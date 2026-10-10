@@ -1,0 +1,127 @@
+name: Go CI
+
+on:
+  # Topic branches are covered by pull_request, which also fires on every push
+  # to an open PR (synchronize). develop pushes re-validate the integrated state
+  # after a squash merge; main stays PR-only because the develop -> main release
+  # PR reruns the suite.
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop, main]
+  schedule:
+    # Weekly so govulncheck catches newly published advisories with no commit
+    # to trigger a run.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+  workflow_call:
+
+# event_name is in the key so the weekly run and release.yml's workflow_call on
+# the default branch do not cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (golangci-lint v2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: just
+      # Installs the golangci-lint version pinned in the justfile.
+      - run: just setup
+      - run: just lint
+      - run: just fmt-check
+
+  test:
+    name: Test (race + shuffle)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: just
+      - run: just vet
+      - run: just mod-verify
+      - run: just test-race
+
+  coverage:
+    name: Coverage gate (>= 90%)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: just
+      - run: just cover-check
+
+  vuln:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: just
+      - run: just vuln
+
+  build:
+    name: Release assets (linux/darwin x amd64/arm64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: just
+      - run: just release-assets
+      - name: Run the host binary
+        run: ./bin/floe-linux-amd64 version
+
+  shell:
+    name: Shell (shellcheck + shfmt)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # shfmt runs through `go tool`, pinned in go.mod.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: just
+      # shellcheck is preinstalled on ubuntu-latest.
+      - run: just shellcheck
+      - run: just shfmt-check

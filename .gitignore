@@ -1,0 +1,4 @@
+# Build & coverage artifacts
+/bin/
+/coverage.out
+/coverage.html
