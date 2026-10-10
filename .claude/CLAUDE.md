@@ -12,7 +12,7 @@ floe はエージェントが書いた HTML ページをローカルサーバー
 
 ## Commands
 
-- `just setup`: `just ci` が使うツール（golangci-lint・govulncheck・shfmt）を CI と同じ版で入れる。
+- `just setup`: CI と同じ版の golangci-lint を入れる。govulncheck と shfmt は `go.mod` の tool として固定し、`go tool` で動かす。
 - `just build`: `bin/floe` をビルドする。
 - `just ci`: push 前の総合チェック（CI と同じ内容）。コード変更後はこれをグリーンにしてからコミットする。
 

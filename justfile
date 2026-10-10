@@ -11,16 +11,15 @@ targets    := "linux-amd64 linux-arm64 darwin-amd64 darwin-arm64"
 default:
     @just --list
 
-# Install the pinned dev tools `just ci` needs into $(go env GOBIN) or GOPATH/bin.
-# Versions must match .github/workflows; shellcheck comes from the OS package manager.
+# Install golangci-lint into $(go env GOBIN) or GOPATH/bin. CI runs this recipe, so the
+# version below is the only pin. govulncheck and shfmt are pinned as tools in go.mod;
+# shellcheck comes from the OS package manager.
 setup:
     #!/usr/bin/env bash
     set -euo pipefail
     bindir="$(go env GOBIN)"
     [ -n "${bindir}" ] || bindir="$(go env GOPATH | cut -d: -f1)/bin"
     mkdir -p "${bindir}"
-    go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
-    go install mvdan.cc/sh/v3/cmd/shfmt@v3.10.0
     # The pinned install.sh SHA256-verifies the downloaded golangci-lint binary.
     curl -sSfL --proto '=https' --tlsv1.2 \
         https://raw.githubusercontent.com/golangci/golangci-lint/114493f9b3e7257d29e4130f2b4a4aadefbb6845/install.sh \
@@ -68,7 +67,7 @@ cover-check:
 
 # Run govulncheck against the module
 vuln:
-    govulncheck {{pkgs}}
+    go tool govulncheck {{pkgs}}
 
 # Verify go.sum integrity
 mod-verify:
@@ -103,7 +102,7 @@ shellcheck:
 
 # Verify shell scripts are shfmt-clean
 shfmt-check:
-    shfmt -i 2 -ci -d install.sh
+    go tool shfmt -i 2 -ci -d install.sh
 
 # Pre-push gate mirroring CI
 ci: fmt-check vet lint test cover-check vuln mod-verify shellcheck shfmt-check

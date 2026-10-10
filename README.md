@@ -27,7 +27,7 @@ release's `SHA256SUMS`.
 Requires Go (see `go.mod`) and [just](https://just.systems).
 
 ```sh
-just setup   # install the pinned lint / vuln / format tools
+just setup   # install the pinned golangci-lint (other tools run via `go tool`)
 just ci      # the same gate CI runs
 ```
 
