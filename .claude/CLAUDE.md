@@ -21,3 +21,4 @@ floe はエージェントが書いた HTML ページをローカルサーバー
 - 対応 OS は linux と darwin（amd64・arm64）。Windows はリンクのパス検査などの信頼境界を検証できないので対応しない。
 - 版は `VERSION` と `internal/version/version.go` を lockstep で更新する。リリースは `develop` → `main` の PR で `VERSION` が変わったときに `release.yml` が行う。
 - カバレッジは `internal/` 全体で 90% 以上（`just cover-check`）。
+- ユーザー向けの挙動を変えたら `CHANGELOG.md`（英語）と `docs/CHANGELOG.ja.md`（日本語）の `[Unreleased]` を同期して更新する。
