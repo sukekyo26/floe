@@ -4,7 +4,7 @@
 
 A local page server for agent-written HTML, shipped as a single Go binary.
 Agents publish a page (or structured data rendered through a template), and
-floe serves it at `http://127.0.0.1:4317` with live reload and a management UI.
+floe serves it at `http://127.0.0.1:7325` with live reload and a management UI.
 Diagrams are drawn as inline SVG from a declarative spec and checked for
 overflow, overlaps and crossing edges before they render.
 
