@@ -1,5 +1,7 @@
 # floe
 
+[日本語版 README](docs/README.ja.md)
+
 A local page server for agent-written HTML, shipped as a single Go binary.
 Agents publish a page (or structured data rendered through a template), and
 floe serves it at `http://127.0.0.1:4317` with live reload and a management UI.
