@@ -93,7 +93,12 @@ release-assets: build-all
     #!/usr/bin/env bash
     set -euo pipefail
     cd bin
-    sha256sum $(for t in {{targets}}; do printf 'floe-%s ' "$t"; done) > SHA256SUMS
+    # macOS ships shasum instead of sha256sum; both print "<hash>  <file>".
+    if command -v sha256sum >/dev/null 2>&1; then sum=(sha256sum)
+    elif command -v shasum >/dev/null 2>&1; then sum=(shasum -a 256)
+    else echo "release-assets: install sha256sum (coreutils) or shasum (perl)" >&2; exit 1
+    fi
+    "${sum[@]}" $(for t in {{targets}}; do printf 'floe-%s ' "$t"; done) > SHA256SUMS
     echo "wrote bin/SHA256SUMS"
 
 # Run shellcheck on the shell scripts
