@@ -33,12 +33,24 @@ func TestRun(t *testing.T) {
 			if got := cli.Run(tt.args, &stdout, &stderr); got != tt.wantCode {
 				t.Errorf("exit code = %d, want %d (stderr: %q)", got, tt.wantCode, stderr.String())
 			}
-			if !strings.Contains(stdout.String(), tt.wantStdout) {
-				t.Errorf("stdout = %q, want it to contain %q", stdout.String(), tt.wantStdout)
-			}
-			if !strings.Contains(stderr.String(), tt.wantStderr) {
-				t.Errorf("stderr = %q, want it to contain %q", stderr.String(), tt.wantStderr)
-			}
+			checkOutput(t, "stdout", stdout.String(), tt.wantStdout)
+			checkOutput(t, "stderr", stderr.String(), tt.wantStderr)
 		})
+	}
+}
+
+// checkOutput requires an empty stream when want is empty; strings.Contains(got, "")
+// would pass for any output.
+func checkOutput(t *testing.T, stream, got, want string) {
+	t.Helper()
+
+	if want == "" {
+		if got != "" {
+			t.Errorf("%s = %q, want it empty", stream, got)
+		}
+		return
+	}
+	if !strings.Contains(got, want) {
+		t.Errorf("%s = %q, want it to contain %q", stream, got, want)
 	}
 }
