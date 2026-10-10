@@ -1,4 +1,4 @@
-# AI Agent Rules
+# CLAUDE.md
 
 ## Repository Context
 
