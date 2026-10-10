@@ -36,7 +36,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5 # v2.87.19
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: just
       # Installs the golangci-lint version pinned in the justfile.
@@ -54,7 +54,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5 # v2.87.19
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: just
       - run: just vet
@@ -71,7 +71,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5 # v2.87.19
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: just
       - run: just cover-check
@@ -86,7 +86,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5 # v2.87.19
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: just
       - run: just vuln
@@ -101,7 +101,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5 # v2.87.19
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: just
       - run: just release-assets
@@ -119,7 +119,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5 # v2.87.19
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: just
       # shellcheck is preinstalled on ubuntu-latest.
