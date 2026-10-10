@@ -20,15 +20,6 @@ Set `FLOE_VERSION` to pin a release and `FLOE_INSTALL_DIR` to change the
 destination (default `~/.local/bin`). The binary is verified against the
 release's `SHA256SUMS`.
 
-## Development
-
-Requires Go (see `go.mod`) and [just](https://just.systems).
-
-```sh
-just setup   # install the pinned golangci-lint (other tools run via `go tool`)
-just ci      # the same gate CI runs
-```
-
 ## License
 
 [MIT](LICENSE)
