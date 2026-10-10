@@ -6,9 +6,7 @@ floe serves it at `http://127.0.0.1:4317` with live reload and a management UI.
 Diagrams are drawn as inline SVG from a declarative spec and checked for
 overflow, overlaps and crossing edges before they render.
 
-> **Status:** under construction. floe is being ported from the `artifact`
-> skill in [azarashi](https://github.com/sukekyo26/azarashi); only `floe version`
-> exists so far.
+> **Status:** under construction; only `floe version` exists so far.
 
 ## Install
 
