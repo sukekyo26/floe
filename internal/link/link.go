@@ -19,19 +19,18 @@ var htmlRe = regexp.MustCompile(`(?i)\.html?$`)
 // under home (~/.ssh, ~/.config) hold settings and keys. Hidden directories inside a project
 // (.agents, .github) are fine; Resolve never serves the dot paths under them.
 func Check(path, home string) error {
-	// The checks compare strings, so a path through a symlink (~/proj -> ~/.ssh) or with .. would slip
-	// past them.
-	if resolved, err := filepath.EvalSymlinks(path); err == nil && resolved != path {
+	// The checks compare strings, so a relative path, a path through a symlink (~/proj -> ~/.ssh) or one
+	// with .. would slip past them. EvalSymlinks keeps a relative path relative, hence IsAbs.
+	if resolved, err := filepath.EvalSymlinks(path); !filepath.IsAbs(path) || err == nil && resolved != path {
 		return usererr.New("link_not_real", path)
 	}
 	// A FIFO named .html would block its reader, so only regular files pass.
 	if fi, err := os.Stat(path); !htmlRe.MatchString(path) || err != nil || !fi.Mode().IsRegular() {
 		return usererr.New("link_not_html", path)
 	}
-	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories. A home
-	// that cannot be resolved (missing, or empty and so ".") leaves the real one unknown: refuse.
-	resolvedHome, err := filepath.EvalSymlinks(home)
-	if err != nil || !filepath.IsAbs(resolvedHome) {
+	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories.
+	resolvedHome, ok := realDir(home)
+	if !ok {
 		return usererr.New("link_home_unresolved", home)
 	}
 	home = resolvedHome
@@ -44,6 +43,17 @@ func Check(path, home string) error {
 		return usererr.New("link_exposes_dir", path, dir)
 	}
 	return nil
+}
+
+// realDir returns the real path of dir. A dir that cannot be resolved (missing, empty and so ".", or
+// not a directory) gives false: the checks that compare against it would be meaningless.
+func realDir(dir string) (string, bool) {
+	resolved, err := filepath.EvalSymlinks(dir)
+	if err != nil || !filepath.IsAbs(resolved) {
+		return "", false
+	}
+	fi, err := os.Stat(resolved)
+	return resolved, err == nil && fi.IsDir()
 }
 
 // Resolve returns the file to serve for rest under the link registered as the real path registered:

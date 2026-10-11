@@ -182,13 +182,13 @@ func TestCheck(t *testing.T) {
 	// A path through a symlink is refused, whatever it points at.
 	symlink(t, filepath.Join(realHome, ".secret"), filepath.Join(realHome, "proj", "alias"))
 	// So is one with .., which the string checks would misread too.
-	for _, p := range []string{"proj/alias/x.html", "proj/../top.html"} {
-		if err := link.Check(realHome+"/"+p, home); err == nil || !strings.Contains(err.Error(), "is not its real path") {
+	for _, p := range []string{realHome + "/proj/alias/x.html", realHome + "/proj/../top.html", ".secret/x.html", "top.html"} {
+		if err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "is not its absolute real path") {
 			t.Errorf("Check(%s) = %v, want it refused as not real", p, err)
 		}
 	}
 	// A home that cannot be resolved leaves the real one unknown, so nothing passes.
-	for _, h := range []string{"", filepath.Join(tmp, "no-such-home")} {
+	for _, h := range []string{"", filepath.Join(tmp, "no-such-home"), filepath.Join(realHome, "top.html")} {
 		if err := link.Check(filepath.Join(realHome, "proj", "ok.HTM"), h); err == nil ||
 			!strings.Contains(err.Error(), "cannot resolve the home directory") {
 			t.Errorf("Check with home %q = %v, want it refused", h, err)
