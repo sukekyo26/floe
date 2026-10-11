@@ -1,0 +1,236 @@
+package cli
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net"
+	"os"
+	"os/signal"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/spf13/cobra"
+
+	"github.com/sukekyo26/floe/internal/daemon"
+	"github.com/sukekyo26/floe/internal/server"
+	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/usererr"
+)
+
+type app struct {
+	env Env
+	cfg *config
+}
+
+func (a *app) store() *store.Store {
+	return store.New(a.cfg.root, a.cfg.home)
+}
+
+func (a *app) out(format string, args ...any) {
+	_, _ = fmt.Fprintf(a.env.Stdout, format+"\n", args...) //nolint:errcheck // nowhere left to report
+}
+
+func (a *app) warn(format string, args ...any) {
+	_, _ = fmt.Fprintf(a.env.Stderr, format+"\n", args...) //nolint:errcheck // nowhere left to report
+}
+
+func (a *app) publishCmd() *cobra.Command {
+	var opts store.Options
+	var slug, title, description string
+	cmd := &cobra.Command{
+		Use:   "publish <file.html>",
+		Short: "Store a page (or --link a file in place) and print its URL",
+		Long: `Store the page and print its URL. The same slug from the same project overwrites it,
+and a slug published from another project is refused unless --force. Body-only HTML
+(no doctype/html/head/body/title) is wrapped in the template. A new slug is also opened
+in the browser ($BROWSER, open, wslview, xdg-open).
+
+--link registers the file in place instead of copying it: it is read on every request,
+and the files under its directory are served for its relative references. The same slug
+for another file is refused unless --force.`,
+		Args: usage(cobra.ExactArgs(1)),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			flags := cmd.Flags()
+			if flags.Changed("slug") {
+				opts.Slug = &slug
+			}
+			if flags.Changed("title") {
+				// An empty title cannot be told from none, and would leave the list blank.
+				if strings.TrimSpace(title) == "" {
+					return usageError{err: usererr.New(
+						"--title is empty: give the page a name, or omit --title to take it from the <title> or first <h1>", "")}
+				}
+				opts.Title = &title
+			}
+			if flags.Changed("description") {
+				opts.Description = &description
+			}
+			return a.publish(cmd.Context(), args[0], opts)
+		},
+	}
+	f := cmd.Flags()
+	f.BoolVar(&opts.Link, "link", false, "register the file in place instead of copying it")
+	f.StringVar(&slug, "slug", "", "the URL name (default: from the file name)")
+	f.StringVar(&title, "title", "", "the title (default: the <title> or first <h1>)")
+	f.StringVar(&description, "description", "", "a description shown in the list")
+	f.BoolVar(&opts.Force, "force", false, "replace a page of another project, or a link to another file")
+	return cmd
+}
+
+// publish checks, makes sure the server runs, then saves, so that a failed publish leaves nothing in
+// the store.
+func (a *app) publish(ctx context.Context, file string, opts store.Options) error {
+	st := a.store()
+	entry, err := st.Prepare(ctx, file, opts, a.env.Dir)
+	if err != nil {
+		return err //nolint:wrapcheck // the message is for the user as is
+	}
+	build, err := daemon.Build()
+	if err != nil {
+		return err //nolint:wrapcheck // already says what failed
+	}
+	err = daemon.Ensure(ctx, daemon.Server{Port: a.cfg.port, Root: a.cfg.root, Build: build, Env: a.serverEnv()})
+	if err != nil {
+		return err //nolint:wrapcheck // the message is for the user as is
+	}
+	if err := st.Save(entry); err != nil {
+		return err //nolint:wrapcheck // already says what failed
+	}
+	url := a.cfg.base() + "/a/" + entry.Slug + "/"
+	// A republish does not open another tab; the open one reloads itself.
+	if entry.Prev == nil {
+		daemon.OpenBrowser(ctx, a.env.Getenv("BROWSER"), url)
+	}
+	a.out("%s", url)
+	if entry.Prev != nil {
+		a.noticeUpdate(entry)
+	}
+	return nil
+}
+
+// noticeUpdate says that a page was overwritten, so that reusing a slug for another page (say "plan")
+// does not go unnoticed. A link without a pinned title has no title of its own to compare.
+func (a *app) noticeUpdate(e *store.Entry) {
+	prev := e.Prev
+	if prev.Title == "" {
+		a.warn(`updated "%s" (last published %s)`, e.Slug, localTime(prev.UpdatedAt))
+		return
+	}
+	a.warn(`updated "%s" (last published %s, title "%s")`, e.Slug, localTime(prev.UpdatedAt), prev.Title)
+	if e.Meta.Title != prev.Title {
+		a.warn("warning: the title changed; if this is a different page, publish it under another --slug")
+	}
+}
+
+// serverEnv is the environment of a server that a publish starts: the settings this command read win
+// over the process's own.
+func (a *app) serverEnv() []string {
+	env := append([]string{}, a.env.Environ...)
+	env = append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home)
+	if a.cfg.rawIdle != "" {
+		env = append(env, "FLOE_IDLE_MINUTES="+a.cfg.rawIdle)
+	}
+	return env
+}
+
+func localTime(iso string) string {
+	t, err := time.Parse(time.RFC3339Nano, iso)
+	if err != nil {
+		return iso
+	}
+	return t.Local().Format("2006-01-02 15:04")
+}
+
+func (a *app) listCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List pages, newest first (updated, slug, title, linked path; tab-separated)",
+		Args:  usage(cobra.NoArgs),
+		RunE: func(*cobra.Command, []string) error {
+			list, err := a.store().List()
+			if err != nil {
+				return err //nolint:wrapcheck // already says what failed
+			}
+			for _, l := range list {
+				a.out("%s\t%s\t%s\t%s", localTime(l.UpdatedAt), l.Slug, l.Title, l.Path)
+			}
+			return nil
+		},
+	}
+}
+
+func (a *app) rmCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "rm <slug>...",
+		Short: "Delete pages in order, stopping at the first failure (a linked file itself is left alone)",
+		Args:  usage(cobra.MinimumNArgs(1)),
+		RunE: func(_ *cobra.Command, args []string) error {
+			st := a.store()
+			for _, slug := range args {
+				if err := st.Remove(slug); err != nil {
+					return err //nolint:wrapcheck // the message is for the user as is
+				}
+			}
+			return nil
+		},
+	}
+}
+
+func (a *app) serveCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "serve",
+		Short: "Run the server in the foreground",
+		Args:  usage(cobra.NoArgs),
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return a.serve(cmd.Context())
+		},
+	}
+}
+
+// serve runs until SIGTERM or SIGINT, or until it has been idle for FLOE_IDLE_MINUTES; the next
+// publish starts it again.
+func (a *app) serve(ctx context.Context) error {
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+	if err := os.MkdirAll(a.cfg.root, 0o700); err != nil {
+		return fmt.Errorf("create %s: %w", a.cfg.root, err)
+	}
+	build, err := daemon.Build()
+	if err != nil {
+		return err //nolint:wrapcheck // already says what failed
+	}
+	var lc net.ListenConfig
+	ln, err := lc.Listen(ctx, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(a.cfg.port)))
+	if errors.Is(err, syscall.EADDRINUSE) {
+		return usererr.New(fmt.Sprintf("port %d is in use; stop that program or set FLOE_PORT", a.cfg.port), "")
+	}
+	if err != nil {
+		return fmt.Errorf("listen: %w", err)
+	}
+	a.out("serving %s at %s/", a.cfg.root, a.cfg.base())
+	srv := server.New(server.Config{Store: a.store(), Port: a.cfg.port, Build: build, Idle: a.cfg.idle})
+	return srv.Serve(ctx, ln) //nolint:wrapcheck // already says what failed
+}
+
+func (a *app) stopCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "stop",
+		Short: "Stop the background server",
+		Args:  usage(cobra.NoArgs),
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			p := daemon.Probe(cmd.Context(), a.cfg.base())
+			if p.State != daemon.Ours {
+				a.out("server is not running")
+				return nil
+			}
+			if err := daemon.Terminate(p.Health.PID); err != nil {
+				return err //nolint:wrapcheck // already says what failed
+			}
+			a.out("stopped server (pid %d)", p.Health.PID)
+			return nil
+		},
+	}
+}

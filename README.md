@@ -8,7 +8,8 @@ floe serves it at `http://127.0.0.1:7325` with live reload and a management UI.
 Diagrams are drawn as inline SVG from a declarative spec and checked for
 overflow, overlaps and crossing edges before they render.
 
-> **Status:** under construction; only `floe version` exists so far.
+> **Status:** under construction. Publishing and serving pages work; templates
+> and diagrams are not there yet.
 
 ## Install
 
@@ -21,6 +22,20 @@ curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 Set `FLOE_VERSION` to pin a release and `FLOE_INSTALL_DIR` to change the
 destination (default `~/.local/bin`). The binary is verified against the
 release's `SHA256SUMS`.
+
+## Usage
+
+```sh
+floe publish report.html          # store the page and print its URL
+floe publish docs/index.html --link  # serve the file in place, with its directory
+floe list                         # pages, newest first
+floe rm report                    # delete a page (a linked file itself stays)
+floe stop                         # stop the background server
+```
+
+The server starts on the first publish and exits after `FLOE_IDLE_MINUTES`
+(default 30) without requests. Pages are kept in `FLOE_DIR` (default
+`~/.local/share/floe`), and `FLOE_PORT` changes the port (default 7325).
 
 ## License
 
