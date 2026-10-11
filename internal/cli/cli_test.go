@@ -343,6 +343,39 @@ func TestPublish(t *testing.T) {
 	}
 }
 
+// TestPublishToASilentPort holds the port with a program that accepts connections and never answers:
+// the publish gives up within the 3 s the server has to start, not after 150 probe timeouts.
+func TestPublishToASilentPort(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	var lc net.ListenConfig
+	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:"+e.vars["FLOE_PORT"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+	go func() {
+		var held []net.Conn
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				for _, c := range held {
+					_ = c.Close()
+				}
+				return
+			}
+			held = append(held, conn)
+		}
+	}()
+	start := time.Now()
+	want(t, "publish", e.run(t, "", "publish", e.write(t, "silent.html", "<h1>Silent</h1>")), 1, "",
+		`floe: the server did not start; run "floe serve" to see the error`)
+	if took := time.Since(start); took > 10*time.Second {
+		t.Errorf("the publish took %v", took)
+	}
+}
+
 func TestPublishToAnotherServer(t *testing.T) {
 	t.Parallel()
 

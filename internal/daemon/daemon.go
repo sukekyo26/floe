@@ -74,11 +74,18 @@ func Probe(ctx context.Context, base string) Status {
 	return Status{State: Ours, Health: h}
 }
 
-// waitWhile probes every 20 ms, up to 3 s, while cond holds; starting and stopping take well under
-// 100 ms.
+// waitWhile probes every 20 ms while cond holds, for 3 s in all; starting and stopping take well under
+// 100 ms. The deadline bounds the probes too, so a program that accepts and never answers cannot
+// stretch the wait.
 func waitWhile(ctx context.Context, base string, p Status, cond func(Status) bool) Status {
-	for i := 0; i < 150 && cond(p); i++ {
-		time.Sleep(20 * time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	for cond(p) {
+		select {
+		case <-ctx.Done():
+			return p
+		case <-time.After(20 * time.Millisecond):
+		}
 		p = Probe(ctx, base)
 	}
 	return p
