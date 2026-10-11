@@ -20,9 +20,13 @@ var htmlRe = regexp.MustCompile(`(?i)\.html?$`)
 // under home (~/.ssh, ~/.config) hold settings and keys. Hidden directories inside a project
 // (.agents, .github) are fine; Resolve never serves the dot paths under them.
 func Check(path, home string) error {
-	// The checks compare strings, so a path through a symlink (~/proj -> ~/.ssh) would slip past them.
+	// The checks compare strings, so a path through a symlink (~/proj -> ~/.ssh) or with .. would slip
+	// past them.
 	if resolved, err := filepath.EvalSymlinks(path); err == nil && resolved != path {
-		return usererr.New(path+" is not a real path; resolve its symlinks before checking it", "")
+		return usererr.New(
+			path+" is not its real path; pass it through filepath.EvalSymlinks (symlinks resolved, path cleaned) first",
+			path+" は実パス（symlink を解決して正規化したパス）ではないので、登録できるかを確かめられません",
+		)
 	}
 	// A FIFO named .html would block its reader, so only regular files pass.
 	if fi, err := os.Stat(path); !htmlRe.MatchString(path) || err != nil || !fi.Mode().IsRegular() {

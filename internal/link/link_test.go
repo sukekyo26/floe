@@ -180,9 +180,11 @@ func TestCheck(t *testing.T) {
 	symlink(t, realHome, home)
 	// A path through a symlink is refused, whatever it points at.
 	symlink(t, filepath.Join(realHome, ".secret"), filepath.Join(realHome, "proj", "alias"))
-	if err := link.Check(filepath.Join(realHome, "proj", "alias", "x.html"), home); err == nil ||
-		!strings.Contains(err.Error(), "is not a real path") {
-		t.Errorf("Check of a path through a symlink = %v, want it refused", err)
+	// So is one with .., which the string checks would misread too.
+	for _, p := range []string{"proj/alias/x.html", "proj/../top.html"} {
+		if err := link.Check(realHome+"/"+p, home); err == nil || !strings.Contains(err.Error(), "is not its real path") {
+			t.Errorf("Check(%s) = %v, want it refused as not real", p, err)
+		}
 	}
 
 	tests := []struct {
