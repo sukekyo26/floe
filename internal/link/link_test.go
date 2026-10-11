@@ -178,6 +178,12 @@ func TestCheck(t *testing.T) {
 	mkfifo(t, filepath.Join(realHome, "proj", "pipe.html"))
 	// $HOME is a symlink: the real paths under it must still meet the home checks.
 	symlink(t, realHome, home)
+	// A path through a symlink is refused, whatever it points at.
+	symlink(t, filepath.Join(realHome, ".secret"), filepath.Join(realHome, "proj", "alias"))
+	if err := link.Check(filepath.Join(realHome, "proj", "alias", "x.html"), home); err == nil ||
+		!strings.Contains(err.Error(), "is not a real path") {
+		t.Errorf("Check of a path through a symlink = %v, want it refused", err)
+	}
 
 	tests := []struct {
 		path string

@@ -14,12 +14,16 @@ import (
 
 var htmlRe = regexp.MustCompile(`(?i)\.html?$`)
 
-// Check reports whether the file at path, already resolved to its real path, may be linked. A link
+// Check reports whether the file at path, which must be its real path, may be linked. A link
 // also serves the files under its directory, so the exposure is kept to that directory: a file
 // directly under / or the home directory would expose all of it, and the hidden directories right
 // under home (~/.ssh, ~/.config) hold settings and keys. Hidden directories inside a project
 // (.agents, .github) are fine; Resolve never serves the dot paths under them.
 func Check(path, home string) error {
+	// The checks compare strings, so a path through a symlink (~/proj -> ~/.ssh) would slip past them.
+	if resolved, err := filepath.EvalSymlinks(path); err == nil && resolved != path {
+		return usererr.New(path+" is not a real path; resolve its symlinks before checking it", "")
+	}
 	// A FIFO named .html would block its reader, so only regular files pass.
 	if fi, err := os.Stat(path); !htmlRe.MatchString(path) || err != nil || !fi.Mode().IsRegular() {
 		return usererr.New(
