@@ -144,11 +144,13 @@ func (e *env) exe(t *testing.T, bin string, args ...string) result {
 	return result{code: code, stdout: stdout.String(), stderr: stderr.String()}
 }
 
+// opened returns what the browser stand-in recorded. The file exists a moment before the URL is in it,
+// so it waits for a whole line.
 func (e *env) opened(t *testing.T) string {
 	t.Helper()
 
 	for range 20 {
-		if b, err := os.ReadFile(filepath.Join(e.tmp, "opened")); err == nil {
+		if b, err := os.ReadFile(filepath.Join(e.tmp, "opened")); err == nil && bytes.HasSuffix(b, []byte("\n")) {
 			return string(b)
 		}
 		time.Sleep(50 * time.Millisecond)
