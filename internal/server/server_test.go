@@ -47,6 +47,10 @@ func newEnv(t *testing.T, idle time.Duration) *env {
 		t.Fatalf("listener address %v", ln.Addr())
 	}
 	port := addr.Port
+	// link.Check refuses a home that does not exist, so the stand-in home is made.
+	if err := os.Mkdir(filepath.Join(tmp, "home"), 0o700); err != nil {
+		t.Fatal(err)
+	}
 	st := store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"))
 	e := &env{
 		tmp: tmp, store: st, base: "http://127.0.0.1:" + strconv.Itoa(port),
