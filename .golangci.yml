@@ -95,6 +95,7 @@ linters:
       # optional fields go here.
       ignore-patterns:
         - '.+/cobra\.Command$'
+        - '^net/http\.Server$'
     exhaustive:
       default-signifies-exhaustive: true
     gocognit:

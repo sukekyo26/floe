@@ -161,6 +161,18 @@ func (c *Catalog) Msg(key string, args ...any) string {
 	return fmt.Sprintf(c.lookup(key), args...)
 }
 
+// Formats returns the unrendered messages whose keys start with prefix, with the same fallback as
+// Msg, for a page that renders them itself.
+func (c *Catalog) Formats(prefix string) map[string]string {
+	formats := map[string]string{}
+	for key := range catalogs[English] {
+		if strings.HasPrefix(key, prefix) {
+			formats[key] = c.lookup(key)
+		}
+	}
+	return formats
+}
+
 func (c *Catalog) lookup(key string) string {
 	for _, lang := range c.chain {
 		if v, ok := catalogs[lang][key]; ok {

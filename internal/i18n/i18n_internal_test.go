@@ -126,6 +126,12 @@ func TestCatalogMsg(t *testing.T) {
 	if got := New("en-us").chain; !slices.Equal(got, []Lang{"en-us", English}) {
 		t.Errorf("the chain of en-us = %v, want English once", got)
 	}
+	if got := New("pt-br").Formats("o"); !maps.Equal(got, map[string]string{"only_en": "brasil"}) {
+		t.Errorf("Formats(o) = %v", got)
+	}
+	if got := New("ja").Formats("p"); !maps.Equal(got, map[string]string{"pair": "%[2]d の前に %[1]s", "percent": "100%%"}) {
+		t.Errorf("Formats(p) = %v", got)
+	}
 	if EnglishCatalog().Lang() != English {
 		t.Error("EnglishCatalog is not English")
 	}
