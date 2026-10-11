@@ -8,3 +8,8 @@ import _ "embed"
 //
 //go:embed template.html
 var Template string
+
+// Page is the management page, which is also the frame around each page.
+//
+//go:embed ui.html
+var Page []byte
