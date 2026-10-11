@@ -19,6 +19,7 @@ func TestTitle(t *testing.T) {
 		{"plain text of the h1", "  <h1>A &amp; <em>B</em></h1>", "A & B"},
 		{"entities", "<title>&lt;x&gt; &quot;q&quot; &#39;s&#39; &#43;&nbsp;</title>", `<x> "q" 's' +`},
 		{"attributes", `<h1 class="big">Big</h1>`, "Big"},
+		{"unicode spaces", "<title>A&nbsp;B\u3000\u3000C\u2003</title>", "A B C"},
 		{"case and newlines", "<TITLE>\n  Upper\n</TITLE>", "Upper"},
 		{"svg title is not the page title", `<h1>Sales</h1><svg viewBox="0 0 1 1"><title>Bar</title></svg>`, "Sales"},
 		{"element name boundary", "<titlex>no</titlex><h1x>no</h1x><h1>yes</h1>", "yes"},

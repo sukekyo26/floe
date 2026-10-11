@@ -24,8 +24,9 @@ var (
 	titleRe    = regexp.MustCompile(`(?is)<title(?:[\s/][^>]*)?>(.*?)</title>`)
 	h1Re       = regexp.MustCompile(`(?is)<h1(?:[\s/][^>]*)?>(.*?)</h1>`)
 	tagRe      = regexp.MustCompile(`<[^>]*>`)
-	spaceRe    = regexp.MustCompile(`\s+`)
-	wrapper    = template.Must(template.New("page").Parse(ui.Template))
+	// JavaScript's \s: Go's \s is ASCII only, but a decoded &nbsp; or a full-width space must collapse too.
+	spaceRe = regexp.MustCompile(`[\s\v\p{Z}\x{FEFF}]+`)
+	wrapper = template.Must(template.New("page").Parse(ui.Template))
 )
 
 func outsideSvg(html string) string {
