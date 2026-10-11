@@ -109,6 +109,10 @@ func TestWrap(t *testing.T) {
 		if !strings.Contains(s, `<meta name="generator" content="floe template">`) {
 			t.Error("wrapped page lacks the template's generator mark")
 		}
+		// The page runs without an HTTP cache (sandbox), so its fonts must not swap in on every load.
+		if !strings.Contains(s, "&display=block\">") {
+			t.Error("the wrapped page does not load its fonts with display=block")
+		}
 		if strings.Count(s, frag) != 1 {
 			t.Errorf("the fragment is not inserted exactly once and verbatim:\n%s", s)
 		}

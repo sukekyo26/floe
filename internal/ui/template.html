@@ -7,7 +7,8 @@
 <title>{{.Title}}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@700;800&family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<!-- display=block: ページは sandbox（origin が null）で動き、Chrome はその読み込みにキャッシュを使わないので、フォントを毎回取り直す。swap だと開くたびに代わりの書体から差し替わってちらつくので、届くまで文字を隠して待つ -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@700;800&family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=block">
 <style>
   /* floe publish が本文だけの HTML を包む雛形。クラスの使い方はスキルの SKILL.md を参照 */
   :root {
