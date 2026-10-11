@@ -22,14 +22,19 @@ func TestPageRendersInTheReadersLanguage(t *testing.T) {
 			!strings.Contains(page, `"ui_delete_done":`) || strings.Contains(page, "{{") {
 			t.Errorf("%s: the page lacks its language, %q or the script's messages", lang, want)
 		}
+		// html/template drops the comments, so Japanese left in the English page is untranslated.
+		if lang == "en" && japaneseRe.MatchString(page) {
+			t.Errorf("the English page has untranslated text: %q", japaneseRe.FindAllString(page, 3))
+		}
 	}
 }
 
 var (
 	// usedRe finds the keys ui.html names: {{.Msg "ui_x"}}, t('ui_x') and the delete or unlink
 	// variants t(`ui_${kind(a)}_x`).
-	usedRe    = regexp.MustCompile(`\{\{\.Msg "(ui_\w+)"\}\}|'(ui_\w+)'|` + "`ui_\\$\\{\\w+\\(\\w*\\)\\}(\\w*)`")
-	jsVerbsRe = regexp.MustCompile(`%(?:\[\d+\])?[sd%]`)
+	usedRe     = regexp.MustCompile(`\{\{\.Msg "(ui_\w+)"\}\}|'(ui_\w+)'|` + "`ui_\\$\\{\\w+\\(\\w*\\)\\}(\\w*)`")
+	jsVerbsRe  = regexp.MustCompile(`%(?:\[\d+\])?[sd%]`)
+	japaneseRe = regexp.MustCompile(`.{0,20}[\p{Hiragana}\p{Katakana}\p{Han}]+.{0,20}`)
 )
 
 // TestPageMessages keeps ui.html and the ui_ messages in step: every key the page names exists, every
