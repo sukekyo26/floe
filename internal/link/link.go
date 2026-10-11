@@ -31,7 +31,9 @@ func Check(path, home string) error {
 	if resolved, err := filepath.EvalSymlinks(home); err == nil {
 		home = resolved
 	}
-	if rest, ok := strings.CutPrefix(path, home+string(filepath.Separator)); ok && strings.HasPrefix(rest, ".") {
+	// A hidden file right under home (~/.x.html) is not in a hidden directory; the next check refuses it.
+	rest, underHome := strings.CutPrefix(path, home+string(filepath.Separator))
+	if underHome && strings.HasPrefix(rest, ".") && strings.ContainsRune(rest, filepath.Separator) {
 		return usererr.New(
 			path+" is under a hidden directory of your home (settings and keys live there); move it out to link it",
 			path+" はホーム直下の隠しディレクトリ（設定や鍵の置き場）の中にあるので登録できません",

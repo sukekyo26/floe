@@ -169,7 +169,7 @@ func TestCheck(t *testing.T) {
 	tmp := realTemp(t)
 	realHome := filepath.Join(tmp, "realhome")
 	home := filepath.Join(tmp, "home")
-	for _, path := range []string{"top.html", ".secret/x.html", "proj/.agents/doc.html", "proj/page.txt", "proj/ok.HTM"} {
+	for _, path := range []string{"top.html", ".top.html", ".secret/x.html", "proj/.agents/doc.html", "proj/page.txt", "proj/ok.HTM"} {
 		write(t, filepath.Join(realHome, path), "<p>x</p>")
 	}
 	if err := os.Mkdir(filepath.Join(realHome, "proj", "dir.html"), 0o750); err != nil {
@@ -187,6 +187,7 @@ func TestCheck(t *testing.T) {
 		{"proj/ok.HTM", ""},
 		{".secret/x.html", "is under a hidden directory of your home"},
 		{"top.html", "would expose all of " + realHome},
+		{".top.html", "would expose all of " + realHome},
 		{"proj/page.txt", "is not an .html file"},
 		{"proj/dir.html", "is not an .html file"},
 		{"proj/pipe.html", "is not an .html file"},
