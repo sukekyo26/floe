@@ -19,6 +19,7 @@ import (
 
 var (
 	indexRe    = regexp.MustCompile(`(?i)^index\.html?$`)
+	langRe     = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8})*$`)
 	nonSlugRe  = regexp.MustCompile(`[^a-z0-9]+`)
 	maxSlugLen = 64
 )
@@ -67,6 +68,7 @@ type Options struct {
 	Slug        *string
 	Title       *string
 	Description *string
+	Lang        *string
 	Force       bool
 }
 
@@ -92,6 +94,12 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	if err != nil {
 		return nil, err
 	}
+	if opts.Lang != nil && !langRe.MatchString(*opts.Lang) {
+		return nil, usererr.New(
+			fmt.Sprintf(`invalid language "%s": use a BCP 47 tag such as en, ja or pt-BR via --lang`, *opts.Lang),
+			fmt.Sprintf("言語「%s」は使えません。en・ja・pt-BR のような BCP 47 の言語タグで指定してください", *opts.Lang),
+		)
+	}
 	prev := s.ReadMeta(slug)
 	dir := cwd
 	if path != "" {
@@ -110,7 +118,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	}
 	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, html, slug), Page: nil, Prev: prev}
 	if path == "" {
-		if e.Page, err = page.Wrap(html, e.Meta.Title); err != nil {
+		if e.Page, err = page.Wrap(html, e.Meta.Title, e.Meta.Lang); err != nil {
 			return nil, fmt.Errorf("wrap %s: %w", file, err)
 		}
 	}
@@ -140,8 +148,8 @@ func (s *Store) read(file string, isLink bool, cwd string) (path, html string, e
 	return path, string(b), nil
 }
 
-// newMeta keeps what was set on the management page (favourite, title, project), the description and
-// createdAt from base; --title and --description win.
+// newMeta keeps what was set on the management page (favourite, title, project), the description, the
+// language and createdAt from base; --title, --description and --lang win.
 func newMeta(opts Options, path, from string, base *Meta, html, slug string) Meta {
 	keepTitle := opts.Title == nil && base.TitleEdited
 	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
@@ -151,6 +159,7 @@ func newMeta(opts Options, path, from string, base *Meta, html, slug string) Met
 		Title:         title(opts, path, keepTitle, base, html, slug),
 		TitleEdited:   keepTitle,
 		Description:   base.Description,
+		Lang:          base.Lang,
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",
@@ -160,6 +169,9 @@ func newMeta(opts Options, path, from string, base *Meta, html, slug string) Met
 	}
 	if opts.Description != nil {
 		m.Description = *opts.Description
+	}
+	if opts.Lang != nil {
+		m.Lang = *opts.Lang
 	}
 	if base.ProjectEdited {
 		m.Project = base.Project

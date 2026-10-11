@@ -41,8 +41,10 @@ type Meta struct {
 	Path  string `json:"path,omitempty"`
 	Title string `json:"title,omitempty"`
 	// TitleEdited and ProjectEdited mark values set on the management page, kept across republishes.
-	TitleEdited   bool   `json:"titleEdited,omitempty"`
-	Description   string `json:"description"`
+	TitleEdited bool   `json:"titleEdited,omitempty"`
+	Description string `json:"description"`
+	// Lang is the language a body-only page is wrapped in (a BCP 47 tag); none is page.DefaultLang.
+	Lang          string `json:"lang,omitempty"`
 	Project       string `json:"project,omitempty"`
 	ProjectEdited bool   `json:"projectEdited,omitempty"`
 	// PublishedFrom is the project that owns a stored page; Project is only what the list shows.

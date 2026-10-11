@@ -533,3 +533,33 @@ func TestListedJSON(t *testing.T) {
 		t.Errorf("Listed JSON = %s, %v", b, err)
 	}
 }
+
+func TestPublishLang(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	frag := e.write(t, "frag.html", "<p>hello</p>")
+	e.mustPublish(t, frag, store.Options{}, "repo")
+	if m := e.meta(t, "frag"); m.Lang != "" || !strings.Contains(e.read(t, "store/frag/index.html"), `<html lang="en">`) {
+		t.Errorf("a page without --lang: lang %q", m.Lang)
+	}
+	e.mustPublish(t, frag, store.Options{Lang: ptr("ja")}, "repo")
+	e.mustPublish(t, frag, store.Options{}, "repo")
+	if m := e.meta(t, "frag"); m.Lang != "ja" || !strings.Contains(e.read(t, "store/frag/index.html"), `<html lang="ja">`) {
+		t.Errorf("a republish without --lang should keep ja: lang %q", m.Lang)
+	}
+	e.mustPublish(t, frag, store.Options{Lang: ptr("pt-BR")}, "repo")
+	if m := e.meta(t, "frag"); m.Lang != "pt-BR" {
+		t.Errorf("--lang pt-BR: lang %q", m.Lang)
+	}
+	e.mustPublish(t, frag, store.Options{Force: true}, "other")
+	if m := e.meta(t, "frag"); m.Lang != "" {
+		t.Errorf("--force from another project should start afresh: lang %q", m.Lang)
+	}
+	for _, bad := range []string{"", "x", "ja_JP", "en-", `ja"><script>`} {
+		_, err := e.publish(t, frag, store.Options{Lang: ptr(bad)}, "other")
+		if ue := wantUserErr(t, err, "invalid language"); !strings.Contains(ue.Ja, "BCP 47") {
+			t.Errorf("--lang %q: ja = %q", bad, ue.Ja)
+		}
+	}
+}
