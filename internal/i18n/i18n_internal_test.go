@@ -131,7 +131,12 @@ func TestCatalogMsg(t *testing.T) {
 	}
 }
 
-var verbRe = regexp.MustCompile(`%(?:\[(\d+)\])?[-+# 0]*\d*(?:\.\d+)?([a-zA-Z%])`)
+var (
+	verbRe = regexp.MustCompile(`%(?:\[(\d+)\])?[-+# 0]*\d*(?:\.\d+)?([a-zA-Z%])`)
+	// starRe finds a width or precision taken from an argument (%*s, %.*f), which shifts the
+	// arguments after it. Catalogs do not use it, so verbs need not count it.
+	starRe = regexp.MustCompile(`%(?:\[\d+\])?[-+# 0]*(?:\*|\d*\.\*)`)
+)
 
 // verbs maps each argument a message formats, by its position, to the verbs it uses (sorted; an
 // argument formatted twice, %[1]s and %[1]q, keeps both).
@@ -178,10 +183,18 @@ func TestVerbs(t *testing.T) {
 	}
 }
 
-// mismatches lists what keeps the catalogs from matching English: a missing or extra key, or a message
-// that formats other arguments or verbs than its English one.
+// mismatches lists what keeps the catalogs from matching English: a missing or extra key, a message
+// that formats other arguments or verbs than its English one, or a * width or precision in any
+// language, which verbs would not count.
 func mismatches(tables map[Lang]map[string]string) []string {
 	var found []string
+	for lang, table := range tables {
+		for key, msg := range table {
+			if starRe.MatchString(msg) {
+				found = append(found, string(lang)+" uses * in "+key)
+			}
+		}
+	}
 	en := tables[English]
 	for lang, table := range tables {
 		if lang == English {
@@ -210,10 +223,13 @@ func TestMismatches(t *testing.T) {
 	t.Parallel()
 
 	got := mismatches(map[Lang]map[string]string{
-		English: {"a": "%s", "b": "%s %d", "c": "plain", "d": "%[1]s %[1]q"},
-		"ja":    {"a": "%d", "b": "%[2]d %[1]s", "d": "%[1]s %[1]s", "x": "extra"},
+		English: {"a": "%s", "b": "%s %d", "c": "plain", "d": "%[1]s %[1]q", "e": "%*d", "f": "%d%%"},
+		"ja":    {"a": "%d", "b": "%[2]d %[1]s", "d": "%[1]s %[1]s", "e": "%*d", "f": "%.*f", "x": "extra"},
 	})
-	want := []string{"ja formats a differently", "ja formats d differently", "ja has extra x", "ja lacks c"}
+	want := []string{
+		"en uses * in e", "ja formats a differently", "ja formats d differently", "ja formats f differently",
+		"ja has extra x", "ja lacks c", "ja uses * in e", "ja uses * in f",
+	}
 	if !slices.Equal(got, want) {
 		t.Errorf("mismatches = %q, want %q", got, want)
 	}
