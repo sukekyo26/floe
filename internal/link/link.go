@@ -35,10 +35,16 @@ func Check(path, home string) error {
 			path+" は通常の HTML ファイル（.html / .htm）ではありません",
 		)
 	}
-	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories.
-	if resolved, err := filepath.EvalSymlinks(home); err == nil {
-		home = resolved
+	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories. A home
+	// that cannot be resolved (missing, or empty and so ".") leaves the real one unknown: refuse.
+	resolvedHome, err := filepath.EvalSymlinks(home)
+	if err != nil || !filepath.IsAbs(resolvedHome) {
+		return usererr.New(
+			fmt.Sprintf(`cannot resolve the home directory "%s"; set HOME to an existing absolute directory`, home),
+			fmt.Sprintf("ホームディレクトリ「%s」を解決できないので、登録できるかを確かめられません。HOME に存在するディレクトリの絶対パスを設定してください", home),
+		)
 	}
+	home = resolvedHome
 	// A hidden file right under home (~/.x.html) is not in a hidden directory; the next check refuses it.
 	rest, underHome := strings.CutPrefix(path, home+string(filepath.Separator))
 	if underHome && strings.HasPrefix(rest, ".") && strings.ContainsRune(rest, filepath.Separator) {

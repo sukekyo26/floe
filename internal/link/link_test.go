@@ -186,6 +186,13 @@ func TestCheck(t *testing.T) {
 			t.Errorf("Check(%s) = %v, want it refused as not real", p, err)
 		}
 	}
+	// A home that cannot be resolved leaves the real one unknown, so nothing passes.
+	for _, h := range []string{"", filepath.Join(tmp, "no-such-home")} {
+		if err := link.Check(filepath.Join(realHome, "proj", "ok.HTM"), h); err == nil ||
+			!strings.Contains(err.Error(), "cannot resolve the home directory") {
+			t.Errorf("Check with home %q = %v, want it refused", h, err)
+		}
+	}
 
 	tests := []struct {
 		path string
