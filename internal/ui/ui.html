@@ -10,17 +10,17 @@
 <!-- display=block, as in template.html: text waits for the fonts instead of flickering from a fallback face -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700..800&family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=block">
 <script>
-  // 保存したテーマを描画前に当て、読み込み時に OS の配色で一瞬光らないようにする
+  // Apply the saved theme before the first paint, so the page does not flash in the OS's scheme while loading
   try {
     const theme = localStorage.getItem('artifacts.theme');
     if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
   } catch {
-    // 保存先を使えなければ OS に合わせる
+    // Without storage, follow the OS
   }
 </script>
 <style>
-  /* 管理画面（/）とページの外枠（/a/<slug>/）を兼ねる。共通の見出しバーの下に、一覧か iframe のどちらかを出す */
-  /* 色はライトとダークを light-dark() で並べて持つ。テーマは color-scheme で決まり、選んだテーマは data-theme で上書きする */
+  /* Both the management page (/) and the frame around a page (/a/<slug>/): under the shared header bar it shows either the list or an iframe */
+  /* Colors hold light and dark side by side with light-dark(). color-scheme picks the theme, and a chosen theme overrides it through data-theme */
   :root {
     --bg: light-dark(#f6f7f9, #17191f); --panel: light-dark(#fff, #20232b); --subtle: light-dark(#f0f2f5, #282b34);
     --hover: light-dark(#f8f9fb, #272a33); --fg: light-dark(#0d1220, #eef0f4); --muted: light-dark(#5a6273, #b0b6c4);
@@ -31,7 +31,7 @@
     --scrim: light-dark(rgb(13 18 32 / 0.4), rgb(0 0 0 / 0.6));
     --shadow-sm: 0 1px 2px light-dark(rgb(16 24 40 / 0.06), rgb(0 0 0 / 0.3));
     --shadow: 0 1px 2px light-dark(rgb(16 24 40 / 0.04), rgb(0 0 0 / 0.3)), 0 10px 30px -14px light-dark(rgb(16 24 40 / 0.16), rgb(0 0 0 / 0.5));
-    /* 本文とコードの書体は雛形（template.html）とそろえる。ロゴの文字だけ Bricolage Grotesque にする */
+    /* Text and code use the template's faces (template.html); only the logo is in Bricolage Grotesque */
     --body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", monospace;
     --bar: 3.5rem;
@@ -42,7 +42,7 @@
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
-  /* 上部にだけ淡い光を置く。外枠ではページの邪魔になるので出さない */
+  /* A faint glow at the top only; not in the frame, where it would get in the page's way */
   body::before {
     content: ""; position: fixed; inset: 0 0 auto; height: 30rem; z-index: -1; pointer-events: none;
     background:
@@ -58,7 +58,7 @@
     position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--line);
     background: color-mix(in srgb, var(--panel) 72%, transparent); backdrop-filter: saturate(1.6) blur(14px);
   }
-  /* 一覧と外枠で同じ位置に出すため、幅は本文に合わせず画面いっぱいにする */
+  /* Full width rather than the text's, so that the list and the frame put things in the same place */
   .bar-inner { padding: 0 16px; height: var(--bar); display: flex; align-items: center; gap: 0.75rem; }
   .brand { display: flex; align-items: center; gap: 0.6rem; flex: none; color: var(--fg); text-decoration: none; font: 800 1.2rem/1 "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -0.03em; }
   .brand svg { width: 26px; height: 26px; flex: none; filter: drop-shadow(0 2px 6px rgb(91 179 164 / 35%)); }
@@ -82,7 +82,7 @@
   .server.down::before { background: var(--danger); animation: none; }
   @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 45%, transparent); } 50% { box-shadow: 0 0 0 4px transparent; } }
 
-  /* 外枠: 見出しバーの下を iframe で埋める。本体の背景が無いページはブラウザ既定の白で見せる */
+  /* The frame: the iframe fills the space under the header bar. A page without a background of its own shows on the browser's default white */
   body.framed { height: 100dvh; display: flex; flex-direction: column; }
   .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; }
   .notfound { flex: 1; align-content: center; }
@@ -150,7 +150,7 @@
   .chip.project::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--glyph-fg); }
   .chip .n { font: 0.68rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
   .chip.none { border-style: dashed; }
-  /* お気に入りはプロジェクトと掛け合わせる別の条件なので、チップと形を変えたオン／オフの切り替えにし、線で区切る */
+  /* Favourites are a separate condition combined with the project, so they are an on/off switch shaped unlike the chips, set apart by a line */
   .fav-toggle {
     display: inline-flex; align-items: center; gap: 0.4rem; flex: none; padding: 0.22rem 0.7rem 0.22rem 0.55rem; font-size: 0.8rem; color: var(--muted);
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px; transition: background-color 0.15s, border-color 0.15s, color 0.15s;
@@ -167,12 +167,12 @@
   .chip[aria-pressed="true"] .n { color: inherit; opacity: 0.65; }
   .count { margin-left: auto; flex: none; font: 0.74rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
 
-  /* var(--h) は宣言した要素で解決されるので、色は --h を持つ要素の上で組み立てる */
+  /* var(--h) resolves where it is declared, so colors are built on the element that has --h */
   li, .chip.project {
     --glyph-bg: light-dark(hsl(var(--h) 85% 95%), hsl(var(--h) 30% 24%)); --glyph-fg: light-dark(hsl(var(--h) 55% 40%), hsl(var(--h) 80% 76%));
   }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: var(--shadow); }
-  /* 行は subgrid で列を共有し、タグ・URL 名・時刻・操作の位置を行どうしでそろえる */
+  /* Rows share columns through subgrid, so tags, slugs, times and actions line up from row to row */
   ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto auto minmax(0, 1fr) repeat(4, auto); }
   li {
     --h: 225; position: relative; grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; column-gap: 0.85rem;
@@ -193,7 +193,7 @@
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--glyph-fg) 14%, transparent);
   }
   .glyph.none { color: var(--faint); background: var(--subtle); box-shadow: inset 0 0 0 1px var(--line); }
-  /* チェックボックスは行のリンクの当たり判定より上に出す。label で押せる範囲を広げる */
+  /* The checkbox sits above the row link's hit area; the label widens what can be clicked */
   .pick { position: relative; z-index: 1; display: grid; place-items: center; width: 22px; height: 30px; margin-right: -0.35rem; cursor: pointer; }
   .sel {
     width: 16px; height: 16px; margin: 0; cursor: pointer; appearance: none; background: var(--panel);
@@ -206,14 +206,14 @@
       linear-gradient(135deg, var(--accent), var(--accent-2));
   }
   li:has(.sel:checked) { background: color-mix(in srgb, var(--accent-soft) 70%, var(--panel)); }
-  /* キーボードで選んだ行は行全体を囲む。タイトル自体の枠は出さない */
+  /* A row reached by keyboard is outlined as a whole, without an outline on the title itself */
   a.title:focus-visible { outline: none; }
   li:has(a.title:focus-visible) { box-shadow: inset 0 0 0 2px var(--accent); }
   li:has(a.title:focus-visible)::before { opacity: 1; }
-  /* タイトルの下に説明（リンクはその後ろにパス）を置き、収まらない分は省略する */
+  /* Under the title: the description (and, for a link, its path after it), cut off where it does not fit */
   .body { display: grid; gap: 0.05rem; min-width: 0; }
   .body > a.title, .sub > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* 行全体をリンクの当たり判定にし、操作部品だけをその上に出す */
+  /* The whole row is the link's hit area; only the controls sit above it */
   a.title { justify-self: start; max-width: 100%; color: var(--fg); font-weight: 600; text-decoration: none; scroll-margin-block: 10rem 5rem; }
   a.title::after { content: ""; position: absolute; inset: 0; }
   li:hover a.title { color: var(--accent); }
@@ -272,7 +272,7 @@
   }
   @media (hover: none) { .keys { display: none; } }
 
-  /* 選択中だけ下に浮かぶ操作バー */
+  /* The action bar that floats at the bottom while items are selected */
   .toasts { position: fixed; right: 16px; bottom: 1.25rem; z-index: 40; display: grid; gap: 0.5rem; justify-items: end; pointer-events: none; }
   .toast {
     display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.95rem; font-size: 0.84rem; font-weight: 550;
@@ -281,7 +281,7 @@
   }
   .toast svg { width: 16px; height: 16px; flex: none; color: var(--good); }
   @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
-  /* 選択中は操作バーの分だけ下に余白を空け、最後の行に重ねない */
+  /* While items are selected, leave room for the action bar so that it does not cover the last row */
   .shell:has(.bulk:not([hidden])) { padding-bottom: 6rem; }
   .bulk {
     position: fixed; left: 50%; bottom: 1.25rem; z-index: 20; translate: -50% 0; display: flex; align-items: center; gap: 0.4rem;
@@ -329,7 +329,7 @@
   .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
 
   @media (max-width: 64rem) { li .slug { display: none; } }
-  /* 狭い幅では説明・パスとメタ情報を 2 行目に回す */
+  /* On narrow screens, the description, the path and the details move to a second line */
   @media (max-width: 40rem) {
     .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
     ul { display: block; }
@@ -381,7 +381,7 @@
   <h1 class="sr-only">floe</h1>
   <div class="toolbar">
     <div class="controls">
-      <!-- 一覧を切り替えるボタン。WAI-ARIA の tabs（矢印キー移動・tabpanel）は実装しないので、チップと同じ aria-pressed にする -->
+      <!-- Buttons that switch the list. They do not implement WAI-ARIA tabs (arrow keys, tabpanel), so they use aria-pressed like the chips -->
       <div class="tabs" role="group" aria-label="{{.Msg "ui_kind"}}">
         <button type="button" data-tab="pages">{{.Msg "ui_tab_pages"}}<span class="n"></span></button>
         <button type="button" data-tab="links">{{.Msg "ui_tab_links"}}<span class="n"></span></button>
@@ -457,7 +457,7 @@
     <button type="button" class="btn danger" id="bulk-delete"></button>
   </div>
 </main>
-<!-- ページ内のコピーや全画面のボタンを動かす。ページは sandbox で opaque origin になり、既定の 'src' に一致しないので * にする -->
+<!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
 <iframe class="frame" id="frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="state notfound" id="notfound" hidden>
@@ -561,7 +561,7 @@
 </template>
 <script>
   const $ = (id) => document.getElementById(id);
-  // 文言はサーバーが閲覧者の言語で埋めた ui_ の書式。書式は Go の fmt と同じ %s・%d・%[n]s・%% だけを使う
+  // Messages are the ui_ formats the server filled in for the reader's language. They use only %s, %d, %[n]s and %%, as Go's fmt does
   const MSG = {{.Messages}};
   const LANG = document.documentElement.lang;
   function t(key, ...args) {
@@ -573,29 +573,29 @@
     });
   }
   let items = [];
-  // /a/<slug>/ ならページの外枠として動く（サーバーが同じ HTML を返す）
+  // At /a/<slug>/ this is the frame around a page (the server returns the same HTML)
   const framed = location.pathname.match(/^\/a\/([^/]+)\/$/)?.[1];
-  // ページ内の外枠の URL へのリンクは、付加スクリプトの知らせでタブごと移る。送り手は sandbox のページなので、
-  // この iframe からの知らせで、同じ origin の外枠の URL のときだけ従う（javascript: などへは移らない）
+  // A link in the page to a frame URL moves the whole tab, on a message from the script added to the page. The sender is the sandboxed page,
+  // so only messages from this iframe naming a frame URL of this origin are followed (never javascript: and the like)
   if (framed) addEventListener('message', (e) => {
     const to = e.source === $('frame').contentWindow && typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
     if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) location.href = to.href;
   });
-  // 保存したページ（pages）と、絶対パスで登録したリンク（links）をタブで分ける
+  // Stored pages (pages) and links registered by absolute path (links) are on separate tabs
   const inTab = (a, t = tab) => Boolean(a.path) === (t === 'links');
-  // 生成元を記録する前のページ。project はディレクトリ名で / を含まないので衝突しない
+  // Pages from before the project was recorded. A project is a directory name without /, so this cannot clash
   const NONE = '/';
   const SIZES = [10, 20, 50, 100];
   const SIZE_KEY = 'artifacts.pageSize';
   let size = SIZES[0];
-  // 並び順。updated はサーバーの並び（更新が新しい順）のまま使う
+  // Sort orders. updated keeps the server's order (newest first)
   const SORTS = {
     updated: null,
     created: (x, y) => (y.createdAt ?? '').localeCompare(x.createdAt ?? ''),
     title: (x, y) => x.title.localeCompare(y.title, LANG),
   };
-  // 一覧の状態（タブ・プロジェクト・検索語・並び順・ページ番号）は URL に持ち、再読み込みで同じ一覧を開く。
-  // 同じ内容をタブ内にも残し、ページ表示中の前後移動と「一覧へ戻る」に使う
+  // The list's state (tab, project, search, sort, page number) lives in the URL, so a reload opens the same list.
+  // It is also kept for the tab, for moving between pages in the frame and for going back to the list
   const LIST_KEY = 'artifacts.list';
   function readState(search) {
     const p = new URLSearchParams(search);
@@ -609,16 +609,16 @@
     };
   }
   let { tab, project, sort, page, fav } = readState(location.search);
-  // 選択した slug。絞り込みやタブを変えたら解除する（見えない項目を消さないように）。ページをまたいだ選択は残す
+  // The selected slugs. Changing a filter or the tab clears them (so that nothing unseen is deleted); a selection across pages stays
   const selected = new Set();
-  // LIMIT: 一覧の変化と接続の回復は 3 秒ごとの取り直しで拾う。件数が数百を超えて重くなったら SSE で変化だけを通知する
+  // LIMIT: changes to the list and a recovered connection are picked up by refetching every 3 s. If hundreds of entries make that heavy, push only the changes over SSE
   const POLL_MS = 3000;
-  // 表示件数は閲覧者の好みとしてブラウザに残す。保存できない環境では既定値で動く
+  // The page size is the viewer's preference, kept in the browser; without storage the default applies
   try {
     const saved = Number(localStorage.getItem(SIZE_KEY));
     if (SIZES.includes(saved)) size = saved;
   } catch {
-    // 保存先を使えない
+    // Storage is unavailable
   }
 
   const fmt = (iso) => new Date(iso).toLocaleString(LANG, { dateStyle: 'medium', timeStyle: 'short' });
@@ -636,7 +636,7 @@
     $('error').hidden = !msg;
   }
 
-  // つながっている間は点だけを出し、切れたときだけ文で知らせる。アドレスはアドレスバーと同じなので出さない
+  // Only a dot while connected, and words only when the connection is lost. The address is the one in the address bar, so it is not shown
   function setServer(ok) {
     const label = t(ok ? 'ui_server_up' : 'ui_server_down_host', location.host);
     $('server').textContent = ok ? '' : t('ui_server_down');
@@ -645,7 +645,7 @@
     $('server').classList.toggle('down', !ok);
   }
 
-  // 接続表示は「サーバーに届いたか」だけで決める。HTTP エラーでも応答があれば届いている
+  // The connection state only says whether the server was reached; an HTTP error is still an answer
   async function api(url, init) {
     try {
       const res = await fetch(url, init);
@@ -657,7 +657,7 @@
     }
   }
 
-  // 既定値（pages タブ・すべて・空の検索・1 ページ目）は URL から省く
+  // Defaults (the pages tab, all projects, no search, the first page) are left out of the URL
   function syncUrl() {
     const url = new URL(location.href);
     const state = {
@@ -672,11 +672,11 @@
     try {
       sessionStorage.setItem(LIST_KEY, url.search);
     } catch {
-      // 保存できなければ、ページ表示中の前後移動は全件の更新順になる
+      // Without storage, moving between pages in the frame follows all entries by update time
     }
   }
 
-  // 一覧に出す項目を、タブ・プロジェクト・検索語・並び順に従って並べる。一覧とページ表示中の前後移動で共通
+  // Picks and orders the entries by tab, project, search and sort; shared by the list and by moving between pages in the frame
   function arrange(state) {
     const q = state.q.trim().toLowerCase();
     const shown = items.filter((a) => inTab(a, state.tab) && (!state.fav || a.favorite)
@@ -694,7 +694,7 @@
     setTimeout(() => t.remove(), 3000);
   }
 
-  // 絞り込みを変えたら 1 ページ目から見せる
+  // A changed filter starts from the first page
   function refilter() {
     page = 1;
     selected.clear();
@@ -716,7 +716,7 @@
     try {
       localStorage.setItem(SIZE_KEY, String(size));
     } catch {
-      // 保存できなくても、この表示には効く
+      // Without storage it still applies to this view
     }
     refilter();
   }
@@ -727,11 +727,11 @@
     scrollTo(0, 0);
   }
 
-  // リンクを消しても元のファイルは残るので、「削除」（ui_delete_*）ではなく「登録解除」（ui_unlink_*）と書く
+  // Removing a link leaves its file alone, so it says unregister (ui_unlink_*) rather than delete (ui_delete_*)
   const kind = (a) => (a.path ? 'unlink' : 'delete');
   const tabKind = () => (tab === 'links' ? 'unlink' : 'delete');
 
-  // 2 回押して実行するボタン。1 回目で確認状態にして true を返し、フォーカスが外れたら戻す
+  // A button that acts on the second click. The first click arms it and returns true; losing focus disarms it
   function arm(btn, armedLabel) {
     if (btn.classList.contains('armed')) return false;
     btn.classList.add('armed');
@@ -750,7 +750,7 @@
     disarmBulk();
   }
 
-  // 失敗したときの理由を返す。もう無い（404）なら消せたものとして扱う
+  // Returns the reason of a failure. Already gone (404) counts as deleted
   async function deleteOne(slug) {
     try {
       const res = await api(`/api/artifacts/${slug}`, { method: 'DELETE' });
@@ -773,12 +773,12 @@
     renderBulk();
   }
 
-  // 相対時刻（「3 分前」など）は一覧を描き直さなくても進める
+  // Relative times ("3 minutes ago") advance without redrawing the list
   function refreshTimes() {
     for (const t of document.querySelectorAll('#list time')) t.textContent = ago(t.dateTime);
   }
 
-  // プロジェクトの色相。行のアイコン・タグ・チップで同じ色にする
+  // The project's hue, shared by the row's icon, its tag and the chip
   const hue = (name) => [...name].reduce((h, c) => (h * 31 + c.codePointAt(0)) % 360, 7);
 
   function chip(label, value, n, extra = '') {
@@ -799,7 +799,7 @@
   function renderChips(list) {
     const counts = new Map();
     for (const a of list) counts.set(a.project ?? NONE, (counts.get(a.project ?? NONE) ?? 0) + 1);
-    // 最後の 1 件を消しても選択が勝手に「すべて」へ戻らないよう、0 件でも選択肢に残す
+    // Kept as a choice even at 0, so that deleting the last entry does not jump the selection back to all
     if (project && !counts.has(project)) counts.set(project, 0);
     const names = [...counts.keys()].filter((k) => k !== NONE).sort((x, y) => x.localeCompare(y));
     const chips = [chip(t('ui_all_projects'), '', list.length), ...names.map((name) => chip(name, name, counts.get(name), 'project'))];
@@ -809,7 +809,7 @@
     $('fav').querySelector('.n').textContent = list.filter((a) => a.favorite).length;
   }
 
-  // 最小の表示件数に収まるなら、件数を切り替えても変わらないのでページ送りごと隠す
+  // If everything fits in the smallest page size, changing the size changes nothing, so the whole pager is hidden
   function renderPager(total, pages, start) {
     $('pager').hidden = total <= SIZES[0];
     $('sizes').replaceChildren(...SIZES.map((n) => {
@@ -861,14 +861,14 @@
     }
     li.querySelector('.slug').textContent = `/a/${a.slug}/`;
     li.querySelector('.slug').title = t('ui_slug_named', a.slug);
-    // 作成順で並べたときは作成日時を出す
+    // Sorted by creation, the creation time is shown
     const when = sort === 'created' && a.createdAt ? a.createdAt : a.updatedAt;
     const time = li.querySelector('time');
     time.dateTime = when;
     time.textContent = ago(when);
     time.title = [a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
       .filter(Boolean).join('\n');
-    // リンクは登録した場所のファイルを表示する。消えていれば開けないことを示す
+    // A link shows the file where it was registered; if the file is gone, the row says it cannot be opened
     if (a.path) {
       const path = document.createElement('span');
       path.className = a.missing ? 'path missing' : 'path';
@@ -897,7 +897,7 @@
     dl.setAttribute('aria-label', t('ui_download_named', a.title));
     if (a.missing) {
       link.removeAttribute('href');
-      // href が無いとフォーカスできず、↑↓ の移動がこの行の手前で止まる。スクリプトからは移れるようにする
+      // Without href it cannot take focus and ↑↓ would stop before this row, so scripts can still move to it
       link.tabIndex = -1;
       open.hidden = true;
       dl.hidden = true;
@@ -934,7 +934,7 @@
       if (choice === 'system') localStorage.removeItem(THEME_KEY);
       else localStorage.setItem(THEME_KEY, choice);
     } catch {
-      // 保存できなくても、この表示には効く
+      // Without storage it still applies to this view
     }
     for (const b of document.querySelectorAll('[data-theme-choice]')) b.setAttribute('aria-pressed', String(b.dataset.themeChoice === choice));
   }
@@ -955,7 +955,7 @@
     }, 1500);
   }
 
-  // 編集中の項目と、開いたときの値。変えた項目だけを送る（リンクのタイトルを触らなければファイルから取り続けるように）
+  // The entry being edited and its values when opened. Only changed fields are sent (so a link's title keeps coming from its file unless edited)
   let editing;
   const EDIT_FIELDS = { title: 'edit-name', slug: 'edit-slug', project: 'edit-project', description: 'edit-desc' };
 
@@ -1003,13 +1003,13 @@
     renderChips(list);
     const shown = arrange({ tab, fav, project, q: $('q').value, sort });
     $('sort').value = sort;
-    // 別の場所で消えた項目は選択から外す
+    // Entries deleted elsewhere leave the selection
     for (const slug of selected) if (!list.some((a) => a.slug === slug)) selected.delete(slug);
     $('count').textContent = shown.length === list.length ? t('ui_count_all', list.length) : t('ui_count_shown', shown.length, list.length);
     $('empty').hidden = tab !== 'pages' || list.length > 0;
     $('empty-links').hidden = tab !== 'links' || list.length > 0;
     $('nomatch').hidden = list.length === 0 || shown.length > 0;
-    // 削除で最後のページが空になったら、残っている最後のページに戻す
+    // If deleting empties the last page, go back to the last one left
     const pages = Math.max(1, Math.ceil(shown.length / size));
     page = Math.min(page, pages);
     const start = (page - 1) * size;
@@ -1019,13 +1019,13 @@
     syncUrl();
   }
 
-  // 開く前の一覧（タブ内に残した状態）の並びで前後へ移る。その一覧に無ければ、同じ種類の全件を更新順で使う
+  // Previous and next follow the list the page was opened from (kept for the tab); if the page is not in it, all entries of the same kind by update time
   function renderNeighbors(a) {
     let saved = '';
     try {
       saved = sessionStorage.getItem(LIST_KEY) ?? '';
     } catch {
-      // 保存先を使えない
+      // Storage is unavailable
     }
     const openable = (state) => arrange(state).filter((x) => !x.missing);
     let order = openable(readState(saved));
@@ -1058,7 +1058,7 @@
     $('frame').title = a?.title ?? framed;
     document.querySelector('.frame-nav').hidden = !found;
     if (found) renderNeighbors(a);
-    // 見つかってから読み込む（無いページの 404 を一瞬見せない）。一度読んだら src を変えず、iframe 内の移動を保つ
+    // Load only once found (so a missing page's 404 never flashes). Once loaded, src stays, keeping navigation inside the iframe
     if (found && !$('frame').hasAttribute('src')) $('frame').src = '?raw';
   }
 
@@ -1069,7 +1069,7 @@
     btn.setAttribute('aria-label', t(`ui_${kind(a)}_named`, a.title));
   }
 
-  // 1 回目のクリックで確認状態にし、2 回目で削除する
+  // The first click arms the button and the second deletes
   async function remove(a, btn) {
     if (arm(btn, t(`ui_${kind(a)}_confirm`))) {
       btn.setAttribute('aria-label', t(`ui_${kind(a)}_confirm_named`, a.title));
@@ -1083,11 +1083,11 @@
     selected.delete(a.slug);
     showError('');
     toast(t(`ui_${kind(a)}_done`, a.title));
-    // 取り直して描いた内容を記録する。手元で消すだけだと、次の取り直しで描き直しが起き、別の行の確認状態が解ける
+    // Refetch and record what was drawn. Removing the row locally would make the next refetch redraw the list and disarm another row
     await load();
   }
 
-  // 最後に描いた一覧の応答。変わっていなければ描き直さず、確認状態の削除ボタンやフォーカスを保つ
+  // The list response last drawn. An unchanged one is not redrawn, keeping armed delete buttons and focus
   let drawn = '';
   let loadFailed = false;
 
@@ -1103,7 +1103,7 @@
       showError(t('ui_load_failed', e.message));
       return;
     }
-    // 消すのは読み込みの失敗だけ。削除の失敗などは次の操作まで残す
+    // Only a load failure is cleared here; a failed delete and the like stays until the next action
     if (loadFailed) {
       loadFailed = false;
       showError('');
@@ -1125,7 +1125,7 @@
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ path: $('add-path').value, slug: $('add-slug').value, description: $('add-desc').value }),
       });
-      // サーバーは理由を 1 行のテキストで返す
+      // The server answers with the reason as one line of text
       if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
       const { slug } = await res.json();
       $('add').reset();
@@ -1145,7 +1145,7 @@
     document.body.classList.add('framed');
     $('frame-download').href = `/api/artifacts/${framed}/download`;
     $('frame-download').download = `${framed}.html`;
-    // 外枠にフォーカスがあるときだけ効く（iframe の中のキー操作はページのもの）
+    // Only while the frame has focus (keys inside the iframe belong to the page)
     document.addEventListener('keydown', (e) => {
       const link = { ArrowLeft: $('frame-prev'), ArrowRight: $('frame-next') }[e.key];
       if (!link?.href || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
@@ -1162,7 +1162,7 @@
     });
     $('edit').addEventListener('submit', saveEdit);
     for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
-    // 背景（dialog 自身）のクリックで閉じる。中身は form が埋めるので、枠内のクリックはここに来ない
+    // A click on the backdrop (the dialog itself) closes it; the form fills the dialog, so clicks inside never land here
     for (const d of document.querySelectorAll('dialog')) {
       d.addEventListener('click', (e) => {
         if (e.target === d) d.close();
@@ -1203,7 +1203,7 @@
       $('q').value = '';
       setProject('');
     });
-    // 文字入力中やモーダルを開いている間は効かせない。行の移動はタイトルのリンクにフォーカスを移すので、Enter はそのまま開く
+    // Not while typing or with a dialog open. Moving between rows focuses the title link, so Enter opens it
     const currentRow = () => [...$('list').children].find((li) => li.contains(document.activeElement));
     const moveRow = (step) => {
       const rows = [...$('list').children];
