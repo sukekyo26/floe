@@ -13,15 +13,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 )
 
 // The management page in headless Chrome, ported from the JS skill's test/artifact-ui.mjs. Each
-// scenario returns its observations joined by |, compared with the JS version's expectations.
+// scenario returns its observations joined by |, compared with the JS version's expectations. The
+// scenarios that read the page's wording run in every language with a catalog, expecting the wording
+// from it.
 
 func chrome(t *testing.T) string {
 	t.Helper()
@@ -44,7 +48,9 @@ type browser struct {
 	base string
 }
 
-func newBrowser(t *testing.T, base string) *browser {
+// newBrowser starts Chrome whose requests ask for lang (Accept-Language), as a reader of that
+// language would.
+func newBrowser(t *testing.T, base string, lang i18n.Lang) *browser {
 	t.Helper()
 
 	// Chrome's helper processes may still write to the profile after it exits, which t.TempDir's cleanup
@@ -76,9 +82,13 @@ func newBrowser(t *testing.T, base string) *browser {
 		cancel()
 		cancelAlloc()
 	})
-	// The first Run starts Chrome and ties it to ctx, so it must not get a shorter-lived context.
-	if err := chromedp.Run(ctx); err != nil {
+	// The first call starts Chrome and ties it to ctx, so it must not get a shorter-lived context.
+	if _, err := chromedp.Call(ctx, network.Enable, network.EnableParams{}); err != nil {
 		t.Fatalf("start Chrome: %v", err)
+	}
+	headers := network.SetExtraHTTPHeadersParams{Headers: network.Headers{"Accept-Language": string(lang)}}
+	if _, err := chromedp.Call(ctx, network.SetExtraHTTPHeaders, headers); err != nil {
+		t.Fatalf("set Accept-Language: %v", err)
 	}
 	return &browser{t: t, ctx: ctx, base: base}
 }
@@ -86,10 +96,11 @@ func newBrowser(t *testing.T, base string) *browser {
 // try evaluates the script expr (its last statement's value, awaited when a promise) and returns
 // JavaScript's String() of it.
 func (b *browser) try(expr string) (string, error) {
-	var s string
-	err := chromedp.Run(b.ctx, chromedp.Evaluate("(async () => String(await (0, eval)("+js(expr)+")))()", &s,
-		func(p *runtime.EvaluateParams) *runtime.EvaluateParams { return p.WithAwaitPromise(true) }))
-	return s, err
+	await := func(p *runtime.EvaluateParams) {
+		yes := true
+		p.AwaitPromise = &yes
+	}
+	return chromedp.Run(b.ctx, chromedp.Evaluate[string]("(async () => String(await (0, eval)("+js(expr)+")))()", await))
 }
 
 func (b *browser) eval(expr string) string {
@@ -132,7 +143,7 @@ func (b *browser) navigate(path string) {
 	b.t.Helper()
 
 	b.eval("window.leaving = true")
-	if err := chromedp.Run(b.ctx, chromedp.Navigate(b.base+path)); err != nil {
+	if err := chromedp.Do(b.ctx, chromedp.Navigate(b.base+path)); err != nil {
 		b.t.Fatalf("navigate %s: %v", path, err)
 	}
 	b.until(path+" to load", "!window.leaving && document.readyState === 'complete'")
@@ -141,7 +152,7 @@ func (b *browser) navigate(path string) {
 func (b *browser) click(x, y float64) {
 	b.t.Helper()
 
-	if err := chromedp.Run(b.ctx, chromedp.MouseClickXY(x, y)); err != nil {
+	if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(x, y)); err != nil {
 		b.t.Fatal(err)
 	}
 }
@@ -176,14 +187,31 @@ func check(t *testing.T, scenario string, out []string, want string) {
 	}
 }
 
+// inEveryLanguage runs scenario once for each language with a catalog, with that language's messages.
+func inEveryLanguage(t *testing.T, scenario func(t *testing.T, lang i18n.Lang, msg func(string, ...any) string)) {
+	t.Helper()
+
+	for _, lang := range i18n.Supported() {
+		t.Run(string(lang), func(t *testing.T) {
+			t.Parallel()
+			scenario(t, lang, i18n.New(lang).Msg)
+		})
+	}
+}
+
 func TestUIManage(t *testing.T) {
 	t.Parallel()
+	inEveryLanguage(t, uiManage)
+}
 
-	e := newEnv(t, time.Minute)
+func uiManage(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
+	t.Helper()
+
+	e := newEnv(t)
 	e.publish(t, e.write(t, "untitled.html", "<p>untitled</p>\n"), store.Options{})
 	time.Sleep(2 * time.Millisecond)
 	e.publish(t, e.write(t, "My Demo.html", "<title>Demo Page</title><p>hi</p>\n"), store.Options{})
-	b := newBrowser(t, e.base)
+	b := newBrowser(t, e.base, lang)
 
 	const titles = "[...document.querySelectorAll('#list li .title')].map((a) => a.textContent).join(',')"
 	const rows = "document.querySelectorAll('#list li').length"
@@ -205,7 +233,7 @@ func TestUIManage(t *testing.T) {
 	out = append(out, b.until("the list to render", titles))
 	out = append(out, b.eval("(() => { const d = document.querySelector('#list li .download'); const o = document.querySelector('#list li .open'); "+
 		"return `${d.getAttribute('href')} ${d.getAttribute('download')} ${o.getAttribute('href')} ${o.target}`; })()"))
-	// A row's project tag filters by it and keeps the choice in the URL; the "全プロジェクト" chip clears it.
+	// A row's project tag filters by it and keeps the choice in the URL; the all-projects chip clears it.
 	out = append(out, b.eval(`(() => {
 		const tag = document.querySelector('#list li .tag');
 		tag.click();
@@ -232,8 +260,8 @@ func TestUIManage(t *testing.T) {
 	b.eval("window.realFetch = window.fetch; window.fetch = () => Promise.reject(new TypeError('Failed to fetch'))")
 	clickDelete("Demo Page")
 	clickDelete("Demo Page")
-	out = append(out, b.until("the delete error",
-		"(() => { const e = document.getElementById('error'); return !e.hidden && e.textContent.includes('削除できませんでした'); })()"))
+	out = append(out, b.until("the delete error", "(() => { const e = document.getElementById('error'); "+
+		"return !e.hidden && e.textContent === "+js(msg("ui_delete_failed", "Demo Page", "Failed to fetch"))+"; })()"))
 	out = append(out, b.eval(rows), b.eval(down))
 	b.eval("window.fetch = window.realFetch")
 	// The button stays armed, so one more click deletes, and reaching the server turns the indicator up.
@@ -269,8 +297,8 @@ func TestUIManage(t *testing.T) {
 	out = append(out, b.eval(pager)+" "+b.eval("localStorage.getItem('artifacts.pageSize')")+" "+b.eval("location.search === ''"))
 
 	check(t, "manage", out, "Demo Page,untitled|/api/artifacts/my-demo/download my-demo.html /a/my-demo/?raw _blank|"+
-		"2 true true|true|1|untitled|1|本当に削除|2|Demo Page|my-demo|true|1|true|true|false|true|true|add-path false|true|"+
-		"10 1 / 3 false|10 2 / 3 false|2|20 1 / 2 false 20 true")
+		"2 true true|true|1|untitled|1|"+msg("ui_delete_confirm")+"|2|Demo Page|my-demo|true|1|true|true|false|true|true|"+
+		"add-path false|true|10 1 / 3 false|10 2 / 3 false|2|20 1 / 2 false 20 true")
 }
 
 // extrasStub answers the list and records the writes in window.calls.
@@ -300,9 +328,14 @@ const extrasStub = `(() => {
 // a path, switches the theme and steps through neighbours, against a stubbed list.
 func TestUIExtras(t *testing.T) {
 	t.Parallel()
+	inEveryLanguage(t, uiExtras)
+}
 
-	e := newEnv(t, time.Minute)
-	b := newBrowser(t, e.base)
+func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
+	t.Helper()
+
+	e := newEnv(t)
+	b := newBrowser(t, e.base, lang)
 	b.navigate("/")
 	b.eval(extrasStub)
 	const titles = "[...document.querySelectorAll('#list .title')].map((a) => a.textContent).join(',')"
@@ -349,18 +382,20 @@ func TestUIExtras(t *testing.T) {
 	out = append(out, b.eval("[document.getElementById('edit-dialog').open, document.getElementById('edit-desc').value].join(' ')"))
 	b.eval("document.getElementById('edit-desc').value = 'new'; document.getElementById('edit').requestSubmit()")
 	b.until("the edit modal to close", "!document.getElementById('edit-dialog').open")
-	out = append(out, b.eval("calls.splice(0).join(',')"), b.eval("document.getElementById('toasts').textContent.includes('保存しました')"))
+	out = append(out, b.eval("calls.splice(0).join(',')"),
+		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_saved"))+")"))
 	// Only linked files have a copy button for their path.
 	out = append(out, b.eval("document.querySelector('#list li .copy').hidden"))
 	b.eval("document.querySelector('.tabs [data-tab=links]').click()")
 	b.eval("document.querySelector('#list li .copy').click()")
-	out = append(out, b.until("the copy", "calls.join(',')"), b.eval("document.getElementById('toasts').textContent.includes('パスをコピーしました')"))
+	out = append(out, b.until("the copy", "calls.join(',')"),
+		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_path_copied"))+")"))
 	// A link whose file is gone has no href, but ↓ still reaches it.
 	b.eval("document.activeElement.blur()")
 	key("ArrowDown")
 	key("ArrowDown")
 	out = append(out, b.eval("document.activeElement.textContent"))
-	// The theme switch overrides the OS setting and is remembered; "OS に合わせる" drops the override.
+	// The theme switch overrides the OS setting and is remembered; the system choice drops the override.
 	b.eval("document.querySelector('[data-theme-choice=dark]').click()")
 	out = append(out, b.eval("[document.documentElement.dataset.theme, getComputedStyle(document.body).backgroundColor, localStorage.getItem('artifacts.theme')].join(' ')"))
 	b.eval("document.querySelector('[data-theme-choice=system]').click()")
@@ -374,8 +409,11 @@ func TestUIExtras(t *testing.T) {
 		"['frame-prev', 'frame-next'].map((id) => document.getElementById(id).getAttribute('href'))"+
 		".concat(document.getElementById('frame-pos').textContent, document.querySelector('.brand').getAttribute('href')).join(' ')"))
 
+	// The time's tooltip lines start with the label of their format ("Created %s").
+	label := func(key string) string { return strings.Fields(msg(key, ""))[0] }
 	check(t, "extras", out, `Beta,Alpha,Gamma|Gamma,Beta,Alpha created|Alpha,Beta,Gamma|Gamma 1|`+
-		`PATCH /api/artifacts/a {"favorite":true}|作成 更新|Beta|1 件を選択中|2 件を選択中|本当に 2 件を削除|`+
+		`PATCH /api/artifacts/a {"favorite":true}|`+label("ui_created_at")+" "+label("ui_updated_at")+`|Beta|`+
+		msg("ui_selected", 1)+"|"+msg("ui_selected", 2)+"|"+msg("ui_delete_bulk_confirm", 2)+"|"+
 		`DELETE /api/artifacts/a,DELETE /api/artifacts/b|true old|PATCH /api/artifacts/a {"description":"new"}|true|true|`+
 		`copy /tmp/x/l.html|true|Missing|dark rgb(23, 25, 31) dark|undefined|/a/a/ /a/c/ 2 / 3 /?sort=title`)
 }
@@ -389,8 +427,9 @@ const listening = "(window.listening ||= (addEventListener('message', (e) => { w
 func TestUIReload(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, time.Minute)
-	b := newBrowser(t, e.base)
+	e := newEnv(t)
+	// The page's wording plays no part here, so one language is enough.
+	b := newBrowser(t, e.base, i18n.English)
 	publish := func(name, slug, body string) {
 		time.Sleep(2 * time.Millisecond) // a republish in the same millisecond would keep the version
 		e.publish(t, e.write(t, filepath.Join("live", name), body), store.Options{Slug: &slug})
@@ -476,8 +515,8 @@ func leave(t *testing.T, e *env, b *browser, publish func(name, slug, body strin
 			continue
 		}
 		tctx, cancel := chromedp.NewContext(b.ctx, chromedp.WithTargetID(info.TargetID))
-		var origin string
-		if err := chromedp.Run(tctx, chromedp.Evaluate("self.origin", &origin)); err != nil {
+		origin, err := chromedp.Run(tctx, chromedp.Evaluate[string]("self.origin"))
+		if err != nil {
 			t.Fatal(err)
 		}
 		if origin == other.URL {
