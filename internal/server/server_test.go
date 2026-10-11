@@ -182,7 +182,7 @@ func TestManagementPageAndFrame(t *testing.T) {
 
 	for _, target := range []string{"/", "/a/untitled/"} {
 		r := e.get(t, target)
-		if r.status != http.StatusOK || !strings.Contains(r.body, "<title>Artifacts</title>") || r.header.Get("Content-Security-Policy") != "" {
+		if r.status != http.StatusOK || !strings.Contains(r.body, "<title>floe</title>") || r.header.Get("Content-Security-Policy") != "" {
 			t.Errorf("GET %s = %d, CSP %q", target, r.status, r.header.Get("Content-Security-Policy"))
 		}
 	}
@@ -438,7 +438,7 @@ func TestLinkedFile(t *testing.T) {
 		t.Errorf("an asset: %v %q", r.header, r.body)
 	}
 	if r := e.get(t, "/a/site/sub/p.html"); !strings.Contains(r.body, "<title>Sub</title>") ||
-		!strings.Contains(r.body, `new window.EventSource("/api/events/site/sub/p.html?since=`) || strings.Contains(r.body, "Artifacts") {
+		!strings.Contains(r.body, `new window.EventSource("/api/events/site/sub/p.html?since=`) || strings.Contains(r.body, "<title>floe</title>") {
 		t.Errorf("an HTML page under the link: %s", r.body)
 	}
 	if r := e.get(t, "/a/site/a%20b%23.html"); !strings.Contains(r.body, `EventSource("/api/events/site/a%20b%23.html?since=`) {
