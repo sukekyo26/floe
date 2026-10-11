@@ -411,7 +411,6 @@ func TestDelete(t *testing.T) {
 	}
 }
 
-// site links a directory with assets, dot paths, an escaping symlink and FIFOs.
 // TestLinkedFileSwappedForSymlink replaces a registered file with a symlink after registering it: the
 // link is served from its real path only, so the page and its download are 404 and the list shows it
 // as missing, titled by its slug.
@@ -438,6 +437,7 @@ func TestLinkedFileSwappedForSymlink(t *testing.T) {
 	}
 }
 
+// site links a directory with assets, dot paths, an escaping symlink and FIFOs.
 func site(t *testing.T, e *env) string {
 	t.Helper()
 
