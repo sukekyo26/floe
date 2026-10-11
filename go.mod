@@ -5,6 +5,7 @@ go 1.27.2
 require (
 	github.com/chromedp/cdproto v0.157.9
 	github.com/chromedp/chromedp v0.21.0
+	github.com/goccy/go-yaml v1.19.2
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/sys v0.48.0
 )
