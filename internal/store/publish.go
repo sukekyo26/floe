@@ -144,6 +144,8 @@ func (s *Store) read(file string, isLink bool, cwd string) (path, html string, e
 // createdAt from base; --title and --description win.
 func newMeta(opts Options, path, from string, base *Meta, html, slug string) Meta {
 	keepTitle := opts.Title == nil && base.TitleEdited
+	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
+	now := Now()
 	m := Meta{
 		Path:          path,
 		Title:         title(opts, path, keepTitle, base, html, slug),
@@ -153,8 +155,8 @@ func newMeta(opts Options, path, from string, base *Meta, html, slug string) Met
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",
 		Favorite:      base.Favorite,
-		CreatedAt:     cmp.Or(base.CreatedAt, Now()),
-		UpdatedAt:     Now(),
+		CreatedAt:     cmp.Or(base.CreatedAt, now),
+		UpdatedAt:     now,
 	}
 	if opts.Description != nil {
 		m.Description = *opts.Description
