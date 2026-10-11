@@ -9,7 +9,7 @@ type Error struct {
 	Conflict bool
 }
 
-// New returns an Error; an empty ja falls back to msg.
+// New returns an *Error; an empty ja falls back to msg.
 func New(msg, ja string) *Error {
 	if ja == "" {
 		ja = msg
