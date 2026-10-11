@@ -85,11 +85,20 @@ func TestStartsAsDocument(t *testing.T) {
 func TestWrap(t *testing.T) {
 	t.Parallel()
 
+	t.Run("the language goes on <html>", func(t *testing.T) {
+		t.Parallel()
+
+		got, err := page.Wrap("<p>こんにちは</p>", "t", "ja")
+		if err != nil || !strings.Contains(string(got), `<html lang="ja">`) {
+			t.Errorf("Wrap with ja = %.80q, %v", got, err)
+		}
+	})
+
 	t.Run("a document is kept as is", func(t *testing.T) {
 		t.Parallel()
 
 		doc := "<!doctype html><title>Doc</title><p>x</p>\n"
-		got, err := page.Wrap(doc, "ignored")
+		got, err := page.Wrap(doc, "ignored", "ja")
 		if err != nil || string(got) != doc {
 			t.Errorf("Wrap = %q, %v; want the document unchanged", got, err)
 		}
@@ -99,13 +108,16 @@ func TestWrap(t *testing.T) {
 		t.Parallel()
 
 		frag := "  <h1>A &amp; <em>B</em></h1>\n<p>keeps $& and $1 and {{.Content}}</p>\n\n"
-		got, err := page.Wrap(frag, `A & B "{{.Content}}"`)
+		got, err := page.Wrap(frag, `A & B "{{.Content}}"`, "")
 		if err != nil {
 			t.Fatal(err)
 		}
 		s := string(got)
 		if !strings.HasPrefix(strings.ToLower(s), "<!doctype html>\n") {
 			t.Errorf("wrapped page starts with %.30q, want <!doctype html>", s)
+		}
+		if !strings.Contains(s, `<html lang="en">`) {
+			t.Error("a wrapped page without a language is not in English")
 		}
 		if !strings.Contains(s, `<meta name="generator" content="floe template">`) {
 			t.Error("wrapped page lacks the template's generator mark")

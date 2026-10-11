@@ -12,8 +12,12 @@ import (
 	"github.com/sukekyo26/floe/internal/ui"
 )
 
-// SniffSize is how much of a page StartsAsDocument looks at.
-const SniffSize = 1024
+const (
+	// SniffSize is how much of a page StartsAsDocument looks at.
+	SniffSize = 1024
+	// DefaultLang is the language of a wrapped page unless the publisher names another.
+	DefaultLang = "en"
+)
 
 var (
 	// An SVG <title> describes the figure, so it neither titles the page nor marks a document.
@@ -63,17 +67,22 @@ func StartsAsDocument(head []byte) bool {
 	return documentRe.Match(head)
 }
 
-// Wrap returns html as is when it is a document, and otherwise the template around it.
-func Wrap(html, title string) ([]byte, error) {
+// Wrap returns html as is when it is a document, and otherwise the template around it, in the language
+// lang (a BCP 47 tag; "" is DefaultLang).
+func Wrap(html, title, lang string) ([]byte, error) {
 	if IsDocument(html) {
 		return []byte(html), nil
+	}
+	if lang == "" {
+		lang = DefaultLang
 	}
 	var b bytes.Buffer
 	//nolint:gosec // G203: the fragment is the page itself; it is meant to be inserted verbatim
 	data := struct {
+		Lang    string
 		Title   string
 		Content template.HTML
-	}{Title: title, Content: template.HTML(html)}
+	}{Lang: lang, Title: title, Content: template.HTML(html)}
 	if err := wrapper.Execute(&b, data); err != nil {
 		return nil, err //nolint:wrapcheck // the template is embedded; an error here is a floe bug
 	}
