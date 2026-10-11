@@ -300,8 +300,12 @@ func TestPublish(t *testing.T) {
 		t.Errorf("republishes opened more tabs: %q", got)
 	}
 
+	before := e.run(t, "", "list").stdout
 	want(t, "a blank --title", e.run(t, "repo", "publish", demo, "--title", " "), 2, "",
 		"floe: --title is empty: give the page a name, or omit --title to take it from the <title> or first <h1>")
+	if after := e.run(t, "", "list").stdout; after != before {
+		t.Errorf("a blank --title changed the list from %q to %q", before, after)
+	}
 	want(t, "an invalid slug", e.run(t, "repo", "publish", demo, "--slug", "../x"), 1, "", `invalid slug "../x"`)
 	want(t, "an invalid language", e.run(t, "repo", "publish", demo, "--lang", "ja_JP"), 1, "",
 		`floe: invalid language "ja_JP": give --lang a BCP 47 tag such as en, ja or pt-BR`)
