@@ -150,4 +150,20 @@ var messagesEN = map[string]string{
 	"ui_unlink_bulk_confirm":  "Really unregister %d?",
 	"ui_unlink_bulk_done":     "%d unregistered",
 	"ui_unlink_bulk_failed":   "%d could not be unregistered (%s) and stay selected.",
+
+	// cli and daemon: the command line and the background server
+	"cli_invalid_port":      "invalid FLOE_PORT \"%s\": use a port number from 1 to 65535",
+	"cli_no_home":           "HOME is not set; set HOME or FLOE_DIR",
+	"cli_title_empty":       "--title is empty: give the page a name, or omit --title to take it from the <title> or first <h1>",
+	"cli_port_in_use":       "port %d is in use; stop that program or set FLOE_PORT",
+	"cli_serving":           "serving %s at %s/",
+	"cli_not_running":       "server is not running",
+	"cli_stopped":           "stopped server (pid %d)",
+	"cli_updated":           "updated \"%s\" (last published %s)",
+	"cli_updated_titled":    "updated \"%s\" (last published %s, title \"%s\")",
+	"cli_title_changed":     "warning: the title changed; if this is a different page, publish it under another --slug",
+	"daemon_outdated_alive": "the outdated server (pid %d) did not stop; run \"floe stop\" and publish again",
+	"daemon_port_taken":     "port %d is used by another program; set FLOE_PORT to a free port",
+	"daemon_not_started":    "the server did not start; run \"floe serve\" to see the error",
+	"daemon_other_root":     "the server on port %d serves %s; run \"floe stop\" and publish again",
 }

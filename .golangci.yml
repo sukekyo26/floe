@@ -96,6 +96,7 @@ linters:
       ignore-patterns:
         - '.+/cobra\.Command$'
         - '^net/http\.Server$'
+        - '^syscall\.SysProcAttr$'
     exhaustive:
       default-signifies-exhaustive: true
     gocognit:

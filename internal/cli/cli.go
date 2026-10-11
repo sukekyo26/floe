@@ -2,34 +2,89 @@
 package cli
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/version"
 )
 
-// Run executes floe with args and returns the process exit code.
-func Run(args []string, stdout, stderr io.Writer) int {
-	root := newRoot()
-	root.SetArgs(args)
-	root.SetOut(stdout)
-	root.SetErr(stderr)
-	if err := root.Execute(); err != nil {
-		// SilenceErrors leaves printing to this single boundary.
-		_, _ = fmt.Fprintf(stderr, "floe: %v\n", err)
-		return 1
-	}
-	return 0
+// Exit codes.
+const (
+	exitOK    = 0
+	exitFail  = 1
+	exitUsage = 2
+)
+
+// Env is what floe takes from its process.
+type Env struct {
+	Getenv func(string) string
+	// Dir is the working directory: it resolves relative files and names the project of a page.
+	Dir    string
+	Stdout io.Writer
+	Stderr io.Writer
+	// Environ is handed to a server that a publish starts.
+	Environ []string
 }
 
-func newRoot() *cobra.Command {
+// usageError is a mistake in the command line (exit 2).
+type usageError struct {
+	err error
+}
+
+func (e usageError) Error() string {
+	return e.err.Error()
+}
+
+func (e usageError) Unwrap() error {
+	return e.err
+}
+
+// Run executes floe with args and returns the process exit code. The exit code is decided here only.
+func Run(ctx context.Context, args []string, env Env) int {
+	cat := i18n.New(i18n.Detect(env.Getenv))
+	root := newRoot(env, cat) //nolint:contextcheck // cobra hands ctx to the commands through ExecuteContext
+	root.SetArgs(args)
+	root.SetOut(env.Stdout)
+	root.SetErr(env.Stderr)
+	err := root.ExecuteContext(ctx)
+	if err == nil {
+		return exitOK
+	}
+	// SilenceErrors leaves printing to this single boundary, which words a usererr in the user's
+	// language. Cobra's own errors (an unknown flag) stay in English.
+	msg := err.Error()
+	var l i18n.Localizer
+	if errors.As(err, &l) {
+		msg = l.Localize(cat)
+	}
+	_, _ = fmt.Fprintf(env.Stderr, "floe: %s\n", msg) //nolint:errcheck // nowhere left to report
+	if errors.As(err, new(usageError)) {
+		return exitUsage
+	}
+	return exitFail
+}
+
+// usage marks the errors of an argument validator as usage errors.
+func usage(validate cobra.PositionalArgs) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if err := validate(cmd, args); err != nil {
+			return usageError{err: err}
+		}
+		return nil
+	}
+}
+
+func newRoot(env Env, cat *i18n.Catalog) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "floe",
 		Short:         "Serve agent-written HTML pages on a local server",
 		Version:       version.Version,
-		Args:          cobra.NoArgs,
+		Args:          usage(cobra.NoArgs),
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		// Without a RunE cobra treats the root as non-runnable and answers an
@@ -39,14 +94,25 @@ func newRoot() *cobra.Command {
 		},
 	}
 	root.SetVersionTemplate("floe {{.Version}}\n")
+	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
+		return usageError{err: err}
+	})
 	root.AddCommand(&cobra.Command{
 		Use:   "version",
 		Short: "Print the floe version",
-		Args:  cobra.NoArgs,
+		Args:  usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			_, err := fmt.Fprintf(cmd.OutOrStdout(), "floe %s\n", version.Version)
 			return err //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	})
+	app := &app{env: env, cfg: nil, cat: cat}
+	// The environment is checked before any command runs, so a typo fails the same way everywhere.
+	root.PersistentPreRunE = func(*cobra.Command, []string) error {
+		cfg, err := loadConfig(env.Getenv)
+		app.cfg = cfg
+		return err
+	}
+	root.AddCommand(app.publishCmd(), app.listCmd(), app.rmCmd(), app.serveCmd(), app.stopCmd())
 	return root
 }

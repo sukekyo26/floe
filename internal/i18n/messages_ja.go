@@ -149,4 +149,20 @@ var messagesJA = map[string]string{
 	"ui_unlink_bulk_confirm":  "本当に %d 件を登録解除",
 	"ui_unlink_bulk_done":     "%d 件を登録解除しました",
 	"ui_unlink_bulk_failed":   "%d 件を登録解除できませんでした（%s）。選択したまま残しています。",
+
+	// cli・daemon
+	"cli_invalid_port":      "FLOE_PORT「%s」は使えません。1 から 65535 のポート番号を指定してください",
+	"cli_no_home":           "HOME が設定されていません。HOME か FLOE_DIR を設定してください",
+	"cli_title_empty":       "--title が空です。ページの名前を指定するか、--title を省いて <title> か最初の <h1> から取ってください",
+	"cli_port_in_use":       "ポート %d は使われています。そのプログラムを止めるか、FLOE_PORT を設定してください",
+	"cli_serving":           "%s を %s/ で配信しています",
+	"cli_not_running":       "サーバーは動いていません",
+	"cli_stopped":           "サーバー（pid %d）を止めました",
+	"cli_updated":           "「%s」を更新しました（前回の公開は %s）",
+	"cli_updated_titled":    "「%s」を更新しました（前回の公開は %s、タイトルは「%s」）",
+	"cli_title_changed":     "警告: タイトルが変わりました。別のページなら --slug で別の URL 名にして公開してください",
+	"daemon_outdated_alive": "古いサーバー（pid %d）が止まりませんでした。floe stop を実行してから公開し直してください",
+	"daemon_port_taken":     "ポート %d は別のプログラムが使っています。FLOE_PORT に空いているポートを設定してください",
+	"daemon_not_started":    "サーバーが起動しませんでした。floe serve を実行してエラーを確かめてください",
+	"daemon_other_root":     "ポート %d のサーバーは %s を配信しています。floe stop を実行してから公開し直してください",
 }
