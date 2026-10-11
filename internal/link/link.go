@@ -23,8 +23,8 @@ func Check(path, home string) error {
 	// A FIFO named .html would block its reader, so only regular files pass.
 	if fi, err := os.Stat(path); !htmlRe.MatchString(path) || err != nil || !fi.Mode().IsRegular() {
 		return usererr.New(
-			path+" is not an .html file; only HTML files can be linked",
-			path+" は HTML ファイル（.html / .htm）ではありません",
+			path+" is not a regular .html or .htm file; only HTML files can be linked",
+			path+" は通常の HTML ファイル（.html / .htm）ではありません",
 		)
 	}
 	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories.

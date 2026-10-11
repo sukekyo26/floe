@@ -188,10 +188,10 @@ func TestCheck(t *testing.T) {
 		{".secret/x.html", "is under a hidden directory of your home"},
 		{"top.html", "would expose all of " + realHome},
 		{".top.html", "would expose all of " + realHome},
-		{"proj/page.txt", "is not an .html file"},
-		{"proj/dir.html", "is not an .html file"},
-		{"proj/pipe.html", "is not an .html file"},
-		{"proj/missing.html", "is not an .html file"},
+		{"proj/page.txt", "is not a regular .html or .htm file"},
+		{"proj/dir.html", "is not a regular .html or .htm file"},
+		{"proj/pipe.html", "is not a regular .html or .htm file"},
+		{"proj/missing.html", "is not a regular .html or .htm file"},
 	}
 	for _, tt := range tests {
 		err := link.Check(filepath.Join(realHome, tt.path), home)
