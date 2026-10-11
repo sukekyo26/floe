@@ -12,7 +12,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -23,13 +22,12 @@ import (
 // App is the name /api/health answers with, so that a client can tell floe from another program.
 const App = "floe"
 
-// Config is what a server serves and how long it stays without requests.
+// Config is what a server serves.
 type Config struct {
 	Store *store.Store
 	Port  int
 	// Build identifies the running binary; a publish from another build restarts the server.
 	Build string
-	Idle  time.Duration
 }
 
 // Server handles the requests.
@@ -177,12 +175,10 @@ func (*Server) redirect(w http.ResponseWriter, r *http.Request) {
 	send(w, http.StatusMovedPermanently, "")
 }
 
-// Serve serves on ln until ctx is done or no request has been in flight for the idle time; an open
-// page holds its event stream, and a shown management page polls the list, so neither lets it stop.
+// Serve serves on ln until ctx is done.
 func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
-	idle := newIdle(s.cfg.Idle)
 	srv := &http.Server{
-		Handler:           idle.wrap(s.Handler()),
+		Handler:           s.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 	}
@@ -192,7 +188,6 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	case err := <-errc:
 		return fmt.Errorf("serve: %w", err)
 	case <-ctx.Done():
-	case <-idle.done:
 	}
 	if err := srv.Close(); err != nil {
 		return fmt.Errorf("close: %w", err)
@@ -201,53 +196,4 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 		return fmt.Errorf("serve: %w", err)
 	}
 	return nil
-}
-
-// idle closes done once no request has been in flight for d.
-type idle struct {
-	d      time.Duration
-	mu     sync.Mutex
-	active int
-	// last is when the last request ended (or when idle was made).
-	last  time.Time
-	timer *time.Timer
-	done  chan struct{}
-	once  sync.Once
-}
-
-func newIdle(d time.Duration) *idle {
-	i := &idle{
-		d: d, mu: sync.Mutex{}, active: 0, last: time.Now(), timer: nil, done: make(chan struct{}), once: sync.Once{},
-	}
-	i.timer = time.AfterFunc(d, i.expire)
-	return i
-}
-
-// expire runs when the timer fires. A request may have begun, or begun and ended, after the timer
-// fired and before this took the lock (Stop cannot cancel a timer that has fired), so it checks again
-// under the lock; the request's end has re-armed the timer.
-func (i *idle) expire() {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if i.active == 0 && time.Since(i.last) >= i.d {
-		i.once.Do(func() { close(i.done) })
-	}
-}
-
-func (i *idle) wrap(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		i.mu.Lock()
-		i.active++
-		i.timer.Stop()
-		i.mu.Unlock()
-		defer func() {
-			i.mu.Lock()
-			if i.active--; i.active == 0 {
-				i.last = time.Now()
-				i.timer.Reset(i.d)
-			}
-			i.mu.Unlock()
-		}()
-		next.ServeHTTP(w, r)
-	})
 }

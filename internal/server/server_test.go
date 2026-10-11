@@ -30,7 +30,7 @@ type env struct {
 	done   chan error
 }
 
-func newEnv(t *testing.T, idle time.Duration) *env {
+func newEnv(t *testing.T) *env {
 	t.Helper()
 
 	tmp, err := filepath.EvalSymlinks(t.TempDir())
@@ -58,7 +58,7 @@ func newEnv(t *testing.T, idle time.Duration) *env {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		e.done <- server.New(server.Config{Store: st, Port: port, Build: "b1", Idle: idle}).Serve(ctx, ln)
+		e.done <- server.New(server.Config{Store: st, Port: port, Build: "b1"}).Serve(ctx, ln)
 	}()
 	t.Cleanup(func() {
 		cancel()
@@ -181,7 +181,7 @@ func statuses(t *testing.T, e *env, targets ...string) string {
 func TestManagementPageAndFrame(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, time.Minute)
+	e := newEnv(t)
 	e.publish(t, e.write(t, "untitled.html", "<p>untitled</p>\n"), store.Options{})
 
 	for _, target := range []string{"/", "/a/untitled/"} {
@@ -214,7 +214,7 @@ func TestManagementPageAndFrame(t *testing.T) {
 func TestHostAndRequestTarget(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, time.Minute)
+	e := newEnv(t)
 	port := strings.TrimPrefix(e.base, "http://127.0.0.1:")
 	if r := e.get(t, "/", "Host", "localhost:"+port); r.status != http.StatusOK {
 		t.Errorf("Host localhost = %d", r.status)
@@ -237,7 +237,7 @@ func TestHostAndRequestTarget(t *testing.T) {
 func TestStoredPage(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, time.Minute)
+	e := newEnv(t)
 	e.publish(t, e.write(t, "My Demo.html", "<title>Demo Page</title><p>hi</p>\n"), store.Options{})
 	stored, err := os.ReadFile(filepath.Join(e.store.Root(), "my-demo", "index.html"))
 	if err != nil {
@@ -298,7 +298,7 @@ func (e *env) events(t *testing.T, target string, wait time.Duration) (http.Head
 func TestLiveReload(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, time.Minute)
+	e := newEnv(t)
 	file := e.write(t, "My Demo.html", "<title>Demo Page</title>")
 	e.publish(t, file, store.Options{})
 	now := url.QueryEscape(e.store.ReadMeta("my-demo").UpdatedAt)
@@ -333,7 +333,7 @@ func TestLiveReload(t *testing.T) {
 func TestEdit(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, time.Minute)
+	e := newEnv(t)
 	e.publish(t, e.write(t, "My Demo.html", "<title>Demo Page</title>"), store.Options{})
 	e.publish(t, e.write(t, "untitled.html", "<p>u</p>"), store.Options{})
 	before := e.store.ReadMeta("my-demo")
@@ -396,7 +396,7 @@ func toString(codes []int) string {
 func TestDelete(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, time.Minute)
+	e := newEnv(t)
 	e.publish(t, e.write(t, "My Demo.html", "<title>Demo Page</title>"), store.Options{})
 	port := strings.TrimPrefix(e.base, "http://127.0.0.1:")
 	del := func(slug, origin string) int {
@@ -441,7 +441,7 @@ func ptr[T any](v T) *T {
 func TestLinkedFile(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, time.Minute)
+	e := newEnv(t)
 	index := site(t, e)
 
 	e.write(t, "site/index.html", "<h1>Linked v2</h1>\n")
@@ -514,7 +514,7 @@ func TestLinkedFile(t *testing.T) {
 func TestLinkedDocumentBytes(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, time.Minute)
+	e := newEnv(t)
 	doc := e.write(t, "doc/index.html", "<!doctype html><title>Doc</title><p>\xff</p>\n")
 	e.publish(t, doc, store.Options{Link: true, Slug: ptr("doc-link")})
 	if dl := e.get(t, "/api/artifacts/doc-link/download"); dl.body != "<!doctype html><title>Doc</title><p>\xff</p>\n" {
@@ -551,7 +551,7 @@ func TestHangUpClosesTheFile(t *testing.T) {
 	if _, err := os.Stat("/proc/self/fd"); err != nil {
 		t.Skip("no /proc")
 	}
-	e := newEnv(t, time.Minute)
+	e := newEnv(t)
 	doc := e.write(t, "abort/index.html", "<!doctype html><title>Abort</title><p>"+strings.Repeat("x", 8<<20))
 	e.publish(t, doc, store.Options{Link: true, Slug: ptr("abort")})
 	for range 10 {
@@ -602,7 +602,7 @@ func countOpen(t *testing.T, dir string) int {
 func TestAddLink(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, time.Minute)
+	e := newEnv(t)
 	index := site(t, e)
 	if err := e.store.Remove("site"); err != nil {
 		t.Fatal(err)
@@ -642,29 +642,5 @@ func TestAddLink(t *testing.T) {
 	}
 	if r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":""}`); r.body != `{"slug":"p"}` {
 		t.Errorf("an omitted slug = %s", r.body)
-	}
-}
-
-func TestIdle(t *testing.T) {
-	t.Parallel()
-
-	e := newEnv(t, 600*time.Millisecond)
-	e.publish(t, e.write(t, "idle.html", "<h1>Idle</h1>"), store.Options{})
-	since := url.QueryEscape(e.store.ReadMeta("idle").UpdatedAt)
-	go e.events(t, "/api/events/idle?since="+since, 2*time.Second)
-	// Another request ending meanwhile must not start the timer while the stream is open.
-	time.Sleep(200 * time.Millisecond)
-	e.get(t, "/api/health")
-	time.Sleep(time.Second)
-	select {
-	case err := <-e.done:
-		t.Fatalf("the server stopped while a page was open: %v", err)
-	default:
-	}
-	select {
-	case err := <-e.done:
-		e.done <- err
-	case <-time.After(3 * time.Second):
-		t.Error("the server did not stop after the idle time")
 	}
 }
