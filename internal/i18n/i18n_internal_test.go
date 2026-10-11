@@ -87,6 +87,8 @@ func TestFromAcceptLanguage(t *testing.T) {
 		"pt-BR, ja":                        "pt-br",
 		"ja;q=bad":                         "ja",
 		"de, fr":                           English,
+		"en, ja;q=5":                       English,
+		"en;q=0.5, ja;q=NaN":               "ja",
 		"ja;Q=0.1, en;q=0.5":               English,
 		"en; foo=bar; q=0.5, ja;q=0.9":     "ja",
 		"en;q=0.5;foo=bar, ja;q=0.9":       "ja",

@@ -91,7 +91,9 @@ func FromAcceptLanguage(header string) Lang {
 		q := 1.0
 		for _, p := range params[1:] {
 			name, v, _ := strings.Cut(strings.TrimSpace(p), "=")
-			if parsed, err := strconv.ParseFloat(strings.TrimSpace(v), 64); strings.EqualFold(name, "q") && err == nil {
+			// A weight is 0 to 1; anything else (2, NaN) is malformed and keeps the default.
+			parsed, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+			if strings.EqualFold(name, "q") && err == nil && parsed >= 0 && parsed <= 1 {
 				q = parsed
 			}
 		}
