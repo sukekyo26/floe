@@ -421,7 +421,7 @@ func TestUIReload(t *testing.T) {
 	out = append(out, b.until("the not-found state",
 		"!document.getElementById('notfound').hidden && document.getElementById('frame').hidden && !document.getElementById('frame').hasAttribute('src')"))
 
-	check(t, "reload", out, "1|2|Live · Artifacts|true|true,true|own own none /a/no-such/|true")
+	check(t, "reload", out, "1|2|Live · floe|true|true,true|own own none /a/no-such/|true")
 }
 
 // leave clicks links out of a page in the frame: a target=_blank tab runs in the other site's origin
