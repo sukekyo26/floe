@@ -86,10 +86,12 @@ func FromAcceptLanguage(header string) Lang {
 	}
 	var choices []choice
 	for _, part := range strings.Split(header, ",") {
-		tag, params, _ := strings.Cut(strings.TrimSpace(part), ";")
+		params := strings.Split(part, ";")
+		tag := strings.TrimSpace(params[0])
 		q := 1.0
-		if v, ok := strings.CutPrefix(strings.TrimSpace(params), "q="); ok {
-			if parsed, err := strconv.ParseFloat(v, 64); err == nil {
+		for _, p := range params[1:] {
+			name, v, _ := strings.Cut(strings.TrimSpace(p), "=")
+			if parsed, err := strconv.ParseFloat(strings.TrimSpace(v), 64); strings.EqualFold(name, "q") && err == nil {
 				q = parsed
 			}
 		}
@@ -133,7 +135,7 @@ func New(lang Lang) *Catalog {
 	if base, _, found := strings.Cut(string(lang), "-"); found {
 		chain = append(chain, Lang(base))
 	}
-	if lang != English {
+	if !slices.Contains(chain, English) {
 		chain = append(chain, English)
 	}
 	return &Catalog{lang: lang, chain: chain}

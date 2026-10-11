@@ -87,6 +87,9 @@ func TestFromAcceptLanguage(t *testing.T) {
 		"pt-BR, ja":                        "pt-br",
 		"ja;q=bad":                         "ja",
 		"de, fr":                           English,
+		"ja;Q=0.1, en;q=0.5":               English,
+		"en; foo=bar; q=0.5, ja;q=0.9":     "ja",
+		"en;q=0.5;foo=bar, ja;q=0.9":       "ja",
 	}
 	for header, want := range tests {
 		if got := FromAcceptLanguage(header); got != want {
@@ -118,6 +121,9 @@ func TestCatalogMsg(t *testing.T) {
 			t.Errorf("New(%q).Msg(%q) = %q, want %q", tt.lang, tt.key, got, tt.want)
 		}
 	}
+	if got := New("en-us").chain; !slices.Equal(got, []Lang{"en-us", English}) {
+		t.Errorf("the chain of en-us = %v, want English once", got)
+	}
 	if EnglishCatalog().Lang() != English {
 		t.Error("EnglishCatalog is not English")
 	}
@@ -125,9 +131,10 @@ func TestCatalogMsg(t *testing.T) {
 
 var verbRe = regexp.MustCompile(`%(?:\[(\d+)\])?[-+# 0]*\d*(?:\.\d+)?([a-zA-Z%])`)
 
-// verbs maps each argument a message formats, by its position, to the verb it uses.
-func verbs(tmpl string) map[int]string {
-	used := map[int]string{}
+// verbs maps each argument a message formats, by its position, to the verbs it uses (sorted; an
+// argument formatted twice, %[1]s and %[1]q, keeps both).
+func verbs(tmpl string) map[int][]string {
+	used := map[int][]string{}
 	next := 1
 	for _, m := range verbRe.FindAllStringSubmatch(tmpl, -1) {
 		if m[2] == "%" {
@@ -136,26 +143,34 @@ func verbs(tmpl string) map[int]string {
 		if m[1] != "" {
 			next, _ = strconv.Atoi(m[1]) //nolint:errcheck // the pattern holds digits only
 		}
-		used[next] = m[2]
+		if !slices.Contains(used[next], m[2]) {
+			used[next] = append(used[next], m[2])
+			slices.Sort(used[next])
+		}
 		next++
 	}
 	return used
 }
 
+func sameVerbs(a, b map[int][]string) bool {
+	return maps.EqualFunc(a, b, slices.Equal[[]string])
+}
+
 func TestVerbs(t *testing.T) {
 	t.Parallel()
 
-	tests := map[string]map[int]string{
+	tests := map[string]map[int][]string{
 		"plain":                  {},
-		"%s and %d":              {1: "s", 2: "d"},
-		"%[2]d の前に %[1]s":        {1: "s", 2: "d"},
-		"100%% of %q":            {1: "q"},
-		"%-8s|%5.2f":             {1: "s", 2: "f"},
-		"%[1]s, again %[1]s":     {1: "s"},
-		"%[2]s then the next %s": {2: "s", 3: "s"},
+		"%s and %d":              {1: {"s"}, 2: {"d"}},
+		"%[2]d の前に %[1]s":        {1: {"s"}, 2: {"d"}},
+		"100%% of %q":            {1: {"q"}},
+		"%-8s|%5.2f":             {1: {"s"}, 2: {"f"}},
+		"%[1]s, again %[1]s":     {1: {"s"}},
+		"%[1]s, quoted %[1]q":    {1: {"q", "s"}},
+		"%[2]s then the next %s": {2: {"s"}, 3: {"s"}},
 	}
 	for tmpl, want := range tests {
-		if got := verbs(tmpl); !maps.Equal(got, want) {
+		if got := verbs(tmpl); !sameVerbs(got, want) {
 			t.Errorf("verbs(%q) = %v, want %v", tmpl, got, want)
 		}
 	}
@@ -180,7 +195,7 @@ func mismatches(tables map[Lang]map[string]string) []string {
 			switch {
 			case !ok:
 				found = append(found, string(lang)+" has extra "+key)
-			case !maps.Equal(verbs(msg), verbs(ref)):
+			case !sameVerbs(verbs(msg), verbs(ref)):
 				found = append(found, string(lang)+" formats "+key+" differently")
 			}
 		}
@@ -193,10 +208,10 @@ func TestMismatches(t *testing.T) {
 	t.Parallel()
 
 	got := mismatches(map[Lang]map[string]string{
-		English: {"a": "%s", "b": "%s %d", "c": "plain"},
-		"ja":    {"a": "%d", "b": "%[2]d %[1]s", "x": "extra"},
+		English: {"a": "%s", "b": "%s %d", "c": "plain", "d": "%[1]s %[1]q"},
+		"ja":    {"a": "%d", "b": "%[2]d %[1]s", "d": "%[1]s %[1]s", "x": "extra"},
 	})
-	want := []string{"ja formats a differently", "ja has extra x", "ja lacks c"}
+	want := []string{"ja formats a differently", "ja formats d differently", "ja has extra x", "ja lacks c"}
 	if !slices.Equal(got, want) {
 		t.Errorf("mismatches = %q, want %q", got, want)
 	}
