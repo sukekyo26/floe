@@ -154,6 +154,12 @@ linters:
       - legacy
       - std-error-handling
     rules:
+      # Catalogs hold long literal messages, and the en/ja maps share one key set by design (parity
+      # is enforced by i18n's tests), which dupl would otherwise flag. Same as cocoon.
+      - path: internal/i18n/messages_.*\.go
+        linters:
+          - lll
+          - dupl
       # Tests get a relaxed profile but still benefit from bug catchers.
       - path: _test\.go
         linters:
