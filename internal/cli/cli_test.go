@@ -39,7 +39,36 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}
-	os.Exit(m.Run())
+	dir, err := os.MkdirTemp("", "floe-cli-test-")
+	if err != nil {
+		panic(err)
+	}
+	otherBuild, err = copySelf(dir)
+	if err != nil {
+		panic(err)
+	}
+	code := m.Run()
+	_ = os.RemoveAll(dir) //nolint:errcheck // a leftover temporary directory is harmless
+	os.Exit(code)
+}
+
+// otherBuild is a copy of this test binary, as a reinstalled floe with another build.
+var otherBuild string
+
+// copySelf writes otherBuild. It runs before the parallel tests: a process they fork while the copy
+// is open for writing would hold it, and running the copy would fail with ETXTBSY (golang/go#22315).
+func copySelf(dir string) (string, error) {
+	self, err := os.Executable()
+	if err != nil {
+		return "", err //nolint:wrapcheck // TestMain panics with it
+	}
+	b, err := os.ReadFile(self)
+	if err != nil {
+		return "", err //nolint:wrapcheck // TestMain panics with it
+	}
+	bin := filepath.Join(dir, "floe-copy")
+	//nolint:gosec // G306: an executable
+	return bin, os.WriteFile(bin, append(b, 0), 0o700) //nolint:wrapcheck // TestMain panics with it
 }
 
 // env is a store, a home and a free port in a temporary directory, with a browser that records what
@@ -371,25 +400,6 @@ func TestServeInProcess(t *testing.T) {
 	}
 }
 
-// copyBinary copies this test binary, as a reinstalled floe with another build.
-func copyBinary(t *testing.T, e *env) string {
-	t.Helper()
-
-	self, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, err := os.ReadFile(self)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bin := filepath.Join(e.tmp, "floe-copy")
-	if err := os.WriteFile(bin, append(b, 0), 0o700); err != nil { //nolint:gosec // G306: an executable
-		t.Fatal(err)
-	}
-	return bin
-}
-
 func TestRestartOnAnotherBuild(t *testing.T) {
 	t.Parallel()
 
@@ -397,7 +407,7 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 	page := e.write(t, "restart.html", "<h1>Restart</h1>")
 	want(t, "publish", e.run(t, "", "publish", page), 0, e.base()+"/a/restart/\n", "")
 	first, _ := e.health(t)
-	bin := copyBinary(t, e)
+	bin := otherBuild
 	want(t, "publish from another build", e.exe(t, bin, "publish", page), 0, e.base()+"/a/restart/\n", "updated")
 	second, _ := e.health(t)
 	want(t, "again", e.exe(t, bin, "publish", page), 0, e.base()+"/a/restart/\n", "updated")
