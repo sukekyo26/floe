@@ -429,8 +429,14 @@ func TestLinkedFile(t *testing.T) {
 	index := site(t, e)
 
 	e.write(t, "site/index.html", "<h1>Linked v2</h1>\n")
-	if r := e.get(t, "/a/site/?raw"); !strings.Contains(r.body, "floe template") || !strings.Contains(r.body, "<title>Linked v2</title>") {
-		t.Errorf("a body-only link is read on every request and wrapped:\n%s", r.body)
+	if r := e.get(t, "/a/site/?raw"); !strings.Contains(r.body, "floe template") || !strings.Contains(r.body, "<title>Linked v2</title>") ||
+		!strings.Contains(r.body, `<html lang="en">`) {
+		t.Errorf("a body-only link is read on every request and wrapped, in English by default:\n%s", r.body)
+	}
+	// The language given when linking is used for every wrap.
+	e.publish(t, index, store.Options{Link: true, Slug: ptr("site"), Lang: ptr("ja")})
+	if r := e.get(t, "/a/site/?raw"); !strings.Contains(r.body, `<html lang="ja">`) {
+		t.Errorf("a link published with --lang ja is not wrapped in Japanese:\n%.200s", r.body)
 	}
 	r := e.get(t, "/a/site/s.css")
 	if r.header.Get("Content-Type") != "text/css; charset=utf-8" || !strings.HasPrefix(r.header.Get("Content-Security-Policy"), "sandbox") ||

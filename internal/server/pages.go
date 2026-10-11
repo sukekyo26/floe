@@ -162,7 +162,7 @@ func sendPage(w http.ResponseWriter, f *os.File, m *store.Meta, slug, rest, tail
 	}
 	// A document marked after the sniffed head comes back as is (Wrap returns it unchanged), so that
 	// bytes that are not UTF-8 are not re-encoded.
-	wrapped, err := page.Wrap(text, title)
+	wrapped, err := page.Wrap(text, title, m.Lang)
 	if err != nil {
 		send(w, http.StatusInternalServerError, err.Error())
 		return
