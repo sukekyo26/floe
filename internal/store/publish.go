@@ -1,0 +1,362 @@
+package store
+
+import (
+	"cmp"
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/sukekyo26/floe/internal/link"
+	"github.com/sukekyo26/floe/internal/page"
+	"github.com/sukekyo26/floe/internal/project"
+	"github.com/sukekyo26/floe/internal/usererr"
+)
+
+var (
+	indexRe    = regexp.MustCompile(`(?i)^index\.html?$`)
+	nonSlugRe  = regexp.MustCompile(`[^a-z0-9]+`)
+	maxSlugLen = 64
+)
+
+// SlugFromFile derives a slug from a file name. index.html does not name anything, so it takes the
+// name of its directory instead; a relative file is resolved against cwd.
+func SlugFromFile(file, cwd string) string {
+	name := filepath.Base(file)
+	if indexRe.MatchString(name) {
+		if !filepath.IsAbs(file) {
+			file = filepath.Join(cwd, file)
+		}
+		name = filepath.Base(filepath.Dir(filepath.Clean(file)))
+	} else {
+		name = strings.TrimSuffix(name, filepath.Ext(name))
+	}
+	slug := nonSlugRe.ReplaceAllString(strings.ToLower(name), "-")
+	return strings.Trim(slug[:min(len(slug), maxSlugLen)], "-")
+}
+
+// freeSlug names a link registered without a slug: the entry of the same path whatever its slug,
+// else base, else base-2, base-3 … so that two index.html files never take over each other.
+func (s *Store) freeSlug(base, path string) string {
+	if dirents, err := os.ReadDir(s.root); err == nil {
+		for _, d := range dirents {
+			if m := s.ReadMeta(d.Name()); ValidSlug(d.Name()) && m != nil && m.Path == path {
+				return d.Name()
+			}
+		}
+	}
+	for n := 1; ; n++ {
+		suffix := ""
+		if n > 1 {
+			suffix = "-" + strconv.Itoa(n)
+		}
+		slug := strings.TrimRight(base[:min(len(base), maxSlugLen-len(suffix))], "-") + suffix
+		if s.ReadMeta(slug) == nil {
+			return slug
+		}
+	}
+}
+
+// Options are the choices of a publish. A nil string is not given; an empty one is.
+type Options struct {
+	Link        bool
+	Slug        *string
+	Title       *string
+	Description *string
+	Force       bool
+}
+
+// Entry is a checked publish, ready to be saved.
+type Entry struct {
+	Slug string
+	Meta Meta
+	// Page is the stored HTML, wrapped when body-only; nil for a link.
+	Page []byte
+	// Prev is the entry this one overwrites, nil for a new slug.
+	Prev *Meta
+}
+
+// Prepare checks a publish of file and builds what Save writes, without writing anything. cwd
+// resolves a relative file and names the project of a stored page; a link's project is that of its
+// directory.
+func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
+	path, html, err := s.read(file, opts.Link, cwd)
+	if err != nil {
+		return nil, err
+	}
+	slug, err := s.slugFor(file, path, opts, cwd)
+	if err != nil {
+		return nil, err
+	}
+	prev := s.ReadMeta(slug)
+	dir := cwd
+	if path != "" {
+		dir = filepath.Dir(path)
+	}
+	from := project.Name(ctx, dir)
+	replacing, err := checkOwner(slug, prev, path, from, opts.Force)
+	if err != nil {
+		return nil, err
+	}
+	// A replaced page or link keeps nothing of the old one.
+	base := prev
+	if replacing || base == nil {
+		var none Meta
+		base = &none
+	}
+	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, html, slug), Page: nil, Prev: prev}
+	if path == "" {
+		if e.Page, err = page.Wrap(html, e.Meta.Title); err != nil {
+			return nil, fmt.Errorf("wrap %s: %w", file, err)
+		}
+	}
+	return e, nil
+}
+
+// read returns the real path of a link ("" for a stored page) and the file's content. A link is
+// checked and stored by its real path: a symlink would otherwise reach into a hidden directory.
+func (s *Store) read(file string, isLink bool, cwd string) (path, html string, err error) {
+	abs := file
+	if !filepath.IsAbs(abs) {
+		abs = filepath.Join(cwd, abs)
+	}
+	if isLink {
+		if path, err = filepath.EvalSymlinks(abs); err != nil {
+			return "", "", cannotRead(file, err)
+		}
+		if err = link.Check(path, s.home); err != nil {
+			return "", "", err //nolint:wrapcheck // a usererr for the caller to show
+		}
+		abs = path
+	}
+	b, err := os.ReadFile(abs) //nolint:gosec // G304: publishing the user's file is the point
+	if err != nil {
+		return "", "", cannotRead(file, err)
+	}
+	return path, string(b), nil
+}
+
+// newMeta keeps what was set on the management page (favourite, title, project), the description and
+// createdAt from base; --title and --description win.
+func newMeta(opts Options, path, from string, base *Meta, html, slug string) Meta {
+	keepTitle := opts.Title == nil && base.TitleEdited
+	m := Meta{
+		Path:          path,
+		Title:         title(opts, path, keepTitle, base, html, slug),
+		TitleEdited:   keepTitle,
+		Description:   base.Description,
+		Project:       from,
+		ProjectEdited: base.ProjectEdited,
+		PublishedFrom: "",
+		Favorite:      base.Favorite,
+		CreatedAt:     cmp.Or(base.CreatedAt, Now()),
+		UpdatedAt:     Now(),
+	}
+	if opts.Description != nil {
+		m.Description = *opts.Description
+	}
+	if base.ProjectEdited {
+		m.Project = base.Project
+	}
+	if path == "" {
+		m.PublishedFrom = from
+	}
+	return m
+}
+
+func cannotRead(file string, err error) error {
+	reason := err.Error()
+	var pe *os.PathError
+	if errors.As(err, &pe) {
+		reason = pe.Err.Error()
+	}
+	return usererr.New(
+		fmt.Sprintf("cannot read %s: %v", file, err),
+		fmt.Sprintf("%s を読めません（%s）。パスとファイルがあるかを確かめてください", file, reason),
+	)
+}
+
+func (s *Store) slugFor(file, path string, opts Options, cwd string) (string, error) {
+	slug := ""
+	switch {
+	case opts.Slug != nil:
+		slug = *opts.Slug
+	case path != "":
+		// Named after the given file, not the symlink's target.
+		slug = s.freeSlug(SlugFromFile(file, cwd), path)
+	default:
+		slug = SlugFromFile(file, cwd)
+	}
+	if !ValidSlug(slug) {
+		return "", usererr.New(
+			fmt.Sprintf(`invalid slug "%s": use lowercase letters, digits and hyphens via --slug`, slug),
+			fmt.Sprintf("URL 名「%s」は使えません。英小文字・数字・ハイフンで入力してください", slug),
+		)
+	}
+	return slug, nil
+}
+
+// checkOwner refuses to overwrite another's entry without force, and reports whether the publish
+// replaces one. A stored page belongs to the project it was published from (pages from before
+// publishedFrom fall back to project, unless that was edited and so names no place). A link belongs
+// to its path: the same slug for another path certainly means another file.
+func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, error) {
+	if prev == nil {
+		return false, nil
+	}
+	if prev.IsLink() != (path != "") {
+		kind, ja := "a stored page", "アーティファクト"
+		if prev.IsLink() {
+			kind, ja = "a linked file", "リンク"
+		}
+		return false, usererr.New(
+			fmt.Sprintf(`"%s" is %s; run "floe rm %s" first or use another --slug`, slug, kind, slug),
+			fmt.Sprintf("URL 名「%s」は%sで使われています。別の URL 名を入力してください", slug, ja),
+		)
+	}
+	if path != "" {
+		if prev.Path == path {
+			return false, nil
+		}
+		if force {
+			return true, nil
+		}
+		err := usererr.New(
+			fmt.Sprintf(`"%s" is linked to %s; use another --slug, or add --force to replace that link`, slug, prev.Path),
+			fmt.Sprintf("URL 名「%s」は %s で使われています。別の URL 名を入力するか、空欄にしてください", slug, prev.Path),
+		)
+		err.Conflict = true
+		return false, err
+	}
+	owner := prev.PublishedFrom
+	if owner == "" && !prev.ProjectEdited {
+		owner = prev.Project
+	}
+	if owner == "" || owner == from {
+		return false, nil
+	}
+	if force {
+		return true, nil
+	}
+	return false, usererr.New(fmt.Sprintf(
+		`"%s" was published from project %s; use another --slug, or add --force to replace that page`, slug, owner,
+	), "")
+}
+
+// title is --title, else the title pinned on the management page, else (for a stored page) the
+// page's own, the previous one, or the slug. A link records no title of its own: it is read from
+// the file each time.
+func title(opts Options, path string, keepTitle bool, base *Meta, html, slug string) string {
+	switch {
+	case opts.Title != nil:
+		return *opts.Title
+	case path != "" || keepTitle:
+		return base.Title
+	default:
+		return cmp.Or(page.Title(html), base.Title, slug)
+	}
+}
+
+// Save writes a prepared entry.
+func (s *Store) Save(e *Entry) error {
+	if err := os.MkdirAll(s.dir(e.Slug), 0o700); err != nil {
+		return fmt.Errorf("save %s: %w", e.Slug, err)
+	}
+	if e.Page != nil {
+		if err := writeAtomic(filepath.Join(s.dir(e.Slug), "index.html"), e.Page); err != nil {
+			return err
+		}
+	}
+	return s.WriteMeta(e.Slug, &e.Meta)
+}
+
+// Remove deletes slug. A linked file itself is left alone.
+func (s *Store) Remove(slug string) error {
+	if !ValidSlug(slug) || s.ReadMeta(slug) == nil {
+		return usererr.New(fmt.Sprintf(`no page "%s" (see: floe list)`, slug), "")
+	}
+	if err := os.RemoveAll(s.dir(slug)); err != nil {
+		return fmt.Errorf("remove %s: %w", slug, err)
+	}
+	return nil
+}
+
+// Edit is a change from the management page. A nil field is left as it is.
+type Edit struct {
+	Title       *string
+	Description *string
+	Project     *string
+	Slug        *string
+	Favorite    *bool
+}
+
+// Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
+// the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
+// page's own title; clearing the project drops it.
+func (s *Store) Edit(slug string, ed Edit) (string, error) {
+	m := s.ReadMeta(slug)
+	if m == nil {
+		return "", ErrNotFound
+	}
+	if ed.Description != nil {
+		m.Description = strings.TrimSpace(*ed.Description)
+	}
+	if ed.Favorite != nil {
+		m.Favorite = *ed.Favorite
+	}
+	if ed.Title != nil {
+		s.setTitle(slug, m, *ed.Title)
+	}
+	if ed.Project != nil {
+		// "/" is the management page's value for "no project".
+		if strings.TrimSpace(*ed.Project) == "/" {
+			return "", usererr.New("プロジェクト名に / だけは使えません", "")
+		}
+		m.Project = strings.TrimSpace(*ed.Project)
+		m.ProjectEdited = m.Project != ""
+	}
+	to, err := s.renameTo(slug, ed.Slug)
+	if err != nil {
+		return "", err
+	}
+	if err := s.WriteMeta(slug, m); err != nil {
+		return "", err
+	}
+	// Renaming moves the directory only; tabs open on the old URL show "not found".
+	if to != slug {
+		if err := os.Rename(s.dir(slug), s.dir(to)); err != nil {
+			return "", fmt.Errorf("rename %s to %s: %w", slug, to, err)
+		}
+	}
+	return to, nil
+}
+
+func (s *Store) setTitle(slug string, m *Meta, t string) {
+	m.Title = strings.TrimSpace(t)
+	m.TitleEdited = m.Title != ""
+	if m.Title == "" && !m.IsLink() {
+		own, _ := os.ReadFile(filepath.Join(s.dir(slug), "index.html")) //nolint:errcheck // unreadable means untitled
+		m.Title = cmp.Or(page.Title(string(own)), slug)
+	}
+}
+
+// renameTo checks the new slug of an edit: nil keeps slug.
+func (s *Store) renameTo(slug string, to *string) (string, error) {
+	if to == nil {
+		return slug, nil
+	}
+	name := strings.TrimSpace(*to)
+	if !ValidSlug(name) {
+		return "", usererr.New(fmt.Sprintf("URL 名「%s」は使えません。英小文字・数字・ハイフンで入力してください", name), "")
+	}
+	if _, err := os.Lstat(s.dir(name)); name != slug && !errors.Is(err, os.ErrNotExist) {
+		err := usererr.New(fmt.Sprintf("URL 名「%s」は使われています。別の URL 名を入力してください", name), "")
+		err.Conflict = true
+		return "", err
+	}
+	return name, nil
+}
