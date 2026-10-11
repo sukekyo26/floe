@@ -109,8 +109,7 @@ func Ensure(ctx context.Context, s Server) error {
 		// Wait for that server only: a concurrent publish may have started the new one already.
 		p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
 		if p.State == Ours && p.Health.PID == old {
-			return usererr.New(
-				fmt.Sprintf(`the outdated server (pid %d) did not stop; run "floe stop" and publish again`, old), "")
+			return usererr.New("daemon_outdated_alive", old)
 		}
 	}
 	if p.State == Down {
@@ -121,12 +120,11 @@ func Ensure(ctx context.Context, s Server) error {
 	}
 	switch {
 	case p.State == Other:
-		return usererr.New(fmt.Sprintf("port %d is used by another program; set FLOE_PORT to a free port", s.Port), "")
+		return usererr.New("daemon_port_taken", s.Port)
 	case p.State == Down:
-		return usererr.New(`the server did not start; run "floe serve" to see the error`, "")
+		return usererr.New("daemon_not_started")
 	case p.Health.Root != s.Root:
-		return usererr.New(
-			fmt.Sprintf(`the server on port %d serves %s; run "floe stop" and publish again`, s.Port, p.Health.Root), "")
+		return usererr.New("daemon_other_root", s.Port, p.Health.Root)
 	default:
 		return nil
 	}

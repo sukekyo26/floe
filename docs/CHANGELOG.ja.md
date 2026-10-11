@@ -16,7 +16,12 @@ floe の主要な変更を記録します。フォーマットは
   - 同じ slug で公開し直すと、そのことを stderr に出す。タイトルが変わっていれば警告も出す。
 - `floe list`・`floe rm`・`floe serve`・`floe stop` と、ライブリロード付きの管理画面を追加。
   - artifact スキルと同じ形式の保存先を読み書きする。
-  - 設定は `FLOE_DIR`・`FLOE_PORT`（既定は 7325）・`FLOE_IDLE_MINUTES`（既定は 30）で行う。
+  - サーバーは `floe stop` で止めるまで動き続ける。
+  - 設定は `FLOE_DIR`・`FLOE_PORT`（既定は 7325）で行う。
+- メッセージを英語と日本語で出すようにした。
+  - コマンドは `FLOE_LANG`、`LC_ALL`、`LC_MESSAGES`、`LANG` の順に見て言語を決める。
+  - 管理画面はブラウザの言語に従う。
+  - 既定は英語。
 - `floe` コマンドと、インストール済みの版を表示する `floe version`
   （`floe --version` でも可）を追加。
 - linux と macOS（amd64 / arm64）向けのビルド済みバイナリを GitHub Releases で配布し、

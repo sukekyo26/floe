@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/version"
 )
 
@@ -45,7 +46,8 @@ func (e usageError) Unwrap() error {
 
 // Run executes floe with args and returns the process exit code. The exit code is decided here only.
 func Run(ctx context.Context, args []string, env Env) int {
-	root := newRoot(env) //nolint:contextcheck // cobra hands ctx to the commands through ExecuteContext
+	cat := i18n.New(i18n.Detect(env.Getenv))
+	root := newRoot(env, cat) //nolint:contextcheck // cobra hands ctx to the commands through ExecuteContext
 	root.SetArgs(args)
 	root.SetOut(env.Stdout)
 	root.SetErr(env.Stderr)
@@ -53,8 +55,14 @@ func Run(ctx context.Context, args []string, env Env) int {
 	if err == nil {
 		return exitOK
 	}
-	// SilenceErrors leaves printing to this single boundary.
-	_, _ = fmt.Fprintf(env.Stderr, "floe: %v\n", err) //nolint:errcheck // nowhere left to report
+	// SilenceErrors leaves printing to this single boundary, which words a usererr in the user's
+	// language. Cobra's own errors (an unknown flag) stay in English.
+	msg := err.Error()
+	var l i18n.Localizer
+	if errors.As(err, &l) {
+		msg = l.Localize(cat)
+	}
+	_, _ = fmt.Fprintf(env.Stderr, "floe: %s\n", msg) //nolint:errcheck // nowhere left to report
 	if errors.As(err, new(usageError)) {
 		return exitUsage
 	}
@@ -71,7 +79,7 @@ func usage(validate cobra.PositionalArgs) cobra.PositionalArgs {
 	}
 }
 
-func newRoot(env Env) *cobra.Command {
+func newRoot(env Env, cat *i18n.Catalog) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "floe",
 		Short:         "Serve agent-written HTML pages on a local server",
@@ -98,7 +106,7 @@ func newRoot(env Env) *cobra.Command {
 			return err //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	})
-	app := &app{env: env, cfg: nil}
+	app := &app{env: env, cfg: nil, cat: cat}
 	// The environment is checked before any command runs, so a typo fails the same way everywhere.
 	root.PersistentPreRunE = func(*cobra.Command, []string) error {
 		cfg, err := loadConfig(env.Getenv)

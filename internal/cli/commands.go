@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/daemon"
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -23,6 +24,8 @@ import (
 type app struct {
 	env Env
 	cfg *config
+	// cat is the language of the messages, from the environment (i18n.Detect).
+	cat *i18n.Catalog
 }
 
 func (a *app) store() *store.Store {
@@ -33,8 +36,14 @@ func (a *app) out(format string, args ...any) {
 	_, _ = fmt.Fprintf(a.env.Stdout, format+"\n", args...) //nolint:errcheck // nowhere left to report
 }
 
-func (a *app) warn(format string, args ...any) {
-	_, _ = fmt.Fprintf(a.env.Stderr, format+"\n", args...) //nolint:errcheck // nowhere left to report
+// say prints the catalog message key to stdout.
+func (a *app) say(key string, args ...any) {
+	a.out("%s", a.cat.Msg(key, args...))
+}
+
+// warn prints the catalog message key to stderr.
+func (a *app) warn(key string, args ...any) {
+	_, _ = fmt.Fprintln(a.env.Stderr, a.cat.Msg(key, args...)) //nolint:errcheck // nowhere left to report
 }
 
 func (a *app) publishCmd() *cobra.Command {
@@ -61,8 +70,7 @@ for another file is refused unless --force.`,
 			if flags.Changed("title") {
 				// An empty title cannot be told from none, and would leave the list blank.
 				if strings.TrimSpace(title) == "" {
-					return usageError{err: usererr.New(
-						"--title is empty: give the page a name, or omit --title to take it from the <title> or first <h1>", "")}
+					return usageError{err: usererr.New("cli_title_empty")}
 				}
 				opts.Title = &title
 			}
@@ -121,12 +129,12 @@ func (a *app) publish(ctx context.Context, file string, opts store.Options) erro
 func (a *app) noticeUpdate(e *store.Entry) {
 	prev := e.Prev
 	if prev.Title == "" {
-		a.warn(`updated "%s" (last published %s)`, e.Slug, localTime(prev.UpdatedAt))
+		a.warn("cli_updated", e.Slug, localTime(prev.UpdatedAt))
 		return
 	}
-	a.warn(`updated "%s" (last published %s, title "%s")`, e.Slug, localTime(prev.UpdatedAt), prev.Title)
+	a.warn("cli_updated_titled", e.Slug, localTime(prev.UpdatedAt), prev.Title)
 	if e.Meta.Title != prev.Title {
-		a.warn("warning: the title changed; if this is a different page, publish it under another --slug")
+		a.warn("cli_title_changed")
 	}
 }
 
@@ -134,11 +142,7 @@ func (a *app) noticeUpdate(e *store.Entry) {
 // over the process's own.
 func (a *app) serverEnv() []string {
 	env := append([]string{}, a.env.Environ...)
-	env = append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home)
-	if a.cfg.rawIdle != "" {
-		env = append(env, "FLOE_IDLE_MINUTES="+a.cfg.rawIdle)
-	}
-	return env
+	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home)
 }
 
 func localTime(iso string) string {
@@ -195,8 +199,7 @@ func (a *app) serveCmd() *cobra.Command {
 	}
 }
 
-// serve runs until SIGTERM or SIGINT, or until it has been idle for FLOE_IDLE_MINUTES; the next
-// publish starts it again.
+// serve runs until SIGTERM or SIGINT ("floe stop" sends SIGTERM).
 func (a *app) serve(ctx context.Context) error {
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
@@ -210,13 +213,13 @@ func (a *app) serve(ctx context.Context) error {
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(a.cfg.port)))
 	if errors.Is(err, syscall.EADDRINUSE) {
-		return usererr.New(fmt.Sprintf("port %d is in use; stop that program or set FLOE_PORT", a.cfg.port), "")
+		return usererr.New("cli_port_in_use", a.cfg.port)
 	}
 	if err != nil {
 		return fmt.Errorf("listen: %w", err)
 	}
-	a.out("serving %s at %s/", a.cfg.root, a.cfg.base())
-	srv := server.New(server.Config{Store: a.store(), Port: a.cfg.port, Build: build, Idle: a.cfg.idle})
+	a.say("cli_serving", a.cfg.root, a.cfg.base())
+	srv := server.New(server.Config{Store: a.store(), Port: a.cfg.port, Build: build})
 	return srv.Serve(ctx, ln) //nolint:wrapcheck // already says what failed
 }
 
@@ -228,13 +231,13 @@ func (a *app) stopCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			p := daemon.Probe(cmd.Context(), a.cfg.base())
 			if p.State != daemon.Ours {
-				a.out("server is not running")
+				a.say("cli_not_running")
 				return nil
 			}
 			if err := daemon.Terminate(p.Health.PID); err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}
-			a.out("stopped server (pid %d)", p.Health.PID)
+			a.say("cli_stopped", p.Health.PID)
 			return nil
 		},
 	}

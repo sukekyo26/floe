@@ -32,8 +32,12 @@ func TestMain(m *testing.M) {
 			Getenv: os.Getenv, Dir: dir, Stdout: os.Stdout, Stderr: os.Stderr, Environ: os.Environ(),
 		}))
 	}
-	if err := os.Setenv(asCLI, "1"); err != nil {
-		panic(err)
+	// The binary run as floe (another build, a started server) reads the real environment: English,
+	// whatever the developer's locale.
+	for k, v := range map[string]string{asCLI: "1", "FLOE_LANG": "en"} {
+		if err := os.Setenv(k, v); err != nil {
+			panic(err)
+		}
 	}
 	os.Exit(m.Run())
 }
@@ -212,22 +216,29 @@ func TestConfigErrors(t *testing.T) {
 		{"FLOE_PORT", "70000", `invalid FLOE_PORT "70000"`},
 		{"FLOE_PORT", "0x10", `invalid FLOE_PORT "0x10"`},
 		{"FLOE_PORT", "1e3", `invalid FLOE_PORT "1e3"`},
-		{"FLOE_IDLE_MINUTES", "0", `floe: invalid FLOE_IDLE_MINUTES "0": use a positive number of minutes`},
-		{"FLOE_IDLE_MINUTES", "-1", `invalid FLOE_IDLE_MINUTES "-1"`},
-		{"FLOE_IDLE_MINUTES", "1e3", `invalid FLOE_IDLE_MINUTES "1e3"`},
-		{"FLOE_IDLE_MINUTES", "Inf", `invalid FLOE_IDLE_MINUTES "Inf"`},
-		{"FLOE_IDLE_MINUTES", "NaN", `invalid FLOE_IDLE_MINUTES "NaN"`},
 	} {
 		saved := e.vars[tt.key]
 		e.vars[tt.key] = tt.value
 		want(t, tt.key+"="+tt.value, e.run(t, "", "list"), 1, "", tt.msg)
 		e.vars[tt.key] = saved
 	}
-	e.vars["FLOE_IDLE_MINUTES"] = "0.01"
-	want(t, "a fractional idle time", e.run(t, "", "list"), 0, "", "")
 	delete(e.vars, "FLOE_DIR")
 	delete(e.vars, "HOME")
 	want(t, "no HOME", e.run(t, "", "list"), 1, "", "floe: HOME is not set; set HOME or FLOE_DIR")
+}
+
+func TestLanguage(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["LANG"] = "ja_JP.UTF-8"
+	want(t, "stop in Japanese", e.run(t, "", "stop"), 0, "サーバーは動いていません\n", "")
+	e.vars["FLOE_PORT"] = "abc"
+	want(t, "a refusal in Japanese", e.run(t, "", "list"), 1, "",
+		"floe: FLOE_PORT「abc」は使えません。1 から 65535 のポート番号を指定してください")
+	want(t, "cobra's own errors stay in English", e.run(t, "", "list", "--nope"), 2, "", "floe: unknown flag: --nope")
+	e.vars["FLOE_LANG"] = "en"
+	want(t, "FLOE_LANG wins over LANG", e.run(t, "", "list"), 1, "", `floe: invalid FLOE_PORT "abc"`)
 }
 
 func TestPublish(t *testing.T) {
@@ -262,7 +273,7 @@ func TestPublish(t *testing.T) {
 		"floe: --title is empty: give the page a name, or omit --title to take it from the <title> or first <h1>")
 	want(t, "an invalid slug", e.run(t, "repo", "publish", demo, "--slug", "../x"), 1, "", `invalid slug "../x"`)
 	want(t, "an invalid language", e.run(t, "repo", "publish", demo, "--lang", "ja_JP"), 1, "",
-		`floe: invalid language "ja_JP": use a BCP 47 tag such as en, ja or pt-BR via --lang`)
+		`floe: invalid language "ja_JP": give --lang a BCP 47 tag such as en, ja or pt-BR`)
 	frag := e.write(t, "frag.html", "<p>こんにちは</p>")
 	want(t, "--lang", e.run(t, "repo", "publish", frag, "--lang", "ja"), 0, e.base()+"/a/frag/\n", "")
 	if b, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], "frag", "index.html")); err != nil || !bytes.Contains(b, []byte(`<html lang="ja">`)) {
@@ -278,13 +289,13 @@ func TestPublish(t *testing.T) {
 	want(t, "re-register", e.run(t, "", "publish", site, "--link"), 0, e.base()+"/a/site/\n", `updated "site" (last published `)
 	sub := e.write(t, "site/sub/p.html", "<title>Sub</title>")
 	want(t, "another file", e.run(t, "", "publish", sub, "--link", "--slug", "site"), 1, "",
-		`"site" is linked to `+site+"; use another --slug, or add --force to replace that link")
+		`slug "site" is linked to `+site+"; choose another slug, or replace that link with floe publish --link --force")
 	want(t, "--force", e.run(t, "", "publish", sub, "--link", "--slug", "site", "--force"), 0, e.base()+"/a/site/\n", "updated")
 	if r := e.run(t, "", "list"); !strings.Contains(r.stdout, "\tsite\tSub\t"+sub+"\n") {
 		t.Errorf("list after --force = %q", r.stdout)
 	}
 
-	want(t, "rm", e.run(t, "", "rm", "site", "my-demo", "frag", "nope", "untouched"), 1, "", `floe: no page "nope" (see: floe list)`)
+	want(t, "rm", e.run(t, "", "rm", "site", "my-demo", "frag", "nope", "untouched"), 1, "", `floe: no page "nope" (see floe list)`)
 	want(t, "list after rm", e.run(t, "", "list"), 0, "", "")
 	if _, err := os.Stat(sub); err != nil {
 		t.Errorf("rm removed the linked file: %v", err)
@@ -410,24 +421,5 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 	}
 	if h, _ := e.health(t); h.Build != second.Build {
 		t.Errorf("the server after the race runs %s, want %s", h.Build, second.Build)
-	}
-}
-
-func TestIdleExit(t *testing.T) {
-	t.Parallel()
-
-	e := newEnv(t)
-	e.vars["FLOE_IDLE_MINUTES"] = "0.01"
-	want(t, "publish", e.run(t, "", "publish", e.write(t, "idle.html", "<h1>Idle</h1>")), 0, e.base()+"/a/idle/\n", "")
-	// Each probe is a request that restarts the 0.6 s timer, so probes are a second apart.
-	up := true
-	for range 4 {
-		time.Sleep(time.Second)
-		if _, up = e.health(t); !up {
-			break
-		}
-	}
-	if up {
-		t.Error("the server did not exit after the idle time")
 	}
 }

@@ -34,9 +34,13 @@ floe rm report                    # delete a page (a linked file itself stays)
 floe stop                         # stop the background server
 ```
 
-The server starts on the first publish and exits after `FLOE_IDLE_MINUTES`
-(default 30) without requests. Pages are kept in `FLOE_DIR` (default
-`~/.local/share/floe`), and `FLOE_PORT` changes the port (default 7325).
+The server starts on the first publish and keeps running until `floe stop`.
+Pages are kept in `FLOE_DIR` (default `~/.local/share/floe`), and `FLOE_PORT`
+changes the port (default 7325).
+
+Messages are in English or Japanese. The command line follows `FLOE_LANG`,
+then `LC_ALL`, `LC_MESSAGES` and `LANG`; the management page follows the
+browser's language. English is the default.
 
 ## License
 
