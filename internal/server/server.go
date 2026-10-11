@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/ui"
 )
@@ -126,8 +127,23 @@ func notFound(w http.ResponseWriter) {
 	send(w, http.StatusNotFound, "not found")
 }
 
-func (*Server) serveUI(w http.ResponseWriter, _ *http.Request) {
-	sendBytes(w, http.StatusOK, htmlType, ui.Page)
+func (*Server) serveUI(w http.ResponseWriter, r *http.Request) {
+	sendUI(w, r, http.StatusOK)
+}
+
+// sendUI answers with the management page in the reader's language.
+func sendUI(w http.ResponseWriter, r *http.Request, status int) {
+	page, err := ui.Page(catalog(r))
+	if err != nil {
+		send(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	sendBytes(w, status, htmlType, page)
+}
+
+// catalog is the language of the reader of a response, from Accept-Language.
+func catalog(r *http.Request) *i18n.Catalog {
+	return i18n.New(i18n.FromAcceptLanguage(r.Header.Get("Accept-Language")))
 }
 
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) {

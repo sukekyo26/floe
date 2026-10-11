@@ -13,7 +13,6 @@ import (
 
 	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/ui"
 )
 
 const (
@@ -66,7 +65,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 				status = http.StatusOK
 			}
 		}
-		sendBytes(w, status, htmlType, ui.Page)
+		sendUI(w, r, status)
 		return
 	}
 	if m == nil {

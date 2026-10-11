@@ -189,6 +189,13 @@ func TestManagementPageAndFrame(t *testing.T) {
 		if r.status != http.StatusOK || !strings.Contains(r.body, "<title>floe</title>") || r.header.Get("Content-Security-Policy") != "" {
 			t.Errorf("GET %s = %d, CSP %q", target, r.status, r.header.Get("Content-Security-Policy"))
 		}
+		if !strings.Contains(r.body, `<html lang="en">`) {
+			t.Errorf("GET %s without Accept-Language is not in English", target)
+		}
+		if r := e.get(t, target, "Accept-Language", "ja,en;q=0.5"); !strings.Contains(r.body, `<html lang="ja">`) ||
+			!strings.Contains(r.body, "一覧へ戻る") {
+			t.Errorf("GET %s for a Japanese reader is not in Japanese", target)
+		}
 	}
 	if r := e.get(t, "/a/no-such/"); r.status != http.StatusNotFound || !strings.Contains(r.body, `id="notfound"`) {
 		t.Errorf("an unknown page URL = %d, want the frame with 404", r.status)
@@ -368,8 +375,13 @@ func TestEdit(t *testing.T) {
 	if m := e.store.ReadMeta("renamed"); m == nil || m.Title != "T" || m.Project != "p" || !m.Favorite {
 		t.Errorf("after the rename: %+v", m)
 	}
-	if r := e.send(t, http.MethodPatch, "/api/artifacts/my-demo", `"x"`); r.body != "送られた内容を読めませんでした（JSON のオブジェクトで送ってください）" {
+	if r := e.send(t, http.MethodPatch, "/api/artifacts/my-demo", `"x"`); r.body != "cannot read the request: send a JSON object" {
 		t.Errorf("a JSON string = %q", r.body)
+	}
+	ja := e.do(t, http.MethodPatch, "/api/artifacts/my-demo", `"x"`,
+		"Origin", e.origin, "Content-Type", "application/json", "Accept-Language", "ja-JP,ja;q=0.9,en;q=0.8")
+	if ja.body != "送られた内容を読めませんでした（JSON のオブジェクトで送ってください）" {
+		t.Errorf("a JSON string to a Japanese reader = %q", ja.body)
 	}
 }
 
@@ -620,8 +632,9 @@ func TestAddLink(t *testing.T) {
 		t.Errorf("add = %d %s, %+v", r.status, r.body, m)
 	}
 	sub := filepath.Join(e.tmp, "site/sub/p.html")
-	if r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":"site"}`); r.status != http.StatusConflict ||
-		!strings.Contains(r.body, "で使われています。別の URL 名を入力するか、空欄にしてください") {
+	r = e.do(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":"site"}`,
+		"Origin", e.origin, "Content-Type", "application/json", "Accept-Language", "ja")
+	if r.status != http.StatusConflict || !strings.Contains(r.body, "URL 名「site」は "+index+" のリンクで使われています") {
 		t.Errorf("a URL name of another file = %d %s", r.status, r.body)
 	}
 	if r := e.send(t, http.MethodPost, "/api/artifacts", body); r.status != http.StatusOK {

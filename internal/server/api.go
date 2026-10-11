@@ -38,26 +38,27 @@ func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]jso
 		return nil
 	}
 	if err != nil || !json.Valid(body) {
-		send(w, http.StatusBadRequest, "送られた内容を読めませんでした（JSON ではありません）")
+		send(w, http.StatusBadRequest, catalog(r).Msg("api_not_json"))
 		return nil
 	}
 	// Anything but an object (a number, a string, an array, null) is a mistake, not an empty change.
 	var input map[string]json.RawMessage
 	if json.Unmarshal(body, &input) != nil || input == nil {
-		send(w, http.StatusBadRequest, "送られた内容を読めませんでした（JSON のオブジェクトで送ってください）")
+		send(w, http.StatusBadRequest, catalog(r).Msg("api_not_object"))
 		return nil
 	}
 	return input
 }
 
-// refuse answers a usererr with its Japanese reason, 409 for a name in use; anything else is 500.
-func refuse(w http.ResponseWriter, err error) {
+// refuse answers a usererr with its reason in the reader's language, 409 for a name in use; anything
+// else is 500.
+func refuse(w http.ResponseWriter, r *http.Request, err error) {
 	var ue *usererr.Error
 	switch {
 	case errors.As(err, &ue) && ue.Conflict:
-		send(w, http.StatusConflict, ue.Ja)
+		send(w, http.StatusConflict, ue.Localize(catalog(r)))
 	case errors.As(err, &ue):
-		send(w, http.StatusBadRequest, ue.Ja)
+		send(w, http.StatusBadRequest, ue.Localize(catalog(r)))
 	default:
 		send(w, http.StatusInternalServerError, err.Error())
 	}
@@ -76,7 +77,7 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	}
 	path := text(input["path"])
 	if path == nil || !filepath.IsAbs(*path) {
-		send(w, http.StatusBadRequest, "HTML ファイルの絶対パス（/ で始まるパス）を入力してください")
+		send(w, http.StatusBadRequest, catalog(r).Msg("api_link_path"))
 		return
 	}
 	opts := store.Options{
@@ -85,11 +86,11 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	}
 	entry, err := s.cfg.Store.Prepare(r.Context(), *path, opts, filepath.Dir(*path))
 	if err != nil {
-		refuse(w, err)
+		refuse(w, r, err)
 		return
 	}
 	if err := s.cfg.Store.Save(entry); err != nil {
-		refuse(w, err)
+		refuse(w, r, err)
 		return
 	}
 	status := http.StatusOK
@@ -139,7 +140,7 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		if raw, ok := input[key]; ok {
 			v, isString := decode[string](raw)
 			if !isString {
-				send(w, http.StatusBadRequest, "タイトル・説明・プロジェクト・URL 名は文字列で送ってください")
+				send(w, http.StatusBadRequest, catalog(r).Msg("api_edit_strings"))
 				return
 			}
 			*field = &v
@@ -148,7 +149,7 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 	if raw, ok := input["favorite"]; ok {
 		v, isBool := decode[bool](raw)
 		if !isBool {
-			send(w, http.StatusBadRequest, "お気に入りは true か false で送ってください")
+			send(w, http.StatusBadRequest, catalog(r).Msg("api_favorite_bool"))
 			return
 		}
 		ed.Favorite = &v
@@ -159,7 +160,7 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		refuse(w, err)
+		refuse(w, r, err)
 		return
 	}
 	sendJSON(w, http.StatusOK, slugBody{Slug: to})

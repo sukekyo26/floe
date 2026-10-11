@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="{{.Lang}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -349,28 +349,28 @@
 <body>
 <header class="bar">
   <div class="bar-inner">
-    <a class="brand" href="/" title="一覧へ">
+    <a class="brand" href="/" title="{{.Msg "ui_back_to_list"}}">
       <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="floe-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D9F3ED"/><stop offset="1" stop-color="#C2E7DF"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#floe-sky)"/><path d="M17 47.5H47" fill="none" stroke="#5BB3A4" stroke-width="2" stroke-linecap="round"/><path d="M24 52.5H40" fill="none" stroke="#8ACBBE" stroke-width="2" stroke-linecap="round"/><path d="M12 32 22 38 41 37 53 29.5 53 34.5 41 42 22 43 12 37Z" fill="#6FAECB"/><path d="M12 32 24 21.5 33 28 22 38Z" fill="#F6FCFE"/><path d="M24 21.5 42 21 53 29.5 33 28Z" fill="#D3EAF4"/><path d="M33 28 53 29.5 41 37 22 38Z" fill="#E8F5FA"/></svg>
       floe
     </a>
-    <nav class="frame-nav" aria-label="前後のページ" hidden>
+    <nav class="frame-nav" aria-label="{{.Msg "ui_page_nav"}}" hidden>
       <a class="icon-btn" id="frame-prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
       <span class="frame-pos" id="frame-pos"></span>
       <a class="icon-btn" id="frame-next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
     </nav>
     <div class="bar-end">
       <span class="frame-actions" hidden>
-        <a class="icon-btn" id="frame-download" title="ダウンロード" aria-label="ダウンロード">
+        <a class="icon-btn" id="frame-download" title="{{.Msg "ui_download"}}" aria-label="{{.Msg "ui_download"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
         </a>
-        <a class="icon-btn" id="frame-open" href="?raw" target="_blank" rel="noopener" title="ページだけを新しいタブで開く" aria-label="ページだけを新しいタブで開く">
+        <a class="icon-btn" id="frame-open" href="?raw" target="_blank" rel="noopener" title="{{.Msg "ui_open_raw"}}" aria-label="{{.Msg "ui_open_raw"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
         </a>
       </span>
-      <div class="theme" role="group" aria-label="テーマ">
-        <button type="button" data-theme-choice="light" title="ライト" aria-label="ライト"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.7-5.7 1.4-1.4M4.9 19.1l1.4-1.4m11.4 0 1.4 1.4M4.9 4.9l1.4 1.4M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg></button>
-        <button type="button" data-theme-choice="dark" title="ダーク" aria-label="ダーク"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/></svg></button>
-        <button type="button" data-theme-choice="system" title="OS に合わせる" aria-label="OS に合わせる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H4zM9 20h6m-3-4v4"/></svg></button>
+      <div class="theme" role="group" aria-label="{{.Msg "ui_theme"}}">
+        <button type="button" data-theme-choice="light" title="{{.Msg "ui_theme_light"}}" aria-label="{{.Msg "ui_theme_light"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.7-5.7 1.4-1.4M4.9 19.1l1.4-1.4m11.4 0 1.4 1.4M4.9 4.9l1.4 1.4M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg></button>
+        <button type="button" data-theme-choice="dark" title="{{.Msg "ui_theme_dark"}}" aria-label="{{.Msg "ui_theme_dark"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/></svg></button>
+        <button type="button" data-theme-choice="system" title="{{.Msg "ui_theme_system"}}" aria-label="{{.Msg "ui_theme_system"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H4zM9 20h6m-3-4v4"/></svg></button>
       </div>
       <span class="server" id="server" role="status"></span>
     </div>
@@ -381,30 +381,30 @@
   <div class="toolbar">
     <div class="controls">
       <!-- 一覧を切り替えるボタン。WAI-ARIA の tabs（矢印キー移動・tabpanel）は実装しないので、チップと同じ aria-pressed にする -->
-      <div class="tabs" role="group" aria-label="種類">
-        <button type="button" data-tab="pages">アーティファクト<span class="n"></span></button>
-        <button type="button" data-tab="links">リンク<span class="n"></span></button>
+      <div class="tabs" role="group" aria-label="{{.Msg "ui_kind"}}">
+        <button type="button" data-tab="pages">{{.Msg "ui_tab_pages"}}<span class="n"></span></button>
+        <button type="button" data-tab="links">{{.Msg "ui_tab_links"}}<span class="n"></span></button>
       </div>
       <label class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input type="search" id="q" placeholder="タイトル・説明・URL 名・パスを検索" aria-label="検索" autocomplete="off">
+        <input type="search" id="q" placeholder="{{.Msg "ui_search_placeholder"}}" aria-label="{{.Msg "ui_search"}}" autocomplete="off">
         <kbd aria-hidden="true">/</kbd>
       </label>
       <button type="button" class="btn primary" id="add-open" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        リンクを追加
+        {{.Msg "ui_add_link"}}
       </button>
     </div>
     <div class="filters">
-      <button type="button" class="fav-toggle" id="fav" role="switch" aria-checked="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>お気に入りのみ<span class="n"></span></button>
+      <button type="button" class="fav-toggle" id="fav" role="switch" aria-checked="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>{{.Msg "ui_favorites_only"}}<span class="n"></span></button>
       <span class="divider" aria-hidden="true"></span>
-      <div class="chips" id="chips" role="group" aria-label="プロジェクト"></div>
+      <div class="chips" id="chips" role="group" aria-label="{{.Msg "ui_project"}}"></div>
       <span class="count" id="count"></span>
-      <label class="sort"><span class="sr-only">並び順</span>
+      <label class="sort"><span class="sr-only">{{.Msg "ui_sort"}}</span>
         <select id="sort">
-          <option value="updated">更新が新しい順</option>
-          <option value="created">作成が新しい順</option>
-          <option value="title">タイトル順</option>
+          <option value="updated">{{.Msg "ui_sort_updated"}}</option>
+          <option value="created">{{.Msg "ui_sort_created"}}</option>
+          <option value="title">{{.Msg "ui_sort_title"}}</option>
         </select>
       </label>
     </div>
@@ -414,43 +414,45 @@
     <ul id="list"></ul>
     <div class="state" id="empty" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>
-      <strong>まだページがありません</strong>
-      <p>エージェントに「ページにして」と頼むか、<code>floe publish &lt;file.html&gt;</code> で追加できます。</p>
+      <strong>{{.Msg "ui_empty_pages"}}</strong>
+      <p>{{.Msg "ui_empty_pages_hint"}}</p>
+      <p><code>floe publish &lt;file.html&gt;</code></p>
     </div>
     <div class="state" id="empty-links" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
-      <strong>まだリンクがありません</strong>
-      <p>「リンクを追加」から HTML ファイルの絶対パスを登録すると、コピーせずその場所のまま表示できます。<code>floe publish &lt;file.html&gt; --link</code> でも追加できます。</p>
+      <strong>{{.Msg "ui_empty_links"}}</strong>
+      <p>{{.Msg "ui_empty_links_hint"}}</p>
+      <p><code>floe publish &lt;file.html&gt; --link</code></p>
     </div>
     <div class="state" id="nomatch" hidden>
-      <strong>条件に合うページがありません</strong>
-      <p><button type="button" class="link-btn" id="clear">絞り込みを解除</button></p>
+      <strong>{{.Msg "ui_nomatch"}}</strong>
+      <p><button type="button" class="link-btn" id="clear">{{.Msg "ui_clear_filters"}}</button></p>
     </div>
   </div>
-  <nav class="pager" id="pager" aria-label="ページ送り" hidden>
+  <nav class="pager" id="pager" aria-label="{{.Msg "ui_pager"}}" hidden>
     <div class="sizes">
-      <span id="sizes-label">表示件数</span>
+      <span id="sizes-label">{{.Msg "ui_page_size"}}</span>
       <div class="seg" id="sizes" role="group" aria-labelledby="sizes-label"></div>
     </div>
     <div class="pages">
       <span class="range" id="range"></span>
-      <button type="button" class="icon-btn" id="prev" aria-label="前のページ">
+      <button type="button" class="icon-btn" id="prev" aria-label="{{.Msg "ui_prev_page"}}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
       </button>
       <span id="pageno"></span>
-      <button type="button" class="icon-btn" id="next" aria-label="次のページ">
+      <button type="button" class="icon-btn" id="next" aria-label="{{.Msg "ui_next_page"}}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
       </button>
     </div>
   </nav>
   <p class="keys" aria-hidden="true">
-    <span><kbd>↑</kbd><kbd>↓</kbd>移動</span><span><kbd>Enter</kbd>開く</span><span><kbd>x</kbd>選択</span><span><kbd>f</kbd>お気に入り</span>
-    <span><kbd>←</kbd><kbd>→</kbd>ページ</span><span><kbd>/</kbd>検索</span>
+    <span><kbd>↑</kbd><kbd>↓</kbd>{{.Msg "ui_key_move"}}</span><span><kbd>Enter</kbd>{{.Msg "ui_key_open"}}</span><span><kbd>x</kbd>{{.Msg "ui_key_select"}}</span><span><kbd>f</kbd>{{.Msg "ui_key_favorite"}}</span>
+    <span><kbd>←</kbd><kbd>→</kbd>{{.Msg "ui_key_page"}}</span><span><kbd>/</kbd>{{.Msg "ui_search"}}</span>
   </p>
-  <div class="bulk" id="bulk" role="region" aria-label="選択した項目の操作" hidden>
+  <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
     <span class="bulk-count" id="bulk-count" aria-live="polite"></span>
-    <button type="button" class="btn" id="bulk-page">このページをすべて選択</button>
-    <button type="button" class="btn" id="bulk-clear">選択を解除</button>
+    <button type="button" class="btn" id="bulk-page">{{.Msg "ui_select_page"}}</button>
+    <button type="button" class="btn" id="bulk-clear">{{.Msg "ui_clear_selection"}}</button>
     <button type="button" class="btn danger" id="bulk-delete"></button>
   </div>
 </main>
@@ -459,35 +461,35 @@
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="state notfound" id="notfound" hidden>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>
-  <strong>ページが見つかりません</strong>
+  <strong>{{.Msg "ui_not_found"}}</strong>
   <p id="notfound-detail"></p>
-  <p><a href="/">一覧へ戻る</a></p>
+  <p><a href="/">{{.Msg "ui_back_to_list"}}</a></p>
 </div>
 <dialog id="add-dialog" aria-labelledby="add-title">
   <form class="add" id="add">
     <div class="add-head">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
       <div>
-        <h2 id="add-title">リンクを追加</h2>
-        <p class="lead">HTML ファイルをコピーせず、その場所のまま表示します。</p>
+        <h2 id="add-title">{{.Msg "ui_add_link"}}</h2>
+        <p class="lead">{{.Msg "ui_add_lead"}}</p>
       </div>
     </div>
-    <label class="field">HTML ファイルの絶対パス
+    <label class="field">{{.Msg "ui_add_path"}}
       <input class="text path" id="add-path" required autofocus autocomplete="off" spellcheck="false"
         placeholder="/home/you/project/coverage/index.html">
     </label>
-    <label class="field"><span>URL 名 <small>省略可</small></span>
+    <label class="field"><span>{{.Msg "ui_slug"}} <small>{{.Msg "ui_optional"}}</small></span>
       <input class="text" id="add-slug" autocomplete="off" spellcheck="false" pattern="[a-z0-9]([a-z0-9\-]{0,62}[a-z0-9])?"
-        title="英小文字・数字・ハイフン" placeholder="空欄ならファイル名（index.html はフォルダ名）から付ける">
-      <small>ページの URL（/a/〇〇/）に使う名前。英小文字・数字・ハイフン</small>
+        title="{{.Msg "ui_slug_rule"}}" placeholder="{{.Msg "ui_add_slug_placeholder"}}">
+      <small>{{.Msg "ui_add_slug_hint"}}</small>
     </label>
-    <label class="field"><span>説明 <small>省略可</small></span>
+    <label class="field"><span>{{.Msg "ui_description"}} <small>{{.Msg "ui_optional"}}</small></span>
       <input class="text" id="add-desc" autocomplete="off">
     </label>
     <p class="error" id="add-error" hidden></p>
     <div class="dialog-actions">
-      <button type="button" class="btn" id="add-cancel" data-close>キャンセル</button>
-      <button type="submit" class="btn primary" id="add-submit">追加</button>
+      <button type="button" class="btn" id="add-cancel" data-close>{{.Msg "ui_cancel"}}</button>
+      <button type="submit" class="btn primary" id="add-submit">{{.Msg "ui_add"}}</button>
     </div>
   </form>
 </dialog>
@@ -496,28 +498,28 @@
     <div class="add-head">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>
       <div>
-        <h2 id="edit-title">編集</h2>
+        <h2 id="edit-title">{{.Msg "ui_edit"}}</h2>
         <p class="lead" id="edit-target"></p>
       </div>
     </div>
-    <label class="field">タイトル
+    <label class="field">{{.Msg "ui_title"}}
       <input class="text" id="edit-name" autocomplete="off">
     </label>
-    <label class="field">URL 名
+    <label class="field">{{.Msg "ui_slug"}}
       <input class="text path" id="edit-slug" required autocomplete="off" spellcheck="false" pattern="[a-z0-9]([a-z0-9\-]{0,62}[a-z0-9])?"
-        title="英小文字・数字・ハイフン">
-      <small>変えると URL（/a/〇〇/）が変わり、古い URL では開けなくなります</small>
+        title="{{.Msg "ui_slug_rule"}}">
+      <small>{{.Msg "ui_edit_slug_hint"}}</small>
     </label>
-    <label class="field"><span>プロジェクト <small>空欄なら「記録なし」</small></span>
+    <label class="field"><span>{{.Msg "ui_project"}} <small>{{.Msg "ui_project_blank"}}</small></span>
       <input class="text" id="edit-project" autocomplete="off" spellcheck="false">
     </label>
-    <label class="field"><span>説明 <small>省略可</small></span>
+    <label class="field"><span>{{.Msg "ui_description"}} <small>{{.Msg "ui_optional"}}</small></span>
       <input class="text" id="edit-desc" autocomplete="off">
     </label>
     <p class="error" id="edit-error" hidden></p>
     <div class="dialog-actions">
-      <button type="button" class="btn" data-close>キャンセル</button>
-      <button type="submit" class="btn primary" id="edit-submit">保存</button>
+      <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
+      <button type="submit" class="btn primary" id="edit-submit">{{.Msg "ui_save"}}</button>
     </div>
   </form>
 </dialog>
@@ -536,17 +538,17 @@
       <button type="button" class="icon-btn star">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
       </button>
-      <button type="button" class="icon-btn copy" title="パスをコピー" hidden>
+      <button type="button" class="icon-btn copy" title="{{.Msg "ui_copy_path"}}" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg>
         <span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
       </button>
-      <button type="button" class="icon-btn edit" title="編集">
+      <button type="button" class="icon-btn edit" title="{{.Msg "ui_edit"}}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>
       </button>
-      <a class="icon-btn open" target="_blank" rel="noopener" title="ページだけを新しいタブで開く">
+      <a class="icon-btn open" target="_blank" rel="noopener" title="{{.Msg "ui_open_raw"}}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
       </a>
-      <a class="icon-btn download" title="ダウンロード">
+      <a class="icon-btn download" title="{{.Msg "ui_download"}}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
       </a>
       <button type="button" class="icon-btn delete">
@@ -558,6 +560,17 @@
 </template>
 <script>
   const $ = (id) => document.getElementById(id);
+  // 文言はサーバーが閲覧者の言語で埋めた ui_ の書式。書式は Go の fmt と同じ %s・%d・%[n]s・%% だけを使う
+  const MSG = {{.Messages}};
+  const LANG = document.documentElement.lang;
+  function t(key, ...args) {
+    let next = 0;
+    return (MSG[key] ?? key).replace(/%(?:\[(\d+)\])?([sd%])/g, (_, n, verb) => {
+      if (verb === '%') return '%';
+      if (n) next = Number(n) - 1;
+      return String(args[next++]);
+    });
+  }
   let items = [];
   // /a/<slug>/ ならページの外枠として動く（サーバーが同じ HTML を返す）
   const framed = location.pathname.match(/^\/a\/([^/]+)\/$/)?.[1];
@@ -578,7 +591,7 @@
   const SORTS = {
     updated: null,
     created: (x, y) => (y.createdAt ?? '').localeCompare(x.createdAt ?? ''),
-    title: (x, y) => x.title.localeCompare(y.title, 'ja'),
+    title: (x, y) => x.title.localeCompare(y.title, LANG),
   };
   // 一覧の状態（タブ・プロジェクト・検索語・並び順・ページ番号）は URL に持ち、再読み込みで同じ一覧を開く。
   // 同じ内容をタブ内にも残し、ページ表示中の前後移動と「一覧へ戻る」に使う
@@ -607,14 +620,14 @@
     // 保存先を使えない
   }
 
-  const fmt = (iso) => new Date(iso).toLocaleString('ja-JP', { dateStyle: 'medium', timeStyle: 'short' });
-  const rtf = new Intl.RelativeTimeFormat('ja', { numeric: 'auto' });
+  const fmt = (iso) => new Date(iso).toLocaleString(LANG, { dateStyle: 'medium', timeStyle: 'short' });
+  const rtf = new Intl.RelativeTimeFormat(LANG, { numeric: 'auto' });
   const UNITS = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['minute', 60]];
 
   function ago(iso) {
     const s = (new Date(iso) - Date.now()) / 1000;
     const [unit, sec] = UNITS.find(([, n]) => Math.abs(s) >= n) ?? [];
-    return unit ? rtf.format(Math.round(s / sec), unit) : 'たった今';
+    return unit ? rtf.format(Math.round(s / sec), unit) : t('ui_just_now');
   }
 
   function showError(msg) {
@@ -624,8 +637,8 @@
 
   // つながっている間は点だけを出し、切れたときだけ文で知らせる。アドレスはアドレスバーと同じなので出さない
   function setServer(ok) {
-    const label = ok ? `サーバー（${location.host}）に接続中` : `サーバー（${location.host}）に接続できません`;
-    $('server').textContent = ok ? '' : 'サーバーに接続できません';
+    const label = t(ok ? 'ui_server_up' : 'ui_server_down_host', location.host);
+    $('server').textContent = ok ? '' : t('ui_server_down');
     $('server').title = label;
     $('server').setAttribute('aria-label', label);
     $('server').classList.toggle('down', !ok);
@@ -713,9 +726,9 @@
     scrollTo(0, 0);
   }
 
-  // リンクを消しても元のファイルは残るので、「削除」ではなく「登録解除」と書く
-  const verb = (a) => (a.path ? '登録解除' : '削除');
-  const tabVerb = () => (tab === 'links' ? '登録解除' : '削除');
+  // リンクを消しても元のファイルは残るので、「削除」（ui_delete_*）ではなく「登録解除」（ui_unlink_*）と書く
+  const kind = (a) => (a.path ? 'unlink' : 'delete');
+  const tabKind = () => (tab === 'links' ? 'unlink' : 'delete');
 
   // 2 回押して実行するボタン。1 回目で確認状態にして true を返し、フォーカスが外れたら戻す
   function arm(btn, armedLabel) {
@@ -727,12 +740,12 @@
 
   function disarmBulk() {
     $('bulk-delete').classList.remove('armed');
-    $('bulk-delete').textContent = tabVerb();
+    $('bulk-delete').textContent = t(`ui_${tabKind()}`);
   }
 
   function renderBulk() {
     $('bulk').hidden = selected.size === 0;
-    $('bulk-count').textContent = `${selected.size} 件を選択中`;
+    $('bulk-count').textContent = t('ui_selected', selected.size);
     disarmBulk();
   }
 
@@ -748,13 +761,13 @@
 
   async function removeSelected() {
     const btn = $('bulk-delete');
-    if (arm(btn, `本当に ${selected.size} 件を${tabVerb()}`)) return;
+    if (arm(btn, t(`ui_${tabKind()}_bulk_confirm`, selected.size))) return;
     const slugs = [...selected];
     const reasons = await Promise.all(slugs.map(deleteOne));
     slugs.forEach((slug, i) => { if (!reasons[i]) selected.delete(slug); });
     const failed = reasons.filter(Boolean);
-    if (failed.length < slugs.length) toast(`${slugs.length - failed.length} 件を${tabVerb()}しました`);
-    showError(failed.length ? `${failed.length} 件を${tabVerb()}できませんでした（${failed[0]}）。選択したまま残しています。` : '');
+    if (failed.length < slugs.length) toast(t(`ui_${tabKind()}_bulk_done`, slugs.length - failed.length));
+    showError(failed.length ? t(`ui_${tabKind()}_bulk_failed`, failed.length, failed[0]) : '');
     await load();
     renderBulk();
   }
@@ -788,8 +801,8 @@
     // 最後の 1 件を消しても選択が勝手に「すべて」へ戻らないよう、0 件でも選択肢に残す
     if (project && !counts.has(project)) counts.set(project, 0);
     const names = [...counts.keys()].filter((k) => k !== NONE).sort((x, y) => x.localeCompare(y));
-    const chips = [chip('全プロジェクト', '', list.length), ...names.map((name) => chip(name, name, counts.get(name), 'project'))];
-    if (counts.has(NONE)) chips.push(chip('記録なし', NONE, counts.get(NONE), 'none'));
+    const chips = [chip(t('ui_all_projects'), '', list.length), ...names.map((name) => chip(name, name, counts.get(name), 'project'))];
+    if (counts.has(NONE)) chips.push(chip(t('ui_no_project'), NONE, counts.get(NONE), 'none'));
     $('chips').replaceChildren(...chips);
     $('fav').setAttribute('aria-checked', String(fav));
     $('fav').querySelector('.n').textContent = list.filter((a) => a.favorite).length;
@@ -818,7 +831,7 @@
     li.dataset.slug = a.slug;
     const sel = li.querySelector('.sel');
     sel.checked = selected.has(a.slug);
-    sel.setAttribute('aria-label', `${a.title} を選択`);
+    sel.setAttribute('aria-label', t('ui_select_named', a.title));
     sel.addEventListener('change', () => {
       if (sel.checked) selected.add(a.slug);
       else selected.delete(a.slug);
@@ -841,45 +854,46 @@
       tag.type = 'button';
       tag.className = 'tag';
       tag.textContent = a.project;
-      tag.title = `${a.project} で絞り込む`;
+      tag.title = t('ui_filter_project', a.project);
       tag.addEventListener('click', () => setProject(a.project));
       li.querySelector('.proj').append(tag);
     }
     li.querySelector('.slug').textContent = `/a/${a.slug}/`;
-    li.querySelector('.slug').title = `URL 名: ${a.slug}`;
+    li.querySelector('.slug').title = t('ui_slug_named', a.slug);
     // 作成順で並べたときは作成日時を出す
     const when = sort === 'created' && a.createdAt ? a.createdAt : a.updatedAt;
     const time = li.querySelector('time');
     time.dateTime = when;
     time.textContent = ago(when);
-    time.title = [a.createdAt && `${a.path ? '登録' : '作成'} ${fmt(a.createdAt)}`, `更新 ${fmt(a.updatedAt)}`].filter(Boolean).join('\n');
+    time.title = [a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
+      .filter(Boolean).join('\n');
     // リンクは登録した場所のファイルを表示する。消えていれば開けないことを示す
     if (a.path) {
       const path = document.createElement('span');
       path.className = a.missing ? 'path missing' : 'path';
-      path.textContent = a.missing ? `${a.path}（ファイルが見つかりません）` : a.path;
+      path.textContent = a.missing ? t('ui_file_missing', a.path) : a.path;
       path.title = a.path;
       li.querySelector('.sub').append(path);
       const copy = li.querySelector('.copy');
       copy.hidden = false;
-      copy.setAttribute('aria-label', `${a.title} のパスをコピー`);
+      copy.setAttribute('aria-label', t('ui_copy_path_named', a.title));
       copy.addEventListener('click', () => copyPath(a.path, copy));
     }
     const star = li.querySelector('.star');
     star.setAttribute('aria-pressed', String(Boolean(a.favorite)));
-    star.title = a.favorite ? 'お気に入りから外す' : 'お気に入りに追加';
-    star.setAttribute('aria-label', `${a.title} を${star.title}`);
+    star.title = t(a.favorite ? 'ui_unfavorite' : 'ui_favorite');
+    star.setAttribute('aria-label', t(a.favorite ? 'ui_unfavorite_named' : 'ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
     const edit = li.querySelector('.edit');
-    edit.setAttribute('aria-label', `${a.title} を編集`);
+    edit.setAttribute('aria-label', t('ui_edit_named', a.title));
     edit.addEventListener('click', () => openEdit(a));
     const open = li.querySelector('.open');
     open.href = `/a/${a.slug}/?raw`;
-    open.setAttribute('aria-label', `${a.title} だけを新しいタブで開く`);
+    open.setAttribute('aria-label', t('ui_open_raw_named', a.title));
     const dl = li.querySelector('.download');
     dl.href = `/api/artifacts/${a.slug}/download`;
     dl.download = `${a.slug}.html`;
-    dl.setAttribute('aria-label', `${a.title} をダウンロード`);
+    dl.setAttribute('aria-label', t('ui_download_named', a.title));
     if (a.missing) {
       link.removeAttribute('href');
       // href が無いとフォーカスできず、↑↓ の移動がこの行の手前で止まる。スクリプトからは移れるようにする
@@ -901,12 +915,12 @@
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ favorite: !a.favorite }),
       });
-      if (!res.ok) throw new Error(`${await res.text()}（HTTP ${res.status}）`);
+      if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
     } catch (e) {
-      showError(`お気に入りを変更できませんでした（${e.message}）。`);
+      showError(t('ui_favorite_failed', e.message));
       return;
     }
-    toast(a.favorite ? `「${a.title}」をお気に入りから外しました` : `「${a.title}」をお気に入りに追加しました`);
+    toast(t(a.favorite ? 'ui_unfavorited' : 'ui_favorited', a.title));
     await load();
   }
 
@@ -928,15 +942,15 @@
     try {
       await navigator.clipboard.writeText(path);
     } catch (e) {
-      showError(`パスをコピーできませんでした（${e.message}）。`);
+      showError(t('ui_copy_failed', e.message));
       return;
     }
     btn.classList.add('copied');
-    btn.title = 'コピーしました';
-    toast('パスをコピーしました');
+    btn.title = t('ui_copied');
+    toast(t('ui_path_copied'));
     setTimeout(() => {
       btn.classList.remove('copied');
-      btn.title = 'パスをコピー';
+      btn.title = t('ui_copy_path');
     }, 1500);
   }
 
@@ -948,7 +962,7 @@
     editing = a;
     $('edit-target').textContent = a.path ?? `/a/${a.slug}/`;
     for (const [key, id] of Object.entries(EDIT_FIELDS)) $(id).value = a[key] ?? '';
-    $('edit-name').placeholder = a.path ? '空欄ならファイルの <title> を使う' : '空欄なら HTML の <title> を使う';
+    $('edit-name').placeholder = t(a.path ? 'ui_title_from_file' : 'ui_title_from_html');
     $('edit-error').hidden = true;
     $('edit-dialog').showModal();
   }
@@ -966,12 +980,12 @@
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(changes),
       });
-      if (!res.ok) throw new Error(`${await res.text()}（HTTP ${res.status}）`);
+      if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
       $('edit-dialog').close();
-      toast('保存しました');
+      toast(t('ui_saved'));
       await load();
     } catch (err) {
-      $('edit-error').textContent = `保存できませんでした: ${err.message}`;
+      $('edit-error').textContent = t('ui_save_failed', err.message);
       $('edit-error').hidden = false;
     } finally {
       btn.disabled = false;
@@ -990,7 +1004,7 @@
     $('sort').value = sort;
     // 別の場所で消えた項目は選択から外す
     for (const slug of selected) if (!list.some((a) => a.slug === slug)) selected.delete(slug);
-    $('count').textContent = shown.length === list.length ? `${list.length} 件` : `${shown.length} / ${list.length} 件`;
+    $('count').textContent = shown.length === list.length ? t('ui_count_all', list.length) : t('ui_count_shown', shown.length, list.length);
     $('empty').hidden = tab !== 'pages' || list.length > 0;
     $('empty-links').hidden = tab !== 'links' || list.length > 0;
     $('nomatch').hidden = list.length === 0 || shown.length > 0;
@@ -1016,12 +1030,14 @@
     let order = openable(readState(saved));
     if (!order.some((x) => x.slug === a.slug)) order = openable({ ...readState(''), tab: a.path ? 'links' : 'pages' });
     const at = order.findIndex((x) => x.slug === a.slug);
-    for (const [id, x, label] of [['frame-prev', order[at - 1], '前'], ['frame-next', order[at + 1], '次']]) {
+    for (const [id, x, named, none] of [
+      ['frame-prev', order[at - 1], 'ui_prev_named', 'ui_no_prev'], ['frame-next', order[at + 1], 'ui_next_named', 'ui_no_next'],
+    ]) {
       const link = $(id);
       if (x) link.href = `/a/${x.slug}/`;
       else link.removeAttribute('href');
       link.setAttribute('aria-disabled', String(!x));
-      link.title = x ? `${label}: ${x.title}` : `${label}のページはありません`;
+      link.title = x ? t(named, x.title) : t(none);
       link.setAttribute('aria-label', link.title);
     }
     $('frame-pos').textContent = `${at + 1} / ${order.length}`;
@@ -1035,8 +1051,8 @@
     document.querySelector('.frame-actions').hidden = !found;
     $('notfound').hidden = found;
     $('notfound-detail').textContent = a?.missing
-      ? `${a.path} が見つかりません。移動していれば、新しい場所で登録し直してください。`
-      : '削除されたか、URL が間違っています。';
+      ? t('ui_link_missing', a.path)
+      : t('ui_not_found_detail');
     $('frame').hidden = !found;
     $('frame').title = a?.title ?? framed;
     document.querySelector('.frame-nav').hidden = !found;
@@ -1047,25 +1063,25 @@
 
   function disarm(a, btn) {
     btn.classList.remove('armed');
-    btn.title = verb(a);
-    btn.querySelector('.label').textContent = verb(a);
-    btn.setAttribute('aria-label', `${a.title} を${verb(a)}`);
+    btn.title = t(`ui_${kind(a)}`);
+    btn.querySelector('.label').textContent = btn.title;
+    btn.setAttribute('aria-label', t(`ui_${kind(a)}_named`, a.title));
   }
 
   // 1 回目のクリックで確認状態にし、2 回目で削除する
   async function remove(a, btn) {
-    if (arm(btn, `本当に${verb(a)}`)) {
-      btn.setAttribute('aria-label', `${a.title} を本当に${verb(a)}`);
+    if (arm(btn, t(`ui_${kind(a)}_confirm`))) {
+      btn.setAttribute('aria-label', t(`ui_${kind(a)}_confirm_named`, a.title));
       return;
     }
     const reason = await deleteOne(a.slug);
     if (reason) {
-      showError(`「${a.title}」を${verb(a)}できませんでした（${reason}）。サーバーが止まっていれば floe serve で起動してください。`);
+      showError(t(`ui_${kind(a)}_failed`, a.title, reason));
       return;
     }
     selected.delete(a.slug);
     showError('');
-    toast(`「${a.title}」を${verb(a)}しました`);
+    toast(t(`ui_${kind(a)}_done`, a.title));
     // 取り直して描いた内容を記録する。手元で消すだけだと、次の取り直しで描き直しが起き、別の行の確認状態が解ける
     await load();
   }
@@ -1083,7 +1099,7 @@
       if (text !== drawn) items = JSON.parse(text);
     } catch (e) {
       loadFailed = true;
-      showError(`一覧を読み込めませんでした（${e.message}）。サーバーが止まっていれば floe serve で起動してください。`);
+      showError(t('ui_load_failed', e.message));
       return;
     }
     // 消すのは読み込みの失敗だけ。削除の失敗などは次の操作まで残す
@@ -1109,15 +1125,15 @@
         body: JSON.stringify({ path: $('add-path').value, slug: $('add-slug').value, description: $('add-desc').value }),
       });
       // サーバーは理由を 1 行のテキストで返す
-      if (!res.ok) throw new Error(`${await res.text()}（HTTP ${res.status}）`);
+      if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
       const { slug } = await res.json();
       $('add').reset();
       $('add-dialog').close();
-      toast(`リンクを追加しました（/a/${slug}/）`);
+      toast(t('ui_link_added', slug));
       page = 1;
       await load();
     } catch (err) {
-      error.textContent = `追加できませんでした: ${err.message}`;
+      error.textContent = t('ui_add_failed', err.message);
       error.hidden = false;
     } finally {
       btn.disabled = false;
