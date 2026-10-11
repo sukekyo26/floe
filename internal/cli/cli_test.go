@@ -206,7 +206,9 @@ func (e *env) health(t *testing.T) (server.Health, bool) {
 	}
 	defer res.Body.Close()
 	var h server.Health
-	return h, json.NewDecoder(res.Body).Decode(&h) == nil
+	// Decoded first: Go does not specify whether h in "return h, f(&h)" is read before or after f.
+	ok := json.NewDecoder(res.Body).Decode(&h) == nil
+	return h, ok
 }
 
 func want(t *testing.T, what string, got result, code int, stdout, stderr string) {
