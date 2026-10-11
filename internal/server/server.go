@@ -208,16 +208,30 @@ type idle struct {
 	d      time.Duration
 	mu     sync.Mutex
 	active int
-	timer  *time.Timer
-	done   chan struct{}
-	once   sync.Once
+	// last is when the last request ended (or when idle was made).
+	last  time.Time
+	timer *time.Timer
+	done  chan struct{}
+	once  sync.Once
 }
 
 func newIdle(d time.Duration) *idle {
-	i := &idle{d: d, mu: sync.Mutex{}, active: 0, timer: nil, done: make(chan struct{}), once: sync.Once{}}
-	// A request racing the timer may reset it after it fired, so done is closed once.
-	i.timer = time.AfterFunc(d, func() { i.once.Do(func() { close(i.done) }) })
+	i := &idle{
+		d: d, mu: sync.Mutex{}, active: 0, last: time.Now(), timer: nil, done: make(chan struct{}), once: sync.Once{},
+	}
+	i.timer = time.AfterFunc(d, i.expire)
 	return i
+}
+
+// expire runs when the timer fires. A request may have begun, or begun and ended, after the timer
+// fired and before this took the lock (Stop cannot cancel a timer that has fired), so it checks again
+// under the lock; the request's end has re-armed the timer.
+func (i *idle) expire() {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if i.active == 0 && time.Since(i.last) >= i.d {
+		i.once.Do(func() { close(i.done) })
+	}
 }
 
 func (i *idle) wrap(next http.Handler) http.Handler {
@@ -229,6 +243,7 @@ func (i *idle) wrap(next http.Handler) http.Handler {
 		defer func() {
 			i.mu.Lock()
 			if i.active--; i.active == 0 {
+				i.last = time.Now()
 				i.timer.Reset(i.d)
 			}
 			i.mu.Unlock()
