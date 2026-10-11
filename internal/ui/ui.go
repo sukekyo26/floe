@@ -3,7 +3,8 @@ package ui
 
 import _ "embed"
 
-// Template wraps a body-only page. It is an html/template with .Title and .Content.
+// Template is the source of the template that wraps a body-only page. internal/page parses it with
+// html/template and fills .Title and .Content.
 //
 //go:embed template.html
 var Template string
