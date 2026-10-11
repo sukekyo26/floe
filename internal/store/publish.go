@@ -95,10 +95,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 		return nil, err
 	}
 	if opts.Lang != nil && !langRe.MatchString(*opts.Lang) {
-		return nil, usererr.New(
-			fmt.Sprintf(`invalid language "%s": use a BCP 47 tag such as en, ja or pt-BR via --lang`, *opts.Lang),
-			fmt.Sprintf("言語「%s」は使えません。en・ja・pt-BR のような BCP 47 の言語タグで指定してください", *opts.Lang),
-		)
+		return nil, usererr.New("store_invalid_lang", *opts.Lang)
 	}
 	prev := s.ReadMeta(slug)
 	dir := cwd
@@ -188,10 +185,7 @@ func cannotRead(file string, err error) error {
 	if errors.As(err, &pe) {
 		reason = pe.Err.Error()
 	}
-	return usererr.New(
-		fmt.Sprintf("cannot read %s: %v", file, err),
-		fmt.Sprintf("%s を読めません（%s）。パスとファイルがあるかを確かめてください", file, reason),
-	)
+	return usererr.New("store_cannot_read", file, reason)
 }
 
 func (s *Store) slugFor(file, path string, opts Options, cwd string) (string, error) {
@@ -206,10 +200,7 @@ func (s *Store) slugFor(file, path string, opts Options, cwd string) (string, er
 		slug = SlugFromFile(file, cwd)
 	}
 	if !ValidSlug(slug) {
-		return "", usererr.New(
-			fmt.Sprintf(`invalid slug "%s": use lowercase letters, digits and hyphens via --slug`, slug),
-			fmt.Sprintf("URL 名「%s」は使えません。英小文字・数字・ハイフンで入力してください", slug),
-		)
+		return "", usererr.New("store_invalid_slug", slug)
 	}
 	return slug, nil
 }
@@ -223,14 +214,11 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 		return false, nil
 	}
 	if prev.IsLink() != (path != "") {
-		kind, ja := "a stored page", "アーティファクト"
+		key := "store_slug_is_page"
 		if prev.IsLink() {
-			kind, ja = "a linked file", "リンク"
+			key = "store_slug_is_link"
 		}
-		return false, usererr.New(
-			fmt.Sprintf(`"%s" is %s; run "floe rm %s" first or use another --slug`, slug, kind, slug),
-			fmt.Sprintf("URL 名「%s」は%sで使われています。別の URL 名を入力してください", slug, ja),
-		)
+		return false, usererr.New(key, slug)
 	}
 	if path != "" {
 		if prev.Path == path {
@@ -239,10 +227,7 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 		if force {
 			return true, nil
 		}
-		err := usererr.New(
-			fmt.Sprintf(`"%s" is linked to %s; use another --slug, or add --force to replace that link`, slug, prev.Path),
-			fmt.Sprintf("URL 名「%s」は %s で使われています。別の URL 名を入力するか、空欄にしてください", slug, prev.Path),
-		)
+		err := usererr.New("store_slug_linked", slug, prev.Path)
 		err.Conflict = true
 		return false, err
 	}
@@ -256,9 +241,7 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 	if force {
 		return true, nil
 	}
-	return false, usererr.New(fmt.Sprintf(
-		`"%s" was published from project %s; use another --slug, or add --force to replace that page`, slug, owner,
-	), "")
+	return false, usererr.New("store_slug_owned", slug, owner)
 }
 
 // title is --title, else the title pinned on the management page, else (for a stored page) the
@@ -291,7 +274,7 @@ func (s *Store) Save(e *Entry) error {
 // Remove deletes slug. A linked file itself is left alone.
 func (s *Store) Remove(slug string) error {
 	if !ValidSlug(slug) || s.ReadMeta(slug) == nil {
-		return usererr.New(fmt.Sprintf(`no page "%s" (see: floe list)`, slug), "")
+		return usererr.New("store_no_page", slug)
 	}
 	if err := os.RemoveAll(s.dir(slug)); err != nil {
 		return fmt.Errorf("remove %s: %w", slug, err)
@@ -328,7 +311,7 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	if ed.Project != nil {
 		// "/" is the management page's value for "no project".
 		if strings.TrimSpace(*ed.Project) == "/" {
-			return "", usererr.New("プロジェクト名に / だけは使えません", "")
+			return "", usererr.New("store_project_slash")
 		}
 		m.Project = strings.TrimSpace(*ed.Project)
 		m.ProjectEdited = m.Project != ""
@@ -365,10 +348,10 @@ func (s *Store) renameTo(slug string, to *string) (string, error) {
 	}
 	name := strings.TrimSpace(*to)
 	if !ValidSlug(name) {
-		return "", usererr.New(fmt.Sprintf("URL 名「%s」は使えません。英小文字・数字・ハイフンで入力してください", name), "")
+		return "", usererr.New("store_invalid_slug", name)
 	}
 	if _, err := os.Lstat(s.dir(name)); name != slug && !errors.Is(err, os.ErrNotExist) {
-		err := usererr.New(fmt.Sprintf("URL 名「%s」は使われています。別の URL 名を入力してください", name), "")
+		err := usererr.New("store_slug_taken", name)
 		err.Conflict = true
 		return "", err
 	}

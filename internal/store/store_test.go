@@ -5,10 +5,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -99,13 +101,14 @@ func (e env) read(t *testing.T, rel string) string {
 	return string(b)
 }
 
-// wantUserErr fails unless err is a usererr whose message contains want, and returns a copy of it.
-func wantUserErr(t *testing.T, err error, want string) usererr.Error {
+// wantUserErr fails unless err is a usererr with the message key and, when given, args; it returns a
+// copy of it.
+func wantUserErr(t *testing.T, err error, key string, args ...any) usererr.Error {
 	t.Helper()
 
 	var ue *usererr.Error
-	if !errors.As(err, &ue) || !strings.Contains(ue.Msg, want) {
-		t.Fatalf("err = %v, want a usererr containing %q", err, want)
+	if !errors.As(err, &ue) || ue.Key != key || len(args) > 0 && !slices.Equal(ue.Args, args) {
+		t.Fatalf("err = %#v, want a usererr %s%v", err, key, args)
 	}
 	return *ue
 }
@@ -180,11 +183,12 @@ func TestPublishNames(t *testing.T) {
 	}
 
 	_, err := e.publish(t, filepath.Join(e.tmp, "proj", "docs", "index.html"), store.Options{Slug: ptr("../x")}, "proj")
-	if ue := wantUserErr(t, err, `invalid slug "../x"`); !strings.Contains(ue.Ja, "URL 名「../x」は使えません") {
-		t.Errorf("ja = %q", ue.Ja)
+	ue := wantUserErr(t, err, "store_invalid_slug", "../x")
+	if ja := ue.Localize(i18n.New("ja")); !strings.Contains(ja, "URL 名「../x」は使えません") {
+		t.Errorf("ja = %q", ja)
 	}
 	_, err = e.publish(t, filepath.Join(e.tmp, "nope.html"), store.Options{}, "proj")
-	wantUserErr(t, err, "cannot read "+filepath.Join(e.tmp, "nope.html"))
+	wantUserErr(t, err, "store_cannot_read", filepath.Join(e.tmp, "nope.html"), "no such file or directory")
 	if _, err := os.Stat(filepath.Join(e.tmp, "store", "nope")); !errors.Is(err, os.ErrNotExist) {
 		t.Error("a failed publish left something in the store")
 	}
@@ -202,7 +206,7 @@ func TestPublishOwner(t *testing.T) {
 	before := e.meta(t, "my-demo")
 
 	_, err := e.publish(t, doc, store.Options{}, "other")
-	wantUserErr(t, err, `"my-demo" was published from project repo; use another --slug, or add --force to replace that page`)
+	wantUserErr(t, err, "store_slug_owned", "my-demo", "repo")
 	if m := e.meta(t, "my-demo"); *m != *before {
 		t.Errorf("a refused publish changed the page: %+v", m)
 	}
@@ -219,7 +223,7 @@ func TestPublishOwner(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = e.publish(t, doc, store.Options{}, "other")
-	wantUserErr(t, err, "published from project legacy")
+	wantUserErr(t, err, "store_slug_owned", "my-demo", "legacy")
 	old.ProjectEdited = true
 	if err = e.s.WriteMeta("my-demo", old); err != nil {
 		t.Fatal(err)
@@ -284,8 +288,7 @@ func TestPublishLink(t *testing.T) {
 	}
 	other := e.write(t, "site/sub/p.html", "<title>Sub</title>")
 	_, err := e.publish(t, other, store.Options{Link: true, Slug: ptr("site")}, "proj")
-	ue := wantUserErr(t, err, `"site" is linked to `+file+"; use another --slug, or add --force to replace that link")
-	if !ue.Conflict || !strings.Contains(ue.Ja, "別の URL 名を入力するか、空欄にしてください") {
+	if ue := wantUserErr(t, err, "store_slug_linked", "site", file); !ue.Conflict {
 		t.Errorf("the refusal is not a conflict for the management page: %+v", ue)
 	}
 	again := e.mustPublish(t, file, store.Options{Link: true, Slug: ptr("site")}, "proj")
@@ -327,16 +330,16 @@ func TestPublishLinkSlugs(t *testing.T) {
 
 	// A slug cannot switch between a stored page and a link.
 	_, err := e.publish(t, e.write(t, "untitled.html", "<p>u</p>"), store.Options{Slug: ptr("site")}, "proj")
-	wantUserErr(t, err, `"site" is a linked file; run "floe rm site" first or use another --slug`)
+	wantUserErr(t, err, "store_slug_is_link", "site")
 	e.mustPublish(t, filepath.Join(e.tmp, "untitled.html"), store.Options{}, "proj")
 	_, err = e.publish(t, site, store.Options{Link: true, Slug: ptr("untitled")}, "proj")
-	wantUserErr(t, err, `"untitled" is a stored page`)
+	wantUserErr(t, err, "store_slug_is_page", "untitled")
 
 	// The link checks apply, by the real path.
 	_, err = e.publish(t, e.write(t, "home/top.html", "<p>t</p>"), store.Options{Link: true}, "proj")
-	wantUserErr(t, err, "would expose all of")
+	wantUserErr(t, err, "link_exposes_dir")
 	_, err = e.publish(t, filepath.Join(e.tmp, "missing.html"), store.Options{Link: true}, "proj")
-	wantUserErr(t, err, "cannot read")
+	wantUserErr(t, err, "store_cannot_read")
 }
 
 func TestList(t *testing.T) {
@@ -441,13 +444,13 @@ func TestEdit(t *testing.T) {
 		t.Error("the old slug is left after a rename")
 	}
 	_, err = e.s.Edit("renamed", store.Edit{Slug: ptr("untitled")})
-	if ue := wantUserErr(t, err, "URL 名「untitled」は使われています"); !ue.Conflict {
+	if ue := wantUserErr(t, err, "store_slug_taken", "untitled"); !ue.Conflict {
 		t.Error("a slug in use is not a conflict")
 	}
 	_, err = e.s.Edit("renamed", store.Edit{Slug: ptr("Bad Slug")})
-	wantUserErr(t, err, "URL 名「Bad Slug」は使えません")
+	wantUserErr(t, err, "store_invalid_slug", "Bad Slug")
 	_, err = e.s.Edit("renamed", store.Edit{Project: ptr(" / ")})
-	wantUserErr(t, err, "/ だけは使えません")
+	wantUserErr(t, err, "store_project_slash")
 	if _, err := e.s.Edit("no-such", store.Edit{}); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("Edit of an unknown slug = %v", err)
 	}
@@ -489,8 +492,8 @@ func TestRemove(t *testing.T) {
 	if _, err := os.Stat(file); err != nil {
 		t.Errorf("rm of a link removed the file itself: %v", err)
 	}
-	wantUserErr(t, e.s.Remove("site"), `no page "site" (see: floe list)`)
-	wantUserErr(t, e.s.Remove("../x"), `no page "../x"`)
+	wantUserErr(t, e.s.Remove("site"), "store_no_page", "site")
+	wantUserErr(t, e.s.Remove("../x"), "store_no_page", "../x")
 }
 
 func TestFileAndVersion(t *testing.T) {
@@ -558,8 +561,6 @@ func TestPublishLang(t *testing.T) {
 	}
 	for _, bad := range []string{"", "x", "ja_JP", "en-", `ja"><script>`} {
 		_, err := e.publish(t, frag, store.Options{Lang: ptr(bad)}, "other")
-		if ue := wantUserErr(t, err, "invalid language"); !strings.Contains(ue.Ja, "BCP 47") {
-			t.Errorf("--lang %q: ja = %q", bad, ue.Ja)
-		}
+		wantUserErr(t, err, "store_invalid_lang", bad)
 	}
 }
