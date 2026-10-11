@@ -20,22 +20,28 @@ curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 `FLOE_VERSION` でリリースを固定し、`FLOE_INSTALL_DIR` でインストール先（既定は
 `~/.local/bin`）を変えられます。バイナリはリリースの `SHA256SUMS` で検証します。
 
-## 使い方
+## クイックスタート
 
 ```sh
-floe publish report.html          # ページを保存して URL を出す
-floe publish notes.html --lang ja # 本文だけの HTML は英語の雛形で包む。--lang で言語を変えられる
-floe publish docs/index.html --link  # ファイルをその場所のまま、ディレクトリごと配信する
-floe list                         # ページを新しい順に出す
-floe rm report                    # ページを消す（リンク先のファイルは残る）
-floe stop                         # 裏で動いているサーバーを止める
+floe publish report.html   # ページを保存して URL を出し、ブラウザで開く
+floe list                  # ページを新しい順に出す
+floe stop                  # 裏で動いているサーバーを止める
 ```
 
 サーバーは最初の公開で起動し、`floe stop` で止めるまで動き続けます。
-ページは `FLOE_DIR`（既定は `~/.local/share/floe`）に保存し、`FLOE_PORT` でポート（既定は 7325）を変えられます。
+管理画面は `http://127.0.0.1:7325` で開けます。
+
+## 多言語化
 
 メッセージは英語と日本語で出せます。コマンドは `FLOE_LANG`、`LC_ALL`、`LC_MESSAGES`、`LANG`
 の順に見て言語を決め、管理画面はブラウザの言語に従います。既定は英語です。
+
+## ドキュメント
+
+| 内容 | English | 日本語 |
+|---|---|---|
+| コマンドと環境変数 | [commands.md](commands.md) | [commands.ja.md](commands.ja.md) |
+| 変更履歴 | [CHANGELOG.md](../CHANGELOG.md) | [CHANGELOG.ja.md](CHANGELOG.ja.md) |
 
 ## ライセンス
 

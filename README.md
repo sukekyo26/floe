@@ -23,24 +23,29 @@ Set `FLOE_VERSION` to pin a release and `FLOE_INSTALL_DIR` to change the
 destination (default `~/.local/bin`). The binary is verified against the
 release's `SHA256SUMS`.
 
-## Usage
+## Quick start
 
 ```sh
-floe publish report.html          # store the page and print its URL
-floe publish notes.html --lang ja # body-only HTML is wrapped in English unless --lang says otherwise
-floe publish docs/index.html --link  # serve the file in place, with its directory
-floe list                         # pages, newest first
-floe rm report                    # delete a page (a linked file itself stays)
-floe stop                         # stop the background server
+floe publish report.html   # store the page, print its URL and open it
+floe list                  # pages, newest first
+floe stop                  # stop the background server
 ```
 
 The server starts on the first publish and keeps running until `floe stop`.
-Pages are kept in `FLOE_DIR` (default `~/.local/share/floe`), and `FLOE_PORT`
-changes the port (default 7325).
+Open `http://127.0.0.1:7325` for the management page.
+
+## i18n
 
 Messages are in English or Japanese. The command line follows `FLOE_LANG`,
 then `LC_ALL`, `LC_MESSAGES` and `LANG`; the management page follows the
 browser's language. English is the default.
+
+## Documentation
+
+| Topic | English | 日本語 |
+|---|---|---|
+| Commands and environment variables | [commands.md](docs/commands.md) | [commands.ja.md](docs/commands.ja.md) |
+| Changelog | [CHANGELOG.md](CHANGELOG.md) | [CHANGELOG.ja.md](docs/CHANGELOG.ja.md) |
 
 ## License
 
