@@ -151,13 +151,10 @@ func (c *Catalog) Lang() Lang {
 	return c.lang
 }
 
-// Msg renders the message key with args (fmt verbs; %[n]s when a language reorders them).
+// Msg renders the message key with args (fmt verbs; %[n]s when a language reorders them). Every
+// message goes through fmt, with or without args, so a literal % is %% in every message.
 func (c *Catalog) Msg(key string, args ...any) string {
-	tmpl := c.lookup(key)
-	if len(args) == 0 {
-		return tmpl
-	}
-	return fmt.Sprintf(tmpl, args...)
+	return fmt.Sprintf(c.lookup(key), args...)
 }
 
 func (c *Catalog) lookup(key string) string {

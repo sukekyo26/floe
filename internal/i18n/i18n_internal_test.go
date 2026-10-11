@@ -26,7 +26,7 @@ func testCatalogs(t *testing.T) {
 	t.Helper()
 
 	withCatalogs(t, map[Lang]map[string]string{
-		English: {"hello": "hello %s", "only_en": "english only", "pair": "%s then %d"},
+		English: {"hello": "hello %s", "only_en": "english only", "pair": "%s then %d", "percent": "100%%"},
 		"ja":    {"hello": "こんにちは %s", "pair": "%[2]d の前に %[1]s"},
 		"pt":    {"hello": "olá %s"},
 		"pt-br": {"only_en": "brasil"},
@@ -110,6 +110,7 @@ func TestCatalogMsg(t *testing.T) {
 		{"pt-br", "only_en", "brasil", nil},
 		{"fr", "hello", "hello Ann", []any{"Ann"}},
 		{English, "missing_key", "missing_key", nil},
+		{English, "percent", "100%", nil},
 	}
 	for _, tt := range tests {
 		c := New(tt.lang)
