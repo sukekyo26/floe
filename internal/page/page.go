@@ -33,8 +33,8 @@ var (
 	wrapper = template.Must(template.New("page").Parse(ui.Template))
 )
 
-func outsideSvg(html string) string {
-	return svgRe.ReplaceAllString(html, "")
+func outsideSvg(doc string) string {
+	return svgRe.ReplaceAllString(doc, "")
 }
 
 // Title returns the <title>, else the first <h1>, as plain text, or "" when the page has neither.
@@ -52,9 +52,9 @@ func Title(doc string) string {
 	return strings.TrimSpace(spaceRe.ReplaceAllString(text, " "))
 }
 
-// IsDocument reports whether html has a document's frame (<!doctype> <html> <head> <body> <title>).
-func IsDocument(html string) bool {
-	return documentRe.MatchString(outsideSvg(html))
+// IsDocument reports whether doc has a document's frame (<!doctype> <html> <head> <body> <title>).
+func IsDocument(doc string) bool {
+	return documentRe.MatchString(outsideSvg(doc))
 }
 
 // StartsAsDocument reports whether the head of a page (its first SniffSize bytes) already marks a
@@ -67,11 +67,11 @@ func StartsAsDocument(head []byte) bool {
 	return documentRe.Match(head)
 }
 
-// Wrap returns html as is when it is a document, and otherwise the template around it, in the language
+// Wrap returns doc as is when it is a document, and otherwise the template around it, in the language
 // lang (a BCP 47 tag; "" is DefaultLang).
-func Wrap(html, title, lang string) ([]byte, error) {
-	if IsDocument(html) {
-		return []byte(html), nil
+func Wrap(doc, title, lang string) ([]byte, error) {
+	if IsDocument(doc) {
+		return []byte(doc), nil
 	}
 	if lang == "" {
 		lang = DefaultLang
@@ -82,7 +82,7 @@ func Wrap(html, title, lang string) ([]byte, error) {
 		Lang    string
 		Title   string
 		Content template.HTML
-	}{Lang: lang, Title: title, Content: template.HTML(html)}
+	}{Lang: lang, Title: title, Content: template.HTML(doc)}
 	if err := wrapper.Execute(&b, data); err != nil {
 		return nil, err //nolint:wrapcheck // the template is embedded; an error here is a floe bug
 	}
