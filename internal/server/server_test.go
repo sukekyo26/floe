@@ -412,6 +412,32 @@ func TestDelete(t *testing.T) {
 }
 
 // site links a directory with assets, dot paths, an escaping symlink and FIFOs.
+// TestLinkedFileSwappedForSymlink replaces a registered file with a symlink after registering it: the
+// link is served from its real path only, so the page and its download are 404 and the list shows it
+// as missing, titled by its slug.
+func TestLinkedFileSwappedForSymlink(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	page := e.write(t, "swap/page.html", "<title>Real</title><p>real</p>")
+	other := e.write(t, "swap/other.html", "<title>Other</title><p>other</p>")
+	e.publish(t, page, store.Options{Link: true, Slug: ptr("swap")})
+	if err := os.Remove(page); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(other, page); err != nil {
+		t.Fatal(err)
+	}
+	if got := statuses(t, e, "/a/swap/", "/a/swap/?raw", "/api/artifacts/swap/download"); got != "404 404 404" {
+		t.Errorf("a link swapped for a symlink = %s", got)
+	}
+	var list []store.Listed
+	if err := json.Unmarshal([]byte(e.get(t, "/api/artifacts").body), &list); err != nil || len(list) != 1 ||
+		list[0].Missing == nil || !*list[0].Missing || list[0].Title != "swap" {
+		t.Errorf("the list after the swap = %+v, %v", list, err)
+	}
+}
+
 func site(t *testing.T, e *env) string {
 	t.Helper()
 
@@ -621,8 +647,9 @@ func TestAddLink(t *testing.T) {
 		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+filepath.Join(e.tmp, "site/pipe.html")+`"}`).status,
 		e.send(t, http.MethodPost, "/api/artifacts", `{"path":1}`).status,
 		e.send(t, http.MethodPost, "/api/artifacts", `{bad`).status,
+		e.send(t, http.MethodPost, "/api/artifacts", `"x"`).status,
 	})
-	if got != "403 403 415 400 400 400 400 400" {
+	if got != "403 403 415 400 400 400 400 400 400" {
 		t.Errorf("refused adds = %s", got)
 	}
 
@@ -639,6 +666,9 @@ func TestAddLink(t *testing.T) {
 	}
 	if r := e.send(t, http.MethodPost, "/api/artifacts", body); r.status != http.StatusOK {
 		t.Errorf("re-adding the same path = %d %s", r.status, r.body)
+	}
+	if list, err := e.store.List(); err != nil || len(list) != 1 {
+		t.Errorf("re-adding the same path made %d entries (%v), want it updated in place", len(list), err)
 	}
 	if r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":""}`); r.body != `{"slug":"p"}` {
 		t.Errorf("an omitted slug = %s", r.body)

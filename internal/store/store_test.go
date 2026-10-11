@@ -338,6 +338,14 @@ func TestPublishLinkSlugs(t *testing.T) {
 	// The link checks apply, by the real path.
 	_, err = e.publish(t, e.write(t, "home/top.html", "<p>t</p>"), store.Options{Link: true}, "proj")
 	wantUserErr(t, err, "link_exposes_dir")
+	// A symlink outside home that points into its hidden directory is judged by where it points.
+	secret := e.write(t, "home/.secret/key.html", "<p>k</p>")
+	mkdir(t, filepath.Join(e.tmp, "pub"))
+	if err = os.Symlink(secret, filepath.Join(e.tmp, "pub/key.html")); err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.publish(t, filepath.Join(e.tmp, "pub/key.html"), store.Options{Link: true}, "proj")
+	wantUserErr(t, err, "link_hidden_home", secret)
 	_, err = e.publish(t, filepath.Join(e.tmp, "missing.html"), store.Options{Link: true}, "proj")
 	wantUserErr(t, err, "store_cannot_read")
 }
