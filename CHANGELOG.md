@@ -11,9 +11,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add `floe publish <file>`, which stores an HTML page and prints its URL on
   `http://127.0.0.1:7325`. It starts the server in the background when needed,
   opens a new page in the browser and wraps body-only HTML in the built-in
-  template. `--link` registers the file in place, served with the files under
-  its directory. `--slug`, `--title`, `--description` and `--force` are also
-  available. Republishing a slug says so on stderr, with a warning when the
+  template, in English unless `--lang` names another language. `--link`
+  registers the file in place, served with the files under its directory.
+  `--slug`, `--title`, `--description` and `--force` are also available. Republishing a slug says so on stderr, with a warning when the
   title changed.
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, as well as the
   management page with live reload, which reads and writes the same store

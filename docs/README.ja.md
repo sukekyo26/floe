@@ -24,6 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 
 ```sh
 floe publish report.html          # ページを保存して URL を出す
+floe publish notes.html --lang ja # 本文だけの HTML は英語の雛形で包む。--lang で言語を変えられる
 floe publish docs/index.html --link  # ファイルをその場所のまま、ディレクトリごと配信する
 floe list                         # ページを新しい順に出す
 floe rm report                    # ページを消す（リンク先のファイルは残る）

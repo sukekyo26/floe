@@ -261,6 +261,13 @@ func TestPublish(t *testing.T) {
 	want(t, "a blank --title", e.run(t, "repo", "publish", demo, "--title", " "), 2, "",
 		"floe: --title is empty: give the page a name, or omit --title to take it from the <title> or first <h1>")
 	want(t, "an invalid slug", e.run(t, "repo", "publish", demo, "--slug", "../x"), 1, "", `invalid slug "../x"`)
+	want(t, "an invalid language", e.run(t, "repo", "publish", demo, "--lang", "ja_JP"), 1, "",
+		`floe: invalid language "ja_JP": use a BCP 47 tag such as en, ja or pt-BR via --lang`)
+	frag := e.write(t, "frag.html", "<p>こんにちは</p>")
+	want(t, "--lang", e.run(t, "repo", "publish", frag, "--lang", "ja"), 0, e.base()+"/a/frag/\n", "")
+	if b, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], "frag", "index.html")); err != nil || !bytes.Contains(b, []byte(`<html lang="ja">`)) {
+		t.Errorf("publish --lang ja did not wrap the page in Japanese: %v", err)
+	}
 	want(t, "a missing file", e.run(t, "repo", "publish", "nope.html"), 1, "", "floe: cannot read nope.html")
 	want(t, "another project", e.run(t, "other", "publish", demo), 1, "",
 		`"my-demo" was published from project repo; use another --slug, or add --force to replace that page`)
@@ -277,7 +284,7 @@ func TestPublish(t *testing.T) {
 		t.Errorf("list after --force = %q", r.stdout)
 	}
 
-	want(t, "rm", e.run(t, "", "rm", "site", "my-demo", "nope", "untouched"), 1, "", `floe: no page "nope" (see: floe list)`)
+	want(t, "rm", e.run(t, "", "rm", "site", "my-demo", "frag", "nope", "untouched"), 1, "", `floe: no page "nope" (see: floe list)`)
 	want(t, "list after rm", e.run(t, "", "list"), 0, "", "")
 	if _, err := os.Stat(sub); err != nil {
 		t.Errorf("rm removed the linked file: %v", err)

@@ -27,6 +27,7 @@ release's `SHA256SUMS`.
 
 ```sh
 floe publish report.html          # store the page and print its URL
+floe publish notes.html --lang ja # body-only HTML is wrapped in English unless --lang says otherwise
 floe publish docs/index.html --link  # serve the file in place, with its directory
 floe list                         # pages, newest first
 floe rm report                    # delete a page (a linked file itself stays)
