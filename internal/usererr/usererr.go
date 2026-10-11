@@ -1,22 +1,29 @@
-// Package usererr carries a mistake the user can fix, worded for the CLI and for the management page.
+// Package usererr carries a mistake the user can fix. It holds a message key and its arguments, and
+// is worded in the reader's language where it is shown (the CLI's exit, an HTTP response).
 package usererr
 
-// Error is a refusal with the English message the CLI prints and the Japanese reason the
-// management page shows. Conflict marks a name already in use (HTTP 409 rather than 400).
+import (
+	"github.com/sukekyo26/floe/internal/i18n"
+)
+
+// Error is a refusal. Conflict marks a name already in use (HTTP 409 rather than 400).
 type Error struct {
-	Msg      string
-	Ja       string
+	Key      string
+	Args     []any
 	Conflict bool
 }
 
-// New returns an *Error; an empty ja falls back to msg.
-func New(msg, ja string) *Error {
-	if ja == "" {
-		ja = msg
-	}
-	return &Error{Msg: msg, Ja: ja, Conflict: false}
+// New returns an *Error for the catalog message key with args.
+func New(key string, args ...any) *Error {
+	return &Error{Key: key, Args: args, Conflict: false}
 }
 
+// Error words the refusal in English, for logs and for callers that do not localize.
 func (e *Error) Error() string {
-	return e.Msg
+	return e.Localize(i18n.EnglishCatalog())
+}
+
+// Localize words the refusal in the language of c.
+func (e *Error) Localize(c *i18n.Catalog) string {
+	return c.Msg(e.Key, e.Args...)
 }

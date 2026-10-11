@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/link"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -217,8 +218,9 @@ func TestCheck(t *testing.T) {
 			continue
 		}
 		var ue *usererr.Error
-		if !errors.As(err, &ue) || !strings.Contains(ue.Msg, tt.want) || ue.Ja == "" {
-			t.Errorf("Check(%s) = %v, want a usererr containing %q", tt.path, err, tt.want)
+		// Every refusal reads in Japanese too, not in the English fallback.
+		if !errors.As(err, &ue) || !strings.Contains(ue.Error(), tt.want) || ue.Localize(i18n.New("ja")) == ue.Error() {
+			t.Errorf("Check(%s) = %v, want a usererr containing %q, translated", tt.path, err, tt.want)
 		}
 	}
 }

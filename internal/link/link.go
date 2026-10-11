@@ -3,7 +3,6 @@
 package link
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -23,41 +22,26 @@ func Check(path, home string) error {
 	// The checks compare strings, so a path through a symlink (~/proj -> ~/.ssh) or with .. would slip
 	// past them.
 	if resolved, err := filepath.EvalSymlinks(path); err == nil && resolved != path {
-		return usererr.New(
-			path+" is not its real path; pass it through filepath.EvalSymlinks (symlinks resolved, path cleaned) first",
-			path+" は実パス（symlink を解決して正規化したパス）ではないので、登録できるかを確かめられません",
-		)
+		return usererr.New("link_not_real", path)
 	}
 	// A FIFO named .html would block its reader, so only regular files pass.
 	if fi, err := os.Stat(path); !htmlRe.MatchString(path) || err != nil || !fi.Mode().IsRegular() {
-		return usererr.New(
-			path+" is not a regular .html or .htm file; only HTML files can be linked",
-			path+" は通常の HTML ファイル（.html / .htm）ではありません",
-		)
+		return usererr.New("link_not_html", path)
 	}
 	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories. A home
 	// that cannot be resolved (missing, or empty and so ".") leaves the real one unknown: refuse.
 	resolvedHome, err := filepath.EvalSymlinks(home)
 	if err != nil || !filepath.IsAbs(resolvedHome) {
-		return usererr.New(
-			fmt.Sprintf(`cannot resolve the home directory "%s"; set HOME to an existing absolute directory`, home),
-			fmt.Sprintf("ホームディレクトリ「%s」を解決できないので、登録できるかを確かめられません。HOME に存在するディレクトリの絶対パスを設定してください", home),
-		)
+		return usererr.New("link_home_unresolved", home)
 	}
 	home = resolvedHome
 	// A hidden file right under home (~/.x.html) is not in a hidden directory; the next check refuses it.
 	rest, underHome := strings.CutPrefix(path, home+string(filepath.Separator))
 	if underHome && strings.HasPrefix(rest, ".") && strings.ContainsRune(rest, filepath.Separator) {
-		return usererr.New(
-			path+" is under a hidden directory of your home (settings and keys live there); move it out to link it",
-			path+" はホーム直下の隠しディレクトリ（設定や鍵の置き場）の中にあるので登録できません",
-		)
+		return usererr.New("link_hidden_home", path)
 	}
 	if dir := filepath.Dir(path); dir == string(filepath.Separator) || dir == home {
-		return usererr.New(
-			fmt.Sprintf("%s would expose all of %s; move it into a directory of its own and link it there", path, dir),
-			fmt.Sprintf("%s を登録すると %s 全体が公開されます。専用のディレクトリに置いてから登録してください", path, dir),
-		)
+		return usererr.New("link_exposes_dir", path, dir)
 	}
 	return nil
 }
