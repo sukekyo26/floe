@@ -7,10 +7,10 @@
 <title>{{.Title}}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- display=block: ページは sandbox（origin が null）で動き、Chrome はその読み込みにキャッシュを使わないので、フォントを毎回取り直す。swap だと開くたびに代わりの書体から差し替わってちらつくので、届くまで文字を隠して待つ -->
+<!-- display=block: pages run in a sandbox (a null origin), where Chrome does not use its cache, so the fonts are fetched every time. With swap each open would flicker from a fallback face, so text waits hidden until they arrive -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@700;800&family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=block">
 <style>
-  /* floe publish が本文だけの HTML を包む雛形。クラスの使い方はスキルの SKILL.md を参照 */
+  /* The template floe publish wraps body-only HTML in. See the skill's SKILL.md for its classes */
   :root {
     --bg: #f3f5f4; --surface: #fff; --fg: #18201e; --muted: #57635f; --line: #d4dbd8;
     --accent: #1d6670; --accent-soft: #dcebec;
@@ -18,7 +18,7 @@
     --display: "Murecho", "Hiragino Sans", "Noto Sans JP", sans-serif;
     --font: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", monospace;
-    /* 本文全体の幅と、読みやすさのために短く保つ文章の幅 */
+    /* The width of the whole body, and the shorter width that keeps prose readable */
     --page-width: 96rem; --text-width: 56rem;
     color-scheme: light;
   }
@@ -70,7 +70,7 @@
   .table-wrap { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; background: var(--surface); }
   th, td { text-align: left; vertical-align: baseline; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line); }
-  /* 狭い幅で文字の列を潰さず、.table-wrap の中で横スクロールさせる */
+  /* On narrow screens, scroll sideways inside .table-wrap instead of squeezing the columns */
   th:not(.num), td:not(.num) { min-width: 7em; }
   thead th { font-family: var(--display); font-size: 0.88rem; border-bottom: 2px solid var(--fg); }
   td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }

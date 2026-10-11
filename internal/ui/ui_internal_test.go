@@ -9,6 +9,18 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 )
 
+// TestSourcesAreInEnglish keeps the files users and template authors read in English: their wording
+// is in the catalogs, and their comments are English too.
+func TestSourcesAreInEnglish(t *testing.T) {
+	t.Parallel()
+
+	for name, src := range map[string]string{"ui.html": pageSource, "template.html": Template} {
+		if japaneseRe.MatchString(src) {
+			t.Errorf("%s has Japanese: %q", name, japaneseRe.FindAllString(src, 3))
+		}
+	}
+}
+
 func TestPageRendersInTheReadersLanguage(t *testing.T) {
 	t.Parallel()
 
