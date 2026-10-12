@@ -3,6 +3,9 @@
 package usererr
 
 import (
+	"errors"
+	"os"
+
 	"github.com/sukekyo26/floe/internal/i18n"
 )
 
@@ -34,4 +37,15 @@ func (e *Error) Localize(c *i18n.Catalog) string {
 		args[i] = a
 	}
 	return c.Msg(e.Key, args...)
+}
+
+// CannotRead is the refusal for a file the user named that cannot be read, with the reason (no such
+// file, permission denied) but not the path twice.
+func CannotRead(file string, err error) *Error {
+	reason := err.Error()
+	var pe *os.PathError
+	if errors.As(err, &pe) {
+		reason = pe.Err.Error()
+	}
+	return New("file_cannot_read", file, reason)
 }

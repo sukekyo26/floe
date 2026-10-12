@@ -188,7 +188,7 @@ func TestPublishNames(t *testing.T) {
 		t.Errorf("ja = %q", ja)
 	}
 	_, err = e.publish(t, filepath.Join(e.tmp, "nope.html"), store.Options{}, "proj")
-	wantUserErr(t, err, "store_cannot_read", filepath.Join(e.tmp, "nope.html"), "no such file or directory")
+	wantUserErr(t, err, "file_cannot_read", filepath.Join(e.tmp, "nope.html"), "no such file or directory")
 	if _, err := os.Stat(filepath.Join(e.tmp, "store", "nope")); !errors.Is(err, os.ErrNotExist) {
 		t.Error("a failed publish left something in the store")
 	}
@@ -347,7 +347,7 @@ func TestPublishLinkSlugs(t *testing.T) {
 	_, err = e.publish(t, filepath.Join(e.tmp, "pub/key.html"), store.Options{Link: true}, "proj")
 	wantUserErr(t, err, "link_hidden_home", secret)
 	_, err = e.publish(t, filepath.Join(e.tmp, "missing.html"), store.Options{Link: true}, "proj")
-	wantUserErr(t, err, "store_cannot_read")
+	wantUserErr(t, err, "file_cannot_read")
 }
 
 func TestList(t *testing.T) {

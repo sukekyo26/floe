@@ -113,6 +113,6 @@ func newRoot(env Env, cat *i18n.Catalog) *cobra.Command {
 		app.cfg = cfg
 		return err
 	}
-	root.AddCommand(app.publishCmd(), app.listCmd(), app.rmCmd(), app.serveCmd(), app.stopCmd())
+	root.AddCommand(app.publishCmd(), app.listCmd(), app.rmCmd(), app.serveCmd(), app.stopCmd(), app.diagramCmd())
 	return root
 }

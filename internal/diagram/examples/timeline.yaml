@@ -1,0 +1,23 @@
+# Timeline: when floe's PRs were merged (JST). Across is time; a period is a bar, a milestone is a dot
+# on the top row, and the names of the rows stand at the left.
+#
+# Scale: x = 160 + 16h, h hours from 10/11 0:00 (one day is 384px). The left 160px hold the names.
+id: timeline
+width: 1100
+height: 240
+title: "When floe's PRs were merged"
+parts:
+  - axis: { x1: 160, x2: 928, y: 200, ticks: [[160, "10/11"], [352, "12:00"], [544, "10/12"], [736, "12:00"], [928, "10/13"]], grid: 30 }
+  - label: { text: "Phase 0: setup", x: 16, y: 84, anchor: start }
+  - label: { text: "Phase 1: port", x: 16, y: 124, anchor: start }
+  - label: { text: "Phase 2: diagrams", x: 16, y: 164, anchor: start }
+  # A short period still says what it holds in the text right of its bar
+  - bar: { x1: 193.1, x2: 193.6, y: 84, tone: accent, label: "#1, #2: repository and CI" }
+  - bar: { x1: 459.7, x2: 521.6, y: 124, tone: good, label: "#3 to #12 (10 PRs)" }
+  - bar: { x1: 531.7, x2: 877.9, y: 164, tone: good, label: "#13, #14 in review" }
+  - dot: { cx: 193.1, cy: 44, tone: accent }
+  - label: { text: repository, x: 193.1, y: 24 }
+  - dot: { cx: 521.6, cy: 44, tone: accent }
+  - label: { text: phase 1 done, x: 521.6, y: 24 }
+  - dot: { cx: 877.9, cy: 44, tone: accent }
+  - label: { text: "#14 opened", x: 877.9, y: 24 }

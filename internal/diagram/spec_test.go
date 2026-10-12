@@ -3,6 +3,7 @@ package diagram_test
 import (
 	"errors"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/goccy/go-yaml"
@@ -52,7 +53,7 @@ parts:
 	}
 	at := func(line, col int) diagram.Pos { return diagram.Pos{Line: line, Column: col} }
 	want := &diagram.Spec{
-		ID: "all-parts", Width: 640, Height: 400.5, Title: "部品の一覧",
+		Pos: at(1, 1), File: "all.yaml", ID: "all-parts", Width: 640, Height: 400.5, Title: "部品の一覧",
 		Parts: []diagram.Part{
 			diagram.Frame{Pos: at(6, 5), X: 16, Y: 16, W: 608, H: 368, Label: "VPC", Icon: "aws/vpc", Square: true},
 			diagram.Box{
@@ -136,6 +137,10 @@ func TestParseErrors(t *testing.T) {
 		{"edge command", head + "  - edge: { d: 'M0,0 C1' }\n", `s.yaml:6:16: edge "M0,0 C1": use absolute M, H, V and L only (got C)`},
 		{"edge start", head + "  - edge: { d: H10 }\n", `s.yaml:6:16: edge "H10": start with M`},
 		{"edge number", head + "  - edge: { d: M10 }\n", `s.yaml:6:16: edge "M10": expected a number after M`},
+		{"edge stray character", head + "  - edge: { d: 'M0,10 H90\" V200' }\n", `s.yaml:6:16: edge "M0,10 H90" V200": unexpected """; write only M, H, V, L, numbers, spaces and commas`},
+		{"edge comma after a command", head + "  - edge: { d: 'M,10 H90' }\n", `s.yaml:6:16: edge "M,10 H90": expected a number after M`},
+		{"edge doubled comma", head + "  - edge: { d: 'M0,0 H10,,V20' }\n", `s.yaml:6:16: edge "M0,0 H10,,V20": unexpected ","; write only M, H, V, L, numbers, spaces and commas`},
+		{"edge relative command", head + "  - edge: { d: 'M0,0 h10' }\n", `s.yaml:6:16: edge "M0,0 h10": use absolute M, H, V and L only (got h)`},
 		{"edge number out of range", head + "  - edge: { d: 'M1e999,0' }\n", `s.yaml:6:16: edge "M1e999,0": expected a number after M`},
 		{"number out of range", head + "  - dot: { cx: 1e999, cy: 0 }\n", "s.yaml:6:16: dot: cx must be a number"},
 		{"zero width", "id: d\nwidth: 0\nheight: 1\ntitle: T\nparts: []\n", "s.yaml:2:8: diagram: width must be greater than 0"},
@@ -202,4 +207,31 @@ func errString(err error) string {
 		return ""
 	}
 	return err.Error()
+}
+
+// An edge's d takes what SVG path data allows for M, H, V and L, as a browser draws it.
+func TestEdgePathForms(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		d    string
+		want [][4]float64
+	}{
+		{"M1E2,0 H+200", [][4]float64{{100, 0, 200, 0}}},
+		{"M0-5L.5.5", [][4]float64{{0, -5, .5, .5}}},
+		{"\fM0 , 0\tV1e1\n", [][4]float64{{0, 0, 0, 10}}},
+		{"M0,0 L1.,2 H3", [][4]float64{{0, 0, 1, 2}, {1, 2, 3, 2}}},
+	}
+	for _, tt := range tests {
+		src := "id: d\nwidth: 9\nheight: 9\ntitle: T\nparts:\n  - edge: { d: " + strconv.Quote(tt.d) + " }\n"
+		s, err := diagram.Parse("s.yaml", []byte(src))
+		if err != nil {
+			t.Errorf("d %q: %v", tt.d, err)
+			continue
+		}
+		e, ok := s.Parts[0].(diagram.Edge)
+		if !ok || !reflect.DeepEqual(e.Segs, tt.want) {
+			t.Errorf("d %q: runs %v, want %v", tt.d, e.Segs, tt.want)
+		}
+	}
 }
