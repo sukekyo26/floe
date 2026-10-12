@@ -41,7 +41,8 @@ var markers = []marker{
 
 // markerKinds are what an edge's start and end take: none, or a marker.
 var markerKinds = func() []string {
-	kinds := []string{"none"}
+	kinds := make([]string, 0, 1+len(markers))
+	kinds = append(kinds, "none")
 	for _, m := range markers {
 		kinds = append(kinds, m.kind)
 	}
