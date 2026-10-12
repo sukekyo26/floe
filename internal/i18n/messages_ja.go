@@ -215,4 +215,11 @@ var messagesJA = map[string]string{
 	"diagram_icon_unavailable": "%s: アイコンにはまだ対応していません",
 	"diagram_id_used":          "図の id「%s」は %s:%d でも使っています。図ごとに別の id を付けてください",
 	"diagram_unknown_example":  "知らない例「%s」です。使えるのは %s です",
+	"diagram_zoom_hint":        "Ctrl / ⌘ + ホイール・ピンチで拡大、拡大中はドラッグで移動",
+	"diagram_zoom_in":          "拡大",
+	"diagram_zoom_out":         "縮小",
+	"diagram_zoom_fit":         "全体",
+	"diagram_zoom_fit_label":   "全体を表示",
+	"diagram_zoom_one":         "原寸",
+	"diagram_zoom_one_label":   "原寸で表示",
 }

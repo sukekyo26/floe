@@ -1,0 +1,78 @@
+  /* Diagrams take the colours of the template's CSS variables, so they follow dark mode. text-anchor is
+     set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
+  /* The frame spans the body's width. Its height follows the diagram's aspect ratio, capped by the
+     screen's height and by max-height (how far it may grow), with the diagram centred in it */
+  .dg-wrap { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; touch-action: pan-y; }
+  .dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
+  .dg-wrap.zoomed:active { cursor: grabbing; }
+  .dg-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: -0.6rem; font-size: 12px; line-height: 1.4; }
+  .dg-tools span { color: var(--muted); margin-right: auto; }
+  @media (max-width: 640px) { .dg-tools span { display: none; } }
+  .dg-tools button { min-width: 2.2rem; padding: 2px 8px; font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+  .dg-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .dg-tools button:disabled { opacity: 0.4; cursor: default; }
+  .dg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--font); }
+  .dg text { dominant-baseline: central; }
+  .dg .main { fill: var(--fg); font-size: 13px; font-weight: 700; }
+  .dg .sub { fill: var(--muted); font-size: 12px; }
+  .dg .code { font-family: var(--mono); font-size: 12px; }
+  .dg .box rect, .dg .box path { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+  .dg .box.accent rect, .dg .box.accent path { fill: var(--accent-soft); stroke: var(--accent); }
+  .dg .box.good rect, .dg .box.good path { fill: var(--good-soft); stroke: var(--good); }
+  .dg .box.warn rect, .dg .box.warn path { fill: var(--warn-soft); stroke: var(--warn); }
+  .dg .box.bad rect, .dg .box.bad path { fill: var(--bad-soft); stroke: var(--bad); }
+  .dg .box.bad text { fill: var(--bad); }
+  .dg .table .bg, .dg .table .head { fill: var(--surface); }
+  .dg .table.accent .head { fill: var(--accent-soft); }
+  .dg .table.good .head { fill: var(--good-soft); }
+  .dg .table.warn .head { fill: var(--warn-soft); }
+  .dg .table.bad .head { fill: var(--bad-soft); }
+  .dg .table .outline { fill: none; stroke: var(--line); stroke-width: 1.2; }
+  .dg .table.accent .outline { stroke: var(--accent); }
+  .dg .table.good .outline { stroke: var(--good); }
+  .dg .table.warn .outline { stroke: var(--warn); }
+  .dg .table.bad .outline { stroke: var(--bad); }
+  .dg .table .sep { stroke: var(--line); }
+  .dg .cell { fill: var(--fg); }
+  .dg .type { fill: var(--muted); font-size: 12px; }
+  /* A frame's dashes are a little darker than the secondary text. Without color-mix, --muted stays */
+  .dg .frame rect { fill: none; stroke: var(--muted); stroke: color-mix(in srgb, var(--muted) 75%, var(--fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
+  .dg .frame.accent rect { stroke: var(--accent); }
+  .dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
+  .dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
+  .dg .icon-dark { display: none; }
+  @media (prefers-color-scheme: dark) { .dg .icon-light { display: none; } .dg .icon-dark { display: inline; } }
+  .dg .edge, .dg .line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+  .dg .edge.dashed { stroke-dasharray: 5 4; }
+  .dg .edge.bold { stroke-width: 3; }
+  .dg .edge.accent { stroke: var(--accent); }
+  .dg .edge.good { stroke: var(--good); }
+  .dg .edge.warn { stroke: var(--warn); }
+  .dg .edge.bad { stroke: var(--bad); }
+  /* An edge's ends take its colour (context-stroke). Without it, --muted stays */
+  .dg .mk-fill { fill: var(--muted); fill: context-stroke; }
+  .dg .mk-hollow { fill: var(--bg); stroke: var(--muted); stroke: context-stroke; stroke-width: 1.2; }
+  .dg .mk-line { fill: none; stroke: var(--muted); stroke: context-stroke; stroke-width: 1.5; }
+  .dg .dot { fill: var(--muted); stroke: var(--muted); }
+  .dg .dot.accent { fill: var(--accent); stroke: var(--accent); }
+  .dg .dot.good { fill: var(--good); stroke: var(--good); }
+  .dg .dot.warn { fill: var(--warn); stroke: var(--warn); }
+  .dg .dot.bad { fill: var(--bad); stroke: var(--bad); }
+  .dg .dot.hollow { fill: var(--bg); stroke-width: 2; }
+  .dg .bar { fill: var(--muted); }
+  .dg .bar.accent { fill: var(--accent); }
+  .dg .bar.good { fill: var(--good); }
+  .dg .bar.warn { fill: var(--warn); }
+  .dg .bar.bad { fill: var(--bad); }
+  .dg .axis { stroke: var(--muted); stroke-width: 1.2; }
+  .dg .grid { stroke: var(--line); }
+  .dg .venn { fill: var(--accent-soft); fill-opacity: 0.6; stroke: var(--accent); stroke-width: 1.5; }
+  .dg .venn.good { fill: var(--good-soft); stroke: var(--good); }
+  .dg .venn.warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .dg .venn.bad { fill: var(--bad-soft); stroke: var(--bad); }
+  .dg .label-bg { fill: var(--bg); }
+  .dg .label { fill: var(--fg); font-size: 12px; }
+  .dg .label.strong { font-size: 13px; font-weight: 700; }
+  .dg .lifeline { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 6 4; }
+  .dg .divider { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 12 6; }
+  .dg .band { fill: var(--accent-soft); stroke: var(--accent); }

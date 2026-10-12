@@ -17,6 +17,13 @@ func TestDiagramRender(t *testing.T) {
 		!strings.Contains(r.stdout, `aria-label="t"`) || !strings.HasSuffix(r.stdout, "</svg></div>\n") {
 		t.Fatalf("render = %+v, want two diagrams", r)
 	}
+	if !strings.HasPrefix(r.stdout, "<script>(") || strings.Count(r.stdout, "<style>") != 1 {
+		t.Errorf("render = %q, want the assets once before the diagrams", r.stdout)
+	}
+	r = e.run(t, "specs", "diagram", "render", "--no-assets", "a.yaml")
+	if r.code != 0 || !strings.HasPrefix(r.stdout, `<div class="dg-wrap"`) || strings.Contains(r.stdout, "<script>") {
+		t.Errorf("render --no-assets = %+v, want the diagram alone", r)
+	}
 
 	// Every spec is read: a mistake in one's shape, the layout of another and a reused id all show.
 	e.write(t, "specs/shape.yaml", "id: c\n"+head+"  - dot: { cx: 1 }\n")
