@@ -11,6 +11,8 @@ Reference for every command of the `floe` binary.
 | `floe rm <slug>...` | Delete pages |
 | `floe serve` | Run the server in the foreground |
 | `floe stop` | Stop the background server |
+| `floe diagram render <spec.yaml>...` | Check diagram specs and print them as inline SVG |
+| `floe diagram example [kind]` | List the example specs, or print one |
 | `floe version` | Print the version (also `floe --version`) |
 | `floe help [command]` | Print help (Cobra builtin) |
 
@@ -75,6 +77,54 @@ Stop the background server. Without one, it prints `server is not running` and e
 
 ---
 
+## `floe diagram render <spec.yaml>...`
+
+Check each diagram spec and print the diagrams, in order, as one HTML fragment of inline SVG on stdout, to paste into a page. A relative path is resolved against the working directory.
+
+- A mistake in the shape of a spec (an unknown key, a wrong type, a value that is not allowed) stops that spec at the first one.
+- Layout mistakes are all reported: text too wide or too tall for its box, parts sticking out of the canvas, overlapping, or straddling the edge of a frame, edges running through boxes, labels or frame headings, and edges crossing like an X.
+- Every mistake of every spec is printed as `file:line:column: message`, and nothing is drawn until all are fixed (exit code 1).
+- The ids of the diagrams drawn together must differ, because they name the diagrams' markers. Draw all the diagrams of a page with one `render`.
+
+### Specs
+
+A spec is a YAML file holding one diagram: a canvas and the parts placed on it at absolute coordinates (the top left is 0, 0).
+
+```yaml
+id: api                        # lowercase letters, digits and hyphens
+width: 640
+height: 200
+title: How the API is laid out # read aloud by screen readers
+parts:
+  - frame: { x: 16, y: 16, w: 608, h: 168, label: VPC }
+  - box: { x: 40, y: 72, w: 200, h: 56, tone: accent, rows: [[ALB, main code], public entry] }
+  - box: { x: 400, y: 72, w: 200, h: 56, rows: [API server, ECS] }
+  - edge: { d: "M240,100 H400", label: HTTPS, at: [320, 100] }
+```
+
+Each part is one key naming its kind. Defaults are in parentheses; `tone` is `accent`, `good`, `warn` or `bad`.
+
+| Part | Keys |
+|---|---|
+| `frame` | `x` `y` `w` `h`, `label`, `accent`, `square` (no rounded corners), `icon`. Its label sits inside the top left corner, so place its contents 32 or more below its top. |
+| `box` | `x` `y` `w` `h`, `rows`, `tone`, `shape` (`rect`; `pill`, `hex` for a decision, `state`). A row is text, or `[text, style]` with the style `main`, `sub`, `main code` or `sub code`; without a style the first row is `main` and the rest `sub`. |
+| `table` | `x` `y` `w`, `title`, `rows`, `tone`. A row is a name, `[name]`, `[name, type]`, or `---` for a separator. The height is 30, plus 22 a row and 9 a separator, plus 6 when it has rows; row i (from 0, without separators) is centred at `y + 41 + 22i`. |
+| `icon` | `x` `y`, `name`, `label`, `size` (48). |
+| `edge` | `d`, `label` with `at: [x, y]`, `dashed`, `bold`, `tone`, `start` (`none`), `end` (`arrow`), `crossing`. `d` takes the absolute `M`, `H`, `V` and `L` only. The ends are `arrow`, `triangle`, `diamond`, `odiamond`, `one`, `many`, `zero-one`, `zero-many` or `none`. `crossing: true` lets this edge cross others. |
+| `dot` | `cx` `cy`, `r` (7), `tone`, `hollow`. Edges may reach its centre. |
+| `bar` | `x1` `x2` `y`, `tone`, `label` (right of the bar). |
+| `axis` | `x1` `x2` `y`, `ticks: [[x, text], ...]`, `grid` (the top of the grid lines). |
+| `circle` | `cx` `cy` `r`, `tone` (`accent`). Circles may overlap. |
+| `label` | `text`, `x` `y`, `anchor` (`middle`; `start`, `end`), `plain` (no background), `strong`. |
+| `line` | `x1` `y1` `x2` `y2`, `kind` (`line`; `lifeline`, `divider`). |
+| `raw` | `svg`: SVG that no part can draw, written out as it is and not checked. |
+
+## `floe diagram example [kind]`
+
+Without a kind, list the built-in examples, one per kind of diagram (architecture, class, ER, flow, Git branches, sequence, state, timeline, Venn): each line holds the kind and a summary, tab-separated. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks.
+
+---
+
 ## The server
 
 - `floe publish` starts the server when it is not running, and keeps using it otherwise. Two publishes racing to start it both end up on the one that comes up.
@@ -99,5 +149,5 @@ The management page follows the browser's language instead. Cobra's own errors (
 | Code | Meaning |
 |---|---|
 | `0` | Success |
-| `1` | Failure (a refused publish, a missing page, a port in use …) |
-| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`) |
+| `1` | Failure (a refused publish, a missing page, a port in use, a diagram spec with mistakes …) |
+| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`, an unknown example) |

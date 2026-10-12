@@ -11,6 +11,8 @@
 | `floe rm <slug>...` | ページを消す |
 | `floe serve` | サーバーを前面で動かす |
 | `floe stop` | 裏で動いているサーバーを止める |
+| `floe diagram render <spec.yaml>...` | 図の spec を検査し、インライン SVG にして出す |
+| `floe diagram example [kind]` | 例の spec を一覧する、または 1 つ出す |
 | `floe version` | 版を出す（`floe --version` でも可） |
 | `floe help [command]` | ヘルプを出す（Cobra の組み込み） |
 
@@ -75,6 +77,54 @@ doctype・`<html>`・`<head>`・`<body>`・`<title>` のどれも無いファイ
 
 ---
 
+## `floe diagram render <spec.yaml>...`
+
+図の spec を 1 つずつ検査し、図を渡した順に、ページに貼れるインライン SVG の HTML 断片 1 つにまとめて stdout に出します。相対パスは作業ディレクトリを基準に解決します。
+
+- spec の形の誤り（知らないキー、型の誤り、使えない値）は、その spec の最初の 1 件で止まります。
+- 配置の誤りはすべて報告します。文字が箱の幅や高さに収まらない、部品がキャンバスからはみ出す・重なる・枠の境界をまたぐ、線が箱・ラベル・枠の見出しを通る、線同士が X 字に交差する、の各誤りです。
+- すべての spec の誤りを `ファイル:行:列: 誤り` の形で出し、すべて直るまで何も描きません（終了コード 1）。
+- 一緒に描く図の id は、線の端の記号の名前に使うので、互いに違う必要があります。1 ページの図は 1 回の `render` で描いてください。
+
+### spec
+
+spec は図を 1 つ持つ YAML ファイルです。キャンバスと、その上に絶対座標（左上が 0, 0）で置く部品を書きます。
+
+```yaml
+id: api                        # 英小文字・数字・ハイフン
+width: 640
+height: 200
+title: How the API is laid out # スクリーンリーダーが読み上げる
+parts:
+  - frame: { x: 16, y: 16, w: 608, h: 168, label: VPC }
+  - box: { x: 40, y: 72, w: 200, h: 56, tone: accent, rows: [[ALB, main code], public entry] }
+  - box: { x: 400, y: 72, w: 200, h: 56, rows: [API server, ECS] }
+  - edge: { d: "M240,100 H400", label: HTTPS, at: [320, 100] }
+```
+
+部品は、種類の名前を 1 つのキーにして書きます。括弧の中は既定値です。`tone` は `accent`・`good`・`warn`・`bad` のどれかです。
+
+| 部品 | キー |
+|---|---|
+| `frame` | `x` `y` `w` `h`、`label`、`accent`、`square`（角を丸めない）、`icon`。見出しは左上の内側に入るので、中身は上端から 32 以上下に置く |
+| `box` | `x` `y` `w` `h`、`rows`、`tone`、`shape`（`rect`。ほかに `pill`、判定の `hex`、`state`）。行は文字列か `[文字列, スタイル]` で、スタイルは `main`・`sub`・`main code`・`sub code`。スタイルが無ければ 1 行目が `main`、残りが `sub` |
+| `table` | `x` `y` `w`、`title`、`rows`、`tone`。行は名前・`[名前]`・`[名前, 型]` か、区切り線の `---`。高さは 30 に、行ごとに 22・区切りごとに 9 を足し、行があればさらに 6 を足したもの。行 i（0 始まり、区切りを除く）の中心は `y + 41 + 22i` |
+| `icon` | `x` `y`、`name`、`label`、`size`（48） |
+| `edge` | `d`、`label` と `at: [x, y]`、`dashed`、`bold`、`tone`、`start`（`none`）、`end`（`arrow`）、`crossing`。`d` には絶対座標の `M`・`H`・`V`・`L` だけを使う。端は `arrow`・`triangle`・`diamond`・`odiamond`・`one`・`many`・`zero-one`・`zero-many`・`none`。`crossing: true` はこの線にほかの線との交差を許す |
+| `dot` | `cx` `cy`、`r`（7）、`tone`、`hollow`。線は中心まで引いてよい |
+| `bar` | `x1` `x2` `y`、`tone`、`label`（棒の右に置く） |
+| `axis` | `x1` `x2` `y`、`ticks: [[x, 文字列], ...]`、`grid`（補助線の上端） |
+| `circle` | `cx` `cy` `r`、`tone`（`accent`）。円どうしは重なってよい |
+| `label` | `text`、`x` `y`、`anchor`（`middle`。ほかに `start`・`end`）、`plain`（背景なし）、`strong` |
+| `line` | `x1` `y1` `x2` `y2`、`kind`（`line`。ほかに `lifeline`・`divider`） |
+| `raw` | `svg`。部品で描けない SVG をそのまま出す。検査の対象外 |
+
+## `floe diagram example [kind]`
+
+種類を渡さなければ、組み込みの例を一覧します。例は図の種類（構成図・クラス図・ER 図・判定フロー・Git のブランチ図・シーケンス図・状態遷移図・タイムライン・ベン図）ごとに 1 つずつあり、各行はタブ区切りで種類と要約です。種類を渡すと、その spec を出します。spec のコメントに、配置に使った格子の説明があります。どの例も検査を通ります。
+
+---
+
 ## サーバー
 
 - `floe publish` は、サーバーが動いていなければ起動し、動いていればそれを使います。2 つの publish が同時に起動しようとしても、どちらも立ち上がった方のサーバーを使います。
@@ -99,5 +149,5 @@ doctype・`<html>`・`<head>`・`<body>`・`<title>` のどれも無いファイ
 | コード | 意味 |
 |---|---|
 | `0` | 成功 |
-| `1` | 失敗（断られた公開、無いページ、使われているポートなど） |
-| `2` | 使い方の誤り（知らないフラグやコマンド、引数の不足、空の `--title`） |
+| `1` | 失敗（断られた公開、無いページ、使われているポート、誤りのある図の spec など） |
+| `2` | 使い方の誤り（知らないフラグやコマンド、引数の不足、空の `--title`、知らない例） |
