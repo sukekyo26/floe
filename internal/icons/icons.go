@@ -65,6 +65,14 @@ func Sets() []string {
 	return names
 }
 
+// CheckSet refuses a set that floe cannot fetch, naming the ones it can.
+func CheckSet(set string) error {
+	if kitOf(set) == nil {
+		return usererr.New("icons_unknown_set", set, strings.Join(Sets(), ", "))
+	}
+	return nil
+}
+
 func kitOf(set string) *kit {
 	i := slices.IndexFunc(kits, func(k *kit) bool { return k.name == set })
 	if i < 0 {
@@ -142,10 +150,10 @@ type Fetched struct {
 // its page links) in its directory, replacing what is there as a whole. A version already there is
 // kept unless force.
 func (s *Store) Fetch(ctx context.Context, set, source string, force bool) (Fetched, error) {
-	k := kitOf(set)
-	if k == nil {
-		return Fetched{}, fmt.Errorf("%w: %q", ErrNoSet, set) //nolint:exhaustruct // nothing fetched
+	if err := CheckSet(set); err != nil {
+		return Fetched{}, err //nolint:exhaustruct // nothing fetched
 	}
+	k := kitOf(set)
 	got := Fetched{Title: k.title, Dir: s.dir(k), Version: "", Count: 0, Already: false}
 	if s.root == "" {
 		return got, usererr.New("icons_no_home")

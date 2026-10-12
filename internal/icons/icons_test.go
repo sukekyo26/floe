@@ -255,6 +255,12 @@ func TestFetchRefusals(t *testing.T) {
 		t.Errorf("Fetch over a broken index = %+v", got)
 	}
 
+	// A set floe cannot fetch is refused by name, and is not a name without a set.
+	_, err := set.Fetch(context.Background(), "gcp", "", false)
+	if want := `unknown icon set "gcp"; use aws`; err == nil || err.Error() != want || errors.Is(err, icons.ErrNoSet) {
+		t.Errorf("Fetch gcp = %v, want %s", err, want)
+	}
+
 	// Without a home to put them under, the icons are refused when used.
 	nowhere := icons.New("")
 	_, serr := nowhere.Search([]string{"lambda"})

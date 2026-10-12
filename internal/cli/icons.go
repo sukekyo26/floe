@@ -2,13 +2,10 @@ package cli
 
 import (
 	"path/filepath"
-	"slices"
-	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/icons"
-	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 func (a *app) iconsCmd() *cobra.Command {
@@ -41,8 +38,8 @@ already there is kept unless --force.`,
 		Args: usage(cobra.RangeArgs(1, 2)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			set := args[0]
-			if !slices.Contains(icons.Sets(), set) {
-				return usageError{err: usererr.New("icons_unknown_set", set, strings.Join(icons.Sets(), ", "))}
+			if err := icons.CheckSet(set); err != nil {
+				return usageError{err: err}
 			}
 			source := ""
 			if len(args) == 2 {
