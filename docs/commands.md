@@ -128,7 +128,7 @@ Each part is one key naming its kind. Defaults are in parentheses; `tone` is `ac
 
 Without a kind, list the built-in examples, one per kind of diagram (architecture, class, ER, flow, Git branches, sequence, state, timeline, Venn): each line holds the kind and a summary, tab-separated. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks.
 
-The examples come in English and Japanese, text and comments alike. They follow the language of messages (`FLOE_LANG`, then `LC_ALL`, `LC_MESSAGES` and `LANG`), so copying an example in a Japanese environment starts a diagram in Japanese. An example not written in the language is printed in English.
+The examples come in English and Japanese, text and comments alike. They follow the language of messages (`FLOE_LANG`, then `LC_ALL`, `LC_MESSAGES` and `LANG`), so copying an example in a Japanese environment starts a diagram in Japanese. An example not written in the language is printed in the language without its region (`ja-JP` to `ja`), else in English.
 
 | Flag | Description |
 |---|---|
@@ -161,4 +161,4 @@ The management page follows the browser's language instead. Cobra's own errors (
 |---|---|
 | `0` | Success |
 | `1` | Failure (a refused publish, a missing page, a port in use, a diagram spec with mistakes …) |
-| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`, an unknown example, an invalid `--lang` for an example) |
+| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`, an unknown example, a `--lang` that is not a BCP 47 tag) |
