@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add data files to `floe publish`: a YAML file names a template, which draws
+  the page from its data. The built-in template `report` lays out a header
+  and sections of Markdown text, with HTML parts for what Markdown cannot say,
+  in the look pages have had so far.
 - Add `floe diagram render <spec.yaml>...`, which draws diagrams from YAML
   specs of parts placed at absolute coordinates and prints them as one HTML
   fragment of inline SVG. It first checks for text that does not fit, parts

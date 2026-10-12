@@ -6,7 +6,7 @@ Reference for every command of the `floe` binary.
 
 | Command | Purpose |
 |---|---|
-| `floe publish <file.html>` | Store a page (or `--link` a file in place) and print its URL |
+| `floe publish <file>` | Store a page (or `--link` a file in place) and print its URL |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe serve` | Run the server in the foreground |
@@ -20,11 +20,11 @@ Reference for every command of the `floe` binary.
 
 ---
 
-## `floe publish <file.html>`
+## `floe publish <file>`
 
 Store the page and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout. If the server is not running, it is started in the background first. A new slug is also opened in the browser; a republished one is not, because the open tab reloads itself.
 
-A relative `<file.html>` is resolved against the working directory.
+`<file>` is a data file (`.yaml`, `.yml`) or an HTML file. A relative path is resolved against the working directory.
 
 ### Flags
 
@@ -32,10 +32,32 @@ A relative `<file.html>` is resolved against the working directory.
 |---|---|
 | `--link` | Register the file in place instead of copying it (see [Linked files](#linked-files)). |
 | `--slug <name>` | The URL name. Lowercase letters, digits and hyphens, up to 64 characters. Defaults to the file name; `index.html` takes the name of its directory. |
-| `--title <text>` | The title shown in the list. Defaults to the page's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
+| `--title <text>` | The title shown in the list. Defaults to a data file's `title:`, or the HTML's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
 | `--description <text>` | A description shown in the list. |
-| `--lang <tag>` | The language to wrap body-only HTML in, as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. |
+| `--lang <tag>` | The language of a page drawn from a data file or wrapped from body-only HTML (`<html lang>`), as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. |
 | `--force` | Replace a page published from another project, or a link to another file. |
+
+### Data files
+
+A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts of Markdown text, with `html` parts for what Markdown cannot say.
+
+```yaml
+template: report               # the template that draws the page
+title: Moving the team wiki
+eyebrow: Plan · 2030-04        # a short line above the title (optional)
+lead: The wiki moves in two weekends.   # a sentence under the title (optional)
+sections:
+  - heading: Steps
+    parts:
+      - text: |                # Markdown, tables included; raw HTML in it is left out
+          1. Freeze edits on **Friday evening**.
+          2. Copy the pages.
+      - html: <p class="note warn">Edits during the freeze are lost.</p>   # HTML as it is
+```
+
+- `theme:` picks a theme of the template (`default`).
+- A data file that names no template, or one that is not there, is refused, as is data of the wrong shape (sections that are not a list).
+- The page is drawn once, when it is published: changing the data file later changes nothing until it is published again.
 
 ### Body-only HTML
 
