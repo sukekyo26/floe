@@ -170,8 +170,19 @@ func TestLookup(t *testing.T) {
 	if want := []string{"aws/res/aws-lambda-lambda-function", "aws/aws-lambda"}; err != nil || icon != nil || !reflect.DeepEqual(names, want) {
 		t.Errorf("Lookup lambda-function = %+v, %v, %v; want %v", icon, names, err, want)
 	}
+	// A misspelt word still finds the name.
+	if _, names, err := set.Lookup("aws/lamda"); err != nil || len(names) == 0 || names[0] != "aws/aws-lambda" {
+		t.Errorf("Lookup aws/lamda = %v, %v; want aws/aws-lambda first", names, err)
+	}
 	if icon, names, err := set.Lookup("aws/amazon-ec2"); err != nil || icon != nil || len(names) != 0 {
 		t.Errorf("Lookup amazon-ec2 = %+v, %v, %v; want no close names", icon, names, err)
+	}
+	// The index is read once: a lookup after it is gone still finds the icon.
+	if err := os.Remove(filepath.Join(root, "aws", "index.json")); err != nil {
+		t.Fatal(err)
+	}
+	if icon, _, err := set.Lookup("aws/aws-lambda"); err != nil || icon == nil {
+		t.Errorf("Lookup after the index is gone = %+v, %v; want the icon", icon, err)
 	}
 	// A name needs a known set in front.
 	for _, name := range []string{"aws-lambda", "gcp/aws-lambda"} {

@@ -235,6 +235,7 @@ var messagesEN = map[string]string{
 	"icons_bad_index":       `cannot read %s (%s); run "floe icons fetch %s --force" to fetch the icons again`,
 	"icons_download":        "cannot download %s (%s); check the network, or download it in a browser and pass its path",
 	"icons_no_package_link": "no link to the package on %s; download the zip there and run: floe icons fetch %s <path-or-url>",
+	"icons_too_large":       "%s is over %dMB, far larger than an icon package; check that it is the right file",
 	"icons_not_zip":         "%s is not a zip file; pass the zip of the package on %s",
 	"icons_bad_zip":         "cannot read %s in %s (%s); download the zip again",
 	"icons_none_in_zip":     "no %s icons in %s; pass the zip of the package on %s",

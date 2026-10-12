@@ -234,6 +234,7 @@ var messagesJA = map[string]string{
 	"icons_bad_index":       "%s を読めません（%s）。floe icons fetch %s --force でアイコンを取り直してください",
 	"icons_download":        "%s を取得できません（%s）。ネットワークを確かめるか、ブラウザで取得してそのパスを渡してください",
 	"icons_no_package_link": "%s にパッケージへのリンクがありません。そこから zip を取得して floe icons fetch %s <パスか URL> を実行してください",
+	"icons_too_large":       "%s は %dMB を超えています。アイコンのパッケージにしては大きすぎるので、正しいファイルか確かめてください",
 	"icons_not_zip":         "%s は zip ではありません。%s にあるパッケージの zip を渡してください",
 	"icons_bad_zip":         "%[2]s の %[1]s を読めません（%[3]s）。zip を取得し直してください",
 	"icons_none_in_zip":     "%[2]s に %[1]s アイコンがありません。%[3]s にあるパッケージの zip を渡してください",

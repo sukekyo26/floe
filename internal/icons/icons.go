@@ -12,15 +12,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -85,11 +83,14 @@ func kitOf(set string) *kit {
 // Store is the icon sets kept under a root (FLOE_ICONS_DIR), a directory each.
 type Store struct {
 	root string
+	// The indexes of the sets read so far, by set: a diagram looks up many icons.
+	mu      sync.Mutex
+	indexes map[string]*index
 }
 
 // New returns the store under root. An empty root (no HOME to put it under) is refused when used.
 func New(root string) *Store {
-	return &Store{root: root}
+	return &Store{root: root, mu: sync.Mutex{}, indexes: map[string]*index{}}
 }
 
 func (s *Store) dir(k *kit) string {
@@ -112,6 +113,11 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 	if s.root == "" {
 		return nil, usererr.New("icons_no_home")
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if idx := s.indexes[k.name]; idx != nil {
+		return idx, nil
+	}
 	file := filepath.Join(s.dir(k), "index.json")
 	b, err := os.ReadFile(file) //nolint:gosec // G304: the set's own index
 	if errors.Is(err, fs.ErrNotExist) {
@@ -124,6 +130,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 	if err != nil {
 		return nil, usererr.New("icons_bad_index", file, err.Error(), k.name)
 	}
+	s.indexes[k.name] = &idx
 	return &idx, nil
 }
 
@@ -194,6 +201,9 @@ func (s *Store) Fetch(ctx context.Context, set, source string, force bool) (Fetc
 	if err = replace(tmp, got.Dir); err != nil {
 		return got, err
 	}
+	s.mu.Lock()
+	s.indexes[k.name] = idx
+	s.mu.Unlock()
 	got.Version, got.Count = idx.Version, len(idx.Icons)
 	return got, nil
 }
@@ -216,37 +226,6 @@ func (k *kit) packageURL(ctx context.Context, source string) (string, error) {
 // IsURL tells a source that Fetch downloads from one it reads as a path.
 func IsURL(source string) bool {
 	return strings.HasPrefix(source, "https://") || strings.HasPrefix(source, "http://")
-}
-
-func read(ctx context.Context, source string) ([]byte, error) {
-	if IsURL(source) {
-		return download(ctx, source)
-	}
-	b, err := os.ReadFile(source) //nolint:gosec // G304: the zip the user named
-	if err != nil {
-		return nil, usererr.CannotRead(source, err)
-	}
-	return b, nil
-}
-
-func download(ctx context.Context, url string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, usererr.New("icons_download", url, err.Error())
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, usererr.New("icons_download", url, err.Error())
-	}
-	defer res.Body.Close() //nolint:errcheck // read only
-	if res.StatusCode != http.StatusOK {
-		return nil, usererr.New("icons_download", url, "HTTP "+strconv.Itoa(res.StatusCode))
-	}
-	b, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, usererr.New("icons_download", url, err.Error())
-	}
-	return b, nil
 }
 
 // replace puts the icons in tmp in place of dir as a whole. When that fails, the previous icons stay.
@@ -330,8 +309,9 @@ func readEntry(f *zip.File) ([]byte, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // worded by the caller
 	}
-	defer r.Close()      //nolint:errcheck // read only
-	return io.ReadAll(r) //nolint:wrapcheck // worded by the caller
+	defer r.Close() //nolint:errcheck // read only
+	// An entry may inflate far beyond its size in the zip.
+	return readAtMost(r, maxIcon)
 }
 
 // keep writes the icon b to dir as name.svg, or name.dark.svg for a dark variant.
@@ -451,13 +431,12 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 	return icon, nil, nil
 }
 
-// closeNames ranks the names by how many words of name they contain, words as slug splits them.
-// LIMIT: words are matched whole within a name, so a misspelt word suggests nothing. If that
-// misses names people mean, rank by edit distance instead.
+// closeNames ranks the names by how many words of name they hold (near), words as slug splits them.
+// LIMIT: a word is matched within 2 edits at most, so an abbreviation (ddb for dynamodb) suggests
+// nothing. If agents write those often, keep a table of aliases.
 func (k *kit) closeNames(idx *index, name string) []string {
 	var words []string
-	split := func(r rune) bool { return r == '/' || r == '-' || r == '_' || unicode.IsSpace(r) }
-	for w := range strings.FieldsFuncSeq(strings.ToLower(name), split) {
+	for w := range strings.FieldsFuncSeq(strings.ToLower(name), isSep) {
 		if len(w) > 1 && !slices.Contains(k.common, w) {
 			words = append(words, w)
 		}
@@ -470,7 +449,7 @@ func (k *kit) closeNames(idx *index, name string) []string {
 	for n := range idx.Icons {
 		score := 0
 		for _, w := range words {
-			if strings.Contains(n, w) {
+			if near(n, w) {
 				score++
 			}
 		}
@@ -486,4 +465,49 @@ func (k *kit) closeNames(idx *index, name string) []string {
 		out = append(out, k.name+"/"+f.name)
 	}
 	return out
+}
+
+func isSep(r rune) bool {
+	return r == '/' || r == '-' || r == '_' || unicode.IsSpace(r)
+}
+
+// near tells whether name holds word, or a word within 1 edit of it (2 for a word of 8 letters or
+// more), so that a misspelt word still finds the name. A word of 3 letters or fewer must be in it.
+func near(name, word string) bool {
+	if strings.Contains(name, word) {
+		return true
+	}
+	edits := 0
+	switch {
+	case len(word) >= 8:
+		edits = 2
+	case len(word) >= 4:
+		edits = 1
+	}
+	for w := range strings.FieldsFuncSeq(name, isSep) {
+		if edits > 0 && distance(w, word) <= edits {
+			return true
+		}
+	}
+	return false
+}
+
+// distance is the Levenshtein distance between a and b, by bytes: icon names are ASCII.
+func distance(a, b string) int {
+	row := make([]int, len(b)+1)
+	for j := range row {
+		row[j] = j
+	}
+	for i := 1; i <= len(a); i++ {
+		diag := row[0]
+		row[0] = i
+		for j := 1; j <= len(b); j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			diag, row[j] = row[j], min(row[j]+1, row[j-1]+1, diag+cost)
+		}
+	}
+	return row[len(b)]
 }
