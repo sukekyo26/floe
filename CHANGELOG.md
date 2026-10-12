@@ -15,8 +15,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   edges, and reports every mistake as `file:line:column`. The fragment
   carries the diagrams' style and a zoom toolbar (buttons, Ctrl / ⌘ + wheel,
   pinch, drag, arrow keys) worded in the page's language; `--no-assets` leaves them out.
+- Add `floe icons fetch <set> [zip-or-url]`, which keeps an icon set (`aws`:
+  the AWS Architecture Icons from the official Icon package) in `FLOE_ICONS_DIR` (default
+  `~/.local/share/floe-icons`), and `floe icons search <word>...`, which lists
+  their names. The `icon` part of a diagram and the `icon` of a frame draw
+  them, switching to an icon's dark variant with the colour scheme, and an
+  unknown name suggests close ones.
 - Add `floe diagram example [kind]`, which lists the built-in example specs
-  (architecture, class, ER, flow, Git, sequence, state, timeline, Venn) or
+  (architecture, AWS, class, ER, flow, Git, sequence, state, timeline, Venn) or
   prints one to copy. The examples come in English and Japanese and follow the
   language of messages; `--lang` picks another.
 - Add `floe publish <file>`, which stores an HTML page and prints its URL on

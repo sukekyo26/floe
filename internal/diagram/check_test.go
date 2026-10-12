@@ -2,11 +2,13 @@ package diagram_test
 
 import (
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/icons"
 )
 
 // check parses a spec of a 300x200 canvas (or w x h when given in head) with parts and checks it.
@@ -15,7 +17,7 @@ func check(t *testing.T, head, parts string) error {
 	if head == "" {
 		head = "width: 300\nheight: 200\n"
 	}
-	return diagram.Check(parse(t, "s.yaml", "id: d\ntitle: t\n"+head+"parts:\n"+parts))
+	return diagram.Check(parse(t, "s.yaml", "id: d\ntitle: t\n"+head+"parts:\n"+parts), standIn)
 }
 
 func TestCheck(t *testing.T) {
@@ -63,7 +65,7 @@ func TestCheck(t *testing.T) {
   - bar: { x1: 100, x2: 180, y: 120 }
   - bar: { x1: 100, x2: 180, y: 150, label: phase }
   - axis: { x1: 10, x2: 290, y: 170, ticks: [[10, 10/06], [290, 10/07]] }
-  - icon: { x: 200, y: 40, name: aws/amazon-ec2, label: EC2 }
+  - icon: { x: 200, y: 40, name: aws/aws-lambda, label: Lambda }
   - label: { text: strong, x: 200, y: 195, anchor: end, strong: true }
   - edge: { d: "M10,50.5 H295", label: own, at: [40, 50.5] }
 `,
@@ -72,14 +74,13 @@ func TestCheck(t *testing.T) {
 				`s.yaml:6:5: box "a": "b" needs about 16px more width`,
 				`s.yaml:6:5: box "a": its text needs a height of 46px or more; the box has 20px`,
 				`s.yaml:7:5: table "users": "identifier  string" needs about 78px more width`,
-				`s.yaml:13:5: icon "aws/amazon-ec2": icons are not supported yet`,
 				`s.yaml:8:5: dot at 295,50 sticks out of the 300x200 canvas`,
 				`s.yaml:12:5: label "10/06" sticks out of the 300x200 canvas`,
 				`s.yaml:12:5: label "10/07" sticks out of the 300x200 canvas`,
 				`s.yaml:14:5: label "strong" sticks out of the 300x200 canvas`,
 				`s.yaml:9:5: circle at 150,150 sticks out of the 300x200 canvas`,
 				`s.yaml:15:5: edge "M10,50.5 H295" runs through table "users" (line 7)`,
-				`s.yaml:15:5: edge "M10,50.5 H295" runs through icon "aws/amazon-ec2" (line 13)`,
+				`s.yaml:15:5: edge "M10,50.5 H295" runs through icon "aws/aws-lambda" (line 13)`,
 			},
 		},
 		{
@@ -124,12 +125,37 @@ func TestCheck(t *testing.T) {
 			want: []string{`s.yaml:7:5: edge "M50,125 V150" runs through the heading of frame "Heading" (line 6)`},
 		},
 		{
-			// the heading of a frame with an icon starts right of the icon
+			// the heading of a frame with an icon starts right of the icon, and edges may not cross the icon
 			name: "heading beside a frame icon",
-			parts: `  - frame: { x: 20, y: 120, w: 200, h: 60, label: Heading, icon: aws/vpc }
-  - edge: { d: "M50,125 V150", end: none }
+			parts: `  - frame: { x: 20, y: 120, w: 200, h: 60, label: Heading, icon: aws/group/region }
+  - edge: { d: "M56,125 V150", end: none }
+  - edge: { d: "M30,125 V150", end: none }
 `,
-			want: []string{`s.yaml:6:5: frame "Heading": icons are not supported yet`},
+			want: []string{`s.yaml:8:5: edge "M30,125 V150" runs through the icon of frame "Heading" (line 6)`},
+		},
+		{
+			// the corner icon is a part: a box may not cover it
+			name: "box over a frame icon",
+			parts: `  - frame: { x: 20, y: 120, w: 200, h: 60, label: Heading, icon: aws/group/region }
+  - box: { x: 40, y: 140, w: 60, h: 30, rows: [b] }
+`,
+			want: []string{`s.yaml:6:5: the icon of frame "Heading" overlaps box "b" (line 7)`},
+		},
+		{
+			name: "icons not there",
+			parts: `  - icon: { x: 10, y: 10, name: lambda }
+  - icon: { x: 70, y: 10, name: aws/lambda }
+  - icon: { x: 130, y: 10, name: aws/amazon-ec2 }
+  - frame: { x: 10, y: 100, w: 200, h: 60, label: Cloud, icon: aws/cloud }
+  - icon: { x: 190, y: 10, name: aws/ }
+`,
+			want: []string{
+				`s.yaml:6:5: icon "lambda": "lambda" needs its icon set in front (aws), like aws/amazon-ec2 (search with: floe icons search <word>)`,
+				`s.yaml:7:5: icon "aws/lambda": no icon "aws/lambda"; did you mean aws/aws-lambda? (search with: floe icons search <word>)`,
+				`s.yaml:8:5: icon "aws/amazon-ec2": no icon "aws/amazon-ec2" (search with: floe icons search <word>)`,
+				`s.yaml:9:5: frame "Cloud": no icon "aws/cloud"; did you mean aws/group/aws-cloud-logo? (search with: floe icons search <word>)`,
+				`s.yaml:10:5: icon "aws/": no icon "aws/" (search with: floe icons search <word>)`,
+			},
 		},
 		{
 			// sampling every 2px, as diagram.mjs did, missed the 2px inside of the narrowest bar
@@ -187,5 +213,19 @@ func TestCheckLocalize(t *testing.T) {
 	}
 	if got, want := l.Localize(i18n.New("ja")), "s.yaml:7:5: box「API」がframe「VPC」（6 行目）の境界をまたいでいます"; got != want {
 		t.Errorf("Localize(ja) = %q, want %q", got, want)
+	}
+}
+
+// Icons not fetched stop the check with how to fetch them, rather than as a mistake of the spec.
+func TestCheckIconsNotFetched(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	s := parse(t, "s.yaml", "id: d\ntitle: t\nwidth: 100\nheight: 100\nparts:\n  - icon: { x: 10, y: 10, name: aws/aws-lambda }\n")
+	err := diagram.Check(s, icons.New(dir))
+	var p diagram.Problems
+	want := "AWS icons are not in " + filepath.Join(dir, "aws") + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
+	if errors.As(err, &p) || errString(err) != want {
+		t.Errorf("Check = %v, want %s", err, want)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -49,10 +50,10 @@ var markerKinds = func() []string {
 	return kinds
 }()
 
-// Render checks the specs and draws them, in order, as one HTML fragment of inline SVG. The ids of the
-// diagrams name their markers, so they must differ between the specs drawn together. On a mistake
-// it draws nothing and returns the Problems of every spec.
-func Render(specs []*Spec) (string, error) {
+// Render checks the specs and draws them, in order, as one HTML fragment of inline SVG, with the icons
+// of store. The ids of the diagrams name their markers and icons, so they must differ between the
+// specs drawn together. On a mistake it draws nothing and returns the Problems of every spec.
+func Render(specs []*Spec, store *icons.Store) (string, error) {
 	var problems Problems
 	layouts := make([]*layout, len(specs))
 	first := map[string]*Spec{}
@@ -63,7 +64,11 @@ func Render(specs []*Spec) (string, error) {
 		} else {
 			first[s.ID] = s
 		}
-		layouts[i] = newLayout(s)
+		l, err := newLayout(s, store)
+		if err != nil {
+			return "", err
+		}
+		layouts[i] = l
 		problems = append(problems, layouts[i].check()...)
 	}
 	if len(problems) > 0 {
@@ -84,6 +89,9 @@ func (l *layout) svg() markup {
 		b.WriteString(string(svgf(`<marker id="%v_%v" viewBox="%v" refX="%v" refY="%v" markerWidth="%v" markerHeight="%v" `+
 			`markerUnits="userSpaceOnUse" orient="auto-start-reverse">%v</marker>`,
 			s.ID, k, m.viewBox, m.rx, m.ry, m.w, m.h, markup(m.body))))
+	}
+	for _, d := range l.iconDefs {
+		b.WriteString(string(d))
 	}
 	defs := b.String()
 	b.Reset()

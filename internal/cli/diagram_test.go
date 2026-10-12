@@ -45,7 +45,7 @@ func TestDiagramExample(t *testing.T) {
 
 	e := newEnv(t)
 	r := e.run(t, "", "diagram", "example")
-	if r.code != 0 || !strings.HasPrefix(r.stdout, "architecture\tArchitecture: ") || strings.Count(r.stdout, "\n") != 9 {
+	if r.code != 0 || !strings.HasPrefix(r.stdout, "architecture\tArchitecture: ") || strings.Count(r.stdout, "\n") != 10 {
 		t.Errorf("example = %+v, want the examples with their summaries", r)
 	}
 	r = e.run(t, "", "diagram", "example", "venn")
@@ -73,5 +73,5 @@ func TestDiagramExample(t *testing.T) {
 	want(t, "an invalid language", e.run(t, "", "diagram", "example", "--lang", "ja_JP"), 2, "",
 		`floe: invalid language "ja_JP": give --lang a BCP 47 tag such as en, ja or pt-BR`)
 	want(t, "an unknown example", e.run(t, "", "diagram", "example", "pie"), 2, "",
-		`floe: unknown example "pie"; use architecture, class, er, flow, git, sequence, state, timeline, venn`)
+		`floe: unknown example "pie"; use architecture, aws, class, er, flow, git, sequence, state, timeline, venn`)
 }

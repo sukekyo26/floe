@@ -12,6 +12,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -36,6 +37,7 @@ func (a *app) diagramRenderCmd() *cobra.Command {
 		Long: `Check each spec and print the diagrams, in order, as one HTML fragment of inline SVG
 to paste into a page. A mistake in a spec's shape stops that spec at the first one; layout
 mistakes (overflowing text, overlaps, edges through boxes, crossings …) are all reported.
+An icon part takes the icons that floe icons fetch <set> keeps.
 Every mistake is printed as file:line:column, and nothing is drawn until all are fixed.
 The ids of the diagrams drawn together must differ.
 
@@ -73,7 +75,7 @@ func (a *app) render(files []string, assets bool) error {
 		}
 		specs = append(specs, s)
 	}
-	out, err := diagram.Render(specs)
+	out, err := diagram.Render(specs, icons.New(a.cfg.icons))
 	var more diagram.Problems
 	if errors.As(err, &more) {
 		problems = append(problems, more...)

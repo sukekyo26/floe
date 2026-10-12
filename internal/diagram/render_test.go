@@ -3,13 +3,19 @@ package diagram_test
 import (
 	"os"
 	"reflect"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"unicode"
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/icons"
 )
+
+// standIn holds a few icons under the official names, each a plain square.
+var standIn = icons.New("testdata/icons")
 
 func parse(t *testing.T, file, src string) *diagram.Spec {
 	t.Helper()
@@ -30,17 +36,52 @@ func readFile(t *testing.T, path string) string {
 }
 
 // Render writes what diagram.mjs writes for the same parts, byte for byte, but for the marker ids
-// (TestRenderMarkerIDs).
+// (TestRenderMarkerIDs) and icons. diagram.mjs wrote an icon's data URI wherever it showed; Render
+// defines each once and places it with <use>, so icons.html is what Render writes, checked by eye.
 func TestRenderMatchesDiagramMJS(t *testing.T) {
 	t.Parallel()
 
-	s := parse(t, "every-part.yaml", readFile(t, "testdata/every-part.yaml"))
-	got, err := diagram.Render([]*diagram.Spec{s})
+	for _, name := range []string{"every-part", "icons"} {
+		s := parse(t, name+".yaml", readFile(t, "testdata/"+name+".yaml"))
+		got, err := diagram.Render([]*diagram.Spec{s}, standIn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := readFile(t, "testdata/"+name+".html"); got != want {
+			t.Errorf("Render %s\n got: %s\nwant: %s", name, got, want)
+		}
+	}
+}
+
+// Each icon at each size is defined once, however often it shows.
+func TestRenderIconDefs(t *testing.T) {
+	t.Parallel()
+
+	got, err := diagram.Render([]*diagram.Spec{parse(t, "icons.yaml", readFile(t, "testdata/icons.yaml"))}, standIn)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := readFile(t, "testdata/every-part.html"); got != want {
-		t.Errorf("Render\n got: %s\nwant: %s", got, want)
+	// Two corner icons (one with a dark variant), the client twice (with one), and Bedrock at two sizes.
+	if defs, uses := strings.Count(got, "<image "), strings.Count(got, "<use "); defs != 7 || uses != 9 {
+		t.Errorf("Render defines %d icons and places %d, want 7 and 9", defs, uses)
+	}
+	if uses := regexp.MustCompile(`<use href="#ic_icon-[0-9a-f]{12}"`).FindAllString(got, -1); len(slices.Compact(slices.Sorted(slices.Values(uses)))) != 7 {
+		t.Errorf("Render places %v, want 7 icons", uses)
+	}
+
+	// The ids come from the images, so diagrams of one id rendered apart do not take each other's icons.
+	const spec = "id: d\nwidth: 100\nheight: 100\ntitle: t\nparts:\n  - icon: { x: 10, y: 10, name: %s }\n"
+	def := regexp.MustCompile(`<image id="([^"]+)"`)
+	ids := make([]string, 0, 2)
+	for _, name := range []string{"aws/aws-lambda", "aws/amazon-bedrock"} {
+		got, err := diagram.Render([]*diagram.Spec{parse(t, "d.yaml", strings.Replace(spec, "%s", name, 1))}, standIn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, def.FindStringSubmatch(got)[1])
+	}
+	if ids[0] == ids[1] {
+		t.Errorf("two icons in diagrams of one id are both %s", ids[0])
 	}
 }
 
@@ -50,7 +91,7 @@ func TestRender(t *testing.T) {
 	const spec = "id: %s\nwidth: 100\nheight: 50\ntitle: t\nparts:\n"
 	a := parse(t, "a.yaml", strings.Replace(spec, "%s", "a", 1)+"  - edge: { d: 'M0,10 H90' }\n")
 	b := parse(t, "b.yaml", strings.Replace(spec, "%s", "b", 1)+"  - raw: { svg: '<rect class=\"band\"/>' }\n")
-	got, err := diagram.Render([]*diagram.Spec{a, b})
+	got, err := diagram.Render([]*diagram.Spec{a, b}, standIn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +118,7 @@ func TestRenderMarkerIDs(t *testing.T) {
 	const spec = "width: 100\nheight: 50\ntitle: t\nparts:\n"
 	a := parse(t, "a.yaml", "id: a\n"+spec+"  - edge: { d: 'M0,10 H90', end: zero-one }\n")
 	b := parse(t, "b.yaml", "id: a-zero\n"+spec+"  - edge: { d: 'M0,10 H90', end: one }\n")
-	got, err := diagram.Render([]*diagram.Spec{a, b})
+	got, err := diagram.Render([]*diagram.Spec{a, b}, standIn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +135,7 @@ func TestRenderProblems(t *testing.T) {
 	const spec = "id: same\nwidth: 100\nheight: 50\ntitle: t\nparts:\n"
 	a := parse(t, "a.yaml", spec+"  - dot: { cx: 0, cy: 0 }\n")
 	b := parse(t, "b.yaml", "\n"+spec+"  - dot: { cx: 50, cy: 25 }\n")
-	_, err := diagram.Render([]*diagram.Spec{a, b})
+	_, err := diagram.Render([]*diagram.Spec{a, b}, standIn)
 	want := `a.yaml:6:5: dot at 0,0 sticks out of the 100x50 canvas
 b.yaml:2:1: diagram id "same" is already used in a.yaml:1; give each diagram its own id`
 	if got := errString(err); got != want {
@@ -119,7 +160,7 @@ func TestExamples(t *testing.T) {
 			t.Errorf("example %s is not in plain English at byte %d", e.Name, i)
 		}
 	}
-	if got, want := strings.Join(names, " "), "architecture class er flow git sequence state timeline venn"; got != want {
+	if got, want := strings.Join(names, " "), "architecture aws class er flow git sequence state timeline venn"; got != want {
 		t.Errorf("examples = %s, want %s", got, want)
 	}
 	for _, lang := range i18n.Supported() {
@@ -131,7 +172,7 @@ func TestExamples(t *testing.T) {
 		translated := lang != i18n.English && err == nil
 		for i, e := range examples {
 			s := parse(t, string(lang)+"/"+e.Name+".yaml", string(e.Spec))
-			if _, err := diagram.Render([]*diagram.Spec{s}); err != nil {
+			if _, err := diagram.Render([]*diagram.Spec{s}, standIn); err != nil {
 				t.Errorf("example %s in %s:\n%v", e.Name, lang, err)
 			}
 			if e.Summary == "" || strings.HasPrefix(e.Summary, "#") {

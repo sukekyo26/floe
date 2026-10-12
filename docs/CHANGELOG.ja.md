@@ -11,7 +11,10 @@ floe の主要な変更を記録します。フォーマットは
 - 絶対座標に部品を置いた YAML の spec から図を描き、インライン SVG の HTML 断片にして出す `floe diagram render <spec.yaml>...` を追加。
   - 描く前に、収まらない文字・キャンバスからのはみ出し・重なり・箱やラベルを通る線・線の交差を検査し、誤りをすべて `ファイル:行:列` の形で出す。
   - 断片には図のスタイルと、ページの言語で書いたズームのツールバー（ボタン・Ctrl / ⌘ + ホイール・ピンチ・ドラッグ・矢印キー）が付く。`--no-assets` で外せる。
-- 組み込みの例の spec（構成図・クラス図・ER 図・判定フロー・Git・シーケンス図・状態遷移図・タイムライン・ベン図）を一覧し、1 つを出す `floe diagram example [kind]` を追加。
+- アイコン集（`aws`: 公式の Icon package の AWS Architecture Icons）を `FLOE_ICONS_DIR`（既定は `~/.local/share/floe-icons`）に取得する `floe icons fetch <set> [zip-or-url]` と、その名前を探す `floe icons search <word>...` を追加。
+  - 図の `icon` 部品と frame の `icon` がこのアイコンを描く。ダーク用の版があれば配色に合わせて切り替わる。
+  - 知らない名前には近い名前を示す。
+- 組み込みの例の spec（構成図・AWS 構成図・クラス図・ER 図・判定フロー・Git・シーケンス図・状態遷移図・タイムライン・ベン図）を一覧し、1 つを出す `floe diagram example [kind]` を追加。
   - 例は英語版と日本語版があり、メッセージの言語に従う。`--lang` で別の言語を選べる。
 - HTML ページを保存して `http://127.0.0.1:7325` の URL を出す `floe publish <file>` を追加。
   - サーバーが動いていなければ裏で起動し、新しいページはブラウザで開き、本文だけの HTML は組み込みの雛形で包む。
