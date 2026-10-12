@@ -388,6 +388,11 @@ func decodeEdge(f *fields) Part {
 
 // segments splits d into straight runs, as diagram.mjs does: only the absolute M, H, V and L.
 func segments(d string) ([][4]float64, *usererr.Error) {
+	// A browser stops drawing a path at the first character it cannot read, so the checks would read
+	// runs that are never drawn. Only the tokens, spaces and commas are taken.
+	if rest := strings.Trim(pathTokenRe.ReplaceAllString(d, " "), " ,\t\r\n"); rest != "" {
+		return nil, usererr.New("diagram_edge_char", d, string([]rune(rest)[0]))
+	}
 	tokens := pathTokenRe.FindAllString(d, -1)
 	var segs [][4]float64
 	var x, y float64

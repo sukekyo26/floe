@@ -45,15 +45,15 @@ func TestRender(t *testing.T) {
 	t.Parallel()
 
 	const spec = "id: %s\nwidth: 100\nheight: 50\ntitle: t\nparts:\n"
-	a := parse(t, "a.yaml", strings.Replace(spec, "%s", "a", 1)+"  - edge: { d: 'M0,10 H90\"' }\n")
+	a := parse(t, "a.yaml", strings.Replace(spec, "%s", "a", 1)+"  - edge: { d: 'M0,10 H90' }\n")
 	b := parse(t, "b.yaml", strings.Replace(spec, "%s", "b", 1)+"  - raw: { svg: '<rect class=\"band\"/>' }\n")
 	got, err := diagram.Render([]*diagram.Spec{a, b})
 	if err != nil {
 		t.Fatal(err)
 	}
-	// diagram.mjs wrote d as it was, so a stray quote broke the SVG; raw stays as it is.
+	// Two diagrams in one fragment; raw stays as it is.
 	for _, w := range []string{
-		`<path d="M0,10 H90&quot;" class="edge" marker-end="url(#a-arrow)"/>`,
+		`<path d="M0,10 H90" class="edge" marker-end="url(#a-arrow)"/>`,
 		"</svg></div>\n<div class=\"dg-wrap\"",
 		`<rect class="band"/>`,
 	} {

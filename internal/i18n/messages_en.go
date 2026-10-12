@@ -191,6 +191,7 @@ var messagesEN = map[string]string{
 	"diagram_table_row":        "%s: write each row as a name, [name] or [name, type], or --- for a separator",
 	"diagram_tick":             "%s: write each tick as [x, text], like [160, 10/06]",
 	"diagram_edge_command":     `edge "%s": use absolute M, H, V and L only (got %s)`,
+	"diagram_edge_char":        `edge "%s": unexpected "%s"; write only M, H, V, L, numbers, spaces and commas`,
 	"diagram_edge_start":       `edge "%s": start with M`,
 	"diagram_edge_number":      `edge "%s": expected a number after %s`,
 	"diagram_edge_no_at":       `edge "%s" has a label but no at: [x, y]`,

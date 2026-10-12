@@ -136,6 +136,7 @@ func TestParseErrors(t *testing.T) {
 		{"edge command", head + "  - edge: { d: 'M0,0 C1' }\n", `s.yaml:6:16: edge "M0,0 C1": use absolute M, H, V and L only (got C)`},
 		{"edge start", head + "  - edge: { d: H10 }\n", `s.yaml:6:16: edge "H10": start with M`},
 		{"edge number", head + "  - edge: { d: M10 }\n", `s.yaml:6:16: edge "M10": expected a number after M`},
+		{"edge stray character", head + "  - edge: { d: 'M0,10 H90\" V200' }\n", `s.yaml:6:16: edge "M0,10 H90" V200": unexpected """; write only M, H, V, L, numbers, spaces and commas`},
 		{"edge number out of range", head + "  - edge: { d: 'M1e999,0' }\n", `s.yaml:6:16: edge "M1e999,0": expected a number after M`},
 		{"number out of range", head + "  - dot: { cx: 1e999, cy: 0 }\n", "s.yaml:6:16: dot: cx must be a number"},
 		{"zero width", "id: d\nwidth: 0\nheight: 1\ntitle: T\nparts: []\n", "s.yaml:2:8: diagram: width must be greater than 0"},

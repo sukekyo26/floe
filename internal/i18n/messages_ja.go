@@ -190,6 +190,7 @@ var messagesJA = map[string]string{
 	"diagram_table_row":        "%s: 各行は名前・[名前]・[名前, 型] のどれかで、区切り線は --- で書いてください",
 	"diagram_tick":             "%s: 目盛りは [160, 10/06] のように [x, 文字列] で書いてください",
 	"diagram_edge_command":     "edge「%s」: 使えるのは絶対座標の M・H・V・L だけです（%s がありました）",
+	"diagram_edge_char":        "edge「%s」: 「%s」は使えません。M・H・V・L・数値・空白・カンマだけで書いてください",
 	"diagram_edge_start":       "edge「%s」: M で始めてください",
 	"diagram_edge_number":      "edge「%s」: %s の後に数値が要ります",
 	"diagram_edge_no_at":       "edge「%s」に label がありますが at: [x, y] がありません",
