@@ -70,6 +70,8 @@ func (a *app) render(files []string) error {
 	var more diagram.Problems
 	if errors.As(err, &more) {
 		problems = append(problems, more...)
+	} else if err != nil {
+		return err //nolint:wrapcheck // already says what failed
 	}
 	if len(problems) > 0 {
 		// The mistakes of each file together, in the order the files were given.
@@ -98,20 +100,22 @@ passes the checks. With a kind, print its spec, whose comments explain its grid.
 			if err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}
-			names := make([]string, len(examples))
-			for i, e := range examples {
-				if len(args) == 0 {
-					a.out("%s\t%s", e.Name, e.Summary)
-				} else if e.Name == args[0] {
-					a.out("%s", strings.TrimSuffix(string(e.Spec), "\n"))
-					return nil
-				}
-				names[i] = e.Name
-			}
 			if len(args) == 0 {
+				for _, e := range examples {
+					a.out("%s\t%s", e.Name, e.Summary)
+				}
 				return nil
 			}
-			return usageError{err: usererr.New("diagram_unknown_example", args[0], strings.Join(names, ", "))}
+			i := slices.IndexFunc(examples, func(e diagram.Example) bool { return e.Name == args[0] })
+			if i < 0 {
+				names := make([]string, len(examples))
+				for i, e := range examples {
+					names[i] = e.Name
+				}
+				return usageError{err: usererr.New("diagram_unknown_example", args[0], strings.Join(names, ", "))}
+			}
+			a.out("%s", strings.TrimSuffix(string(examples[i].Spec), "\n"))
+			return nil
 		},
 	}
 }
