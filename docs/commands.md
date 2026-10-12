@@ -6,7 +6,7 @@ Reference for every command of the `floe` binary.
 
 | Command | Purpose |
 |---|---|
-| `floe publish <file>` | Store a page (or `--link` a file in place) and print its URL |
+| `floe publish <data.yaml>` | Store a page drawn from a data file (or `--link` an HTML file in place) and print its URL |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe serve` | Run the server in the foreground |
@@ -20,21 +20,21 @@ Reference for every command of the `floe` binary.
 
 ---
 
-## `floe publish <file>`
+## `floe publish <data.yaml>` / `floe publish --link <file.html>`
 
-Store the page and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout. If the server is not running, it is started in the background first. A new slug is also opened in the browser; a republished one is not, because the open tab reloads itself.
+Draw a page from a data file, store it and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout. If the server is not running, it is started in the background first. A new slug is also opened in the browser; a republished one is not, because the open tab reloads itself.
 
-`<file>` is a data file (`.yaml`, `.yml`) or an HTML file. A relative path is resolved against the working directory.
+Pages are drawn from data files (`.yaml`, `.yml`). An HTML file is not stored: link it with `--link` to show it as it is. A relative path is resolved against the working directory.
 
 ### Flags
 
 | Flag | Description |
 |---|---|
-| `--link` | Register the file in place instead of copying it (see [Linked files](#linked-files)). |
-| `--slug <name>` | The URL name. Lowercase letters, digits and hyphens, up to 64 characters. Defaults to the file name; `index.html` takes the name of its directory. |
-| `--title <text>` | The title shown in the list. Defaults to a data file's `title:`, or the HTML's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
+| `--link` | Register an HTML file in place and show it as it is (see [Linked files](#linked-files)). |
+| `--slug <name>` | The URL name. Lowercase letters, digits and hyphens, up to 64 characters. Defaults to the file name; a linked `index.html` takes the name of its directory. |
+| `--title <text>` | The title shown in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
 | `--description <text>` | A description shown in the list. |
-| `--lang <tag>` | The language of a page drawn from a data file or wrapped from body-only HTML (`<html lang>`), as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. |
+| `--lang <tag>` | The language of the page drawn from a data file (`<html lang>`), as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. |
 | `--force` | Replace a page published from another project, or a link to another file. |
 
 ### Data files
@@ -59,10 +59,6 @@ sections:
 - A data file that names no template, or one that is not there, is refused, as is data of the wrong shape (sections that are not a list).
 - The page is drawn once, when it is published: changing the data file later changes nothing until it is published again.
 
-### Body-only HTML
-
-A file without a doctype, `<html>`, `<head>`, `<body>` or `<title>` is wrapped in the built-in template, with `<html lang>` set to `--lang`. A whole document is stored as it is.
-
 ### Projects and overwriting
 
 Each page belongs to the project it is published from. The project is the repository name in git's `origin` URL, else the repository's directory, else the working directory's name. A link belongs to its file's directory instead.
@@ -73,7 +69,7 @@ Each page belongs to the project it is published from. The project is the reposi
 
 ### Linked files
 
-`--link` serves the file where it is. It is read on every request, so saving the file updates the open tab. The files under its directory are served too, for its relative references (CSS, scripts, images).
+`--link` serves an HTML file where it is, as it is: floe adds nothing around it, so a page of your own or one another tool made shows as written. It is read on every request, so saving the file updates the open tab. The files under its directory are served too, for its relative references (CSS, scripts, images).
 
 - Only a regular `.html` or `.htm` file can be linked.
 - A file in a hidden directory right under your home (settings and keys live there) is refused.

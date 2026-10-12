@@ -8,10 +8,6 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Add data files to `floe publish`: a YAML file names a template, which draws
-  the page from its data. The built-in template `report` lays out a header
-  and sections of Markdown text, with HTML parts for what Markdown cannot say,
-  in the look pages have had so far.
 - Add `floe diagram render <spec.yaml>...`, which draws diagrams from YAML
   specs of parts placed at absolute coordinates and prints them as one HTML
   fragment of inline SVG. It first checks for text that does not fit, parts
@@ -29,11 +25,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   (architecture, AWS, class, ER, flow, Git, sequence, state, timeline, Venn) or
   prints one to copy. The examples come in English and Japanese and follow the
   language of messages; `--lang` picks another.
-- Add `floe publish <file>`, which stores an HTML page and prints its URL on
-  `http://127.0.0.1:7325`. It starts the server in the background when needed,
-  opens a new page in the browser and wraps body-only HTML in the built-in
-  template, in English unless `--lang` names another language. `--link`
-  registers the file in place, served with the files under its directory.
+- Add `floe publish <data.yaml>`, which draws a page from a data file with the
+  template it names, stores it and prints its URL on `http://127.0.0.1:7325`.
+  The built-in template `report` lays out a header and sections of Markdown
+  text, with HTML parts for what Markdown cannot say. A page is in English
+  unless `--lang` names another language. It starts the server in the
+  background when needed and opens a new page in the browser. An HTML file is
+  not stored: `--link` registers it in place and shows it as it is, served
+  with the files under its directory.
   `--slug`, `--title`, `--description` and `--force` are also available.
   Republishing a slug says so on stderr, with a warning when the title
   changed.
