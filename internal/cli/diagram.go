@@ -28,22 +28,28 @@ func (a *app) diagramCmd() *cobra.Command {
 }
 
 func (a *app) diagramRenderCmd() *cobra.Command {
-	return &cobra.Command{
+	var noAssets bool
+	cmd := &cobra.Command{
 		Use:   "render <spec.yaml>...",
 		Short: "Check diagram specs and print them as one HTML fragment of inline SVG",
 		Long: `Check each spec and print the diagrams, in order, as one HTML fragment of inline SVG
 to paste into a page. A mistake in a spec's shape stops that spec at the first one; layout
 mistakes (overflowing text, overlaps, edges through boxes, crossings …) are all reported.
 Every mistake is printed as file:line:column, and nothing is drawn until all are fixed.
-The ids of the diagrams drawn together must differ.`,
+The ids of the diagrams drawn together must differ.
+
+The fragment starts with the diagrams' style and the script that zooms them (once per page
+is enough; more does no harm). --no-assets leaves them out.`,
 		Args: usage(cobra.MinimumNArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return a.render(args)
+			return a.render(args, !noAssets)
 		},
 	}
+	cmd.Flags().BoolVar(&noAssets, "no-assets", false, "print the diagrams without their style and zoom script")
+	return cmd
 }
 
-func (a *app) render(files []string) error {
+func (a *app) render(files []string, assets bool) error {
 	var problems diagram.Problems
 	specs := make([]*diagram.Spec, 0, len(files))
 	for _, file := range files {
@@ -83,6 +89,13 @@ func (a *app) render(files []string) error {
 		}
 		slices.SortStableFunc(problems, func(x, y *diagram.Error) int { return cmp.Compare(order[x.File], order[y.File]) })
 		return problems
+	}
+	if assets {
+		head, err := diagram.Assets()
+		if err != nil {
+			return err //nolint:wrapcheck // already says what failed
+		}
+		out = head + "\n" + out
 	}
 	a.out("%s", out)
 	return nil

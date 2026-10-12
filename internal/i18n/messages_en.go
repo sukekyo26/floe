@@ -216,4 +216,11 @@ var messagesEN = map[string]string{
 	"diagram_icon_unavailable": "%s: icons are not supported yet",
 	"diagram_id_used":          `diagram id "%s" is already used in %s:%d; give each diagram its own id`,
 	"diagram_unknown_example":  `unknown example "%s"; use %s`,
+	"diagram_zoom_hint":        "Ctrl / ⌘ + wheel or pinch to zoom; drag or use the arrow keys to move while zoomed",
+	"diagram_zoom_in":          "Zoom in",
+	"diagram_zoom_out":         "Zoom out",
+	"diagram_zoom_fit":         "Fit",
+	"diagram_zoom_fit_label":   "Show the whole diagram",
+	"diagram_zoom_one":         "1:1",
+	"diagram_zoom_one_label":   "Show at actual size",
 }
