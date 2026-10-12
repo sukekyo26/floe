@@ -218,7 +218,7 @@ func FromNode(file string, n ast.Node) (*Spec, error) {
 	if err != nil {
 		return nil, err
 	}
-	spec := &Spec{ID: f.str("id"), Width: f.num("width"), Height: f.num("height"), Title: f.optStr("title"), Parts: nil}
+	spec := &Spec{ID: f.str("id"), Width: f.size("width"), Height: f.size("height"), Title: f.optStr("title"), Parts: nil}
 	items := f.list("parts")
 	if f.lookup("parts") == nil {
 		f.missing("parts")
@@ -274,14 +274,14 @@ func decodePart(file string, n ast.Node) (Part, error) {
 
 func decodeFrame(f *fields) Part {
 	return Frame{
-		Pos: f.at, X: f.num("x"), Y: f.num("y"), W: f.num("w"), H: f.num("h"),
+		Pos: f.at, X: f.num("x"), Y: f.num("y"), W: f.size("w"), H: f.size("h"),
 		Label: f.optStr("label"), Accent: f.flag("accent"), Icon: f.optStr("icon"), Square: f.flag("square"),
 	}
 }
 
 func decodeBox(f *fields) Part {
 	return Box{
-		Pos: f.at, X: f.num("x"), Y: f.num("y"), W: f.num("w"), H: f.num("h"),
+		Pos: f.at, X: f.num("x"), Y: f.num("y"), W: f.size("w"), H: f.size("h"),
 		Rows: boxRows(f), Tone: f.oneOf("tone", "", tones...), Shape: f.oneOf("shape", "rect", shapes...),
 	}
 }
@@ -323,7 +323,7 @@ func boxRows(f *fields) []Row {
 
 func decodeTable(f *fields) Part {
 	return Table{
-		Pos: f.at, X: f.num("x"), Y: f.num("y"), W: f.num("w"), Title: f.str("title"),
+		Pos: f.at, X: f.num("x"), Y: f.num("y"), W: f.size("w"), Title: f.str("title"),
 		Rows: tableRows(f), Tone: f.oneOf("tone", "", tones...),
 	}
 }
@@ -356,7 +356,7 @@ func tableRows(f *fields) []TableRow {
 func decodeIcon(f *fields) Part {
 	return Icon{
 		Pos: f.at, X: f.num("x"), Y: f.num("y"), Name: f.str("name"),
-		Label: f.optStr("label"), Size: f.optNum("size", 48),
+		Label: f.optStr("label"), Size: f.optSize("size", 48),
 	}
 }
 
@@ -432,7 +432,7 @@ func segments(d string) ([][4]float64, *usererr.Error) {
 
 func decodeDot(f *fields) Part {
 	return Dot{
-		Pos: f.at, CX: f.num("cx"), CY: f.num("cy"), R: f.optNum("r", 7),
+		Pos: f.at, CX: f.num("cx"), CY: f.num("cy"), R: f.optSize("r", 7),
 		Tone: f.oneOf("tone", "", tones...), Hollow: f.flag("hollow"),
 	}
 }
@@ -471,7 +471,7 @@ func ticks(f *fields) []Tick {
 
 func decodeCircle(f *fields) Part {
 	return Circle{
-		Pos: f.at, CX: f.num("cx"), CY: f.num("cy"), R: f.num("r"),
+		Pos: f.at, CX: f.num("cx"), CY: f.num("cy"), R: f.size("r"),
 		Tone: f.oneOf("tone", "accent", tones...),
 	}
 }
