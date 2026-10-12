@@ -10,9 +10,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/cdproto/target"
@@ -48,43 +50,77 @@ type browser struct {
 	base string
 }
 
-// newBrowser starts Chrome whose requests ask for lang (Accept-Language), as a reader of that
-// language would.
+// The UI tests share one Chrome and run one after another. Started per scenario and in parallel, six
+// Chromes on a two-core CI runner took more than the 5 s a wait allows to open a tab.
+var shared struct {
+	once sync.Once
+	ctx  context.Context // the first tab of the shared Chrome
+	err  error
+	stop func()
+}
+
+// TestMain stops the shared Chrome once every test has run.
+func TestMain(m *testing.M) {
+	code := m.Run()
+	if shared.stop != nil {
+		shared.stop()
+	}
+	os.Exit(code)
+}
+
+// startChrome starts the shared Chrome from path, once.
+func startChrome(path string) (context.Context, error) {
+	shared.once.Do(func() {
+		// Chrome's helper processes may still write to the profile after it exits, so the profile is
+		// removed with retries and left behind if it still cannot be.
+		profile, err := os.MkdirTemp("", "floe-ui-")
+		if err != nil {
+			shared.err = err
+			return
+		}
+		opts := append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.ExecPath(path),
+			chromedp.NoSandbox,
+			// Names other than 127.0.0.1 fail at once: pages load Google Fonts in <head>, which would hold
+			// the page on a slow network.
+			chromedp.Flag("host-resolver-rules", "MAP * ~NOTFOUND, EXCLUDE 127.0.0.1"),
+			chromedp.UserDataDir(profile),
+		)
+		actx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), opts...)
+		// chromedp logs CDP events newer than its protocol version; they do not matter here.
+		ctx, cancel := chromedp.NewContext(actx, chromedp.WithErrorf(func(string, ...any) {}))
+		shared.ctx = ctx
+		shared.stop = func() {
+			cancel()
+			cancelAlloc()
+			for range 10 {
+				if os.RemoveAll(profile) == nil {
+					return
+				}
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
+		// The first call starts Chrome and ties it to ctx.
+		if _, err := chromedp.Call(ctx, network.Enable, network.EnableParams{}); err != nil {
+			shared.err = fmt.Errorf("start Chrome: %w", err)
+		}
+	})
+	return shared.ctx, shared.err
+}
+
+// newBrowser opens a tab of the shared Chrome in a browser context of its own (its own cookies and
+// storage), whose requests ask for lang (Accept-Language) as a reader of that language would.
 func newBrowser(t *testing.T, base string, lang i18n.Lang) *browser {
 	t.Helper()
 
-	// Chrome's helper processes may still write to the profile after it exits, which t.TempDir's cleanup
-	// would report, so the profile is removed with retries and left behind if it still cannot be.
-	profile, err := os.MkdirTemp("", "floe-ui-")
+	parent, err := startChrome(chrome(t))
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		for range 10 {
-			if os.RemoveAll(profile) == nil {
-				return
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
-	})
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.ExecPath(chrome(t)),
-		chromedp.NoSandbox,
-		// Names other than 127.0.0.1 fail at once: pages load Google Fonts in <head>, which would hold
-		// the page on a slow network.
-		chromedp.Flag("host-resolver-rules", "MAP * ~NOTFOUND, EXCLUDE 127.0.0.1"),
-		chromedp.UserDataDir(profile),
-	)
-	actx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), opts...)
-	// chromedp logs CDP events newer than its protocol version; they do not matter here.
-	ctx, cancel := chromedp.NewContext(actx, chromedp.WithErrorf(func(string, ...any) {}))
-	t.Cleanup(func() {
-		cancel()
-		cancelAlloc()
-	})
-	// The first call starts Chrome and ties it to ctx, so it must not get a shorter-lived context.
+	ctx, cancel := chromedp.NewContext(parent, chromedp.WithNewBrowserContext())
+	t.Cleanup(cancel)
 	if _, err := chromedp.Call(ctx, network.Enable, network.EnableParams{}); err != nil {
-		t.Fatalf("start Chrome: %v", err)
+		t.Fatalf("open a tab: %v", err)
 	}
 	headers := network.SetExtraHTTPHeadersParams{Headers: network.Headers{"Accept-Language": string(lang)}}
 	if _, err := chromedp.Call(ctx, network.SetExtraHTTPHeaders, headers); err != nil {
@@ -122,12 +158,15 @@ func truthy(s string) bool {
 	}
 }
 
-// until polls expr every 50 ms, up to 5 s, until it is truthy; an evaluation error (a document being
-// replaced) counts as not yet.
+// waitLimit is how long a test waits for the page to change. Only a wait that fails takes that long.
+const waitLimit = 10 * time.Second
+
+// until polls expr every 50 ms, up to waitLimit, until it is truthy; an evaluation error (a document
+// being replaced) counts as not yet.
 func (b *browser) until(what, expr string) string {
 	b.t.Helper()
 
-	for range 100 {
+	for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); {
 		if s, err := b.try(expr); err == nil && truthy(s) {
 			return s
 		}
@@ -171,6 +210,40 @@ func (b *browser) rect(expr string) rect {
 	return r
 }
 
+// frame measures the iframe of the page once the fonts have settled: the management page waits for its
+// fonts (display=block), and the layout they settle moves the iframe, which a click measured before
+// would miss.
+func (b *browser) frame() rect {
+	b.t.Helper()
+
+	b.until("the fonts", "document.fonts.status === 'loaded'")
+	return b.rect("document.getElementById('frame')")
+}
+
+// hover moves the pointer onto (x, y), over the page in the frame, until that page reports it (it
+// posts "over" on pointerover). Chrome routes input into the frame only once the frame has drawn,
+// which can lag behind the page's own scripts on a busy machine, and a click sent before is lost.
+func (b *browser) hover(x, y float64) {
+	b.t.Helper()
+
+	b.eval("window.over = false; window.hovering ||= (addEventListener('message', (e) => { if (e.data === 'over') window.over = true; }), true)")
+	move := func(x, y float64) {
+		p := input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseMoved, X: x, Y: y}
+		if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, p); err != nil {
+			b.t.Fatal(err)
+		}
+	}
+	for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); {
+		move(0, 0) // off the frame first: pointerover fires only on entering
+		move(x, y)
+		if s, err := b.try("window.over"); err == nil && truthy(s) {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	b.t.Fatal("timed out waiting for the page in the frame to get the pointer")
+}
+
 func js(s string) string {
 	b, err := json.Marshal(s)
 	if err != nil {
@@ -193,14 +266,12 @@ func inEveryLanguage(t *testing.T, scenario func(t *testing.T, lang i18n.Lang, m
 
 	for _, lang := range i18n.Supported() {
 		t.Run(string(lang), func(t *testing.T) {
-			t.Parallel()
 			scenario(t, lang, i18n.New(lang).Msg)
 		})
 	}
 }
 
-func TestUIManage(t *testing.T) {
-	t.Parallel()
+func TestUIManage(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
 	inEveryLanguage(t, uiManage)
 }
 
@@ -326,8 +397,7 @@ const extrasStub = `(() => {
 
 // TestUIExtras sorts, filters favourites, moves by keyboard, deletes in bulk, edits in a modal, copies
 // a path, switches the theme and steps through neighbours, against a stubbed list.
-func TestUIExtras(t *testing.T) {
-	t.Parallel()
+func TestUIExtras(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
 	inEveryLanguage(t, uiExtras)
 }
 
@@ -424,8 +494,7 @@ const listening = "(window.listening ||= (addEventListener('message', (e) => { w
 // TestUIReload checks that an open page reloads itself when republished, from inside the sandbox, and
 // that the page URL is a frame which allows clipboard writes and fullscreen, sends links to other sites
 // to new tabs out of the sandbox, and moves the whole tab for links to another page.
-func TestUIReload(t *testing.T) {
-	t.Parallel()
+func TestUIReload(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
 
 	e := newEnv(t)
 	// The page's wording plays no part here, so one language is enough.
@@ -480,10 +549,12 @@ func leave(t *testing.T, e *env, b *browser, publish func(name, slug, body strin
 		`<a href="inner.html" style="top: 120px">inner</a><a href="/a/no-such/" style="top: 180px">frame</a>`+
 		// The page declares globals named like the ones the appended script uses; it must not pick them up.
 		"<script>const open = () => {}; const URL = null; const EventSource = null; const self = null;"+
+		"document.addEventListener('pointerover', () => parent.postMessage('over', '*'));"+
 		"setInterval(() => parent.postMessage('ready', '*'), 100)</script>")
 	b.navigate("/a/leave/")
 	b.until("the page in the frame", listening)
-	box := b.rect("document.getElementById('frame')")
+	box := b.frame()
+	b.hover(box.X+20, box.Y+20)
 	for _, y := range []float64{20, 80, 140} {
 		b.click(box.X+20, box.Y+y)
 	}
@@ -499,8 +570,8 @@ func leave(t *testing.T, e *env, b *browser, publish func(name, slug, body strin
 		}
 		return nil
 	}
-	for i := 0; tab(other.URL+"/blank") == nil; i++ {
-		if i == 100 {
+	for deadline := time.Now().Add(waitLimit); tab(other.URL+"/blank") == nil; {
+		if time.Now().After(deadline) {
 			t.Fatal("timed out waiting for the target=_blank tab")
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -529,6 +600,8 @@ func leave(t *testing.T, e *env, b *browser, publish func(name, slug, body strin
 	// The inner link moved the iframe, so the page is opened again before the last click.
 	b.navigate("/a/leave/")
 	b.until("the page in the frame again", listening)
+	box = b.frame()
+	b.hover(box.X+20, box.Y+200)
 	b.click(box.X+20, box.Y+200)
 	// The tab moves to the frame URL itself, and no frame is nested in the iframe.
 	origins = append(origins, b.until("the tab to move", "location.pathname === '/a/no-such/' && location.pathname"))

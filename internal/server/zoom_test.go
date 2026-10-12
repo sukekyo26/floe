@@ -21,8 +21,7 @@ import (
 // A diagram fits its frame, zooms with the buttons and Ctrl + wheel, pans by dragging, fits again, sets
 // up once however often its assets are included, and words its toolbar in the page's language. Ported
 // from the zoom scenario of the JS skill's test/artifact-ui.mjs.
-func TestUIZoom(t *testing.T) {
-	t.Parallel()
+func TestUIZoom(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
 	inEveryLanguage(t, uiZoom)
 }
 
