@@ -2,6 +2,7 @@ package diagram
 
 import (
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -94,8 +95,8 @@ func Check(file string, s *Spec) error {
 
 func (l *layout) problem(at Pos, key string, args ...any) {
 	e := &Error{File: l.file, Pos: at, Err: usererr.New(key, args...)}
-	if !l.seen[e.Error()] {
-		l.seen[e.Error()] = true
+	if key := e.Error(); !l.seen[key] {
+		l.seen[key] = true
 		l.problems = append(l.problems, e)
 	}
 }
@@ -228,12 +229,14 @@ func (l *layout) fit(at Pos, what *usererr.Error, text string, size float64, cod
 // checkPlacement reports parts sticking out of the canvas, overlapping and straddling frames.
 func (l *layout) checkPlacement(s *Spec) {
 	canvas := rect{0, 0, s.Width, s.Height, nil, Pos{Line: 0, Column: 0}}
-	for _, r := range concat(l.boxes, l.marks, l.labels, l.frames, l.areas) {
+	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas) {
 		if !r.inside(canvas) {
 			l.problem(r.at, "diagram_outside", r.what, formatNum(s.Width), formatNum(s.Height))
 		}
 	}
-	solids := concat(l.boxes, l.marks, l.labels)
+	solids := slices.Concat(l.boxes, l.marks, l.labels)
+	// LIMIT: every pair is compared (O(n²)), here and for edges. If diagrams of hundreds of parts get
+	// slow, compare only the parts that share a cell of a grid.
 	for i, a := range solids {
 		for _, b := range solids[i+1:] {
 			if a.overlaps(b) {
@@ -241,7 +244,7 @@ func (l *layout) checkPlacement(s *Spec) {
 			}
 		}
 	}
-	for _, b := range concat(l.boxes, l.marks) {
+	for _, b := range slices.Concat(l.boxes, l.marks) {
 		for _, f := range l.frames {
 			if b.overlaps(f) && !b.inside(f) {
 				l.problem(b.at, "diagram_straddle", b.what, f.what, f.at.Line)
@@ -261,7 +264,7 @@ func (l *layout) checkEdges() {
 	}
 	// An edge across a label hides part of it behind the label's background, and an edge across text
 	// without a background (a plain label, a frame heading) strikes through the text.
-	texts := concat(l.labels, l.heads)
+	texts := slices.Concat(l.labels, l.heads)
 	for _, p := range l.paths {
 		for i, r := range texts {
 			if i != p.own && p.runsThrough(r) {
@@ -283,14 +286,6 @@ func (l *layout) checkCrossings() {
 			}
 		}
 	}
-}
-
-func concat(lists ...[]rect) []rect {
-	var all []rect
-	for _, l := range lists {
-		all = append(all, l...)
-	}
-	return all
 }
 
 func (p path) runsThrough(r rect) bool {
