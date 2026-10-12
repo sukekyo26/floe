@@ -10,12 +10,6 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 )
 
-// Template is the source of the template that wraps a body-only page. internal/page parses it with
-// html/template and fills .Lang, .Title and .Content.
-//
-//go:embed template.html
-var Template string
-
 //go:embed ui.html
 var pageSource string
 

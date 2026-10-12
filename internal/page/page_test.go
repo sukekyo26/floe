@@ -1,7 +1,6 @@
 package page_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/page"
@@ -34,106 +33,4 @@ func TestTitle(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestIsDocument(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		html string
-		want bool
-	}{
-		{"<!DOCTYPE html><p>x</p>", true},
-		{"<html lang=ja>", true},
-		{"<head>", true},
-		{"<body>", true},
-		{"<title>t</title>", true},
-		{"<p>fragment</p>", false},
-		{"<header>not a head</header>", false},
-		{`<svg viewBox="0 0 1 1"><title>Chart</title></svg><h1>Frag</h1>`, false},
-	}
-	for _, tt := range tests {
-		if got := page.IsDocument(tt.html); got != tt.want {
-			t.Errorf("IsDocument(%q) = %v, want %v", tt.html, got, tt.want)
-		}
-	}
-}
-
-func TestStartsAsDocument(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		head string
-		want bool
-	}{
-		{"<!doctype html><title>Doc</title>", true},
-		{`<svg viewBox="0 0 1 1"><title>Chart</title></svg><h1>Frag</h1>`, false},
-		{"<body><svg><title>x</title></svg>", true},
-		{"<!-- " + strings.Repeat("x", 2000) + " --><!doctype html>", false},
-	}
-	for _, tt := range tests {
-		head := []byte(tt.head)
-		if len(head) > page.SniffSize {
-			head = head[:page.SniffSize]
-		}
-		if got := page.StartsAsDocument(head); got != tt.want {
-			t.Errorf("StartsAsDocument(%.40q) = %v, want %v", tt.head, got, tt.want)
-		}
-	}
-}
-
-func TestWrap(t *testing.T) {
-	t.Parallel()
-
-	t.Run("the language goes on <html>", func(t *testing.T) {
-		t.Parallel()
-
-		got, err := page.Wrap("<p>こんにちは</p>", "t", "ja")
-		if err != nil || !strings.Contains(string(got), `<html lang="ja">`) {
-			t.Errorf("Wrap with ja = %.80q, %v", got, err)
-		}
-	})
-
-	t.Run("a document is kept as is", func(t *testing.T) {
-		t.Parallel()
-
-		doc := "<!doctype html><title>Doc</title><p>x</p>\n"
-		got, err := page.Wrap(doc, "ignored", "ja")
-		if err != nil || string(got) != doc {
-			t.Errorf("Wrap = %q, %v; want the document unchanged", got, err)
-		}
-	})
-
-	t.Run("a fragment is wrapped verbatim with an escaped title", func(t *testing.T) {
-		t.Parallel()
-
-		frag := "  <h1>A &amp; <em>B</em></h1>\n<p>keeps $& and $1 and {{.Content}}</p>\n\n"
-		got, err := page.Wrap(frag, `A & B "{{.Content}}"`, "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		s := string(got)
-		if !strings.HasPrefix(strings.ToLower(s), "<!doctype html>\n") {
-			t.Errorf("wrapped page starts with %.30q, want <!doctype html>", s)
-		}
-		if !strings.Contains(s, `<html lang="en">`) {
-			t.Error("a wrapped page without a language is not in English")
-		}
-		if !strings.Contains(s, `<meta name="generator" content="floe template">`) {
-			t.Error("wrapped page lacks the template's generator mark")
-		}
-		// The page runs without an HTTP cache (sandbox), so its fonts must not swap in on every load.
-		if !strings.Contains(s, "&display=block\">") {
-			t.Error("the wrapped page does not load its fonts with display=block")
-		}
-		if strings.Count(s, frag) != 1 {
-			t.Errorf("the fragment is not inserted exactly once and verbatim:\n%s", s)
-		}
-		if want := "<title>A &amp; B &#34;{{.Content}}&#34;</title>"; !strings.Contains(s, want) {
-			t.Errorf("wrapped page lacks %q", want)
-		}
-		if page.Title(s) != `A & B "{{.Content}}"` {
-			t.Errorf("Title(wrapped) = %q", page.Title(s))
-		}
-	})
 }

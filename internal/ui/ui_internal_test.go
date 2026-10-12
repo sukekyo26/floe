@@ -14,7 +14,7 @@ import (
 func TestSourcesAreInEnglish(t *testing.T) {
 	t.Parallel()
 
-	for name, src := range map[string]string{"ui.html": pageSource, "template.html": Template} {
+	for name, src := range map[string]string{"ui.html": pageSource} {
 		if japaneseRe.MatchString(src) {
 			t.Errorf("%s has Japanese: %q", name, japaneseRe.FindAllString(src, 3))
 		}

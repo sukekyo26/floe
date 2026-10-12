@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -11,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/store"
 )
 
@@ -100,7 +98,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		stream(w, contentType, f, nil, "")
 		return
 	}
-	sendPage(w, f, m, slug, rest, servedScript(slug, rest, version))
+	sendPage(w, f, servedScript(slug, rest, version))
 }
 
 func (s *Server) download(w http.ResponseWriter, r *http.Request) {
@@ -125,48 +123,15 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	// The page as stored; a body-only link is wrapped as it is shown, so that the download is a whole
-	// page. Nothing added on serving (the reload script) goes in.
+	// The page as stored or linked. Nothing added on serving (the reload script) goes in.
 	w.Header().Set("Content-Disposition", `attachment; filename="`+slug+`.html"`)
-	sendPage(w, f, m, slug, "", "")
+	sendPage(w, f, "")
 }
 
-// sendPage sends an HTML page and tail after it. Only a body-only link needs rewriting (a stored page
-// was wrapped when published; a link changes, so it is wrapped on every request); anything else is
-// streamed without holding it in memory.
-func sendPage(w http.ResponseWriter, f *os.File, m *store.Meta, slug, rest, tail string) {
-	head := make([]byte, page.SniffSize)
-	n, err := io.ReadFull(f, head)
-	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
-		send(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	head = head[:n]
-	if !m.IsLink() || page.StartsAsDocument(head) {
-		stream(w, htmlType, f, head, tail)
-		return
-	}
-	body, err := io.ReadAll(f)
-	if err != nil {
-		send(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	text := string(head) + string(body)
-	title := page.Title(text)
-	if rest == "" && m.Title != "" {
-		title = m.Title
-	}
-	if title == "" {
-		title = slug
-	}
-	// A document marked after the sniffed head comes back as is (Wrap returns it unchanged), so that
-	// bytes that are not UTF-8 are not re-encoded.
-	wrapped, err := page.Wrap(text, title, m.Lang)
-	if err != nil {
-		send(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	sendBytes(w, http.StatusOK, htmlType, append(wrapped, tail...))
+// sendPage sends an HTML page as it is, with tail after it: a stored page was drawn when it was
+// published, and a linked file is the user's own.
+func sendPage(w http.ResponseWriter, f *os.File, tail string) {
+	stream(w, htmlType, f, nil, tail)
 }
 
 // stream sends head (already read from f), the rest of f and tail. A read error after the header has

@@ -77,7 +77,7 @@ type Options struct {
 type Entry struct {
 	Slug string
 	Meta Meta
-	// Page is the stored HTML, wrapped when body-only; nil for a link.
+	// Page is the stored HTML, drawn from the data file; nil for a link.
 	Page []byte
 	// Prev is the entry this one overwrites, nil for a new slug.
 	Prev *Meta
@@ -91,12 +91,17 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	if err != nil {
 		return nil, err
 	}
+	// A stored page is drawn from a data file; HTML is only linked, and shown as it is.
 	var data *tmpl.Data
 	own := ""
 	if path == "" {
-		if data, own, err = readPage(file, src); err != nil {
-			return nil, err
+		if !IsDataFile(file) {
+			return nil, usererr.New("store_not_data", file)
 		}
+		if data, err = tmpl.Read(file, []byte(src)); err != nil {
+			return nil, err //nolint:wrapcheck // a usererr for the caller to show
+		}
+		own = data.Title
 	}
 	slug, err := s.slugFor(file, path, opts, cwd)
 	if err != nil {
@@ -122,38 +127,13 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 		base = &none
 	}
 	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Page: nil, Prev: prev}
-	if path == "" {
-		if err := e.draw(file, src, data); err != nil {
-			return nil, err
+	if data != nil {
+		e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
+		if e.Page, err = data.Render(e.Meta.Title, e.Meta.Lang); err != nil {
+			return nil, err //nolint:wrapcheck // a usererr for the caller to show
 		}
 	}
 	return e, nil
-}
-
-// readPage reads a stored page's data (nil unless it is a data file) and its own title.
-func readPage(file, src string) (*tmpl.Data, string, error) {
-	if !IsDataFile(file) {
-		return nil, page.Title(src), nil
-	}
-	data, err := tmpl.Read(file, []byte(src))
-	if err != nil {
-		return nil, "", err //nolint:wrapcheck // a usererr for the caller to show
-	}
-	return data, data.Title, nil
-}
-
-// draw makes the stored page: drawn from data, or src wrapped when it is body-only HTML.
-func (e *Entry) draw(file, src string, data *tmpl.Data) error {
-	var err error
-	if data == nil {
-		if e.Page, err = page.Wrap(src, e.Meta.Title, e.Meta.Lang); err != nil {
-			return fmt.Errorf("wrap %s: %w", file, err)
-		}
-		return nil
-	}
-	e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
-	e.Page, err = data.Render(e.Meta.Title, cmp.Or(e.Meta.Lang, page.DefaultLang))
-	return err //nolint:wrapcheck // a usererr for the caller to show
 }
 
 // read returns the real path of a link ("" for a stored page) and the file's content. A link is
@@ -271,8 +251,8 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 	return false, usererr.New("store_slug_owned", slug, owner)
 }
 
-// title is --title, else the title pinned on the management page, else (for a stored page) its own
-// (the data's title:, or the HTML's), the previous one, or the slug. A link records no title of its
+// title is --title, else the title pinned on the management page, else (for a stored page) the data's
+// title:, the previous one, or the slug. A link records no title of its
 // own: it is read from the file each time.
 func title(opts Options, path string, keepTitle bool, base *Meta, own, slug string) string {
 	switch {

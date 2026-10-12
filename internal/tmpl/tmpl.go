@@ -25,8 +25,12 @@ import (
 //go:embed builtin
 var builtin embed.FS
 
-// DefaultTheme is the theme of a page whose data names none.
-const DefaultTheme = "default"
+const (
+	// DefaultTheme is the theme of a page whose data names none.
+	DefaultTheme = "default"
+	// DefaultLang is the language of a page unless the publisher names another.
+	DefaultLang = "en"
+)
 
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
 
@@ -107,8 +111,11 @@ func themesOf(name string) ([]string, error) {
 	return themes, nil
 }
 
-// Render draws d as a page titled title in lang (a BCP 47 tag).
+// Render draws d as a page titled title in lang (a BCP 47 tag; "" is DefaultLang).
 func (d *Data) Render(title, lang string) ([]byte, error) {
+	if lang == "" {
+		lang = DefaultLang
+	}
 	dir := path.Join("builtin", d.Template)
 	src, err := fs.ReadFile(builtin, path.Join(dir, "page.html"))
 	if err != nil {
