@@ -106,10 +106,10 @@ parts:
 
 | 部品 | キー |
 |---|---|
-| `frame` | `x` `y` `w` `h`、`label`、`accent`、`square`（角を丸めない）、`icon`。見出しは左上の内側に入るので、中身は上端から 32 以上下に置く |
+| `frame` | `x` `y` `w` `h`、`label`、`accent`、`square`（角を丸めない）、`icon`（まだ描けない。付けた frame は断る）。見出しは左上の内側に入るので、中身は上端から 32 以上下に置く |
 | `box` | `x` `y` `w` `h`、`rows`、`tone`、`shape`（`rect`。ほかに `pill`、判定の `hex`、`state`）。行は文字列か `[文字列, スタイル]` で、スタイルは `main`・`sub`・`main code`・`sub code`。スタイルが無ければ 1 行目が `main`、残りが `sub` |
 | `table` | `x` `y` `w`、`title`、`rows`、`tone`。行は名前・`[名前]`・`[名前, 型]` か、区切り線の `---`。高さは 30 に、行ごとに 22・区切りごとに 9 を足し、行があればさらに 6 を足したもの。行 i（0 始まり、区切りを除く）の中心は `y + 41 + 22i` |
-| `icon` | `x` `y`、`name`、`label`、`size`（48） |
+| `icon` | `x` `y`、`name`、`label`、`size`（48）。アイコンはまだ描けない。`icon` 部品のある spec は断る（「アイコンにはまだ対応していません」） |
 | `edge` | `d`、`label` と `at: [x, y]`、`dashed`、`bold`、`tone`、`start`（`none`）、`end`（`arrow`）、`crossing`。`d` には絶対座標の `M`・`H`・`V`・`L` だけを使う。端は `arrow`・`triangle`・`diamond`・`odiamond`・`one`・`many`・`zero-one`・`zero-many`・`none`。`crossing: true` はこの線にほかの線との交差を許す |
 | `dot` | `cx` `cy`、`r`（7）、`tone`、`hollow`。線は中心まで引いてよい |
 | `bar` | `x1` `x2` `y`、`tone`、`label`（棒の右に置く） |

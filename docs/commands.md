@@ -106,10 +106,10 @@ Each part is one key naming its kind. Defaults are in parentheses; `tone` is `ac
 
 | Part | Keys |
 |---|---|
-| `frame` | `x` `y` `w` `h`, `label`, `accent`, `square` (no rounded corners), `icon`. Its label sits inside the top left corner, so place its contents 32 or more below its top. |
+| `frame` | `x` `y` `w` `h`, `label`, `accent`, `square` (no rounded corners), `icon` (not drawn yet: a frame with it is refused). Its label sits inside the top left corner, so place its contents 32 or more below its top. |
 | `box` | `x` `y` `w` `h`, `rows`, `tone`, `shape` (`rect`; `pill`, `hex` for a decision, `state`). A row is text, or `[text, style]` with the style `main`, `sub`, `main code` or `sub code`; without a style the first row is `main` and the rest `sub`. |
 | `table` | `x` `y` `w`, `title`, `rows`, `tone`. A row is a name, `[name]`, `[name, type]`, or `---` for a separator. The height is 30, plus 22 a row and 9 a separator, plus 6 when it has rows; row i (from 0, without separators) is centred at `y + 41 + 22i`. |
-| `icon` | `x` `y`, `name`, `label`, `size` (48). |
+| `icon` | `x` `y`, `name`, `label`, `size` (48). Icons are not drawn yet: a spec with an `icon` part is refused (`icons are not supported yet`). |
 | `edge` | `d`, `label` with `at: [x, y]`, `dashed`, `bold`, `tone`, `start` (`none`), `end` (`arrow`), `crossing`. `d` takes the absolute `M`, `H`, `V` and `L` only. The ends are `arrow`, `triangle`, `diamond`, `odiamond`, `one`, `many`, `zero-one`, `zero-many` or `none`. `crossing: true` lets this edge cross others. |
 | `dot` | `cx` `cy`, `r` (7), `tone`, `hollow`. Edges may reach its centre. |
 | `bar` | `x1` `x2` `y`, `tone`, `label` (right of the bar). |
