@@ -15,11 +15,7 @@ func check(t *testing.T, head, parts string) error {
 	if head == "" {
 		head = "width: 300\nheight: 200\n"
 	}
-	s, err := diagram.Parse("s.yaml", []byte("id: d\ntitle: t\n"+head+"parts:\n"+parts))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return diagram.Check(s)
+	return diagram.Check(parse(t, "s.yaml", "id: d\ntitle: t\n"+head+"parts:\n"+parts))
 }
 
 func TestCheck(t *testing.T) {
