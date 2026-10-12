@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/icons"
 )
 
 // Problems are the layout mistakes of a diagram, all of them at once, each at the line and column of
@@ -28,9 +29,13 @@ func (p Problems) Localize(c *i18n.Catalog) string {
 
 // Check reports the layout mistakes of s, as diagram.mjs does: text too wide or tall for its box,
 // parts sticking out of the canvas, overlapping, straddling the edge of a frame, edges running
-// through boxes, labels or frame headings, and edges crossing.
-func Check(s *Spec) error {
-	if p := newLayout(s).check(); len(p) > 0 {
+// through boxes, labels or frame headings, and edges crossing. Icons are looked up in store.
+func Check(s *Spec, store *icons.Store) error {
+	l := newLayout(s, store)
+	if l.err != nil {
+		return l.err
+	}
+	if p := l.check(); len(p) > 0 {
 		return p
 	}
 	return nil

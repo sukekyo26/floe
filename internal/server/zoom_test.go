@@ -15,6 +15,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/store"
 )
 
@@ -154,7 +155,7 @@ func diagramPage(t *testing.T, lang i18n.Lang) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svg, err := diagram.Render([]*diagram.Spec{s})
+	svg, err := diagram.Render([]*diagram.Spec{s}, icons.New(""))
 	if err != nil {
 		t.Fatal(err)
 	}

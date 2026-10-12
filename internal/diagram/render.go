@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -49,10 +50,10 @@ var markerKinds = func() []string {
 	return kinds
 }()
 
-// Render checks the specs and draws them, in order, as one HTML fragment of inline SVG. The ids of the
-// diagrams name their markers, so they must differ between the specs drawn together. On a mistake
-// it draws nothing and returns the Problems of every spec.
-func Render(specs []*Spec) (string, error) {
+// Render checks the specs and draws them, in order, as one HTML fragment of inline SVG, with the icons
+// of store. The ids of the diagrams name their markers, so they must differ between the specs drawn
+// together. On a mistake it draws nothing and returns the Problems of every spec.
+func Render(specs []*Spec, store *icons.Store) (string, error) {
 	var problems Problems
 	layouts := make([]*layout, len(specs))
 	first := map[string]*Spec{}
@@ -63,7 +64,10 @@ func Render(specs []*Spec) (string, error) {
 		} else {
 			first[s.ID] = s
 		}
-		layouts[i] = newLayout(s)
+		layouts[i] = newLayout(s, store)
+		if err := layouts[i].err; err != nil {
+			return "", err
+		}
 		problems = append(problems, layouts[i].check()...)
 	}
 	if len(problems) > 0 {

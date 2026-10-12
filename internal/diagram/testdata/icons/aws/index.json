@@ -1,0 +1,23 @@
+{
+ "version": "01022030",
+ "source": "a stand-in for the AWS icons, for tests",
+ "icons": {
+  "amazon-bedrock": {
+   "category": "Artificial-Intelligence"
+  },
+  "aws-lambda": {
+   "category": "Compute"
+  },
+  "group/aws-cloud-logo": {
+   "category": "Group",
+   "dark": true
+  },
+  "group/region": {
+   "category": "Group"
+  },
+  "res/client": {
+   "category": "General-Icons",
+   "dark": true
+  }
+ }
+}

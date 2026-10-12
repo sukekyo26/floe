@@ -1,10 +1,12 @@
 package diagram
 
 import (
+	"errors"
 	"math"
 	"slices"
 	"strings"
 
+	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -44,6 +46,8 @@ type path struct {
 // the SVG of each part, so that the checks and the drawing read the same geometry.
 type layout struct {
 	spec     *Spec
+	icons    *icons.Store
+	err      error  // what stops the drawing that is no mistake of the spec (the icons are not there)
 	boxes    []rect // edges may not run through these
 	marks    []rect // may not overlap, but edges may reach their centre (dots)
 	frames   []rect
@@ -60,9 +64,9 @@ type layout struct {
 	markers []string // the marker kinds the edges use, in the order of first use
 }
 
-func newLayout(s *Spec) *layout {
+func newLayout(s *Spec, store *icons.Store) *layout {
 	l := &layout{
-		spec: s, boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, paths: nil,
+		spec: s, icons: store, err: nil, boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, paths: nil,
 		problems: nil, seen: map[string]bool{},
 		areaSVG: nil, edgeSVG: nil, boxSVG: nil, labelSVG: nil, grids: nil, markers: nil,
 	}
@@ -146,20 +150,58 @@ func (l *layout) addFrame(f Frame) {
 	if f.Accent {
 		cls += " accent"
 	}
+	var corner markup
 	if f.Icon != "" {
-		l.problem(f.Pos, "diagram_icon_unavailable", what)
+		// The frame's line (1.2 wide) is centred on its edge, so the icon moved out by 1 covers its
+		// outer half (0.6) too.
+		corner = l.image(f.Pos, f.Icon, f.X-1, f.Y-1, 32, what)
 	}
-	l.areaSVG = append(l.areaSVG, svgf(`<g class="%v"><rect x="%v" y="%v" width="%v" height="%v" rx="%v"/>`+
-		`<text x="%v" y="%v" text-anchor="start">%v</text></g>`, cls, f.X, f.Y, f.W, f.H, rx, hx, hy, f.Label))
+	if corner != "" {
+		cls += " grouped"
+	}
+	box := svgf(`<g class="%v"><rect x="%v" y="%v" width="%v" height="%v" rx="%v"/>`, cls, f.X, f.Y, f.W, f.H, rx)
+	head := svgf(`<text x="%v" y="%v" text-anchor="start">%v</text></g>`, hx, hy, f.Label)
+	l.areaSVG = append(l.areaSVG, box+corner+head)
 }
 
 func (l *layout) addIcon(i Icon) {
 	what := usererr.New("diagram_what_icon", i.Name)
 	l.boxes = append(l.boxes, rect{i.X, i.Y, i.Size, i.Size, what, i.Pos})
-	l.problem(i.Pos, "diagram_icon_unavailable", what)
+	l.boxSVG = append(l.boxSVG, l.image(i.Pos, i.Name, i.X, i.Y, i.Size, what))
 	if i.Label != "" {
 		l.label(i.Pos, i.Label, i.X+i.Size/2, i.Y+i.Size+16, "middle", false, false)
 	}
+}
+
+// image places the icon of name (aws/…) as an <image>, two with a variant for dark backgrounds.
+// Not inline <svg>: the official icons' ids collide between icons. An icon not there is a mistake
+// of the spec, and icons not fetched stop the drawing.
+func (l *layout) image(at Pos, name string, x, y, size float64, what *usererr.Error) markup {
+	icon, names, err := l.icons.Lookup(name)
+	if errors.Is(err, icons.ErrNoSet) {
+		l.problem(at, "diagram_icon_set", what, name, strings.Join(icons.Sets(), ", "))
+		return ""
+	}
+	if err != nil {
+		if l.err == nil {
+			l.err = err
+		}
+		return ""
+	}
+	if icon == nil {
+		if len(names) == 0 {
+			l.problem(at, "diagram_icon_unknown", what, name)
+		} else {
+			l.problem(at, "diagram_icon_close_names", what, name, strings.Join(names, ", "))
+		}
+		return ""
+	}
+	const img = `<image href="%v" x="%v" y="%v" width="%v" height="%v"`
+	if icon.Dark == "" {
+		return svgf(img+`/>`, icon.Light, x, y, size, size)
+	}
+	return svgf(img+` class="icon-light"/>`, icon.Light, x, y, size, size) +
+		svgf(img+` class="icon-dark"/>`, icon.Dark, x, y, size, size)
 }
 
 // label places text at x, y as diagram.mjs does: 18px tall, with 5px around it. It returns the
