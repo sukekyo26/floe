@@ -19,7 +19,7 @@ func check(t *testing.T, head, parts string) error {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return diagram.Check("s.yaml", s)
+	return diagram.Check(s)
 }
 
 func TestCheck(t *testing.T) {
@@ -76,6 +76,7 @@ func TestCheck(t *testing.T) {
 				`s.yaml:6:5: box "a": "b" needs about 16px more width`,
 				`s.yaml:6:5: box "a": its text needs a height of 46px or more; the box has 20px`,
 				`s.yaml:7:5: table "users": "identifier  string" needs about 78px more width`,
+				`s.yaml:13:5: icon "aws/amazon-ec2": icons are not supported yet`,
 				`s.yaml:8:5: dot at 295,50 sticks out of the 300x200 canvas`,
 				`s.yaml:12:5: label "10/06" sticks out of the 300x200 canvas`,
 				`s.yaml:12:5: label "10/07" sticks out of the 300x200 canvas`,
@@ -132,7 +133,7 @@ func TestCheck(t *testing.T) {
 			parts: `  - frame: { x: 20, y: 120, w: 200, h: 60, label: Heading, icon: aws/vpc }
   - edge: { d: "M50,125 V150", end: none }
 `,
-			want: nil,
+			want: []string{`s.yaml:6:5: frame "Heading": icons are not supported yet`},
 		},
 		{
 			name:  "the same mistake once",

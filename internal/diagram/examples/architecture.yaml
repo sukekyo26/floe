@@ -1,0 +1,38 @@
+# Architecture: where each piece runs. Nested frames separate the places, and the main flow's edges
+# are numbered (1 to 4) for a list under the diagram that explains each step.
+#
+# Grid: rows centred at y = 92 + 88n (boxes 56 tall, 32 apart). Columns: the agent, the store, the
+# server, the browser. Edges between boxes of one row are one horizontal line; an edge between rows
+# bends once.
+id: arch
+width: 1248
+height: 512
+title: How floe serves a page
+parts:
+  - frame: { x: 272, y: 108, w: 256, h: 300, label: "Store ~/.local/share/floe" }
+  - frame: { x: 624, y: 20, w: 280, h: 476, label: "Local server 127.0.0.1:7325", accent: true }
+  - frame: { x: 968, y: 20, w: 264, h: 476, label: Browser }
+  - frame: { x: 984, y: 112, w: 232, h: 188, label: "Frame /a/<slug>/" }
+  - box: { x: 24, y: 64, w: 200, h: 56, tone: accent, rows: [[floe publish, main code], run by the agent] }
+  - box: { x: 288, y: 152, w: 224, h: 56, rows: [["<slug>/index.html", main code], a stored page] }
+  - box: { x: 288, y: 240, w: 224, h: 56, rows: [["<slug>/meta.json", main code], "title, description, link"] }
+  - box: { x: 288, y: 328, w: 224, h: 56, rows: [Linked HTML file, read on every request] }
+  - box: { x: 644, y: 64, w: 240, h: 56, rows: [[/api/health, main code], "is it up, which build"] }
+  - box: { x: 644, y: 152, w: 240, h: 56, rows: [["/a/<slug>/?raw", main code], "the page, sandboxed"] }
+  - box: { x: 644, y: 240, w: 240, h: 56, rows: [["/api/events/<slug>", main code], change notices (SSE)] }
+  - box: { x: 644, y: 328, w: 240, h: 56, rows: [["/ and /a/<slug>/", main code], manager and frame (ui.html)] }
+  - box: { x: 644, y: 416, w: 240, h: 56, rows: [[/api/artifacts, main code], "list, edit, register links"] }
+  # Two edges (3 and 4) reach the page, so its box spans two rows
+  - box: { x: 1000, y: 152, w: 200, h: 132, tone: accent, rows: [The page, "an iframe of ?raw", "sandboxed, origin null"] }
+  - box: { x: 988, y: 416, w: 224, h: 56, rows: [Management page, origin 127.0.0.1] }
+  - edge: { d: "M224,92 H644", label: "1 health", at: [434, 92] }
+  - edge: { d: "M124,120 V180 H288", label: "2 save", at: [200, 180] }
+  - edge: { d: "M512,180 H644", label: "3 read", at: [578, 180] }
+  - edge: { d: "M512,268 H644", label: "4 version", at: [578, 268] }
+  - edge: { d: "M400,296 V328", dashed: true, label: path, at: [410, 312] }
+  - edge: { d: "M884,180 H1000", label: "3 serve", at: [942, 180] }
+  - edge: { d: "M1000,268 H884", label: "4 listen", at: [942, 268] }
+  # Two edges leaving one box start 8 above and below its middle, so they do not overlap
+  - edge: { d: "M884,348 H1100 V300" }
+  - edge: { d: "M884,364 H1070 V416" }
+  - edge: { d: "M988,444 H884", start: arrow, label: API, at: [936, 444] }

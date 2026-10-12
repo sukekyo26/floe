@@ -1,0 +1,23 @@
+# State diagram: floe's server. States stand in one row; a pair of opposite transitions is two
+# parallel lines, and transitions from two states to the same one join into one line.
+#
+# Grid: states centred at y = 120, boxes 200 x 64 and 200 apart (wider than a label). Parallel
+# lines are 12 above and below the middle. The start is a dot.
+id: state
+width: 1080
+height: 252
+title: "The states of floe's server"
+parts:
+  - box: { x: 60, y: 88, w: 200, h: 64, shape: state, rows: [Stopped, no process] }
+  - box: { x: 460, y: 88, w: 200, h: 64, tone: accent, shape: state, rows: [Running, "on 127.0.0.1:7325"] }
+  - box: { x: 860, y: 88, w: 200, h: 64, tone: warn, shape: state, rows: [Outdated, floe was reinstalled] }
+  - dot: { cx: 22, cy: 120 }
+  - edge: { d: "M29,120 H60" }
+  # A transition back to the same state bends out above the box
+  - edge: { d: "M110,88 V58 H210 V88", label: start fails (port in use), at: [160, 40] }
+  - edge: { d: "M260,120 H460", label: publish or serve, at: [360, 102] }
+  - edge: { d: "M660,108 H860", label: floe reinstalled, at: [760, 90] }
+  - edge: { d: "M860,132 H660", label: next publish replaces it, at: [760, 150] }
+  # Two states going to the same one share the line below, with one arrow
+  - edge: { d: "M960,152 V216 H160 V152", label: "floe stop, logout or reboot", at: [360, 216] }
+  - edge: { d: "M560,152 V216", end: none }

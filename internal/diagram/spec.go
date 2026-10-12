@@ -17,8 +17,10 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// Spec is one diagram.
+// Spec is one diagram, read from File where Pos is.
 type Spec struct {
+	Pos
+	File          string
 	ID            string
 	Width, Height float64
 	Title         string
@@ -157,7 +159,7 @@ var (
 	idRe        = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 	tones       = []string{"accent", "good", "warn", "bad"}
 	shapes      = []string{"rect", "pill", "hex", "state"}
-	markers     = []string{"none", "arrow", "triangle", "diamond", "odiamond", "one", "many", "zero-one", "zero-many"}
+	markerKinds = []string{"none", "arrow", "triangle", "diamond", "odiamond", "one", "many", "zero-one", "zero-many"}
 	rowStyles   = []string{"main", "sub", "main code", "sub code"}
 	textAnchors = []string{"middle", "start", "end"}
 	lineKinds   = []string{"line", "lifeline", "divider"}
@@ -218,7 +220,10 @@ func FromNode(file string, n ast.Node) (*Spec, error) {
 	if err != nil {
 		return nil, err
 	}
-	spec := &Spec{ID: f.str("id"), Width: f.num("width"), Height: f.num("height"), Title: f.optStr("title"), Parts: nil}
+	spec := &Spec{
+		Pos: f.at, File: file, ID: f.str("id"), Width: f.num("width"), Height: f.num("height"),
+		Title: f.optStr("title"), Parts: nil,
+	}
 	items := f.list("parts")
 	if f.lookup("parts") == nil {
 		f.missing("parts")
@@ -364,7 +369,7 @@ func decodeEdge(f *fields) Part {
 	e := Edge{
 		Pos: f.at, D: f.str("d"), Segs: nil, Label: f.optStr("label"), LabelAt: f.pair("at"),
 		Dashed: f.flag("dashed"), Bold: f.flag("bold"), Tone: f.oneOf("tone", "", tones...),
-		Start: f.oneOf("start", "none", markers...), End: f.oneOf("end", "arrow", markers...),
+		Start: f.oneOf("start", "none", markerKinds...), End: f.oneOf("end", "arrow", markerKinds...),
 		Crossing: f.flag("crossing"),
 	}
 	if f.err != nil {

@@ -2,22 +2,9 @@ package diagram
 
 import (
 	"math"
-	"strconv"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
-)
-
-// Text sizes and box metrics of diagram.mjs.
-const (
-	sizeMain  = 13
-	sizeSub   = 12
-	pad       = 16 // a box's inner margin on each side
-	lineGap   = 17 // between the rows of a box
-	tableHead = 30
-	tableRow  = 22
-	tableSep  = 9
 )
 
 // Problems are the layout mistakes of a diagram, all of them at once, each at the line and column of
@@ -38,191 +25,21 @@ func (p Problems) Localize(c *i18n.Catalog) string {
 	return strings.Join(lines, "\n")
 }
 
-// rect is the area a part takes, with the words that name it in messages.
-type rect struct {
-	x, y, w, h float64
-	what       *usererr.Error
-	at         Pos
-}
-
-func (a rect) overlaps(b rect) bool {
-	return a.x < b.x+b.w && b.x < a.x+a.w && a.y < b.y+b.h && b.y < a.y+a.h
-}
-
-func (a rect) inside(b rect) bool {
-	return a.x >= b.x && a.y >= b.y && a.x+a.w <= b.x+b.w && a.y+a.h <= b.y+b.h
-}
-
-type path struct {
-	edge Edge
-	own  int // the index in labels of the edge's label, which it may run through; -1 without one
-}
-
-// layout is what the checks compare, gathered from the parts in the order diagram.mjs gathers them.
-type layout struct {
-	file     string
-	boxes    []rect // edges may not run through these
-	marks    []rect // may not overlap, but edges may reach their centre (dots)
-	frames   []rect
-	areas    []rect // may overlap (Venn circles)
-	labels   []rect
-	heads    []rect // frame headings, which edges may not cross
-	paths    []path
-	problems Problems
-	seen     map[string]bool
-}
-
 // Check reports the layout mistakes of s, as diagram.mjs does: text too wide or tall for its box,
 // parts sticking out of the canvas, overlapping, straddling the edge of a frame, edges running
-// through boxes, labels or frame headings, and edges crossing. file names s in the messages.
-func Check(file string, s *Spec) error {
-	l := &layout{
-		file: file, boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, paths: nil,
-		problems: nil, seen: map[string]bool{},
+// through boxes, labels or frame headings, and edges crossing.
+func Check(s *Spec) error {
+	if p := newLayout(s).check(); len(p) > 0 {
+		return p
 	}
-	for _, p := range s.Parts {
-		l.add(p)
-	}
-	l.checkPlacement(s)
+	return nil
+}
+
+func (l *layout) check() Problems {
+	l.checkPlacement(l.spec)
 	l.checkEdges()
 	l.checkCrossings()
-	if len(l.problems) == 0 {
-		return nil
-	}
 	return l.problems
-}
-
-func (l *layout) problem(at Pos, key string, args ...any) {
-	e := &Error{File: l.file, Pos: at, Err: usererr.New(key, args...)}
-	if !l.seen[e.Error()] {
-		l.seen[e.Error()] = true
-		l.problems = append(l.problems, e)
-	}
-}
-
-func (l *layout) add(p Part) {
-	switch p := p.(type) {
-	case Frame:
-		l.addFrame(p)
-	case Icon:
-		l.boxes = append(l.boxes, rect{p.X, p.Y, p.Size, p.Size, usererr.New("diagram_what_icon", p.Name), p.Pos})
-		if p.Label != "" {
-			l.label(p.Pos, p.Label, p.X+p.Size/2, p.Y+p.Size+16, "middle", false)
-		}
-	case Box:
-		l.addBox(p)
-	case Table:
-		l.addTable(p)
-	case Edge:
-		e := path{edge: p, own: -1}
-		if p.Label != "" {
-			e.own = l.label(p.Pos, p.Label, p.LabelAt[0], p.LabelAt[1], "middle", false)
-		}
-		l.paths = append(l.paths, e)
-	case Dot:
-		what := usererr.New("diagram_what_dot", formatNum(p.CX), formatNum(p.CY))
-		l.marks = append(l.marks, rect{p.CX - p.R, p.CY - p.R, p.R * 2, p.R * 2, what, p.Pos})
-	case Bar:
-		l.addBar(p)
-	case Axis:
-		for _, t := range p.Ticks {
-			l.label(p.Pos, t.Text, t.X, p.Y+17, "middle", false)
-		}
-	case Circle:
-		what := usererr.New("diagram_what_circle", formatNum(p.CX), formatNum(p.CY))
-		l.areas = append(l.areas, rect{p.CX - p.R, p.CY - p.R, p.R * 2, p.R * 2, what, p.Pos})
-	case Label:
-		l.label(p.Pos, p.Text, p.X, p.Y, p.Anchor, p.Strong)
-	}
-}
-
-// addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
-func (l *layout) addFrame(f Frame) {
-	l.frames = append(l.frames, rect{f.X, f.Y, f.W, f.H, usererr.New("diagram_what_frame", f.Label), f.Pos})
-	if f.Label == "" {
-		return
-	}
-	hx, hy, size := f.X+12, f.Y+18, float64(sizeSub)
-	if f.Icon != "" {
-		hx, hy, size = f.X+40, f.Y+15, sizeMain
-	}
-	head := usererr.New("diagram_what_heading", f.Label)
-	l.heads = append(l.heads, rect{hx, hy - 9, textWidth(f.Label, size, false), 18, head, f.Pos})
-}
-
-func (l *layout) addBar(b Bar) {
-	name := b.Label
-	if name == "" {
-		name = formatNum(b.X1) + "-" + formatNum(b.X2)
-	}
-	w := math.Max(b.X2-b.X1, 4)
-	l.boxes = append(l.boxes, rect{b.X1, b.Y - 7, w, 14, usererr.New("diagram_what_bar", name), b.Pos})
-	if b.Label != "" {
-		l.label(b.Pos, b.Label, b.X1+w+10, b.Y, "start", false)
-	}
-}
-
-// label places text at x, y as diagram.mjs does: 18px tall, with 5px around it. It returns the
-// label's index in labels.
-func (l *layout) label(at Pos, text string, x, y float64, anchor string, strong bool) int {
-	size := float64(sizeSub)
-	if strong {
-		size = sizeMain
-	}
-	w := textWidth(text, size, false) + 10
-	x0 := x - w/2
-	switch anchor {
-	case "start":
-		x0 = x - 5
-	case "end":
-		x0 = x - w + 5
-	}
-	l.labels = append(l.labels, rect{x0, y - 9, w, 18, usererr.New("diagram_what_label", text), at})
-	return len(l.labels) - 1
-}
-
-func (l *layout) addBox(b Box) {
-	what := usererr.New("diagram_what_box", b.Rows[0].Text)
-	room := b.W
-	if b.Shape == "hex" {
-		room -= 36
-	}
-	room -= pad * 2
-	for _, r := range b.Rows {
-		size := float64(sizeMain)
-		if strings.HasPrefix(r.Style, "sub") {
-			size = sizeSub
-		}
-		l.fit(b.Pos, what, r.Text, size, strings.HasSuffix(r.Style, "code"), room)
-	}
-	if need := len(b.Rows)*lineGap + 12; float64(need) > b.H {
-		l.problem(b.Pos, "diagram_too_short", what, need, formatNum(b.H))
-	}
-	l.boxes = append(l.boxes, rect{b.X, b.Y, b.W, b.H, what, b.Pos})
-}
-
-func (l *layout) addTable(t Table) {
-	what := usererr.New("diagram_what_table", t.Title)
-	l.fit(t.Pos, what, t.Title, sizeMain, false, t.W-pad*2)
-	h := float64(tableHead)
-	for _, r := range t.Rows {
-		if r.Sep {
-			h += tableSep
-			continue
-		}
-		l.fit(t.Pos, what, r.Name+"  "+r.Type, sizeSub, true, t.W-24)
-		h += tableRow
-	}
-	if len(t.Rows) > 0 {
-		h += 6
-	}
-	l.boxes = append(l.boxes, rect{t.X, t.Y, t.W, h, what, t.Pos})
-}
-
-func (l *layout) fit(at Pos, what *usererr.Error, text string, size float64, code bool, room float64) {
-	if tw := textWidth(text, size, code); tw > room {
-		l.problem(at, "diagram_too_narrow", what, text, int(math.Ceil(tw-room)))
-	}
 }
 
 // checkPlacement reports parts sticking out of the canvas, overlapping and straddling frames.
@@ -344,36 +161,4 @@ func crossing(s, q [4]float64) (x, y float64, ok bool) {
 		return 0, 0, false
 	}
 	return x1 + t*(x2-x1), y1 + t*(y2-y1), true
-}
-
-// textWidth estimates the width of s: a full-width character (above U+2E80) is size wide, any other
-// 0.6 of it, or 0.62 in code.
-// LIMIT: an estimate, as diagram.mjs makes it. Measure the text instead if a font change makes it miss.
-func textWidth(s string, size float64, code bool) float64 {
-	narrow := size * 0.6
-	if code {
-		narrow = size * 0.62
-	}
-	w := 0.0
-	for _, c := range s {
-		if c > 0x2e80 {
-			w += size
-		} else {
-			w += narrow
-		}
-	}
-	return w
-}
-
-// formatNum writes v as JavaScript's Number#toString does, so that numbers in messages and SVG read
-// as diagram.mjs writes them.
-func formatNum(v float64) string {
-	if v == 0 {
-		return "0" // and -0
-	}
-	if a := math.Abs(v); a >= 1e21 || a < 1e-6 {
-		mant, exp, _ := strings.Cut(strconv.FormatFloat(v, 'e', -1, 64), "e")
-		return mant + "e" + exp[:1] + strings.TrimLeft(exp[1:], "0")
-	}
-	return strconv.FormatFloat(v, 'f', -1, 64)
 }

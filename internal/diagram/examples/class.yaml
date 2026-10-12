@@ -1,0 +1,26 @@
+# Class diagram: the error types of floe's diagram package. Interfaces sit on the top tier; the
+# types that implement them share one bent line (the triangle reads as implements), and a diamond
+# marks what a type holds. Each table lists only the members the diagram is about.
+#
+# Grid: table centres at x = 150, 500, 850 (tables 240 wide) and x = 330, 670 for the interfaces;
+# tiers start at y = 20 and 168, and the implements lines bend at y = 123, between the tiers.
+id: class
+width: 1000
+height: 350
+title: "The error types of floe's diagram package"
+parts:
+  - table: { x: 210, y: 20, w: 240, title: error, rows: [[Error(), string]] }
+  - table: { x: 550, y: 20, w: 240, title: i18n.Localizer, rows: [[Localize(c), string]] }
+  - table: { x: 30, y: 168, w: 240, title: usererr.Error, tone: accent, rows: [[Key, string], [Args, "[]any"], [Conflict, bool], "---", [Error(), string], [Localize(c), string]] }
+  - table: { x: 380, y: 168, w: 240, title: diagram.Error, tone: accent, rows: [[File, string], [Pos, Pos], [Err, "*usererr.Error"], "---", [Error(), string], [Localize(c), string]] }
+  - table: { x: 730, y: 168, w: 240, title: diagram.Problems, tone: accent, rows: [[elements, "*Error"], "---", [Error(), string], [Localize(c), string]] }
+  # Implements: up from each type to the bend, along it, and up into the interface
+  - edge: { d: "M150,168 V123 H330 V78", end: triangle }
+  - edge: { d: "M150,168 V123 H670 V78", end: triangle }
+  - edge: { d: "M500,168 V123 H330 V78", end: triangle }
+  - edge: { d: "M500,168 V123 H670 V78", end: triangle }
+  - edge: { d: "M850,168 V123 H330 V78", end: triangle }
+  - edge: { d: "M850,168 V123 H670 V78", end: triangle }
+  # Holds: the diamond is on the holder; rows are centred at y + 41 + 22i
+  - edge: { d: "M380,253 H270", start: diamond, end: none, label: Err, at: [325, 241] }
+  - edge: { d: "M730,209 H620", start: odiamond, end: none, label: holds, at: [675, 197] }

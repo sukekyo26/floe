@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `floe diagram render <spec.yaml>...`, which draws diagrams from YAML
+  specs of parts placed at absolute coordinates and prints them as one HTML
+  fragment of inline SVG. It first checks for text that does not fit, parts
+  outside the canvas, overlaps, edges through boxes or labels, and crossing
+  edges, and reports every mistake as `file:line:column`.
+- Add `floe diagram example [kind]`, which lists the built-in example specs
+  (architecture, class, ER, flow, Git, sequence, state, timeline, Venn) or
+  prints one to copy.
 - Add `floe publish <file>`, which stores an HTML page and prints its URL on
   `http://127.0.0.1:7325`. It starts the server in the background when needed,
   opens a new page in the browser and wraps body-only HTML in the built-in

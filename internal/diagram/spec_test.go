@@ -52,7 +52,7 @@ parts:
 	}
 	at := func(line, col int) diagram.Pos { return diagram.Pos{Line: line, Column: col} }
 	want := &diagram.Spec{
-		ID: "all-parts", Width: 640, Height: 400.5, Title: "部品の一覧",
+		Pos: at(1, 1), File: "all.yaml", ID: "all-parts", Width: 640, Height: 400.5, Title: "部品の一覧",
 		Parts: []diagram.Part{
 			diagram.Frame{Pos: at(6, 5), X: 16, Y: 16, W: 608, H: 368, Label: "VPC", Icon: "aws/vpc", Square: true},
 			diagram.Box{
