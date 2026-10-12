@@ -480,6 +480,10 @@ func TestPublishDataFile(t *testing.T) {
 	e := newEnv(t)
 	plan := e.write(t, "plan.yaml", "template: report\ntitle: The plan\nsections:\n  - parts:\n      - text: Do it.\n")
 	want(t, "publish a data file", e.run(t, "", "publish", plan), 0, e.base()+"/a/plan/\n", "")
+	// Waiting for the browser to open the page also keeps it from writing after the test.
+	if got := e.opened(t); got != e.base()+"/a/plan/\n" {
+		t.Errorf("a first publish opened %q", got)
+	}
 	if b, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], "plan", "index.html")); err != nil || !bytes.Contains(b, []byte("<h1>The plan</h1>")) {
 		t.Errorf("the published page = %s, %v", b, err)
 	}
