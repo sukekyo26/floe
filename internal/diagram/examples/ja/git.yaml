@@ -1,0 +1,35 @@
+# Git のブランチ図: floe の図の作業。PR を前の PR の上に積んでいる。横がコミットの順で、ブランチごとに
+# 1 行のレーンを持つ。分岐と合流は斜めの線 1 本。破線はまだマージしていないもの、白抜きの丸はレビュー中の PR。
+#
+# 格子: レーンは y = 50, 110, 170, 230、コミットは x = 200 から 70 刻み。名札（pill）は分岐点の左で終わり、
+# 幅は名前の幅（13px の等幅で 1 文字 ≈ 8.1px）+ 40。
+id: git
+width: 860
+height: 260
+title: "フェーズ 2 の積み重ねたブランチ"
+parts:
+  - box: { x: 15.3, y: 35, w: 96.7, h: 30, tone: "accent", shape: "pill", rows: [["develop", "main code"]] }
+  - box: { x: 114, y: 95, w: 202, h: 30, tone: "good", shape: "pill", rows: [["feature/diagram-spec", "main code"]] }
+  - box: { x: 245.9, y: 155, w: 210.1, h: 30, shape: "pill", rows: [["feature/diagram-check", "main code"]] }
+  - box: { x: 297.8, y: 215, w: 218.2, h: 30, shape: "pill", rows: [["feature/diagram-render", "main code"]] }
+  # 線を先に引き、丸を上に重ねる（丸は線の上に置いてよい）
+  - edge: { d: "M112,50 H830", bold: true, tone: "accent", end: "none" }
+  - edge: { d: "M270,50 L340,110 L410,50", tone: "good", end: "none" }
+  - edge: { d: "M410,50 L480,170", end: "none" }
+  - edge: { d: "M480,170 L620,50", dashed: true, end: "none" }
+  - edge: { d: "M480,170 L550,230 H620", end: "none" }
+  - edge: { d: "M620,230 L760,50", dashed: true, end: "none" }
+  - dot: { cx: 200, cy: 50, tone: "accent" }
+  - dot: { cx: 270, cy: 50, tone: "accent" }
+  - dot: { cx: 410, cy: 50, tone: "accent" }
+  - dot: { cx: 620, cy: 50, tone: "accent", hollow: true }
+  - dot: { cx: 760, cy: 50, tone: "accent", hollow: true }
+  - dot: { cx: 340, cy: 110, tone: "good" }
+  - dot: { cx: 480, cy: 170 }
+  - dot: { cx: 550, cy: 230 }
+  - dot: { cx: 620, cy: 230 }
+  - label: { text: "#11", x: 200, y: 30 }
+  - label: { text: "#12", x: 270, y: 30 }
+  - label: { text: "#13", x: 410, y: 30 }
+  - label: { text: "#14 レビュー中", x: 620, y: 30 }
+  - label: { text: "#15 積み重ね", x: 760, y: 30 }

@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/diagram"
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -102,14 +103,25 @@ func (a *app) render(files []string, assets bool) error {
 }
 
 func (a *app) diagramExampleCmd() *cobra.Command {
-	return &cobra.Command{
+	var lang string
+	cmd := &cobra.Command{
 		Use:   "example [kind]",
 		Short: "List the built-in example specs, or print the one of a kind",
 		Long: `Without a kind, list the built-in examples: one per kind of diagram, each a spec that
-passes the checks. With a kind, print its spec, whose comments explain its grid.`,
+passes the checks. With a kind, print its spec, whose comments explain its grid.
+
+The examples are written in the language of floe's messages (FLOE_LANG, LC_ALL, LC_MESSAGES,
+LANG), or in --lang; an example not written in that language is printed in English.`,
 		Args: usage(cobra.MaximumNArgs(1)),
-		RunE: func(_ *cobra.Command, args []string) error {
-			examples, err := diagram.Examples()
+		RunE: func(cmd *cobra.Command, args []string) error {
+			in := a.cat.Lang()
+			if cmd.Flags().Changed("lang") {
+				if !i18n.IsTag(lang) {
+					return usageError{err: usererr.New("lang_invalid", lang)}
+				}
+				in = i18n.Lang(strings.ToLower(lang))
+			}
+			examples, err := diagram.Examples(in)
 			if err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}
@@ -131,4 +143,6 @@ passes the checks. With a kind, print its spec, whose comments explain its grid.
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&lang, "lang", "", "the language of the examples, as a BCP 47 tag (en, ja)")
+	return cmd
 }

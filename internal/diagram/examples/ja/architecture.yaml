@@ -1,0 +1,37 @@
+# 構成図: 各部品がどこで動くか。入れ子の枠で置き場所を分け、主な流れの線に番号（①〜④）を振って、
+# 図の下にその番号の説明を並べる。
+#
+# 格子: 行の中心 y = 92 + 88n（箱の高さ 56、行の間 32）。列は エージェント・保存先・サーバー・ブラウザ。
+# 同じ行の箱どうしは水平線 1 本で結び、行をまたぐ線は 1 回だけ折る。
+id: arch
+width: 1248
+height: 512
+title: "floe がページを配信する仕組み"
+parts:
+  - frame: { x: 272, y: 108, w: 256, h: 300, label: "保存先 ~/.local/share/floe" }
+  - frame: { x: 624, y: 20, w: 280, h: 476, label: "ローカルサーバー 127.0.0.1:7325", accent: true }
+  - frame: { x: 968, y: 20, w: 264, h: 476, label: "ブラウザ" }
+  - frame: { x: 984, y: 112, w: 232, h: 188, label: "外枠 /a/<slug>/" }
+  - box: { x: 24, y: 64, w: 200, h: 56, tone: "accent", rows: [["floe publish", "main code"], "エージェントが実行"] }
+  - box: { x: 288, y: 152, w: 224, h: 56, rows: [["<slug>/index.html", "main code"], "保存したページ"] }
+  - box: { x: 288, y: 240, w: 224, h: 56, rows: [["<slug>/meta.json", "main code"], "タイトル・説明・リンク先"] }
+  - box: { x: 288, y: 328, w: 224, h: 56, rows: ["手元の HTML", "--link で登録・毎回読む"] }
+  - box: { x: 644, y: 64, w: 240, h: 56, rows: [["/api/health", "main code"], "起動と版を確認"] }
+  - box: { x: 644, y: 152, w: 240, h: 56, rows: [["/a/<slug>/?raw", "main code"], "ページを返す（sandbox）"] }
+  - box: { x: 644, y: 240, w: 240, h: 56, rows: [["/api/events/<slug>", "main code"], "変更を通知（SSE）"] }
+  - box: { x: 644, y: 328, w: 240, h: 56, rows: [["/ と /a/<slug>/", "main code"], "管理画面と外枠（ui.html）"] }
+  - box: { x: 644, y: 416, w: 240, h: 56, rows: [["/api/artifacts", "main code"], "一覧・編集・リンク登録"] }
+  # 2 本の線（③・④）を受けるので、2 行にまたがる高さにする
+  - box: { x: 1000, y: 152, w: 200, h: 132, tone: "accent", rows: ["ページ本体", "?raw を読む iframe", "sandbox・origin null"] }
+  - box: { x: 988, y: 416, w: 224, h: 56, rows: ["管理画面", "127.0.0.1 の origin"] }
+  - edge: { d: "M224,92 H644", label: "① 起動確認", at: [434, 92] }
+  - edge: { d: "M124,120 V180 H288", label: "② 保存", at: [200, 180] }
+  - edge: { d: "M512,180 H644", label: "③ 読む", at: [578, 180] }
+  - edge: { d: "M512,268 H644", label: "④ 版を確認", at: [578, 268] }
+  - edge: { d: "M400,296 V328", dashed: true, label: "path", at: [410, 312] }
+  - edge: { d: "M884,180 H1000", label: "③ 返す", at: [942, 180] }
+  - edge: { d: "M1000,268 H884", label: "④ 購読", at: [942, 268] }
+  # 1 つの箱から 2 か所へ出す線は、出る高さを中央から ±8 ずらして重ねない
+  - edge: { d: "M884,348 H1100 V300" }
+  - edge: { d: "M884,364 H1070 V416" }
+  - edge: { d: "M988,444 H884", start: "arrow", label: "API", at: [936, 444] }
