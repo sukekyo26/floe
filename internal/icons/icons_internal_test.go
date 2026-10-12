@@ -136,7 +136,7 @@ func TestReadLimits(t *testing.T) { //nolint:paralleltest // changes the limits
 
 	ctx := context.Background()
 	for path, want := range map[string]string{
-		"/silent":        "timeout awaiting response headers",
+		"/silent":        "(no response in 100ms)",
 		"/stalls":        "(no data for 100ms)",
 		"/large":         "is over 0MB",
 		"/large-unsized": "is over 0MB",
@@ -178,23 +178,43 @@ func TestReadLimits(t *testing.T) { //nolint:paralleltest // changes the limits
 	if err == nil || !strings.Contains(err.Error(), "(larger than any icon); download the zip again") {
 		t.Errorf("Fetch with an icon past the limit = %v", err)
 	}
+
+	// Icons each under their limit are capped in all, as the package is.
+	set(t, &maxIcon, 15)
+	set(t, &maxPackage, 20)
+	zb.Reset()
+	zw = zip.NewWriter(&zb)
+	for _, name := range []string{"Architecture-Group-Icons_01022030/A_32.svg", "Architecture-Group-Icons_01022030/B_32.svg"} {
+		if w, err = zw.Create(name); err == nil {
+			_, err = w.Write(bytes.Repeat([]byte("x"), 11))
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err = zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = aws.extract(zb.Bytes(), "many.zip", t.TempDir()); err == nil || !strings.Contains(err.Error(), "many.zip is over 0MB") {
+		t.Errorf("extract of icons past the limit in all = %v", err)
+	}
 }
 
-func TestNear(t *testing.T) {
+func TestMatch(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range []struct {
 		name, word string
-		want       bool
+		want       int
 	}{
-		{"aws-lambda", "lambda", true},
-		{"aws-lambda", "lamda", true},         // 1 edit
-		{"aws-lambda", "lmda", false},         // 2 edits for a short word
-		{"amazon-dynamodb", "dynamdbo", true}, // 2 edits for a long word
-		{"amazon-ec2", "ec3", false},          // a short word must be in the name
+		{"aws-lambda", "lambda", 2},
+		{"aws-lambda", "lamda", 1},         // 1 edit
+		{"aws-lambda", "lmda", 0},          // 2 edits for a short word
+		{"amazon-dynamodb", "dynamdbo", 1}, // 2 edits for a long word
+		{"amazon-ec2", "ec3", 0},           // a short word must be in the name
 	} {
-		if got := near(c.name, c.word); got != c.want {
-			t.Errorf("near(%s, %s) = %v, want %v", c.name, c.word, got, c.want)
+		if got := match(c.name, c.word); got != c.want {
+			t.Errorf("match(%s, %s) = %d, want %d", c.name, c.word, got, c.want)
 		}
 	}
 }

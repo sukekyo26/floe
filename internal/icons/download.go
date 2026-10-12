@@ -1,8 +1,10 @@
 package icons
 
 import (
+	"cmp"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -23,8 +25,9 @@ var (
 )
 
 var (
-	errTooLarge = errors.New("larger than any icon")
-	errStalled  = errors.New("the download stalled")
+	errTooLarge   = errors.New("larger than any icon")
+	errNoResponse = errors.New("no response")
+	errNoData     = errors.New("no data")
 )
 
 // readAtMost reads r to its end, or stops with errTooLarge past max bytes.
@@ -62,14 +65,13 @@ func download(ctx context.Context, url string) ([]byte, error) {
 	if err != nil {
 		return nil, usererr.New("icons_download", url, err.Error())
 	}
-	transport, _ := http.DefaultTransport.(*http.Transport) //nolint:errcheck // the standard one
-	transport = transport.Clone()
-	transport.ResponseHeaderTimeout = headerTimeout
-	// No Timeout over the whole download: the stall timer below stops one that no longer moves.
-	client := &http.Client{Transport: transport, CheckRedirect: nil, Jar: nil, Timeout: 0}
-	res, err := client.Do(req)
+	// Timers give up on the download: after headerTimeout without a response, then after
+	// stallTimeout without data. No timeout covers the whole of it, so a slow one is let finish.
+	waiting := time.AfterFunc(headerTimeout, func() { cancel(fmt.Errorf("%w in %v", errNoResponse, headerTimeout)) })
+	res, err := http.DefaultClient.Do(req)
+	waiting.Stop()
 	if err != nil {
-		return nil, usererr.New("icons_download", url, err.Error())
+		return nil, usererr.New("icons_download", url, cmp.Or(context.Cause(ctx), err).Error())
 	}
 	defer res.Body.Close() //nolint:errcheck // read only
 	if res.StatusCode != http.StatusOK {
@@ -78,18 +80,14 @@ func download(ctx context.Context, url string) ([]byte, error) {
 	if res.ContentLength > maxPackage {
 		return nil, usererr.New("icons_too_large", url, maxPackage>>20)
 	}
-	stall := time.AfterFunc(stallTimeout, func() { cancel(errStalled) })
+	stall := time.AfterFunc(stallTimeout, func() { cancel(fmt.Errorf("%w for %v", errNoData, stallTimeout)) })
 	defer stall.Stop()
 	b, err := readAtMost(progress{r: res.Body, on: func() { stall.Reset(stallTimeout) }}, maxPackage)
 	if errors.Is(err, errTooLarge) {
 		return nil, usererr.New("icons_too_large", url, maxPackage>>20)
 	}
 	if err != nil {
-		reason := err.Error()
-		if errors.Is(context.Cause(ctx), errStalled) {
-			reason = "no data for " + stallTimeout.String()
-		}
-		return nil, usererr.New("icons_download", url, reason)
+		return nil, usererr.New("icons_download", url, cmp.Or(context.Cause(ctx), err).Error())
 	}
 	return b, nil
 }

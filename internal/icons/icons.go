@@ -86,11 +86,12 @@ type Store struct {
 	// The indexes of the sets read so far, by set: a diagram looks up many icons.
 	mu      sync.Mutex
 	indexes map[string]*index
+	icons   map[string]*Icon // by name, as Lookup found them
 }
 
 // New returns the store under root. An empty root (no HOME to put it under) is refused when used.
 func New(root string) *Store {
-	return &Store{root: root, mu: sync.Mutex{}, indexes: map[string]*index{}}
+	return &Store{root: root, mu: sync.Mutex{}, indexes: map[string]*index{}, icons: map[string]*Icon{}}
 }
 
 func (s *Store) dir(k *kit) string {
@@ -203,6 +204,7 @@ func (s *Store) Fetch(ctx context.Context, set, source string, force bool) (Fetc
 	}
 	s.mu.Lock()
 	s.indexes[k.name] = idx
+	clear(s.icons)
 	s.mu.Unlock()
 	got.Version, got.Count = idx.Version, len(idx.Icons)
 	return got, nil
@@ -258,6 +260,8 @@ func (k *kit) extract(buf []byte, from, dir string) (*index, error) {
 	}
 	idx := &index{Version: "", Source: from, Icons: map[string]entry{}}
 	light := map[string]bool{}
+	// What is written is capped like the package: many entries each under maxIcon could fill the disk.
+	var written int64
 	for _, f := range zr.File {
 		icon, ok := k.iconOf(f.Name)
 		// A service in two categories (only the background differs) keeps the first.
@@ -268,17 +272,14 @@ func (k *kit) extract(buf []byte, from, dir string) (*index, error) {
 		if b, err = readEntry(f); err != nil {
 			return nil, usererr.New("icons_bad_zip", f.Name, from, err.Error())
 		}
+		if written += int64(len(b)); written > maxPackage {
+			return nil, usererr.New("icons_too_large", from, maxPackage>>20)
+		}
 		if err = keep(dir, icon, b); err != nil {
 			return nil, err
 		}
-		idx.Version = cmp.Or(idx.Version, icon.version)
-		e, seen := idx.Icons[icon.name]
-		if !seen {
-			e.Category = icon.category
-		}
-		e.Dark = e.Dark || icon.dark
+		idx.add(icon)
 		light[icon.name] = light[icon.name] || !icon.dark
-		idx.Icons[icon.name] = e
 	}
 	if idx.Version == "" {
 		return nil, usererr.New("icons_none_in_zip", k.title, from, k.page)
@@ -287,6 +288,17 @@ func (k *kit) extract(buf []byte, from, dir string) (*index, error) {
 		return nil, err
 	}
 	return idx, writeIndex(idx, dir)
+}
+
+// add records icon, kept from the package, in the index.
+func (idx *index) add(icon packed) {
+	idx.Version = cmp.Or(idx.Version, icon.version)
+	e, seen := idx.Icons[icon.name]
+	if !seen {
+		e.Category = icon.category
+	}
+	e.Dark = e.Dark || icon.dark
+	idx.Icons[icon.name] = e
 }
 
 // darkAlone makes the dark variant of an icon without a light one its usual one.
@@ -411,6 +423,11 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 	if !ok {
 		return nil, k.closeNames(idx, rest), nil
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if icon := s.icons[name]; icon != nil {
+		return icon, nil, nil
+	}
 	dir := s.dir(k)
 	uri := func(file string) (string, error) {
 		b, rerr := os.ReadFile(filepath.Join(dir, file)) //nolint:gosec // G304: a name in the set's index
@@ -428,6 +445,7 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 			return nil, nil, err
 		}
 	}
+	s.icons[name] = icon
 	return icon, nil, nil
 }
 
@@ -437,7 +455,8 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 func (k *kit) closeNames(idx *index, name string) []string {
 	var words []string
 	for w := range strings.FieldsFuncSeq(strings.ToLower(name), isSep) {
-		if len(w) > 1 && !slices.Contains(k.common, w) {
+		// A common word, or a misspelling of one, would find most names.
+		if len(w) > 1 && !slices.ContainsFunc(k.common, func(c string) bool { return match(c, w) > 0 }) {
 			words = append(words, w)
 		}
 	}
@@ -449,9 +468,7 @@ func (k *kit) closeNames(idx *index, name string) []string {
 	for n := range idx.Icons {
 		score := 0
 		for _, w := range words {
-			if near(n, w) {
-				score++
-			}
+			score += match(n, w)
 		}
 		if score > 0 {
 			found = append(found, scored{n, score})
@@ -471,11 +488,12 @@ func isSep(r rune) bool {
 	return r == '/' || r == '-' || r == '_' || unicode.IsSpace(r)
 }
 
-// near tells whether name holds word, or a word within 1 edit of it (2 for a word of 8 letters or
-// more), so that a misspelt word still finds the name. A word of 3 letters or fewer must be in it.
-func near(name, word string) bool {
+// match scores how name holds word: 2 when it holds it, 1 when a word of it is within 1 edit (2 for
+// a word of 8 letters or more), so that a misspelt word still finds the name, and 0 otherwise. A
+// word of 3 letters or fewer must be in the name.
+func match(name, word string) int {
 	if strings.Contains(name, word) {
-		return true
+		return 2
 	}
 	edits := 0
 	switch {
@@ -483,13 +501,15 @@ func near(name, word string) bool {
 		edits = 2
 	case len(word) >= 4:
 		edits = 1
+	default:
+		return 0
 	}
 	for w := range strings.FieldsFuncSeq(name, isSep) {
-		if edits > 0 && distance(w, word) <= edits {
-			return true
+		if distance(w, word) <= edits {
+			return 1
 		}
 	}
-	return false
+	return 0
 }
 
 // distance is the Levenshtein distance between a and b, by bytes: icon names are ASCII.

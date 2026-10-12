@@ -174,6 +174,10 @@ func TestLookup(t *testing.T) {
 	if _, names, err := set.Lookup("aws/lamda"); err != nil || len(names) == 0 || names[0] != "aws/aws-lambda" {
 		t.Errorf("Lookup aws/lamda = %v, %v; want aws/aws-lambda first", names, err)
 	}
+	// A misspelt common word finds nothing by itself, so the other words decide.
+	if _, names, err := set.Lookup("aws/amazn-lambda"); err != nil || len(names) != 2 || names[0] != "aws/aws-lambda" {
+		t.Errorf("Lookup aws/amazn-lambda = %v, %v; want the two lambdas, aws/aws-lambda first", names, err)
+	}
 	if icon, names, err := set.Lookup("aws/amazon-ec2"); err != nil || icon != nil || len(names) != 0 {
 		t.Errorf("Lookup amazon-ec2 = %+v, %v, %v; want no close names", icon, names, err)
 	}
