@@ -37,14 +37,15 @@ func Check(s *Spec) error {
 }
 
 func (l *layout) check() Problems {
-	l.checkPlacement(l.spec)
+	l.checkPlacement()
 	l.checkEdges()
 	l.checkCrossings()
 	return l.problems
 }
 
 // checkPlacement reports parts sticking out of the canvas, overlapping and straddling frames.
-func (l *layout) checkPlacement(s *Spec) {
+func (l *layout) checkPlacement() {
+	s := l.spec
 	canvas := rect{0, 0, s.Width, s.Height, nil, Pos{Line: 0, Column: 0}}
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas) {
 		if !r.inside(canvas) {

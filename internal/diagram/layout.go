@@ -113,7 +113,7 @@ func (l *layout) add(p Part) {
 		l.label(p.Pos, p.Text, p.X, p.Y, p.Anchor, p.Plain, p.Strong)
 	case Line:
 		l.edgeSVG = append(l.edgeSVG,
-			svgf(`<line x1="%v" y1="%v" x2="%v" y2="%v" class="%v"/>`, p.X1, p.Y1, p.X2, p.Y2, p.Kind))
+			line(p.X1, p.Y1, p.X2, p.Y2, p.Kind))
 	case Raw:
 		l.edgeSVG = append(l.edgeSVG, markup(p.SVG))
 	}
@@ -237,7 +237,7 @@ func (l *layout) addTable(t Table) {
 	for _, row := range t.Rows {
 		if row.Sep {
 			body.WriteString(string(
-				svgf(`<line x1="%v" y1="%v" x2="%v" y2="%v" class="sep"/>`, x, top+tableSep/2.0, x+w, top+tableSep/2.0)))
+				line(x, top+tableSep/2.0, x+w, top+tableSep/2.0, "sep")))
 			top += tableSep
 			h += tableSep
 			continue
@@ -260,7 +260,7 @@ func (l *layout) addTable(t Table) {
 		x, y+tableHead, y+r, x, y, x+r, y, x+w-r, x+w, y, x+w, y+r, y+tableHead)
 	sep := markup("")
 	if len(t.Rows) > 0 {
-		sep = svgf(`<line x1="%v" y1="%v" x2="%v" y2="%v" class="sep"/>`, x, y+tableHead, x+w, y+tableHead)
+		sep = line(x, y+tableHead, x+w, y+tableHead, "sep")
 	}
 	l.boxSVG = append(l.boxSVG, svgf(`<g class="%v"><rect x="%v" y="%v" width="%v" height="%v" rx="%v" class="bg"/>%v%v`+
 		`<text x="%v" y="%v" text-anchor="middle" class="main">%v</text>%v`+
@@ -318,14 +318,19 @@ func (l *layout) addBar(b Bar) {
 }
 
 func (l *layout) addAxis(a Axis) {
-	l.edgeSVG = append(l.edgeSVG, svgf(`<line x1="%v" y1="%v" x2="%v" y2="%v" class="axis"/>`, a.X1, a.Y, a.X2, a.Y))
+	l.edgeSVG = append(l.edgeSVG, line(a.X1, a.Y, a.X2, a.Y, "axis"))
 	for _, t := range a.Ticks {
 		if a.Grid != nil {
-			l.grids = append(l.grids, svgf(`<line x1="%v" y1="%v" x2="%v" y2="%v" class="grid"/>`, t.X, *a.Grid, t.X, a.Y))
+			l.grids = append(l.grids, line(t.X, *a.Grid, t.X, a.Y, "grid"))
 		}
-		l.edgeSVG = append(l.edgeSVG, svgf(`<line x1="%v" y1="%v" x2="%v" y2="%v" class="axis"/>`, t.X, a.Y, t.X, a.Y+5))
+		l.edgeSVG = append(l.edgeSVG, line(t.X, a.Y, t.X, a.Y+5, "axis"))
 		l.label(a.Pos, t.Text, t.X, a.Y+17, "middle", true, false)
 	}
+}
+
+// line draws a straight line of the class cls.
+func line(x1, y1, x2, y2 float64, cls string) markup {
+	return svgf(`<line x1="%v" y1="%v" x2="%v" y2="%v" class="%v"/>`, x1, y1, x2, y2, cls)
 }
 
 // textWidth estimates the width of s: a full-width character (above U+2E80) is size wide, any other

@@ -159,7 +159,6 @@ var (
 	idRe        = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 	tones       = []string{"accent", "good", "warn", "bad"}
 	shapes      = []string{"rect", "pill", "hex", "state"}
-	markerKinds = []string{"none", "arrow", "triangle", "diamond", "odiamond", "one", "many", "zero-one", "zero-many"}
 	rowStyles   = []string{"main", "sub", "main code", "sub code"}
 	textAnchors = []string{"middle", "start", "end"}
 	lineKinds   = []string{"line", "lifeline", "divider"}
