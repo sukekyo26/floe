@@ -9,6 +9,7 @@ package i18n
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -44,6 +45,14 @@ func Supported() []Lang {
 	}
 	slices.Sort(langs)
 	return append([]Lang{English}, langs...)
+}
+
+// tagRe is a BCP 47 language tag: a language of 2 or 3 letters, then subtags such as a region.
+var tagRe = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8})*$`)
+
+// IsTag reports whether s is written as a BCP 47 language tag (en, ja, pt-BR).
+func IsTag(s string) bool {
+	return tagRe.MatchString(s)
 }
 
 // Match returns the registered language for a tag such as ja, ja_JP.UTF-8 or pt-BR: the tag itself,
@@ -133,6 +142,11 @@ type Catalog struct {
 
 // New returns the catalog of lang. A language without a catalog renders in English.
 func New(lang Lang) *Catalog {
+	return &Catalog{lang: lang, chain: Fallbacks(lang)}
+}
+
+// Fallbacks lists where to look for a text in lang, in order: lang, lang without its region, English.
+func Fallbacks(lang Lang) []Lang {
 	chain := []Lang{lang}
 	if base, _, found := strings.Cut(string(lang), "-"); found {
 		chain = append(chain, Lang(base))
@@ -140,7 +154,7 @@ func New(lang Lang) *Catalog {
 	if !slices.Contains(chain, English) {
 		chain = append(chain, English)
 	}
-	return &Catalog{lang: lang, chain: chain}
+	return chain
 }
 
 var english = New(English)

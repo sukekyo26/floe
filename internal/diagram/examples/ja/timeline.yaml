@@ -1,0 +1,23 @@
+# タイムライン: floe の PR がマージされた時期（JST）。横が時間で、期間は棒、節目は上の段の丸。行の名前は
+# 左端にまとめる。
+#
+# 目盛り: x = 160 + 16h（h は 10/11 0:00 からの時間。1 日 = 384px）。左の 160px は行の名前。
+id: timeline
+width: 1100
+height: 240
+title: "floe の PR がマージされた時期"
+parts:
+  - axis: { x1: 160, x2: 928, y: 200, ticks: [[160, "10/11"], [352, "12:00"], [544, "10/12"], [736, "12:00"], [928, "10/13"]], grid: 30 }
+  - label: { text: "フェーズ 0: 準備", x: 16, y: 84, anchor: "start" }
+  - label: { text: "フェーズ 1: 移植", x: 16, y: 124, anchor: "start" }
+  - label: { text: "フェーズ 2: 図", x: 16, y: 164, anchor: "start" }
+  # 短い期間も、棒の右の文字で中身が分かるようにする
+  - bar: { x1: 193.1, x2: 193.6, y: 84, tone: "accent", label: "#1・#2 リポジトリと CI" }
+  - bar: { x1: 459.7, x2: 521.6, y: 124, tone: "good", label: "#3〜#12（10 本）" }
+  - bar: { x1: 531.7, x2: 877.9, y: 164, tone: "good", label: "#13・#14 レビュー中" }
+  - dot: { cx: 193.1, cy: 44, tone: "accent" }
+  - label: { text: "リポジトリ作成", x: 193.1, y: 24 }
+  - dot: { cx: 521.6, cy: 44, tone: "accent" }
+  - label: { text: "フェーズ 1 完了", x: 521.6, y: 24 }
+  - dot: { cx: 877.9, cy: 44, tone: "accent" }
+  - label: { text: "#14 を作成", x: 877.9, y: 24 }
