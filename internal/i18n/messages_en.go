@@ -176,6 +176,7 @@ var messagesEN = map[string]string{
 	"diagram_unknown_key":   `%s: unknown key "%s"; use %s`,
 	"diagram_missing_key":   "%s: give %s",
 	"diagram_not_number":    "%s: %s must be a number",
+	"diagram_not_positive":  "%s: %s must be greater than 0",
 	"diagram_not_text":      "%s: %s must be text",
 	"diagram_not_bool":      "%s: %s must be true or false",
 	"diagram_not_list":      "%s: %s must be a list",

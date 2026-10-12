@@ -175,6 +175,7 @@ var messagesJA = map[string]string{
 	"diagram_unknown_key":   "%s: 知らないキー「%s」です。使えるのは %s です",
 	"diagram_missing_key":   "%s: %s を指定してください",
 	"diagram_not_number":    "%s: %s は数値で指定してください",
+	"diagram_not_positive":  "%s: %s は 0 より大きい値で指定してください",
 	"diagram_not_text":      "%s: %s は文字列で指定してください",
 	"diagram_not_bool":      "%s: %s は true か false で指定してください",
 	"diagram_not_list":      "%s: %s はリストで指定してください",

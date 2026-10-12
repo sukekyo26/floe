@@ -168,6 +168,25 @@ func (f *fields) num(key string) float64 {
 	return f.number(key, n)
 }
 
+// size returns the length under key, which must be given and above 0.
+func (f *fields) size(key string) float64 {
+	v := f.num(key)
+	f.positive(key, v)
+	return v
+}
+
+func (f *fields) optSize(key string, def float64) float64 {
+	v := f.optNum(key, def)
+	f.positive(key, v)
+	return v
+}
+
+func (f *fields) positive(key string, v float64) {
+	if n := f.lookup(key); n != nil && v <= 0 {
+		f.fail(n, "diagram_not_positive", f.kind, key)
+	}
+}
+
 func (f *fields) optNum(key string, def float64) float64 {
 	n := f.get(key)
 	if n == nil {
