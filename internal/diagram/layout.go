@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/icons"
@@ -62,6 +63,9 @@ type layout struct {
 	// Axis grid lines go below every other edge, last first: diagram.mjs unshifts them.
 	grids   []markup
 	markers []string // the marker kinds the edges use, in the order of first use
+	// Each icon at each size is defined once (in <defs>) and placed with <use>, however often it shows.
+	iconDefs []markup
+	iconIDs  map[string]string // by data URI and size
 }
 
 // newLayout lays out s. Icons not fetched stop it with an error, as no mistake of s does.
@@ -70,6 +74,7 @@ func newLayout(s *Spec, store *icons.Store) (*layout, error) {
 		spec: s, icons: store, err: nil, boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, paths: nil,
 		problems: nil, seen: map[string]bool{},
 		areaSVG: nil, edgeSVG: nil, boxSVG: nil, labelSVG: nil, grids: nil, markers: nil,
+		iconDefs: nil, iconIDs: map[string]string{},
 	}
 	for _, p := range s.Parts {
 		l.add(p)
@@ -178,8 +183,8 @@ func (l *layout) addIcon(i Icon) {
 	}
 }
 
-// image places the icon of name (aws/…) as an <image>, two with a variant for dark backgrounds.
-// Not inline <svg>: the official icons' ids collide between icons. An icon not there is a mistake
+// image places the icon of name (aws/…), two with a variant for dark backgrounds. An icon is an
+// <image>, not inline <svg>: the official icons' ids collide between icons. An icon not there is a mistake
 // of the spec, and icons not fetched stop the drawing.
 func (l *layout) image(at Pos, name string, x, y, size float64, what *usererr.Error) markup {
 	icon, names, err := l.icons.Lookup(name)
@@ -201,12 +206,24 @@ func (l *layout) image(at Pos, name string, x, y, size float64, what *usererr.Er
 		}
 		return ""
 	}
-	const img = `<image href="%v" x="%v" y="%v" width="%v" height="%v"`
 	if icon.Dark == "" {
-		return svgf(img+`/>`, icon.Light, x, y, size, size)
+		return svgf(`<use href="#%v" x="%v" y="%v"/>`, l.iconDef(icon.Light, size), x, y)
 	}
-	return svgf(img+` class="icon-light"/>`, icon.Light, x, y, size, size) +
-		svgf(img+` class="icon-dark"/>`, icon.Dark, x, y, size, size)
+	return svgf(`<use href="#%v" x="%v" y="%v" class="icon-light"/>`, l.iconDef(icon.Light, size), x, y) +
+		svgf(`<use href="#%v" x="%v" y="%v" class="icon-dark"/>`, l.iconDef(icon.Dark, size), x, y)
+}
+
+// iconDef returns the id of the <image> of href at size in <defs>, defining it on first use. Its
+// id joins the diagram's id and icon<n>, as a marker's does.
+func (l *layout) iconDef(href string, size float64) string {
+	key := href + " " + formatNum(size)
+	if id, ok := l.iconIDs[key]; ok {
+		return id
+	}
+	id := l.spec.ID + "_icon" + strconv.Itoa(len(l.iconDefs)+1)
+	l.iconIDs[key] = id
+	l.iconDefs = append(l.iconDefs, svgf(`<image id="%v" href="%v" width="%v" height="%v"/>`, id, href, size, size))
+	return id
 }
 
 // label places text at x, y as diagram.mjs does: 18px tall, with 5px around it. It returns the

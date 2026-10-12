@@ -1,5 +1,5 @@
 # Icons alone and in the corner of frames, with and without a variant for dark backgrounds (the
-# stand-ins in icons/aws). icons.html is what diagram.mjs drew from the same calls.
+# stand-ins in icons/aws). An icon shown twice is defined once; at another size it is another one.
 id: ic
 width: 400
 height: 200
@@ -8,4 +8,6 @@ parts:
   - frame: { x: 10, y: 10, w: 380, h: 180, label: Cloud <x>, icon: aws/group/aws-cloud-logo }
   - frame: { x: 30, y: 50, w: 160, h: 130, label: Region, icon: aws/group/region }
   - icon: { x: 80, y: 80, name: aws/res/client, label: Client & co }
+  - icon: { x: 130, y: 80, name: aws/res/client }
   - icon: { x: 250, y: 70, name: aws/amazon-bedrock, size: 64 }
+  - icon: { x: 330, y: 70, name: aws/amazon-bedrock }

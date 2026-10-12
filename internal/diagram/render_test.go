@@ -34,8 +34,8 @@ func readFile(t *testing.T, path string) string {
 }
 
 // Render writes what diagram.mjs writes for the same parts, byte for byte, but for the marker ids
-// (TestRenderMarkerIDs). icons.yaml draws icons alone and in the corner of frames, with and without
-// a variant for dark backgrounds.
+// (TestRenderMarkerIDs) and icons. diagram.mjs wrote an icon's data URI wherever it showed; Render
+// defines each once and places it with <use>, so icons.html is what Render writes, checked by eye.
 func TestRenderMatchesDiagramMJS(t *testing.T) {
 	t.Parallel()
 
@@ -48,6 +48,23 @@ func TestRenderMatchesDiagramMJS(t *testing.T) {
 		if want := readFile(t, "testdata/"+name+".html"); got != want {
 			t.Errorf("Render %s\n got: %s\nwant: %s", name, got, want)
 		}
+	}
+}
+
+// Each icon at each size is defined once, however often it shows.
+func TestRenderIconDefs(t *testing.T) {
+	t.Parallel()
+
+	got, err := diagram.Render([]*diagram.Spec{parse(t, "icons.yaml", readFile(t, "testdata/icons.yaml"))}, standIn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Two corner icons (one with a dark variant), the client twice (with one), and Bedrock at two sizes.
+	if defs, uses := strings.Count(got, "<image "), strings.Count(got, "<use "); defs != 7 || uses != 9 {
+		t.Errorf("Render defines %d icons and places %d, want 7 and 9", defs, uses)
+	}
+	if n := strings.Count(got, `<use href="#ic_icon4"`); n != 2 {
+		t.Errorf("the client's light variant is placed %d times, want 2", n)
 	}
 }
 

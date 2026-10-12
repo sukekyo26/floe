@@ -90,6 +90,9 @@ func (l *layout) svg() markup {
 			`markerUnits="userSpaceOnUse" orient="auto-start-reverse">%v</marker>`,
 			s.ID, k, m.viewBox, m.rx, m.ry, m.w, m.h, markup(m.body))))
 	}
+	for _, d := range l.iconDefs {
+		b.WriteString(string(d))
+	}
 	defs := b.String()
 	b.Reset()
 	for i := len(l.grids) - 1; i >= 0; i-- {
