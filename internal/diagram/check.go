@@ -261,8 +261,9 @@ func (l *layout) checkEdges() {
 	}
 	// An edge across a label hides part of it behind the label's background, and an edge across text
 	// without a background (a plain label, a frame heading) strikes through the text.
+	texts := concat(l.labels, l.heads)
 	for _, p := range l.paths {
-		for i, r := range concat(l.labels, l.heads) {
+		for i, r := range texts {
 			if i != p.own && p.runsThrough(r) {
 				l.problem(p.edge.Pos, "diagram_runs_through", p.edge.D, r.what, r.at.Line)
 			}
