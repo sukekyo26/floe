@@ -300,7 +300,7 @@ func (l *layout) marker(kind, where string) markup {
 	if !slices.Contains(l.markers, kind) {
 		l.markers = append(l.markers, kind)
 	}
-	return svgf(` marker-%v="url(#%v-%v)"`, where, l.spec.ID, kind)
+	return svgf(` marker-%v="url(#%v_%v)"`, where, l.spec.ID, kind)
 }
 
 func (l *layout) addBar(b Bar) {

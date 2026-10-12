@@ -1,5 +1,6 @@
 # Every part but icon, with text to escape. every-part.html is what diagram.mjs drew from the same
-# calls; Render must write the same bytes.
+# calls, with "_" instead of "-" between the diagram id and a marker kind; Render must write the same
+# bytes.
 id: all
 width: 700.5
 height: 400

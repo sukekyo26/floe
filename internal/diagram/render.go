@@ -81,7 +81,7 @@ func (l *layout) svg() markup {
 	var b strings.Builder
 	for _, k := range l.markers {
 		m := markers[slices.IndexFunc(markers, func(m marker) bool { return m.kind == k })]
-		b.WriteString(string(svgf(`<marker id="%v-%v" viewBox="%v" refX="%v" refY="%v" markerWidth="%v" markerHeight="%v" `+
+		b.WriteString(string(svgf(`<marker id="%v_%v" viewBox="%v" refX="%v" refY="%v" markerWidth="%v" markerHeight="%v" `+
 			`markerUnits="userSpaceOnUse" orient="auto-start-reverse">%v</marker>`,
 			s.ID, k, m.viewBox, m.rx, m.ry, m.w, m.h, markup(m.body))))
 	}

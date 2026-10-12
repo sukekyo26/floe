@@ -27,7 +27,8 @@ func readFile(t *testing.T, path string) string {
 	return string(b)
 }
 
-// Render writes what diagram.mjs writes for the same parts, byte for byte.
+// Render writes what diagram.mjs writes for the same parts, byte for byte, but for the marker ids
+// (TestRenderMarkerIDs).
 func TestRenderMatchesDiagramMJS(t *testing.T) {
 	t.Parallel()
 
@@ -53,7 +54,7 @@ func TestRender(t *testing.T) {
 	}
 	// Two diagrams in one fragment; raw stays as it is.
 	for _, w := range []string{
-		`<path d="M0,10 H90" class="edge" marker-end="url(#a-arrow)"/>`,
+		`<path d="M0,10 H90" class="edge" marker-end="url(#a_arrow)"/>`,
 		"</svg></div>\n<div class=\"dg-wrap\"",
 		`<rect class="band"/>`,
 	} {
@@ -61,8 +62,27 @@ func TestRender(t *testing.T) {
 			t.Errorf("Render = %s\nwant it to contain %s", got, w)
 		}
 	}
-	if n := strings.Count(got, `<marker id="a-arrow"`); n != 1 {
+	if n := strings.Count(got, `<marker id="a_arrow"`); n != 1 {
 		t.Errorf("Render defines the arrow %d times, want once", n)
+	}
+}
+
+// diagram.mjs joined the diagram id and the marker kind with "-", so "a" with zero-one and "a-zero"
+// with one both defined a-zero-one, and one diagram drew the other's marker. An id has no "_".
+func TestRenderMarkerIDs(t *testing.T) {
+	t.Parallel()
+
+	const spec = "width: 100\nheight: 50\ntitle: t\nparts:\n"
+	a := parse(t, "a.yaml", "id: a\n"+spec+"  - edge: { d: 'M0,10 H90', end: zero-one }\n")
+	b := parse(t, "b.yaml", "id: a-zero\n"+spec+"  - edge: { d: 'M0,10 H90', end: one }\n")
+	got, err := diagram.Render([]*diagram.Spec{a, b})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, w := range []string{`<marker id="a_zero-one"`, `url(#a_zero-one)`, `<marker id="a-zero_one"`, `url(#a-zero_one)`} {
+		if strings.Count(got, w) != 1 {
+			t.Errorf("Render = %s\nwant %s once", got, w)
+		}
 	}
 }
 
