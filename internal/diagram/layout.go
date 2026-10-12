@@ -66,7 +66,7 @@ type layout struct {
 	markers []string // the marker kinds the edges use, in the order of first use
 	// Each icon at each size is defined once (in <defs>) and placed with <use>, however often it shows.
 	iconDefs []markup
-	iconIDs  map[string]string // by data URI and size
+	iconIDs  map[string]string // by name and size
 }
 
 // newLayout lays out s. Icons not fetched stop it with an error, as no mistake of s does.
@@ -208,21 +208,22 @@ func (l *layout) image(at Pos, name string, x, y, size float64, what *usererr.Er
 		return ""
 	}
 	if icon.Dark == "" {
-		return svgf(`<use href="#%v" x="%v" y="%v"/>`, l.iconDef(icon.Light, size), x, y)
+		return svgf(`<use href="#%v" x="%v" y="%v"/>`, l.iconDef(name, icon.Light, size), x, y)
 	}
-	return svgf(`<use href="#%v" x="%v" y="%v" class="icon-light"/>`, l.iconDef(icon.Light, size), x, y) +
-		svgf(`<use href="#%v" x="%v" y="%v" class="icon-dark"/>`, l.iconDef(icon.Dark, size), x, y)
+	return svgf(`<use href="#%v" x="%v" y="%v" class="icon-light"/>`, l.iconDef(name, icon.Light, size), x, y) +
+		svgf(`<use href="#%v" x="%v" y="%v" class="icon-dark"/>`, l.iconDef(name+" dark", icon.Dark, size), x, y)
 }
 
-// iconDef returns the id of the <image> of href at size in <defs>, defining it on first use. The id
-// joins the diagram's id and a hash of the image, so that diagrams of one id rendered apart and
-// pasted into one page still find their own icons.
-func (l *layout) iconDef(href string, size float64) string {
-	key := href + " " + formatNum(size)
+// iconDef returns the id of the <image> of href at size in <defs>, defining it on first use. It is
+// found again by name (with " dark" for the dark variant) and size, which are short; the id joins the
+// diagram's id and a hash of the image, so that diagrams of one id rendered apart and pasted into
+// one page still find their own icons.
+func (l *layout) iconDef(name, href string, size float64) string {
+	key := name + " " + formatNum(size)
 	if id, ok := l.iconIDs[key]; ok {
 		return id
 	}
-	sum := sha256.Sum256([]byte(key))
+	sum := sha256.Sum256([]byte(href + " " + formatNum(size)))
 	id := l.spec.ID + "_icon-" + hex.EncodeToString(sum[:6])
 	l.iconIDs[key] = id
 	l.iconDefs = append(l.iconDefs, svgf(`<image id="%v" href="%v" width="%v" height="%v"/>`, id, href, size, size))
