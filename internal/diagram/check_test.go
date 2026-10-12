@@ -136,6 +136,29 @@ func TestCheck(t *testing.T) {
 			want: []string{`s.yaml:6:5: frame "Heading": icons are not supported yet`},
 		},
 		{
+			// sampling every 2px, as diagram.mjs did, missed the 2px inside of the narrowest bar
+			name: "edges through thin or clipped parts",
+			parts: `  - bar: { x1: 100, x2: 100, y: 50 }
+  - edge: { d: "M1,50 H201", end: none }
+  - box: { x: 150, y: 100, w: 40, h: 40, rows: [b] }
+  - edge: { d: "M140,104 L156,88", end: none }
+  - edge: { d: "M150,150 L186,96", end: none }
+`,
+			want: []string{
+				`s.yaml:7:5: edge "M1,50 H201" runs through bar "100-100" (line 6)`,
+				`s.yaml:10:5: edge "M150,150 L186,96" runs through box "b" (line 8)`,
+			},
+		},
+		{
+			name: "edges along an edge or touching a corner",
+			parts: `  - box: { x: 100, y: 100, w: 40, h: 40, rows: [b] }
+  - edge: { d: "M90,139 H150", end: none }
+  - edge: { d: "M129,91 L149,111", end: none }
+  - edge: { d: "M120,120 V120", end: none }
+`,
+			want: []string{`s.yaml:9:5: edge "M120,120 V120" runs through box "b" (line 6)`},
+		},
+		{
 			name:  "the same mistake once",
 			parts: "  - axis: { x1: 10, x2: 290, y: 100, ticks: [[400, x], [500, x]] }\n",
 			want:  []string{`s.yaml:6:5: label "x" sticks out of the 300x200 canvas`},

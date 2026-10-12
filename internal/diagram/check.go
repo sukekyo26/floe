@@ -2,6 +2,7 @@ package diagram
 
 import (
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -45,12 +46,14 @@ func (l *layout) check() Problems {
 // checkPlacement reports parts sticking out of the canvas, overlapping and straddling frames.
 func (l *layout) checkPlacement(s *Spec) {
 	canvas := rect{0, 0, s.Width, s.Height, nil, Pos{Line: 0, Column: 0}}
-	for _, r := range concat(l.boxes, l.marks, l.labels, l.frames, l.areas) {
+	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas) {
 		if !r.inside(canvas) {
 			l.problem(r.at, "diagram_outside", r.what, formatNum(s.Width), formatNum(s.Height))
 		}
 	}
-	solids := concat(l.boxes, l.marks, l.labels)
+	solids := slices.Concat(l.boxes, l.marks, l.labels)
+	// LIMIT: every pair is compared (O(n²)), here and for edges. If diagrams of hundreds of parts get
+	// slow, compare only the parts that share a cell of a grid.
 	for i, a := range solids {
 		for _, b := range solids[i+1:] {
 			if a.overlaps(b) {
@@ -58,7 +61,7 @@ func (l *layout) checkPlacement(s *Spec) {
 			}
 		}
 	}
-	for _, b := range concat(l.boxes, l.marks) {
+	for _, b := range slices.Concat(l.boxes, l.marks) {
 		for _, f := range l.frames {
 			if b.overlaps(f) && !b.inside(f) {
 				l.problem(b.at, "diagram_straddle", b.what, f.what, f.at.Line)
@@ -78,7 +81,7 @@ func (l *layout) checkEdges() {
 	}
 	// An edge across a label hides part of it behind the label's background, and an edge across text
 	// without a background (a plain label, a frame heading) strikes through the text.
-	texts := concat(l.labels, l.heads)
+	texts := slices.Concat(l.labels, l.heads)
 	for _, p := range l.paths {
 		for i, r := range texts {
 			if i != p.own && p.runsThrough(r) {
@@ -102,14 +105,6 @@ func (l *layout) checkCrossings() {
 	}
 }
 
-func concat(lists ...[]rect) []rect {
-	var all []rect
-	for _, l := range lists {
-		all = append(all, l...)
-	}
-	return all
-}
-
 func (p path) runsThrough(r rect) bool {
 	for _, s := range p.edge.Segs {
 		if crosses(s, r) {
@@ -119,19 +114,31 @@ func (p path) runsThrough(r rect) bool {
 	return false
 }
 
-// crosses reports whether a straight run passes inside r, 1px in from its edges, sampled every 2px.
-// An end touching the edge of r does not count.
+// crosses reports whether a straight run passes inside r, 1px in from its edges. An end touching the
+// edge of r, or a run along it, does not count.
 func crosses(s [4]float64, r rect) bool {
 	x1, y1, x2, y2 := s[0], s[1], s[2], s[3]
-	steps := math.Max(1, math.Ceil(math.Hypot(x2-x1, y2-y1)/2))
-	for k := 0.0; k <= steps; k++ {
-		px := x1 + (x2-x1)*k/steps
-		py := y1 + (y2-y1)*k/steps
-		if px > r.x+1 && px < r.x+r.w-1 && py > r.y+1 && py < r.y+r.h-1 {
-			return true
+	dx, dy := x2-x1, y2-y1
+	minX, maxX, minY, maxY := r.x+1, r.x+r.w-1, r.y+1, r.y+r.h-1
+	// Clip the run to the closed area (Liang-Barsky). What is left is a chord of it, and when any of the
+	// chord is strictly inside, its midpoint is too.
+	t0, t1 := 0.0, 1.0
+	for _, c := range [4][2]float64{{-dx, x1 - minX}, {dx, maxX - x1}, {-dy, y1 - minY}, {dy, maxY - y1}} {
+		p, q := c[0], c[1]
+		switch {
+		case p == 0 && q < 0:
+			return false
+		case p < 0:
+			t0 = max(t0, q/p)
+		case p > 0:
+			t1 = min(t1, q/p)
 		}
 	}
-	return false
+	if t0 > t1 {
+		return false
+	}
+	mx, my := x1+dx*(t0+t1)/2, y1+dy*(t0+t1)/2
+	return mx > minX && mx < maxX && my > minY && my < maxY
 }
 
 // firstCrossing finds where a run of a first crosses a run of b, rounded as Math.round does.

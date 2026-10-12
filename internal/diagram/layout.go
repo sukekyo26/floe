@@ -74,8 +74,8 @@ func newLayout(s *Spec) *layout {
 
 func (l *layout) problem(at Pos, key string, args ...any) {
 	e := &Error{File: l.spec.File, Pos: at, Err: usererr.New(key, args...)}
-	if !l.seen[e.Error()] {
-		l.seen[e.Error()] = true
+	if key := e.Error(); !l.seen[key] {
+		l.seen[key] = true
 		l.problems = append(l.problems, e)
 	}
 }
