@@ -213,7 +213,7 @@ func TestCheckIconsNotFetched(t *testing.T) {
 	s := parse(t, "s.yaml", "id: d\ntitle: t\nwidth: 100\nheight: 100\nparts:\n  - icon: { x: 10, y: 10, name: aws/aws-lambda }\n")
 	err := diagram.Check(s, icons.New(dir))
 	var p diagram.Problems
-	want := "AWS icons are not in " + filepath.Join(dir, "aws") + `; run "floe icons fetch" (downloads about 14MB from aws.amazon.com) and try again`
+	want := "AWS icons are not in " + filepath.Join(dir, "aws") + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
 	if errors.As(err, &p) || errString(err) != want {
 		t.Errorf("Check = %v, want %s", err, want)
 	}

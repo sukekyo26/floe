@@ -15,8 +15,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   edges, and reports every mistake as `file:line:column`. The fragment
   carries the diagrams' style and a zoom toolbar (buttons, Ctrl / ⌘ + wheel,
   pinch, drag, arrow keys) worded in the page's language; `--no-assets` leaves them out.
-- Add `floe icons fetch [zip-or-url]`, which keeps the AWS Architecture Icons
-  from the official Icon package in `FLOE_ICONS_DIR` (default
+- Add `floe icons fetch <set> [zip-or-url]`, which keeps an icon set (`aws`:
+  the AWS Architecture Icons from the official Icon package) in `FLOE_ICONS_DIR` (default
   `~/.local/share/floe-icons`), and `floe icons search <word>...`, which lists
   their names. The `icon` part of a diagram and the `icon` of a frame draw
   them, switching to an icon's dark variant with the colour scheme, and an

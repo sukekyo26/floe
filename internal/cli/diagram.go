@@ -37,7 +37,7 @@ func (a *app) diagramRenderCmd() *cobra.Command {
 		Long: `Check each spec and print the diagrams, in order, as one HTML fragment of inline SVG
 to paste into a page. A mistake in a spec's shape stops that spec at the first one; layout
 mistakes (overflowing text, overlaps, edges through boxes, crossings …) are all reported.
-An icon part takes the AWS icons that floe icons fetch keeps.
+An icon part takes the icons that floe icons fetch <set> keeps.
 Every mistake is printed as file:line:column, and nothing is drawn until all are fixed.
 The ids of the diagrams drawn together must differ.
 

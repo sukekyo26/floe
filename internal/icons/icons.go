@@ -45,9 +45,6 @@ type packed struct {
 
 var kits = []*kit{&aws}
 
-// Default is the set that floe icons fetch fetches.
-const Default = "aws"
-
 // ErrNoSet is a name without a known set in front.
 var ErrNoSet = errors.New("no icon set in front")
 
@@ -116,7 +113,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		err = json.Unmarshal(b, &idx)
 	}
 	if err != nil {
-		return nil, usererr.New("icons_bad_index", file, err.Error())
+		return nil, usererr.New("icons_bad_index", file, err.Error(), k.name)
 	}
 	return &idx, nil
 }
@@ -127,7 +124,7 @@ func (s *Store) loadIndex(k *kit) (*index, error) {
 		return nil, err
 	}
 	if idx == nil {
-		return nil, usererr.New("icons_not_fetched", k.title, s.dir(k), k.size, k.host)
+		return nil, usererr.New("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
 	}
 	return idx, nil
 }
@@ -141,7 +138,7 @@ type Fetched struct {
 	Already bool
 }
 
-// Fetch keeps the icons of set from its package zip at source (a URL or a path; when empty, the one
+// Fetch keeps the icons of set (one of Sets) from its package zip at source (a URL or a path; when empty, the one
 // its page links) in its directory, replacing what is there as a whole. A version already there is
 // kept unless force.
 func (s *Store) Fetch(ctx context.Context, set, source string, force bool) (Fetched, error) {
@@ -204,7 +201,7 @@ func (k *kit) packageURL(ctx context.Context, source string) (string, error) {
 	if from := k.link.FindString(string(page)); from != "" {
 		return from, nil
 	}
-	return "", usererr.New("icons_no_package_link", k.page)
+	return "", usererr.New("icons_no_package_link", k.page, k.name)
 }
 
 // IsURL tells a source that Fetch downloads from one it reads as a path.
@@ -383,7 +380,7 @@ func (s *Store) Search(words []string) ([]Hit, error) {
 		}
 	}
 	if !fetched {
-		return nil, usererr.New("icons_none_fetched", s.root)
+		return nil, usererr.New("icons_none_fetched", s.root, strings.Join(Sets(), ", "))
 	}
 	if len(hits) == 0 {
 		return nil, usererr.New("icons_no_match", `"`+strings.Join(terms, `" "`)+`"`)
@@ -418,7 +415,7 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 	uri := func(file string) (string, error) {
 		b, rerr := os.ReadFile(filepath.Join(dir, file)) //nolint:gosec // G304: a name in the set's index
 		if rerr != nil {
-			return "", usererr.New("icons_bad_index", filepath.Join(dir, "index.json"), rerr.Error())
+			return "", usererr.New("icons_bad_index", filepath.Join(dir, "index.json"), rerr.Error(), k.name)
 		}
 		return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(b), nil
 	}

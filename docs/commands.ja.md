@@ -13,7 +13,7 @@
 | `floe stop` | 裏で動いているサーバーを止める |
 | `floe diagram render <spec.yaml>...` | 図の spec を検査し、インライン SVG にして出す |
 | `floe diagram example [kind]` | 例の spec を一覧する、または 1 つ出す |
-| `floe icons fetch [zip-or-url]` | 図の `icon` 部品に使う AWS アイコンを取得する |
+| `floe icons fetch <set> [zip-or-url]` | 図の `icon` 部品に使うアイコン集（`aws`）を取得する |
 | `floe icons search <word>...` | 名前にすべての語を含む取得済みのアイコンを一覧する |
 | `floe version` | 版を出す（`floe --version` でも可） |
 | `floe help [command]` | ヘルプを出す（Cobra の組み込み） |
@@ -128,7 +128,7 @@ parts:
 
 ## `floe diagram example [kind]`
 
-種類を渡さなければ、組み込みの例を一覧します。例は図の種類（構成図・AWS 構成図・クラス図・ER 図・判定フロー・Git のブランチ図・シーケンス図・状態遷移図・タイムライン・ベン図）ごとに 1 つずつあり、各行はタブ区切りで種類と要約です。種類を渡すと、その spec を出します。spec のコメントに、配置に使った格子の説明があります。どの例も検査を通ります。AWS 構成図の例は AWS アイコンを使うので、`floe icons fetch` の後で描いてください。
+種類を渡さなければ、組み込みの例を一覧します。例は図の種類（構成図・AWS 構成図・クラス図・ER 図・判定フロー・Git のブランチ図・シーケンス図・状態遷移図・タイムライン・ベン図）ごとに 1 つずつあり、各行はタブ区切りで種類と要約です。種類を渡すと、その spec を出します。spec のコメントに、配置に使った格子の説明があります。どの例も検査を通ります。AWS 構成図の例は AWS アイコンを使うので、`floe icons fetch aws` の後で描いてください。
 
 例は英語版と日本語版があり、図の文字もコメントもその言語で書いてあります。メッセージの言語（`FLOE_LANG`、無ければ `LC_ALL`・`LC_MESSAGES`・`LANG`）に従うので、日本語の環境で例を写すと、図も日本語で書き始められます。その言語で書いていない例は、地域を外した言語（`ja-JP` なら `ja`）、それも無ければ英語で出ます。
 
@@ -136,11 +136,15 @@ parts:
 |---|---|
 | `--lang <tag>` | 例の言語。BCP 47 のタグ（`en`・`ja`）で指定する。地域付きは言語に（`ja-JP` は `ja` に）、例の無い言語は英語に戻る |
 
-## `floe icons fetch [zip-or-url]`
+## `floe icons fetch <set> [zip-or-url]`
 
-[AWS Architecture Icons](https://aws.amazon.com/architecture/icons/) を、図の `icon` 部品用に `$FLOE_ICONS_DIR/aws` に取得します。取り出すのは 48px のサービスとリソースのアイコン、32px のグループのアイコンと、それぞれのダーク用の版です。floe はアイコンを同梱しないので、マシンごとに 1 回取得します。
+アイコン集を、図の `icon` 部品用に `$FLOE_ICONS_DIR/<set>` に取得します。floe はアイコンを同梱しないので、マシンごとにアイコン集を 1 回取得します。アイコン集は次のとおりです。
 
-- 引数が無ければ、公式ページから Icon package の zip（約 14MB）を探して取得します。ブラウザで取得した zip のパスか、その URL を渡すこともできます。相対パスは作業ディレクトリから解決します。
+| アイコン集 | アイコン |
+|---|---|
+| `aws` | [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/)。48px のサービスとリソースのアイコン、32px のグループのアイコンと、それぞれのダーク用の版。Icon package の zip は約 14MB |
+
+- zip を渡さなければ、アイコン集の公式ページからパッケージを探して取得します。ブラウザで取得した zip のパスか、その URL を渡すこともできます。相対パスは作業ディレクトリから解決します。
 - 同じ版が既にあれば何もしません。`--force` で取り直します。
 - 置き換えは丸ごとです。途中で失敗しても前の版が残ります。
 

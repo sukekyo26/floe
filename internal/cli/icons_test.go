@@ -15,7 +15,7 @@ func TestIcons(t *testing.T) {
 	root := filepath.Join(e.vars["HOME"], ".local", "share", "floe-icons")
 	dir := filepath.Join(root, "aws")
 	want(t, "search before a fetch", e.run(t, "", "icons", "search", "lambda"), 1, "",
-		"floe: no icons are in "+root+`; run "floe icons fetch" and try again`)
+		"floe: no icons are in "+root+`; fetch a set with "floe icons fetch <set>" (aws) and try again`)
 
 	zipFile := filepath.Join(e.tmp, "Icon-package.zip")
 	f, err := os.Create(zipFile)
@@ -41,12 +41,15 @@ func TestIcons(t *testing.T) {
 	if err = f.Close(); err != nil {
 		t.Fatal(err)
 	}
-	want(t, "fetch", e.run(t, "", "icons", "fetch", "Icon-package.zip"), 0, "fetched 2 AWS icons (01022030) into "+dir+"\n", "")
+	want(t, "fetch", e.run(t, "", "icons", "fetch", "aws", "Icon-package.zip"), 0, "fetched 2 AWS icons (01022030) into "+dir+"\n", "")
 	e.vars["FLOE_LANG"] = "ja"
-	want(t, "fetch again", e.run(t, "", "icons", "fetch", "Icon-package.zip"), 0,
+	want(t, "fetch again", e.run(t, "", "icons", "fetch", "aws", "Icon-package.zip"), 0,
 		"AWS アイコン 01022030 は "+dir+" に取得済みです（取り直すには --force を付けてください）\n", "")
 	delete(e.vars, "FLOE_LANG")
 	want(t, "search", e.run(t, "", "icons", "search", "aws", "Lambda"), 0, "aws/aws-lambda\tCompute\n", "")
+	want(t, "fetch an unknown set", e.run(t, "", "icons", "fetch", "gcp"), 2, "",
+		`floe: unknown icon set "gcp"; use aws`)
+	want(t, "fetch without a set", e.run(t, "", "icons", "fetch"), 2, "", "floe: accepts between 1 and 2 arg(s), received 0")
 	want(t, "search nothing", e.run(t, "", "icons", "search"), 2, "", "floe: requires at least 1 arg(s)")
 
 	// render draws icons from there, and names close ones for a name not there.

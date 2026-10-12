@@ -13,7 +13,7 @@ Reference for every command of the `floe` binary.
 | `floe stop` | Stop the background server |
 | `floe diagram render <spec.yaml>...` | Check diagram specs and print them as inline SVG |
 | `floe diagram example [kind]` | List the example specs, or print one |
-| `floe icons fetch [zip-or-url]` | Keep the AWS icons for the `icon` parts of diagrams |
+| `floe icons fetch <set> [zip-or-url]` | Keep an icon set (`aws`) for the `icon` parts of diagrams |
 | `floe icons search <word>...` | List the fetched icons whose name contains every word |
 | `floe version` | Print the version (also `floe --version`) |
 | `floe help [command]` | Print help (Cobra builtin) |
@@ -128,7 +128,7 @@ Each part is one key naming its kind. Defaults are in parentheses; `tone` is `ac
 
 ## `floe diagram example [kind]`
 
-Without a kind, list the built-in examples, one per kind of diagram (architecture, AWS architecture, class, ER, flow, Git branches, sequence, state, timeline, Venn): each line holds the kind and a summary, tab-separated. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks. The AWS example draws AWS icons, so render it after `floe icons fetch`.
+Without a kind, list the built-in examples, one per kind of diagram (architecture, AWS architecture, class, ER, flow, Git branches, sequence, state, timeline, Venn): each line holds the kind and a summary, tab-separated. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks. The AWS example draws AWS icons, so render it after `floe icons fetch aws`.
 
 The examples come in English and Japanese, text and comments alike. They follow the language of messages (`FLOE_LANG`, then `LC_ALL`, `LC_MESSAGES` and `LANG`), so copying an example in a Japanese environment starts a diagram in Japanese. An example not written in the language is printed in the language without its region (`ja-JP` to `ja`), else in English.
 
@@ -136,11 +136,15 @@ The examples come in English and Japanese, text and comments alike. They follow 
 |---|---|
 | `--lang <tag>` | The language of the examples, as a BCP 47 tag (`en`, `ja`). A region falls back to its language (`ja-JP` to `ja`), and a language without examples to English. |
 
-## `floe icons fetch [zip-or-url]`
+## `floe icons fetch <set> [zip-or-url]`
 
-Keep the [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/) in `$FLOE_ICONS_DIR/aws` for the `icon` parts of diagrams: the 48px service and resource icons and the 32px group icons, with their variants for dark backgrounds. floe does not ship icons; each machine fetches them once.
+Keep an icon set in `$FLOE_ICONS_DIR/<set>` for the `icon` parts of diagrams. floe does not ship icons; each machine fetches a set once. The sets:
 
-- Without an argument, the Icon package zip (about 14MB) is found on the official page and downloaded. A zip downloaded in a browser, or its URL, can be given instead; a relative path is resolved against the working directory.
+| Set | Icons |
+|---|---|
+| `aws` | The [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/): the 48px service and resource icons and the 32px group icons, with their variants for dark backgrounds. The Icon package zip is about 14MB. |
+
+- Without a zip, the set's package is found on its official page and downloaded. A zip downloaded in a browser, or its URL, can be given instead; a relative path is resolved against the working directory.
 - A version already there is kept. `--force` fetches it again.
 - The icons are replaced as a whole: if that fails, the previous ones stay.
 

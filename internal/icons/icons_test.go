@@ -66,7 +66,7 @@ const page = "https://aws.amazon.com/architecture/icons/"
 
 func fetch(t *testing.T, set *icons.Store, source string, force bool) icons.Fetched {
 	t.Helper()
-	got, err := set.Fetch(context.Background(), icons.Default, source, force)
+	got, err := set.Fetch(context.Background(), "aws", source, force)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,11 +81,11 @@ func TestFetchAndSearch(t *testing.T) {
 	dir := filepath.Join(root, "aws")
 	// Before a fetch, a search and a lookup say how to fetch.
 	_, err := set.Search([]string{"lambda"})
-	if want := "no icons are in " + root + `; run "floe icons fetch" and try again`; err == nil || err.Error() != want {
+	if want := "no icons are in " + root + `; fetch a set with "floe icons fetch <set>" (aws) and try again`; err == nil || err.Error() != want {
 		t.Errorf("Search before a fetch = %v, want %s", err, want)
 	}
 	_, _, err = set.Lookup("aws/aws-lambda")
-	want := "AWS icons are not in " + dir + `; run "floe icons fetch" (downloads about 14MB from aws.amazon.com) and try again`
+	want := "AWS icons are not in " + dir + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
 	if err == nil || err.Error() != want {
 		t.Errorf("Lookup before a fetch = %v, want %s", err, want)
 	}
@@ -205,7 +205,7 @@ func TestFetchFromURL(t *testing.T) {
 	if got := fetch(t, set, url, false); !got.Already || gets.Load() != 1 {
 		t.Errorf("Fetch of a URL of the same version = %+v after %d downloads, want 1", got, gets.Load())
 	}
-	_, err = set.Fetch(context.Background(), icons.Default, srv.URL+"/missing.zip", false)
+	_, err = set.Fetch(context.Background(), "aws", srv.URL+"/missing.zip", false)
 	if want := "cannot download " + srv.URL + "/missing.zip (HTTP 404)"; err == nil || !strings.HasPrefix(err.Error(), want) {
 		t.Errorf("Fetch of a missing URL = %v, want %s…", err, want)
 	}
@@ -228,7 +228,7 @@ func TestFetchRefusals(t *testing.T) {
 		empty:   "no AWS icons in " + empty + "; pass the zip of the package on " + page,
 		missing: "cannot read " + missing + " (no such file or directory); check the path and that the file exists",
 	} {
-		if _, err := set.Fetch(context.Background(), icons.Default, source, false); err == nil || err.Error() != want {
+		if _, err := set.Fetch(context.Background(), "aws", source, false); err == nil || err.Error() != want {
 			t.Errorf("Fetch %s = %v, want %s", source, err, want)
 		}
 	}
@@ -244,7 +244,7 @@ func TestFetchRefusals(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "index.json"), []byte("{"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := set.Search([]string{"lambda"}); err == nil || !strings.Contains(err.Error(), `run "floe icons fetch --force"`) {
+	if _, err := set.Search([]string{"lambda"}); err == nil || !strings.Contains(err.Error(), `run "floe icons fetch aws --force"`) {
 		t.Errorf("Search with a broken index = %v", err)
 	}
 	if got := fetch(t, set, writeZip(t, "Icon-package.zip", packageFiles), false); got.Count != 7 {
@@ -254,7 +254,7 @@ func TestFetchRefusals(t *testing.T) {
 	// Without a home to put them under, the icons are refused when used.
 	nowhere := icons.New("")
 	_, serr := nowhere.Search([]string{"lambda"})
-	_, ferr := nowhere.Fetch(context.Background(), icons.Default, empty, false)
+	_, ferr := nowhere.Fetch(context.Background(), "aws", empty, false)
 	for _, err := range []error{serr, ferr} {
 		if want := "HOME is not set; set HOME or FLOE_ICONS_DIR"; err == nil || err.Error() != want {
 			t.Errorf("icons without a root = %v, want %s", err, want)

@@ -35,7 +35,7 @@ func TestFetchRestoresPrevious(t *testing.T) { //nolint:paralleltest // replaces
 	}
 	t.Cleanup(func() { rename = os.Rename })
 
-	_, err := set.Fetch(context.Background(), Default, src, true)
+	_, err := set.Fetch(context.Background(), "aws", src, true)
 	if err == nil || !strings.Contains(err.Error(), "injected") {
 		t.Errorf("Fetch = %v, want the injected failure", err)
 	}

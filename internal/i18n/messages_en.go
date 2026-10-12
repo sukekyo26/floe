@@ -228,11 +228,12 @@ var messagesEN = map[string]string{
 
 	// icons: fetching and searching the AWS icons
 	"icons_no_home":         "HOME is not set; set HOME or FLOE_ICONS_DIR",
-	"icons_not_fetched":     `%s icons are not in %s; run "floe icons fetch" (downloads about %s from %s) and try again`,
-	"icons_none_fetched":    `no icons are in %s; run "floe icons fetch" and try again`,
-	"icons_bad_index":       `cannot read %s (%s); run "floe icons fetch --force" to fetch the icons again`,
+	"icons_unknown_set":     `unknown icon set "%s"; use %s`,
+	"icons_not_fetched":     `%[1]s icons are not in %[2]s; run "floe icons fetch %[3]s" (downloads about %[4]s from %[5]s) and try again`,
+	"icons_none_fetched":    `no icons are in %s; fetch a set with "floe icons fetch <set>" (%s) and try again`,
+	"icons_bad_index":       `cannot read %s (%s); run "floe icons fetch %s --force" to fetch the icons again`,
 	"icons_download":        "cannot download %s (%s); check the network, or download it in a browser and pass its path",
-	"icons_no_package_link": "no link to the package on %s; download the zip there and run: floe icons fetch <path-or-url>",
+	"icons_no_package_link": "no link to the package on %s; download the zip there and run: floe icons fetch %s <path-or-url>",
 	"icons_not_zip":         "%s is not a zip file; pass the zip of the package on %s",
 	"icons_bad_zip":         "cannot read %s in %s (%s); download the zip again",
 	"icons_none_in_zip":     "no %s icons in %s; pass the zip of the package on %s",

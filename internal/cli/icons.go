@@ -2,10 +2,13 @@ package cli
 
 import (
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 func (a *app) iconsCmd() *cobra.Command {
@@ -24,24 +27,31 @@ func (a *app) iconsCmd() *cobra.Command {
 func (a *app) iconsFetchCmd() *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
-		Use:   "fetch [zip-or-url]",
-		Short: "Keep the AWS icons of the official Icon package for icon parts",
-		Long: `Keep the AWS Architecture Icons (48px services and resources, 32px groups, with their
-variants for dark backgrounds) in $FLOE_ICONS_DIR/aws for the icon parts of diagrams.
-Without an argument, the Icon package zip (about 14MB) is found on its official page; a
-downloaded zip or its URL can be given instead.
+		Use:   "fetch <set> [zip-or-url]",
+		Short: "Keep an icon set from its official package for icon parts",
+		Long: `Keep an icon set in $FLOE_ICONS_DIR/<set> for the icon parts of diagrams. The sets:
+
+  aws  the AWS Architecture Icons (48px services and resources, 32px groups, with their
+       variants for dark backgrounds); the Icon package zip is about 14MB
+
+Without a zip, the package is found on the set's official page; a downloaded zip or its
+URL can be given instead.
 The icons are replaced as a whole, and the previous ones stay if that fails. A version
 already there is kept unless --force.`,
-		Args: usage(cobra.MaximumNArgs(1)),
+		Args: usage(cobra.RangeArgs(1, 2)),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			set := args[0]
+			if !slices.Contains(icons.Sets(), set) {
+				return usageError{err: usererr.New("icons_unknown_set", set, strings.Join(icons.Sets(), ", "))}
+			}
 			source := ""
-			if len(args) == 1 {
-				source = args[0]
+			if len(args) == 2 {
+				source = args[1]
 				if !icons.IsURL(source) && !filepath.IsAbs(source) {
 					source = filepath.Join(a.env.Dir, source)
 				}
 			}
-			got, err := icons.New(a.cfg.icons).Fetch(cmd.Context(), icons.Default, source, force)
+			got, err := icons.New(a.cfg.icons).Fetch(cmd.Context(), set, source, force)
 			if err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}
