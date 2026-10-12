@@ -13,6 +13,8 @@
 | `floe stop` | 裏で動いているサーバーを止める |
 | `floe diagram render <spec.yaml>...` | 図の spec を検査し、インライン SVG にして出す |
 | `floe diagram example [kind]` | 例の spec を一覧する、または 1 つ出す |
+| `floe icons fetch [zip-or-url]` | 図の `icon` 部品に使う AWS アイコンを取得する |
+| `floe icons search <word>...` | 名前にすべての語を含む取得済みのアイコンを一覧する |
 | `floe version` | 版を出す（`floe --version` でも可） |
 | `floe help [command]` | ヘルプを出す（Cobra の組み込み） |
 
@@ -111,10 +113,10 @@ parts:
 
 | 部品 | キー |
 |---|---|
-| `frame` | `x` `y` `w` `h`、`label`、`accent`、`square`（角を丸めない）、`icon`（まだ描けない。付けた frame は断る）。見出しは左上の内側に入るので、中身は上端から 32 以上下に置く |
+| `frame` | `x` `y` `w` `h`、`label`、`accent`、`square`（角を丸めない）、`icon`（`aws/group/region` のようなアイコン名。AWS のグループ枠の作法で、角を丸めず、角に 32px のアイコンを置く）。見出しは左上の内側に入るので、中身は上端から 32 以上（アイコン付きは 40 以上）下に置く |
 | `box` | `x` `y` `w` `h`、`rows`、`tone`、`shape`（`rect`。ほかに `pill`、判定の `hex`、`state`）。行は文字列か `[文字列, スタイル]` で、スタイルは `main`・`sub`・`main code`・`sub code`。スタイルが無ければ 1 行目が `main`、残りが `sub` |
 | `table` | `x` `y` `w`、`title`、`rows`、`tone`。行は名前・`[名前]`・`[名前, 型]` か、区切り線の `---`。高さは 30 に、行ごとに 22・区切りごとに 9 を足し、行があればさらに 6 を足したもの。行 i（0 始まり、区切りを除く）の中心は `y + 41 + 22i` |
-| `icon` | `x` `y`、`name`、`label`、`size`（48）。アイコンはまだ描けない。`icon` 部品のある spec は断る（「アイコンにはまだ対応していません」） |
+| `icon` | `x` `y`（左上）、`name`、`label`（アイコンの下に置く）、`size`（48）。`name` はアイコン集とその中の名前で、`aws/amazon-ec2` のように書く（`floe icons search` で探す）。ダーク用の版があるアイコンは配色に合わせて切り替わる。線はアイコンの辺で止める。知らない名前は誤りとして、近い名前を示す |
 | `edge` | `d`、`label` と `at: [x, y]`、`dashed`、`bold`、`tone`、`start`（`none`）、`end`（`arrow`）、`crossing`。`d` には絶対座標の `M`・`H`・`V`・`L` だけを使う。端は `arrow`・`triangle`・`diamond`・`odiamond`・`one`・`many`・`zero-one`・`zero-many`・`none`。`crossing: true` はこの線にほかの線との交差を許す |
 | `dot` | `cx` `cy`、`r`（7）、`tone`、`hollow`。線は中心まで引いてよい |
 | `bar` | `x1` `x2` `y`、`tone`、`label`（棒の右に置く） |
@@ -126,13 +128,29 @@ parts:
 
 ## `floe diagram example [kind]`
 
-種類を渡さなければ、組み込みの例を一覧します。例は図の種類（構成図・クラス図・ER 図・判定フロー・Git のブランチ図・シーケンス図・状態遷移図・タイムライン・ベン図）ごとに 1 つずつあり、各行はタブ区切りで種類と要約です。種類を渡すと、その spec を出します。spec のコメントに、配置に使った格子の説明があります。どの例も検査を通ります。
+種類を渡さなければ、組み込みの例を一覧します。例は図の種類（構成図・AWS 構成図・クラス図・ER 図・判定フロー・Git のブランチ図・シーケンス図・状態遷移図・タイムライン・ベン図）ごとに 1 つずつあり、各行はタブ区切りで種類と要約です。種類を渡すと、その spec を出します。spec のコメントに、配置に使った格子の説明があります。どの例も検査を通ります。AWS 構成図の例は AWS アイコンを使うので、`floe icons fetch` の後で描いてください。
 
 例は英語版と日本語版があり、図の文字もコメントもその言語で書いてあります。メッセージの言語（`FLOE_LANG`、無ければ `LC_ALL`・`LC_MESSAGES`・`LANG`）に従うので、日本語の環境で例を写すと、図も日本語で書き始められます。その言語で書いていない例は、地域を外した言語（`ja-JP` なら `ja`）、それも無ければ英語で出ます。
 
 | フラグ | 説明 |
 |---|---|
 | `--lang <tag>` | 例の言語。BCP 47 のタグ（`en`・`ja`）で指定する。地域付きは言語に（`ja-JP` は `ja` に）、例の無い言語は英語に戻る |
+
+## `floe icons fetch [zip-or-url]`
+
+[AWS Architecture Icons](https://aws.amazon.com/architecture/icons/) を、図の `icon` 部品用に `$FLOE_ICONS_DIR/aws` に取得します。取り出すのは 48px のサービスとリソースのアイコン、32px のグループのアイコンと、それぞれのダーク用の版です。floe はアイコンを同梱しないので、マシンごとに 1 回取得します。
+
+- 引数が無ければ、公式ページから Icon package の zip（約 14MB）を探して取得します。ブラウザで取得した zip のパスか、その URL を渡すこともできます。相対パスは作業ディレクトリから解決します。
+- 同じ版が既にあれば何もしません。`--force` で取り直します。
+- 置き換えは丸ごとです。途中で失敗しても前の版が残ります。
+
+| フラグ | 説明 |
+|---|---|
+| `--force` | 同じ版が既にあっても取り直す |
+
+## `floe icons search <word>...`
+
+名前にすべての語を含む取得済みのアイコンを、1 行に 1 つ、`icon` 部品に渡す名前（`aws/…`）とカテゴリのタブ区切りで出します。大文字と小文字は区別しません。
 
 ---
 
@@ -150,6 +168,7 @@ parts:
 |---|---|
 | `FLOE_DIR` | ページの保存先。既定は `$XDG_DATA_HOME/floe`、無ければ `~/.local/share/floe`。artifact スキルと同じ形式なので、互いの保存先を読める |
 | `FLOE_PORT` | ポート（既定は `7325`）。1 から 65535 の 10 進数 |
+| `FLOE_ICONS_DIR` | `floe icons fetch` がアイコン集を置く場所。アイコン集ごとにディレクトリ（`aws`）を作る。既定は `$XDG_DATA_HOME/floe-icons`、無ければ `~/.local/share/floe-icons` |
 | `FLOE_LANG` | メッセージの言語（`en`・`ja`）。無ければ `LC_ALL`、`LC_MESSAGES`、`LANG` の順に見る。カタログの無い言語は飛ばす。既定は英語 |
 | `BROWSER` | 新しいページを開くコマンド。既定は macOS なら `open`、それ以外は `wslview` か `xdg-open` |
 

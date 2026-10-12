@@ -9,8 +9,8 @@ Diagrams are drawn as inline SVG from a declarative spec and checked for
 overflow, overlaps and crossing edges before they render.
 
 > **Status:** under construction. Publishing and serving pages and drawing
-> diagrams (`floe diagram render`) work; icons in diagrams and the templates
-> described above are planned and not there yet.
+> diagrams (`floe diagram render`, with AWS icons from `floe icons fetch`)
+> work; the templates described above are planned and not there yet.
 
 ## Install
 

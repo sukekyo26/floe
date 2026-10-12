@@ -13,6 +13,8 @@ Reference for every command of the `floe` binary.
 | `floe stop` | Stop the background server |
 | `floe diagram render <spec.yaml>...` | Check diagram specs and print them as inline SVG |
 | `floe diagram example [kind]` | List the example specs, or print one |
+| `floe icons fetch [zip-or-url]` | Keep the AWS icons for the `icon` parts of diagrams |
+| `floe icons search <word>...` | List the fetched icons whose name contains every word |
 | `floe version` | Print the version (also `floe --version`) |
 | `floe help [command]` | Print help (Cobra builtin) |
 
@@ -111,10 +113,10 @@ Each part is one key naming its kind. Defaults are in parentheses; `tone` is `ac
 
 | Part | Keys |
 |---|---|
-| `frame` | `x` `y` `w` `h`, `label`, `accent`, `square` (no rounded corners), `icon` (not drawn yet: a frame with it is refused). Its label sits inside the top left corner, so place its contents 32 or more below its top. |
+| `frame` | `x` `y` `w` `h`, `label`, `accent`, `square` (no rounded corners), `icon` (an icon name such as `aws/group/region`: the frame is drawn in the AWS group style, with square corners and the 32px icon in its corner). Its label sits inside the top left corner, so place its contents 32 or more below its top (40 with an icon). |
 | `box` | `x` `y` `w` `h`, `rows`, `tone`, `shape` (`rect`; `pill`, `hex` for a decision, `state`). A row is text, or `[text, style]` with the style `main`, `sub`, `main code` or `sub code`; without a style the first row is `main` and the rest `sub`. |
 | `table` | `x` `y` `w`, `title`, `rows`, `tone`. A row is a name, `[name]`, `[name, type]`, or `---` for a separator. The height is 30, plus 22 a row and 9 a separator, plus 6 when it has rows; row i (from 0, without separators) is centred at `y + 41 + 22i`. |
-| `icon` | `x` `y`, `name`, `label`, `size` (48). Icons are not drawn yet: a spec with an `icon` part is refused (`icons are not supported yet`). |
+| `icon` | `x` `y` (the top left), `name`, `label` (below the icon), `size` (48). `name` is the icon's set and its name in the set, like `aws/amazon-ec2` (see `floe icons search`); an icon with a variant for dark backgrounds switches with the colour scheme. Edges stop at its sides. An unknown name is a mistake that suggests close names. |
 | `edge` | `d`, `label` with `at: [x, y]`, `dashed`, `bold`, `tone`, `start` (`none`), `end` (`arrow`), `crossing`. `d` takes the absolute `M`, `H`, `V` and `L` only. The ends are `arrow`, `triangle`, `diamond`, `odiamond`, `one`, `many`, `zero-one`, `zero-many` or `none`. `crossing: true` lets this edge cross others. |
 | `dot` | `cx` `cy`, `r` (7), `tone`, `hollow`. Edges may reach its centre. |
 | `bar` | `x1` `x2` `y`, `tone`, `label` (right of the bar). |
@@ -126,13 +128,29 @@ Each part is one key naming its kind. Defaults are in parentheses; `tone` is `ac
 
 ## `floe diagram example [kind]`
 
-Without a kind, list the built-in examples, one per kind of diagram (architecture, class, ER, flow, Git branches, sequence, state, timeline, Venn): each line holds the kind and a summary, tab-separated. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks.
+Without a kind, list the built-in examples, one per kind of diagram (architecture, AWS architecture, class, ER, flow, Git branches, sequence, state, timeline, Venn): each line holds the kind and a summary, tab-separated. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks. The AWS example draws AWS icons, so render it after `floe icons fetch`.
 
 The examples come in English and Japanese, text and comments alike. They follow the language of messages (`FLOE_LANG`, then `LC_ALL`, `LC_MESSAGES` and `LANG`), so copying an example in a Japanese environment starts a diagram in Japanese. An example not written in the language is printed in the language without its region (`ja-JP` to `ja`), else in English.
 
 | Flag | Description |
 |---|---|
 | `--lang <tag>` | The language of the examples, as a BCP 47 tag (`en`, `ja`). A region falls back to its language (`ja-JP` to `ja`), and a language without examples to English. |
+
+## `floe icons fetch [zip-or-url]`
+
+Keep the [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/) in `$FLOE_ICONS_DIR/aws` for the `icon` parts of diagrams: the 48px service and resource icons and the 32px group icons, with their variants for dark backgrounds. floe does not ship icons; each machine fetches them once.
+
+- Without an argument, the Icon package zip (about 14MB) is found on the official page and downloaded. A zip downloaded in a browser, or its URL, can be given instead; a relative path is resolved against the working directory.
+- A version already there is kept. `--force` fetches it again.
+- The icons are replaced as a whole: if that fails, the previous ones stay.
+
+| Flag | Description |
+|---|---|
+| `--force` | Fetch the icons even if that version is already there. |
+
+## `floe icons search <word>...`
+
+List the fetched icons whose name contains every word (case does not matter), one per line: the name to give an `icon` part (`aws/…`) and its category, tab-separated.
 
 ---
 
@@ -150,6 +168,7 @@ The examples come in English and Japanese, text and comments alike. They follow 
 |---|---|
 | `FLOE_DIR` | Where pages are stored. Defaults to `$XDG_DATA_HOME/floe`, else `~/.local/share/floe`. The layout is the same as the artifact skill's, so either can read the other's. |
 | `FLOE_PORT` | The port (default `7325`). A decimal number from 1 to 65535. |
+| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. |
 | `FLOE_LANG` | The language of messages (`en`, `ja`). Falls back to `LC_ALL`, `LC_MESSAGES`, then `LANG`; a language without a catalog is skipped. English is the default. |
 | `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |
 
