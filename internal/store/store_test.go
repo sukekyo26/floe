@@ -572,3 +572,33 @@ func TestPublishLang(t *testing.T) {
 		wantUserErr(t, err, "lang_invalid", bad)
 	}
 }
+
+// A data file is drawn with the template it names, titled by its title: unless --title says
+// otherwise, and the page records the template and theme.
+func TestPublishDataFile(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	file := e.write(t, "plan.yaml", "template: report\ntitle: The plan\nsections:\n  - heading: Steps\n    parts:\n      - text: Do **it**.\n")
+	entry := e.mustPublish(t, file, store.Options{Lang: ptr("ja")}, "")
+	m := entry.Meta
+	if entry.Slug != "plan" || m.Title != "The plan" || m.Template != "report" || m.Theme != "default" || m.Lang != "ja" {
+		t.Errorf("meta = %+v (slug %s)", m, entry.Slug)
+	}
+	b, err := os.ReadFile(filepath.Join(e.tmp, "store", "plan", "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`<html lang="ja">`, "<h1>The plan</h1>", "<p>Do <strong>it</strong>.</p>"} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("the page lacks %s:\n%s", want, b)
+		}
+	}
+	if entry := e.mustPublish(t, file, store.Options{Title: ptr("Pinned")}, ""); !strings.Contains(string(entry.Page), "<h1>Pinned</h1>") {
+		t.Errorf("--title does not title the drawn page: %s", entry.Page)
+	}
+	bad := e.write(t, "bad.yml", "template: deck\n")
+	if _, err := e.publish(t, bad, store.Options{}, ""); err == nil || err.Error() != bad+`: unknown template "deck"; use report` {
+		t.Errorf("publish of a data file naming no template there = %v", err)
+	}
+}

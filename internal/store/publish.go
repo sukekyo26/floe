@@ -15,6 +15,7 @@ import (
 	"github.com/sukekyo26/floe/internal/link"
 	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/project"
+	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -86,9 +87,16 @@ type Entry struct {
 // resolves a relative file and names the project of a stored page; a link's project is that of its
 // directory.
 func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
-	path, html, err := s.read(file, opts.Link, cwd)
+	path, src, err := s.read(file, opts.Link, cwd)
 	if err != nil {
 		return nil, err
+	}
+	var data *tmpl.Data
+	own := ""
+	if path == "" {
+		if data, own, err = readPage(file, src); err != nil {
+			return nil, err
+		}
 	}
 	slug, err := s.slugFor(file, path, opts, cwd)
 	if err != nil {
@@ -113,18 +121,44 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 		var none Meta
 		base = &none
 	}
-	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, html, slug), Page: nil, Prev: prev}
+	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Page: nil, Prev: prev}
 	if path == "" {
-		if e.Page, err = page.Wrap(html, e.Meta.Title, e.Meta.Lang); err != nil {
-			return nil, fmt.Errorf("wrap %s: %w", file, err)
+		if err := e.draw(file, src, data); err != nil {
+			return nil, err
 		}
 	}
 	return e, nil
 }
 
+// readPage reads a stored page's data (nil unless it is a data file) and its own title.
+func readPage(file, src string) (*tmpl.Data, string, error) {
+	if !IsDataFile(file) {
+		return nil, page.Title(src), nil
+	}
+	data, err := tmpl.Read(file, []byte(src))
+	if err != nil {
+		return nil, "", err //nolint:wrapcheck // a usererr for the caller to show
+	}
+	return data, data.Title, nil
+}
+
+// draw makes the stored page: drawn from data, or src wrapped when it is body-only HTML.
+func (e *Entry) draw(file, src string, data *tmpl.Data) error {
+	var err error
+	if data == nil {
+		if e.Page, err = page.Wrap(src, e.Meta.Title, e.Meta.Lang); err != nil {
+			return fmt.Errorf("wrap %s: %w", file, err)
+		}
+		return nil
+	}
+	e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
+	e.Page, err = data.Render(e.Meta.Title, cmp.Or(e.Meta.Lang, page.DefaultLang))
+	return err //nolint:wrapcheck // a usererr for the caller to show
+}
+
 // read returns the real path of a link ("" for a stored page) and the file's content. A link is
 // checked and stored by its real path: a symlink would otherwise reach into a hidden directory.
-func (s *Store) read(file string, isLink bool, cwd string) (path, html string, err error) {
+func (s *Store) read(file string, isLink bool, cwd string) (path, content string, err error) {
 	abs := file
 	if !filepath.IsAbs(abs) {
 		abs = filepath.Join(cwd, abs)
@@ -147,16 +181,18 @@ func (s *Store) read(file string, isLink bool, cwd string) (path, html string, e
 
 // newMeta keeps what was set on the management page (favourite, title, project), the description, the
 // language and createdAt from base; --title, --description and --lang win.
-func newMeta(opts Options, path, from string, base *Meta, html, slug string) Meta {
+func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta {
 	keepTitle := opts.Title == nil && base.TitleEdited
 	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
 	now := Now()
 	m := Meta{
 		Path:          path,
-		Title:         title(opts, path, keepTitle, base, html, slug),
+		Title:         title(opts, path, keepTitle, base, own, slug),
 		TitleEdited:   keepTitle,
 		Description:   base.Description,
 		Lang:          base.Lang,
+		Template:      "",
+		Theme:         "",
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",
@@ -235,18 +271,24 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 	return false, usererr.New("store_slug_owned", slug, owner)
 }
 
-// title is --title, else the title pinned on the management page, else (for a stored page) the
-// page's own, the previous one, or the slug. A link records no title of its own: it is read from
-// the file each time.
-func title(opts Options, path string, keepTitle bool, base *Meta, html, slug string) string {
+// title is --title, else the title pinned on the management page, else (for a stored page) its own
+// (the data's title:, or the HTML's), the previous one, or the slug. A link records no title of its
+// own: it is read from the file each time.
+func title(opts Options, path string, keepTitle bool, base *Meta, own, slug string) string {
 	switch {
 	case opts.Title != nil:
 		return *opts.Title
 	case path != "" || keepTitle:
 		return base.Title
 	default:
-		return cmp.Or(page.Title(html), base.Title, slug)
+		return cmp.Or(own, base.Title, slug)
 	}
+}
+
+// IsDataFile reports whether file is a data file (.yaml or .yml) rather than a page.
+func IsDataFile(file string) bool {
+	ext := strings.ToLower(filepath.Ext(file))
+	return ext == ".yaml" || ext == ".yml"
 }
 
 // Save writes a prepared entry.

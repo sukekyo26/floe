@@ -50,13 +50,14 @@ func (a *app) publishCmd() *cobra.Command {
 	var opts store.Options
 	var slug, title, description, lang string
 	cmd := &cobra.Command{
-		Use:   "publish <file.html>",
+		Use:   "publish <file>",
 		Short: "Store a page (or --link a file in place) and print its URL",
 		Long: `Store the page and print its URL. The same slug from the same project overwrites it,
-and a slug published from another project is refused unless --force. Body-only HTML
-(no doctype/html/head/body/title) is wrapped in the template, in English unless --lang
-names another language (a republish keeps the last one given). A new slug is also opened
-in the browser ($BROWSER, open, wslview, xdg-open).
+and a slug published from another project is refused unless --force. A data file (.yaml,
+.yml) names a template, which draws the page from its data (template: report). Body-only
+HTML (no doctype/html/head/body/title) is wrapped in the template. A page is in English
+unless --lang names another language (a republish keeps the last one given). A new slug is
+also opened in the browser ($BROWSER, open, wslview, xdg-open).
 
 --link registers the file in place instead of copying it: it is read on every request,
 and the files under its directory are served for its relative references. The same slug
