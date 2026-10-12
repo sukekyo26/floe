@@ -3,6 +3,8 @@ package diagram_test
 import (
 	"os"
 	"reflect"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"unicode"
@@ -63,8 +65,23 @@ func TestRenderIconDefs(t *testing.T) {
 	if defs, uses := strings.Count(got, "<image "), strings.Count(got, "<use "); defs != 7 || uses != 9 {
 		t.Errorf("Render defines %d icons and places %d, want 7 and 9", defs, uses)
 	}
-	if n := strings.Count(got, `<use href="#ic_icon4"`); n != 2 {
-		t.Errorf("the client's light variant is placed %d times, want 2", n)
+	if uses := regexp.MustCompile(`<use href="#ic_icon-[0-9a-f]{12}"`).FindAllString(got, -1); len(slices.Compact(slices.Sorted(slices.Values(uses)))) != 7 {
+		t.Errorf("Render places %v, want 7 icons", uses)
+	}
+
+	// The ids come from the images, so diagrams of one id rendered apart do not take each other's icons.
+	const spec = "id: d\nwidth: 100\nheight: 100\ntitle: t\nparts:\n  - icon: { x: 10, y: 10, name: %s }\n"
+	def := regexp.MustCompile(`<image id="([^"]+)"`)
+	ids := make([]string, 0, 2)
+	for _, name := range []string{"aws/aws-lambda", "aws/amazon-bedrock"} {
+		got, err := diagram.Render([]*diagram.Spec{parse(t, "d.yaml", strings.Replace(spec, "%s", name, 1))}, standIn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, def.FindStringSubmatch(got)[1])
+	}
+	if ids[0] == ids[1] {
+		t.Errorf("two icons in diagrams of one id are both %s", ids[0])
 	}
 }
 

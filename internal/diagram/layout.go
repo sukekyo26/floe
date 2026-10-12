@@ -1,10 +1,11 @@
 package diagram
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"math"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/icons"
@@ -213,14 +214,16 @@ func (l *layout) image(at Pos, name string, x, y, size float64, what *usererr.Er
 		svgf(`<use href="#%v" x="%v" y="%v" class="icon-dark"/>`, l.iconDef(icon.Dark, size), x, y)
 }
 
-// iconDef returns the id of the <image> of href at size in <defs>, defining it on first use. Its
-// id joins the diagram's id and icon<n>, as a marker's does.
+// iconDef returns the id of the <image> of href at size in <defs>, defining it on first use. The id
+// joins the diagram's id and a hash of the image, so that diagrams of one id rendered apart and
+// pasted into one page still find their own icons.
 func (l *layout) iconDef(href string, size float64) string {
 	key := href + " " + formatNum(size)
 	if id, ok := l.iconIDs[key]; ok {
 		return id
 	}
-	id := l.spec.ID + "_icon" + strconv.Itoa(len(l.iconDefs)+1)
+	sum := sha256.Sum256([]byte(key))
+	id := l.spec.ID + "_icon-" + hex.EncodeToString(sum[:6])
 	l.iconIDs[key] = id
 	l.iconDefs = append(l.iconDefs, svgf(`<image id="%v" href="%v" width="%v" height="%v"/>`, id, href, size, size))
 	return id

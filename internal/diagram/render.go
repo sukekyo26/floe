@@ -51,8 +51,8 @@ var markerKinds = func() []string {
 }()
 
 // Render checks the specs and draws them, in order, as one HTML fragment of inline SVG, with the icons
-// of store. The ids of the diagrams name their markers, so they must differ between the specs drawn
-// together. On a mistake it draws nothing and returns the Problems of every spec.
+// of store. The ids of the diagrams name their markers and icons, so they must differ between the
+// specs drawn together. On a mistake it draws nothing and returns the Problems of every spec.
 func Render(specs []*Spec, store *icons.Store) (string, error) {
 	var problems Problems
 	layouts := make([]*layout, len(specs))
