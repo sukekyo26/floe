@@ -241,4 +241,12 @@ var messagesJA = map[string]string{
 	"icons_no_match":        "名前に %s をすべて含むアイコンはありません。短い語で試してください",
 	"icons_fetched":         "%[2]s アイコン %[1]d 個（%[3]s）を %[4]s に取得しました",
 	"icons_already":         "%s アイコン %s は %s に取得済みです（取り直すには --force を付けてください）",
+
+	// tmpl
+	"tmpl_yaml":          "%s は YAML として読めません: %s",
+	"tmpl_no_template":   "%s: 先頭で template: report のようにテンプレートを指定してください（テンプレート: %s）",
+	"tmpl_not_text":      "%s: %s は文字列で指定してください",
+	"tmpl_unknown":       "%s: 知らないテンプレート「%s」です。使えるのは %s です",
+	"tmpl_unknown_theme": "%[1]s: テンプレート %[3]s にテーマ「%[2]s」はありません。使えるのは %[4]s です",
+	"tmpl_render":        "%s はテンプレート %s に合いません: %s",
 }

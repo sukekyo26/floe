@@ -242,4 +242,12 @@ var messagesEN = map[string]string{
 	"icons_no_match":        "no icon name contains all of %s; try a shorter word",
 	"icons_fetched":         "fetched %d %s icons (%s) into %s",
 	"icons_already":         "%s icons %s are already in %s (add --force to fetch them again)",
+
+	// tmpl: reading data files and drawing them with templates
+	"tmpl_yaml":          "%s is not valid YAML: %s",
+	"tmpl_no_template":   "%s: name the template at the top, like template: report (templates: %s)",
+	"tmpl_not_text":      "%s: %s must be text",
+	"tmpl_unknown":       `%s: unknown template "%s"; use %s`,
+	"tmpl_unknown_theme": `%[1]s: template %[3]s has no theme "%[2]s"; use %[4]s`,
+	"tmpl_render":        "%s does not fit the template %s: %s",
 }
