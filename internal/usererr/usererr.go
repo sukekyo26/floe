@@ -23,7 +23,15 @@ func (e *Error) Error() string {
 	return e.Localize(i18n.EnglishCatalog())
 }
 
-// Localize words the refusal in the language of c.
+// Localize words the refusal in the language of c. An argument that is itself a Localizer (a
+// worded part of the message, such as the name of a diagram part) is worded in c too.
 func (e *Error) Localize(c *i18n.Catalog) string {
-	return c.Msg(e.Key, e.Args...)
+	args := make([]any, len(e.Args))
+	for i, a := range e.Args {
+		if l, ok := a.(i18n.Localizer); ok {
+			a = l.Localize(c)
+		}
+		args[i] = a
+	}
+	return c.Msg(e.Key, args...)
 }
