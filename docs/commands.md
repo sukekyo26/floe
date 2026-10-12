@@ -113,7 +113,7 @@ Each part is one key naming its kind. Defaults are in parentheses; `tone` is `ac
 
 | Part | Keys |
 |---|---|
-| `frame` | `x` `y` `w` `h`, `label`, `accent`, `square` (no rounded corners), `icon` (an icon name such as `aws/group/region`: the frame is drawn in the AWS group style, with square corners and the 32px icon in its corner). Its label sits inside the top left corner, so place its contents 32 or more below its top (40 with an icon). |
+| `frame` | `x` `y` `w` `h`, `label`, `accent`, `square` (no rounded corners), `icon` (an icon name such as `aws/group/region`: the frame is drawn in the AWS group style, with square corners and the 32px icon in its corner, which other parts and edges may not cover or run through). Its label sits inside the top left corner, so place its contents 32 or more below its top (40 with an icon). |
 | `box` | `x` `y` `w` `h`, `rows`, `tone`, `shape` (`rect`; `pill`, `hex` for a decision, `state`). A row is text, or `[text, style]` with the style `main`, `sub`, `main code` or `sub code`; without a style the first row is `main` and the rest `sub`. |
 | `table` | `x` `y` `w`, `title`, `rows`, `tone`. A row is a name, `[name]`, `[name, type]`, or `---` for a separator. The height is 30, plus 22 a row and 9 a separator, plus 6 when it has rows; row i (from 0, without separators) is centred at `y + 41 + 22i`. |
 | `icon` | `x` `y` (the top left), `name`, `label` (below the icon), `size` (48). `name` is the icon's set and its name in the set, like `aws/amazon-ec2` (see `floe icons search`); an icon with a variant for dark backgrounds switches with the colour scheme. Edges stop at its sides. An unknown name is a mistake that suggests close names. |

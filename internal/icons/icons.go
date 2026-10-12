@@ -21,6 +21,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -45,7 +46,7 @@ type packed struct {
 
 var kits = []*kit{&aws}
 
-// ErrNoSet is a name without a known set in front.
+// ErrNoSet is a name without a known set in front (aws/…).
 var ErrNoSet = errors.New("no icon set in front")
 
 var (
@@ -419,7 +420,7 @@ type Icon struct {
 func (s *Store) Lookup(name string) (*Icon, []string, error) {
 	set, rest, _ := strings.Cut(name, "/")
 	k := kitOf(set)
-	if k == nil || rest == "" {
+	if k == nil {
 		return nil, nil, ErrNoSet
 	}
 	idx, err := s.loadIndex(k)
@@ -450,9 +451,13 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 	return icon, nil, nil
 }
 
+// closeNames ranks the names by how many words of name they contain, words as slug splits them.
+// LIMIT: words are matched whole within a name, so a misspelt word suggests nothing. If that
+// misses names people mean, rank by edit distance instead.
 func (k *kit) closeNames(idx *index, name string) []string {
 	var words []string
-	for w := range strings.FieldsFuncSeq(strings.ToLower(name), func(r rune) bool { return r == '/' || r == '-' }) {
+	split := func(r rune) bool { return r == '/' || r == '-' || r == '_' || unicode.IsSpace(r) }
+	for w := range strings.FieldsFuncSeq(strings.ToLower(name), split) {
 		if len(w) > 1 && !slices.Contains(k.common, w) {
 			words = append(words, w)
 		}

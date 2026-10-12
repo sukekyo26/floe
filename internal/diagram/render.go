@@ -64,10 +64,11 @@ func Render(specs []*Spec, store *icons.Store) (string, error) {
 		} else {
 			first[s.ID] = s
 		}
-		layouts[i] = newLayout(s, store)
-		if err := layouts[i].err; err != nil {
+		l, err := newLayout(s, store)
+		if err != nil {
 			return "", err
 		}
+		layouts[i] = l
 		problems = append(problems, layouts[i].check()...)
 	}
 	if len(problems) > 0 {

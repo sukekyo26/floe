@@ -134,17 +134,27 @@ func TestCheck(t *testing.T) {
 			want: []string{`s.yaml:8:5: edge "M30,125 V150" runs through the icon of frame "Heading" (line 6)`},
 		},
 		{
+			// the corner icon is a part: a box may not cover it
+			name: "box over a frame icon",
+			parts: `  - frame: { x: 20, y: 120, w: 200, h: 60, label: Heading, icon: aws/group/region }
+  - box: { x: 40, y: 140, w: 60, h: 30, rows: [b] }
+`,
+			want: []string{`s.yaml:6:5: the icon of frame "Heading" overlaps box "b" (line 7)`},
+		},
+		{
 			name: "icons not there",
 			parts: `  - icon: { x: 10, y: 10, name: lambda }
   - icon: { x: 70, y: 10, name: aws/lambda }
   - icon: { x: 130, y: 10, name: aws/amazon-ec2 }
   - frame: { x: 10, y: 100, w: 200, h: 60, label: Cloud, icon: aws/cloud }
+  - icon: { x: 190, y: 10, name: aws/ }
 `,
 			want: []string{
 				`s.yaml:6:5: icon "lambda": "lambda" needs its icon set in front (aws), like aws/amazon-ec2 (search with: floe icons search <word>)`,
 				`s.yaml:7:5: icon "aws/lambda": no icon "aws/lambda"; did you mean aws/aws-lambda? (search with: floe icons search <word>)`,
 				`s.yaml:8:5: icon "aws/amazon-ec2": no icon "aws/amazon-ec2" (search with: floe icons search <word>)`,
 				`s.yaml:9:5: frame "Cloud": no icon "aws/cloud"; did you mean aws/group/aws-cloud-logo? (search with: floe icons search <word>)`,
+				`s.yaml:10:5: icon "aws/": no icon "aws/" (search with: floe icons search <word>)`,
 			},
 		},
 		{

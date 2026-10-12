@@ -47,7 +47,7 @@ type path struct {
 type layout struct {
 	spec     *Spec
 	icons    *icons.Store
-	err      error  // what stops the drawing that is no mistake of the spec (the icons are not there)
+	err      error  // the first error that is no mistake of the spec (the icons are not there)
 	boxes    []rect // edges may not run through these
 	marks    []rect // may not overlap, but edges may reach their centre (dots)
 	frames   []rect
@@ -64,7 +64,8 @@ type layout struct {
 	markers []string // the marker kinds the edges use, in the order of first use
 }
 
-func newLayout(s *Spec, store *icons.Store) *layout {
+// newLayout lays out s. Icons not fetched stop it with an error, as no mistake of s does.
+func newLayout(s *Spec, store *icons.Store) (*layout, error) {
 	l := &layout{
 		spec: s, icons: store, err: nil, boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, paths: nil,
 		problems: nil, seen: map[string]bool{},
@@ -73,7 +74,10 @@ func newLayout(s *Spec, store *icons.Store) *layout {
 	for _, p := range s.Parts {
 		l.add(p)
 	}
-	return l
+	if l.err != nil {
+		return nil, l.err
+	}
+	return l, nil
 }
 
 func (l *layout) problem(at Pos, key string, args ...any) {
@@ -153,8 +157,9 @@ func (l *layout) addFrame(f Frame) {
 	var corner markup
 	if f.Icon != "" {
 		cls += " grouped"
-		// Edges may not cross the icon, as they may not cross the heading.
-		l.heads = append(l.heads, rect{f.X, f.Y, 31, 31, usererr.New("diagram_what_frame_icon", f.Label), f.Pos})
+		// The icon is a part like a box: nothing may overlap it or run through it. It is checked from
+		// the frame's edge, as the 1px of it outside the frame only covers the frame's line.
+		l.boxes = append(l.boxes, rect{f.X, f.Y, 31, 31, usererr.New("diagram_what_frame_icon", f.Label), f.Pos})
 		// The frame's line (1.2 wide) is centred on its edge, so the icon moved out by 1 covers its
 		// outer half (0.6) too.
 		corner = l.image(f.Pos, f.Icon, f.X-1, f.Y-1, 32, what)

@@ -31,9 +31,9 @@ func (p Problems) Localize(c *i18n.Catalog) string {
 // parts sticking out of the canvas, overlapping, straddling the edge of a frame, edges running
 // through boxes, labels or frame headings, and edges crossing. Icons are looked up in store.
 func Check(s *Spec, store *icons.Store) error {
-	l := newLayout(s, store)
-	if l.err != nil {
-		return l.err
+	l, err := newLayout(s, store)
+	if err != nil {
+		return err
 	}
 	if p := l.check(); len(p) > 0 {
 		return p

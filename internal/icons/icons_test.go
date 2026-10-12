@@ -166,7 +166,7 @@ func TestLookup(t *testing.T) {
 		t.Errorf("Lookup res/client = %+v, %v, %v; want both variants", icon, names, err)
 	}
 	// An unknown name gets the names sharing the most words, shortest first.
-	icon, names, err = set.Lookup("aws/Lambda-Function")
+	icon, names, err = set.Lookup("aws/Lambda_Function")
 	if want := []string{"aws/res/aws-lambda-lambda-function", "aws/aws-lambda"}; err != nil || icon != nil || !reflect.DeepEqual(names, want) {
 		t.Errorf("Lookup lambda-function = %+v, %v, %v; want %v", icon, names, err, want)
 	}
@@ -174,7 +174,7 @@ func TestLookup(t *testing.T) {
 		t.Errorf("Lookup amazon-ec2 = %+v, %v, %v; want no close names", icon, names, err)
 	}
 	// A name needs a known set in front.
-	for _, name := range []string{"aws-lambda", "aws/", "gcp/aws-lambda"} {
+	for _, name := range []string{"aws-lambda", "gcp/aws-lambda"} {
 		if _, _, err := set.Lookup(name); !errors.Is(err, icons.ErrNoSet) {
 			t.Errorf("Lookup %s = %v, want ErrNoSet", name, err)
 		}
