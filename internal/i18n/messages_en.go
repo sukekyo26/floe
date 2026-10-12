@@ -15,7 +15,7 @@ var messagesEN = map[string]string{
 
 	// store: publishing and editing pages
 	"store_invalid_lang":  `invalid language "%s": give --lang a BCP 47 tag such as en, ja or pt-BR`,
-	"store_cannot_read":   "cannot read %s (%s); check the path and that the file exists",
+	"file_cannot_read":    "cannot read %s (%s); check the path and that the file exists",
 	"store_invalid_slug":  `invalid slug "%s": use only lowercase letters, digits and hyphens`,
 	"store_slug_is_page":  `slug "%[1]s" is used by a stored page; choose another slug, or remove that page first (floe rm %[1]s)`,
 	"store_slug_is_link":  `slug "%[1]s" is used by a linked file; choose another slug, or remove that link first (floe rm %[1]s)`,

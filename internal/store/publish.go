@@ -131,7 +131,7 @@ func (s *Store) read(file string, isLink bool, cwd string) (path, html string, e
 	}
 	if isLink {
 		if path, err = filepath.EvalSymlinks(abs); err != nil {
-			return "", "", cannotRead(file, err)
+			return "", "", usererr.CannotRead(file, err)
 		}
 		if err = link.Check(path, s.home); err != nil {
 			return "", "", err //nolint:wrapcheck // a usererr for the caller to show
@@ -140,7 +140,7 @@ func (s *Store) read(file string, isLink bool, cwd string) (path, html string, e
 	}
 	b, err := os.ReadFile(abs) //nolint:gosec // G304: publishing the user's file is the point
 	if err != nil {
-		return "", "", cannotRead(file, err)
+		return "", "", usererr.CannotRead(file, err)
 	}
 	return path, string(b), nil
 }
@@ -177,15 +177,6 @@ func newMeta(opts Options, path, from string, base *Meta, html, slug string) Met
 		m.PublishedFrom = from
 	}
 	return m
-}
-
-func cannotRead(file string, err error) error {
-	reason := err.Error()
-	var pe *os.PathError
-	if errors.As(err, &pe) {
-		reason = pe.Err.Error()
-	}
-	return usererr.New("store_cannot_read", file, reason)
 }
 
 func (s *Store) slugFor(file, path string, opts Options, cwd string) (string, error) {
