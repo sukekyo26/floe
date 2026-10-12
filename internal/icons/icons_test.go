@@ -114,6 +114,10 @@ func TestFetchAndSearch(t *testing.T) {
 	if hits, serr := set.Search([]string{"lambda", "function"}); serr != nil || len(hits) != 1 {
 		t.Errorf("Search lambda function = %v, %v, want the function only", hits, serr)
 	}
+	// A name as a spec writes it finds itself.
+	if hits, serr := set.Search([]string{"aws/aws-lambda"}); serr != nil || len(hits) != 1 {
+		t.Errorf("Search aws/aws-lambda = %v, %v, want aws/aws-lambda", hits, serr)
+	}
 	_, err = set.Search([]string{"lambda", "nothing"})
 	if want := `no icon name contains all of "lambda" "nothing"; try a shorter word`; err == nil || err.Error() != want {
 		t.Errorf("Search without a hit = %v, want %s", err, want)
@@ -162,7 +166,7 @@ func TestLookup(t *testing.T) {
 		t.Errorf("Lookup res/client = %+v, %v, %v; want both variants", icon, names, err)
 	}
 	// An unknown name gets the names sharing the most words, shortest first.
-	icon, names, err = set.Lookup("aws/lambda-function")
+	icon, names, err = set.Lookup("aws/Lambda-Function")
 	if want := []string{"aws/res/aws-lambda-lambda-function", "aws/aws-lambda"}; err != nil || icon != nil || !reflect.DeepEqual(names, want) {
 		t.Errorf("Lookup lambda-function = %+v, %v, %v; want %v", icon, names, err, want)
 	}

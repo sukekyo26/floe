@@ -257,7 +257,9 @@ func replace(tmp, dir string) error {
 		}
 		return fmt.Errorf("move the new icons into place: %w", err)
 	}
-	return os.RemoveAll(old) //nolint:wrapcheck // the new icons are in place; this is cleanup
+	// The new icons are in place: a previous one left behind is harmless.
+	_ = os.RemoveAll(old) //nolint:errcheck // see above
+	return nil
 }
 
 // extract writes the set's icons in the zip in buf to dir, with their index.json.
@@ -274,8 +276,12 @@ func (k *kit) extract(buf []byte, from, dir string) (*index, error) {
 		if !ok || (icon.dark && idx.Icons[icon.name].Dark) || (!icon.dark && light[icon.name]) {
 			continue
 		}
-		if err = keep(f, dir, icon); err != nil {
+		var b []byte
+		if b, err = readEntry(f); err != nil {
 			return nil, usererr.New("icons_bad_zip", f.Name, from, err.Error())
+		}
+		if err = keep(dir, icon, b); err != nil {
+			return nil, err
 		}
 		idx.Version = cmp.Or(idx.Version, icon.version)
 		e, seen := idx.Icons[icon.name]
@@ -310,26 +316,29 @@ func darkAlone(idx *index, light map[string]bool, dir string) error {
 	return nil
 }
 
-// keep writes the icon in f to dir as name.svg, or name.dark.svg for a dark variant.
-func keep(f *zip.File, dir string, icon packed) error {
+func readEntry(f *zip.File) ([]byte, error) {
+	r, err := f.Open()
+	if err != nil {
+		return nil, err //nolint:wrapcheck // worded by the caller
+	}
+	defer r.Close()      //nolint:errcheck // read only
+	return io.ReadAll(r) //nolint:wrapcheck // worded by the caller
+}
+
+// keep writes the icon b to dir as name.svg, or name.dark.svg for a dark variant.
+func keep(dir string, icon packed, b []byte) error {
 	path := filepath.Join(dir, icon.name+".svg")
 	if icon.dark {
 		path = filepath.Join(dir, icon.name+".dark.svg")
 	}
-	r, err := f.Open()
-	if err != nil {
-		return err //nolint:wrapcheck // worded by the caller
-	}
-	defer r.Close() //nolint:errcheck // read only
-	b, err := io.ReadAll(r)
-	if err != nil {
-		return err //nolint:wrapcheck // worded by the caller
-	}
 	// G703: a name holds no slash but those its kit puts in (TestIconOfStaysInside).
-	if err = os.MkdirAll(filepath.Dir(path), 0o700); err != nil { //nolint:gosec // see above
-		return err //nolint:wrapcheck // worded by the caller
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil { //nolint:gosec // see above
+		return fmt.Errorf("keep the icon %s: %w", icon.name, err)
 	}
-	return os.WriteFile(path, b, 0o600) //nolint:gosec,wrapcheck // see above; worded by the caller
+	if err := os.WriteFile(path, b, 0o600); err != nil { //nolint:gosec // see above
+		return fmt.Errorf("keep the icon %s: %w", icon.name, err)
+	}
+	return nil
 }
 
 func writeIndex(idx *index, dir string) error {
@@ -356,7 +365,7 @@ type Hit struct {
 	Category string
 }
 
-// Search returns the icons of the fetched sets whose name contains every word, by name.
+// Search returns the icons of the fetched sets whose name (set/name) contains every word, by name.
 func (s *Store) Search(words []string) ([]Hit, error) {
 	terms := make([]string, len(words))
 	for i, w := range words {
@@ -374,8 +383,10 @@ func (s *Store) Search(words []string) ([]Hit, error) {
 		}
 		fetched = true
 		for name, e := range idx.Icons {
-			if !slices.ContainsFunc(terms, func(t string) bool { return !strings.Contains(name, t) }) {
-				hits = append(hits, Hit{Name: k.name + "/" + name, Category: e.Category})
+			// Matched as printed, set and all, so that a name copied from a spec finds itself.
+			full := k.name + "/" + name
+			if !slices.ContainsFunc(terms, func(t string) bool { return !strings.Contains(full, t) }) {
+				hits = append(hits, Hit{Name: full, Category: e.Category})
 			}
 		}
 	}
@@ -433,7 +444,7 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 
 func (k *kit) closeNames(idx *index, name string) []string {
 	var words []string
-	for w := range strings.FieldsFuncSeq(name, func(r rune) bool { return r == '/' || r == '-' }) {
+	for w := range strings.FieldsFuncSeq(strings.ToLower(name), func(r rune) bool { return r == '/' || r == '-' }) {
 		if len(w) > 1 && !slices.Contains(k.common, w) {
 			words = append(words, w)
 		}
