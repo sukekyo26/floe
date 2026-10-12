@@ -2,6 +2,7 @@ package diagram_test
 
 import (
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"unicode"
@@ -102,8 +103,8 @@ b.yaml:2:1: diagram id "same" is already used in a.yaml:1; give each diagram its
 }
 
 // Every built-in example passes the checks and opens with a summary, in every language with a
-// catalog. English holds every kind and is written in plain English; every other language translates
-// every example.
+// catalog. English holds every kind and is written in plain English; a language with examples of its
+// own translates every one, and a language without them falls back to English.
 func TestExamples(t *testing.T) {
 	t.Parallel()
 
@@ -126,6 +127,8 @@ func TestExamples(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		_, err = os.Stat("examples/" + string(lang))
+		translated := lang != i18n.English && err == nil
 		for i, e := range examples {
 			s := parse(t, string(lang)+"/"+e.Name+".yaml", string(e.Spec))
 			if _, err := diagram.Render([]*diagram.Spec{s}); err != nil {
@@ -134,7 +137,7 @@ func TestExamples(t *testing.T) {
 			if e.Summary == "" || strings.HasPrefix(e.Summary, "#") {
 				t.Errorf("example %s in %s has no summary on its first line: %q", e.Name, lang, e.Summary)
 			}
-			if lang != i18n.English && string(e.Spec) == string(english[i].Spec) {
+			if translated && string(e.Spec) == string(english[i].Spec) {
 				t.Errorf("example %s is not translated into %s", e.Name, lang)
 			}
 		}
@@ -149,7 +152,7 @@ func TestExamples(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if string(got[0].Spec) != string(in[0].Spec) {
+		if !reflect.DeepEqual(got, in) {
 			t.Errorf("Examples(%s) is not in %s", lang, want)
 		}
 	}

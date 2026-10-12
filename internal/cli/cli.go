@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
 )
 
@@ -67,6 +68,14 @@ func Run(ctx context.Context, args []string, env Env) int {
 		return exitUsage
 	}
 	return exitFail
+}
+
+// checkLang refuses a --lang that is not a BCP 47 tag, as a usage error.
+func checkLang(lang string) error {
+	if !i18n.IsTag(lang) {
+		return usageError{err: usererr.New("lang_invalid", lang)}
+	}
+	return nil
 }
 
 // usage marks the errors of an argument validator as usage errors.

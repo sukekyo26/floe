@@ -307,7 +307,7 @@ func TestPublish(t *testing.T) {
 		t.Errorf("a blank --title changed the list from %q to %q", before, after)
 	}
 	want(t, "an invalid slug", e.run(t, "repo", "publish", demo, "--slug", "../x"), 1, "", `invalid slug "../x"`)
-	want(t, "an invalid language", e.run(t, "repo", "publish", demo, "--lang", "ja_JP"), 1, "",
+	want(t, "an invalid language", e.run(t, "repo", "publish", demo, "--lang", "ja_JP"), 2, "",
 		`floe: invalid language "ja_JP": give --lang a BCP 47 tag such as en, ja or pt-BR`)
 	frag := e.write(t, "frag.html", "<p>こんにちは</p>")
 	want(t, "--lang", e.run(t, "repo", "publish", frag, "--lang", "ja"), 0, e.base()+"/a/frag/\n", "")

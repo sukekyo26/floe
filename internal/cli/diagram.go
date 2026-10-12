@@ -111,15 +111,20 @@ func (a *app) diagramExampleCmd() *cobra.Command {
 passes the checks. With a kind, print its spec, whose comments explain its grid.
 
 The examples are written in the language of floe's messages (FLOE_LANG, LC_ALL, LC_MESSAGES,
-LANG), or in --lang; an example not written in that language is printed in English.`,
+LANG), or in --lang. An example not written in that language is printed in the language without
+its region (ja-JP to ja), else in English.`,
 		Args: usage(cobra.MaximumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			in := a.cat.Lang()
 			if cmd.Flags().Changed("lang") {
-				if !i18n.IsTag(lang) {
-					return usageError{err: usererr.New("lang_invalid", lang)}
+				if err := checkLang(lang); err != nil {
+					return err
 				}
-				in = i18n.Lang(strings.ToLower(lang))
+				// A language without messages has no examples either: those are in English.
+				in = i18n.English
+				if matched, ok := i18n.Match(lang); ok {
+					in = matched
+				}
 			}
 			examples, err := diagram.Examples(in)
 			if err != nil {

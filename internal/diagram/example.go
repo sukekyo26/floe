@@ -10,8 +10,8 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 )
 
-// examples holds a directory per language. English holds every example; another language may hold
-// some of them.
+// examples holds a directory per language with a spec (.yaml) per example. English holds every
+// example; another language may hold some of them.
 //
 //go:embed examples
 var examples embed.FS
@@ -29,9 +29,13 @@ func Examples(lang i18n.Lang) ([]Example, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the examples: %w", err)
 	}
+	chain := i18n.Fallbacks(lang)
 	out := make([]Example, 0, len(entries))
 	for _, e := range entries {
-		src, err := example(lang, e.Name())
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".yaml") {
+			continue
+		}
+		src, err := example(chain, e.Name())
 		if err != nil {
 			return nil, err
 		}
@@ -43,8 +47,9 @@ func Examples(lang i18n.Lang) ([]Example, error) {
 	return out, nil
 }
 
-func example(lang i18n.Lang, file string) ([]byte, error) {
-	for _, l := range i18n.Fallbacks(lang) {
+// example reads file from the first language of chain that has it.
+func example(chain []i18n.Lang, file string) ([]byte, error) {
+	for _, l := range chain {
 		src, err := examples.ReadFile("examples/" + string(l) + "/" + file)
 		if err == nil {
 			return src, nil
