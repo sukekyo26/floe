@@ -14,7 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   outside the canvas, overlaps, edges through boxes or labels, and crossing
   edges, and reports every mistake as `file:line:column`. The fragment
   carries the diagrams' style and a zoom toolbar (buttons, Ctrl / ⌘ + wheel,
-  pinch, drag) worded in the page's language; `--no-assets` leaves them out.
+  pinch, drag, arrow keys) worded in the page's language; `--no-assets` leaves them out.
 - Add `floe diagram example [kind]`, which lists the built-in example specs
   (architecture, class, ER, flow, Git, sequence, state, timeline, Venn) or
   prints one to copy.

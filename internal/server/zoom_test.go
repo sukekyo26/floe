@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -32,8 +34,10 @@ func uiZoom(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 
 	e := newEnv(t)
 	b := newBrowser(t, e.base, lang)
-	page := diagramPage(t)
-	slug, l := "diagram", string(lang)
+	// A frame without a diagram comes first: it must not keep the diagram after it from its toolbar. The
+	// tag is in upper case, which the toolbar matches as floe does.
+	page := `<div class="dg-wrap"></div>` + "\n" + diagramPage(t)
+	slug, l := "diagram", strings.ToUpper(string(lang))
 	e.publish(t, e.write(t, "diagram.html", page), store.Options{Slug: &slug, Lang: &l})
 	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 1000, Height: 800, DeviceScaleFactor: 1}
 	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
@@ -47,7 +51,7 @@ func uiZoom(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	at := func(ax, ay float64) [2]float64 {
 		var p [2]float64
 		s := b.eval(fmt.Sprintf(`(() => {
-			const v = document.querySelector('.dg').viewBox.baseVal, w = document.querySelector('.dg-wrap');
+			const v = document.querySelector('.dg').viewBox.baseVal, w = document.querySelector('.dg').parentElement;
 			return [v.x + %v * v.width / w.clientWidth, v.y + %v * v.height / w.clientHeight].join(' ');
 		})()`, ax, ay))
 		if _, err := fmt.Sscan(s, &p[0], &p[1]); err != nil {
@@ -56,7 +60,7 @@ func uiZoom(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		return p
 	}
 	origin := b.eval(`(() => {
-		const w = document.querySelector('.dg-wrap');
+		const w = document.querySelector('.dg').parentElement;
 		w.scrollIntoView();
 		const r = w.getBoundingClientRect();
 		return (r.left + w.clientLeft) + ' ' + (r.top + w.clientTop);
@@ -99,7 +103,7 @@ func uiZoom(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"return v.width >= 1248 && v.height >= 512 && document.querySelector('.dg-tools [data-zoom=fit]').disabled; })()"))
 	click("in")
 	out = append(out, b.eval("(() => { const v = document.querySelector('.dg').viewBox.baseVal; "+
-		"return Math.round("+js(fitted)+".split(' ')[2] / v.width * 100) + ' ' + document.querySelector('.dg-wrap').classList.contains('zoomed'); })()"))
+		"return Math.round("+js(fitted)+".split(' ')[2] / v.width * 100) + ' ' + document.querySelector('.dg').parentElement.classList.contains('zoomed'); })()"))
 	// Ctrl + wheel zooms in about the pointer: the diagram point under it stays put.
 	before := at(200, 100)
 	wheel(200, 100, -200, ctrl)
@@ -115,13 +119,26 @@ func uiZoom(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	mouse(input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseMoved, X: 200, Y: 100, Button: left, Buttons: 1})
 	mouse(input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseReleased, X: 200, Y: 100, Button: left, ClickCount: 1})
 	out = append(out, near(grabbed, at(200, 100)))
+	// The arrow keys move a zoomed diagram too, 40 screen px a press.
+	beforeKey := at(200, 100)
+	b.eval("document.querySelector('.dg').parentElement.focus()")
+	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.ArrowRight)); err != nil {
+		t.Fatal(err)
+	}
+	afterKey := at(200, 100)
+	out = append(out, strconv.FormatBool(afterKey[0] > beforeKey[0] && afterKey[1] == beforeKey[1]))
 	click("fit")
 	out = append(out, strconv.FormatBool(view() == fitted))
 	// The assets script run a second time (a page that includes them twice) adds no second toolbar.
 	out = append(out, b.eval("(0, eval)([...document.scripts].find((s) => s.textContent.includes('zoomable')).textContent), "+
 		"document.querySelectorAll('.dg-tools').length"))
 
-	check(t, "zoom", out, "true|true|125 true|true|true|true|true|1")
+	// Zooming out as far as the whole diagram fits again: the fit button turns off.
+	click("in")
+	click("out")
+	out = append(out, b.eval("document.querySelector('.dg-tools [data-zoom=fit]').disabled"))
+
+	check(t, "zoom", out, "true|true|125 true|true|true|true|true|true|1|true")
 }
 
 // diagramPage is a body-only page of the architecture example with its assets, as floe diagram render

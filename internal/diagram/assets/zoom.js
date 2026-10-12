@@ -3,14 +3,16 @@
 // messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
 function zoomable(messages) {
   const MAX = 4;
-  const lang = document.documentElement.lang || 'en';
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
   const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
   const setup = (wrap) => {
-    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing
-    if (wrap.dataset.zoomable) return;
-    wrap.dataset.zoomable = 'on';
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
     const svg = wrap.querySelector('svg');
-    const [, , W, H] = svg.getAttribute('viewBox').split(' ').map(Number);
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
     // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
     // diagram stays shown when the frame resizes
     let s = 1, cx = W / 2, cy = H / 2, fitted = true;
@@ -66,7 +68,8 @@ function zoomable(messages) {
       cx += dx / s - dx / ns;
       cy += dy / s - dy / ns;
       s = ns;
-      fitted = false;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
       render();
     };
 
@@ -84,7 +87,8 @@ function zoomable(messages) {
     wrap.addEventListener('wheel', (e) => {
       if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
-      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
       zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
     }, { passive: false });
 
@@ -111,7 +115,20 @@ function zoomable(messages) {
       if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
       else render();
     });
-    for (const type of ['pointerup', 'pointercancel']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: the arrow keys move a zoomed diagram by 40 screen px
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
     // The first resize notice comes just before painting, so settle the state once now for code
     // (tests) that reads it without waiting for a paint
     render();
