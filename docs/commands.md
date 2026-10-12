@@ -147,6 +147,7 @@ Keep an icon set in `$FLOE_ICONS_DIR/<set>` for the `icon` parts of diagrams. fl
 - Without a zip, the set's package is found on its official page and downloaded. A zip downloaded in a browser, or its URL, can be given instead; a relative path is resolved against the working directory.
 - A version already there is kept. `--force` fetches it again.
 - The icons are replaced as a whole: if that fails, the previous ones stay.
+- A download gives up when no response comes in 30 seconds or no data for 60 seconds; a slow one that keeps going is let finish. A package over 256MB, or an icon in it over 1MB, is refused.
 
 | Flag | Description |
 |---|---|
