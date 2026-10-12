@@ -25,6 +25,9 @@ func TestDiagramRender(t *testing.T) {
 		"floe: shape.yaml:6:5: dot: give cy\n"+
 			"layout.yaml:1:1: diagram id \"a\" is already used in a.yaml:1; give each diagram its own id\n"+
 			"layout.yaml:6:5: dot at 0,25 sticks out of the 100x50 canvas\n")
+	want(t, "mistakes in the order of the files", e.run(t, "specs", "diagram", "render", "layout.yaml", "shape.yaml"), 1, "",
+		"floe: layout.yaml:6:5: dot at 0,25 sticks out of the 100x50 canvas\n"+
+			"shape.yaml:6:5: dot: give cy\n")
 	want(t, "render a missing file", e.run(t, "specs", "diagram", "render", "a.yaml", "nope.yaml"), 1, "",
 		"floe: cannot read nope.yaml (no such file or directory)")
 	want(t, "render nothing", e.run(t, "", "diagram", "render"), 2, "", "floe: requires at least 1 arg(s)")

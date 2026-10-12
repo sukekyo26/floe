@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"cmp"
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -59,6 +61,9 @@ func (a *app) render(files []string) error {
 			problems = append(problems, mistake)
 			continue
 		}
+		if err != nil {
+			return err //nolint:wrapcheck // already says what failed
+		}
 		specs = append(specs, s)
 	}
 	out, err := diagram.Render(specs)
@@ -67,6 +72,14 @@ func (a *app) render(files []string) error {
 		problems = append(problems, more...)
 	}
 	if len(problems) > 0 {
+		// The mistakes of each file together, in the order the files were given.
+		order := map[string]int{}
+		for i, f := range files {
+			if _, ok := order[f]; !ok {
+				order[f] = i
+			}
+		}
+		slices.SortStableFunc(problems, func(x, y *diagram.Error) int { return cmp.Compare(order[x.File], order[y.File]) })
 		return problems
 	}
 	a.out("%s", out)
