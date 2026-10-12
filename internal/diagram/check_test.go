@@ -125,12 +125,13 @@ func TestCheck(t *testing.T) {
 			want: []string{`s.yaml:7:5: edge "M50,125 V150" runs through the heading of frame "Heading" (line 6)`},
 		},
 		{
-			// the heading of a frame with an icon starts right of the icon
+			// the heading of a frame with an icon starts right of the icon, and edges may not cross the icon
 			name: "heading beside a frame icon",
 			parts: `  - frame: { x: 20, y: 120, w: 200, h: 60, label: Heading, icon: aws/group/region }
-  - edge: { d: "M50,125 V150", end: none }
+  - edge: { d: "M56,125 V150", end: none }
+  - edge: { d: "M30,125 V150", end: none }
 `,
-			want: nil,
+			want: []string{`s.yaml:8:5: edge "M30,125 V150" runs through the icon of frame "Heading" (line 6)`},
 		},
 		{
 			name: "icons not there",

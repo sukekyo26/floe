@@ -152,12 +152,12 @@ func (l *layout) addFrame(f Frame) {
 	}
 	var corner markup
 	if f.Icon != "" {
+		cls += " grouped"
+		// Edges may not cross the icon, as they may not cross the heading.
+		l.heads = append(l.heads, rect{f.X, f.Y, 31, 31, usererr.New("diagram_what_frame_icon", f.Label), f.Pos})
 		// The frame's line (1.2 wide) is centred on its edge, so the icon moved out by 1 covers its
 		// outer half (0.6) too.
 		corner = l.image(f.Pos, f.Icon, f.X-1, f.Y-1, 32, what)
-	}
-	if corner != "" {
-		cls += " grouped"
 	}
 	box := svgf(`<g class="%v"><rect x="%v" y="%v" width="%v" height="%v" rx="%v"/>`, cls, f.X, f.Y, f.W, f.H, rx)
 	head := svgf(`<text x="%v" y="%v" text-anchor="start">%v</text></g>`, hx, hy, f.Label)

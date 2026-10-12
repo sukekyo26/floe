@@ -198,6 +198,7 @@ var messagesJA = map[string]string{
 	"diagram_edge_no_at":       "edge「%s」に label がありますが at: [x, y] がありません",
 	"diagram_what_frame":       "frame「%s」",
 	"diagram_what_heading":     "frame「%s」の見出し",
+	"diagram_what_frame_icon":  "frame「%s」のアイコン",
 	"diagram_what_box":         "box「%s」",
 	"diagram_what_table":       "table「%s」",
 	"diagram_what_icon":        "icon「%s」",

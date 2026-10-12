@@ -199,6 +199,7 @@ var messagesEN = map[string]string{
 	"diagram_edge_no_at":       `edge "%s" has a label but no at: [x, y]`,
 	"diagram_what_frame":       `frame "%s"`,
 	"diagram_what_heading":     `the heading of frame "%s"`,
+	"diagram_what_frame_icon":  `the icon of frame "%s"`,
 	"diagram_what_box":         `box "%s"`,
 	"diagram_what_table":       `table "%s"`,
 	"diagram_what_icon":        `icon "%s"`,
