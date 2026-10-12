@@ -8,8 +8,9 @@ floe serves it at `http://127.0.0.1:7325` with live reload and a management UI.
 Diagrams are drawn as inline SVG from a declarative spec and checked for
 overflow, overlaps and crossing edges before they render.
 
-> **Status:** under construction. Publishing and serving pages work; the
-> templates and diagrams described above are planned and not there yet.
+> **Status:** under construction. Publishing and serving pages and drawing
+> diagrams (`floe diagram render`) work; icons in diagrams and the templates
+> described above are planned and not there yet.
 
 ## Install
 
