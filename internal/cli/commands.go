@@ -78,6 +78,9 @@ for another file is refused unless --force.`,
 				opts.Description = &description
 			}
 			if flags.Changed("lang") {
+				if err := checkLang(lang); err != nil {
+					return err
+				}
 				opts.Lang = &lang
 			}
 			return a.publish(cmd.Context(), args[0], opts)

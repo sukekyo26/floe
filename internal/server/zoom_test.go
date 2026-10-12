@@ -36,7 +36,7 @@ func uiZoom(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b := newBrowser(t, e.base, lang)
 	// A frame without a diagram comes first: it must not keep the diagram after it from its toolbar. The
 	// tag is in upper case, which the toolbar matches as floe does.
-	page := `<div class="dg-wrap"></div>` + "\n" + diagramPage(t)
+	page := `<div class="dg-wrap"></div>` + "\n" + diagramPage(t, lang)
 	slug, l := "diagram", strings.ToUpper(string(lang))
 	e.publish(t, e.write(t, "diagram.html", page), store.Options{Slug: &slug, Lang: &l})
 	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 1000, Height: 800, DeviceScaleFactor: 1}
@@ -141,12 +141,12 @@ func uiZoom(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	check(t, "zoom", out, "true|true|125 true|true|true|true|true|true|1|true")
 }
 
-// diagramPage is a body-only page of the architecture example with its assets, as floe diagram render
-// prints it.
-func diagramPage(t *testing.T) string {
+// diagramPage is a body-only page of the architecture example in lang with its assets, as floe diagram
+// render prints it.
+func diagramPage(t *testing.T, lang i18n.Lang) string {
 	t.Helper()
 
-	examples, err := diagram.Examples()
+	examples, err := diagram.Examples(lang)
 	if err != nil {
 		t.Fatal(err)
 	}

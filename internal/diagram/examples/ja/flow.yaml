@@ -1,0 +1,53 @@
+# 判定フロー: floe publish の検査。本流を縦一列に通し、拒否は右へ出して理由を書き、判定を飛ばす経路は
+# 左を迂回させる。
+#
+# 格子: 本流の中心 x = 300、段の中心 y = 40 + 76n（箱の高さ 52、段の間 24）。理由の札は x = 540 から。
+# 本流へ進む答えは、線の右にラベルで添える。
+id: flow
+width: 860
+height: 916
+title: "floe publish の検査"
+parts:
+  - box: { x: 200, y: 20, w: 200, h: 40, tone: "accent", shape: "pill", rows: [["floe publish <file>", "main code"]] }
+  - box: { x: 130, y: 90, w: 340, h: 52, shape: "hex", rows: ["--link で登録するか"] }
+  - box: { x: 130, y: 166, w: 340, h: 52, rows: ["symlink を実体のパスに解決"] }
+  - box: { x: 130, y: 242, w: 340, h: 52, shape: "hex", rows: [".html / .htm の通常ファイルか"] }
+  - box: { x: 130, y: 318, w: 340, h: 52, shape: "hex", rows: ["home 直下の隠しディレクトリの中か"] }
+  - box: { x: 130, y: 394, w: 340, h: 52, shape: "hex", rows: ["/ か home の直下にあるか"] }
+  - box: { x: 130, y: 470, w: 340, h: 52, shape: "hex", rows: ["slug は英小文字・数字・ハイフンか"] }
+  - box: { x: 130, y: 546, w: 340, h: 52, shape: "hex", rows: ["slug が別の種類で使われているか"] }
+  - box: { x: 130, y: 622, w: 340, h: 52, shape: "hex", rows: ["別の持ち主で --force なしか"] }
+  - box: { x: 130, y: 698, w: 340, h: 52, rows: ["サーバーを確かめ、必要なら起動"] }
+  - box: { x: 130, y: 774, w: 340, h: 52, rows: ["保存（ページは雛形で包む）", "リンクは meta.json だけ"] }
+  - box: { x: 200, y: 856, w: 200, h: 40, tone: "good", shape: "pill", rows: ["URL を出力"] }
+  - edge: { d: "M300,60 V90" }
+  - edge: { d: "M300,142 V166" }
+  - label: { text: "はい", x: 312, y: 154, anchor: "start" }
+  - edge: { d: "M300,218 V242" }
+  - edge: { d: "M300,294 V318" }
+  - label: { text: "はい", x: 312, y: 306, anchor: "start" }
+  - edge: { d: "M300,370 V394" }
+  - label: { text: "いいえ", x: 312, y: 382, anchor: "start" }
+  - edge: { d: "M300,446 V470" }
+  - label: { text: "いいえ", x: 312, y: 458, anchor: "start" }
+  - edge: { d: "M300,522 V546" }
+  - label: { text: "はい", x: 312, y: 534, anchor: "start" }
+  - edge: { d: "M300,598 V622" }
+  - label: { text: "いいえ", x: 312, y: 610, anchor: "start" }
+  - edge: { d: "M300,674 V698" }
+  - label: { text: "いいえ", x: 312, y: 686, anchor: "start" }
+  - edge: { d: "M300,750 V774" }
+  - edge: { d: "M300,826 V856" }
+  - edge: { d: "M130,116 H90 V496 H130", label: "いいえ", at: [98, 102] }
+  - box: { x: 540, y: 250, w: 300, h: 36, tone: "bad", shape: "pill", rows: [["HTML ファイルではない", "sub"]] }
+  - edge: { d: "M470,268 H540", label: "いいえ", at: [505, 254] }
+  - box: { x: 540, y: 326, w: 300, h: 36, tone: "bad", shape: "pill", rows: [["設定や鍵の置き場は公開しない", "sub"]] }
+  - edge: { d: "M470,344 H540", label: "はい", at: [505, 330] }
+  - box: { x: 540, y: 402, w: 300, h: 36, tone: "bad", shape: "pill", rows: [["ディレクトリ全体が公開されてしまう", "sub"]] }
+  - edge: { d: "M470,420 H540", label: "はい", at: [505, 406] }
+  - box: { x: 540, y: 478, w: 300, h: 36, tone: "bad", shape: "pill", rows: [["URL 名に使えない文字がある", "sub"]] }
+  - edge: { d: "M470,496 H540", label: "いいえ", at: [505, 482] }
+  - box: { x: 540, y: 554, w: 300, h: 36, tone: "bad", shape: "pill", rows: [["先に rm するか別の slug にする", "sub"]] }
+  - edge: { d: "M470,572 H540", label: "はい", at: [505, 558] }
+  - box: { x: 540, y: 630, w: 300, h: 36, tone: "bad", shape: "pill", rows: [["別の slug にするか --force を付ける", "sub"]] }
+  - edge: { d: "M470,648 H540", label: "はい", at: [505, 634] }

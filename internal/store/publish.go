@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/link"
 	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/project"
@@ -19,7 +20,6 @@ import (
 
 var (
 	indexRe    = regexp.MustCompile(`(?i)^index\.html?$`)
-	langRe     = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8})*$`)
 	nonSlugRe  = regexp.MustCompile(`[^a-z0-9]+`)
 	maxSlugLen = 64
 )
@@ -94,8 +94,8 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	if err != nil {
 		return nil, err
 	}
-	if opts.Lang != nil && !langRe.MatchString(*opts.Lang) {
-		return nil, usererr.New("store_invalid_lang", *opts.Lang)
+	if opts.Lang != nil && !i18n.IsTag(*opts.Lang) {
+		return nil, usererr.New("lang_invalid", *opts.Lang)
 	}
 	prev := s.ReadMeta(slug)
 	dir := cwd

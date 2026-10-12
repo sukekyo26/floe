@@ -569,6 +569,6 @@ func TestPublishLang(t *testing.T) {
 	}
 	for _, bad := range []string{"", "x", "ja_JP", "en-", `ja"><script>`} {
 		_, err := e.publish(t, frag, store.Options{Lang: ptr(bad)}, "other")
-		wantUserErr(t, err, "store_invalid_lang", bad)
+		wantUserErr(t, err, "lang_invalid", bad)
 	}
 }

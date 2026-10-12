@@ -1,0 +1,36 @@
+# シーケンス図: floe publish から開いているタブの再読み込みまで。参加者を等間隔の列に並べ、時間を上から
+# 下へ流す。応答は破線、ラベルは線の上。場面の切り替わりは区切り線とラベルで示す。
+#
+# 格子: 列の間隔 260、メッセージは 40 刻み。ラベルは線の 14 上。帯（raw）はサーバーが版を比べ続ける区間で、
+# サーバーへのメッセージは帯の縁で止める。
+id: seq
+width: 1040
+height: 700
+title: "floe publish から再読み込みまで"
+parts:
+  - box: { x: 15, y: 12, w: 230, h: 52, tone: "accent", rows: ["エージェント", ["floe publish", "sub code"]] }
+  - line: { x1: 130, y1: 64, x2: 130, y2: 688, kind: "lifeline" }
+  - box: { x: 275, y: 12, w: 230, h: 52, tone: "accent", rows: ["保存先", ["~/.local/share/floe", "sub code"]] }
+  - line: { x1: 390, y1: 64, x2: 390, y2: 688, kind: "lifeline" }
+  - box: { x: 535, y: 12, w: 230, h: 52, tone: "accent", rows: ["サーバー", ["floe serve", "sub code"]] }
+  - line: { x1: 650, y1: 64, x2: 650, y2: 688, kind: "lifeline" }
+  - box: { x: 795, y: 12, w: 230, h: 52, tone: "accent", rows: ["ブラウザ", ["ページのタブ", "sub"]] }
+  - line: { x1: 910, y1: 64, x2: 910, y2: 688, kind: "lifeline" }
+  - raw: { svg: "<rect x=\"644\" y=\"420\" width=\"12\" height=\"190\" class=\"band\"/>" }
+  - edge: { d: "M130,104 H650", label: "GET /api/health", at: [390, 90] }
+  - edge: { d: "M130,144 H650", label: "止まっていれば floe serve を起動", at: [390, 130] }
+  - edge: { d: "M650,184 H130", dashed: true, label: "health が応答するまで待つ", at: [390, 170] }
+  - edge: { d: "M130,224 H390", label: "index.html・meta.json を書く", at: [260, 210] }
+  - edge: { d: "M130,264 H910", label: "新しい slug ならブラウザで開く", at: [520, 250] }
+  - edge: { d: "M910,304 H650", label: "GET /a/<slug>/?raw", at: [780, 290] }
+  - edge: { d: "M650,344 H390", label: "読む", at: [520, 330] }
+  - edge: { d: "M650,384 H910", dashed: true, label: "HTML + 再読み込みスクリプト", at: [780, 370] }
+  - edge: { d: "M910,424 H656", label: "EventSource ?since=版", at: [780, 410] }
+  - label: { text: "1 秒ごとに版を比べる", x: 664, y: 470, anchor: "start" }
+  - line: { x1: 16, y1: 500, x2: 1024, y2: 500, kind: "divider" }
+  - label: { text: "同じ slug で公開し直す", x: 520, y: 500 }
+  - edge: { d: "M130,544 H390", label: "書き直す（updatedAt が進む）", at: [260, 530] }
+  - edge: { d: "M644,584 H390", label: "stat で新しい版を見つける", at: [520, 570] }
+  - edge: { d: "M650,624 H910", dashed: true, label: "event: reload", at: [780, 610] }
+  # 自分へのメッセージは右へ張り出す小さな折れ線
+  - edge: { d: "M910,648 H950 V676 H910", label: "location.reload()", at: [892, 662] }

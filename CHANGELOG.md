@@ -17,7 +17,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   pinch, drag, arrow keys) worded in the page's language; `--no-assets` leaves them out.
 - Add `floe diagram example [kind]`, which lists the built-in example specs
   (architecture, class, ER, flow, Git, sequence, state, timeline, Venn) or
-  prints one to copy.
+  prints one to copy. The examples come in English and Japanese and follow the
+  language of messages; `--lang` picks another.
 - Add `floe publish <file>`, which stores an HTML page and prints its URL on
   `http://127.0.0.1:7325`. It starts the server in the background when needed,
   opens a new page in the browser and wraps body-only HTML in the built-in

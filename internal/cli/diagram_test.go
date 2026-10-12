@@ -56,6 +56,22 @@ func TestDiagramExample(t *testing.T) {
 	if r := e.run(t, "", "diagram", "render", "venn.yaml"); r.code != 0 {
 		t.Errorf("render of the venn example = %+v", r)
 	}
+	e.vars["FLOE_LANG"] = "ja"
+	if r := e.run(t, "", "diagram", "example"); r.code != 0 || !strings.HasPrefix(r.stdout, "architecture\t構成図: ") {
+		t.Errorf("example in Japanese = %+v, want the Japanese summaries", r)
+	}
+	if r := e.run(t, "", "diagram", "example", "venn", "--lang", "en"); r.code != 0 || !strings.HasPrefix(r.stdout, "# Venn diagram: ") {
+		t.Errorf("example venn --lang en = %+v, want the English spec", r)
+	}
+	delete(e.vars, "FLOE_LANG")
+	if r := e.run(t, "", "diagram", "example", "venn", "--lang", "ja"); r.code != 0 || !strings.HasPrefix(r.stdout, "# ベン図: ") {
+		t.Errorf("example venn --lang ja = %+v, want the Japanese spec", r)
+	}
+	if r := e.run(t, "", "diagram", "example", "venn", "--lang", "pt-BR"); r.code != 0 || !strings.HasPrefix(r.stdout, "# Venn diagram: ") {
+		t.Errorf("example venn --lang pt-BR = %+v, want the English spec", r)
+	}
+	want(t, "an invalid language", e.run(t, "", "diagram", "example", "--lang", "ja_JP"), 2, "",
+		`floe: invalid language "ja_JP": give --lang a BCP 47 tag such as en, ja or pt-BR`)
 	want(t, "an unknown example", e.run(t, "", "diagram", "example", "pie"), 2, "",
 		`floe: unknown example "pie"; use architecture, class, er, flow, git, sequence, state, timeline, venn`)
 }
