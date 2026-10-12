@@ -5,6 +5,9 @@ func init() {
 }
 
 var messagesJA = map[string]string{
+	// 共通
+	"file_cannot_read": "%s を読めません（%s）。パスとファイルがあるかを確かめてください",
+
 	// link
 	"link_not_real":        "%s は絶対パスの実パス（symlink を解決して正規化したパス）ではないので、登録できるかを確かめられません",
 	"link_not_html":        "%s は通常の HTML ファイル（.html / .htm）ではないので、登録できません",
@@ -14,7 +17,6 @@ var messagesJA = map[string]string{
 
 	// store
 	"store_invalid_lang":  "言語「%s」は使えません。--lang には en・ja・pt-BR のような BCP 47 の言語タグを指定してください",
-	"file_cannot_read":    "%s を読めません（%s）。パスとファイルがあるかを確かめてください",
 	"store_invalid_slug":  "URL 名「%s」は使えません。英小文字・数字・ハイフンで入力してください",
 	"store_slug_is_page":  "URL 名「%[1]s」は保存したページで使われています。別の URL 名にするか、先にそれを消してください（floe rm %[1]s）",
 	"store_slug_is_link":  "URL 名「%[1]s」はリンクで使われています。別の URL 名にするか、先にそれを消してください（floe rm %[1]s）",

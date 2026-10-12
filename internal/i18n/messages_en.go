@@ -6,6 +6,9 @@ func init() {
 
 // messagesEN is the reference catalog: every other language has exactly its keys.
 var messagesEN = map[string]string{
+	// shared: mistakes more than one command makes
+	"file_cannot_read": "cannot read %s (%s); check the path and that the file exists",
+
 	// link: which files may be linked
 	"link_not_real":        "%s is not its absolute real path; pass it through filepath.Abs and filepath.EvalSymlinks (symlinks resolved, path cleaned) first",
 	"link_not_html":        "%s is not a regular .html or .htm file; only HTML files can be linked",
@@ -15,7 +18,6 @@ var messagesEN = map[string]string{
 
 	// store: publishing and editing pages
 	"store_invalid_lang":  `invalid language "%s": give --lang a BCP 47 tag such as en, ja or pt-BR`,
-	"file_cannot_read":    "cannot read %s (%s); check the path and that the file exists",
 	"store_invalid_slug":  `invalid slug "%s": use only lowercase letters, digits and hyphens`,
 	"store_slug_is_page":  `slug "%[1]s" is used by a stored page; choose another slug, or remove that page first (floe rm %[1]s)`,
 	"store_slug_is_link":  `slug "%[1]s" is used by a linked file; choose another slug, or remove that link first (floe rm %[1]s)`,
