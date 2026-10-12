@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
@@ -162,9 +164,12 @@ var (
 	rowStyles   = []string{"main", "sub", "main code", "sub code"}
 	textAnchors = []string{"middle", "start", "end"}
 	lineKinds   = []string{"line", "lifeline", "divider"}
-	// Tokens of an edge's d as diagram.mjs splits them; anything else (commas, spaces) separates.
-	pathTokenRe = regexp.MustCompile(`[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?`)
+	// A number of SVG path data: a sign, digits with or without a point, and an exponent.
+	pathNumberRe = regexp.MustCompile(`^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?`)
 )
+
+// pathSpace is the white space of SVG path data.
+const pathSpace = " \t\r\n\f"
 
 type decoder struct {
 	kind   string
@@ -386,47 +391,39 @@ func decodeEdge(f *fields) Part {
 	return e
 }
 
-// segments splits d into straight runs, as diagram.mjs does: only the absolute M, H, V and L.
+// segments splits d into straight runs. It reads the grammar of SVG path data for the absolute M, H, V
+// and L only: a browser stops drawing at the first character the grammar does not allow, and the
+// checks must read only what is drawn.
 func segments(d string) ([][4]float64, *usererr.Error) {
-	// A browser stops drawing a path at the first character it cannot read, so the checks would read
-	// runs that are never drawn. Only the tokens, spaces and commas are taken.
-	if rest := strings.Trim(pathTokenRe.ReplaceAllString(d, " "), " ,\t\r\n"); rest != "" {
-		return nil, usererr.New("diagram_edge_char", d, string([]rune(rest)[0]))
-	}
-	tokens := pathTokenRe.FindAllString(d, -1)
 	var segs [][4]float64
 	var x, y float64
 	started := false
-	for i := 0; i < len(tokens); {
-		cmd := tokens[i]
-		i++
-		num := func() (float64, *usererr.Error) {
-			if i >= len(tokens) {
-				return 0, usererr.New("diagram_edge_number", d, cmd)
-			}
-			v, err := strconv.ParseFloat(tokens[i], 64)
-			i++
-			if err != nil {
-				return 0, usererr.New("diagram_edge_number", d, cmd)
-			}
-			return v, nil
-		}
-		nx, ny := x, y
-		var err *usererr.Error
-		switch cmd {
-		case "M", "L":
-			if nx, err = num(); err == nil {
-				ny, err = num()
-			}
-		case "H":
-			nx, err = num()
-		case "V":
-			ny, err = num()
-		default:
+	rest := strings.TrimLeft(d, pathSpace)
+	for rest != "" {
+		r, size := utf8.DecodeRuneInString(rest)
+		cmd := string(r)
+		switch {
+		case strings.ContainsRune("MHVL", r):
+		case r < utf8.RuneSelf && unicode.IsLetter(r):
 			return nil, usererr.New("diagram_edge_command", d, cmd)
+		default:
+			return nil, usererr.New("diagram_edge_char", d, cmd)
 		}
-		if err != nil {
-			return nil, err
+		n := 2
+		if cmd == "H" || cmd == "V" {
+			n = 1
+		}
+		v, after, ok := pathNumbers(rest[size:], n)
+		if !ok {
+			return nil, usererr.New("diagram_edge_number", d, cmd)
+		}
+		rest = after
+		nx, ny := v[0], v[1]
+		switch cmd {
+		case "H":
+			ny = y
+		case "V":
+			nx, ny = x, v[0]
 		}
 		if cmd != "M" {
 			if !started {
@@ -437,6 +434,24 @@ func segments(d string) ([][4]float64, *usererr.Error) {
 		x, y, started = nx, ny, true
 	}
 	return segs, nil
+}
+
+// pathNumbers reads the n numbers after a command, separated by a comma, spaces or both, and the
+// spaces after them.
+func pathNumbers(s string, n int) (v [2]float64, rest string, ok bool) {
+	rest = strings.TrimLeft(s, pathSpace)
+	for k := range n {
+		if k > 0 {
+			rest = strings.TrimLeft(strings.TrimPrefix(strings.TrimLeft(rest, pathSpace), ","), pathSpace)
+		}
+		m := pathNumberRe.FindString(rest)
+		f, err := strconv.ParseFloat(m, 64)
+		if m == "" || err != nil {
+			return v, rest, false
+		}
+		v[k], rest = f, rest[len(m):]
+	}
+	return v, strings.TrimLeft(rest, pathSpace), true
 }
 
 func decodeDot(f *fields) Part {
