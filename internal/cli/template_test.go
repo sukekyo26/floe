@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/version"
 )
 
 // floe template new copies a template to edit, its example naming the copy; list and show tell of it.
@@ -21,14 +23,15 @@ func TestTemplateCommands(t *testing.T) {
 	if r := e.run(t, "", "template", "new", "spec", "--from", "report"); r.code != 0 || r.stdout != "made the template spec in "+spec+", a copy of report\n" {
 		t.Fatalf("template new = %+v", r)
 	}
+	release := strings.SplitN(version.Version, ".", 3)
 	floe, err := os.ReadFile(filepath.Join(spec, "template.yaml"))
-	if err != nil || string(floe) != "floe: 0.0\n" {
+	if err != nil || string(floe) != "floe: "+release[0]+"."+release[1]+"\n" {
 		t.Errorf("template.yaml = %q, %v", floe, err)
 	}
 	if r := e.run(t, "", "check", filepath.Join(spec, "example.yaml")); r.code != 0 {
 		t.Errorf("check of the copy's example = %+v", r)
 	}
-	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.Contains(r.stdout, "\nspec\t"+spec+"\tdefault\t0.0.0\tA page of sections") {
+	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.Contains(r.stdout, "\nspec\t"+spec+"\tdefault\t"+release[0]+"."+release[1]+".0\tA page of sections") {
 		t.Errorf("template list with a copy = %+v", r)
 	}
 	if fi, serr := os.Stat(spec); serr != nil || fi.Mode().Perm() != 0o755 {
@@ -59,10 +62,29 @@ func TestTemplateCommands(t *testing.T) {
 	}
 	delete(e.vars, "FLOE_LANG")
 
-	// A copy of a template of one's own without template.yaml needs no floe either.
+	// A copy of a template of one's own keeps its template.yaml as written, and names itself.
+	kept := "# kept\nfloe: " + release[0] + "." + release[1] + ".0\n"
+	e.write(t, "templates/spec/template.yaml", kept)
 	if r := e.run(t, "", "template", "new", "spec2", "--from", "spec"); r.code != 0 {
 		t.Fatalf("template new from one's own = %+v", r)
 	}
+	if b, err := os.ReadFile(filepath.Join(e.tmp, "templates", "spec2", "template.yaml")); err != nil || string(b) != kept {
+		t.Errorf("the copy's template.yaml = %q, %v", b, err)
+	}
+	if b, err := os.ReadFile(filepath.Join(e.tmp, "templates", "spec2", "example.yaml")); err != nil || !strings.Contains(string(b), "\ntemplate: spec2\n") {
+		t.Errorf("the copy's example = %s, %v", b, err)
+	}
+
+	// A template.yaml that does not read stops the copy, which leaves nothing at its name.
+	e.write(t, "templates/spec/template.yaml", "floe: x\n")
+	if r := e.run(t, "", "template", "new", "spec4", "--from", "spec"); r.code != 1 || !strings.Contains(r.stderr, "template.yaml:1:7") {
+		t.Errorf("template new from a broken template.yaml = %+v", r)
+	}
+	if _, err := os.Stat(filepath.Join(e.tmp, "templates", "spec4")); !os.IsNotExist(err) {
+		t.Errorf("a failed copy left spec4: %v", err)
+	}
+
+	// A copy of a template of one's own without template.yaml needs no floe either.
 	if err := os.Remove(filepath.Join(e.tmp, "templates", "spec", "template.yaml")); err != nil {
 		t.Fatal(err)
 	}

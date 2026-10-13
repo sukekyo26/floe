@@ -11,7 +11,6 @@ import (
 	"github.com/goccy/go-yaml/ast"
 
 	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/version"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -55,7 +54,11 @@ func (l *Library) New(name, from string) (string, error) {
 		err = os.Chmod(tmp, 0o755) //nolint:gosec // G302: templates are not secret
 	}
 	if err == nil {
+		// os.Rename refuses a directory there, so one made since the check above is not written over.
 		err = os.Rename(tmp, at)
+	}
+	if errors.Is(err, fs.ErrExist) {
+		return "", usererr.New("tmpl_new_exists", name, at)
 	}
 	if err != nil {
 		return "", fmt.Errorf("make the template %s: %w", name, err)
@@ -69,11 +72,14 @@ func (t *Template) copyTo(dir, name string) error {
 		return err
 	}
 	// A built-in template comes with this floe, which a copy of it names; a copy of one of one's own
-	// keeps its template.yaml, or its lack of one.
+	// keeps its template.yaml, or its lack of one, which must read.
+	if _, err := t.needs(); err != nil {
+		return err
+	}
 	if t.Dir == "" {
-		have, ok := versionOf(version.Version)
-		if !ok {
-			return fmt.Errorf("the version of floe %q is not major.minor.patch", version.Version) //nolint:err113 // floe's own
+		have, err := thisFloe()
+		if err != nil {
+			return err
 		}
 		floe := fmt.Sprintf("floe: %d.%d\n", have[0], have[1])
 		//nolint:gosec // G306: templates are not secret
@@ -111,7 +117,11 @@ func renamed(src []byte, name string) []byte {
 	line := []rune(lines[v.Line-1])
 	from := 0
 	if v.Line == k.Line {
-		from = min(k.Column-1+len([]rune("template")), len(line))
+		// After the colon that ends the key, written bare or in quotes.
+		from = len(line)
+		if i := strings.IndexRune(string(line[k.Column-1:]), ':'); i >= 0 {
+			from = k.Column + len([]rune(string(line[k.Column-1:])[:i]))
+		}
 	}
 	head, tail := string(line[:from]), string(line[from:])
 	if i := strings.Index(tail, old); i >= 0 && old != "" {

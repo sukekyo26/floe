@@ -41,6 +41,20 @@ func TestReadOptionalOfATemplateGone(t *testing.T) {
 	}
 }
 
+// This floe's version leaves out what follows its release.
+func TestReleaseOf(t *testing.T) {
+	t.Parallel()
+
+	for s, want := range map[string]semver{"1.2.3": {1, 2, 3}, "1.2.3-rc.1": {1, 2, 3}, "0.4.0+build.5": {0, 4, 0}} {
+		if got, ok := releaseOf(s); !ok || got != want {
+			t.Errorf("releaseOf(%q) = %v, %v", s, got, ok)
+		}
+	}
+	if _, ok := releaseOf("v1.2.3"); ok {
+		t.Error("releaseOf took v1.2.3")
+	}
+}
+
 // The version is read as written: YAML would read 1.10 as the number 1.1.
 func TestNeedsFloe(t *testing.T) {
 	t.Parallel()

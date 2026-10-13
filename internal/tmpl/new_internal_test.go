@@ -18,6 +18,9 @@ func TestRenamed(t *testing.T) {
 		{"template: report   \n", "template: spec   \n"},
 		{"template:   report \t# r\n", "template:   spec \t# r\n"},
 		{"template:\n  report\n", "template:\n  spec\n"},
+		// A key in quotes is not written over.
+		{"\"template\": report\n", "\"template\": spec\n"},
+		{"{'template':report}\n", "{'template':spec}\n"},
 		// A column counts characters, not bytes.
 		{"{a: 日日日日 report, template: report}\n", "{a: 日日日日 report, template: spec}\n"},
 	} {

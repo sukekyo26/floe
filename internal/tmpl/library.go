@@ -252,11 +252,22 @@ func (t *Template) checkVersion() error {
 	if needs == nil || err != nil {
 		return err
 	}
-	have, ok := versionOf(version.Version)
-	if !ok {
-		return fmt.Errorf("the version of floe %q is not major.minor.patch", version.Version) //nolint:err113 // floe's own
+	have, err := thisFloe()
+	if err != nil {
+		return err
 	}
 	return fits(t.Name, *needs, have)
+}
+
+// thisFloe is the version of this floe, a pre-release or build after it (1.2.3-rc.1) left out: a
+// template written for 1.2.3 is drawn by its release candidates too.
+func thisFloe() (semver, error) {
+	v, ok := releaseOf(version.Version)
+	if !ok {
+		//nolint:err113 // floe's own version, set when it is built
+		return v, fmt.Errorf("the version of this floe %q is not a version like 1.2.3", version.Version)
+	}
+	return v, nil
 }
 
 // needs returns the floe t needs, or nil when it names none.
@@ -316,6 +327,13 @@ func needsFloe(file string, src []byte) (semver, error) {
 		return semver{}, yamlpos.New(file, yamlpos.Of(body), "tmpl_template_yaml")
 	}
 	return *needs, nil
+}
+
+// releaseOf reads the version s, a pre-release or build after it left out.
+func releaseOf(s string) (semver, bool) {
+	core, _, _ := strings.Cut(s, "-")
+	core, _, _ = strings.Cut(core, "+")
+	return versionOf(core)
 }
 
 // semver is a version: major, minor and patch.
