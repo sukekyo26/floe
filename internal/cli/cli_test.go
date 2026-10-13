@@ -313,7 +313,7 @@ func TestPublish(t *testing.T) {
 
 	before := e.run(t, "", "list").stdout
 	want(t, "a blank --title", e.run(t, "repo", "publish", demo, "--title", " "), 2, "",
-		"floe: --title is empty: give the page a name, or omit --title to take the data file's title:")
+		"floe: --title is empty: give the page a name, or omit --title to take the data file's title:, or a link's <title> or <h1>")
 	if after := e.run(t, "", "list").stdout; after != before {
 		t.Errorf("a blank --title changed the list from %q to %q", before, after)
 	}
