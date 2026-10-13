@@ -45,14 +45,30 @@ func (l *Library) Names() []string {
 			names = append(names, e.Name())
 		}
 	}
-	if entries, err := os.ReadDir(l.dir); l.dir != "" && err == nil {
-		for _, e := range entries {
-			if t, err := l.own(e.Name()); err == nil && t != nil && !slices.Contains(names, e.Name()) {
-				names = append(names, e.Name())
-			}
+	for _, name := range l.ownNames() {
+		if !slices.Contains(names, name) {
+			names = append(names, name)
 		}
 	}
 	slices.Sort(names)
+	return names
+}
+
+// ownNames are the templates of one's own, by name: none without a directory of them.
+func (l *Library) ownNames() []string {
+	if l.dir == "" {
+		return nil
+	}
+	entries, err := os.ReadDir(l.dir)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	for _, e := range entries {
+		if t, err := l.own(e.Name()); err == nil && t != nil {
+			names = append(names, e.Name())
+		}
+	}
 	return names
 }
 
@@ -138,14 +154,14 @@ func (t *Template) themes() ([]string, error) {
 	return themes, nil
 }
 
-// files gives use the files of t, as a file system rooted at t.
-func (t *Template) files(use func(fs.FS) error) error {
+// files calls read with the files of t, as a file system rooted at t.
+func (t *Template) files(read func(fs.FS) error) error {
 	if t.Dir == "" {
 		sub, err := fs.Sub(builtin, path.Join("builtin", t.Name))
 		if err != nil {
 			return fmt.Errorf("open the template %s: %w", t.Name, err)
 		}
-		return use(sub)
+		return read(sub)
 	}
 	// os.Root refuses a path, a symlink included, that leads out of the template.
 	root, err := os.OpenRoot(t.Dir)
@@ -153,7 +169,7 @@ func (t *Template) files(use func(fs.FS) error) error {
 		return fmt.Errorf("open the template %s: %w", t.Name, err)
 	}
 	defer root.Close()
-	return use(root.FS())
+	return read(root.FS())
 }
 
 // checkVersion refuses t when the floe it needs is not this one: template.yaml's floe: 1.2 takes a

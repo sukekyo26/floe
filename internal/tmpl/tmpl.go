@@ -107,9 +107,9 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	return d, nil
 }
 
-// pickTheme sets the theme of d: theme when given, which t must have, else the data's, reported at at
-// when t does not have it.
-func pickTheme(t *Template, d *Data, theme string, at yamlpos.Pos) (yamlpos.Problems, error) {
+// pickTheme sets the theme of d: theme when given, which t must have, else the data's, reported at
+// pos, where the data names it, when t does not have it.
+func pickTheme(t *Template, d *Data, theme string, pos yamlpos.Pos) (yamlpos.Problems, error) {
 	themes, err := t.themes()
 	if err != nil {
 		return nil, err
@@ -120,7 +120,7 @@ func pickTheme(t *Template, d *Data, theme string, at yamlpos.Pos) (yamlpos.Prob
 	case theme != "":
 		d.Theme = theme
 	case !slices.Contains(themes, d.Theme):
-		e := yamlpos.New(d.File, at, "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
+		e := yamlpos.New(d.File, pos, "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
 		return yamlpos.Problems{e}, nil
 	}
 	return nil, nil
