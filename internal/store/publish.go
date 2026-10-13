@@ -124,7 +124,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	}
 	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Page: nil, Prev: prev}
 	if data != nil {
-		e.Meta.Template, e.Meta.Theme, e.Meta.DataTitle = data.Template, data.Theme, data.Title
+		e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
 		if e.Page, err = data.Render(e.Meta.Title, e.Meta.Lang); err != nil {
 			return nil, err //nolint:wrapcheck // a usererr for the caller to show
 		}
@@ -185,7 +185,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Lang:          base.Lang,
 		Template:      "",
 		Theme:         "",
-		DataTitle:     "",
+		DataTitle:     own,
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",
@@ -276,7 +276,8 @@ func title(opts Options, path string, keepTitle bool, base *Meta, own, slug stri
 	case path != "" || keepTitle:
 		return base.Title
 	default:
-		return cmp.Or(own, base.Title, slug)
+		// As clearing the title on the management page does: the data file's title:, else the slug.
+		return cmp.Or(own, slug)
 	}
 }
 

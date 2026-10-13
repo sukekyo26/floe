@@ -169,6 +169,12 @@ func TestPublishNeedsDataFile(t *testing.T) {
 	if m := e.meta(t, "untitled"); m.Title != "untitled" || !strings.Contains(e.read(t, "store/untitled/index.html"), "<h1>untitled</h1>") {
 		t.Errorf("a data file without a title: is titled %q", m.Title)
 	}
+	// Removing title: from the data file gives the slug back, as clearing the title does.
+	e.mustPublish(t, e.page(t, "untitled.yaml", "Once"), store.Options{}, "proj")
+	e.mustPublish(t, e.page(t, "untitled.yaml", ""), store.Options{}, "proj")
+	if m := e.meta(t, "untitled"); m.Title != "untitled" || m.DataTitle != "" {
+		t.Errorf("a data file whose title: is removed: %+v", m)
+	}
 }
 
 func TestPublishNames(t *testing.T) {
