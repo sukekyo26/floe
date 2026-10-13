@@ -74,7 +74,7 @@ Relations between items that a schema cannot say, each checked on every item of 
 orders.yaml:13:12: access_patterns[0].key: use an attribute as the key ("user_id")
 ```
 
-The paths of `for` and `field` must be declared in `schema.json`, through `properties` and `items`: a misspelt one would find nothing in the data to check. `floe template check` makes sure they are, except for a path through `$ref`, `anyOf` and the like, or through an item of any value, which may be declared there. A mistake in `checks.yaml` itself is reported at its line and column there; like a data file, it takes no anchors, aliases or tags.
+The paths of `for` and `field` must be declared in `schema.json`, through `properties` and `items`: a misspelt one would find nothing in the data to check. `floe template check` refuses a path where a schema without its key refuses other keys (`"additionalProperties": false`, or a `type` other than `object`), and a `for` whose `type` is not `array`; a path a schema may take otherwise (through `$ref`, `anyOf`, or other keys it allows) passes. A mistake in `checks.yaml` itself is reported at its line and column there; like a data file, it takes no anchors, aliases or tags.
 
 ## computed.yaml
 
