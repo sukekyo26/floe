@@ -90,7 +90,7 @@ func TestDiagramIcons(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = os.WriteFile(index, []byte(strings.Replace(string(b), `"aws-lambda"`, `"aws-lambda-gone"`, 1)), 0o600); err != nil {
+	if err = os.WriteFile(index, []byte(strings.Replace(string(b), `"aws-lambda"`, `"aws-lambda-gone"`, 1)), 0o600); err != nil { //nolint:gosec // G703: the test's own directory
 		t.Fatal(err)
 	}
 	if _, err = l.Read("data.yaml", []byte(src), "", ""); err == nil || !strings.Contains(err.Error(), `"aws/aws-lambda"`) {
