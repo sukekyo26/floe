@@ -12,6 +12,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
+	"github.com/goccy/go-yaml/token"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -80,25 +81,63 @@ func Parse(file string, src []byte, documents string) (ast.Node, error) {
 	if err != nil {
 		return nil, Syntax(file, err)
 	}
-	// A directive (%YAML) heads the document after it, and --- at the end starts none.
-	var docs []*ast.DocumentNode
+	var body ast.Node
+	var head *Pos // a directive (%YAML) heads the document after it
 	for _, d := range doc.Docs {
-		if _, directive := d.Body.(*ast.DirectiveNode); d.Body != nil && !directive {
-			docs = append(docs, d)
+		switch b := d.Body.(type) {
+		case *ast.DirectiveNode:
+			at := Of(b)
+			head = &at
+			continue
+		case nil:
+			// An empty document: --- at the end, or one goccy/go-yaml left empty after a second ---,
+			// dropping what followed.
+			if d.Start != nil {
+				if at, ok := dropped(src, d.Start.Position); ok {
+					return nil, New(file, at, documents)
+				}
+			}
+			continue
 		}
+		if body != nil {
+			at := Of(d.Body)
+			switch {
+			case head != nil:
+				at = *head
+			case d.Start != nil:
+				at = Pos{Line: d.Start.Position.Line, Column: d.Start.Position.Column}
+			}
+			return nil, New(file, at, documents)
+		}
+		body, head = d.Body, nil
 	}
-	switch {
-	case len(docs) == 0:
+	if body == nil {
 		return nil, ErrEmpty
-	case len(docs) > 1:
-		// At the --- that starts the second document, or at its body after a ... that ended the first.
-		at := Of(docs[1].Body)
-		if s := docs[1].Start; s != nil {
-			at = Pos{Line: s.Position.Line, Column: s.Position.Column}
-		}
-		return nil, New(file, at, documents)
 	}
-	return docs[0].Body, nil
+	return body, nil
+}
+
+// dropped finds a second --- after the one at start, which goccy/go-yaml reads as an empty document
+// and the text after it lost. ok is false when only blank lines and comments follow start.
+func dropped(src []byte, start *token.Position) (Pos, bool) {
+	lines := strings.Split(string(src), "\n")
+	for n := start.Line; n <= len(lines); n++ {
+		line := lines[n-1]
+		col := 1
+		if n == start.Line {
+			col = start.Column + len("---")
+			if col > len(line)+1 {
+				continue
+			}
+			line = line[col-1:]
+		}
+		text := strings.TrimLeft(line, " \t")
+		if text == "" || strings.HasPrefix(text, "#") {
+			continue
+		}
+		return Pos{Line: n, Column: col + len(line) - len(text)}, true
+	}
+	return Pos{Line: 0, Column: 0}, false
 }
 
 // Error is a mistake in a YAML file, at a line and column of it.
@@ -149,7 +188,7 @@ func (p Problems) Localize(c *i18n.Catalog) string {
 	return strings.Join(lines, "\n")
 }
 
-// FirstAnchor returns the first anchor, alias or tag under n, or nil. Callers refuse them, so that
+// FirstAnchor returns the first anchor, alias, merge key (<<) or tag under n, or nil. Callers refuse them, so that
 // every value is written where its position points.
 func FirstAnchor(n ast.Node) ast.Node {
 	a := &anchors{found: nil}
@@ -166,7 +205,7 @@ func (a *anchors) Visit(n ast.Node) ast.Visitor {
 		return nil
 	}
 	switch n.(type) {
-	case *ast.AnchorNode, *ast.AliasNode, *ast.TagNode:
+	case *ast.AnchorNode, *ast.AliasNode, *ast.TagNode, *ast.MergeKeyNode:
 		a.found = n
 		return nil
 	default:

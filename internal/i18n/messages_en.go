@@ -171,12 +171,14 @@ var messagesEN = map[string]string{
 	"daemon_not_started":    "the server did not start; run \"floe serve\" to see the error",
 	"daemon_other_root":     "the server on port %d serves %s; run \"floe stop\" and publish again",
 
+	// yaml: reading a YAML file (diagram specs and data files)
+	"yaml_syntax":     "this is not valid YAML: %s",
+	"yaml_no_anchors": "anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
+
 	// diagram: reading a diagram spec (kinds and keys such as box and rows are spec names, not words)
 	"diagram_yaml":             "this is not valid YAML: %s",
 	"diagram_documents":        "a spec holds one diagram; put each --- separated document in a file of its own",
 	"diagram_empty":            "the spec is empty; write a diagram with id, width, height, title and parts",
-	"yaml_syntax":              "this is not valid YAML: %s",
-	"yaml_no_anchors":          "anchors, aliases and tags are not supported; write the value out",
 	"diagram_not_mapping":      "%s: write a mapping of keys and values",
 	"diagram_unknown_key":      `%s: unknown key "%s"; use %s`,
 	"diagram_missing_key":      "%s: give %s",

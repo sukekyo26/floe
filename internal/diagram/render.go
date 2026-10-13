@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/icons"
-	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -60,8 +59,7 @@ func Render(specs []*Spec, store *icons.Store) (string, error) {
 	first := map[string]*Spec{}
 	for i, s := range specs {
 		if f, ok := first[s.ID]; ok {
-			err := usererr.New("diagram_id_used", s.ID, f.File, f.Line)
-			problems = append(problems, &yamlpos.Error{File: s.File, Pos: s.Pos, Err: err})
+			problems = append(problems, yamlpos.New(s.File, s.Pos, "diagram_id_used", s.ID, f.File, f.Line))
 		} else {
 			first[s.ID] = s
 		}

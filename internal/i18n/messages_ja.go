@@ -170,12 +170,14 @@ var messagesJA = map[string]string{
 	"daemon_not_started":    "サーバーが起動しませんでした。floe serve を実行してエラーを確かめてください",
 	"daemon_other_root":     "ポート %d のサーバーは %s を配信しています。floe stop を実行してから公開し直してください",
 
+	// yaml
+	"yaml_syntax":     "YAML として読めません: %s",
+	"yaml_no_anchors": "アンカー・エイリアス・マージキー（<<）・タグは使えません。値をそのまま書いてください",
+
 	// diagram
 	"diagram_yaml":             "YAML として読めません: %s",
 	"diagram_documents":        "spec には図を 1 つだけ書きます。--- で区切った文書は、それぞれ別のファイルにしてください",
 	"diagram_empty":            "spec が空です。id・width・height・title・parts を持つ図を書いてください",
-	"yaml_syntax":              "YAML として読めません: %s",
-	"yaml_no_anchors":          "アンカー・エイリアス・タグは使えません。値をそのまま書いてください",
 	"diagram_not_mapping":      "%s: キーと値のマッピングで書いてください",
 	"diagram_unknown_key":      "%s: 知らないキー「%s」です。使えるのは %s です",
 	"diagram_missing_key":      "%s: %s を指定してください",

@@ -111,7 +111,7 @@ func TestParseErrors(t *testing.T) {
 		{"YAML syntax", "id: a\nid: b\n", `s.yaml:2:1: this is not valid YAML: mapping key "id" already defined at [1:1]`},
 		{"empty", "", "s.yaml:1:1: the spec is empty; write a diagram with id, width, height, title and parts"},
 		{"two documents", head + "---\nid: e\n", "s.yaml:6:1: a spec holds one diagram; put each --- separated document in a file of its own"},
-		{"anchor", head + "  - dot: { cx: &x 1, cy: *x }\n", "s.yaml:6:16: anchors, aliases and tags are not supported; write the value out"},
+		{"anchor", head + "  - dot: { cx: &x 1, cy: *x }\n", "s.yaml:6:16: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"},
 		{"not a mapping", "- a\n", "s.yaml:1:1: diagram: write a mapping of keys and values"},
 		{"unknown top key", head + "  []\nwidht: 3\n", `s.yaml:7:1: diagram: unknown key "widht"; use id, width, height, title, parts`},
 		{"missing key", "id: d\nheight: 1\ntitle: T\nparts: []\n", "s.yaml:1:1: diagram: give width"},
