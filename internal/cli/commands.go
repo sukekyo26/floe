@@ -78,6 +78,10 @@ for another file is refused unless --force.`,
 				opts.Description = &description
 			}
 			if flags.Changed("lang") {
+				// A linked file is shown as it is, so nothing would take the language.
+				if opts.Link {
+					return usageError{err: usererr.New("cli_lang_link")}
+				}
 				if err := checkLang(lang); err != nil {
 					return err
 				}
@@ -91,7 +95,7 @@ for another file is refused unless --force.`,
 	f.StringVar(&slug, "slug", "", "the URL name (default: from the file name)")
 	f.StringVar(&title, "title", "", "the title (default: the data file's title:, or a link's <title> or <h1>)")
 	f.StringVar(&description, "description", "", "a description shown in the list")
-	f.StringVar(&lang, "lang", "", "the language of the page, e.g. ja (default: en, or the last one given)")
+	f.StringVar(&lang, "lang", "", "the language of a data file's page, e.g. ja (default: en, or the last one given)")
 	f.BoolVar(&opts.Force, "force", false, "replace a page of another project, or a link to another file")
 	return cmd
 }

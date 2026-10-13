@@ -203,4 +203,4 @@ The management page follows the browser's language instead. Cobra's own errors (
 |---|---|
 | `0` | Success |
 | `1` | Failure (a refused publish, a missing page, a port in use, a diagram spec with mistakes …) |
-| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`, an unknown example, a `--lang` that is not a BCP 47 tag) |
+| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`, an unknown example, a `--lang` that is not a BCP 47 tag or that is given with `--link`) |

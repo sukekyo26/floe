@@ -331,6 +331,8 @@ func TestPublish(t *testing.T) {
 
 	// A link: the same slug for another file is refused unless --force.
 	site := e.write(t, "site/index.html", "<h1>Linked</h1>")
+	want(t, "--lang with --link", e.run(t, "", "publish", site, "--link", "--lang", "ja"), 2, "",
+		"floe: --lang is the language of a page drawn from a data file: a linked file is shown as it is")
 	want(t, "publish --link", e.run(t, "", "publish", site, "--link"), 0, e.base()+"/a/site/\n", "")
 	want(t, "re-register", e.run(t, "", "publish", site, "--link"), 0, e.base()+"/a/site/\n", `updated "site" (last published `)
 	sub := e.write(t, "site/sub/p.html", "<title>Sub</title>")
