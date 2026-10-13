@@ -39,8 +39,8 @@ Pages are drawn from data files (`.yaml`, `.yml`). An HTML file is not stored: l
 | `--slug <name>` | The URL name. Lowercase letters, digits and hyphens, up to 64 characters. Defaults to the file name; a linked `index.html` takes the name of its directory. |
 | `--title <text>` | The title shown in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
 | `--description <text>` | A description shown in the list. |
-| `--lang <tag>` | The language of the page drawn from a data file (`<html lang>`), as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. Refused with `--link`: a linked file is shown as it is. |
-| `--theme <name>` | The template's theme to draw the page with, over the data file's `theme:`, which is then not used. Defaults to `theme:`, else `default`; a republish without it goes back to `theme:`. An empty value is a usage error. Refused with `--link`. |
+| `--lang <tag>` | The language of the page drawn from a data file (`<html lang>`), as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. Refused with `--link` of an HTML file, which is shown as it is. |
+| `--theme <name>` | The template's theme to draw the page with, over the data file's `theme:`, which is then not used. Defaults to `theme:`, else `default`; a republish without it goes back to `theme:`. An empty value is a usage error. Refused with `--link` of an HTML file. |
 | `--force` | Replace a page published from another project, or a link to another file. |
 
 ### Data files
@@ -66,7 +66,7 @@ sections:
 - A template of your own, in `FLOE_TEMPLATES_DIR`, takes the place of a built-in one of its name. [templates.md](templates.md) tells how to write one.
 - The data is checked against the template's schema before the page is drawn. Every mistake is printed at once as `file:line:column: message`, and nothing is published until all are fixed (exit code 1): a missing or unknown template, an item the template does not have (a typo), a value of the wrong type, and the like.
 - A data file is one YAML document of keys and values: one with `---` between documents, or with anchors, aliases or tags, is refused.
-- The page is drawn once, when it is published: changing the data file later changes nothing until it is published again.
+- The page is drawn once, when it is published: changing the data file later changes nothing until it is published again. A data file linked with `--link` is drawn each time it is opened instead.
 
 ### Projects and overwriting
 
@@ -80,11 +80,19 @@ Each page belongs to the project it is published from. The project is the reposi
 
 `--link` serves an HTML file where it is, as it is: floe adds nothing around it, so a page of your own or one another tool made shows as written. It is read on every request, so saving the file updates the open tab. The files under its directory are served too, for its relative references (CSS, scripts, images).
 
-- Only a regular `.html` or `.htm` file can be linked.
+- Only a regular `.html` or `.htm` file, or a data file (`.yaml`, `.yml`), can be linked.
 - A file in a hidden directory right under your home (settings and keys live there) is refused.
 - A file directly under `/` or under your home itself is refused, because the whole directory would be served.
 - A link without `--slug` reuses the slug of the same file, else takes the first free one of `name`, `name-2`, `name-3` …
 - The same slug for another file is refused unless `--force`.
+
+A linked data file is drawn each time its page is opened, with `--lang` and `--theme` as given when it was linked, so that a page written in a repository can be read while it is written:
+
+- It is checked when it is linked, as `floe publish` checks it, and refused with its mistakes.
+- Saving the data file, an image it shows or a file of its template reloads the open tab.
+- When it has mistakes, the tab shows them instead of the page, and comes back to the page once they are fixed and saved.
+- Nothing of its directory is served: its images are in its page. Its download is the page drawn.
+- Its title in the list is its `title:`, read each time.
 
 ---
 
