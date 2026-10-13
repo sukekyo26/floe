@@ -18,6 +18,7 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -29,7 +30,11 @@ type app struct {
 }
 
 func (a *app) store() *store.Store {
-	return store.New(a.cfg.root, a.cfg.home)
+	return store.New(a.cfg.root, a.cfg.home, a.templates())
+}
+
+func (a *app) templates() *tmpl.Library {
+	return tmpl.NewLibrary(a.cfg.templates)
 }
 
 func (a *app) out(format string, args ...any) {

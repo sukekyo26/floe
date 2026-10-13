@@ -14,10 +14,11 @@ var decimalIntRe = regexp.MustCompile(`^[0-9]+$`)
 
 // config is what floe reads from the environment. Every command checks it first.
 type config struct {
-	root  string
-	icons string // empty when there is no home to put it under, which the icons commands refuse
-	home  string
-	port  int
+	root      string
+	icons     string // empty when there is no home to put it under, which the icons commands refuse
+	templates string // the templates of one's own; empty when there is no home to put them under
+	home      string
+	port      int
 }
 
 func (c *config) base() string {
@@ -25,7 +26,7 @@ func (c *config) base() string {
 }
 
 func loadConfig(getenv func(string) string) (*config, error) {
-	c := &config{root: "", icons: "", home: getenv("HOME"), port: defaultPort}
+	c := &config{root: "", icons: "", templates: "", home: getenv("HOME"), port: defaultPort}
 	if raw := getenv("FLOE_PORT"); raw != "" {
 		// Decimal only: hex (0x10) and exponents (1e3) are typos, not ports.
 		port, err := strconv.Atoi(raw)
@@ -50,5 +51,21 @@ func loadConfig(getenv func(string) string) (*config, error) {
 	if c.icons == "" && data != "" {
 		c.icons = filepath.Join(data, "floe-icons")
 	}
+	c.templates = templatesDir(getenv, c.home)
 	return c, nil
+}
+
+// templatesDir is where the templates of one's own are, or "" when there is no home to put them under.
+func templatesDir(getenv func(string) string, home string) string {
+	if dir := getenv("FLOE_TEMPLATES_DIR"); dir != "" {
+		return dir
+	}
+	conf := getenv("XDG_CONFIG_HOME")
+	if conf == "" && home != "" {
+		conf = filepath.Join(home, ".config")
+	}
+	if conf == "" {
+		return ""
+	}
+	return filepath.Join(conf, "floe", "templates")
 }

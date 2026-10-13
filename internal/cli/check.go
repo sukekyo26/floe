@@ -9,7 +9,6 @@ import (
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -49,7 +48,7 @@ func checkFile(a *app, file string) []error {
 	if err != nil {
 		return []error{err}
 	}
-	d, err := tmpl.Read(file, src, "")
+	d, err := a.templates().Read(file, src, "")
 	var all yamlpos.Problems
 	switch {
 	case errors.As(err, &all):

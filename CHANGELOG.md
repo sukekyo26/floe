@@ -39,6 +39,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   `--description` and `--force` are also available.
   Republishing a slug says so on stderr, with a warning when the title
   changed.
+- Use templates of your own: a directory in `FLOE_TEMPLATES_DIR` (default
+  `~/.config/floe/templates`), a symlink included, takes the place of a
+  built-in template of its name. Besides `page.html`, `schema.json` and
+  themes, a template may check relations between items with `checks.yaml`
+  and compute values for the page with `computed.yaml`, in
+  [expr](https://expr-lang.org/), each failure reported at the data file's
+  line and column; `page.html` writes numbers with `num` and `bytes`.
+  `template.yaml` names the floe a template needs. See
+  [docs/templates.md](docs/templates.md).
 - Add `floe check <data.yaml>...`, which checks data files as `floe publish`
   does and prints every mistake as `file:line:column`, without publishing them
   or starting the server, for the CI of a repository that keeps data files.

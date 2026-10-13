@@ -12,7 +12,7 @@ overflow, overlaps and crossing edges before they render.
 > **Status:** under construction. Publishing pages from data files with the
 > built-in `report` template, linking HTML files and drawing diagrams
 > (`floe diagram render`, with AWS icons from `floe icons fetch aws`) and
-> checking data files (`floe check`) work; templates of your own are planned.
+> checking data files (`floe check`) and templates of your own work.
 
 ## Install
 
@@ -50,6 +50,7 @@ browser's language. English is the default.
 | Topic | English | 日本語 |
 |---|---|---|
 | Commands and environment variables | [commands.md](docs/commands.md) | [commands.ja.md](docs/commands.ja.md) |
+| Writing templates | [templates.md](docs/templates.md) | [templates.ja.md](docs/templates.ja.md) |
 | Changelog | [CHANGELOG.md](CHANGELOG.md) | [CHANGELOG.ja.md](docs/CHANGELOG.ja.md) |
 
 ## License
