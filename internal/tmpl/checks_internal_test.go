@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -156,40 +157,46 @@ func data(t *testing.T, src string) (*Data, ast.Node) {
 	return &Data{File: "d.yaml", Template: "t", Theme: DefaultTheme, Title: "", Values: values}, root
 }
 
-// A path of checks.yaml is refused only where the schema surely does not declare it: one through a
-// schema that may declare more than its properties and items say, or that takes any value, passes,
-// and a type other than array is never a list.
+// A path of checks.yaml is refused only where the schema surely does not declare it: a schema without
+// the key that refuses other keys. One that may take it, through $ref, anyOf, patternProperties or by
+// taking any keys, passes; properties are followed whatever else a schema says; and a type other than
+// array is never a list.
 func TestDeclared(t *testing.T) {
 	t.Parallel()
 
+	const closed = `"additionalProperties": false, `
 	for _, tt := range []struct {
 		schema, for_, field, want string
 	}{
-		{`{"properties": {"a": {"type": "array"}}}`, "a", "x", ""},
-		{`{"properties": {"a": {"type": "array", "items": {"properties": {"x": {}}}}}}`, "a", "y", "tmpl_checks_field"},
-		{`{"properties": {"a": {"type": "array"}}}`, "b", "", "tmpl_checks_undeclared"},
+		{`{` + closed + `"properties": {"a": {"type": "array"}}}`, "a", "x", ""},
+		{`{"properties": {"a": {"type": "array", "items": {` + closed + `"properties": {"x": {}}}}}}`, "a", "y", "tmpl_checks_field"},
+		{`{` + closed + `"properties": {"a": {"type": "array"}}}`, "b", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"a": {"type": "array"}}}`, "b", "", ""},
 		{`{"properties": {"a": {"type": "string", "anyOf": [{"minLength": 1}]}}}`, "a", "", "tmpl_checks_not_array"},
+		{`{"properties": {"a": {"type": []}}}`, "a", "", ""},
 		{`{"properties": {"a": {}}}`, "a", "x", ""},
-		{`{"properties": {"a": null}}`, "a.b", "", ""},
-		{`{"properties": {"a": {"type": "object", "unevaluatedProperties": {"type": "array"}}}}`, "a.x", "", ""},
-		{`{"properties": {"a": {"type": "object", "dependentSchemas": {}}}}`, "a.x", "", ""},
-		{`{"properties": {"a": {"type": "array", "prefixItems": [{}]}}}`, "a", "name", ""},
-		{`{"properties": {"a": {"type": "object", "properties": {"b": {"type": "object"}}, "allOf": [{}]}}}`, "a.b.c", "", ""},
-		{`{"properties": {"a": {"type": "object", "additionalProperties": false, "properties": {}}}}`, "a.x", "", "tmpl_checks_undeclared"},
-		{`{"properties": {"a": {"type": "array"}}, "AnyOf": 3}`, "a", "", ""},
+		{`{"properties": {"a": {"description": "x"}}}`, "a.x", "", ""},
+		{`{"properties": {"a": true}}`, "a.b", "", ""},
+		{`{"properties": {"a": false}}`, "a", "", "tmpl_checks_undeclared"},
+		{`{` + closed + `"allOf": [{}], "properties": {"rows": {"type": "string"}}}`, "rows", "", "tmpl_checks_not_array"},
+		{`{` + closed + `"patternProperties": {"^x": {}}}`, "xs", "", ""},
+		{`{"properties": {"a": {"type": "object", "unevaluatedProperties": false, "allOf": [{"properties": {"x": {}}}]}}}`, "a.x", "", ""},
+		{`{"properties": {"a": {"type": "array", "prefixItems": [{}], "items": {` + closed + `"properties": {}}}}}`, "a", "name", ""},
+		{`{"properties": {"a": {"type": "object", ` + closed + `"properties": {}}}}`, "a.x", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"a": {"type": "array"}}}`, "a.0", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"a": {"type": ["object", "null"]}}}`, "a.x", "", ""},
 	} {
-		s, err := decodeSchema([]byte(tt.schema))
-		if err != nil {
-			t.Fatalf("decodeSchema(%s) = %v", tt.schema, err)
+		var doc any
+		if err := json.Unmarshal([]byte(tt.schema), &doc); err != nil {
+			t.Fatalf("%s: %v", tt.schema, err)
 		}
 		c := relation{For: tt.for_, Field: tt.field, Expr: "true", Message: "m", file: "checks.yaml", at: map[string]yamlpos.Pos{}}
-		err = c.declared(s)
-		var e *yamlpos.Error
+		e := c.declared(doc)
 		switch {
-		case tt.want == "" && err != nil:
-			t.Errorf("%s, for %s, field %s = %v", tt.schema, tt.for_, tt.field, err)
-		case tt.want != "" && (!errors.As(err, &e) || e.Err.Key != tt.want):
-			t.Errorf("%s, for %s, field %s = %v, want %s", tt.schema, tt.for_, tt.field, err, tt.want)
+		case tt.want == "" && e != nil:
+			t.Errorf("%s, for %s, field %s = %v", tt.schema, tt.for_, tt.field, e)
+		case tt.want != "" && (e == nil || e.Err.Key != tt.want):
+			t.Errorf("%s, for %s, field %s = %v, want %s", tt.schema, tt.for_, tt.field, e, tt.want)
 		}
 	}
 }

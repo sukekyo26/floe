@@ -293,6 +293,7 @@ var messagesEN = map[string]string{
 	"tmpl_schema_other":        "%s: %s",
 	"tmpl_top_level":           "the top level",
 	"tmpl_or":                  " or ",
+	"tmpl_and":                 ", ",
 	"tmpl_type_object":         "keys and values",
 	"tmpl_type_array":          "a list",
 	"tmpl_type_string":         "text",

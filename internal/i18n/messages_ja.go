@@ -292,6 +292,7 @@ var messagesJA = map[string]string{
 	"tmpl_schema_other":        "%s: %s",
 	"tmpl_top_level":           "最上位",
 	"tmpl_or":                  "か",
+	"tmpl_and":                 "・",
 	"tmpl_type_object":         "キーと値",
 	"tmpl_type_array":          "リスト",
 	"tmpl_type_string":         "文字列",

@@ -76,7 +76,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 		case err != nil:
 			mistakes = append(mistakes, err)
 		case !found:
-			mistakes = append(mistakes, usererr.New("tmpl_file_missing", t.file(name), strings.Join(needed, ", ")))
+			mistakes = append(mistakes, usererr.New("tmpl_file_missing", t.file(name), andList(needed)))
 		}
 	}
 	if mistakes != nil {
@@ -97,7 +97,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
-	mistakes = append(mistakes, t.checkChecks(s)...)
+	mistakes = append(mistakes, t.checkChecks(doc)...)
 	computed, found, err := t.readOptional("computed.yaml")
 	if err == nil && found {
 		_, err = readComputed(t.file("computed.yaml"), computed, slices.Sorted(maps.Keys(s.Properties)))
@@ -111,8 +111,9 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	return warnings, mistakes
 }
 
-// checkChecks returns the mistakes of the checks.yaml of t, if it has one, against its schema s.
-func (t *Template) checkChecks(s *schema) []error {
+// checkChecks returns the mistakes of the checks.yaml of t, if it has one, against its schema doc as
+// read, in the order of the file.
+func (t *Template) checkChecks(doc any) []error {
 	src, found, err := t.readOptional("checks.yaml")
 	if err != nil {
 		return []error{err}
@@ -121,19 +122,81 @@ func (t *Template) checkChecks(s *schema) []error {
 		return nil
 	}
 	list, err := readChecks(t.file("checks.yaml"), src)
-	var mistakes []error
-	if err != nil {
-		mistakes = append(mistakes, err)
+	var problems yamlpos.Problems
+	if err != nil && !errors.As(err, &problems) {
+		return []error{err}
 	}
 	for _, c := range list {
-		if err = c.declared(s); err != nil {
-			mistakes = append(mistakes, err)
+		if e := c.declared(doc); e != nil {
+			problems = append(problems, e)
 		}
-		if _, err = c.program(); err != nil {
-			mistakes = append(mistakes, err)
+		var e *yamlpos.Error
+		if _, err = c.program(); errors.As(err, &e) {
+			problems = append(problems, e)
 		}
 	}
-	return mistakes
+	if problems == nil {
+		return nil
+	}
+	return []error{problems.Sorted()}
+}
+
+// declared checks that the schema doc, as read, declares the list at c.For and c.Field under its
+// items: a path misspelt would find nothing in the data to check, and fail no data. A path is not
+// declared where a schema without the key refuses other keys (additionalProperties: false), and is not
+// a list where the type it names is not array.
+// LIMIT: a key is not matched against the patterns of patternProperties, and is taken as declared
+// there. Match them if a template comes to declare its lists by pattern.
+func (c relation) declared(doc any) *yamlpos.Error {
+	list, sure := declaredAt(doc, strings.Split(c.For, "."))
+	var types []string
+	if list != nil {
+		types = typeNames(list["type"])
+	}
+	switch {
+	case list == nil && sure:
+		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
+	case list == nil:
+		return nil
+	case len(types) > 0 && !slices.Contains(types, "array"):
+		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_array", c.For)
+	case c.Field == "":
+		return nil
+	}
+	items, ok := list["items"]
+	if _, prefix := list["prefixItems"]; !ok || prefix {
+		return nil // items of any keys
+	}
+	if field, sure := declaredAt(items, strings.Split(c.Field, ".")); field == nil && sure {
+		return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field", c.Field, c.For)
+	}
+	return nil
+}
+
+// declaredAt follows the path of keys steps from the schema v, as read. It returns the schema declared
+// there, or nil, sure true where the path is surely not declared (a schema without the key refuses
+// other keys, or keys at all) and false where a schema may take it.
+func declaredAt(v any, steps []string) (found map[string]any, sure bool) {
+	for _, step := range steps {
+		m, ok := v.(map[string]any)
+		if !ok {
+			return nil, v == false // true takes any value, false none
+		}
+		// A value of another type than object has no keys.
+		if types := typeNames(m["type"]); len(types) > 0 && !slices.Contains(types, "object") {
+			return nil, true
+		}
+		props, isMap := m["properties"].(map[string]any)
+		if v, ok = props[step]; !isMap || !ok {
+			_, patterns := m["patternProperties"]
+			return nil, m["additionalProperties"] == false && !patterns
+		}
+	}
+	m, ok := v.(map[string]any)
+	if !ok {
+		return nil, v == false
+	}
+	return m, true
 }
 
 // checkExample reads the example.yaml of t as a data file of it, and draws it.

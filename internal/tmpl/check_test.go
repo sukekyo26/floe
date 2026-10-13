@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
@@ -231,7 +232,10 @@ func TestCheckMissingFile(t *testing.T) {
 	_, mistakes := tmpl.Check(dir)
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_file_missing" {
-		t.Errorf("Check without example.yaml = %v", mistakes)
+		t.Fatalf("Check without example.yaml = %v", mistakes)
+	}
+	if ja := e.Localize(i18n.New("ja")); !strings.Contains(ja, "page.html・schema.json・example.yaml・themes/default.css") {
+		t.Errorf("the mistake in Japanese = %s", ja)
 	}
 }
 

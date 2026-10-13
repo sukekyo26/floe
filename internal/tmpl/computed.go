@@ -106,8 +106,8 @@ type computed struct {
 }
 
 // readComputed reads and compiles the computed.yaml src of file, its mistakes at their lines and
-// columns: all those of its names, then all those of its expressions, then values computed from each
-// other.
+// columns: all those of its values and names at once, then all those of its expressions, then values
+// computed from each other.
 func readComputed(file string, src []byte, declared []string) (*computed, error) {
 	// The names of the expressions read are checked beside the mistakes of the others.
 	exprs, where, err := readExprs(file, src)

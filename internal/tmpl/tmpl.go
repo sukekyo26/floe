@@ -4,7 +4,6 @@ package tmpl
 
 import (
 	"bytes"
-	"cmp"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -350,59 +349,6 @@ type schema struct {
 	Type        any      `json:"type"` // a JSON type, or a list of them
 	Enum        []any    `json:"enum"`
 	Required    []string `json:"required"`
-
-	// plain is true when s declares nothing beyond its properties and items, as its keywords are all of
-	// plainKeywords, and declares something: then a path it does not declare is not declared.
-	plain bool
-}
-
-// plainKeywords are the keywords of a schema that declare no item beyond its properties and items.
-// additionalProperties and unevaluatedProperties are plain when false.
-var plainKeywords = []string{
-	"$schema", "$id", "$comment", "$defs", "definitions", "title", "description", "deprecated", "readOnly",
-	"writeOnly", "type", "properties", "items", "required", "format", "enum", "const", "default", "examples",
-	"minItems", "maxItems", "uniqueItems", "minLength", "maxLength", "pattern", "minimum", "maximum",
-	"exclusiveMinimum", "exclusiveMaximum", "multipleOf", "minProperties", "maxProperties", "propertyNames",
-	"contentMediaType", "contentEncoding",
-}
-
-// UnmarshalJSON reads a schema, its numbers as written, and tells whether it is plain.
-func (s *schema) UnmarshalJSON(b []byte) error {
-	type fields schema // without this method
-	dec := json.NewDecoder(bytes.NewReader(b))
-	dec.UseNumber()
-	if err := dec.Decode((*fields)(s)); err != nil {
-		return err //nolint:wrapcheck // wrapped by schemaOf
-	}
-	var keys map[string]json.RawMessage
-	if err := json.Unmarshal(b, &keys); err != nil {
-		return err //nolint:wrapcheck // wrapped by schemaOf
-	}
-	s.plain = len(keys) > 0
-	for k, v := range keys {
-		closing := (k == "additionalProperties" || k == "unevaluatedProperties") && string(v) == "false"
-		if !closing && !slices.Contains(plainKeywords, k) {
-			s.plain = false
-		}
-	}
-	return nil
-}
-
-// at returns what s declares at the path of keys steps, or nil where it declares none. sure is false
-// when the path passes through a schema that is not plain: $ref, anyOf, patternProperties and the like
-// may declare it there, and {} or null takes any value.
-func (s *schema) at(steps []string) (found *schema, sure bool) {
-	for _, step := range steps {
-		if !s.plain {
-			return nil, false
-		}
-		p, ok := s.Properties[step]
-		if !ok {
-			return nil, true
-		}
-		s = cmp.Or(p, new(schema)) // null in schema.json declares an item of any value
-	}
-	return s, s.plain
 }
 
 // prepare readies v for page.html: an item declared but not given becomes nil, so that page.html can

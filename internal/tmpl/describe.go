@@ -103,9 +103,9 @@ func (s *schema) items() []Item {
 	return items
 }
 
-// types are the JSON types s takes: those it names, else those its keywords imply.
-func (s *schema) types() []string {
-	switch t := s.Type.(type) {
+// typeNames are the JSON types the value of type: names, or nil for none.
+func typeNames(t any) []string {
+	switch t := t.(type) {
 	case string:
 		return []string{t}
 	case []any:
@@ -113,6 +113,14 @@ func (s *schema) types() []string {
 		for _, v := range t {
 			types = append(types, fmt.Sprint(v))
 		}
+		return types
+	}
+	return nil
+}
+
+// types are the JSON types s takes: those it names, else those its keywords imply.
+func (s *schema) types() []string {
+	if types := typeNames(s.Type); types != nil {
 		return types
 	}
 	switch {

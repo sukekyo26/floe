@@ -300,6 +300,13 @@ func jsonText(v any) string {
 	return string(b)
 }
 
+// andList words its items as a list: page.html, schema.json.
+type andList []string
+
+func (l andList) Localize(c *i18n.Catalog) string {
+	return strings.Join(l, c.Msg("tmpl_and"))
+}
+
 // orList words its items as alternatives: text or a number.
 type orList []any
 

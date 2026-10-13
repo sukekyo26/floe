@@ -193,29 +193,6 @@ func (c relation) failure(file string, root ast.Node, at []string, err error) *y
 	}
 }
 
-// declared checks that the schema s declares the list at c.For, and c.Field under its items: a path
-// misspelt would find nothing in the data to check, and fail no data. A path through a schema that is
-// not plain is taken as declared, since it may be; a type that is not array is not a list wherever it
-// is declared.
-func (c relation) declared(s *schema) error {
-	list, sure := s.at(strings.Split(c.For, "."))
-	switch {
-	case list == nil && !sure:
-		return nil
-	case list == nil:
-		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
-	case len(list.types()) > 0 && !slices.Contains(list.types(), "array"):
-		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_array", c.For)
-	case !sure || c.Field == "" || list.Items == nil:
-		// A list without items declared takes items of any keys.
-		return nil
-	}
-	if field, sure := list.Items.at(strings.Split(c.Field, ".")); field != nil || !sure {
-		return nil
-	}
-	return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field", c.Field, c.For)
-}
-
 // listAt returns the list at steps under values, nil when the data leaves it out, and false when what
 // is there is not a list.
 func listAt(values map[string]any, steps []string) ([]any, bool) {
