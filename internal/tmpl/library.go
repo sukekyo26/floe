@@ -99,6 +99,15 @@ func (l *Library) entries() ([]fs.DirEntry, error) {
 	return entries, nil
 }
 
+// unknown refuses the template name, which there is none of, naming those there are.
+func (l *Library) unknown(name string) error {
+	names, err := l.Names()
+	if err != nil {
+		return err
+	}
+	return usererr.New("tmpl_unknown", name, strings.Join(names, ", "))
+}
+
 // Find returns the template name, or nil when there is none.
 func (l *Library) Find(name string) (*Template, error) {
 	if !validName(name) {
@@ -239,22 +248,31 @@ func (t *Template) files(read func(fs.FS) error) error {
 // floe 1.2.0 or later of major 1, and floe: 0.2 one of 0.2, as a minor version of 0 may break what the
 // one before it took. A built-in template, or one without template.yaml, needs none.
 func (t *Template) checkVersion() error {
-	if t.Dir == "" {
-		return nil
-	}
-	src, found, err := t.readOptional("template.yaml")
-	if !found || err != nil {
-		return err
-	}
-	needs, err := needsFloe(filepath.Join(t.Path, "template.yaml"), src)
-	if err != nil {
+	needs, err := t.needs()
+	if needs == nil || err != nil {
 		return err
 	}
 	have, ok := versionOf(version.Version)
 	if !ok {
 		return fmt.Errorf("the version of floe %q is not major.minor.patch", version.Version) //nolint:err113 // floe's own
 	}
-	return fits(t.Name, needs, have)
+	return fits(t.Name, *needs, have)
+}
+
+// needs returns the floe t needs, or nil when it names none.
+func (t *Template) needs() (*semver, error) {
+	if t.Dir == "" {
+		return nil, nil //nolint:nilnil // a built-in template needs this floe, which it comes with
+	}
+	src, found, err := t.readOptional("template.yaml")
+	if !found || err != nil {
+		return nil, err
+	}
+	needs, err := needsFloe(filepath.Join(t.Path, "template.yaml"), src)
+	if err != nil {
+		return nil, err
+	}
+	return &needs, nil
 }
 
 // fits refuses the template name, which needs a floe of needs, for a floe of have.

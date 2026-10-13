@@ -281,12 +281,19 @@ func schemaOf(t *Template) (*schema, error) {
 	return &s, nil
 }
 
-// schema is the part of a template's JSON Schema that drawing and computing read: the items it
-// declares and their format.
+// schema is the part of a template's JSON Schema that floe reads: the items it declares, their format,
+// and what floe template show tells of them.
 type schema struct {
 	Format     string             `json:"format"`
 	Properties map[string]*schema `json:"properties"`
 	Items      *schema            `json:"items"`
+
+	// What floe template show tells of an item.
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Type        any      `json:"type"` // a JSON type, or a list of them
+	Enum        []any    `json:"enum"`
+	Required    []string `json:"required"`
 }
 
 // prepare readies v for page.html: an item declared but not given becomes nil, so that page.html can
