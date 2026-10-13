@@ -64,7 +64,7 @@ var shared = []string{"template", "theme", "title"}
 // --theme): the data's theme: is then not used, and a theme the template does not have is refused as
 // a *usererr.Error, as is a template that needs another floe.
 func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
-	d, root, where, problems, err := start(file, src, theme != "")
+	h, err := start(file, src, theme != "")
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		var names []string
 		if names, err = l.Names(); err != nil {
@@ -75,6 +75,7 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	if err != nil {
 		return nil, err
 	}
+	d, problems := h.d, h.problems
 	fail := func(p yamlpos.Pos, key string, args ...any) {
 		problems = append(problems, yamlpos.New(file, p, key, args...))
 	}
@@ -91,10 +92,10 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 			return nil, err
 		}
 		switch {
-		case d.Template == "" && problems == nil:
-			fail(where["template"], "tmpl_no_template", strings.Join(names, ", "))
+		case h.unnamed:
+			fail(h.where["template"], "tmpl_no_template", strings.Join(names, ", "))
 		case d.Template != "":
-			fail(where["template"], "tmpl_unknown", d.Template, strings.Join(names, ", "))
+			fail(h.where["template"], "tmpl_unknown", d.Template, strings.Join(names, ", "))
 		}
 		return nil, problems.Sorted()
 	}
@@ -102,27 +103,39 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	if err = t.checkVersion(); err != nil {
 		return nil, err
 	}
-	if err = t.check(d, root, theme, where["theme"], problems); err != nil {
+	if err = t.check(d, h.root, theme, h.where["theme"], problems); err != nil {
 		return nil, err
 	}
 	return d, nil
 }
 
-// start reads the data file src, file in its mistakes, up to its template: its values, the keys every
-// template shares moved to d, where each of those is written, and the mistakes in them. With themed, a
-// theme is given over the data's. It fails with yamlpos.ErrEmpty for a file without a document.
-func start(file string, src []byte, themed bool) (*Data, ast.Node, map[string]yamlpos.Pos, yamlpos.Problems, error) {
+// head is a data file read up to its template.
+type head struct {
+	d    *Data // its values, the keys every template shares moved to d
+	root ast.Node
+	// where each key every template shares is written, the top of the file for one left out
+	where    map[string]yamlpos.Pos
+	problems yamlpos.Problems // the mistakes in those keys
+	unnamed  bool             // template: is left out or empty, a mistake left to the caller to word
+}
+
+// start reads the data file src, file in its mistakes, up to its template. With themed, a theme is
+// given over the data's. It fails with yamlpos.ErrEmpty for a file without a document.
+func start(file string, src []byte, themed bool) (*head, error) {
 	root, err := parse(file, src)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, err
 	}
 	top, err := decode(file, root)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, err
 	}
+	// A template: written but not text is a mistake readShared reports.
+	v, written := top["template"]
+	_, text := v.(string)
 	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil}
 	where, problems := readShared(d, root, themed)
-	return d, root, where, problems, nil
+	return &head{d: d, root: root, where: where, problems: problems, unnamed: d.Template == "" && (!written || text)}, nil
 }
 
 // check checks d, whose root is root, against t, which then draws it: with the theme theme when given,
@@ -335,18 +348,35 @@ type schema struct {
 	Type        any      `json:"type"` // a JSON type, or a list of them
 	Enum        []any    `json:"enum"`
 	Required    []string `json:"required"`
+
+	// What floe does not follow, for floe template check to tell where a path may be declared.
+	Ref                  string `json:"$ref"`
+	AnyOf                []any  `json:"anyOf"`
+	OneOf                []any  `json:"oneOf"`
+	AllOf                []any  `json:"allOf"`
+	If                   any    `json:"if"`
+	PatternProperties    any    `json:"patternProperties"`
+	AdditionalProperties any    `json:"additionalProperties"`
 }
 
-// at returns what s declares at the path of keys steps, or nil where it declares none.
-func (s *schema) at(steps []string) *schema {
+// at returns what s declares at the path of keys steps, or nil where it declares none. unknown is
+// true when the path leaves properties through what floe does not follow, where it may be declared.
+func (s *schema) at(steps []string) (found *schema, unknown bool) {
 	for _, step := range steps {
 		p, ok := s.Properties[step]
 		if !ok {
-			return nil
+			return nil, s.opaque()
 		}
 		s = cmp.Or(p, new(schema)) // null in schema.json declares an item of any value
 	}
-	return s
+	return s, false
+}
+
+// opaque reports whether s declares more than its properties, items and type say: through $ref,
+// anyOf, oneOf, allOf, if, patternProperties or additionalProperties.
+func (s *schema) opaque() bool {
+	open := s.AdditionalProperties != nil && s.AdditionalProperties != false
+	return s.Ref != "" || len(s.AnyOf)+len(s.OneOf)+len(s.AllOf) > 0 || s.If != nil || s.PatternProperties != nil || open
 }
 
 // prepare readies v for page.html: an item declared but not given becomes nil, so that page.html can

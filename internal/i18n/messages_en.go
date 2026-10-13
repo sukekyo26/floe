@@ -334,4 +334,5 @@ var messagesEN = map[string]string{
 	"tmpl_example_name":        "example.yaml names the template %s; name it %s, after the template's directory",
 	"tmpl_checks_missing":      "write %s in the check",
 	"tmpl_check_not_dir":       "%s is not a directory: a template is a directory of its files",
+	"tmpl_file_missing":        "%s is missing: a template has page.html, schema.json, example.yaml and themes/default.css",
 }

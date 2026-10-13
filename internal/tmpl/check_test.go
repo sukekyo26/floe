@@ -110,6 +110,17 @@ func TestCheckMistakes(t *testing.T) {
 			want:  []string{"sizes/checks.yaml:2:3: write expr in the check"},
 		},
 		{
+			name: "lists through anyOf and $ref",
+			files: map[string]string{
+				"schema.json": `"note": { "type": "string", "format": "html" },` + "|" +
+					`"others": { "anyOf": [{ "type": "array", "items": { "$ref": "#/properties/files/items" } }, { "type": "null" }] },` +
+					`"named": { "type": "array", "items": { "$ref": "#/properties/files/items" } },` +
+					`"note": { "type": "string", "format": "html" },`,
+				"checks.yaml": "- for: others\n  field: name\n  expr: 'true'\n  message: m\n" +
+					"- for: named\n  field: name\n  expr: 'true'\n  message: m\n",
+			},
+		},
+		{
 			name:  "not a list",
 			files: map[string]string{"checks.yaml": "- for: note\n  expr: 'true'\n  message: m\n"},
 			want:  []string{"sizes/checks.yaml:1:8: for: schema.json does not declare note a list"},
@@ -138,6 +149,14 @@ func TestCheckMistakes(t *testing.T) {
 			want: []string{
 				"sizes/example.yaml:1:11: example.yaml names the template report; name it sizes",
 				`sizes/example.yaml:2:8: template sizes has no theme "print"`,
+			},
+		},
+		{
+			name:  "example without a template",
+			files: map[string]string{"example.yaml": "title: 3\nfiles: []\n"},
+			want: []string{
+				"sizes/example.yaml:1:1: name the template at the top level, like template: report (templates: sizes)",
+				"sizes/example.yaml:1:8: title must be text",
 			},
 		},
 		{
@@ -181,6 +200,21 @@ func TestCheckName(t *testing.T) {
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_new_name" {
 		t.Errorf("Check of %s = %v", dir, mistakes)
+	}
+}
+
+// A file a template needs is named when it is missing.
+func TestCheckMissingFile(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, nil)
+	if err := os.Remove(filepath.Join(dir, "example.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	_, mistakes := tmpl.Check(dir)
+	var e *usererr.Error
+	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_file_missing" {
+		t.Errorf("Check without example.yaml = %v", mistakes)
 	}
 }
 

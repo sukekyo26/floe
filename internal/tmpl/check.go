@@ -40,18 +40,19 @@ func Check(dir string) (warnings []*usererr.Error, mistakes []error) {
 	}
 	t.Path = dir
 	// The floe a template needs comes before its mistakes, which another floe may not make.
+	if err = t.checkVersion(); err != nil {
+		return nil, []error{err}
+	}
 	needs, err := t.needs()
 	if err != nil {
 		return nil, []error{err}
 	}
-	have, err := thisFloe()
-	if err != nil {
-		return nil, []error{err}
-	}
 	if needs == nil {
+		var have semver
+		if have, err = thisFloe(); err != nil {
+			return nil, []error{err}
+		}
 		warnings = append(warnings, usererr.New("tmpl_no_template_yaml", dir, have.minor()))
-	} else if err = fits(name, *needs, have); err != nil {
-		return warnings, []error{err}
 	}
 	more, mistakes := t.checkFiles()
 	warnings = append(warnings, more...)
@@ -68,6 +69,18 @@ func Check(dir string) (warnings []*usererr.Error, mistakes []error) {
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values,
 // page.html and the default theme.
 func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
+	for _, name := range []string{"page.html", "schema.json", "example.yaml", "themes/" + DefaultTheme + ".css"} {
+		_, found, err := t.readOptional(name)
+		switch {
+		case err != nil:
+			mistakes = append(mistakes, err)
+		case !found:
+			mistakes = append(mistakes, usererr.New("tmpl_file_missing", t.file(name)))
+		}
+	}
+	if mistakes != nil {
+		return nil, mistakes
+	}
 	src, err := t.readFile("schema.json")
 	if err != nil {
 		return nil, []error{err}
@@ -92,9 +105,6 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 		mistakes = append(mistakes, err)
 	}
 	if _, err = t.page(); err != nil {
-		mistakes = append(mistakes, err)
-	}
-	if _, err = t.readFile("themes/" + DefaultTheme + ".css"); err != nil {
 		mistakes = append(mistakes, err)
 	}
 	return warnings, mistakes
@@ -132,7 +142,7 @@ func (t *Template) checkExample() error {
 	if err != nil {
 		return err
 	}
-	d, root, where, problems, err := start(file, src, false)
+	h, err := start(file, src, false)
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		return yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", t.Name)
 	}
@@ -140,15 +150,16 @@ func (t *Template) checkExample() error {
 		return err
 	}
 	// A data file started from it names this template, as floe template new writes it.
+	d, problems := h.d, h.problems
 	switch {
-	case d.Template == "" && problems == nil:
-		problems = append(problems, yamlpos.New(file, where["template"], "tmpl_no_template", t.Name))
+	case h.unnamed:
+		problems = append(problems, yamlpos.New(file, h.where["template"], "tmpl_no_template", t.Name))
 	case d.Template != "" && d.Template != t.Name:
-		problems = append(problems, yamlpos.New(file, where["template"], "tmpl_example_name", d.Template, t.Name))
+		problems = append(problems, yamlpos.New(file, h.where["template"], "tmpl_example_name", d.Template, t.Name))
 	}
 	// The later stages check it against t, and name t in their mistakes.
 	d.Template = t.Name
-	if err = t.check(d, root, "", where["theme"], problems); err != nil {
+	if err = t.check(d, h.root, "", h.where["theme"], problems); err != nil {
 		return err
 	}
 	_, err = d.Render(cmp.Or(d.Title, file), "")

@@ -77,15 +77,20 @@ func readChecks(file string, src []byte) ([]relation, error) {
 		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_checks_yaml")
 	}
 	list := make([]relation, len(seq.Values))
+	var problems yamlpos.Problems
 	for i, n := range seq.Values {
-		if list[i], err = readCheck(file, n); err != nil {
-			return nil, err
+		var e *yamlpos.Error
+		if list[i], e = readCheck(file, n); e != nil {
+			problems = append(problems, e)
 		}
+	}
+	if problems != nil {
+		return nil, problems
 	}
 	return list, nil
 }
 
-func readCheck(file string, n ast.Node) (relation, error) {
+func readCheck(file string, n ast.Node) (relation, *yamlpos.Error) {
 	c := relation{For: "", Field: "", Expr: "", Message: "", file: file, at: map[string]yamlpos.Pos{"": yamlpos.Of(n)}}
 	m, ok := n.(*ast.MappingNode)
 	if !ok {
@@ -186,19 +191,30 @@ func (c relation) failure(file string, root ast.Node, at []string, err error) *y
 
 // declared checks that the schema s declares the list at c.For, and c.Field under its items: a path
 // misspelt would find nothing in the data to check, and fail no data.
-// LIMIT: the path is followed through properties and items alone, as prepare follows it. Follow $ref
-// too if a template comes to declare its lists through one.
+// LIMIT: the path is followed through properties and items alone; one through $ref, anyOf,
+// patternProperties and the like is taken as declared. Follow those if a misspelt path there comes to
+// matter.
 func (c relation) declared(s *schema) error {
-	list := s.at(strings.Split(c.For, "."))
+	list, unknown := s.at(strings.Split(c.For, "."))
 	switch {
+	case unknown:
+		return nil
 	case list == nil:
 		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
-	case !slices.Contains(list.types(), "array"):
+	case !slices.Contains(list.types(), "array") && !list.opaque():
 		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_array", c.For)
-	case c.Field != "" && (list.Items == nil || list.Items.at(strings.Split(c.Field, ".")) == nil):
-		return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field", c.Field, c.For)
+	case c.Field == "":
+		return nil
+	case list.Items == nil:
+		if list.opaque() {
+			return nil
+		}
+	default:
+		if field, unknown := list.Items.at(strings.Split(c.Field, ".")); field != nil || unknown {
+			return nil
+		}
 	}
-	return nil
+	return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field", c.Field, c.For)
 }
 
 // listAt returns the list at steps under values, nil when the data leaves it out, and false when what

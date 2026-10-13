@@ -333,4 +333,5 @@ var messagesJA = map[string]string{
 	"tmpl_example_name":        "example.yaml がテンプレート %s を指定しています。テンプレートのディレクトリ名の %s にしてください",
 	"tmpl_checks_missing":      "検査に %s を書いてください",
 	"tmpl_check_not_dir":       "%s はディレクトリではありません。テンプレートは、ファイルを収めたディレクトリです",
+	"tmpl_file_missing":        "%s がありません。テンプレートには page.html・schema.json・example.yaml・themes/default.css が要ります",
 }

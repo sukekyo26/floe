@@ -97,8 +97,8 @@ notes:
 	}
 }
 
-// A checks.yaml that is not right is the template's mistake, not one of the data, reported at its line
-// and column in checks.yaml.
+// A checks.yaml that is not right is the template's mistake, reported at its line and column in
+// checks.yaml.
 func TestRelationsOfABrokenTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -116,12 +116,15 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 	} {
 		d, root := data(t, "a: [1]\nb: x\n")
 		err := relate("checks.yaml", []byte(tt.checks), d, root)
-		var p yamlpos.Problems
-		if err == nil || errors.As(err, &p) || !strings.HasPrefix(err.Error(), tt.want) {
+		if err == nil || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("relate(%q) = %v, want %s", tt.checks, err, tt.want)
 		}
 	}
 	d, root := data(t, "a: [1]\n")
+	both := "- for: a\n  expr: 'true'\n- for: a\n  message: m\n"
+	if err := relate("checks.yaml", []byte(both), d, root); err == nil || err.Error() != "checks.yaml:1:3: write message in the check\nchecks.yaml:3:3: write expr in the check" {
+		t.Errorf("relate of two broken checks = %v", err)
+	}
 	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 && -item / 2 == -0.5\n  message: m\n"), d, root); err != nil {
 		t.Errorf("relate of data that holds = %v", err)
 	}

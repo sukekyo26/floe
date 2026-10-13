@@ -82,8 +82,8 @@ table: '{"a": [1e308 * 10]}'
 	}
 }
 
-// A computed.yaml that is not right is the template's mistake, not one of the data, reported at its
-// line and column in computed.yaml.
+// A computed.yaml that is not right is the template's mistake, reported at its line and column in
+// computed.yaml, each of its names and expressions at once.
 func TestComputeOfABrokenTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -105,11 +105,12 @@ func TestComputeOfABrokenTemplate(t *testing.T) {
 		{"a: [1]\n", "computed.yaml:1:4: write computed.yaml as names and expressions"},
 		{"a:\n", "computed.yaml:1:1: write computed.yaml as names and expressions"},
 		{"- a\n", "computed.yaml:1:1: write computed.yaml as names and expressions"},
+		{"in: 1\nsum: 1\n", "computed.yaml:1:1: in is not a name an expression or page.html can use: write a letter, then letters, digits and _, and not a word or function of expr\ncomputed.yaml:2:1: sum is not a name"},
+		{"a: 1 +\nb: nope\n", "computed.yaml:1:4: 1 + cannot be read as an expression: unexpected token EOF\ncomputed.yaml:2:4: nope cannot be read"},
 	} {
 		d, root := data(t, "reads_per_sec: 1\n")
 		err := compute("computed.yaml", []byte(tt.src), d, declared, root)
-		var p yamlpos.Problems
-		if err == nil || errors.As(err, &p) || !strings.HasPrefix(err.Error(), tt.want) {
+		if err == nil || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("compute(%q) = %v, want %s", tt.src, err, tt.want)
 		}
 	}
