@@ -60,7 +60,8 @@ func relate(checks string, src []byte, d *Data, root ast.Node) error {
 	return nil
 }
 
-// readChecks reads the checks src of file, a mistake in them at its line and column.
+// readChecks reads the checks src of file, a mistake in them at its line and column: the mistakes of
+// some are yamlpos.Problems, returned with the others.
 func readChecks(file string, src []byte) ([]relation, error) {
 	body, err := yamlpos.Parse(file, src, "tmpl_checks_yaml")
 	if errors.Is(err, yamlpos.ErrEmpty) {
@@ -76,16 +77,19 @@ func readChecks(file string, src []byte) ([]relation, error) {
 	if !ok {
 		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_checks_yaml")
 	}
-	list := make([]relation, len(seq.Values))
+	var list []relation
 	var problems yamlpos.Problems
-	for i, n := range seq.Values {
-		var e *yamlpos.Error
-		if list[i], e = readCheck(file, n); e != nil {
+	for _, n := range seq.Values {
+		c, e := readCheck(file, n)
+		if e != nil {
 			problems = append(problems, e)
+			continue
 		}
+		list = append(list, c)
 	}
 	if problems != nil {
-		return nil, problems
+		// The checks written right, for floe template check to tell their mistakes too.
+		return list, problems
 	}
 	return list, nil
 }
@@ -98,7 +102,7 @@ func readCheck(file string, n ast.Node) (relation, *yamlpos.Error) {
 	}
 	to := map[string]*string{"for": &c.For, "field": &c.Field, "expr": &c.Expr, "message": &c.Message}
 	for _, kv := range m.Values {
-		k := keyOf(kv)
+		k := yamlpos.KeyOf(kv)
 		key := k.GetToken().Value
 		dst, ok := to[key]
 		if !ok {
@@ -190,29 +194,24 @@ func (c relation) failure(file string, root ast.Node, at []string, err error) *y
 }
 
 // declared checks that the schema s declares the list at c.For, and c.Field under its items: a path
-// misspelt would find nothing in the data to check, and fail no data.
-// LIMIT: the path is followed through properties and items alone; one through $ref, anyOf,
-// patternProperties and the like is taken as declared. Follow those if a misspelt path there comes to
-// matter.
+// misspelt would find nothing in the data to check, and fail no data. A path through a schema that is
+// not plain is taken as declared, since it may be; a type that is not array is not a list wherever it
+// is declared.
 func (c relation) declared(s *schema) error {
-	list, unknown := s.at(strings.Split(c.For, "."))
+	list, sure := s.at(strings.Split(c.For, "."))
 	switch {
-	case unknown:
+	case list == nil && !sure:
 		return nil
 	case list == nil:
 		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
-	case !slices.Contains(list.types(), "array") && !list.opaque():
+	case len(list.types()) > 0 && !slices.Contains(list.types(), "array"):
 		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_array", c.For)
-	case c.Field == "":
+	case !sure || c.Field == "" || list.Items == nil:
+		// A list without items declared takes items of any keys.
 		return nil
-	case list.Items == nil:
-		if list.opaque() {
-			return nil
-		}
-	default:
-		if field, unknown := list.Items.at(strings.Split(c.Field, ".")); field != nil || unknown {
-			return nil
-		}
+	}
+	if field, sure := list.Items.at(strings.Split(c.Field, ".")); field != nil || !sure {
+		return nil
 	}
 	return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field", c.Field, c.For)
 }

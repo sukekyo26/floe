@@ -192,3 +192,20 @@ func TestBuiltins(t *testing.T) {
 		}
 	}
 }
+
+// A data file without its template is told so beside the other mistakes of the keys every template
+// shares, and a theme: that is not text leaves the theme the default one.
+func TestUnnamedBesideOtherMistakes(t *testing.T) {
+	t.Parallel()
+
+	_, err := tmpl.NewLibrary("").Read("d.yaml", []byte("title: 3\ntheme: [x]\n"), "")
+	want := "d.yaml:1:1: name the template at the top level, like template: report (templates: report)\n" +
+		"d.yaml:1:8: title must be text\nd.yaml:2:8: theme must be text"
+	if err == nil || err.Error() != want {
+		t.Errorf("Read = %v\nwant %s", err, want)
+	}
+	_, err = tmpl.NewLibrary("").Read("d.yaml", []byte("template: report\ntheme: [x]\n"), "")
+	if want = "d.yaml:2:8: theme must be text"; err == nil || err.Error() != want {
+		t.Errorf("Read of a theme not text = %v\nwant %s", err, want)
+	}
+}

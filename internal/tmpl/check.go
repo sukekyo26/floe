@@ -69,13 +69,14 @@ func Check(dir string) (warnings []*usererr.Error, mistakes []error) {
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values,
 // page.html and the default theme.
 func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
-	for _, name := range []string{"page.html", "schema.json", "example.yaml", "themes/" + DefaultTheme + ".css"} {
+	needed := []string{"page.html", "schema.json", "example.yaml", "themes/" + DefaultTheme + ".css"}
+	for _, name := range needed {
 		_, found, err := t.readOptional(name)
 		switch {
 		case err != nil:
 			mistakes = append(mistakes, err)
 		case !found:
-			mistakes = append(mistakes, usererr.New("tmpl_file_missing", t.file(name)))
+			mistakes = append(mistakes, usererr.New("tmpl_file_missing", t.file(name), strings.Join(needed, ", ")))
 		}
 	}
 	if mistakes != nil {
@@ -120,10 +121,10 @@ func (t *Template) checkChecks(s *schema) []error {
 		return nil
 	}
 	list, err := readChecks(t.file("checks.yaml"), src)
-	if err != nil {
-		return []error{err}
-	}
 	var mistakes []error
+	if err != nil {
+		mistakes = append(mistakes, err)
+	}
 	for _, c := range list {
 		if err = c.declared(s); err != nil {
 			mistakes = append(mistakes, err)

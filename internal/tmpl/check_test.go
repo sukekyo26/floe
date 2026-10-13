@@ -121,6 +121,23 @@ func TestCheckMistakes(t *testing.T) {
 			},
 		},
 		{
+			name:  "a broken check beside others",
+			files: map[string]string{"checks.yaml": "- for: files\n  expr: 'true'\n- for: filez\n  expr: itme\n  message: m\n"},
+			want: []string{
+				"sizes/checks.yaml:1:3: write message in the check",
+				"sizes/checks.yaml:3:8: for: schema.json does not declare filez",
+				"sizes/checks.yaml:4:9: itme cannot be read as an expression",
+			},
+		},
+		{
+			name:  "a value and a name of computed.yaml",
+			files: map[string]string{"computed.yaml": "in: [1]\nsum: 1\n"},
+			want: []string{
+				"sizes/computed.yaml:1:5: write computed.yaml as names and expressions",
+				"sizes/computed.yaml:2:1: sum is not a name",
+			},
+		},
+		{
 			name:  "not a list",
 			files: map[string]string{"checks.yaml": "- for: note\n  expr: 'true'\n  message: m\n"},
 			want:  []string{"sizes/checks.yaml:1:8: for: schema.json does not declare note a list"},

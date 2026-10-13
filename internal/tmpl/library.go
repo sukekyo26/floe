@@ -322,7 +322,7 @@ func needsFloe(file string, src []byte) (semver, error) {
 	}
 	var needs *semver
 	for _, kv := range m.Values {
-		k := keyOf(kv)
+		k := yamlpos.KeyOf(kv)
 		key := k.GetToken().Value
 		if key != "floe" {
 			return semver{}, yamlpos.New(file, yamlpos.Of(k), "tmpl_template_yaml_key", key)

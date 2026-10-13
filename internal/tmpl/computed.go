@@ -109,11 +109,12 @@ type computed struct {
 // columns: all those of its names, then all those of its expressions, then values computed from each
 // other.
 func readComputed(file string, src []byte, declared []string) (*computed, error) {
+	// The names of the expressions read are checked beside the mistakes of the others.
 	exprs, where, err := readExprs(file, src)
-	if err != nil {
+	var problems yamlpos.Problems
+	if err != nil && !errors.As(err, &problems) {
 		return nil, err
 	}
-	var problems yamlpos.Problems
 	fail := func(at yamlpos.Pos, key string, args ...any) {
 		problems = append(problems, yamlpos.New(file, at, key, args...))
 	}
@@ -121,9 +122,9 @@ func readComputed(file string, src []byte, declared []string) (*computed, error)
 	for _, n := range names {
 		switch {
 		case !usable(n):
-			fail(yamlpos.Of(keyOf(where[n])), "tmpl_computed_name", n)
+			fail(yamlpos.Of(yamlpos.KeyOf(where[n])), "tmpl_computed_name", n)
 		case slices.Contains(declared, n):
-			fail(yamlpos.Of(keyOf(where[n])), "tmpl_computed_clash", n)
+			fail(yamlpos.Of(yamlpos.KeyOf(where[n])), "tmpl_computed_clash", n)
 		}
 	}
 	if problems != nil {
@@ -148,7 +149,7 @@ func readComputed(file string, src []byte, declared []string) (*computed, error)
 	}
 	c.env = reflect.New(reflect.StructOf(fields)).Elem()
 	for _, n := range names {
-		at := yamlpos.OfValue(keyOf(where[n]), where[n].Value)
+		at := yamlpos.OfValue(yamlpos.KeyOf(where[n]), where[n].Value)
 		p, err := compile(exprs[n], c.env.Interface())
 		if err != nil {
 			fail(at, "tmpl_expr", exprs[n], brief(err))
@@ -165,13 +166,15 @@ func readComputed(file string, src []byte, declared []string) (*computed, error)
 	}
 	order, cycle := topological(names, c.uses)
 	if cycle != nil {
-		return nil, yamlpos.New(file, yamlpos.Of(keyOf(where[cycle[0]])), "tmpl_computed_cycle", strings.Join(cycle, " → "))
+		at := yamlpos.Of(yamlpos.KeyOf(where[cycle[0]]))
+		return nil, yamlpos.New(file, at, "tmpl_computed_cycle", strings.Join(cycle, " → "))
 	}
 	c.order = order
 	return c, nil
 }
 
 // readExprs reads the names and expressions of the computed.yaml src of file, and where each is written.
+// Those whose expression is not text are left out, and their mistakes returned as yamlpos.Problems.
 func readExprs(file string, src []byte) (map[string]string, map[string]*ast.MappingValueNode, error) {
 	exprs, where := map[string]string{}, map[string]*ast.MappingValueNode{}
 	body, err := yamlpos.Parse(file, src, "tmpl_computed_yaml")
@@ -190,16 +193,16 @@ func readExprs(file string, src []byte) (map[string]string, map[string]*ast.Mapp
 	}
 	var problems yamlpos.Problems
 	for _, kv := range m.Values {
-		n := keyOf(kv).GetToken().Value
+		n := yamlpos.KeyOf(kv).GetToken().Value
 		s, ok := text(kv.Value)
 		if !ok || s == "" {
-			problems = append(problems, yamlpos.New(file, yamlpos.OfValue(keyOf(kv), kv.Value), "tmpl_computed_yaml"))
+			problems = append(problems, yamlpos.New(file, yamlpos.OfValue(yamlpos.KeyOf(kv), kv.Value), "tmpl_computed_yaml"))
 			continue
 		}
 		exprs[n], where[n] = s, kv
 	}
 	if problems != nil {
-		return nil, nil, problems
+		return exprs, where, problems
 	}
 	return exprs, where, nil
 }

@@ -130,12 +130,10 @@ func start(file string, src []byte, themed bool) (*head, error) {
 	if err != nil {
 		return nil, err
 	}
-	// A template: written but not text is a mistake readShared reports.
-	v, written := top["template"]
-	_, text := v.(string)
 	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil}
-	where, problems := readShared(d, root, themed)
-	return &head{d: d, root: root, where: where, problems: problems, unnamed: d.Template == "" && (!written || text)}, nil
+	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
+	h.readShared(themed)
+	return h, nil
 }
 
 // check checks d, whose root is root, against t, which then draws it: with the theme theme when given,
@@ -190,34 +188,38 @@ func checkValues(t *Template, d *Data, root ast.Node, problems yamlpos.Problems)
 	return checkComputed(t, d, root)
 }
 
-// readShared moves the keys every template shares from d.Values to d, and returns where each is
-// written (the top of the file for one left out) and the mistakes in them. With themed, a theme is
-// given over the data's, and its theme: is not used.
-func readShared(d *Data, root ast.Node, themed bool) (map[string]yamlpos.Pos, yamlpos.Problems) {
-	var problems yamlpos.Problems
-	where := map[string]yamlpos.Pos{}
+// readShared moves the keys every template shares from h.d.Values to h.d, and notes where each is
+// written (the top of the file for one left out), the mistakes in them, and whether template: names
+// none. With themed, a theme is given over the data's, and its theme: is not used.
+func (h *head) readShared(themed bool) {
+	d := h.d
 	to := map[string]*string{"template": &d.Template, "theme": &d.Theme, "title": &d.Title}
+	h.unnamed = true
 	for _, key := range shared {
-		where[key] = yamlpos.Of(root)
+		h.where[key] = yamlpos.Of(h.root)
 		v, ok := d.Values[key]
 		if !ok {
 			continue
 		}
-		k, n, _ := yamlpos.Find(root, []string{key})
-		where[key] = yamlpos.OfValue(k, n)
+		k, n, _ := yamlpos.Find(h.root, []string{key})
+		h.where[key] = yamlpos.OfValue(k, n)
 		delete(d.Values, key)
 		if key == "theme" && themed {
 			continue
 		}
-		if s, ok := v.(string); ok {
+		s, text := v.(string)
+		if key == "template" {
+			// One that is not text is reported so.
+			h.unnamed = text && s == ""
+		}
+		if text {
 			*to[key] = s
 		} else {
-			problems = append(problems, yamlpos.New(d.File, where[key], "tmpl_not_text", key))
+			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_not_text", key))
 		}
 	}
 	// A title of spaces names none, as an empty --title does.
 	d.Title = strings.TrimSpace(d.Title)
-	return where, problems
 }
 
 // parse reads src as one YAML document of keys and values, without anchors, aliases or tags, so
@@ -349,34 +351,58 @@ type schema struct {
 	Enum        []any    `json:"enum"`
 	Required    []string `json:"required"`
 
-	// What floe does not follow, for floe template check to tell where a path may be declared.
-	Ref                  string `json:"$ref"`
-	AnyOf                []any  `json:"anyOf"`
-	OneOf                []any  `json:"oneOf"`
-	AllOf                []any  `json:"allOf"`
-	If                   any    `json:"if"`
-	PatternProperties    any    `json:"patternProperties"`
-	AdditionalProperties any    `json:"additionalProperties"`
+	// plain is true when s declares nothing beyond its properties and items, as its keywords are all of
+	// plainKeywords, and declares something: then a path it does not declare is not declared.
+	plain bool
 }
 
-// at returns what s declares at the path of keys steps, or nil where it declares none. unknown is
-// true when the path leaves properties through what floe does not follow, where it may be declared.
-func (s *schema) at(steps []string) (found *schema, unknown bool) {
+// plainKeywords are the keywords of a schema that declare no item beyond its properties and items.
+// additionalProperties and unevaluatedProperties are plain when false.
+var plainKeywords = []string{
+	"$schema", "$id", "$comment", "$defs", "definitions", "title", "description", "deprecated", "readOnly",
+	"writeOnly", "type", "properties", "items", "required", "format", "enum", "const", "default", "examples",
+	"minItems", "maxItems", "uniqueItems", "minLength", "maxLength", "pattern", "minimum", "maximum",
+	"exclusiveMinimum", "exclusiveMaximum", "multipleOf", "minProperties", "maxProperties", "propertyNames",
+	"contentMediaType", "contentEncoding",
+}
+
+// UnmarshalJSON reads a schema, its numbers as written, and tells whether it is plain.
+func (s *schema) UnmarshalJSON(b []byte) error {
+	type fields schema // without this method
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+	if err := dec.Decode((*fields)(s)); err != nil {
+		return err //nolint:wrapcheck // wrapped by schemaOf
+	}
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(b, &keys); err != nil {
+		return err //nolint:wrapcheck // wrapped by schemaOf
+	}
+	s.plain = len(keys) > 0
+	for k, v := range keys {
+		closing := (k == "additionalProperties" || k == "unevaluatedProperties") && string(v) == "false"
+		if !closing && !slices.Contains(plainKeywords, k) {
+			s.plain = false
+		}
+	}
+	return nil
+}
+
+// at returns what s declares at the path of keys steps, or nil where it declares none. sure is false
+// when the path passes through a schema that is not plain: $ref, anyOf, patternProperties and the like
+// may declare it there, and {} or null takes any value.
+func (s *schema) at(steps []string) (found *schema, sure bool) {
 	for _, step := range steps {
+		if !s.plain {
+			return nil, false
+		}
 		p, ok := s.Properties[step]
 		if !ok {
-			return nil, s.opaque()
+			return nil, true
 		}
 		s = cmp.Or(p, new(schema)) // null in schema.json declares an item of any value
 	}
-	return s, false
-}
-
-// opaque reports whether s declares more than its properties, items and type say: through $ref,
-// anyOf, oneOf, allOf, if, patternProperties or additionalProperties.
-func (s *schema) opaque() bool {
-	open := s.AdditionalProperties != nil && s.AdditionalProperties != false
-	return s.Ref != "" || len(s.AnyOf)+len(s.OneOf)+len(s.AllOf) > 0 || s.If != nil || s.PatternProperties != nil || open
+	return s, s.plain
 }
 
 // prepare readies v for page.html: an item declared but not given becomes nil, so that page.html can
@@ -470,19 +496,11 @@ func nonTextKey(n ast.Node) ast.Node {
 	if !ok {
 		return nil
 	}
-	key := keyOf(v)
+	key := yamlpos.KeyOf(v)
 	if _, text := key.(*ast.StringNode); text {
 		return nil
 	}
 	return key
-}
-
-// keyOf returns the key of kv, the text after ? for an explicit key.
-func keyOf(kv *ast.MappingValueNode) ast.Node {
-	if explicit, ok := kv.Key.(*ast.MappingKeyNode); ok {
-		return explicit.Value
-	}
-	return kv.Key
 }
 
 // plain refuses in body, the file's, what would hide where a value is written (an anchor, alias, merge

@@ -155,3 +155,41 @@ func data(t *testing.T, src string) (*Data, ast.Node) {
 	}
 	return &Data{File: "d.yaml", Template: "t", Theme: DefaultTheme, Title: "", Values: values}, root
 }
+
+// A path of checks.yaml is refused only where the schema surely does not declare it: one through a
+// schema that may declare more than its properties and items say, or that takes any value, passes,
+// and a type other than array is never a list.
+func TestDeclared(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		schema, for_, field, want string
+	}{
+		{`{"properties": {"a": {"type": "array"}}}`, "a", "x", ""},
+		{`{"properties": {"a": {"type": "array", "items": {"properties": {"x": {}}}}}}`, "a", "y", "tmpl_checks_field"},
+		{`{"properties": {"a": {"type": "array"}}}`, "b", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"a": {"type": "string", "anyOf": [{"minLength": 1}]}}}`, "a", "", "tmpl_checks_not_array"},
+		{`{"properties": {"a": {}}}`, "a", "x", ""},
+		{`{"properties": {"a": null}}`, "a.b", "", ""},
+		{`{"properties": {"a": {"type": "object", "unevaluatedProperties": {"type": "array"}}}}`, "a.x", "", ""},
+		{`{"properties": {"a": {"type": "object", "dependentSchemas": {}}}}`, "a.x", "", ""},
+		{`{"properties": {"a": {"type": "array", "prefixItems": [{}]}}}`, "a", "name", ""},
+		{`{"properties": {"a": {"type": "object", "properties": {"b": {"type": "object"}}, "allOf": [{}]}}}`, "a.b.c", "", ""},
+		{`{"properties": {"a": {"type": "object", "additionalProperties": false, "properties": {}}}}`, "a.x", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"a": {"type": "array"}}, "AnyOf": 3}`, "a", "", ""},
+	} {
+		s, err := decodeSchema([]byte(tt.schema))
+		if err != nil {
+			t.Fatalf("decodeSchema(%s) = %v", tt.schema, err)
+		}
+		c := relation{For: tt.for_, Field: tt.field, Expr: "true", Message: "m", file: "checks.yaml", at: map[string]yamlpos.Pos{}}
+		err = c.declared(s)
+		var e *yamlpos.Error
+		switch {
+		case tt.want == "" && err != nil:
+			t.Errorf("%s, for %s, field %s = %v", tt.schema, tt.for_, tt.field, err)
+		case tt.want != "" && (!errors.As(err, &e) || e.Err.Key != tt.want):
+			t.Errorf("%s, for %s, field %s = %v, want %s", tt.schema, tt.for_, tt.field, err, tt.want)
+		}
+	}
+}
