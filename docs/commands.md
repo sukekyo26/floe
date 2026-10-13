@@ -7,6 +7,7 @@ Reference for every command of the `floe` binary.
 | Command | Purpose |
 |---|---|
 | `floe publish <data.yaml>` | Store a page drawn from a data file (or `--link` an HTML file in place) and print its URL |
+| `floe check <data.yaml>...` | Check data files as `floe publish` would, without publishing them |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe serve` | Run the server in the foreground |
@@ -78,6 +79,17 @@ Each page belongs to the project it is published from. The project is the reposi
 - A file directly under `/` or under your home itself is refused, because the whole directory would be served.
 - A link without `--slug` reuses the slug of the same file, else takes the first free one of `name`, `name-2`, `name-3` …
 - The same slug for another file is refused unless `--force`.
+
+---
+
+## `floe check <data.yaml>...`
+
+Check each data file as `floe publish` does before it stores the page: its YAML, its template and theme, the template's schema, and drawing the page. A relative path is resolved against the working directory.
+
+- Every mistake of every file is printed at once as `file:line:column: message`, in the order the files were given (exit code 1).
+- Nothing is printed when every file is right (exit code 0).
+- Nothing is published, and the server is not started, so a repository's CI can run it over its data files.
+- A file that is not a data file (`.yaml`, `.yml`) is refused.
 
 ---
 
@@ -204,5 +216,5 @@ The management page follows the browser's language instead. Cobra's own errors (
 | Code | Meaning |
 |---|---|
 | `0` | Success |
-| `1` | Failure (a refused publish, a missing page, a port in use, a diagram spec with mistakes …) |
+| `1` | Failure (a refused publish, a missing page, a port in use, a data file or diagram spec with mistakes …) |
 | `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`, an unknown example, a `--lang` that is not a BCP 47 tag) |

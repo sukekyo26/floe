@@ -159,6 +159,7 @@ var messagesEN = map[string]string{
 	// cli and daemon: the command line and the background server
 	"cli_invalid_port":      "invalid FLOE_PORT \"%s\": use a port number from 1 to 65535",
 	"cli_no_home":           "HOME is not set; set HOME or FLOE_DIR",
+	"cli_check_not_data":    "%s is not a data file (.yaml or .yml)",
 	"cli_title_empty":       "--title is empty: give the page a name, or omit --title to take the data file's title:, or a link's <title> or <h1>",
 	"cli_port_in_use":       "port %d is in use; stop that program or set FLOE_PORT",
 	"cli_serving":           "serving %s at %s/",
