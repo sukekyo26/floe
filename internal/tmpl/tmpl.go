@@ -248,6 +248,8 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 }
 
 var funcs = template.FuncMap{
+	"bytes": formatBytes,
+	"num":   formatNum,
 	// markdown writes Markdown text as HTML, a table wrapped in <div class="table-wrap"> for a theme to
 	// scroll. Raw HTML in it is left out: a data item takes HTML only when its schema says format: html.
 	"markdown": func(text string) (template.HTML, error) {
