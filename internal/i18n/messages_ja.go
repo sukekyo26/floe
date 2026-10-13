@@ -286,5 +286,8 @@ var messagesJA = map[string]string{
 	"tmpl_type_integer":        "整数",
 	"tmpl_type_boolean":        "true か false",
 	"tmpl_type_null":           "空",
+	"tmpl_check":               "%s: %s（「%s」）",
+	"tmpl_check_bare":          "%s: %s",
+	"tmpl_check_error":         "%s: %s（検査を実行できませんでした: %s）",
 	"tmpl_render":              "%s はテンプレート %s に合いません: %s",
 }

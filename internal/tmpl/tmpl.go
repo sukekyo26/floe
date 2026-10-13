@@ -50,8 +50,9 @@ type Data struct {
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
 var shared = []string{"template", "theme", "title"}
 
-// Read reads the data file src and checks it against its template's schema; file names it in errors.
-// A mistake is a *yamlpos.Error, and the schema's are all reported at once as yamlpos.Problems.
+// Read reads the data file src and checks it against its template's schema, then its checks; file
+// names it in errors. A mistake is a *yamlpos.Error, and those of the schema or of the checks are all
+// reported at once as yamlpos.Problems.
 //
 // theme, when not "", is the theme to draw with instead of the one the data names (floe publish
 // --theme): the data's theme: is then not used, and a theme the template does not have is refused as
@@ -93,18 +94,28 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 	case !slices.Contains(themes, d.Theme):
 		fail(where["theme"], "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
 	}
-	err = checkSchema(d, root)
+	if err = checkValues(d, root, problems); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+// checkValues checks d against its template's schema and then its checks, reporting the schema's
+// mistakes with problems, those found before.
+func checkValues(d *Data, root ast.Node, problems yamlpos.Problems) error {
+	err := checkSchema(d, root)
 	var more yamlpos.Problems
 	switch {
 	case errors.As(err, &more):
 		problems = append(problems, more...)
 	case err != nil:
-		return nil, err
+		return err
 	}
 	if problems != nil {
-		return nil, problems.Sorted()
+		return problems.Sorted()
 	}
-	return d, nil
+	// Data that broke its schema would only give the checks' expressions mistakes that mean nothing.
+	return checkRelations(d, root)
 }
 
 // readShared moves the keys every template shares from d.Values to d, and returns where each is

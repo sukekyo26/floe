@@ -287,5 +287,8 @@ var messagesEN = map[string]string{
 	"tmpl_type_integer":        "a whole number",
 	"tmpl_type_boolean":        "true or false",
 	"tmpl_type_null":           "nothing",
+	"tmpl_check":               `%s: %s ("%s")`,
+	"tmpl_check_bare":          "%s: %s",
+	"tmpl_check_error":         "%s: %s (the check could not run: %s)",
 	"tmpl_render":              "%s does not fit the template %s: %s",
 }

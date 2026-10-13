@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goccy/go-yaml"
-
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -95,18 +93,8 @@ open: { y: 1 }
 func check(t *testing.T, schema, src string) yamlpos.Problems {
 	t.Helper()
 
-	root, err := parse("d.yaml", []byte(src))
-	if err != nil {
-		t.Fatal(err)
-	}
-	d, err := Read("d.yaml", []byte("template: report\n"), "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	d.File = "d.yaml"
-	if err := yaml.NodeToValue(root, &d.Values); err != nil {
-		t.Fatal(err)
-	}
+	d, root := data(t, src)
+	d.Template = "report"
 	var p yamlpos.Problems
 	if err := validate([]byte(schema), d, root); !errors.As(err, &p) {
 		t.Fatalf("validate = %v, want problems", err)
