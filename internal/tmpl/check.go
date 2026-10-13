@@ -3,7 +3,9 @@ package tmpl
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"maps"
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -25,11 +27,18 @@ func Check(dir string) (warnings []*usererr.Error, mistakes []error) {
 	if !validName(name) {
 		return nil, []error{usererr.New("tmpl_new_name", name)}
 	}
-	resolved, err := filepath.EvalSymlinks(abs)
-	if err != nil {
+	if _, err = os.Stat(abs); err != nil {
 		return nil, []error{usererr.CannotRead(dir, err)}
 	}
-	t := &Template{Name: name, Dir: resolved, Path: dir}
+	// Found as a library of the directory above would find it, symlink and all.
+	t, err := NewLibrary(filepath.Dir(abs)).resolve(name)
+	if err != nil {
+		return nil, []error{err}
+	}
+	if t == nil {
+		return nil, []error{usererr.New("tmpl_check_not_dir", dir)}
+	}
+	t.Path = dir
 	// The floe a template needs comes before its mistakes, which another floe may not make.
 	needs, err := t.needs()
 	if err != nil {
@@ -67,9 +76,9 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	s, err := schemaOf(t)
+	s, err := decodeSchema(src)
 	if err != nil {
-		return nil, []error{err}
+		return nil, []error{fmt.Errorf("read the schema of %s: %w", t.Name, err)}
 	}
 	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil}
 	lint.walk(doc, "#", true)
@@ -137,6 +146,8 @@ func (t *Template) checkExample() error {
 	case d.Template != "" && d.Template != t.Name:
 		problems = append(problems, yamlpos.New(file, where["template"], "tmpl_example_name", d.Template, t.Name))
 	}
+	// The later stages check it against t, and name t in their mistakes.
+	d.Template = t.Name
 	if err = t.check(d, root, "", where["theme"], problems); err != nil {
 		return err
 	}
@@ -166,9 +177,8 @@ func (l *schemaLint) walk(v any, ptr string, reached bool) {
 			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unreached", l.file, ptr, f))
 		}
 	}
-	_, closed := m["additionalProperties"]
-	_, unevaluated := m["unevaluatedProperties"]
-	if _, ok := m["properties"]; ok && reached && (!closed && !unevaluated || m["additionalProperties"] == true) {
+	closed := m["additionalProperties"] == false || m["unevaluatedProperties"] == false
+	if _, ok := m["properties"]; ok && reached && !closed {
 		l.warnings = append(l.warnings, usererr.New("tmpl_schema_open", l.file, ptr))
 	}
 	for _, kw := range slices.Sorted(maps.Keys(m)) {

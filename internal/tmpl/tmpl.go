@@ -215,8 +215,8 @@ func parse(file string, src []byte) (ast.Node, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a mistake at its line and column, or ErrEmpty
 	}
-	if a := yamlpos.FirstAnchor(body); a != nil {
-		return nil, yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
+	if err = noAnchors(file, body); err != nil {
+		return nil, err
 	}
 	if k := first(body, nonTextKey); k != nil {
 		return nil, yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value)

@@ -95,6 +95,21 @@ func TestCheckMistakes(t *testing.T) {
 			},
 		},
 		{
+			name:    "open to any key",
+			files:   map[string]string{"schema.json": `"additionalProperties": false` + "|" + `"unevaluatedProperties": true`},
+			warning: `sizes/schema.json: #/properties/files/items declares properties without "additionalProperties": false`,
+		},
+		{
+			name:  "anchors",
+			files: map[string]string{"checks.yaml": "- for: files\n  expr: 'true'\n  message: &m m\n- for: files\n  expr: 'true'\n  message: *m\n"},
+			want:  []string{"sizes/checks.yaml:3:12: anchors, aliases, merge keys (<<) and tags are not supported"},
+		},
+		{
+			name:  "missing key",
+			files: map[string]string{"checks.yaml": "- for: files\n  expr:\n  message: m\n"},
+			want:  []string{"sizes/checks.yaml:2:3: write expr in the check"},
+		},
+		{
 			name:  "not a list",
 			files: map[string]string{"checks.yaml": "- for: note\n  expr: 'true'\n  message: m\n"},
 			want:  []string{"sizes/checks.yaml:1:8: for: schema.json does not declare note a list"},
@@ -115,6 +130,14 @@ func TestCheckMistakes(t *testing.T) {
 			want: []string{
 				"sizes/example.yaml:1:11: example.yaml names the template report; name it sizes",
 				"sizes/example.yaml:3:5: files[0].bytes is required but missing",
+			},
+		},
+		{
+			name:  "example of another theme",
+			files: map[string]string{"example.yaml": "template: report\ntheme: print\nfiles: []\n"},
+			want: []string{
+				"sizes/example.yaml:1:11: example.yaml names the template report; name it sizes",
+				`sizes/example.yaml:2:8: template sizes has no theme "print"`,
 			},
 		},
 		{
@@ -158,6 +181,21 @@ func TestCheckName(t *testing.T) {
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_new_name" {
 		t.Errorf("Check of %s = %v", dir, mistakes)
+	}
+}
+
+// A path that is not a directory is not a template.
+func TestCheckFile(t *testing.T) {
+	t.Parallel()
+
+	file := filepath.Join(t.TempDir(), "sizes")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, mistakes := tmpl.Check(file)
+	var e *usererr.Error
+	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_check_not_dir" {
+		t.Errorf("Check of a file = %v", mistakes)
 	}
 }
 

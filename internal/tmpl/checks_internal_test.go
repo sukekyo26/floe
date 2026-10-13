@@ -103,7 +103,7 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ checks, want string }{
-		{"- for: a\n  expr: 'true'\n", "checks.yaml:1:3: write checks.yaml as a list of checks"},
+		{"- for: a\n  expr: 'true'\n", "checks.yaml:1:3: write message in the check"},
 		{"- for: a\n  expr: 'true'\n  message: m\n  feild: x\n", "checks.yaml:4:3: feild is not a key of a check"},
 		{"- for: a\n  expr: [x]\n  message: m\n", "checks.yaml:2:9: expr must be text"},
 		{"for: a\n", "checks.yaml:1:1: write checks.yaml as a list of checks"},

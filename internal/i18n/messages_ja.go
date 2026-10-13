@@ -331,4 +331,6 @@ var messagesJA = map[string]string{
 	"tmpl_schema_open":         `%s: %s は "additionalProperties": false を書かずに properties を宣言しているので、打ち間違えたキーを断れません`,
 	"tmpl_no_template_yaml":    "%s に template.yaml がありません。テンプレートを書いた floe の版を floe: %s のように書いてください",
 	"tmpl_example_name":        "example.yaml がテンプレート %s を指定しています。テンプレートのディレクトリ名の %s にしてください",
+	"tmpl_checks_missing":      "検査に %s を書いてください",
+	"tmpl_check_not_dir":       "%s はディレクトリではありません。テンプレートは、ファイルを収めたディレクトリです",
 }

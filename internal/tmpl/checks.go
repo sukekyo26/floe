@@ -69,6 +69,9 @@ func readChecks(file string, src []byte) ([]relation, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a mistake at its line and column
 	}
+	if err = noAnchors(file, body); err != nil {
+		return nil, err
+	}
 	seq, ok := body.(*ast.SequenceNode)
 	if !ok {
 		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_checks_yaml")
@@ -100,10 +103,25 @@ func readCheck(file string, n ast.Node) (relation, error) {
 			return c, yamlpos.New(file, c.at[key], "tmpl_not_text", key)
 		}
 	}
-	if c.For == "" || c.Expr == "" || c.Message == "" {
-		return c, yamlpos.New(file, c.at[""], "tmpl_checks_yaml")
+	for _, key := range []string{"for", "expr", "message"} {
+		if *to[key] == "" {
+			at, written := c.at[key]
+			if !written {
+				at = c.at[""]
+			}
+			return c, yamlpos.New(file, at, "tmpl_checks_missing", key)
+		}
 	}
 	return c, nil
+}
+
+// noAnchors refuses an anchor, alias, merge key or tag under body, the file's, which would hide where a
+// value is written.
+func noAnchors(file string, body ast.Node) error {
+	if a := yamlpos.FirstAnchor(body); a != nil {
+		return yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
+	}
+	return nil
 }
 
 // text returns the value of n as text, a number or true as written, and false for a list or keys and

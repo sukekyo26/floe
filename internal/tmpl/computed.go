@@ -168,6 +168,9 @@ func readExprs(file string, src []byte) (map[string]string, map[string]*ast.Mapp
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // a mistake at its line and column
 	}
+	if err = noAnchors(file, body); err != nil {
+		return nil, nil, err
+	}
 	m, ok := body.(*ast.MappingNode)
 	if !ok {
 		return nil, nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_computed_yaml")

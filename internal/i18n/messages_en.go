@@ -332,4 +332,6 @@ var messagesEN = map[string]string{
 	"tmpl_schema_open":         `%s: %s declares properties without "additionalProperties": false, so a misspelt key is not refused`,
 	"tmpl_no_template_yaml":    "%s has no template.yaml: write floe: %s in it, the floe the template is written for",
 	"tmpl_example_name":        "example.yaml names the template %s; name it %s, after the template's directory",
+	"tmpl_checks_missing":      "write %s in the check",
+	"tmpl_check_not_dir":       "%s is not a directory: a template is a directory of its files",
 }
