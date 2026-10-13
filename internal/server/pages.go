@@ -138,7 +138,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 			notFound(w)
 			return
 		case err != nil:
-			send(w, http.StatusConflict, "the page cannot be drawn; open it to see why")
+			send(w, http.StatusConflict, mistakesText(catalog(r), err))
 			return
 		}
 		body = bytes.NewReader(page)
@@ -250,6 +250,15 @@ func (s *Server) version(slug, rest string) string {
 	return s.cfg.Store.Version(m, file)
 }
 
+// mistakesText words why a linked data file cannot be drawn, in the language of c.
+func mistakesText(c *i18n.Catalog, err error) string {
+	var l i18n.Localizer
+	if errors.As(err, &l) {
+		return l.Localize(c)
+	}
+	return err.Error()
+}
+
 // mistakes is the page shown for a linked data file with mistakes, in the reader's language.
 var mistakes = template.Must(template.New("mistakes").Parse(`<!doctype html>
 <html lang="{{.Lang}}">
@@ -266,11 +275,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.6 ui-monospac
 `))
 
 func mistakesPage(c *i18n.Catalog, slug string, err error) []byte {
-	text := err.Error()
-	var l i18n.Localizer
-	if errors.As(err, &l) {
-		text = l.Localize(c)
-	}
+	text := mistakesText(c, err)
 	var b bytes.Buffer
 	//nolint:errcheck // a buffer takes every write, and the fields are text
 	_ = mistakes.Execute(&b, map[string]string{
