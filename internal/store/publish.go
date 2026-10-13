@@ -98,13 +98,12 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	var data *tmpl.Data
 	own := ""
 	if path == "" {
-		if data, err = tmpl.Read(file, []byte(src)); err != nil {
-			return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
-		}
+		theme := ""
 		if opts.Theme != nil {
-			if err = data.UseTheme(*opts.Theme); err != nil {
-				return nil, err //nolint:wrapcheck // a usererr for the caller to show
-			}
+			theme = *opts.Theme
+		}
+		if data, err = tmpl.Read(file, []byte(src), theme); err != nil {
+			return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 		}
 		own = data.Title
 	}

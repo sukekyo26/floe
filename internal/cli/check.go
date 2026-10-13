@@ -3,9 +3,11 @@ package cli
 import (
 	"cmp"
 	"errors"
+	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -28,35 +30,59 @@ the server is not started, and nothing is printed when the files are right.`,
 }
 
 func (a *app) check(files []string) error {
-	var problems yamlpos.Problems
+	found := make(mistakes, 0, len(files))
 	for _, file := range files {
-		if !store.IsDataFile(file) {
-			return usererr.New("cli_check_not_data", file)
-		}
-		src, err := a.readArg(file)
-		if err != nil {
-			return err
-		}
-		d, err := tmpl.Read(file, src)
-		var all yamlpos.Problems
-		var one *yamlpos.Error
-		switch {
-		case errors.As(err, &all):
-			problems = append(problems, all...)
-			continue
-		case errors.As(err, &one):
-			problems = append(problems, one)
-			continue
-		case err != nil:
-			return err //nolint:wrapcheck // already says what failed
-		}
-		// Drawing is the last stage. Data that passed its schema fails here only by the template's mistake.
-		if _, err := d.Render(cmp.Or(d.Title, file), ""); err != nil {
-			return err //nolint:wrapcheck // a usererr naming the file and the template
-		}
+		found = append(found, checkFile(a, file)...)
 	}
-	if problems != nil {
-		return problems
+	if len(found) > 0 {
+		return found
 	}
 	return nil
+}
+
+// checkFile returns the mistakes of file: each at its line and column, or one about the whole file.
+func checkFile(a *app, file string) []error {
+	if !store.IsDataFile(file) {
+		return []error{usererr.New("cli_check_not_data", file)}
+	}
+	src, err := a.readArg(file)
+	if err != nil {
+		return []error{err}
+	}
+	d, err := tmpl.Read(file, src, "")
+	var all yamlpos.Problems
+	switch {
+	case errors.As(err, &all):
+		found := make([]error, len(all))
+		for i, e := range all {
+			found[i] = e
+		}
+		return found
+	case err != nil:
+		return []error{err}
+	}
+	// Drawing is the last stage. Data that passed its schema fails here only by the template's mistake.
+	if _, err := d.Render(cmp.Or(d.Title, file), ""); err != nil {
+		return []error{err}
+	}
+	return nil
+}
+
+// mistakes are the mistakes of every file checked, one per line, in the order of the files.
+type mistakes []error
+
+func (m mistakes) Error() string {
+	return m.Localize(i18n.EnglishCatalog())
+}
+
+func (m mistakes) Localize(c *i18n.Catalog) string {
+	lines := make([]string, len(m))
+	for i, e := range m {
+		lines[i] = e.Error()
+		var l i18n.Localizer
+		if errors.As(e, &l) {
+			lines[i] = l.Localize(c)
+		}
+	}
+	return strings.Join(lines, "\n")
 }

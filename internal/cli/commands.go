@@ -85,6 +85,9 @@ for another file is refused unless --force.`,
 				opts.Lang = &lang
 			}
 			if flags.Changed("theme") {
+				if strings.TrimSpace(theme) == "" {
+					return usageError{err: usererr.New("cli_theme_empty")}
+				}
 				opts.Theme = &theme
 			}
 			return a.publish(cmd.Context(), args[0], opts)

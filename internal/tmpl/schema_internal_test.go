@@ -99,7 +99,7 @@ func check(t *testing.T, schema, src string) yamlpos.Problems {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := Read("d.yaml", []byte("template: report\n"))
+	d, err := Read("d.yaml", []byte("template: report\n"), "")
 	if err != nil {
 		t.Fatal(err)
 	}

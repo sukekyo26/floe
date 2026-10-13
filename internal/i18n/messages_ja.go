@@ -160,6 +160,7 @@ var messagesJA = map[string]string{
 	"cli_no_home":           "HOME が設定されていません。HOME か FLOE_DIR を設定してください",
 	"cli_check_not_data":    "%s はデータファイル（.yaml か .yml）ではありません",
 	"cli_title_empty":       "--title が空です。ページの名前を指定するか、--title を省いてデータファイルの title:（リンクなら <title> か最初の <h1>）から取ってください",
+	"cli_theme_empty":       "--theme が空です。テンプレートのテーマを指定するか、--theme を省いてデータファイルの theme: から取ってください",
 	"cli_port_in_use":       "ポート %d は使われています。そのプログラムを止めるか、FLOE_PORT を設定してください",
 	"cli_serving":           "%s を %s/ で配信しています",
 	"cli_not_running":       "サーバーは動いていません",

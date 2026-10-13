@@ -507,6 +507,7 @@ func TestPublishDataFile(t *testing.T) {
 		"floe: "+bad+":1:1: 最上位に template: report のようにテンプレートを指定してください（テンプレート: report）")
 	want(t, "publish --theme of no theme", e.run(t, "", "publish", plan, "--theme", "print"), 1, "",
 		"floe: テンプレート report にテーマ「print」はありません。使えるのは default です")
+	want(t, "publish --theme empty", e.run(t, "", "publish", plan, "--theme", " "), 2, "", "floe: --theme が空です")
 }
 
 // floe check reports the mistakes of every file at once, without publishing or starting the server,
@@ -522,9 +523,12 @@ func TestCheck(t *testing.T) {
 	want(t, "check files with mistakes", e.run(t, "", "check", "ok.yaml", "bad.yaml", "bad.yml"), 1, "",
 		"floe: bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lead, sections, template, theme, title\n"+
 			`bad.yml:2:8: template report has no theme "print"; use default`)
-	want(t, "check a file that is not a data file", e.run(t, "", "check", "page.html"), 1, "",
-		"floe: page.html is not a data file (.yaml or .yml)")
-	want(t, "check a missing file", e.run(t, "", "check", "nope.yaml"), 1, "", "floe: cannot read nope.yaml")
+	// A file that cannot be checked is reported with the others, not instead of them.
+	want(t, "check files that cannot be checked", e.run(t, "", "check", "page.html", "bad.yaml", "nope.yaml"), 1, "",
+		"floe: page.html is not a data file (.yaml or .yml)\nbad.yaml:2:1: leed is not an item")
+	if r := e.run(t, "", "check", "bad.yaml", "nope.yaml"); !strings.Contains(r.stderr, "\ncannot read nope.yaml") {
+		t.Errorf("check of a missing file after one with mistakes = %q", r.stderr)
+	}
 	want(t, "check without a file", e.run(t, "", "check"), 2, "", "floe: requires at least 1 arg(s)")
 	if _, err := os.Stat(e.vars["FLOE_DIR"]); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("check wrote to the store: %v", err)

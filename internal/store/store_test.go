@@ -622,12 +622,18 @@ func TestPublishLang(t *testing.T) {
 		wantUserErr(t, err, "lang_invalid", bad)
 	}
 
-	// --theme picks a theme of the template over the data's, and is refused for a link.
-	e.mustPublish(t, frag, store.Options{Theme: ptr("default")}, "other")
-	if m := e.meta(t, "frag"); m.Theme != "default" {
-		t.Errorf("--theme default: theme %q", m.Theme)
+	// --theme picks a theme of the template over the data's, which is then not used, and is refused
+	// for a link.
+	printed := e.write(t, "printed.yaml", "template: report\ntheme: print\n")
+	_, err := e.publish(t, printed, store.Options{}, "other")
+	if err == nil || !strings.Contains(err.Error(), `template report has no theme "print"`) {
+		t.Errorf("publish of a theme the template does not have = %v", err)
 	}
-	_, err := e.publish(t, frag, store.Options{Theme: ptr("print")}, "other")
+	e.mustPublish(t, printed, store.Options{Theme: ptr("default")}, "other")
+	if m := e.meta(t, "printed"); m.Theme != "default" {
+		t.Errorf("--theme default over theme: print: theme %q", m.Theme)
+	}
+	_, err = e.publish(t, frag, store.Options{Theme: ptr("print")}, "other")
 	wantUserErr(t, err, "tmpl_unknown_theme", "print", "report", "default")
 
 	// A linked file is shown as it is: --lang is refused, and a language left from before is dropped.

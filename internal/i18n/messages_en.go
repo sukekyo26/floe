@@ -161,6 +161,7 @@ var messagesEN = map[string]string{
 	"cli_no_home":           "HOME is not set; set HOME or FLOE_DIR",
 	"cli_check_not_data":    "%s is not a data file (.yaml or .yml)",
 	"cli_title_empty":       "--title is empty: give the page a name, or omit --title to take the data file's title:, or a link's <title> or <h1>",
+	"cli_theme_empty":       "--theme is empty: name a theme of the template, or omit --theme to take the data file's theme:",
 	"cli_port_in_use":       "port %d is in use; stop that program or set FLOE_PORT",
 	"cli_serving":           "serving %s at %s/",
 	"cli_not_running":       "server is not running",
