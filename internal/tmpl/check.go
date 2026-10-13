@@ -106,11 +106,10 @@ func (t *Template) checkChecks(s *schema) []error {
 	}
 	var mistakes []error
 	for _, c := range list {
-		_, err = c.program()
-		if err == nil {
-			err = c.declared(s)
+		if err = c.declared(s); err != nil {
+			mistakes = append(mistakes, err)
 		}
-		if err != nil {
+		if _, err = c.program(); err != nil {
 			mistakes = append(mistakes, err)
 		}
 	}

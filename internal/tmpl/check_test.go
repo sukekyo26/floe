@@ -85,11 +85,12 @@ func TestCheckMistakes(t *testing.T) {
 			files: map[string]string{"checks.yaml": "- for: file\n  expr: 'true'\n  message: m\n" +
 				"- for: files.0\n  expr: 'true'\n  message: m\n" +
 				"- for: files\n  field: size\n  expr: 'true'\n  message: m\n" +
-				"- for: files\n  expr: itme\n  message: m\n"},
+				"- for: file\n  expr: itme\n  message: m\n"},
 			want: []string{
 				"sizes/checks.yaml:1:8: for: schema.json does not declare file",
 				"sizes/checks.yaml:4:8: for: schema.json does not declare files.0",
 				"sizes/checks.yaml:8:10: field: schema.json does not declare size under the items of files",
+				"sizes/checks.yaml:11:8: for: schema.json does not declare file",
 				"sizes/checks.yaml:12:9: itme cannot be read as an expression: unknown name itme",
 			},
 		},
