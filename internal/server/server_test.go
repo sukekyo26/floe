@@ -52,7 +52,7 @@ func newEnv(t *testing.T) *env {
 	if err := os.Mkdir(filepath.Join(tmp, "home"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	st := store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary(""))
+	st := store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary(filepath.Join(tmp, "templates")))
 	e := &env{
 		tmp: tmp, store: st, base: "http://127.0.0.1:" + strconv.Itoa(port),
 		origin: "http://127.0.0.1:" + strconv.Itoa(port), done: make(chan error, 1),
@@ -101,7 +101,7 @@ func (e *env) write(t *testing.T, rel, body string) string {
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil { //nolint:gosec // G703: the test's own directory
 		t.Fatal(err)
 	}
 	return path
@@ -522,7 +522,7 @@ func TestLinkedFile(t *testing.T) {
 	}
 
 	// Saving the linked file notifies its open pages.
-	since := url.QueryEscape(store.Version(e.store.ReadMeta("site"), index))
+	since := url.QueryEscape(e.store.Version(e.store.ReadMeta("site"), index))
 	ch := make(chan string, 1)
 	go func() {
 		_, body := e.events(t, "/api/events/site?since="+since, 4*time.Second)

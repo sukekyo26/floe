@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -209,6 +210,7 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 	refused := map[string]*usererr.Error{}
 	var problems yamlpos.Problems
 	for _, f := range found {
+		d.tried = append(d.tried, filepath.Join(dir, filepath.FromSlash(f.name)))
 		// An image named by many items is read once, and its mistake reported at each of them: refused
 		// holds nil for one read.
 		e, seen := refused[f.name]

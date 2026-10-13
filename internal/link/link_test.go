@@ -170,7 +170,7 @@ func TestCheck(t *testing.T) {
 	tmp := realTemp(t)
 	realHome := filepath.Join(tmp, "realhome")
 	home := filepath.Join(tmp, "home")
-	for _, path := range []string{"top.html", ".top.html", ".secret/x.html", "proj/.agents/doc.html", "proj/page.txt", "proj/ok.HTM"} {
+	for _, path := range []string{"top.html", ".top.html", ".secret/x.html", "proj/.agents/doc.html", "proj/page.txt", "proj/ok.HTM", "proj/spec.YML"} {
 		write(t, filepath.Join(realHome, path), "<p>x</p>")
 	}
 	if err := os.Mkdir(filepath.Join(realHome, "proj", "dir.html"), 0o750); err != nil {
@@ -201,13 +201,14 @@ func TestCheck(t *testing.T) {
 	}{
 		{"proj/.agents/doc.html", ""},
 		{"proj/ok.HTM", ""},
+		{"proj/spec.YML", ""},
 		{".secret/x.html", "is under a hidden directory of your home"},
 		{"top.html", "would expose all of " + realHome},
 		{".top.html", "would expose all of " + realHome},
-		{"proj/page.txt", "is not a regular .html or .htm file"},
-		{"proj/dir.html", "is not a regular .html or .htm file"},
-		{"proj/pipe.html", "is not a regular .html or .htm file"},
-		{"proj/missing.html", "is not a regular .html or .htm file"},
+		{"proj/page.txt", "is not a regular HTML file (.html, .htm) or data file"},
+		{"proj/dir.html", "is not a regular HTML file (.html, .htm) or data file"},
+		{"proj/pipe.html", "is not a regular HTML file (.html, .htm) or data file"},
+		{"proj/missing.html", "is not a regular HTML file (.html, .htm) or data file"},
 	}
 	for _, tt := range tests {
 		err := link.Check(filepath.Join(realHome, tt.path), home)

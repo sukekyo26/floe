@@ -12,7 +12,7 @@ var messagesEN = map[string]string{
 
 	// link: which files may be linked
 	"link_not_real":        "%s is not its absolute real path; pass it through filepath.Abs and filepath.EvalSymlinks (symlinks resolved, path cleaned) first",
-	"link_not_html":        "%s is not a regular .html or .htm file; only HTML files can be linked",
+	"link_not_linkable":    "%s is not a regular HTML file (.html, .htm) or data file (.yaml, .yml); only those can be linked",
 	"link_home_unresolved": `cannot resolve the home directory "%s"; set HOME to an existing absolute directory`,
 	"link_hidden_home":     "%s is under a hidden directory of your home (settings and keys live there); move it out to link it",
 	"link_exposes_dir":     "%s would expose all of %s; move it into a directory of its own and link it there",
@@ -264,6 +264,8 @@ var messagesEN = map[string]string{
 	"icons_already":         "%s icons %s are already in %s (add --force to fetch them again)",
 
 	// tmpl: reading data files and drawing them with templates
+	"server_mistakes_head":     "The data file has mistakes",
+	"server_mistakes_lead":     "Fix them and save the file: this tab shows the page again.",
 	"tmpl_no_template":         "name the template at the top level, like template: report (templates: %s)",
 	"tmpl_not_mapping":         "write the top level as keys and values, like template: report",
 	"tmpl_documents":           "a data file holds one YAML document: write the page as one, without --- between parts",

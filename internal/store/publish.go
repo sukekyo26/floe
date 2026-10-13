@@ -95,16 +95,16 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	if err != nil {
 		return nil, err
 	}
-	var data *tmpl.Data
+	theme := ""
+	if opts.Theme != nil {
+		theme = *opts.Theme
+	}
+	data, err := s.readData(file, path, src, theme, cwd)
+	if err != nil {
+		return nil, err
+	}
 	own := ""
-	if path == "" {
-		theme := ""
-		if opts.Theme != nil {
-			theme = *opts.Theme
-		}
-		if data, err = s.templates.Read(file, []byte(src), theme, cwd); err != nil {
-			return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
-		}
+	if data != nil {
 		own = data.Title
 	}
 	slug, err := s.slugFor(file, path, opts, cwd)
@@ -129,12 +129,39 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	}
 	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Page: nil, Prev: prev}
 	if data != nil {
-		e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
-		if e.Page, err = data.Render(e.Meta.Title, e.Meta.Lang); err != nil {
-			return nil, err //nolint:wrapcheck // a usererr for the caller to show
+		if err = e.draw(data, theme); err != nil {
+			return nil, err
 		}
 	}
 	return e, nil
+}
+
+// readData reads and checks the data file file, of content src, if it is one: nil otherwise. A linked
+// one, of the real path path, is checked as a stored page is, its images under its real directory.
+func (s *Store) readData(file, path, src, theme, cwd string) (*tmpl.Data, error) {
+	if !IsDataFile(file) {
+		return nil, nil //nolint:nilnil // a page, which is linked as it is
+	}
+	name := cmp.Or(path, file)
+	data, err := s.templates.Read(name, []byte(src), theme, cwd)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
+	}
+	return data, nil
+}
+
+// draw draws the page of e from data: stored, or, for a link, drawn each time it is opened, which
+// keeps only the theme given over the data's.
+func (e *Entry) draw(data *tmpl.Data, theme string) error {
+	var err error
+	if !e.Meta.IsLink() {
+		e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
+		e.Page, err = data.Render(e.Meta.Title, e.Meta.Lang)
+		return err //nolint:wrapcheck // a usererr for the caller to show
+	}
+	e.Meta.Theme = theme
+	_, err = data.Render(cmp.Or(e.Meta.Title, data.Title, e.Slug), e.Meta.Lang)
+	return err //nolint:wrapcheck // a usererr for the caller to show
 }
 
 // read returns the real path of a link ("" for a stored page) and the file's content. A link is
@@ -161,15 +188,15 @@ func (s *Store) read(file string, isLink bool, cwd string) (path, content string
 }
 
 // checkKind checks that file, opts.Lang and opts.Theme fit the kind of publish, before file is read. A
-// stored page is drawn from a data file in opts.Lang and opts.Theme; HTML is only linked, and shown as
-// it is, in its own language and look.
+// page is drawn from a data file in opts.Lang and opts.Theme, stored or linked; HTML is only linked,
+// and shown as it is, in its own language and look.
 func checkKind(file string, opts Options) error {
 	switch {
 	case !opts.Link && !IsDataFile(file):
 		return usererr.New("store_not_data", file)
-	case opts.Link && opts.Lang != nil:
+	case opts.Link && !IsDataFile(file) && opts.Lang != nil:
 		return usererr.New("store_lang_link")
-	case opts.Link && opts.Theme != nil:
+	case opts.Link && !IsDataFile(file) && opts.Theme != nil:
 		return usererr.New("store_theme_link")
 	case opts.Lang != nil && !i18n.IsTag(*opts.Lang):
 		return usererr.New("lang_invalid", *opts.Lang)
@@ -178,7 +205,8 @@ func checkKind(file string, opts Options) error {
 }
 
 // newMeta keeps what was set on the management page (favourite, title, project), the description, the
-// language and createdAt from base; --title, --description and --lang win. A link has no language.
+// language and createdAt from base; --title, --description and --lang win. A linked HTML file has no
+// language.
 func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta {
 	keepTitle := opts.Title == nil && base.TitleEdited
 	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
@@ -208,9 +236,10 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 	if base.ProjectEdited {
 		m.Project = base.Project
 	}
-	if path == "" {
+	switch {
+	case path == "":
 		m.PublishedFrom = from
-	} else {
+	case !IsDataFile(path):
 		m.Lang = ""
 	}
 	return m

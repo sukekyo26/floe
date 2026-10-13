@@ -1,6 +1,8 @@
 package cli_test
 
 import (
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -212,5 +214,34 @@ func TestDataImages(t *testing.T) {
 	e.write(t, "work/report/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nchart: ../chart.png\n")
 	if r := e.run(t, "work", "check", "report/sizes.yaml"); r.code != 1 || !strings.Contains(r.stderr, `report/sizes.yaml:3:8: chart: "../chart.png" is not a file under`) {
 		t.Errorf("check of an image out of the directory = %+v", r)
+	}
+}
+
+// A linked data file is drawn by the server floe publish starts, with the templates of one's own the
+// publish was given.
+func TestLinkDataFileOfOwnTemplate(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	if err := os.CopyFS(filepath.Join(e.tmp, "templates", "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
+		t.Fatal(err)
+	}
+	data := e.write(t, "work/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\n")
+	if r := e.run(t, "work", "publish", "sizes.yaml", "--link"); r.code != 0 {
+		t.Fatalf("publish --link = %+v", r)
+	}
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.base()+"/a/sizes/?raw", http.NoBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	b, err := io.ReadAll(res.Body)
+	if err != nil || !strings.Contains(string(b), "<td>1.5 KiB</td>") {
+		t.Errorf("the linked page of %s = %v:\n%s", data, err, b)
 	}
 }

@@ -566,7 +566,7 @@ func TestFileAndVersion(t *testing.T) {
 	if _, ok := e.s.File("p", stored, "x.css"); ok {
 		t.Error("a stored page serves a subpath")
 	}
-	if v := store.Version(stored, ""); v != stored.UpdatedAt {
+	if v := e.s.Version(stored, ""); v != stored.UpdatedAt {
 		t.Errorf("Version of a stored page = %q", v)
 	}
 	file := e.write(t, "site/index.html", "x")
@@ -575,10 +575,10 @@ func TestFileAndVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	linked := &store.Meta{Path: file}
-	if v := store.Version(linked, file); v != "2026-03-04T05:06:07.890Z" {
+	if v := e.s.Version(linked, file); v != "2026-03-04T05:06:07.890Z" {
 		t.Errorf("Version of a link = %q", v)
 	}
-	if v := store.Version(linked, file+".gone"); v != "" {
+	if v := e.s.Version(linked, file+".gone"); v != "" {
 		t.Errorf("Version of a gone link = %q", v)
 	}
 	if store.Now() == "" || !store.ValidSlug("a-1") || store.ValidSlug("-a") || e.s.Root() != filepath.Join(e.tmp, "store") {
@@ -684,5 +684,38 @@ func TestPublishDataFile(t *testing.T) {
 	bad := e.write(t, "bad.yml", "template: deck\n")
 	if _, err := e.publish(t, bad, store.Options{}, ""); err == nil || err.Error() != bad+`:1:11: unknown template "deck"; use report` {
 		t.Errorf("publish of a data file naming no template there = %v", err)
+	}
+}
+
+// A data file is linked as an HTML file is, checked as a stored page is, with its language and the
+// theme given over its own: no page is stored, as it is drawn each time it is opened.
+func TestLinkDataFile(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	data := e.write(t, "proj/spec.yaml", "template: report\ntitle: Spec\n")
+	entry := e.mustPublish(t, data, store.Options{Link: true, Lang: ptr("ja"), Theme: ptr("default")}, "proj")
+	m := entry.Meta
+	if entry.Page != nil || m.Path != data || m.Lang != "ja" || m.Theme != "default" || m.Template != "" || m.Title != "" {
+		t.Errorf("the entry = %+v, page %d bytes", m, len(entry.Page))
+	}
+	if !m.IsDrawn() || e.s.Version(&m, data) == "" {
+		t.Errorf("IsDrawn = %v, Version = %q", m.IsDrawn(), e.s.Version(&m, data))
+	}
+	if _, err := os.Stat(filepath.Join(e.tmp, "store", "spec", "index.html")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a page was stored for a link: %v", err)
+	}
+	page, _, err := e.s.Draw("spec", &m, data)
+	if err != nil || !strings.Contains(string(page), `<html lang="ja">`) || !strings.Contains(string(page), "<h1>Spec</h1>") {
+		t.Errorf("Draw = %v:\n%s", err, page)
+	}
+
+	bad := e.write(t, "proj/bad.yaml", "template: report\nsections: 3\n")
+	if _, err = e.publish(t, bad, store.Options{Link: true}, "proj"); err == nil || !strings.Contains(err.Error(), "bad.yaml:2:11: sections:") {
+		t.Errorf("linking a data file with mistakes = %v", err)
+	}
+	html := e.write(t, "proj/page.html", "<title>x</title>")
+	if _, err = e.publish(t, html, store.Options{Link: true, Lang: ptr("ja")}, "proj"); err == nil {
+		t.Error("an HTML file was linked with a language")
 	}
 }
