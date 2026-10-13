@@ -3,9 +3,7 @@ package cli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
-	"io"
 	"net"
 	"net/http"
 	"os"
@@ -18,6 +16,7 @@ import (
 	"time"
 
 	"github.com/sukekyo26/floe/internal/cli"
+	"github.com/sukekyo26/floe/internal/daemon"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/version"
 )
@@ -77,26 +76,44 @@ func copySelf(dir string) (string, error) {
 type env struct {
 	tmp  string
 	vars map[string]string
+	port string // the port of its server, which a test may set FLOE_PORT away from
 }
 
-// handedOut are the ports freePort gave, so that two tests never share one: a port closed for a
-// server to take is free again, and the system may hand it out once more.
+// handedOut are the ports given to the tests running now, so that two never share one: a port
+// closed for a server to take later is free again, and the system may give it out once more.
 var handedOut sync.Map
 
 // freePort returns a port free now, for a server a test starts on it.
 func freePort(t *testing.T) int {
 	t.Helper()
 
-	for {
-		ln := listen(t)
-		port := portOf(t, ln)
-		if ln.Close() != nil {
-			t.Fatal("no free port")
-		}
-		if _, taken := handedOut.LoadOrStore(port, true); !taken {
-			return port
-		}
+	ln := listenFree(t)
+	port := portOf(t, ln)
+	if ln.Close() != nil {
+		t.Fatal("no free port")
 	}
+	return port
+}
+
+// listenFree listens on a port given to no other test running now, and keeps it given until t ends.
+func listenFree(t *testing.T) net.Listener {
+	t.Helper()
+
+	for range 100 {
+		var lc net.ListenConfig
+		ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		port := portOf(t, ln)
+		if _, taken := handedOut.LoadOrStore(port, true); !taken {
+			t.Cleanup(func() { handedOut.Delete(port) })
+			return ln
+		}
+		_ = ln.Close()
+	}
+	t.Fatal("no port free of the other tests")
+	return nil
 }
 
 func portOf(t *testing.T, ln net.Listener) int {
@@ -109,24 +126,14 @@ func portOf(t *testing.T, ln net.Listener) int {
 	return addr.Port
 }
 
-func listen(t *testing.T) net.Listener {
-	t.Helper()
-
-	var lc net.ListenConfig
-	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	return ln
-}
-
 // hold listens on a port of its own for e and keeps it, so that nothing takes it between choosing it
 // and listening on it.
 func (e *env) hold(t *testing.T) net.Listener {
 	t.Helper()
 
-	ln := listen(t)
-	e.vars["FLOE_PORT"] = strconv.Itoa(portOf(t, ln))
+	ln := listenFree(t)
+	e.port = strconv.Itoa(portOf(t, ln))
+	e.vars["FLOE_PORT"] = e.port
 	t.Cleanup(func() { _ = ln.Close() })
 	return ln
 }
@@ -138,10 +145,11 @@ func newEnv(t *testing.T) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e := &env{tmp: tmp, vars: map[string]string{
+	port := strconv.Itoa(freePort(t))
+	e := &env{tmp: tmp, port: port, vars: map[string]string{
 		"HOME":      filepath.Join(tmp, "home"),
 		"FLOE_DIR":  filepath.Join(tmp, "store"),
-		"FLOE_PORT": strconv.Itoa(freePort(t)),
+		"FLOE_PORT": port,
 		"BROWSER":   filepath.Join(tmp, "browser"),
 	}}
 	e.write(t, "browser", "#!/bin/sh\nprintf '%s\\n' \"$1\" >>'"+filepath.Join(tmp, "opened")+"'\n")
@@ -200,14 +208,34 @@ func (e *env) stop(t *testing.T) {
 	t.Helper()
 
 	ctx := context.WithoutCancel(t.Context())
-	e.runIn(ctx, t, "", "stop")
-	for range 150 {
-		if _, up := e.healthIn(ctx, t); !up {
-			return
+	e.vars["FLOE_PORT"] = e.port
+	// A server in this process (floe serve, run by a test) stops with the test's context: a SIGTERM to
+	// its pid would stop the test binary.
+	if h, up := e.healthIn(ctx, t); up && h.PID != os.Getpid() {
+		if r := e.runIn(ctx, t, "", "stop"); r.code != 0 {
+			t.Errorf("stop = %+v", r)
+		}
+	}
+	if !e.wait(ctx, t, false) {
+		t.Error("the server outlived the test")
+	}
+}
+
+// wait probes e's port until a server of floe is up there, or down when up is false, and reports
+// whether it came to that. Starting and stopping take well under a second, but a loaded machine (the
+// whole suite under -race) may take longer.
+func (e *env) wait(ctx context.Context, t *testing.T, up bool) bool {
+	t.Helper()
+
+	for deadline := time.Now().Add(10 * time.Second); ; {
+		if _, now := e.healthIn(ctx, t); now == up {
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	t.Error("the server outlived the test")
 }
 
 func (e *env) runIn(ctx context.Context, t *testing.T, dir string, args ...string) result {
@@ -269,22 +297,8 @@ func (e *env) health(t *testing.T) (server.Health, bool) {
 func (e *env) healthIn(ctx context.Context, t *testing.T) (server.Health, bool) {
 	t.Helper()
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-	// A port that is not one (a test of FLOE_PORT) has nothing up on it.
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, e.base()+"/api/health", http.NoBody)
-	if err != nil {
-		return server.Health{}, false
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return server.Health{}, false
-	}
-	defer res.Body.Close()
-	var h server.Health
-	// Decoded first: Go does not specify whether h in "return h, f(&h)" is read before or after f.
-	ok := json.NewDecoder(res.Body).Decode(&h) == nil
-	return h, ok
+	p := daemon.Probe(ctx, e.base())
+	return p.Health, p.State == daemon.Ours
 }
 
 func want(t *testing.T, what string, got result, code int, stdout, stderr string) {
@@ -414,15 +428,9 @@ func TestPublish(t *testing.T) {
 		t.Errorf("rm removed the linked file: %v", err)
 	}
 
-	h, up := e.health(t)
+	h, _ := e.health(t)
 	want(t, "stop", e.run(t, "", "stop"), 0, "stopped server (pid "+strconv.Itoa(h.PID)+")\n", "")
-	for range 50 {
-		if _, up = e.health(t); !up {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	if up {
+	if !e.wait(t.Context(), t, false) {
 		t.Error("stop did not shut the server down")
 	}
 }
@@ -484,23 +492,24 @@ func TestServeInProcess(t *testing.T) {
 
 	e := newEnv(t)
 	ctx, cancel := context.WithCancel(t.Context())
-	var stdout bytes.Buffer
+	var stdout, stderr bytes.Buffer
 	done := make(chan int, 1)
 	go func() {
 		done <- cli.Run(ctx, []string{"serve"}, cli.Env{
-			Getenv: func(k string) string { return e.vars[k] }, Dir: e.tmp, Stdout: &stdout, Stderr: io.Discard,
+			Getenv: func(k string) string { return e.vars[k] }, Dir: e.tmp, Stdout: &stdout, Stderr: &stderr,
 			Environ: nil,
 		})
 	}()
-	// Up in well under a second, but a loaded machine (the whole suite under -race) may take longer.
-	up := false
-	for deadline := time.Now().Add(10 * time.Second); !up && time.Now().Before(deadline); {
-		if _, up = e.health(t); !up {
-			time.Sleep(20 * time.Millisecond)
+	// A serve that stops at once (its port taken) says why, rather than leave the wait to run out.
+	upOrDone := make(chan bool, 1)
+	go func() { upOrDone <- e.wait(ctx, t, true) }()
+	select {
+	case code := <-done:
+		t.Fatalf("serve = %d before it came up: %s", code, stderr.String())
+	case up := <-upOrDone:
+		if !up {
+			t.Fatal("serve did not come up")
 		}
-	}
-	if !up {
-		t.Fatal("serve did not come up")
 	}
 	cancel()
 	if code := <-done; code != 0 || stdout.String() != "serving "+e.vars["FLOE_DIR"]+" at "+e.base()+"/\n" {
