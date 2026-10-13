@@ -27,6 +27,7 @@ var (
 	errName  = errors.New("is not a name an expression or page.html can use; write letters, digits and _")
 	errClash = errors.New("is an item of the data too, so an expression could not tell them apart")
 	errCycle = errors.New("the values are computed from each other")
+	errEnv   = errors.New("$env is not for computed.yaml; use the names")
 )
 
 // usable reports whether n is a name an expression and page.html (.Calc.n) can use: not a word of expr
@@ -123,6 +124,14 @@ func readComputed(src []byte, declared []string) (*computed, error) {
 		return nil, fmt.Errorf("computed.yaml: %w", err)
 	}
 	names := slices.Sorted(maps.Keys(exprs))
+	for _, n := range names {
+		switch {
+		case !usable(n):
+			return nil, fmt.Errorf("%s %w", n, errName)
+		case slices.Contains(declared, n):
+			return nil, fmt.Errorf("%s %w", n, errClash)
+		}
+	}
 	// LIMIT: an item whose name an expression cannot use (my-size, or a function of expr such as date)
 	// is not seen by name. Give the expressions the data as doc too if a template needs one.
 	items := slices.DeleteFunc(slices.Clone(declared), func(n string) bool { return !usable(n) })
@@ -140,14 +149,6 @@ func readComputed(src []byte, declared []string) (*computed, error) {
 		}
 		c.field[v] = i
 	}
-	for _, n := range names {
-		switch {
-		case !usable(n):
-			return nil, fmt.Errorf("%s %w", n, errName)
-		case slices.Contains(declared, n):
-			return nil, fmt.Errorf("%s %w", n, errClash)
-		}
-	}
 	c.env = reflect.New(reflect.StructOf(fields)).Elem()
 	for _, n := range names {
 		p, err := compile(exprs[n], c.env.Interface())
@@ -155,7 +156,9 @@ func readComputed(src []byte, declared []string) (*computed, error) {
 			return nil, fmt.Errorf("%s: %w", n, err)
 		}
 		c.programs[n] = p
-		c.uses[n] = usedNames(p, exprs)
+		if c.uses[n], err = usedNames(p, exprs); err != nil {
+			return nil, fmt.Errorf("%s: %w", n, err)
+		}
 	}
 	order, err := topological(names, c.uses)
 	if err != nil {
@@ -165,19 +168,23 @@ func readComputed(src []byte, declared []string) (*computed, error) {
 	return c, nil
 }
 
-// usedNames returns the names of computed that the program p uses.
-func usedNames(p *vm.Program, computed map[string]string) []string {
+// usedNames returns the names of computed that the program p uses. It refuses $env, through which p
+// could use one without its name, before it is computed, or hand the variables to page.html.
+func usedNames(p *vm.Program, computed map[string]string) ([]string, error) {
 	var u used
 	node := p.Node()
 	exprast.Walk(&node, &u)
 	var names []string
 	for _, n := range u {
+		if n == "$env" {
+			return nil, errEnv
+		}
 		if _, ok := computed[n]; ok && !slices.Contains(names, n) {
 			names = append(names, n)
 		}
 	}
 	slices.Sort(names)
-	return names
+	return names, nil
 }
 
 type used []string

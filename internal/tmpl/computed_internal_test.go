@@ -96,6 +96,8 @@ func TestComputeOfABrokenTemplate(t *testing.T) {
 		{"in: 1\n", "in is not a name"},
 		{"_divide: 1\n", "_divide is not a name"},
 		{"a: nope + 1\n", "a: nope + 1: unknown name nope"},
+		{"a: ($env.z ?? 0) + 1\nz: 3\n", "a: $env is not for computed.yaml"},
+		{"e: $env\n", "e: $env is not for computed.yaml"},
 		{"a: 1 +\n", "a: 1 +: unexpected token EOF"},
 		{"- a\n", "computed.yaml: "},
 	} {
