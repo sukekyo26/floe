@@ -21,6 +21,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/link"
 	"github.com/sukekyo26/floe/internal/page"
+	"github.com/sukekyo26/floe/internal/tmpl"
 )
 
 const isoMillis = "2006-01-02T15:04:05.000Z"
@@ -68,6 +69,8 @@ func (m *Meta) IsLink() bool {
 type Store struct {
 	root string
 	home string
+	// templates draw the pages of data files.
+	templates *tmpl.Library
 
 	mu sync.Mutex
 	// LIMIT: entries of unlinked paths stay (a few hundred bytes each). Drop them on removal if a
@@ -79,9 +82,10 @@ type cachedTitle struct {
 	key, title string
 }
 
-// New returns the store at root. home is the user's home directory, which bounds what may be linked.
-func New(root, home string) *Store {
-	return &Store{root: root, home: home, mu: sync.Mutex{}, titles: map[string]cachedTitle{}}
+// New returns the store at root. home is the user's home directory, which bounds what may be linked,
+// and templates draw the pages of data files.
+func New(root, home string, templates *tmpl.Library) *Store {
+	return &Store{root: root, home: home, templates: templates, mu: sync.Mutex{}, titles: map[string]cachedTitle{}}
 }
 
 // Root returns the store directory.

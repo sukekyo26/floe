@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -27,10 +26,10 @@ var formats = []string{"html"}
 
 // checkSchema checks the values of d against its template's schema.json and reports every mistake at
 // its line and column under root, the data file's top mapping.
-func checkSchema(d *Data, root ast.Node) error {
-	src, err := builtin.ReadFile(path.Join("builtin", d.Template, "schema.json"))
+func checkSchema(t *Template, d *Data, root ast.Node) error {
+	src, err := t.readFile("schema.json")
 	if err != nil {
-		return fmt.Errorf("read the schema of %s: %w", d.Template, err)
+		return err
 	}
 	return validate(src, d, root)
 }

@@ -290,5 +290,9 @@ var messagesJA = map[string]string{
 	"tmpl_check_bare":          "%s: %s",
 	"tmpl_check_error":         "%s: %s（検査を実行できませんでした: %s）",
 	"tmpl_computed_error":      "%s = %s をこのファイルから計算できません: %s",
+	"tmpl_floe_major":          "テンプレート %s は floe %d 向けで、この floe %s では使えません。この floe 向けの版を入れてください",
+	"tmpl_floe_older":          "テンプレート %s には floe %s 以降が要ります（この floe は %s）。floe を更新してください",
+	"tmpl_template_yaml":       "template.yaml には、キー floe: を 1 つだけ書き、テンプレートが要る floe の版を floe: 1.2 のように書いてください",
+	"tmpl_template_yaml_key":   "%s は template.yaml のキーではありません。テンプレートが要る floe の版を floe: 1.2 のように書いてください",
 	"tmpl_render":              "%s はテンプレート %s に合いません: %s",
 }

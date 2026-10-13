@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io/fs"
 	"math"
 	"path"
 	"slices"
@@ -59,9 +58,12 @@ var shared = []string{"template", "theme", "title"}
 //
 // theme, when not "", is the theme to draw with instead of the one the data names (floe publish
 // --theme): the data's theme: is then not used, and a theme the template does not have is refused as
-// a *usererr.Error.
-func Read(file string, src []byte, theme string) (*Data, error) {
+// a *usererr.Error, as is a template that needs another floe.
+func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	root, err := parse(file, src)
+	if errors.Is(err, yamlpos.ErrEmpty) {
+		return nil, yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", strings.Join(l.Names(), ", "))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -75,17 +77,40 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 		problems = append(problems, yamlpos.New(file, p, key, args...))
 	}
 	// Without its template, the data has no schema to be checked against.
+	var t *Template
+	if d.Template != "" {
+		if t, err = l.Find(d.Template); err != nil {
+			return nil, err
+		}
+	}
 	switch {
 	case d.Template == "" && problems == nil:
-		fail(where["template"], "tmpl_no_template", strings.Join(Names(), ", "))
+		fail(where["template"], "tmpl_no_template", strings.Join(l.Names(), ", "))
 		return nil, problems.Sorted()
 	case d.Template == "":
 		return nil, problems.Sorted()
-	case !slices.Contains(Names(), d.Template):
-		fail(where["template"], "tmpl_unknown", d.Template, strings.Join(Names(), ", "))
+	case t == nil:
+		fail(where["template"], "tmpl_unknown", d.Template, strings.Join(l.Names(), ", "))
 		return nil, problems.Sorted()
 	}
-	themes, err := themesOf(d.Template)
+	// The floe a template needs comes before its mistakes, which another floe may not make.
+	if err = t.checkVersion(); err != nil {
+		return nil, err
+	}
+	more, err := pickTheme(t, d, theme, where["theme"])
+	if err != nil {
+		return nil, err
+	}
+	if err = checkValues(t, d, root, append(problems, more...)); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+// pickTheme sets the theme of d: theme when given, which t must have, else the data's, reported at at
+// when t does not have it.
+func pickTheme(t *Template, d *Data, theme string, at yamlpos.Pos) (yamlpos.Problems, error) {
+	themes, err := t.themes()
 	if err != nil {
 		return nil, err
 	}
@@ -95,18 +120,16 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 	case theme != "":
 		d.Theme = theme
 	case !slices.Contains(themes, d.Theme):
-		fail(where["theme"], "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
+		e := yamlpos.New(d.File, at, "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
+		return yamlpos.Problems{e}, nil
 	}
-	if err = checkValues(d, root, problems); err != nil {
-		return nil, err
-	}
-	return d, nil
+	return nil, nil
 }
 
 // checkValues checks d against its template's schema and then its checks, and computes its values,
 // reporting the schema's mistakes with problems, those found before in the keys every template shares.
-func checkValues(d *Data, root ast.Node, problems yamlpos.Problems) error {
-	err := checkSchema(d, root)
+func checkValues(t *Template, d *Data, root ast.Node, problems yamlpos.Problems) error {
+	err := checkSchema(t, d, root)
 	var more yamlpos.Problems
 	switch {
 	case errors.As(err, &more):
@@ -119,10 +142,10 @@ func checkValues(d *Data, root ast.Node, problems yamlpos.Problems) error {
 	}
 	// Each stage runs on data that passed the one before: broken data would only give the expressions
 	// mistakes that mean nothing.
-	if err = checkRelations(d, root); err != nil {
+	if err = checkRelations(t, d, root); err != nil {
 		return err
 	}
-	return checkComputed(d, root)
+	return checkComputed(t, d, root)
 }
 
 // readShared moves the keys every template shares from d.Values to d, and returns where each is
@@ -160,11 +183,8 @@ func readShared(d *Data, root ast.Node, themed bool) (map[string]yamlpos.Pos, ya
 // number for and which would make a comparison of the checks silently hold or fail.
 func parse(file string, src []byte) (ast.Node, error) {
 	body, err := yamlpos.Parse(file, src, "tmpl_documents")
-	if errors.Is(err, yamlpos.ErrEmpty) {
-		return nil, yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", strings.Join(Names(), ", "))
-	}
 	if err != nil {
-		return nil, err //nolint:wrapcheck // a mistake at its line and column
+		return nil, err //nolint:wrapcheck // a mistake at its line and column, or ErrEmpty
 	}
 	if a := yamlpos.FirstAnchor(body); a != nil {
 		return nil, yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
@@ -181,48 +201,30 @@ func parse(file string, src []byte) (ast.Node, error) {
 	return body, nil
 }
 
-// Names are the templates there are, by name.
-func Names() []string {
-	entries, err := builtin.ReadDir("builtin")
-	if err != nil {
-		return nil
-	}
-	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		names = append(names, e.Name())
-	}
-	return names
-}
-
-func themesOf(name string) ([]string, error) {
-	entries, err := builtin.ReadDir(path.Join("builtin", name, "themes"))
-	if err != nil {
-		return nil, fmt.Errorf("read the themes of %s: %w", name, err)
-	}
-	themes := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if t, ok := strings.CutSuffix(e.Name(), ".css"); ok {
-			themes = append(themes, t)
-		}
-	}
-	return themes, nil
-}
+// errNoTemplate is a template gone between reading data and drawing it.
+var errNoTemplate = errors.New("its template is gone")
 
 // Render draws d as a page titled title in lang (a BCP 47 tag; "" is DefaultLang).
-func (d *Data) Render(title, lang string) ([]byte, error) {
+func (l *Library) Render(d *Data, title, lang string) ([]byte, error) {
 	if lang == "" {
 		lang = DefaultLang
 	}
-	dir := path.Join("builtin", d.Template)
-	src, err := fs.ReadFile(builtin, path.Join(dir, "page.html"))
+	t, err := l.Find(d.Template)
 	if err != nil {
-		return nil, fmt.Errorf("read the template %s: %w", d.Template, err)
+		return nil, err
 	}
-	css, err := fs.ReadFile(builtin, path.Join(dir, "themes", d.Theme+".css"))
+	if t == nil {
+		return nil, fmt.Errorf("draw %s: %w", d.File, errNoTemplate)
+	}
+	src, err := t.readFile("page.html")
 	if err != nil {
-		return nil, fmt.Errorf("read the theme %s of %s: %w", d.Theme, d.Template, err)
+		return nil, err
 	}
-	s, err := schemaOf(d.Template)
+	css, err := t.readFile(path.Join("themes", d.Theme+".css"))
+	if err != nil {
+		return nil, err
+	}
+	s, err := schemaOf(t)
 	if err != nil {
 		return nil, err
 	}
@@ -264,15 +266,15 @@ var funcs = template.FuncMap{
 	},
 }
 
-// schemaOf reads the schema of the template name.
-func schemaOf(name string) (*schema, error) {
-	b, err := builtin.ReadFile(path.Join("builtin", name, "schema.json"))
+// schemaOf reads the schema of t.
+func schemaOf(t *Template) (*schema, error) {
+	b, err := t.readFile("schema.json")
 	if err != nil {
-		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
+		return nil, err
 	}
 	var s schema
 	if err = json.Unmarshal(b, &s); err != nil {
-		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
+		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
 	}
 	return &s, nil
 }

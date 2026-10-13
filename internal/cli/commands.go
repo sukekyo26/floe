@@ -18,6 +18,7 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -29,7 +30,11 @@ type app struct {
 }
 
 func (a *app) store() *store.Store {
-	return store.New(a.cfg.root, a.cfg.home)
+	return store.New(a.cfg.root, a.cfg.home, a.templates())
+}
+
+func (a *app) templates() *tmpl.Library {
+	return tmpl.NewLibrary(a.cfg.templates)
 }
 
 func (a *app) out(format string, args ...any) {
@@ -154,7 +159,8 @@ func (a *app) noticeUpdate(e *store.Entry) {
 // over the process's own.
 func (a *app) serverEnv() []string {
 	env := append([]string{}, a.env.Environ...)
-	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home)
+	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home,
+		"FLOE_TEMPLATES_DIR="+a.cfg.templates)
 }
 
 func localTime(iso string) string {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -33,7 +34,7 @@ func newEnv(t *testing.T) env {
 		t.Fatal(err)
 	}
 	mkdir(t, filepath.Join(tmp, "home"))
-	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"))}
+	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary(""))}
 }
 
 func mkdir(t *testing.T, dir string) {

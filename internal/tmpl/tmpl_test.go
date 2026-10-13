@@ -12,13 +12,16 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
+// builtins are the built-in templates alone.
+var builtins = tmpl.NewLibrary("")
+
 func render(t *testing.T, src string) string {
 	t.Helper()
-	d, err := tmpl.Read("data.yaml", []byte(src), "")
+	d, err := builtins.Read("data.yaml", []byte(src), "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := d.Render("A title & more", "ja")
+	b, err := builtins.Render(d, "A title & more", "ja")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,14 +36,14 @@ func TestReportExample(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := tmpl.Read("example.yaml", src, "")
+	d, err := builtins.Read("example.yaml", src, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if d.Template != "report" || d.Theme != "default" || d.Title != "Moving the team wiki" {
 		t.Errorf("Read = %+v", d)
 	}
-	if d, err := tmpl.Read("data.yaml", []byte("template: report\ntitle: ' T '\n"), ""); err != nil || d.Title != "T" {
+	if d, err := builtins.Read("data.yaml", []byte("template: report\ntitle: ' T '\n"), ""); err != nil || d.Title != "T" {
 		t.Errorf("Read of a title with spaces = %+v, %v", d, err)
 	}
 	got := render(t, string(src))
@@ -103,7 +106,7 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\ntitle: [a]\n", "data.yaml:2:8: title must be text"},
 		{"template: report\ntitle: 'a\n", "data.yaml:2:8: this is not valid YAML: "},
 	} {
-		_, err := tmpl.Read("data.yaml", []byte(c.src), "")
+		_, err := builtins.Read("data.yaml", []byte(c.src), "")
 		var one *yamlpos.Error
 		var all yamlpos.Problems
 		if !errors.As(err, &one) && !errors.As(err, &all) || !strings.HasPrefix(err.Error(), c.want) {
@@ -111,15 +114,15 @@ func TestReadRefusals(t *testing.T) {
 		}
 	}
 	// An explicit key is found by its text after ?.
-	if _, err := tmpl.Read("data.yaml", []byte("template: report\n? lead\n: 3\n"), ""); err == nil || err.Error() != "data.yaml:3:3: lead: write text, not a number" {
+	if _, err := builtins.Read("data.yaml", []byte("template: report\n? lead\n: 3\n"), ""); err == nil || err.Error() != "data.yaml:3:3: lead: write text, not a number" {
 		t.Errorf("Read of an explicit key = %v", err)
 	}
-	if _, err := tmpl.Read("data.yaml", []byte("%YAML 1.2\n---\ntemplate: report\n"), ""); err != nil {
+	if _, err := builtins.Read("data.yaml", []byte("%YAML 1.2\n---\ntemplate: report\n"), ""); err != nil {
 		t.Errorf("Read of a document after a %%YAML directive = %v", err)
 	}
 	// Data that passed its schema draws; a template that does not fit it is refused while drawing.
 	d := &tmpl.Data{File: "data.yaml", Template: "report", Theme: "default", Title: "", Values: map[string]any{"sections": "no"}}
-	if _, err := d.Render("t", "en"); err == nil || !strings.HasPrefix(err.Error(), "data.yaml does not fit the template report: ") {
+	if _, err := builtins.Render(d, "t", "en"); err == nil || !strings.HasPrefix(err.Error(), "data.yaml does not fit the template report: ") {
 		t.Errorf("Render of data of the wrong shape = %v", err)
 	}
 }
@@ -141,7 +144,7 @@ sections:
       - {}
   - parts: nope
 `
-	_, err := tmpl.Read("bad.yaml", []byte(src), "")
+	_, err := builtins.Read("bad.yaml", []byte(src), "")
 	var p yamlpos.Problems
 	if !errors.As(err, &p) {
 		t.Fatalf("Read = %v, want problems", err)
@@ -166,7 +169,7 @@ sections:
 func TestBuiltins(t *testing.T) {
 	t.Parallel()
 
-	for _, name := range tmpl.Names() {
+	for _, name := range builtins.Names() {
 		for _, f := range []string{"page.html", "schema.json", "example.yaml", "themes/default.css"} {
 			if _, err := fs.Stat(os.DirFS("builtin/"+name), f); err != nil {
 				t.Errorf("template %s: %v", name, err)

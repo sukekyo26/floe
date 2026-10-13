@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"maps"
 	"math"
-	"path"
 	"reflect"
 	"regexp"
 	"slices"
@@ -49,15 +48,15 @@ var identifier = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 
 // checkComputed computes the values of d's template's computed.yaml, if it has one, into d.Calc, and
 // reports at the top of root those its data cannot give.
-func checkComputed(d *Data, root ast.Node) error {
-	src, err := builtin.ReadFile(path.Join("builtin", d.Template, "computed.yaml"))
+func checkComputed(t *Template, d *Data, root ast.Node) error {
+	src, err := t.readFile("computed.yaml")
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("read the computed values of %s: %w", d.Template, err)
+		return err
 	}
-	s, err := schemaOf(d.Template)
+	s, err := schemaOf(t)
 	if err != nil {
 		return err
 	}

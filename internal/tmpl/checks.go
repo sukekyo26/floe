@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -34,13 +33,13 @@ type scope struct {
 
 // checkRelations checks the values of d against its template's checks.yaml, if it has one, and reports
 // every failure at its line and column under root.
-func checkRelations(d *Data, root ast.Node) error {
-	src, err := builtin.ReadFile(path.Join("builtin", d.Template, "checks.yaml"))
+func checkRelations(t *Template, d *Data, root ast.Node) error {
+	src, err := t.readFile("checks.yaml")
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("read the checks of %s: %w", d.Template, err)
+		return err
 	}
 	return relate(src, d, root)
 }

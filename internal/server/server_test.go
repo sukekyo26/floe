@@ -19,6 +19,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/tmpl"
 )
 
 // env is a server on a free port over a store in a temporary directory.
@@ -51,7 +52,7 @@ func newEnv(t *testing.T) *env {
 	if err := os.Mkdir(filepath.Join(tmp, "home"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	st := store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"))
+	st := store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary(""))
 	e := &env{
 		tmp: tmp, store: st, base: "http://127.0.0.1:" + strconv.Itoa(port),
 		origin: "http://127.0.0.1:" + strconv.Itoa(port), done: make(chan error, 1),

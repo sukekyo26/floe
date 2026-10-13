@@ -102,7 +102,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 		if opts.Theme != nil {
 			theme = *opts.Theme
 		}
-		if data, err = tmpl.Read(file, []byte(src), theme); err != nil {
+		if data, err = s.templates.Read(file, []byte(src), theme); err != nil {
 			return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 		}
 		own = data.Title
@@ -130,7 +130,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Page: nil, Prev: prev}
 	if data != nil {
 		e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
-		if e.Page, err = data.Render(e.Meta.Title, e.Meta.Lang); err != nil {
+		if e.Page, err = s.templates.Render(data, e.Meta.Title, e.Meta.Lang); err != nil {
 			return nil, err //nolint:wrapcheck // a usererr for the caller to show
 		}
 	}
