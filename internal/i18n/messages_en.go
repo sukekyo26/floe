@@ -25,7 +25,7 @@ var messagesEN = map[string]string{
 	"store_slug_owned":    `slug "%[1]s" was published from project %[2]s; use another --slug, or add --force to replace that page`,
 	"store_slug_taken":    `slug "%s" is already in use; choose another slug`,
 	"store_project_slash": `a project name cannot be just "/"`,
-	"store_not_data":      "%s is not a data file: publish a page as a data file (.yaml) for a template such as report, or show HTML as it is with --link",
+	"store_not_data":      "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
 	"store_no_page":       `no page "%s" (see floe list)`,
 
 	// server: refusals of the management page's API

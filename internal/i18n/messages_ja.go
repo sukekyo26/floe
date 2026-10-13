@@ -24,7 +24,7 @@ var messagesJA = map[string]string{
 	"store_slug_owned":    "URL 名「%[1]s」はプロジェクト %[2]s から公開されています。--slug で別の URL 名にするか、--force を付けてそのページを置き換えてください",
 	"store_slug_taken":    "URL 名「%s」は使われています。別の URL 名を入力してください",
 	"store_project_slash": "プロジェクト名に / だけは使えません",
-	"store_not_data":      "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml）で公開するか、HTML は --link でそのまま表示してください",
+	"store_not_data":      "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
 	"store_no_page":       "ページ「%s」はありません（floe list で確かめられます）",
 
 	// server
