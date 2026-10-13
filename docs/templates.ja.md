@@ -74,7 +74,7 @@ floe: 1.2
 orders.yaml:13:12: access_patterns[0].key: キーには属性一覧にある属性を使う（「user_id」）
 ```
 
-`for`・`field` のパスは、`schema.json` の `properties` と `items` で宣言されている必要があります。打ち間違えたパスはデータの中に検査するものが見つからず、何も検査しません。`$ref` や `anyOf` などを通るパスは確かめません。`floe template check` がこれを確かめます。`checks.yaml` そのものの誤りは、`checks.yaml` の行と列で出します。データファイルと同じく、アンカー・エイリアス・タグは使えません。
+`for`・`field` のパスは、`schema.json` の `properties` と `items` で宣言されている必要があります。打ち間違えたパスはデータの中に検査するものが見つからず、何も検査しません。`floe template check` がこれを確かめます。ただし、`$ref` や `anyOf` など、またはどんな値でもよい項目を通るパスは、そこで宣言されうるので確かめません。`checks.yaml` そのものの誤りは、`checks.yaml` の行と列で出します。データファイルと同じく、アンカー・エイリアス・タグは使えません。
 
 ## computed.yaml
 
