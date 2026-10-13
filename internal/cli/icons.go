@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -44,8 +43,8 @@ already there is kept unless --force.`,
 			source := ""
 			if len(args) == 2 {
 				source = args[1]
-				if !icons.IsURL(source) && !filepath.IsAbs(source) {
-					source = filepath.Join(a.env.Dir, source)
+				if !icons.IsURL(source) {
+					source = a.abs(source)
 				}
 			}
 			got, err := icons.New(a.iconsDir()).Fetch(cmd.Context(), set, source, force)
