@@ -74,7 +74,7 @@ Relations between items that a schema cannot say, each checked on every item of 
 orders.yaml:13:12: access_patterns[0].key: use an attribute as the key ("user_id")
 ```
 
-The paths of `for` and `field` must be declared in `schema.json`, through `properties` and `items`: a misspelt one would find nothing in the data to check. `floe template check` makes sure they are. A mistake in `checks.yaml` itself is reported at its line and column there.
+The paths of `for` and `field` must be declared in `schema.json`, through `properties` and `items`: a misspelt one would find nothing in the data to check. `floe template check` makes sure they are. A mistake in `checks.yaml` itself is reported at its line and column there; like a data file, it takes no anchors, aliases or tags.
 
 ## computed.yaml
 
@@ -85,7 +85,7 @@ item_bytes: sum(attributes, .avg_bytes)
 storage_gb: item_bytes * records.in_1_year / 1e9
 ```
 
-An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in. A name is a letter followed by letters, digits and `_`, and is neither one of the data's items nor a word or function of expr. A value the data cannot give (a division by zero, an item left out that the expression needs) is reported, and a value that would be NaN or ±Inf is too. A mistake in `computed.yaml` itself is reported at its line and column there.
+An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in. A name is a letter followed by letters, digits and `_`, and is neither one of the data's items nor a word or function of expr. A value the data cannot give (a division by zero, an item left out that the expression needs) is reported, and a value that would be NaN or ±Inf is too. A mistake in `computed.yaml` itself is reported at its line and column there; like a data file, it takes no anchors, aliases or tags.
 
 ## The order of the checks
 
