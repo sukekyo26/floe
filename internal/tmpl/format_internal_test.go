@@ -22,6 +22,8 @@ func TestFormat(t *testing.T) {
 		{"{{.f | num 2}}", "0.3"},
 		{"{{999 | num}} {{100 | num 1}}", "999 100"},
 		{"{{512 | bytes}}", "512 B"},
+		{"{{1023 | bytes}}", "1,023 B"},
+		{"{{.z | num}} {{.z | num 2}}", "0 0"},
 		{"{{1536 | bytes}}", "1.5 KiB"},
 		{"{{1048576 | bytes}}", "1 MiB"},
 		{"{{123456789 | bytes}}", "118 MiB"},
@@ -32,7 +34,7 @@ func TestFormat(t *testing.T) {
 			t.Fatal(err)
 		}
 		var b strings.Builder
-		if err := page.Execute(&b, map[string]any{"u": uint64(18446744073709551615), "f": tenth + fifth}); err != nil || b.String() != tt.want {
+		if err := page.Execute(&b, map[string]any{"u": uint64(18446744073709551615), "f": tenth + fifth, "z": -tenth * 0}); err != nil || b.String() != tt.want {
 			t.Errorf("%s = %q, %v; want %s", tt.src, b.String(), err, tt.want)
 		}
 	}

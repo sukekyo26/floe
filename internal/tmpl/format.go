@@ -39,7 +39,7 @@ func formatNum(args ...any) (string, error) {
 }
 
 // formatBytes, bytes in page.html, writes a count of bytes in the binary unit that keeps it under
-// 1024, to 3 significant digits: 1536 is 1.5 KiB.
+// 1024, to 3 significant digits above bytes: 1536 is 1.5 KiB, and 1023 is 1,023 B.
 func formatBytes(v any) (string, error) {
 	f, err := float(v)
 	if err != nil {
@@ -51,7 +51,13 @@ func formatBytes(v any) (string, error) {
 		f /= 1024
 		unit++
 	}
-	text, err := decimal(f, 3)
+	// A count under 1024 is written exactly.
+	var n any = f
+	digits := 3
+	if unit == 0 {
+		n, digits = v, 0
+	}
+	text, err := decimal(n, digits)
 	if err != nil {
 		return "", fmt.Errorf("bytes: %w", err)
 	}
@@ -80,6 +86,9 @@ func decimal(v any, digits int) (string, error) {
 			if r, err := strconv.ParseFloat(strconv.FormatFloat(f, 'g', digits, 64), 64); err == nil {
 				f = r
 			}
+		}
+		if f == 0 {
+			f = 0 // not -0
 		}
 		text = strconv.FormatFloat(f, 'f', -1, 64)
 	}
