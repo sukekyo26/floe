@@ -8,6 +8,9 @@
 |---|---|
 | `floe publish <data.yaml>` | データファイルから描いたページを保存し（`--link` なら HTML をその場所のまま登録し）、URL を出す |
 | `floe check <data.yaml>...` | データファイルを `floe publish` と同じく検査する。公開はしない |
+| `floe template list` | テンプレートを一覧する |
+| `floe template show <name>` | テンプレートのデータファイルに書ける項目と見本を出す |
+| `floe template new <name> --from <template>` | 別のテンプレートを写して、自分のテンプレートを作る |
 | `floe list` | ページを新しい順に出す |
 | `floe rm <slug>...` | ページを消す |
 | `floe serve` | サーバーを前面で動かす |
@@ -91,6 +94,25 @@ sections:
 - どのファイルも正しければ何も出しません（終了コード 0）。
 - 公開もサーバーの起動もしないので、データファイルを置いたリポジトリの CI から使えます。
 - データファイル（`.yaml`・`.yml`）でないファイルは断ります。
+
+---
+
+## `floe template list`
+
+テンプレートを 1 行に 1 つ出します。各行はタブ区切りの 5 列で、名前、置き場所（自分のテンプレートのディレクトリか `組み込み`）、テーマ（カンマ区切り）、要る floe の版（`template.yaml` から。無ければ空）、`schema.json` の説明です。自分のテンプレートは、同じ名前の組み込みのテンプレートの代わりに使われます。テンプレートの書き方は [templates.ja.md](templates.ja.md) にあります。
+
+## `floe template show <name>`
+
+テンプレートのデータファイルに書けるものを出します。データファイルを書く前に読みます。置き場所、テーマ、要る floe の版、項目（`schema.json` から。それぞれ取る値と説明を添え、下の項目は字下げする）、`example.yaml` です。
+
+## `floe template new <name> --from <template>`
+
+`<template>`（組み込みでも自分のものでもよい）を写して、自分のテンプレート `<name>` を `$FLOE_TEMPLATES_DIR/<name>` に作ります。写したものを直して使います。
+
+- `template.yaml` には要る floe の版を書きます。`<template>` のもの、組み込みを写したときはこの floe の版です。
+- `example.yaml` の `template:` は `<name>` にします。
+- 名前は英小文字・数字・`-`・`_` です。組み込みと同じ名前にすると、組み込みの代わりに使われます。
+- 同じ名前の自分のテンプレートが既にあれば、そのままにして止めます（終了コード 1）。
 
 ---
 

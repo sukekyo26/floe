@@ -48,6 +48,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   line and column; `page.html` writes numbers with `num` and `bytes`.
   `template.yaml` names the floe a template needs. See
   [docs/templates.md](docs/templates.md).
+- Add `floe template list`, which lists the templates with where they are,
+  their themes and the floe they need; `floe template show <name>`, which
+  prints the items a data file of a template may hold and its example, to
+  read before writing one; and `floe template new <name> --from <template>`,
+  which copies a template into a template of your own to edit.
 - Add `floe check <data.yaml>...`, which checks data files as `floe publish`
   does and prints every mistake as `file:line:column`, without publishing them
   or starting the server, for the CI of a repository that keeps data files.
