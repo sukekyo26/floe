@@ -37,6 +37,9 @@ func TestReportExample(t *testing.T) {
 	if d.Template != "report" || d.Theme != "default" || d.Title != "Moving the team wiki" {
 		t.Errorf("Read = %+v", d)
 	}
+	if d, err := tmpl.Read("data.yaml", []byte("template: report\ntitle: ' T '\n")); err != nil || d.Title != "T" {
+		t.Errorf("Read of a title with spaces = %+v, %v", d, err)
+	}
 	got := render(t, string(src))
 	for _, want := range []string{
 		`<html lang="ja">`,
