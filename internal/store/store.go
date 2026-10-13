@@ -45,9 +45,11 @@ type Meta struct {
 	Description string `json:"description"`
 	// Lang is the language a page is drawn in (a BCP 47 tag); none is tmpl.DefaultLang.
 	Lang string `json:"lang,omitempty"`
-	// Template and Theme drew a page published from a data file.
+	// Template and Theme drew a page published from a data file, and DataTitle is its title:, which
+	// clearing the title on the management page gives back.
 	Template      string `json:"template,omitempty"`
 	Theme         string `json:"theme,omitempty"`
+	DataTitle     string `json:"dataTitle,omitempty"`
 	Project       string `json:"project,omitempty"`
 	ProjectEdited bool   `json:"projectEdited,omitempty"`
 	// PublishedFrom is the project that owns a stored page; Project is only what the list shows.

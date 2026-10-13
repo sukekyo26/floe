@@ -124,7 +124,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	}
 	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Page: nil, Prev: prev}
 	if data != nil {
-		e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
+		e.Meta.Template, e.Meta.Theme, e.Meta.DataTitle = data.Template, data.Theme, data.Title
 		if e.Page, err = data.Render(e.Meta.Title, e.Meta.Lang); err != nil {
 			return nil, err //nolint:wrapcheck // a usererr for the caller to show
 		}
@@ -185,6 +185,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Lang:          base.Lang,
 		Template:      "",
 		Theme:         "",
+		DataTitle:     "",
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",
@@ -320,7 +321,7 @@ type Edit struct {
 
 // Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
 // the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
-// page's own title; clearing the project drops it.
+// page's own title (the data file's title:); clearing the project drops it.
 func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	m := s.ReadMeta(slug)
 	if m == nil {
@@ -362,7 +363,13 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 func (s *Store) setTitle(slug string, m *Meta, t string) {
 	m.Title = strings.TrimSpace(t)
 	m.TitleEdited = m.Title != ""
-	if m.Title == "" && !m.IsLink() {
+	switch {
+	case m.Title != "" || m.IsLink():
+	case m.Template != "":
+		// The drawn page's <title> is the title it was published under, pinned ones included.
+		m.Title = cmp.Or(m.DataTitle, slug)
+	default:
+		// A page stored as HTML before pages were drawn from data files.
 		own, _ := os.ReadFile(filepath.Join(s.dir(slug), "index.html")) //nolint:errcheck // unreadable means untitled
 		m.Title = cmp.Or(page.Title(string(own)), slug)
 	}

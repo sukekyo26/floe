@@ -482,11 +482,39 @@ func TestEdit(t *testing.T) {
 		strings.Contains(raw, "Edited") {
 		t.Errorf("clearing restores the page's title and drops the keys:\n%s", raw)
 	}
-	if err := os.Remove(filepath.Join(e.tmp, "store/renamed/index.html")); err != nil {
+
+	// A drawn page's <title> is the title it was published under, so clearing a pinned title goes back
+	// to the data file's title:, or to the slug.
+	for _, tt := range []struct{ file, title, want string }{
+		{"pinned.yaml", "Data Title", "Data Title"},
+		{"bare.yaml", "", "bare"},
+	} {
+		slug := strings.TrimSuffix(tt.file, ".yaml")
+		file := e.page(t, tt.file, tt.title)
+		e.mustPublish(t, file, store.Options{}, "repo")
+		if _, err := e.s.Edit(slug, store.Edit{Title: ptr("Pinned")}); err != nil {
+			t.Fatal(err)
+		}
+		e.mustPublish(t, file, store.Options{}, "repo")
+		if _, err := e.s.Edit(slug, store.Edit{Title: ptr(" ")}); err != nil || e.meta(t, slug).Title != tt.want {
+			t.Errorf("clearing the pinned title of %s: %v %+v", tt.file, err, e.meta(t, slug))
+		}
+	}
+
+	// A page stored as HTML before pages were drawn takes its own <title> back, or the slug.
+	old := store.Meta{Title: "Pinned", TitleEdited: true, CreatedAt: before.CreatedAt, UpdatedAt: before.UpdatedAt}
+	e.write(t, "store/old/index.html", "<title>Old</title>")
+	if err := e.s.WriteMeta("old", &old); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.s.Edit("renamed", store.Edit{Title: ptr(" ")}); err != nil || e.meta(t, "renamed").Title != "renamed" {
-		t.Errorf("clearing the title of an unreadable page falls back to the slug: %v %+v", err, e.meta(t, "renamed"))
+	if _, err := e.s.Edit("old", store.Edit{Title: ptr("")}); err != nil || e.meta(t, "old").Title != "Old" {
+		t.Errorf("clearing the title of an HTML page: %v %+v", err, e.meta(t, "old"))
+	}
+	if err := os.Remove(filepath.Join(e.tmp, "store/old/index.html")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.s.Edit("old", store.Edit{Title: ptr(" ")}); err != nil || e.meta(t, "old").Title != "old" {
+		t.Errorf("clearing the title of an unreadable page falls back to the slug: %v %+v", err, e.meta(t, "old"))
 	}
 
 	file := e.write(t, "site/index.html", "<h1>L</h1>")
