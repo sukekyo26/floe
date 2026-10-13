@@ -83,10 +83,11 @@ type Store struct {
 	// LIMIT: entries of unlinked paths stay (a few hundred bytes each). Drop them on removal if a
 	// server ever sees tens of thousands of paths in its lifetime.
 	titles map[string]cachedTitle
-	// sources are what the last drawing of each linked data file read besides it, by slug and file (see
+	// drawn is what the last drawing of each linked data file read besides it, by slug and file (see
 	// sourceKey).
-	// LIMIT: kept for removed slugs too, as titles are. Drop them on removal if that comes to matter.
-	sources map[string]tmpl.Sources
+	// LIMIT: one entry for every slug and file ever drawn, removed, renamed and relinked ones too, as
+	// titles are. Drop them on removal if a server comes to see thousands of them in its lifetime.
+	drawn map[string]drawing
 }
 
 type cachedTitle struct {
@@ -98,7 +99,7 @@ type cachedTitle struct {
 func New(root, home string, templates *tmpl.Library) *Store {
 	return &Store{
 		root: root, home: home, templates: templates, mu: sync.Mutex{}, titles: map[string]cachedTitle{},
-		sources: map[string]tmpl.Sources{},
+		drawn: map[string]drawing{},
 	}
 }
 
@@ -175,8 +176,10 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	// only once what the drawing reads is known, or the first drawing would reload at once.
 	key := sourceKey(slug, file)
 	s.mu.Lock()
-	_, known := s.sources[key]
+	last, ok := s.drawn[key]
 	s.mu.Unlock()
+	// Published again, it may read other templates: its version waits for this drawing.
+	known := ok && last.at == m.UpdatedAt
 	if known {
 		version = s.Version(slug, m, file)
 	}
@@ -187,14 +190,9 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	} else {
 		var d *tmpl.Data
 		var sources tmpl.Sources
-		// A link from before links recorded their templates is drawn with the server's.
-		templates := s.templates
-		if m.Templates != "" {
-			templates = tmpl.NewLibrary(m.Templates)
-		}
-		d, sources, err = templates.ReadSources(file, src, m.Theme, "")
+		d, sources, err = tmpl.NewLibrary(m.Templates).ReadSources(file, src, m.Theme, "")
 		s.mu.Lock()
-		s.sources[key] = sources
+		s.drawn[key] = drawing{at: m.UpdatedAt, sources: sources}
 		s.mu.Unlock()
 		if err == nil {
 			page, err = drawLinked(d, m, slug)
@@ -204,6 +202,13 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 		version = s.Version(slug, m, file)
 	}
 	return page, version, err
+}
+
+// drawing is what a drawing of a linked data file read besides it, and the publish it drew (its
+// updatedAt).
+type drawing struct {
+	at      string
+	sources tmpl.Sources
 }
 
 // sourceKey keys what a drawing read: one file linked under two slugs may be drawn with two themes or
@@ -232,9 +237,9 @@ func (s *Store) Version(slug string, m *Meta, file string) string {
 		return v
 	}
 	s.mu.Lock()
-	sources := s.sources[sourceKey(slug, file)]
+	last := s.drawn[sourceKey(slug, file)]
 	s.mu.Unlock()
-	v += "+" + m.UpdatedAt + "+" + stamp(sources)
+	v += "+" + m.UpdatedAt + "+" + stamp(last.sources)
 	if unix.Access(file, unix.R_OK) != nil {
 		return v + "+unreadable"
 	}

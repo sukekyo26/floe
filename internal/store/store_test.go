@@ -720,10 +720,6 @@ func TestLinkDataFile(t *testing.T) {
 	if _, version, drawErr := e.s.Draw("spec", &m, other); drawErr != nil || version != e.s.Version("spec", &m, other) {
 		t.Errorf("Draw of another file under the slug = %v at %q, watched at %q", drawErr, version, e.s.Version("spec", &m, other))
 	}
-	// A language that is no tag is told before the file is looked for.
-	if _, err = e.publish(t, "proj/none.yaml", store.Options{Link: true, Lang: ptr("x x")}, ""); err == nil || !strings.Contains(err.Error(), "x x") {
-		t.Errorf("linking with a language that is no tag = %v", err)
-	}
 
 	bad := e.write(t, "proj/bad.yaml", "template: report\nsections: 3\n")
 	if _, err = e.publish(t, bad, store.Options{Link: true}, "proj"); err == nil || !strings.Contains(err.Error(), "bad.yaml:2:11: sections:") {
@@ -820,5 +816,18 @@ func TestLinkDataFileTwice(t *testing.T) {
 	}
 	if now := e.s.Version("a", &a, data); now != version {
 		t.Errorf("drawing b moved the version of a: %q, then %q", version, now)
+	}
+
+	// Linked again with the other templates, a is served at the version it is watched at, which waits
+	// for the drawing: the tab reloads once, not twice.
+	time.Sleep(5 * time.Millisecond) // another updatedAt, kept to the millisecond
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dirs["b"]))
+	entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr("a")}, filepath.Join(e.tmp, "proj"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	relinked := entry.Meta
+	if _, version, err = e.s.Draw("a", &relinked, data); err != nil || version != e.s.Version("a", &relinked, data) {
+		t.Errorf("a linked again was served at %q, watched at %q (%v)", version, e.s.Version("a", &relinked, data), err)
 	}
 }

@@ -88,8 +88,11 @@ type Entry struct {
 // resolves a relative file and names the project of a stored page; a link's project is that of its
 // directory.
 func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
-	if err := checkFirst(file, opts); err != nil {
-		return nil, err
+	// A link is of the kind of its real file, whatever the name of a symlink to it says (see read).
+	if !opts.Link {
+		if err := checkKind(file, opts); err != nil {
+			return nil, err
+		}
 	}
 	path, src, err := s.read(file, opts, cwd)
 	if err != nil {
@@ -192,18 +195,6 @@ func (s *Store) read(file string, opts Options, cwd string) (path, content strin
 	return path, string(b), nil
 }
 
-// checkFirst checks what can be before file is read: the language, and the kind of a file not linked.
-// A link is of the kind of its real file, whatever the name of a symlink to it says.
-func checkFirst(file string, opts Options) error {
-	if opts.Lang != nil && !i18n.IsTag(*opts.Lang) {
-		return usererr.New("lang_invalid", *opts.Lang)
-	}
-	if !opts.Link {
-		return checkKind(file, opts)
-	}
-	return nil
-}
-
 // checkKind checks that opts.Lang and opts.Theme fit the kind of file: a page is drawn from a data file
 // in opts.Lang and opts.Theme, stored or linked; HTML is only linked, and shown as it is, in its own
 // language and look. A link's file is its real path.
@@ -215,6 +206,8 @@ func checkKind(file string, opts Options) error {
 		return usererr.New("store_lang_link")
 	case opts.Link && !IsDataFile(file) && opts.Theme != nil:
 		return usererr.New("store_theme_link")
+	case opts.Lang != nil && !i18n.IsTag(*opts.Lang):
+		return usererr.New("lang_invalid", *opts.Lang)
 	}
 	return nil
 }
