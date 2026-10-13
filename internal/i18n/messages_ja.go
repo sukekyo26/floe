@@ -25,6 +25,7 @@ var messagesJA = map[string]string{
 	"store_slug_taken":    "URL 名「%s」は使われています。別の URL 名を入力してください",
 	"store_project_slash": "プロジェクト名に / だけは使えません",
 	"store_not_data":      "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
+	"store_lang_link":     "--lang はデータファイルから描くページの言語です。リンクしたファイルは中身のまま、そのファイルの <html lang> で表示します",
 	"store_no_page":       "ページ「%s」はありません（floe list で確かめられます）",
 
 	// server
@@ -157,7 +158,6 @@ var messagesJA = map[string]string{
 	"cli_invalid_port":      "FLOE_PORT「%s」は使えません。1 から 65535 のポート番号を指定してください",
 	"cli_no_home":           "HOME が設定されていません。HOME か FLOE_DIR を設定してください",
 	"cli_title_empty":       "--title が空です。ページの名前を指定するか、--title を省いてデータファイルの title:（リンクなら <title> か最初の <h1>）から取ってください",
-	"cli_lang_link":         "--lang はデータファイルから描くページの言語です。リンクしたファイルは中身のまま、そのファイルの <html lang> で表示します",
 	"cli_port_in_use":       "ポート %d は使われています。そのプログラムを止めるか、FLOE_PORT を設定してください",
 	"cli_serving":           "%s を %s/ で配信しています",
 	"cli_not_running":       "サーバーは動いていません",

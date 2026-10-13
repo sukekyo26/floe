@@ -26,6 +26,7 @@ var messagesEN = map[string]string{
 	"store_slug_taken":    `slug "%s" is already in use; choose another slug`,
 	"store_project_slash": `a project name cannot be just "/"`,
 	"store_not_data":      "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
+	"store_lang_link":     "--lang is the language of a page drawn from a data file: a linked file is shown as it is, in its own <html lang>",
 	"store_no_page":       `no page "%s" (see floe list)`,
 
 	// server: refusals of the management page's API
@@ -158,7 +159,6 @@ var messagesEN = map[string]string{
 	"cli_invalid_port":      "invalid FLOE_PORT \"%s\": use a port number from 1 to 65535",
 	"cli_no_home":           "HOME is not set; set HOME or FLOE_DIR",
 	"cli_title_empty":       "--title is empty: give the page a name, or omit --title to take the data file's title:, or a link's <title> or <h1>",
-	"cli_lang_link":         "--lang is the language of a page drawn from a data file: a linked file is shown as it is, in its own <html lang>",
 	"cli_port_in_use":       "port %d is in use; stop that program or set FLOE_PORT",
 	"cli_serving":           "serving %s at %s/",
 	"cli_not_running":       "server is not running",

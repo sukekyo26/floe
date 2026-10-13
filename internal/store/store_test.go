@@ -582,6 +582,21 @@ func TestPublishLang(t *testing.T) {
 		_, err := e.publish(t, frag, store.Options{Lang: ptr(bad)}, "other")
 		wantUserErr(t, err, "lang_invalid", bad)
 	}
+
+	// A linked file is shown as it is: --lang is refused, and a language left from before is dropped.
+	site := e.write(t, "site/index.html", "<h1>A</h1>")
+	_, err := e.publish(t, site, store.Options{Link: true, Lang: ptr("ja")}, "repo")
+	wantUserErr(t, err, "store_lang_link")
+	e.mustPublish(t, site, store.Options{Link: true}, "repo")
+	m := e.meta(t, "site")
+	m.Lang = "ja"
+	if err := e.s.WriteMeta("site", m); err != nil {
+		t.Fatal(err)
+	}
+	e.mustPublish(t, site, store.Options{Link: true}, "repo")
+	if m := e.meta(t, "site"); m.Lang != "" {
+		t.Errorf("a relinked file keeps lang %q", m.Lang)
+	}
 }
 
 // A data file is drawn with the template it names, titled by its title: unless --title says

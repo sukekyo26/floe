@@ -87,9 +87,8 @@ type Entry struct {
 // resolves a relative file and names the project of a stored page; a link's project is that of its
 // directory.
 func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
-	// A stored page is drawn from a data file; HTML is only linked, and shown as it is.
-	if !opts.Link && !IsDataFile(file) {
-		return nil, usererr.New("store_not_data", file)
+	if err := checkKind(file, opts); err != nil {
+		return nil, err
 	}
 	path, src, err := s.read(file, opts.Link, cwd)
 	if err != nil {
@@ -106,9 +105,6 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	slug, err := s.slugFor(file, path, opts, cwd)
 	if err != nil {
 		return nil, err
-	}
-	if opts.Lang != nil && !i18n.IsTag(*opts.Lang) {
-		return nil, usererr.New("lang_invalid", *opts.Lang)
 	}
 	prev := s.ReadMeta(slug)
 	dir := cwd
@@ -159,8 +155,24 @@ func (s *Store) read(file string, isLink bool, cwd string) (path, content string
 	return path, string(b), nil
 }
 
+// checkKind checks that file and opts.Lang fit the kind of publish, before file is read. A stored page
+// is drawn from a data file in opts.Lang; HTML is only linked, and shown as it is in its own language.
+func checkKind(file string, opts Options) error {
+	switch {
+	case !opts.Link && !IsDataFile(file):
+		return usererr.New("store_not_data", file)
+	case opts.Lang == nil:
+		return nil
+	case opts.Link:
+		return usererr.New("store_lang_link")
+	case !i18n.IsTag(*opts.Lang):
+		return usererr.New("lang_invalid", *opts.Lang)
+	}
+	return nil
+}
+
 // newMeta keeps what was set on the management page (favourite, title, project), the description, the
-// language and createdAt from base; --title, --description and --lang win.
+// language and createdAt from base; --title, --description and --lang win. A link has no language.
 func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta {
 	keepTitle := opts.Title == nil && base.TitleEdited
 	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
@@ -191,6 +203,8 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 	}
 	if path == "" {
 		m.PublishedFrom = from
+	} else {
+		m.Lang = ""
 	}
 	return m
 }

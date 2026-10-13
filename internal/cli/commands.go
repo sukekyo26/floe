@@ -78,10 +78,6 @@ for another file is refused unless --force.`,
 				opts.Description = &description
 			}
 			if flags.Changed("lang") {
-				// A linked file is shown as it is, so nothing would take the language.
-				if opts.Link {
-					return usageError{err: usererr.New("cli_lang_link")}
-				}
 				if err := checkLang(lang); err != nil {
 					return err
 				}

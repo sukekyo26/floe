@@ -34,7 +34,7 @@ Pages are drawn from data files (`.yaml`, `.yml`). An HTML file is not stored: l
 | `--slug <name>` | The URL name. Lowercase letters, digits and hyphens, up to 64 characters. Defaults to the file name; a linked `index.html` takes the name of its directory. |
 | `--title <text>` | The title shown in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
 | `--description <text>` | A description shown in the list. |
-| `--lang <tag>` | The language of the page drawn from a data file (`<html lang>`), as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. |
+| `--lang <tag>` | The language of the page drawn from a data file (`<html lang>`), as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. Refused with `--link`: a linked file is shown as it is. |
 | `--force` | Replace a page published from another project, or a link to another file. |
 
 ### Data files
@@ -203,4 +203,4 @@ The management page follows the browser's language instead. Cobra's own errors (
 |---|---|
 | `0` | Success |
 | `1` | Failure (a refused publish, a missing page, a port in use, a diagram spec with mistakes …) |
-| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`, an unknown example, a `--lang` that is not a BCP 47 tag or that is given with `--link`) |
+| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`, an unknown example, a `--lang` that is not a BCP 47 tag) |
