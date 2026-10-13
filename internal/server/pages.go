@@ -94,11 +94,11 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 			contentType = "application/octet-stream"
 		}
 	}
-	if contentType != htmlType {
-		stream(w, contentType, f, nil, "")
-		return
+	tail := ""
+	if contentType == htmlType {
+		tail = servedScript(slug, rest, version)
 	}
-	sendPage(w, f, servedScript(slug, rest, version))
+	stream(w, contentType, f, tail)
 }
 
 func (s *Server) download(w http.ResponseWriter, r *http.Request) {
@@ -125,24 +125,16 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 	defer f.Close() //nolint:errcheck // read-only
 	// The page as stored or linked. Nothing added on serving (the reload script) goes in.
 	w.Header().Set("Content-Disposition", `attachment; filename="`+slug+`.html"`)
-	sendPage(w, f, "")
+	stream(w, htmlType, f, "")
 }
 
-// sendPage sends an HTML page as it is, with tail after it: a stored page was drawn when it was
-// published, and a linked file is the user's own.
-func sendPage(w http.ResponseWriter, f *os.File, tail string) {
-	stream(w, htmlType, f, nil, tail)
-}
-
-// stream sends head (already read from f), the rest of f and tail. A read error after the header has
-// gone out can only cut the response short.
-func stream(w http.ResponseWriter, contentType string, f *os.File, head []byte, tail string) {
+// stream sends f as it is, with tail after it: a stored page was drawn when it was published, and a
+// linked file is the user's own. A read error after the header has gone out can only cut the
+// response short.
+func stream(w http.ResponseWriter, contentType string, f *os.File, tail string) {
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write(head); err != nil {
-		return
-	}
 	if _, err := io.Copy(w, f); err != nil {
 		return
 	}
