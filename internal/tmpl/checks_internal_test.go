@@ -28,6 +28,10 @@ const relations = `
 - for: attributes
   expr: item.name != "secret"
   message: the name secret is taken
+- for: notes
+  field: text
+  expr: len(item.text) < 5
+  message: keep notes short
 - for: nowhere.at_all
   expr: "false"
   message: never runs
@@ -54,6 +58,9 @@ model:
     - id: AP-2
       key: [pk]
       reads: 1
+notes:
+  - text: |
+      a long note
 `
 	got := failures(t, relations, src)
 	want := []string{
@@ -64,8 +71,12 @@ model:
 		"d.yaml:13:24: model.patterns[1].rate.per_sec: keep reads per second under 10 (the check could not run: 1 / 0 is not a finite number)",
 		"d.yaml:14:7: model.patterns[2]: keep reads per second under 10 (the check could not run: ",
 		"d.yaml:15:12: model.patterns[2].key: use an attribute as the key",
+		"d.yaml:18:11: notes[0].text: keep notes short",
 	}
 	lines := strings.Split(got.Error(), "\n")
+	if last := lines[len(lines)-1]; last != want[len(want)-1] {
+		t.Errorf("a block of text is quoted by its |: %s", last)
+	}
 	if len(lines) != len(want) {
 		t.Fatalf("the failures =\n%s\nwant %d", got.Error(), len(want))
 	}
@@ -99,7 +110,7 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 		}
 	}
 	d, root := data(t, "a: [1]\n")
-	if err := relate([]byte("- for: a\n  expr: item == 1\n  message: m\n"), d, root); err != nil {
+	if err := relate([]byte("- for: a\n  expr: item == 1 && -item / 2 == -0.5\n  message: m\n"), d, root); err != nil {
 		t.Errorf("relate of data that holds = %v", err)
 	}
 }

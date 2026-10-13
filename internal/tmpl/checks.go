@@ -56,9 +56,10 @@ func relate(src []byte, d *Data, root ast.Node) error {
 	if err := yaml.UnmarshalWithOptions(src, &checks, yaml.Strict()); err != nil {
 		return fmt.Errorf("read the checks of %s: %w", d.Template, err)
 	}
+	doc := exprValues(d.Values)
 	var problems yamlpos.Problems
 	for i, c := range checks {
-		more, err := c.check(d, root)
+		more, err := c.check(d.File, doc, root)
 		if err != nil {
 			return fmt.Errorf("read the checks of %s: check %d: %w", d.Template, i+1, err)
 		}
@@ -70,9 +71,9 @@ func relate(src []byte, d *Data, root ast.Node) error {
 	return nil
 }
 
-// check runs c on each item of its list in d. An error is the template's mistake, and the problems
-// are the data's.
-func (c relation) check(d *Data, root ast.Node) (yamlpos.Problems, error) {
+// check runs c on each item of its list in doc, the values of file. An error is the template's mistake,
+// and the problems are the data's.
+func (c relation) check(file string, doc map[string]any, root ast.Node) (yamlpos.Problems, error) {
 	if c.For == "" || c.Expr == "" || c.Message == "" {
 		return nil, errIncomplete
 	}
@@ -81,13 +82,13 @@ func (c relation) check(d *Data, root ast.Node) (yamlpos.Problems, error) {
 		return nil, err
 	}
 	steps := strings.Split(c.For, ".")
-	list, err := listAt(d.Values, steps)
+	list, err := listAt(doc, steps)
 	if err != nil {
 		return nil, fmt.Errorf("for %s %w", c.For, err)
 	}
 	var problems yamlpos.Problems
 	for i, item := range list {
-		out, err := expr.Run(p, scope{Item: item, Doc: d.Values})
+		out, err := expr.Run(p, scope{Item: item, Doc: doc})
 		if held, ok := out.(bool); ok && held && err == nil {
 			continue
 		}
@@ -95,22 +96,25 @@ func (c relation) check(d *Data, root ast.Node) (yamlpos.Problems, error) {
 		if c.Field != "" {
 			at = append(at, strings.Split(c.Field, ".")...)
 		}
-		problems = append(problems, c.failure(d.File, root, at, err))
+		problems = append(problems, c.failure(file, root, at, err))
 	}
 	return problems, nil
 }
 
 // failure reports c failed, or could not run with err, at the node at under root: with its value when
-// it is one written out.
+// it is one written out on its line. A block scalar's token is its | or >, not its text.
 func (c relation) failure(file string, root ast.Node, at []string, err error) *yamlpos.Error {
 	key, value, path := yamlpos.Find(root, at)
 	pos := yamlpos.OfValue(key, value)
 	_, scalar := value.(ast.ScalarNode)
-	_, null := value.(*ast.NullNode)
+	switch value.(type) {
+	case *ast.NullNode, *ast.LiteralNode:
+		scalar = false
+	}
 	switch {
 	case err != nil:
 		return yamlpos.New(file, pos, "tmpl_check_error", path, c.Message, brief(err))
-	case scalar && !null:
+	case scalar && !strings.Contains(value.GetToken().Value, "\n"):
 		return yamlpos.New(file, pos, "tmpl_check", path, c.Message, value.GetToken().Value)
 	default:
 		return yamlpos.New(file, pos, "tmpl_check_bare", path, c.Message)
