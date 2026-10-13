@@ -27,7 +27,8 @@ func TestSchemaWording(t *testing.T) {
     "size": { "type": "integer", "minimum": 1, "maximum": 9 },
     "rate": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1.5 },
     "keys": { "type": "object", "maxProperties": 1 },
-    "kind": { "const": "x" }
+    "kind": { "const": "x" },
+    "huge": { "type": "number" }
   }
 }`
 	src := `op: Scan
@@ -37,18 +38,20 @@ size: 10
 rate: 1.5
 keys: { a: 1, b: 2 }
 kind: y
+huge: .inf
 `
 	tests := []struct{ en, ja string }{
 		{`d.yaml:1:1: name is required but missing`, `d.yaml:1:1: name は必須の項目ですが、ありません`},
 		{`d.yaml:1:5: op: "Scan" is not allowed; use GetItem, Query`, `d.yaml:1:5: op: 「Scan」は使えません。使えるのは GetItem, Query です`},
 		{`d.yaml:2:7: tags: the number of items must be at most 3`, `d.yaml:2:7: tags: 3 個までにしてください`},
-		{`d.yaml:2:7: tags: items 0 and 1 are the same; write each once`, `d.yaml:2:7: tags: 0 番目と 1 番目が同じです。1 つずつにしてください`},
+		{`d.yaml:2:7: tags: items 1 and 2 are the same; write each once`, `d.yaml:2:7: tags: 1 番目と 2 番目が同じです。1 つずつにしてください`},
 		{`d.yaml:3:5: id: "AP-x12345" does not match ^AP-[0-9]+$`, `d.yaml:3:5: id: 「AP-x12345」は ^AP-[0-9]+$ の形に合いません`},
 		{`d.yaml:3:5: id: the length in characters must be at most 5`, `d.yaml:3:5: id: 5 文字までにしてください`},
 		{`d.yaml:4:7: size: write 9 or less`, `d.yaml:4:7: size: 9 以下にしてください`},
 		{`d.yaml:5:7: rate: write less than 1.5`, `d.yaml:5:7: rate: 1.5 より小さくしてください`},
 		{`d.yaml:6:9: keys: the number of keys must be at most 1`, `d.yaml:6:9: keys: キーは 1 個までにしてください`},
 		{`d.yaml:7:7: kind: value must be 'x'`, `d.yaml:7:7: kind: value must be 'x'`},
+		{`d.yaml:8:7: huge: write a number in digits, not +Inf`, `d.yaml:8:7: huge: +Inf ではなく数字で書いてください`},
 	}
 	got := check(t, schema, src)
 	for _, tt := range tests {

@@ -247,7 +247,6 @@ var messagesEN = map[string]string{
 	"icons_already":         "%s icons %s are already in %s (add --force to fetch them again)",
 
 	// tmpl: reading data files and drawing them with templates
-	"tmpl_yaml":              "this is not valid YAML: %s",
 	"tmpl_no_template":       "name the template at the top level, like template: report (templates: %s)",
 	"tmpl_not_mapping":       "write the top level as keys and values, like template: report",
 	"tmpl_documents":         "a data file holds one YAML document: write the page as one, without --- between parts",
@@ -270,6 +269,7 @@ var messagesEN = map[string]string{
 	"tmpl_schema_below":      "%s: write less than %s",
 	"tmpl_schema_pattern":    `%s: "%s" does not match %s`,
 	"tmpl_schema_unique":     "%s: items %d and %d are the same; write each once",
+	"tmpl_schema_not_finite": "%s: write a number in digits, not %s",
 	"tmpl_schema_other":      "%s: %s",
 	"tmpl_top_level":         "the top level",
 	"tmpl_or":                " or ",

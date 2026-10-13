@@ -85,7 +85,7 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 		}
 		return
 	}
-	key, value, at := yamlpos.Find(s.root, e.InstanceLocation)
+	_, value, at := yamlpos.Find(s.root, e.InstanceLocation)
 	switch k := e.ErrorKind.(type) {
 	case *kind.Required:
 		for _, name := range k.Missing {
@@ -114,43 +114,48 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 			want[i] = fmt.Sprint(w)
 		}
 		s.add(value, "tmpl_schema_enum", label(at), fmt.Sprint(k.Got), strings.Join(want, ", "))
-	case *kind.Pattern:
-		s.add(value, "tmpl_schema_pattern", label(at), k.Got, k.Want)
-	case *kind.UniqueItems:
-		s.add(value, "tmpl_schema_unique", label(at), k.Duplicates[0], k.Duplicates[1])
 	default:
-		if key, want, ok := limit(e.ErrorKind); ok {
-			s.add(value, key, label(at), want)
+		if key, args, ok := wording(e.ErrorKind); ok {
+			s.add(value, key, append([]any{label(at)}, args...)...)
 			return
 		}
 		// The rest are rare in a template's schema; their wording stays the library's English.
-		s.add(cmp.Or(value, key), "tmpl_schema_other", label(at), e.ErrorKind.LocalizedString(english))
+		s.add(value, "tmpl_schema_other", label(at), e.ErrorKind.LocalizedString(english))
 	}
 }
 
-// limit words a mistake against a bound: how many items or keys, how long, how large.
-func limit(k jsonschema.ErrorKind) (key string, want any, ok bool) {
+// wording words a mistake the catalog has a message for, after the path: a bound (how many items or
+// keys, how long, how large), a pattern, a duplicate or a number JSON cannot hold.
+func wording(k jsonschema.ErrorKind) (key string, args []any, ok bool) {
 	switch k := k.(type) {
 	case *kind.MinItems:
-		return "tmpl_schema_min_items", k.Want, true
+		return "tmpl_schema_min_items", []any{k.Want}, true
 	case *kind.MaxItems:
-		return "tmpl_schema_max_items", k.Want, true
+		return "tmpl_schema_max_items", []any{k.Want}, true
 	case *kind.MinProperties:
-		return "tmpl_schema_min_keys", k.Want, true
+		return "tmpl_schema_min_keys", []any{k.Want}, true
 	case *kind.MaxProperties:
-		return "tmpl_schema_max_keys", k.Want, true
+		return "tmpl_schema_max_keys", []any{k.Want}, true
 	case *kind.MinLength:
-		return "tmpl_schema_min_length", k.Want, true
+		return "tmpl_schema_min_length", []any{k.Want}, true
 	case *kind.MaxLength:
-		return "tmpl_schema_max_length", k.Want, true
+		return "tmpl_schema_max_length", []any{k.Want}, true
 	case *kind.Minimum:
-		return "tmpl_schema_minimum", number(k.Want), true
+		return "tmpl_schema_minimum", []any{number(k.Want)}, true
 	case *kind.Maximum:
-		return "tmpl_schema_maximum", number(k.Want), true
+		return "tmpl_schema_maximum", []any{number(k.Want)}, true
 	case *kind.ExclusiveMinimum:
-		return "tmpl_schema_above", number(k.Want), true
+		return "tmpl_schema_above", []any{number(k.Want)}, true
 	case *kind.ExclusiveMaximum:
-		return "tmpl_schema_below", number(k.Want), true
+		return "tmpl_schema_below", []any{number(k.Want)}, true
+	case *kind.Pattern:
+		return "tmpl_schema_pattern", []any{k.Got, k.Want}, true
+	case *kind.UniqueItems:
+		// The library counts from 0; people count items from 1.
+		return "tmpl_schema_unique", []any{k.Duplicates[0] + 1, k.Duplicates[1] + 1}, true
+	case *kind.InvalidJsonValue:
+		// .inf and .nan: YAML has them, JSON does not.
+		return "tmpl_schema_not_finite", []any{fmt.Sprint(k.Value)}, true
 	}
 	return "", nil, false
 }
@@ -158,10 +163,7 @@ func limit(k jsonschema.ErrorKind) (key string, want any, ok bool) {
 var english = message.NewPrinter(language.English)
 
 func (s *schemaCheck) add(n ast.Node, key string, args ...any) {
-	if n == nil {
-		n = s.root
-	}
-	s.problems = append(s.problems, &yamlpos.Error{File: s.file, Pos: yamlpos.Of(n), Err: usererr.New(key, args...)})
+	s.problems = append(s.problems, yamlpos.New(s.file, yamlpos.Of(n), key, args...))
 }
 
 // properties lists the items the mapping at the schema location url declares, for a misspelt one.

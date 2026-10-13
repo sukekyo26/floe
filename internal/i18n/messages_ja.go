@@ -246,7 +246,6 @@ var messagesJA = map[string]string{
 	"icons_already":         "%s アイコン %s は %s に取得済みです（取り直すには --force を付けてください）",
 
 	// tmpl
-	"tmpl_yaml":              "YAML として読めません: %s",
 	"tmpl_no_template":       "最上位に template: report のようにテンプレートを指定してください（テンプレート: %s）",
 	"tmpl_not_mapping":       "最上位は template: report のようなキーと値で書いてください",
 	"tmpl_documents":         "データファイルには YAML の文書を 1 つだけ書きます。--- で区切らず、ページを 1 つの文書で書いてください",
@@ -269,6 +268,7 @@ var messagesJA = map[string]string{
 	"tmpl_schema_below":      "%s: %s より小さくしてください",
 	"tmpl_schema_pattern":    "%s: 「%s」は %s の形に合いません",
 	"tmpl_schema_unique":     "%s: %d 番目と %d 番目が同じです。1 つずつにしてください",
+	"tmpl_schema_not_finite": "%s: %s ではなく数字で書いてください",
 	"tmpl_schema_other":      "%s: %s",
 	"tmpl_top_level":         "最上位",
 	"tmpl_or":                "か",
