@@ -35,8 +35,11 @@ func (l *Library) New(name, from string) (string, error) {
 		return "", l.unknown(from)
 	}
 	at := filepath.Join(l.dir, name)
-	if _, lerr := os.Lstat(at); !errors.Is(lerr, fs.ErrNotExist) {
+	switch _, lerr := os.Lstat(at); {
+	case lerr == nil:
 		return "", usererr.New("tmpl_new_exists", name, at)
+	case !errors.Is(lerr, fs.ErrNotExist):
+		return "", fmt.Errorf("make the template %s: %w", name, lerr)
 	}
 	if err = os.MkdirAll(l.dir, 0o755); err != nil { //nolint:gosec // G301: templates are not secret
 		return "", fmt.Errorf("make the template %s: %w", name, err)
@@ -47,7 +50,11 @@ func (l *Library) New(name, from string) (string, error) {
 		return "", fmt.Errorf("make the template %s: %w", name, err)
 	}
 	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory
+	// MkdirTemp makes it 0700; a template is no more secret than the directory of templates.
 	if err = src.copyTo(tmp, name); err == nil {
+		err = os.Chmod(tmp, 0o755) //nolint:gosec // G302: templates are not secret
+	}
+	if err == nil {
 		err = os.Rename(tmp, at)
 	}
 	if err != nil {
@@ -98,9 +105,9 @@ func renamed(src []byte, name string) []byte {
 	at := yamlpos.OfValue(key, value)
 	old := value.GetToken().Value
 	lines := strings.SplitAfter(string(src), "\n")
-	line := lines[at.Line-1]
-	// The value starts at its column, after a quote if it has one.
-	head, tail := line[:at.Column-1], line[at.Column-1:]
+	// The value starts at its column, counted in characters, after a quote if it has one.
+	line := []rune(lines[at.Line-1])
+	head, tail := string(line[:at.Column-1]), string(line[at.Column-1:])
 	if i := strings.Index(tail, old); i >= 0 && old != "" {
 		lines[at.Line-1] = head + tail[:i] + name + tail[i+len(old):]
 	}

@@ -14,6 +14,8 @@ func TestRenamed(t *testing.T) {
 		{"template: [report]\n", "template: [report]\n"},
 		{"sections:\n  - template: report\n", "sections:\n  - template: report\n"},
 		{"not: [valid\n", "not: [valid\n"},
+		// A column counts characters, not bytes.
+		{"{a: 日日日日 report, template: report}\n", "{a: 日日日日 report, template: spec}\n"},
 	} {
 		if got := string(renamed([]byte(tt.src), "spec")); got != tt.want {
 			t.Errorf("renamed(%q) = %q, want %q", tt.src, got, tt.want)
