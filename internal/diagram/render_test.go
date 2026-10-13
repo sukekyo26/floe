@@ -26,6 +26,12 @@ func parse(t *testing.T, file, src string) *diagram.Spec {
 	return s
 }
 
+// render draws specs with diagram.Render, the diagrams one after another.
+func render(specs []*diagram.Spec, store *icons.Store) (string, error) {
+	out, err := diagram.Render(specs, store)
+	return strings.Join(out, "\n"), err
+}
+
 func readFile(t *testing.T, path string) string {
 	t.Helper()
 	b, err := os.ReadFile(path)
@@ -43,7 +49,7 @@ func TestRenderMatchesDiagramMJS(t *testing.T) {
 
 	for _, name := range []string{"every-part", "icons"} {
 		s := parse(t, name+".yaml", readFile(t, "testdata/"+name+".yaml"))
-		got, err := diagram.Render([]*diagram.Spec{s}, standIn)
+		got, err := render([]*diagram.Spec{s}, standIn)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -57,7 +63,7 @@ func TestRenderMatchesDiagramMJS(t *testing.T) {
 func TestRenderIconDefs(t *testing.T) {
 	t.Parallel()
 
-	got, err := diagram.Render([]*diagram.Spec{parse(t, "icons.yaml", readFile(t, "testdata/icons.yaml"))}, standIn)
+	got, err := render([]*diagram.Spec{parse(t, "icons.yaml", readFile(t, "testdata/icons.yaml"))}, standIn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +80,7 @@ func TestRenderIconDefs(t *testing.T) {
 	def := regexp.MustCompile(`<image id="([^"]+)"`)
 	ids := make([]string, 0, 2)
 	for _, name := range []string{"aws/aws-lambda", "aws/amazon-bedrock"} {
-		got, err := diagram.Render([]*diagram.Spec{parse(t, "d.yaml", strings.Replace(spec, "%s", name, 1))}, standIn)
+		got, err := render([]*diagram.Spec{parse(t, "d.yaml", strings.Replace(spec, "%s", name, 1))}, standIn)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -91,21 +97,23 @@ func TestRender(t *testing.T) {
 	const spec = "id: %s\nwidth: 100\nheight: 50\ntitle: t\nparts:\n"
 	a := parse(t, "a.yaml", strings.Replace(spec, "%s", "a", 1)+"  - edge: { d: 'M0,10 H90' }\n")
 	b := parse(t, "b.yaml", strings.Replace(spec, "%s", "b", 1)+"  - raw: { svg: '<rect class=\"band\"/>' }\n")
-	got, err := diagram.Render([]*diagram.Spec{a, b}, standIn)
+	out, err := diagram.Render([]*diagram.Spec{a, b}, standIn)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Two diagrams in one fragment; raw stays as it is.
-	for _, w := range []string{
+	// A fragment for each diagram, in order; raw stays as it is.
+	if len(out) != 2 {
+		t.Fatalf("Render = %q, want 2 diagrams", out)
+	}
+	for i, w := range []string{
 		`<path d="M0,10 H90" class="edge" marker-end="url(#a_arrow)"/>`,
-		"</svg></div>\n<div class=\"dg-wrap\"",
 		`<rect class="band"/>`,
 	} {
-		if !strings.Contains(got, w) {
-			t.Errorf("Render = %s\nwant it to contain %s", got, w)
+		if !strings.HasPrefix(out[i], `<div class="dg-wrap"`) || !strings.Contains(out[i], w) {
+			t.Errorf("Render drew diagram %d as %s\nwant it to contain %s", i, out[i], w)
 		}
 	}
-	if n := strings.Count(got, `<marker id="a_arrow"`); n != 1 {
+	if n := strings.Count(out[0], `<marker id="a_arrow"`); n != 1 {
 		t.Errorf("Render defines the arrow %d times, want once", n)
 	}
 }
@@ -118,7 +126,7 @@ func TestRenderMarkerIDs(t *testing.T) {
 	const spec = "width: 100\nheight: 50\ntitle: t\nparts:\n"
 	a := parse(t, "a.yaml", "id: a\n"+spec+"  - edge: { d: 'M0,10 H90', end: zero-one }\n")
 	b := parse(t, "b.yaml", "id: a-zero\n"+spec+"  - edge: { d: 'M0,10 H90', end: one }\n")
-	got, err := diagram.Render([]*diagram.Spec{a, b}, standIn)
+	got, err := render([]*diagram.Spec{a, b}, standIn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +143,7 @@ func TestRenderProblems(t *testing.T) {
 	const spec = "id: same\nwidth: 100\nheight: 50\ntitle: t\nparts:\n"
 	a := parse(t, "a.yaml", spec+"  - dot: { cx: 0, cy: 0 }\n")
 	b := parse(t, "b.yaml", "\n"+spec+"  - dot: { cx: 50, cy: 25 }\n")
-	_, err := diagram.Render([]*diagram.Spec{a, b}, standIn)
+	_, err := render([]*diagram.Spec{a, b}, standIn)
 	want := `a.yaml:6:5: dot at 0,0 sticks out of the 100x50 canvas
 b.yaml:2:1: diagram id "same" is already used in a.yaml:1; give each diagram its own id`
 	if got := errString(err); got != want {
@@ -172,7 +180,7 @@ func TestExamples(t *testing.T) {
 		translated := lang != i18n.English && err == nil
 		for i, e := range examples {
 			s := parse(t, string(lang)+"/"+e.Name+".yaml", string(e.Spec))
-			if _, err := diagram.Render([]*diagram.Spec{s}, standIn); err != nil {
+			if _, err := render([]*diagram.Spec{s}, standIn); err != nil {
 				t.Errorf("example %s in %s:\n%v", e.Name, lang, err)
 			}
 			if e.Summary == "" || strings.HasPrefix(e.Summary, "#") {

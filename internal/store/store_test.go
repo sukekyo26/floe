@@ -34,7 +34,7 @@ func newEnv(t *testing.T) env {
 		t.Fatal(err)
 	}
 	mkdir(t, filepath.Join(tmp, "home"))
-	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary(""))}
+	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary("", ""))}
 }
 
 func mkdir(t *testing.T, dir string) {
@@ -793,7 +793,7 @@ func TestLinkDataFileTwice(t *testing.T) {
 	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\n")
 	metas := map[string]store.Meta{}
 	for slug, dir := range dirs {
-		s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir))
+		s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, ""))
 		entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr(slug)}, filepath.Join(e.tmp, "proj"))
 		if err != nil {
 			t.Fatal(err)
@@ -821,7 +821,7 @@ func TestLinkDataFileTwice(t *testing.T) {
 	// Linked again with the other templates, a is served at the version it is watched at, which waits
 	// for the drawing: the tab reloads once, not twice.
 	time.Sleep(5 * time.Millisecond) // another updatedAt, kept to the millisecond
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dirs["b"]))
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dirs["b"], ""))
 	entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr("a")}, filepath.Join(e.tmp, "proj"))
 	if err != nil {
 		t.Fatal(err)
@@ -829,5 +829,35 @@ func TestLinkDataFileTwice(t *testing.T) {
 	relinked := entry.Meta
 	if _, version, err = e.s.Draw("a", &relinked, data); err != nil || version != e.s.Version("a", &relinked, data) {
 		t.Errorf("a linked again was served at %q, watched at %q (%v)", version, e.s.Version("a", &relinked, data), err)
+	}
+}
+
+// A linked data file whose diagrams show icons not fetched yet is drawn again once they are: the fetch
+// its mistake asks for reloads its tab.
+func TestLinkDataFileIcons(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	icons := filepath.Join(e.tmp, "icons")
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", icons))
+	data := e.write(t, "proj/spec.yaml", "template: report\nsections:\n  - parts:\n      - diagram:\n          id: a\n"+
+		"          width: 100\n          height: 50\n          title: t\n          parts:\n"+
+		"            - icon: { x: 10, y: 5, name: aws/aws-lambda, size: 24 }\n")
+	m := store.Meta{Path: data}
+	_, version, err := s.Draw("spec", &m, data)
+	if err == nil || !strings.Contains(err.Error(), "floe icons fetch aws") {
+		t.Fatalf("Draw without the icons = %v", err)
+	}
+	if v := s.Version("spec", &m, data); v != version {
+		t.Fatalf("the version moved from %q to %q with nothing changed", version, v)
+	}
+	if err = os.CopyFS(icons, os.DirFS("../diagram/testdata/icons")); err != nil {
+		t.Fatal(err)
+	}
+	if v := s.Version("spec", &m, data); v == version {
+		t.Errorf("the version stays %q once the icons are fetched", v)
+	}
+	if page, _, err := s.Draw("spec", &m, data); err != nil || !strings.Contains(string(page), `<use href="#a_icon-`) {
+		t.Errorf("Draw with the icons = %v", err)
 	}
 }

@@ -190,7 +190,8 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	} else {
 		var d *tmpl.Data
 		var sources tmpl.Sources
-		d, sources, err = tmpl.NewLibrary(m.Templates).ReadSources(file, src, m.Theme, "")
+		// The templates it was linked with, but the server's icons: one place for all, not one's own.
+		d, sources, err = tmpl.NewLibrary(m.Templates, s.templates.IconsDir()).ReadSources(file, src, m.Theme, "")
 		s.mu.Lock()
 		s.drawn[key] = drawing{at: m.UpdatedAt, sources: sources}
 		s.mu.Unlock()
@@ -255,8 +256,9 @@ func modTime(file string) string {
 	return fi.ModTime().UTC().Format(isoMillis)
 }
 
-// stamp sums up the state of sources: the size and mtime of each image and of every file under the
-// template's directory, and the mtime of the directory of templates, where one may come.
+// stamp sums up the state of sources: the size and mtime of each image, of each index of icons and of
+// every file under the template's directory, and the mtime of the directory of templates, where one
+// may come.
 // LIMIT: walks the template's directory on each look (every second for each open tab). Watch it with
 // fsnotify if templates grow to hundreds of files.
 func stamp(sources tmpl.Sources) string {
@@ -287,8 +289,8 @@ func stamp(sources tmpl.Sources) string {
 			return nil
 		})
 	}
-	for _, image := range sources.Images {
-		add(image)
+	for _, file := range slices.Concat(sources.Images, sources.Icons) {
+		add(file)
 	}
 	return strconv.FormatUint(h.Sum64(), 36)
 }

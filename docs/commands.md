@@ -45,7 +45,7 @@ Pages are drawn from data files (`.yaml`, `.yml`). An HTML file is not stored: l
 
 ### Data files
 
-A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts of Markdown text, with `html` parts for what Markdown cannot say.
+A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts of Markdown text, with `diagram` parts for diagrams and `html` parts for what Markdown cannot say.
 
 ```yaml
 template: report               # the template that draws the page
@@ -58,11 +58,21 @@ sections:
       - text: |                # Markdown, tables included; raw HTML in it is left out
           1. Freeze edits on **Friday evening**.
           2. Copy the pages.
+      - diagram:               # a diagram spec, as floe diagram render takes it
+          id: move
+          width: 640
+          height: 120
+          title: The pages go from the old wiki to the new host
+          parts:
+            - box: { x: 16, y: 32, w: 184, h: 56, rows: [Old wiki] }
+            - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [New host] }
+            - edge: { d: "M200,60 H440" }
       - html: <p class="note warn">Edits during the freeze are lost.</p>   # HTML as it is
 ```
 
 - `theme:` picks a theme of the template (`default`).
 - An image the template takes (an item of `"format": "image"`) is a path under the data file's directory; the image goes into the page.
+- A diagram (a `diagram` part of `report`, or an item of `"format": "diagram"`) is a spec written in place, with the parts and checks of [`floe diagram render`](#floe-diagram-render-specyaml), its mistakes at the data file's lines and columns. The ids of the diagrams of a page must differ. Its icons come from `FLOE_ICONS_DIR`; for a linked data file, from that of the server.
 - A template of your own, in `FLOE_TEMPLATES_DIR`, takes the place of a built-in one of its name. [templates.md](templates.md) tells how to write one.
 - The data is checked against the template's schema before the page is drawn. Every mistake is printed at once as `file:line:column: message`, and nothing is published until all are fixed (exit code 1): a missing or unknown template, an item the template does not have (a typo), a value of the wrong type, and the like.
 - A data file is one YAML document of keys and values: one with `---` between documents, or with anchors, aliases or tags, is refused.
@@ -89,7 +99,7 @@ Each page belongs to the project it is published from. The project is the reposi
 A linked data file is drawn each time its page is opened, with `--lang` and `--theme` as given when it was linked, so that a page written in a repository can be read while it is written:
 
 - It is checked when it is linked, as `floe publish` checks it, and refused with its mistakes.
-- Saving the data file, an image it shows or a file of its template reloads the open tab.
+- Saving the data file, an image it shows or a file of its template, or fetching the icons its diagrams show, reloads the open tab.
 - When it has mistakes, the tab shows them instead of the page, and comes back to the page once they are fixed and saved.
 - Nothing of its directory is served: its images are in its page. Its download is the page drawn.
 - Its title in the list is its `title:`, read each time.
@@ -250,7 +260,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 |---|---|
 | `FLOE_DIR` | Where pages are stored. Defaults to `$XDG_DATA_HOME/floe`, else `~/.local/share/floe`. The layout is the same as the artifact skill's, so either can read the other's. |
 | `FLOE_PORT` | The port (default `7325`). A decimal number from 1 to 65535. |
-| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. |
+| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. A relative one is under the working directory. The diagrams of a linked data file show the icons of the server, which takes the one of the publish that started it. |
 | `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. A linked data file is drawn with the one of the publish that linked it, a relative one under its working directory. |
 | `FLOE_LANG` | The language of messages (`en`, `ja`). Falls back to `LC_ALL`, `LC_MESSAGES`, then `LANG`; a language without a catalog is skipped. English is the default. |
 | `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |

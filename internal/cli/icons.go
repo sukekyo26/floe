@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"path/filepath"
-
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/icons"
@@ -44,11 +42,11 @@ already there is kept unless --force.`,
 			source := ""
 			if len(args) == 2 {
 				source = args[1]
-				if !icons.IsURL(source) && !filepath.IsAbs(source) {
-					source = filepath.Join(a.env.Dir, source)
+				if !icons.IsURL(source) {
+					source = a.abs(source)
 				}
 			}
-			got, err := icons.New(a.cfg.icons).Fetch(cmd.Context(), set, source, force)
+			got, err := icons.New(a.iconsDir()).Fetch(cmd.Context(), set, source, force)
 			if err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}
@@ -72,7 +70,7 @@ func (a *app) iconsSearchCmd() *cobra.Command {
 an icon part (aws/…) and its category, tab-separated.`,
 		Args: usage(cobra.MinimumNArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
-			hits, err := icons.New(a.cfg.icons).Search(args)
+			hits, err := icons.New(a.iconsDir()).Search(args)
 			if err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}

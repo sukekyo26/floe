@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -23,7 +24,7 @@ func TestDrawEveryStage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	l := tmpl.NewLibrary("testdata")
+	l := tmpl.NewLibrary("testdata", "")
 	d, err := l.Read(file, src, "", "")
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +51,7 @@ func TestDrawEveryStage(t *testing.T) {
 func TestCheck(t *testing.T) {
 	t.Parallel()
 
-	warnings, mistakes := tmpl.Check("testdata/sizes")
+	warnings, mistakes := tmpl.Check("testdata/sizes", "")
 	if len(warnings) != 1 || len(mistakes) != 0 {
 		t.Fatalf("Check = %v, %v", warnings, mistakes)
 	}
@@ -60,7 +61,7 @@ func TestCheck(t *testing.T) {
 	}
 
 	dir := sizes(t, map[string]string{"template.yaml": "floe: " + release[0] + "." + release[1] + "\n"})
-	if warnings, mistakes := tmpl.Check(dir); len(warnings) != 0 || len(mistakes) != 0 {
+	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
 		t.Errorf("Check with template.yaml = %v, %v", warnings, mistakes)
 	}
 }
@@ -208,6 +209,27 @@ func TestCheckMistakes(t *testing.T) {
 			want:  []string{`sizes/page.html: there is no image "nope.svg" under `},
 		},
 		{
+			name:    "a theme without the variables of diagrams",
+			files:   map[string]string{"schema.json": `"chart":|"plan": { "type": "object", "format": "diagram" },` + "\n    " + `"chart":`},
+			warning: "sizes/themes/default.css does not define --bg, --surface, --fg, --muted, --line, --accent, --accent-soft",
+		},
+		{
+			name: "formats of other types",
+			files: map[string]string{"schema.json": `"note": { "type": "string", "format": "html" }|"note": { "type": "object", "format": "html", ` +
+				`"properties": { "logo": { "type": "string", "format": "image" } } }, "plan": { "format": "diagram" }`},
+			want: []string{
+				`sizes/schema.json: #/properties/note: floe draws an item of the format html from a value of type string; declare "type": "string" alone`,
+				"sizes/schema.json: #/properties/note/properties/logo: the format image marks an item to draw",
+				`sizes/schema.json: #/properties/plan: floe draws an item of the format diagram from a value of type object`,
+			},
+		},
+		{
+			name: "a format inside a diagram",
+			files: map[string]string{"schema.json": `"chart":|"plan": { "type": "object", "format": "diagram", ` +
+				`"properties": { "logo": { "type": "string", "format": "image" } } },` + "\n    " + `"chart":`},
+			want: []string{"sizes/schema.json: #/properties/plan/properties/logo: the format image marks an item to draw"},
+		},
+		{
 			name:  "newer floe",
 			files: map[string]string{"template.yaml": "floe: 999.0\n"},
 			want:  []string{"template sizes needs floe 999.0.0 or later"},
@@ -216,7 +238,7 @@ func TestCheckMistakes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			warnings, mistakes := tmpl.Check(sizes(t, tt.files))
+			warnings, mistakes := tmpl.Check(sizes(t, tt.files), "")
 			lines := make([]string, 0, len(mistakes))
 			for _, m := range mistakes {
 				lines = append(lines, strings.Split(m.Error(), "\n")...)
@@ -236,6 +258,21 @@ func TestCheckMistakes(t *testing.T) {
 	}
 }
 
+// The variables of diagrams that page.html defines, for every theme, are not missed in a theme.
+func TestCheckVariablesInPage(t *testing.T) {
+	t.Parallel()
+
+	release := strings.SplitN(version.Version, ".", 3)
+	dir := sizes(t, map[string]string{
+		"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
+		"schema.json":   `"chart":|"plan": { "type": "object", "format": "diagram" },` + "\n    " + `"chart":`,
+		"page.html":     "<body>|<body><style>:root { " + strings.Join(diagram.Variables(), ": red; ") + ": red }</style>",
+	})
+	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
+		t.Errorf("Check = %v, %v", warnings, mistakes)
+	}
+}
+
 // A directory is checked as a template of its name, which must be one.
 func TestCheckName(t *testing.T) {
 	t.Parallel()
@@ -244,7 +281,7 @@ func TestCheckName(t *testing.T) {
 	if err := os.CopyFS(dir, os.DirFS("testdata/sizes")); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir)
+	_, mistakes := tmpl.Check(dir, "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_new_name" {
 		t.Errorf("Check of %s = %v", dir, mistakes)
@@ -259,7 +296,7 @@ func TestCheckMissingFile(t *testing.T) {
 	if err := os.Remove(filepath.Join(dir, "example.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir)
+	_, mistakes := tmpl.Check(dir, "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_file_missing" {
 		t.Fatalf("Check without example.yaml = %v", mistakes)
@@ -280,7 +317,7 @@ func TestRenderBadAsset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := tmpl.NewLibrary(filepath.Dir(dir)).Read(file, src, "", "")
+	d, err := tmpl.NewLibrary(filepath.Dir(dir), "").Read(file, src, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,7 +342,7 @@ func TestCheckAssetsFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "assets"), nil, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir)
+	_, mistakes := tmpl.Check(dir, "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_assets_not_dir" {
 		t.Errorf("Check with a file named assets = %v", mistakes)
@@ -320,7 +357,7 @@ func TestCheckFile(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(file)
+	_, mistakes := tmpl.Check(file, "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_check_not_dir" {
 		t.Errorf("Check of a file = %v", mistakes)

@@ -202,8 +202,8 @@ func (t *Template) assets() func(name string) (template.URL, error) {
 // directory of the data file, into d.images, and reports each mistake at its line and column under
 // root.
 func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
-	var found []imageAt
-	s.findImages(d.Values, nil, &found)
+	var found []itemAt
+	s.find("image", d.Values, nil, &found)
 	if found == nil {
 		return nil
 	}
@@ -216,18 +216,23 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 	refused := map[string]*usererr.Error{}
 	var problems yamlpos.Problems
 	for _, f := range found {
+		// Not text where the schema gives no type: drawn as written.
+		name, ok := f.value.(string)
+		if !ok {
+			continue
+		}
 		// An image named by many items is read once, and its mistake reported at each of them: refused
 		// holds nil for one read.
-		e, seen := refused[f.name]
+		e, seen := refused[name]
 		if !seen {
-			if imagePath(f.name) {
-				d.tried = append(d.tried, filepath.Join(dir, filepath.FromSlash(f.name)))
+			if imagePath(name) {
+				d.tried = append(d.tried, filepath.Join(dir, filepath.FromSlash(name)))
 			}
 			var uri template.URL
-			if uri, e = imageURI(r.FS(), f.name, dir); e == nil {
-				d.images[f.name] = uri
+			if uri, e = imageURI(r.FS(), name, dir); e == nil {
+				d.images[name] = uri
 			}
-			refused[f.name] = e
+			refused[name] = e
 		}
 		if e == nil {
 			continue
@@ -241,31 +246,4 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 		return problems.Sorted()
 	}
 	return nil
-}
-
-// imageAt is an image a data file names, and the path of keys to where it does.
-type imageAt struct {
-	name string
-	at   []string
-}
-
-// findImages adds to found the images v holds where s declares format image, v being at the path at.
-func (s *schema) findImages(v any, at []string, found *[]imageAt) {
-	if s == nil {
-		return
-	}
-	switch v := v.(type) {
-	case string:
-		if s.Format == "image" {
-			*found = append(*found, imageAt{name: v, at: at})
-		}
-	case map[string]any:
-		for k, item := range v {
-			s.Properties[k].findImages(item, append(at[:len(at):len(at)], k), found)
-		}
-	case []any:
-		for i, item := range v {
-			s.Items.findImages(item, append(at[:len(at):len(at)], strconv.Itoa(i)), found)
-		}
-	}
 }

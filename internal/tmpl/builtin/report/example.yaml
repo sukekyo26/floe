@@ -1,4 +1,5 @@
-# A report: a heading and parts per section. Text is Markdown; html goes in as it is.
+# A report: a heading and parts per section. Text is Markdown; html goes in as it is; a diagram is
+# a spec as floe diagram render takes it.
 template: report
 title: Moving the team wiki
 eyebrow: Plan · 2030-04
@@ -10,6 +11,17 @@ sections:
           1. Freeze edits on the old wiki on **Friday evening**.
           2. Copy the pages and check the links.
           3. Point the team's bookmarks at the new host.
+      - diagram:
+          id: move
+          width: 640
+          height: 120
+          title: The pages go from the old wiki to the new host
+          parts:
+            - box: { x: 16, y: 32, w: 184, h: 56, rows: [Old wiki, read-only from Friday] }
+            - box: { x: 228, y: 32, w: 184, h: 56, tone: accent, rows: [Copy, links checked] }
+            - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [New host, open on Monday] }
+            - edge: { d: "M200,60 H228" }
+            - edge: { d: "M412,60 H440" }
   - heading: Risks
     parts:
       - text: |

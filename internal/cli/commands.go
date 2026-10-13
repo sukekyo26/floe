@@ -35,16 +35,27 @@ func (a *app) store() *store.Store {
 }
 
 func (a *app) templates() *tmpl.Library {
-	return tmpl.NewLibrary(a.templatesDir())
+	return tmpl.NewLibrary(a.templatesDir(), a.iconsDir())
 }
 
-// templatesDir is the directory of templates of one's own, a relative one under the working directory,
-// so that a link records, and the server it starts uses, the one this command means.
+// templatesDir is the directory of templates of one's own, so that a link records, and the server it
+// starts uses, the one this command means.
 func (a *app) templatesDir() string {
-	if a.cfg.templates == "" || filepath.IsAbs(a.cfg.templates) {
-		return a.cfg.templates
+	return a.abs(a.cfg.templates)
+}
+
+// iconsDir is the directory of icons, so that the server a publish starts draws the icons this command
+// checked a linked data file with.
+func (a *app) iconsDir() string {
+	return a.abs(a.cfg.icons)
+}
+
+// abs puts a relative dir under the working directory; "" stays "".
+func (a *app) abs(dir string) string {
+	if dir == "" || filepath.IsAbs(dir) {
+		return dir
 	}
-	return filepath.Join(a.env.Dir, a.cfg.templates)
+	return filepath.Join(a.env.Dir, dir)
 }
 
 func (a *app) out(format string, args ...any) {
@@ -77,7 +88,8 @@ opened in the browser ($BROWSER, open, wslview, xdg-open).
 --link registers a file in place instead of storing a page. An HTML file is shown as it is:
 it is read on every request, and the files under its directory are served for its relative
 references. A data file is drawn each time its page is opened, and saving it, an image it
-shows or a file of its template reloads the open tab. The same slug for another file is
+shows or a file of its template, or fetching the icons its diagrams show, reloads the open
+tab. The same slug for another file is
 refused unless --force.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -172,7 +184,7 @@ func (a *app) noticeUpdate(e *store.Entry) {
 func (a *app) serverEnv() []string {
 	env := append([]string{}, a.env.Environ...)
 	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home,
-		"FLOE_TEMPLATES_DIR="+a.templatesDir())
+		"FLOE_TEMPLATES_DIR="+a.templatesDir(), "FLOE_ICONS_DIR="+a.iconsDir())
 }
 
 func localTime(iso string) string {

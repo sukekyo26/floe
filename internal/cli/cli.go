@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -140,11 +139,7 @@ func newRoot(env Env, cat *i18n.Catalog) *cobra.Command {
 
 // readArg reads a file named on the command line, relative to the working directory.
 func (a *app) readArg(file string) ([]byte, error) {
-	abs := file
-	if !filepath.IsAbs(abs) {
-		abs = filepath.Join(a.env.Dir, abs)
-	}
-	src, err := os.ReadFile(abs) //nolint:gosec // G304: reading the file the user names is the point
+	src, err := os.ReadFile(a.abs(file)) //nolint:gosec // G304: reading the file the user names is the point
 	if err != nil {
 		return nil, usererr.CannotRead(file, err)
 	}
