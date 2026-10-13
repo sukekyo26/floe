@@ -159,8 +159,7 @@ func (a *app) noticeUpdate(e *store.Entry) {
 // over the process's own.
 func (a *app) serverEnv() []string {
 	env := append([]string{}, a.env.Environ...)
-	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home,
-		"FLOE_TEMPLATES_DIR="+a.cfg.templates)
+	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home)
 }
 
 func localTime(iso string) string {
