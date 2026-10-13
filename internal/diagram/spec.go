@@ -17,11 +17,12 @@ import (
 	"github.com/goccy/go-yaml/parser"
 
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // Spec is one diagram, read from File where Pos is.
 type Spec struct {
-	Pos
+	yamlpos.Pos
 	File          string
 	ID            string
 	Width, Height float64
@@ -31,12 +32,12 @@ type Spec struct {
 
 // Part is one of Frame, Box, Table, Icon, Edge, Dot, Bar, Axis, Circle, Label, Line and Raw.
 type Part interface {
-	At() Pos
+	At() yamlpos.Pos
 }
 
 // Frame is a box around other parts, with its label inside the top left corner.
 type Frame struct {
-	Pos
+	yamlpos.Pos
 	X, Y, W, H float64
 	Label      string
 	Accent     bool
@@ -46,7 +47,7 @@ type Frame struct {
 
 // Box is a box of centred rows of text.
 type Box struct {
-	Pos
+	yamlpos.Pos
 	X, Y, W, H float64
 	Rows       []Row
 	Tone       string
@@ -60,7 +61,7 @@ type Row struct {
 
 // Table is a heading over rows of a name and a type (an ER entity, a class).
 type Table struct {
-	Pos
+	yamlpos.Pos
 	X, Y, W float64
 	Title   string
 	Rows    []TableRow
@@ -75,7 +76,7 @@ type TableRow struct {
 
 // Icon is an icon of an icon set (aws/…) with its top left at X, Y.
 type Icon struct {
-	Pos
+	yamlpos.Pos
 	X, Y  float64
 	Name  string
 	Label string
@@ -84,7 +85,7 @@ type Icon struct {
 
 // Edge is a right-angled line through the absolute M, H, V and L commands of D.
 type Edge struct {
-	Pos
+	yamlpos.Pos
 	D        string
 	Segs     [][4]float64 // x1, y1, x2, y2 of each straight run of D
 	Label    string
@@ -99,7 +100,7 @@ type Edge struct {
 
 // Dot is a circle that edges may reach the centre of (a commit, a milestone, a start state).
 type Dot struct {
-	Pos
+	yamlpos.Pos
 	CX, CY, R float64
 	Tone      string
 	Hollow    bool
@@ -107,7 +108,7 @@ type Dot struct {
 
 // Bar is a horizontal span (a timeline period), with its label to the right.
 type Bar struct {
-	Pos
+	yamlpos.Pos
 	X1, X2, Y float64
 	Tone      string
 	Label     string
@@ -115,7 +116,7 @@ type Bar struct {
 
 // Axis is a time axis with labelled ticks, and grid lines up to Grid when it is set.
 type Axis struct {
-	Pos
+	yamlpos.Pos
 	X1, X2, Y float64
 	Ticks     []Tick
 	Grid      *float64
@@ -129,14 +130,14 @@ type Tick struct {
 
 // Circle is a translucent circle that may overlap others (a Venn diagram).
 type Circle struct {
-	Pos
+	yamlpos.Pos
 	CX, CY, R float64
 	Tone      string
 }
 
 // Label is text; Anchor is middle, start or end.
 type Label struct {
-	Pos
+	yamlpos.Pos
 	Text   string
 	X, Y   float64
 	Anchor string
@@ -146,14 +147,14 @@ type Label struct {
 
 // Line is a line without arrows; Kind is line, lifeline or divider.
 type Line struct {
-	Pos
+	yamlpos.Pos
 	X1, Y1, X2, Y2 float64
 	Kind           string
 }
 
 // Raw is SVG that no part can draw, written out as it is and left out of the checks.
 type Raw struct {
-	Pos
+	yamlpos.Pos
 	SVG string
 }
 
@@ -193,21 +194,23 @@ var decoders = []decoder{
 
 // Parse reads the spec in src; file names it in errors.
 func Parse(file string, src []byte) (*Spec, error) {
+	start := yamlpos.Pos{Line: 1, Column: 1}
 	doc, err := parser.ParseBytes(src, 0)
 	if err != nil {
 		var se *yaml.SyntaxError
 		if errors.As(err, &se) && se.Token != nil {
-			at := Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}
-			return nil, &Error{File: file, Pos: at, Err: usererr.New("diagram_yaml", se.Message)}
+			at := yamlpos.Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}
+			return nil, &yamlpos.Error{File: file, Pos: at, Err: usererr.New("diagram_yaml", se.Message)}
 		}
-		return nil, &Error{File: file, Pos: Pos{Line: 1, Column: 1}, Err: usererr.New("diagram_yaml", err.Error())}
+		return nil, &yamlpos.Error{File: file, Pos: start, Err: usererr.New("diagram_yaml", err.Error())}
 	}
 	if len(doc.Docs) > 1 {
-		at := doc.Docs[1].Start.Position // the --- that starts the second document
-		return nil, &Error{File: file, Pos: Pos{Line: at.Line, Column: at.Column}, Err: usererr.New("diagram_documents")}
+		sep := doc.Docs[1].Start.Position // the --- that starts the second document
+		at := yamlpos.Pos{Line: sep.Line, Column: sep.Column}
+		return nil, &yamlpos.Error{File: file, Pos: at, Err: usererr.New("diagram_documents")}
 	}
 	if len(doc.Docs) == 0 || doc.Docs[0].Body == nil {
-		return nil, &Error{File: file, Pos: Pos{Line: 1, Column: 1}, Err: usererr.New("diagram_empty")}
+		return nil, &yamlpos.Error{File: file, Pos: start, Err: usererr.New("diagram_empty")}
 	}
 	return FromNode(file, doc.Docs[0].Body)
 }
@@ -215,12 +218,10 @@ func Parse(file string, src []byte) (*Spec, error) {
 // FromNode reads a spec from a node of YAML already parsed, such as a diagram inside a data file,
 // so that its errors point at the lines and columns of that file.
 func FromNode(file string, n ast.Node) (*Spec, error) {
-	a := &anchors{found: nil}
-	ast.Walk(a, n)
-	if a.found != nil {
-		return nil, &Error{File: file, Pos: posOf(a.found), Err: usererr.New("diagram_no_anchors")}
+	if a := yamlpos.FirstAnchor(n); a != nil {
+		return nil, &yamlpos.Error{File: file, Pos: yamlpos.Of(a), Err: usererr.New("diagram_no_anchors")}
 	}
-	f, err := newFields(file, "diagram", posOf(n), n)
+	f, err := newFields(file, "diagram", yamlpos.Of(n), n)
 	if err != nil {
 		return nil, err
 	}
@@ -236,12 +237,12 @@ func FromNode(file string, n ast.Node) (*Spec, error) {
 		return nil, err
 	}
 	if !idRe.MatchString(spec.ID) {
-		return nil, f.errAt(posOf(f.lookup("id")), "diagram_bad_id", spec.ID)
+		return nil, f.errAt(yamlpos.Of(f.lookup("id")), "diagram_bad_id", spec.ID)
 	}
 	if strings.TrimSpace(spec.Title) == "" {
 		at := f.at
 		if n := f.lookup("title"); n != nil {
-			at = posOf(n)
+			at = yamlpos.Of(n)
 		}
 		return nil, f.errAt(at, "diagram_no_title", spec.ID)
 	}
@@ -259,7 +260,7 @@ func FromNode(file string, n ast.Node) (*Spec, error) {
 func decodePart(file string, n ast.Node) (Part, error) {
 	m, ok := n.(*ast.MappingNode)
 	if !ok || len(m.Values) != 1 {
-		return nil, &Error{File: file, Pos: posOf(n), Err: usererr.New("diagram_part_shape")}
+		return nil, &yamlpos.Error{File: file, Pos: yamlpos.Of(n), Err: usererr.New("diagram_part_shape")}
 	}
 	kind := m.Values[0].Key.String()
 	i := slices.IndexFunc(decoders, func(d decoder) bool { return d.kind == kind })
@@ -268,12 +269,12 @@ func decodePart(file string, n ast.Node) (Part, error) {
 		for _, d := range decoders {
 			kinds = append(kinds, d.kind)
 		}
-		return nil, &Error{
-			File: file, Pos: posOf(m.Values[0].Key),
+		return nil, &yamlpos.Error{
+			File: file, Pos: yamlpos.Of(m.Values[0].Key),
 			Err: usererr.New("diagram_unknown_part", kind, strings.Join(kinds, ", ")),
 		}
 	}
-	f, err := newFields(file, kind, posOf(m.Values[0].Key), m.Values[0].Value)
+	f, err := newFields(file, kind, yamlpos.Of(m.Values[0].Key), m.Values[0].Value)
 	if err != nil {
 		return nil, err
 	}

@@ -1,88 +1,33 @@
 package diagram
 
 import (
-	"fmt"
 	"math"
 	"slices"
 	"strings"
 
 	"github.com/goccy/go-yaml/ast"
 
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
-
-// Pos is a line and column of the spec's YAML, both from 1.
-type Pos struct {
-	Line, Column int
-}
-
-// At returns the position, so that every part embedding Pos tells where it was written.
-func (p Pos) At() Pos {
-	return p
-}
-
-// Error is a mistake in a spec, at a line and column of its YAML.
-type Error struct {
-	File string
-	Pos  Pos
-	Err  *usererr.Error
-}
-
-// Error words the mistake in English.
-func (e *Error) Error() string {
-	return e.Localize(i18n.EnglishCatalog())
-}
-
-// Localize words the mistake in the language of c, after the file, line and column.
-func (e *Error) Localize(c *i18n.Catalog) string {
-	return fmt.Sprintf("%s:%d:%d: %s", e.File, e.Pos.Line, e.Pos.Column, e.Err.Localize(c))
-}
-
-// anchors finds the first anchor, alias or tag. They are refused, so that every value is written
-// where its position points.
-type anchors struct {
-	found ast.Node
-}
-
-func (a *anchors) Visit(n ast.Node) ast.Visitor {
-	if a.found != nil {
-		return nil
-	}
-	switch n.(type) {
-	case *ast.AnchorNode, *ast.AliasNode, *ast.TagNode:
-		a.found = n
-		return nil
-	default:
-		return a
-	}
-}
-
-func posOf(n ast.Node) Pos {
-	if m, ok := n.(*ast.MappingNode); ok && len(m.Values) > 0 {
-		n = m.Values[0].Key
-	}
-	p := n.GetToken().Position
-	return Pos{Line: p.Line, Column: p.Column}
-}
 
 // fields reads the keys of one mapping and keeps the first mistake, so a decoder reads every key
 // in a row and checks once at the end. The keys a decoder asks for are the keys it knows.
 type fields struct {
 	file   string
-	kind   string // names the mapping in messages: diagram, box, edge…
-	at     Pos    // where a missing key is reported
+	kind   string      // names the mapping in messages: diagram, box, edge…
+	at     yamlpos.Pos // where a missing key is reported
 	values []*ast.MappingValueNode
 	asked  []string
-	err    *Error
+	err    *yamlpos.Error
 }
 
-func newFields(file, kind string, at Pos, n ast.Node) (*fields, error) {
+func newFields(file, kind string, at yamlpos.Pos, n ast.Node) (*fields, error) {
 	f := &fields{file: file, kind: kind, at: at, values: nil, asked: nil, err: nil}
 	m, ok := n.(*ast.MappingNode)
 	if !ok {
 		if _, null := n.(*ast.NullNode); !null {
-			at = posOf(n)
+			at = yamlpos.Of(n)
 		}
 		return nil, f.errAt(at, "diagram_not_mapping", kind)
 	}
@@ -90,13 +35,13 @@ func newFields(file, kind string, at Pos, n ast.Node) (*fields, error) {
 	return f, nil
 }
 
-func (f *fields) errAt(at Pos, key string, args ...any) *Error {
-	return &Error{File: f.file, Pos: at, Err: usererr.New(key, args...)}
+func (f *fields) errAt(at yamlpos.Pos, key string, args ...any) *yamlpos.Error {
+	return &yamlpos.Error{File: f.file, Pos: at, Err: usererr.New(key, args...)}
 }
 
 func (f *fields) fail(n ast.Node, key string, args ...any) {
 	if f.err == nil {
-		f.err = f.errAt(posOf(n), key, args...)
+		f.err = f.errAt(yamlpos.Of(n), key, args...)
 	}
 }
 
@@ -127,7 +72,7 @@ func (f *fields) missing(key string) {
 func (f *fields) done() error {
 	for _, v := range f.values {
 		if !slices.Contains(f.asked, v.Key.String()) {
-			return f.errAt(posOf(v.Key), "diagram_unknown_key", f.kind, v.Key.String(), strings.Join(f.asked, ", "))
+			return f.errAt(yamlpos.Of(v.Key), "diagram_unknown_key", f.kind, v.Key.String(), strings.Join(f.asked, ", "))
 		}
 	}
 	if f.err != nil {

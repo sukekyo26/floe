@@ -3,29 +3,10 @@ package diagram
 import (
 	"math"
 	"slices"
-	"strings"
 
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
-
-// Problems are the layout mistakes of a diagram, all of them at once, each at the line and column of
-// the part it is about.
-type Problems []*Error
-
-// Error words the mistakes in English, one per line.
-func (p Problems) Error() string {
-	return p.Localize(i18n.EnglishCatalog())
-}
-
-// Localize words the mistakes in the language of c, one per line.
-func (p Problems) Localize(c *i18n.Catalog) string {
-	lines := make([]string, len(p))
-	for i, e := range p {
-		lines[i] = e.Localize(c)
-	}
-	return strings.Join(lines, "\n")
-}
 
 // Check reports the layout mistakes of s, as diagram.mjs does: text too wide or tall for its box,
 // parts sticking out of the canvas, overlapping, straddling the edge of a frame, edges running
@@ -41,7 +22,7 @@ func Check(s *Spec, store *icons.Store) error {
 	return nil
 }
 
-func (l *layout) check() Problems {
+func (l *layout) check() yamlpos.Problems {
 	l.checkPlacement()
 	l.checkEdges()
 	l.checkCrossings()
@@ -51,7 +32,7 @@ func (l *layout) check() Problems {
 // checkPlacement reports parts sticking out of the canvas, overlapping and straddling frames.
 func (l *layout) checkPlacement() {
 	s := l.spec
-	canvas := rect{0, 0, s.Width, s.Height, nil, Pos{Line: 0, Column: 0}}
+	canvas := rect{0, 0, s.Width, s.Height, nil, yamlpos.Pos{Line: 0, Column: 0}}
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas) {
 		if !r.inside(canvas) {
 			l.problem(r.at, "diagram_outside", r.what, formatNum(s.Width), formatNum(s.Height))

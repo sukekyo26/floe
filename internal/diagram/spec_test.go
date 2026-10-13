@@ -11,6 +11,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -51,7 +52,7 @@ parts:
 	if err != nil {
 		t.Fatal(err)
 	}
-	at := func(line, col int) diagram.Pos { return diagram.Pos{Line: line, Column: col} }
+	at := func(line, col int) yamlpos.Pos { return yamlpos.Pos{Line: line, Column: col} }
 	want := &diagram.Spec{
 		Pos: at(1, 1), File: "all.yaml", ID: "all-parts", Width: 640, Height: 400.5, Title: "部品の一覧",
 		Parts: []diagram.Part{
