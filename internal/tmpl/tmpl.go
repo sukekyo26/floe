@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"math"
 	"path"
 	"slices"
 	"strings"
@@ -50,8 +51,9 @@ type Data struct {
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
 var shared = []string{"template", "theme", "title"}
 
-// Read reads the data file src and checks it against its template's schema; file names it in errors.
-// A mistake is a *yamlpos.Error, and the schema's are all reported at once as yamlpos.Problems.
+// Read reads the data file src and checks it against its template's schema, then its checks; file
+// names it in errors. A mistake is a *yamlpos.Error, and those of the schema or of the checks are all
+// reported at once as yamlpos.Problems.
 //
 // theme, when not "", is the theme to draw with instead of the one the data names (floe publish
 // --theme): the data's theme: is then not used, and a theme the template does not have is refused as
@@ -61,9 +63,9 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 	if err != nil {
 		return nil, err
 	}
-	var top map[string]any
-	if err = yaml.NodeToValue(root, &top); err != nil {
-		return nil, yamlpos.Syntax(file, err)
+	top, err := decode(file, root)
+	if err != nil {
+		return nil, err
 	}
 	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top}
 	where, problems := readShared(d, root, theme != "")
@@ -93,18 +95,29 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 	case !slices.Contains(themes, d.Theme):
 		fail(where["theme"], "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
 	}
-	err = checkSchema(d, root)
+	if err = checkValues(d, root, problems); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+// checkValues checks d against its template's schema and then its checks, reporting the schema's
+// mistakes with problems, those found before in the keys every template shares.
+func checkValues(d *Data, root ast.Node, problems yamlpos.Problems) error {
+	err := checkSchema(d, root)
 	var more yamlpos.Problems
 	switch {
 	case errors.As(err, &more):
 		problems = append(problems, more...)
 	case err != nil:
-		return nil, err
+		return err
 	}
 	if problems != nil {
-		return nil, problems.Sorted()
+		return problems.Sorted()
 	}
-	return d, nil
+	// Stage 3 runs on data that passed stage 2, its shared keys and its schema: broken data would only
+	// give the checks' expressions mistakes that mean nothing.
+	return checkRelations(d, root)
 }
 
 // readShared moves the keys every template shares from d.Values to d, and returns where each is
@@ -138,7 +151,8 @@ func readShared(d *Data, root ast.Node, themed bool) (map[string]yamlpos.Pos, ya
 }
 
 // parse reads src as one YAML document of keys and values, without anchors, aliases or tags, so
-// that every value is written where its position points.
+// that every value is written where its position points, and without .inf or .nan, which JSON has no
+// number for and which would make a comparison of the checks silently hold or fail.
 func parse(file string, src []byte) (ast.Node, error) {
 	body, err := yamlpos.Parse(file, src, "tmpl_documents")
 	if errors.Is(err, yamlpos.ErrEmpty) {
@@ -150,8 +164,11 @@ func parse(file string, src []byte) (ast.Node, error) {
 	if a := yamlpos.FirstAnchor(body); a != nil {
 		return nil, yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
 	}
-	if k := firstNonTextKey(body); k != nil {
+	if k := first(body, nonTextKey); k != nil {
 		return nil, yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value)
+	}
+	if n := first(body, nonFinite); n != nil {
+		return nil, yamlpos.New(file, yamlpos.Of(n), "tmpl_not_finite", n.GetToken().Value)
 	}
 	if _, ok := body.(*ast.MappingNode); !ok {
 		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_not_mapping")
@@ -281,31 +298,80 @@ func (s *schema) prepare(v any) any {
 	return v
 }
 
-// firstNonTextKey returns the first key under n that is not text, or nil. A key is a name: 0x10, ~
-// or 1.0 would be read as another name than the one written, and not found where it was written.
-func firstNonTextKey(n ast.Node) ast.Node {
-	k := &keys{found: nil}
-	ast.Walk(k, n)
-	return k.found
+// decode reads the values under root. goccy/go-yaml reads a whole number above 0 as uint64, which
+// expr negates by wrapping around (-3 / 2 is 9.2e18), so one that fits becomes an int.
+func decode(file string, root ast.Node) (map[string]any, error) {
+	var top map[string]any
+	if err := yaml.NodeToValue(root, &top); err != nil {
+		return nil, yamlpos.Syntax(file, err)
+	}
+	ints(top)
+	return top, nil
 }
 
-type keys struct {
+// ints turns the uint64 in v that fit into int, in place, and returns v.
+func ints(v any) any {
+	switch v := v.(type) {
+	case uint64:
+		if v <= math.MaxInt64 {
+			return int(v)
+		}
+	case map[string]any:
+		for k, item := range v {
+			v[k] = ints(item)
+		}
+	case []any:
+		for i, item := range v {
+			v[i] = ints(item)
+		}
+	}
+	return v
+}
+
+// first returns the first node under n that pick picks, or nil.
+func first(n ast.Node, pick func(ast.Node) ast.Node) ast.Node {
+	f := &finder{pick: pick, found: nil}
+	ast.Walk(f, n)
+	return f.found
+}
+
+type finder struct {
+	pick  func(ast.Node) ast.Node
 	found ast.Node
 }
 
-func (k *keys) Visit(n ast.Node) ast.Visitor {
-	if k.found != nil {
+func (f *finder) Visit(n ast.Node) ast.Visitor {
+	if f.found != nil {
 		return nil
 	}
-	if v, ok := n.(*ast.MappingValueNode); ok {
-		key := ast.Node(v.Key)
-		if explicit, ok := key.(*ast.MappingKeyNode); ok {
-			key = explicit.Value
-		}
-		if _, text := key.(*ast.StringNode); !text {
-			k.found = key
-			return nil
-		}
+	if f.found = f.pick(n); f.found != nil {
+		return nil
 	}
-	return k
+	return f
+}
+
+// nonTextKey picks the key of n that is not text. A key is a name: 0x10, ~ or 1.0 would be read as
+// another name than the one written, and not found where it was written.
+func nonTextKey(n ast.Node) ast.Node {
+	v, ok := n.(*ast.MappingValueNode)
+	if !ok {
+		return nil
+	}
+	key := ast.Node(v.Key)
+	if explicit, ok := key.(*ast.MappingKeyNode); ok {
+		key = explicit.Value
+	}
+	if _, text := key.(*ast.StringNode); text {
+		return nil
+	}
+	return key
+}
+
+// nonFinite picks .inf and .nan.
+func nonFinite(n ast.Node) ast.Node {
+	switch n.(type) {
+	case *ast.InfinityNode, *ast.NanNode:
+		return n
+	}
+	return nil
 }

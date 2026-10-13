@@ -110,9 +110,6 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 			return
 		}
 		s.add(where, "tmpl_schema_enum", label(at), fmt.Sprint(k.Got), strings.Join(want, ", "))
-	case *kind.InvalidJsonValue:
-		// .inf and .nan: YAML has them, JSON does not. The text as written, not Go's +Inf.
-		s.add(where, "tmpl_schema_not_finite", label(at), value.GetToken().Value)
 	default:
 		if key, args, ok := wording(e.ErrorKind); ok {
 			s.add(where, key, append([]any{label(at)}, args...)...)
