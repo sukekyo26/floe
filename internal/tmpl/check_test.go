@@ -269,8 +269,8 @@ func TestCheckMissingFile(t *testing.T) {
 	}
 }
 
-// An image of assets/ that is not right stops the drawing as a mistake of the template's page.html,
-// in the language of the messages.
+// An image of assets/ that is not right stops the drawing as a mistake of the template's assets/, as
+// floe template check tells it, in the language of the messages.
 func TestRenderBadAsset(t *testing.T) {
 	t.Parallel()
 
@@ -289,7 +289,7 @@ func TestRenderBadAsset(t *testing.T) {
 	if !errors.As(err, &e) || e.Key != "tmpl_item" {
 		t.Fatalf("Render = %v", err)
 	}
-	if ja := e.Localize(i18n.New("ja")); ja != filepath.Join(dir, "page.html")+": 「logo.svg」の中身は、名前が示す image/svg+xml ではありません" {
+	if ja := e.Localize(i18n.New("ja")); ja != filepath.Join(dir, "assets")+": 「logo.svg」の中身は、名前が示す image/svg+xml ではありません" {
 		t.Errorf("the mistake in Japanese = %s", ja)
 	}
 }

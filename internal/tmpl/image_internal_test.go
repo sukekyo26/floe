@@ -42,8 +42,15 @@ func TestImageURI(t *testing.T) {
 	if err = os.WriteFile(outside, png, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
 		t.Fatal(err)
 	}
-	if err = os.Symlink(outside, filepath.Join(dir, "link.png")); err != nil {
-		t.Fatal(err)
+	// A symlink is refused wherever it leads: out of the directory, through a directory, to a name that
+	// starts with a dot, or inside by an absolute path.
+	for link, to := range map[string]string{
+		"link.png": outside, "out": filepath.Dir(outside), "pic.png": ".hidden/c.png",
+		"abs.png": filepath.Join(dir, "a.png"),
+	} {
+		if err = os.Symlink(to, filepath.Join(dir, link)); err != nil {
+			t.Fatal(err)
+		}
 	}
 	r, err := os.OpenRoot(dir)
 	if err != nil {
@@ -65,7 +72,13 @@ func TestImageURI(t *testing.T) {
 		{"/a.png", "tmpl_image_path"},
 		{".hidden/c.png", "tmpl_image_path"},
 		{"sub/../a.png", "tmpl_image_path"},
-		{"link.png", "tmpl_image_path"},
+		{"link.png", "tmpl_image_symlink"},
+		{"out/out.png", "tmpl_image_symlink"},
+		{"pic.png", "tmpl_image_symlink"},
+		{"abs.png", "tmpl_image_symlink"},
+		{"A.png", "tmpl_image_missing"},
+		{"SUB/b.PNG", "tmpl_image_missing"},
+		{"a.png/x.png", "tmpl_image_missing"},
 	} {
 		uri, e := imageURI(r.FS(), tt.name, dir)
 		got := string(uri)
@@ -108,5 +121,26 @@ func TestCheckImages(t *testing.T) {
 	}
 	if len(d.images) != 1 || !strings.HasPrefix(string(d.images["a.png"]), "data:image/png;base64,") {
 		t.Errorf("the images = %v", d.images)
+	}
+}
+
+// An image of assets/ is read once a drawing: a second call does not read it again.
+func TestAssetsReadOnce(t *testing.T) {
+	t.Parallel()
+
+	dir := filepath.Join(t.TempDir(), "sizes")
+	if err := os.CopyFS(dir, os.DirFS("testdata/sizes")); err != nil {
+		t.Fatal(err)
+	}
+	asset := (&Template{Name: "sizes", Dir: dir, Path: dir}).assets()
+	first, err := asset("logo.svg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Remove(filepath.Join(dir, "assets", "logo.svg")); err != nil {
+		t.Fatal(err)
+	}
+	if again, err := asset("logo.svg"); err != nil || again != first {
+		t.Errorf("asset again = %.30s, %v; want it as read first", again, err)
 	}
 }

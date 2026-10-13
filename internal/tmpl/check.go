@@ -122,7 +122,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 // page.html names to asset, in every branch.
 func (t *Template) checkAssets(page *template.Template) []error {
 	var mistakes []error
-	var checked []string
+	var checked map[string]bool
 	err := t.files(func(files fs.FS) error {
 		fi, err := fs.Stat(files, "assets")
 		switch {
@@ -148,11 +148,16 @@ func (t *Template) checkAssets(page *template.Template) []error {
 		return []error{fmt.Errorf("read the assets of %s: %w", t.Name, err)}
 	}
 	for _, name := range assetsNamed(page) {
-		if slices.Contains(checked, name) {
+		if checked[name] {
 			continue // its mistake, if it has one, is told already
 		}
-		if _, err = t.asset(name); err != nil {
-			mistakes = append(mistakes, usererr.New("tmpl_item", t.file("page.html"), err))
+		var bad *usererr.Error
+		_, err = t.asset(name)
+		switch {
+		case errors.As(err, &bad):
+			mistakes = append(mistakes, t.assetMistake(bad))
+		case err != nil:
+			mistakes = append(mistakes, err)
 		}
 	}
 	return mistakes
@@ -161,7 +166,8 @@ func (t *Template) checkAssets(page *template.Template) []error {
 // assetImages returns the mistakes of the images of assets, the assets/ of t, and the names of those
 // it checked. A file not named as an image (a README), or whose name starts with a dot, which asset
 // cannot name, is left alone.
-func (t *Template) assetImages(assets fs.FS) (mistakes []error, checked []string, err error) {
+func (t *Template) assetImages(assets fs.FS) (mistakes []error, checked map[string]bool, err error) {
+	checked = map[string]bool{}
 	err = fs.WalkDir(assets, ".", func(name string, e fs.DirEntry, err error) error {
 		switch {
 		case err != nil:
@@ -172,7 +178,7 @@ func (t *Template) assetImages(assets fs.FS) (mistakes []error, checked []string
 			return nil
 		}
 		if _, image := imageTypes[strings.ToLower(path.Ext(name))]; image {
-			checked = append(checked, name)
+			checked[name] = true
 			if _, bad := imageURI(assets, name, t.file("assets")); bad != nil {
 				mistakes = append(mistakes, usererr.New("tmpl_item", t.file("assets"), bad))
 			}

@@ -3,13 +3,13 @@ package tmpl
 import (
 	"bytes"
 	"encoding/base64"
-	"errors"
 	"html/template"
 	"io"
 	"io/fs"
 	"net/http"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -52,15 +52,38 @@ func imageURI(files fs.FS, name, where string) (template.URL, *usererr.Error) {
 	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b)), nil
 }
 
-// readImage reads the file name of files, a regular file up to maxImage. os.Root refuses a symlink
-// that leads out of files.
+// readImage reads the file name of files, a regular file up to maxImage. Each name on its path must be
+// in its directory as written, case and all, so that a page drawn on macOS, which ignores case, draws
+// on linux too; and none may be a symlink, which could lead out of files or to a name starting with a
+// dot.
 func readImage(files fs.FS, name, where string) ([]byte, *usererr.Error) {
-	fi, err := fs.Stat(files, name)
+	steps := strings.Split(name, "/")
+	for i := range steps {
+		entries, err := fs.ReadDir(files, path.Join(append([]string{"."}, steps[:i]...)...))
+		if err != nil {
+			return nil, usererr.New("tmpl_image_unreadable", name, err.Error())
+		}
+		k := slices.IndexFunc(entries, func(e fs.DirEntry) bool { return e.Name() == steps[i] })
+		last := i == len(steps)-1
+		switch {
+		case k < 0:
+			return nil, usererr.New("tmpl_image_missing", name, where)
+		case entries[k].Type()&fs.ModeSymlink != 0:
+			return nil, usererr.New("tmpl_image_symlink", name, where)
+		case !last && !entries[k].IsDir():
+			return nil, usererr.New("tmpl_image_missing", name, where)
+		case last && !entries[k].Type().IsRegular():
+			return nil, usererr.New("tmpl_image_not_file", name)
+		}
+	}
+	f, err := files.Open(name)
+	if err != nil {
+		return nil, usererr.New("tmpl_image_unreadable", name, err.Error())
+	}
+	defer f.Close()
+	// The file opened is told by itself: its name may lead elsewhere by now.
+	fi, err := f.Stat()
 	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		return nil, usererr.New("tmpl_image_missing", name, where)
-	case err != nil && leadsOut(files, name):
-		return nil, usererr.New("tmpl_image_path", name, where)
 	case err != nil:
 		return nil, usererr.New("tmpl_image_unreadable", name, err.Error())
 	case !fi.Mode().IsRegular():
@@ -68,34 +91,14 @@ func readImage(files fs.FS, name, where string) ([]byte, *usererr.Error) {
 	case fi.Size() > maxImage:
 		return nil, tooLarge(name, fi.Size())
 	}
-	b, err := readAtMost(files, name, maxImage+1)
+	b, err := io.ReadAll(io.LimitReader(f, maxImage+1))
 	switch {
 	case err != nil:
 		return nil, usererr.New("tmpl_image_unreadable", name, err.Error())
-	case len(b) > maxImage: // grown since it was looked at: read only as far as the limit
-		if fi, err = fs.Stat(files, name); err == nil && fi.Size() > maxImage {
-			return nil, tooLarge(name, fi.Size())
-		}
-		return nil, tooLarge(name, int64(len(b)))
+	case len(b) > maxImage:
+		return nil, usererr.New("tmpl_image_changed", name)
 	}
 	return b, nil
-}
-
-// leadsOut reports whether name is a symlink that files cannot follow: one that leads out of it,
-// which os.Root refuses with an error of its own.
-func leadsOut(files fs.FS, name string) bool {
-	fi, err := fs.Lstat(files, name)
-	return err == nil && fi.Mode()&fs.ModeSymlink != 0
-}
-
-// readAtMost reads up to n bytes of the file name of files.
-func readAtMost(files fs.FS, name string, n int64) ([]byte, error) {
-	f, err := files.Open(name)
-	if err != nil {
-		return nil, err //nolint:wrapcheck // worded by the caller
-	}
-	defer f.Close()
-	return io.ReadAll(io.LimitReader(f, n)) //nolint:wrapcheck // worded by the caller
 }
 
 // tooLarge refuses the image name of size bytes, saying by how much: one just over the limit would be
@@ -160,6 +163,32 @@ func (t *Template) asset(name string) (template.URL, error) {
 		return "", e
 	}
 	return uri, nil
+}
+
+// assetMistake places the mistake e of the image of assets/ page.html asks for: a name that finds no
+// image floe takes is a mistake of page.html, and a file that is not right one of assets/.
+func (t *Template) assetMistake(e *usererr.Error) *usererr.Error {
+	where := "assets"
+	switch e.Key {
+	case "tmpl_image_path", "tmpl_image_type", "tmpl_image_missing":
+		where = "page.html"
+	}
+	return usererr.New("tmpl_item", t.file(where), e)
+}
+
+// assets returns asset for one drawing: an image shown many times is read once.
+func (t *Template) assets() func(name string) (template.URL, error) {
+	read := map[string]template.URL{}
+	return func(name string) (template.URL, error) {
+		if uri, ok := read[name]; ok {
+			return uri, nil
+		}
+		uri, err := t.asset(name)
+		if err == nil {
+			read[name] = uri
+		}
+		return uri, err
+	}
 }
 
 // checkImages reads the images of d, its items its schema s declares of format image, under dir, the

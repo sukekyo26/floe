@@ -337,6 +337,8 @@ var messagesJA = map[string]string{
 	"tmpl_image_type":          "「%s」は floe が扱う画像ではありません。png・jpeg・gif・webp・svg を使ってください",
 	"tmpl_image_missing":       "%[2]s の下に画像「%[1]s」がありません",
 	"tmpl_image_not_file":      "「%s」は画像のファイルではなく、ディレクトリなどです",
+	"tmpl_image_symlink":       "「%s」は symlink を通っていて、%s の外に出うるので使えません。画像そのものを置いてください",
+	"tmpl_image_changed":       "画像「%s」が読んでいる間に変わりました。やり直してください",
 	"tmpl_image_unreadable":    "画像「%s」を読めません: %s",
 	"tmpl_image_large":         "画像「%s」は %s バイトで、画像の上限の %s バイト（%s）を超えています。小さくしてください",
 	"tmpl_image_content":       "「%s」の中身は、名前が示す %s ではありません",

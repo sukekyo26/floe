@@ -294,7 +294,7 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	var bad *usererr.Error
 	switch {
 	case errors.As(err, &bad):
-		return nil, usererr.New("tmpl_item", t.file("page.html"), bad)
+		return nil, t.assetMistake(bad)
 	case err != nil:
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
@@ -307,21 +307,9 @@ func (t *Template) page() (*template.Template, error) {
 	if err != nil {
 		return nil, err
 	}
-	// An image of assets/ shown many times is read once a drawing.
-	assets := map[string]template.URL{}
-	asset := func(name string) (template.URL, error) {
-		if uri, ok := assets[name]; ok {
-			return uri, nil
-		}
-		uri, bad := t.asset(name)
-		if bad == nil {
-			assets[name] = uri
-		}
-		return uri, bad
-	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
-		Funcs(template.FuncMap{"asset": asset}).Parse(string(src))
+		Funcs(template.FuncMap{"asset": t.assets()}).Parse(string(src))
 	if err != nil {
 		return nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
 	}
