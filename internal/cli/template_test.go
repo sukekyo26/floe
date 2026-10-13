@@ -270,3 +270,24 @@ func (e *env) fetch(t *testing.T, path string) string {
 	}
 	return string(b)
 }
+
+// The server a publish starts draws the diagrams of a linked data file with the icons of a relative
+// FLOE_ICONS_DIR under the working directory of that publish, as its check did.
+func TestLinkDataFileOfRelativeIcons(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	if err := os.CopyFS(filepath.Join(e.tmp, "work", "icons"), os.DirFS("../diagram/testdata/icons")); err != nil {
+		t.Fatal(err)
+	}
+	e.write(t, "work/a.yaml", "template: report\nsections:\n  - parts:\n      - diagram:\n          id: a\n"+
+		"          width: 100\n          height: 50\n          title: t\n          parts:\n"+
+		"            - icon: { x: 10, y: 5, name: aws/aws-lambda, size: 24 }\n")
+	e.vars["FLOE_ICONS_DIR"] = "icons"
+	if r := e.run(t, "work", "publish", "a.yaml", "--link"); r.code != 0 {
+		t.Fatalf("publish --link = %+v", r)
+	}
+	if page := e.fetch(t, "/a/a/?raw"); !strings.Contains(page, `<use href="#a_icon-`) {
+		t.Errorf("the linked page:\n%s", page)
+	}
+}

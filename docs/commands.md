@@ -260,7 +260,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 |---|---|
 | `FLOE_DIR` | Where pages are stored. Defaults to `$XDG_DATA_HOME/floe`, else `~/.local/share/floe`. The layout is the same as the artifact skill's, so either can read the other's. |
 | `FLOE_PORT` | The port (default `7325`). A decimal number from 1 to 65535. |
-| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. |
+| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. A relative one is under the working directory. The diagrams of a linked data file show the icons of the server, which takes the one of the publish that started it. |
 | `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. A linked data file is drawn with the one of the publish that linked it, a relative one under its working directory. |
 | `FLOE_LANG` | The language of messages (`en`, `ja`). Falls back to `LC_ALL`, `LC_MESSAGES`, then `LANG`; a language without a catalog is skipped. English is the default. |
 | `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |

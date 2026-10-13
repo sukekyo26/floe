@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -213,6 +214,12 @@ func TestCheckMistakes(t *testing.T) {
 			warning: "sizes/themes/default.css does not define --bg, --surface, --fg, --muted, --line, --accent, --accent-soft",
 		},
 		{
+			name: "a format inside a diagram",
+			files: map[string]string{"schema.json": `"chart":|"plan": { "type": "object", "format": "diagram", ` +
+				`"properties": { "logo": { "type": "string", "format": "image" } } },` + "\n    " + `"chart":`},
+			want: []string{"sizes/schema.json: #/properties/plan/properties/logo: the format image marks an item to draw"},
+		},
+		{
 			name:  "newer floe",
 			files: map[string]string{"template.yaml": "floe: 999.0\n"},
 			want:  []string{"template sizes needs floe 999.0.0 or later"},
@@ -238,6 +245,21 @@ func TestCheckMistakes(t *testing.T) {
 				t.Errorf("the warnings = %v, want %s", warnings, tt.warning)
 			}
 		})
+	}
+}
+
+// The variables of diagrams that page.html defines, for every theme, are not missed in a theme.
+func TestCheckVariablesInPage(t *testing.T) {
+	t.Parallel()
+
+	release := strings.SplitN(version.Version, ".", 3)
+	dir := sizes(t, map[string]string{
+		"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
+		"schema.json":   `"chart":|"plan": { "type": "object", "format": "diagram" },` + "\n    " + `"chart":`,
+		"page.html":     "<body>|<body><style>:root { " + strings.Join(diagram.Variables(), ": red; ") + ": red }</style>",
+	})
+	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
+		t.Errorf("Check = %v, %v", warnings, mistakes)
 	}
 }
 

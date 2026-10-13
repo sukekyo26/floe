@@ -70,7 +70,7 @@ func (a *app) render(files []string, assets bool) error {
 		}
 		specs = append(specs, s)
 	}
-	svgs, err := diagram.Render(specs, icons.New(a.cfg.icons))
+	svgs, err := diagram.Render(specs, icons.New(a.iconsDir()))
 	var more yamlpos.Problems
 	if errors.As(err, &more) {
 		problems = append(problems, more...)

@@ -128,7 +128,8 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 }
 
 // checkThemeVariables warns of each theme of t that leaves out a CSS variable diagrams take their
-// colours and fonts from: its diagrams would keep light colours in dark mode.
+// colours and fonts from, which page.html does not define either: its diagrams would keep light
+// colours in dark mode.
 // LIMIT: a variable is looked for as written (--fg:), not as CSS reads it. Parse the CSS if a theme
 // comes to define one otherwise (through @import, or in a comment that hides it).
 func (t *Template) checkThemeVariables() ([]*usererr.Error, error) {
@@ -136,6 +137,12 @@ func (t *Template) checkThemeVariables() ([]*usererr.Error, error) {
 	if err != nil {
 		return nil, err
 	}
+	// page.html may define them for every theme, in a <style> of its own.
+	page, err := t.readFile("page.html")
+	if err != nil {
+		return nil, err
+	}
+	inPage := definedVariables(page)
 	var warnings []*usererr.Error
 	for _, theme := range themes {
 		name := path.Join("themes", theme+".css")
@@ -143,13 +150,10 @@ func (t *Template) checkThemeVariables() ([]*usererr.Error, error) {
 		if err != nil {
 			return nil, err
 		}
-		defined := map[string]bool{}
-		for _, m := range cssVariable.FindAllSubmatch(css, -1) {
-			defined[string(m[1])] = true
-		}
+		defined := definedVariables(css)
 		var missing []string
 		for _, v := range diagram.Variables() {
-			if !defined[v] {
+			if !defined[v] && !inPage[v] {
 				missing = append(missing, v)
 			}
 		}
@@ -160,7 +164,15 @@ func (t *Template) checkThemeVariables() ([]*usererr.Error, error) {
 	return warnings, nil
 }
 
-// cssVariable is a CSS variable defined: --fg: #000.
+// definedVariables returns the CSS variables src defines (--fg: #000), by name.
+func definedVariables(src []byte) map[string]bool {
+	defined := map[string]bool{}
+	for _, m := range cssVariable.FindAllSubmatch(src, -1) {
+		defined[string(m[1])] = true
+	}
+	return defined
+}
+
 var cssVariable = regexp.MustCompile(`(?:^|[^\w-])(--[\w-]+)\s*:`)
 
 // checkAssets returns the mistakes of the images under the assets/ of t, if it has one, and of those
@@ -503,6 +515,8 @@ func (l *schemaLint) walk(v any, ptr string, reached bool) {
 			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unreached", l.file, ptr, f))
 		case f == "diagram":
 			l.diagrams = true
+			// prepare draws it whole, and goes no further in: a format below is not reached.
+			reached = false
 		}
 	}
 	closed := m["additionalProperties"] == false || m["unevaluatedProperties"] == false

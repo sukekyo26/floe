@@ -475,8 +475,11 @@ func (s *schema) find(format string, v any, at []string, found *[]itemAt) {
 	if s == nil {
 		return
 	}
-	if s.Format == format {
-		*found = append(*found, itemAt{value: v, at: at})
+	// An item of a format of floe's is drawn whole: what it holds is not looked into.
+	if slices.Contains(formats, s.Format) {
+		if s.Format == format {
+			*found = append(*found, itemAt{value: v, at: at})
+		}
 		return
 	}
 	switch v := v.(type) {
