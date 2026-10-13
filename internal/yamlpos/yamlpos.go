@@ -4,6 +4,8 @@ package yamlpos
 
 import (
 	"fmt"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/goccy/go-yaml/ast"
@@ -30,6 +32,38 @@ func Of(n ast.Node) Pos {
 	}
 	p := n.GetToken().Position
 	return Pos{Line: p.Line, Column: p.Column}
+}
+
+// Find follows at, keys of mappings and indexes of sequences, from root. It returns the key node of
+// the last step (nil at root or for an index), its value node, and the path written as
+// sections[0].parts[1]. It stops at the last node it can reach.
+func Find(root ast.Node, at []string) (key, value ast.Node, path string) {
+	value = root
+	var b strings.Builder
+	for _, step := range at {
+		switch n := value.(type) {
+		case *ast.MappingNode:
+			i := slices.IndexFunc(n.Values, func(v *ast.MappingValueNode) bool { return v.Key.GetToken().Value == step })
+			if i < 0 {
+				return key, value, b.String()
+			}
+			if b.Len() > 0 {
+				b.WriteByte('.')
+			}
+			b.WriteString(step)
+			key, value = n.Values[i].Key, n.Values[i].Value
+		case *ast.SequenceNode:
+			i, err := strconv.Atoi(step)
+			if err != nil || i < 0 || i >= len(n.Values) {
+				return key, value, b.String()
+			}
+			fmt.Fprintf(&b, "[%d]", i)
+			key, value = nil, n.Values[i]
+		default:
+			return key, value, b.String()
+		}
+	}
+	return key, value, b.String()
 }
 
 // Error is a mistake in a YAML file, at a line and column of it.
