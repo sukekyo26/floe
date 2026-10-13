@@ -62,7 +62,7 @@ open: { y: 1 }
 		{`d.yaml:10:1: pick: write one of a, b`, `d.yaml:10:1: pick: a, b のどれかを書いてください`},
 		{`d.yaml:11:9: open.y is not an item of the template report (a typo?)`, `d.yaml:11:9: open.y はテンプレート report に無い項目です（打ち間違い？）`},
 	}
-	got := check(t, schema, src)
+	got := schemaProblems(t, schema, src)
 	for _, tt := range tests {
 		if !strings.Contains(got.Error(), tt.en) {
 			t.Errorf("the mistakes lack %q:\n%s", tt.en, got.Error())
@@ -78,7 +78,7 @@ open: { y: 1 }
 	}
 
 	// The lower bounds, and a mistake at the top level.
-	low := check(t, schema, "name: x\ntags: [a]\nid: AP-\nsize: 0\nrate: 0\n").Error()
+	low := schemaProblems(t, schema, "name: x\ntags: [a]\nid: AP-\nsize: 0\nrate: 0\n").Error()
 	for _, want := range []string{
 		"tags: the number of items must be at least 2", "id: the length in characters must be at least 4",
 		"size: write 1 or more", "rate: write more than 0",
@@ -87,7 +87,7 @@ open: { y: 1 }
 			t.Errorf("the mistakes lack %q:\n%s", want, low)
 		}
 	}
-	if top := check(t, `{"minProperties": 3}`, "a: 1\n").Error(); top != "d.yaml:1:1: the top level: the number of keys must be at least 3" {
+	if top := schemaProblems(t, `{"minProperties": 3}`, "a: 1\n").Error(); top != "d.yaml:1:1: the top level: the number of keys must be at least 3" {
 		t.Errorf("a mistake at the top level = %s", top)
 	}
 }
@@ -107,7 +107,7 @@ func TestSchemaRefersToNoFile(t *testing.T) {
 	}
 }
 
-func check(t *testing.T, schema, src string) yamlpos.Problems {
+func schemaProblems(t *testing.T, schema, src string) yamlpos.Problems {
 	t.Helper()
 
 	d, root := data(t, src)
