@@ -4,23 +4,26 @@ package tmpl
 
 import (
 	"bytes"
+	"cmp"
 	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"io/fs"
 	"path"
 	"slices"
 	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/goccy/go-yaml/ast"
+	"github.com/goccy/go-yaml/parser"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // builtin holds a directory per built-in template: page.html, schema.json, example.yaml and themes/.
@@ -46,59 +49,92 @@ type Data struct {
 	Values   map[string]any
 }
 
-// Read reads the data file src; file names it in errors.
+// shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
+var shared = []string{"template", "theme", "title"}
+
+// Read reads the data file src and checks it against its template's schema; file names it in errors.
+// A mistake is a *yamlpos.Error, and the schema's are all reported at once as yamlpos.Problems.
 func Read(file string, src []byte) (*Data, error) {
-	dec := yaml.NewDecoder(bytes.NewReader(src))
-	var doc, more any
-	if err := dec.Decode(&doc); err != nil && !errors.Is(err, io.EOF) {
-		return nil, usererr.New("tmpl_yaml", file, yaml.FormatError(err, false, false))
+	root, err := parse(file, src)
+	if err != nil {
+		return nil, err
 	}
-	// A document after --- would otherwise be left out without a word.
-	switch err := dec.Decode(&more); {
-	case err == nil:
-		return nil, usererr.New("tmpl_documents", file)
-	case !errors.Is(err, io.EOF):
-		return nil, usererr.New("tmpl_yaml", file, yaml.FormatError(err, false, false))
+	at := func(n ast.Node, key string, args ...any) error {
+		return &yamlpos.Error{File: file, Pos: yamlpos.Of(n), Err: usererr.New(key, args...)}
 	}
-	if doc == nil {
-		return nil, usererr.New("tmpl_no_template", file, strings.Join(Names(), ", "))
-	}
-	top, ok := doc.(map[string]any)
-	if !ok {
-		return nil, usererr.New("tmpl_not_mapping", file)
+	var top map[string]any
+	if err = yaml.NodeToValue(root, &top); err != nil {
+		return nil, at(root, "tmpl_yaml", err.Error())
 	}
 	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top}
-	for _, k := range []struct {
-		key string
-		to  *string
-	}{{"template", &d.Template}, {"theme", &d.Theme}, {"title", &d.Title}} {
-		v, ok := top[k.key]
+	nodes := map[string]ast.Node{}
+	for i, to := range []*string{&d.Template, &d.Theme, &d.Title} {
+		key := shared[i]
+		v, ok := top[key]
 		if !ok {
 			continue
 		}
+		_, n, _ := yamlpos.Find(root, []string{key})
+		nodes[key] = n
 		s, ok := v.(string)
 		if !ok {
-			return nil, usererr.New("tmpl_not_text", file, k.key)
+			return nil, at(n, "tmpl_not_text", key)
 		}
-		*k.to = s
-		delete(top, k.key)
+		*to = s
+		delete(top, key)
 	}
 	// A title of spaces names none, as an empty --title does.
 	d.Title = strings.TrimSpace(d.Title)
 	if d.Template == "" {
-		return nil, usererr.New("tmpl_no_template", file, strings.Join(Names(), ", "))
+		return nil, at(cmp.Or(nodes["template"], root), "tmpl_no_template", strings.Join(Names(), ", "))
 	}
 	if !slices.Contains(Names(), d.Template) {
-		return nil, usererr.New("tmpl_unknown", file, d.Template, strings.Join(Names(), ", "))
+		return nil, at(nodes["template"], "tmpl_unknown", d.Template, strings.Join(Names(), ", "))
 	}
 	themes, err := themesOf(d.Template)
 	if err != nil {
 		return nil, err
 	}
 	if !slices.Contains(themes, d.Theme) {
-		return nil, usererr.New("tmpl_unknown_theme", file, d.Theme, d.Template, strings.Join(themes, ", "))
+		return nil, at(nodes["theme"], "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
+	}
+	if err := checkSchema(d, root); err != nil {
+		return nil, err
 	}
 	return d, nil
+}
+
+// parse reads src as one YAML document of keys and values, without anchors, aliases or tags, so
+// that every value is written where its position points.
+func parse(file string, src []byte) (ast.Node, error) {
+	at := func(p yamlpos.Pos, key string, args ...any) error {
+		return &yamlpos.Error{File: file, Pos: p, Err: usererr.New(key, args...)}
+	}
+	start := yamlpos.Pos{Line: 1, Column: 1}
+	doc, err := parser.ParseBytes(src, 0)
+	if err != nil {
+		var se *yaml.SyntaxError
+		if errors.As(err, &se) && se.Token != nil {
+			return nil, at(yamlpos.Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}, "tmpl_yaml", se.Message)
+		}
+		return nil, at(start, "tmpl_yaml", err.Error())
+	}
+	// A document after --- would otherwise be left out without a word.
+	if len(doc.Docs) > 1 {
+		sep := doc.Docs[1].Start.Position
+		return nil, at(yamlpos.Pos{Line: sep.Line, Column: sep.Column}, "tmpl_documents")
+	}
+	if len(doc.Docs) == 0 || doc.Docs[0].Body == nil {
+		return nil, at(start, "tmpl_no_template", strings.Join(Names(), ", "))
+	}
+	body := doc.Docs[0].Body
+	if a := yamlpos.FirstAnchor(body); a != nil {
+		return nil, at(yamlpos.Of(a), "yaml_no_anchors")
+	}
+	if _, ok := body.(*ast.MappingNode); !ok {
+		return nil, at(yamlpos.Of(body), "tmpl_not_mapping")
+	}
+	return body, nil
 }
 
 // Names are the templates there are, by name.
@@ -161,9 +197,8 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 		"Theme": template.CSS(css), //nolint:gosec // G203: the template's own theme, not data
 	})
 	if err != nil {
-		// LIMIT: until the data is checked against the schema (phase 4b), data of the wrong shape
-		// fails here, worded as Go's template error, and some data the schema refuses draws without a
-		// word (a misspelt key is left out; a part of two kinds draws both).
+		// Read checked the data against the schema, so this is the template's own mistake: page.html
+		// naming an item its schema does not declare, or using one as another type.
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	return b.Bytes(), nil

@@ -28,7 +28,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add `floe publish <data.yaml>`, which draws a page from a data file with the
   template it names, stores it and prints its URL on `http://127.0.0.1:7325`.
   The built-in template `report` lays out a header and sections of Markdown
-  text, with HTML parts for what Markdown cannot say. A page is in English
+  text, with HTML parts for what Markdown cannot say. The data is checked
+  against the template's schema first, and every mistake is reported at its
+  line and column (`file:line:column`). A page is in English
   unless `--lang` names another language. It starts the server in the
   background when needed and opens a new page in the browser. An HTML file is
   not stored: `--link` registers it in place and shows it as it is, served

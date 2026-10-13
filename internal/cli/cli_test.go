@@ -503,5 +503,5 @@ func TestPublishDataFile(t *testing.T) {
 	e.vars["FLOE_LANG"] = "ja"
 	bad := e.write(t, "bad.yaml", "title: t\n")
 	want(t, "publish a data file without a template", e.run(t, "", "publish", bad), 1, "",
-		"floe: "+bad+": 最上位に template: report のようにテンプレートを指定してください（テンプレート: report）")
+		"floe: "+bad+":1:1: 最上位に template: report のようにテンプレートを指定してください（テンプレート: report）")
 }

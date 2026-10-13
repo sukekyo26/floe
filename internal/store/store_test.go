@@ -663,7 +663,7 @@ func TestPublishDataFile(t *testing.T) {
 		t.Errorf("--title does not title the drawn page: %s", entry.Page)
 	}
 	bad := e.write(t, "bad.yml", "template: deck\n")
-	if _, err := e.publish(t, bad, store.Options{}, ""); err == nil || err.Error() != bad+`: unknown template "deck"; use report` {
+	if _, err := e.publish(t, bad, store.Options{}, ""); err == nil || err.Error() != bad+`:1:11: unknown template "deck"; use report` {
 		t.Errorf("publish of a data file naming no template there = %v", err)
 	}
 }

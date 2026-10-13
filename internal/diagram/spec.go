@@ -219,7 +219,7 @@ func Parse(file string, src []byte) (*Spec, error) {
 // so that its errors point at the lines and columns of that file.
 func FromNode(file string, n ast.Node) (*Spec, error) {
 	if a := yamlpos.FirstAnchor(n); a != nil {
-		return nil, &yamlpos.Error{File: file, Pos: yamlpos.Of(a), Err: usererr.New("diagram_no_anchors")}
+		return nil, &yamlpos.Error{File: file, Pos: yamlpos.Of(a), Err: usererr.New("yaml_no_anchors")}
 	}
 	f, err := newFields(file, "diagram", yamlpos.Of(n), n)
 	if err != nil {
