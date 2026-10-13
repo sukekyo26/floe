@@ -16,7 +16,6 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
-	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -25,18 +24,14 @@ import (
 // Library is the templates floe draws with: those of a directory of one's own, a directory each, then
 // the built-in ones. One of one's own takes the place of a built-in one of its name.
 type Library struct {
-	dir   string       // "" without one
-	icons *icons.Store // the icons the diagrams of data files show
+	dir   string // "" without one
+	icons string // the directory of icons the diagrams of data files show; "" for none
 }
 
 // NewLibrary returns the templates of dir, a directory of templates of one's own ("" for none), and
-// the built-in ones, which draw the icons of store in diagrams (nil for none: a diagram that shows one
-// is refused).
-func NewLibrary(dir string, store *icons.Store) *Library {
-	if store == nil {
-		store = icons.New("")
-	}
-	return &Library{dir: dir, icons: store}
+// the built-in ones, which draw the icons kept in iconsDir (FLOE_ICONS_DIR) in diagrams.
+func NewLibrary(dir, iconsDir string) *Library {
+	return &Library{dir: dir, icons: iconsDir}
 }
 
 // Dir is the directory of templates of one's own, "" for none.
@@ -44,8 +39,8 @@ func (l *Library) Dir() string {
 	return l.dir
 }
 
-// Icons are the icons the diagrams of data files show.
-func (l *Library) Icons() *icons.Store {
+// IconsDir is the directory of icons the diagrams of data files show.
+func (l *Library) IconsDir() string {
 	return l.icons
 }
 
@@ -57,7 +52,7 @@ type Template struct {
 	// Path is where a template of one's own was found, as its mistakes name it; "" for a built-in one.
 	Path string
 
-	icons *icons.Store // those of the library it was found in
+	icons string // the directory of icons of the library it was found in
 }
 
 // Names are the templates there are, by name. It fails when the directory of templates of one's own

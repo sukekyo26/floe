@@ -7,7 +7,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -192,7 +191,7 @@ code 0. Nothing is printed when the templates are right.`,
 		RunE: func(_ *cobra.Command, args []string) error {
 			var found mistakes
 			for _, dir := range args {
-				warnings, more := tmpl.Check(dir, icons.New(a.cfg.icons))
+				warnings, more := tmpl.Check(dir, a.cfg.icons)
 				for _, w := range warnings {
 					_, _ = fmt.Fprintln(a.env.Stderr, w.Localize(a.cat)) //nolint:errcheck // nowhere left to report
 				}

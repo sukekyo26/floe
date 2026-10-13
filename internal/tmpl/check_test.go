@@ -23,7 +23,7 @@ func TestDrawEveryStage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	l := tmpl.NewLibrary("testdata", nil)
+	l := tmpl.NewLibrary("testdata", "")
 	d, err := l.Read(file, src, "", "")
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +50,7 @@ func TestDrawEveryStage(t *testing.T) {
 func TestCheck(t *testing.T) {
 	t.Parallel()
 
-	warnings, mistakes := tmpl.Check("testdata/sizes", nil)
+	warnings, mistakes := tmpl.Check("testdata/sizes", "")
 	if len(warnings) != 1 || len(mistakes) != 0 {
 		t.Fatalf("Check = %v, %v", warnings, mistakes)
 	}
@@ -60,7 +60,7 @@ func TestCheck(t *testing.T) {
 	}
 
 	dir := sizes(t, map[string]string{"template.yaml": "floe: " + release[0] + "." + release[1] + "\n"})
-	if warnings, mistakes := tmpl.Check(dir, nil); len(warnings) != 0 || len(mistakes) != 0 {
+	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
 		t.Errorf("Check with template.yaml = %v, %v", warnings, mistakes)
 	}
 }
@@ -221,7 +221,7 @@ func TestCheckMistakes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			warnings, mistakes := tmpl.Check(sizes(t, tt.files), nil)
+			warnings, mistakes := tmpl.Check(sizes(t, tt.files), "")
 			lines := make([]string, 0, len(mistakes))
 			for _, m := range mistakes {
 				lines = append(lines, strings.Split(m.Error(), "\n")...)
@@ -249,7 +249,7 @@ func TestCheckName(t *testing.T) {
 	if err := os.CopyFS(dir, os.DirFS("testdata/sizes")); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir, nil)
+	_, mistakes := tmpl.Check(dir, "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_new_name" {
 		t.Errorf("Check of %s = %v", dir, mistakes)
@@ -264,7 +264,7 @@ func TestCheckMissingFile(t *testing.T) {
 	if err := os.Remove(filepath.Join(dir, "example.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir, nil)
+	_, mistakes := tmpl.Check(dir, "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_file_missing" {
 		t.Fatalf("Check without example.yaml = %v", mistakes)
@@ -285,7 +285,7 @@ func TestRenderBadAsset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := tmpl.NewLibrary(filepath.Dir(dir), nil).Read(file, src, "", "")
+	d, err := tmpl.NewLibrary(filepath.Dir(dir), "").Read(file, src, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +310,7 @@ func TestCheckAssetsFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "assets"), nil, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir, nil)
+	_, mistakes := tmpl.Check(dir, "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_assets_not_dir" {
 		t.Errorf("Check with a file named assets = %v", mistakes)
@@ -325,7 +325,7 @@ func TestCheckFile(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(file, nil)
+	_, mistakes := tmpl.Check(file, "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_check_not_dir" {
 		t.Errorf("Check of a file = %v", mistakes)

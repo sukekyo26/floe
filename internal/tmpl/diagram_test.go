@@ -1,11 +1,12 @@
 package tmpl_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/tmpl"
 )
 
@@ -67,7 +68,12 @@ func TestDiagramIcons(t *testing.T) {
 	t.Parallel()
 
 	src := strings.Replace(strings.Replace(twoDiagrams, "- dot: %s", "- icon: { x: 10, y: 5, name: aws/aws-lambda, size: 24 }", 1), "%s", "b", 1)
-	d, err := tmpl.NewLibrary("", icons.New("../diagram/testdata/icons")).Read("data.yaml", []byte(src), "", "")
+	dir := t.TempDir()
+	if err := os.CopyFS(dir, os.DirFS("../diagram/testdata/icons")); err != nil {
+		t.Fatal(err)
+	}
+	l := tmpl.NewLibrary("", dir)
+	d, err := l.Read("data.yaml", []byte(src), "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,8 +84,20 @@ func TestDiagramIcons(t *testing.T) {
 	if !strings.Contains(string(page), `<use href="#a_icon-`) {
 		t.Errorf("the icon is not drawn:\n%s", page)
 	}
+	// Each read reads the icons afresh: a server keeps its library, and a fetch replaces them.
+	index := filepath.Join(dir, "aws", "index.json")
+	b, err := os.ReadFile(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(index, []byte(strings.Replace(string(b), `"aws-lambda"`, `"aws-lambda-gone"`, 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = l.Read("data.yaml", []byte(src), "", ""); err == nil || !strings.Contains(err.Error(), `"aws/aws-lambda"`) {
+		t.Errorf("Read after the icons changed = %v, want the icon unknown", err)
+	}
 	// Without the icons fetched, the drawing stops and says how to fetch them.
-	_, err = tmpl.NewLibrary("", icons.New(t.TempDir())).Read("data.yaml", []byte(src), "", "")
+	_, err = tmpl.NewLibrary("", t.TempDir()).Read("data.yaml", []byte(src), "", "")
 	if err == nil || !strings.Contains(err.Error(), "floe icons fetch aws") {
 		t.Errorf("Read without the icons = %v", err)
 	}

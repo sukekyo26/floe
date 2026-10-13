@@ -77,8 +77,8 @@ func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error
 
 // Sources are the files a read of a data file read besides it, for a link to be drawn again when one
 // changes, whether the read found mistakes or not.
-// LIMIT: not the icons of its diagrams, which a fetch of them does not change in a drawn page. Watch
-// their index if fetching icons for an open page comes to need a reload by hand too often.
+// LIMIT: not the icons of its diagrams: fetching them does not reload an open page, which shows them
+// once reloaded by hand. Watch their index if that comes to be needed often.
 type Sources struct {
 	Templates string   // the directory of templates of one's own, where one may come; "" for none
 	Template  string   // the directory of the template of one's own the data names; "" for none

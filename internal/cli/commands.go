@@ -17,7 +17,6 @@ import (
 
 	"github.com/sukekyo26/floe/internal/daemon"
 	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/tmpl"
@@ -36,7 +35,7 @@ func (a *app) store() *store.Store {
 }
 
 func (a *app) templates() *tmpl.Library {
-	return tmpl.NewLibrary(a.templatesDir(), icons.New(a.cfg.icons))
+	return tmpl.NewLibrary(a.templatesDir(), a.cfg.icons)
 }
 
 // templatesDir is the directory of templates of one's own, a relative one under the working directory,

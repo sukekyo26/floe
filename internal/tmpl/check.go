@@ -19,15 +19,14 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // Check checks the template at dir as a template of the directory's name, whatever its example.yaml
 // names: its files, then its example.yaml through every stage of a publish, drawing included, with the
-// icons of store in its diagrams. The mistakes stop it from being drawn, and the warnings do not.
-func Check(dir string, store *icons.Store) (warnings []*usererr.Error, mistakes []error) {
+// icons kept in iconsDir in its diagrams. The mistakes stop it from being drawn, and the warnings do not.
+func Check(dir, iconsDir string) (warnings []*usererr.Error, mistakes []error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, []error{usererr.CannotRead(dir, err)}
@@ -40,7 +39,7 @@ func Check(dir string, store *icons.Store) (warnings []*usererr.Error, mistakes 
 		return nil, []error{usererr.CannotRead(dir, err)}
 	}
 	// Found as a library of the directory above would find it, symlink and all.
-	t, err := NewLibrary(filepath.Dir(abs), store).resolve(name)
+	t, err := NewLibrary(filepath.Dir(abs), iconsDir).resolve(name)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -108,10 +107,10 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	warnings, mistakes = lint.warnings, lint.mistakes
 	if lint.diagrams {
 		more, themeErr := t.checkThemeVariables()
-		if themeErr != nil {
-			return warnings, append(mistakes, themeErr)
-		}
 		warnings = append(warnings, more...)
+		if themeErr != nil {
+			mistakes = append(mistakes, themeErr)
+		}
 	}
 	mistakes = append(mistakes, t.checkChecks(sch)...)
 	computed, found, err := t.readOptional("computed.yaml")
@@ -144,9 +143,13 @@ func (t *Template) checkThemeVariables() ([]*usererr.Error, error) {
 		if err != nil {
 			return nil, err
 		}
+		defined := map[string]bool{}
+		for _, m := range cssVariable.FindAllSubmatch(css, -1) {
+			defined[string(m[1])] = true
+		}
 		var missing []string
 		for _, v := range diagram.Variables() {
-			if !regexp.MustCompile(`(^|[^\w-])` + regexp.QuoteMeta(v) + `\s*:`).Match(css) {
+			if !defined[v] {
 				missing = append(missing, v)
 			}
 		}
@@ -156,6 +159,9 @@ func (t *Template) checkThemeVariables() ([]*usererr.Error, error) {
 	}
 	return warnings, nil
 }
+
+// cssVariable is a CSS variable defined: --fg: #000.
+var cssVariable = regexp.MustCompile(`(?:^|[^\w-])(--[\w-]+)\s*:`)
 
 // checkAssets returns the mistakes of the images under the assets/ of t, if it has one, and of those
 // page.html names to asset, in every branch.

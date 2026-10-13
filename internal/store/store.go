@@ -191,7 +191,7 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 		var d *tmpl.Data
 		var sources tmpl.Sources
 		// The templates it was linked with, but the server's icons: one place for all, not one's own.
-		d, sources, err = tmpl.NewLibrary(m.Templates, s.templates.Icons()).ReadSources(file, src, m.Theme, "")
+		d, sources, err = tmpl.NewLibrary(m.Templates, s.templates.IconsDir()).ReadSources(file, src, m.Theme, "")
 		s.mu.Lock()
 		s.drawn[key] = drawing{at: m.UpdatedAt, sources: sources}
 		s.mu.Unlock()

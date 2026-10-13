@@ -52,7 +52,7 @@ func newEnv(t *testing.T) *env {
 	if err := os.Mkdir(filepath.Join(tmp, "home"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	st := store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary(filepath.Join(tmp, "templates"), nil))
+	st := store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary(filepath.Join(tmp, "templates"), ""))
 	e := &env{
 		tmp: tmp, store: st, base: "http://127.0.0.1:" + strconv.Itoa(port),
 		origin: "http://127.0.0.1:" + strconv.Itoa(port), done: make(chan error, 1),

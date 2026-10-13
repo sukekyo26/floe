@@ -34,7 +34,7 @@ func newEnv(t *testing.T) env {
 		t.Fatal(err)
 	}
 	mkdir(t, filepath.Join(tmp, "home"))
-	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary("", nil))}
+	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary("", ""))}
 }
 
 func mkdir(t *testing.T, dir string) {
@@ -793,7 +793,7 @@ func TestLinkDataFileTwice(t *testing.T) {
 	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\n")
 	metas := map[string]store.Meta{}
 	for slug, dir := range dirs {
-		s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, nil))
+		s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, ""))
 		entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr(slug)}, filepath.Join(e.tmp, "proj"))
 		if err != nil {
 			t.Fatal(err)
@@ -821,7 +821,7 @@ func TestLinkDataFileTwice(t *testing.T) {
 	// Linked again with the other templates, a is served at the version it is watched at, which waits
 	// for the drawing: the tab reloads once, not twice.
 	time.Sleep(5 * time.Millisecond) // another updatedAt, kept to the millisecond
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dirs["b"], nil))
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dirs["b"], ""))
 	entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr("a")}, filepath.Join(e.tmp, "proj"))
 	if err != nil {
 		t.Fatal(err)
