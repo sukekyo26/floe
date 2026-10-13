@@ -292,6 +292,7 @@ var messagesEN = map[string]string{
 	"tmpl_check_error":         "%s: %s (the check could not run: %s)",
 	"tmpl_computed_error":      "%s = %s cannot be computed from this file: %s",
 	"tmpl_floe_major":          "template %s is written for floe %s, not for this floe %s; get a version of it for this floe",
+	"tmpl_dir_unreadable":      "the directory of your own templates %s cannot be read: %s; fix it, or set FLOE_TEMPLATES_DIR",
 	"tmpl_own_broken":          "your own template %s (%s) cannot be read: %s; fix it, or remove it",
 	"tmpl_floe_older":          "template %s needs floe %s or later, and this is floe %s; update floe",
 	"tmpl_template_yaml":       "write template.yaml as one key, floe:, and the version of floe the template needs, like floe: 1.2",

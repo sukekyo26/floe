@@ -116,12 +116,31 @@ func TestBrokenOwnTemplates(t *testing.T) {
 		t.Errorf("a theme that leads out of the template = %v", err)
 	}
 
-	unversioned := t.TempDir()
-	if err := os.Symlink("gone.yaml", filepath.Join(own(t, unversioned, "report"), "template.yaml")); err != nil {
-		t.Fatal(err)
+	// A file a template may leave out is broken, not missing, when it is a symlink that leads nowhere.
+	for _, file := range []string{"template.yaml", "checks.yaml", "computed.yaml"} {
+		dir := t.TempDir()
+		if err := os.Symlink("gone.yaml", filepath.Join(own(t, dir, "report"), file)); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := draw(tmpl.NewLibrary(dir), "template: report\n"); err == nil || !strings.Contains(err.Error(), file) {
+			t.Errorf("a %s that leads nowhere = %v", file, err)
+		}
 	}
-	if _, err := draw(tmpl.NewLibrary(unversioned), "template: report\n"); err == nil || !strings.Contains(err.Error(), "template.yaml") {
-		t.Errorf("a template.yaml that leads nowhere = %v", err)
+
+	// A directory of templates that cannot be read says so, rather than a template it may not hold.
+	if os.Getuid() != 0 {
+		locked := t.TempDir()
+		if err := os.Chmod(locked, 0); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if err := os.Chmod(locked, 0o700); err != nil {
+				t.Error(err)
+			}
+		})
+		if _, err := draw(tmpl.NewLibrary(locked), "template: report\n"); err == nil || !strings.Contains(err.Error(), "the directory of your own templates") {
+			t.Errorf("a directory of templates that cannot be read = %v", err)
+		}
 	}
 }
 
@@ -136,13 +155,17 @@ func TestTemplateVersion(t *testing.T) {
 		{"floe: 1.2\n", "template report needs floe 1.2.0 or later, and this is floe 0.0.0"},
 		{"floe: 0.1\n", "template report needs floe 0.1.0 or later, and this is floe 0.0.0"},
 		{"floe: 0.0.1\n", "template report needs floe 0.0.1 or later"},
-		{"floe: x\n", "template.yaml:1:7: write template.yaml as one key, floe:"},
+		{"floe: x\n", "/report/template.yaml:1:7: write template.yaml as one key, floe:"},
 		{"floe: [0]\n", "template.yaml:1:7: write template.yaml as one key, floe:"},
 		{"flow: 0\n", "template.yaml:1:1: flow is not a key of template.yaml"},
 		{"", "template.yaml:1:1: write template.yaml as one key, floe:"},
 	} {
+		// Linked from the directory of templates, a mistake is named where it was found.
 		dir := t.TempDir()
-		at := own(t, dir, "report")
+		at := own(t, t.TempDir(), "report")
+		if err := os.Symlink(at, filepath.Join(dir, "report")); err != nil {
+			t.Fatal(err)
+		}
 		if err := os.WriteFile(filepath.Join(at, "template.yaml"), []byte(tt.yaml), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -153,7 +176,9 @@ func TestTemplateVersion(t *testing.T) {
 			t.Errorf("template.yaml %q = %v, want the data's mistake", tt.yaml, err)
 		case tt.want != "" && (err == nil || !strings.Contains(err.Error(), tt.want)):
 			t.Errorf("template.yaml %q = %v, want %s", tt.yaml, err, tt.want)
-		case tt.want != "" && !strings.HasPrefix(tt.want, "template.yaml") && !errors.As(err, &ue):
+		case strings.HasPrefix(tt.want, "/") && !strings.HasPrefix(err.Error(), dir):
+			t.Errorf("template.yaml %q = %v, named where the symlink leads, not under %s", tt.yaml, err, dir)
+		case tt.want != "" && !strings.Contains(tt.want, "template.yaml:") && !errors.As(err, &ue):
 			t.Errorf("template.yaml %q = %T, want a usererr", tt.yaml, err)
 		}
 	}

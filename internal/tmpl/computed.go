@@ -3,7 +3,6 @@ package tmpl
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"maps"
 	"math"
 	"reflect"
@@ -49,11 +48,8 @@ var identifier = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 // checkComputed computes the values of d's template's computed.yaml, if it has one, into d.Calc, and
 // reports at the top of root those its data cannot give.
 func checkComputed(t *Template, d *Data, root ast.Node) error {
-	src, err := t.readFile("computed.yaml")
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
+	src, err := t.readOptional("computed.yaml")
+	if src == nil || err != nil {
 		return err
 	}
 	s, err := schemaOf(t)

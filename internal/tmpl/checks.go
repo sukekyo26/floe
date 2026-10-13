@@ -3,7 +3,6 @@ package tmpl
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"slices"
 	"strconv"
 	"strings"
@@ -34,11 +33,8 @@ type scope struct {
 // checkRelations checks the values of d against its template's checks.yaml, if it has one, and reports
 // every failure at its line and column under root.
 func checkRelations(t *Template, d *Data, root ast.Node) error {
-	src, err := t.readFile("checks.yaml")
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
+	src, err := t.readOptional("checks.yaml")
+	if src == nil || err != nil {
 		return err
 	}
 	return relate(src, d, root)

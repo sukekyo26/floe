@@ -37,6 +37,8 @@ type Template struct {
 	Name string
 	// Dir is the real path of a template of one's own, a symlink followed; "" for a built-in one.
 	Dir string
+	// Path is where a template of one's own was found, as its mistakes name it; "" for a built-in one.
+	Path string
 }
 
 // Names are the templates there are, by name.
@@ -61,17 +63,30 @@ func (l *Library) ownNames() []string {
 	if l.dir == "" {
 		return nil
 	}
-	entries, err := os.ReadDir(l.dir)
+	entries, err := l.entries()
 	if err != nil {
 		return nil
 	}
 	var names []string
 	for _, e := range entries {
-		if t, err := l.own(e.Name()); err == nil && t != nil {
+		if t, err := l.resolve(e.Name()); validName(e.Name()) && err == nil && t != nil {
 			names = append(names, e.Name())
 		}
 	}
 	return names
+}
+
+// entries are what the directory of templates of one's own holds: none without one, or with a file in
+// its way.
+func (l *Library) entries() ([]fs.DirEntry, error) {
+	entries, err := os.ReadDir(l.dir)
+	switch {
+	case errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR):
+		return nil, nil
+	case err != nil:
+		return nil, usererr.New("tmpl_dir_unreadable", l.dir, err.Error())
+	}
+	return entries, nil
 }
 
 // Find returns the template name, or nil when there is none.
@@ -89,7 +104,7 @@ func (l *Library) Find(name string) (*Template, error) {
 	case err != nil:
 		return nil, fmt.Errorf("find the template %s: %w", name, err)
 	}
-	return &Template{Name: name, Dir: ""}, nil
+	return &Template{Name: name, Dir: "", Path: ""}, nil
 }
 
 // own returns the template name of one's own, or nil without one. A file there is not a template, but
@@ -98,11 +113,21 @@ func (l *Library) own(name string) (*Template, error) {
 	if l.dir == "" || !validName(name) {
 		return nil, nil //nolint:nilnil // none
 	}
-	at := filepath.Join(l.dir, name)
-	// Nothing there, or a file in the way of the directory of templates: none of one's own.
-	if _, err := os.Lstat(at); errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
+	entries, err := l.entries()
+	if err != nil {
+		return nil, err
+	}
+	// The entry of the name as written: a file system that ignores case (macOS) would take Report for
+	// report.
+	if !slices.ContainsFunc(entries, func(e fs.DirEntry) bool { return e.Name() == name }) {
 		return nil, nil //nolint:nilnil // none
 	}
+	return l.resolve(name)
+}
+
+// resolve returns the template of one's own at the entry name, or nil when it is a file.
+func (l *Library) resolve(name string) (*Template, error) {
+	at := filepath.Join(l.dir, name)
 	dir, err := filepath.EvalSymlinks(at)
 	if err != nil {
 		return nil, usererr.New("tmpl_own_broken", name, at, err.Error())
@@ -114,7 +139,7 @@ func (l *Library) own(name string) (*Template, error) {
 	if !fi.IsDir() {
 		return nil, nil //nolint:nilnil // a file, not a template
 	}
-	return &Template{Name: name, Dir: dir}, nil
+	return &Template{Name: name, Dir: dir, Path: at}, nil
 }
 
 // validName reports whether name can name a template: lower case letters, digits, - and _, so that it
@@ -139,6 +164,26 @@ func (t *Template) readFile(name string) ([]byte, error) {
 		return nil, fmt.Errorf("read %s of the template %s: %w", name, t.Name, err)
 	}
 	return b, nil
+}
+
+// readOptional reads the file name like readFile, or returns nil when t has none. A symlink that leads
+// nowhere is a broken file, not a missing one.
+func (t *Template) readOptional(name string) ([]byte, error) {
+	b, err := t.readFile(name)
+	if errors.Is(err, fs.ErrNotExist) && !t.has(name) {
+		return nil, nil
+	}
+	return b, err
+}
+
+// has reports whether t has the file name, a symlink of it counted whatever it leads to.
+func (t *Template) has(name string) bool {
+	if t.Dir == "" {
+		_, err := fs.Stat(builtin, path.Join("builtin", t.Name, name))
+		return err == nil
+	}
+	_, err := os.Lstat(filepath.Join(t.Dir, filepath.FromSlash(name)))
+	return !errors.Is(err, fs.ErrNotExist)
 }
 
 // themes are the themes of t, by name.
@@ -184,16 +229,11 @@ func (t *Template) checkVersion() error {
 	if t.Dir == "" {
 		return nil
 	}
-	src, err := t.readFile("template.yaml")
-	// A symlink that leads nowhere is a broken template.yaml, not a missing one.
-	_, lerr := os.Lstat(filepath.Join(t.Dir, "template.yaml"))
-	if errors.Is(err, fs.ErrNotExist) && errors.Is(lerr, fs.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
+	src, err := t.readOptional("template.yaml")
+	if src == nil || err != nil {
 		return err
 	}
-	needs, err := needsFloe(path.Join(t.Dir, "template.yaml"), src)
+	needs, err := needsFloe(filepath.Join(t.Path, "template.yaml"), src)
 	if err != nil {
 		return err
 	}
