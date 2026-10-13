@@ -64,7 +64,7 @@ func (l *Library) Names() ([]string, error) {
 }
 
 // ownNames are the templates of one's own, by name: none without a directory of them. One that is
-// broken is left out here, and reported when used.
+// broken (a symlink that leads nowhere) is named too, for its mistake to be reported where it is used.
 func (l *Library) ownNames() ([]string, error) {
 	if l.dir == "" {
 		return nil, nil
@@ -78,7 +78,7 @@ func (l *Library) ownNames() ([]string, error) {
 		if !validName(e.Name()) {
 			continue
 		}
-		if t, err := l.resolve(e.Name()); err == nil && t != nil {
+		if t, err := l.resolve(e.Name()); err != nil || t != nil {
 			names = append(names, e.Name())
 		}
 	}

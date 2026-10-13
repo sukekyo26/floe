@@ -1,8 +1,6 @@
 package tmpl
 
 import (
-	"bytes"
-	"encoding/json"
 	"reflect"
 	"testing"
 )
@@ -15,24 +13,27 @@ func TestItems(t *testing.T) {
   "required": ["tags"],
   "properties": {
     "tags": { "type": "array", "items": { "type": "string", "enum": ["a", "b"], "description": "A tag" } },
-    "size": { "type": ["integer", "null"], "enum": [1000000, 2000000] },
+    "size": { "type": ["integer", "null"], "enum": [1000000, 2000000, null] },
+    "kind": { "type": "strng" },
     "notes": { "type": "array", "items": { "type": "string", "format": "html" } },
     "gone": null
   }
 }`
-	var s schema
-	dec := json.NewDecoder(bytes.NewReader([]byte(src)))
-	dec.UseNumber()
-	if err := dec.Decode(&s); err != nil {
+	s, err := decodeSchema([]byte(src))
+	if err != nil {
 		t.Fatal(err)
 	}
 	want := []Item{
 		{Name: "gone", Types: nil, Of: nil, Format: "", Enum: nil, Required: false, Description: "", Items: nil},
+		{Name: "kind", Types: []string{"strng"}, Of: nil, Format: "", Enum: nil, Required: false, Description: "", Items: nil},
 		{Name: "notes", Types: []string{"array"}, Of: []string{"string"}, Format: "html", Enum: nil, Required: false, Description: "", Items: nil},
-		{Name: "size", Types: []string{"integer", "null"}, Of: nil, Format: "", Enum: []string{"1000000", "2000000"}, Required: false, Description: "", Items: nil},
+		{Name: "size", Types: []string{"integer", "null"}, Of: nil, Format: "", Enum: []string{"1000000", "2000000", "null"}, Required: false, Description: "", Items: nil},
 		{Name: "tags", Types: []string{"array"}, Of: []string{"string"}, Format: "", Enum: []string{"a", "b"}, Required: true, Description: "A tag", Items: nil},
 	}
 	if got := s.items(); !reflect.DeepEqual(got, want) {
 		t.Errorf("items =\n%+v\nwant\n%+v", got, want)
+	}
+	if _, err := decodeSchema([]byte(`{} garbage`)); err == nil {
+		t.Error("decodeSchema took text after the schema")
 	}
 }

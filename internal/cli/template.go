@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -44,7 +45,9 @@ your own takes the place of the built-in one of its name.`,
 					broken = append(broken, err)
 					continue
 				}
-				a.out("%s\t%s\t%s\t%s\t%s", d.Name, oneLine(a.where(d)), strings.Join(d.Themes, ","), d.Floe, oneLine(d.About))
+				// The columns are for scripts to read, in every language: built-in is not translated.
+				where := cmp.Or(d.Path, "built-in")
+				a.out("%s\t%s\t%s\t%s\t%s", d.Name, oneLine(where), oneLine(strings.Join(d.Themes, ",")), d.Floe, oneLine(d.About))
 			}
 			if broken != nil {
 				return broken
@@ -87,7 +90,7 @@ may hold (from its schema.json), and its example.yaml to start a data file from.
 func (a *app) showTemplate(d *tmpl.Description) {
 	head := d.Name
 	if d.About != "" {
-		head += ": " + d.About
+		head += ": " + oneLine(d.About)
 	}
 	a.out("%s", head)
 	a.out("%s", a.cat.Msg("cli_template_where", a.where(d)))
@@ -109,10 +112,7 @@ func (a *app) showTemplate(d *tmpl.Description) {
 // under it indented.
 func (a *app) showItems(items []tmpl.Item, indent string) {
 	for _, it := range items {
-		what := tmpl.Types(it.Types).Localize(a.cat)
-		if len(it.Of) > 0 {
-			what = a.cat.Msg("cli_template_list_of", tmpl.Types(it.Of).Localize(a.cat))
-		}
+		what := a.takes(it)
 		parts := []string{}
 		if what != "" {
 			parts = append(parts, what)
@@ -128,11 +128,24 @@ func (a *app) showItems(items []tmpl.Item, indent string) {
 		}
 		line := indent + it.Name + ": " + strings.Join(parts, a.cat.Msg("cli_template_and"))
 		if it.Description != "" {
-			line += " — " + it.Description
+			line += " — " + oneLine(it.Description)
 		}
 		a.out("%s", line)
 		a.showItems(it.Items, indent+"  ")
 	}
+}
+
+// takes words the types an item takes, a list as a list of what its items take: a list of text or
+// nothing.
+func (a *app) takes(it tmpl.Item) string {
+	words := make([]string, len(it.Types))
+	for i, t := range it.Types {
+		words[i] = tmpl.Types([]string{t}).Localize(a.cat)
+		if t == "array" && len(it.Of) > 0 {
+			words[i] = a.cat.Msg("cli_template_list_of", tmpl.Types(it.Of).Localize(a.cat))
+		}
+	}
+	return strings.Join(words, a.cat.Msg("tmpl_or"))
 }
 
 func (a *app) templateNewCmd() *cobra.Command {

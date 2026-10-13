@@ -47,10 +47,30 @@ func TestTemplateCommands(t *testing.T) {
 	if err := os.WriteFile(schema, []byte(strings.Replace(string(src), `"description": "A page`, `"description": "Two\nlines.\tA page`, 1)), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.Symlink(filepath.Join(e.tmp, "gone"), filepath.Join(e.tmp, "templates", "memo")); err != nil {
+		t.Fatal(err)
+	}
+	e.vars["FLOE_LANG"] = "ja"
 	r := e.run(t, "", "template", "list")
-	if r.code != 1 || !strings.Contains(r.stdout, "report\t") || !strings.Contains(r.stdout, "\tTwo lines. A page of sections") ||
-		!strings.Contains(r.stderr, "schema.json of the template drafts") || strings.Count(r.stdout, "\n") != 2 {
-		t.Errorf("template list with a broken template = %+v", r)
+	if r.code != 1 || !strings.Contains(r.stdout, "report\tbuilt-in\t") || !strings.Contains(r.stdout, "\tTwo lines. A page of sections") ||
+		!strings.Contains(r.stderr, "schema.json of the template drafts") || !strings.Contains(r.stderr, "memo") ||
+		strings.Count(r.stdout, "\n") != 2 {
+		t.Errorf("template list with broken templates = %+v", r)
+	}
+	delete(e.vars, "FLOE_LANG")
+
+	// A copy of a template of one's own without template.yaml needs no floe either.
+	if r := e.run(t, "", "template", "new", "spec2", "--from", "spec"); r.code != 0 {
+		t.Fatalf("template new from one's own = %+v", r)
+	}
+	if err := os.Remove(filepath.Join(e.tmp, "templates", "spec", "template.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if r := e.run(t, "", "template", "new", "spec3", "--from", "spec"); r.code != 0 {
+		t.Fatalf("template new from one's own without template.yaml = %+v", r)
+	}
+	if _, err := os.Stat(filepath.Join(e.tmp, "templates", "spec3", "template.yaml")); !os.IsNotExist(err) {
+		t.Errorf("a copy of a template without template.yaml has one: %v", err)
 	}
 
 	for _, tt := range []struct {
@@ -60,7 +80,7 @@ func TestTemplateCommands(t *testing.T) {
 	}{
 		{[]string{"new", "spec", "--from", "report"}, 1, "floe: spec is there already (" + spec + "); pick another name, or remove it\n"},
 		{[]string{"new", "Spec", "--from", "report"}, 1, "floe: Spec cannot name a template"},
-		{[]string{"new", "memo", "--from", "nope"}, 1, `floe: unknown template "nope"; use drafts, report, spec`},
+		{[]string{"new", "memo", "--from", "nope"}, 1, `floe: unknown template "nope"; use drafts, memo, report, spec, spec2, spec3`},
 		{[]string{"new", "memo"}, 2, "floe: name the template to copy with --from, like --from report"},
 		{[]string{"show", "nope"}, 1, `floe: unknown template "nope"`},
 	} {
@@ -105,5 +125,15 @@ func TestTemplateShow(t *testing.T) {
 	e.vars["FLOE_LANG"] = "ja"
 	if r := e.run(t, "", "template", "show", "report"); !strings.Contains(r.stdout, "      html: 文字列、形式 html — HTML that goes in as it is\n") {
 		t.Errorf("template show in Japanese:\n%s", r.stdout)
+	}
+	delete(e.vars, "FLOE_LANG")
+
+	// A list that may be null says so, and a description keeps to its line.
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	e.write(t, "templates/memo/schema.json", `{"properties": {"tags": {"type": ["array", "null"], "items": {"type": "string"},
+  "description": "Two\nlines"}}}`)
+	e.write(t, "templates/memo/themes/default.css", "")
+	if r := e.run(t, "", "template", "show", "memo"); !strings.Contains(r.stdout, "\n  tags: a list of text or nothing — Two lines\n") {
+		t.Errorf("template show of a list that may be null:\n%s%s", r.stdout, r.stderr)
 	}
 }

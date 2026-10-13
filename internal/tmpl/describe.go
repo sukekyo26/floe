@@ -96,7 +96,7 @@ func (s *schema) items() []Item {
 			it.Items = p.items()
 		}
 		for _, e := range enum {
-			it.Enum = append(it.Enum, fmt.Sprint(e))
+			it.Enum = append(it.Enum, jsonText(e))
 		}
 		items = append(items, it)
 	}

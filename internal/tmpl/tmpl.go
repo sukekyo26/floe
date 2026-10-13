@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"math"
 	"path"
 	"slices"
@@ -274,12 +275,26 @@ func schemaOf(t *Template) (*schema, error) {
 	if err != nil {
 		return nil, err
 	}
+	s, err := decodeSchema(b)
+	if err != nil {
+		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
+	}
+	return s, nil
+}
+
+var errAfterSchema = errors.New("text after the schema")
+
+// decodeSchema reads the JSON Schema b, its numbers as written, so that an enum of 1000000 is not
+// shown as 1e+06.
+func decodeSchema(b []byte) (*schema, error) {
 	var s schema
-	// Numbers as written, so that an enum of 1000000 is not shown as 1e+06.
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.UseNumber()
-	if err = dec.Decode(&s); err != nil {
-		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
+	if err := dec.Decode(&s); err != nil {
+		return nil, err //nolint:wrapcheck // wrapped by schemaOf
+	}
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
+		return nil, errAfterSchema
 	}
 	return &s, nil
 }
