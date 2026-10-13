@@ -27,6 +27,7 @@ var messagesEN = map[string]string{
 	"store_project_slash": `a project name cannot be just "/"`,
 	"store_not_data":      "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
 	"store_lang_link":     "--lang is the language of a page drawn from a data file: a linked file is shown as it is, in its own <html lang>",
+	"store_theme_link":    "--theme picks the theme of a page drawn from a data file: a linked file is shown as it is",
 	"store_no_page":       `no page "%s" (see floe list)`,
 
 	// server: refusals of the management page's API

@@ -140,6 +140,20 @@ func parse(file string, src []byte) (ast.Node, error) {
 	return body, nil
 }
 
+// UseTheme draws d with the theme name of its template instead of the one its data names, as
+// floe publish --theme does.
+func (d *Data) UseTheme(name string) error {
+	themes, err := themesOf(d.Template)
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(themes, name) {
+		return usererr.New("tmpl_unknown_theme", name, d.Template, strings.Join(themes, ", "))
+	}
+	d.Theme = name
+	return nil
+}
+
 // Names are the templates there are, by name.
 func Names() []string {
 	entries, err := builtin.ReadDir("builtin")

@@ -35,6 +35,7 @@ Pages are drawn from data files (`.yaml`, `.yml`). An HTML file is not stored: l
 | `--title <text>` | The title shown in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
 | `--description <text>` | A description shown in the list. |
 | `--lang <tag>` | The language of the page drawn from a data file (`<html lang>`), as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. Refused with `--link`: a linked file is shown as it is. |
+| `--theme <name>` | The template's theme to draw the page with, over the data file's `theme:`. Defaults to `theme:`, else `default`; a republish without it goes back to `theme:`. Refused with `--link`. |
 | `--force` | Replace a page published from another project, or a link to another file. |
 
 ### Data files

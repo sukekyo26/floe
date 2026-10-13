@@ -504,4 +504,6 @@ func TestPublishDataFile(t *testing.T) {
 	bad := e.write(t, "bad.yaml", "title: t\n")
 	want(t, "publish a data file without a template", e.run(t, "", "publish", bad), 1, "",
 		"floe: "+bad+":1:1: 最上位に template: report のようにテンプレートを指定してください（テンプレート: report）")
+	want(t, "publish --theme of no theme", e.run(t, "", "publish", plan, "--theme", "print"), 1, "",
+		"floe: テンプレート report にテーマ「print」はありません。使えるのは default です")
 }

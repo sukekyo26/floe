@@ -26,6 +26,7 @@ var messagesJA = map[string]string{
 	"store_project_slash": "プロジェクト名に / だけは使えません",
 	"store_not_data":      "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
 	"store_lang_link":     "--lang はデータファイルから描くページの言語です。リンクしたファイルは中身のまま、そのファイルの <html lang> で表示します",
+	"store_theme_link":    "--theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
 	"store_no_page":       "ページ「%s」はありません（floe list で確かめられます）",
 
 	// server

@@ -622,10 +622,20 @@ func TestPublishLang(t *testing.T) {
 		wantUserErr(t, err, "lang_invalid", bad)
 	}
 
+	// --theme picks a theme of the template over the data's, and is refused for a link.
+	e.mustPublish(t, frag, store.Options{Theme: ptr("default")}, "other")
+	if m := e.meta(t, "frag"); m.Theme != "default" {
+		t.Errorf("--theme default: theme %q", m.Theme)
+	}
+	_, err := e.publish(t, frag, store.Options{Theme: ptr("print")}, "other")
+	wantUserErr(t, err, "tmpl_unknown_theme", "print", "report", "default")
+
 	// A linked file is shown as it is: --lang is refused, and a language left from before is dropped.
 	site := e.write(t, "site/index.html", "<h1>A</h1>")
-	_, err := e.publish(t, site, store.Options{Link: true, Lang: ptr("ja")}, "repo")
+	_, err = e.publish(t, site, store.Options{Link: true, Lang: ptr("ja")}, "repo")
 	wantUserErr(t, err, "store_lang_link")
+	_, err = e.publish(t, site, store.Options{Link: true, Theme: ptr("default")}, "repo")
+	wantUserErr(t, err, "store_theme_link")
 	e.mustPublish(t, site, store.Options{Link: true}, "repo")
 	m := e.meta(t, "site")
 	m.Lang = "ja"
