@@ -2,6 +2,8 @@ package tmpl
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -87,6 +89,21 @@ open: { y: 1 }
 	}
 	if top := check(t, `{"minProperties": 3}`, "a: 1\n").Error(); top != "d.yaml:1:1: the top level: the number of keys must be at least 3" {
 		t.Errorf("a mistake at the top level = %s", top)
+	}
+}
+
+// A schema refers to no other file: a file:// URL would read one out of the template.
+func TestSchemaRefersToNoFile(t *testing.T) {
+	t.Parallel()
+
+	outside := filepath.Join(t.TempDir(), "defs.json")
+	if err := os.WriteFile(outside, []byte(`{"type": "string"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	d, root := data(t, "a: x\n")
+	err := validate([]byte(`{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
+	if err == nil || !strings.Contains(err.Error(), "a schema refers to no other file or URL") {
+		t.Errorf("validate of a $ref to a file = %v", err)
 	}
 }
 

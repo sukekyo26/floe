@@ -42,6 +42,9 @@ func validate(src []byte, d *Data, root ast.Node) error {
 	}
 	url := "floe:///templates/" + d.Template + "/schema.json"
 	c := jsonschema.NewCompiler()
+	// A template's schema is one file: a URL it refers to, file:// above all, could read one out of the
+	// template.
+	c.UseLoader(noLoader{})
 	c.AssertFormat()
 	for _, f := range formats {
 		c.RegisterFormat(&jsonschema.Format{Name: f, Validate: func(any) error { return nil }})
@@ -65,6 +68,14 @@ func validate(src []byte, d *Data, root ast.Node) error {
 		return fmt.Errorf("check %s against its schema: %w", d.File, ve)
 	}
 	return s.problems
+}
+
+var errSchemaURL = errors.New("a schema refers to no other file or URL; write it in schema.json")
+
+type noLoader struct{}
+
+func (noLoader) Load(url string) (any, error) {
+	return nil, fmt.Errorf("%s: %w", url, errSchemaURL)
 }
 
 type schemaCheck struct {
