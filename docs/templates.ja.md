@@ -45,7 +45,7 @@ floe: 1.2
 |---|---|
 | `.Title` | ページのタイトル。`--title`、管理画面で固定したタイトル、データファイルの `title:`、slug の順に決まる |
 | `.Lang` | ページの言語（`--lang`。既定は `en`） |
-| `.Data` | データファイルの項目（`template`・`theme`・`title` を除く）。スキーマで宣言していてデータに無い項目は nil なので、`{{with .Data.lead}}` と書ける。スキーマで宣言していない名前は描画を止める。`"format": "html"` の項目は HTML としてそのまま入る |
+| `.Data` | データファイルの項目（`template`・`theme`・`title` を除く）。スキーマで宣言していてデータに無い項目は nil なので、`{{with .Data.lead}}` と書ける。スキーマで宣言していない名前は描画を止める。`"format": "html"` の項目は HTML としてそのまま、`"format": "diagram"` の項目はその SVG として入る |
 | `.Calc` | `computed.yaml` の値（名前で引く） |
 | `.Theme` | テーマの CSS。`<style>{{.Theme}}</style>` のように使う |
 | `markdown` | Markdown の文字列を HTML にする（`{{markdown .text}}`）。中の生の HTML は除き、表は `<div class="table-wrap">` で包む |
@@ -57,9 +57,11 @@ floe: 1.2
 
 データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。キーの打ち間違いを断るため、`"additionalProperties": false` を書きます。`template`・`theme`・`title` は floe が読むので、宣言しません。
 
-`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）、`html`、`image` を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。`html` と `image` は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。
+`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）、`html`・`image`・`diagram` を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。`html`・`image`・`diagram` は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。
 
 `"format": "image"` の項目には、画像のパスを、データファイルのディレクトリからの相対で、その配下に、`..` やドットで始まる名前を使わずに書きます。画像は data URI としてページに入るので、`<img src="{{.Data.chart}}">` と書けて、ページだけで表示が完結します。
+
+`"format": "diagram"` の項目には、図の spec を [`floe diagram render`](commands.ja.md#floe-diagram-render-specyaml) に渡すのと同じ形でその場に書きます。`"type": "object"` で宣言してください。spec は `floe diagram render` と同じく検査し、誤りはデータファイルの行と列で出します。1 ページの図の id は互いに違えます。`{{.Data.plan}}` がインライン SVG で図を描き、ページの末尾に図のスタイルとズームが 1 回だけ付きます。図は色と書体を、`report` の既定のテーマが定義しているテーマの CSS 変数（`--fg`・`--bg`・`--accent` など）から取ります。`floe template check` は、そのどれかを定義していないテーマを警告します。そのテーマの図はダークモードでも明るい色のままになります。
 
 ## 画像
 
@@ -100,7 +102,7 @@ storage_gb: item_bytes * records.in_1_year / 1e9
 データファイルは次の順に検査します。各段は、前の段を通ったデータにだけ動きます。`floe check` は公開せずにすべての段を通します。
 
 1. YAML
-2. テンプレート、テンプレートが要る floe の版、テーマ、テンプレートの `schema.json`、画像
+2. テンプレート、テンプレートが要る floe の版、テーマ、テンプレートの `schema.json`、画像、図
 3. テンプレートの `checks.yaml`
 4. テンプレートの `computed.yaml`
 5. `page.html` の描画

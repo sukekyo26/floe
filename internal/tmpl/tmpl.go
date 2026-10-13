@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/goccy/go-yaml"
@@ -21,6 +22,7 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 
+	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -52,7 +54,9 @@ type Data struct {
 	tmpl   *Template               // the template Read checked the data against, which draws it
 	schema *schema                 // the template's schema as Read read it, for drawing as checked
 	images map[string]template.URL // its images as data URIs, by the path written
-	tried  []string                // the files of the images it names, read or not
+	// its diagrams drawn, by the path of keys to each (pathKey); nil without one
+	diagrams map[string]template.HTML
+	tried    []string // the files of the images it names, read or not
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -73,6 +77,8 @@ func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error
 
 // Sources are the files a read of a data file read besides it, for a link to be drawn again when one
 // changes, whether the read found mistakes or not.
+// LIMIT: not the icons of its diagrams, which a fetch of them does not change in a drawn page. Watch
+// their index if fetching icons for an open page comes to need a reload by hand too often.
 type Sources struct {
 	Templates string   // the directory of templates of one's own, where one may come; "" for none
 	Template  string   // the directory of the template of one's own the data names; "" for none
@@ -166,7 +172,7 @@ func start(file string, src []byte, themed bool) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
-		images: nil, tried: nil,
+		images: nil, diagrams: nil, tried: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)
@@ -228,7 +234,7 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 		return err
 	}
 	d.schema = s
-	if err = checkImages(s, d, root, dir); err != nil {
+	if err = checkItems(checkImages(s, d, root, dir), checkDiagrams(s, d, root, t.icons)); err != nil {
 		return err
 	}
 	// Each stage runs on data that passed the one before: broken data would only give the expressions
@@ -312,7 +318,7 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	err = page.Execute(&b, map[string]any{
 		"Title": title,
 		"Lang":  lang,
-		"Data":  d.schema.prepare(d.Values, d.images),
+		"Data":  d.schema.prepare(d.Values, nil, d),
 		"Calc":  d.Calc,
 		"Theme": template.CSS(css), //nolint:gosec // G203: the template's own theme, not data
 	})
@@ -325,6 +331,14 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 		return nil, t.assetMistake(bad)
 	case err != nil:
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
+	}
+	// Once at the end, as the reload script is: page.html picks which diagrams it draws, and where.
+	if d.diagrams != nil {
+		assets, err := diagram.Assets()
+		if err != nil {
+			return nil, err //nolint:wrapcheck // already says what failed
+		}
+		b.WriteString("\n" + assets + "\n")
 	}
 	return b.Bytes(), nil
 }
@@ -410,12 +424,16 @@ type schema struct {
 	Required    []string `json:"required"`
 }
 
-// prepare readies v for page.html: an item declared but not given becomes nil, so that page.html can
-// test it under missingkey=error, an item of format html becomes HTML that goes in as it is, and one
-// of format image the data URI of its image, from images.
-func (s *schema) prepare(v any, images map[string]template.URL) any {
+// prepare readies v, at the path at, for page.html: an item declared but not given becomes nil, so
+// that page.html can test it under missingkey=error, an item of format html becomes HTML that goes in
+// as it is, one of format image the data URI of its image, and one of format diagram its SVG, both as
+// d read them.
+func (s *schema) prepare(v any, at []string, d *Data) any {
 	if s == nil {
 		return v
+	}
+	if s.Format == "diagram" {
+		return d.diagrams[pathKey(at)]
 	}
 	switch v := v.(type) {
 	case string:
@@ -423,12 +441,12 @@ func (s *schema) prepare(v any, images map[string]template.URL) any {
 		case "html":
 			return template.HTML(v) //nolint:gosec // G203: the schema declares this item HTML
 		case "image":
-			return images[v]
+			return d.images[v]
 		}
 	case map[string]any:
 		out := make(map[string]any, len(v)+len(s.Properties))
 		for k, item := range v {
-			out[k] = s.Properties[k].prepare(item, images)
+			out[k] = s.Properties[k].prepare(item, append(at[:len(at):len(at)], k), d)
 		}
 		for k := range s.Properties {
 			if _, ok := out[k]; !ok {
@@ -439,11 +457,43 @@ func (s *schema) prepare(v any, images map[string]template.URL) any {
 	case []any:
 		out := make([]any, len(v))
 		for i, item := range v {
-			out[i] = s.Items.prepare(item, images)
+			out[i] = s.Items.prepare(item, append(at[:len(at):len(at)], strconv.Itoa(i)), d)
 		}
 		return out
 	}
 	return v
+}
+
+// itemAt is an item of a data file, and the path of keys to it.
+type itemAt struct {
+	value any
+	at    []string
+}
+
+// find adds to found the items v holds where s declares the format, v being at the path at.
+func (s *schema) find(format string, v any, at []string, found *[]itemAt) {
+	if s == nil {
+		return
+	}
+	if s.Format == format {
+		*found = append(*found, itemAt{value: v, at: at})
+		return
+	}
+	switch v := v.(type) {
+	case map[string]any:
+		for k, item := range v {
+			s.Properties[k].find(format, item, append(at[:len(at):len(at)], k), found)
+		}
+	case []any:
+		for i, item := range v {
+			s.Items.find(format, item, append(at[:len(at):len(at)], strconv.Itoa(i)), found)
+		}
+	}
+}
+
+// pathKey keys an item by its path of keys.
+func pathKey(at []string) string {
+	return strings.Join(at, "\x00")
 }
 
 // decode reads the values under root. goccy/go-yaml reads a whole number above 0 as uint64, which

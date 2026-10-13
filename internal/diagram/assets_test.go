@@ -35,6 +35,14 @@ func TestAssets(t *testing.T) {
 			t.Errorf("messages in %s = %v, want %v", lang, messages[lang], want)
 		}
 	}
+	// A theme defines these for diagrams to follow it.
+	want := []string{
+		"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
+		"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono",
+	}
+	if got := diagram.Variables(); !reflect.DeepEqual(got, want) {
+		t.Errorf("Variables() = %v, want %v", got, want)
+	}
 	// Pages carry these files as they are, so they are written in English.
 	for _, f := range []string{"assets/zoom.js", "assets/diagram.css"} {
 		b, err := os.ReadFile(f)

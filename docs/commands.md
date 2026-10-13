@@ -45,7 +45,7 @@ Pages are drawn from data files (`.yaml`, `.yml`). An HTML file is not stored: l
 
 ### Data files
 
-A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts of Markdown text, with `html` parts for what Markdown cannot say.
+A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts of Markdown text, with `diagram` parts for diagrams and `html` parts for what Markdown cannot say.
 
 ```yaml
 template: report               # the template that draws the page
@@ -58,11 +58,21 @@ sections:
       - text: |                # Markdown, tables included; raw HTML in it is left out
           1. Freeze edits on **Friday evening**.
           2. Copy the pages.
+      - diagram:               # a diagram spec, as floe diagram render takes it
+          id: move
+          width: 640
+          height: 120
+          title: The pages go from the old wiki to the new host
+          parts:
+            - box: { x: 16, y: 32, w: 184, h: 56, rows: [Old wiki] }
+            - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [New host] }
+            - edge: { d: "M200,60 H440" }
       - html: <p class="note warn">Edits during the freeze are lost.</p>   # HTML as it is
 ```
 
 - `theme:` picks a theme of the template (`default`).
 - An image the template takes (an item of `"format": "image"`) is a path under the data file's directory; the image goes into the page.
+- A diagram (a `diagram` part of `report`, or an item of `"format": "diagram"`) is a spec written in place, with the parts and checks of [`floe diagram render`](#floe-diagram-render-specyaml), its mistakes at the data file's lines and columns. The ids of the diagrams of a page must differ. Its icons come from `FLOE_ICONS_DIR`; for a linked data file, from that of the server.
 - A template of your own, in `FLOE_TEMPLATES_DIR`, takes the place of a built-in one of its name. [templates.md](templates.md) tells how to write one.
 - The data is checked against the template's schema before the page is drawn. Every mistake is printed at once as `file:line:column: message`, and nothing is published until all are fixed (exit code 1): a missing or unknown template, an item the template does not have (a typo), a value of the wrong type, and the like.
 - A data file is one YAML document of keys and values: one with `---` between documents, or with anchors, aliases or tags, is refused.

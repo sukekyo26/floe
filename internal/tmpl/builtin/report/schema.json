@@ -19,7 +19,8 @@
               "description": "One key naming the kind of the part",
               "properties": {
                 "text": { "type": "string", "description": "Markdown; raw HTML in it is left out" },
-                "html": { "type": "string", "format": "html", "description": "HTML that goes in as it is" }
+                "html": { "type": "string", "format": "html", "description": "HTML that goes in as it is" },
+                "diagram": { "type": "object", "format": "diagram", "description": "A diagram: a spec as floe diagram render takes it (id, width, height, title, parts); floe diagram example shows one of each kind" }
               },
               "minProperties": 1,
               "maxProperties": 1,

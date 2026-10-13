@@ -16,6 +16,7 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
+	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -24,18 +25,28 @@ import (
 // Library is the templates floe draws with: those of a directory of one's own, a directory each, then
 // the built-in ones. One of one's own takes the place of a built-in one of its name.
 type Library struct {
-	dir string // "" without one
+	dir   string       // "" without one
+	icons *icons.Store // the icons the diagrams of data files show
 }
 
 // NewLibrary returns the templates of dir, a directory of templates of one's own ("" for none), and
-// the built-in ones.
-func NewLibrary(dir string) *Library {
-	return &Library{dir: dir}
+// the built-in ones, which draw the icons of store in diagrams (nil for none: a diagram that shows one
+// is refused).
+func NewLibrary(dir string, store *icons.Store) *Library {
+	if store == nil {
+		store = icons.New("")
+	}
+	return &Library{dir: dir, icons: store}
 }
 
 // Dir is the directory of templates of one's own, "" for none.
 func (l *Library) Dir() string {
 	return l.dir
+}
+
+// Icons are the icons the diagrams of data files show.
+func (l *Library) Icons() *icons.Store {
+	return l.icons
 }
 
 // Template is a template found by name.
@@ -45,6 +56,8 @@ type Template struct {
 	Dir string
 	// Path is where a template of one's own was found, as its mistakes name it; "" for a built-in one.
 	Path string
+
+	icons *icons.Store // those of the library it was found in
 }
 
 // Names are the templates there are, by name. It fails when the directory of templates of one's own
@@ -129,7 +142,7 @@ func (l *Library) Find(name string) (*Template, error) {
 	case err != nil:
 		return nil, fmt.Errorf("find the template %s: %w", name, err)
 	}
-	return &Template{Name: name, Dir: "", Path: ""}, nil
+	return &Template{Name: name, Dir: "", Path: "", icons: l.icons}, nil
 }
 
 // own returns the template name of one's own, or nil without one. A file there is not a template, but
@@ -169,7 +182,7 @@ func (l *Library) resolve(name string) (*Template, error) {
 	if !fi.IsDir() {
 		return nil, nil //nolint:nilnil // a file, not a template
 	}
-	return &Template{Name: name, Dir: dir, Path: at}, nil
+	return &Template{Name: name, Dir: dir, Path: at, icons: l.icons}, nil
 }
 
 // validName reports whether name can name a template: lower case letters, digits, - and _, so that it

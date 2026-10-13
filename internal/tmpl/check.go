@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -17,14 +18,16 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
+	"github.com/sukekyo26/floe/internal/diagram"
+	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // Check checks the template at dir as a template of the directory's name, whatever its example.yaml
-// names: its files, then its example.yaml through every stage of a publish, drawing included. The
-// mistakes stop it from being drawn, and the warnings do not.
-func Check(dir string) (warnings []*usererr.Error, mistakes []error) {
+// names: its files, then its example.yaml through every stage of a publish, drawing included, with the
+// icons of store in its diagrams. The mistakes stop it from being drawn, and the warnings do not.
+func Check(dir string, store *icons.Store) (warnings []*usererr.Error, mistakes []error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, []error{usererr.CannotRead(dir, err)}
@@ -37,7 +40,7 @@ func Check(dir string) (warnings []*usererr.Error, mistakes []error) {
 		return nil, []error{usererr.CannotRead(dir, err)}
 	}
 	// Found as a library of the directory above would find it, symlink and all.
-	t, err := NewLibrary(filepath.Dir(abs)).resolve(name)
+	t, err := NewLibrary(filepath.Dir(abs), store).resolve(name)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -100,9 +103,16 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil}
+	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil, diagrams: false}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
+	if lint.diagrams {
+		more, themeErr := t.checkThemeVariables()
+		if themeErr != nil {
+			return warnings, append(mistakes, themeErr)
+		}
+		warnings = append(warnings, more...)
+	}
 	mistakes = append(mistakes, t.checkChecks(sch)...)
 	computed, found, err := t.readOptional("computed.yaml")
 	if err == nil && found {
@@ -116,6 +126,35 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 		return warnings, append(mistakes, err)
 	}
 	return warnings, append(mistakes, t.checkAssets(page)...)
+}
+
+// checkThemeVariables warns of each theme of t that leaves out a CSS variable diagrams take their
+// colours and fonts from: its diagrams would keep light colours in dark mode.
+// LIMIT: a variable is looked for as written (--fg:), not as CSS reads it. Parse the CSS if a theme
+// comes to define one otherwise (through @import, or in a comment that hides it).
+func (t *Template) checkThemeVariables() ([]*usererr.Error, error) {
+	themes, err := t.themes()
+	if err != nil {
+		return nil, err
+	}
+	var warnings []*usererr.Error
+	for _, theme := range themes {
+		name := path.Join("themes", theme+".css")
+		css, err := t.readFile(name)
+		if err != nil {
+			return nil, err
+		}
+		var missing []string
+		for _, v := range diagram.Variables() {
+			if !regexp.MustCompile(`(^|[^\w-])` + regexp.QuoteMeta(v) + `\s*:`).Match(css) {
+				missing = append(missing, v)
+			}
+		}
+		if missing != nil {
+			warnings = append(warnings, usererr.New("tmpl_theme_variables", t.file(name), andList(missing)))
+		}
+	}
+	return warnings, nil
 }
 
 // checkAssets returns the mistakes of the images under the assets/ of t, if it has one, and of those
@@ -440,6 +479,7 @@ type schemaLint struct {
 	file     string
 	warnings []*usererr.Error
 	mistakes []error
+	diagrams bool // whether the schema declares an item of format diagram that floe draws
 }
 
 // walk walks the schema v at the JSON pointer ptr. reached tells that prepare reaches it, through
@@ -455,6 +495,8 @@ func (l *schemaLint) walk(v any, ptr string, reached bool) {
 			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unknown", l.file, ptr, f))
 		case slices.Contains(formats, f) && !reached:
 			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unreached", l.file, ptr, f))
+		case f == "diagram":
+			l.diagrams = true
 		}
 	}
 	closed := m["additionalProperties"] == false || m["unevaluatedProperties"] == false

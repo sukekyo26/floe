@@ -13,7 +13,7 @@ import (
 )
 
 // builtins are the built-in templates alone.
-var builtins = tmpl.NewLibrary("")
+var builtins = tmpl.NewLibrary("", nil)
 
 func render(t *testing.T, src string) string {
 	t.Helper()
@@ -57,6 +57,7 @@ func TestReportExample(t *testing.T) {
 		`<div class="table-wrap"><table>`,
 		`<th>Likelihood</th>`,
 		`<p class="note warn">Anyone editing during the freeze loses their changes.</p>`,
+		`aria-label="The pages go from the old wiki to the new host"`,
 		`--accent: #1d6670;`,
 	} {
 		if !strings.Contains(got, want) {
@@ -75,6 +76,9 @@ func TestReportParts(t *testing.T) {
 	}
 	if strings.Contains(got, `class="eyebrow"`) || strings.Contains(got, `class="lead"`) {
 		t.Errorf("an eyebrow or a lead is drawn without one: %s", got)
+	}
+	if strings.Contains(got, "dg-wrap") {
+		t.Errorf("a page without diagrams holds their zoom: %s", got)
 	}
 }
 
@@ -156,7 +160,7 @@ sections:
 	want := []string{
 		"bad.yaml:3:1: leed is not an item of the template report (a typo?); use eyebrow, lead, sections, template, theme, title",
 		"bad.yaml:5:14: sections[0].heading: write text, not a number",
-		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use html, text",
+		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use diagram, html, text",
 		"bad.yaml:8:9: sections[0].parts[1]: the number of keys must be at most 1",
 		"bad.yaml:10:9: sections[0].parts[2]: the number of keys must be at least 1",
 		"bad.yaml:11:12: sections[1].parts: write a list, not text",
@@ -169,7 +173,8 @@ sections:
 	}
 }
 
-// Every built-in template has a page, a schema, an example that draws, and a default theme.
+// Every built-in template has a page, a schema, an example that draws, and a default theme, and passes
+// floe template check but for the template.yaml a built-in one does without.
 func TestBuiltins(t *testing.T) {
 	t.Parallel()
 
@@ -190,6 +195,9 @@ func TestBuiltins(t *testing.T) {
 		if render(t, string(src)) == "" {
 			t.Errorf("the example of %s draws nothing", name)
 		}
+		if warnings, mistakes := tmpl.Check("builtin/"+name, nil); len(warnings) != 1 || len(mistakes) != 0 {
+			t.Errorf("Check of %s = %v, %v", name, warnings, mistakes)
+		}
 	}
 }
 
@@ -198,13 +206,13 @@ func TestBuiltins(t *testing.T) {
 func TestUnnamedBesideOtherMistakes(t *testing.T) {
 	t.Parallel()
 
-	_, err := tmpl.NewLibrary("").Read("d.yaml", []byte("title: 3\ntheme: [x]\n"), "", "")
+	_, err := tmpl.NewLibrary("", nil).Read("d.yaml", []byte("title: 3\ntheme: [x]\n"), "", "")
 	want := "d.yaml:1:1: name the template at the top level, like template: report (templates: report)\n" +
 		"d.yaml:1:8: title must be text\nd.yaml:2:8: theme must be text"
 	if err == nil || err.Error() != want {
 		t.Errorf("Read = %v\nwant %s", err, want)
 	}
-	_, err = tmpl.NewLibrary("").Read("d.yaml", []byte("template: report\ntheme: [x]\n"), "", "")
+	_, err = tmpl.NewLibrary("", nil).Read("d.yaml", []byte("template: report\ntheme: [x]\n"), "", "")
 	if want = "d.yaml:2:8: theme must be text"; err == nil || err.Error() != want {
 		t.Errorf("Read of a theme not text = %v\nwant %s", err, want)
 	}

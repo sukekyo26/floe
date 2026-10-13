@@ -4,6 +4,7 @@ import (
 	_ "embed" // the zoom script and the diagrams' style
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -15,6 +16,20 @@ var (
 	//go:embed assets/diagram.css
 	diagramCSS string
 )
+
+// Variables are the CSS variables of the page that diagrams take their colours and fonts from, by
+// name (--fg). A page without one draws its diagrams in light colours that dark mode does not change.
+func Variables() []string {
+	found := pageVariable.FindAllStringSubmatch(diagramCSS, -1)
+	names := make([]string, 0, len(found))
+	for _, m := range found {
+		names = append(names, m[1])
+	}
+	return names
+}
+
+// pageVariable is a variable of the page in diagram.css, with the light colour it falls back to.
+var pageVariable = regexp.MustCompile(`var\((--[a-z-]+), `)
 
 // Assets returns what a page holds once, before or after its diagrams: the style that colours them
 // from the page's CSS variables, and the script that zooms them, its toolbar worded in every

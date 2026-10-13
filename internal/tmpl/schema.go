@@ -23,7 +23,7 @@ import (
 
 // formats are the formats floe gives a meaning to, beyond JSON Schema's own. Validating them is a
 // no-op: they mark an item for drawing, and what an item holds is checked where it is drawn.
-var formats = []string{"html", "image"}
+var formats = []string{"html", "image", "diagram"}
 
 // validate checks the values of d against the schema src, its template's schema.json, and reports
 // every mistake at its line and column under root, the data file's top mapping.
