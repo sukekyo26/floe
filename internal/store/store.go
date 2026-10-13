@@ -44,7 +44,10 @@ type Meta struct {
 	TitleEdited bool   `json:"titleEdited,omitempty"`
 	Description string `json:"description"`
 	// Lang is the language a body-only page is wrapped in (a BCP 47 tag); none is page.DefaultLang.
-	Lang          string `json:"lang,omitempty"`
+	Lang string `json:"lang,omitempty"`
+	// Template and Theme drew a page published from a data file.
+	Template      string `json:"template,omitempty"`
+	Theme         string `json:"theme,omitempty"`
 	Project       string `json:"project,omitempty"`
 	ProjectEdited bool   `json:"projectEdited,omitempty"`
 	// PublishedFrom is the project that owns a stored page; Project is only what the list shows.

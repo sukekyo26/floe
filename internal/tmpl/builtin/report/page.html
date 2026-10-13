@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="floe report">
+<title>{{.Title}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- display=block: pages run in a sandbox (a null origin), where Chrome does not use its cache, so the fonts are fetched every time. With swap each open would flicker from a fallback face, so text waits hidden until they arrive -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@700;800&family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=block">
+<style>
+{{.Theme}}
+</style>
+</head>
+<body>
+<main>
+<header>
+{{- with .Data.eyebrow}}
+<p class="eyebrow">{{.}}</p>
+{{- end}}
+<h1>{{.Title}}</h1>
+{{- with .Data.lead}}
+<p class="lead">{{.}}</p>
+{{- end}}
+</header>
+{{- range .Data.sections}}
+<section>
+{{- with .heading}}
+<h2>{{.}}</h2>
+{{- end}}
+{{- range .parts}}
+{{- with .text}}
+{{markdown .}}
+{{- end}}
+{{- with .html}}
+{{.}}
+{{- end}}
+{{- end}}
+</section>
+{{- end}}
+</main>
+</body>
+</html>

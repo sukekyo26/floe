@@ -7,6 +7,7 @@ require (
 	github.com/chromedp/chromedp v0.21.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/spf13/cobra v1.10.2
+	github.com/yuin/goldmark v1.8.6
 	golang.org/x/sys v0.48.0
 )
 

@@ -1,0 +1,20 @@
+# A report: a heading and parts per section. Text is Markdown; html goes in as it is.
+template: report
+title: Moving the team wiki
+eyebrow: Plan · 2030-04
+lead: The wiki moves to the new host in two weekends, with the old one read-only in between.
+sections:
+  - heading: Steps
+    parts:
+      - text: |
+          1. Freeze edits on the old wiki on **Friday evening**.
+          2. Copy the pages and check the links.
+          3. Point the team's bookmarks at the new host.
+  - heading: Risks
+    parts:
+      - text: |
+          | Risk | Likelihood | What we do |
+          | --- | --- | --- |
+          | Broken links | High | A link check after the copy |
+          | Lost attachments | Low | Keep the old host for a month |
+      - html: <p class="note warn">Anyone editing during the freeze loses their changes.</p>

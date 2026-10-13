@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "report",
+  "description": "A page of sections, each a heading over parts: Markdown text, or HTML for what text cannot say.",
+  "type": "object",
+  "properties": {
+    "eyebrow": { "type": "string", "description": "A short line above the title, such as the kind of page and its date" },
+    "lead": { "type": "string", "description": "A sentence or two under the title that sums the page up" },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": { "type": "string" },
+          "parts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One key naming the kind of the part",
+              "properties": {
+                "text": { "type": "string", "description": "Markdown; raw HTML in it is left out" },
+                "html": { "type": "string", "format": "html", "description": "HTML that goes in as it is" }
+              },
+              "minProperties": 1,
+              "maxProperties": 1,
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
