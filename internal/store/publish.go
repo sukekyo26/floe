@@ -333,9 +333,6 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	if ed.Favorite != nil {
 		m.Favorite = *ed.Favorite
 	}
-	if ed.Title != nil {
-		s.setTitle(slug, m, *ed.Title)
-	}
 	if ed.Project != nil {
 		// "/" is the management page's value for "no project".
 		if strings.TrimSpace(*ed.Project) == "/" {
@@ -347,6 +344,9 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	to, err := s.renameTo(slug, ed.Slug)
 	if err != nil {
 		return "", err
+	}
+	if ed.Title != nil {
+		s.setTitle(slug, to, m, *ed.Title)
 	}
 	if err := s.WriteMeta(slug, m); err != nil {
 		return "", err
@@ -360,19 +360,22 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	return to, nil
 }
 
-func (s *Store) setTitle(slug string, m *Meta, t string) {
+// setTitle sets the title of slug, which the edit renames to: an empty one gives back the page's own,
+// or to.
+func (s *Store) setTitle(slug, to string, m *Meta, t string) {
 	m.Title = strings.TrimSpace(t)
 	m.TitleEdited = m.Title != ""
-	switch {
-	case m.Title != "" || m.IsLink():
-	case m.Template != "":
-		// The drawn page's <title> is the title it was published under, pinned ones included.
-		m.Title = cmp.Or(m.DataTitle, slug)
-	default:
-		// A page stored as HTML before pages were drawn from data files.
-		own, _ := os.ReadFile(filepath.Join(s.dir(slug), "index.html")) //nolint:errcheck // unreadable means untitled
-		m.Title = cmp.Or(page.Title(string(own)), slug)
+	if m.Title != "" || m.IsLink() {
+		return
 	}
+	if m.Template != "" {
+		// The drawn page's <title> is the title it was published under, pinned ones included.
+		m.Title = cmp.Or(m.DataTitle, to)
+		return
+	}
+	// A page stored as HTML before pages were drawn from data files.
+	own, _ := os.ReadFile(filepath.Join(s.dir(slug), "index.html")) //nolint:errcheck // unreadable means untitled
+	m.Title = cmp.Or(page.Title(string(own)), to)
 }
 
 // renameTo checks the new slug of an edit: nil keeps slug.

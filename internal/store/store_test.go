@@ -484,13 +484,14 @@ func TestEdit(t *testing.T) {
 	}
 
 	// A drawn page's <title> is the title it was published under, so clearing a pinned title goes back
-	// to the data file's title:, or to the slug.
+	// to the data file's title:, or to the slug (a title of spaces names none).
 	for _, tt := range []struct{ file, title, want string }{
-		{"pinned.yaml", "Data Title", "Data Title"},
+		{"pinned.yaml", "title: Data Title\n", "Data Title"},
 		{"bare.yaml", "", "bare"},
+		{"spaces.yaml", "title: '  '\n", "spaces"},
 	} {
 		slug := strings.TrimSuffix(tt.file, ".yaml")
-		file := e.page(t, tt.file, tt.title)
+		file := e.write(t, tt.file, "template: report\n"+tt.title)
 		e.mustPublish(t, file, store.Options{}, "repo")
 		if _, err := e.s.Edit(slug, store.Edit{Title: ptr("Pinned")}); err != nil {
 			t.Fatal(err)
@@ -499,6 +500,10 @@ func TestEdit(t *testing.T) {
 		if _, err := e.s.Edit(slug, store.Edit{Title: ptr(" ")}); err != nil || e.meta(t, slug).Title != tt.want {
 			t.Errorf("clearing the pinned title of %s: %v %+v", tt.file, err, e.meta(t, slug))
 		}
+	}
+	// Clearing the title while renaming falls back to the new slug.
+	if _, err := e.s.Edit("bare", store.Edit{Title: ptr(""), Slug: ptr("bare-2")}); err != nil || e.meta(t, "bare-2").Title != "bare-2" {
+		t.Errorf("clearing the title while renaming: %v %+v", err, e.meta(t, "bare-2"))
 	}
 
 	// A page stored as HTML before pages were drawn takes its own <title> back, or the slug.
@@ -513,8 +518,8 @@ func TestEdit(t *testing.T) {
 	if err := os.Remove(filepath.Join(e.tmp, "store/old/index.html")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.s.Edit("old", store.Edit{Title: ptr(" ")}); err != nil || e.meta(t, "old").Title != "old" {
-		t.Errorf("clearing the title of an unreadable page falls back to the slug: %v %+v", err, e.meta(t, "old"))
+	if _, err := e.s.Edit("old", store.Edit{Title: ptr(" "), Slug: ptr("older")}); err != nil || e.meta(t, "older").Title != "older" {
+		t.Errorf("clearing the title of an unreadable page falls back to the new slug: %v %+v", err, e.meta(t, "older"))
 	}
 
 	file := e.write(t, "site/index.html", "<h1>L</h1>")
