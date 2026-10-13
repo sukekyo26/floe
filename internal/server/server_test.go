@@ -496,7 +496,7 @@ func TestLinkedFile(t *testing.T) {
 
 	e.write(t, "site/index.html", "<h1>Linked v2</h1>\n")
 	if r := e.get(t, "/a/site/?raw"); !strings.HasPrefix(r.body, "<h1>Linked v2</h1>\n\n<script>") {
-		t.Errorf("a body-only link is read on every request and served as it is:\n%s", r.body)
+		t.Errorf("a link is read on every request and served as it is:\n%s", r.body)
 	}
 	r := e.get(t, "/a/site/s.css")
 	if r.header.Get("Content-Type") != "text/css; charset=utf-8" || !strings.HasPrefix(r.header.Get("Content-Security-Policy"), "sandbox") ||
@@ -537,7 +537,7 @@ func TestLinkedFile(t *testing.T) {
 	}
 
 	if dl := e.get(t, "/api/artifacts/site/download"); dl.body != "<h1>Linked v3</h1>\n" {
-		t.Errorf("download of a body-only link: %s", dl.body)
+		t.Errorf("download of a link: %s", dl.body)
 	}
 
 	if err := os.Rename(index, index+".gone"); err != nil {

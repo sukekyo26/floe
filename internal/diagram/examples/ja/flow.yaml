@@ -18,7 +18,7 @@ parts:
   - box: { x: 130, y: 546, w: 340, h: 52, shape: "hex", rows: ["slug が別の種類で使われているか"] }
   - box: { x: 130, y: 622, w: 340, h: 52, shape: "hex", rows: ["別の持ち主で --force なしか"] }
   - box: { x: 130, y: 698, w: 340, h: 52, rows: ["サーバーを確かめ、必要なら起動"] }
-  - box: { x: 130, y: 774, w: 340, h: 52, rows: ["保存（ページは雛形で包む）", "リンクは meta.json だけ"] }
+  - box: { x: 130, y: 774, w: 340, h: 52, rows: ["保存（ページはテンプレートで描く）", "リンクは meta.json だけ"] }
   - box: { x: 200, y: 856, w: 200, h: 40, tone: "good", shape: "pill", rows: ["URL を出力"] }
   - edge: { d: "M300,60 V90" }
   - edge: { d: "M300,142 V166" }

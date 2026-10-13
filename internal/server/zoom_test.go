@@ -141,8 +141,7 @@ func uiZoom(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	check(t, "zoom", out, "true|true|125 true|true|true|true|true|true|1|true")
 }
 
-// diagramPage is a body-only page of the architecture example in lang with its assets, as floe diagram
-// render prints it.
+// diagramPage is the architecture example in lang with its assets, as floe diagram render prints it.
 func diagramPage(t *testing.T, lang i18n.Lang) string {
 	t.Helper()
 
