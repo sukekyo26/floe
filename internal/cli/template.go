@@ -126,7 +126,10 @@ func (a *app) showItems(items []tmpl.Item, indent string) {
 		if it.Required {
 			parts = append(parts, a.cat.Msg("cli_template_required"))
 		}
-		line := indent + it.Name + ": " + strings.Join(parts, a.cat.Msg("cli_template_and"))
+		line := indent + it.Name
+		if len(parts) > 0 {
+			line += ": " + strings.Join(parts, a.cat.Msg("cli_template_and"))
+		}
 		if it.Description != "" {
 			line += " — " + oneLine(it.Description)
 		}

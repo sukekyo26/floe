@@ -131,9 +131,9 @@ func TestTemplateShow(t *testing.T) {
 	// A list that may be null says so, and a description keeps to its line.
 	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
 	e.write(t, "templates/memo/schema.json", `{"properties": {"tags": {"type": ["array", "null"], "items": {"type": "string"},
-  "description": "Two\nlines"}}}`)
+  "description": "Two\nlines"}, "gone": null}}`)
 	e.write(t, "templates/memo/themes/default.css", "")
-	if r := e.run(t, "", "template", "show", "memo"); !strings.Contains(r.stdout, "\n  tags: a list of text or nothing — Two lines\n") {
+	if r := e.run(t, "", "template", "show", "memo"); !strings.Contains(r.stdout, "\n  gone\n  tags: a list of text or nothing — Two lines\n") {
 		t.Errorf("template show of a list that may be null:\n%s%s", r.stdout, r.stderr)
 	}
 }
