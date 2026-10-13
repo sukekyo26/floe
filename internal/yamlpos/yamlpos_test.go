@@ -27,6 +27,10 @@ func TestOfAndFirstAnchor(t *testing.T) {
 	if a == nil || yamlpos.Of(a) != (yamlpos.Pos{Line: 3, Column: 8}) {
 		t.Errorf("FirstAnchor = %v", a)
 	}
+	merge, err := parser.ParseBytes([]byte("a: 1\n<<: {b: 2}\n"), 0)
+	if err != nil || yamlpos.FirstAnchor(merge.Docs[0].Body) == nil {
+		t.Error("FirstAnchor missed a merge key")
+	}
 	clean, err := parser.ParseBytes([]byte("a: 1\n"), 0)
 	if err != nil || yamlpos.FirstAnchor(clean.Docs[0].Body) != nil {
 		t.Error("FirstAnchor found one in plain YAML")
@@ -38,7 +42,7 @@ func TestOfAndFirstAnchor(t *testing.T) {
 func TestParse(t *testing.T) {
 	t.Parallel()
 
-	for _, src := range []string{"a: 1\n", "%YAML 1.2\n---\na: 1\n", "---\na: 1\n", "a: 1\n---\n"} {
+	for _, src := range []string{"a: 1\n", "%YAML 1.2\n---\na: 1\n", "---\na: 1\n", "a: 1\n---\n", "a: 1\n---\n# c\n"} {
 		if body, err := yamlpos.Parse("a.yaml", []byte(src), "diagram_documents"); err != nil || body == nil {
 			t.Errorf("Parse(%q) = %v, %v", src, body, err)
 		}
@@ -51,6 +55,11 @@ func TestParse(t *testing.T) {
 	for _, tt := range []struct{ src, want string }{
 		{"a: 1\n---\nb: 2\n", "a.yaml:2:1: a spec holds one diagram"},
 		{"a: 1\n...\nb: 2\n", "a.yaml:3:1: a spec holds one diagram"},
+		{"a: 1\n...\n%YAML 1.2\n---\nb: 2\n", "a.yaml:3:1: a spec holds one diagram"},
+		// goccy/go-yaml reads a second --- as an empty document and drops what follows it.
+		{"a: 1\n---\n---\nb: 2\n", "a.yaml:3:1: a spec holds one diagram"},
+		{"---\n---\nid: d\n", "a.yaml:2:1: a spec holds one diagram"},
+		{"a: 1\n---\n\n---\nb: 2\n", "a.yaml:4:1: a spec holds one diagram"},
 		{"a: 'x\n", "a.yaml:1:4: this is not valid YAML: "},
 		{"a: 1\na: 2\n", "a.yaml:2:1: this is not valid YAML: mapping key \"a\" already defined"},
 	} {
@@ -70,11 +79,11 @@ func TestProblems(t *testing.T) {
 		yamlpos.New("a.yaml", yamlpos.Pos{Line: 3, Column: 4}, "yaml_no_anchors"),
 	}
 	if got, want := p.Error(), "a.yaml:1:2: this is not valid YAML: x\n"+
-		"a.yaml:3:4: anchors, aliases and tags are not supported; write the value out"; got != want {
+		"a.yaml:3:4: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"; got != want {
 		t.Errorf("Error = %q, want %q", got, want)
 	}
 	if got, want := p.Localize(i18n.New("ja")), "a.yaml:1:2: YAML として読めません: x\n"+
-		"a.yaml:3:4: アンカー・エイリアス・タグは使えません。値をそのまま書いてください"; got != want {
+		"a.yaml:3:4: アンカー・エイリアス・マージキー（<<）・タグは使えません。値をそのまま書いてください"; got != want {
 		t.Errorf("Localize = %q, want %q", got, want)
 	}
 }
