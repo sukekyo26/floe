@@ -97,27 +97,35 @@ notes:
 	}
 }
 
-// A checks.yaml that is not right is the template's mistake, not one of the data.
+// A checks.yaml that is not right is the template's mistake, reported at its line and column in
+// checks.yaml.
 func TestRelationsOfABrokenTemplate(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ checks, want string }{
-		{"- for: a\n  expr: 'true'\n", "check 1: write for, expr and message"},
-		{"- for: a\n  expr: 'true'\n  message: m\n  feild: x\n", `unknown field "feild"`},
-		{"- for: a\n  expr: 'itme.x'\n  message: m\n", "check 1: itme.x: unknown name itme"},
-		{"- for: a\n  expr: 'item.x +'\n  message: m\n", "check 1: item.x +: unexpected token EOF"},
-		{"- for: a.b\n  expr: 'true'\n  message: m\n", "check 1: for a.b does not lead to a list"},
-		{"- for: b\n  expr: 'true'\n  message: m\n", "check 1: for b does not lead to a list"},
+		{"- for: a\n  expr: 'true'\n", "checks.yaml:1:3: write message in the check"},
+		{"- for: a\n  expr: 'true'\n  message: m\n  feild: x\n", "checks.yaml:4:3: feild is not a key of a check"},
+		{"- for: a\n  expr: [x]\n  message: m\n", "checks.yaml:2:9: expr must be text"},
+		{"for: a\n", "checks.yaml:1:1: write checks.yaml as a list of checks"},
+		{"- for: a\n  expr: 'true'\n  1: m\n", "checks.yaml:3:3: a key is a name: write 1 as text, in quotes"},
+		{"- a\n", "checks.yaml:1:3: write checks.yaml as a list of checks"},
+		{"- for: a\n  expr: 'itme.x'\n  message: m\n", "checks.yaml:2:9: itme.x cannot be read as an expression: unknown name itme"},
+		{"- for: a\n  expr: 'item.x +'\n  message: m\n", "checks.yaml:2:9: item.x + cannot be read as an expression: unexpected token EOF"},
+		{"- for: a.b\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: a.b does not lead to a list in d.yaml"},
+		{"- for: b\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b does not lead to a list in d.yaml"},
 	} {
 		d, root := data(t, "a: [1]\nb: x\n")
-		err := relate([]byte(tt.checks), d, root)
-		var p yamlpos.Problems
-		if err == nil || errors.As(err, &p) || !strings.Contains(err.Error(), tt.want) {
+		err := relate("checks.yaml", []byte(tt.checks), d, root)
+		if err == nil || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("relate(%q) = %v, want %s", tt.checks, err, tt.want)
 		}
 	}
 	d, root := data(t, "a: [1]\n")
-	if err := relate([]byte("- for: a\n  expr: item == 1 && -item / 2 == -0.5\n  message: m\n"), d, root); err != nil {
+	both := "- for: a\n  expr: 'true'\n- for: a\n  message: m\n"
+	if err := relate("checks.yaml", []byte(both), d, root); err == nil || err.Error() != "checks.yaml:1:3: write message in the check\nchecks.yaml:3:3: write expr in the check" {
+		t.Errorf("relate of two broken checks = %v", err)
+	}
+	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 && -item / 2 == -0.5\n  message: m\n"), d, root); err != nil {
 		t.Errorf("relate of data that holds = %v", err)
 	}
 }
@@ -127,7 +135,7 @@ func failures(t *testing.T, checks, src string) yamlpos.Problems {
 
 	d, root := data(t, src)
 	var p yamlpos.Problems
-	if err := relate([]byte(checks), d, root); !errors.As(err, &p) {
+	if err := relate("checks.yaml", []byte(checks), d, root); !errors.As(err, &p) {
 		t.Fatalf("relate = %v, want problems", err)
 	}
 	return p
@@ -146,4 +154,53 @@ func data(t *testing.T, src string) (*Data, ast.Node) {
 		t.Fatal(err)
 	}
 	return &Data{File: "d.yaml", Template: "t", Theme: DefaultTheme, Title: "", Values: values}, root
+}
+
+// A path of checks.yaml is refused only where the compiled schema surely refuses it: a schema
+// without the key that refuses other keys, or keys at all. One that may take it (through patterns,
+// allOf, anyOf, or by taking any keys) passes, $ref is followed, and a list is refused only where its
+// types leave array out.
+func TestDeclared(t *testing.T) {
+	t.Parallel()
+
+	const closed = `"additionalProperties": false, `
+	const draft7 = `"$schema": "http://json-schema.org/draft-07/schema#", `
+	for _, tt := range []struct {
+		schema, for_, field, want string
+	}{
+		{`{` + closed + `"properties": {"a": {"type": "array"}}}`, "a", "x", ""},
+		{`{"properties": {"a": {"type": "array", "items": {` + closed + `"properties": {"x": {}}}}}}`, "a", "y", "tmpl_checks_field"},
+		{`{` + closed + `"properties": {"a": {"type": "array"}}}`, "b", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"a": {"type": "array"}}}`, "b", "", ""},
+		{`{"properties": {"a": {"type": "string", "anyOf": [{"minLength": 1}]}}}`, "a", "", "tmpl_checks_not_array"},
+		{`{"properties": {"a": {}}}`, "a", "x", ""},
+		{`{"properties": {"a": {"description": "x"}}}`, "a.x", "", ""},
+		{`{"properties": {"a": true}}`, "a.b", "", ""},
+		{`{"properties": {"a": false}}`, "a", "", "tmpl_checks_undeclared"},
+		{`{` + closed + `"allOf": [{}], "properties": {"rows": {"type": "string"}}}`, "rows", "", "tmpl_checks_not_array"},
+		{`{` + closed + `"patternProperties": {"^x": {}}}`, "xs", "", ""},
+		{`{"type": "object", "properties": {"a": {"type": "array"}}, "unevaluatedProperties": false}`, "b", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"a": {}}, "allOf": [{"properties": {"b": {}}}], "unevaluatedProperties": false}`, "b", "", ""},
+		{`{"properties": {"a": {"type": "array", "prefixItems": [{}], "items": {` + closed + `"properties": {}}}}}`, "a", "name", ""},
+		{`{"properties": {"a": {"type": "object", ` + closed + `"properties": {}}}}`, "a.x", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"a": {"type": "array"}}}`, "a.0", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"a": {"type": ["object", "null"]}}}`, "a.x", "", ""},
+		{`{"$defs": {"l": {` + closed + `"properties": {"rows": {"type": "array"}}}}, "properties": {"a": {"$ref": "#/$defs/l"}}}`, "a.rows", "", ""},
+		{`{"$defs": {"l": {` + closed + `"properties": {"rows": {"type": "array"}}}}, "properties": {"a": {"$ref": "#/$defs/l"}}}`, "a.cols", "", "tmpl_checks_undeclared"},
+		{`{` + draft7 + `"definitions": {"l": {"type": "object", "properties": {"rows": {"type": "array"}}}}, "properties": {"a": {"$ref": "#/definitions/l", ` + closed + `"type": "string"}}}`, "a.rows", "", ""},
+		{`{` + draft7 + `"definitions": {"l": {"type": "array"}}, "properties": {"a": {"$ref": "#/definitions/l", "type": "string"}}}`, "a", "", ""},
+	} {
+		s, _, err := compileSchema("t", []byte(tt.schema))
+		if err != nil {
+			t.Fatalf("%s: %v", tt.schema, err)
+		}
+		c := relation{For: tt.for_, Field: tt.field, Expr: "true", Message: "m", file: "checks.yaml", at: map[string]yamlpos.Pos{}}
+		e := c.declared(s)
+		switch {
+		case tt.want == "" && e != nil:
+			t.Errorf("%s, for %s, field %s = %v", tt.schema, tt.for_, tt.field, e)
+		case tt.want != "" && (e == nil || e.Err.Key != tt.want):
+			t.Errorf("%s, for %s, field %s = %v, want %s", tt.schema, tt.for_, tt.field, e, tt.want)
+		}
+	}
 }

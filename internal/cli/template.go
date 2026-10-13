@@ -2,6 +2,7 @@ package cli
 
 import (
 	"cmp"
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -13,13 +14,13 @@ import (
 func (a *app) templateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "template",
-		Short: "List the templates, show what a data file of one may hold, and make one of your own",
+		Short: "List the templates, show what a data file of one may hold, make one of your own, and check it",
 		Args:  usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	}
-	cmd.AddCommand(a.templateListCmd(), a.templateShowCmd(), a.templateNewCmd())
+	cmd.AddCommand(a.templateListCmd(), a.templateShowCmd(), a.templateNewCmd(), a.templateCheckCmd())
 	return cmd
 }
 
@@ -128,7 +129,7 @@ func (a *app) showItems(items []tmpl.Item, indent string) {
 		}
 		line := indent + it.Name
 		if len(parts) > 0 {
-			line += ": " + strings.Join(parts, a.cat.Msg("cli_template_and"))
+			line += ": " + strings.Join(parts, a.cat.Msg("tmpl_and"))
 		}
 		if it.Description != "" {
 			line += " — " + oneLine(it.Description)
@@ -175,4 +176,31 @@ is left as it is. A copy named like a built-in template takes its place.`,
 	}
 	cmd.Flags().StringVar(&from, "from", "", "the template to copy (required)")
 	return cmd
+}
+
+func (a *app) templateCheckCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "check <dir>...",
+		Short: "Check templates before you use or share them",
+		Long: `Check each directory as a template of its name: its template.yaml, schema.json, checks.yaml,
+computed.yaml, page.html and default theme, and then its example.yaml through every stage of
+floe publish, drawing the page included. Every mistake is printed, at its line and column where
+it has one, and the exit code is 1 when there is one. Warnings go to stderr and leave the exit
+code 0. Nothing is printed when the templates are right.`,
+		Args: usage(cobra.MinimumNArgs(1)),
+		RunE: func(_ *cobra.Command, args []string) error {
+			var found mistakes
+			for _, dir := range args {
+				warnings, more := tmpl.Check(dir)
+				for _, w := range warnings {
+					_, _ = fmt.Fprintln(a.env.Stderr, w.Localize(a.cat)) //nolint:errcheck // nowhere left to report
+				}
+				found = append(found, more...)
+			}
+			if found != nil {
+				return found
+			}
+			return nil
+		},
+	}
 }

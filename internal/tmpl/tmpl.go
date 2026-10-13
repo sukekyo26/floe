@@ -63,7 +63,7 @@ var shared = []string{"template", "theme", "title"}
 // --theme): the data's theme: is then not used, and a theme the template does not have is refused as
 // a *usererr.Error, as is a template that needs another floe.
 func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
-	root, err := parse(file, src)
+	h, err := start(file, src, theme != "")
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		var names []string
 		if names, err = l.Names(); err != nil {
@@ -74,12 +74,7 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	if err != nil {
 		return nil, err
 	}
-	top, err := decode(file, root)
-	if err != nil {
-		return nil, err
-	}
-	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil}
-	where, problems := readShared(d, root, theme != "")
+	d, problems := h.d, h.problems
 	fail := func(p yamlpos.Pos, key string, args ...any) {
 		problems = append(problems, yamlpos.New(file, p, key, args...))
 	}
@@ -96,10 +91,10 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 			return nil, err
 		}
 		switch {
-		case d.Template == "" && problems == nil:
-			fail(where["template"], "tmpl_no_template", strings.Join(names, ", "))
+		case h.unnamed:
+			fail(h.where["template"], "tmpl_no_template", strings.Join(names, ", "))
 		case d.Template != "":
-			fail(where["template"], "tmpl_unknown", d.Template, strings.Join(names, ", "))
+			fail(h.where["template"], "tmpl_unknown", d.Template, strings.Join(names, ", "))
 		}
 		return nil, problems.Sorted()
 	}
@@ -107,15 +102,48 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	if err = t.checkVersion(); err != nil {
 		return nil, err
 	}
-	d.tmpl = t
-	more, err := pickTheme(t, d, theme, where["theme"])
-	if err != nil {
-		return nil, err
-	}
-	if err = checkValues(t, d, root, append(problems, more...)); err != nil {
+	if err = t.check(d, h.root, theme, h.where["theme"], problems); err != nil {
 		return nil, err
 	}
 	return d, nil
+}
+
+// head is a data file read up to its template.
+type head struct {
+	d    *Data // its values, the keys every template shares moved to d
+	root ast.Node
+	// where each key every template shares is written, the top of the file for one left out
+	where    map[string]yamlpos.Pos
+	problems yamlpos.Problems // the mistakes in those keys
+	unnamed  bool             // template: is left out or empty, a mistake left to the caller to word
+}
+
+// start reads the data file src, file in its mistakes, up to its template. With themed, a theme is
+// given over the data's. It fails with yamlpos.ErrEmpty for a file without a document.
+func start(file string, src []byte, themed bool) (*head, error) {
+	root, err := parse(file, src)
+	if err != nil {
+		return nil, err
+	}
+	top, err := decode(file, root)
+	if err != nil {
+		return nil, err
+	}
+	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil}
+	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
+	h.readShared(themed)
+	return h, nil
+}
+
+// check checks d, whose root is root, against t, which then draws it: with the theme theme when given,
+// else the data's, written at at. problems are those found before in the keys every template shares.
+func (t *Template) check(d *Data, root ast.Node, theme string, at yamlpos.Pos, problems yamlpos.Problems) error {
+	d.tmpl = t
+	more, err := pickTheme(t, d, theme, at)
+	if err != nil {
+		return err
+	}
+	return checkValues(t, d, root, append(problems, more...))
 }
 
 // pickTheme sets the theme of d: theme when given, which t must have, else the data's, reported at
@@ -159,34 +187,38 @@ func checkValues(t *Template, d *Data, root ast.Node, problems yamlpos.Problems)
 	return checkComputed(t, d, root)
 }
 
-// readShared moves the keys every template shares from d.Values to d, and returns where each is
-// written (the top of the file for one left out) and the mistakes in them. With themed, a theme is
-// given over the data's, and its theme: is not used.
-func readShared(d *Data, root ast.Node, themed bool) (map[string]yamlpos.Pos, yamlpos.Problems) {
-	var problems yamlpos.Problems
-	where := map[string]yamlpos.Pos{}
+// readShared moves the keys every template shares from h.d.Values to h.d, and notes where each is
+// written (the top of the file for one left out), the mistakes in them, and whether template: names
+// none. With themed, a theme is given over the data's, and its theme: is not used.
+func (h *head) readShared(themed bool) {
+	d := h.d
 	to := map[string]*string{"template": &d.Template, "theme": &d.Theme, "title": &d.Title}
+	h.unnamed = true
 	for _, key := range shared {
-		where[key] = yamlpos.Of(root)
+		h.where[key] = yamlpos.Of(h.root)
 		v, ok := d.Values[key]
 		if !ok {
 			continue
 		}
-		k, n, _ := yamlpos.Find(root, []string{key})
-		where[key] = yamlpos.OfValue(k, n)
+		k, n, _ := yamlpos.Find(h.root, []string{key})
+		h.where[key] = yamlpos.OfValue(k, n)
 		delete(d.Values, key)
 		if key == "theme" && themed {
 			continue
 		}
-		if s, ok := v.(string); ok {
+		s, text := v.(string)
+		if key == "template" {
+			// One that is not text is reported so.
+			h.unnamed = text && s == ""
+		}
+		if text {
 			*to[key] = s
 		} else {
-			problems = append(problems, yamlpos.New(d.File, where[key], "tmpl_not_text", key))
+			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_not_text", key))
 		}
 	}
 	// A title of spaces names none, as an empty --title does.
 	d.Title = strings.TrimSpace(d.Title)
-	return where, problems
 }
 
 // parse reads src as one YAML document of keys and values, without anchors, aliases or tags, so
@@ -197,11 +229,8 @@ func parse(file string, src []byte) (ast.Node, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a mistake at its line and column, or ErrEmpty
 	}
-	if a := yamlpos.FirstAnchor(body); a != nil {
-		return nil, yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
-	}
-	if k := first(body, nonTextKey); k != nil {
-		return nil, yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value)
+	if err = plain(file, body); err != nil {
+		return nil, err
 	}
 	if n := first(body, nonFinite); n != nil {
 		return nil, yamlpos.New(file, yamlpos.Of(n), "tmpl_not_finite", n.GetToken().Value)
@@ -219,7 +248,7 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 		lang = DefaultLang
 	}
 	t := d.tmpl
-	src, err := t.readFile("page.html")
+	page, err := t.page()
 	if err != nil {
 		return nil, err
 	}
@@ -230,11 +259,6 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	s, err := schemaOf(t)
 	if err != nil {
 		return nil, err
-	}
-	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
-	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).Parse(string(src))
-	if err != nil {
-		return nil, fmt.Errorf("parse the template %s: %w", d.Template, err)
 	}
 	var b bytes.Buffer
 	err = page.Execute(&b, map[string]any{
@@ -250,6 +274,20 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	return b.Bytes(), nil
+}
+
+// page reads and parses the page.html of t.
+func (t *Template) page() (*template.Template, error) {
+	src, err := t.readFile("page.html")
+	if err != nil {
+		return nil, err
+	}
+	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
+	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).Parse(string(src))
+	if err != nil {
+		return nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
+	}
+	return page, nil
 }
 
 var funcs = template.FuncMap{
@@ -404,14 +442,23 @@ func nonTextKey(n ast.Node) ast.Node {
 	if !ok {
 		return nil
 	}
-	key := ast.Node(v.Key)
-	if explicit, ok := key.(*ast.MappingKeyNode); ok {
-		key = explicit.Value
-	}
+	key := yamlpos.KeyOf(v)
 	if _, text := key.(*ast.StringNode); text {
 		return nil
 	}
 	return key
+}
+
+// plain refuses in body, the file's, what would hide where a value is written (an anchor, alias, merge
+// key or tag) or read a key as another name than the one written.
+func plain(file string, body ast.Node) error {
+	if a := yamlpos.FirstAnchor(body); a != nil {
+		return yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
+	}
+	if k := first(body, nonTextKey); k != nil {
+		return yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value)
+	}
+	return nil
 }
 
 // nonFinite picks .inf and .nan.

@@ -45,14 +45,19 @@ adheres to [Semantic Versioning](https://semver.org/).
   themes, a template may check relations between items with `checks.yaml`
   and compute values for the page with `computed.yaml`, in
   [expr](https://expr-lang.org/), each failure reported at the data file's
-  line and column; `page.html` writes numbers with `num` and `bytes`.
+  line and column, and a mistake in those files at their own;
+  `page.html` writes numbers with `num` and `bytes`.
   `template.yaml` names the floe a template needs. See
   [docs/templates.md](docs/templates.md).
 - Add `floe template list`, which lists the templates with where they are,
   their themes and the floe they need; `floe template show <name>`, which
   prints the items a data file of a template may hold and its example, to
-  read before writing one; and `floe template new <name> --from <template>`,
-  which copies a template into a template of your own to edit.
+  read before writing one; `floe template new <name> --from <template>`,
+  which copies a template into a template of your own to edit; and
+  `floe template check <dir>...`, which checks a template before you use or
+  share it: its files (a `format` floe does not know, and paths of
+  `checks.yaml` that `schema.json` does not declare, among them), then its
+  `example.yaml` through every stage of a publish.
 - Add `floe check <data.yaml>...`, which checks data files as `floe publish`
   does and prints every mistake as `file:line:column`, without publishing them
   or starting the server, for the CI of a repository that keeps data files.

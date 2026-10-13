@@ -11,6 +11,7 @@ Reference for every command of the `floe` binary.
 | `floe template list` | List the templates |
 | `floe template show <name>` | Show the items a data file of a template may hold, and its example |
 | `floe template new <name> --from <template>` | Make a template of your own as a copy of another, to edit |
+| `floe template check <dir>...` | Check templates before you use or share them |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe serve` | Run the server in the foreground |
@@ -113,6 +114,17 @@ Make the template `<name>` of your own in `$FLOE_TEMPLATES_DIR/<name>` as a copy
 - Its `example.yaml` names `<name>` as its `template:`.
 - A name is lower case letters, digits, `-` and `_`. A copy named like a built-in template takes its place.
 - A template of your own of that name is left as it is: the command stops (exit code 1).
+
+## `floe template check <dir>...`
+
+Check each directory as the template of its name, before you use or share it. A relative path is resolved against the working directory.
+
+- Its files first: `template.yaml`, `schema.json` (a `format` floe does not know is a mistake), `checks.yaml` (the paths of `for` and `field` must be declared in `schema.json`), `computed.yaml`, `page.html` and `themes/default.css`.
+- Then its `example.yaml` through every stage of `floe publish`, drawing the page included. It must name the template of the directory's name: the template drawn is always the one in the directory, never another of its name.
+- Every mistake is printed at once, as `file:line:column: message` where it has a place (exit code 1). Nothing is printed when every template is right (exit code 0).
+- Warnings go to stderr and leave the exit code 0: no `template.yaml`, or an object of `schema.json` that does not refuse a misspelt key (no `"additionalProperties": false`).
+
+[templates.md](templates.md) tells what each file holds.
 
 ---
 

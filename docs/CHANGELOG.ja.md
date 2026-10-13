@@ -26,9 +26,9 @@ floe の主要な変更を記録します。フォーマットは
   - `--theme` でテンプレートの別のテーマを選べる。ほかに `--slug`・`--title`・`--description`・`--lang`・`--force` を使える。
   - 同じ slug で公開し直すと、そのことを stderr に出す。タイトルが変わっていれば警告も出す。
 - 自分のテンプレートを使えるようにした。`FLOE_TEMPLATES_DIR`（既定は `~/.config/floe/templates`）に置いたディレクトリ（symlink でもよい）が、同じ名前の組み込みのテンプレートの代わりに使われる。
-  - `page.html`・`schema.json`・テーマのほか、`checks.yaml` で項目どうしの関係を検査し、`computed.yaml` でページに出す値を計算できる。式は [expr](https://expr-lang.org/) で書き、誤りはデータファイルの行と列で出す。`page.html` は `num` と `bytes` で数を書ける。
+  - `page.html`・`schema.json`・テーマのほか、`checks.yaml` で項目どうしの関係を検査し、`computed.yaml` でページに出す値を計算できる。式は [expr](https://expr-lang.org/) で書き、誤りはデータファイルの行と列で、これらのファイルそのものの誤りはそのファイルの行と列で出す。`page.html` は `num` と `bytes` で数を書ける。
   - `template.yaml` に、テンプレートが要る floe の版を書く。書き方は [docs/templates.ja.md](templates.ja.md) にある。
-- テンプレートを置き場所・テーマ・要る floe の版とともに一覧する `floe template list`、データファイルに書ける項目と見本を出す `floe template show <name>`（データファイルを書く前に読む）、テンプレートを写して自分のテンプレートを作る `floe template new <name> --from <template>` を追加。
+- テンプレートを置き場所・テーマ・要る floe の版とともに一覧する `floe template list`、データファイルに書ける項目と見本を出す `floe template show <name>`（データファイルを書く前に読む）、テンプレートを写して自分のテンプレートを作る `floe template new <name> --from <template>`、テンプレートを使う前や配る前に検査する `floe template check <dir>...` を追加。`template check` はファイル（floe が知らない `format` や、`schema.json` で宣言していない `checks.yaml` のパスなど）を検査してから、`example.yaml` を公開のすべての段に通す。
 - データファイルを `floe publish` と同じく検査し、誤りをすべて `ファイル:行:列` で出す `floe check <data.yaml>...` を追加。公開もサーバーの起動もしないので、データファイルを置いたリポジトリの CI から使える。
 - `floe list`・`floe rm`・`floe serve`・`floe stop` と、ライブリロード付きの管理画面を追加。
   - artifact スキルと同じ形式の保存先を読み書きする。

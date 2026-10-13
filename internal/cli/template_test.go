@@ -31,6 +31,29 @@ func TestTemplateCommands(t *testing.T) {
 	if r := e.run(t, "", "check", filepath.Join(spec, "example.yaml")); r.code != 0 {
 		t.Errorf("check of the copy's example = %+v", r)
 	}
+	if r := e.run(t, "", "template", "check", spec); r.code != 0 || r.stdout != "" || r.stderr != "" {
+		t.Errorf("template check of the copy = %+v", r)
+	}
+	// Warnings leave the exit code 0; mistakes, at their lines and columns, make it 1.
+	if err = os.Remove(filepath.Join(spec, "template.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if r := e.run(t, "", "template", "check", spec); r.code != 0 || !strings.HasPrefix(r.stderr, spec+" has no template.yaml") {
+		t.Errorf("template check without template.yaml = %+v", r)
+	}
+	computed := filepath.Join(spec, "computed.yaml")
+	if err = os.WriteFile(computed, []byte("total: nope\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if r := e.run(t, "", "template", "check", spec); r.code != 1 || !strings.Contains(r.stderr, "\n"+computed+":1:8: nope cannot be read as an expression: unknown name nope\n") {
+		t.Errorf("template check of a broken template = %+v", r)
+	}
+	if err = os.Remove(computed); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(spec, "template.yaml"), floe, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
+		t.Fatal(err)
+	}
 	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.Contains(r.stdout, "\nspec\t"+spec+"\tdefault\t"+release[0]+"."+release[1]+".0\tA page of sections") {
 		t.Errorf("template list with a copy = %+v", r)
 	}

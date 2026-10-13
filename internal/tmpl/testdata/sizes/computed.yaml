@@ -1,0 +1,3 @@
+share: largest / total
+total: sum(files, .bytes)
+largest: max(map(files, .bytes))

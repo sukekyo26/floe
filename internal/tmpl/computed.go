@@ -15,17 +15,9 @@ import (
 	exprbuiltin "github.com/expr-lang/expr/builtin"
 	"github.com/expr-lang/expr/parser"
 	"github.com/expr-lang/expr/vm"
-	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 
 	"github.com/sukekyo26/floe/internal/yamlpos"
-)
-
-var (
-	errName  = errors.New("is not a name an expression or page.html can use; write letters, digits and _")
-	errClash = errors.New("is an item of the data too, so an expression could not tell them apart")
-	errCycle = errors.New("the values are computed from each other")
-	errEnv   = errors.New("$env is not for computed.yaml; use the names")
 )
 
 // usable reports whether n is a name an expression and page.html (.Calc.n) can use: not a word of expr
@@ -56,16 +48,16 @@ func checkComputed(t *Template, d *Data, root ast.Node) error {
 	if err != nil {
 		return err
 	}
-	return compute(src, d, slices.Sorted(maps.Keys(s.Properties)), root)
+	return compute(t.file("computed.yaml"), src, d, slices.Sorted(maps.Keys(s.Properties)), root)
 }
 
-// compute computes the values of the computed.yaml src from the values of d, whose items the schema
-// declares, in declared. An expression sees the items and the other computed values by name, and a
-// value is computed after those it uses, in whatever order src writes them.
-func compute(src []byte, d *Data, declared []string, root ast.Node) error {
-	c, err := readComputed(src, declared)
+// compute computes the values of the computed.yaml src, file in its mistakes, from the values of d,
+// whose items the schema declares, in declared. An expression sees the items and the other computed
+// values by name, and a value is computed after those it uses, in whatever order src writes them.
+func compute(file string, src []byte, d *Data, declared []string, root ast.Node) error {
+	c, err := readComputed(file, src, declared)
 	if err != nil {
-		return fmt.Errorf("read the computed values of %s: %w", d.Template, err)
+		return err
 	}
 	// An item the data leaves out stays nil.
 	for _, n := range c.items {
@@ -113,19 +105,30 @@ type computed struct {
 	env      reflect.Value
 }
 
-func readComputed(src []byte, declared []string) (*computed, error) {
-	var exprs map[string]string
-	if err := yaml.UnmarshalWithOptions(src, &exprs, yaml.Strict()); err != nil {
-		return nil, fmt.Errorf("computed.yaml: %w", err)
+// readComputed reads and compiles the computed.yaml src of file, its mistakes at their lines and
+// columns: all those of its values and names at once, then all those of its expressions, then values
+// computed from each other.
+func readComputed(file string, src []byte, declared []string) (*computed, error) {
+	// The names of the expressions read are checked beside the mistakes of the others.
+	exprs, where, err := readExprs(file, src)
+	var problems yamlpos.Problems
+	if err != nil && !errors.As(err, &problems) {
+		return nil, err
+	}
+	fail := func(at yamlpos.Pos, key string, args ...any) {
+		problems = append(problems, yamlpos.New(file, at, key, args...))
 	}
 	names := slices.Sorted(maps.Keys(exprs))
 	for _, n := range names {
 		switch {
 		case !usable(n):
-			return nil, fmt.Errorf("%s %w", n, errName)
+			fail(yamlpos.Of(yamlpos.KeyOf(where[n])), "tmpl_computed_name", n)
 		case slices.Contains(declared, n):
-			return nil, fmt.Errorf("%s %w", n, errClash)
+			fail(yamlpos.Of(yamlpos.KeyOf(where[n])), "tmpl_computed_clash", n)
 		}
+	}
+	if problems != nil {
+		return nil, problems.Sorted()
 	}
 	// LIMIT: an item whose name an expression cannot use (my-size, or a function of expr such as date)
 	// is not seen by name. Give the expressions the data as doc too if a template needs one.
@@ -146,40 +149,81 @@ func readComputed(src []byte, declared []string) (*computed, error) {
 	}
 	c.env = reflect.New(reflect.StructOf(fields)).Elem()
 	for _, n := range names {
+		at := yamlpos.OfValue(yamlpos.KeyOf(where[n]), where[n].Value)
 		p, err := compile(exprs[n], c.env.Interface())
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", n, err)
+			fail(at, "tmpl_expr", exprs[n], brief(err))
+			continue
 		}
 		c.programs[n] = p
-		if c.uses[n], err = usedNames(p, exprs); err != nil {
-			return nil, fmt.Errorf("%s: %w", n, err)
+		var env bool
+		if c.uses[n], env = usedNames(p, exprs); env {
+			fail(at, "tmpl_computed_env")
 		}
 	}
-	order, err := topological(names, c.uses)
-	if err != nil {
-		return nil, err
+	if problems != nil {
+		return nil, problems.Sorted()
+	}
+	order, cycle := topological(names, c.uses)
+	if cycle != nil {
+		at := yamlpos.Of(yamlpos.KeyOf(where[cycle[0]]))
+		return nil, yamlpos.New(file, at, "tmpl_computed_cycle", strings.Join(cycle, " → "))
 	}
 	c.order = order
 	return c, nil
 }
 
-// usedNames returns the names of computed that the program p uses. It refuses $env, through which p
-// could use one without its name, before it is computed, or hand the variables to page.html.
-func usedNames(p *vm.Program, computed map[string]string) ([]string, error) {
+// readExprs reads the names and expressions of the computed.yaml src of file, and where each is written.
+// Those whose expression is not text are left out, and their mistakes returned as yamlpos.Problems.
+func readExprs(file string, src []byte) (map[string]string, map[string]*ast.MappingValueNode, error) {
+	exprs, where := map[string]string{}, map[string]*ast.MappingValueNode{}
+	body, err := yamlpos.Parse(file, src, "tmpl_computed_yaml")
+	if errors.Is(err, yamlpos.ErrEmpty) {
+		return exprs, where, nil
+	}
+	if err != nil {
+		return nil, nil, err //nolint:wrapcheck // a mistake at its line and column
+	}
+	if err = plain(file, body); err != nil {
+		return nil, nil, err
+	}
+	m, ok := body.(*ast.MappingNode)
+	if !ok {
+		return nil, nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_computed_yaml")
+	}
+	var problems yamlpos.Problems
+	for _, kv := range m.Values {
+		n := yamlpos.KeyOf(kv).GetToken().Value
+		s, ok := text(kv.Value)
+		if !ok || s == "" {
+			problems = append(problems, yamlpos.New(file, yamlpos.OfValue(yamlpos.KeyOf(kv), kv.Value), "tmpl_computed_yaml"))
+			continue
+		}
+		exprs[n], where[n] = s, kv
+	}
+	if problems != nil {
+		return exprs, where, problems
+	}
+	return exprs, where, nil
+}
+
+// usedNames returns the names of computed that the program p uses, and env true when p uses $env, to be
+// refused: through it p could use one without its name, before it is computed, or hand the variables to
+// page.html.
+func usedNames(p *vm.Program, computed map[string]string) (names []string, env bool) {
 	var u used
 	node := p.Node()
 	exprast.Walk(&node, &u)
-	var names []string
 	for _, n := range u {
 		if n == "$env" {
-			return nil, errEnv
+			return nil, true
 		}
 		if _, ok := computed[n]; ok && !slices.Contains(names, n) {
 			names = append(names, n)
 		}
 	}
 	slices.Sort(names)
-	return names, nil
+	return names, false
 }
 
 type used []string
@@ -190,30 +234,29 @@ func (u *used) Visit(n *exprast.Node) {
 	}
 }
 
-// topological orders names so that each comes after those it uses, or reports the names that use
-// each other.
-func topological(names []string, uses map[string][]string) ([]string, error) {
+// topological orders names so that each comes after those it uses, or returns the names that use each
+// other as cycle, the first of them last too.
+func topological(names []string, uses map[string][]string) (order, cycle []string) {
 	const (
 		unseen = iota
 		visiting
 		done
 	)
 	state := map[string]int{}
-	var order, stack []string
-	var visit func(n string) error
-	visit = func(n string) error {
+	var stack []string
+	var visit func(n string) []string
+	visit = func(n string) []string {
 		switch state[n] {
 		case done:
 			return nil
 		case visiting:
-			cycle := slices.Concat(stack[slices.Index(stack, n):], []string{n})
-			return fmt.Errorf("%w: %s", errCycle, strings.Join(cycle, " → "))
+			return slices.Concat(stack[slices.Index(stack, n):], []string{n})
 		}
 		state[n] = visiting
 		stack = append(stack, n)
 		for _, u := range uses[n] {
-			if err := visit(u); err != nil {
-				return err
+			if found := visit(u); found != nil {
+				return found
 			}
 		}
 		stack = stack[:len(stack)-1]
@@ -222,8 +265,8 @@ func topological(names []string, uses map[string][]string) ([]string, error) {
 		return nil
 	}
 	for _, n := range names {
-		if err := visit(n); err != nil {
-			return nil, err
+		if cycle = visit(n); cycle != nil {
+			return nil, cycle
 		}
 	}
 	return order, nil

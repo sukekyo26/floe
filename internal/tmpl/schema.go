@@ -37,25 +37,9 @@ func checkSchema(t *Template, d *Data, root ast.Node) error {
 
 // validate checks the values of d against the schema src.
 func validate(src []byte, d *Data, root ast.Node) error {
-	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
+	sch, doc, err := compileSchema(d.Template, src)
 	if err != nil {
-		return fmt.Errorf("read the schema of %s: %w", d.Template, err)
-	}
-	url := "floe:///templates/" + d.Template + "/schema.json"
-	c := jsonschema.NewCompiler()
-	// A template's schema is one file: a URL it refers to, file:// above all, could read one out of the
-	// template.
-	c.UseLoader(noLoader{})
-	c.AssertFormat()
-	for _, f := range formats {
-		c.RegisterFormat(&jsonschema.Format{Name: f, Validate: func(any) error { return nil }})
-	}
-	if err = c.AddResource(url, doc); err != nil {
-		return fmt.Errorf("read the schema of %s: %w", d.Template, err)
-	}
-	sch, err := c.Compile(url)
-	if err != nil {
-		return fmt.Errorf("compile the schema of %s: %w", d.Template, err)
+		return err
 	}
 	err = sch.Validate(d.Values)
 	var ve *jsonschema.ValidationError
@@ -69,6 +53,49 @@ func validate(src []byte, d *Data, root ast.Node) error {
 		return fmt.Errorf("check %s against its schema: %w", d.File, ve)
 	}
 	return s.problems
+}
+
+// compileSchema compiles the schema src of the template name, and returns it as read too.
+func compileSchema(name string, src []byte) (*jsonschema.Schema, any, error) {
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
+	if err != nil {
+		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
+	}
+	url := "floe:///templates/" + name + "/schema.json"
+	c := newCompiler()
+	if err = c.AddResource(url, doc); err != nil {
+		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
+	}
+	sch, err := c.Compile(url)
+	if err != nil {
+		return nil, nil, fmt.Errorf("compile the schema of %s: %w", name, err)
+	}
+	return sch, doc, nil
+}
+
+func newCompiler() *jsonschema.Compiler {
+	c := jsonschema.NewCompiler()
+	// A template's schema is one file: a URL it refers to, file:// above all, could read one out of the
+	// template.
+	c.UseLoader(noLoader{})
+	c.AssertFormat()
+	for _, f := range formats {
+		c.RegisterFormat(&jsonschema.Format{Name: f, Validate: func(any) error { return nil }})
+	}
+	return c
+}
+
+// knownFormat reports whether floe knows the format f: one of JSON Schema's that it checks, or one of
+// its own. jsonschema passes a value of a format it does not know, so a template that uses a format of
+// a later floe would be drawn as if it had none.
+func knownFormat(f string) bool {
+	const url = "floe:///format.json"
+	c := newCompiler()
+	if err := c.AddResource(url, map[string]any{"format": f}); err != nil {
+		return false
+	}
+	s, err := c.Compile(url)
+	return err == nil && s.Format != nil
 }
 
 var errSchemaURL = errors.New("a schema refers to no other file or URL; write it in schema.json")
@@ -271,6 +298,13 @@ func jsonText(v any) string {
 		return fmt.Sprint(v)
 	}
 	return string(b)
+}
+
+// andList words its items as a list: page.html, schema.json.
+type andList []string
+
+func (l andList) Localize(c *i18n.Catalog) string {
+	return strings.Join(l, c.Msg("tmpl_and"))
 }
 
 // orList words its items as alternatives: text or a number.

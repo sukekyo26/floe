@@ -1,0 +1,354 @@
+package tmpl
+
+import (
+	"cmp"
+	"errors"
+	"fmt"
+	"maps"
+	"os"
+	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
+
+	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
+)
+
+// Check checks the template at dir as a template of the directory's name, whatever its example.yaml
+// names: its files, then its example.yaml through every stage of a publish, drawing included. The
+// mistakes stop it from being drawn, and the warnings do not.
+func Check(dir string) (warnings []*usererr.Error, mistakes []error) {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, []error{usererr.CannotRead(dir, err)}
+	}
+	name := filepath.Base(abs)
+	if !validName(name) {
+		return nil, []error{usererr.New("tmpl_new_name", name)}
+	}
+	if _, err = os.Stat(abs); err != nil {
+		return nil, []error{usererr.CannotRead(dir, err)}
+	}
+	// Found as a library of the directory above would find it, symlink and all.
+	t, err := NewLibrary(filepath.Dir(abs)).resolve(name)
+	if err != nil {
+		return nil, []error{err}
+	}
+	if t == nil {
+		return nil, []error{usererr.New("tmpl_check_not_dir", dir)}
+	}
+	t.Path = dir
+	// The floe a template needs comes before its mistakes, which another floe may not make.
+	if err = t.checkVersion(); err != nil {
+		return nil, []error{err}
+	}
+	needs, err := t.needs()
+	if err != nil {
+		return nil, []error{err}
+	}
+	if needs == nil {
+		var have semver
+		if have, err = thisFloe(); err != nil {
+			return nil, []error{err}
+		}
+		warnings = append(warnings, usererr.New("tmpl_no_template_yaml", dir, have.minor()))
+	}
+	more, mistakes := t.checkFiles()
+	warnings = append(warnings, more...)
+	if mistakes != nil {
+		return warnings, mistakes
+	}
+	// Each stage runs on what passed the one before: a broken file would only fail the example.
+	if err = t.checkExample(); err != nil {
+		return warnings, []error{err}
+	}
+	return warnings, nil
+}
+
+// checkFiles checks the files of t apart from any data: its schema, its checks and computed values,
+// page.html and the default theme.
+func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
+	needed := []string{"page.html", "schema.json", "example.yaml", "themes/" + DefaultTheme + ".css"}
+	for _, name := range needed {
+		_, found, err := t.readOptional(name)
+		switch {
+		case err != nil:
+			mistakes = append(mistakes, err)
+		case !found:
+			mistakes = append(mistakes, usererr.New("tmpl_file_missing", t.file(name), andList(needed)))
+		}
+	}
+	if mistakes != nil {
+		return nil, mistakes
+	}
+	src, err := t.readFile("schema.json")
+	if err != nil {
+		return nil, []error{err}
+	}
+	sch, doc, err := compileSchema(t.Name, src)
+	if err != nil {
+		return nil, []error{err}
+	}
+	s, err := decodeSchema(src)
+	if err != nil {
+		return nil, []error{fmt.Errorf("read the schema of %s: %w", t.Name, err)}
+	}
+	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil}
+	lint.walk(doc, "#", true)
+	warnings, mistakes = lint.warnings, lint.mistakes
+	mistakes = append(mistakes, t.checkChecks(sch)...)
+	computed, found, err := t.readOptional("computed.yaml")
+	if err == nil && found {
+		_, err = readComputed(t.file("computed.yaml"), computed, slices.Sorted(maps.Keys(s.Properties)))
+	}
+	if err != nil {
+		mistakes = append(mistakes, err)
+	}
+	if _, err = t.page(); err != nil {
+		mistakes = append(mistakes, err)
+	}
+	return warnings, mistakes
+}
+
+// checkChecks returns the mistakes of the checks.yaml of t, if it has one, against its schema doc as
+// read, in the order of the file.
+func (t *Template) checkChecks(s *jsonschema.Schema) []error {
+	src, found, err := t.readOptional("checks.yaml")
+	if err != nil {
+		return []error{err}
+	}
+	if !found {
+		return nil
+	}
+	list, err := readChecks(t.file("checks.yaml"), src)
+	var problems yamlpos.Problems
+	if err != nil && !errors.As(err, &problems) {
+		return []error{err}
+	}
+	for _, c := range list {
+		if e := c.declared(s); e != nil {
+			problems = append(problems, e)
+		}
+		if _, e := c.program(); e != nil {
+			problems = append(problems, e)
+		}
+	}
+	if problems == nil {
+		return nil
+	}
+	return []error{problems.Sorted()}
+}
+
+// declared checks that the compiled schema s declares the list at c.For and c.Field under its items:
+// a path misspelt would find nothing in the data to check, and fail no data. A path is refused only
+// where the schema surely refuses it, a list only where its types leave array out.
+func (c relation) declared(s *jsonschema.Schema) *yamlpos.Error {
+	list, sure := declaredAt(s, strings.Split(c.For, "."))
+	switch {
+	case list == nil && sure:
+		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
+	case list == nil:
+		return nil
+	case !takes(list, "array"):
+		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_array", c.For)
+	case c.Field == "":
+		return nil
+	}
+	items := itemsOf(list)
+	if items == nil {
+		return nil
+	}
+	if field, sure := declaredAt(items, strings.Split(c.Field, ".")); field == nil && sure {
+		return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field", c.Field, c.For)
+	}
+	return nil
+}
+
+// declaredAt follows the path of keys steps from the compiled schema s, through properties and $ref.
+// It returns the schema declared there, or nil, sure true where the path is surely not declared and
+// false where a schema may take it.
+// LIMIT: a key is not matched against patternProperties, nor followed through allOf, anyOf and the
+// like: it is taken as declared there. Follow them if a template comes to declare its lists so.
+func declaredAt(s *jsonschema.Schema, steps []string) (found *jsonschema.Schema, sure bool) {
+	for _, step := range steps {
+		if s.Bool != nil {
+			return nil, !*s.Bool // true takes any value, false none
+		}
+		if !takes(s, "object") {
+			return nil, true
+		}
+		next := propertyOf(s, step)
+		if next == nil {
+			// A schema and those its $ref leads to all apply: one that refuses the key is enough.
+			for r := s; r != nil; r = r.Ref {
+				if refuses(r) {
+					return nil, true
+				}
+			}
+			return nil, false
+		}
+		s = next
+	}
+	if s.Bool != nil {
+		return nil, !*s.Bool
+	}
+	return s, true
+}
+
+// propertyOf returns the schema s declares for the key in its properties or those of its $ref, or nil.
+func propertyOf(s *jsonschema.Schema, key string) *jsonschema.Schema {
+	for ; s != nil; s = s.Ref {
+		if p, ok := s.Properties[key]; ok {
+			return p
+		}
+	}
+	return nil
+}
+
+// refuses reports whether s surely refuses a key it does not declare: by additionalProperties: false,
+// or by unevaluatedProperties: false where nothing else may take the key.
+func refuses(s *jsonschema.Schema) bool {
+	if len(s.PatternProperties) > 0 {
+		return false
+	}
+	if closed, ok := s.AdditionalProperties.(bool); ok {
+		return !closed
+	}
+	u := s.UnevaluatedProperties
+	if u == nil || u.Bool == nil || *u.Bool {
+		return false
+	}
+	applies := s.Ref != nil || s.RecursiveRef != nil || s.DynamicRef != nil || s.If != nil ||
+		len(s.AllOf)+len(s.AnyOf)+len(s.OneOf)+len(s.DependentSchemas)+len(s.Dependencies) > 0
+	return s.AdditionalProperties == nil && !applies
+}
+
+// takes reports whether s, and the schemas its $ref leads to, may take a value of the JSON type t.
+func takes(s *jsonschema.Schema, t string) bool {
+	for ; s != nil; s = s.Ref {
+		if s.Types != nil && !s.Types.IsEmpty() && !slices.Contains(s.Types.ToStrings(), t) {
+			return false
+		}
+	}
+	return true
+}
+
+// itemsOf returns the schema of every item of the list s, or nil where none is declared, or where the
+// items are declared by their position (prefixItems), not one schema for all.
+func itemsOf(s *jsonschema.Schema) *jsonschema.Schema {
+	for ; s != nil; s = s.Ref {
+		if len(s.PrefixItems) > 0 {
+			return nil
+		}
+		if s.Items2020 != nil {
+			return s.Items2020
+		}
+		switch items := s.Items.(type) {
+		case *jsonschema.Schema:
+			return items
+		case []*jsonschema.Schema:
+			return nil
+		}
+	}
+	return nil
+}
+
+// checkExample reads the example.yaml of t as a data file of it, and draws it.
+func (t *Template) checkExample() error {
+	file := t.file("example.yaml")
+	src, err := t.readFile("example.yaml")
+	if err != nil {
+		return err
+	}
+	h, err := start(file, src, false)
+	if errors.Is(err, yamlpos.ErrEmpty) {
+		return yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", t.Name)
+	}
+	if err != nil {
+		return err
+	}
+	// A data file started from it names this template, as floe template new writes it.
+	d, problems := h.d, h.problems
+	switch {
+	case h.unnamed:
+		problems = append(problems, yamlpos.New(file, h.where["template"], "tmpl_no_template", t.Name))
+	case d.Template != "" && d.Template != t.Name:
+		problems = append(problems, yamlpos.New(file, h.where["template"], "tmpl_example_name", d.Template, t.Name))
+	}
+	// The later stages check it against t, and name t in their mistakes.
+	d.Template = t.Name
+	if err = t.check(d, h.root, "", h.where["theme"], problems); err != nil {
+		return err
+	}
+	_, err = d.Render(cmp.Or(d.Title, file), "")
+	return err
+}
+
+// schemaLint finds what jsonschema compiles but floe would not draw as the schema means.
+type schemaLint struct {
+	file     string
+	warnings []*usererr.Error
+	mistakes []error
+}
+
+// walk walks the schema v at the JSON pointer ptr. reached tells that prepare reaches it, through
+// properties and items alone, so that a format of floe's own there marks an item for drawing.
+func (l *schemaLint) walk(v any, ptr string, reached bool) {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return
+	}
+	if f, ok := m["format"].(string); ok {
+		switch {
+		case !knownFormat(f):
+			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unknown", l.file, ptr, f))
+		case slices.Contains(formats, f) && !reached:
+			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unreached", l.file, ptr, f))
+		}
+	}
+	closed := m["additionalProperties"] == false || m["unevaluatedProperties"] == false
+	if _, ok := m["properties"]; ok && reached && !closed {
+		l.warnings = append(l.warnings, usererr.New("tmpl_schema_open", l.file, ptr))
+	}
+	for _, kw := range slices.Sorted(maps.Keys(m)) {
+		l.keyword(kw, m[kw], ptr+"/"+pointerKey.Replace(kw), reached)
+	}
+}
+
+// keyword walks the schemas the keyword kw of a schema holds in v, at ptr.
+func (l *schemaLint) keyword(kw string, v any, ptr string, reached bool) {
+	switch sub := v.(type) {
+	case map[string]any:
+		switch kw {
+		case "properties":
+			l.each(sub, ptr, reached)
+		case "items":
+			l.walk(sub, ptr, reached)
+		case "$defs", "definitions", "patternProperties", "dependentSchemas":
+			l.each(sub, ptr, false)
+		case "additionalProperties", "unevaluatedProperties", "propertyNames", "additionalItems",
+			"unevaluatedItems", "contains", "not", "if", "then", "else", "contentSchema":
+			l.walk(sub, ptr, false)
+		}
+	case []any:
+		switch kw {
+		case "allOf", "anyOf", "oneOf", "prefixItems", "items":
+			for i, s := range sub {
+				l.walk(s, ptr+"/"+strconv.Itoa(i), false)
+			}
+		}
+	}
+}
+
+// each walks the schemas of a keyword that maps names to them, at ptr.
+func (l *schemaLint) each(m map[string]any, ptr string, reached bool) {
+	for _, k := range slices.Sorted(maps.Keys(m)) {
+		l.walk(m[k], ptr+"/"+pointerKey.Replace(k), reached)
+	}
+}
+
+// pointerKey escapes a key as a step of a JSON pointer.
+var pointerKey = strings.NewReplacer("~", "~0", "/", "~1")

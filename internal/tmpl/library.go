@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -175,6 +176,12 @@ func validName(name string) bool {
 
 var templateName = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
+// file names the file name of t in its mistakes: under where t was found, or under its name for a
+// built-in one.
+func (t *Template) file(name string) string {
+	return filepath.Join(cmp.Or(t.Path, t.Name), name)
+}
+
 // readFile reads the file name, a slash-separated path under the template. Under a template of one's
 // own, a symlink that leads out of it is refused.
 func (t *Template) readFile(name string) ([]byte, error) {
@@ -279,7 +286,7 @@ func (t *Template) needs() (*semver, error) {
 	if !found || err != nil {
 		return nil, err
 	}
-	needs, err := needsFloe(filepath.Join(t.Path, "template.yaml"), src)
+	needs, err := needsFloe(t.file("template.yaml"), src)
 	if err != nil {
 		return nil, err
 	}
@@ -306,20 +313,24 @@ func needsFloe(file string, src []byte) (semver, error) {
 	if err != nil {
 		return semver{}, err //nolint:wrapcheck // a mistake at its line and column
 	}
+	if err = plain(file, body); err != nil {
+		return semver{}, err
+	}
 	m, ok := body.(*ast.MappingNode)
 	if !ok {
 		return semver{}, yamlpos.New(file, yamlpos.Of(body), "tmpl_template_yaml")
 	}
 	var needs *semver
 	for _, kv := range m.Values {
-		key := kv.Key.GetToken().Value
+		k := yamlpos.KeyOf(kv)
+		key := k.GetToken().Value
 		if key != "floe" {
-			return semver{}, yamlpos.New(file, yamlpos.Of(kv.Key), "tmpl_template_yaml_key", key)
+			return semver{}, yamlpos.New(file, yamlpos.Of(k), "tmpl_template_yaml_key", key)
 		}
 		_, scalar := kv.Value.(ast.ScalarNode)
 		v, ok := versionOf(kv.Value.GetToken().Value)
 		if !scalar || !ok {
-			return semver{}, yamlpos.New(file, yamlpos.OfValue(kv.Key, kv.Value), "tmpl_template_yaml")
+			return semver{}, yamlpos.New(file, yamlpos.OfValue(k, kv.Value), "tmpl_template_yaml")
 		}
 		needs = &v
 	}
@@ -341,6 +352,11 @@ type semver [3]int
 
 func (v semver) String() string {
 	return fmt.Sprintf("%d.%d.%d", v[0], v[1], v[2])
+}
+
+// minor writes v as major.minor, as template.yaml names the floe a template needs.
+func (v semver) minor() string {
+	return fmt.Sprintf("%d.%d", v[0], v[1])
 }
 
 // series is the versions that take what v takes: its major, or its minor under major 0.
