@@ -14,6 +14,7 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 func (a *app) diagramCmd() *cobra.Command {
@@ -53,7 +54,7 @@ is enough; more does no harm). --no-assets leaves them out.`,
 }
 
 func (a *app) render(files []string, assets bool) error {
-	var problems diagram.Problems
+	var problems yamlpos.Problems
 	specs := make([]*diagram.Spec, 0, len(files))
 	for _, file := range files {
 		abs := file
@@ -65,7 +66,7 @@ func (a *app) render(files []string, assets bool) error {
 			return usererr.CannotRead(file, err)
 		}
 		s, err := diagram.Parse(file, src)
-		var mistake *diagram.Error
+		var mistake *yamlpos.Error
 		if errors.As(err, &mistake) {
 			problems = append(problems, mistake)
 			continue
@@ -76,7 +77,7 @@ func (a *app) render(files []string, assets bool) error {
 		specs = append(specs, s)
 	}
 	out, err := diagram.Render(specs, icons.New(a.cfg.icons))
-	var more diagram.Problems
+	var more yamlpos.Problems
 	if errors.As(err, &more) {
 		problems = append(problems, more...)
 	} else if err != nil {
@@ -90,7 +91,7 @@ func (a *app) render(files []string, assets bool) error {
 				order[f] = i
 			}
 		}
-		slices.SortStableFunc(problems, func(x, y *diagram.Error) int { return cmp.Compare(order[x.File], order[y.File]) })
+		slices.SortStableFunc(problems, func(x, y *yamlpos.Error) int { return cmp.Compare(order[x.File], order[y.File]) })
 		return problems
 	}
 	if assets {

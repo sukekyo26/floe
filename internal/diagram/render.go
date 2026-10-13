@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/icons"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // maxScale stops a diagram growing on a wide screen once its bold text is as large as the template's
@@ -54,13 +54,12 @@ var markerKinds = func() []string {
 // of store. The ids of the diagrams name their markers and icons, so they must differ between the
 // specs drawn together. On a mistake it draws nothing and returns the Problems of every spec.
 func Render(specs []*Spec, store *icons.Store) (string, error) {
-	var problems Problems
+	var problems yamlpos.Problems
 	layouts := make([]*layout, len(specs))
 	first := map[string]*Spec{}
 	for i, s := range specs {
 		if f, ok := first[s.ID]; ok {
-			err := usererr.New("diagram_id_used", s.ID, f.File, f.Line)
-			problems = append(problems, &Error{File: s.File, Pos: s.Pos, Err: err})
+			problems = append(problems, yamlpos.New(s.File, s.Pos, "diagram_id_used", s.ID, f.File, f.Line))
 		} else {
 			first[s.ID] = s
 		}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -51,7 +52,7 @@ parts:
 	if err != nil {
 		t.Fatal(err)
 	}
-	at := func(line, col int) diagram.Pos { return diagram.Pos{Line: line, Column: col} }
+	at := func(line, col int) yamlpos.Pos { return yamlpos.Pos{Line: line, Column: col} }
 	want := &diagram.Spec{
 		Pos: at(1, 1), File: "all.yaml", ID: "all-parts", Width: 640, Height: 400.5, Title: "部品の一覧",
 		Parts: []diagram.Part{
@@ -110,7 +111,7 @@ func TestParseErrors(t *testing.T) {
 		{"YAML syntax", "id: a\nid: b\n", `s.yaml:2:1: this is not valid YAML: mapping key "id" already defined at [1:1]`},
 		{"empty", "", "s.yaml:1:1: the spec is empty; write a diagram with id, width, height, title and parts"},
 		{"two documents", head + "---\nid: e\n", "s.yaml:6:1: a spec holds one diagram; put each --- separated document in a file of its own"},
-		{"anchor", head + "  - dot: { cx: &x 1, cy: *x }\n", "s.yaml:6:16: anchors, aliases and tags are not supported; write the value out"},
+		{"anchor", head + "  - dot: { cx: &x 1, cy: *x }\n", "s.yaml:6:16: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"},
 		{"not a mapping", "- a\n", "s.yaml:1:1: diagram: write a mapping of keys and values"},
 		{"unknown top key", head + "  []\nwidht: 3\n", `s.yaml:7:1: diagram: unknown key "widht"; use id, width, height, title, parts`},
 		{"missing key", "id: d\nheight: 1\ntitle: T\nparts: []\n", "s.yaml:1:1: diagram: give width"},

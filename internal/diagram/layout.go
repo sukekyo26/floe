@@ -10,6 +10,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // Text sizes and box metrics of diagram.mjs.
@@ -28,7 +29,7 @@ const (
 type rect struct {
 	x, y, w, h float64
 	what       *usererr.Error
-	at         Pos
+	at         yamlpos.Pos
 }
 
 func (a rect) overlaps(b rect) bool {
@@ -57,7 +58,7 @@ type layout struct {
 	labels   []rect
 	heads    []rect // frame headings, which edges may not cross
 	paths    []path
-	problems Problems
+	problems yamlpos.Problems
 	seen     map[string]bool
 	// The SVG of the layers, drawn bottom to top.
 	areaSVG, edgeSVG, boxSVG, labelSVG []markup
@@ -86,8 +87,8 @@ func newLayout(s *Spec, store *icons.Store) (*layout, error) {
 	return l, nil
 }
 
-func (l *layout) problem(at Pos, key string, args ...any) {
-	e := &Error{File: l.spec.File, Pos: at, Err: usererr.New(key, args...)}
+func (l *layout) problem(at yamlpos.Pos, key string, args ...any) {
+	e := yamlpos.New(l.spec.File, at, key, args...)
 	if key := e.Error(); !l.seen[key] {
 		l.seen[key] = true
 		l.problems = append(l.problems, e)
@@ -187,7 +188,7 @@ func (l *layout) addIcon(i Icon) {
 // image places the icon of name (aws/…), two with a variant for dark backgrounds. An icon is an
 // <image>, not inline <svg>: the official icons' ids collide between icons. An icon not there is a mistake
 // of the spec, and icons not fetched stop the drawing.
-func (l *layout) image(at Pos, name string, x, y, size float64, what *usererr.Error) markup {
+func (l *layout) image(at yamlpos.Pos, name string, x, y, size float64, what *usererr.Error) markup {
 	icon, names, err := l.icons.Lookup(name)
 	if errors.Is(err, icons.ErrNoSet) {
 		l.problem(at, "diagram_icon_set", what, name, strings.Join(icons.Sets(), ", "))
@@ -232,7 +233,7 @@ func (l *layout) iconDef(name, href string, size float64) string {
 
 // label places text at x, y as diagram.mjs does: 18px tall, with 5px around it. It returns the
 // label's index in labels.
-func (l *layout) label(at Pos, text string, x, y float64, anchor string, plain, strong bool) int {
+func (l *layout) label(at yamlpos.Pos, text string, x, y float64, anchor string, plain, strong bool) int {
 	size, cls := float64(sizeSub), "label"
 	if strong {
 		size, cls = sizeMain, "label strong"
@@ -336,7 +337,7 @@ func (l *layout) addTable(t Table) {
 		"table"+tone(t.Tone), x, y, w, h, r, head, sep, x+w/2, y+tableHead/2, t.Title, markup(body.String()), x, y, w, h, r))
 }
 
-func (l *layout) fit(at Pos, what *usererr.Error, text string, size float64, code bool, room float64) {
+func (l *layout) fit(at yamlpos.Pos, what *usererr.Error, text string, size float64, code bool, room float64) {
 	if tw := textWidth(text, size, code); tw > room {
 		l.problem(at, "diagram_too_narrow", what, text, int(math.Ceil(tw-room)))
 	}
