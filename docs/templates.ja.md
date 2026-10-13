@@ -26,7 +26,7 @@ my-report/
     └── print.css    # ほかのテーマ（任意）
 ```
 
-作り始めるときは、`floe template new my-report --from report` で別のテンプレートを写します。`floe template show <name>` で、テンプレートのデータファイルに書けるものを出せます。
+作り始めるときは、`floe template new my-report --from report` で別のテンプレートを写します。`floe template show <name>` で、テンプレートのデータファイルに書けるものを出せます。`floe template check <dir>` は、使う前や配る前にテンプレートを検査します。ファイルを検査してから、`example.yaml` を公開のすべての段に通します（[commands.ja.md](commands.ja.md#floe-template-check-dir)）。
 
 ## template.yaml
 
@@ -34,7 +34,7 @@ my-report/
 floe: 1.2
 ```
 
-このテンプレートには、floe 1.2.0 以降で、メジャーが 1 のものが要ります。メジャーが 0 のあいだはマイナーの版でテンプレートの書き方が変わりうるので、`floe: 0.2` は 0.2.0 以降の 0.2 の floe を要ります。合わない floe では、データを検査する前に公開が止まり、テンプレートが要る floe の版を示します。`template.yaml` の無いテンプレートは、どの floe でも描けます。
+このテンプレートには、floe 1.2.0 以降で、メジャーが 1 のものが要ります。メジャーが 0 のあいだはマイナーの版でテンプレートの書き方が変わりうるので、`floe: 0.2` は 0.2.0 以降の 0.2 の floe を要ります。合わない floe では、データを検査する前に公開が止まり、テンプレートが要る floe の版を示します。`template.yaml` の無いテンプレートは、どの floe でも描けます。`floe template check` はこれを警告します。
 
 ## page.html
 
@@ -55,6 +55,8 @@ floe: 1.2
 
 データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。キーの打ち間違いを断るため、`"additionalProperties": false` を書きます。`template`・`theme`・`title` は floe が読むので、宣言しません。
 
+`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）か `html` を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。`html` は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目はエスケープされます。
+
 ## checks.yaml
 
 スキーマでは書けない、項目どうしの関係です。リストの要素 1 つずつに検査を当てます。
@@ -72,6 +74,8 @@ floe: 1.2
 orders.yaml:13:12: access_patterns[0].key: キーには属性一覧にある属性を使う（「user_id」）
 ```
 
+`for`・`field` のパスは、`schema.json` の `properties` と `items` で宣言されている必要があります。打ち間違えたパスはデータの中に検査するものが見つからず、何も検査しません。`floe template check` がこれを確かめます。`checks.yaml` そのものの誤りは、`checks.yaml` の行と列で出します。
+
 ## computed.yaml
 
 データから計算する値です。`page.html` は `.Calc.<名前>` で表示します。
@@ -81,7 +85,7 @@ item_bytes: sum(attributes, .avg_bytes)
 storage_gb: item_bytes * records.in_1_year / 1e9
 ```
 
-式からは、スキーマで宣言したデータファイルの項目と、ほかの計算の値が、名前でそのまま見えます。書く順番は自由です。名前は文字で始まり、文字・数字・`_` が続くもので、データの項目とも、expr の語や関数とも重ねられません。データから計算できない値（0 で割った、式に要る項目が無い）は誤りとして出します。値が NaN や ±Inf になるときも同じです。
+式からは、スキーマで宣言したデータファイルの項目と、ほかの計算の値が、名前でそのまま見えます。書く順番は自由です。名前は文字で始まり、文字・数字・`_` が続くもので、データの項目とも、expr の語や関数とも重ねられません。データから計算できない値（0 で割った、式に要る項目が無い）は誤りとして出します。値が NaN や ±Inf になるときも同じです。`computed.yaml` そのものの誤りは、`computed.yaml` の行と列で出します。
 
 ## 検査の順番
 

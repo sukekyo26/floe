@@ -26,7 +26,7 @@ my-report/
     └── print.css    # more themes (optional)
 ```
 
-To start one, copy another with `floe template new my-report --from report`. `floe template show <name>` prints what a data file of a template may hold.
+To start one, copy another with `floe template new my-report --from report`. `floe template show <name>` prints what a data file of a template may hold, and `floe template check <dir>` checks a template before you use or share it: its files, then its `example.yaml` through every stage of a publish ([commands.md](commands.md#floe-template-check-dir)).
 
 ## template.yaml
 
@@ -34,7 +34,7 @@ To start one, copy another with `floe template new my-report --from report`. `fl
 floe: 1.2
 ```
 
-The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor version may change what templates can do, so `floe: 0.2` takes floe 0.2.0 or later of 0.2. With another floe, a publish stops before the data is checked, naming the floe the template needs. A template without `template.yaml` is drawn by any floe.
+The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor version may change what templates can do, so `floe: 0.2` takes floe 0.2.0 or later of 0.2. With another floe, a publish stops before the data is checked, naming the floe the template needs. A template without `template.yaml` is drawn by any floe, and `floe template check` warns of it.
 
 ## page.html
 
@@ -55,6 +55,8 @@ The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor versi
 
 A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused. `template`, `theme` and `title` are read by floe and are not declared.
 
+A `format` is one of JSON Schema's that floe checks (`date`, `email`, `uri`…) or `html`; `floe template check` refuses another, which this floe would let any value pass. `html` goes under `properties` and `items` alone, where floe looks for it: under `anyOf`, `$defs` and the like, the item would be escaped.
+
 ## checks.yaml
 
 Relations between items that a schema cannot say, each checked on every item of a list:
@@ -72,6 +74,8 @@ Relations between items that a schema cannot say, each checked on every item of 
 orders.yaml:13:12: access_patterns[0].key: use an attribute as the key ("user_id")
 ```
 
+The paths of `for` and `field` must be declared in `schema.json`, through `properties` and `items`: a misspelt one would find nothing in the data to check. `floe template check` makes sure they are. A mistake in `checks.yaml` itself is reported at its line and column there.
+
 ## computed.yaml
 
 Values computed from the data, for `page.html` to show as `.Calc.<name>`:
@@ -81,7 +85,7 @@ item_bytes: sum(attributes, .avg_bytes)
 storage_gb: item_bytes * records.in_1_year / 1e9
 ```
 
-An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in. A name is a letter followed by letters, digits and `_`, and is neither one of the data's items nor a word or function of expr. A value the data cannot give (a division by zero, an item left out that the expression needs) is reported, and a value that would be NaN or ±Inf is too.
+An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in. A name is a letter followed by letters, digits and `_`, and is neither one of the data's items nor a word or function of expr. A value the data cannot give (a division by zero, an item left out that the expression needs) is reported, and a value that would be NaN or ±Inf is too. A mistake in `computed.yaml` itself is reported at its line and column there.
 
 ## The order of the checks
 

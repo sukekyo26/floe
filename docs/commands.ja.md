@@ -11,6 +11,7 @@
 | `floe template list` | テンプレートを一覧する |
 | `floe template show <name>` | テンプレートのデータファイルに書ける項目と見本を出す |
 | `floe template new <name> --from <template>` | 別のテンプレートを写して、自分のテンプレートを作る |
+| `floe template check <dir>...` | テンプレートを、使う前や配る前に検査する |
 | `floe list` | ページを新しい順に出す |
 | `floe rm <slug>...` | ページを消す |
 | `floe serve` | サーバーを前面で動かす |
@@ -113,6 +114,17 @@ sections:
 - `example.yaml` の `template:` は `<name>` にします。
 - 名前は英小文字・数字・`-`・`_` です。組み込みと同じ名前にすると、組み込みの代わりに使われます。
 - 同じ名前の自分のテンプレートが既にあれば、そのままにして止めます（終了コード 1）。
+
+## `floe template check <dir>...`
+
+各ディレクトリを、そのディレクトリ名のテンプレートとして検査します。使う前や配る前に通します。相対パスは作業ディレクトリを基準に解決します。
+
+- まずファイルを検査します。`template.yaml`、`schema.json`（floe が知らない `format` は誤り）、`checks.yaml`（`for`・`field` のパスが `schema.json` で宣言されていること）、`computed.yaml`、`page.html`、`themes/default.css` です。
+- 次に `example.yaml` を、ページの描画まで `floe publish` のすべての段に通します。`example.yaml` はディレクトリ名のテンプレートを指定します。描くのは常にそのディレクトリのテンプレートで、同じ名前の別のテンプレートではありません。
+- 誤りはすべてまとめて、位置のあるものは `ファイル:行:列: メッセージ` の形で出します（終了コード 1）。どのテンプレートも正しければ何も出しません（終了コード 0）。
+- 警告は stderr に出し、終了コードは 0 のままです。`template.yaml` が無いとき、`schema.json` のオブジェクトが打ち間違えたキーを断らない（`"additionalProperties": false` が無い）ときに出します。
+
+各ファイルに書くものは [templates.ja.md](templates.ja.md) にあります。
 
 ---
 
