@@ -32,7 +32,7 @@ var messagesJA = map[string]string{
 	// server
 	"api_not_json":      "送られた内容を読めませんでした（JSON ではありません）",
 	"api_not_object":    "送られた内容を読めませんでした（JSON のオブジェクトで送ってください）",
-	"api_link_path":     "HTML ファイルの絶対パス（/ で始まるパス）を入力してください",
+	"api_link_path":     "HTML かデータファイルの絶対パス（/ で始まるパス）を入力してください",
 	"api_edit_strings":  "タイトル・説明・プロジェクト・URL 名は文字列で送ってください",
 	"api_favorite_bool": "お気に入りは true か false で送ってください",
 
@@ -70,7 +70,7 @@ var messagesJA = map[string]string{
 	"ui_empty_pages":          "まだページがありません",
 	"ui_empty_pages_hint":     "エージェントに「ページにして」と頼むか、次のコマンドで追加できます。",
 	"ui_empty_links":          "まだリンクがありません",
-	"ui_empty_links_hint":     "「リンクを追加」から HTML ファイルの絶対パスを登録すると、コピーせずその場所のまま表示できます。次のコマンドでも追加できます。",
+	"ui_empty_links_hint":     "「リンクを追加」から HTML かデータファイルの絶対パスを登録すると、コピーせずその場所のまま表示できます。次のコマンドでも追加できます。",
 	"ui_nomatch":              "条件に合うページがありません",
 	"ui_clear_filters":        "絞り込みを解除",
 	"ui_pager":                "ページ送り",
@@ -90,8 +90,8 @@ var messagesJA = map[string]string{
 	"ui_not_found":            "ページが見つかりません",
 	"ui_not_found_detail":     "削除されたか、URL が間違っています。",
 	"ui_link_missing":         "%s が見つかりません。移動していれば、新しい場所で登録し直してください。",
-	"ui_add_lead":             "HTML ファイルをコピーせず、その場所のまま表示します。",
-	"ui_add_path":             "HTML ファイルの絶対パス",
+	"ui_add_lead":             "HTML ファイルはその場所のまま表示し、データファイルは開くたびにページを描きます。どちらもコピーしません。",
+	"ui_add_path":             "HTML かデータファイルの絶対パス",
 	"ui_slug":                 "URL 名",
 	"ui_slug_named":           "URL 名: %s",
 	"ui_slug_rule":            "英小文字・数字・ハイフン",

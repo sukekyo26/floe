@@ -93,9 +93,10 @@ func waitWhile(ctx context.Context, base string, p Status, cond func(Status) boo
 
 // Server is the server a publish needs.
 type Server struct {
-	Port  int
-	Root  string
-	Build string
+	Port      int
+	Root      string
+	Build     string
+	Templates string // the directory of templates of one's own it draws linked data files with
 	// Env is the environment of the started server (it reads its settings from there).
 	Env []string
 }
@@ -104,11 +105,12 @@ func (s Server) base() string {
 	return "http://127.0.0.1:" + strconv.Itoa(s.Port)
 }
 
-// Ensure makes sure a server of this build serves the root on the port, starting one or replacing an
-// outdated one as needed.
+// Ensure makes sure a server of this build serves the root on the port with these templates, starting
+// one or replacing an outdated one as needed.
 func Ensure(ctx context.Context, s Server) error {
 	p := Probe(ctx, s.base())
-	if p.State == Ours && p.Health.Root == s.Root && p.Health.Build != s.Build {
+	stale := p.Health.Build != s.Build || p.Health.Templates != s.Templates
+	if p.State == Ours && p.Health.Root == s.Root && stale {
 		old := p.Health.PID
 		if err := Terminate(old); err != nil {
 			return err

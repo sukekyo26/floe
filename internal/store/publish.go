@@ -95,6 +95,12 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	if err != nil {
 		return nil, err
 	}
+	// A link is of the kind of its real file, whatever the name of a symlink to it says.
+	if path != "" {
+		if err = checkKind(path, opts); err != nil {
+			return nil, err
+		}
+	}
 	theme := ""
 	if opts.Theme != nil {
 		theme = *opts.Theme
@@ -139,10 +145,11 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 // readData reads and checks the data file file, of content src, if it is one: nil otherwise. A linked
 // one, of the real path path, is checked as a stored page is, its images under its real directory.
 func (s *Store) readData(file, path, src, theme, cwd string) (*tmpl.Data, error) {
-	if !IsDataFile(file) {
+	// A link is of the kind of its real file, whatever the name of a symlink to it says.
+	name := cmp.Or(path, file)
+	if !IsDataFile(name) {
 		return nil, nil //nolint:nilnil // a page, which is linked as it is
 	}
-	name := cmp.Or(path, file)
 	data, err := s.templates.Read(name, []byte(src), theme, cwd)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
@@ -160,8 +167,8 @@ func (e *Entry) draw(data *tmpl.Data, theme string) error {
 		return err //nolint:wrapcheck // a usererr for the caller to show
 	}
 	e.Meta.Theme = theme
-	_, err = data.Render(cmp.Or(e.Meta.Title, data.Title, e.Slug), e.Meta.Lang)
-	return err //nolint:wrapcheck // a usererr for the caller to show
+	_, err = drawLinked(data, &e.Meta, e.Slug)
+	return err
 }
 
 // read returns the real path of a link ("" for a stored page) and the file's content. A link is

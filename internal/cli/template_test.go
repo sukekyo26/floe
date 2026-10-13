@@ -218,20 +218,37 @@ func TestDataImages(t *testing.T) {
 }
 
 // A linked data file is drawn by the server floe publish starts, with the templates of one's own the
-// publish was given.
+// publish was given: a publish with others replaces a server that draws with the ones before.
 func TestLinkDataFileOfOwnTemplate(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
-	if err := os.CopyFS(filepath.Join(e.tmp, "templates", "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
-		t.Fatal(err)
+	for _, dir := range []string{"templates", "others"} {
+		if err := os.CopyFS(filepath.Join(e.tmp, dir, "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
+			t.Fatal(err)
+		}
 	}
-	data := e.write(t, "work/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\n")
-	if r := e.run(t, "work", "publish", "sizes.yaml", "--link"); r.code != 0 {
-		t.Fatalf("publish --link = %+v", r)
+	e.write(t, "others/sizes/page.html", "<p>{{.Calc.total}} of the others</p>")
+	e.write(t, "work/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\n")
+	for dir, want := range map[string]string{"templates": "<td>1.5 KiB</td>", "others": "<p>1536 of the others</p>"} {
+		e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, dir)
+		if r := e.run(t, "work", "publish", "sizes.yaml", "--link"); r.code != 0 {
+			t.Fatalf("publish --link with %s = %+v", dir, r)
+		}
+		if h, _ := e.health(t); h.Templates != e.vars["FLOE_TEMPLATES_DIR"] {
+			t.Errorf("the server draws with %s, want %s", h.Templates, e.vars["FLOE_TEMPLATES_DIR"])
+		}
+		if page := e.fetch(t, "/a/sizes/?raw"); !strings.Contains(page, want) {
+			t.Errorf("the linked page with %s:\n%s", dir, page)
+		}
 	}
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.base()+"/a/sizes/?raw", http.NoBody)
+}
+
+// fetch returns the body the server answers path with.
+func (e *env) fetch(t *testing.T, path string) string {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.base()+path, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +258,8 @@ func TestLinkDataFileOfOwnTemplate(t *testing.T) {
 	}
 	defer res.Body.Close()
 	b, err := io.ReadAll(res.Body)
-	if err != nil || !strings.Contains(string(b), "<td>1.5 KiB</td>") {
-		t.Errorf("the linked page of %s = %v:\n%s", data, err, b)
+	if err != nil {
+		t.Fatal(err)
 	}
+	return string(b)
 }

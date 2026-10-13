@@ -133,8 +133,12 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 	var body io.Reader
 	if m.IsDrawn() {
 		page, _, err := s.cfg.Store.Draw(slug, m, file)
-		if err != nil {
-			send(w, http.StatusConflict, "the data file has mistakes; open the page to see them")
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			notFound(w)
+			return
+		case err != nil:
+			send(w, http.StatusConflict, "the page cannot be drawn; open it to see why")
 			return
 		}
 		body = bytes.NewReader(page)

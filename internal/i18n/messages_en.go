@@ -33,7 +33,7 @@ var messagesEN = map[string]string{
 	// server: refusals of the management page's API
 	"api_not_json":      "cannot read the request: it is not JSON",
 	"api_not_object":    "cannot read the request: send a JSON object",
-	"api_link_path":     "enter the absolute path of an HTML file (one starting with /)",
+	"api_link_path":     "enter the absolute path of an HTML or data file (one starting with /)",
 	"api_edit_strings":  "send the title, description, project and slug as strings",
 	"api_favorite_bool": "send favorite as true or false",
 
@@ -71,7 +71,7 @@ var messagesEN = map[string]string{
 	"ui_empty_pages":          "No pages yet",
 	"ui_empty_pages_hint":     "Ask an agent to make it a page, or add one with:",
 	"ui_empty_links":          "No links yet",
-	"ui_empty_links_hint":     "Register an HTML file by its absolute path with “Add a link” to show it where it is, without copying it. You can also add one with:",
+	"ui_empty_links_hint":     "Register an HTML or data file by its absolute path with “Add a link” to show it where it is, without copying it. You can also add one with:",
 	"ui_nomatch":              "No pages match",
 	"ui_clear_filters":        "Clear the filters",
 	"ui_pager":                "Pagination",
@@ -91,8 +91,8 @@ var messagesEN = map[string]string{
 	"ui_not_found":            "Page not found",
 	"ui_not_found_detail":     "It has been deleted, or the URL is wrong.",
 	"ui_link_missing":         "%s is not found. If it has moved, register it again at its new place.",
-	"ui_add_lead":             "Shows an HTML file where it is, without copying it.",
-	"ui_add_path":             "Absolute path of the HTML file",
+	"ui_add_lead":             "Shows an HTML file where it is, or draws a page from a data file each time it is opened, without copying either.",
+	"ui_add_path":             "Absolute path of the HTML or data file",
 	"ui_slug":                 "Slug",
 	"ui_slug_named":           "Slug: %s",
 	"ui_slug_rule":            "Lowercase letters, digits and hyphens",

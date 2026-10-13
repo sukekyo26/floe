@@ -64,9 +64,11 @@ published from another project is refused unless --force. A page is in English u
 its data names (theme:, else default) unless --theme names another. A new slug is also
 opened in the browser ($BROWSER, open, wslview, xdg-open).
 
---link registers an HTML file in place and shows it as it is: it is read on every request,
-and the files under its directory are served for its relative references. The same slug
-for another file is refused unless --force.`,
+--link registers a file in place instead of storing a page. An HTML file is shown as it is:
+it is read on every request, and the files under its directory are served for its relative
+references. A data file is drawn each time its page is opened, and saving it, an image it
+shows or a file of its template reloads the open tab. The same slug for another file is
+refused unless --force.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()
@@ -100,7 +102,7 @@ for another file is refused unless --force.`,
 		},
 	}
 	f := cmd.Flags()
-	f.BoolVar(&opts.Link, "link", false, "register an HTML file in place and show it as it is")
+	f.BoolVar(&opts.Link, "link", false, "register the file in place: HTML shown as it is, a data file drawn when opened")
 	f.StringVar(&slug, "slug", "", "the URL name (default: from the file name)")
 	f.StringVar(&title, "title", "", "the title (default: the data file's title:, or a link's <title> or <h1>)")
 	f.StringVar(&description, "description", "", "a description shown in the list")
@@ -122,7 +124,9 @@ func (a *app) publish(ctx context.Context, file string, opts store.Options) erro
 	if err != nil {
 		return err //nolint:wrapcheck // already says what failed
 	}
-	err = daemon.Ensure(ctx, daemon.Server{Port: a.cfg.port, Root: a.cfg.root, Build: build, Env: a.serverEnv()})
+	err = daemon.Ensure(ctx, daemon.Server{
+		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.cfg.templates, Env: a.serverEnv(),
+	})
 	if err != nil {
 		return err //nolint:wrapcheck // the message is for the user as is
 	}
@@ -237,7 +241,7 @@ func (a *app) serve(ctx context.Context) error {
 		return fmt.Errorf("listen: %w", err)
 	}
 	a.say("cli_serving", a.cfg.root, a.cfg.base())
-	srv := server.New(server.Config{Store: a.store(), Port: a.cfg.port, Build: build})
+	srv := server.New(server.Config{Store: a.store(), Port: a.cfg.port, Build: build, Templates: a.cfg.templates})
 	return srv.Serve(ctx, ln) //nolint:wrapcheck // already says what failed
 }
 

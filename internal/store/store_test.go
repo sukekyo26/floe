@@ -719,3 +719,34 @@ func TestLinkDataFile(t *testing.T) {
 		t.Error("an HTML file was linked with a language")
 	}
 }
+
+// A linked data file that cannot be read is served at the version that watching it sees, so that its
+// tab does not reload over and over; and one linked through a symlink is of the kind of its real file.
+func TestLinkDataFileEdges(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	data := e.write(t, "proj/spec.yaml", "template: report\n")
+	m := e.mustPublish(t, data, store.Options{Link: true}, "proj").Meta
+	if err := os.Chmod(data, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chmod(data, 0o600); err != nil {
+			t.Error(err)
+		}
+	})
+	_, version, err := e.s.Draw("spec", &m, data)
+	if !errors.Is(err, store.ErrNotFound) || version != e.s.Version(&m, data) {
+		t.Errorf("Draw of a file that cannot be read = %v at %q, watched at %q", err, version, e.s.Version(&m, data))
+	}
+
+	bad := e.write(t, "proj/bad.yaml", "template: nosuch\n")
+	if err = os.Symlink(bad, filepath.Join(e.tmp, "proj", "view.html")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = e.publish(t, filepath.Join(e.tmp, "proj", "view.html"), store.Options{Link: true}, "proj"); err == nil ||
+		!strings.Contains(err.Error(), `unknown template "nosuch"`) {
+		t.Errorf("linking a data file with mistakes through a symlink named .html = %v", err)
+	}
+}

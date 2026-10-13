@@ -62,6 +62,13 @@ func TestDrawnLink(t *testing.T) {
 		since = url.QueryEscape(e.store.Version(e.store.ReadMeta("sizes"), data))
 	}
 
+	// A file of the template whose name starts with a dot (.git) is no file of it.
+	before := e.store.Version(e.store.ReadMeta("sizes"), data)
+	e.write(t, "templates/sizes/.git/HEAD", "ref")
+	if after := e.store.Version(e.store.ReadMeta("sizes"), data); after != before {
+		t.Errorf("a file under .git of the template changed the version: %s, then %s", before, after)
+	}
+
 	// A mistake shows the mistakes, in the reader's language, and is still listed as there.
 	e.write(t, "work/spec/sizes.yaml", strings.Replace(right, "bytes: 1536", "bytes: lots", 1))
 	r = e.get(t, "/a/sizes/?raw", "Accept-Language", "ja")
@@ -74,6 +81,18 @@ func TestDrawnLink(t *testing.T) {
 	}
 	if d := e.get(t, "/api/artifacts/sizes/download"); d.status != http.StatusConflict {
 		t.Errorf("the download of a data file with mistakes = %d", d.status)
+	}
+	// One that cannot be read is not there to download.
+	if err = os.Chmod(data, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chmod(data, 0o600); err != nil {
+			t.Error(err)
+		}
+	})
+	if d := e.get(t, "/api/artifacts/sizes/download"); d.status != http.StatusNotFound {
+		t.Errorf("the download of a data file that cannot be read = %d", d.status)
 	}
 }
 

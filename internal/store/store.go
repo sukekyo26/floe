@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -80,6 +81,7 @@ type Store struct {
 	// server ever sees tens of thousands of paths in its lifetime.
 	titles map[string]cachedTitle
 	// sources are what the last drawing of each linked data file read besides it, by its path.
+	// LIMIT: kept for unlinked paths too, as titles are. Drop them on removal if that comes to matter.
 	sources map[string]tmpl.Sources
 }
 
@@ -173,21 +175,30 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	if known {
 		version = s.Version(m, file)
 	}
+	var sources tmpl.Sources
 	src, err := os.ReadFile(file) //nolint:gosec // G304: file passed File
 	if err != nil {
-		return nil, version, usererr.CannotRead(file, err)
+		err = fmt.Errorf("%w: %w", ErrNotFound, usererr.CannotRead(file, err))
+	} else {
+		var d *tmpl.Data
+		if d, sources, err = s.templates.ReadSources(file, src, m.Theme, ""); err == nil {
+			page, err = drawLinked(d, m, slug)
+		}
 	}
-	d, sources, err := s.templates.ReadSources(file, src, m.Theme, "")
+	// Noted even for a file that cannot be read: the version watched is the one the page was served at.
 	s.mu.Lock()
 	s.sources[file] = sources
 	s.mu.Unlock()
 	if !known {
 		version = s.Version(m, file)
 	}
-	if err == nil {
-		page, err = d.Render(cmp.Or(m.Title, d.Title, slug), m.Lang)
-	}
-	return page, version, err //nolint:wrapcheck // mistakes and usererrs for the caller to show
+	return page, version, err
+}
+
+// drawLinked draws d, the data file a link of slug registers, under the title pinned for it, else its
+// title:, else slug.
+func drawLinked(d *tmpl.Data, m *Meta, slug string) ([]byte, error) {
+	return d.Render(cmp.Or(m.Title, d.Title, slug), m.Lang) //nolint:wrapcheck // a usererr for the caller to show
 }
 
 // Version is what live reload compares: a stored page's publish time, a linked file's mtime, and for a
@@ -234,9 +245,15 @@ func stamp(sources tmpl.Sources) string {
 		add(sources.Templates)
 	}
 	if sources.Template != "" {
+		// A name starting with a dot (.git) is no file of the template.
 		//nolint:errcheck // a file that cannot be walked to is left out of the sum
 		_ = filepath.WalkDir(sources.Template, func(p string, e fs.DirEntry, err error) error {
-			if err == nil && !e.IsDir() {
+			switch {
+			case err != nil:
+				return nil //nolint:nilerr // as above
+			case p != sources.Template && strings.HasPrefix(e.Name(), ".") && e.IsDir():
+				return fs.SkipDir
+			case !e.IsDir() && !strings.HasPrefix(e.Name(), "."):
 				add(p)
 			}
 			return nil
@@ -323,9 +340,11 @@ func (s *Store) linkTitle(file string, data bool) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	title := page.Title(string(b))
+	var title string
 	if data {
 		title = tmpl.TitleOf(b)
+	} else {
+		title = page.Title(string(b))
 	}
 	s.mu.Lock()
 	s.titles[file] = cachedTitle{key: key, title: title}
