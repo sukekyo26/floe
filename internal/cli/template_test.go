@@ -1,6 +1,8 @@
 package cli_test
 
 import (
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -213,4 +215,58 @@ func TestDataImages(t *testing.T) {
 	if r := e.run(t, "work", "check", "report/sizes.yaml"); r.code != 1 || !strings.Contains(r.stderr, `report/sizes.yaml:3:8: chart: "../chart.png" is not a file under`) {
 		t.Errorf("check of an image out of the directory = %+v", r)
 	}
+}
+
+// A linked data file is drawn with the templates of one's own of the publish that linked it, a relative
+// directory under its working directory, whatever the server's: links of two such directories are
+// drawn side by side.
+func TestLinkDataFileOfOwnTemplate(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	for _, dir := range []string{"templates", "others"} {
+		if err := os.CopyFS(filepath.Join(e.tmp, dir, "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e.write(t, "others/sizes/page.html", "<p>{{.Calc.total}} of the others</p>")
+	e.write(t, "work/a.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\n")
+	e.write(t, "work/b.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\n")
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	if r := e.run(t, "work", "publish", "a.yaml", "--link"); r.code != 0 {
+		t.Fatalf("publish --link a = %+v", r)
+	}
+	first, _ := e.health(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = "../others"
+	if r := e.run(t, "work", "publish", "b.yaml", "--link"); r.code != 0 {
+		t.Fatalf("publish --link b = %+v", r)
+	}
+	if h, _ := e.health(t); h.PID != first.PID {
+		t.Errorf("the server was replaced: pid %d, then %d", first.PID, h.PID)
+	}
+	for slug, want := range map[string]string{"a": "<td>1.5 KiB</td>", "b": "<p>1536 of the others</p>"} {
+		if page := e.fetch(t, "/a/"+slug+"/?raw"); !strings.Contains(page, want) {
+			t.Errorf("the linked page %s:\n%s", slug, page)
+		}
+	}
+}
+
+// fetch returns the body the server answers path with.
+func (e *env) fetch(t *testing.T, path string) string {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.base()+path, http.NoBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
 }

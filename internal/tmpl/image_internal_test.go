@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -142,5 +143,21 @@ func TestAssetsReadOnce(t *testing.T) {
 	}
 	if again, err := asset("logo.svg"); err != nil || again != first {
 		t.Errorf("asset again = %.30s, %v; want it as read first", again, err)
+	}
+}
+
+// The images a drawing watches are those it may read, once each: not a path it refuses.
+func TestTriedImages(t *testing.T) {
+	t.Parallel()
+
+	s, err := decodeSchema([]byte(`{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	d, root := data(t, "pics: [a.png, ../b.png, a.png, .c.png]\n")
+	_ = checkImages(s, d, root, dir) //nolint:errcheck // the images are missing; what was tried is the point
+	if want := []string{filepath.Join(dir, "a.png")}; !slices.Equal(d.tried, want) {
+		t.Errorf("tried = %v, want %v", d.tried, want)
 	}
 }

@@ -11,7 +11,7 @@ var messagesJA = map[string]string{
 
 	// link
 	"link_not_real":        "%s は絶対パスの実パス（symlink を解決して正規化したパス）ではないので、登録できるかを確かめられません",
-	"link_not_html":        "%s は通常の HTML ファイル（.html / .htm）ではないので、登録できません",
+	"link_not_linkable":    "%s は通常の HTML ファイル（.html / .htm）でもデータファイル（.yaml / .yml）でもないので、登録できません",
 	"link_home_unresolved": "ホームディレクトリ「%s」を解決できないので、登録できるかを確かめられません。HOME に存在するディレクトリの絶対パスを設定してください",
 	"link_hidden_home":     "%s はホーム直下の隠しディレクトリ（設定や鍵の置き場）の中にあるので、登録できません",
 	"link_exposes_dir":     "%[1]s を登録すると %[2]s 全体が公開されます。専用のディレクトリに置いてから登録してください",
@@ -32,7 +32,7 @@ var messagesJA = map[string]string{
 	// server
 	"api_not_json":      "送られた内容を読めませんでした（JSON ではありません）",
 	"api_not_object":    "送られた内容を読めませんでした（JSON のオブジェクトで送ってください）",
-	"api_link_path":     "HTML ファイルの絶対パス（/ で始まるパス）を入力してください",
+	"api_link_path":     "HTML かデータファイルの絶対パス（/ で始まるパス）を入力してください",
 	"api_edit_strings":  "タイトル・説明・プロジェクト・URL 名は文字列で送ってください",
 	"api_favorite_bool": "お気に入りは true か false で送ってください",
 
@@ -70,7 +70,7 @@ var messagesJA = map[string]string{
 	"ui_empty_pages":          "まだページがありません",
 	"ui_empty_pages_hint":     "エージェントに「ページにして」と頼むか、次のコマンドで追加できます。",
 	"ui_empty_links":          "まだリンクがありません",
-	"ui_empty_links_hint":     "「リンクを追加」から HTML ファイルの絶対パスを登録すると、コピーせずその場所のまま表示できます。次のコマンドでも追加できます。",
+	"ui_empty_links_hint":     "「リンクを追加」から HTML かデータファイルの絶対パスを登録すると、コピーせずその場所のまま表示できます。次のコマンドでも追加できます。",
 	"ui_nomatch":              "条件に合うページがありません",
 	"ui_clear_filters":        "絞り込みを解除",
 	"ui_pager":                "ページ送り",
@@ -90,8 +90,8 @@ var messagesJA = map[string]string{
 	"ui_not_found":            "ページが見つかりません",
 	"ui_not_found_detail":     "削除されたか、URL が間違っています。",
 	"ui_link_missing":         "%s が見つかりません。移動していれば、新しい場所で登録し直してください。",
-	"ui_add_lead":             "HTML ファイルをコピーせず、その場所のまま表示します。",
-	"ui_add_path":             "HTML ファイルの絶対パス",
+	"ui_add_lead":             "HTML ファイルはその場所のまま表示し、データファイルは開くたびにページを描きます。どちらもコピーしません。",
+	"ui_add_path":             "HTML かデータファイルの絶対パス",
 	"ui_slug":                 "URL 名",
 	"ui_slug_named":           "URL 名: %s",
 	"ui_slug_rule":            "英小文字・数字・ハイフン",
@@ -263,6 +263,8 @@ var messagesJA = map[string]string{
 	"icons_already":         "%s アイコン %s は %s に取得済みです（取り直すには --force を付けてください）",
 
 	// tmpl
+	"server_mistakes_head":     "データファイルに誤りがあります",
+	"server_mistakes_lead":     "直してファイルを保存すると、このタブにページが戻ります。",
 	"tmpl_no_template":         "最上位に template: report のようにテンプレートを指定してください（テンプレート: %s）",
 	"tmpl_not_mapping":         "最上位は template: report のようなキーと値で書いてください",
 	"tmpl_documents":           "データファイルには YAML の文書を 1 つだけ書きます。--- で区切らず、ページを 1 つの文書で書いてください",

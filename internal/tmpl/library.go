@@ -33,6 +33,11 @@ func NewLibrary(dir string) *Library {
 	return &Library{dir: dir}
 }
 
+// Dir is the directory of templates of one's own, "" for none.
+func (l *Library) Dir() string {
+	return l.dir
+}
+
 // Template is a template found by name.
 type Template struct {
 	Name string

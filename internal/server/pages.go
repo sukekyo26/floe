@@ -1,7 +1,10 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
+	"html/template"
 	"io"
 	"net/http"
 	"net/url"
@@ -10,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 )
 
@@ -75,18 +79,27 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
+	// Assets are sandboxed too: an SVG or HTML opened directly must not run in this origin.
+	h := w.Header()
+	h.Set("Content-Security-Policy", pageCSP)
+	h.Set("X-Content-Type-Options", "nosniff")
+	if m.IsDrawn() {
+		page, version, err := s.cfg.Store.Draw(slug, m, file)
+		if err != nil {
+			// Saving the file right reloads the tab back to the page.
+			page = mistakesPage(catalog(r), slug, err)
+		}
+		stream(w, htmlType, bytes.NewReader(page), servedScript(slug, "", version))
+		return
+	}
 	// The version is taken before the content: a change in between costs one extra reload, not a miss.
-	version := store.Version(m, file)
+	version := s.cfg.Store.Version(slug, m, file)
 	f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
 	if err != nil {
 		notFound(w)
 		return
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	// Assets are sandboxed too: an SVG or HTML opened directly must not run in this origin.
-	h := w.Header()
-	h.Set("Content-Security-Policy", pageCSP)
-	h.Set("X-Content-Type-Options", "nosniff")
 	contentType := htmlType
 	if rest != "" {
 		contentType = types[strings.ToLower(filepath.Ext(file))]
@@ -117,21 +130,36 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
-	if err != nil {
-		notFound(w)
-		return
+	var body io.Reader
+	if m.IsDrawn() {
+		page, _, err := s.cfg.Store.Draw(slug, m, file)
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			notFound(w)
+			return
+		case err != nil:
+			send(w, http.StatusConflict, mistakesText(catalog(r), err))
+			return
+		}
+		body = bytes.NewReader(page)
+	} else {
+		f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
+		if err != nil {
+			notFound(w)
+			return
+		}
+		defer f.Close() //nolint:errcheck // read-only
+		body = f
 	}
-	defer f.Close() //nolint:errcheck // read-only
-	// The page as stored or linked. Nothing added on serving (the reload script) goes in.
+	// The page as stored, linked or drawn. Nothing added on serving (the reload script) goes in.
 	w.Header().Set("Content-Disposition", `attachment; filename="`+slug+`.html"`)
-	stream(w, htmlType, f, "")
+	stream(w, htmlType, body, "")
 }
 
 // stream sends f as it is, with tail after it: a stored page was drawn when it was published, and a
 // linked file is the user's own. A read error after the header has gone out can only cut the
 // response short.
-func stream(w http.ResponseWriter, contentType string, f *os.File, tail string) {
+func stream(w http.ResponseWriter, contentType string, f io.Reader, tail string) {
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
@@ -219,5 +247,40 @@ func (s *Server) version(slug, rest string) string {
 		return ""
 	}
 	file, _ := s.cfg.Store.File(slug, m, rest)
-	return store.Version(m, file)
+	return s.cfg.Store.Version(slug, m, file)
+}
+
+// mistakesText words why a linked data file cannot be drawn, in the language of c.
+func mistakesText(c *i18n.Catalog, err error) string {
+	var l i18n.Localizer
+	if errors.As(err, &l) {
+		return l.Localize(c)
+	}
+	return err.Error()
+}
+
+// mistakes is the page shown for a linked data file with mistakes, in the reader's language.
+var mistakes = template.Must(template.New("mistakes").Parse(`<!doctype html>
+<html lang="{{.Lang}}">
+<head><meta charset="utf-8"><title>{{.Slug}}</title>
+<style>
+:root { color-scheme: light dark; --fg: #1f2328; --bg: #fff; --bad: #b42318; }
+@media (prefers-color-scheme: dark) { :root { --fg: #e6edf3; --bg: #0d1117; --bad: #ff7b72; } }
+body { margin: 2rem; font: 15px/1.6 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+h1 { font-size: 1.25rem; color: var(--bad); }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.6 ui-monospace, monospace; }
+</style></head>
+<body><h1>{{.Head}}</h1><p>{{.Lead}}</p><pre>{{.Mistakes}}</pre></body>
+</html>
+`))
+
+func mistakesPage(c *i18n.Catalog, slug string, err error) []byte {
+	text := mistakesText(c, err)
+	var b bytes.Buffer
+	//nolint:errcheck // a buffer takes every write, and the fields are text
+	_ = mistakes.Execute(&b, map[string]string{
+		"Lang": string(c.Lang()), "Slug": slug, "Head": c.Msg("server_mistakes_head"),
+		"Lead": c.Msg("server_mistakes_lead"), "Mistakes": text,
+	})
+	return b.Bytes()
 }

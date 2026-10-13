@@ -566,7 +566,7 @@ func TestFileAndVersion(t *testing.T) {
 	if _, ok := e.s.File("p", stored, "x.css"); ok {
 		t.Error("a stored page serves a subpath")
 	}
-	if v := store.Version(stored, ""); v != stored.UpdatedAt {
+	if v := e.s.Version("p", stored, ""); v != stored.UpdatedAt {
 		t.Errorf("Version of a stored page = %q", v)
 	}
 	file := e.write(t, "site/index.html", "x")
@@ -575,10 +575,10 @@ func TestFileAndVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	linked := &store.Meta{Path: file}
-	if v := store.Version(linked, file); v != "2026-03-04T05:06:07.890Z" {
+	if v := e.s.Version("p", linked, file); v != "2026-03-04T05:06:07.890Z" {
 		t.Errorf("Version of a link = %q", v)
 	}
-	if v := store.Version(linked, file+".gone"); v != "" {
+	if v := e.s.Version("p", linked, file+".gone"); v != "" {
 		t.Errorf("Version of a gone link = %q", v)
 	}
 	if store.Now() == "" || !store.ValidSlug("a-1") || store.ValidSlug("-a") || e.s.Root() != filepath.Join(e.tmp, "store") {
@@ -684,5 +684,150 @@ func TestPublishDataFile(t *testing.T) {
 	bad := e.write(t, "bad.yml", "template: deck\n")
 	if _, err := e.publish(t, bad, store.Options{}, ""); err == nil || err.Error() != bad+`:1:11: unknown template "deck"; use report` {
 		t.Errorf("publish of a data file naming no template there = %v", err)
+	}
+}
+
+// A data file is linked as an HTML file is, checked as a stored page is, with its language and the
+// theme given over its own: no page is stored, as it is drawn each time it is opened.
+func TestLinkDataFile(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	data := e.write(t, "proj/spec.yaml", "template: report\ntitle: Spec\n")
+	entry := e.mustPublish(t, data, store.Options{Link: true, Lang: ptr("ja"), Theme: ptr("default")}, "proj")
+	m := entry.Meta
+	if entry.Page != nil || m.Path != data || m.Lang != "ja" || m.Theme != "default" || m.Template != "" || m.Title != "" {
+		t.Errorf("the entry = %+v, page %d bytes", m, len(entry.Page))
+	}
+	if !m.IsDrawn() || e.s.Version("spec", &m, data) == "" {
+		t.Errorf("IsDrawn = %v, Version = %q", m.IsDrawn(), e.s.Version("spec", &m, data))
+	}
+	if _, err := os.Stat(filepath.Join(e.tmp, "store", "spec", "index.html")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a page was stored for a link: %v", err)
+	}
+	page, _, err := e.s.Draw("spec", &m, data)
+	if err != nil || !strings.Contains(string(page), `<html lang="ja">`) || !strings.Contains(string(page), "<h1>Spec</h1>") {
+		t.Errorf("Draw = %v:\n%s", err, page)
+	}
+
+	// Linked again in another language, it reloads its tab.
+	again := e.mustPublish(t, data, store.Options{Link: true, Lang: ptr("en")}, "proj").Meta
+	if e.s.Version("spec", &again, data) == e.s.Version("spec", &m, data) {
+		t.Error("linking again in another language left the version as it was")
+	}
+	// A slug that comes to link another file watches nothing of the one before.
+	other := e.write(t, "proj/other.yaml", "template: report\n")
+	if _, version, drawErr := e.s.Draw("spec", &m, other); drawErr != nil || version != e.s.Version("spec", &m, other) {
+		t.Errorf("Draw of another file under the slug = %v at %q, watched at %q", drawErr, version, e.s.Version("spec", &m, other))
+	}
+
+	bad := e.write(t, "proj/bad.yaml", "template: report\nsections: 3\n")
+	if _, err = e.publish(t, bad, store.Options{Link: true}, "proj"); err == nil || !strings.Contains(err.Error(), "bad.yaml:2:11: sections:") {
+		t.Errorf("linking a data file with mistakes = %v", err)
+	}
+	html := e.write(t, "proj/page.html", "<title>x</title>")
+	if _, err = e.publish(t, html, store.Options{Link: true, Lang: ptr("ja")}, "proj"); err == nil {
+		t.Error("an HTML file was linked with a language")
+	}
+}
+
+// A linked data file that cannot be read is served at the version that watching it sees, so that its
+// tab does not reload over and over; and one linked through a symlink is of the kind of its real file.
+func TestLinkDataFileEdges(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	data := e.write(t, "proj/spec.yaml", "template: report\n")
+	m := e.mustPublish(t, data, store.Options{Link: true}, "proj").Meta
+	if err := os.Chmod(data, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chmod(data, 0o600); err != nil {
+			t.Error(err)
+		}
+	})
+	_, version, err := e.s.Draw("spec", &m, data)
+	if !errors.Is(err, store.ErrNotFound) || version != e.s.Version("spec", &m, data) {
+		t.Errorf("Draw of a file that cannot be read = %v at %q, watched at %q", err, version, e.s.Version("spec", &m, data))
+	}
+	// Made readable again, it reloads its tab.
+	if err = os.Chmod(data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if again := e.s.Version("spec", &m, data); again == version {
+		t.Errorf("the version of the file made readable again stays %q", again)
+	}
+
+	// A symlink named .html to a data file takes what a data file does.
+	if err = os.Symlink(data, filepath.Join(e.tmp, "proj", "spec.html")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = e.publish(t, filepath.Join(e.tmp, "proj", "spec.html"), store.Options{Link: true, Theme: ptr("default")}, "proj"); err != nil {
+		t.Errorf("linking a data file through a symlink named .html, with --theme = %v", err)
+	}
+
+	bad := e.write(t, "proj/bad.yaml", "template: nosuch\n")
+	if err = os.Symlink(bad, filepath.Join(e.tmp, "proj", "view.html")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = e.publish(t, filepath.Join(e.tmp, "proj", "view.html"), store.Options{Link: true}, "proj"); err == nil ||
+		!strings.Contains(err.Error(), `unknown template "nosuch"`) {
+		t.Errorf("linking a data file with mistakes through a symlink named .html = %v", err)
+	}
+}
+
+// One data file linked under two slugs, drawn with the templates of their publishes, is watched apart:
+// drawing one does not move the version of the other.
+func TestLinkDataFileTwice(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	dirs := map[string]string{"a": filepath.Join(e.tmp, "a"), "b": filepath.Join(e.tmp, "b")}
+	for _, dir := range dirs {
+		if err := os.CopyFS(filepath.Join(dir, "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e.write(t, "b/sizes/extra.css", "")
+	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\n")
+	metas := map[string]store.Meta{}
+	for slug, dir := range dirs {
+		s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir))
+		entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr(slug)}, filepath.Join(e.tmp, "proj"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = s.Save(entry); err != nil {
+			t.Fatal(err)
+		}
+		if entry.Meta.Templates != dir {
+			t.Errorf("the templates of %s = %q, want %q", slug, entry.Meta.Templates, dir)
+		}
+		metas[slug] = entry.Meta
+	}
+	a, b := metas["a"], metas["b"]
+	_, version, err := e.s.Draw("a", &a, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = e.s.Draw("b", &b, data); err != nil {
+		t.Fatal(err)
+	}
+	if now := e.s.Version("a", &a, data); now != version {
+		t.Errorf("drawing b moved the version of a: %q, then %q", version, now)
+	}
+
+	// Linked again with the other templates, a is served at the version it is watched at, which waits
+	// for the drawing: the tab reloads once, not twice.
+	time.Sleep(5 * time.Millisecond) // another updatedAt, kept to the millisecond
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dirs["b"]))
+	entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr("a")}, filepath.Join(e.tmp, "proj"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	relinked := entry.Meta
+	if _, version, err = e.s.Draw("a", &relinked, data); err != nil || version != e.s.Version("a", &relinked, data) {
+		t.Errorf("a linked again was served at %q, watched at %q (%v)", version, e.s.Version("a", &relinked, data), err)
 	}
 }

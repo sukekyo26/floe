@@ -52,6 +52,7 @@ type Data struct {
 	tmpl   *Template               // the template Read checked the data against, which draws it
 	schema *schema                 // the template's schema as Read read it, for drawing as checked
 	images map[string]template.URL // its images as data URIs, by the path written
+	tried  []string                // the files of the images it names, read or not
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -66,6 +67,21 @@ var shared = []string{"template", "theme", "title"}
 // --theme): the data's theme: is then not used, and a theme the template does not have is refused as
 // a *usererr.Error, as is a template that needs another floe. A relative file is under cwd.
 func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error) {
+	d, _, err := l.ReadSources(file, src, theme, cwd)
+	return d, err
+}
+
+// Sources are the files a read of a data file read besides it, for a link to be drawn again when one
+// changes, whether the read found mistakes or not.
+type Sources struct {
+	Templates string   // the directory of templates of one's own, where one may come; "" for none
+	Template  string   // the directory of the template of one's own the data names; "" for none
+	Images    []string // the images the data names, read or not
+}
+
+// ReadSources reads the data file src as Read does, and returns its Sources too.
+func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data, Sources, error) {
+	sources := Sources{Templates: l.dir, Template: "", Images: nil}
 	dir := filepath.Dir(file)
 	if !filepath.IsAbs(dir) {
 		dir = filepath.Join(cwd, dir)
@@ -74,12 +90,12 @@ func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		var names []string
 		if names, err = l.Names(); err != nil {
-			return nil, err
+			return nil, sources, err
 		}
-		return nil, yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", strings.Join(names, ", "))
+		return nil, sources, yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", strings.Join(names, ", "))
 	}
 	if err != nil {
-		return nil, err
+		return nil, sources, err
 	}
 	d, problems := h.d, h.problems
 	fail := func(p yamlpos.Pos, key string, args ...any) {
@@ -89,13 +105,13 @@ func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error
 	var t *Template
 	if d.Template != "" {
 		if t, err = l.Find(d.Template); err != nil {
-			return nil, err
+			return nil, sources, err
 		}
 	}
 	if t == nil {
 		var names []string
 		if names, err = l.Names(); err != nil {
-			return nil, err
+			return nil, sources, err
 		}
 		switch {
 		case h.unnamed:
@@ -103,16 +119,28 @@ func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error
 		case d.Template != "":
 			fail(h.where["template"], "tmpl_unknown", d.Template, strings.Join(names, ", "))
 		}
-		return nil, problems.Sorted()
+		return nil, sources, problems.Sorted()
 	}
+	sources.Template = t.Dir
 	// The floe a template needs comes before its mistakes, which another floe may not make.
 	if err = t.checkVersion(); err != nil {
-		return nil, err
+		return nil, sources, err
 	}
-	if err = t.check(d, h.root, dir, theme, h.where["theme"], problems); err != nil {
-		return nil, err
+	err = t.check(d, h.root, dir, theme, h.where["theme"], problems)
+	sources.Images = d.tried
+	if err != nil {
+		return nil, sources, err
 	}
-	return d, nil
+	return d, sources, nil
+}
+
+// TitleOf returns the title: of the data file src, or "" when it names none or cannot be read.
+func TitleOf(src []byte) string {
+	h, err := start("", src, false)
+	if err != nil {
+		return ""
+	}
+	return h.d.Title
 }
 
 // head is a data file read up to its template.
@@ -138,7 +166,7 @@ func start(file string, src []byte, themed bool) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
-		images: nil,
+		images: nil, tried: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)

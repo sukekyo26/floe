@@ -11,7 +11,8 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-var htmlRe = regexp.MustCompile(`(?i)\.html?$`)
+// linkable are the files a link can register: a page, or a data file drawn each time it is opened.
+var linkable = regexp.MustCompile(`(?i)\.(html?|ya?ml)$`)
 
 // Check reports whether the file at path, which must be its real path, may be linked. A link
 // also serves the files under its directory, so the exposure is kept to that directory: a file
@@ -25,8 +26,8 @@ func Check(path, home string) error {
 		return usererr.New("link_not_real", path)
 	}
 	// A FIFO named .html would block its reader, so only regular files pass.
-	if fi, err := os.Stat(path); !htmlRe.MatchString(path) || err != nil || !fi.Mode().IsRegular() {
-		return usererr.New("link_not_html", path)
+	if fi, err := os.Stat(path); !linkable.MatchString(path) || err != nil || !fi.Mode().IsRegular() {
+		return usererr.New("link_not_linkable", path)
 	}
 	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories.
 	resolvedHome, ok := realDir(home)

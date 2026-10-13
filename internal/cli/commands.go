@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -34,7 +35,16 @@ func (a *app) store() *store.Store {
 }
 
 func (a *app) templates() *tmpl.Library {
-	return tmpl.NewLibrary(a.cfg.templates)
+	return tmpl.NewLibrary(a.templatesDir())
+}
+
+// templatesDir is the directory of templates of one's own, a relative one under the working directory,
+// so that a link records, and the server it starts uses, the one this command means.
+func (a *app) templatesDir() string {
+	if a.cfg.templates == "" || filepath.IsAbs(a.cfg.templates) {
+		return a.cfg.templates
+	}
+	return filepath.Join(a.env.Dir, a.cfg.templates)
 }
 
 func (a *app) out(format string, args ...any) {
@@ -64,9 +74,11 @@ published from another project is refused unless --force. A page is in English u
 its data names (theme:, else default) unless --theme names another. A new slug is also
 opened in the browser ($BROWSER, open, wslview, xdg-open).
 
---link registers an HTML file in place and shows it as it is: it is read on every request,
-and the files under its directory are served for its relative references. The same slug
-for another file is refused unless --force.`,
+--link registers a file in place instead of storing a page. An HTML file is shown as it is:
+it is read on every request, and the files under its directory are served for its relative
+references. A data file is drawn each time its page is opened, and saving it, an image it
+shows or a file of its template reloads the open tab. The same slug for another file is
+refused unless --force.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()
@@ -100,7 +112,7 @@ for another file is refused unless --force.`,
 		},
 	}
 	f := cmd.Flags()
-	f.BoolVar(&opts.Link, "link", false, "register an HTML file in place and show it as it is")
+	f.BoolVar(&opts.Link, "link", false, "register the file in place: HTML shown as it is, a data file drawn when opened")
 	f.StringVar(&slug, "slug", "", "the URL name (default: from the file name)")
 	f.StringVar(&title, "title", "", "the title (default: the data file's title:, or a link's <title> or <h1>)")
 	f.StringVar(&description, "description", "", "a description shown in the list")
@@ -159,7 +171,8 @@ func (a *app) noticeUpdate(e *store.Entry) {
 // over the process's own.
 func (a *app) serverEnv() []string {
 	env := append([]string{}, a.env.Environ...)
-	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home)
+	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home,
+		"FLOE_TEMPLATES_DIR="+a.templatesDir())
 }
 
 func localTime(iso string) string {

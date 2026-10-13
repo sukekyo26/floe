@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -34,7 +35,7 @@ var imageTypes = map[string]string{
 // takes for a src as it is. where names files in the mistake: name must be a path under it without
 // .. or a name starting with a dot, of an image floe takes, by its name and by what it holds.
 func imageURI(files fs.FS, name, where string) (template.URL, *usererr.Error) {
-	if !fs.ValidPath(name) || name == "." || strings.HasPrefix(name, ".") || strings.Contains(name, "/.") {
+	if !imagePath(name) {
 		return "", usererr.New("tmpl_image_path", name, where)
 	}
 	typ, ok := imageTypes[strings.ToLower(path.Ext(name))]
@@ -50,6 +51,12 @@ func imageURI(files fs.FS, name, where string) (template.URL, *usererr.Error) {
 	}
 	//nolint:gosec // G203: an image of a type floe takes, checked by what it holds
 	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b)), nil
+}
+
+// imagePath reports whether name may name an image: a slash-separated path under its directory,
+// without .. or a name starting with a dot.
+func imagePath(name string) bool {
+	return fs.ValidPath(name) && name != "." && !strings.HasPrefix(name, ".") && !strings.Contains(name, "/.")
 }
 
 // readImage reads the file name of files, a regular file up to maxImage. Each name on its path must be
@@ -213,6 +220,9 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 		// holds nil for one read.
 		e, seen := refused[f.name]
 		if !seen {
+			if imagePath(f.name) {
+				d.tried = append(d.tried, filepath.Join(dir, filepath.FromSlash(f.name)))
+			}
 			var uri template.URL
 			if uri, e = imageURI(r.FS(), f.name, dir); e == nil {
 				d.images[f.name] = uri

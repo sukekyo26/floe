@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -54,11 +55,13 @@ func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]jso
 // else is 500.
 func refuse(w http.ResponseWriter, r *http.Request, err error) {
 	var ue *usererr.Error
+	// The mistakes of a data file, at their lines and columns, are worded too.
+	var l i18n.Localizer
 	switch {
 	case errors.As(err, &ue) && ue.Conflict:
 		send(w, http.StatusConflict, ue.Localize(catalog(r)))
-	case errors.As(err, &ue):
-		send(w, http.StatusBadRequest, ue.Localize(catalog(r)))
+	case errors.As(err, &l):
+		send(w, http.StatusBadRequest, l.Localize(catalog(r)))
 	default:
 		send(w, http.StatusInternalServerError, err.Error())
 	}

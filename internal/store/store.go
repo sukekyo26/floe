@@ -9,11 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +25,7 @@ import (
 	"github.com/sukekyo26/floe/internal/link"
 	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/tmpl"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 const isoMillis = "2006-01-02T15:04:05.000Z"
@@ -48,9 +52,12 @@ type Meta struct {
 	Lang string `json:"lang,omitempty"`
 	// Template and Theme drew a page published from a data file, and DataTitle is its title:, which
 	// clearing the title on the management page gives back.
-	Template      string `json:"template,omitempty"`
-	Theme         string `json:"theme,omitempty"`
-	DataTitle     string `json:"dataTitle,omitempty"`
+	Template  string `json:"template,omitempty"`
+	Theme     string `json:"theme,omitempty"`
+	DataTitle string `json:"dataTitle,omitempty"`
+	// Templates is the directory of templates of one's own a linked data file is drawn with: the one of
+	// the publish that linked it, whatever the server's.
+	Templates     string `json:"templates,omitempty"`
 	Project       string `json:"project,omitempty"`
 	ProjectEdited bool   `json:"projectEdited,omitempty"`
 	// PublishedFrom is the project that owns a stored page; Project is only what the list shows.
@@ -76,6 +83,11 @@ type Store struct {
 	// LIMIT: entries of unlinked paths stay (a few hundred bytes each). Drop them on removal if a
 	// server ever sees tens of thousands of paths in its lifetime.
 	titles map[string]cachedTitle
+	// drawn is what the last drawing of each linked data file read besides it, by slug and file (see
+	// sourceKey).
+	// LIMIT: one entry for every slug and file ever drawn, removed, renamed and relinked ones too, as
+	// titles are. Drop them on removal if a server comes to see thousands of them in its lifetime.
+	drawn map[string]drawing
 }
 
 type cachedTitle struct {
@@ -85,7 +97,10 @@ type cachedTitle struct {
 // New returns the store at root. home is the user's home directory, which bounds what may be linked,
 // and templates draw the pages of data files.
 func New(root, home string, templates *tmpl.Library) *Store {
-	return &Store{root: root, home: home, templates: templates, mu: sync.Mutex{}, titles: map[string]cachedTitle{}}
+	return &Store{
+		root: root, home: home, templates: templates, mu: sync.Mutex{}, titles: map[string]cachedTitle{},
+		drawn: map[string]drawing{},
+	}
 }
 
 // Root returns the store directory.
@@ -135,28 +150,147 @@ func writeAtomic(path string, data []byte) error {
 }
 
 // File returns the file to serve for rest under slug: a stored page has its index.html only, a link
-// its registered file and the files under its directory (see link.Resolve).
+// its registered file and the files under its directory (see link.Resolve). A linked data file has its
+// own file only: the images of its page are in the page.
 func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
-	if m.IsLink() {
+	if m.IsLink() && (rest == "" || !IsDataFile(m.Path)) {
 		return link.Resolve(m.Path, rest)
 	}
-	if rest != "" {
+	if m.IsLink() || rest != "" {
 		return "", false
 	}
 	return filepath.Join(s.dir(slug), "index.html"), true
 }
 
-// Version is what live reload compares: a stored page's publish time, a link's file mtime ("" when
-// the file cannot be read).
-func Version(m *Meta, file string) string {
+// IsDrawn reports whether m is a linked data file, whose page is drawn each time it is opened.
+func (m *Meta) IsDrawn() bool {
+	return m.IsLink() && IsDataFile(m.Path)
+}
+
+// Draw draws the page of the linked data file file of slug, whose meta.json is m: in its language,
+// with the theme given over the data's if any, under the title pinned for it, else its title:, else
+// slug. What the drawing read besides file is kept for Version, mistakes or not, and version is the
+// Version the page was drawn at.
+func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version string, err error) {
+	// Taken before the reading, so that a change in between costs a reload rather than a miss; but
+	// only once what the drawing reads is known, or the first drawing would reload at once.
+	key := sourceKey(slug, file)
+	s.mu.Lock()
+	last, ok := s.drawn[key]
+	s.mu.Unlock()
+	// Published again, it may read other templates: its version waits for this drawing.
+	known := ok && last.at == m.UpdatedAt
+	if known {
+		version = s.Version(slug, m, file)
+	}
+	src, err := os.ReadFile(file) //nolint:gosec // G304: file passed File
+	if err != nil {
+		// What it read before stays watched; that it cannot be read is in its version.
+		err = fmt.Errorf("%w: %w", ErrNotFound, usererr.CannotRead(file, err))
+	} else {
+		var d *tmpl.Data
+		var sources tmpl.Sources
+		d, sources, err = tmpl.NewLibrary(m.Templates).ReadSources(file, src, m.Theme, "")
+		s.mu.Lock()
+		s.drawn[key] = drawing{at: m.UpdatedAt, sources: sources}
+		s.mu.Unlock()
+		if err == nil {
+			page, err = drawLinked(d, m, slug)
+		}
+	}
+	if !known {
+		version = s.Version(slug, m, file)
+	}
+	return page, version, err
+}
+
+// drawing is what a drawing of a linked data file read besides it, and the publish it drew (its
+// updatedAt).
+type drawing struct {
+	at      string
+	sources tmpl.Sources
+}
+
+// sourceKey keys what a drawing read: one file linked under two slugs may be drawn with two themes or
+// templates, and a slug removed in another process (floe rm) may come to link another file.
+func sourceKey(slug, file string) string {
+	return slug + "\x00" + file
+}
+
+// drawLinked draws d, the data file a link of slug registers, under the title pinned for it, else its
+// title:, else slug.
+func drawLinked(d *tmpl.Data, m *Meta, slug string) ([]byte, error) {
+	return d.Render(cmp.Or(m.Title, d.Title, slug), m.Lang) //nolint:wrapcheck // a usererr for the caller to show
+}
+
+// Version is what live reload compares: a stored page's publish time, a linked file's mtime, and for a
+// linked data file of slug its publish time too (another theme, language or templates) and the state
+// of what its last drawing read besides it (its template's files, its images) and whether it can be
+// read, so that publishing it again, saving any of them, or making it readable again reloads the page.
+// It is "" when the file is gone.
+func (s *Store) Version(slug string, m *Meta, file string) string {
 	if !m.IsLink() {
 		return m.UpdatedAt
 	}
+	v := modTime(file)
+	if v == "" || !m.IsDrawn() {
+		return v
+	}
+	s.mu.Lock()
+	last := s.drawn[sourceKey(slug, file)]
+	s.mu.Unlock()
+	v += "+" + m.UpdatedAt + "+" + stamp(last.sources)
+	if unix.Access(file, unix.R_OK) != nil {
+		return v + "+unreadable"
+	}
+	return v
+}
+
+// modTime is the mtime of file, or "" when it cannot be read.
+func modTime(file string) string {
 	fi, err := os.Stat(file)
 	if err != nil {
 		return ""
 	}
 	return fi.ModTime().UTC().Format(isoMillis)
+}
+
+// stamp sums up the state of sources: the size and mtime of each image and of every file under the
+// template's directory, and the mtime of the directory of templates, where one may come.
+// LIMIT: walks the template's directory on each look (every second for each open tab). Watch it with
+// fsnotify if templates grow to hundreds of files.
+func stamp(sources tmpl.Sources) string {
+	h := fnv.New64a()
+	add := func(p string) {
+		fi, err := os.Stat(p)
+		if err != nil {
+			_, _ = fmt.Fprintf(h, "%s:-\n", p) //nolint:errcheck // a hash takes every write
+			return
+		}
+		_, _ = fmt.Fprintf(h, "%s:%d:%d\n", p, fi.Size(), fi.ModTime().UnixNano()) //nolint:errcheck // as above
+	}
+	if sources.Templates != "" {
+		add(sources.Templates)
+	}
+	if sources.Template != "" {
+		// A name starting with a dot (.git) is no file of the template.
+		//nolint:errcheck // a file that cannot be walked to is left out of the sum
+		_ = filepath.WalkDir(sources.Template, func(p string, e fs.DirEntry, err error) error {
+			switch {
+			case err != nil:
+				return nil //nolint:nilerr // as above
+			case p != sources.Template && strings.HasPrefix(e.Name(), ".") && e.IsDir():
+				return fs.SkipDir
+			case !e.IsDir() && !strings.HasPrefix(e.Name(), "."):
+				add(p)
+			}
+			return nil
+		})
+	}
+	for _, image := range sources.Images {
+		add(image)
+	}
+	return strconv.FormatUint(h.Sum64(), 36)
 }
 
 // Listed is an entry of the list. A link takes its title and update time from the file; Missing is
@@ -202,12 +336,12 @@ func (s *Store) listed(slug string, m *Meta) Listed {
 	title, readable := "", false
 	file, ok := s.File(slug, m, "")
 	if ok {
-		title, readable = s.linkTitle(file)
+		title, readable = s.linkTitle(file, m.IsDrawn())
 	}
 	if l.Title == "" {
 		l.Title = cmp.Or(title, slug)
 	}
-	if v := Version(m, file); readable && v != "" {
+	if v := modTime(file); readable && v != "" {
 		l.UpdatedAt = v
 	}
 	missing := !readable
@@ -215,9 +349,10 @@ func (s *Store) listed(slug string, m *Meta) Listed {
 	return l
 }
 
-// linkTitle returns the title of a linked file, cached per version of the file: the management page
-// and the open pages poll the list every few seconds, and a report can be megabytes.
-func (s *Store) linkTitle(file string) (string, bool) {
+// linkTitle returns the title of a linked file, its <title> or first <h1>, or the title: of a data
+// file, cached per version of the file: the management page and the open pages poll the list every few
+// seconds, and a report can be megabytes. A data file with mistakes has none, but can be read.
+func (s *Store) linkTitle(file string, data bool) (string, bool) {
 	var st unix.Stat_t
 	if unix.Stat(file, &st) != nil {
 		return "", false
@@ -233,7 +368,12 @@ func (s *Store) linkTitle(file string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	title := page.Title(string(b))
+	var title string
+	if data {
+		title = tmpl.TitleOf(b)
+	} else {
+		title = page.Title(string(b))
+	}
 	s.mu.Lock()
 	s.titles[file] = cachedTitle{key: key, title: title}
 	s.mu.Unlock()
