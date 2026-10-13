@@ -17,7 +17,6 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
-	"github.com/goccy/go-yaml/parser"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 
@@ -60,11 +59,11 @@ func Read(file string, src []byte) (*Data, error) {
 		return nil, err
 	}
 	at := func(n ast.Node, key string, args ...any) error {
-		return &yamlpos.Error{File: file, Pos: yamlpos.Of(n), Err: usererr.New(key, args...)}
+		return yamlpos.New(file, yamlpos.Of(n), key, args...)
 	}
 	var top map[string]any
 	if err = yaml.NodeToValue(root, &top); err != nil {
-		return nil, at(root, "tmpl_yaml", err.Error())
+		return nil, yamlpos.Syntax(file, err)
 	}
 	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top}
 	nodes := map[string]ast.Node{}
@@ -107,32 +106,18 @@ func Read(file string, src []byte) (*Data, error) {
 // parse reads src as one YAML document of keys and values, without anchors, aliases or tags, so
 // that every value is written where its position points.
 func parse(file string, src []byte) (ast.Node, error) {
-	at := func(p yamlpos.Pos, key string, args ...any) error {
-		return &yamlpos.Error{File: file, Pos: p, Err: usererr.New(key, args...)}
+	body, err := yamlpos.Parse(file, src, "tmpl_documents")
+	if errors.Is(err, yamlpos.ErrEmpty) {
+		return nil, yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", strings.Join(Names(), ", "))
 	}
-	start := yamlpos.Pos{Line: 1, Column: 1}
-	doc, err := parser.ParseBytes(src, 0)
 	if err != nil {
-		var se *yaml.SyntaxError
-		if errors.As(err, &se) && se.Token != nil {
-			return nil, at(yamlpos.Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}, "tmpl_yaml", se.Message)
-		}
-		return nil, at(start, "tmpl_yaml", err.Error())
+		return nil, err //nolint:wrapcheck // a mistake at its line and column
 	}
-	// A document after --- would otherwise be left out without a word.
-	if len(doc.Docs) > 1 {
-		sep := doc.Docs[1].Start.Position
-		return nil, at(yamlpos.Pos{Line: sep.Line, Column: sep.Column}, "tmpl_documents")
-	}
-	if len(doc.Docs) == 0 || doc.Docs[0].Body == nil {
-		return nil, at(start, "tmpl_no_template", strings.Join(Names(), ", "))
-	}
-	body := doc.Docs[0].Body
 	if a := yamlpos.FirstAnchor(body); a != nil {
-		return nil, at(yamlpos.Of(a), "yaml_no_anchors")
+		return nil, yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
 	}
 	if _, ok := body.(*ast.MappingNode); !ok {
-		return nil, at(yamlpos.Of(body), "tmpl_not_mapping")
+		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_not_mapping")
 	}
 	return body, nil
 }

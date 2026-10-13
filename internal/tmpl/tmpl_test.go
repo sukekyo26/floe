@@ -85,6 +85,8 @@ func TestReadRefusals(t *testing.T) {
 		{"template: ''\n", "data.yaml:1:11: name the template at the top level"},
 		{"- template: report\n", "data.yaml:1:1: write the top level as keys and values"},
 		{"template: report\n---\ntitle: t\n", "data.yaml:2:1: a data file holds one YAML document"},
+		{"template: report\n...\nlead: x\n", "data.yaml:3:1: a data file holds one YAML document"},
+		{"template: report\ntemplate: report\n", `data.yaml:2:1: this is not valid YAML: mapping key "template" already defined`},
 		{"template: report\n---\ntitle: 'a\n", "data.yaml:3:8: this is not valid YAML: "},
 		{"template: report\nlead: &a x\n", "data.yaml:2:7: anchors, aliases and tags are not supported"},
 		{"template: deck\n", `data.yaml:1:11: unknown template "deck"; use report`},
@@ -97,6 +99,9 @@ func TestReadRefusals(t *testing.T) {
 		if !errors.As(err, &at) || !strings.HasPrefix(err.Error(), c.want) {
 			t.Errorf("Read %q = %v, want %s", c.src, err, c.want)
 		}
+	}
+	if _, err := tmpl.Read("data.yaml", []byte("%YAML 1.2\n---\ntemplate: report\n")); err != nil {
+		t.Errorf("Read of a document after a %%YAML directive = %v", err)
 	}
 	// Data that passed its schema draws; a template that does not fit it is refused while drawing.
 	d := &tmpl.Data{File: "data.yaml", Template: "report", Theme: "default", Title: "", Values: map[string]any{"sections": "no"}}

@@ -78,12 +78,7 @@ var ErrEmpty = errors.New("no YAML document")
 func Parse(file string, src []byte, documents string) (ast.Node, error) {
 	doc, err := parser.ParseBytes(src, 0)
 	if err != nil {
-		var se *yaml.SyntaxError
-		if errors.As(err, &se) && se.Token != nil {
-			at := Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}
-			return nil, New(file, at, "yaml_syntax", se.Message)
-		}
-		return nil, New(file, Pos{Line: 1, Column: 1}, "yaml_syntax", err.Error())
+		return nil, Syntax(file, err)
 	}
 	// A directive (%YAML) heads the document after it, and --- at the end starts none.
 	var docs []*ast.DocumentNode
@@ -111,6 +106,15 @@ type Error struct {
 	File string
 	Pos  Pos
 	Err  *usererr.Error
+}
+
+// Syntax places an error of goccy/go-yaml at its token, or at the start of file without one.
+func Syntax(file string, err error) *Error {
+	var se *yaml.SyntaxError
+	if errors.As(err, &se) && se.Token != nil {
+		return New(file, Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}, "yaml_syntax", se.Message)
+	}
+	return New(file, Pos{Line: 1, Column: 1}, "yaml_syntax", err.Error())
 }
 
 // New returns the mistake worded by the catalog message key with args, at at in file.
