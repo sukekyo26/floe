@@ -7,7 +7,7 @@
 リンクしてそのまま表示します。どちらも `http://127.0.0.1:7325` で配信し、ライブリロードと管理 UI を提供します。図は宣言的な定義から
 インライン SVG として描画し、描画前にはみ出し・重なり・線の交差を検査します。
 
-> **ステータス:** 開発中です。組み込みの `report` テンプレートでのデータファイルの公開、HTML のリンク、図の描画（`floe diagram render`。AWS アイコンは `floe icons fetch aws` で取得）は使えます。データファイルの検査と自分のテンプレートは予定で、まだありません。
+> **ステータス:** 開発中です。組み込みの `report` テンプレートでのデータファイルの公開、HTML のリンク、図の描画（`floe diagram render`。AWS アイコンは `floe icons fetch aws` で取得）、データファイルの検査（`floe check`）は使えます。自分のテンプレートは予定で、まだありません。
 
 ## インストール
 
@@ -25,6 +25,7 @@ curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 ```sh
 floe publish plan.yaml     # データからページを描いて保存し、URL を出してブラウザで開く
 floe publish --link out/index.html   # HTML のファイルをそのまま表示する（リクエストのたびに読む）
+floe check plan.yaml       # 公開せずにデータファイルを検査する
 floe list                  # ページを新しい順に出す
 floe stop                  # 裏で動いているサーバーを止める
 ```

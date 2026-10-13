@@ -3,8 +3,6 @@ package cli
 import (
 	"cmp"
 	"errors"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -57,13 +55,9 @@ func (a *app) render(files []string, assets bool) error {
 	var problems yamlpos.Problems
 	specs := make([]*diagram.Spec, 0, len(files))
 	for _, file := range files {
-		abs := file
-		if !filepath.IsAbs(abs) {
-			abs = filepath.Join(a.env.Dir, abs)
-		}
-		src, err := os.ReadFile(abs) //nolint:gosec // G304: reading the user's spec is the point
+		src, err := a.readArg(file)
 		if err != nil {
-			return usererr.CannotRead(file, err)
+			return err
 		}
 		s, err := diagram.Parse(file, src)
 		var mistake *yamlpos.Error

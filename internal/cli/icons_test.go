@@ -55,7 +55,7 @@ func TestIcons(t *testing.T) {
 	// render draws icons from there, and names close ones for a name not there.
 	e.write(t, "icon.yaml", "id: i\nwidth: 100\nheight: 100\ntitle: t\nparts:\n  - icon: { x: 10, y: 10, name: aws/lambda }\n")
 	want(t, "render an unknown icon", e.run(t, "", "diagram", "render", "icon.yaml"), 1, "",
-		`floe: icon.yaml:6:5: icon "aws/lambda": no icon "aws/lambda"; did you mean aws/aws-lambda? (search with: floe icons search <word>)`)
+		`icon.yaml:6:5: icon "aws/lambda": no icon "aws/lambda"; did you mean aws/aws-lambda? (search with: floe icons search <word>)`)
 	e.write(t, "icon.yaml", "id: i\nwidth: 100\nheight: 100\ntitle: t\nparts:\n  - icon: { x: 10, y: 10, name: aws/aws-lambda }\n")
 	if r := e.run(t, "", "diagram", "render", "--no-assets", "icon.yaml"); r.code != 0 || !strings.Contains(r.stdout, `href="data:image/svg+xml;base64,`) || !strings.Contains(r.stdout, `<use href="#i_icon-`) {
 		t.Errorf("render an icon = %+v", r)

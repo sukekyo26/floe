@@ -48,14 +48,15 @@ func (a *app) warn(key string, args ...any) {
 
 func (a *app) publishCmd() *cobra.Command {
 	var opts store.Options
-	var slug, title, description, lang string
+	var slug, title, description, lang, theme string
 	cmd := &cobra.Command{
 		Use:   "publish <data.yaml> | --link <file.html>",
 		Short: "Store a page drawn from a data file (or --link an HTML file in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
 store it and print its URL. The same slug from the same project overwrites it, and a slug
 published from another project is refused unless --force. A page is in English unless
---lang names another language (a republish keeps the last one given). A new slug is also
+--lang names another language (a republish keeps the last one given), and in the theme
+its data names (theme:, else default) unless --theme names another. A new slug is also
 opened in the browser ($BROWSER, open, wslview, xdg-open).
 
 --link registers an HTML file in place and shows it as it is: it is read on every request,
@@ -83,6 +84,13 @@ for another file is refused unless --force.`,
 				}
 				opts.Lang = &lang
 			}
+			if flags.Changed("theme") {
+				theme = strings.TrimSpace(theme)
+				if theme == "" {
+					return usageError{err: usererr.New("cli_theme_empty")}
+				}
+				opts.Theme = &theme
+			}
 			return a.publish(cmd.Context(), args[0], opts)
 		},
 	}
@@ -92,6 +100,7 @@ for another file is refused unless --force.`,
 	f.StringVar(&title, "title", "", "the title (default: the data file's title:, or a link's <title> or <h1>)")
 	f.StringVar(&description, "description", "", "a description shown in the list")
 	f.StringVar(&lang, "lang", "", "the language of a data file's page, e.g. ja (default: en, or the last one given)")
+	f.StringVar(&theme, "theme", "", "the template's theme to draw with (default: the data file's theme:, else default)")
 	f.BoolVar(&opts.Force, "force", false, "replace a page of another project, or a link to another file")
 	return cmd
 }

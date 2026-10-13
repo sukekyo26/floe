@@ -7,6 +7,7 @@ Reference for every command of the `floe` binary.
 | Command | Purpose |
 |---|---|
 | `floe publish <data.yaml>` | Store a page drawn from a data file (or `--link` an HTML file in place) and print its URL |
+| `floe check <data.yaml>...` | Check data files as `floe publish` would, without publishing them |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe serve` | Run the server in the foreground |
@@ -35,6 +36,7 @@ Pages are drawn from data files (`.yaml`, `.yml`). An HTML file is not stored: l
 | `--title <text>` | The title shown in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
 | `--description <text>` | A description shown in the list. |
 | `--lang <tag>` | The language of the page drawn from a data file (`<html lang>`), as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. Refused with `--link`: a linked file is shown as it is. |
+| `--theme <name>` | The template's theme to draw the page with, over the data file's `theme:`, which is then not used. Defaults to `theme:`, else `default`; a republish without it goes back to `theme:`. An empty value is a usage error. Refused with `--link`. |
 | `--force` | Replace a page published from another project, or a link to another file. |
 
 ### Data files
@@ -77,6 +79,17 @@ Each page belongs to the project it is published from. The project is the reposi
 - A file directly under `/` or under your home itself is refused, because the whole directory would be served.
 - A link without `--slug` reuses the slug of the same file, else takes the first free one of `name`, `name-2`, `name-3` …
 - The same slug for another file is refused unless `--force`.
+
+---
+
+## `floe check <data.yaml>...`
+
+Check each data file as `floe publish` does before it stores the page: its YAML, its template and theme, the template's schema, and drawing the page. A relative path is resolved against the working directory.
+
+- Every mistake of every file is printed at once as `file:line:column: message`, in the order the files were given (exit code 1).
+- Nothing is printed when every file is right (exit code 0).
+- Nothing is published, and the server is not started, so a repository's CI can run it over its data files.
+- A file that is not a data file (`.yaml`, `.yml`) is refused.
 
 ---
 
@@ -203,5 +216,5 @@ The management page follows the browser's language instead. Cobra's own errors (
 | Code | Meaning |
 |---|---|
 | `0` | Success |
-| `1` | Failure (a refused publish, a missing page, a port in use, a diagram spec with mistakes …) |
-| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`, an unknown example, a `--lang` that is not a BCP 47 tag) |
+| `1` | Failure (a refused publish, a missing page, a port in use, a data file or diagram spec with mistakes …) |
+| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title` or `--theme`, an unknown example, a `--lang` that is not a BCP 47 tag) |

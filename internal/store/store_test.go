@@ -622,10 +622,28 @@ func TestPublishLang(t *testing.T) {
 		wantUserErr(t, err, "lang_invalid", bad)
 	}
 
+	// --theme picks a theme of the template over the data's, which is then not used, and is refused
+	// for a link.
+	printed := e.write(t, "printed.yaml", "template: report\ntheme: print\n")
+	_, err := e.publish(t, printed, store.Options{}, "other")
+	if err == nil || !strings.Contains(err.Error(), `template report has no theme "print"`) {
+		t.Errorf("publish of a theme the template does not have = %v", err)
+	}
+	e.mustPublish(t, printed, store.Options{Theme: ptr("default")}, "other")
+	if m := e.meta(t, "printed"); m.Theme != "default" {
+		t.Errorf("--theme default over theme: print: theme %q", m.Theme)
+	}
+	listed := e.write(t, "listed.yaml", "template: report\ntheme: [dark]\n")
+	e.mustPublish(t, listed, store.Options{Theme: ptr("default")}, "other")
+	_, err = e.publish(t, frag, store.Options{Theme: ptr("print")}, "other")
+	wantUserErr(t, err, "tmpl_unknown_theme", "print", "report", "default")
+
 	// A linked file is shown as it is: --lang is refused, and a language left from before is dropped.
 	site := e.write(t, "site/index.html", "<h1>A</h1>")
-	_, err := e.publish(t, site, store.Options{Link: true, Lang: ptr("ja")}, "repo")
+	_, err = e.publish(t, site, store.Options{Link: true, Lang: ptr("ja")}, "repo")
 	wantUserErr(t, err, "store_lang_link")
+	_, err = e.publish(t, site, store.Options{Link: true, Theme: ptr("default")}, "repo")
+	wantUserErr(t, err, "store_theme_link")
 	e.mustPublish(t, site, store.Options{Link: true}, "repo")
 	m := e.meta(t, "site")
 	m.Lang = "ja"

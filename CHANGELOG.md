@@ -35,9 +35,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   background when needed and opens a new page in the browser. An HTML file is
   not stored: `--link` registers it in place and shows it as it is, served
   with the files under its directory.
-  `--slug`, `--title`, `--description` and `--force` are also available.
+  `--theme` picks another theme of the template, and `--slug`, `--title`,
+  `--description` and `--force` are also available.
   Republishing a slug says so on stderr, with a warning when the title
   changed.
+- Add `floe check <data.yaml>...`, which checks data files as `floe publish`
+  does and prints every mistake as `file:line:column`, without publishing them
+  or starting the server, for the CI of a repository that keeps data files.
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, as well as the
   management page with live reload, which reads and writes the same store
   format as the artifact skill. The server keeps running until `floe stop`.

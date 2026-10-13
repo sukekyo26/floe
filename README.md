@@ -11,8 +11,8 @@ overflow, overlaps and crossing edges before they render.
 
 > **Status:** under construction. Publishing pages from data files with the
 > built-in `report` template, linking HTML files and drawing diagrams
-> (`floe diagram render`, with AWS icons from `floe icons fetch aws`) work;
-> checks of data files and templates of your own are planned.
+> (`floe diagram render`, with AWS icons from `floe icons fetch aws`) and
+> checking data files (`floe check`) work; templates of your own are planned.
 
 ## Install
 
@@ -31,6 +31,7 @@ release's `SHA256SUMS`.
 ```sh
 floe publish plan.yaml     # draw the page from its data, store it, print its URL and open it
 floe publish --link out/index.html   # show an HTML file as it is, read on every request
+floe check plan.yaml       # check a data file without publishing it
 floe list                  # pages, newest first
 floe stop                  # stop the background server
 ```

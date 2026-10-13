@@ -52,40 +52,24 @@ var shared = []string{"template", "theme", "title"}
 
 // Read reads the data file src and checks it against its template's schema; file names it in errors.
 // A mistake is a *yamlpos.Error, and the schema's are all reported at once as yamlpos.Problems.
-func Read(file string, src []byte) (*Data, error) {
+//
+// theme, when not "", is the theme to draw with instead of the one the data names (floe publish
+// --theme): the data's theme: is then not used, and a theme the template does not have is refused as
+// a *usererr.Error.
+func Read(file string, src []byte, theme string) (*Data, error) {
 	root, err := parse(file, src)
 	if err != nil {
 		return nil, err
-	}
-	var problems yamlpos.Problems
-	fail := func(p yamlpos.Pos, key string, args ...any) {
-		problems = append(problems, yamlpos.New(file, p, key, args...))
 	}
 	var top map[string]any
 	if err = yaml.NodeToValue(root, &top); err != nil {
 		return nil, yamlpos.Syntax(file, err)
 	}
 	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top}
-	// Where each shared key is written, or the top of the file for one left out.
-	where := map[string]yamlpos.Pos{}
-	to := map[string]*string{"template": &d.Template, "theme": &d.Theme, "title": &d.Title}
-	for _, key := range shared {
-		where[key] = yamlpos.Of(root)
-		v, ok := top[key]
-		if !ok {
-			continue
-		}
-		k, n, _ := yamlpos.Find(root, []string{key})
-		where[key] = yamlpos.OfValue(k, n)
-		delete(top, key)
-		if s, ok := v.(string); ok {
-			*to[key] = s
-		} else {
-			fail(where[key], "tmpl_not_text", key)
-		}
+	where, problems := readShared(d, root, theme != "")
+	fail := func(p yamlpos.Pos, key string, args ...any) {
+		problems = append(problems, yamlpos.New(file, p, key, args...))
 	}
-	// A title of spaces names none, as an empty --title does.
-	d.Title = strings.TrimSpace(d.Title)
 	// Without its template, the data has no schema to be checked against.
 	switch {
 	case d.Template == "" && problems == nil:
@@ -101,7 +85,12 @@ func Read(file string, src []byte) (*Data, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !slices.Contains(themes, d.Theme) {
+	switch {
+	case theme != "" && !slices.Contains(themes, theme):
+		return nil, usererr.New("tmpl_unknown_theme", theme, d.Template, strings.Join(themes, ", "))
+	case theme != "":
+		d.Theme = theme
+	case !slices.Contains(themes, d.Theme):
 		fail(where["theme"], "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
 	}
 	err = checkSchema(d, root)
@@ -116,6 +105,36 @@ func Read(file string, src []byte) (*Data, error) {
 		return nil, problems.Sorted()
 	}
 	return d, nil
+}
+
+// readShared moves the keys every template shares from d.Values to d, and returns where each is
+// written (the top of the file for one left out) and the mistakes in them. With themed, a theme is
+// given over the data's, and its theme: is not used.
+func readShared(d *Data, root ast.Node, themed bool) (map[string]yamlpos.Pos, yamlpos.Problems) {
+	var problems yamlpos.Problems
+	where := map[string]yamlpos.Pos{}
+	to := map[string]*string{"template": &d.Template, "theme": &d.Theme, "title": &d.Title}
+	for _, key := range shared {
+		where[key] = yamlpos.Of(root)
+		v, ok := d.Values[key]
+		if !ok {
+			continue
+		}
+		k, n, _ := yamlpos.Find(root, []string{key})
+		where[key] = yamlpos.OfValue(k, n)
+		delete(d.Values, key)
+		if key == "theme" && themed {
+			continue
+		}
+		if s, ok := v.(string); ok {
+			*to[key] = s
+		} else {
+			problems = append(problems, yamlpos.New(d.File, where[key], "tmpl_not_text", key))
+		}
+	}
+	// A title of spaces names none, as an empty --title does.
+	d.Title = strings.TrimSpace(d.Title)
+	return where, problems
 }
 
 // parse reads src as one YAML document of keys and values, without anchors, aliases or tags, so

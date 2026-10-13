@@ -6,12 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // Exit codes.
@@ -63,7 +66,15 @@ func Run(ctx context.Context, args []string, env Env) int {
 	if errors.As(err, &l) {
 		msg = l.Localize(cat)
 	}
-	_, _ = fmt.Fprintf(env.Stderr, "floe: %s\n", msg) //nolint:errcheck // nowhere left to report
+	// Mistakes at lines and columns go out as they are, one per line, for editors and CI to read.
+	prefix := "floe: "
+	var all yamlpos.Problems
+	var one *yamlpos.Error
+	var checked mistakes
+	if errors.As(err, &all) || errors.As(err, &one) || errors.As(err, &checked) {
+		prefix = ""
+	}
+	_, _ = fmt.Fprintf(env.Stderr, "%s%s\n", prefix, msg) //nolint:errcheck // nowhere left to report
 	if errors.As(err, new(usageError)) {
 		return exitUsage
 	}
@@ -122,7 +133,20 @@ func newRoot(env Env, cat *i18n.Catalog) *cobra.Command {
 		app.cfg = cfg
 		return err
 	}
-	root.AddCommand(app.publishCmd(), app.listCmd(), app.rmCmd(), app.serveCmd(), app.stopCmd(),
+	root.AddCommand(app.publishCmd(), app.checkCmd(), app.listCmd(), app.rmCmd(), app.serveCmd(), app.stopCmd(),
 		app.diagramCmd(), app.iconsCmd())
 	return root
+}
+
+// readArg reads a file named on the command line, relative to the working directory.
+func (a *app) readArg(file string) ([]byte, error) {
+	abs := file
+	if !filepath.IsAbs(abs) {
+		abs = filepath.Join(a.env.Dir, abs)
+	}
+	src, err := os.ReadFile(abs) //nolint:gosec // G304: reading the file the user names is the point
+	if err != nil {
+		return nil, usererr.CannotRead(file, err)
+	}
+	return src, nil
 }
