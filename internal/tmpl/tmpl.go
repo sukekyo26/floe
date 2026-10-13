@@ -57,8 +57,9 @@ func Read(file string, src []byte) (*Data, error) {
 	if err != nil {
 		return nil, err
 	}
-	at := func(p yamlpos.Pos, key string, args ...any) error {
-		return yamlpos.New(file, p, key, args...)
+	var problems yamlpos.Problems
+	fail := func(p yamlpos.Pos, key string, args ...any) {
+		problems = append(problems, yamlpos.New(file, p, key, args...))
 	}
 	var top map[string]any
 	if err = yaml.NodeToValue(root, &top); err != nil {
@@ -76,30 +77,43 @@ func Read(file string, src []byte) (*Data, error) {
 		}
 		k, n, _ := yamlpos.Find(root, []string{key})
 		where[key] = yamlpos.OfValue(k, n)
-		s, ok := v.(string)
-		if !ok {
-			return nil, at(where[key], "tmpl_not_text", key)
-		}
-		*to[key] = s
 		delete(top, key)
+		if s, ok := v.(string); ok {
+			*to[key] = s
+		} else {
+			fail(where[key], "tmpl_not_text", key)
+		}
 	}
 	// A title of spaces names none, as an empty --title does.
 	d.Title = strings.TrimSpace(d.Title)
-	if d.Template == "" {
-		return nil, at(where["template"], "tmpl_no_template", strings.Join(Names(), ", "))
-	}
-	if !slices.Contains(Names(), d.Template) {
-		return nil, at(where["template"], "tmpl_unknown", d.Template, strings.Join(Names(), ", "))
+	// Without its template, the data has no schema to be checked against.
+	switch {
+	case d.Template == "" && problems == nil:
+		fail(where["template"], "tmpl_no_template", strings.Join(Names(), ", "))
+		return nil, problems.Sorted()
+	case d.Template == "":
+		return nil, problems.Sorted()
+	case !slices.Contains(Names(), d.Template):
+		fail(where["template"], "tmpl_unknown", d.Template, strings.Join(Names(), ", "))
+		return nil, problems.Sorted()
 	}
 	themes, err := themesOf(d.Template)
 	if err != nil {
 		return nil, err
 	}
 	if !slices.Contains(themes, d.Theme) {
-		return nil, at(where["theme"], "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
+		fail(where["theme"], "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
 	}
-	if err := checkSchema(d, root); err != nil {
+	err = checkSchema(d, root)
+	var more yamlpos.Problems
+	switch {
+	case errors.As(err, &more):
+		problems = append(problems, more...)
+	case err != nil:
 		return nil, err
+	}
+	if problems != nil {
+		return nil, problems.Sorted()
 	}
 	return d, nil
 }
@@ -116,6 +130,9 @@ func parse(file string, src []byte) (ast.Node, error) {
 	}
 	if a := yamlpos.FirstAnchor(body); a != nil {
 		return nil, yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
+	}
+	if k := firstNonTextKey(body); k != nil {
+		return nil, yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value)
 	}
 	if _, ok := body.(*ast.MappingNode); !ok {
 		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_not_mapping")
@@ -243,4 +260,33 @@ func (s *schema) prepare(v any) any {
 		return out
 	}
 	return v
+}
+
+// firstNonTextKey returns the first key under n that is not text, or nil. A key is a name: 0x10, ~
+// or 1.0 would be read as another name than the one written, and not found where it was written.
+func firstNonTextKey(n ast.Node) ast.Node {
+	k := &keys{found: nil}
+	ast.Walk(k, n)
+	return k.found
+}
+
+type keys struct {
+	found ast.Node
+}
+
+func (k *keys) Visit(n ast.Node) ast.Visitor {
+	if k.found != nil {
+		return nil
+	}
+	if v, ok := n.(*ast.MappingValueNode); ok {
+		key := ast.Node(v.Key)
+		if explicit, ok := key.(*ast.MappingKeyNode); ok {
+			key = explicit.Value
+		}
+		if _, text := key.(*ast.StringNode); !text {
+			k.found = key
+			return nil
+		}
+	}
+	return k
 }

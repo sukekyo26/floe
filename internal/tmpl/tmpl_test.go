@@ -91,14 +91,20 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\nlead: &a x\n", "data.yaml:2:7: anchors, aliases, merge keys (<<) and tags are not supported"},
 		{"template: report\n<<: {lead: x}\n", "data.yaml:2:1: anchors, aliases, merge keys (<<) and tags are not supported"},
 		{"template:\n", "data.yaml:1:1: template must be text"},
+		{"template: report\n0x10: x\n", "data.yaml:2:1: a key is a name: write 0x10 as text, in quotes"},
+		{"template: report\nsections:\n  - ~: x\n", "data.yaml:3:5: a key is a name: write ~ as text, in quotes"},
+		{"template: report\nsections:\n  -\n", "data.yaml:3:3: sections[0]: write keys and values, not nothing"},
+		// The shared keys and the schema are reported together.
+		{"template: report\ntheme: print\nleed: x\n", "data.yaml:2:8: template report has no theme \"print\"; use default\ndata.yaml:3:1: leed is not an item"},
 		{"template: deck\n", `data.yaml:1:11: unknown template "deck"; use report`},
 		{"template: report\ntheme: print\n", `data.yaml:2:8: template report has no theme "print"; use default`},
 		{"template: report\ntitle: [a]\n", "data.yaml:2:8: title must be text"},
 		{"template: report\ntitle: 'a\n", "data.yaml:2:8: this is not valid YAML: "},
 	} {
 		_, err := tmpl.Read("data.yaml", []byte(c.src))
-		var at *yamlpos.Error
-		if !errors.As(err, &at) || !strings.HasPrefix(err.Error(), c.want) {
+		var one *yamlpos.Error
+		var all yamlpos.Problems
+		if !errors.As(err, &one) && !errors.As(err, &all) || !strings.HasPrefix(err.Error(), c.want) {
 			t.Errorf("Read %q = %v, want %s", c.src, err, c.want)
 		}
 	}

@@ -29,7 +29,9 @@ func TestSchemaWording(t *testing.T) {
     "keys": { "type": "object", "maxProperties": 1 },
     "kind": { "const": "x" },
     "huge": { "type": "number" },
-    "note": { "type": "string" }
+    "note": { "type": "string" },
+    "pick": { "enum": ["a", "b"] },
+    "open": { "type": "object", "patternProperties": { "^x-": {} }, "additionalProperties": false }
   }
 }`
 	src := `op: Scan
@@ -41,6 +43,8 @@ keys: { a: 1, b: 2 }
 kind: y
 huge: .inf
 note:
+pick:
+open: { y: 1 }
 `
 	tests := []struct{ en, ja string }{
 		{`d.yaml:1:1: name is required but missing`, `d.yaml:1:1: name は必須の項目ですが、ありません`},
@@ -55,6 +59,8 @@ note:
 		{`d.yaml:7:7: kind: value must be 'x'`, `d.yaml:7:7: kind: value must be 'x'`},
 		{`d.yaml:8:7: huge: .inf is not a value a data file can hold`, `d.yaml:8:7: huge: .inf は使えません。`},
 		{`d.yaml:9:1: note: write text, not nothing`, `d.yaml:9:1: note: 空ではなく文字列で書いてください`},
+		{`d.yaml:10:1: pick: write one of a, b`, `d.yaml:10:1: pick: a, b のどれかを書いてください`},
+		{`d.yaml:11:9: open.y is not an item of the template report (a typo?)`, `d.yaml:11:9: open.y はテンプレート report に無い項目です（打ち間違い？）`},
 	}
 	got := check(t, schema, src)
 	for _, tt := range tests {
@@ -64,6 +70,11 @@ note:
 		if ja := got.Localize(i18n.New("ja")); !strings.Contains(ja, tt.ja) {
 			t.Errorf("the mistakes lack %q:\n%s", tt.ja, ja)
 		}
+	}
+
+	// A mapping allowed by pattern has no list of items to suggest.
+	if strings.Contains(got.Error(), "open.y is not an item of the template report (a typo?); use") {
+		t.Errorf("an item allowed by pattern lists the items: %s", got.Error())
 	}
 
 	// The lower bounds, and a mistake at the top level.

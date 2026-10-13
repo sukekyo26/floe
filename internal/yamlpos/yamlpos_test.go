@@ -54,7 +54,7 @@ func TestFind(t *testing.T) {
 	}{
 		{nil, "", false, yamlpos.Pos{Line: 1, Column: 1}},
 		{[]string{"list", "0", "b c"}, "list[0].b c", true, yamlpos.Pos{Line: 3, Column: 12}},
-		{[]string{"list", "0"}, "list[0]", false, yamlpos.Pos{Line: 2, Column: 5}},
+		{[]string{"list", "0"}, "list[0]", true, yamlpos.Pos{Line: 2, Column: 5}},
 		{[]string{"list", "5", "a"}, "list", true, yamlpos.Pos{Line: 2, Column: 3}},
 		{[]string{"nope"}, "", false, yamlpos.Pos{Line: 1, Column: 1}},
 	} {

@@ -2,7 +2,6 @@ package tmpl
 
 import (
 	"bytes"
-	"cmp"
 	"errors"
 	"fmt"
 	"math/big"
@@ -62,9 +61,10 @@ func validate(src []byte, d *Data, root ast.Node) error {
 	}
 	s := &schemaCheck{file: d.File, template: d.Template, root: root, schema: doc, problems: nil}
 	s.collect(ve)
-	slices.SortStableFunc(s.problems, func(x, y *yamlpos.Error) int {
-		return cmp.Or(cmp.Compare(x.Pos.Line, y.Pos.Line), cmp.Compare(x.Pos.Column, y.Pos.Column))
-	})
+	if len(s.problems) == 0 {
+		// A failure without a mistake to point at is not one the data can fix.
+		return fmt.Errorf("check %s against its schema: %w", d.File, ve)
+	}
 	return s.problems
 }
 
@@ -93,16 +93,7 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 			s.add(where, "tmpl_schema_required", join(at, name))
 		}
 	case *kind.AdditionalProperties:
-		names := s.properties(e.SchemaURL)
-		if len(e.InstanceLocation) == 0 {
-			names = append(names, shared...)
-			slices.Sort(names)
-		}
-		allowed := strings.Join(names, ", ")
-		for _, name := range k.Properties {
-			extra, _, path := yamlpos.Find(s.root, append(slices.Clone(e.InstanceLocation), name))
-			s.add(yamlpos.Of(extra), "tmpl_schema_unknown", path, s.template, allowed)
-		}
+		s.unknown(e, k.Properties, where)
 	case *kind.Type:
 		want := make(orList, len(k.Want))
 		for i, t := range k.Want {
@@ -113,6 +104,10 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 		want := make([]string, len(k.Want))
 		for i, w := range k.Want {
 			want[i] = fmt.Sprint(w)
+		}
+		if k.Got == nil {
+			s.add(where, "tmpl_schema_enum_empty", label(at), strings.Join(want, ", "))
+			return
 		}
 		s.add(where, "tmpl_schema_enum", label(at), fmt.Sprint(k.Got), strings.Join(want, ", "))
 	case *kind.InvalidJsonValue:
@@ -164,6 +159,29 @@ func wording(k jsonschema.ErrorKind) (key string, args []any, ok bool) {
 
 var english = message.NewPrinter(language.English)
 
+// unknown reports the items of the mapping at e that the template does not have, each at its key
+// (or at the mapping, where), with the items it has.
+func (s *schemaCheck) unknown(e *jsonschema.ValidationError, extras []string, where yamlpos.Pos) {
+	names := s.properties(e.SchemaURL)
+	if len(e.InstanceLocation) == 0 {
+		names = append(names, shared...)
+		slices.Sort(names)
+	}
+	for _, name := range extras {
+		extra, _, path := yamlpos.Find(s.root, append(slices.Clone(e.InstanceLocation), name))
+		at := where
+		if extra != nil {
+			at = yamlpos.Of(extra)
+		}
+		if len(names) == 0 {
+			// Items the schema allows by pattern or through $ref have no list to give.
+			s.add(at, "tmpl_schema_unknown_bare", path, s.template)
+			continue
+		}
+		s.add(at, "tmpl_schema_unknown", path, s.template, strings.Join(names, ", "))
+	}
+}
+
 func (s *schemaCheck) add(at yamlpos.Pos, key string, args ...any) {
 	s.problems = append(s.problems, yamlpos.New(s.file, at, key, args...))
 }
@@ -180,7 +198,7 @@ func (s *schemaCheck) properties(url string) []string {
 		if !ok {
 			return nil
 		}
-		v = m[strings.NewReplacer("~1", "/", "~0", "~").Replace(step)]
+		v = m[pointerStep.Replace(step)]
 	}
 	m, ok := v.(map[string]any)
 	if !ok {
@@ -196,6 +214,9 @@ func (s *schemaCheck) properties(url string) []string {
 	}
 	return nil
 }
+
+// pointerStep unescapes a step of a JSON pointer.
+var pointerStep = strings.NewReplacer("~1", "/", "~0", "~")
 
 // join adds name to the path at.
 func join(at, name string) string {

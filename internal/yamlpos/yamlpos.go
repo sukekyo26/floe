@@ -3,6 +3,7 @@
 package yamlpos
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"slices"
@@ -39,8 +40,8 @@ func Of(n ast.Node) Pos {
 }
 
 // Find follows at, keys of mappings and indexes of sequences, from root. It returns the key node of
-// the last step (nil at root or for an index), its value node, and the path written as
-// sections[0].parts[1]. It stops at the last node it can reach.
+// the last step (the - of an entry of a block sequence; nil at root or in a flow sequence), its value
+// node, and the path written as sections[0].parts[1]. It stops at the last node it can reach.
 func Find(root ast.Node, at []string) (key, value ast.Node, path string) {
 	value = root
 	var b strings.Builder
@@ -63,6 +64,9 @@ func Find(root ast.Node, at []string) (key, value ast.Node, path string) {
 			}
 			fmt.Fprintf(&b, "[%d]", i)
 			key, value = nil, n.Values[i]
+			if len(n.Entries) == len(n.Values) {
+				key = n.Entries[i] // its -, where an entry left empty is
+			}
 		default:
 			return key, value, b.String()
 		}
@@ -190,6 +194,15 @@ func (e *Error) Localize(c *i18n.Catalog) string {
 
 // Problems are mistakes reported all at once, each at its own line and column.
 type Problems []*Error
+
+// Sorted returns p in the order of the file.
+func (p Problems) Sorted() Problems {
+	slices.SortStableFunc(p, func(x, y *Error) int {
+		return cmp.Or(cmp.Compare(x.File, y.File), cmp.Compare(x.Pos.Line, y.Pos.Line),
+			cmp.Compare(x.Pos.Column, y.Pos.Column))
+	})
+	return p
+}
 
 // Error words the mistakes in English, one per line.
 func (p Problems) Error() string {
