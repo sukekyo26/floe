@@ -93,6 +93,7 @@ A linked data file is drawn each time its page is opened, with `--lang` and `--t
 - When it has mistakes, the tab shows them instead of the page, and comes back to the page once they are fixed and saved.
 - Nothing of its directory is served: its images are in its page. Its download is the page drawn.
 - Its title in the list is its `title:`, read each time.
+- It is drawn with the templates of your own of the publish that linked it (`FLOE_TEMPLATES_DIR`); one linked on the management page, with those of the publish that started the server.
 
 ---
 
