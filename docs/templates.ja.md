@@ -57,11 +57,11 @@ floe: 1.2
 
 データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。キーの打ち間違いを断るため、`"additionalProperties": false` を書きます。`template`・`theme`・`title` は floe が読むので、宣言しません。
 
-`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）、`html`・`image`・`diagram` を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。`html`・`image`・`diagram` は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。
+`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）、`html`・`image`・`diagram` を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。`html`・`image`・`diagram` は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。型は、`html` と `image` には `"type": "string"` だけを、`diagram` には `"type": "object"` だけを宣言します。こうした項目は丸ごと描くので、その中に書いた format は描かれず、`floe template check` もそれを誤りにします。
 
 `"format": "image"` の項目には、画像のパスを、データファイルのディレクトリからの相対で、その配下に、`..` やドットで始まる名前を使わずに書きます。画像は data URI としてページに入るので、`<img src="{{.Data.chart}}">` と書けて、ページだけで表示が完結します。
 
-`"format": "diagram"` の項目には、図の spec を [`floe diagram render`](commands.ja.md#floe-diagram-render-specyaml) に渡すのと同じ形でその場に書きます。`"type": "object"` で宣言してください。spec は `floe diagram render` と同じく検査し、誤りはデータファイルの行と列で出します。1 ページの図の id は互いに違えます。`{{.Data.plan}}` がインライン SVG で図を描き、ページの末尾に図のスタイルとズームが 1 回だけ付きます。図は色と書体を、`report` の既定のテーマが定義しているテーマの CSS 変数（`--fg`・`--bg`・`--accent` など）から取ります。変数はテーマで定義するか、すべてのテーマの分を `page.html` の `<style>` で定義します。`floe template check` は、そのどれかを定義していないテーマを警告します。そのテーマの図はダークモードでも明るい色のままになります。
+`"format": "diagram"` の項目には、図の spec を [`floe diagram render`](commands.ja.md#floe-diagram-render-specyaml) に渡すのと同じ形でその場に書きます。spec は `floe diagram render` と同じく検査し、誤りはデータファイルの行と列で出します。1 ページの図の id は互いに違えます。`{{.Data.plan}}` がインライン SVG で図を描き、ページの末尾に図のスタイルとズームが 1 回だけ付きます。図は色と書体を、`report` の既定のテーマが定義しているテーマの CSS 変数（`--fg`・`--bg`・`--accent` など）から取ります。変数はテーマで定義するか、すべてのテーマの分を `page.html` の `<style>` で定義します。`floe template check` は、そのどれかを定義していないテーマを警告します。そのテーマの図はダークモードでも明るい色のままになります。
 
 ## 画像
 

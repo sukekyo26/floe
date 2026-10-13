@@ -432,17 +432,19 @@ func (s *schema) prepare(v any, at []string, d *Data) any {
 	if s == nil {
 		return v
 	}
-	if s.Format == "diagram" {
+	// An item of a format of floe's is drawn whole, as find found it: what it holds is not looked into.
+	text, isText := v.(string)
+	switch {
+	case s.Format == "diagram":
 		return d.diagrams[pathKey(at)]
+	case s.Format == "html" && isText:
+		return template.HTML(text) //nolint:gosec // G203: the schema declares this item HTML
+	case s.Format == "image" && isText:
+		return d.images[text]
+	case slices.Contains(formats, s.Format):
+		return v
 	}
 	switch v := v.(type) {
-	case string:
-		switch s.Format {
-		case "html":
-			return template.HTML(v) //nolint:gosec // G203: the schema declares this item HTML
-		case "image":
-			return d.images[v]
-		}
 	case map[string]any:
 		out := make(map[string]any, len(v)+len(s.Properties))
 		for k, item := range v {

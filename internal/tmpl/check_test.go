@@ -214,6 +214,16 @@ func TestCheckMistakes(t *testing.T) {
 			warning: "sizes/themes/default.css does not define --bg, --surface, --fg, --muted, --line, --accent, --accent-soft",
 		},
 		{
+			name: "formats of other types",
+			files: map[string]string{"schema.json": `"note": { "type": "string", "format": "html" }|"note": { "type": "object", "format": "html", ` +
+				`"properties": { "logo": { "type": "string", "format": "image" } } }, "plan": { "format": "diagram" }`},
+			want: []string{
+				`sizes/schema.json: #/properties/note: floe draws an item of the format html from a value of type string; declare "type": "string" alone`,
+				"sizes/schema.json: #/properties/note/properties/logo: the format image marks an item to draw",
+				`sizes/schema.json: #/properties/plan: floe draws an item of the format diagram from a value of type object`,
+			},
+		},
+		{
 			name: "a format inside a diagram",
 			files: map[string]string{"schema.json": `"chart":|"plan": { "type": "object", "format": "diagram", ` +
 				`"properties": { "logo": { "type": "string", "format": "image" } } },` + "\n    " + `"chart":`},

@@ -329,6 +329,7 @@ var messagesJA = map[string]string{
 	"tmpl_format_unknown":      "%s: %s: floe は format「%s」を知りません。JSON Schema の format か、html・image・diagram を使ってください",
 	"tmpl_format_unreached":    "%s: %s: format %s は描く項目の印です。floe が辿る properties か items の下で宣言してください",
 	"tmpl_schema_open":         `%s: %s は "additionalProperties": false を書かずに properties を宣言しているので、打ち間違えたキーを断れません`,
+	"tmpl_format_type":         `%s: %s: floe は format %s の項目を型 %s の値から描きます。"type": "%[4]s" だけを宣言してください`,
 	"tmpl_theme_variables":     "%s は、図が色と書体を取る %s を定義していません。このテーマの図はダークモードでも明るい色のままです",
 	"tmpl_no_template_yaml":    "%s に template.yaml がありません。テンプレートを書いた floe の版を floe: %s のように書いてください",
 	"tmpl_example_name":        "example.yaml がテンプレート %s を指定しています。テンプレートのディレクトリ名の %s にしてください",

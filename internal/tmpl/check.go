@@ -492,6 +492,10 @@ func (t *Template) checkExample() error {
 	return err
 }
 
+// formatTypes are the JSON types of the items of floe's formats: the text of HTML or of an image's
+// path, and a diagram's spec.
+var formatTypes = map[string]string{"html": "string", "image": "string", "diagram": "object"}
+
 // schemaLint finds what jsonschema compiles but floe would not draw as the schema means.
 type schemaLint struct {
 	file     string
@@ -513,8 +517,11 @@ func (l *schemaLint) walk(v any, ptr string, reached bool) {
 			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unknown", l.file, ptr, f))
 		case slices.Contains(formats, f) && !reached:
 			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unreached", l.file, ptr, f))
-		case f == "diagram":
-			l.diagrams = true
+		case slices.Contains(formats, f):
+			if m["type"] != formatTypes[f] {
+				l.mistakes = append(l.mistakes, usererr.New("tmpl_format_type", l.file, ptr, f, formatTypes[f]))
+			}
+			l.diagrams = l.diagrams || f == "diagram"
 			// prepare draws it whole, and goes no further in: a format below is not reached.
 			reached = false
 		}
