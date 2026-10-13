@@ -8,7 +8,7 @@ A template draws a page from a data file (`floe publish <data.yaml>`). floe has 
 
 - A template of your own is a directory `$FLOE_TEMPLATES_DIR/<name>/`, named after the template. `FLOE_TEMPLATES_DIR` defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`.
 - The directory may be a symlink, to a clone of a repository for example. A file in it that leads out of it, through a symlink, is refused.
-- A file, or a name starting with a dot, is not a template.
+- A template's name is lower case letters, digits, `-` and `_`, starting with a letter or a digit. A file, or a directory of another name, is not a template.
 - A broken template of your own stops the publish with an error: floe does not fall back to the built-in one of its name.
 
 ## Files
@@ -34,7 +34,7 @@ To start one, copy the built-in `report` from [the source](../internal/tmpl/buil
 floe: 1.2
 ```
 
-The template needs floe 1.2.0 or later, of major 1. With another floe, a publish stops before the data is checked, naming the floe the template needs. A template without `template.yaml` is drawn by any floe.
+The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor version may change what templates can do, so `floe: 0.2` takes floe 0.2.0 or later of 0.2. With another floe, a publish stops before the data is checked, naming the floe the template needs. A template without `template.yaml` is drawn by any floe.
 
 ## page.html
 
@@ -88,7 +88,7 @@ An expression sees the data file's items that the schema declares, and the other
 A data file is checked in this order, and each stage runs only on data that passed the one before. `floe check` runs them all without publishing.
 
 1. Its YAML
-2. Its template and theme, and the template's `schema.json`
+2. Its template, the floe the template needs, its theme, and the template's `schema.json`
 3. The template's `checks.yaml`
 4. The template's `computed.yaml`
 5. Drawing `page.html`

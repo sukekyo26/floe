@@ -21,7 +21,7 @@ func render(t *testing.T, src string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := builtins.Render(d, "A title & more", "ja")
+	b, err := d.Render("A title & more", "ja")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,8 +121,12 @@ func TestReadRefusals(t *testing.T) {
 		t.Errorf("Read of a document after a %%YAML directive = %v", err)
 	}
 	// Data that passed its schema draws; a template that does not fit it is refused while drawing.
-	d := &tmpl.Data{File: "data.yaml", Template: "report", Theme: "default", Title: "", Values: map[string]any{"sections": "no"}}
-	if _, err := builtins.Render(d, "t", "en"); err == nil || !strings.HasPrefix(err.Error(), "data.yaml does not fit the template report: ") {
+	d, err := builtins.Read("data.yaml", []byte("template: report\n"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.Values = map[string]any{"sections": "no"}
+	if _, err := d.Render("t", "en"); err == nil || !strings.HasPrefix(err.Error(), "data.yaml does not fit the template report: ") {
 		t.Errorf("Render of data of the wrong shape = %v", err)
 	}
 }

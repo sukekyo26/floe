@@ -7,9 +7,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/goccy/go-yaml/ast"
 
@@ -97,16 +99,17 @@ func (l *Library) own(name string) (*Template, error) {
 		return nil, nil //nolint:nilnil // none
 	}
 	at := filepath.Join(l.dir, name)
-	if _, err := os.Lstat(at); errors.Is(err, fs.ErrNotExist) {
+	// Nothing there, or a file in the way of the directory of templates: none of one's own.
+	if _, err := os.Lstat(at); errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
 		return nil, nil //nolint:nilnil // none
 	}
 	dir, err := filepath.EvalSymlinks(at)
 	if err != nil {
-		return nil, fmt.Errorf("find the template %s: %w", name, err)
+		return nil, usererr.New("tmpl_own_broken", name, at, err.Error())
 	}
 	fi, err := os.Stat(dir)
 	if err != nil {
-		return nil, fmt.Errorf("find the template %s: %w", name, err)
+		return nil, usererr.New("tmpl_own_broken", name, at, err.Error())
 	}
 	if !fi.IsDir() {
 		return nil, nil //nolint:nilnil // a file, not a template
@@ -114,12 +117,14 @@ func (l *Library) own(name string) (*Template, error) {
 	return &Template{Name: name, Dir: dir}, nil
 }
 
-// validName reports whether name can name a template: a name of a directory, not a path, and not one
-// starting with a dot, which floe keeps for the work of installing one.
+// validName reports whether name can name a template: lower case letters, digits, - and _, so that it
+// is not a path, nor a name starting with a dot, which floe keeps for the work of installing one, and
+// so that it names the same template on a file system that ignores case (macOS).
 func validName(name string) bool {
-	return name != "" && filepath.IsLocal(name) && filepath.Base(name) == name && name[0] != '.' &&
-		!strings.ContainsAny(name, `/\`)
+	return templateName.MatchString(name)
 }
+
+var templateName = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
 // readFile reads the file name, a slash-separated path under the template. Under a template of one's
 // own, a symlink that leads out of it is refused.
@@ -173,13 +178,16 @@ func (t *Template) files(read func(fs.FS) error) error {
 }
 
 // checkVersion refuses t when the floe it needs is not this one: template.yaml's floe: 1.2 takes a
-// floe 1.2.0 or later of major 1. A built-in template, or one without template.yaml, needs none.
+// floe 1.2.0 or later of major 1, and floe: 0.2 one of 0.2, as a minor version of 0 may break what the
+// one before it took. A built-in template, or one without template.yaml, needs none.
 func (t *Template) checkVersion() error {
 	if t.Dir == "" {
 		return nil
 	}
 	src, err := t.readFile("template.yaml")
-	if errors.Is(err, fs.ErrNotExist) {
+	// A symlink that leads nowhere is a broken template.yaml, not a missing one.
+	_, lerr := os.Lstat(filepath.Join(t.Dir, "template.yaml"))
+	if errors.Is(err, fs.ErrNotExist) && errors.Is(lerr, fs.ErrNotExist) {
 		return nil
 	}
 	if err != nil {
@@ -193,11 +201,16 @@ func (t *Template) checkVersion() error {
 	if !ok {
 		return fmt.Errorf("the version of floe %q is not major.minor.patch", version.Version) //nolint:err113 // floe's own
 	}
+	return fits(t.Name, needs, have)
+}
+
+// fits refuses the template name, which needs a floe of needs, for a floe of have.
+func fits(name string, needs, have semver) error {
 	switch {
-	case have[0] != needs[0]:
-		return usererr.New("tmpl_floe_major", t.Name, needs[0], version.Version)
-	case have[1] < needs[1] || have[1] == needs[1] && have[2] < needs[2]:
-		return usererr.New("tmpl_floe_older", t.Name, needs.String(), version.Version)
+	case slices.Compare(have[:], needs[:]) < 0:
+		return usererr.New("tmpl_floe_older", name, needs.String(), have.String())
+	case have.series() != needs.series():
+		return usererr.New("tmpl_floe_major", name, needs.series(), have.String())
 	}
 	return nil
 }
@@ -239,6 +252,14 @@ type semver [3]int
 
 func (v semver) String() string {
 	return fmt.Sprintf("%d.%d.%d", v[0], v[1], v[2])
+}
+
+// series is the versions that take what v takes: its major, or its minor under major 0.
+func (v semver) series() string {
+	if v[0] == 0 {
+		return fmt.Sprintf("0.%d", v[1])
+	}
+	return strconv.Itoa(v[0])
 }
 
 // versionOf reads 1, 1.2 or 1.2.3, the parts left out being 0.

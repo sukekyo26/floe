@@ -37,7 +37,7 @@ func draw(l *tmpl.Library, src string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	b, err := l.Render(d, "t", "en")
+	b, err := d.Render("t", "en")
 	return string(b), err
 }
 
@@ -68,7 +68,11 @@ func TestOwnTemplates(t *testing.T) {
 	if page, err := draw(tmpl.NewLibrary(""), "template: report\n"); err != nil || strings.Contains(page, "<i>own</i>") {
 		t.Errorf("a page of the built-in report = %v", err)
 	}
-	for _, name := range []string{"../report", ".installing", "notes.txt", "a/b"} {
+	// A file where the directory of templates would be holds none.
+	if _, err := draw(tmpl.NewLibrary(filepath.Join(dir, "notes.txt")), "template: report\n"); err != nil {
+		t.Errorf("a page of report under a file in the way = %v", err)
+	}
+	for _, name := range []string{"../report", ".installing", "notes.txt", "a/b", "Report", "memo/"} {
 		if _, err := draw(l, "template: "+name+"\n"); err == nil || !strings.Contains(err.Error(), "unknown template") {
 			t.Errorf("template %s = %v, want unknown", name, err)
 		}
@@ -92,7 +96,7 @@ func TestBrokenOwnTemplates(t *testing.T) {
 	if err := os.Symlink(filepath.Join(dangling, "gone"), filepath.Join(dangling, "report")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dangling), "template: report\n"); err == nil || !strings.Contains(err.Error(), "find the template report") {
+	if _, err := draw(tmpl.NewLibrary(dangling), "template: report\n"); err == nil || !strings.Contains(err.Error(), "your own template report (") {
 		t.Errorf("a symlink that leads nowhere = %v", err)
 	}
 
@@ -111,6 +115,14 @@ func TestBrokenOwnTemplates(t *testing.T) {
 	if _, err := draw(tmpl.NewLibrary(leaky), "template: report\n"); err == nil || !strings.Contains(err.Error(), "themes/default.css") {
 		t.Errorf("a theme that leads out of the template = %v", err)
 	}
+
+	unversioned := t.TempDir()
+	if err := os.Symlink("gone.yaml", filepath.Join(own(t, unversioned, "report"), "template.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := draw(tmpl.NewLibrary(unversioned), "template: report\n"); err == nil || !strings.Contains(err.Error(), "template.yaml") {
+		t.Errorf("a template.yaml that leads nowhere = %v", err)
+	}
 }
 
 // template.yaml names the floe a template needs; a template for another major of floe, or for a later
@@ -121,7 +133,7 @@ func TestTemplateVersion(t *testing.T) {
 	for _, tt := range []struct{ yaml, want string }{
 		{"floe: 0\n", ""},
 		{"floe: 0.0.0\n", ""},
-		{"floe: 1.2\n", "template report is written for floe 1, not for this floe 0.0.0"},
+		{"floe: 1.2\n", "template report needs floe 1.2.0 or later, and this is floe 0.0.0"},
 		{"floe: 0.1\n", "template report needs floe 0.1.0 or later, and this is floe 0.0.0"},
 		{"floe: 0.0.1\n", "template report needs floe 0.0.1 or later"},
 		{"floe: x\n", "template.yaml:1:7: write template.yaml as one key, floe:"},

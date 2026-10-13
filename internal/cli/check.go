@@ -48,8 +48,7 @@ func checkFile(a *app, file string) []error {
 	if err != nil {
 		return []error{err}
 	}
-	templates := a.templates()
-	d, err := templates.Read(file, src, "")
+	d, err := a.templates().Read(file, src, "")
 	var all yamlpos.Problems
 	switch {
 	case errors.As(err, &all):
@@ -62,7 +61,7 @@ func checkFile(a *app, file string) []error {
 		return []error{err}
 	}
 	// Drawing is the last stage. Data that passed its schema fails here only by the template's mistake.
-	if _, err := templates.Render(d, cmp.Or(d.Title, file), ""); err != nil {
+	if _, err := d.Render(cmp.Or(d.Title, file), ""); err != nil {
 		return []error{err}
 	}
 	return nil

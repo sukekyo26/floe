@@ -46,6 +46,8 @@ type Data struct {
 	Title    string // "" when the data names none
 	Values   map[string]any
 	Calc     map[string]any // the values of the template's computed.yaml, by name; nil without one
+
+	tmpl *Template // the template Read checked the data against, which draws it
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -71,7 +73,7 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil}
+	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil}
 	where, problems := readShared(d, root, theme != "")
 	fail := func(p yamlpos.Pos, key string, args ...any) {
 		problems = append(problems, yamlpos.New(file, p, key, args...))
@@ -97,6 +99,7 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	if err = t.checkVersion(); err != nil {
 		return nil, err
 	}
+	d.tmpl = t
 	more, err := pickTheme(t, d, theme, where["theme"])
 	if err != nil {
 		return nil, err
@@ -201,21 +204,13 @@ func parse(file string, src []byte) (ast.Node, error) {
 	return body, nil
 }
 
-// errNoTemplate is a template gone between reading data and drawing it.
-var errNoTemplate = errors.New("its template is gone")
-
-// Render draws d as a page titled title in lang (a BCP 47 tag; "" is DefaultLang).
-func (l *Library) Render(d *Data, title, lang string) ([]byte, error) {
+// Render draws d, as read by Library.Read, as a page titled title in lang (a BCP 47 tag; "" is
+// DefaultLang), with the template the data was checked against.
+func (d *Data) Render(title, lang string) ([]byte, error) {
 	if lang == "" {
 		lang = DefaultLang
 	}
-	t, err := l.Find(d.Template)
-	if err != nil {
-		return nil, err
-	}
-	if t == nil {
-		return nil, fmt.Errorf("draw %s: %w", d.File, errNoTemplate)
-	}
+	t := d.tmpl
 	src, err := t.readFile("page.html")
 	if err != nil {
 		return nil, err

@@ -1,6 +1,34 @@
 package tmpl
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+// A floe fits a template from the version it needs up to the next major, or the next minor under
+// major 0.
+func TestFits(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		needs, have semver
+		want        string
+	}{
+		{semver{1, 2, 0}, semver{1, 2, 0}, ""},
+		{semver{1, 2, 0}, semver{1, 9, 3}, ""},
+		{semver{1, 2, 0}, semver{1, 1, 9}, "template t needs floe 1.2.0 or later, and this is floe 1.1.9"},
+		{semver{1, 2, 0}, semver{2, 0, 0}, "template t is written for floe 1, not for this floe 2.0.0"},
+		{semver{2, 0, 0}, semver{1, 9, 0}, "template t needs floe 2.0.0 or later"},
+		{semver{0, 2, 0}, semver{0, 2, 5}, ""},
+		{semver{0, 2, 0}, semver{0, 3, 0}, "template t is written for floe 0.2, not for this floe 0.3.0"},
+		{semver{0, 2, 1}, semver{0, 2, 0}, "template t needs floe 0.2.1 or later"},
+	} {
+		err := fits("t", tt.needs, tt.have)
+		if tt.want == "" && err != nil || tt.want != "" && (err == nil || !strings.HasPrefix(err.Error(), tt.want)) {
+			t.Errorf("fits(%v, %v) = %v, want %q", tt.needs, tt.have, err, tt.want)
+		}
+	}
+}
 
 // The version is read as written: YAML would read 1.10 as the number 1.1.
 func TestNeedsFloe(t *testing.T) {
