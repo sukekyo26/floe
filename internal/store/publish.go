@@ -320,8 +320,9 @@ type Edit struct {
 }
 
 // Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
-// the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
-// page's own title (the data file's title:); clearing the project drops it.
+// the list nor the open tabs move. Clearing the title hands it back to the file (a link), to the
+// data file's title: (a page drawn from one) or to the <title> or first <h1> of a page stored as HTML,
+// else to the slug; clearing the project drops it.
 func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	m := s.ReadMeta(slug)
 	if m == nil {
