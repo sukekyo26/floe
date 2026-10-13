@@ -73,6 +73,10 @@ vuln:
 mod-verify:
     go mod verify
 
+# Verify go.mod and go.sum are tidy (direct and indirect requirements, no unused modules)
+mod-tidy-check:
+    go mod tidy -diff
+
 # Build bin/floe for the host
 build:
     @mkdir -p bin
@@ -110,4 +114,4 @@ shfmt-check:
     go tool shfmt -i 2 -ci -d install.sh
 
 # Pre-push gate mirroring CI
-ci: fmt-check vet lint test cover-check vuln mod-verify shellcheck shfmt-check
+ci: fmt-check vet lint test cover-check vuln mod-verify mod-tidy-check shellcheck shfmt-check
