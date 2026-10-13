@@ -19,6 +19,7 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -31,7 +32,7 @@ const (
 	// DefaultTheme is the theme of a page whose data names none.
 	DefaultTheme = "default"
 	// DefaultLang is the language of a page unless the publisher names another.
-	DefaultLang = "en"
+	DefaultLang = string(i18n.English)
 )
 
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
