@@ -83,6 +83,8 @@ func Read(file string, src []byte) (*Data, error) {
 		*k.to = s
 		delete(top, k.key)
 	}
+	// A title of spaces names none, as an empty --title does.
+	d.Title = strings.TrimSpace(d.Title)
 	if d.Template == "" {
 		return nil, usererr.New("tmpl_no_template", file, strings.Join(Names(), ", "))
 	}

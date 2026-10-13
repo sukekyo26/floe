@@ -169,6 +169,12 @@ func TestPublishNeedsDataFile(t *testing.T) {
 	if m := e.meta(t, "untitled"); m.Title != "untitled" || !strings.Contains(e.read(t, "store/untitled/index.html"), "<h1>untitled</h1>") {
 		t.Errorf("a data file without a title: is titled %q", m.Title)
 	}
+	// Removing title: from the data file gives the slug back, as clearing the title does.
+	e.mustPublish(t, e.page(t, "untitled.yaml", "Once"), store.Options{}, "proj")
+	e.mustPublish(t, e.page(t, "untitled.yaml", ""), store.Options{}, "proj")
+	if m := e.meta(t, "untitled"); m.Title != "untitled" || m.DataTitle != "" {
+		t.Errorf("a data file whose title: is removed: %+v", m)
+	}
 }
 
 func TestPublishNames(t *testing.T) {
@@ -482,11 +488,44 @@ func TestEdit(t *testing.T) {
 		strings.Contains(raw, "Edited") {
 		t.Errorf("clearing restores the page's title and drops the keys:\n%s", raw)
 	}
-	if err := os.Remove(filepath.Join(e.tmp, "store/renamed/index.html")); err != nil {
+
+	// A drawn page's <title> is the title it was published under, so clearing a pinned title goes back
+	// to the data file's title:, or to the slug (a title of spaces names none).
+	for _, tt := range []struct{ file, title, want string }{
+		{"pinned.yaml", "title: Data Title\n", "Data Title"},
+		{"bare.yaml", "", "bare"},
+		{"spaces.yaml", "title: '  '\n", "spaces"},
+	} {
+		slug := strings.TrimSuffix(tt.file, ".yaml")
+		file := e.write(t, tt.file, "template: report\n"+tt.title)
+		e.mustPublish(t, file, store.Options{}, "repo")
+		if _, err := e.s.Edit(slug, store.Edit{Title: ptr("Pinned")}); err != nil {
+			t.Fatal(err)
+		}
+		e.mustPublish(t, file, store.Options{}, "repo")
+		if _, err := e.s.Edit(slug, store.Edit{Title: ptr(" ")}); err != nil || e.meta(t, slug).Title != tt.want {
+			t.Errorf("clearing the pinned title of %s: %v %+v", tt.file, err, e.meta(t, slug))
+		}
+	}
+	// Clearing the title while renaming falls back to the new slug.
+	if _, err := e.s.Edit("bare", store.Edit{Title: ptr(""), Slug: ptr("bare-2")}); err != nil || e.meta(t, "bare-2").Title != "bare-2" {
+		t.Errorf("clearing the title while renaming: %v %+v", err, e.meta(t, "bare-2"))
+	}
+
+	// A page stored as HTML before pages were drawn takes its own <title> back, or the slug.
+	old := store.Meta{Title: "Pinned", TitleEdited: true, CreatedAt: before.CreatedAt, UpdatedAt: before.UpdatedAt}
+	e.write(t, "store/old/index.html", "<title>Old</title>")
+	if err := e.s.WriteMeta("old", &old); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.s.Edit("renamed", store.Edit{Title: ptr(" ")}); err != nil || e.meta(t, "renamed").Title != "renamed" {
-		t.Errorf("clearing the title of an unreadable page falls back to the slug: %v %+v", err, e.meta(t, "renamed"))
+	if _, err := e.s.Edit("old", store.Edit{Title: ptr("")}); err != nil || e.meta(t, "old").Title != "Old" {
+		t.Errorf("clearing the title of an HTML page: %v %+v", err, e.meta(t, "old"))
+	}
+	if err := os.Remove(filepath.Join(e.tmp, "store/old/index.html")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.s.Edit("old", store.Edit{Title: ptr(" "), Slug: ptr("older")}); err != nil || e.meta(t, "older").Title != "older" {
+		t.Errorf("clearing the title of an unreadable page falls back to the new slug: %v %+v", err, e.meta(t, "older"))
 	}
 
 	file := e.write(t, "site/index.html", "<h1>L</h1>")

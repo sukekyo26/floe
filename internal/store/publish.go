@@ -185,6 +185,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Lang:          base.Lang,
 		Template:      "",
 		Theme:         "",
+		DataTitle:     own,
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",
@@ -275,7 +276,8 @@ func title(opts Options, path string, keepTitle bool, base *Meta, own, slug stri
 	case path != "" || keepTitle:
 		return base.Title
 	default:
-		return cmp.Or(own, base.Title, slug)
+		// As clearing the title on the management page does: the data file's title:, else the slug.
+		return cmp.Or(own, slug)
 	}
 }
 
@@ -319,8 +321,9 @@ type Edit struct {
 }
 
 // Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
-// the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
-// page's own title; clearing the project drops it.
+// the list nor the open tabs move. Clearing the title hands it back to the file (a link), to the
+// data file's title: (a page drawn from one) or to the <title> or first <h1> of a page stored as HTML,
+// else to the slug; clearing the project drops it.
 func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	m := s.ReadMeta(slug)
 	if m == nil {
@@ -331,9 +334,6 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	}
 	if ed.Favorite != nil {
 		m.Favorite = *ed.Favorite
-	}
-	if ed.Title != nil {
-		s.setTitle(slug, m, *ed.Title)
 	}
 	if ed.Project != nil {
 		// "/" is the management page's value for "no project".
@@ -347,6 +347,9 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if ed.Title != nil {
+		s.setTitle(slug, to, m, *ed.Title)
+	}
 	if err := s.WriteMeta(slug, m); err != nil {
 		return "", err
 	}
@@ -359,13 +362,22 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	return to, nil
 }
 
-func (s *Store) setTitle(slug string, m *Meta, t string) {
+// setTitle sets the title of slug, which the edit renames to: an empty one gives back the page's own,
+// or to.
+func (s *Store) setTitle(slug, to string, m *Meta, t string) {
 	m.Title = strings.TrimSpace(t)
 	m.TitleEdited = m.Title != ""
-	if m.Title == "" && !m.IsLink() {
-		own, _ := os.ReadFile(filepath.Join(s.dir(slug), "index.html")) //nolint:errcheck // unreadable means untitled
-		m.Title = cmp.Or(page.Title(string(own)), slug)
+	if m.Title != "" || m.IsLink() {
+		return
 	}
+	if m.Template != "" {
+		// The drawn page's <title> is the title it was published under, pinned ones included.
+		m.Title = cmp.Or(m.DataTitle, to)
+		return
+	}
+	// A page stored as HTML before pages were drawn from data files.
+	own, _ := os.ReadFile(filepath.Join(s.dir(slug), "index.html")) //nolint:errcheck // unreadable means untitled
+	m.Title = cmp.Or(page.Title(string(own)), to)
 }
 
 // renameTo checks the new slug of an edit: nil keeps slug.
