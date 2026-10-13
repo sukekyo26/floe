@@ -3,8 +3,11 @@
 package yamlpos
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/goccy/go-yaml"
@@ -37,6 +40,41 @@ func Of(n ast.Node) Pos {
 	return Pos{Line: p.Line, Column: p.Column}
 }
 
+// Find follows at, keys of mappings and indexes of sequences, from root. It returns the key node of
+// the last step (the - of an entry of a block sequence; nil at root or in a flow sequence), its value
+// node, and the path written as sections[0].parts[1]. It stops at the last node it can reach.
+func Find(root ast.Node, at []string) (key, value ast.Node, path string) {
+	value = root
+	var b strings.Builder
+	for _, step := range at {
+		switch n := value.(type) {
+		case *ast.MappingNode:
+			i := slices.IndexFunc(n.Values, func(v *ast.MappingValueNode) bool { return keyOf(v).GetToken().Value == step })
+			if i < 0 {
+				return key, value, b.String()
+			}
+			if b.Len() > 0 {
+				b.WriteByte('.')
+			}
+			b.WriteString(step)
+			key, value = keyOf(n.Values[i]), n.Values[i].Value
+		case *ast.SequenceNode:
+			i, err := strconv.Atoi(step)
+			if err != nil || i < 0 || i >= len(n.Values) {
+				return key, value, b.String()
+			}
+			fmt.Fprintf(&b, "[%d]", i)
+			key, value = nil, n.Values[i]
+			if len(n.Entries) == len(n.Values) {
+				key = n.Entries[i] // its -, where an entry left empty is
+			}
+		default:
+			return key, value, b.String()
+		}
+	}
+	return key, value, b.String()
+}
+
 // ErrEmpty is returned by Parse for a file without a document, for the caller to word.
 var ErrEmpty = errors.New("no YAML document")
 
@@ -46,12 +84,7 @@ var ErrEmpty = errors.New("no YAML document")
 func Parse(file string, src []byte, documents string) (ast.Node, error) {
 	doc, err := parser.ParseBytes(src, 0)
 	if err != nil {
-		var se *yaml.SyntaxError
-		if errors.As(err, &se) && se.Token != nil {
-			at := Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}
-			return nil, New(file, at, "yaml_syntax", se.Message)
-		}
-		return nil, New(file, Pos{Line: 1, Column: 1}, "yaml_syntax", err.Error())
+		return nil, Syntax(file, err)
 	}
 	var body ast.Node
 	var head *Pos // a directive (%YAML) heads the document after it
@@ -110,11 +143,37 @@ func dropped(src []byte, start *token.Position) (Pos, bool) {
 	return Pos{Line: 0, Column: 0}, false
 }
 
+// keyOf returns the key of v, the text after ? for an explicit key.
+func keyOf(v *ast.MappingValueNode) ast.Node {
+	if k, ok := v.Key.(*ast.MappingKeyNode); ok {
+		return k.Value
+	}
+	return v.Key
+}
+
+// OfValue returns where the value of key is written, or where key is when the value is left out:
+// an empty value has no text to point at.
+func OfValue(key, value ast.Node) Pos {
+	if _, null := value.(*ast.NullNode); null && key != nil {
+		return Of(key)
+	}
+	return Of(value)
+}
+
 // Error is a mistake in a YAML file, at a line and column of it.
 type Error struct {
 	File string
 	Pos  Pos
 	Err  *usererr.Error
+}
+
+// Syntax places an error of goccy/go-yaml at its token, or at the start of file without one.
+func Syntax(file string, err error) *Error {
+	var se *yaml.SyntaxError
+	if errors.As(err, &se) && se.Token != nil {
+		return New(file, Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}, "yaml_syntax", se.Message)
+	}
+	return New(file, Pos{Line: 1, Column: 1}, "yaml_syntax", err.Error())
 }
 
 // New returns the mistake worded by the catalog message key with args, at at in file.
@@ -134,6 +193,15 @@ func (e *Error) Localize(c *i18n.Catalog) string {
 
 // Problems are mistakes reported all at once, each at its own line and column.
 type Problems []*Error
+
+// Sorted returns p in the order of the file.
+func (p Problems) Sorted() Problems {
+	slices.SortStableFunc(p, func(x, y *Error) int {
+		return cmp.Or(cmp.Compare(x.File, y.File), cmp.Compare(x.Pos.Line, y.Pos.Line),
+			cmp.Compare(x.Pos.Column, y.Pos.Column))
+	})
+	return p
+}
 
 // Error words the mistakes in English, one per line.
 func (p Problems) Error() string {

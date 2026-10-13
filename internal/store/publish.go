@@ -98,7 +98,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	own := ""
 	if path == "" {
 		if data, err = tmpl.Read(file, []byte(src)); err != nil {
-			return nil, err //nolint:wrapcheck // a usererr for the caller to show
+			return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 		}
 		own = data.Title
 	}

@@ -1,12 +1,15 @@
 package tmpl_test
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 func render(t *testing.T, src string) string {
@@ -72,31 +75,88 @@ func TestReportParts(t *testing.T) {
 	}
 }
 
+// Each refusal of Read points at the line and column it is about.
 func TestReadRefusals(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range []struct{ src, want string }{
-		{"title: t\n", "data.yaml: name the template at the top level, like template: report (templates: report)"},
-		{"", "data.yaml: name the template at the top level"},
-		{"- template: report\n", "data.yaml: write the top level as keys and values"},
-		{"template: report\n---\ntitle: t\n", "data.yaml has more than one YAML document"},
-		{"template: report\n---\ntitle: 'a\n", "data.yaml is not valid YAML: "},
-		{"template: deck\n", `data.yaml: unknown template "deck"; use report`},
-		{"template: report\ntheme: print\n", `data.yaml: template report has no theme "print"; use default`},
-		{"template: report\ntitle: [a]\n", "data.yaml: title must be text"},
-		{"template: report\ntitle: 'a\n", "data.yaml is not valid YAML: "},
+		{"title: t\n", "data.yaml:1:1: name the template at the top level, like template: report (templates: report)"},
+		{"", "data.yaml:1:1: name the template at the top level"},
+		{"template: ''\n", "data.yaml:1:11: name the template at the top level"},
+		{"- template: report\n", "data.yaml:1:1: write the top level as keys and values"},
+		{"template: report\n---\ntitle: t\n", "data.yaml:2:1: a data file holds one YAML document"},
+		{"template: report\n...\nlead: x\n", "data.yaml:3:1: a data file holds one YAML document"},
+		{"template: report\ntemplate: report\n", `data.yaml:2:1: this is not valid YAML: mapping key "template" already defined`},
+		{"template: report\n---\ntitle: 'a\n", "data.yaml:3:8: this is not valid YAML: "},
+		{"template: report\nlead: &a x\n", "data.yaml:2:7: anchors, aliases, merge keys (<<) and tags are not supported"},
+		{"template: report\n<<: {lead: x}\n", "data.yaml:2:1: anchors, aliases, merge keys (<<) and tags are not supported"},
+		{"template:\n", "data.yaml:1:1: template must be text"},
+		{"template: report\n0x10: x\n", "data.yaml:2:1: a key is a name: write 0x10 as text, in quotes"},
+		{"template: report\nsections:\n  - ~: x\n", "data.yaml:3:5: a key is a name: write ~ as text, in quotes"},
+		{"template: report\nsections:\n  -\n", "data.yaml:3:3: sections[0]: write keys and values, not nothing"},
+		// The shared keys and the schema are reported together.
+		{"template: report\ntheme: print\nleed: x\n", "data.yaml:2:8: template report has no theme \"print\"; use default\ndata.yaml:3:1: leed is not an item"},
+		{"template: deck\n", `data.yaml:1:11: unknown template "deck"; use report`},
+		{"template: report\ntheme: print\n", `data.yaml:2:8: template report has no theme "print"; use default`},
+		{"template: report\ntitle: [a]\n", "data.yaml:2:8: title must be text"},
+		{"template: report\ntitle: 'a\n", "data.yaml:2:8: this is not valid YAML: "},
 	} {
 		_, err := tmpl.Read("data.yaml", []byte(c.src))
-		if err == nil || !strings.HasPrefix(err.Error(), c.want) {
+		var one *yamlpos.Error
+		var all yamlpos.Problems
+		if !errors.As(err, &one) && !errors.As(err, &all) || !strings.HasPrefix(err.Error(), c.want) {
 			t.Errorf("Read %q = %v, want %s", c.src, err, c.want)
 		}
 	}
-	d, err := tmpl.Read("data.yaml", []byte("template: report\nsections: no\n"))
-	if err != nil {
-		t.Fatal(err)
+	// An explicit key is found by its text after ?.
+	if _, err := tmpl.Read("data.yaml", []byte("template: report\n? lead\n: 3\n")); err == nil || err.Error() != "data.yaml:3:3: lead: write text, not a number" {
+		t.Errorf("Read of an explicit key = %v", err)
 	}
+	if _, err := tmpl.Read("data.yaml", []byte("%YAML 1.2\n---\ntemplate: report\n")); err != nil {
+		t.Errorf("Read of a document after a %%YAML directive = %v", err)
+	}
+	// Data that passed its schema draws; a template that does not fit it is refused while drawing.
+	d := &tmpl.Data{File: "data.yaml", Template: "report", Theme: "default", Title: "", Values: map[string]any{"sections": "no"}}
 	if _, err := d.Render("t", "en"); err == nil || !strings.HasPrefix(err.Error(), "data.yaml does not fit the template report: ") {
 		t.Errorf("Render of data of the wrong shape = %v", err)
+	}
+}
+
+// Every mistake against the schema is reported at once, in the order of the file, each at its line
+// and column, worded in the reader's language.
+func TestSchemaMistakes(t *testing.T) {
+	t.Parallel()
+
+	src := `template: report
+title: Bad
+leed: a typo
+sections:
+  - heading: 1
+    parts:
+      - txt: hello
+      - text: a
+        html: <b>b</b>
+      - {}
+  - parts: nope
+`
+	_, err := tmpl.Read("bad.yaml", []byte(src))
+	var p yamlpos.Problems
+	if !errors.As(err, &p) {
+		t.Fatalf("Read = %v, want problems", err)
+	}
+	want := []string{
+		"bad.yaml:3:1: leed is not an item of the template report (a typo?); use eyebrow, lead, sections, template, theme, title",
+		"bad.yaml:5:14: sections[0].heading: write text, not a number",
+		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use html, text",
+		"bad.yaml:8:9: sections[0].parts[1]: the number of keys must be at most 1",
+		"bad.yaml:10:9: sections[0].parts[2]: the number of keys must be at least 1",
+		"bad.yaml:11:12: sections[1].parts: write a list, not text",
+	}
+	if got := p.Error(); got != strings.Join(want, "\n") {
+		t.Errorf("the mistakes =\n%s\nwant\n%s", got, strings.Join(want, "\n"))
+	}
+	if ja := p.Localize(i18n.New("ja")); !strings.Contains(ja, "bad.yaml:11:12: sections[1].parts: 文字列ではなくリストで書いてください") {
+		t.Errorf("the mistakes in Japanese:\n%s", ja)
 	}
 }
 

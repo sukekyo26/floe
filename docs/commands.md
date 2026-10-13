@@ -56,7 +56,8 @@ sections:
 ```
 
 - `theme:` picks a theme of the template (`default`).
-- A data file that names no template, or one that is not there, is refused, as is data of the wrong shape (sections that are not a list). A data file is one YAML document: one with `---` between documents is refused.
+- The data is checked against the template's schema before the page is drawn. Every mistake is printed at once as `file:line:column: message`, and nothing is published until all are fixed (exit code 1): a missing or unknown template, an item the template does not have (a typo), a value of the wrong type, and the like.
+- A data file is one YAML document of keys and values: one with `---` between documents, or with anchors, aliases or tags, is refused.
 - The page is drawn once, when it is published: changing the data file later changes nothing until it is published again.
 
 ### Projects and overwriting

@@ -9,18 +9,19 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"io/fs"
 	"path"
 	"slices"
 	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/goccy/go-yaml/ast"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // builtin holds a directory per built-in template: page.html, schema.json, example.yaml and themes/.
@@ -46,59 +47,97 @@ type Data struct {
 	Values   map[string]any
 }
 
-// Read reads the data file src; file names it in errors.
+// shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
+var shared = []string{"template", "theme", "title"}
+
+// Read reads the data file src and checks it against its template's schema; file names it in errors.
+// A mistake is a *yamlpos.Error, and the schema's are all reported at once as yamlpos.Problems.
 func Read(file string, src []byte) (*Data, error) {
-	dec := yaml.NewDecoder(bytes.NewReader(src))
-	var doc, more any
-	if err := dec.Decode(&doc); err != nil && !errors.Is(err, io.EOF) {
-		return nil, usererr.New("tmpl_yaml", file, yaml.FormatError(err, false, false))
+	root, err := parse(file, src)
+	if err != nil {
+		return nil, err
 	}
-	// A document after --- would otherwise be left out without a word.
-	switch err := dec.Decode(&more); {
-	case err == nil:
-		return nil, usererr.New("tmpl_documents", file)
-	case !errors.Is(err, io.EOF):
-		return nil, usererr.New("tmpl_yaml", file, yaml.FormatError(err, false, false))
+	var problems yamlpos.Problems
+	fail := func(p yamlpos.Pos, key string, args ...any) {
+		problems = append(problems, yamlpos.New(file, p, key, args...))
 	}
-	if doc == nil {
-		return nil, usererr.New("tmpl_no_template", file, strings.Join(Names(), ", "))
-	}
-	top, ok := doc.(map[string]any)
-	if !ok {
-		return nil, usererr.New("tmpl_not_mapping", file)
+	var top map[string]any
+	if err = yaml.NodeToValue(root, &top); err != nil {
+		return nil, yamlpos.Syntax(file, err)
 	}
 	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top}
-	for _, k := range []struct {
-		key string
-		to  *string
-	}{{"template", &d.Template}, {"theme", &d.Theme}, {"title", &d.Title}} {
-		v, ok := top[k.key]
+	// Where each shared key is written, or the top of the file for one left out.
+	where := map[string]yamlpos.Pos{}
+	to := map[string]*string{"template": &d.Template, "theme": &d.Theme, "title": &d.Title}
+	for _, key := range shared {
+		where[key] = yamlpos.Of(root)
+		v, ok := top[key]
 		if !ok {
 			continue
 		}
-		s, ok := v.(string)
-		if !ok {
-			return nil, usererr.New("tmpl_not_text", file, k.key)
+		k, n, _ := yamlpos.Find(root, []string{key})
+		where[key] = yamlpos.OfValue(k, n)
+		delete(top, key)
+		if s, ok := v.(string); ok {
+			*to[key] = s
+		} else {
+			fail(where[key], "tmpl_not_text", key)
 		}
-		*k.to = s
-		delete(top, k.key)
 	}
 	// A title of spaces names none, as an empty --title does.
 	d.Title = strings.TrimSpace(d.Title)
-	if d.Template == "" {
-		return nil, usererr.New("tmpl_no_template", file, strings.Join(Names(), ", "))
-	}
-	if !slices.Contains(Names(), d.Template) {
-		return nil, usererr.New("tmpl_unknown", file, d.Template, strings.Join(Names(), ", "))
+	// Without its template, the data has no schema to be checked against.
+	switch {
+	case d.Template == "" && problems == nil:
+		fail(where["template"], "tmpl_no_template", strings.Join(Names(), ", "))
+		return nil, problems.Sorted()
+	case d.Template == "":
+		return nil, problems.Sorted()
+	case !slices.Contains(Names(), d.Template):
+		fail(where["template"], "tmpl_unknown", d.Template, strings.Join(Names(), ", "))
+		return nil, problems.Sorted()
 	}
 	themes, err := themesOf(d.Template)
 	if err != nil {
 		return nil, err
 	}
 	if !slices.Contains(themes, d.Theme) {
-		return nil, usererr.New("tmpl_unknown_theme", file, d.Theme, d.Template, strings.Join(themes, ", "))
+		fail(where["theme"], "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
+	}
+	err = checkSchema(d, root)
+	var more yamlpos.Problems
+	switch {
+	case errors.As(err, &more):
+		problems = append(problems, more...)
+	case err != nil:
+		return nil, err
+	}
+	if problems != nil {
+		return nil, problems.Sorted()
 	}
 	return d, nil
+}
+
+// parse reads src as one YAML document of keys and values, without anchors, aliases or tags, so
+// that every value is written where its position points.
+func parse(file string, src []byte) (ast.Node, error) {
+	body, err := yamlpos.Parse(file, src, "tmpl_documents")
+	if errors.Is(err, yamlpos.ErrEmpty) {
+		return nil, yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", strings.Join(Names(), ", "))
+	}
+	if err != nil {
+		return nil, err //nolint:wrapcheck // a mistake at its line and column
+	}
+	if a := yamlpos.FirstAnchor(body); a != nil {
+		return nil, yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
+	}
+	if k := firstNonTextKey(body); k != nil {
+		return nil, yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value)
+	}
+	if _, ok := body.(*ast.MappingNode); !ok {
+		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_not_mapping")
+	}
+	return body, nil
 }
 
 // Names are the templates there are, by name.
@@ -161,9 +200,8 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 		"Theme": template.CSS(css), //nolint:gosec // G203: the template's own theme, not data
 	})
 	if err != nil {
-		// LIMIT: until the data is checked against the schema (phase 4b), data of the wrong shape
-		// fails here, worded as Go's template error, and some data the schema refuses draws without a
-		// word (a misspelt key is left out; a part of two kinds draws both).
+		// Read checked the data against the schema, so this is the template's own mistake: page.html
+		// naming an item its schema does not declare, or using one as another type.
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	return b.Bytes(), nil
@@ -222,4 +260,33 @@ func (s *schema) prepare(v any) any {
 		return out
 	}
 	return v
+}
+
+// firstNonTextKey returns the first key under n that is not text, or nil. A key is a name: 0x10, ~
+// or 1.0 would be read as another name than the one written, and not found where it was written.
+func firstNonTextKey(n ast.Node) ast.Node {
+	k := &keys{found: nil}
+	ast.Walk(k, n)
+	return k.found
+}
+
+type keys struct {
+	found ast.Node
+}
+
+func (k *keys) Visit(n ast.Node) ast.Visitor {
+	if k.found != nil {
+		return nil
+	}
+	if v, ok := n.(*ast.MappingValueNode); ok {
+		key := ast.Node(v.Key)
+		if explicit, ok := key.(*ast.MappingKeyNode); ok {
+			key = explicit.Value
+		}
+		if _, text := key.(*ast.StringNode); !text {
+			k.found = key
+			return nil
+		}
+	}
+	return k
 }
