@@ -101,7 +101,7 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 }
 
 // checkValues checks d against its template's schema and then its checks, reporting the schema's
-// mistakes with problems, those found before.
+// mistakes with problems, those found before in the keys every template shares.
 func checkValues(d *Data, root ast.Node, problems yamlpos.Problems) error {
 	err := checkSchema(d, root)
 	var more yamlpos.Problems
@@ -114,7 +114,8 @@ func checkValues(d *Data, root ast.Node, problems yamlpos.Problems) error {
 	if problems != nil {
 		return problems.Sorted()
 	}
-	// Data that broke its schema would only give the checks' expressions mistakes that mean nothing.
+	// Stage 3 runs on data that passed stage 2, its shared keys and its schema: broken data would only
+	// give the checks' expressions mistakes that mean nothing.
 	return checkRelations(d, root)
 }
 
