@@ -50,10 +50,10 @@ var markerKinds = func() []string {
 	return kinds
 }()
 
-// Render checks the specs and draws them, in order, as one HTML fragment of inline SVG, with the icons
+// Render checks the specs and draws each, in order, as an HTML fragment of inline SVG, with the icons
 // of store. The ids of the diagrams name their markers and icons, so they must differ between the
 // specs drawn together. On a mistake it draws nothing and returns the Problems of every spec.
-func Render(specs []*Spec, store *icons.Store) (string, error) {
+func Render(specs []*Spec, store *icons.Store) ([]string, error) {
 	var problems yamlpos.Problems
 	layouts := make([]*layout, len(specs))
 	first := map[string]*Spec{}
@@ -65,19 +65,19 @@ func Render(specs []*Spec, store *icons.Store) (string, error) {
 		}
 		l, err := newLayout(s, store)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		layouts[i] = l
 		problems = append(problems, layouts[i].check()...)
 	}
 	if len(problems) > 0 {
-		return "", problems
+		return nil, problems
 	}
 	out := make([]string, len(layouts))
 	for i, l := range layouts {
 		out[i] = string(l.svg())
 	}
-	return strings.Join(out, "\n"), nil
+	return out, nil
 }
 
 func (l *layout) svg() markup {

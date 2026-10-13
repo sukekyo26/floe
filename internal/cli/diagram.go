@@ -70,7 +70,7 @@ func (a *app) render(files []string, assets bool) error {
 		}
 		specs = append(specs, s)
 	}
-	out, err := diagram.Render(specs, icons.New(a.cfg.icons))
+	svgs, err := diagram.Render(specs, icons.New(a.cfg.icons))
 	var more yamlpos.Problems
 	if errors.As(err, &more) {
 		problems = append(problems, more...)
@@ -88,6 +88,7 @@ func (a *app) render(files []string, assets bool) error {
 		slices.SortStableFunc(problems, func(x, y *yamlpos.Error) int { return cmp.Compare(order[x.File], order[y.File]) })
 		return problems
 	}
+	out := strings.Join(svgs, "\n")
 	if assets {
 		head, err := diagram.Assets()
 		if err != nil {

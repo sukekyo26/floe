@@ -162,5 +162,5 @@ func diagramPage(t *testing.T, lang i18n.Lang) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return assets + "\n<section><h2>Architecture</h2>" + svg + "</section>\n"
+	return assets + "\n<section><h2>Architecture</h2>" + svg[0] + "</section>\n"
 }
