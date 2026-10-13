@@ -39,6 +39,16 @@ writes: writes_per_sec ?? 0
 	}
 }
 
+// A key the schema does not declare is not seen, even one named like a computed value.
+func TestComputeSeesDeclaredItemsOnly(t *testing.T) {
+	t.Parallel()
+
+	d, root := data(t, "t: 5\n")
+	if err := compute([]byte("t: 'nil'\nu: t ?? 0\n"), d, declared, root); err != nil || d.Calc["u"] != 0 {
+		t.Errorf("Calc = %v, %v; want u 0", d.Calc, err)
+	}
+}
+
 // A value the data cannot give is reported at the top of the file, each once: one that uses it is not
 // computed.
 func TestComputeFailures(t *testing.T) {
@@ -49,6 +59,8 @@ func TestComputeFailures(t *testing.T) {
 twice: per_read * 2
 writes: writes_per_sec * 2
 huge: 1e308 * 10
+list: '[1, 1e308 * 10]'
+table: '{"a": [1e308 * 10]}'
 `
 	err := compute([]byte(src), d, declared, root)
 	var p yamlpos.Problems
@@ -57,7 +69,9 @@ huge: 1e308 * 10
 	}
 	want := []string{
 		"d.yaml:1:1: huge = 1e308 * 10 cannot be computed from this file: the value +Inf is not a finite number",
+		"d.yaml:1:1: list = [1, 1e308 * 10] cannot be computed from this file: the value +Inf is not a finite number",
 		"d.yaml:1:1: per_read = 1 / reads_per_sec cannot be computed from this file: 1 / 0 is not a finite number",
+		"d.yaml:1:1: table = {\"a\": [1e308 * 10]} cannot be computed from this file: the value +Inf is not a finite number",
 		"d.yaml:1:1: writes = writes_per_sec * 2 cannot be computed from this file: invalid operation: <nil> * int",
 	}
 	if got := p.Error(); got != strings.Join(want, "\n") {

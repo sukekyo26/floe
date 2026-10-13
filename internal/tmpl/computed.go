@@ -33,8 +33,7 @@ var (
 // (true, in, let…), and not one of its functions (sum, date…), which a variable named so would hide.
 // It starts with a letter, as floe's own functions of arithmetic start with _.
 func usable(n string) bool {
-	function := slices.ContainsFunc(exprbuiltin.Builtins, func(f *exprbuiltin.Function) bool { return f.Name == n })
-	if function || !identifier.MatchString(n) {
+	if _, function := exprbuiltin.Index[n]; function || !identifier.MatchString(n) {
 		return false
 	}
 	tree, err := parser.Parse(n)
@@ -73,9 +72,9 @@ func compute(src []byte, d *Data, declared []string, root ast.Node) error {
 		return fmt.Errorf("read the computed values of %s: %w", d.Template, err)
 	}
 	// An item the data leaves out stays nil.
-	for n, i := range c.field {
+	for _, n := range c.items {
 		if v := d.Values[n]; v != nil {
-			c.env.Field(i).Set(reflect.ValueOf(v))
+			c.env.Field(c.field[n]).Set(reflect.ValueOf(v))
 		}
 	}
 	d.Calc = map[string]any{}
@@ -113,6 +112,7 @@ type computed struct {
 	programs map[string]*vm.Program
 	uses     map[string][]string
 	order    []string
+	items    []string // the items of the data the expressions see
 	field    map[string]int
 	env      reflect.Value
 }
@@ -123,13 +123,14 @@ func readComputed(src []byte, declared []string) (*computed, error) {
 		return nil, fmt.Errorf("computed.yaml: %w", err)
 	}
 	names := slices.Sorted(maps.Keys(exprs))
-	// LIMIT: an item the data names like a function of expr (date, count…) is not seen by name. Give
-	// the expressions the data as doc too if a template needs one.
-	vars := slices.Concat(slices.DeleteFunc(slices.Clone(declared), func(n string) bool { return !usable(n) }), names)
+	// LIMIT: an item whose name an expression cannot use (my-size, or a function of expr such as date)
+	// is not seen by name. Give the expressions the data as doc too if a template needs one.
+	items := slices.DeleteFunc(slices.Clone(declared), func(n string) bool { return !usable(n) })
+	vars := slices.Concat(items, names)
 	fields := make([]reflect.StructField, len(vars))
 	c := &computed{
 		exprs: exprs, programs: map[string]*vm.Program{}, uses: map[string][]string{}, order: nil,
-		field: map[string]int{}, env: reflect.Value{},
+		items: items, field: map[string]int{}, env: reflect.Value{},
 	}
 	for i, v := range vars {
 		// Each variable is typed any, so that an expression may use it as whatever the data holds.
