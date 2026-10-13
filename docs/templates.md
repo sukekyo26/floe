@@ -21,6 +21,7 @@ my-report/
 ├── example.yaml     # a data file to start from
 ├── checks.yaml      # relations between items (optional)
 ├── computed.yaml    # values computed from the data (optional)
+├── assets/          # images page.html shows with asset (optional)
 └── themes/
     ├── default.css  # the default theme (required)
     └── print.css    # more themes (optional)
@@ -50,12 +51,19 @@ The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor versi
 | `markdown` | Markdown text as HTML (`{{markdown .text}}`), raw HTML in it left out, a table wrapped in `<div class="table-wrap">` |
 | `num` | A number with its digits grouped (`{{.Calc.total \| num}}` is `1,234,567`), or rounded to significant digits (`{{.Calc.rate \| num 3}}` is `0.00648`) |
 | `bytes` | A count of bytes in a binary unit (`{{.Calc.size \| bytes}}` is `1.5 KiB`) |
+| `asset` | An image of the template's `assets/` as a data URI (`<img src="{{asset "logo.svg"}}">`) |
 
 ## schema.json
 
 A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused. `template`, `theme` and `title` are read by floe and are not declared.
 
-A `format` is one of JSON Schema's that floe checks (`date`, `email`, `uri`…) or `html`; `floe template check` refuses another, which this floe would let any value pass. `html` goes under `properties` and `items` alone, where floe looks for it: under `anyOf`, `$defs` and the like, the item would be escaped.
+A `format` is one of JSON Schema's that floe checks (`date`, `email`, `uri`…), `html` or `image`; `floe template check` refuses another, which this floe would let any value pass. `html` and `image` go under `properties` and `items` alone, where floe looks for them: under `anyOf`, `$defs` and the like, the item would be drawn as text.
+
+An item of `"format": "image"` is the path of an image, relative to the data file's directory and under it, without `..` or names starting with a dot. The image goes into the page as a data URI, for `<img src="{{.Data.chart}}">`, so that the page holds all it shows.
+
+## Images
+
+An image, of the data or of `assets/`, is a png, jpeg, gif, webp or svg file, by its name and by what it holds, up to 1 MiB. A mistake in an image of the data is reported at its line and column; `floe template check` checks every file of `assets/` but those whose name starts with a dot.
 
 ## checks.yaml
 
@@ -92,7 +100,7 @@ An expression sees the data file's items that the schema declares, and the other
 A data file is checked in this order, and each stage runs only on data that passed the one before. `floe check` runs them all without publishing.
 
 1. Its YAML
-2. Its template, the floe the template needs, its theme, and the template's `schema.json`
+2. Its template, the floe the template needs, its theme, the template's `schema.json`, and its images
 3. The template's `checks.yaml`
 4. The template's `computed.yaml`
 5. Drawing `page.html`

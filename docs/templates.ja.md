@@ -21,6 +21,7 @@ my-report/
 ├── example.yaml     # 書き始めに使うデータファイル
 ├── checks.yaml      # 項目どうしの関係（任意）
 ├── computed.yaml    # データから計算する値（任意）
+├── assets/          # page.html が asset で出す画像（任意）
 └── themes/
     ├── default.css  # 既定のテーマ（必須）
     └── print.css    # ほかのテーマ（任意）
@@ -50,12 +51,19 @@ floe: 1.2
 | `markdown` | Markdown の文字列を HTML にする（`{{markdown .text}}`）。中の生の HTML は除き、表は `<div class="table-wrap">` で包む |
 | `num` | 数を桁区切りで書く（`{{.Calc.total \| num}}` は `1,234,567`）。有効数字で丸めることもできる（`{{.Calc.rate \| num 3}}` は `0.00648`） |
 | `bytes` | バイト数を二進の単位で書く（`{{.Calc.size \| bytes}}` は `1.5 KiB`） |
+| `asset` | テンプレートの `assets/` の画像を data URI にする（`<img src="{{asset "logo.svg"}}">`） |
 
 ## schema.json
 
 データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。キーの打ち間違いを断るため、`"additionalProperties": false` を書きます。`template`・`theme`・`title` は floe が読むので、宣言しません。
 
-`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）か `html` を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。`html` は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目はエスケープされます。
+`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）、`html`、`image` を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。`html` と `image` は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。
+
+`"format": "image"` の項目には、画像のパスを、データファイルのディレクトリからの相対で、その配下に、`..` やドットで始まる名前を使わずに書きます。画像は data URI としてページに入るので、`<img src="{{.Data.chart}}">` と書けて、ページだけで表示が完結します。
+
+## 画像
+
+画像は、データのものも `assets/` のものも、png・jpeg・gif・webp・svg のファイルで、名前と中身の両方で判定し、1 MiB までです。データの画像の誤りは、その行と列で出します。`floe template check` は、`assets/` の、ドットで始まる名前以外のすべてのファイルを確かめます。
 
 ## checks.yaml
 
@@ -92,7 +100,7 @@ storage_gb: item_bytes * records.in_1_year / 1e9
 データファイルは次の順に検査します。各段は、前の段を通ったデータにだけ動きます。`floe check` は公開せずにすべての段を通します。
 
 1. YAML
-2. テンプレート、テンプレートが要る floe の版、テーマ、テンプレートの `schema.json`
+2. テンプレート、テンプレートが要る floe の版、テーマ、テンプレートの `schema.json`、画像
 3. テンプレートの `checks.yaml`
 4. テンプレートの `computed.yaml`
 5. `page.html` の描画

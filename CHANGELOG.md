@@ -47,6 +47,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   [expr](https://expr-lang.org/), each failure reported at the data file's
   line and column, and a mistake in those files at their own;
   `page.html` writes numbers with `num` and `bytes`.
+  Images go into the page as data URIs: an item of `"format": "image"`
+  names an image under the data file's directory, and `page.html` shows one
+  of the template's `assets/` with `asset`. An image is a png, jpeg, gif,
+  webp or svg file up to 1 MiB, checked by its name and by what it holds,
+  and a mistake in one of the data is reported at its line and column.
   `template.yaml` names the floe a template needs. See
   [docs/templates.md](docs/templates.md).
 - Add `floe template list`, which lists the templates with where they are,
