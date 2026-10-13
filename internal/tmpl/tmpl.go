@@ -57,6 +57,7 @@ type Data struct {
 	// its diagrams drawn, by the path of keys to each (pathKey); nil without one
 	diagrams map[string]template.HTML
 	tried    []string // the files of the images it names, read or not
+	icons    []string // the index files of the icon sets its diagrams may show, when it has one
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -77,17 +78,16 @@ func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error
 
 // Sources are the files a read of a data file read besides it, for a link to be drawn again when one
 // changes, whether the read found mistakes or not.
-// LIMIT: not the icons of its diagrams: fetching them does not reload an open page, which shows them
-// once reloaded by hand. Watch their index if that comes to be needed often.
 type Sources struct {
 	Templates string   // the directory of templates of one's own, where one may come; "" for none
 	Template  string   // the directory of the template of one's own the data names; "" for none
 	Images    []string // the images the data names, read or not
+	Icons     []string // the index files of the icon sets, when it has a diagram, fetched or not
 }
 
 // ReadSources reads the data file src as Read does, and returns its Sources too.
 func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data, Sources, error) {
-	sources := Sources{Templates: l.dir, Template: "", Images: nil}
+	sources := Sources{Templates: l.dir, Template: "", Images: nil, Icons: nil}
 	dir := filepath.Dir(file)
 	if !filepath.IsAbs(dir) {
 		dir = filepath.Join(cwd, dir)
@@ -133,7 +133,7 @@ func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data
 		return nil, sources, err
 	}
 	err = t.check(d, h.root, dir, theme, h.where["theme"], problems)
-	sources.Images = d.tried
+	sources.Images, sources.Icons = d.tried, d.icons
 	if err != nil {
 		return nil, sources, err
 	}
@@ -172,7 +172,7 @@ func start(file string, src []byte, themed bool) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
-		images: nil, diagrams: nil, tried: nil,
+		images: nil, diagrams: nil, tried: nil, icons: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)

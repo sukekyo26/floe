@@ -256,8 +256,9 @@ func modTime(file string) string {
 	return fi.ModTime().UTC().Format(isoMillis)
 }
 
-// stamp sums up the state of sources: the size and mtime of each image and of every file under the
-// template's directory, and the mtime of the directory of templates, where one may come.
+// stamp sums up the state of sources: the size and mtime of each image, of each index of icons and of
+// every file under the template's directory, and the mtime of the directory of templates, where one
+// may come.
 // LIMIT: walks the template's directory on each look (every second for each open tab). Watch it with
 // fsnotify if templates grow to hundreds of files.
 func stamp(sources tmpl.Sources) string {
@@ -288,8 +289,8 @@ func stamp(sources tmpl.Sources) string {
 			return nil
 		})
 	}
-	for _, image := range sources.Images {
-		add(image)
+	for _, file := range slices.Concat(sources.Images, sources.Icons) {
+		add(file)
 	}
 	return strconv.FormatUint(h.Sum64(), 36)
 }

@@ -99,7 +99,7 @@ Each page belongs to the project it is published from. The project is the reposi
 A linked data file is drawn each time its page is opened, with `--lang` and `--theme` as given when it was linked, so that a page written in a repository can be read while it is written:
 
 - It is checked when it is linked, as `floe publish` checks it, and refused with its mistakes.
-- Saving the data file, an image it shows or a file of its template reloads the open tab.
+- Saving the data file, an image it shows or a file of its template, or fetching the icons its diagrams show, reloads the open tab.
 - When it has mistakes, the tab shows them instead of the page, and comes back to the page once they are fixed and saved.
 - Nothing of its directory is served: its images are in its page. Its download is the page drawn.
 - Its title in the list is its `title:`, read each time.

@@ -24,19 +24,15 @@ func checkDiagrams(s *schema, d *Data, root ast.Node, iconsDir string) error {
 	if found == nil {
 		return nil
 	}
-	var problems yamlpos.Problems
+	var errs []error
 	specs := make([]*diagram.Spec, 0, len(found))
 	paths := map[*diagram.Spec][]string{}
 	for _, f := range found {
 		_, n, _ := yamlpos.Find(root, f.at)
 		spec, err := diagram.FromNode(d.File, n)
-		var e *yamlpos.Error
-		switch {
-		case errors.As(err, &e):
-			problems = append(problems, e)
+		if err != nil {
+			errs = append(errs, err)
 			continue
-		case err != nil:
-			return err //nolint:wrapcheck // already says what failed
 		}
 		specs = append(specs, spec)
 		paths[spec] = f.at
@@ -45,16 +41,12 @@ func checkDiagrams(s *schema, d *Data, root ast.Node, iconsDir string) error {
 	slices.SortFunc(specs, func(a, b *diagram.Spec) int {
 		return cmp.Or(cmp.Compare(a.Line, b.Line), cmp.Compare(a.Column, b.Column))
 	})
-	svgs, err := diagram.Render(specs, icons.New(iconsDir))
-	var more yamlpos.Problems
-	switch {
-	case errors.As(err, &more):
-		problems = append(problems, more...)
-	case err != nil:
-		return err //nolint:wrapcheck // already says what failed: icons not fetched
-	}
-	if problems != nil {
-		return problems.Sorted()
+	store := icons.New(iconsDir)
+	// Watched for a link: the fetch a mistake asks for, or one that replaces them, draws it again.
+	d.icons = store.Indexes()
+	svgs, err := diagram.Render(specs, store)
+	if err = checkItems(append(errs, err)...); err != nil {
+		return err
 	}
 	d.diagrams = make(map[string]template.HTML, len(specs))
 	for i, spec := range specs {
@@ -69,9 +61,12 @@ func checkItems(errs ...error) error {
 	var problems yamlpos.Problems
 	for _, err := range errs {
 		var more yamlpos.Problems
+		var one *yamlpos.Error
 		switch {
 		case errors.As(err, &more):
 			problems = append(problems, more...)
+		case errors.As(err, &one):
+			problems = append(problems, one)
 		case err != nil:
 			return err
 		}

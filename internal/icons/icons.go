@@ -94,6 +94,18 @@ func New(root string) *Store {
 	return &Store{root: root, mu: sync.Mutex{}, indexes: map[string]*index{}, icons: map[string]*Icon{}}
 }
 
+// Indexes are the index files of every set, fetched or not: a fetch replaces the one of its set.
+func (s *Store) Indexes() []string {
+	if s.root == "" {
+		return nil
+	}
+	files := make([]string, len(kits))
+	for i, k := range kits {
+		files[i] = filepath.Join(s.dir(k), "index.json")
+	}
+	return files
+}
+
 func (s *Store) dir(k *kit) string {
 	return filepath.Join(s.root, k.name)
 }

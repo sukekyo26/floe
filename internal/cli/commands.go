@@ -88,7 +88,8 @@ opened in the browser ($BROWSER, open, wslview, xdg-open).
 --link registers a file in place instead of storing a page. An HTML file is shown as it is:
 it is read on every request, and the files under its directory are served for its relative
 references. A data file is drawn each time its page is opened, and saving it, an image it
-shows or a file of its template reloads the open tab. The same slug for another file is
+shows or a file of its template, or fetching the icons its diagrams show, reloads the open
+tab. The same slug for another file is
 refused unless --force.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
