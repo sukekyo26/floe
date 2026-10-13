@@ -234,7 +234,7 @@ func TestCheckMissingFile(t *testing.T) {
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_file_missing" {
 		t.Fatalf("Check without example.yaml = %v", mistakes)
 	}
-	if ja := e.Localize(i18n.New("ja")); !strings.Contains(ja, "page.html・schema.json・example.yaml・themes/default.css") {
+	if ja := e.Localize(i18n.New("ja")); !strings.Contains(ja, "page.html、schema.json、example.yaml、themes/default.css") {
 		t.Errorf("the mistake in Japanese = %s", ja)
 	}
 }

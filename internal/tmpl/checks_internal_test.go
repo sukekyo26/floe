@@ -1,7 +1,6 @@
 package tmpl
 
 import (
-	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -157,14 +156,15 @@ func data(t *testing.T, src string) (*Data, ast.Node) {
 	return &Data{File: "d.yaml", Template: "t", Theme: DefaultTheme, Title: "", Values: values}, root
 }
 
-// A path of checks.yaml is refused only where the schema surely does not declare it: a schema without
-// the key that refuses other keys. One that may take it, through $ref, anyOf, patternProperties or by
-// taking any keys, passes; properties are followed whatever else a schema says; and a type other than
-// array is never a list.
+// A path of checks.yaml is refused only where the compiled schema surely refuses it: a schema
+// without the key that refuses other keys, or keys at all. One that may take it (through patterns,
+// allOf, anyOf, or by taking any keys) passes, $ref is followed, and a list is refused only where its
+// types leave array out.
 func TestDeclared(t *testing.T) {
 	t.Parallel()
 
 	const closed = `"additionalProperties": false, `
+	const draft7 = `"$schema": "http://json-schema.org/draft-07/schema#", `
 	for _, tt := range []struct {
 		schema, for_, field, want string
 	}{
@@ -173,25 +173,29 @@ func TestDeclared(t *testing.T) {
 		{`{` + closed + `"properties": {"a": {"type": "array"}}}`, "b", "", "tmpl_checks_undeclared"},
 		{`{"properties": {"a": {"type": "array"}}}`, "b", "", ""},
 		{`{"properties": {"a": {"type": "string", "anyOf": [{"minLength": 1}]}}}`, "a", "", "tmpl_checks_not_array"},
-		{`{"properties": {"a": {"type": []}}}`, "a", "", ""},
 		{`{"properties": {"a": {}}}`, "a", "x", ""},
 		{`{"properties": {"a": {"description": "x"}}}`, "a.x", "", ""},
 		{`{"properties": {"a": true}}`, "a.b", "", ""},
 		{`{"properties": {"a": false}}`, "a", "", "tmpl_checks_undeclared"},
 		{`{` + closed + `"allOf": [{}], "properties": {"rows": {"type": "string"}}}`, "rows", "", "tmpl_checks_not_array"},
 		{`{` + closed + `"patternProperties": {"^x": {}}}`, "xs", "", ""},
-		{`{"properties": {"a": {"type": "object", "unevaluatedProperties": false, "allOf": [{"properties": {"x": {}}}]}}}`, "a.x", "", ""},
+		{`{"type": "object", "properties": {"a": {"type": "array"}}, "unevaluatedProperties": false}`, "b", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"a": {}}, "allOf": [{"properties": {"b": {}}}], "unevaluatedProperties": false}`, "b", "", ""},
 		{`{"properties": {"a": {"type": "array", "prefixItems": [{}], "items": {` + closed + `"properties": {}}}}}`, "a", "name", ""},
 		{`{"properties": {"a": {"type": "object", ` + closed + `"properties": {}}}}`, "a.x", "", "tmpl_checks_undeclared"},
 		{`{"properties": {"a": {"type": "array"}}}`, "a.0", "", "tmpl_checks_undeclared"},
 		{`{"properties": {"a": {"type": ["object", "null"]}}}`, "a.x", "", ""},
+		{`{"$defs": {"l": {` + closed + `"properties": {"rows": {"type": "array"}}}}, "properties": {"a": {"$ref": "#/$defs/l"}}}`, "a.rows", "", ""},
+		{`{"$defs": {"l": {` + closed + `"properties": {"rows": {"type": "array"}}}}, "properties": {"a": {"$ref": "#/$defs/l"}}}`, "a.cols", "", "tmpl_checks_undeclared"},
+		{`{` + draft7 + `"definitions": {"l": {"type": "object", "properties": {"rows": {"type": "array"}}}}, "properties": {"a": {"$ref": "#/definitions/l", ` + closed + `"type": "string"}}}`, "a.rows", "", ""},
+		{`{` + draft7 + `"definitions": {"l": {"type": "array"}}, "properties": {"a": {"$ref": "#/definitions/l", "type": "string"}}}`, "a", "", ""},
 	} {
-		var doc any
-		if err := json.Unmarshal([]byte(tt.schema), &doc); err != nil {
+		s, _, err := compileSchema("t", []byte(tt.schema))
+		if err != nil {
 			t.Fatalf("%s: %v", tt.schema, err)
 		}
 		c := relation{For: tt.for_, Field: tt.field, Expr: "true", Message: "m", file: "checks.yaml", at: map[string]yamlpos.Pos{}}
-		e := c.declared(doc)
+		e := c.declared(s)
 		switch {
 		case tt.want == "" && e != nil:
 			t.Errorf("%s, for %s, field %s = %v", tt.schema, tt.for_, tt.field, e)

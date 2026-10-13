@@ -129,7 +129,7 @@ func (a *app) showItems(items []tmpl.Item, indent string) {
 		}
 		line := indent + it.Name
 		if len(parts) > 0 {
-			line += ": " + strings.Join(parts, a.cat.Msg("cli_template_and"))
+			line += ": " + strings.Join(parts, a.cat.Msg("tmpl_and"))
 		}
 		if it.Description != "" {
 			line += " — " + oneLine(it.Description)

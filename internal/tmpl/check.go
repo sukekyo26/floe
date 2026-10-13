@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/santhosh-tekuri/jsonschema/v6"
+
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -86,7 +88,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	_, doc, err := compileSchema(t.Name, src)
+	sch, doc, err := compileSchema(t.Name, src)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -97,7 +99,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
-	mistakes = append(mistakes, t.checkChecks(doc)...)
+	mistakes = append(mistakes, t.checkChecks(sch)...)
 	computed, found, err := t.readOptional("computed.yaml")
 	if err == nil && found {
 		_, err = readComputed(t.file("computed.yaml"), computed, slices.Sorted(maps.Keys(s.Properties)))
@@ -113,7 +115,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 
 // checkChecks returns the mistakes of the checks.yaml of t, if it has one, against its schema doc as
 // read, in the order of the file.
-func (t *Template) checkChecks(doc any) []error {
+func (t *Template) checkChecks(s *jsonschema.Schema) []error {
 	src, found, err := t.readOptional("checks.yaml")
 	if err != nil {
 		return []error{err}
@@ -127,11 +129,10 @@ func (t *Template) checkChecks(doc any) []error {
 		return []error{err}
 	}
 	for _, c := range list {
-		if e := c.declared(doc); e != nil {
+		if e := c.declared(s); e != nil {
 			problems = append(problems, e)
 		}
-		var e *yamlpos.Error
-		if _, err = c.program(); errors.As(err, &e) {
+		if _, e := c.program(); e != nil {
 			problems = append(problems, e)
 		}
 	}
@@ -141,31 +142,24 @@ func (t *Template) checkChecks(doc any) []error {
 	return []error{problems.Sorted()}
 }
 
-// declared checks that the schema doc, as read, declares the list at c.For and c.Field under its
-// items: a path misspelt would find nothing in the data to check, and fail no data. A path is not
-// declared where a schema without the key refuses other keys (additionalProperties: false), and is not
-// a list where the type it names is not array.
-// LIMIT: a key is not matched against the patterns of patternProperties, and is taken as declared
-// there. Match them if a template comes to declare its lists by pattern.
-func (c relation) declared(doc any) *yamlpos.Error {
-	list, sure := declaredAt(doc, strings.Split(c.For, "."))
-	var types []string
-	if list != nil {
-		types = typeNames(list["type"])
-	}
+// declared checks that the compiled schema s declares the list at c.For and c.Field under its items:
+// a path misspelt would find nothing in the data to check, and fail no data. A path is refused only
+// where the schema surely refuses it, a list only where its types leave array out.
+func (c relation) declared(s *jsonschema.Schema) *yamlpos.Error {
+	list, sure := declaredAt(s, strings.Split(c.For, "."))
 	switch {
 	case list == nil && sure:
 		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
 	case list == nil:
 		return nil
-	case len(types) > 0 && !slices.Contains(types, "array"):
+	case !takes(list, "array"):
 		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_array", c.For)
 	case c.Field == "":
 		return nil
 	}
-	items, ok := list["items"]
-	if _, prefix := list["prefixItems"]; !ok || prefix {
-		return nil // items of any keys
+	items := itemsOf(list)
+	if items == nil {
+		return nil
 	}
 	if field, sure := declaredAt(items, strings.Split(c.Field, ".")); field == nil && sure {
 		return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field", c.Field, c.For)
@@ -173,30 +167,93 @@ func (c relation) declared(doc any) *yamlpos.Error {
 	return nil
 }
 
-// declaredAt follows the path of keys steps from the schema v, as read. It returns the schema declared
-// there, or nil, sure true where the path is surely not declared (a schema without the key refuses
-// other keys, or keys at all) and false where a schema may take it.
-func declaredAt(v any, steps []string) (found map[string]any, sure bool) {
+// declaredAt follows the path of keys steps from the compiled schema s, through properties and $ref.
+// It returns the schema declared there, or nil, sure true where the path is surely not declared and
+// false where a schema may take it.
+// LIMIT: a key is not matched against patternProperties, nor followed through allOf, anyOf and the
+// like: it is taken as declared there. Follow them if a template comes to declare its lists so.
+func declaredAt(s *jsonschema.Schema, steps []string) (found *jsonschema.Schema, sure bool) {
 	for _, step := range steps {
-		m, ok := v.(map[string]any)
-		if !ok {
-			return nil, v == false // true takes any value, false none
+		if s.Bool != nil {
+			return nil, !*s.Bool // true takes any value, false none
 		}
-		// A value of another type than object has no keys.
-		if types := typeNames(m["type"]); len(types) > 0 && !slices.Contains(types, "object") {
+		if !takes(s, "object") {
 			return nil, true
 		}
-		props, isMap := m["properties"].(map[string]any)
-		if v, ok = props[step]; !isMap || !ok {
-			_, patterns := m["patternProperties"]
-			return nil, m["additionalProperties"] == false && !patterns
+		next := propertyOf(s, step)
+		if next == nil {
+			// A schema and those its $ref leads to all apply: one that refuses the key is enough.
+			for r := s; r != nil; r = r.Ref {
+				if refuses(r) {
+					return nil, true
+				}
+			}
+			return nil, false
+		}
+		s = next
+	}
+	if s.Bool != nil {
+		return nil, !*s.Bool
+	}
+	return s, true
+}
+
+// propertyOf returns the schema s declares for the key in its properties or those of its $ref, or nil.
+func propertyOf(s *jsonschema.Schema, key string) *jsonschema.Schema {
+	for ; s != nil; s = s.Ref {
+		if p, ok := s.Properties[key]; ok {
+			return p
 		}
 	}
-	m, ok := v.(map[string]any)
-	if !ok {
-		return nil, v == false
+	return nil
+}
+
+// refuses reports whether s surely refuses a key it does not declare: by additionalProperties: false,
+// or by unevaluatedProperties: false where nothing else may take the key.
+func refuses(s *jsonschema.Schema) bool {
+	if len(s.PatternProperties) > 0 {
+		return false
 	}
-	return m, true
+	if closed, ok := s.AdditionalProperties.(bool); ok {
+		return !closed
+	}
+	u := s.UnevaluatedProperties
+	if u == nil || u.Bool == nil || *u.Bool {
+		return false
+	}
+	applies := s.Ref != nil || s.RecursiveRef != nil || s.DynamicRef != nil || s.If != nil ||
+		len(s.AllOf)+len(s.AnyOf)+len(s.OneOf)+len(s.DependentSchemas)+len(s.Dependencies) > 0
+	return s.AdditionalProperties == nil && !applies
+}
+
+// takes reports whether s, and the schemas its $ref leads to, may take a value of the JSON type t.
+func takes(s *jsonschema.Schema, t string) bool {
+	for ; s != nil; s = s.Ref {
+		if s.Types != nil && !s.Types.IsEmpty() && !slices.Contains(s.Types.ToStrings(), t) {
+			return false
+		}
+	}
+	return true
+}
+
+// itemsOf returns the schema of every item of the list s, or nil where none is declared, or where the
+// items are declared by their position (prefixItems), not one schema for all.
+func itemsOf(s *jsonschema.Schema) *jsonschema.Schema {
+	for ; s != nil; s = s.Ref {
+		if len(s.PrefixItems) > 0 {
+			return nil
+		}
+		if s.Items2020 != nil {
+			return s.Items2020
+		}
+		switch items := s.Items.(type) {
+		case *jsonschema.Schema:
+			return items
+		case []*jsonschema.Schema:
+			return nil
+		}
+	}
+	return nil
 }
 
 // checkExample reads the example.yaml of t as a data file of it, and draws it.

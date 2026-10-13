@@ -137,7 +137,7 @@ func text(n ast.Node) (string, bool) {
 }
 
 // program compiles the expression of c.
-func (c relation) program() (*vm.Program, error) {
+func (c relation) program() (*vm.Program, *yamlpos.Error) {
 	p, err := compile(c.Expr, scope{Item: nil, Doc: nil}, expr.AsBool())
 	if err != nil {
 		return nil, yamlpos.New(c.file, c.at["expr"], "tmpl_expr", c.Expr, brief(err))
