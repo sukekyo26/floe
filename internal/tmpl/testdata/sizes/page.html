@@ -2,6 +2,8 @@
 <html lang="{{.Lang}}">
 <head><meta charset="utf-8"><title>{{.Title}}</title><style>{{.Theme}}</style></head>
 <body>
+<img src="{{asset "logo.svg"}}" alt="">
+{{with .Data.chart}}<img src="{{.}}" alt="chart">{{end}}
 {{with .Data.note}}<p>{{.}}</p>{{end}}
 <table>
 {{range .Data.files}}<tr><td>{{.name}}</td><td>{{.bytes | bytes}}</td><td>{{.updated}}</td></tr>

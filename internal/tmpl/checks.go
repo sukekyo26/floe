@@ -189,7 +189,7 @@ func (c relation) failure(file string, root ast.Node, at []string, err error) *y
 	case shown != "" && !strings.Contains(shown, "\n"):
 		return yamlpos.New(file, pos, "tmpl_check", path, c.Message, shown)
 	default:
-		return yamlpos.New(file, pos, "tmpl_check_bare", path, c.Message)
+		return yamlpos.New(file, pos, "tmpl_item", path, c.Message)
 	}
 }
 

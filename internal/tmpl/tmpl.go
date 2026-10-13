@@ -12,6 +12,7 @@ import (
 	"io"
 	"math"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -48,7 +49,9 @@ type Data struct {
 	Values   map[string]any
 	Calc     map[string]any // the values of the template's computed.yaml, by name; nil without one
 
-	tmpl *Template // the template Read checked the data against, which draws it
+	tmpl   *Template               // the template Read checked the data against, which draws it
+	schema *schema                 // the template's schema as Read read it, for drawing as checked
+	images map[string]template.URL // its images as data URIs, by the path written
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -61,8 +64,12 @@ var shared = []string{"template", "theme", "title"}
 //
 // theme, when not "", is the theme to draw with instead of the one the data names (floe publish
 // --theme): the data's theme: is then not used, and a theme the template does not have is refused as
-// a *usererr.Error, as is a template that needs another floe.
-func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
+// a *usererr.Error, as is a template that needs another floe. A relative file is under cwd.
+func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error) {
+	dir := filepath.Dir(file)
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(cwd, dir)
+	}
 	h, err := start(file, src, theme != "")
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		var names []string
@@ -102,7 +109,7 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	if err = t.checkVersion(); err != nil {
 		return nil, err
 	}
-	if err = t.check(d, h.root, theme, h.where["theme"], problems); err != nil {
+	if err = t.check(d, h.root, dir, theme, h.where["theme"], problems); err != nil {
 		return nil, err
 	}
 	return d, nil
@@ -129,21 +136,25 @@ func start(file string, src []byte, themed bool) (*head, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil}
+	d := &Data{
+		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
+		images: nil,
+	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)
 	return h, nil
 }
 
-// check checks d, whose root is root, against t, which then draws it: with the theme theme when given,
-// else the data's, written at at. problems are those found before in the keys every template shares.
-func (t *Template) check(d *Data, root ast.Node, theme string, at yamlpos.Pos, problems yamlpos.Problems) error {
+// check checks d, whose root is root and whose images are under dir, against t, which then draws it:
+// with the theme theme when given, else the data's, written at at. problems are those found before in
+// the keys every template shares.
+func (t *Template) check(d *Data, root ast.Node, dir, theme string, at yamlpos.Pos, problems yamlpos.Problems) error {
 	d.tmpl = t
 	more, err := pickTheme(t, d, theme, at)
 	if err != nil {
 		return err
 	}
-	return checkValues(t, d, root, append(problems, more...))
+	return checkValues(t, d, root, dir, append(problems, more...))
 }
 
 // pickTheme sets the theme of d: theme when given, which t must have, else the data's, reported at
@@ -165,10 +176,15 @@ func pickTheme(t *Template, d *Data, theme string, pos yamlpos.Pos) (yamlpos.Pro
 	return nil, nil
 }
 
-// checkValues checks d against its template's schema and then its checks, and computes its values,
-// reporting the schema's mistakes with problems, those found before in the keys every template shares.
-func checkValues(t *Template, d *Data, root ast.Node, problems yamlpos.Problems) error {
-	err := checkSchema(t, d, root)
+// checkValues checks d against its template's schema, reads its images under dir, checks it against
+// its checks and computes its values, reporting the schema's mistakes with problems, those found before
+// in the keys every template shares.
+func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlpos.Problems) error {
+	src, err := t.readFile("schema.json")
+	if err != nil {
+		return err
+	}
+	err = validate(src, d, root)
 	var more yamlpos.Problems
 	switch {
 	case errors.As(err, &more):
@@ -179,12 +195,20 @@ func checkValues(t *Template, d *Data, root ast.Node, problems yamlpos.Problems)
 	if problems != nil {
 		return problems.Sorted()
 	}
+	s, err := t.decodeSchema(src)
+	if err != nil {
+		return err
+	}
+	d.schema = s
+	if err = checkImages(s, d, root, dir); err != nil {
+		return err
+	}
 	// Each stage runs on data that passed the one before: broken data would only give the expressions
 	// mistakes that mean nothing.
 	if err = checkRelations(t, d, root); err != nil {
 		return err
 	}
-	return checkComputed(t, d, root)
+	return checkComputed(t, d, root, s)
 }
 
 // readShared moves the keys every template shares from h.d.Values to h.d, and notes where each is
@@ -256,21 +280,22 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	s, err := schemaOf(t)
-	if err != nil {
-		return nil, err
-	}
 	var b bytes.Buffer
 	err = page.Execute(&b, map[string]any{
 		"Title": title,
 		"Lang":  lang,
-		"Data":  s.prepare(d.Values),
+		"Data":  d.schema.prepare(d.Values, d.images),
 		"Calc":  d.Calc,
 		"Theme": template.CSS(css), //nolint:gosec // G203: the template's own theme, not data
 	})
-	if err != nil {
-		// Read checked the data against the schema, so this is the template's own mistake: page.html
-		// naming an item its schema does not declare, or using one as another type.
+	// Read checked the data against the schema, so this is the template's own mistake: an image of its
+	// assets/ that is not right, or page.html naming an item its schema does not declare, or using one
+	// as another type.
+	var bad *usererr.Error
+	switch {
+	case errors.As(err, &bad):
+		return nil, t.assetMistake(bad)
+	case err != nil:
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	return b.Bytes(), nil
@@ -283,7 +308,8 @@ func (t *Template) page() (*template.Template, error) {
 		return nil, err
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
-	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).Parse(string(src))
+	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
+		Funcs(template.FuncMap{"asset": t.assets()}).Parse(string(src))
 	if err != nil {
 		return nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
 	}
@@ -313,6 +339,11 @@ func schemaOf(t *Template) (*schema, error) {
 	if err != nil {
 		return nil, err
 	}
+	return t.decodeSchema(b)
+}
+
+// decodeSchema reads b, the schema.json of t.
+func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	s, err := decodeSchema(b)
 	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
@@ -352,20 +383,24 @@ type schema struct {
 }
 
 // prepare readies v for page.html: an item declared but not given becomes nil, so that page.html can
-// test it under missingkey=error, and an item of format html becomes HTML that goes in as it is.
-func (s *schema) prepare(v any) any {
+// test it under missingkey=error, an item of format html becomes HTML that goes in as it is, and one
+// of format image the data URI of its image, from images.
+func (s *schema) prepare(v any, images map[string]template.URL) any {
 	if s == nil {
 		return v
 	}
 	switch v := v.(type) {
 	case string:
-		if s.Format == "html" {
+		switch s.Format {
+		case "html":
 			return template.HTML(v) //nolint:gosec // G203: the schema declares this item HTML
+		case "image":
+			return images[v]
 		}
 	case map[string]any:
 		out := make(map[string]any, len(v)+len(s.Properties))
 		for k, item := range v {
-			out[k] = s.Properties[k].prepare(item)
+			out[k] = s.Properties[k].prepare(item, images)
 		}
 		for k := range s.Properties {
 			if _, ok := out[k]; !ok {
@@ -376,7 +411,7 @@ func (s *schema) prepare(v any) any {
 	case []any:
 		out := make([]any, len(v))
 		for i, item := range v {
-			out[i] = s.Items.prepare(item)
+			out[i] = s.Items.prepare(item, images)
 		}
 		return out
 	}

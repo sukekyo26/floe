@@ -4,12 +4,16 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"html/template"
+	"io/fs"
 	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+	tparse "text/template/parse"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
@@ -92,9 +96,9 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	s, err := decodeSchema(src)
+	s, err := t.decodeSchema(src)
 	if err != nil {
-		return nil, []error{fmt.Errorf("read the schema of %s: %w", t.Name, err)}
+		return nil, []error{err}
 	}
 	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil}
 	lint.walk(doc, "#", true)
@@ -107,10 +111,154 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		mistakes = append(mistakes, err)
 	}
-	if _, err = t.page(); err != nil {
-		mistakes = append(mistakes, err)
+	page, err := t.page()
+	if err != nil {
+		return warnings, append(mistakes, err)
 	}
-	return warnings, mistakes
+	return warnings, append(mistakes, t.checkAssets(page)...)
+}
+
+// checkAssets returns the mistakes of the images under the assets/ of t, if it has one, and of those
+// page.html names to asset, in every branch.
+func (t *Template) checkAssets(page *template.Template) []error {
+	var mistakes []error
+	var checked map[string]bool
+	err := t.files(func(files fs.FS) error {
+		fi, err := fs.Stat(files, "assets")
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			return nil
+		case err != nil:
+			return err //nolint:wrapcheck // wrapped below
+		case !fi.IsDir():
+			return usererr.New("tmpl_assets_not_dir", t.file("assets"))
+		}
+		sub, err := fs.Sub(files, "assets")
+		if err != nil {
+			return err //nolint:wrapcheck // wrapped below
+		}
+		mistakes, checked, err = t.assetImages(sub)
+		return err
+	})
+	var notDir *usererr.Error
+	switch {
+	case errors.As(err, &notDir):
+		return []error{notDir}
+	case err != nil:
+		return []error{fmt.Errorf("read the assets of %s: %w", t.Name, err)}
+	}
+	for _, name := range assetsNamed(page) {
+		if checked[name] {
+			continue // its mistake, if it has one, is told already
+		}
+		var bad *usererr.Error
+		_, err = t.asset(name)
+		switch {
+		case errors.As(err, &bad):
+			mistakes = append(mistakes, t.assetMistake(bad))
+		case err != nil:
+			mistakes = append(mistakes, err)
+		}
+	}
+	return mistakes
+}
+
+// assetImages returns the mistakes of the images of assets, the assets/ of t, and the names of those
+// it checked. A file not named as an image (a README), or whose name starts with a dot, which asset
+// cannot name, is left alone.
+func (t *Template) assetImages(assets fs.FS) (mistakes []error, checked map[string]bool, err error) {
+	checked = map[string]bool{}
+	err = fs.WalkDir(assets, ".", func(name string, e fs.DirEntry, err error) error {
+		switch {
+		case err != nil:
+			return err
+		case name != "." && strings.HasPrefix(e.Name(), ".") && e.IsDir():
+			return fs.SkipDir
+		case e.IsDir() || strings.HasPrefix(e.Name(), "."):
+			return nil
+		}
+		if _, image := imageTypes[strings.ToLower(path.Ext(name))]; image {
+			checked[name] = true
+			if _, bad := imageURI(assets, name, t.file("assets")); bad != nil {
+				mistakes = append(mistakes, usererr.New("tmpl_item", t.file("assets"), bad))
+			}
+		}
+		return nil
+	})
+	return mistakes, checked, err //nolint:wrapcheck // wrapped by checkAssets
+}
+
+// assetsNamed returns the names page passes to asset as written, {{asset "logo.svg"}}, once each.
+// LIMIT: a name piped to it, or computed, is not found. Look for those too if templates come to use them.
+func assetsNamed(page *template.Template) []string {
+	var w assetWalk
+	for _, t := range page.Templates() {
+		if t.Tree != nil {
+			w.node(t.Tree.Root)
+		}
+	}
+	return w.names
+}
+
+// assetWalk walks a parse tree of page.html for the names passed to asset.
+type assetWalk struct {
+	names []string
+}
+
+func (w *assetWalk) node(n tparse.Node) {
+	switch n := n.(type) {
+	case *tparse.ListNode:
+		if n != nil {
+			for _, item := range n.Nodes {
+				w.node(item)
+			}
+		}
+	case *tparse.PipeNode:
+		w.pipe(n)
+	case *tparse.ActionNode:
+		w.pipe(n.Pipe)
+	case *tparse.TemplateNode:
+		w.pipe(n.Pipe)
+	case *tparse.IfNode:
+		w.branch(&n.BranchNode)
+	case *tparse.RangeNode:
+		w.branch(&n.BranchNode)
+	case *tparse.WithNode:
+		w.branch(&n.BranchNode)
+	}
+}
+
+func (w *assetWalk) branch(b *tparse.BranchNode) {
+	w.pipe(b.Pipe)
+	w.node(b.List)
+	w.node(b.ElseList)
+}
+
+func (w *assetWalk) pipe(p *tparse.PipeNode) {
+	if p == nil {
+		return
+	}
+	for _, c := range p.Cmds {
+		if name, ok := assetCall(c); ok && !slices.Contains(w.names, name) {
+			w.names = append(w.names, name)
+		}
+		for _, a := range c.Args {
+			w.node(a)
+		}
+	}
+}
+
+// assetCall returns the name c passes to asset, when it is asset "name".
+func assetCall(c *tparse.CommandNode) (string, bool) {
+	if len(c.Args) != 2 {
+		return "", false
+	}
+	id, call := c.Args[0].(*tparse.IdentifierNode)
+	name, text := c.Args[1].(*tparse.StringNode)
+	if !call || !text || id.Ident != "asset" {
+		return "", false
+	}
+	return name.Text, true
 }
 
 // checkChecks returns the mistakes of the checks.yaml of t, if it has one, against its schema doc as
@@ -280,7 +428,7 @@ func (t *Template) checkExample() error {
 	}
 	// The later stages check it against t, and name t in their mistakes.
 	d.Template = t.Name
-	if err = t.check(d, h.root, "", h.where["theme"], problems); err != nil {
+	if err = t.check(d, h.root, t.Dir, "", h.where["theme"], problems); err != nil {
 		return err
 	}
 	_, err = d.Render(cmp.Or(d.Title, file), "")

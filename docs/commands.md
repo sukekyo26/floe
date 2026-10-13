@@ -62,6 +62,7 @@ sections:
 ```
 
 - `theme:` picks a theme of the template (`default`).
+- An image the template takes (an item of `"format": "image"`) is a path under the data file's directory; the image goes into the page.
 - A template of your own, in `FLOE_TEMPLATES_DIR`, takes the place of a built-in one of its name. [templates.md](templates.md) tells how to write one.
 - The data is checked against the template's schema before the page is drawn. Every mistake is printed at once as `file:line:column: message`, and nothing is published until all are fixed (exit code 1): a missing or unknown template, an item the template does not have (a typo), a value of the wrong type, and the like.
 - A data file is one YAML document of keys and values: one with `---` between documents, or with anchors, aliases or tags, is refused.
@@ -119,7 +120,7 @@ Make the template `<name>` of your own in `$FLOE_TEMPLATES_DIR/<name>` as a copy
 
 Check each directory as the template of its name, before you use or share it. A relative path is resolved against the working directory.
 
-- Its files first: `template.yaml`, `schema.json` (a `format` floe does not know is a mistake), `checks.yaml` (the paths of `for` and `field` must be declared in `schema.json`), `computed.yaml`, `page.html` and `themes/default.css`.
+- Its files first: `template.yaml`, `schema.json` (a `format` floe does not know is a mistake), `checks.yaml` (the paths of `for` and `field` must be declared in `schema.json`), `computed.yaml`, `page.html`, `themes/default.css` and the images of `assets/`.
 - Then its `example.yaml` through every stage of `floe publish`, drawing the page included. It must name the template of the directory's name: the template drawn is always the one in the directory, never another of its name.
 - Every mistake is printed at once, as `file:line:column: message` where it has a place (exit code 1). Nothing is printed when every template is right (exit code 0).
 - Warnings go to stderr and leave the exit code 0: no `template.yaml`, or an object of `schema.json` that does not refuse a misspelt key (no `"additionalProperties": false`).

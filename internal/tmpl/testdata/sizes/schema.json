@@ -4,6 +4,7 @@
   "type": "object",
   "properties": {
     "note": { "type": "string", "format": "html" },
+    "chart": { "type": "string", "format": "image" },
     "files": {
       "type": "array",
       "items": {

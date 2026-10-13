@@ -23,19 +23,10 @@ import (
 
 // formats are the formats floe gives a meaning to, beyond JSON Schema's own. Validating them is a
 // no-op: they mark an item for drawing, and what an item holds is checked where it is drawn.
-var formats = []string{"html"}
+var formats = []string{"html", "image"}
 
-// checkSchema checks the values of d against its template's schema.json and reports every mistake at
-// its line and column under root, the data file's top mapping.
-func checkSchema(t *Template, d *Data, root ast.Node) error {
-	src, err := t.readFile("schema.json")
-	if err != nil {
-		return err
-	}
-	return validate(src, d, root)
-}
-
-// validate checks the values of d against the schema src.
+// validate checks the values of d against the schema src, its template's schema.json, and reports
+// every mistake at its line and column under root, the data file's top mapping.
 func validate(src []byte, d *Data, root ast.Node) error {
 	sch, doc, err := compileSchema(d.Template, src)
 	if err != nil {
@@ -151,7 +142,7 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 		}
 		// LIMIT: the rest (anyOf, oneOf, const, dependencies…) keep the library's English. Word one
 		// in the catalogs when a template's schema comes to use it.
-		s.add(where, "tmpl_schema_other", label(at), e.ErrorKind.LocalizedString(english))
+		s.add(where, "tmpl_item", label(at), e.ErrorKind.LocalizedString(english))
 	}
 }
 

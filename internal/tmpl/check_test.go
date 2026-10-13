@@ -13,25 +13,35 @@ import (
 	"github.com/sukekyo26/floe/internal/version"
 )
 
-// The template of testdata/sizes uses every stage: its checks, its computed values, num and bytes.
+// The template of testdata/sizes uses every stage: its checks, its computed values, num, bytes, its
+// assets and an image of the data.
 func TestDrawEveryStage(t *testing.T) {
 	t.Parallel()
 
-	src, err := os.ReadFile("testdata/sizes/example.yaml")
+	const file = "testdata/sizes/example.yaml"
+	src, err := os.ReadFile(file)
 	if err != nil {
 		t.Fatal(err)
 	}
-	page, err := draw(tmpl.NewLibrary("testdata"), string(src))
+	l := tmpl.NewLibrary("testdata")
+	d, err := l.Read(file, src, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"<p><b>made</b> for tests</p>", "<td>1.5 KiB</td>", "<p>2,049,536 bytes, 1 of them"} {
-		if !strings.Contains(page, want) {
-			t.Errorf("the page has no %s:\n%s", want, page)
+	b, err := d.Render("t", "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"<p><b>made</b> for tests</p>", "<td>1.5 KiB</td>", "<p>2,049,536 bytes, 1 of them",
+		`<img src="data:image/svg&#43;xml;base64,`, `<img src="data:image/png;base64,iVBORw0KGgo`,
+	} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("the page has no %s:\n%s", want, b)
 		}
 	}
 	twice := strings.Replace(string(src), "b.png", "a.txt", 1)
-	if _, err := draw(tmpl.NewLibrary("testdata"), twice); err == nil || !strings.Contains(err.Error(), "data.yaml:7:11: files[1].name: give each file its own name") {
+	if _, err := l.Read(file, []byte(twice), "", ""); err == nil || !strings.Contains(err.Error(), file+":8:11: files[1].name: give each file its own name") {
 		t.Errorf("a check that fails = %v", err)
 	}
 }
@@ -178,6 +188,26 @@ func TestCheckMistakes(t *testing.T) {
 			},
 		},
 		{
+			name:  "an image of the example",
+			files: map[string]string{"example.yaml": "chart: chart.png|chart: none.png"},
+			want:  []string{`sizes/example.yaml:4:8: chart: there is no image "none.png" under `},
+		},
+		{
+			name:  "an asset",
+			files: map[string]string{"assets/notes.png": "not an image", "assets/.DS_Store": "x", "assets/README.md": "x"},
+			want:  []string{`"notes.png" does not hold the image/png its name says`},
+		},
+		{
+			name:  "an asset page.html names",
+			files: map[string]string{"assets/logo.svg": "not svg"},
+			want:  []string{`sizes/assets: "logo.svg" does not hold the image/svg+xml its name says`},
+		},
+		{
+			name:  "an asset in a branch the example does not reach",
+			files: map[string]string{"page.html": "<body>|<body>{{if false}}{{asset \"nope.svg\"}}{{else}}{{asset \"logo.svg\"}}{{end}}"},
+			want:  []string{`sizes/page.html: there is no image "nope.svg" under `},
+		},
+		{
 			name:  "newer floe",
 			files: map[string]string{"template.yaml": "floe: 999.0\n"},
 			want:  []string{"template sizes needs floe 999.0.0 or later"},
@@ -236,6 +266,49 @@ func TestCheckMissingFile(t *testing.T) {
 	}
 	if ja := e.Localize(i18n.New("ja")); !strings.Contains(ja, "page.html、schema.json、example.yaml、themes/default.css") {
 		t.Errorf("the mistake in Japanese = %s", ja)
+	}
+}
+
+// An image of assets/ that is not right stops the drawing as a mistake of the template's assets/, as
+// floe template check tells it, in the language of the messages.
+func TestRenderBadAsset(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{"assets/logo.svg": "not svg"})
+	file := filepath.Join(dir, "example.yaml")
+	src, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := tmpl.NewLibrary(filepath.Dir(dir)).Read(file, src, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = d.Render("t", "en")
+	var e *usererr.Error
+	if !errors.As(err, &e) || e.Key != "tmpl_item" {
+		t.Fatalf("Render = %v", err)
+	}
+	if ja := e.Localize(i18n.New("ja")); ja != filepath.Join(dir, "assets")+": 「logo.svg」の中身は、名前が示す image/svg+xml ではありません" {
+		t.Errorf("the mistake in Japanese = %s", ja)
+	}
+}
+
+// A file named assets is not the directory of assets.
+func TestCheckAssetsFile(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, nil)
+	if err := os.RemoveAll(filepath.Join(dir, "assets")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "assets"), nil, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
+		t.Fatal(err)
+	}
+	_, mistakes := tmpl.Check(dir)
+	var e *usererr.Error
+	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_assets_not_dir" {
+		t.Errorf("Check with a file named assets = %v", mistakes)
 	}
 }
 

@@ -48,7 +48,7 @@ func checkFile(a *app, file string) []error {
 	if err != nil {
 		return []error{err}
 	}
-	d, err := a.templates().Read(file, src, "")
+	d, err := a.templates().Read(file, src, "", a.env.Dir)
 	var all yamlpos.Problems
 	switch {
 	case errors.As(err, &all):
