@@ -65,7 +65,7 @@ func TestImageURI(t *testing.T) {
 		{"/a.png", "tmpl_image_path"},
 		{".hidden/c.png", "tmpl_image_path"},
 		{"sub/../a.png", "tmpl_image_path"},
-		{"link.png", "tmpl_image_unreadable"},
+		{"link.png", "tmpl_image_path"},
 	} {
 		uri, e := imageURI(r.FS(), tt.name, dir)
 		got := string(uri)

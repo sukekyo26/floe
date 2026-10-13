@@ -50,6 +50,7 @@ type Data struct {
 	Calc     map[string]any // the values of the template's computed.yaml, by name; nil without one
 
 	tmpl   *Template               // the template Read checked the data against, which draws it
+	schema *schema                 // the template's schema as Read read it, for drawing as checked
 	images map[string]template.URL // its images as data URIs, by the path written
 }
 
@@ -136,7 +137,8 @@ func start(file string, src []byte, themed bool) (*head, error) {
 		return nil, err
 	}
 	d := &Data{
-		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, images: nil,
+		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
+		images: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)
@@ -197,6 +199,7 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 	if err != nil {
 		return err
 	}
+	d.schema = s
 	if err = checkImages(s, d, root, dir); err != nil {
 		return err
 	}
@@ -277,21 +280,22 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	s, err := schemaOf(t)
-	if err != nil {
-		return nil, err
-	}
 	var b bytes.Buffer
 	err = page.Execute(&b, map[string]any{
 		"Title": title,
 		"Lang":  lang,
-		"Data":  s.prepare(d.Values, d.images),
+		"Data":  d.schema.prepare(d.Values, d.images),
 		"Calc":  d.Calc,
 		"Theme": template.CSS(css), //nolint:gosec // G203: the template's own theme, not data
 	})
-	if err != nil {
-		// Read checked the data against the schema, so this is the template's own mistake: page.html
-		// naming an item its schema does not declare, or using one as another type.
+	// Read checked the data against the schema, so this is the template's own mistake: an image of its
+	// assets/ that is not right, or page.html naming an item its schema does not declare, or using one
+	// as another type.
+	var bad *usererr.Error
+	switch {
+	case errors.As(err, &bad):
+		return nil, usererr.New("tmpl_item", t.file("page.html"), bad)
+	case err != nil:
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	return b.Bytes(), nil
@@ -303,9 +307,21 @@ func (t *Template) page() (*template.Template, error) {
 	if err != nil {
 		return nil, err
 	}
+	// An image of assets/ shown many times is read once a drawing.
+	assets := map[string]template.URL{}
+	asset := func(name string) (template.URL, error) {
+		if uri, ok := assets[name]; ok {
+			return uri, nil
+		}
+		uri, bad := t.asset(name)
+		if bad == nil {
+			assets[name] = uri
+		}
+		return uri, bad
+	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
-		Funcs(template.FuncMap{"asset": t.asset}).Parse(string(src))
+		Funcs(template.FuncMap{"asset": asset}).Parse(string(src))
 	if err != nil {
 		return nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
 	}

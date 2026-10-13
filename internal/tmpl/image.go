@@ -59,6 +59,8 @@ func readImage(files fs.FS, name, where string) ([]byte, *usererr.Error) {
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		return nil, usererr.New("tmpl_image_missing", name, where)
+	case err != nil && leadsOut(files, name):
+		return nil, usererr.New("tmpl_image_path", name, where)
 	case err != nil:
 		return nil, usererr.New("tmpl_image_unreadable", name, err.Error())
 	case !fi.Mode().IsRegular():
@@ -70,10 +72,20 @@ func readImage(files fs.FS, name, where string) ([]byte, *usererr.Error) {
 	switch {
 	case err != nil:
 		return nil, usererr.New("tmpl_image_unreadable", name, err.Error())
-	case len(b) > maxImage: // grown since it was looked at
+	case len(b) > maxImage: // grown since it was looked at: read only as far as the limit
+		if fi, err = fs.Stat(files, name); err == nil && fi.Size() > maxImage {
+			return nil, tooLarge(name, fi.Size())
+		}
 		return nil, tooLarge(name, int64(len(b)))
 	}
 	return b, nil
+}
+
+// leadsOut reports whether name is a symlink that files cannot follow: one that leads out of it,
+// which os.Root refuses with an error of its own.
+func leadsOut(files fs.FS, name string) bool {
+	fi, err := fs.Lstat(files, name)
+	return err == nil && fi.Mode()&fs.ModeSymlink != 0
 }
 
 // readAtMost reads up to n bytes of the file name of files.
@@ -168,10 +180,10 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 	refused := map[string]*usererr.Error{}
 	var problems yamlpos.Problems
 	for _, f := range found {
-		// An image named by many items is read once, and its mistake reported at each of them.
-		_, read := d.images[f.name]
+		// An image named by many items is read once, and its mistake reported at each of them: refused
+		// holds nil for one read.
 		e, seen := refused[f.name]
-		if !read && !seen {
+		if !seen {
 			var uri template.URL
 			if uri, e = imageURI(r.FS(), f.name, dir); e == nil {
 				d.images[f.name] = uri

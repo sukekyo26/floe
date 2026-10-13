@@ -198,6 +198,11 @@ func TestCheckMistakes(t *testing.T) {
 			want:  []string{`"notes.png" does not hold the image/png its name says`},
 		},
 		{
+			name:  "an asset page.html names",
+			files: map[string]string{"assets/logo.svg": "not svg"},
+			want:  []string{`sizes/assets: "logo.svg" does not hold the image/svg+xml its name says`},
+		},
+		{
 			name:  "an asset in a branch the example does not reach",
 			files: map[string]string{"page.html": "<body>|<body>{{if false}}{{asset \"nope.svg\"}}{{else}}{{asset \"logo.svg\"}}{{end}}"},
 			want:  []string{`sizes/page.html: there is no image "nope.svg" under `},
@@ -260,6 +265,31 @@ func TestCheckMissingFile(t *testing.T) {
 		t.Fatalf("Check without example.yaml = %v", mistakes)
 	}
 	if ja := e.Localize(i18n.New("ja")); !strings.Contains(ja, "page.html、schema.json、example.yaml、themes/default.css") {
+		t.Errorf("the mistake in Japanese = %s", ja)
+	}
+}
+
+// An image of assets/ that is not right stops the drawing as a mistake of the template's page.html,
+// in the language of the messages.
+func TestRenderBadAsset(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{"assets/logo.svg": "not svg"})
+	file := filepath.Join(dir, "example.yaml")
+	src, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := tmpl.NewLibrary(filepath.Dir(dir)).Read(file, src, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = d.Render("t", "en")
+	var e *usererr.Error
+	if !errors.As(err, &e) || e.Key != "tmpl_item" {
+		t.Fatalf("Render = %v", err)
+	}
+	if ja := e.Localize(i18n.New("ja")); ja != filepath.Join(dir, "page.html")+": 「logo.svg」の中身は、名前が示す image/svg+xml ではありません" {
 		t.Errorf("the mistake in Japanese = %s", ja)
 	}
 }
