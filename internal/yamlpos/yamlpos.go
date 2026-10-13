@@ -9,6 +9,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
+	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/parser"
 	"github.com/goccy/go-yaml/token"
 
@@ -57,7 +58,8 @@ func Parse(file string, src []byte, documents string) (ast.Node, error) {
 	for _, d := range doc.Docs {
 		switch b := d.Body.(type) {
 		case *ast.DirectiveNode:
-			at := Of(b)
+			// At the --- before it, when one ended the document before.
+			at := startOf(d, Of(b))
 			head = &at
 			continue
 		case nil:
@@ -71,12 +73,9 @@ func Parse(file string, src []byte, documents string) (ast.Node, error) {
 			continue
 		}
 		if body != nil {
-			at := Of(d.Body)
-			switch {
-			case head != nil:
+			at := startOf(d, Of(d.Body))
+			if head != nil {
 				at = *head
-			case d.Start != nil:
-				at = Pos{Line: d.Start.Position.Line, Column: d.Start.Position.Column}
 			}
 			return nil, New(file, at, documents)
 		}
@@ -88,25 +87,25 @@ func Parse(file string, src []byte, documents string) (ast.Node, error) {
 	return body, nil
 }
 
-// dropped finds a second --- after the one at start, which goccy/go-yaml reads as an empty document
-// and the text after it lost. ok is false when only blank lines and comments follow start.
+// startOf returns where d starts: at its ---, or at at without one.
+func startOf(d *ast.DocumentNode, at Pos) Pos {
+	if d.Start != nil {
+		return Pos{Line: d.Start.Position.Line, Column: d.Start.Position.Column}
+	}
+	return at
+}
+
+// dropped finds text after the --- at start, which goccy/go-yaml reads as an empty document and
+// loses: a second --- with text after it. ok is false when only comments and ... follow.
 func dropped(src []byte, start *token.Position) (Pos, bool) {
-	lines := strings.Split(string(src), "\n")
-	for n := start.Line; n <= len(lines); n++ {
-		line := lines[n-1]
-		col := 1
-		if n == start.Line {
-			col = start.Column + len("---")
-			if col > len(line)+1 {
-				continue
-			}
-			line = line[col-1:]
-		}
-		text := strings.TrimLeft(line, " \t")
-		if text == "" || strings.HasPrefix(text, "#") {
+	for _, t := range lexer.Tokenize(string(src)) {
+		p := t.Position
+		if p.Line < start.Line || p.Line == start.Line && p.Column <= start.Column {
 			continue
 		}
-		return Pos{Line: n, Column: col + len(line) - len(text)}, true
+		if t.Type != token.CommentType && t.Type != token.DocumentEndType {
+			return Pos{Line: p.Line, Column: p.Column}, true
+		}
 	}
 	return Pos{Line: 0, Column: 0}, false
 }

@@ -42,12 +42,15 @@ func TestOfAndFirstAnchor(t *testing.T) {
 func TestParse(t *testing.T) {
 	t.Parallel()
 
-	for _, src := range []string{"a: 1\n", "%YAML 1.2\n---\na: 1\n", "---\na: 1\n", "a: 1\n---\n", "a: 1\n---\n# c\n"} {
+	for _, src := range []string{
+		"a: 1\n", "%YAML 1.2\n---\na: 1\n", "---\na: 1\n", "a: 1\n---\n", "a: 1\n---\n# c\n", "a: 1\r\n---\r\n\r\n",
+		"a: 1\n---\n... # end\n",
+	} {
 		if body, err := yamlpos.Parse("a.yaml", []byte(src), "diagram_documents"); err != nil || body == nil {
 			t.Errorf("Parse(%q) = %v, %v", src, body, err)
 		}
 	}
-	for _, src := range []string{"", "# only a comment\n"} {
+	for _, src := range []string{"", "# only a comment\n", "---\n...\n"} {
 		if body, err := yamlpos.Parse("a.yaml", []byte(src), "diagram_documents"); !errors.Is(err, yamlpos.ErrEmpty) || body != nil {
 			t.Errorf("Parse(%q) = %v, %v; want no document", src, body, err)
 		}
@@ -56,6 +59,7 @@ func TestParse(t *testing.T) {
 		{"a: 1\n---\nb: 2\n", "a.yaml:2:1: a spec holds one diagram"},
 		{"a: 1\n...\nb: 2\n", "a.yaml:3:1: a spec holds one diagram"},
 		{"a: 1\n...\n%YAML 1.2\n---\nb: 2\n", "a.yaml:3:1: a spec holds one diagram"},
+		{"a: 1\n---\n%YAML 1.2\n---\nb: 2\n", "a.yaml:2:1: a spec holds one diagram"},
 		// goccy/go-yaml reads a second --- as an empty document and drops what follows it.
 		{"a: 1\n---\n---\nb: 2\n", "a.yaml:3:1: a spec holds one diagram"},
 		{"---\n---\nid: d\n", "a.yaml:2:1: a spec holds one diagram"},
