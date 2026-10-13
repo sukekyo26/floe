@@ -14,6 +14,10 @@ func TestRenamed(t *testing.T) {
 		{"template: [report]\n", "template: [report]\n"},
 		{"sections:\n  - template: report\n", "sections:\n  - template: report\n"},
 		{"not: [valid\n", "not: [valid\n"},
+		// Blanks after the value, or a value on a line of its own, do not lose it.
+		{"template: report   \n", "template: spec   \n"},
+		{"template:   report \t# r\n", "template:   spec \t# r\n"},
+		{"template:\n  report\n", "template:\n  spec\n"},
 		// A column counts characters, not bytes.
 		{"{a: 日日日日 report, template: report}\n", "{a: 日日日日 report, template: spec}\n"},
 	} {

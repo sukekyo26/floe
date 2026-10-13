@@ -16,8 +16,8 @@ import (
 )
 
 // New makes the template name of one's own as a copy of the template from, and returns where it is.
-// It names the floe the copy needs in template.yaml, the one from names or else this floe, and the
-// copy in example.yaml's template:. A template of one's own already named so is left as it is.
+// A copy of a built-in template names this floe in template.yaml, and the copy names itself in
+// example.yaml's template:. A template of one's own already named so is left as it is.
 // LIMIT: a symlink in from is not copied (os.CopyFS refuses it). Copy what it leads to if a template
 // of one's own comes to need that.
 func (l *Library) New(name, from string) (string, error) {
@@ -68,15 +68,16 @@ func (t *Template) copyTo(dir, name string) error {
 	if err := t.files(func(files fs.FS) error { return os.CopyFS(dir, files) }); err != nil {
 		return err
 	}
-	needs, err := t.needs()
-	if err != nil {
-		return err
-	}
-	if needs == nil {
-		have, _ := versionOf(version.Version)
+	// A built-in template comes with this floe, which a copy of it names; a copy of one of one's own
+	// keeps its template.yaml, or its lack of one.
+	if t.Dir == "" {
+		have, ok := versionOf(version.Version)
+		if !ok {
+			return fmt.Errorf("the version of floe %q is not major.minor.patch", version.Version) //nolint:err113 // floe's own
+		}
 		floe := fmt.Sprintf("floe: %d.%d\n", have[0], have[1])
 		//nolint:gosec // G306: templates are not secret
-		if err = os.WriteFile(filepath.Join(dir, "template.yaml"), []byte(floe), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "template.yaml"), []byte(floe), 0o644); err != nil {
 			return err //nolint:wrapcheck // wrapped by New
 		}
 	}
@@ -102,14 +103,19 @@ func renamed(src []byte, name string) []byte {
 	if _, text := value.(*ast.StringNode); key == nil || path != "template" || !text {
 		return src
 	}
-	at := yamlpos.OfValue(key, value)
 	old := value.GetToken().Value
+	k, v := yamlpos.Of(key), yamlpos.Of(value)
 	lines := strings.SplitAfter(string(src), "\n")
-	// The value starts at its column, counted in characters, after a quote if it has one.
-	line := []rune(lines[at.Line-1])
-	head, tail := string(line[:at.Column-1]), string(line[at.Column-1:])
+	// The value is the first old after the key on its line, or on a line of its own. goccy/go-yaml
+	// moves a value's column right by the blanks after it, so the column is not where to look.
+	line := []rune(lines[v.Line-1])
+	from := 0
+	if v.Line == k.Line {
+		from = min(k.Column-1+len([]rune("template")), len(line))
+	}
+	head, tail := string(line[:from]), string(line[from:])
 	if i := strings.Index(tail, old); i >= 0 && old != "" {
-		lines[at.Line-1] = head + tail[:i] + name + tail[i+len(old):]
+		lines[v.Line-1] = head + tail[:i] + name + tail[i+len(old):]
 	}
 	return []byte(strings.Join(lines, ""))
 }
