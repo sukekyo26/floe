@@ -50,16 +50,15 @@ func (a *app) publishCmd() *cobra.Command {
 	var opts store.Options
 	var slug, title, description, lang string
 	cmd := &cobra.Command{
-		Use:   "publish <file>",
-		Short: "Store a page (or --link a file in place) and print its URL",
-		Long: `Store the page and print its URL. The same slug from the same project overwrites it,
-and a slug published from another project is refused unless --force. A data file (.yaml,
-.yml) names a template, which draws the page from its data (template: report). Body-only
-HTML (no doctype/html/head/body/title) is wrapped in the template. A page is in English
-unless --lang names another language (a republish keeps the last one given). A new slug is
-also opened in the browser ($BROWSER, open, wslview, xdg-open).
+		Use:   "publish <data.yaml> | --link <file.html>",
+		Short: "Store a page drawn from a data file (or --link an HTML file in place) and print its URL",
+		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
+store it and print its URL. The same slug from the same project overwrites it, and a slug
+published from another project is refused unless --force. A page is in English unless
+--lang names another language (a republish keeps the last one given). A new slug is also
+opened in the browser ($BROWSER, open, wslview, xdg-open).
 
---link registers the file in place instead of copying it: it is read on every request,
+--link registers an HTML file in place and shows it as it is: it is read on every request,
 and the files under its directory are served for its relative references. The same slug
 for another file is refused unless --force.`,
 		Args: usage(cobra.ExactArgs(1)),
@@ -88,11 +87,11 @@ for another file is refused unless --force.`,
 		},
 	}
 	f := cmd.Flags()
-	f.BoolVar(&opts.Link, "link", false, "register the file in place instead of copying it")
+	f.BoolVar(&opts.Link, "link", false, "register an HTML file in place and show it as it is")
 	f.StringVar(&slug, "slug", "", "the URL name (default: from the file name)")
-	f.StringVar(&title, "title", "", "the title (default: the <title> or first <h1>)")
+	f.StringVar(&title, "title", "", "the title (default: the data file's title:, or a link's <title> or <h1>)")
 	f.StringVar(&description, "description", "", "a description shown in the list")
-	f.StringVar(&lang, "lang", "", "the language to wrap body-only HTML in, e.g. ja (default: en, or the last one given)")
+	f.StringVar(&lang, "lang", "", "the language of a data file's page, e.g. ja (default: en, or the last one given)")
 	f.BoolVar(&opts.Force, "force", false, "replace a page of another project, or a link to another file")
 	return cmd
 }

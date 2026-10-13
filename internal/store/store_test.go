@@ -101,6 +101,17 @@ func (e env) read(t *testing.T, rel string) string {
 	return string(b)
 }
 
+// page writes a data file for the report template, titled title ("" for none).
+func (e env) page(t *testing.T, rel, title string) string {
+	t.Helper()
+
+	src := "template: report\n"
+	if title != "" {
+		src += "title: " + title + "\n"
+	}
+	return e.write(t, rel, src)
+}
+
 // wantUserErr fails unless err is a usererr with the message key and, when given, args; it returns a
 // copy of it.
 func wantUserErr(t *testing.T, err error, key string, args ...any) usererr.Error {
@@ -117,15 +128,15 @@ func TestPublishStoredPage(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	doc := e.write(t, "My Demo.html", "<title>Demo  Page</title><p>hi</p>\n")
+	doc := e.page(t, "My Demo.yaml", "Demo Page")
 	first := e.mustPublish(t, doc, store.Options{Description: ptr("a demo")}, "proj")
 	m := e.meta(t, "my-demo")
 	if first.Slug != "my-demo" || first.Prev != nil || m.Title != "Demo Page" || m.Description != "a demo" ||
 		m.Project != "proj" || m.PublishedFrom != "proj" || m.Path != "" || m.CreatedAt != m.UpdatedAt {
 		t.Fatalf("first publish: %+v, %+v", first, m)
 	}
-	if got := e.read(t, "store/my-demo/index.html"); got != "<title>Demo  Page</title><p>hi</p>\n" {
-		t.Errorf("a page with its own <title> is stored as %q, want it as is", got)
+	if got := e.read(t, "store/my-demo/index.html"); !strings.Contains(got, "<h1>Demo Page</h1>") || m.Template != "report" {
+		t.Errorf("the page is stored as %q (template %q), want it drawn by report", got, m.Template)
 	}
 
 	again := e.mustPublish(t, doc, store.Options{Slug: ptr("my-demo")}, "proj")
@@ -141,23 +152,22 @@ func TestPublishStoredPage(t *testing.T) {
 	}
 }
 
-func TestPublishFragment(t *testing.T) {
+// A stored page is drawn from a data file: HTML is refused unless linked, and a data file without a
+// title: is titled by its slug.
+func TestPublishNeedsDataFile(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	e.mustPublish(t, e.write(t, "untitled.html", "<p>untitled</p>\n"), store.Options{}, "proj")
-	page := e.read(t, "store/untitled/index.html")
-	if e.meta(t, "untitled").Title != "untitled" || !strings.HasPrefix(page, "<!doctype html>") ||
-		!strings.Contains(page, "floe template") || !strings.Contains(page, "<p>untitled</p>") {
-		t.Errorf("a body-only page without a title: %s\n%s", e.meta(t, "untitled").Title, page)
-	}
-
-	frag := "  <h1>A &amp; <em>B</em></h1>\n<p>keeps $& and $1</p>\n\n"
-	e.mustPublish(t, e.write(t, "frag.html", frag), store.Options{}, "proj")
-	page = e.read(t, "store/frag/index.html")
-	if e.meta(t, "frag").Title != "A & B" || !strings.Contains(page, "<title>A &amp; B</title>") ||
-		!strings.Contains(page, frag) {
-		t.Errorf("a fragment titled by its <h1>: %q\n%s", e.meta(t, "frag").Title, page)
+	frag := e.write(t, "frag.html", "<h1>A</h1>")
+	_, err := e.publish(t, frag, store.Options{}, "proj")
+	wantUserErr(t, err, "store_not_data", frag)
+	// The refusal comes before reading, so a missing HTML file is pointed to --link too.
+	missing := filepath.Join(e.tmp, "missing.html")
+	_, err = e.publish(t, missing, store.Options{}, "proj")
+	wantUserErr(t, err, "store_not_data", missing)
+	e.mustPublish(t, e.page(t, "untitled.yaml", ""), store.Options{}, "proj")
+	if m := e.meta(t, "untitled"); m.Title != "untitled" || !strings.Contains(e.read(t, "store/untitled/index.html"), "<h1>untitled</h1>") {
+		t.Errorf("a data file without a title: is titled %q", m.Title)
 	}
 }
 
@@ -169,26 +179,27 @@ func TestPublishNames(t *testing.T) {
 	tests := []struct {
 		file, cwd, want string
 	}{
-		{long + " b.html", "proj", long},
-		{"Report_2026.HTM", "proj", "report-2026"},
+		{long + " b.yaml", "proj", long},
+		{"Report_2026.YML", "proj", "report-2026"},
 		{"docs/index.html", "proj", "docs"},
 		{"index.html", "proj/rel", "rel"},
 	}
+	// index.html, which only a link takes, is named after its directory.
 	for _, tt := range tests {
-		e.write(t, filepath.Join(tt.cwd, tt.file), "<p>x</p>")
-		entry := e.mustPublish(t, tt.file, store.Options{}, tt.cwd)
+		e.write(t, filepath.Join(tt.cwd, tt.file), "template: report\n")
+		entry := e.mustPublish(t, tt.file, store.Options{Link: !store.IsDataFile(tt.file)}, tt.cwd)
 		if entry.Slug != tt.want {
 			t.Errorf("publish %s from %s: slug %q, want %q", tt.file, tt.cwd, entry.Slug, tt.want)
 		}
 	}
 
-	_, err := e.publish(t, filepath.Join(e.tmp, "proj", "docs", "index.html"), store.Options{Slug: ptr("../x")}, "proj")
+	_, err := e.publish(t, filepath.Join(e.tmp, "proj", "Report_2026.YML"), store.Options{Slug: ptr("../x")}, "proj")
 	ue := wantUserErr(t, err, "store_invalid_slug", "../x")
 	if ja := ue.Localize(i18n.New("ja")); !strings.Contains(ja, "URL 名「../x」は使えません") {
 		t.Errorf("ja = %q", ja)
 	}
-	_, err = e.publish(t, filepath.Join(e.tmp, "nope.html"), store.Options{}, "proj")
-	wantUserErr(t, err, "file_cannot_read", filepath.Join(e.tmp, "nope.html"), "no such file or directory")
+	_, err = e.publish(t, filepath.Join(e.tmp, "nope.yaml"), store.Options{}, "proj")
+	wantUserErr(t, err, "file_cannot_read", filepath.Join(e.tmp, "nope.yaml"), "no such file or directory")
 	if _, err := os.Stat(filepath.Join(e.tmp, "store", "nope")); !errors.Is(err, os.ErrNotExist) {
 		t.Error("a failed publish left something in the store")
 	}
@@ -198,7 +209,7 @@ func TestPublishOwner(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	doc := e.write(t, "My Demo.html", "<title>Demo Page</title>")
+	doc := e.page(t, "My Demo.yaml", "Demo Page")
 	e.mustPublish(t, doc, store.Options{Description: ptr("repo page")}, "repo")
 	if _, err := e.s.Edit("my-demo", store.Edit{Favorite: ptr(true)}); err != nil {
 		t.Fatal(err)
@@ -235,7 +246,7 @@ func TestPublishKeepsEdits(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	doc := e.write(t, "My Demo.html", "<title>Demo Page</title>")
+	doc := e.page(t, "My Demo.yaml", "Demo Page")
 	e.mustPublish(t, doc, store.Options{}, "repo")
 	if _, err := e.s.Edit("my-demo", store.Edit{Favorite: ptr(true), Title: ptr("Mine"), Project: ptr("p")}); err != nil {
 		t.Fatal(err)
@@ -329,9 +340,9 @@ func TestPublishLinkSlugs(t *testing.T) {
 	}
 
 	// A slug cannot switch between a stored page and a link.
-	_, err := e.publish(t, e.write(t, "untitled.html", "<p>u</p>"), store.Options{Slug: ptr("site")}, "proj")
+	_, err := e.publish(t, e.page(t, "untitled.yaml", ""), store.Options{Slug: ptr("site")}, "proj")
 	wantUserErr(t, err, "store_slug_is_link", "site")
-	e.mustPublish(t, filepath.Join(e.tmp, "untitled.html"), store.Options{}, "proj")
+	e.mustPublish(t, filepath.Join(e.tmp, "untitled.yaml"), store.Options{}, "proj")
 	_, err = e.publish(t, site, store.Options{Link: true, Slug: ptr("untitled")}, "proj")
 	wantUserErr(t, err, "store_slug_is_page", "untitled")
 
@@ -434,8 +445,8 @@ func TestEdit(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	e.mustPublish(t, e.write(t, "My Demo.html", "<title>Demo Page</title>"), store.Options{}, "repo")
-	e.mustPublish(t, e.write(t, "untitled.html", "<p>u</p>"), store.Options{}, "repo")
+	e.mustPublish(t, e.page(t, "My Demo.yaml", "Demo Page"), store.Options{}, "repo")
+	e.mustPublish(t, e.page(t, "untitled.yaml", ""), store.Options{}, "repo")
 	before := e.meta(t, "my-demo")
 
 	if _, err := e.s.Edit("my-demo", store.Edit{Description: ptr("  edited  ")}); err != nil {
@@ -549,7 +560,7 @@ func TestPublishLang(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	frag := e.write(t, "frag.html", "<p>hello</p>")
+	frag := e.page(t, "frag.yaml", "")
 	e.mustPublish(t, frag, store.Options{}, "repo")
 	if m := e.meta(t, "frag"); m.Lang != "" || !strings.Contains(e.read(t, "store/frag/index.html"), `<html lang="en">`) {
 		t.Errorf("a page without --lang: lang %q", m.Lang)
@@ -570,6 +581,21 @@ func TestPublishLang(t *testing.T) {
 	for _, bad := range []string{"", "x", "ja_JP", "en-", `ja"><script>`} {
 		_, err := e.publish(t, frag, store.Options{Lang: ptr(bad)}, "other")
 		wantUserErr(t, err, "lang_invalid", bad)
+	}
+
+	// A linked file is shown as it is: --lang is refused, and a language left from before is dropped.
+	site := e.write(t, "site/index.html", "<h1>A</h1>")
+	_, err := e.publish(t, site, store.Options{Link: true, Lang: ptr("ja")}, "repo")
+	wantUserErr(t, err, "store_lang_link")
+	e.mustPublish(t, site, store.Options{Link: true}, "repo")
+	m := e.meta(t, "site")
+	m.Lang = "ja"
+	if err := e.s.WriteMeta("site", m); err != nil {
+		t.Fatal(err)
+	}
+	e.mustPublish(t, site, store.Options{Link: true}, "repo")
+	if m := e.meta(t, "site"); m.Lang != "" {
+		t.Errorf("a relinked file keeps lang %q", m.Lang)
 	}
 }
 

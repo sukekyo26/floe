@@ -7,7 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='floe-sky' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23D9F3ED'/%3E%3Cstop offset='1' stop-color='%23C2E7DF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='15' fill='url(%23floe-sky)'/%3E%3Cpath d='M17 47.5H47' fill='none' stroke='%235BB3A4' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M24 52.5H40' fill='none' stroke='%238ACBBE' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M12 32 22 38 41 37 53 29.5 53 34.5 41 42 22 43 12 37Z' fill='%236FAECB'/%3E%3Cpath d='M12 32 24 21.5 33 28 22 38Z' fill='%23F6FCFE'/%3E%3Cpath d='M24 21.5 42 21 53 29.5 33 28Z' fill='%23D3EAF4'/%3E%3Cpath d='M33 28 53 29.5 41 37 22 38Z' fill='%23E8F5FA'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- display=block, as in template.html: text waits for the fonts instead of flickering from a fallback face -->
+<!-- display=block, as in the report template's page.html: text waits for the fonts instead of flickering from a fallback face -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700..800&family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=block">
 <script>
   // Apply the saved theme before the first paint, so the page does not flash in the OS's scheme while loading
@@ -31,7 +31,7 @@
     --scrim: light-dark(rgb(13 18 32 / 0.4), rgb(0 0 0 / 0.6));
     --shadow-sm: 0 1px 2px light-dark(rgb(16 24 40 / 0.06), rgb(0 0 0 / 0.3));
     --shadow: 0 1px 2px light-dark(rgb(16 24 40 / 0.04), rgb(0 0 0 / 0.3)), 0 10px 30px -14px light-dark(rgb(16 24 40 / 0.16), rgb(0 0 0 / 0.5));
-    /* Text and code use the template's faces (template.html); only the logo is in Bricolage Grotesque */
+    /* Text and code use the report template's faces; only the logo is in Bricolage Grotesque */
     --body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", monospace;
     --bar: 3.5rem;

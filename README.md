@@ -2,15 +2,17 @@
 
 [日本語版 README](docs/README.ja.md)
 
-A local page server for agent-written HTML, shipped as a single Go binary.
-Agents publish a page (or structured data rendered through a template), and
-floe serves it at `http://127.0.0.1:7325` with live reload and a management UI.
+A local page server for agents, shipped as a single Go binary. Agents write a
+page as data (YAML) and floe draws it with a template, or link an HTML file to
+show it as it is; floe serves them at `http://127.0.0.1:7325` with live reload
+and a management UI.
 Diagrams are drawn as inline SVG from a declarative spec and checked for
 overflow, overlaps and crossing edges before they render.
 
-> **Status:** under construction. Publishing and serving pages and drawing
-> diagrams (`floe diagram render`, with AWS icons from `floe icons fetch aws`)
-> work; the templates described above are planned and not there yet.
+> **Status:** under construction. Publishing pages from data files with the
+> built-in `report` template, linking HTML files and drawing diagrams
+> (`floe diagram render`, with AWS icons from `floe icons fetch aws`) work;
+> checks of data files and templates of your own are planned.
 
 ## Install
 
@@ -27,7 +29,8 @@ release's `SHA256SUMS`.
 ## Quick start
 
 ```sh
-floe publish report.html   # store the page, print its URL and open it
+floe publish plan.yaml     # draw the page from its data, store it, print its URL and open it
+floe publish --link out/index.html   # show an HTML file as it is, read on every request
 floe list                  # pages, newest first
 floe stop                  # stop the background server
 ```

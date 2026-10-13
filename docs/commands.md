@@ -6,7 +6,7 @@ Reference for every command of the `floe` binary.
 
 | Command | Purpose |
 |---|---|
-| `floe publish <file>` | Store a page (or `--link` a file in place) and print its URL |
+| `floe publish <data.yaml>` | Store a page drawn from a data file (or `--link` an HTML file in place) and print its URL |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe serve` | Run the server in the foreground |
@@ -20,21 +20,21 @@ Reference for every command of the `floe` binary.
 
 ---
 
-## `floe publish <file>`
+## `floe publish <data.yaml>` / `floe publish --link <file.html>`
 
-Store the page and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout. If the server is not running, it is started in the background first. A new slug is also opened in the browser; a republished one is not, because the open tab reloads itself.
+Draw a page from a data file, store it and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout. If the server is not running, it is started in the background first. A new slug is also opened in the browser; a republished one is not, because the open tab reloads itself.
 
-`<file>` is a data file (`.yaml`, `.yml`) or an HTML file. A relative path is resolved against the working directory.
+Pages are drawn from data files (`.yaml`, `.yml`). An HTML file is not stored: link it with `--link` to show it as it is. A relative path is resolved against the working directory.
 
 ### Flags
 
 | Flag | Description |
 |---|---|
-| `--link` | Register the file in place instead of copying it (see [Linked files](#linked-files)). |
-| `--slug <name>` | The URL name. Lowercase letters, digits and hyphens, up to 64 characters. Defaults to the file name; `index.html` takes the name of its directory. |
-| `--title <text>` | The title shown in the list. Defaults to a data file's `title:`, or the HTML's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
+| `--link` | Register an HTML file in place and show it as it is (see [Linked files](#linked-files)). |
+| `--slug <name>` | The URL name. Lowercase letters, digits and hyphens, up to 64 characters. Defaults to the file name; a linked `index.html` takes the name of its directory. |
+| `--title <text>` | The title shown in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
 | `--description <text>` | A description shown in the list. |
-| `--lang <tag>` | The language of a page drawn from a data file or wrapped from body-only HTML (`<html lang>`), as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. |
+| `--lang <tag>` | The language of the page drawn from a data file (`<html lang>`), as a BCP 47 tag (`en`, `ja`, `pt-BR`). Defaults to `en`, or to the last one given for the slug. Refused with `--link`: a linked file is shown as it is. |
 | `--force` | Replace a page published from another project, or a link to another file. |
 
 ### Data files
@@ -59,10 +59,6 @@ sections:
 - A data file that names no template, or one that is not there, is refused, as is data of the wrong shape (sections that are not a list). A data file is one YAML document: one with `---` between documents is refused.
 - The page is drawn once, when it is published: changing the data file later changes nothing until it is published again.
 
-### Body-only HTML
-
-A file without a doctype, `<html>`, `<head>`, `<body>` or `<title>` is wrapped in the built-in template, with `<html lang>` set to `--lang`. A whole document is stored as it is.
-
 ### Projects and overwriting
 
 Each page belongs to the project it is published from. The project is the repository name in git's `origin` URL, else the repository's directory, else the working directory's name. A link belongs to its file's directory instead.
@@ -73,7 +69,7 @@ Each page belongs to the project it is published from. The project is the reposi
 
 ### Linked files
 
-`--link` serves the file where it is. It is read on every request, so saving the file updates the open tab. The files under its directory are served too, for its relative references (CSS, scripts, images).
+`--link` serves an HTML file where it is, as it is: floe adds nothing around it, so a page of your own or one another tool made shows as written. It is read on every request, so saving the file updates the open tab. The files under its directory are served too, for its relative references (CSS, scripts, images).
 
 - Only a regular `.html` or `.htm` file can be linked.
 - A file in a hidden directory right under your home (settings and keys live there) is refused.
@@ -103,13 +99,13 @@ Stop the background server. Without one, it prints `server is not running` and e
 
 ## `floe diagram render <spec.yaml>...`
 
-Check each diagram spec and print the diagrams, in order, as one HTML fragment of inline SVG on stdout, to paste into a page. A relative path is resolved against the working directory.
+Check each diagram spec and print the diagrams, in order, as one HTML fragment of inline SVG on stdout, to paste into an HTML page of your own: a whole document with `<!doctype html>` and `<html lang>`, since `floe publish --link` shows the file as it is. A relative path is resolved against the working directory.
 
 - A mistake in the shape of a spec (an unknown key, a wrong type, a value that is not allowed) stops that spec at the first one.
 - Layout mistakes are all reported: text too wide or too tall for its box, parts sticking out of the canvas, overlapping, or straddling the edge of a frame, edges running through boxes, labels or frame headings, and edges crossing like an X.
 - Every mistake of every spec is printed as `file:line:column: message`, and nothing is drawn until all are fixed (exit code 1).
 - The ids of the diagrams drawn together must differ, because they name the diagrams' markers and icons. Draw all the diagrams of a page with one `render`.
-- The fragment starts with the assets: the diagrams' style, which takes its colours from the template's CSS variables (so dark mode follows; a page outside the template gets the template's light colours), and the script that zooms them. Each diagram sits in a frame that first shows it whole; readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. The toolbar is worded in the page's language (`<html lang>`, from `floe publish --lang`). A page needs the assets once; holding them more than once does no harm.
+- The fragment starts with the assets: the diagrams' style, which takes its colours from the CSS variables the `report` theme defines (so dark mode follows; a page without them gets that theme's light colours), and the script that zooms them. Each diagram sits in a frame that first shows it whole; readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. The toolbar is worded in the page's language (`<html lang>`). A page needs the assets once; holding them more than once does no harm.
 
 | Flag | Description |
 |---|---|

@@ -77,7 +77,7 @@ type Options struct {
 type Entry struct {
 	Slug string
 	Meta Meta
-	// Page is the stored HTML, wrapped when body-only; nil for a link.
+	// Page is the stored HTML, drawn from the data file; nil for a link.
 	Page []byte
 	// Prev is the entry this one overwrites, nil for a new slug.
 	Prev *Meta
@@ -87,6 +87,9 @@ type Entry struct {
 // resolves a relative file and names the project of a stored page; a link's project is that of its
 // directory.
 func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
+	if err := checkKind(file, opts); err != nil {
+		return nil, err
+	}
 	path, src, err := s.read(file, opts.Link, cwd)
 	if err != nil {
 		return nil, err
@@ -94,16 +97,14 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	var data *tmpl.Data
 	own := ""
 	if path == "" {
-		if data, own, err = readPage(file, src); err != nil {
-			return nil, err
+		if data, err = tmpl.Read(file, []byte(src)); err != nil {
+			return nil, err //nolint:wrapcheck // a usererr for the caller to show
 		}
+		own = data.Title
 	}
 	slug, err := s.slugFor(file, path, opts, cwd)
 	if err != nil {
 		return nil, err
-	}
-	if opts.Lang != nil && !i18n.IsTag(*opts.Lang) {
-		return nil, usererr.New("lang_invalid", *opts.Lang)
 	}
 	prev := s.ReadMeta(slug)
 	dir := cwd
@@ -122,38 +123,13 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 		base = &none
 	}
 	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Page: nil, Prev: prev}
-	if path == "" {
-		if err := e.draw(file, src, data); err != nil {
-			return nil, err
+	if data != nil {
+		e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
+		if e.Page, err = data.Render(e.Meta.Title, e.Meta.Lang); err != nil {
+			return nil, err //nolint:wrapcheck // a usererr for the caller to show
 		}
 	}
 	return e, nil
-}
-
-// readPage reads a stored page's data (nil unless it is a data file) and its own title.
-func readPage(file, src string) (*tmpl.Data, string, error) {
-	if !IsDataFile(file) {
-		return nil, page.Title(src), nil
-	}
-	data, err := tmpl.Read(file, []byte(src))
-	if err != nil {
-		return nil, "", err //nolint:wrapcheck // a usererr for the caller to show
-	}
-	return data, data.Title, nil
-}
-
-// draw makes the stored page: drawn from data, or src wrapped when it is body-only HTML.
-func (e *Entry) draw(file, src string, data *tmpl.Data) error {
-	var err error
-	if data == nil {
-		if e.Page, err = page.Wrap(src, e.Meta.Title, e.Meta.Lang); err != nil {
-			return fmt.Errorf("wrap %s: %w", file, err)
-		}
-		return nil
-	}
-	e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
-	e.Page, err = data.Render(e.Meta.Title, cmp.Or(e.Meta.Lang, page.DefaultLang))
-	return err //nolint:wrapcheck // a usererr for the caller to show
 }
 
 // read returns the real path of a link ("" for a stored page) and the file's content. A link is
@@ -179,8 +155,24 @@ func (s *Store) read(file string, isLink bool, cwd string) (path, content string
 	return path, string(b), nil
 }
 
+// checkKind checks that file and opts.Lang fit the kind of publish, before file is read. A stored page
+// is drawn from a data file in opts.Lang; HTML is only linked, and shown as it is in its own language.
+func checkKind(file string, opts Options) error {
+	switch {
+	case !opts.Link && !IsDataFile(file):
+		return usererr.New("store_not_data", file)
+	case opts.Lang == nil:
+		return nil
+	case opts.Link:
+		return usererr.New("store_lang_link")
+	case !i18n.IsTag(*opts.Lang):
+		return usererr.New("lang_invalid", *opts.Lang)
+	}
+	return nil
+}
+
 // newMeta keeps what was set on the management page (favourite, title, project), the description, the
-// language and createdAt from base; --title, --description and --lang win.
+// language and createdAt from base; --title, --description and --lang win. A link has no language.
 func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta {
 	keepTitle := opts.Title == nil && base.TitleEdited
 	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
@@ -211,6 +203,8 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 	}
 	if path == "" {
 		m.PublishedFrom = from
+	} else {
+		m.Lang = ""
 	}
 	return m
 }
@@ -271,8 +265,8 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 	return false, usererr.New("store_slug_owned", slug, owner)
 }
 
-// title is --title, else the title pinned on the management page, else (for a stored page) its own
-// (the data's title:, or the HTML's), the previous one, or the slug. A link records no title of its
+// title is --title, else the title pinned on the management page, else (for a stored page) the data's
+// title:, the previous one, or the slug. A link records no title of its
 // own: it is read from the file each time.
 func title(opts Options, path string, keepTitle bool, base *Meta, own, slug string) string {
 	switch {

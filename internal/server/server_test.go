@@ -69,6 +69,30 @@ func newEnv(t *testing.T) *env {
 	return e
 }
 
+// page writes a data file for the report template titled title ("" for none), with html as its one
+// part when there is some.
+func (e *env) page(t *testing.T, rel, title, html string) string {
+	t.Helper()
+
+	var b strings.Builder
+	b.WriteString("template: report\n")
+	if title != "" {
+		q, err := json.Marshal(title) // a JSON string is a YAML one too
+		if err != nil {
+			t.Fatal(err)
+		}
+		b.WriteString("title: " + string(q) + "\n")
+	}
+	if html != "" {
+		b.WriteString("sections:\n  - parts:\n      - html: |\n")
+		for line := range strings.Lines(html) {
+			b.WriteString("          " + line)
+		}
+		b.WriteString("\n")
+	}
+	return e.write(t, rel, b.String())
+}
+
 func (e *env) write(t *testing.T, rel, body string) string {
 	t.Helper()
 
@@ -182,7 +206,7 @@ func TestManagementPageAndFrame(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	e.publish(t, e.write(t, "untitled.html", "<p>untitled</p>\n"), store.Options{})
+	e.publish(t, e.page(t, "untitled.yaml", "", "<p>untitled</p>"), store.Options{})
 
 	for _, target := range []string{"/", "/a/untitled/"} {
 		r := e.get(t, target)
@@ -238,7 +262,7 @@ func TestStoredPage(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	e.publish(t, e.write(t, "My Demo.html", "<title>Demo Page</title><p>hi</p>\n"), store.Options{})
+	e.publish(t, e.page(t, "My Demo.yaml", "Demo Page", "<p>hi</p>"), store.Options{})
 	stored, err := os.ReadFile(filepath.Join(e.store.Root(), "my-demo", "index.html"))
 	if err != nil {
 		t.Fatal(err)
@@ -299,7 +323,7 @@ func TestLiveReload(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	file := e.write(t, "My Demo.html", "<title>Demo Page</title>")
+	file := e.page(t, "My Demo.yaml", "Demo Page", "")
 	e.publish(t, file, store.Options{})
 	now := url.QueryEscape(e.store.ReadMeta("my-demo").UpdatedAt)
 
@@ -334,8 +358,8 @@ func TestEdit(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	e.publish(t, e.write(t, "My Demo.html", "<title>Demo Page</title>"), store.Options{})
-	e.publish(t, e.write(t, "untitled.html", "<p>u</p>"), store.Options{})
+	e.publish(t, e.page(t, "My Demo.yaml", "Demo Page", ""), store.Options{})
+	e.publish(t, e.page(t, "untitled.yaml", "", "<p>u</p>"), store.Options{})
 	before := e.store.ReadMeta("my-demo")
 	patch := func(target, body string) int { return e.send(t, http.MethodPatch, target, body).status }
 
@@ -397,7 +421,7 @@ func TestDelete(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	e.publish(t, e.write(t, "My Demo.html", "<title>Demo Page</title>"), store.Options{})
+	e.publish(t, e.page(t, "My Demo.yaml", "Demo Page", ""), store.Options{})
 	port := strings.TrimPrefix(e.base, "http://127.0.0.1:")
 	del := func(slug, origin string) int {
 		return e.do(t, http.MethodDelete, "/api/artifacts/"+slug, "", "Origin", origin).status
@@ -471,14 +495,8 @@ func TestLinkedFile(t *testing.T) {
 	index := site(t, e)
 
 	e.write(t, "site/index.html", "<h1>Linked v2</h1>\n")
-	if r := e.get(t, "/a/site/?raw"); !strings.Contains(r.body, "floe template") || !strings.Contains(r.body, "<title>Linked v2</title>") ||
-		!strings.Contains(r.body, `<html lang="en">`) {
-		t.Errorf("a body-only link is read on every request and wrapped, in English by default:\n%s", r.body)
-	}
-	// The language given when linking is used for every wrap.
-	e.publish(t, index, store.Options{Link: true, Slug: ptr("site"), Lang: ptr("ja")})
-	if r := e.get(t, "/a/site/?raw"); !strings.Contains(r.body, `<html lang="ja">`) {
-		t.Errorf("a link published with --lang ja is not wrapped in Japanese:\n%.200s", r.body)
+	if r := e.get(t, "/a/site/?raw"); !strings.HasPrefix(r.body, "<h1>Linked v2</h1>\n\n<script>") {
+		t.Errorf("a link is read on every request and served as it is:\n%s", r.body)
 	}
 	r := e.get(t, "/a/site/s.css")
 	if r.header.Get("Content-Type") != "text/css; charset=utf-8" || !strings.HasPrefix(r.header.Get("Content-Security-Policy"), "sandbox") ||
@@ -518,15 +536,8 @@ func TestLinkedFile(t *testing.T) {
 		t.Errorf("saving the file did not notify: %q", body)
 	}
 
-	dl := e.get(t, "/api/artifacts/site/download")
-	if !strings.Contains(dl.body, "floe template") || !strings.Contains(dl.body, "<title>Linked v3</title>") ||
-		strings.Contains(dl.body, "EventSource") {
-		t.Errorf("download of a body-only link: %s", dl.body)
-	}
-	// A title pinned on the management page titles the wrapped link.
-	e.send(t, http.MethodPatch, "/api/artifacts/site", `{"title":"Pinned"}`)
-	if r := e.get(t, "/a/site/?raw"); !strings.Contains(r.body, "<title>Pinned</title>") {
-		t.Errorf("a pinned title does not title the wrapped link")
+	if dl := e.get(t, "/api/artifacts/site/download"); dl.body != "<h1>Linked v3</h1>\n" {
+		t.Errorf("download of a link: %s", dl.body)
 	}
 
 	if err := os.Rename(index, index+".gone"); err != nil {
@@ -554,18 +565,11 @@ func TestLinkedDocumentBytes(t *testing.T) {
 		t.Error("a large document is not streamed byte for byte with the reloader appended")
 	}
 
-	late := "<!-- " + strings.Repeat("x", 2000) + " --><!doctype html><title>Late</title><p>\xff"
-	e.write(t, "doc/index.html", late)
-	if dl := e.get(t, "/api/artifacts/doc-link/download"); dl.body != late {
-		t.Error("a document marked after the first 1 KB is re-encoded or wrapped")
-	}
-	if r := e.get(t, "/a/doc-link/?raw"); strings.Contains(r.body, "floe template") {
-		t.Error("a document marked late is wrapped")
-	}
-
-	e.write(t, "doc/index.html", `<svg viewBox="0 0 1 1"><title>Chart</title></svg>`+"\n<h1>Frag</h1>\n")
-	if r := e.get(t, "/a/doc-link/?raw"); !strings.Contains(r.body, "floe template") || !strings.Contains(r.body, "<title>Frag</title>") {
-		t.Errorf("a fragment starting with an SVG <title> is not wrapped:\n%s", r.body)
+	// A fragment is served as it is too, bytes that are not UTF-8 and all.
+	frag := `<svg viewBox="0 0 1 1"><title>Chart</title></svg>` + "\n<h1>Frag</h1><p>\xff</p>\n"
+	e.write(t, "doc/index.html", frag)
+	if dl := e.get(t, "/api/artifacts/doc-link/download"); dl.body != frag {
+		t.Errorf("download of a linked fragment = %q", dl.body)
 	}
 }
 

@@ -17,7 +17,7 @@ var (
 )
 
 // Assets returns what a page holds once, before or after its diagrams: the style that colours them
-// from the template's CSS variables, and the script that zooms them, its toolbar worded in every
+// from the page's CSS variables, and the script that zooms them, its toolbar worded in every
 // language with a catalog for the page's <html lang> to pick from. Holding it twice does no harm.
 func Assets() (string, error) {
 	messages := map[i18n.Lang]map[string]string{}

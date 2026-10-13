@@ -279,9 +279,9 @@ func uiManage(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	t.Helper()
 
 	e := newEnv(t)
-	e.publish(t, e.write(t, "untitled.html", "<p>untitled</p>\n"), store.Options{})
+	e.publish(t, e.page(t, "untitled.yaml", "", "<p>untitled</p>"), store.Options{})
 	time.Sleep(2 * time.Millisecond)
-	e.publish(t, e.write(t, "My Demo.html", "<title>Demo Page</title><p>hi</p>\n"), store.Options{})
+	e.publish(t, e.page(t, "My Demo.yaml", "Demo Page", "<p>hi</p>"), store.Options{})
 	b := newBrowser(t, e.base, lang)
 
 	const titles = "[...document.querySelectorAll('#list li .title')].map((a) => a.textContent).join(',')"
@@ -499,18 +499,18 @@ func TestUIReload(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	e := newEnv(t)
 	// The page's wording plays no part here, so one language is enough.
 	b := newBrowser(t, e.base, i18n.English)
-	publish := func(name, slug, body string) {
+	publish := func(name, slug, title, body string) {
 		time.Sleep(2 * time.Millisecond) // a republish in the same millisecond would keep the version
-		e.publish(t, e.write(t, filepath.Join("live", name), body), store.Options{Slug: &slug})
+		e.publish(t, e.page(t, filepath.Join("live", name), title, body), store.Options{Slug: &slug})
 	}
 	shown := func(v string) string { return "document.getElementById('v')?.textContent === '" + v + "'" }
 
 	out := make([]string, 0, 7)
-	publish("live.html", "live", `<title>Live</title><p id="v">1</p>`)
+	publish("live.yaml", "live", "Live", `<p id="v">1</p>`)
 	b.navigate("/a/live/?raw")
 	b.until("the first version", shown("1"))
 	out = append(out, "1")
-	publish("live.html", "live", `<title>Live</title><p id="v">2</p>`)
+	publish("live.yaml", "live", "Live", `<p id="v">2</p>`)
 	b.until("the page to reload", shown("2"))
 	out = append(out, "2")
 	// The page URL itself is the frame: the tab is named after the page and the iframe loads ?raw.
@@ -519,7 +519,7 @@ func TestUIReload(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	out = append(out, b.eval("new URL(document.getElementById('frame').src).search === '?raw'"))
 	// The frame lets the page write to the clipboard and go fullscreen. The page keeps reporting its
 	// policy, since it may load before the listener is attached.
-	publish("perm.html", "perm", "<title>Perm</title><script>const policy = document.permissionsPolicy ?? document.featurePolicy; "+
+	publish("perm.yaml", "perm", "Perm", "<script>const policy = document.permissionsPolicy ?? document.featurePolicy; "+
 		"setInterval(() => parent.postMessage(policy ? ['clipboard-write', 'fullscreen'].map((f) => policy.allowsFeature(f)).join() : 'no policy API', '*'), 100)</script>")
 	b.navigate("/a/perm/")
 	out = append(out, b.until("the page permissions", listening))
@@ -536,7 +536,7 @@ func TestUIReload(t *testing.T) { //nolint:paralleltest // the UI tests share on
 // out of the sandbox, a link without target opens a new tab too (most sites refuse to be framed), a
 // link within the server stays in the frame, and a link to a frame URL moves the whole tab. The other
 // site refuses framing. It returns each tab's origin (none when no tab opened) and where the tab moved.
-func leave(t *testing.T, e *env, b *browser, publish func(name, slug, body string)) string {
+func leave(t *testing.T, e *env, b *browser, publish func(name, slug, title, body string)) string {
 	t.Helper()
 
 	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -544,7 +544,7 @@ func leave(t *testing.T, e *env, b *browser, publish func(name, slug, body strin
 		_, _ = fmt.Fprint(w, "<title>Elsewhere</title>") //nolint:errcheck // the test checks what opened
 	}))
 	defer other.Close()
-	publish("leave.html", "leave", `<title>Leave</title><style>a { position: fixed; left: 0; width: 200px; height: 40px; }</style>`+
+	publish("leave.yaml", "leave", "Leave", `<style>a { position: fixed; left: 0; width: 200px; height: 40px; }</style>`+
 		`<a href="`+other.URL+`/blank" target="_blank" style="top: 0">blank</a><a href="`+other.URL+`/plain" style="top: 60px">plain</a>`+
 		`<a href="inner.html" style="top: 120px">inner</a><a href="/a/no-such/" style="top: 180px">frame</a>`+
 		// The page declares globals named like the ones the appended script uses; it must not pick them up.

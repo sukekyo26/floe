@@ -43,7 +43,7 @@ type Meta struct {
 	// TitleEdited and ProjectEdited mark values set on the management page, kept across republishes.
 	TitleEdited bool   `json:"titleEdited,omitempty"`
 	Description string `json:"description"`
-	// Lang is the language a body-only page is wrapped in (a BCP 47 tag); none is page.DefaultLang.
+	// Lang is the language a page is drawn in (a BCP 47 tag); none is tmpl.DefaultLang.
 	Lang string `json:"lang,omitempty"`
 	// Template and Theme drew a page published from a data file.
 	Template      string `json:"template,omitempty"`

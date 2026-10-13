@@ -10,7 +10,6 @@ import (
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/page"
 )
 
 func TestAssets(t *testing.T) {
@@ -19,11 +18,6 @@ func TestAssets(t *testing.T) {
 	got, err := diagram.Assets()
 	if err != nil {
 		t.Fatal(err)
-	}
-	// Pasted into body-only HTML, the assets must not make it read as a whole document, or the page
-	// would lose the template (and its CSS variables) around it.
-	if page.IsDocument(got) {
-		t.Error("Assets() reads as a whole HTML document")
 	}
 	for _, w := range []string{`<script>(// `, ");</script>\n<style>\n", ".dg .box rect", "</style>"} {
 		if !strings.Contains(got, w) {

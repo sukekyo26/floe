@@ -18,7 +18,7 @@ parts:
   - box: { x: 130, y: 546, w: 340, h: 52, shape: hex, rows: ["Slug taken by the other kind?"] }
   - box: { x: 130, y: 622, w: 340, h: 52, shape: hex, rows: ["Another owner, without --force?"] }
   - box: { x: 130, y: 698, w: 340, h: 52, rows: ["Check the server, start it if needed"] }
-  - box: { x: 130, y: 774, w: 340, h: 52, rows: [Save (a page is wrapped), a link keeps only meta.json] }
+  - box: { x: 130, y: 774, w: 340, h: 52, rows: [Save (a page is drawn), a link keeps only meta.json] }
   - box: { x: 200, y: 856, w: 200, h: 40, tone: good, shape: pill, rows: [Print the URL] }
   - edge: { d: "M300,60 V90" }
   - edge: { d: "M300,142 V166" }

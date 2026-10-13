@@ -121,6 +121,17 @@ func (e *env) base() string {
 	return "http://127.0.0.1:" + e.vars["FLOE_PORT"]
 }
 
+// page writes a data file for the report template, titled title ("" for none).
+func (e *env) page(t *testing.T, rel, title string) string {
+	t.Helper()
+
+	src := "template: report\n"
+	if title != "" {
+		src += "title: " + title + "\n"
+	}
+	return e.write(t, rel, src)
+}
+
 func (e *env) write(t *testing.T, rel, body string) string {
 	t.Helper()
 
@@ -276,7 +287,7 @@ func TestPublish(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	demo := e.write(t, "My Demo.html", "<title>Demo  Page</title><p>hi</p>\n")
+	demo := e.page(t, "My Demo.yaml", "Demo Page")
 	url := e.base() + "/a/my-demo/"
 	want(t, "publish", e.run(t, "repo", "publish", demo, "--description", "a demo"), 0, url+"\n", "")
 	if got := e.opened(t); got != url+"\n" {
@@ -302,24 +313,26 @@ func TestPublish(t *testing.T) {
 
 	before := e.run(t, "", "list").stdout
 	want(t, "a blank --title", e.run(t, "repo", "publish", demo, "--title", " "), 2, "",
-		"floe: --title is empty: give the page a name, or omit --title to take it from the <title> or first <h1>")
+		"floe: --title is empty: give the page a name, or omit --title to take the data file's title:, or a link's <title> or <h1>")
 	if after := e.run(t, "", "list").stdout; after != before {
 		t.Errorf("a blank --title changed the list from %q to %q", before, after)
 	}
 	want(t, "an invalid slug", e.run(t, "repo", "publish", demo, "--slug", "../x"), 1, "", `invalid slug "../x"`)
 	want(t, "an invalid language", e.run(t, "repo", "publish", demo, "--lang", "ja_JP"), 2, "",
 		`floe: invalid language "ja_JP": give --lang a BCP 47 tag such as en, ja or pt-BR`)
-	frag := e.write(t, "frag.html", "<p>こんにちは</p>")
+	frag := e.page(t, "frag.yaml", "こんにちは")
 	want(t, "--lang", e.run(t, "repo", "publish", frag, "--lang", "ja"), 0, e.base()+"/a/frag/\n", "")
 	if b, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], "frag", "index.html")); err != nil || !bytes.Contains(b, []byte(`<html lang="ja">`)) {
-		t.Errorf("publish --lang ja did not wrap the page in Japanese: %v", err)
+		t.Errorf("publish --lang ja did not draw the page in Japanese: %v", err)
 	}
-	want(t, "a missing file", e.run(t, "repo", "publish", "nope.html"), 1, "", "floe: cannot read nope.html")
+	want(t, "a missing file", e.run(t, "repo", "publish", "nope.yaml"), 1, "", "floe: cannot read nope.yaml")
 	want(t, "another project", e.run(t, "other", "publish", demo), 1, "",
 		`"my-demo" was published from project repo; use another --slug, or add --force to replace that page`)
 
 	// A link: the same slug for another file is refused unless --force.
 	site := e.write(t, "site/index.html", "<h1>Linked</h1>")
+	want(t, "--lang with --link", e.run(t, "", "publish", site, "--link", "--lang", "ja"), 1, "",
+		"floe: --lang is the language of a page drawn from a data file: a linked file is shown as it is")
 	want(t, "publish --link", e.run(t, "", "publish", site, "--link"), 0, e.base()+"/a/site/\n", "")
 	want(t, "re-register", e.run(t, "", "publish", site, "--link"), 0, e.base()+"/a/site/\n", `updated "site" (last published `)
 	sub := e.write(t, "site/sub/p.html", "<title>Sub</title>")
@@ -375,7 +388,7 @@ func TestPublishToASilentPort(t *testing.T) {
 		}
 	}()
 	start := time.Now()
-	want(t, "publish", e.run(t, "", "publish", e.write(t, "silent.html", "<h1>Silent</h1>")), 1, "",
+	want(t, "publish", e.run(t, "", "publish", e.page(t, "silent.yaml", "Silent")), 1, "",
 		`floe: the server did not start; run "floe serve" to see the error`)
 	if took := time.Since(start); took > 10*time.Second {
 		t.Errorf("the publish took %v", took)
@@ -386,7 +399,7 @@ func TestPublishToAnotherServer(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	demo := e.write(t, "My Demo.html", "<title>Demo</title>")
+	demo := e.page(t, "My Demo.yaml", "Demo")
 	want(t, "publish", e.run(t, "", "publish", demo), 0, e.base()+"/a/my-demo/\n", "")
 	e.vars["FLOE_DIR"] = filepath.Join(e.tmp, "other")
 	want(t, "another store", e.run(t, "", "publish", demo), 1, "", "floe: the server on port "+e.vars["FLOE_PORT"]+
@@ -443,7 +456,7 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	page := e.write(t, "restart.html", "<h1>Restart</h1>")
+	page := e.page(t, "restart.yaml", "Restart")
 	want(t, "publish", e.run(t, "", "publish", page), 0, e.base()+"/a/restart/\n", "")
 	first, _ := e.health(t)
 	bin := otherBuild
