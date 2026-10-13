@@ -28,6 +28,7 @@ floe の主要な変更を記録します。フォーマットは
 - 自分のテンプレートを使えるようにした。`FLOE_TEMPLATES_DIR`（既定は `~/.config/floe/templates`）に置いたディレクトリ（symlink でもよい）が、同じ名前の組み込みのテンプレートの代わりに使われる。
   - `page.html`・`schema.json`・テーマのほか、`checks.yaml` で項目どうしの関係を検査し、`computed.yaml` でページに出す値を計算できる。式は [expr](https://expr-lang.org/) で書き、誤りはデータファイルの行と列で出す。`page.html` は `num` と `bytes` で数を書ける。
   - `template.yaml` に、テンプレートが要る floe の版を書く。書き方は [docs/templates.ja.md](templates.ja.md) にある。
+- テンプレートを置き場所・テーマ・要る floe の版とともに一覧する `floe template list`、データファイルに書ける項目と見本を出す `floe template show <name>`（データファイルを書く前に読む）、テンプレートを写して自分のテンプレートを作る `floe template new <name> --from <template>` を追加。
 - データファイルを `floe publish` と同じく検査し、誤りをすべて `ファイル:行:列` で出す `floe check <data.yaml>...` を追加。公開もサーバーの起動もしないので、データファイルを置いたリポジトリの CI から使える。
 - `floe list`・`floe rm`・`floe serve`・`floe stop` と、ライブリロード付きの管理画面を追加。
   - artifact スキルと同じ形式の保存先を読み書きする。

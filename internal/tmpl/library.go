@@ -64,7 +64,7 @@ func (l *Library) Names() ([]string, error) {
 }
 
 // ownNames are the templates of one's own, by name: none without a directory of them. One that is
-// broken is left out here, and reported when used.
+// broken (a symlink that leads nowhere) is named too, for its mistake to be reported where it is used.
 func (l *Library) ownNames() ([]string, error) {
 	if l.dir == "" {
 		return nil, nil
@@ -78,7 +78,7 @@ func (l *Library) ownNames() ([]string, error) {
 		if !validName(e.Name()) {
 			continue
 		}
-		if t, err := l.resolve(e.Name()); err == nil && t != nil {
+		if t, err := l.resolve(e.Name()); err != nil || t != nil {
 			names = append(names, e.Name())
 		}
 	}
@@ -97,6 +97,15 @@ func (l *Library) entries() ([]fs.DirEntry, error) {
 		return nil, usererr.New("tmpl_dir_unreadable", l.dir, err.Error())
 	}
 	return entries, nil
+}
+
+// unknown refuses the template name, which there is none of, naming those there are.
+func (l *Library) unknown(name string) error {
+	names, err := l.Names()
+	if err != nil {
+		return err
+	}
+	return usererr.New("tmpl_unknown", name, strings.Join(names, ", "))
 }
 
 // Find returns the template name, or nil when there is none.
@@ -239,22 +248,42 @@ func (t *Template) files(read func(fs.FS) error) error {
 // floe 1.2.0 or later of major 1, and floe: 0.2 one of 0.2, as a minor version of 0 may break what the
 // one before it took. A built-in template, or one without template.yaml, needs none.
 func (t *Template) checkVersion() error {
-	if t.Dir == "" {
-		return nil
-	}
-	src, found, err := t.readOptional("template.yaml")
-	if !found || err != nil {
+	needs, err := t.needs()
+	if needs == nil || err != nil {
 		return err
 	}
-	needs, err := needsFloe(filepath.Join(t.Path, "template.yaml"), src)
+	have, err := thisFloe()
 	if err != nil {
 		return err
 	}
-	have, ok := versionOf(version.Version)
+	return fits(t.Name, *needs, have)
+}
+
+// thisFloe is the version of this floe, a pre-release or build after it (1.2.3-rc.1) left out: a
+// template written for 1.2.3 is drawn by its release candidates too.
+func thisFloe() (semver, error) {
+	v, ok := releaseOf(version.Version)
 	if !ok {
-		return fmt.Errorf("the version of floe %q is not major.minor.patch", version.Version) //nolint:err113 // floe's own
+		//nolint:err113 // floe's own version, set when it is built
+		return v, fmt.Errorf("the version of this floe %q is not a version like 1.2.3", version.Version)
 	}
-	return fits(t.Name, needs, have)
+	return v, nil
+}
+
+// needs returns the floe t needs, or nil when it names none.
+func (t *Template) needs() (*semver, error) {
+	if t.Dir == "" {
+		return nil, nil //nolint:nilnil // a built-in template needs this floe, which it comes with
+	}
+	src, found, err := t.readOptional("template.yaml")
+	if !found || err != nil {
+		return nil, err
+	}
+	needs, err := needsFloe(filepath.Join(t.Path, "template.yaml"), src)
+	if err != nil {
+		return nil, err
+	}
+	return &needs, nil
 }
 
 // fits refuses the template name, which needs a floe of needs, for a floe of have.
@@ -298,6 +327,13 @@ func needsFloe(file string, src []byte) (semver, error) {
 		return semver{}, yamlpos.New(file, yamlpos.Of(body), "tmpl_template_yaml")
 	}
 	return *needs, nil
+}
+
+// releaseOf reads the version s, a pre-release or build after it left out.
+func releaseOf(s string) (semver, bool) {
+	core, _, _ := strings.Cut(s, "-")
+	core, _, _ = strings.Cut(core, "+")
+	return versionOf(core)
 }
 
 // semver is a version: major, minor and patch.

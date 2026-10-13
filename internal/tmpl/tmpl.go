@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"math"
 	"path"
 	"slices"
@@ -274,19 +275,42 @@ func schemaOf(t *Template) (*schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	var s schema
-	if err = json.Unmarshal(b, &s); err != nil {
+	s, err := decodeSchema(b)
+	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
+	}
+	return s, nil
+}
+
+var errAfterSchema = errors.New("text after the schema")
+
+// decodeSchema reads the JSON Schema b, its numbers as written, so that an enum of 1000000 is not
+// shown as 1e+06.
+func decodeSchema(b []byte) (*schema, error) {
+	var s schema
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+	if err := dec.Decode(&s); err != nil {
+		return nil, err //nolint:wrapcheck // wrapped by schemaOf
+	}
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
+		return nil, errAfterSchema
 	}
 	return &s, nil
 }
 
-// schema is the part of a template's JSON Schema that drawing and computing read: the items it
-// declares and their format.
+// schema is the part of a template's JSON Schema that floe reads: the items it declares, their format,
+// and what floe template show tells of them.
 type schema struct {
 	Format     string             `json:"format"`
 	Properties map[string]*schema `json:"properties"`
 	Items      *schema            `json:"items"`
+
+	// What floe template show tells of an item.
+	Description string   `json:"description"`
+	Type        any      `json:"type"` // a JSON type, or a list of them
+	Enum        []any    `json:"enum"`
+	Required    []string `json:"required"`
 }
 
 // prepare readies v for page.html: an item declared but not given becomes nil, so that page.html can

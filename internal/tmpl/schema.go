@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -105,21 +106,17 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 	case *kind.AdditionalProperties:
 		s.unknown(e, k.Properties, where)
 	case *kind.Type:
-		want := make(orList, len(k.Want))
-		for i, t := range k.Want {
-			want[i] = usererr.New("tmpl_type_" + t)
-		}
-		s.add(where, "tmpl_schema_type", label(at), usererr.New("tmpl_type_"+k.Got), want)
+		s.add(where, "tmpl_schema_type", label(at), usererr.New("tmpl_type_"+k.Got), Types(k.Want))
 	case *kind.Enum:
 		want := make([]string, len(k.Want))
 		for i, w := range k.Want {
-			want[i] = fmt.Sprint(w)
+			want[i] = jsonText(w)
 		}
 		if k.Got == nil {
 			s.add(where, "tmpl_schema_enum_empty", label(at), strings.Join(want, ", "))
 			return
 		}
-		s.add(where, "tmpl_schema_enum", label(at), fmt.Sprint(k.Got), strings.Join(want, ", "))
+		s.add(where, "tmpl_schema_enum", label(at), jsonText(k.Got), strings.Join(want, ", "))
 	default:
 		if key, args, ok := wording(e.ErrorKind); ok {
 			s.add(where, key, append([]any{label(at)}, args...)...)
@@ -247,6 +244,33 @@ func number(r *big.Rat) string {
 	}
 	f, _ := r.Float64()
 	return strconv.FormatFloat(f, 'g', -1, 64)
+}
+
+// Types words JSON types (string, array…) as alternatives in a message: text or a number. A name
+// JSON does not have stays as written.
+func Types(types []string) i18n.Localizer {
+	words := make(orList, len(types))
+	for i, t := range types {
+		words[i] = t
+		if slices.Contains(jsonTypes, t) {
+			words[i] = usererr.New("tmpl_type_" + t)
+		}
+	}
+	return words
+}
+
+var jsonTypes = []string{"array", "boolean", "integer", "null", "number", "object", "string"}
+
+// jsonText writes a value of JSON as JSON does, text as it is: null rather than Go's <nil>.
+func jsonText(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Sprint(v)
+	}
+	return string(b)
 }
 
 // orList words its items as alternatives: text or a number.

@@ -26,7 +26,7 @@ my-report/
     └── print.css    # ほかのテーマ（任意）
 ```
 
-作り始めるときは、組み込みの `report` を[ソース](../internal/tmpl/builtin/report)から別の名前でコピーします。
+作り始めるときは、`floe template new my-report --from report` で別のテンプレートを写します。`floe template show <name>` で、テンプレートのデータファイルに書けるものを出せます。
 
 ## template.yaml
 

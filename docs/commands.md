@@ -8,6 +8,9 @@ Reference for every command of the `floe` binary.
 |---|---|
 | `floe publish <data.yaml>` | Store a page drawn from a data file (or `--link` an HTML file in place) and print its URL |
 | `floe check <data.yaml>...` | Check data files as `floe publish` would, without publishing them |
+| `floe template list` | List the templates |
+| `floe template show <name>` | Show the items a data file of a template may hold, and its example |
+| `floe template new <name> --from <template>` | Make a template of your own as a copy of another, to edit |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe serve` | Run the server in the foreground |
@@ -91,6 +94,25 @@ Check each data file as `floe publish` does before it stores the page: its YAML,
 - Nothing is printed when every file is right (exit code 0).
 - Nothing is published, and the server is not started, so a repository's CI can run it over its data files.
 - A file that is not a data file (`.yaml`, `.yml`) is refused.
+
+---
+
+## `floe template list`
+
+Print the templates, one per line in five tab-separated columns: the name, where it is (the directory of a template of your own, or `built-in` in every language, for scripts), its themes (comma-separated), the floe it needs (from its `template.yaml`; empty without one) and the description of its `schema.json`. A template of your own takes the place of the built-in one of its name. [templates.md](templates.md) tells how templates are written.
+
+## `floe template show <name>`
+
+Print what a data file of the template may hold, to read before writing one: where the template is, its themes, the floe it needs, its items (from `schema.json`, each with what it takes and its description, the items under it indented) and its `example.yaml`.
+
+## `floe template new <name> --from <template>`
+
+Make the template `<name>` of your own in `$FLOE_TEMPLATES_DIR/<name>` as a copy of `<template>`, built-in or your own, to edit.
+
+- Its `template.yaml` names the floe it needs: that of `<template>`, or this floe's for a copy of a built-in one.
+- Its `example.yaml` names `<name>` as its `template:`.
+- A name is lower case letters, digits, `-` and `_`. A copy named like a built-in template takes its place.
+- A template of your own of that name is left as it is: the command stops (exit code 1).
 
 ---
 

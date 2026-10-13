@@ -26,7 +26,7 @@ my-report/
     └── print.css    # more themes (optional)
 ```
 
-To start one, copy the built-in `report` from [the source](../internal/tmpl/builtin/report) under a new name.
+To start one, copy another with `floe template new my-report --from report`. `floe template show <name>` prints what a data file of a template may hold.
 
 ## template.yaml
 
