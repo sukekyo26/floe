@@ -12,6 +12,7 @@ import (
 	"io"
 	"math"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -48,7 +49,9 @@ type Data struct {
 	Values   map[string]any
 	Calc     map[string]any // the values of the template's computed.yaml, by name; nil without one
 
-	tmpl *Template // the template Read checked the data against, which draws it
+	tmpl   *Template               // the template Read checked the data against, which draws it
+	dir    string                  // the directory of the data file, where its images are
+	images map[string]template.URL // its images as data URIs, by the path written
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -61,9 +64,13 @@ var shared = []string{"template", "theme", "title"}
 //
 // theme, when not "", is the theme to draw with instead of the one the data names (floe publish
 // --theme): the data's theme: is then not used, and a theme the template does not have is refused as
-// a *usererr.Error, as is a template that needs another floe.
-func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
-	h, err := start(file, src, theme != "")
+// a *usererr.Error, as is a template that needs another floe. A relative file is under cwd.
+func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error) {
+	dir := filepath.Dir(file)
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(cwd, dir)
+	}
+	h, err := start(file, dir, src, theme != "")
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		var names []string
 		if names, err = l.Names(); err != nil {
@@ -118,9 +125,10 @@ type head struct {
 	unnamed  bool             // template: is left out or empty, a mistake left to the caller to word
 }
 
-// start reads the data file src, file in its mistakes, up to its template. With themed, a theme is
-// given over the data's. It fails with yamlpos.ErrEmpty for a file without a document.
-func start(file string, src []byte, themed bool) (*head, error) {
+// start reads the data file src, file in its mistakes and in the directory dir, up to its template.
+// With themed, a theme is given over the data's. It fails with yamlpos.ErrEmpty for a file without a
+// document.
+func start(file, dir string, src []byte, themed bool) (*head, error) {
 	root, err := parse(file, src)
 	if err != nil {
 		return nil, err
@@ -129,7 +137,9 @@ func start(file string, src []byte, themed bool) (*head, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil}
+	d := &Data{
+		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, dir: dir, images: nil,
+	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)
 	return h, nil
@@ -178,6 +188,13 @@ func checkValues(t *Template, d *Data, root ast.Node, problems yamlpos.Problems)
 	}
 	if problems != nil {
 		return problems.Sorted()
+	}
+	s, err := schemaOf(t)
+	if err != nil {
+		return err
+	}
+	if err = checkImages(s, d, root, d.dir); err != nil {
+		return err
 	}
 	// Each stage runs on data that passed the one before: broken data would only give the expressions
 	// mistakes that mean nothing.
@@ -264,7 +281,7 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	err = page.Execute(&b, map[string]any{
 		"Title": title,
 		"Lang":  lang,
-		"Data":  s.prepare(d.Values),
+		"Data":  s.prepare(d.Values, d.images),
 		"Calc":  d.Calc,
 		"Theme": template.CSS(css), //nolint:gosec // G203: the template's own theme, not data
 	})
@@ -283,7 +300,8 @@ func (t *Template) page() (*template.Template, error) {
 		return nil, err
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
-	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).Parse(string(src))
+	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
+		Funcs(template.FuncMap{"asset": t.asset}).Parse(string(src))
 	if err != nil {
 		return nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
 	}
@@ -352,20 +370,24 @@ type schema struct {
 }
 
 // prepare readies v for page.html: an item declared but not given becomes nil, so that page.html can
-// test it under missingkey=error, and an item of format html becomes HTML that goes in as it is.
-func (s *schema) prepare(v any) any {
+// test it under missingkey=error, an item of format html becomes HTML that goes in as it is, and one
+// of format image the data URI of its image, from images.
+func (s *schema) prepare(v any, images map[string]template.URL) any {
 	if s == nil {
 		return v
 	}
 	switch v := v.(type) {
 	case string:
-		if s.Format == "html" {
+		switch s.Format {
+		case "html":
 			return template.HTML(v) //nolint:gosec // G203: the schema declares this item HTML
+		case "image":
+			return images[v]
 		}
 	case map[string]any:
 		out := make(map[string]any, len(v)+len(s.Properties))
 		for k, item := range v {
-			out[k] = s.Properties[k].prepare(item)
+			out[k] = s.Properties[k].prepare(item, images)
 		}
 		for k := range s.Properties {
 			if _, ok := out[k]; !ok {
@@ -376,7 +398,7 @@ func (s *schema) prepare(v any) any {
 	case []any:
 		out := make([]any, len(v))
 		for i, item := range v {
-			out[i] = s.Items.prepare(item)
+			out[i] = s.Items.prepare(item, images)
 		}
 		return out
 	}

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -110,7 +111,40 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if _, err = t.page(); err != nil {
 		mistakes = append(mistakes, err)
 	}
-	return warnings, mistakes
+	return warnings, append(mistakes, t.checkAssets()...)
+}
+
+// checkAssets returns the mistakes of the files under the assets/ of t, if it has one: each is an
+// image floe takes. One whose name starts with a dot, which asset cannot name, is left alone.
+func (t *Template) checkAssets() []error {
+	var mistakes []error
+	err := t.files(func(files fs.FS) error {
+		if _, err := fs.Stat(files, "assets"); errors.Is(err, fs.ErrNotExist) {
+			return nil
+		}
+		sub, err := fs.Sub(files, "assets")
+		if err != nil {
+			return err //nolint:wrapcheck // wrapped below
+		}
+		return fs.WalkDir(sub, ".", func(name string, e fs.DirEntry, err error) error {
+			switch {
+			case err != nil:
+				return err
+			case name != "." && strings.HasPrefix(e.Name(), ".") && e.IsDir():
+				return fs.SkipDir
+			case e.IsDir() || strings.HasPrefix(e.Name(), "."):
+				return nil
+			}
+			if _, bad := imageURI(sub, name, t.file("assets")); bad != nil {
+				mistakes = append(mistakes, bad)
+			}
+			return nil
+		})
+	})
+	if err != nil {
+		return []error{fmt.Errorf("read the assets of %s: %w", t.Name, err)}
+	}
+	return mistakes
 }
 
 // checkChecks returns the mistakes of the checks.yaml of t, if it has one, against its schema doc as
@@ -263,7 +297,7 @@ func (t *Template) checkExample() error {
 	if err != nil {
 		return err
 	}
-	h, err := start(file, src, false)
+	h, err := start(file, t.Dir, src, false)
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		return yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", t.Name)
 	}

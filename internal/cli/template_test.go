@@ -182,3 +182,35 @@ func TestTemplateShow(t *testing.T) {
 		t.Errorf("template show of a list that may be null:\n%s%s", r.stdout, r.stderr)
 	}
 }
+
+// The images of a data file are read from its directory, a relative one under the working directory,
+// by floe check and floe publish alike, and go into the page.
+func TestDataImages(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	if err := os.CopyFS(filepath.Join(e.tmp, "templates", "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
+		t.Fatal(err)
+	}
+	png, err := os.ReadFile("../tmpl/testdata/sizes/chart.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.write(t, "work/report/chart.png", string(png))
+	e.write(t, "work/report/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nchart: chart.png\n")
+	if r := e.run(t, "work", "check", "report/sizes.yaml"); r.code != 0 {
+		t.Errorf("check = %+v", r)
+	}
+	if r := e.run(t, "work", "publish", "report/sizes.yaml"); r.code != 0 {
+		t.Fatalf("publish = %+v", r)
+	}
+	b, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], "sizes", "index.html"))
+	if err != nil || !strings.Contains(string(b), `<img src="data:image/png;base64,`) {
+		t.Errorf("the published page = %s, %v", b, err)
+	}
+	e.write(t, "work/report/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nchart: ../chart.png\n")
+	if r := e.run(t, "work", "check", "report/sizes.yaml"); r.code != 1 || !strings.Contains(r.stderr, `report/sizes.yaml:3:8: chart: "../chart.png" is not a file under`) {
+		t.Errorf("check of an image out of the directory = %+v", r)
+	}
+}

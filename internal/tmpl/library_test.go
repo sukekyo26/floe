@@ -33,7 +33,7 @@ func own(t *testing.T, dir, name string) string {
 }
 
 func draw(l *tmpl.Library, src string) (string, error) {
-	d, err := l.Read("data.yaml", []byte(src), "")
+	d, err := l.Read("data.yaml", []byte(src), "", "")
 	if err != nil {
 		return "", err
 	}

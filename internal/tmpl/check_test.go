@@ -13,25 +13,35 @@ import (
 	"github.com/sukekyo26/floe/internal/version"
 )
 
-// The template of testdata/sizes uses every stage: its checks, its computed values, num and bytes.
+// The template of testdata/sizes uses every stage: its checks, its computed values, num, bytes, its
+// assets and an image of the data.
 func TestDrawEveryStage(t *testing.T) {
 	t.Parallel()
 
-	src, err := os.ReadFile("testdata/sizes/example.yaml")
+	const file = "testdata/sizes/example.yaml"
+	src, err := os.ReadFile(file)
 	if err != nil {
 		t.Fatal(err)
 	}
-	page, err := draw(tmpl.NewLibrary("testdata"), string(src))
+	l := tmpl.NewLibrary("testdata")
+	d, err := l.Read(file, src, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"<p><b>made</b> for tests</p>", "<td>1.5 KiB</td>", "<p>2,049,536 bytes, 1 of them"} {
-		if !strings.Contains(page, want) {
-			t.Errorf("the page has no %s:\n%s", want, page)
+	b, err := d.Render("t", "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"<p><b>made</b> for tests</p>", "<td>1.5 KiB</td>", "<p>2,049,536 bytes, 1 of them",
+		`<img src="data:image/svg&#43;xml;base64,`, `<img src="data:image/png;base64,iVBORw0KGgo`,
+	} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("the page has no %s:\n%s", want, b)
 		}
 	}
 	twice := strings.Replace(string(src), "b.png", "a.txt", 1)
-	if _, err := draw(tmpl.NewLibrary("testdata"), twice); err == nil || !strings.Contains(err.Error(), "data.yaml:7:11: files[1].name: give each file its own name") {
+	if _, err := l.Read(file, []byte(twice), "", ""); err == nil || !strings.Contains(err.Error(), file+":8:11: files[1].name: give each file its own name") {
 		t.Errorf("a check that fails = %v", err)
 	}
 }
@@ -176,6 +186,16 @@ func TestCheckMistakes(t *testing.T) {
 				"sizes/example.yaml:1:1: name the template at the top level, like template: report (templates: sizes)",
 				"sizes/example.yaml:1:8: title must be text",
 			},
+		},
+		{
+			name:  "an image of the example",
+			files: map[string]string{"example.yaml": "chart: chart.png|chart: none.png"},
+			want:  []string{`sizes/example.yaml:4:8: chart: there is no image "none.png" under `},
+		},
+		{
+			name:  "an asset",
+			files: map[string]string{"assets/notes.png": "not an image", "assets/.DS_Store": "x"},
+			want:  []string{`"notes.png" does not hold the image/png its name says`},
 		},
 		{
 			name:  "newer floe",

@@ -334,4 +334,11 @@ var messagesJA = map[string]string{
 	"tmpl_checks_missing":      "検査に %s を書いてください",
 	"tmpl_check_not_dir":       "%s はディレクトリではありません。テンプレートは、ファイルを収めたディレクトリです",
 	"tmpl_file_missing":        "%s がありません。テンプレートには %s が要ります",
+	"tmpl_item":                "%s: %s",
+	"tmpl_image_path":          "「%s」は %s の下のファイルではありません。.. やドットで始まる名前を使わずに、そこからの相対パスで書いてください",
+	"tmpl_image_type":          "「%s」は floe が扱う画像ではありません。png・jpeg・gif・webp・svg を使ってください",
+	"tmpl_image_missing":       "%[2]s の下に画像「%[1]s」がありません",
+	"tmpl_image_unreadable":    "画像「%s」を読めません: %s",
+	"tmpl_image_large":         "画像「%s」は %s で、画像の上限の %s を超えています。小さくしてください",
+	"tmpl_image_content":       "「%s」の中身は、名前が示す %s ではありません",
 }

@@ -335,4 +335,11 @@ var messagesEN = map[string]string{
 	"tmpl_checks_missing":      "write %s in the check",
 	"tmpl_check_not_dir":       "%s is not a directory: a template is a directory of its files",
 	"tmpl_file_missing":        "%s is missing: a template has %s",
+	"tmpl_item":                "%s: %s",
+	"tmpl_image_path":          `"%s" is not a file under %s: write a path relative to it, without .. or names starting with a dot`,
+	"tmpl_image_type":          `"%s" is not an image floe takes: use png, jpeg, gif, webp or svg`,
+	"tmpl_image_missing":       `there is no image "%s" under %s`,
+	"tmpl_image_unreadable":    `the image "%s" cannot be read: %s`,
+	"tmpl_image_large":         `the image "%s" is %s, over the %s an image may be; make it smaller`,
+	"tmpl_image_content":       `"%s" does not hold the %s its name says`,
 }

@@ -1,6 +1,7 @@
 template: sizes
 title: Sizes
 note: <b>made</b> for tests
+chart: chart.png
 files:
   - name: a.txt
     bytes: 1536
