@@ -7,7 +7,7 @@
 リンクしてそのまま表示します。どちらも `http://127.0.0.1:7325` で配信し、ライブリロードと管理 UI を提供します。図は宣言的な定義から
 インライン SVG として描画し、描画前にはみ出し・重なり・線の交差を検査します。
 
-> **ステータス:** 開発中です。組み込みの `report` テンプレートでのデータファイルの公開、HTML のリンク、図の描画（`floe diagram render`。AWS アイコンは `floe icons fetch aws` で取得）、データファイルの検査（`floe check`）は使えます。自分のテンプレートは予定で、まだありません。
+> **ステータス:** 開発中です。組み込みの `report` テンプレートでのデータファイルの公開、HTML のリンク、図の描画（`floe diagram render`。AWS アイコンは `floe icons fetch aws` で取得）、データファイルの検査（`floe check`）、自分のテンプレートは使えます。
 
 ## インストール
 
@@ -43,6 +43,7 @@ floe stop                  # 裏で動いているサーバーを止める
 | 内容 | English | 日本語 |
 |---|---|---|
 | コマンドと環境変数 | [commands.md](commands.md) | [commands.ja.md](commands.ja.md) |
+| テンプレートの書き方 | [templates.md](templates.md) | [templates.ja.md](templates.ja.md) |
 | 変更履歴 | [CHANGELOG.md](../CHANGELOG.md) | [CHANGELOG.ja.md](CHANGELOG.ja.md) |
 
 ## ライセンス
