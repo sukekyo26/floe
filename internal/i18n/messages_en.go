@@ -337,6 +337,7 @@ var messagesEN = map[string]string{
 	"tmpl_image_path":          `"%s" is not a file under %s: write a path relative to it, without .. or names starting with a dot`,
 	"tmpl_image_type":          `"%s" is not an image floe takes: use png, jpeg, gif, webp or svg`,
 	"tmpl_image_missing":       `there is no image "%s" under %s`,
+	"tmpl_image_not_file":      `"%s" is not a file of an image, but a directory or the like`,
 	"tmpl_image_unreadable":    `the image "%s" cannot be read: %s`,
 	"tmpl_image_large":         `the image "%s" is %s bytes, over the %s bytes (%s) an image may be; make it smaller`,
 	"tmpl_image_content":       `"%s" does not hold the %s its name says`,

@@ -37,15 +37,11 @@ func usable(n string) bool {
 
 var identifier = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 
-// checkComputed computes the values of d's template's computed.yaml, if it has one, into d.Calc, and
-// reports at the top of root those its data cannot give.
-func checkComputed(t *Template, d *Data, root ast.Node) error {
+// checkComputed computes the values of d's template's computed.yaml, if it has one, into d.Calc, from
+// the items its schema s declares, and reports at the top of root those its data cannot give.
+func checkComputed(t *Template, d *Data, root ast.Node, s *schema) error {
 	src, found, err := t.readOptional("computed.yaml")
 	if !found || err != nil {
-		return err
-	}
-	s, err := schemaOf(t)
-	if err != nil {
 		return err
 	}
 	return compute(t.file("computed.yaml"), src, d, slices.Sorted(maps.Keys(s.Properties)), root)

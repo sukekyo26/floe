@@ -178,7 +178,11 @@ func pickTheme(t *Template, d *Data, theme string, pos yamlpos.Pos) (yamlpos.Pro
 // its checks and computes its values, reporting the schema's mistakes with problems, those found before
 // in the keys every template shares.
 func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlpos.Problems) error {
-	err := checkSchema(t, d, root)
+	src, err := t.readFile("schema.json")
+	if err != nil {
+		return err
+	}
+	err = validate(src, d, root)
 	var more yamlpos.Problems
 	switch {
 	case errors.As(err, &more):
@@ -189,7 +193,7 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 	if problems != nil {
 		return problems.Sorted()
 	}
-	s, err := schemaOf(t)
+	s, err := t.decodeSchema(src)
 	if err != nil {
 		return err
 	}
@@ -201,7 +205,7 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 	if err = checkRelations(t, d, root); err != nil {
 		return err
 	}
-	return checkComputed(t, d, root)
+	return checkComputed(t, d, root, s)
 }
 
 // readShared moves the keys every template shares from h.d.Values to h.d, and notes where each is
@@ -331,6 +335,11 @@ func schemaOf(t *Template) (*schema, error) {
 	if err != nil {
 		return nil, err
 	}
+	return t.decodeSchema(b)
+}
+
+// decodeSchema reads b, the schema.json of t.
+func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	s, err := decodeSchema(b)
 	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)

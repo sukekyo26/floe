@@ -57,10 +57,12 @@ func imageURI(files fs.FS, name, where string) (template.URL, *usererr.Error) {
 func readImage(files fs.FS, name, where string) ([]byte, *usererr.Error) {
 	fi, err := fs.Stat(files, name)
 	switch {
-	case errors.Is(err, fs.ErrNotExist) || err == nil && !fi.Mode().IsRegular():
+	case errors.Is(err, fs.ErrNotExist):
 		return nil, usererr.New("tmpl_image_missing", name, where)
 	case err != nil:
 		return nil, usererr.New("tmpl_image_unreadable", name, err.Error())
+	case !fi.Mode().IsRegular():
+		return nil, usererr.New("tmpl_image_not_file", name)
 	case fi.Size() > maxImage:
 		return nil, tooLarge(name, fi.Size())
 	}

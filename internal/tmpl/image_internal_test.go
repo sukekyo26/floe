@@ -22,6 +22,7 @@ func TestImageURI(t *testing.T) {
 	files := map[string][]byte{
 		"a.png":         png,
 		"sub/b.PNG":     png,
+		"dir.png/c.png": png,
 		"png.gif":       png,
 		"logo.svg":      []byte("\xef\xbb\xbf<!DOCTYPE svg>\n<svg viewBox=\"0 0 1 1\"/>"),
 		"text.svg":      []byte("<html><svg/></html>"),
@@ -59,6 +60,7 @@ func TestImageURI(t *testing.T) {
 		{"large.png", "tmpl_image_large"},
 		{"none.png", "tmpl_image_missing"},
 		{"sub", "tmpl_image_type"},
+		{"dir.png", "tmpl_image_not_file"},
 		{"../a.png", "tmpl_image_path"},
 		{"/a.png", "tmpl_image_path"},
 		{".hidden/c.png", "tmpl_image_path"},
