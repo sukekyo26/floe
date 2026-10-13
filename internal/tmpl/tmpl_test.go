@@ -45,6 +45,7 @@ func TestReportExample(t *testing.T) {
 		`<p class="eyebrow">Plan · 2030-04</p>`,
 		`<h2>Steps</h2>`,
 		`<li>Freeze edits on the old wiki on <strong>Friday evening</strong>.</li>`,
+		`<div class="table-wrap"><table>`,
 		`<th>Likelihood</th>`,
 		`<p class="note warn">Anyone editing during the freeze loses their changes.</p>`,
 		`--accent: #1d6670;`,
@@ -59,8 +60,8 @@ func TestReportExample(t *testing.T) {
 func TestReportParts(t *testing.T) {
 	t.Parallel()
 
-	got := render(t, "template: report\nsections:\n  - parts:\n      - text: 'a <script>x()</script> **b**'\n  - heading: h\n")
-	if strings.Contains(got, "<script>x()") || !strings.Contains(got, "<strong>b</strong>") {
+	got := render(t, "template: report\nsections:\n  - parts:\n      - text: 'a <script>x()</script> <table> `</table>` **b**'\n  - heading: h\n")
+	if strings.Contains(got, "<script>x()") || !strings.Contains(got, "<strong>b</strong>") || strings.Contains(got, `<div class="table-wrap">`) {
 		t.Errorf("Markdown with raw HTML = %s", got)
 	}
 	if strings.Contains(got, `class="eyebrow"`) || strings.Contains(got, `class="lead"`) {
@@ -72,8 +73,11 @@ func TestReadRefusals(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range []struct{ src, want string }{
-		{"title: t\n", "data.yaml: name the template at the top, like template: report (templates: report)"},
-		{"", "data.yaml: name the template at the top"},
+		{"title: t\n", "data.yaml: name the template at the top level, like template: report (templates: report)"},
+		{"", "data.yaml: name the template at the top level"},
+		{"- template: report\n", "data.yaml: write the top level as keys and values"},
+		{"template: report\n---\ntitle: t\n", "data.yaml has more than one YAML document"},
+		{"template: report\n---\ntitle: 'a\n", "data.yaml is not valid YAML: "},
 		{"template: deck\n", `data.yaml: unknown template "deck"; use report`},
 		{"template: report\ntheme: print\n", `data.yaml: template report has no theme "print"; use default`},
 		{"template: report\ntitle: [a]\n", "data.yaml: title must be text"},

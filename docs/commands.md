@@ -56,7 +56,7 @@ sections:
 ```
 
 - `theme:` picks a theme of the template (`default`).
-- A data file that names no template, or one that is not there, is refused, as is data of the wrong shape (sections that are not a list).
+- A data file that names no template, or one that is not there, is refused, as is data of the wrong shape (sections that are not a list). A data file is one YAML document: one with `---` between documents is refused.
 - The page is drawn once, when it is published: changing the data file later changes nothing until it is published again.
 
 ### Projects and overwriting
