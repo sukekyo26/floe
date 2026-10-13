@@ -17,7 +17,8 @@ import (
 // LIMIT: +, - and * past ±1.8e308 still give ±Inf. Check their results too if a template needs such numbers.
 var arithmetic = []expr.Option{
 	finite("_divide", "/", runtime.Divide), expr.Operator("/", "_divide"),
-	finite("_power", "**", runtime.Exponent), expr.Operator("**", "_power"),
+	// expr matches an operator as written, and ^ is ** written otherwise.
+	finite("_power", "**", runtime.Exponent), expr.Operator("**", "_power"), expr.Operator("^", "_power"),
 }
 
 var errNotFinite = errors.New("is not a finite number")
