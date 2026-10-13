@@ -290,5 +290,6 @@ var messagesEN = map[string]string{
 	"tmpl_check":               `%s: %s ("%s")`,
 	"tmpl_check_bare":          "%s: %s",
 	"tmpl_check_error":         "%s: %s (the check could not run: %s)",
+	"tmpl_computed_error":      "%s = %s cannot be computed from this file: %s",
 	"tmpl_render":              "%s does not fit the template %s: %s",
 }

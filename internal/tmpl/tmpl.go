@@ -46,14 +46,16 @@ type Data struct {
 	Theme    string
 	Title    string // "" when the data names none
 	Values   map[string]any
+	Calc     map[string]any // the values of the template's computed.yaml, by name; nil without one
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
 var shared = []string{"template", "theme", "title"}
 
-// Read reads the data file src and checks it against its template's schema, then its checks; file
-// names it in errors. A mistake is a *yamlpos.Error, and those of the schema or of the checks are all
-// reported at once as yamlpos.Problems.
+// Read reads the data file src, checks it against its template's schema, then its checks, and
+// computes the values of its computed.yaml; file names it in errors. A mistake is a *yamlpos.Error,
+// and those of the schema, of the checks or of the computing are all reported at once as
+// yamlpos.Problems.
 //
 // theme, when not "", is the theme to draw with instead of the one the data names (floe publish
 // --theme): the data's theme: is then not used, and a theme the template does not have is refused as
@@ -67,7 +69,7 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top}
+	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil}
 	where, problems := readShared(d, root, theme != "")
 	fail := func(p yamlpos.Pos, key string, args ...any) {
 		problems = append(problems, yamlpos.New(file, p, key, args...))
@@ -101,8 +103,8 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 	return d, nil
 }
 
-// checkValues checks d against its template's schema and then its checks, reporting the schema's
-// mistakes with problems, those found before in the keys every template shares.
+// checkValues checks d against its template's schema and then its checks, and computes its values,
+// reporting the schema's mistakes with problems, those found before in the keys every template shares.
 func checkValues(d *Data, root ast.Node, problems yamlpos.Problems) error {
 	err := checkSchema(d, root)
 	var more yamlpos.Problems
@@ -115,9 +117,12 @@ func checkValues(d *Data, root ast.Node, problems yamlpos.Problems) error {
 	if problems != nil {
 		return problems.Sorted()
 	}
-	// Stage 3 runs on data that passed stage 2, its shared keys and its schema: broken data would only
-	// give the checks' expressions mistakes that mean nothing.
-	return checkRelations(d, root)
+	// Each stage runs on data that passed the one before: broken data would only give the expressions
+	// mistakes that mean nothing.
+	if err = checkRelations(d, root); err != nil {
+		return err
+	}
+	return checkComputed(d, root)
 }
 
 // readShared moves the keys every template shares from d.Values to d, and returns where each is
@@ -217,11 +222,9 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the theme %s of %s: %w", d.Theme, d.Template, err)
 	}
-	var s schema
-	if b, rerr := fs.ReadFile(builtin, path.Join(dir, "schema.json")); rerr != nil {
-		return nil, fmt.Errorf("read the schema of %s: %w", d.Template, rerr)
-	} else if err = json.Unmarshal(b, &s); err != nil {
-		return nil, fmt.Errorf("read the schema of %s: %w", d.Template, err)
+	s, err := schemaOf(d.Template)
+	if err != nil {
+		return nil, err
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).Parse(string(src))
@@ -233,6 +236,7 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 		"Title": title,
 		"Lang":  lang,
 		"Data":  s.prepare(d.Values),
+		"Calc":  d.Calc,
 		"Theme": template.CSS(css), //nolint:gosec // G203: the template's own theme, not data
 	})
 	if err != nil {
@@ -258,8 +262,21 @@ var funcs = template.FuncMap{
 	},
 }
 
-// schema is the part of a template's JSON Schema that drawing reads: the items it declares and their
-// format.
+// schemaOf reads the schema of the template name.
+func schemaOf(name string) (*schema, error) {
+	b, err := builtin.ReadFile(path.Join("builtin", name, "schema.json"))
+	if err != nil {
+		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
+	}
+	var s schema
+	if err = json.Unmarshal(b, &s); err != nil {
+		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
+	}
+	return &s, nil
+}
+
+// schema is the part of a template's JSON Schema that drawing and computing read: the items it
+// declares and their format.
 type schema struct {
 	Format     string             `json:"format"`
 	Properties map[string]*schema `json:"properties"`

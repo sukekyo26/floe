@@ -289,5 +289,6 @@ var messagesJA = map[string]string{
 	"tmpl_check":               "%s: %s（「%s」）",
 	"tmpl_check_bare":          "%s: %s",
 	"tmpl_check_error":         "%s: %s（検査を実行できませんでした: %s）",
+	"tmpl_computed_error":      "%s = %s をこのファイルから計算できません: %s",
 	"tmpl_render":              "%s はテンプレート %s に合いません: %s",
 }
