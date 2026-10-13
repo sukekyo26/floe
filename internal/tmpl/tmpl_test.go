@@ -72,8 +72,11 @@ func TestReadRefusals(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range []struct{ src, want string }{
-		{"title: t\n", "data.yaml: name the template at the top, like template: report (templates: report)"},
-		{"", "data.yaml: name the template at the top"},
+		{"title: t\n", "data.yaml: name the template at the top level, like template: report (templates: report)"},
+		{"", "data.yaml: name the template at the top level"},
+		{"- template: report\n", "data.yaml: write the top level as keys and values"},
+		{"template: report\n---\ntitle: t\n", "data.yaml has more than one YAML document"},
+		{"template: report\n---\ntitle: 'a\n", "data.yaml is not valid YAML: "},
 		{"template: deck\n", `data.yaml: unknown template "deck"; use report`},
 		{"template: report\ntheme: print\n", `data.yaml: template report has no theme "print"; use default`},
 		{"template: report\ntitle: [a]\n", "data.yaml: title must be text"},

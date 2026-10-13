@@ -244,7 +244,9 @@ var messagesJA = map[string]string{
 
 	// tmpl
 	"tmpl_yaml":          "%s は YAML として読めません: %s",
-	"tmpl_no_template":   "%s: 先頭で template: report のようにテンプレートを指定してください（テンプレート: %s）",
+	"tmpl_no_template":   "%s: 最上位に template: report のようにテンプレートを指定してください（テンプレート: %s）",
+	"tmpl_not_mapping":   "%s: 最上位は template: report のようなキーと値で書いてください",
+	"tmpl_documents":     "%s に YAML の文書が 2 つ以上あります。--- で区切らず、ページを 1 つの文書で書いてください",
 	"tmpl_not_text":      "%s: %s は文字列で指定してください",
 	"tmpl_unknown":       "%s: 知らないテンプレート「%s」です。使えるのは %s です",
 	"tmpl_unknown_theme": "%[1]s: テンプレート %[3]s にテーマ「%[2]s」はありません。使えるのは %[4]s です",

@@ -6,8 +6,10 @@ import (
 	"bytes"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"path"
 	"slices"
@@ -41,12 +43,24 @@ type Data struct {
 
 // Read reads the data file src; file names it in errors.
 func Read(file string, src []byte) (*Data, error) {
-	var top map[string]any
-	if err := yaml.Unmarshal(src, &top); err != nil {
+	dec := yaml.NewDecoder(bytes.NewReader(src))
+	var doc, more any
+	if err := dec.Decode(&doc); err != nil && !errors.Is(err, io.EOF) {
 		return nil, usererr.New("tmpl_yaml", file, yaml.FormatError(err, false, false))
 	}
-	if top == nil {
+	// A document after --- would otherwise be left out without a word.
+	switch err := dec.Decode(&more); {
+	case err == nil:
+		return nil, usererr.New("tmpl_documents", file)
+	case !errors.Is(err, io.EOF):
+		return nil, usererr.New("tmpl_yaml", file, yaml.FormatError(err, false, false))
+	}
+	if doc == nil {
 		return nil, usererr.New("tmpl_no_template", file, strings.Join(Names(), ", "))
+	}
+	top, ok := doc.(map[string]any)
+	if !ok {
+		return nil, usererr.New("tmpl_not_mapping", file)
 	}
 	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top}
 	for _, k := range []struct {
