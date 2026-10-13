@@ -66,7 +66,7 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 		return nil, yamlpos.Syntax(file, err)
 	}
 	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top}
-	where, problems := readShared(d, root)
+	where, problems := readShared(d, root, theme != "")
 	fail := func(p yamlpos.Pos, key string, args ...any) {
 		problems = append(problems, yamlpos.New(file, p, key, args...))
 	}
@@ -108,8 +108,9 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 }
 
 // readShared moves the keys every template shares from d.Values to d, and returns where each is
-// written (the top of the file for one left out) and the mistakes in them.
-func readShared(d *Data, root ast.Node) (map[string]yamlpos.Pos, yamlpos.Problems) {
+// written (the top of the file for one left out) and the mistakes in them. With themed, a theme is
+// given over the data's, and its theme: is not used.
+func readShared(d *Data, root ast.Node, themed bool) (map[string]yamlpos.Pos, yamlpos.Problems) {
 	var problems yamlpos.Problems
 	where := map[string]yamlpos.Pos{}
 	to := map[string]*string{"template": &d.Template, "theme": &d.Theme, "title": &d.Title}
@@ -122,6 +123,9 @@ func readShared(d *Data, root ast.Node) (map[string]yamlpos.Pos, yamlpos.Problem
 		k, n, _ := yamlpos.Find(root, []string{key})
 		where[key] = yamlpos.OfValue(k, n)
 		delete(d.Values, key)
+		if key == "theme" && themed {
+			continue
+		}
 		if s, ok := v.(string); ok {
 			*to[key] = s
 		} else {

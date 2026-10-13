@@ -14,6 +14,7 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // Exit codes.
@@ -65,7 +66,15 @@ func Run(ctx context.Context, args []string, env Env) int {
 	if errors.As(err, &l) {
 		msg = l.Localize(cat)
 	}
-	_, _ = fmt.Fprintf(env.Stderr, "floe: %s\n", msg) //nolint:errcheck // nowhere left to report
+	// Mistakes at lines and columns go out as they are, one per line, for editors and CI to read.
+	prefix := "floe: "
+	var all yamlpos.Problems
+	var one *yamlpos.Error
+	var checked mistakes
+	if errors.As(err, &all) || errors.As(err, &one) || errors.As(err, &checked) {
+		prefix = ""
+	}
+	_, _ = fmt.Fprintf(env.Stderr, "%s%s\n", prefix, msg) //nolint:errcheck // nowhere left to report
 	if errors.As(err, new(usageError)) {
 		return exitUsage
 	}

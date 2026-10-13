@@ -504,7 +504,7 @@ func TestPublishDataFile(t *testing.T) {
 	e.vars["FLOE_LANG"] = "ja"
 	bad := e.write(t, "bad.yaml", "title: t\n")
 	want(t, "publish a data file without a template", e.run(t, "", "publish", bad), 1, "",
-		"floe: "+bad+":1:1: 最上位に template: report のようにテンプレートを指定してください（テンプレート: report）")
+		bad+":1:1: 最上位に template: report のようにテンプレートを指定してください（テンプレート: report）")
 	want(t, "publish --theme of no theme", e.run(t, "", "publish", plan, "--theme", "print"), 1, "",
 		"floe: テンプレート report にテーマ「print」はありません。使えるのは default です")
 	want(t, "publish --theme empty", e.run(t, "", "publish", plan, "--theme", " "), 2, "", "floe: --theme が空です")
@@ -521,11 +521,15 @@ func TestCheck(t *testing.T) {
 	e.write(t, "bad.yml", "template: report\ntheme: print\n")
 	want(t, "check a right file", e.run(t, "", "check", "ok.yaml"), 0, "", "")
 	want(t, "check files with mistakes", e.run(t, "", "check", "ok.yaml", "bad.yaml", "bad.yml"), 1, "",
-		"floe: bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lead, sections, template, theme, title\n"+
+		"bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lead, sections, template, theme, title\n"+
 			`bad.yml:2:8: template report has no theme "print"; use default`)
+	// Mistakes at lines and columns go out as they are, for editors and CI to read.
+	if r := e.run(t, "", "check", "bad.yaml"); !strings.HasPrefix(r.stderr, "bad.yaml:2:1: ") {
+		t.Errorf("check prefixed its mistakes: %q", r.stderr)
+	}
 	// A file that cannot be checked is reported with the others, not instead of them.
 	want(t, "check files that cannot be checked", e.run(t, "", "check", "page.html", "bad.yaml", "nope.yaml"), 1, "",
-		"floe: page.html is not a data file (.yaml or .yml)\nbad.yaml:2:1: leed is not an item")
+		"page.html is not a data file (.yaml or .yml)\nbad.yaml:2:1: leed is not an item")
 	if r := e.run(t, "", "check", "bad.yaml", "nope.yaml"); !strings.Contains(r.stderr, "\ncannot read nope.yaml") {
 		t.Errorf("check of a missing file after one with mistakes = %q", r.stderr)
 	}

@@ -85,7 +85,8 @@ for another file is refused unless --force.`,
 				opts.Lang = &lang
 			}
 			if flags.Changed("theme") {
-				if strings.TrimSpace(theme) == "" {
+				theme = strings.TrimSpace(theme)
+				if theme == "" {
 					return usageError{err: usererr.New("cli_theme_empty")}
 				}
 				opts.Theme = &theme

@@ -11,8 +11,8 @@ overflow, overlaps and crossing edges before they render.
 
 > **Status:** under construction. Publishing pages from data files with the
 > built-in `report` template, linking HTML files and drawing diagrams
-> (`floe diagram render`, with AWS icons from `floe icons fetch aws`) work;
-> checks of data files and templates of your own are planned.
+> (`floe diagram render`, with AWS icons from `floe icons fetch aws`) and
+> checking data files (`floe check`) work; templates of your own are planned.
 
 ## Install
 

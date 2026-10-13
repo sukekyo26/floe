@@ -633,6 +633,8 @@ func TestPublishLang(t *testing.T) {
 	if m := e.meta(t, "printed"); m.Theme != "default" {
 		t.Errorf("--theme default over theme: print: theme %q", m.Theme)
 	}
+	listed := e.write(t, "listed.yaml", "template: report\ntheme: [dark]\n")
+	e.mustPublish(t, listed, store.Options{Theme: ptr("default")}, "other")
 	_, err = e.publish(t, frag, store.Options{Theme: ptr("print")}, "other")
 	wantUserErr(t, err, "tmpl_unknown_theme", "print", "report", "default")
 
