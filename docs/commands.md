@@ -99,7 +99,7 @@ Stop the background server. Without one, it prints `server is not running` and e
 
 ## `floe diagram render <spec.yaml>...`
 
-Check each diagram spec and print the diagrams, in order, as one HTML fragment of inline SVG on stdout, to paste into a page. A relative path is resolved against the working directory.
+Check each diagram spec and print the diagrams, in order, as one HTML fragment of inline SVG on stdout, to paste into an HTML page of your own: a whole document with `<!doctype html>` and `<html lang>`, since `floe publish --link` shows the file as it is. A relative path is resolved against the working directory.
 
 - A mistake in the shape of a spec (an unknown key, a wrong type, a value that is not allowed) stops that spec at the first one.
 - Layout mistakes are all reported: text too wide or too tall for its box, parts sticking out of the canvas, overlapping, or straddling the edge of a frame, edges running through boxes, labels or frame headings, and edges crossing like an X.
