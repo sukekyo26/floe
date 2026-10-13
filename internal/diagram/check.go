@@ -32,7 +32,7 @@ func (l *layout) check() yamlpos.Problems {
 // checkPlacement reports parts sticking out of the canvas, overlapping and straddling frames.
 func (l *layout) checkPlacement() {
 	s := l.spec
-	canvas := rect{0, 0, s.Width, s.Height, nil, yamlpos.Pos{Line: 0, Column: 0}}
+	canvas := rect{0, 0, s.Width, s.Height, nil, yamlpos.Pos{Line: 0, Column: 0}} // not a part, so written nowhere
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas) {
 		if !r.inside(canvas) {
 			l.problem(r.at, "diagram_outside", r.what, formatNum(s.Width), formatNum(s.Height))

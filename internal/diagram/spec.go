@@ -12,9 +12,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
-	"github.com/goccy/go-yaml/parser"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -194,32 +192,21 @@ var decoders = []decoder{
 
 // Parse reads the spec in src; file names it in errors.
 func Parse(file string, src []byte) (*Spec, error) {
-	start := yamlpos.Pos{Line: 1, Column: 1}
-	doc, err := parser.ParseBytes(src, 0)
+	body, err := yamlpos.Parse(file, src, "diagram_documents")
+	if errors.Is(err, yamlpos.ErrEmpty) {
+		return nil, yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "diagram_empty")
+	}
 	if err != nil {
-		var se *yaml.SyntaxError
-		if errors.As(err, &se) && se.Token != nil {
-			at := yamlpos.Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}
-			return nil, &yamlpos.Error{File: file, Pos: at, Err: usererr.New("diagram_yaml", se.Message)}
-		}
-		return nil, &yamlpos.Error{File: file, Pos: start, Err: usererr.New("diagram_yaml", err.Error())}
+		return nil, err //nolint:wrapcheck // a mistake at its line and column
 	}
-	if len(doc.Docs) > 1 {
-		sep := doc.Docs[1].Start.Position // the --- that starts the second document
-		at := yamlpos.Pos{Line: sep.Line, Column: sep.Column}
-		return nil, &yamlpos.Error{File: file, Pos: at, Err: usererr.New("diagram_documents")}
-	}
-	if len(doc.Docs) == 0 || doc.Docs[0].Body == nil {
-		return nil, &yamlpos.Error{File: file, Pos: start, Err: usererr.New("diagram_empty")}
-	}
-	return FromNode(file, doc.Docs[0].Body)
+	return FromNode(file, body)
 }
 
 // FromNode reads a spec from a node of YAML already parsed, such as a diagram inside a data file,
 // so that its errors point at the lines and columns of that file.
 func FromNode(file string, n ast.Node) (*Spec, error) {
 	if a := yamlpos.FirstAnchor(n); a != nil {
-		return nil, &yamlpos.Error{File: file, Pos: yamlpos.Of(a), Err: usererr.New("diagram_no_anchors")}
+		return nil, yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
 	}
 	f, err := newFields(file, "diagram", yamlpos.Of(n), n)
 	if err != nil {
@@ -260,7 +247,7 @@ func FromNode(file string, n ast.Node) (*Spec, error) {
 func decodePart(file string, n ast.Node) (Part, error) {
 	m, ok := n.(*ast.MappingNode)
 	if !ok || len(m.Values) != 1 {
-		return nil, &yamlpos.Error{File: file, Pos: yamlpos.Of(n), Err: usererr.New("diagram_part_shape")}
+		return nil, yamlpos.New(file, yamlpos.Of(n), "diagram_part_shape")
 	}
 	kind := m.Values[0].Key.String()
 	i := slices.IndexFunc(decoders, func(d decoder) bool { return d.kind == kind })
@@ -269,10 +256,7 @@ func decodePart(file string, n ast.Node) (Part, error) {
 		for _, d := range decoders {
 			kinds = append(kinds, d.kind)
 		}
-		return nil, &yamlpos.Error{
-			File: file, Pos: yamlpos.Of(m.Values[0].Key),
-			Err: usererr.New("diagram_unknown_part", kind, strings.Join(kinds, ", ")),
-		}
+		return nil, yamlpos.New(file, yamlpos.Of(m.Values[0].Key), "diagram_unknown_part", kind, strings.Join(kinds, ", "))
 	}
 	f, err := newFields(file, kind, yamlpos.Of(m.Values[0].Key), m.Values[0].Value)
 	if err != nil {

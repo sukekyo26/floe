@@ -7,7 +7,6 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
-	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -36,7 +35,7 @@ func newFields(file, kind string, at yamlpos.Pos, n ast.Node) (*fields, error) {
 }
 
 func (f *fields) errAt(at yamlpos.Pos, key string, args ...any) *yamlpos.Error {
-	return &yamlpos.Error{File: f.file, Pos: at, Err: usererr.New(key, args...)}
+	return yamlpos.New(f.file, at, key, args...)
 }
 
 func (f *fields) fail(n ast.Node, key string, args ...any) {
