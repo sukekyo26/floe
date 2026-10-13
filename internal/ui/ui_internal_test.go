@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"io/fs"
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -14,7 +16,21 @@ import (
 func TestSourcesAreInEnglish(t *testing.T) {
 	t.Parallel()
 
-	for name, src := range map[string]string{"ui.html": pageSource} {
+	sources := map[string]string{"ui.html": pageSource}
+	// The built-in templates are the ones template authors start from.
+	builtin := os.DirFS("../tmpl/builtin")
+	err := fs.WalkDir(builtin, ".", func(name string, e fs.DirEntry, err error) error {
+		if err != nil || e.IsDir() {
+			return err
+		}
+		b, err := fs.ReadFile(builtin, name)
+		sources["tmpl/builtin/"+name] = string(b)
+		return err
+	})
+	if err != nil || len(sources) == 1 {
+		t.Fatalf("read the built-in templates: %v (%d files)", err, len(sources)-1)
+	}
+	for name, src := range sources {
 		if japaneseRe.MatchString(src) {
 			t.Errorf("%s has Japanese: %q", name, japaneseRe.FindAllString(src, 3))
 		}
