@@ -88,7 +88,7 @@ func newLayout(s *Spec, store *icons.Store) (*layout, error) {
 }
 
 func (l *layout) problem(at yamlpos.Pos, key string, args ...any) {
-	e := &yamlpos.Error{File: l.spec.File, Pos: at, Err: usererr.New(key, args...)}
+	e := yamlpos.New(l.spec.File, at, key, args...)
 	if key := e.Error(); !l.seen[key] {
 		l.seen[key] = true
 		l.problems = append(l.problems, e)

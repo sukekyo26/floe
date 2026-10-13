@@ -175,6 +175,7 @@ var messagesEN = map[string]string{
 	"diagram_yaml":             "this is not valid YAML: %s",
 	"diagram_documents":        "a spec holds one diagram; put each --- separated document in a file of its own",
 	"diagram_empty":            "the spec is empty; write a diagram with id, width, height, title and parts",
+	"yaml_syntax":              "this is not valid YAML: %s",
 	"yaml_no_anchors":          "anchors, aliases and tags are not supported; write the value out",
 	"diagram_not_mapping":      "%s: write a mapping of keys and values",
 	"diagram_unknown_key":      `%s: unknown key "%s"; use %s`,

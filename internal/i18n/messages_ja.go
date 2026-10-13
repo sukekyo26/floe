@@ -174,6 +174,7 @@ var messagesJA = map[string]string{
 	"diagram_yaml":             "YAML として読めません: %s",
 	"diagram_documents":        "spec には図を 1 つだけ書きます。--- で区切った文書は、それぞれ別のファイルにしてください",
 	"diagram_empty":            "spec が空です。id・width・height・title・parts を持つ図を書いてください",
+	"yaml_syntax":              "YAML として読めません: %s",
 	"yaml_no_anchors":          "アンカー・エイリアス・タグは使えません。値をそのまま書いてください",
 	"diagram_not_mapping":      "%s: キーと値のマッピングで書いてください",
 	"diagram_unknown_key":      "%s: 知らないキー「%s」です。使えるのは %s です",
