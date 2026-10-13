@@ -1,7 +1,7 @@
-  /* Diagrams take the colours of the template's CSS variables, so they follow dark mode. text-anchor is
+  /* Diagrams take the colours of the page's CSS variables, so they follow dark mode. text-anchor is
      set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
-  /* The template's colours and fonts, with its light ones for a page outside the template, which
-     does not define them (a whole HTML document) */
+  /* The colours and fonts the report theme defines, with its light ones for a page that does not
+     define them */
   .dg-wrap, .dg-tools {
     --dg-bg: var(--bg, #f3f5f4);
     --dg-surface: var(--surface, #fff);
