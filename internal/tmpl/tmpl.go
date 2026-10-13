@@ -4,7 +4,6 @@ package tmpl
 
 import (
 	"bytes"
-	"cmp"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -58,44 +57,46 @@ func Read(file string, src []byte) (*Data, error) {
 	if err != nil {
 		return nil, err
 	}
-	at := func(n ast.Node, key string, args ...any) error {
-		return yamlpos.New(file, yamlpos.Of(n), key, args...)
+	at := func(p yamlpos.Pos, key string, args ...any) error {
+		return yamlpos.New(file, p, key, args...)
 	}
 	var top map[string]any
 	if err = yaml.NodeToValue(root, &top); err != nil {
 		return nil, yamlpos.Syntax(file, err)
 	}
 	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top}
-	nodes := map[string]ast.Node{}
-	for i, to := range []*string{&d.Template, &d.Theme, &d.Title} {
-		key := shared[i]
+	// Where each shared key is written, or the top of the file for one left out.
+	where := map[string]yamlpos.Pos{}
+	to := map[string]*string{"template": &d.Template, "theme": &d.Theme, "title": &d.Title}
+	for _, key := range shared {
+		where[key] = yamlpos.Of(root)
 		v, ok := top[key]
 		if !ok {
 			continue
 		}
-		_, n, _ := yamlpos.Find(root, []string{key})
-		nodes[key] = n
+		k, n, _ := yamlpos.Find(root, []string{key})
+		where[key] = yamlpos.OfValue(k, n)
 		s, ok := v.(string)
 		if !ok {
-			return nil, at(n, "tmpl_not_text", key)
+			return nil, at(where[key], "tmpl_not_text", key)
 		}
-		*to = s
+		*to[key] = s
 		delete(top, key)
 	}
 	// A title of spaces names none, as an empty --title does.
 	d.Title = strings.TrimSpace(d.Title)
 	if d.Template == "" {
-		return nil, at(cmp.Or(nodes["template"], root), "tmpl_no_template", strings.Join(Names(), ", "))
+		return nil, at(where["template"], "tmpl_no_template", strings.Join(Names(), ", "))
 	}
 	if !slices.Contains(Names(), d.Template) {
-		return nil, at(nodes["template"], "tmpl_unknown", d.Template, strings.Join(Names(), ", "))
+		return nil, at(where["template"], "tmpl_unknown", d.Template, strings.Join(Names(), ", "))
 	}
 	themes, err := themesOf(d.Template)
 	if err != nil {
 		return nil, err
 	}
 	if !slices.Contains(themes, d.Theme) {
-		return nil, at(nodes["theme"], "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
+		return nil, at(where["theme"], "tmpl_unknown_theme", d.Theme, d.Template, strings.Join(themes, ", "))
 	}
 	if err := checkSchema(d, root); err != nil {
 		return nil, err

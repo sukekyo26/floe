@@ -47,7 +47,7 @@ func Find(root ast.Node, at []string) (key, value ast.Node, path string) {
 	for _, step := range at {
 		switch n := value.(type) {
 		case *ast.MappingNode:
-			i := slices.IndexFunc(n.Values, func(v *ast.MappingValueNode) bool { return v.Key.GetToken().Value == step })
+			i := slices.IndexFunc(n.Values, func(v *ast.MappingValueNode) bool { return keyOf(v).GetToken().Value == step })
 			if i < 0 {
 				return key, value, b.String()
 			}
@@ -55,7 +55,7 @@ func Find(root ast.Node, at []string) (key, value ast.Node, path string) {
 				b.WriteByte('.')
 			}
 			b.WriteString(step)
-			key, value = n.Values[i].Key, n.Values[i].Value
+			key, value = keyOf(n.Values[i]), n.Values[i].Value
 		case *ast.SequenceNode:
 			i, err := strconv.Atoi(step)
 			if err != nil || i < 0 || i >= len(n.Values) {
@@ -138,6 +138,23 @@ func dropped(src []byte, start *token.Position) (Pos, bool) {
 		return Pos{Line: n, Column: col + len(line) - len(text)}, true
 	}
 	return Pos{Line: 0, Column: 0}, false
+}
+
+// keyOf returns the key of v, the text after ? for an explicit key.
+func keyOf(v *ast.MappingValueNode) ast.Node {
+	if k, ok := v.Key.(*ast.MappingKeyNode); ok {
+		return k.Value
+	}
+	return v.Key
+}
+
+// OfValue returns where the value of key is written, or where key is when the value is left out:
+// an empty value has no text to point at.
+func OfValue(key, value ast.Node) Pos {
+	if _, null := value.(*ast.NullNode); null && key != nil {
+		return Of(key)
+	}
+	return Of(value)
 }
 
 // Error is a mistake in a YAML file, at a line and column of it.

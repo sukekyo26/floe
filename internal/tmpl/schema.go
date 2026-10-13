@@ -85,11 +85,12 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 		}
 		return
 	}
-	_, value, at := yamlpos.Find(s.root, e.InstanceLocation)
+	key, value, at := yamlpos.Find(s.root, e.InstanceLocation)
+	where := yamlpos.OfValue(key, value)
 	switch k := e.ErrorKind.(type) {
 	case *kind.Required:
 		for _, name := range k.Missing {
-			s.add(value, "tmpl_schema_required", join(at, name))
+			s.add(where, "tmpl_schema_required", join(at, name))
 		}
 	case *kind.AdditionalProperties:
 		names := s.properties(e.SchemaURL)
@@ -99,33 +100,37 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 		}
 		allowed := strings.Join(names, ", ")
 		for _, name := range k.Properties {
-			extra, _, where := yamlpos.Find(s.root, append(slices.Clone(e.InstanceLocation), name))
-			s.add(extra, "tmpl_schema_unknown", where, s.template, allowed)
+			extra, _, path := yamlpos.Find(s.root, append(slices.Clone(e.InstanceLocation), name))
+			s.add(yamlpos.Of(extra), "tmpl_schema_unknown", path, s.template, allowed)
 		}
 	case *kind.Type:
 		want := make(orList, len(k.Want))
 		for i, t := range k.Want {
 			want[i] = usererr.New("tmpl_type_" + t)
 		}
-		s.add(value, "tmpl_schema_type", label(at), usererr.New("tmpl_type_"+k.Got), want)
+		s.add(where, "tmpl_schema_type", label(at), usererr.New("tmpl_type_"+k.Got), want)
 	case *kind.Enum:
 		want := make([]string, len(k.Want))
 		for i, w := range k.Want {
 			want[i] = fmt.Sprint(w)
 		}
-		s.add(value, "tmpl_schema_enum", label(at), fmt.Sprint(k.Got), strings.Join(want, ", "))
+		s.add(where, "tmpl_schema_enum", label(at), fmt.Sprint(k.Got), strings.Join(want, ", "))
+	case *kind.InvalidJsonValue:
+		// .inf and .nan: YAML has them, JSON does not. The text as written, not Go's +Inf.
+		s.add(where, "tmpl_schema_not_finite", label(at), value.GetToken().Value)
 	default:
 		if key, args, ok := wording(e.ErrorKind); ok {
-			s.add(value, key, append([]any{label(at)}, args...)...)
+			s.add(where, key, append([]any{label(at)}, args...)...)
 			return
 		}
-		// The rest are rare in a template's schema; their wording stays the library's English.
-		s.add(value, "tmpl_schema_other", label(at), e.ErrorKind.LocalizedString(english))
+		// LIMIT: the rest (anyOf, oneOf, const, dependencies…) keep the library's English. Word one
+		// in the catalogs when a template's schema comes to use it.
+		s.add(where, "tmpl_schema_other", label(at), e.ErrorKind.LocalizedString(english))
 	}
 }
 
 // wording words a mistake the catalog has a message for, after the path: a bound (how many items or
-// keys, how long, how large), a pattern, a duplicate or a number JSON cannot hold.
+// keys, how long, how large), a pattern or a duplicate.
 func wording(k jsonschema.ErrorKind) (key string, args []any, ok bool) {
 	switch k := k.(type) {
 	case *kind.MinItems:
@@ -153,17 +158,14 @@ func wording(k jsonschema.ErrorKind) (key string, args []any, ok bool) {
 	case *kind.UniqueItems:
 		// The library counts from 0; people count items from 1.
 		return "tmpl_schema_unique", []any{k.Duplicates[0] + 1, k.Duplicates[1] + 1}, true
-	case *kind.InvalidJsonValue:
-		// .inf and .nan: YAML has them, JSON does not.
-		return "tmpl_schema_not_finite", []any{fmt.Sprint(k.Value)}, true
 	}
 	return "", nil, false
 }
 
 var english = message.NewPrinter(language.English)
 
-func (s *schemaCheck) add(n ast.Node, key string, args ...any) {
-	s.problems = append(s.problems, yamlpos.New(s.file, yamlpos.Of(n), key, args...))
+func (s *schemaCheck) add(at yamlpos.Pos, key string, args ...any) {
+	s.problems = append(s.problems, yamlpos.New(s.file, at, key, args...))
 }
 
 // properties lists the items the mapping at the schema location url declares, for a misspelt one.

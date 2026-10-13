@@ -88,7 +88,9 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\n...\nlead: x\n", "data.yaml:3:1: a data file holds one YAML document"},
 		{"template: report\ntemplate: report\n", `data.yaml:2:1: this is not valid YAML: mapping key "template" already defined`},
 		{"template: report\n---\ntitle: 'a\n", "data.yaml:3:8: this is not valid YAML: "},
-		{"template: report\nlead: &a x\n", "data.yaml:2:7: anchors, aliases and tags are not supported"},
+		{"template: report\nlead: &a x\n", "data.yaml:2:7: anchors, aliases, merge keys (<<) and tags are not supported"},
+		{"template: report\n<<: {lead: x}\n", "data.yaml:2:1: anchors, aliases, merge keys (<<) and tags are not supported"},
+		{"template:\n", "data.yaml:1:1: template must be text"},
 		{"template: deck\n", `data.yaml:1:11: unknown template "deck"; use report`},
 		{"template: report\ntheme: print\n", `data.yaml:2:8: template report has no theme "print"; use default`},
 		{"template: report\ntitle: [a]\n", "data.yaml:2:8: title must be text"},
@@ -99,6 +101,10 @@ func TestReadRefusals(t *testing.T) {
 		if !errors.As(err, &at) || !strings.HasPrefix(err.Error(), c.want) {
 			t.Errorf("Read %q = %v, want %s", c.src, err, c.want)
 		}
+	}
+	// An explicit key is found by its text after ?.
+	if _, err := tmpl.Read("data.yaml", []byte("template: report\n? lead\n: 3\n")); err == nil || err.Error() != "data.yaml:3:3: lead: write text, not a number" {
+		t.Errorf("Read of an explicit key = %v", err)
 	}
 	if _, err := tmpl.Read("data.yaml", []byte("%YAML 1.2\n---\ntemplate: report\n")); err != nil {
 		t.Errorf("Read of a document after a %%YAML directive = %v", err)

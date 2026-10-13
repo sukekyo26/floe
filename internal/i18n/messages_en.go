@@ -176,7 +176,6 @@ var messagesEN = map[string]string{
 	"yaml_no_anchors": "anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
 
 	// diagram: reading a diagram spec (kinds and keys such as box and rows are spec names, not words)
-	"diagram_yaml":             "this is not valid YAML: %s",
 	"diagram_documents":        "a spec holds one diagram; put each --- separated document in a file of its own",
 	"diagram_empty":            "the spec is empty; write a diagram with id, width, height, title and parts",
 	"diagram_not_mapping":      "%s: write a mapping of keys and values",
@@ -271,7 +270,7 @@ var messagesEN = map[string]string{
 	"tmpl_schema_below":      "%s: write less than %s",
 	"tmpl_schema_pattern":    `%s: "%s" does not match %s`,
 	"tmpl_schema_unique":     "%s: items %d and %d are the same; write each once",
-	"tmpl_schema_not_finite": "%s: write a number in digits, not %s",
+	"tmpl_schema_not_finite": "%s: %s is not a value a data file can hold; write a number in digits, or quote it as text",
 	"tmpl_schema_other":      "%s: %s",
 	"tmpl_top_level":         "the top level",
 	"tmpl_or":                " or ",

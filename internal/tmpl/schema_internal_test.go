@@ -28,7 +28,8 @@ func TestSchemaWording(t *testing.T) {
     "rate": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1.5 },
     "keys": { "type": "object", "maxProperties": 1 },
     "kind": { "const": "x" },
-    "huge": { "type": "number" }
+    "huge": { "type": "number" },
+    "note": { "type": "string" }
   }
 }`
 	src := `op: Scan
@@ -39,6 +40,7 @@ rate: 1.5
 keys: { a: 1, b: 2 }
 kind: y
 huge: .inf
+note:
 `
 	tests := []struct{ en, ja string }{
 		{`d.yaml:1:1: name is required but missing`, `d.yaml:1:1: name は必須の項目ですが、ありません`},
@@ -51,7 +53,8 @@ huge: .inf
 		{`d.yaml:5:7: rate: write less than 1.5`, `d.yaml:5:7: rate: 1.5 より小さくしてください`},
 		{`d.yaml:6:9: keys: the number of keys must be at most 1`, `d.yaml:6:9: keys: キーは 1 個までにしてください`},
 		{`d.yaml:7:7: kind: value must be 'x'`, `d.yaml:7:7: kind: value must be 'x'`},
-		{`d.yaml:8:7: huge: write a number in digits, not +Inf`, `d.yaml:8:7: huge: +Inf ではなく数字で書いてください`},
+		{`d.yaml:8:7: huge: .inf is not a value a data file can hold`, `d.yaml:8:7: huge: .inf は使えません。`},
+		{`d.yaml:9:1: note: write text, not nothing`, `d.yaml:9:1: note: 空ではなく文字列で書いてください`},
 	}
 	got := check(t, schema, src)
 	for _, tt := range tests {

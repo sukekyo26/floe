@@ -175,7 +175,6 @@ var messagesJA = map[string]string{
 	"yaml_no_anchors": "アンカー・エイリアス・マージキー（<<）・タグは使えません。値をそのまま書いてください",
 
 	// diagram
-	"diagram_yaml":             "YAML として読めません: %s",
 	"diagram_documents":        "spec には図を 1 つだけ書きます。--- で区切った文書は、それぞれ別のファイルにしてください",
 	"diagram_empty":            "spec が空です。id・width・height・title・parts を持つ図を書いてください",
 	"diagram_not_mapping":      "%s: キーと値のマッピングで書いてください",
@@ -270,7 +269,7 @@ var messagesJA = map[string]string{
 	"tmpl_schema_below":      "%s: %s より小さくしてください",
 	"tmpl_schema_pattern":    "%s: 「%s」は %s の形に合いません",
 	"tmpl_schema_unique":     "%s: %d 番目と %d 番目が同じです。1 つずつにしてください",
-	"tmpl_schema_not_finite": "%s: %s ではなく数字で書いてください",
+	"tmpl_schema_not_finite": "%s: %s は使えません。数は数字で書き、文字列なら引用符で囲んでください",
 	"tmpl_schema_other":      "%s: %s",
 	"tmpl_top_level":         "最上位",
 	"tmpl_or":                "か",
