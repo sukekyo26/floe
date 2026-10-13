@@ -152,7 +152,8 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	})
 	if err != nil {
 		// LIMIT: until the data is checked against the schema (phase 4b), data of the wrong shape
-		// fails here, worded as Go's template error, and a misspelt key is left out without a word.
+		// fails here, worded as Go's template error, and some data the schema refuses draws without a
+		// word (a misspelt key is left out; a part of two kinds draws both).
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	return b.Bytes(), nil
