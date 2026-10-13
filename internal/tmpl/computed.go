@@ -115,9 +115,9 @@ func readComputed(file string, src []byte, declared []string) (*computed, error)
 	for _, n := range names {
 		switch {
 		case !usable(n):
-			return nil, yamlpos.New(file, yamlpos.Of(where[n].Key), "tmpl_computed_name", n)
+			return nil, yamlpos.New(file, yamlpos.Of(keyOf(where[n])), "tmpl_computed_name", n)
 		case slices.Contains(declared, n):
-			return nil, yamlpos.New(file, yamlpos.Of(where[n].Key), "tmpl_computed_clash", n)
+			return nil, yamlpos.New(file, yamlpos.Of(keyOf(where[n])), "tmpl_computed_clash", n)
 		}
 	}
 	// LIMIT: an item whose name an expression cannot use (my-size, or a function of expr such as date)
@@ -139,7 +139,7 @@ func readComputed(file string, src []byte, declared []string) (*computed, error)
 	}
 	c.env = reflect.New(reflect.StructOf(fields)).Elem()
 	for _, n := range names {
-		at := yamlpos.OfValue(where[n].Key, where[n].Value)
+		at := yamlpos.OfValue(keyOf(where[n]), where[n].Value)
 		p, err := compile(exprs[n], c.env.Interface())
 		if err != nil {
 			return nil, yamlpos.New(file, at, "tmpl_expr", exprs[n], brief(err))
@@ -152,7 +152,7 @@ func readComputed(file string, src []byte, declared []string) (*computed, error)
 	}
 	order, cycle := topological(names, c.uses)
 	if cycle != nil {
-		return nil, yamlpos.New(file, yamlpos.Of(where[cycle[0]].Key), "tmpl_computed_cycle", strings.Join(cycle, " → "))
+		return nil, yamlpos.New(file, yamlpos.Of(keyOf(where[cycle[0]])), "tmpl_computed_cycle", strings.Join(cycle, " → "))
 	}
 	c.order = order
 	return c, nil
@@ -168,7 +168,7 @@ func readExprs(file string, src []byte) (map[string]string, map[string]*ast.Mapp
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // a mistake at its line and column
 	}
-	if err = noAnchors(file, body); err != nil {
+	if err = plain(file, body); err != nil {
 		return nil, nil, err
 	}
 	m, ok := body.(*ast.MappingNode)
@@ -176,10 +176,10 @@ func readExprs(file string, src []byte) (map[string]string, map[string]*ast.Mapp
 		return nil, nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_computed_yaml")
 	}
 	for _, kv := range m.Values {
-		n := kv.Key.GetToken().Value
+		n := keyOf(kv).GetToken().Value
 		s, ok := text(kv.Value)
 		if !ok || s == "" {
-			return nil, nil, yamlpos.New(file, yamlpos.OfValue(kv.Key, kv.Value), "tmpl_computed_yaml")
+			return nil, nil, yamlpos.New(file, yamlpos.OfValue(keyOf(kv), kv.Value), "tmpl_computed_yaml")
 		}
 		exprs[n], where[n] = s, kv
 	}

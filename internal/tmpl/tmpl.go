@@ -215,11 +215,8 @@ func parse(file string, src []byte) (ast.Node, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a mistake at its line and column, or ErrEmpty
 	}
-	if err = noAnchors(file, body); err != nil {
+	if err = plain(file, body); err != nil {
 		return nil, err
-	}
-	if k := first(body, nonTextKey); k != nil {
-		return nil, yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value)
 	}
 	if n := first(body, nonFinite); n != nil {
 		return nil, yamlpos.New(file, yamlpos.Of(n), "tmpl_not_finite", n.GetToken().Value)
@@ -443,14 +440,31 @@ func nonTextKey(n ast.Node) ast.Node {
 	if !ok {
 		return nil
 	}
-	key := ast.Node(v.Key)
-	if explicit, ok := key.(*ast.MappingKeyNode); ok {
-		key = explicit.Value
-	}
+	key := keyOf(v)
 	if _, text := key.(*ast.StringNode); text {
 		return nil
 	}
 	return key
+}
+
+// keyOf returns the key of kv, the text after ? for an explicit key.
+func keyOf(kv *ast.MappingValueNode) ast.Node {
+	if explicit, ok := kv.Key.(*ast.MappingKeyNode); ok {
+		return explicit.Value
+	}
+	return kv.Key
+}
+
+// plain refuses in body, the file's, what would hide where a value is written (an anchor, alias, merge
+// key or tag) or read a key as another name than the one written.
+func plain(file string, body ast.Node) error {
+	if a := yamlpos.FirstAnchor(body); a != nil {
+		return yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
+	}
+	if k := first(body, nonTextKey); k != nil {
+		return yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value)
+	}
+	return nil
 }
 
 // nonFinite picks .inf and .nan.

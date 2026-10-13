@@ -93,7 +93,9 @@ func TestComputeOfABrokenTemplate(t *testing.T) {
 		{"x: 1\nrecords: 1\n", "computed.yaml:2:1: records is an item of the data too"},
 		{"my-size: 1\n", "computed.yaml:1:1: my-size is not a name an expression or page.html can use"},
 		{"sum: 1\n", "computed.yaml:1:1: sum is not a name"},
-		{"true: 1\n", "computed.yaml:1:1: true is not a name"},
+		{"'true': 1\n", "computed.yaml:1:1: true is not a name"},
+		{"true: 1\n", "computed.yaml:1:1: a key is a name: write true as text, in quotes"},
+		{"a: &x 1\nb: *x\n", "computed.yaml:1:4: anchors, aliases, merge keys (<<) and tags are not supported"},
 		{"in: 1\n", "computed.yaml:1:1: in is not a name"},
 		{"_divide: 1\n", "computed.yaml:1:1: _divide is not a name"},
 		{"a: nope + 1\n", "computed.yaml:1:4: nope + 1 cannot be read as an expression: unknown name nope"},
@@ -110,5 +112,15 @@ func TestComputeOfABrokenTemplate(t *testing.T) {
 		if err == nil || errors.As(err, &p) || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("compute(%q) = %v, want %s", tt.src, err, tt.want)
 		}
+	}
+}
+
+// An explicit key (? name) names its value as a key written plainly does.
+func TestComputeExplicitKey(t *testing.T) {
+	t.Parallel()
+
+	d, root := data(t, "reads_per_sec: 1\n")
+	if err := compute("computed.yaml", []byte("? twice\n: reads_per_sec * 2\n"), d, declared, root); err != nil || d.Calc["twice"] != 2 {
+		t.Errorf("Calc = %v, %v; want twice 2", d.Calc, err)
 	}
 }

@@ -313,20 +313,24 @@ func needsFloe(file string, src []byte) (semver, error) {
 	if err != nil {
 		return semver{}, err //nolint:wrapcheck // a mistake at its line and column
 	}
+	if err = plain(file, body); err != nil {
+		return semver{}, err
+	}
 	m, ok := body.(*ast.MappingNode)
 	if !ok {
 		return semver{}, yamlpos.New(file, yamlpos.Of(body), "tmpl_template_yaml")
 	}
 	var needs *semver
 	for _, kv := range m.Values {
-		key := kv.Key.GetToken().Value
+		k := keyOf(kv)
+		key := k.GetToken().Value
 		if key != "floe" {
-			return semver{}, yamlpos.New(file, yamlpos.Of(kv.Key), "tmpl_template_yaml_key", key)
+			return semver{}, yamlpos.New(file, yamlpos.Of(k), "tmpl_template_yaml_key", key)
 		}
 		_, scalar := kv.Value.(ast.ScalarNode)
 		v, ok := versionOf(kv.Value.GetToken().Value)
 		if !scalar || !ok {
-			return semver{}, yamlpos.New(file, yamlpos.OfValue(kv.Key, kv.Value), "tmpl_template_yaml")
+			return semver{}, yamlpos.New(file, yamlpos.OfValue(k, kv.Value), "tmpl_template_yaml")
 		}
 		needs = &v
 	}

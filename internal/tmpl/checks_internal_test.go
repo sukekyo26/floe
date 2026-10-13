@@ -107,6 +107,7 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 		{"- for: a\n  expr: 'true'\n  message: m\n  feild: x\n", "checks.yaml:4:3: feild is not a key of a check"},
 		{"- for: a\n  expr: [x]\n  message: m\n", "checks.yaml:2:9: expr must be text"},
 		{"for: a\n", "checks.yaml:1:1: write checks.yaml as a list of checks"},
+		{"- for: a\n  expr: 'true'\n  1: m\n", "checks.yaml:3:3: a key is a name: write 1 as text, in quotes"},
 		{"- a\n", "checks.yaml:1:3: write checks.yaml as a list of checks"},
 		{"- for: a\n  expr: 'itme.x'\n  message: m\n", "checks.yaml:2:9: itme.x cannot be read as an expression: unknown name itme"},
 		{"- for: a\n  expr: 'item.x +'\n  message: m\n", "checks.yaml:2:9: item.x + cannot be read as an expression: unexpected token EOF"},
