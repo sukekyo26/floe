@@ -79,7 +79,37 @@ type env struct {
 	vars map[string]string
 }
 
+// handedOut are the ports freePort gave, so that two tests never share one: a port closed for a
+// server to take is free again, and the system may hand it out once more.
+var handedOut sync.Map
+
+// freePort returns a port free now, for a server a test starts on it.
 func freePort(t *testing.T) int {
+	t.Helper()
+
+	for {
+		ln := listen(t)
+		port := portOf(t, ln)
+		if ln.Close() != nil {
+			t.Fatal("no free port")
+		}
+		if _, taken := handedOut.LoadOrStore(port, true); !taken {
+			return port
+		}
+	}
+}
+
+func portOf(t *testing.T, ln net.Listener) int {
+	t.Helper()
+
+	addr, ok := ln.Addr().(*net.TCPAddr)
+	if !ok {
+		t.Fatal("not a TCP listener")
+	}
+	return addr.Port
+}
+
+func listen(t *testing.T) net.Listener {
 	t.Helper()
 
 	var lc net.ListenConfig
@@ -87,11 +117,18 @@ func freePort(t *testing.T) int {
 	if err != nil {
 		t.Fatal(err)
 	}
-	addr, ok := ln.Addr().(*net.TCPAddr)
-	if !ok || ln.Close() != nil {
-		t.Fatal("no free port")
-	}
-	return addr.Port
+	return ln
+}
+
+// hold listens on a port of its own for e and keeps it, so that nothing takes it between choosing it
+// and listening on it.
+func (e *env) hold(t *testing.T) net.Listener {
+	t.Helper()
+
+	ln := listen(t)
+	e.vars["FLOE_PORT"] = strconv.Itoa(portOf(t, ln))
+	t.Cleanup(func() { _ = ln.Close() })
+	return ln
 }
 
 func newEnv(t *testing.T) *env {
@@ -114,7 +151,7 @@ func newEnv(t *testing.T) *env {
 	if err := os.MkdirAll(e.vars["HOME"], 0o700); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { e.run(t, "", "stop") })
+	t.Cleanup(func() { e.stop(t) })
 	return e
 }
 
@@ -154,13 +191,34 @@ type result struct {
 // run runs floe in process from dir (a directory under tmp, "" for tmp itself).
 func (e *env) run(t *testing.T, dir string, args ...string) result {
 	t.Helper()
+	return e.runIn(t.Context(), t, dir, args...)
+}
+
+// stop stops the server a test left on its port, and fails the test when the server outlives it. It
+// runs as a cleanup, after t.Context() is canceled, so it takes a context that is not.
+func (e *env) stop(t *testing.T) {
+	t.Helper()
+
+	ctx := context.WithoutCancel(t.Context())
+	e.runIn(ctx, t, "", "stop")
+	for range 150 {
+		if _, up := e.healthIn(ctx, t); !up {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Error("the server outlived the test")
+}
+
+func (e *env) runIn(ctx context.Context, t *testing.T, dir string, args ...string) result {
+	t.Helper()
 
 	cwd := filepath.Join(e.tmp, dir)
 	if err := os.MkdirAll(cwd, 0o750); err != nil {
 		t.Fatal(err)
 	}
 	var stdout, stderr bytes.Buffer
-	code := cli.Run(t.Context(), args, cli.Env{
+	code := cli.Run(ctx, args, cli.Env{
 		Getenv: func(k string) string { return e.vars[k] }, Dir: cwd, Stdout: &stdout, Stderr: &stderr,
 		Environ: os.Environ(),
 	})
@@ -205,12 +263,18 @@ func (e *env) opened(t *testing.T) string {
 
 func (e *env) health(t *testing.T) (server.Health, bool) {
 	t.Helper()
+	return e.healthIn(t.Context(), t)
+}
 
-	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+func (e *env) healthIn(ctx context.Context, t *testing.T) (server.Health, bool) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
+	// A port that is not one (a test of FLOE_PORT) has nothing up on it.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, e.base()+"/api/health", http.NoBody)
 	if err != nil {
-		t.Fatal(err)
+		return server.Health{}, false
 	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -369,12 +433,7 @@ func TestPublishToASilentPort(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	var lc net.ListenConfig
-	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:"+e.vars["FLOE_PORT"])
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = ln.Close() })
+	ln := e.hold(t)
 	go func() {
 		var held []net.Conn
 		for {
@@ -410,11 +469,7 @@ func TestPublishToAnotherServer(t *testing.T) {
 	}
 
 	o := newEnv(t)
-	var lc net.ListenConfig
-	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:"+o.vars["FLOE_PORT"])
-	if err != nil {
-		t.Fatal(err)
-	}
+	ln := o.hold(t)
 	srv := &http.Server{Handler: http.NotFoundHandler(), ReadHeaderTimeout: time.Second}
 	go func() { _ = srv.Serve(ln) }() //nolint:errcheck // closed by the cleanup
 	t.Cleanup(func() { _ = srv.Close() })
@@ -437,12 +492,12 @@ func TestServeInProcess(t *testing.T) {
 			Environ: nil,
 		})
 	}()
+	// Up in well under a second, but a loaded machine (the whole suite under -race) may take longer.
 	up := false
-	for range 100 {
-		if _, up = e.health(t); up {
-			break
+	for deadline := time.Now().Add(10 * time.Second); !up && time.Now().Before(deadline); {
+		if _, up = e.health(t); !up {
+			time.Sleep(20 * time.Millisecond)
 		}
-		time.Sleep(20 * time.Millisecond)
 	}
 	if !up {
 		t.Fatal("serve did not come up")
