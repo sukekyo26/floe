@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -27,6 +28,16 @@ func TestFits(t *testing.T) {
 		if tt.want == "" && err != nil || tt.want != "" && (err == nil || !strings.HasPrefix(err.Error(), tt.want)) {
 			t.Errorf("fits(%v, %v) = %v, want %q", tt.needs, tt.have, err, tt.want)
 		}
+	}
+}
+
+// A template gone after it was found is an error, not a template without its optional files.
+func TestReadOptionalOfATemplateGone(t *testing.T) {
+	t.Parallel()
+
+	gone := &Template{Name: "gone", Dir: filepath.Join(t.TempDir(), "gone"), Path: ""}
+	if _, found, err := gone.readOptional("checks.yaml"); err == nil || found {
+		t.Errorf("readOptional of a template gone = %v, %v", found, err)
 	}
 }
 

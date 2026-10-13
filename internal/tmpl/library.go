@@ -41,43 +41,53 @@ type Template struct {
 	Path string
 }
 
-// Names are the templates there are, by name.
-func (l *Library) Names() []string {
+// Names are the templates there are, by name. It fails when the directory of templates of one's own
+// cannot be read, rather than leave them out.
+func (l *Library) Names() ([]string, error) {
 	var names []string
 	if entries, err := fs.ReadDir(builtin, "builtin"); err == nil {
 		for _, e := range entries {
 			names = append(names, e.Name())
 		}
 	}
-	for _, name := range l.ownNames() {
+	own, err := l.ownNames()
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range own {
 		if !slices.Contains(names, name) {
 			names = append(names, name)
 		}
 	}
 	slices.Sort(names)
-	return names
+	return names, nil
 }
 
-// ownNames are the templates of one's own, by name: none without a directory of them.
-func (l *Library) ownNames() []string {
+// ownNames are the templates of one's own, by name: none without a directory of them. One that is
+// broken is left out here, and reported when used.
+func (l *Library) ownNames() ([]string, error) {
 	if l.dir == "" {
-		return nil
+		return nil, nil
 	}
 	entries, err := l.entries()
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	var names []string
 	for _, e := range entries {
-		if t, err := l.resolve(e.Name()); validName(e.Name()) && err == nil && t != nil {
+		if !validName(e.Name()) {
+			continue
+		}
+		if t, err := l.resolve(e.Name()); err == nil && t != nil {
 			names = append(names, e.Name())
 		}
 	}
-	return names
+	return names, nil
 }
 
 // entries are what the directory of templates of one's own holds: none without one, or with a file in
 // its way.
+// LIMIT: read on every lookup. Keep the entries if a directory comes to hold thousands of them.
 func (l *Library) entries() ([]fs.DirEntry, error) {
 	entries, err := os.ReadDir(l.dir)
 	switch {
@@ -118,11 +128,16 @@ func (l *Library) own(name string) (*Template, error) {
 		return nil, err
 	}
 	// The entry of the name as written: a file system that ignores case (macOS) would take Report for
-	// report.
-	if !slices.ContainsFunc(entries, func(e fs.DirEntry) bool { return e.Name() == name }) {
-		return nil, nil //nolint:nilnil // none
+	// report. One of another case is refused rather than passed over for a built-in template.
+	if slices.ContainsFunc(entries, func(e fs.DirEntry) bool { return e.Name() == name }) {
+		return l.resolve(name)
 	}
-	return l.resolve(name)
+	for _, e := range entries {
+		if strings.EqualFold(e.Name(), name) {
+			return nil, usererr.New("tmpl_own_case", filepath.Join(l.dir, e.Name()), name)
+		}
+	}
+	return nil, nil //nolint:nilnil // none
 }
 
 // resolve returns the template of one's own at the entry name, or nil when it is a file.
@@ -166,24 +181,22 @@ func (t *Template) readFile(name string) ([]byte, error) {
 	return b, nil
 }
 
-// readOptional reads the file name like readFile, or returns nil when t has none. A symlink that leads
-// nowhere is a broken file, not a missing one.
-func (t *Template) readOptional(name string) ([]byte, error) {
-	b, err := t.readFile(name)
-	if errors.Is(err, fs.ErrNotExist) && !t.has(name) {
-		return nil, nil
+// readOptional reads the file name like readFile, and found is false when t has none. A symlink that
+// leads nowhere is a broken file, not a missing one, and a template gone is an error.
+func (t *Template) readOptional(name string) (b []byte, found bool, err error) {
+	err = t.files(func(files fs.FS) error {
+		if _, statErr := fs.Lstat(files, name); errors.Is(statErr, fs.ErrNotExist) {
+			return nil
+		}
+		found = true
+		var readErr error
+		b, readErr = fs.ReadFile(files, name)
+		return readErr //nolint:wrapcheck // wrapped below
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("read %s of the template %s: %w", name, t.Name, err)
 	}
-	return b, err
-}
-
-// has reports whether t has the file name, a symlink of it counted whatever it leads to.
-func (t *Template) has(name string) bool {
-	if t.Dir == "" {
-		_, err := fs.Stat(builtin, path.Join("builtin", t.Name, name))
-		return err == nil
-	}
-	_, err := os.Lstat(filepath.Join(t.Dir, filepath.FromSlash(name)))
-	return !errors.Is(err, fs.ErrNotExist)
+	return b, found, nil
 }
 
 // themes are the themes of t, by name.
@@ -229,8 +242,8 @@ func (t *Template) checkVersion() error {
 	if t.Dir == "" {
 		return nil
 	}
-	src, err := t.readOptional("template.yaml")
-	if src == nil || err != nil {
+	src, found, err := t.readOptional("template.yaml")
+	if !found || err != nil {
 		return err
 	}
 	needs, err := needsFloe(filepath.Join(t.Path, "template.yaml"), src)

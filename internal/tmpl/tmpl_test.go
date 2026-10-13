@@ -173,7 +173,11 @@ sections:
 func TestBuiltins(t *testing.T) {
 	t.Parallel()
 
-	for _, name := range builtins.Names() {
+	names, err := builtins.Names()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range names {
 		for _, f := range []string{"page.html", "schema.json", "example.yaml", "themes/default.css"} {
 			if _, err := fs.Stat(os.DirFS("builtin/"+name), f); err != nil {
 				t.Errorf("template %s: %v", name, err)

@@ -64,7 +64,11 @@ var shared = []string{"template", "theme", "title"}
 func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	root, err := parse(file, src)
 	if errors.Is(err, yamlpos.ErrEmpty) {
-		return nil, yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", strings.Join(l.Names(), ", "))
+		var names []string
+		if names, err = l.Names(); err != nil {
+			return nil, err
+		}
+		return nil, yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", strings.Join(names, ", "))
 	}
 	if err != nil {
 		return nil, err
@@ -85,14 +89,17 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 			return nil, err
 		}
 	}
-	switch {
-	case d.Template == "" && problems == nil:
-		fail(where["template"], "tmpl_no_template", strings.Join(l.Names(), ", "))
-		return nil, problems.Sorted()
-	case d.Template == "":
-		return nil, problems.Sorted()
-	case t == nil:
-		fail(where["template"], "tmpl_unknown", d.Template, strings.Join(l.Names(), ", "))
+	if t == nil {
+		var names []string
+		if names, err = l.Names(); err != nil {
+			return nil, err
+		}
+		switch {
+		case d.Template == "" && problems == nil:
+			fail(where["template"], "tmpl_no_template", strings.Join(names, ", "))
+		case d.Template != "":
+			fail(where["template"], "tmpl_unknown", d.Template, strings.Join(names, ", "))
+		}
 		return nil, problems.Sorted()
 	}
 	// The floe a template needs comes before its mistakes, which another floe may not make.

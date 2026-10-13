@@ -292,6 +292,7 @@ var messagesJA = map[string]string{
 	"tmpl_computed_error":      "%s = %s をこのファイルから計算できません: %s",
 	"tmpl_floe_major":          "テンプレート %s は floe %s 向けで、この floe %s では使えません。この floe 向けの版を入れてください",
 	"tmpl_dir_unreadable":      "自分のテンプレートのディレクトリ %s を読めません: %s。直すか、FLOE_TEMPLATES_DIR を設定してください",
+	"tmpl_own_case":            "%s はテンプレート %s ではありません。テンプレートの名前は小文字です。改名してください",
 	"tmpl_own_broken":          "自分のテンプレート %s（%s）を読めません: %s。直すか、消してください",
 	"tmpl_floe_older":          "テンプレート %s には floe %s 以降が要ります（この floe は %s）。floe を更新してください",
 	"tmpl_template_yaml":       "template.yaml には、キー floe: を 1 つだけ書き、テンプレートが要る floe の版を floe: 1.2 のように書いてください",

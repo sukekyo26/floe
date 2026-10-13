@@ -57,8 +57,8 @@ func TestOwnTemplates(t *testing.T) {
 		t.Fatal(err)
 	}
 	l := tmpl.NewLibrary(dir)
-	if got := l.Names(); !slices.Equal(got, []string{"memo", "report"}) {
-		t.Errorf("Names = %v", got)
+	if got, err := l.Names(); err != nil || !slices.Equal(got, []string{"memo", "report"}) {
+		t.Errorf("Names = %v, %v", got, err)
 	}
 	for _, name := range []string{"report", "memo"} {
 		if page, err := draw(l, "template: "+name+"\n"); err != nil || !strings.Contains(page, "<i>own</i>") {
@@ -116,6 +116,13 @@ func TestBrokenOwnTemplates(t *testing.T) {
 		t.Errorf("a theme that leads out of the template = %v", err)
 	}
 
+	// A template of one's own named in another case is refused, not passed over for the built-in one.
+	cased := t.TempDir()
+	own(t, cased, "Report")
+	if _, err := draw(tmpl.NewLibrary(cased), "template: report\n"); err == nil || !strings.Contains(err.Error(), "is not template report: template names are lower case") {
+		t.Errorf("a template of one's own named Report = %v", err)
+	}
+
 	// A file a template may leave out is broken, not missing, when it is a symlink that leads nowhere.
 	for _, file := range []string{"template.yaml", "checks.yaml", "computed.yaml"} {
 		dir := t.TempDir()
@@ -138,8 +145,10 @@ func TestBrokenOwnTemplates(t *testing.T) {
 				t.Error(err)
 			}
 		})
-		if _, err := draw(tmpl.NewLibrary(locked), "template: report\n"); err == nil || !strings.Contains(err.Error(), "the directory of your own templates") {
-			t.Errorf("a directory of templates that cannot be read = %v", err)
+		for _, src := range []string{"template: report\n", "title: no template\n"} {
+			if _, err := draw(tmpl.NewLibrary(locked), src); err == nil || !strings.Contains(err.Error(), "the directory of your own templates") {
+				t.Errorf("%q under a directory of templates that cannot be read = %v", src, err)
+			}
 		}
 	}
 }
