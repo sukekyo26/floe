@@ -31,6 +31,27 @@ func TestTemplateCommands(t *testing.T) {
 	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.Contains(r.stdout, "\nspec\t"+spec+"\tdefault\t0.0.0\tA page of sections") {
 		t.Errorf("template list with a copy = %+v", r)
 	}
+	if fi, serr := os.Stat(spec); serr != nil || fi.Mode().Perm() != 0o755 {
+		t.Errorf("the copy's mode = %v, %v", fi, serr)
+	}
+
+	// A broken template is reported after the others, which it does not hide, and a description keeps
+	// to its column.
+	e.write(t, "templates/drafts/page.html", "")
+	schema := filepath.Join(spec, "schema.json")
+	src, err := os.ReadFile(schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	//nolint:gosec // G703: the test's own directory
+	if err := os.WriteFile(schema, []byte(strings.Replace(string(src), `"description": "A page`, `"description": "Two\nlines.\tA page`, 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	r := e.run(t, "", "template", "list")
+	if r.code != 1 || !strings.Contains(r.stdout, "report\t") || !strings.Contains(r.stdout, "\tTwo lines. A page of sections") ||
+		!strings.Contains(r.stderr, "schema.json of the template drafts") || strings.Count(r.stdout, "\n") != 2 {
+		t.Errorf("template list with a broken template = %+v", r)
+	}
 
 	for _, tt := range []struct {
 		args []string
@@ -39,13 +60,26 @@ func TestTemplateCommands(t *testing.T) {
 	}{
 		{[]string{"new", "spec", "--from", "report"}, 1, "floe: spec is there already (" + spec + "); pick another name, or remove it\n"},
 		{[]string{"new", "Spec", "--from", "report"}, 1, "floe: Spec cannot name a template"},
-		{[]string{"new", "memo", "--from", "nope"}, 1, `floe: unknown template "nope"; use report, spec`},
+		{[]string{"new", "memo", "--from", "nope"}, 1, `floe: unknown template "nope"; use drafts, report, spec`},
 		{[]string{"new", "memo"}, 2, "floe: name the template to copy with --from, like --from report"},
 		{[]string{"show", "nope"}, 1, `floe: unknown template "nope"`},
 	} {
 		if r := e.run(t, "", append([]string{"template"}, tt.args...)...); r.code != tt.code || !strings.Contains(r.stderr, tt.want) {
 			t.Errorf("template %v = %+v, want %d and %s", tt.args, r, tt.code, tt.want)
 		}
+	}
+}
+
+// floe template new under a file where the directory of templates would be says what failed, not that
+// the template is there.
+func TestTemplateNewUnderAFile(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = e.write(t, "templates", "")
+	if r := e.run(t, "", "template", "new", "spec", "--from", "report"); r.code != 1 || strings.Contains(r.stderr, "is there already") ||
+		!strings.Contains(r.stderr, "make the template spec") {
+		t.Errorf("template new under a file = %+v", r)
 	}
 }
 

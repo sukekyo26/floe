@@ -105,11 +105,7 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 	case *kind.AdditionalProperties:
 		s.unknown(e, k.Properties, where)
 	case *kind.Type:
-		want := make(orList, len(k.Want))
-		for i, t := range k.Want {
-			want[i] = usererr.New("tmpl_type_" + t)
-		}
-		s.add(where, "tmpl_schema_type", label(at), usererr.New("tmpl_type_"+k.Got), want)
+		s.add(where, "tmpl_schema_type", label(at), usererr.New("tmpl_type_"+k.Got), Types(k.Want))
 	case *kind.Enum:
 		want := make([]string, len(k.Want))
 		for i, w := range k.Want {
@@ -247,6 +243,15 @@ func number(r *big.Rat) string {
 	}
 	f, _ := r.Float64()
 	return strconv.FormatFloat(f, 'g', -1, 64)
+}
+
+// Types words JSON types (string, array…) as alternatives in a message: text or a number.
+func Types(types []string) i18n.Localizer {
+	words := make(orList, len(types))
+	for i, t := range types {
+		words[i] = usererr.New("tmpl_type_" + t)
+	}
+	return words
 }
 
 // orList words its items as alternatives: text or a number.

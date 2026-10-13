@@ -11,8 +11,7 @@ import (
 type Description struct {
 	Name  string
 	Path  string // where a template of one's own is; "" for a built-in one
-	Title string // schema.json's title and description
-	About string
+	About string // schema.json's description
 	// Floe is the floe template.yaml needs, major.minor.patch, and Series the versions that take what
 	// it takes (its major, or its minor under major 0); "" without template.yaml.
 	Floe    string
@@ -52,7 +51,7 @@ func (l *Library) Describe(name string) (*Description, error) {
 		return nil, err
 	}
 	d := &Description{
-		Name: name, Path: t.Path, Title: s.Title, About: s.Description, Floe: "", Series: "", Themes: themes,
+		Name: name, Path: t.Path, About: s.Description, Floe: "", Series: "", Themes: themes,
 		Items: s.items(), Example: nil,
 	}
 	needs, err := t.needs()
@@ -71,22 +70,33 @@ func (l *Library) Describe(name string) (*Description, error) {
 // items are the items s declares, by name.
 func (s *schema) items() []Item {
 	names := slices.Sorted(maps.Keys(s.Properties))
+	if len(names) == 0 {
+		return nil
+	}
 	items := make([]Item, 0, len(names))
 	for _, n := range names {
 		p := s.Properties[n]
+		if p == nil {
+			p = new(schema) // null in schema.json: nothing to tell of it
+		}
 		it := Item{
 			Name: n, Types: p.types(), Of: nil, Format: p.Format, Enum: nil, Required: slices.Contains(s.Required, n),
 			Description: p.Description, Items: nil,
 		}
-		for _, e := range p.Enum {
-			it.Enum = append(it.Enum, fmt.Sprint(e))
-		}
+		enum := p.Enum
 		if p.Items != nil {
 			// A list described by its items: "a list of …", each one what it holds.
 			it.Of, it.Items = p.Items.types(), p.Items.items()
+			it.Format = cmp.Or(it.Format, p.Items.Format)
 			it.Description = cmp.Or(it.Description, p.Items.Description)
+			if len(enum) == 0 {
+				enum = p.Items.Enum
+			}
 		} else {
 			it.Items = p.items()
+		}
+		for _, e := range enum {
+			it.Enum = append(it.Enum, fmt.Sprint(e))
 		}
 		items = append(items, it)
 	}

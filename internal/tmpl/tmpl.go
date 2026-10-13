@@ -275,7 +275,10 @@ func schemaOf(t *Template) (*schema, error) {
 		return nil, err
 	}
 	var s schema
-	if err = json.Unmarshal(b, &s); err != nil {
+	// Numbers as written, so that an enum of 1000000 is not shown as 1e+06.
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+	if err = dec.Decode(&s); err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
 	}
 	return &s, nil
@@ -289,7 +292,6 @@ type schema struct {
 	Items      *schema            `json:"items"`
 
 	// What floe template show tells of an item.
-	Title       string   `json:"title"`
 	Description string   `json:"description"`
 	Type        any      `json:"type"` // a JSON type, or a list of them
 	Enum        []any    `json:"enum"`

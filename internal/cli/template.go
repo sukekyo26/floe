@@ -36,16 +36,27 @@ your own takes the place of the built-in one of its name.`,
 			if err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}
+			// A broken template does not hide the others: it is reported after them (exit code 1).
+			var broken mistakes
 			for _, name := range names {
 				d, err := l.Describe(name)
 				if err != nil {
-					return err //nolint:wrapcheck // already says what failed
+					broken = append(broken, err)
+					continue
 				}
-				a.out("%s\t%s\t%s\t%s\t%s", d.Name, a.where(d), strings.Join(d.Themes, ","), d.Floe, d.About)
+				a.out("%s\t%s\t%s\t%s\t%s", d.Name, oneLine(a.where(d)), strings.Join(d.Themes, ","), d.Floe, oneLine(d.About))
+			}
+			if broken != nil {
+				return broken
 			}
 			return nil
 		},
 	}
+}
+
+// oneLine keeps a column of a line to itself: tabs and line ends in it become spaces.
+func oneLine(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }
 
 func (a *app) where(d *tmpl.Description) string {
@@ -98,9 +109,9 @@ func (a *app) showTemplate(d *tmpl.Description) {
 // under it indented.
 func (a *app) showItems(items []tmpl.Item, indent string) {
 	for _, it := range items {
-		what := a.types(it.Types)
+		what := tmpl.Types(it.Types).Localize(a.cat)
 		if len(it.Of) > 0 {
-			what = a.cat.Msg("cli_template_list_of", a.types(it.Of))
+			what = a.cat.Msg("cli_template_list_of", tmpl.Types(it.Of).Localize(a.cat))
 		}
 		parts := []string{}
 		if what != "" {
@@ -122,15 +133,6 @@ func (a *app) showItems(items []tmpl.Item, indent string) {
 		a.out("%s", line)
 		a.showItems(it.Items, indent+"  ")
 	}
-}
-
-// types words JSON types as alternatives: text or a number.
-func (a *app) types(types []string) string {
-	words := make([]string, len(types))
-	for i, t := range types {
-		words[i] = a.cat.Msg("tmpl_type_" + t)
-	}
-	return strings.Join(words, a.cat.Msg("tmpl_or"))
 }
 
 func (a *app) templateNewCmd() *cobra.Command {
