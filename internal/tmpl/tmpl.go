@@ -152,21 +152,24 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	})
 	if err != nil {
 		// LIMIT: until the data is checked against the schema (phase 4b), data of the wrong shape
-		// fails here, worded as Go's template error.
+		// fails here, worded as Go's template error, and a misspelt key is left out without a word.
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	return b.Bytes(), nil
 }
 
 var funcs = template.FuncMap{
-	// markdown writes Markdown text as HTML. Raw HTML in it is left out: a data item takes HTML only
-	// when its schema says format: html.
+	// markdown writes Markdown text as HTML, a table wrapped in <div class="table-wrap"> for a theme to
+	// scroll. Raw HTML in it is left out: a data item takes HTML only when its schema says format: html.
 	"markdown": func(text string) (template.HTML, error) {
 		var b bytes.Buffer
 		if err := markdown.Convert([]byte(text), &b); err != nil {
 			return "", fmt.Errorf("markdown: %w", err)
 		}
-		return template.HTML(b.String()), nil //nolint:gosec // G203: goldmark leaves raw HTML out
+		// With raw HTML left out, every <table> in the output is one goldmark drew.
+		html := strings.ReplaceAll(b.String(), "<table>", `<div class="table-wrap"><table>`)
+		html = strings.ReplaceAll(html, "</table>", "</table></div>")
+		return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 	},
 }
 
