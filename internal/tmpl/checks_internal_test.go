@@ -97,27 +97,31 @@ notes:
 	}
 }
 
-// A checks.yaml that is not right is the template's mistake, not one of the data.
+// A checks.yaml that is not right is the template's mistake, not one of the data, reported at its line
+// and column in checks.yaml.
 func TestRelationsOfABrokenTemplate(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ checks, want string }{
-		{"- for: a\n  expr: 'true'\n", "check 1: write for, expr and message"},
-		{"- for: a\n  expr: 'true'\n  message: m\n  feild: x\n", `unknown field "feild"`},
-		{"- for: a\n  expr: 'itme.x'\n  message: m\n", "check 1: itme.x: unknown name itme"},
-		{"- for: a\n  expr: 'item.x +'\n  message: m\n", "check 1: item.x +: unexpected token EOF"},
-		{"- for: a.b\n  expr: 'true'\n  message: m\n", "check 1: for a.b does not lead to a list"},
-		{"- for: b\n  expr: 'true'\n  message: m\n", "check 1: for b does not lead to a list"},
+		{"- for: a\n  expr: 'true'\n", "checks.yaml:1:3: write checks.yaml as a list of checks"},
+		{"- for: a\n  expr: 'true'\n  message: m\n  feild: x\n", "checks.yaml:4:3: feild is not a key of a check"},
+		{"- for: a\n  expr: [x]\n  message: m\n", "checks.yaml:2:9: expr must be text"},
+		{"for: a\n", "checks.yaml:1:1: write checks.yaml as a list of checks"},
+		{"- a\n", "checks.yaml:1:3: write checks.yaml as a list of checks"},
+		{"- for: a\n  expr: 'itme.x'\n  message: m\n", "checks.yaml:2:9: itme.x cannot be read as an expression: unknown name itme"},
+		{"- for: a\n  expr: 'item.x +'\n  message: m\n", "checks.yaml:2:9: item.x + cannot be read as an expression: unexpected token EOF"},
+		{"- for: a.b\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: a.b does not lead to a list in d.yaml"},
+		{"- for: b\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b does not lead to a list in d.yaml"},
 	} {
 		d, root := data(t, "a: [1]\nb: x\n")
-		err := relate([]byte(tt.checks), d, root)
+		err := relate("checks.yaml", []byte(tt.checks), d, root)
 		var p yamlpos.Problems
-		if err == nil || errors.As(err, &p) || !strings.Contains(err.Error(), tt.want) {
+		if err == nil || errors.As(err, &p) || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("relate(%q) = %v, want %s", tt.checks, err, tt.want)
 		}
 	}
 	d, root := data(t, "a: [1]\n")
-	if err := relate([]byte("- for: a\n  expr: item == 1 && -item / 2 == -0.5\n  message: m\n"), d, root); err != nil {
+	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 && -item / 2 == -0.5\n  message: m\n"), d, root); err != nil {
 		t.Errorf("relate of data that holds = %v", err)
 	}
 }
@@ -127,7 +131,7 @@ func failures(t *testing.T, checks, src string) yamlpos.Problems {
 
 	d, root := data(t, src)
 	var p yamlpos.Problems
-	if err := relate([]byte(checks), d, root); !errors.As(err, &p) {
+	if err := relate("checks.yaml", []byte(checks), d, root); !errors.As(err, &p) {
 		t.Fatalf("relate = %v, want problems", err)
 	}
 	return p

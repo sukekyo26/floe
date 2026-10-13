@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -175,6 +176,12 @@ func validName(name string) bool {
 
 var templateName = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
+// file names the file name of t in its mistakes: under where t was found, or under its name for a
+// built-in one.
+func (t *Template) file(name string) string {
+	return filepath.Join(cmp.Or(t.Path, t.Name), name)
+}
+
 // readFile reads the file name, a slash-separated path under the template. Under a template of one's
 // own, a symlink that leads out of it is refused.
 func (t *Template) readFile(name string) ([]byte, error) {
@@ -279,7 +286,7 @@ func (t *Template) needs() (*semver, error) {
 	if !found || err != nil {
 		return nil, err
 	}
-	needs, err := needsFloe(filepath.Join(t.Path, "template.yaml"), src)
+	needs, err := needsFloe(t.file("template.yaml"), src)
 	if err != nil {
 		return nil, err
 	}
@@ -341,6 +348,11 @@ type semver [3]int
 
 func (v semver) String() string {
 	return fmt.Sprintf("%d.%d.%d", v[0], v[1], v[2])
+}
+
+// minor writes v as major.minor, as template.yaml names the floe a template needs.
+func (v semver) minor() string {
+	return fmt.Sprintf("%d.%d", v[0], v[1])
 }
 
 // series is the versions that take what v takes: its major, or its minor under major 0.

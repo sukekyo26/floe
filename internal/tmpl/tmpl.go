@@ -4,6 +4,7 @@ package tmpl
 
 import (
 	"bytes"
+	"cmp"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -63,7 +64,7 @@ var shared = []string{"template", "theme", "title"}
 // --theme): the data's theme: is then not used, and a theme the template does not have is refused as
 // a *usererr.Error, as is a template that needs another floe.
 func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
-	root, err := parse(file, src)
+	d, root, where, problems, err := start(file, src, theme != "")
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		var names []string
 		if names, err = l.Names(); err != nil {
@@ -74,12 +75,6 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	if err != nil {
 		return nil, err
 	}
-	top, err := decode(file, root)
-	if err != nil {
-		return nil, err
-	}
-	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil}
-	where, problems := readShared(d, root, theme != "")
 	fail := func(p yamlpos.Pos, key string, args ...any) {
 		problems = append(problems, yamlpos.New(file, p, key, args...))
 	}
@@ -107,15 +102,38 @@ func (l *Library) Read(file string, src []byte, theme string) (*Data, error) {
 	if err = t.checkVersion(); err != nil {
 		return nil, err
 	}
-	d.tmpl = t
-	more, err := pickTheme(t, d, theme, where["theme"])
-	if err != nil {
-		return nil, err
-	}
-	if err = checkValues(t, d, root, append(problems, more...)); err != nil {
+	if err = t.check(d, root, theme, where["theme"], problems); err != nil {
 		return nil, err
 	}
 	return d, nil
+}
+
+// start reads the data file src, file in its mistakes, up to its template: its values, the keys every
+// template shares moved to d, where each of those is written, and the mistakes in them. With themed, a
+// theme is given over the data's. It fails with yamlpos.ErrEmpty for a file without a document.
+func start(file string, src []byte, themed bool) (*Data, ast.Node, map[string]yamlpos.Pos, yamlpos.Problems, error) {
+	root, err := parse(file, src)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	top, err := decode(file, root)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	d := &Data{File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil}
+	where, problems := readShared(d, root, themed)
+	return d, root, where, problems, nil
+}
+
+// check checks d, whose root is root, against t, which then draws it: with the theme theme when given,
+// else the data's, written at at. problems are those found before in the keys every template shares.
+func (t *Template) check(d *Data, root ast.Node, theme string, at yamlpos.Pos, problems yamlpos.Problems) error {
+	d.tmpl = t
+	more, err := pickTheme(t, d, theme, at)
+	if err != nil {
+		return err
+	}
+	return checkValues(t, d, root, append(problems, more...))
 }
 
 // pickTheme sets the theme of d: theme when given, which t must have, else the data's, reported at
@@ -219,7 +237,7 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 		lang = DefaultLang
 	}
 	t := d.tmpl
-	src, err := t.readFile("page.html")
+	page, err := t.page()
 	if err != nil {
 		return nil, err
 	}
@@ -230,11 +248,6 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	s, err := schemaOf(t)
 	if err != nil {
 		return nil, err
-	}
-	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
-	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).Parse(string(src))
-	if err != nil {
-		return nil, fmt.Errorf("parse the template %s: %w", d.Template, err)
 	}
 	var b bytes.Buffer
 	err = page.Execute(&b, map[string]any{
@@ -250,6 +263,20 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	return b.Bytes(), nil
+}
+
+// page reads and parses the page.html of t.
+func (t *Template) page() (*template.Template, error) {
+	src, err := t.readFile("page.html")
+	if err != nil {
+		return nil, err
+	}
+	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
+	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).Parse(string(src))
+	if err != nil {
+		return nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
+	}
+	return page, nil
 }
 
 var funcs = template.FuncMap{
@@ -311,6 +338,18 @@ type schema struct {
 	Type        any      `json:"type"` // a JSON type, or a list of them
 	Enum        []any    `json:"enum"`
 	Required    []string `json:"required"`
+}
+
+// at returns what s declares at the path of keys steps, or nil where it declares none.
+func (s *schema) at(steps []string) *schema {
+	for _, step := range steps {
+		p, ok := s.Properties[step]
+		if !ok {
+			return nil
+		}
+		s = cmp.Or(p, new(schema)) // null in schema.json declares an item of any value
+	}
+	return s
 }
 
 // prepare readies v for page.html: an item declared but not given becomes nil, so that page.html can

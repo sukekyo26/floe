@@ -30,7 +30,7 @@ item_bytes: sum(attributes, .avg_bytes) + count(attributes, .avg_bytes > 100)
 read_units: ceil(item_bytes / 4096) * reads_per_sec
 writes: writes_per_sec ?? 0
 `
-	if err := compute([]byte(src), d, declared, root); err != nil {
+	if err := compute("computed.yaml", []byte(src), d, declared, root); err != nil {
 		t.Fatal(err)
 	}
 	want := map[string]any{"item_bytes": 30, "storage_gb": 0.03, "read_units": 10.0, "writes": 0}
@@ -44,7 +44,7 @@ func TestComputeSeesDeclaredItemsOnly(t *testing.T) {
 	t.Parallel()
 
 	d, root := data(t, "t: 5\n")
-	if err := compute([]byte("t: 'nil'\nu: t ?? 0\n"), d, declared, root); err != nil || d.Calc["u"] != 0 {
+	if err := compute("computed.yaml", []byte("t: 'nil'\nu: t ?? 0\n"), d, declared, root); err != nil || d.Calc["u"] != 0 {
 		t.Errorf("Calc = %v, %v; want u 0", d.Calc, err)
 	}
 }
@@ -62,7 +62,7 @@ huge: 1e308 * 10
 list: '[1, 1e308 * 10]'
 table: '{"a": [1e308 * 10]}'
 `
-	err := compute([]byte(src), d, declared, root)
+	err := compute("computed.yaml", []byte(src), d, declared, root)
 	var p yamlpos.Problems
 	if !errors.As(err, &p) {
 		t.Fatalf("compute = %v, want problems", err)
@@ -82,29 +82,32 @@ table: '{"a": [1e308 * 10]}'
 	}
 }
 
-// A computed.yaml that is not right is the template's mistake, not one of the data.
+// A computed.yaml that is not right is the template's mistake, not one of the data, reported at its
+// line and column in computed.yaml.
 func TestComputeOfABrokenTemplate(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ src, want string }{
-		{"a: b + 1\nb: c + 1\nc: a + 1\n", "the values are computed from each other: a → b → c → a"},
-		{"a: a + 1\n", "the values are computed from each other: a → a"},
-		{"records: 1\n", "records is an item of the data too"},
-		{"my-size: 1\n", "my-size is not a name an expression or page.html can use"},
-		{"sum: 1\n", "sum is not a name"},
-		{"true: 1\n", "true is not a name"},
-		{"in: 1\n", "in is not a name"},
-		{"_divide: 1\n", "_divide is not a name"},
-		{"a: nope + 1\n", "a: nope + 1: unknown name nope"},
-		{"a: ($env.z ?? 0) + 1\nz: 3\n", "a: $env is not for computed.yaml"},
-		{"e: $env\n", "e: $env is not for computed.yaml"},
-		{"a: 1 +\n", "a: 1 +: unexpected token EOF"},
-		{"- a\n", "computed.yaml: "},
+		{"c: a + 1\na: b + 1\nb: c + 1\n", "computed.yaml:2:1: the values are computed from each other: a → b → c → a"},
+		{"a: a + 1\n", "computed.yaml:1:1: the values are computed from each other: a → a"},
+		{"x: 1\nrecords: 1\n", "computed.yaml:2:1: records is an item of the data too"},
+		{"my-size: 1\n", "computed.yaml:1:1: my-size is not a name an expression or page.html can use"},
+		{"sum: 1\n", "computed.yaml:1:1: sum is not a name"},
+		{"true: 1\n", "computed.yaml:1:1: true is not a name"},
+		{"in: 1\n", "computed.yaml:1:1: in is not a name"},
+		{"_divide: 1\n", "computed.yaml:1:1: _divide is not a name"},
+		{"a: nope + 1\n", "computed.yaml:1:4: nope + 1 cannot be read as an expression: unknown name nope"},
+		{"a: ($env.z ?? 0) + 1\nz: 3\n", "computed.yaml:1:4: $env is not for computed.yaml"},
+		{"e: $env\n", "computed.yaml:1:4: $env is not for computed.yaml"},
+		{"a: 1 +\n", "computed.yaml:1:4: 1 + cannot be read as an expression: unexpected token EOF"},
+		{"a: [1]\n", "computed.yaml:1:4: write computed.yaml as names and expressions"},
+		{"a:\n", "computed.yaml:1:1: write computed.yaml as names and expressions"},
+		{"- a\n", "computed.yaml:1:1: write computed.yaml as names and expressions"},
 	} {
 		d, root := data(t, "reads_per_sec: 1\n")
-		err := compute([]byte(tt.src), d, declared, root)
+		err := compute("computed.yaml", []byte(tt.src), d, declared, root)
 		var p yamlpos.Problems
-		if err == nil || errors.As(err, &p) || !strings.Contains(err.Error(), tt.want) {
+		if err == nil || errors.As(err, &p) || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("compute(%q) = %v, want %s", tt.src, err, tt.want)
 		}
 	}

@@ -81,7 +81,7 @@ func (t *Template) copyTo(dir, name string) error {
 		if err != nil {
 			return err
 		}
-		floe := fmt.Sprintf("floe: %d.%d\n", have[0], have[1])
+		floe := "floe: " + have.minor() + "\n"
 		//nolint:gosec // G306: templates are not secret
 		if err := os.WriteFile(filepath.Join(dir, "template.yaml"), []byte(floe), 0o644); err != nil {
 			return err //nolint:wrapcheck // wrapped by New

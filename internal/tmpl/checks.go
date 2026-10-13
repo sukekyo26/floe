@@ -2,12 +2,12 @@ package tmpl
 
 import (
 	"errors"
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/vm"
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 
@@ -18,10 +18,10 @@ import (
 // at for, a path of keys like sections or model.tables. A failure points at the item's field, a path
 // of keys under the item, or at the item without one.
 type relation struct {
-	For     string `yaml:"for"`
-	Field   string `yaml:"field"`
-	Expr    string `yaml:"expr"`
-	Message string `yaml:"message"`
+	For, Field, Expr, Message string
+
+	file string                 // checks.yaml, as its mistakes name it
+	at   map[string]yamlpos.Pos // where each key is written, and "" where the check is
 }
 
 // scope is what the expression of a check sees.
@@ -37,25 +37,20 @@ func checkRelations(t *Template, d *Data, root ast.Node) error {
 	if !found || err != nil {
 		return err
 	}
-	return relate(src, d, root)
+	return relate(t.file("checks.yaml"), src, d, root)
 }
 
-var (
-	errIncomplete = errors.New("write for, expr and message")
-	errNotList    = errors.New("does not lead to a list")
-)
-
-// relate checks the values of d against the checks src.
-func relate(src []byte, d *Data, root ast.Node) error {
-	var checks []relation
-	if err := yaml.UnmarshalWithOptions(src, &checks, yaml.Strict()); err != nil {
-		return fmt.Errorf("read the checks of %s: %w", d.Template, err)
+// relate checks the values of d against the checks src of the file checks.
+func relate(checks string, src []byte, d *Data, root ast.Node) error {
+	list, err := readChecks(checks, src)
+	if err != nil {
+		return err
 	}
 	var problems yamlpos.Problems
-	for i, c := range checks {
+	for _, c := range list {
 		more, err := c.check(d.File, d.Values, root)
 		if err != nil {
-			return fmt.Errorf("read the checks of %s: check %d: %w", d.Template, i+1, err)
+			return err
 		}
 		problems = append(problems, more...)
 	}
@@ -65,20 +60,83 @@ func relate(src []byte, d *Data, root ast.Node) error {
 	return nil
 }
 
+// readChecks reads the checks src of file, a mistake in them at its line and column.
+func readChecks(file string, src []byte) ([]relation, error) {
+	body, err := yamlpos.Parse(file, src, "tmpl_checks_yaml")
+	if errors.Is(err, yamlpos.ErrEmpty) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err //nolint:wrapcheck // a mistake at its line and column
+	}
+	seq, ok := body.(*ast.SequenceNode)
+	if !ok {
+		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_checks_yaml")
+	}
+	list := make([]relation, len(seq.Values))
+	for i, n := range seq.Values {
+		if list[i], err = readCheck(file, n); err != nil {
+			return nil, err
+		}
+	}
+	return list, nil
+}
+
+func readCheck(file string, n ast.Node) (relation, error) {
+	c := relation{For: "", Field: "", Expr: "", Message: "", file: file, at: map[string]yamlpos.Pos{"": yamlpos.Of(n)}}
+	m, ok := n.(*ast.MappingNode)
+	if !ok {
+		return c, yamlpos.New(file, yamlpos.Of(n), "tmpl_checks_yaml")
+	}
+	to := map[string]*string{"for": &c.For, "field": &c.Field, "expr": &c.Expr, "message": &c.Message}
+	for _, kv := range m.Values {
+		key := kv.Key.GetToken().Value
+		dst, ok := to[key]
+		if !ok {
+			return c, yamlpos.New(file, yamlpos.Of(kv.Key), "tmpl_checks_key", key)
+		}
+		c.at[key] = yamlpos.OfValue(kv.Key, kv.Value)
+		if *dst, ok = text(kv.Value); !ok {
+			return c, yamlpos.New(file, c.at[key], "tmpl_not_text", key)
+		}
+	}
+	if c.For == "" || c.Expr == "" || c.Message == "" {
+		return c, yamlpos.New(file, c.at[""], "tmpl_checks_yaml")
+	}
+	return c, nil
+}
+
+// text returns the value of n as text, a number or true as written, and false for a list or keys and
+// values. One left empty is "".
+func text(n ast.Node) (string, bool) {
+	if _, ok := n.(ast.ScalarNode); !ok {
+		return "", false
+	}
+	var s string
+	err := yaml.NodeToValue(n, &s)
+	return s, err == nil
+}
+
+// program compiles the expression of c.
+func (c relation) program() (*vm.Program, error) {
+	p, err := compile(c.Expr, scope{Item: nil, Doc: nil}, expr.AsBool())
+	if err != nil {
+		return nil, yamlpos.New(c.file, c.at["expr"], "tmpl_expr", c.Expr, brief(err))
+	}
+	return p, nil
+}
+
 // check runs c on each item of its list in doc, the values of file. An error is the template's mistake,
 // and the problems are the data's.
 func (c relation) check(file string, doc map[string]any, root ast.Node) (yamlpos.Problems, error) {
-	if c.For == "" || c.Expr == "" || c.Message == "" {
-		return nil, errIncomplete
-	}
-	p, err := compile(c.Expr, scope{Item: nil, Doc: nil}, expr.AsBool())
+	p, err := c.program()
 	if err != nil {
 		return nil, err
 	}
 	steps := strings.Split(c.For, ".")
-	list, err := listAt(doc, steps)
-	if err != nil {
-		return nil, fmt.Errorf("for %s %w", c.For, err)
+	list, ok := listAt(doc, steps)
+	if !ok {
+		return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
 	}
 	var problems yamlpos.Problems
 	for i, item := range list {
@@ -116,25 +174,40 @@ func (c relation) failure(file string, root ast.Node, at []string, err error) *y
 	}
 }
 
-// listAt returns the list at steps under values, or nil when the data leaves it out.
-func listAt(values map[string]any, steps []string) ([]any, error) {
+// declared checks that the schema s declares the list at c.For, and c.Field under its items: a path
+// misspelt would find nothing in the data to check, and fail no data.
+// LIMIT: the path is followed through properties and items alone, as prepare follows it. Follow $ref
+// too if a template comes to declare its lists through one.
+func (c relation) declared(s *schema) error {
+	list := s.at(strings.Split(c.For, "."))
+	switch {
+	case list == nil:
+		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
+	case !slices.Contains(list.types(), "array"):
+		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_array", c.For)
+	case c.Field != "" && (list.Items == nil || list.Items.at(strings.Split(c.Field, ".")) == nil):
+		return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field", c.Field, c.For)
+	}
+	return nil
+}
+
+// listAt returns the list at steps under values, nil when the data leaves it out, and false when what
+// is there is not a list.
+func listAt(values map[string]any, steps []string) ([]any, bool) {
 	var v any = values
 	for _, step := range steps {
 		if v == nil {
-			return nil, nil
+			return nil, true
 		}
 		m, ok := v.(map[string]any)
 		if !ok {
-			return nil, errNotList
+			return nil, false
 		}
 		v = m[step]
 	}
 	if v == nil {
-		return nil, nil
+		return nil, true
 	}
 	list, ok := v.([]any)
-	if !ok {
-		return nil, errNotList
-	}
-	return list, nil
+	return list, ok
 }

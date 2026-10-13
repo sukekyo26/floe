@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Files and their sizes, checked and summed: a template for floe's tests",
+  "type": "object",
+  "properties": {
+    "note": { "type": "string", "format": "html" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "bytes": { "type": "integer", "minimum": 0 },
+          "updated": { "type": "string", "format": "date" }
+        },
+        "required": ["name", "bytes"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["files"],
+  "additionalProperties": false
+}

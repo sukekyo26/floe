@@ -1,0 +1,4 @@
+- for: files
+  field: name
+  expr: count(doc.files, .name == item.name) == 1
+  message: give each file its own name

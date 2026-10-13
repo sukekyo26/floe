@@ -1,0 +1,9 @@
+template: sizes
+title: Sizes
+note: <b>made</b> for tests
+files:
+  - name: a.txt
+    bytes: 1536
+  - name: b.png
+    bytes: 2048000
+    updated: "2026-10-13"

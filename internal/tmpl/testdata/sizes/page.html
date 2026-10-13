@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head><meta charset="utf-8"><title>{{.Title}}</title><style>{{.Theme}}</style></head>
+<body>
+{{with .Data.note}}<p>{{.}}</p>{{end}}
+<table>
+{{range .Data.files}}<tr><td>{{.name}}</td><td>{{.bytes | bytes}}</td><td>{{.updated}}</td></tr>
+{{end}}</table>
+<p>{{.Calc.total | num}} bytes, {{.Calc.share | num 2}} of them in the largest file</p>
+</body>
+</html>
