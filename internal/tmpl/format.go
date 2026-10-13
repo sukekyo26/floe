@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"strconv"
 	"strings"
 )
@@ -39,25 +40,30 @@ func formatNum(args ...any) (string, error) {
 }
 
 // formatBytes, bytes in page.html, writes a count of bytes in the binary unit that keeps it under
-// 1024, to 3 significant digits above bytes: 1536 is 1.5 KiB, and 1023 is 1,023 B.
+// 1024, to 3 significant digits but every digit before the point: 1536 is 1.5 KiB, 1023 is 1,023 B,
+// and 1047552 is 1,023 KiB.
 func formatBytes(v any) (string, error) {
 	f, err := float(v)
 	if err != nil {
 		return "", fmt.Errorf("bytes: %w", err)
 	}
-	units := []string{"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"}
 	unit := 0
+	units := []string{"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"}
 	for math.Abs(f) >= 1024 && unit < len(units)-1 {
 		f /= 1024
 		unit++
 	}
-	// A count under 1024 is written exactly.
-	var n any = f
-	digits := 3
-	if unit == 0 {
-		n, digits = v, 0
+	// A count under 1024 is written exactly, as v.
+	if unit > 0 {
+		f = roundFloat(f, max(3, len(strconv.FormatFloat(math.Trunc(math.Abs(f)), 'f', 0, 64))))
+		// Rounded, 1048575 is 1024 KiB: 1 MiB.
+		if math.Abs(f) >= 1024 && unit < len(units)-1 {
+			f /= 1024
+			unit++
+		}
+		v = f
 	}
-	text, err := decimal(n, digits)
+	text, err := decimal(v, 0)
 	if err != nil {
 		return "", fmt.Errorf("bytes: %w", err)
 	}
@@ -65,27 +71,21 @@ func formatBytes(v any) (string, error) {
 }
 
 // decimal writes v grouped, rounded to digits significant digits unless digits is 0. A whole number
-// is written exactly, beyond the 2^53 a float holds.
+// is written exactly, beyond the 2^53 a float holds, and rounded as one.
 func decimal(v any, digits int) (string, error) {
 	var text string
-	switch n := v.(type) {
-	case int:
-		text = strconv.Itoa(n)
-	case int64:
-		text = strconv.FormatInt(n, 10)
-	case uint64:
-		text = strconv.FormatUint(n, 10)
-	}
-	if text == "" || digits > 0 {
+	if i, ok := whole(v); ok {
+		if digits > 0 {
+			i = roundWhole(i, digits)
+		}
+		text = i.String()
+	} else {
 		f, err := float(v)
 		if err != nil {
 			return "", err
 		}
 		if digits > 0 {
-			// The shortest text of f rounded, without the noise of the float's binary digits.
-			if r, err := strconv.ParseFloat(strconv.FormatFloat(f, 'g', digits, 64), 64); err == nil {
-				f = r
-			}
+			f = roundFloat(f, digits)
 		}
 		if f == 0 {
 			f = 0 // not -0
@@ -96,11 +96,11 @@ func decimal(v any, digits int) (string, error) {
 	if t, ok := strings.CutPrefix(text, "-"); ok {
 		sign, text = "-", t
 	}
-	whole, fraction, dot := strings.Cut(text, ".")
+	integer, fraction, dot := strings.Cut(text, ".")
 	var b strings.Builder
 	b.WriteString(sign)
-	for i, r := range whole {
-		if i > 0 && (len(whole)-i)%3 == 0 {
+	for i, r := range integer {
+		if i > 0 && (len(integer)-i)%3 == 0 {
 			b.WriteByte(',')
 		}
 		b.WriteRune(r)
@@ -111,16 +111,54 @@ func decimal(v any, digits int) (string, error) {
 	return b.String(), nil
 }
 
-func float(v any) (float64, error) {
+// whole returns v as an integer, when it is a whole number.
+func whole(v any) (*big.Int, bool) {
 	switch n := v.(type) {
 	case int:
-		return float64(n), nil
+		return big.NewInt(int64(n)), true
 	case int64:
-		return float64(n), nil
+		return big.NewInt(n), true
 	case uint64:
-		return float64(n), nil
-	case float64:
-		return n, nil
+		return new(big.Int).SetUint64(n), true
+	}
+	return nil, false
+}
+
+func float(v any) (float64, error) {
+	if i, ok := whole(v); ok {
+		f, _ := new(big.Float).SetInt(i).Float64()
+		return f, nil
+	}
+	if f, ok := v.(float64); ok {
+		return f, nil
 	}
 	return 0, fmt.Errorf("%v (%T) %w", v, v, errNotNumber)
+}
+
+// roundWhole rounds i to digits significant digits, half away from zero.
+func roundWhole(i *big.Int, digits int) *big.Int {
+	abs := new(big.Int).Abs(i)
+	n := len(abs.String())
+	if digits >= n {
+		return i
+	}
+	unit := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(n-digits)), nil)
+	q, r := new(big.Int).QuoRem(abs, unit, new(big.Int))
+	if r.Lsh(r, 1).Cmp(unit) >= 0 {
+		q.Add(q, big.NewInt(1))
+	}
+	q.Mul(q, unit)
+	if i.Sign() < 0 {
+		q.Neg(q)
+	}
+	return q
+}
+
+// roundFloat rounds f to digits significant digits: the shortest text of it, without the noise of the
+// float's binary digits.
+func roundFloat(f float64, digits int) float64 {
+	if r, err := strconv.ParseFloat(strconv.FormatFloat(f, 'g', digits, 64), 64); err == nil {
+		return r
+	}
+	return f
 }
