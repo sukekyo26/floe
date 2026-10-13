@@ -273,7 +273,7 @@ var messagesEN = map[string]string{
 	"tmpl_schema_below":        "%s: write less than %s",
 	"tmpl_schema_pattern":      `%s: "%s" does not match %s`,
 	"tmpl_schema_unique":       "%s: items %d and %d are the same; write each once",
-	"tmpl_schema_not_finite":   "%s: %s is not a value a data file can hold; write a number in digits, or quote it as text",
+	"tmpl_not_finite":          "%s is not a value a data file can hold; write a number in digits, or quote it as text",
 	"tmpl_key_not_text":        "a key is a name: write %s as text, in quotes",
 	"tmpl_schema_unknown_bare": "%s is not an item of the template %s (a typo?)",
 	"tmpl_schema_enum_empty":   "%s: write one of %s",

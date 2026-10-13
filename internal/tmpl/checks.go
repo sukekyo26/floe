@@ -56,10 +56,9 @@ func relate(src []byte, d *Data, root ast.Node) error {
 	if err := yaml.UnmarshalWithOptions(src, &checks, yaml.Strict()); err != nil {
 		return fmt.Errorf("read the checks of %s: %w", d.Template, err)
 	}
-	doc := exprValues(d.Values)
 	var problems yamlpos.Problems
 	for i, c := range checks {
-		more, err := c.check(d.File, doc, root)
+		more, err := c.check(d.File, d.Values, root)
 		if err != nil {
 			return fmt.Errorf("read the checks of %s: check %d: %w", d.Template, i+1, err)
 		}
@@ -102,20 +101,21 @@ func (c relation) check(file string, doc map[string]any, root ast.Node) (yamlpos
 }
 
 // failure reports c failed, or could not run with err, at the node at under root: with its value when
-// it is one written out on its line. A block scalar's token is its | or >, not its text.
+// it is one line of text. A block scalar's token is its | or >, not its text.
 func (c relation) failure(file string, root ast.Node, at []string, err error) *yamlpos.Error {
 	key, value, path := yamlpos.Find(root, at)
 	pos := yamlpos.OfValue(key, value)
-	_, scalar := value.(ast.ScalarNode)
+	var shown string
 	switch value.(type) {
 	case *ast.NullNode, *ast.LiteralNode:
-		scalar = false
+	case ast.ScalarNode:
+		shown = value.GetToken().Value
 	}
 	switch {
 	case err != nil:
 		return yamlpos.New(file, pos, "tmpl_check_error", path, c.Message, brief(err))
-	case scalar && !strings.Contains(value.GetToken().Value, "\n"):
-		return yamlpos.New(file, pos, "tmpl_check", path, c.Message, value.GetToken().Value)
+	case shown != "" && !strings.Contains(shown, "\n"):
+		return yamlpos.New(file, pos, "tmpl_check", path, c.Message, shown)
 	default:
 		return yamlpos.New(file, pos, "tmpl_check_bare", path, c.Message)
 	}

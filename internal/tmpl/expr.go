@@ -44,35 +44,6 @@ func compile(src string, env any, opts ...expr.Option) (*vm.Program, error) {
 	return p, nil
 }
 
-// exprValue readies a value of a data file for expr: goccy/go-yaml reads a whole number above 0 as
-// uint64, which expr negates by wrapping around (-3 / 2 is 9.2e18), so one that fits becomes an int.
-func exprValue(v any) any {
-	switch v := v.(type) {
-	case uint64:
-		if v <= math.MaxInt64 {
-			return int(v)
-		}
-	case map[string]any:
-		return exprValues(v)
-	case []any:
-		out := make([]any, len(v))
-		for i, item := range v {
-			out[i] = exprValue(item)
-		}
-		return out
-	}
-	return v
-}
-
-// exprValues readies the values of a data file for expr, as exprValue does.
-func exprValues(m map[string]any) map[string]any {
-	out := make(map[string]any, len(m))
-	for k, v := range m {
-		out[k] = exprValue(v)
-	}
-	return out
-}
-
 // brief words an error of expr on one line, without the snippet it draws under the message.
 func brief(err error) string {
 	if fe := (*file.Error)(nil); errors.As(err, &fe) {

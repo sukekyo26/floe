@@ -272,7 +272,7 @@ var messagesJA = map[string]string{
 	"tmpl_schema_below":        "%s: %s より小さくしてください",
 	"tmpl_schema_pattern":      "%s: 「%s」は %s の形に合いません",
 	"tmpl_schema_unique":       "%s: %d 番目と %d 番目が同じです。1 つずつにしてください",
-	"tmpl_schema_not_finite":   "%s: %s は使えません。数は数字で書き、文字列なら引用符で囲んでください",
+	"tmpl_not_finite":          "%s は使えません。数は数字で書き、文字列なら引用符で囲んでください",
 	"tmpl_key_not_text":        "キーは名前です。%s は引用符で囲んで文字列にしてください",
 	"tmpl_schema_unknown_bare": "%s はテンプレート %s に無い項目です（打ち間違い？）",
 	"tmpl_schema_enum_empty":   "%s: %s のどれかを書いてください",

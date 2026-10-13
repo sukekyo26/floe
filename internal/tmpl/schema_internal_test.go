@@ -39,7 +39,7 @@ size: 10
 rate: 1.5
 keys: { a: 1, b: 2 }
 kind: y
-huge: .inf
+huge: x
 note:
 pick:
 open: { y: 1 }
@@ -55,7 +55,7 @@ open: { y: 1 }
 		{`d.yaml:5:7: rate: write less than 1.5`, `d.yaml:5:7: rate: 1.5 より小さくしてください`},
 		{`d.yaml:6:9: keys: the number of keys must be at most 1`, `d.yaml:6:9: keys: キーは 1 個までにしてください`},
 		{`d.yaml:7:7: kind: value must be 'x'`, `d.yaml:7:7: kind: value must be 'x'`},
-		{`d.yaml:8:7: huge: .inf is not a value a data file can hold`, `d.yaml:8:7: huge: .inf は使えません。`},
+		{`d.yaml:8:7: huge: write a number, not text`, `d.yaml:8:7: huge: 文字列ではなく数で書いてください`},
 		{`d.yaml:9:1: note: write text, not nothing`, `d.yaml:9:1: note: 空ではなく文字列で書いてください`},
 		{`d.yaml:10:1: pick: write one of a, b`, `d.yaml:10:1: pick: a, b のどれかを書いてください`},
 		{`d.yaml:11:9: open.y is not an item of the template report (a typo?)`, `d.yaml:11:9: open.y はテンプレート report に無い項目です（打ち間違い？）`},

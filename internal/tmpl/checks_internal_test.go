@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -30,8 +29,12 @@ const relations = `
   message: the name secret is taken
 - for: notes
   field: text
-  expr: len(item.text) < 5
+  expr: item.text == nil || len(item.text) < 5
   message: keep notes short
+- for: notes
+  field: text
+  expr: item.text != nil
+  message: write the note
 - for: nowhere.at_all
   expr: "false"
   message: never runs
@@ -61,6 +64,7 @@ model:
 notes:
   - text: |
       a long note
+  - text:
 `
 	got := failures(t, relations, src)
 	want := []string{
@@ -72,10 +76,13 @@ notes:
 		"d.yaml:14:7: model.patterns[2]: keep reads per second under 10 (the check could not run: ",
 		"d.yaml:15:12: model.patterns[2].key: use an attribute as the key",
 		"d.yaml:18:11: notes[0].text: keep notes short",
+		"d.yaml:20:5: notes[1].text: write the note",
 	}
 	lines := strings.Split(got.Error(), "\n")
-	if last := lines[len(lines)-1]; last != want[len(want)-1] {
-		t.Errorf("a block of text is quoted by its |: %s", last)
+	for _, i := range []int{len(want) - 2, len(want) - 1} {
+		if len(lines) == len(want) && lines[i] != want[i] {
+			t.Errorf("a block of text or an empty value is quoted: %s", lines[i])
+		}
 	}
 	if len(lines) != len(want) {
 		t.Fatalf("the failures =\n%s\nwant %d", got.Error(), len(want))
@@ -134,9 +141,9 @@ func data(t *testing.T, src string) (*Data, ast.Node) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d := &Data{File: "d.yaml", Template: "t", Theme: DefaultTheme, Title: "", Values: nil}
-	if err := yaml.NodeToValue(root, &d.Values); err != nil {
+	values, err := decode("d.yaml", root)
+	if err != nil {
 		t.Fatal(err)
 	}
-	return d, root
+	return &Data{File: "d.yaml", Template: "t", Theme: DefaultTheme, Title: "", Values: values}, root
 }
