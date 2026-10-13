@@ -710,6 +710,21 @@ func TestLinkDataFile(t *testing.T) {
 		t.Errorf("Draw = %v:\n%s", err, page)
 	}
 
+	// Linked again in another language, it reloads its tab.
+	again := e.mustPublish(t, data, store.Options{Link: true, Lang: ptr("en")}, "proj").Meta
+	if e.s.Version("spec", &again, data) == e.s.Version("spec", &m, data) {
+		t.Error("linking again in another language left the version as it was")
+	}
+	// A slug that comes to link another file watches nothing of the one before.
+	other := e.write(t, "proj/other.yaml", "template: report\n")
+	if _, version, drawErr := e.s.Draw("spec", &m, other); drawErr != nil || version != e.s.Version("spec", &m, other) {
+		t.Errorf("Draw of another file under the slug = %v at %q, watched at %q", drawErr, version, e.s.Version("spec", &m, other))
+	}
+	// A language that is no tag is told before the file is looked for.
+	if _, err = e.publish(t, "proj/none.yaml", store.Options{Link: true, Lang: ptr("x x")}, ""); err == nil || !strings.Contains(err.Error(), "x x") {
+		t.Errorf("linking with a language that is no tag = %v", err)
+	}
+
 	bad := e.write(t, "proj/bad.yaml", "template: report\nsections: 3\n")
 	if _, err = e.publish(t, bad, store.Options{Link: true}, "proj"); err == nil || !strings.Contains(err.Error(), "bad.yaml:2:11: sections:") {
 		t.Errorf("linking a data file with mistakes = %v", err)

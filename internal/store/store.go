@@ -83,8 +83,8 @@ type Store struct {
 	// LIMIT: entries of unlinked paths stay (a few hundred bytes each). Drop them on removal if a
 	// server ever sees tens of thousands of paths in its lifetime.
 	titles map[string]cachedTitle
-	// sources are what the last drawing of each linked data file read besides it, by its slug: one file
-	// linked twice may be drawn with two themes.
+	// sources are what the last drawing of each linked data file read besides it, by slug and file (see
+	// sourceKey).
 	// LIMIT: kept for removed slugs too, as titles are. Drop them on removal if that comes to matter.
 	sources map[string]tmpl.Sources
 }
@@ -173,8 +173,9 @@ func (m *Meta) IsDrawn() bool {
 func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version string, err error) {
 	// Taken before the reading, so that a change in between costs a reload rather than a miss; but
 	// only once what the drawing reads is known, or the first drawing would reload at once.
+	key := sourceKey(slug, file)
 	s.mu.Lock()
-	_, known := s.sources[slug]
+	_, known := s.sources[key]
 	s.mu.Unlock()
 	if known {
 		version = s.Version(slug, m, file)
@@ -186,9 +187,14 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	} else {
 		var d *tmpl.Data
 		var sources tmpl.Sources
-		d, sources, err = tmpl.NewLibrary(m.Templates).ReadSources(file, src, m.Theme, "")
+		// A link from before links recorded their templates is drawn with the server's.
+		templates := s.templates
+		if m.Templates != "" {
+			templates = tmpl.NewLibrary(m.Templates)
+		}
+		d, sources, err = templates.ReadSources(file, src, m.Theme, "")
 		s.mu.Lock()
-		s.sources[slug] = sources
+		s.sources[key] = sources
 		s.mu.Unlock()
 		if err == nil {
 			page, err = drawLinked(d, m, slug)
@@ -200,6 +206,12 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	return page, version, err
 }
 
+// sourceKey keys what a drawing read: one file linked under two slugs may be drawn with two themes or
+// templates, and a slug removed in another process (floe rm) may come to link another file.
+func sourceKey(slug, file string) string {
+	return slug + "\x00" + file
+}
+
 // drawLinked draws d, the data file a link of slug registers, under the title pinned for it, else its
 // title:, else slug.
 func drawLinked(d *tmpl.Data, m *Meta, slug string) ([]byte, error) {
@@ -207,9 +219,10 @@ func drawLinked(d *tmpl.Data, m *Meta, slug string) ([]byte, error) {
 }
 
 // Version is what live reload compares: a stored page's publish time, a linked file's mtime, and for a
-// linked data file of slug the state of what its last drawing read besides it too (its template's
-// files, its images) and whether it can be read, so that saving any of them, or making it readable
-// again, reloads the page. It is "" when the file is gone.
+// linked data file of slug its publish time too (another theme, language or templates) and the state
+// of what its last drawing read besides it (its template's files, its images) and whether it can be
+// read, so that publishing it again, saving any of them, or making it readable again reloads the page.
+// It is "" when the file is gone.
 func (s *Store) Version(slug string, m *Meta, file string) string {
 	if !m.IsLink() {
 		return m.UpdatedAt
@@ -219,14 +232,12 @@ func (s *Store) Version(slug string, m *Meta, file string) string {
 		return v
 	}
 	s.mu.Lock()
-	sources := s.sources[slug]
+	sources := s.sources[sourceKey(slug, file)]
 	s.mu.Unlock()
-	v += "+" + stamp(sources)
-	f, err := os.Open(file) //nolint:gosec // G304: file passed File
-	if err != nil {
+	v += "+" + m.UpdatedAt + "+" + stamp(sources)
+	if unix.Access(file, unix.R_OK) != nil {
 		return v + "+unreadable"
 	}
-	_ = f.Close() //nolint:errcheck // opened only to tell it can be
 	return v
 }
 

@@ -62,6 +62,16 @@ func TestDrawnLink(t *testing.T) {
 		since = url.QueryEscape(e.store.Version("sizes", e.store.ReadMeta("sizes"), data))
 	}
 
+	// A link from before links recorded their templates is drawn with the server's.
+	m := e.store.ReadMeta("sizes")
+	m.Templates = ""
+	if err = e.store.WriteMeta("sizes", m); err != nil {
+		t.Fatal(err)
+	}
+	if page := e.get(t, "/a/sizes/?raw").body; !strings.Contains(page, "<td>1.5 KiB</td>") {
+		t.Errorf("a link without its templates:\n%s", page)
+	}
+
 	// A file of the template whose name starts with a dot (.git) is no file of it.
 	before := e.store.Version("sizes", e.store.ReadMeta("sizes"), data)
 	e.write(t, "templates/sizes/.git/HEAD", "ref")

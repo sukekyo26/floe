@@ -88,11 +88,8 @@ type Entry struct {
 // resolves a relative file and names the project of a stored page; a link's project is that of its
 // directory.
 func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
-	// A link is of the kind of its real file, whatever the name of a symlink to it says.
-	if !opts.Link {
-		if err := checkKind(file, opts); err != nil {
-			return nil, err
-		}
+	if err := checkFirst(file, opts); err != nil {
+		return nil, err
 	}
 	path, src, err := s.read(file, opts, cwd)
 	if err != nil {
@@ -132,7 +129,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	}
 	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Page: nil, Prev: prev}
 	if data != nil {
-		if err = e.draw(data, theme, s.templatesDir(cwd)); err != nil {
+		if err = e.draw(data, theme, s.templates.Dir()); err != nil {
 			return nil, err
 		}
 	}
@@ -168,15 +165,6 @@ func (e *Entry) draw(data *tmpl.Data, theme, templates string) error {
 	return err
 }
 
-// templatesDir is the directory of templates of one's own, a relative one under cwd.
-func (s *Store) templatesDir(cwd string) string {
-	dir := s.templates.Dir()
-	if dir != "" && !filepath.IsAbs(dir) {
-		dir = filepath.Join(cwd, dir)
-	}
-	return dir
-}
-
 // read returns the real path of a link ("" for a stored page) and the file's content. A link is
 // checked and stored by its real path: a symlink would otherwise reach into a hidden directory. It is
 // of the kind of its real file, whatever the name of a symlink to it says.
@@ -204,9 +192,21 @@ func (s *Store) read(file string, opts Options, cwd string) (path, content strin
 	return path, string(b), nil
 }
 
-// checkKind checks that file, opts.Lang and opts.Theme fit the kind of publish, before file is read. A
-// page is drawn from a data file in opts.Lang and opts.Theme, stored or linked; HTML is only linked,
-// and shown as it is, in its own language and look.
+// checkFirst checks what can be before file is read: the language, and the kind of a file not linked.
+// A link is of the kind of its real file, whatever the name of a symlink to it says.
+func checkFirst(file string, opts Options) error {
+	if opts.Lang != nil && !i18n.IsTag(*opts.Lang) {
+		return usererr.New("lang_invalid", *opts.Lang)
+	}
+	if !opts.Link {
+		return checkKind(file, opts)
+	}
+	return nil
+}
+
+// checkKind checks that opts.Lang and opts.Theme fit the kind of file: a page is drawn from a data file
+// in opts.Lang and opts.Theme, stored or linked; HTML is only linked, and shown as it is, in its own
+// language and look. A link's file is its real path.
 func checkKind(file string, opts Options) error {
 	switch {
 	case !opts.Link && !IsDataFile(file):
@@ -215,8 +215,6 @@ func checkKind(file string, opts Options) error {
 		return usererr.New("store_lang_link")
 	case opts.Link && !IsDataFile(file) && opts.Theme != nil:
 		return usererr.New("store_theme_link")
-	case opts.Lang != nil && !i18n.IsTag(*opts.Lang):
-		return usererr.New("lang_invalid", *opts.Lang)
 	}
 	return nil
 }
