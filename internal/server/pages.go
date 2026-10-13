@@ -93,7 +93,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// The version is taken before the content: a change in between costs one extra reload, not a miss.
-	version := s.cfg.Store.Version(m, file)
+	version := s.cfg.Store.Version(slug, m, file)
 	f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
 	if err != nil {
 		notFound(w)
@@ -247,7 +247,7 @@ func (s *Server) version(slug, rest string) string {
 		return ""
 	}
 	file, _ := s.cfg.Store.File(slug, m, rest)
-	return s.cfg.Store.Version(m, file)
+	return s.cfg.Store.Version(slug, m, file)
 }
 
 // mistakesText words why a linked data file cannot be drawn, in the language of c.

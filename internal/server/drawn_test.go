@@ -59,13 +59,13 @@ func TestDrawnLink(t *testing.T) {
 		if _, body := e.events(t, "/api/events/sizes?since="+since, 3*time.Second); !strings.Contains(body, "event: reload") {
 			t.Errorf("saving %s did not reload the tab: %q", file, body)
 		}
-		since = url.QueryEscape(e.store.Version(e.store.ReadMeta("sizes"), data))
+		since = url.QueryEscape(e.store.Version("sizes", e.store.ReadMeta("sizes"), data))
 	}
 
 	// A file of the template whose name starts with a dot (.git) is no file of it.
-	before := e.store.Version(e.store.ReadMeta("sizes"), data)
+	before := e.store.Version("sizes", e.store.ReadMeta("sizes"), data)
 	e.write(t, "templates/sizes/.git/HEAD", "ref")
-	if after := e.store.Version(e.store.ReadMeta("sizes"), data); after != before {
+	if after := e.store.Version("sizes", e.store.ReadMeta("sizes"), data); after != before {
 		t.Errorf("a file under .git of the template changed the version: %s, then %s", before, after)
 	}
 

@@ -217,8 +217,9 @@ func TestDataImages(t *testing.T) {
 	}
 }
 
-// A linked data file is drawn by the server floe publish starts, with the templates of one's own the
-// publish was given: a publish with others replaces a server that draws with the ones before.
+// A linked data file is drawn with the templates of one's own of the publish that linked it, a relative
+// directory under its working directory, whatever the server's: links of two such directories are
+// drawn side by side.
 func TestLinkDataFileOfOwnTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -229,17 +230,23 @@ func TestLinkDataFileOfOwnTemplate(t *testing.T) {
 		}
 	}
 	e.write(t, "others/sizes/page.html", "<p>{{.Calc.total}} of the others</p>")
-	e.write(t, "work/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\n")
-	for dir, want := range map[string]string{"templates": "<td>1.5 KiB</td>", "others": "<p>1536 of the others</p>"} {
-		e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, dir)
-		if r := e.run(t, "work", "publish", "sizes.yaml", "--link"); r.code != 0 {
-			t.Fatalf("publish --link with %s = %+v", dir, r)
-		}
-		if h, _ := e.health(t); h.Templates != e.vars["FLOE_TEMPLATES_DIR"] {
-			t.Errorf("the server draws with %s, want %s", h.Templates, e.vars["FLOE_TEMPLATES_DIR"])
-		}
-		if page := e.fetch(t, "/a/sizes/?raw"); !strings.Contains(page, want) {
-			t.Errorf("the linked page with %s:\n%s", dir, page)
+	e.write(t, "work/a.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\n")
+	e.write(t, "work/b.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\n")
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	if r := e.run(t, "work", "publish", "a.yaml", "--link"); r.code != 0 {
+		t.Fatalf("publish --link a = %+v", r)
+	}
+	first, _ := e.health(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = "../others"
+	if r := e.run(t, "work", "publish", "b.yaml", "--link"); r.code != 0 {
+		t.Fatalf("publish --link b = %+v", r)
+	}
+	if h, _ := e.health(t); h.PID != first.PID {
+		t.Errorf("the server was replaced: pid %d, then %d", first.PID, h.PID)
+	}
+	for slug, want := range map[string]string{"a": "<td>1.5 KiB</td>", "b": "<p>1536 of the others</p>"} {
+		if page := e.fetch(t, "/a/"+slug+"/?raw"); !strings.Contains(page, want) {
+			t.Errorf("the linked page %s:\n%s", slug, page)
 		}
 	}
 }

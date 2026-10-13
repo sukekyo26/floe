@@ -88,18 +88,15 @@ type Entry struct {
 // resolves a relative file and names the project of a stored page; a link's project is that of its
 // directory.
 func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
-	if err := checkKind(file, opts); err != nil {
-		return nil, err
-	}
-	path, src, err := s.read(file, opts.Link, cwd)
-	if err != nil {
-		return nil, err
-	}
 	// A link is of the kind of its real file, whatever the name of a symlink to it says.
-	if path != "" {
-		if err = checkKind(path, opts); err != nil {
+	if !opts.Link {
+		if err := checkKind(file, opts); err != nil {
 			return nil, err
 		}
+	}
+	path, src, err := s.read(file, opts, cwd)
+	if err != nil {
+		return nil, err
 	}
 	theme := ""
 	if opts.Theme != nil {
@@ -135,7 +132,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	}
 	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Page: nil, Prev: prev}
 	if data != nil {
-		if err = e.draw(data, theme); err != nil {
+		if err = e.draw(data, theme, s.templatesDir(cwd)); err != nil {
 			return nil, err
 		}
 	}
@@ -158,32 +155,45 @@ func (s *Store) readData(file, path, src, theme, cwd string) (*tmpl.Data, error)
 }
 
 // draw draws the page of e from data: stored, or, for a link, drawn each time it is opened, which
-// keeps only the theme given over the data's.
-func (e *Entry) draw(data *tmpl.Data, theme string) error {
+// keeps only the theme given over the data's and the directory of templates it is drawn with.
+func (e *Entry) draw(data *tmpl.Data, theme, templates string) error {
 	var err error
 	if !e.Meta.IsLink() {
 		e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
 		e.Page, err = data.Render(e.Meta.Title, e.Meta.Lang)
 		return err //nolint:wrapcheck // a usererr for the caller to show
 	}
-	e.Meta.Theme = theme
+	e.Meta.Theme, e.Meta.Templates = theme, templates
 	_, err = drawLinked(data, &e.Meta, e.Slug)
 	return err
 }
 
+// templatesDir is the directory of templates of one's own, a relative one under cwd.
+func (s *Store) templatesDir(cwd string) string {
+	dir := s.templates.Dir()
+	if dir != "" && !filepath.IsAbs(dir) {
+		dir = filepath.Join(cwd, dir)
+	}
+	return dir
+}
+
 // read returns the real path of a link ("" for a stored page) and the file's content. A link is
-// checked and stored by its real path: a symlink would otherwise reach into a hidden directory.
-func (s *Store) read(file string, isLink bool, cwd string) (path, content string, err error) {
+// checked and stored by its real path: a symlink would otherwise reach into a hidden directory. It is
+// of the kind of its real file, whatever the name of a symlink to it says.
+func (s *Store) read(file string, opts Options, cwd string) (path, content string, err error) {
 	abs := file
 	if !filepath.IsAbs(abs) {
 		abs = filepath.Join(cwd, abs)
 	}
-	if isLink {
+	if opts.Link {
 		if path, err = filepath.EvalSymlinks(abs); err != nil {
 			return "", "", usererr.CannotRead(file, err)
 		}
 		if err = link.Check(path, s.home); err != nil {
 			return "", "", err //nolint:wrapcheck // a usererr for the caller to show
+		}
+		if err = checkKind(path, opts); err != nil {
+			return "", "", err
 		}
 		abs = path
 	}
@@ -227,6 +237,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Template:      "",
 		Theme:         "",
 		DataTitle:     own,
+		Templates:     "",
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",

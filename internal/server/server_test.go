@@ -522,7 +522,7 @@ func TestLinkedFile(t *testing.T) {
 	}
 
 	// Saving the linked file notifies its open pages.
-	since := url.QueryEscape(e.store.Version(e.store.ReadMeta("site"), index))
+	since := url.QueryEscape(e.store.Version("site", e.store.ReadMeta("site"), index))
 	ch := make(chan string, 1)
 	go func() {
 		_, body := e.events(t, "/api/events/site?since="+since, 4*time.Second)

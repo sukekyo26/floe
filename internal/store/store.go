@@ -52,9 +52,12 @@ type Meta struct {
 	Lang string `json:"lang,omitempty"`
 	// Template and Theme drew a page published from a data file, and DataTitle is its title:, which
 	// clearing the title on the management page gives back.
-	Template      string `json:"template,omitempty"`
-	Theme         string `json:"theme,omitempty"`
-	DataTitle     string `json:"dataTitle,omitempty"`
+	Template  string `json:"template,omitempty"`
+	Theme     string `json:"theme,omitempty"`
+	DataTitle string `json:"dataTitle,omitempty"`
+	// Templates is the directory of templates of one's own a linked data file is drawn with: the one of
+	// the publish that linked it, whatever the server's.
+	Templates     string `json:"templates,omitempty"`
 	Project       string `json:"project,omitempty"`
 	ProjectEdited bool   `json:"projectEdited,omitempty"`
 	// PublishedFrom is the project that owns a stored page; Project is only what the list shows.
@@ -80,8 +83,9 @@ type Store struct {
 	// LIMIT: entries of unlinked paths stay (a few hundred bytes each). Drop them on removal if a
 	// server ever sees tens of thousands of paths in its lifetime.
 	titles map[string]cachedTitle
-	// sources are what the last drawing of each linked data file read besides it, by its path.
-	// LIMIT: kept for unlinked paths too, as titles are. Drop them on removal if that comes to matter.
+	// sources are what the last drawing of each linked data file read besides it, by its slug: one file
+	// linked twice may be drawn with two themes.
+	// LIMIT: kept for removed slugs too, as titles are. Drop them on removal if that comes to matter.
 	sources map[string]tmpl.Sources
 }
 
@@ -170,27 +174,28 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	// Taken before the reading, so that a change in between costs a reload rather than a miss; but
 	// only once what the drawing reads is known, or the first drawing would reload at once.
 	s.mu.Lock()
-	_, known := s.sources[file]
+	_, known := s.sources[slug]
 	s.mu.Unlock()
 	if known {
-		version = s.Version(m, file)
+		version = s.Version(slug, m, file)
 	}
-	var sources tmpl.Sources
 	src, err := os.ReadFile(file) //nolint:gosec // G304: file passed File
 	if err != nil {
+		// What it read before stays watched; that it cannot be read is in its version.
 		err = fmt.Errorf("%w: %w", ErrNotFound, usererr.CannotRead(file, err))
 	} else {
 		var d *tmpl.Data
-		if d, sources, err = s.templates.ReadSources(file, src, m.Theme, ""); err == nil {
+		var sources tmpl.Sources
+		d, sources, err = tmpl.NewLibrary(m.Templates).ReadSources(file, src, m.Theme, "")
+		s.mu.Lock()
+		s.sources[slug] = sources
+		s.mu.Unlock()
+		if err == nil {
 			page, err = drawLinked(d, m, slug)
 		}
 	}
-	// Noted even for a file that cannot be read: the version watched is the one the page was served at.
-	s.mu.Lock()
-	s.sources[file] = sources
-	s.mu.Unlock()
 	if !known {
-		version = s.Version(m, file)
+		version = s.Version(slug, m, file)
 	}
 	return page, version, err
 }
@@ -202,9 +207,10 @@ func drawLinked(d *tmpl.Data, m *Meta, slug string) ([]byte, error) {
 }
 
 // Version is what live reload compares: a stored page's publish time, a linked file's mtime, and for a
-// linked data file the state of what its last drawing read besides it too (its template's files, its
-// images), so that saving any of them reloads the page. It is "" when the file cannot be read.
-func (s *Store) Version(m *Meta, file string) string {
+// linked data file of slug the state of what its last drawing read besides it too (its template's
+// files, its images) and whether it can be read, so that saving any of them, or making it readable
+// again, reloads the page. It is "" when the file is gone.
+func (s *Store) Version(slug string, m *Meta, file string) string {
 	if !m.IsLink() {
 		return m.UpdatedAt
 	}
@@ -213,9 +219,15 @@ func (s *Store) Version(m *Meta, file string) string {
 		return v
 	}
 	s.mu.Lock()
-	sources := s.sources[file]
+	sources := s.sources[slug]
 	s.mu.Unlock()
-	return v + "+" + stamp(sources)
+	v += "+" + stamp(sources)
+	f, err := os.Open(file) //nolint:gosec // G304: file passed File
+	if err != nil {
+		return v + "+unreadable"
+	}
+	_ = f.Close() //nolint:errcheck // opened only to tell it can be
+	return v
 }
 
 // modTime is the mtime of file, or "" when it cannot be read.

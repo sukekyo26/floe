@@ -28,9 +28,6 @@ type Config struct {
 	Port  int
 	// Build identifies the running binary; a publish from another build restarts the server.
 	Build string
-	// Templates is the directory of templates of one's own the pages are drawn with; a publish with
-	// another restarts the server too.
-	Templates string
 }
 
 // Server handles the requests.
@@ -148,18 +145,15 @@ func catalog(r *http.Request) *i18n.Catalog {
 }
 
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
-	sendJSON(w, http.StatusOK, Health{
-		App: App, PID: os.Getpid(), Root: s.cfg.Store.Root(), Build: s.cfg.Build, Templates: s.cfg.Templates,
-	})
+	sendJSON(w, http.StatusOK, Health{App: App, PID: os.Getpid(), Root: s.cfg.Store.Root(), Build: s.cfg.Build})
 }
 
 // Health is the answer of /api/health.
 type Health struct {
-	App       string `json:"app"`
-	PID       int    `json:"pid"`
-	Root      string `json:"root"`
-	Build     string `json:"build"`
-	Templates string `json:"templates"`
+	App   string `json:"app"`
+	PID   int    `json:"pid"`
+	Root  string `json:"root"`
+	Build string `json:"build"`
 }
 
 func (s *Server) list(w http.ResponseWriter, _ *http.Request) {

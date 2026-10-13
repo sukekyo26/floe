@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -34,7 +35,16 @@ func (a *app) store() *store.Store {
 }
 
 func (a *app) templates() *tmpl.Library {
-	return tmpl.NewLibrary(a.cfg.templates)
+	return tmpl.NewLibrary(a.templatesDir())
+}
+
+// templatesDir is the directory of templates of one's own, a relative one under the working directory,
+// so that a link records, and the server it starts uses, the one this command means.
+func (a *app) templatesDir() string {
+	if a.cfg.templates == "" || filepath.IsAbs(a.cfg.templates) {
+		return a.cfg.templates
+	}
+	return filepath.Join(a.env.Dir, a.cfg.templates)
 }
 
 func (a *app) out(format string, args ...any) {
@@ -124,9 +134,7 @@ func (a *app) publish(ctx context.Context, file string, opts store.Options) erro
 	if err != nil {
 		return err //nolint:wrapcheck // already says what failed
 	}
-	err = daemon.Ensure(ctx, daemon.Server{
-		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.cfg.templates, Env: a.serverEnv(),
-	})
+	err = daemon.Ensure(ctx, daemon.Server{Port: a.cfg.port, Root: a.cfg.root, Build: build, Env: a.serverEnv()})
 	if err != nil {
 		return err //nolint:wrapcheck // the message is for the user as is
 	}
@@ -164,7 +172,7 @@ func (a *app) noticeUpdate(e *store.Entry) {
 func (a *app) serverEnv() []string {
 	env := append([]string{}, a.env.Environ...)
 	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home,
-		"FLOE_TEMPLATES_DIR="+a.cfg.templates)
+		"FLOE_TEMPLATES_DIR="+a.templatesDir())
 }
 
 func localTime(iso string) string {
@@ -241,7 +249,7 @@ func (a *app) serve(ctx context.Context) error {
 		return fmt.Errorf("listen: %w", err)
 	}
 	a.say("cli_serving", a.cfg.root, a.cfg.base())
-	srv := server.New(server.Config{Store: a.store(), Port: a.cfg.port, Build: build, Templates: a.cfg.templates})
+	srv := server.New(server.Config{Store: a.store(), Port: a.cfg.port, Build: build})
 	return srv.Serve(ctx, ln) //nolint:wrapcheck // already says what failed
 }
 

@@ -566,7 +566,7 @@ func TestFileAndVersion(t *testing.T) {
 	if _, ok := e.s.File("p", stored, "x.css"); ok {
 		t.Error("a stored page serves a subpath")
 	}
-	if v := e.s.Version(stored, ""); v != stored.UpdatedAt {
+	if v := e.s.Version("p", stored, ""); v != stored.UpdatedAt {
 		t.Errorf("Version of a stored page = %q", v)
 	}
 	file := e.write(t, "site/index.html", "x")
@@ -575,10 +575,10 @@ func TestFileAndVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	linked := &store.Meta{Path: file}
-	if v := e.s.Version(linked, file); v != "2026-03-04T05:06:07.890Z" {
+	if v := e.s.Version("p", linked, file); v != "2026-03-04T05:06:07.890Z" {
 		t.Errorf("Version of a link = %q", v)
 	}
-	if v := e.s.Version(linked, file+".gone"); v != "" {
+	if v := e.s.Version("p", linked, file+".gone"); v != "" {
 		t.Errorf("Version of a gone link = %q", v)
 	}
 	if store.Now() == "" || !store.ValidSlug("a-1") || store.ValidSlug("-a") || e.s.Root() != filepath.Join(e.tmp, "store") {
@@ -699,8 +699,8 @@ func TestLinkDataFile(t *testing.T) {
 	if entry.Page != nil || m.Path != data || m.Lang != "ja" || m.Theme != "default" || m.Template != "" || m.Title != "" {
 		t.Errorf("the entry = %+v, page %d bytes", m, len(entry.Page))
 	}
-	if !m.IsDrawn() || e.s.Version(&m, data) == "" {
-		t.Errorf("IsDrawn = %v, Version = %q", m.IsDrawn(), e.s.Version(&m, data))
+	if !m.IsDrawn() || e.s.Version("spec", &m, data) == "" {
+		t.Errorf("IsDrawn = %v, Version = %q", m.IsDrawn(), e.s.Version("spec", &m, data))
 	}
 	if _, err := os.Stat(filepath.Join(e.tmp, "store", "spec", "index.html")); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("a page was stored for a link: %v", err)
@@ -737,8 +737,23 @@ func TestLinkDataFileEdges(t *testing.T) {
 		}
 	})
 	_, version, err := e.s.Draw("spec", &m, data)
-	if !errors.Is(err, store.ErrNotFound) || version != e.s.Version(&m, data) {
-		t.Errorf("Draw of a file that cannot be read = %v at %q, watched at %q", err, version, e.s.Version(&m, data))
+	if !errors.Is(err, store.ErrNotFound) || version != e.s.Version("spec", &m, data) {
+		t.Errorf("Draw of a file that cannot be read = %v at %q, watched at %q", err, version, e.s.Version("spec", &m, data))
+	}
+	// Made readable again, it reloads its tab.
+	if err = os.Chmod(data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if again := e.s.Version("spec", &m, data); again == version {
+		t.Errorf("the version of the file made readable again stays %q", again)
+	}
+
+	// A symlink named .html to a data file takes what a data file does.
+	if err = os.Symlink(data, filepath.Join(e.tmp, "proj", "spec.html")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = e.publish(t, filepath.Join(e.tmp, "proj", "spec.html"), store.Options{Link: true, Theme: ptr("default")}, "proj"); err != nil {
+		t.Errorf("linking a data file through a symlink named .html, with --theme = %v", err)
 	}
 
 	bad := e.write(t, "proj/bad.yaml", "template: nosuch\n")
@@ -748,5 +763,47 @@ func TestLinkDataFileEdges(t *testing.T) {
 	if _, err = e.publish(t, filepath.Join(e.tmp, "proj", "view.html"), store.Options{Link: true}, "proj"); err == nil ||
 		!strings.Contains(err.Error(), `unknown template "nosuch"`) {
 		t.Errorf("linking a data file with mistakes through a symlink named .html = %v", err)
+	}
+}
+
+// One data file linked under two slugs, drawn with the templates of their publishes, is watched apart:
+// drawing one does not move the version of the other.
+func TestLinkDataFileTwice(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	dirs := map[string]string{"a": filepath.Join(e.tmp, "a"), "b": filepath.Join(e.tmp, "b")}
+	for _, dir := range dirs {
+		if err := os.CopyFS(filepath.Join(dir, "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e.write(t, "b/sizes/extra.css", "")
+	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\n")
+	metas := map[string]store.Meta{}
+	for slug, dir := range dirs {
+		s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir))
+		entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr(slug)}, filepath.Join(e.tmp, "proj"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = s.Save(entry); err != nil {
+			t.Fatal(err)
+		}
+		if entry.Meta.Templates != dir {
+			t.Errorf("the templates of %s = %q, want %q", slug, entry.Meta.Templates, dir)
+		}
+		metas[slug] = entry.Meta
+	}
+	a, b := metas["a"], metas["b"]
+	_, version, err := e.s.Draw("a", &a, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = e.s.Draw("b", &b, data); err != nil {
+		t.Fatal(err)
+	}
+	if now := e.s.Version("a", &a, data); now != version {
+		t.Errorf("drawing b moved the version of a: %q, then %q", version, now)
 	}
 }
