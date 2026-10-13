@@ -194,8 +194,13 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			name:  "an asset",
-			files: map[string]string{"assets/notes.png": "not an image", "assets/.DS_Store": "x"},
+			files: map[string]string{"assets/notes.png": "not an image", "assets/.DS_Store": "x", "assets/README.md": "x"},
 			want:  []string{`"notes.png" does not hold the image/png its name says`},
+		},
+		{
+			name:  "an asset in a branch the example does not reach",
+			files: map[string]string{"page.html": "<body>|<body>{{if false}}{{asset \"nope.svg\"}}{{else}}{{asset \"logo.svg\"}}{{end}}"},
+			want:  []string{`sizes/page.html: there is no image "nope.svg" under `},
 		},
 		{
 			name:  "newer floe",
@@ -256,6 +261,24 @@ func TestCheckMissingFile(t *testing.T) {
 	}
 	if ja := e.Localize(i18n.New("ja")); !strings.Contains(ja, "page.html、schema.json、example.yaml、themes/default.css") {
 		t.Errorf("the mistake in Japanese = %s", ja)
+	}
+}
+
+// A file named assets is not the directory of assets.
+func TestCheckAssetsFile(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, nil)
+	if err := os.RemoveAll(filepath.Join(dir, "assets")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "assets"), nil, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
+		t.Fatal(err)
+	}
+	_, mistakes := tmpl.Check(dir)
+	var e *usererr.Error
+	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_assets_not_dir" {
+		t.Errorf("Check with a file named assets = %v", mistakes)
 	}
 }
 

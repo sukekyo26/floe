@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -72,5 +73,38 @@ func TestImageURI(t *testing.T) {
 		if !strings.HasPrefix(got, tt.want) {
 			t.Errorf("imageURI(%s) = %s, want %s", tt.name, got, tt.want)
 		}
+	}
+	// Just over the limit, an image is told by the byte.
+	_, e := imageURI(r.FS(), "large.png", dir)
+	if want := fmt.Sprintf(`is %s bytes, over the 1,048,576 bytes (1 MiB)`, english.Sprintf("%d", len(png)+maxImage)); e == nil || !strings.Contains(e.Error(), want) {
+		t.Errorf("the mistake of a large image = %v, want %s", e, want)
+	}
+}
+
+// An image named by many items is reported at each of them, and read once.
+func TestCheckImages(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	png, err := os.ReadFile("testdata/sizes/chart.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(dir, "a.png"), png, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
+		t.Fatal(err)
+	}
+	s, err := decodeSchema([]byte(`{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, root := data(t, "pics:\n  - a.png\n  - none.png\n  - a.png\n  - none.png\n")
+	err = checkImages(s, d, root, dir)
+	want := "d.yaml:3:5: pics[1]: there is no image \"none.png\" under " + dir + "\n" +
+		"d.yaml:5:5: pics[3]: there is no image \"none.png\" under " + dir
+	if err == nil || err.Error() != want {
+		t.Errorf("checkImages = %v\nwant %s", err, want)
+	}
+	if len(d.images) != 1 || !strings.HasPrefix(string(d.images["a.png"]), "data:image/png;base64,") {
+		t.Errorf("the images = %v", d.images)
 	}
 }

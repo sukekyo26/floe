@@ -50,7 +50,6 @@ type Data struct {
 	Calc     map[string]any // the values of the template's computed.yaml, by name; nil without one
 
 	tmpl   *Template               // the template Read checked the data against, which draws it
-	dir    string                  // the directory of the data file, where its images are
 	images map[string]template.URL // its images as data URIs, by the path written
 }
 
@@ -70,7 +69,7 @@ func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error
 	if !filepath.IsAbs(dir) {
 		dir = filepath.Join(cwd, dir)
 	}
-	h, err := start(file, dir, src, theme != "")
+	h, err := start(file, src, theme != "")
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		var names []string
 		if names, err = l.Names(); err != nil {
@@ -109,7 +108,7 @@ func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error
 	if err = t.checkVersion(); err != nil {
 		return nil, err
 	}
-	if err = t.check(d, h.root, theme, h.where["theme"], problems); err != nil {
+	if err = t.check(d, h.root, dir, theme, h.where["theme"], problems); err != nil {
 		return nil, err
 	}
 	return d, nil
@@ -125,10 +124,9 @@ type head struct {
 	unnamed  bool             // template: is left out or empty, a mistake left to the caller to word
 }
 
-// start reads the data file src, file in its mistakes and in the directory dir, up to its template.
-// With themed, a theme is given over the data's. It fails with yamlpos.ErrEmpty for a file without a
-// document.
-func start(file, dir string, src []byte, themed bool) (*head, error) {
+// start reads the data file src, file in its mistakes, up to its template. With themed, a theme is
+// given over the data's. It fails with yamlpos.ErrEmpty for a file without a document.
+func start(file string, src []byte, themed bool) (*head, error) {
 	root, err := parse(file, src)
 	if err != nil {
 		return nil, err
@@ -138,22 +136,23 @@ func start(file, dir string, src []byte, themed bool) (*head, error) {
 		return nil, err
 	}
 	d := &Data{
-		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, dir: dir, images: nil,
+		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, images: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)
 	return h, nil
 }
 
-// check checks d, whose root is root, against t, which then draws it: with the theme theme when given,
-// else the data's, written at at. problems are those found before in the keys every template shares.
-func (t *Template) check(d *Data, root ast.Node, theme string, at yamlpos.Pos, problems yamlpos.Problems) error {
+// check checks d, whose root is root and whose images are under dir, against t, which then draws it:
+// with the theme theme when given, else the data's, written at at. problems are those found before in
+// the keys every template shares.
+func (t *Template) check(d *Data, root ast.Node, dir, theme string, at yamlpos.Pos, problems yamlpos.Problems) error {
 	d.tmpl = t
 	more, err := pickTheme(t, d, theme, at)
 	if err != nil {
 		return err
 	}
-	return checkValues(t, d, root, append(problems, more...))
+	return checkValues(t, d, root, dir, append(problems, more...))
 }
 
 // pickTheme sets the theme of d: theme when given, which t must have, else the data's, reported at
@@ -175,9 +174,10 @@ func pickTheme(t *Template, d *Data, theme string, pos yamlpos.Pos) (yamlpos.Pro
 	return nil, nil
 }
 
-// checkValues checks d against its template's schema and then its checks, and computes its values,
-// reporting the schema's mistakes with problems, those found before in the keys every template shares.
-func checkValues(t *Template, d *Data, root ast.Node, problems yamlpos.Problems) error {
+// checkValues checks d against its template's schema, reads its images under dir, checks it against
+// its checks and computes its values, reporting the schema's mistakes with problems, those found before
+// in the keys every template shares.
+func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlpos.Problems) error {
 	err := checkSchema(t, d, root)
 	var more yamlpos.Problems
 	switch {
@@ -193,7 +193,7 @@ func checkValues(t *Template, d *Data, root ast.Node, problems yamlpos.Problems)
 	if err != nil {
 		return err
 	}
-	if err = checkImages(s, d, root, d.dir); err != nil {
+	if err = checkImages(s, d, root, dir); err != nil {
 		return err
 	}
 	// Each stage runs on data that passed the one before: broken data would only give the expressions

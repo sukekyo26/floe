@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"html/template"
+	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -19,7 +20,8 @@ import (
 )
 
 // maxImage is the size an image may be.
-// LIMIT: 1 MiB, as every image goes into the page. Raise it if pages come to need larger ones.
+// LIMIT: 1 MiB an image, and no bound on how many a page holds, as every image goes into the page.
+// Raise the one, or bound the other, if pages come to need it.
 const maxImage = 1 << 20
 
 // imageTypes are the images floe takes, by the extension of their name.
@@ -39,25 +41,54 @@ func imageURI(files fs.FS, name, where string) (template.URL, *usererr.Error) {
 	if !ok {
 		return "", usererr.New("tmpl_image_type", name)
 	}
-	// os.Root refuses a symlink that leads out of files.
-	fi, err := fs.Stat(files, name)
-	switch {
-	case errors.Is(err, fs.ErrNotExist) || err == nil && !fi.Mode().IsRegular():
-		return "", usererr.New("tmpl_image_missing", name, where)
-	case err != nil:
-		return "", usererr.New("tmpl_image_unreadable", name, err.Error())
-	case fi.Size() > maxImage:
-		return "", usererr.New("tmpl_image_large", name, byteSize(fi.Size()), byteSize(maxImage))
-	}
-	b, err := fs.ReadFile(files, name)
-	if err != nil {
-		return "", usererr.New("tmpl_image_unreadable", name, err.Error())
+	b, e := readImage(files, name, where)
+	if e != nil {
+		return "", e
 	}
 	if holds := http.DetectContentType(b); holds != typ && (typ != "image/svg+xml" || !isSVG(b)) {
 		return "", usererr.New("tmpl_image_content", name, typ)
 	}
 	//nolint:gosec // G203: an image of a type floe takes, checked by what it holds
 	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b)), nil
+}
+
+// readImage reads the file name of files, a regular file up to maxImage. os.Root refuses a symlink
+// that leads out of files.
+func readImage(files fs.FS, name, where string) ([]byte, *usererr.Error) {
+	fi, err := fs.Stat(files, name)
+	switch {
+	case errors.Is(err, fs.ErrNotExist) || err == nil && !fi.Mode().IsRegular():
+		return nil, usererr.New("tmpl_image_missing", name, where)
+	case err != nil:
+		return nil, usererr.New("tmpl_image_unreadable", name, err.Error())
+	case fi.Size() > maxImage:
+		return nil, tooLarge(name, fi.Size())
+	}
+	b, err := readAtMost(files, name, maxImage+1)
+	switch {
+	case err != nil:
+		return nil, usererr.New("tmpl_image_unreadable", name, err.Error())
+	case len(b) > maxImage: // grown since it was looked at
+		return nil, tooLarge(name, int64(len(b)))
+	}
+	return b, nil
+}
+
+// readAtMost reads up to n bytes of the file name of files.
+func readAtMost(files fs.FS, name string, n int64) ([]byte, error) {
+	f, err := files.Open(name)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // worded by the caller
+	}
+	defer f.Close()
+	return io.ReadAll(io.LimitReader(f, n)) //nolint:wrapcheck // worded by the caller
+}
+
+// tooLarge refuses the image name of size bytes, saying by how much: one just over the limit would be
+// 1 MiB as bytes writes it.
+func tooLarge(name string, size int64) *usererr.Error {
+	return usererr.New("tmpl_image_large", name, english.Sprintf("%d", size), english.Sprintf("%d", maxImage),
+		byteSize(maxImage))
 }
 
 // byteSize writes n bytes as bytes in page.html does.
@@ -132,11 +163,20 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 	}
 	defer r.Close()
 	d.images = map[string]template.URL{}
+	refused := map[string]*usererr.Error{}
 	var problems yamlpos.Problems
 	for _, f := range found {
-		uri, e := imageURI(r.FS(), f.name, dir)
+		// An image named by many items is read once, and its mistake reported at each of them.
+		_, read := d.images[f.name]
+		e, seen := refused[f.name]
+		if !read && !seen {
+			var uri template.URL
+			if uri, e = imageURI(r.FS(), f.name, dir); e == nil {
+				d.images[f.name] = uri
+			}
+			refused[f.name] = e
+		}
 		if e == nil {
-			d.images[f.name] = uri
 			continue
 		}
 		key, value, at := yamlpos.Find(root, f.at)

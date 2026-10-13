@@ -151,7 +151,7 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 		}
 		// LIMIT: the rest (anyOf, oneOf, const, dependencies…) keep the library's English. Word one
 		// in the catalogs when a template's schema comes to use it.
-		s.add(where, "tmpl_schema_other", label(at), e.ErrorKind.LocalizedString(english))
+		s.add(where, "tmpl_item", label(at), e.ErrorKind.LocalizedString(english))
 	}
 }
 
