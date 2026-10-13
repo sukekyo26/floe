@@ -161,6 +161,10 @@ func TestPublishNeedsDataFile(t *testing.T) {
 	frag := e.write(t, "frag.html", "<h1>A</h1>")
 	_, err := e.publish(t, frag, store.Options{}, "proj")
 	wantUserErr(t, err, "store_not_data", frag)
+	// The refusal comes before reading, so a missing HTML file is pointed to --link too.
+	missing := filepath.Join(e.tmp, "missing.html")
+	_, err = e.publish(t, missing, store.Options{}, "proj")
+	wantUserErr(t, err, "store_not_data", missing)
 	e.mustPublish(t, e.page(t, "untitled.yaml", ""), store.Options{}, "proj")
 	if m := e.meta(t, "untitled"); m.Title != "untitled" || !strings.Contains(e.read(t, "store/untitled/index.html"), "<h1>untitled</h1>") {
 		t.Errorf("a data file without a title: is titled %q", m.Title)

@@ -87,17 +87,17 @@ type Entry struct {
 // resolves a relative file and names the project of a stored page; a link's project is that of its
 // directory.
 func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
+	// A stored page is drawn from a data file; HTML is only linked, and shown as it is.
+	if !opts.Link && !IsDataFile(file) {
+		return nil, usererr.New("store_not_data", file)
+	}
 	path, src, err := s.read(file, opts.Link, cwd)
 	if err != nil {
 		return nil, err
 	}
-	// A stored page is drawn from a data file; HTML is only linked, and shown as it is.
 	var data *tmpl.Data
 	own := ""
 	if path == "" {
-		if !IsDataFile(file) {
-			return nil, usererr.New("store_not_data", file)
-		}
 		if data, err = tmpl.Read(file, []byte(src)); err != nil {
 			return nil, err //nolint:wrapcheck // a usererr for the caller to show
 		}
