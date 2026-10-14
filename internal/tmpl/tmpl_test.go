@@ -185,7 +185,7 @@ func TestReadRefusals(t *testing.T) {
 
 	for _, c := range []struct{ src, want string }{
 		{"title: t\nlang: en\n", "data.yaml:1:1: name the template at the top level, like template: report (templates: report)"},
-		{"", "data.yaml:1:1: name the template at the top level"},
+		{"", "data.yaml:1:1: name the language of the page at the top level"},
 		{"template: ''\nlang: en\n", "data.yaml:1:11: name the template at the top level"},
 		{"- template: report\n", "data.yaml:1:1: write the top level as keys and values"},
 		{"template: report\n---\ntitle: t\nlang: en\n", "data.yaml:2:1: a data file holds one YAML document"},
@@ -216,7 +216,7 @@ func TestReadRefusals(t *testing.T) {
 		}
 	}
 	// An empty file misses both keys every data file needs.
-	if _, err := builtins.Read("data.yaml", nil, "", ""); err == nil || !strings.Contains(err.Error(), "\ndata.yaml:1:1: name the language of the page") {
+	if _, err := builtins.Read("data.yaml", nil, "", ""); err == nil || !strings.Contains(err.Error(), "\ndata.yaml:1:1: name the template at the top level") {
 		t.Errorf("Read of an empty file = %v", err)
 	}
 	// An explicit key is found by its text after ?.

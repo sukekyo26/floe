@@ -107,14 +107,8 @@ func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data
 	}
 	h, err := start(file, src, theme != "")
 	if errors.Is(err, yamlpos.ErrEmpty) {
-		var names []string
-		if names, err = l.Names(); err != nil {
-			return nil, sources, err
-		}
-		top := yamlpos.Pos{Line: 1, Column: 1}
-		return nil, sources, yamlpos.Problems{
-			yamlpos.New(file, top, "tmpl_no_template", strings.Join(names, ", ")), yamlpos.New(file, top, "tmpl_no_lang"),
-		}
+		// As an empty mapping, which is told every key it misses at its top.
+		h, err = start(file, []byte("{}"), theme != "")
 	}
 	if err != nil {
 		return nil, sources, err
@@ -439,8 +433,18 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
 	}
-	// floe takes these out of a data file before the schema sees it: an item of one of their names
-	// would always be empty, and a required one always missing.
+	if err = t.refuseShared(s); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+// refuseShared refuses a schema that declares, or requires, a key floe reads from every data file itself:
+// floe takes it out of the data before the schema sees it, so the item would always be empty, and a
+// required one always missing.
+// LIMIT: the top of the schema only, not through $ref or allOf; look there if a schema comes to put its
+// items so.
+func (t *Template) refuseShared(s *schema) error {
 	var named []string
 	for _, key := range shared {
 		if _, ok := s.Properties[key]; ok || slices.Contains(s.Required, key) {
@@ -448,9 +452,9 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 		}
 	}
 	if named != nil {
-		return nil, usererr.New("tmpl_schema_shared", t.file("schema.json"), andList(named), andList(shared))
+		return usererr.New("tmpl_schema_shared", t.file("schema.json"), andList(named), andList(shared))
 	}
-	return s, nil
+	return nil
 }
 
 var errAfterSchema = errors.New("text after the schema")
