@@ -8,6 +8,8 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- データファイルに表・カード・注記を書けるようにした。組み込みの `report` は部品 `table`（`head` と `rows`。セルは 1 行の Markdown か数）・`cards`（`title` と Markdown の `text` の並び）・`note`（Markdown の `text` と、`warn` か `bad` の `tone`）を受け取る。
+  - テンプレートの `page.html` から `markdownLine` を使える。1 行の Markdown を段落で包まずに描き、`-` や `1.` のようなセルは文字のまま出す。
 - データファイルの中に図を書けるようにした。組み込みの `report` は部品 `diagram` を、テンプレートは `"format": "diagram"` の項目を受け取り、`floe diagram render` に渡すのと同じ spec をその場に書く。
   - 図は `floe diagram render` と同じく検査し（id の重複はページ全体で）、誤りはすべてデータファイルの行と列で出す。
   - ページには図のスタイルとズームが 1 回だけ付く。

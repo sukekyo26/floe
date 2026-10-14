@@ -56,7 +56,11 @@ func TestReportExample(t *testing.T) {
 		`<li>Freeze edits on the old wiki on <strong>Friday evening</strong>.</li>`,
 		`<div class="table-wrap"><table>`,
 		`<th>Likelihood</th>`,
-		`<p class="note warn">Anyone editing during the freeze loses their changes.</p>`,
+		`<td>Keep the old host for <strong>a month</strong></td>`,
+		`<td>120</td>`,
+		`<div class="card"><h3>Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>`,
+		`<div class="note warn"><p>Anyone editing during the freeze loses their changes.</p>`,
+		`<span class="pill good">on track</span>`,
 		`aria-label="The pages go from the old wiki to the new host"`,
 		`--accent: #1d6670;`,
 	} {
@@ -79,6 +83,38 @@ func TestReportParts(t *testing.T) {
 	}
 	if strings.Contains(got, "dg-wrap") {
 		t.Errorf("a page without diagrams holds their zoom: %s", got)
+	}
+}
+
+// A table's cell is a line of Markdown: what would start a block stays text, and raw HTML is left
+// out. A table without a head, a card without text and a note without a tone leave them out.
+func TestReportTableCardsNote(t *testing.T) {
+	t.Parallel()
+
+	got := render(t, `template: report
+sections:
+  - parts:
+      - table:
+          rows:
+            - ["-", "1.", "# x", "> q", 0.25, "a <b>c</b> ~~d~~ [e](https://e.example)", "f\n\ng", ""]
+      - cards:
+          - title: A & B
+      - note:
+          text: n
+`)
+	for _, want := range []string{
+		`<table><tbody><tr><td>-</td><td>1.</td><td># x</td><td>&gt; q</td><td>0.25</td>` +
+			`<td>a <!-- raw HTML omitted -->c<!-- raw HTML omitted --> <del>d</del> <a href="https://e.example">e</a></td>` +
+			`<td>f g</td><td></td></tr>`,
+		`<div class="card"><h3>A &amp; B</h3></div>`,
+		`<div class="note"><p>n</p>`,
+	} {
+		if !strings.Contains(strings.ReplaceAll(got, "\n", ""), strings.ReplaceAll(want, "\n", "")) {
+			t.Errorf("the page lacks %s:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "<thead>") {
+		t.Errorf("a table without a head has one: %s", got)
 	}
 }
 
@@ -160,7 +196,7 @@ sections:
 	want := []string{
 		"bad.yaml:3:1: leed is not an item of the template report (a typo?); use eyebrow, lead, sections, template, theme, title",
 		"bad.yaml:5:14: sections[0].heading: write text, not a number",
-		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use diagram, html, text",
+		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use cards, diagram, html, note, table, text",
 		"bad.yaml:8:9: sections[0].parts[1]: the number of keys must be at most 1",
 		"bad.yaml:10:9: sections[0].parts[2]: the number of keys must be at least 1",
 		"bad.yaml:11:12: sections[1].parts: write a list, not text",

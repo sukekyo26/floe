@@ -33,6 +33,28 @@
 {{- with .text}}
 {{markdown .}}
 {{- end}}
+{{- with .table}}
+<div class="table-wrap"><table>
+{{- with .head}}
+<thead><tr>{{range .}}<th>{{markdownLine (print .)}}</th>{{end}}</tr></thead>
+{{- end}}
+<tbody>
+{{- range .rows}}
+<tr>{{range .}}<td>{{markdownLine (print .)}}</td>{{end}}</tr>
+{{- end}}
+</tbody>
+</table></div>
+{{- end}}
+{{- with .cards}}
+<div class="cards">
+{{- range .}}
+<div class="card"><h3>{{.title}}</h3>{{with .text}}{{markdown .}}{{end}}</div>
+{{- end}}
+</div>
+{{- end}}
+{{- with .note}}
+<div class="note{{with .tone}} {{.}}{{end}}">{{markdown .text}}</div>
+{{- end}}
 {{- with .html}}
 {{.}}
 {{- end}}

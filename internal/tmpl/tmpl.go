@@ -21,6 +21,9 @@ import (
 	"github.com/goccy/go-yaml/ast"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
+	gmtext "github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -41,6 +44,16 @@ const (
 )
 
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
+
+// markdownLine reads paragraphs alone, without the paragraph transformers that make a line a table or a
+// link reference definition, so that a line like "-", "1." or "# x" stays text.
+var markdownLine = goldmark.New(
+	goldmark.WithParser(parser.NewParser(
+		parser.WithBlockParsers(util.Prioritized(parser.NewParagraphParser(), 1000)),
+		parser.WithInlineParsers(parser.DefaultInlineParsers()...),
+	)),
+	goldmark.WithExtensions(extension.Strikethrough, extension.Linkify),
+)
 
 // Data is a data file read: the keys every template shares, and the rest for the template's schema.
 type Data struct {
@@ -372,6 +385,24 @@ var funcs = template.FuncMap{
 		html := strings.ReplaceAll(b.String(), "<table>", `<div class="table-wrap"><table>`)
 		html = strings.ReplaceAll(html, "</table>", "</table></div>")
 		return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
+	},
+	// markdownLine writes a line of Markdown, such as a table cell, as HTML without a paragraph around it.
+	"markdownLine": func(text string) (template.HTML, error) {
+		src := []byte(text)
+		var b bytes.Buffer
+		doc := markdownLine.Parser().Parse(gmtext.NewReader(src))
+		// The children of the document are paragraphs alone: a blank line between two is drawn as a space.
+		for p := doc.FirstChild(); p != nil; p = p.NextSibling() {
+			if p != doc.FirstChild() {
+				b.WriteString(" ")
+			}
+			for n := p.FirstChild(); n != nil; n = n.NextSibling() {
+				if err := markdownLine.Renderer().Render(&b, src, n); err != nil {
+					return "", fmt.Errorf("markdownLine: %w", err)
+				}
+			}
+		}
+		return template.HTML(b.String()), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 	},
 }
 
