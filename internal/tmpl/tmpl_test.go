@@ -194,7 +194,7 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\n---\ntitle: 'a\nlang: en\n", "data.yaml:3:8: this is not valid YAML: "},
 		{"template: report\nlead: &a x\nlang: en\n", "data.yaml:2:7: anchors, aliases, merge keys (<<) and tags are not supported"},
 		{"template: report\n<<: {lead: x}\nlang: en\n", "data.yaml:2:1: anchors, aliases, merge keys (<<) and tags are not supported"},
-		{"template:\n", "data.yaml:1:1: template must be text"},
+		{"template:\nlang: en\n", "data.yaml:1:1: template must be text"},
 		{"template: report\n0x10: x\nlang: en\n", "data.yaml:2:1: a key is a name: write 0x10 as text, in quotes"},
 		{"template: report\nsections:\n  - ~: x\nlang: en\n", "data.yaml:3:5: a key is a name: write ~ as text, in quotes"},
 		{"template: report\nsections:\n  -\nlang: en\n", "data.yaml:3:3: sections[0]: write keys and values, not nothing"},

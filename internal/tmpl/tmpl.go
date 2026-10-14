@@ -265,12 +265,15 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 func (h *head) readShared(themed bool) {
 	d := h.d
 	to := map[string]*string{"lang": &d.Lang, "template": &d.Template, "theme": &d.Theme, "title": &d.Title}
-	lang, langWritten := d.Values["lang"]
 	h.unnamed = true
 	for _, key := range shared {
 		h.where[key] = yamlpos.Of(h.root)
 		v, ok := d.Values[key]
 		if !ok {
+			// The page's <html lang> is the data's own, so that every way of drawing it gives the same page.
+			if key == "lang" {
+				h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_no_lang"))
+			}
 			continue
 		}
 		k, n, _ := yamlpos.Find(h.root, []string{key})
@@ -284,21 +287,17 @@ func (h *head) readShared(themed bool) {
 			// One that is not text is reported so.
 			h.unnamed = text && s == ""
 		}
-		if text {
+		switch {
+		case key == "lang" && text && !i18n.IsTag(s):
+			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_lang_invalid", s))
+		case text:
 			*to[key] = s
-		} else {
+		default:
 			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_not_text", key))
 		}
 	}
 	// A title of spaces names none, as an empty --title does.
 	d.Title = strings.TrimSpace(d.Title)
-	// The page's <html lang> is the data's own, so that every way of drawing it gives the same page.
-	switch s, text := lang.(string); {
-	case !langWritten:
-		h.problems = append(h.problems, yamlpos.New(d.File, h.where["lang"], "tmpl_no_lang"))
-	case text && !i18n.IsTag(s):
-		h.problems = append(h.problems, yamlpos.New(d.File, h.where["lang"], "tmpl_lang_invalid", s))
-	}
 }
 
 // parse reads src as one YAML document of keys and values, without anchors, aliases or tags, so
