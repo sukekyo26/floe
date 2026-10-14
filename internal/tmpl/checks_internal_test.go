@@ -97,6 +97,17 @@ notes:
 	}
 }
 
+// A list on the way of for is gone through item by item, an item without the list holding none.
+func TestRelationsThroughLists(t *testing.T) {
+	t.Parallel()
+
+	checks := "- for: groups.members\n  field: name\n  expr: item.name != 'bad'\n  message: no bad members\n"
+	src := "groups:\n  - members:\n      - name: ok\n  - {}\n  - members:\n      - name: ok\n      - name: bad\n"
+	if got, want := failures(t, checks, src).Error(), `d.yaml:7:15: groups[2].members[1].name: no bad members ("bad")`; got != want {
+		t.Errorf("the failures = %s, want %s", got, want)
+	}
+}
+
 // A checks.yaml that is not right is the template's mistake, reported at its line and column in
 // checks.yaml.
 func TestRelationsOfABrokenTemplate(t *testing.T) {
@@ -159,7 +170,7 @@ func data(t *testing.T, src string) (*Data, ast.Node) {
 // A path of checks.yaml is refused only where the compiled schema surely refuses it: a schema
 // without the key that refuses other keys, or keys at all. One that may take it (through patterns,
 // allOf, anyOf, or by taking any keys) passes, $ref is followed, and a list is refused only where its
-// types leave array out.
+// types leave array out. A list on the way of for is gone into, its items.
 func TestDeclared(t *testing.T) {
 	t.Parallel()
 
@@ -183,7 +194,14 @@ func TestDeclared(t *testing.T) {
 		{`{"properties": {"a": {}}, "allOf": [{"properties": {"b": {}}}], "unevaluatedProperties": false}`, "b", "", ""},
 		{`{"properties": {"a": {"type": "array", "prefixItems": [{}], "items": {` + closed + `"properties": {}}}}}`, "a", "name", ""},
 		{`{"properties": {"a": {"type": "object", ` + closed + `"properties": {}}}}`, "a.x", "", "tmpl_checks_undeclared"},
-		{`{"properties": {"a": {"type": "array"}}}`, "a.0", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"a": {"type": "array", "items": {"type": "string"}}}}`, "a.0", "", "tmpl_checks_undeclared"},
+		// for goes through a list on the way, its items; field takes keys alone.
+		{`{"properties": {"s": {"type": "array", "items": {` + closed + `"properties": {"p": {"type": "array"}}}}}}`, "s.p", "", ""},
+		{`{"properties": {"s": {"type": "array", "items": {` + closed + `"properties": {"p": {"type": "array"}}}}}}`, "s.q", "", "tmpl_checks_undeclared"},
+		{`{"properties": {"s": {"type": "array", "items": {"properties": {"p": {"type": "string"}}}}}}`, "s.p", "", "tmpl_checks_not_array"},
+		{`{"properties": {"a": {"type": "array", "items": {"type": "array", "items": {` + closed + `"properties": {"x": {"type": "array"}}}}}}}`, "a.x", "", ""},
+		{`{"properties": {"a": {"type": "array"}}}`, "a.x", "", ""},
+		{`{"properties": {"s": {"type": "array", "items": {"properties": {"p": {"type": "array", "items": {` + closed + `"properties": {"x": {}}}}}}}}}`, "s", "p.x", "tmpl_checks_field"},
 		{`{"properties": {"a": {"type": ["object", "null"]}}}`, "a.x", "", ""},
 		{`{"$defs": {"l": {` + closed + `"properties": {"rows": {"type": "array"}}}}, "properties": {"a": {"$ref": "#/$defs/l"}}}`, "a.rows", "", ""},
 		{`{"$defs": {"l": {` + closed + `"properties": {"rows": {"type": "array"}}}}, "properties": {"a": {"$ref": "#/$defs/l"}}}`, "a.cols", "", "tmpl_checks_undeclared"},

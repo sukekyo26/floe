@@ -15,8 +15,9 @@ import (
 )
 
 // relation is a check of checks.yaml that the schema cannot say: expr holds for each item of the list
-// at for, a path of keys like sections or model.tables. A failure points at the item's field, a path
-// of keys under the item, or at the item without one.
+// at for, a path of keys like sections or model.tables, a list on the way gone through item by item
+// (sections.parts is the parts of every section). A failure points at the item's field, a path of
+// keys under the item, or at the item without one.
 type relation struct {
 	For, Field, Expr, Message string
 
@@ -152,20 +153,19 @@ func (c relation) check(file string, doc map[string]any, root ast.Node) (yamlpos
 	if err != nil {
 		return nil, err
 	}
-	steps := strings.Split(c.For, ".")
-	list, ok := listAt(doc, steps)
-	if !ok {
+	var items []itemAt
+	if !itemsAt(doc, strings.Split(c.For, "."), nil, &items) {
 		return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
 	}
 	var problems yamlpos.Problems
-	for i, item := range list {
-		out, err := expr.Run(p, scope{Item: item, Doc: doc})
+	for _, item := range items {
+		out, err := expr.Run(p, scope{Item: item.value, Doc: doc})
 		if held, ok := out.(bool); ok && held && err == nil {
 			continue
 		}
-		at := slices.Concat(steps, []string{strconv.Itoa(i)})
+		at := item.at
 		if c.Field != "" {
-			at = append(at, strings.Split(c.Field, ".")...)
+			at = slices.Concat(at, strings.Split(c.Field, "."))
 		}
 		problems = append(problems, c.failure(file, root, at, err))
 	}
@@ -193,23 +193,25 @@ func (c relation) failure(file string, root ast.Node, at []string, err error) *y
 	}
 }
 
-// listAt returns the list at steps under values, nil when the data leaves it out, and false when what
-// is there is not a list.
-func listAt(values map[string]any, steps []string) ([]any, bool) {
-	var v any = values
-	for _, step := range steps {
-		if v == nil {
-			return nil, true
+// itemsAt adds to found the items of the lists at steps under v, v being at the path at: a list on the
+// way is gone through item by item. A list or value the data leaves out holds none. It returns false
+// when what is at steps is not a list.
+func itemsAt(v any, steps, at []string, found *[]itemAt) bool {
+	switch v := v.(type) {
+	case nil:
+		return true
+	case map[string]any:
+		return len(steps) > 0 && itemsAt(v[steps[0]], steps[1:], slices.Concat(at, steps[:1]), found)
+	case []any:
+		for i, item := range v {
+			here := slices.Concat(at, []string{strconv.Itoa(i)})
+			if len(steps) == 0 {
+				*found = append(*found, itemAt{value: item, at: here})
+			} else if !itemsAt(item, steps, here, found) {
+				return false
+			}
 		}
-		m, ok := v.(map[string]any)
-		if !ok {
-			return nil, false
-		}
-		v = m[step]
+		return true
 	}
-	if v == nil {
-		return nil, true
-	}
-	list, ok := v.([]any)
-	return list, ok
+	return false
 }
