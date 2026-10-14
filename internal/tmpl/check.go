@@ -98,13 +98,17 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	s, err := t.decodeSchema(src)
+	s, err := decodeSchema(src)
 	if err != nil {
-		return nil, []error{err}
+		return nil, []error{fmt.Errorf("read the schema of %s: %w", t.Name, err)}
 	}
 	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil, diagrams: false}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
+	// Told beside the other mistakes of the files, not instead of them.
+	if err = t.refuseShared(s); err != nil {
+		mistakes = append(mistakes, err)
+	}
 	if lint.diagrams {
 		more, themeErr := t.checkThemeVariables()
 		warnings = append(warnings, more...)

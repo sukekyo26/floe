@@ -246,6 +246,13 @@ func TestCheckMistakes(t *testing.T) {
 			},
 		},
 		{
+			name: "an item floe reads itself beside another mistake",
+			files: map[string]string{
+				"schema.json": `"chart":|"title": { "type": "string" },` + "\n    " + `"chart":`, "page.html": "{{if}}",
+			},
+			want: []string{"sizes/schema.json declares title, which floe reads", "parse the template sizes: "},
+		},
+		{
 			name:  "newer floe",
 			files: map[string]string{"template.yaml": "floe: 999.0\n"},
 			want:  []string{"template sizes needs floe 999.0.0 or later"},
@@ -380,8 +387,6 @@ func TestCheckFile(t *testing.T) {
 	}
 }
 
-// sizes copies testdata/sizes into a directory sizes, with files written over: a whole file, or old|new
-// for old to be replaced with new.
 // A schema that declares a key floe reads from every data file itself, as an item or only as required,
 // is refused wherever the template is read: its item would always be empty, or always missing.
 func TestSchemaOfSharedKeys(t *testing.T) {
@@ -408,6 +413,8 @@ func mustRead(t *testing.T, file string) string {
 	return string(b)
 }
 
+// sizes copies testdata/sizes into a directory sizes, with files written over: a whole file, or old|new
+// for old to be replaced with new.
 func sizes(t *testing.T, files map[string]string) string {
 	t.Helper()
 

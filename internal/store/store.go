@@ -251,7 +251,7 @@ func drawLinked(d *tmpl.Data, m *Meta, slug string) ([]byte, error) {
 }
 
 // Version is what live reload compares: a stored page's publish time, a linked file's mtime, and for a
-// linked data file of slug its publish time too (another theme, language or templates) and the state
+// linked data file of slug its publish time too (another theme or templates) and the state
 // of what its last drawing read besides it (its template's files, its images) and whether it can be
 // read, so that publishing it again, saving any of them, or making it readable again reloads the page.
 // It is "" when the file is gone.

@@ -112,21 +112,18 @@ func (a *app) showTemplate(d *tmpl.Description) {
 	}
 }
 
-// sharedItems are the keys floe reads from every data file of the template name itself, told beside
-// the items of its schema.
+// sharedItems are the keys floe reads from every data file of the template name itself, worded in the
+// reader's language.
 func (a *app) sharedItems(name string) []tmpl.Item {
-	item := func(n string, enum []string, required bool, key string, args ...any) tmpl.Item {
-		return tmpl.Item{
-			Name: n, Types: []string{"string"}, Of: nil, Format: "", Enum: enum, Required: required,
-			Description: a.cat.Msg(key, args...), Items: nil,
+	items := tmpl.SharedItems(name)
+	for i, it := range items {
+		var args []any
+		if it.Name == "theme" {
+			args = []any{tmpl.DefaultTheme}
 		}
+		items[i].Description = a.cat.Msg("cli_template_shared_"+it.Name, args...)
 	}
-	return []tmpl.Item{
-		item("lang", nil, true, "cli_template_shared_lang"),
-		item("template", []string{name}, true, "cli_template_shared_template"),
-		item("theme", nil, false, "cli_template_shared_theme", tmpl.DefaultTheme),
-		item("title", nil, false, "cli_template_shared_title"),
-	}
+	return items
 }
 
 // showItems writes each item on a line, its name, what it takes and its description, and the items
