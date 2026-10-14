@@ -3,6 +3,8 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -50,10 +52,32 @@ type rendered struct {
 }
 
 func (a *app) renderPages(files []string, outDir string, check bool) error {
+	pages, err := a.drawPages(files, outDir)
+	switch {
+	case err != nil:
+		return err
+	case check:
+		return a.checkPages(pages)
+	default:
+		return a.writePages(pages, outDir)
+	}
+}
+
+// drawPages draws the page of each data file and names the HTML file it goes to, or returns the
+// mistakes of every file, and the pages two data files would write.
+func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
 	found := make(mistakes, 0, len(files))
 	pages := make([]rendered, 0, len(files))
-	writers := map[string]string{} // the data file that writes each HTML file, by its absolute path
+	read := map[string]bool{} // the data files drawn, by their absolute paths
+	// The data file that writes each page, by the page's absolute path in lower case: on a filesystem
+	// that ignores case (macOS), Spec.html and spec.html are one file.
+	writers := map[string]string{}
 	for _, file := range files {
+		// One file named twice (by two globs, or as ./spec.yaml and spec.yaml) is drawn once.
+		if read[a.abs(file)] {
+			continue
+		}
+		read[a.abs(file)] = true
 		page, errs := drawFile(a, file)
 		if len(errs) > 0 {
 			found = append(found, errs...)
@@ -64,21 +88,29 @@ func (a *app) renderPages(files []string, outDir string, check bool) error {
 			dir = filepath.Dir(file)
 		}
 		to := filepath.Join(dir, strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))+".html")
-		if first, ok := writers[a.abs(to)]; ok {
+		key := strings.ToLower(a.abs(to))
+		if first, ok := writers[key]; ok {
 			found = append(found, usererr.New("cli_render_same_file", first, file, to))
 			continue
 		}
-		writers[a.abs(to)] = file
-		pages = append(pages, rendered{from: file, to: to, page: tmpl.WithCutOff(page)})
+		writers[key] = file
+		cut, err := io.ReadAll(tmpl.WithCutOff(page))
+		if err != nil {
+			return nil, fmt.Errorf("draw %s: %w", file, err)
+		}
+		pages = append(pages, rendered{from: file, to: to, page: cut})
 	}
 	if len(found) > 0 {
-		return found
+		return nil, found
 	}
-	if check {
-		return a.checkPages(pages)
-	}
+	return pages, nil
+}
+
+// writePages writes each page that changes, and prints its path.
+func (a *app) writePages(pages []rendered, outDir string) error {
 	if outDir != "" {
-		if err := os.MkdirAll(a.abs(outDir), 0o750); err != nil {
+		// As the pages in it, for others to read.
+		if err := os.MkdirAll(a.abs(outDir), 0o755); err != nil { //nolint:gosec // G301: pages to share
 			return usererr.CannotWrite(outDir, err)
 		}
 	}

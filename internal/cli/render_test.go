@@ -31,6 +31,8 @@ func TestRender(t *testing.T) {
 		}
 	}
 	want(t, "render again", e.run(t, "work", "render", "spec.yaml"), 0, "", "")
+	e.write(t, "work/other.yaml", spec)
+	want(t, "render a file named twice", e.run(t, "work", "render", "spec.yaml", "./other.yaml", "other.yaml"), 0, "other.html\n", "")
 	want(t, "check", e.run(t, "work", "render", "--check", "spec.yaml"), 0, "", "")
 
 	e.write(t, "work/spec.yaml", strings.Replace(spec, "Do", "Did", 1))
@@ -52,11 +54,15 @@ func TestRenderRefusals(t *testing.T) {
 	e := newEnv(t)
 	e.write(t, "spec.yaml", spec)
 	e.write(t, "sub/spec.yaml", spec)
+	e.write(t, "sub/Spec.yaml", spec)
 	e.write(t, "bad.yaml", "template: report\nleed: x\nlang: en\n")
 	want(t, "render with a mistake", e.run(t, "", "render", "spec.yaml", "bad.yaml"), 1, "",
 		"bad.yaml:2:1: leed is not an item of the template report")
 	want(t, "render onto one page", e.run(t, "", "render", "spec.yaml", "sub/spec.yaml", "--out-dir", "out"), 1, "",
 		"spec.yaml and sub/spec.yaml would both write out/spec.html; write them into other directories")
+	// On macOS, Spec.html and spec.html are one file.
+	want(t, "render onto one page but for case", e.run(t, "", "render", "spec.yaml", "sub/Spec.yaml", "--out-dir", "out"), 1, "",
+		"spec.yaml and sub/Spec.yaml would both write out/Spec.html")
 	for _, f := range []string{"spec.html", "out"} {
 		if _, err := os.Stat(filepath.Join(e.tmp, f)); !os.IsNotExist(err) {
 			t.Errorf("%s was written: %v", f, err)
@@ -65,15 +71,16 @@ func TestRenderRefusals(t *testing.T) {
 	want(t, "render without a file", e.run(t, "", "render"), 2, "", "floe: requires at least 1 arg(s)")
 }
 
-// The page floe render writes is the download of the page floe publish stores: drawn the same each time.
+// The page floe render writes is the download of the page floe publish stores: drawn the same each time,
+// and titled the same, by the slug, without a title:.
 func TestRenderIsTheDownload(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	e.write(t, "spec.yaml", spec)
-	want(t, "render", e.run(t, "", "render", "spec.yaml"), 0, "spec.html\n", "")
-	want(t, "publish", e.run(t, "", "publish", "spec.yaml"), 0, e.base()+"/a/spec/\n", "")
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.base()+"/api/artifacts/spec/download", nil)
+	e.write(t, "My_Spec.yaml", strings.Replace(spec, "title: Spec\n", "", 1))
+	want(t, "render", e.run(t, "", "render", "My_Spec.yaml"), 0, "My_Spec.html\n", "")
+	want(t, "publish", e.run(t, "", "publish", "My_Spec.yaml"), 0, e.base()+"/a/my-spec/\n", "")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.base()+"/api/artifacts/my-spec/download", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +93,8 @@ func TestRenderIsTheDownload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if page, err := os.ReadFile(filepath.Join(e.tmp, "spec.html")); err != nil || !bytes.Equal(page, download) {
+	if page, err := os.ReadFile(filepath.Join(e.tmp, "My_Spec.html")); err != nil || !bytes.Equal(page, download) ||
+		!bytes.Contains(page, []byte("<title>my-spec</title>")) {
 		t.Errorf("the page = %v\n%s\nthe download =\n%s", err, page, download)
 	}
 }
