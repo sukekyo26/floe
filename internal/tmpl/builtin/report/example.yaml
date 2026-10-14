@@ -1,6 +1,6 @@
 # A report: a heading and parts per section. Text is Markdown; a table's cells are lines of Markdown,
-# numbers in quotes; html goes in as it is; a diagram is a spec as floe diagram render takes it; a
-# script is a function the page calls with an element to draw in and its data.
+# numbers in quotes, or pills; html goes in as it is; a diagram is a spec as floe diagram render takes
+# it; a script is a function the page calls with an element to draw in and its data.
 template: report
 title: Moving the team wiki
 eyebrow: Plan · 2030-04
@@ -52,10 +52,11 @@ sections:
             - title: Likelihood
             - { title: Pages, num: true }
             - title: What we do
+            - title: State
           rows:
-            - [Broken links, High, '120', A link check after the copy]
-            - [Lost attachments, Low, '8', Keep the old host for **a month**]
-            - [Slow search, Unknown, "-", Rebuild the index on `Sunday`]
+            - [Broken links, High, '120', A link check after the copy, { pill: watching, tone: warn }]
+            - [Lost attachments, Low, '8', Keep the old host for **a month**, { pill: covered, tone: good }]
+            - [Slow search, Unknown, "-", Rebuild the index on `Sunday`, { pill: open }]
       - note:
           tone: warn
           text: Anyone editing during the freeze loses their changes.

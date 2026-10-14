@@ -58,6 +58,7 @@ func TestReportExample(t *testing.T) {
 		`<th scope="col">Likelihood</th>`,
 		`<td>Keep the old host for <strong>a month</strong></td>`,
 		`<td class="num">120</td>`,
+		`<td><span class="pill warn">watching</span></td>`,
 		`<div class="card"><h3>Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>`,
 		`<div class="note warn"><p>Anyone editing during the freeze loses their changes.</p>`,
 		`<span class="pill good">on track</span>`,
@@ -87,8 +88,8 @@ func TestReportParts(t *testing.T) {
 }
 
 // A table's cell is a line of Markdown: what would start a block stays text, its lines are joined,
-// and raw HTML is left out. A num column is aligned right. A card without text and a note without a
-// tone leave them out.
+// and raw HTML is left out; a pill is its text in its tone. A num column is aligned right. A card
+// without text and a note without a tone leave them out.
 func TestReportTableCardsNote(t *testing.T) {
 	t.Parallel()
 
@@ -105,6 +106,8 @@ func TestReportTableCardsNote(t *testing.T) {
 		{`"c  \nd"`, "c\nd"},
 		{`" \n "`, ""},
 		{`""`, ""},
+		{`{ pill: "#40 <b>", tone: good }`, `<span class="pill good">#40 &lt;b&gt;</span>`},
+		{`{ pill: x }`, `<span class="pill">x</span>`},
 	}
 	src := "template: report\nsections:\n  - parts:\n      - table:\n          columns: [{title: Cell}, {title: '**N**', num: true}]\n          rows:\n"
 	want := make([]string, 0, len(cells)+3)
@@ -121,10 +124,13 @@ func TestReportTableCardsNote(t *testing.T) {
 			t.Errorf("the page lacks %s:\n%s", w, got)
 		}
 	}
-	// A number would lose how it was written (1.50 as 1.5, 1234567.5 as 1.2345675e+06): a cell is text.
+	// A number would lose how it was written (1.50 as 1.5, 1234567.5 as 1.2345675e+06): a cell is text or
+	// a pill, which has its text and a tone floe knows.
 	// A part with nothing in it is a slip.
 	for src, want := range map[string]string{
-		"table: { columns: [{title: a}], rows: [[1.50]] }": "data.yaml:4:49: sections[0].parts[0].table.rows[0][0]: write text, not a number",
+		"table: { columns: [{title: a}], rows: [[1.50]] }": "data.yaml:4:49: sections[0].parts[0].table.rows[0][0]: write text or keys and values, not a number",
+		"table: { columns: [{title: a}], rows: [[{tone: good}], [{pill: x, tone: ok}]] }": "data.yaml:4:50: sections[0].parts[0].table.rows[0][0].pill is required but missing\n" +
+			`data.yaml:4:81: sections[0].parts[0].table.rows[1][0].tone: "ok" is not allowed; use good, warn, bad`,
 		"table: { columns: [], rows: [] }": "data.yaml:4:27: sections[0].parts[0].table.columns: the number of items must be at least 1\n" +
 			"data.yaml:4:37: sections[0].parts[0].table.rows: the number of items must be at least 1",
 		"table: { columns: [{title: a}, {title: b}], rows: [[x, y], [x]] }": "data.yaml:4:59: sections[0].parts[0].table.rows: write as many cells in each row as there are columns",
