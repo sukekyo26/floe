@@ -96,7 +96,7 @@ sections:
   - parts:
       - table:
           rows:
-            - ["-", "1.", "# x", "> q", "1.50", "a <b>c</b> ~~d~~ [e](https://e.example)", "    120", "\tt", "**a\n\n  b**", " \n ", ""]
+            - ["-", "1.", "# x", "> q", "1.50", "a <b>c</b> ~~d~~ [e](https://e.example)", "    120", "\tt", "**a\n\n  b**", "c  \nd", " \n ", ""]
       - table:
           head: [h]
           rows: [[c]]
@@ -108,7 +108,7 @@ sections:
 	for _, want := range []string{
 		"<table>\n<tbody>\n<tr><td>-</td><td>1.</td><td># x</td><td>&gt; q</td><td>1.50</td>" +
 			`<td>a <!-- raw HTML omitted -->c<!-- raw HTML omitted --> <del>d</del> <a href="https://e.example">e</a></td>` +
-			"<td>120</td><td>t</td><td><strong>a\nb</strong></td><td></td><td></td></tr>",
+			"<td>120</td><td>t</td><td><strong>a\nb</strong></td><td>c\nd</td><td></td><td></td></tr>",
 		`<thead><tr><th scope="col">h</th></tr></thead>`,
 		`<div class="card"><h3>A &amp; B</h3></div>`,
 		`<div class="note"><p>n</p>`,
