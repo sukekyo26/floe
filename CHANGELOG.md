@@ -44,9 +44,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   The built-in template `report` lays out a header and sections of Markdown
   text, with HTML parts for what Markdown cannot say. The data is checked
   against the template's schema first, and every mistake is reported at its
-  line and column (`file:line:column`). A page drawn from a data file sends
-  nothing out: its CSP blocks `fetch`, XHR, images from elsewhere and forms,
-  in its download too. A page is in English
+  line and column (`file:line:column`). The scripts of a page drawn from a
+  data file cannot send what it holds out: its CSP blocks `fetch`, XHR,
+  images from elsewhere and forms, in its download too. A page is in English
   unless `--lang` names another language. It starts the server in the
   background when needed and opens a new page in the browser. An HTML file is
   not stored: `--link` registers it in place and shows it as it is, served

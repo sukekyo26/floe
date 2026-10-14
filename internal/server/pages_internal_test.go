@@ -1,6 +1,9 @@
 package server
 
-import "testing"
+import (
+	"io"
+	"testing"
+)
 
 // The CSP goes into a download before anything it could load: after a doctype in any case, past a BOM
 // and comments before it, or before the rest when there is none.
@@ -18,8 +21,9 @@ func TestWithCutOff(t *testing.T) {
 		"<!doctype":                                   meta + "<!doctype",
 		"":                                            meta,
 	} {
-		if got := string(withCutOff([]byte(page))); got != want {
-			t.Errorf("withCutOff(%q) = %q, want %q", page, got, want)
+		got, err := io.ReadAll(withCutOff([]byte(page)))
+		if err != nil || string(got) != want {
+			t.Errorf("withCutOff(%q) = %q, %v, want %q", page, got, err, want)
 		}
 	}
 }

@@ -41,16 +41,16 @@ func TestUICutOff(t *testing.T) { //nolint:paralleltest // the UI tests share on
 		return strings.Join(reached, " ")
 	}
 	// The page tries each way out once loaded, and lists what CSP blocked. Once loaded: a form submitted
-	// while the page is parsed stops the parsing, before the reload script. The form goes last: if it got
-	// out, it would move the page away.
+	// while the page is parsed stops the parsing, before the reload script. The form goes once the others
+	// have ended: if it got out, it would move the page away and could cut them short.
 	tries := "<script>window.blocked = [];" +
 		"document.addEventListener('securitypolicyviolation', (e) => blocked.push(e.effectiveDirective));" +
 		"addEventListener('load', () => {const out = " + js(outside.URL) + ";" +
-		"fetch(out + '/fetch').catch(() => {});" +
-		"const x = new XMLHttpRequest(); x.open('GET', out + '/xhr'); x.send();" +
-		"new Image().src = out + '/img';" +
-		"fetch('/api/artifacts').catch(() => {});" +
-		"const f = document.createElement('form'); f.method = 'post'; f.action = out + '/form'; document.body.append(f); f.submit();});" +
+		"const x = new XMLHttpRequest(); x.open('GET', out + '/xhr'); const img = new Image();" +
+		"Promise.allSettled([fetch(out + '/fetch'), fetch('/api/artifacts')," +
+		"new Promise((r) => { x.onloadend = r; x.send(); })," +
+		"new Promise((r) => { img.onload = img.onerror = r; img.src = out + '/img'; })]).then(() => {" +
+		"const f = document.createElement('form'); f.method = 'post'; f.action = out + '/form'; document.body.append(f); f.submit();});});" +
 		"</script>"
 	all := "window.blocked.length === 5 && window.blocked.sort().join()"
 	const want = "connect-src,connect-src,connect-src,form-action,img-src"

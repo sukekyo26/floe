@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -29,15 +28,15 @@ const (
 // cdns are where a page drawn from a data file may load libraries from, with their styles and fonts.
 const cdns = "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com"
 
-// cutOff is the CSP of a page drawn from a data file: what it shows is in it, so it loads nothing but
-// Google Fonts and the libraries of cdns, and connects to connect only. A template's or the data's
-// script cannot send the page out with fetch, an image or a form.
-// LIMIT: CSP cannot stop the page from moving or WebRTC, so this stops a slip, not a hostile script.
-// Rethink it before taking templates one does not trust.
+// cutOff is the CSP of a page drawn from a data file: what it shows is in it (images, fonts and media
+// as data URIs), so it loads nothing but Google Fonts and the libraries of cdns, and connects to connect
+// only. A template's or the data's script cannot send what the page holds out with fetch, XHR, an image
+// or a form.
+// LIMIT: moving the page, opening a window, WebRTC and DNS prefetch escape CSP; rethink for untrusted templates.
 func cutOff(connect string) string {
-	return "default-src 'none'; img-src data: blob:; " +
+	return "default-src 'none'; img-src data: blob:; media-src data: blob:; " +
 		"style-src 'unsafe-inline' https://fonts.googleapis.com " + cdns + "; " +
-		"font-src https://fonts.gstatic.com " + cdns + "; " +
+		"font-src data: https://fonts.gstatic.com " + cdns + "; " +
 		"script-src 'unsafe-inline' " + cdns + "; form-action 'none'; connect-src " + connect
 }
 
@@ -52,7 +51,7 @@ func cutsOff(m *store.Meta) bool {
 // parser moves it into <head> all the same. Nothing connects: the reload script is not in a download.
 // A page floe draws is UTF-8: the charset goes first, so that the CSP does not push the page's own out
 // of the bytes a browser reads for it.
-func withCutOff(page []byte) []byte {
+func withCutOff(page []byte) io.Reader {
 	at := len(page) - len(bytes.TrimPrefix(page, []byte("\uFEFF")))
 	for {
 		at = len(page) - len(bytes.TrimLeft(page[at:], " \t\r\n"))
@@ -69,7 +68,7 @@ func withCutOff(page []byte) []byte {
 		}
 	}
 	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + cutOff("'none'") + "\">"
-	return slices.Concat(page[:at], []byte(meta), page[at:])
+	return io.MultiReader(bytes.NewReader(page[:at]), strings.NewReader(meta), bytes.NewReader(page[at:]))
 }
 
 // types are the files served from a link's directory. The registered file itself is HTML whatever its
@@ -185,6 +184,15 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 	}
 	var body io.Reader
 	switch {
+	case !cutsOff(m):
+		// Linked HTML, as it is.
+		f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
+		if err != nil {
+			notFound(w)
+			return
+		}
+		defer f.Close() //nolint:errcheck // read-only
+		body = f
 	case m.IsDrawn():
 		page, _, err := s.cfg.Store.Draw(slug, m, file)
 		switch {
@@ -195,22 +203,15 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 			send(w, http.StatusConflict, mistakesText(catalog(r), err))
 			return
 		}
-		body = bytes.NewReader(withCutOff(page))
-	case cutsOff(m):
+		body = withCutOff(page)
+	default:
+		// A page stored from a data file.
 		page, err := os.ReadFile(file) //nolint:gosec // G304: file passed store.File
 		if err != nil {
 			notFound(w)
 			return
 		}
-		body = bytes.NewReader(withCutOff(page))
-	default:
-		f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
-		if err != nil {
-			notFound(w)
-			return
-		}
-		defer f.Close() //nolint:errcheck // read-only
-		body = f
+		body = withCutOff(page)
 	}
 	// The page as stored, linked or drawn, a page drawn from a data file still cut off. Nothing added on
 	// serving (the reload script) goes in.
