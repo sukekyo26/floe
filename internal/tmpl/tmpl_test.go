@@ -101,6 +101,7 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\n0x10: x\n", "data.yaml:2:1: a key is a name: write 0x10 as text, in quotes"},
 		{"template: report\nsections:\n  - ~: x\n", "data.yaml:3:5: a key is a name: write ~ as text, in quotes"},
 		{"template: report\nsections:\n  -\n", "data.yaml:3:3: sections[0]: write keys and values, not nothing"},
+		{"template: report\nsections: [~]\n", "data.yaml:2:12: sections[0]: write keys and values, not nothing"},
 		{"template: report\nlead: .inf\n", "data.yaml:2:7: .inf is not a value a data file can hold"},
 		{"template: report\nsections:\n  - heading: .NaN\n", "data.yaml:3:14: .NaN is not a value a data file can hold"},
 		// The shared keys and the schema are reported together.
