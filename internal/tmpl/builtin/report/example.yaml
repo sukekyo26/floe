@@ -34,7 +34,11 @@ sections:
   - heading: Risks
     parts:
       - table:
-          head: [Risk, Likelihood, Pages, What we do]
+          columns:
+            - title: Risk
+            - title: Likelihood
+            - { title: Pages, num: true }
+            - title: What we do
           rows:
             - [Broken links, High, '120', A link check after the copy]
             - [Lost attachments, Low, '8', Keep the old host for **a month**]

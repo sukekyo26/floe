@@ -34,13 +34,12 @@
 {{markdown .}}
 {{- end}}
 {{- with .table}}
+{{- $columns := .columns}}
 <div class="table-wrap"><table>
-{{- with .head}}
-<thead><tr>{{range .}}<th scope="col">{{markdownLine .}}</th>{{end}}</tr></thead>
-{{- end}}
+<thead><tr>{{range $columns}}<th scope="col"{{if .num}} class="num"{{end}}>{{markdownLine .title}}</th>{{end}}</tr></thead>
 <tbody>
 {{- range .rows}}
-<tr>{{range .}}<td>{{markdownLine .}}</td>{{end}}</tr>
+<tr>{{range $i, $cell := .}}<td{{if and (lt $i (len $columns)) (index $columns $i).num}} class="num"{{end}}>{{markdownLine $cell}}</td>{{end}}</tr>
 {{- end}}
 </tbody>
 </table></div>
