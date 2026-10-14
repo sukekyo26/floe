@@ -3,6 +3,7 @@ package cli
 import (
 	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -101,11 +102,30 @@ func (a *app) showTemplate(d *tmpl.Description) {
 	}
 	a.out("")
 	a.out("%s", a.cat.Msg("cli_template_items"))
-	a.showItems(d.Items, "  ")
+	items := append(a.sharedItems(d.Name), d.Items...)
+	slices.SortFunc(items, func(x, y tmpl.Item) int { return cmp.Compare(x.Name, y.Name) })
+	a.showItems(items, "  ")
 	if d.Example != nil {
 		a.out("")
 		a.out("%s", a.cat.Msg("cli_template_example"))
 		a.out("%s", strings.TrimRight(string(d.Example), "\n"))
+	}
+}
+
+// sharedItems are the keys floe reads from every data file of the template name itself, told beside
+// the items of its schema.
+func (a *app) sharedItems(name string) []tmpl.Item {
+	item := func(n string, enum []string, required bool, key string, args ...any) tmpl.Item {
+		return tmpl.Item{
+			Name: n, Types: []string{"string"}, Of: nil, Format: "", Enum: enum, Required: required,
+			Description: a.cat.Msg(key, args...), Items: nil,
+		}
+	}
+	return []tmpl.Item{
+		item("lang", nil, true, "cli_template_shared_lang"),
+		item("template", []string{name}, true, "cli_template_shared_template"),
+		item("theme", nil, false, "cli_template_shared_theme", tmpl.DefaultTheme),
+		item("title", nil, false, "cli_template_shared_title"),
 	}
 }
 
