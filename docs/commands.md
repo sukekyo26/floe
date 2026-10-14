@@ -110,7 +110,7 @@ A linked data file is drawn each time its page is opened, with `--lang` and `--t
 - It is checked when it is linked, as `floe publish` checks it, and refused with its mistakes.
 - Saving the data file, an image it shows or a file of its template, or fetching the icons its diagrams show, reloads the open tab.
 - When it has mistakes, the tab shows them instead of the page, and comes back to the page once they are fixed and saved.
-- Nothing of its directory is served: its images are in its page. Its download is the page drawn.
+- Nothing of its directory is served: its images are in its page. Its download is the page drawn, its CSP kept in a `<meta>`.
 - Its title in the list is its `title:`, read each time.
 - It is drawn with the templates of your own of the publish that linked it (`FLOE_TEMPLATES_DIR`); one linked on the management page, with those of the server (of the `floe publish` or `floe serve` that started it).
 
