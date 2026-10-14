@@ -104,6 +104,7 @@ func TestReportTableCardsNote(t *testing.T) {
 		{`"**a\n\n  b**"`, "<strong>a\nb</strong>"},
 		{`"c  \nd"`, "c\nd"},
 		{`" \n "`, ""},
+		{`""`, ""},
 	}
 	src := "template: report\nsections:\n  - parts:\n      - table:\n          columns: [{title: Cell}, {title: '**N**', num: true}]\n          rows:\n"
 	want := make([]string, 0, len(cells)+3)
