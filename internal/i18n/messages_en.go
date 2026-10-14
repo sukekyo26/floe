@@ -7,8 +7,9 @@ func init() {
 // messagesEN is the reference catalog: every other language has exactly its keys.
 var messagesEN = map[string]string{
 	// shared: mistakes more than one command makes
-	"file_cannot_read": "cannot read %s (%s); check the path and that the file exists",
-	"lang_invalid":     `invalid language "%s": give --lang a BCP 47 tag such as en, ja or pt-BR`,
+	"file_cannot_read":  "cannot read %s (%s); check the path and that the file exists",
+	"file_cannot_write": "cannot write %s (%s); check that its directory can be written to",
+	"lang_invalid":      `invalid language "%s": give --lang a BCP 47 tag such as en, ja or pt-BR`,
 
 	// link: which files may be linked
 	"link_not_real":        "%s is not its absolute real path; pass it through filepath.Abs and filepath.EvalSymlinks (symlinks resolved, path cleaned) first",
@@ -176,6 +177,10 @@ var messagesEN = map[string]string{
 	"cli_template_no_from":         "name the template to copy with --from, like --from report",
 	"cli_template_made":            "made the template %s in %s, a copy of %s",
 	"cli_check_not_data":           "%s is not a data file (.yaml or .yml)",
+	"cli_render_same_file":         "%s and %s would both write %s; rename one of them",
+	"cli_render_same_file_case":    "%s and %s would write %s and %s, which are one file where case is ignored (macOS); rename one of them",
+	"cli_render_missing":           "%s is missing: write it from %s with floe render",
+	"cli_render_stale":             "%s is not what %s draws: write it again with floe render",
 	"cli_title_empty":              "--title is empty: give the page a name, or omit --title to take the data file's title:, or a link's <title> or <h1>",
 	"cli_theme_empty":              "--theme is empty: name a theme of the template, or omit --theme to take the data file's theme:",
 	"cli_port_in_use":              "port %d is in use; stop that program or set FLOE_PORT",

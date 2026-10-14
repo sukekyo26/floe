@@ -8,6 +8,7 @@ Reference for every command of the `floe` binary.
 |---|---|
 | `floe publish <data.yaml>` | Store a page drawn from a data file (or `--link` an HTML file in place) and print its URL |
 | `floe check <data.yaml>...` | Check data files as `floe publish` would, without publishing them |
+| `floe render <data.yaml>...` | Write the page of each data file to an HTML file, to keep in a repository |
 | `floe template list` | List the templates |
 | `floe template show <name>` | Show the items a data file of a template may hold, and its example |
 | `floe template new <name> --from <template>` | Make a template of your own as a copy of another, to edit |
@@ -131,6 +132,32 @@ Check each data file as `floe publish` does before it stores the page: its YAML,
 - Nothing is printed when every file is right (exit code 0).
 - Nothing is published, and the server is not started, so a repository's CI can run it over its data files.
 - A file that is not a data file (`.yaml`, `.yml`) is refused.
+
+---
+
+## `floe render <data.yaml>...`
+
+Draw each data file as `floe publish` does and write its page to `<name>.html`, beside the data file, so that a repository keeps the data file for agents to read and edit, and its page for people to read. The page is the one the management page downloads: it opens without floe, what it shows is in it (images, the diagrams' style and zoom), and its CSP, which keeps its scripts from sending what it holds out, is in a `<meta>`.
+
+```sh
+floe render docs/spec.yaml                 # writes docs/spec.html
+floe render docs/*.yaml --out-dir site     # writes site/<name>.html
+floe render --check docs/*.yaml            # in CI: fails when a page was not written again
+```
+
+| Flag | Description |
+|---|---|
+| `--out-dir <dir>` | Write the pages in this directory, made when missing, instead of beside each data file. |
+| `--check` | Write nothing: print each page that is missing or is not what its data file draws (exit code 1), or nothing when every page is (exit code 0). |
+
+- A page is written only when it changes, and its path is printed; a page that would not change is left as it is, so running it again does nothing.
+- A page there is written over: keep the pages in version control to get one back. A page that is a symlink is written where it leads, and stays a symlink.
+- Every mistake of every file is printed at once as `file:line:column: message`, as `floe check` prints them, and nothing is written until all are fixed (exit code 1). Nothing is written either when two data files would write the same page (`a/spec.yaml` and `b/spec.yaml` with one `--out-dir`, `spec.yaml` and `spec.yml`, or the same through a symlinked directory).
+- The page's language, theme and title are the data file's `lang:`, `theme:` and `title:` (else the slug `floe publish` would give it, else, for a name of no letter a slug takes, the name), so that writing a page and checking it take the same arguments.
+- A data file named twice (by two globs, through a symlinked directory, or in another case on macOS) is written once; a symlink of another name is a page of its own.
+- Nothing is published, and the server is not started.
+- A page depends on the floe, the templates and the icons that draw it: in CI, use the floe version and the templates the pages were written with, and write the pages again when you upgrade.
+- A `script` of the page runs without the sandbox of the server's pages when the file is opened; its CSP still cuts off `fetch`, XHR, images from elsewhere and forms. A link between pages (`/a/<slug>/`) does not work in a file: link the files relatively.
 
 ---
 

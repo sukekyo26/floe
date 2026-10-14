@@ -6,6 +6,7 @@ package store
 import (
 	"bytes"
 	"cmp"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -135,19 +136,43 @@ func (s *Store) WriteMeta(slug string, m *Meta) error {
 	if err := enc.Encode(m); err != nil {
 		return fmt.Errorf("encode meta.json of %s: %w", slug, err)
 	}
-	return writeAtomic(filepath.Join(s.dir(slug), "meta.json"), b.Bytes())
+	return WriteAtomic(filepath.Join(s.dir(slug), "meta.json"), b.Bytes(), 0o600)
 }
 
-func writeAtomic(path string, data []byte) error {
-	tmp := path + ".tmp-" + strconv.Itoa(os.Getpid())
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+// WriteAtomic writes data to path with the mode perm, less the umask, through a file beside it, so that a
+// reader sees the old content or the new, never a part. The file beside it is a new one of its own
+// (O_EXCL, under a random name), so that one left there, or placed there, cannot keep its mode or lead
+// the write elsewhere.
+func WriteAtomic(path string, data []byte, perm os.FileMode) error {
+	f, err := createNew(path+".tmp-", perm)
+	if err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
-	if err := os.Rename(tmp, path); err != nil {
+	tmp := f.Name()
+	_, err = f.Write(data)
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if err == nil {
+		err = os.Rename(tmp, path)
+	}
+	if err != nil {
 		_ = os.Remove(tmp)
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 	return nil
+}
+
+// createNew creates a file named prefix and a random suffix, with the mode perm less the umask (which
+// os.CreateTemp does not take), trying another name while one is taken.
+func createNew(prefix string, perm os.FileMode) (*os.File, error) {
+	for {
+		name := prefix + rand.Text()
+		f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm) //nolint:gosec // G304: beside the file written
+		if !errors.Is(err, fs.ErrExist) {
+			return f, err //nolint:wrapcheck // WriteAtomic says what it wrote
+		}
+	}
 }
 
 // File returns the file to serve for rest under slug: a stored page has its index.html only, a link

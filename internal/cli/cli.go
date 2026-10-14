@@ -133,7 +133,7 @@ func newRoot(env Env, cat *i18n.Catalog) *cobra.Command {
 		return err
 	}
 	root.AddCommand(app.publishCmd(), app.checkCmd(), app.templateCmd(), app.listCmd(), app.rmCmd(), app.serveCmd(),
-		app.stopCmd(), app.diagramCmd(), app.iconsCmd())
+		app.stopCmd(), app.diagramCmd(), app.iconsCmd(), app.renderCmd())
 	return root
 }
 

@@ -1,4 +1,4 @@
-package server
+package tmpl
 
 import (
 	"io"
@@ -10,7 +10,7 @@ import (
 func TestWithCutOff(t *testing.T) {
 	t.Parallel()
 
-	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + cutOff("'none'") + "\">"
+	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + CutOff("'none'") + "\">"
 	for page, want := range map[string]string{
 		"<!doctype html><html>":                       "<!doctype html>" + meta + "<html>",
 		"\n <!DOCTYPE HTML>\n<head>":                  "\n <!DOCTYPE HTML>" + meta + "\n<head>",
@@ -24,9 +24,9 @@ func TestWithCutOff(t *testing.T) {
 		"<!doctype":                                   meta + "<!doctype",
 		"":                                            meta,
 	} {
-		got, err := io.ReadAll(withCutOff([]byte(page)))
-		if err != nil || string(got) != want {
-			t.Errorf("withCutOff(%q) = %q, %v, want %q", page, got, err, want)
+		got, err := io.ReadAll(WithCutOff([]byte(page)))
+		if err != nil || string(got) != want || string(CutOffPage([]byte(page))) != want {
+			t.Errorf("WithCutOff(%q) = %q, %v; CutOffPage = %q; want %q", page, got, err, CutOffPage([]byte(page)), want)
 		}
 	}
 }

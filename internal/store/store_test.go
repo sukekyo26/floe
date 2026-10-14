@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/tmpl"
@@ -837,5 +839,27 @@ func TestLinkDataFileIcons(t *testing.T) {
 	}
 	if page, _, err := s.Draw("spec", &m, data); err != nil || !strings.Contains(string(page), `<use href="#a_icon-`) {
 		t.Errorf("Draw with the icons = %v", err)
+	}
+}
+
+// WriteAtomic gives the file the mode asked less the umask, as os.WriteFile does, writing over the file
+// there and leaving nothing beside it.
+func TestWriteAtomic(t *testing.T) { //nolint:paralleltest // sets the umask, which is the process's
+	defer unix.Umask(unix.Umask(0o022))
+	dir := t.TempDir()
+	path := filepath.Join(dir, "page.html")
+	for _, c := range []struct {
+		umask int
+		want  os.FileMode
+	}{{0o022, 0o644}, {0o077, 0o600}} {
+		unix.Umask(c.umask)
+		if err := store.WriteAtomic(path, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		fi, err := os.Stat(path)
+		entries, _ := os.ReadDir(dir) //nolint:errcheck // counted below
+		if err != nil || fi.Mode().Perm() != c.want || len(entries) != 1 {
+			t.Errorf("under umask %o: %v, %v, %d files; want %v", c.umask, fi.Mode(), err, len(entries), c.want)
+		}
 	}
 }

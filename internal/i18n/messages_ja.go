@@ -6,8 +6,9 @@ func init() {
 
 var messagesJA = map[string]string{
 	// 共通
-	"file_cannot_read": "%s を読めません（%s）。パスとファイルがあるかを確かめてください",
-	"lang_invalid":     "言語「%s」は使えません。--lang には en・ja・pt-BR のような BCP 47 の言語タグを指定してください",
+	"file_cannot_read":  "%s を読めません（%s）。パスとファイルがあるかを確かめてください",
+	"file_cannot_write": "%s に書き出せません（%s）。そのディレクトリに書き込めるかを確かめてください",
+	"lang_invalid":      "言語「%s」は使えません。--lang には en・ja・pt-BR のような BCP 47 の言語タグを指定してください",
 
 	// link
 	"link_not_real":        "%s は絶対パスの実パス（symlink を解決して正規化したパス）ではないので、登録できるかを確かめられません",
@@ -175,6 +176,10 @@ var messagesJA = map[string]string{
 	"cli_template_no_from":         "写すテンプレートを --from で指定してください（--from report など）",
 	"cli_template_made":            "テンプレート %s を %s に作りました（%s の写し）",
 	"cli_check_not_data":           "%s はデータファイル（.yaml か .yml）ではありません",
+	"cli_render_same_file":         "%s と %s が同じ %s に書き出します。どちらかの名前を変えてください",
+	"cli_render_same_file_case":    "%s と %s は %s と %s に書き出します。大文字小文字を区別しない所（macOS）では同じファイルなので、どちらかの名前を変えてください",
+	"cli_render_missing":           "%s がありません。floe render で %s から書き出してください",
+	"cli_render_stale":             "%s は %s から描いたものと違います。floe render で書き出し直してください",
 	"cli_title_empty":              "--title が空です。ページの名前を指定するか、--title を省いてデータファイルの title:（リンクなら <title> か最初の <h1>）から取ってください",
 	"cli_theme_empty":              "--theme が空です。テンプレートのテーマを指定するか、--theme を省いてデータファイルの theme: から取ってください",
 	"cli_port_in_use":              "ポート %d は使われています。そのプログラムを止めるか、FLOE_PORT を設定してください",
