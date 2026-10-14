@@ -54,6 +54,8 @@ The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor versi
 | `bytes` | A count of bytes in a binary unit (`{{.Calc.size \| bytes}}` is `1.5 KiB`) |
 | `asset` | An image of the template's `assets/` as a data URI (`<img src="{{asset "logo.svg"}}">`) |
 
+A page drawn from a data file holds all it shows, and sends nothing out: its Content-Security-Policy lets it load only images of data URIs (and `blob:`), inline styles and scripts, Google Fonts, and scripts from cdnjs, jsDelivr and unpkg. `fetch`, XHR, an image from elsewhere and a form are blocked, and so is the management page's API. Its download keeps the same policy in a `<meta>`. CSP cannot stop a script from moving the page or from WebRTC, so this guards against a slip, not a hostile template: use templates you trust.
+
 ## schema.json
 
 A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused. `template`, `theme` and `title` are read by floe and are not declared.
