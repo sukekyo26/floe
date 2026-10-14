@@ -54,6 +54,8 @@ floe: 1.2
 | `bytes` | バイト数を二進の単位で書く（`{{.Calc.size \| bytes}}` は `1.5 KiB`） |
 | `asset` | テンプレートの `assets/` の画像を data URI にする（`<img src="{{asset "logo.svg"}}">`） |
 
+データファイルから描いたページは、出すものをすべて中に持ち、そのスクリプトはページの中身を外へ送れません。Content-Security-Policy により、読み込めるのは data URI（と `blob:`）の画像・フォント・音声と動画、インラインのスタイルとスクリプト、Google Fonts、cdnjs・jsDelivr・unpkg のライブラリ（スクリプト・スタイル・フォント。`eval` と WebAssembly は不可）だけです。`fetch`・XHR・ほかの場所の画像・フォームは止まり、管理画面の API にも届きません。ダウンロードしたファイルも、同じ制限を `<meta>` で持ちます。Google Fonts と CDN には、そこから読み込むものの要求が出ます。スクリプトによるページの移動・ウィンドウを開くこと・WebRTC・DNS の先読みは CSP では止められないので、これはうっかりした通信を防ぐもので、悪意のあるテンプレートを閉じ込めるものではありません。信頼できるテンプレートだけを使ってください。
+
 ## schema.json
 
 データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。キーの打ち間違いを断るため、`"additionalProperties": false` を書きます。`template`・`theme`・`title` は floe が読むので、宣言しません。

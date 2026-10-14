@@ -110,7 +110,7 @@ A linked data file is drawn each time its page is opened, with `--lang` and `--t
 - It is checked when it is linked, as `floe publish` checks it, and refused with its mistakes.
 - Saving the data file, an image it shows or a file of its template, or fetching the icons its diagrams show, reloads the open tab.
 - When it has mistakes, the tab shows them instead of the page, and comes back to the page once they are fixed and saved.
-- Nothing of its directory is served: its images are in its page. Its download is the page drawn.
+- Nothing of its directory is served: its images are in its page. Its download is the page drawn, its CSP kept in a `<meta>`.
 - Its title in the list is its `title:`, read each time.
 - It is drawn with the templates of your own of the publish that linked it (`FLOE_TEMPLATES_DIR`); one linked on the management page, with those of the server (of the `floe publish` or `floe serve` that started it).
 
@@ -262,6 +262,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 - The server keeps running until `floe stop`, logout or reboot.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
 - Pages run in a sandbox, so their scripts cannot reach the management page's API.
+- The scripts of a page drawn from a data file cannot send what it holds out with `fetch`, XHR, images from elsewhere or forms, its download included; see [templates](templates.md#pagehtml). Linked HTML loads what it loads.
 
 ## Environment variables
 

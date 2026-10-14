@@ -25,6 +25,77 @@ const (
 	pageCSP = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"
 )
 
+// cdns are where a page drawn from a data file may load libraries from, with their styles and fonts.
+const cdns = "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com"
+
+// cutOff is the CSP of a page drawn from a data file: what it shows is in it (images, fonts and media
+// as data URIs), so it loads nothing but Google Fonts and the libraries of cdns, and its fetch, XHR and
+// EventSource reach only the source given as connect. A template's or the data's script cannot send
+// what the page holds out with fetch, XHR, an image or a form.
+// LIMIT: moving the page, opening a window, WebRTC and DNS prefetch escape CSP; rethink for untrusted templates.
+func cutOff(connect string) string {
+	return "default-src 'none'; img-src data: blob:; media-src data: blob:; " +
+		"style-src 'unsafe-inline' https://fonts.googleapis.com " + cdns + "; " +
+		"font-src data: blob: https://fonts.gstatic.com " + cdns + "; " +
+		"script-src 'unsafe-inline' " + cdns + "; form-action 'none'; connect-src " + connect
+}
+
+// cutsOff reports whether the page of m is served under cutOff: stored drawn (marked when published), or
+// a linked data file, drawn each time.
+func cutsOff(m *store.Meta) bool {
+	return m.StrictCSP || m.IsDrawn()
+}
+
+// withCutOff puts cutOff into a downloaded page, which is opened without the headers: right after the
+// doctype (past a BOM and comments before it), since a <meta> binds only what comes after it; the
+// parser moves it into <head> all the same. Nothing connects: the reload script is not in a download.
+// A page floe draws is UTF-8: the charset goes first, so that the CSP does not push the page's own out
+// of the bytes a browser reads for it.
+func withCutOff(page []byte) io.Reader {
+	at := len(page) - len(bytes.TrimPrefix(page, []byte("\uFEFF")))
+	for {
+		at = len(page) - len(bytes.TrimLeft(page[at:], " \t\n\f\r"))
+		n := comment(page[at:])
+		if n == 0 {
+			break
+		}
+		at += n
+	}
+	doctype := []byte("<!doctype")
+	if rest := page[at:]; len(rest) >= len(doctype) && bytes.EqualFold(rest[:len(doctype)], doctype) {
+		if end := bytes.IndexByte(rest, '>'); end >= 0 {
+			at += end + 1
+		}
+	}
+	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + cutOff("'none'") + "\">"
+	return io.MultiReader(bytes.NewReader(page[:at]), strings.NewReader(meta), bytes.NewReader(page[at:]))
+}
+
+// comment returns the length of the comment b starts with, ended where an HTML parser ends it, or 0 for
+// none or one never closed: <!-- … --> or --!>, the empty <!--> and <!--->, and <? … >.
+func comment(b []byte) int {
+	switch {
+	case bytes.HasPrefix(b, []byte("<?")):
+		return bytes.IndexByte(b, '>') + 1
+	case !bytes.HasPrefix(b, []byte("<!--")):
+		return 0
+	}
+	body := b[len("<!--"):]
+	switch {
+	case bytes.HasPrefix(body, []byte(">")):
+		return len("<!-->")
+	case bytes.HasPrefix(body, []byte("->")):
+		return len("<!--->")
+	}
+	end := 0
+	for _, closing := range []string{"-->", "--!>"} {
+		if i := bytes.Index(body, []byte(closing)); i >= 0 && (end == 0 || len("<!--")+i+len(closing) < end) {
+			end = len("<!--") + i + len(closing)
+		}
+	}
+	return end
+}
+
 // types are the files served from a link's directory. The registered file itself is HTML whatever its
 // extension.
 var types = map[string]string{
@@ -81,7 +152,13 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	}
 	// Assets are sandboxed too: an SVG or HTML opened directly must not run in this origin.
 	h := w.Header()
-	h.Set("Content-Security-Policy", pageCSP)
+	csp := pageCSP
+	if cutsOff(m) {
+		// The reload script's stream only, under the name the page was opened by: the management API is
+		// on the same port.
+		csp += "; " + cutOff("http://"+r.Host+"/api/events/")
+	}
+	h.Set("Content-Security-Policy", csp)
 	h.Set("X-Content-Type-Options", "nosniff")
 	if m.IsDrawn() {
 		page, version, err := s.cfg.Store.Draw(slug, m, file)
@@ -131,7 +208,17 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body io.Reader
-	if m.IsDrawn() {
+	switch {
+	case !cutsOff(m):
+		// Linked HTML, or a page stored before strictCsp (or by the artifact skill), as it is.
+		f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
+		if err != nil {
+			notFound(w)
+			return
+		}
+		defer f.Close() //nolint:errcheck // read-only
+		body = f
+	case m.IsDrawn():
 		page, _, err := s.cfg.Store.Draw(slug, m, file)
 		switch {
 		case errors.Is(err, store.ErrNotFound):
@@ -141,17 +228,18 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 			send(w, http.StatusConflict, mistakesText(catalog(r), err))
 			return
 		}
-		body = bytes.NewReader(page)
-	} else {
-		f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
+		body = withCutOff(page)
+	default:
+		// A page stored from a data file.
+		page, err := os.ReadFile(file) //nolint:gosec // G304: file passed store.File
 		if err != nil {
 			notFound(w)
 			return
 		}
-		defer f.Close() //nolint:errcheck // read-only
-		body = f
+		body = withCutOff(page)
 	}
-	// The page as stored, linked or drawn. Nothing added on serving (the reload script) goes in.
+	// The page as stored, linked or drawn, a page drawn from a data file still cut off. Nothing added on
+	// serving (the reload script) goes in.
 	w.Header().Set("Content-Disposition", `attachment; filename="`+slug+`.html"`)
 	stream(w, htmlType, body, "")
 }

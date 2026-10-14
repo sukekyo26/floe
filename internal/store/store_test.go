@@ -136,8 +136,9 @@ func TestPublishStoredPage(t *testing.T) {
 		m.Project != "proj" || m.PublishedFrom != "proj" || m.Path != "" || m.CreatedAt != m.UpdatedAt {
 		t.Fatalf("first publish: %+v, %+v", first, m)
 	}
-	if got := e.read(t, "store/my-demo/index.html"); !strings.Contains(got, "<h1>Demo Page</h1>") || m.Template != "report" {
-		t.Errorf("the page is stored as %q (template %q), want it drawn by report", got, m.Template)
+	if got := e.read(t, "store/my-demo/index.html"); !strings.Contains(got, "<h1>Demo Page</h1>") || m.Template != "report" || !m.StrictCSP ||
+		!strings.Contains(e.read(t, "store/my-demo/meta.json"), `"strictCsp": true`) {
+		t.Errorf("the page is stored as %q (template %q, strictCsp %v), want it drawn by report and cut off", got, m.Template, m.StrictCSP)
 	}
 
 	again := e.mustPublish(t, doc, store.Options{Slug: ptr("my-demo")}, "proj")
@@ -696,7 +697,8 @@ func TestLinkDataFile(t *testing.T) {
 	data := e.write(t, "proj/spec.yaml", "template: report\ntitle: Spec\n")
 	entry := e.mustPublish(t, data, store.Options{Link: true, Lang: ptr("ja"), Theme: ptr("default")}, "proj")
 	m := entry.Meta
-	if entry.Page != nil || m.Path != data || m.Lang != "ja" || m.Theme != "default" || m.Template != "" || m.Title != "" {
+	if entry.Page != nil || m.Path != data || m.Lang != "ja" || m.Theme != "default" || m.Template != "" || m.Title != "" ||
+		m.StrictCSP {
 		t.Errorf("the entry = %+v, page %d bytes", m, len(entry.Page))
 	}
 	if !m.IsDrawn() || e.s.Version("spec", &m, data) == "" {

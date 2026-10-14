@@ -39,10 +39,14 @@ func TestDrawnLink(t *testing.T) {
 			t.Fatalf("the page = %d, without %s:\n%s", r.status, want, r.body)
 		}
 	}
+	if got := r.header.Get("Content-Security-Policy"); got != sandbox+"; "+cutOff+e.base+"/api/events/" {
+		t.Errorf("the page's CSP = %q", got)
+	}
 	if got := e.get(t, "/a/sizes/chart.png").status; got != http.StatusNotFound {
 		t.Errorf("a file beside the data file = %d, want it not served", got)
 	}
-	if d := e.get(t, "/api/artifacts/sizes/download"); d.status != http.StatusOK || !strings.Contains(d.body, "<td>1.5 KiB</td>") || strings.Contains(d.body, "EventSource") {
+	if d := e.get(t, "/api/artifacts/sizes/download"); d.status != http.StatusOK || !strings.Contains(d.body, "<td>1.5 KiB</td>") ||
+		strings.Contains(d.body, "EventSource") || !strings.HasPrefix(d.body, "<!doctype html>\n"+cutOffMeta) {
 		t.Errorf("the download = %d:\n%s", d.status, d.body)
 	}
 	if l := e.get(t, "/api/artifacts"); !strings.Contains(l.body, `"title":"Sizes"`) {
@@ -73,7 +77,8 @@ func TestDrawnLink(t *testing.T) {
 	e.write(t, "work/spec/sizes.yaml", strings.Replace(right, "bytes: 1536", "bytes: lots", 1))
 	r = e.get(t, "/a/sizes/?raw", "Accept-Language", "ja")
 	if r.status != http.StatusOK || !strings.Contains(r.body, "データファイルに誤りがあります") ||
-		!strings.Contains(r.body, "sizes.yaml:3:26: files[0].bytes:") || !strings.Contains(r.body, "/api/events/sizes?since=") {
+		!strings.Contains(r.body, "sizes.yaml:3:26: files[0].bytes:") || !strings.Contains(r.body, "/api/events/sizes?since=") ||
+		r.header.Get("Content-Security-Policy") != sandbox+"; "+cutOff+e.base+"/api/events/" {
 		t.Errorf("the page of a data file with mistakes = %d:\n%s", r.status, r.body)
 	}
 	if l := e.get(t, "/api/artifacts"); strings.Contains(l.body, `"missing":true`) {
