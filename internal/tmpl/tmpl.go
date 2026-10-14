@@ -68,8 +68,10 @@ type Data struct {
 	images map[string]template.URL // its images as data URIs, by the path written
 	// its diagrams drawn, by the path of keys to each (pathKey); nil without one
 	diagrams map[string]template.HTML
-	tried    []string // the files of the images it names, read or not
-	icons    []string // the index files of the icon sets its diagrams may show, when it has one
+	// its scripts drawn, each its element and the call of its function, by the path of keys to each
+	scripts map[string]template.HTML
+	tried   []string // the files of the images it names, read or not
+	icons   []string // the index files of the icon sets its diagrams may show, when it has one
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -184,7 +186,7 @@ func start(file string, src []byte, themed bool) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
-		images: nil, diagrams: nil, tried: nil, icons: nil,
+		images: nil, diagrams: nil, scripts: nil, tried: nil, icons: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)
@@ -246,7 +248,8 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 		return err
 	}
 	d.schema = s
-	if err = checkItems(checkImages(s, d, root, dir), checkDiagrams(s, d, root, t.icons)); err != nil {
+	err = checkItems(checkImages(s, d, root, dir), checkDiagrams(s, d, root, t.icons), checkScripts(s, d, root))
+	if err != nil {
 		return err
 	}
 	// Each stage runs on data that passed the one before: broken data would only give the expressions
@@ -465,8 +468,8 @@ type schema struct {
 
 // prepare readies v, at the path at, for page.html: an item declared but not given becomes nil, so
 // that page.html can test it under missingkey=error, an item of format html becomes HTML that goes in
-// as it is, one of format image the data URI of its image, and one of format diagram its SVG, both as
-// d read them.
+// as it is, one of format image the data URI of its image, one of format diagram its SVG, and one of
+// format script its element and the call of its function, all as d read them.
 func (s *schema) prepare(v any, at []string, d *Data) any {
 	if s == nil {
 		return v
@@ -476,6 +479,8 @@ func (s *schema) prepare(v any, at []string, d *Data) any {
 	switch {
 	case s.Format == "diagram":
 		return d.diagrams[pathKey(at)]
+	case s.Format == "script":
+		return d.scripts[pathKey(at)]
 	case s.Format == "html" && isText:
 		return template.HTML(text) //nolint:gosec // G203: the schema declares this item HTML
 	case s.Format == "image" && isText:

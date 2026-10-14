@@ -347,4 +347,7 @@ var messagesJA = map[string]string{
 	"tmpl_image_large":         "画像「%s」は %s バイトで、画像の上限の %s バイト（%s）を超えています。小さくしてください",
 	"tmpl_image_content":       "「%s」の中身は、名前が示す %s ではありません",
 	"tmpl_assets_not_dir":      "%s はディレクトリではありません。assets/ には、page.html が asset で出す画像を置きます",
+	"tmpl_script_js":           "js に、描く場所の要素と data を受け取って動く関数を書いてください: function (el, data) { … }",
+	"tmpl_script_key":          "script に書けるのは js と data です。%s は書けません",
+	"tmpl_script_end":          "js に %s があり、ページはそこでスクリプトが終わると読みます。文字列なら '<' + '%s' のように分けてください",
 }

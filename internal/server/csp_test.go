@@ -3,6 +3,7 @@ package server_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -95,4 +96,28 @@ func TestUICutOff(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	out = append(out, "out:"+got())
 
 	check(t, "cut off", out, want+"|out:|reloaded|"+want+"|out:|out:"+gotOut)
+}
+
+// A script part runs under the CSP of a page drawn from a data file: its function gets the element in
+// its place and its data, the example's slider among them.
+func TestUIScript(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
+	e := newEnv(t)
+	b := newBrowser(t, e.base, i18n.English)
+	data := e.write(t, "script.yaml", "template: report\nsections:\n  - parts:\n      - text: before\n"+
+		"      - script:\n          data: { words: [moves, '</script>'] }\n"+
+		"          js: |\n            function (el, data) { el.id = 'moved'; el.textContent = data.words.join(' '); }\n")
+	e.publish(t, data, store.Options{Slug: ptr("script")})
+	b.navigate("/a/script/?raw")
+	got := b.eval("const el = document.getElementById('moved'); el.previousElementSibling.textContent + '|' + el.textContent")
+
+	example, err := os.ReadFile("../tmpl/builtin/report/example.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.publish(t, e.write(t, "example.yaml", string(example)), store.Options{Slug: ptr("example")})
+	b.navigate("/a/example/?raw")
+	slider := b.eval("const input = document.querySelector('input[type=range]'); const before = input.closest('div').querySelector('output').textContent;" +
+		"input.value = 1000; input.dispatchEvent(new Event('input')); before + ' ' + input.closest('div').querySelector('output').textContent")
+
+	check(t, "script", []string{got, slider}, "before|moves </script>|7 hours 2 hours")
 }

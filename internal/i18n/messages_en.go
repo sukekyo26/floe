@@ -348,4 +348,7 @@ var messagesEN = map[string]string{
 	"tmpl_image_large":         `the image "%s" is %s bytes, over the %s bytes (%s) an image may be; make it smaller`,
 	"tmpl_image_content":       `"%s" does not hold the %s its name says`,
 	"tmpl_assets_not_dir":      "%s is not a directory: assets/ holds the images page.html shows with asset",
+	"tmpl_script_js":           "write js, the function to run with the element it draws in and data: function (el, data) { … }",
+	"tmpl_script_key":          "a script takes js and data, not %s",
+	"tmpl_script_end":          "js holds %s, where the page would end its script; split it in a string, as '<' + '%s'",
 }

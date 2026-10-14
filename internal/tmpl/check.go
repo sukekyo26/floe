@@ -514,8 +514,8 @@ func (t *Template) checkExample() error {
 }
 
 // formatTypes are the JSON types of the items of floe's formats: the text of HTML or of an image's
-// path, and a diagram's spec.
-var formatTypes = map[string]string{"html": "string", "image": "string", "diagram": "object"}
+// path, a diagram's spec, and a script's js and data.
+var formatTypes = map[string]string{"html": "string", "image": "string", "diagram": "object", "script": "object"}
 
 // schemaLint finds what jsonschema compiles but floe would not draw as the schema means.
 type schemaLint struct {

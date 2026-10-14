@@ -1,5 +1,6 @@
 # A report: a heading and parts per section. Text is Markdown; a table's cells are lines of Markdown,
-# numbers in quotes; html goes in as it is; a diagram is a spec as floe diagram render takes it.
+# numbers in quotes; html goes in as it is; a diagram is a spec as floe diagram render takes it; a
+# script is a function the page calls with an element to draw in and its data.
 template: report
 title: Moving the team wiki
 eyebrow: Plan · 2030-04
@@ -31,6 +32,18 @@ sections:
             text: Runs the link check and fixes what it finds.
           - title: Bookmarks
             text: Sends the new address to the team on Monday morning.
+  - heading: How long the copy takes
+    parts:
+      - script:
+          data: { pages: 1840 }
+          js: |
+            function (el, data) {
+              el.innerHTML = '<label>Pages an hour <input type="range" min="100" max="1000" step="50" value="300"></label> <output></output>';
+              const input = el.querySelector('input'), out = el.querySelector('output');
+              const update = () => { out.textContent = `${Math.ceil(data.pages / input.value)} hours`; };
+              input.addEventListener('input', update);
+              update();
+            }
   - heading: Risks
     parts:
       - table:
