@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `floe render <data.yaml>...`, which writes the page of each data file
+  to `<name>.html` beside it, or in `--out-dir`, for a repository to keep the
+  data file for agents and its page for people. The page is the download of
+  the page `floe publish` stores: it opens without floe, with its CSP in a
+  `<meta>`. A page is written only when it changes, and nothing is written
+  while a data file has mistakes. `--check` writes nothing and fails when a
+  page is missing or not what its data file draws, for CI.
 - Run scripts in data files: the built-in `report` takes a `script` part, and
   a template takes an item of `"format": "script"`, each `js`, a function the
   page calls with an empty element in its place and `data`, any value. A `js`
