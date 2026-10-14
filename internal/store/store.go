@@ -135,12 +135,14 @@ func (s *Store) WriteMeta(slug string, m *Meta) error {
 	if err := enc.Encode(m); err != nil {
 		return fmt.Errorf("encode meta.json of %s: %w", slug, err)
 	}
-	return writeAtomic(filepath.Join(s.dir(slug), "meta.json"), b.Bytes())
+	return WriteAtomic(filepath.Join(s.dir(slug), "meta.json"), b.Bytes(), 0o600)
 }
 
-func writeAtomic(path string, data []byte) error {
+// WriteAtomic writes data to path through a file beside it, so that a reader sees the old content or
+// the new, never a part.
+func WriteAtomic(path string, data []byte, perm os.FileMode) error {
 	tmp := path + ".tmp-" + strconv.Itoa(os.Getpid())
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	if err := os.WriteFile(tmp, data, perm); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 	if err := os.Rename(tmp, path); err != nil {

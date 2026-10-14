@@ -1,16 +1,13 @@
-package server
+package tmpl
 
-import (
-	"io"
-	"testing"
-)
+import "testing"
 
 // The CSP goes into a download before anything it could load: after a doctype in any case, past a BOM
 // and comments before it, which end where a browser ends them, or before the rest when there is none.
 func TestWithCutOff(t *testing.T) {
 	t.Parallel()
 
-	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + cutOff("'none'") + "\">"
+	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + CutOff("'none'") + "\">"
 	for page, want := range map[string]string{
 		"<!doctype html><html>":                       "<!doctype html>" + meta + "<html>",
 		"\n <!DOCTYPE HTML>\n<head>":                  "\n <!DOCTYPE HTML>" + meta + "\n<head>",
@@ -24,9 +21,8 @@ func TestWithCutOff(t *testing.T) {
 		"<!doctype":                                   meta + "<!doctype",
 		"":                                            meta,
 	} {
-		got, err := io.ReadAll(withCutOff([]byte(page)))
-		if err != nil || string(got) != want {
-			t.Errorf("withCutOff(%q) = %q, %v, want %q", page, got, err, want)
+		if got := string(WithCutOff([]byte(page))); got != want {
+			t.Errorf("WithCutOff(%q) = %q, want %q", page, got, want)
 		}
 	}
 }

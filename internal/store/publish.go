@@ -324,7 +324,7 @@ func (s *Store) Save(e *Entry) error {
 		return fmt.Errorf("save %s: %w", e.Slug, err)
 	}
 	if e.Page != nil {
-		if err := writeAtomic(filepath.Join(s.dir(e.Slug), "index.html"), e.Page); err != nil {
+		if err := WriteAtomic(filepath.Join(s.dir(e.Slug), "index.html"), e.Page, 0o600); err != nil {
 			return err
 		}
 	}
