@@ -45,7 +45,7 @@ floe: 1.2
 |---|---|
 | `.Title` | ページのタイトル。`--title`、管理画面で固定したタイトル、データファイルの `title:`、slug の順に決まる |
 | `.Lang` | ページの言語（`--lang`。既定は `en`） |
-| `.Data` | データファイルの項目（`template`・`theme`・`title` を除く）。スキーマで宣言していてデータに無い項目は nil なので、`{{with .Data.lead}}` と書ける。スキーマで宣言していない名前は描画を止める。`"format": "html"` の項目は HTML としてそのまま、`"format": "diagram"` の項目はその SVG として入る |
+| `.Data` | データファイルの項目（`template`・`theme`・`title` を除く）。スキーマで宣言していてデータに無い項目は nil なので、`{{with .Data.lead}}` と書ける。スキーマで宣言していない名前は描画を止める。`"format": "html"` の項目は HTML としてそのまま、`"format": "diagram"` の項目はその SVG として、`"format": "script"` の項目は置き場所の要素と関数の呼び出しとして入る |
 | `.Calc` | `computed.yaml` の値（名前で引く） |
 | `.Theme` | テーマの CSS。`<style>{{.Theme}}</style>` のように使う |
 | `markdown` | Markdown の文字列を HTML にする（`{{markdown .text}}`）。中の生の HTML は除き、表は `<div class="table-wrap">` で包む |
@@ -60,11 +60,13 @@ floe: 1.2
 
 データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。キーの打ち間違いを断るため、`"additionalProperties": false` を書きます。`template`・`theme`・`title` は floe が読むので、宣言しません。
 
-`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）、`html`・`image`・`diagram` を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。`html`・`image`・`diagram` は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。型は、`html` と `image` には `"type": "string"` だけを、`diagram` には `"type": "object"` だけを宣言します。こうした項目は丸ごと描くので、その中に書いた format は描かれず、`floe template check` もそれを誤りにします。
+`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）、`html`・`image`・`diagram`・`script` を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。`html`・`image`・`diagram`・`script` は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。型は、`html` と `image` には `"type": "string"` だけを、`diagram` と `script` には `"type": "object"` だけを宣言します。こうした項目は丸ごと描くので、その中に書いた format は描かれず、`floe template check` もそれを誤りにします。
 
 `"format": "image"` の項目には、画像のパスを、データファイルのディレクトリからの相対で、その配下に、`..` やドットで始まる名前を使わずに書きます。画像は data URI としてページに入るので、`<img src="{{.Data.chart}}">` と書けて、ページだけで表示が完結します。
 
 `"format": "diagram"` の項目には、図の spec を [`floe diagram render`](commands.ja.md#floe-diagram-render-specyaml) に渡すのと同じ形でその場に書きます。spec は `floe diagram render` と同じく検査し、誤りはデータファイルの行と列で出します。1 ページの図の id は互いに違えます。`{{.Data.plan}}` がインライン SVG で図を描き、ページの末尾に図のスタイルとズームが 1 回だけ付きます。図は色と書体を、`report` の既定のテーマが定義しているテーマの CSS 変数（`--fg`・`--bg`・`--accent` など）から取ります。変数はテーマで定義するか、すべてのテーマの分を `page.html` の `<style>` で定義します。`floe template check` は、そのどれかを定義していないテーマを警告します。そのテーマの図はダークモードでも明るい色のままになります。
+
+`"format": "script"` の項目には、ページで動かすものを、関数の `js` と、任意の値の `data` で書きます。`{{.Data.calculator}}` は空の要素を描き、その要素と data を渡して関数を呼びます（`function (el, data) { … }`）。data は JSON として入ります。floe が検査するのは形（`js` が関数の文字列であること、`js` と `data` のほかに何も無いこと）だけで、ページがそこでスクリプトの終わりと読む `</script` か `<!--` を含む `js` は断ります。関数の中の誤りはブラウザで分かります。関数はページの sandbox の中で、その CSP の下で動きます（[page.html](#pagehtml) を参照）。
 
 ## 画像
 
