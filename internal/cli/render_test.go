@@ -30,6 +30,9 @@ func TestRender(t *testing.T) {
 			t.Errorf("the page lacks %s:\n%s", w, page)
 		}
 	}
+	if fi, err := os.Stat(html); err != nil || fi.Mode().Perm() != 0o644 {
+		t.Errorf("the page's mode = %v, %v; want -rw-r--r--, for others to read", fi.Mode(), err)
+	}
 	want(t, "render again", e.run(t, "work", "render", "spec.yaml"), 0, "", "")
 	e.write(t, "work/other.yaml", spec)
 	want(t, "render a file named twice", e.run(t, "work", "render", "spec.yaml", "./other.yaml", "other.yaml"), 0, "other.html\n", "")

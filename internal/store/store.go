@@ -138,14 +138,26 @@ func (s *Store) WriteMeta(slug string, m *Meta) error {
 	return WriteAtomic(filepath.Join(s.dir(slug), "meta.json"), b.Bytes(), 0o600)
 }
 
-// WriteAtomic writes data to path through a file beside it, so that a reader sees the old content or
-// the new, never a part.
+// WriteAtomic writes data to path with the mode perm through a file beside it, so that a reader sees the
+// old content or the new, never a part. The file beside it is a new one of its own (O_EXCL), so that one
+// left there, or placed there, cannot keep its mode or lead the write elsewhere.
 func WriteAtomic(path string, data []byte, perm os.FileMode) error {
-	tmp := path + ".tmp-" + strconv.Itoa(os.Getpid())
-	if err := os.WriteFile(tmp, data, perm); err != nil {
+	f, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp-*")
+	if err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
-	if err := os.Rename(tmp, path); err != nil {
+	tmp := f.Name()
+	_, err = f.Write(data)
+	if err == nil {
+		err = f.Chmod(perm)
+	}
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if err == nil {
+		err = os.Rename(tmp, path)
+	}
+	if err != nil {
 		_ = os.Remove(tmp)
 		return fmt.Errorf("write %s: %w", path, err)
 	}
