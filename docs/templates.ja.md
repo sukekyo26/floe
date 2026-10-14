@@ -66,7 +66,7 @@ floe: 1.2
 
 `"format": "diagram"` の項目には、図の spec を [`floe diagram render`](commands.ja.md#floe-diagram-render-specyaml) に渡すのと同じ形でその場に書きます。spec は `floe diagram render` と同じく検査し、誤りはデータファイルの行と列で出します。1 ページの図の id は互いに違えます。`{{.Data.plan}}` がインライン SVG で図を描き、ページの末尾に図のスタイルとズームが 1 回だけ付きます。図は色と書体を、`report` の既定のテーマが定義しているテーマの CSS 変数（`--fg`・`--bg`・`--accent` など）から取ります。変数はテーマで定義するか、すべてのテーマの分を `page.html` の `<style>` で定義します。`floe template check` は、そのどれかを定義していないテーマを警告します。そのテーマの図はダークモードでも明るい色のままになります。
 
-`"format": "script"` の項目には、ページで動かすものを、関数の `js` と、任意の値の `data` で書きます。`{{.Data.calculator}}` は空の要素を描き、その要素と data を渡して関数を呼びます（`function (el, data) { … }`）。data は JSON として入ります。floe が検査するのは形（`js` が関数の文字列であること、`js` と `data` のほかに何も無いこと）だけで、ページがそこでスクリプトの終わりと読む `</script` か `<!--` を含む `js` は断ります。関数の中の誤りはブラウザで分かります。関数はページの sandbox の中で、その CSP の下で動きます（[page.html](#pagehtml) を参照）。
+`"format": "script"` の項目には、ページで動かすものを、関数の `js` と、任意の値の `data` で書きます。`{{.Data.calculator}}` は空の要素を描き、その要素と data を渡して関数を呼びます（`function (el, data) { … }`）。data は JSON として入り、キーと値の組は名前の順に並びます。順番が意味を持つものはリストで書きます。floe が検査するのは形（`js` が関数の文字列であること、`js` と `data` のほかに何も無いこと）だけで、ページがそこでスクリプトの終わりと読む `</script` か `<!--` を含む `js` は断ります。関数の中の誤りはブラウザで分かります。関数はページの sandbox の中で、その CSP の下で動きます（[page.html](#pagehtml) を参照）。
 
 ## 画像
 
