@@ -45,7 +45,7 @@
 
 ### データファイル
 
-データファイルはテンプレートを指定し、テンプレートがそのデータからページを描きます。組み込みのテンプレートは `report` です。見出しの下に節を並べ、節は見出しと部品からなります。部品は Markdown の文章で、図は `diagram` の部品で、Markdown で書けないものは `html` の部品で書きます。
+データファイルはテンプレートを指定し、テンプレートがそのデータからページを描きます。組み込みのテンプレートは `report` です。見出しの下に節を並べ、節は見出しと部品からなります。部品は Markdown の文章と、表（`table`）・カード（`cards`）・注記（`note`）です。図は `diagram` の部品で、これらで書けないものは `html` の部品で書きます。
 
 ```yaml
 template: report               # ページを描くテンプレート
@@ -67,7 +67,14 @@ sections:
             - box: { x: 16, y: 32, w: 184, h: 56, rows: [古い wiki] }
             - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [新しいホスト] }
             - edge: { d: "M200,60 H440" }
-      - html: <p class="note warn">止めている間の編集は失われます。</p>   # そのまま入る HTML
+      - table:                 # セルは 1 行の Markdown か数
+          head: [リスク, 起こりやすさ]
+          rows:
+            - [リンク切れ, 高い]
+      - cards:                 # 横に並ぶカード。見出しと Markdown の文章
+          - { title: 写す, text: '**土曜**にページを写す。' }
+      - note: { tone: warn, text: 止めている間の編集は失われます。 }   # tone は warn・bad か、無し
+      - html: <p>状況 <span class="pill good">予定どおり</span></p>   # そのまま入る HTML
 ```
 
 - `theme:` でテンプレートのテーマを選びます（`default`）。
