@@ -2,6 +2,7 @@ package tmpl_test
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -126,7 +127,11 @@ func TestBrokenOwnTemplates(t *testing.T) {
 	// A file a template may leave out is broken, not missing, when it is a symlink that leads nowhere.
 	for _, file := range []string{"template.yaml", "checks.yaml", "computed.yaml"} {
 		dir := t.TempDir()
-		if err := os.Symlink("gone.yaml", filepath.Join(own(t, dir, "report"), file)); err != nil {
+		path := filepath.Join(own(t, dir, "report"), file)
+		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			t.Fatal(err)
+		}
+		if err := os.Symlink("gone.yaml", path); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := draw(tmpl.NewLibrary(dir, ""), "template: report\n"); err == nil || !strings.Contains(err.Error(), file) {

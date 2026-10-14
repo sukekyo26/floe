@@ -126,6 +126,7 @@ func TestReportTableCardsNote(t *testing.T) {
 		"table: { columns: [{title: a}], rows: [[1.50]] }": "data.yaml:4:49: sections[0].parts[0].table.rows[0][0]: write text, not a number",
 		"table: { columns: [], rows: [] }": "data.yaml:4:27: sections[0].parts[0].table.columns: the number of items must be at least 1\n" +
 			"data.yaml:4:37: sections[0].parts[0].table.rows: the number of items must be at least 1",
+		"table: { columns: [{title: a}, {title: b}], rows: [[x, y], [x]] }": "data.yaml:4:59: sections[0].parts[0].table.rows: write as many cells in each row as there are columns",
 		"note: { text: '' }": "data.yaml:4:23: sections[0].parts[0].note.text: the length in characters must be at least 1",
 	} {
 		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\n"), "", "")
