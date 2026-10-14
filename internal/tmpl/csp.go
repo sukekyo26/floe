@@ -3,6 +3,7 @@ package tmpl
 import (
 	"bytes"
 	"io"
+	"slices"
 	"strings"
 )
 
@@ -28,6 +29,18 @@ func CutOff(connect string) string {
 // A page floe draws is UTF-8: the charset goes first, so that the CSP does not push the page's own out
 // of the bytes a browser reads for it.
 func WithCutOff(page []byte) io.Reader {
+	at, meta := cutOffAt(page)
+	return io.MultiReader(bytes.NewReader(page[:at]), strings.NewReader(meta), bytes.NewReader(page[at:]))
+}
+
+// CutOffPage is the page WithCutOff reads, whole.
+func CutOffPage(page []byte) []byte {
+	at, meta := cutOffAt(page)
+	return slices.Concat(page[:at], []byte(meta), page[at:])
+}
+
+// cutOffAt returns where in page the <meta> of CutOff goes, and the <meta>.
+func cutOffAt(page []byte) (int, string) {
 	at := len(page) - len(bytes.TrimPrefix(page, []byte("\uFEFF")))
 	for {
 		at = len(page) - len(bytes.TrimLeft(page[at:], " \t\n\f\r"))
@@ -44,7 +57,7 @@ func WithCutOff(page []byte) io.Reader {
 		}
 	}
 	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + CutOff("'none'") + "\">"
-	return io.MultiReader(bytes.NewReader(page[:at]), strings.NewReader(meta), bytes.NewReader(page[at:]))
+	return at, meta
 }
 
 // comment returns the length of the comment b starts with, ended where an HTML parser ends it, or 0 for

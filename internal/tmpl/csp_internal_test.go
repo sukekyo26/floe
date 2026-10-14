@@ -25,8 +25,8 @@ func TestWithCutOff(t *testing.T) {
 		"":                                            meta,
 	} {
 		got, err := io.ReadAll(WithCutOff([]byte(page)))
-		if err != nil || string(got) != want {
-			t.Errorf("WithCutOff(%q) = %q, %v, want %q", page, got, err, want)
+		if err != nil || string(got) != want || string(CutOffPage([]byte(page))) != want {
+			t.Errorf("WithCutOff(%q) = %q, %v; CutOffPage = %q; want %q", page, got, err, CutOffPage([]byte(page)), want)
 		}
 	}
 }
