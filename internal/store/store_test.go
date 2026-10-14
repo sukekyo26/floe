@@ -692,7 +692,7 @@ func TestLinkDataFile(t *testing.T) {
 		t.Errorf("Draw = %v:\n%s", err, page)
 	}
 
-	// Linked again in another theme, it reloads its tab.
+	// Linked again, it reloads its tab: the version holds the publish time.
 	again := e.mustPublish(t, data, store.Options{Link: true}, "proj").Meta
 	if e.s.Version("spec", &again, data) == e.s.Version("spec", &m, data) {
 		t.Error("linking again in another theme left the version as it was")
