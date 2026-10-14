@@ -26,7 +26,6 @@ var messagesEN = map[string]string{
 	"store_slug_taken":    `slug "%s" is already in use; choose another slug`,
 	"store_project_slash": `a project name cannot be just "/"`,
 	"store_not_data":      "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
-	"store_lang_link":     "--lang is the language of a page drawn from a data file: a linked file is shown as it is, in its own <html lang>",
 	"store_theme_link":    "--theme picks the theme of a page drawn from a data file: a linked file is shown as it is",
 	"store_no_page":       `no page "%s" (see floe list)`,
 
@@ -266,6 +265,8 @@ var messagesEN = map[string]string{
 	// tmpl: reading data files and drawing them with templates
 	"server_mistakes_head":     "The data file has mistakes",
 	"server_mistakes_lead":     "Fix them and save the file: this tab shows the page again.",
+	"tmpl_no_lang":             "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)",
+	"tmpl_lang_invalid":        `invalid language "%s": write lang: as a BCP 47 tag such as en, ja or pt-BR`,
 	"tmpl_no_template":         "name the template at the top level, like template: report (templates: %s)",
 	"tmpl_not_mapping":         "write the top level as keys and values, like template: report",
 	"tmpl_documents":           "a data file holds one YAML document: write the page as one, without --- between parts",

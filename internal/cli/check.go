@@ -61,7 +61,7 @@ func checkFile(a *app, file string) []error {
 		return []error{err}
 	}
 	// Drawing is the last stage. Data that passed its schema fails here only by the template's mistake.
-	if _, err := d.Render(cmp.Or(d.Title, file), ""); err != nil {
+	if _, err := d.Render(cmp.Or(d.Title, file)); err != nil {
 		return []error{err}
 	}
 	return nil

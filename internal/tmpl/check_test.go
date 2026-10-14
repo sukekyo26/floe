@@ -29,7 +29,7 @@ func TestDrawEveryStage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := d.Render("t", "en")
+	b, err := d.Render("t")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			name:  "example",
-			files: map[string]string{"example.yaml": "template: report\nfiles:\n  - name: a\n"},
+			files: map[string]string{"example.yaml": "template: report\nfiles:\n  - name: a\nlang: en\n"},
 			want: []string{
 				"sizes/example.yaml:1:11: example.yaml names the template report; name it sizes",
 				"sizes/example.yaml:3:5: files[0].bytes is required but missing",
@@ -174,7 +174,7 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			name:  "example of another theme",
-			files: map[string]string{"example.yaml": "template: report\ntheme: print\nfiles: []\n"},
+			files: map[string]string{"example.yaml": "template: report\ntheme: print\nfiles: []\nlang: en\n"},
 			want: []string{
 				"sizes/example.yaml:1:11: example.yaml names the template report; name it sizes",
 				`sizes/example.yaml:2:8: template sizes has no theme "print"`,
@@ -182,7 +182,7 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			name:  "example without a template",
-			files: map[string]string{"example.yaml": "title: 3\nfiles: []\n"},
+			files: map[string]string{"example.yaml": "title: 3\nfiles: []\nlang: en\n"},
 			want: []string{
 				"sizes/example.yaml:1:1: name the template at the top level, like template: report (templates: sizes)",
 				"sizes/example.yaml:1:8: title must be text",
@@ -330,7 +330,7 @@ func TestRenderBadAsset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = d.Render("t", "en")
+	_, err = d.Render("t")
 	var e *usererr.Error
 	if !errors.As(err, &e) || e.Key != "tmpl_item" {
 		t.Fatalf("Render = %v", err)

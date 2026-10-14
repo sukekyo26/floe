@@ -509,7 +509,7 @@ func (t *Template) checkExample() error {
 	if err = t.check(d, h.root, t.Dir, "", h.where["theme"], problems); err != nil {
 		return err
 	}
-	_, err = d.Render(cmp.Or(d.Title, file), "")
+	_, err = d.Render(cmp.Or(d.Title, file))
 	return err
 }
 

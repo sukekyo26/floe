@@ -25,7 +25,6 @@ var messagesJA = map[string]string{
 	"store_slug_taken":    "URL 名「%s」は使われています。別の URL 名を入力してください",
 	"store_project_slash": "プロジェクト名に / だけは使えません",
 	"store_not_data":      "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
-	"store_lang_link":     "--lang はデータファイルから描くページの言語です。リンクしたファイルは中身のまま、そのファイルの <html lang> で表示します",
 	"store_theme_link":    "--theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
 	"store_no_page":       "ページ「%s」はありません（floe list で確かめられます）",
 
@@ -265,6 +264,8 @@ var messagesJA = map[string]string{
 	// tmpl
 	"server_mistakes_head":     "データファイルに誤りがあります",
 	"server_mistakes_lead":     "直してファイルを保存すると、このタブにページが戻ります。",
+	"tmpl_no_lang":             "最上位に lang: ja のようにページの言語を指定してください（en・ja・pt-BR のような BCP 47 の言語タグ）",
+	"tmpl_lang_invalid":        "言語「%s」は使えません。lang: には en・ja・pt-BR のような BCP 47 の言語タグを指定してください",
 	"tmpl_no_template":         "最上位に template: report のようにテンプレートを指定してください（テンプレート: %s）",
 	"tmpl_not_mapping":         "最上位は template: report のようなキーと値で書いてください",
 	"tmpl_documents":           "データファイルには YAML の文書を 1 つだけ書きます。--- で区切らず、ページを 1 つの文書で書いてください",

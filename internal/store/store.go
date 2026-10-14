@@ -48,8 +48,6 @@ type Meta struct {
 	// TitleEdited and ProjectEdited mark values set on the management page, kept across republishes.
 	TitleEdited bool   `json:"titleEdited,omitempty"`
 	Description string `json:"description"`
-	// Lang is the language a page is drawn in (a BCP 47 tag); none is tmpl.DefaultLang.
-	Lang string `json:"lang,omitempty"`
 	// Template and Theme drew a page published from a data file, and DataTitle is its title:, which
 	// clearing the title on the management page gives back.
 	Template  string `json:"template,omitempty"`
@@ -224,7 +222,7 @@ func sourceKey(slug, file string) string {
 // drawLinked draws d, the data file a link of slug registers, under the title pinned for it, else its
 // title:, else slug.
 func drawLinked(d *tmpl.Data, m *Meta, slug string) ([]byte, error) {
-	return d.Render(cmp.Or(m.Title, d.Title, slug), m.Lang) //nolint:wrapcheck // a usererr for the caller to show
+	return d.Render(cmp.Or(m.Title, d.Title, slug)) //nolint:wrapcheck // a usererr for the caller to show
 }
 
 // Version is what live reload compares: a stored page's publish time, a linked file's mtime, and for a

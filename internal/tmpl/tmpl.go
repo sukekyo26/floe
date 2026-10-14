@@ -38,8 +38,6 @@ var builtin embed.FS
 const (
 	// DefaultTheme is the theme of a page whose data names none.
 	DefaultTheme = "default"
-	// DefaultLang is the language of a page unless the publisher names another.
-	DefaultLang = string(i18n.English)
 )
 
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
@@ -60,6 +58,7 @@ type Data struct {
 	Template string
 	Theme    string
 	Title    string // "" when the data names none
+	Lang     string // the language of the page, a BCP 47 tag
 	Values   map[string]any
 	Calc     map[string]any // the values of the template's computed.yaml, by name; nil without one
 
@@ -75,7 +74,7 @@ type Data struct {
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
-var shared = []string{"template", "theme", "title"}
+var shared = []string{"lang", "template", "theme", "title"}
 
 // Read reads the data file src, checks it against its template's schema, then its checks, and
 // computes the values of its computed.yaml; file names it in errors. A mistake is a *yamlpos.Error,
@@ -185,7 +184,7 @@ func start(file string, src []byte, themed bool) (*head, error) {
 		return nil, err
 	}
 	d := &Data{
-		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
+		File: file, Template: "", Theme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
 		images: nil, diagrams: nil, scripts: nil, tried: nil, icons: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
@@ -265,7 +264,8 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 // none. With themed, a theme is given over the data's, and its theme: is not used.
 func (h *head) readShared(themed bool) {
 	d := h.d
-	to := map[string]*string{"template": &d.Template, "theme": &d.Theme, "title": &d.Title}
+	to := map[string]*string{"lang": &d.Lang, "template": &d.Template, "theme": &d.Theme, "title": &d.Title}
+	lang, langWritten := d.Values["lang"]
 	h.unnamed = true
 	for _, key := range shared {
 		h.where[key] = yamlpos.Of(h.root)
@@ -292,6 +292,13 @@ func (h *head) readShared(themed bool) {
 	}
 	// A title of spaces names none, as an empty --title does.
 	d.Title = strings.TrimSpace(d.Title)
+	// The page's <html lang> is the data's own, so that every way of drawing it gives the same page.
+	switch s, text := lang.(string); {
+	case !langWritten:
+		h.problems = append(h.problems, yamlpos.New(d.File, h.where["lang"], "tmpl_no_lang"))
+	case text && !i18n.IsTag(s):
+		h.problems = append(h.problems, yamlpos.New(d.File, h.where["lang"], "tmpl_lang_invalid", s))
+	}
 }
 
 // parse reads src as one YAML document of keys and values, without anchors, aliases or tags, so
@@ -314,12 +321,9 @@ func parse(file string, src []byte) (ast.Node, error) {
 	return body, nil
 }
 
-// Render draws d, as read by Library.Read, as a page titled title in lang (a BCP 47 tag; "" is
-// DefaultLang), with the template the data was checked against.
-func (d *Data) Render(title, lang string) ([]byte, error) {
-	if lang == "" {
-		lang = DefaultLang
-	}
+// Render draws d, as read by Library.Read, as a page titled title in its lang:, with the template the
+// data was checked against.
+func (d *Data) Render(title string) ([]byte, error) {
 	t := d.tmpl
 	page, err := t.page()
 	if err != nil {
@@ -332,7 +336,7 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	var b bytes.Buffer
 	err = page.Execute(&b, map[string]any{
 		"Title": title,
-		"Lang":  lang,
+		"Lang":  d.Lang,
 		"Data":  d.schema.prepare(d.Values, nil, d),
 		"Calc":  d.Calc,
 		"Theme": template.CSS(css), //nolint:gosec // G203: the template's own theme, not data

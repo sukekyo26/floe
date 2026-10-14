@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/link"
 	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/project"
@@ -69,7 +68,6 @@ type Options struct {
 	Slug        *string
 	Title       *string
 	Description *string
-	Lang        *string
 	Theme       *string
 	Force       bool
 }
@@ -160,7 +158,7 @@ func (e *Entry) draw(data *tmpl.Data, theme, templates string) error {
 	var err error
 	if !e.Meta.IsLink() {
 		e.Meta.Template, e.Meta.Theme, e.Meta.StrictCSP = data.Template, data.Theme, true
-		e.Page, err = data.Render(e.Meta.Title, e.Meta.Lang)
+		e.Page, err = data.Render(e.Meta.Title)
 		return err //nolint:wrapcheck // a usererr for the caller to show
 	}
 	e.Meta.Theme, e.Meta.Templates = theme, templates
@@ -195,26 +193,21 @@ func (s *Store) read(file string, opts Options, cwd string) (path, content strin
 	return path, string(b), nil
 }
 
-// checkKind checks that opts.Lang and opts.Theme fit the kind of file: a page is drawn from a data file
-// in opts.Lang and opts.Theme, stored or linked; HTML is only linked, and shown as it is, in its own
-// language and look. A link's file is its real path.
+// checkKind checks that opts.Theme fits the kind of file: a page is drawn from a data file in
+// opts.Theme, stored or linked; HTML is only linked, and shown as it is, in its own look. A link's file
+// is its real path.
 func checkKind(file string, opts Options) error {
 	switch {
 	case !opts.Link && !IsDataFile(file):
 		return usererr.New("store_not_data", file)
-	case opts.Link && !IsDataFile(file) && opts.Lang != nil:
-		return usererr.New("store_lang_link")
 	case opts.Link && !IsDataFile(file) && opts.Theme != nil:
 		return usererr.New("store_theme_link")
-	case opts.Lang != nil && !i18n.IsTag(*opts.Lang):
-		return usererr.New("lang_invalid", *opts.Lang)
 	}
 	return nil
 }
 
-// newMeta keeps what was set on the management page (favourite, title, project), the description, the
-// language and createdAt from base; --title, --description and --lang win. A linked HTML file has no
-// language.
+// newMeta keeps what was set on the management page (favourite, title, project), the description and
+// createdAt from base; --title and --description win.
 func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta {
 	keepTitle := opts.Title == nil && base.TitleEdited
 	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
@@ -224,7 +217,6 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Title:         title(opts, path, keepTitle, base, own, slug),
 		TitleEdited:   keepTitle,
 		Description:   base.Description,
-		Lang:          base.Lang,
 		Template:      "",
 		Theme:         "",
 		DataTitle:     own,
@@ -240,17 +232,11 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 	if opts.Description != nil {
 		m.Description = *opts.Description
 	}
-	if opts.Lang != nil {
-		m.Lang = *opts.Lang
-	}
 	if base.ProjectEdited {
 		m.Project = base.Project
 	}
-	switch {
-	case path == "":
+	if path == "" {
 		m.PublishedFrom = from
-	case !IsDataFile(path):
-		m.Lang = ""
 	}
 	return m
 }

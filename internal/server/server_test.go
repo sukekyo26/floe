@@ -87,7 +87,7 @@ func (e *env) page(t *testing.T, rel, title, html string) string {
 	t.Helper()
 
 	var b strings.Builder
-	b.WriteString("template: report\n")
+	b.WriteString("template: report\nlang: en\n")
 	if title != "" {
 		q, err := json.Marshal(title) // a JSON string is a YAML one too
 		if err != nil {

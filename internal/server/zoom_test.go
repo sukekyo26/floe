@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"fmt"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -38,7 +39,11 @@ func uiZoom(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// tag is in upper case, which the toolbar matches as floe does.
 	page := `<div class="dg-wrap"></div>` + "\n" + diagramPage(t, lang)
 	slug, l := "diagram", strings.ToUpper(string(lang))
-	e.publish(t, e.page(t, "diagram.yaml", "Diagram", page), store.Options{Slug: &slug, Lang: &l})
+	src, err := os.ReadFile(e.page(t, "diagram.yaml", "Diagram", page))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.publish(t, e.write(t, "diagram.yaml", strings.Replace(string(src), "lang: en", "lang: "+l, 1)), store.Options{Slug: &slug})
 	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 1000, Height: 800, DeviceScaleFactor: 1}
 	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
 		t.Fatal(err)

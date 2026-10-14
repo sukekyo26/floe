@@ -106,7 +106,7 @@ func (e env) read(t *testing.T, rel string) string {
 func (e env) page(t *testing.T, rel, title string) string {
 	t.Helper()
 
-	src := "template: report\n"
+	src := "template: report\nlang: en\n"
 	if title != "" {
 		src += "title: " + title + "\n"
 	}
@@ -194,7 +194,7 @@ func TestPublishNames(t *testing.T) {
 	}
 	// index.html, which only a link takes, is named after its directory.
 	for _, tt := range tests {
-		e.write(t, filepath.Join(tt.cwd, tt.file), "template: report\n")
+		e.write(t, filepath.Join(tt.cwd, tt.file), "template: report\nlang: en\n")
 		entry := e.mustPublish(t, tt.file, store.Options{Link: !store.IsDataFile(tt.file)}, tt.cwd)
 		if entry.Slug != tt.want {
 			t.Errorf("publish %s from %s: slug %q, want %q", tt.file, tt.cwd, entry.Slug, tt.want)
@@ -499,7 +499,7 @@ func TestEdit(t *testing.T) {
 		{"spaces.yaml", "title: '  '\n", "spaces"},
 	} {
 		slug := strings.TrimSuffix(tt.file, ".yaml")
-		file := e.write(t, tt.file, "template: report\n"+tt.title)
+		file := e.write(t, tt.file, "template: report\nlang: en\n"+tt.title)
 		e.mustPublish(t, file, store.Options{}, "repo")
 		if _, err := e.s.Edit(slug, store.Edit{Title: ptr("Pinned")}); err != nil {
 			t.Fatal(err)
@@ -597,37 +597,29 @@ func TestListedJSON(t *testing.T) {
 	}
 }
 
+// A page is in the language of its data's lang:, which meta.json does not keep; data without one is
+// refused.
 func TestPublishLang(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
 	frag := e.page(t, "frag.yaml", "")
-	e.mustPublish(t, frag, store.Options{}, "repo")
-	if m := e.meta(t, "frag"); m.Lang != "" || !strings.Contains(e.read(t, "store/frag/index.html"), `<html lang="en">`) {
-		t.Errorf("a page without --lang: lang %q", m.Lang)
+	ja := e.write(t, "ja.yaml", "template: report\nlang: ja\n")
+	e.mustPublish(t, ja, store.Options{}, "repo")
+	if page, meta := e.read(t, "store/ja/index.html"), e.read(t, "store/ja/meta.json"); !strings.Contains(page, `<html lang="ja">`) ||
+		strings.Contains(meta, `"lang"`) {
+		t.Errorf("a page of lang: ja =\n%s\nmeta.json =\n%s", page, meta)
 	}
-	e.mustPublish(t, frag, store.Options{Lang: ptr("ja")}, "repo")
-	e.mustPublish(t, frag, store.Options{}, "repo")
-	if m := e.meta(t, "frag"); m.Lang != "ja" || !strings.Contains(e.read(t, "store/frag/index.html"), `<html lang="ja">`) {
-		t.Errorf("a republish without --lang should keep ja: lang %q", m.Lang)
-	}
-	e.mustPublish(t, frag, store.Options{Lang: ptr("pt-BR")}, "repo")
-	if m := e.meta(t, "frag"); m.Lang != "pt-BR" {
-		t.Errorf("--lang pt-BR: lang %q", m.Lang)
-	}
-	e.mustPublish(t, frag, store.Options{Force: true}, "other")
-	if m := e.meta(t, "frag"); m.Lang != "" {
-		t.Errorf("--force from another project should start afresh: lang %q", m.Lang)
-	}
-	for _, bad := range []string{"", "x", "ja_JP", "en-", `ja"><script>`} {
-		_, err := e.publish(t, frag, store.Options{Lang: ptr(bad)}, "other")
-		wantUserErr(t, err, "lang_invalid", bad)
+	none := e.write(t, "none.yaml", "template: report\n")
+	_, err := e.publish(t, none, store.Options{}, "repo")
+	if err == nil || !strings.Contains(err.Error(), "none.yaml:1:1: name the language of the page") {
+		t.Errorf("publish of data without lang: = %v", err)
 	}
 
 	// --theme picks a theme of the template over the data's, which is then not used, and is refused
 	// for a link.
-	printed := e.write(t, "printed.yaml", "template: report\ntheme: print\n")
-	_, err := e.publish(t, printed, store.Options{}, "other")
+	printed := e.write(t, "printed.yaml", "template: report\ntheme: print\nlang: en\n")
+	_, err = e.publish(t, printed, store.Options{}, "other")
 	if err == nil || !strings.Contains(err.Error(), `template report has no theme "print"`) {
 		t.Errorf("publish of a theme the template does not have = %v", err)
 	}
@@ -635,27 +627,15 @@ func TestPublishLang(t *testing.T) {
 	if m := e.meta(t, "printed"); m.Theme != "default" {
 		t.Errorf("--theme default over theme: print: theme %q", m.Theme)
 	}
-	listed := e.write(t, "listed.yaml", "template: report\ntheme: [dark]\n")
+	listed := e.write(t, "listed.yaml", "template: report\ntheme: [dark]\nlang: en\n")
 	e.mustPublish(t, listed, store.Options{Theme: ptr("default")}, "other")
 	_, err = e.publish(t, frag, store.Options{Theme: ptr("print")}, "other")
 	wantUserErr(t, err, "tmpl_unknown_theme", "print", "report", "default")
 
-	// A linked file is shown as it is: --lang is refused, and a language left from before is dropped.
+	// A linked file is shown as it is: --theme is refused.
 	site := e.write(t, "site/index.html", "<h1>A</h1>")
-	_, err = e.publish(t, site, store.Options{Link: true, Lang: ptr("ja")}, "repo")
-	wantUserErr(t, err, "store_lang_link")
 	_, err = e.publish(t, site, store.Options{Link: true, Theme: ptr("default")}, "repo")
 	wantUserErr(t, err, "store_theme_link")
-	e.mustPublish(t, site, store.Options{Link: true}, "repo")
-	m := e.meta(t, "site")
-	m.Lang = "ja"
-	if err := e.s.WriteMeta("site", m); err != nil {
-		t.Fatal(err)
-	}
-	e.mustPublish(t, site, store.Options{Link: true}, "repo")
-	if m := e.meta(t, "site"); m.Lang != "" {
-		t.Errorf("a relinked file keeps lang %q", m.Lang)
-	}
 }
 
 // A data file is drawn with the template it names, titled by its title: unless --title says
@@ -664,10 +644,10 @@ func TestPublishDataFile(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	file := e.write(t, "plan.yaml", "template: report\ntitle: The plan\nsections:\n  - heading: Steps\n    parts:\n      - text: Do **it**.\n")
-	entry := e.mustPublish(t, file, store.Options{Lang: ptr("ja")}, "")
+	file := e.write(t, "plan.yaml", "template: report\ntitle: The plan\nsections:\n  - heading: Steps\n    parts:\n      - text: Do **it**.\nlang: ja\n")
+	entry := e.mustPublish(t, file, store.Options{}, "")
 	m := entry.Meta
-	if entry.Slug != "plan" || m.Title != "The plan" || m.Template != "report" || m.Theme != "default" || m.Lang != "ja" {
+	if entry.Slug != "plan" || m.Title != "The plan" || m.Template != "report" || m.Theme != "default" {
 		t.Errorf("meta = %+v (slug %s)", m, entry.Slug)
 	}
 	b, err := os.ReadFile(filepath.Join(e.tmp, "store", "plan", "index.html"))
@@ -682,22 +662,22 @@ func TestPublishDataFile(t *testing.T) {
 	if entry := e.mustPublish(t, file, store.Options{Title: ptr("Pinned")}, ""); !strings.Contains(string(entry.Page), "<h1>Pinned</h1>") {
 		t.Errorf("--title does not title the drawn page: %s", entry.Page)
 	}
-	bad := e.write(t, "bad.yml", "template: deck\n")
+	bad := e.write(t, "bad.yml", "template: deck\nlang: en\n")
 	if _, err := e.publish(t, bad, store.Options{}, ""); err == nil || err.Error() != bad+`:1:11: unknown template "deck"; use report` {
 		t.Errorf("publish of a data file naming no template there = %v", err)
 	}
 }
 
-// A data file is linked as an HTML file is, checked as a stored page is, with its language and the
-// theme given over its own: no page is stored, as it is drawn each time it is opened.
+// A data file is linked as an HTML file is, checked as a stored page is, with the theme given over its
+// own: no page is stored, as it is drawn each time it is opened, in its lang:.
 func TestLinkDataFile(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	data := e.write(t, "proj/spec.yaml", "template: report\ntitle: Spec\n")
-	entry := e.mustPublish(t, data, store.Options{Link: true, Lang: ptr("ja"), Theme: ptr("default")}, "proj")
+	data := e.write(t, "proj/spec.yaml", "template: report\ntitle: Spec\nlang: ja\n")
+	entry := e.mustPublish(t, data, store.Options{Link: true, Theme: ptr("default")}, "proj")
 	m := entry.Meta
-	if entry.Page != nil || m.Path != data || m.Lang != "ja" || m.Theme != "default" || m.Template != "" || m.Title != "" ||
+	if entry.Page != nil || m.Path != data || m.Theme != "default" || m.Template != "" || m.Title != "" ||
 		m.StrictCSP {
 		t.Errorf("the entry = %+v, page %d bytes", m, len(entry.Page))
 	}
@@ -712,24 +692,20 @@ func TestLinkDataFile(t *testing.T) {
 		t.Errorf("Draw = %v:\n%s", err, page)
 	}
 
-	// Linked again in another language, it reloads its tab.
-	again := e.mustPublish(t, data, store.Options{Link: true, Lang: ptr("en")}, "proj").Meta
+	// Linked again in another theme, it reloads its tab.
+	again := e.mustPublish(t, data, store.Options{Link: true}, "proj").Meta
 	if e.s.Version("spec", &again, data) == e.s.Version("spec", &m, data) {
-		t.Error("linking again in another language left the version as it was")
+		t.Error("linking again in another theme left the version as it was")
 	}
 	// A slug that comes to link another file watches nothing of the one before.
-	other := e.write(t, "proj/other.yaml", "template: report\n")
+	other := e.write(t, "proj/other.yaml", "template: report\nlang: en\n")
 	if _, version, drawErr := e.s.Draw("spec", &m, other); drawErr != nil || version != e.s.Version("spec", &m, other) {
 		t.Errorf("Draw of another file under the slug = %v at %q, watched at %q", drawErr, version, e.s.Version("spec", &m, other))
 	}
 
-	bad := e.write(t, "proj/bad.yaml", "template: report\nsections: 3\n")
+	bad := e.write(t, "proj/bad.yaml", "template: report\nsections: 3\nlang: en\n")
 	if _, err = e.publish(t, bad, store.Options{Link: true}, "proj"); err == nil || !strings.Contains(err.Error(), "bad.yaml:2:11: sections:") {
 		t.Errorf("linking a data file with mistakes = %v", err)
-	}
-	html := e.write(t, "proj/page.html", "<title>x</title>")
-	if _, err = e.publish(t, html, store.Options{Link: true, Lang: ptr("ja")}, "proj"); err == nil {
-		t.Error("an HTML file was linked with a language")
 	}
 }
 
@@ -739,7 +715,7 @@ func TestLinkDataFileEdges(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	data := e.write(t, "proj/spec.yaml", "template: report\n")
+	data := e.write(t, "proj/spec.yaml", "template: report\nlang: en\n")
 	m := e.mustPublish(t, data, store.Options{Link: true}, "proj").Meta
 	if err := os.Chmod(data, 0); err != nil {
 		t.Fatal(err)
@@ -769,7 +745,7 @@ func TestLinkDataFileEdges(t *testing.T) {
 		t.Errorf("linking a data file through a symlink named .html, with --theme = %v", err)
 	}
 
-	bad := e.write(t, "proj/bad.yaml", "template: nosuch\n")
+	bad := e.write(t, "proj/bad.yaml", "template: nosuch\nlang: en\n")
 	if err = os.Symlink(bad, filepath.Join(e.tmp, "proj", "view.html")); err != nil {
 		t.Fatal(err)
 	}
@@ -792,7 +768,7 @@ func TestLinkDataFileTwice(t *testing.T) {
 		}
 	}
 	e.write(t, "b/sizes/extra.css", "")
-	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\n")
+	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nlang: en\n")
 	metas := map[string]store.Meta{}
 	for slug, dir := range dirs {
 		s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, ""))
@@ -844,7 +820,7 @@ func TestLinkDataFileIcons(t *testing.T) {
 	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", icons))
 	data := e.write(t, "proj/spec.yaml", "template: report\nsections:\n  - parts:\n      - diagram:\n          id: a\n"+
 		"          width: 100\n          height: 50\n          title: t\n          parts:\n"+
-		"            - icon: { x: 10, y: 5, name: aws/aws-lambda, size: 24 }\n")
+		"            - icon: { x: 10, y: 5, name: aws/aws-lambda, size: 24 }\nlang: en\n")
 	m := store.Meta{Path: data}
 	_, version, err := s.Draw("spec", &m, data)
 	if err == nil || !strings.Contains(err.Error(), "floe icons fetch aws") {

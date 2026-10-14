@@ -28,10 +28,9 @@ func TestDrawnLink(t *testing.T) {
 		t.Fatal(err)
 	}
 	chart := e.write(t, "work/spec/chart.png", string(png))
-	const right = "template: sizes\ntitle: Sizes\nfiles: [{name: a, bytes: 1536}]\nchart: chart.png\n"
+	const right = "template: sizes\ntitle: Sizes\nfiles: [{name: a, bytes: 1536}]\nchart: chart.png\nlang: ja\n"
 	data := e.write(t, "work/spec/sizes.yaml", right)
-	ja := "ja"
-	e.publish(t, data, store.Options{Link: true, Lang: &ja, Slug: nil, Title: nil, Description: nil, Theme: nil, Force: false})
+	e.publish(t, data, store.Options{Link: true, Slug: nil, Title: nil, Description: nil, Theme: nil, Force: false})
 
 	r := e.get(t, "/a/sizes/?raw")
 	for _, want := range []string{`<html lang="ja">`, "<td>1.5 KiB</td>", `<img src="data:image/png;base64,`, "/api/events/sizes?since="} {

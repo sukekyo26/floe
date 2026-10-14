@@ -200,7 +200,7 @@ func TestDataImages(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.write(t, "work/report/chart.png", string(png))
-	e.write(t, "work/report/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nchart: chart.png\n")
+	e.write(t, "work/report/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nchart: chart.png\nlang: en\n")
 	if r := e.run(t, "work", "check", "report/sizes.yaml"); r.code != 0 {
 		t.Errorf("check = %+v", r)
 	}
@@ -211,7 +211,7 @@ func TestDataImages(t *testing.T) {
 	if err != nil || !strings.Contains(string(b), `<img src="data:image/png;base64,`) {
 		t.Errorf("the published page = %s, %v", b, err)
 	}
-	e.write(t, "work/report/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nchart: ../chart.png\n")
+	e.write(t, "work/report/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nchart: ../chart.png\nlang: en\n")
 	if r := e.run(t, "work", "check", "report/sizes.yaml"); r.code != 1 || !strings.Contains(r.stderr, `report/sizes.yaml:3:8: chart: "../chart.png" is not a file under`) {
 		t.Errorf("check of an image out of the directory = %+v", r)
 	}
@@ -230,8 +230,8 @@ func TestLinkDataFileOfOwnTemplate(t *testing.T) {
 		}
 	}
 	e.write(t, "others/sizes/page.html", "<p>{{.Calc.total}} of the others</p>")
-	e.write(t, "work/a.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\n")
-	e.write(t, "work/b.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\n")
+	e.write(t, "work/a.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\nlang: en\n")
+	e.write(t, "work/b.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\nlang: en\n")
 	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
 	if r := e.run(t, "work", "publish", "a.yaml", "--link"); r.code != 0 {
 		t.Fatalf("publish --link a = %+v", r)
@@ -282,7 +282,7 @@ func TestLinkDataFileOfRelativeIcons(t *testing.T) {
 	}
 	e.write(t, "work/a.yaml", "template: report\nsections:\n  - parts:\n      - diagram:\n          id: a\n"+
 		"          width: 100\n          height: 50\n          title: t\n          parts:\n"+
-		"            - icon: { x: 10, y: 5, name: aws/aws-lambda, size: 24 }\n")
+		"            - icon: { x: 10, y: 5, name: aws/aws-lambda, size: 24 }\nlang: en\n")
 	e.vars["FLOE_ICONS_DIR"] = "icons"
 	if r := e.run(t, "work", "publish", "a.yaml", "--link"); r.code != 0 {
 		t.Fatalf("publish --link = %+v", r)

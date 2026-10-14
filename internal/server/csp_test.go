@@ -105,7 +105,7 @@ func TestUIScript(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	b := newBrowser(t, e.base, i18n.English)
 	data := e.write(t, "script.yaml", "template: report\nsections:\n  - parts:\n      - text: before\n"+
 		"      - script:\n          data: { words: [moves, '</script>'], __proto__: { x: 1 } }\n"+
-		"          js: |\n            function (el, data) { el.id = 'moved'; el.textContent = data.words.join(' ') + ' ' + Object.keys(data); }; // drawn\n")
+		"          js: |\n            function (el, data) { el.id = 'moved'; el.textContent = data.words.join(' ') + ' ' + Object.keys(data); }; // drawn\nlang: en\n")
 	e.publish(t, data, store.Options{Slug: ptr("script")})
 	b.navigate("/a/script/?raw")
 	got := b.eval("const el = document.getElementById('moved'); el.previousElementSibling.textContent + '|' + el.textContent")
