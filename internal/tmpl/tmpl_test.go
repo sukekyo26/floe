@@ -137,19 +137,22 @@ func TestReportTableCardsNote(t *testing.T) {
 	}
 }
 
-// A script is an element to draw in and the call of its function with it and its data, as JSON that no
-// text ends the script in; a ; after the function is left out. A js the page would read the end of its script in is refused, as is a
-// script without js or with keys it does not take.
+// A script is an element to draw in and its function called with it and its data, the text of JSON
+// that no text ends the script in, parsed; a ; or a comment after the function still parses. A js the
+// page would read the end of its script in is refused, as is a script without js or with keys it does
+// not take.
 func TestReportScript(t *testing.T) {
 	t.Parallel()
 
 	got := render(t, "template: report\nsections:\n  - parts:\n      - script:\n          data: { a: '</script><b>&', n: 1.50 }\n"+
-		"          js: |\n            function (el, data) { el.textContent = data.a; } // a comment\n"+
+		"          js: |\n            function (el, data) { el.textContent = data.a; }; // a comment\n"+
 		"      - script:\n          js: (el) => el.append('x');\n")
 	for _, want := range []string{
-		"<div></div><script>(function (el, data) { el.textContent = data.a; } // a comment\n)(document.currentScript.previousElementSibling, " +
-			`{"a":"\u003c/script\u003e\u003cb\u003e\u0026","n":1.5});</script>`,
-		"<div></div><script>((el) => el.append('x')\n)(document.currentScript.previousElementSibling, null);</script>",
+		"<div></div><script>{const floeScript = function (el, data) { el.textContent = data.a; }; // a comment\n\n" +
+			";floeScript(document.currentScript.previousElementSibling, " +
+			`JSON.parse("{\"a\":\"\\u003c/script\\u003e\\u003cb\\u003e\\u0026\",\"n\":1.5}"));}</script>`,
+		"<div></div><script>{const floeScript = (el) => el.append('x');\n" +
+			`;floeScript(document.currentScript.previousElementSibling, JSON.parse("null"));}</script>`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("the page lacks %s:\n%s", want, got)

@@ -99,13 +99,13 @@ func TestUICutOff(t *testing.T) { //nolint:paralleltest // the UI tests share on
 }
 
 // A script part runs under the CSP of a page drawn from a data file: its function gets the element in
-// its place and its data, the example's slider among them.
+// its place and its data, a key __proto__ a key of it, the example's slider among them.
 func TestUIScript(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
 	e := newEnv(t)
 	b := newBrowser(t, e.base, i18n.English)
 	data := e.write(t, "script.yaml", "template: report\nsections:\n  - parts:\n      - text: before\n"+
-		"      - script:\n          data: { words: [moves, '</script>'] }\n"+
-		"          js: |\n            function (el, data) { el.id = 'moved'; el.textContent = data.words.join(' '); }\n")
+		"      - script:\n          data: { words: [moves, '</script>'], __proto__: { x: 1 } }\n"+
+		"          js: |\n            function (el, data) { el.id = 'moved'; el.textContent = data.words.join(' ') + ' ' + Object.keys(data); }; // drawn\n")
 	e.publish(t, data, store.Options{Slug: ptr("script")})
 	b.navigate("/a/script/?raw")
 	got := b.eval("const el = document.getElementById('moved'); el.previousElementSibling.textContent + '|' + el.textContent")
@@ -119,5 +119,5 @@ func TestUIScript(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	slider := b.eval("const input = document.querySelector('input[type=range]'); const before = input.closest('div').querySelector('output').textContent;" +
 		"input.value = 1000; input.dispatchEvent(new Event('input')); before + ' ' + input.closest('div').querySelector('output').textContent")
 
-	check(t, "script", []string{got, slider}, "before|moves </script>|7 hours 2 hours")
+	check(t, "script", []string{got, slider}, "before|moves </script> __proto__,words|7 hours 2 hours")
 }

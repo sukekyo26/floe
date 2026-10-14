@@ -545,6 +545,17 @@ func pathKey(at []string) string {
 	return strings.Join(at, "\x00")
 }
 
+// itemMistake is the mistake e in the item at the path at under root, of the data file file: at its
+// value, or at its key with onKey.
+func itemMistake(file string, root ast.Node, at []string, onKey bool, e *usererr.Error) *yamlpos.Error {
+	key, value, path := yamlpos.Find(root, at)
+	pos := yamlpos.OfValue(key, value)
+	if onKey {
+		pos = yamlpos.Of(key)
+	}
+	return &yamlpos.Error{File: file, Pos: pos, Err: usererr.New("tmpl_item", path, e)}
+}
+
 // decode reads the values under root. goccy/go-yaml reads a whole number above 0 as uint64, which
 // expr negates by wrapping around (-3 / 2 is 9.2e18), so one that fits becomes an int.
 func decode(file string, root ast.Node) (map[string]any, error) {

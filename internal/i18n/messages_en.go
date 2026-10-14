@@ -327,7 +327,7 @@ var messagesEN = map[string]string{
 	"tmpl_computed_clash":      "%s is an item of the data too, so an expression could not tell them apart; rename it",
 	"tmpl_computed_cycle":      "the values are computed from each other: %s",
 	"tmpl_computed_env":        "$env is not for computed.yaml; use the names",
-	"tmpl_format_unknown":      `%s: %s: floe does not know the format "%s"; use a format of JSON Schema, or html, image or diagram`,
+	"tmpl_format_unknown":      `%s: %s: floe does not know the format "%s"; use a format of JSON Schema, or html, image, diagram or script`,
 	"tmpl_format_unreached":    "%s: %s: the format %s marks an item to draw; declare it under properties or items, which floe follows",
 	"tmpl_schema_open":         `%s: %s declares properties without "additionalProperties": false, so a misspelt key is not refused`,
 	"tmpl_format_type":         `%s: %s: floe draws an item of the format %s from a value of type %s; declare "type": "%[4]s" alone`,

@@ -3,9 +3,7 @@ package tmpl
 import (
 	"encoding/json"
 	"html/template"
-	"maps"
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/goccy/go-yaml/ast"
@@ -47,7 +45,7 @@ func readScript(file string, root ast.Node, f itemAt) (js string, data any, mist
 		m = keys
 	}
 	at := func(k string) []string { return append(f.at[:len(f.at):len(f.at)], k) }
-	for _, k := range slices.Sorted(maps.Keys(m)) {
+	for k := range m {
 		if k != "js" && k != "data" {
 			mistakes = append(mistakes, itemMistake(file, root, at(k), true, usererr.New("tmpl_script_key", k)))
 		}
@@ -73,13 +71,14 @@ func readScript(file string, root ast.Node, f itemAt) (js string, data any, mist
 var scriptEnd = regexp.MustCompile(`(?i)</script|<!--`)
 
 // drawScript draws the element a script draws in, and the call of its function js with that element
-// and data. data goes in as JSON, whose < and > are escaped, so that no text of it ends the script.
-// A ; after the function, as a statement ends, would break the call, and is left out.
+// and data. js is assigned, so that a ; or a comment after the function still parses, and the line
+// break ends a // comment before the call. data goes in as the text of its JSON, whose < and > are
+// escaped, so that no text of it ends the script, and is parsed, so that a key __proto__ is a key.
 func drawScript(js string, data any) template.HTML {
 	// Values read from YAML, without .inf or .nan or keys other than text, always encode.
-	b, _ := json.Marshal(data) //nolint:errcheck,errchkjson // see above
-	js = strings.TrimRight(js, " \t\r\n;")
-	// The line break ends a // comment at the end of js before the call.
-	html := "<div></div><script>(" + js + "\n)(document.currentScript.previousElementSibling, " + string(b) + ");</script>"
+	b, _ := json.Marshal(data)         //nolint:errcheck,errchkjson // see above
+	text, _ := json.Marshal(string(b)) //nolint:errcheck,errchkjson // text always encodes
+	html := "<div></div><script>{const floeScript = " + js + "\n" +
+		";floeScript(document.currentScript.previousElementSibling, JSON.parse(" + string(text) + "));}</script>"
 	return template.HTML(html) //nolint:gosec // G203: the data file's own script, its end checked by scriptEnd
 }
