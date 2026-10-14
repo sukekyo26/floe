@@ -177,6 +177,7 @@ var messagesJA = map[string]string{
 	"cli_template_made":            "テンプレート %s を %s に作りました（%s の写し）",
 	"cli_check_not_data":           "%s はデータファイル（.yaml か .yml）ではありません",
 	"cli_render_same_file":         "%s と %s が同じ %s に書き出します。どちらかの名前を変えてください",
+	"cli_render_same_file_case":    "%s と %s は %s と %s に書き出します。大文字小文字を区別しない所（macOS）では同じファイルなので、どちらかの名前を変えてください",
 	"cli_render_missing":           "%s がありません。floe render で %s から書き出してください",
 	"cli_render_stale":             "%s は %s から描いたものと違います。floe render で書き出し直してください",
 	"cli_title_empty":              "--title が空です。ページの名前を指定するか、--title を省いてデータファイルの title:（リンクなら <title> か最初の <h1>）から取ってください",

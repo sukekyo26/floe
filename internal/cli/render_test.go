@@ -42,6 +42,19 @@ func TestRender(t *testing.T) {
 		t.Fatal(err)
 	}
 	want(t, "render a symlink of another name", e.run(t, "work", "render", "spec.yaml", "latest.yaml"), 0, "latest.html\n", "")
+	// A page that is a symlink is written where it leads, and stays a symlink.
+	e.write(t, "site/shared.html", "old")
+	if err := os.Symlink("../site/shared.html", filepath.Join(e.tmp, "work", "shared.html")); err != nil {
+		t.Fatal(err)
+	}
+	e.write(t, "work/shared.yaml", spec)
+	want(t, "render onto a symlink", e.run(t, "work", "render", "shared.yaml"), 0, "shared.html\n", "")
+	if fi, err := os.Lstat(filepath.Join(e.tmp, "work", "shared.html")); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("the page lost its symlink: %v, %v", fi.Mode(), err)
+	}
+	if b, err := os.ReadFile(filepath.Join(e.tmp, "site", "shared.html")); err != nil || !bytes.Contains(b, []byte("<p>Do <strong>it</strong>.</p>")) {
+		t.Errorf("the page the symlink leads to = %v\n%s", err, b)
+	}
 	// A name without a letter a slug takes titles the page by itself.
 	e.write(t, "work/仕様.yaml", strings.Replace(spec, "title: Spec\n", "", 1))
 	want(t, "render a name the slug drops", e.run(t, "work", "render", "仕様.yaml"), 0, "仕様.html\n", "")
@@ -77,7 +90,7 @@ func TestRenderRefusals(t *testing.T) {
 		"spec.yaml and sub/spec.yaml would both write out/spec.html; rename one of them")
 	// On macOS, Spec.html and spec.html are one file.
 	want(t, "render onto one page but for case", e.run(t, "", "render", "spec.yaml", "sub/Spec.yaml", "--out-dir", "out"), 1, "",
-		"spec.yaml and sub/Spec.yaml would both write out/Spec.html")
+		"spec.yaml and sub/Spec.yaml would write out/spec.html and out/Spec.html, which are one file where case is ignored (macOS)")
 	for _, f := range []string{"spec.html", "out"} {
 		if _, err := os.Stat(filepath.Join(e.tmp, f)); !os.IsNotExist(err) {
 			t.Errorf("%s was written: %v", f, err)
@@ -88,6 +101,16 @@ func TestRenderRefusals(t *testing.T) {
 	want(t, "render a file with mistakes onto one page", e.run(t, "", "render", "bad.yaml", "sub/bad.yaml", "--out-dir", "out"), 1, "",
 		"bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n"+
 			"bad.yaml and sub/bad.yaml would both write out/bad.html")
+	// The mistakes of a file that clashes are told with the clash; a file that cannot be read, named twice,
+	// is told once.
+	e.write(t, "sub2/spec.yaml", "template: report\nleed: x\nlang: en\n")
+	want(t, "render a file with mistakes that clashes", e.run(t, "", "render", "spec.yaml", "sub2/spec.yaml", "--out-dir", "out"), 1, "",
+		"sub2/spec.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n"+
+			"spec.yaml and sub2/spec.yaml would both write out/spec.html")
+	if r := e.run(t, "", "render", "missing.yaml", "./missing.yaml"); r.code != 1 || strings.Count(r.stderr, "\n") != 1 ||
+		!strings.Contains(r.stderr, "cannot read missing.yaml") {
+		t.Errorf("render of a missing file named twice = %d %q", r.code, r.stderr)
+	}
 	e.write(t, "sub/spec.yml", spec)
 	if err := os.Symlink("sub", filepath.Join(e.tmp, "alias")); err != nil {
 		t.Fatal(err)

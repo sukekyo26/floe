@@ -151,7 +151,7 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 | `--check` | Write nothing: print each page that is missing or is not what its data file draws (exit code 1), or nothing when every page is (exit code 0). |
 
 - A page is written only when it changes, and its path is printed; a page that would not change is left as it is, so running it again does nothing.
-- A page there is written over: keep the pages in version control to get one back.
+- A page there is written over: keep the pages in version control to get one back. A page that is a symlink is written where it leads, and stays a symlink.
 - Every mistake of every file is printed at once as `file:line:column: message`, as `floe check` prints them, and nothing is written until all are fixed (exit code 1). Nothing is written either when two data files would write the same page (`a/spec.yaml` and `b/spec.yaml` with one `--out-dir`, `spec.yaml` and `spec.yml`, or the same through a symlinked directory).
 - The page's language, theme and title are the data file's `lang:`, `theme:` and `title:` (else the slug `floe publish` would give it, else, for a name of no letter a slug takes, the name), so that writing a page and checking it take the same arguments.
 - A data file named twice (by two globs, through a symlinked directory, or in another case on macOS) is written once; a symlink of another name is a page of its own.

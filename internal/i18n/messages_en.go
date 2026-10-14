@@ -178,6 +178,7 @@ var messagesEN = map[string]string{
 	"cli_template_made":            "made the template %s in %s, a copy of %s",
 	"cli_check_not_data":           "%s is not a data file (.yaml or .yml)",
 	"cli_render_same_file":         "%s and %s would both write %s; rename one of them",
+	"cli_render_same_file_case":    "%s and %s would write %s and %s, which are one file where case is ignored (macOS); rename one of them",
 	"cli_render_missing":           "%s is missing: write it from %s with floe render",
 	"cli_render_stale":             "%s is not what %s draws: write it again with floe render",
 	"cli_title_empty":              "--title is empty: give the page a name, or omit --title to take the data file's title:, or a link's <title> or <h1>",
