@@ -36,7 +36,24 @@
                         "additionalProperties": false
                       }
                     },
-                    "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" }, "minItems": 1 }, "minItems": 1 }
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": ["string", "object"],
+                          "description": "A line of Markdown, or a pill: a short status, with a tone of good, warn or bad",
+                          "properties": {
+                            "pill": { "type": "string", "minLength": 1 },
+                            "tone": { "enum": ["good", "warn", "bad"] }
+                          },
+                          "required": ["pill"],
+                          "additionalProperties": false
+                        },
+                        "minItems": 1
+                      },
+                      "minItems": 1
+                    }
                   },
                   "required": ["columns", "rows"],
                   "additionalProperties": false
