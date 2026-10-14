@@ -10,6 +10,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -53,6 +54,17 @@ func checkDiagrams(s *schema, d *Data, root ast.Node, iconsDir string) error {
 		d.diagrams[pathKey(paths[spec])] = template.HTML(svgs[i]) //nolint:gosec // G203: drawn by diagram, its values escaped
 	}
 	return nil
+}
+
+// itemMistake is the mistake e in the item at the path at under root, of the data file file: at its
+// value, or at its key with onKey.
+func itemMistake(file string, root ast.Node, at []string, onKey bool, e *usererr.Error) *yamlpos.Error {
+	key, value, path := yamlpos.Find(root, at)
+	pos := yamlpos.OfValue(key, value)
+	if onKey {
+		pos = yamlpos.Of(key)
+	}
+	return &yamlpos.Error{File: file, Pos: pos, Err: usererr.New("tmpl_item", path, e)}
 }
 
 // checkItems returns the mistakes of the checks of a stage, errs, together: those at a line and column

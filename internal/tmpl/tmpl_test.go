@@ -138,16 +138,16 @@ func TestReportTableCardsNote(t *testing.T) {
 }
 
 // A script is an element to draw in and the call of its function with it and its data, as JSON that no
-// text ends the script in. A js the page would read the end of its script in is refused, as is a
+// text ends the script in; a ; after the function is left out. A js the page would read the end of its script in is refused, as is a
 // script without js or with keys it does not take.
 func TestReportScript(t *testing.T) {
 	t.Parallel()
 
 	got := render(t, "template: report\nsections:\n  - parts:\n      - script:\n          data: { a: '</script><b>&', n: 1.50 }\n"+
 		"          js: |\n            function (el, data) { el.textContent = data.a; } // a comment\n"+
-		"      - script:\n          js: (el) => el.append('x')\n")
+		"      - script:\n          js: (el) => el.append('x');\n")
 	for _, want := range []string{
-		"<div></div><script>(function (el, data) { el.textContent = data.a; } // a comment\n\n)(document.currentScript.previousElementSibling, " +
+		"<div></div><script>(function (el, data) { el.textContent = data.a; } // a comment\n)(document.currentScript.previousElementSibling, " +
 			`{"a":"\u003c/script\u003e\u003cb\u003e\u0026","n":1.5});</script>`,
 		"<div></div><script>((el) => el.append('x')\n)(document.currentScript.previousElementSibling, null);</script>",
 	} {
@@ -156,12 +156,12 @@ func TestReportScript(t *testing.T) {
 		}
 	}
 	for src, want := range map[string]string{
-		"script: { js: f, run: 1 }":          "data.yaml:4:26: sections[0].parts[0].script.run: a script takes js and data, not run",
-		"script: { data: 1 }":                "data.yaml:4:19: sections[0].parts[0].script: write js, the function to run with the element it draws in and data: function (el, data) { … }",
-		"script: { js: 1 }":                  "data.yaml:4:23: sections[0].parts[0].script.js: write js, the function to run with the element it draws in and data: function (el, data) { … }",
-		"script: { js: ' ' }":                "data.yaml:4:23: sections[0].parts[0].script.js: write js, the function to run with the element it draws in and data: function (el, data) { … }",
-		"script: { js: \"f('</SCRIPT>')\" }": "data.yaml:4:23: sections[0].parts[0].script.js: js holds </SCRIPT, where the page would end its script; split it in a string, as '<' + '/SCRIPT'",
-		"script: { js: \"f('<!--')\" }":      "data.yaml:4:23: sections[0].parts[0].script.js: js holds <!--, where the page would end its script; split it in a string, as '<' + '!--'",
+		"script: { js: f, run: 1 }":                  "data.yaml:4:26: sections[0].parts[0].script.run: a script takes js and data, not run",
+		"script: { data: 1 }":                        "data.yaml:4:19: sections[0].parts[0].script: write js, the function to run with the element it draws in and data: function (el, data) { … }",
+		"script: { js: 1 }":                          "data.yaml:4:23: sections[0].parts[0].script.js: write js, the function to run with the element it draws in and data: function (el, data) { … }",
+		"script: { js: ' ' }":                        "data.yaml:4:23: sections[0].parts[0].script.js: write js, the function to run with the element it draws in and data: function (el, data) { … }",
+		"script: { js: \"f('</SCRIPT>')\" }":         "data.yaml:4:23: sections[0].parts[0].script.js: js holds </SCRIPT, where the page would end its script; split it in a string, as '<' + '/SCRIPT'",
+		"script: { js: \"f('<!--', '</script>')\" }": "data.yaml:4:23: sections[0].parts[0].script.js: js holds <!--, where the page would end its script; split it in a string, as '<' + '!--'",
 	} {
 		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\n"), "", "")
 		if err == nil || err.Error() != want {
