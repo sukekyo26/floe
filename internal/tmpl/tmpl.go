@@ -111,7 +111,10 @@ func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data
 		if names, err = l.Names(); err != nil {
 			return nil, sources, err
 		}
-		return nil, sources, yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", strings.Join(names, ", "))
+		top := yamlpos.Pos{Line: 1, Column: 1}
+		return nil, sources, yamlpos.Problems{
+			yamlpos.New(file, top, "tmpl_no_template", strings.Join(names, ", ")), yamlpos.New(file, top, "tmpl_no_lang"),
+		}
 	}
 	if err != nil {
 		return nil, sources, err
@@ -231,6 +234,11 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 	if err != nil {
 		return err
 	}
+	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
+	s, err := t.decodeSchema(src)
+	if err != nil {
+		return err
+	}
 	err = validate(src, d, root)
 	var more yamlpos.Problems
 	switch {
@@ -241,10 +249,6 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 	}
 	if problems != nil {
 		return problems.Sorted()
-	}
-	s, err := t.decodeSchema(src)
-	if err != nil {
-		return err
 	}
 	d.schema = s
 	err = checkItems(checkImages(s, d, root, dir), checkDiagrams(s, d, root, t.icons), checkScripts(s, d, root))
@@ -434,6 +438,17 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	s, err := decodeSchema(b)
 	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
+	}
+	// floe takes these out of a data file before the schema sees it: an item of one of their names
+	// would always be empty, and a required one always missing.
+	var named []string
+	for _, key := range shared {
+		if _, ok := s.Properties[key]; ok || slices.Contains(s.Required, key) {
+			named = append(named, key)
+		}
+	}
+	if named != nil {
+		return nil, usererr.New("tmpl_schema_shared", t.file("schema.json"), andList(named), andList(shared))
 	}
 	return s, nil
 }
