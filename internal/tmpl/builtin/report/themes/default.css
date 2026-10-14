@@ -60,9 +60,11 @@ table { border-collapse: collapse; width: 100%; background: var(--surface); }
 th, td { text-align: left; vertical-align: baseline; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line); }
 /* On narrow screens, scroll sideways inside .table-wrap instead of squeezing the columns */
 th:not(.num), td:not(.num) { min-width: 7em; }
+/* A num column's heading wraps as long as it needs, but not a character a line */
+th.num { min-width: 6em; }
 thead th { font-family: var(--display); font-size: 0.88rem; border-bottom: 2px solid var(--fg); }
-th.num, td.num { text-align: right; white-space: nowrap; }
-td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+th.num, td.num { text-align: right; }
+td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pill {
   display: inline-block; font-family: var(--mono); font-size: 0.74rem; font-weight: 600;
   padding: 0.1em 0.6em; border-radius: 999px; white-space: nowrap; background: var(--accent-soft); color: var(--accent);
