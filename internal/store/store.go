@@ -55,6 +55,9 @@ type Meta struct {
 	Template  string `json:"template,omitempty"`
 	Theme     string `json:"theme,omitempty"`
 	DataTitle string `json:"dataTitle,omitempty"`
+	// StrictCSP marks a stored page drawn from a data file, served with what goes out cut off. A page
+	// stored before, or by the artifact skill, has none and is served as it was.
+	StrictCSP bool `json:"strictCsp,omitempty"`
 	// Templates is the directory of templates of one's own a linked data file is drawn with: the one of
 	// the publish that linked it, whatever the server's.
 	Templates     string `json:"templates,omitempty"`

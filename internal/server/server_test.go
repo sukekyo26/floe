@@ -70,6 +70,16 @@ func newEnv(t *testing.T) *env {
 	return e
 }
 
+// The CSP of every page, and what a page drawn from a data file adds, up to the source it connects to.
+const (
+	sandbox = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"
+	cutOff  = "default-src 'none'; img-src data: blob:; style-src 'unsafe-inline' https://fonts.googleapis.com; " +
+		"font-src https://fonts.gstatic.com; " +
+		"script-src 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; " +
+		"form-action 'none'; connect-src "
+	cutOffMeta = `<meta http-equiv="Content-Security-Policy" content="` + cutOff + `'none'">`
+)
+
 // page writes a data file for the report template titled title ("" for none), with html as its one
 // part when there is some.
 func (e *env) page(t *testing.T, rel, title, html string) string {
@@ -275,15 +285,23 @@ func TestStoredPage(t *testing.T) {
 	if !strings.HasPrefix(r.body, string(stored)) || !strings.HasPrefix(r.body[len(stored):], script) {
 		t.Errorf("?raw should be the stored page then the reload script:\n%s", r.body)
 	}
-	if !strings.HasPrefix(r.header.Get("Content-Security-Policy"), "sandbox allow-scripts") ||
+	if r.header.Get("Content-Security-Policy") != sandbox+"; "+cutOff+e.base+"/api/events/" ||
 		r.header.Get("X-Content-Type-Options") != "nosniff" || r.header.Get("Content-Type") != "text/html; charset=utf-8" {
 		t.Errorf("?raw headers = %v", r.header)
 	}
+	// The stream is allowed under the name the page was opened by.
+	localhost := strings.Replace(e.base, "127.0.0.1", "localhost", 1)
+	if got := e.get(t, "/a/my-demo/?raw", "Host", strings.TrimPrefix(localhost, "http://")).header.Get("Content-Security-Policy"); !strings.HasSuffix(got, " "+localhost+"/api/events/") {
+		t.Errorf("?raw by localhost: CSP %q", got)
+	}
 
 	dl := e.get(t, "/api/artifacts/my-demo/download")
-	if dl.body != string(stored) || dl.header.Get("Content-Disposition") != `attachment; filename="my-demo.html"` {
+	want := strings.Replace(string(stored), "<!doctype html>", "<!doctype html>\n"+cutOffMeta, 1)
+	if !strings.HasPrefix(string(stored), "<!doctype html>") || dl.body != want ||
+		dl.header.Get("Content-Disposition") != `attachment; filename="my-demo.html"` {
 		t.Errorf("download = %q, %v", dl.body, dl.header)
 	}
+
 	if got := statuses(t, e, "/api/artifacts/no-such/download", "/api/artifacts/Bad_Slug/download", "/a/my-demo/x.css",
 		"/a/no-such/?raw"); got != "404 404 404 404" {
 		t.Errorf("unknown downloads and a stored page's subpath = %s", got)
@@ -292,6 +310,16 @@ func TestStoredPage(t *testing.T) {
 	var list []store.Listed
 	if err := json.Unmarshal([]byte(e.get(t, "/api/artifacts").body), &list); err != nil || len(list) != 1 || list[0].Title != "Demo Page" {
 		t.Errorf("list = %+v, %v", list, err)
+	}
+
+	// A page stored before (or by the artifact skill) has no strictCsp, and is served and downloaded as it was.
+	e.write(t, "store/old/index.html", "<!doctype html><p>old</p>")
+	e.write(t, "store/old/meta.json", `{"title":"Old","description":"","createdAt":"2026-01-01T00:00:00.000Z","updatedAt":"2026-01-01T00:00:00.000Z"}`)
+	if got := e.get(t, "/a/old/?raw").header.Get("Content-Security-Policy"); got != sandbox {
+		t.Errorf("an old page: CSP %q", got)
+	}
+	if got := e.get(t, "/api/artifacts/old/download").body; got != "<!doctype html><p>old</p>" {
+		t.Errorf("an old page's download = %q", got)
 	}
 }
 
@@ -496,11 +524,16 @@ func TestLinkedFile(t *testing.T) {
 	index := site(t, e)
 
 	e.write(t, "site/index.html", "<h1>Linked v2</h1>\n")
-	if r := e.get(t, "/a/site/?raw"); !strings.HasPrefix(r.body, "<h1>Linked v2</h1>\n\n<script>") {
-		t.Errorf("a link is read on every request and served as it is:\n%s", r.body)
+	// Linked HTML is another tool's, which may load from elsewhere: it is not cut off.
+	if r := e.get(t, "/a/site/?raw"); !strings.HasPrefix(r.body, "<h1>Linked v2</h1>\n\n<script>") ||
+		r.header.Get("Content-Security-Policy") != sandbox {
+		t.Errorf("a link is read on every request and served as it is: %v\n%s", r.header, r.body)
+	}
+	if got := e.get(t, "/api/artifacts/site/download").body; got != "<h1>Linked v2</h1>\n" {
+		t.Errorf("a link's download = %q", got)
 	}
 	r := e.get(t, "/a/site/s.css")
-	if r.header.Get("Content-Type") != "text/css; charset=utf-8" || !strings.HasPrefix(r.header.Get("Content-Security-Policy"), "sandbox") ||
+	if r.header.Get("Content-Type") != "text/css; charset=utf-8" || r.header.Get("Content-Security-Policy") != sandbox ||
 		r.header.Get("X-Content-Type-Options") != "nosniff" || r.body != "p{}" {
 		t.Errorf("an asset: %v %q", r.header, r.body)
 	}

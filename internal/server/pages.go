@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -24,6 +25,38 @@ const (
 	// opener, so it cannot reach the API either).
 	pageCSP = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"
 )
+
+// cutOff is the CSP of a page drawn from a data file: what it shows is in it, so it loads nothing but
+// the fonts and libraries of the CDNs pages may use, and connects to connect only. A template's or the
+// data's script cannot send the page out with fetch, an image or a form. Moving the page and WebRTC
+// are beyond CSP: this stops a slip, not a hostile script.
+func cutOff(connect string) string {
+	return "default-src 'none'; img-src data: blob:; style-src 'unsafe-inline' https://fonts.googleapis.com; " +
+		"font-src https://fonts.gstatic.com; " +
+		"script-src 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; " +
+		"form-action 'none'; connect-src " + connect
+}
+
+// cutsOff reports whether the page of m is served under cutOff: stored drawn (marked when published), or
+// a linked data file, drawn each time.
+func cutsOff(m *store.Meta) bool {
+	return m.StrictCSP || m.IsDrawn()
+}
+
+// withCutOff puts cutOff into a downloaded page, which is opened without the headers: right after the
+// doctype, since a <meta> binds only what comes after it; the parser moves it into <head> all the same.
+// Nothing connects: the reload script is not in a download.
+func withCutOff(page []byte) []byte {
+	at := 0
+	rest := bytes.TrimLeft(page, " \t\r\n")
+	if len(rest) >= len("<!doctype") && strings.EqualFold(string(rest[:len("<!doctype")]), "<!doctype") {
+		if end := bytes.IndexByte(rest, '>'); end >= 0 {
+			at = len(page) - len(rest) + end + 1
+		}
+	}
+	meta := "\n<meta http-equiv=\"Content-Security-Policy\" content=\"" + cutOff("'none'") + "\">"
+	return slices.Concat(page[:at], []byte(meta), page[at:])
+}
 
 // types are the files served from a link's directory. The registered file itself is HTML whatever its
 // extension.
@@ -81,7 +114,13 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	}
 	// Assets are sandboxed too: an SVG or HTML opened directly must not run in this origin.
 	h := w.Header()
-	h.Set("Content-Security-Policy", pageCSP)
+	csp := pageCSP
+	if cutsOff(m) {
+		// The reload script's stream only, under the name the page was opened by: the management API is
+		// on the same port.
+		csp += "; " + cutOff("http://"+r.Host+"/api/events/")
+	}
+	h.Set("Content-Security-Policy", csp)
 	h.Set("X-Content-Type-Options", "nosniff")
 	if m.IsDrawn() {
 		page, version, err := s.cfg.Store.Draw(slug, m, file)
@@ -130,30 +169,28 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	var body io.Reader
+	var page []byte
+	var err error
 	if m.IsDrawn() {
-		page, _, err := s.cfg.Store.Draw(slug, m, file)
-		switch {
-		case errors.Is(err, store.ErrNotFound):
-			notFound(w)
-			return
-		case err != nil:
+		page, _, err = s.cfg.Store.Draw(slug, m, file)
+		if err != nil && !errors.Is(err, store.ErrNotFound) {
 			send(w, http.StatusConflict, mistakesText(catalog(r), err))
 			return
 		}
-		body = bytes.NewReader(page)
 	} else {
-		f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
-		if err != nil {
-			notFound(w)
-			return
-		}
-		defer f.Close() //nolint:errcheck // read-only
-		body = f
+		page, err = os.ReadFile(file) //nolint:gosec // G304: file passed store.File
 	}
-	// The page as stored, linked or drawn. Nothing added on serving (the reload script) goes in.
+	if err != nil {
+		notFound(w)
+		return
+	}
+	// The page as stored, linked or drawn. Nothing added on serving (the reload script) goes in, but
+	// what goes out stays cut off.
+	if cutsOff(m) {
+		page = withCutOff(page)
+	}
 	w.Header().Set("Content-Disposition", `attachment; filename="`+slug+`.html"`)
-	stream(w, htmlType, body, "")
+	stream(w, htmlType, bytes.NewReader(page), "")
 }
 
 // stream sends f as it is, with tail after it: a stored page was drawn when it was published, and a

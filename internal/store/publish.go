@@ -159,7 +159,7 @@ func (s *Store) readData(file, path, src, theme, cwd string) (*tmpl.Data, error)
 func (e *Entry) draw(data *tmpl.Data, theme, templates string) error {
 	var err error
 	if !e.Meta.IsLink() {
-		e.Meta.Template, e.Meta.Theme = data.Template, data.Theme
+		e.Meta.Template, e.Meta.Theme, e.Meta.StrictCSP = data.Template, data.Theme, true
 		e.Page, err = data.Render(e.Meta.Title, e.Meta.Lang)
 		return err //nolint:wrapcheck // a usererr for the caller to show
 	}
@@ -228,6 +228,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Template:      "",
 		Theme:         "",
 		DataTitle:     own,
+		StrictCSP:     false,
 		Templates:     "",
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,
