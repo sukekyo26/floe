@@ -41,7 +41,7 @@ func TestOfAndFirstAnchor(t *testing.T) {
 func TestFind(t *testing.T) {
 	t.Parallel()
 
-	doc, err := parser.ParseBytes([]byte("list:\n  - a: 1\n    \"b c\": 2\n"), 0)
+	doc, err := parser.ParseBytes([]byte("list:\n  - a: 1\n    \"b c\": 2\nflow: [x, ~]\n"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,10 +57,13 @@ func TestFind(t *testing.T) {
 		{[]string{"list", "0"}, "list[0]", true, yamlpos.Pos{Line: 2, Column: 5}},
 		{[]string{"list", "5", "a"}, "list", true, yamlpos.Pos{Line: 2, Column: 3}},
 		{[]string{"nope"}, "", false, yamlpos.Pos{Line: 1, Column: 1}},
+		// The first entry of a flow sequence has no token, the others a comma: neither is a key.
+		{[]string{"flow", "0"}, "flow[0]", false, yamlpos.Pos{Line: 4, Column: 8}},
+		{[]string{"flow", "1"}, "flow[1]", false, yamlpos.Pos{Line: 4, Column: 11}},
 	} {
 		key, value, path := yamlpos.Find(root, tt.at)
-		if path != tt.path || (key != nil) != tt.key || yamlpos.Of(value) != tt.pos {
-			t.Errorf("Find(%q) = %v, %v at %+v, %q", tt.at, key, value, yamlpos.Of(value), path)
+		if path != tt.path || (key != nil) != tt.key || yamlpos.OfValue(key, value) != tt.pos {
+			t.Errorf("Find(%q) = %v, %v at %+v, %q", tt.at, key, value, yamlpos.OfValue(key, value), path)
 		}
 	}
 }
