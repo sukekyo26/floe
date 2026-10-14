@@ -21,7 +21,7 @@
                 "text": { "type": "string", "description": "Markdown; raw HTML in it is left out" },
                 "table": {
                   "type": "object",
-                  "description": "A table; each cell is a line of Markdown (code, bold, links), a number in quotes as it is drawn",
+                  "description": "A table; each cell is a line of Markdown (code, bold, links), a number in quotes as it is drawn, or a pill",
                   "properties": {
                     "columns": {
                       "type": "array",
@@ -38,11 +38,11 @@
                     },
                     "rows": {
                       "type": "array",
+                      "description": "Rows of cells, as many as the columns: a line of Markdown, or a pill { pill: a short status, as it is, tone: good, warn or bad }; quote a cell holding ': '",
                       "items": {
                         "type": "array",
                         "items": {
                           "type": ["string", "object"],
-                          "description": "A line of Markdown, or a pill: a short status, with a tone of good, warn or bad",
                           "properties": {
                             "pill": { "type": "string", "minLength": 1 },
                             "tone": { "enum": ["good", "warn", "bad"] }

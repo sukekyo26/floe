@@ -124,8 +124,8 @@ func TestReportTableCardsNote(t *testing.T) {
 			t.Errorf("the page lacks %s:\n%s", w, got)
 		}
 	}
-	// A number would lose how it was written (1.50 as 1.5, 1234567.5 as 1.2345675e+06): a cell is text, or a
-	// pill.
+	// A number would lose how it was written (1.50 as 1.5, 1234567.5 as 1.2345675e+06): a cell is text or
+	// a pill, which has its text and a tone floe knows.
 	// A part with nothing in it is a slip.
 	for src, want := range map[string]string{
 		"table: { columns: [{title: a}], rows: [[1.50]] }": "data.yaml:4:49: sections[0].parts[0].table.rows[0][0]: write text or keys and values, not a number",
