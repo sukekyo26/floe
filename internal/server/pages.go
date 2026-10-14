@@ -164,7 +164,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 			send(w, http.StatusConflict, mistakesText(catalog(r), err))
 			return
 		}
-		body = bytes.NewReader(tmpl.WithCutOff(page))
+		body = tmpl.WithCutOff(page)
 	default:
 		// A page stored from a data file.
 		page, err := os.ReadFile(file) //nolint:gosec // G304: file passed store.File
@@ -172,7 +172,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 			notFound(w)
 			return
 		}
-		body = bytes.NewReader(tmpl.WithCutOff(page))
+		body = tmpl.WithCutOff(page)
 	}
 	// The page as stored, linked or drawn, a page drawn from a data file still cut off. Nothing added on
 	// serving (the reload script) goes in.

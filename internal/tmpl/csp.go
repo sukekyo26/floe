@@ -2,7 +2,8 @@ package tmpl
 
 import (
 	"bytes"
-	"slices"
+	"io"
+	"strings"
 )
 
 // cdns are where a page drawn from a data file may load libraries from, with their styles and fonts.
@@ -26,7 +27,7 @@ func CutOff(connect string) string {
 // not in such a page.
 // A page floe draws is UTF-8: the charset goes first, so that the CSP does not push the page's own out
 // of the bytes a browser reads for it.
-func WithCutOff(page []byte) []byte {
+func WithCutOff(page []byte) io.Reader {
 	at := len(page) - len(bytes.TrimPrefix(page, []byte("\uFEFF")))
 	for {
 		at = len(page) - len(bytes.TrimLeft(page[at:], " \t\n\f\r"))
@@ -43,7 +44,7 @@ func WithCutOff(page []byte) []byte {
 		}
 	}
 	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + CutOff("'none'") + "\">"
-	return slices.Concat(page[:at], []byte(meta), page[at:])
+	return io.MultiReader(bytes.NewReader(page[:at]), strings.NewReader(meta), bytes.NewReader(page[at:]))
 }
 
 // comment returns the length of the comment b starts with, ended where an HTML parser ends it, or 0 for
