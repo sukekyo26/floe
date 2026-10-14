@@ -8,7 +8,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
-- データファイルに表・カード・注記を書けるようにした。組み込みの `report` は部品 `table`（`columns` と `rows`。`num` の列は右に揃える。セルは 1 行の Markdown で、数は引用符で囲む）・`cards`（`title` と Markdown の `text` の並び）・`note`（Markdown の `text` と、`warn` か `bad` の `tone`）を受け取る。
+- データファイルに表・カード・注記を書けるようにした。組み込みの `report` は部品 `table`（`columns` と `rows`。`num` の列は右に揃える。セルは 1 行の Markdown で、数は引用符で囲む。各行のセルは列の数だけ書く）・`cards`（`title` と Markdown の `text` の並び）・`note`（Markdown の `text` と、`warn` か `bad` の `tone`）を受け取る。
   - テンプレートの `page.html` から `markdownLine` を使える。1 行の Markdown を段落で包まずに描き、`-` や `1.` のようなセルは文字のまま出す。
 - データファイルの中に図を書けるようにした。組み込みの `report` は部品 `diagram` を、テンプレートは `"format": "diagram"` の項目を受け取り、`floe diagram render` に渡すのと同じ spec をその場に書く。
   - 図は `floe diagram render` と同じく検査し（id の重複はページ全体で）、誤りはすべてデータファイルの行と列で出す。
@@ -33,7 +33,7 @@ floe の主要な変更を記録します。フォーマットは
   - `--theme` でテンプレートの別のテーマを選べる。ほかに `--slug`・`--title`・`--description`・`--lang`・`--force` を使える。
   - 同じ slug で公開し直すと、そのことを stderr に出す。タイトルが変わっていれば警告も出す。
 - 自分のテンプレートを使えるようにした。`FLOE_TEMPLATES_DIR`（既定は `~/.config/floe/templates`）に置いたディレクトリ（symlink でもよい）が、同じ名前の組み込みのテンプレートの代わりに使われる。
-  - `page.html`・`schema.json`・テーマのほか、`checks.yaml` で項目どうしの関係を検査し、`computed.yaml` でページに出す値を計算できる。式は [expr](https://expr-lang.org/) で書き、誤りはデータファイルの行と列で、これらのファイルそのものの誤りはそのファイルの行と列で出す。`page.html` は `num` と `bytes` で数を書ける。
+  - `page.html`・`schema.json`・テーマのほか、`checks.yaml` で項目どうしの関係を（リストの要素ごとに。`sections.parts` のように途中のリストも辿る）検査し、`computed.yaml` でページに出す値を計算できる。式は [expr](https://expr-lang.org/) で書き、誤りはデータファイルの行と列で、これらのファイルそのものの誤りはそのファイルの行と列で出す。`page.html` は `num` と `bytes` で数を書ける。
   - 画像は data URI としてページに入る。`"format": "image"` の項目にはデータファイルのディレクトリの配下の画像を書き、`page.html` はテンプレートの `assets/` の画像を `asset` で出す。画像は 1 MiB までの png・jpeg・gif・webp・svg で、名前と中身の両方で判定し、データの画像の誤りは行と列で出す。
   - `template.yaml` に、テンプレートが要る floe の版を書く。書き方は [docs/templates.ja.md](templates.ja.md) にある。
 - テンプレートを置き場所・テーマ・要る floe の版とともに一覧する `floe template list`、データファイルに書ける項目と見本を出す `floe template show <name>`（データファイルを書く前に読む）、テンプレートを写して自分のテンプレートを作る `floe template new <name> --from <template>`、テンプレートを使う前や配る前に検査する `floe template check <dir>...` を追加。`template check` はファイル（floe が知らない `format` や、`schema.json` で宣言していない `checks.yaml` のパスなど）を検査してから、`example.yaml` を公開のすべての段に通す。

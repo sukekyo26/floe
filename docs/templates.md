@@ -73,11 +73,13 @@ An image, of the data or of `assets/`, is a png, jpeg, gif, webp or svg file, by
 Relations between items that a schema cannot say, each checked on every item of a list:
 
 ```yaml
-- for: access_patterns            # a path of keys to a list
+- for: access_patterns            # a path of keys to a list (sections.parts: the parts of every section)
   field: key                      # the item's key to point at when it fails (optional)
   expr: item.key in map(doc.attributes, .name)
   message: use an attribute as the key
 ```
+
+A list on the way of `for` is gone through item by item: `sections.parts` checks the parts of every section, and a failure is reported at `sections[1].parts[0]`. `field` is a path of keys under the item alone.
 
 `expr` is an [expr](https://expr-lang.org/) expression that must hold. It sees the list's item as `item` and the data file's items as `doc`. Each item it fails for is reported at its field, with the field's value:
 
@@ -85,7 +87,7 @@ Relations between items that a schema cannot say, each checked on every item of 
 orders.yaml:13:12: access_patterns[0].key: use an attribute as the key ("user_id")
 ```
 
-The paths of `for` and `field` must be declared in `schema.json`, through `properties` and `items`: a misspelt one would find nothing in the data to check. `floe template check` follows them through `properties` and `$ref`, and refuses a path where a schema without its key refuses other keys (`"additionalProperties": false`, `"unevaluatedProperties": false`, or a `type` other than `object`), and a `for` whose types leave `array` out. A path a schema may take otherwise (by `patternProperties`, `allOf`, `anyOf`, or other keys it allows) passes. A mistake in `checks.yaml` itself is reported at its line and column there; like a data file, it takes no anchors, aliases or tags.
+The paths of `for` and `field` must be declared in `schema.json`, through `properties` and `items`: a misspelt one would find nothing in the data to check. `floe template check` follows them through `properties` and `$ref`, and `for` through `items` too, and refuses a path where a schema without its key refuses other keys (`"additionalProperties": false`, `"unevaluatedProperties": false`, or a `type` other than `object`), and a `for` whose types leave `array` out. A path a schema may take otherwise (by `patternProperties`, `allOf`, `anyOf`, or other keys it allows) passes. A mistake in `checks.yaml` itself is reported at its line and column there; like a data file, it takes no anchors, aliases or tags.
 
 ## computed.yaml
 

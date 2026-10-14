@@ -351,7 +351,7 @@ func (t *Template) checkChecks(s *jsonschema.Schema) []error {
 // a path misspelt would find nothing in the data to check, and fail no data. A path is refused only
 // where the schema surely refuses it, a list only where its types leave array out.
 func (c relation) declared(s *jsonschema.Schema) *yamlpos.Error {
-	list, sure := declaredAt(s, strings.Split(c.For, "."))
+	list, sure := declaredAt(s, strings.Split(c.For, "."), true)
 	switch {
 	case list == nil && sure:
 		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
@@ -366,19 +366,26 @@ func (c relation) declared(s *jsonschema.Schema) *yamlpos.Error {
 	if items == nil {
 		return nil
 	}
-	if field, sure := declaredAt(items, strings.Split(c.Field, ".")); field == nil && sure {
+	if field, sure := declaredAt(items, strings.Split(c.Field, "."), false); field == nil && sure {
 		return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field", c.Field, c.For)
 	}
 	return nil
 }
 
-// declaredAt follows the path of keys steps from the compiled schema s, through properties and $ref.
-// It returns the schema declared there, or nil, sure true where the path is surely not declared and
-// false where a schema may take it.
+// declaredAt follows the path of keys steps from the compiled schema s, through properties and $ref,
+// and through the items of a list on the way when lists is true. It returns the schema declared
+// there, or nil, sure true where the path is surely not declared and false where a schema may take it.
 // LIMIT: a key is not matched against patternProperties, nor followed through allOf, anyOf and the
-// like: it is taken as declared there. Follow them if a template comes to declare its lists so.
-func declaredAt(s *jsonschema.Schema, steps []string) (found *jsonschema.Schema, sure bool) {
+// like: it is taken as declared there. A schema that takes both a list and keys and values is followed
+// as keys and values. Follow them if a template comes to declare its lists so.
+func declaredAt(s *jsonschema.Schema, steps []string, lists bool) (found *jsonschema.Schema, sure bool) {
 	for _, step := range steps {
+		if lists {
+			s = intoItems(s)
+		}
+		if s == nil {
+			return nil, false
+		}
 		if s.Bool != nil {
 			return nil, !*s.Bool // true takes any value, false none
 		}
@@ -401,6 +408,20 @@ func declaredAt(s *jsonschema.Schema, steps []string) (found *jsonschema.Schema,
 		return nil, !*s.Bool
 	}
 	return s, true
+}
+
+// intoItems returns the schema of the items of s while s is surely a list and not keys and values, or
+// nil where a list does not declare its items, or declares lists of itself all the way down.
+func intoItems(s *jsonschema.Schema) *jsonschema.Schema {
+	seen := map[*jsonschema.Schema]bool{}
+	for s != nil && s.Bool == nil && !takes(s, "object") && takes(s, "array") {
+		if seen[s] {
+			return nil
+		}
+		seen[s] = true
+		s = itemsOf(s)
+	}
+	return s
 }
 
 // propertyOf returns the schema s declares for the key in its properties or those of its $ref, or nil.

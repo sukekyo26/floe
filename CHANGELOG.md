@@ -10,7 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Write tables, cards and notes in data files: the built-in `report` takes
   `table` (`columns`, a `num` one aligned right, and `rows`, each cell a line of
-  Markdown, a number in quotes),
+  Markdown, a number in quotes, as many in each row as there are columns),
   `cards` (each a `title` over Markdown `text`) and `note` (Markdown `text`,
   with a `tone` of `warn` or `bad`) parts. A template's `page.html` takes
   `markdownLine`, which draws a line of Markdown without a paragraph around
@@ -61,6 +61,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   `~/.config/floe/templates`), a symlink included, takes the place of a
   built-in template of its name. Besides `page.html`, `schema.json` and
   themes, a template may check relations between items with `checks.yaml`
+  (on the items of a list, lists on the way gone through: `sections.parts`)
   and compute values for the page with `computed.yaml`, in
   [expr](https://expr-lang.org/), each failure reported at the data file's
   line and column, and a mistake in those files at their own;
