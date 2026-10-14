@@ -36,7 +36,7 @@ const cdns = "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpk
 func cutOff(connect string) string {
 	return "default-src 'none'; img-src data: blob:; media-src data: blob:; " +
 		"style-src 'unsafe-inline' https://fonts.googleapis.com " + cdns + "; " +
-		"font-src data: https://fonts.gstatic.com " + cdns + "; " +
+		"font-src data: blob: https://fonts.gstatic.com " + cdns + "; " +
 		"script-src 'unsafe-inline' " + cdns + "; form-action 'none'; connect-src " + connect
 }
 
@@ -54,21 +54,46 @@ func cutsOff(m *store.Meta) bool {
 func withCutOff(page []byte) io.Reader {
 	at := len(page) - len(bytes.TrimPrefix(page, []byte("\uFEFF")))
 	for {
-		at = len(page) - len(bytes.TrimLeft(page[at:], " \t\r\n"))
-		end := bytes.Index(page[at:], []byte("-->"))
-		if !bytes.HasPrefix(page[at:], []byte("<!--")) || end < 0 {
+		at = len(page) - len(bytes.TrimLeft(page[at:], " \t\n\f\r"))
+		n := comment(page[at:])
+		if n == 0 {
 			break
 		}
-		at += end + len("-->")
+		at += n
 	}
-	const doctype = "<!doctype"
-	if rest := page[at:]; len(rest) >= len(doctype) && strings.EqualFold(string(rest[:len(doctype)]), doctype) {
+	doctype := []byte("<!doctype")
+	if rest := page[at:]; len(rest) >= len(doctype) && bytes.EqualFold(rest[:len(doctype)], doctype) {
 		if end := bytes.IndexByte(rest, '>'); end >= 0 {
 			at += end + 1
 		}
 	}
 	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + cutOff("'none'") + "\">"
 	return io.MultiReader(bytes.NewReader(page[:at]), strings.NewReader(meta), bytes.NewReader(page[at:]))
+}
+
+// comment returns the length of the comment b starts with, ended where an HTML parser ends it, or 0 for
+// none or one never closed: <!-- … --> or --!>, the empty <!--> and <!--->, and <? … >.
+func comment(b []byte) int {
+	switch {
+	case bytes.HasPrefix(b, []byte("<?")):
+		return bytes.IndexByte(b, '>') + 1
+	case !bytes.HasPrefix(b, []byte("<!--")):
+		return 0
+	}
+	body := b[len("<!--"):]
+	switch {
+	case bytes.HasPrefix(body, []byte(">")):
+		return len("<!-->")
+	case bytes.HasPrefix(body, []byte("->")):
+		return len("<!--->")
+	}
+	end := 0
+	for _, closing := range []string{"-->", "--!>"} {
+		if i := bytes.Index(body, []byte(closing)); i >= 0 && (end == 0 || len("<!--")+i+len(closing) < end) {
+			end = len("<!--") + i + len(closing)
+		}
+	}
+	return end
 }
 
 // types are the files served from a link's directory. The registered file itself is HTML whatever its
@@ -185,7 +210,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 	var body io.Reader
 	switch {
 	case !cutsOff(m):
-		// Linked HTML, as it is.
+		// Linked HTML, or a page stored before strictCsp (or by the artifact skill), as it is.
 		f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
 		if err != nil {
 			notFound(w)
