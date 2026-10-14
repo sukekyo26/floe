@@ -42,6 +42,7 @@ floe の主要な変更を記録します。フォーマットは
   - `page.html`・`schema.json`・テーマのほか、`checks.yaml` で項目どうしの関係を（リストの要素ごとに。`sections.parts` のように途中のリストも辿る）検査し、`computed.yaml` でページに出す値を計算できる。式は [expr](https://expr-lang.org/) で書き、誤りはデータファイルの行と列で、これらのファイルそのものの誤りはそのファイルの行と列で出す。`page.html` は `num` と `bytes` で数を書ける。
   - 画像は data URI としてページに入る。`"format": "image"` の項目にはデータファイルのディレクトリの配下の画像を書き、`page.html` はテンプレートの `assets/` の画像を `asset` で出す。画像は 1 MiB までの png・jpeg・gif・webp・svg で、名前と中身の両方で判定し、データの画像の誤りは行と列で出す。
   - `template.yaml` に、テンプレートが要る floe の版を書く。書き方は [docs/templates.ja.md](templates.ja.md) にある。
+  - スキーマは、floe がどのデータファイルからも自分で読む `lang`・`template`・`theme`・`title` を宣言したり必須に挙げたりできない。
 - テンプレートを置き場所・テーマ・要る floe の版とともに一覧する `floe template list`、データファイルに書ける項目と見本を出す `floe template show <name>`（データファイルを書く前に読む）、テンプレートを写して自分のテンプレートを作る `floe template new <name> --from <template>`、テンプレートを使う前や配る前に検査する `floe template check <dir>...` を追加。`template check` はファイル（floe が知らない `format` や、`schema.json` で宣言していない `checks.yaml` のパスなど）を検査してから、`example.yaml` を公開のすべての段に通す。
 - データファイルを `floe publish` と同じく検査し、誤りをすべて `ファイル:行:列` で出す `floe check <data.yaml>...` を追加。公開もサーバーの起動もしないので、データファイルを置いたリポジトリの CI から使える。
 - `floe list`・`floe rm`・`floe serve`・`floe stop` と、ライブリロード付きの管理画面を追加。

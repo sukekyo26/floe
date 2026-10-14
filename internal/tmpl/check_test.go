@@ -242,7 +242,7 @@ func TestCheckMistakes(t *testing.T) {
 			name:  "an item floe reads itself",
 			files: map[string]string{"schema.json": `"chart":|"lang": { "type": "string" },` + "\n    " + `"chart":`},
 			want: []string{
-				"sizes/schema.json declares lang, which floe reads from every data file itself (lang, template, theme, title): give the items of the schema other names",
+				"sizes/schema.json declares or requires lang, which floe reads from every data file itself (lang, template, theme, title): give the items of the schema other names",
 			},
 		},
 		{
@@ -250,7 +250,16 @@ func TestCheckMistakes(t *testing.T) {
 			files: map[string]string{
 				"schema.json": `"chart":|"title": { "type": "string" },` + "\n    " + `"chart":`, "page.html": "{{if}}",
 			},
-			want: []string{"sizes/schema.json declares title, which floe reads", "parse the template sizes: "},
+			want: []string{"sizes/schema.json declares or requires title, which floe reads", "parse the template sizes: "},
+		},
+		{
+			name:  "an empty example",
+			files: map[string]string{"example.yaml": ""},
+			want: []string{
+				"sizes/example.yaml:1:1: name the language of the page at the top level",
+				"sizes/example.yaml:1:1: name the template at the top level, like template: report (templates: sizes)",
+				"sizes/example.yaml:1:1: files is required but missing",
+			},
 		},
 		{
 			name:  "newer floe",
@@ -398,7 +407,7 @@ func TestSchemaOfSharedKeys(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := tmpl.NewLibrary(filepath.Dir(dir), "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), "", "")
-	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json declares lang, title, which floe reads") {
+	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json declares or requires lang, title, which floe reads") {
 		t.Errorf("Read with a template whose schema declares lang and title = %v", err)
 	}
 }
