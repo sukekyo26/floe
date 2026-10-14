@@ -79,8 +79,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   of the template's `assets/` with `asset`. An image is a png, jpeg, gif,
   webp or svg file up to 1 MiB, checked by its name and by what it holds,
   and a mistake in one of the data is reported at its line and column.
-  `template.yaml` names the floe a template needs. See
-  [docs/templates.md](docs/templates.md).
+  `template.yaml` names the floe a template needs. A schema may not declare
+  or require `lang`, `template`, `theme` or `title`, which floe reads from
+  every data file itself. See [docs/templates.md](docs/templates.md).
 - Add `floe template list`, which lists the templates with where they are,
   their themes and the floe they need; `floe template show <name>`, which
   prints the items a data file of a template may hold and its example, to
