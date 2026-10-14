@@ -73,11 +73,11 @@ func newEnv(t *testing.T) *env {
 // The CSP of every page, and what a page drawn from a data file adds, up to the source it connects to.
 const (
 	sandbox = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"
-	cutOff  = "default-src 'none'; img-src data: blob:; style-src 'unsafe-inline' https://fonts.googleapis.com; " +
-		"font-src https://fonts.gstatic.com; " +
-		"script-src 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; " +
+	cdns    = "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com"
+	cutOff  = "default-src 'none'; img-src data: blob:; style-src 'unsafe-inline' https://fonts.googleapis.com " + cdns + "; " +
+		"font-src https://fonts.gstatic.com " + cdns + "; script-src 'unsafe-inline' " + cdns + "; " +
 		"form-action 'none'; connect-src "
-	cutOffMeta = `<meta http-equiv="Content-Security-Policy" content="` + cutOff + `'none'">`
+	cutOffMeta = `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="` + cutOff + `'none'">`
 )
 
 // page writes a data file for the report template titled title ("" for none), with html as its one

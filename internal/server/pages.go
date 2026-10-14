@@ -26,15 +26,19 @@ const (
 	pageCSP = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"
 )
 
+// cdns are where a page drawn from a data file may load libraries from, with their styles and fonts.
+const cdns = "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com"
+
 // cutOff is the CSP of a page drawn from a data file: what it shows is in it, so it loads nothing but
-// the fonts and libraries of the CDNs pages may use, and connects to connect only. A template's or the
-// data's script cannot send the page out with fetch, an image or a form. Moving the page and WebRTC
-// are beyond CSP: this stops a slip, not a hostile script.
+// Google Fonts and the libraries of cdns, and connects to connect only. A template's or the data's
+// script cannot send the page out with fetch, an image or a form.
+// LIMIT: CSP cannot stop the page from moving or WebRTC, so this stops a slip, not a hostile script.
+// Rethink it before taking templates one does not trust.
 func cutOff(connect string) string {
-	return "default-src 'none'; img-src data: blob:; style-src 'unsafe-inline' https://fonts.googleapis.com; " +
-		"font-src https://fonts.gstatic.com; " +
-		"script-src 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; " +
-		"form-action 'none'; connect-src " + connect
+	return "default-src 'none'; img-src data: blob:; " +
+		"style-src 'unsafe-inline' https://fonts.googleapis.com " + cdns + "; " +
+		"font-src https://fonts.gstatic.com " + cdns + "; " +
+		"script-src 'unsafe-inline' " + cdns + "; form-action 'none'; connect-src " + connect
 }
 
 // cutsOff reports whether the page of m is served under cutOff: stored drawn (marked when published), or
@@ -44,17 +48,27 @@ func cutsOff(m *store.Meta) bool {
 }
 
 // withCutOff puts cutOff into a downloaded page, which is opened without the headers: right after the
-// doctype, since a <meta> binds only what comes after it; the parser moves it into <head> all the same.
-// Nothing connects: the reload script is not in a download.
+// doctype (past a BOM and comments before it), since a <meta> binds only what comes after it; the
+// parser moves it into <head> all the same. Nothing connects: the reload script is not in a download.
+// A page floe draws is UTF-8: the charset goes first, so that the CSP does not push the page's own out
+// of the bytes a browser reads for it.
 func withCutOff(page []byte) []byte {
-	at := 0
-	rest := bytes.TrimLeft(page, " \t\r\n")
-	if len(rest) >= len("<!doctype") && strings.EqualFold(string(rest[:len("<!doctype")]), "<!doctype") {
+	at := len(page) - len(bytes.TrimPrefix(page, []byte("\uFEFF")))
+	for {
+		at = len(page) - len(bytes.TrimLeft(page[at:], " \t\r\n"))
+		end := bytes.Index(page[at:], []byte("-->"))
+		if !bytes.HasPrefix(page[at:], []byte("<!--")) || end < 0 {
+			break
+		}
+		at += end + len("-->")
+	}
+	const doctype = "<!doctype"
+	if rest := page[at:]; len(rest) >= len(doctype) && strings.EqualFold(string(rest[:len(doctype)]), doctype) {
 		if end := bytes.IndexByte(rest, '>'); end >= 0 {
-			at = len(page) - len(rest) + end + 1
+			at += end + 1
 		}
 	}
-	meta := "\n<meta http-equiv=\"Content-Security-Policy\" content=\"" + cutOff("'none'") + "\">"
+	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + cutOff("'none'") + "\">"
 	return slices.Concat(page[:at], []byte(meta), page[at:])
 }
 
@@ -169,28 +183,39 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	var page []byte
-	var err error
-	if m.IsDrawn() {
-		page, _, err = s.cfg.Store.Draw(slug, m, file)
-		if err != nil && !errors.Is(err, store.ErrNotFound) {
+	var body io.Reader
+	switch {
+	case m.IsDrawn():
+		page, _, err := s.cfg.Store.Draw(slug, m, file)
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			notFound(w)
+			return
+		case err != nil:
 			send(w, http.StatusConflict, mistakesText(catalog(r), err))
 			return
 		}
-	} else {
-		page, err = os.ReadFile(file) //nolint:gosec // G304: file passed store.File
+		body = bytes.NewReader(withCutOff(page))
+	case cutsOff(m):
+		page, err := os.ReadFile(file) //nolint:gosec // G304: file passed store.File
+		if err != nil {
+			notFound(w)
+			return
+		}
+		body = bytes.NewReader(withCutOff(page))
+	default:
+		f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
+		if err != nil {
+			notFound(w)
+			return
+		}
+		defer f.Close() //nolint:errcheck // read-only
+		body = f
 	}
-	if err != nil {
-		notFound(w)
-		return
-	}
-	// The page as stored, linked or drawn. Nothing added on serving (the reload script) goes in, but
-	// what goes out stays cut off.
-	if cutsOff(m) {
-		page = withCutOff(page)
-	}
+	// The page as stored, linked or drawn, a page drawn from a data file still cut off. Nothing added on
+	// serving (the reload script) goes in.
 	w.Header().Set("Content-Disposition", `attachment; filename="`+slug+`.html"`)
-	stream(w, htmlType, bytes.NewReader(page), "")
+	stream(w, htmlType, body, "")
 }
 
 // stream sends f as it is, with tail after it: a stored page was drawn when it was published, and a
