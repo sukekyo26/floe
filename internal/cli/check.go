@@ -3,6 +3,7 @@ package cli
 import (
 	"cmp"
 	"errors"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -41,7 +42,8 @@ func (a *app) check(files []string) error {
 }
 
 // drawFile draws the page of the data file file, titled as floe publish titles it (its title:, else the
-// slug of its name), or returns its mistakes: each at its line and column, or one about the whole file.
+// slug of its name, else, for a name without a letter a slug takes, the name itself), or returns its
+// mistakes: each at its line and column, or one about the whole file.
 func drawFile(a *app, file string) ([]byte, []error) {
 	if !store.IsDataFile(file) {
 		return nil, []error{usererr.New("cli_check_not_data", file)}
@@ -63,7 +65,8 @@ func drawFile(a *app, file string) ([]byte, []error) {
 		return nil, []error{err}
 	}
 	// Drawing is the last stage. Data that passed its schema fails here only by the template's mistake.
-	page, err := d.Render(cmp.Or(d.Title, store.SlugFromFile(file, a.env.Dir)))
+	name := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
+	page, err := d.Render(cmp.Or(d.Title, store.SlugFromFile(file, a.env.Dir), name))
 	if err != nil {
 		return nil, []error{err}
 	}

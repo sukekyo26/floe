@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -68,16 +69,20 @@ func (a *app) renderPages(files []string, outDir string, check bool) error {
 func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
 	found := make(mistakes, 0, len(files))
 	pages := make([]rendered, 0, len(files))
-	read := map[string]bool{} // the data files drawn, by their absolute paths
+	var read []os.FileInfo // the data files drawn
 	// The data file that writes each page, by the page's absolute path in lower case: on a filesystem
 	// that ignores case (macOS), Spec.html and spec.html are one file.
+	// LIMIT: case only. APFS also takes the NFC and NFD of a name as one; fold Unicode if pages collide so.
 	writers := map[string]string{}
 	for _, file := range files {
-		// One file named twice (by two globs, or as ./spec.yaml and spec.yaml) is drawn once.
-		if read[a.abs(file)] {
-			continue
+		// One file named twice (by two globs, as ./spec.yaml and spec.yaml, in another case on macOS, or
+		// through a symlink) is drawn once. One that cannot be read is left to drawFile to report.
+		if fi, err := os.Stat(a.abs(file)); err == nil {
+			if slices.ContainsFunc(read, func(r os.FileInfo) bool { return os.SameFile(r, fi) }) {
+				continue
+			}
+			read = append(read, fi)
 		}
-		read[a.abs(file)] = true
 		page, errs := drawFile(a, file)
 		if len(errs) > 0 {
 			found = append(found, errs...)

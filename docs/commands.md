@@ -153,8 +153,8 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 - A page is written only when it changes, and its path is printed; a page that would not change is left as it is, so running it again does nothing.
 - A page there is written over: keep the pages in version control to get one back.
 - Every mistake of every file is printed at once as `file:line:column: message`, as `floe check` prints them, and nothing is written until all are fixed (exit code 1). Nothing is written either when two data files would write the same page (`a/spec.yaml` and `b/spec.yaml` with one `--out-dir`).
-- The page's language, theme and title are the data file's `lang:`, `theme:` and `title:` (else the slug `floe publish` would give it), so that writing a page and checking it take the same arguments.
-- A data file named twice (by two globs, say) is written once.
+- The page's language, theme and title are the data file's `lang:`, `theme:` and `title:` (else the slug `floe publish` would give it, else, for a name of no letter a slug takes, the name), so that writing a page and checking it take the same arguments.
+- A data file named twice (by two globs, through a symlink, or in another case on macOS) is written once.
 - Nothing is published, and the server is not started.
 - A page depends on the floe, the templates and the icons that draw it: in CI, use the floe version and the templates the pages were written with, and write the pages again when you upgrade.
 - A `script` of the page runs without the sandbox of the server's pages when the file is opened; its CSP still cuts off `fetch`, XHR, images from elsewhere and forms. A link between pages (`/a/<slug>/`) does not work in a file: link the files relatively.
