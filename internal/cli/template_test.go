@@ -160,6 +160,8 @@ func TestTemplateShow(t *testing.T) {
 		"report: A page of sections",
 		"\nwhere: built-in\nthemes: default\n\nitems:\n",
 		"\n  eyebrow: text — A short line above the title",
+		"\n  lang: text, required — The page's language, a BCP 47 tag such as en, ja or pt-BR\n",
+		"\n  template: text, one of report, required — The template that draws the page\n",
 		"\n  sections: a list of keys and values\n    heading: text\n    parts: a list of keys and values — One key naming the kind of the part\n",
 		"\n      html: text, format html — HTML that goes in as it is\n",
 		"\nexample.yaml:\n# A report",
@@ -180,7 +182,7 @@ func TestTemplateShow(t *testing.T) {
 	e.write(t, "templates/memo/schema.json", `{"properties": {"tags": {"type": ["array", "null"], "items": {"type": "string"},
   "description": "Two\nlines"}, "gone": null}}`)
 	e.write(t, "templates/memo/themes/default.css", "")
-	if r := e.run(t, "", "template", "show", "memo"); !strings.Contains(r.stdout, "\n  gone\n  tags: a list of text or nothing — Two lines\n") {
+	if r := e.run(t, "", "template", "show", "memo"); !strings.Contains(r.stdout, "\n  gone\n  lang: text, required — The page's language, a BCP 47 tag such as en, ja or pt-BR\n  tags: a list of text or nothing — Two lines\n") {
 		t.Errorf("template show of a list that may be null:\n%s%s", r.stdout, r.stderr)
 	}
 }

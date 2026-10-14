@@ -50,9 +50,11 @@ func (l *Library) Describe(name string) (*Description, error) {
 	if err != nil {
 		return nil, err
 	}
+	items := append(sharedItems(name, themes), s.items()...)
+	slices.SortFunc(items, func(x, y Item) int { return cmp.Compare(x.Name, y.Name) })
 	d := &Description{
 		Name: name, Path: t.Path, About: s.Description, Floe: "", Series: "", Themes: themes,
-		Items: s.items(), Example: nil,
+		Items: items, Example: nil,
 	}
 	needs, err := t.needs()
 	if err != nil {
@@ -65,6 +67,23 @@ func (l *Library) Describe(name string) (*Description, error) {
 		return nil, err
 	}
 	return d, nil
+}
+
+// sharedItems are the keys floe reads from every data file of the template name itself, told beside
+// the items of its schema.
+func sharedItems(name string, themes []string) []Item {
+	item := func(n string, enum []string, required bool, description string) Item {
+		return Item{
+			Name: n, Types: []string{"string"}, Of: nil, Format: "", Enum: enum, Required: required,
+			Description: description, Items: nil,
+		}
+	}
+	return []Item{
+		item("lang", nil, true, "The page's language, a BCP 47 tag such as en, ja or pt-BR"),
+		item("template", []string{name}, true, "The template that draws the page"),
+		item("theme", themes, false, "The theme to draw with (default: "+DefaultTheme+")"),
+		item("title", nil, false, "The page's title"),
+	}
 }
 
 // items are the items s declares, by name.

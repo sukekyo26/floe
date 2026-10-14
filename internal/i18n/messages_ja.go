@@ -337,6 +337,7 @@ var messagesJA = map[string]string{
 	"tmpl_checks_missing":      "検査に %s を書いてください",
 	"tmpl_check_not_dir":       "%s はディレクトリではありません。テンプレートは、ファイルを収めたディレクトリです",
 	"tmpl_file_missing":        "%s がありません。テンプレートには %s が要ります",
+	"tmpl_schema_shared":       "%s が項目 %s を宣言しています。%s は floe がどのデータファイルからも自分で読むので、項目に別の名前を付けてください",
 	"tmpl_item":                "%s: %s",
 	"tmpl_image_path":          "「%s」は %s の下のファイルではありません。.. やドットで始まる名前を使わずに、そこからの相対パスで書いてください",
 	"tmpl_image_type":          "「%s」は floe が扱う画像ではありません。png・jpeg・gif・webp・svg を使ってください",
