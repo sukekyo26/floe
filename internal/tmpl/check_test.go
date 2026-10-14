@@ -242,7 +242,7 @@ func TestCheckMistakes(t *testing.T) {
 			name:  "an item floe reads itself",
 			files: map[string]string{"schema.json": `"chart":|"lang": { "type": "string" },` + "\n    " + `"chart":`},
 			want: []string{
-				"sizes/schema.json declares the item lang, which floe reads from every data file itself (lang, template, theme, title): give the item another name",
+				"sizes/schema.json declares lang, which floe reads from every data file itself (lang, template, theme, title): give the items of the schema other names",
 			},
 		},
 		{
@@ -382,6 +382,32 @@ func TestCheckFile(t *testing.T) {
 
 // sizes copies testdata/sizes into a directory sizes, with files written over: a whole file, or old|new
 // for old to be replaced with new.
+// A schema that declares a key floe reads from every data file itself, as an item or only as required,
+// is refused wherever the template is read: its item would always be empty, or always missing.
+func TestSchemaOfSharedKeys(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{"schema.json": `"chart":|"title": { "type": "string" },` + "\n    " + `"chart":`})
+	if err := os.WriteFile(filepath.Join(dir, "schema.json"), []byte(strings.Replace(mustRead(t, filepath.Join(dir, "schema.json")),
+		`"required": ["files"]`, `"required": ["files", "lang"]`, 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), "", "")
+	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json declares lang, title, which floe reads") {
+		t.Errorf("Read with a template whose schema declares lang and title = %v", err)
+	}
+}
+
+func mustRead(t *testing.T, file string) string {
+	t.Helper()
+
+	b, err := os.ReadFile(file) //nolint:gosec // G304: the test's own file
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
 func sizes(t *testing.T, files map[string]string) string {
 	t.Helper()
 

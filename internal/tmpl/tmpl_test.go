@@ -215,6 +215,10 @@ func TestReadRefusals(t *testing.T) {
 			t.Errorf("Read %q = %v, want %s", c.src, err, c.want)
 		}
 	}
+	// An empty file misses both keys every data file needs.
+	if _, err := builtins.Read("data.yaml", nil, "", ""); err == nil || !strings.Contains(err.Error(), "\ndata.yaml:1:1: name the language of the page") {
+		t.Errorf("Read of an empty file = %v", err)
+	}
 	// An explicit key is found by its text after ?.
 	if _, err := builtins.Read("data.yaml", []byte("template: report\n? lead\n: 3\nlang: en\n"), "", ""); err == nil || err.Error() != "data.yaml:3:3: lead: write text, not a number" {
 		t.Errorf("Read of an explicit key = %v", err)

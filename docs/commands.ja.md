@@ -155,7 +155,7 @@ sections:
 
 各ディレクトリを、そのディレクトリ名のテンプレートとして検査します。使う前や配る前に通します。相対パスは作業ディレクトリを基準に解決します。
 
-- まずファイルを検査します。`template.yaml`、`schema.json`（floe が知らない `format` と、floe がどのデータファイルからも読むキー `lang`・`template`・`theme`・`title` と同じ名前の項目は誤り）、`checks.yaml`（`for`・`field` のパスが `schema.json` で宣言されていること）、`computed.yaml`、`page.html`、`themes/default.css`、`assets/` の画像です。
+- まずファイルを検査します。`template.yaml`、`schema.json`（floe が知らない `format` と、floe がどのデータファイルからも読むキー `lang`・`template`・`theme`・`title` と同じ名前の項目を宣言する、または必須に挙げるのは誤り）、`checks.yaml`（`for`・`field` のパスが `schema.json` で宣言されていること）、`computed.yaml`、`page.html`、`themes/default.css`、`assets/` の画像です。
 - 次に `example.yaml` を、ページの描画まで `floe publish` のすべての段に通します。`example.yaml` はディレクトリ名のテンプレートを指定します。描くのは常にそのディレクトリのテンプレートで、同じ名前の別のテンプレートではありません。
 - 誤りはすべてまとめて、位置のあるものは `ファイル:行:列: メッセージ` の形で出します（終了コード 1）。どのテンプレートも正しければ何も出しません（終了コード 0）。
 - 警告は stderr に出し、終了コードは 0 のままです。`template.yaml` が無いとき、`schema.json` のオブジェクトが打ち間違えたキーを断らない（`"additionalProperties": false` が無い）ときに出します。

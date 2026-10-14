@@ -105,7 +105,6 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil, diagrams: false}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
-	mistakes = append(mistakes, t.checkShared(s)...)
 	if lint.diagrams {
 		more, themeErr := t.checkThemeVariables()
 		warnings = append(warnings, more...)
@@ -132,18 +131,6 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 // colours and fonts from, which page.html does not define either: its diagrams would keep light
 // colours in dark mode.
 // LIMIT: a variable is looked for as written (--fg:), not as CSS reads it. Parse the CSS if a theme
-// checkShared refuses an item of the schema s named as a key floe reads from every data file itself:
-// floe takes it out of the data before the schema sees it, so the item would always be empty.
-func (t *Template) checkShared(s *schema) []error {
-	var mistakes []error
-	for _, key := range shared {
-		if _, ok := s.Properties[key]; ok {
-			mistakes = append(mistakes, usererr.New("tmpl_schema_shared", t.file("schema.json"), key, andList(shared)))
-		}
-	}
-	return mistakes
-}
-
 // comes to define one otherwise (through @import, or in a comment that hides it).
 func (t *Template) checkThemeVariables() ([]*usererr.Error, error) {
 	themes, err := t.themes()
