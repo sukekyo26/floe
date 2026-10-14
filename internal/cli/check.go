@@ -65,12 +65,17 @@ func drawFile(a *app, file string) ([]byte, []error) {
 		return nil, []error{err}
 	}
 	// Drawing is the last stage. Data that passed its schema fails here only by the template's mistake.
-	name := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
-	page, err := d.Render(cmp.Or(d.Title, store.SlugFromFile(file, a.env.Dir), name))
+	page, err := d.Render(cmp.Or(d.Title, store.SlugFromFile(file, a.env.Dir), baseName(file)))
 	if err != nil {
 		return nil, []error{err}
 	}
 	return page, nil
+}
+
+// baseName is the name of file without its extension: what floe render names its page by, and the title
+// of last resort.
+func baseName(file string) string {
+	return strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
 }
 
 // mistakes are the mistakes of every file checked, one per line, in the order of the files.

@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -69,36 +68,31 @@ func (a *app) renderPages(files []string, outDir string, check bool) error {
 func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
 	found := make(mistakes, 0, len(files))
 	pages := make([]rendered, 0, len(files))
-	var read []os.FileInfo // the data files drawn
-	// The data file that writes each page, by the page's absolute path in lower case: on a filesystem
-	// that ignores case (macOS), Spec.html and spec.html are one file.
+	// The data file that writes each page, by the page's real path in lower case: through a symlinked
+	// directory, and on a filesystem that ignores case (macOS), two paths may be one file.
 	// LIMIT: case only. APFS also takes the NFC and NFD of a name as one; fold Unicode if pages collide so.
 	writers := map[string]string{}
 	for _, file := range files {
-		// One file named twice (by two globs, as ./spec.yaml and spec.yaml, in another case on macOS, or
-		// through a symlink) is drawn once. One that cannot be read is left to drawFile to report.
-		if fi, err := os.Stat(a.abs(file)); err == nil {
-			if slices.ContainsFunc(read, func(r os.FileInfo) bool { return os.SameFile(r, fi) }) {
-				continue
-			}
-			read = append(read, fi)
+		dir := outDir
+		if dir == "" {
+			dir = filepath.Dir(file)
 		}
+		to := filepath.Join(dir, baseName(file)+".html")
+		key := strings.ToLower(a.realPath(to))
+		if first, ok := writers[key]; ok {
+			// One file named twice (by two globs, as ./spec.yaml and spec.yaml, in another case on macOS,
+			// or through a symlinked directory) writes its page once.
+			if !sameFile(a.abs(first), a.abs(file)) {
+				found = append(found, usererr.New("cli_render_same_file", first, file, to))
+			}
+			continue
+		}
+		writers[key] = file
 		page, errs := drawFile(a, file)
 		if len(errs) > 0 {
 			found = append(found, errs...)
 			continue
 		}
-		dir := outDir
-		if dir == "" {
-			dir = filepath.Dir(file)
-		}
-		to := filepath.Join(dir, strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))+".html")
-		key := strings.ToLower(a.abs(to))
-		if first, ok := writers[key]; ok {
-			found = append(found, usererr.New("cli_render_same_file", first, file, to))
-			continue
-		}
-		writers[key] = file
 		cut, err := io.ReadAll(tmpl.WithCutOff(page))
 		if err != nil {
 			return nil, fmt.Errorf("draw %s: %w", file, err)
@@ -109,6 +103,25 @@ func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
 		return nil, found
 	}
 	return pages, nil
+}
+
+// realPath is the path of file with the symlinks of its directory resolved, when the directory is there.
+func (a *app) realPath(file string) string {
+	abs := a.abs(file)
+	if dir, err := filepath.EvalSymlinks(filepath.Dir(abs)); err == nil {
+		return filepath.Join(dir, filepath.Base(abs))
+	}
+	return abs
+}
+
+// sameFile reports whether x and y are one file; false when either cannot be read, which drawFile tells.
+func sameFile(x, y string) bool {
+	fx, err := os.Stat(x)
+	if err != nil {
+		return false
+	}
+	fy, err := os.Stat(y)
+	return err == nil && os.SameFile(fx, fy)
 }
 
 // writePages writes each page that changes, and prints its path.

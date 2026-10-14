@@ -37,6 +37,11 @@ func TestRender(t *testing.T) {
 		t.Fatal(err)
 	}
 	want(t, "render a file named through a symlink too", e.run(t, "", "render", "work/spec.yaml", "link/spec.yaml"), 0, "", "")
+	// A symlink of another name is another page.
+	if err := os.Symlink("spec.yaml", filepath.Join(e.tmp, "work", "latest.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	want(t, "render a symlink of another name", e.run(t, "work", "render", "spec.yaml", "latest.yaml"), 0, "latest.html\n", "")
 	// A name without a letter a slug takes titles the page by itself.
 	e.write(t, "work/仕様.yaml", strings.Replace(spec, "title: Spec\n", "", 1))
 	want(t, "render a name the slug drops", e.run(t, "work", "render", "仕様.yaml"), 0, "仕様.html\n", "")
@@ -78,6 +83,17 @@ func TestRenderRefusals(t *testing.T) {
 			t.Errorf("%s was written: %v", f, err)
 		}
 	}
+	// A file with mistakes still takes its page, and two files reach one page through a symlinked directory.
+	e.write(t, "sub/bad.yaml", spec)
+	want(t, "render a file with mistakes onto one page", e.run(t, "", "render", "bad.yaml", "sub/bad.yaml", "--out-dir", "out"), 1, "",
+		"bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n"+
+			"bad.yaml and sub/bad.yaml would both write out/bad.html")
+	e.write(t, "sub/spec.yml", spec)
+	if err := os.Symlink("sub", filepath.Join(e.tmp, "alias")); err != nil {
+		t.Fatal(err)
+	}
+	want(t, "render onto one page through a symlink", e.run(t, "", "render", "sub/spec.yaml", "alias/spec.yml"), 1, "",
+		"sub/spec.yaml and alias/spec.yml would both write alias/spec.html")
 	want(t, "render without a file", e.run(t, "", "render"), 2, "", "floe: requires at least 1 arg(s)")
 }
 
