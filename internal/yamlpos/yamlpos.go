@@ -65,7 +65,8 @@ func Find(root ast.Node, at []string) (key, value ast.Node, path string) {
 			}
 			fmt.Fprintf(&b, "[%d]", i)
 			key, value = nil, n.Values[i]
-			if len(n.Entries) == len(n.Values) {
+			// goccy/go-yaml gives a flow sequence entries too, without a - to point at.
+			if !n.IsFlowStyle && len(n.Entries) == len(n.Values) {
 				key = n.Entries[i] // its -, where an entry left empty is
 			}
 		default:
