@@ -68,9 +68,11 @@ sections:
             - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [New host] }
             - edge: { d: "M200,60 H440" }
       - table:                 # each cell is a line of Markdown, a number in quotes
-          head: [Risk, Likelihood]
+          columns:
+            - title: Risk
+            - { title: Pages, num: true }   # numbers: aligned right
           rows:
-            - [Broken links, High]
+            - [Broken links, '120']
       - cards:                 # cards side by side, each a title over Markdown text
           - { title: Copy, text: Copies the pages on **Saturday**. }
       - note: { tone: warn, text: Edits during the freeze are lost. }   # tone: warn, bad, or none

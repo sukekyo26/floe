@@ -68,9 +68,11 @@ sections:
             - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [新しいホスト] }
             - edge: { d: "M200,60 H440" }
       - table:                 # セルは 1 行の Markdown。数は引用符で囲む
-          head: [リスク, 起こりやすさ]
+          columns:
+            - title: リスク
+            - { title: ページ数, num: true }   # 数の列: 右に揃える
           rows:
-            - [リンク切れ, 高い]
+            - [リンク切れ, '120']
       - cards:                 # 横に並ぶカード。見出しと Markdown の文章
           - { title: 写す, text: '**土曜**にページを写す。' }
       - note: { tone: warn, text: 止めている間の編集は失われます。 }   # tone は warn・bad か、無し
