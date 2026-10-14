@@ -342,6 +342,7 @@ var messagesEN = map[string]string{
 	"tmpl_checks_missing":      "write %s in the check",
 	"tmpl_check_not_dir":       "%s is not a directory: a template is a directory of its files",
 	"tmpl_file_missing":        "%s is missing: a template has %s",
+	"tmpl_schema_shared":       "%s declares the item %s, which floe reads from every data file itself (%s): give the item another name",
 	"tmpl_item":                "%s: %s",
 	"tmpl_image_path":          `"%s" is not a file under %s: write a path relative to it, without .. or names starting with a dot`,
 	"tmpl_image_type":          `"%s" is not an image floe takes: use png, jpeg, gif, webp or svg`,

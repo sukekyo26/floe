@@ -45,7 +45,7 @@ The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor versi
 |---|---|
 | `.Title` | The page's title: `--title`, a title pinned on the management page, the data file's `title:`, else the slug |
 | `.Lang` | The page's language: the data file's `lang:` |
-| `.Data` | The data file's items, without `template`, `theme` and `title`. An item the schema declares but the data leaves out is nil, so `{{with .Data.lead}}` works; a name the schema does not declare stops the drawing. An item of `"format": "html"` goes in as HTML, one of `"format": "diagram"` as its SVG, and one of `"format": "script"` as its element and the call of its function |
+| `.Data` | The data file's items, without `lang`, `template`, `theme` and `title`, which floe reads itself (`.Lang`, `.Title`, `.Theme`); a schema that declares one of them is refused by `floe template check`. An item the schema declares but the data leaves out is nil, so `{{with .Data.lead}}` works; a name the schema does not declare stops the drawing. An item of `"format": "html"` goes in as HTML, one of `"format": "diagram"` as its SVG, and one of `"format": "script"` as its element and the call of its function |
 | `.Calc` | The values of `computed.yaml`, by name |
 | `.Theme` | The theme's CSS, for `<style>{{.Theme}}</style>` |
 | `markdown` | Markdown text as HTML (`{{markdown .text}}`), raw HTML in it left out, a table wrapped in `<div class="table-wrap">` |

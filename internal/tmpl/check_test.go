@@ -239,6 +239,13 @@ func TestCheckMistakes(t *testing.T) {
 			want: []string{"sizes/schema.json: #/properties/plan/properties/logo: the format image marks an item to draw"},
 		},
 		{
+			name:  "an item floe reads itself",
+			files: map[string]string{"schema.json": `"chart":|"lang": { "type": "string" },` + "\n    " + `"chart":`},
+			want: []string{
+				"sizes/schema.json declares the item lang, which floe reads from every data file itself (lang, template, theme, title): give the item another name",
+			},
+		},
+		{
 			name:  "newer floe",
 			files: map[string]string{"template.yaml": "floe: 999.0\n"},
 			want:  []string{"template sizes needs floe 999.0.0 or later"},
