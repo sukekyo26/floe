@@ -3,6 +3,7 @@ package cli
 import (
 	"cmp"
 	"errors"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -31,7 +32,8 @@ the server is not started, and nothing is printed when the files are right.`,
 func (a *app) check(files []string) error {
 	found := make(mistakes, 0, len(files))
 	for _, file := range files {
-		found = append(found, checkFile(a, file)...)
+		_, errs := drawFile(a, file)
+		found = append(found, errs...)
 	}
 	if len(found) > 0 {
 		return found
@@ -39,14 +41,15 @@ func (a *app) check(files []string) error {
 	return nil
 }
 
-// checkFile returns the mistakes of file: each at its line and column, or one about the whole file.
-func checkFile(a *app, file string) []error {
+// drawFile draws the page of the data file file, titled by its title:, else its name, or returns its
+// mistakes: each at its line and column, or one about the whole file.
+func drawFile(a *app, file string) ([]byte, []error) {
 	if !store.IsDataFile(file) {
-		return []error{usererr.New("cli_check_not_data", file)}
+		return nil, []error{usererr.New("cli_check_not_data", file)}
 	}
 	src, err := a.readArg(file)
 	if err != nil {
-		return []error{err}
+		return nil, []error{err}
 	}
 	d, err := a.templates().Read(file, src, "", a.env.Dir)
 	var all yamlpos.Problems
@@ -56,15 +59,16 @@ func checkFile(a *app, file string) []error {
 		for i, e := range all {
 			found[i] = e
 		}
-		return found
+		return nil, found
 	case err != nil:
-		return []error{err}
+		return nil, []error{err}
 	}
 	// Drawing is the last stage. Data that passed its schema fails here only by the template's mistake.
-	if _, err := d.Render(cmp.Or(d.Title, file)); err != nil {
-		return []error{err}
+	page, err := d.Render(cmp.Or(d.Title, strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))))
+	if err != nil {
+		return nil, []error{err}
 	}
-	return nil
+	return page, nil
 }
 
 // mistakes are the mistakes of every file checked, one per line, in the order of the files.

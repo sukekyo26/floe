@@ -42,10 +42,19 @@ func (e *Error) Localize(c *i18n.Catalog) string {
 // CannotRead is the refusal for a file the user named that cannot be read, with the reason (no such
 // file, permission denied) but not the path twice.
 func CannotRead(file string, err error) *Error {
-	reason := err.Error()
+	return New("file_cannot_read", file, reason(err))
+}
+
+// CannotWrite is the refusal for a file floe cannot write where the user asked, with the reason.
+func CannotWrite(file string, err error) *Error {
+	return New("file_cannot_write", file, reason(err))
+}
+
+// reason is why a file could not be read or written, without its path.
+func reason(err error) string {
 	var pe *os.PathError
 	if errors.As(err, &pe) {
-		reason = pe.Err.Error()
+		return pe.Err.Error()
 	}
-	return New("file_cannot_read", file, reason)
+	return err.Error()
 }
