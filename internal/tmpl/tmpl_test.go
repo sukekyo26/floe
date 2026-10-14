@@ -106,7 +106,8 @@ func TestReportTableCardsNote(t *testing.T) {
 		{`" \n "`, ""},
 	}
 	src := "template: report\nsections:\n  - parts:\n      - table:\n          columns: [{title: Cell}, {title: '**N**', num: true}]\n          rows:\n"
-	want := []string{`<thead><tr><th scope="col">Cell</th><th scope="col" class="num"><strong>N</strong></th></tr></thead>`}
+	want := make([]string, 0, len(cells)+3)
+	want = append(want, `<thead><tr><th scope="col">Cell</th><th scope="col" class="num"><strong>N</strong></th></tr></thead>`)
 	for _, c := range cells {
 		src += "            - [" + c.yaml + ", '9']\n"
 		want = append(want, "<tr><td>"+c.html+`</td><td class="num">9</td></tr>`)
