@@ -45,7 +45,7 @@ The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor versi
 |---|---|
 | `.Title` | The page's title: `--title`, a title pinned on the management page, the data file's `title:`, else the slug |
 | `.Lang` | The page's language (`--lang`, default `en`) |
-| `.Data` | The data file's items, without `template`, `theme` and `title`. An item the schema declares but the data leaves out is nil, so `{{with .Data.lead}}` works; a name the schema does not declare stops the drawing. An item of `"format": "html"` goes in as HTML, and one of `"format": "diagram"` as its SVG |
+| `.Data` | The data file's items, without `template`, `theme` and `title`. An item the schema declares but the data leaves out is nil, so `{{with .Data.lead}}` works; a name the schema does not declare stops the drawing. An item of `"format": "html"` goes in as HTML, one of `"format": "diagram"` as its SVG, and one of `"format": "script"` as its element and the call of its function |
 | `.Calc` | The values of `computed.yaml`, by name |
 | `.Theme` | The theme's CSS, for `<style>{{.Theme}}</style>` |
 | `markdown` | Markdown text as HTML (`{{markdown .text}}`), raw HTML in it left out, a table wrapped in `<div class="table-wrap">` |
@@ -60,11 +60,13 @@ A page drawn from a data file holds all it shows, and its scripts cannot send wh
 
 A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused. `template`, `theme` and `title` are read by floe and are not declared.
 
-A `format` is one of JSON Schema's that floe checks (`date`, `email`, `uri`…), `html`, `image` or `diagram`; `floe template check` refuses another, which this floe would let any value pass. `html`, `image` and `diagram` go under `properties` and `items` alone, where floe looks for them: under `anyOf`, `$defs` and the like, the item would be drawn as text. Declare `"type": "string"` alone for `html` and `image`, and `"type": "object"` alone for `diagram`: such an item is drawn whole, and a format inside it is not drawn, which `floe template check` refuses too.
+A `format` is one of JSON Schema's that floe checks (`date`, `email`, `uri`…), `html`, `image`, `diagram` or `script`; `floe template check` refuses another, which this floe would let any value pass. `html`, `image`, `diagram` and `script` go under `properties` and `items` alone, where floe looks for them: under `anyOf`, `$defs` and the like, the item would be drawn as text. Declare `"type": "string"` alone for `html` and `image`, and `"type": "object"` alone for `diagram` and `script`: such an item is drawn whole, and a format inside it is not drawn, which `floe template check` refuses too.
 
 An item of `"format": "image"` is the path of an image, relative to the data file's directory and under it, without `..` or names starting with a dot. The image goes into the page as a data URI, for `<img src="{{.Data.chart}}">`, so that the page holds all it shows.
 
 An item of `"format": "diagram"` is a diagram spec, written in place as [`floe diagram render`](commands.md#floe-diagram-render-specyaml) takes it. It is checked as `floe diagram render` checks a spec, its mistakes reported at the data file's lines and columns, and the ids of a page's diagrams must differ. `{{.Data.plan}}` draws it as inline SVG, and the page gets the diagrams' style and zoom once, at its end. Diagrams take their colours and fonts from the theme's CSS variables, as `report`'s default theme defines them (`--fg`, `--bg`, `--accent`…): A theme defines them, or `page.html` does for every theme in a `<style>` of its own; `floe template check` warns of a theme that leaves one out, whose diagrams keep light colours in dark mode.
+
+An item of `"format": "script"` is something that moves, written as `js`, a function, and `data`, any value: `{{.Data.calculator}}` draws an empty element and calls the function with it and the data, `function (el, data) { … }`. The data goes in as JSON, the keys of a mapping in the order of their names: write a list where the order matters. floe checks the shape alone (`js` is a function's text, and nothing but `js` and `data`) and refuses a `js` holding `</script` or `<!--`, where the page would end its script; what the function does shows in the browser. It runs where it stands, as the page is read: the elements after it are not there yet, nor the web fonts, so wait for `load` (`addEventListener('load', …)`) for those. It runs in the page's sandbox under its CSP (see [page.html](#pagehtml)).
 
 ## Images
 

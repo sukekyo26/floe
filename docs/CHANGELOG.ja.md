@@ -8,6 +8,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- データファイルの中にスクリプトを書けるようにした。組み込みの `report` は部品 `script` を、テンプレートは `"format": "script"` の項目を受け取る。`js` に関数を書き、ページはその場所の空の要素と、任意の値の `data` を渡して呼ぶ。`</script` か `<!--` を含む `js` は、その `js` を指して断る。
 - データファイルに表・カード・注記を書けるようにした。組み込みの `report` は部品 `table`（`columns` と `rows`。`num` の列は右に揃える。セルは 1 行の Markdown で、数は引用符で囲む。各行のセルは列の数だけ書く）・`cards`（`title` と Markdown の `text` の並び）・`note`（Markdown の `text` と、`warn` か `bad` の `tone`）を受け取る。
   - テンプレートの `page.html` から `markdownLine` を使える。1 行の Markdown を段落で包まずに描き、`-` や `1.` のようなセルは文字のまま出す。
 - データファイルの中に図を書けるようにした。組み込みの `report` は部品 `diagram` を、テンプレートは `"format": "diagram"` の項目を受け取り、`floe diagram render` に渡すのと同じ spec をその場に書く。

@@ -137,6 +137,42 @@ func TestReportTableCardsNote(t *testing.T) {
 	}
 }
 
+// A script is an element to draw in and its function called with it and its data, the text of JSON
+// that no text ends the script in, parsed; a ; or a comment after the function still parses. A js the
+// page would read the end of its script in is refused, as is a script without js or with keys it does
+// not take.
+func TestReportScript(t *testing.T) {
+	t.Parallel()
+
+	got := render(t, "template: report\nsections:\n  - parts:\n      - script:\n          data: { a: '</script><b>&', n: 1.50 }\n"+
+		"          js: |\n            function (el, data) { el.textContent = data.a; }; // a comment\n"+
+		"      - script:\n          js: (el) => el.append('x');\n")
+	for _, want := range []string{
+		"<div></div><script>{const floeScript = function (el, data) { el.textContent = data.a; }; // a comment\n\n" +
+			";floeScript(document.currentScript.previousElementSibling, " +
+			`JSON.parse("{\"a\":\"\\u003c/script\\u003e\\u003cb\\u003e\\u0026\",\"n\":1.5}"));}</script>`,
+		"<div></div><script>{const floeScript = (el) => el.append('x');\n" +
+			`;floeScript(document.currentScript.previousElementSibling, JSON.parse("null"));}</script>`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the page lacks %s:\n%s", want, got)
+		}
+	}
+	for src, want := range map[string]string{
+		"script: { js: f, run: 1 }":                  "data.yaml:4:26: sections[0].parts[0].script.run: a script takes js and data, not run",
+		"script: { data: 1 }":                        "data.yaml:4:19: sections[0].parts[0].script: write js, the function to run with the element it draws in and data: function (el, data) { … }",
+		"script: { js: 1 }":                          "data.yaml:4:23: sections[0].parts[0].script.js: write js, the function to run with the element it draws in and data: function (el, data) { … }",
+		"script: { js: ' ' }":                        "data.yaml:4:23: sections[0].parts[0].script.js: write js, the function to run with the element it draws in and data: function (el, data) { … }",
+		"script: { js: \"f('</SCRIPT>')\" }":         "data.yaml:4:23: sections[0].parts[0].script.js: js holds </SCRIPT, where the page would end its script; split it in a string, as '<' + '/SCRIPT'",
+		"script: { js: \"f('<!--', '</script>')\" }": "data.yaml:4:23: sections[0].parts[0].script.js: js holds <!--, where the page would end its script; split it in a string, as '<' + '!--'",
+	} {
+		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\n"), "", "")
+		if err == nil || err.Error() != want {
+			t.Errorf("Read of %s = %v, want %s", src, err, want)
+		}
+	}
+}
+
 // Each refusal of Read points at the line and column it is about.
 func TestReadRefusals(t *testing.T) {
 	t.Parallel()
@@ -216,7 +252,7 @@ sections:
 	want := []string{
 		"bad.yaml:3:1: leed is not an item of the template report (a typo?); use eyebrow, lead, sections, template, theme, title",
 		"bad.yaml:5:14: sections[0].heading: write text, not a number",
-		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use cards, diagram, html, note, table, text",
+		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use cards, diagram, html, note, script, table, text",
 		"bad.yaml:8:9: sections[0].parts[1]: the number of keys must be at most 1",
 		"bad.yaml:10:9: sections[0].parts[2]: the number of keys must be at least 1",
 		"bad.yaml:11:12: sections[1].parts: write a list, not text",

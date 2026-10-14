@@ -326,7 +326,7 @@ var messagesJA = map[string]string{
 	"tmpl_computed_clash":      "%s はデータの項目にもあり、式から区別できません。名前を変えてください",
 	"tmpl_computed_cycle":      "値が互いを使って計算されています: %s",
 	"tmpl_computed_env":        "computed.yaml では $env を使えません。名前で参照してください",
-	"tmpl_format_unknown":      "%s: %s: floe は format「%s」を知りません。JSON Schema の format か、html・image・diagram を使ってください",
+	"tmpl_format_unknown":      "%s: %s: floe は format「%s」を知りません。JSON Schema の format か、html・image・diagram・script を使ってください",
 	"tmpl_format_unreached":    "%s: %s: format %s は描く項目の印です。floe が辿る properties か items の下で宣言してください",
 	"tmpl_schema_open":         `%s: %s は "additionalProperties": false を書かずに properties を宣言しているので、打ち間違えたキーを断れません`,
 	"tmpl_format_type":         `%s: %s: floe は format %s の項目を型 %s の値から描きます。"type": "%[4]s" だけを宣言してください`,
@@ -347,4 +347,7 @@ var messagesJA = map[string]string{
 	"tmpl_image_large":         "画像「%s」は %s バイトで、画像の上限の %s バイト（%s）を超えています。小さくしてください",
 	"tmpl_image_content":       "「%s」の中身は、名前が示す %s ではありません",
 	"tmpl_assets_not_dir":      "%s はディレクトリではありません。assets/ には、page.html が asset で出す画像を置きます",
+	"tmpl_script_js":           "js に、描く場所の要素と data を受け取って動く関数を書いてください: function (el, data) { … }",
+	"tmpl_script_key":          "script に書けるのは js と data です。%s は書けません",
+	"tmpl_script_end":          "js に %s があり、ページはそこでスクリプトが終わると読みます。文字列なら '<' + '%s' のように分けてください",
 }

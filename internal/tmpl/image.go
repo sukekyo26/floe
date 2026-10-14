@@ -237,10 +237,7 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 		if e == nil {
 			continue
 		}
-		key, value, at := yamlpos.Find(root, f.at)
-		problems = append(problems, &yamlpos.Error{
-			File: d.File, Pos: yamlpos.OfValue(key, value), Err: usererr.New("tmpl_item", at, e),
-		})
+		problems = append(problems, itemMistake(d.File, root, f.at, false, e))
 	}
 	if problems != nil {
 		return problems.Sorted()

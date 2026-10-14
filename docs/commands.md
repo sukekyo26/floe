@@ -45,7 +45,7 @@ Pages are drawn from data files (`.yaml`, `.yml`). An HTML file is not stored: l
 
 ### Data files
 
-A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts: Markdown text, `table`, `cards` and `note` parts, `diagram` parts for diagrams, and `html` parts for what they cannot say.
+A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts: Markdown text, `table`, `cards` and `note` parts, `diagram` parts for diagrams, `script` parts for what moves, and `html` parts for what they cannot say.
 
 ```yaml
 template: report               # the template that draws the page
@@ -76,12 +76,17 @@ sections:
       - cards:                 # cards side by side, each a title over Markdown text
           - { title: Copy, text: Copies the pages on **Saturday**. }
       - note: { tone: warn, text: Edits during the freeze are lost. }   # tone: warn, bad, or none
+      - script:                # a function the page calls with an element to draw in and data
+          data: { pages: 1840 }
+          js: |
+            function (el, data) { el.textContent = `${Math.ceil(data.pages / 300)} hours`; }
       - html: <p>Status <span class="pill good">on track</span></p>   # HTML as it is
 ```
 
 - `theme:` picks a theme of the template (`default`).
 - An image the template takes (an item of `"format": "image"`) is a path under the data file's directory; the image goes into the page.
 - A diagram (a `diagram` part of `report`, or an item of `"format": "diagram"`) is a spec written in place, with the parts and checks of [`floe diagram render`](#floe-diagram-render-specyaml), its mistakes at the data file's lines and columns. The ids of the diagrams of a page must differ. Its icons come from `FLOE_ICONS_DIR`; for a linked data file, from that of the server.
+- A script (a `script` part of `report`, or an item of `"format": "script"`) is `js`, a function the page calls with an empty element in its place and `data`. A mapping in `data` comes in the order of its keys' names (write a list where the order matters), and the function runs where it stands, before the rest of the page is read. A `js` holding `</script` or `<!--` is refused; a mistake inside the function shows in the browser.
 - A template of your own, in `FLOE_TEMPLATES_DIR`, takes the place of a built-in one of its name. [templates.md](templates.md) tells how to write one.
 - The data is checked against the template's schema and its checks (`checks.yaml`) before the page is drawn. Every mistake is printed at once as `file:line:column: message`, and nothing is published until all are fixed (exit code 1): a missing or unknown template, an item the template does not have (a typo), a value of the wrong type, a row of a `table` with more or fewer cells than its columns, and the like.
 - A data file is one YAML document of keys and values: one with `---` between documents, or with anchors, aliases or tags, is refused.

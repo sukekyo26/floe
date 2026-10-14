@@ -224,6 +224,15 @@ func TestCheckMistakes(t *testing.T) {
 			},
 		},
 		{
+			name: "a script out of reach, and one of text",
+			files: map[string]string{"schema.json": `"chart":|"move": { "oneOf": [{ "type": "object", "format": "script" }] }, ` +
+				`"run": { "type": "string", "format": "script" },` + "\n    " + `"chart":`},
+			want: []string{
+				"sizes/schema.json: #/properties/move/oneOf/0: the format script marks an item to draw",
+				`sizes/schema.json: #/properties/run: floe draws an item of the format script from a value of type object`,
+			},
+		},
+		{
 			name: "a format inside a diagram",
 			files: map[string]string{"schema.json": `"chart":|"plan": { "type": "object", "format": "diagram", ` +
 				`"properties": { "logo": { "type": "string", "format": "image" } } },` + "\n    " + `"chart":`},

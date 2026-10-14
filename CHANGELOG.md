@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Run scripts in data files: the built-in `report` takes a `script` part, and
+  a template takes an item of `"format": "script"`, each `js`, a function the
+  page calls with an empty element in its place and `data`, any value. A `js`
+  holding `</script` or `<!--` is refused, pointing at the `js`.
 - Write tables, cards and notes in data files: the built-in `report` takes
   `table` (`columns`, a `num` one aligned right, and `rows`, each cell a line of
   Markdown, a number in quotes, as many in each row as there are columns),

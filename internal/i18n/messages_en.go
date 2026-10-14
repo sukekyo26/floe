@@ -327,7 +327,7 @@ var messagesEN = map[string]string{
 	"tmpl_computed_clash":      "%s is an item of the data too, so an expression could not tell them apart; rename it",
 	"tmpl_computed_cycle":      "the values are computed from each other: %s",
 	"tmpl_computed_env":        "$env is not for computed.yaml; use the names",
-	"tmpl_format_unknown":      `%s: %s: floe does not know the format "%s"; use a format of JSON Schema, or html, image or diagram`,
+	"tmpl_format_unknown":      `%s: %s: floe does not know the format "%s"; use a format of JSON Schema, or html, image, diagram or script`,
 	"tmpl_format_unreached":    "%s: %s: the format %s marks an item to draw; declare it under properties or items, which floe follows",
 	"tmpl_schema_open":         `%s: %s declares properties without "additionalProperties": false, so a misspelt key is not refused`,
 	"tmpl_format_type":         `%s: %s: floe draws an item of the format %s from a value of type %s; declare "type": "%[4]s" alone`,
@@ -348,4 +348,7 @@ var messagesEN = map[string]string{
 	"tmpl_image_large":         `the image "%s" is %s bytes, over the %s bytes (%s) an image may be; make it smaller`,
 	"tmpl_image_content":       `"%s" does not hold the %s its name says`,
 	"tmpl_assets_not_dir":      "%s is not a directory: assets/ holds the images page.html shows with asset",
+	"tmpl_script_js":           "write js, the function to run with the element it draws in and data: function (el, data) { … }",
+	"tmpl_script_key":          "a script takes js and data, not %s",
+	"tmpl_script_end":          "js holds %s, where the page would end its script; split it in a string, as '<' + '%s'",
 }
