@@ -21,6 +21,8 @@ import (
 	"github.com/goccy/go-yaml/ast"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/util"
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -41,6 +43,16 @@ const (
 )
 
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
+
+// markdownLine reads paragraphs alone, without the paragraph transformers that make a line a table or a
+// link reference definition, so that a line like "-", "1." or "# x" stays text.
+var markdownLine = goldmark.New(
+	goldmark.WithParser(parser.NewParser(
+		parser.WithBlockParsers(util.Prioritized(parser.NewParagraphParser(), 1000)),
+		parser.WithInlineParsers(parser.DefaultInlineParsers()...),
+	)),
+	goldmark.WithExtensions(extension.Strikethrough, extension.Linkify),
+)
 
 // Data is a data file read: the keys every template shares, and the rest for the template's schema.
 type Data struct {
@@ -364,15 +376,42 @@ var funcs = template.FuncMap{
 	// markdown writes Markdown text as HTML, a table wrapped in <div class="table-wrap"> for a theme to
 	// scroll. Raw HTML in it is left out: a data item takes HTML only when its schema says format: html.
 	"markdown": func(text string) (template.HTML, error) {
-		var b bytes.Buffer
-		if err := markdown.Convert([]byte(text), &b); err != nil {
-			return "", fmt.Errorf("markdown: %w", err)
+		html, err := convert(markdown, "markdown", text)
+		if err != nil {
+			return "", err
 		}
 		// With raw HTML left out, every <table> in the output is one goldmark drew.
-		html := strings.ReplaceAll(b.String(), "<table>", `<div class="table-wrap"><table>`)
+		html = strings.ReplaceAll(html, "<table>", `<div class="table-wrap"><table>`)
 		html = strings.ReplaceAll(html, "</table>", "</table></div>")
 		return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 	},
+	// markdownLine writes a line of Markdown, such as a table cell, as HTML without a paragraph around it.
+	"markdownLine": func(text string) (template.HTML, error) {
+		// The text is made one paragraph of unbroken lines: a blank line would split it, an indented
+		// line would open no block, as markdownLine reads no indented code, and two spaces at the end
+		// of a line would break it.
+		var lines []string
+		for line := range strings.Lines(text) {
+			if line = strings.TrimSpace(line); line != "" {
+				lines = append(lines, line)
+			}
+		}
+		html, err := convert(markdownLine, "markdownLine", strings.Join(lines, "\n"))
+		if err != nil {
+			return "", err
+		}
+		html = strings.TrimSuffix(strings.TrimPrefix(html, "<p>"), "</p>\n")
+		return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
+	},
+}
+
+// convert writes text as HTML with md, the function of page.html called name.
+func convert(md goldmark.Markdown, name, text string) (string, error) {
+	var b bytes.Buffer
+	if err := md.Convert([]byte(text), &b); err != nil {
+		return "", fmt.Errorf("%s: %w", name, err)
+	}
+	return b.String(), nil
 }
 
 // schemaOf reads the schema of t.

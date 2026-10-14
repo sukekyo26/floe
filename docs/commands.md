@@ -45,7 +45,7 @@ Pages are drawn from data files (`.yaml`, `.yml`). An HTML file is not stored: l
 
 ### Data files
 
-A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts of Markdown text, with `diagram` parts for diagrams and `html` parts for what Markdown cannot say.
+A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts: Markdown text, `table`, `cards` and `note` parts, `diagram` parts for diagrams, and `html` parts for what they cannot say.
 
 ```yaml
 template: report               # the template that draws the page
@@ -67,7 +67,16 @@ sections:
             - box: { x: 16, y: 32, w: 184, h: 56, rows: [Old wiki] }
             - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [New host] }
             - edge: { d: "M200,60 H440" }
-      - html: <p class="note warn">Edits during the freeze are lost.</p>   # HTML as it is
+      - table:                 # each cell is a line of Markdown, a number in quotes
+          columns:
+            - title: Risk
+            - { title: Pages, num: true }   # numbers: aligned right
+          rows:
+            - [Broken links, '120']
+      - cards:                 # cards side by side, each a title over Markdown text
+          - { title: Copy, text: Copies the pages on **Saturday**. }
+      - note: { tone: warn, text: Edits during the freeze are lost. }   # tone: warn, bad, or none
+      - html: <p>Status <span class="pill good">on track</span></p>   # HTML as it is
 ```
 
 - `theme:` picks a theme of the template (`default`).

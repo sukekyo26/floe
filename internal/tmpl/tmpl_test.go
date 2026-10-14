@@ -55,8 +55,12 @@ func TestReportExample(t *testing.T) {
 		`<h2>Steps</h2>`,
 		`<li>Freeze edits on the old wiki on <strong>Friday evening</strong>.</li>`,
 		`<div class="table-wrap"><table>`,
-		`<th>Likelihood</th>`,
-		`<p class="note warn">Anyone editing during the freeze loses their changes.</p>`,
+		`<th scope="col">Likelihood</th>`,
+		`<td>Keep the old host for <strong>a month</strong></td>`,
+		`<td class="num">120</td>`,
+		`<div class="card"><h3>Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>`,
+		`<div class="note warn"><p>Anyone editing during the freeze loses their changes.</p>`,
+		`<span class="pill good">on track</span>`,
 		`aria-label="The pages go from the old wiki to the new host"`,
 		`--accent: #1d6670;`,
 	} {
@@ -79,6 +83,56 @@ func TestReportParts(t *testing.T) {
 	}
 	if strings.Contains(got, "dg-wrap") {
 		t.Errorf("a page without diagrams holds their zoom: %s", got)
+	}
+}
+
+// A table's cell is a line of Markdown: what would start a block stays text, its lines are joined,
+// and raw HTML is left out. A num column is aligned right. A card without text and a note without a
+// tone leave them out.
+func TestReportTableCardsNote(t *testing.T) {
+	t.Parallel()
+
+	cells := []struct{ yaml, html string }{
+		{`"-"`, "-"},
+		{`"1."`, "1."},
+		{`"# x"`, "# x"},
+		{`"> q"`, "&gt; q"},
+		{`"1.50"`, "1.50"},
+		{`"a <b>c</b> ~~d~~ [e](https://e.example)"`, `a <!-- raw HTML omitted -->c<!-- raw HTML omitted --> <del>d</del> <a href="https://e.example">e</a>`},
+		{`"    120"`, "120"},
+		{`"\tt"`, "t"},
+		{`"**a\n\n  b**"`, "<strong>a\nb</strong>"},
+		{`"c  \nd"`, "c\nd"},
+		{`" \n "`, ""},
+		{`""`, ""},
+	}
+	src := "template: report\nsections:\n  - parts:\n      - table:\n          columns: [{title: Cell}, {title: '**N**', num: true}]\n          rows:\n"
+	want := make([]string, 0, len(cells)+3)
+	want = append(want, `<thead><tr><th scope="col">Cell</th><th scope="col" class="num"><strong>N</strong></th></tr></thead>`)
+	for _, c := range cells {
+		src += "            - [" + c.yaml + ", '9']\n"
+		want = append(want, "<tr><td>"+c.html+`</td><td class="num">9</td></tr>`)
+	}
+	src += "      - cards:\n          - title: A & B\n      - note:\n          text: n\n"
+	want = append(want, `<div class="card"><h3>A &amp; B</h3></div>`, `<div class="note"><p>n</p>`)
+	got := render(t, src)
+	for _, w := range want {
+		if !strings.Contains(got, w) {
+			t.Errorf("the page lacks %s:\n%s", w, got)
+		}
+	}
+	// A number would lose how it was written (1.50 as 1.5, 1234567.5 as 1.2345675e+06): a cell is text.
+	// A part with nothing in it is a slip.
+	for src, want := range map[string]string{
+		"table: { columns: [{title: a}], rows: [[1.50]] }": "data.yaml:4:49: sections[0].parts[0].table.rows[0][0]: write text, not a number",
+		"table: { columns: [], rows: [] }": "data.yaml:4:27: sections[0].parts[0].table.columns: the number of items must be at least 1\n" +
+			"data.yaml:4:37: sections[0].parts[0].table.rows: the number of items must be at least 1",
+		"note: { text: '' }": "data.yaml:4:23: sections[0].parts[0].note.text: the length in characters must be at least 1",
+	} {
+		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\n"), "", "")
+		if err == nil || err.Error() != want {
+			t.Errorf("Read of %s = %v, want %s", src, err, want)
+		}
 	}
 }
 
@@ -161,7 +215,7 @@ sections:
 	want := []string{
 		"bad.yaml:3:1: leed is not an item of the template report (a typo?); use eyebrow, lead, sections, template, theme, title",
 		"bad.yaml:5:14: sections[0].heading: write text, not a number",
-		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use diagram, html, text",
+		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use cards, diagram, html, note, table, text",
 		"bad.yaml:8:9: sections[0].parts[1]: the number of keys must be at most 1",
 		"bad.yaml:10:9: sections[0].parts[2]: the number of keys must be at least 1",
 		"bad.yaml:11:12: sections[1].parts: write a list, not text",

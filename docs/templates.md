@@ -49,6 +49,7 @@ The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor versi
 | `.Calc` | The values of `computed.yaml`, by name |
 | `.Theme` | The theme's CSS, for `<style>{{.Theme}}</style>` |
 | `markdown` | Markdown text as HTML (`{{markdown .text}}`), raw HTML in it left out, a table wrapped in `<div class="table-wrap">` |
+| `markdownLine` | A line of Markdown, such as a table cell, as HTML without a paragraph around it (`<td>{{markdownLine .}}</td>`): code, emphasis and links, while a line like `-`, `1.` or `# x` stays text. Lines, indented or apart, are joined as one. Raw HTML in it is left out |
 | `num` | A number with its digits grouped (`{{.Calc.total \| num}}` is `1,234,567`), or rounded to significant digits (`{{.Calc.rate \| num 3}}` is `0.00648`) |
 | `bytes` | A count of bytes in a binary unit (`{{.Calc.size \| bytes}}` is `1.5 KiB`) |
 | `asset` | An image of the template's `assets/` as a data URI (`<img src="{{asset "logo.svg"}}">`) |

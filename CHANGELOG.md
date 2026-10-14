@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Write tables, cards and notes in data files: the built-in `report` takes
+  `table` (`columns`, a `num` one aligned right, and `rows`, each cell a line of
+  Markdown, a number in quotes),
+  `cards` (each a `title` over Markdown `text`) and `note` (Markdown `text`,
+  with a `tone` of `warn` or `bad`) parts. A template's `page.html` takes
+  `markdownLine`, which draws a line of Markdown without a paragraph around
+  it, keeping a cell like `-` or `1.` as text.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template takes an item of `"format": "diagram"`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as

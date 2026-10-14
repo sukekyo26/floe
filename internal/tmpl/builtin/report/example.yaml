@@ -1,5 +1,5 @@
-# A report: a heading and parts per section. Text is Markdown; html goes in as it is; a diagram is
-# a spec as floe diagram render takes it.
+# A report: a heading and parts per section. Text is Markdown; a table's cells are lines of Markdown,
+# numbers in quotes; html goes in as it is; a diagram is a spec as floe diagram render takes it.
 template: report
 title: Moving the team wiki
 eyebrow: Plan · 2030-04
@@ -22,11 +22,28 @@ sections:
             - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [New host, open on Monday] }
             - edge: { d: "M200,60 H228" }
             - edge: { d: "M412,60 H440" }
+  - heading: Who does what
+    parts:
+      - cards:
+          - title: Copy
+            text: Copies the pages on **Saturday** and keeps a list of what failed.
+          - title: Links
+            text: Runs the link check and fixes what it finds.
+          - title: Bookmarks
+            text: Sends the new address to the team on Monday morning.
   - heading: Risks
     parts:
-      - text: |
-          | Risk | Likelihood | What we do |
-          | --- | --- | --- |
-          | Broken links | High | A link check after the copy |
-          | Lost attachments | Low | Keep the old host for a month |
-      - html: <p class="note warn">Anyone editing during the freeze loses their changes.</p>
+      - table:
+          columns:
+            - title: Risk
+            - title: Likelihood
+            - { title: Pages, num: true }
+            - title: What we do
+          rows:
+            - [Broken links, High, '120', A link check after the copy]
+            - [Lost attachments, Low, '8', Keep the old host for **a month**]
+            - [Slow search, Unknown, "-", Rebuild the index on `Sunday`]
+      - note:
+          tone: warn
+          text: Anyone editing during the freeze loses their changes.
+      - html: <p>Status <span class="pill good">on track</span></p>
