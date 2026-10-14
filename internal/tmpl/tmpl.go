@@ -22,7 +22,6 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
-	gmtext "github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 
 	"github.com/sukekyo26/floe/internal/diagram"
@@ -388,21 +387,20 @@ var funcs = template.FuncMap{
 	},
 	// markdownLine writes a line of Markdown, such as a table cell, as HTML without a paragraph around it.
 	"markdownLine": func(text string) (template.HTML, error) {
-		src := []byte(text)
-		var b bytes.Buffer
-		doc := markdownLine.Parser().Parse(gmtext.NewReader(src))
-		// The children of the document are paragraphs alone: a blank line between two is drawn as a space.
-		for p := doc.FirstChild(); p != nil; p = p.NextSibling() {
-			if p != doc.FirstChild() {
-				b.WriteString(" ")
-			}
-			for n := p.FirstChild(); n != nil; n = n.NextSibling() {
-				if err := markdownLine.Renderer().Render(&b, src, n); err != nil {
-					return "", fmt.Errorf("markdownLine: %w", err)
-				}
+		// The text is made one paragraph: a blank line would split it, and an indented line would open
+		// no block, as markdownLine reads no indented code, and be left out.
+		var lines []string
+		for line := range strings.Lines(text) {
+			if line = strings.TrimLeft(strings.TrimRight(line, "\r\n"), " \t"); strings.TrimSpace(line) != "" {
+				lines = append(lines, line)
 			}
 		}
-		return template.HTML(b.String()), nil //nolint:gosec // G203: goldmark leaves raw HTML out
+		var b bytes.Buffer
+		if err := markdownLine.Convert([]byte(strings.Join(lines, "\n")), &b); err != nil {
+			return "", fmt.Errorf("markdownLine: %w", err)
+		}
+		html := strings.TrimSuffix(strings.TrimPrefix(b.String(), "<p>"), "</p>\n")
+		return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 	},
 }
 

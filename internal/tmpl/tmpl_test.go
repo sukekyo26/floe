@@ -55,7 +55,7 @@ func TestReportExample(t *testing.T) {
 		`<h2>Steps</h2>`,
 		`<li>Freeze edits on the old wiki on <strong>Friday evening</strong>.</li>`,
 		`<div class="table-wrap"><table>`,
-		`<th>Likelihood</th>`,
+		`<th scope="col">Likelihood</th>`,
 		`<td>Keep the old host for <strong>a month</strong></td>`,
 		`<td>120</td>`,
 		`<div class="card"><h3>Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>`,
@@ -96,30 +96,41 @@ sections:
   - parts:
       - table:
           rows:
-            - ["-", "1.", "# x", "> q", "1.50", "a <b>c</b> ~~d~~ [e](https://e.example)", "f\n\ng", ""]
+            - ["-", "1.", "# x", "> q", "1.50", "a <b>c</b> ~~d~~ [e](https://e.example)", "    120", "\tt", "**a\n\n  b**", " \n ", ""]
+      - table:
+          head: [h]
+          rows: [[c]]
       - cards:
           - title: A & B
       - note:
           text: n
 `)
 	for _, want := range []string{
-		`<table><tbody><tr><td>-</td><td>1.</td><td># x</td><td>&gt; q</td><td>1.50</td>` +
+		"<table>\n<tbody>\n<tr><td>-</td><td>1.</td><td># x</td><td>&gt; q</td><td>1.50</td>" +
 			`<td>a <!-- raw HTML omitted -->c<!-- raw HTML omitted --> <del>d</del> <a href="https://e.example">e</a></td>` +
-			`<td>f g</td><td></td></tr>`,
+			"<td>120</td><td>t</td><td><strong>a\nb</strong></td><td></td><td></td></tr>",
+		`<thead><tr><th scope="col">h</th></tr></thead>`,
 		`<div class="card"><h3>A &amp; B</h3></div>`,
 		`<div class="note"><p>n</p>`,
 	} {
-		if !strings.Contains(strings.ReplaceAll(got, "\n", ""), want) {
+		if !strings.Contains(got, want) {
 			t.Errorf("the page lacks %s:\n%s", want, got)
 		}
 	}
-	if strings.Contains(got, "<thead>") {
+	if strings.Count(got, "<thead>") != 1 {
 		t.Errorf("a table without a head has one: %s", got)
 	}
 	// A number would lose how it was written (1.50 as 1.5, 1234567.5 as 1.2345675e+06): a cell is text.
-	_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - table: { rows: [[1.50]] }\n"), "", "")
-	if err == nil || err.Error() != "data.yaml:4:26: sections[0].parts[0].table.rows[0][0]: write text, not a number" {
-		t.Errorf("Read of a number in a cell = %v", err)
+	// A part with nothing in it is a slip.
+	for src, want := range map[string]string{
+		"table: { rows: [[1.50]] }": "data.yaml:4:26: sections[0].parts[0].table.rows[0][0]: write text, not a number",
+		"table: { rows: [] }":       "data.yaml:4:24: sections[0].parts[0].table.rows: the number of items must be at least 1",
+		"note: { text: '' }":        "data.yaml:4:23: sections[0].parts[0].note.text: the length in characters must be at least 1",
+	} {
+		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\n"), "", "")
+		if err == nil || err.Error() != want {
+			t.Errorf("Read of %s = %v, want %s", src, err, want)
+		}
 	}
 }
 

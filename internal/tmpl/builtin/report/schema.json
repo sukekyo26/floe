@@ -23,8 +23,8 @@
                   "type": "object",
                   "description": "A table; each cell is a line of Markdown (code, bold, links), a number in quotes as it is drawn",
                   "properties": {
-                    "head": { "type": "array", "items": { "type": "string" } },
-                    "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" } } }
+                    "head": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+                    "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" }, "minItems": 1 }, "minItems": 1 }
                   },
                   "required": ["rows"],
                   "additionalProperties": false
@@ -32,10 +32,11 @@
                 "cards": {
                   "type": "array",
                   "description": "Cards side by side, each a title over Markdown text",
+                  "minItems": 1,
                   "items": {
                     "type": "object",
                     "properties": {
-                      "title": { "type": "string" },
+                      "title": { "type": "string", "minLength": 1 },
                       "text": { "type": "string", "description": "Markdown" }
                     },
                     "required": ["title"],
@@ -47,7 +48,7 @@
                   "description": "A note set apart from the text: a warning with tone warn, a danger with tone bad",
                   "properties": {
                     "tone": { "enum": ["warn", "bad"] },
-                    "text": { "type": "string", "description": "Markdown" }
+                    "text": { "type": "string", "minLength": 1, "description": "Markdown" }
                   },
                   "required": ["text"],
                   "additionalProperties": false

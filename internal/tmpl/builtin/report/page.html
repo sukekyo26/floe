@@ -36,7 +36,7 @@
 {{- with .table}}
 <div class="table-wrap"><table>
 {{- with .head}}
-<thead><tr>{{range .}}<th>{{markdownLine .}}</th>{{end}}</tr></thead>
+<thead><tr>{{range .}}<th scope="col">{{markdownLine .}}</th>{{end}}</tr></thead>
 {{- end}}
 <tbody>
 {{- range .rows}}
