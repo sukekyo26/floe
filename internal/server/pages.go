@@ -29,8 +29,8 @@ const (
 const cdns = "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com"
 
 // cutOff is the CSP of a page drawn from a data file: what it shows is in it (images, fonts and media
-// as data URIs), so it loads nothing but Google Fonts and the libraries of cdns, and connects to connect
-// only. A template's or the data's script cannot send what the page holds out with fetch, XHR, an image
+// as data URIs), so it loads nothing but Google Fonts and the libraries of cdns, and its fetch, XHR and
+// EventSource reach only the source given as connect. A template's or the data's script cannot send what the page holds out with fetch, XHR, an image
 // or a form.
 // LIMIT: moving the page, opening a window, WebRTC and DNS prefetch escape CSP; rethink for untrusted templates.
 func cutOff(connect string) string {
