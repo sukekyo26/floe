@@ -376,7 +376,8 @@ func (c relation) declared(s *jsonschema.Schema) *yamlpos.Error {
 // and through the items of a list on the way when lists is true. It returns the schema declared
 // there, or nil, sure true where the path is surely not declared and false where a schema may take it.
 // LIMIT: a key is not matched against patternProperties, nor followed through allOf, anyOf and the
-// like: it is taken as declared there. Follow them if a template comes to declare its lists so.
+// like: it is taken as declared there. A schema that takes both a list and keys and values is followed
+// as keys and values. Follow them if a template comes to declare its lists so.
 func declaredAt(s *jsonschema.Schema, steps []string, lists bool) (found *jsonschema.Schema, sure bool) {
 	for _, step := range steps {
 		if lists {
@@ -410,9 +411,14 @@ func declaredAt(s *jsonschema.Schema, steps []string, lists bool) (found *jsonsc
 }
 
 // intoItems returns the schema of the items of s while s is surely a list and not keys and values, or
-// nil where a list does not declare its items.
+// nil where a list does not declare its items, or declares lists of itself all the way down.
 func intoItems(s *jsonschema.Schema) *jsonschema.Schema {
+	seen := map[*jsonschema.Schema]bool{}
 	for s != nil && s.Bool == nil && !takes(s, "object") && takes(s, "array") {
+		if seen[s] {
+			return nil
+		}
+		seen[s] = true
 		s = itemsOf(s)
 	}
 	return s

@@ -194,8 +194,9 @@ func (c relation) failure(file string, root ast.Node, at []string, err error) *y
 }
 
 // itemsAt adds to found the items of the lists at steps under v, v being at the path at: a list on the
-// way is gone through item by item. A list or value the data leaves out holds none. It returns false
-// when what is at steps is not a list.
+// way is gone through item by item. A list or value the data leaves out holds none, and so does an item
+// of a list on the way that is not keys and values or a list, which a schema may take beside them. It
+// returns false when what is at steps is not a list.
 func itemsAt(v any, steps, at []string, found *[]itemAt) bool {
 	switch v := v.(type) {
 	case nil:
@@ -205,9 +206,13 @@ func itemsAt(v any, steps, at []string, found *[]itemAt) bool {
 	case []any:
 		for i, item := range v {
 			here := slices.Concat(at, []string{strconv.Itoa(i)})
-			if len(steps) == 0 {
+			_, isMap := item.(map[string]any)
+			_, isList := item.([]any)
+			switch {
+			case len(steps) == 0:
 				*found = append(*found, itemAt{value: item, at: here})
-			} else if !itemsAt(item, steps, here, found) {
+			case !isMap && !isList:
+			case !itemsAt(item, steps, here, found):
 				return false
 			}
 		}
