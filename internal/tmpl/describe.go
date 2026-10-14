@@ -67,6 +67,26 @@ func (l *Library) Describe(name string) (*Description, error) {
 	return d, nil
 }
 
+// SharedItems are the keys floe reads from every data file of the template name itself, to be told beside
+// the items of its schema; their descriptions are floe's, for the caller to word.
+func SharedItems(name string) []Item {
+	items := make([]Item, 0, len(shared))
+	for _, key := range shared {
+		it := Item{
+			Name: key, Types: []string{"string"}, Of: nil, Format: "", Enum: nil, Required: false, Description: "",
+			Items: nil,
+		}
+		switch key {
+		case "lang":
+			it.Required = true
+		case "template":
+			it.Enum, it.Required = []string{name}, true
+		}
+		items = append(items, it)
+	}
+	return items
+}
+
 // items are the items s declares, by name.
 func (s *schema) items() []Item {
 	names := slices.Sorted(maps.Keys(s.Properties))
