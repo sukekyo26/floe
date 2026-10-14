@@ -262,7 +262,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 - The server keeps running until `floe stop`, logout or reboot.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
 - Pages run in a sandbox, so their scripts cannot reach the management page's API.
-- A page drawn from a data file sends nothing out (`fetch`, XHR, images from elsewhere, forms), its download included; see [templates](templates.md#pagehtml). Linked HTML loads what it loads.
+- The scripts of a page drawn from a data file cannot send what it holds out with `fetch`, XHR, images from elsewhere or forms, its download included; see [templates](templates.md#pagehtml). Linked HTML loads what it loads.
 
 ## Environment variables
 
