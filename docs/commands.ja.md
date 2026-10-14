@@ -67,12 +67,13 @@ sections:
             - box: { x: 16, y: 32, w: 184, h: 56, rows: [古い wiki] }
             - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [新しいホスト] }
             - edge: { d: "M200,60 H440" }
-      - table:                 # セルは 1 行の Markdown。数は引用符で囲む
+      - table:                 # セルは 1 行の Markdown。数は引用符で囲む。状態の札（pill）も書ける
           columns:
             - title: リスク
             - { title: ページ数, num: true }   # 数の列: 右に揃える
+            - title: 状態
           rows:
-            - [リンク切れ, '120']
+            - [リンク切れ, '120', { pill: 注視, tone: warn }]   # tone は good・warn・bad か、無し
       - cards:                 # 横に並ぶカード。見出しと Markdown の文章
           - { title: 写す, text: '**土曜**にページを写す。' }
       - note: { tone: warn, text: 止めている間の編集は失われます。 }   # tone は warn・bad か、無し
