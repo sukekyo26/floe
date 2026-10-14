@@ -36,11 +36,11 @@
 {{- with .table}}
 <div class="table-wrap"><table>
 {{- with .head}}
-<thead><tr>{{range .}}<th>{{markdownLine (print .)}}</th>{{end}}</tr></thead>
+<thead><tr>{{range .}}<th>{{markdownLine .}}</th>{{end}}</tr></thead>
 {{- end}}
 <tbody>
 {{- range .rows}}
-<tr>{{range .}}<td>{{markdownLine (print .)}}</td>{{end}}</tr>
+<tr>{{range .}}<td>{{markdownLine .}}</td>{{end}}</tr>
 {{- end}}
 </tbody>
 </table></div>

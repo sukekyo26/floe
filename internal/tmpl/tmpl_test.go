@@ -96,25 +96,30 @@ sections:
   - parts:
       - table:
           rows:
-            - ["-", "1.", "# x", "> q", 0.25, "a <b>c</b> ~~d~~ [e](https://e.example)", "f\n\ng", ""]
+            - ["-", "1.", "# x", "> q", "1.50", "a <b>c</b> ~~d~~ [e](https://e.example)", "f\n\ng", ""]
       - cards:
           - title: A & B
       - note:
           text: n
 `)
 	for _, want := range []string{
-		`<table><tbody><tr><td>-</td><td>1.</td><td># x</td><td>&gt; q</td><td>0.25</td>` +
+		`<table><tbody><tr><td>-</td><td>1.</td><td># x</td><td>&gt; q</td><td>1.50</td>` +
 			`<td>a <!-- raw HTML omitted -->c<!-- raw HTML omitted --> <del>d</del> <a href="https://e.example">e</a></td>` +
 			`<td>f g</td><td></td></tr>`,
 		`<div class="card"><h3>A &amp; B</h3></div>`,
 		`<div class="note"><p>n</p>`,
 	} {
-		if !strings.Contains(strings.ReplaceAll(got, "\n", ""), strings.ReplaceAll(want, "\n", "")) {
+		if !strings.Contains(strings.ReplaceAll(got, "\n", ""), want) {
 			t.Errorf("the page lacks %s:\n%s", want, got)
 		}
 	}
 	if strings.Contains(got, "<thead>") {
 		t.Errorf("a table without a head has one: %s", got)
+	}
+	// A number would lose how it was written (1.50 as 1.5, 1234567.5 as 1.2345675e+06): a cell is text.
+	_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - table: { rows: [[1.50]] }\n"), "", "")
+	if err == nil || err.Error() != "data.yaml:4:26: sections[0].parts[0].table.rows[0][0]: write text, not a number" {
+		t.Errorf("Read of a number in a cell = %v", err)
 	}
 }
 

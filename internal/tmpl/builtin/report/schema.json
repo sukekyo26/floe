@@ -21,10 +21,10 @@
                 "text": { "type": "string", "description": "Markdown; raw HTML in it is left out" },
                 "table": {
                   "type": "object",
-                  "description": "A table; each cell is a line of Markdown (code, bold, links) or a number",
+                  "description": "A table; each cell is a line of Markdown (code, bold, links), a number in quotes as it is drawn",
                   "properties": {
-                    "head": { "type": "array", "items": { "type": ["string", "number"] } },
-                    "rows": { "type": "array", "items": { "type": "array", "items": { "type": ["string", "number"] } } }
+                    "head": { "type": "array", "items": { "type": "string" } },
+                    "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" } } }
                   },
                   "required": ["rows"],
                   "additionalProperties": false

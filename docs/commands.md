@@ -67,7 +67,7 @@ sections:
             - box: { x: 16, y: 32, w: 184, h: 56, rows: [Old wiki] }
             - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [New host] }
             - edge: { d: "M200,60 H440" }
-      - table:                 # each cell is a line of Markdown, or a number
+      - table:                 # each cell is a line of Markdown, a number in quotes
           head: [Risk, Likelihood]
           rows:
             - [Broken links, High]

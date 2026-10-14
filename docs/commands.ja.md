@@ -67,7 +67,7 @@ sections:
             - box: { x: 16, y: 32, w: 184, h: 56, rows: [古い wiki] }
             - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [新しいホスト] }
             - edge: { d: "M200,60 H440" }
-      - table:                 # セルは 1 行の Markdown か数
+      - table:                 # セルは 1 行の Markdown。数は引用符で囲む
           head: [リスク, 起こりやすさ]
           rows:
             - [リンク切れ, 高い]
