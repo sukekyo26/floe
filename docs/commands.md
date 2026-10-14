@@ -67,12 +67,13 @@ sections:
             - box: { x: 16, y: 32, w: 184, h: 56, rows: [Old wiki] }
             - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [New host] }
             - edge: { d: "M200,60 H440" }
-      - table:                 # each cell is a line of Markdown, a number in quotes
+      - table:                 # each cell is a line of Markdown, a number in quotes, or a pill
           columns:
             - title: Risk
             - { title: Pages, num: true }   # numbers: aligned right
+            - title: State
           rows:
-            - [Broken links, '120']
+            - [Broken links, '120', { pill: watching, tone: warn }]   # tone: good, warn, bad, or none
       - cards:                 # cards side by side, each a title over Markdown text
           - { title: Copy, text: Copies the pages on **Saturday**. }
       - note: { tone: warn, text: Edits during the freeze are lost. }   # tone: warn, bad, or none
