@@ -98,9 +98,9 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	s, err := decodeSchema(src)
+	s, err := t.decodeSchema(src)
 	if err != nil {
-		return nil, []error{fmt.Errorf("read the schema of %s: %w", t.Name, err)}
+		return nil, []error{err}
 	}
 	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil, diagrams: false}
 	lint.walk(doc, "#", true)
@@ -494,9 +494,6 @@ func (t *Template) checkExample() error {
 		return err
 	}
 	h, err := start(file, src, false)
-	if errors.Is(err, yamlpos.ErrEmpty) {
-		return yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", t.Name)
-	}
 	if err != nil {
 		return err
 	}

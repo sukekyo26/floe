@@ -106,10 +106,6 @@ func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data
 		dir = filepath.Join(cwd, dir)
 	}
 	h, err := start(file, src, theme != "")
-	if errors.Is(err, yamlpos.ErrEmpty) {
-		// As an empty mapping, which is told every key it misses at its top.
-		h, err = start(file, []byte("{}"), theme != "")
-	}
 	if err != nil {
 		return nil, sources, err
 	}
@@ -173,6 +169,10 @@ type head struct {
 // given over the data's. It fails with yamlpos.ErrEmpty for a file without a document.
 func start(file string, src []byte, themed bool) (*head, error) {
 	root, err := parse(file, src)
+	if errors.Is(err, yamlpos.ErrEmpty) {
+		// As an empty mapping, which is told every key it misses at its top.
+		root, err = parse(file, []byte("{}"))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -231,6 +231,9 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
 	s, err := t.decodeSchema(src)
 	if err != nil {
+		return err
+	}
+	if err = t.refuseShared(s); err != nil {
 		return err
 	}
 	err = validate(src, d, root)
@@ -424,7 +427,14 @@ func schemaOf(t *Template) (*schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	return t.decodeSchema(b)
+	s, err := t.decodeSchema(b)
+	if err == nil {
+		err = t.refuseShared(s)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // decodeSchema reads b, the schema.json of t.
@@ -432,9 +442,6 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	s, err := decodeSchema(b)
 	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
-	}
-	if err = t.refuseShared(s); err != nil {
-		return nil, err
 	}
 	return s, nil
 }
