@@ -38,8 +38,6 @@ var builtin embed.FS
 const (
 	// DefaultTheme is the theme of a page whose data names none.
 	DefaultTheme = "default"
-	// DefaultLang is the language of a page unless the publisher names another.
-	DefaultLang = string(i18n.English)
 )
 
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
@@ -60,6 +58,7 @@ type Data struct {
 	Template string
 	Theme    string
 	Title    string // "" when the data names none
+	Lang     string // the language of the page, a BCP 47 tag
 	Values   map[string]any
 	Calc     map[string]any // the values of the template's computed.yaml, by name; nil without one
 
@@ -75,7 +74,7 @@ type Data struct {
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
-var shared = []string{"template", "theme", "title"}
+var shared = []string{"lang", "template", "theme", "title"}
 
 // Read reads the data file src, checks it against its template's schema, then its checks, and
 // computes the values of its computed.yaml; file names it in errors. A mistake is a *yamlpos.Error,
@@ -107,13 +106,6 @@ func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data
 		dir = filepath.Join(cwd, dir)
 	}
 	h, err := start(file, src, theme != "")
-	if errors.Is(err, yamlpos.ErrEmpty) {
-		var names []string
-		if names, err = l.Names(); err != nil {
-			return nil, sources, err
-		}
-		return nil, sources, yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", strings.Join(names, ", "))
-	}
 	if err != nil {
 		return nil, sources, err
 	}
@@ -177,6 +169,10 @@ type head struct {
 // given over the data's. It fails with yamlpos.ErrEmpty for a file without a document.
 func start(file string, src []byte, themed bool) (*head, error) {
 	root, err := parse(file, src)
+	if errors.Is(err, yamlpos.ErrEmpty) {
+		// As an empty mapping, which is told every key it misses at its top.
+		root, err = parse(file, []byte("{}"))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +181,7 @@ func start(file string, src []byte, themed bool) (*head, error) {
 		return nil, err
 	}
 	d := &Data{
-		File: file, Template: "", Theme: DefaultTheme, Title: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
+		File: file, Template: "", Theme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
 		images: nil, diagrams: nil, scripts: nil, tried: nil, icons: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
@@ -232,6 +228,14 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 	if err != nil {
 		return err
 	}
+	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
+	s, err := t.decodeSchema(src)
+	if err != nil {
+		return err
+	}
+	if err = t.refuseShared(s); err != nil {
+		return err
+	}
 	err = validate(src, d, root)
 	var more yamlpos.Problems
 	switch {
@@ -242,10 +246,6 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 	}
 	if problems != nil {
 		return problems.Sorted()
-	}
-	s, err := t.decodeSchema(src)
-	if err != nil {
-		return err
 	}
 	d.schema = s
 	err = checkItems(checkImages(s, d, root, dir), checkDiagrams(s, d, root, t.icons), checkScripts(s, d, root))
@@ -265,12 +265,16 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 // none. With themed, a theme is given over the data's, and its theme: is not used.
 func (h *head) readShared(themed bool) {
 	d := h.d
-	to := map[string]*string{"template": &d.Template, "theme": &d.Theme, "title": &d.Title}
+	to := map[string]*string{"lang": &d.Lang, "template": &d.Template, "theme": &d.Theme, "title": &d.Title}
 	h.unnamed = true
 	for _, key := range shared {
 		h.where[key] = yamlpos.Of(h.root)
 		v, ok := d.Values[key]
 		if !ok {
+			// The page's <html lang> is the data's own, so that every way of drawing it gives the same page.
+			if key == "lang" {
+				h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_no_lang"))
+			}
 			continue
 		}
 		k, n, _ := yamlpos.Find(h.root, []string{key})
@@ -284,9 +288,12 @@ func (h *head) readShared(themed bool) {
 			// One that is not text is reported so.
 			h.unnamed = text && s == ""
 		}
-		if text {
+		switch {
+		case key == "lang" && text && !i18n.IsTag(s):
+			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_lang_invalid", s))
+		case text:
 			*to[key] = s
-		} else {
+		default:
 			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_not_text", key))
 		}
 	}
@@ -314,12 +321,9 @@ func parse(file string, src []byte) (ast.Node, error) {
 	return body, nil
 }
 
-// Render draws d, as read by Library.Read, as a page titled title in lang (a BCP 47 tag; "" is
-// DefaultLang), with the template the data was checked against.
-func (d *Data) Render(title, lang string) ([]byte, error) {
-	if lang == "" {
-		lang = DefaultLang
-	}
+// Render draws d, as read by Library.Read, as a page titled title in its lang:, with the template the
+// data was checked against.
+func (d *Data) Render(title string) ([]byte, error) {
 	t := d.tmpl
 	page, err := t.page()
 	if err != nil {
@@ -332,7 +336,7 @@ func (d *Data) Render(title, lang string) ([]byte, error) {
 	var b bytes.Buffer
 	err = page.Execute(&b, map[string]any{
 		"Title": title,
-		"Lang":  lang,
+		"Lang":  d.Lang,
 		"Data":  d.schema.prepare(d.Values, nil, d),
 		"Calc":  d.Calc,
 		"Theme": template.CSS(css), //nolint:gosec // G203: the template's own theme, not data
@@ -423,7 +427,14 @@ func schemaOf(t *Template) (*schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	return t.decodeSchema(b)
+	s, err := t.decodeSchema(b)
+	if err == nil {
+		err = t.refuseShared(s)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // decodeSchema reads b, the schema.json of t.
@@ -433,6 +444,24 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
 	}
 	return s, nil
+}
+
+// refuseShared refuses a schema that declares, or requires, a key floe reads from every data file itself:
+// floe takes it out of the data before the schema sees it, so the item would always be empty, and a
+// required one always missing.
+// LIMIT: the top of the schema only, not through $ref or allOf; look there if a schema comes to put its
+// items so.
+func (t *Template) refuseShared(s *schema) error {
+	var named []string
+	for _, key := range shared {
+		if _, ok := s.Properties[key]; ok || slices.Contains(s.Required, key) {
+			named = append(named, key)
+		}
+	}
+	if named != nil {
+		return usererr.New("tmpl_schema_shared", t.file("schema.json"), andList(named), andList(shared))
+	}
+	return nil
 }
 
 var errAfterSchema = errors.New("text after the schema")

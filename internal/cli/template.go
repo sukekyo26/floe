@@ -3,6 +3,7 @@ package cli
 import (
 	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -101,12 +102,28 @@ func (a *app) showTemplate(d *tmpl.Description) {
 	}
 	a.out("")
 	a.out("%s", a.cat.Msg("cli_template_items"))
-	a.showItems(d.Items, "  ")
+	items := append(a.sharedItems(d.Name), d.Items...)
+	slices.SortFunc(items, func(x, y tmpl.Item) int { return cmp.Compare(x.Name, y.Name) })
+	a.showItems(items, "  ")
 	if d.Example != nil {
 		a.out("")
 		a.out("%s", a.cat.Msg("cli_template_example"))
 		a.out("%s", strings.TrimRight(string(d.Example), "\n"))
 	}
+}
+
+// sharedItems are the keys floe reads from every data file of the template name itself, worded in the
+// reader's language.
+func (a *app) sharedItems(name string) []tmpl.Item {
+	items := tmpl.SharedItems(name)
+	for i, it := range items {
+		var args []any
+		if it.Name == "theme" {
+			args = []any{tmpl.DefaultTheme}
+		}
+		items[i].Description = a.cat.Msg("cli_template_shared_"+it.Name, args...)
+	}
+	return items
 }
 
 // showItems writes each item on a line, its name, what it takes and its description, and the items

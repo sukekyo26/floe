@@ -21,7 +21,7 @@ func render(t *testing.T, src string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := d.Render("A title & more", "ja")
+	b, err := d.Render("A title & more")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,12 +43,12 @@ func TestReportExample(t *testing.T) {
 	if d.Template != "report" || d.Theme != "default" || d.Title != "Moving the team wiki" {
 		t.Errorf("Read = %+v", d)
 	}
-	if d, err := builtins.Read("data.yaml", []byte("template: report\ntitle: ' T '\n"), "", ""); err != nil || d.Title != "T" {
+	if d, err := builtins.Read("data.yaml", []byte("template: report\ntitle: ' T '\nlang: en\n"), "", ""); err != nil || d.Title != "T" {
 		t.Errorf("Read of a title with spaces = %+v, %v", d, err)
 	}
 	got := render(t, string(src))
 	for _, want := range []string{
-		`<html lang="ja">`,
+		`<html lang="en">`,
 		`<title>A title &amp; more</title>`,
 		`<h1>A title &amp; more</h1>`,
 		`<p class="eyebrow">Plan · 2030-04</p>`,
@@ -75,7 +75,7 @@ func TestReportExample(t *testing.T) {
 func TestReportParts(t *testing.T) {
 	t.Parallel()
 
-	got := render(t, "template: report\nsections:\n  - parts:\n      - text: 'a <script>x()</script> <table> `</table>` **b**'\n  - heading: h\n")
+	got := render(t, "template: report\nsections:\n  - parts:\n      - text: 'a <script>x()</script> <table> `</table>` **b**'\n  - heading: h\nlang: en\n")
 	if strings.Contains(got, "<script>x()") || !strings.Contains(got, "<strong>b</strong>") || strings.Contains(got, `<div class="table-wrap">`) {
 		t.Errorf("Markdown with raw HTML = %s", got)
 	}
@@ -116,7 +116,7 @@ func TestReportTableCardsNote(t *testing.T) {
 		src += "            - [" + c.yaml + ", '9']\n"
 		want = append(want, "<tr><td>"+c.html+`</td><td class="num">9</td></tr>`)
 	}
-	src += "      - cards:\n          - title: A & B\n      - note:\n          text: n\n"
+	src += "      - cards:\n          - title: A & B\n      - note:\n          text: n\nlang: en\n"
 	want = append(want, `<div class="card"><h3>A &amp; B</h3></div>`, `<div class="note"><p>n</p>`)
 	got := render(t, src)
 	for _, w := range want {
@@ -136,7 +136,7 @@ func TestReportTableCardsNote(t *testing.T) {
 		"table: { columns: [{title: a}, {title: b}], rows: [[x, y], [x]] }": "data.yaml:4:59: sections[0].parts[0].table.rows: write as many cells in each row as there are columns",
 		"note: { text: '' }": "data.yaml:4:23: sections[0].parts[0].note.text: the length in characters must be at least 1",
 	} {
-		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\n"), "", "")
+		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\nlang: en\n"), "", "")
 		if err == nil || err.Error() != want {
 			t.Errorf("Read of %s = %v, want %s", src, err, want)
 		}
@@ -152,7 +152,7 @@ func TestReportScript(t *testing.T) {
 
 	got := render(t, "template: report\nsections:\n  - parts:\n      - script:\n          data: { a: '</script><b>&', n: 1.50 }\n"+
 		"          js: |\n            function (el, data) { el.textContent = data.a; }; // a comment\n"+
-		"      - script:\n          js: (el) => el.append('x');\n")
+		"      - script:\n          js: (el) => el.append('x');\nlang: en\n")
 	for _, want := range []string{
 		"<div></div><script>{const floeScript = function (el, data) { el.textContent = data.a; }; // a comment\n\n" +
 			";floeScript(document.currentScript.previousElementSibling, " +
@@ -172,7 +172,7 @@ func TestReportScript(t *testing.T) {
 		"script: { js: \"f('</SCRIPT>')\" }":         "data.yaml:4:23: sections[0].parts[0].script.js: js holds </SCRIPT, where the page would end its script; split it in a string, as '<' + '/SCRIPT'",
 		"script: { js: \"f('<!--', '</script>')\" }": "data.yaml:4:23: sections[0].parts[0].script.js: js holds <!--, where the page would end its script; split it in a string, as '<' + '!--'",
 	} {
-		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\n"), "", "")
+		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\nlang: en\n"), "", "")
 		if err == nil || err.Error() != want {
 			t.Errorf("Read of %s = %v, want %s", src, err, want)
 		}
@@ -184,29 +184,29 @@ func TestReadRefusals(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range []struct{ src, want string }{
-		{"title: t\n", "data.yaml:1:1: name the template at the top level, like template: report (templates: report)"},
-		{"", "data.yaml:1:1: name the template at the top level"},
-		{"template: ''\n", "data.yaml:1:11: name the template at the top level"},
+		{"title: t\nlang: en\n", "data.yaml:1:1: name the template at the top level, like template: report (templates: report)"},
+		{"", "data.yaml:1:1: name the language of the page at the top level"},
+		{"template: ''\nlang: en\n", "data.yaml:1:11: name the template at the top level"},
 		{"- template: report\n", "data.yaml:1:1: write the top level as keys and values"},
-		{"template: report\n---\ntitle: t\n", "data.yaml:2:1: a data file holds one YAML document"},
-		{"template: report\n...\nlead: x\n", "data.yaml:3:1: a data file holds one YAML document"},
-		{"template: report\ntemplate: report\n", `data.yaml:2:1: this is not valid YAML: mapping key "template" already defined`},
-		{"template: report\n---\ntitle: 'a\n", "data.yaml:3:8: this is not valid YAML: "},
-		{"template: report\nlead: &a x\n", "data.yaml:2:7: anchors, aliases, merge keys (<<) and tags are not supported"},
-		{"template: report\n<<: {lead: x}\n", "data.yaml:2:1: anchors, aliases, merge keys (<<) and tags are not supported"},
-		{"template:\n", "data.yaml:1:1: template must be text"},
-		{"template: report\n0x10: x\n", "data.yaml:2:1: a key is a name: write 0x10 as text, in quotes"},
-		{"template: report\nsections:\n  - ~: x\n", "data.yaml:3:5: a key is a name: write ~ as text, in quotes"},
-		{"template: report\nsections:\n  -\n", "data.yaml:3:3: sections[0]: write keys and values, not nothing"},
-		{"template: report\nsections: [~]\n", "data.yaml:2:12: sections[0]: write keys and values, not nothing"},
-		{"template: report\nlead: .inf\n", "data.yaml:2:7: .inf is not a value a data file can hold"},
-		{"template: report\nsections:\n  - heading: .NaN\n", "data.yaml:3:14: .NaN is not a value a data file can hold"},
+		{"template: report\n---\ntitle: t\nlang: en\n", "data.yaml:2:1: a data file holds one YAML document"},
+		{"template: report\n...\nlead: x\nlang: en\n", "data.yaml:3:1: a data file holds one YAML document"},
+		{"template: report\ntemplate: report\nlang: en\n", `data.yaml:2:1: this is not valid YAML: mapping key "template" already defined`},
+		{"template: report\n---\ntitle: 'a\nlang: en\n", "data.yaml:3:8: this is not valid YAML: "},
+		{"template: report\nlead: &a x\nlang: en\n", "data.yaml:2:7: anchors, aliases, merge keys (<<) and tags are not supported"},
+		{"template: report\n<<: {lead: x}\nlang: en\n", "data.yaml:2:1: anchors, aliases, merge keys (<<) and tags are not supported"},
+		{"template:\nlang: en\n", "data.yaml:1:1: template must be text"},
+		{"template: report\n0x10: x\nlang: en\n", "data.yaml:2:1: a key is a name: write 0x10 as text, in quotes"},
+		{"template: report\nsections:\n  - ~: x\nlang: en\n", "data.yaml:3:5: a key is a name: write ~ as text, in quotes"},
+		{"template: report\nsections:\n  -\nlang: en\n", "data.yaml:3:3: sections[0]: write keys and values, not nothing"},
+		{"template: report\nsections: [~]\nlang: en\n", "data.yaml:2:12: sections[0]: write keys and values, not nothing"},
+		{"template: report\nlead: .inf\nlang: en\n", "data.yaml:2:7: .inf is not a value a data file can hold"},
+		{"template: report\nsections:\n  - heading: .NaN\nlang: en\n", "data.yaml:3:14: .NaN is not a value a data file can hold"},
 		// The shared keys and the schema are reported together.
-		{"template: report\ntheme: print\nleed: x\n", "data.yaml:2:8: template report has no theme \"print\"; use default\ndata.yaml:3:1: leed is not an item"},
-		{"template: deck\n", `data.yaml:1:11: unknown template "deck"; use report`},
-		{"template: report\ntheme: print\n", `data.yaml:2:8: template report has no theme "print"; use default`},
-		{"template: report\ntitle: [a]\n", "data.yaml:2:8: title must be text"},
-		{"template: report\ntitle: 'a\n", "data.yaml:2:8: this is not valid YAML: "},
+		{"template: report\ntheme: print\nleed: x\nlang: en\n", "data.yaml:2:8: template report has no theme \"print\"; use default\ndata.yaml:3:1: leed is not an item"},
+		{"template: deck\nlang: en\n", `data.yaml:1:11: unknown template "deck"; use report`},
+		{"template: report\ntheme: print\nlang: en\n", `data.yaml:2:8: template report has no theme "print"; use default`},
+		{"template: report\ntitle: [a]\nlang: en\n", "data.yaml:2:8: title must be text"},
+		{"template: report\ntitle: 'a\nlang: en\n", "data.yaml:2:8: this is not valid YAML: "},
 	} {
 		_, err := builtins.Read("data.yaml", []byte(c.src), "", "")
 		var one *yamlpos.Error
@@ -215,20 +215,24 @@ func TestReadRefusals(t *testing.T) {
 			t.Errorf("Read %q = %v, want %s", c.src, err, c.want)
 		}
 	}
+	// An empty file misses both keys every data file needs.
+	if _, err := builtins.Read("data.yaml", nil, "", ""); err == nil || !strings.Contains(err.Error(), "\ndata.yaml:1:1: name the template at the top level") {
+		t.Errorf("Read of an empty file = %v", err)
+	}
 	// An explicit key is found by its text after ?.
-	if _, err := builtins.Read("data.yaml", []byte("template: report\n? lead\n: 3\n"), "", ""); err == nil || err.Error() != "data.yaml:3:3: lead: write text, not a number" {
+	if _, err := builtins.Read("data.yaml", []byte("template: report\n? lead\n: 3\nlang: en\n"), "", ""); err == nil || err.Error() != "data.yaml:3:3: lead: write text, not a number" {
 		t.Errorf("Read of an explicit key = %v", err)
 	}
-	if _, err := builtins.Read("data.yaml", []byte("%YAML 1.2\n---\ntemplate: report\n"), "", ""); err != nil {
+	if _, err := builtins.Read("data.yaml", []byte("%YAML 1.2\n---\ntemplate: report\nlang: en\n"), "", ""); err != nil {
 		t.Errorf("Read of a document after a %%YAML directive = %v", err)
 	}
 	// Data that passed its schema draws; a template that does not fit it is refused while drawing.
-	d, err := builtins.Read("data.yaml", []byte("template: report\n"), "", "")
+	d, err := builtins.Read("data.yaml", []byte("template: report\nlang: en\n"), "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	d.Values = map[string]any{"sections": "no"}
-	if _, err := d.Render("t", "en"); err == nil || !strings.HasPrefix(err.Error(), "data.yaml does not fit the template report: ") {
+	if _, err := d.Render("t"); err == nil || !strings.HasPrefix(err.Error(), "data.yaml does not fit the template report: ") {
 		t.Errorf("Render of data of the wrong shape = %v", err)
 	}
 }
@@ -249,6 +253,7 @@ sections:
         html: <b>b</b>
       - {}
   - parts: nope
+lang: en
 `
 	_, err := builtins.Read("bad.yaml", []byte(src), "", "")
 	var p yamlpos.Problems
@@ -256,7 +261,7 @@ sections:
 		t.Fatalf("Read = %v, want problems", err)
 	}
 	want := []string{
-		"bad.yaml:3:1: leed is not an item of the template report (a typo?); use eyebrow, lead, sections, template, theme, title",
+		"bad.yaml:3:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title",
 		"bad.yaml:5:14: sections[0].heading: write text, not a number",
 		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use cards, diagram, html, note, script, table, text",
 		"bad.yaml:8:9: sections[0].parts[1]: the number of keys must be at most 1",
@@ -304,14 +309,32 @@ func TestBuiltins(t *testing.T) {
 func TestUnnamedBesideOtherMistakes(t *testing.T) {
 	t.Parallel()
 
-	_, err := tmpl.NewLibrary("", "").Read("d.yaml", []byte("title: 3\ntheme: [x]\n"), "", "")
+	_, err := tmpl.NewLibrary("", "").Read("d.yaml", []byte("title: 3\ntheme: [x]\nlang: ja_JP\n"), "", "")
 	want := "d.yaml:1:1: name the template at the top level, like template: report (templates: report)\n" +
-		"d.yaml:1:8: title must be text\nd.yaml:2:8: theme must be text"
+		"d.yaml:1:8: title must be text\nd.yaml:2:8: theme must be text\n" +
+		`d.yaml:3:7: invalid language "ja_JP": write lang: as a BCP 47 tag such as en, ja or pt-BR`
 	if err == nil || err.Error() != want {
 		t.Errorf("Read = %v\nwant %s", err, want)
 	}
-	_, err = tmpl.NewLibrary("", "").Read("d.yaml", []byte("template: report\ntheme: [x]\n"), "", "")
+	_, err = tmpl.NewLibrary("", "").Read("d.yaml", []byte("template: report\ntheme: [x]\nlang: en\n"), "", "")
 	if want = "d.yaml:2:8: theme must be text"; err == nil || err.Error() != want {
 		t.Errorf("Read of a theme not text = %v\nwant %s", err, want)
+	}
+	// The language is the data's own: one left out or not text is a mistake.
+	for src, want := range map[string]string{
+		"template: report\n":             "d.yaml:1:1: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)",
+		"template: report\nlang: [ja]\n": "d.yaml:2:7: lang must be text",
+	} {
+		if _, err := tmpl.NewLibrary("", "").Read("d.yaml", []byte(src), "", ""); err == nil || err.Error() != want {
+			t.Errorf("Read %q = %v\nwant %s", src, err, want)
+		}
+	}
+	// It goes into <html lang> as it is, so only a BCP 47 tag passes.
+	for _, bad := range []string{"", "x", "ja_JP", "en-", `ja"><script>`} {
+		src := "template: report\nlang: '" + bad + "'\n"
+		want := `d.yaml:2:7: invalid language "` + bad + `": write lang: as a BCP 47 tag such as en, ja or pt-BR`
+		if _, err := tmpl.NewLibrary("", "").Read("d.yaml", []byte(src), "", ""); err == nil || err.Error() != want {
+			t.Errorf("Read %q = %v\nwant %s", src, err, want)
+		}
 	}
 }

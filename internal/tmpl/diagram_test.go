@@ -11,6 +11,7 @@ import (
 )
 
 const twoDiagrams = `template: report
+lang: en
 sections:
   - parts:
       - diagram:
@@ -36,9 +37,9 @@ func TestDiagramMistakes(t *testing.T) {
 	src := strings.Replace(strings.Replace(twoDiagrams, "%s", "{ cx: 0, cy: 0 }", 1), "%s", "a", 1) +
 		"      - diagram:\n          id: b\n          width: 100\n          title: The third\n          parts: []\n"
 	_, err := builtins.Read("data.yaml", []byte(src), "", "")
-	want := "data.yaml:10:15: dot at 0,0 sticks out of the 100x50 canvas\n" +
-		`data.yaml:12:11: diagram id "a" is already used in data.yaml:5; give each diagram its own id` + "\n" +
-		"data.yaml:18:11: diagram: give height"
+	want := "data.yaml:11:15: dot at 0,0 sticks out of the 100x50 canvas\n" +
+		`data.yaml:13:11: diagram id "a" is already used in data.yaml:6; give each diagram its own id` + "\n" +
+		"data.yaml:19:11: diagram: give height"
 	if err == nil || err.Error() != want {
 		t.Errorf("Read = %v\nwant %s", err, want)
 	}
@@ -77,7 +78,7 @@ func TestDiagramIcons(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	page, err := d.Render("t", "")
+	page, err := d.Render("t")
 	if err != nil {
 		t.Fatal(err)
 	}

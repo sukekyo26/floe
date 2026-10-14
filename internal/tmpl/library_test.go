@@ -38,7 +38,7 @@ func draw(l *tmpl.Library, src string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	b, err := d.Render("t", "en")
+	b, err := d.Render("t")
 	return string(b), err
 }
 
@@ -62,19 +62,19 @@ func TestOwnTemplates(t *testing.T) {
 		t.Errorf("Names = %v, %v", got, err)
 	}
 	for _, name := range []string{"report", "memo"} {
-		if page, err := draw(l, "template: "+name+"\n"); err != nil || !strings.Contains(page, "<i>own</i>") {
+		if page, err := draw(l, "template: "+name+"\nlang: en\n"); err != nil || !strings.Contains(page, "<i>own</i>") {
 			t.Errorf("a page of %s = %v, drawn by the built-in one", name, err)
 		}
 	}
-	if page, err := draw(tmpl.NewLibrary("", ""), "template: report\n"); err != nil || strings.Contains(page, "<i>own</i>") {
+	if page, err := draw(tmpl.NewLibrary("", ""), "template: report\nlang: en\n"); err != nil || strings.Contains(page, "<i>own</i>") {
 		t.Errorf("a page of the built-in report = %v", err)
 	}
 	// A file where the directory of templates would be holds none.
-	if _, err := draw(tmpl.NewLibrary(filepath.Join(dir, "notes.txt"), ""), "template: report\n"); err != nil {
+	if _, err := draw(tmpl.NewLibrary(filepath.Join(dir, "notes.txt"), ""), "template: report\nlang: en\n"); err != nil {
 		t.Errorf("a page of report under a file in the way = %v", err)
 	}
 	for _, name := range []string{"../report", ".installing", "notes.txt", "a/b", "Report", "memo/"} {
-		if _, err := draw(l, "template: "+name+"\n"); err == nil || !strings.Contains(err.Error(), "unknown template") {
+		if _, err := draw(l, "template: "+name+"\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "unknown template") {
 			t.Errorf("template %s = %v, want unknown", name, err)
 		}
 	}
@@ -89,7 +89,7 @@ func TestBrokenOwnTemplates(t *testing.T) {
 	if err := os.Remove(filepath.Join(own(t, dir, "report"), "page.html")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, ""), "template: report\n"); err == nil || !strings.Contains(err.Error(), "page.html") {
+	if _, err := draw(tmpl.NewLibrary(dir, ""), "template: report\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "page.html") {
 		t.Errorf("a template without page.html = %v", err)
 	}
 
@@ -97,7 +97,7 @@ func TestBrokenOwnTemplates(t *testing.T) {
 	if err := os.Symlink(filepath.Join(dangling, "gone"), filepath.Join(dangling, "report")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dangling, ""), "template: report\n"); err == nil || !strings.Contains(err.Error(), "your own template report (") {
+	if _, err := draw(tmpl.NewLibrary(dangling, ""), "template: report\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "your own template report (") {
 		t.Errorf("a symlink that leads nowhere = %v", err)
 	}
 
@@ -113,14 +113,14 @@ func TestBrokenOwnTemplates(t *testing.T) {
 	if err := os.Symlink(outside, theme); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(leaky, ""), "template: report\n"); err == nil || !strings.Contains(err.Error(), "themes/default.css") {
+	if _, err := draw(tmpl.NewLibrary(leaky, ""), "template: report\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "themes/default.css") {
 		t.Errorf("a theme that leads out of the template = %v", err)
 	}
 
 	// A template of one's own named in another case is refused, not passed over for the built-in one.
 	cased := t.TempDir()
 	own(t, cased, "Report")
-	if _, err := draw(tmpl.NewLibrary(cased, ""), "template: report\n"); err == nil || !strings.Contains(err.Error(), "is not template report: template names are lower case") {
+	if _, err := draw(tmpl.NewLibrary(cased, ""), "template: report\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "is not template report: template names are lower case") {
 		t.Errorf("a template of one's own named Report = %v", err)
 	}
 
@@ -134,7 +134,7 @@ func TestBrokenOwnTemplates(t *testing.T) {
 		if err := os.Symlink("gone.yaml", path); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := draw(tmpl.NewLibrary(dir, ""), "template: report\n"); err == nil || !strings.Contains(err.Error(), file) {
+		if _, err := draw(tmpl.NewLibrary(dir, ""), "template: report\nlang: en\n"); err == nil || !strings.Contains(err.Error(), file) {
 			t.Errorf("a %s that leads nowhere = %v", file, err)
 		}
 	}
@@ -150,7 +150,7 @@ func TestBrokenOwnTemplates(t *testing.T) {
 				t.Error(err)
 			}
 		})
-		for _, src := range []string{"template: report\n", "title: no template\n"} {
+		for _, src := range []string{"template: report\nlang: en\n", "title: no template\n"} {
 			if _, err := draw(tmpl.NewLibrary(locked, ""), src); err == nil || !strings.Contains(err.Error(), "the directory of your own templates") {
 				t.Errorf("%q under a directory of templates that cannot be read = %v", src, err)
 			}
@@ -183,7 +183,7 @@ func TestTemplateVersion(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(at, "template.yaml"), []byte(tt.yaml), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		_, err := draw(tmpl.NewLibrary(dir, ""), "template: report\nleed: a typo\n")
+		_, err := draw(tmpl.NewLibrary(dir, ""), "template: report\nleed: a typo\nlang: en\n")
 		var ue *usererr.Error
 		switch {
 		case tt.want == "" && (err == nil || !strings.Contains(err.Error(), "leed is not an item")):

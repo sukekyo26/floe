@@ -171,7 +171,7 @@ func (e *env) base() string {
 func (e *env) page(t *testing.T, rel, title string) string {
 	t.Helper()
 
-	src := "template: report\n"
+	src := "template: report\nlang: en\n"
 	if title != "" {
 		src += "title: " + title + "\n"
 	}
@@ -397,12 +397,14 @@ func TestPublish(t *testing.T) {
 		t.Errorf("a blank --title changed the list from %q to %q", before, after)
 	}
 	want(t, "an invalid slug", e.run(t, "repo", "publish", demo, "--slug", "../x"), 1, "", `invalid slug "../x"`)
-	want(t, "an invalid language", e.run(t, "repo", "publish", demo, "--lang", "ja_JP"), 2, "",
-		`floe: invalid language "ja_JP": give --lang a BCP 47 tag such as en, ja or pt-BR`)
-	frag := e.page(t, "frag.yaml", "こんにちは")
-	want(t, "--lang", e.run(t, "repo", "publish", frag, "--lang", "ja"), 0, e.base()+"/a/frag/\n", "")
+	// The language is the data's lang:.
+	bad := e.write(t, "bad.yaml", "template: report\nlang: ja_JP\n")
+	want(t, "an invalid language", e.run(t, "repo", "publish", bad), 1, "",
+		`bad.yaml:2:7: invalid language "ja_JP": write lang: as a BCP 47 tag such as en, ja or pt-BR`)
+	frag := e.write(t, "frag.yaml", "template: report\nlang: ja\ntitle: こんにちは\n")
+	want(t, "lang: ja", e.run(t, "repo", "publish", frag), 0, e.base()+"/a/frag/\n", "")
 	if b, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], "frag", "index.html")); err != nil || !bytes.Contains(b, []byte(`<html lang="ja">`)) {
-		t.Errorf("publish --lang ja did not draw the page in Japanese: %v", err)
+		t.Errorf("publish of lang: ja did not draw the page in Japanese: %v", err)
 	}
 	want(t, "a missing file", e.run(t, "repo", "publish", "nope.yaml"), 1, "", "floe: cannot read nope.yaml")
 	want(t, "another project", e.run(t, "other", "publish", demo), 1, "",
@@ -410,8 +412,6 @@ func TestPublish(t *testing.T) {
 
 	// A link: the same slug for another file is refused unless --force.
 	site := e.write(t, "site/index.html", "<h1>Linked</h1>")
-	want(t, "--lang with --link", e.run(t, "", "publish", site, "--link", "--lang", "ja"), 1, "",
-		"floe: --lang is the language of a page drawn from a data file: a linked file is shown as it is")
 	want(t, "publish --link", e.run(t, "", "publish", site, "--link"), 0, e.base()+"/a/site/\n", "")
 	want(t, "re-register", e.run(t, "", "publish", site, "--link"), 0, e.base()+"/a/site/\n", `updated "site" (last published `)
 	sub := e.write(t, "site/sub/p.html", "<title>Sub</title>")
@@ -556,7 +556,7 @@ func TestPublishDataFile(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	plan := e.write(t, "plan.yaml", "template: report\ntitle: The plan\nsections:\n  - parts:\n      - text: Do it.\n")
+	plan := e.write(t, "plan.yaml", "template: report\ntitle: The plan\nsections:\n  - parts:\n      - text: Do it.\nlang: en\n")
 	want(t, "publish a data file", e.run(t, "", "publish", plan), 0, e.base()+"/a/plan/\n", "")
 	// Waiting for the browser to open the page also keeps it from writing after the test.
 	if got := e.opened(t); got != e.base()+"/a/plan/\n" {
@@ -580,12 +580,12 @@ func TestCheck(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	e.write(t, "ok.yaml", "template: report\ntitle: OK\n")
-	e.write(t, "bad.yaml", "template: report\nleed: x\n")
-	e.write(t, "bad.yml", "template: report\ntheme: print\n")
+	e.write(t, "ok.yaml", "template: report\ntitle: OK\nlang: en\n")
+	e.write(t, "bad.yaml", "template: report\nleed: x\nlang: en\n")
+	e.write(t, "bad.yml", "template: report\ntheme: print\nlang: en\n")
 	want(t, "check a right file", e.run(t, "", "check", "ok.yaml"), 0, "", "")
 	want(t, "check files with mistakes", e.run(t, "", "check", "ok.yaml", "bad.yaml", "bad.yml"), 1, "",
-		"bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lead, sections, template, theme, title\n"+
+		"bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n"+
 			`bad.yml:2:8: template report has no theme "print"; use default`)
 	// Mistakes at lines and columns go out as they are, for editors and CI to read.
 	if r := e.run(t, "", "check", "bad.yaml"); !strings.HasPrefix(r.stderr, "bad.yaml:2:1: ") {

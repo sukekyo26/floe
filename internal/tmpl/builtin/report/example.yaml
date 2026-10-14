@@ -2,6 +2,7 @@
 # numbers in quotes, or pills; html goes in as it is; a diagram is a spec as floe diagram render takes
 # it; a script is a function the page calls with an element to draw in and its data.
 template: report
+lang: en
 title: Moving the team wiki
 eyebrow: Plan · 2030-04
 lead: The wiki moves to the new host in two weekends, with the old one read-only in between.

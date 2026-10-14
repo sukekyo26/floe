@@ -105,6 +105,10 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil, diagrams: false}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
+	// Told beside the other mistakes of the files, not instead of them.
+	if err = t.refuseShared(s); err != nil {
+		mistakes = append(mistakes, err)
+	}
 	if lint.diagrams {
 		more, themeErr := t.checkThemeVariables()
 		warnings = append(warnings, more...)
@@ -490,9 +494,6 @@ func (t *Template) checkExample() error {
 		return err
 	}
 	h, err := start(file, src, false)
-	if errors.Is(err, yamlpos.ErrEmpty) {
-		return yamlpos.New(file, yamlpos.Pos{Line: 1, Column: 1}, "tmpl_no_template", t.Name)
-	}
 	if err != nil {
 		return err
 	}
@@ -509,7 +510,7 @@ func (t *Template) checkExample() error {
 	if err = t.check(d, h.root, t.Dir, "", h.where["theme"], problems); err != nil {
 		return err
 	}
-	_, err = d.Render(cmp.Or(d.Title, file), "")
+	_, err = d.Render(cmp.Or(d.Title, file))
 	return err
 }
 

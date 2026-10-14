@@ -44,8 +44,8 @@ floe: 1.2
 | 名前 | 中身 |
 |---|---|
 | `.Title` | ページのタイトル。`--title`、管理画面で固定したタイトル、データファイルの `title:`、slug の順に決まる |
-| `.Lang` | ページの言語（`--lang`。既定は `en`） |
-| `.Data` | データファイルの項目（`template`・`theme`・`title` を除く）。スキーマで宣言していてデータに無い項目は nil なので、`{{with .Data.lead}}` と書ける。スキーマで宣言していない名前は描画を止める。`"format": "html"` の項目は HTML としてそのまま、`"format": "diagram"` の項目はその SVG として、`"format": "script"` の項目は置き場所の要素と関数の呼び出しとして入る |
+| `.Lang` | ページの言語（データファイルの `lang:`） |
+| `.Data` | データファイルの項目（floe が自分で読む `lang`・`template`・`theme`・`title` を除く。これらは `.Lang`・`.Title`・`.Theme` で使う。どれかを宣言する、または必須に挙げるスキーマは、どこで使っても断る）。スキーマで宣言していてデータに無い項目は nil なので、`{{with .Data.lead}}` と書ける。スキーマで宣言していない名前は描画を止める。`"format": "html"` の項目は HTML としてそのまま、`"format": "diagram"` の項目はその SVG として、`"format": "script"` の項目は置き場所の要素と関数の呼び出しとして入る |
 | `.Calc` | `computed.yaml` の値（名前で引く） |
 | `.Theme` | テーマの CSS。`<style>{{.Theme}}</style>` のように使う |
 | `markdown` | Markdown の文字列を HTML にする（`{{markdown .text}}`）。中の生の HTML は除き、表は `<div class="table-wrap">` で包む |

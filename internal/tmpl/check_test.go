@@ -29,7 +29,7 @@ func TestDrawEveryStage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := d.Render("t", "en")
+	b, err := d.Render("t")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			name:  "example",
-			files: map[string]string{"example.yaml": "template: report\nfiles:\n  - name: a\n"},
+			files: map[string]string{"example.yaml": "template: report\nfiles:\n  - name: a\nlang: en\n"},
 			want: []string{
 				"sizes/example.yaml:1:11: example.yaml names the template report; name it sizes",
 				"sizes/example.yaml:3:5: files[0].bytes is required but missing",
@@ -174,7 +174,7 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			name:  "example of another theme",
-			files: map[string]string{"example.yaml": "template: report\ntheme: print\nfiles: []\n"},
+			files: map[string]string{"example.yaml": "template: report\ntheme: print\nfiles: []\nlang: en\n"},
 			want: []string{
 				"sizes/example.yaml:1:11: example.yaml names the template report; name it sizes",
 				`sizes/example.yaml:2:8: template sizes has no theme "print"`,
@@ -182,7 +182,7 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			name:  "example without a template",
-			files: map[string]string{"example.yaml": "title: 3\nfiles: []\n"},
+			files: map[string]string{"example.yaml": "title: 3\nfiles: []\nlang: en\n"},
 			want: []string{
 				"sizes/example.yaml:1:1: name the template at the top level, like template: report (templates: sizes)",
 				"sizes/example.yaml:1:8: title must be text",
@@ -237,6 +237,29 @@ func TestCheckMistakes(t *testing.T) {
 			files: map[string]string{"schema.json": `"chart":|"plan": { "type": "object", "format": "diagram", ` +
 				`"properties": { "logo": { "type": "string", "format": "image" } } },` + "\n    " + `"chart":`},
 			want: []string{"sizes/schema.json: #/properties/plan/properties/logo: the format image marks an item to draw"},
+		},
+		{
+			name:  "an item floe reads itself",
+			files: map[string]string{"schema.json": `"chart":|"lang": { "type": "string" },` + "\n    " + `"chart":`},
+			want: []string{
+				"sizes/schema.json declares or requires lang, which floe reads from every data file itself (lang, template, theme, title): give the items of the schema other names",
+			},
+		},
+		{
+			name: "an item floe reads itself beside another mistake",
+			files: map[string]string{
+				"schema.json": `"chart":|"title": { "type": "string" },` + "\n    " + `"chart":`, "page.html": "{{if}}",
+			},
+			want: []string{"sizes/schema.json declares or requires title, which floe reads", "parse the template sizes: "},
+		},
+		{
+			name:  "an empty example",
+			files: map[string]string{"example.yaml": ""},
+			want: []string{
+				"sizes/example.yaml:1:1: name the language of the page at the top level",
+				"sizes/example.yaml:1:1: name the template at the top level, like template: report (templates: sizes)",
+				"sizes/example.yaml:1:1: files is required but missing",
+			},
 		},
 		{
 			name:  "newer floe",
@@ -330,7 +353,7 @@ func TestRenderBadAsset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = d.Render("t", "en")
+	_, err = d.Render("t")
 	var e *usererr.Error
 	if !errors.As(err, &e) || e.Key != "tmpl_item" {
 		t.Fatalf("Render = %v", err)
@@ -371,6 +394,32 @@ func TestCheckFile(t *testing.T) {
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_check_not_dir" {
 		t.Errorf("Check of a file = %v", mistakes)
 	}
+}
+
+// A schema that declares a key floe reads from every data file itself, as an item or only as required,
+// is refused wherever the template is read: its item would always be empty, or always missing.
+func TestSchemaOfSharedKeys(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{"schema.json": `"chart":|"title": { "type": "string" },` + "\n    " + `"chart":`})
+	if err := os.WriteFile(filepath.Join(dir, "schema.json"), []byte(strings.Replace(mustRead(t, filepath.Join(dir, "schema.json")),
+		`"required": ["files"]`, `"required": ["files", "lang"]`, 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), "", "")
+	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json declares or requires lang, title, which floe reads") {
+		t.Errorf("Read with a template whose schema declares lang and title = %v", err)
+	}
+}
+
+func mustRead(t *testing.T, file string) string {
+	t.Helper()
+
+	b, err := os.ReadFile(file) //nolint:gosec // G304: the test's own file
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
 }
 
 // sizes copies testdata/sizes into a directory sizes, with files written over: a whole file, or old|new

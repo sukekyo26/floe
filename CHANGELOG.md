@@ -51,8 +51,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   against the template's schema first, and every mistake is reported at its
   line and column (`file:line:column`). The scripts of a page drawn from a
   data file cannot send what it holds out: its CSP blocks `fetch`, XHR,
-  images from elsewhere and forms, in its download too. A page is in English
-  unless `--lang` names another language. It starts the server in the
+  images from elsewhere and forms, in its download too. A page is in the
+  language its data file names (`lang:`, a BCP 47 tag such as `en` or `ja`),
+  which every data file holds. It starts the server in the
   background when needed and opens a new page in the browser. An HTML file is
   not stored: `--link` registers it in place and shows it as it is, served
   with the files under its directory. A data file linked with `--link` is
@@ -78,8 +79,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   of the template's `assets/` with `asset`. An image is a png, jpeg, gif,
   webp or svg file up to 1 MiB, checked by its name and by what it holds,
   and a mistake in one of the data is reported at its line and column.
-  `template.yaml` names the floe a template needs. See
-  [docs/templates.md](docs/templates.md).
+  `template.yaml` names the floe a template needs. A schema may not declare
+  or require `lang`, `template`, `theme` or `title`, which floe reads from
+  every data file itself. See [docs/templates.md](docs/templates.md).
 - Add `floe template list`, which lists the templates with where they are,
   their themes and the floe they need; `floe template show <name>`, which
   prints the items a data file of a template may hold and its example, to
