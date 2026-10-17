@@ -60,7 +60,7 @@ floe: 1.2
 
 データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。キーの打ち間違いを断るため、`"additionalProperties": false` を書きます。`template`・`theme`・`title` は floe が読むので、宣言しません。
 
-`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）か、文字列の読み方を決める floe の format（`html`・`image`・`markdown`）を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。floe の format は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。型は `"type": "string"` だけを宣言します。図とスクリプトは format ではなく[部品](#部品)です。
+`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）か、文字列の読み方を決める floe の format（`html`・`image`・`markdown`）を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。floe の format は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。型は `"type": "string"` だけを宣言します。図とスクリプトは format ではなく[部品](#部品)です。`"format": "diagram"`・`"format": "script"` と書いたスキーマは、どこで使っても断ります。
 
 `"format": "markdown"` の項目には Markdown を書きます。`{{.Data.text}}` が、`markdown` と同じく HTML に描きます。すでに HTML なので、`{{markdown .Data.text}}` と書くと描画が止まります。
 
