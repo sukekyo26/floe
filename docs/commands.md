@@ -88,12 +88,12 @@ sections:
 - `lang:` is the page's language (`<html lang>`), a BCP 47 tag (`en`, `ja`, `pt-BR`). Every data file names one.
 - `theme:` picks a theme of the template (`default`).
 - An image the template takes (an item of `"format": "image"`) is a path under the data file's directory; the image goes into the page.
-- A diagram (a `diagram` part of `report`, or an item of `"format": "diagram"`) is a spec written in place, with the parts and checks of [`floe diagram render`](#floe-diagram-render-specyaml), its mistakes at the data file's lines and columns. The ids of the diagrams of a page must differ. Its icons come from `FLOE_ICONS_DIR`; for a linked data file, from that of the server.
+- A diagram (a `diagram` part of `report`, or an item of `"format": "diagram"`) is a spec written in place, with the parts and checks of [`floe diagram render`](#floe-diagram-render-specyaml), its mistakes at the data file's lines and columns. The ids of the diagrams of a page must differ. Its icons come from `FLOE_ICONS_DIR`; for a published page, from that of the server, which draws it.
 - A script (a `script` part of `report`, or an item of `"format": "script"`) is `js`, a function the page calls with an empty element in its place and `data`. A mapping in `data` comes in the order of its keys' names (write a list where the order matters), and the function runs where it stands, before the rest of the page is read. A `js` holding `</script` or `<!--` is refused; a mistake inside the function shows in the browser.
 - A template of your own, in `FLOE_TEMPLATES_DIR`, takes the place of a built-in one of its name. [templates.md](templates.md) tells how to write one.
 - The data is checked against the template's schema and its checks (`checks.yaml`) before the page is drawn. Every mistake is printed at once as `file:line:column: message`, and nothing is published until all are fixed (exit code 1): a missing or unknown template, a missing `lang:` or one that is not a BCP 47 tag, an item the template does not have (a typo), a value of the wrong type, a row of a `table` with more or fewer cells than its columns, and the like.
 - A data file is one YAML document of keys and values: one with `---` between documents, or with anchors, aliases or tags, is refused.
-- The page is drawn once, when it is published: changing the data file later changes nothing until it is published again. A data file linked with `--link` is drawn each time it is opened instead.
+- The page is drawn each time it is opened, from the copy of the data file kept when it was published: changing the data file changes nothing until it is published again, but changing its template does. A data file linked with `--link` is drawn from its place instead.
 
 ### Projects and overwriting
 
@@ -304,8 +304,8 @@ List the fetched icons whose name contains every word (case does not matter), on
 |---|---|
 | `FLOE_DIR` | Where pages are stored. Defaults to `$XDG_DATA_HOME/floe`, else `~/.local/share/floe`. |
 | `FLOE_PORT` | The port (default `7325`). A decimal number from 1 to 65535. |
-| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. A relative one is under the working directory. The diagrams of a linked data file show the icons of the server, which takes the one of the publish that started it. |
-| `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. A linked data file is drawn with the one of the publish that linked it, a relative one under its working directory. |
+| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. A relative one is under the working directory. The diagrams of a published page show the icons of the server, which takes the one of the publish that started it. |
+| `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. A published page is drawn with the one of the publish that stored or linked it, a relative one under its working directory. |
 | `FLOE_LANG` | The language of messages (`en`, `ja`). Falls back to `LC_ALL`, `LC_MESSAGES`, then `LANG`; a language without a catalog is skipped. English is the default. |
 | `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |
 
