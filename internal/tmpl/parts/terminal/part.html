@@ -1,0 +1,3 @@
+<pre class="floe-terminal {{or .shell "sh"}}">
+{{- range .steps}}<span class="run">{{.run}}</span>{{with .out}}<span class="out">{{.}}</span>{{end}}{{end -}}
+</pre>

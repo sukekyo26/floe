@@ -8,6 +8,7 @@
   --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
   /* The width of the whole body, and the shorter width that keeps prose readable */
   --page-width: 96rem; --text-width: 56rem;
+  --terminal-bg: #1b2120; --terminal-fg: #e2e9e7; --terminal-prompt: #63b5be;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -44,7 +45,7 @@ pre {
   margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.84rem; line-height: 1.65;
 }
-pre code { background: none; padding: 0; }
+pre code { font-size: inherit; background: none; padding: 0; }
 .stats { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; }
 .stat { display: grid; }
 .stat b { font-family: var(--mono); font-size: 1.6rem; font-variant-numeric: tabular-nums; }

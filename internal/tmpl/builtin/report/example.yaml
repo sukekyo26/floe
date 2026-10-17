@@ -1,4 +1,5 @@
-# A report: a heading and parts per section. Text is Markdown; a table's cells are lines of Markdown,
+# A report: a heading and parts per section. Text is Markdown; code and commands go in code and
+# terminal, which draws the prompt; a table's cells are lines of Markdown,
 # numbers in quotes, or pills; html goes in as it is; a diagram is a spec as floe diagram render takes
 # it; a script is a function the page calls with an element to draw in and its data.
 template: report
@@ -24,6 +25,17 @@ sections:
             - box: { x: 440, y: 32, w: 184, h: 56, tone: good, rows: [New host, open on Monday] }
             - edge: { d: "M200,60 H228" }
             - edge: { d: "M412,60 H440" }
+      - terminal:
+          steps:
+            - run: wiki export --all --out pages/
+              out: 1840 pages written to pages/
+            - run: linkcheck pages/
+      - code:
+          file: old-wiki.conf
+          text: |
+            # Read-only from Friday evening
+            read_only = true
+            banner = "This wiki has moved to the new host."
   - heading: Who does what
     parts:
       - cards:

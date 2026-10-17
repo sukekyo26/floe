@@ -150,7 +150,7 @@ func TestCheckParts(t *testing.T) {
 
 	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table"} {
 		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
-		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of cards, diagram, note, script, table"
+		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of cards, code, diagram, note, script, table, terminal"
 		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 			t.Errorf("Check of %s = %v", ref, mistakes)
 		}
@@ -252,4 +252,58 @@ func TestGoPartsAndMarkdown(t *testing.T) {
 	if i < 0 || d.Items[i].Part != "diagram" || !strings.HasPrefix(d.Items[i].Description, "A diagram: a spec") {
 		t.Errorf("the items = %+v", d.Items)
 	}
+}
+
+// Code goes in as it is, under its file, else its language; a terminal draws its prompt by the shell's
+// class, with a command's later lines and its output apart.
+func TestCodeAndTerminal(t *testing.T) {
+	t.Parallel()
+
+	page := render(t, "template: report\nlang: en\nsections:\n  - parts:\n"+
+		"      - code: { file: a.go, lang: go, text: \"if a < b {\\n\\treturn\\n}\\n\" }\n"+
+		"      - code: { lang: sh, text: x }\n"+
+		"      - code: { text: y }\n"+
+		"      - terminal: { steps: [{ run: \"make \\\\\\n  all\", out: done }, { run: ls }] }\n"+
+		"      - terminal: { shell: powershell, steps: [{ run: dir }] }\n")
+	for _, want := range []string{
+		"<figure class=\"floe-code\"><figcaption>a.go</figcaption><pre><code>if a &lt; b {\n\treturn\n}\n</code></pre></figure>",
+		`<figure class="floe-code"><figcaption>sh</figcaption><pre><code>x</code></pre></figure>`,
+		`<figure class="floe-code"><pre><code>y</code></pre></figure>`,
+		"<pre class=\"floe-terminal sh\"><span class=\"run\">make \\\n  all</span><span class=\"out\">done</span><span class=\"run\">ls</span></pre>",
+		`<pre class="floe-terminal powershell"><span class="run">dir</span></pre>`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the page lacks %s:\n%s", want, page)
+		}
+	}
+	if strings.Count(page, ".floe-code {") != 1 || strings.Count(page, ".floe-terminal {") != 1 {
+		t.Errorf("the parts' styles, once each:\n%s", page)
+	}
+
+	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
+		"      - code: { lang: go }\n"+
+		"      - terminal: { shell: zsh, steps: [] }\n"), "", "")
+	for _, want := range []string{
+		"bad.yaml:5:17: sections[0].parts[0].code.text is required but missing",
+		`bad.yaml:6:28: sections[0].parts[1].terminal.shell: "zsh" is not allowed; use sh, powershell, cmd`,
+		"bad.yaml:6:40: sections[0].parts[1].terminal.steps: the number of items must be at least 1",
+	} {
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("the mistakes = %v, want %s", err, want)
+		}
+	}
+}
+
+// report sends code and commands to their parts: a block of code or a prompt in text is refused, while
+// short code in a sentence and a quote pass.
+func TestReportRefusesCodeInText(t *testing.T) {
+	t.Parallel()
+
+	for _, text := range []string{"```go\\nx\\n```", "~~~\\nx\\n~~~", "$ floe list", "PS> dir", "  PS C:\\\\work> dir"} {
+		_, err := builtins.Read("t.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n      - text: \"a\\n"+text+"\"\n"), "", "")
+		if err == nil || !strings.Contains(err.Error(), "t.yaml:5:15: sections[0].parts[0].text: write ") {
+			t.Errorf("text %q = %v", text, err)
+		}
+	}
+	render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: \"Run `floe list`.\\n\\n> a quote\\n\\nIt costs $ 5.\"\n")
 }

@@ -1,0 +1,9 @@
+- for: sections.parts
+  field: text
+  expr: item.text == nil || !(item.text matches "(?m)^\\s*(```|~~~)")
+  message: write code in a code part, which shows it under its file or language
+# LIMIT: a line of prose starting "$ " (a price) is refused too; such a line is rare, and is to be reworded.
+- for: sections.parts
+  field: text
+  expr: item.text == nil || !(item.text matches "(?m)^\\s*(\\$|PS( [^>\\n]*)?>) ")
+  message: write commands in a terminal part, which draws the prompt and keeps it out of a copy
