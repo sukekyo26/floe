@@ -93,7 +93,7 @@ A page gets the style of each part whose classes it uses once, a table of Markdo
 | `--text-width` | How wide a note grows, as text does |
 | `--terminal-bg`, `--terminal-fg`, `--terminal-prompt` | A terminal's ground, dark in light mode too; its commands' text, faded for their output; its prompt |
 
-A theme defines them, or `page.html` does for every theme in a `<style>` of its own; `floe template check` warns of a theme that leaves out one its parts or diagrams take, whose parts keep light colours in dark mode. A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
+A theme defines them, or `page.html` does for every theme in a `<style>` of its own; `floe template check` warns of a theme that leaves out one its parts or diagrams take, whose parts keep light colours in dark mode (a terminal stays dark). A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
 
 ## Images
 
