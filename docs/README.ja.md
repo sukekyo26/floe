@@ -23,7 +23,7 @@ curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 ## クイックスタート
 
 ```sh
-floe publish plan.yaml     # データからページを描いて保存し、URL を出してブラウザで開く
+floe publish plan.yaml     # データを保存し、ページの URL を出してブラウザで開く
 floe publish --link out/index.html   # HTML のファイルをそのまま表示する（リクエストのたびに読む）
 floe check plan.yaml       # 公開せずにデータファイルを検査する
 floe list                  # ページを新しい順に出す

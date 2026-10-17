@@ -5,14 +5,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/sukekyo26/floe/internal/link"
-	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/project"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -76,8 +78,10 @@ type Options struct {
 type Entry struct {
 	Slug string
 	Meta Meta
-	// Page is the stored HTML, drawn from the data file; nil for a link.
-	Page []byte
+	// Source is the data file of a stored page, and Images the images it shows, by the path it names
+	// them by; nil for a link.
+	Source []byte
+	Images map[string][]byte
 	// Prev is the entry this one overwrites, nil for a new slug.
 	Prev *Meta
 }
@@ -128,9 +132,9 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 		var none Meta
 		base = &none
 	}
-	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Page: nil, Prev: prev}
+	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Source: nil, Images: nil, Prev: prev}
 	if data != nil {
-		if err = e.draw(data, theme, s.templates.Dir()); err != nil {
+		if err = e.draw(data, src, theme, s.templates.Dir()); err != nil {
 			return nil, err
 		}
 	}
@@ -152,17 +156,19 @@ func (s *Store) readData(file, path, src, theme, cwd string) (*tmpl.Data, error)
 	return data, nil
 }
 
-// draw draws the page of e from data: stored, or, for a link, drawn each time it is opened, which
-// keeps only the theme given over the data's and the directory of templates it is drawn with.
-func (e *Entry) draw(data *tmpl.Data, theme, templates string) error {
-	var err error
-	if !e.Meta.IsLink() {
-		e.Meta.Template, e.Meta.Theme, e.Meta.StrictCSP = data.Template, data.Theme, true
-		e.Page, err = data.Render(e.Meta.Title)
-		return err //nolint:wrapcheck // a usererr for the caller to show
-	}
+// draw checks that data, of content src, draws, and keeps what drawing it each time it is opened
+// takes: the theme given over the data's, the directory of templates, and for a stored page src and
+// its images.
+func (e *Entry) draw(data *tmpl.Data, src, theme, templates string) error {
 	e.Meta.Theme, e.Meta.Templates = theme, templates
-	_, err = drawLinked(data, &e.Meta, e.Slug)
+	if !e.Meta.IsLink() {
+		e.Source = []byte(src)
+		var err error
+		if e.Images, err = data.Images(); err != nil {
+			return err //nolint:wrapcheck // floe's own encoding, not the user's
+		}
+	}
+	_, err := drawData(data, &e.Meta, e.Slug)
 	return err
 }
 
@@ -217,11 +223,10 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Title:         title(opts, path, keepTitle, base, own, slug),
 		TitleEdited:   keepTitle,
 		Description:   base.Description,
-		Template:      "",
 		Theme:         "",
 		DataTitle:     own,
-		StrictCSP:     false,
 		Templates:     "",
+		Source:        "",
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",
@@ -259,9 +264,8 @@ func (s *Store) slugFor(file, path string, opts Options, cwd string) (string, er
 }
 
 // checkOwner refuses to overwrite another's entry without force, and reports whether the publish
-// replaces one. A stored page belongs to the project it was published from (pages from before
-// publishedFrom fall back to project, unless that was edited and so names no place). A link belongs
-// to its path: the same slug for another path certainly means another file.
+// replaces one. A stored page belongs to the project it was published from. A link belongs to its
+// path: the same slug for another path certainly means another file.
 func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, error) {
 	if prev == nil {
 		return false, nil
@@ -285,9 +289,6 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 		return false, err
 	}
 	owner := prev.PublishedFrom
-	if owner == "" && !prev.ProjectEdited {
-		owner = prev.Project
-	}
 	if owner == "" || owner == from {
 		return false, nil
 	}
@@ -318,25 +319,134 @@ func IsDataFile(file string) bool {
 	return ext == ".yaml" || ext == ".yml"
 }
 
-// Save writes a prepared entry.
+// Save writes a prepared entry. A stored page's data file and images go to a new directory, which
+// meta.json then names, so that a save that fails leaves the old copy; the copies it no longer names
+// go after. Saves, edits and removals of one slug take turns, in this process or another, so that an
+// edit does not write back a meta.json naming a copy a save removed. What Prepare read is not held:
+// an edit between it and Save is written over.
+// LIMIT: a drawing that read meta.json just before a save may find its copy gone, and shows that it
+// cannot be read until the tab's next look. Keep the copy before until the next save if that shows.
 func (s *Store) Save(e *Entry) error {
-	if err := os.MkdirAll(s.dir(e.Slug), 0o700); err != nil {
+	dir := s.dir(e.Slug)
+	unlock, err := lock(dir, true)
+	if err != nil {
 		return fmt.Errorf("save %s: %w", e.Slug, err)
 	}
-	if e.Page != nil {
-		if err := WriteAtomic(filepath.Join(s.dir(e.Slug), "index.html"), e.Page, 0o600); err != nil {
+	defer unlock()
+	if !e.Meta.IsLink() {
+		if e.Meta.Source, err = writeSource(dir, e.Source, e.Images); err != nil {
+			return fmt.Errorf("save %s: %w", e.Slug, err)
+		}
+	}
+	if err = s.WriteMeta(e.Slug, &e.Meta); err != nil {
+		return err
+	}
+	removeSources(dir, e.Meta.Source)
+	return nil
+}
+
+// lock waits to hold dir alone among those who lock it, made first with create, and returns what lets
+// it go. The lock is on the directory, not its name: when the one it waited for was removed or renamed
+// meanwhile, it locks the one dir names then, or fails with fs.ErrNotExist when there is none.
+func lock(dir string, create bool) (func(), error) {
+	for {
+		if create {
+			if err := os.MkdirAll(dir, 0o700); err != nil {
+				return nil, err //nolint:wrapcheck // the caller says what it locked
+			}
+		}
+		f, err := os.Open(dir) //nolint:gosec // G304: the directory of a slug
+		if create && errors.Is(err, fs.ErrNotExist) {
+			continue // removed or renamed since it was made
+		}
+		if err != nil {
+			return nil, err //nolint:wrapcheck // as above
+		}
+		if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
+			_ = f.Close()   //nolint:errcheck // read-only
+			return nil, err //nolint:wrapcheck // as above
+		}
+		held, err := f.Stat()
+		named, nameErr := os.Stat(dir)
+		if err == nil && nameErr == nil && os.SameFile(held, named) {
+			// Closing it lets the lock go.
+			return func() { _ = f.Close() }, nil //nolint:errcheck // as above
+		}
+		_ = f.Close() //nolint:errcheck // as above
+		if err != nil {
+			return nil, err //nolint:wrapcheck // as above
+		}
+	}
+}
+
+// writeSource writes the data file src and its images, at the paths it names them by, to a new
+// directory under dir, and returns its name. One left by a write that fails goes.
+func writeSource(dir string, src []byte, images map[string][]byte) (string, error) {
+	tmp, err := os.MkdirTemp(dir, sourcePrefix)
+	if err != nil {
+		return "", err //nolint:wrapcheck // Save says what it saved
+	}
+	if err = writeCopy(tmp, src, images); err != nil {
+		_ = os.RemoveAll(tmp) //nolint:errcheck // the next save removes it otherwise
+		return "", err
+	}
+	return filepath.Base(tmp), nil
+}
+
+// writeCopy writes the data file src and its images under dir.
+func writeCopy(dir string, src []byte, images map[string][]byte) error {
+	if err := writeUnder(dir, tmpl.KeptName, src); err != nil {
+		return err
+	}
+	for name, b := range images {
+		if err := writeUnder(dir, name, b); err != nil {
 			return err
 		}
 	}
-	return s.WriteMeta(e.Slug, &e.Meta)
+	return nil
+}
+
+// writeUnder writes b to name, a slash-separated path, under dir, making the directories on its way.
+func writeUnder(dir, name string, b []byte) error {
+	p := filepath.Join(dir, filepath.FromSlash(name))
+	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+		return err //nolint:wrapcheck // Save says what it saved
+	}
+	return os.WriteFile(p, b, 0o600) //nolint:wrapcheck // as above
+}
+
+// removeSources removes the copies under dir but keep ("" for none): the ones a save replaced, or
+// left when it stopped halfway. The save is done by then: one that cannot go is left for the next.
+func removeSources(dir, keep string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, d := range entries {
+		if name := d.Name(); strings.HasPrefix(name, sourcePrefix) && name != keep {
+			_ = os.RemoveAll(filepath.Join(dir, name)) //nolint:errcheck // as above
+		}
+	}
 }
 
 // Remove deletes slug. A linked file itself is left alone.
 func (s *Store) Remove(slug string) error {
-	if !ValidSlug(slug) || s.ReadMeta(slug) == nil {
+	if !ValidSlug(slug) {
 		return usererr.New("store_no_page", slug)
 	}
-	if err := os.RemoveAll(s.dir(slug)); err != nil {
+	// A removal that waited for another of the same slug finds nothing, as one that came after.
+	unlock, err := lock(s.dir(slug), false)
+	if errors.Is(err, fs.ErrNotExist) {
+		return usererr.New("store_no_page", slug)
+	}
+	if err != nil {
+		return fmt.Errorf("remove %s: %w", slug, err)
+	}
+	defer unlock()
+	if s.ReadMeta(slug) == nil {
+		return usererr.New("store_no_page", slug)
+	}
+	if err = os.RemoveAll(s.dir(slug)); err != nil {
 		return fmt.Errorf("remove %s: %w", slug, err)
 	}
 	return nil
@@ -352,10 +462,17 @@ type Edit struct {
 }
 
 // Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
-// the list nor the open tabs move. Clearing the title hands it back to the file (a link), to the
-// data file's title: (a page drawn from one) or to the <title> or first <h1> of a page stored as HTML,
-// else to the slug; clearing the project drops it.
+// the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
+// data file's title: when published (a stored page), else to the slug; clearing the project drops it.
 func (s *Store) Edit(slug string, ed Edit) (string, error) {
+	unlock, err := lock(s.dir(slug), false)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("edit %s: %w", slug, err)
+	}
+	defer unlock()
 	m := s.ReadMeta(slug)
 	if m == nil {
 		return "", ErrNotFound
@@ -379,7 +496,7 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 		return "", err
 	}
 	if ed.Title != nil {
-		s.setTitle(slug, to, m, *ed.Title)
+		setTitle(to, m, *ed.Title)
 	}
 	if err := s.WriteMeta(slug, m); err != nil {
 		return "", err
@@ -393,22 +510,15 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	return to, nil
 }
 
-// setTitle sets the title of slug, which the edit renames to: an empty one gives back the page's own,
-// or to.
-func (s *Store) setTitle(slug, to string, m *Meta, t string) {
+// setTitle sets the title of m, whose slug the edit renames to: an empty one gives back the page's
+// own, or to.
+func setTitle(to string, m *Meta, t string) {
 	m.Title = strings.TrimSpace(t)
 	m.TitleEdited = m.Title != ""
-	if m.Title != "" || m.IsLink() {
-		return
-	}
-	if m.Template != "" {
+	if m.Title == "" && !m.IsLink() {
 		// The drawn page's <title> is the title it was published under, pinned ones included.
 		m.Title = cmp.Or(m.DataTitle, to)
-		return
 	}
-	// A page stored as HTML before pages were drawn from data files.
-	own, _ := os.ReadFile(filepath.Join(s.dir(slug), "index.html")) //nolint:errcheck // unreadable means untitled
-	m.Title = cmp.Or(page.Title(string(own)), to)
 }
 
 // renameTo checks the new slug of an edit: nil keeps slug.

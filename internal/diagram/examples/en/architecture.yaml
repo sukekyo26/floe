@@ -14,7 +14,7 @@ parts:
   - frame: { x: 968, y: 20, w: 264, h: 476, label: Browser }
   - frame: { x: 984, y: 112, w: 232, h: 188, label: "Frame /a/<slug>/" }
   - box: { x: 24, y: 64, w: 200, h: 56, tone: accent, rows: [[floe publish, main code], run by the agent] }
-  - box: { x: 288, y: 152, w: 224, h: 56, rows: [["<slug>/index.html", main code], a stored page] }
+  - box: { x: 288, y: 152, w: 224, h: 56, rows: [["<slug>/source-<id>/", main code], "data file, images"] }
   - box: { x: 288, y: 240, w: 224, h: 56, rows: [["<slug>/meta.json", main code], "title, description, link"] }
   - box: { x: 288, y: 328, w: 224, h: 56, rows: [Linked HTML file, read on every request] }
   - box: { x: 644, y: 64, w: 240, h: 56, rows: [[/api/health, main code], "is it up, which build"] }

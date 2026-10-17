@@ -5,6 +5,7 @@ package tmpl
 import (
 	"bytes"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -144,6 +145,22 @@ func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data
 		return nil, sources, err
 	}
 	return d, sources, nil
+}
+
+// Images returns the images d shows as read, by the slash-separated path written, under the directory
+// of its data file. They are decoded from the data URIs the drawing takes, so that a drawing does not
+// hold each image twice for a publish to keep them.
+func (d *Data) Images() (map[string][]byte, error) {
+	images := make(map[string][]byte, len(d.images))
+	for name, uri := range d.images {
+		_, encoded, _ := strings.Cut(string(uri), ";base64,")
+		b, err := base64.StdEncoding.DecodeString(encoded)
+		if err != nil {
+			return nil, fmt.Errorf("decode the image %s: %w", name, err)
+		}
+		images[name] = b
+	}
+	return images, nil
 }
 
 // TitleOf returns the title: of the data file src, or "" when it names none or cannot be read.

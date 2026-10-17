@@ -10,7 +10,7 @@ title: What floe stores
 parts:
   - table: { x: 380, y: 40, w: 260, title: Page (meta.json), tone: accent, rows: [[slug, PK], [title, text], [description, text], [lang, BCP 47], [project, "FK, shown"], [publishedFrom, "FK, owner"], [favorite, bool], [createdAt, time], [updatedAt, time]] }
   - table: { x: 40, y: 150, w: 200, title: Project, rows: [[name, repository]] }
-  - table: { x: 780, y: 40, w: 240, title: Stored page, rows: [[slug, "PK, FK"], [index.html, drawn HTML]] }
+  - table: { x: 780, y: 40, w: 240, title: Stored page, rows: [[slug, "PK, FK"], [source, the copy]] }
   - table: { x: 780, y: 172, w: 240, title: Link, rows: [[slug, "PK, FK"], [path, real path]] }
   - edge: { d: "M240,169 H380", start: zero-one, end: zero-many, label: shown, at: [310, 169] }
   - edge: { d: "M240,191 H380", start: zero-one, end: zero-many, label: owner, at: [310, 191] }

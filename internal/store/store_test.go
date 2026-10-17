@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -104,6 +105,29 @@ func (e env) read(t *testing.T, rel string) string {
 	return string(b)
 }
 
+// kept reads the copy of the data file of the stored page slug.
+func (e env) kept(t *testing.T, slug string) string {
+	t.Helper()
+
+	return e.read(t, filepath.Join("store", slug, e.meta(t, slug).Source, "data.yaml"))
+}
+
+// drawn draws the stored page slug as it is served.
+func (e env) drawn(t *testing.T, slug string) string {
+	t.Helper()
+
+	m := e.meta(t, slug)
+	file, ok := e.s.File(slug, m, "")
+	if !ok {
+		t.Fatalf("no file to draw for %s", slug)
+	}
+	page, _, err := e.s.Draw(slug, m, file)
+	if err != nil {
+		t.Fatalf("draw %s: %v", slug, err)
+	}
+	return string(page)
+}
+
 // page writes a data file for the report template, titled title ("" for none).
 func (e env) page(t *testing.T, rel, title string) string {
 	t.Helper()
@@ -138,9 +162,9 @@ func TestPublishStoredPage(t *testing.T) {
 		m.Project != "proj" || m.PublishedFrom != "proj" || m.Path != "" || m.CreatedAt != m.UpdatedAt {
 		t.Fatalf("first publish: %+v, %+v", first, m)
 	}
-	if got := e.read(t, "store/my-demo/index.html"); !strings.Contains(got, "<h1>Demo Page</h1>") || m.Template != "report" || !m.StrictCSP ||
-		!strings.Contains(e.read(t, "store/my-demo/meta.json"), `"strictCsp": true`) {
-		t.Errorf("the page is stored as %q (template %q, strictCsp %v), want it drawn by report and cut off", got, m.Template, m.StrictCSP)
+	if got := e.drawn(t, "my-demo"); !strings.Contains(got, "<h1>Demo Page</h1>") || !m.IsDrawn() ||
+		e.kept(t, "my-demo") != e.read(t, "My Demo.yaml") {
+		t.Errorf("the page is drawn as %q from %q, want the data file kept and drawn by report", got, e.kept(t, "my-demo"))
 	}
 
 	again := e.mustPublish(t, doc, store.Options{Slug: ptr("my-demo")}, "proj")
@@ -170,7 +194,7 @@ func TestPublishNeedsDataFile(t *testing.T) {
 	_, err = e.publish(t, missing, store.Options{}, "proj")
 	wantUserErr(t, err, "store_not_data", missing)
 	e.mustPublish(t, e.page(t, "untitled.yaml", ""), store.Options{}, "proj")
-	if m := e.meta(t, "untitled"); m.Title != "untitled" || !strings.Contains(e.read(t, "store/untitled/index.html"), "<h1>untitled</h1>") {
+	if m := e.meta(t, "untitled"); m.Title != "untitled" || !strings.Contains(e.drawn(t, "untitled"), "<h1>untitled</h1>") {
 		t.Errorf("a data file without a title: is titled %q", m.Title)
 	}
 	// Removing title: from the data file gives the slug back, as clearing the title does.
@@ -237,19 +261,6 @@ func TestPublishOwner(t *testing.T) {
 	if m.PublishedFrom != "other" || m.Project != "other" || m.Favorite || m.Description != "" || m.CreatedAt == before.CreatedAt {
 		t.Errorf("--force did not start the page afresh: %+v", m)
 	}
-
-	// A page from before publishedFrom is owned by its project, unless that was edited on the page.
-	old := &store.Meta{Title: "t", Project: "legacy", CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt}
-	if err = e.s.WriteMeta("my-demo", old); err != nil {
-		t.Fatal(err)
-	}
-	_, err = e.publish(t, doc, store.Options{}, "other")
-	wantUserErr(t, err, "store_slug_owned", "my-demo", "legacy")
-	old.ProjectEdited = true
-	if err = e.s.WriteMeta("my-demo", old); err != nil {
-		t.Fatal(err)
-	}
-	e.mustPublish(t, doc, store.Options{}, "other")
 }
 
 func TestPublishKeepsEdits(t *testing.T) {
@@ -285,7 +296,7 @@ func TestPublishLink(t *testing.T) {
 	file := e.write(t, "site/index.html", "<h1>Linked v1</h1>")
 	entry := e.mustPublish(t, file, store.Options{Link: true, Slug: ptr("site"), Description: ptr("d")}, "elsewhere")
 	m := e.meta(t, "site")
-	if entry.Page != nil || m.Path != file || m.Project != "site" || m.PublishedFrom != "" || m.Title != "" {
+	if entry.Source != nil || m.Path != file || m.Project != "site" || m.PublishedFrom != "" || m.Title != "" {
 		t.Errorf("a link: %+v", m)
 	}
 	if des, err := os.ReadDir(filepath.Join(e.tmp, "store", "site")); err != nil || len(des) != 1 {
@@ -516,22 +527,6 @@ func TestEdit(t *testing.T) {
 		t.Errorf("clearing the title while renaming: %v %+v", err, e.meta(t, "bare-2"))
 	}
 
-	// A page stored as HTML before pages were drawn takes its own <title> back, or the slug.
-	old := store.Meta{Title: "Pinned", TitleEdited: true, CreatedAt: before.CreatedAt, UpdatedAt: before.UpdatedAt}
-	e.write(t, "store/old/index.html", "<title>Old</title>")
-	if err := e.s.WriteMeta("old", &old); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.s.Edit("old", store.Edit{Title: ptr("")}); err != nil || e.meta(t, "old").Title != "Old" {
-		t.Errorf("clearing the title of an HTML page: %v %+v", err, e.meta(t, "old"))
-	}
-	if err := os.Remove(filepath.Join(e.tmp, "store/old/index.html")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.s.Edit("old", store.Edit{Title: ptr(" "), Slug: ptr("older")}); err != nil || e.meta(t, "older").Title != "older" {
-		t.Errorf("clearing the title of an unreadable page falls back to the new slug: %v %+v", err, e.meta(t, "older"))
-	}
-
 	file := e.write(t, "site/index.html", "<h1>L</h1>")
 	e.mustPublish(t, file, store.Options{Link: true}, "proj")
 	if _, err := e.s.Edit("site", store.Edit{Title: ptr("Pinned")}); err != nil {
@@ -539,6 +534,182 @@ func TestEdit(t *testing.T) {
 	}
 	if _, err := e.s.Edit("site", store.Edit{Title: ptr("")}); err != nil || e.meta(t, "site").Title != "" {
 		t.Errorf("clearing a link's title hands it back to the file: %+v", e.meta(t, "site"))
+	}
+}
+
+// Saves and edits of one slug at once take turns: each succeeds, and the store holds the page whole,
+// meta.json naming the copy that is there.
+func TestSaveAtOnce(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	doc := e.page(t, "race.yaml", "Race")
+	mkdir(t, filepath.Join(e.tmp, "proj"))
+	e.mustPublish(t, doc, store.Options{}, "proj")
+	errs := make([]error, 16)
+	var wg sync.WaitGroup
+	for i := range errs {
+		wg.Go(func() {
+			if i%2 == 1 {
+				_, errs[i] = e.s.Edit("race", store.Edit{Description: ptr("d")})
+				return
+			}
+			entry, err := e.s.Prepare(t.Context(), doc, store.Options{}, filepath.Join(e.tmp, "proj"))
+			if err == nil {
+				err = e.s.Save(entry)
+			}
+			errs[i] = err
+		})
+	}
+	wg.Wait()
+	if err := errors.Join(errs...); err != nil {
+		t.Fatalf("saves at once: %v", err)
+	}
+	if page := e.drawn(t, "race"); !strings.Contains(page, "<h1>Race</h1>") {
+		t.Errorf("the page after saves at once:\n%s", page)
+	}
+}
+
+// A save whose write fails leaves the page it was to replace drawn as it was.
+func TestSaveFailureKeepsPage(t *testing.T) {
+	t.Parallel()
+
+	if os.Getuid() == 0 {
+		t.Skip("root writes into a directory it cannot write")
+	}
+	e := newEnv(t)
+	doc := e.page(t, "kept.yaml", "Kept")
+	e.mustPublish(t, doc, store.Options{}, "proj")
+	source := filepath.Join(e.tmp, "store", "kept")
+	if err := os.Chmod(source, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chmod(source, 0o700); err != nil {
+			t.Error(err)
+		}
+	})
+	entry, err := e.s.Prepare(t.Context(), e.page(t, "kept.yaml", "Changed"), store.Options{}, filepath.Join(e.tmp, "proj"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.s.Save(entry); err == nil {
+		t.Fatal("a save into a directory it cannot write succeeded")
+	}
+	if page := e.drawn(t, "kept"); !strings.Contains(page, "<h1>Kept</h1>") {
+		t.Errorf("the page after a failed save:\n%s", page)
+	}
+}
+
+// An edit and a removal wait while the slug's directory is locked, as a save holds it.
+func TestEditAndRemoveWaitForSave(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.mustPublish(t, e.page(t, "wait.yaml", "Wait"), store.Options{}, "proj")
+	for _, act := range []func() error{
+		func() error {
+			_, err := e.s.Edit("wait", store.Edit{Description: ptr("d")})
+			return err
+		},
+		func() error { return e.s.Remove("wait") },
+	} {
+		f, err := os.Open(filepath.Join(e.tmp, "store", "wait"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
+			t.Fatal(err)
+		}
+		done := make(chan error, 1)
+		go func() { done <- act() }()
+		select {
+		case err = <-done:
+			t.Fatalf("it did not wait for the lock: %v", err)
+		case <-time.After(100 * time.Millisecond):
+		}
+		if err = f.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err = <-done; err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// One that waited for the slug's directory while it was renamed acts on the slug's directory then: a
+// removal finds no page, and a save makes the page anew.
+func TestWaitThroughRename(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	doc := e.page(t, "moved.yaml", "Moved")
+	e.mustPublish(t, doc, store.Options{}, "proj")
+	dir := filepath.Join(e.tmp, "store", "moved")
+	entry, err := e.s.Prepare(t.Context(), doc, store.Options{}, filepath.Join(e.tmp, "proj"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name string
+		act  func() error
+		want func(error) bool
+	}{
+		{"remove", func() error { return e.s.Remove("moved") }, func(err error) bool {
+			var ue *usererr.Error
+			return errors.As(err, &ue) && ue.Key == "store_no_page"
+		}},
+		{"save", func() error { return e.s.Save(entry) }, func(err error) bool { return err == nil }},
+	} {
+		f, err := os.Open(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
+			t.Fatal(err)
+		}
+		done := make(chan error, 1)
+		go func() { done <- tt.act() }()
+		time.Sleep(50 * time.Millisecond)
+		if err = os.Rename(dir, dir+"-away"); err != nil {
+			t.Fatal(err)
+		}
+		if err = f.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err = <-done; !tt.want(err) {
+			t.Errorf("%s through a rename = %v", tt.name, err)
+		}
+		if err = os.RemoveAll(dir + "-away"); err != nil {
+			t.Fatal(err)
+		}
+		mkdir(t, dir)
+	}
+	if page := e.drawn(t, "moved"); !strings.Contains(page, "<h1>Moved</h1>") {
+		t.Errorf("the page a save made anew:\n%s", page)
+	}
+}
+
+// A store whose path holds what a glob takes for a pattern keeps one copy of a page all the same.
+func TestStoreUnderPatternPath(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	root := filepath.Join(e.tmp, "[notes]", "store")
+	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", ""))
+	doc := e.page(t, "plan.yaml", "Plan")
+	for range 2 {
+		entry, err := st.Prepare(t.Context(), doc, store.Options{}, e.tmp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = st.Save(entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := os.ReadDir(filepath.Join(root, "plan"))
+	if err != nil || len(entries) != 2 {
+		t.Errorf("the page holds %v (%v), want one copy and meta.json", entries, err)
 	}
 }
 
@@ -562,15 +733,21 @@ func TestFileAndVersion(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	stored := &store.Meta{UpdatedAt: "2026-01-01T00:00:00.000Z"}
-	if f, ok := e.s.File("p", stored, ""); !ok || f != filepath.Join(e.tmp, "store", "p", "index.html") {
+	stored := &store.Meta{Source: "source-1", UpdatedAt: "2026-01-01T00:00:00.000Z"}
+	if f, ok := e.s.File("p", stored, ""); !ok || f != filepath.Join(e.tmp, "store", "p", "source-1", "data.yaml") {
 		t.Errorf("File of a stored page = %q, %v", f, ok)
 	}
 	if _, ok := e.s.File("p", stored, "x.css"); ok {
 		t.Error("a stored page serves a subpath")
 	}
-	if v := e.s.Version("p", stored, ""); v != stored.UpdatedAt {
-		t.Errorf("Version of a stored page = %q", v)
+	for _, source := range []string{"../q/source-1", "/etc", "source-1/..", "other"} {
+		if f, ok := e.s.File("p", &store.Meta{Source: source}, ""); ok {
+			t.Errorf("File of a page whose source is %q = %q", source, f)
+		}
+	}
+	data := e.page(t, "store/p/source-1/data.yaml", "")
+	if v := e.s.Version("p", stored, data); !strings.Contains(v, "+"+stored.UpdatedAt+"+") {
+		t.Errorf("Version of a stored page = %q, want its publish time in it", v)
 	}
 	file := e.write(t, "site/index.html", "x")
 	mtime := time.Date(2026, 3, 4, 5, 6, 7, 890_123_456, time.UTC)
@@ -608,7 +785,7 @@ func TestPublishLang(t *testing.T) {
 	frag := e.page(t, "frag.yaml", "")
 	ja := e.write(t, "ja.yaml", "template: report\nlang: ja\n")
 	e.mustPublish(t, ja, store.Options{}, "repo")
-	if page, meta := e.read(t, "store/ja/index.html"), e.read(t, "store/ja/meta.json"); !strings.Contains(page, `<html lang="ja">`) ||
+	if page, meta := e.drawn(t, "ja"), e.read(t, "store/ja/meta.json"); !strings.Contains(page, `<html lang="ja">`) ||
 		strings.Contains(meta, `"lang"`) {
 		t.Errorf("a page of lang: ja =\n%s\nmeta.json =\n%s", page, meta)
 	}
@@ -641,7 +818,7 @@ func TestPublishLang(t *testing.T) {
 }
 
 // A data file is drawn with the template it names, titled by its title: unless --title says
-// otherwise, and the page records the template and theme.
+// otherwise, and the page records the theme given over the data's only.
 func TestPublishDataFile(t *testing.T) {
 	t.Parallel()
 
@@ -649,20 +826,18 @@ func TestPublishDataFile(t *testing.T) {
 	file := e.write(t, "plan.yaml", "template: report\ntitle: The plan\nsections:\n  - heading: Steps\n    parts:\n      - text: Do **it**.\nlang: ja\n")
 	entry := e.mustPublish(t, file, store.Options{}, "")
 	m := entry.Meta
-	if entry.Slug != "plan" || m.Title != "The plan" || m.Template != "report" || m.Theme != "default" {
+	if entry.Slug != "plan" || m.Title != "The plan" || m.Theme != "" {
 		t.Errorf("meta = %+v (slug %s)", m, entry.Slug)
 	}
-	b, err := os.ReadFile(filepath.Join(e.tmp, "store", "plan", "index.html"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	page := e.drawn(t, "plan")
 	for _, want := range []string{`<html lang="ja">`, "<h1>The plan</h1>", "<p>Do <strong>it</strong>.</p>"} {
-		if !strings.Contains(string(b), want) {
-			t.Errorf("the page lacks %s:\n%s", want, b)
+		if !strings.Contains(page, want) {
+			t.Errorf("the page lacks %s:\n%s", want, page)
 		}
 	}
-	if entry := e.mustPublish(t, file, store.Options{Title: ptr("Pinned")}, ""); !strings.Contains(string(entry.Page), "<h1>Pinned</h1>") {
-		t.Errorf("--title does not title the drawn page: %s", entry.Page)
+	e.mustPublish(t, file, store.Options{Title: ptr("Pinned")}, "")
+	if page := e.drawn(t, "plan"); !strings.Contains(page, "<h1>Pinned</h1>") {
+		t.Errorf("--title does not title the drawn page: %s", page)
 	}
 	bad := e.write(t, "bad.yml", "template: deck\nlang: en\n")
 	if _, err := e.publish(t, bad, store.Options{}, ""); err == nil || err.Error() != bad+`:1:11: unknown template "deck"; use report` {
@@ -679,15 +854,14 @@ func TestLinkDataFile(t *testing.T) {
 	data := e.write(t, "proj/spec.yaml", "template: report\ntitle: Spec\nlang: ja\n")
 	entry := e.mustPublish(t, data, store.Options{Link: true, Theme: ptr("default")}, "proj")
 	m := entry.Meta
-	if entry.Page != nil || m.Path != data || m.Theme != "default" || m.Template != "" || m.Title != "" ||
-		m.StrictCSP {
-		t.Errorf("the entry = %+v, page %d bytes", m, len(entry.Page))
+	if entry.Source != nil || m.Path != data || m.Theme != "default" || m.Title != "" {
+		t.Errorf("the entry = %+v, source %d bytes", m, len(entry.Source))
 	}
 	if !m.IsDrawn() || e.s.Version("spec", &m, data) == "" {
 		t.Errorf("IsDrawn = %v, Version = %q", m.IsDrawn(), e.s.Version("spec", &m, data))
 	}
-	if _, err := os.Stat(filepath.Join(e.tmp, "store", "spec", "index.html")); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("a page was stored for a link: %v", err)
+	if kept, globErr := filepath.Glob(filepath.Join(e.tmp, "store", "spec", "source-*")); globErr != nil || m.Source != "" || kept != nil {
+		t.Errorf("a copy was stored for a link: %q, %v %v", m.Source, kept, globErr)
 	}
 	page, _, err := e.s.Draw("spec", &m, data)
 	if err != nil || !strings.Contains(string(page), `<html lang="ja">`) || !strings.Contains(string(page), "<h1>Spec</h1>") {

@@ -13,7 +13,7 @@ parts:
   - frame: { x: 968, y: 20, w: 264, h: 476, label: "ブラウザ" }
   - frame: { x: 984, y: 112, w: 232, h: 188, label: "外枠 /a/<slug>/" }
   - box: { x: 24, y: 64, w: 200, h: 56, tone: "accent", rows: [["floe publish", "main code"], "エージェントが実行"] }
-  - box: { x: 288, y: 152, w: 224, h: 56, rows: [["<slug>/index.html", "main code"], "保存したページ"] }
+  - box: { x: 288, y: 152, w: 224, h: 56, rows: [["<slug>/source-<id>/", "main code"], "データファイル・画像"] }
   - box: { x: 288, y: 240, w: 224, h: 56, rows: [["<slug>/meta.json", "main code"], "タイトル・説明・リンク先"] }
   - box: { x: 288, y: 328, w: 224, h: 56, rows: ["手元の HTML", "--link で登録・毎回読む"] }
   - box: { x: 644, y: 64, w: 240, h: 56, rows: [["/api/health", "main code"], "起動と版を確認"] }

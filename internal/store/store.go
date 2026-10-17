@@ -1,6 +1,6 @@
-// Package store keeps the pages under the store directory: <slug>/index.html and meta.json for a
-// stored page, meta.json alone for a linked file. The layout and meta.json are the JS version's, so
-// either can read the other's store.
+// Package store keeps the pages under the store directory: <slug>/source-<id>/ (the data file,
+// data.yaml, and the images it shows), which meta.json names, for a stored page, meta.json alone for a
+// linked file.
 package store
 
 import (
@@ -29,7 +29,12 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-const isoMillis = "2006-01-02T15:04:05.000Z"
+const (
+	isoMillis = "2006-01-02T15:04:05.000Z"
+	// sourcePrefix names a copy under a stored page: its data file, tmpl.KeptName, and the images it
+	// shows, at the paths it names them by.
+	sourcePrefix = "source-"
+)
 
 var slugRe = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$`)
 
@@ -41,7 +46,7 @@ func ValidSlug(s string) bool {
 	return slugRe.MatchString(s)
 }
 
-// Meta is meta.json. The field order and the omitted empty keys follow the JS version's output.
+// Meta is meta.json.
 type Meta struct {
 	// Path is the real path of a linked file; a stored page has none.
 	Path  string `json:"path,omitempty"`
@@ -49,17 +54,15 @@ type Meta struct {
 	// TitleEdited and ProjectEdited mark values set on the management page, kept across republishes.
 	TitleEdited bool   `json:"titleEdited,omitempty"`
 	Description string `json:"description"`
-	// Template and Theme drew a page published from a data file, and DataTitle is its title:, which
-	// clearing the title on the management page gives back.
-	Template  string `json:"template,omitempty"`
+	// Theme is the theme a data file is drawn with over the data's (floe publish --theme), and DataTitle
+	// its title: when published, which clearing the title on the management page gives back.
 	Theme     string `json:"theme,omitempty"`
 	DataTitle string `json:"dataTitle,omitempty"`
-	// StrictCSP marks a stored page drawn from a data file, served with what goes out cut off. A page
-	// stored before, or by the artifact skill, has none and is served as it was.
-	StrictCSP bool `json:"strictCsp,omitempty"`
-	// Templates is the directory of templates of one's own a linked data file is drawn with: the one of
-	// the publish that linked it, whatever the server's.
-	Templates     string `json:"templates,omitempty"`
+	// Templates is the directory of templates of one's own a data file is drawn with: the one of the
+	// publish that stored or linked it, whatever the server's.
+	Templates string `json:"templates,omitempty"`
+	// Source is the directory of a stored page's copy of its data file and images, under its own.
+	Source        string `json:"source,omitempty"`
 	Project       string `json:"project,omitempty"`
 	ProjectEdited bool   `json:"projectEdited,omitempty"`
 	// PublishedFrom is the project that owns a stored page; Project is only what the list shows.
@@ -85,10 +88,11 @@ type Store struct {
 	// LIMIT: entries of unlinked paths stay (a few hundred bytes each). Drop them on removal if a
 	// server ever sees tens of thousands of paths in its lifetime.
 	titles map[string]cachedTitle
-	// drawn is what the last drawing of each linked data file read besides it, by slug and file (see
+	// drawn is what the last drawing of each data file read besides it, by slug and file (see
 	// sourceKey).
-	// LIMIT: one entry for every slug and file ever drawn, removed, renamed and relinked ones too, as
-	// titles are. Drop them on removal if a server comes to see thousands of them in its lifetime.
+	// LIMIT: one entry for every slug and file ever drawn, removed, renamed, relinked and republished
+	// ones too (a republish's copy is a new file), as titles are. Drop them on removal if a server comes
+	// to see thousands of them in its lifetime.
 	drawn map[string]drawing
 }
 
@@ -175,28 +179,39 @@ func createNew(prefix string, perm os.FileMode) (*os.File, error) {
 	}
 }
 
-// File returns the file to serve for rest under slug: a stored page has its index.html only, a link
-// its registered file and the files under its directory (see link.Resolve). A linked data file has its
+// File returns the file to serve for rest under slug: a stored page has its data file only, a link its
+// registered file and the files under its directory (see link.Resolve). A linked data file has its
 // own file only: the images of its page are in the page.
 func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 	if m.IsLink() && (rest == "" || !IsDataFile(m.Path)) {
 		return link.Resolve(m.Path, rest)
 	}
-	if m.IsLink() || rest != "" {
+	if m.IsLink() || rest != "" || !copyName(m.Source) {
 		return "", false
 	}
-	return filepath.Join(s.dir(slug), "index.html"), true
+	return filepath.Join(s.dir(slug), m.Source, tmpl.KeptName), true
 }
 
-// IsDrawn reports whether m is a linked data file, whose page is drawn each time it is opened.
+// copyName reports whether source may name the copy of a stored page: one name a save gives, or none
+// (a page from before copies, which has none to read). Another, in a meta.json written by hand, could
+// lead out of the page's directory.
+func copyName(source string) bool {
+	return source == "" || source == filepath.Base(source) && strings.HasPrefix(source, sourcePrefix)
+}
+
+// IsDrawn reports whether the page of m is drawn from a data file each time it is opened: a stored
+// page, or a linked data file.
 func (m *Meta) IsDrawn() bool {
-	return m.IsLink() && IsDataFile(m.Path)
+	return !m.IsLink() || IsDataFile(m.Path)
 }
 
-// Draw draws the page of the linked data file file of slug, whose meta.json is m: in its language,
-// with the theme given over the data's if any, under the title pinned for it, else its title:, else
-// slug. What the drawing read besides file is kept for Version, mistakes or not, and version is the
-// Version the page was drawn at.
+// Draw draws the page of the data file file of slug, whose meta.json is m: in its language, with the
+// theme given over the data's if any, under the title pinned for it, else its title:, else slug. What
+// the drawing read besides file is kept for Version, mistakes or not, and version is the Version the
+// page was drawn at.
+// LIMIT: draws on every opening, a few ms for a page of 100 KB, its images read and encoded again
+// each time. Keep the page drawn while its Version stays if pages of megabytes of images come to be
+// opened often.
 func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version string, err error) {
 	// Taken before the reading, so that a change in between costs a reload rather than a miss; but
 	// only once what the drawing reads is known, or the first drawing would reload at once.
@@ -222,7 +237,7 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 		s.drawn[key] = drawing{at: m.UpdatedAt, sources: sources}
 		s.mu.Unlock()
 		if err == nil {
-			page, err = drawLinked(d, m, slug)
+			page, err = drawData(d, m, slug)
 		}
 	}
 	if !known {
@@ -231,7 +246,7 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	return page, version, err
 }
 
-// drawing is what a drawing of a linked data file read besides it, and the publish it drew (its
+// drawing is what a drawing of a data file read besides it, and the publish it drew (its
 // updatedAt).
 type drawing struct {
 	at      string
@@ -244,21 +259,17 @@ func sourceKey(slug, file string) string {
 	return slug + "\x00" + file
 }
 
-// drawLinked draws d, the data file a link of slug registers, under the title pinned for it, else its
-// title:, else slug.
-func drawLinked(d *tmpl.Data, m *Meta, slug string) ([]byte, error) {
+// drawData draws d, the data file of slug, under the title pinned for it, else its title:, else slug.
+func drawData(d *tmpl.Data, m *Meta, slug string) ([]byte, error) {
 	return d.Render(cmp.Or(m.Title, d.Title, slug)) //nolint:wrapcheck // a usererr for the caller to show
 }
 
-// Version is what live reload compares: a stored page's publish time, a linked file's mtime, and for a
-// linked data file of slug its publish time too (another theme or templates) and the state
-// of what its last drawing read besides it (its template's files, its images) and whether it can be
-// read, so that publishing it again, saving any of them, or making it readable again reloads the page.
+// Version is what live reload compares: a linked file's mtime, and for a data file of slug, stored or
+// linked, its publish time too (another theme or templates) and the state of what its last drawing
+// read besides it (its template's files, its images) and whether it can be read, so that publishing
+// it again, saving any of them, or making it readable again reloads the page.
 // It is "" when the file is gone.
 func (s *Store) Version(slug string, m *Meta, file string) string {
-	if !m.IsLink() {
-		return m.UpdatedAt
-	}
 	v := modTime(file)
 	if v == "" || !m.IsDrawn() {
 		return v

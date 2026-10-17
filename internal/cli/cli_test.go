@@ -18,6 +18,7 @@ import (
 	"github.com/sukekyo26/floe/internal/cli"
 	"github.com/sukekyo26/floe/internal/daemon"
 	"github.com/sukekyo26/floe/internal/server"
+	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/version"
 )
 
@@ -165,6 +166,21 @@ func newEnv(t *testing.T) *env {
 
 func (e *env) base() string {
 	return "http://127.0.0.1:" + e.vars["FLOE_PORT"]
+}
+
+// kept reads the copy of the data file of the stored page slug.
+func (e *env) kept(t *testing.T, slug string) []byte {
+	t.Helper()
+
+	m := store.New(e.vars["FLOE_DIR"], "", nil).ReadMeta(slug)
+	if m == nil {
+		t.Fatalf("no page %s", slug)
+	}
+	b, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], slug, m.Source, "data.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }
 
 // page writes a data file for the report template, titled title ("" for none).
@@ -403,8 +419,8 @@ func TestPublish(t *testing.T) {
 		`bad.yaml:2:7: invalid language "ja_JP": write lang: as a BCP 47 tag such as en, ja or pt-BR`)
 	frag := e.write(t, "frag.yaml", "template: report\nlang: ja\ntitle: こんにちは\n")
 	want(t, "lang: ja", e.run(t, "repo", "publish", frag), 0, e.base()+"/a/frag/\n", "")
-	if b, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], "frag", "index.html")); err != nil || !bytes.Contains(b, []byte(`<html lang="ja">`)) {
-		t.Errorf("publish of lang: ja did not draw the page in Japanese: %v", err)
+	if b := e.kept(t, "frag"); !bytes.Contains(b, []byte("lang: ja")) {
+		t.Errorf("publish of lang: ja kept %s", b)
 	}
 	want(t, "a missing file", e.run(t, "repo", "publish", "nope.yaml"), 1, "", "floe: cannot read nope.yaml")
 	want(t, "another project", e.run(t, "other", "publish", demo), 1, "",
@@ -562,8 +578,8 @@ func TestPublishDataFile(t *testing.T) {
 	if got := e.opened(t); got != e.base()+"/a/plan/\n" {
 		t.Errorf("a first publish opened %q", got)
 	}
-	if b, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], "plan", "index.html")); err != nil || !bytes.Contains(b, []byte("<h1>The plan</h1>")) {
-		t.Errorf("the published page = %s, %v", b, err)
+	if b := e.kept(t, "plan"); !bytes.Contains(b, []byte("title: The plan")) {
+		t.Errorf("the published data file = %s", b)
 	}
 	e.vars["FLOE_LANG"] = "ja"
 	bad := e.write(t, "bad.yaml", "title: t\n")
