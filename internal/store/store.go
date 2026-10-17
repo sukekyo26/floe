@@ -187,10 +187,17 @@ func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 	if m.IsLink() && (rest == "" || !IsDataFile(m.Path)) {
 		return link.Resolve(m.Path, rest)
 	}
-	if m.IsLink() || rest != "" {
+	if m.IsLink() || rest != "" || !copyName(m.Source) {
 		return "", false
 	}
 	return filepath.Join(s.dir(slug), m.Source, sourceName), true
+}
+
+// copyName reports whether source may name the copy of a stored page: one name a save gives, or none
+// (a page from before copies, which has none to read). Another, in a meta.json written by hand, could
+// lead out of the page's directory.
+func copyName(source string) bool {
+	return source == "" || source == filepath.Base(source) && strings.HasPrefix(source, sourcePrefix)
 }
 
 // IsDrawn reports whether the page of m is drawn from a data file each time it is opened: a stored

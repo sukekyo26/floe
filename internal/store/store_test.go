@@ -717,6 +717,11 @@ func TestFileAndVersion(t *testing.T) {
 	if _, ok := e.s.File("p", stored, "x.css"); ok {
 		t.Error("a stored page serves a subpath")
 	}
+	for _, source := range []string{"../q/source-1", "/etc", "source-1/..", "other"} {
+		if f, ok := e.s.File("p", &store.Meta{Source: source}, ""); ok {
+			t.Errorf("File of a page whose source is %q = %q", source, f)
+		}
+	}
 	data := e.page(t, "store/p/source-1/data.yaml", "")
 	if v := e.s.Version("p", stored, data); !strings.Contains(v, "+"+stored.UpdatedAt+"+") {
 		t.Errorf("Version of a stored page = %q, want its publish time in it", v)
