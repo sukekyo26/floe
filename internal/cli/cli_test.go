@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"os"
@@ -97,21 +98,27 @@ func freePort(t *testing.T) int {
 }
 
 // listenFree listens on a port given to no other test running now, and keeps it given until t ends.
+// The port is out of the range the system gives to a listener of port 0, as the tests of the other
+// packages, run at the same time in processes of their own, listen: one of them would otherwise take
+// the port while a test's server is replaced, or once it is stopped, and be taken for that server.
+// LIMIT: 20000-29999 is below the ephemeral range of linux (32768 on) and macOS (49152 on). A machine
+// whose range reaches down into it may see such a clash again; read the range from the system then.
 func listenFree(t *testing.T) net.Listener {
 	t.Helper()
 
 	for range 100 {
+		port := 20000 + rand.IntN(10000) //nolint:gosec // G404: a port to try, not a secret
+		if _, taken := handedOut.LoadOrStore(port, true); taken {
+			continue
+		}
 		var lc net.ListenConfig
-		ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+		ln, err := lc.Listen(t.Context(), "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
 		if err != nil {
-			t.Fatal(err)
+			handedOut.Delete(port)
+			continue
 		}
-		port := portOf(t, ln)
-		if _, taken := handedOut.LoadOrStore(port, true); !taken {
-			t.Cleanup(func() { handedOut.Delete(port) })
-			return ln
-		}
-		_ = ln.Close()
+		t.Cleanup(func() { handedOut.Delete(port) })
+		return ln
 	}
 	t.Fatal("no port free of the other tests")
 	return nil
@@ -320,7 +327,8 @@ func (e *env) healthIn(ctx context.Context, t *testing.T) (server.Health, bool) 
 	t.Helper()
 
 	p := daemon.Probe(ctx, e.base())
-	return p.Health, p.State == daemon.Ours && strings.HasPrefix(p.Health.Root, e.tmp+string(filepath.Separator))
+	rel, err := filepath.Rel(e.tmp, p.Health.Root)
+	return p.Health, p.State == daemon.Ours && err == nil && filepath.IsLocal(rel)
 }
 
 func want(t *testing.T, what string, got result, code int, stdout, stderr string) {
