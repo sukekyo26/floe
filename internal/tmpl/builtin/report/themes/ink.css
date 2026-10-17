@@ -9,7 +9,7 @@
 .floe-pill.bad { background: var(--bad); color: var(--surface); }
 .floe-card { border: 1.5px solid var(--fg); box-shadow: 4px 4px 0 var(--fg); }
 .floe-card::before { content: none; }
-.floe-note { display: block; background: var(--surface); border: 1.5px solid var(--accent); }
+.floe-note { padding-left: 1.25rem; background: var(--surface); border: 1.5px solid var(--accent); }
 .floe-note.good { background: var(--surface); border-color: var(--good); }
 .floe-note.warn { background: var(--surface); border-color: var(--warn); }
 .floe-note.bad { background: var(--surface); border-color: var(--bad); }
@@ -20,4 +20,6 @@
 .floe-note.bad .floe-note-title { background: var(--bad); color: var(--surface); }
 :is(.floe-code, .floe-terminal) { box-shadow: none; }
 :is(.floe-code, .floe-terminal) figcaption { background: rgb(255 255 255 / 0.07); font-weight: 600; }
+:is(blockquote, .floe-table thead) :is(code, a) { color: inherit; }
+:is(blockquote, .floe-table thead) code { background: color-mix(in srgb, currentColor 15%, transparent); }
 blockquote { border: 0; padding: 1.1rem 1.5rem; border-radius: 14px; background: var(--fg); color: var(--bg); font-size: 1.05rem; }

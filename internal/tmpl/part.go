@@ -406,6 +406,9 @@ func (p *part) draw(v any) (template.HTML, error) {
 // LIMIT: the attributes are found as written, not as an HTML parser reads them (class= in a script's
 // string counts); parse the page if a page comes to write one so.
 func partStyles(page []byte) (string, error) {
+	if !bytes.Contains(page, []byte("floe-")) {
+		return "", nil
+	}
 	used := map[string]bool{}
 	for _, m := range classAttr.FindAllSubmatch(page, -1) {
 		for _, c := range strings.Fields(strings.Trim(string(m[1]), `"'`)) {

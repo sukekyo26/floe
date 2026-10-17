@@ -4,9 +4,9 @@
 .floe-table tbody tr:nth-child(even) td { background: none; }
 .floe-table tbody tr + tr td { border-top: 1px solid var(--line); }
 .floe-pill:is(.good, .warn, .bad)::before { margin-right: 0.35em; font-weight: 800; }
-.floe-pill.good::before { content: "✓"; }
-.floe-pill.warn::before { content: "!"; }
-.floe-pill.bad::before { content: "×"; }
+.floe-pill.good::before { content: "✓"; content: "✓" / ""; }
+.floe-pill.warn::before { content: "!"; content: "!" / ""; }
+.floe-pill.bad::before { content: "×"; content: "×" / ""; }
 .floe-card {
   border: 0; border-radius: 16px; padding-top: 1.5rem; box-shadow: 0 0 0 1px var(--line), 0 8px 24px -12px rgb(24 32 30 / 0.25);
   background: linear-gradient(var(--accent), var(--accent)) top / 100% 6px no-repeat, var(--surface);

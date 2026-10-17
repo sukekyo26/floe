@@ -7,7 +7,7 @@
 .floe-pill:is(.good, .warn, .bad) { background: none; }
 .floe-card { border-radius: 4px; border-top: 3px solid var(--accent); box-shadow: none; }
 .floe-card::before { content: none; }
-.floe-note { display: block; border-radius: 4px; padding: 0.85rem 1.25rem; }
+.floe-note { border-radius: 4px; padding: 0.85rem 1.25rem; }
 .floe-note::before, .floe-note:is(.good, .warn, .bad)::before { content: none; }
 .floe-note-title { font-size: 0.8rem; letter-spacing: 0.06em; }
 :is(.floe-code, .floe-terminal) { border-radius: 4px; box-shadow: none; }

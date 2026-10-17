@@ -132,8 +132,8 @@ func TestCheckParts(t *testing.T) {
 		}
 	}
 	if !strings.Contains(told, "--accent") || !strings.Contains(told, "--good-soft") || strings.Contains(told, "--fg,") ||
-		!strings.Contains(told, "--muted, which the template's parts and diagrams take from it, so they keep the default theme's values: its light colours, in dark mode too\n") ||
-		!strings.Contains(told, "does not define --text-width, --mono, which the template's parts and diagrams take from it, so they keep the default theme's values\n") {
+		!strings.Contains(told, "--muted, which the template's parts and diagrams take from it, so they keep values of their own: light colours, in dark mode too\n") ||
+		!strings.Contains(told, "does not define --text-width, --mono, which the template's parts and diagrams take from it, so they keep values of their own\n") {
 		t.Errorf("the warning of the theme = %q", told)
 	}
 	// A theme that leaves out no colour is not told of dark mode.
