@@ -238,8 +238,15 @@ func joinDescriptions(beside, named string) string {
 	if beside == "" || named == "" {
 		return beside + named
 	}
-	if last, _ := utf8.DecodeLastRuneInString(beside); !unicode.IsPunct(last) {
+	switch last, _ := utf8.DecodeLastRuneInString(beside); {
+	case unicode.IsPunct(last):
+	case unicode.In(last, unicode.Han, unicode.Hiragana, unicode.Katakana):
+		beside += "。"
+	default:
 		beside += "."
+	}
+	if last, _ := utf8.DecodeLastRuneInString(beside); last > unicode.MaxASCII {
+		return beside + named
 	}
 	return beside + " " + named
 }
@@ -362,21 +369,29 @@ func partStyles(names []string) (string, error) {
 
 // withStyles puts style into page before the template's own styles, which then win over the parts'
 // where they say otherwise: before the first <style> or <link> of its <head>, else before its </head>.
-// A page without a <head> gets it before its first <style> or <link>, else at its end.
+// A page without a <head> gets it before its first <style> or <link>, else at its end. One in a
+// script, a noscript or a comment is not the template's style.
+// LIMIT: the tags are found as written, not as an HTML parser reads them (a <style in an attribute's
+// value is taken for one). Parse the page if a template comes to write one so.
 func withStyles(page []byte, style string) []byte {
 	at := len(page)
 	if end := headEnd.FindIndex(page); end != nil {
 		at = end[0]
 	}
-	if own := ownStyle.FindIndex(page[:at]); own != nil {
-		at = own[0]
+	hidden := notStyled.FindAllIndex(page[:at], -1)
+	for _, own := range ownStyle.FindAllIndex(page[:at], -1) {
+		if !slices.ContainsFunc(hidden, func(h []int) bool { return h[0] <= own[0] && own[0] < h[1] }) {
+			at = own[0]
+			break
+		}
 	}
 	return slices.Concat(page[:at], []byte(style), page[at:])
 }
 
 var (
-	headEnd  = regexp.MustCompile(`(?i)</head\s*>`)
-	ownStyle = regexp.MustCompile(`(?i)<(?:style|link)\b`)
+	headEnd   = regexp.MustCompile(`(?i)</head\s*>`)
+	ownStyle  = regexp.MustCompile(`(?i)<(?:style|link)\b`)
+	notStyled = regexp.MustCompile(`(?is)<!--.*?-->|<script\b.*?</script\s*>|<noscript\b.*?</noscript\s*>`)
 )
 
 // partVariables returns the CSS variables the style of the parts named takes from the theme, once

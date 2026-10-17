@@ -3,6 +3,7 @@ package tmpl
 import (
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/diagram"
@@ -65,9 +66,42 @@ func TestWithStyles(t *testing.T) {
 		"<head><title>t</title></HEAD><style>b{}</style>":             "<head><title>t</title>S</HEAD><style>b{}</style>",
 		"<p>x</p><link rel=stylesheet href=data:,>":                   "<p>x</p>S<link rel=stylesheet href=data:,>",
 		"<p>x</p>": "<p>x</p>S",
+		"<head><noscript><link rel=stylesheet></noscript><!-- <style> --><script>'<style>'</script><style>c{}</style></head>": "<head><noscript><link rel=stylesheet></noscript><!-- <style> --><script>'<style>'</script>S<style>c{}</style></head>",
 	} {
 		if got := string(withStyles([]byte(page), "S")); got != want {
 			t.Errorf("withStyles(%q) = %q, want %q", page, got, want)
 		}
+	}
+}
+
+// A description beside a $ref is ended as a sentence of its script before the part's.
+func TestJoinDescriptions(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range [][3]string{
+		{"Risks", "A table", "Risks. A table"},
+		{"Risks:", "A table", "Risks: A table"},
+		{"起こりうる問題", "A table", "起こりうる問題。A table"},
+		{"問題（四半期）", "A table", "問題（四半期）A table"},
+		{"", "A table", "A table"},
+		{"Risks", "", "Risks"},
+	} {
+		if got := joinDescriptions(c[0], c[1]); got != c[2] {
+			t.Errorf("joinDescriptions(%q, %q) = %q, want %q", c[0], c[1], got, c[2])
+		}
+	}
+}
+
+// A mistake in a check's expression is told before one in its list, which the data may not reach.
+func TestCheckExprFirst(t *testing.T) {
+	t.Parallel()
+
+	list, err := readChecks("checks.yaml", []byte("- for: title\n  expr: 'item +'\n  message: m\n"), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	problems, err := list[0].check("data.yaml", map[string]any{"title": "t"}, nil)
+	if problems != nil || err == nil || !strings.Contains(err.Error(), "item +") {
+		t.Errorf("check = %v, %v, want the mistake in the expression", problems, err)
 	}
 }

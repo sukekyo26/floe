@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	"slices"
 	"strconv"
@@ -103,19 +104,17 @@ func knownFormat(f string) bool {
 	return err == nil && s.Format != nil
 }
 
-// unknownPart is the mistake of a $ref, ref, under floe:///parts/ that names no part of floe's.
+// unknownPart is the mistake of a $ref, ref, under floe:///parts/ that names no part of floe's whole.
 func unknownPart(ref string) error {
 	set, err := builtinParts()
 	if err != nil {
 		return err
 	}
-	names := make([]string, 0, len(set.schemas))
-	for url := range set.schemas {
-		name, _ := partName(url)
-		names = append(names, name)
+	names := strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")
+	if whole, _, into := strings.Cut(ref, "#"); into && set.schemas[whole] != nil {
+		return usererr.New("tmpl_part_into", ref, whole)
 	}
-	slices.Sort(names)
-	return usererr.New("tmpl_part_unknown", ref, strings.Join(names, ", "))
+	return usererr.New("tmpl_part_unknown", ref, names)
 }
 
 var errSchemaURL = errors.New("a schema refers to no other file or URL; write it in schema.json")

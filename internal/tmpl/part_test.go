@@ -158,7 +158,7 @@ func TestCheckParts(t *testing.T) {
 	// One into a part would be drawn as plain data.
 	ref := "floe:///parts/table.json#/properties/columns"
 	dir = memo(t, `"risks": {"$ref": "`+ref+`"}`)
-	want := "#/properties/risks: " + ref + " is not a part of floe's"
+	want := "#/properties/risks: " + ref + " points into a part of floe's, which would be checked but not drawn as the part; refer to the whole part, floe:///parts/table.json"
 	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 		t.Errorf("Check of a ref into a part = %v", mistakes)
 	}

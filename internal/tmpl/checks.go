@@ -153,6 +153,13 @@ func (c relation) program() (*vm.Program, *yamlpos.Error) {
 // check runs c on each item of its list in doc, the values of file. An error is the template's mistake,
 // and the problems are the data's.
 func (c relation) check(file string, doc map[string]any, root ast.Node) (yamlpos.Problems, error) {
+	// A mistake in the expression first: it is the template's whatever the data.
+	if c.prog == nil {
+		var err *yamlpos.Error
+		if c.prog, err = c.program(); err != nil {
+			return nil, err
+		}
+	}
 	var items []itemAt
 	if !itemsAt(doc, strings.Split(c.For, "."), nil, &items) {
 		return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
