@@ -13,7 +13,9 @@ floe の主要な変更を記録します。フォーマットは
   - 中身が変わるときだけ書き出し、データファイルに誤りがあるあいだは何も書き出さない。
   - `--check` は何も書き出さず、無いページとデータファイルから描いたものと違うページがあれば失敗する。CI で使う。
 - データファイルの中にスクリプトを書けるようにした。組み込みの `report` は部品 `script` を、テンプレートは `"format": "script"` の項目を受け取る。`js` に関数を書き、ページはその場所の空の要素と、任意の値の `data` を渡して呼ぶ。`</script` か `<!--` を含む `js` は、その `js` を指して断る。
-- データファイルに表・カード・注記を書けるようにした。組み込みの `report` は部品 `table`（`columns` と `rows`。`num` の列は右に揃える。セルは 1 行の Markdown で、数は引用符で囲む。`{ pill, tone }` で状態の札も書ける。各行のセルは列の数だけ書く）・`cards`（`title` と Markdown の `text` の並び）・`note`（Markdown の `text` と、`warn` か `bad` の `tone`）を受け取る。
+- データファイルに表・カード・注記を書けるようにした。floe の部品 `table`（`columns` と `rows`。`num` の列は右に揃える。セルは 1 行の Markdown で、数は引用符で囲む。`{ pill, tone }` で状態の札も書ける。各行のセルは列の数だけ書く）・`cards`（`title` と Markdown の `text` の並び）・`note`（Markdown の `text` と `tone`）で、`tone` は `accent`・`good`・`warn`・`bad` のどれか。
+  - 組み込みの `report` はこれらを受け取る。自作のテンプレートは `"$ref": "floe:///parts/table.json"` で部品を指す。floe が項目を検査して描き、部品のスタイルをページに 1 回だけ入れる。
+  - `floe template show` は部品の項目を出す。`floe template check` は、部品が色を取る CSS 変数を定義していないテーマを警告する。
   - テンプレートの `page.html` から `markdownLine` を使える。1 行の Markdown を段落で包まずに描き、`-` や `1.` のようなセルは文字のまま出す。
 - データファイルの中に図を書けるようにした。組み込みの `report` は部品 `diagram` を、テンプレートは `"format": "diagram"` の項目を受け取り、`floe diagram render` に渡すのと同じ spec をその場に書く。
   - 図は `floe diagram render` と同じく検査し（id の重複はページ全体で）、誤りはすべてデータファイルの行と列で出す。

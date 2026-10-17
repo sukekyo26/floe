@@ -64,9 +64,33 @@ floe: 1.2
 
 `"format": "image"` の項目には、画像のパスを、データファイルのディレクトリからの相対で、その配下に、`..` やドットで始まる名前を使わずに書きます。画像は data URI としてページに入るので、`<img src="{{.Data.chart}}">` と書けて、ページだけで表示が完結します。
 
-`"format": "diagram"` の項目には、図の spec を [`floe diagram render`](commands.ja.md#floe-diagram-render-specyaml) に渡すのと同じ形でその場に書きます。spec は `floe diagram render` と同じく検査し、誤りはデータファイルの行と列で出します。1 ページの図の id は互いに違えます。`{{.Data.plan}}` がインライン SVG で図を描き、ページの末尾に図のスタイルとズームが 1 回だけ付きます。図は色と書体を、`report` の既定のテーマが定義しているテーマの CSS 変数（`--fg`・`--bg`・`--accent` など）から取ります。変数はテーマで定義するか、すべてのテーマの分を `page.html` の `<style>` で定義します。`floe template check` は、そのどれかを定義していないテーマを警告します。そのテーマの図はダークモードでも明るい色のままになります。
+`"format": "diagram"` の項目には、図の spec を [`floe diagram render`](commands.ja.md#floe-diagram-render-specyaml) に渡すのと同じ形でその場に書きます。spec は `floe diagram render` と同じく検査し、誤りはデータファイルの行と列で出します。1 ページの図の id は互いに違えます。`{{.Data.plan}}` がインライン SVG で図を描き、ページの末尾に図のスタイルとズームが 1 回だけ付きます。図は色と書体を、[部品](#部品) と同じくテーマの CSS 変数から取ります。
 
 `"format": "script"` の項目には、ページで動かすものを、関数の `js` と、任意の値の `data` で書きます。`{{.Data.calculator}}` は空の要素を描き、その要素と data を渡して関数を呼びます（`function (el, data) { … }`）。data は JSON として入り、キーと値の組は名前の順に並びます。順番が意味を持つものはリストで書きます。floe が検査するのは形（`js` が関数の文字列であること、`js` と `data` のほかに何も無いこと）だけで、ページがそこでスクリプトの終わりと読む `</script` か `<!--` を含む `js` は断ります。関数の中の誤りはブラウザで分かります。関数は、ページを読み込む途中のその位置で動きます。後ろの要素や Web フォントはまだ無いので、それらを使うときは `load` を待ちます（`addEventListener('load', …)`）。関数はページの sandbox の中で、その CSP の下で動きます（[page.html](#pagehtml) を参照）。
+
+## 部品
+
+floe には、テンプレートの項目を描く部品があります。`table`（セルにピルを置ける）・`cards`・`note` です。schema では、floe が探す `properties` と `items` の下で、部品を `$ref` で指します。`anyOf` や `$defs` などの下では描かれないので、`floe template check` が誤りにします。
+
+```json
+"risks": { "$ref": "floe:///parts/table.json", "description": "What may go wrong" }
+```
+
+`page.html` では、項目を置きたい場所に `{{.Data.risks}}` と書きます。floe は項目を部品の schema と検査で確かめ（誤りはデータファイルの行と列で出します）、HTML に描きます。`floe template show` は、`$ref` の横に書いた説明に続けて、部品の項目を出します。floe に無い部品を指す `$ref` は、floe にある部品を添えて断ります。
+
+ページには、使った部品のスタイルが 1 回ずつ、`</head>` の前に入ります（`</head>` が無ければページの末尾）。部品のクラス名は `floe-` で始まり（`floe-table`・`floe-pill`・`floe-cards`・`floe-card`・`floe-note`）、テーマから見た目を変えられます。部品は色・書体・注記の幅を、テーマの CSS 変数から取ります。変数の無いテーマでは、既定のテーマの明るい値を使います。
+
+| 変数 | 意味 |
+| --- | --- |
+| `--bg`・`--surface` | ページの地、部品の面 |
+| `--fg`・`--muted` | 文字、薄い文字 |
+| `--line` | 線と枠 |
+| `--accent`・`--accent-soft` | 強調の色と、その淡い地 |
+| `--good`・`--warn`・`--bad` とそれぞれの `-soft` | 良い・注意・悪いの色と、その淡い地 |
+| `--font`・`--mono` | 本文の書体、等幅の書体 |
+| `--text-width` | 注記が広がる幅（本文と同じ） |
+
+変数はテーマで定義するか、すべてのテーマの分を `page.html` の `<style>` で定義します。`floe template check` は、部品や図が使う変数のどれかを定義していないテーマを警告します。そのテーマの部品はダークモードでも明るい色のままになります。`tone`（ピル・注記・図の部品）は `accent`・`good`・`warn`・`bad` のどれかで、`--accent`・`--good` などの色と、その `-soft` を使います。
 
 ## 画像
 

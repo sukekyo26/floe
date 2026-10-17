@@ -19,14 +19,19 @@ adheres to [Semantic Versioning](https://semver.org/).
   a template takes an item of `"format": "script"`, each `js`, a function the
   page calls with an empty element in its place and `data`, any value. A `js`
   holding `</script` or `<!--` is refused, pointing at the `js`.
-- Write tables, cards and notes in data files: the built-in `report` takes
-  `table` (`columns`, a `num` one aligned right, and `rows`, each cell a line of
+- Write tables, cards and notes in data files: floe's parts `table`
+  (`columns`, a `num` one aligned right, and `rows`, each cell a line of
   Markdown, a number in quotes, or a pill, `{ pill, tone }`, as many in each
-  row as there are columns),
-  `cards` (each a `title` over Markdown `text`) and `note` (Markdown `text`,
-  with a `tone` of `warn` or `bad`) parts. A template's `page.html` takes
-  `markdownLine`, which draws a line of Markdown without a paragraph around
-  it, keeping a cell like `-` or `1.` as text.
+  row as there are columns), `cards` (each a `title` over Markdown `text`) and
+  `note` (Markdown `text` with a `tone`), each `tone` `accent`, `good`, `warn`
+  or `bad`. The built-in `report` takes them, and a template of one's own
+  refers to one with `"$ref": "floe:///parts/table.json"`: floe checks the item,
+  draws it, and puts the part's style into the page once.
+  `floe template show` tells a part's items, and `floe template check` warns
+  of a theme that leaves out a CSS variable its parts take their colours from.
+  A template's `page.html` takes `markdownLine`, which draws a line of
+  Markdown without a paragraph around it, keeping a cell like `-` or `1.` as
+  text.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template takes an item of `"format": "diagram"`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as
