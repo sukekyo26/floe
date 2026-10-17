@@ -45,10 +45,10 @@ floe: 1.2
 |---|---|
 | `.Title` | ページのタイトル。`--title`、管理画面で固定したタイトル、データファイルの `title:`、slug の順に決まる |
 | `.Lang` | ページの言語（データファイルの `lang:`） |
-| `.Data` | データファイルの項目（floe が自分で読む `lang`・`template`・`theme`・`title` を除く。これらは `.Lang`・`.Title`・`.Theme` で使う。どれかを宣言する、または必須に挙げるスキーマは、どこで使っても断る）。スキーマで宣言していてデータに無い項目は nil なので、`{{with .Data.lead}}` と書ける。スキーマで宣言していない名前は描画を止める。`"format": "html"` の項目は HTML としてそのまま、`"format": "diagram"` の項目はその SVG として、`"format": "script"` の項目は置き場所の要素と関数の呼び出しとして入る |
+| `.Data` | データファイルの項目（floe が自分で読む `lang`・`template`・`theme`・`title` を除く。これらは `.Lang`・`.Title`・`.Theme` で使う。どれかを宣言する、または必須に挙げるスキーマは、どこで使っても断る）。スキーマで宣言していてデータに無い項目は nil なので、`{{with .Data.lead}}` と書ける。スキーマで宣言していない名前は描画を止める。`"format": "html"` の項目は HTML としてそのまま、`"format": "markdown"` の項目はその HTML として入る。図はその SVG として、スクリプトは置き場所の要素と関数の呼び出しとして入る |
 | `.Calc` | `computed.yaml` の値（名前で引く） |
 | `.Theme` | テーマの CSS。`<style>{{.Theme}}</style>` のように使う |
-| `markdown` | Markdown の文字列を HTML にする（`{{markdown .text}}`）。中の生の HTML は除き、表は `<div class="table-wrap">` で包む |
+| `markdown` | Markdown の文字列を HTML にする（`{{markdown .text}}`）。中の生の HTML は除き、表は表の部品の見た目にする（`<div class="floe-table">`） |
 | `markdownLine` | 表のセルのような 1 行の Markdown を、段落で包まずに HTML にする（`<td>{{markdownLine .}}</td>`）。コード・強調・リンクを書け、`-`・`1.`・`# x` のような行は文字のまま出る。複数の行は、字下げや空行があっても 1 つにつなぐ。中の生の HTML は除く |
 | `num` | 数を桁区切りで書く（`{{.Calc.total \| num}}` は `1,234,567`）。有効数字で丸めることもできる（`{{.Calc.rate \| num 3}}` は `0.00648`） |
 | `bytes` | バイト数を二進の単位で書く（`{{.Calc.size \| bytes}}` は `1.5 KiB`） |
@@ -60,17 +60,19 @@ floe: 1.2
 
 データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。キーの打ち間違いを断るため、`"additionalProperties": false` を書きます。`template`・`theme`・`title` は floe が読むので、宣言しません。
 
-`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）、`html`・`image`・`diagram`・`script` を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。`html`・`image`・`diagram`・`script` は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。型は、`html` と `image` には `"type": "string"` だけを、`diagram` と `script` には `"type": "object"` だけを宣言します。こうした項目は丸ごと描くので、その中に書いた format は描かれず、`floe template check` もそれを誤りにします。
+`format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）か、文字列の読み方を決める floe の format（`html`・`image`・`markdown`）を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。floe の format は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。型は `"type": "string"` だけを宣言します。図とスクリプトは format ではなく[部品](#部品)です。`"format": "diagram"`・`"format": "script"` は、スキーマのどこに書いても `floe template check` が断ります。`properties` と `items` の下に書いたものは、テンプレートをどこで使っても断ります。
+
+`"format": "markdown"` の項目には Markdown を書きます。`{{.Data.text}}` が、`markdown` と同じく HTML に描きます。すでに HTML なので、`{{markdown .Data.text}}` と書くと描画が止まります。
 
 `"format": "image"` の項目には、画像のパスを、データファイルのディレクトリからの相対で、その配下に、`..` やドットで始まる名前を使わずに書きます。画像は data URI としてページに入るので、`<img src="{{.Data.chart}}">` と書けて、ページだけで表示が完結します。
 
-`"format": "diagram"` の項目には、図の spec を [`floe diagram render`](commands.ja.md#floe-diagram-render-specyaml) に渡すのと同じ形でその場に書きます。spec は `floe diagram render` と同じく検査し、誤りはデータファイルの行と列で出します。1 ページの図の id は互いに違えます。`{{.Data.plan}}` がインライン SVG で図を描き、ページの末尾に図のスタイルとズームが 1 回だけ付きます。図は色と書体を、[部品](#部品) と同じくテーマの CSS 変数から取ります。
+部品 `diagram`（`"$ref": "floe:///parts/diagram.json"`）の項目には、図の spec を [`floe diagram render`](commands.ja.md#floe-diagram-render-specyaml) に渡すのと同じ形でその場に書きます。spec は `floe diagram render` と同じく検査し、誤りはデータファイルの行と列で出します。1 ページの図の id は互いに違えます。`{{.Data.plan}}` がインライン SVG で図を描き、ページの末尾に図のスタイルとズームが 1 回だけ付きます。図は色と書体を、[部品](#部品) と同じくテーマの CSS 変数から取ります。
 
-`"format": "script"` の項目には、ページで動かすものを、関数の `js` と、任意の値の `data` で書きます。`{{.Data.calculator}}` は空の要素を描き、その要素と data を渡して関数を呼びます（`function (el, data) { … }`）。data は JSON として入り、キーと値の組は名前の順に並びます。順番が意味を持つものはリストで書きます。floe が検査するのは形（`js` が関数の文字列であること、`js` と `data` のほかに何も無いこと）だけで、ページがそこでスクリプトの終わりと読む `</script` か `<!--` を含む `js` は断ります。関数の中の誤りはブラウザで分かります。関数は、ページを読み込む途中のその位置で動きます。後ろの要素や Web フォントはまだ無いので、それらを使うときは `load` を待ちます（`addEventListener('load', …)`）。関数はページの sandbox の中で、その CSP の下で動きます（[page.html](#pagehtml) を参照）。
+部品 `script`（`"$ref": "floe:///parts/script.json"`）の項目には、ページで動かすものを、関数の `js` と、任意の値の `data` で書きます。`{{.Data.calculator}}` は空の要素を描き、その要素と data を渡して関数を呼びます（`function (el, data) { … }`）。data は JSON として入り、キーと値の組は名前の順に並びます。順番が意味を持つものはリストで書きます。floe が検査するのは形（`js` が関数の文字列であること、`js` と `data` のほかに何も無いこと）だけで、ページがそこでスクリプトの終わりと読む `</script` か `<!--` を含む `js` は断ります。関数の中の誤りはブラウザで分かります。関数は、ページを読み込む途中のその位置で動きます。後ろの要素や Web フォントはまだ無いので、それらを使うときは `load` を待ちます（`addEventListener('load', …)`）。関数はページの sandbox の中で、その CSP の下で動きます（[page.html](#pagehtml) を参照）。
 
 ## 部品
 
-floe には、テンプレートの項目を描く部品があります。`table`（セルにピルを置ける）・`cards`・`note` です。schema では、floe が探す `properties` と `items` の下で、部品を `$ref` で指します。`anyOf` や `$defs` などの下では描かれないので、`floe template check` が誤りにします。
+floe には、テンプレートの項目を描く部品があります。`table`（セルにピルを置ける）・`cards`・`note`・`diagram`・`script`（後の 2 つは上で説明）です。schema では、floe が探す `properties` と `items` の下で、部品を `$ref` で指します。`anyOf` や `$defs` などの下では描かれないので、`floe template check` が誤りにします。
 
 ```json
 "risks": { "$ref": "floe:///parts/table.json", "description": "What may go wrong" }
@@ -78,7 +80,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 
 `page.html` では、項目を置きたい場所に `{{.Data.risks}}` と書きます。floe は項目を部品の schema と検査で確かめ（誤りはデータファイルの行と列で出します）、HTML に描きます。`floe template show` は、`$ref` の横に書いた説明に続けて、部品の項目を出します。floe に無い部品を指す `$ref` は、floe にある部品を添えて断ります。
 
-ページには、使った部品のスタイルが 1 回ずつ、`<head>` の中でテンプレート自身のスタイルより前に入ります（`<head>` が無ければページの末尾）。部品のクラス名は `floe-` で始まります（`floe-table`・`floe-pill`・`floe-cards`・`floe-card`・`floe-note`）。テーマに同じセレクタ（か、より詳しいセレクタ）の規則を書けば、後に来る分だけ部品の規則より優先されて、見た目を変えられます。部品と図は色・書体・注記の幅を、テーマの CSS 変数から取ります。変数の無いテーマでは、既定のテーマの明るい値を使います。
+ページには、クラスを使った部品のスタイルが 1 回ずつ（Markdown の表や、`<span class="floe-pill good">` のように部品のクラスを書いた HTML も含む）、`<head>` の中でテンプレート自身のスタイルより前に入ります（`<head>` が無ければページの末尾）。部品のクラス名は `floe-` で始まります（`floe-table`・`floe-pill`・`floe-cards`・`floe-card`・`floe-note`）。テーマに同じセレクタ（か、より詳しいセレクタ）の規則を書けば、後に来る分だけ部品の規則より優先されて、見た目を変えられます。部品と図は色・書体・注記の幅を、テーマの CSS 変数から取ります。変数の無いテーマでは、既定のテーマの明るい値を使います。
 
 | 変数 | 意味 |
 | --- | --- |

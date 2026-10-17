@@ -103,7 +103,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 		return nil, []error{err}
 	}
 	lint := &schemaLint{
-		file: t.file("schema.json"), base: schemaURL(t.Name), warnings: nil, mistakes: nil, diagrams: false, parts: nil,
+		file: t.file("schema.json"), base: schemaURL(t.Name), warnings: nil, mistakes: nil, parts: nil,
 	}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
@@ -526,9 +526,9 @@ func (t *Template) checkExample() error {
 	return err
 }
 
-// formatTypes are the JSON types of the items of floe's formats: the text of HTML or of an image's
-// path, a diagram's spec, and a script's js and data.
-var formatTypes = map[string]string{"html": "string", "image": "string", "diagram": "object", "script": "object"}
+// formatTypes are the JSON types of the items of floe's formats: the text of HTML, of an image's path,
+// or of Markdown.
+var formatTypes = map[string]string{"html": "string", "image": "string", "markdown": "string"}
 
 // schemaLint finds what jsonschema compiles but floe would not draw as the schema means.
 type schemaLint struct {
@@ -536,7 +536,6 @@ type schemaLint struct {
 	warnings []*usererr.Error
 	mistakes []error
 	base     string   // the schema's URL, which a relative $ref is read from
-	diagrams bool     // whether the schema declares an item of format diagram that floe draws
 	parts    []string // the parts of floe's that draw the items it declares, once each
 }
 
@@ -568,6 +567,9 @@ func (l *schemaLint) walk(v any, ptr string, reached bool) {
 // the item whole.
 func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 	switch {
+	case isGoPart(f):
+		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_part", l.file, ptr, f, f))
+		return true
 	case !knownFormat(f):
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unknown", l.file, ptr, f))
 	case slices.Contains(formats, f) && !reached:
@@ -576,7 +578,10 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 		if typ != formatTypes[f] {
 			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_type", l.file, ptr, f, formatTypes[f]))
 		}
-		l.diagrams = l.diagrams || f == "diagram"
+		// Markdown draws its tables in the table part's look.
+		if f == "markdown" && !slices.Contains(l.parts, "table") {
+			l.parts = append(l.parts, "table")
+		}
 		return true
 	}
 	return false
@@ -585,7 +590,7 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 // variables returns the CSS variables the parts and diagrams l found take from the theme, once each.
 func (l *schemaLint) variables() ([]string, error) {
 	vars, err := partVariables(l.parts)
-	if err != nil || !l.diagrams {
+	if err != nil || !slices.Contains(l.parts, "diagram") {
 		return vars, err
 	}
 	for _, v := range diagram.Variables() {

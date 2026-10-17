@@ -12,16 +12,14 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// checkScripts draws the scripts of d, its items its schema s declares of format script, into
-// d.scripts, by the path of keys to each, and reports each mistake in their shape at its line and
+// checkScripts draws the scripts of d, its items its schema s declares of the part script, into
+// d.parts, by the path of keys to each, and reports each mistake in their shape at its line and
 // column under root. What a function does is the browser's to tell.
 func checkScripts(s *schema, d *Data, root ast.Node) error {
-	var found []itemAt
-	s.find("script", d.Values, nil, &found)
+	found := partsNamed(s, d, "script")
 	if found == nil {
 		return nil
 	}
-	d.scripts = make(map[string]template.HTML, len(found))
 	var problems yamlpos.Problems
 	for _, f := range found {
 		js, data, mistakes := readScript(d.File, root, f)
@@ -29,7 +27,7 @@ func checkScripts(s *schema, d *Data, root ast.Node) error {
 			problems = append(problems, mistakes...)
 			continue
 		}
-		d.scripts[pathKey(f.at)] = drawScript(js, data)
+		d.drew(f.at, drawScript(js, data))
 	}
 	if problems != nil {
 		return problems.Sorted()

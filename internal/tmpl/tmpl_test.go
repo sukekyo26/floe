@@ -83,7 +83,7 @@ func TestReportParts(t *testing.T) {
 	t.Parallel()
 
 	got := render(t, "template: report\nsections:\n  - parts:\n      - text: 'a <script>x()</script> <table> `</table>` **b**'\n  - heading: h\nlang: en\n")
-	if strings.Contains(got, "<script>x()") || !strings.Contains(got, "<strong>b</strong>") || strings.Contains(got, `<div class="table-wrap">`) {
+	if strings.Contains(got, "<script>x()") || !strings.Contains(got, "<strong>b</strong>") || strings.Contains(got, `<div class="floe-table">`) {
 		t.Errorf("Markdown with raw HTML = %s", got)
 	}
 	if strings.Contains(got, `class="eyebrow"`) || strings.Contains(got, `class="lead"`) {

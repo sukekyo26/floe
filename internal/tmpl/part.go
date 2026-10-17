@@ -67,20 +67,20 @@ func (set *partSet) pointsInto(ref string) (whole string, into bool) {
 	return whole, into && ok && set.parts[name] != nil
 }
 
-// intoPart returns a $ref of s, or of those under it, that points into a part of floe's, or "".
-func (s *schema) intoPart(set *partSet) string {
+// first returns the first of s and the schemas under it that ok takes, with its pointer under ptr, or nil.
+func (s *schema) first(ptr string, ok func(*schema) bool) (string, *schema) {
 	if s == nil {
-		return ""
+		return "", nil
 	}
-	if _, into := set.pointsInto(s.Ref); into {
-		return s.Ref
+	if ok(s) {
+		return ptr, s
 	}
 	for _, name := range slices.Sorted(maps.Keys(s.Properties)) {
-		if ref := s.Properties[name].intoPart(set); ref != "" {
-			return ref
+		if at, found := s.Properties[name].first(ptr+"/properties/"+pointerKey.Replace(name), ok); found != nil {
+			return at, found
 		}
 	}
-	return s.Items.intoPart(set)
+	return s.Items.first(ptr+"/items", ok)
 }
 
 // absolute makes the $ref of s, and those under it, absolute, read from the schema at base.
@@ -102,9 +102,27 @@ func (s *schema) absolute(base string) {
 type part struct {
 	name   string
 	schema *schema
-	page   *template.Template
+	page   *template.Template // nil for one floe draws in Go (goParts)
 	css    string
 	checks []relation
+	// classes finds a class of its style in a page, which then gets the style
+	classes *regexp.Regexp
+}
+
+// goParts are the parts floe draws in Go, each a description: their schema takes an object, whose
+// shape floe checks where it draws it.
+var goParts = map[string]string{
+	"diagram": "A diagram: a spec as floe diagram render takes it (id, width, height, title, parts); " +
+		"floe diagram example shows one of each kind",
+	"script": "Something that moves: js, a function (el, data) { … } the page calls with an empty element in its " +
+		"place and data, any value. It runs in the page's sandbox, where fetch, XHR, images from elsewhere and " +
+		"forms are blocked",
+}
+
+// isGoPart reports whether name is a part floe draws in Go.
+func isGoPart(name string) bool {
+	_, ok := goParts[name]
+	return ok
 }
 
 // partSet is floe's parts, and every schema under parts/, by URL: the parts' and those they share.
@@ -141,6 +159,15 @@ func readParts() (*partSet, error) {
 			set.parts[e.Name()] = p
 		}
 	}
+	for name, about := range goParts {
+		url := partsURL + name + ".json"
+		set.docs[url] = map[string]any{"type": "object", "description": about}
+		set.schemas[url] = &schema{
+			Format: "", Ref: "", Properties: nil, Items: nil, part: nil, Description: about, Type: "object", Enum: nil,
+			Required: nil,
+		}
+		set.parts[name] = &part{name: name, schema: set.schemas[url], page: nil, css: "", checks: nil, classes: nil}
+	}
 	for _, s := range set.schemas {
 		s.resolve(set)
 	}
@@ -165,6 +192,9 @@ func (set *partSet) readSchema(url, file string) error {
 	return nil
 }
 
+// styleClass finds the classes a part's style names: .floe-table.
+var styleClass = regexp.MustCompile(`\.(floe-[\w-]+)`)
+
 // readPart reads the part name, whose schema is s.
 func readPart(name string, s *schema) (*part, error) {
 	dir := path.Join("parts", name)
@@ -180,7 +210,10 @@ func readPart(name string, s *schema) (*part, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
-	p := &part{name: name, schema: s, page: page, css: string(css), checks: nil}
+	p := &part{name: name, schema: s, page: page, css: string(css), checks: nil, classes: nil}
+	if classes := appendFound(nil, styleClass, p.css); classes != nil {
+		p.classes = regexp.MustCompile(`(?:^|[^\w-])(?:` + strings.Join(classes, "|") + `)(?:[^\w-]|$)`)
+	}
 	src, err := partFiles.ReadFile(path.Join(dir, "checks.yaml"))
 	switch {
 	case err == nil:
@@ -289,12 +322,11 @@ func (s *schema) findParts(v any, at []string, found *[]partAt) {
 func checkParts(s *schema, d *Data, root ast.Node) error {
 	var found []partAt
 	s.findParts(d.Values, nil, &found)
-	if found == nil {
-		return nil
-	}
-	d.parts = make(map[string]template.HTML, len(found))
 	var problems yamlpos.Problems
 	for _, f := range found {
+		if f.part.page == nil {
+			continue // drawn in Go, by its own check
+		}
 		more, err := f.part.check(d.File, f.itemAt, root)
 		if err != nil {
 			return err
@@ -307,15 +339,33 @@ func checkParts(s *schema, d *Data, root ast.Node) error {
 		if err != nil {
 			return err
 		}
-		d.parts[pathKey(f.at)] = html
-		if !slices.Contains(d.used, f.part.name) {
-			d.used = append(d.used, f.part.name)
-		}
+		d.drew(f.at, html)
 	}
 	if problems != nil {
 		return problems.Sorted()
 	}
 	return nil
+}
+
+// partsNamed returns the items of d its schema s draws by the part name.
+func partsNamed(s *schema, d *Data, name string) []itemAt {
+	var found []partAt
+	s.findParts(d.Values, nil, &found)
+	var named []itemAt
+	for _, f := range found {
+		if f.part.name == name {
+			named = append(named, f.itemAt)
+		}
+	}
+	return named
+}
+
+// drew notes html, a part's drawing of the item at the path at.
+func (d *Data) drew(at []string, html template.HTML) {
+	if d.parts == nil {
+		d.parts = map[string]template.HTML{}
+	}
+	d.parts[pathKey(at)] = html
 }
 
 // check runs the checks of p on the item f of the data file file, under root. An error is p's own
@@ -352,19 +402,28 @@ func (p *part) draw(v any) (template.HTML, error) {
 	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
 }
 
-// partStyles returns the style of the parts named, in the order of their names, for the page's <head>.
-func partStyles(names []string) (string, error) {
+// partStyles returns the style of the parts whose classes page uses, in the order of their names, for
+// the page's <head>, or "" for none: a part's own, a table of Markdown, or HTML that takes a part's look
+// (<span class="floe-pill good">). A class named in the page's prose or theme brings its part's style too.
+// LIMIT: classes are found in the page's whole text; look in class attributes alone if unused style matters.
+func partStyles(page []byte) (string, error) {
+	if !bytes.Contains(page, []byte("floe-")) {
+		return "", nil
+	}
 	set, err := builtinParts()
 	if err != nil {
 		return "", err
 	}
 	var b strings.Builder
-	b.WriteString("<style>\n")
-	for _, name := range slices.Sorted(slices.Values(names)) {
-		b.WriteString(set.parts[name].css)
+	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
+		if p := set.parts[name]; p.classes != nil && p.classes.Match(page) {
+			b.WriteString(p.css)
+		}
 	}
-	b.WriteString("</style>\n")
-	return b.String(), nil
+	if b.Len() == 0 {
+		return "", nil
+	}
+	return "<style>\n" + b.String() + "</style>\n", nil
 }
 
 // withStyles puts style into page before the template's own styles, which then win over the parts'
@@ -428,13 +487,19 @@ func partVariables(names []string) ([]string, error) {
 	}
 	var vars []string
 	for _, name := range slices.Sorted(slices.Values(names)) {
-		for _, m := range fallback.FindAllStringSubmatch(set.parts[name].css, -1) {
-			if !slices.Contains(vars, m[1]) {
-				vars = append(vars, m[1])
-			}
-		}
+		vars = appendFound(vars, fallback, set.parts[name].css)
 	}
 	return vars, nil
+}
+
+// appendFound appends to found what re's first group finds in s, each once.
+func appendFound(found []string, re *regexp.Regexp, s string) []string {
+	for _, m := range re.FindAllStringSubmatch(s, -1) {
+		if !slices.Contains(found, m[1]) {
+			found = append(found, m[1])
+		}
+	}
+	return found
 }
 
 // fallback finds the variables a style takes with a value of its own for a theme without them.

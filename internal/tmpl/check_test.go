@@ -210,8 +210,13 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			name:    "a theme without the variables of diagrams",
-			files:   map[string]string{"schema.json": `"chart":|"plan": { "type": "object", "format": "diagram" },` + "\n    " + `"chart":`},
+			files:   map[string]string{"schema.json": `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`},
 			warning: "sizes/themes/default.css does not define --bg, --surface, --fg, --muted, --line, --accent, --accent-soft",
+		},
+		{
+			name:    "a theme without the variables of a Markdown table",
+			files:   map[string]string{"schema.json": `"chart":|"aside": { "type": "string", "format": "markdown" },` + "\n    " + `"chart":`},
+			warning: "sizes/themes/default.css does not define --surface, --line, --fg, --mono, --accent-soft, --accent, --good-soft",
 		},
 		{
 			name: "formats of other types",
@@ -220,21 +225,21 @@ func TestCheckMistakes(t *testing.T) {
 			want: []string{
 				`sizes/schema.json: #/properties/note: floe draws an item of the format html from a value of type string; declare "type": "string" alone`,
 				"sizes/schema.json: #/properties/note/properties/logo: the format image marks an item to draw",
-				`sizes/schema.json: #/properties/plan: floe draws an item of the format diagram from a value of type object`,
+				`sizes/schema.json: #/properties/plan: a diagram is a part of floe's, not a format; write "$ref": "floe:///parts/diagram.json"`,
 			},
 		},
 		{
-			name: "a script out of reach, and one of text",
-			files: map[string]string{"schema.json": `"chart":|"move": { "oneOf": [{ "type": "object", "format": "script" }] }, ` +
-				`"run": { "type": "string", "format": "script" },` + "\n    " + `"chart":`},
+			name: "a script out of reach, and Markdown of type object",
+			files: map[string]string{"schema.json": `"chart":|"move": { "oneOf": [{ "$ref": "floe:///parts/script.json" }] }, ` +
+				`"run": { "type": "object", "format": "markdown" },` + "\n    " + `"chart":`},
 			want: []string{
-				"sizes/schema.json: #/properties/move/oneOf/0: the format script marks an item to draw",
-				`sizes/schema.json: #/properties/run: floe draws an item of the format script from a value of type object`,
+				"sizes/schema.json: #/properties/move/oneOf/0: the part script draws an item",
+				`sizes/schema.json: #/properties/run: floe draws an item of the format markdown from a value of type string`,
 			},
 		},
 		{
 			name: "a format inside a diagram",
-			files: map[string]string{"schema.json": `"chart":|"plan": { "type": "object", "format": "diagram", ` +
+			files: map[string]string{"schema.json": `"chart":|"plan": { "$ref": "floe:///parts/diagram.json", ` +
 				`"properties": { "logo": { "type": "string", "format": "image" } } },` + "\n    " + `"chart":`},
 			want: []string{"sizes/schema.json: #/properties/plan/properties/logo: the format image marks an item to draw"},
 		},
@@ -297,7 +302,7 @@ func TestCheckVariablesInPage(t *testing.T) {
 	release := strings.SplitN(version.Version, ".", 3)
 	dir := sizes(t, map[string]string{
 		"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
-		"schema.json":   `"chart":|"plan": { "type": "object", "format": "diagram" },` + "\n    " + `"chart":`,
+		"schema.json":   `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`,
 		"page.html":     "<body>|<body><style>:root { " + strings.Join(diagram.Variables(), ": red; ") + ": red }</style>",
 	})
 	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
