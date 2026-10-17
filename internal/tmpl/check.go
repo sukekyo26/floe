@@ -585,12 +585,22 @@ func (l *schemaLint) variables() ([]string, error) {
 }
 
 // part notes the part of floe's ref names, at ptr, if it names one: one prepare does not reach would
-// never be drawn.
+// never be drawn. A ref into a part (floe:///parts/table.json#/properties/rows) is refused: it would
+// be drawn as plain data.
 func (l *schemaLint) part(ref, ptr string, reached bool) {
-	name := strings.TrimSuffix(strings.TrimPrefix(ref, partsURL), ".json")
+	if !strings.HasPrefix(ref, partsURL) {
+		return
+	}
+	name, ok := partName(ref)
 	set, err := builtinParts()
+	if err != nil {
+		l.mistakes = append(l.mistakes, err)
+		return
+	}
 	switch {
-	case err != nil || set.parts[name] == nil:
+	case !ok:
+		l.mistakes = append(l.mistakes, usererr.New("tmpl_item", l.file, usererr.New("tmpl_item", ptr, unknownPart(ref))))
+	case set.parts[name] == nil:
 	case !reached:
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_part_unreached", l.file, ptr, name))
 	case !slices.Contains(l.parts, name):

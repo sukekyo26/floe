@@ -99,18 +99,22 @@ func knownFormat(f string) bool {
 	return err == nil && s.Format != nil
 }
 
+// unknownPart is the mistake of a $ref, ref, under floe:///parts/ that names no part of floe's.
+func unknownPart(ref string) error {
+	set, err := builtinParts()
+	if err != nil {
+		return err
+	}
+	return usererr.New("tmpl_part_unknown", ref, strings.Join(slices.Sorted(maps.Keys(set.parts)), ", "))
+}
+
 var errSchemaURL = errors.New("a schema refers to no other file or URL; write it in schema.json")
 
 type noLoader struct{}
 
 func (noLoader) Load(url string) (any, error) {
-	if name, ok := strings.CutPrefix(url, partsURL); ok {
-		set, err := builtinParts()
-		if err != nil {
-			return nil, err
-		}
-		names := slices.Sorted(maps.Keys(set.parts))
-		return nil, usererr.New("tmpl_part_unknown", strings.TrimSuffix(name, ".json"), strings.Join(names, ", "))
+	if strings.HasPrefix(url, partsURL) {
+		return nil, unknownPart(url)
 	}
 	return nil, fmt.Errorf("%s: %w", url, errSchemaURL)
 }

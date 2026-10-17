@@ -34,7 +34,8 @@ func memo(t *testing.T, items string) string {
 	return dir
 }
 
-const memoItems = `"risks": {"$ref": "floe:///parts/table.json"}, "aside": {"$ref": "floe:///parts/note.json", "description": "An aside."}`
+const memoItems = `"risks": {"$ref": "floe:///parts/table.json"}, "aside": {"$ref": "floe:///parts/note.json", "description": "An aside"}, ` +
+	`"asides": {"type": "array", "items": {"$ref": "floe:///parts/note.json"}}`
 
 // A template of one's own draws an item by a part of floe's with a $ref: the part checks it, at the
 // data's lines and columns, draws it, and puts its style into the page's <head> once.
@@ -49,6 +50,10 @@ func TestPartsInOwnTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	head, _, _ := strings.Cut(page, "</head>")
+	// Before the template's own style, which wins over a part's where it says otherwise.
+	if parts, own := strings.Index(head, ".floe-table {"), strings.Index(head, ":root { --fg: #000; }"); parts < 0 || own < parts {
+		t.Errorf("the parts' style is at %d, the theme's at %d", parts, own)
+	}
 	for _, want := range []string{
 		`<div class="floe-table"><table>`, `<td class="num">120</td>`, `<span class="floe-pill bad">open</span>`,
 		`<div class="floe-note warn"><p>Keep the old host</p>`,
@@ -85,11 +90,17 @@ func TestDescribePart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var aside tmpl.Item
+	var aside, asides tmpl.Item
 	for _, it := range d.Items {
-		if it.Name == "aside" {
+		switch it.Name {
+		case "aside":
 			aside = it
+		case "asides":
+			asides = it
 		}
+	}
+	if asides.Part != "note" || asides.Of[0] != "object" {
+		t.Errorf("asides = %+v", asides)
 	}
 	if aside.Part != "note" || !strings.HasPrefix(aside.Description, "An aside. A note set apart") {
 		t.Errorf("aside = %+v", aside)
@@ -122,13 +133,22 @@ func TestCheckParts(t *testing.T) {
 		t.Errorf("the warning of the theme = %q", told)
 	}
 
-	dir := memo(t, `"risks": {"$ref": "floe:///parts/chart.json"}`)
-	want := `floe has no part "chart"; use cards, note, table`
-	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
-		t.Errorf("Check of an unknown part = %v", mistakes)
+	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table"} {
+		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
+		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of cards, note, table"
+		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
+			t.Errorf("Check of %s = %v", ref, mistakes)
+		}
+		if _, err := draw(tmpl.NewLibrary(dir, ""), "template: memo\nlang: en\n"); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("Read of a template with %s = %v", ref, err)
+		}
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, ""), "template: memo\nlang: en\n"); err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Read of a template with an unknown part = %v", err)
+	// One into a part would be drawn as plain data.
+	ref := "floe:///parts/table.json#/properties/columns"
+	dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
+	want := "#/properties/risks: " + ref + " is not a part of floe's"
+	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
+		t.Errorf("Check of a ref into a part = %v", mistakes)
 	}
 	// One floe does not follow to would never be drawn.
 	dir = memo(t, `"risks": {"anyOf": [{"$ref": "floe:///parts/table.json"}]}`)

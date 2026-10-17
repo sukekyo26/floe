@@ -23,6 +23,7 @@ type relation struct {
 
 	file string                 // checks.yaml, as its mistakes name it
 	at   map[string]yamlpos.Pos // where each key is written, and "" where the check is
+	prog *vm.Program            // expr compiled ahead, for a part's; nil to compile it when run
 }
 
 // scope is what the expression of a check sees.
@@ -97,7 +98,9 @@ func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 }
 
 func readCheck(file string, n ast.Node, ofPart bool) (relation, *yamlpos.Error) {
-	c := relation{For: "", Field: "", Expr: "", Message: "", file: file, at: map[string]yamlpos.Pos{"": yamlpos.Of(n)}}
+	c := relation{
+		For: "", Field: "", Expr: "", Message: "", file: file, at: map[string]yamlpos.Pos{"": yamlpos.Of(n)}, prog: nil,
+	}
 	m, ok := n.(*ast.MappingNode)
 	if !ok {
 		return c, yamlpos.New(file, yamlpos.Of(n), "tmpl_checks_yaml")
@@ -159,9 +162,12 @@ func (c relation) check(file string, doc map[string]any, root ast.Node) (yamlpos
 
 // run runs c on each of items of the values doc of file.
 func (c relation) run(file string, doc map[string]any, items []itemAt, root ast.Node) (yamlpos.Problems, error) {
-	p, err := c.program()
-	if err != nil {
-		return nil, err
+	p := c.prog
+	if p == nil {
+		var err *yamlpos.Error
+		if p, err = c.program(); err != nil {
+			return nil, err
+		}
 	}
 	var problems yamlpos.Problems
 	for _, item := range items {

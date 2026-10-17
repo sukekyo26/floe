@@ -29,11 +29,15 @@ var partFiles embed.FS
 // partsURL is where a schema refers to floe's parts and the schemas they share: floe:///parts/table.json.
 const partsURL = "floe:///parts/"
 
-// palette are the CSS variables of a theme that parts take their colours, fonts and width from, each
-// with the report theme's light one for a theme that does not define it.
-var palette = []string{
-	"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
-	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono", "--text-width",
+// partName returns the name of the part of floe's, or of the schema the parts share, that ref names as
+// floe:///parts/<name>.json, and false for a ref written otherwise.
+func partName(ref string) (string, bool) {
+	name, ok := strings.CutPrefix(ref, partsURL)
+	if !ok {
+		return "", false
+	}
+	name, ok = strings.CutSuffix(name, ".json")
+	return name, ok && name != "" && !strings.ContainsAny(name, "/#")
 }
 
 // part is a part of floe's: a template's schema refers to it, and floe checks it, draws it and puts its
@@ -83,7 +87,33 @@ func readParts() (*partSet, error) {
 	for _, s := range set.schemas {
 		s.resolve(set)
 	}
+	// A part readies its item with no data file to look up what it drew: it holds no item of a part or
+	// a format of floe's.
+	for name, p := range set.parts {
+		if p.schema.drawsWhole() {
+			return nil, fmt.Errorf("%w: %s", errPartWhole, name)
+		}
+	}
 	return set, nil
+}
+
+var errPartWhole = errors.New("a part holds an item of a part or a format of floe's")
+
+// drawsWhole reports whether s, or a schema under it, declares an item of a part or a format of
+// floe's.
+func (s *schema) drawsWhole() bool {
+	if s == nil {
+		return false
+	}
+	if s.part != nil || slices.Contains(formats, s.Format) || s.Items.drawsWhole() {
+		return true
+	}
+	for _, p := range s.Properties {
+		if p.drawsWhole() {
+			return true
+		}
+	}
+	return false
 }
 
 // readSchema reads the schema file of floe's at url.
@@ -126,6 +156,13 @@ func readPart(name string, s *schema) (*part, error) {
 		if p.checks, err = readChecks(path.Join(dir, "checks.yaml"), src, true); err != nil {
 			return nil, err
 		}
+		// Compiled once: the checks of a part run on each item it draws.
+		for i, c := range p.checks {
+			var e *yamlpos.Error
+			if p.checks[i].prog, e = c.program(); e != nil {
+				return nil, e
+			}
+		}
 	case !errors.Is(err, fs.ErrNotExist):
 		return nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
@@ -146,8 +183,9 @@ func (s *schema) resolve(set *partSet) {
 	if !ok {
 		return
 	}
-	s.part = set.parts[strings.TrimSuffix(strings.TrimPrefix(s.Ref, partsURL), ".json")]
-	s.Description = strings.TrimSpace(s.Description + " " + target.Description)
+	name, _ := partName(s.Ref)
+	s.part = set.parts[name]
+	s.Description = joinDescriptions(s.Description, target.Description)
 	if s.Properties == nil {
 		s.Properties, s.Required = target.Properties, target.Required
 	}
@@ -160,6 +198,19 @@ func (s *schema) resolve(set *partSet) {
 	if s.Enum == nil {
 		s.Enum = target.Enum
 	}
+}
+
+// joinDescriptions writes the description beside a $ref, a sentence ended if it is not, before that
+// of what the $ref names.
+func joinDescriptions(beside, named string) string {
+	beside = strings.TrimSpace(beside)
+	if beside == "" || named == "" {
+		return beside + named
+	}
+	if !strings.ContainsAny(beside[len(beside)-1:], ".!?:") && !strings.HasSuffix(beside, "。") {
+		beside += "."
+	}
+	return beside + " " + named
 }
 
 // partAt is an item of a data file drawn by a part, and the path of keys to it.
@@ -278,17 +329,25 @@ func partStyles(names []string) (string, error) {
 	return b.String(), nil
 }
 
-// withStyles puts style into page before its </head>, so that the parts are styled as they are first
-// drawn, or at its end in a page without one.
+// withStyles puts style into the <head> of page, so that the parts are styled as they are first drawn:
+// before the template's own styles, which then win over the parts' where they say otherwise, or before
+// its </head>; at its end in a page without one.
 func withStyles(page []byte, style string) []byte {
-	at := headEnd.FindIndex(page)
-	if at == nil {
+	end := headEnd.FindIndex(page)
+	if end == nil {
 		return append(page, style...)
 	}
-	return slices.Concat(page[:at[0]], []byte(style), page[at[0]:])
+	at := end[0]
+	if own := ownStyle.FindIndex(page[:at]); own != nil {
+		at = own[0]
+	}
+	return slices.Concat(page[:at], []byte(style), page[at:])
 }
 
-var headEnd = regexp.MustCompile(`(?i)</head\s*>`)
+var (
+	headEnd  = regexp.MustCompile(`(?i)</head\s*>`)
+	ownStyle = regexp.MustCompile(`(?i)<(?:style|link)\b`)
+)
 
 // partVariables returns the CSS variables the style of the parts named takes from the theme, once
 // each, in the order of their names.

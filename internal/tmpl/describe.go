@@ -104,14 +104,13 @@ func (s *schema) items() []Item {
 			Name: n, Types: p.types(), Of: nil, Format: p.Format, Part: "", Enum: nil,
 			Required: slices.Contains(s.Required, n), Description: p.Description, Items: nil,
 		}
-		if p.part != nil {
-			it.Part = p.part.name
-		}
+
 		enum := p.Enum
 		if p.Items != nil {
 			// A list described by its items: "a list of …", each one what it holds.
 			it.Of, it.Items = p.Items.types(), p.Items.items()
 			it.Format = cmp.Or(it.Format, p.Items.Format)
+			it.Part = p.Items.partName()
 			it.Description = cmp.Or(it.Description, p.Items.Description)
 			if len(enum) == 0 {
 				enum = p.Items.Enum
@@ -119,12 +118,21 @@ func (s *schema) items() []Item {
 		} else {
 			it.Items = p.items()
 		}
+		it.Part = cmp.Or(p.partName(), it.Part)
 		for _, e := range enum {
 			it.Enum = append(it.Enum, jsonText(e))
 		}
 		items = append(items, it)
 	}
 	return items
+}
+
+// partName is the name of the part of floe's that draws s, or "".
+func (s *schema) partName() string {
+	if s.part == nil {
+		return ""
+	}
+	return s.part.name
 }
 
 // types are the JSON types s takes: those it names, else those its keywords imply.

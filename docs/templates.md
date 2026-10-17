@@ -78,7 +78,7 @@ floe has parts that draw items of a template: `table` (with pills in its cells),
 
 `page.html` puts the item where it goes, `{{.Data.risks}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML. `floe template show` tells the part's items, after the description written beside the `$ref`. A `$ref` to a part floe does not have is refused, with the parts it has.
 
-A page gets the style of each part it uses once, before its `</head>` (at its end without one). The parts' classes start with `floe-` (`floe-table`, `floe-pill`, `floe-cards`, `floe-card`, `floe-note`), for a theme to restyle them. Parts take their colours, fonts and the width of a note from the theme's CSS variables, with the default theme's light values for a theme without them:
+A page gets the style of each part it uses once, in its `<head>` before the template's own styles (at its end without a `<head>`). The parts' classes start with `floe-` (`floe-table`, `floe-pill`, `floe-cards`, `floe-card`, `floe-note`): a theme restyles them with a rule of its own, which wins over the part's. Parts take their colours, fonts and the width of a note from the theme's CSS variables, with the default theme's light values for a theme without them:
 
 | Variable | What it is |
 | --- | --- |

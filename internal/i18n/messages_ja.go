@@ -342,7 +342,7 @@ var messagesJA = map[string]string{
 	"tmpl_computed_cycle":          "値が互いを使って計算されています: %s",
 	"tmpl_computed_env":            "computed.yaml では $env を使えません。名前で参照してください",
 	"tmpl_format_unknown":          "%s: %s: floe は format「%s」を知りません。JSON Schema の format か、html・image・diagram・script を使ってください",
-	"tmpl_part_unknown":            "floe に部品「%s」はありません。%s のどれかを使ってください",
+	"tmpl_part_unknown":            "%s は floe の部品ではありません。floe:///parts/<名前>.json の形で、名前は %s のどれかを書いてください",
 	"tmpl_part_unreached":          "%s: %s: 部品 %s は項目を描きます。floe が辿る properties か items の下で参照してください",
 	"tmpl_format_unreached":        "%s: %s: format %s は描く項目の印です。floe が辿る properties か items の下で宣言してください",
 	"tmpl_schema_open":             `%s: %s は "additionalProperties": false を書かずに properties を宣言しているので、打ち間違えたキーを断れません`,

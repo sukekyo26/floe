@@ -8,6 +8,13 @@ import (
 	"github.com/sukekyo26/floe/internal/diagram"
 )
 
+// palette are the CSS variables of a theme that parts and diagrams take their colours, fonts and width
+// from, as docs/templates.md lists them.
+var palette = []string{
+	"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
+	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono", "--text-width",
+}
+
 // The parts and diagrams take their colours, fonts and width from the palette alone, which the report
 // theme defines whole; the parts' tones are the diagrams'.
 func TestPalette(t *testing.T) {
