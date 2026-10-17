@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"math/rand/v2"
 	"net"
 	"net/http"
 	"os"
@@ -98,27 +97,21 @@ func freePort(t *testing.T) int {
 }
 
 // listenFree listens on a port given to no other test running now, and keeps it given until t ends.
-// The port is out of the range the system gives to a listener of port 0, as the tests of the other
-// packages, run at the same time in processes of their own, listen: one of them would otherwise take
-// the port while a test's server is replaced, or once it is stopped, and be taken for that server.
-// LIMIT: 20000-29999 is below the ephemeral range of linux (32768 on) and macOS (49152 on). A machine
-// whose range reaches down into it may see such a clash again; read the range from the system then.
 func listenFree(t *testing.T) net.Listener {
 	t.Helper()
 
 	for range 100 {
-		port := 20000 + rand.IntN(10000) //nolint:gosec // G404: a port to try, not a secret
-		if _, taken := handedOut.LoadOrStore(port, true); taken {
-			continue
-		}
 		var lc net.ListenConfig
-		ln, err := lc.Listen(t.Context(), "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
+		ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 		if err != nil {
-			handedOut.Delete(port)
-			continue
+			t.Fatal(err)
 		}
-		t.Cleanup(func() { handedOut.Delete(port) })
-		return ln
+		port := portOf(t, ln)
+		if _, taken := handedOut.LoadOrStore(port, true); !taken {
+			t.Cleanup(func() { handedOut.Delete(port) })
+			return ln
+		}
+		_ = ln.Close()
 	}
 	t.Fatal("no port free of the other tests")
 	return nil
@@ -233,31 +226,30 @@ func (e *env) stop(t *testing.T) {
 	ctx := context.WithoutCancel(t.Context())
 	e.vars["FLOE_PORT"] = e.port
 	// A server in this process (floe serve, run by a test) stops with the test's context: a SIGTERM to
-	// its pid would stop the test binary. The pid is the one probed, not one floe stop would probe
-	// again: another package's server may have the port by then.
+	// its pid would stop the test binary.
 	if h, up := e.healthIn(ctx, t); up && h.PID != os.Getpid() {
-		if err := daemon.Terminate(h.PID); err != nil {
-			t.Error(err)
+		if r := e.runIn(ctx, t, "", "stop"); r.code != 0 {
+			t.Errorf("stop = %+v", r)
 		}
 	}
-	if h, down := e.wait(ctx, t, false); !down {
+	if !e.wait(ctx, t, false) {
+		h, _ := e.healthIn(ctx, t)
 		t.Errorf("the server outlived the test: %+v", h)
 	}
 }
 
-// wait probes e's port until e's server is up there, or down when up is false, and reports whether it
-// came to that, with the health it probed last. Starting and stopping take well under a second, but a
-// loaded machine (the whole suite under -race) may take longer.
-func (e *env) wait(ctx context.Context, t *testing.T, up bool) (server.Health, bool) {
+// wait probes e's port until a server of floe is up there, or down when up is false, and reports
+// whether it came to that. Starting and stopping take well under a second, but a loaded machine (the
+// whole suite under -race) may take longer.
+func (e *env) wait(ctx context.Context, t *testing.T, up bool) bool {
 	t.Helper()
 
 	for deadline := time.Now().Add(10 * time.Second); ; {
-		h, now := e.healthIn(ctx, t)
-		if now == up {
-			return h, true
+		if _, now := e.healthIn(ctx, t); now == up {
+			return true
 		}
 		if time.Now().After(deadline) {
-			return h, false
+			return false
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
@@ -319,16 +311,11 @@ func (e *env) health(t *testing.T) (server.Health, bool) {
 	return e.healthIn(t.Context(), t)
 }
 
-// healthIn probes e's port, and reports whether e's own server is up there: a server of floe for a
-// store under e's directory (FLOE_DIR, or another a test names). Another package's tests, run at the
-// same time in a process of their own, may start a server of floe on the port as soon as e's lets it
-// go.
 func (e *env) healthIn(ctx context.Context, t *testing.T) (server.Health, bool) {
 	t.Helper()
 
 	p := daemon.Probe(ctx, e.base())
-	rel, err := filepath.Rel(e.tmp, p.Health.Root)
-	return p.Health, p.State == daemon.Ours && err == nil && filepath.IsLocal(rel)
+	return p.Health, p.State == daemon.Ours
 }
 
 func want(t *testing.T, what string, got result, code int, stdout, stderr string) {
@@ -460,7 +447,7 @@ func TestPublish(t *testing.T) {
 
 	h, _ := e.health(t)
 	want(t, "stop", e.run(t, "", "stop"), 0, "stopped server (pid "+strconv.Itoa(h.PID)+")\n", "")
-	if _, down := e.wait(t.Context(), t, false); !down {
+	if !e.wait(t.Context(), t, false) {
 		t.Error("stop did not shut the server down")
 	}
 }
@@ -532,10 +519,7 @@ func TestServeInProcess(t *testing.T) {
 	}()
 	// A serve that stops at once (its port taken) says why, rather than leave the wait to run out.
 	upOrDone := make(chan bool, 1)
-	go func() {
-		_, up := e.wait(ctx, t, true)
-		upOrDone <- up
-	}()
+	go func() { upOrDone <- e.wait(ctx, t, true) }()
 	select {
 	case code := <-done:
 		t.Fatalf("serve = %d before it came up: %s", code, stderr.String())
