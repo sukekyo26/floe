@@ -60,7 +60,7 @@ func TestReportExample(t *testing.T) {
 		`<td class="num">120</td>`,
 		`<td><span class="floe-pill warn">watching</span></td>`,
 		`<div class="floe-card"><h3>Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>`,
-		`<div class="floe-note warn"><p>Anyone editing during the freeze loses their changes.</p>`,
+		`<div class="floe-note warn"><strong class="floe-note-title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>`,
 		`<details><summary>What the freeze covers</summary>`,
 		`aria-label="The pages go from the old wiki to the new host"`,
 		`--accent: #1d6670;`,
