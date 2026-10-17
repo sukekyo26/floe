@@ -341,9 +341,7 @@ func (s *Store) Save(e *Entry) error {
 	if err = s.WriteMeta(e.Slug, &e.Meta); err != nil {
 		return err
 	}
-	if err = removeSources(dir, e.Meta.Source); err != nil {
-		return fmt.Errorf("save %s: %w", e.Slug, err)
-	}
+	removeSources(dir, e.Meta.Source)
 	return nil
 }
 
@@ -358,6 +356,9 @@ func lock(dir string, create bool) (func(), error) {
 			}
 		}
 		f, err := os.Open(dir) //nolint:gosec // G304: the directory of a slug
+		if create && errors.Is(err, fs.ErrNotExist) {
+			continue // removed or renamed since it was made
+		}
 		if err != nil {
 			return nil, err //nolint:wrapcheck // as above
 		}
@@ -385,17 +386,24 @@ func writeSource(dir string, src []byte, images map[string][]byte) (string, erro
 	if err != nil {
 		return "", err //nolint:wrapcheck // Save says what it saved
 	}
-	err = writeUnder(tmp, sourceName, src)
-	for name, b := range images {
-		if err == nil {
-			err = writeUnder(tmp, name, b)
-		}
-	}
-	if err != nil {
+	if err = writeCopy(tmp, src, images); err != nil {
 		_ = os.RemoveAll(tmp) //nolint:errcheck // the next save removes it otherwise
 		return "", err
 	}
 	return filepath.Base(tmp), nil
+}
+
+// writeCopy writes the data file src and its images under dir.
+func writeCopy(dir string, src []byte, images map[string][]byte) error {
+	if err := writeUnder(dir, tmpl.KeptName, src); err != nil {
+		return err
+	}
+	for name, b := range images {
+		if err := writeUnder(dir, name, b); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // writeUnder writes b to name, a slash-separated path, under dir, making the directories on its way.
@@ -408,21 +416,17 @@ func writeUnder(dir, name string, b []byte) error {
 }
 
 // removeSources removes the copies under dir but keep ("" for none): the ones a save replaced, or
-// left when it stopped halfway.
-func removeSources(dir, keep string) error {
-	old, err := filepath.Glob(filepath.Join(dir, sourcePrefix+"*"))
+// left when it stopped halfway. The save is done by then: one that cannot go is left for the next.
+func removeSources(dir, keep string) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return err //nolint:wrapcheck // Save says what it saved
+		return
 	}
-	for _, p := range old {
-		if filepath.Base(p) == keep {
-			continue
-		}
-		if err = os.RemoveAll(p); err != nil {
-			return err //nolint:wrapcheck // as above
+	for _, d := range entries {
+		if name := d.Name(); strings.HasPrefix(name, sourcePrefix) && name != keep {
+			_ = os.RemoveAll(filepath.Join(dir, name)) //nolint:errcheck // as above
 		}
 	}
-	return nil
 }
 
 // Remove deletes slug. A linked file itself is left alone.

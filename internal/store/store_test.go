@@ -690,6 +690,29 @@ func TestWaitThroughRename(t *testing.T) {
 	}
 }
 
+// A store whose path holds what a glob takes for a pattern keeps one copy of a page all the same.
+func TestStoreUnderPatternPath(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	root := filepath.Join(e.tmp, "[notes]", "store")
+	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", ""))
+	doc := e.page(t, "plan.yaml", "Plan")
+	for range 2 {
+		entry, err := st.Prepare(t.Context(), doc, store.Options{}, e.tmp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = st.Save(entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := os.ReadDir(filepath.Join(root, "plan"))
+	if err != nil || len(entries) != 2 {
+		t.Errorf("the page holds %v (%v), want one copy and meta.json", entries, err)
+	}
+}
+
 func TestRemove(t *testing.T) {
 	t.Parallel()
 

@@ -31,10 +31,9 @@ import (
 
 const (
 	isoMillis = "2006-01-02T15:04:05.000Z"
-	// sourcePrefix names a copy under a stored page: its data file, sourceName, and the images it shows,
-	// at the paths it names them by.
+	// sourcePrefix names a copy under a stored page: its data file, tmpl.KeptName, and the images it
+	// shows, at the paths it names them by.
 	sourcePrefix = "source-"
-	sourceName   = tmpl.KeptName
 )
 
 var slugRe = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$`)
@@ -190,7 +189,7 @@ func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 	if m.IsLink() || rest != "" || !copyName(m.Source) {
 		return "", false
 	}
-	return filepath.Join(s.dir(slug), m.Source, sourceName), true
+	return filepath.Join(s.dir(slug), m.Source, tmpl.KeptName), true
 }
 
 // copyName reports whether source may name the copy of a stored page: one name a save gives, or none
