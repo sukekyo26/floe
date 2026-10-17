@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -84,6 +83,12 @@ type Entry struct {
 	Images map[string][]byte
 	// Prev is the entry this one overwrites, nil for a new slug.
 	Prev *Meta
+
+	// What settle builds Meta from: the publish's options, the real path of a link, the project
+	// published from, the data's title:, the theme given over the data's and the directory of
+	// templates the data file is drawn with.
+	opts                              Options
+	path, from, own, theme, templates string
 }
 
 // Prepare checks a publish of file and builds what Save writes, without writing anything. cwd
@@ -116,25 +121,24 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	if err != nil {
 		return nil, err
 	}
-	prev := s.ReadMeta(slug)
 	dir := cwd
 	if path != "" {
 		dir = filepath.Dir(path)
 	}
-	from := project.Name(ctx, dir)
-	replacing, err := checkOwner(slug, prev, path, from, opts.Force)
-	if err != nil {
+	var none Meta
+	e := &Entry{
+		Slug: slug, Meta: none, Source: nil, Images: nil, Prev: nil,
+		opts: opts, path: path, from: project.Name(ctx, dir), own: own, theme: "", templates: "",
+	}
+	if data != nil {
+		e.theme, e.templates = theme, s.templates.Dir()
+	}
+	// Checked against the slug as it is now, to fail before drawing; Save checks again.
+	if err = e.settle(s.ReadMeta(slug)); err != nil {
 		return nil, err
 	}
-	// A replaced page or link keeps nothing of the old one.
-	base := prev
-	if replacing || base == nil {
-		var none Meta
-		base = &none
-	}
-	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Source: nil, Images: nil, Prev: prev}
 	if data != nil {
-		if err = e.draw(data, src, theme, s.templates.Dir()); err != nil {
+		if err = e.draw(data, src); err != nil {
 			return nil, err
 		}
 	}
@@ -156,11 +160,26 @@ func (s *Store) readData(file, path, src, theme, cwd string) (*tmpl.Data, error)
 	return data, nil
 }
 
-// draw checks that data, of content src, draws, and keeps what drawing it each time it is opened
-// takes: the theme given over the data's, the directory of templates, and for a stored page src and
-// its images.
-func (e *Entry) draw(data *tmpl.Data, src, theme, templates string) error {
-	e.Meta.Theme, e.Meta.Templates = theme, templates
+// settle checks e against prev, the entry its slug holds (nil for none), and builds its meta.json on
+// it. A replaced page or link keeps nothing of the old one.
+func (e *Entry) settle(prev *Meta) error {
+	replacing, err := checkOwner(e.Slug, prev, e.path, e.from, e.opts.Force)
+	if err != nil {
+		return err
+	}
+	base := prev
+	if replacing || base == nil {
+		var none Meta
+		base = &none
+	}
+	e.Meta = newMeta(e.opts, e.path, e.from, base, e.own, e.Slug)
+	e.Meta.Theme, e.Meta.Templates = e.theme, e.templates
+	e.Prev = prev
+	return nil
+}
+
+// draw checks that data, of content src, draws, and keeps for a stored page src and its images.
+func (e *Entry) draw(data *tmpl.Data, src string) error {
 	if !e.Meta.IsLink() {
 		e.Source = []byte(src)
 		var err error
@@ -319,20 +338,26 @@ func IsDataFile(file string) bool {
 	return ext == ".yaml" || ext == ".yml"
 }
 
-// Save writes a prepared entry. A stored page's data file and images go to a new directory, which
-// meta.json then names, so that a save that fails leaves the old copy; the copies it no longer names
-// go after. Saves, edits and removals of one slug take turns, in this process or another, so that an
-// edit does not write back a meta.json naming a copy a save removed. What Prepare read is not held:
-// an edit between it and Save is written over.
+// Save writes a prepared entry. It checks the entry again against the slug as it is then, as an edit,
+// another publish or a rename may have changed it since Prepare: what was set on the management page
+// stays, and a page of another project is still refused. A stored page's data file and images go to
+// a new directory, which meta.json then names, so that a save that fails leaves the old copy; the
+// copies it no longer names go after.
 // LIMIT: a drawing that read meta.json just before a save may find its copy gone, and shows that it
 // cannot be read until the tab's next look. Keep the copy before until the next save if that shows.
 func (s *Store) Save(e *Entry) error {
-	dir := s.dir(e.Slug)
-	unlock, err := lock(dir, true)
+	unlock, err := s.lock()
 	if err != nil {
 		return fmt.Errorf("save %s: %w", e.Slug, err)
 	}
 	defer unlock()
+	if err = e.settle(s.ReadMeta(e.Slug)); err != nil {
+		return err
+	}
+	dir := s.dir(e.Slug)
+	if err = os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("save %s: %w", e.Slug, err)
+	}
 	if !e.Meta.IsLink() {
 		if e.Meta.Source, err = writeSource(dir, e.Source, e.Images); err != nil {
 			return fmt.Errorf("save %s: %w", e.Slug, err)
@@ -345,38 +370,25 @@ func (s *Store) Save(e *Entry) error {
 	return nil
 }
 
-// lock waits to hold dir alone among those who lock it, made first with create, and returns what lets
-// it go. The lock is on the directory, not its name: when the one it waited for was removed or renamed
-// meanwhile, it locks the one dir names then, or fails with fs.ErrNotExist when there is none.
-func lock(dir string, create bool) (func(), error) {
-	for {
-		if create {
-			if err := os.MkdirAll(dir, 0o700); err != nil {
-				return nil, err //nolint:wrapcheck // the caller says what it locked
-			}
-		}
-		f, err := os.Open(dir) //nolint:gosec // G304: the directory of a slug
-		if create && errors.Is(err, fs.ErrNotExist) {
-			continue // removed or renamed since it was made
-		}
-		if err != nil {
-			return nil, err //nolint:wrapcheck // as above
-		}
-		if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
-			_ = f.Close()   //nolint:errcheck // read-only
-			return nil, err //nolint:wrapcheck // as above
-		}
-		held, err := f.Stat()
-		named, nameErr := os.Stat(dir)
-		if err == nil && nameErr == nil && os.SameFile(held, named) {
-			// Closing it lets the lock go.
-			return func() { _ = f.Close() }, nil //nolint:errcheck // as above
-		}
-		_ = f.Close() //nolint:errcheck // as above
-		if err != nil {
-			return nil, err //nolint:wrapcheck // as above
-		}
+// lock waits to hold the store alone among saves, edits and removals, in this process or another, and
+// returns what lets it go. One lock for the store holds a slug not made yet, and the slug a rename
+// takes, as well.
+// LIMIT: saves of different pages wait for each other too, a few ms each. Lock each slug, and each
+// name a rename takes, if a store comes to see many saves at once.
+func (s *Store) lock() (func(), error) {
+	if err := os.MkdirAll(s.root, 0o700); err != nil {
+		return nil, err //nolint:wrapcheck // the caller says what it locked for
 	}
+	f, err := os.OpenFile(filepath.Join(s.root, ".lock"), os.O_RDONLY|os.O_CREATE, 0o600)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // as above
+	}
+	if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
+		_ = f.Close()   //nolint:errcheck // nothing written
+		return nil, err //nolint:wrapcheck // as above
+	}
+	// Closing it lets the lock go.
+	return func() { _ = f.Close() }, nil //nolint:errcheck // as above
 }
 
 // writeSource writes the data file src and its images, at the paths it names them by, to a new
@@ -434,15 +446,12 @@ func (s *Store) Remove(slug string) error {
 	if !ValidSlug(slug) {
 		return usererr.New("store_no_page", slug)
 	}
-	// A removal that waited for another of the same slug finds nothing, as one that came after.
-	unlock, err := lock(s.dir(slug), false)
-	if errors.Is(err, fs.ErrNotExist) {
-		return usererr.New("store_no_page", slug)
-	}
+	unlock, err := s.lock()
 	if err != nil {
 		return fmt.Errorf("remove %s: %w", slug, err)
 	}
 	defer unlock()
+	// A removal that waited for another of the same slug finds nothing, as one that came after.
 	if s.ReadMeta(slug) == nil {
 		return usererr.New("store_no_page", slug)
 	}
@@ -465,10 +474,7 @@ type Edit struct {
 // the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
 // data file's title: when published (a stored page), else to the slug; clearing the project drops it.
 func (s *Store) Edit(slug string, ed Edit) (string, error) {
-	unlock, err := lock(s.dir(slug), false)
-	if errors.Is(err, fs.ErrNotExist) {
-		return "", ErrNotFound
-	}
+	unlock, err := s.lock()
 	if err != nil {
 		return "", fmt.Errorf("edit %s: %w", slug, err)
 	}

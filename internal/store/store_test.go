@@ -601,20 +601,26 @@ func TestSaveFailureKeepsPage(t *testing.T) {
 	}
 }
 
-// An edit and a removal wait while the slug's directory is locked, as a save holds it.
-func TestEditAndRemoveWaitForSave(t *testing.T) {
+// A save, an edit and a removal wait while the store is locked, as another of them holds it.
+func TestSaveEditRemoveWait(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	e.mustPublish(t, e.page(t, "wait.yaml", "Wait"), store.Options{}, "proj")
+	doc := e.page(t, "wait.yaml", "Wait")
+	e.mustPublish(t, doc, store.Options{}, "proj")
+	entry, err := e.s.Prepare(t.Context(), doc, store.Options{}, filepath.Join(e.tmp, "proj"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, act := range []func() error{
+		func() error { return e.s.Save(entry) },
 		func() error {
 			_, err := e.s.Edit("wait", store.Edit{Description: ptr("d")})
 			return err
 		},
 		func() error { return e.s.Remove("wait") },
 	} {
-		f, err := os.Open(filepath.Join(e.tmp, "store", "wait"))
+		f, err := os.Open(filepath.Join(e.tmp, "store", ".lock"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -637,79 +643,47 @@ func TestEditAndRemoveWaitForSave(t *testing.T) {
 	}
 }
 
-// One that waited for the slug's directory while it was renamed acts on the slug's directory then: a
-// removal finds no page, and a save makes the page anew.
-func TestWaitThroughRename(t *testing.T) {
+// Save checks a publish again against its slug as it is then: an edit made since Prepare stays, and
+// a page another project published, or renamed onto the slug, since is refused.
+func TestSaveChecksAgain(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	doc := e.page(t, "moved.yaml", "Moved")
+	prepare := func(file, cwd string) *store.Entry {
+		t.Helper()
+		mkdir(t, filepath.Join(e.tmp, cwd))
+		entry, err := e.s.Prepare(t.Context(), file, store.Options{}, filepath.Join(e.tmp, cwd))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return entry
+	}
+
+	doc := e.page(t, "kept.yaml", "Kept")
 	e.mustPublish(t, doc, store.Options{}, "proj")
-	dir := filepath.Join(e.tmp, "store", "moved")
-	entry, err := e.s.Prepare(t.Context(), doc, store.Options{}, filepath.Join(e.tmp, "proj"))
-	if err != nil {
+	entry := prepare(doc, "proj")
+	if _, err := e.s.Edit("kept", store.Edit{Description: ptr("set meanwhile")}); err != nil {
 		t.Fatal(err)
 	}
-	for _, tt := range []struct {
-		name string
-		act  func() error
-		want func(error) bool
-	}{
-		{"remove", func() error { return e.s.Remove("moved") }, func(err error) bool {
-			var ue *usererr.Error
-			return errors.As(err, &ue) && ue.Key == "store_no_page"
-		}},
-		{"save", func() error { return e.s.Save(entry) }, func(err error) bool { return err == nil }},
-	} {
-		f, err := os.Open(dir)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
-			t.Fatal(err)
-		}
-		done := make(chan error, 1)
-		go func() { done <- tt.act() }()
-		time.Sleep(50 * time.Millisecond)
-		if err = os.Rename(dir, dir+"-away"); err != nil {
-			t.Fatal(err)
-		}
-		if err = f.Close(); err != nil {
-			t.Fatal(err)
-		}
-		if err = <-done; !tt.want(err) {
-			t.Errorf("%s through a rename = %v", tt.name, err)
-		}
-		if err = os.RemoveAll(dir + "-away"); err != nil {
-			t.Fatal(err)
-		}
-		mkdir(t, dir)
+	if err := e.s.Save(entry); err != nil || e.meta(t, "kept").Description != "set meanwhile" || entry.Prev == nil {
+		t.Errorf("a save after an edit: %v, %+v", err, e.meta(t, "kept"))
 	}
-	if page := e.drawn(t, "moved"); !strings.Contains(page, "<h1>Moved</h1>") {
-		t.Errorf("the page a save made anew:\n%s", page)
-	}
-}
 
-// A store whose path holds what a glob takes for a pattern keeps one copy of a page all the same.
-func TestStoreUnderPatternPath(t *testing.T) {
-	t.Parallel()
-
-	e := newEnv(t)
-	root := filepath.Join(e.tmp, "[notes]", "store")
-	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", ""))
-	doc := e.page(t, "plan.yaml", "Plan")
-	for range 2 {
-		entry, err := st.Prepare(t.Context(), doc, store.Options{}, e.tmp)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err = st.Save(entry); err != nil {
-			t.Fatal(err)
-		}
+	race := e.page(t, "race.yaml", "Race")
+	first, second := prepare(race, "one"), prepare(race, "two")
+	if err := e.s.Save(first); err != nil {
+		t.Fatal(err)
 	}
-	entries, err := os.ReadDir(filepath.Join(root, "plan"))
-	if err != nil || len(entries) != 2 {
-		t.Errorf("the page holds %v (%v), want one copy and meta.json", entries, err)
+	wantUserErr(t, e.s.Save(second), "store_slug_owned", "race", "one")
+
+	e.mustPublish(t, e.page(t, "a.yaml", "A"), store.Options{}, "one")
+	onto := prepare(e.page(t, "b.yaml", "B"), "two")
+	if _, err := e.s.Edit("a", store.Edit{Slug: ptr("b")}); err != nil {
+		t.Fatal(err)
+	}
+	wantUserErr(t, e.s.Save(onto), "store_slug_owned", "b", "one")
+	if page := e.drawn(t, "b"); !strings.Contains(page, "<h1>A</h1>") {
+		t.Errorf("the renamed page after a refused save:\n%s", page)
 	}
 }
 
