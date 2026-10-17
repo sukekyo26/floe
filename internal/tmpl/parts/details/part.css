@@ -10,5 +10,4 @@
 }
 .floe-details[open] > summary::before { transform: rotate(45deg); margin-top: -0.25rem; }
 .floe-details > summary:focus-visible { outline-offset: -2px; border-radius: 14px; }
-.floe-details > .body { display: grid; gap: 1rem; padding: 0 1.2rem 1.1rem; min-width: 0; }
-.floe-details > .body > * { min-width: 0; }
+.floe-details > div { padding: 0 1.2rem 1.1rem; }

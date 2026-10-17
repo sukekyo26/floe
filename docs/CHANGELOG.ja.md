@@ -16,7 +16,8 @@ floe の主要な変更を記録します。フォーマットは
   - `findings`: レビューの指摘。それぞれ `level`・場所・中身・見送った理由・結末のピル。`decision`: 題の下に理由と退けた案。`risks`: 起きやすさ（`likely`）と影響（`impact`）、両方から決める色。
   - `matrix`: 行と列のセルに ✓・△・×。`fields`: 設定やコマンドの項目と型・必須・既定値。`timeline`: 線に沿った日付の並び。`bars`: 値の棒。
   - `faq`: 押すと答えが開く問い。`glossary`: 用語。`keys`: キーキャップと働き。
-  - `details` と `tabs`: 中に置いた部品（`text`・`code`・`terminal`・`diff`・`note`・`table`）を題の下に畳むか、タブで 1 つずつ見せる。
+  - `details` と `tabs`: 中に置いた部品（`text`・`code`・`terminal`・`diff`・`note`・`table` を並べた `stack`）を題の下に畳むか、タブで 1 つずつ見せる。
+  - テンプレート自身の項目にも、`cell`（1 行の Markdown かピル）と `stack` を使える。
   - どのテーマでも表・カード・コードの見た目を使い、`risks` の見出しのような部品の言葉はページの言語で描く。差分の行の色は `--code-add` と `--code-del`。
 - データファイルから描いたページを、データファイルの隣（か `--out-dir`）の `<名前>.html` に書き出す `floe render <data.yaml>...` を追加。リポジトリに、エージェント向けのデータファイルと人向けのページの両方を置くためのもの。
   - ページは `floe publish` が保存するページのダウンロードと同じで、floe 無しで開ける。CSP は `<meta>` に入る。

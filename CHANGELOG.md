@@ -26,11 +26,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   required and its default), `timeline` (dates down a line), `bars` (values as
   bars), `faq` (questions opening their answers), `glossary`, `keys`
   (keycaps and what they do), and `details` and `tabs`, which fold the parts
-  they hold under a title or show one tab's at a time: `text`, `code`,
-  `terminal`, `diff`, `note` or `table`. They take the look of tables, cards
-  and code in every theme, and draw their few words, such as the headings of
-  `risks`, in the page's language; `--code-add` and `--code-del` colour a
-  diff's lines.
+  they hold under a title or show one tab's at a time, a `stack` of `text`,
+  `code`, `terminal`, `diff`, `note` or `table`. A template's own items may
+  hold a `cell` (a line of Markdown or a pill) or a `stack` too. They take
+  the look of tables, cards and code in every theme, and draw their few
+  words, such as the headings of `risks`, in the page's language;
+  `--code-add` and `--code-del` colour a diff's lines.
 - Add `floe render <data.yaml>...`, which writes the page of each data file
   to `<name>.html` beside it, or in `--out-dir`, for a repository to keep the
   data file for agents and its page for people. The page is the download of

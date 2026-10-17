@@ -185,6 +185,7 @@ func readParts() (*partSet, error) {
 }
 
 // partsUnder adds to names the parts the schemas under s refer to.
+// LIMIT: a part that held itself, at any depth, would walk forever; keep the parts walked if one comes to.
 func (s *schema) partsUnder(names *[]string) {
 	if s == nil {
 		return

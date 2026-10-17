@@ -152,7 +152,7 @@ func TestCheckParts(t *testing.T) {
 
 	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table"} {
 		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
-		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stats, steps, table, tabs, terminal, timeline, tree"
+		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree"
 		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 			t.Errorf("Check of %s = %v", ref, mistakes)
 		}
@@ -417,7 +417,7 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 	for _, want := range []string{
 		`<tr><td class="level"><span class="floe-pill bad">must</span></td><td><code class="at">a.go:1</code><div><code>x</code> leaks</div><div class="why">later</div></td><td class="status"><span class="floe-pill good">fixed</span></td></tr>`,
 		`<td class="level"><span class="floe-pill nit">nit</span></td><td><div>y</div></td><td class="status"></td>`,
-		`<details class="floe-details"><summary>Log</summary><div class="body"><figure class="floe-terminal sh"><pre><span class="run">make</span></pre></figure><p><strong>done</strong></p>` + "\n</div></details>",
+		`<details class="floe-details"><summary>Log</summary><div class="floe-stack"><figure class="floe-terminal sh"><pre><span class="run">make</span></pre></figure><p><strong>done</strong></p>` + "\n</div></details>",
 		`<td class="yes"><span class="mark"><span>Yes</span></span></td><td class="part"><span class="mark"><span>Partly</span></span><small>some</small></td>`,
 		`<p class="meta"><span class="floe-pill">decided</span><span>2026-10-12</span></p><h3>Take B</h3><p>Why</p>` + "\n" + `<p class="set-aside">Set aside</p><ul><li>A</li></ul>`,
 		`<th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col">Impact</th><th scope="col">What we do</th>`,
@@ -431,8 +431,8 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 		`<details open><summary>Why?</summary><div><p><a href="https://example.com">See</a></p>`,
 		`<div><dt>part</dt><dd><p>A piece</p>`,
 		`<div><dt><kbd>Ctrl</kbd><span>+</span><kbd>K</kbd></dt><dd>Find</dd></div>`,
-		`<label><input type="radio" name="tab" checked>bash</label><div><figure class="floe-code"><pre><code>ls</code></pre></figure></div>`,
-		`<label><input type="radio" name="tab">cmd</label><div><div class="floe-note"><p>n</p>`,
+		`<label><input type="radio" name="tab" checked>bash</label><div class="floe-stack"><figure class="floe-code"><pre><code>ls</code></pre></figure></div>`,
+		`<label><input type="radio" name="tab">cmd</label><div class="floe-stack"><div class="floe-note"><p>n</p>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page lacks %s:\n%s", want, page)

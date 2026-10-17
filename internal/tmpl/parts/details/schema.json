@@ -6,25 +6,7 @@
   "properties": {
     "title": { "type": "string", "minLength": 1 },
     "open": { "type": "boolean", "description": "Open when the page opens" },
-    "parts": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-          "type": "object",
-          "description": "One key naming the kind of the part",
-          "properties": {
-            "text": { "type": "string", "minLength": 1, "description": "Markdown" },
-            "code": { "$ref": "floe:///parts/code.json" },
-            "terminal": { "$ref": "floe:///parts/terminal.json" },
-            "diff": { "$ref": "floe:///parts/diff.json" },
-            "note": { "$ref": "floe:///parts/note.json" },
-            "table": { "$ref": "floe:///parts/table.json" }
-          },
-          "minProperties": 1,
-          "maxProperties": 1,
-          "additionalProperties": false
-        }
-    }
+    "parts": { "$ref": "floe:///parts/stack.json" }
   },
   "required": ["title", "parts"],
   "additionalProperties": false

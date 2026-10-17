@@ -7,5 +7,5 @@
 .floe-tabs > label:has(:checked) { background: var(--accent-soft, #dcebec); color: var(--accent, #1d6670); }
 .floe-tabs > label:has(:focus-visible) { outline: 2px solid var(--accent, #1d6670); outline-offset: 2px; }
 .floe-tabs input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
-.floe-tabs > div { order: 1; flex-basis: 100%; min-width: 0; display: none; gap: 1rem; margin-top: 0.3rem; }
+.floe-tabs > div { order: 1; flex-basis: 100%; display: none; margin-top: 0.3rem; }
 .floe-tabs > label:has(:checked) + div { display: grid; }

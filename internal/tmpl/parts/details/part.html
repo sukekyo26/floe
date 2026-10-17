@@ -1,2 +1,1 @@
-{{- define "body"}}{{range .}}{{with .text}}{{markdown .}}{{end}}{{with .code}}{{.}}{{end}}{{with .terminal}}{{.}}{{end}}{{with .diff}}{{.}}{{end}}{{with .note}}{{.}}{{end}}{{with .table}}{{.}}{{end}}{{end}}{{end -}}
-<details class="floe-details"{{if .open}} open{{end}}><summary>{{.title}}</summary><div class="body">{{template "body" .parts}}</div></details>
+<details class="floe-details"{{if .open}} open{{end}}><summary>{{.title}}</summary>{{.parts}}</details>
