@@ -415,8 +415,8 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 		"      - tabs: [{ title: bash, parts: [{ code: { text: ls } }] }, { title: cmd, parts: [{ note: { text: n } }] }]\n"
 	page := render(t, fmt.Sprintf(src, "en"))
 	for _, want := range []string{
-		`<tr><td class="level"><span class="floe-pill bad">must</span></td><td><code class="at">a.go:1</code><div><code>x</code> leaks</div><div class="why">later</div></td><td class="status"><span class="floe-pill good">fixed</span></td></tr>`,
-		`<td class="level"><span class="floe-pill nit">nit</span></td><td><div>y</div></td><td class="status"></td>`,
+		`<tr><td class="level"><span class="floe-pill bad">must</span></td><td><div class="head"><code class="at">a.go:1</code><span class="status"><span class="floe-pill good">fixed</span></span></div><div><code>x</code> leaks</div><div class="why">later</div></td></tr>`,
+		`<tr><td class="level"><span class="floe-pill nit">nit</span></td><td><div>y</div></td></tr>`,
 		`<details class="floe-details"><summary>Log</summary><div class="floe-stack"><figure class="floe-terminal sh"><pre><span class="run">make</span></pre></figure><p><strong>done</strong></p>` + "\n</div></details>",
 		`<td class="yes"><span class="mark"><span>Yes</span></span></td><td class="part"><span class="mark"><span>Partly</span></span><small>some</small></td>`,
 		`<p class="meta"><span class="floe-pill">decided</span><span>2026-10-12</span></p><h3>Take B</h3><p>Why</p>` + "\n" + `<p class="set-aside">Set aside</p><ul><li>A</li></ul>`,

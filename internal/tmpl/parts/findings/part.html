@@ -1,7 +1,9 @@
 <div class="floe-table floe-findings"><table>
 <tbody>
 {{- range .}}
-<tr><td class="level"><span class="floe-pill{{if eq .level "must"}} bad{{else if eq .level "should"}} warn{{else}} nit{{end}}">{{.level}}</span></td><td>{{with .at}}<code class="at">{{.}}</code>{{end}}<div>{{markdownLine .text}}</div>{{with .why}}<div class="why">{{markdownLine .}}</div>{{end}}</td><td class="status">{{with .status}}{{.}}{{end}}</td></tr>
+<tr><td class="level"><span class="floe-pill{{if eq .level "must"}} bad{{else if eq .level "should"}} warn{{else}} nit{{end}}">{{.level}}</span></td><td>
+{{- if or .at .status}}<div class="head">{{with .at}}<code class="at">{{.}}</code>{{end}}{{with .status}}<span class="status">{{.}}</span>{{end}}</div>{{end -}}
+<div>{{markdownLine .text}}</div>{{with .why}}<div class="why">{{markdownLine .}}</div>{{end}}</td></tr>
 {{- end}}
 </tbody>
 </table></div>
