@@ -226,30 +226,31 @@ func (e *env) stop(t *testing.T) {
 	ctx := context.WithoutCancel(t.Context())
 	e.vars["FLOE_PORT"] = e.port
 	// A server in this process (floe serve, run by a test) stops with the test's context: a SIGTERM to
-	// its pid would stop the test binary.
+	// its pid would stop the test binary. The pid is the one probed, not one floe stop would probe
+	// again: another package's server may have the port by then.
 	if h, up := e.healthIn(ctx, t); up && h.PID != os.Getpid() {
-		if r := e.runIn(ctx, t, "", "stop"); r.code != 0 {
-			t.Errorf("stop = %+v", r)
+		if err := daemon.Terminate(h.PID); err != nil {
+			t.Error(err)
 		}
 	}
-	if !e.wait(ctx, t, false) {
-		h, _ := e.healthIn(ctx, t)
+	if h, down := e.wait(ctx, t, false); !down {
 		t.Errorf("the server outlived the test: %+v", h)
 	}
 }
 
-// wait probes e's port until a server of floe is up there, or down when up is false, and reports
-// whether it came to that. Starting and stopping take well under a second, but a loaded machine (the
-// whole suite under -race) may take longer.
-func (e *env) wait(ctx context.Context, t *testing.T, up bool) bool {
+// wait probes e's port until e's server is up there, or down when up is false, and reports whether it
+// came to that, with the health it probed last. Starting and stopping take well under a second, but a
+// loaded machine (the whole suite under -race) may take longer.
+func (e *env) wait(ctx context.Context, t *testing.T, up bool) (server.Health, bool) {
 	t.Helper()
 
 	for deadline := time.Now().Add(10 * time.Second); ; {
-		if _, now := e.healthIn(ctx, t); now == up {
-			return true
+		h, now := e.healthIn(ctx, t)
+		if now == up {
+			return h, true
 		}
 		if time.Now().After(deadline) {
-			return false
+			return h, false
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
@@ -311,14 +312,15 @@ func (e *env) health(t *testing.T) (server.Health, bool) {
 	return e.healthIn(t.Context(), t)
 }
 
-// healthIn probes e's port, and reports whether e's own server is up there: a server of floe for the
-// store e was made with. Another package's tests, run at the same time in a process of their own, may
-// start a server of floe on the port as soon as e's lets it go.
+// healthIn probes e's port, and reports whether e's own server is up there: a server of floe for a
+// store under e's directory (FLOE_DIR, or another a test names). Another package's tests, run at the
+// same time in a process of their own, may start a server of floe on the port as soon as e's lets it
+// go.
 func (e *env) healthIn(ctx context.Context, t *testing.T) (server.Health, bool) {
 	t.Helper()
 
 	p := daemon.Probe(ctx, e.base())
-	return p.Health, p.State == daemon.Ours && p.Health.Root == filepath.Join(e.tmp, "store")
+	return p.Health, p.State == daemon.Ours && strings.HasPrefix(p.Health.Root, e.tmp+string(filepath.Separator))
 }
 
 func want(t *testing.T, what string, got result, code int, stdout, stderr string) {
@@ -450,7 +452,7 @@ func TestPublish(t *testing.T) {
 
 	h, _ := e.health(t)
 	want(t, "stop", e.run(t, "", "stop"), 0, "stopped server (pid "+strconv.Itoa(h.PID)+")\n", "")
-	if !e.wait(t.Context(), t, false) {
+	if _, down := e.wait(t.Context(), t, false); !down {
 		t.Error("stop did not shut the server down")
 	}
 }
@@ -522,7 +524,10 @@ func TestServeInProcess(t *testing.T) {
 	}()
 	// A serve that stops at once (its port taken) says why, rather than leave the wait to run out.
 	upOrDone := make(chan bool, 1)
-	go func() { upOrDone <- e.wait(ctx, t, true) }()
+	go func() {
+		_, up := e.wait(ctx, t, true)
+		upOrDone <- up
+	}()
 	select {
 	case code := <-done:
 		t.Fatalf("serve = %d before it came up: %s", code, stderr.String())
