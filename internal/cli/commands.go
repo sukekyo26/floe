@@ -256,7 +256,9 @@ func (a *app) serve(ctx context.Context) error {
 // listen takes the listener the publish that started this server bound for it, or binds the port.
 func (a *app) listen() (net.Listener, error) {
 	if ln, err := daemon.Handed(a.env.Getenv, a.cfg.port); ln != nil || err != nil {
-		return ln, err //nolint:wrapcheck // already says what failed
+		// Taken once: a floe run from here binds its own.
+		_ = os.Unsetenv(daemon.ListenerEnv) //nolint:errcheck // a name Unsetenv takes
+		return ln, err                      //nolint:wrapcheck // already says what failed
 	}
 	ln, err := daemon.Listen(a.cfg.port)
 	if errors.Is(err, syscall.EADDRINUSE) {

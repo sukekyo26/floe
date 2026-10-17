@@ -126,14 +126,9 @@ func Ensure(ctx context.Context, s Server) error {
 		}
 	}
 	if p.State == Down {
-		started, err := start(ctx, s)
-		if err != nil {
+		var err error
+		if p, err = startAndWait(ctx, s, p); err != nil {
 			return err
-		}
-		p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Down })
-		// Bound, but none answers: another publish's server still starting, or a program that does not.
-		if p.State == Down && !started {
-			return usererr.New("daemon_port_silent", s.Port)
 		}
 	}
 	switch {
@@ -146,6 +141,25 @@ func Ensure(ctx context.Context, s Server) error {
 	default:
 		return nil
 	}
+}
+
+// startAndWait starts a server on the port, p being Down, and waits for one to answer there.
+func startAndWait(ctx context.Context, s Server, p Status) (Status, error) {
+	started := false
+	// Twice at most: the port another publish bound comes free, if its server fails, while this one
+	// waits for it.
+	for try := 0; try < 2 && p.State == Down && !started; try++ {
+		var err error
+		if started, err = start(ctx, s); err != nil {
+			return p, err
+		}
+		p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Down })
+	}
+	// Bound, but none answers: another publish's server still starting, or a program that does not.
+	if p.State == Down && !started {
+		return p, usererr.New("daemon_port_silent", s.Port)
+	}
+	return p, nil
 }
 
 // ListenerEnv tells "floe serve" the file descriptor of the listener the publish that started it bound.
@@ -176,19 +190,22 @@ func Handed(getenv func(string) string, port int) (net.Listener, error) {
 	if v == "" {
 		return nil, nil //nolint:nilnil // none handed down: the server binds the port itself
 	}
-	// Not standard input, output or error, which taking would close.
-	fd, err := strconv.Atoi(v)
-	if err == nil && fd < listenerFD {
-		err = errLowFD
+	refuse := func(err error) error {
+		return fmt.Errorf("take the listener handed down (%s=%s): %w", ListenerEnv, v, err)
 	}
+	fd, err := strconv.Atoi(v)
 	if err != nil {
-		return nil, fmt.Errorf("take the listener handed down (%s=%s): %w", ListenerEnv, v, err)
+		return nil, refuse(err)
+	}
+	// Not standard input, output or error, which taking would close.
+	if fd < listenerFD {
+		return nil, refuse(errLowFD)
 	}
 	f := os.NewFile(uintptr(fd), "listener") //nolint:gosec // G115: a descriptor the publish wrote
 	defer f.Close()                          //nolint:errcheck // the listener holds its own copy
 	ln, err := net.FileListener(f)
 	if err != nil {
-		return nil, fmt.Errorf("take the listener handed down (%s=%s): %w", ListenerEnv, v, err)
+		return nil, refuse(err)
 	}
 	if want := Addr(port); ln.Addr().String() != want {
 		_ = ln.Close() //nolint:errcheck // refused

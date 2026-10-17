@@ -460,9 +460,9 @@ func TestPublish(t *testing.T) {
 }
 
 // TestPublishToASilentPort holds the port with a program that accepts connections and never answers:
-// the publish gives up within the 3 s the server has to start, not after 150 probe timeouts, says the
-// port is taken, and starts no server, as it cannot bind the port: one started anyway could take the
-// port once it is let go.
+// the publish gives up within the two waits of 3 s the server has to start, not after 150 probe
+// timeouts, says the port is in use with nothing answering, and starts no server, as it cannot bind
+// the port: one started anyway could take the port once it is let go.
 func TestPublishToASilentPort(t *testing.T) {
 	t.Parallel()
 
@@ -490,10 +490,11 @@ func TestPublishToASilentPort(t *testing.T) {
 	}
 	want(t, "publish", e.exe(t, self, "publish", e.page(t, "silent.yaml", "Silent")), 1, "",
 		"floe: port "+e.port+" is in use, and nothing answers there")
-	if took := time.Since(start); took > 10*time.Second {
+	if took := time.Since(start); took > 15*time.Second {
 		t.Errorf("the publish took %v", took)
 	}
 	// A server started, slow on a loaded machine, may write its mark after the publish gives up.
+	// LIMIT: one slower still than this second goes unseen. Wait on its pid if that shows.
 	time.Sleep(time.Second)
 	switch b, readErr := os.ReadFile(mark); {
 	case readErr == nil:
@@ -504,6 +505,20 @@ func TestPublishToASilentPort(t *testing.T) {
 	case !errors.Is(readErr, os.ErrNotExist):
 		t.Errorf("read the mark of a server started: %v", readErr)
 	}
+}
+
+// A port held while the publish waits, and let go before it gives up, as when another publish's server
+// failed to start, is bound on a second try and served.
+func TestPublishAfterThePortComesFree(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	ln := e.hold(t)
+	go func() {
+		time.Sleep(1500 * time.Millisecond)
+		_ = ln.Close()
+	}()
+	want(t, "publish", e.run(t, "", "publish", e.page(t, "free.yaml", "Free")), 0, e.base()+"/a/free/\n", "")
 }
 
 func TestPublishToAnotherServer(t *testing.T) {

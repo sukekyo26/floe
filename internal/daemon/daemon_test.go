@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/daemon"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // A server takes the listener handed down only when it is on its port; none handed down binds itself.
@@ -64,4 +65,22 @@ func TestHanded(t *testing.T) {
 		t.Fatalf("Handed of a listener on the port = %v, %v", ln, err)
 	}
 	_ = ln.Close()
+}
+
+// A port that cannot be bound for another reason than its use says so, with the reason.
+func TestCannotListen(t *testing.T) {
+	t.Parallel()
+
+	// Port 1 is privileged on linux; where it is not, or to root, there is nothing to refuse.
+	if ln, err := daemon.Listen(1); !errors.Is(err, syscall.EACCES) {
+		if err == nil {
+			_ = ln.Close()
+		}
+		t.Skip("port 1 is not refused here")
+	}
+	err := daemon.Ensure(t.Context(), daemon.Server{Port: 1, Root: t.TempDir(), Build: "b", Env: nil})
+	var ue *usererr.Error
+	if !errors.As(err, &ue) || ue.Key != "daemon_cannot_listen" || len(ue.Args) != 2 || ue.Args[1] != "permission denied" {
+		t.Errorf("Ensure on a privileged port = %#v", err)
+	}
 }
