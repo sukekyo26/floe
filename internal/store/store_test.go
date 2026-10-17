@@ -557,6 +557,34 @@ func TestSaveAtOnce(t *testing.T) {
 	}
 }
 
+// A save whose write fails leaves the page it was to replace drawn as it was.
+func TestSaveFailureKeepsPage(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	doc := e.page(t, "kept.yaml", "Kept")
+	e.mustPublish(t, doc, store.Options{}, "proj")
+	source := filepath.Join(e.tmp, "store", "kept", "source")
+	if err := os.Chmod(source, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chmod(source, 0o700); err != nil {
+			t.Error(err)
+		}
+	})
+	entry, err := e.s.Prepare(t.Context(), e.page(t, "kept.yaml", "Changed"), store.Options{}, filepath.Join(e.tmp, "proj"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.s.Save(entry); err == nil {
+		t.Fatal("a save into a directory it cannot write succeeded")
+	}
+	if page := e.drawn(t, "kept"); !strings.Contains(page, "<h1>Kept</h1>") {
+		t.Errorf("the page after a failed save:\n%s", page)
+	}
+}
+
 func TestRemove(t *testing.T) {
 	t.Parallel()
 

@@ -116,11 +116,13 @@ func TestDrawnStored(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.write(t, "work/spec/img/old.png", string(png))
+	e.write(t, "work/spec/gone/old.png", string(png))
 	e.write(t, "work/spec/img/chart.png", string(png))
 	const right = "template: sizes\ntitle: Sizes\nfiles: [{name: a, bytes: 1536}]\nchart: img/chart.png\nlang: ja\n"
-	data := e.write(t, "work/spec/sizes.yaml", strings.Replace(right, "chart.png", "old.png", 1))
+	data := e.write(t, "work/spec/sizes.yaml", strings.Replace(right, "img/chart.png", "gone/old.png", 1))
 	e.publish(t, data, store.Options{})
+	// What a write stopped halfway left goes on the next publish.
+	e.write(t, "store/sizes/source/.tmp-stray", "x")
 	e.write(t, "work/spec/sizes.yaml", right)
 	e.publish(t, data, store.Options{})
 	if err = os.RemoveAll(filepath.Join(e.tmp, "work")); err != nil {
@@ -134,7 +136,7 @@ func TestDrawnStored(t *testing.T) {
 	if b, readErr := os.ReadFile(filepath.Join(source, "img", "chart.png")); readErr != nil || string(b) != string(png) {
 		t.Errorf("the copy of the image = %v", readErr)
 	}
-	for _, gone := range []string{"source/img/old.png", "index.html"} {
+	for _, gone := range []string{"source/gone", "source/.tmp-stray", "index.html"} {
 		if _, statErr := os.Stat(filepath.Join(e.store.Root(), "sizes", gone)); !errors.Is(statErr, os.ErrNotExist) {
 			t.Errorf("%s is in the store: %v", gone, statErr)
 		}

@@ -5,9 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -352,21 +354,54 @@ func lock(dir string) (func(), error) {
 	return func() { _ = f.Close() }, nil //nolint:errcheck // as above
 }
 
-// writeSource puts the data file src and its images under dir/source/, emptied first, so that an
-// image the data no longer shows does not stay. The data file goes last, whole, so that a drawing in
-// between finds no data file rather than part of one or of its images. A write that fails leaves the
-// page unreadable until the next publish, which the data file just read is there for.
+// writeSource puts the data file src and its images under dir/source/, over what is there: the images
+// first, then the data file, each whole, and then what the data no longer shows goes. A drawing in
+// between finds the old data file or the new one, each with its images, and a write that fails leaves
+// the old page drawn.
 func writeSource(dir string, src []byte, images map[string][]byte) error {
 	source := filepath.Join(dir, sourceDir)
-	if err := os.RemoveAll(source); err != nil {
-		return err //nolint:wrapcheck // Save says what it saved
-	}
 	for name, b := range images {
 		if err := writeUnder(source, name, b); err != nil {
 			return err
 		}
 	}
-	return writeUnder(source, sourceName, src)
+	if err := writeUnder(source, sourceName, src); err != nil {
+		return err
+	}
+	return prune(source, images)
+}
+
+// prune removes the files under source but its data file and images (a file a write left halfway
+// too), and then the directories left empty.
+func prune(source string, images map[string][]byte) error {
+	r, err := os.OpenRoot(source)
+	if err != nil {
+		return err //nolint:wrapcheck // Save says what it saved
+	}
+	defer r.Close() //nolint:errcheck // nothing written through it is left to flush
+	var dirs []string
+	err = fs.WalkDir(r.FS(), ".", func(name string, d fs.DirEntry, err error) error {
+		_, shown := images[name]
+		switch {
+		case err != nil:
+			return err
+		case d.IsDir():
+			if name != "." {
+				dirs = append(dirs, name)
+			}
+		case !shown && name != sourceName:
+			return r.Remove(name)
+		}
+		return nil
+	})
+	if err != nil {
+		return err //nolint:wrapcheck // as above
+	}
+	// Deepest first; one that still holds an image stays.
+	for _, d := range slices.Backward(dirs) {
+		_ = r.Remove(d) //nolint:errcheck // not empty
+	}
+	return nil
 }
 
 // writeUnder writes b to name, a slash-separated path, under dir, making the directories on its way.
