@@ -104,7 +104,6 @@ func (s *schema) items() []Item {
 			Name: n, Types: p.types(), Of: nil, Format: p.Format, Part: "", Enum: nil,
 			Required: slices.Contains(s.Required, n), Description: p.Description, Items: nil,
 		}
-
 		enum := p.Enum
 		if p.Items != nil {
 			// A list described by its items: "a list of …", each one what it holds.

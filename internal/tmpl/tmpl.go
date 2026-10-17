@@ -477,6 +477,9 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 		return nil, err
 	}
 	s.absolute(schemaURL(t.Name))
+	if ref := s.intoPart(set); ref != "" {
+		return nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(ref))
+	}
 	s.resolve(set)
 	return s, nil
 }

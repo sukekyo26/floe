@@ -110,11 +110,12 @@ func unknownPart(ref string) error {
 	if err != nil {
 		return err
 	}
-	names := strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")
-	if whole, _, into := strings.Cut(ref, "#"); into && set.schemas[whole] != nil {
-		return usererr.New("tmpl_part_into", ref, whole)
+	if whole, _, into := strings.Cut(ref, "#"); into {
+		if name, ok := partName(whole); ok && set.parts[name] != nil {
+			return usererr.New("tmpl_part_into", ref, whole)
+		}
 	}
-	return usererr.New("tmpl_part_unknown", ref, names)
+	return usererr.New("tmpl_part_unknown", ref, strings.Join(slices.Sorted(maps.Keys(set.parts)), ", "))
 }
 
 var errSchemaURL = errors.New("a schema refers to no other file or URL; write it in schema.json")

@@ -167,15 +167,9 @@ func (c relation) check(file string, doc map[string]any, root ast.Node) (yamlpos
 	return c.run(file, doc, items, root)
 }
 
-// run runs c on each of items of the values doc of file.
+// run runs c, its expression compiled, on each of items of the values doc of file.
 func (c relation) run(file string, doc map[string]any, items []itemAt, root ast.Node) (yamlpos.Problems, error) {
 	p := c.prog
-	if p == nil {
-		var err *yamlpos.Error
-		if p, err = c.program(); err != nil {
-			return nil, err
-		}
-	}
 	var problems yamlpos.Problems
 	for _, item := range items {
 		out, err := expr.Run(p, scope{Item: item.value, Doc: doc})

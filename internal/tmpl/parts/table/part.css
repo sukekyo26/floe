@@ -9,7 +9,7 @@
 .floe-table th.num { min-width: 6em; }
 .floe-table thead th { font-size: 0.88rem; border-bottom: 2px solid var(--fg, #18201e); }
 .floe-table .num { text-align: right; }
-.floe-table td.num { font-family: var(--mono, monospace); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.floe-table td.num { min-width: auto; font-family: var(--mono, monospace); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .floe-pill {
   display: inline-block; font-family: var(--mono, monospace); font-size: 0.74rem; font-weight: 600;
   padding: 0.1em 0.6em; border-radius: 999px; white-space: nowrap;

@@ -589,8 +589,7 @@ func (l *schemaLint) variables() ([]string, error) {
 }
 
 // part notes the part of floe's ref names, at ptr, and reports whether it names one: one prepare does
-// not reach would never be drawn. A ref into a part (floe:///parts/table.json#/properties/rows) is
-// refused: it would be checked as the part but drawn as plain data.
+// not reach would never be drawn. A ref into a part is refused as the schema is read.
 func (l *schemaLint) part(ref, ptr string, reached bool) bool {
 	ref = absolute(l.base, ref)
 	if !strings.HasPrefix(ref, partsURL) {
@@ -603,10 +602,7 @@ func (l *schemaLint) part(ref, ptr string, reached bool) bool {
 		return false
 	}
 	switch {
-	case !ok:
-		l.mistakes = append(l.mistakes, usererr.New("tmpl_item", l.file, usererr.New("tmpl_item", ptr, unknownPart(ref))))
-		return false
-	case set.parts[name] == nil:
+	case !ok || set.parts[name] == nil:
 		return false
 	case !reached:
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_part_unreached", l.file, ptr, name))

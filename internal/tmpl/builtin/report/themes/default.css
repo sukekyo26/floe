@@ -49,13 +49,13 @@ pre code { background: none; padding: 0; }
 .stat { display: grid; }
 .stat b { font-family: var(--mono); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
 .stat span { color: var(--muted); font-size: 0.85rem; }
-/* Tables written in Markdown text, which floe wraps in .table-wrap; a table part brings its own style */
+/* Tables of the page: those of Markdown text, in .table-wrap, of HTML, and of the table part, which adds its own */
 .table-wrap { overflow-x: auto; }
-.table-wrap table { border-collapse: collapse; width: 100%; background: var(--surface); }
-.table-wrap :is(th, td) {
+table { border-collapse: collapse; width: 100%; background: var(--surface); }
+th, td {
   text-align: left; vertical-align: baseline; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line);
   /* On narrow screens, scroll sideways inside .table-wrap instead of squeezing the columns */
   min-width: 7em;
 }
-.table-wrap thead th { font-family: var(--display); font-size: 0.88rem; border-bottom: 2px solid var(--fg); }
+thead th { font-family: var(--display); font-size: 0.88rem; border-bottom: 2px solid var(--fg); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

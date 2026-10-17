@@ -155,12 +155,15 @@ func TestCheckParts(t *testing.T) {
 		!strings.Contains(mistakes[0].Error(), "#/properties/risks/properties/x: the format diagram marks an item to draw") {
 		t.Errorf("Check of a format beside a part = %v", mistakes)
 	}
-	// One into a part would be drawn as plain data.
+	// One into a part would be drawn as plain data: a publish refuses it too.
 	ref := "floe:///parts/table.json#/properties/columns"
 	dir = memo(t, `"risks": {"$ref": "`+ref+`"}`)
-	want := "#/properties/risks: " + ref + " points into a part of floe's, which would be checked but not drawn as the part; refer to the whole part, floe:///parts/table.json"
+	want := "schema.json: " + ref + " points into a part of floe's, which would be checked but not drawn as the part; refer to the whole part, floe:///parts/table.json"
 	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 		t.Errorf("Check of a ref into a part = %v", mistakes)
+	}
+	if _, err := draw(tmpl.NewLibrary(dir, ""), "template: memo\nlang: en\n"); err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("Read of a template with a ref into a part = %v", err)
 	}
 	// One floe does not follow to would never be drawn.
 	dir = memo(t, `"risks": {"anyOf": [{"$ref": "floe:///parts/table.json"}]}`)

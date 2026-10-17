@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"maps"
 	"net/url"
 	"path"
 	"regexp"
@@ -55,6 +56,25 @@ func absolute(base, ref string) string {
 		return ref
 	}
 	return b.ResolveReference(r).String()
+}
+
+// intoPart returns a $ref of s, or of those under it, that points into a part of floe's, or "": it
+// would be checked as the part but drawn as plain data.
+func (s *schema) intoPart(set *partSet) string {
+	if s == nil {
+		return ""
+	}
+	if whole, _, into := strings.Cut(s.Ref, "#"); into {
+		if name, ok := partName(whole); ok && set.parts[name] != nil {
+			return s.Ref
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(s.Properties)) {
+		if ref := s.Properties[name].intoPart(set); ref != "" {
+			return ref
+		}
+	}
+	return s.Items.intoPart(set)
 }
 
 // absolute makes the $ref of s, and those under it, absolute, read from the schema at base.
@@ -369,29 +389,51 @@ func partStyles(names []string) (string, error) {
 
 // withStyles puts style into page before the template's own styles, which then win over the parts'
 // where they say otherwise: before the first <style> or <link> of its <head>, else before its </head>.
-// A page without a <head> gets it before its first <style> or <link>, else at its end. One in a
-// script, a noscript or a comment is not the template's style.
+// A page without a <head> gets it before its first <style> or <link>, else at its end. A tag in a
+// comment, a script or a noscript is not one.
 // LIMIT: the tags are found as written, not as an HTML parser reads them (a <style in an attribute's
 // value is taken for one). Parse the page if a template comes to write one so.
 func withStyles(page []byte, style string) []byte {
-	at := len(page)
-	if end := headEnd.FindIndex(page); end != nil {
-		at = end[0]
+	hidden := hiddenText(page)
+	shown := func(m []int) bool {
+		return !slices.ContainsFunc(hidden, func(h [2]int) bool { return h[0] <= m[0] && m[0] < h[1] })
 	}
-	hidden := notStyled.FindAllIndex(page[:at], -1)
-	for _, own := range ownStyle.FindAllIndex(page[:at], -1) {
-		if !slices.ContainsFunc(hidden, func(h []int) bool { return h[0] <= own[0] && own[0] < h[1] }) {
-			at = own[0]
-			break
-		}
+	at := len(page)
+	if i := slices.IndexFunc(headEnd.FindAllIndex(page, -1), shown); i >= 0 {
+		at = headEnd.FindAllIndex(page, -1)[i][0]
+	}
+	if own := ownStyle.FindAllIndex(page[:at], -1); slices.ContainsFunc(own, shown) {
+		at = own[slices.IndexFunc(own, shown)][0]
 	}
 	return slices.Concat(page[:at], []byte(style), page[at:])
 }
 
+// hiddenText returns where page holds text that is not its tags: its comments, as an HTML parser ends
+// them (one never closed runs to the end), its scripts and its noscripts.
+func hiddenText(page []byte) [][2]int {
+	var hidden [][2]int
+	for _, m := range scriptText.FindAllIndex(page, -1) {
+		hidden = append(hidden, [2]int{m[0], m[1]})
+	}
+	for at := 0; ; {
+		i := bytes.Index(page[at:], []byte("<!--"))
+		if i < 0 {
+			return hidden
+		}
+		start := at + i
+		n := comment(page[start:])
+		if n == 0 {
+			n = len(page) - start
+		}
+		hidden = append(hidden, [2]int{start, start + n})
+		at = start + n
+	}
+}
+
 var (
-	headEnd   = regexp.MustCompile(`(?i)</head\s*>`)
-	ownStyle  = regexp.MustCompile(`(?i)<(?:style|link)\b`)
-	notStyled = regexp.MustCompile(`(?is)<!--.*?-->|<script\b.*?</script\s*>|<noscript\b.*?</noscript\s*>`)
+	headEnd    = regexp.MustCompile(`(?i)</head\s*>`)
+	ownStyle   = regexp.MustCompile(`(?i)<(?:style|link)\b`)
+	scriptText = regexp.MustCompile(`(?is)<script\b.*?</script\s*>|<noscript\b.*?</noscript\s*>`)
 )
 
 // partVariables returns the CSS variables the style of the parts named takes from the theme, once
