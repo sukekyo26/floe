@@ -81,8 +81,8 @@ func startChrome(path string) (context.Context, error) {
 		opts := append(chromedp.DefaultExecAllocatorOptions[:],
 			chromedp.ExecPath(path),
 			chromedp.NoSandbox,
-			// Names other than 127.0.0.1 fail at once: pages load Google Fonts in <head>, which would hold
-			// the page on a slow network.
+			// Names other than 127.0.0.1 fail at once: the tests do not reach the network, nor wait on it
+			// for anything a page loads from elsewhere.
 			chromedp.Flag("host-resolver-rules", "MAP * ~NOTFOUND, EXCLUDE 127.0.0.1"),
 			chromedp.UserDataDir(profile),
 		)
@@ -208,16 +208,6 @@ func (b *browser) rect(expr string) rect {
 		b.t.Fatal(err)
 	}
 	return r
-}
-
-// frame measures the iframe of the page once the fonts have settled: the management page waits for its
-// fonts (display=block), and the layout they settle moves the iframe, which a click measured before
-// would miss.
-func (b *browser) frame() rect {
-	b.t.Helper()
-
-	b.until("the fonts", "document.fonts.status === 'loaded'")
-	return b.rect("document.getElementById('frame')")
 }
 
 // hover moves the pointer onto (x, y), over the page in the frame, until that page reports it (it
@@ -553,7 +543,7 @@ func leave(t *testing.T, e *env, b *browser, publish func(name, slug, title, bod
 		"setInterval(() => parent.postMessage('ready', '*'), 100)</script>")
 	b.navigate("/a/leave/")
 	b.until("the page in the frame", listening)
-	box := b.frame()
+	box := b.rect("document.getElementById('frame')")
 	b.hover(box.X+20, box.Y+20)
 	for _, y := range []float64{20, 80, 140} {
 		b.click(box.X+20, box.Y+y)
@@ -600,7 +590,7 @@ func leave(t *testing.T, e *env, b *browser, publish func(name, slug, title, bod
 	// The inner link moved the iframe, so the page is opened again before the last click.
 	b.navigate("/a/leave/")
 	b.until("the page in the frame again", listening)
-	box = b.frame()
+	box = b.rect("document.getElementById('frame')")
 	b.hover(box.X+20, box.Y+200)
 	b.click(box.X+20, box.Y+200)
 	// The tab moves to the frame URL itself, and no frame is nested in the iframe.

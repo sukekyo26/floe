@@ -47,18 +47,21 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}
-	dir, err := os.MkdirTemp("", "floe-cli-test-")
-	if err != nil {
+	var err error
+	if shared, err = os.MkdirTemp("", "floe-cli-test-"); err != nil {
 		panic(err)
 	}
-	otherBuild, err = copySelf(dir)
+	otherBuild, err = copySelf(shared)
 	if err != nil {
 		panic(err)
 	}
 	code := m.Run()
-	_ = os.RemoveAll(dir) //nolint:errcheck // a leftover temporary directory is harmless
+	_ = os.RemoveAll(shared) //nolint:errcheck // a leftover temporary directory is harmless
 	os.Exit(code)
 }
+
+// shared is a temporary directory of the whole run, for what may still be written to after a test.
+var shared string
 
 // otherBuild is a copy of this test binary, as a reinstalled floe with another build.
 var otherBuild string
@@ -82,9 +85,10 @@ func copySelf(dir string) (string, error) {
 // env is a store, a home and a free port in a temporary directory, with a browser that records what
 // it is asked to open.
 type env struct {
-	tmp  string
-	vars map[string]string
-	port string // the port of its server, which a test may set FLOE_PORT away from
+	tmp      string
+	vars     map[string]string
+	port     string // the port of its server, which a test may set FLOE_PORT away from
+	openedAt string // where the browser stand-in records the URLs it is given
 }
 
 // handedOut are the ports given to the tests running now, so that two never share one: a port
@@ -160,7 +164,14 @@ func newEnv(t *testing.T) *env {
 		"FLOE_PORT": port,
 		"BROWSER":   filepath.Join(tmp, "browser"),
 	}}
-	e.write(t, "browser", "#!/bin/sh\nprintf '%s\\n' \"$1\" >>'"+filepath.Join(tmp, "opened")+"'\n")
+	// A publish leaves the browser running, so the stand-in may write after the test: it does so out of
+	// tmp, whose removal fails on a file made meanwhile.
+	opened, err := os.MkdirTemp(shared, "opened-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.openedAt = filepath.Join(opened, "opened")
+	e.write(t, "browser", "#!/bin/sh\nprintf '%s\\n' \"$1\" >>'"+e.openedAt+"'\n")
 	if err := os.Chmod(filepath.Join(tmp, "browser"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -305,7 +316,7 @@ func (e *env) opened(t *testing.T) string {
 	t.Helper()
 
 	for range 20 {
-		if b, err := os.ReadFile(filepath.Join(e.tmp, "opened")); err == nil && bytes.HasSuffix(b, []byte("\n")) {
+		if b, err := os.ReadFile(e.openedAt); err == nil && bytes.HasSuffix(b, []byte("\n")) {
 			return string(b)
 		}
 		time.Sleep(50 * time.Millisecond)
