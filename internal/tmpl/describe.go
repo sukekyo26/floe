@@ -27,6 +27,7 @@ type Item struct {
 	Types       []string // JSON types: string, number, integer, boolean, object, array, null
 	Of          []string // the types of the items of a list
 	Format      string
+	Part        string // the part of floe's that draws it; "" for none
 	Enum        []string
 	Required    bool
 	Description string
@@ -73,7 +74,7 @@ func SharedItems(name string) []Item {
 	items := make([]Item, 0, len(shared))
 	for _, key := range shared {
 		it := Item{
-			Name: key, Types: []string{"string"}, Of: nil, Format: "", Enum: nil, Required: false, Description: "",
+			Name: key, Types: []string{"string"}, Of: nil, Format: "", Part: "", Enum: nil, Required: false, Description: "",
 			Items: nil,
 		}
 		switch key {
@@ -100,14 +101,15 @@ func (s *schema) items() []Item {
 			p = new(schema) // null in schema.json: nothing to tell of it
 		}
 		it := Item{
-			Name: n, Types: p.types(), Of: nil, Format: p.Format, Enum: nil, Required: slices.Contains(s.Required, n),
-			Description: p.Description, Items: nil,
+			Name: n, Types: p.types(), Of: nil, Format: p.Format, Part: "", Enum: nil,
+			Required: slices.Contains(s.Required, n), Description: p.Description, Items: nil,
 		}
 		enum := p.Enum
 		if p.Items != nil {
 			// A list described by its items: "a list of …", each one what it holds.
 			it.Of, it.Items = p.Items.types(), p.Items.items()
 			it.Format = cmp.Or(it.Format, p.Items.Format)
+			it.Part = p.Items.drawnBy()
 			it.Description = cmp.Or(it.Description, p.Items.Description)
 			if len(enum) == 0 {
 				enum = p.Items.Enum
@@ -115,12 +117,21 @@ func (s *schema) items() []Item {
 		} else {
 			it.Items = p.items()
 		}
+		it.Part = cmp.Or(p.drawnBy(), it.Part)
 		for _, e := range enum {
 			it.Enum = append(it.Enum, jsonText(e))
 		}
 		items = append(items, it)
 	}
 	return items
+}
+
+// drawnBy is the name of the part of floe's that draws s, or "".
+func (s *schema) drawnBy() string {
+	if s.part == nil {
+		return ""
+	}
+	return s.part.name
 }
 
 // types are the JSON types s takes: those it names, else those its keywords imply.

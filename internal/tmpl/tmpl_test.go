@@ -54,19 +54,26 @@ func TestReportExample(t *testing.T) {
 		`<p class="eyebrow">Plan · 2030-04</p>`,
 		`<h2>Steps</h2>`,
 		`<li>Freeze edits on the old wiki on <strong>Friday evening</strong>.</li>`,
-		`<div class="table-wrap"><table>`,
+		`<div class="floe-table"><table>`,
 		`<th scope="col">Likelihood</th>`,
 		`<td>Keep the old host for <strong>a month</strong></td>`,
 		`<td class="num">120</td>`,
-		`<td><span class="pill warn">watching</span></td>`,
-		`<div class="card"><h3>Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>`,
-		`<div class="note warn"><p>Anyone editing during the freeze loses their changes.</p>`,
-		`<span class="pill good">on track</span>`,
+		`<td><span class="floe-pill warn">watching</span></td>`,
+		`<div class="floe-card"><h3>Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>`,
+		`<div class="floe-note warn"><p>Anyone editing during the freeze loses their changes.</p>`,
+		`<details><summary>What the freeze covers</summary>`,
 		`aria-label="The pages go from the old wiki to the new host"`,
 		`--accent: #1d6670;`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("the example lacks %s:\n%s", want, got)
+		}
+	}
+	// The style of each part it uses is in its <head> once, so that a part is styled as it is drawn.
+	head, _, _ := strings.Cut(got, "</head>")
+	for _, style := range []string{".floe-table {", ".floe-cards {", ".floe-note {"} {
+		if strings.Count(head, style) != 1 || strings.Count(got, style) != 1 {
+			t.Errorf("the example holds %s %d times, %d in its <head>", style, strings.Count(got, style), strings.Count(head, style))
 		}
 	}
 }
@@ -106,8 +113,9 @@ func TestReportTableCardsNote(t *testing.T) {
 		{`"c  \nd"`, "c\nd"},
 		{`" \n "`, ""},
 		{`""`, ""},
-		{`{ pill: "#40 <b>", tone: good }`, `<span class="pill good">#40 &lt;b&gt;</span>`},
-		{`{ pill: x }`, `<span class="pill">x</span>`},
+		{`{ pill: "#40 <b>", tone: good }`, `<span class="floe-pill good">#40 &lt;b&gt;</span>`},
+		{`{ pill: x }`, `<span class="floe-pill">x</span>`},
+		{`{ pill: y, tone: accent }`, `<span class="floe-pill accent">y</span>`},
 	}
 	src := "template: report\nsections:\n  - parts:\n      - table:\n          columns: [{title: Cell}, {title: '**N**', num: true}]\n          rows:\n"
 	want := make([]string, 0, len(cells)+3)
@@ -116,8 +124,9 @@ func TestReportTableCardsNote(t *testing.T) {
 		src += "            - [" + c.yaml + ", '9']\n"
 		want = append(want, "<tr><td>"+c.html+`</td><td class="num">9</td></tr>`)
 	}
-	src += "      - cards:\n          - title: A & B\n      - note:\n          text: n\nlang: en\n"
-	want = append(want, `<div class="card"><h3>A &amp; B</h3></div>`, `<div class="note"><p>n</p>`)
+	src += "      - cards:\n          - title: A & B\n      - note:\n          text: n\n      - note: { text: m, tone: good }\nlang: en\n"
+	want = append(want, `<div class="floe-card"><h3>A &amp; B</h3></div>`, `<div class="floe-note"><p>n</p>`,
+		`<div class="floe-note good"><p>m</p>`)
 	got := render(t, src)
 	for _, w := range want {
 		if !strings.Contains(got, w) {
@@ -130,7 +139,7 @@ func TestReportTableCardsNote(t *testing.T) {
 	for src, want := range map[string]string{
 		"table: { columns: [{title: a}], rows: [[1.50]] }": "data.yaml:4:49: sections[0].parts[0].table.rows[0][0]: write text or keys and values, not a number",
 		"table: { columns: [{title: a}], rows: [[{tone: good}], [{pill: x, tone: ok}]] }": "data.yaml:4:50: sections[0].parts[0].table.rows[0][0].pill is required but missing\n" +
-			`data.yaml:4:81: sections[0].parts[0].table.rows[1][0].tone: "ok" is not allowed; use good, warn, bad`,
+			`data.yaml:4:81: sections[0].parts[0].table.rows[1][0].tone: "ok" is not allowed; use accent, good, warn, bad`,
 		"table: { columns: [], rows: [] }": "data.yaml:4:27: sections[0].parts[0].table.columns: the number of items must be at least 1\n" +
 			"data.yaml:4:37: sections[0].parts[0].table.rows: the number of items must be at least 1",
 		"table: { columns: [{title: a}, {title: b}], rows: [[x, y], [x]] }": "data.yaml:4:59: sections[0].parts[0].table.rows: write as many cells in each row as there are columns",

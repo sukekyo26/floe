@@ -74,15 +74,15 @@ sections:
             - { title: Pages, num: true }   # numbers: aligned right
             - title: State
           rows:
-            - [Broken links, '120', { pill: watching, tone: warn }]   # tone: good, warn, bad, or none
+            - [Broken links, '120', { pill: watching, tone: warn }]   # tone: accent, good, warn, bad, or none
       - cards:                 # cards side by side, each a title over Markdown text
           - { title: Copy, text: Copies the pages on **Saturday**. }
-      - note: { tone: warn, text: Edits during the freeze are lost. }   # tone: warn, bad, or none
+      - note: { tone: warn, text: Edits during the freeze are lost. }   # tone: accent, good, warn, bad, or none
       - script:                # a function the page calls with an element to draw in and data
           data: { pages: 1840 }
           js: |
             function (el, data) { el.textContent = `${Math.ceil(data.pages / 300)} hours`; }
-      - html: <p>Status <span class="pill good">on track</span></p>   # HTML as it is
+      - html: <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>   # HTML as it is
 ```
 
 - `lang:` is the page's language (`<html lang>`), a BCP 47 tag (`en`, `ja`, `pt-BR`). Every data file names one.

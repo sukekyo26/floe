@@ -74,15 +74,15 @@ sections:
             - { title: ページ数, num: true }   # 数の列: 右に揃える
             - title: 状態
           rows:
-            - [リンク切れ, '120', { pill: 注視, tone: warn }]   # tone は good・warn・bad か、無し
+            - [リンク切れ, '120', { pill: 注視, tone: warn }]   # tone は accent・good・warn・bad か、無し
       - cards:                 # 横に並ぶカード。見出しと Markdown の文章
           - { title: 写す, text: '**土曜**にページを写す。' }
-      - note: { tone: warn, text: 止めている間の編集は失われます。 }   # tone は warn・bad か、無し
+      - note: { tone: warn, text: 止めている間の編集は失われます。 }   # tone は accent・good・warn・bad か、無し
       - script:                # 描く場所の要素と data を渡してページが呼ぶ関数
           data: { pages: 1840 }
           js: |
             function (el, data) { el.textContent = `${Math.ceil(data.pages / 300)} 時間`; }
-      - html: <p>状況 <span class="pill good">予定どおり</span></p>   # そのまま入る HTML
+      - html: <details><summary>止める範囲</summary><p>編集・コメント・アップロード。</p></details>   # そのまま入る HTML
 ```
 
 - `lang:` はページの言語（`<html lang>`）で、BCP 47 の言語タグ（`en`・`ja`・`pt-BR`）で書きます。どのデータファイルにも必要です。

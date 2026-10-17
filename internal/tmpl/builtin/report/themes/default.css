@@ -45,36 +45,17 @@ pre {
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.84rem; line-height: 1.65;
 }
 pre code { background: none; padding: 0; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.75rem; }
-.card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
-  padding: 0.9rem 1rem; display: grid; gap: 0.35rem; align-content: start; min-width: 0;
-}
-.card :is(p, ul, ol) { color: var(--muted); font-size: 0.92rem; }
 .stats { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; }
 .stat { display: grid; }
 .stat b { font-family: var(--mono); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
 .stat span { color: var(--muted); font-size: 0.85rem; }
+/* Tables of the page: those of Markdown text, in .table-wrap, of HTML, and of the table part, which adds its own */
 .table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; background: var(--surface); }
-th, td { text-align: left; vertical-align: baseline; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line); }
-/* On narrow screens, scroll sideways inside .table-wrap instead of squeezing the columns */
-th:not(.num), td:not(.num) { min-width: 7em; }
-/* A num column's heading wraps as long as it needs, but not a character a line */
-th.num { min-width: 6em; }
-thead th { font-family: var(--display); font-size: 0.88rem; border-bottom: 2px solid var(--fg); }
-th.num, td.num { text-align: right; }
-td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.pill {
-  display: inline-block; font-family: var(--mono); font-size: 0.74rem; font-weight: 600;
-  padding: 0.1em 0.6em; border-radius: 999px; white-space: nowrap; background: var(--accent-soft); color: var(--accent);
+th, td {
+  text-align: left; vertical-align: baseline; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line);
+  /* On narrow screens, scroll sideways inside .table-wrap instead of squeezing the columns */
+  min-width: 7em;
 }
-.pill.good { background: var(--good-soft); color: var(--good); }
-.pill.warn { background: var(--warn-soft); color: var(--warn); }
-.pill.bad { background: var(--bad-soft); color: var(--bad); }
-.note { background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 0.75rem 1rem; border-radius: 0 6px 6px 0; max-width: var(--text-width); }
-.note.warn { background: var(--warn-soft); border-color: var(--warn); }
-.note.bad { background: var(--bad-soft); border-color: var(--bad); }
-.note > * + * { margin-top: 0.6rem; }
-.note code { background: var(--surface); }
+thead th { font-family: var(--display); font-size: 0.88rem; border-bottom: 2px solid var(--fg); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

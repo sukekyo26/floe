@@ -138,6 +138,9 @@ func (a *app) showItems(items []tmpl.Item, indent string) {
 		if it.Format != "" {
 			parts = append(parts, a.cat.Msg("cli_template_format", it.Format))
 		}
+		if it.Part != "" {
+			parts = append(parts, a.cat.Msg("cli_template_part", it.Part))
+		}
 		if len(it.Enum) > 0 {
 			parts = append(parts, a.cat.Msg("cli_template_enum", strings.Join(it.Enum, ", ")))
 		}

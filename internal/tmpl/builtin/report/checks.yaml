@@ -1,4 +1,0 @@
-- for: sections.parts
-  field: table.rows
-  expr: item.table == nil || all(item.table.rows, len(#) == len(item.table.columns))
-  message: write as many cells in each row as there are columns

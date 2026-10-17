@@ -44,12 +44,12 @@ var notFetched = map[string]bool{
 }
 
 // builtinSources reads ui.html, the files of the built-in templates, the ones template authors start
-// from, and the diagram assets every page with a diagram holds, by their names.
+// from, of floe's parts, and the diagram assets every page with a diagram holds, by their names.
 func builtinSources(t *testing.T) map[string]string {
 	t.Helper()
 
 	sources := map[string]string{"ui.html": pageSource}
-	for _, dir := range []string{"tmpl/builtin", "diagram/assets"} {
+	for _, dir := range []string{"tmpl/builtin", "tmpl/parts", "diagram/assets"} {
 		root := os.DirFS("../" + dir)
 		err := fs.WalkDir(root, ".", func(name string, e fs.DirEntry, err error) error {
 			if err != nil || e.IsDir() {

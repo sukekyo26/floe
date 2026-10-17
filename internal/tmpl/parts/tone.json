@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tone",
+  "description": "The colour of a part: accent, good, warn or bad, from the theme's colour variables",
+  "enum": ["accent", "good", "warn", "bad"]
+}
