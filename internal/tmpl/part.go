@@ -83,6 +83,23 @@ func (s *schema) intoPart(set *partSet) string {
 	return s.Items.intoPart(set)
 }
 
+// formatPart returns the pointer, under ptr, to a schema of s, or of those under it, whose format names a
+// part floe draws in Go, and that format, or "" for none.
+func (s *schema) formatPart(ptr string) (at, format string) {
+	if s == nil {
+		return "", ""
+	}
+	if goParts[s.Format] != "" {
+		return ptr, s.Format
+	}
+	for _, name := range slices.Sorted(maps.Keys(s.Properties)) {
+		if at, f := s.Properties[name].formatPart(ptr + "/properties/" + pointerKey.Replace(name)); f != "" {
+			return at, f
+		}
+	}
+	return s.Items.formatPart(ptr + "/items")
+}
+
 // absolute makes the $ref of s, and those under it, absolute, read from the schema at base.
 func (s *schema) absolute(base string) {
 	if s == nil {

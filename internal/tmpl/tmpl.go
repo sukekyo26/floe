@@ -465,7 +465,7 @@ func schemaOf(t *Template) (*schema, error) {
 }
 
 // decodeSchema reads b, the schema.json of t, with what it refers to among floe's parts, and refuses a
-// ref into a part.
+// ref into a part and a part floe draws in Go written as a format, which would be drawn as its text.
 func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	s, err := t.readSchema(b)
 	if err != nil {
@@ -477,6 +477,9 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	}
 	if ref := s.intoPart(set); ref != "" {
 		return nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(ref))
+	}
+	if ptr, f := s.formatPart("#"); f != "" {
+		return nil, usererr.New("tmpl_format_part", t.file("schema.json"), ptr, f, f)
 	}
 	return s, nil
 }

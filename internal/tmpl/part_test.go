@@ -243,6 +243,11 @@ func TestGoPartsAndMarkdown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	_, err = draw(tmpl.NewLibrary(memo(t, `"plans": {"type": "array", "items": {"type": "object", "format": "script"}}`), ""),
+		"template: memo\nlang: en\nplans: [{js: 'function () {}'}]\n")
+	if err == nil || !strings.Contains(err.Error(), `#/properties/plans/items: a script is a part of floe's, not a format; write "$ref": "floe:///parts/script.json"`) {
+		t.Errorf("a script written as a format = %v", err)
+	}
 	i := slices.IndexFunc(d.Items, func(it tmpl.Item) bool { return it.Name == "risks" })
 	if i < 0 || d.Items[i].Part != "diagram" || !strings.HasPrefix(d.Items[i].Description, "A diagram: a spec") {
 		t.Errorf("the items = %+v", d.Items)
