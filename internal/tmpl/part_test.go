@@ -297,9 +297,10 @@ func TestCodeAndTerminal(t *testing.T) {
 	// A command written with its prompt would show two, and copy one: a first word ending in a prompt's mark is
 	// one, after an environment's name too, while a comment, a redirect and $ further on are not.
 	runs := []string{
-		"$ ls", "% make", "❯ make", `PS C:\Program Files> dir`, `C:\work> dir`, "cd app\n$ make", "user@host:~/作業$ make",
-		"root@host:~# apt update", "[me@host app]$ make", "(venv) $ pip install x", "> app.log", "# a comment", "echo $ x",
-		`C:\Python312\python.exe a.py > out.txt`,
+		"$ ls", "% make", "❯ make", `PS C:\Program Files> dir`, `C:\work> dir`, "user@host:~/作業$ make",
+		"root@host:~# apt update", "[me@host app]$ make", "(venv) $ pip install x", "me@mac% make",
+		"> app.log", ">> app.log", "2> err.log", "&> all.log", "(cd web && make) >> build.log", "# a comment", "echo $ x",
+		"%EDITOR% notes.txt", `C:\Python312\python.exe a.py > out.txt`, "cat > a.html <<EOF\n<p> hi</p>\n$ x\nEOF",
 	}
 	steps := make([]string, 0, len(runs))
 	for _, r := range runs {
