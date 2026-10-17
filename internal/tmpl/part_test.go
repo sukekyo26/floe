@@ -127,11 +127,12 @@ func TestCheckParts(t *testing.T) {
 	var told string
 	for _, w := range warnings {
 		if strings.Contains(w.Error(), "themes/default.css") {
-			told = w.Error()
+			told += w.Error() + "\n"
 		}
 	}
 	if !strings.Contains(told, "--accent") || !strings.Contains(told, "--good-soft") || strings.Contains(told, "--fg,") ||
-		!strings.Contains(told, "dark mode") {
+		!strings.Contains(told, "--line, which the template's parts and diagrams take from it, so they keep the default theme's values: its light colours, in dark mode too\n") ||
+		!strings.Contains(told, "does not define --text-width, --mono, which the template's parts and diagrams take from it, so they keep the default theme's values\n") {
 		t.Errorf("the warning of the theme = %q", told)
 	}
 	// A theme that leaves out no colour is not told of dark mode.
@@ -294,8 +295,9 @@ func TestCodeAndTerminal(t *testing.T) {
 	}
 	// A command written with its prompt would show two, and copy one.
 	_, err = builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
-		"      - terminal: { steps: [{ run: '$ ls' }, { run: 'PS C:\\work> dir' }, { run: '> dir' }, { run: 'echo $ x' }] }\n"), "", "")
-	if err == nil || strings.Count(err.Error(), "write the command without its prompt") != 3 ||
+		"      - terminal: { steps: [{ run: '$ ls' }, { run: 'PS C:\\work> dir' }, { run: 'C:\\work> dir' }, { run: \"cd app\\n$ make\" }, "+
+		"{ run: '> app.log' }, { run: 'echo $ x' }] }\n"), "", "")
+	if err == nil || strings.Count(err.Error(), "write the command without its prompt") != 4 ||
 		!strings.Contains(err.Error(), `bad.yaml:5:36: sections[0].parts[0].terminal.steps[0].run: write the command without its prompt, which floe draws from the shell ("$ ls")`) {
 		t.Errorf("commands with their prompts = %v", err)
 	}
@@ -308,7 +310,7 @@ func TestReportRefusesCodeInText(t *testing.T) {
 
 	for _, text := range []string{
 		"```go\\nx\\n```", "~~~\\nx\\n~~~", "```sh\\n$ ls\\n```", "$ floe list", "PS> dir", "  PS C:\\\\work> dir",
-		"- $ make", "1. > $ make",
+		"- $ make", "1. > $ make", ">$ make", "C:\\\\work> dir", "> ```sh\\n> x\\n> ```", "- ```sh\\n  x",
 	} {
 		_, err := builtins.Read("t.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n      - text: \"a\\n"+text+"\"\n"), "", "")
 		if err == nil || strings.Count(err.Error(), "t.yaml:5:15: sections[0].parts[0].text: write ") != 1 {

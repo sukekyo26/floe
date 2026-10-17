@@ -159,18 +159,21 @@ func (t *Template) checkThemeVariables(lint *schemaLint) ([]*usererr.Error, erro
 			return nil, err
 		}
 		defined := definedVariables(css)
-		var missing []string
+		var colours, others []string
 		for _, v := range vars {
-			if !defined[v] && !inPage[v] {
-				missing = append(missing, v)
+			switch {
+			case defined[v] || inPage[v]:
+			case slices.Contains(sameInDark, v):
+				others = append(others, v)
+			default:
+				colours = append(colours, v)
 			}
 		}
-		if missing != nil {
-			key := "tmpl_theme_variables"
-			if !slices.ContainsFunc(missing, func(v string) bool { return !slices.Contains(sameInDark, v) }) {
-				key = "tmpl_theme_variables_plain"
-			}
-			warnings = append(warnings, usererr.New(key, t.file(name), andList(missing)))
+		if colours != nil {
+			warnings = append(warnings, usererr.New("tmpl_theme_variables", t.file(name), andList(colours)))
+		}
+		if others != nil {
+			warnings = append(warnings, usererr.New("tmpl_theme_variables_plain", t.file(name), andList(others)))
 		}
 	}
 	return warnings, nil
