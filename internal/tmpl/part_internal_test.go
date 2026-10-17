@@ -52,9 +52,13 @@ func TestPalette(t *testing.T) {
 			}
 		}
 	}
-	// compare is drawn in the table's look, so a theme for it is warned of the table's variables too.
+	// compare is drawn in the table's look, so a theme for it is warned of the table's variables too, and
+	// tabs of those of code, which a diff in it is drawn in the look of.
 	if compare, cerr := partVariables([]string{"compare"}); cerr != nil || !slices.Contains(compare, "--line") {
 		t.Errorf("the variables of compare = %v, %v", compare, cerr)
+	}
+	if tabs, terr := partVariables([]string{"tabs"}); terr != nil || !slices.Contains(tabs, "--code-bg") || !slices.Contains(tabs, "--code-add") {
+		t.Errorf("the variables of tabs = %v, %v", tabs, terr)
 	}
 	for _, v := range append(vars, diagram.Variables()...) {
 		if !slices.Contains(palette, v) {

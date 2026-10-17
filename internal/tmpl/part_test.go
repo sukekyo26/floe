@@ -453,14 +453,21 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 
 	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
 		"      - matrix: { columns: [a, b], rows: [{ what: x, cells: [yes] }, { what: y, cells: [yes, maybe] }] }\n"+
-		"      - tabs: [{ title: a, parts: [{ terminal: { steps: [{ run: '$ ls' }] } }] }, { title: b, parts: [{ text: x }] }]\n"), "", "")
+		"      - tabs: [{ title: a, parts: [{ terminal: { steps: [{ run: '$ ls' }] } }] }, { title: b, parts: [{ text: x }] }]\n"+
+		"      - links: [{ title: a, url: '/a/x/' }, { title: b, url: 'mailto:a@example.com' }, { title: c, url: 'javascript:alert(1)' }]\n"), "", "")
 	for _, want := range []string{
+		"sections[0].parts[2].links[2].url: write a URL of http, https or mailto, or a path",
 		"sections[0].parts[1].tabs[0].parts[0].terminal.steps[0].run: write the command without its prompt",
 		"sections[0].parts[0].matrix.rows[0].cells: write as many cells in each row as there are columns",
 		"sections[0].parts[0].matrix.rows[1].cells: write each cell yes, part or no, or { mark, note }",
 	} {
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("the mistakes = %v, want %s", err, want)
+		}
+	}
+	for _, ok := range []string{"links[0].url", "links[1].url"} {
+		if err != nil && strings.Contains(err.Error(), ok) {
+			t.Errorf("%s refused: %v", ok, err)
 		}
 	}
 }

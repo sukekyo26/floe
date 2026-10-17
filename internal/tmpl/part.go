@@ -550,12 +550,19 @@ func partVariables(names []string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var used []string
-	for _, name := range names {
-		used = append(used, set.parts[name].uses...)
+	// The parts used are followed to those they use in turn: tabs holds a stack, which holds a diff, drawn
+	// in the look of code.
+	used := map[string]bool{}
+	for next := names; len(next) > 0; {
+		name := next[0]
+		next = next[1:]
+		if !used[name] {
+			used[name] = true
+			next = append(next, set.parts[name].uses...)
+		}
 	}
 	var vars []string
-	for _, name := range slices.Compact(slices.Sorted(slices.Values(append(used, names...)))) {
+	for _, name := range slices.Sorted(maps.Keys(used)) {
 		vars = appendFound(vars, fallback, set.parts[name].css)
 	}
 	return vars, nil

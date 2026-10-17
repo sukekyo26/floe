@@ -11,7 +11,7 @@
       "at": { "type": "string", "minLength": 1, "description": "Where it is, such as internal/tmpl/part.go:412" },
       "text": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
       "why": { "type": "string", "minLength": 1, "description": "Why it was left as it is; a line of Markdown" },
-      "status": { "$ref": "floe:///parts/cell.json", "description": "What became of it, such as { pill: fixed, tone: good }" }
+      "status": { "$ref": "floe:///parts/cell.json", "description": "What became of it, such as { pill: fixed, tone: good }." }
     },
     "required": ["level", "text"],
     "additionalProperties": false
