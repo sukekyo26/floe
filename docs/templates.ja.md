@@ -72,7 +72,7 @@ floe: 1.2
 
 ## 部品
 
-floe には、テンプレートの項目を描く部品があります。`table`（セルにピルを置ける）・`cards`・`note`・`code`・`terminal`・`diagram`・`script`（後の 2 つは上で説明）です。`code` は `text` にコードをそのまま書き、`file` があればファイル名を、無ければ `lang` を上に出します。`terminal` は `steps` に、打つコマンド（`run`。2 行目からはその続き）と出力（`out`）の組を並べ、`shell` のプロンプトを付けます。`sh`（`$`。省いたとき）・`powershell`（`PS>`）・`cmd`（`>`）です。プロンプトはスタイルで描くので、コマンドをコピーしても入りません。最初の語がプロンプト（`$`・`#`・`%`・`>`・`❯` で終わる語）の `run` は断ります。schema では、floe が探す `properties` と `items` の下で、部品を `$ref` で指します。`anyOf` や `$defs` などの下では描かれないので、`floe template check` が誤りにします。
+floe には、テンプレートの項目を描く部品があります。`table`（セルにピルを置ける）・`cards`・`note`・`code`・`terminal`・`diagram`・`script`（後の 2 つは上で説明）です。`code` は `text` にコードをそのまま書き、`file` があればファイル名を、無ければ `lang` を上に出します。`terminal` は `steps` に、打つコマンド（`run`。2 行目からはその続き）と出力（`out`）の組を並べ、`shell` のプロンプトを付け、シェルの名前を上に出します。`bash`・`sh`（`$`）・`zsh`（`%`）・`powershell`（`PS>`）・`cmd`（`>`）で、省くと名前は出さずにプロンプトは `$` です。どちらもエディタやターミナルと同じく、ライトモードでも暗い地です。プロンプトはスタイルで描くので、コマンドをコピーしても入りません。最初の語がプロンプト（`$`・`#`・`%`・`>`・`❯` で終わる語）の `run` は断ります。schema では、floe が探す `properties` と `items` の下で、部品を `$ref` で指します。`anyOf` や `$defs` などの下では描かれないので、`floe template check` が誤りにします。
 
 ```json
 "risks": { "$ref": "floe:///parts/table.json", "description": "What may go wrong" }
@@ -91,7 +91,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 | `--good`・`--warn`・`--bad` とそれぞれの `-soft` | 良い・注意・悪いの色と、その淡い地 |
 | `--font`・`--mono` | 本文の書体、等幅の書体 |
 | `--text-width` | 注記が広がる幅（本文と同じ） |
-| `--terminal-bg`・`--terminal-fg`・`--terminal-prompt` | ターミナルの地（ライトモードでも暗い）、コマンドの字（出力はこれを薄くする）、プロンプト |
+| `--code-bg`・`--code-fg`・`--code-prompt` | コードとターミナルの地（ライトモードでも暗い）、その字（コマンドの出力はこれを薄くする）、ターミナルのプロンプト |
 
 変数はテーマで定義するか、すべてのテーマの分を `page.html` の `<style>` で定義します。`floe template check` は、部品や図が使う変数のどれかを定義していないテーマを警告します。そのテーマの部品はダークモードでも明るい色のままになります（ターミナルは暗いまま）。`tone`（ピル・注記・図の部品）は `accent`・`good`・`warn`・`bad` のどれかで、`--accent`・`--good` などの色と、その `-soft` を使います。
 

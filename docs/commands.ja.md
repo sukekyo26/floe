@@ -59,7 +59,7 @@ sections:
       - text: |                # Markdown（表も書ける）。中の生の HTML は出さない
           1. **金曜の夜**に編集を止める。
           2. ページを写す。
-      - terminal:              # 打つコマンドと出力。プロンプトは floe が付ける（shell は sh・powershell・cmd）
+      - terminal:              # 打つコマンドと出力。プロンプトは floe が付ける（shell は bash・zsh・sh・powershell・cmd）
           steps:
             - { run: wiki export --out pages/, out: 1840 pages written }
       - code:                  # コードをそのまま。ファイル名か言語を上に出す

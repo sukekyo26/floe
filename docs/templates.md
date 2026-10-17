@@ -72,7 +72,7 @@ An item the part `script` draws (`"$ref": "floe:///parts/script.json"`) is somet
 
 ## Parts
 
-floe has parts that draw items of a template: `table` (with pills in its cells), `cards`, `note`, `code`, `terminal`, `diagram` and `script` (both told above). `code` is `text`, code as it is, under its `file`, else its `lang`. `terminal` is `steps`, each a command (`run`, its later lines going on with it) and what it printed (`out`), at the prompt of its `shell`: `sh` (`$`, when left out), `powershell` (`PS>`) or `cmd` (`>`). The style draws the prompt, so a copy of the commands leaves it out; a `run` whose first word is a prompt (ending in `$`, `#`, `%`, `>` or `❯`) is refused. A schema refers to one with `$ref`, under `properties` and `items`, where floe looks for them; `floe template check` refuses one under `anyOf`, `$defs` and the like, which would never be drawn.
+floe has parts that draw items of a template: `table` (with pills in its cells), `cards`, `note`, `code`, `terminal`, `diagram` and `script` (both told above). `code` is `text`, code as it is, under its `file`, else its `lang`. `terminal` is `steps`, each a command (`run`, its later lines going on with it) and what it printed (`out`), at the prompt of its `shell`, whose name goes above them: `bash` or `sh` (`$`), `zsh` (`%`), `powershell` (`PS>`) or `cmd` (`>`); left out, no name and `$`. Both are dark in light mode too, as an editor and a terminal are. The style draws the prompt, so a copy of the commands leaves it out; a `run` whose first word is a prompt (ending in `$`, `#`, `%`, `>` or `❯`) is refused. A schema refers to one with `$ref`, under `properties` and `items`, where floe looks for them; `floe template check` refuses one under `anyOf`, `$defs` and the like, which would never be drawn.
 
 ```json
 "risks": { "$ref": "floe:///parts/table.json", "description": "What may go wrong" }
@@ -91,7 +91,7 @@ A page gets the style of each part whose classes it uses once, a table of Markdo
 | `--good`, `--warn`, `--bad` and their `-soft` | Good, warning and bad, and their pale grounds |
 | `--font`, `--mono` | The text's typeface, and the fixed-width one |
 | `--text-width` | How wide a note grows, as text does |
-| `--terminal-bg`, `--terminal-fg`, `--terminal-prompt` | A terminal's ground, dark in light mode too; its commands' text, faded for their output; its prompt |
+| `--code-bg`, `--code-fg`, `--code-prompt` | The ground of code and a terminal, dark in light mode too; their text, faded for a command's output; a terminal's prompt |
 
 A theme defines them, or `page.html` does for every theme in a `<style>` of its own; `floe template check` warns of a theme that leaves out one its parts or diagrams take, whose parts keep light colours in dark mode (a terminal stays dark). A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
 

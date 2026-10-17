@@ -59,7 +59,7 @@ sections:
       - text: |                # Markdown, tables included; raw HTML in it is left out
           1. Freeze edits on **Friday evening**.
           2. Copy the pages.
-      - terminal:              # commands and what they printed; floe draws the prompt (shell: sh, powershell, cmd)
+      - terminal:              # commands and what they printed; floe draws the prompt (shell: bash, zsh, sh, powershell, cmd)
           steps:
             - { run: wiki export --out pages/, out: 1840 pages written }
       - code:                  # code as it is, under its file or language
