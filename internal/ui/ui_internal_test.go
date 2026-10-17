@@ -16,8 +16,31 @@ import (
 func TestSourcesAreInEnglish(t *testing.T) {
 	t.Parallel()
 
+	for name, src := range builtinSources(t) {
+		if japaneseRe.MatchString(src) {
+			t.Errorf("%s has Japanese: %q", name, japaneseRe.FindAllString(src, 3))
+		}
+	}
+}
+
+// TestBuiltinsLoadNothingFromElsewhere keeps the management page and the built-in templates off the
+// network: a page that loads from elsewhere is its template author's choice, not floe's.
+func TestBuiltinsLoadNothingFromElsewhere(t *testing.T) {
+	t.Parallel()
+
+	for name, src := range builtinSources(t) {
+		if elsewhereRe.MatchString(src) {
+			t.Errorf("%s loads from elsewhere: %q", name, elsewhereRe.FindAllString(src, 3))
+		}
+	}
+}
+
+// builtinSources reads ui.html and the files of the built-in templates, the ones template authors
+// start from, by their names.
+func builtinSources(t *testing.T) map[string]string {
+	t.Helper()
+
 	sources := map[string]string{"ui.html": pageSource}
-	// The built-in templates are the ones template authors start from.
 	builtin := os.DirFS("../tmpl/builtin")
 	err := fs.WalkDir(builtin, ".", func(name string, e fs.DirEntry, err error) error {
 		if err != nil || e.IsDir() {
@@ -30,11 +53,7 @@ func TestSourcesAreInEnglish(t *testing.T) {
 	if err != nil || len(sources) == 1 {
 		t.Fatalf("read the built-in templates: %v (%d files)", err, len(sources)-1)
 	}
-	for name, src := range sources {
-		if japaneseRe.MatchString(src) {
-			t.Errorf("%s has Japanese: %q", name, japaneseRe.FindAllString(src, 3))
-		}
-	}
+	return sources
 }
 
 func TestPageRendersInTheReadersLanguage(t *testing.T) {
@@ -63,6 +82,9 @@ var (
 	usedRe     = regexp.MustCompile(`\{\{\.Msg "(ui_\w+)"\}\}|'(ui_\w+)'|` + "`ui_\\$\\{\\w+\\(\\w*\\)\\}(\\w*)`")
 	jsVerbsRe  = regexp.MustCompile(`%(?:\[\d+\])?[sd%]`)
 	japaneseRe = regexp.MustCompile(`.{0,20}[\p{Hiragana}\p{Katakana}\p{Han}]+.{0,20}`)
+	// elsewhereRe finds what a page would load from another host: an href or src, an @import or a url()
+	// of http(s) or a scheme-relative //.
+	elsewhereRe = regexp.MustCompile(`(?i)(?:\b(?:href|src)\s*=\s*["']?|@import\s+(?:url\(\s*)?["']?|\burl\(\s*["']?)(?:https?:)?//`)
 )
 
 // TestPageMessages keeps ui.html and the ui_ messages in step: every key the page names exists, every

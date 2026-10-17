@@ -3,9 +3,10 @@
   --bg: #f3f5f4; --surface: #fff; --fg: #18201e; --muted: #57635f; --line: #d4dbd8;
   --accent: #1d6670; --accent-soft: #dcebec;
   --good: #1f7a45; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
-  --display: "Murecho", "Hiragino Sans", "Noto Sans JP", sans-serif;
-  --font: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", monospace;
+  /* System faces only: a built-in template loads nothing from elsewhere */
+  --font: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", monospace;
   /* The width of the whole body, and the shorter width that keeps prose readable */
   --page-width: 96rem; --text-width: 56rem;
   color-scheme: light;
