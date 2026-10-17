@@ -21,7 +21,7 @@ parts:
   - edge: { d: "M130,104 H650", label: GET /api/health, at: [390, 90] }
   - edge: { d: "M130,144 H650", label: start floe serve if it is stopped, at: [390, 130] }
   - edge: { d: "M650,184 H130", dashed: true, label: wait until health answers, at: [390, 170] }
-  - edge: { d: "M130,224 H390", label: write index.html and meta.json, at: [260, 210] }
+  - edge: { d: "M130,224 H390", label: write source/ and meta.json, at: [260, 210] }
   - edge: { d: "M130,264 H910", label: open a new slug in the browser, at: [520, 250] }
   - edge: { d: "M910,304 H650", label: "GET /a/<slug>/?raw", at: [780, 290] }
   - edge: { d: "M650,344 H390", label: read, at: [520, 330] }
