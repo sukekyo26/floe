@@ -121,8 +121,6 @@ func TestDrawnStored(t *testing.T) {
 	const right = "template: sizes\ntitle: Sizes\nfiles: [{name: a, bytes: 1536}]\nchart: img/chart.png\nlang: ja\n"
 	data := e.write(t, "work/spec/sizes.yaml", strings.Replace(right, "chart.png", "old.png", 1))
 	e.publish(t, data, store.Options{})
-	// What a publish stopped halfway left goes on the next.
-	e.write(t, "store/sizes/.source-stray/data.yaml", "x")
 	e.write(t, "work/spec/sizes.yaml", right)
 	e.publish(t, data, store.Options{})
 	if err = os.RemoveAll(filepath.Join(e.tmp, "work")); err != nil {
@@ -136,7 +134,7 @@ func TestDrawnStored(t *testing.T) {
 	if b, readErr := os.ReadFile(filepath.Join(source, "img", "chart.png")); readErr != nil || string(b) != string(png) {
 		t.Errorf("the copy of the image = %v", readErr)
 	}
-	for _, gone := range []string{"source/img/old.png", ".source-stray", "index.html"} {
+	for _, gone := range []string{"source/img/old.png", "index.html"} {
 		if _, statErr := os.Stat(filepath.Join(e.store.Root(), "sizes", gone)); !errors.Is(statErr, os.ErrNotExist) {
 			t.Errorf("%s is in the store: %v", gone, statErr)
 		}

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -326,43 +325,23 @@ func (s *Store) Save(e *Entry) error {
 	return s.WriteMeta(e.Slug, &e.Meta)
 }
 
-// writeSource puts the data file src and its images under dir/source/, replacing it whole, so that an
-// image the data no longer shows does not stay. What a publish stopped halfway left beside it goes
-// first, as may that of a publish of the same slug at the same time, which then fails.
-// LIMIT: between the two renames the page cannot be read, and a tab opening it then shows the mistake
-// until it reloads. Swap them at once (renameat2 RENAME_EXCHANGE, renamex_np RENAME_SWAP) if it shows.
+// writeSource puts the data file src and its images under dir/source/, emptied first, so that an
+// image the data no longer shows does not stay. A write that fails leaves the page unreadable until
+// the next publish, which the data file just read is there for.
 func writeSource(dir string, src []byte, images map[string][]byte) error {
-	left, err := filepath.Glob(filepath.Join(dir, ".source-*"))
-	if err != nil {
+	source := filepath.Join(dir, sourceDir)
+	if err := os.RemoveAll(source); err != nil {
 		return err //nolint:wrapcheck // Save says what it saved
 	}
-	for _, p := range left {
-		if err = os.RemoveAll(p); err != nil {
-			return err //nolint:wrapcheck // as above
-		}
-	}
-	tmp, err := os.MkdirTemp(dir, ".source-")
-	if err != nil {
-		return err //nolint:wrapcheck // as above
-	}
-	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; else what is left goes on the next publish
-	if err = writeUnder(tmp, sourceName, src); err != nil {
+	if err := writeUnder(source, sourceName, src); err != nil {
 		return err
 	}
 	for name, b := range images {
-		if err = writeUnder(tmp, name, b); err != nil {
+		if err := writeUnder(source, name, b); err != nil {
 			return err
 		}
 	}
-	cur, old := filepath.Join(dir, sourceDir), tmp+"-old"
-	if err = os.Rename(cur, old); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return err //nolint:wrapcheck // as above
-	}
-	if err = os.Rename(tmp, cur); err != nil {
-		_ = os.Rename(old, cur) //nolint:errcheck // the old one back if it can; the error is the rename's
-		return err              //nolint:wrapcheck // as above
-	}
-	return os.RemoveAll(old) //nolint:wrapcheck // as above
+	return nil
 }
 
 // writeUnder writes b to name, a slash-separated path, under dir, making the directories on its way.
