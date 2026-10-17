@@ -143,9 +143,21 @@ func TestCheckParts(t *testing.T) {
 			t.Errorf("Read of a template with %s = %v", ref, err)
 		}
 	}
+	// One written relative to the schema is the part all the same.
+	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "../../parts/table.json"}, "aside": {"type": "string"}`), "")
+	if page, err := draw(l, "template: memo\nlang: en\nrisks: { columns: [{title: a}], rows: [[x]] }\n"); err != nil ||
+		!strings.Contains(page, `<div class="floe-table">`) {
+		t.Errorf("a page of a part named relatively = %v", err)
+	}
+	// What a part's item holds is not looked into: a format beside the $ref would never be drawn.
+	dir := memo(t, `"risks": {"$ref": "floe:///parts/table.json", "properties": {"x": {"type": "object", "format": "diagram"}}}`)
+	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 ||
+		!strings.Contains(mistakes[0].Error(), "#/properties/risks/properties/x: the format diagram marks an item to draw") {
+		t.Errorf("Check of a format beside a part = %v", mistakes)
+	}
 	// One into a part would be drawn as plain data.
 	ref := "floe:///parts/table.json#/properties/columns"
-	dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
+	dir = memo(t, `"risks": {"$ref": "`+ref+`"}`)
 	want := "#/properties/risks: " + ref + " is not a part of floe's"
 	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 		t.Errorf("Check of a ref into a part = %v", mistakes)

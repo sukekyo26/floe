@@ -110,7 +110,7 @@ func (s *schema) items() []Item {
 			// A list described by its items: "a list of …", each one what it holds.
 			it.Of, it.Items = p.Items.types(), p.Items.items()
 			it.Format = cmp.Or(it.Format, p.Items.Format)
-			it.Part = p.Items.partName()
+			it.Part = p.Items.drawnBy()
 			it.Description = cmp.Or(it.Description, p.Items.Description)
 			if len(enum) == 0 {
 				enum = p.Items.Enum
@@ -118,7 +118,7 @@ func (s *schema) items() []Item {
 		} else {
 			it.Items = p.items()
 		}
-		it.Part = cmp.Or(p.partName(), it.Part)
+		it.Part = cmp.Or(p.drawnBy(), it.Part)
 		for _, e := range enum {
 			it.Enum = append(it.Enum, jsonText(e))
 		}
@@ -127,8 +127,8 @@ func (s *schema) items() []Item {
 	return items
 }
 
-// partName is the name of the part of floe's that draws s, or "".
-func (s *schema) partName() string {
+// drawnBy is the name of the part of floe's that draws s, or "".
+func (s *schema) drawnBy() string {
 	if s.part == nil {
 		return ""
 	}

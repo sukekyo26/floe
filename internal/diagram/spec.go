@@ -156,12 +156,9 @@ type Raw struct {
 	SVG string
 }
 
-// Tones are the colours a part of a diagram takes from the page's CSS variables, as the parts of a
-// template do.
-var Tones = []string{"accent", "good", "warn", "bad"}
-
 var (
 	idRe        = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+	tones       = []string{"accent", "good", "warn", "bad"}
 	shapes      = []string{"rect", "pill", "hex", "state"}
 	rowStyles   = []string{"main", "sub", "main code", "sub code"}
 	textAnchors = []string{"middle", "start", "end"}
@@ -279,7 +276,7 @@ func decodeFrame(f *fields) Part {
 func decodeBox(f *fields) Part {
 	return Box{
 		Pos: f.at, X: f.num("x"), Y: f.num("y"), W: f.size("w"), H: f.size("h"),
-		Rows: boxRows(f), Tone: f.oneOf("tone", "", Tones...), Shape: f.oneOf("shape", "rect", shapes...),
+		Rows: boxRows(f), Tone: f.oneOf("tone", "", tones...), Shape: f.oneOf("shape", "rect", shapes...),
 	}
 }
 
@@ -321,7 +318,7 @@ func boxRows(f *fields) []Row {
 func decodeTable(f *fields) Part {
 	return Table{
 		Pos: f.at, X: f.num("x"), Y: f.num("y"), W: f.size("w"), Title: f.str("title"),
-		Rows: tableRows(f), Tone: f.oneOf("tone", "", Tones...),
+		Rows: tableRows(f), Tone: f.oneOf("tone", "", tones...),
 	}
 }
 
@@ -360,7 +357,7 @@ func decodeIcon(f *fields) Part {
 func decodeEdge(f *fields) Part {
 	e := Edge{
 		Pos: f.at, D: f.str("d"), Segs: nil, Label: f.optStr("label"), LabelAt: f.pair("at"),
-		Dashed: f.flag("dashed"), Bold: f.flag("bold"), Tone: f.oneOf("tone", "", Tones...),
+		Dashed: f.flag("dashed"), Bold: f.flag("bold"), Tone: f.oneOf("tone", "", tones...),
 		Start: f.oneOf("start", "none", markerKinds...), End: f.oneOf("end", "arrow", markerKinds...),
 		Crossing: f.flag("crossing"),
 	}
@@ -445,14 +442,14 @@ func pathNumbers(s string, n int) (v [2]float64, rest string, ok bool) {
 func decodeDot(f *fields) Part {
 	return Dot{
 		Pos: f.at, CX: f.num("cx"), CY: f.num("cy"), R: f.optSize("r", 7),
-		Tone: f.oneOf("tone", "", Tones...), Hollow: f.flag("hollow"),
+		Tone: f.oneOf("tone", "", tones...), Hollow: f.flag("hollow"),
 	}
 }
 
 func decodeBar(f *fields) Part {
 	return Bar{
 		Pos: f.at, X1: f.num("x1"), X2: f.num("x2"), Y: f.num("y"),
-		Tone: f.oneOf("tone", "", Tones...), Label: f.optStr("label"),
+		Tone: f.oneOf("tone", "", tones...), Label: f.optStr("label"),
 	}
 }
 
@@ -484,7 +481,7 @@ func ticks(f *fields) []Tick {
 func decodeCircle(f *fields) Part {
 	return Circle{
 		Pos: f.at, CX: f.num("cx"), CY: f.num("cy"), R: f.size("r"),
-		Tone: f.oneOf("tone", "accent", Tones...),
+		Tone: f.oneOf("tone", "accent", tones...),
 	}
 }
 

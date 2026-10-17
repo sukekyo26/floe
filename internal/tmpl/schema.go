@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"math/big"
 	"slices"
 	"strconv"
@@ -53,7 +52,7 @@ func compileSchema(name string, src []byte) (*jsonschema.Schema, any, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
-	url := "floe:///templates/" + name + "/schema.json"
+	url := schemaURL(name)
 	c := newCompiler()
 	if err = c.AddResource(url, doc); err != nil {
 		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
@@ -72,6 +71,11 @@ func compileSchema(name string, src []byte) (*jsonschema.Schema, any, error) {
 		return nil, nil, fmt.Errorf("compile the schema of %s: %w", name, err)
 	}
 	return sch, doc, nil
+}
+
+// schemaURL is the URL of the schema of the template name, which a relative $ref is read from.
+func schemaURL(name string) string {
+	return "floe:///templates/" + name + "/schema.json"
 }
 
 func newCompiler() *jsonschema.Compiler {
@@ -105,7 +109,13 @@ func unknownPart(ref string) error {
 	if err != nil {
 		return err
 	}
-	return usererr.New("tmpl_part_unknown", ref, strings.Join(slices.Sorted(maps.Keys(set.parts)), ", "))
+	names := make([]string, 0, len(set.schemas))
+	for url := range set.schemas {
+		name, _ := partName(url)
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	return usererr.New("tmpl_part_unknown", ref, strings.Join(names, ", "))
 }
 
 var errSchemaURL = errors.New("a schema refers to no other file or URL; write it in schema.json")

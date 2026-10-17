@@ -476,6 +476,7 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	if err != nil {
 		return nil, err
 	}
+	s.absolute(schemaURL(t.Name))
 	s.resolve(set)
 	return s, nil
 }

@@ -1,7 +1,7 @@
 package tmpl
 
 import (
-	"encoding/json"
+	"regexp"
 	"slices"
 	"testing"
 
@@ -16,7 +16,8 @@ var palette = []string{
 }
 
 // The parts and diagrams take their colours, fonts and width from the palette alone, which the report
-// theme defines whole; the parts' tones are the diagrams'.
+// theme defines whole. A part takes each with a value of its own for a theme without it: one taken
+// without would not be warned of by floe template check.
 func TestPalette(t *testing.T) {
 	t.Parallel()
 
@@ -31,6 +32,11 @@ func TestPalette(t *testing.T) {
 	vars, err := partVariables(names)
 	if err != nil {
 		t.Fatal(err)
+	}
+	for name, p := range set.parts {
+		if bare := regexp.MustCompile(`var\(\s*--[\w-]+\s*\)`).FindString(p.css); bare != "" {
+			t.Errorf("the part %s takes %s without a value of its own", name, bare)
+		}
 	}
 	for _, v := range append(vars, diagram.Variables()...) {
 		if !slices.Contains(palette, v) {
@@ -47,13 +53,21 @@ func TestPalette(t *testing.T) {
 			t.Errorf("the report theme leaves %s out", v)
 		}
 	}
+}
 
-	b, err := partFiles.ReadFile("parts/tone.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var tone struct{ Enum []string }
-	if err = json.Unmarshal(b, &tone); err != nil || !slices.Equal(tone.Enum, diagram.Tones) {
-		t.Errorf("tone.json = %v, %v; the diagrams' tones are %v", tone.Enum, err, diagram.Tones)
+// The parts' style goes before the template's own, which then wins over it: in the <head>, else before
+// the first <style> or <link> of a page without one, else at its end.
+func TestWithStyles(t *testing.T) {
+	t.Parallel()
+
+	for page, want := range map[string]string{
+		"<head><meta charset=utf-8><style>a{}</style></head><p>x</p>": "<head><meta charset=utf-8>S<style>a{}</style></head><p>x</p>",
+		"<head><title>t</title></HEAD><style>b{}</style>":             "<head><title>t</title>S</HEAD><style>b{}</style>",
+		"<p>x</p><link rel=stylesheet href=data:,>":                   "<p>x</p>S<link rel=stylesheet href=data:,>",
+		"<p>x</p>": "<p>x</p>S",
+	} {
+		if got := string(withStyles([]byte(page), "S")); got != want {
+			t.Errorf("withStyles(%q) = %q, want %q", page, got, want)
+		}
 	}
 }

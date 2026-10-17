@@ -102,7 +102,9 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil, diagrams: false, parts: nil}
+	lint := &schemaLint{
+		file: t.file("schema.json"), base: schemaURL(t.Name), warnings: nil, mistakes: nil, diagrams: false, parts: nil,
+	}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
 	// Told beside the other mistakes of the files, not instead of them.
@@ -525,6 +527,7 @@ type schemaLint struct {
 	file     string
 	warnings []*usererr.Error
 	mistakes []error
+	base     string   // the schema's URL, which a relative $ref is read from
 	diagrams bool     // whether the schema declares an item of format diagram that floe draws
 	parts    []string // the parts of floe's that draw the items it declares, once each
 }
@@ -536,8 +539,9 @@ func (l *schemaLint) walk(v any, ptr string, reached bool) {
 	if !ok {
 		return
 	}
-	if ref, ok := m["$ref"].(string); ok {
-		l.part(ref, ptr, reached)
+	if ref, ok := m["$ref"].(string); ok && l.part(ref, ptr, reached) {
+		// prepare draws it whole, and goes no further in.
+		reached = false
 	}
 	if f, ok := m["format"].(string); ok && l.format(f, m["type"], ptr, reached) {
 		// prepare draws it whole, and goes no further in: a format below is not reached.
@@ -584,28 +588,32 @@ func (l *schemaLint) variables() ([]string, error) {
 	return vars, nil
 }
 
-// part notes the part of floe's ref names, at ptr, if it names one: one prepare does not reach would
-// never be drawn. A ref into a part (floe:///parts/table.json#/properties/rows) is refused: it would
-// be drawn as plain data.
-func (l *schemaLint) part(ref, ptr string, reached bool) {
+// part notes the part of floe's ref names, at ptr, and reports whether it names one: one prepare does
+// not reach would never be drawn. A ref into a part (floe:///parts/table.json#/properties/rows) is
+// refused: it would be checked as the part but drawn as plain data.
+func (l *schemaLint) part(ref, ptr string, reached bool) bool {
+	ref = absolute(l.base, ref)
 	if !strings.HasPrefix(ref, partsURL) {
-		return
+		return false
 	}
 	name, ok := partName(ref)
 	set, err := builtinParts()
 	if err != nil {
 		l.mistakes = append(l.mistakes, err)
-		return
+		return false
 	}
 	switch {
 	case !ok:
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_item", l.file, usererr.New("tmpl_item", ptr, unknownPart(ref))))
+		return false
 	case set.parts[name] == nil:
+		return false
 	case !reached:
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_part_unreached", l.file, ptr, name))
 	case !slices.Contains(l.parts, name):
 		l.parts = append(l.parts, name)
 	}
+	return true
 }
 
 // keyword walks the schemas the keyword kw of a schema holds in v, at ptr.

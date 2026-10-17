@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"net/url"
 	"path"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/goccy/go-yaml/ast"
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -38,6 +41,34 @@ func partName(ref string) (string, bool) {
 	}
 	name, ok = strings.CutSuffix(name, ".json")
 	return name, ok && name != "" && !strings.ContainsAny(name, "/#")
+}
+
+// absolute returns ref read from the schema at base, as jsonschema reads it: ../../parts/table.json
+// from a template's schema is floe:///parts/table.json. A ref that is not a URL stays as written.
+func absolute(base, ref string) string {
+	b, err := url.Parse(base)
+	if err != nil {
+		return ref
+	}
+	r, err := url.Parse(ref)
+	if err != nil {
+		return ref
+	}
+	return b.ResolveReference(r).String()
+}
+
+// absolute makes the $ref of s, and those under it, absolute, read from the schema at base.
+func (s *schema) absolute(base string) {
+	if s == nil {
+		return
+	}
+	if s.Ref != "" {
+		s.Ref = absolute(base, s.Ref)
+	}
+	for _, p := range s.Properties {
+		p.absolute(base)
+	}
+	s.Items.absolute(base)
 }
 
 // part is a part of floe's: a template's schema refers to it, and floe checks it, draws it and puts its
@@ -207,7 +238,7 @@ func joinDescriptions(beside, named string) string {
 	if beside == "" || named == "" {
 		return beside + named
 	}
-	if !strings.ContainsAny(beside[len(beside)-1:], ".!?:") && !strings.HasSuffix(beside, "。") {
+	if last, _ := utf8.DecodeLastRuneInString(beside); !unicode.IsPunct(last) {
 		beside += "."
 	}
 	return beside + " " + named
@@ -329,15 +360,14 @@ func partStyles(names []string) (string, error) {
 	return b.String(), nil
 }
 
-// withStyles puts style into the <head> of page, so that the parts are styled as they are first drawn:
-// before the template's own styles, which then win over the parts' where they say otherwise, or before
-// its </head>; at its end in a page without one.
+// withStyles puts style into page before the template's own styles, which then win over the parts'
+// where they say otherwise: before the first <style> or <link> of its <head>, else before its </head>.
+// A page without a <head> gets it before its first <style> or <link>, else at its end.
 func withStyles(page []byte, style string) []byte {
-	end := headEnd.FindIndex(page)
-	if end == nil {
-		return append(page, style...)
+	at := len(page)
+	if end := headEnd.FindIndex(page); end != nil {
+		at = end[0]
 	}
-	at := end[0]
 	if own := ownStyle.FindIndex(page[:at]); own != nil {
 		at = own[0]
 	}

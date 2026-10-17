@@ -348,7 +348,7 @@ var messagesEN = map[string]string{
 	"tmpl_format_unreached":        "%s: %s: the format %s marks an item to draw; declare it under properties or items, which floe follows",
 	"tmpl_schema_open":             `%s: %s declares properties without "additionalProperties": false, so a misspelt key is not refused`,
 	"tmpl_format_type":             `%s: %s: floe draws an item of the format %s from a value of type %s; declare "type": "%[4]s" alone`,
-	"tmpl_theme_variables":         "%s does not define %s, which diagrams take their colours and fonts from, so its diagrams keep light colours in dark mode",
+	"tmpl_theme_variables":         "%s does not define %s, which the template's parts and diagrams take their colours, fonts and widths from, so they keep light colours in dark mode",
 	"tmpl_no_template_yaml":        "%s has no template.yaml: write floe: %s in it, the floe the template is written for",
 	"tmpl_example_name":            "example.yaml names the template %s; name it %s, after the template's directory",
 	"tmpl_checks_missing":          "write %s in the check",
