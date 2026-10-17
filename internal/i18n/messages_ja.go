@@ -274,7 +274,7 @@ var messagesJA = map[string]string{
 	"server_mistakes_head":         "データファイルに誤りがあります",
 	"server_mistakes_lead":         "直してファイルを保存すると、このタブにページが戻ります。",
 	"server_mistakes_lead_no_copy": "データファイルの写しを読めません。元のデータファイルから公開し直すか、floe rm %s でページを消してください。",
-	"server_mistakes_lead_stored":  "元のデータファイルを直して公開し直すと、このタブにページが戻ります。公開したデータファイルと画像の写しは %s にあります。",
+	"server_mistakes_lead_stored":  "元のデータファイルを直して公開し直すか、テンプレートを直して保存すると、このタブにページが戻ります。公開したデータファイルと画像の写しは %s にあります。",
 	"tmpl_no_lang":                 "最上位に lang: ja のようにページの言語を指定してください（en・ja・pt-BR のような BCP 47 の言語タグ）",
 	"tmpl_lang_invalid":            "言語「%s」は使えません。lang: には en・ja・pt-BR のような BCP 47 の言語タグを指定してください",
 	"tmpl_no_template":             "最上位に template: report のようにテンプレートを指定してください（テンプレート: %s）",

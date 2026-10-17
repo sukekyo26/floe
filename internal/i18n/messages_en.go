@@ -275,7 +275,7 @@ var messagesEN = map[string]string{
 	"server_mistakes_head":         "The data file has mistakes",
 	"server_mistakes_lead":         "Fix them and save the file: this tab shows the page again.",
 	"server_mistakes_lead_no_copy": "The copy of its data file cannot be read: publish it again from the data file, or remove the page (floe rm %s).",
-	"server_mistakes_lead_stored":  "Fix them in the data file and publish it again: this tab shows the page again. The copy published, with its images, is in %s.",
+	"server_mistakes_lead_stored":  "Fix them in the data file and publish it again, or in its template and save it: this tab shows the page again. The copy published, with its images, is in %s.",
 	"tmpl_no_lang":                 "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)",
 	"tmpl_lang_invalid":            `invalid language "%s": write lang: as a BCP 47 tag such as en, ja or pt-BR`,
 	"tmpl_no_template":             "name the template at the top level, like template: report (templates: %s)",
