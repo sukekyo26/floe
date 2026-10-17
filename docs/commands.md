@@ -62,7 +62,7 @@ sections:
       - terminal:              # commands and what they printed; floe draws the prompt (shell: bash, zsh, sh, powershell, cmd)
           steps:
             - { run: wiki export --out pages/, out: 1840 pages written }
-      - code:                  # code as it is, under its file or language
+      - code:                  # code as it is, its file and language above it
           file: old-wiki.conf
           text: |
             read_only = true

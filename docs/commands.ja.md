@@ -62,7 +62,7 @@ sections:
       - terminal:              # 打つコマンドと出力。プロンプトは floe が付ける（shell は bash・zsh・sh・powershell・cmd）
           steps:
             - { run: wiki export --out pages/, out: 1840 pages written }
-      - code:                  # コードをそのまま。ファイル名か言語を上に出す
+      - code:                  # コードをそのまま。ファイル名と言語を上に出す
           file: old-wiki.conf
           text: |
             read_only = true
