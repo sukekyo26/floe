@@ -1,0 +1,14 @@
+/* In the table's look; a level is three bars filled one, two or all, in the colour of the risk */
+.floe-risks td.what { font-weight: 600; }
+.floe-risks td:is(.low, .mid, .high) { min-width: 6.5em; white-space: nowrap; }
+.floe-risks .level { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+.floe-risks .level::before {
+  content: ""; width: 2.4rem; height: 0.5rem; border-radius: 2px; color: var(--good, #1f7a45);
+  background: linear-gradient(currentColor, currentColor) left / 30% 100% no-repeat,
+    color-mix(in srgb, var(--line, #d4dbd8) 70%, var(--surface, #fff));
+  mask: repeating-linear-gradient(to right, #000 0 30%, transparent 30% 35%);
+}
+.floe-risks .mid .level::before { background-size: 65% 100%, auto; }
+.floe-risks .high .level::before { background-size: 100% 100%, auto; }
+.floe-risks tr.warn .level::before { color: var(--warn, #8a5a10); }
+.floe-risks tr.bad .level::before { color: var(--bad, #b3261e); }

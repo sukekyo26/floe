@@ -1,5 +1,6 @@
 # A report: a heading and parts per section. Text is Markdown; code and commands go in code and
-# terminal, which draws the prompt; a table's cells are lines of Markdown,
+# terminal, which draws the prompt; numbers, steps and what changes go in stats, steps and compare;
+# a table's cells are lines of Markdown,
 # numbers in quotes, or pills; html goes in as it is; a diagram is a spec as floe diagram render takes
 # it; a script is a function the page calls with an element to draw in and its data.
 template: report
@@ -8,12 +9,26 @@ title: Moving the team wiki
 eyebrow: Plan · 2030-04
 lead: The wiki moves to the new host in two weekends, with the old one read-only in between.
 sections:
+  - heading: At a glance
+    parts:
+      - stats:
+          - { label: Pages, value: '1,840' }
+          - { label: Broken links, value: '120', note: '-35 since the last check', tone: good }
+          - { label: Downtime, value: '0', unit: hours }
+      - compare:
+          before: Now
+          after: After the move
+          rows:
+            - { what: Host, before: The old server, after: The new host }
+            - { what: Search, before: Built in, after: Rebuilt on `Sunday` }
+            - { what: Address, before: wiki.example.com, after: wiki.example.com }
   - heading: Steps
     parts:
-      - text: |
-          1. Freeze edits on the old wiki on **Friday evening**.
-          2. Copy the pages and check the links.
-          3. Point the team's bookmarks at the new host.
+      - text: The pages move over **one weekend**; the old wiki stays readable until the new one opens.
+      - steps:
+          - { title: Freeze edits on the old wiki, text: On **Friday evening**., state: done }
+          - { title: Copy the pages and check the links, state: doing }
+          - title: Point the team's bookmarks at the new host
       - diagram:
           id: move
           width: 640

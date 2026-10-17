@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "details",
+  "description": "Parts folded under a title, which a click opens, for a long log or an appendix",
+  "type": "object",
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "open": { "type": "boolean", "description": "Open when the page opens" },
+    "parts": { "$ref": "floe:///parts/stack.json" }
+  },
+  "required": ["title", "parts"],
+  "additionalProperties": false
+}

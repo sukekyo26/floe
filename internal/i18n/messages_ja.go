@@ -372,4 +372,19 @@ var messagesJA = map[string]string{
 	"tmpl_script_js":               "js に、描く場所の要素と data を受け取って動く関数を書いてください: function (el, data) { … }",
 	"tmpl_script_key":              "script に書けるのは js と data です。%s は書けません",
 	"tmpl_script_end":              "js に %s があり、ページはそこでスクリプトが終わると読みます。文字列なら '<' + '%s' のように分けてください",
+
+	// The words floe's parts draw in a page, by part_<part>_<word>: label "likely" in the part risks.
+	"part_matrix_yes":        "できる",
+	"part_matrix_part":       "一部",
+	"part_matrix_no":         "できない",
+	"part_decision_rejected": "退けた案",
+	"part_risks_risk":        "リスク",
+	"part_risks_likely":      "起きやすさ",
+	"part_risks_impact":      "影響",
+	"part_risks_fix":         "手当て",
+	"part_risks_low":         "低",
+	"part_risks_mid":         "中",
+	"part_risks_high":        "高",
+	"part_fields_required":   "必須",
+	"part_fields_default":    "既定:",
 }

@@ -373,4 +373,19 @@ var messagesEN = map[string]string{
 	"tmpl_script_js":               "write js, the function to run with the element it draws in and data: function (el, data) { … }",
 	"tmpl_script_key":              "a script takes js and data, not %s",
 	"tmpl_script_end":              "js holds %s, where the page would end its script; split it in a string, as '<' + '%s'",
+
+	// The words floe's parts draw in a page, by part_<part>_<word>: label "likely" in the part risks.
+	"part_matrix_yes":        "Yes",
+	"part_matrix_part":       "Partly",
+	"part_matrix_no":         "No",
+	"part_decision_rejected": "Set aside",
+	"part_risks_risk":        "Risk",
+	"part_risks_likely":      "Likelihood",
+	"part_risks_impact":      "Impact",
+	"part_risks_fix":         "What we do",
+	"part_risks_low":         "Low",
+	"part_risks_mid":         "Medium",
+	"part_risks_high":        "High",
+	"part_fields_required":   "required",
+	"part_fields_default":    "Default:",
 }

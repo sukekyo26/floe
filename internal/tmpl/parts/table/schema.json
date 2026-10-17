@@ -19,18 +19,10 @@
     },
     "rows": {
       "type": "array",
-      "description": "Rows of cells, as many as the columns: a line of Markdown, or a pill { pill: a short status, as it is, tone }; quote a cell holding ': '",
+      "description": "Rows of cells, as many as the columns",
       "items": {
         "type": "array",
-        "items": {
-          "type": ["string", "object"],
-          "properties": {
-            "pill": { "type": "string", "minLength": 1 },
-            "tone": { "$ref": "floe:///parts/tone.json" }
-          },
-          "required": ["pill"],
-          "additionalProperties": false
-        },
+        "items": { "$ref": "floe:///parts/cell.json" },
         "minItems": 1
       },
       "minItems": 1

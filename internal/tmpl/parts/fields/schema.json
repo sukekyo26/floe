@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "fields",
+  "description": "The keys of a setting, the flags of a command or the fields of an API, each its name, type, whether it is required, what it is and its default",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string", "minLength": 1 },
+      "type": { "type": "string", "minLength": 1, "description": "Such as string or number" },
+      "required": { "type": "boolean" },
+      "default": { "type": ["string", "number", "boolean"], "description": "The value when it is left out; a number in quotes is drawn as written" },
+      "text": { "type": "string", "minLength": 1, "description": "What it is; a line of Markdown" }
+    },
+    "required": ["name"],
+    "additionalProperties": false
+  }
+}

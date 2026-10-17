@@ -1,0 +1,10 @@
+/* In the table's look, without a heading: the name over its type, what it is over its default */
+.floe-fields td.name { width: 30%; }
+.floe-fields .name code { font-weight: 700; background: none; padding: 0; white-space: nowrap; }
+.floe-fields .required { margin-left: 0.5rem; font-size: 0.72rem; font-weight: 700; color: var(--bad, #b3261e); }
+.floe-fields .type {
+  display: block; width: fit-content; margin-top: 0.2rem; padding: 0 0.45rem; border-radius: 5px; font-size: 0.75rem;
+  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP");
+  background: color-mix(in srgb, var(--line, #d4dbd8) 45%, var(--surface, #fff)); color: var(--muted, #57635f);
+}
+.floe-fields .default { display: block; margin-top: 0.15rem; font-size: 0.85rem; color: var(--muted, #57635f); }

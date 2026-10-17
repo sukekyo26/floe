@@ -1,0 +1,26 @@
+/* A folder's contents hang from a rule under it; the marks of files and folders are masks in the text's colour */
+.floe-tree {
+  padding: 0.8rem 1.2rem; overflow-x: auto; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8);
+  border-radius: 14px; box-shadow: 0 1px 2px rgb(24 32 30 / 0.06);
+}
+.floe-tree ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; max-width: none; }
+.floe-tree ul ul { margin-left: 0.5rem; padding-left: 1.15rem; border-left: 1px solid var(--line, #d4dbd8); }
+.floe-tree li { padding-block: 0.12rem; }
+.floe-tree .name {
+  display: inline-flex; align-items: center; gap: 0.45rem; white-space: nowrap;
+  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP"); font-size: 0.86rem;
+}
+.floe-tree .name::before {
+  content: ""; flex: none; width: 1rem; height: 1rem; background: var(--muted, #57635f);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M5 2.5h6.5l3.5 3.5v11.5h-10zM11.5 2.5v3.5h3.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.floe-tree .name.dir { font-weight: 600; }
+.floe-tree .name.dir::before { background: var(--accent, #1d6670); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M2.5 5h5l1.5 2h8.5v9h-15z'/%3E%3C/svg%3E"); }
+.floe-tree .note { margin-left: 0.75rem; font-size: 0.85rem; color: var(--muted, #57635f); }
+.floe-tree li > .name::after { font-weight: 800; }
+.floe-tree li.added > .name { color: var(--good, #1f7a45); }
+.floe-tree li.added > .name::after { content: "+"; }
+.floe-tree li.removed > .name { color: var(--bad, #b3261e); text-decoration: line-through; }
+.floe-tree li.removed > .name::after { content: "−"; }
+.floe-tree li.changed > .name { color: var(--warn, #8a5a10); }
+.floe-tree li.changed > .name::after { content: "±"; }

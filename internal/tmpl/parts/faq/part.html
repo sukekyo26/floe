@@ -1,0 +1,5 @@
+<div class="floe-faq">
+{{- range .}}
+<details{{if .open}} open{{end}}><summary>{{.q}}</summary><div>{{markdown .a}}</div></details>
+{{- end}}
+</div>
