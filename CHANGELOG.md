@@ -16,7 +16,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   while a data file has mistakes. `--check` writes nothing and fails when a
   page is missing or not what its data file draws, for CI.
 - Run scripts in data files: the built-in `report` takes a `script` part, and
-  a template takes an item of `"format": "script"`, each `js`, a function the
+  a template refers to the part `floe:///parts/script.json`, each `js`, a function the
   page calls with an empty element in its place and `data`, any value. A `js`
   holding `</script` or `<!--` is refused, pointing at the `js`.
 - Write tables, cards and notes in data files: floe's parts `table`
@@ -26,14 +26,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   `note` (Markdown `text` with a `tone`), each `tone` `accent`, `good`, `warn`
   or `bad`. The built-in `report` takes them, and a template of one's own
   refers to one with `"$ref": "floe:///parts/table.json"`: floe checks the item,
-  draws it, and puts the part's style into the page once.
+  draws it, and puts the part's style once into a page that uses its classes,
+  a table of Markdown (in the table's look) and HTML that names them
+  (`<span class="floe-pill good">`) included. A template's item of
+  `"format": "markdown"` is Markdown text, which floe draws as HTML.
   `floe template show` tells a part's items, and `floe template check` warns
   of a theme that leaves out a CSS variable its parts take their colours from.
   A template's `page.html` takes `markdownLine`, which draws a line of
   Markdown without a paragraph around it, keeping a cell like `-` or `1.` as
   text.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
-  and a template takes an item of `"format": "diagram"`, each a spec as
+  and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as
   `floe diagram render` checks one, its ids across the page, and every
   mistake is reported at the data file's line and column. The page gets the
