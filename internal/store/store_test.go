@@ -254,18 +254,6 @@ func TestPublishOwner(t *testing.T) {
 		t.Errorf("--force did not start the page afresh: %+v", m)
 	}
 
-	// A page from before publishedFrom is owned by its project, unless that was edited on the page.
-	old := &store.Meta{Title: "t", Project: "legacy", CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt}
-	if err = e.s.WriteMeta("my-demo", old); err != nil {
-		t.Fatal(err)
-	}
-	_, err = e.publish(t, doc, store.Options{}, "other")
-	wantUserErr(t, err, "store_slug_owned", "my-demo", "legacy")
-	old.ProjectEdited = true
-	if err = e.s.WriteMeta("my-demo", old); err != nil {
-		t.Fatal(err)
-	}
-	e.mustPublish(t, doc, store.Options{}, "other")
 }
 
 func TestPublishKeepsEdits(t *testing.T) {

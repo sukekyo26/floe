@@ -257,9 +257,8 @@ func (s *Store) slugFor(file, path string, opts Options, cwd string) (string, er
 }
 
 // checkOwner refuses to overwrite another's entry without force, and reports whether the publish
-// replaces one. A stored page belongs to the project it was published from (pages from before
-// publishedFrom fall back to project, unless that was edited and so names no place). A link belongs
-// to its path: the same slug for another path certainly means another file.
+// replaces one. A stored page belongs to the project it was published from. A link belongs to its
+// path: the same slug for another path certainly means another file.
 func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, error) {
 	if prev == nil {
 		return false, nil
@@ -283,9 +282,6 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 		return false, err
 	}
 	owner := prev.PublishedFrom
-	if owner == "" && !prev.ProjectEdited {
-		owner = prev.Project
-	}
 	if owner == "" || owner == from {
 		return false, nil
 	}
