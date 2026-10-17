@@ -191,6 +191,8 @@ var messagesJA = map[string]string{
 	"cli_title_changed":            "警告: タイトルが変わりました。別のページなら --slug で別の URL 名にして公開してください",
 	"daemon_outdated_alive":        "古いサーバー（pid %d）が止まりませんでした。floe stop を実行してから公開し直してください",
 	"daemon_port_taken":            "ポート %d は別のプログラムが使っています。FLOE_PORT に空いているポートを設定してください",
+	"daemon_cannot_listen":         "127.0.0.1:%d で待ち受けできません（%s）。FLOE_PORT に別のポートを設定してください",
+	"daemon_port_silent":           "ポート %d は使われていますが、応答がありません。別の公開が起動したサーバーがまだ起動中か、別のプログラムが使っています。公開し直すか、FLOE_PORT に空いているポートを設定してください",
 	"daemon_not_started":           "サーバーが起動しませんでした。floe serve を実行してエラーを確かめてください",
 	"daemon_other_root":            "ポート %d のサーバーは %s を配信しています。floe stop を実行してから公開し直してください",
 

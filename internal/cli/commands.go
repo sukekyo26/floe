@@ -244,17 +244,30 @@ func (a *app) serve(ctx context.Context) error {
 	if err != nil {
 		return err //nolint:wrapcheck // already says what failed
 	}
-	var lc net.ListenConfig
-	ln, err := lc.Listen(ctx, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(a.cfg.port)))
-	if errors.Is(err, syscall.EADDRINUSE) {
-		return usererr.New("cli_port_in_use", a.cfg.port)
-	}
+	ln, err := a.listen()
 	if err != nil {
-		return fmt.Errorf("listen: %w", err)
+		return err
 	}
 	a.say("cli_serving", a.cfg.root, a.cfg.base())
 	srv := server.New(server.Config{Store: a.store(), Port: a.cfg.port, Build: build})
 	return srv.Serve(ctx, ln) //nolint:wrapcheck // already says what failed
+}
+
+// listen takes the listener the publish that started this server bound for it, or binds the port.
+func (a *app) listen() (net.Listener, error) {
+	if ln, err := daemon.Handed(a.env.Getenv, a.cfg.port); ln != nil || err != nil {
+		// Taken once: a floe run from here binds its own.
+		_ = os.Unsetenv(daemon.ListenerEnv) //nolint:errcheck // a name Unsetenv takes
+		return ln, err                      //nolint:wrapcheck // already says what failed
+	}
+	ln, err := daemon.Listen(a.cfg.port)
+	if errors.Is(err, syscall.EADDRINUSE) {
+		return nil, usererr.New("cli_port_in_use", a.cfg.port)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("listen: %w", err)
+	}
+	return ln, nil
 }
 
 func (a *app) stopCmd() *cobra.Command {

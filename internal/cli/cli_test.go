@@ -26,8 +26,15 @@ import (
 // is this binary.
 const asCLI = "FLOE_TEST_AS_CLI"
 
+// servedMark names a file for the binary run as floe serve to write its pid to, for a test to tell
+// whether a server was started at all.
+const servedMark = "FLOE_TEST_SERVED_MARK"
+
 func TestMain(m *testing.M) {
 	if os.Getenv(asCLI) == "1" {
+		if mark := os.Getenv(servedMark); mark != "" && len(os.Args) > 1 && os.Args[1] == "serve" {
+			_ = os.WriteFile(mark, []byte(strconv.Itoa(os.Getpid())), 0o600) //nolint:errcheck,gosec // G703: a path the test names; it fails without it
+		}
 		dir, _ := os.Getwd() //nolint:errcheck // as main does
 		os.Exit(cli.Run(context.Background(), os.Args[1:], cli.Env{
 			Getenv: os.Getenv, Dir: dir, Stdout: os.Stdout, Stderr: os.Stderr, Environ: os.Environ(),
@@ -233,7 +240,8 @@ func (e *env) stop(t *testing.T) {
 		}
 	}
 	if !e.wait(ctx, t, false) {
-		t.Error("the server outlived the test")
+		h, _ := e.healthIn(ctx, t)
+		t.Errorf("the server outlived the test: %+v", h)
 	}
 }
 
@@ -452,7 +460,9 @@ func TestPublish(t *testing.T) {
 }
 
 // TestPublishToASilentPort holds the port with a program that accepts connections and never answers:
-// the publish gives up within the 3 s the server has to start, not after 150 probe timeouts.
+// the publish gives up within the two waits of 3 s the server has to start, not after 150 probe
+// timeouts, says the port is in use with nothing answering, and starts no server, as it cannot bind
+// the port: one started anyway could take the port once it is let go.
 func TestPublishToASilentPort(t *testing.T) {
 	t.Parallel()
 
@@ -471,12 +481,44 @@ func TestPublishToASilentPort(t *testing.T) {
 			held = append(held, conn)
 		}
 	}()
+	mark := filepath.Join(e.tmp, "served")
+	e.vars[servedMark] = mark
 	start := time.Now()
-	want(t, "publish", e.run(t, "", "publish", e.page(t, "silent.yaml", "Silent")), 1, "",
-		`floe: the server did not start; run "floe serve" to see the error`)
-	if took := time.Since(start); took > 10*time.Second {
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want(t, "publish", e.exe(t, self, "publish", e.page(t, "silent.yaml", "Silent")), 1, "",
+		"floe: port "+e.port+" is in use, and nothing answers there")
+	if took := time.Since(start); took > 15*time.Second {
 		t.Errorf("the publish took %v", took)
 	}
+	// A server started, slow on a loaded machine, may write its mark after the publish gives up.
+	// LIMIT: one slower still than this second goes unseen. Wait on its pid if that shows.
+	time.Sleep(time.Second)
+	switch b, readErr := os.ReadFile(mark); {
+	case readErr == nil:
+		t.Errorf("a publish that could not bind the port started a server (pid %s)", b)
+		if pid, atoiErr := strconv.Atoi(string(b)); atoiErr == nil {
+			_ = daemon.Terminate(pid) //nolint:errcheck // a failure already
+		}
+	case !errors.Is(readErr, os.ErrNotExist):
+		t.Errorf("read the mark of a server started: %v", readErr)
+	}
+}
+
+// A port held while the publish waits, and let go before it gives up, as when another publish's server
+// failed to start, is bound on a second try and served.
+func TestPublishAfterThePortComesFree(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	ln := e.hold(t)
+	go func() {
+		time.Sleep(1500 * time.Millisecond)
+		_ = ln.Close()
+	}()
+	want(t, "publish", e.run(t, "", "publish", e.page(t, "free.yaml", "Free")), 0, e.base()+"/a/free/\n", "")
 }
 
 func TestPublishToAnotherServer(t *testing.T) {

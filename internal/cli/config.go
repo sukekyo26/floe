@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/sukekyo26/floe/internal/daemon"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -22,7 +23,7 @@ type config struct {
 }
 
 func (c *config) base() string {
-	return "http://127.0.0.1:" + strconv.Itoa(c.port)
+	return "http://" + daemon.Addr(c.port)
 }
 
 func loadConfig(getenv func(string) string) (*config, error) {
