@@ -72,7 +72,7 @@ floe: 1.2
 
 ## 部品
 
-floe には、テンプレートの項目を描く部品があります。`table`（セルにピルを置ける）・`cards`・`note`・`code`・`terminal`・`diagram`・`script`（後の 2 つは上で説明）です。`note` は Markdown の `text` と `tone` で、`title` を書けば上に見出しを出します。`code` は `text` にコードをそのまま書き、上にファイル名（`file`）を、その右端に言語（`lang`）を出します。`terminal` は `steps` に、打つコマンド（`run`。2 行目からはその続き）と出力（`out`）の組を並べ、`shell` のプロンプトを付け、シェルの名前を上に出します。`bash`・`sh`（`$`）・`zsh`（`%`）・`powershell`（`PS>`）・`cmd`（`>`）で、省くと名前は出さずにプロンプトは `$` です。どちらもエディタやターミナルと同じく、ライトモードでも暗い地です。プロンプトはスタイルで描くので、コマンドをコピーしても入りません。最初の語がプロンプト（`$`・`#`・`%`・`>`・`❯` で終わる語）の `run` は断ります。schema では、floe が探す `properties` と `items` の下で、部品を `$ref` で指します。`anyOf` や `$defs` などの下では描かれないので、`floe template check` が誤りにします。
+floe には、テンプレートの項目を描く部品があります。`table`（セルにピルを置ける）・`cards`・`note`・`code`・`terminal`・`stats`・`progress`・`steps`・`checklist`・`compare`・`options`・`facts`・`diff`・`tree`・`links`・`diagram`・`script`（後の 2 つは上で説明）です。`note` は Markdown の `text` と `tone` で、`title` を書けば上に見出しを出します。`code` は `text` にコードをそのまま書き、上にファイル名（`file`）を、その右端に言語（`lang`）を出します。`terminal` は `steps` に、打つコマンド（`run`。2 行目からはその続き）と出力（`out`）の組を並べ、`shell` のプロンプトを付け、シェルの名前を上に出します。`bash`・`sh`（`$`）・`zsh`（`%`）・`powershell`（`PS>`）・`cmd`（`>`）で、省くと名前は出さずにプロンプトは `$` です。どちらもエディタやターミナルと同じく、ライトモードでも暗い地です。プロンプトはスタイルで描くので、コマンドをコピーしても入りません。最初の語がプロンプト（`$`・`#`・`%`・`>`・`❯` で終わる語）の `run` は断ります。`stats` は大きな数の並びで、それぞれ `label` と引用符で囲んだ `value`、`unit`、`tone` の色の `note` です。`progress` は棒の並びで、それぞれ `label` と、`of` のうち `done` まで埋まる棒です。`steps` は番号付きの段で、それぞれ `title` と Markdown の `text`、`state` が `done`・`doing`・`todo`（省いたとき）です。`checklist` は 1 行の Markdown の項目で、`done` なら印が付き、済んだ数を最後に出します。`compare` は見出し `before` と `after` の下に、項目（`what`）ごとの `before` と `after` を `rows` に並べます。両側が同じ行は薄く描きます。`options` は `title`・Markdown の `text`・`pros`・`cons` のカードで、選ぶ案は `pick`（「勧める」などの語）の札と枠で示します。`facts` は `name` と `value` の組で、`value` は表のセルと同じく 1 行の Markdown かピルです。`diff` は git が書く形の差分を `text` に書き、コードの見た目で、上にファイル名（`file`）、足した行と消した行の数、言語（`lang`）を出します。`tree` はそれぞれ `path`（フォルダは `/` で終える）で、パスが指すフォルダに入れ子にし、`note` と `change`（`added`・`removed`・`changed`）を付けます。`links` は `url` へのリンクの `title` と一言（`text`）のカードです。schema では、floe が探す `properties` と `items` の下で、部品を `$ref` で指します。`anyOf` や `$defs` などの下では描かれないので、`floe template check` が誤りにします。
 
 ```json
 "risks": { "$ref": "floe:///parts/table.json", "description": "What may go wrong" }
@@ -80,7 +80,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 
 `page.html` では、項目を置きたい場所に `{{.Data.risks}}` と書きます。floe は項目を部品の schema と検査で確かめ（誤りはデータファイルの行と列で出します）、HTML に描きます。`floe template show` は、`$ref` の横に書いた説明に続けて、部品の項目を出します。floe に無い部品を指す `$ref` は、floe にある部品を添えて断ります。
 
-ページには、クラスを使った部品のスタイルが 1 回ずつ（Markdown の表や、`<span class="floe-pill good">` のように部品のクラスを書いた HTML も含む）、`<head>` の中でテンプレート自身のスタイルより前に入ります（`<head>` が無ければページの末尾）。部品のクラス名は `floe-` で始まります（`floe-table`・`floe-pill`・`floe-cards`・`floe-card`・`floe-note`・`floe-note-title`・`floe-code`・`floe-terminal`）。テーマに同じセレクタ（か、より詳しいセレクタ）の規則を書けば、後に来る分だけ部品の規則より優先されて、見た目を変えられます。部品と図は色・書体・注記の幅を、テーマの CSS 変数から取ります。変数の無いテーマでは、部品が持つ明るい値（report と同じ）を使います。
+ページには、クラスを使った部品のスタイルが 1 回ずつ（Markdown の表や、`<span class="floe-pill good">` のように部品のクラスを書いた HTML も含む）、`<head>` の中でテンプレート自身のスタイルより前に入ります（`<head>` が無ければページの末尾）。部品のクラス名は `floe-` で始まります（`floe-table`・`floe-pill`・`floe-cards`・`floe-card`・`floe-note`・`floe-note-title`・`floe-code`・`floe-terminal`、その後の部品は `floe-stats`・`floe-progress`・`floe-steps` のように部品の名前から）。テーマに同じセレクタ（か、より詳しいセレクタ）の規則を書けば、後に来る分だけ部品の規則より優先されて、見た目を変えられます。`compare` は表の、`stats`・`options`・`facts`・`links` はカードの、`diff` はコードの見た目で描くので、テーマのそれらの規則がこれらにも効きます。部品と図は色・書体・注記の幅を、テーマの CSS 変数から取ります。変数の無いテーマでは、部品が持つ明るい値（report と同じ）を使います。
 
 | 変数 | 意味 |
 | --- | --- |
@@ -92,6 +92,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 | `--font`・`--mono` | 本文の書体、等幅の書体 |
 | `--text-width` | 注記が広がる幅（本文と同じ） |
 | `--code-bg`・`--code-fg`・`--code-prompt` | コードとターミナルの地（ライトモードでも暗い）、その字（コマンドの出力はこれを薄くする）、ターミナルのプロンプトとコードの言語の札 |
+| `--code-add`・`--code-del` | 差分の足した行と消した行（暗い地の上） |
 
 変数はテーマで定義するか、すべてのテーマの分を `page.html` の `<style>` で定義します。`floe template check` は、部品や図が使う変数のどれかを定義していないテーマを警告します。そのテーマの部品はダークモードでも明るい色のままになります（コードとターミナルは暗いまま）。`tone`（ピル・注記・図の部品）は `accent`・`good`・`warn`・`bad` のどれかで、`--accent`・`--good` などの色と、その `-soft` を使います。
 
