@@ -220,7 +220,7 @@ func TestCheckMistakes(t *testing.T) {
 			want: []string{
 				`sizes/schema.json: #/properties/note: floe draws an item of the format html from a value of type string; declare "type": "string" alone`,
 				"sizes/schema.json: #/properties/note/properties/logo: the format image marks an item to draw",
-				`sizes/schema.json: #/properties/plan: floe does not know the format "diagram"; use a format of JSON Schema, or html, image or markdown; a diagram or a script is a part`,
+				`sizes/schema.json: #/properties/plan: a diagram is a part of floe's, not a format; write "$ref": "floe:///parts/diagram.json"`,
 			},
 		},
 		{

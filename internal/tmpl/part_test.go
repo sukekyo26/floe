@@ -3,6 +3,7 @@ package tmpl_test
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -238,9 +239,8 @@ func TestGoPartsAndMarkdown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, it := range d.Items {
-		if it.Name == "risks" && (it.Part != "diagram" || !strings.HasPrefix(it.Description, "A diagram: a spec")) {
-			t.Errorf("risks = %+v", it)
-		}
+	i := slices.IndexFunc(d.Items, func(it tmpl.Item) bool { return it.Name == "risks" })
+	if i < 0 || d.Items[i].Part != "diagram" || !strings.HasPrefix(d.Items[i].Description, "A diagram: a spec") {
+		t.Errorf("the items = %+v", d.Items)
 	}
 }
