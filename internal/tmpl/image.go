@@ -35,36 +35,22 @@ var imageTypes = map[string]string{
 // takes for a src as it is. where names files in the mistake: name must be a path under it without
 // .. or a name starting with a dot, of an image floe takes, by its name and by what it holds.
 func imageURI(files fs.FS, name, where string) (template.URL, *usererr.Error) {
-	b, typ, e := checkedImage(files, name, where)
-	if e != nil {
-		return "", e
-	}
-	return dataURI(typ, b), nil
-}
-
-// dataURI returns b, an image of the type typ checked by checkedImage, as a data URI.
-func dataURI(typ string, b []byte) template.URL {
-	//nolint:gosec // G203: an image of a type floe takes, checked by what it holds
-	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b))
-}
-
-// checkedImage reads the image name as imageURI does, and returns it with its type.
-func checkedImage(files fs.FS, name, where string) ([]byte, string, *usererr.Error) {
 	if !imagePath(name) {
-		return nil, "", usererr.New("tmpl_image_path", name, where)
+		return "", usererr.New("tmpl_image_path", name, where)
 	}
 	typ, ok := imageTypes[strings.ToLower(path.Ext(name))]
 	if !ok {
-		return nil, "", usererr.New("tmpl_image_type", name)
+		return "", usererr.New("tmpl_image_type", name)
 	}
 	b, e := readImage(files, name, where)
 	if e != nil {
-		return nil, "", e
+		return "", e
 	}
 	if holds := http.DetectContentType(b); holds != typ && (typ != "image/svg+xml" || !isSVG(b)) {
-		return nil, "", usererr.New("tmpl_image_content", name, typ)
+		return "", usererr.New("tmpl_image_content", name, typ)
 	}
-	return b, typ, nil
+	//nolint:gosec // G203: an image of a type floe takes, checked by what it holds
+	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b)), nil
 }
 
 // imagePath reports whether name may name an image: a slash-separated path under its directory,
@@ -226,7 +212,7 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 		return usererr.CannotRead(dir, err)
 	}
 	defer r.Close()
-	d.images, d.files = map[string]template.URL{}, map[string][]byte{}
+	d.images = map[string]template.URL{}
 	refused := map[string]*usererr.Error{}
 	var problems yamlpos.Problems
 	for _, f := range found {
@@ -242,11 +228,9 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 			if imagePath(name) {
 				d.tried = append(d.tried, filepath.Join(dir, filepath.FromSlash(name)))
 			}
-			var b []byte
-			var typ string
-			if b, typ, e = checkedImage(r.FS(), name, dir); e == nil {
-				d.images[name] = dataURI(typ, b)
-				d.files[name] = b
+			var uri template.URL
+			if uri, e = imageURI(r.FS(), name, dir); e == nil {
+				d.images[name] = uri
 			}
 			refused[name] = e
 		}

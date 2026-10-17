@@ -163,7 +163,11 @@ func (s *Store) readData(file, path, src, theme, cwd string) (*tmpl.Data, error)
 func (e *Entry) draw(data *tmpl.Data, src, theme, templates string) error {
 	e.Meta.Theme, e.Meta.Templates = theme, templates
 	if !e.Meta.IsLink() {
-		e.Source, e.Images = []byte(src), data.Images()
+		e.Source = []byte(src)
+		var err error
+		if e.Images, err = data.Images(); err != nil {
+			return err //nolint:wrapcheck // floe's own encoding, not the user's
+		}
 		for name := range e.Images {
 			// One name on macOS, which ignores case.
 			if first, _, _ := strings.Cut(name, "/"); strings.EqualFold(first, sourceName) {

@@ -5,6 +5,7 @@ package tmpl
 import (
 	"bytes"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -65,7 +66,6 @@ type Data struct {
 	tmpl   *Template               // the template Read checked the data against, which draws it
 	schema *schema                 // the template's schema as Read read it, for drawing as checked
 	images map[string]template.URL // its images as data URIs, by the path written
-	files  map[string][]byte       // its images as read, by the path written
 	// its diagrams drawn, by the path of keys to each (pathKey); nil without one
 	diagrams map[string]template.HTML
 	// its scripts drawn, each its element and the call of its function, by the path of keys to each
@@ -148,9 +148,19 @@ func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data
 }
 
 // Images returns the images d shows as read, by the slash-separated path written, under the directory
-// of its data file. The map and its bytes are d's own, not copied: they are not to be changed.
-func (d *Data) Images() map[string][]byte {
-	return d.files
+// of its data file. They are decoded from the data URIs the drawing takes, so that a drawing does not
+// hold each image twice for a publish to keep them.
+func (d *Data) Images() (map[string][]byte, error) {
+	images := make(map[string][]byte, len(d.images))
+	for name, uri := range d.images {
+		_, encoded, _ := strings.Cut(string(uri), ";base64,")
+		b, err := base64.StdEncoding.DecodeString(encoded)
+		if err != nil {
+			return nil, fmt.Errorf("decode the image %s: %w", name, err)
+		}
+		images[name] = b
+	}
+	return images, nil
 }
 
 // TitleOf returns the title: of the data file src, or "" when it names none or cannot be read.
@@ -189,7 +199,7 @@ func start(file string, src []byte, themed bool) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
-		images: nil, files: nil, diagrams: nil, scripts: nil, tried: nil, icons: nil,
+		images: nil, diagrams: nil, scripts: nil, tried: nil, icons: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)
