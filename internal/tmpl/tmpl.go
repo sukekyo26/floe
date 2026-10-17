@@ -148,7 +148,7 @@ func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data
 }
 
 // Images returns the images d shows as read, by the slash-separated path written, under the directory
-// of its data file.
+// of its data file. The map and its bytes are d's own, not copied: they are not to be changed.
 func (d *Data) Images() map[string][]byte {
 	return d.files
 }
