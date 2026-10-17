@@ -10,7 +10,7 @@
       "name": { "type": "string", "minLength": 1 },
       "type": { "type": "string", "minLength": 1, "description": "Such as string or number" },
       "required": { "type": "boolean" },
-      "default": { "type": ["string", "number", "boolean"], "description": "The value when it is left out" },
+      "default": { "type": ["string", "number", "boolean"], "description": "The value when it is left out; a number in quotes is drawn as written" },
       "text": { "type": "string", "minLength": 1, "description": "What it is; a line of Markdown" }
     },
     "required": ["name"],

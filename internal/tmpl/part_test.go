@@ -405,7 +405,7 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 		"      - details: { title: Log, parts: [{ terminal: { steps: [{ run: make }] } }, { text: '**done**' }] }\n" +
 		"      - matrix: { columns: [linux, mac], rows: [{ what: serve, cells: [yes, { mark: part, note: some }] }] }\n" +
 		"      - decision: { title: Take B, status: { pill: decided }, date: '2026-10-12', text: Why, rejected: [A] }\n" +
-		"      - risks: [{ what: r, likely: high, impact: mid, fix: f }, { what: s, likely: low, impact: mid }]\n" +
+		"      - risks: [{ what: r, likely: high, impact: mid, fix: f }, { what: s, likely: low, impact: mid }, { what: u, likely: mid, impact: mid }, { what: v, likely: high, impact: low }]\n" +
 		"      - fields: [{ name: --open, type: boolean, required: true, default: false, text: Opens }, { name: --x }]\n" +
 		"      - timeline: [{ date: '10-02', title: T, text: x, tone: good }]\n" +
 		"      - bars: [{ label: a, value: 1 }, { label: b, value: 4, tone: warn }]\n" +
@@ -423,6 +423,8 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 		`<th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col">Impact</th><th scope="col">What we do</th>`,
 		`<tr class="bad"><td class="what">r</td><td class="high"><span class="level">High</span></td><td class="mid"><span class="level">Medium</span></td><td>f</td></tr>`,
 		`<tr class="good"><td class="what">s</td>`,
+		`<tr class="warn"><td class="what">u</td>`,
+		`<tr class="warn"><td class="what">v</td>`,
 		`<td class="name"><code>--open</code><span class="required">required</span><span class="type">boolean</span></td><td>Opens<span class="default">Default: <code>false</code></span></td>`,
 		`<td class="name"><code>--x</code></td><td></td>`,
 		`<li class="good"><span class="date">10-02</span><div><strong>T</strong><p>x</p>`,
