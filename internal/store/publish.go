@@ -320,15 +320,15 @@ func IsDataFile(file string) bool {
 }
 
 // Save writes a prepared entry. A stored page's data file and images go to a new directory, which
-// meta.json then names, so that a drawing finds the old copy or the new one, whole, and a save that
-// fails leaves the old one; the copies it no longer names go after. Saves, edits and removals of one
-// slug take turns, in this process or another, so that none writes meta.json over another's.
+// meta.json then names, so that a save that fails leaves the old copy; the copies it no longer names
+// go after. Saves, edits and removals of one slug take turns, in this process or another, so that an
+// edit does not write back a meta.json naming a copy a save removed. What Prepare read is not held:
+// an edit between it and Save is written over.
+// LIMIT: a drawing that read meta.json just before a save may find its copy gone, and shows that it
+// cannot be read until the tab's next look. Keep the copy before until the next save if that shows.
 func (s *Store) Save(e *Entry) error {
 	dir := s.dir(e.Slug)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return fmt.Errorf("save %s: %w", e.Slug, err)
-	}
-	unlock, err := lock(dir)
+	unlock, err := lock(dir, true)
 	if err != nil {
 		return fmt.Errorf("save %s: %w", e.Slug, err)
 	}
@@ -347,18 +347,35 @@ func (s *Store) Save(e *Entry) error {
 	return nil
 }
 
-// lock waits to hold dir alone among those who lock it, and returns what lets it go.
-func lock(dir string) (func(), error) {
-	f, err := os.Open(dir) //nolint:gosec // G304: the directory of a slug
-	if err != nil {
-		return nil, err //nolint:wrapcheck // the caller says what it locked
+// lock waits to hold dir alone among those who lock it, made first with create, and returns what lets
+// it go. The lock is on the directory, not its name: when the one it waited for was removed or renamed
+// meanwhile, it locks the one dir names then, or fails with fs.ErrNotExist when there is none.
+func lock(dir string, create bool) (func(), error) {
+	for {
+		if create {
+			if err := os.MkdirAll(dir, 0o700); err != nil {
+				return nil, err //nolint:wrapcheck // the caller says what it locked
+			}
+		}
+		f, err := os.Open(dir) //nolint:gosec // G304: the directory of a slug
+		if err != nil {
+			return nil, err //nolint:wrapcheck // as above
+		}
+		if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
+			_ = f.Close()   //nolint:errcheck // read-only
+			return nil, err //nolint:wrapcheck // as above
+		}
+		held, err := f.Stat()
+		named, nameErr := os.Stat(dir)
+		if err == nil && nameErr == nil && os.SameFile(held, named) {
+			// Closing it lets the lock go.
+			return func() { _ = f.Close() }, nil //nolint:errcheck // as above
+		}
+		_ = f.Close() //nolint:errcheck // as above
+		if err != nil {
+			return nil, err //nolint:wrapcheck // as above
+		}
 	}
-	if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
-		_ = f.Close()   //nolint:errcheck // read-only
-		return nil, err //nolint:wrapcheck // as above
-	}
-	// Closing it lets the lock go.
-	return func() { _ = f.Close() }, nil //nolint:errcheck // as above
 }
 
 // writeSource writes the data file src and its images, at the paths it names them by, to a new
@@ -410,14 +427,21 @@ func removeSources(dir, keep string) error {
 
 // Remove deletes slug. A linked file itself is left alone.
 func (s *Store) Remove(slug string) error {
-	if !ValidSlug(slug) || s.ReadMeta(slug) == nil {
+	if !ValidSlug(slug) {
 		return usererr.New("store_no_page", slug)
 	}
-	unlock, err := lock(s.dir(slug))
+	// A removal that waited for another of the same slug finds nothing, as one that came after.
+	unlock, err := lock(s.dir(slug), false)
+	if errors.Is(err, fs.ErrNotExist) {
+		return usererr.New("store_no_page", slug)
+	}
 	if err != nil {
 		return fmt.Errorf("remove %s: %w", slug, err)
 	}
 	defer unlock()
+	if s.ReadMeta(slug) == nil {
+		return usererr.New("store_no_page", slug)
+	}
 	if err = os.RemoveAll(s.dir(slug)); err != nil {
 		return fmt.Errorf("remove %s: %w", slug, err)
 	}
@@ -437,7 +461,7 @@ type Edit struct {
 // the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
 // data file's title: when published (a stored page), else to the slug; clearing the project drops it.
 func (s *Store) Edit(slug string, ed Edit) (string, error) {
-	unlock, err := lock(s.dir(slug))
+	unlock, err := lock(s.dir(slug), false)
 	if errors.Is(err, fs.ErrNotExist) {
 		return "", ErrNotFound
 	}

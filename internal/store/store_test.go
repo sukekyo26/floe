@@ -637,6 +637,59 @@ func TestEditAndRemoveWaitForSave(t *testing.T) {
 	}
 }
 
+// One that waited for the slug's directory while it was renamed acts on the slug's directory then: a
+// removal finds no page, and a save makes the page anew.
+func TestWaitThroughRename(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	doc := e.page(t, "moved.yaml", "Moved")
+	e.mustPublish(t, doc, store.Options{}, "proj")
+	dir := filepath.Join(e.tmp, "store", "moved")
+	entry, err := e.s.Prepare(t.Context(), doc, store.Options{}, filepath.Join(e.tmp, "proj"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name string
+		act  func() error
+		want func(error) bool
+	}{
+		{"remove", func() error { return e.s.Remove("moved") }, func(err error) bool {
+			var ue *usererr.Error
+			return errors.As(err, &ue) && ue.Key == "store_no_page"
+		}},
+		{"save", func() error { return e.s.Save(entry) }, func(err error) bool { return err == nil }},
+	} {
+		f, err := os.Open(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
+			t.Fatal(err)
+		}
+		done := make(chan error, 1)
+		go func() { done <- tt.act() }()
+		time.Sleep(50 * time.Millisecond)
+		if err = os.Rename(dir, dir+"-away"); err != nil {
+			t.Fatal(err)
+		}
+		if err = f.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err = <-done; !tt.want(err) {
+			t.Errorf("%s through a rename = %v", tt.name, err)
+		}
+		if err = os.RemoveAll(dir + "-away"); err != nil {
+			t.Fatal(err)
+		}
+		mkdir(t, dir)
+	}
+	if page := e.drawn(t, "moved"); !strings.Contains(page, "<h1>Moved</h1>") {
+		t.Errorf("the page a save made anew:\n%s", page)
+	}
+}
+
 func TestRemove(t *testing.T) {
 	t.Parallel()
 
