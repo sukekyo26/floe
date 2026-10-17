@@ -774,6 +774,39 @@ func TestStoreWithoutLockFile(t *testing.T) {
 	}
 }
 
+// A link without --slug takes its slug when it is saved: two linked at once take a slug each, and one
+// whose entry was renamed since Prepare keeps the new slug.
+func TestLinkSlugPickedOnSave(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	prepare := func(file string) *store.Entry {
+		t.Helper()
+		entry, err := e.s.Prepare(t.Context(), file, store.Options{Link: true}, e.tmp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return entry
+	}
+	one, two := prepare(e.write(t, "a/site/index.html", "<h1>A</h1>")), prepare(e.write(t, "b/site/index.html", "<h1>B</h1>"))
+	for _, entry := range []*store.Entry{one, two} {
+		if err := e.s.Save(entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if one.Slug != "site" || two.Slug != "site-2" || e.meta(t, "site-2").Path != filepath.Join(e.tmp, "b", "site", "index.html") {
+		t.Errorf("two links saved at once took %s and %s", one.Slug, two.Slug)
+	}
+
+	again := prepare(filepath.Join(e.tmp, "a", "site", "index.html"))
+	if _, err := e.s.Edit("site", store.Edit{Slug: ptr("renamed")}); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.s.Save(again); err != nil || again.Slug != "renamed" || e.s.ReadMeta("site") != nil {
+		t.Errorf("a link renamed since Prepare was saved as %s (%v)", again.Slug, err)
+	}
+}
+
 func TestRemove(t *testing.T) {
 	t.Parallel()
 

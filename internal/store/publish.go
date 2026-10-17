@@ -77,6 +77,8 @@ type Options struct {
 // Entry is a checked publish, ready to be saved.
 type Entry struct {
 	Slug string
+	// Meta is what Save writes as meta.json. Save builds it again on the slug as it is then, so a value
+	// set here between Prepare and Save does not stay.
 	Meta Meta
 	// Source is the data file of a stored page, and Images the images it shows, by the path it names
 	// them by; nil for a link.
@@ -89,6 +91,8 @@ type Entry struct {
 	// templates of the Meta it replaces: the publish's options and the project published from.
 	opts Options
 	from string
+	// named is what a link without --slug is named after, for Save to pick its slug again: "" else.
+	named string
 }
 
 // Prepare checks a publish of file and builds what Save writes, without writing anything. cwd
@@ -130,7 +134,12 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	if data != nil {
 		seed.Theme, seed.Templates = theme, s.templates.Dir()
 	}
-	e := &Entry{Slug: slug, Meta: seed, Source: nil, Images: nil, Prev: nil, opts: opts, from: project.Name(ctx, dir)}
+	e := &Entry{
+		Slug: slug, Meta: seed, Source: nil, Images: nil, Prev: nil, opts: opts, from: project.Name(ctx, dir), named: "",
+	}
+	if opts.Slug == nil && path != "" {
+		e.named = SlugFromFile(file, cwd)
+	}
 	// Checked against the slug as it is now, to fail before drawing; Save checks again.
 	if err = e.settle(s.ReadMeta(slug)); err != nil {
 		return nil, err
@@ -350,6 +359,10 @@ func (s *Store) Save(e *Entry) error {
 		return fmt.Errorf("save %s: %w", e.Slug, err)
 	}
 	defer unlock()
+	// Picked again, as another link may have taken the slug, or the file's own been renamed, since.
+	if e.named != "" {
+		e.Slug = s.freeSlug(e.named, e.Meta.Path)
+	}
 	if err = e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return err
 	}
@@ -369,9 +382,6 @@ func (s *Store) Save(e *Entry) error {
 
 // write writes e to dir, the directory of its slug: the copy of a stored page, then meta.json.
 func (s *Store) write(e *Entry, dir string) error {
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return fmt.Errorf("save %s: %w", e.Slug, err)
-	}
 	if !e.Meta.IsLink() {
 		var err error
 		if e.Meta.Source, err = writeSource(dir, e.Source, e.Images); err != nil {
@@ -385,8 +395,9 @@ func (s *Store) write(e *Entry, dir string) error {
 // returns what lets it go. One lock for the store holds a slug not made yet, and the slug a rename
 // takes, as well. The lock file is made when missing; the store too with create, else a store not
 // made yet fails with fs.ErrNotExist, as it holds no page.
-// LIMIT: saves of different pages wait for each other too, a few ms each, and all wait while a
-// process holding it is stopped (Ctrl-Z). Lock each slug, and each name a rename takes, if a store
+// LIMIT: saves of different pages wait for each other too, while the copy of a page and its images
+// is written (a few ms for the plan pages here), and all wait while a process holding it is stopped
+// (Ctrl-Z). Lock each slug, and each name a rename takes, if a store
 // comes to see many saves at once.
 func (s *Store) lock(create bool) (func(), error) {
 	if create {
