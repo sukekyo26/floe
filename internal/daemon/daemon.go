@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -120,18 +121,10 @@ func Ensure(ctx context.Context, s Server) error {
 		}
 	}
 	if p.State == Down {
-		pid, err := start(ctx, s.Env)
-		if err != nil {
+		if err := start(ctx, s); err != nil {
 			return err
 		}
 		p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Down })
-		// One that is not the server (another publish's came up first, or none did) lost the port, or
-		// is slow to start: left, it could take the port once the server there stops.
-		if p.Health.PID != pid {
-			if err = Terminate(pid); err != nil {
-				return err
-			}
-		}
 	}
 	switch {
 	case p.State == Other:
@@ -145,21 +138,49 @@ func Ensure(ctx context.Context, s Server) error {
 	}
 }
 
-// start runs "floe serve" in a session of its own, so that it outlives the publish and its terminal
-// (and ctx: the server must not be killed when the publish ends), and returns its pid.
-func start(ctx context.Context, env []string) (int, error) {
+// errNotTCP is a listener of "tcp" that is not a *net.TCPListener, which net does not give.
+var errNotTCP = errors.New("not a TCP listener")
+
+// ListenerEnv tells "floe serve" that its listener is file descriptor 3, which the publish that started
+// it bound.
+const ListenerEnv = "FLOE_SERVE_LISTENER"
+
+// start binds the port, then runs "floe serve" on it in a session of its own, so that it outlives the
+// publish and its terminal (and ctx: the server must not be killed when the publish ends). A publish
+// that cannot bind the port starts nothing: another publish's server has it already, and a second
+// server, slow to start, would otherwise take the port once that one stops.
+func start(ctx context.Context, s Server) error {
+	var lc net.ListenConfig
+	ln, err := lc.Listen(ctx, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(s.Port)))
+	if errors.Is(err, syscall.EADDRINUSE) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("listen: %w", err)
+	}
+	defer ln.Close() //nolint:errcheck // the server holds its own copy
+	tcp, ok := ln.(*net.TCPListener)
+	if !ok {
+		return fmt.Errorf("listen: %w", errNotTCP)
+	}
+	f, err := tcp.File()
+	if err != nil {
+		return fmt.Errorf("listen: %w", err)
+	}
+	defer f.Close() //nolint:errcheck // as above
 	exe, err := os.Executable()
 	if err != nil {
-		return 0, fmt.Errorf("find the floe binary: %w", err)
+		return fmt.Errorf("find the floe binary: %w", err)
 	}
 	cmd := exec.CommandContext(context.WithoutCancel(ctx), exe, "serve") //nolint:gosec // G204: our own binary
-	cmd.Env = env
+	cmd.Env = append(append([]string{}, s.Env...), ListenerEnv+"=3")
+	cmd.ExtraFiles = []*os.File{f}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
-		return 0, fmt.Errorf("start the server: %w", err)
+		return fmt.Errorf("start the server: %w", err)
 	}
 	go func() { _ = cmd.Wait() }() //nolint:errcheck // reaps the server if it exits before we do
-	return cmd.Process.Pid, nil
+	return nil
 }
 
 // Terminate sends SIGTERM to pid. A process that has exited already counts as stopped.

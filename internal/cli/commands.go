@@ -244,17 +244,35 @@ func (a *app) serve(ctx context.Context) error {
 	if err != nil {
 		return err //nolint:wrapcheck // already says what failed
 	}
-	var lc net.ListenConfig
-	ln, err := lc.Listen(ctx, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(a.cfg.port)))
-	if errors.Is(err, syscall.EADDRINUSE) {
-		return usererr.New("cli_port_in_use", a.cfg.port)
-	}
+	ln, err := a.listen(ctx)
 	if err != nil {
-		return fmt.Errorf("listen: %w", err)
+		return err
 	}
 	a.say("cli_serving", a.cfg.root, a.cfg.base())
 	srv := server.New(server.Config{Store: a.store(), Port: a.cfg.port, Build: build})
 	return srv.Serve(ctx, ln) //nolint:wrapcheck // already says what failed
+}
+
+// listen binds the port, or takes the listener the publish that started this server bound for it.
+func (a *app) listen(ctx context.Context) (net.Listener, error) {
+	if a.env.Getenv(daemon.ListenerEnv) != "" {
+		f := os.NewFile(3, "listener")
+		defer f.Close() //nolint:errcheck // the listener holds its own copy
+		ln, err := net.FileListener(f)
+		if err != nil {
+			return nil, fmt.Errorf("take the listener: %w", err)
+		}
+		return ln, nil
+	}
+	var lc net.ListenConfig
+	ln, err := lc.Listen(ctx, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(a.cfg.port)))
+	if errors.Is(err, syscall.EADDRINUSE) {
+		return nil, usererr.New("cli_port_in_use", a.cfg.port)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("listen: %w", err)
+	}
+	return ln, nil
 }
 
 func (a *app) stopCmd() *cobra.Command {
