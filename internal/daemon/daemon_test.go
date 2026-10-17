@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/daemon"
@@ -17,9 +19,13 @@ func TestHanded(t *testing.T) {
 	if ln, err := daemon.Handed(none, 1); ln != nil || err != nil {
 		t.Errorf("Handed with none handed down = %v, %v", ln, err)
 	}
-	bad := func(string) string { return "three" }
-	if _, err := daemon.Handed(bad, 1); err == nil {
+	if _, err := daemon.Handed(func(string) string { return "three" }, 1); err == nil {
 		t.Error("Handed took a descriptor that is not a number")
+	}
+	// Standard output is refused before it is taken, which would close it.
+	if _, err := daemon.Handed(func(string) string { return "1" }, 1); err == nil ||
+		!strings.Contains(err.Error(), "not a descriptor handed down") {
+		t.Errorf("Handed of standard output = %v", err)
 	}
 
 	held, err := daemon.Listen(0)
@@ -35,15 +41,20 @@ func TestHanded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Handed takes the descriptor it is given, as a server does once: each call is handed a copy.
+	f, err := held.File()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = f.Close() })
+	// Handed takes, and closes, the descriptor it is given, as a server does once: each call is handed
+	// a copy of its own.
 	handed := func(t *testing.T) func(string) string {
 		t.Helper()
-		f, fileErr := held.File()
-		if fileErr != nil {
-			t.Fatal(fileErr)
+		fd, dupErr := syscall.Dup(int(f.Fd())) //nolint:gosec // G115: a descriptor fits an int
+		if dupErr != nil {
+			t.Fatal(dupErr)
 		}
-		t.Cleanup(func() { _ = f.Close() })
-		return func(string) string { return strconv.Itoa(int(f.Fd())) } //nolint:gosec // G115: a descriptor fits an int
+		return func(string) string { return strconv.Itoa(fd) }
 	}
 	if _, err = daemon.Handed(handed(t), port+1); !errors.Is(err, daemon.ErrHandedAddr) {
 		t.Errorf("Handed of a listener on another port = %v", err)

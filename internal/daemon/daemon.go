@@ -102,7 +102,12 @@ type Server struct {
 }
 
 func (s Server) base() string {
-	return "http://127.0.0.1:" + strconv.Itoa(s.Port)
+	return "http://" + Addr(s.Port)
+}
+
+// Addr is the address a server of floe serves on, on port.
+func Addr(port int) string {
+	return net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 }
 
 // Ensure makes sure a server of this build serves the root on the port, starting one or replacing an
@@ -126,9 +131,9 @@ func Ensure(ctx context.Context, s Server) error {
 			return err
 		}
 		p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Down })
-		// Bound by a program that does not answer, rather than by another publish's server.
+		// Bound, but none answers: another publish's server still starting, or a program that does not.
 		if p.State == Down && !started {
-			return usererr.New("daemon_port_taken", s.Port)
+			return usererr.New("daemon_port_silent", s.Port)
 		}
 	}
 	switch {
@@ -149,13 +154,19 @@ const ListenerEnv = "FLOE_SERVE_LISTENER"
 // listenerFD is the descriptor a started server takes its listener at: the first of cmd.ExtraFiles.
 const listenerFD = 3
 
+// errLowFD is a descriptor below those a publish hands down.
+var errLowFD = errors.New("not a descriptor handed down")
+
 // ErrHandedAddr is a listener handed down on another address than the server's.
 var ErrHandedAddr = errors.New("the listener handed down is not on the server's address")
 
-// Listen binds 127.0.0.1:port, where a server of floe serves.
+// Listen binds Addr(port).
 func Listen(port int) (*net.TCPListener, error) {
-	addr := &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: port, Zone: ""}
-	return net.ListenTCP("tcp", addr) //nolint:wrapcheck // the caller says what it bound for
+	addr, err := net.ResolveTCPAddr("tcp", Addr(port))
+	if err != nil {
+		return nil, err //nolint:wrapcheck // the caller says what it bound for
+	}
+	return net.ListenTCP("tcp", addr) //nolint:wrapcheck // as above
 }
 
 // Handed returns the listener the publish that started this server bound on port, in the variables
@@ -165,7 +176,11 @@ func Handed(getenv func(string) string, port int) (net.Listener, error) {
 	if v == "" {
 		return nil, nil //nolint:nilnil // none handed down: the server binds the port itself
 	}
+	// Not standard input, output or error, which taking would close.
 	fd, err := strconv.Atoi(v)
+	if err == nil && fd < listenerFD {
+		err = errLowFD
+	}
 	if err != nil {
 		return nil, fmt.Errorf("take the listener handed down (%s=%s): %w", ListenerEnv, v, err)
 	}
@@ -175,7 +190,7 @@ func Handed(getenv func(string) string, port int) (net.Listener, error) {
 	if err != nil {
 		return nil, fmt.Errorf("take the listener handed down (%s=%s): %w", ListenerEnv, v, err)
 	}
-	if want := net.JoinHostPort("127.0.0.1", strconv.Itoa(port)); ln.Addr().String() != want {
+	if want := Addr(port); ln.Addr().String() != want {
 		_ = ln.Close() //nolint:errcheck // refused
 		return nil, fmt.Errorf("%w: %s, not %s", ErrHandedAddr, ln.Addr(), want)
 	}

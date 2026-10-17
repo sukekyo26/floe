@@ -484,16 +484,25 @@ func TestPublishToASilentPort(t *testing.T) {
 	mark := filepath.Join(e.tmp, "served")
 	e.vars[servedMark] = mark
 	start := time.Now()
-	want(t, "publish", e.exe(t, otherBuild, "publish", e.page(t, "silent.yaml", "Silent")), 1, "",
-		"floe: port "+e.port+" is used by another program; set FLOE_PORT to a free port")
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want(t, "publish", e.exe(t, self, "publish", e.page(t, "silent.yaml", "Silent")), 1, "",
+		"floe: port "+e.port+" is in use, and nothing answers there")
 	if took := time.Since(start); took > 10*time.Second {
 		t.Errorf("the publish took %v", took)
 	}
-	switch pid, err := os.ReadFile(mark); {
-	case err == nil:
-		t.Errorf("a publish that could not bind the port started a server (pid %s)", pid)
-	case !errors.Is(err, os.ErrNotExist):
-		t.Errorf("read the mark of a server started: %v", err)
+	// A server started, slow on a loaded machine, may write its mark after the publish gives up.
+	time.Sleep(time.Second)
+	switch b, readErr := os.ReadFile(mark); {
+	case readErr == nil:
+		t.Errorf("a publish that could not bind the port started a server (pid %s)", b)
+		if pid, atoiErr := strconv.Atoi(string(b)); atoiErr == nil {
+			_ = daemon.Terminate(pid) //nolint:errcheck // a failure already
+		}
+	case !errors.Is(readErr, os.ErrNotExist):
+		t.Errorf("read the mark of a server started: %v", readErr)
 	}
 }
 

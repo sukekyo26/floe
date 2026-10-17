@@ -193,6 +193,7 @@ var messagesEN = map[string]string{
 	"daemon_outdated_alive":        "the outdated server (pid %d) did not stop; run \"floe stop\" and publish again",
 	"daemon_port_taken":            "port %d is used by another program; set FLOE_PORT to a free port",
 	"daemon_cannot_listen":         "cannot listen on 127.0.0.1:%d (%s); set FLOE_PORT to another port",
+	"daemon_port_silent":           "port %d is in use, and nothing answers there: a server another publish started may still be starting, or another program holds it; publish again, or set FLOE_PORT to a free port",
 	"daemon_not_started":           "the server did not start; run \"floe serve\" to see the error",
 	"daemon_other_root":            "the server on port %d serves %s; run \"floe stop\" and publish again",
 
