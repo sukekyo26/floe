@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -26,8 +28,16 @@ import (
 // is this binary.
 const asCLI = "FLOE_TEST_AS_CLI"
 
+// slowServe names a file for the binary run as floe serve to write its pid to, then to wait before it
+// serves, as one may on a loaded machine. A SIGTERM then stops it, its handler not yet set.
+const slowServe = "FLOE_TEST_SLOW_SERVE"
+
 func TestMain(m *testing.M) {
 	if os.Getenv(asCLI) == "1" {
+		if mark := os.Getenv(slowServe); mark != "" && len(os.Args) > 1 && os.Args[1] == "serve" {
+			_ = os.WriteFile(mark, []byte(strconv.Itoa(os.Getpid())), 0o600) //nolint:errcheck,gosec // G703: a path the test names; the test waits for it
+			time.Sleep(time.Minute)
+		}
 		dir, _ := os.Getwd() //nolint:errcheck // as main does
 		os.Exit(cli.Run(context.Background(), os.Args[1:], cli.Env{
 			Getenv: os.Getenv, Dir: dir, Stdout: os.Stdout, Stderr: os.Stderr, Environ: os.Environ(),
@@ -531,6 +541,58 @@ func TestServeInProcess(t *testing.T) {
 	cancel()
 	if code := <-done; code != 0 || stdout.String() != "serving "+e.vars["FLOE_DIR"]+" at "+e.base()+"/\n" {
 		t.Errorf("serve = %d %q", code, stdout.String())
+	}
+}
+
+// A server a publish started is stopped when another came up first: slow to reach the port, it would
+// otherwise take it once that one stops, and serve on after it.
+func TestLostServerStopped(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	build, err := daemon.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	port, err := strconv.Atoi(e.port)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mark := filepath.Join(e.tmp, "slow")
+	env := append(os.Environ(), "FLOE_DIR="+e.vars["FLOE_DIR"], "FLOE_PORT="+e.port, "HOME="+e.vars["HOME"], slowServe+"="+mark)
+	ensured := make(chan error, 1)
+	go func() {
+		ensured <- daemon.Ensure(t.Context(), daemon.Server{Port: port, Root: e.vars["FLOE_DIR"], Build: build, Env: env})
+	}()
+	pid := 0
+	for deadline := time.Now().Add(10 * time.Second); pid == 0; time.Sleep(20 * time.Millisecond) {
+		if b, readErr := os.ReadFile(mark); readErr == nil && len(b) > 0 {
+			pid, _ = strconv.Atoi(string(b)) //nolint:errcheck // 0 waits on
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the slow server did not start")
+		}
+	}
+	t.Cleanup(func() { _ = daemon.Terminate(pid) }) //nolint:errcheck // gone already but for a failure
+
+	// The server that comes up first: one in this process, while the slow one waits.
+	ctx, cancel := context.WithCancel(t.Context())
+	served := make(chan int, 1)
+	go func() {
+		served <- cli.Run(ctx, []string{"serve"}, cli.Env{
+			Getenv: func(k string) string { return e.vars[k] }, Dir: e.tmp, Stdout: io.Discard, Stderr: io.Discard,
+			Environ: nil,
+		})
+	}()
+	if err = <-ensured; err != nil {
+		t.Fatalf("Ensure = %v", err)
+	}
+	cancel()
+	<-served
+	for deadline := time.Now().Add(10 * time.Second); syscall.Kill(pid, 0) == nil; time.Sleep(20 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("the server Ensure started and another came up before was left running")
+		}
 	}
 }
 
