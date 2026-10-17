@@ -67,37 +67,20 @@ func (set *partSet) pointsInto(ref string) (whole string, into bool) {
 	return whole, into && ok && set.parts[name] != nil
 }
 
-// intoPart returns a $ref of s, or of those under it, that points into a part of floe's, or "".
-func (s *schema) intoPart(set *partSet) string {
+// first returns the first of s and the schemas under it that ok takes, with its pointer under ptr, or nil.
+func (s *schema) first(ptr string, ok func(*schema) bool) (string, *schema) {
 	if s == nil {
-		return ""
+		return "", nil
 	}
-	if _, into := set.pointsInto(s.Ref); into {
-		return s.Ref
+	if ok(s) {
+		return ptr, s
 	}
 	for _, name := range slices.Sorted(maps.Keys(s.Properties)) {
-		if ref := s.Properties[name].intoPart(set); ref != "" {
-			return ref
+		if at, found := s.Properties[name].first(ptr+"/properties/"+pointerKey.Replace(name), ok); found != nil {
+			return at, found
 		}
 	}
-	return s.Items.intoPart(set)
-}
-
-// formatPart returns the pointer, under ptr, to a schema of s, or of those under it, whose format names a
-// part floe draws in Go, and that format, or "" for none.
-func (s *schema) formatPart(ptr string) (at, format string) {
-	if s == nil {
-		return "", ""
-	}
-	if goParts[s.Format] != "" {
-		return ptr, s.Format
-	}
-	for _, name := range slices.Sorted(maps.Keys(s.Properties)) {
-		if at, f := s.Properties[name].formatPart(ptr + "/properties/" + pointerKey.Replace(name)); f != "" {
-			return at, f
-		}
-	}
-	return s.Items.formatPart(ptr + "/items")
+	return s.Items.first(ptr+"/items", ok)
 }
 
 // absolute makes the $ref of s, and those under it, absolute, read from the schema at base.
@@ -134,6 +117,12 @@ var goParts = map[string]string{
 	"script": "Something that moves: js, a function (el, data) { … } the page calls with an empty element in its " +
 		"place and data, any value. It runs in the page's sandbox, where fetch, XHR, images from elsewhere and " +
 		"forms are blocked",
+}
+
+// isGoPart reports whether name is a part floe draws in Go.
+func isGoPart(name string) bool {
+	_, ok := goParts[name]
+	return ok
 }
 
 // partSet is floe's parts, and every schema under parts/, by URL: the parts' and those they share.
@@ -222,13 +211,7 @@ func readPart(name string, s *schema) (*part, error) {
 		return nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
 	p := &part{name: name, schema: s, page: page, css: string(css), checks: nil, classes: nil}
-	var classes []string
-	for _, m := range styleClass.FindAllStringSubmatch(p.css, -1) {
-		if !slices.Contains(classes, m[1]) {
-			classes = append(classes, m[1])
-		}
-	}
-	if classes != nil {
+	if classes := appendFound(nil, styleClass, p.css); classes != nil {
 		p.classes = regexp.MustCompile(`(?:^|[^\w-])(?:` + strings.Join(classes, "|") + `)(?:[^\w-]|$)`)
 	}
 	src, err := partFiles.ReadFile(path.Join(dir, "checks.yaml"))
@@ -421,9 +404,8 @@ func (p *part) draw(v any) (template.HTML, error) {
 
 // partStyles returns the style of the parts whose classes page uses, in the order of their names, for
 // the page's <head>, or "" for none: a part's own, a table of Markdown, or HTML that takes a part's look
-// (<span class="floe-pill good">).
-// LIMIT: a class is found anywhere in the page's text, so a page that names one in its prose or its
-// theme gets that part's style unused. Look in class attributes alone if the unused style comes to matter.
+// (<span class="floe-pill good">). A class named in the page's prose or theme brings its part's style too.
+// LIMIT: classes are found in the page's whole text; look in class attributes alone if unused style matters.
 func partStyles(page []byte) (string, error) {
 	set, err := builtinParts()
 	if err != nil {
@@ -502,13 +484,19 @@ func partVariables(names []string) ([]string, error) {
 	}
 	var vars []string
 	for _, name := range slices.Sorted(slices.Values(names)) {
-		for _, m := range fallback.FindAllStringSubmatch(set.parts[name].css, -1) {
-			if !slices.Contains(vars, m[1]) {
-				vars = append(vars, m[1])
-			}
-		}
+		vars = appendFound(vars, fallback, set.parts[name].css)
 	}
 	return vars, nil
+}
+
+// appendFound appends to found what re's first group finds in s, each once.
+func appendFound(found []string, re *regexp.Regexp, s string) []string {
+	for _, m := range re.FindAllStringSubmatch(s, -1) {
+		if !slices.Contains(found, m[1]) {
+			found = append(found, m[1])
+		}
+	}
+	return found
 }
 
 // fallback finds the variables a style takes with a value of its own for a theme without them.

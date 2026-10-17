@@ -103,7 +103,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 		return nil, []error{err}
 	}
 	lint := &schemaLint{
-		file: t.file("schema.json"), base: schemaURL(t.Name), warnings: nil, mistakes: nil, diagrams: false, parts: nil,
+		file: t.file("schema.json"), base: schemaURL(t.Name), warnings: nil, mistakes: nil, parts: nil,
 	}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
@@ -536,7 +536,6 @@ type schemaLint struct {
 	warnings []*usererr.Error
 	mistakes []error
 	base     string   // the schema's URL, which a relative $ref is read from
-	diagrams bool     // whether the schema declares an item floe draws by the part diagram
 	parts    []string // the parts of floe's that draw the items it declares, once each
 }
 
@@ -568,8 +567,9 @@ func (l *schemaLint) walk(v any, ptr string, reached bool) {
 // the item whole.
 func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 	switch {
-	case goParts[f] != "":
+	case isGoPart(f):
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_part", l.file, ptr, f, f))
+		return true
 	case !knownFormat(f):
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unknown", l.file, ptr, f))
 	case slices.Contains(formats, f) && !reached:
@@ -590,7 +590,7 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 // variables returns the CSS variables the parts and diagrams l found take from the theme, once each.
 func (l *schemaLint) variables() ([]string, error) {
 	vars, err := partVariables(l.parts)
-	if err != nil || !l.diagrams {
+	if err != nil || !slices.Contains(l.parts, "diagram") {
 		return vars, err
 	}
 	for _, v := range diagram.Variables() {
@@ -627,7 +627,6 @@ func (l *schemaLint) part(ref, ptr string, reached bool) bool {
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_part_unreached", l.file, ptr, name))
 	case !slices.Contains(l.parts, name):
 		l.parts = append(l.parts, name)
-		l.diagrams = l.diagrams || name == "diagram"
 	}
 	return true
 }

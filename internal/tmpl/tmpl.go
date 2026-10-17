@@ -475,11 +475,11 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	if ref := s.intoPart(set); ref != "" {
-		return nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(ref))
+	if _, into := s.first("#", func(x *schema) bool { _, into := set.pointsInto(x.Ref); return into }); into != nil {
+		return nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(into.Ref))
 	}
-	if ptr, f := s.formatPart("#"); f != "" {
-		return nil, usererr.New("tmpl_format_part", t.file("schema.json"), ptr, f, f)
+	if ptr, as := s.first("#", func(x *schema) bool { return isGoPart(x.Format) }); as != nil {
+		return nil, usererr.New("tmpl_format_part", t.file("schema.json"), ptr, as.Format, as.Format)
 	}
 	return s, nil
 }
