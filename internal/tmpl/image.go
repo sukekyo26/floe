@@ -233,7 +233,7 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 				d.tried = append(d.tried, filepath.Join(dir, filepath.FromSlash(name)))
 			}
 			var uri template.URL
-			if first, _, _ := strings.Cut(name, "/"); strings.Contains(name, "/") && strings.EqualFold(first, KeptName) {
+			if first, _, under := strings.Cut(name, "/"); under && strings.EqualFold(first, KeptName) {
 				e = usererr.New("tmpl_image_kept_name", name, KeptName)
 			} else if uri, e = imageURI(r.FS(), name, dir); e == nil {
 				d.images[name] = uri
