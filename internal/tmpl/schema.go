@@ -110,10 +110,8 @@ func unknownPart(ref string) error {
 	if err != nil {
 		return err
 	}
-	if whole, _, into := strings.Cut(ref, "#"); into {
-		if name, ok := partName(whole); ok && set.parts[name] != nil {
-			return usererr.New("tmpl_part_into", ref, whole)
-		}
+	if whole, into := set.pointsInto(ref); into {
+		return usererr.New("tmpl_part_into", ref, whole)
 	}
 	return usererr.New("tmpl_part_unknown", ref, strings.Join(slices.Sorted(maps.Keys(set.parts)), ", "))
 }

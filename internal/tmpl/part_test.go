@@ -129,8 +129,22 @@ func TestCheckParts(t *testing.T) {
 			told = w.Error()
 		}
 	}
-	if !strings.Contains(told, "--accent") || !strings.Contains(told, "--good-soft") || strings.Contains(told, "--fg,") {
+	if !strings.Contains(told, "--accent") || !strings.Contains(told, "--good-soft") || strings.Contains(told, "--fg,") ||
+		!strings.Contains(told, "dark mode") {
 		t.Errorf("the warning of the theme = %q", told)
+	}
+	// A theme that leaves out no colour is not told of dark mode.
+	colours := memo(t, memoItems)
+	theme := ":root { --fg: #000; --surface: #fff; --line: #ccc; --muted: #666; --accent: #00f; --accent-soft: #eef; " +
+		"--good: #0a0; --good-soft: #efe; --warn: #a60; --warn-soft: #fed; --bad: #a00; --bad-soft: #fee; }\n"
+	if err := os.WriteFile(filepath.Join(colours, "memo", "themes", "default.css"), []byte(theme), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	warnings, _ = tmpl.Check(filepath.Join(colours, "memo"), "")
+	for _, w := range warnings {
+		if strings.Contains(w.Error(), "themes/default.css") && (strings.Contains(w.Error(), "dark mode") || !strings.Contains(w.Error(), "--mono")) {
+			t.Errorf("the warning of a theme of every colour = %q", w.Error())
+		}
 	}
 
 	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table"} {
@@ -158,12 +172,24 @@ func TestCheckParts(t *testing.T) {
 	// One into a part would be drawn as plain data: a publish refuses it too.
 	ref := "floe:///parts/table.json#/properties/columns"
 	dir = memo(t, `"risks": {"$ref": "`+ref+`"}`)
-	want := "schema.json: " + ref + " points into a part of floe's, which would be checked but not drawn as the part; refer to the whole part, floe:///parts/table.json"
-	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
+	want := ref + " points into a part of floe's, which would be checked but not drawn as the part; refer to the whole part, floe:///parts/table.json"
+	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "#/properties/risks: "+want) {
 		t.Errorf("Check of a ref into a part = %v", mistakes)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, ""), "template: memo\nlang: en\n"); err == nil || !strings.Contains(err.Error(), want) {
+	if _, err := draw(tmpl.NewLibrary(dir, ""), "template: memo\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "schema.json: "+want) {
 		t.Errorf("Read of a template with a ref into a part = %v", err)
+	}
+	// Through $defs too, beside the schema's other mistakes.
+	dir = memo(t, `"risks": {"$ref": "#/$defs/rows"}, "aside": {"type": "string", "format": "colour"}}, "$defs": {"rows": {"$ref": "`+ref+`"}`)
+	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 2 ||
+		!strings.Contains(mistakes[0].Error()+mistakes[1].Error(), "#/$defs/rows: "+want) {
+		t.Errorf("Check of a ref into a part through $defs = %v", mistakes)
+	}
+	// An empty fragment is the whole part.
+	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/table.json#"}, "aside": {"type": "string"}`), "")
+	if page, err := draw(l, "template: memo\nlang: en\nrisks: { columns: [{title: a}], rows: [[x]] }\n"); err != nil ||
+		!strings.Contains(page, `<div class="floe-table">`) {
+		t.Errorf("a page of a part with an empty fragment = %v", err)
 	}
 	// One floe does not follow to would never be drawn.
 	dir = memo(t, `"risks": {"anyOf": [{"$ref": "floe:///parts/table.json"}]}`)

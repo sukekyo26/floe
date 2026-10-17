@@ -350,6 +350,7 @@ var messagesEN = map[string]string{
 	"tmpl_schema_open":             `%s: %s declares properties without "additionalProperties": false, so a misspelt key is not refused`,
 	"tmpl_format_type":             `%s: %s: floe draws an item of the format %s from a value of type %s; declare "type": "%[4]s" alone`,
 	"tmpl_theme_variables":         "%s does not define %s, which the template's parts and diagrams take from it, so they keep the default theme's values: its light colours, in dark mode too",
+	"tmpl_theme_variables_plain":   "%s does not define %s, which the template's parts and diagrams take from it, so they keep the default theme's values",
 	"tmpl_no_template_yaml":        "%s has no template.yaml: write floe: %s in it, the floe the template is written for",
 	"tmpl_example_name":            "example.yaml names the template %s; name it %s, after the template's directory",
 	"tmpl_checks_missing":          "write %s in the check",

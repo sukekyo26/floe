@@ -98,7 +98,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	s, err := t.decodeSchema(src)
+	s, err := t.readSchema(src)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -166,11 +166,19 @@ func (t *Template) checkThemeVariables(lint *schemaLint) ([]*usererr.Error, erro
 			}
 		}
 		if missing != nil {
-			warnings = append(warnings, usererr.New("tmpl_theme_variables", t.file(name), andList(missing)))
+			key := "tmpl_theme_variables"
+			if !slices.ContainsFunc(missing, func(v string) bool { return !slices.Contains(notColours, v) }) {
+				key = "tmpl_theme_variables_plain"
+			}
+			warnings = append(warnings, usererr.New(key, t.file(name), andList(missing)))
 		}
 	}
 	return warnings, nil
 }
+
+// notColours are the CSS variables of the parts and diagrams that are not colours: their fonts and the
+// width of a note.
+var notColours = []string{"--font", "--mono", "--text-width"}
 
 // definedVariables returns the CSS variables src defines (--fg: #000), by name.
 func definedVariables(src []byte) map[string]bool {
@@ -589,7 +597,8 @@ func (l *schemaLint) variables() ([]string, error) {
 }
 
 // part notes the part of floe's ref names, at ptr, and reports whether it names one: one prepare does
-// not reach would never be drawn. A ref into a part is refused as the schema is read.
+// not reach would never be drawn. A ref into a part, wherever it is, would be checked as the part but
+// drawn as plain data.
 func (l *schemaLint) part(ref, ptr string, reached bool) bool {
 	ref = absolute(l.base, ref)
 	if !strings.HasPrefix(ref, partsURL) {
@@ -602,7 +611,12 @@ func (l *schemaLint) part(ref, ptr string, reached bool) bool {
 		return false
 	}
 	switch {
-	case !ok || set.parts[name] == nil:
+	case !ok:
+		if _, into := set.pointsInto(ref); into {
+			l.mistakes = append(l.mistakes, usererr.New("tmpl_item", l.file, usererr.New("tmpl_item", ptr, unknownPart(ref))))
+		}
+		return false
+	case set.parts[name] == nil:
 		return false
 	case !reached:
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_part_unreached", l.file, ptr, name))

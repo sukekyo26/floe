@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -54,6 +55,19 @@ func TestPalette(t *testing.T) {
 			t.Errorf("the report theme leaves %s out", v)
 		}
 	}
+	// A theme without a variable gets the report theme's light value, as docs/templates.md says.
+	light, _, _ := strings.Cut(string(css), "@media")
+	values := map[string]string{}
+	for _, m := range regexp.MustCompile(`(--[\w-]+):\s*([^;]+);`).FindAllStringSubmatch(light, -1) {
+		values[m[1]] = strings.TrimSpace(m[2])
+	}
+	for name, p := range set.parts {
+		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,\s*([^)]*)\)`).FindAllStringSubmatch(p.css, -1) {
+			if values[m[1]] != strings.TrimSpace(m[2]) {
+				t.Errorf("the part %s takes %s with %s; the report theme's is %s", name, m[1], m[2], values[m[1]])
+			}
+		}
+	}
 }
 
 // The parts' style goes before the template's own, which then wins over it: in the <head>, else before
@@ -66,6 +80,8 @@ func TestWithStyles(t *testing.T) {
 		"<head><title>t</title></HEAD><style>b{}</style>":             "<head><title>t</title>S</HEAD><style>b{}</style>",
 		"<p>x</p><link rel=stylesheet href=data:,>":                   "<p>x</p>S<link rel=stylesheet href=data:,>",
 		"<p>x</p>": "<p>x</p>S",
+		`<head><script>if (s.startsWith("<!--")) x()</script><style>f{}</style></head>`:                                       `<head><script>if (s.startsWith("<!--")) x()</script>S<style>f{}</style></head>`,
+		"<head><!-- no <script> here --><style>g{}</style></head><body><script>y()</script>":                                  "<head><!-- no <script> here -->S<style>g{}</style></head><body><script>y()</script>",
 		"<head><!-- styles before </head> --><style>d{}</style></head>":                                                       "<head><!-- styles before </head> -->S<style>d{}</style></head>",
 		"<head><!--><style>e{}</style><!-- x --></head>":                                                                      "<head><!-->S<style>e{}</style><!-- x --></head>",
 		"<head><noscript><link rel=stylesheet></noscript><!-- <style> --><script>'<style>'</script><style>c{}</style></head>": "<head><noscript><link rel=stylesheet></noscript><!-- <style> --><script>'<style>'</script>S<style>c{}</style></head>",
@@ -105,5 +121,31 @@ func TestCheckExprFirst(t *testing.T) {
 	problems, err := list[0].check("data.yaml", map[string]any{"title": "t"}, nil)
 	if problems != nil || err == nil || !strings.Contains(err.Error(), "item +") {
 		t.Errorf("check = %v, %v, want the mistake in the expression", problems, err)
+	}
+}
+
+// A part readies its item with no data file to look up what it drew: it holds no item of a part or a
+// format of floe's.
+func TestPartsDrawnWhole(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var drawnWhole func(s *schema) bool
+	drawnWhole = func(s *schema) bool {
+		if s == nil {
+			return false
+		}
+		if s.part != nil || slices.Contains(formats, s.Format) || drawnWhole(s.Items) {
+			return true
+		}
+		return slices.ContainsFunc(slices.Collect(maps.Values(s.Properties)), drawnWhole)
+	}
+	for name, p := range set.parts {
+		if drawnWhole(p.schema.Items) || slices.ContainsFunc(slices.Collect(maps.Values(p.schema.Properties)), drawnWhole) {
+			t.Errorf("the part %s holds an item of a part or a format", name)
+		}
 	}
 }

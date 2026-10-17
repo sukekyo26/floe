@@ -55,19 +55,25 @@ func absolute(base, ref string) string {
 	if err != nil {
 		return ref
 	}
-	return b.ResolveReference(r).String()
+	// An empty fragment points at the whole: floe:///parts/table.json# is the table.
+	return strings.TrimSuffix(b.ResolveReference(r).String(), "#")
 }
 
-// intoPart returns a $ref of s, or of those under it, that points into a part of floe's, or "": it
-// would be checked as the part but drawn as plain data.
+// pointsInto returns the part of floe's, whole, that ref points into, and false when it does not: a
+// ref into a part would be checked as the part but drawn as plain data.
+func (set *partSet) pointsInto(ref string) (whole string, into bool) {
+	whole, _, into = strings.Cut(ref, "#")
+	name, ok := partName(whole)
+	return whole, into && ok && set.parts[name] != nil
+}
+
+// intoPart returns a $ref of s, or of those under it, that points into a part of floe's, or "".
 func (s *schema) intoPart(set *partSet) string {
 	if s == nil {
 		return ""
 	}
-	if whole, _, into := strings.Cut(s.Ref, "#"); into {
-		if name, ok := partName(whole); ok && set.parts[name] != nil {
-			return s.Ref
-		}
+	if _, into := set.pointsInto(s.Ref); into {
+		return s.Ref
 	}
 	for _, name := range slices.Sorted(maps.Keys(s.Properties)) {
 		if ref := s.Properties[name].intoPart(set); ref != "" {
@@ -138,33 +144,7 @@ func readParts() (*partSet, error) {
 	for _, s := range set.schemas {
 		s.resolve(set)
 	}
-	// A part readies its item with no data file to look up what it drew: it holds no item of a part or
-	// a format of floe's.
-	for name, p := range set.parts {
-		if p.schema.drawsWhole() {
-			return nil, fmt.Errorf("%w: %s", errPartWhole, name)
-		}
-	}
 	return set, nil
-}
-
-var errPartWhole = errors.New("a part holds an item of a part or a format of floe's")
-
-// drawsWhole reports whether s, or a schema under it, declares an item of a part or a format of
-// floe's.
-func (s *schema) drawsWhole() bool {
-	if s == nil {
-		return false
-	}
-	if s.part != nil || slices.Contains(formats, s.Format) || s.Items.drawsWhole() {
-		return true
-	}
-	for _, p := range s.Properties {
-		if p.drawsWhole() {
-			return true
-		}
-	}
-	return false
 }
 
 // readSchema reads the schema file of floe's at url.
@@ -342,6 +322,10 @@ func checkParts(s *schema, d *Data, root ast.Node) error {
 // mistake, and the problems are the data's.
 func (p *part) check(file string, f itemAt, root ast.Node) (yamlpos.Problems, error) {
 	var problems yamlpos.Problems
+	var doc map[string]any
+	if m, ok := f.value.(map[string]any); ok {
+		doc = m
+	}
 	for _, c := range p.checks {
 		items := []itemAt{f}
 		if c.For != "" {
@@ -349,10 +333,6 @@ func (p *part) check(file string, f itemAt, root ast.Node) (yamlpos.Problems, er
 			if !itemsAt(f.value, strings.Split(c.For, "."), f.at, &items) {
 				return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
 			}
-		}
-		var doc map[string]any
-		if m, ok := f.value.(map[string]any); ok {
-			doc = m
 		}
 		more, err := c.run(file, doc, items, root)
 		if err != nil {
@@ -394,46 +374,49 @@ func partStyles(names []string) (string, error) {
 // LIMIT: the tags are found as written, not as an HTML parser reads them (a <style in an attribute's
 // value is taken for one). Parse the page if a template comes to write one so.
 func withStyles(page []byte, style string) []byte {
-	hidden := hiddenText(page)
-	shown := func(m []int) bool {
-		return !slices.ContainsFunc(hidden, func(h [2]int) bool { return h[0] <= m[0] && m[0] < h[1] })
+	at, own := len(page), -1
+	for i := 0; i < len(page); {
+		m := tagOrText.FindSubmatchIndex(page[i:])
+		if m == nil {
+			break
+		}
+		start, next := i+m[0], i+m[1]
+		switch {
+		case m[2] >= 0:
+			// A comment, ended as an HTML parser ends it; one never closed runs to the end.
+			next = len(page)
+			if n := comment(page[start:]); n > 0 {
+				next = start + n
+			}
+		case m[4] >= 0:
+			// A script's or a noscript's text runs to its end tag.
+			next = len(page)
+			if closing := endTag[strings.ToLower(string(page[i+m[4]:i+m[5]]))].FindIndex(page[i+m[1]:]); closing != nil {
+				next = i + m[1] + closing[1]
+			}
+		case m[6] >= 0:
+			if own < 0 {
+				own = start
+			}
+		default:
+			at = start // </head>
+			next = len(page)
+		}
+		i = next
 	}
-	at := len(page)
-	if i := slices.IndexFunc(headEnd.FindAllIndex(page, -1), shown); i >= 0 {
-		at = headEnd.FindAllIndex(page, -1)[i][0]
-	}
-	if own := ownStyle.FindAllIndex(page[:at], -1); slices.ContainsFunc(own, shown) {
-		at = own[slices.IndexFunc(own, shown)][0]
+	if own >= 0 && own < at {
+		at = own
 	}
 	return slices.Concat(page[:at], []byte(style), page[at:])
 }
 
-// hiddenText returns where page holds text that is not its tags: its comments, as an HTML parser ends
-// them (one never closed runs to the end), its scripts and its noscripts.
-func hiddenText(page []byte) [][2]int {
-	var hidden [][2]int
-	for _, m := range scriptText.FindAllIndex(page, -1) {
-		hidden = append(hidden, [2]int{m[0], m[1]})
-	}
-	for at := 0; ; {
-		i := bytes.Index(page[at:], []byte("<!--"))
-		if i < 0 {
-			return hidden
-		}
-		start := at + i
-		n := comment(page[start:])
-		if n == 0 {
-			n = len(page) - start
-		}
-		hidden = append(hidden, [2]int{start, start + n})
-		at = start + n
-	}
-}
-
 var (
-	headEnd    = regexp.MustCompile(`(?i)</head\s*>`)
-	ownStyle   = regexp.MustCompile(`(?i)<(?:style|link)\b`)
-	scriptText = regexp.MustCompile(`(?is)<script\b.*?</script\s*>|<noscript\b.*?</noscript\s*>`)
+	// tagOrText finds, in order, a comment, a script or a noscript, a style or a link, and </head>.
+	tagOrText = regexp.MustCompile(`(?i)(<!--)|<(script|noscript)\b[^>]*>|(<(?:style|link)\b)|</head\s*>`)
+	endTag    = map[string]*regexp.Regexp{
+		"script":   regexp.MustCompile(`(?i)</script\s*>`),
+		"noscript": regexp.MustCompile(`(?i)</noscript\s*>`),
+	}
 )
 
 // partVariables returns the CSS variables the style of the parts named takes from the theme, once

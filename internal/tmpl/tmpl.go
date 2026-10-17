@@ -466,8 +466,26 @@ func schemaOf(t *Template) (*schema, error) {
 	return s, nil
 }
 
-// decodeSchema reads b, the schema.json of t, with what it refers to among floe's parts.
+// decodeSchema reads b, the schema.json of t, with what it refers to among floe's parts, and refuses a
+// ref into a part.
 func (t *Template) decodeSchema(b []byte) (*schema, error) {
+	s, err := t.readSchema(b)
+	if err != nil {
+		return nil, err
+	}
+	set, err := builtinParts()
+	if err != nil {
+		return nil, err
+	}
+	if ref := s.intoPart(set); ref != "" {
+		return nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(ref))
+	}
+	return s, nil
+}
+
+// readSchema reads b, the schema.json of t, with what it refers to among floe's parts, a ref into a
+// part left for the caller to refuse.
+func (t *Template) readSchema(b []byte) (*schema, error) {
 	s, err := decodeSchema(b)
 	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
@@ -477,9 +495,6 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 		return nil, err
 	}
 	s.absolute(schemaURL(t.Name))
-	if ref := s.intoPart(set); ref != "" {
-		return nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(ref))
-	}
 	s.resolve(set)
 	return s, nil
 }
@@ -575,7 +590,7 @@ func (s *schema) prepare(v any, at []string, d *Data) any {
 func (s *schema) drawn(v any, at []string, d *Data) (any, bool) {
 	text, isText := v.(string)
 	switch {
-	case s.part != nil && d != nil:
+	case s.part != nil:
 		return d.parts[pathKey(at)], true
 	case s.Format == "diagram":
 		return d.diagrams[pathKey(at)], true
