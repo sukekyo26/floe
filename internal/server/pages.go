@@ -288,7 +288,11 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.6 ui-monospac
 func mistakesPage(c *i18n.Catalog, slug string, m *store.Meta, file string, err error) []byte {
 	text := mistakesText(c, err)
 	lead := c.Msg("server_mistakes_lead")
-	if !m.IsLink() {
+	switch {
+	case m.IsLink():
+	case errors.Is(err, store.ErrNotFound):
+		lead = c.Msg("server_mistakes_lead_no_copy", slug)
+	default:
 		lead = c.Msg("server_mistakes_lead_stored", filepath.Dir(file))
 	}
 	var b bytes.Buffer

@@ -317,7 +317,8 @@ func TestStoredPage(t *testing.T) {
 	// A page stored as HTML (by the artifact skill) is not read: it has no data file to draw.
 	e.write(t, "store/old/index.html", "<!doctype html><p>old</p>")
 	e.write(t, "store/old/meta.json", `{"title":"Old","description":"","createdAt":"2026-01-01T00:00:00.000Z","updatedAt":"2026-01-01T00:00:00.000Z"}`)
-	if r := e.get(t, "/a/old/?raw"); strings.Contains(r.body, "<p>old</p>") || !strings.Contains(r.body, "source/data.yaml") {
+	if r := e.get(t, "/a/old/?raw"); strings.Contains(r.body, "<p>old</p>") || !strings.Contains(r.body, "source/data.yaml") ||
+		!strings.Contains(r.body, "floe rm old") {
 		t.Errorf("a page stored as HTML = %s", r.body)
 	}
 	if got := e.get(t, "/api/artifacts/old/download").status; got != http.StatusNotFound {
