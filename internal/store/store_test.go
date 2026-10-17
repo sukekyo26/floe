@@ -643,8 +643,9 @@ func TestSaveEditRemoveWait(t *testing.T) {
 	}
 }
 
-// Save checks a publish again against its slug as it is then: an edit made since Prepare stays, and
-// a page another project published, or renamed onto the slug, since is refused.
+// Save checks a publish again against its slug as it is then. An edit made after Prepare stays, and
+// the publish is refused when, after Prepare, another project published the slug or a page was
+// renamed onto it.
 func TestSaveChecksAgain(t *testing.T) {
 	t.Parallel()
 
