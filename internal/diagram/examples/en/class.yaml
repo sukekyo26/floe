@@ -1,4 +1,4 @@
-# Class diagram: the error types of floe's diagram package. Interfaces sit on the top tier; the
+# Class diagram: the error types of a mistake at a line and column (floe's yamlpos package). Interfaces sit on the top tier; the
 # types that implement them share one bent line (the triangle reads as implements), and a diamond
 # marks what a type holds. Each table lists only the members the diagram is about.
 #
@@ -7,13 +7,13 @@
 id: class
 width: 1000
 height: 350
-title: "The error types of floe's diagram package"
+title: "The error types of floe's yamlpos package"
 parts:
   - table: { x: 210, y: 20, w: 240, title: error, rows: [[Error(), string]] }
   - table: { x: 550, y: 20, w: 240, title: i18n.Localizer, rows: [[Localize(c), string]] }
   - table: { x: 30, y: 168, w: 240, title: usererr.Error, tone: accent, rows: [[Key, string], [Args, "[]any"], [Conflict, bool], "---", [Error(), string], [Localize(c), string]] }
-  - table: { x: 380, y: 168, w: 240, title: diagram.Error, tone: accent, rows: [[File, string], [Pos, Pos], [Err, "*usererr.Error"], "---", [Error(), string], [Localize(c), string]] }
-  - table: { x: 730, y: 168, w: 240, title: diagram.Problems, tone: accent, rows: [[elements, "*Error"], "---", [Error(), string], [Localize(c), string]] }
+  - table: { x: 380, y: 168, w: 240, title: yamlpos.Error, tone: accent, rows: [[File, string], [Pos, Pos], [Err, "*usererr.Error"], "---", [Error(), string], [Localize(c), string]] }
+  - table: { x: 730, y: 168, w: 240, title: yamlpos.Problems, tone: accent, rows: [[elements, "*Error"], "---", [Error(), string], [Localize(c), string]] }
   # Implements: up from each type to the bend, along it, and up into the interface
   - edge: { d: "M150,168 V123 H330 V78", end: triangle }
   - edge: { d: "M150,168 V123 H670 V78", end: triangle }

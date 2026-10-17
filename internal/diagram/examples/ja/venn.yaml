@@ -12,13 +12,12 @@ parts:
   - label: { text: "floe publish", x: 170, y: 30, plain: true, strong: true }
   - label: { text: "floe serve", x: 590, y: 30, plain: true, strong: true }
   - label: { text: "floe diagram render", x: 600, y: 490, plain: true, strong: true }
-  - label: { text: "cli", x: 380, y: 237, plain: true }
-  - label: { text: "i18n", x: 380, y: 255, plain: true }
-  - label: { text: "usererr", x: 380, y: 273, plain: true }
+  - label: { text: "cli・i18n", x: 380, y: 228, plain: true }
+  - label: { text: "usererr・yamlpos", x: 380, y: 246, plain: true }
+  - label: { text: "diagram・icons", x: 380, y: 264, plain: true }
+  - label: { text: "go-yaml", x: 380, y: 282, plain: true }
   - label: { text: "store・link", x: 380, y: 92, plain: true }
-  - label: { text: "page・ui", x: 380, y: 110, plain: true }
-  - label: { text: "daemon", x: 380, y: 128, plain: true }
+  - label: { text: "tmpl・daemon", x: 380, y: 110, plain: true }
   - label: { text: "project", x: 200, y: 170, plain: true }
   - label: { text: "server", x: 560, y: 170, plain: true }
-  - label: { text: "diagram", x: 380, y: 421, plain: true }
-  - label: { text: "go-yaml", x: 380, y: 439, plain: true }
+  - label: { text: "page・ui", x: 560, y: 188, plain: true }

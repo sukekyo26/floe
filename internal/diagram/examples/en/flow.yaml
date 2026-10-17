@@ -5,25 +5,26 @@
 # Reasons start at x = 540. The answer that stays on the main path is a label right of the line.
 id: flow
 width: 860
-height: 916
+height: 986
 title: What floe publish checks
 parts:
   - box: { x: 200, y: 20, w: 200, h: 40, tone: accent, shape: pill, rows: [["floe publish <file>", main code]] }
-  - box: { x: 130, y: 90, w: 340, h: 52, shape: hex, rows: ["Linked with --link?"] }
-  - box: { x: 130, y: 166, w: 340, h: 52, rows: [Resolve symlinks to the real path] }
-  - box: { x: 130, y: 242, w: 340, h: 52, shape: hex, rows: ["A regular .html or .htm file?"] }
+  - box: { x: 130, y: 90, w: 340, h: 52, rows: ["Resolve a link to its real path"] }
+  - box: { x: 130, y: 166, w: 340, h: 52, shape: hex, rows: ["A data file, or linked HTML?"] }
+  - box: { x: 130, y: 242, w: 340, h: 52, shape: hex, rows: ["Linked with --link?"] }
   - box: { x: 130, y: 318, w: 340, h: 52, shape: hex, rows: ["In a hidden directory of home?"] }
   - box: { x: 130, y: 394, w: 340, h: 52, shape: hex, rows: ["Right under / or your home?"] }
-  - box: { x: 130, y: 470, w: 340, h: 52, shape: hex, rows: ["Slug of a-z, 0-9 and hyphens?"] }
-  - box: { x: 130, y: 546, w: 340, h: 52, shape: hex, rows: ["Slug taken by the other kind?"] }
-  - box: { x: 130, y: 622, w: 340, h: 52, shape: hex, rows: ["Another owner, without --force?"] }
-  - box: { x: 130, y: 698, w: 340, h: 52, rows: ["Check the server, start it if needed"] }
-  - box: { x: 130, y: 774, w: 340, h: 52, rows: [Save (a page is drawn), a link keeps only meta.json] }
-  - box: { x: 200, y: 856, w: 200, h: 40, tone: good, shape: pill, rows: [Print the URL] }
+  - box: { x: 130, y: 470, w: 340, h: 52, rows: ["Check the data file and its images", [a linked HTML file is shown as it is, sub]] }
+  - box: { x: 130, y: 546, w: 340, h: 52, shape: hex, rows: ["Slug of a-z, 0-9 and hyphens?"] }
+  - box: { x: 130, y: 622, w: 340, h: 52, shape: hex, rows: ["Slug taken by the other kind?"] }
+  - box: { x: 130, y: 698, w: 340, h: 52, shape: hex, rows: ["Another owner, without --force?"] }
+  - box: { x: 130, y: 774, w: 340, h: 52, rows: ["Check the server, start it if needed"] }
+  - box: { x: 130, y: 850, w: 340, h: 52, rows: ["Save the data file and its images", ["a link keeps only meta.json", sub]] }
+  - box: { x: 200, y: 926, w: 200, h: 40, tone: good, shape: pill, rows: [Print the URL] }
   - edge: { d: "M300,60 V90" }
   - edge: { d: "M300,142 V166" }
-  - label: { text: "yes", x: 312, y: 154, anchor: start }
   - edge: { d: "M300,218 V242" }
+  - label: { text: "yes", x: 312, y: 230, anchor: start }
   - edge: { d: "M300,294 V318" }
   - label: { text: "yes", x: 312, y: 306, anchor: start }
   - edge: { d: "M300,370 V394" }
@@ -31,23 +32,26 @@ parts:
   - edge: { d: "M300,446 V470" }
   - label: { text: "no", x: 312, y: 458, anchor: start }
   - edge: { d: "M300,522 V546" }
-  - label: { text: "yes", x: 312, y: 534, anchor: start }
   - edge: { d: "M300,598 V622" }
-  - label: { text: "no", x: 312, y: 610, anchor: start }
+  - label: { text: "yes", x: 312, y: 610, anchor: start }
   - edge: { d: "M300,674 V698" }
   - label: { text: "no", x: 312, y: 686, anchor: start }
   - edge: { d: "M300,750 V774" }
-  - edge: { d: "M300,826 V856" }
-  - edge: { d: "M130,116 H90 V496 H130", label: "no", at: [106, 102] }
-  - box: { x: 540, y: 250, w: 300, h: 36, tone: bad, shape: pill, rows: [[Only HTML files can be linked, sub]] }
-  - edge: { d: "M470,268 H540", label: "no", at: [505, 254] }
+  - label: { text: "no", x: 312, y: 762, anchor: start }
+  - edge: { d: "M300,826 V850" }
+  - edge: { d: "M300,902 V926" }
+  - edge: { d: "M130,268 H90 V496 H130", label: "no", at: [106, 254] }
+  - box: { x: 540, y: 174, w: 300, h: 36, tone: bad, shape: pill, rows: [["Publish a data file, or link HTML", sub]] }
+  - edge: { d: "M470,192 H540", label: "no", at: [505, 178] }
   - box: { x: 540, y: 326, w: 300, h: 36, tone: bad, shape: pill, rows: [[Settings and keys live there, sub]] }
   - edge: { d: "M470,344 H540", label: "yes", at: [505, 330] }
   - box: { x: 540, y: 402, w: 300, h: 36, tone: bad, shape: pill, rows: [[The whole directory would be served, sub]] }
   - edge: { d: "M470,420 H540", label: "yes", at: [505, 406] }
-  - box: { x: 540, y: 478, w: 300, h: 36, tone: bad, shape: pill, rows: [[Not usable in a URL, sub]] }
-  - edge: { d: "M470,496 H540", label: "no", at: [505, 482] }
-  - box: { x: 540, y: 554, w: 300, h: 36, tone: bad, shape: pill, rows: [["Remove it first, or use another slug", sub]] }
-  - edge: { d: "M470,572 H540", label: "yes", at: [505, 558] }
-  - box: { x: 540, y: 630, w: 300, h: 36, tone: bad, shape: pill, rows: [["Use another slug, or add --force", sub]] }
+  - box: { x: 540, y: 478, w: 300, h: 36, tone: bad, shape: pill, rows: [[Each mistake at its line and column, sub]] }
+  - edge: { d: "M470,496 H540", label: "mistakes", at: [505, 482] }
+  - box: { x: 540, y: 554, w: 300, h: 36, tone: bad, shape: pill, rows: [[Not usable in a URL, sub]] }
+  - edge: { d: "M470,572 H540", label: "no", at: [505, 558] }
+  - box: { x: 540, y: 630, w: 300, h: 36, tone: bad, shape: pill, rows: [["Remove it first, or use another slug", sub]] }
   - edge: { d: "M470,648 H540", label: "yes", at: [505, 634] }
+  - box: { x: 540, y: 706, w: 300, h: 36, tone: bad, shape: pill, rows: [["Use another slug, or add --force", sub]] }
+  - edge: { d: "M470,724 H540", label: "yes", at: [505, 710] }
