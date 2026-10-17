@@ -526,9 +526,9 @@ func (t *Template) checkExample() error {
 	return err
 }
 
-// formatTypes are the JSON types of the items of floe's formats: the text of HTML or of an image's
-// path, a diagram's spec, and a script's js and data.
-var formatTypes = map[string]string{"html": "string", "image": "string", "diagram": "object", "script": "object"}
+// formatTypes are the JSON types of the items of floe's formats: the text of HTML, of an image's path,
+// or of Markdown.
+var formatTypes = map[string]string{"html": "string", "image": "string", "markdown": "string"}
 
 // schemaLint finds what jsonschema compiles but floe would not draw as the schema means.
 type schemaLint struct {
@@ -536,7 +536,7 @@ type schemaLint struct {
 	warnings []*usererr.Error
 	mistakes []error
 	base     string   // the schema's URL, which a relative $ref is read from
-	diagrams bool     // whether the schema declares an item of format diagram that floe draws
+	diagrams bool     // whether the schema declares an item floe draws by the part diagram
 	parts    []string // the parts of floe's that draw the items it declares, once each
 }
 
@@ -576,7 +576,10 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 		if typ != formatTypes[f] {
 			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_type", l.file, ptr, f, formatTypes[f]))
 		}
-		l.diagrams = l.diagrams || f == "diagram"
+		// Markdown draws its tables in the table part's look.
+		if f == "markdown" && !slices.Contains(l.parts, "table") {
+			l.parts = append(l.parts, "table")
+		}
 		return true
 	}
 	return false
@@ -622,6 +625,7 @@ func (l *schemaLint) part(ref, ptr string, reached bool) bool {
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_part_unreached", l.file, ptr, name))
 	case !slices.Contains(l.parts, name):
 		l.parts = append(l.parts, name)
+		l.diagrams = l.diagrams || name == "diagram"
 	}
 	return true
 }

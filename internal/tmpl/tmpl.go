@@ -66,15 +66,11 @@ type Data struct {
 	tmpl   *Template               // the template Read checked the data against, which draws it
 	schema *schema                 // the template's schema as Read read it, for drawing as checked
 	images map[string]template.URL // its images as data URIs, by the path written
-	// its diagrams drawn, by the path of keys to each (pathKey); nil without one
-	diagrams map[string]template.HTML
-	// its scripts drawn, each its element and the call of its function, by the path of keys to each
-	scripts map[string]template.HTML
-	// its items drawn by floe's parts, by the path of keys to each; nil without one
-	parts map[string]template.HTML
-	used  []string // the parts that draw them, once each
-	tried []string // the files of the images it names, read or not
-	icons []string // the index files of the icon sets its diagrams may show, when it has one
+	// its items drawn by floe's parts, by the path of keys to each (pathKey); nil without one
+	parts    map[string]template.HTML
+	diagrams bool     // whether it has a diagram, for the page to get their style and zoom
+	tried    []string // the files of the images it names, read or not
+	icons    []string // the index files of the icon sets its diagrams may show, when it has one
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -202,7 +198,7 @@ func start(file string, src []byte, themed bool) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
-		images: nil, diagrams: nil, scripts: nil, parts: nil, used: nil, tried: nil, icons: nil,
+		images: nil, parts: nil, diagrams: false, tried: nil, icons: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)
@@ -373,15 +369,15 @@ func (d *Data) Render(title string) ([]byte, error) {
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	out := b.Bytes()
-	if d.used != nil {
-		style, err := partStyles(d.used)
-		if err != nil {
-			return nil, err
-		}
+	style, err := partStyles(out)
+	if err != nil {
+		return nil, err
+	}
+	if style != "" {
 		out = withStyles(out, style)
 	}
 	// Once at the end, as the reload script is: page.html picks which diagrams it draws, and where.
-	if d.diagrams != nil {
+	if d.diagrams {
 		assets, err := diagram.Assets()
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already says what failed
@@ -407,20 +403,9 @@ func (t *Template) page() (*template.Template, error) {
 }
 
 var funcs = template.FuncMap{
-	"bytes": formatBytes,
-	"num":   formatNum,
-	// markdown writes Markdown text as HTML, a table wrapped in <div class="table-wrap"> for a theme to
-	// scroll. Raw HTML in it is left out: a data item takes HTML only when its schema says format: html.
-	"markdown": func(text string) (template.HTML, error) {
-		html, err := convert(markdown, "markdown", text)
-		if err != nil {
-			return "", err
-		}
-		// With raw HTML left out, every <table> in the output is one goldmark drew.
-		html = strings.ReplaceAll(html, "<table>", `<div class="table-wrap"><table>`)
-		html = strings.ReplaceAll(html, "</table>", "</table></div>")
-		return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
-	},
+	"bytes":    formatBytes,
+	"num":      formatNum,
+	"markdown": markdownHTML,
 	// markdownLine writes a line of Markdown, such as a table cell, as HTML without a paragraph around it.
 	"markdownLine": func(text string) (template.HTML, error) {
 		// The text is made one paragraph of unbroken lines: a blank line would split it, an indented
@@ -439,6 +424,19 @@ var funcs = template.FuncMap{
 		html = strings.TrimSuffix(strings.TrimPrefix(html, "<p>"), "</p>\n")
 		return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 	},
+}
+
+// markdownHTML writes Markdown text as HTML, a table in the table part's look. Raw HTML in it is left
+// out: a data item takes HTML only when its schema says format: html.
+func markdownHTML(text string) (template.HTML, error) {
+	html, err := convert(markdown, "markdown", text)
+	if err != nil {
+		return "", err
+	}
+	// With raw HTML left out, every <table> in the output is one goldmark drew.
+	html = strings.ReplaceAll(html, "<table>", `<div class="floe-table"><table>`)
+	html = strings.ReplaceAll(html, "</table>", "</table></div>")
+	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 }
 
 // convert writes text as HTML with md, the function of page.html called name.
@@ -552,10 +550,10 @@ type schema struct {
 }
 
 // prepare readies v, at the path at, for page.html: an item declared but not given becomes nil, so
-// that page.html can test it under missingkey=error, an item a part draws becomes its HTML, an item of
-// format html HTML that goes in as it is, one of format image the data URI of its image, one of format
-// diagram its SVG, and one of format script its element and the call of its function, all as d read
-// them. A part readies its own item with d nil: it holds no item of a part or a format.
+// that page.html can test it under missingkey=error, an item a part draws becomes its HTML as d drew it
+// (a diagram its SVG, a script its element and the call of its function), an item of format html HTML
+// that goes in as it is, one of format markdown its HTML, and one of format image the data URI of its
+// image. A part readies its own item with d nil: it holds no item of a part or a format.
 func (s *schema) prepare(v any, at []string, d *Data) any {
 	if s == nil {
 		return v
@@ -592,10 +590,9 @@ func (s *schema) drawn(v any, at []string, d *Data) (any, bool) {
 	switch {
 	case s.part != nil:
 		return d.parts[pathKey(at)], true
-	case s.Format == "diagram":
-		return d.diagrams[pathKey(at)], true
-	case s.Format == "script":
-		return d.scripts[pathKey(at)], true
+	case s.Format == "markdown" && isText:
+		html, _ := markdownHTML(text) //nolint:errcheck // goldmark fails only to write, and a buffer does not
+		return html, true
 	case s.Format == "html" && isText:
 		return template.HTML(text), true //nolint:gosec // G203: the schema declares this item HTML
 	case s.Format == "image" && isText:

@@ -149,7 +149,7 @@ func TestCheckParts(t *testing.T) {
 
 	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table"} {
 		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
-		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of cards, note, table"
+		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of cards, diagram, note, script, table"
 		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 			t.Errorf("Check of %s = %v", ref, mistakes)
 		}
@@ -164,9 +164,9 @@ func TestCheckParts(t *testing.T) {
 		t.Errorf("a page of a part named relatively = %v", err)
 	}
 	// What a part's item holds is not looked into: a format beside the $ref would never be drawn.
-	dir := memo(t, `"risks": {"$ref": "floe:///parts/table.json", "properties": {"x": {"type": "object", "format": "diagram"}}}`)
+	dir := memo(t, `"risks": {"$ref": "floe:///parts/table.json", "properties": {"x": {"type": "string", "format": "image"}}}`)
 	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 ||
-		!strings.Contains(mistakes[0].Error(), "#/properties/risks/properties/x: the format diagram marks an item to draw") {
+		!strings.Contains(mistakes[0].Error(), "#/properties/risks/properties/x: the format image marks an item to draw") {
 		t.Errorf("Check of a format beside a part = %v", mistakes)
 	}
 	// One into a part would be drawn as plain data: a publish refuses it too.
@@ -196,5 +196,51 @@ func TestCheckParts(t *testing.T) {
 	want = "#/properties/risks/anyOf/0: the part table draws an item"
 	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 		t.Errorf("Check of a part under anyOf = %v", mistakes)
+	}
+}
+
+// A page gets a part's style wherever it uses the part's classes: a table of Markdown takes the table
+// part's look, and so does HTML that names its classes; a page that uses none gets no style.
+func TestPartStylesByClass(t *testing.T) {
+	t.Parallel()
+
+	page := render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: |\n          | a | b |\n          | - | - |\n          | 1 | 2 |\n")
+	if !strings.Contains(page, `<div class="floe-table"><table>`) || strings.Count(page, ".floe-table {") != 1 {
+		t.Errorf("a page of a Markdown table:\n%s", page)
+	}
+	page = render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"floe-pill good\">ok</span>\n")
+	if strings.Count(page, ".floe-pill {") != 1 || strings.Contains(page, ".floe-note {") {
+		t.Errorf("a page of a pill in HTML:\n%s", page)
+	}
+	if page = render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: plain\n"); strings.Contains(page, ".floe-") {
+		t.Errorf("a page of no part holds a part's style:\n%s", page)
+	}
+}
+
+// Diagrams, scripts and Markdown are floe's to draw in a template of one's own too: a diagram and a
+// script as parts, Markdown as a format; floe template show tells the parts.
+func TestGoPartsAndMarkdown(t *testing.T) {
+	t.Parallel()
+
+	dir := memo(t, `"risks": {"$ref": "floe:///parts/diagram.json"}, "aside": {"type": "string", "format": "markdown"}`)
+	l := tmpl.NewLibrary(dir, "")
+	page, err := draw(l, "template: memo\nlang: en\naside: '**bold**'\n"+
+		"risks: { id: d, width: 100, height: 60, title: T, parts: [{ box: { x: 10, y: 10, w: 80, h: 40, rows: [A] } }] }\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`aria-label="T"`, "<p><strong>bold</strong></p>", "diagram_zoom_fit"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the page lacks %s:\n%s", want, page)
+		}
+	}
+	d, err := l.Describe("memo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, it := range d.Items {
+		if it.Name == "risks" && (it.Part != "diagram" || !strings.HasPrefix(it.Description, "A diagram: a spec")) {
+			t.Errorf("risks = %+v", it)
+		}
 	}
 }
