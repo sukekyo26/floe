@@ -341,7 +341,7 @@ var messagesJA = map[string]string{
 	"tmpl_computed_clash":          "%s はデータの項目にもあり、式から区別できません。名前を変えてください",
 	"tmpl_computed_cycle":          "値が互いを使って計算されています: %s",
 	"tmpl_computed_env":            "computed.yaml では $env を使えません。名前で参照してください",
-	"tmpl_format_unknown":          "%s: %s: floe は format「%s」を知りません。JSON Schema の format か、html・image・markdown を使ってください。図とスクリプトは部品（floe:///parts/diagram.json）です",
+	"tmpl_format_unknown":          "%s: %s: floe は format「%s」を知りません。JSON Schema の format か、html・image・markdown を使ってください。図とスクリプトは部品（floe:///parts/diagram.json・floe:///parts/script.json）です",
 	"tmpl_part_into":               "%s は floe の部品の中を指していて、部品として検査はされても描かれません。部品全体の %s を指してください",
 	"tmpl_part_unknown":            "%s は floe の部品ではありません。部品は floe:///parts/<名前>.json の形で、名前は %s のどれかを、部品の tone は floe:///parts/tone.json を書いてください",
 	"tmpl_part_unreached":          "%s: %s: 部品 %s は項目を描きます。floe が辿る properties か items の下で参照してください",

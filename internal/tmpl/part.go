@@ -211,7 +211,9 @@ func readPart(name string, s *schema) (*part, error) {
 			classes = append(classes, m[1])
 		}
 	}
-	p.classes = regexp.MustCompile(`\b(?:` + strings.Join(classes, "|") + `)\b`)
+	if classes != nil {
+		p.classes = regexp.MustCompile(`\b(?:` + strings.Join(classes, "|") + `)\b`)
+	}
 	src, err := partFiles.ReadFile(path.Join(dir, "checks.yaml"))
 	switch {
 	case err == nil:
@@ -403,6 +405,8 @@ func (p *part) draw(v any) (template.HTML, error) {
 // partStyles returns the style of the parts whose classes page uses, in the order of their names, for
 // the page's <head>, or "" for none: a part's own, a table of Markdown, or HTML that takes a part's look
 // (<span class="floe-pill good">).
+// LIMIT: a class is found anywhere in the page's text, so a page that names one in its prose or its
+// theme gets that part's style unused. Look in class attributes alone if the unused style comes to matter.
 func partStyles(page []byte) (string, error) {
 	set, err := builtinParts()
 	if err != nil {

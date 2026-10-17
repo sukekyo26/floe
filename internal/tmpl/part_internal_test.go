@@ -39,6 +39,9 @@ func TestPalette(t *testing.T) {
 		if bare := regexp.MustCompile(`var\(\s*--[\w-]+\s*\)`).FindString(p.css); bare != "" {
 			t.Errorf("the part %s takes %s without a value of its own", name, bare)
 		}
+		if p.page != nil && p.classes == nil {
+			t.Errorf("the style of the part %s names no floe- class, so no page gets it", name)
+		}
 	}
 	for _, v := range append(vars, diagram.Variables()...) {
 		if !slices.Contains(palette, v) {
