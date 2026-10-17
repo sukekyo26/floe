@@ -45,9 +45,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   word is a prompt (ending in `$`, `#`, `%`, `>` or `❯`, such as `~/app$` or
   `C:\work>`) is refused. `report` refuses a fenced block of code in `text`,
   pointing at the parts to write code and commands in.
-- Pick the look of the built-in `report` by its theme: `default` (faces with
-  round corners), `editorial` (rules and thin frames, as in print), `bento`
-  (faces set in panels), `ink` (a table's heading in ink, states filled with
+- Pick the look of the built-in `report` by its theme: `default` (faces set
+  in panels, notes in their tone's colour), `soft` (faces with round corners),
+  `editorial` (rules and thin frames, as in print), `ink` (a table's heading in ink, states filled with
   their colour) or `tinted` (faces tinted with the accent), each in light and
   dark mode. A theme restyles floe's parts by their classes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,

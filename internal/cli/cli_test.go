@@ -639,7 +639,7 @@ func TestPublishDataFile(t *testing.T) {
 	want(t, "publish a data file without a template", e.run(t, "", "publish", bad), 1, "",
 		bad+":1:1: 最上位に template: report のようにテンプレートを指定してください（テンプレート: report）")
 	want(t, "publish --theme of no theme", e.run(t, "", "publish", plan, "--theme", "print"), 1, "",
-		"floe: テンプレート report にテーマ「print」はありません。使えるのは bento, default, editorial, ink, tinted です")
+		"floe: テンプレート report にテーマ「print」はありません。使えるのは default, editorial, ink, soft, tinted です")
 	want(t, "publish --theme empty", e.run(t, "", "publish", plan, "--theme", " "), 2, "", "floe: --theme が空です")
 }
 
@@ -655,7 +655,7 @@ func TestCheck(t *testing.T) {
 	want(t, "check a right file", e.run(t, "", "check", "ok.yaml"), 0, "", "")
 	want(t, "check files with mistakes", e.run(t, "", "check", "ok.yaml", "bad.yaml", "bad.yml"), 1, "",
 		"bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n"+
-			`bad.yml:2:8: template report has no theme "print"; use bento, default, editorial, ink, tinted`)
+			`bad.yml:2:8: template report has no theme "print"; use default, editorial, ink, soft, tinted`)
 	// Mistakes at lines and columns go out as they are, for editors and CI to read.
 	if r := e.run(t, "", "check", "bad.yaml"); !strings.HasPrefix(r.stderr, "bad.yaml:2:1: ") {
 		t.Errorf("check prefixed its mistakes: %q", r.stderr)

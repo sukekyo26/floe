@@ -1,0 +1,2 @@
+/* Faces with round corners, as the parts are drawn by default */
+blockquote { border: 0; padding: 0.9rem 1.25rem; border-radius: 14px; background: color-mix(in srgb, var(--line) 40%, var(--surface)); }

@@ -207,19 +207,23 @@ func TestCheckParts(t *testing.T) {
 func TestPartStylesByClass(t *testing.T) {
 	t.Parallel()
 
-	page := render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: |\n          | a | b |\n          | - | - |\n          | 1 | 2 |\n")
+	page := render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - text: |\n          | a | b |\n          | - | - |\n          | 1 | 2 |\n")
 	if !strings.Contains(page, `<div class="floe-table"><table>`) || strings.Count(page, ".floe-table {") != 1 {
 		t.Errorf("a page of a Markdown table:\n%s", page)
 	}
-	page = render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"floe-pill good\">ok</span>\n")
+	page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"floe-pill good\">ok</span>\n")
 	if strings.Count(page, ".floe-pill {") != 1 || strings.Contains(page, ".floe-note {") {
 		t.Errorf("a page of a pill in HTML:\n%s", page)
 	}
-	page = render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - html: <p class=\"floe-note-own\">x</p>\n")
+	page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - html: <p class=\"floe-note-own\">x</p>\n")
 	if strings.Contains(page, ".floe-note {") {
 		t.Errorf("a class a part's starts gets the part's style:\n%s", page)
 	}
-	if page = render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: plain\n"); strings.Contains(page, ".floe-") {
+	page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - text: the `floe-note` class\n")
+	if strings.Contains(page, ".floe-note {") {
+		t.Errorf("a class named in prose gets the part's style:\n%s", page)
+	}
+	if page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - text: plain\n"); strings.Contains(page, ".floe-") {
 		t.Errorf("a page of no part holds a part's style:\n%s", page)
 	}
 }
