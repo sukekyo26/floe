@@ -121,22 +121,23 @@ func TestDrawnStored(t *testing.T) {
 	const right = "template: sizes\ntitle: Sizes\nfiles: [{name: a, bytes: 1536}]\nchart: img/chart.png\nlang: ja\n"
 	data := e.write(t, "work/spec/sizes.yaml", strings.Replace(right, "img/chart.png", "gone/old.png", 1))
 	e.publish(t, data, store.Options{})
-	// What a write stopped halfway left goes on the next publish.
-	e.write(t, "store/sizes/source/.tmp-stray", "x")
+	first := e.store.ReadMeta("sizes").Source
+	// What a save stopped halfway left goes on the next.
+	e.write(t, "store/sizes/source-stray/data.yaml", "x")
 	e.write(t, "work/spec/sizes.yaml", right)
 	e.publish(t, data, store.Options{})
 	if err = os.RemoveAll(filepath.Join(e.tmp, "work")); err != nil {
 		t.Fatal(err)
 	}
 
-	source := filepath.Join(e.store.Root(), "sizes", "source")
+	source := filepath.Join(e.store.Root(), "sizes", e.store.ReadMeta("sizes").Source)
 	if b, readErr := os.ReadFile(filepath.Join(source, "data.yaml")); readErr != nil || string(b) != right {
 		t.Errorf("the copy of the data file = %q, %v", b, readErr)
 	}
 	if b, readErr := os.ReadFile(filepath.Join(source, "img", "chart.png")); readErr != nil || string(b) != string(png) {
 		t.Errorf("the copy of the image = %v", readErr)
 	}
-	for _, gone := range []string{"source/gone", "source/.tmp-stray", "index.html"} {
+	for _, gone := range []string{first, "source-stray", "index.html"} {
 		if _, statErr := os.Stat(filepath.Join(e.store.Root(), "sizes", gone)); !errors.Is(statErr, os.ErrNotExist) {
 			t.Errorf("%s is in the store: %v", gone, statErr)
 		}
@@ -147,7 +148,7 @@ func TestDrawnStored(t *testing.T) {
 			t.Fatalf("the page = %d, without %s:\n%s", r.status, want, r.body)
 		}
 	}
-	if got := statuses(t, e, "/a/sizes/data.yaml", "/a/sizes/source/data.yaml"); got != "404 404" {
+	if got := statuses(t, e, "/a/sizes/data.yaml", "/a/sizes/"+filepath.Base(source)+"/data.yaml"); got != "404 404" {
 		t.Errorf("the copy is served: %s", got)
 	}
 	if d := e.get(t, "/api/artifacts/sizes/download"); !strings.HasPrefix(d.body, "<!doctype html>\n"+cutOffMeta) {
@@ -156,7 +157,9 @@ func TestDrawnStored(t *testing.T) {
 
 	// Saving the copy reloads the tab, and a mistake in it shows the mistakes.
 	since := regexp.MustCompile(`since=([^"]+)`).FindStringSubmatch(r.body)[1]
-	e.write(t, "store/sizes/source/data.yaml", strings.Replace(right, "bytes: 1536", "bytes: lots", 1))
+	if err = os.WriteFile(filepath.Join(source, "data.yaml"), []byte(strings.Replace(right, "bytes: 1536", "bytes: lots", 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	later := time.Now().Add(time.Minute)
 	if err = os.Chtimes(filepath.Join(source, "data.yaml"), later, later); err != nil {
 		t.Fatal(err)
@@ -164,7 +167,7 @@ func TestDrawnStored(t *testing.T) {
 	if _, body := e.events(t, "/api/events/sizes?since="+since, 3*time.Second); !strings.Contains(body, "event: reload") {
 		t.Errorf("saving the copy did not reload the tab: %q", body)
 	}
-	if r := e.get(t, "/a/sizes/?raw"); !strings.Contains(r.body, "source/data.yaml:3:26: files[0].bytes:") ||
+	if r := e.get(t, "/a/sizes/?raw"); !strings.Contains(r.body, filepath.Join(source, "data.yaml")+":3:26: files[0].bytes:") ||
 		!strings.Contains(r.body, "publish it again") || !strings.Contains(r.body, "is in "+source+".") {
 		t.Errorf("the page of a copy with mistakes:\n%s", r.body)
 	}
@@ -201,7 +204,9 @@ func TestDrawnStored(t *testing.T) {
 	}
 
 	// Renamed on the management page, it is drawn under its new slug.
-	e.write(t, "store/sizes/source/data.yaml", right)
+	if err = os.WriteFile(filepath.Join(source, "data.yaml"), []byte(right), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := e.store.Edit("sizes", store.Edit{Slug: ptr("moved")}); err != nil {
 		t.Fatal(err)
 	}

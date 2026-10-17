@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -227,6 +226,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Theme:         "",
 		DataTitle:     own,
 		Templates:     "",
+		Source:        "",
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",
@@ -319,8 +319,10 @@ func IsDataFile(file string) bool {
 	return ext == ".yaml" || ext == ".yml"
 }
 
-// Save writes a prepared entry. Saves of one slug take turns, in this process or another: two
-// publishes at once would otherwise empty source/ under each other's writes.
+// Save writes a prepared entry. A stored page's data file and images go to a new directory, which
+// meta.json then names, so that a drawing finds the old copy or the new one, whole, and a save that
+// fails leaves the old one; the copies it no longer names go after. Saves, edits and removals of one
+// slug take turns, in this process or another, so that none writes meta.json over another's.
 func (s *Store) Save(e *Entry) error {
 	dir := s.dir(e.Slug)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -332,18 +334,24 @@ func (s *Store) Save(e *Entry) error {
 	}
 	defer unlock()
 	if !e.Meta.IsLink() {
-		if err := writeSource(dir, e.Source, e.Images); err != nil {
+		if e.Meta.Source, err = writeSource(dir, e.Source, e.Images); err != nil {
 			return fmt.Errorf("save %s: %w", e.Slug, err)
 		}
 	}
-	return s.WriteMeta(e.Slug, &e.Meta)
+	if err = s.WriteMeta(e.Slug, &e.Meta); err != nil {
+		return err
+	}
+	if err = removeSources(dir, e.Meta.Source); err != nil {
+		return fmt.Errorf("save %s: %w", e.Slug, err)
+	}
+	return nil
 }
 
 // lock waits to hold dir alone among those who lock it, and returns what lets it go.
 func lock(dir string) (func(), error) {
 	f, err := os.Open(dir) //nolint:gosec // G304: the directory of a slug
 	if err != nil {
-		return nil, err //nolint:wrapcheck // Save says what it saved
+		return nil, err //nolint:wrapcheck // the caller says what it locked
 	}
 	if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
 		_ = f.Close()   //nolint:errcheck // read-only
@@ -353,84 +361,24 @@ func lock(dir string) (func(), error) {
 	return func() { _ = f.Close() }, nil //nolint:errcheck // as above
 }
 
-// writeSource puts the data file src and its images under dir/source/, over what is there: the images
-// first, then the data file, each whole, and then what the data no longer shows goes. The data file is
-// never missing, so a drawing in between draws the old page or the new one; the old one may show an
-// image of the new data of the same name, or miss one that went. A write that fails leaves the old
-// data file with those images until the next publish.
-func writeSource(dir string, src []byte, images map[string][]byte) error {
-	source := filepath.Join(dir, sourceDir)
-	if err := os.MkdirAll(source, 0o700); err != nil {
-		return err //nolint:wrapcheck // Save says what it saved
-	}
-	r, err := os.OpenRoot(source)
+// writeSource writes the data file src and its images, at the paths it names them by, to a new
+// directory under dir, and returns its name. One left by a write that fails goes.
+func writeSource(dir string, src []byte, images map[string][]byte) (string, error) {
+	tmp, err := os.MkdirTemp(dir, sourcePrefix)
 	if err != nil {
-		return err //nolint:wrapcheck // as above
+		return "", err //nolint:wrapcheck // Save says what it saved
 	}
-	defer r.Close() //nolint:errcheck // nothing written through it is left to flush
+	err = writeUnder(tmp, sourceName, src)
 	for name, b := range images {
-		if err = clearWay(r, name); err != nil {
-			return err
-		}
-		if err = writeUnder(source, name, b); err != nil {
-			return err
+		if err == nil {
+			err = writeUnder(tmp, name, b)
 		}
 	}
-	if err = writeUnder(source, sourceName, src); err != nil {
-		return err
-	}
-	return prune(r, images)
-}
-
-// clearWay removes what the old copy under r left in the way of the image name: a file where name
-// needs a directory, or a directory where it needs its file. The new data shows neither, as it shows
-// name.
-func clearWay(r *os.Root, name string) error {
-	steps := strings.Split(name, "/")
-	for i := 1; i < len(steps); i++ {
-		dir := strings.Join(steps[:i], "/")
-		fi, err := r.Lstat(dir)
-		switch {
-		case errors.Is(err, fs.ErrNotExist):
-			return nil
-		case err != nil:
-			return err //nolint:wrapcheck // Save says what it saved
-		case !fi.IsDir():
-			return r.Remove(dir) //nolint:wrapcheck // as above
-		}
-	}
-	if fi, err := r.Lstat(name); err == nil && fi.IsDir() {
-		return r.RemoveAll(name) //nolint:wrapcheck // as above
-	}
-	return nil
-}
-
-// prune removes the files under r but its data file and images (a file a write left halfway too), and
-// then the directories left empty.
-func prune(r *os.Root, images map[string][]byte) error {
-	var dirs []string
-	err := fs.WalkDir(r.FS(), ".", func(name string, d fs.DirEntry, err error) error {
-		_, shown := images[name]
-		switch {
-		case err != nil:
-			return err
-		case d.IsDir():
-			if name != "." {
-				dirs = append(dirs, name)
-			}
-		case !shown && name != sourceName:
-			return r.Remove(name)
-		}
-		return nil
-	})
 	if err != nil {
-		return err //nolint:wrapcheck // Save says what it saved
+		_ = os.RemoveAll(tmp) //nolint:errcheck // the next save removes it otherwise
+		return "", err
 	}
-	// Deepest first; one that still holds an image stays.
-	for _, d := range slices.Backward(dirs) {
-		_ = r.Remove(d) //nolint:errcheck // not empty
-	}
-	return nil
+	return filepath.Base(tmp), nil
 }
 
 // writeUnder writes b to name, a slash-separated path, under dir, making the directories on its way.
@@ -439,7 +387,25 @@ func writeUnder(dir, name string, b []byte) error {
 	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
 		return err //nolint:wrapcheck // Save says what it saved
 	}
-	return WriteAtomic(p, b, 0o600)
+	return os.WriteFile(p, b, 0o600) //nolint:wrapcheck // as above
+}
+
+// removeSources removes the copies under dir but keep ("" for none): the ones a save replaced, or
+// left when it stopped halfway.
+func removeSources(dir, keep string) error {
+	old, err := filepath.Glob(filepath.Join(dir, sourcePrefix+"*"))
+	if err != nil {
+		return err //nolint:wrapcheck // Save says what it saved
+	}
+	for _, p := range old {
+		if filepath.Base(p) == keep {
+			continue
+		}
+		if err = os.RemoveAll(p); err != nil {
+			return err //nolint:wrapcheck // as above
+		}
+	}
+	return nil
 }
 
 // Remove deletes slug. A linked file itself is left alone.
@@ -447,7 +413,12 @@ func (s *Store) Remove(slug string) error {
 	if !ValidSlug(slug) || s.ReadMeta(slug) == nil {
 		return usererr.New("store_no_page", slug)
 	}
-	if err := os.RemoveAll(s.dir(slug)); err != nil {
+	unlock, err := lock(s.dir(slug))
+	if err != nil {
+		return fmt.Errorf("remove %s: %w", slug, err)
+	}
+	defer unlock()
+	if err = os.RemoveAll(s.dir(slug)); err != nil {
 		return fmt.Errorf("remove %s: %w", slug, err)
 	}
 	return nil
@@ -466,6 +437,14 @@ type Edit struct {
 // the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
 // data file's title: when published (a stored page), else to the slug; clearing the project drops it.
 func (s *Store) Edit(slug string, ed Edit) (string, error) {
+	unlock, err := lock(s.dir(slug))
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("edit %s: %w", slug, err)
+	}
+	defer unlock()
 	m := s.ReadMeta(slug)
 	if m == nil {
 		return "", ErrNotFound

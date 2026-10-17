@@ -1,5 +1,6 @@
-// Package store keeps the pages under the store directory: <slug>/source/ (the data file, data.yaml,
-// and the images it shows) and meta.json for a stored page, meta.json alone for a linked file.
+// Package store keeps the pages under the store directory: <slug>/source-<id>/ (the data file,
+// data.yaml, and the images it shows), which meta.json names, for a stored page, meta.json alone for a
+// linked file.
 package store
 
 import (
@@ -30,10 +31,10 @@ import (
 
 const (
 	isoMillis = "2006-01-02T15:04:05.000Z"
-	// sourceDir under a stored page holds its data file, sourceName, and the images it shows, at the
-	// paths it names them by.
-	sourceDir  = "source"
-	sourceName = tmpl.KeptName
+	// sourcePrefix names a copy under a stored page: its data file, sourceName, and the images it shows,
+	// at the paths it names them by.
+	sourcePrefix = "source-"
+	sourceName   = tmpl.KeptName
 )
 
 var slugRe = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$`)
@@ -60,7 +61,9 @@ type Meta struct {
 	DataTitle string `json:"dataTitle,omitempty"`
 	// Templates is the directory of templates of one's own a data file is drawn with: the one of the
 	// publish that stored or linked it, whatever the server's.
-	Templates     string `json:"templates,omitempty"`
+	Templates string `json:"templates,omitempty"`
+	// Source is the directory of a stored page's copy of its data file and images, under its own.
+	Source        string `json:"source,omitempty"`
 	Project       string `json:"project,omitempty"`
 	ProjectEdited bool   `json:"projectEdited,omitempty"`
 	// PublishedFrom is the project that owns a stored page; Project is only what the list shows.
@@ -88,8 +91,9 @@ type Store struct {
 	titles map[string]cachedTitle
 	// drawn is what the last drawing of each data file read besides it, by slug and file (see
 	// sourceKey).
-	// LIMIT: one entry for every slug and file ever drawn, removed, renamed and relinked ones too, as
-	// titles are. Drop them on removal if a server comes to see thousands of them in its lifetime.
+	// LIMIT: one entry for every slug and file ever drawn, removed, renamed, relinked and republished
+	// ones too (a republish's copy is a new file), as titles are. Drop them on removal if a server comes
+	// to see thousands of them in its lifetime.
 	drawn map[string]drawing
 }
 
@@ -186,12 +190,7 @@ func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 	if m.IsLink() || rest != "" {
 		return "", false
 	}
-	return s.sourceFile(slug), true
-}
-
-// sourceFile is the data file of the stored page slug.
-func (s *Store) sourceFile(slug string) string {
-	return filepath.Join(s.dir(slug), sourceDir, sourceName)
+	return filepath.Join(s.dir(slug), m.Source, sourceName), true
 }
 
 // IsDrawn reports whether the page of m is drawn from a data file each time it is opened: a stored

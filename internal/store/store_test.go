@@ -105,6 +105,13 @@ func (e env) read(t *testing.T, rel string) string {
 	return string(b)
 }
 
+// kept reads the copy of the data file of the stored page slug.
+func (e env) kept(t *testing.T, slug string) string {
+	t.Helper()
+
+	return e.read(t, filepath.Join("store", slug, e.meta(t, slug).Source, "data.yaml"))
+}
+
 // drawn draws the stored page slug as it is served.
 func (e env) drawn(t *testing.T, slug string) string {
 	t.Helper()
@@ -156,8 +163,8 @@ func TestPublishStoredPage(t *testing.T) {
 		t.Fatalf("first publish: %+v, %+v", first, m)
 	}
 	if got := e.drawn(t, "my-demo"); !strings.Contains(got, "<h1>Demo Page</h1>") || !m.IsDrawn() ||
-		e.read(t, "store/my-demo/source/data.yaml") != e.read(t, "My Demo.yaml") {
-		t.Errorf("the page is drawn as %q from %q, want the data file kept and drawn by report", got, e.read(t, "store/my-demo/source/data.yaml"))
+		e.kept(t, "my-demo") != e.read(t, "My Demo.yaml") {
+		t.Errorf("the page is drawn as %q from %q, want the data file kept and drawn by report", got, e.kept(t, "my-demo"))
 	}
 
 	again := e.mustPublish(t, doc, store.Options{Slug: ptr("my-demo")}, "proj")
@@ -530,17 +537,23 @@ func TestEdit(t *testing.T) {
 	}
 }
 
-// Saves of one slug at once take turns: each succeeds, and the store holds the page whole.
+// Saves and edits of one slug at once take turns: each succeeds, and the store holds the page whole,
+// meta.json naming the copy that is there.
 func TestSaveAtOnce(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
 	doc := e.page(t, "race.yaml", "Race")
 	mkdir(t, filepath.Join(e.tmp, "proj"))
-	errs := make([]error, 8)
+	e.mustPublish(t, doc, store.Options{}, "proj")
+	errs := make([]error, 16)
 	var wg sync.WaitGroup
 	for i := range errs {
 		wg.Go(func() {
+			if i%2 == 1 {
+				_, errs[i] = e.s.Edit("race", store.Edit{Description: ptr("d")})
+				return
+			}
 			entry, err := e.s.Prepare(t.Context(), doc, store.Options{}, filepath.Join(e.tmp, "proj"))
 			if err == nil {
 				err = e.s.Save(entry)
@@ -567,7 +580,7 @@ func TestSaveFailureKeepsPage(t *testing.T) {
 	e := newEnv(t)
 	doc := e.page(t, "kept.yaml", "Kept")
 	e.mustPublish(t, doc, store.Options{}, "proj")
-	source := filepath.Join(e.tmp, "store", "kept", "source")
+	source := filepath.Join(e.tmp, "store", "kept")
 	if err := os.Chmod(source, 0o500); err != nil {
 		t.Fatal(err)
 	}
@@ -585,6 +598,42 @@ func TestSaveFailureKeepsPage(t *testing.T) {
 	}
 	if page := e.drawn(t, "kept"); !strings.Contains(page, "<h1>Kept</h1>") {
 		t.Errorf("the page after a failed save:\n%s", page)
+	}
+}
+
+// An edit and a removal wait while the slug's directory is locked, as a save holds it.
+func TestEditAndRemoveWaitForSave(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.mustPublish(t, e.page(t, "wait.yaml", "Wait"), store.Options{}, "proj")
+	for _, act := range []func() error{
+		func() error {
+			_, err := e.s.Edit("wait", store.Edit{Description: ptr("d")})
+			return err
+		},
+		func() error { return e.s.Remove("wait") },
+	} {
+		f, err := os.Open(filepath.Join(e.tmp, "store", "wait"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
+			t.Fatal(err)
+		}
+		done := make(chan error, 1)
+		go func() { done <- act() }()
+		select {
+		case err = <-done:
+			t.Fatalf("it did not wait for the lock: %v", err)
+		case <-time.After(100 * time.Millisecond):
+		}
+		if err = f.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err = <-done; err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -608,14 +657,14 @@ func TestFileAndVersion(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	stored := &store.Meta{UpdatedAt: "2026-01-01T00:00:00.000Z"}
-	if f, ok := e.s.File("p", stored, ""); !ok || f != filepath.Join(e.tmp, "store", "p", "source", "data.yaml") {
+	stored := &store.Meta{Source: "source-1", UpdatedAt: "2026-01-01T00:00:00.000Z"}
+	if f, ok := e.s.File("p", stored, ""); !ok || f != filepath.Join(e.tmp, "store", "p", "source-1", "data.yaml") {
 		t.Errorf("File of a stored page = %q, %v", f, ok)
 	}
 	if _, ok := e.s.File("p", stored, "x.css"); ok {
 		t.Error("a stored page serves a subpath")
 	}
-	data := e.page(t, "store/p/source/data.yaml", "")
+	data := e.page(t, "store/p/source-1/data.yaml", "")
 	if v := e.s.Version("p", stored, data); !strings.Contains(v, "+"+stored.UpdatedAt+"+") {
 		t.Errorf("Version of a stored page = %q, want its publish time in it", v)
 	}
@@ -730,8 +779,8 @@ func TestLinkDataFile(t *testing.T) {
 	if !m.IsDrawn() || e.s.Version("spec", &m, data) == "" {
 		t.Errorf("IsDrawn = %v, Version = %q", m.IsDrawn(), e.s.Version("spec", &m, data))
 	}
-	if _, err := os.Stat(filepath.Join(e.tmp, "store", "spec", "source")); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("a page was stored for a link: %v", err)
+	if kept, globErr := filepath.Glob(filepath.Join(e.tmp, "store", "spec", "source-*")); globErr != nil || m.Source != "" || kept != nil {
+		t.Errorf("a copy was stored for a link: %q, %v %v", m.Source, kept, globErr)
 	}
 	page, _, err := e.s.Draw("spec", &m, data)
 	if err != nil || !strings.Contains(string(page), `<html lang="ja">`) || !strings.Contains(string(page), "<h1>Spec</h1>") {
