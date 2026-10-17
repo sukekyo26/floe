@@ -120,10 +120,18 @@ func Ensure(ctx context.Context, s Server) error {
 		}
 	}
 	if p.State == Down {
-		if err := start(ctx, s.Env); err != nil {
+		pid, err := start(ctx, s.Env)
+		if err != nil {
 			return err
 		}
 		p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Down })
+		// One that is not the server (another publish's came up first, or none did) lost the port, or
+		// is slow to start: left, it could take the port once the server there stops.
+		if p.Health.PID != pid {
+			if err = Terminate(pid); err != nil {
+				return err
+			}
+		}
 	}
 	switch {
 	case p.State == Other:
@@ -138,20 +146,20 @@ func Ensure(ctx context.Context, s Server) error {
 }
 
 // start runs "floe serve" in a session of its own, so that it outlives the publish and its terminal
-// (and ctx: the server must not be killed when the publish ends).
-func start(ctx context.Context, env []string) error {
+// (and ctx: the server must not be killed when the publish ends), and returns its pid.
+func start(ctx context.Context, env []string) (int, error) {
 	exe, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("find the floe binary: %w", err)
+		return 0, fmt.Errorf("find the floe binary: %w", err)
 	}
 	cmd := exec.CommandContext(context.WithoutCancel(ctx), exe, "serve") //nolint:gosec // G204: our own binary
 	cmd.Env = env
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start the server: %w", err)
+		return 0, fmt.Errorf("start the server: %w", err)
 	}
 	go func() { _ = cmd.Wait() }() //nolint:errcheck // reaps the server if it exits before we do
-	return nil
+	return cmd.Process.Pid, nil
 }
 
 // Terminate sends SIGTERM to pid. A process that has exited already counts as stopped.
