@@ -1,3 +1,4 @@
+# LIMIT: only the common prompts are known, not "(venv) $ ", "root@host:~# " or a path with a space; add a form when one is met.
 - for: steps
   field: run
   expr: not (item.run matches "(?m)^\\s*(\\[[^\\]\\n]*\\]\\$|[\\w.-]+@[\\w.-]+ \\S+ %|[\\w.@:~/-]*\\$|PS( ([A-Za-z]:\\\\|[~/])[^>\\n]*)?>|[A-Za-z]:\\\\[^>\\s]*>|%|❯) ")
