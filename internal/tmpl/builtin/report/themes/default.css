@@ -8,7 +8,7 @@
   --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
   /* The width of the whole body, and the shorter width that keeps prose readable */
   --page-width: 96rem; --text-width: 56rem;
-  --terminal-bg: #1b2120; --terminal-fg: #e2e9e7; --terminal-prompt: #63b5be;
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #63b5be;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -16,7 +16,7 @@
     --bg: #111716; --surface: #182120; --fg: #e2e9e7; --muted: #97a5a2; --line: #2b3634;
     --accent: #63b5be; --accent-soft: #1b3336;
     --good: #6fcf97; --good-soft: #173126; --warn: #e2a85e; --warn-soft: #392b18; --bad: #f2b8b5; --bad-soft: #3b1f1d;
-    --terminal-bg: #0a0e0d;
+    --code-bg: #0a0e0d;
     color-scheme: dark;
   }
 }

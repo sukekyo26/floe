@@ -266,13 +266,15 @@ func TestCodeAndTerminal(t *testing.T) {
 		"      - code: { lang: sh, text: x }\n"+
 		"      - code: { text: y }\n"+
 		"      - terminal: { steps: [{ run: \"make \\\\\\n  all\", out: done }, { run: ls }] }\n"+
-		"      - terminal: { shell: powershell, steps: [{ run: dir }] }\n")
+		"      - terminal: { shell: powershell, steps: [{ run: dir }] }\n"+
+		"      - terminal: { shell: zsh, steps: [{ run: ls }] }\n")
 	for _, want := range []string{
 		"<figure class=\"floe-code\"><figcaption>a.go</figcaption><pre><code>if a &lt; b {\n\treturn\n}\n</code></pre></figure>",
 		`<figure class="floe-code"><figcaption>sh</figcaption><pre><code>x</code></pre></figure>`,
 		`<figure class="floe-code"><pre><code>y</code></pre></figure>`,
-		"<pre class=\"floe-terminal sh\"><span class=\"run\">make \\\n  all</span><span class=\"out\">done</span><span class=\"run\">ls</span></pre>",
-		`<pre class="floe-terminal powershell"><span class="run">dir</span></pre>`,
+		"<figure class=\"floe-terminal sh\"><pre><span class=\"run\">make \\\n  all</span><span class=\"out\">done</span><span class=\"run\">ls</span></pre></figure>",
+		`<figure class="floe-terminal powershell"><figcaption>PowerShell</figcaption><pre><span class="run">dir</span></pre></figure>`,
+		`<figure class="floe-terminal zsh"><figcaption>zsh</figcaption><pre><span class="run">ls</span></pre></figure>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page lacks %s:\n%s", want, page)
@@ -284,11 +286,11 @@ func TestCodeAndTerminal(t *testing.T) {
 
 	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
 		"      - code: { lang: go }\n"+
-		"      - terminal: { shell: zsh, steps: [] }\n"), "", "")
+		"      - terminal: { shell: fish, steps: [] }\n"), "", "")
 	for _, want := range []string{
 		"bad.yaml:5:17: sections[0].parts[0].code.text is required but missing",
-		`bad.yaml:6:28: sections[0].parts[1].terminal.shell: "zsh" is not allowed; use sh, powershell, cmd`,
-		"bad.yaml:6:40: sections[0].parts[1].terminal.steps: the number of items must be at least 1",
+		`bad.yaml:6:28: sections[0].parts[1].terminal.shell: "fish" is not allowed; use bash, zsh, sh, powershell, cmd`,
+		"bad.yaml:6:41: sections[0].parts[1].terminal.steps: the number of items must be at least 1",
 	} {
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("the mistakes = %v, want %s", err, want)
