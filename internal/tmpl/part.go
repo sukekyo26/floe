@@ -407,6 +407,9 @@ func (p *part) draw(v any) (template.HTML, error) {
 // (<span class="floe-pill good">). A class named in the page's prose or theme brings its part's style too.
 // LIMIT: classes are found in the page's whole text; look in class attributes alone if unused style matters.
 func partStyles(page []byte) (string, error) {
+	if !bytes.Contains(page, []byte("floe-")) {
+		return "", nil
+	}
 	set, err := builtinParts()
 	if err != nil {
 		return "", err
