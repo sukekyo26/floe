@@ -354,10 +354,11 @@ func (s *Store) Save(e *Entry) error {
 		return err
 	}
 	dir := s.dir(e.Slug)
+	made := os.Mkdir(dir, 0o700) == nil
 	if err = s.write(e, dir); err != nil {
-		// A new slug's directory, left, would keep a rename off the slug from the management page,
-		// which does not list it.
-		if e.Prev == nil {
+		// The directory this save made, left, would keep a rename off the slug from the management
+		// page, which does not list it. One that was there (its meta.json unreadable) stays.
+		if made {
 			_ = os.RemoveAll(dir) //nolint:errcheck // the error is the save's
 		}
 		return err
@@ -382,20 +383,20 @@ func (s *Store) write(e *Entry, dir string) error {
 
 // lock waits to hold the store alone among saves, edits and removals, in this process or another, and
 // returns what lets it go. One lock for the store holds a slug not made yet, and the slug a rename
-// takes, as well. With create, the store and its lock file are made when missing; else a store
-// without them fails with fs.ErrNotExist, as it holds no page.
+// takes, as well. The lock file is made when missing; the store too with create, else a store not
+// made yet fails with fs.ErrNotExist, as it holds no page.
 // LIMIT: saves of different pages wait for each other too, a few ms each, and all wait while a
 // process holding it is stopped (Ctrl-Z). Lock each slug, and each name a rename takes, if a store
 // comes to see many saves at once.
 func (s *Store) lock(create bool) (func(), error) {
-	flag := os.O_RDONLY
 	if create {
 		if err := os.MkdirAll(s.root, 0o700); err != nil {
 			return nil, err //nolint:wrapcheck // the caller says what it locked for
 		}
-		flag |= os.O_CREATE
+	} else if _, err := os.Stat(s.root); err != nil {
+		return nil, err //nolint:wrapcheck // as above
 	}
-	f, err := os.OpenFile(filepath.Join(s.root, ".lock"), flag, 0o600)
+	f, err := os.OpenFile(filepath.Join(s.root, ".lock"), os.O_RDONLY|os.O_CREATE, 0o600)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // as above
 	}

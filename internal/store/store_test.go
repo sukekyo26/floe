@@ -727,23 +727,50 @@ func TestNoStore(t *testing.T) {
 	}
 }
 
-// A save of a new slug that fails leaves no directory, which would keep a rename off the slug.
-func TestFailedNewSaveLeavesNothing(t *testing.T) {
+// A save that fails leaves no directory it made, which would keep a rename off the slug, and leaves
+// one that was there, its meta.json unreadable.
+func TestFailedSave(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	doc := e.page(t, "fresh.yaml", "Fresh")
-	entry, err := e.s.Prepare(t.Context(), doc, store.Options{}, e.tmp)
-	if err != nil {
+	failing := func(file string) *store.Entry {
+		t.Helper()
+		entry, err := e.s.Prepare(t.Context(), file, store.Options{}, e.tmp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// No file is named with a NUL.
+		entry.Images = map[string][]byte{"bad\x00.png": {1}}
+		return entry
+	}
+	if err := e.s.Save(failing(e.page(t, "fresh.yaml", "Fresh"))); err == nil {
+		t.Fatal("a save of an image named with a NUL succeeded")
+	}
+	if _, err := os.Stat(filepath.Join(e.tmp, "store", "fresh")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a failed save of a new slug left its directory: %v", err)
+	}
+
+	e.mustPublish(t, e.page(t, "kept.yaml", "Kept"), store.Options{}, "")
+	e.write(t, "store/kept/meta.json", "{")
+	if err := e.s.Save(failing(e.page(t, "kept.yaml", "Kept"))); err == nil {
+		t.Fatal("a save of an image named with a NUL succeeded")
+	}
+	if kept, err := filepath.Glob(filepath.Join(e.tmp, "store", "kept", "source-*", "data.yaml")); err != nil || len(kept) != 1 {
+		t.Errorf("a failed save over an unreadable meta.json removed the copy: %v %v", kept, err)
+	}
+}
+
+// A store made by a floe that took no lock is locked all the same: an edit finds its pages.
+func TestStoreWithoutLockFile(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.mustPublish(t, e.page(t, "old.yaml", "Old"), store.Options{}, "proj")
+	if err := os.Remove(filepath.Join(e.tmp, "store", ".lock")); err != nil {
 		t.Fatal(err)
 	}
-	// meta.json cannot be written over a directory.
-	mkdir(t, filepath.Join(e.tmp, "store", "fresh", "meta.json"))
-	if err = e.s.Save(entry); err == nil {
-		t.Fatal("a save over a directory named meta.json succeeded")
-	}
-	if _, err = os.Stat(filepath.Join(e.tmp, "store", "fresh")); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("a failed save of a new slug left its directory: %v", err)
+	if _, err := e.s.Edit("old", store.Edit{Description: ptr("d")}); err != nil || e.meta(t, "old").Description != "d" {
+		t.Errorf("an edit in a store without a lock file = %v", err)
 	}
 }
 
