@@ -29,29 +29,42 @@ func TestBuiltinsLoadNothingFromElsewhere(t *testing.T) {
 	t.Parallel()
 
 	for name, src := range builtinSources(t) {
-		if elsewhereRe.MatchString(src) {
-			t.Errorf("%s loads from elsewhere: %q", name, elsewhereRe.FindAllString(src, 3))
+		for _, url := range elsewhereRe.FindAllString(src, -1) {
+			if !notFetched[url] {
+				t.Errorf("%s names %s", name, url)
+			}
 		}
 	}
 }
 
-// builtinSources reads ui.html and the files of the built-in templates, the ones template authors
-// start from, by their names.
+// notFetched are the URLs the sources name only as identifiers.
+var notFetched = map[string]bool{
+	"http://www.w3.org/2000/svg":                   true,
+	"https://json-schema.org/draft/2020-12/schema": true,
+}
+
+// builtinSources reads ui.html, the files of the built-in templates, the ones template authors start
+// from, and the diagram assets every page with a diagram holds, by their names.
 func builtinSources(t *testing.T) map[string]string {
 	t.Helper()
 
 	sources := map[string]string{"ui.html": pageSource}
-	builtin := os.DirFS("../tmpl/builtin")
-	err := fs.WalkDir(builtin, ".", func(name string, e fs.DirEntry, err error) error {
-		if err != nil || e.IsDir() {
+	for _, dir := range []string{"tmpl/builtin", "diagram/assets"} {
+		root := os.DirFS("../" + dir)
+		err := fs.WalkDir(root, ".", func(name string, e fs.DirEntry, err error) error {
+			if err != nil || e.IsDir() {
+				return err
+			}
+			b, err := fs.ReadFile(root, name)
+			sources[dir+"/"+name] = string(b)
 			return err
+		})
+		if err != nil {
+			t.Fatalf("read %s: %v", dir, err)
 		}
-		b, err := fs.ReadFile(builtin, name)
-		sources["tmpl/builtin/"+name] = string(b)
-		return err
-	})
-	if err != nil || len(sources) == 1 {
-		t.Fatalf("read the built-in templates: %v (%d files)", err, len(sources)-1)
+	}
+	if len(sources) < 3 {
+		t.Fatalf("read %d files", len(sources))
 	}
 	return sources
 }
@@ -82,9 +95,9 @@ var (
 	usedRe     = regexp.MustCompile(`\{\{\.Msg "(ui_\w+)"\}\}|'(ui_\w+)'|` + "`ui_\\$\\{\\w+\\(\\w*\\)\\}(\\w*)`")
 	jsVerbsRe  = regexp.MustCompile(`%(?:\[\d+\])?[sd%]`)
 	japaneseRe = regexp.MustCompile(`.{0,20}[\p{Hiragana}\p{Katakana}\p{Han}]+.{0,20}`)
-	// elsewhereRe finds what a page would load from another host: an href or src, an @import or a url()
-	// of http(s) or a scheme-relative //.
-	elsewhereRe = regexp.MustCompile(`(?i)(?:\b(?:href|src)\s*=\s*["']?|@import\s+(?:url\(\s*)?["']?|\burl\(\s*["']?)(?:https?:)?//`)
+	// elsewhereRe finds URLs of other hosts, in full or scheme-relative ("//host", '//host', (//host
+	// or =//host), wherever a page might load them from: an attribute, CSS or a script.
+	elsewhereRe = regexp.MustCompile(`(?i)(?:https?:|["'(=])//[^\s"'()<>]+`)
 )
 
 // TestPageMessages keeps ui.html and the ui_ messages in step: every key the page names exists, every
