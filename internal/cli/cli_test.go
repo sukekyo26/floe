@@ -233,7 +233,8 @@ func (e *env) stop(t *testing.T) {
 		}
 	}
 	if !e.wait(ctx, t, false) {
-		t.Error("the server outlived the test")
+		h, _ := e.healthIn(ctx, t)
+		t.Errorf("the server outlived the test: %+v", h)
 	}
 }
 
@@ -310,11 +311,14 @@ func (e *env) health(t *testing.T) (server.Health, bool) {
 	return e.healthIn(t.Context(), t)
 }
 
+// healthIn probes e's port, and reports whether e's own server is up there: a server of floe for the
+// store e was made with. Another package's tests, run at the same time in a process of their own, may
+// start a server of floe on the port as soon as e's lets it go.
 func (e *env) healthIn(ctx context.Context, t *testing.T) (server.Health, bool) {
 	t.Helper()
 
 	p := daemon.Probe(ctx, e.base())
-	return p.Health, p.State == daemon.Ours
+	return p.Health, p.State == daemon.Ours && p.Health.Root == filepath.Join(e.tmp, "store")
 }
 
 func want(t *testing.T, what string, got result, code int, stdout, stderr string) {
