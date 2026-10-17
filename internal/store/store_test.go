@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -526,6 +527,33 @@ func TestEdit(t *testing.T) {
 	}
 	if _, err := e.s.Edit("site", store.Edit{Title: ptr("")}); err != nil || e.meta(t, "site").Title != "" {
 		t.Errorf("clearing a link's title hands it back to the file: %+v", e.meta(t, "site"))
+	}
+}
+
+// Saves of one slug at once take turns: each succeeds, and the store holds the page whole.
+func TestSaveAtOnce(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	doc := e.page(t, "race.yaml", "Race")
+	mkdir(t, filepath.Join(e.tmp, "proj"))
+	errs := make([]error, 8)
+	var wg sync.WaitGroup
+	for i := range errs {
+		wg.Go(func() {
+			entry, err := e.s.Prepare(t.Context(), doc, store.Options{}, filepath.Join(e.tmp, "proj"))
+			if err == nil {
+				err = e.s.Save(entry)
+			}
+			errs[i] = err
+		})
+	}
+	wg.Wait()
+	if err := errors.Join(errs...); err != nil {
+		t.Fatalf("saves at once: %v", err)
+	}
+	if page := e.drawn(t, "race"); !strings.Contains(page, "<h1>Race</h1>") {
+		t.Errorf("the page after saves at once:\n%s", page)
 	}
 }
 

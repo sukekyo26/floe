@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/sukekyo26/floe/internal/link"
 	"github.com/sukekyo26/floe/internal/project"
 	"github.com/sukekyo26/floe/internal/tmpl"
@@ -311,18 +313,38 @@ func IsDataFile(file string) bool {
 	return ext == ".yaml" || ext == ".yml"
 }
 
-// Save writes a prepared entry.
+// Save writes a prepared entry. Saves of one slug take turns, in this process or another: two
+// publishes at once would otherwise empty source/ under each other's writes.
 func (s *Store) Save(e *Entry) error {
 	dir := s.dir(e.Slug)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("save %s: %w", e.Slug, err)
 	}
+	unlock, err := lock(dir)
+	if err != nil {
+		return fmt.Errorf("save %s: %w", e.Slug, err)
+	}
+	defer unlock()
 	if !e.Meta.IsLink() {
 		if err := writeSource(dir, e.Source, e.Images); err != nil {
 			return fmt.Errorf("save %s: %w", e.Slug, err)
 		}
 	}
 	return s.WriteMeta(e.Slug, &e.Meta)
+}
+
+// lock waits to hold dir alone among those who lock it, and returns what lets it go.
+func lock(dir string) (func(), error) {
+	f, err := os.Open(dir) //nolint:gosec // G304: the directory of a slug
+	if err != nil {
+		return nil, err //nolint:wrapcheck // Save says what it saved
+	}
+	if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
+		_ = f.Close()   //nolint:errcheck // read-only
+		return nil, err //nolint:wrapcheck // as above
+	}
+	// Closing it lets the lock go.
+	return func() { _ = f.Close() }, nil //nolint:errcheck // as above
 }
 
 // writeSource puts the data file src and its images under dir/source/, emptied first, so that an
