@@ -1,11 +1,4 @@
 - for: sections.parts
   field: text
   expr: item.text == nil || !(item.text matches "(?m)^\\s*(?:(?:[-*+]|\\d+[.)])\\s+|>\\s*)*(```|~~~)")
-  message: write code in a code part, which shows it under its file or language
-# LIMIT: a line of prose starting "$ ", "US$ " or "% " is refused too; leave out one before a digit if one is reported.
-- for: sections.parts
-  field: text
-  expr: >-
-    item.text == nil || item.text matches "(?m)^\\s*(?:(?:[-*+]|\\d+[.)])\\s+|>\\s*)*(```|~~~)" ||
-    !(item.text matches "(?m)^\\s*(?:(?:[-*+]|\\d+[.)])\\s+|>\\s*)*(\\[[^\\]\\n]*\\]\\$|[\\w.-]+@[\\w.-]+ \\S+ %|[\\w.@:~/-]*\\$|PS( ([A-Za-z]:\\\\|[~/])[^>\\n]*)?>|[A-Za-z]:\\\\[^>\\s]*>|%|❯) ")
-  message: write commands in a terminal part, which draws the prompt and keeps it out of a copy
+  message: write code in a code part and commands in a terminal part, which show them under their file or prompt

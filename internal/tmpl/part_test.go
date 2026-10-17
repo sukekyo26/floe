@@ -1,6 +1,7 @@
 package tmpl_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -293,31 +294,40 @@ func TestCodeAndTerminal(t *testing.T) {
 			t.Errorf("the mistakes = %v, want %s", err, want)
 		}
 	}
-	// A command written with its prompt would show two, and copy one.
+	// A command written with its prompt would show two, and copy one: a first word ending in a prompt's mark is
+	// one, after an environment's name too, while a comment, a redirect and $ further on are not.
+	runs := []string{
+		"$ ls", "% make", "❯ make", `PS C:\Program Files> dir`, `C:\work> dir`, "cd app\n$ make", "user@host:~/作業$ make",
+		"root@host:~# apt update", "[me@host app]$ make", "(venv) $ pip install x", "> app.log", "# a comment", "echo $ x",
+		`C:\Python312\python.exe a.py > out.txt`,
+	}
+	steps := make([]string, 0, len(runs))
+	for _, r := range runs {
+		steps = append(steps, fmt.Sprintf("{ run: %q }", r))
+	}
 	_, err = builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
-		"      - terminal: { steps: [{ run: '$ ls' }, { run: 'PS C:\\work> dir' }, { run: 'C:\\work> dir' }, { run: \"cd app\\n$ make\" }, { run: 'user@host:~/app$ make' }, "+
-		"{ run: '[me@host app]$ make' }, { run: 'me@mac floe % make' }, { run: 'C:\\Python312\\python.exe a.py > out.txt' }, "+
-		"{ run: '> app.log' }, { run: 'echo $ x' }] }\n"), "", "")
-	if err == nil || strings.Count(err.Error(), "write the command without its prompt") != 7 ||
-		!strings.Contains(err.Error(), `bad.yaml:5:36: sections[0].parts[0].terminal.steps[0].run: write the command without its prompt, which floe draws from the shell ("$ ls")`) {
-		t.Errorf("commands with their prompts = %v", err)
+		"      - terminal: { steps: ["+strings.Join(steps, ", ")+"] }\n"), "", "")
+	for i, r := range runs {
+		want := fmt.Sprintf("terminal.steps[%d].run: write the command without its prompt", i)
+		if refused := err != nil && strings.Contains(err.Error(), want); refused != (i < 10) {
+			t.Errorf("run %q refused = %v: %v", r, refused, err)
+		}
 	}
 }
 
-// report sends code and commands to their parts: a block of code or a prompt in text is refused, while
-// short code in a sentence and a quote pass.
+// report sends code and commands to their parts by refusing a fenced block of code in text, in a list or
+// a quote too, while prose, a quote and short code in a sentence pass, prompts or not.
 func TestReportRefusesCodeInText(t *testing.T) {
 	t.Parallel()
 
 	for _, text := range []string{
-		"```go\\nx\\n```", "~~~\\nx\\n~~~", "```sh\\n$ ls\\n```", "$ floe list", "PS> dir", "  PS C:\\\\work> dir",
-		"- $ make", "1. > $ make", ">$ make", "C:\\\\work> dir", "> ```sh\\n> x\\n> ```", "- ```sh\\n  x",
-		"user@host:~/app$ make", "% make", "❯ make", "[me@host app]$ make", "me@mac floe % make", "PS /home/me> ls",
+		"```go\\nx\\n```", "~~~\\nx\\n~~~", "```sh\\n$ ls\\n```", "> ```sh\\n> x\\n> ```", "- ```sh\\n  x",
 	} {
 		_, err := builtins.Read("t.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n      - text: \"a\\n"+text+"\"\n"), "", "")
 		if err == nil || strings.Count(err.Error(), "t.yaml:5:15: sections[0].parts[0].text: write ") != 1 {
 			t.Errorf("text %q = %v", text, err)
 		}
 	}
-	render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: \"Run `floe list`.\\n\\n> a quote\\n\\nIt costs $ 5.\\n\\n`$ ls` lists.\\n\\nPS 5 > 4 holds.\"\n")
+	render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: \"Run `floe list`.\\n\\n> a quote\\n\\n"+
+		"$ 5 a month.\\n\\n100% done.\\n\\n`$ ls` lists.\"\n")
 }

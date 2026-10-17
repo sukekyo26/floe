@@ -1,5 +1,7 @@
-# LIMIT: only the common prompts are known, not "(venv) $ ", "root@host:~# " or a path with a space; add a form when one is met.
+# A prompt is a first word ending in $, #, %, > or ❯ (a bare # or > is a comment or a redirect), after an
+# environment's (venv), or [user@host dir], or PS and a path.
+# LIMIT: the first word alone is looked at: Mac:~ me$ and ~ ❯ pass, x.exe> out is refused; look further if they are met.
 - for: steps
   field: run
-  expr: not (item.run matches "(?m)^\\s*(\\[[^\\]\\n]*\\]\\$|[\\w.-]+@[\\w.-]+ \\S+ %|[\\w.@:~/-]*\\$|PS( ([A-Za-z]:\\\\|[~/])[^>\\n]*)?>|[A-Za-z]:\\\\[^>\\s]*>|%|❯) ")
+  expr: not (item.run matches "(?m)^\\s*(\\([^)\\n]*\\)\\s+)?(\\[[^\\]\\n]*\\][$#%]|PS( [^>\\n]*)?>|\\S*[$%❯]|\\S+[#>]) ")
   message: write the command without its prompt, which floe draws from the shell
