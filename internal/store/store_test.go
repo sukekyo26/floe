@@ -253,7 +253,6 @@ func TestPublishOwner(t *testing.T) {
 	if m.PublishedFrom != "other" || m.Project != "other" || m.Favorite || m.Description != "" || m.CreatedAt == before.CreatedAt {
 		t.Errorf("--force did not start the page afresh: %+v", m)
 	}
-
 }
 
 func TestPublishKeepsEdits(t *testing.T) {
