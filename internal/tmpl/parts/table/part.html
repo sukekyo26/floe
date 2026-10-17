@@ -3,7 +3,7 @@
 <tbody>
 {{- range .rows}}
 <tr>{{range $i, $cell := .}}<td{{if (index $.columns $i).num}} class="num"{{end}}>
-{{- if eq (printf "%T" $cell) "string"}}{{markdownLine $cell}}{{else}}<span class="floe-pill{{with $cell.tone}} {{.}}{{end}}">{{$cell.pill}}</span>{{end -}}
+{{- $cell -}}
 </td>{{end}}</tr>
 {{- end}}
 </tbody>

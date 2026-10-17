@@ -403,27 +403,30 @@ func (t *Template) page() (*template.Template, error) {
 }
 
 var funcs = template.FuncMap{
-	"bytes":    formatBytes,
-	"num":      formatNum,
-	"markdown": markdownHTML,
-	// markdownLine writes a line of Markdown, such as a table cell, as HTML without a paragraph around it.
-	"markdownLine": func(text string) (template.HTML, error) {
-		// The text is made one paragraph of unbroken lines: a blank line would split it, an indented
-		// line would open no block, as markdownLine reads no indented code, and two spaces at the end
-		// of a line would break it.
-		var lines []string
-		for line := range strings.Lines(text) {
-			if line = strings.TrimSpace(line); line != "" {
-				lines = append(lines, line)
-			}
+	"bytes":        formatBytes,
+	"num":          formatNum,
+	"markdown":     markdownHTML,
+	"markdownLine": markdownLineHTML,
+}
+
+// markdownLineHTML, markdownLine in page.html, writes a line of Markdown, such as a table cell, as HTML
+// without a paragraph around it.
+func markdownLineHTML(text string) (template.HTML, error) {
+	// The text is made one paragraph of unbroken lines: a blank line would split it, an indented
+	// line would open no block, as markdownLine reads no indented code, and two spaces at the end
+	// of a line would break it.
+	var lines []string
+	for line := range strings.Lines(text) {
+		if line = strings.TrimSpace(line); line != "" {
+			lines = append(lines, line)
 		}
-		html, err := convert(markdownLine, "markdownLine", strings.Join(lines, "\n"))
-		if err != nil {
-			return "", err
-		}
-		html = strings.TrimSuffix(strings.TrimPrefix(html, "<p>"), "</p>\n")
-		return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
-	},
+	}
+	html, err := convert(markdownLine, "markdownLine", strings.Join(lines, "\n"))
+	if err != nil {
+		return "", err
+	}
+	html = strings.TrimSuffix(strings.TrimPrefix(html, "<p>"), "</p>\n")
+	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 }
 
 // markdownHTML writes Markdown text as HTML, a table in the table part's look. Raw HTML in it is left

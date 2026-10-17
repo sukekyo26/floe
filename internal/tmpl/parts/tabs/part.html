@@ -1,0 +1,6 @@
+{{- define "body"}}{{range .}}{{with .text}}{{markdown .}}{{end}}{{with .code}}{{.}}{{end}}{{with .terminal}}{{.}}{{end}}{{with .diff}}{{.}}{{end}}{{with .note}}{{.}}{{end}}{{with .table}}{{.}}{{end}}{{end}}{{end -}}
+<form class="floe-tabs">
+{{- range $i, $t := .}}
+<label><input type="radio" name="tab"{{if not $i}} checked{{end}}>{{$t.title}}</label><div>{{template "body" $t.parts}}</div>
+{{- end}}
+</form>

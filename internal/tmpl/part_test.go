@@ -152,7 +152,7 @@ func TestCheckParts(t *testing.T) {
 
 	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table"} {
 		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
-		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of cards, checklist, code, compare, diagram, diff, facts, links, note, options, progress, script, stats, steps, table, terminal, tree"
+		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stats, steps, table, tabs, terminal, timeline, tree"
 		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 			t.Errorf("Check of %s = %v", ref, mistakes)
 		}
@@ -388,6 +388,76 @@ func TestPartsOfNumbersAndChanges(t *testing.T) {
 	for _, want := range []string{
 		"bad.yaml:5:68: sections[0].parts[0].progress[1].done: write done no greater than of, the whole",
 		"bad.yaml:6:37: sections[0].parts[1].tree[1].path: write a path naming a file or a folder",
+	} {
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("the mistakes = %v, want %s", err, want)
+		}
+	}
+}
+
+// The parts of reviews and references draw their words in the page's language, and tabs and details
+// draw the parts they hold.
+func TestPartsOfReviewsAndReferences(t *testing.T) {
+	t.Parallel()
+
+	src := "template: report\ntheme: soft\nlang: %s\nsections:\n  - parts:\n" +
+		"      - findings: [{ level: must, at: 'a.go:1', text: '`x` leaks', why: later, status: { pill: fixed, tone: good } }, { level: nit, text: y }]\n" +
+		"      - details: { title: Log, parts: [{ terminal: { steps: [{ run: make }] } }, { text: '**done**' }] }\n" +
+		"      - matrix: { columns: [linux, mac], rows: [{ what: serve, cells: [yes, { mark: part, note: some }] }] }\n" +
+		"      - decision: { title: Take B, status: { pill: decided }, date: '2026-10-12', text: Why, rejected: [A] }\n" +
+		"      - risks: [{ what: r, likely: high, impact: mid, fix: f }, { what: s, likely: low, impact: mid }]\n" +
+		"      - fields: [{ name: --open, type: boolean, required: true, default: false, text: Opens }, { name: --x }]\n" +
+		"      - timeline: [{ date: '10-02', title: T, text: x, tone: good }]\n" +
+		"      - bars: [{ label: a, value: 1 }, { label: b, value: 4, tone: warn }]\n" +
+		"      - faq: [{ q: Why?, a: '[See](https://example.com)', open: true }]\n" +
+		"      - glossary: [{ term: part, text: A piece }]\n" +
+		"      - keys: [{ keys: [Ctrl, K], text: Find }]\n" +
+		"      - tabs: [{ title: bash, parts: [{ code: { text: ls } }] }, { title: cmd, parts: [{ note: { text: n } }] }]\n"
+	page := render(t, fmt.Sprintf(src, "en"))
+	for _, want := range []string{
+		`<tr><td class="level"><span class="floe-pill bad">must</span></td><td><code class="at">a.go:1</code><div><code>x</code> leaks</div><div class="why">later</div></td><td class="status"><span class="floe-pill good">fixed</span></td></tr>`,
+		`<td class="level"><span class="floe-pill nit">nit</span></td><td><div>y</div></td><td class="status"></td>`,
+		`<details class="floe-details"><summary>Log</summary><div class="body"><figure class="floe-terminal sh"><pre><span class="run">make</span></pre></figure><p><strong>done</strong></p>` + "\n</div></details>",
+		`<td class="yes"><span class="mark"><span>Yes</span></span></td><td class="part"><span class="mark"><span>Partly</span></span><small>some</small></td>`,
+		`<p class="meta"><span class="floe-pill">decided</span><span>2026-10-12</span></p><h3>Take B</h3><p>Why</p>` + "\n" + `<p class="set-aside">Set aside</p><ul><li>A</li></ul>`,
+		`<th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col">Impact</th><th scope="col">What we do</th>`,
+		`<tr class="bad"><td class="what">r</td><td class="high"><span class="level">High</span></td><td class="mid"><span class="level">Medium</span></td><td>f</td></tr>`,
+		`<tr class="good"><td class="what">s</td>`,
+		`<td class="name"><code>--open</code><span class="required">required</span><span class="type">boolean</span></td><td>Opens<span class="default">Default: <code>false</code></span></td>`,
+		`<td class="name"><code>--x</code></td><td></td>`,
+		`<li class="good"><span class="date">10-02</span><div><strong>T</strong><p>x</p>`,
+		`<div><span class="label">a</span><span class="track"><span style="width: 25%"></span></span><span class="value">1</span></div>`,
+		`<div class="warn"><span class="label">b</span><span class="track"><span style="width: 100%"></span></span><span class="value">4</span></div>`,
+		`<details open><summary>Why?</summary><div><p><a href="https://example.com">See</a></p>`,
+		`<div><dt>part</dt><dd><p>A piece</p>`,
+		`<div><dt><kbd>Ctrl</kbd><span>+</span><kbd>K</kbd></dt><dd>Find</dd></div>`,
+		`<label><input type="radio" name="tab" checked>bash</label><div><figure class="floe-code"><pre><code>ls</code></pre></figure></div>`,
+		`<label><input type="radio" name="tab">cmd</label><div><div class="floe-note"><p>n</p>`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the page lacks %s:\n%s", want, page)
+		}
+	}
+	// The parts held bring their style too.
+	for _, style := range []string{".floe-terminal {", ".floe-code {", ".floe-note {", ".floe-tabs {"} {
+		if strings.Count(page, style) != 1 {
+			t.Errorf("the page has %s %d times", style, strings.Count(page, style))
+		}
+	}
+	page = render(t, fmt.Sprintf(src, "ja-JP"))
+	for _, want := range []string{`<span>一部</span>`, `<th scope="col">起きやすさ</th>`, `<span class="level">高</span>`, `<span class="required">必須</span>`, `<p class="set-aside">退けた案</p>`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the Japanese page lacks %s", want)
+		}
+	}
+
+	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
+		"      - matrix: { columns: [a, b], rows: [{ what: x, cells: [yes] }, { what: y, cells: [yes, maybe] }] }\n"+
+		"      - tabs: [{ title: a, parts: [{ terminal: { steps: [{ run: '$ ls' }] } }] }, { title: b, parts: [{ text: x }] }]\n"), "", "")
+	for _, want := range []string{
+		"sections[0].parts[1].tabs[0].parts[0].terminal.steps[0].run: write the command without its prompt",
+		"sections[0].parts[0].matrix.rows[0].cells: write as many cells in each row as there are columns",
+		"sections[0].parts[0].matrix.rows[1].cells: write each cell yes, part or no, or { mark, note }",
 	} {
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("the mistakes = %v, want %s", err, want)

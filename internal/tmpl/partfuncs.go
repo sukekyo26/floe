@@ -6,7 +6,38 @@ import (
 )
 
 // partFuncs are the functions floe's parts draw with, besides those of page.html.
-var partFuncs = template.FuncMap{"diff": diffOf, "tree": treeOf}
+var partFuncs = template.FuncMap{"bars": barsOf, "diff": diffOf, "tree": treeOf}
+
+// bar is an item of a bars part, and the width of its bar, a percentage of the longest's.
+type bar struct {
+	Label, Tone string
+	Value       any
+	Width       float64
+}
+
+// barsOf gives each of the items of a bars part, each a label and a value no less than 0, its width.
+func barsOf(items []any) ([]bar, error) {
+	bars := make([]bar, 0, len(items))
+	longest := 0.0
+	for _, item := range items {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		n, err := float(m["value"])
+		if err != nil {
+			return nil, err
+		}
+		longest = max(longest, n)
+		bars = append(bars, bar{Label: stringOf(m["label"]), Tone: stringOf(m["tone"]), Value: m["value"], Width: n})
+	}
+	for i := range bars {
+		if longest > 0 {
+			bars[i].Width = bars[i].Width / longest * 100
+		}
+	}
+	return bars, nil
+}
 
 // diffLine is a line of a diff and its kind, the class it is drawn in: add, del, hunk (@@), meta (the
 // lines naming the files, \ No newline at end of file), or "" for a line that stays.

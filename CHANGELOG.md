@@ -8,8 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Add ten parts, which the built-in `report` takes and a template refers to
-  as `floe:///parts/<name>.json`: `stats` (large numbers with a unit and a
+- Add twenty-two parts, which the built-in `report` takes and a template
+  refers to as `floe:///parts/<name>.json`: `stats` (large numbers with a unit and a
   note in a tone), `progress` (bars of `done` of `of`), `steps` (numbered,
   each `done`, `doing` or `todo`), `checklist` (items ticked when `done`, with
   their count), `compare` (rows `before` and `after` under two headings, a
@@ -18,8 +18,19 @@ adheres to [Semantic Versioning](https://semver.org/).
   pill), `diff` (a diff as git writes it, its added and removed lines
   coloured and counted), `tree` (paths nested into their folders, each with a
   note and an `added`, `removed` or `changed` mark) and `links` (cards of a
-  title, a URL and a few words). They take the look of tables, cards and code
-  in every theme; `--code-add` and `--code-del` colour a diff's lines.
+  title, a URL and a few words); `findings` (a review's, each a `level`,
+  where, what, why it was left and a pill of what became of it), `decision`
+  (a title over why and the options set aside), `risks` (how `likely` and its
+  `impact`, coloured by both), `matrix` (cells of ✓, △ or × by row and
+  column), `fields` (a setting's or a command's, each its type, whether it is
+  required and its default), `timeline` (dates down a line), `bars` (values as
+  bars), `faq` (questions opening their answers), `glossary`, `keys`
+  (keycaps and what they do), and `details` and `tabs`, which fold the parts
+  they hold under a title or show one tab's at a time: `text`, `code`,
+  `terminal`, `diff`, `note` or `table`. They take the look of tables, cards
+  and code in every theme, and draw their few words, such as the headings of
+  `risks`, in the page's language; `--code-add` and `--code-del` colour a
+  diff's lines.
 - Add `floe render <data.yaml>...`, which writes the page of each data file
   to `<name>.html` beside it, or in `--out-dir`, for a repository to keep the
   data file for agents and its page for people. The page is the download of

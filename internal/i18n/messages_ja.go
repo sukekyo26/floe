@@ -344,7 +344,7 @@ var messagesJA = map[string]string{
 	"tmpl_format_unknown":          "%s: %s: floe は format「%s」を知りません。JSON Schema の format か、html・image・markdown を使ってください",
 	"tmpl_format_part":             "%s: %s: %s は format ではなく floe の部品です。\"$ref\": \"floe:///parts/%s.json\" と書いてください",
 	"tmpl_part_into":               "%s は floe の部品の中を指していて、部品として検査はされても描かれません。部品全体の %s を指してください",
-	"tmpl_part_unknown":            "%s は floe の部品ではありません。部品は floe:///parts/<名前>.json の形で、名前は %s のどれかを、部品の tone は floe:///parts/tone.json を、表のセルは floe:///parts/cell.json を書いてください",
+	"tmpl_part_unknown":            "%s は floe の部品ではありません。部品は floe:///parts/<名前>.json の形で、名前は %s のどれかを、部品の tone は floe:///parts/tone.json を書いてください",
 	"tmpl_part_unreached":          "%s: %s: 部品 %s は項目を描きます。floe が辿る properties か items の下で参照してください",
 	"tmpl_format_unreached":        "%s: %s: format %s は描く項目の印です。floe が辿る properties か items の下で宣言してください",
 	"tmpl_schema_open":             `%s: %s は "additionalProperties": false を書かずに properties を宣言しているので、打ち間違えたキーを断れません`,
@@ -372,4 +372,19 @@ var messagesJA = map[string]string{
 	"tmpl_script_js":               "js に、描く場所の要素と data を受け取って動く関数を書いてください: function (el, data) { … }",
 	"tmpl_script_key":              "script に書けるのは js と data です。%s は書けません",
 	"tmpl_script_end":              "js に %s があり、ページはそこでスクリプトが終わると読みます。文字列なら '<' + '%s' のように分けてください",
+
+	// The words floe's parts draw in a page, by part_<part>_<word>: label "likely" in the part risks.
+	"part_matrix_yes":        "できる",
+	"part_matrix_part":       "一部",
+	"part_matrix_no":         "できない",
+	"part_decision_rejected": "退けた案",
+	"part_risks_risk":        "リスク",
+	"part_risks_likely":      "起きやすさ",
+	"part_risks_impact":      "影響",
+	"part_risks_fix":         "手当て",
+	"part_risks_low":         "低",
+	"part_risks_mid":         "中",
+	"part_risks_high":        "高",
+	"part_fields_required":   "必須",
+	"part_fields_default":    "既定:",
 }

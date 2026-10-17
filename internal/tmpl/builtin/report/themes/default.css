@@ -35,12 +35,12 @@
 .floe-code .lang { border-radius: 6px; }
 blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--panel); color: var(--fg); }
 blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
-:is(.floe-progress, .floe-steps, .floe-checklist, .floe-tree) { background: var(--panel); border: 0; border-radius: 20px; box-shadow: none; }
-.floe-bar progress { background: var(--surface); }
-.floe-checklist { padding: 6px; }
-.floe-checklist > li { background: var(--surface); }
-.floe-checklist > li:first-child { border-radius: 14px 14px 0 0; }
-.floe-checklist > li:last-child { border-radius: 0 0 14px 14px; }
-.floe-checklist > li:only-child { border-radius: 14px; }
+:is(.floe-progress, .floe-steps, .floe-checklist, .floe-tree, .floe-details, .floe-timeline, .floe-bars, .floe-faq, .floe-glossary, .floe-keys) { background: var(--panel); border: 0; border-radius: 20px; box-shadow: none; }
+:is(.floe-bar progress, .floe-bars .track) { background: var(--surface); }
+:is(.floe-checklist, .floe-faq, .floe-glossary, .floe-keys) { padding: 6px; }
+:is(.floe-checklist, .floe-faq, .floe-glossary, .floe-keys) > * { background: var(--surface); }
+:is(.floe-checklist, .floe-faq, .floe-glossary, .floe-keys) > :first-child { border-radius: 14px 14px 0 0; }
+:is(.floe-checklist, .floe-faq, .floe-glossary, .floe-keys) > :last-child { border-radius: 0 0 14px 14px; }
+:is(.floe-checklist, .floe-faq, .floe-glossary, .floe-keys) > :only-child { border-radius: 14px; }
 .floe-tree { padding: 6px; }
 .floe-tree > ul { background: var(--surface); border-radius: 14px; padding: 0.7rem 1.1rem; }

@@ -1,0 +1,6 @@
+/* In the table's look, without a heading: a level's pill, then where and what, then what became of it */
+.floe-findings td.level, .floe-findings td.status { width: 1%; min-width: auto; white-space: nowrap; }
+.floe-findings td.status { text-align: right; }
+.floe-findings .level .nit { background: color-mix(in srgb, var(--line, #d4dbd8) 55%, var(--surface, #fff)); color: var(--muted, #57635f); }
+.floe-findings .at { display: block; width: fit-content; padding: 0; background: none; font-size: 0.8rem; color: var(--accent, #1d6670); overflow-wrap: anywhere; }
+.floe-findings .why { margin-top: 0.15rem; font-size: 0.88rem; color: var(--muted, #57635f); }

@@ -1,0 +1,14 @@
+/* Each question a row; Q leads it, and its answer opens under it */
+.floe-faq { display: grid; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 14px; box-shadow: 0 1px 2px rgb(24 32 30 / 0.06); }
+.floe-faq > details + details { border-top: 1px solid var(--line, #d4dbd8); }
+.floe-faq summary {
+  display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.5rem; padding: 0.75rem 1.2rem;
+  cursor: pointer; font-weight: 700; list-style: none;
+}
+.floe-faq summary::-webkit-details-marker { display: none; }
+.floe-faq summary::before { content: "Q"; content: "Q" / ""; color: var(--accent, #1d6670); }
+.floe-faq summary::after { content: "+"; content: "+" / ""; color: var(--muted, #57635f); font-weight: 400; }
+.floe-faq details[open] summary::after { content: "−"; content: "−" / ""; }
+.floe-faq summary:focus-visible { outline-offset: -2px; }
+.floe-faq details > div { display: grid; gap: 0.5rem; padding: 0 1.2rem 0.9rem 3.1rem; color: var(--muted, #57635f); }
+.floe-faq details > div > * { margin: 0; }

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/diagram"
+	"github.com/sukekyo26/floe/internal/i18n"
 )
 
 // palette are the CSS variables of a theme that parts and diagrams take their colours, fonts and width
@@ -40,7 +41,7 @@ func TestPalette(t *testing.T) {
 		if bare := regexp.MustCompile(`var\(\s*--[\w-]+\s*\)`).FindString(p.css); bare != "" {
 			t.Errorf("the part %s takes %s without a value of its own", name, bare)
 		}
-		if p.page != nil && p.classes == nil {
+		if p.pages != nil && p.classes == nil {
 			t.Errorf("the style of the part %s names no floe- class, so no page gets it", name)
 		}
 		// A part draws in another's look by naming its classes in its HTML, not in its style, which would
@@ -139,8 +140,8 @@ func TestCheckExprFirst(t *testing.T) {
 	}
 }
 
-// A part readies its item with no data file to look up what it drew: it holds no item of a part or a
-// format of floe's.
+// A part holds parts, which it draws as the data file drew them, but no item of a format of floe's,
+// which floe looks for only outside parts.
 func TestPartsDrawnWhole(t *testing.T) {
 	t.Parallel()
 
@@ -153,14 +154,41 @@ func TestPartsDrawnWhole(t *testing.T) {
 		if s == nil {
 			return false
 		}
-		if s.part != nil || slices.Contains(formats, s.Format) || drawnWhole(s.Items) {
+		if slices.Contains(formats, s.Format) || drawnWhole(s.Items) {
 			return true
 		}
 		return slices.ContainsFunc(slices.Collect(maps.Values(s.Properties)), drawnWhole)
 	}
 	for name, p := range set.parts {
 		if drawnWhole(p.schema.Items) || slices.ContainsFunc(slices.Collect(maps.Values(p.schema.Properties)), drawnWhole) {
-			t.Errorf("the part %s holds an item of a part or a format", name)
+			t.Errorf("the part %s holds an item of a format", name)
+		}
+	}
+}
+
+// Every word a part draws by label has a message, which the languages without it take from English.
+func TestPartLabels(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The words a part draws from its data, label $mark, are the values of the schema's enum.
+	dynamic := map[string][]string{"matrix": {"yes", "part", "no"}, "risks": {"low", "mid", "high"}}
+	english := i18n.EnglishCatalog()
+	for name, p := range set.parts {
+		keys := dynamic[name]
+		for _, m := range regexp.MustCompile(`label "(\w+)"`).FindAllStringSubmatch(p.html, -1) {
+			keys = append(keys, m[1])
+		}
+		if strings.Contains(p.html, "label $") != (dynamic[name] != nil) {
+			t.Errorf("the part %s draws a word from its data, which TestPartLabels does not know", name)
+		}
+		for _, k := range keys {
+			if key := "part_" + name + "_" + k; english.Msg(key) == key {
+				t.Errorf("no message for %s", key)
+			}
 		}
 	}
 }
