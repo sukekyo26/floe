@@ -14,7 +14,8 @@ import (
 // from, as docs/templates.md lists them.
 var palette = []string{
 	"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
-	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono", "--text-width",
+	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono", "--text-width", "--terminal-bg", "--terminal-fg",
+	"--terminal-prompt",
 }
 
 // The parts and diagrams take their colours, fonts and width from the palette alone, which the report

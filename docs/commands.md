@@ -45,7 +45,7 @@ Pages are drawn from data files (`.yaml`, `.yml`). The data file is copied to `<
 
 ### Data files
 
-A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts: Markdown text, `table`, `cards` and `note` parts, `diagram` parts for diagrams, `script` parts for what moves, and `html` parts for what they cannot say.
+A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts: Markdown text, `code` and `terminal` parts for code and commands, `table`, `cards` and `note` parts, `diagram` parts for diagrams, `script` parts for what moves, and `html` parts for what they cannot say.
 
 ```yaml
 template: report               # the template that draws the page
@@ -59,6 +59,13 @@ sections:
       - text: |                # Markdown, tables included; raw HTML in it is left out
           1. Freeze edits on **Friday evening**.
           2. Copy the pages.
+      - terminal:              # commands and what they printed; floe draws the prompt (shell: sh, powershell, cmd)
+          steps:
+            - { run: wiki export --out pages/, out: 1840 pages written }
+      - code:                  # code as it is, under its file or language
+          file: old-wiki.conf
+          text: |
+            read_only = true
       - diagram:               # a diagram spec, as floe diagram render takes it
           id: move
           width: 640
@@ -91,7 +98,7 @@ sections:
 - A diagram (the part `diagram`, in `report` or a template's own) is a spec written in place, with the parts and checks of [`floe diagram render`](#floe-diagram-render-specyaml), its mistakes at the data file's lines and columns. The ids of the diagrams of a page must differ. Its icons come from `FLOE_ICONS_DIR`; for a published page, from that of the server, which draws it.
 - A script (the part `script`, in `report` or a template's own) is `js`, a function the page calls with an empty element in its place and `data`. A mapping in `data` comes in the order of its keys' names (write a list where the order matters), and the function runs where it stands, before the rest of the page is read. A `js` holding `</script` or `<!--` is refused; a mistake inside the function shows in the browser.
 - A template of your own, in `FLOE_TEMPLATES_DIR`, takes the place of a built-in one of its name. [templates.md](templates.md) tells how to write one.
-- The data is checked against the template's schema and its checks (`checks.yaml`) before the page is drawn. Every mistake is printed at once as `file:line:column: message`, and nothing is published until all are fixed (exit code 1): a missing or unknown template, a missing `lang:` or one that is not a BCP 47 tag, an item the template does not have (a typo), a value of the wrong type, a row of a `table` with more or fewer cells than its columns, and the like.
+- The data is checked against the template's schema and its checks (`checks.yaml`) before the page is drawn. Every mistake is printed at once as `file:line:column: message`, and nothing is published until all are fixed (exit code 1): a missing or unknown template, a missing `lang:` or one that is not a BCP 47 tag, an item the template does not have (a typo), a value of the wrong type, a row of a `table` with more or fewer cells than its columns, and the like. `report` refuses a fenced block of code (a line starting with ```` ``` ```` or `~~~`, indented or in a list or a quote too) in `text`: write code in `code` and commands in `terminal`. A `terminal`'s `run` whose first word is a prompt, ending in `$`, `#`, `%`, `>` or `❯` (`$ `, `~/app$ `, `root@host:~# `, `C:\work> `, `❯ `; after `(venv) `, and `[me@host app]$ ` and `PS C:\work> ` too), is refused.
 - A data file is one YAML document of keys and values: one with `---` between documents, or with anchors, aliases or tags, is refused.
 - The page is drawn each time it is opened, from the copy of the data file kept when it was published: changing the data file changes nothing until it is published again, but changing its template does. A data file linked with `--link` is drawn from its place instead.
 

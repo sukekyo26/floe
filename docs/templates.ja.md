@@ -72,7 +72,7 @@ floe: 1.2
 
 ## 部品
 
-floe には、テンプレートの項目を描く部品があります。`table`（セルにピルを置ける）・`cards`・`note`・`diagram`・`script`（後の 2 つは上で説明）です。schema では、floe が探す `properties` と `items` の下で、部品を `$ref` で指します。`anyOf` や `$defs` などの下では描かれないので、`floe template check` が誤りにします。
+floe には、テンプレートの項目を描く部品があります。`table`（セルにピルを置ける）・`cards`・`note`・`code`・`terminal`・`diagram`・`script`（後の 2 つは上で説明）です。`code` は `text` にコードをそのまま書き、`file` があればファイル名を、無ければ `lang` を上に出します。`terminal` は `steps` に、打つコマンド（`run`。2 行目からはその続き）と出力（`out`）の組を並べ、`shell` のプロンプトを付けます。`sh`（`$`。省いたとき）・`powershell`（`PS>`）・`cmd`（`>`）です。プロンプトはスタイルで描くので、コマンドをコピーしても入りません。最初の語がプロンプト（`$`・`#`・`%`・`>`・`❯` で終わる語）の `run` は断ります。schema では、floe が探す `properties` と `items` の下で、部品を `$ref` で指します。`anyOf` や `$defs` などの下では描かれないので、`floe template check` が誤りにします。
 
 ```json
 "risks": { "$ref": "floe:///parts/table.json", "description": "What may go wrong" }
@@ -80,7 +80,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 
 `page.html` では、項目を置きたい場所に `{{.Data.risks}}` と書きます。floe は項目を部品の schema と検査で確かめ（誤りはデータファイルの行と列で出します）、HTML に描きます。`floe template show` は、`$ref` の横に書いた説明に続けて、部品の項目を出します。floe に無い部品を指す `$ref` は、floe にある部品を添えて断ります。
 
-ページには、クラスを使った部品のスタイルが 1 回ずつ（Markdown の表や、`<span class="floe-pill good">` のように部品のクラスを書いた HTML も含む）、`<head>` の中でテンプレート自身のスタイルより前に入ります（`<head>` が無ければページの末尾）。部品のクラス名は `floe-` で始まります（`floe-table`・`floe-pill`・`floe-cards`・`floe-card`・`floe-note`）。テーマに同じセレクタ（か、より詳しいセレクタ）の規則を書けば、後に来る分だけ部品の規則より優先されて、見た目を変えられます。部品と図は色・書体・注記の幅を、テーマの CSS 変数から取ります。変数の無いテーマでは、既定のテーマの明るい値を使います。
+ページには、クラスを使った部品のスタイルが 1 回ずつ（Markdown の表や、`<span class="floe-pill good">` のように部品のクラスを書いた HTML も含む）、`<head>` の中でテンプレート自身のスタイルより前に入ります（`<head>` が無ければページの末尾）。部品のクラス名は `floe-` で始まります（`floe-table`・`floe-pill`・`floe-cards`・`floe-card`・`floe-note`・`floe-code`・`floe-terminal`）。テーマに同じセレクタ（か、より詳しいセレクタ）の規則を書けば、後に来る分だけ部品の規則より優先されて、見た目を変えられます。部品と図は色・書体・注記の幅を、テーマの CSS 変数から取ります。変数の無いテーマでは、既定のテーマの明るい値を使います。
 
 | 変数 | 意味 |
 | --- | --- |
@@ -91,8 +91,9 @@ floe には、テンプレートの項目を描く部品があります。`table
 | `--good`・`--warn`・`--bad` とそれぞれの `-soft` | 良い・注意・悪いの色と、その淡い地 |
 | `--font`・`--mono` | 本文の書体、等幅の書体 |
 | `--text-width` | 注記が広がる幅（本文と同じ） |
+| `--terminal-bg`・`--terminal-fg`・`--terminal-prompt` | ターミナルの地（ライトモードでも暗い）、コマンドの字（出力はこれを薄くする）、プロンプト |
 
-変数はテーマで定義するか、すべてのテーマの分を `page.html` の `<style>` で定義します。`floe template check` は、部品や図が使う変数のどれかを定義していないテーマを警告します。そのテーマの部品はダークモードでも明るい色のままになります。`tone`（ピル・注記・図の部品）は `accent`・`good`・`warn`・`bad` のどれかで、`--accent`・`--good` などの色と、その `-soft` を使います。
+変数はテーマで定義するか、すべてのテーマの分を `page.html` の `<style>` で定義します。`floe template check` は、部品や図が使う変数のどれかを定義していないテーマを警告します。そのテーマの部品はダークモードでも明るい色のままになります（ターミナルは暗いまま）。`tone`（ピル・注記・図の部品）は `accent`・`good`・`warn`・`bad` のどれかで、`--accent`・`--good` などの色と、その `-soft` を使います。
 
 ## 画像
 

@@ -159,26 +159,29 @@ func (t *Template) checkThemeVariables(lint *schemaLint) ([]*usererr.Error, erro
 			return nil, err
 		}
 		defined := definedVariables(css)
-		var missing []string
+		var colours, others []string
 		for _, v := range vars {
-			if !defined[v] && !inPage[v] {
-				missing = append(missing, v)
+			switch {
+			case defined[v] || inPage[v]:
+			case slices.Contains(sameInDark, v):
+				others = append(others, v)
+			default:
+				colours = append(colours, v)
 			}
 		}
-		if missing != nil {
-			key := "tmpl_theme_variables"
-			if !slices.ContainsFunc(missing, func(v string) bool { return !slices.Contains(notColours, v) }) {
-				key = "tmpl_theme_variables_plain"
-			}
-			warnings = append(warnings, usererr.New(key, t.file(name), andList(missing)))
+		if colours != nil {
+			warnings = append(warnings, usererr.New("tmpl_theme_variables", t.file(name), andList(colours)))
+		}
+		if others != nil {
+			warnings = append(warnings, usererr.New("tmpl_theme_variables_plain", t.file(name), andList(others)))
 		}
 	}
 	return warnings, nil
 }
 
-// notColours are the CSS variables of the parts and diagrams that are not colours: their fonts and the
-// width of a note.
-var notColours = []string{"--font", "--mono", "--text-width"}
+// sameInDark are the CSS variables of the parts whose default serves dark mode as well: their fonts, the
+// width of a note, and a terminal's text and prompt, dark-ground colours in light mode too.
+var sameInDark = []string{"--font", "--mono", "--text-width", "--terminal-fg", "--terminal-prompt"}
 
 // definedVariables returns the CSS variables src defines (--fg: #000), by name.
 func definedVariables(src []byte) map[string]bool {

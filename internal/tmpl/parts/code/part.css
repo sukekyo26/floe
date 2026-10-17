@@ -1,0 +1,14 @@
+.floe-code {
+  margin: 0; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 6px; overflow: hidden;
+  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP");
+}
+.floe-code figcaption {
+  font-size: 0.78rem; color: var(--muted, #57635f); background: var(--accent-soft, #dcebec);
+  padding: 0.3rem 1rem; border-bottom: 1px solid var(--line, #d4dbd8);
+}
+.floe-code pre {
+  margin: 0; padding: 0.9rem 1rem; overflow-x: auto; background: none; border: 0; border-radius: 0;
+  font-family: inherit; font-size: 0.875rem; line-height: 1.65; tab-size: 4; color: var(--fg, #18201e);
+}
+/* A block, so that the code's last line break draws no empty line */
+.floe-code code { display: block; font: inherit; background: none; padding: 0; border-radius: 0; }

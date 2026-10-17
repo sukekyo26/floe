@@ -272,7 +272,7 @@ lang: en
 	want := []string{
 		"bad.yaml:3:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title",
 		"bad.yaml:5:14: sections[0].heading: write text, not a number",
-		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use cards, diagram, html, note, script, table, text",
+		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use cards, code, diagram, html, note, script, table, terminal, text",
 		"bad.yaml:8:9: sections[0].parts[1]: the number of keys must be at most 1",
 		"bad.yaml:10:9: sections[0].parts[2]: the number of keys must be at least 1",
 		"bad.yaml:11:12: sections[1].parts: write a list, not text",

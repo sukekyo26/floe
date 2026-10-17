@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "report",
-  "description": "A page of sections, each a heading over parts: Markdown text, tables, cards, notes, diagrams, scripts, or HTML for what they cannot say.",
+  "description": "A page of sections, each a heading over parts: Markdown text, code, commands at a terminal, tables, cards, notes, diagrams, scripts, or HTML for what they cannot say.",
   "type": "object",
   "properties": {
     "eyebrow": { "type": "string", "description": "A short line above the title, such as the kind of page and its date" },
@@ -18,7 +18,9 @@
               "type": "object",
               "description": "One key naming the kind of the part",
               "properties": {
-                "text": { "type": "string", "format": "markdown", "description": "Markdown; raw HTML in it is left out" },
+                "text": { "type": "string", "format": "markdown", "description": "Markdown; raw HTML in it is left out. Code goes in code and commands in terminal, short code in a sentence as `code`" },
+                "code": { "$ref": "floe:///parts/code.json", "description": "Write every block of code here" },
+                "terminal": { "$ref": "floe:///parts/terminal.json", "description": "Write every command here, without its prompt" },
                 "table": { "$ref": "floe:///parts/table.json" },
                 "cards": { "$ref": "floe:///parts/cards.json" },
                 "note": { "$ref": "floe:///parts/note.json" },

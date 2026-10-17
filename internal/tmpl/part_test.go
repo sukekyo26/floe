@@ -1,6 +1,7 @@
 package tmpl_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -127,11 +128,12 @@ func TestCheckParts(t *testing.T) {
 	var told string
 	for _, w := range warnings {
 		if strings.Contains(w.Error(), "themes/default.css") {
-			told = w.Error()
+			told += w.Error() + "\n"
 		}
 	}
 	if !strings.Contains(told, "--accent") || !strings.Contains(told, "--good-soft") || strings.Contains(told, "--fg,") ||
-		!strings.Contains(told, "dark mode") {
+		!strings.Contains(told, "--line, which the template's parts and diagrams take from it, so they keep the default theme's values: its light colours, in dark mode too\n") ||
+		!strings.Contains(told, "does not define --text-width, --mono, which the template's parts and diagrams take from it, so they keep the default theme's values\n") {
 		t.Errorf("the warning of the theme = %q", told)
 	}
 	// A theme that leaves out no colour is not told of dark mode.
@@ -150,7 +152,7 @@ func TestCheckParts(t *testing.T) {
 
 	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table"} {
 		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
-		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of cards, diagram, note, script, table"
+		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of cards, code, diagram, note, script, table, terminal"
 		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 			t.Errorf("Check of %s = %v", ref, mistakes)
 		}
@@ -252,4 +254,81 @@ func TestGoPartsAndMarkdown(t *testing.T) {
 	if i < 0 || d.Items[i].Part != "diagram" || !strings.HasPrefix(d.Items[i].Description, "A diagram: a spec") {
 		t.Errorf("the items = %+v", d.Items)
 	}
+}
+
+// Code goes in as it is, under its file, else its language; a terminal draws its prompt by the shell's
+// class, with a command's later lines and its output apart.
+func TestCodeAndTerminal(t *testing.T) {
+	t.Parallel()
+
+	page := render(t, "template: report\nlang: en\nsections:\n  - parts:\n"+
+		"      - code: { file: a.go, lang: go, text: \"if a < b {\\n\\treturn\\n}\\n\" }\n"+
+		"      - code: { lang: sh, text: x }\n"+
+		"      - code: { text: y }\n"+
+		"      - terminal: { steps: [{ run: \"make \\\\\\n  all\", out: done }, { run: ls }] }\n"+
+		"      - terminal: { shell: powershell, steps: [{ run: dir }] }\n")
+	for _, want := range []string{
+		"<figure class=\"floe-code\"><figcaption>a.go</figcaption><pre><code>if a &lt; b {\n\treturn\n}\n</code></pre></figure>",
+		`<figure class="floe-code"><figcaption>sh</figcaption><pre><code>x</code></pre></figure>`,
+		`<figure class="floe-code"><pre><code>y</code></pre></figure>`,
+		"<pre class=\"floe-terminal sh\"><span class=\"run\">make \\\n  all</span><span class=\"out\">done</span><span class=\"run\">ls</span></pre>",
+		`<pre class="floe-terminal powershell"><span class="run">dir</span></pre>`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the page lacks %s:\n%s", want, page)
+		}
+	}
+	if strings.Count(page, ".floe-code {") != 1 || strings.Count(page, ".floe-terminal {") != 1 {
+		t.Errorf("the parts' styles, once each:\n%s", page)
+	}
+
+	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
+		"      - code: { lang: go }\n"+
+		"      - terminal: { shell: zsh, steps: [] }\n"), "", "")
+	for _, want := range []string{
+		"bad.yaml:5:17: sections[0].parts[0].code.text is required but missing",
+		`bad.yaml:6:28: sections[0].parts[1].terminal.shell: "zsh" is not allowed; use sh, powershell, cmd`,
+		"bad.yaml:6:40: sections[0].parts[1].terminal.steps: the number of items must be at least 1",
+	} {
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("the mistakes = %v, want %s", err, want)
+		}
+	}
+	// A command written with its prompt would show two, and copy one: a first word ending in a prompt's mark is
+	// one, after an environment's name too, while a comment, a redirect and $ further on are not.
+	runs := []string{
+		"$ ls", "% make", "❯ make", `PS C:\Program Files> dir`, `C:\work> dir`, "user@host:~/作業$ make",
+		"root@host:~# apt update", "[me@host app]$ make", "(venv) $ pip install x", "me@mac% make",
+		"> app.log", ">> app.log", "2> err.log", "&> all.log", "(cd web && make) >> build.log", "# a comment", "echo $ x",
+		"%EDITOR% notes.txt", `C:\Python312\python.exe a.py > out.txt`, "cat > a.html <<EOF\n<p> hi</p>\n$ x\nEOF",
+	}
+	steps := make([]string, 0, len(runs))
+	for _, r := range runs {
+		steps = append(steps, fmt.Sprintf("{ run: %q }", r))
+	}
+	_, err = builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
+		"      - terminal: { steps: ["+strings.Join(steps, ", ")+"] }\n"), "", "")
+	for i, r := range runs {
+		want := fmt.Sprintf("terminal.steps[%d].run: write the command without its prompt", i)
+		if refused := err != nil && strings.Contains(err.Error(), want); refused != (i < 10) {
+			t.Errorf("run %q refused = %v: %v", r, refused, err)
+		}
+	}
+}
+
+// report sends code and commands to their parts by refusing a fenced block of code in text, in a list or
+// a quote too, while prose, a quote and short code in a sentence pass, prompts or not.
+func TestReportRefusesCodeInText(t *testing.T) {
+	t.Parallel()
+
+	for _, text := range []string{
+		"```go\\nx\\n```", "~~~\\nx\\n~~~", "```sh\\n$ ls\\n```", "> ```sh\\n> x\\n> ```", "- ```sh\\n  x",
+	} {
+		_, err := builtins.Read("t.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n      - text: \"a\\n"+text+"\"\n"), "", "")
+		if err == nil || strings.Count(err.Error(), "t.yaml:5:15: sections[0].parts[0].text: write ") != 1 {
+			t.Errorf("text %q = %v", text, err)
+		}
+	}
+	render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: \"Run `floe list`.\\n\\n> a quote\\n\\n"+
+		"$ 5 a month.\\n\\n100% done.\\n\\n`$ ls` lists.\"\n")
 }
