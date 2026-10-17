@@ -72,7 +72,7 @@ An item the part `script` draws (`"$ref": "floe:///parts/script.json"`) is somet
 
 ## Parts
 
-floe has parts that draw items of a template: `table` (with pills in its cells), `cards`, `note`, `code`, `terminal`, `diagram` and `script` (both told above). `code` is `text`, code as it is, under its `file`, else its `lang`. `terminal` is `steps`, each a command (`run`, its later lines going on with it) and what it printed (`out`), at the prompt of its `shell`: `sh` (`$`, when left out), `powershell` (`PS>`) or `cmd` (`>`). The style draws the prompt, so a copy of the commands leaves it out. A schema refers to one with `$ref`, under `properties` and `items`, where floe looks for them; `floe template check` refuses one under `anyOf`, `$defs` and the like, which would never be drawn.
+floe has parts that draw items of a template: `table` (with pills in its cells), `cards`, `note`, `code`, `terminal`, `diagram` and `script` (both told above). `code` is `text`, code as it is, under its `file`, else its `lang`. `terminal` is `steps`, each a command (`run`, its later lines going on with it) and what it printed (`out`), at the prompt of its `shell`: `sh` (`$`, when left out), `powershell` (`PS>`) or `cmd` (`>`). The style draws the prompt, so a copy of the commands leaves it out; a `run` whose first word is a prompt (ending in `$`, `#`, `%`, `>` or `❯`) is refused. A schema refers to one with `$ref`, under `properties` and `items`, where floe looks for them; `floe template check` refuses one under `anyOf`, `$defs` and the like, which would never be drawn.
 
 ```json
 "risks": { "$ref": "floe:///parts/table.json", "description": "What may go wrong" }

@@ -41,10 +41,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `powershell` `PS>` or `cmd` `>`), which the built-in `report` takes. The
   prompt is drawn by the style, so a copy of the commands leaves it out, and a
   terminal is dark in light mode too, in the colours of `--terminal-bg`,
-  `--terminal-fg` and `--terminal-prompt`. A `run` written with its prompt is
-  refused. `report` refuses a fenced block of code and a line starting with a
-  prompt (`$ `, `~/app$ `, `% `, `PS> `, `C:\work> ` and the like) in `text`,
-  pointing at the part to write it in.
+  `--terminal-fg` and `--terminal-prompt`. A `run` whose first word is a
+  prompt (ending in `$`, `#`, `%`, `>` or `❯`, such as `~/app$` or `C:\work>`)
+  is refused. `report` refuses a fenced block of code in `text`, pointing at
+  the parts to write code and commands in.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as

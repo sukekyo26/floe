@@ -72,7 +72,7 @@ floe: 1.2
 
 ## 部品
 
-floe には、テンプレートの項目を描く部品があります。`table`（セルにピルを置ける）・`cards`・`note`・`code`・`terminal`・`diagram`・`script`（後の 2 つは上で説明）です。`code` は `text` にコードをそのまま書き、`file` があればファイル名を、無ければ `lang` を上に出します。`terminal` は `steps` に、打つコマンド（`run`。2 行目からはその続き）と出力（`out`）の組を並べ、`shell` のプロンプトを付けます。`sh`（`$`。省いたとき）・`powershell`（`PS>`）・`cmd`（`>`）です。プロンプトはスタイルで描くので、コマンドをコピーしても入りません。schema では、floe が探す `properties` と `items` の下で、部品を `$ref` で指します。`anyOf` や `$defs` などの下では描かれないので、`floe template check` が誤りにします。
+floe には、テンプレートの項目を描く部品があります。`table`（セルにピルを置ける）・`cards`・`note`・`code`・`terminal`・`diagram`・`script`（後の 2 つは上で説明）です。`code` は `text` にコードをそのまま書き、`file` があればファイル名を、無ければ `lang` を上に出します。`terminal` は `steps` に、打つコマンド（`run`。2 行目からはその続き）と出力（`out`）の組を並べ、`shell` のプロンプトを付けます。`sh`（`$`。省いたとき）・`powershell`（`PS>`）・`cmd`（`>`）です。プロンプトはスタイルで描くので、コマンドをコピーしても入りません。最初の語がプロンプト（`$`・`#`・`%`・`>`・`❯` で終わる語）の `run` は断ります。schema では、floe が探す `properties` と `items` の下で、部品を `$ref` で指します。`anyOf` や `$defs` などの下では描かれないので、`floe template check` が誤りにします。
 
 ```json
 "risks": { "$ref": "floe:///parts/table.json", "description": "What may go wrong" }
