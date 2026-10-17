@@ -162,6 +162,11 @@ func (e *Entry) draw(data *tmpl.Data, src, theme, templates string) error {
 	e.Meta.Theme, e.Meta.Templates = theme, templates
 	if !e.Meta.IsLink() {
 		e.Source, e.Images = []byte(src), data.Images()
+		for name := range e.Images {
+			if first, _, _ := strings.Cut(name, "/"); first == sourceName {
+				return usererr.New("store_image_source_name", name, sourceName)
+			}
+		}
 	}
 	_, err := drawData(data, &e.Meta, e.Slug)
 	return err

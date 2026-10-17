@@ -18,16 +18,17 @@ var messagesJA = map[string]string{
 	"link_exposes_dir":     "%[1]s を登録すると %[2]s 全体が公開されます。専用のディレクトリに置いてから登録してください",
 
 	// store
-	"store_invalid_slug":  "URL 名「%s」は使えません。英小文字・数字・ハイフンで入力してください",
-	"store_slug_is_page":  "URL 名「%[1]s」は保存したページで使われています。別の URL 名にするか、先にそれを消してください（floe rm %[1]s）",
-	"store_slug_is_link":  "URL 名「%[1]s」はリンクで使われています。別の URL 名にするか、先にそれを消してください（floe rm %[1]s）",
-	"store_slug_linked":   "URL 名「%[1]s」は %[2]s のリンクで使われています。別の URL 名にするか、floe publish --link --force でそのリンクを置き換えてください",
-	"store_slug_owned":    "URL 名「%[1]s」はプロジェクト %[2]s から公開されています。--slug で別の URL 名にするか、--force を付けてそのページを置き換えてください",
-	"store_slug_taken":    "URL 名「%s」は使われています。別の URL 名を入力してください",
-	"store_project_slash": "プロジェクト名に / だけは使えません",
-	"store_not_data":      "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
-	"store_theme_link":    "--theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
-	"store_no_page":       "ページ「%s」はありません（floe list で確かめられます）",
+	"store_invalid_slug":      "URL 名「%s」は使えません。英小文字・数字・ハイフンで入力してください",
+	"store_slug_is_page":      "URL 名「%[1]s」は保存したページで使われています。別の URL 名にするか、先にそれを消してください（floe rm %[1]s）",
+	"store_slug_is_link":      "URL 名「%[1]s」はリンクで使われています。別の URL 名にするか、先にそれを消してください（floe rm %[1]s）",
+	"store_slug_linked":       "URL 名「%[1]s」は %[2]s のリンクで使われています。別の URL 名にするか、floe publish --link --force でそのリンクを置き換えてください",
+	"store_slug_owned":        "URL 名「%[1]s」はプロジェクト %[2]s から公開されています。--slug で別の URL 名にするか、--force を付けてそのページを置き換えてください",
+	"store_slug_taken":        "URL 名「%s」は使われています。別の URL 名を入力してください",
+	"store_project_slash":     "プロジェクト名に / だけは使えません",
+	"store_not_data":          "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
+	"store_theme_link":        "--theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
+	"store_no_page":           "ページ「%s」はありません（floe list で確かめられます）",
+	"store_image_source_name": "画像「%[1]s」は %[2]s という名前のディレクトリの下にあります。保存先はデータファイルをその名前で写すので、ディレクトリの名前を変えてください",
 
 	// server
 	"api_not_json":      "送られた内容を読めませんでした（JSON ではありません）",

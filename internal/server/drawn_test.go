@@ -167,6 +167,14 @@ func TestDrawnStored(t *testing.T) {
 		t.Errorf("the page of a copy with mistakes:\n%s", r.body)
 	}
 
+	// An image under a directory named as the copy of the data file is refused.
+	e.write(t, "clash/data.yaml/c.png", string(png))
+	clash := e.write(t, "clash/sizes.yaml", strings.Replace(right, "img/chart.png", "data.yaml/c.png", 1))
+	if _, err := e.store.Prepare(t.Context(), clash, store.Options{Slug: ptr("sizes")}, e.tmp); err == nil ||
+		!strings.Contains(err.Error(), `image "data.yaml/c.png" is under a directory named data.yaml`) {
+		t.Errorf("publish of an image under data.yaml/ = %v", err)
+	}
+
 	// Renamed on the management page, it is drawn under its new slug.
 	e.write(t, "store/sizes/source/data.yaml", right)
 	if _, err := e.store.Edit("sizes", store.Edit{Slug: ptr("moved")}); err != nil {

@@ -19,16 +19,17 @@ var messagesEN = map[string]string{
 	"link_exposes_dir":     "%s would expose all of %s; move it into a directory of its own and link it there",
 
 	// store: publishing and editing pages
-	"store_invalid_slug":  `invalid slug "%s": use only lowercase letters, digits and hyphens`,
-	"store_slug_is_page":  `slug "%[1]s" is used by a stored page; choose another slug, or remove that page first (floe rm %[1]s)`,
-	"store_slug_is_link":  `slug "%[1]s" is used by a linked file; choose another slug, or remove that link first (floe rm %[1]s)`,
-	"store_slug_linked":   `slug "%[1]s" is linked to %[2]s; choose another slug, or replace that link with floe publish --link --force`,
-	"store_slug_owned":    `slug "%[1]s" was published from project %[2]s; use another --slug, or add --force to replace that page`,
-	"store_slug_taken":    `slug "%s" is already in use; choose another slug`,
-	"store_project_slash": `a project name cannot be just "/"`,
-	"store_not_data":      "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
-	"store_theme_link":    "--theme picks the theme of a page drawn from a data file: a linked file is shown as it is",
-	"store_no_page":       `no page "%s" (see floe list)`,
+	"store_invalid_slug":      `invalid slug "%s": use only lowercase letters, digits and hyphens`,
+	"store_slug_is_page":      `slug "%[1]s" is used by a stored page; choose another slug, or remove that page first (floe rm %[1]s)`,
+	"store_slug_is_link":      `slug "%[1]s" is used by a linked file; choose another slug, or remove that link first (floe rm %[1]s)`,
+	"store_slug_linked":       `slug "%[1]s" is linked to %[2]s; choose another slug, or replace that link with floe publish --link --force`,
+	"store_slug_owned":        `slug "%[1]s" was published from project %[2]s; use another --slug, or add --force to replace that page`,
+	"store_slug_taken":        `slug "%s" is already in use; choose another slug`,
+	"store_project_slash":     `a project name cannot be just "/"`,
+	"store_not_data":          "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
+	"store_theme_link":        "--theme picks the theme of a page drawn from a data file: a linked file is shown as it is",
+	"store_no_page":           `no page "%s" (see floe list)`,
+	"store_image_source_name": `image "%[1]s" is under a directory named %[2]s, the name the store keeps the data file by; rename that directory`,
 
 	// server: refusals of the management page's API
 	"api_not_json":      "cannot read the request: it is not JSON",
