@@ -5,6 +5,7 @@
   "type": "object",
   "properties": {
     "tone": { "$ref": "floe:///parts/tone.json" },
+    "title": { "type": "string", "minLength": 1, "description": "A short heading above the text, such as Note or Warning" },
     "text": { "type": "string", "minLength": 1, "description": "Markdown" }
   },
   "required": ["text"],

@@ -903,7 +903,7 @@ func TestPublishLang(t *testing.T) {
 	listed := e.write(t, "listed.yaml", "template: report\ntheme: [dark]\nlang: en\n")
 	e.mustPublish(t, listed, store.Options{Theme: ptr("default")}, "other")
 	_, err = e.publish(t, frag, store.Options{Theme: ptr("print")}, "other")
-	wantUserErr(t, err, "tmpl_unknown_theme", "print", "report", "default")
+	wantUserErr(t, err, "tmpl_unknown_theme", "print", "report", "bento, default, editorial, ink, tinted")
 
 	// A linked file is shown as it is: --theme is refused.
 	site := e.write(t, "site/index.html", "<h1>A</h1>")

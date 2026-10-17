@@ -23,7 +23,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   (`columns`, a `num` one aligned right, and `rows`, each cell a line of
   Markdown, a number in quotes, or a pill, `{ pill, tone }`, as many in each
   row as there are columns), `cards` (each a `title` over Markdown `text`) and
-  `note` (Markdown `text` with a `tone`), each `tone` `accent`, `good`, `warn`
+  `note` (Markdown `text` with a `tone`, under a `title` if one is given), each `tone` `accent`, `good`, `warn`
   or `bad`. The built-in `report` takes them, and a template of one's own
   refers to one with `"$ref": "floe:///parts/table.json"`: floe checks the item,
   draws it, and puts the part's style once into a page that uses its classes,
@@ -36,7 +36,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   Markdown without a paragraph around it, keeping a cell like `-` or `1.` as
   text.
 - Write code and commands in data files: floe's parts `code` (`text` as it is,
-  under its `file`, else its `lang`) and `terminal` (`steps`, each a command,
+  under its `file` with its `lang` at the right) and `terminal` (`steps`, each a command,
   `run`, with what it printed, `out`, under the name of its `shell` and at its
   prompt: `bash` or `sh` `$`, `zsh` `%`, `powershell` `PS>` or `cmd` `>`),
   which the built-in `report` takes. The prompt is drawn by the style, so a
@@ -45,6 +45,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   word is a prompt (ending in `$`, `#`, `%`, `>` or `❯`, such as `~/app$` or
   `C:\work>`) is refused. `report` refuses a fenced block of code in `text`,
   pointing at the parts to write code and commands in.
+- Pick the look of the built-in `report` by its theme: `default` (faces with
+  round corners), `editorial` (rules and thin frames, as in print), `bento`
+  (faces set in panels), `ink` (a table's heading in ink, states filled with
+  their colour) or `tinted` (faces tinted with the accent), each in light and
+  dark mode. A theme restyles floe's parts by their classes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as

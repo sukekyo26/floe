@@ -1,19 +1,23 @@
-/* A mark of the tone's colour stands at the left of the text, which goes in the second column */
+/* A mark of the tone stands at the left, drawn by the style; the title and text go in the second column */
 .floe-note {
-  display: grid; grid-template-columns: 1.4rem 1fr; column-gap: 0.75rem; align-items: start;
-  background: var(--accent-soft, #dcebec); border: 1px solid color-mix(in srgb, var(--accent, #1d6670) 25%, transparent);
-  padding: 0.85rem 1rem; border-radius: 8px; max-width: var(--text-width, 56rem);
+  display: grid; grid-template-columns: 1.6rem 1fr; column-gap: 0.85rem; align-items: start;
+  background: var(--accent-soft, #dcebec); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width, 56rem);
 }
-.floe-note.good { background: var(--good-soft, #dcefe3); border-color: color-mix(in srgb, var(--good, #1f7a45) 25%, transparent); }
-.floe-note.warn { background: var(--warn-soft, #f6e8d2); border-color: color-mix(in srgb, var(--warn, #8a5a10) 25%, transparent); }
-.floe-note.bad { background: var(--bad-soft, #fbe5e2); border-color: color-mix(in srgb, var(--bad, #b3261e) 25%, transparent); }
+.floe-note.good { background: var(--good-soft, #dcefe3); }
+.floe-note.warn { background: var(--warn-soft, #f6e8d2); }
+.floe-note.bad { background: var(--bad-soft, #fbe5e2); }
 .floe-note::before {
-  content: "i"; grid-row: 1 / span 99; display: grid; place-items: center; width: 1.4rem; height: 1.4rem; margin-top: 0.2rem;
+  content: "i"; grid-row: 1 / span 99; display: grid; place-items: center; width: 1.6rem; height: 1.6rem; margin-top: 0.15rem;
   border-radius: 50%; background: var(--accent, #1d6670); color: var(--surface, #fff); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
 .floe-note.good::before { content: "✓"; background: var(--good, #1f7a45); }
 .floe-note.warn::before { content: "!"; background: var(--warn, #8a5a10); }
-.floe-note.bad::before { content: "✕"; background: var(--bad, #b3261e); }
+.floe-note.bad::before { content: "×"; background: var(--bad, #b3261e); }
 .floe-note > * { grid-column: 2; margin: 0; }
-.floe-note > * + * { margin-top: 0.6rem; }
+.floe-note > * + * { margin-top: 0.5rem; }
+.floe-note-title { display: block; font-size: 0.9rem; color: var(--accent, #1d6670); }
+.floe-note.good .floe-note-title { color: var(--good, #1f7a45); }
+.floe-note.warn .floe-note-title { color: var(--warn, #8a5a10); }
+.floe-note.bad .floe-note-title { color: var(--bad, #b3261e); }
+.floe-note > .floe-note-title + * { margin-top: 0.1rem; }
 .floe-note code { background: var(--surface, #fff); }

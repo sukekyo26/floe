@@ -1,1 +1,1 @@
-<div class="floe-note{{with .tone}} {{.}}{{end}}">{{markdown .text}}</div>
+<div class="floe-note{{with .tone}} {{.}}{{end}}">{{with .title}}<strong class="floe-note-title">{{.}}</strong>{{end}}{{markdown .text}}</div>

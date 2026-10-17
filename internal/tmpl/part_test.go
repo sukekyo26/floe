@@ -111,7 +111,7 @@ func TestDescribePart(t *testing.T) {
 	for _, it := range aside.Items {
 		names = append(names, it.Name+":"+strings.Join(it.Enum, "|"))
 	}
-	if strings.Join(names, " ") != "text: tone:accent|good|warn|bad" {
+	if strings.Join(names, " ") != "text: title: tone:accent|good|warn|bad" {
 		t.Errorf("the items of aside are %v", names)
 	}
 }
@@ -269,8 +269,8 @@ func TestCodeAndTerminal(t *testing.T) {
 		"      - terminal: { shell: powershell, steps: [{ run: dir }] }\n"+
 		"      - terminal: { shell: zsh, steps: [{ run: ls }] }\n")
 	for _, want := range []string{
-		"<figure class=\"floe-code\"><figcaption>a.go</figcaption><pre><code>if a &lt; b {\n\treturn\n}\n</code></pre></figure>",
-		`<figure class="floe-code"><figcaption>sh</figcaption><pre><code>x</code></pre></figure>`,
+		"<figure class=\"floe-code\"><figcaption><span class=\"file\">a.go</span><span class=\"lang\">go</span></figcaption><pre><code>if a &lt; b {\n\treturn\n}\n</code></pre></figure>",
+		`<figure class="floe-code"><figcaption><span class="lang">sh</span></figcaption><pre><code>x</code></pre></figure>`,
 		`<figure class="floe-code"><pre><code>y</code></pre></figure>`,
 		"<figure class=\"floe-terminal sh\"><pre><span class=\"run\">make \\\n  all</span><span class=\"out\">done</span><span class=\"run\">ls</span></pre></figure>",
 		`<figure class="floe-terminal powershell"><figcaption>PowerShell</figcaption><pre><span class="run">dir</span></pre></figure>`,
