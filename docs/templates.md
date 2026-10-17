@@ -60,7 +60,7 @@ A page drawn from a data file holds all it shows, and its scripts cannot send wh
 
 A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused. `template`, `theme` and `title` are read by floe and are not declared.
 
-A `format` is one of JSON Schema's that floe checks (`date`, `email`, `uri`…), or one of floe's that tells how to read a text: `html`, `image` or `markdown`; `floe template check` refuses another, which this floe would let any value pass. Floe's go under `properties` and `items` alone, where floe looks for them: under `anyOf`, `$defs` and the like, the item would be drawn as text. Declare `"type": "string"` alone for them. A diagram or a script is a [part](#parts), not a format: a schema that writes `"format": "diagram"` or `"format": "script"` is refused wherever the template is used.
+A `format` is one of JSON Schema's that floe checks (`date`, `email`, `uri`…), or one of floe's that tells how to read a text: `html`, `image` or `markdown`; `floe template check` refuses another, which this floe would let any value pass. Floe's go under `properties` and `items` alone, where floe looks for them: under `anyOf`, `$defs` and the like, the item would be drawn as text. Declare `"type": "string"` alone for them. A diagram or a script is a [part](#parts), not a format: `floe template check` refuses `"format": "diagram"` and `"format": "script"` anywhere in a schema, and one under `properties` and `items` stops the template wherever it is used.
 
 An item of `"format": "markdown"` is Markdown text: `{{.Data.text}}` draws it as HTML, as `markdown` does. It is HTML already, so `{{markdown .Data.text}}` stops the drawing.
 
