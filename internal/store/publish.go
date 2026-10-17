@@ -348,22 +348,20 @@ func lock(dir string) (func(), error) {
 }
 
 // writeSource puts the data file src and its images under dir/source/, emptied first, so that an
-// image the data no longer shows does not stay. A write that fails leaves the page unreadable until
-// the next publish, which the data file just read is there for.
+// image the data no longer shows does not stay. The data file goes last, whole, so that a drawing in
+// between finds no data file rather than part of one or of its images. A write that fails leaves the
+// page unreadable until the next publish, which the data file just read is there for.
 func writeSource(dir string, src []byte, images map[string][]byte) error {
 	source := filepath.Join(dir, sourceDir)
 	if err := os.RemoveAll(source); err != nil {
 		return err //nolint:wrapcheck // Save says what it saved
-	}
-	if err := writeUnder(source, sourceName, src); err != nil {
-		return err
 	}
 	for name, b := range images {
 		if err := writeUnder(source, name, b); err != nil {
 			return err
 		}
 	}
-	return nil
+	return writeUnder(source, sourceName, src)
 }
 
 // writeUnder writes b to name, a slash-separated path, under dir, making the directories on its way.
@@ -372,7 +370,7 @@ func writeUnder(dir, name string, b []byte) error {
 	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
 		return err //nolint:wrapcheck // Save says what it saved
 	}
-	return os.WriteFile(p, b, 0o600) //nolint:wrapcheck // as above
+	return WriteAtomic(p, b, 0o600)
 }
 
 // Remove deletes slug. A linked file itself is left alone.
