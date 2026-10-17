@@ -65,6 +65,7 @@ type Data struct {
 	tmpl   *Template               // the template Read checked the data against, which draws it
 	schema *schema                 // the template's schema as Read read it, for drawing as checked
 	images map[string]template.URL // its images as data URIs, by the path written
+	files  map[string][]byte       // its images as read, by the path written
 	// its diagrams drawn, by the path of keys to each (pathKey); nil without one
 	diagrams map[string]template.HTML
 	// its scripts drawn, each its element and the call of its function, by the path of keys to each
@@ -146,6 +147,12 @@ func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data
 	return d, sources, nil
 }
 
+// Images returns the images d shows as read, by the slash-separated path written, under the directory
+// of its data file.
+func (d *Data) Images() map[string][]byte {
+	return d.files
+}
+
 // TitleOf returns the title: of the data file src, or "" when it names none or cannot be read.
 func TitleOf(src []byte) string {
 	h, err := start("", src, false)
@@ -182,7 +189,7 @@ func start(file string, src []byte, themed bool) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
-		images: nil, diagrams: nil, scripts: nil, tried: nil, icons: nil,
+		images: nil, files: nil, diagrams: nil, scripts: nil, tried: nil, icons: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)

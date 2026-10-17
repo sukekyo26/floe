@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"os"
@@ -98,6 +99,82 @@ func TestDrawnLink(t *testing.T) {
 	})
 	if d := e.get(t, "/api/artifacts/sizes/download"); d.status != http.StatusNotFound {
 		t.Errorf("the download of a data file that cannot be read = %d", d.status)
+	}
+}
+
+// A stored data file is drawn each time it is opened from the copy publish keeps of it and of its
+// images: the original may go, publishing again replaces the copy whole, and saving the copy reloads
+// the tab.
+func TestDrawnStored(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	if err := os.CopyFS(filepath.Join(e.tmp, "templates", "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
+		t.Fatal(err)
+	}
+	png, err := os.ReadFile("../tmpl/testdata/sizes/chart.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.write(t, "work/spec/img/old.png", string(png))
+	e.write(t, "work/spec/img/chart.png", string(png))
+	const right = "template: sizes\ntitle: Sizes\nfiles: [{name: a, bytes: 1536}]\nchart: img/chart.png\nlang: ja\n"
+	data := e.write(t, "work/spec/sizes.yaml", strings.Replace(right, "chart.png", "old.png", 1))
+	e.publish(t, data, store.Options{})
+	// What a publish stopped halfway left goes on the next.
+	e.write(t, "store/sizes/.source-stray/data.yaml", "x")
+	e.write(t, "work/spec/sizes.yaml", right)
+	e.publish(t, data, store.Options{})
+	if err = os.RemoveAll(filepath.Join(e.tmp, "work")); err != nil {
+		t.Fatal(err)
+	}
+
+	source := filepath.Join(e.store.Root(), "sizes", "source")
+	if b, readErr := os.ReadFile(filepath.Join(source, "data.yaml")); readErr != nil || string(b) != right {
+		t.Errorf("the copy of the data file = %q, %v", b, readErr)
+	}
+	if b, readErr := os.ReadFile(filepath.Join(source, "img", "chart.png")); readErr != nil || string(b) != string(png) {
+		t.Errorf("the copy of the image = %v", readErr)
+	}
+	for _, gone := range []string{"source/img/old.png", ".source-stray", "index.html"} {
+		if _, statErr := os.Stat(filepath.Join(e.store.Root(), "sizes", gone)); !errors.Is(statErr, os.ErrNotExist) {
+			t.Errorf("%s is in the store: %v", gone, statErr)
+		}
+	}
+	r := e.get(t, "/a/sizes/?raw")
+	for _, want := range []string{"<td>1.5 KiB</td>", `<img src="data:image/png;base64,`, "/api/events/sizes?since="} {
+		if r.status != http.StatusOK || !strings.Contains(r.body, want) {
+			t.Fatalf("the page = %d, without %s:\n%s", r.status, want, r.body)
+		}
+	}
+	if got := statuses(t, e, "/a/sizes/data.yaml", "/a/sizes/source/data.yaml"); got != "404 404" {
+		t.Errorf("the copy is served: %s", got)
+	}
+	if d := e.get(t, "/api/artifacts/sizes/download"); !strings.HasPrefix(d.body, "<!doctype html>\n"+cutOffMeta) {
+		t.Errorf("the download = %d:\n%s", d.status, d.body)
+	}
+
+	// Saving the copy reloads the tab, and a mistake in it shows the mistakes.
+	since := regexp.MustCompile(`since=([^"]+)`).FindStringSubmatch(r.body)[1]
+	e.write(t, "store/sizes/source/data.yaml", strings.Replace(right, "bytes: 1536", "bytes: lots", 1))
+	later := time.Now().Add(time.Minute)
+	if err = os.Chtimes(filepath.Join(source, "data.yaml"), later, later); err != nil {
+		t.Fatal(err)
+	}
+	if _, body := e.events(t, "/api/events/sizes?since="+since, 3*time.Second); !strings.Contains(body, "event: reload") {
+		t.Errorf("saving the copy did not reload the tab: %q", body)
+	}
+	if r := e.get(t, "/a/sizes/?raw"); !strings.Contains(r.body, "source/data.yaml:3:26: files[0].bytes:") {
+		t.Errorf("the page of a copy with mistakes:\n%s", r.body)
+	}
+
+	// Renamed on the management page, it is drawn under its new slug.
+	e.write(t, "store/sizes/source/data.yaml", right)
+	if _, err := e.store.Edit("sizes", store.Edit{Slug: ptr("moved")}); err != nil {
+		t.Fatal(err)
+	}
+	if r := e.get(t, "/a/moved/?raw"); !strings.Contains(r.body, "<td>1.5 KiB</td>") {
+		t.Errorf("the renamed page:\n%s", r.body)
 	}
 }
 

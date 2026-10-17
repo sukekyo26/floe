@@ -275,14 +275,15 @@ func TestStoredPage(t *testing.T) {
 
 	e := newEnv(t)
 	e.publish(t, e.page(t, "My Demo.yaml", "Demo Page", "<p>hi</p>"), store.Options{})
-	stored, err := os.ReadFile(filepath.Join(e.store.Root(), "my-demo", "index.html"))
+	m := e.store.ReadMeta("my-demo")
+	file, _ := e.store.File("my-demo", m, "")
+	stored, version, err := e.store.Draw("my-demo", m, file)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := e.store.ReadMeta("my-demo")
 
 	r := e.get(t, "/a/my-demo/?raw")
-	script := "\n<script>{const es = new window.EventSource(\"/api/events/my-demo?since=" + url.QueryEscape(m.UpdatedAt) + "\");"
+	script := "\n<script>{const es = new window.EventSource(\"/api/events/my-demo?since=" + url.QueryEscape(version) + "\");"
 	if !strings.HasPrefix(r.body, string(stored)) || !strings.HasPrefix(r.body[len(stored):], script) {
 		t.Errorf("?raw should be the stored page then the reload script:\n%s", r.body)
 	}
@@ -313,14 +314,14 @@ func TestStoredPage(t *testing.T) {
 		t.Errorf("list = %+v, %v", list, err)
 	}
 
-	// A page stored before (or by the artifact skill) has no strictCsp, and is served and downloaded as it was.
+	// A page stored as HTML (by the artifact skill) is not read: it has no data file to draw.
 	e.write(t, "store/old/index.html", "<!doctype html><p>old</p>")
 	e.write(t, "store/old/meta.json", `{"title":"Old","description":"","createdAt":"2026-01-01T00:00:00.000Z","updatedAt":"2026-01-01T00:00:00.000Z"}`)
-	if got := e.get(t, "/a/old/?raw").header.Get("Content-Security-Policy"); got != sandbox {
-		t.Errorf("an old page: CSP %q", got)
+	if r := e.get(t, "/a/old/?raw"); strings.Contains(r.body, "<p>old</p>") || !strings.Contains(r.body, "source/data.yaml") {
+		t.Errorf("a page stored as HTML = %s", r.body)
 	}
-	if got := e.get(t, "/api/artifacts/old/download").body; got != "<!doctype html><p>old</p>" {
-		t.Errorf("an old page's download = %q", got)
+	if got := e.get(t, "/api/artifacts/old/download").status; got != http.StatusNotFound {
+		t.Errorf("a page stored as HTML: download %d", got)
 	}
 }
 
@@ -355,7 +356,9 @@ func TestLiveReload(t *testing.T) {
 	e := newEnv(t)
 	file := e.page(t, "My Demo.yaml", "Demo Page", "")
 	e.publish(t, file, store.Options{})
-	now := url.QueryEscape(e.store.ReadMeta("my-demo").UpdatedAt)
+	m := e.store.ReadMeta("my-demo")
+	stored, _ := e.store.File("my-demo", m, "")
+	now := url.QueryEscape(e.store.Version("my-demo", m, stored))
 
 	h, body := e.events(t, "/api/events/my-demo?since=stale", 3*time.Second)
 	if h.Get("Access-Control-Allow-Origin") != "null" || body != "retry: 1000\n\nevent: reload\ndata: changed\n\n" {

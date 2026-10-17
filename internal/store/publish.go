@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -12,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/link"
-	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/project"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -76,8 +76,10 @@ type Options struct {
 type Entry struct {
 	Slug string
 	Meta Meta
-	// Page is the stored HTML, drawn from the data file; nil for a link.
-	Page []byte
+	// Source is the data file of a stored page, and Images the images it shows, by the path it names
+	// them by; nil for a link.
+	Source []byte
+	Images map[string][]byte
 	// Prev is the entry this one overwrites, nil for a new slug.
 	Prev *Meta
 }
@@ -128,9 +130,9 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 		var none Meta
 		base = &none
 	}
-	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Page: nil, Prev: prev}
+	e := &Entry{Slug: slug, Meta: newMeta(opts, path, from, base, own, slug), Source: nil, Images: nil, Prev: prev}
 	if data != nil {
-		if err = e.draw(data, theme, s.templates.Dir()); err != nil {
+		if err = e.draw(data, src, theme, s.templates.Dir()); err != nil {
 			return nil, err
 		}
 	}
@@ -152,17 +154,15 @@ func (s *Store) readData(file, path, src, theme, cwd string) (*tmpl.Data, error)
 	return data, nil
 }
 
-// draw draws the page of e from data: stored, or, for a link, drawn each time it is opened, which
-// keeps only the theme given over the data's and the directory of templates it is drawn with.
-func (e *Entry) draw(data *tmpl.Data, theme, templates string) error {
-	var err error
-	if !e.Meta.IsLink() {
-		e.Meta.Template, e.Meta.Theme, e.Meta.StrictCSP = data.Template, data.Theme, true
-		e.Page, err = data.Render(e.Meta.Title)
-		return err //nolint:wrapcheck // a usererr for the caller to show
-	}
+// draw checks that data, of content src, draws, and keeps what drawing it each time it is opened
+// takes: the theme given over the data's, the directory of templates, and for a stored page src and
+// its images.
+func (e *Entry) draw(data *tmpl.Data, src, theme, templates string) error {
 	e.Meta.Theme, e.Meta.Templates = theme, templates
-	_, err = drawLinked(data, &e.Meta, e.Slug)
+	if !e.Meta.IsLink() {
+		e.Source, e.Images = []byte(src), data.Images()
+	}
+	_, err := drawData(data, &e.Meta, e.Slug)
 	return err
 }
 
@@ -217,10 +217,8 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Title:         title(opts, path, keepTitle, base, own, slug),
 		TitleEdited:   keepTitle,
 		Description:   base.Description,
-		Template:      "",
 		Theme:         "",
 		DataTitle:     own,
-		StrictCSP:     false,
 		Templates:     "",
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,
@@ -320,15 +318,64 @@ func IsDataFile(file string) bool {
 
 // Save writes a prepared entry.
 func (s *Store) Save(e *Entry) error {
-	if err := os.MkdirAll(s.dir(e.Slug), 0o700); err != nil {
+	dir := s.dir(e.Slug)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("save %s: %w", e.Slug, err)
 	}
-	if e.Page != nil {
-		if err := WriteAtomic(filepath.Join(s.dir(e.Slug), "index.html"), e.Page, 0o600); err != nil {
-			return err
+	if !e.Meta.IsLink() {
+		if err := writeSource(dir, e.Source, e.Images); err != nil {
+			return fmt.Errorf("save %s: %w", e.Slug, err)
 		}
 	}
 	return s.WriteMeta(e.Slug, &e.Meta)
+}
+
+// writeSource puts the data file src and its images under dir/source/, replacing it whole, so that an
+// image the data no longer shows does not stay. What a publish stopped halfway left beside it goes
+// first, as may that of a publish of the same slug at the same time, which then fails.
+// LIMIT: between the two renames the page cannot be read, and a tab opening it then shows the mistake
+// until it reloads. Swap them at once (renameat2 RENAME_EXCHANGE, renamex_np RENAME_SWAP) if it shows.
+func writeSource(dir string, src []byte, images map[string][]byte) error {
+	left, err := filepath.Glob(filepath.Join(dir, ".source-*"))
+	if err != nil {
+		return err //nolint:wrapcheck // Save says what it saved
+	}
+	for _, p := range left {
+		if err = os.RemoveAll(p); err != nil {
+			return err //nolint:wrapcheck // as above
+		}
+	}
+	tmp, err := os.MkdirTemp(dir, ".source-")
+	if err != nil {
+		return err //nolint:wrapcheck // as above
+	}
+	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; else what is left goes on the next publish
+	if err = writeUnder(tmp, sourceName, src); err != nil {
+		return err
+	}
+	for name, b := range images {
+		if err = writeUnder(tmp, name, b); err != nil {
+			return err
+		}
+	}
+	cur, old := filepath.Join(dir, sourceDir), tmp+"-old"
+	if err = os.Rename(cur, old); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err //nolint:wrapcheck // as above
+	}
+	if err = os.Rename(tmp, cur); err != nil {
+		_ = os.Rename(old, cur) //nolint:errcheck // the old one back if it can; the error is the rename's
+		return err              //nolint:wrapcheck // as above
+	}
+	return os.RemoveAll(old) //nolint:wrapcheck // as above
+}
+
+// writeUnder writes b to name, a slash-separated path, under dir, making the directories on its way.
+func writeUnder(dir, name string, b []byte) error {
+	p := filepath.Join(dir, filepath.FromSlash(name))
+	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+		return err //nolint:wrapcheck // Save says what it saved
+	}
+	return os.WriteFile(p, b, 0o600) //nolint:wrapcheck // as above
 }
 
 // Remove deletes slug. A linked file itself is left alone.
@@ -352,9 +399,8 @@ type Edit struct {
 }
 
 // Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
-// the list nor the open tabs move. Clearing the title hands it back to the file (a link), to the
-// data file's title: (a page drawn from one) or to the <title> or first <h1> of a page stored as HTML,
-// else to the slug; clearing the project drops it.
+// the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
+// data file's title: when published (a stored page), else to the slug; clearing the project drops it.
 func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	m := s.ReadMeta(slug)
 	if m == nil {
@@ -379,7 +425,7 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 		return "", err
 	}
 	if ed.Title != nil {
-		s.setTitle(slug, to, m, *ed.Title)
+		setTitle(to, m, *ed.Title)
 	}
 	if err := s.WriteMeta(slug, m); err != nil {
 		return "", err
@@ -393,22 +439,15 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	return to, nil
 }
 
-// setTitle sets the title of slug, which the edit renames to: an empty one gives back the page's own,
-// or to.
-func (s *Store) setTitle(slug, to string, m *Meta, t string) {
+// setTitle sets the title of m, whose slug the edit renames to: an empty one gives back the page's
+// own, or to.
+func setTitle(to string, m *Meta, t string) {
 	m.Title = strings.TrimSpace(t)
 	m.TitleEdited = m.Title != ""
-	if m.Title != "" || m.IsLink() {
-		return
-	}
-	if m.Template != "" {
+	if m.Title == "" && !m.IsLink() {
 		// The drawn page's <title> is the title it was published under, pinned ones included.
 		m.Title = cmp.Or(m.DataTitle, to)
-		return
 	}
-	// A page stored as HTML before pages were drawn from data files.
-	own, _ := os.ReadFile(filepath.Join(s.dir(slug), "index.html")) //nolint:errcheck // unreadable means untitled
-	m.Title = cmp.Or(page.Title(string(own)), to)
 }
 
 // renameTo checks the new slug of an edit: nil keeps slug.

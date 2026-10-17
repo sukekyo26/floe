@@ -209,9 +209,8 @@ func TestDataImages(t *testing.T) {
 	if r := e.run(t, "work", "publish", "report/sizes.yaml"); r.code != 0 {
 		t.Fatalf("publish = %+v", r)
 	}
-	b, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], "sizes", "index.html"))
-	if err != nil || !strings.Contains(string(b), `<img src="data:image/png;base64,`) {
-		t.Errorf("the published page = %s, %v", b, err)
+	if _, err := os.Stat(filepath.Join(e.vars["FLOE_DIR"], "sizes", "source", "chart.png")); err != nil {
+		t.Errorf("the published page keeps no image: %v", err)
 	}
 	e.write(t, "work/report/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nchart: ../chart.png\nlang: en\n")
 	if r := e.run(t, "work", "check", "report/sizes.yaml"); r.code != 1 || !strings.Contains(r.stderr, `report/sizes.yaml:3:8: chart: "../chart.png" is not a file under`) {

@@ -104,6 +104,22 @@ func (e env) read(t *testing.T, rel string) string {
 	return string(b)
 }
 
+// drawn draws the stored page slug as it is served.
+func (e env) drawn(t *testing.T, slug string) string {
+	t.Helper()
+
+	m := e.meta(t, slug)
+	file, ok := e.s.File(slug, m, "")
+	if !ok {
+		t.Fatalf("no file to draw for %s", slug)
+	}
+	page, _, err := e.s.Draw(slug, m, file)
+	if err != nil {
+		t.Fatalf("draw %s: %v", slug, err)
+	}
+	return string(page)
+}
+
 // page writes a data file for the report template, titled title ("" for none).
 func (e env) page(t *testing.T, rel, title string) string {
 	t.Helper()
@@ -138,9 +154,9 @@ func TestPublishStoredPage(t *testing.T) {
 		m.Project != "proj" || m.PublishedFrom != "proj" || m.Path != "" || m.CreatedAt != m.UpdatedAt {
 		t.Fatalf("first publish: %+v, %+v", first, m)
 	}
-	if got := e.read(t, "store/my-demo/index.html"); !strings.Contains(got, "<h1>Demo Page</h1>") || m.Template != "report" || !m.StrictCSP ||
-		!strings.Contains(e.read(t, "store/my-demo/meta.json"), `"strictCsp": true`) {
-		t.Errorf("the page is stored as %q (template %q, strictCsp %v), want it drawn by report and cut off", got, m.Template, m.StrictCSP)
+	if got := e.drawn(t, "my-demo"); !strings.Contains(got, "<h1>Demo Page</h1>") || !m.IsDrawn() ||
+		e.read(t, "store/my-demo/source/data.yaml") != e.read(t, "My Demo.yaml") {
+		t.Errorf("the page is drawn as %q from %q, want the data file kept and drawn by report", got, e.read(t, "store/my-demo/source/data.yaml"))
 	}
 
 	again := e.mustPublish(t, doc, store.Options{Slug: ptr("my-demo")}, "proj")
@@ -170,7 +186,7 @@ func TestPublishNeedsDataFile(t *testing.T) {
 	_, err = e.publish(t, missing, store.Options{}, "proj")
 	wantUserErr(t, err, "store_not_data", missing)
 	e.mustPublish(t, e.page(t, "untitled.yaml", ""), store.Options{}, "proj")
-	if m := e.meta(t, "untitled"); m.Title != "untitled" || !strings.Contains(e.read(t, "store/untitled/index.html"), "<h1>untitled</h1>") {
+	if m := e.meta(t, "untitled"); m.Title != "untitled" || !strings.Contains(e.drawn(t, "untitled"), "<h1>untitled</h1>") {
 		t.Errorf("a data file without a title: is titled %q", m.Title)
 	}
 	// Removing title: from the data file gives the slug back, as clearing the title does.
@@ -285,7 +301,7 @@ func TestPublishLink(t *testing.T) {
 	file := e.write(t, "site/index.html", "<h1>Linked v1</h1>")
 	entry := e.mustPublish(t, file, store.Options{Link: true, Slug: ptr("site"), Description: ptr("d")}, "elsewhere")
 	m := e.meta(t, "site")
-	if entry.Page != nil || m.Path != file || m.Project != "site" || m.PublishedFrom != "" || m.Title != "" {
+	if entry.Source != nil || m.Path != file || m.Project != "site" || m.PublishedFrom != "" || m.Title != "" {
 		t.Errorf("a link: %+v", m)
 	}
 	if des, err := os.ReadDir(filepath.Join(e.tmp, "store", "site")); err != nil || len(des) != 1 {
@@ -516,22 +532,6 @@ func TestEdit(t *testing.T) {
 		t.Errorf("clearing the title while renaming: %v %+v", err, e.meta(t, "bare-2"))
 	}
 
-	// A page stored as HTML before pages were drawn takes its own <title> back, or the slug.
-	old := store.Meta{Title: "Pinned", TitleEdited: true, CreatedAt: before.CreatedAt, UpdatedAt: before.UpdatedAt}
-	e.write(t, "store/old/index.html", "<title>Old</title>")
-	if err := e.s.WriteMeta("old", &old); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.s.Edit("old", store.Edit{Title: ptr("")}); err != nil || e.meta(t, "old").Title != "Old" {
-		t.Errorf("clearing the title of an HTML page: %v %+v", err, e.meta(t, "old"))
-	}
-	if err := os.Remove(filepath.Join(e.tmp, "store/old/index.html")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.s.Edit("old", store.Edit{Title: ptr(" "), Slug: ptr("older")}); err != nil || e.meta(t, "older").Title != "older" {
-		t.Errorf("clearing the title of an unreadable page falls back to the new slug: %v %+v", err, e.meta(t, "older"))
-	}
-
 	file := e.write(t, "site/index.html", "<h1>L</h1>")
 	e.mustPublish(t, file, store.Options{Link: true}, "proj")
 	if _, err := e.s.Edit("site", store.Edit{Title: ptr("Pinned")}); err != nil {
@@ -563,14 +563,15 @@ func TestFileAndVersion(t *testing.T) {
 
 	e := newEnv(t)
 	stored := &store.Meta{UpdatedAt: "2026-01-01T00:00:00.000Z"}
-	if f, ok := e.s.File("p", stored, ""); !ok || f != filepath.Join(e.tmp, "store", "p", "index.html") {
+	if f, ok := e.s.File("p", stored, ""); !ok || f != filepath.Join(e.tmp, "store", "p", "source", "data.yaml") {
 		t.Errorf("File of a stored page = %q, %v", f, ok)
 	}
 	if _, ok := e.s.File("p", stored, "x.css"); ok {
 		t.Error("a stored page serves a subpath")
 	}
-	if v := e.s.Version("p", stored, ""); v != stored.UpdatedAt {
-		t.Errorf("Version of a stored page = %q", v)
+	data := e.page(t, "store/p/source/data.yaml", "")
+	if v := e.s.Version("p", stored, data); !strings.Contains(v, "+"+stored.UpdatedAt+"+") {
+		t.Errorf("Version of a stored page = %q, want its publish time in it", v)
 	}
 	file := e.write(t, "site/index.html", "x")
 	mtime := time.Date(2026, 3, 4, 5, 6, 7, 890_123_456, time.UTC)
@@ -608,7 +609,7 @@ func TestPublishLang(t *testing.T) {
 	frag := e.page(t, "frag.yaml", "")
 	ja := e.write(t, "ja.yaml", "template: report\nlang: ja\n")
 	e.mustPublish(t, ja, store.Options{}, "repo")
-	if page, meta := e.read(t, "store/ja/index.html"), e.read(t, "store/ja/meta.json"); !strings.Contains(page, `<html lang="ja">`) ||
+	if page, meta := e.drawn(t, "ja"), e.read(t, "store/ja/meta.json"); !strings.Contains(page, `<html lang="ja">`) ||
 		strings.Contains(meta, `"lang"`) {
 		t.Errorf("a page of lang: ja =\n%s\nmeta.json =\n%s", page, meta)
 	}
@@ -641,7 +642,7 @@ func TestPublishLang(t *testing.T) {
 }
 
 // A data file is drawn with the template it names, titled by its title: unless --title says
-// otherwise, and the page records the template and theme.
+// otherwise, and the page records the theme given over the data's only.
 func TestPublishDataFile(t *testing.T) {
 	t.Parallel()
 
@@ -649,20 +650,18 @@ func TestPublishDataFile(t *testing.T) {
 	file := e.write(t, "plan.yaml", "template: report\ntitle: The plan\nsections:\n  - heading: Steps\n    parts:\n      - text: Do **it**.\nlang: ja\n")
 	entry := e.mustPublish(t, file, store.Options{}, "")
 	m := entry.Meta
-	if entry.Slug != "plan" || m.Title != "The plan" || m.Template != "report" || m.Theme != "default" {
+	if entry.Slug != "plan" || m.Title != "The plan" || m.Theme != "" {
 		t.Errorf("meta = %+v (slug %s)", m, entry.Slug)
 	}
-	b, err := os.ReadFile(filepath.Join(e.tmp, "store", "plan", "index.html"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	page := e.drawn(t, "plan")
 	for _, want := range []string{`<html lang="ja">`, "<h1>The plan</h1>", "<p>Do <strong>it</strong>.</p>"} {
-		if !strings.Contains(string(b), want) {
-			t.Errorf("the page lacks %s:\n%s", want, b)
+		if !strings.Contains(page, want) {
+			t.Errorf("the page lacks %s:\n%s", want, page)
 		}
 	}
-	if entry := e.mustPublish(t, file, store.Options{Title: ptr("Pinned")}, ""); !strings.Contains(string(entry.Page), "<h1>Pinned</h1>") {
-		t.Errorf("--title does not title the drawn page: %s", entry.Page)
+	e.mustPublish(t, file, store.Options{Title: ptr("Pinned")}, "")
+	if page := e.drawn(t, "plan"); !strings.Contains(page, "<h1>Pinned</h1>") {
+		t.Errorf("--title does not title the drawn page: %s", page)
 	}
 	bad := e.write(t, "bad.yml", "template: deck\nlang: en\n")
 	if _, err := e.publish(t, bad, store.Options{}, ""); err == nil || err.Error() != bad+`:1:11: unknown template "deck"; use report` {
@@ -679,14 +678,13 @@ func TestLinkDataFile(t *testing.T) {
 	data := e.write(t, "proj/spec.yaml", "template: report\ntitle: Spec\nlang: ja\n")
 	entry := e.mustPublish(t, data, store.Options{Link: true, Theme: ptr("default")}, "proj")
 	m := entry.Meta
-	if entry.Page != nil || m.Path != data || m.Theme != "default" || m.Template != "" || m.Title != "" ||
-		m.StrictCSP {
-		t.Errorf("the entry = %+v, page %d bytes", m, len(entry.Page))
+	if entry.Source != nil || m.Path != data || m.Theme != "default" || m.Title != "" {
+		t.Errorf("the entry = %+v, source %d bytes", m, len(entry.Source))
 	}
 	if !m.IsDrawn() || e.s.Version("spec", &m, data) == "" {
 		t.Errorf("IsDrawn = %v, Version = %q", m.IsDrawn(), e.s.Version("spec", &m, data))
 	}
-	if _, err := os.Stat(filepath.Join(e.tmp, "store", "spec", "index.html")); !errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(filepath.Join(e.tmp, "store", "spec", "source")); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("a page was stored for a link: %v", err)
 	}
 	page, _, err := e.s.Draw("spec", &m, data)

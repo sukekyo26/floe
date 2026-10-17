@@ -26,12 +26,6 @@ const (
 	pageCSP = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"
 )
 
-// cutsOff reports whether the page of m is served under CutOff: stored drawn (marked when published), or
-// a linked data file, drawn each time.
-func cutsOff(m *store.Meta) bool {
-	return m.StrictCSP || m.IsDrawn()
-}
-
 // types are the files served from a link's directory. The registered file itself is HTML whatever its
 // extension.
 var types = map[string]string{
@@ -89,7 +83,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	// Assets are sandboxed too: an SVG or HTML opened directly must not run in this origin.
 	h := w.Header()
 	csp := pageCSP
-	if cutsOff(m) {
+	if m.IsDrawn() {
 		// The reload script's stream only, under the name the page was opened by: the management API is
 		// on the same port.
 		csp += "; " + tmpl.CutOff("http://"+r.Host+"/api/events/")
@@ -144,17 +138,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body io.Reader
-	switch {
-	case !cutsOff(m):
-		// Linked HTML, or a page stored before strictCsp (or by the artifact skill), as it is.
-		f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
-		if err != nil {
-			notFound(w)
-			return
-		}
-		defer f.Close() //nolint:errcheck // read-only
-		body = f
-	case m.IsDrawn():
+	if m.IsDrawn() {
 		page, _, err := s.cfg.Store.Draw(slug, m, file)
 		switch {
 		case errors.Is(err, store.ErrNotFound):
@@ -165,23 +149,24 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		body = tmpl.WithCutOff(page)
-	default:
-		// A page stored from a data file.
-		page, err := os.ReadFile(file) //nolint:gosec // G304: file passed store.File
+	} else {
+		// Linked HTML, as it is.
+		f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
 		if err != nil {
 			notFound(w)
 			return
 		}
-		body = tmpl.WithCutOff(page)
+		defer f.Close() //nolint:errcheck // read-only
+		body = f
 	}
-	// The page as stored, linked or drawn, a page drawn from a data file still cut off. Nothing added on
-	// serving (the reload script) goes in.
+	// The page linked or drawn, a page drawn from a data file still cut off. Nothing added on serving
+	// (the reload script) goes in.
 	w.Header().Set("Content-Disposition", `attachment; filename="`+slug+`.html"`)
 	stream(w, htmlType, body, "")
 }
 
-// stream sends f as it is, with tail after it: a stored page was drawn when it was published, and a
-// linked file is the user's own. A read error after the header has gone out can only cut the
+// stream sends f as it is, with tail after it: a data file's page is drawn by floe, and a linked file
+// is the user's own. A read error after the header has gone out can only cut the
 // response short.
 func stream(w http.ResponseWriter, contentType string, f io.Reader, tail string) {
 	w.Header().Set("Content-Type", contentType)
