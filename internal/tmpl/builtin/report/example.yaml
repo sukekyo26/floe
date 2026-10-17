@@ -61,4 +61,4 @@ sections:
       - note:
           tone: warn
           text: Anyone editing during the freeze loses their changes.
-      - html: <p>Status <span class="pill good">on track</span></p>
+      - html: <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>

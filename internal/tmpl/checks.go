@@ -43,7 +43,7 @@ func checkRelations(t *Template, d *Data, root ast.Node) error {
 
 // relate checks the values of d against the checks src of the file checks.
 func relate(checks string, src []byte, d *Data, root ast.Node) error {
-	list, err := readChecks(checks, src)
+	list, err := readChecks(checks, src, false)
 	if err != nil {
 		return err
 	}
@@ -62,8 +62,9 @@ func relate(checks string, src []byte, d *Data, root ast.Node) error {
 }
 
 // readChecks reads the checks src of file, a mistake in them at its line and column: the mistakes of
-// some are yamlpos.Problems, returned with the others.
-func readChecks(file string, src []byte) ([]relation, error) {
+// some are yamlpos.Problems, returned with the others. A part's checks may leave for out, to check the
+// part itself.
+func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 	body, err := yamlpos.Parse(file, src, "tmpl_checks_yaml")
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		return nil, nil
@@ -81,7 +82,7 @@ func readChecks(file string, src []byte) ([]relation, error) {
 	var list []relation
 	var problems yamlpos.Problems
 	for _, n := range seq.Values {
-		c, e := readCheck(file, n)
+		c, e := readCheck(file, n, ofPart)
 		if e != nil {
 			problems = append(problems, e)
 			continue
@@ -95,7 +96,7 @@ func readChecks(file string, src []byte) ([]relation, error) {
 	return list, nil
 }
 
-func readCheck(file string, n ast.Node) (relation, *yamlpos.Error) {
+func readCheck(file string, n ast.Node, ofPart bool) (relation, *yamlpos.Error) {
 	c := relation{For: "", Field: "", Expr: "", Message: "", file: file, at: map[string]yamlpos.Pos{"": yamlpos.Of(n)}}
 	m, ok := n.(*ast.MappingNode)
 	if !ok {
@@ -115,7 +116,7 @@ func readCheck(file string, n ast.Node) (relation, *yamlpos.Error) {
 		}
 	}
 	for _, key := range []string{"for", "expr", "message"} {
-		if *to[key] == "" {
+		if *to[key] == "" && (key != "for" || !ofPart) {
 			at, written := c.at[key]
 			if !written {
 				at = c.at[""]
@@ -149,13 +150,18 @@ func (c relation) program() (*vm.Program, *yamlpos.Error) {
 // check runs c on each item of its list in doc, the values of file. An error is the template's mistake,
 // and the problems are the data's.
 func (c relation) check(file string, doc map[string]any, root ast.Node) (yamlpos.Problems, error) {
-	p, err := c.program()
-	if err != nil {
-		return nil, err
-	}
 	var items []itemAt
 	if !itemsAt(doc, strings.Split(c.For, "."), nil, &items) {
 		return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
+	}
+	return c.run(file, doc, items, root)
+}
+
+// run runs c on each of items of the values doc of file.
+func (c relation) run(file string, doc map[string]any, items []itemAt, root ast.Node) (yamlpos.Problems, error) {
+	p, err := c.program()
+	if err != nil {
+		return nil, err
 	}
 	var problems yamlpos.Problems
 	for _, item := range items {

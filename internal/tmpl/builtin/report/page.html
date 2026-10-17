@@ -30,27 +30,13 @@
 {{markdown .}}
 {{- end}}
 {{- with .table}}
-{{- $columns := .columns}}
-<div class="table-wrap"><table>
-<thead><tr>{{range $columns}}<th scope="col"{{if .num}} class="num"{{end}}>{{markdownLine .title}}</th>{{end}}</tr></thead>
-<tbody>
-{{- range .rows}}
-<tr>{{range $i, $cell := .}}<td{{if (index $columns $i).num}} class="num"{{end}}>
-{{- if eq (printf "%T" $cell) "string"}}{{markdownLine $cell}}{{else}}<span class="pill{{with $cell.tone}} {{.}}{{end}}">{{$cell.pill}}</span>{{end -}}
-</td>{{end}}</tr>
-{{- end}}
-</tbody>
-</table></div>
+{{.}}
 {{- end}}
 {{- with .cards}}
-<div class="cards">
-{{- range .}}
-<div class="card"><h3>{{.title}}</h3>{{with .text}}{{markdown .}}{{end}}</div>
-{{- end}}
-</div>
+{{.}}
 {{- end}}
 {{- with .note}}
-<div class="note{{with .tone}} {{.}}{{end}}">{{markdown .text}}</div>
+{{.}}
 {{- end}}
 {{- with .html}}
 {{.}}

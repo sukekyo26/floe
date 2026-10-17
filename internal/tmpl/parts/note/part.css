@@ -1,0 +1,10 @@
+.floe-note {
+  background: var(--accent-soft, #dcebec); border-left: 3px solid var(--accent, #1d6670);
+  padding: 0.75rem 1rem; border-radius: 0 6px 6px 0; max-width: var(--text-width, 56rem);
+}
+.floe-note.good { background: var(--good-soft, #dcefe3); border-color: var(--good, #1f7a45); }
+.floe-note.warn { background: var(--warn-soft, #f6e8d2); border-color: var(--warn, #8a5a10); }
+.floe-note.bad { background: var(--bad-soft, #fbe5e2); border-color: var(--bad, #b3261e); }
+.floe-note > * { margin: 0; }
+.floe-note > * + * { margin-top: 0.6rem; }
+.floe-note code { background: var(--surface, #fff); }

@@ -102,19 +102,17 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil, diagrams: false}
+	lint := &schemaLint{file: t.file("schema.json"), warnings: nil, mistakes: nil, diagrams: false, parts: nil}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
 	// Told beside the other mistakes of the files, not instead of them.
 	if err = t.refuseShared(s); err != nil {
 		mistakes = append(mistakes, err)
 	}
-	if lint.diagrams {
-		more, themeErr := t.checkThemeVariables()
-		warnings = append(warnings, more...)
-		if themeErr != nil {
-			mistakes = append(mistakes, themeErr)
-		}
+	more, err := t.checkThemeVariables(lint)
+	warnings = append(warnings, more...)
+	if err != nil {
+		mistakes = append(mistakes, err)
 	}
 	mistakes = append(mistakes, t.checkChecks(sch)...)
 	computed, found, err := t.readOptional("computed.yaml")
@@ -131,12 +129,16 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	return warnings, append(mistakes, t.checkAssets(page)...)
 }
 
-// checkThemeVariables warns of each theme of t that leaves out a CSS variable diagrams take their
-// colours and fonts from, which page.html does not define either: its diagrams would keep light
-// colours in dark mode.
+// checkThemeVariables warns of each theme of t that leaves out a CSS variable the parts and diagrams
+// its schema declares, as lint found them, take their colours and fonts from, which page.html does not
+// define either: they would keep light colours in dark mode.
 // LIMIT: a variable is looked for as written (--fg:), not as CSS reads it. Parse the CSS if a theme
 // comes to define one otherwise (through @import, or in a comment that hides it).
-func (t *Template) checkThemeVariables() ([]*usererr.Error, error) {
+func (t *Template) checkThemeVariables(lint *schemaLint) ([]*usererr.Error, error) {
+	vars, err := lint.variables()
+	if vars == nil || err != nil {
+		return nil, err
+	}
 	themes, err := t.themes()
 	if err != nil {
 		return nil, err
@@ -156,7 +158,7 @@ func (t *Template) checkThemeVariables() ([]*usererr.Error, error) {
 		}
 		defined := definedVariables(css)
 		var missing []string
-		for _, v := range diagram.Variables() {
+		for _, v := range vars {
 			if !defined[v] && !inPage[v] {
 				missing = append(missing, v)
 			}
@@ -332,7 +334,7 @@ func (t *Template) checkChecks(s *jsonschema.Schema) []error {
 	if !found {
 		return nil
 	}
-	list, err := readChecks(t.file("checks.yaml"), src)
+	list, err := readChecks(t.file("checks.yaml"), src, false)
 	var problems yamlpos.Problems
 	if err != nil && !errors.As(err, &problems) {
 		return []error{err}
@@ -523,7 +525,8 @@ type schemaLint struct {
 	file     string
 	warnings []*usererr.Error
 	mistakes []error
-	diagrams bool // whether the schema declares an item of format diagram that floe draws
+	diagrams bool     // whether the schema declares an item of format diagram that floe draws
+	parts    []string // the parts of floe's that draw the items it declares, once each
 }
 
 // walk walks the schema v at the JSON pointer ptr. reached tells that prepare reaches it, through
@@ -533,20 +536,12 @@ func (l *schemaLint) walk(v any, ptr string, reached bool) {
 	if !ok {
 		return
 	}
-	if f, ok := m["format"].(string); ok {
-		switch {
-		case !knownFormat(f):
-			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unknown", l.file, ptr, f))
-		case slices.Contains(formats, f) && !reached:
-			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unreached", l.file, ptr, f))
-		case slices.Contains(formats, f):
-			if m["type"] != formatTypes[f] {
-				l.mistakes = append(l.mistakes, usererr.New("tmpl_format_type", l.file, ptr, f, formatTypes[f]))
-			}
-			l.diagrams = l.diagrams || f == "diagram"
-			// prepare draws it whole, and goes no further in: a format below is not reached.
-			reached = false
-		}
+	if ref, ok := m["$ref"].(string); ok {
+		l.part(ref, ptr, reached)
+	}
+	if f, ok := m["format"].(string); ok && l.format(f, m["type"], ptr, reached) {
+		// prepare draws it whole, and goes no further in: a format below is not reached.
+		reached = false
 	}
 	closed := m["additionalProperties"] == false || m["unevaluatedProperties"] == false
 	if _, ok := m["properties"]; ok && reached && !closed {
@@ -554,6 +549,52 @@ func (l *schemaLint) walk(v any, ptr string, reached bool) {
 	}
 	for _, kw := range slices.Sorted(maps.Keys(m)) {
 		l.keyword(kw, m[kw], ptr+"/"+pointerKey.Replace(kw), reached)
+	}
+}
+
+// format checks the format f of the schema at ptr, of the type typ, and reports whether prepare draws
+// the item whole.
+func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
+	switch {
+	case !knownFormat(f):
+		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unknown", l.file, ptr, f))
+	case slices.Contains(formats, f) && !reached:
+		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unreached", l.file, ptr, f))
+	case slices.Contains(formats, f):
+		if typ != formatTypes[f] {
+			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_type", l.file, ptr, f, formatTypes[f]))
+		}
+		l.diagrams = l.diagrams || f == "diagram"
+		return true
+	}
+	return false
+}
+
+// variables returns the CSS variables the parts and diagrams l found take from the theme, once each.
+func (l *schemaLint) variables() ([]string, error) {
+	vars, err := partVariables(l.parts)
+	if err != nil || !l.diagrams {
+		return vars, err
+	}
+	for _, v := range diagram.Variables() {
+		if !slices.Contains(vars, v) {
+			vars = append(vars, v)
+		}
+	}
+	return vars, nil
+}
+
+// part notes the part of floe's ref names, at ptr, if it names one: one prepare does not reach would
+// never be drawn.
+func (l *schemaLint) part(ref, ptr string, reached bool) {
+	name := strings.TrimSuffix(strings.TrimPrefix(ref, partsURL), ".json")
+	set, err := builtinParts()
+	switch {
+	case err != nil || set.parts[name] == nil:
+	case !reached:
+		l.mistakes = append(l.mistakes, usererr.New("tmpl_part_unreached", l.file, ptr, name))
+	case !slices.Contains(l.parts, name):
+		l.parts = append(l.parts, name)
 	}
 }
 

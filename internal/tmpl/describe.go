@@ -27,6 +27,7 @@ type Item struct {
 	Types       []string // JSON types: string, number, integer, boolean, object, array, null
 	Of          []string // the types of the items of a list
 	Format      string
+	Part        string // the part of floe's that draws it; "" for none
 	Enum        []string
 	Required    bool
 	Description string
@@ -73,7 +74,7 @@ func SharedItems(name string) []Item {
 	items := make([]Item, 0, len(shared))
 	for _, key := range shared {
 		it := Item{
-			Name: key, Types: []string{"string"}, Of: nil, Format: "", Enum: nil, Required: false, Description: "",
+			Name: key, Types: []string{"string"}, Of: nil, Format: "", Part: "", Enum: nil, Required: false, Description: "",
 			Items: nil,
 		}
 		switch key {
@@ -100,8 +101,11 @@ func (s *schema) items() []Item {
 			p = new(schema) // null in schema.json: nothing to tell of it
 		}
 		it := Item{
-			Name: n, Types: p.types(), Of: nil, Format: p.Format, Enum: nil, Required: slices.Contains(s.Required, n),
-			Description: p.Description, Items: nil,
+			Name: n, Types: p.types(), Of: nil, Format: p.Format, Part: "", Enum: nil,
+			Required: slices.Contains(s.Required, n), Description: p.Description, Items: nil,
+		}
+		if p.part != nil {
+			it.Part = p.part.name
 		}
 		enum := p.Enum
 		if p.Items != nil {

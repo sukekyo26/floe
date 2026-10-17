@@ -70,8 +70,11 @@ type Data struct {
 	diagrams map[string]template.HTML
 	// its scripts drawn, each its element and the call of its function, by the path of keys to each
 	scripts map[string]template.HTML
-	tried   []string // the files of the images it names, read or not
-	icons   []string // the index files of the icon sets its diagrams may show, when it has one
+	// its items drawn by floe's parts, by the path of keys to each; nil without one
+	parts map[string]template.HTML
+	used  []string // the parts that draw them, once each
+	tried []string // the files of the images it names, read or not
+	icons []string // the index files of the icon sets its diagrams may show, when it has one
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -199,7 +202,7 @@ func start(file string, src []byte, themed bool) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil, tmpl: nil, schema: nil,
-		images: nil, diagrams: nil, scripts: nil, tried: nil, icons: nil,
+		images: nil, diagrams: nil, scripts: nil, parts: nil, used: nil, tried: nil, icons: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(themed)
@@ -265,7 +268,8 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 		return problems.Sorted()
 	}
 	d.schema = s
-	err = checkItems(checkImages(s, d, root, dir), checkDiagrams(s, d, root, t.icons), checkScripts(s, d, root))
+	err = checkItems(checkImages(s, d, root, dir), checkDiagrams(s, d, root, t.icons), checkScripts(s, d, root),
+		checkParts(s, d, root))
 	if err != nil {
 		return err
 	}
@@ -368,15 +372,23 @@ func (d *Data) Render(title string) ([]byte, error) {
 	case err != nil:
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
+	out := b.Bytes()
+	if d.used != nil {
+		style, err := partStyles(d.used)
+		if err != nil {
+			return nil, err
+		}
+		out = withStyles(out, style)
+	}
 	// Once at the end, as the reload script is: page.html picks which diagrams it draws, and where.
 	if d.diagrams != nil {
 		assets, err := diagram.Assets()
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already says what failed
 		}
-		b.WriteString("\n" + assets + "\n")
+		out = append(out, "\n"+assets+"\n"...)
 	}
-	return b.Bytes(), nil
+	return out, nil
 }
 
 // page reads and parses the page.html of t.
@@ -454,12 +466,17 @@ func schemaOf(t *Template) (*schema, error) {
 	return s, nil
 }
 
-// decodeSchema reads b, the schema.json of t.
+// decodeSchema reads b, the schema.json of t, with what it refers to among floe's parts.
 func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	s, err := decodeSchema(b)
 	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
 	}
+	set, err := builtinParts()
+	if err != nil {
+		return nil, err
+	}
+	s.resolve(set)
 	return s, nil
 }
 
@@ -498,12 +515,15 @@ func decodeSchema(b []byte) (*schema, error) {
 	return &s, nil
 }
 
-// schema is the part of a template's JSON Schema that floe reads: the items it declares, their format,
-// and what floe template show tells of them.
+// schema is the part of a template's JSON Schema that floe reads: the items it declares, their format
+// or the part of floe's that draws them, and what floe template show tells of them.
 type schema struct {
 	Format     string             `json:"format"`
+	Ref        string             `json:"$ref"`
 	Properties map[string]*schema `json:"properties"`
 	Items      *schema            `json:"items"`
+
+	part *part // the part of floe's $ref names; nil for none
 
 	// What floe template show tells of an item.
 	Description string   `json:"description"`
@@ -513,26 +533,16 @@ type schema struct {
 }
 
 // prepare readies v, at the path at, for page.html: an item declared but not given becomes nil, so
-// that page.html can test it under missingkey=error, an item of format html becomes HTML that goes in
-// as it is, one of format image the data URI of its image, one of format diagram its SVG, and one of
-// format script its element and the call of its function, all as d read them.
+// that page.html can test it under missingkey=error, an item a part draws becomes its HTML, an item of
+// format html HTML that goes in as it is, one of format image the data URI of its image, one of format
+// diagram its SVG, and one of format script its element and the call of its function, all as d read
+// them. A part readies its own item with d nil: it holds no item of a part or a format.
 func (s *schema) prepare(v any, at []string, d *Data) any {
 	if s == nil {
 		return v
 	}
-	// An item of a format of floe's is drawn whole, as find found it: what it holds is not looked into.
-	text, isText := v.(string)
-	switch {
-	case s.Format == "diagram":
-		return d.diagrams[pathKey(at)]
-	case s.Format == "script":
-		return d.scripts[pathKey(at)]
-	case s.Format == "html" && isText:
-		return template.HTML(text) //nolint:gosec // G203: the schema declares this item HTML
-	case s.Format == "image" && isText:
-		return d.images[text]
-	case slices.Contains(formats, s.Format):
-		return v
+	if drawn, whole := s.drawn(v, at, d); whole {
+		return drawn
 	}
 	switch v := v.(type) {
 	case map[string]any:
@@ -556,6 +566,27 @@ func (s *schema) prepare(v any, at []string, d *Data) any {
 	return v
 }
 
+// drawn returns v, at the path at, as d drew it whole, by a part or as an item of a format of floe's,
+// and false when it is not drawn whole.
+func (s *schema) drawn(v any, at []string, d *Data) (any, bool) {
+	text, isText := v.(string)
+	switch {
+	case s.part != nil && d != nil:
+		return d.parts[pathKey(at)], true
+	case s.Format == "diagram":
+		return d.diagrams[pathKey(at)], true
+	case s.Format == "script":
+		return d.scripts[pathKey(at)], true
+	case s.Format == "html" && isText:
+		return template.HTML(text), true //nolint:gosec // G203: the schema declares this item HTML
+	case s.Format == "image" && isText:
+		return d.images[text], true
+	case slices.Contains(formats, s.Format):
+		return v, true
+	}
+	return nil, false
+}
+
 // itemAt is an item of a data file, and the path of keys to it.
 type itemAt struct {
 	value any
@@ -567,7 +598,10 @@ func (s *schema) find(format string, v any, at []string, found *[]itemAt) {
 	if s == nil {
 		return
 	}
-	// An item of a format of floe's is drawn whole: what it holds is not looked into.
+	// A part, or an item of a format of floe's, is drawn whole: what it holds is not looked into.
+	if s.part != nil {
+		return
+	}
 	if slices.Contains(formats, s.Format) {
 		if s.Format == format {
 			*found = append(*found, itemAt{value: v, at: at})

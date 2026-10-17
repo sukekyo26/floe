@@ -19,69 +19,9 @@
               "description": "One key naming the kind of the part",
               "properties": {
                 "text": { "type": "string", "description": "Markdown; raw HTML in it is left out" },
-                "table": {
-                  "type": "object",
-                  "description": "A table; each cell is a line of Markdown (code, bold, links), a number in quotes as it is drawn, or a pill",
-                  "properties": {
-                    "columns": {
-                      "type": "array",
-                      "minItems": 1,
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "title": { "type": "string", "description": "A line of Markdown" },
-                          "num": { "type": "boolean", "description": "Numbers: aligned right, in a fixed-width font" }
-                        },
-                        "required": ["title"],
-                        "additionalProperties": false
-                      }
-                    },
-                    "rows": {
-                      "type": "array",
-                      "description": "Rows of cells, as many as the columns: a line of Markdown, or a pill { pill: a short status, as it is, tone: good, warn or bad }; quote a cell holding ': '",
-                      "items": {
-                        "type": "array",
-                        "items": {
-                          "type": ["string", "object"],
-                          "properties": {
-                            "pill": { "type": "string", "minLength": 1 },
-                            "tone": { "enum": ["good", "warn", "bad"] }
-                          },
-                          "required": ["pill"],
-                          "additionalProperties": false
-                        },
-                        "minItems": 1
-                      },
-                      "minItems": 1
-                    }
-                  },
-                  "required": ["columns", "rows"],
-                  "additionalProperties": false
-                },
-                "cards": {
-                  "type": "array",
-                  "description": "Cards side by side, each a title over Markdown text",
-                  "minItems": 1,
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "title": { "type": "string", "minLength": 1 },
-                      "text": { "type": "string", "description": "Markdown" }
-                    },
-                    "required": ["title"],
-                    "additionalProperties": false
-                  }
-                },
-                "note": {
-                  "type": "object",
-                  "description": "A note set apart from the text: a warning with tone warn, a danger with tone bad",
-                  "properties": {
-                    "tone": { "enum": ["warn", "bad"] },
-                    "text": { "type": "string", "minLength": 1, "description": "Markdown" }
-                  },
-                  "required": ["text"],
-                  "additionalProperties": false
-                },
+                "table": { "$ref": "floe:///parts/table.json" },
+                "cards": { "$ref": "floe:///parts/cards.json" },
+                "note": { "$ref": "floe:///parts/note.json" },
                 "html": { "type": "string", "format": "html", "description": "HTML that goes in as it is" },
                 "diagram": { "type": "object", "format": "diagram", "description": "A diagram: a spec as floe diagram render takes it (id, width, height, title, parts); floe diagram example shows one of each kind" },
                 "script": { "type": "object", "format": "script", "description": "Something that moves: js, a function (el, data) { … } the page calls with an empty element in its place and data, any value. It runs in the page's sandbox, where fetch, XHR, images from elsewhere and forms are blocked" }
