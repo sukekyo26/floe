@@ -295,9 +295,9 @@ func TestCodeAndTerminal(t *testing.T) {
 	}
 	// A command written with its prompt would show two, and copy one.
 	_, err = builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
-		"      - terminal: { steps: [{ run: '$ ls' }, { run: 'PS C:\\work> dir' }, { run: 'C:\\work> dir' }, { run: \"cd app\\n$ make\" }, "+
+		"      - terminal: { steps: [{ run: '$ ls' }, { run: 'PS C:\\work> dir' }, { run: 'C:\\work> dir' }, { run: \"cd app\\n$ make\" }, { run: 'user@host:~/app$ make' }, "+
 		"{ run: '> app.log' }, { run: 'echo $ x' }] }\n"), "", "")
-	if err == nil || strings.Count(err.Error(), "write the command without its prompt") != 4 ||
+	if err == nil || strings.Count(err.Error(), "write the command without its prompt") != 5 ||
 		!strings.Contains(err.Error(), `bad.yaml:5:36: sections[0].parts[0].terminal.steps[0].run: write the command without its prompt, which floe draws from the shell ("$ ls")`) {
 		t.Errorf("commands with their prompts = %v", err)
 	}
@@ -311,11 +311,12 @@ func TestReportRefusesCodeInText(t *testing.T) {
 	for _, text := range []string{
 		"```go\\nx\\n```", "~~~\\nx\\n~~~", "```sh\\n$ ls\\n```", "$ floe list", "PS> dir", "  PS C:\\\\work> dir",
 		"- $ make", "1. > $ make", ">$ make", "C:\\\\work> dir", "> ```sh\\n> x\\n> ```", "- ```sh\\n  x",
+		"user@host:~/app$ make", "% make", "❯ make",
 	} {
 		_, err := builtins.Read("t.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n      - text: \"a\\n"+text+"\"\n"), "", "")
 		if err == nil || strings.Count(err.Error(), "t.yaml:5:15: sections[0].parts[0].text: write ") != 1 {
 			t.Errorf("text %q = %v", text, err)
 		}
 	}
-	render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: \"Run `floe list`.\\n\\n> a quote\\n\\nIt costs $ 5.\"\n")
+	render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: \"Run `floe list`.\\n\\n> a quote\\n\\nIt costs $ 5.\\n\\n`$ ls` lists.\"\n")
 }

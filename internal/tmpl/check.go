@@ -180,8 +180,8 @@ func (t *Template) checkThemeVariables(lint *schemaLint) ([]*usererr.Error, erro
 }
 
 // sameInDark are the CSS variables of the parts whose default serves dark mode as well: their fonts, the
-// width of a note, and a terminal's colours, dark in light mode too.
-var sameInDark = []string{"--font", "--mono", "--text-width", "--terminal-bg", "--terminal-fg", "--terminal-prompt"}
+// width of a note, and a terminal's text and prompt, dark-ground colours in light mode too.
+var sameInDark = []string{"--font", "--mono", "--text-width", "--terminal-fg", "--terminal-prompt"}
 
 // definedVariables returns the CSS variables src defines (--fg: #000), by name.
 func definedVariables(src []byte) map[string]bool {
