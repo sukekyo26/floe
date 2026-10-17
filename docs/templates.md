@@ -45,7 +45,7 @@ The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor versi
 |---|---|
 | `.Title` | The page's title: `--title`, a title pinned on the management page, the data file's `title:`, else the slug |
 | `.Lang` | The page's language: the data file's `lang:` |
-| `.Data` | The data file's items, without `lang`, `template`, `theme` and `title`, which floe reads itself (`.Lang`, `.Title`, `.Theme`); a schema that declares one of them, or lists one as required, is refused wherever the template is used. An item the schema declares but the data leaves out is nil, so `{{with .Data.lead}}` works; a name the schema does not declare stops the drawing. An item of `"format": "html"` goes in as HTML, one of `"format": "diagram"` as its SVG, and one of `"format": "script"` as its element and the call of its function |
+| `.Data` | The data file's items, without `lang`, `template`, `theme` and `title`, which floe reads itself (`.Lang`, `.Title`, `.Theme`); a schema that declares one of them, or lists one as required, is refused wherever the template is used. An item the schema declares but the data leaves out is nil, so `{{with .Data.lead}}` works; a name the schema does not declare stops the drawing. An item of `"format": "html"` goes in as HTML and one of `"format": "markdown"` as its HTML; a diagram goes in as its SVG, and a script as its element and the call of its function |
 | `.Calc` | The values of `computed.yaml`, by name |
 | `.Theme` | The theme's CSS, for `<style>{{.Theme}}</style>` |
 | `markdown` | Markdown text as HTML (`{{markdown .text}}`), raw HTML in it left out, a table in the look of the table part (`<div class="floe-table">`) |
@@ -62,7 +62,7 @@ A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Wr
 
 A `format` is one of JSON Schema's that floe checks (`date`, `email`, `uri`…), or one of floe's that tells how to read a text: `html`, `image` or `markdown`; `floe template check` refuses another, which this floe would let any value pass. Floe's go under `properties` and `items` alone, where floe looks for them: under `anyOf`, `$defs` and the like, the item would be drawn as text. Declare `"type": "string"` alone for them. A diagram or a script is a [part](#parts), not a format.
 
-An item of `"format": "markdown"` is Markdown text: `{{.Data.text}}` draws it as HTML, as `markdown` does.
+An item of `"format": "markdown"` is Markdown text: `{{.Data.text}}` draws it as HTML, as `markdown` does. It is HTML already, so `{{markdown .Data.text}}` stops the drawing.
 
 An item of `"format": "image"` is the path of an image, relative to the data file's directory and under it, without `..` or names starting with a dot. The image goes into the page as a data URI, for `<img src="{{.Data.chart}}">`, so that the page holds all it shows.
 
