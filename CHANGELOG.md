@@ -51,8 +51,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   (architecture, AWS, class, ER, flow, Git, sequence, state, timeline, Venn) or
   prints one to copy. The examples come in English and Japanese and follow the
   language of messages; `--lang` picks another.
-- Add `floe publish <data.yaml>`, which draws a page from a data file with the
-  template it names, stores it and prints its URL on `http://127.0.0.1:7325`.
+- Add `floe publish <data.yaml>`, which stores a data file with the images it
+  shows (`<slug>/source/` in `FLOE_DIR`, where it can be taken back from) and
+  prints the URL of its page on `http://127.0.0.1:7325`, drawn with the
+  template it names each time it is opened.
   The built-in template `report` lays out a header and sections of Markdown
   text, with HTML parts for what Markdown cannot say. The data is checked
   against the template's schema first, and every mistake is reported at its
@@ -64,10 +66,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   background when needed and opens a new page in the browser. An HTML file is
   not stored: `--link` registers it in place and shows it as it is, served
   with the files under its directory. A data file linked with `--link` is
-  drawn each time its page is opened instead of stored: saving it, an image
-  it shows or a file of its template, or fetching the icons its diagrams
-  show, reloads the open tab, and while it has mistakes the tab shows them in
-  place of the page.
+  drawn from its place instead of stored. Saving a data file, an image it
+  shows or a file of its template, or fetching the icons its diagrams show,
+  reloads the open tab, and while it has mistakes the tab shows them in place
+  of the page.
   `--theme` picks another theme of the template, and `--slug`, `--title`,
   `--description` and `--force` are also available.
   Republishing a slug says so on stderr, with a warning when the title
@@ -102,8 +104,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   does and prints every mistake as `file:line:column`, without publishing them
   or starting the server, for the CI of a repository that keeps data files.
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, as well as the
-  management page with live reload, which reads and writes the same store
-  format as the artifact skill. The server keeps running until `floe stop`.
+  management page with live reload. The server keeps running until
+  `floe stop`.
   They are configured with `FLOE_DIR` and `FLOE_PORT` (default 7325).
 - Show messages in English or Japanese. The command line follows `FLOE_LANG`,
   then `LC_ALL`, `LC_MESSAGES` and `LANG`; the management page follows the

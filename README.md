@@ -29,7 +29,7 @@ release's `SHA256SUMS`.
 ## Quick start
 
 ```sh
-floe publish plan.yaml     # draw the page from its data, store it, print its URL and open it
+floe publish plan.yaml     # store the data, print the URL of its page and open it
 floe publish --link out/index.html   # show an HTML file as it is, read on every request
 floe check plan.yaml       # check a data file without publishing it
 floe list                  # pages, newest first

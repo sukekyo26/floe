@@ -28,9 +28,9 @@ Reference for every command of the `floe` binary.
 
 ## `floe publish <data.yaml>` / `floe publish --link <file.html>`
 
-Draw a page from a data file, store it and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout. If the server is not running, it is started in the background first. A new slug is also opened in the browser; a republished one is not, because the open tab reloads itself.
+Store a data file and print the URL of its page (`http://127.0.0.1:7325/a/<slug>/`) on stdout. The page is drawn each time it is opened. If the server is not running, it is started in the background first. A new slug is also opened in the browser; a republished one is not, because the open tab reloads itself.
 
-Pages are drawn from data files (`.yaml`, `.yml`). An HTML file is not stored: link it with `--link` to show it as it is. A relative path is resolved against the working directory.
+Pages are drawn from data files (`.yaml`, `.yml`). The data file is copied to `<slug>/source/data.yaml` under `FLOE_DIR`, with the images it shows at the paths it names them by; take it back from there if the original is lost. An HTML file is not stored: link it with `--link` to show it as it is. A relative path is resolved against the working directory.
 
 ### Flags
 
@@ -302,7 +302,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 
 | Variable | Description |
 |---|---|
-| `FLOE_DIR` | Where pages are stored. Defaults to `$XDG_DATA_HOME/floe`, else `~/.local/share/floe`. The layout is the same as the artifact skill's, so either can read the other's. |
+| `FLOE_DIR` | Where pages are stored. Defaults to `$XDG_DATA_HOME/floe`, else `~/.local/share/floe`. |
 | `FLOE_PORT` | The port (default `7325`). A decimal number from 1 to 65535. |
 | `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. A relative one is under the working directory. The diagrams of a linked data file show the icons of the server, which takes the one of the publish that started it. |
 | `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. A linked data file is drawn with the one of the publish that linked it, a relative one under its working directory. |
