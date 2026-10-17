@@ -1,0 +1,10 @@
+/* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls */
+.floe-diff pre { padding-inline: 0; }
+.floe-diff code { display: grid; grid-template-columns: minmax(100%, max-content); }
+.floe-diff code > span { padding-inline: 1.1rem; }
+.floe-diff .add { background: color-mix(in srgb, var(--code-add, #6fcf97) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add, #6fcf97); }
+.floe-diff .del { background: color-mix(in srgb, var(--code-del, #f2b8b5) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del, #f2b8b5); }
+.floe-diff .hunk { color: var(--code-prompt, #63b5be); }
+.floe-diff .meta { opacity: 0.65; }
+.floe-diff figcaption .added { color: var(--code-add, #6fcf97); }
+.floe-diff figcaption .removed { color: var(--code-del, #f2b8b5); }

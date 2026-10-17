@@ -1,0 +1,6 @@
+/* In the faces of cards, unnumbered */
+.floe-facts { margin: 0; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem; }
+.floe-facts > div { gap: 0.1rem; padding-block: 0.8rem; }
+.floe-facts > div::before { content: none; }
+.floe-facts dt { font-size: 0.8rem; color: var(--muted, #57635f); }
+.floe-facts dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }

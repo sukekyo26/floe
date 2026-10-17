@@ -345,7 +345,7 @@ var messagesEN = map[string]string{
 	"tmpl_format_unknown":          `%s: %s: floe does not know the format "%s"; use a format of JSON Schema, or html, image or markdown`,
 	"tmpl_format_part":             `%s: %s: a %s is a part of floe's, not a format; write "$ref": "floe:///parts/%s.json"`,
 	"tmpl_part_into":               "%s points into a part of floe's, which would be checked but not drawn as the part; refer to the whole part, %s",
-	"tmpl_part_unknown":            `%s is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of %s, or to the tones of the parts as floe:///parts/tone.json`,
+	"tmpl_part_unknown":            `%s is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of %s, or to what the parts share: a tone as floe:///parts/tone.json, a cell of a table as floe:///parts/cell.json`,
 	"tmpl_part_unreached":          "%s: %s: the part %s draws an item; refer to it under properties or items, which floe follows",
 	"tmpl_format_unreached":        "%s: %s: the format %s marks an item to draw; declare it under properties or items, which floe follows",
 	"tmpl_schema_open":             `%s: %s declares properties without "additionalProperties": false, so a misspelt key is not refused`,

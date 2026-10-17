@@ -1,0 +1,5 @@
+<ul class="floe-cards floe-links">
+{{- range .}}
+<li class="floe-card"><a href="{{.url}}">{{.title}}</a>{{with .text}}<p>{{.}}</p>{{end}}</li>
+{{- end}}
+</ul>

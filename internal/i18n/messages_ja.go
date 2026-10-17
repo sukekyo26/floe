@@ -344,7 +344,7 @@ var messagesJA = map[string]string{
 	"tmpl_format_unknown":          "%s: %s: floe は format「%s」を知りません。JSON Schema の format か、html・image・markdown を使ってください",
 	"tmpl_format_part":             "%s: %s: %s は format ではなく floe の部品です。\"$ref\": \"floe:///parts/%s.json\" と書いてください",
 	"tmpl_part_into":               "%s は floe の部品の中を指していて、部品として検査はされても描かれません。部品全体の %s を指してください",
-	"tmpl_part_unknown":            "%s は floe の部品ではありません。部品は floe:///parts/<名前>.json の形で、名前は %s のどれかを、部品の tone は floe:///parts/tone.json を書いてください",
+	"tmpl_part_unknown":            "%s は floe の部品ではありません。部品は floe:///parts/<名前>.json の形で、名前は %s のどれかを、部品の tone は floe:///parts/tone.json を、表のセルは floe:///parts/cell.json を書いてください",
 	"tmpl_part_unreached":          "%s: %s: 部品 %s は項目を描きます。floe が辿る properties か items の下で参照してください",
 	"tmpl_format_unreached":        "%s: %s: format %s は描く項目の印です。floe が辿る properties か items の下で宣言してください",
 	"tmpl_schema_open":             `%s: %s は "additionalProperties": false を書かずに properties を宣言しているので、打ち間違えたキーを断れません`,

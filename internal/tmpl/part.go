@@ -103,9 +103,11 @@ type part struct {
 	name    string
 	schema  *schema
 	page    *template.Template // nil for one floe draws in Go (goParts)
+	html    string             // page as written
 	css     string
 	checks  []relation
 	classes []string // the classes its style names, one of which in a page gives it the style
+	uses    []string // the parts whose classes its HTML names, itself and those it is drawn in the look of
 }
 
 // goParts are the parts floe draws in Go, each a description: their schema takes an object, whose
@@ -165,12 +167,34 @@ func readParts() (*partSet, error) {
 			Format: "", Ref: "", Properties: nil, Items: nil, part: nil, Description: about, Type: "object", Enum: nil,
 			Required: nil,
 		}
-		set.parts[name] = &part{name: name, schema: set.schemas[url], page: nil, css: "", checks: nil, classes: nil}
+		set.parts[name] = &part{
+			name: name, schema: set.schemas[url], page: nil, html: "", css: "", checks: nil, classes: nil, uses: nil,
+		}
+	}
+	for _, p := range set.parts {
+		p.uses = set.partsNamedIn(p.html)
 	}
 	for _, s := range set.schemas {
 		s.resolve(set)
 	}
 	return set, nil
+}
+
+// partsNamedIn returns the names of the parts whose classes the class attributes of html name, in order.
+func (set *partSet) partsNamedIn(html string) []string {
+	named := map[string]bool{}
+	for _, m := range classAttr.FindAllStringSubmatch(html, -1) {
+		for _, c := range strings.Fields(strings.Trim(m[1], `"'`)) {
+			named[c] = true
+		}
+	}
+	var names []string
+	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
+		if slices.ContainsFunc(set.parts[name].classes, func(c string) bool { return named[c] }) {
+			names = append(names, name)
+		}
+	}
+	return names
 }
 
 // readSchema reads the schema file of floe's at url.
@@ -201,7 +225,7 @@ func readPart(name string, s *schema) (*part, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
-	page, err := template.New(name).Option("missingkey=error").Funcs(funcs).Parse(string(html))
+	page, err := template.New(name).Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).Parse(string(html))
 	if err != nil {
 		return nil, fmt.Errorf("parse the part %s: %w", name, err)
 	}
@@ -209,7 +233,9 @@ func readPart(name string, s *schema) (*part, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
-	p := &part{name: name, schema: s, page: page, css: string(css), checks: nil, classes: nil}
+	p := &part{
+		name: name, schema: s, page: page, html: string(html), css: string(css), checks: nil, classes: nil, uses: nil,
+	}
 	p.classes = appendFound(nil, styleClass, p.css)
 	src, err := partFiles.ReadFile(path.Join(dir, "checks.yaml"))
 	switch {
@@ -373,11 +399,17 @@ func (p *part) check(file string, f itemAt, root ast.Node) (yamlpos.Problems, er
 	if m, ok := f.value.(map[string]any); ok {
 		doc = m
 	}
+	_, isList := f.value.([]any)
 	for _, c := range p.checks {
 		items := []itemAt{f}
-		if c.For != "" {
+		// A check without for checks the part itself, or each of its items when it is a list.
+		if c.For != "" || isList {
+			var steps []string
+			if c.For != "" {
+				steps = strings.Split(c.For, ".")
+			}
 			items = nil
-			if !itemsAt(f.value, strings.Split(c.For, "."), f.at, &items) {
+			if !itemsAt(f.value, steps, f.at, &items) {
 				return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
 			}
 		}
@@ -409,24 +441,13 @@ func partStyles(page []byte) (string, error) {
 	if !bytes.Contains(page, []byte("floe-")) {
 		return "", nil
 	}
-	used := map[string]bool{}
-	for _, m := range classAttr.FindAllSubmatch(page, -1) {
-		for _, c := range strings.Fields(strings.Trim(string(m[1]), `"'`)) {
-			used[c] = true
-		}
-	}
-	if len(used) == 0 {
-		return "", nil
-	}
 	set, err := builtinParts()
 	if err != nil {
 		return "", err
 	}
 	var b strings.Builder
-	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-		if p := set.parts[name]; slices.ContainsFunc(p.classes, func(c string) bool { return used[c] }) {
-			b.WriteString(p.css)
-		}
+	for _, name := range set.partsNamedIn(string(page)) {
+		b.WriteString(set.parts[name].css)
 	}
 	if b.Len() == 0 {
 		return "", nil
@@ -489,15 +510,19 @@ var (
 	}
 )
 
-// partVariables returns the CSS variables the style of the parts named takes from the theme, once
-// each, in the order of their names.
+// partVariables returns the CSS variables the style of the parts named, and of those they are drawn in
+// the look of, takes from the theme, once each, in the order of the parts' names.
 func partVariables(names []string) ([]string, error) {
 	set, err := builtinParts()
 	if err != nil {
 		return nil, err
 	}
+	var used []string
+	for _, name := range names {
+		used = append(used, set.parts[name].uses...)
+	}
 	var vars []string
-	for _, name := range slices.Sorted(slices.Values(names)) {
+	for _, name := range slices.Compact(slices.Sorted(slices.Values(append(used, names...)))) {
 		vars = appendFound(vars, fallback, set.parts[name].css)
 	}
 	return vars, nil

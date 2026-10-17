@@ -13,3 +13,4 @@
 :is(.floe-code, .floe-terminal) { border-radius: 4px; box-shadow: none; }
 .floe-code .lang { border-radius: 3px; }
 blockquote { padding-left: 1.4rem; border-left: 3px solid var(--accent); color: var(--fg); font-size: 1.1rem; }
+:is(.floe-progress, .floe-steps, .floe-checklist, .floe-tree) { border-radius: 4px; box-shadow: none; }

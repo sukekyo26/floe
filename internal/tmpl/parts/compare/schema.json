@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "compare",
+  "description": "What changes, side by side: each row a thing, as it is before and after, in a table under the two headings; a row the same both sides is drawn faint",
+  "type": "object",
+  "properties": {
+    "before": { "type": "string", "minLength": 1, "description": "The heading of the left, such as Now; a line of Markdown" },
+    "after": { "type": "string", "minLength": 1, "description": "The heading of the right, such as Next; a line of Markdown" },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "what": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
+          "before": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
+          "after": { "type": "string", "minLength": 1, "description": "A line of Markdown" }
+        },
+        "required": ["what", "before", "after"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["before", "after", "rows"],
+  "additionalProperties": false
+}

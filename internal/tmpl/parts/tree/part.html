@@ -1,0 +1,6 @@
+{{- define "nodes"}}<ul>
+{{- range .}}
+<li{{with .Change}} class="{{.}}"{{end}}><span class="name{{if .Dir}} dir{{end}}">{{.Name}}</span>{{with .Note}}<span class="note">{{.}}</span>{{end}}{{with .Children}}{{template "nodes" .}}{{end}}</li>
+{{- end}}
+</ul>{{end -}}
+<div class="floe-tree">{{template "nodes" tree .}}</div>

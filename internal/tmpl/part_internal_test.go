@@ -15,7 +15,7 @@ import (
 var palette = []string{
 	"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
 	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono", "--text-width", "--code-bg", "--code-fg",
-	"--code-prompt",
+	"--code-prompt", "--code-add", "--code-del",
 }
 
 // The parts and diagrams take their colours, fonts and width from the palette alone, which the report
@@ -43,6 +43,17 @@ func TestPalette(t *testing.T) {
 		if p.page != nil && p.classes == nil {
 			t.Errorf("the style of the part %s names no floe- class, so no page gets it", name)
 		}
+		// A part draws in another's look by naming its classes in its HTML, not in its style, which would
+		// bring its style to a page of the other's.
+		for other, q := range set.parts {
+			if c := slices.IndexFunc(p.classes, func(c string) bool { return slices.Contains(q.classes, c) }); other != name && c >= 0 {
+				t.Errorf("the styles of the parts %s and %s both name %s", name, other, p.classes[c])
+			}
+		}
+	}
+	// compare is drawn in the table's look, so a theme for it is warned of the table's variables too.
+	if compare, cerr := partVariables([]string{"compare"}); cerr != nil || !slices.Contains(compare, "--line") {
+		t.Errorf("the variables of compare = %v, %v", compare, cerr)
 	}
 	for _, v := range append(vars, diagram.Variables()...) {
 		if !slices.Contains(palette, v) {

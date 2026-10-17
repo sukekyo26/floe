@@ -1,0 +1,8 @@
+<div class="floe-table floe-compare"><table>
+<thead><tr><th></th><th scope="col">{{markdownLine .before}}</th><th scope="col" class="after">{{markdownLine .after}}</th></tr></thead>
+<tbody>
+{{- range .rows}}
+<tr{{if eq .before .after}} class="same"{{end}}><td class="what">{{markdownLine .what}}</td><td>{{markdownLine .before}}</td><td class="after">{{markdownLine .after}}</td></tr>
+{{- end}}
+</tbody>
+</table></div>

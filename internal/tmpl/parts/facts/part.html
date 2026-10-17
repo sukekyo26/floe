@@ -1,0 +1,5 @@
+<dl class="floe-cards floe-facts">
+{{- range .}}
+<div class="floe-card"><dt>{{.name}}</dt><dd>{{if eq (printf "%T" .value) "string"}}{{markdownLine .value}}{{else}}<span class="floe-pill{{with .value.tone}} {{.}}{{end}}">{{.value.pill}}</span>{{end}}</dd></div>
+{{- end}}
+</dl>

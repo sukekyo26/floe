@@ -8,6 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add ten parts, which the built-in `report` takes and a template refers to
+  as `floe:///parts/<name>.json`: `stats` (large numbers with a unit and a
+  note in a tone), `progress` (bars of `done` of `of`), `steps` (numbered,
+  each `done`, `doing` or `todo`), `checklist` (items ticked when `done`, with
+  their count), `compare` (rows `before` and `after` under two headings, a
+  row the same both sides drawn faint), `options` (cards of `pros` and `cons`,
+  the one to `pick` ringed under its badge), `facts` (names with a value or a
+  pill), `diff` (a diff as git writes it, its added and removed lines
+  coloured and counted), `tree` (paths nested into their folders, each with a
+  note and an `added`, `removed` or `changed` mark) and `links` (cards of a
+  title, a URL and a few words). They take the look of tables, cards and code
+  in every theme; `--code-add` and `--code-del` colour a diff's lines.
 - Add `floe render <data.yaml>...`, which writes the page of each data file
   to `<name>.html` beside it, or in `--out-dir`, for a repository to keep the
   data file for agents and its page for people. The page is the download of

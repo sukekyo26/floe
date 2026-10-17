@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "options",
+  "description": "Options side by side, numbered cards each a title over Markdown text, its pros (+) and cons (−); the one to take is ringed under a badge",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "title": { "type": "string", "minLength": 1 },
+      "pick": { "type": "string", "minLength": 1, "description": "Marks the option to take, with this word as its badge, such as Recommended" },
+      "text": { "type": "string", "minLength": 1, "description": "Markdown" },
+      "pros": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "A line of Markdown" } },
+      "cons": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "A line of Markdown" } }
+    },
+    "required": ["title"],
+    "additionalProperties": false
+  }
+}

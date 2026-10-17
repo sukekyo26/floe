@@ -152,7 +152,7 @@ func TestCheckParts(t *testing.T) {
 
 	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table"} {
 		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
-		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of cards, code, diagram, note, script, table, terminal"
+		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of cards, checklist, code, compare, diagram, diff, facts, links, note, options, progress, script, stats, steps, table, terminal, tree"
 		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 			t.Errorf("Check of %s = %v", ref, mistakes)
 		}
@@ -337,4 +337,60 @@ func TestReportRefusesCodeInText(t *testing.T) {
 	}
 	render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: \"Run `floe list`.\\n\\n> a quote\\n\\n"+
 		"$ 5 a month.\\n\\n100% done.\\n\\n`$ ls` lists.\"\n")
+}
+
+// The parts drawn in another's look name its classes and bring its style; a list part checks each of its
+// items, and a tree's paths nest.
+func TestPartsOfNumbersAndChanges(t *testing.T) {
+	t.Parallel()
+
+	page := render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n"+
+		"      - stats: [{ label: Pages, value: '18', unit: MB, note: '+5', tone: good }]\n"+
+		"      - progress: [{ label: Copy, done: 5, of: 8, tone: warn }]\n"+
+		"      - steps: [{ title: A, state: done }, { title: B, text: '**now**', state: doing }, { title: C }]\n"+
+		"      - checklist: [{ text: '`ci`', done: true }, { text: b }]\n"+
+		"      - compare: { before: Now, after: Next, rows: [{ what: a, before: x, after: y }, { what: b, before: z, after: z }] }\n"+
+		"      - options: [{ title: A, pick: Take, pros: [p], cons: [c] }]\n"+
+		"      - facts: [{ name: State, value: { pill: open, tone: bad } }, { name: Due, value: '`soon`' }]\n"+
+		"      - diff: { file: a.go, text: \"@@ -1 +1 @@\\n-a\\n+b\\n\" }\n"+
+		"      - tree: [{ path: a/b.go, note: B, change: added }]\n"+
+		"      - links: [{ title: PR, url: 'https://example.com/1', text: merged }]\n")
+	for _, want := range []string{
+		`<div class="floe-card floe-stat good"><dt>Pages</dt><dd class="value">18<span class="unit">MB</span></dd><dd class="note">&#43;5</dd></div>`,
+		`<label class="floe-bar warn"><span class="label">Copy</span><span class="count">5 / 8</span><progress value="5" max="8">5 / 8</progress></label>`,
+		`<li class="done"><strong>A</strong></li>`,
+		`<li class="doing" aria-current="step"><strong>B</strong><p><strong>now</strong></p>`,
+		`<li class="todo"><strong>C</strong></li>`,
+		`<li class="done"><code>ci</code></li>`,
+		`<tr><td class="what">a</td><td>x</td><td class="after">y</td></tr>`,
+		`<tr class="same"><td class="what">b</td>`,
+		`<div class="floe-card floe-option pick"><h3>A <span class="floe-pill">Take</span></h3><ul><li class="pro">p</li><li class="con">c</li></ul></div>`,
+		`<dt>State</dt><dd><span class="floe-pill bad">open</span></dd>`,
+		`<dt>Due</dt><dd><code>soon</code></dd>`,
+		`<span class="file">a.go</span><span class="added">+1</span><span class="removed">−1</span></figcaption><pre><code><span class="hunk">@@ -1 &#43;1 @@` + "\n" + `</span><span class="del">-a` + "\n",
+		`<li><span class="name dir">a/</span><ul>` + "\n" + `<li class="added"><span class="name">b.go</span><span class="note">B</span></li>`,
+		`<li class="floe-card"><a href="https://example.com/1">PR</a><p>merged</p></li>`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the page lacks %s:\n%s", want, page)
+		}
+	}
+	// Each style once: those of the parts drawn, and of the table, the cards and code they are drawn in the look of.
+	for _, style := range []string{".floe-stats {", ".floe-progress {", ".floe-steps {", ".floe-table {", ".floe-cards {", ".floe-code {", ".floe-diff pre {", ".floe-tree {", ".floe-pill {"} {
+		if strings.Count(page, style) != 1 {
+			t.Errorf("the page has %s %d times", style, strings.Count(page, style))
+		}
+	}
+
+	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
+		"      - progress: [{ label: a, done: 1, of: 2 }, { label: b, done: 3, of: 2 }]\n"+
+		"      - tree: [{ path: a }, { path: // }]\n"), "", "")
+	for _, want := range []string{
+		"bad.yaml:5:68: sections[0].parts[0].progress[1].done: write done no greater than of, the whole",
+		"bad.yaml:6:37: sections[0].parts[1].tree[1].path: write a path naming a file or a folder",
+	} {
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("the mistakes = %v, want %s", err, want)
+		}
+	}
 }

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "progress",
+  "description": "How far things have gone: each a label over a bar, filled as far as done goes of of, with the count",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "label": { "type": "string", "minLength": 1 },
+      "done": { "type": "integer", "minimum": 0 },
+      "of": { "type": "integer", "minimum": 1, "description": "The whole, no less than done" },
+      "tone": { "$ref": "floe:///parts/tone.json", "description": "The bar's colour, accent when left out" }
+    },
+    "required": ["label", "done", "of"],
+    "additionalProperties": false
+  }
+}

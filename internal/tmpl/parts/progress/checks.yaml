@@ -1,0 +1,3 @@
+- field: done
+  expr: item.done <= item.of
+  message: write done no greater than of, the whole
