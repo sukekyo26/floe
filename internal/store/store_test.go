@@ -687,6 +687,65 @@ func TestSaveChecksAgain(t *testing.T) {
 	}
 }
 
+// A store whose path holds what a glob takes for a pattern keeps one copy of a page all the same.
+func TestStoreUnderPatternPath(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	root := filepath.Join(e.tmp, "[notes]", "store")
+	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", ""))
+	doc := e.page(t, "plan.yaml", "Plan")
+	for range 2 {
+		entry, err := st.Prepare(t.Context(), doc, store.Options{}, e.tmp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = st.Save(entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := os.ReadDir(filepath.Join(root, "plan"))
+	if err != nil || len(entries) != 2 {
+		t.Errorf("the page holds %v (%v), want one copy and meta.json", entries, err)
+	}
+}
+
+// An edit or a removal in a store not made yet finds no page, and makes nothing.
+func TestNoStore(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	root := filepath.Join(e.tmp, "none")
+	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", ""))
+	wantUserErr(t, st.Remove("x"), "store_no_page", "x")
+	if _, err := st.Edit("x", store.Edit{Description: ptr("d")}); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("an edit in no store = %v", err)
+	}
+	if _, err := os.Stat(root); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a lookup made the store: %v", err)
+	}
+}
+
+// A save of a new slug that fails leaves no directory, which would keep a rename off the slug.
+func TestFailedNewSaveLeavesNothing(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	doc := e.page(t, "fresh.yaml", "Fresh")
+	entry, err := e.s.Prepare(t.Context(), doc, store.Options{}, e.tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// meta.json cannot be written over a directory.
+	mkdir(t, filepath.Join(e.tmp, "store", "fresh", "meta.json"))
+	if err = e.s.Save(entry); err == nil {
+		t.Fatal("a save over a directory named meta.json succeeded")
+	}
+	if _, err = os.Stat(filepath.Join(e.tmp, "store", "fresh")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a failed save of a new slug left its directory: %v", err)
+	}
+}
+
 func TestRemove(t *testing.T) {
 	t.Parallel()
 
