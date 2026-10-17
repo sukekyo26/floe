@@ -167,7 +167,7 @@ func (t *Template) checkThemeVariables(lint *schemaLint) ([]*usererr.Error, erro
 		}
 		if missing != nil {
 			key := "tmpl_theme_variables"
-			if !slices.ContainsFunc(missing, func(v string) bool { return !slices.Contains(notColours, v) }) {
+			if !slices.ContainsFunc(missing, func(v string) bool { return !slices.Contains(sameInDark, v) }) {
 				key = "tmpl_theme_variables_plain"
 			}
 			warnings = append(warnings, usererr.New(key, t.file(name), andList(missing)))
@@ -176,9 +176,9 @@ func (t *Template) checkThemeVariables(lint *schemaLint) ([]*usererr.Error, erro
 	return warnings, nil
 }
 
-// notColours are the CSS variables of the parts and diagrams that are not colours: their fonts and the
-// width of a note.
-var notColours = []string{"--font", "--mono", "--text-width"}
+// sameInDark are the CSS variables of the parts whose default serves dark mode as well: their fonts, the
+// width of a note, and a terminal's colours, dark in light mode too.
+var sameInDark = []string{"--font", "--mono", "--text-width", "--terminal-bg", "--terminal-fg", "--terminal-prompt"}
 
 // definedVariables returns the CSS variables src defines (--fg: #000), by name.
 func definedVariables(src []byte) map[string]bool {

@@ -292,6 +292,13 @@ func TestCodeAndTerminal(t *testing.T) {
 			t.Errorf("the mistakes = %v, want %s", err, want)
 		}
 	}
+	// A command written with its prompt would show two, and copy one.
+	_, err = builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
+		"      - terminal: { steps: [{ run: '$ ls' }, { run: 'PS C:\\work> dir' }, { run: '> dir' }, { run: 'echo $ x' }] }\n"), "", "")
+	if err == nil || strings.Count(err.Error(), "write the command without its prompt") != 3 ||
+		!strings.Contains(err.Error(), `bad.yaml:5:36: sections[0].parts[0].terminal.steps[0].run: write the command without its prompt, which floe draws from the shell ("$ ls")`) {
+		t.Errorf("commands with their prompts = %v", err)
+	}
 }
 
 // report sends code and commands to their parts: a block of code or a prompt in text is refused, while
@@ -299,9 +306,12 @@ func TestCodeAndTerminal(t *testing.T) {
 func TestReportRefusesCodeInText(t *testing.T) {
 	t.Parallel()
 
-	for _, text := range []string{"```go\\nx\\n```", "~~~\\nx\\n~~~", "$ floe list", "PS> dir", "  PS C:\\\\work> dir"} {
+	for _, text := range []string{
+		"```go\\nx\\n```", "~~~\\nx\\n~~~", "```sh\\n$ ls\\n```", "$ floe list", "PS> dir", "  PS C:\\\\work> dir",
+		"- $ make", "1. > $ make",
+	} {
 		_, err := builtins.Read("t.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n      - text: \"a\\n"+text+"\"\n"), "", "")
-		if err == nil || !strings.Contains(err.Error(), "t.yaml:5:15: sections[0].parts[0].text: write ") {
+		if err == nil || strings.Count(err.Error(), "t.yaml:5:15: sections[0].parts[0].text: write ") != 1 {
 			t.Errorf("text %q = %v", text, err)
 		}
 	}
