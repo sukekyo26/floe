@@ -568,7 +568,7 @@ func (l *schemaLint) walk(v any, ptr string, reached bool) {
 // the item whole.
 func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 	switch {
-	case f == "diagram" || f == "script":
+	case goParts[f] != "":
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_part", l.file, ptr, f, f))
 	case !knownFormat(f):
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unknown", l.file, ptr, f))

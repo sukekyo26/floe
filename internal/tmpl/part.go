@@ -212,7 +212,7 @@ func readPart(name string, s *schema) (*part, error) {
 		}
 	}
 	if classes != nil {
-		p.classes = regexp.MustCompile(`\b(?:` + strings.Join(classes, "|") + `)\b`)
+		p.classes = regexp.MustCompile(`(?:^|[^\w-])(?:` + strings.Join(classes, "|") + `)(?:[^\w-]|$)`)
 	}
 	src, err := partFiles.ReadFile(path.Join(dir, "checks.yaml"))
 	switch {

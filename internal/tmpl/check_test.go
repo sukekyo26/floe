@@ -214,6 +214,11 @@ func TestCheckMistakes(t *testing.T) {
 			warning: "sizes/themes/default.css does not define --bg, --surface, --fg, --muted, --line, --accent, --accent-soft",
 		},
 		{
+			name:    "a theme without the variables of a Markdown table",
+			files:   map[string]string{"schema.json": `"chart":|"aside": { "type": "string", "format": "markdown" },` + "\n    " + `"chart":`},
+			warning: "sizes/themes/default.css does not define --surface, --line, --fg, --mono, --accent-soft, --accent, --good-soft",
+		},
+		{
 			name: "formats of other types",
 			files: map[string]string{"schema.json": `"note": { "type": "string", "format": "html" }|"note": { "type": "object", "format": "html", ` +
 				`"properties": { "logo": { "type": "string", "format": "image" } } }, "plan": { "format": "diagram" }`},
@@ -224,7 +229,7 @@ func TestCheckMistakes(t *testing.T) {
 			},
 		},
 		{
-			name: "a script out of reach, and one of text",
+			name: "a script out of reach, and Markdown of type object",
 			files: map[string]string{"schema.json": `"chart":|"move": { "oneOf": [{ "$ref": "floe:///parts/script.json" }] }, ` +
 				`"run": { "type": "object", "format": "markdown" },` + "\n    " + `"chart":`},
 			want: []string{

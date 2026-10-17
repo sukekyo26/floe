@@ -213,6 +213,10 @@ func TestPartStylesByClass(t *testing.T) {
 	if strings.Count(page, ".floe-pill {") != 1 || strings.Contains(page, ".floe-note {") {
 		t.Errorf("a page of a pill in HTML:\n%s", page)
 	}
+	page = render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - html: <p class=\"floe-note-own\">x</p>\n")
+	if strings.Contains(page, ".floe-note {") {
+		t.Errorf("a class a part's starts gets the part's style:\n%s", page)
+	}
 	if page = render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: plain\n"); strings.Contains(page, ".floe-") {
 		t.Errorf("a page of no part holds a part's style:\n%s", page)
 	}
