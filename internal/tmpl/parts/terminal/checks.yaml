@@ -1,4 +1,4 @@
 - for: steps
   field: run
-  expr: not (item.run matches "(?m)^\\s*([\\w.@:~/-]*\\$|PS( [^>\\n]*)?>|[A-Za-z]:\\\\[^>\\n]*>|%|❯) ")
+  expr: not (item.run matches "(?m)^\\s*(\\[[^\\]\\n]*\\]\\$|[\\w.-]+@[\\w.-]+ \\S+ %|[\\w.@:~/-]*\\$|PS( ([A-Za-z]:\\\\|[~/])[^>\\n]*)?>|[A-Za-z]:\\\\[^>\\s]*>|%|❯) ")
   message: write the command without its prompt, which floe draws from the shell

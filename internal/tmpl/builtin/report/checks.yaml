@@ -7,5 +7,5 @@
   field: text
   expr: >-
     item.text == nil || item.text matches "(?m)^\\s*(?:(?:[-*+]|\\d+[.)])\\s+|>\\s*)*(```|~~~)" ||
-    !(item.text matches "(?m)^\\s*(?:(?:[-*+]|\\d+[.)])\\s+|>\\s*)*([\\w.@:~/-]*\\$|PS( [^>\\n]*)?>|[A-Za-z]:\\\\[^>\\n]*>|%|❯) ")
+    !(item.text matches "(?m)^\\s*(?:(?:[-*+]|\\d+[.)])\\s+|>\\s*)*(\\[[^\\]\\n]*\\]\\$|[\\w.-]+@[\\w.-]+ \\S+ %|[\\w.@:~/-]*\\$|PS( ([A-Za-z]:\\\\|[~/])[^>\\n]*)?>|[A-Za-z]:\\\\[^>\\s]*>|%|❯) ")
   message: write commands in a terminal part, which draws the prompt and keeps it out of a copy
