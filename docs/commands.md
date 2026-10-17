@@ -30,7 +30,7 @@ Reference for every command of the `floe` binary.
 
 Store a data file and print the URL of its page (`http://127.0.0.1:7325/a/<slug>/`) on stdout. The page is drawn each time it is opened. If the server is not running, it is started in the background first. A new slug is also opened in the browser; a republished one is not, because the open tab reloads itself.
 
-Pages are drawn from data files (`.yaml`, `.yml`). The data file is copied to `<slug>/source/data.yaml` under `FLOE_DIR`, with the images it shows at the paths it names them by; take it back from there if the original is lost. An HTML file is not stored: link it with `--link` to show it as it is. A relative path is resolved against the working directory.
+Pages are drawn from data files (`.yaml`, `.yml`). The data file is copied to `<slug>/source-<id>/data.yaml` under `FLOE_DIR`, with the images it shows at the paths it names them by; take it back from there if the original is lost. Each publish writes a new copy and then removes the one before, so a publish that fails leaves the page as it was. An HTML file is not stored: link it with `--link` to show it as it is. A relative path is resolved against the working directory.
 
 ### Flags
 

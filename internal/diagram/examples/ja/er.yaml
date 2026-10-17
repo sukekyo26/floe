@@ -10,7 +10,7 @@ title: "floe が保存するデータ"
 parts:
   - table: { x: 380, y: 40, w: 260, title: "ページ（meta.json）", tone: "accent", rows: [["slug", "PK"], ["title", "文字列"], ["description", "文字列"], ["lang", "BCP 47"], ["project", "FK・表示用"], ["publishedFrom", "FK・持ち主"], ["favorite", "真偽値"], ["createdAt", "日時"], ["updatedAt", "日時"]] }
   - table: { x: 40, y: 150, w: 200, title: "プロジェクト", rows: [["name", "リポジトリ名"]] }
-  - table: { x: 780, y: 40, w: 240, title: "保存したページ", rows: [["slug", "PK・FK"], ["source/", "データファイル・画像"]] }
+  - table: { x: 780, y: 40, w: 240, title: "保存したページ", rows: [["slug", "PK・FK"], ["source", "写しのディレクトリ"]] }
   - table: { x: 780, y: 172, w: 240, title: "リンク", rows: [["slug", "PK・FK"], ["path", "実体のパス"]] }
   - edge: { d: "M240,169 H380", start: "zero-one", end: "zero-many", label: "表示用", at: [310, 169] }
   - edge: { d: "M240,191 H380", start: "zero-one", end: "zero-many", label: "持ち主", at: [310, 191] }

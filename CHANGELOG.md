@@ -52,7 +52,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   prints one to copy. The examples come in English and Japanese and follow the
   language of messages; `--lang` picks another.
 - Add `floe publish <data.yaml>`, which stores a data file with the images it
-  shows (`<slug>/source/` in `FLOE_DIR`, where it can be taken back from) and
+  shows (`<slug>/source-<id>/` in `FLOE_DIR`, where it can be taken back from) and
   prints the URL of its page on `http://127.0.0.1:7325`, drawn with the
   template it names each time it is opened.
   The built-in template `report` lays out a header and sections of Markdown
