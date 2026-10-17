@@ -94,7 +94,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		page, version, err := s.cfg.Store.Draw(slug, m, file)
 		if err != nil {
 			// Saving the file right, or publishing it again, reloads the tab back to the page.
-			page = mistakesPage(catalog(r), slug, !m.IsLink(), err)
+			page = mistakesPage(catalog(r), slug, m, file, err)
 		}
 		stream(w, htmlType, bytes.NewReader(page), servedScript(slug, "", version))
 		return
@@ -283,19 +283,19 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.6 ui-monospac
 </html>
 `))
 
-// mistakesPage words the mistakes of the data file of slug: a stored one is put right by publishing the
-// data file again, a linked one by saving it.
-func mistakesPage(c *i18n.Catalog, slug string, stored bool, err error) []byte {
+// mistakesPage words the mistakes of file, the data file of slug, whose meta.json is m: a linked one
+// is put right by saving it, a stored one, a copy, by publishing the data file again.
+func mistakesPage(c *i18n.Catalog, slug string, m *store.Meta, file string, err error) []byte {
 	text := mistakesText(c, err)
-	lead := "server_mistakes_lead"
-	if stored {
-		lead = "server_mistakes_lead_stored"
+	lead := c.Msg("server_mistakes_lead")
+	if !m.IsLink() {
+		lead = c.Msg("server_mistakes_lead_stored", filepath.Dir(file))
 	}
 	var b bytes.Buffer
 	//nolint:errcheck // a buffer takes every write, and the fields are text
 	_ = mistakes.Execute(&b, map[string]string{
 		"Lang": string(c.Lang()), "Slug": slug, "Head": c.Msg("server_mistakes_head"),
-		"Lead": c.Msg(lead), "Mistakes": text,
+		"Lead": lead, "Mistakes": text,
 	})
 	return b.Bytes()
 }
