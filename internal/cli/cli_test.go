@@ -460,8 +460,9 @@ func TestPublish(t *testing.T) {
 }
 
 // TestPublishToASilentPort holds the port with a program that accepts connections and never answers:
-// the publish gives up within the 3 s the server has to start, not after 150 probe timeouts, and starts
-// no server, as it cannot bind the port: one started anyway could take the port once it is let go.
+// the publish gives up within the 3 s the server has to start, not after 150 probe timeouts, says the
+// port is taken, and starts no server, as it cannot bind the port: one started anyway could take the
+// port once it is let go.
 func TestPublishToASilentPort(t *testing.T) {
 	t.Parallel()
 
@@ -484,12 +485,15 @@ func TestPublishToASilentPort(t *testing.T) {
 	e.vars[servedMark] = mark
 	start := time.Now()
 	want(t, "publish", e.exe(t, otherBuild, "publish", e.page(t, "silent.yaml", "Silent")), 1, "",
-		`floe: the server did not start; run "floe serve" to see the error`)
+		"floe: port "+e.port+" is used by another program; set FLOE_PORT to a free port")
 	if took := time.Since(start); took > 10*time.Second {
 		t.Errorf("the publish took %v", took)
 	}
-	if pid, err := os.ReadFile(mark); !errors.Is(err, os.ErrNotExist) {
+	switch pid, err := os.ReadFile(mark); {
+	case err == nil:
 		t.Errorf("a publish that could not bind the port started a server (pid %s)", pid)
+	case !errors.Is(err, os.ErrNotExist):
+		t.Errorf("read the mark of a server started: %v", err)
 	}
 }
 

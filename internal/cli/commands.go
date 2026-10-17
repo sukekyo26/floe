@@ -244,7 +244,7 @@ func (a *app) serve(ctx context.Context) error {
 	if err != nil {
 		return err //nolint:wrapcheck // already says what failed
 	}
-	ln, err := a.listen(ctx)
+	ln, err := a.listen()
 	if err != nil {
 		return err
 	}
@@ -253,19 +253,12 @@ func (a *app) serve(ctx context.Context) error {
 	return srv.Serve(ctx, ln) //nolint:wrapcheck // already says what failed
 }
 
-// listen binds the port, or takes the listener the publish that started this server bound for it.
-func (a *app) listen(ctx context.Context) (net.Listener, error) {
-	if a.env.Getenv(daemon.ListenerEnv) != "" {
-		f := os.NewFile(3, "listener")
-		defer f.Close() //nolint:errcheck // the listener holds its own copy
-		ln, err := net.FileListener(f)
-		if err != nil {
-			return nil, fmt.Errorf("take the listener: %w", err)
-		}
-		return ln, nil
+// listen takes the listener the publish that started this server bound for it, or binds the port.
+func (a *app) listen() (net.Listener, error) {
+	if ln, err := daemon.Handed(a.env.Getenv, a.cfg.port); ln != nil || err != nil {
+		return ln, err //nolint:wrapcheck // already says what failed
 	}
-	var lc net.ListenConfig
-	ln, err := lc.Listen(ctx, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(a.cfg.port)))
+	ln, err := daemon.Listen(a.cfg.port)
 	if errors.Is(err, syscall.EADDRINUSE) {
 		return nil, usererr.New("cli_port_in_use", a.cfg.port)
 	}
