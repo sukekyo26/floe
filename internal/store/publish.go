@@ -165,7 +165,8 @@ func (e *Entry) draw(data *tmpl.Data, src, theme, templates string) error {
 	if !e.Meta.IsLink() {
 		e.Source, e.Images = []byte(src), data.Images()
 		for name := range e.Images {
-			if first, _, _ := strings.Cut(name, "/"); first == sourceName {
+			// One name on macOS, which ignores case.
+			if first, _, _ := strings.Cut(name, "/"); strings.EqualFold(first, sourceName) {
 				return usererr.New("store_image_source_name", name, sourceName)
 			}
 		}
@@ -355,32 +356,62 @@ func lock(dir string) (func(), error) {
 }
 
 // writeSource puts the data file src and its images under dir/source/, over what is there: the images
-// first, then the data file, each whole, and then what the data no longer shows goes. A drawing in
-// between finds the old data file or the new one, each with its images, and a write that fails leaves
-// the old page drawn.
+// first, then the data file, each whole, and then what the data no longer shows goes. The data file is
+// never missing, so a drawing in between draws the old page or the new one; the old one may show an
+// image of the new data of the same name, or miss one that went. A write that fails leaves the old
+// data file with those images until the next publish.
 func writeSource(dir string, src []byte, images map[string][]byte) error {
 	source := filepath.Join(dir, sourceDir)
+	if err := os.MkdirAll(source, 0o700); err != nil {
+		return err //nolint:wrapcheck // Save says what it saved
+	}
+	r, err := os.OpenRoot(source)
+	if err != nil {
+		return err //nolint:wrapcheck // as above
+	}
+	defer r.Close() //nolint:errcheck // nothing written through it is left to flush
 	for name, b := range images {
-		if err := writeUnder(source, name, b); err != nil {
+		if err = clearWay(r, name); err != nil {
+			return err
+		}
+		if err = writeUnder(source, name, b); err != nil {
 			return err
 		}
 	}
-	if err := writeUnder(source, sourceName, src); err != nil {
+	if err = writeUnder(source, sourceName, src); err != nil {
 		return err
 	}
-	return prune(source, images)
+	return prune(r, images)
 }
 
-// prune removes the files under source but its data file and images (a file a write left halfway
-// too), and then the directories left empty.
-func prune(source string, images map[string][]byte) error {
-	r, err := os.OpenRoot(source)
-	if err != nil {
-		return err //nolint:wrapcheck // Save says what it saved
+// clearWay removes what the old copy under r left in the way of the image name: a file where name
+// needs a directory, or a directory where it needs its file. The new data shows neither, as it shows
+// name.
+func clearWay(r *os.Root, name string) error {
+	steps := strings.Split(name, "/")
+	for i := 1; i < len(steps); i++ {
+		dir := strings.Join(steps[:i], "/")
+		fi, err := r.Lstat(dir)
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			return nil
+		case err != nil:
+			return err //nolint:wrapcheck // Save says what it saved
+		case !fi.IsDir():
+			return r.Remove(dir) //nolint:wrapcheck // as above
+		}
 	}
-	defer r.Close() //nolint:errcheck // nothing written through it is left to flush
+	if fi, err := r.Lstat(name); err == nil && fi.IsDir() {
+		return r.RemoveAll(name) //nolint:wrapcheck // as above
+	}
+	return nil
+}
+
+// prune removes the files under r but its data file and images (a file a write left halfway too), and
+// then the directories left empty.
+func prune(r *os.Root, images map[string][]byte) error {
 	var dirs []string
-	err = fs.WalkDir(r.FS(), ".", func(name string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(r.FS(), ".", func(name string, d fs.DirEntry, err error) error {
 		_, shown := images[name]
 		switch {
 		case err != nil:
@@ -395,7 +426,7 @@ func prune(source string, images map[string][]byte) error {
 		return nil
 	})
 	if err != nil {
-		return err //nolint:wrapcheck // as above
+		return err //nolint:wrapcheck // Save says what it saved
 	}
 	// Deepest first; one that still holds an image stays.
 	for _, d := range slices.Backward(dirs) {

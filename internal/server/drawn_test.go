@@ -165,16 +165,40 @@ func TestDrawnStored(t *testing.T) {
 		t.Errorf("saving the copy did not reload the tab: %q", body)
 	}
 	if r := e.get(t, "/a/sizes/?raw"); !strings.Contains(r.body, "source/data.yaml:3:26: files[0].bytes:") ||
-		!strings.Contains(r.body, "publish it again") {
+		!strings.Contains(r.body, "publish it again") || !strings.Contains(r.body, "is in "+source+".") {
 		t.Errorf("the page of a copy with mistakes:\n%s", r.body)
 	}
 
 	// An image under a directory named as the copy of the data file is refused.
-	e.write(t, "clash/data.yaml/c.png", string(png))
-	clash := e.write(t, "clash/sizes.yaml", strings.Replace(right, "img/chart.png", "data.yaml/c.png", 1))
-	if _, err := e.store.Prepare(t.Context(), clash, store.Options{Slug: ptr("sizes")}, e.tmp); err == nil ||
-		!strings.Contains(err.Error(), `image "data.yaml/c.png" is under a directory named data.yaml`) {
-		t.Errorf("publish of an image under data.yaml/ = %v", err)
+	// An image under a directory named as the copy of the data file is refused, in any case: macOS
+	// ignores it.
+	e.write(t, "clash/Data.yaml/c.png", string(png))
+	clash := e.write(t, "clash/sizes.yaml", strings.Replace(right, "img/chart.png", "Data.yaml/c.png", 1))
+	if _, prepErr := e.store.Prepare(t.Context(), clash, store.Options{Slug: ptr("sizes")}, e.tmp); prepErr == nil ||
+		!strings.Contains(prepErr.Error(), `image "Data.yaml/c.png" is under a directory named data.yaml`) {
+		t.Errorf("publish of an image under Data.yaml/ = %v", prepErr)
+	}
+
+	// An image whose path turns from a directory into a file, and back, is published each time.
+	e.write(t, "flip/x.png/a.png", string(png))
+	flip := e.write(t, "flip/sizes.yaml", strings.Replace(right, "img/chart.png", "x.png/a.png", 1))
+	e.publish(t, flip, store.Options{Slug: ptr("flip")})
+	if err = os.Rename(filepath.Join(e.tmp, "flip", "x.png"), filepath.Join(e.tmp, "flip", "x.png.dir")); err != nil {
+		t.Fatal(err)
+	}
+	e.write(t, "flip/x.png", string(png))
+	e.write(t, "flip/sizes.yaml", strings.Replace(right, "img/chart.png", "x.png", 1))
+	e.publish(t, flip, store.Options{Slug: ptr("flip")})
+	if err = os.Remove(filepath.Join(e.tmp, "flip", "x.png")); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Rename(filepath.Join(e.tmp, "flip", "x.png.dir"), filepath.Join(e.tmp, "flip", "x.png")); err != nil {
+		t.Fatal(err)
+	}
+	e.write(t, "flip/sizes.yaml", strings.Replace(right, "img/chart.png", "x.png/a.png", 1))
+	e.publish(t, flip, store.Options{Slug: ptr("flip")})
+	if r := e.get(t, "/a/flip/?raw"); !strings.Contains(r.body, `<img src="data:image/png;base64,`) {
+		t.Errorf("the page after the image's path turned twice:\n%s", r.body)
 	}
 
 	// Renamed on the management page, it is drawn under its new slug.

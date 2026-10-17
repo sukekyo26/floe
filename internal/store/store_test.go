@@ -561,6 +561,9 @@ func TestSaveAtOnce(t *testing.T) {
 func TestSaveFailureKeepsPage(t *testing.T) {
 	t.Parallel()
 
+	if os.Getuid() == 0 {
+		t.Skip("root writes into a directory it cannot write")
+	}
 	e := newEnv(t)
 	doc := e.page(t, "kept.yaml", "Kept")
 	e.mustPublish(t, doc, store.Options{}, "proj")
