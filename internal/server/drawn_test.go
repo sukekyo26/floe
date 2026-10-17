@@ -162,7 +162,8 @@ func TestDrawnStored(t *testing.T) {
 	if _, body := e.events(t, "/api/events/sizes?since="+since, 3*time.Second); !strings.Contains(body, "event: reload") {
 		t.Errorf("saving the copy did not reload the tab: %q", body)
 	}
-	if r := e.get(t, "/a/sizes/?raw"); !strings.Contains(r.body, "source/data.yaml:3:26: files[0].bytes:") {
+	if r := e.get(t, "/a/sizes/?raw"); !strings.Contains(r.body, "source/data.yaml:3:26: files[0].bytes:") ||
+		!strings.Contains(r.body, "publish it again") {
 		t.Errorf("the page of a copy with mistakes:\n%s", r.body)
 	}
 

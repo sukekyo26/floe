@@ -93,8 +93,8 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	if m.IsDrawn() {
 		page, version, err := s.cfg.Store.Draw(slug, m, file)
 		if err != nil {
-			// Saving the file right reloads the tab back to the page.
-			page = mistakesPage(catalog(r), slug, err)
+			// Saving the file right, or publishing it again, reloads the tab back to the page.
+			page = mistakesPage(catalog(r), slug, !m.IsLink(), err)
 		}
 		stream(w, htmlType, bytes.NewReader(page), servedScript(slug, "", version))
 		return
@@ -259,7 +259,7 @@ func (s *Server) version(slug, rest string) string {
 	return s.cfg.Store.Version(slug, m, file)
 }
 
-// mistakesText words why a linked data file cannot be drawn, in the language of c.
+// mistakesText words why a data file cannot be drawn, in the language of c.
 func mistakesText(c *i18n.Catalog, err error) string {
 	var l i18n.Localizer
 	if errors.As(err, &l) {
@@ -268,7 +268,7 @@ func mistakesText(c *i18n.Catalog, err error) string {
 	return err.Error()
 }
 
-// mistakes is the page shown for a linked data file with mistakes, in the reader's language.
+// mistakes is the page shown for a data file with mistakes, in the reader's language.
 var mistakes = template.Must(template.New("mistakes").Parse(`<!doctype html>
 <html lang="{{.Lang}}">
 <head><meta charset="utf-8"><title>{{.Slug}}</title>
@@ -283,13 +283,19 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.6 ui-monospac
 </html>
 `))
 
-func mistakesPage(c *i18n.Catalog, slug string, err error) []byte {
+// mistakesPage words the mistakes of the data file of slug: a stored one is put right by publishing the
+// data file again, a linked one by saving it.
+func mistakesPage(c *i18n.Catalog, slug string, stored bool, err error) []byte {
 	text := mistakesText(c, err)
+	lead := "server_mistakes_lead"
+	if stored {
+		lead = "server_mistakes_lead_stored"
+	}
 	var b bytes.Buffer
 	//nolint:errcheck // a buffer takes every write, and the fields are text
 	_ = mistakes.Execute(&b, map[string]string{
 		"Lang": string(c.Lang()), "Slug": slug, "Head": c.Msg("server_mistakes_head"),
-		"Lead": c.Msg("server_mistakes_lead"), "Mistakes": text,
+		"Lead": c.Msg(lead), "Mistakes": text,
 	})
 	return b.Bytes()
 }

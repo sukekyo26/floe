@@ -86,7 +86,7 @@ type Store struct {
 	// LIMIT: entries of unlinked paths stay (a few hundred bytes each). Drop them on removal if a
 	// server ever sees tens of thousands of paths in its lifetime.
 	titles map[string]cachedTitle
-	// drawn is what the last drawing of each linked data file read besides it, by slug and file (see
+	// drawn is what the last drawing of each data file read besides it, by slug and file (see
 	// sourceKey).
 	// LIMIT: one entry for every slug and file ever drawn, removed, renamed and relinked ones too, as
 	// titles are. Drop them on removal if a server comes to see thousands of them in its lifetime.
@@ -241,7 +241,7 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	return page, version, err
 }
 
-// drawing is what a drawing of a linked data file read besides it, and the publish it drew (its
+// drawing is what a drawing of a data file read besides it, and the publish it drew (its
 // updatedAt).
 type drawing struct {
 	at      string
