@@ -5,8 +5,8 @@
   "type": "object",
   "properties": {
     "shell": {
-      "enum": ["sh", "powershell", "cmd"],
-      "description": "The shell, which gives the prompt: sh ($, when left out), powershell (PS>) or cmd (>)"
+      "enum": ["bash", "zsh", "sh", "powershell", "cmd"],
+      "description": "The shell, named above the commands, which gives the prompt: bash or sh ($), zsh (%), powershell (PS>) or cmd (>); left out, no name and $"
     },
     "steps": {
       "type": "array",

@@ -59,10 +59,10 @@ sections:
       - text: |                # Markdown（表も書ける）。中の生の HTML は出さない
           1. **金曜の夜**に編集を止める。
           2. ページを写す。
-      - terminal:              # 打つコマンドと出力。プロンプトは floe が付ける（shell は sh・powershell・cmd）
+      - terminal:              # 打つコマンドと出力。プロンプトは floe が付ける（shell は bash・zsh・sh・powershell・cmd）
           steps:
             - { run: wiki export --out pages/, out: 1840 pages written }
-      - code:                  # コードをそのまま。ファイル名か言語を上に出す
+      - code:                  # コードをそのまま。ファイル名と言語を上に出す
           file: old-wiki.conf
           text: |
             read_only = true
@@ -93,7 +93,7 @@ sections:
 ```
 
 - `lang:` はページの言語（`<html lang>`）で、BCP 47 の言語タグ（`en`・`ja`・`pt-BR`）で書きます。どのデータファイルにも必要です。
-- `theme:` でテンプレートのテーマを選びます（`default`）。
+- `theme:` でテンプレートのテーマを選びます。`report` のテーマは、`default`（区画に面を並べ、注記は tone の色の地）・`soft`（角の丸い面）・`editorial`（印刷物のような罫と細い枠）・`ink`（表の見出しを墨の地に、状態を色で塗る）・`tinted`（強調の色を帯びた面）です。
 - テンプレートが画像を取る項目（`"format": "image"`）には、データファイルのディレクトリの配下のパスを書きます。画像はページに埋め込まれます。
 - 図（`report` や自作のテンプレートの部品 `diagram`）には spec をその場に書きます。部品と検査は [`floe diagram render`](#floe-diagram-render-specyaml) と同じで、誤りはデータファイルの行と列で出ます。1 ページの図の id は互いに違えます。アイコンは `FLOE_ICONS_DIR` から読みます。公開したページでは、ページを描くサーバーの `FLOE_ICONS_DIR` です。
 - スクリプト（`report` や自作のテンプレートの部品 `script`）は `js` に関数を書き、ページはその場所の空の要素と `data` を渡して呼びます。`data` のキーと値の組は名前の順に並ぶので、順番が要るものはリストで書きます。関数はその位置で、ページの残りを読む前に動きます。`</script` か `<!--` を含む `js` は断ります。関数の中の誤りはブラウザで分かります。

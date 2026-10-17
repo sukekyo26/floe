@@ -1,54 +1,37 @@
-/* The default look of the report template: the look floe has given pages from the start */
-:root {
-  --bg: #f3f5f4; --surface: #fff; --fg: #18201e; --muted: #57635f; --line: #d4dbd8;
-  --accent: #1d6670; --accent-soft: #dcebec;
-  --good: #1f7a45; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
-  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --display: var(--font);
-  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
-  /* The width of the whole body, and the shorter width that keeps prose readable */
-  --page-width: 96rem; --text-width: 56rem;
-  --terminal-bg: #1b2120; --terminal-fg: #e2e9e7; --terminal-prompt: #63b5be;
-  color-scheme: light;
+/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+:root { --panel: color-mix(in srgb, var(--line) 45%, var(--bg)); }
+.floe-table {
+  background: var(--panel); border: 0; border-radius: 20px; padding: 6px; box-shadow: none;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111716; --surface: #182120; --fg: #e2e9e7; --muted: #97a5a2; --line: #2b3634;
-    --accent: #63b5be; --accent-soft: #1b3336;
-    --good: #6fcf97; --good-soft: #173126; --warn: #e2a85e; --warn-soft: #392b18; --bad: #f2b8b5; --bad-soft: #3b1f1d;
-    --terminal-bg: #0a0e0d;
-    color-scheme: dark;
-  }
+.floe-table table { border-collapse: separate; border-spacing: 0; }
+.floe-table thead th { background: none; padding-block: 0.6rem 0.5rem; }
+.floe-table tbody td, .floe-table tbody tr:nth-child(even) td { background: var(--surface); }
+.floe-table tbody tr + tr td { border-top: 1px solid var(--line); }
+.floe-table tbody tr:first-child td:first-child { border-top-left-radius: 14px; }
+.floe-table tbody tr:first-child td:last-child { border-top-right-radius: 14px; }
+.floe-table tbody tr:last-child td:first-child { border-bottom-left-radius: 14px; }
+.floe-table tbody tr:last-child td:last-child { border-bottom-right-radius: 14px; }
+.floe-pill { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+.floe-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.floe-cards { background: var(--panel); border-radius: 20px; padding: 0.75rem; gap: 0.75rem; }
+.floe-card { border: 0; box-shadow: none; }
+.floe-card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
 }
-* { box-sizing: border-box; }
-body {
-  margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font);
-  font-size: 16px; line-height: 1.85; padding-inline: 16px; padding-block: 2.5rem 4rem;
+.floe-note {
+  padding-left: 4.35rem; border-radius: 18px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
 }
-main { max-width: var(--page-width); margin-inline: auto; display: grid; gap: 2.5rem; }
-main > *, section > * { min-width: 0; }
-h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
-h1 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: 0.01em; }
-h2 { font-size: 1.4rem; }
-h3 { font-size: 1.05rem; }
-p, ul, ol { margin: 0; max-width: var(--text-width); }
-ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
-a { color: var(--accent); }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-header { display: grid; gap: 0.7rem; }
-section { display: grid; gap: 1rem; }
-section > h2 { border-top: 1px solid var(--line); padding-top: 1.3rem; }
-.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.lead { color: var(--muted); font-size: 1.05rem; }
-.muted { color: var(--muted); }
-code { font-family: var(--mono); font-size: 0.86em; background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
-pre {
-  margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
-  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
-}
-pre code { font-size: inherit; background: none; padding: 0; }
-.stats { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; }
-.stat { display: grid; }
-.stat b { font-family: var(--mono); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
-.stat span { color: var(--muted); font-size: 0.85rem; }
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+.floe-note.good { border-color: color-mix(in srgb, var(--good) 20%, transparent); }
+.floe-note.warn { border-color: color-mix(in srgb, var(--warn) 20%, transparent); }
+.floe-note.bad { border-color: color-mix(in srgb, var(--bad) 20%, transparent); }
+.floe-note::before { top: 0.85rem; width: 2.25rem; height: 2.25rem; border-radius: 10px; background: var(--surface); color: var(--accent); }
+.floe-note.good::before { background: var(--surface); color: var(--good); }
+.floe-note.warn::before { background: var(--surface); color: var(--warn); }
+.floe-note.bad::before { background: var(--surface); color: var(--bad); }
+:is(.floe-code, .floe-terminal) { border-radius: 18px; box-shadow: none; padding: 6px; }
+:is(.floe-code, .floe-terminal) figcaption { background: none; border: 0; padding: 0.3rem 0.6rem 0.5rem; }
+:is(.floe-code, .floe-terminal) pre { background: rgb(255 255 255 / 0.04); border-radius: 12px; }
+.floe-code .lang { border-radius: 6px; }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--panel); color: var(--fg); }
+blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }

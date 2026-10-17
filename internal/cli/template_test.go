@@ -17,7 +17,7 @@ func TestTemplateCommands(t *testing.T) {
 
 	e := newEnv(t)
 	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
-	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.HasPrefix(r.stdout, "report\tbuilt-in\tdefault\t\tA page of sections") {
+	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.HasPrefix(r.stdout, "report\tbuilt-in\tdefault,editorial,ink,soft,tinted\t\tA page of sections") {
 		t.Fatalf("template list = %+v", r)
 	}
 
@@ -56,7 +56,7 @@ func TestTemplateCommands(t *testing.T) {
 	if err = os.WriteFile(filepath.Join(spec, "template.yaml"), floe, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
 		t.Fatal(err)
 	}
-	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.Contains(r.stdout, "\nspec\t"+spec+"\tdefault\t"+release[0]+"."+release[1]+".0\tA page of sections") {
+	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.Contains(r.stdout, "\nspec\t"+spec+"\tdefault,editorial,ink,soft,tinted\t"+release[0]+"."+release[1]+".0\tA page of sections") {
 		t.Errorf("template list with a copy = %+v", r)
 	}
 	if fi, serr := os.Stat(spec); serr != nil || fi.Mode().Perm() != 0o755 {
@@ -158,7 +158,7 @@ func TestTemplateShow(t *testing.T) {
 	r := e.run(t, "", "template", "show", "report")
 	for _, want := range []string{
 		"report: A page of sections",
-		"\nwhere: built-in\nthemes: default\n\nitems:\n",
+		"\nwhere: built-in\nthemes: default, editorial, ink, soft, tinted\n\nitems:\n",
 		"\n  eyebrow: text — A short line above the title",
 		"\n  lang: text, required — The page's language, a BCP 47 tag such as en, ja or pt-BR\n",
 		"\n  template: text, one of report, required — The template that draws the page\n",

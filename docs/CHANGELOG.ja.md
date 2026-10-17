@@ -13,14 +13,15 @@ floe の主要な変更を記録します。フォーマットは
   - 中身が変わるときだけ書き出し、データファイルに誤りがあるあいだは何も書き出さない。
   - `--check` は何も書き出さず、無いページとデータファイルから描いたものと違うページがあれば失敗する。CI で使う。
 - データファイルの中にスクリプトを書けるようにした。組み込みの `report` は部品 `script` を、テンプレートは部品 `floe:///parts/script.json` を指す。`js` に関数を書き、ページはその場所の空の要素と、任意の値の `data` を渡して呼ぶ。`</script` か `<!--` を含む `js` は、その `js` を指して断る。
-- データファイルに表・カード・注記を書けるようにした。floe の部品 `table`（`columns` と `rows`。`num` の列は右に揃える。セルは 1 行の Markdown で、数は引用符で囲む。`{ pill, tone }` で状態の札も書ける。各行のセルは列の数だけ書く）・`cards`（`title` と Markdown の `text` の並び）・`note`（Markdown の `text` と `tone`）で、`tone` は `accent`・`good`・`warn`・`bad` のどれか。
+- データファイルに表・カード・注記を書けるようにした。floe の部品 `table`（`columns` と `rows`。`num` の列は右に揃える。セルは 1 行の Markdown で、数は引用符で囲む。`{ pill, tone }` で状態の札も書ける。各行のセルは列の数だけ書く）・`cards`（`title` と Markdown の `text` の並び）・`note`（Markdown の `text` と `tone`。`title` を書けば上に見出しを出す）で、`tone` は `accent`・`good`・`warn`・`bad` のどれか。
   - 組み込みの `report` はこれらを受け取る。自作のテンプレートは `"$ref": "floe:///parts/table.json"` で部品を指す。floe が項目を検査して描き、部品のクラスを使うページに、部品のスタイルを 1 回だけ入れる。Markdown の表（表の部品の見た目になる）と、部品のクラスを書いた HTML（`<span class="floe-pill good">`）も含む。
   - テンプレートの `"format": "markdown"` の項目は Markdown で、floe が HTML に描く。
   - `floe template show` は部品の項目を出す。`floe template check` は、部品が色を取る CSS 変数を定義していないテーマを警告する。
   - テンプレートの `page.html` から `markdownLine` を使える。1 行の Markdown を段落で包まずに描き、`-` や `1.` のようなセルは文字のまま出す。
-- データファイルにコードとコマンドを書けるようにした。floe の部品 `code`（`text` にコードをそのまま書き、`file` があればファイル名を、無ければ `lang` を上に出す）と `terminal`（`steps` に、打つコマンドの `run` と出力の `out` を並べ、`shell` のプロンプトを付ける。`sh` は `$`、`powershell` は `PS>`、`cmd` は `>`）で、組み込みの `report` も受け取る。
-  - プロンプトはスタイルで描くので、コマンドをコピーしても入らない。ターミナルはライトモードでも暗い地で、色は `--terminal-bg`・`--terminal-fg`・`--terminal-prompt` から取る。
+- データファイルにコードとコマンドを書けるようにした。floe の部品 `code`（`text` にコードをそのまま書き、上にファイル名（`file`）を、その右端に言語（`lang`）を出す）と `terminal`（`steps` に、打つコマンドの `run` と出力の `out` を並べ、`shell` の名前を上に出してプロンプトを付ける。`bash`・`sh` は `$`、`zsh` は `%`、`powershell` は `PS>`、`cmd` は `>`）で、組み込みの `report` も受け取る。
+  - プロンプトはスタイルで描くので、コマンドをコピーしても入らない。コードとターミナルはライトモードでも暗い地で、色は `--code-bg`・`--code-fg`・`--code-prompt` から取る。
   - 最初の語がプロンプト（`~/app$`・`C:\work>` のように `$`・`#`・`%`・`>`・`❯` で終わる語）の `run` は断る。`report` は、`text` の中のフェンスのコードブロックを、書くべき部品を添えて断る。
+- 組み込みの `report` の見た目をテーマで選べるようにした。`default`（区画に面を並べ、注記は tone の色の地）・`soft`（角の丸い面）・`editorial`（印刷物のような罫と細い枠）・`ink`（表の見出しを墨の地に、状態を色で塗る）・`tinted`（強調の色を帯びた面）で、どれもライトとダークの両方に対応する。テーマは floe の部品の見た目を、部品のクラスで上書きする。
 - データファイルの中に図を書けるようにした。組み込みの `report` は部品 `diagram` を、テンプレートは部品 `floe:///parts/diagram.json` を指し、`floe diagram render` に渡すのと同じ spec をその場に書く。
   - 図は `floe diagram render` と同じく検査し（id の重複はページ全体で）、誤りはすべてデータファイルの行と列で出す。
   - ページには図のスタイルとズームが 1 回だけ付く。

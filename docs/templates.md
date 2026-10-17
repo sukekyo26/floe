@@ -72,7 +72,7 @@ An item the part `script` draws (`"$ref": "floe:///parts/script.json"`) is somet
 
 ## Parts
 
-floe has parts that draw items of a template: `table` (with pills in its cells), `cards`, `note`, `code`, `terminal`, `diagram` and `script` (both told above). `code` is `text`, code as it is, under its `file`, else its `lang`. `terminal` is `steps`, each a command (`run`, its later lines going on with it) and what it printed (`out`), at the prompt of its `shell`: `sh` (`$`, when left out), `powershell` (`PS>`) or `cmd` (`>`). The style draws the prompt, so a copy of the commands leaves it out; a `run` whose first word is a prompt (ending in `$`, `#`, `%`, `>` or `❯`) is refused. A schema refers to one with `$ref`, under `properties` and `items`, where floe looks for them; `floe template check` refuses one under `anyOf`, `$defs` and the like, which would never be drawn.
+floe has parts that draw items of a template: `table` (with pills in its cells), `cards`, `note`, `code`, `terminal`, `diagram` and `script` (both told above). `note` is Markdown `text` with a `tone`, and a `title` above it if one is given. `code` is `text`, code as it is, under its `file` with its `lang` at the right. `terminal` is `steps`, each a command (`run`, its later lines going on with it) and what it printed (`out`), at the prompt of its `shell`, whose name goes above them: `bash` or `sh` (`$`), `zsh` (`%`), `powershell` (`PS>`) or `cmd` (`>`); left out, no name and `$`. Both are dark in light mode too, as an editor and a terminal are. The style draws the prompt, so a copy of the commands leaves it out; a `run` whose first word is a prompt (ending in `$`, `#`, `%`, `>` or `❯`) is refused. A schema refers to one with `$ref`, under `properties` and `items`, where floe looks for them; `floe template check` refuses one under `anyOf`, `$defs` and the like, which would never be drawn.
 
 ```json
 "risks": { "$ref": "floe:///parts/table.json", "description": "What may go wrong" }
@@ -80,7 +80,7 @@ floe has parts that draw items of a template: `table` (with pills in its cells),
 
 `page.html` puts the item where it goes, `{{.Data.risks}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML. `floe template show` tells the part's items, after the description written beside the `$ref`. A `$ref` to a part floe does not have is refused, with the parts it has.
 
-A page gets the style of each part whose classes it uses once, a table of Markdown and HTML that names them (`<span class="floe-pill good">`) included, in its `<head>` before the template's own styles (at its end without a `<head>`). The parts' classes start with `floe-` (`floe-table`, `floe-pill`, `floe-cards`, `floe-card`, `floe-note`, `floe-code`, `floe-terminal`): a theme restyles them with a rule of its own for the same selector (or a more specific one), which wins as it comes later. Parts and diagrams take their colours, fonts and the width of a note from the theme's CSS variables, with the default theme's light values for a theme without them:
+A page gets the style of each part whose classes it uses once, a table of Markdown and HTML that names them (`<span class="floe-pill good">`) included, in its `<head>` before the template's own styles (at its end without a `<head>`). The parts' classes start with `floe-` (`floe-table`, `floe-pill`, `floe-cards`, `floe-card`, `floe-note`, `floe-note-title`, `floe-code`, `floe-terminal`): a theme restyles them with a rule of its own for the same selector (or a more specific one), which wins as it comes later. Parts and diagrams take their colours, fonts and the width of a note from the theme's CSS variables, with light values of their own (report's) for a theme without them:
 
 | Variable | What it is |
 | --- | --- |
@@ -91,9 +91,9 @@ A page gets the style of each part whose classes it uses once, a table of Markdo
 | `--good`, `--warn`, `--bad` and their `-soft` | Good, warning and bad, and their pale grounds |
 | `--font`, `--mono` | The text's typeface, and the fixed-width one |
 | `--text-width` | How wide a note grows, as text does |
-| `--terminal-bg`, `--terminal-fg`, `--terminal-prompt` | A terminal's ground, dark in light mode too; its commands' text, faded for their output; its prompt |
+| `--code-bg`, `--code-fg`, `--code-prompt` | The ground of code and a terminal, dark in light mode too; their text, faded for a command's output; a terminal's prompt and the badge of code's language |
 
-A theme defines them, or `page.html` does for every theme in a `<style>` of its own; `floe template check` warns of a theme that leaves out one its parts or diagrams take, whose parts keep light colours in dark mode (a terminal stays dark). A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
+A theme defines them, or `page.html` does for every theme in a `<style>` of its own; `floe template check` warns of a theme that leaves out one its parts or diagrams take, whose parts keep light colours in dark mode (code and a terminal stay dark). A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
 
 ## Images
 

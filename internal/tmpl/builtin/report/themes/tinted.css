@@ -1,0 +1,25 @@
+/* The accent tints the faces: a table's heading, the bands of cards and the marks of notes take colour */
+.floe-table { border: 0; border-radius: 16px; box-shadow: 0 0 0 1px var(--line), 0 8px 24px -12px rgb(24 32 30 / 0.25); }
+.floe-table thead th { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.floe-table tbody tr:nth-child(even) td { background: none; }
+.floe-table tbody tr + tr td { border-top: 1px solid var(--line); }
+.floe-pill:is(.good, .warn, .bad)::before { margin-right: 0.35em; font-weight: 800; }
+.floe-pill.good::before { content: "✓"; content: "✓" / ""; }
+.floe-pill.warn::before { content: "!"; content: "!" / ""; }
+.floe-pill.bad::before { content: "×"; content: "×" / ""; }
+.floe-card {
+  border: 0; border-radius: 16px; padding-top: 1.5rem; box-shadow: 0 0 0 1px var(--line), 0 8px 24px -12px rgb(24 32 30 / 0.25);
+  background: linear-gradient(var(--accent), var(--accent)) top / 100% 6px no-repeat, var(--surface);
+}
+.floe-card:nth-child(3n + 2) { background: linear-gradient(var(--good), var(--good)) top / 100% 6px no-repeat, var(--surface); }
+.floe-card:nth-child(3n) { background: linear-gradient(var(--warn), var(--warn)) top / 100% 6px no-repeat, var(--surface); }
+.floe-card::before { content: none; }
+.floe-note { border-radius: 16px; }
+.floe-note::before { background: var(--surface); color: var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.floe-note.good::before { background: var(--surface); color: var(--good); box-shadow: 0 0 0 1px color-mix(in srgb, var(--good) 30%, transparent); }
+.floe-note.warn::before { background: var(--surface); color: var(--warn); box-shadow: 0 0 0 1px color-mix(in srgb, var(--warn) 30%, transparent); }
+.floe-note.bad::before { background: var(--surface); color: var(--bad); box-shadow: 0 0 0 1px color-mix(in srgb, var(--bad) 30%, transparent); }
+:is(.floe-code, .floe-terminal) { border-radius: 16px; box-shadow: 0 8px 24px -12px rgb(24 32 30 / 0.35); }
+:is(.floe-code, .floe-terminal) figcaption::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--code-prompt); }
+.floe-code .lang { border-radius: 999px; }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 16px; background: var(--accent-soft); color: var(--fg); }

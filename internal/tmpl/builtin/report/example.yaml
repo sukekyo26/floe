@@ -26,6 +26,7 @@ sections:
             - edge: { d: "M200,60 H228" }
             - edge: { d: "M412,60 H440" }
       - terminal:
+          shell: bash
           steps:
             - run: wiki export --all --out pages/
               out: 1840 pages written to pages/
@@ -72,5 +73,6 @@ sections:
             - [Slow search, Unknown, "-", Rebuild the index on `Sunday`, { pill: open }]
       - note:
           tone: warn
+          title: Heads up
           text: Anyone editing during the freeze loses their changes.
       - html: <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>

@@ -59,10 +59,10 @@ sections:
       - text: |                # Markdown, tables included; raw HTML in it is left out
           1. Freeze edits on **Friday evening**.
           2. Copy the pages.
-      - terminal:              # commands and what they printed; floe draws the prompt (shell: sh, powershell, cmd)
+      - terminal:              # commands and what they printed; floe draws the prompt (shell: bash, zsh, sh, powershell, cmd)
           steps:
             - { run: wiki export --out pages/, out: 1840 pages written }
-      - code:                  # code as it is, under its file or language
+      - code:                  # code as it is, its file and language above it
           file: old-wiki.conf
           text: |
             read_only = true
@@ -93,7 +93,7 @@ sections:
 ```
 
 - `lang:` is the page's language (`<html lang>`), a BCP 47 tag (`en`, `ja`, `pt-BR`). Every data file names one.
-- `theme:` picks a theme of the template (`default`).
+- `theme:` picks a theme of the template. `report` has `default` (faces set in panels, notes in their tone's colour), `soft` (faces with round corners), `editorial` (rules and thin frames, as in print), `ink` (a table's heading in ink, states filled with their colour) and `tinted` (faces tinted with the accent).
 - An image the template takes (an item of `"format": "image"`) is a path under the data file's directory; the image goes into the page.
 - A diagram (the part `diagram`, in `report` or a template's own) is a spec written in place, with the parts and checks of [`floe diagram render`](#floe-diagram-render-specyaml), its mistakes at the data file's lines and columns. The ids of the diagrams of a page must differ. Its icons come from `FLOE_ICONS_DIR`; for a published page, from that of the server, which draws it.
 - A script (the part `script`, in `report` or a template's own) is `js`, a function the page calls with an empty element in its place and `data`. A mapping in `data` comes in the order of its keys' names (write a list where the order matters), and the function runs where it stands, before the rest of the page is read. A `js` holding `</script` or `<!--` is refused; a mistake inside the function shows in the browser.

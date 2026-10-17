@@ -1,7 +1,14 @@
-.floe-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.75rem; }
+/* Each card is numbered by its place, as the steps of a plan are */
+.floe-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
 .floe-card {
-  background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 6px;
-  padding: 0.9rem 1rem; display: grid; gap: 0.35rem; align-content: start; min-width: 0;
+  background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 14px;
+  box-shadow: 0 1px 2px rgb(24 32 30 / 0.06);
+  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+}
+.floe-card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  background: var(--accent-soft, #dcebec); color: var(--accent, #1d6670); font-size: 0.8rem; font-weight: 700;
 }
 .floe-card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
 .floe-card :is(p, ul, ol) { margin: 0; color: var(--muted, #57635f); font-size: 0.92rem; }

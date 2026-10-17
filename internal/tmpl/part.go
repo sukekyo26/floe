@@ -100,13 +100,12 @@ func (s *schema) absolute(base string) {
 // part is a part of floe's: a template's schema refers to it, and floe checks it, draws it and puts its
 // style into the page.
 type part struct {
-	name   string
-	schema *schema
-	page   *template.Template // nil for one floe draws in Go (goParts)
-	css    string
-	checks []relation
-	// classes finds a class of its style in a page, which then gets the style
-	classes *regexp.Regexp
+	name    string
+	schema  *schema
+	page    *template.Template // nil for one floe draws in Go (goParts)
+	css     string
+	checks  []relation
+	classes []string // the classes its style names, one of which in a page gives it the style
 }
 
 // goParts are the parts floe draws in Go, each a description: their schema takes an object, whose
@@ -211,9 +210,7 @@ func readPart(name string, s *schema) (*part, error) {
 		return nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
 	p := &part{name: name, schema: s, page: page, css: string(css), checks: nil, classes: nil}
-	if classes := appendFound(nil, styleClass, p.css); classes != nil {
-		p.classes = regexp.MustCompile(`(?:^|[^\w-])(?:` + strings.Join(classes, "|") + `)(?:[^\w-]|$)`)
-	}
+	p.classes = appendFound(nil, styleClass, p.css)
 	src, err := partFiles.ReadFile(path.Join(dir, "checks.yaml"))
 	switch {
 	case err == nil:
@@ -404,10 +401,21 @@ func (p *part) draw(v any) (template.HTML, error) {
 
 // partStyles returns the style of the parts whose classes page uses, in the order of their names, for
 // the page's <head>, or "" for none: a part's own, a table of Markdown, or HTML that takes a part's look
-// (<span class="floe-pill good">). A class named in the page's prose or theme brings its part's style too.
-// LIMIT: classes are found in the page's whole text; look in class attributes alone if unused style matters.
+// (<span class="floe-pill good">). The classes are those of its class attributes, so that a theme or
+// prose that names one brings no style.
+// LIMIT: the attributes are found as written, not as an HTML parser reads them (class= in a script's
+// string counts); parse the page if a page comes to write one so.
 func partStyles(page []byte) (string, error) {
 	if !bytes.Contains(page, []byte("floe-")) {
+		return "", nil
+	}
+	used := map[string]bool{}
+	for _, m := range classAttr.FindAllSubmatch(page, -1) {
+		for _, c := range strings.Fields(strings.Trim(string(m[1]), `"'`)) {
+			used[c] = true
+		}
+	}
+	if len(used) == 0 {
 		return "", nil
 	}
 	set, err := builtinParts()
@@ -416,7 +424,7 @@ func partStyles(page []byte) (string, error) {
 	}
 	var b strings.Builder
 	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-		if p := set.parts[name]; p.classes != nil && p.classes.Match(page) {
+		if p := set.parts[name]; slices.ContainsFunc(p.classes, func(c string) bool { return used[c] }) {
 			b.WriteString(p.css)
 		}
 	}
@@ -425,6 +433,9 @@ func partStyles(page []byte) (string, error) {
 	}
 	return "<style>\n" + b.String() + "</style>\n", nil
 }
+
+// classAttr finds the value of a class attribute: class="floe-pill good", class='…' or class=x.
+var classAttr = regexp.MustCompile(`(?i)\sclass\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` + "`" + `]+)`)
 
 // withStyles puts style into page before the template's own styles, which then win over the parts'
 // where they say otherwise: before the first <style> or <link> of its <head>, else before its </head>.

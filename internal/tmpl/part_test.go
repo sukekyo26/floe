@@ -111,7 +111,7 @@ func TestDescribePart(t *testing.T) {
 	for _, it := range aside.Items {
 		names = append(names, it.Name+":"+strings.Join(it.Enum, "|"))
 	}
-	if strings.Join(names, " ") != "text: tone:accent|good|warn|bad" {
+	if strings.Join(names, " ") != "text: title: tone:accent|good|warn|bad" {
 		t.Errorf("the items of aside are %v", names)
 	}
 }
@@ -132,8 +132,8 @@ func TestCheckParts(t *testing.T) {
 		}
 	}
 	if !strings.Contains(told, "--accent") || !strings.Contains(told, "--good-soft") || strings.Contains(told, "--fg,") ||
-		!strings.Contains(told, "--line, which the template's parts and diagrams take from it, so they keep the default theme's values: its light colours, in dark mode too\n") ||
-		!strings.Contains(told, "does not define --text-width, --mono, which the template's parts and diagrams take from it, so they keep the default theme's values\n") {
+		!strings.Contains(told, "--muted, which the template's parts and diagrams take from it, so they keep values of their own: light colours, in dark mode too\n") ||
+		!strings.Contains(told, "does not define --text-width, --mono, which the template's parts and diagrams take from it, so they keep values of their own\n") {
 		t.Errorf("the warning of the theme = %q", told)
 	}
 	// A theme that leaves out no colour is not told of dark mode.
@@ -207,19 +207,23 @@ func TestCheckParts(t *testing.T) {
 func TestPartStylesByClass(t *testing.T) {
 	t.Parallel()
 
-	page := render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: |\n          | a | b |\n          | - | - |\n          | 1 | 2 |\n")
+	page := render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - text: |\n          | a | b |\n          | - | - |\n          | 1 | 2 |\n")
 	if !strings.Contains(page, `<div class="floe-table"><table>`) || strings.Count(page, ".floe-table {") != 1 {
 		t.Errorf("a page of a Markdown table:\n%s", page)
 	}
-	page = render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"floe-pill good\">ok</span>\n")
+	page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"floe-pill good\">ok</span>\n")
 	if strings.Count(page, ".floe-pill {") != 1 || strings.Contains(page, ".floe-note {") {
 		t.Errorf("a page of a pill in HTML:\n%s", page)
 	}
-	page = render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - html: <p class=\"floe-note-own\">x</p>\n")
+	page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - html: <p class=\"floe-note-own\">x</p>\n")
 	if strings.Contains(page, ".floe-note {") {
 		t.Errorf("a class a part's starts gets the part's style:\n%s", page)
 	}
-	if page = render(t, "template: report\nlang: en\nsections:\n  - parts:\n      - text: plain\n"); strings.Contains(page, ".floe-") {
+	page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - text: the `floe-note` class\n")
+	if strings.Contains(page, ".floe-note {") {
+		t.Errorf("a class named in prose gets the part's style:\n%s", page)
+	}
+	if page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - text: plain\n"); strings.Contains(page, ".floe-") {
 		t.Errorf("a page of no part holds a part's style:\n%s", page)
 	}
 }
@@ -266,13 +270,15 @@ func TestCodeAndTerminal(t *testing.T) {
 		"      - code: { lang: sh, text: x }\n"+
 		"      - code: { text: y }\n"+
 		"      - terminal: { steps: [{ run: \"make \\\\\\n  all\", out: done }, { run: ls }] }\n"+
-		"      - terminal: { shell: powershell, steps: [{ run: dir }] }\n")
+		"      - terminal: { shell: powershell, steps: [{ run: dir }] }\n"+
+		"      - terminal: { shell: zsh, steps: [{ run: ls }] }\n")
 	for _, want := range []string{
-		"<figure class=\"floe-code\"><figcaption>a.go</figcaption><pre><code>if a &lt; b {\n\treturn\n}\n</code></pre></figure>",
-		`<figure class="floe-code"><figcaption>sh</figcaption><pre><code>x</code></pre></figure>`,
+		"<figure class=\"floe-code\"><figcaption><span class=\"file\">a.go</span><span class=\"lang\">go</span></figcaption><pre><code>if a &lt; b {\n\treturn\n}\n</code></pre></figure>",
+		`<figure class="floe-code"><figcaption><span class="lang">sh</span></figcaption><pre><code>x</code></pre></figure>`,
 		`<figure class="floe-code"><pre><code>y</code></pre></figure>`,
-		"<pre class=\"floe-terminal sh\"><span class=\"run\">make \\\n  all</span><span class=\"out\">done</span><span class=\"run\">ls</span></pre>",
-		`<pre class="floe-terminal powershell"><span class="run">dir</span></pre>`,
+		"<figure class=\"floe-terminal sh\"><pre><span class=\"run\">make \\\n  all</span><span class=\"out\">done</span><span class=\"run\">ls</span></pre></figure>",
+		`<figure class="floe-terminal powershell"><figcaption>PowerShell</figcaption><pre><span class="run">dir</span></pre></figure>`,
+		`<figure class="floe-terminal zsh"><figcaption>zsh</figcaption><pre><span class="run">ls</span></pre></figure>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page lacks %s:\n%s", want, page)
@@ -284,11 +290,11 @@ func TestCodeAndTerminal(t *testing.T) {
 
 	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
 		"      - code: { lang: go }\n"+
-		"      - terminal: { shell: zsh, steps: [] }\n"), "", "")
+		"      - terminal: { shell: fish, steps: [] }\n"), "", "")
 	for _, want := range []string{
 		"bad.yaml:5:17: sections[0].parts[0].code.text is required but missing",
-		`bad.yaml:6:28: sections[0].parts[1].terminal.shell: "zsh" is not allowed; use sh, powershell, cmd`,
-		"bad.yaml:6:40: sections[0].parts[1].terminal.steps: the number of items must be at least 1",
+		`bad.yaml:6:28: sections[0].parts[1].terminal.shell: "fish" is not allowed; use bash, zsh, sh, powershell, cmd`,
+		"bad.yaml:6:41: sections[0].parts[1].terminal.steps: the number of items must be at least 1",
 	} {
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("the mistakes = %v, want %s", err, want)

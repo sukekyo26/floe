@@ -60,7 +60,7 @@ func TestReportExample(t *testing.T) {
 		`<td class="num">120</td>`,
 		`<td><span class="floe-pill warn">watching</span></td>`,
 		`<div class="floe-card"><h3>Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>`,
-		`<div class="floe-note warn"><p>Anyone editing during the freeze loses their changes.</p>`,
+		`<div class="floe-note warn"><strong class="floe-note-title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>`,
 		`<details><summary>What the freeze covers</summary>`,
 		`aria-label="The pages go from the old wiki to the new host"`,
 		`--accent: #1d6670;`,
@@ -71,8 +71,12 @@ func TestReportExample(t *testing.T) {
 	}
 	// The style of each part it uses is in its <head> once, so that a part is styled as it is drawn.
 	head, _, _ := strings.Cut(got, "</head>")
+	theme, rerr := os.ReadFile("builtin/report/themes/default.css")
+	if rerr != nil {
+		t.Fatal(rerr)
+	}
 	for _, style := range []string{".floe-table {", ".floe-cards {", ".floe-note {"} {
-		if strings.Count(head, style) != 1 || strings.Count(got, style) != 1 {
+		if strings.Count(head, style) != 1+strings.Count(string(theme), style) || strings.Count(got, style) != strings.Count(head, style) {
 			t.Errorf("the example holds %s %d times, %d in its <head>", style, strings.Count(got, style), strings.Count(head, style))
 		}
 	}
@@ -211,9 +215,9 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\nlead: .inf\nlang: en\n", "data.yaml:2:7: .inf is not a value a data file can hold"},
 		{"template: report\nsections:\n  - heading: .NaN\nlang: en\n", "data.yaml:3:14: .NaN is not a value a data file can hold"},
 		// The shared keys and the schema are reported together.
-		{"template: report\ntheme: print\nleed: x\nlang: en\n", "data.yaml:2:8: template report has no theme \"print\"; use default\ndata.yaml:3:1: leed is not an item"},
+		{"template: report\ntheme: print\nleed: x\nlang: en\n", "data.yaml:2:8: template report has no theme \"print\"; use default, editorial, ink, soft, tinted\ndata.yaml:3:1: leed is not an item"},
 		{"template: deck\nlang: en\n", `data.yaml:1:11: unknown template "deck"; use report`},
-		{"template: report\ntheme: print\nlang: en\n", `data.yaml:2:8: template report has no theme "print"; use default`},
+		{"template: report\ntheme: print\nlang: en\n", `data.yaml:2:8: template report has no theme "print"; use default, editorial, ink, soft, tinted`},
 		{"template: report\ntitle: [a]\nlang: en\n", "data.yaml:2:8: title must be text"},
 		{"template: report\ntitle: 'a\nlang: en\n", "data.yaml:2:8: this is not valid YAML: "},
 	} {

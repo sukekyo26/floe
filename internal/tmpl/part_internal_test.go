@@ -14,8 +14,8 @@ import (
 // from, as docs/templates.md lists them.
 var palette = []string{
 	"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
-	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono", "--text-width", "--terminal-bg", "--terminal-fg",
-	"--terminal-prompt",
+	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono", "--text-width", "--code-bg", "--code-fg",
+	"--code-prompt",
 }
 
 // The parts and diagrams take their colours, fonts and width from the palette alone, which the report
@@ -49,7 +49,7 @@ func TestPalette(t *testing.T) {
 			t.Errorf("%s is not of the palette", v)
 		}
 	}
-	css, err := builtin.ReadFile("builtin/report/themes/default.css")
+	css, err := builtin.ReadFile("builtin/report/page.html")
 	if err != nil {
 		t.Fatal(err)
 	}

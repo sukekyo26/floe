@@ -1,22 +1,26 @@
 /* On narrow screens, the table scrolls sideways inside .floe-table instead of squeezing its columns */
-.floe-table { overflow-x: auto; }
-.floe-table table { border-collapse: collapse; width: 100%; background: var(--surface, #fff); }
-.floe-table :is(th, td) {
-  text-align: left; vertical-align: baseline; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line, #d4dbd8);
+.floe-table {
+  overflow-x: auto; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 14px;
+  box-shadow: 0 1px 2px rgb(24 32 30 / 0.06);
 }
+.floe-table table { border-collapse: collapse; width: 100%; }
+.floe-table :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.8rem 1.1rem; }
 .floe-table :is(th, td):not(.num) { min-width: 7em; }
 /* A num column's heading wraps as long as it needs, but not a character a line */
 .floe-table th.num { min-width: 6em; }
-.floe-table thead th { font-size: 0.88rem; border-bottom: 2px solid var(--fg, #18201e); }
+.floe-table thead th {
+  font-size: 0.8rem; font-weight: 600; color: var(--muted, #57635f);
+  background: color-mix(in srgb, var(--line, #d4dbd8) 40%, var(--surface, #fff));
+}
+.floe-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line, #d4dbd8) 18%, var(--surface, #fff)); }
 .floe-table .num { text-align: right; }
 .floe-table td.num {
   min-width: auto; font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP");
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .floe-pill {
-  display: inline-block; font-size: 0.74rem; font-weight: 600;
-  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP");
-  padding: 0.1em 0.6em; border-radius: 999px; white-space: nowrap;
+  display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
   background: var(--accent-soft, #dcebec); color: var(--accent, #1d6670);
 }
 .floe-pill.good { background: var(--good-soft, #dcefe3); color: var(--good, #1f7a45); }
