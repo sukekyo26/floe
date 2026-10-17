@@ -169,13 +169,12 @@ func TestDrawnStored(t *testing.T) {
 		t.Errorf("the page of a copy with mistakes:\n%s", r.body)
 	}
 
-	// An image under a directory named as the copy of the data file is refused.
-	// An image under a directory named as the copy of the data file is refused, in any case: macOS
-	// ignores it.
+	// An image under a directory named as the copy of the data file is refused at its line, in any case:
+	// macOS ignores it.
 	e.write(t, "clash/Data.yaml/c.png", string(png))
 	clash := e.write(t, "clash/sizes.yaml", strings.Replace(right, "img/chart.png", "Data.yaml/c.png", 1))
 	if _, prepErr := e.store.Prepare(t.Context(), clash, store.Options{Slug: ptr("sizes")}, e.tmp); prepErr == nil ||
-		!strings.Contains(prepErr.Error(), `image "Data.yaml/c.png" is under a directory named data.yaml`) {
+		!strings.Contains(prepErr.Error(), `sizes.yaml:4:8: chart: "Data.yaml/c.png" is under a directory named data.yaml`) {
 		t.Errorf("publish of an image under Data.yaml/ = %v", prepErr)
 	}
 

@@ -20,6 +20,10 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
+// KeptName is the name a published page keeps its data file by, beside the images it shows: an image
+// may not be under a directory of that name, in any case, as macOS ignores it.
+const KeptName = "data.yaml"
+
 // maxImage is the size an image may be.
 // LIMIT: 1 MiB an image, and no bound on how many a page holds, as every image goes into the page.
 // Raise the one, or bound the other, if pages come to need it.
@@ -229,7 +233,9 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 				d.tried = append(d.tried, filepath.Join(dir, filepath.FromSlash(name)))
 			}
 			var uri template.URL
-			if uri, e = imageURI(r.FS(), name, dir); e == nil {
+			if first, _, _ := strings.Cut(name, "/"); strings.Contains(name, "/") && strings.EqualFold(first, KeptName) {
+				e = usererr.New("tmpl_image_kept_name", name, KeptName)
+			} else if uri, e = imageURI(r.FS(), name, dir); e == nil {
 				d.images[name] = uri
 			}
 			refused[name] = e

@@ -33,7 +33,7 @@ const (
 	// sourceDir under a stored page holds its data file, sourceName, and the images it shows, at the
 	// paths it names them by.
 	sourceDir  = "source"
-	sourceName = "data.yaml"
+	sourceName = tmpl.KeptName
 )
 
 var slugRe = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$`)

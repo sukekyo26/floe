@@ -168,12 +168,6 @@ func (e *Entry) draw(data *tmpl.Data, src, theme, templates string) error {
 		if e.Images, err = data.Images(); err != nil {
 			return err //nolint:wrapcheck // floe's own encoding, not the user's
 		}
-		for name := range e.Images {
-			// One name on macOS, which ignores case.
-			if first, _, _ := strings.Cut(name, "/"); strings.EqualFold(first, sourceName) {
-				return usererr.New("store_image_source_name", name, sourceName)
-			}
-		}
 	}
 	_, err := drawData(data, &e.Meta, e.Slug)
 	return err
