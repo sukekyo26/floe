@@ -1,4 +1,4 @@
-# クラス図: floe の図のパッケージの誤りの型。インターフェースを上の段に置き、実装する型は 1 本の折れ線を
+# クラス図: 行と列を指す誤りの型（floe の yamlpos パッケージ）。インターフェースを上の段に置き、実装する型は 1 本の折れ線を
 # 共有して三角（実装）で結ぶ。ひし形は型が保持するものを表す。各表には、図の目的に要るメンバーだけを書く。
 #
 # 格子: 表の中心 x = 150, 500, 850（表の幅 240）、インターフェースは x = 330, 670。段の上端は y = 20 と 168 で、
@@ -6,13 +6,13 @@
 id: class
 width: 1000
 height: 350
-title: "図のパッケージの誤りの型"
+title: "yamlpos パッケージの誤りの型"
 parts:
   - table: { x: 210, y: 20, w: 240, title: "error", rows: [["Error()", "string"]] }
   - table: { x: 550, y: 20, w: 240, title: "i18n.Localizer", rows: [["Localize(c)", "string"]] }
   - table: { x: 30, y: 168, w: 240, title: "usererr.Error", tone: "accent", rows: [["Key", "string"], ["Args", "[]any"], ["Conflict", "bool"], "---", ["Error()", "string"], ["Localize(c)", "string"]] }
-  - table: { x: 380, y: 168, w: 240, title: "diagram.Error", tone: "accent", rows: [["File", "string"], ["Pos", "Pos"], ["Err", "*usererr.Error"], "---", ["Error()", "string"], ["Localize(c)", "string"]] }
-  - table: { x: 730, y: 168, w: 240, title: "diagram.Problems", tone: "accent", rows: [["要素", "*Error"], "---", ["Error()", "string"], ["Localize(c)", "string"]] }
+  - table: { x: 380, y: 168, w: 240, title: "yamlpos.Error", tone: "accent", rows: [["File", "string"], ["Pos", "Pos"], ["Err", "*usererr.Error"], "---", ["Error()", "string"], ["Localize(c)", "string"]] }
+  - table: { x: 730, y: 168, w: 240, title: "yamlpos.Problems", tone: "accent", rows: [["要素", "*Error"], "---", ["Error()", "string"], ["Localize(c)", "string"]] }
   # 実装: 各型の上辺から折れ目まで上がり、横へ寄ってインターフェースの下辺へ入る
   - edge: { d: "M150,168 V123 H330 V78", end: "triangle" }
   - edge: { d: "M150,168 V123 H670 V78", end: "triangle" }
