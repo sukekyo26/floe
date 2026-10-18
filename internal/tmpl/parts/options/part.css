@@ -2,8 +2,9 @@
 .floe-option.pick { outline: 2px solid var(--accent, #1d6670); outline-offset: -1px; }
 .floe-option h3 > span { margin-left: 0.4rem; vertical-align: 0.1em; }
 .floe-option ul { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
-.floe-option li { display: grid; grid-template-columns: 1.1rem minmax(0, 1fr); gap: 0.35rem; }
-.floe-option li::before { font-weight: 800; }
+/* The mark hangs at the left, so that a line of text and code flows as one */
+.floe-option li { position: relative; padding-left: 1.45rem; }
+.floe-option li::before { position: absolute; left: 0.1rem; font-weight: 800; }
 .floe-option li.pro { color: var(--fg, #18201e); }
 .floe-option li.pro::before { content: "+"; color: var(--good, #1f7a45); }
 .floe-option li.con::before { content: "−"; color: var(--bad, #b3261e); }
