@@ -72,6 +72,11 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/d" || c.icons != "" {
 		t.Errorf("an XDG directory with ~ without a home = %+v, %v", c, err)
 	}
+	// Without a place for the pages, that is told first.
+	vars = map[string]string{"FLOE_ICONS_DIR": "~/icons"}
+	if _, err := loadConfig(getenv, "/w"); err == nil || !strings.Contains(err.Error(), "HOME is not set; set HOME or FLOE_DIR") {
+		t.Errorf("no place for the pages and an icons directory of ~ = %v", err)
+	}
 	// An XDG directory is not floe's: one of ~name is ignored, as a relative one is.
 	vars = map[string]string{"HOME": "/h", "XDG_CONFIG_HOME": "~foo"}
 	if c, err := loadConfig(getenv, "/w"); err != nil || c.templates != "/h/.config/floe/templates" {

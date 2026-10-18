@@ -14,11 +14,12 @@ const defaultPort = 7325
 
 var decimalIntRe = regexp.MustCompile(`^[0-9]+$`)
 
-// config is what floe reads from the environment. Every command checks it first.
+// config is what floe reads from the environment. Every command checks it first. A directory is nowhere
+// without its setting, an XDG base directory and a home.
 type config struct {
 	root      string
-	icons     string // empty when there is no home to put it under, which the icons commands refuse
-	templates string // the templates of one's own; empty when there is no home to put them under
+	icons     string // empty when there is nowhere to put it, which the icons commands refuse
+	templates string // the templates of one's own; empty when there is nowhere to put them
 	home      string
 	port      int
 }
@@ -47,21 +48,16 @@ func loadConfig(getenv func(string) string, dir string) (*config, error) {
 }
 
 // readDirs reads floe's directories: each its setting, else a default under the XDG base directory, else
-// under the home. Without a home, the icons and the templates of one's own are none (the icons commands
-// refuse that, and the built-in templates are the only ones), and the pages need FLOE_DIR.
+// under the home. With none of them, the icons and the templates of one's own are none (the icons
+// commands refuse that, and the built-in templates are the only ones), and the pages are refused.
 func (c *config) readDirs(getenv func(string) string, dir string) error {
-	data := xdgDir(getenv, "XDG_DATA_HOME", c.home)
-	if data == "" && c.home != "" {
-		data = filepath.Join(c.home, ".local", "share")
-	}
-	conf := xdgDir(getenv, "XDG_CONFIG_HOME", c.home)
-	if conf == "" && c.home != "" {
-		conf = filepath.Join(c.home, ".config")
-	}
+	data := xdgDir(getenv, "XDG_DATA_HOME", c.home, ".local", "share")
+	conf := xdgDir(getenv, "XDG_CONFIG_HOME", c.home, ".config")
 	for _, d := range []struct {
 		key, base, name string
 		to              *string
 	}{
+		// First, so that one without a place for the pages is told that before the rest.
 		{"FLOE_DIR", data, "floe", &c.root},
 		// Not under FLOE_DIR: icons is a valid slug, so a page could take its place.
 		{"FLOE_ICONS_DIR", data, "floe-icons", &c.icons},
@@ -74,10 +70,10 @@ func (c *config) readDirs(getenv func(string) string, dir string) error {
 		if v == "" && d.base != "" {
 			v = filepath.Join(d.base, d.name)
 		}
+		if v == "" && d.to == &c.root {
+			return usererr.New("cli_no_home")
+		}
 		*d.to = v
-	}
-	if c.root == "" {
-		return usererr.New("cli_no_home")
 	}
 	return nil
 }
@@ -85,8 +81,8 @@ func (c *config) readDirs(getenv func(string) string, dir string) error {
 // floeDir reads floe's directory setting key: a ~ or ~/ at its start stands for home, so that one written
 // in quotes (a .env file, a service unit) does not name a directory "~", and a relative one is under dir.
 // ~name (the home of name, to a shell), a ~ without a home and a relative one without dir are refused.
-// LIMIT: ~name is refused, not looked up: os/user without cgo reads /etc/passwd alone, which misses the
-// users of macOS. Look it up if floe comes to build with cgo.
+// LIMIT: ~name is refused, not looked up: os/user without cgo reads /etc/passwd alone on linux, which misses
+// the users of NSS (LDAP, SSSD); look it up if one comes to need ~name, and refuse a name it cannot find.
 func floeDir(getenv func(string) string, key, home, dir string) (string, error) {
 	v := getenv(key)
 	switch {
@@ -106,17 +102,20 @@ func floeDir(getenv func(string) string, key, home, dir string) (string, error) 
 	return filepath.Join(dir, v), nil
 }
 
-// xdgDir reads the XDG base directory key, a ~ or ~/ at its start standing for home: "" for none, or for
-// one that is still relative, which its spec calls invalid.
-func xdgDir(getenv func(string) string, key, home string) string {
+// xdgDir reads the XDG base directory key, a ~ or ~/ at its start standing for home, else the default
+// under home: "" for none. One that is still relative is none, as its spec calls it invalid.
+func xdgDir(getenv func(string) string, key, home string, under ...string) string {
 	v := getenv(key)
 	if ofHome(v) && home != "" {
 		v = filepath.Join(home, v[1:])
 	}
-	if !filepath.IsAbs(v) {
-		return ""
+	switch {
+	case filepath.IsAbs(v):
+		return filepath.Clean(v)
+	case home != "":
+		return filepath.Join(append([]string{home}, under...)...)
 	}
-	return filepath.Clean(v)
+	return ""
 }
 
 // ofHome reports whether v starts with what a shell takes for one's home: ~ or ~/.
