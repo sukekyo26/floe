@@ -129,7 +129,7 @@ A linked data file is drawn each time its page is opened, with `--theme` and `--
 - When it has mistakes, the tab shows them instead of the page, and comes back to the page once they are fixed and saved.
 - Nothing of its directory is served: its images are in its page. Its download is the page drawn, its CSP kept in a `<meta>`.
 - Its title in the list is its `title:`, read each time.
-- It is drawn with the templates of your own of the publish that linked it (`FLOE_TEMPLATES_DIR`); one linked on the management page, with those of the server (of the `floe publish` or `floe serve` that started it).
+- It is drawn with the server's templates of your own (`FLOE_TEMPLATES_DIR` of the `floe publish` or `floe serve` that started it), as every page is.
 
 ---
 
@@ -313,8 +313,8 @@ List the fetched icons whose name contains every word (case does not matter), on
 |---|---|
 | `FLOE_DIR` | Where pages are stored. Defaults to `$XDG_DATA_HOME/floe`, else `~/.local/share/floe`. |
 | `FLOE_PORT` | The port (default `7325`). A decimal number from 1 to 65535. |
-| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. A relative one is under the working directory. The diagrams of a published page show the icons of the server, which takes the one of the publish that started it. |
-| `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. A published page is drawn with the one of the publish that stored or linked it, a relative one under its working directory. |
+| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. A relative one is under the working directory. The diagrams of a published page show the icons of the server, which takes the one of the `floe publish` or `floe serve` that started it; a publish that means another is refused (run `floe stop` first). |
+| `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. A published page is drawn with the server's, the one of the `floe publish` or `floe serve` that started it (a relative one under its working directory); a publish that means another is refused (move the templates there, or run `floe stop` first). |
 | `FLOE_LANG` | The language of messages (`en`, `ja`). Falls back to `LC_ALL`, `LC_MESSAGES`, then `LANG`; a language without a catalog is skipped. English is the default. |
 | `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |
 

@@ -129,7 +129,7 @@ sections:
 - 誤りがあるときは、ページの代わりに誤りの一覧を出します。直して保存すれば、ページに戻ります。
 - ディレクトリの配下は配信しません（画像はページに埋め込みます）。ダウンロードは描いたページで、CSP を `<meta>` で持ちます。
 - 一覧のタイトルは、開くたびに読む `title:` です。
-- 登録した公開の自分のテンプレート（`FLOE_TEMPLATES_DIR`）で描きます。管理画面から登録したものは、サーバー（を起動した `floe publish` か `floe serve`）のテンプレートで描きます。
+- ほかのページと同じく、サーバーの自分のテンプレート（サーバーを起動した `floe publish` か `floe serve` の `FLOE_TEMPLATES_DIR`）で描きます。
 
 ---
 
@@ -313,8 +313,8 @@ parts:
 |---|---|
 | `FLOE_DIR` | ページの保存先。既定は `$XDG_DATA_HOME/floe`、無ければ `~/.local/share/floe` |
 | `FLOE_PORT` | ポート（既定は `7325`）。1 から 65535 の 10 進数 |
-| `FLOE_ICONS_DIR` | `floe icons fetch` がアイコン集を置く場所。アイコン集ごとにディレクトリ（`aws`）を作る。既定は `$XDG_DATA_HOME/floe-icons`、無ければ `~/.local/share/floe-icons`。相対パスは作業ディレクトリが基準。公開したページの図は、サーバーのアイコンを描く。サーバーは、それを起動した公開の置き場所を使う |
-| `FLOE_TEMPLATES_DIR` | 自分のテンプレートを置く場所。テンプレートごとにディレクトリを作る（[templates.ja.md](templates.ja.md)）。既定は `$XDG_CONFIG_HOME/floe/templates`、無ければ `~/.config/floe/templates`。公開したページは、保存か登録をした公開の置き場所（相対パスなら、そのときの作業ディレクトリが基準）で描く |
+| `FLOE_ICONS_DIR` | `floe icons fetch` がアイコン集を置く場所。アイコン集ごとにディレクトリ（`aws`）を作る。既定は `$XDG_DATA_HOME/floe-icons`、無ければ `~/.local/share/floe-icons`。相対パスは作業ディレクトリが基準。公開したページの図は、サーバーのアイコンを描く。サーバーは、それを起動した `floe publish` か `floe serve` の置き場所を使う。別の置き場所を指す公開は断る（先に `floe stop` する） |
+| `FLOE_TEMPLATES_DIR` | 自分のテンプレートを置く場所。テンプレートごとにディレクトリを作る（[templates.ja.md](templates.ja.md)）。既定は `$XDG_CONFIG_HOME/floe/templates`、無ければ `~/.config/floe/templates`。公開したページは、サーバーの置き場所で描く。サーバーは、それを起動した `floe publish` か `floe serve` の置き場所（相対パスなら、そのときの作業ディレクトリが基準）を使う。別の置き場所を指す公開は断る（テンプレートをそこへ移すか、先に `floe stop` する） |
 | `FLOE_LANG` | メッセージの言語（`en`・`ja`）。無ければ `LC_ALL`、`LC_MESSAGES`、`LANG` の順に見る。カタログの無い言語は飛ばす。既定は英語 |
 | `BROWSER` | 新しいページを開くコマンド。既定は macOS なら `open`、それ以外は `wslview` か `xdg-open` |
 
