@@ -26,7 +26,10 @@ func (c *config) base() string {
 	return "http://" + daemon.Addr(c.port)
 }
 
-func loadConfig(getenv func(string) string) (*config, error) {
+// loadConfig reads the settings from getenv, a relative directory under dir, the working directory ("" when
+// it cannot be read), so that a server a command starts or finds, whatever its own, means the ones the
+// command does.
+func loadConfig(getenv func(string) string, dir string) (*config, error) {
 	c := &config{root: "", icons: "", templates: "", home: getenv("HOME"), port: defaultPort}
 	if raw := getenv("FLOE_PORT"); raw != "" {
 		// Decimal only: hex (0x10) and exponents (1e3) are typos, not ports.
@@ -36,7 +39,7 @@ func loadConfig(getenv func(string) string) (*config, error) {
 		}
 		c.port = port
 	}
-	data := getenv("XDG_DATA_HOME")
+	data := xdg(getenv, "XDG_DATA_HOME")
 	if data == "" && c.home != "" {
 		data = filepath.Join(c.home, ".local", "share")
 	}
@@ -53,7 +56,32 @@ func loadConfig(getenv func(string) string) (*config, error) {
 		c.icons = filepath.Join(data, "floe-icons")
 	}
 	c.templates = templatesDir(getenv, c.home)
+	if err := c.resolve(dir); err != nil {
+		return nil, err
+	}
 	return c, nil
+}
+
+// resolve puts the relative directories of c under dir, refusing one when dir is "".
+func (c *config) resolve(dir string) error {
+	for _, d := range []*string{&c.root, &c.icons, &c.templates} {
+		if *d == "" || filepath.IsAbs(*d) {
+			continue
+		}
+		if dir == "" {
+			return usererr.New("cli_relative_no_dir", *d)
+		}
+		*d = filepath.Join(dir, *d)
+	}
+	return nil
+}
+
+// xdg reads the XDG base directory key, "" for none or a relative one, which the XDG spec calls invalid.
+func xdg(getenv func(string) string, key string) string {
+	if dir := getenv(key); filepath.IsAbs(dir) {
+		return dir
+	}
+	return ""
 }
 
 // templatesDir is where the templates of one's own are, or "" when there is no home to put them under.
@@ -61,7 +89,7 @@ func templatesDir(getenv func(string) string, home string) string {
 	if dir := getenv("FLOE_TEMPLATES_DIR"); dir != "" {
 		return dir
 	}
-	conf := getenv("XDG_CONFIG_HOME")
+	conf := xdg(getenv, "XDG_CONFIG_HOME")
 	if conf == "" && home != "" {
 		conf = filepath.Join(home, ".config")
 	}
