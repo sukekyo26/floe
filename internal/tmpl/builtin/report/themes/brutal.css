@@ -1,0 +1,65 @@
+/* Thick black frames, flat primary faces and hard offset shadows; no corner is rounded */
+:root {
+  --brutal-ink: #0a0a0a; --brutal-yellow: #ffde21; --brutal-blue: #6fa2ff; --brutal-pink: #ff8acb;
+  --brutal-green: #3ddc84; --brutal-orange: #ffa62b; --brutal-red: #ff5c5c;
+  --brutal-head-bg: #0a0a0a; --brutal-head-fg: #ffde21;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --brutal-ink: #f2f2f2; --brutal-head-bg: #ffde21; --brutal-head-fg: #0a0a0a; }
+}
+.floe-table {
+  border: 3px solid var(--brutal-ink); border-radius: 0; box-shadow: 6px 6px 0 var(--brutal-ink); margin: 0 6px 6px 0;
+}
+.floe-table thead th { background: var(--brutal-head-bg); color: var(--brutal-head-fg); font-weight: 900; }
+.floe-table tbody tr:nth-child(even) td { background: none; }
+.floe-table tbody tr + tr td { border-top: 2px solid var(--brutal-ink); }
+.floe-pill {
+  border: 2px solid var(--brutal-ink); border-radius: 0; font-weight: 900; color: #0a0a0a; background: var(--brutal-blue);
+}
+.floe-pill.good { background: var(--brutal-green); color: #0a0a0a; }
+.floe-pill.warn { background: var(--brutal-orange); color: #0a0a0a; }
+.floe-pill.bad { background: var(--brutal-red); color: #0a0a0a; }
+.floe-cards { gap: 1.5rem; padding: 0 6px 6px 0; }
+.floe-card { border: 3px solid var(--brutal-ink); border-radius: 0; box-shadow: 6px 6px 0 var(--brutal-ink); }
+.floe-card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / "";
+  display: block; width: auto; height: auto; background: none; color: inherit; font-size: 2.4rem; font-weight: 900; line-height: 1;
+}
+/* Plain cards and options take the primary faces in turn; numbers, facts and links stay on the surface */
+:is(.floe-cards:not(.floe-stats, .floe-facts, .floe-links, .floe-decision)) > .floe-card { background: var(--brutal-yellow); color: #0a0a0a; }
+:is(.floe-cards:not(.floe-stats, .floe-facts, .floe-links, .floe-decision)) > .floe-card:nth-child(3n + 2) { background: var(--brutal-blue); }
+:is(.floe-cards:not(.floe-stats, .floe-facts, .floe-links, .floe-decision)) > .floe-card:nth-child(3n) { background: var(--brutal-pink); }
+:is(.floe-cards:not(.floe-stats, .floe-facts, .floe-links, .floe-decision)) > .floe-card :is(p, ul, ol, li, a) { color: #0a0a0a; font-weight: 600; }
+.floe-note {
+  border: 3px solid var(--brutal-ink); border-radius: 0; background: var(--surface); padding-left: 4rem;
+  box-shadow: 6px 6px 0 var(--brutal-blue); margin: 0 6px 6px 0;
+}
+.floe-note.good { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-green); }
+.floe-note.warn { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-orange); }
+.floe-note.bad { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-red); }
+.floe-note::before {
+  width: 1.9rem; height: 1.9rem; border-radius: 0; border: 2px solid var(--brutal-ink); background: var(--brutal-blue); color: #0a0a0a; font-weight: 900;
+}
+.floe-note.good::before { background: var(--brutal-green); color: #0a0a0a; }
+.floe-note.warn::before { background: var(--brutal-orange); color: #0a0a0a; }
+.floe-note.bad::before { background: var(--brutal-red); color: #0a0a0a; }
+.floe-note-title, .floe-note:is(.good, .warn, .bad) .floe-note-title { color: var(--fg); font-weight: 900; }
+:is(.floe-code, .floe-terminal) {
+  border: 3px solid var(--brutal-ink); border-radius: 0; box-shadow: 6px 6px 0 var(--brutal-blue); margin: 0 6px 6px 0;
+}
+.floe-terminal { box-shadow: 6px 6px 0 var(--brutal-pink); }
+:is(.floe-code, .floe-terminal) figcaption {
+  background: var(--surface); color: var(--fg); opacity: 1; font-weight: 800; border-bottom: 3px solid var(--brutal-ink);
+}
+.floe-code .lang { border-radius: 0; border: 2px solid var(--brutal-ink); background: var(--brutal-blue); color: #0a0a0a; font-weight: 900; }
+.floe-code.floe-diff figcaption :is(.added, .removed) { font-weight: 900; }
+blockquote {
+  border: 3px solid var(--brutal-ink); border-radius: 0; padding: 1.1rem 1.4rem; background: var(--brutal-yellow); color: #0a0a0a;
+  font-size: 1.2rem; font-weight: 800; box-shadow: 6px 6px 0 var(--brutal-ink); margin-right: 6px;
+}
+blockquote :is(a, code) { color: inherit; }
+:is(.floe-progress, .floe-steps, .floe-checklist, .floe-tree, .floe-details, .floe-timeline, .floe-bars, .floe-faq, .floe-glossary, .floe-keys) {
+  border: 3px solid var(--brutal-ink); border-radius: 0; box-shadow: 6px 6px 0 var(--brutal-ink); margin: 0 6px 6px 0;
+}
+.floe-tabs > label { border-radius: 0; border: 2px solid transparent; }
+.floe-tabs > label:has(:checked) { background: var(--brutal-yellow); color: #0a0a0a; border-color: var(--brutal-ink); }

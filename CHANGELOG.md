@@ -71,9 +71,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   pointing at the parts to write code and commands in.
 - Pick the look of the built-in `report` by its theme: `default` (faces set
   in panels, notes in their tone's colour), `soft` (faces with round corners),
-  `editorial` (rules and thin frames, as in print), `ink` (a table's heading in ink, states filled with
-  their colour) or `tinted` (faces tinted with the accent), each in light and
-  dark mode. A theme restyles floe's parts by their classes.
+  `editorial` (rules and thin frames, as in print), `ink` (a table's heading
+  in ink, states filled with their colour), `brutal` (thick black frames,
+  primary faces and hard shadows), `blueprint` (blue ink on squared paper,
+  every cell ruled), `notebook` (ruled paper, marker strokes and sticky
+  notes), `swiss` (heavy black rules, large numbers and red, states told by
+  shape) or `washi` (sumi and vermilion on washi in a Mincho face, seals and
+  vertical quotes), each in light and dark mode. A theme restyles floe's
+  parts by their classes, leaving the page as the template draws it.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as
