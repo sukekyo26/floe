@@ -374,19 +374,6 @@ var messagesJA = map[string]string{
 	"tmpl_script_end":              "js に %s があり、ページはそこでスクリプトが終わると読みます。文字列なら '<' + '%s' のように分けてください",
 
 	// The words floe's parts draw in a page, by part_<part>_<word>: label "likely" in the part risks.
-	"part_matrix_yes":        "できる",
-	"part_matrix_part":       "一部",
-	"part_matrix_no":         "できない",
-	"part_decision_rejected": "退けた案",
-	"part_risks_risk":        "リスク",
-	"part_risks_likely":      "起きやすさ",
-	"part_risks_impact":      "影響",
-	"part_risks_fix":         "手当て",
-	"part_risks_low":         "低",
-	"part_risks_mid":         "中",
-	"part_risks_high":        "高",
-	"part_fields_required":   "必須",
-	"part_fields_default":    "既定:",
 
 	"cli_template_parts_themes":       "部品のテーマ: %s",
 	"cli_template_shared_parts_theme": "floe の部品を描くテーマ。上の部品のテーマのどれか（既定は %s）",
@@ -398,4 +385,12 @@ var messagesJA = map[string]string{
 	"cli_relative_no_dir":             "作業ディレクトリを読めないので、%s の相対パスのディレクトリ %s がどこか決まりません。存在するディレクトリから floe を実行するか、それを絶対パスで設定してください",
 	"cli_tilde_no_home":               "%s が %s で、~ はホームを指しますが、HOME が設定されていません。HOME を設定するか、%s を絶対パスで設定してください",
 	"cli_tilde_name":                  "%s が %s です。floe がホームとして読むのは先頭の ~ と ~/ だけで、~name は読みません。絶対パスで書くか、作業ディレクトリの下のその名前のディレクトリなら ./%s と書いてください",
+	"tmpl_words_yaml":                 "words.yaml は言語タグごとに、言葉の名前とその文字列を書いてください",
+	"tmpl_words_lang":                 "%s は en・ja・pt-BR のような言語タグではありません",
+	"tmpl_words_lang_not_mapping":     "%s: 言葉の名前とその文字列を書いてください",
+	"tmpl_words_not_text":             "%s.%s: 文字列で書いてください",
+	"tmpl_words_no_en":                "words.yaml に en がありません。言葉の無い言語のページは en で描きます",
+	"tmpl_words_missing":              "%s に %s がありません。en にはあります",
+	"tmpl_words_extra":                "%s に %s があります。en にはありません",
+	"tmpl_words_unknown":              "%s に言葉「%s」がありません",
 }

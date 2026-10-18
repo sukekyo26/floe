@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/i18n"
 )
 
 // palette are the CSS variables of a theme that parts and diagrams take their colours, fonts and width
@@ -174,29 +173,66 @@ func TestPartsDrawnWhole(t *testing.T) {
 	}
 }
 
-// Every word a part draws by label has a message, which the languages without it take from English.
-func TestPartLabels(t *testing.T) {
+// Every word a part draws has its text in the part's words.yaml.
+func TestPartWords(t *testing.T) {
 	t.Parallel()
 
 	set, err := builtinParts()
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The words a part draws from its data, label $mark, are the values of the schema's enum.
+	// The words a part draws from its data, word $mark, are the values of the schema's enum.
 	dynamic := map[string][]string{"matrix": {"yes", "part", "no"}, "risks": {"low", "mid", "high"}}
-	english := i18n.EnglishCatalog()
 	for name, p := range set.parts {
-		keys := dynamic[name]
-		for _, m := range regexp.MustCompile(`label "(\w+)"`).FindAllStringSubmatch(p.html, -1) {
-			keys = append(keys, m[1])
+		names := dynamic[name]
+		for _, m := range regexp.MustCompile(`word "(\w+)"`).FindAllStringSubmatch(p.html, -1) {
+			names = append(names, m[1])
 		}
-		if strings.Contains(p.html, "label $") != (dynamic[name] != nil) {
-			t.Errorf("the part %s draws a word from its data, which TestPartLabels does not know", name)
+		if strings.Contains(p.html, "word $") != (dynamic[name] != nil) {
+			t.Errorf("the part %s draws a word from its data, which TestPartWords does not know", name)
 		}
-		for _, k := range keys {
-			if key := "part_" + name + "_" + k; english.Msg(key) == key {
-				t.Errorf("no message for %s", key)
+		for _, n := range names {
+			if _, ok := p.words[fallbackLang][n]; !ok {
+				t.Errorf("the part %s has no word %s", name, n)
 			}
 		}
+	}
+}
+
+// A part's words are read with their mistakes at their lines and columns, and a page takes the words of
+// its language, else of its language without the region, else of en.
+func TestReadWords(t *testing.T) {
+	t.Parallel()
+
+	w, err := readWords("w.yaml", []byte("en: { a: A, b: B }\nJA: { a: あ, b: い }\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for tag, want := range map[string]string{"ja": "ja", "ja-JP": "ja", "en-GB": "en", "fr": "en"} {
+		if got := w.lang(tag); got != want {
+			t.Errorf("lang(%s) = %s, want %s", tag, got, want)
+		}
+	}
+	if got, err := w.word("w.yaml", "ja")("a"); got != "あ" || err != nil {
+		t.Errorf("word a in ja = %q, %v", got, err)
+	}
+	if _, err := w.word("w.yaml", "en")("c"); err == nil || err.Error() != `w.yaml has no word "c"` {
+		t.Errorf("word c = %v", err)
+	}
+	for src, want := range map[string]string{
+		"ja: { a: あ }\n":                "w.yaml:1:1: words.yaml has no en",
+		"en: { a: A }\nja: { b: い }\n":  "w.yaml:2:1: ja leaves out a, which en has\nw.yaml:2:1: ja has b, which en does not",
+		"en: { a: A }\nj_p: { a: あ }\n": "w.yaml:2:1: j_p is not a language tag",
+		"en: { a: [A] }\n":              "w.yaml:1:10: en.a: write text",
+		"en: A\n":                       "w.yaml:1:5: en: write the names of the words",
+		"- en\n":                        "w.yaml:1:1: write words.yaml as language tags",
+		"en: &x { a: A }\nja: *x\n":     "w.yaml:1:5: anchors, aliases",
+	} {
+		if _, err := readWords("w.yaml", []byte(src)); err == nil || !strings.HasPrefix(err.Error(), want) {
+			t.Errorf("readWords(%q) = %v, want %s", src, err, want)
+		}
+	}
+	if w, err := readWords("w.yaml", nil); w != nil || err != nil {
+		t.Errorf("readWords of nothing = %v, %v", w, err)
 	}
 }

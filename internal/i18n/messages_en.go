@@ -375,19 +375,6 @@ var messagesEN = map[string]string{
 	"tmpl_script_end":              "js holds %s, where the page would end its script; split it in a string, as '<' + '%s'",
 
 	// The words floe's parts draw in a page, by part_<part>_<word>: label "likely" in the part risks.
-	"part_matrix_yes":        "Yes",
-	"part_matrix_part":       "Partly",
-	"part_matrix_no":         "No",
-	"part_decision_rejected": "Set aside",
-	"part_risks_risk":        "Risk",
-	"part_risks_likely":      "Likelihood",
-	"part_risks_impact":      "Impact",
-	"part_risks_fix":         "What we do",
-	"part_risks_low":         "Low",
-	"part_risks_mid":         "Medium",
-	"part_risks_high":        "High",
-	"part_fields_required":   "required",
-	"part_fields_default":    "Default:",
 
 	"cli_template_parts_themes":       "parts themes: %s",
 	"cli_template_shared_parts_theme": "The theme to draw floe's parts with, one of the parts themes above (default: %s)",
@@ -399,4 +386,12 @@ var messagesEN = map[string]string{
 	"cli_relative_no_dir":             "the working directory cannot be read, so %s, the relative directory %s, means nothing; run floe from a directory that exists, or set it as an absolute path",
 	"cli_tilde_no_home":               "%s is %s, whose ~ stands for a home, but HOME is not set; set HOME, or %s as an absolute path",
 	"cli_tilde_name":                  "%s is %s: floe takes only ~ and ~/ at the start for your home, not ~name; write the path absolute, or ./%s for a directory of that name under the working directory",
+	"tmpl_words_yaml":                 "write words.yaml as language tags, each the names of the words and their text",
+	"tmpl_words_lang":                 "%s is not a language tag such as en, ja or pt-BR",
+	"tmpl_words_lang_not_mapping":     "%s: write the names of the words and their text",
+	"tmpl_words_not_text":             "%s.%s: write text",
+	"tmpl_words_no_en":                "words.yaml has no en, which a page of a language it has no words of is drawn in",
+	"tmpl_words_missing":              "%s leaves out %s, which en has",
+	"tmpl_words_extra":                "%s has %s, which en does not",
+	"tmpl_words_unknown":              `%s has no word "%s"`,
 }
