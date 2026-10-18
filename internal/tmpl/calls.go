@@ -3,23 +3,26 @@ package tmpl
 import (
 	"html/template"
 	"slices"
+	"strings"
 	tparse "text/template/parse"
 )
 
 // calls are the calls of a function of a template: the names passed to it as written, once each in the
-// order they come, and whether one is passed otherwise, from the data.
+// order they come, and whether it is called otherwise (with a value of the data, or as no name is).
 type calls struct {
-	names    []string
-	computed bool
+	names []string
+	other bool
 }
 
-// callsOf returns the calls of the function fn in page and the templates it defines: fn "x", "x" | fn,
-// or one of another argument.
-// LIMIT: a name in parentheses (fn ("x")) or a chain ((fn "x").y) counts as computed; follow those
-// nodes if a template comes to write one so.
+// callsOf returns the calls of the function fn in page and the templates it defines, in the order of
+// their names: fn "x" and "x" | fn name x, any other call is other.
+// LIMIT: a name in parentheses (fn ("x")) is other; follow the pipe in them if a template comes to write
+// one so.
 func callsOf(page *template.Template, fn string) calls {
 	var c calls
-	for _, t := range page.Templates() {
+	templates := page.Templates()
+	slices.SortFunc(templates, func(x, y *template.Template) int { return strings.Compare(x.Name(), y.Name()) })
+	for _, t := range templates {
 		if t.Tree != nil {
 			c.node(fn, t.Tree.Root)
 		}
@@ -34,12 +37,12 @@ func (c *calls) node(fn string, n tparse.Node) {
 				continue
 			}
 			switch {
-			case len(cmd.Args) > 1:
+			case len(cmd.Args) == 2:
 				c.add(cmd.Args[1])
-			case i > 0 && len(p.Cmds[i-1].Args) == 1:
+			case len(cmd.Args) == 1 && i > 0 && len(p.Cmds[i-1].Args) == 1:
 				c.add(p.Cmds[i-1].Args[0])
 			default:
-				c.computed = true
+				c.other = true
 			}
 		}
 	}
@@ -48,12 +51,12 @@ func (c *calls) node(fn string, n tparse.Node) {
 	}
 }
 
-// add notes arg, passed to the function: its text when written, else that one is computed.
+// add notes arg, passed to the function: its text when written, else a call of another kind.
 func (c *calls) add(arg tparse.Node) {
 	s, ok := arg.(*tparse.StringNode)
 	switch {
 	case !ok:
-		c.computed = true
+		c.other = true
 	case !slices.Contains(c.names, s.Text):
 		c.names = append(c.names, s.Text)
 	}
@@ -86,6 +89,8 @@ func children(n tparse.Node) []tparse.Node {
 		return []tparse.Node{n.Pipe}
 	case *tparse.CommandNode:
 		return n.Args
+	case *tparse.ChainNode: // (fn "x").y
+		return []tparse.Node{n.Node}
 	case *tparse.IfNode:
 		return []tparse.Node{n.Pipe, n.List, n.ElseList}
 	case *tparse.RangeNode:

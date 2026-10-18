@@ -264,8 +264,8 @@ func (t *Template) assetImages(assets fs.FS) (mistakes []error, checked map[stri
 	return mistakes, checked, err //nolint:wrapcheck // wrapped by checkAssets
 }
 
-// assetsNamed returns the names page passes to asset as written, {{asset "logo.svg"}}, once each.
-// LIMIT: a name piped to it, or computed, is not found. Look for those too if templates come to use them.
+// assetsNamed returns the names page passes to asset as written, {{asset "logo.svg"}} or {{"logo.svg" |
+// asset}}, once each. One of the data is left to the drawing.
 func assetsNamed(page *template.Template) []string {
 	return callsOf(page, "asset").names
 }

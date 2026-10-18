@@ -194,10 +194,11 @@ func TestPartWords(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if callsOf(page, "word").computed != (fromData[name] != nil) {
-			t.Errorf("the part %s draws a word from its data, which TestPartWords does not know", name)
+		words := callsOf(page, "word")
+		if words.other != (fromData[name] != nil) {
+			t.Errorf("the part %s names a word otherwise than as written, which TestPartWords does not know", name)
 		}
-		drawn := append(namedWords(page), fromData[name]...)
+		drawn := slices.Concat(words.names, fromData[name])
 		for _, n := range drawn {
 			if _, ok := p.words[fallbackLang][n]; !ok {
 				t.Errorf("the part %s has no word %s", name, n)
@@ -254,7 +255,7 @@ func TestReadWords(t *testing.T) {
 	if w, err := readWords("w.yaml", []byte("en:\n  a: |\n    A\n")); err != nil || w["en"]["a"] != "A" {
 		t.Errorf("readWords of a block = %v, %v", w, err)
 	}
-	// A language not read is told once: not compared with en, nor en with it.
+	// A language not read is not compared with en, nor en with it: its own mistake alone is told.
 	for src, want := range map[string]string{
 		"en: { a: A }\nja: x\n": "w.yaml:2:5: ja: write the names of the words and their text",
 		"en: A\nja: { a: x }\n": "w.yaml:1:5: en: write the names of the words and their text",
@@ -277,7 +278,8 @@ func TestReadWords(t *testing.T) {
 		`{{if .x}}{{with .y}}{{word "b"}}{{end}}{{end}}`:    `p.html names the words b, which w.yaml does not have`,
 		`{{range .x}}{{word "a"}}{{word .}}{{end}}`:         "",
 		`{{define "d"}}{{word "c"}}{{end}}{{template "d"}}`: `p.html names the words c, which w.yaml does not have`,
-		`{{"d" | word}}`: `p.html names the words d, which w.yaml does not have`,
+		`{{"d" | word}}`:   `p.html names the words d, which w.yaml does not have`,
+		`{{(word "e").x}}`: `p.html names the words e, which w.yaml does not have`,
 	} {
 		page, err := template.New("p").Funcs(template.FuncMap{"word": zh.word("w.yaml", "en")}).Parse(src)
 		if err != nil {
