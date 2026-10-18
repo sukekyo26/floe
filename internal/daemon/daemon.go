@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -162,29 +161,34 @@ func CheckDirs(ctx context.Context, s Server) error {
 // otherDirs refuses p, a server of floe that serves the root of s, when it draws with other directories
 // of templates or icons than s.
 func (s Server) otherDirs(p Status) error {
-	same := sameDir(p.Health.Templates, s.Templates) && sameDir(p.Health.Icons, s.Icons)
-	if p.State != Ours || !sameDir(p.Health.Root, s.Root) || same {
+	if p.State != Ours || !sameDir(p.Health.Root, s.Root) ||
+		sameOrUnread(p.Health.Templates, s.Templates) && sameOrUnread(p.Health.Icons, s.Icons) {
 		return nil
 	}
 	return usererr.New("daemon_other_dirs", s.Port, p.Health.Templates, p.Health.Icons, s.Templates, s.Icons)
 }
 
 // sameDir reports whether a and b name one directory: as written once cleaned, or through a symlink.
-// Two that do not exist are one too: neither holds anything to draw with, and the one made later is
-// told apart then.
 func sameDir(a, b string) bool {
 	if filepath.Clean(a) == filepath.Clean(b) {
 		return true
 	}
 	x, errA := os.Stat(a)
 	y, errB := os.Stat(b)
-	switch {
-	case errA == nil && errB == nil:
-		return os.SameFile(x, y)
-	case errors.Is(errA, fs.ErrNotExist) && errors.Is(errB, fs.ErrNotExist):
+	return errA == nil && errB == nil && os.SameFile(x, y)
+}
+
+// sameOrUnread reports whether the directories a and b of templates or icons draw alike: one directory, or
+// two that cannot be read, neither holding anything to draw with.
+// LIMIT: one made readable later draws pages unchecked until the next publish tells the two apart; watch
+// the directories if that comes to matter.
+func sameOrUnread(a, b string) bool {
+	if sameDir(a, b) {
 		return true
 	}
-	return false
+	_, errA := os.Stat(a)
+	_, errB := os.Stat(b)
+	return errA != nil && errB != nil
 }
 
 // startAndWait starts a server on the port, p being Down, and waits for one to answer there.
