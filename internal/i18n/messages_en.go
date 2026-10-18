@@ -398,4 +398,5 @@ var messagesEN = map[string]string{
 	"daemon_other_dirs":               "the server on port %d draws pages with the templates of %s and the icons of %s, and this command means the templates of %s and the icons of %s (FLOE_TEMPLATES_DIR, FLOE_ICONS_DIR); move yours where the server reads them, or run \"floe stop\" and publish again",
 	"cli_relative_no_dir":             "the working directory cannot be read, so %s, the relative directory %s, means nothing; run floe from a directory that exists, or set it (or what it defaults from) as an absolute path",
 	"cli_tilde_no_home":               "%s is %s, whose ~ stands for a home, but HOME is not set; set HOME, or %s as an absolute path",
+	"cli_tilde_name":                  "%s is %s: floe takes only ~ and ~/ at the start for your home, not ~name; write the path absolute",
 }

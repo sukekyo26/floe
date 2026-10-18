@@ -397,4 +397,5 @@ var messagesJA = map[string]string{
 	"daemon_other_dirs":               "ポート %d のサーバーはテンプレートを %s、アイコンを %s から読んでページを描いていますが、このコマンドはテンプレートを %s、アイコンを %s と指しています（FLOE_TEMPLATES_DIR・FLOE_ICONS_DIR）。サーバーが読む場所へ移すか、\"floe stop\" してから公開し直してください",
 	"cli_relative_no_dir":             "作業ディレクトリを読めないので、%s の相対パスのディレクトリ %s がどこか決まりません。存在するディレクトリから floe を実行するか、それ（か既定の元になる変数）を絶対パスで設定してください",
 	"cli_tilde_no_home":               "%s が %s で、~ はホームを指しますが、HOME が設定されていません。HOME を設定するか、%s を絶対パスで設定してください",
+	"cli_tilde_name":                  "%s が %s です。floe がホームとして読むのは先頭の ~ と ~/ だけで、~name は読みません。絶対パスで書いてください",
 }

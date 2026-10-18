@@ -50,17 +50,26 @@ func TestLoadConfigDefaults(t *testing.T) {
 		c.templates != "/h/.config/floe/templates" {
 		t.Errorf("relative XDG directories = %+v, %v", c, err)
 	}
-	// A ~ written in quotes stands for the home, as a shell would have expanded it; ~name is a name.
-	vars = map[string]string{"HOME": "/h", "FLOE_DIR": "~/pages", "FLOE_TEMPLATES_DIR": "~", "XDG_DATA_HOME": "~/data", "FLOE_ICONS_DIR": "~x"}
-	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/h/pages" || c.templates != "/h" || c.icons != "/w/~x" {
+	// A ~ or ~/ written in quotes stands for the home; ~name, a home to a shell, is refused.
+	vars = map[string]string{"HOME": "/h", "FLOE_DIR": "~/pages", "FLOE_TEMPLATES_DIR": "~", "FLOE_ICONS_DIR": "~/icons"}
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/h/pages" || c.templates != "/h" || c.icons != "/h/icons" {
 		t.Errorf("directories with ~ = %+v, %v", c, err)
 	}
-	vars = map[string]string{"HOME": "/h", "XDG_DATA_HOME": "~/data"}
-	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/h/data/floe" {
-		t.Errorf("XDG_DATA_HOME with ~ = %+v, %v", c, err)
+	vars = map[string]string{"HOME": "/h", "XDG_DATA_HOME": "~/data", "XDG_CONFIG_HOME": "~/cfg"}
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/h/data/floe" || c.templates != "/h/cfg/floe/templates" {
+		t.Errorf("XDG directories with ~ = %+v, %v", c, err)
 	}
+	vars = map[string]string{"HOME": "/h", "FLOE_ICONS_DIR": "~x"}
+	if _, err := loadConfig(getenv, "/w"); err == nil || !strings.Contains(err.Error(), "FLOE_ICONS_DIR is ~x: floe takes only ~ and ~/") {
+		t.Errorf("~name = %v", err)
+	}
+	// Without a home, a floe directory's ~ is refused, and an XDG one's ignored as a relative one is.
 	vars = map[string]string{"FLOE_DIR": "~/pages"}
 	if _, err := loadConfig(getenv, "/w"); err == nil || !strings.Contains(err.Error(), "FLOE_DIR is ~/pages, whose ~ stands for a home") {
 		t.Errorf("~ without a home = %v", err)
+	}
+	vars = map[string]string{"FLOE_DIR": "/d", "XDG_DATA_HOME": "~/data"}
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/d" || c.icons != "" {
+		t.Errorf("an XDG directory with ~ without a home = %+v, %v", c, err)
 	}
 }

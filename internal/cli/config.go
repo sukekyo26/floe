@@ -71,19 +71,24 @@ func loadConfig(getenv func(string) string, dir string) (*config, error) {
 // dirKeys are the settings that name a directory.
 var dirKeys = []string{"FLOE_DIR", "FLOE_ICONS_DIR", "FLOE_TEMPLATES_DIR", "XDG_DATA_HOME", "XDG_CONFIG_HOME"}
 
-// expandHome returns getenv with a "~" or "~/" at the start of a directory setting standing for home, as a
-// shell expands it unquoted, so that one written in quotes (a .env file, a service unit) does not name a
-// directory "~". One without a home is refused.
+// expandHome returns getenv with a "~" or "~/" at the start of a directory setting standing for home, so
+// that one written in quotes (a .env file, a service unit) does not name a directory "~". Another ~ at the
+// start (~name, the home of name to a shell) is refused, as is a floe directory's ~ without a home; an XDG
+// one's is left, a relative directory its spec ignores.
 func expandHome(getenv func(string) string, home string) (func(string) string, error) {
 	tilde := func(v string) bool { return v == "~" || strings.HasPrefix(v, "~/") }
 	for _, key := range dirKeys {
-		if v := getenv(key); home == "" && tilde(v) {
+		v := getenv(key)
+		switch {
+		case strings.HasPrefix(v, "~") && !tilde(v):
+			return nil, usererr.New("cli_tilde_name", key, v)
+		case tilde(v) && home == "" && strings.HasPrefix(key, "FLOE_"):
 			return nil, usererr.New("cli_tilde_no_home", key, v, key)
 		}
 	}
 	return func(key string) string {
 		v := getenv(key)
-		if slices.Contains(dirKeys, key) && tilde(v) {
+		if slices.Contains(dirKeys, key) && tilde(v) && home != "" {
 			return filepath.Join(home, v[1:])
 		}
 		return v
