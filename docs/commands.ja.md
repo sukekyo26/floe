@@ -318,7 +318,7 @@ parts:
 | `FLOE_LANG` | メッセージの言語（`en`・`ja`）。無ければ `LC_ALL`、`LC_MESSAGES`、`LANG` の順に見る。カタログの無い言語は飛ばす。既定は英語 |
 | `BROWSER` | 新しいページを開くコマンド。既定は macOS なら `open`、それ以外は `wslview` か `xdg-open` |
 
-`FLOE_DIR`・`FLOE_ICONS_DIR`・`FLOE_TEMPLATES_DIR`・`XDG_DATA_HOME`・`XDG_CONFIG_HOME` の先頭の `~`・`~/` は `HOME` を指します。引用符の中（`.env` ファイルやサービスのユニット）に書いても、`~` という名前のディレクトリにはなりません。`~name` は断り、`HOME` が無いときの `FLOE_` の変数の `~` も断ります。相対パスの `XDG_DATA_HOME`・`XDG_CONFIG_HOME` は XDG の仕様どおり無視し、`HOME` が無いときに `~` で始まるものも無視します。
+`FLOE_DIR`・`FLOE_ICONS_DIR`・`FLOE_TEMPLATES_DIR`・`XDG_DATA_HOME`・`XDG_CONFIG_HOME` の先頭の `~`・`~/` は `HOME` を指します。引用符の中（`.env` ファイルやサービスのユニット）に書いても、`~` という名前のディレクトリにはなりません。`FLOE_` の変数が `~name` で始まるとき、`HOME` が無いのに `~` で始まるときは断ります。相対パスの `XDG_DATA_HOME`・`XDG_CONFIG_HOME` は XDG の仕様どおり無視し、`~name` で始まるもの、`HOME` が無いのに `~` で始まるものも無視します。
 
 管理画面は、代わりにブラウザの言語に従います。Cobra 自身のエラー（知らないフラグやコマンド）と `--help` は英語です。
 

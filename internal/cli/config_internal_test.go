@@ -72,4 +72,14 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/d" || c.icons != "" {
 		t.Errorf("an XDG directory with ~ without a home = %+v, %v", c, err)
 	}
+	// An XDG directory is not floe's: one of ~name is ignored, as a relative one is.
+	vars = map[string]string{"HOME": "/h", "XDG_CONFIG_HOME": "~foo"}
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.templates != "/h/.config/floe/templates" {
+		t.Errorf("an XDG directory of ~name = %+v, %v", c, err)
+	}
+	// An absolute directory is cleaned, as a relative one is joined.
+	vars = map[string]string{"FLOE_DIR": "/d/"}
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/d" {
+		t.Errorf("an absolute directory with a slash at the end = %+v, %v", c, err)
+	}
 }
