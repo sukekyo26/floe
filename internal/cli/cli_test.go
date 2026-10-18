@@ -620,6 +620,34 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 	}
 }
 
+// A publish that means other icons than the server's is refused, from another build too, which would
+// otherwise replace the server with one drawing every page with them; the same directory written
+// otherwise passes.
+func TestPublishOtherDirs(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	page := e.page(t, "dirs.yaml", "Dirs")
+	want(t, "publish", e.run(t, "", "publish", page), 0, e.base()+"/a/dirs/\n", "")
+	first, _ := e.health(t)
+	e.vars["FLOE_ICONS_DIR"] = filepath.Join(e.tmp, "other-icons")
+	for what, bin := range map[string]string{"this build": "", "another build": otherBuild} {
+		var r result
+		if bin == "" {
+			r = e.run(t, "", "publish", page)
+		} else {
+			r = e.exe(t, bin, "publish", page)
+		}
+		want(t, "publish from "+what+" with other icons", r, 1, "",
+			"floe: the server on port "+e.port+" draws pages with the templates of "+first.Templates+" and the icons of "+first.Icons)
+	}
+	if h, _ := e.health(t); h.PID != first.PID {
+		t.Errorf("the server was replaced: pid %d, then %d", first.PID, h.PID)
+	}
+	e.vars["FLOE_ICONS_DIR"] = first.Icons + string(filepath.Separator)
+	want(t, "publish with the icons written with a slash at the end", e.run(t, "", "publish", page), 0, e.base()+"/a/dirs/\n", "updated")
+}
+
 // A data file is published as a page drawn with its template, and a mistake in it is refused.
 func TestPublishDataFile(t *testing.T) {
 	t.Parallel()

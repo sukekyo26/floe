@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"syscall"
@@ -118,6 +119,10 @@ func Addr(port int) string {
 // outdated one as needed.
 func Ensure(ctx context.Context, s Server) error {
 	p := Probe(ctx, s.base())
+	// One of other directories is refused before it is replaced, which would draw others' pages with these.
+	if err := s.otherDirs(p); err != nil {
+		return err
+	}
 	if p.State == Ours && p.Health.Root == s.Root && p.Health.Build != s.Build {
 		old := p.Health.PID
 		if err := Terminate(old); err != nil {
@@ -142,11 +147,35 @@ func Ensure(ctx context.Context, s Server) error {
 		return usererr.New("daemon_not_started")
 	case p.Health.Root != s.Root:
 		return usererr.New("daemon_other_root", s.Port, p.Health.Root)
-	case p.Health.Templates != s.Templates || p.Health.Icons != s.Icons:
-		return usererr.New("daemon_other_dirs", s.Port, p.Health.Templates, p.Health.Icons)
 	default:
+		return s.otherDirs(p)
+	}
+}
+
+// CheckDirs refuses a server of floe on the port that serves the root with other directories of templates
+// or icons, so that a publish says so before it checks a data file with its own. None there passes.
+func CheckDirs(ctx context.Context, s Server) error {
+	return s.otherDirs(Probe(ctx, s.base()))
+}
+
+// otherDirs refuses p, a server of floe that serves the root of s, when it draws with other directories
+// of templates or icons than s.
+func (s Server) otherDirs(p Status) error {
+	same := sameDir(p.Health.Templates, s.Templates) && sameDir(p.Health.Icons, s.Icons)
+	if p.State != Ours || p.Health.Root != s.Root || same {
 		return nil
 	}
+	return usererr.New("daemon_other_dirs", s.Port, p.Health.Templates, p.Health.Icons)
+}
+
+// sameDir reports whether a and b name one directory: as written once cleaned, or through a symlink.
+func sameDir(a, b string) bool {
+	if filepath.Clean(a) == filepath.Clean(b) {
+		return true
+	}
+	x, errA := os.Stat(a)
+	y, errB := os.Stat(b)
+	return errA == nil && errB == nil && os.SameFile(x, y)
 }
 
 // startAndWait starts a server on the port, p being Down, and waits for one to answer there.

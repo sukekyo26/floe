@@ -223,7 +223,7 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	s.mu.Lock()
 	last, ok := s.drawn[key]
 	s.mu.Unlock()
-	// Published again, it may read other templates: its version waits for this drawing.
+	// Published again, it may be drawn with another theme: its version waits for this drawing.
 	known := ok && last.at == m.UpdatedAt
 	if known {
 		version = s.Version(slug, m, file)
@@ -261,8 +261,8 @@ type drawing struct {
 	sources tmpl.Sources
 }
 
-// sourceKey keys what a drawing read: one file linked under two slugs may be drawn with two themes or
-// templates, and a slug removed in another process (floe rm) may come to link another file.
+// sourceKey keys what a drawing read: one file linked under two slugs may be drawn with two themes, and a
+// slug removed in another process (floe rm) may come to link another file.
 func sourceKey(slug, file string) string {
 	return slug + "\x00" + file
 }

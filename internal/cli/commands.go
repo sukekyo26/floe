@@ -52,8 +52,11 @@ func (a *app) iconsDir() string {
 
 // abs puts a relative dir under the working directory; "" stays "".
 func (a *app) abs(dir string) string {
-	if dir == "" || filepath.IsAbs(dir) {
-		return dir
+	switch {
+	case dir == "":
+		return ""
+	case filepath.IsAbs(dir):
+		return filepath.Clean(dir)
 	}
 	return filepath.Join(a.env.Dir, dir)
 }
@@ -143,20 +146,24 @@ refused unless --force.`,
 // publish checks, makes sure the server runs, then saves, so that a failed publish leaves nothing in
 // the store.
 func (a *app) publish(ctx context.Context, file string, opts store.Options) error {
+	build, err := daemon.Build()
+	if err != nil {
+		return err //nolint:wrapcheck // already says what failed
+	}
+	server := daemon.Server{
+		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.templatesDir(), Icons: a.iconsDir(),
+		Env: a.serverEnv(),
+	}
+	// Before the check, which would find mistakes with templates the server does not draw with.
+	if err = daemon.CheckDirs(ctx, server); err != nil {
+		return err //nolint:wrapcheck // the message is for the user as is
+	}
 	st := a.store()
 	entry, err := st.Prepare(ctx, file, opts, a.env.Dir)
 	if err != nil {
 		return err //nolint:wrapcheck // the message is for the user as is
 	}
-	build, err := daemon.Build()
-	if err != nil {
-		return err //nolint:wrapcheck // already says what failed
-	}
-	err = daemon.Ensure(ctx, daemon.Server{
-		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.templatesDir(), Icons: a.iconsDir(),
-		Env: a.serverEnv(),
-	})
-	if err != nil {
+	if err = daemon.Ensure(ctx, server); err != nil {
 		return err //nolint:wrapcheck // the message is for the user as is
 	}
 	if err := st.Save(entry); err != nil {
