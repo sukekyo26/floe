@@ -12,7 +12,8 @@
   background-color: var(--bp-sheet); background-image: var(--bp-squares); background-size: 16px 16px; border-radius: 0;
   box-shadow: none;
 }
-.floe-note:is(.good, .warn, .bad) { background-color: var(--bp-sheet); background-image: var(--bp-squares); }
+/* A note of a tone sets its whole background, its size too, so it gets the squares again */
+.floe-note:is(.good, .warn, .bad) { background-color: var(--bp-sheet); background-image: var(--bp-squares); background-size: 16px 16px; }
 :is(.floe-table, .floe-card, .floe-progress, .floe-steps, .floe-checklist, .floe-tree, .floe-details, .floe-timeline, .floe-bars, .floe-faq, .floe-glossary, .floe-keys) {
   border: 1.5px solid var(--bp-ink);
 }
