@@ -1,5 +1,5 @@
 /* Sumi and vermilion printed on washi, in a Mincho face: tables closed by double rules, states and notes as
-   seals, cards marked with a seal of their number in kanji, and quotes set vertically */
+   seals, cards marked with a seal of their number in kanji, and quotes ruled in vermilion */
 :root {
   --washi-font: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", "Noto Serif CJK JP", serif;
   --washi-paper: #f7f1e3; --washi-sumi: #1d1b18; --washi-hair: rgb(29 27 24 / 0.18); --washi-nezumi: #5f594f;
@@ -54,10 +54,9 @@
 :is(.floe-code, .floe-terminal) { border-radius: 0; box-shadow: none; border-top: 3px solid var(--washi-shu); }
 :is(.floe-code, .floe-terminal) figcaption { background: none; border: 0; font-family: var(--washi-font); }
 .floe-code .lang { border-radius: 0; background: none; border: 1.5px solid var(--code-prompt); color: var(--code-prompt); }
-/* A quote runs top to bottom and right to left, its lines no taller than a page's view */
 blockquote {
-  writing-mode: vertical-rl; width: fit-content; max-height: 22rem; max-width: 100%; overflow-x: auto; padding: 1.5rem 1.8rem;
-  border: 0; border-right: 3px solid var(--washi-shu); font-size: 1.25rem; line-height: 2; letter-spacing: 0.12em;
+  padding: 1.3rem 1.8rem; border: 0; border-left: 3px solid var(--washi-shu); font-size: 1.15rem; line-height: 2;
+  letter-spacing: 0.08em;
 }
 .floe-details > summary, .floe-faq summary { font-family: var(--washi-font); }
 :is(.floe-progress, .floe-steps, .floe-checklist, .floe-tree, .floe-details, .floe-timeline, .floe-bars, .floe-faq, .floe-glossary, .floe-keys) {

@@ -78,11 +78,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   squared paper, every cell ruled), `notebook` (ruled paper, marker strokes
   and sticky notes), `swiss` (heavy black rules, large numbers and red, states
   told by shape) or `washi` (sumi and vermilion on washi in a Mincho face,
-  seals and vertical quotes), each in light and dark mode. A parts theme
-  restyles the parts by their classes, and Markdown's quotes, and goes into
-  every page after the parts' style; the template's theme (`theme:`, `report`
-  has `default`) styles the page and comes after it. `floe template show`
-  lists the parts themes.
+  seals and quotes ruled in vermilion), each in light and dark mode. A parts
+  theme restyles the parts by their classes, and Markdown's quotes, and goes
+  into every page after the parts' style; the template's theme (`theme:`,
+  `report` has `default`) styles the page and comes after it. `floe template
+  show` lists the parts themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as
