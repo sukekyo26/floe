@@ -49,7 +49,7 @@ func builtinSources(t *testing.T) map[string]string {
 	t.Helper()
 
 	sources := map[string]string{"ui.html": pageSource}
-	for _, dir := range []string{"tmpl/builtin", "tmpl/parts", "diagram/assets"} {
+	for _, dir := range []string{"tmpl/templates", "tmpl/parts", "diagram/assets"} {
 		root := os.DirFS("../" + dir)
 		err := fs.WalkDir(root, ".", func(name string, e fs.DirEntry, err error) error {
 			if err != nil || e.IsDir() {

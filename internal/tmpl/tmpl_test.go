@@ -32,7 +32,7 @@ func render(t *testing.T, src string) string {
 func TestReportExample(t *testing.T) {
 	t.Parallel()
 
-	src, err := os.ReadFile("builtin/report/example.yaml")
+	src, err := os.ReadFile("templates/report/example.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestReportExample(t *testing.T) {
 	}
 	// The style of each part it uses is in its <head> once, so that a part is styled as it is drawn.
 	head, _, _ := strings.Cut(got, "</head>")
-	theme, rerr := os.ReadFile("builtin/report/themes/default.css")
+	theme, rerr := os.ReadFile("templates/report/themes/default.css")
 	if rerr != nil {
 		t.Fatal(rerr)
 	}
@@ -302,18 +302,18 @@ func TestBuiltins(t *testing.T) {
 	}
 	for _, name := range names {
 		for _, f := range []string{"page.html", "schema.json", "example.yaml", "themes/default.css"} {
-			if _, err := fs.Stat(os.DirFS("builtin/"+name), f); err != nil {
+			if _, err := fs.Stat(os.DirFS("templates/"+name), f); err != nil {
 				t.Errorf("template %s: %v", name, err)
 			}
 		}
-		src, err := os.ReadFile("builtin/" + name + "/example.yaml")
+		src, err := os.ReadFile("templates/" + name + "/example.yaml")
 		if err != nil {
 			t.Fatal(err)
 		}
 		if render(t, string(src)) == "" {
 			t.Errorf("the example of %s draws nothing", name)
 		}
-		if warnings, mistakes := tmpl.Check("builtin/"+name, ""); len(warnings) != 1 || len(mistakes) != 0 {
+		if warnings, mistakes := tmpl.Check("templates/"+name, ""); len(warnings) != 1 || len(mistakes) != 0 {
 			t.Errorf("Check of %s = %v, %v", name, warnings, mistakes)
 		}
 	}

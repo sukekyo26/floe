@@ -65,7 +65,7 @@ func TestPalette(t *testing.T) {
 			t.Errorf("%s is not of the palette", v)
 		}
 	}
-	css, err := builtin.ReadFile("builtin/report/page.html")
+	css, err := templateFiles.ReadFile("templates/report/page.html")
 	if err != nil {
 		t.Fatal(err)
 	}
