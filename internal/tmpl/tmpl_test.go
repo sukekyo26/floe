@@ -217,9 +217,9 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\nlead: .inf\nlang: en\n", "data.yaml:2:7: .inf is not a value a data file can hold"},
 		{"template: report\nsections:\n  - heading: .NaN\nlang: en\n", "data.yaml:3:14: .NaN is not a value a data file can hold"},
 		// The shared keys and the schema are reported together.
-		{"template: report\ntheme: print\nleed: x\nlang: en\n", "data.yaml:2:8: template report has no theme \"print\"; use default, editorial, ink, soft, tinted\ndata.yaml:3:1: leed is not an item"},
+		{"template: report\ntheme: print\nleed: x\nlang: en\n", "data.yaml:2:8: template report has no theme \"print\"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi\ndata.yaml:3:1: leed is not an item"},
 		{"template: deck\nlang: en\n", `data.yaml:1:11: unknown template "deck"; use report`},
-		{"template: report\ntheme: print\nlang: en\n", `data.yaml:2:8: template report has no theme "print"; use default, editorial, ink, soft, tinted`},
+		{"template: report\ntheme: print\nlang: en\n", `data.yaml:2:8: template report has no theme "print"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`},
 		{"template: report\ntitle: [a]\nlang: en\n", "data.yaml:2:8: title must be text"},
 		{"template: report\ntitle: 'a\nlang: en\n", "data.yaml:2:8: this is not valid YAML: "},
 	} {
