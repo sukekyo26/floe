@@ -10,6 +10,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -52,7 +53,7 @@ func drawFile(a *app, file string) ([]byte, []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	d, err := a.templates().Read(file, src, "", a.env.Dir)
+	d, err := a.templates().Read(file, src, tmpl.Themes{Template: "", Parts: ""}, a.env.Dir)
 	var all yamlpos.Problems
 	switch {
 	case errors.As(err, &all):

@@ -26,7 +26,7 @@ var messagesJA = map[string]string{
 	"store_slug_taken":    "URL 名「%s」は使われています。別の URL 名を入力してください",
 	"store_project_slash": "プロジェクト名に / だけは使えません",
 	"store_not_data":      "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
-	"store_theme_link":    "--theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
+	"store_theme_link":    "--theme と --parts-theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
 	"store_no_page":       "ページ「%s」はありません（floe list で確かめられます）",
 
 	// server
@@ -172,7 +172,7 @@ var messagesJA = map[string]string{
 	"cli_template_required":        "必須",
 	"cli_template_shared_lang":     "ページの言語。en・ja・pt-BR のような BCP 47 の言語タグ",
 	"cli_template_shared_template": "ページを描くテンプレート",
-	"cli_template_shared_theme":    "描くテーマ。上のテーマのどれか（既定は %s）",
+	"cli_template_shared_theme":    "ページを描くテンプレートのテーマ。上のテーマのどれか（既定は %s）",
 	"cli_template_shared_title":    "ページのタイトル",
 	"cli_template_no_from":         "写すテンプレートを --from で指定してください（--from report など）",
 	"cli_template_made":            "テンプレート %s を %s に作りました（%s の写し）",
@@ -387,4 +387,9 @@ var messagesJA = map[string]string{
 	"part_risks_high":        "高",
 	"part_fields_required":   "必須",
 	"part_fields_default":    "既定:",
+
+	"cli_template_parts_themes":       "部品のテーマ: %s",
+	"cli_template_shared_parts_theme": "floe の部品を描くテーマ。上の部品のテーマのどれか（既定は %s）",
+	"cli_parts_theme_empty":           "--parts-theme が空です。部品のテーマを指定するか、--parts-theme を省いてデータファイルの parts-theme: から取ってください",
+	"tmpl_unknown_parts_theme":        "部品のテーマ「%[1]s」はありません。使えるのは %[3]s です",
 }

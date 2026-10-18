@@ -75,8 +75,8 @@ func (a *app) templateShowCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "show <name>",
 		Short: "Show the items a data file of a template may hold, and its example",
-		Long: `Show a template: where it is, its themes, the floe it needs, the items a data file of it
-may hold (from its schema.json), and its example.yaml to start a data file from.`,
+		Long: `Show a template: where it is, its themes, the parts themes, the floe it needs, the items a
+data file of it may hold (from its schema.json), and its example.yaml to start a data file from.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
 			d, err := a.templates().Describe(args[0])
@@ -97,6 +97,7 @@ func (a *app) showTemplate(d *tmpl.Description) {
 	a.out("%s", head)
 	a.out("%s", a.cat.Msg("cli_template_where", a.where(d)))
 	a.out("%s", a.cat.Msg("cli_template_themes", strings.Join(d.Themes, ", ")))
+	a.out("%s", a.cat.Msg("cli_template_parts_themes", strings.Join(d.PartsThemes, ", ")))
 	if d.Floe != "" {
 		a.out("%s", a.cat.Msg("cli_template_floe", d.Floe, d.Series))
 	}
@@ -118,10 +119,10 @@ func (a *app) sharedItems(name string) []tmpl.Item {
 	items := tmpl.SharedItems(name)
 	for i, it := range items {
 		var args []any
-		if it.Name == "theme" {
+		if it.Name == "theme" || it.Name == "parts-theme" {
 			args = []any{tmpl.DefaultTheme}
 		}
-		items[i].Description = a.cat.Msg("cli_template_shared_"+it.Name, args...)
+		items[i].Description = a.cat.Msg("cli_template_shared_"+strings.ReplaceAll(it.Name, "-", "_"), args...)
 	}
 	return items
 }

@@ -54,10 +54,12 @@ type Meta struct {
 	// TitleEdited and ProjectEdited mark values set on the management page, kept across republishes.
 	TitleEdited bool   `json:"titleEdited,omitempty"`
 	Description string `json:"description"`
-	// Theme is the theme a data file is drawn with over the data's (floe publish --theme), and DataTitle
-	// its title: when published, which clearing the title on the management page gives back.
-	Theme     string `json:"theme,omitempty"`
-	DataTitle string `json:"dataTitle,omitempty"`
+	// Theme and PartsTheme are the themes a data file is drawn with over the data's (floe publish --theme
+	// and --parts-theme), and DataTitle its title: when published, which clearing the title on the
+	// management page gives back.
+	Theme      string `json:"theme,omitempty"`
+	PartsTheme string `json:"partsTheme,omitempty"`
+	DataTitle  string `json:"dataTitle,omitempty"`
 	// Templates is the directory of templates of one's own a data file is drawn with: the one of the
 	// publish that stored or linked it, whatever the server's.
 	Templates string `json:"templates,omitempty"`
@@ -206,7 +208,7 @@ func (m *Meta) IsDrawn() bool {
 }
 
 // Draw draws the page of the data file file of slug, whose meta.json is m: in its language, with the
-// theme given over the data's if any, under the title pinned for it, else its title:, else slug. What
+// themes given over the data's if any, under the title pinned for it, else its title:, else slug. What
 // the drawing read besides file is kept for Version, mistakes or not, and version is the Version the
 // page was drawn at.
 // LIMIT: draws on every opening, a few ms for a page of 100 KB, its images read and encoded again
@@ -232,7 +234,7 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 		var d *tmpl.Data
 		var sources tmpl.Sources
 		// The templates it was linked with, but the server's icons: one place for all, not one's own.
-		d, sources, err = tmpl.NewLibrary(m.Templates, s.templates.IconsDir()).ReadSources(file, src, m.Theme, "")
+		d, sources, err = tmpl.NewLibrary(m.Templates, s.templates.IconsDir()).ReadSources(file, src, m.themes(), "")
 		s.mu.Lock()
 		s.drawn[key] = drawing{at: m.UpdatedAt, sources: sources}
 		s.mu.Unlock()
@@ -244,6 +246,11 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 		version = s.Version(slug, m, file)
 	}
 	return page, version, err
+}
+
+// themes are the themes m draws its data file with over the data's.
+func (m *Meta) themes() tmpl.Themes {
+	return tmpl.Themes{Template: m.Theme, Parts: m.PartsTheme}
 }
 
 // drawing is what a drawing of a data file read besides it, and the publish it drew (its
