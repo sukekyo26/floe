@@ -318,7 +318,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 | `FLOE_LANG` | The language of messages (`en`, `ja`). Falls back to `LC_ALL`, `LC_MESSAGES`, then `LANG`; a language without a catalog is skipped. English is the default. |
 | `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |
 
-A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says.
+A `~` or `~/` at the start of these directories stands for `HOME`, as a shell would have expanded it, so that one written in quotes (a `.env` file, a service unit) is not a directory named `~`. A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says.
 
 The management page follows the browser's language instead. Cobra's own errors (an unknown flag or command) and `--help` are in English.
 

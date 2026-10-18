@@ -50,4 +50,17 @@ func TestLoadConfigDefaults(t *testing.T) {
 		c.templates != "/h/.config/floe/templates" {
 		t.Errorf("relative XDG directories = %+v, %v", c, err)
 	}
+	// A ~ written in quotes stands for the home, as a shell would have expanded it; ~name is a name.
+	vars = map[string]string{"HOME": "/h", "FLOE_DIR": "~/pages", "FLOE_TEMPLATES_DIR": "~", "XDG_DATA_HOME": "~/data", "FLOE_ICONS_DIR": "~x"}
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/h/pages" || c.templates != "/h" || c.icons != "/w/~x" {
+		t.Errorf("directories with ~ = %+v, %v", c, err)
+	}
+	vars = map[string]string{"HOME": "/h", "XDG_DATA_HOME": "~/data"}
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/h/data/floe" {
+		t.Errorf("XDG_DATA_HOME with ~ = %+v, %v", c, err)
+	}
+	vars = map[string]string{"FLOE_DIR": "~/pages"}
+	if _, err := loadConfig(getenv, "/w"); err == nil || !strings.Contains(err.Error(), "FLOE_DIR is ~/pages, whose ~ stands for a home") {
+		t.Errorf("~ without a home = %v", err)
+	}
 }

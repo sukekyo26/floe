@@ -396,4 +396,5 @@ var messagesJA = map[string]string{
 	"tmpl_parts_theme_of_template":    "部品のテーマ「%[1]s」はありません。「%[1]s」はテンプレート %[2]s のテーマなので theme: %[1]s（または --theme %[1]s）と書くか、部品のテーマ %[3]s を使ってください",
 	"daemon_other_dirs":               "ポート %d のサーバーはテンプレートを %s、アイコンを %s から読んでページを描いていますが、このコマンドはテンプレートを %s、アイコンを %s と指しています（FLOE_TEMPLATES_DIR・FLOE_ICONS_DIR）。サーバーが読む場所へ移すか、\"floe stop\" してから公開し直してください",
 	"cli_relative_no_dir":             "作業ディレクトリを読めないので、%s の相対パスのディレクトリ %s がどこか決まりません。存在するディレクトリから floe を実行するか、それ（か既定の元になる変数）を絶対パスで設定してください",
+	"cli_tilde_no_home":               "%s が %s で、~ はホームを指しますが、HOME が設定されていません。HOME を設定するか、%s を絶対パスで設定してください",
 }

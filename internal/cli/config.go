@@ -3,7 +3,9 @@ package cli
 import (
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/sukekyo26/floe/internal/daemon"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -31,6 +33,10 @@ func (c *config) base() string {
 // command does.
 func loadConfig(getenv func(string) string, dir string) (*config, error) {
 	c := &config{root: "", icons: "", templates: "", home: getenv("HOME"), port: defaultPort}
+	getenv, err := expandHome(getenv, c.home)
+	if err != nil {
+		return nil, err
+	}
 	if raw := getenv("FLOE_PORT"); raw != "" {
 		// Decimal only: hex (0x10) and exponents (1e3) are typos, not ports.
 		port, err := strconv.Atoi(raw)
@@ -60,6 +66,28 @@ func loadConfig(getenv func(string) string, dir string) (*config, error) {
 		return nil, err
 	}
 	return c, nil
+}
+
+// dirKeys are the settings that name a directory.
+var dirKeys = []string{"FLOE_DIR", "FLOE_ICONS_DIR", "FLOE_TEMPLATES_DIR", "XDG_DATA_HOME", "XDG_CONFIG_HOME"}
+
+// expandHome returns getenv with a "~" or "~/" at the start of a directory setting standing for home, as a
+// shell expands it unquoted, so that one written in quotes (a .env file, a service unit) does not name a
+// directory "~". One without a home is refused.
+func expandHome(getenv func(string) string, home string) (func(string) string, error) {
+	tilde := func(v string) bool { return v == "~" || strings.HasPrefix(v, "~/") }
+	for _, key := range dirKeys {
+		if v := getenv(key); home == "" && tilde(v) {
+			return nil, usererr.New("cli_tilde_no_home", key, v, key)
+		}
+	}
+	return func(key string) string {
+		v := getenv(key)
+		if slices.Contains(dirKeys, key) && tilde(v) {
+			return filepath.Join(home, v[1:])
+		}
+		return v
+	}, nil
 }
 
 // resolve puts the relative directories of c under dir, refusing one when dir is "".
