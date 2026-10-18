@@ -129,8 +129,14 @@ func newRoot(env Env, cat *i18n.Catalog) *cobra.Command {
 	// The environment is checked before any command runs, so a typo fails the same way everywhere.
 	root.PersistentPreRunE = func(*cobra.Command, []string) error {
 		cfg, err := loadConfig(env.Getenv)
+		if err != nil {
+			return err
+		}
+		// Relative directories are under the working directory, so that a server this command starts or
+		// finds, whatever its own, means the ones this command does.
+		cfg.root, cfg.icons, cfg.templates = app.abs(cfg.root), app.abs(cfg.icons), app.abs(cfg.templates)
 		app.cfg = cfg
-		return err
+		return nil
 	}
 	root.AddCommand(app.publishCmd(), app.checkCmd(), app.templateCmd(), app.listCmd(), app.rmCmd(), app.serveCmd(),
 		app.stopCmd(), app.diagramCmd(), app.iconsCmd(), app.renderCmd())

@@ -652,6 +652,26 @@ func TestPublishOtherDirs(t *testing.T) {
 	want(t, "publish with the icons written with a slash at the end", e.run(t, "", "publish", page), 0, e.base()+"/a/dirs/\n", "updated")
 }
 
+// A relative FLOE_DIR is under the working directory: the server keeps the one it was started for, and
+// a publish from elsewhere, which means another, is refused rather than stored where the server does
+// not look.
+func TestRelativeRoot(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.page(t, "a/x.yaml", "X")
+	e.page(t, "b/y.yaml", "Y")
+	e.vars["FLOE_DIR"] = "pages"
+	// The server's stop at the end of the test means the root it serves.
+	t.Cleanup(func() { e.vars["FLOE_DIR"] = filepath.Join(e.tmp, "a", "pages") })
+	want(t, "publish from a", e.run(t, "a", "publish", "x.yaml"), 0, e.base()+"/a/x/\n", "")
+	if h, _ := e.health(t); h.Root != filepath.Join(e.tmp, "a", "pages") {
+		t.Errorf("the server serves %s", h.Root)
+	}
+	want(t, "publish from b", e.run(t, "b", "publish", "y.yaml"), 1, "",
+		"floe: the server on port "+e.port+" serves "+filepath.Join(e.tmp, "a", "pages"))
+}
+
 // A data file is published as a page drawn with its template, and a mistake in it is refused.
 func TestPublishDataFile(t *testing.T) {
 	t.Parallel()

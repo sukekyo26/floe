@@ -38,16 +38,14 @@ func (a *app) templates() *tmpl.Library {
 	return tmpl.NewLibrary(a.templatesDir(), a.iconsDir())
 }
 
-// templatesDir is the directory of templates of one's own, so that the server a publish starts uses, and
-// the one it finds runs with, the one this command means.
+// templatesDir is the directory of templates of one's own.
 func (a *app) templatesDir() string {
-	return a.abs(a.cfg.templates)
+	return a.cfg.templates
 }
 
-// iconsDir is the directory of icons, so that the server a publish starts draws the icons this command
-// checked a linked data file with.
+// iconsDir is the directory of icons.
 func (a *app) iconsDir() string {
-	return a.abs(a.cfg.icons)
+	return a.cfg.icons
 }
 
 // abs puts a relative dir under the working directory; "" stays "".
