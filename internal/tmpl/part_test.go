@@ -369,7 +369,7 @@ func TestPartsOfNumbersAndChanges(t *testing.T) {
 		`<dt>Due</dt><dd><code>soon</code></dd>`,
 		`<span class="file">a.go</span><span class="added">+1</span><span class="removed">−1</span></figcaption><pre><code><span class="hunk">@@ -1 &#43;1 @@` + "\n" + `</span><span class="del">-a` + "\n",
 		`<li><span class="name dir">a/</span><ul>` + "\n" + `<li class="added"><span class="name">b.go</span><span class="note">B</span></li>`,
-		`<li class="floe-card"><a href="https://example.com/1">PR</a><p>merged</p></li>`,
+		`<li class="floe-card"><a href="https://example.com/1">PR</a><p>merged</p><span class="url">https://example.com/1</span></li>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page lacks %s:\n%s", want, page)
