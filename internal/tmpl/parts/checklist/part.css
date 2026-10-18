@@ -1,0 +1,20 @@
+/* The count of the items done comes from counters, under the last */
+.floe-checklist {
+  list-style: none; margin: 0; padding: 0.35rem 0; display: grid; gap: 0; max-width: none;
+  counter-reset: floe-check floe-checked; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8);
+  border-radius: 14px; box-shadow: 0 1px 2px rgb(24 32 30 / 0.06);
+}
+.floe-checklist > li { position: relative; padding: 0.6rem 1.2rem 0.6rem 3rem; counter-increment: floe-check; }
+.floe-checklist > li + li { border-top: 1px solid var(--line, #d4dbd8); }
+.floe-checklist > li.done { counter-increment: floe-check floe-checked; color: var(--muted, #57635f); }
+/* A mark, not a box: the items are not to be ticked on the page */
+.floe-checklist > li::before {
+  content: "–"; position: absolute; left: 1.2rem; top: 0.6rem; width: 1.15rem; text-align: center;
+  font-weight: 800; color: var(--muted, #57635f);
+}
+.floe-checklist > li.done::before { content: "✓"; color: var(--good, #1f7a45); }
+.floe-checklist::after {
+  content: counter(floe-checked) " / " counter(floe-check); padding: 0.4rem 1.2rem 0.1rem; text-align: right;
+  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP");
+  font-size: 0.8rem; color: var(--muted, #57635f);
+}

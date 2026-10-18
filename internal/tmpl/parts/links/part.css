@@ -1,0 +1,20 @@
+/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
+.floe-links { list-style: none; margin: 0; padding: 0; max-width: none; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
+.floe-links > li { position: relative; gap: 0.1rem; padding-block: 0.9rem; padding-left: 3.7rem; }
+.floe-links > li::before {
+  content: ""; position: absolute; left: 1.1rem; top: 0.95rem; display: block; width: 1.9rem; height: 1.9rem;
+  border-radius: 9px; background: var(--accent-soft, #dcebec);
+}
+.floe-links a { font-weight: 700; color: var(--accent, #1d6670); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+.floe-links a::before {
+  content: ""; position: absolute; left: calc(1.1rem + 0.45rem); top: calc(0.95rem + 0.45rem); width: 1rem; height: 1rem;
+  background: var(--accent, #1d6670); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.floe-links a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.floe-links > li:hover a { text-decoration-thickness: 2px; }
+.floe-links a:focus-visible { outline: none; }
+.floe-links > li:has(a:focus-visible) { outline: 2px solid var(--accent, #1d6670); outline-offset: 2px; }
+.floe-links .url {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted, #57635f);
+  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP");
+}

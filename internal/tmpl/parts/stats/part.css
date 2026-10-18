@@ -1,0 +1,16 @@
+/* In the faces of cards, unnumbered */
+.floe-stats { margin: 0; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+.floe-stats > div { gap: 0.15rem; }
+.floe-stats > div::before { content: none; }
+.floe-stat dt { font-size: 0.85rem; color: var(--muted, #57635f); }
+.floe-stat dd { margin: 0; }
+.floe-stat .value {
+  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP");
+  font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.floe-stat .unit { margin-left: 0.3em; font-size: 0.5em; font-weight: 400; color: var(--muted, #57635f); }
+.floe-stat .note { font-size: 0.82rem; font-weight: 600; color: var(--muted, #57635f); }
+.floe-stat.accent .note { color: var(--accent, #1d6670); }
+.floe-stat.good .note { color: var(--good, #1f7a45); }
+.floe-stat.warn .note { color: var(--warn, #8a5a10); }
+.floe-stat.bad .note { color: var(--bad, #b3261e); }

@@ -15,7 +15,7 @@
   --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
   /* The width of the whole body, and the shorter width that keeps prose readable */
   --page-width: 96rem; --text-width: 56rem;
-  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #63b5be;
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #63b5be; --code-add: #6fcf97; --code-del: #f2b8b5;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -56,10 +56,6 @@ pre {
 pre code { font-size: inherit; background: none; padding: 0; }
 blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
 blockquote > * + * { margin-top: 0.6rem; }
-.stats { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; }
-.stat { display: grid; }
-.stat b { font-family: var(--mono); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
-.stat span { color: var(--muted); font-size: 0.85rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 <style>
@@ -99,6 +95,72 @@ blockquote > * + * { margin-top: 0.6rem; }
 {{.}}
 {{- end}}
 {{- with .note}}
+{{.}}
+{{- end}}
+{{- with .stats}}
+{{.}}
+{{- end}}
+{{- with .progress}}
+{{.}}
+{{- end}}
+{{- with .steps}}
+{{.}}
+{{- end}}
+{{- with .checklist}}
+{{.}}
+{{- end}}
+{{- with .compare}}
+{{.}}
+{{- end}}
+{{- with .options}}
+{{.}}
+{{- end}}
+{{- with .facts}}
+{{.}}
+{{- end}}
+{{- with .diff}}
+{{.}}
+{{- end}}
+{{- with .tree}}
+{{.}}
+{{- end}}
+{{- with .links}}
+{{.}}
+{{- end}}
+{{- with .findings}}
+{{.}}
+{{- end}}
+{{- with .details}}
+{{.}}
+{{- end}}
+{{- with .matrix}}
+{{.}}
+{{- end}}
+{{- with .decision}}
+{{.}}
+{{- end}}
+{{- with .risks}}
+{{.}}
+{{- end}}
+{{- with .fields}}
+{{.}}
+{{- end}}
+{{- with .timeline}}
+{{.}}
+{{- end}}
+{{- with .bars}}
+{{.}}
+{{- end}}
+{{- with .faq}}
+{{.}}
+{{- end}}
+{{- with .glossary}}
+{{.}}
+{{- end}}
+{{- with .keys}}
+{{.}}
+{{- end}}
+{{- with .tabs}}
 {{.}}
 {{- end}}
 {{- with .html}}

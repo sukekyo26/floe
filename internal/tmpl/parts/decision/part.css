@@ -1,0 +1,10 @@
+/* A card of its own, unnumbered, its title large */
+.floe-decision { grid-template-columns: minmax(0, 1fr); }
+.floe-decision > div::before { content: none; }
+.floe-decision > div { gap: 0.5rem; }
+.floe-decision h3 { font-size: 1.25rem; line-height: 1.45; }
+.floe-decision .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: 0.82rem; }
+.floe-decision .set-aside { margin-top: 0.3rem; font-size: 0.8rem; font-weight: 600; }
+.floe-decision ul { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
+.floe-decision li { position: relative; padding-left: 1.45rem; }
+.floe-decision li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad, #b3261e); }

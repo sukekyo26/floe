@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tabs",
+  "description": "The same thing in several forms, one shown at a time under tabs of their titles, such as the commands of bash and of PowerShell",
+  "type": "array",
+  "minItems": 2,
+  "items": {
+    "type": "object",
+    "properties": {
+      "title": { "type": "string", "minLength": 1 },
+      "parts": { "$ref": "floe:///parts/stack.json" }
+    },
+    "required": ["title", "parts"],
+    "additionalProperties": false
+  }
+}

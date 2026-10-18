@@ -1,0 +1,5 @@
+<dl class="floe-keys">
+{{- range .}}
+<div><dt>{{range $i, $k := .keys}}{{if $i}}<span>+</span>{{end}}<kbd>{{$k}}</kbd>{{end}}</dt><dd>{{markdownLine .text}}</dd></div>
+{{- end}}
+</dl>

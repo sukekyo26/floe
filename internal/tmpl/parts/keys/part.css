@@ -1,0 +1,11 @@
+/* Keycaps at the left of what they do */
+.floe-keys { margin: 0; display: grid; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 14px; box-shadow: 0 1px 2px rgb(24 32 30 / 0.06); }
+.floe-keys > div { display: grid; grid-template-columns: minmax(7rem, auto) minmax(0, 1fr); gap: 0.2rem 1.5rem; align-items: center; padding: 0.65rem 1.2rem; }
+.floe-keys > div + div { border-top: 1px solid var(--line, #d4dbd8); }
+.floe-keys dt { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; color: var(--muted, #57635f); font-size: 0.8rem; }
+.floe-keys dd { margin: 0; }
+.floe-keys kbd {
+  min-width: 1.8rem; padding: 0.05rem 0.5rem; border-radius: 6px; text-align: center; color: var(--fg, #18201e);
+  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP"); font-size: 0.8rem;
+  background: var(--bg, #f3f5f4); box-shadow: inset 0 -2px 0 var(--line, #d4dbd8), 0 0 0 1px var(--line, #d4dbd8);
+}

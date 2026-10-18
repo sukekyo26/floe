@@ -64,7 +64,7 @@ func relate(checks string, src []byte, d *Data, root ast.Node) error {
 
 // readChecks reads the checks src of file, a mistake in them at its line and column: the mistakes of
 // some are yamlpos.Problems, returned with the others. A part's checks may leave for out, to check the
-// part itself.
+// part itself, or each of its items when it is a list.
 func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 	body, err := yamlpos.Parse(file, src, "tmpl_checks_yaml")
 	if errors.Is(err, yamlpos.ErrEmpty) {

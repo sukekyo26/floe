@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "stats",
+  "description": "Numbers side by side, each large under its label, with a note under it such as the change since last time, coloured by its tone",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "label": { "type": "string", "minLength": 1 },
+      "value": { "type": "string", "minLength": 1, "description": "The number, in quotes as it is drawn: '14.9'" },
+      "unit": { "type": "string", "minLength": 1, "description": "Drawn small after the value, such as MB or %" },
+      "note": { "type": "string", "minLength": 1, "description": "A short line under the value, such as +5 since last week" },
+      "tone": { "$ref": "floe:///parts/tone.json", "description": "The note's colour: good for a change for the better, bad for the worse" }
+    },
+    "required": ["label", "value"],
+    "additionalProperties": false
+  }
+}

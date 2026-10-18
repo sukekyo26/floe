@@ -216,7 +216,7 @@ func TestCheckMistakes(t *testing.T) {
 		{
 			name:    "a theme without the variables of a Markdown table",
 			files:   map[string]string{"schema.json": `"chart":|"aside": { "type": "string", "format": "markdown" },` + "\n    " + `"chart":`},
-			warning: "sizes/themes/default.css does not define --surface, --line, --muted, --accent-soft, --accent, --good-soft",
+			warning: "sizes/themes/default.css does not define --accent-soft, --accent, --good-soft, --good, --warn-soft, --warn, --bad-soft, --bad, --surface, --line, --muted,",
 		},
 		{
 			name: "formats of other types",
