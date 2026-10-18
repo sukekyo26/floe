@@ -229,22 +229,30 @@ func (t *Template) check(h *head, dir string, given Themes, problems yamlpos.Pro
 	if err != nil {
 		return err
 	}
-	// A parts theme named as the template's is told where it goes.
-	unknown := "tmpl_unknown_theme"
-	if name := cmp.Or(given.Template, d.Theme); slices.Contains(partsThemes, name) && !slices.Contains(themes, name) {
-		unknown = "tmpl_theme_of_parts"
-	}
+	// A theme of one kind named as one of the other is told where it goes.
+	unknown := misplaced(cmp.Or(given.Template, d.Theme), themes, partsThemes, "tmpl_unknown_theme", "tmpl_theme_of_parts")
 	more, err := pickTheme(d, &d.Theme, given.Template, themes, h.where["theme"], unknown)
 	if err != nil {
 		return err
 	}
 	problems = append(problems, more...)
-	more, err = pickTheme(d, &d.PartsTheme, given.Parts, partsThemes, h.where["parts-theme"], "tmpl_unknown_parts_theme")
+	unknown = misplaced(cmp.Or(given.Parts, d.PartsTheme), partsThemes, themes, "tmpl_unknown_parts_theme",
+		"tmpl_parts_theme_of_template")
+	more, err = pickTheme(d, &d.PartsTheme, given.Parts, partsThemes, h.where["parts-theme"], unknown)
 	if err != nil {
 		return err
 	}
 	problems = append(problems, more...)
 	return checkValues(t, d, h.root, dir, problems)
+}
+
+// misplaced returns the message of the theme name that is not one of names: elsewhere when it is one of
+// others, the themes of the other kind, else unknown.
+func misplaced(name string, names, others []string, unknown, elsewhere string) string {
+	if !slices.Contains(names, name) && slices.Contains(others, name) {
+		return elsewhere
+	}
+	return unknown
 }
 
 // pickTheme sets *theme, a theme of d, to given when not "", which must be one of names, else leaves the

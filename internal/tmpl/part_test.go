@@ -153,6 +153,21 @@ func TestCheckParts(t *testing.T) {
 		}
 	}
 
+	// A theme of the template named as the parts theme is told where it goes, as --parts-theme is.
+	own := memo(t, memoItems)
+	if err := os.WriteFile(filepath.Join(own, "memo", "themes", "print.css"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	misplaced := `there is no parts theme "print", which is a theme of the template memo: write theme: print`
+	if _, err := draw(tmpl.NewLibrary(own, ""), "template: memo\nlang: en\nparts-theme: print\n"); err == nil ||
+		!strings.Contains(err.Error(), "data.yaml:3:14: "+misplaced) {
+		t.Errorf("Read of parts-theme: print = %v", err)
+	}
+	if _, err := tmpl.NewLibrary(own, "").Read("d.yaml", []byte("template: memo\nlang: en\n"), tmpl.Themes{Parts: "print"}, ""); err == nil ||
+		!strings.HasPrefix(err.Error(), misplaced) {
+		t.Errorf("Read with the parts theme print = %v", err)
+	}
+
 	// themes/ holds the parts themes, and is no part.
 	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table", "floe:///parts/themes.json"} {
 		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
