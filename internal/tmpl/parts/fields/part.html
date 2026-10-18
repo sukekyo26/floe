@@ -1,7 +1,7 @@
 <div class="floe-table floe-fields"><table>
 <tbody>
 {{- range .}}
-<tr><td class="name"><code>{{.name}}</code>{{if .required}}<span class="required">{{label "required"}}</span>{{end}}{{with .type}}<span class="type">{{.}}</span>{{end}}</td><td>{{with .text}}{{markdownLine .}}{{end}}{{if ne (printf "%T" .default) "<nil>"}}<span class="default">{{label "default"}} <code>{{.default}}</code></span>{{end}}</td></tr>
+<tr><td class="name"><code>{{.name}}</code>{{if .required}}<span class="required">{{word "required"}}</span>{{end}}{{with .type}}<span class="type">{{.}}</span>{{end}}</td><td>{{with .text}}{{markdownLine .}}{{end}}{{if ne (printf "%T" .default) "<nil>"}}<span class="default">{{word "default"}} <code>{{.default}}</code></span>{{end}}</td></tr>
 {{- end}}
 </tbody>
 </table></div>

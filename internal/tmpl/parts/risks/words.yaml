@@ -1,0 +1,2 @@
+en: { risk: Risk, likely: Likelihood, impact: Impact, fix: What we do, low: Low, mid: Medium, high: High }
+ja: { risk: リスク, likely: 起きやすさ, impact: 影響, fix: 手当て, low: 低, mid: 中, high: 高 }

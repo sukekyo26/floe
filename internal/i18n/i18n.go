@@ -3,8 +3,8 @@
 // file. Errors carry a key and arguments and are rendered at the boundary (the CLI's exit, an HTTP
 // response), so the same error reads in English in logs and in the reader's language on screen.
 //
-// A key missing from a language falls back to the language without its region (pt-BR to pt), then
-// to English, then to the key itself.
+// A key missing from a language falls back to the language without its last subtag, one at a time
+// (zh-Hant-TW to zh-Hant to zh, pt-BR to pt), then to English, then to the key itself.
 package i18n
 
 import (
@@ -55,23 +55,38 @@ func IsTag(s string) bool {
 	return tagRe.MatchString(s)
 }
 
-// Match returns the registered language for a tag such as ja, ja_JP.UTF-8 or pt-BR: the tag itself,
-// else its language without the region. It reports false for a tag no catalog covers (C, POSIX, fr).
+// Match returns the registered language for a tag such as ja, ja_JP.UTF-8 or pt-BR, as Lookup finds it.
+// It reports false for a tag no catalog covers (C, POSIX, fr).
 func Match(tag string) (Lang, bool) {
+	lang, ok := Lookup(tag, func(t string) bool { _, ok := catalogs[Lang(t)]; return ok })
+	return Lang(lang), ok
+}
+
+// Lookup finds the language of a tag such as ja, ja_JP.UTF-8, pt-BR or zh-Hant-TW for which has
+// reports true: the tag itself, else the tag without its last subtag, one at a time (zh-hant-tw, zh-hant,
+// zh), as RFC 4647 looks a language up. has is given, and Lookup returns, the tag lowercased with - for _
+// and without an encoding (.UTF-8) or a modifier (@latin). It reports false for none.
+func Lookup(tag string, has func(string) bool) (string, bool) {
 	tag = strings.ToLower(tag)
 	if i := strings.IndexAny(tag, ".@"); i >= 0 {
 		tag = tag[:i] // ja_JP.UTF-8, sr_RS@latin
 	}
 	tag = strings.ReplaceAll(strings.TrimSpace(tag), "_", "-")
-	if _, ok := catalogs[Lang(tag)]; ok && tag != "" {
-		return Lang(tag), true
-	}
-	if base, _, found := strings.Cut(tag, "-"); found {
-		if _, ok := catalogs[Lang(base)]; ok {
-			return Lang(base), true
+	for ; tag != ""; tag = parent(tag) {
+		if has(tag) {
+			return tag, true
 		}
 	}
 	return "", false
+}
+
+// parent is tag without its last subtag, "" for one of none: zh-hant for zh-hant-tw.
+func parent(tag string) string {
+	i := strings.LastIndex(tag, "-")
+	if i < 0 {
+		return ""
+	}
+	return tag[:i]
 }
 
 // Detect picks the language of the CLI from the environment: FLOE_LANG, LC_ALL, LC_MESSAGES, then
@@ -145,11 +160,12 @@ func New(lang Lang) *Catalog {
 	return &Catalog{lang: lang, chain: Fallbacks(lang)}
 }
 
-// Fallbacks lists where to look for a text in lang, in order: lang, lang without its region, English.
+// Fallbacks lists where to look for a text in lang, in order: lang, lang without its last subtag, one at a
+// time (as Lookup goes), then English.
 func Fallbacks(lang Lang) []Lang {
-	chain := []Lang{lang}
-	if base, _, found := strings.Cut(string(lang), "-"); found {
-		chain = append(chain, Lang(base))
+	var chain []Lang
+	for tag := string(lang); tag != ""; tag = parent(tag) {
+		chain = append(chain, Lang(tag))
 	}
 	if !slices.Contains(chain, English) {
 		chain = append(chain, English)

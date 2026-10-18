@@ -21,12 +21,11 @@ import (
 	"github.com/goccy/go-yaml/ast"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// partFiles holds a directory per part of floe's (schema.json, part.html, part.css and checks.yaml), the
-// schemas the parts share (tone.json), and the parts themes (themes/).
+// partFiles holds a directory per part of floe's (schema.json, part.html, part.css, checks.yaml and
+// words.yaml), the schemas the parts share (tone.json), and the parts themes (themes/).
 //
 //go:embed parts
 var partFiles embed.FS
@@ -103,8 +102,9 @@ func (s *schema) absolute(base string) {
 type part struct {
 	name    string
 	schema  *schema
-	pages   map[i18n.Lang]*template.Template // by the language of its labels; nil for one floe draws in Go (goParts)
-	html    string                           // the template of pages, as written
+	pages   map[string]*template.Template // by the language of its words; nil for one floe draws in Go (goParts)
+	words   words
+	html    string // the template of pages, as written
 	css     string
 	checks  []relation
 	classes []string // the classes its style names, one of which in a page gives it the style
@@ -172,7 +172,8 @@ func readParts() (*partSet, error) {
 			Required: nil,
 		}
 		set.parts[name] = &part{
-			name: name, schema: set.schemas[url], pages: nil, html: "", css: "", checks: nil, classes: nil, uses: nil,
+			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: "", checks: nil, classes: nil,
+			uses: nil,
 		}
 	}
 	for _, s := range set.schemas {
@@ -250,22 +251,37 @@ func readPart(name string, s *schema) (*part, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
-	pages := map[i18n.Lang]*template.Template{}
-	for _, lang := range i18n.Supported() {
-		c := i18n.New(lang)
-		// label writes a word of the part in the page's language: label "likely" is part_risks_likely.
-		label := template.FuncMap{"label": func(key string) string { return c.Msg("part_" + name + "_" + key) }}
-		if pages[lang], err = template.New(name).Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
-			Funcs(label).Parse(string(html)); err != nil {
+	file := path.Join(dir, "words.yaml")
+	w, err := readPartWords(file)
+	if err != nil {
+		return nil, err
+	}
+	page, err := template.New(name).Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
+		Funcs(template.FuncMap{"word": w.word(file, fallbackLang)}).Parse(string(html))
+	if err != nil {
+		return nil, fmt.Errorf("parse the part %s: %w", name, err)
+	}
+	if err = w.checkWords(page, path.Join(dir, "part.html"), file); err != nil {
+		return nil, err
+	}
+	// One page per language of its words, word writing each of them: word "likely" is likely in words.yaml.
+	pages := map[string]*template.Template{fallbackLang: page}
+	for lang := range w {
+		if lang == fallbackLang {
+			continue
+		}
+		if pages[lang], err = page.Clone(); err != nil {
 			return nil, fmt.Errorf("parse the part %s: %w", name, err)
 		}
+		pages[lang].Funcs(template.FuncMap{"word": w.word(file, lang)})
 	}
 	css, err := partFiles.ReadFile(path.Join(dir, "part.css"))
 	if err != nil {
 		return nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
 	p := &part{
-		name: name, schema: s, pages: pages, html: string(html), css: string(css), checks: nil, classes: nil, uses: nil,
+		name: name, schema: s, pages: pages, words: w, html: string(html), css: string(css), checks: nil, classes: nil,
+		uses: nil,
 	}
 	p.classes = appendFound(nil, styleClass, p.css)
 	src, err := partFiles.ReadFile(path.Join(dir, "checks.yaml"))
@@ -285,6 +301,25 @@ func readPart(name string, s *schema) (*part, error) {
 		return nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
 	return p, nil
+}
+
+// readPartWords reads file, the words.yaml of a part; a part without one has the words of en alone, none,
+// so that it has a page all the same.
+func readPartWords(file string) (words, error) {
+	src, err := partFiles.ReadFile(file)
+	var w words
+	switch {
+	case err == nil:
+		if w, err = readWords(file, src); err != nil {
+			return nil, err
+		}
+	case !errors.Is(err, fs.ErrNotExist):
+		return nil, fmt.Errorf("read %s: %w", file, err)
+	}
+	if w == nil {
+		w = words{fallbackLang: nil}
+	}
+	return w, nil
 }
 
 // resolve fills what s and the schemas under it refer to among floe's in set: the items, types and
@@ -456,12 +491,8 @@ func (p *part) check(file string, f itemAt, root ast.Node) (yamlpos.Problems, er
 // draw draws f, an item of d p checked, as HTML, its words in d's language, and the parts it holds as d
 // drew them.
 func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
-	lang, ok := i18n.Match(d.Lang)
-	if !ok {
-		lang = i18n.English
-	}
 	var b bytes.Buffer
-	if err := p.pages[lang].Execute(&b, p.schema.prepare(f.value, f.at, d)); err != nil {
+	if err := p.pages[p.words.lang(d.Lang)].Execute(&b, p.schema.prepare(f.value, f.at, d)); err != nil {
 		return "", fmt.Errorf("draw the part %s: %w", p.name, err)
 	}
 	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template

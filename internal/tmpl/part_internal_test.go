@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"html/template"
 	"maps"
 	"regexp"
 	"slices"
@@ -8,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/i18n"
 )
 
 // palette are the CSS variables of a theme that parts and diagrams take their colours, fonts and width
@@ -174,29 +174,119 @@ func TestPartsDrawnWhole(t *testing.T) {
 	}
 }
 
-// Every word a part draws by label has a message, which the languages without it take from English.
-func TestPartLabels(t *testing.T) {
+// Every word a part draws has its text in the part's words.yaml, and every word there is drawn: named as
+// written (word "risk"), or from the data (word $level), one of the values of the schema's enum.
+func TestPartWords(t *testing.T) {
 	t.Parallel()
 
 	set, err := builtinParts()
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The words a part draws from its data, label $mark, are the values of the schema's enum.
-	dynamic := map[string][]string{"matrix": {"yes", "part", "no"}, "risks": {"low", "mid", "high"}}
-	english := i18n.EnglishCatalog()
+	fromData := map[string][]string{"matrix": {"yes", "part", "no"}, "risks": {"low", "mid", "high"}}
 	for name, p := range set.parts {
-		keys := dynamic[name]
-		for _, m := range regexp.MustCompile(`label "(\w+)"`).FindAllStringSubmatch(p.html, -1) {
-			keys = append(keys, m[1])
+		if p.pages == nil {
+			continue
 		}
-		if strings.Contains(p.html, "label $") != (dynamic[name] != nil) {
-			t.Errorf("the part %s draws a word from its data, which TestPartLabels does not know", name)
+		// Its HTML parsed anew: the parts' own pages are escaped, in place, by the tests drawing them.
+		page, err := template.New(name).Funcs(funcs).Funcs(partFuncs).
+			Funcs(template.FuncMap{"word": p.words.word("", fallbackLang)}).Parse(p.html)
+		if err != nil {
+			t.Fatal(err)
 		}
-		for _, k := range keys {
-			if key := "part_" + name + "_" + k; english.Msg(key) == key {
-				t.Errorf("no message for %s", key)
+		words := callsOf(page, "word")
+		if words.other != (fromData[name] != nil) {
+			t.Errorf("the part %s names a word otherwise than as written, which TestPartWords does not know", name)
+		}
+		drawn := slices.Concat(words.names, fromData[name])
+		for _, n := range drawn {
+			if _, ok := p.words[fallbackLang][n]; !ok {
+				t.Errorf("the part %s has no word %s", name, n)
 			}
+		}
+		for n := range p.words[fallbackLang] {
+			if !slices.Contains(drawn, n) {
+				t.Errorf("the part %s does not draw its word %s", name, n)
+			}
+		}
+	}
+}
+
+// A part's words are read with their mistakes at their lines and columns, and a page takes the words of
+// its language, else of the language without its last subtag, one at a time, else of en.
+func TestReadWords(t *testing.T) {
+	t.Parallel()
+
+	w, err := readWords("w.yaml", []byte("en: { a: A, b: B }\nJA: { a: あ, b: い }\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for tag, want := range map[string]string{"ja": "ja", "ja-JP": "ja", "en-GB": "en", "fr": "en", "JA_jp.UTF-8": "ja"} {
+		if got := w.lang(tag); got != want {
+			t.Errorf("lang(%s) = %s, want %s", tag, got, want)
+		}
+	}
+	if got, err := w.word("w.yaml", "ja")("a"); got != "あ" || err != nil {
+		t.Errorf("word a in ja = %q, %v", got, err)
+	}
+	if _, err := w.word("w.yaml", "en")("c"); err == nil || err.Error() != `w.yaml has no word "c"` {
+		t.Errorf("word c = %v", err)
+	}
+	for src, want := range map[string]string{
+		"ja: { a: あ }\n":                                    "w.yaml:1:1: words.yaml has no en",
+		"en: { a: A }\nja: { b: い }\n":                      "w.yaml:2:1: ja leaves out a, which en has\nw.yaml:2:1: ja has b, which en does not",
+		"en: { a: A }\nj_p: { a: あ }\n":                     "w.yaml:2:1: j_p is not a language tag",
+		"en: { a: [A] }\n":                                  "w.yaml:1:10: en.a: write text",
+		"en: A\n":                                           "w.yaml:1:5: en: write the names of the words",
+		"- en\n":                                            "w.yaml:1:1: write words.yaml as language tags",
+		"en: &x { a: A }\nja: *x\n":                         "w.yaml:1:5: anchors, aliases",
+		"en: { a: A }\nEN: { a: B }\n":                      "w.yaml:2:1: EN is the language en again",
+		"en: { a: A }\npt-BR: { b: B }\n":                   "w.yaml:2:1: pt-BR leaves out a, which en has\nw.yaml:2:1: pt-BR has b, which en does not",
+		"en: { a: A }\n---\nja: { a: あ }\n":                 "w.yaml:2:1: words.yaml holds one YAML document",
+		"en: { a: A, b: B }\nj_p: { a: あ }\nja: { a: あ }\n": "w.yaml:2:1: j_p is not a language tag such as en, ja or pt-BR\nw.yaml:3:1: ja leaves out b, which en has",
+		"en: { one: 1 }\n":                                  "w.yaml:1:12: en.one: write text, in quotes where YAML would read a number",
+		"en: { a: A }\nja:\n":                               "w.yaml:2:1: ja: write the names",
+		"en: { a: A }\nja_JP: { a: 1 }\n":                   "w.yaml:2:1: ja_JP is not a language tag such as en, ja or pt-BR\nw.yaml:2:13: ja_JP.a: write text",
+	} {
+		if _, err := readWords("w.yaml", []byte(src)); err == nil || !strings.HasPrefix(err.Error(), want) {
+			t.Errorf("readWords(%q) = %v, want %s", src, err, want)
+		}
+	}
+	if w, err := readWords("w.yaml", []byte("en:\n  a: |\n    A\n")); err != nil || w["en"]["a"] != "A" {
+		t.Errorf("readWords of a block = %v, %v", w, err)
+	}
+	// A language not read is not compared with en, nor en with it: its own mistake alone is told.
+	for src, want := range map[string]string{
+		"en: { a: A }\nja: x\n": "w.yaml:2:5: ja: write the names of the words and their text",
+		"en: A\nja: { a: x }\n": "w.yaml:1:5: en: write the names of the words and their text",
+	} {
+		if _, err := readWords("w.yaml", []byte(src)); err == nil || err.Error() != want {
+			t.Errorf("readWords(%q) = %v, want %s", src, err, want)
+		}
+	}
+	if w, err := readWords("w.yaml", nil); w != nil || err != nil {
+		t.Errorf("readWords of nothing = %v, %v", w, err)
+	}
+	// A language of more subtags is looked up a subtag at a time.
+	zh := words{"en": {"a": "A"}, "zh-hant": {"a": "甲"}}
+	if got := zh.lang("zh-Hant-TW"); got != "zh-hant" {
+		t.Errorf("lang(zh-Hant-TW) = %s", got)
+	}
+	// A word named as written that the part has none of is refused as it is read, in any branch; one named
+	// from the data is left to the drawing.
+	for src, want := range map[string]string{
+		`{{if .x}}{{with .y}}{{word "b"}}{{end}}{{end}}`:    `p.html names the words b, which w.yaml does not have`,
+		`{{range .x}}{{word "a"}}{{word .}}{{end}}`:         "",
+		`{{define "d"}}{{word "c"}}{{end}}{{template "d"}}`: `p.html names the words c, which w.yaml does not have`,
+		`{{"d" | word}}`:   `p.html names the words d, which w.yaml does not have`,
+		`{{(word "e").x}}`: `p.html names the words e, which w.yaml does not have`,
+	} {
+		page, err := template.New("p").Funcs(template.FuncMap{"word": zh.word("w.yaml", "en")}).Parse(src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = zh.checkWords(page, "p.html", "w.yaml"); (err == nil) != (want == "") || err != nil && err.Error() != want {
+			t.Errorf("checkWords(%s) = %v, want %q", src, err, want)
 		}
 	}
 }

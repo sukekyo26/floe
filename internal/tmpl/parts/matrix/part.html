@@ -4,7 +4,7 @@
 {{- range .rows}}
 <tr><td class="what">{{markdownLine .what}}</td>
 {{- range .cells}}{{$mark := .}}{{$note := ""}}{{if ne (printf "%T" .) "string"}}{{$mark = .mark}}{{$note = .note}}{{end -}}
-<td class="{{$mark}}"><span class="mark"><span>{{label $mark}}</span></span>{{with $note}}<small>{{.}}</small>{{end}}</td>
+<td class="{{$mark}}"><span class="mark"><span>{{word $mark}}</span></span>{{with $note}}<small>{{.}}</small>{{end}}</td>
 {{- end}}</tr>
 {{- end}}
 </tbody>

@@ -2,26 +2,60 @@ package ui
 
 import (
 	"io/fs"
+	"maps"
 	"os"
+	"path"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml"
+
 	"github.com/sukekyo26/floe/internal/i18n"
 )
 
 // TestSourcesAreInEnglish keeps the files users and template authors read in English: their wording
-// is in the catalogs, and their comments are English too.
+// is in the catalogs, and their comments are English too. A part's words.yaml holds its words in every
+// language, as a catalog does: its comment lines and its en, which a page of a language it has no words
+// of is drawn in, are kept in English.
 func TestSourcesAreInEnglish(t *testing.T) {
 	t.Parallel()
 
 	for name, src := range builtinSources(t) {
+		words, err := path.Match("tmpl/parts/*/words.yaml", name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if words {
+			src = englishOfWords(t, name, src)
+		}
 		if japaneseRe.MatchString(src) {
 			t.Errorf("%s has Japanese: %q", name, japaneseRe.FindAllString(src, 3))
 		}
 	}
 }
+
+// englishOfWords returns what of src, the words.yaml file name, must be English: its comments, at the
+// start of a line or after a space, and the words of en, however its tag is written.
+func englishOfWords(t *testing.T, name, src string) string {
+	t.Helper()
+
+	var all map[string]map[string]string
+	if err := yaml.Unmarshal([]byte(src), &all); err != nil {
+		t.Fatalf("%s: %v", name, err)
+	}
+	english := commentRe.FindAllString(src, -1)
+	for tag, words := range all {
+		if strings.EqualFold(tag, "en") {
+			english = append(english, slices.Collect(maps.Values(words))...)
+		}
+	}
+	return strings.Join(english, "\n")
+}
+
+// commentRe finds a comment of YAML: # at the start of a line or after a space, to the end of the line.
+var commentRe = regexp.MustCompile(`(?m)(?:^|\s)#.*$`)
 
 // TestBuiltinsLoadNothingFromElsewhere keeps the management page and the built-in templates off the
 // network: a page that loads from elsewhere is its template author's choice, not floe's.
