@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"html/template"
 	"maps"
 	"regexp"
 	"slices"
@@ -173,7 +174,8 @@ func TestPartsDrawnWhole(t *testing.T) {
 	}
 }
 
-// Every word a part draws has its text in the part's words.yaml.
+// Every word a part draws from its data (word $mark), one of the values of the schema's enum, has its text
+// in the part's words.yaml; those named as written are checked as the part is read.
 func TestPartWords(t *testing.T) {
 	t.Parallel()
 
@@ -181,13 +183,9 @@ func TestPartWords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The words a part draws from its data, word $mark, are the values of the schema's enum.
 	dynamic := map[string][]string{"matrix": {"yes", "part", "no"}, "risks": {"low", "mid", "high"}}
 	for name, p := range set.parts {
 		names := dynamic[name]
-		for _, m := range regexp.MustCompile(`word "(\w+)"`).FindAllStringSubmatch(p.html, -1) {
-			names = append(names, m[1])
-		}
 		if strings.Contains(p.html, "word $") != (dynamic[name] != nil) {
 			t.Errorf("the part %s draws a word from its data, which TestPartWords does not know", name)
 		}
@@ -208,7 +206,7 @@ func TestReadWords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for tag, want := range map[string]string{"ja": "ja", "ja-JP": "ja", "en-GB": "en", "fr": "en"} {
+	for tag, want := range map[string]string{"ja": "ja", "ja-JP": "ja", "en-GB": "en", "fr": "en", "JA_jp.UTF-8": "ja"} {
 		if got := w.lang(tag); got != want {
 			t.Errorf("lang(%s) = %s, want %s", tag, got, want)
 		}
@@ -220,13 +218,16 @@ func TestReadWords(t *testing.T) {
 		t.Errorf("word c = %v", err)
 	}
 	for src, want := range map[string]string{
-		"ja: { a: あ }\n":                "w.yaml:1:1: words.yaml has no en",
-		"en: { a: A }\nja: { b: い }\n":  "w.yaml:2:1: ja leaves out a, which en has\nw.yaml:2:1: ja has b, which en does not",
-		"en: { a: A }\nj_p: { a: あ }\n": "w.yaml:2:1: j_p is not a language tag",
-		"en: { a: [A] }\n":              "w.yaml:1:10: en.a: write text",
-		"en: A\n":                       "w.yaml:1:5: en: write the names of the words",
-		"- en\n":                        "w.yaml:1:1: write words.yaml as language tags",
-		"en: &x { a: A }\nja: *x\n":     "w.yaml:1:5: anchors, aliases",
+		"ja: { a: あ }\n":                    "w.yaml:1:1: words.yaml has no en",
+		"en: { a: A }\nja: { b: い }\n":      "w.yaml:2:1: ja leaves out a, which en has\nw.yaml:2:1: ja has b, which en does not",
+		"en: { a: A }\nj_p: { a: あ }\n":     "w.yaml:2:1: j_p is not a language tag",
+		"en: { a: [A] }\n":                  "w.yaml:1:10: en.a: write text",
+		"en: A\n":                           "w.yaml:1:5: en: write the names of the words",
+		"- en\n":                            "w.yaml:1:1: write words.yaml as language tags",
+		"en: &x { a: A }\nja: *x\n":         "w.yaml:1:5: anchors, aliases",
+		"en: { a: A }\nEN: { a: B }\n":      "w.yaml:2:1: EN is the language en again",
+		"en: { a: A }\npt-BR: { b: B }\n":   "w.yaml:2:1: pt-BR leaves out a, which en has\nw.yaml:2:1: pt-BR has b, which en does not",
+		"en: { a: A }\n---\nja: { a: あ }\n": "w.yaml:2:1: words.yaml holds one YAML document",
 	} {
 		if _, err := readWords("w.yaml", []byte(src)); err == nil || !strings.HasPrefix(err.Error(), want) {
 			t.Errorf("readWords(%q) = %v, want %s", src, err, want)
@@ -234,5 +235,24 @@ func TestReadWords(t *testing.T) {
 	}
 	if w, err := readWords("w.yaml", nil); w != nil || err != nil {
 		t.Errorf("readWords of nothing = %v, %v", w, err)
+	}
+	// A language of more subtags is looked up a subtag at a time.
+	zh := words{"en": {"a": "A"}, "zh-hant": {"a": "甲"}}
+	if got := zh.lang("zh-Hant-TW"); got != "zh-hant" {
+		t.Errorf("lang(zh-Hant-TW) = %s", got)
+	}
+	// A word named as written that the part has none of is refused as it is read, in any branch; one named
+	// from the data is left to the drawing.
+	for src, want := range map[string]string{
+		`{{if .x}}{{with .y}}{{word "b"}}{{end}}{{end}}`: `p.html names the word "b", which w.yaml does not have`,
+		`{{range .x}}{{word "a"}}{{word .}}{{end}}`:      "",
+	} {
+		page, err := template.New("p").Funcs(template.FuncMap{"word": zh.word("w.yaml", "en")}).Parse(src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = zh.checkWords(page.Tree, "p.html", "w.yaml"); (err == nil) != (want == "") || err != nil && err.Error() != want {
+			t.Errorf("checkWords(%s) = %v, want %q", src, err, want)
+		}
 	}
 }

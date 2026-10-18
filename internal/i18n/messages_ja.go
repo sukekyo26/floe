@@ -373,8 +373,6 @@ var messagesJA = map[string]string{
 	"tmpl_script_key":              "script に書けるのは js と data です。%s は書けません",
 	"tmpl_script_end":              "js に %s があり、ページはそこでスクリプトが終わると読みます。文字列なら '<' + '%s' のように分けてください",
 
-	// The words floe's parts draw in a page, by part_<part>_<word>: label "likely" in the part risks.
-
 	"cli_template_parts_themes":       "部品のテーマ: %s",
 	"cli_template_shared_parts_theme": "floe の部品を描くテーマ。上の部品のテーマのどれか（既定は %s）",
 	"cli_parts_theme_empty":           "--parts-theme が空です。部品のテーマを指定するか、--parts-theme を省いてデータファイルの parts-theme: から取ってください",
@@ -393,4 +391,7 @@ var messagesJA = map[string]string{
 	"tmpl_words_missing":              "%s に %s がありません。en にはあります",
 	"tmpl_words_extra":                "%s に %s があります。en にはありません",
 	"tmpl_words_unknown":              "%s に言葉「%s」がありません",
+	"tmpl_words_documents":            "words.yaml に書ける YAML の文書は 1 つです。間の --- を消してください",
+	"tmpl_words_lang_twice":           "%s は言語 %s の重なりです。言語タグは大文字と小文字で区別しません",
+	"tmpl_words_unnamed":              "%s が言葉「%s」を使っていますが、%s にありません",
 }

@@ -255,14 +255,22 @@ func readPart(name string, s *schema) (*part, error) {
 	if err != nil {
 		return nil, err
 	}
+	file := path.Join(dir, "words.yaml")
+	page, err := template.New(name).Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
+		Funcs(template.FuncMap{"word": w.word(file, fallbackLang)}).Parse(string(html))
+	if err != nil {
+		return nil, fmt.Errorf("parse the part %s: %w", name, err)
+	}
+	if err = w.checkWords(page.Tree, path.Join(dir, "part.html"), file); err != nil {
+		return nil, err
+	}
 	// One page per language of its words, word writing each of them: word "likely" is likely in words.yaml.
 	pages := map[string]*template.Template{}
-	for _, lang := range slices.Sorted(maps.Keys(w)) {
-		word := template.FuncMap{"word": w.word(path.Join(dir, "words.yaml"), lang)}
-		if pages[lang], err = template.New(name).Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
-			Funcs(word).Parse(string(html)); err != nil {
+	for lang := range w {
+		if pages[lang], err = page.Clone(); err != nil {
 			return nil, fmt.Errorf("parse the part %s: %w", name, err)
 		}
+		pages[lang].Funcs(template.FuncMap{"word": w.word(file, lang)})
 	}
 	css, err := partFiles.ReadFile(path.Join(dir, "part.css"))
 	if err != nil {

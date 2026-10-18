@@ -14,12 +14,19 @@ import (
 
 // TestSourcesAreInEnglish keeps the files users and template authors read in English: their wording
 // is in the catalogs, and their comments are English too. A part's words.yaml holds its words in every
-// language, as a catalog does.
+// language, as a catalog does: its comments alone are kept in English.
 func TestSourcesAreInEnglish(t *testing.T) {
 	t.Parallel()
 
 	for name, src := range builtinSources(t) {
-		if path.Base(name) != "words.yaml" && japaneseRe.MatchString(src) {
+		words, err := path.Match("tmpl/parts/*/words.yaml", name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if words {
+			src = strings.Join(regexp.MustCompile(`(?m)#.*$`).FindAllString(src, -1), "\n")
+		}
+		if japaneseRe.MatchString(src) {
 			t.Errorf("%s has Japanese: %q", name, japaneseRe.FindAllString(src, 3))
 		}
 	}

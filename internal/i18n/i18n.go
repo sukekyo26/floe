@@ -55,21 +55,31 @@ func IsTag(s string) bool {
 	return tagRe.MatchString(s)
 }
 
-// Match returns the registered language for a tag such as ja, ja_JP.UTF-8 or pt-BR: the tag itself,
-// else its language without the region. It reports false for a tag no catalog covers (C, POSIX, fr).
+// Match returns the registered language for a tag such as ja, ja_JP.UTF-8 or pt-BR, as Lookup finds it.
+// It reports false for a tag no catalog covers (C, POSIX, fr).
 func Match(tag string) (Lang, bool) {
+	lang, ok := Lookup(tag, func(t string) bool { _, ok := catalogs[Lang(t)]; return ok })
+	return Lang(lang), ok
+}
+
+// Lookup returns the language of a tag such as ja, ja_JP.UTF-8, pt-BR or zh-Hant-TW that has reports
+// having, lowercased: the tag itself, else the tag without its last subtag, one at a time (zh-hant-tw,
+// zh-hant, zh), as RFC 4647 looks a language up. It reports false for none.
+func Lookup(tag string, has func(string) bool) (string, bool) {
 	tag = strings.ToLower(tag)
 	if i := strings.IndexAny(tag, ".@"); i >= 0 {
 		tag = tag[:i] // ja_JP.UTF-8, sr_RS@latin
 	}
 	tag = strings.ReplaceAll(strings.TrimSpace(tag), "_", "-")
-	if _, ok := catalogs[Lang(tag)]; ok && tag != "" {
-		return Lang(tag), true
-	}
-	if base, _, found := strings.Cut(tag, "-"); found {
-		if _, ok := catalogs[Lang(base)]; ok {
-			return Lang(base), true
+	for tag != "" {
+		if has(tag) {
+			return tag, true
 		}
+		i := strings.LastIndex(tag, "-")
+		if i < 0 {
+			break
+		}
+		tag = tag[:i]
 	}
 	return "", false
 }

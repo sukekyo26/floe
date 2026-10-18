@@ -374,8 +374,6 @@ var messagesEN = map[string]string{
 	"tmpl_script_key":              "a script takes js and data, not %s",
 	"tmpl_script_end":              "js holds %s, where the page would end its script; split it in a string, as '<' + '%s'",
 
-	// The words floe's parts draw in a page, by part_<part>_<word>: label "likely" in the part risks.
-
 	"cli_template_parts_themes":       "parts themes: %s",
 	"cli_template_shared_parts_theme": "The theme to draw floe's parts with, one of the parts themes above (default: %s)",
 	"cli_parts_theme_empty":           "--parts-theme is empty: name a parts theme, or omit --parts-theme to take the data file's parts-theme:",
@@ -394,4 +392,7 @@ var messagesEN = map[string]string{
 	"tmpl_words_missing":              "%s leaves out %s, which en has",
 	"tmpl_words_extra":                "%s has %s, which en does not",
 	"tmpl_words_unknown":              `%s has no word "%s"`,
+	"tmpl_words_documents":            "words.yaml holds one YAML document: remove the --- between the parts",
+	"tmpl_words_lang_twice":           "%s is the language %s again: a tag's case does not tell languages apart",
+	"tmpl_words_unnamed":              `%s names the word "%s", which %s does not have`,
 }
