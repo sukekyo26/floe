@@ -100,8 +100,8 @@ type Entry struct {
 	// Prev is the entry this one overwrites, nil for a new slug.
 	Prev *Meta
 
-	// What settle builds Meta from, with the link's path, the data's title:, the theme and the
-	// templates of the Meta it replaces: the publish's options and the project published from.
+	// What settle builds Meta from, with the link's path, the data's title: and the themes of the Meta
+	// it replaces: the publish's options and the project published from.
 	opts Options
 	from string
 	// named is what a link without --slug is named after, for Save to pick its slug again: "" else.
@@ -142,7 +142,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	var seed Meta
 	seed.Path, seed.DataTitle = path, own
 	if data != nil {
-		seed.Theme, seed.PartsTheme, seed.Templates = themes.Template, themes.Parts, s.templates.Dir()
+		seed.Theme, seed.PartsTheme = themes.Template, themes.Parts
 	}
 	e := &Entry{
 		Slug: slug, Meta: seed, Source: nil, Images: nil, Prev: nil, opts: opts, from: project.Name(ctx, dir), named: "",
@@ -191,7 +191,7 @@ func (e *Entry) settle(prev *Meta) error {
 		base = &none
 	}
 	e.Meta = newMeta(e.opts, was.Path, e.from, base, was.DataTitle, e.Slug)
-	e.Meta.Theme, e.Meta.PartsTheme, e.Meta.Templates = was.Theme, was.PartsTheme, was.Templates
+	e.Meta.Theme, e.Meta.PartsTheme = was.Theme, was.PartsTheme
 	e.Prev = prev
 	return nil
 }
@@ -263,7 +263,6 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Theme:         "",
 		PartsTheme:    "",
 		DataTitle:     own,
-		Templates:     "",
 		Source:        "",
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,

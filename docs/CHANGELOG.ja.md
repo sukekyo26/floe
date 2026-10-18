@@ -58,7 +58,7 @@ floe の主要な変更を記録します。フォーマットは
   - データファイル・ページに出す画像・テンプレートのファイルのどれかを保存するか、図に出すアイコンを取得すると、開いているタブが再読み込みする。誤りがあるあいだは、ページの代わりに誤りの一覧を出す。
   - `--theme` でテンプレートの別のテーマを選べる。ほかに `--slug`・`--title`・`--description`・`--force` を使える。
   - 同じ slug で公開し直すと、そのことを stderr に出す。タイトルが変わっていれば警告も出す。
-- 自分のテンプレートを使えるようにした。`FLOE_TEMPLATES_DIR`（既定は `~/.config/floe/templates`）に置いたディレクトリ（symlink でもよい）が、同じ名前の組み込みのテンプレートの代わりに使われる。
+- 自分のテンプレートを使えるようにした。`FLOE_TEMPLATES_DIR`（既定は `~/.config/floe/templates`）に置いたディレクトリ（symlink でもよい）が、同じ名前の組み込みのテンプレートの代わりに使われる。公開したページはサーバーのテンプレートで描き、`FLOE_TEMPLATES_DIR` か `FLOE_ICONS_DIR` が動いているサーバーと違う公開は、`floe stop` を案内して断る。
   - `page.html`・`schema.json`・テーマのほか、`checks.yaml` で項目どうしの関係を（リストの要素ごとに。`sections.parts` のように途中のリストも辿る）検査し、`computed.yaml` でページに出す値を計算できる。式は [expr](https://expr-lang.org/) で書き、誤りはデータファイルの行と列で、これらのファイルそのものの誤りはそのファイルの行と列で出す。`page.html` は `num` と `bytes` で数を書ける。
   - 画像は data URI としてページに入る。`"format": "image"` の項目にはデータファイルのディレクトリの配下の画像を書き、`page.html` はテンプレートの `assets/` の画像を `asset` で出す。画像は 1 MiB までの png・jpeg・gif・webp・svg で、名前と中身の両方で判定し、データの画像の誤りは行と列で出す。
   - `template.yaml` に、テンプレートが要る floe の版を書く。書き方は [docs/templates.ja.md](templates.ja.md) にある。

@@ -1,7 +1,9 @@
 package cli_test
 
 import (
+	"errors"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -218,9 +220,9 @@ func TestDataImages(t *testing.T) {
 	}
 }
 
-// A linked data file is drawn with the templates of one's own of the publish that linked it, a relative
-// directory under its working directory, whatever the server's: links of two such directories are
-// drawn side by side.
+// A linked data file is drawn with the server's templates of one's own, a relative directory under the
+// working directory of the publish that started it. A publish that means other templates is refused
+// before it stores anything, rather than linking a page the server would draw with others.
 func TestLinkDataFileOfOwnTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -230,25 +232,20 @@ func TestLinkDataFileOfOwnTemplate(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	e.write(t, "others/sizes/page.html", "<p>{{.Calc.total}} of the others</p>")
 	e.write(t, "work/a.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\nlang: en\n")
 	e.write(t, "work/b.yaml", "template: sizes\nfiles: [{name: a, bytes: 1536}]\nlang: en\n")
-	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	e.vars["FLOE_TEMPLATES_DIR"] = "../templates"
 	if r := e.run(t, "work", "publish", "a.yaml", "--link"); r.code != 0 {
 		t.Fatalf("publish --link a = %+v", r)
 	}
-	first, _ := e.health(t)
+	if page := e.fetch(t, "/a/a/?raw"); !strings.Contains(page, "<td>1.5 KiB</td>") {
+		t.Errorf("the linked page a:\n%s", page)
+	}
 	e.vars["FLOE_TEMPLATES_DIR"] = "../others"
-	if r := e.run(t, "work", "publish", "b.yaml", "--link"); r.code != 0 {
-		t.Fatalf("publish --link b = %+v", r)
-	}
-	if h, _ := e.health(t); h.PID != first.PID {
-		t.Errorf("the server was replaced: pid %d, then %d", first.PID, h.PID)
-	}
-	for slug, want := range map[string]string{"a": "<td>1.5 KiB</td>", "b": "<p>1536 of the others</p>"} {
-		if page := e.fetch(t, "/a/"+slug+"/?raw"); !strings.Contains(page, want) {
-			t.Errorf("the linked page %s:\n%s", slug, page)
-		}
+	want(t, "publish --link with other templates", e.run(t, "work", "publish", "b.yaml", "--link"), 1, "",
+		"floe: the server on port "+e.port+" draws pages with the templates of "+filepath.Join(e.tmp, "templates"))
+	if _, err := os.Stat(filepath.Join(e.vars["FLOE_DIR"], "b")); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("the refused link was stored: %v", err)
 	}
 }
 

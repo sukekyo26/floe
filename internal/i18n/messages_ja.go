@@ -394,4 +394,5 @@ var messagesJA = map[string]string{
 	"tmpl_unknown_parts_theme":        "部品のテーマ「%[1]s」はありません。使えるのは %[3]s です",
 	"tmpl_theme_of_parts":             "テンプレート %[2]s にテーマ「%[1]s」はありません。「%[1]s」は部品のテーマなので parts-theme: %[1]s（または --parts-theme %[1]s）と書くか、テンプレートのテーマ %[3]s を使ってください",
 	"tmpl_parts_theme_of_template":    "部品のテーマ「%[1]s」はありません。「%[1]s」はテンプレート %[2]s のテーマなので theme: %[1]s（または --theme %[1]s）と書くか、部品のテーマ %[3]s を使ってください",
+	"daemon_other_dirs":               "ポート %d のサーバーはテンプレートを %s、アイコンを %s から読んでページを描いていますが、このコマンドはテンプレートを %s、アイコンを %s と指しています（FLOE_TEMPLATES_DIR・FLOE_ICONS_DIR）。サーバーが読む場所へ移すか、\"floe stop\" してから公開し直してください",
 }

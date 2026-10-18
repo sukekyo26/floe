@@ -38,8 +38,8 @@ func (a *app) templates() *tmpl.Library {
 	return tmpl.NewLibrary(a.templatesDir(), a.iconsDir())
 }
 
-// templatesDir is the directory of templates of one's own, so that a link records, and the server it
-// starts uses, the one this command means.
+// templatesDir is the directory of templates of one's own, so that the server a publish starts uses, and
+// the one it finds runs with, the one this command means.
 func (a *app) templatesDir() string {
 	return a.abs(a.cfg.templates)
 }
@@ -143,17 +143,24 @@ refused unless --force.`,
 // publish checks, makes sure the server runs, then saves, so that a failed publish leaves nothing in
 // the store.
 func (a *app) publish(ctx context.Context, file string, opts store.Options) error {
+	build, err := daemon.Build()
+	if err != nil {
+		return err //nolint:wrapcheck // already says what failed
+	}
+	server := daemon.Server{
+		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.templatesDir(), Icons: a.iconsDir(),
+		Env: a.serverEnv(),
+	}
+	// Before the check, which would find mistakes with templates the server does not draw with.
+	if err = daemon.CheckDirs(ctx, server); err != nil {
+		return err //nolint:wrapcheck // the message is for the user as is
+	}
 	st := a.store()
 	entry, err := st.Prepare(ctx, file, opts, a.env.Dir)
 	if err != nil {
 		return err //nolint:wrapcheck // the message is for the user as is
 	}
-	build, err := daemon.Build()
-	if err != nil {
-		return err //nolint:wrapcheck // already says what failed
-	}
-	err = daemon.Ensure(ctx, daemon.Server{Port: a.cfg.port, Root: a.cfg.root, Build: build, Env: a.serverEnv()})
-	if err != nil {
+	if err = daemon.Ensure(ctx, server); err != nil {
 		return err //nolint:wrapcheck // the message is for the user as is
 	}
 	if err := st.Save(entry); err != nil {
