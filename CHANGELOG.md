@@ -164,7 +164,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, as well as the
   management page with live reload. The server keeps running until
   `floe stop`.
-  They are configured with `FLOE_DIR` and `FLOE_PORT` (default 7325).
+  They are configured with `FLOE_DIR` and `FLOE_PORT` (default 7325). A
+  relative `FLOE_DIR`, `FLOE_ICONS_DIR` or `FLOE_TEMPLATES_DIR` is under the
+  working directory, and a `~` or `~/` at its start stands for `HOME`
+  (`~name` is refused). The defaults are under `XDG_DATA_HOME` and
+  `XDG_CONFIG_HOME`, whose `~` stands for `HOME` too; a relative one of
+  those is ignored, as the XDG spec says.
 - Show messages in English or Japanese. The command line follows `FLOE_LANG`,
   then `LC_ALL`, `LC_MESSAGES` and `LANG`; the management page follows the
   browser's language. English is the default.

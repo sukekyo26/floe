@@ -128,7 +128,7 @@ func newRoot(env Env, cat *i18n.Catalog) *cobra.Command {
 	app := &app{env: env, cfg: nil, cat: cat}
 	// The environment is checked before any command runs, so a typo fails the same way everywhere.
 	root.PersistentPreRunE = func(*cobra.Command, []string) error {
-		cfg, err := loadConfig(env.Getenv)
+		cfg, err := loadConfig(env.Getenv, env.Dir)
 		app.cfg = cfg
 		return err
 	}

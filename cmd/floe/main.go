@@ -9,7 +9,8 @@ import (
 )
 
 func main() {
-	// An unreadable working directory only matters to publish, which resolves files against it.
+	// An unreadable working directory matters only to what is resolved against it: a relative file, or a
+	// relative directory of the settings, which is refused.
 	dir, _ := os.Getwd() //nolint:errcheck // see above
 	os.Exit(cli.Run(context.Background(), os.Args[1:], cli.Env{
 		Getenv: os.Getenv, Dir: dir, Stdout: os.Stdout, Stderr: os.Stderr, Environ: os.Environ(),
