@@ -630,7 +630,11 @@ func TestPublishOtherDirs(t *testing.T) {
 	page := e.page(t, "dirs.yaml", "Dirs")
 	want(t, "publish", e.run(t, "", "publish", page), 0, e.base()+"/a/dirs/\n", "")
 	first, _ := e.health(t)
+	// One that exists: two that do not are one, neither holding an icon.
 	e.vars["FLOE_ICONS_DIR"] = filepath.Join(e.tmp, "other-icons")
+	if err := os.Mkdir(e.vars["FLOE_ICONS_DIR"], 0o700); err != nil {
+		t.Fatal(err)
+	}
 	for what, bin := range map[string]string{"this build": "", "another build": otherBuild} {
 		var r result
 		if bin == "" {

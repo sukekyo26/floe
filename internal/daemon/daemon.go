@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -123,7 +124,7 @@ func Ensure(ctx context.Context, s Server) error {
 	if err := s.otherDirs(p); err != nil {
 		return err
 	}
-	if p.State == Ours && p.Health.Root == s.Root && p.Health.Build != s.Build {
+	if p.State == Ours && sameDir(p.Health.Root, s.Root) && p.Health.Build != s.Build {
 		old := p.Health.PID
 		if err := Terminate(old); err != nil {
 			return err
@@ -145,7 +146,7 @@ func Ensure(ctx context.Context, s Server) error {
 		return usererr.New("daemon_port_taken", s.Port)
 	case p.State == Down:
 		return usererr.New("daemon_not_started")
-	case p.Health.Root != s.Root:
+	case !sameDir(p.Health.Root, s.Root):
 		return usererr.New("daemon_other_root", s.Port, p.Health.Root)
 	default:
 		return s.otherDirs(p)
@@ -162,20 +163,28 @@ func CheckDirs(ctx context.Context, s Server) error {
 // of templates or icons than s.
 func (s Server) otherDirs(p Status) error {
 	same := sameDir(p.Health.Templates, s.Templates) && sameDir(p.Health.Icons, s.Icons)
-	if p.State != Ours || p.Health.Root != s.Root || same {
+	if p.State != Ours || !sameDir(p.Health.Root, s.Root) || same {
 		return nil
 	}
-	return usererr.New("daemon_other_dirs", s.Port, p.Health.Templates, p.Health.Icons)
+	return usererr.New("daemon_other_dirs", s.Port, p.Health.Templates, p.Health.Icons, s.Templates, s.Icons)
 }
 
 // sameDir reports whether a and b name one directory: as written once cleaned, or through a symlink.
+// Two that do not exist are one too: neither holds anything to draw with, and the one made later is
+// told apart then.
 func sameDir(a, b string) bool {
 	if filepath.Clean(a) == filepath.Clean(b) {
 		return true
 	}
 	x, errA := os.Stat(a)
 	y, errB := os.Stat(b)
-	return errA == nil && errB == nil && os.SameFile(x, y)
+	switch {
+	case errA == nil && errB == nil:
+		return os.SameFile(x, y)
+	case errors.Is(errA, fs.ErrNotExist) && errors.Is(errB, fs.ErrNotExist):
+		return true
+	}
+	return false
 }
 
 // startAndWait starts a server on the port, p being Down, and waits for one to answer there.

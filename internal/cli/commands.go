@@ -52,11 +52,8 @@ func (a *app) iconsDir() string {
 
 // abs puts a relative dir under the working directory; "" stays "".
 func (a *app) abs(dir string) string {
-	switch {
-	case dir == "":
-		return ""
-	case filepath.IsAbs(dir):
-		return filepath.Clean(dir)
+	if dir == "" || filepath.IsAbs(dir) {
+		return dir
 	}
 	return filepath.Join(a.env.Dir, dir)
 }
