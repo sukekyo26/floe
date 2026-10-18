@@ -28,18 +28,34 @@ func TestSourcesAreInEnglish(t *testing.T) {
 			t.Fatal(err)
 		}
 		if words {
-			var all map[string]map[string]string
-			if err := yaml.Unmarshal([]byte(src), &all); err != nil {
-				t.Fatalf("%s: %v", name, err)
-			}
-			src = strings.Join(append(regexp.MustCompile(`(?m)^\s*#.*$`).FindAllString(src, -1),
-				slices.Collect(maps.Values(all["en"]))...), "\n")
+			src = englishOfWords(t, name, src)
 		}
 		if japaneseRe.MatchString(src) {
 			t.Errorf("%s has Japanese: %q", name, japaneseRe.FindAllString(src, 3))
 		}
 	}
 }
+
+// englishOfWords returns what of src, the words.yaml file name, must be English: its comments, at the
+// start of a line or after a space, and the words of en, however its tag is written.
+func englishOfWords(t *testing.T, name, src string) string {
+	t.Helper()
+
+	var all map[string]map[string]string
+	if err := yaml.Unmarshal([]byte(src), &all); err != nil {
+		t.Fatalf("%s: %v", name, err)
+	}
+	english := commentRe.FindAllString(src, -1)
+	for tag, words := range all {
+		if strings.EqualFold(tag, "en") {
+			english = append(english, slices.Collect(maps.Values(words))...)
+		}
+	}
+	return strings.Join(english, "\n")
+}
+
+// commentRe finds a comment of YAML: # at the start of a line or after a space, to the end of the line.
+var commentRe = regexp.MustCompile(`(?m)(?:^|\s)#.*$`)
 
 // TestBuiltinsLoadNothingFromElsewhere keeps the management page and the built-in templates off the
 // network: a page that loads from elsewhere is its template author's choice, not floe's.

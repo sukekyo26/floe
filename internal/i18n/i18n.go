@@ -72,17 +72,21 @@ func Lookup(tag string, has func(string) bool) (string, bool) {
 		tag = tag[:i] // ja_JP.UTF-8, sr_RS@latin
 	}
 	tag = strings.ReplaceAll(strings.TrimSpace(tag), "_", "-")
-	for tag != "" {
+	for ; tag != ""; tag = parent(tag) {
 		if has(tag) {
 			return tag, true
 		}
-		i := strings.LastIndex(tag, "-")
-		if i < 0 {
-			break
-		}
-		tag = tag[:i]
 	}
 	return "", false
+}
+
+// parent is tag without its last subtag, "" for one of none: zh-hant for zh-hant-tw.
+func parent(tag string) string {
+	i := strings.LastIndex(tag, "-")
+	if i < 0 {
+		return ""
+	}
+	return tag[:i]
 }
 
 // Detect picks the language of the CLI from the environment: FLOE_LANG, LC_ALL, LC_MESSAGES, then
@@ -156,11 +160,12 @@ func New(lang Lang) *Catalog {
 	return &Catalog{lang: lang, chain: Fallbacks(lang)}
 }
 
-// Fallbacks lists where to look for a text in lang, in order: lang, lang without its region, English.
+// Fallbacks lists where to look for a text in lang, in order: lang, lang without its last subtag, one at a
+// time (as Lookup goes), then English.
 func Fallbacks(lang Lang) []Lang {
-	chain := []Lang{lang}
-	if base, _, found := strings.Cut(string(lang), "-"); found {
-		chain = append(chain, Lang(base))
+	var chain []Lang
+	for tag := string(lang); tag != ""; tag = parent(tag) {
+		chain = append(chain, Lang(tag))
 	}
 	if !slices.Contains(chain, English) {
 		chain = append(chain, English)

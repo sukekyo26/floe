@@ -174,8 +174,8 @@ func TestPartsDrawnWhole(t *testing.T) {
 	}
 }
 
-// Every word a part draws from its data (word $mark), one of the values of the schema's enum, has its text
-// in the part's words.yaml; those named as written are checked as the part is read.
+// Every word a part draws has its text in the part's words.yaml, and every word there is drawn: named as
+// written (word "risk"), or from the data (word $level), one of the values of the schema's enum.
 func TestPartWords(t *testing.T) {
 	t.Parallel()
 
@@ -183,20 +183,19 @@ func TestPartWords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dynamic := map[string][]string{"matrix": {"yes", "part", "no"}, "risks": {"low", "mid", "high"}}
+	fromData := map[string][]string{"matrix": {"yes", "part", "no"}, "risks": {"low", "mid", "high"}}
 	for name, p := range set.parts {
-		names := dynamic[name]
-		if strings.Contains(p.html, "word $") != (dynamic[name] != nil) {
-			t.Errorf("the part %s draws a word from its data, which TestPartWords does not know", name)
+		if p.pages == nil {
+			continue
 		}
-		for _, n := range names {
+		drawn := append(namedWords(p.pages[fallbackLang]), fromData[name]...)
+		for _, n := range drawn {
 			if _, ok := p.words[fallbackLang][n]; !ok {
 				t.Errorf("the part %s has no word %s", name, n)
 			}
 		}
-		// And every word of its words.yaml is drawn, named as written or from the data.
 		for n := range p.words[fallbackLang] {
-			if !slices.Contains(names, n) && !strings.Contains(p.html, `word "`+n+`"`) {
+			if !slices.Contains(drawn, n) {
 				t.Errorf("the part %s does not draw its word %s", name, n)
 			}
 		}
@@ -239,7 +238,7 @@ func TestReadWords(t *testing.T) {
 			t.Errorf("readWords(%q) = %v, want %s", src, err, want)
 		}
 	}
-	if w, err := readWords("w.yaml", []byte("en:\n  a: |\n    A\n")); err != nil || w["en"]["a"] != "A\n" {
+	if w, err := readWords("w.yaml", []byte("en:\n  a: |\n    A\n")); err != nil || w["en"]["a"] != "A" {
 		t.Errorf("readWords of a block = %v, %v", w, err)
 	}
 	if w, err := readWords("w.yaml", nil); w != nil || err != nil {
@@ -253,10 +252,10 @@ func TestReadWords(t *testing.T) {
 	// A word named as written that the part has none of is refused as it is read, in any branch; one named
 	// from the data is left to the drawing.
 	for src, want := range map[string]string{
-		`{{if .x}}{{with .y}}{{word "b"}}{{end}}{{end}}`:    `p.html names the word "b", which w.yaml does not have`,
+		`{{if .x}}{{with .y}}{{word "b"}}{{end}}{{end}}`:    `p.html names the words b, which w.yaml does not have`,
 		`{{range .x}}{{word "a"}}{{word .}}{{end}}`:         "",
-		`{{define "d"}}{{word "c"}}{{end}}{{template "d"}}`: `p.html names the word "c", which w.yaml does not have`,
-		`{{"d" | word}}`: `p.html names the word "d", which w.yaml does not have`,
+		`{{define "d"}}{{word "c"}}{{end}}{{template "d"}}`: `p.html names the words c, which w.yaml does not have`,
+		`{{"d" | word}}`: `p.html names the words d, which w.yaml does not have`,
 	} {
 		page, err := template.New("p").Funcs(template.FuncMap{"word": zh.word("w.yaml", "en")}).Parse(src)
 		if err != nil {

@@ -393,5 +393,5 @@ var messagesJA = map[string]string{
 	"tmpl_words_unknown":              "%s に言葉「%s」がありません",
 	"tmpl_words_documents":            "words.yaml に書ける YAML の文書は 1 つです。間の --- を消してください",
 	"tmpl_words_lang_twice":           "%s は言語 %s の重なりです。言語タグは大文字と小文字で区別しません",
-	"tmpl_words_unnamed":              "%s が言葉「%s」を使っていますが、%s にありません",
+	"tmpl_words_unnamed":              "%s が言葉 %s を使っていますが、%s にありません",
 }

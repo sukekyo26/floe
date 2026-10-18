@@ -84,8 +84,8 @@ func readLang(file, tag string, n ast.Node) (map[string]string, yamlpos.Problems
 		switch text := v.Value.(type) {
 		case *ast.StringNode:
 			ws[name] = text.Value
-		case *ast.LiteralNode: // | or >
-			ws[name] = text.Value.Value
+		case *ast.LiteralNode: // | or >, its line break at the end dropped: a word is drawn inline
+			ws[name] = strings.TrimRight(text.Value.Value, "\n")
 		default:
 			problems = append(problems, yamlpos.New(file, yamlpos.Of(v.Value), "tmpl_words_not_text", tag, name))
 		}
@@ -152,42 +152,59 @@ func (w words) word(file, lang string) func(string) (string, error) {
 // that branch; html and file name the part's HTML and its words in the mistake. A word named from the
 // data (word $level) is checked when it is drawn.
 func (w words) checkWords(page *template.Template, html, file string) error {
+	var missing []string
+	for _, name := range namedWords(page) {
+		if _, ok := w[fallbackLang][name]; !ok {
+			missing = append(missing, name)
+		}
+	}
+	if missing != nil {
+		return usererr.New("tmpl_words_unnamed", html, andList(missing), file)
+	}
+	return nil
+}
+
+// namedWords returns the names of the words page, and the templates it defines, name as written, once
+// each, in order.
+func namedWords(page *template.Template) []string {
 	var names []string
 	for _, t := range page.Templates() {
 		if t.Tree != nil {
 			wordNames(t.Tree.Root, &names)
 		}
 	}
-	for _, name := range names {
-		if _, ok := w[fallbackLang][name]; !ok {
-			return usererr.New("tmpl_words_unnamed", html, name, file)
-		}
-	}
-	return nil
+	slices.Sort(names)
+	return slices.Compact(names)
 }
 
 // wordNames adds to names the names of the words n and the nodes under it name as written: word "x",
 // or "x" | word.
+// LIMIT: a name in parentheses (word ("x")) or a chain ((word "x").y) is left to the drawing; follow
+// those nodes too if a part comes to write one so.
 func wordNames(n tparse.Node, names *[]string) {
 	switch n := n.(type) {
 	case *tparse.CommandNode:
 		if isWord(n) && len(n.Args) > 1 {
-			if s, ok := n.Args[1].(*tparse.StringNode); ok {
-				*names = append(*names, s.Text)
-			}
+			*names = append(*names, literal(n.Args[1])...)
 		}
 	case *tparse.PipeNode:
 		for i := 1; n != nil && i < len(n.Cmds); i++ {
-			if prev := n.Cmds[i-1].Args; isWord(n.Cmds[i]) && len(n.Cmds[i].Args) == 1 && len(prev) == 1 {
-				if s, ok := prev[0].(*tparse.StringNode); ok {
-					*names = append(*names, s.Text)
-				}
+			if c := n.Cmds[i]; isWord(c) && len(c.Args) == 1 && len(n.Cmds[i-1].Args) == 1 {
+				*names = append(*names, literal(n.Cmds[i-1].Args[0])...)
 			}
 		}
 	}
 	for _, c := range children(n) {
 		wordNames(c, names)
 	}
+}
+
+// literal returns the text of n, a string as written, or none.
+func literal(n tparse.Node) []string {
+	if s, ok := n.(*tparse.StringNode); ok {
+		return []string{s.Text}
+	}
+	return nil
 }
 
 // isWord reports whether c calls word.
