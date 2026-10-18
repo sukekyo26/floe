@@ -24,8 +24,8 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// partFiles holds a directory per part of floe's (schema.json, part.html, part.css and checks.yaml), the
-// schemas the parts share (tone.json), and the parts themes (themes/).
+// partFiles holds a directory per part of floe's (schema.json, part.html, part.css, checks.yaml and
+// words.yaml), the schemas the parts share (tone.json), and the parts themes (themes/).
 //
 //go:embed parts
 var partFiles embed.FS
@@ -261,7 +261,7 @@ func readPart(name string, s *schema) (*part, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse the part %s: %w", name, err)
 	}
-	if err = w.checkWords(page.Tree, path.Join(dir, "part.html"), file); err != nil {
+	if err = w.checkWords(page, path.Join(dir, "part.html"), file); err != nil {
 		return nil, err
 	}
 	// One page per language of its words, word writing each of them: word "likely" is likely in words.yaml.

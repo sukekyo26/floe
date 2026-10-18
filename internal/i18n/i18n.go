@@ -62,9 +62,10 @@ func Match(tag string) (Lang, bool) {
 	return Lang(lang), ok
 }
 
-// Lookup returns the language of a tag such as ja, ja_JP.UTF-8, pt-BR or zh-Hant-TW that has reports
-// having, lowercased: the tag itself, else the tag without its last subtag, one at a time (zh-hant-tw,
-// zh-hant, zh), as RFC 4647 looks a language up. It reports false for none.
+// Lookup finds the language of a tag such as ja, ja_JP.UTF-8, pt-BR or zh-Hant-TW for which has
+// reports true: the tag itself, else the tag without its last subtag, one at a time (zh-hant-tw, zh-hant,
+// zh), as RFC 4647 looks a language up. has is given, and Lookup returns, the tag lowercased with - for _
+// and without an encoding (.UTF-8) or a modifier (@latin). It reports false for none.
 func Lookup(tag string, has func(string) bool) (string, bool) {
 	tag = strings.ToLower(tag)
 	if i := strings.IndexAny(tag, ".@"); i >= 0 {

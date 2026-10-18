@@ -194,6 +194,12 @@ func TestPartWords(t *testing.T) {
 				t.Errorf("the part %s has no word %s", name, n)
 			}
 		}
+		// And every word of its words.yaml is drawn, named as written or from the data.
+		for n := range p.words[fallbackLang] {
+			if !slices.Contains(names, n) && !strings.Contains(p.html, `word "`+n+`"`) {
+				t.Errorf("the part %s does not draw its word %s", name, n)
+			}
+		}
 	}
 }
 
@@ -233,6 +239,9 @@ func TestReadWords(t *testing.T) {
 			t.Errorf("readWords(%q) = %v, want %s", src, err, want)
 		}
 	}
+	if w, err := readWords("w.yaml", []byte("en:\n  a: |\n    A\n")); err != nil || w["en"]["a"] != "A\n" {
+		t.Errorf("readWords of a block = %v, %v", w, err)
+	}
 	if w, err := readWords("w.yaml", nil); w != nil || err != nil {
 		t.Errorf("readWords of nothing = %v, %v", w, err)
 	}
@@ -244,14 +253,16 @@ func TestReadWords(t *testing.T) {
 	// A word named as written that the part has none of is refused as it is read, in any branch; one named
 	// from the data is left to the drawing.
 	for src, want := range map[string]string{
-		`{{if .x}}{{with .y}}{{word "b"}}{{end}}{{end}}`: `p.html names the word "b", which w.yaml does not have`,
-		`{{range .x}}{{word "a"}}{{word .}}{{end}}`:      "",
+		`{{if .x}}{{with .y}}{{word "b"}}{{end}}{{end}}`:    `p.html names the word "b", which w.yaml does not have`,
+		`{{range .x}}{{word "a"}}{{word .}}{{end}}`:         "",
+		`{{define "d"}}{{word "c"}}{{end}}{{template "d"}}`: `p.html names the word "c", which w.yaml does not have`,
+		`{{"d" | word}}`: `p.html names the word "d", which w.yaml does not have`,
 	} {
 		page, err := template.New("p").Funcs(template.FuncMap{"word": zh.word("w.yaml", "en")}).Parse(src)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err = zh.checkWords(page.Tree, "p.html", "w.yaml"); (err == nil) != (want == "") || err != nil && err.Error() != want {
+		if err = zh.checkWords(page, "p.html", "w.yaml"); (err == nil) != (want == "") || err != nil && err.Error() != want {
 			t.Errorf("checkWords(%s) = %v, want %q", src, err, want)
 		}
 	}

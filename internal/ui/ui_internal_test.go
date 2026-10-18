@@ -2,6 +2,7 @@ package ui
 
 import (
 	"io/fs"
+	"maps"
 	"os"
 	"path"
 	"regexp"
@@ -9,12 +10,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml"
+
 	"github.com/sukekyo26/floe/internal/i18n"
 )
 
 // TestSourcesAreInEnglish keeps the files users and template authors read in English: their wording
 // is in the catalogs, and their comments are English too. A part's words.yaml holds its words in every
-// language, as a catalog does: its comments alone are kept in English.
+// language, as a catalog does: its comment lines and its en, which a page of a language it has no words
+// of is drawn in, are kept in English.
 func TestSourcesAreInEnglish(t *testing.T) {
 	t.Parallel()
 
@@ -24,7 +28,12 @@ func TestSourcesAreInEnglish(t *testing.T) {
 			t.Fatal(err)
 		}
 		if words {
-			src = strings.Join(regexp.MustCompile(`(?m)#.*$`).FindAllString(src, -1), "\n")
+			var all map[string]map[string]string
+			if err := yaml.Unmarshal([]byte(src), &all); err != nil {
+				t.Fatalf("%s: %v", name, err)
+			}
+			src = strings.Join(append(regexp.MustCompile(`(?m)^\s*#.*$`).FindAllString(src, -1),
+				slices.Collect(maps.Values(all["en"]))...), "\n")
 		}
 		if japaneseRe.MatchString(src) {
 			t.Errorf("%s has Japanese: %q", name, japaneseRe.FindAllString(src, 3))
