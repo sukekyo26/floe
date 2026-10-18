@@ -59,10 +59,11 @@ func readWords(file string, src []byte) (words, error) {
 		ws, more := readLang(file, tag, v.Value)
 		w[lang], problems = ws, append(problems, more...)
 	}
-	if problems != nil {
+	// The names are checked beside the other mistakes, so that one run tells them all.
+	if problems = append(problems, w.checkNames(file, seen, yamlpos.Of(top))...); problems != nil {
 		return nil, problems.Sorted()
 	}
-	return w, w.checkNames(file, seen, yamlpos.Of(top))
+	return w, nil
 }
 
 // writtenTag is a language tag of words.yaml as written, and where.
@@ -87,6 +88,8 @@ func readLang(file, tag string, n ast.Node) (map[string]string, yamlpos.Problems
 		case *ast.LiteralNode: // | or >, its line break at the end dropped: a word is drawn inline
 			ws[name] = strings.TrimRight(text.Value.Value, "\n")
 		default:
+			// Named all the same, so that it is not told left out too.
+			ws[name] = ""
 			problems = append(problems, yamlpos.New(file, yamlpos.Of(v.Value), "tmpl_words_not_text", tag, name))
 		}
 	}
@@ -95,10 +98,10 @@ func readLang(file, tag string, n ast.Node) (map[string]string, yamlpos.Problems
 
 // checkNames refuses w without en, at top, and a language of w, written as seen says, that leaves out a
 // word en names or names one en does not.
-func (w words) checkNames(file string, seen map[string]writtenTag, top yamlpos.Pos) error {
+func (w words) checkNames(file string, seen map[string]writtenTag, top yamlpos.Pos) yamlpos.Problems {
 	en, ok := w[fallbackLang]
 	if !ok {
-		return yamlpos.New(file, top, "tmpl_words_no_en")
+		return yamlpos.Problems{yamlpos.New(file, top, "tmpl_words_no_en")}
 	}
 	var problems yamlpos.Problems
 	for lang, ws := range w {
@@ -122,10 +125,7 @@ func (w words) checkNames(file string, seen map[string]writtenTag, top yamlpos.P
 			problems = append(problems, yamlpos.New(file, seen[lang].at, "tmpl_words_extra", seen[lang].tag, andList(extra)))
 		}
 	}
-	if problems != nil {
-		return problems.Sorted()
-	}
-	return nil
+	return problems
 }
 
 // lang picks the language of w a page of the language tag is drawn in, as i18n.Lookup finds it, else en.

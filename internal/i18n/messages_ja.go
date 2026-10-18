@@ -386,7 +386,7 @@ var messagesJA = map[string]string{
 	"tmpl_words_yaml":                 "words.yaml は言語タグごとに、言葉の名前とその文字列を書いてください",
 	"tmpl_words_lang":                 "%s は en・ja・pt-BR のような言語タグではありません",
 	"tmpl_words_lang_not_mapping":     "%s: 言葉の名前とその文字列を書いてください",
-	"tmpl_words_not_text":             "%s.%s: 文字列で書いてください",
+	"tmpl_words_not_text":             "%s.%s: 文字列で書いてください。YAML が数・true・false・null と読むものは引用符で囲みます",
 	"tmpl_words_no_en":                "words.yaml に en がありません。言葉の無い言語のページは en で描きます",
 	"tmpl_words_missing":              "%s に %s がありません。en にはあります",
 	"tmpl_words_extra":                "%s に %s があります。en にはありません",

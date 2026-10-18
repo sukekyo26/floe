@@ -387,7 +387,7 @@ var messagesEN = map[string]string{
 	"tmpl_words_yaml":                 "write words.yaml as language tags, each the names of the words and their text",
 	"tmpl_words_lang":                 "%s is not a language tag such as en, ja or pt-BR",
 	"tmpl_words_lang_not_mapping":     "%s: write the names of the words and their text",
-	"tmpl_words_not_text":             "%s.%s: write text",
+	"tmpl_words_not_text":             "%s.%s: write text, in quotes where YAML would read a number, true, false or null",
 	"tmpl_words_no_en":                "words.yaml has no en, which a page of a language it has no words of is drawn in",
 	"tmpl_words_missing":              "%s leaves out %s, which en has",
 	"tmpl_words_extra":                "%s has %s, which en does not",

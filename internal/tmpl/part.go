@@ -251,11 +251,11 @@ func readPart(name string, s *schema) (*part, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
-	w, err := readPartWords(dir)
+	file := path.Join(dir, "words.yaml")
+	w, err := readPartWords(file)
 	if err != nil {
 		return nil, err
 	}
-	file := path.Join(dir, "words.yaml")
 	page, err := template.New(name).Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
 		Funcs(template.FuncMap{"word": w.word(file, fallbackLang)}).Parse(string(html))
 	if err != nil {
@@ -265,8 +265,11 @@ func readPart(name string, s *schema) (*part, error) {
 		return nil, err
 	}
 	// One page per language of its words, word writing each of them: word "likely" is likely in words.yaml.
-	pages := map[string]*template.Template{}
+	pages := map[string]*template.Template{fallbackLang: page}
 	for lang := range w {
+		if lang == fallbackLang {
+			continue
+		}
 		if pages[lang], err = page.Clone(); err != nil {
 			return nil, fmt.Errorf("parse the part %s: %w", name, err)
 		}
@@ -300,10 +303,9 @@ func readPart(name string, s *schema) (*part, error) {
 	return p, nil
 }
 
-// readPartWords reads the words.yaml of the part in dir; a part without one has the words of en alone,
-// none, so that it has a page all the same.
-func readPartWords(dir string) (words, error) {
-	file := path.Join(dir, "words.yaml")
+// readPartWords reads file, the words.yaml of a part; a part without one has the words of en alone, none,
+// so that it has a page all the same.
+func readPartWords(file string) (words, error) {
 	src, err := partFiles.ReadFile(file)
 	var w words
 	switch {

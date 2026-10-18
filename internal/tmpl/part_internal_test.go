@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	tparse "text/template/parse"
 
 	"github.com/sukekyo26/floe/internal/diagram"
 )
@@ -188,7 +189,16 @@ func TestPartWords(t *testing.T) {
 		if p.pages == nil {
 			continue
 		}
-		drawn := append(namedWords(p.pages[fallbackLang]), fromData[name]...)
+		// Its HTML parsed anew: the parts' own pages are escaped, in place, by the tests drawing them.
+		page, err := template.New(name).Funcs(funcs).Funcs(partFuncs).
+			Funcs(template.FuncMap{"word": p.words.word("", fallbackLang)}).Parse(p.html)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if drawsFromData(page) != (fromData[name] != nil) {
+			t.Errorf("the part %s draws a word from its data, which TestPartWords does not know", name)
+		}
+		drawn := append(namedWords(page), fromData[name]...)
 		for _, n := range drawn {
 			if _, ok := p.words[fallbackLang][n]; !ok {
 				t.Errorf("the part %s has no word %s", name, n)
@@ -200,6 +210,27 @@ func TestPartWords(t *testing.T) {
 			}
 		}
 	}
+}
+
+// drawsFromData reports whether page names a word other than as written: word $level, or $level | word.
+func drawsFromData(page *template.Template) bool {
+	var walk func(tparse.Node) bool
+	walk = func(n tparse.Node) bool {
+		switch n := n.(type) {
+		case *tparse.CommandNode:
+			if isWord(n) && len(n.Args) > 1 && literal(n.Args[1]) == nil {
+				return true
+			}
+		case *tparse.PipeNode:
+			for i := 1; n != nil && i < len(n.Cmds); i++ {
+				if isWord(n.Cmds[i]) && len(n.Cmds[i].Args) == 1 && literal(n.Cmds[i-1].Args[0]) == nil {
+					return true
+				}
+			}
+		}
+		return slices.ContainsFunc(children(n), walk)
+	}
+	return slices.ContainsFunc(page.Templates(), func(t *template.Template) bool { return t.Tree != nil && walk(t.Tree.Root) })
 }
 
 // A part's words are read with their mistakes at their lines and columns, and a page takes the words of
@@ -223,16 +254,18 @@ func TestReadWords(t *testing.T) {
 		t.Errorf("word c = %v", err)
 	}
 	for src, want := range map[string]string{
-		"ja: { a: あ }\n":                    "w.yaml:1:1: words.yaml has no en",
-		"en: { a: A }\nja: { b: い }\n":      "w.yaml:2:1: ja leaves out a, which en has\nw.yaml:2:1: ja has b, which en does not",
-		"en: { a: A }\nj_p: { a: あ }\n":     "w.yaml:2:1: j_p is not a language tag",
-		"en: { a: [A] }\n":                  "w.yaml:1:10: en.a: write text",
-		"en: A\n":                           "w.yaml:1:5: en: write the names of the words",
-		"- en\n":                            "w.yaml:1:1: write words.yaml as language tags",
-		"en: &x { a: A }\nja: *x\n":         "w.yaml:1:5: anchors, aliases",
-		"en: { a: A }\nEN: { a: B }\n":      "w.yaml:2:1: EN is the language en again",
-		"en: { a: A }\npt-BR: { b: B }\n":   "w.yaml:2:1: pt-BR leaves out a, which en has\nw.yaml:2:1: pt-BR has b, which en does not",
-		"en: { a: A }\n---\nja: { a: あ }\n": "w.yaml:2:1: words.yaml holds one YAML document",
+		"ja: { a: あ }\n":                                    "w.yaml:1:1: words.yaml has no en",
+		"en: { a: A }\nja: { b: い }\n":                      "w.yaml:2:1: ja leaves out a, which en has\nw.yaml:2:1: ja has b, which en does not",
+		"en: { a: A }\nj_p: { a: あ }\n":                     "w.yaml:2:1: j_p is not a language tag",
+		"en: { a: [A] }\n":                                  "w.yaml:1:10: en.a: write text",
+		"en: A\n":                                           "w.yaml:1:5: en: write the names of the words",
+		"- en\n":                                            "w.yaml:1:1: write words.yaml as language tags",
+		"en: &x { a: A }\nja: *x\n":                         "w.yaml:1:5: anchors, aliases",
+		"en: { a: A }\nEN: { a: B }\n":                      "w.yaml:2:1: EN is the language en again",
+		"en: { a: A }\npt-BR: { b: B }\n":                   "w.yaml:2:1: pt-BR leaves out a, which en has\nw.yaml:2:1: pt-BR has b, which en does not",
+		"en: { a: A }\n---\nja: { a: あ }\n":                 "w.yaml:2:1: words.yaml holds one YAML document",
+		"en: { a: A, b: B }\nj_p: { a: あ }\nja: { a: あ }\n": "w.yaml:2:1: j_p is not a language tag such as en, ja or pt-BR\nw.yaml:3:1: ja leaves out b, which en has",
+		"en: { one: 1 }\n":                                  "w.yaml:1:12: en.one: write text, in quotes where YAML would read a number",
 	} {
 		if _, err := readWords("w.yaml", []byte(src)); err == nil || !strings.HasPrefix(err.Error(), want) {
 			t.Errorf("readWords(%q) = %v, want %s", src, err, want)

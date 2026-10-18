@@ -46,6 +46,10 @@ func TestMatch(t *testing.T) {
 			t.Errorf("Match(%q) = %q, %v; want %q", tag, got, ok, want)
 		}
 	}
+	// A tag of more subtags falls back one at a time.
+	if got := Fallbacks("zh-hant-tw"); !slices.Equal(got, []Lang{"zh-hant-tw", "zh-hant", "zh", English}) {
+		t.Errorf("Fallbacks(zh-hant-tw) = %v", got)
+	}
 	if got := Supported(); !slices.Equal(got, []Lang{English, "ja", "pt", "pt-br"}) {
 		t.Errorf("Supported() = %v", got)
 	}

@@ -3,8 +3,8 @@
 // file. Errors carry a key and arguments and are rendered at the boundary (the CLI's exit, an HTTP
 // response), so the same error reads in English in logs and in the reader's language on screen.
 //
-// A key missing from a language falls back to the language without its region (pt-BR to pt), then
-// to English, then to the key itself.
+// A key missing from a language falls back to the language without its last subtag, one at a time
+// (zh-Hant-TW to zh-Hant to zh, pt-BR to pt), then to English, then to the key itself.
 package i18n
 
 import (
