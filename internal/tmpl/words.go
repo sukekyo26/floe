@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"slices"
 	"strings"
-	tparse "text/template/parse"
 
 	"github.com/goccy/go-yaml/ast"
 
@@ -46,18 +45,22 @@ func readWords(file string, src []byte) (words, error) {
 		key := yamlpos.KeyOf(v)
 		tag := key.GetToken().Value
 		lang := strings.ToLower(tag)
+		// Its words are read whatever its tag, so that their mistakes are told in the same run.
+		ws, more := readLang(file, tag, key, v.Value)
+		problems = append(problems, more...)
 		switch {
 		case !i18n.IsTag(tag):
 			problems = append(problems, yamlpos.New(file, yamlpos.Of(key), "tmpl_words_lang", tag))
-			continue
 		case seen[lang].tag != "":
 			// A tag's case means nothing: EN after en would take its place unseen.
 			problems = append(problems, yamlpos.New(file, yamlpos.Of(key), "tmpl_words_lang_twice", tag, seen[lang].tag))
-			continue
+		default:
+			seen[lang] = writtenTag{tag: tag, at: yamlpos.Of(key)}
+			// One not read is not compared with en, which would tell its words missing too.
+			if ws != nil {
+				w[lang] = ws
+			}
 		}
-		seen[lang] = writtenTag{tag: tag, at: yamlpos.Of(key)}
-		ws, more := readLang(file, tag, v.Value)
-		w[lang], problems = ws, append(problems, more...)
 	}
 	// The names are checked beside the other mistakes, so that one run tells them all.
 	if problems = append(problems, w.checkNames(file, seen, yamlpos.Of(top))...); problems != nil {
@@ -72,11 +75,12 @@ type writtenTag struct {
 	at  yamlpos.Pos
 }
 
-// readLang reads n, the words of the language tag: names and their text.
-func readLang(file, tag string, n ast.Node) (map[string]string, yamlpos.Problems) {
+// readLang reads n, the words of the language tag written as key: names and their text; nil when it
+// is not names and their text.
+func readLang(file, tag string, key, n ast.Node) (map[string]string, yamlpos.Problems) {
 	m, ok := n.(*ast.MappingNode)
 	if !ok {
-		return nil, yamlpos.Problems{yamlpos.New(file, yamlpos.Of(n), "tmpl_words_lang_not_mapping", tag)}
+		return nil, yamlpos.Problems{yamlpos.New(file, yamlpos.OfValue(key, n), "tmpl_words_lang_not_mapping", tag)}
 	}
 	ws := map[string]string{}
 	var problems yamlpos.Problems
@@ -90,7 +94,8 @@ func readLang(file, tag string, n ast.Node) (map[string]string, yamlpos.Problems
 		default:
 			// Named all the same, so that it is not told left out too.
 			ws[name] = ""
-			problems = append(problems, yamlpos.New(file, yamlpos.Of(v.Value), "tmpl_words_not_text", tag, name))
+			at := yamlpos.OfValue(yamlpos.KeyOf(v), v.Value)
+			problems = append(problems, yamlpos.New(file, at, "tmpl_words_not_text", tag, name))
 		}
 	}
 	return ws, problems
@@ -100,7 +105,10 @@ func readLang(file, tag string, n ast.Node) (map[string]string, yamlpos.Problems
 // word en names or names one en does not.
 func (w words) checkNames(file string, seen map[string]writtenTag, top yamlpos.Pos) yamlpos.Problems {
 	en, ok := w[fallbackLang]
-	if !ok {
+	switch {
+	case !ok && seen[fallbackLang].tag != "":
+		return nil // written, but not read: told already
+	case !ok:
 		return yamlpos.Problems{yamlpos.New(file, top, "tmpl_words_no_en")}
 	}
 	var problems yamlpos.Problems
@@ -167,79 +175,7 @@ func (w words) checkWords(page *template.Template, html, file string) error {
 // namedWords returns the names of the words page, and the templates it defines, name as written, once
 // each, in order.
 func namedWords(page *template.Template) []string {
-	var names []string
-	for _, t := range page.Templates() {
-		if t.Tree != nil {
-			wordNames(t.Tree.Root, &names)
-		}
-	}
+	names := callsOf(page, "word").names
 	slices.Sort(names)
-	return slices.Compact(names)
-}
-
-// wordNames adds to names the names of the words n and the nodes under it name as written: word "x",
-// or "x" | word.
-// LIMIT: a name in parentheses (word ("x")) or a chain ((word "x").y) is left to the drawing; follow
-// those nodes too if a part comes to write one so.
-func wordNames(n tparse.Node, names *[]string) {
-	switch n := n.(type) {
-	case *tparse.CommandNode:
-		if isWord(n) && len(n.Args) > 1 {
-			*names = append(*names, literal(n.Args[1])...)
-		}
-	case *tparse.PipeNode:
-		for i := 1; n != nil && i < len(n.Cmds); i++ {
-			if c := n.Cmds[i]; isWord(c) && len(c.Args) == 1 && len(n.Cmds[i-1].Args) == 1 {
-				*names = append(*names, literal(n.Cmds[i-1].Args[0])...)
-			}
-		}
-	}
-	for _, c := range children(n) {
-		wordNames(c, names)
-	}
-}
-
-// literal returns the text of n, a string as written, or none.
-func literal(n tparse.Node) []string {
-	if s, ok := n.(*tparse.StringNode); ok {
-		return []string{s.Text}
-	}
-	return nil
-}
-
-// isWord reports whether c calls word.
-func isWord(c *tparse.CommandNode) bool {
-	id, ok := c.Args[0].(*tparse.IdentifierNode)
-	return ok && id.Ident == "word"
-}
-
-// children returns the nodes right under n that may hold a call of word.
-func children(n tparse.Node) []tparse.Node {
-	switch n := n.(type) {
-	case *tparse.ListNode:
-		if n != nil {
-			return n.Nodes
-		}
-	case *tparse.PipeNode:
-		if n != nil {
-			nodes := make([]tparse.Node, 0, len(n.Cmds))
-			for _, c := range n.Cmds {
-				nodes = append(nodes, c)
-			}
-			return nodes
-		}
-	case *tparse.ActionNode:
-		return []tparse.Node{n.Pipe}
-	case *tparse.TemplateNode:
-		return []tparse.Node{n.Pipe}
-	case *tparse.CommandNode:
-		return n.Args
-	case *tparse.IfNode:
-		return []tparse.Node{n.Pipe, n.List, n.ElseList}
-	case *tparse.RangeNode:
-		return []tparse.Node{n.Pipe, n.List, n.ElseList}
-	case *tparse.WithNode:
-		return []tparse.Node{n.Pipe, n.List, n.ElseList}
-	}
-	return nil
+	return names
 }

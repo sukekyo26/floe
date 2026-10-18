@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	tparse "text/template/parse"
 
 	"github.com/sukekyo26/floe/internal/diagram"
 )
@@ -195,7 +194,7 @@ func TestPartWords(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if drawsFromData(page) != (fromData[name] != nil) {
+		if callsOf(page, "word").computed != (fromData[name] != nil) {
 			t.Errorf("the part %s draws a word from its data, which TestPartWords does not know", name)
 		}
 		drawn := append(namedWords(page), fromData[name]...)
@@ -212,29 +211,8 @@ func TestPartWords(t *testing.T) {
 	}
 }
 
-// drawsFromData reports whether page names a word other than as written: word $level, or $level | word.
-func drawsFromData(page *template.Template) bool {
-	var walk func(tparse.Node) bool
-	walk = func(n tparse.Node) bool {
-		switch n := n.(type) {
-		case *tparse.CommandNode:
-			if isWord(n) && len(n.Args) > 1 && literal(n.Args[1]) == nil {
-				return true
-			}
-		case *tparse.PipeNode:
-			for i := 1; n != nil && i < len(n.Cmds); i++ {
-				if isWord(n.Cmds[i]) && len(n.Cmds[i].Args) == 1 && literal(n.Cmds[i-1].Args[0]) == nil {
-					return true
-				}
-			}
-		}
-		return slices.ContainsFunc(children(n), walk)
-	}
-	return slices.ContainsFunc(page.Templates(), func(t *template.Template) bool { return t.Tree != nil && walk(t.Tree.Root) })
-}
-
 // A part's words are read with their mistakes at their lines and columns, and a page takes the words of
-// its language, else of its language without the region, else of en.
+// its language, else of the language without its last subtag, one at a time, else of en.
 func TestReadWords(t *testing.T) {
 	t.Parallel()
 
@@ -266,6 +244,8 @@ func TestReadWords(t *testing.T) {
 		"en: { a: A }\n---\nja: { a: あ }\n":                 "w.yaml:2:1: words.yaml holds one YAML document",
 		"en: { a: A, b: B }\nj_p: { a: あ }\nja: { a: あ }\n": "w.yaml:2:1: j_p is not a language tag such as en, ja or pt-BR\nw.yaml:3:1: ja leaves out b, which en has",
 		"en: { one: 1 }\n":                                  "w.yaml:1:12: en.one: write text, in quotes where YAML would read a number",
+		"en: { a: A }\nja:\n":                               "w.yaml:2:1: ja: write the names",
+		"en: { a: A }\nja_JP: { a: 1 }\n":                   "w.yaml:2:1: ja_JP is not a language tag such as en, ja or pt-BR\nw.yaml:2:13: ja_JP.a: write text",
 	} {
 		if _, err := readWords("w.yaml", []byte(src)); err == nil || !strings.HasPrefix(err.Error(), want) {
 			t.Errorf("readWords(%q) = %v, want %s", src, err, want)
@@ -273,6 +253,15 @@ func TestReadWords(t *testing.T) {
 	}
 	if w, err := readWords("w.yaml", []byte("en:\n  a: |\n    A\n")); err != nil || w["en"]["a"] != "A" {
 		t.Errorf("readWords of a block = %v, %v", w, err)
+	}
+	// A language not read is told once: not compared with en, nor en with it.
+	for src, want := range map[string]string{
+		"en: { a: A }\nja: x\n": "w.yaml:2:5: ja: write the names of the words and their text",
+		"en: A\nja: { a: x }\n": "w.yaml:1:5: en: write the names of the words and their text",
+	} {
+		if _, err := readWords("w.yaml", []byte(src)); err == nil || err.Error() != want {
+			t.Errorf("readWords(%q) = %v, want %s", src, err, want)
+		}
 	}
 	if w, err := readWords("w.yaml", nil); w != nil || err != nil {
 		t.Errorf("readWords of nothing = %v, %v", w, err)

@@ -14,7 +14,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	tparse "text/template/parse"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
@@ -268,74 +267,7 @@ func (t *Template) assetImages(assets fs.FS) (mistakes []error, checked map[stri
 // assetsNamed returns the names page passes to asset as written, {{asset "logo.svg"}}, once each.
 // LIMIT: a name piped to it, or computed, is not found. Look for those too if templates come to use them.
 func assetsNamed(page *template.Template) []string {
-	var w assetWalk
-	for _, t := range page.Templates() {
-		if t.Tree != nil {
-			w.node(t.Tree.Root)
-		}
-	}
-	return w.names
-}
-
-// assetWalk walks a parse tree of page.html for the names passed to asset.
-type assetWalk struct {
-	names []string
-}
-
-func (w *assetWalk) node(n tparse.Node) {
-	switch n := n.(type) {
-	case *tparse.ListNode:
-		if n != nil {
-			for _, item := range n.Nodes {
-				w.node(item)
-			}
-		}
-	case *tparse.PipeNode:
-		w.pipe(n)
-	case *tparse.ActionNode:
-		w.pipe(n.Pipe)
-	case *tparse.TemplateNode:
-		w.pipe(n.Pipe)
-	case *tparse.IfNode:
-		w.branch(&n.BranchNode)
-	case *tparse.RangeNode:
-		w.branch(&n.BranchNode)
-	case *tparse.WithNode:
-		w.branch(&n.BranchNode)
-	}
-}
-
-func (w *assetWalk) branch(b *tparse.BranchNode) {
-	w.pipe(b.Pipe)
-	w.node(b.List)
-	w.node(b.ElseList)
-}
-
-func (w *assetWalk) pipe(p *tparse.PipeNode) {
-	if p == nil {
-		return
-	}
-	for _, c := range p.Cmds {
-		if name, ok := assetCall(c); ok && !slices.Contains(w.names, name) {
-			w.names = append(w.names, name)
-		}
-		for _, a := range c.Args {
-			w.node(a)
-		}
-	}
-}
-
-// assetCall returns the name c passes to asset, when it is asset "name".
-func assetCall(c *tparse.CommandNode) (string, bool) {
-	if len(c.Args) != 2 {
-		return "", false
-	}
-	id, call := c.Args[0].(*tparse.IdentifierNode)
-	name, text := c.Args[1].(*tparse.StringNode)
-	if !call || !text || id.Ident != "asset" {
-		return "", false
-	}
-	return name.Text, true
+	return callsOf(page, "asset").names
 }
 
 // checkChecks returns the mistakes of the checks.yaml of t, if it has one, against its schema doc as
