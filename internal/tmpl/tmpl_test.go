@@ -220,6 +220,7 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\ntheme: print\nleed: x\nlang: en\n", "data.yaml:2:8: template report has no theme \"print\"; use default\ndata.yaml:3:1: leed is not an item"},
 		{"template: deck\nlang: en\n", `data.yaml:1:11: unknown template "deck"; use report`},
 		{"template: report\ntheme: print\nlang: en\n", `data.yaml:2:8: template report has no theme "print"; use default`},
+		{"template: report\ntheme: brutal\nlang: en\n", `data.yaml:2:8: template report has no theme "brutal", which is a parts theme: write parts-theme: brutal (or --parts-theme brutal), or a theme of the template: default`},
 		{"template: report\nparts-theme: print\nlang: en\n", `data.yaml:2:14: there is no parts theme "print"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`},
 		{"template: report\nparts-theme: [x]\nlang: en\n", "data.yaml:2:14: parts-theme must be text"},
 		{"template: report\ntitle: [a]\nlang: en\n", "data.yaml:2:8: title must be text"},

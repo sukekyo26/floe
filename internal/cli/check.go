@@ -20,7 +20,7 @@ func (a *app) checkCmd() *cobra.Command {
 		Use:   "check <data.yaml>...",
 		Short: "Check data files as floe publish would, without publishing them",
 		Long: `Check each data file as floe publish does before it draws the page: its YAML, its template
-and theme, the template's schema, and drawing the page. Every mistake of every file is printed
+and themes, the template's schema, and drawing the page. Every mistake of every file is printed
 as file:line:column: message, and the exit code is 1 when there is one. Nothing is published,
 the server is not started, and nothing is printed when the files are right.`,
 		Args: usage(cobra.MinimumNArgs(1)),

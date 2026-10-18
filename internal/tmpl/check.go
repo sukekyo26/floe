@@ -602,8 +602,9 @@ func (l *schemaLint) variables() ([]string, error) {
 	if slices.Contains(l.parts, "diagram") {
 		more = diagram.Variables()
 	}
+	// Whichever parts theme a data file picks styles the parts, and the quotes of Markdown, which counts
+	// as the table part.
 	if len(l.parts) > 0 {
-		// Whichever parts theme a data file picks styles the parts too.
 		themes, err := partsThemeVariables()
 		if err != nil {
 			return nil, err

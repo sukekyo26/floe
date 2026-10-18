@@ -349,8 +349,8 @@ var messagesJA = map[string]string{
 	"tmpl_format_unreached":        "%s: %s: format %s は描く項目の印です。floe が辿る properties か items の下で宣言してください",
 	"tmpl_schema_open":             `%s: %s は "additionalProperties": false を書かずに properties を宣言しているので、打ち間違えたキーを断れません`,
 	"tmpl_format_type":             `%s: %s: floe は format %s の項目を型 %s の値から描きます。"type": "%[4]s" だけを宣言してください`,
-	"tmpl_theme_variables":         "%s は、テンプレートの部品と図が使う %s を定義していません。部品と図は自分の既定の値を使うので、色はダークモードでも明るいままです",
-	"tmpl_theme_variables_plain":   "%s は、テンプレートの部品と図が使う %s を定義していません。部品と図は自分の既定の値を使います",
+	"tmpl_theme_variables":         "%s は、テンプレートの部品と図、または部品のテーマが使う %s を定義していません。部品と図は自分の既定の値を使うので色はダークモードでも明るいままになり、部品のテーマはその値無しで描きます",
+	"tmpl_theme_variables_plain":   "%s は、テンプレートの部品と図、または部品のテーマが使う %s を定義していません。部品と図は自分の既定の値を使い、部品のテーマはその値無しで描きます",
 	"tmpl_no_template_yaml":        "%s に template.yaml がありません。テンプレートを書いた floe の版を floe: %s のように書いてください",
 	"tmpl_example_name":            "example.yaml がテンプレート %s を指定しています。テンプレートのディレクトリ名の %s にしてください",
 	"tmpl_checks_missing":          "検査に %s を書いてください",
@@ -392,4 +392,5 @@ var messagesJA = map[string]string{
 	"cli_template_shared_parts_theme": "floe の部品を描くテーマ。上の部品のテーマのどれか（既定は %s）",
 	"cli_parts_theme_empty":           "--parts-theme が空です。部品のテーマを指定するか、--parts-theme を省いてデータファイルの parts-theme: から取ってください",
 	"tmpl_unknown_parts_theme":        "部品のテーマ「%[1]s」はありません。使えるのは %[3]s です",
+	"tmpl_theme_of_parts":             "テンプレート %[2]s にテーマ「%[1]s」はありません。「%[1]s」は部品のテーマなので parts-theme: %[1]s（または --parts-theme %[1]s）と書くか、テンプレートのテーマ %[3]s を使ってください",
 }

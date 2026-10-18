@@ -107,19 +107,23 @@ refused unless --force.`,
 			if flags.Changed("description") {
 				opts.Description = &description
 			}
-			if flags.Changed("theme") {
-				theme = strings.TrimSpace(theme)
-				if theme == "" {
-					return usageError{err: usererr.New("cli_theme_empty")}
+			// A theme given is trimmed, and an empty one refused: it would take the data's.
+			for _, f := range []struct {
+				name, empty string
+				value       *string
+				to          **string
+			}{
+				{"theme", "cli_theme_empty", &theme, &opts.Theme},
+				{"parts-theme", "cli_parts_theme_empty", &partsTheme, &opts.PartsTheme},
+			} {
+				if !flags.Changed(f.name) {
+					continue
 				}
-				opts.Theme = &theme
-			}
-			if flags.Changed("parts-theme") {
-				partsTheme = strings.TrimSpace(partsTheme)
-				if partsTheme == "" {
-					return usageError{err: usererr.New("cli_parts_theme_empty")}
+				*f.value = strings.TrimSpace(*f.value)
+				if *f.value == "" {
+					return usageError{err: usererr.New(f.empty)}
 				}
-				opts.PartsTheme = &partsTheme
+				*f.to = f.value
 			}
 			return a.publish(cmd.Context(), args[0], opts)
 		},

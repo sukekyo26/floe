@@ -350,8 +350,8 @@ var messagesEN = map[string]string{
 	"tmpl_format_unreached":        "%s: %s: the format %s marks an item to draw; declare it under properties or items, which floe follows",
 	"tmpl_schema_open":             `%s: %s declares properties without "additionalProperties": false, so a misspelt key is not refused`,
 	"tmpl_format_type":             `%s: %s: floe draws an item of the format %s from a value of type %s; declare "type": "%[4]s" alone`,
-	"tmpl_theme_variables":         "%s does not define %s, which the template's parts and diagrams take from it, so they keep values of their own: light colours, in dark mode too",
-	"tmpl_theme_variables_plain":   "%s does not define %s, which the template's parts and diagrams take from it, so they keep values of their own",
+	"tmpl_theme_variables":         "%s does not define %s, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, light colours in dark mode too, and the parts themes go without them",
+	"tmpl_theme_variables_plain":   "%s does not define %s, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, and the parts themes go without them",
 	"tmpl_no_template_yaml":        "%s has no template.yaml: write floe: %s in it, the floe the template is written for",
 	"tmpl_example_name":            "example.yaml names the template %s; name it %s, after the template's directory",
 	"tmpl_checks_missing":          "write %s in the check",
@@ -393,4 +393,5 @@ var messagesEN = map[string]string{
 	"cli_template_shared_parts_theme": "The theme to draw floe's parts with, one of the parts themes above (default: %s)",
 	"cli_parts_theme_empty":           "--parts-theme is empty: name a parts theme, or omit --parts-theme to take the data file's parts-theme:",
 	"tmpl_unknown_parts_theme":        `there is no parts theme "%[1]s"; use %[3]s`,
+	"tmpl_theme_of_parts":             `template %[2]s has no theme "%[1]s", which is a parts theme: write parts-theme: %[1]s (or --parts-theme %[1]s), or a theme of the template: %[3]s`,
 }

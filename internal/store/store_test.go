@@ -910,6 +910,8 @@ func TestPublishLang(t *testing.T) {
 	if m := e.meta(t, "parts"); m.PartsTheme != "brutal" || m.Theme != "" {
 		t.Errorf("--parts-theme brutal: theme %q, parts theme %q", m.Theme, m.PartsTheme)
 	}
+	_, err = e.publish(t, frag, store.Options{Theme: ptr("brutal")}, "other")
+	wantUserErr(t, err, "tmpl_theme_of_parts", "brutal", "report", "default")
 	_, err = e.publish(t, frag, store.Options{PartsTheme: ptr("print")}, "other")
 	wantUserErr(t, err, "tmpl_unknown_parts_theme", "print", "report",
 		"blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi")

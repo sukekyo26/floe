@@ -56,7 +56,7 @@ pre {
 pre code { font-size: inherit; background: none; padding: 0; }
 /* A quote's look is the parts theme's: :where() leaves this the least specific, for any parts theme to win */
 :where(blockquote) { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
-:where(blockquote > * + *) { margin-top: 0.6rem; }
+blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 <style>

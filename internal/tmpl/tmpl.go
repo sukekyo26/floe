@@ -5,6 +5,7 @@ package tmpl
 
 import (
 	"bytes"
+	"cmp"
 	"embed"
 	"encoding/base64"
 	"encoding/json"
@@ -228,7 +229,12 @@ func (t *Template) check(h *head, dir string, given Themes, problems yamlpos.Pro
 	if err != nil {
 		return err
 	}
-	more, err := pickTheme(d, &d.Theme, given.Template, themes, h.where["theme"], "tmpl_unknown_theme")
+	// A parts theme named as the template's is told where it goes.
+	unknown := "tmpl_unknown_theme"
+	if name := cmp.Or(given.Template, d.Theme); slices.Contains(partsThemes, name) && !slices.Contains(themes, name) {
+		unknown = "tmpl_theme_of_parts"
+	}
+	more, err := pickTheme(d, &d.Theme, given.Template, themes, h.where["theme"], unknown)
 	if err != nil {
 		return err
 	}
