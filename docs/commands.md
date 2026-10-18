@@ -45,7 +45,7 @@ Pages are drawn from data files (`.yaml`, `.yml`). The data file is copied to `<
 
 ### Data files
 
-A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts: Markdown text, `code` and `terminal` parts for code and commands, `table`, `cards` and `note` parts, `diagram` parts for diagrams, `script` parts for what moves, and `html` parts for what they cannot say.
+A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts: Markdown text, `code` and `terminal` parts for code and commands, `table`, `cards` and `note` parts, parts for numbers, steps, what changes, options, diffs, file trees, review findings, decisions, risks and more, `tabs` and `details` that hold parts (all told in [Parts](templates.md#parts)), `diagram` parts for diagrams, `script` parts for what moves, and `html` parts for what they cannot say.
 
 ```yaml
 template: report               # the template that draws the page
