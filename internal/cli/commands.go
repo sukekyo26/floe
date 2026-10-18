@@ -38,8 +38,8 @@ func (a *app) templates() *tmpl.Library {
 	return tmpl.NewLibrary(a.templatesDir(), a.iconsDir())
 }
 
-// templatesDir is the directory of templates of one's own, so that a link records, and the server it
-// starts uses, the one this command means.
+// templatesDir is the directory of templates of one's own, so that the server a publish starts uses, and
+// the one it finds runs with, the one this command means.
 func (a *app) templatesDir() string {
 	return a.abs(a.cfg.templates)
 }
@@ -152,7 +152,10 @@ func (a *app) publish(ctx context.Context, file string, opts store.Options) erro
 	if err != nil {
 		return err //nolint:wrapcheck // already says what failed
 	}
-	err = daemon.Ensure(ctx, daemon.Server{Port: a.cfg.port, Root: a.cfg.root, Build: build, Env: a.serverEnv()})
+	err = daemon.Ensure(ctx, daemon.Server{
+		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.templatesDir(), Icons: a.iconsDir(),
+		Env: a.serverEnv(),
+	})
 	if err != nil {
 		return err //nolint:wrapcheck // the message is for the user as is
 	}

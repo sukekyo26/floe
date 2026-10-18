@@ -395,4 +395,5 @@ var messagesEN = map[string]string{
 	"tmpl_unknown_parts_theme":        `there is no parts theme "%[1]s"; use %[3]s`,
 	"tmpl_theme_of_parts":             `template %[2]s has no theme "%[1]s", which is a parts theme: write parts-theme: %[1]s (or --parts-theme %[1]s), or a theme of the template: %[3]s`,
 	"tmpl_parts_theme_of_template":    `there is no parts theme "%[1]s", which is a theme of the template %[2]s: write theme: %[1]s (or --theme %[1]s), or a parts theme: %[3]s`,
+	"daemon_other_dirs":               "the server on port %d draws pages with the templates of %s and the icons of %s, not those of this command (FLOE_TEMPLATES_DIR, FLOE_ICONS_DIR); move your templates and icons there, or run \"floe stop\" and publish again",
 }

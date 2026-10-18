@@ -60,9 +60,6 @@ type Meta struct {
 	Theme      string `json:"theme,omitempty"`
 	PartsTheme string `json:"partsTheme,omitempty"`
 	DataTitle  string `json:"dataTitle,omitempty"`
-	// Templates is the directory of templates of one's own a data file is drawn with: the one of the
-	// publish that stored or linked it, whatever the server's.
-	Templates string `json:"templates,omitempty"`
 	// Source is the directory of a stored page's copy of its data file and images, under its own.
 	Source        string `json:"source,omitempty"`
 	Project       string `json:"project,omitempty"`
@@ -114,6 +111,11 @@ func New(root, home string, templates *tmpl.Library) *Store {
 // Root returns the store directory.
 func (s *Store) Root() string {
 	return s.root
+}
+
+// Templates are the templates the store draws data files with: the server's, whoever published them.
+func (s *Store) Templates() *tmpl.Library {
+	return s.templates
 }
 
 func (s *Store) dir(slug string) string {
@@ -233,8 +235,7 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	} else {
 		var d *tmpl.Data
 		var sources tmpl.Sources
-		// The templates it was linked with, but the server's icons: one place for all, not one's own.
-		d, sources, err = tmpl.NewLibrary(m.Templates, s.templates.IconsDir()).ReadSources(file, src, m.themes(), "")
+		d, sources, err = s.templates.ReadSources(file, src, m.themes(), "")
 		s.mu.Lock()
 		s.drawn[key] = drawing{at: m.UpdatedAt, sources: sources}
 		s.mu.Unlock()
@@ -272,7 +273,7 @@ func drawData(d *tmpl.Data, m *Meta, slug string) ([]byte, error) {
 }
 
 // Version is what live reload compares: a linked file's mtime, and for a data file of slug, stored or
-// linked, its publish time too (another theme or templates) and the state of what its last drawing
+// linked, its publish time too (another theme) and the state of what its last drawing
 // read besides it (its template's files, its images) and whether it can be read, so that publishing
 // it again, saving any of them, or making it readable again reloads the page.
 // It is "" when the file is gone.

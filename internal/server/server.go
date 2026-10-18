@@ -145,7 +145,11 @@ func catalog(r *http.Request) *i18n.Catalog {
 }
 
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
-	sendJSON(w, http.StatusOK, Health{App: App, PID: os.Getpid(), Root: s.cfg.Store.Root(), Build: s.cfg.Build})
+	templates := s.cfg.Store.Templates()
+	sendJSON(w, http.StatusOK, Health{
+		App: App, PID: os.Getpid(), Root: s.cfg.Store.Root(), Build: s.cfg.Build, Templates: templates.Dir(),
+		Icons: templates.IconsDir(),
+	})
 }
 
 // Health is the answer of /api/health.
@@ -154,6 +158,9 @@ type Health struct {
 	PID   int    `json:"pid"`
 	Root  string `json:"root"`
 	Build string `json:"build"`
+	// Templates and Icons are the directories of templates of one's own and of icons it draws pages with.
+	Templates string `json:"templates"`
+	Icons     string `json:"icons"`
 }
 
 func (s *Server) list(w http.ResponseWriter, _ *http.Request) {

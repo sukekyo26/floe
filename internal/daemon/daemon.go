@@ -97,6 +97,10 @@ type Server struct {
 	Port  int
 	Root  string
 	Build string
+	// Templates and Icons are the directories the server must draw pages with: those the publish checked
+	// the data file with.
+	Templates string
+	Icons     string
 	// Env is the environment of the started server (it reads its settings from there).
 	Env []string
 }
@@ -138,6 +142,8 @@ func Ensure(ctx context.Context, s Server) error {
 		return usererr.New("daemon_not_started")
 	case p.Health.Root != s.Root:
 		return usererr.New("daemon_other_root", s.Port, p.Health.Root)
+	case p.Health.Templates != s.Templates || p.Health.Icons != s.Icons:
+		return usererr.New("daemon_other_dirs", s.Port, p.Health.Templates, p.Health.Icons)
 	default:
 		return nil
 	}

@@ -1038,58 +1038,48 @@ func TestLinkDataFileEdges(t *testing.T) {
 	}
 }
 
-// One data file linked under two slugs, drawn with the templates of their publishes, is watched apart:
-// drawing one does not move the version of the other.
+// One data file linked under two slugs, drawn with two parts themes, is watched apart: drawing one does
+// not move the version of the other.
 func TestLinkDataFileTwice(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	dirs := map[string]string{"a": filepath.Join(e.tmp, "a"), "b": filepath.Join(e.tmp, "b")}
-	for _, dir := range dirs {
-		if err := os.CopyFS(filepath.Join(dir, "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
-			t.Fatal(err)
-		}
+	dir := filepath.Join(e.tmp, "templates")
+	if err := os.CopyFS(filepath.Join(dir, "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
+		t.Fatal(err)
 	}
-	e.write(t, "b/sizes/extra.css", "")
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, ""))
 	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nlang: en\n")
-	metas := map[string]store.Meta{}
-	for slug, dir := range dirs {
-		s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, ""))
-		entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr(slug)}, filepath.Join(e.tmp, "proj"))
+	link := func(slug, theme string) store.Meta {
+		t.Helper()
+		entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr(slug), PartsTheme: ptr(theme)},
+			filepath.Join(e.tmp, "proj"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		if err = s.Save(entry); err != nil {
 			t.Fatal(err)
 		}
-		if entry.Meta.Templates != dir {
-			t.Errorf("the templates of %s = %q, want %q", slug, entry.Meta.Templates, dir)
-		}
-		metas[slug] = entry.Meta
+		return entry.Meta
 	}
-	a, b := metas["a"], metas["b"]
-	_, version, err := e.s.Draw("a", &a, data)
+	a, b := link("a", "default"), link("b", "brutal")
+	_, version, err := s.Draw("a", &a, data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err = e.s.Draw("b", &b, data); err != nil {
+	if _, _, err = s.Draw("b", &b, data); err != nil {
 		t.Fatal(err)
 	}
-	if now := e.s.Version("a", &a, data); now != version {
+	if now := s.Version("a", &a, data); now != version {
 		t.Errorf("drawing b moved the version of a: %q, then %q", version, now)
 	}
 
-	// Linked again with the other templates, a is served at the version it is watched at, which waits
-	// for the drawing: the tab reloads once, not twice.
+	// Linked again with the other theme, a is served at the version it is watched at, which waits for
+	// the drawing: the tab reloads once, not twice.
 	time.Sleep(5 * time.Millisecond) // another updatedAt, kept to the millisecond
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dirs["b"], ""))
-	entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr("a")}, filepath.Join(e.tmp, "proj"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	relinked := entry.Meta
-	if _, version, err = e.s.Draw("a", &relinked, data); err != nil || version != e.s.Version("a", &relinked, data) {
-		t.Errorf("a linked again was served at %q, watched at %q (%v)", version, e.s.Version("a", &relinked, data), err)
+	relinked := link("a", "brutal")
+	if _, version, err = s.Draw("a", &relinked, data); err != nil || version != s.Version("a", &relinked, data) {
+		t.Errorf("a linked again was served at %q, watched at %q (%v)", version, s.Version("a", &relinked, data), err)
 	}
 }
 
