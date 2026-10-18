@@ -64,14 +64,14 @@ func loadConfig(getenv func(string) string, dir string) (*config, error) {
 
 // resolve puts the relative directories of c under dir, refusing one when dir is "".
 func (c *config) resolve(dir string) error {
-	for _, d := range []*string{&c.root, &c.icons, &c.templates} {
-		if *d == "" || filepath.IsAbs(*d) {
-			continue
+	for _, d := range []struct {
+		name string
+		path *string
+	}{{"FLOE_DIR", &c.root}, {"FLOE_ICONS_DIR", &c.icons}, {"FLOE_TEMPLATES_DIR", &c.templates}} {
+		if dir == "" && *d.path != "" && !filepath.IsAbs(*d.path) {
+			return usererr.New("cli_relative_no_dir", d.name, *d.path)
 		}
-		if dir == "" {
-			return usererr.New("cli_relative_no_dir", *d)
-		}
-		*d = filepath.Join(dir, *d)
+		*d.path = under(dir, *d.path)
 	}
 	return nil
 }

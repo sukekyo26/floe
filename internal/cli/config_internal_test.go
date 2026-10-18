@@ -38,12 +38,16 @@ func TestLoadConfigDefaults(t *testing.T) {
 	}
 	// A relative directory is under the working directory; a relative XDG directory is none, as its spec
 	// says.
-	vars = map[string]string{"HOME": "/h", "FLOE_DIR": "pages", "FLOE_TEMPLATES_DIR": "t/", "XDG_DATA_HOME": "data"}
-	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/w/pages" || c.templates != "/w/t" ||
-		c.icons != "/h/.local/share/floe-icons" {
+	vars = map[string]string{"HOME": "/h", "FLOE_DIR": "pages", "FLOE_ICONS_DIR": "icons", "FLOE_TEMPLATES_DIR": "t/"}
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/w/pages" || c.icons != "/w/icons" || c.templates != "/w/t" {
 		t.Errorf("relative directories = %+v, %v", c, err)
 	}
-	if _, err := loadConfig(getenv, ""); err == nil || !strings.Contains(err.Error(), "the relative directory pages") {
+	if _, err := loadConfig(getenv, ""); err == nil || !strings.Contains(err.Error(), "FLOE_DIR, the relative directory pages") {
 		t.Errorf("a relative directory without a working directory = %v", err)
+	}
+	vars = map[string]string{"HOME": "/h", "XDG_DATA_HOME": "data", "XDG_CONFIG_HOME": "conf"}
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/h/.local/share/floe" || c.icons != "/h/.local/share/floe-icons" ||
+		c.templates != "/h/.config/floe/templates" {
+		t.Errorf("relative XDG directories = %+v, %v", c, err)
 	}
 }
