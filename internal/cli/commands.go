@@ -40,18 +40,10 @@ func (a *app) templates() *tmpl.Library {
 
 // abs puts a relative dir under the working directory; "" stays "".
 func (a *app) abs(dir string) string {
-	return under(a.env.Dir, dir)
-}
-
-// under puts a relative path p under dir, and cleans an absolute one; "" stays "".
-func under(dir, p string) string {
-	switch {
-	case p == "":
-		return ""
-	case filepath.IsAbs(p):
-		return filepath.Clean(p)
+	if dir == "" || filepath.IsAbs(dir) {
+		return dir
 	}
-	return filepath.Join(dir, p)
+	return filepath.Join(a.env.Dir, dir)
 }
 
 func (a *app) out(format string, args ...any) {
