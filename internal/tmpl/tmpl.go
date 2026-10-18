@@ -31,10 +31,10 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// builtin holds a directory per built-in template: page.html, schema.json, example.yaml and themes/.
+// templateFiles holds a directory per built-in template: page.html, schema.json, example.yaml and themes/.
 //
-//go:embed builtin
-var builtin embed.FS
+//go:embed templates
+var templateFiles embed.FS
 
 const (
 	// DefaultTheme is the theme of a page whose data names none.

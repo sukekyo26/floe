@@ -19,7 +19,7 @@ func own(t *testing.T, dir, name string) string {
 	t.Helper()
 
 	at := filepath.Join(dir, name)
-	if err := os.CopyFS(at, os.DirFS("builtin/report")); err != nil {
+	if err := os.CopyFS(at, os.DirFS("templates/report")); err != nil {
 		t.Fatal(err)
 	}
 	page := filepath.Join(at, "page.html")

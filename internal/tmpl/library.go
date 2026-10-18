@@ -59,7 +59,7 @@ type Template struct {
 // cannot be read, rather than leave them out.
 func (l *Library) Names() ([]string, error) {
 	var names []string
-	if entries, err := fs.ReadDir(builtin, "builtin"); err == nil {
+	if entries, err := fs.ReadDir(templateFiles, "templates"); err == nil {
 		for _, e := range entries {
 			names = append(names, e.Name())
 		}
@@ -130,7 +130,7 @@ func (l *Library) Find(name string) (*Template, error) {
 	if t, err := l.own(name); t != nil || err != nil {
 		return t, err
 	}
-	_, err := fs.Stat(builtin, path.Join("builtin", name))
+	_, err := fs.Stat(templateFiles, path.Join("templates", name))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		return nil, nil //nolint:nilnil // no such template
@@ -249,7 +249,7 @@ func (t *Template) themes() ([]string, error) {
 // files calls read with the files of t, as a file system rooted at t.
 func (t *Template) files(read func(fs.FS) error) error {
 	if t.Dir == "" {
-		sub, err := fs.Sub(builtin, path.Join("builtin", t.Name))
+		sub, err := fs.Sub(templateFiles, path.Join("templates", t.Name))
 		if err != nil {
 			return fmt.Errorf("open the template %s: %w", t.Name, err)
 		}

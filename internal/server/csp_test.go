@@ -110,7 +110,7 @@ func TestUIScript(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	b.navigate("/a/script/?raw")
 	got := b.eval("const el = document.getElementById('moved'); el.previousElementSibling.textContent + '|' + el.textContent")
 
-	example, err := os.ReadFile("../tmpl/builtin/report/example.yaml")
+	example, err := os.ReadFile("../tmpl/templates/report/example.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
