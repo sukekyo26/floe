@@ -69,16 +69,20 @@ adheres to [Semantic Versioning](https://semver.org/).
   word is a prompt (ending in `$`, `#`, `%`, `>` or `❯`, such as `~/app$` or
   `C:\work>`) is refused. `report` refuses a fenced block of code in `text`,
   pointing at the parts to write code and commands in.
-- Pick the look of the built-in `report` by its theme: `default` (faces set
-  in panels, notes in their tone's colour), `soft` (faces with round corners),
-  `editorial` (rules and thin frames, as in print), `ink` (a table's heading
-  in ink, states filled with their colour), `brutal` (thick black frames,
-  primary faces and hard shadows), `blueprint` (blue ink on squared paper,
-  every cell ruled), `notebook` (ruled paper, marker strokes and sticky
-  notes), `swiss` (heavy black rules, large numbers and red, states told by
-  shape) or `washi` (sumi and vermilion on washi in a Mincho face, seals and
-  vertical quotes), each in light and dark mode. A theme restyles floe's
-  parts by their classes, leaving the page as the template draws it.
+- Pick the look of floe's parts, in any template, by a parts theme
+  (`parts-theme:` in a data file, `floe publish --parts-theme`): `default`
+  (faces set in panels, notes in their tone's colour), `soft` (faces with
+  round corners), `editorial` (rules and thin frames, as in print), `ink` (a
+  table's heading in ink, states filled with their colour), `brutal` (thick
+  black frames, primary faces and hard shadows), `blueprint` (blue ink on
+  squared paper, every cell ruled), `notebook` (ruled paper, marker strokes
+  and sticky notes), `swiss` (heavy black rules, large numbers and red, states
+  told by shape) or `washi` (sumi and vermilion on washi in a Mincho face,
+  seals and vertical quotes), each in light and dark mode. A parts theme
+  restyles the parts by their classes, and Markdown's quotes, and goes into
+  every page after the parts' style; the template's theme (`theme:`, `report`
+  has `default`) styles the page and comes after it. `floe template show`
+  lists the parts themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as

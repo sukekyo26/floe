@@ -40,21 +40,24 @@ const memoItems = `"risks": {"$ref": "floe:///parts/table.json"}, "aside": {"$re
 	`"asides": {"type": "array", "items": {"$ref": "floe:///parts/note.json"}}`
 
 // A template of one's own draws an item by a part of floe's with a $ref: the part checks it, at the
-// data's lines and columns, draws it, and puts its style into the page's <head> once.
+// data's lines and columns, draws it, and puts its style into the page's <head> once, the parts theme
+// after it.
 func TestPartsInOwnTemplate(t *testing.T) {
 	t.Parallel()
 
 	l := tmpl.NewLibrary(memo(t, memoItems), "")
-	page, err := draw(l, "template: memo\nlang: en\n"+
+	page, err := draw(l, "template: memo\nlang: en\nparts-theme: soft\n"+
 		"risks: { columns: [{title: Risk}, {title: Pages, num: true}], rows: [[Links, '120'], [Search, { pill: open, tone: bad }]] }\n"+
 		"aside: { text: Keep the old host, tone: warn }\n")
 	if err != nil {
 		t.Fatal(err)
 	}
 	head, _, _ := strings.Cut(page, "</head>")
-	// Before the template's own style, which wins over a part's where it says otherwise.
-	if parts, own := strings.Index(head, ".floe-table {"), strings.Index(head, ":root { --fg: #000; }"); parts < 0 || own < parts {
-		t.Errorf("the parts' style is at %d, the theme's at %d", parts, own)
+	// Before the template's own style, which wins over a part's and the parts theme's where it says otherwise.
+	parts, theme, own := strings.Index(head, ".floe-table {"), strings.Index(head, "/* Faces with round corners"),
+		strings.Index(head, ":root { --fg: #000; }")
+	if parts < 0 || theme < parts || own < theme {
+		t.Errorf("the parts' style is at %d, the parts theme's at %d, the template's theme's at %d", parts, theme, own)
 	}
 	for _, want := range []string{
 		`<div class="floe-table"><table>`, `<td class="num">120</td>`, `<span class="floe-pill bad">open</span>`,
@@ -132,13 +135,13 @@ func TestCheckParts(t *testing.T) {
 		}
 	}
 	if !strings.Contains(told, "--accent") || !strings.Contains(told, "--good-soft") || strings.Contains(told, "--fg,") ||
-		!strings.Contains(told, "--muted, which the template's parts and diagrams take from it, so they keep values of their own: light colours, in dark mode too\n") ||
-		!strings.Contains(told, "does not define --text-width, --mono, which the template's parts and diagrams take from it, so they keep values of their own\n") {
+		!strings.Contains(told, "--muted, --bg, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, light colours in dark mode too, and the parts themes go without them\n") ||
+		!strings.Contains(told, "does not define --text-width, --mono, --font, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, and the parts themes go without them\n") {
 		t.Errorf("the warning of the theme = %q", told)
 	}
 	// A theme that leaves out no colour is not told of dark mode.
 	colours := memo(t, memoItems)
-	theme := ":root { --fg: #000; --surface: #fff; --line: #ccc; --muted: #666; --accent: #00f; --accent-soft: #eef; " +
+	theme := ":root { --bg: #eee; --fg: #000; --surface: #fff; --line: #ccc; --muted: #666; --accent: #00f; --accent-soft: #eef; " +
 		"--good: #0a0; --good-soft: #efe; --warn: #a60; --warn-soft: #fed; --bad: #a00; --bad-soft: #fee; }\n"
 	if err := os.WriteFile(filepath.Join(colours, "memo", "themes", "default.css"), []byte(theme), 0o600); err != nil {
 		t.Fatal(err)
@@ -150,7 +153,23 @@ func TestCheckParts(t *testing.T) {
 		}
 	}
 
-	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table"} {
+	// A theme of the template named as the parts theme is told where it goes, as --parts-theme is.
+	own := memo(t, memoItems)
+	if err := os.WriteFile(filepath.Join(own, "memo", "themes", "print.css"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	misplaced := `there is no parts theme "print", which is a theme of the template memo: write theme: print`
+	if _, err := draw(tmpl.NewLibrary(own, ""), "template: memo\nlang: en\nparts-theme: print\n"); err == nil ||
+		!strings.Contains(err.Error(), "data.yaml:3:14: "+misplaced) {
+		t.Errorf("Read of parts-theme: print = %v", err)
+	}
+	if _, err := tmpl.NewLibrary(own, "").Read("d.yaml", []byte("template: memo\nlang: en\n"), tmpl.Themes{Parts: "print"}, ""); err == nil ||
+		!strings.HasPrefix(err.Error(), misplaced) {
+		t.Errorf("Read with the parts theme print = %v", err)
+	}
+
+	// themes/ holds the parts themes, and is no part.
+	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table", "floe:///parts/themes.json"} {
 		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
 		want := ref + " is not a part of floe's; refer to one as floe:///parts/<name>.json, the name one of bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree"
 		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
@@ -207,24 +226,28 @@ func TestCheckParts(t *testing.T) {
 func TestPartStylesByClass(t *testing.T) {
 	t.Parallel()
 
-	page := render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - text: |\n          | a | b |\n          | - | - |\n          | 1 | 2 |\n")
+	page := render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - text: |\n          | a | b |\n          | - | - |\n          | 1 | 2 |\n")
 	if !strings.Contains(page, `<div class="floe-table"><table>`) || strings.Count(page, ".floe-table {") != 1 {
 		t.Errorf("a page of a Markdown table:\n%s", page)
 	}
-	page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"floe-pill good\">ok</span>\n")
+	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"floe-pill good\">ok</span>\n")
 	if strings.Count(page, ".floe-pill {") != 1 || strings.Contains(page, ".floe-note {") {
 		t.Errorf("a page of a pill in HTML:\n%s", page)
 	}
-	page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - html: <p class=\"floe-note-own\">x</p>\n")
+	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - html: <p class=\"floe-note-own\">x</p>\n")
 	if strings.Contains(page, ".floe-note {") {
 		t.Errorf("a class a part's starts gets the part's style:\n%s", page)
 	}
-	page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - text: the `floe-note` class\n")
+	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - text: the `floe-note` class\n")
 	if strings.Contains(page, ".floe-note {") {
 		t.Errorf("a class named in prose gets the part's style:\n%s", page)
 	}
-	if page = render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n      - text: plain\n"); strings.Contains(page, ".floe-") {
+	if page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - text: plain\n"); strings.Contains(page, ".floe-") {
 		t.Errorf("a page of no part holds a part's style:\n%s", page)
+	}
+	// The parts theme styles Markdown's quotes too, so a page of no part gets it all the same.
+	if !strings.Contains(page, "/* Faces with round corners") {
+		t.Errorf("a page of no part lacks the parts theme:\n%s", page)
 	}
 }
 
@@ -290,7 +313,7 @@ func TestCodeAndTerminal(t *testing.T) {
 
 	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
 		"      - code: { lang: go }\n"+
-		"      - terminal: { shell: fish, steps: [] }\n"), "", "")
+		"      - terminal: { shell: fish, steps: [] }\n"), tmpl.Themes{}, "")
 	for _, want := range []string{
 		"bad.yaml:5:17: sections[0].parts[0].code.text is required but missing",
 		`bad.yaml:6:28: sections[0].parts[1].terminal.shell: "fish" is not allowed; use bash, zsh, sh, powershell, cmd`,
@@ -313,7 +336,7 @@ func TestCodeAndTerminal(t *testing.T) {
 		steps = append(steps, fmt.Sprintf("{ run: %q }", r))
 	}
 	_, err = builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
-		"      - terminal: { steps: ["+strings.Join(steps, ", ")+"] }\n"), "", "")
+		"      - terminal: { steps: ["+strings.Join(steps, ", ")+"] }\n"), tmpl.Themes{}, "")
 	for i, r := range runs {
 		want := fmt.Sprintf("terminal.steps[%d].run: write the command without its prompt", i)
 		if refused := err != nil && strings.Contains(err.Error(), want); refused != (i < 10) {
@@ -330,7 +353,7 @@ func TestReportRefusesCodeInText(t *testing.T) {
 	for _, text := range []string{
 		"```go\\nx\\n```", "~~~\\nx\\n~~~", "```sh\\n$ ls\\n```", "> ```sh\\n> x\\n> ```", "- ```sh\\n  x",
 	} {
-		_, err := builtins.Read("t.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n      - text: \"a\\n"+text+"\"\n"), "", "")
+		_, err := builtins.Read("t.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n      - text: \"a\\n"+text+"\"\n"), tmpl.Themes{}, "")
 		if err == nil || strings.Count(err.Error(), "t.yaml:5:15: sections[0].parts[0].text: write ") != 1 {
 			t.Errorf("text %q = %v", text, err)
 		}
@@ -344,7 +367,7 @@ func TestReportRefusesCodeInText(t *testing.T) {
 func TestPartsOfNumbersAndChanges(t *testing.T) {
 	t.Parallel()
 
-	page := render(t, "template: report\ntheme: soft\nlang: en\nsections:\n  - parts:\n"+
+	page := render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n"+
 		"      - stats: [{ label: Pages, value: '18', unit: MB, note: '+5', tone: good }]\n"+
 		"      - progress: [{ label: Copy, done: 5, of: 8, tone: warn }]\n"+
 		"      - steps: [{ title: A, state: done }, { title: B, text: '**now**', state: doing }, { title: C }]\n"+
@@ -384,7 +407,7 @@ func TestPartsOfNumbersAndChanges(t *testing.T) {
 
 	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
 		"      - progress: [{ label: a, done: 1, of: 2 }, { label: b, done: 3, of: 2 }]\n"+
-		"      - tree: [{ path: a }, { path: // }]\n"), "", "")
+		"      - tree: [{ path: a }, { path: // }]\n"), tmpl.Themes{}, "")
 	for _, want := range []string{
 		"bad.yaml:5:68: sections[0].parts[0].progress[1].done: write done no greater than of, the whole",
 		"bad.yaml:6:37: sections[0].parts[1].tree[1].path: write a path naming a file or a folder",
@@ -400,7 +423,7 @@ func TestPartsOfNumbersAndChanges(t *testing.T) {
 func TestPartsOfReviewsAndReferences(t *testing.T) {
 	t.Parallel()
 
-	src := "template: report\ntheme: soft\nlang: %s\nsections:\n  - parts:\n" +
+	src := "template: report\nparts-theme: soft\nlang: %s\nsections:\n  - parts:\n" +
 		"      - findings: [{ level: must, at: 'a.go:1', text: '`x` leaks', why: later, status: { pill: fixed, tone: good } }, { level: nit, text: y }]\n" +
 		"      - details: { title: Log, parts: [{ terminal: { steps: [{ run: make }] } }, { text: '**done**' }] }\n" +
 		"      - matrix: { columns: [linux, mac], rows: [{ what: serve, cells: [yes, { mark: part, note: some }] }] }\n" +
@@ -456,7 +479,7 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
 		"      - matrix: { columns: [a, b], rows: [{ what: x, cells: [yes] }, { what: y, cells: [yes, maybe] }] }\n"+
 		"      - tabs: [{ title: a, parts: [{ terminal: { steps: [{ run: '$ ls' }] } }] }, { title: b, parts: [{ text: x }] }]\n"+
-		"      - links: [{ title: a, url: '/a/x/' }, { title: b, url: 'mailto:a@example.com' }, { title: c, url: 'javascript:alert(1)' }]\n"), "", "")
+		"      - links: [{ title: a, url: '/a/x/' }, { title: b, url: 'mailto:a@example.com' }, { title: c, url: 'javascript:alert(1)' }]\n"), tmpl.Themes{}, "")
 	for _, want := range []string{
 		"sections[0].parts[2].links[2].url: write a URL of http, https or mailto, or a path",
 		"sections[0].parts[1].tabs[0].parts[0].terminal.steps[0].run: write the command without its prompt",

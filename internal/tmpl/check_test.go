@@ -25,7 +25,7 @@ func TestDrawEveryStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	l := tmpl.NewLibrary("testdata", "")
-	d, err := l.Read(file, src, "", "")
+	d, err := l.Read(file, src, tmpl.Themes{}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestDrawEveryStage(t *testing.T) {
 		}
 	}
 	twice := strings.Replace(string(src), "b.png", "a.txt", 1)
-	if _, err := l.Read(file, []byte(twice), "", ""); err == nil || !strings.Contains(err.Error(), file+":8:11: files[1].name: give each file its own name") {
+	if _, err := l.Read(file, []byte(twice), tmpl.Themes{}, ""); err == nil || !strings.Contains(err.Error(), file+":8:11: files[1].name: give each file its own name") {
 		t.Errorf("a check that fails = %v", err)
 	}
 }
@@ -247,7 +247,7 @@ func TestCheckMistakes(t *testing.T) {
 			name:  "an item floe reads itself",
 			files: map[string]string{"schema.json": `"chart":|"lang": { "type": "string" },` + "\n    " + `"chart":`},
 			want: []string{
-				"sizes/schema.json declares or requires lang, which floe reads from every data file itself (lang, template, theme, title): give the items of the schema other names",
+				"sizes/schema.json declares or requires lang, which floe reads from every data file itself (lang, parts-theme, template, theme, title): give the items of the schema other names",
 			},
 		},
 		{
@@ -354,7 +354,7 @@ func TestRenderBadAsset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := tmpl.NewLibrary(filepath.Dir(dir), "").Read(file, src, "", "")
+	d, err := tmpl.NewLibrary(filepath.Dir(dir), "").Read(file, src, tmpl.Themes{}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,7 +411,7 @@ func TestSchemaOfSharedKeys(t *testing.T) {
 		`"required": ["files"]`, `"required": ["files", "lang"]`, 1)), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := tmpl.NewLibrary(filepath.Dir(dir), "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), "", "")
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), tmpl.Themes{}, "")
 	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json declares or requires lang, title, which floe reads") {
 		t.Errorf("Read with a template whose schema declares lang and title = %v", err)
 	}

@@ -60,7 +60,11 @@ func TestPalette(t *testing.T) {
 	if tabs, terr := partVariables([]string{"tabs"}); terr != nil || !slices.Contains(tabs, "--code-bg") || !slices.Contains(tabs, "--code-add") {
 		t.Errorf("the variables of tabs = %v, %v", tabs, terr)
 	}
-	for _, v := range append(vars, diagram.Variables()...) {
+	themes, err := partsThemeVariables()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range slices.Concat(vars, diagram.Variables(), themes) {
 		if !slices.Contains(palette, v) {
 			t.Errorf("%s is not of the palette", v)
 		}

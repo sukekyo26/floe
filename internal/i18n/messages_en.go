@@ -27,7 +27,7 @@ var messagesEN = map[string]string{
 	"store_slug_taken":    `slug "%s" is already in use; choose another slug`,
 	"store_project_slash": `a project name cannot be just "/"`,
 	"store_not_data":      "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
-	"store_theme_link":    "--theme picks the theme of a page drawn from a data file: a linked file is shown as it is",
+	"store_theme_link":    "--theme and --parts-theme pick the themes of a page drawn from a data file: a linked file is shown as it is",
 	"store_no_page":       `no page "%s" (see floe list)`,
 
 	// server: refusals of the management page's API
@@ -173,7 +173,7 @@ var messagesEN = map[string]string{
 	"cli_template_required":        "required",
 	"cli_template_shared_lang":     "The page's language, a BCP 47 tag such as en, ja or pt-BR",
 	"cli_template_shared_template": "The template that draws the page",
-	"cli_template_shared_theme":    "The theme to draw with, one of the themes above (default: %s)",
+	"cli_template_shared_theme":    "The template's theme to draw the page with, one of the themes above (default: %s)",
 	"cli_template_shared_title":    "The page's title",
 	"cli_template_no_from":         "name the template to copy with --from, like --from report",
 	"cli_template_made":            "made the template %s in %s, a copy of %s",
@@ -350,8 +350,8 @@ var messagesEN = map[string]string{
 	"tmpl_format_unreached":        "%s: %s: the format %s marks an item to draw; declare it under properties or items, which floe follows",
 	"tmpl_schema_open":             `%s: %s declares properties without "additionalProperties": false, so a misspelt key is not refused`,
 	"tmpl_format_type":             `%s: %s: floe draws an item of the format %s from a value of type %s; declare "type": "%[4]s" alone`,
-	"tmpl_theme_variables":         "%s does not define %s, which the template's parts and diagrams take from it, so they keep values of their own: light colours, in dark mode too",
-	"tmpl_theme_variables_plain":   "%s does not define %s, which the template's parts and diagrams take from it, so they keep values of their own",
+	"tmpl_theme_variables":         "%s does not define %s, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, light colours in dark mode too, and the parts themes go without them",
+	"tmpl_theme_variables_plain":   "%s does not define %s, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, and the parts themes go without them",
 	"tmpl_no_template_yaml":        "%s has no template.yaml: write floe: %s in it, the floe the template is written for",
 	"tmpl_example_name":            "example.yaml names the template %s; name it %s, after the template's directory",
 	"tmpl_checks_missing":          "write %s in the check",
@@ -388,4 +388,11 @@ var messagesEN = map[string]string{
 	"part_risks_high":        "High",
 	"part_fields_required":   "required",
 	"part_fields_default":    "Default:",
+
+	"cli_template_parts_themes":       "parts themes: %s",
+	"cli_template_shared_parts_theme": "The theme to draw floe's parts with, one of the parts themes above (default: %s)",
+	"cli_parts_theme_empty":           "--parts-theme is empty: name a parts theme, or omit --parts-theme to take the data file's parts-theme:",
+	"tmpl_unknown_parts_theme":        `there is no parts theme "%[1]s"; use %[3]s`,
+	"tmpl_theme_of_parts":             `template %[2]s has no theme "%[1]s", which is a parts theme: write parts-theme: %[1]s (or --parts-theme %[1]s), or a theme of the template: %[3]s`,
+	"tmpl_parts_theme_of_template":    `there is no parts theme "%[1]s", which is a theme of the template %[2]s: write theme: %[1]s (or --theme %[1]s), or a parts theme: %[3]s`,
 }

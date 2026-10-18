@@ -25,8 +25,8 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// partFiles holds a directory per part of floe's (schema.json, part.html, part.css and checks.yaml),
-// and the schemas the parts share (tone.json).
+// partFiles holds a directory per part of floe's (schema.json, part.html, part.css and checks.yaml), the
+// schemas the parts share (tone.json), and the parts themes (themes/).
 //
 //go:embed parts
 var partFiles embed.FS
@@ -144,6 +144,9 @@ func readParts() (*partSet, error) {
 		return nil, fmt.Errorf("read the parts: %w", err)
 	}
 	for _, e := range entries {
+		if e.Name() == themesDir {
+			continue
+		}
 		file := path.Join("parts", e.Name())
 		url := partsURL + e.Name()
 		if e.IsDir() {
@@ -464,29 +467,76 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
 }
 
-// partStyles returns the style of the parts whose classes page uses, in the order of their names, for
-// the page's <head>, or "" for none: a part's own, a table of Markdown, or HTML that takes a part's look
-// (<span class="floe-pill good">). The classes are those of its class attributes, so that a theme or
-// prose that names one brings no style.
+// partStyles returns the style for the page's <head>: that of the parts whose classes page uses, in the
+// order of their names, then the parts theme theme, which every page gets, as it styles Markdown's quotes
+// too. A part is used by its own, a table of Markdown, or HTML that takes a part's look (<span
+// class="floe-pill good">). The classes are those of its class attributes, so that a theme or prose that
+// names one brings no style.
 // LIMIT: the attributes are found as written, not as an HTML parser reads them (class= in a script's
 // string counts); parse the page if a page comes to write one so.
-func partStyles(page []byte) (string, error) {
-	if !bytes.Contains(page, []byte("floe-")) {
-		return "", nil
+func partStyles(page []byte, theme string) (string, error) {
+	var b strings.Builder
+	if bytes.Contains(page, []byte("floe-")) {
+		set, err := builtinParts()
+		if err != nil {
+			return "", err
+		}
+		for _, name := range set.partsNamedIn(string(page)) {
+			b.WriteString(set.parts[name].css)
+		}
 	}
-	set, err := builtinParts()
+	css, err := readPartsTheme(theme)
 	if err != nil {
 		return "", err
 	}
-	var b strings.Builder
-	for _, name := range set.partsNamedIn(string(page)) {
-		b.WriteString(set.parts[name].css)
-	}
-	if b.Len() == 0 {
-		return "", nil
-	}
+	b.Write(css)
 	return "<style>\n" + b.String() + "</style>\n", nil
 }
+
+// themesDir is the directory of parts/ that holds the parts themes, and so is no part.
+const themesDir = "themes"
+
+// PartsThemes returns the themes of floe's parts, by name.
+func PartsThemes() ([]string, error) {
+	themes, err := themesIn(partFiles, path.Join("parts", themesDir))
+	if err != nil {
+		return nil, fmt.Errorf("read the parts themes: %w", err)
+	}
+	return themes, nil
+}
+
+func readPartsTheme(name string) ([]byte, error) {
+	css, err := partFiles.ReadFile(path.Join("parts", themesDir, name+".css"))
+	if err != nil {
+		return nil, fmt.Errorf("read the parts theme %s: %w", name, err)
+	}
+	return css, nil
+}
+
+// partsThemeVariables returns the CSS variables the parts themes take from the page, those a theme uses
+// and does not define itself, once each, in the order of the themes' names.
+func partsThemeVariables() ([]string, error) {
+	themes, err := PartsThemes()
+	if err != nil {
+		return nil, err
+	}
+	var vars []string
+	for _, name := range themes {
+		css, err := readPartsTheme(name)
+		if err != nil {
+			return nil, err
+		}
+		defined := definedVariables(css)
+		for _, v := range appendFound(nil, usedVariable, string(css)) {
+			if !defined[v] && !slices.Contains(vars, v) {
+				vars = append(vars, v)
+			}
+		}
+	}
+	return vars, nil
+}
+
+var usedVariable = regexp.MustCompile(`var\(\s*(--[\w-]+)`)
 
 // classAttr finds the value of a class attribute: class="floe-pill good", class='…' or class=x.
 var classAttr = regexp.MustCompile(`(?i)\sclass\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` + "`" + `]+)`)

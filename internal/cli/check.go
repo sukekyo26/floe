@@ -10,6 +10,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -19,7 +20,7 @@ func (a *app) checkCmd() *cobra.Command {
 		Use:   "check <data.yaml>...",
 		Short: "Check data files as floe publish would, without publishing them",
 		Long: `Check each data file as floe publish does before it draws the page: its YAML, its template
-and theme, the template's schema, and drawing the page. Every mistake of every file is printed
+and themes, the template's schema, and drawing the page. Every mistake of every file is printed
 as file:line:column: message, and the exit code is 1 when there is one. Nothing is published,
 the server is not started, and nothing is printed when the files are right.`,
 		Args: usage(cobra.MinimumNArgs(1)),
@@ -52,7 +53,7 @@ func drawFile(a *app, file string) ([]byte, []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	d, err := a.templates().Read(file, src, "", a.env.Dir)
+	d, err := a.templates().Read(file, src, tmpl.Themes{Template: "", Parts: ""}, a.env.Dir)
 	var all yamlpos.Problems
 	switch {
 	case errors.As(err, &all):

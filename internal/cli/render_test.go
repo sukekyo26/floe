@@ -99,13 +99,13 @@ func TestRenderRefusals(t *testing.T) {
 	// A file with mistakes still takes its page, and two files reach one page through a symlinked directory.
 	e.write(t, "sub/bad.yaml", spec)
 	want(t, "render a file with mistakes onto one page", e.run(t, "", "render", "bad.yaml", "sub/bad.yaml", "--out-dir", "out"), 1, "",
-		"bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n"+
+		"bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, parts-theme, sections, template, theme, title\n"+
 			"bad.yaml and sub/bad.yaml would both write out/bad.html")
 	// The mistakes of a file that clashes are told with the clash; a file that cannot be read, named twice,
 	// is told once.
 	e.write(t, "sub2/spec.yaml", "template: report\nleed: x\nlang: en\n")
 	want(t, "render a file with mistakes that clashes", e.run(t, "", "render", "spec.yaml", "sub2/spec.yaml", "--out-dir", "out"), 1, "",
-		"sub2/spec.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n"+
+		"sub2/spec.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, parts-theme, sections, template, theme, title\n"+
 			"spec.yaml and sub2/spec.yaml would both write out/spec.html")
 	if r := e.run(t, "", "render", "missing.yaml", "./missing.yaml"); r.code != 1 || strings.Count(r.stderr, "\n") != 1 ||
 		!strings.Contains(r.stderr, "cannot read missing.yaml") {

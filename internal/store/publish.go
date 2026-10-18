@@ -71,7 +71,20 @@ type Options struct {
 	Title       *string
 	Description *string
 	Theme       *string
+	PartsTheme  *string
 	Force       bool
+}
+
+// themes are the themes o gives over the data's.
+func (o Options) themes() tmpl.Themes {
+	var themes tmpl.Themes
+	if o.Theme != nil {
+		themes.Template = *o.Theme
+	}
+	if o.PartsTheme != nil {
+		themes.Parts = *o.PartsTheme
+	}
+	return themes
 }
 
 // Entry is a checked publish, ready to be saved.
@@ -109,11 +122,8 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	if err != nil {
 		return nil, err
 	}
-	theme := ""
-	if opts.Theme != nil {
-		theme = *opts.Theme
-	}
-	data, err := s.readData(file, path, src, theme, cwd)
+	themes := opts.themes()
+	data, err := s.readData(file, path, src, themes, cwd)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +142,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	var seed Meta
 	seed.Path, seed.DataTitle = path, own
 	if data != nil {
-		seed.Theme, seed.Templates = theme, s.templates.Dir()
+		seed.Theme, seed.PartsTheme, seed.Templates = themes.Template, themes.Parts, s.templates.Dir()
 	}
 	e := &Entry{
 		Slug: slug, Meta: seed, Source: nil, Images: nil, Prev: nil, opts: opts, from: project.Name(ctx, dir), named: "",
@@ -154,13 +164,13 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 
 // readData reads and checks the data file file, of content src, if it is one: nil otherwise. A linked
 // one, of the real path path, is checked as a stored page is, its images under its real directory.
-func (s *Store) readData(file, path, src, theme, cwd string) (*tmpl.Data, error) {
+func (s *Store) readData(file, path, src string, themes tmpl.Themes, cwd string) (*tmpl.Data, error) {
 	// A link is of the kind of its real file, whatever the name of a symlink to it says.
 	name := cmp.Or(path, file)
 	if !IsDataFile(name) {
 		return nil, nil //nolint:nilnil // a page, which is linked as it is
 	}
-	data, err := s.templates.Read(name, []byte(src), theme, cwd)
+	data, err := s.templates.Read(name, []byte(src), themes, cwd)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 	}
@@ -181,7 +191,7 @@ func (e *Entry) settle(prev *Meta) error {
 		base = &none
 	}
 	e.Meta = newMeta(e.opts, was.Path, e.from, base, was.DataTitle, e.Slug)
-	e.Meta.Theme, e.Meta.Templates = was.Theme, was.Templates
+	e.Meta.Theme, e.Meta.PartsTheme, e.Meta.Templates = was.Theme, was.PartsTheme, was.Templates
 	e.Prev = prev
 	return nil
 }
@@ -226,14 +236,14 @@ func (s *Store) read(file string, opts Options, cwd string) (path, content strin
 	return path, string(b), nil
 }
 
-// checkKind checks that opts.Theme fits the kind of file: a page is drawn from a data file in
-// opts.Theme, stored or linked; HTML is only linked, and shown as it is, in its own look. A link's file
-// is its real path.
+// checkKind checks that the themes of opts fit the kind of file: a page is drawn from a data file in
+// them, stored or linked; HTML is only linked, and shown as it is, in its own look. A link's file is its
+// real path.
 func checkKind(file string, opts Options) error {
 	switch {
 	case !opts.Link && !IsDataFile(file):
 		return usererr.New("store_not_data", file)
-	case opts.Link && !IsDataFile(file) && opts.Theme != nil:
+	case opts.Link && !IsDataFile(file) && (opts.Theme != nil || opts.PartsTheme != nil):
 		return usererr.New("store_theme_link")
 	}
 	return nil
@@ -251,6 +261,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		TitleEdited:   keepTitle,
 		Description:   base.Description,
 		Theme:         "",
+		PartsTheme:    "",
 		DataTitle:     own,
 		Templates:     "",
 		Source:        "",

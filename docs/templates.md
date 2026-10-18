@@ -23,7 +23,7 @@ my-report/
 ├── computed.yaml    # values computed from the data (optional)
 ├── assets/          # images page.html shows with asset (optional)
 └── themes/
-    ├── default.css  # the default theme (required)
+    ├── default.css  # the template's default theme, for the page (required)
     └── print.css    # more themes (optional)
 ```
 
@@ -45,9 +45,9 @@ The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor versi
 |---|---|
 | `.Title` | The page's title: `--title`, a title pinned on the management page, the data file's `title:`, else the slug |
 | `.Lang` | The page's language: the data file's `lang:` |
-| `.Data` | The data file's items, without `lang`, `template`, `theme` and `title`, which floe reads itself (`.Lang`, `.Title`, `.Theme`); a schema that declares one of them, or lists one as required, is refused wherever the template is used. An item the schema declares but the data leaves out is nil, so `{{with .Data.lead}}` works; a name the schema does not declare stops the drawing. An item of `"format": "html"` goes in as HTML and one of `"format": "markdown"` as its HTML; a diagram goes in as its SVG, and a script as its element and the call of its function |
+| `.Data` | The data file's items, without `lang`, `parts-theme`, `template`, `theme` and `title`, which floe reads itself (`.Lang`, `.Title`, `.Theme`; the parts theme goes in by itself); a schema that declares one of them, or lists one as required, is refused wherever the template is used. An item the schema declares but the data leaves out is nil, so `{{with .Data.lead}}` works; a name the schema does not declare stops the drawing. An item of `"format": "html"` goes in as HTML and one of `"format": "markdown"` as its HTML; a diagram goes in as its SVG, and a script as its element and the call of its function |
 | `.Calc` | The values of `computed.yaml`, by name |
-| `.Theme` | The theme's CSS, for `<style>{{.Theme}}</style>` |
+| `.Theme` | The CSS of the template's theme, for `<style>{{.Theme}}</style>` |
 | `markdown` | Markdown text as HTML (`{{markdown .text}}`), raw HTML in it left out, a table in the look of the table part (`<div class="floe-table">`) |
 | `markdownLine` | A line of Markdown, such as a table cell, as HTML without a paragraph around it (`<td>{{markdownLine .}}</td>`): code, emphasis and links, while a line like `-`, `1.` or `# x` stays text. Lines, indented or apart, are joined as one. Raw HTML in it is left out |
 | `num` | A number with its digits grouped (`{{.Calc.total \| num}}` is `1,234,567`), or rounded to significant digits (`{{.Calc.rate \| num 3}}` is `0.00648`) |
@@ -58,7 +58,7 @@ A page drawn from a data file holds all it shows, and its scripts cannot send wh
 
 ## schema.json
 
-A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused. `template`, `theme` and `title` are read by floe and are not declared.
+A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused. `template`, `theme`, `parts-theme` and `title` are read by floe and are not declared.
 
 A `format` is one of JSON Schema's that floe checks (`date`, `email`, `uri`…), or one of floe's that tells how to read a text: `html`, `image` or `markdown`; `floe template check` refuses another, which this floe would let any value pass. Floe's go under `properties` and `items` alone, where floe looks for them: under `anyOf`, `$defs` and the like, the item would be drawn as text. Declare `"type": "string"` alone for them. A diagram or a script is a [part](#parts), not a format: `floe template check` refuses `"format": "diagram"` and `"format": "script"` anywhere in a schema, and one under `properties` and `items` stops the template wherever it is used.
 
@@ -80,7 +80,11 @@ floe has parts that draw items of a template: `table` (with pills in its cells),
 
 `page.html` puts the item where it goes, `{{.Data.risks}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML. `floe template show` tells the part's items, after the description written beside the `$ref`. A `$ref` to a part floe does not have is refused, with the parts it has.
 
-A page gets the style of each part whose classes it uses once, a table of Markdown and HTML that names them (`<span class="floe-pill good">`) included, in its `<head>` before the template's own styles (at its end without a `<head>`). The parts' classes start with `floe-` (`floe-table`, `floe-pill`, `floe-cards`, `floe-card`, `floe-note`, `floe-note-title`, `floe-code`, `floe-terminal`, and of the parts that follow, `floe-stats`, `floe-progress`, `floe-steps`… named after them): a theme restyles them with a rule of its own for the same selector (or a more specific one), which wins as it comes later. `compare` is drawn in the table's look, `stats`, `options`, `facts` and `links` in the cards' and `diff` in code's, so that a theme's rules for those draw them too. Parts and diagrams take their colours, fonts and the width of a note from the theme's CSS variables, with light values of their own (report's) for a theme without them:
+A page gets the style of each part whose classes it uses once, a table of Markdown and HTML that names them (`<span class="floe-pill good">`) included, in its `<head>` before the template's own styles (at its end without a `<head>`), followed by the parts theme. The parts' classes start with `floe-` (`floe-table`, `floe-pill`, `floe-cards`, `floe-card`, `floe-note`, `floe-note-title`, `floe-code`, `floe-terminal`, and of the parts that follow, `floe-stats`, `floe-progress`, `floe-steps`… named after them): a theme restyles them with a rule of its own for the same selector (or a more specific one), which wins as it comes later. `compare` is drawn in the table's look, `stats`, `options`, `facts` and `links` in the cards' and `diff` in code's, so that a theme's rules for those draw them too.
+
+The parts theme is one of floe's, the same for every template, which the data file picks with `parts-theme:` (else `default`; `floe template show` lists them): it restyles the parts' classes and Markdown's quotes (`blockquote`), and goes into every page, one of no part too. The template's styles and its theme come after it and win for the same selector, so leave the parts to the parts theme; `report` writes the look of a quote as `:where(blockquote)`, which any parts theme's rule wins over. A parts theme sets the colours of code on `.floe-code` and `.floe-terminal`, not on `:root`, where `page.html` would win.
+
+Parts and diagrams take their colours, fonts and the width of a note from the theme's CSS variables, with light values of their own (report's) for a theme without them:
 
 | Variable | What it is |
 | --- | --- |
@@ -94,7 +98,7 @@ A page gets the style of each part whose classes it uses once, a table of Markdo
 | `--code-bg`, `--code-fg`, `--code-prompt` | The ground of code and a terminal, dark in light mode too; their text, faded for a command's output; a terminal's prompt and the badge of code's language |
 | `--code-add`, `--code-del` | A diff's lines added and removed, on the dark ground |
 
-A theme defines them, or `page.html` does for every theme in a `<style>` of its own; `floe template check` warns of a theme that leaves out one its parts or diagrams take, whose parts keep light colours in dark mode (code and a terminal stay dark). A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
+A theme defines them, or `page.html` does for every theme in a `<style>` of its own; `floe template check` warns of a theme that leaves out one its parts or diagrams take, or the parts themes do, whose parts keep light colours in dark mode (code and a terminal stay dark). A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
 
 ## Images
 
@@ -137,7 +141,7 @@ An expression sees the data file's items that the schema declares, and the other
 A data file is checked in this order, and each stage runs only on data that passed the one before. `floe check` runs them all without publishing.
 
 1. Its YAML
-2. Its template, the floe the template needs, its theme, the template's `schema.json`, its images and its diagrams
+2. Its template, the floe the template needs, its themes, the template's `schema.json`, its images and its diagrams
 3. The template's `checks.yaml`
 4. The template's `computed.yaml`
 5. Drawing `page.html`

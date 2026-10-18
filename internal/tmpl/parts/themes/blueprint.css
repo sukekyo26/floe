@@ -3,10 +3,12 @@
 :root {
   --bp-ink: #1f56b5; --bp-sheet: #f7faff; --bp-grid: rgb(31 86 181 / 0.08);
   --bp-squares: linear-gradient(var(--bp-grid) 1px, transparent 1px), linear-gradient(90deg, var(--bp-grid) 1px, transparent 1px);
-  --code-bg: #0d3266; --code-fg: #eaf2ff; --code-prompt: #7fdcff;
 }
+/* Set on the parts of code: page.html sets these at :root after a parts theme, and would win there */
+:is(.floe-code, .floe-terminal) { --code-bg: #0d3266; --code-fg: #eaf2ff; --code-prompt: #7fdcff; }
 @media (prefers-color-scheme: dark) {
-  :root { --bp-ink: #7fb3ff; --bp-sheet: #0f1b2d; --bp-grid: rgb(127 179 255 / 0.08); --code-bg: #0a1f3f; }
+  :root { --bp-ink: #7fb3ff; --bp-sheet: #0f1b2d; --bp-grid: rgb(127 179 255 / 0.08); }
+  :is(.floe-code, .floe-terminal) { --code-bg: #0a1f3f; }
 }
 :is(.floe-table, .floe-card, .floe-note, .floe-progress, .floe-steps, .floe-checklist, .floe-tree, .floe-details, .floe-timeline, .floe-bars, .floe-faq, .floe-glossary, .floe-keys, blockquote) {
   background-color: var(--bp-sheet); background-image: var(--bp-squares); background-size: 16px 16px; border-radius: 0;

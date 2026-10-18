@@ -509,7 +509,7 @@ func (t *Template) checkExample() error {
 	if err != nil {
 		return err
 	}
-	h, err := start(file, src, false)
+	h, err := start(file, src, Themes{Template: "", Parts: ""})
 	if err != nil {
 		return err
 	}
@@ -523,7 +523,7 @@ func (t *Template) checkExample() error {
 	}
 	// The later stages check it against t, and name t in their mistakes.
 	d.Template = t.Name
-	if err = t.check(d, h.root, t.Dir, "", h.where["theme"], problems); err != nil {
+	if err = t.check(h, t.Dir, Themes{Template: "", Parts: ""}, problems); err != nil {
 		return err
 	}
 	_, err = d.Render(cmp.Or(d.Title, file))
@@ -591,13 +591,29 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 	return false
 }
 
-// variables returns the CSS variables the parts and diagrams l found take from the theme, once each.
+// variables returns the CSS variables the parts and diagrams l found, and the parts themes, take from the
+// theme, once each.
 func (l *schemaLint) variables() ([]string, error) {
 	vars, err := partVariables(l.parts)
-	if err != nil || !slices.Contains(l.parts, "diagram") {
-		return vars, err
+	if err != nil {
+		return nil, err
 	}
-	for _, v := range diagram.Variables() {
+	var more []string
+	if slices.Contains(l.parts, "diagram") {
+		more = diagram.Variables()
+	}
+	// Whichever parts theme a data file picks styles the parts, and the quotes of Markdown, which counts
+	// as the table part.
+	// LIMIT: every variable of every parts theme, not those of the rules for the parts used; read the
+	// themes' rules by their classes if a template of few parts comes to be warned of others' colours.
+	if len(l.parts) > 0 {
+		themes, err := partsThemeVariables()
+		if err != nil {
+			return nil, err
+		}
+		more = append(more, themes...)
+	}
+	for _, v := range more {
 		if !slices.Contains(vars, v) {
 			vars = append(vars, v)
 		}

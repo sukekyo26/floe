@@ -36,7 +36,7 @@ func TestDiagramMistakes(t *testing.T) {
 
 	src := strings.Replace(strings.Replace(twoDiagrams, "%s", "{ cx: 0, cy: 0 }", 1), "%s", "a", 1) +
 		"      - diagram:\n          id: b\n          width: 100\n          title: The third\n          parts: []\n"
-	_, err := builtins.Read("data.yaml", []byte(src), "", "")
+	_, err := builtins.Read("data.yaml", []byte(src), tmpl.Themes{}, "")
 	want := "data.yaml:11:15: dot at 0,0 sticks out of the 100x50 canvas\n" +
 		`data.yaml:13:11: diagram id "a" is already used in data.yaml:6; give each diagram its own id` + "\n" +
 		"data.yaml:19:11: diagram: give height"
@@ -74,7 +74,7 @@ func TestDiagramIcons(t *testing.T) {
 		t.Fatal(err)
 	}
 	l := tmpl.NewLibrary("", dir)
-	d, err := l.Read("data.yaml", []byte(src), "", "")
+	d, err := l.Read("data.yaml", []byte(src), tmpl.Themes{}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,11 +94,11 @@ func TestDiagramIcons(t *testing.T) {
 	if err = os.WriteFile(index, []byte(strings.Replace(string(b), `"aws-lambda"`, `"aws-lambda-gone"`, 1)), 0o600); err != nil { //nolint:gosec // G703: the test's own directory
 		t.Fatal(err)
 	}
-	if _, err = l.Read("data.yaml", []byte(src), "", ""); err == nil || !strings.Contains(err.Error(), `"aws/aws-lambda"`) {
+	if _, err = l.Read("data.yaml", []byte(src), tmpl.Themes{}, ""); err == nil || !strings.Contains(err.Error(), `"aws/aws-lambda"`) {
 		t.Errorf("Read after the icons changed = %v, want the icon unknown", err)
 	}
 	// Without the icons fetched, the drawing stops and says how to fetch them.
-	_, err = tmpl.NewLibrary("", t.TempDir()).Read("data.yaml", []byte(src), "", "")
+	_, err = tmpl.NewLibrary("", t.TempDir()).Read("data.yaml", []byte(src), tmpl.Themes{}, "")
 	if err == nil || !strings.Contains(err.Error(), "floe icons fetch aws") {
 		t.Errorf("Read without the icons = %v", err)
 	}

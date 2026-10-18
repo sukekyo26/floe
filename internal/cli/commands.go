@@ -74,15 +74,16 @@ func (a *app) warn(key string, args ...any) {
 
 func (a *app) publishCmd() *cobra.Command {
 	var opts store.Options
-	var slug, title, description, theme string
+	var slug, title, description, theme, partsTheme string
 	cmd := &cobra.Command{
 		Use:   "publish <data.yaml> | --link <file.html>",
 		Short: "Store a page drawn from a data file (or --link an HTML file in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
 store it and print its URL. The same slug from the same project overwrites it, and a slug
 published from another project is refused unless --force. A page is in the language its
-data names (lang:), and in the theme its data names (theme:, else default) unless --theme
-names another. A new slug is also opened in the browser ($BROWSER, open, wslview, xdg-open).
+data names (lang:), and in the themes its data names (theme: for the template's, parts-theme:
+for floe's parts, each else default) unless --theme or --parts-theme names another. A new
+slug is also opened in the browser ($BROWSER, open, wslview, xdg-open).
 
 --link registers a file in place instead of storing a page. An HTML file is shown as it is:
 it is read on every request, and the files under its directory are served for its relative
@@ -106,12 +107,23 @@ refused unless --force.`,
 			if flags.Changed("description") {
 				opts.Description = &description
 			}
-			if flags.Changed("theme") {
-				theme = strings.TrimSpace(theme)
-				if theme == "" {
-					return usageError{err: usererr.New("cli_theme_empty")}
+			// A theme given is trimmed, and an empty one refused: it would take the data's.
+			for _, f := range []struct {
+				name, empty string
+				value       *string
+				to          **string
+			}{
+				{"theme", "cli_theme_empty", &theme, &opts.Theme},
+				{"parts-theme", "cli_parts_theme_empty", &partsTheme, &opts.PartsTheme},
+			} {
+				if !flags.Changed(f.name) {
+					continue
 				}
-				opts.Theme = &theme
+				*f.value = strings.TrimSpace(*f.value)
+				if *f.value == "" {
+					return usageError{err: usererr.New(f.empty)}
+				}
+				*f.to = f.value
 			}
 			return a.publish(cmd.Context(), args[0], opts)
 		},
@@ -122,6 +134,8 @@ refused unless --force.`,
 	f.StringVar(&title, "title", "", "the title (default: the data file's title:, or a link's <title> or <h1>)")
 	f.StringVar(&description, "description", "", "a description shown in the list")
 	f.StringVar(&theme, "theme", "", "the template's theme to draw with (default: the data file's theme:, else default)")
+	f.StringVar(&partsTheme, "parts-theme", "",
+		"the theme to draw floe's parts with (default: the data file's parts-theme:, else default)")
 	f.BoolVar(&opts.Force, "force", false, "replace a page of another project, or a link to another file")
 	return cmd
 }

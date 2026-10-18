@@ -903,11 +903,24 @@ func TestPublishLang(t *testing.T) {
 	listed := e.write(t, "listed.yaml", "template: report\ntheme: [dark]\nlang: en\n")
 	e.mustPublish(t, listed, store.Options{Theme: ptr("default")}, "other")
 	_, err = e.publish(t, frag, store.Options{Theme: ptr("print")}, "other")
-	wantUserErr(t, err, "tmpl_unknown_theme", "print", "report", "blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi")
+	wantUserErr(t, err, "tmpl_unknown_theme", "print", "report", "default")
+	// --parts-theme does so for the parts theme, which the page is drawn with whenever it is opened.
+	parts := e.write(t, "parts.yaml", "template: report\nparts-theme: [dark]\nlang: en\n")
+	e.mustPublish(t, parts, store.Options{PartsTheme: ptr("brutal")}, "other")
+	if m := e.meta(t, "parts"); m.PartsTheme != "brutal" || m.Theme != "" {
+		t.Errorf("--parts-theme brutal: theme %q, parts theme %q", m.Theme, m.PartsTheme)
+	}
+	_, err = e.publish(t, frag, store.Options{Theme: ptr("brutal")}, "other")
+	wantUserErr(t, err, "tmpl_theme_of_parts", "brutal", "report", "default")
+	_, err = e.publish(t, frag, store.Options{PartsTheme: ptr("print")}, "other")
+	wantUserErr(t, err, "tmpl_unknown_parts_theme", "print", "report",
+		"blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi")
 
 	// A linked file is shown as it is: --theme is refused.
 	site := e.write(t, "site/index.html", "<h1>A</h1>")
 	_, err = e.publish(t, site, store.Options{Link: true, Theme: ptr("default")}, "repo")
+	wantUserErr(t, err, "store_theme_link")
+	_, err = e.publish(t, site, store.Options{Link: true, PartsTheme: ptr("default")}, "repo")
 	wantUserErr(t, err, "store_theme_link")
 }
 
