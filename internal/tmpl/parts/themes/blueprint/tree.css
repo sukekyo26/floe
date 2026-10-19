@@ -1,7 +1,0 @@
-:scope {
-  background-color: var(--bp-sheet); background-image: var(--bp-squares); background-size: 16px 16px; border-radius: 0;
-  box-shadow: none;
-}
-:scope {
-  border: 1.5px solid var(--bp-ink);
-}

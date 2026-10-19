@@ -523,10 +523,10 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // selectors: floe's base, under the template's own CSS (own: its page.css, then its theme), under the
 // parts'. The parts' are the style of each part the page names, by its own element, a table of Markdown,
 // or HTML that takes a part's look (<span class="good" data-floe-part="cell">), after the parts it is
-// drawn in the look of, which it adjusts; then the parts theme theme, its base.css, which every page
-// gets, as it holds its variables and the look of Markdown's quotes, and its style of each of those
-// parts in the same order. Within the layer the more specific rule wins, else the later. The style of
-// the part diagram is the diagrams'.
+// drawn in the look of, which it adjusts; then the parts theme theme: its base.css, which every page
+// gets, as it holds its variables and the look of Markdown's quotes, its parts.css, the rules of several
+// parts, and its style of each of those parts in the same order. Within the layer the more specific
+// rule wins, else the later. The style of the part diagram is the diagrams'.
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
@@ -541,6 +541,9 @@ func pageStyle(page, own []byte, theme string) (string, error) {
 		set, err := builtinParts()
 		if err != nil {
 			return "", err
+		}
+		if themed.shared != "" {
+			themes += everyPart(themed.shared)
 		}
 		for _, name := range set.inOrder(set.partsNamedIn(string(page))) {
 			css := set.parts[name].css
@@ -591,6 +594,12 @@ func scoped(name, css string) string {
 	return `@scope ([data-floe-part~="` + name + `"]) to (:scope [data-floe-part] > *) {` + "\n" + css + "}\n"
 }
 
+// everyPart is css, rules of several parts that name each of them (:scope:where([data-floe-part~="code"])),
+// reaching the elements of every part as scoped does those of one.
+func everyPart(css string) string {
+	return "@scope ([data-floe-part]) to (:scope [data-floe-part] > *) {\n" + css + "}\n"
+}
+
 // baseCSS is what every page starts from: text, lists, links, code and quotes, for the template's own
 // elements and, where its CSS does not reach, those of the parts.
 //
@@ -615,10 +624,12 @@ func PartsThemes() ([]string, error) {
 	return themes, nil
 }
 
-// partsTheme is a parts theme: its base.css, for every page, and the style of each part it restyles.
+// partsTheme is a parts theme: its base.css, for every page, its parts.css, the rules of several parts,
+// and the style of each part it restyles alone.
 type partsTheme struct {
-	base  string
-	parts map[string]string // by the part's name
+	base   string
+	shared string
+	parts  map[string]string // by the part's name
 }
 
 func readPartsTheme(name string) (*partsTheme, error) {
@@ -627,24 +638,27 @@ func readPartsTheme(name string) (*partsTheme, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the parts theme %s: %w", name, err)
 	}
-	t := &partsTheme{base: "", parts: map[string]string{}}
+	t := &partsTheme{base: "", shared: "", parts: map[string]string{}}
 	for _, e := range entries {
 		css, err := partFiles.ReadFile(path.Join(dir, e.Name()))
 		if err != nil {
 			return nil, fmt.Errorf("read the parts theme %s: %w", name, err)
 		}
-		if part := strings.TrimSuffix(e.Name(), ".css"); part == "base" {
+		switch part := strings.TrimSuffix(e.Name(), ".css"); part {
+		case "base":
 			t.base = string(css)
-		} else {
+		case "parts":
+			t.shared = string(css)
+		default:
 			t.parts[part] = string(css)
 		}
 	}
 	return t, nil
 }
 
-// all is the whole CSS of t, its base first, then the parts' in the order of their names.
+// all is the whole CSS of t, its base and parts.css first, then the parts' in the order of their names.
 func (t *partsTheme) all() string {
-	css := t.base
+	css := t.base + t.shared
 	for _, name := range slices.Sorted(maps.Keys(t.parts)) {
 		css += t.parts[name]
 	}

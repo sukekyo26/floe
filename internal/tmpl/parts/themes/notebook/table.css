@@ -1,9 +1,2 @@
-:scope {
-  font-family: var(--nb-font);
-}
-:scope {
-  background-color: var(--nb-sheet); background-image: repeating-linear-gradient(transparent 0 35px, var(--nb-rule) 35px 36px);
-  border: 2px solid var(--nb-ink); border-radius: var(--nb-hand); box-shadow: none; color: var(--nb-ink);
-}
 :scope thead th { background: none; color: var(--nb-ink); font-size: 0.9rem; font-weight: 700; border-bottom: 3px double var(--nb-ink); }
 :scope tbody tr:nth-child(even) td { background: none; }

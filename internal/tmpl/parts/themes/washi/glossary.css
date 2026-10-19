@@ -1,6 +1,0 @@
-:scope {
-  font-family: var(--washi-font); background: var(--washi-paper); color: var(--washi-sumi); border-radius: 0; box-shadow: none;
-}
-:scope {
-  border: 0; border-top: 4px double var(--washi-sumi); border-bottom: 4px double var(--washi-sumi);
-}

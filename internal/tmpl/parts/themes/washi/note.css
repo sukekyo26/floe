@@ -1,6 +1,3 @@
-:scope {
-  font-family: var(--washi-font); background: var(--washi-paper); color: var(--washi-sumi); border-radius: 0; box-shadow: none;
-}
 :scope, :scope:is(.good, .warn, .bad) { background: var(--washi-paper); border: 0; border-top: 2px solid var(--washi-ai); padding-left: 4rem; }
 :scope.good { border-top-color: var(--washi-matcha); }
 :scope.warn { border-top-color: var(--washi-kincha); }

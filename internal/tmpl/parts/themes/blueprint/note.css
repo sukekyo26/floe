@@ -1,7 +1,3 @@
-:scope {
-  background-color: var(--bp-sheet); background-image: var(--bp-squares); background-size: 16px 16px; border-radius: 0;
-  box-shadow: none;
-}
 /* A note of a tone sets its whole background, its size too, so it gets the squares again */
 :scope:is(.good, .warn, .bad) { background-color: var(--bp-sheet); background-image: var(--bp-squares); background-size: 16px 16px; }
 :scope { border: 1.5px dashed var(--bp-ink); }

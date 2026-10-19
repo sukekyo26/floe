@@ -1,0 +1,8 @@
+:scope:where([data-floe-part~="table"], [data-floe-part~="note"], [data-floe-part~="progress"], [data-floe-part~="steps"], [data-floe-part~="checklist"], [data-floe-part~="tree"], [data-floe-part~="details"], [data-floe-part~="timeline"], [data-floe-part~="bars"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]), :where(:scope[data-floe-part~="cards"]) .card {
+  font-family: var(--nb-font);
+}
+:scope:where([data-floe-part~="table"], [data-floe-part~="progress"], [data-floe-part~="steps"], [data-floe-part~="checklist"], [data-floe-part~="tree"], [data-floe-part~="details"], [data-floe-part~="timeline"], [data-floe-part~="bars"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]) {
+  background-color: var(--nb-sheet); background-image: repeating-linear-gradient(transparent 0 35px, var(--nb-rule) 35px 36px);
+  border: 2px solid var(--nb-ink); border-radius: var(--nb-hand); box-shadow: none; color: var(--nb-ink);
+}
+:scope:where([data-floe-part~="code"], [data-floe-part~="terminal"]) { border-radius: 10px; box-shadow: 0 10px 18px -12px rgb(0 0 0 / 0.5); }

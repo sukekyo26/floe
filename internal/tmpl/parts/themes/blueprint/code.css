@@ -1,10 +1,1 @@
-/* Set on the parts of code: page.html sets these at :root after a parts theme, and would win there */
-:scope { --code-bg: #0d3266; --code-fg: #eaf2ff; --code-prompt: #7fdcff; }
-@media (prefers-color-scheme: dark) {
-  :scope { --code-bg: #0a1f3f; }
-}
-:scope { border: 1.5px solid var(--bp-ink); border-radius: 0; box-shadow: none; }
-:scope figcaption {
-  background: none; border-bottom: 1px solid rgb(170 205 255 / 0.4); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
-}
 :scope .lang { border-radius: 0; background: none; border: 1.5px solid var(--code-prompt); color: var(--code-prompt); }

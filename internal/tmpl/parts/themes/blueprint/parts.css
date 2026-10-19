@@ -1,0 +1,16 @@
+/* Set on the parts of code, not on :root, where they would replace the page's own colours of code */
+:scope:where([data-floe-part~="code"], [data-floe-part~="terminal"]) { --code-bg: #0d3266; --code-fg: #eaf2ff; --code-prompt: #7fdcff; }
+@media (prefers-color-scheme: dark) {
+  :scope:where([data-floe-part~="code"], [data-floe-part~="terminal"]) { --code-bg: #0a1f3f; }
+}
+:scope:where([data-floe-part~="table"], [data-floe-part~="note"], [data-floe-part~="progress"], [data-floe-part~="steps"], [data-floe-part~="checklist"], [data-floe-part~="tree"], [data-floe-part~="details"], [data-floe-part~="timeline"], [data-floe-part~="bars"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]), :where(:scope[data-floe-part~="cards"]) .card {
+  background-color: var(--bp-sheet); background-image: var(--bp-squares); background-size: 16px 16px; border-radius: 0;
+  box-shadow: none;
+}
+:scope:where([data-floe-part~="table"], [data-floe-part~="progress"], [data-floe-part~="steps"], [data-floe-part~="checklist"], [data-floe-part~="tree"], [data-floe-part~="details"], [data-floe-part~="timeline"], [data-floe-part~="bars"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]), :where(:scope[data-floe-part~="cards"]) .card {
+  border: 1.5px solid var(--bp-ink);
+}
+:scope:where([data-floe-part~="code"], [data-floe-part~="terminal"]) { border: 1.5px solid var(--bp-ink); border-radius: 0; box-shadow: none; }
+:scope:where([data-floe-part~="code"], [data-floe-part~="terminal"]) figcaption {
+  background: none; border-bottom: 1px solid rgb(170 205 255 / 0.4); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+}

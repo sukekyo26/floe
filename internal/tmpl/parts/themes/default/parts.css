@@ -1,0 +1,10 @@
+:scope:where([data-floe-part~="code"], [data-floe-part~="terminal"]) { border-radius: 18px; box-shadow: none; padding: 6px; }
+:scope:where([data-floe-part~="code"], [data-floe-part~="terminal"]) figcaption { background: none; border: 0; padding: 0.3rem 0.6rem 0.5rem; }
+:scope:where([data-floe-part~="code"], [data-floe-part~="terminal"]) pre { background: rgb(255 255 255 / 0.04); border-radius: 12px; }
+:scope:where([data-floe-part~="progress"], [data-floe-part~="steps"], [data-floe-part~="checklist"], [data-floe-part~="tree"], [data-floe-part~="details"], [data-floe-part~="timeline"], [data-floe-part~="bars"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]) { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
+:scope:where([data-floe-part~="bars"]) .track, :where(:scope[data-floe-part~="progress"]) .bar progress { background: var(--surface); }
+:scope:where([data-floe-part~="checklist"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]) { padding: 6px; }
+:scope:where([data-floe-part~="checklist"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]) > * { background: var(--surface); }
+:scope:where([data-floe-part~="checklist"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]) > :first-child { border-radius: 14px 14px 0 0; }
+:scope:where([data-floe-part~="checklist"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]) > :last-child { border-radius: 0 0 14px 14px; }
+:scope:where([data-floe-part~="checklist"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]) > :only-child { border-radius: 14px; }
