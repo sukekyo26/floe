@@ -300,8 +300,8 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 		return problems.Sorted()
 	}
 	d.schema = s
-	err = checkItems(checkImages(s, d, root, dir), checkDiagrams(s, d, root, t.icons), checkScripts(s, d, root),
-		checkParts(s, d, root))
+	err = checkItems(checkImages(s, d, root, dir), checkHTML(s, d, root), checkDiagrams(s, d, root, t.icons),
+		checkScripts(s, d, root), checkParts(s, d, root))
 	if err != nil {
 		return err
 	}
@@ -311,6 +311,29 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 		return err
 	}
 	return checkComputed(t, d, root, s)
+}
+
+// checkHTML refuses the items of d of format html, as its schema s declares them, that hold a <style> or
+// a <link>, at their lines and columns under root: floe puts a page's CSS together, in layers, and a
+// style of the data would win over them all.
+func checkHTML(s *schema, d *Data, root ast.Node) error {
+	var found []itemAt
+	s.find("html", d.Values, nil, &found)
+	var problems yamlpos.Problems
+	for _, f := range found {
+		html, ok := f.value.(string)
+		if !ok {
+			continue
+		}
+		at := tagsOf([]byte(html))
+		if at.style >= 0 || at.link >= 0 {
+			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_style")))
+		}
+	}
+	if problems != nil {
+		return problems.Sorted()
+	}
+	return nil
 }
 
 // readShared moves the keys every template shares from h.d.Values to h.d, and notes where each is
@@ -384,7 +407,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	css, err := t.readFile(path.Join("themes", d.Theme+".css"))
+	own, err := t.css(d.Theme)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +417,6 @@ func (d *Data) Render(title string) ([]byte, error) {
 		"Lang":  d.Lang,
 		"Data":  d.schema.prepare(d.Values, nil, d),
 		"Calc":  d.Calc,
-		"Theme": template.CSS(css), //nolint:gosec // G203: the template's own theme, not data
 	})
 	// Read checked the data against the schema, so this is the template's own mistake: an image of its
 	// assets/ that is not right, or page.html naming an item its schema does not declare, or using one
@@ -407,27 +429,43 @@ func (d *Data) Render(title string) ([]byte, error) {
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	out := b.Bytes()
-	style, err := partStyles(out, d.PartsTheme)
+	style, err := pageStyle(out, own, d.PartsTheme, d.diagrams)
 	if err != nil {
 		return nil, err
 	}
 	out = withStyles(out, style)
 	// Once at the end, as the reload script is: page.html picks which diagrams it draws, and where.
 	if d.diagrams {
-		assets, err := diagram.Assets()
+		script, err := diagram.Script()
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already says what failed
 		}
-		out = append(out, "\n"+assets+"\n"...)
+		out = append(out, "\n"+script+"\n"...)
 	}
 	return out, nil
 }
 
-// page reads and parses the page.html of t.
+// css returns the template's own CSS: its page.css, empty if it has none, then its theme.
+func (t *Template) css(theme string) ([][]byte, error) {
+	page, err := t.ownCSS("page.css")
+	if err != nil {
+		return nil, err
+	}
+	css, err := t.ownCSS(path.Join("themes", theme+".css"))
+	if err != nil {
+		return nil, err
+	}
+	return [][]byte{page, css}, nil
+}
+
+// page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together.
 func (t *Template) page() (*template.Template, error) {
 	src, err := t.readFile("page.html")
 	if err != nil {
 		return nil, err
+	}
+	if at := tagsOf(src).style; at >= 0 {
+		return nil, usererr.New("tmpl_page_style", t.file("page.html"), lineAt(src, at))
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).

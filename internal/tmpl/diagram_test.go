@@ -55,12 +55,16 @@ func TestDiagrams(t *testing.T) {
 	if first < 0 || second < first {
 		t.Errorf("the diagrams are drawn at %d and %d:\n%s", first, second, got)
 	}
-	assets, err := diagram.Assets()
+	script, err := diagram.Script()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n := strings.Count(got, assets); n != 1 || !strings.HasSuffix(got, assets+"\n") {
+	if n := strings.Count(got, script); n != 1 || !strings.HasSuffix(got, script+"\n") {
 		t.Errorf("the page holds the zoom %d times, want once at its end", n)
+	}
+	// The diagrams' style goes in once, with the parts'.
+	if n := strings.Count(got, diagram.Style()); n != 1 || !strings.Contains(got, "@layer floe.parts {\n"+diagram.Style()) {
+		t.Errorf("the page holds the diagrams' style %d times, want once in the parts' layer", n)
 	}
 }
 

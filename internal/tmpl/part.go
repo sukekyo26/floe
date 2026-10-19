@@ -21,6 +21,7 @@ import (
 	"github.com/goccy/go-yaml/ast"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
+	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -498,30 +499,48 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
 }
 
-// partStyles returns the style for the page's <head>: that of the parts whose classes page uses, in the
-// order of their names, then the parts theme theme, which every page gets, as it styles Markdown's quotes
-// too. A part is used by its own, a table of Markdown, or HTML that takes a part's look (<span
-// class="floe-pill good">). The classes are those of its class attributes, so that a theme or prose that
-// names one brings no style.
+// pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
+// selectors: the template's own CSS (own: its page.css, then its theme, a style sheet each) under the
+// parts'. The parts' are the style of the parts whose classes page uses, in the order of their names, the
+// diagrams' when it has diagrams, then the parts theme theme, which every page gets, as it styles
+// Markdown's quotes too. A part
+// is used by its own, a table of Markdown, or HTML that takes a part's look (<span class="floe-pill
+// good">). The classes are those of its class attributes, so that a theme or prose that names one brings
+// no style.
+// LIMIT: the parts theme shares the parts' layer, where its rule for a part drawn in another's look loses
+// to the part's more specific one (.floe-links > li::before over .floe-card::before), as that part
+// needs. Layer a theme after each part once a theme is a file of each part.
 // LIMIT: the attributes are found as written, not as an HTML parser reads them (class= in a script's
 // string counts); parse the page if a page comes to write one so.
-func partStyles(page []byte, theme string) (string, error) {
-	var b strings.Builder
+func pageStyle(page []byte, own [][]byte, theme string, diagrams bool) (string, error) {
+	var parts strings.Builder
 	if bytes.Contains(page, []byte("floe-")) {
 		set, err := builtinParts()
 		if err != nil {
 			return "", err
 		}
 		for _, name := range set.partsNamedIn(string(page)) {
-			b.WriteString(set.parts[name].css)
+			parts.WriteString(set.parts[name].css)
 		}
+	}
+	if diagrams {
+		parts.WriteString(diagram.Style())
 	}
 	css, err := readPartsTheme(theme)
 	if err != nil {
 		return "", err
 	}
-	b.Write(css)
-	return "<style>\n" + b.String() + "</style>\n", nil
+	// Each file of the template's CSS is a style sheet of its own, so that a mistake in it, a comment or a
+	// block left open, ends with it; the first sheet names the layers, which puts them in that order.
+	style := "<style>\n@layer floe.page, floe.parts;\n" +
+		"@layer floe.parts {\n" + parts.String() + string(css) + "}\n</style>\n"
+	for _, css := range own {
+		if len(css) == 0 {
+			continue
+		}
+		style += "<style>\n@layer floe.page {\n" + string(css) + "}\n</style>\n"
+	}
+	return style, nil
 }
 
 // themesDir is the directory of parts/ that holds the parts themes, and so is no part.
@@ -572,14 +591,25 @@ var usedVariable = regexp.MustCompile(`var\(\s*(--[\w-]+)`)
 // classAttr finds the value of a class attribute: class="floe-pill good", class='…' or class=x.
 var classAttr = regexp.MustCompile(`(?i)\sclass\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` + "`" + `]+)`)
 
-// withStyles puts style into page before the template's own styles, which then win over the parts'
-// where they say otherwise: before the first <style> or <link> of its <head>, else before its </head>.
-// A page without a <head> gets it before its first <style> or <link>, else at its end. A tag in a
-// comment, a script or a noscript is not one.
+// withStyles puts style into page before its </head>, else at its end. Where it goes decides nothing
+// else: the <link>s of page.html (fonts, libraries) are out of the layers, and win over them all.
+func withStyles(page []byte, style string) []byte {
+	at := tagsOf(page).head
+	if at < 0 {
+		at = len(page)
+	}
+	return slices.Concat(page[:at], []byte(style), page[at:])
+}
+
+// tags are the offsets of the first </head>, <style> and <link> of a page, -1 for one it lacks.
+type tags struct{ head, style, link int }
+
+// tagsOf finds the tags of page. A tag in a comment, a script or a noscript is not one: a sandboxed page
+// runs its scripts, so a noscript's text is never read as HTML.
 // LIMIT: the tags are found as written, not as an HTML parser reads them (a <style in an attribute's
 // value is taken for one). Parse the page if a template comes to write one so.
-func withStyles(page []byte, style string) []byte {
-	at, own := len(page), -1
+func tagsOf(page []byte) tags {
+	found := tags{head: -1, style: -1, link: -1}
 	for i := 0; i < len(page); {
 		m := tagOrText.FindSubmatchIndex(page[i:])
 		if m == nil {
@@ -600,24 +630,24 @@ func withStyles(page []byte, style string) []byte {
 				next = i + m[1] + closing[1]
 			}
 		case m[6] >= 0:
-			if own < 0 {
-				own = start
+			at := &found.link
+			if strings.EqualFold(string(page[i+m[6]:i+m[7]]), "style") {
+				at = &found.style
 			}
-		default:
-			at = start // </head>
-			next = len(page)
+			if *at < 0 {
+				*at = start
+			}
+		case found.head < 0:
+			found.head = start
 		}
 		i = next
 	}
-	if own >= 0 && own < at {
-		at = own
-	}
-	return slices.Concat(page[:at], []byte(style), page[at:])
+	return found
 }
 
 var (
 	// tagOrText finds, in order, a comment, a script or a noscript, a style or a link, and </head>.
-	tagOrText = regexp.MustCompile(`(?i)(<!--)|<(script|noscript)\b[^>]*>|(<(?:style|link)\b)|</head\s*>`)
+	tagOrText = regexp.MustCompile(`(?i)(<!--)|<(script|noscript)(?:[\s/][^>]*)?>|<(style|link)[\s/>]|</head\s*>`)
 	endTag    = map[string]*regexp.Regexp{
 		"script":   regexp.MustCompile(`(?i)</script\s*>`),
 		"noscript": regexp.MustCompile(`(?i)</noscript\s*>`),

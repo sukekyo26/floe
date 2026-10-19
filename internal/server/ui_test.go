@@ -534,13 +534,16 @@ func leave(t *testing.T, e *env, b *browser, publish func(name, slug, title, bod
 		_, _ = fmt.Fprint(w, "<title>Elsewhere</title>") //nolint:errcheck // the test checks what opened
 	}))
 	defer other.Close()
-	publish("leave.yaml", "leave", "Leave", `<style>a { position: fixed; left: 0; width: 200px; height: 40px; }</style>`+
-		`<a href="`+other.URL+`/blank" target="_blank" style="top: 0">blank</a><a href="`+other.URL+`/plain" style="top: 60px">plain</a>`+
-		`<a href="inner.html" style="top: 120px">inner</a><a href="/a/no-such/" style="top: 180px">frame</a>`+
-		// The page declares globals named like the ones the appended script uses; it must not pick them up.
-		"<script>const open = () => {}; const URL = null; const EventSource = null; const self = null;"+
-		"document.addEventListener('pointerover', () => parent.postMessage('over', '*'));"+
-		"setInterval(() => parent.postMessage('ready', '*'), 100)</script>")
+	at := func(top string) string {
+		return `style="position: fixed; left: 0; width: 200px; height: 40px; top: ` + top + `"`
+	}
+	publish("leave.yaml", "leave", "Leave",
+		`<a href="`+other.URL+`/blank" target="_blank" `+at("0")+`>blank</a><a href="`+other.URL+`/plain" `+at("60px")+`>plain</a>`+
+			`<a href="inner.html" `+at("120px")+`>inner</a><a href="/a/no-such/" `+at("180px")+`>frame</a>`+
+			// The page declares globals named like the ones the appended script uses; it must not pick them up.
+			"<script>const open = () => {}; const URL = null; const EventSource = null; const self = null;"+
+			"document.addEventListener('pointerover', () => parent.postMessage('over', '*'));"+
+			"setInterval(() => parent.postMessage('ready', '*'), 100)</script>")
 	b.navigate("/a/leave/")
 	b.until("the page in the frame", listening)
 	box := b.rect("document.getElementById('frame')")

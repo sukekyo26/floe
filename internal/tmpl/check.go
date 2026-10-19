@@ -127,11 +127,31 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return warnings, append(mistakes, err)
 	}
-	return warnings, append(mistakes, t.checkAssets(page)...)
+	mistakes = append(mistakes, t.checkAssets(page)...)
+	return warnings, append(mistakes, t.checkCSS()...)
+}
+
+// checkCSS returns the mistakes of page.css and of each theme of t that ownCSS refuses.
+func (t *Template) checkCSS() []error {
+	themes, err := t.themes()
+	if err != nil {
+		return []error{err}
+	}
+	names := []string{"page.css"}
+	for _, theme := range themes {
+		names = append(names, path.Join("themes", theme+".css"))
+	}
+	var mistakes []error
+	for _, name := range names {
+		if _, err := t.ownCSS(name); err != nil {
+			mistakes = append(mistakes, err)
+		}
+	}
+	return mistakes
 }
 
 // checkThemeVariables warns of each theme of t that leaves out a CSS variable the parts and diagrams
-// its schema declares, as lint found them, take their colours and fonts from, which page.html does not
+// its schema declares, as lint found them, take their colours and fonts from, which page.css does not
 // define either: they would keep light colours in dark mode.
 // LIMIT: a variable is looked for as written (--fg:), not as CSS reads it. Parse the CSS if a theme
 // comes to define one otherwise (through @import, or in a comment that hides it).
@@ -144,8 +164,8 @@ func (t *Template) checkThemeVariables(lint *schemaLint) ([]*usererr.Error, erro
 	if err != nil {
 		return nil, err
 	}
-	// page.html may define them for every theme, in a <style> of its own.
-	page, err := t.readFile("page.html")
+	// page.css may define them for every theme.
+	page, _, err := t.readOptional("page.css")
 	if err != nil {
 		return nil, err
 	}

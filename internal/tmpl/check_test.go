@@ -295,7 +295,61 @@ func TestCheckMistakes(t *testing.T) {
 	}
 }
 
-// The variables of diagrams that page.html defines, for every theme, are not missed in a theme.
+// A <style> of page.html is refused at its line, as floe check and the drawing refuse it: floe puts a
+// page's CSS together.
+func TestPageStyleRefused(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{"page.html": "<body>|<body>\n<!-- <style> -->\n<style>p {}</style>"})
+	want := filepath.Join(dir, "page.html") + ":6: page.html holds a <style>: write the template's CSS in page.css"
+	if _, mistakes := tmpl.Check(dir, ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+		t.Errorf("Check = %v, want %s", mistakes, want)
+	}
+}
+
+// An @import of the template's CSS, which a browser does not read in floe's layer, is refused at its
+// line by floe template check and by the drawing, past comments that name it or hold more than ASCII,
+// and one the file ends without its ; too.
+func TestCSSImportRefused(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{
+		"page.css":           "/* 色の定義です。\n   @import は書かない */\nbody { color: red; }\n@IMPORT url(x.css);\n",
+		"themes/default.css": "a { color: red; }\n@import url(y.css)",
+	})
+	want := []string{
+		filepath.Join(dir, "page.css") + ":4: floe puts the template's CSS in a layer, where a browser reads no @import",
+		filepath.Join(dir, "themes", "default.css") + ":2: floe puts the template's CSS in a layer",
+	}
+	_, mistakes := tmpl.Check(dir, "")
+	if len(mistakes) != len(want) || !strings.HasPrefix(mistakes[0].Error(), want[0]) || !strings.HasPrefix(mistakes[1].Error(), want[1]) {
+		t.Errorf("Check = %v, want %q", mistakes, want)
+	}
+	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), want[0]) {
+		t.Errorf("drawing = %v, want %s", err, want[0])
+	}
+}
+
+// A } of the template's CSS that closes no block, which would close floe's layer around it, is refused at
+// its line, past braces and an @import in strings and comments, and a /* in a string, which starts none.
+func TestCSSBraceRefused(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{
+		"page.css": "a::before { content: \"} @import x; /*\"; }\n@media print { p { color: red; } }\n}\n/* } */\nb { color: red; }\n",
+	})
+	want := filepath.Join(dir, "page.css") + ":3: this } closes no block"
+	if _, mistakes := tmpl.Check(dir, ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+		t.Errorf("Check = %v, want %s", mistakes, want)
+	}
+	// A block left open ends with the template's own <style>.
+	ok := sizes(t, map[string]string{"page.css": "@media print { p { color: red; }\n"})
+	if warnings, mistakes := tmpl.Check(ok, ""); len(mistakes) != 0 {
+		t.Errorf("Check of a block left open = %v, %v", warnings, mistakes)
+	}
+}
+
+// The variables of diagrams that page.css defines, for every theme, are not missed in a theme.
 func TestCheckVariablesInPage(t *testing.T) {
 	t.Parallel()
 
@@ -303,7 +357,7 @@ func TestCheckVariablesInPage(t *testing.T) {
 	dir := sizes(t, map[string]string{
 		"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
 		"schema.json":   `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`,
-		"page.html":     "<body>|<body><style>:root { " + strings.Join(diagram.Variables(), ": red; ") + ": red }</style>",
+		"page.css":      ":root { " + strings.Join(diagram.Variables(), ": red; ") + ": red }",
 	})
 	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
 		t.Errorf("Check = %v, %v", warnings, mistakes)

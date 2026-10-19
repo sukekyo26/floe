@@ -2,7 +2,6 @@ package server_test
 
 import (
 	"fmt"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,7 +15,6 @@ import (
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/store"
 )
 
@@ -37,13 +35,8 @@ func uiZoom(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b := newBrowser(t, e.base, lang)
 	// A frame without a diagram comes first: it must not keep the diagram after it from its toolbar. The
 	// tag is in upper case, which the toolbar matches as floe does.
-	page := `<div class="dg-wrap"></div>` + "\n" + diagramPage(t, lang)
-	slug, l := "diagram", strings.ToUpper(string(lang))
-	src, err := os.ReadFile(e.page(t, "diagram.yaml", "Diagram", page))
-	if err != nil {
-		t.Fatal(err)
-	}
-	e.publish(t, e.write(t, "diagram.yaml", strings.Replace(string(src), "lang: en", "lang: "+l, 1)), store.Options{Slug: &slug})
+	slug := "diagram"
+	e.publish(t, e.write(t, "diagram.yaml", diagramData(t, lang)), store.Options{Slug: &slug})
 	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 1000, Height: 800, DeviceScaleFactor: 1}
 	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
 		t.Fatal(err)
@@ -146,8 +139,8 @@ func uiZoom(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	check(t, "zoom", out, "true|true|125 true|true|true|true|true|true|1|true")
 }
 
-// diagramPage is the architecture example in lang with its assets, as floe diagram render prints it.
-func diagramPage(t *testing.T, lang i18n.Lang) string {
+// diagramData is a data file of the architecture example in lang, after an empty frame.
+func diagramData(t *testing.T, lang i18n.Lang) string {
 	t.Helper()
 
 	examples, err := diagram.Examples(lang)
@@ -155,17 +148,11 @@ func diagramPage(t *testing.T, lang i18n.Lang) string {
 		t.Fatal(err)
 	}
 	i := slices.IndexFunc(examples, func(e diagram.Example) bool { return e.Name == "architecture" })
-	s, err := diagram.Parse("architecture.yaml", examples[i].Spec)
-	if err != nil {
-		t.Fatal(err)
+	var b strings.Builder
+	b.WriteString("template: report\nlang: " + strings.ToUpper(string(lang)) + "\ntitle: Diagram\nsections:\n" +
+		"  - heading: Architecture\n    parts:\n      - html: <div class=\"dg-wrap\"></div>\n      - diagram:\n")
+	for line := range strings.Lines(string(examples[i].Spec)) {
+		b.WriteString("          " + line)
 	}
-	svg, err := diagram.Render([]*diagram.Spec{s}, icons.New(""))
-	if err != nil {
-		t.Fatal(err)
-	}
-	assets, err := diagram.Assets()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return assets + "\n<section><h2>Architecture</h2>" + svg[0] + "</section>\n"
+	return b.String()
 }
