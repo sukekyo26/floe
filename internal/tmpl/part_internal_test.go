@@ -131,24 +131,6 @@ func TestTagsOf(t *testing.T) {
 	}
 }
 
-// Every file of a parts theme is its base.css, its parts.css or the style of one of floe's parts: a file
-// of another name would go into no page.
-func TestPartsThemeFiles(t *testing.T) {
-	t.Parallel()
-
-	set, err := builtinParts()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for name, theme := range set.themes {
-		for part := range theme.parts {
-			if _, ok := set.parts[part]; !ok {
-				t.Errorf("the parts theme %s has %s.css, which is no part's", name, part)
-			}
-		}
-	}
-}
-
 // A part's style comes after that of the parts it is drawn in the look of, which it adjusts, and of the
 // parts it holds; the others keep the order given.
 func TestInOrder(t *testing.T) {

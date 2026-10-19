@@ -357,6 +357,8 @@ var messagesEN = map[string]string{
 	"tmpl_part_unnamed":            `%s: the part %s names itself in no data-floe-part; write data-floe-part="%s" on its element`,
 	"tmpl_part_names":              "%s:%d: the part takes the look of the part %s, which there is none of; use %s",
 	"tmpl_part_broken":             "your own part %s cannot be used: %s; fix it, or remove it",
+	"tmpl_parts_theme_broken":      "your own parts theme %s cannot be used: %s; fix it, or remove it",
+	"tmpl_parts_theme_file":        "%s: a file of a parts theme is base.css, parts.css or the style of a part, <name>.css, the name one of %s",
 	"tmpl_part_unreached":          "%s: %s: the part %s draws an item; refer to it under properties or items, which floe follows",
 	"tmpl_format_unreached":        "%s: %s: the format %s marks an item to draw; declare it under properties or items, which floe follows",
 	"tmpl_schema_open":             `%s: %s declares properties without "additionalProperties": false, so a misspelt key is not refused`,

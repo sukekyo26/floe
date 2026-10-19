@@ -356,6 +356,8 @@ var messagesJA = map[string]string{
 	"tmpl_part_unnamed":            `%s: 部品 %s が data-floe-part で自分を名乗っていません。部品の要素に data-floe-part="%s" を書いてください`,
 	"tmpl_part_names":              "%s:%d: 見た目を借りる部品 %s がありません。%s のどれかを書いてください",
 	"tmpl_part_broken":             "自分の部品 %s は使えません: %s。直すか、消してください",
+	"tmpl_parts_theme_broken":      "自分の部品のテーマ %s は使えません: %s。直すか、消してください",
+	"tmpl_parts_theme_file":        "%s: 部品のテーマのファイルは base.css・parts.css か、部品のスタイルの <名前>.css です。名前は %s のどれかです",
 	"tmpl_part_unreached":          "%s: %s: 部品 %s は項目を描きます。floe が辿る properties か items の下で参照してください",
 	"tmpl_format_unreached":        "%s: %s: format %s は描く項目の印です。floe が辿る properties か items の下で宣言してください",
 	"tmpl_schema_open":             `%s: %s は "additionalProperties": false を書かずに properties を宣言しているので、打ち間違えたキーを断れません`,

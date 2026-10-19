@@ -137,7 +137,8 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 }
 
 // brokenParts warns of each part of one's own in set that cannot be used, but those src, page.html,
-// names, which checkNamedParts refuses: the schema refers to none of them, as it compiled.
+// names, which checkNamedParts refuses: the schema refers to none of them, as it compiled. A parts theme
+// that cannot be used is warned of too: a data file picks it.
 func brokenParts(set *partSet, src []byte) []*usererr.Error {
 	named := map[string]bool{}
 	for _, n := range namedParts(string(src)) {
@@ -148,6 +149,9 @@ func brokenParts(set *partSet, src []byte) []*usererr.Error {
 		if !named[name] {
 			warnings = append(warnings, usererr.New("tmpl_part_broken", name, set.broken[name]))
 		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
+		warnings = append(warnings, usererr.New("tmpl_parts_theme_broken", name, set.brokenThemes[name]))
 	}
 	return warnings
 }

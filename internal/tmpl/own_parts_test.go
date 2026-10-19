@@ -3,10 +3,12 @@ package tmpl_test
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/tmpl"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // ownParts writes parts of one's own, files by their path under the directory of parts, and returns it.
@@ -147,5 +149,55 @@ func TestBrokenOwnParts(t *testing.T) {
 	}
 	if len(mistakes) != 0 || len(told) != len(whys) {
 		t.Errorf("Check of a template of the quote = %v, %v", told, mistakes)
+	}
+}
+
+// A parts theme of one's own is picked as floe's are. One of the name of one of floe's takes the place
+// of its files of their names, the rest staying floe's. floe's themes do not style a part of one's own
+// that took the place of floe's, whose rules would fit it ill: its file goes, and its parts.css does not
+// reach the part. One that cannot be used is refused to a data file that picks it.
+func TestOwnPartsThemes(t *testing.T) {
+	t.Parallel()
+
+	files := quote("code")
+	files["themes/brutal/code.css"] = "/* brutal's code of one's own */\n"
+	files["themes/mine/base.css"] = "/* mine */\n:root { --mine-ink: #123; }\n"
+	files["themes/bad/nope.css"] = ""
+	parts := ownParts(t, files)
+	dir := memo(t, `"risks": {"$ref": "floe:///parts/code.json"}, "aside": {"$ref": "floe:///parts/note.json"}`)
+	l := tmpl.NewLibrary(dir, parts, "")
+	page, err := draw(l, "template: memo\nlang: en\nparts-theme: brutal\nrisks: { text: x }\naside: { text: y }\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	note, err := os.ReadFile(filepath.Join("parts", "themes", "brutal", "note.css"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for want, n := range map[string]int{
+		`@scope ([data-floe-part~="code"]) to (:scope [data-floe-part] > *) {` + "\n/* brutal's code of one's own */": 1,
+		`@scope ([data-floe-part]:not([data-floe-part~="code"])) to (:scope [data-floe-part] > *) {`:                  1,
+		string(note): 1,
+		":scope .lang { border-radius: 0; border: 2px solid var(--brutal-ink)": 0,
+	} {
+		if strings.Count(page, want) != n {
+			t.Errorf("the page holds %s %d times, want %d:\n%s", want, strings.Count(page, want), n, page)
+		}
+	}
+	if page, err = draw(l, "template: memo\nlang: en\nparts-theme: mine\nrisks: { text: x }\n"); err != nil ||
+		!strings.Contains(page, "/* mine */") {
+		t.Errorf("drawing with the parts theme mine = %v:\n%s", err, page)
+	}
+	why := "your own parts theme bad cannot be used: " + filepath.Join(parts, "themes", "bad", "nope.css") +
+		": a file of a parts theme is base.css, parts.css or the style of a part"
+	if _, err = draw(l, "template: memo\nlang: en\nparts-theme: bad\nrisks: { text: x }\n"); err == nil || !strings.HasPrefix(err.Error(), why) {
+		t.Errorf("drawing with the parts theme bad = %v, want %s", err, why)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "memo", "example.yaml"), []byte("template: memo\nlang: en\nrisks: { text: x }\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	warnings, mistakes := tmpl.Check(filepath.Join(dir, "memo"), parts, "")
+	if len(mistakes) != 0 || !slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), why) }) {
+		t.Errorf("Check = %v, %v, want %s", warnings, mistakes, why)
 	}
 }
