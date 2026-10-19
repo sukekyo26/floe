@@ -111,14 +111,20 @@ type part struct {
 	uses   []string // the parts its HTML names and its schema holds, itself among them
 }
 
-// goParts are the parts floe draws in Go, each a description: their schema takes an object, whose
-// shape floe checks where it draws it.
-var goParts = map[string]string{
-	"diagram": "A diagram: a spec as floe diagram render takes it (id, width, height, title, parts); " +
-		"floe diagram example shows one of each kind",
-	"script": "Something that moves: js, a function (el, data) { … } the page calls with an empty element in its " +
-		"place and data, any value. It runs in the page's sandbox, where fetch, XHR, images from elsewhere and " +
-		"forms are blocked",
+// goParts are the parts floe draws in Go, each a description and its style: their schema takes an object,
+// whose shape floe checks where it draws it.
+var goParts = map[string]struct{ about, css string }{
+	"diagram": {
+		about: "A diagram: a spec as floe diagram render takes it (id, width, height, title, parts); " +
+			"floe diagram example shows one of each kind",
+		css: diagram.Style(),
+	},
+	"script": {
+		about: "Something that moves: js, a function (el, data) { … } the page calls with an empty element in " +
+			"its place and data, any value. It runs in the page's sandbox, where fetch, XHR, images from " +
+			"elsewhere and forms are blocked",
+		css: "",
+	},
 }
 
 // isGoPart reports whether name is a part floe draws in Go.
@@ -164,15 +170,15 @@ func readParts() (*partSet, error) {
 			set.parts[e.Name()] = p
 		}
 	}
-	for name, about := range goParts {
+	for name, p := range goParts {
 		url := partsURL + name + ".json"
-		set.docs[url] = map[string]any{"type": "object", "description": about}
+		set.docs[url] = map[string]any{"type": "object", "description": p.about}
 		set.schemas[url] = &schema{
-			Format: "", Ref: "", Properties: nil, Items: nil, part: nil, Description: about, Type: "object", Enum: nil,
+			Format: "", Ref: "", Properties: nil, Items: nil, part: nil, Description: p.about, Type: "object", Enum: nil,
 			Required: nil,
 		}
 		set.parts[name] = &part{
-			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: "", checks: nil, uses: nil,
+			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: p.css, checks: nil, uses: nil,
 		}
 	}
 	for _, s := range set.schemas {
@@ -521,12 +527,12 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
 // selectors: floe's base, under the template's own CSS (own: its page.css, then its theme, a style
-// sheet each), under the parts'. The parts' are the style of each part the page names, by its own element, a table of Markdown,
-// or HTML that takes a part's look (<span class="good" data-floe-part="cell">), after the parts it is
-// drawn in the look of, which it adjusts; then the parts theme theme: its base.css, which every page
-// gets, as it holds its variables and the look of Markdown's quotes, its parts.css, the rules of several
-// parts, and its style of each of those parts in the same order. Within the layer the more specific
-// rule wins, else the later. The style of the part diagram is the diagrams'.
+// sheet each), under the parts'. The parts' are the style of each part the page names, by its own
+// element, a table of Markdown, or HTML that takes a part's look (<span class="good" data-floe-part="cell">),
+// after the parts it is drawn in the look of, which it adjusts; then the parts theme theme: its base.css,
+// which every page gets, as it holds its variables and the look of Markdown's quotes, its parts.css, the
+// rules of several parts, and its style of each of those parts in the same order. Within the layer the
+// more specific rule wins, else the later.
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
@@ -546,11 +552,7 @@ func pageStyle(page []byte, own [][]byte, theme string) (string, error) {
 			themes += everyPart(themed.shared)
 		}
 		for _, name := range set.inOrder(set.partsNamedIn(string(page))) {
-			css := set.parts[name].css
-			if name == "diagram" {
-				css = diagram.Style()
-			}
-			parts.WriteString(scoped(name, css))
+			parts.WriteString(scoped(name, set.parts[name].css))
 			if t := themed.parts[name]; t != "" {
 				themes += scoped(name, t)
 			}

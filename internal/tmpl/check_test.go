@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -220,7 +219,7 @@ func TestCheckMistakes(t *testing.T) {
 		{
 			name:    "a theme without the variables of diagrams",
 			files:   map[string]string{"schema.json": `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`},
-			warning: "sizes/themes/default.css does not define --accent, --accent-soft, --surface, --line, --muted, --bg, --fg,",
+			warning: "sizes/themes/default.css does not define --bg, --surface, --fg, --muted, --line, --accent, --accent-soft",
 		},
 		{
 			name:    "a theme without the variables of a Markdown table",
@@ -390,18 +389,26 @@ func TestCSSBraceRefused(t *testing.T) {
 }
 
 // The variables of diagrams and of floe's base that page.css defines, for every theme, are not missed in a
-// theme.
+// theme, and those of the base are not lost beside the diagrams'.
 func TestCheckVariablesInPage(t *testing.T) {
 	t.Parallel()
 
 	release := strings.SplitN(version.Version, ".", 3)
-	dir := sizes(t, map[string]string{
-		"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
-		"schema.json":   `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`,
-		"page.css":      ":scope { --text-width: 50rem; " + strings.Join(diagram.Variables(), ": red; ") + ": red }",
-	})
-	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
-		t.Errorf("Check = %v, %v", warnings, mistakes)
+	diagrams := ":scope { " + strings.Join([]string{
+		"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
+		"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono",
+	}, ": red; ") + ": red; "
+	for page, want := range map[string]string{diagrams + "}": "does not define --text-width,", diagrams + "--text-width: 50rem; }": ""} {
+		dir := sizes(t, map[string]string{
+			"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
+			"schema.json":   `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`,
+			"page.css":      page,
+		})
+		warnings, mistakes := tmpl.Check(dir, "")
+		if len(mistakes) != 0 || want == "" && len(warnings) != 0 ||
+			want != "" && (len(warnings) != 1 || !strings.Contains(warnings[0].Error(), want)) {
+			t.Errorf("Check with %s = %v, %v, want %q", page, warnings, mistakes, want)
+		}
 	}
 }
 
