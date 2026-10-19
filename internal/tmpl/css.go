@@ -2,26 +2,34 @@ package tmpl
 
 import (
 	"bytes"
-	"regexp"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// ownCSS refuses css, the file name of t, where a } closes no block, which would close floe's layer
-// around the template's CSS and leave the rules after it out of it, over the parts' styles, or where it
-// imports a stylesheet, which a browser does not read in a layer.
-func (t *Template) ownCSS(name string, css []byte) error {
+// ownCSS returns name, a file of t's CSS, empty when t has none. It refuses the file where a } closes
+// no block, which would close floe's layer around it and leave the rules after it out of it, over the
+// parts' styles, or where it imports a stylesheet, which a browser does not read in a layer.
+func (t *Template) ownCSS(name string) ([]byte, error) {
+	css, _, err := t.readOptional(name)
+	if err != nil {
+		return nil, err
+	}
 	rules, stray := cssRules(css)
 	if stray >= 0 {
-		return usererr.New("tmpl_css_brace", t.file(name), bytes.Count(css[:stray], []byte("\n"))+1)
+		return nil, usererr.New("tmpl_css_brace", t.file(name), lineAt(css, stray))
 	}
 	for _, r := range rules {
 		if !r.block && strings.HasPrefix(strings.ToLower(r.prelude), "@import") {
-			return usererr.New("tmpl_css_import", t.file(name), bytes.Count(css[:r.at], []byte("\n"))+1)
+			return nil, usererr.New("tmpl_css_import", t.file(name), lineAt(css, r.at))
 		}
 	}
-	return nil
+	return css, nil
+}
+
+// lineAt is the line of src, from 1, that the offset at is on.
+func lineAt(src []byte, at int) int {
+	return bytes.Count(src[:at], []byte("\n")) + 1
 }
 
 // cssRule is what comes before a block of CSS, a selector or an at-rule's prelude, or an at-rule
@@ -60,6 +68,10 @@ func cssRules(css []byte) (rules []cssRule, stray int) {
 			start = i + 1
 		}
 	}
+	// A statement the file ends without its ;, which the browser reads all the same.
+	if r := ruleOf(blank, start, len(blank), false); strings.HasPrefix(r.prelude, "@") {
+		rules = append(rules, r)
+	}
 	return rules, -1
 }
 
@@ -85,18 +97,25 @@ func stringEnd(css []byte, i int) int {
 }
 
 // withoutComments returns css with each byte of its comments a space, but a line break, so that an
-// offset in it is one in css.
+// offset in it is one in css. A /* in a string starts no comment; a comment never closed runs to the end.
 func withoutComments(css []byte) []byte {
-	return cssComment.ReplaceAllFunc(css, func(c []byte) []byte {
-		blank := bytes.Clone(c)
-		for i, b := range blank {
-			if b != '\n' {
-				blank[i] = ' '
+	blank := bytes.Clone(css)
+	for i := 0; i < len(blank); i++ {
+		switch {
+		case blank[i] == '"' || blank[i] == '\'':
+			i = stringEnd(blank, i)
+		case bytes.HasPrefix(blank[i:], []byte("/*")):
+			end := len(blank)
+			if n := bytes.Index(blank[i+2:], []byte("*/")); n >= 0 {
+				end = i + 2 + n + 2
 			}
+			for ; i < end; i++ {
+				if blank[i] != '\n' {
+					blank[i] = ' '
+				}
+			}
+			i--
 		}
-		return blank
-	})
+	}
+	return blank
 }
-
-// cssComment finds a comment of CSS; one never closed runs to the end.
-var cssComment = regexp.MustCompile(`(?s)/\*.*?(?:\*/|$)`)

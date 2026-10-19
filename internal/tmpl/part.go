@@ -500,9 +500,10 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 }
 
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
-// selectors: the template's own CSS (own: its page.css, then its theme) under the parts'. The parts' are
-// the style of the parts whose classes page uses, in the order of their names, the diagrams' when it has
-// diagrams, then the parts theme theme, which every page gets, as it styles Markdown's quotes too. A part
+// selectors: the template's own CSS (own: its page.css, then its theme, a style sheet each) under the
+// parts'. The parts' are the style of the parts whose classes page uses, in the order of their names, the
+// diagrams' when it has diagrams, then the parts theme theme, which every page gets, as it styles
+// Markdown's quotes too. A part
 // is used by its own, a table of Markdown, or HTML that takes a part's look (<span class="floe-pill
 // good">). The classes are those of its class attributes, so that a theme or prose that names one brings
 // no style.
@@ -511,7 +512,7 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // needs. Layer a theme after each part once a theme is a file of each part.
 // LIMIT: the attributes are found as written, not as an HTML parser reads them (class= in a script's
 // string counts); parse the page if a page comes to write one so.
-func pageStyle(page, own []byte, theme string, diagrams bool) (string, error) {
+func pageStyle(page []byte, own [][]byte, theme string, diagrams bool) (string, error) {
 	var parts strings.Builder
 	if bytes.Contains(page, []byte("floe-")) {
 		set, err := builtinParts()
@@ -529,11 +530,17 @@ func pageStyle(page, own []byte, theme string, diagrams bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// The template's CSS is a style sheet of its own, so that a mistake in it, a comment or a block left
-	// open, ends with it; the first sheet names the layers, which puts them in that order.
-	return "<style>\n@layer floe.page, floe.parts;\n" +
-		"@layer floe.parts {\n" + parts.String() + string(css) + "}\n</style>\n" +
-		"<style>\n@layer floe.page {\n" + string(own) + "}\n</style>\n", nil
+	// Each file of the template's CSS is a style sheet of its own, so that a mistake in it, a comment or a
+	// block left open, ends with it; the first sheet names the layers, which puts them in that order.
+	style := "<style>\n@layer floe.page, floe.parts;\n" +
+		"@layer floe.parts {\n" + parts.String() + string(css) + "}\n</style>\n"
+	for _, css := range own {
+		if len(css) == 0 {
+			continue
+		}
+		style += "<style>\n@layer floe.page {\n" + string(css) + "}\n</style>\n"
+	}
+	return style, nil
 }
 
 // themesDir is the directory of parts/ that holds the parts themes, and so is no part.
