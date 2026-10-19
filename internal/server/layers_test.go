@@ -12,7 +12,8 @@ import (
 // still styles what neither of them does, such as where a part stands. It reaches the part's element but
 // not what the part holds, whose colour it gives by inheritance alone. Its @keyframes and @font-face,
 // in floe's @scope, work. A block page.css leaves open does not take in the theme, nor one a part of one's
-// own leaves open the parts after it. A part's style stops at a part it holds.
+// own leaves open the parts after it. A part's style stops at a part it holds. floe's parts theme does not
+// style a part of one's own that took the place of floe's, but does those drawn in its look.
 func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
 	e := newEnv(t)
 	b := newBrowser(t, e.base, i18n.English)
@@ -70,4 +71,19 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	got = b.eval(`[getComputedStyle(document.querySelector('[data-floe-part=leaky]')).color,
 		getComputedStyle(document.querySelector('[data-floe-part=note]')).backgroundColor].join(' | ')`)
 	check(t, "leaky", []string{got}, "rgb(0, 0, 3) | rgb(246, 232, 210)")
+
+	// A table of one's own takes the place of floe's: floe's washi does not style it, but still styles
+	// compare, drawn in the table's look ("table compare"), by its parts.css.
+	e.write(t, "parts/table/schema.json", `{"type": "object", "properties": {"text": {"type": "string"}}}`)
+	e.write(t, "parts/table/part.html", `<div data-floe-part="table">{{.text}}</div>`)
+	e.write(t, "parts/table/part.css", "")
+	slug = "own-table"
+	e.publish(t, e.write(t, "own-table.yaml", "template: report\nlang: en\nparts-theme: washi\nsections:\n  - parts:\n"+
+		"      - table: { text: mine }\n      - compare: { before: a, after: b, rows: [{ what: x, before: p, after: q }] }\n"),
+		store.Options{Slug: &slug})
+	b.navigate("/a/own-table/?raw")
+	b.until("the compare", "!!document.querySelector('[data-floe-part~=compare]')")
+	got = b.eval(`[getComputedStyle(document.querySelector('[data-floe-part=table]')).backgroundColor,
+		getComputedStyle(document.querySelector('[data-floe-part~=compare]')).backgroundColor].join(' | ')`)
+	check(t, "own table", []string{got}, "rgba(0, 0, 0, 0) | rgb(247, 241, 227)")
 }
