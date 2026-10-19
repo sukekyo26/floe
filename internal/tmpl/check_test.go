@@ -47,20 +47,29 @@ func TestDrawEveryStage(t *testing.T) {
 	}
 }
 
-// A right template passes, warned only that it does not name the floe it needs.
+// A right template passes, warned that it does not name the floe it needs, and of the variables floe's
+// base takes that its theme leaves out, though it uses no part.
 func TestCheck(t *testing.T) {
 	t.Parallel()
 
 	warnings, mistakes := tmpl.Check("testdata/sizes", "")
-	if len(warnings) != 1 || len(mistakes) != 0 {
+	if len(warnings) != 3 || len(mistakes) != 0 {
 		t.Fatalf("Check = %v, %v", warnings, mistakes)
+	}
+	if want := "testdata/sizes/themes/default.css does not define --accent, --accent-soft, --surface, --line, --muted, which floe's base"; !strings.HasPrefix(warnings[1].Error(), want) {
+		t.Errorf("the warning = %s, want %s", warnings[1], want)
 	}
 	release := strings.SplitN(version.Version, ".", 3)
 	if want := "testdata/sizes has no template.yaml: write floe: " + release[0] + "." + release[1] + " in it"; !strings.HasPrefix(warnings[0].Error(), want) {
 		t.Errorf("the warning = %s, want %s", warnings[0], want)
 	}
 
-	dir := sizes(t, map[string]string{"template.yaml": "floe: " + release[0] + "." + release[1] + "\n"})
+	// With template.yaml, and a theme that defines the base's variables, nothing is told.
+	dir := sizes(t, map[string]string{
+		"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
+		"page.css": ":scope { --accent: #00f; --accent-soft: #eef; --surface: #fff; --line: #ccc; --muted: #666; " +
+			"--text-width: 50rem; --mono: monospace; }\n",
+	})
 	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
 		t.Errorf("Check with template.yaml = %v, %v", warnings, mistakes)
 	}
@@ -216,7 +225,7 @@ func TestCheckMistakes(t *testing.T) {
 		{
 			name:    "a theme without the variables of a Markdown table",
 			files:   map[string]string{"schema.json": `"chart":|"aside": { "type": "string", "format": "markdown" },` + "\n    " + `"chart":`},
-			warning: "sizes/themes/default.css does not define --accent, --accent-soft, --surface, --line, --muted, --good-soft, --good, --warn-soft, --warn, --bad-soft, --bad,",
+			warning: "sizes/themes/default.css does not define --accent-soft, --accent, --good-soft, --good, --warn-soft, --warn, --bad-soft, --bad, --surface, --line, --muted,",
 		},
 		{
 			name: "formats of other types",
@@ -307,14 +316,14 @@ func TestPageStyleRefused(t *testing.T) {
 	}
 }
 
-// The template's CSS names the page's root as :scope, past a comment that names it otherwise, and
+// The template's CSS names the page's root as :scope, past a comment and values that name it otherwise, and
 // page.html takes the look of parts floe has, past a name it puts together, a mistake told at the line of
 // the name.
 func TestTemplateCSSAndParts(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{
-		"page.css":           "/* not :root */\n:scope { --fg: #000; }\n:root .lead, a { color: red; }\n",
+		"page.css":           "/* not :root */\n:scope { --fg: #000; }\nb { background: url(html.svg); animation: html 1s; }\n:root .lead, a { color: red; }\n",
 		"themes/default.css": "body { font-family: sans-serif; }\nhtml{ color: red; }\n",
 		"page.html":          "<body>|<body><span\n" + `data-floe-part="cell nope"></span><i data-floe-part="{{"cell"}}"></i>`,
 	})
@@ -324,7 +333,7 @@ func TestTemplateCSSAndParts(t *testing.T) {
 		got = append(got, strings.TrimPrefix(m.Error(), dir+string(filepath.Separator)))
 	}
 	want := []string{
-		"page.css:3: write the page's root as :scope, not :root",
+		"page.css:4: write the page's root as :scope, not :root",
 		filepath.Join("themes", "default.css") + ":2: write the page's root as :scope, not html",
 		"page.html:5: page.html takes the look of the part nope, which floe does not have; use bars, ",
 	}

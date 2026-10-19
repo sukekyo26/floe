@@ -139,8 +139,8 @@ func TestCheckParts(t *testing.T) {
 		}
 	}
 	if !strings.Contains(told, "--accent") || !strings.Contains(told, "--good-soft") || strings.Contains(told, "--fg,") ||
-		!strings.Contains(told, "--bad, --bg, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, light colours in dark mode too, and the parts themes go without them\n") ||
-		!strings.Contains(told, "does not define --text-width, --mono, --font, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, and the parts themes go without them\n") {
+		!strings.Contains(told, "--muted, --bg, which floe's base, the template's parts and diagrams, or the parts themes take from it: the parts and diagrams keep values of their own, light colours in dark mode too, and the parts themes go without them\n") ||
+		!strings.Contains(told, "does not define --text-width, --mono, --font, which floe's base, the template's parts and diagrams, or the parts themes take from it: the parts and diagrams keep values of their own, and the parts themes go without them\n") {
 		t.Errorf("the warning of the theme = %q", told)
 	}
 	// A theme that leaves out no colour is not told of dark mode.

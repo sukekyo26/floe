@@ -689,11 +689,7 @@ func partVariables(names []string) ([]string, error) {
 			next = append(next, set.parts[name].uses...)
 		}
 	}
-	// floe's base styles the elements of every part floe draws from HTML.
 	var vars []string
-	if slices.ContainsFunc(names, func(name string) bool { return !isGoPart(name) }) {
-		vars = appendFound(nil, fallback, baseCSS)
-	}
 	for _, name := range slices.Sorted(maps.Keys(used)) {
 		vars = appendFound(vars, fallback, set.parts[name].css)
 	}

@@ -102,7 +102,7 @@ Parts and diagrams take their colours, fonts and the width of a note from the th
 | `--code-bg`, `--code-fg`, `--code-prompt` | The ground of code and a terminal, dark in light mode too; their text, faded for a command's output; a terminal's prompt and the badge of code's language |
 | `--code-add`, `--code-del` | A diff's lines added and removed, on the dark ground |
 
-A theme defines them on `:scope`, or `page.css` does for every theme; `floe template check` warns of a theme that leaves out one its parts or diagrams take, or the parts themes do, whose parts keep light colours in dark mode (code and a terminal stay dark). A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
+A theme defines them on `:scope`, or `page.css` does for every theme; `floe template check` warns of a theme that leaves out one floe's base takes, or its parts or diagrams, or the parts themes do, whose parts keep light colours in dark mode (code and a terminal stay dark). A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
 
 ## Images
 
