@@ -175,18 +175,31 @@ func (l *Library) own(name string) (*Template, error) {
 // resolve returns the template of one's own at the entry name, or nil when it is a file.
 func (l *Library) resolve(name string) (*Template, error) {
 	at := filepath.Join(l.dir, name)
-	dir, err := filepath.EvalSymlinks(at)
+	dir, err := dirAt(at)
 	if err != nil {
 		return nil, usererr.New("tmpl_own_broken", name, at, err.Error())
 	}
-	fi, err := os.Stat(dir)
-	if err != nil {
-		return nil, usererr.New("tmpl_own_broken", name, at, err.Error())
-	}
-	if !fi.IsDir() {
+	if dir == "" {
 		return nil, nil //nolint:nilnil // a file, not a template
 	}
 	return &Template{Name: name, Dir: dir, Path: at, icons: l.icons, partsDir: l.parts, set: nil}, nil
+}
+
+// dirAt returns the directory at, a symlink followed, as its real path, or "" for a file. A symlink that
+// leads nowhere, or one that cannot be read, is its error.
+func dirAt(at string) (string, error) {
+	dir, err := filepath.EvalSymlinks(at)
+	if err != nil {
+		return "", err //nolint:wrapcheck // the callers say what it is
+	}
+	fi, err := os.Stat(dir)
+	if err != nil {
+		return "", err //nolint:wrapcheck // as above
+	}
+	if !fi.IsDir() {
+		return "", nil
+	}
+	return dir, nil
 }
 
 // validName reports whether name can name a template: lower case letters, digits, - and _, so that it

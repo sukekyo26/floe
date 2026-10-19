@@ -150,7 +150,7 @@ type partSet struct {
 }
 
 // builtinParts reads floe's parts once.
-var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("") })
+var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("", nil) })
 
 // partsIn returns floe's parts with those of one's own in dir over them, "" for none: floe's alone, read
 // once, when dir holds nothing.
@@ -167,13 +167,13 @@ func partsIn(dir string) (*partSet, error) {
 	case err != nil:
 		return nil, usererr.New("tmpl_parts_dir_unreadable", dir, err.Error())
 	}
-	return readParts(dir)
+	return readParts(dir, entries)
 }
 
-// readParts reads floe's parts and, over them, those of one's own in dir, "" for none: one of the name
-// of one of floe's takes its place whole. One of one's own that cannot be used is left out, its mistake
-// kept for a template that uses it.
-func readParts(dir string) (*partSet, error) {
+// readParts reads floe's parts and, over them, those of one's own in dir, "" for none, which holds
+// entries: one of the name of one of floe's takes its place whole. One of one's own that cannot be used
+// is left out, its mistake kept for a template that uses it.
+func readParts(dir string, entries []os.DirEntry) (*partSet, error) {
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
 		broken: map[string]error{}, brokenThemes: map[string]error{},
@@ -182,7 +182,7 @@ func readParts(dir string) (*partSet, error) {
 		return nil, err
 	}
 	if dir != "" {
-		if err := set.readOwn(dir); err != nil {
+		if err := set.readOwn(dir, entries); err != nil {
 			return nil, err
 		}
 	}
@@ -261,11 +261,7 @@ func (set *partSet) readBuiltin() error {
 
 // readOwn reads the parts of one's own in dir into set, over floe's of their names, a directory each, a
 // symlink followed. Those that cannot be used are left out of set, and kept in set.broken.
-func (set *partSet) readOwn(dir string) error {
-	entries, readErr := os.ReadDir(dir)
-	if readErr != nil {
-		return usererr.New("tmpl_parts_dir_unreadable", dir, readErr.Error())
-	}
+func (set *partSet) readOwn(dir string, entries []os.DirEntry) error {
 	own := map[string]string{} // the directory of each, as its mistakes name it
 	var replaced []string
 	for _, e := range entries {
@@ -281,11 +277,17 @@ func (set *partSet) readOwn(dir string) error {
 			own[name] = at
 		}
 	}
-	// Each names itself, and parts there are, once all are read.
-	for _, name := range slices.Sorted(maps.Keys(own)) {
-		if err := set.checkNames(name, own[name]); err != nil {
-			set.broken[name] = err
-			set.drop(name)
+	// Each names itself, and parts there are, once all are read: again while one is left out, as a part
+	// may take the look of the one left out.
+	for left := true; left; {
+		left = false
+		for _, name := range slices.Sorted(maps.Keys(own)) {
+			if err := set.checkNames(name, own[name]); err != nil {
+				set.broken[name] = err
+				set.drop(name)
+				delete(own, name)
+				left = true
+			}
 		}
 	}
 	// floe's themes style floe's parts alone: their rules would fit a part of one's own of the name ill.
@@ -318,9 +320,13 @@ func (set *partSet) readOwnThemes(dir string) error {
 		if t == nil {
 			t = newPartsTheme()
 		}
-		root, err := openDir(at)
-		if root == nil && err == nil {
+		dir, err := dirAt(at)
+		if dir == "" && err == nil {
 			continue
+		}
+		var root *os.Root
+		if err == nil {
+			root, err = os.OpenRoot(dir)
 		}
 		if err == nil {
 			err = set.readPartsTheme(root.FS(), at, t)
@@ -336,32 +342,23 @@ func (set *partSet) readOwnThemes(dir string) error {
 	return nil
 }
 
-// openDir opens the directory at, a symlink followed, so that a symlink in it that leads out of it is
-// refused; nil for a file.
-func openDir(at string) (*os.Root, error) {
-	dir, err := filepath.EvalSymlinks(at)
-	if err != nil {
-		return nil, err //nolint:wrapcheck // kept as the mistake of what is there, which names it
-	}
-	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
-		return nil, err //nolint:wrapcheck // as above
-	}
-	return os.OpenRoot(dir) //nolint:wrapcheck // as above
-}
-
 // readOwnPart reads the part name of one's own in the directory at into set, a symlink followed, and
 // one in it that leads out of it refused, and reports whether it read it and whether it took the place
-// of floe's of the name. One that cannot be used is kept in set.broken, and one named as a part floe draws
-// in Go leaves floe's in place.
+// of floe's of the name. One that cannot be used is kept in set.broken, and one of a name set keeps
+// leaves floe's in place.
 func (set *partSet) readOwnPart(name, at string) (read, replaces bool) {
-	root, err := openDir(at)
+	dir, err := dirAt(at)
 	switch {
-	case root == nil && err == nil:
+	case dir == "" && err == nil:
 		return false, false
-	case err == nil && (isGoPart(name) || name == "base" || name == "parts"):
-		_ = root.Close() //nolint:errcheck // nothing read
+	case set.reserved(name):
+		// Told whatever is there, which never takes the place of floe's.
 		set.broken[name] = usererr.New("tmpl_part_name", at, name)
 		return false, false
+	}
+	var root *os.Root
+	if err == nil {
+		root, err = os.OpenRoot(dir)
 	}
 	replaces = set.parts[name] != nil
 	set.drop(name)
@@ -375,6 +372,13 @@ func (set *partSet) readOwnPart(name, at string) (read, replaces bool) {
 		return false, replaces
 	}
 	return true, replaces
+}
+
+// reserved reports whether a part of one's own cannot be named name: a part floe draws in Go, a schema
+// the parts share (tone), or a file of a parts theme (base and parts).
+func (set *partSet) reserved(name string) bool {
+	_, schema := set.docs[partsURL+name+".json"]
+	return isGoPart(name) || schema && set.parts[name] == nil || name == "base" || name == "parts"
 }
 
 // checkNames refuses the part name, whose directory is dir, when its part.html does not name it in a
@@ -682,8 +686,9 @@ func checkParts(s *schema, d *Data, root ast.Node) error {
 		var bad *usererr.Error
 		switch {
 		case errors.As(err, &bad):
-			// A word the data names (word .level) that the part has not: told at the item.
-			return itemMistake(d.File, root, f.at, false, bad)
+			// A word the data names (word .level) that the part has not: told at the item, with the rest.
+			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
+			continue
 		case err != nil:
 			return err
 		}
@@ -775,10 +780,12 @@ func (set *partSet) pageStyle(page []byte, own [][]byte, theme string) (string, 
 	}
 	// The first sheet names the layers, which puts them in that order. Each file after it is a sheet of
 	// its own, so that a mistake in it, a comment or a block left open, ends with it.
-	style := "<style>\n@layer floe.base, floe.page, floe.parts;\n@layer floe.base {\n" + baseCSS + "}\n</style>\n"
+	var style strings.Builder
+	style.WriteString("<style>\n@layer floe.base, floe.page, floe.parts;\n@layer floe.base {\n" + baseCSS +
+		"}\n</style>\n")
 	sheet := func(layer, css string) {
 		if css != "" {
-			style += "<style>\n@layer " + layer + " {\n" + css + "}\n</style>\n"
+			style.WriteString("<style>\n@layer " + layer + " {\n" + css + "}\n</style>\n")
 		}
 	}
 	var names []string
@@ -804,7 +811,7 @@ func (set *partSet) pageStyle(page []byte, own [][]byte, theme string) (string, 
 			sheet("floe.page", "@scope (:root) to ([data-floe-part] > *) {\n"+string(css)+"}\n")
 		}
 	}
-	return style, nil
+	return style.String(), nil
 }
 
 // inOrder returns names, parts of set, each after the parts it uses that names holds, else in order.
@@ -864,14 +871,8 @@ const themesDir = "themes"
 
 // themeNames returns the parts themes of set, by name, those that cannot be used among them.
 func (set *partSet) themeNames() []string {
-	return slices.Sorted(maps.Keys(maps.Collect(func(yield func(string, bool) bool) {
-		for name := range set.themes {
-			yield(name, true)
-		}
-		for name := range set.brokenThemes {
-			yield(name, true)
-		}
-	})))
+	return slices.Sorted(slices.Values(slices.Concat(slices.Collect(maps.Keys(set.themes)),
+		slices.Collect(maps.Keys(set.brokenThemes)))))
 }
 
 // partsTheme is a parts theme: its base.css, for every page, its parts.css, the rules of several parts,

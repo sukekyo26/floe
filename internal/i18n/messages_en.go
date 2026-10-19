@@ -353,7 +353,7 @@ var messagesEN = map[string]string{
 	"tmpl_part_into":               "%s points into a part of floe's, which would be checked but not drawn as the part; refer to the whole part, %s",
 	"tmpl_part_unknown":            `%s is not a part; refer to one as floe:///parts/<name>.json, the name one of %s, floe's and your own, or to the tones of the parts as floe:///parts/tone.json`,
 	"tmpl_parts_dir_unreadable":    "the directory of your own parts %s cannot be read: %s; fix it, or set FLOE_PARTS_DIR",
-	"tmpl_part_name":               "%s: a part of your own cannot be named %s: floe draws diagram and script itself, and base and parts name the files of a parts theme; rename it",
+	"tmpl_part_name":               "%s: a part of your own cannot be named %s: floe draws diagram and script itself, tone is the tones the parts share, and base and parts name the files of a parts theme; rename it",
 	"tmpl_part_unnamed":            `%s: the part %s names itself in no data-floe-part; write data-floe-part="%s" on its element`,
 	"tmpl_part_names":              "%s:%d: the part takes the look of the part %s, which there is none of; use %s",
 	"tmpl_part_broken":             "your own part %s cannot be used: %s; fix it, or remove it",

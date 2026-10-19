@@ -352,7 +352,7 @@ var messagesJA = map[string]string{
 	"tmpl_part_into":               "%s は floe の部品の中を指していて、部品として検査はされても描かれません。部品全体の %s を指してください",
 	"tmpl_part_unknown":            "%s は部品ではありません。部品は floe:///parts/<名前>.json の形で、名前は %s（floe の部品と自分の部品）のどれかを、部品の tone は floe:///parts/tone.json を書いてください",
 	"tmpl_parts_dir_unreadable":    "自分の部品のディレクトリ %s を読めません: %s。直すか、FLOE_PARTS_DIR を設定してください",
-	"tmpl_part_name":               "%s: 自分の部品に %s という名前は付けられません。diagram と script は floe が描き、base と parts は部品のテーマのファイルの名前です。名前を変えてください",
+	"tmpl_part_name":               "%s: 自分の部品に %s という名前は付けられません。diagram と script は floe が描き、tone は部品が共有する色合い、base と parts は部品のテーマのファイルの名前です。名前を変えてください",
 	"tmpl_part_unnamed":            `%s: 部品 %s が data-floe-part で自分を名乗っていません。部品の要素に data-floe-part="%s" を書いてください`,
 	"tmpl_part_names":              "%s:%d: 見た目を借りる部品 %s がありません。%s のどれかを書いてください",
 	"tmpl_part_broken":             "自分の部品 %s は使えません: %s。直すか、消してください",

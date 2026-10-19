@@ -77,28 +77,37 @@ func TestOwnParts(t *testing.T) {
 }
 
 // A part of one's own that cannot be used is refused, with why, to a template that uses it, by its
-// schema or its page.html, and told as a warning to one that does not, which is drawn. One named as a
-// part floe draws in Go leaves floe's in place.
+// schema or its page.html, and told as a warning to one that does not, which is drawn: one that takes the
+// look of one left out too. One named as a part floe draws in Go or a schema the parts share leaves
+// floe's in place, a symlink that leads nowhere too.
 func TestBrokenOwnParts(t *testing.T) {
 	t.Parallel()
 
 	files := map[string]string{
-		"unnamed/schema.json": `{"type": "object"}`,
-		"unnamed/part.html":   `<div class="x">{{.}}</div>`,
-		"unnamed/part.css":    "",
-		"brace/schema.json":   `{"type": "object"}`,
-		"brace/part.html":     `<div data-floe-part="brace"></div>`,
-		"brace/part.css":      ":scope { color: red; }\n}\n",
-		"lender/schema.json":  `{"type": "object"}`,
-		"lender/part.html":    `<div data-floe-part="nope lender"></div>`,
-		"lender/part.css":     "",
-		"base/schema.json":    `{"type": "object"}`,
-		"diagram/schema.json": `{"type": "object"}`,
+		"unnamed/schema.json":  `{"type": "object"}`,
+		"unnamed/part.html":    `<div class="x">{{.}}</div>`,
+		"unnamed/part.css":     "",
+		"brace/schema.json":    `{"type": "object"}`,
+		"brace/part.html":      `<div data-floe-part="brace"></div>`,
+		"brace/part.css":       ":scope { color: red; }\n}\n",
+		"lender/schema.json":   `{"type": "object"}`,
+		"lender/part.html":     `<div data-floe-part="nope lender"></div>`,
+		"lender/part.css":      "",
+		"borrower/schema.json": `{"type": "object"}`,
+		"borrower/part.html":   `<div data-floe-part="unnamed borrower"></div>`,
+		"borrower/part.css":    "",
+		"base/schema.json":     `{"type": "object"}`,
+		"diagram/schema.json":  `{"type": "object"}`,
 	}
-	for name, body := range quote("quote") {
-		files[name] = body
+	for _, name := range []string{"quote", "tone"} {
+		for file, body := range quote(name) {
+			files[file] = body
+		}
 	}
 	parts := ownParts(t, files)
+	if err := os.Symlink(filepath.Join(parts, "nowhere"), filepath.Join(parts, "script")); err != nil {
+		t.Fatal(err)
+	}
 	whys := map[string]string{
 		"unnamed": "your own part unnamed cannot be used: " + filepath.Join(parts, "unnamed", "part.html") +
 			`: the part unnamed names itself in no data-floe-part`,
@@ -107,14 +116,18 @@ func TestBrokenOwnParts(t *testing.T) {
 			":1: the part takes the look of the part nope, which there is none of",
 		"base":    "your own part base cannot be used: " + filepath.Join(parts, "base") + ": a part of your own cannot be named base",
 		"diagram": "your own part diagram cannot be used: " + filepath.Join(parts, "diagram") + ": a part of your own cannot be named diagram",
+		"script":  "your own part script cannot be used: " + filepath.Join(parts, "script") + ": a part of your own cannot be named script",
+		"tone":    "your own part tone cannot be used: " + filepath.Join(parts, "tone") + ": a part of your own cannot be named tone",
+		"borrower": "your own part borrower cannot be used: " + filepath.Join(parts, "borrower", "part.html") +
+			":1: the part takes the look of the part unnamed, which there is none of",
 	}
 	for name, why := range whys {
 		dir := memo(t, `"risks": {"$ref": "floe:///parts/`+name+`.json"}, "aside": {"type": "string"}`)
 		_, mistakes := tmpl.Check(filepath.Join(dir, "memo"), parts, "")
-		if name == "diagram" {
-			// floe's diagram stays: the schema is right, and only the example, which is no diagram, fails.
+		if name == "diagram" || name == "script" || name == "tone" {
+			// floe's stays: the schema is right, and only the example, which fits none of them, fails.
 			if len(mistakes) != 1 || strings.Contains(mistakes[0].Error(), "cannot be used") {
-				t.Errorf("Check of a template of the diagram = %v", mistakes)
+				t.Errorf("Check of a template of %s = %v", name, mistakes)
 			}
 			continue
 		}
@@ -136,6 +149,12 @@ func TestBrokenOwnParts(t *testing.T) {
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/quote.json"}, "aside": {"type": "string"}`)
 	if _, err := draw(tmpl.NewLibrary(dir, parts, ""), "template: memo\nlang: en\nrisks: { text: Hi }\n"); err != nil {
 		t.Errorf("drawing a template of the quote = %v", err)
+	}
+	// floe's tone stays the tone of its parts.
+	if page, err := draw(tmpl.NewLibrary(memo(t, memoItems), parts, ""), "template: memo\nlang: en\n"+
+		"risks: { columns: [{title: Risk}], rows: [[Links]] }\naside: { text: Hi, tone: warn }\n"); err != nil ||
+		!strings.Contains(page, `<div class="warn" data-floe-part="note">`) {
+		t.Errorf("drawing a note of a tone = %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "memo", "example.yaml"), []byte("template: memo\nlang: en\nrisks: { text: Hi }\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -203,7 +222,7 @@ func TestOwnPartsThemes(t *testing.T) {
 }
 
 // A word a part's HTML names from the data (word .level) that its words.yaml has not is told at the
-// data's item.
+// data's item, beside the failures of the checks of the other items.
 func TestPartWordAtItem(t *testing.T) {
 	t.Parallel()
 
@@ -213,12 +232,16 @@ func TestPartWordAtItem(t *testing.T) {
 		"level/part.css":    "",
 		"level/words.yaml":  "en: { low: Low }\n",
 	})
-	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/level.json"}, "aside": {"type": "string"}`), parts, "")
+	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/level.json"}, "aside": {"$ref": "floe:///parts/progress.json"}`), parts, "")
 	if page, err := draw(l, "template: memo\nlang: en\nrisks: { level: low }\n"); err != nil || !strings.Contains(page, ">Low</span>") {
 		t.Errorf("drawing a word the part has = %v", err)
 	}
 	want := "data.yaml:3:10: risks: " + filepath.Join(parts, "level", "words.yaml") + ` has no word "mid"`
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: { level: mid }\n"); err == nil || err.Error() != want {
 		t.Errorf("drawing a word the part has not = %v, want %s", err, want)
+	}
+	_, err := draw(l, "template: memo\nlang: en\nrisks: { level: mid }\naside: [{ label: Pages, done: 5, of: 3 }]\n")
+	if err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), "data.yaml:4:") {
+		t.Errorf("drawing a word the part has not beside a check that fails = %v", err)
 	}
 }
