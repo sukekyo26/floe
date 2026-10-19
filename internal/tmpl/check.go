@@ -124,13 +124,13 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		mistakes = append(mistakes, err)
 	}
-	page, err := t.page()
+	page, src, err := t.page()
 	if err != nil {
 		return warnings, append(mistakes, err)
 	}
 	mistakes = append(mistakes, t.checkAssets(page)...)
 	mistakes = append(mistakes, t.checkCSS()...)
-	return warnings, append(mistakes, t.checkNamedParts()...)
+	return warnings, append(mistakes, t.checkNamedParts(src)...)
 }
 
 // checkCSS returns the mistakes of page.css and of each theme of t that ownCSS refuses.
@@ -156,30 +156,19 @@ func (t *Template) checkCSS() []error {
 	return mistakes
 }
 
-// checkNamedParts returns a mistake for each part page.html takes the look of, by data-floe-part, that
-// floe does not have: the page would get no style for it. A name page.html puts together ({{.kind}})
-// is not looked at.
-func (t *Template) checkNamedParts() []error {
-	src, err := t.readFile("page.html")
-	if err != nil {
-		return []error{err}
-	}
+// checkNamedParts returns a mistake for each part src, page.html, takes the look of, by data-floe-part,
+// that floe does not have: the page would get no style for it.
+func (t *Template) checkNamedParts(src []byte) []error {
 	set, err := builtinParts()
 	if err != nil {
 		return []error{err}
 	}
 	var mistakes []error
-	for _, m := range partAttr.FindAllSubmatchIndex(src, -1) {
-		value := string(src[m[2]:m[3]])
-		if strings.Contains(value, "{{") {
-			continue
-		}
-		for _, name := range strings.Fields(strings.Trim(value, `"'`)) {
-			if _, ok := set.parts[name]; !ok {
-				line := bytes.Count(src[:m[0]], []byte("\n")) + 1
-				mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), line, name,
-					strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")))
-			}
+	for _, n := range namedParts(string(src)) {
+		if _, ok := set.parts[n.name]; !ok {
+			line := bytes.Count(src[:n.at], []byte("\n")) + 1
+			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), line, n.name,
+				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")))
 		}
 	}
 	return mistakes

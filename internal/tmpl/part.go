@@ -208,8 +208,8 @@ func (s *schema) partsUnder(names *[]string) {
 // partsNamedIn returns the names of the parts the data-floe-part attributes of html name, in order.
 func (set *partSet) partsNamedIn(html string) []string {
 	named := map[string]bool{}
-	for _, name := range namedParts(html) {
-		named[name] = true
+	for _, n := range namedParts(html) {
+		named[n.name] = true
 	}
 	var names []string
 	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
@@ -220,15 +220,28 @@ func (set *partSet) partsNamedIn(html string) []string {
 	return names
 }
 
+// namedPart is a name a data-floe-part attribute gives, and the offset where the attribute's value starts.
+type namedPart struct {
+	name string
+	at   int
+}
+
 // namedParts returns the names the data-floe-part attributes of html give, as written: an element of a
-// part names it, after the parts it is drawn in the look of (data-floe-part="table compare").
+// part names it, after the parts it is drawn in the look of (data-floe-part="table compare"). A name
+// that html puts together ({{.kind}}) is not one.
 // LIMIT: the attributes are found as written, not as an HTML parser reads them (one in a script's string
 // counts); parse the page if a page comes to write one so.
-func namedParts(html string) []string {
-	found := partAttr.FindAllStringSubmatch(html, -1)
-	names := make([]string, 0, len(found))
+func namedParts(html string) []namedPart {
+	found := partAttr.FindAllStringSubmatchIndex(html, -1)
+	names := make([]namedPart, 0, len(found))
 	for _, m := range found {
-		names = append(names, strings.Fields(strings.Trim(m[1], `"'`))...)
+		value := html[m[2]:m[3]]
+		if strings.Contains(value, "{{") {
+			continue
+		}
+		for _, name := range strings.Fields(strings.Trim(value, `"'`)) {
+			names = append(names, namedPart{name: name, at: m[2]})
+		}
 	}
 	return names
 }

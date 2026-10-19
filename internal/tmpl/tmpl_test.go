@@ -169,10 +169,10 @@ func TestReportScript(t *testing.T) {
 		"          js: |\n            function (el, data) { el.textContent = data.a; }; // a comment\n"+
 		"      - script:\n          js: (el) => el.append('x');\nlang: en\n")
 	for _, want := range []string{
-		"<div data-floe-part=\"script\"></div><script>{const floeScript = function (el, data) { el.textContent = data.a; }; // a comment\n\n" +
+		"<div></div><script>{const floeScript = function (el, data) { el.textContent = data.a; }; // a comment\n\n" +
 			";floeScript(document.currentScript.previousElementSibling, " +
 			`JSON.parse("{\"a\":\"\\u003c/script\\u003e\\u003cb\\u003e\\u0026\",\"n\":1.5}"));}</script>`,
-		"<div data-floe-part=\"script\"></div><script>{const floeScript = (el) => el.append('x');\n" +
+		"<div></div><script>{const floeScript = (el) => el.append('x');\n" +
 			`;floeScript(document.currentScript.previousElementSibling, JSON.parse("null"));}</script>`,
 	} {
 		if !strings.Contains(got, want) {

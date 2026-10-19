@@ -42,12 +42,13 @@ func TestPalette(t *testing.T) {
 			t.Errorf("the part %s takes %s without a value of its own", name, bare)
 		}
 		// A part's element names it, so that a page that draws it gets its style, and every name is a part's.
-		if names := namedParts(p.html); p.pages != nil && !slices.Contains(names, name) {
+		names := namedParts(p.html)
+		if p.pages != nil && !slices.ContainsFunc(names, func(n namedPart) bool { return n.name == name }) {
 			t.Errorf("the HTML of the part %s does not name it in a data-floe-part", name)
 		}
-		for _, other := range namedParts(p.html) {
-			if _, ok := set.parts[other]; !ok {
-				t.Errorf("the HTML of the part %s names %s, which is no part", name, other)
+		for _, other := range names {
+			if _, ok := set.parts[other.name]; !ok {
+				t.Errorf("the HTML of the part %s names %s, which is no part", name, other.name)
 			}
 		}
 	}
