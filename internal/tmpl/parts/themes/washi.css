@@ -14,8 +14,9 @@
   }
   :is(.floe-code, .floe-terminal) { --code-bg: #14120f; }
 }
+/* --display too, the face floe's base gives headings */
 :is(.floe-table, .floe-card, .floe-note, .floe-progress, .floe-steps, .floe-checklist, .floe-tree, .floe-details, .floe-timeline, .floe-bars, .floe-faq, .floe-glossary, .floe-keys, blockquote) {
-  font-family: var(--washi-font); background: var(--washi-paper); color: var(--washi-sumi); border-radius: 0; box-shadow: none;
+  font-family: var(--washi-font); --display: var(--washi-font); background: var(--washi-paper); color: var(--washi-sumi); border-radius: 0; box-shadow: none;
 }
 .floe-table { border: 0; padding-inline: 1.4rem; }
 .floe-table table { border-top: 4px double var(--washi-sumi); border-bottom: 4px double var(--washi-sumi); }

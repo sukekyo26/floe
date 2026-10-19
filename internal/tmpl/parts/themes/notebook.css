@@ -18,8 +18,9 @@
     --nb-stick-1: #f3e38f; --nb-stick-2: #f6c2d4; --nb-stick-3: #bfdcf7;
   }
 }
+/* --display too, the face floe's base gives headings */
 :is(.floe-table, .floe-card, .floe-note, .floe-progress, .floe-steps, .floe-checklist, .floe-tree, .floe-details, .floe-timeline, .floe-bars, .floe-faq, .floe-glossary, .floe-keys, blockquote) {
-  font-family: var(--nb-font);
+  font-family: var(--nb-font); --display: var(--nb-font);
 }
 :is(.floe-table, .floe-progress, .floe-steps, .floe-checklist, .floe-tree, .floe-details, .floe-timeline, .floe-bars, .floe-faq, .floe-glossary, .floe-keys) {
   background-color: var(--nb-sheet); background-image: repeating-linear-gradient(transparent 0 35px, var(--nb-rule) 35px 36px);
