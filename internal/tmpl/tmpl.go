@@ -445,24 +445,17 @@ func (d *Data) Render(title string) ([]byte, error) {
 	return out, nil
 }
 
-// css returns the template's own CSS: its page.css, if it has one, then its theme.
-func (t *Template) css(theme string) ([]byte, error) {
-	page, _, err := t.readOptional("page.css")
+// css returns the template's own CSS: its page.css, empty if it has none, then its theme.
+func (t *Template) css(theme string) ([][]byte, error) {
+	page, err := t.ownCSS("page.css")
 	if err != nil {
 		return nil, err
 	}
-	if err = t.ownCSS("page.css", page); err != nil {
-		return nil, err
-	}
-	name := path.Join("themes", theme+".css")
-	css, err := t.readFile(name)
+	css, err := t.ownCSS(path.Join("themes", theme+".css"))
 	if err != nil {
 		return nil, err
 	}
-	if err = t.ownCSS(name, css); err != nil {
-		return nil, err
-	}
-	return slices.Concat(page, css), nil
+	return [][]byte{page, css}, nil
 }
 
 // page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together. It
@@ -473,7 +466,7 @@ func (t *Template) page() (*template.Template, []byte, error) {
 		return nil, nil, err
 	}
 	if at := tagsOf(src).style; at >= 0 {
-		return nil, nil, usererr.New("tmpl_page_style", t.file("page.html"), bytes.Count(src[:at], []byte("\n"))+1)
+		return nil, nil, usererr.New("tmpl_page_style", t.file("page.html"), lineAt(src, at))
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).

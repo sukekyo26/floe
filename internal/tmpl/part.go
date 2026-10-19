@@ -520,8 +520,8 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 }
 
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
-// selectors: floe's base, under the template's own CSS (own: its page.css, then its theme), under the
-// parts'. The parts' are the style of each part the page names, by its own element, a table of Markdown,
+// selectors: floe's base, under the template's own CSS (own: its page.css, then its theme, a style
+// sheet each), under the parts'. The parts' are the style of each part the page names, by its own element, a table of Markdown,
 // or HTML that takes a part's look (<span class="good" data-floe-part="cell">), after the parts it is
 // drawn in the look of, which it adjusts; then the parts theme theme: its base.css, which every page
 // gets, as it holds its variables and the look of Markdown's quotes, its parts.css, the rules of several
@@ -530,7 +530,7 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
-func pageStyle(page, own []byte, theme string) (string, error) {
+func pageStyle(page []byte, own [][]byte, theme string) (string, error) {
 	themed, err := readPartsTheme(theme)
 	if err != nil {
 		return "", err
@@ -556,12 +556,19 @@ func pageStyle(page, own []byte, theme string) (string, error) {
 			}
 		}
 	}
-	// The template's CSS is a style sheet of its own, so that a mistake in it, a comment or a block left
-	// open, ends with it; the first sheet names the layers, which puts them in that order.
-	return "<style>\n@layer floe.base, floe.page, floe.parts;\n" +
+	// Each file of the template's CSS is a style sheet of its own, so that a mistake in it, a comment or a
+	// block left open, ends with it; the first sheet names the layers, which puts them in that order.
+	style := "<style>\n@layer floe.base, floe.page, floe.parts;\n" +
 		"@layer floe.base {\n" + baseCSS + "}\n" +
-		"@layer floe.parts {\n" + parts.String() + themes + "}\n</style>\n" +
-		"<style>\n@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(own) + "}\n}\n</style>\n", nil
+		"@layer floe.parts {\n" + parts.String() + themes + "}\n</style>\n"
+	for _, css := range own {
+		if len(css) == 0 {
+			continue
+		}
+		style += "<style>\n@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(css) +
+			"}\n}\n</style>\n"
+	}
+	return style, nil
 }
 
 // inOrder returns names, parts of set, each after the parts it uses that names holds, else in order.

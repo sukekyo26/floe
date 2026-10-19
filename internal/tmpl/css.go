@@ -8,28 +8,36 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// ownCSS refuses css, the file name of t, where a } closes no block, which would close floe's layer
-// around the template's CSS and leave the rules after it out of it, over the parts' styles; where it
-// imports a stylesheet, which a browser does not read in a layer; or where a selector names the page's
-// root as :root or html: floe scopes the template's CSS to the page, @scope (:root), where :scope is the
-// root and those name nothing.
-func (t *Template) ownCSS(name string, css []byte) error {
-	line := func(at int) int { return bytes.Count(css[:at], []byte("\n")) + 1 }
+// ownCSS returns name, a file of t's CSS, empty when t has none. It refuses the file where a } closes
+// no block, which would close floe's layer around it and leave the rules after it out of it, over the
+// parts' styles; where it imports a stylesheet, which a browser does not read in a layer; or where a
+// selector names the page's root as :root or html: floe scopes the template's CSS to the page,
+// @scope (:root), where :scope is the root and those name nothing.
+func (t *Template) ownCSS(name string) ([]byte, error) {
+	css, _, err := t.readOptional(name)
+	if err != nil {
+		return nil, err
+	}
 	rules, stray := cssRules(css)
 	if stray >= 0 {
-		return usererr.New("tmpl_css_brace", t.file(name), line(stray))
+		return nil, usererr.New("tmpl_css_brace", t.file(name), lineAt(css, stray))
 	}
 	for _, r := range rules {
 		switch {
 		case !r.block && strings.HasPrefix(strings.ToLower(r.prelude), "@import"):
-			return usererr.New("tmpl_css_import", t.file(name), line(r.at))
+			return nil, usererr.New("tmpl_css_import", t.file(name), lineAt(css, r.at))
 		case r.block && !strings.HasPrefix(r.prelude, "@"):
 			if m := rootSelector.FindStringSubmatchIndex(r.prelude); m != nil {
-				return usererr.New("tmpl_css_root", t.file(name), line(r.at+m[2]), r.prelude[m[2]:m[3]])
+				return nil, usererr.New("tmpl_css_root", t.file(name), lineAt(css, r.at+m[2]), r.prelude[m[2]:m[3]])
 			}
 		}
 	}
-	return nil
+	return css, nil
+}
+
+// lineAt is the line of src, from 1, that the offset at is on.
+func lineAt(src []byte, at int) int {
+	return bytes.Count(src[:at], []byte("\n")) + 1
 }
 
 // rootSelector finds :root or html in a selector.
@@ -71,6 +79,10 @@ func cssRules(css []byte) (rules []cssRule, stray int) {
 			start = i + 1
 		}
 	}
+	// A statement the file ends without its ;, which the browser reads all the same.
+	if r := ruleOf(blank, start, len(blank), false); strings.HasPrefix(r.prelude, "@") {
+		rules = append(rules, r)
+	}
 	return rules, -1
 }
 
@@ -96,18 +108,25 @@ func stringEnd(css []byte, i int) int {
 }
 
 // withoutComments returns css with each byte of its comments a space, but a line break, so that an
-// offset in it is one in css.
+// offset in it is one in css. A /* in a string starts no comment; a comment never closed runs to the end.
 func withoutComments(css []byte) []byte {
-	return cssComment.ReplaceAllFunc(css, func(c []byte) []byte {
-		blank := bytes.Clone(c)
-		for i, b := range blank {
-			if b != '\n' {
-				blank[i] = ' '
+	blank := bytes.Clone(css)
+	for i := 0; i < len(blank); i++ {
+		switch {
+		case blank[i] == '"' || blank[i] == '\'':
+			i = stringEnd(blank, i)
+		case bytes.HasPrefix(blank[i:], []byte("/*")):
+			end := len(blank)
+			if n := bytes.Index(blank[i+2:], []byte("*/")); n >= 0 {
+				end = i + 2 + n + 2
 			}
+			for ; i < end; i++ {
+				if blank[i] != '\n' {
+					blank[i] = ' '
+				}
+			}
+			i--
 		}
-		return blank
-	})
+	}
+	return blank
 }
-
-// cssComment finds a comment of CSS; one never closed runs to the end.
-var cssComment = regexp.MustCompile(`(?s)/\*.*?(?:\*/|$)`)

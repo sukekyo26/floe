@@ -1,7 +1,6 @@
 package tmpl
 
 import (
-	"bytes"
 	"cmp"
 	"errors"
 	"fmt"
@@ -145,11 +144,7 @@ func (t *Template) checkCSS() []error {
 	}
 	var mistakes []error
 	for _, name := range names {
-		css, _, err := t.readOptional(name)
-		if err == nil {
-			err = t.ownCSS(name, css)
-		}
-		if err != nil {
+		if _, err := t.ownCSS(name); err != nil {
 			mistakes = append(mistakes, err)
 		}
 	}
@@ -166,8 +161,7 @@ func (t *Template) checkNamedParts(src []byte) []error {
 	var mistakes []error
 	for _, n := range namedParts(string(src)) {
 		if _, ok := set.parts[n.name]; !ok {
-			line := bytes.Count(src[:n.at], []byte("\n")) + 1
-			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), line, n.name,
+			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), lineAt(src, n.at), n.name,
 				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")))
 		}
 	}
@@ -578,7 +572,7 @@ func (l *schemaLint) variables() ([]string, error) {
 	// the parts.
 	more := appendFound(nil, fallback, baseCSS)
 	if slices.Contains(l.parts, "diagram") {
-		more = diagram.Variables()
+		more = append(more, diagram.Variables()...)
 	}
 	// Whichever parts theme a data file picks styles the parts, and the quotes of Markdown, which counts
 	// as the table part.
