@@ -104,6 +104,23 @@ Parts and diagrams take their colours, fonts and the width of a note from the th
 
 A theme defines them on `:scope`, or `page.css` does for every theme; `floe template check` warns of a theme that leaves out one floe's base takes, or its parts or diagrams, or the parts themes do, whose parts keep light colours in dark mode (code and a terminal stay dark). A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
 
+## Parts of your own
+
+- A part of your own is a directory `$FLOE_PARTS_DIR/<name>/`, named after the part, of the files floe's parts have: `schema.json`, `part.html` and `part.css`, and `checks.yaml` and `words.yaml` if it needs them. `FLOE_PARTS_DIR` defaults to `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`. The directory may be a symlink; a file in it that leads out of it is refused.
+- Its name is a template's (lower case letters, digits, `-` and `_`). `diagram` and `script`, which floe draws itself, and `base` and `parts`, the names of a parts theme's files, are refused.
+- A schema refers to it as to floe's, `"$ref": "floe:///parts/quote.json"`. One of the name of one of floe's takes its place whole, in every template and in the parts drawn in its look (a `table` of your own draws Markdown's tables and `compare` too); floe's files do not fill in for one it leaves out, and floe's parts themes do not style it.
+- Its element names it, `data-floe-part="quote"`, after the parts it is drawn in the look of. Its `part.css` is scoped as floe's are: it writes the element as `:scope`, and its classes meet no other part's nor the template's. A `}` that closes no block, an `@import`, and `:root` or `html` in a selector are refused at their line, and a block it leaves open ends with its own `<style>`.
+- A part of your own that cannot be used (a mistake in its files, a name it is refused) is refused, with why, to a template that uses it, by its schema or its `page.html`, and floe does not fall back to its own part of the name. `floe template check` warns of each one a template does not use.
+
+```html
+<figure data-floe-part="quote"><blockquote>{{markdown .text}}</blockquote>
+{{- with .source}}<figcaption class="source">{{word "by"}} {{.}}</figcaption>{{end}}</figure>
+```
+
+A parts theme of your own is a directory `$FLOE_PARTS_DIR/themes/<name>/` of the files floe's have: `base.css` (for every page: its variables, of names of its own, and Markdown's quotes), `parts.css` (rules of several parts, each named, as `:scope:where([data-floe-part~="quote"])`) and `<part>.css` (one part's, scoped to it), each left out if not needed; a file of another name is refused. One of the name of one of floe's takes the place of its files of their names, the others staying floe's: `themes/brutal/quote.css` styles a quote of your own in brutal. Put an empty file to leave out one of floe's. One that cannot be used is refused to a data file that picks it.
+
+A page published, or linked, is drawn with the server's parts, those of the `floe publish` or `floe serve` that started it, and saving a file of a part reloads a linked page.
+
 ## Images
 
 An image, of the data or of `assets/`, is a png, jpeg, gif, webp or svg file, by its name and by what it holds, up to 1 MiB. Each name on its path is matched as written, case and all, so that a template made on macOS draws on linux too, and none may be a symlink, wherever it leads. A mistake in an image of the data is reported at its line and column; `floe template check` checks every image of `assets/`, and every one `page.html` names to `asset`, in branches the example does not reach too. The images `example.yaml` names are read from the template's directory: a data file started from the example needs them beside it.

@@ -104,6 +104,23 @@ floe には、テンプレートの項目を描く部品があります。`table
 
 変数はテーマの `:scope` で定義するか、すべてのテーマの分を `page.css` で定義します。`floe template check` は、floe の基本の見た目、部品や図、部品のテーマが使う変数のどれかを定義していないテーマを警告します。そのテーマの部品はダークモードでも明るい色のままになります（コードとターミナルは暗いまま）。`tone`（ピル・注記・図の部品）は `accent`・`good`・`warn`・`bad` のどれかで、`--accent`・`--good` などの色と、その `-soft` を使います。
 
+## 自分の部品
+
+- 自分の部品は、部品の名前のディレクトリ `$FLOE_PARTS_DIR/<名前>/` に、floe の部品と同じファイルを置きます。`schema.json`・`part.html`・`part.css` と、要れば `checks.yaml`・`words.yaml` です。`FLOE_PARTS_DIR` の既定は `$XDG_CONFIG_HOME/floe/parts`、無ければ `~/.config/floe/parts` です。ディレクトリはシンボリックリンクでもかまいません。その中からシンボリックリンクで外へ出るファイルは断ります。
+- 名前の決まりはテンプレートと同じです（英小文字・数字・`-`・`_`）。floe が自分で描く `diagram`・`script` と、部品のテーマのファイルの名前 `base`・`parts` は断ります。
+- schema からは floe の部品と同じく `"$ref": "floe:///parts/quote.json"` で指します。floe の部品と同じ名前なら、その部品に丸ごと代わります。どのテンプレートでも、その見た目を借りる部品でも同じです（自分の `table` は Markdown の表と `compare` も描きます）。置かなかったファイルを floe の部品が補うことはなく、floe の部品のテーマもその部品には当たりません。
+- 部品の要素は `data-floe-part="quote"` で自分を名乗ります。ほかの部品の見た目を借りるなら、その名前を先に書きます。`part.css` は floe の部品と同じく部品の範囲に入るので、要素は `:scope` と書き、中のクラスはほかの部品ともテンプレートともぶつかりません。どのブロックも閉じない `}`、`@import`、セレクタの `:root`・`html` は行を示して断ります。閉じ忘れたブロックは、その部品の `<style>` の中で終わります。
+- 使えない自分の部品（ファイルの誤り、断る名前）を使うテンプレートは、schema からでも `page.html` からでも、理由を添えて断ります。同じ名前の floe の部品には戻しません。テンプレートが使わない壊れた部品は、`floe template check` が警告で知らせます。
+
+```html
+<figure data-floe-part="quote"><blockquote>{{markdown .text}}</blockquote>
+{{- with .source}}<figcaption class="source">{{word "by"}} {{.}}</figcaption>{{end}}</figure>
+```
+
+自分の部品のテーマは、ディレクトリ `$FLOE_PARTS_DIR/themes/<名前>/` に floe のテーマと同じファイルを置きます。`base.css`（どのページにも入る。自分の名前の変数と Markdown の引用）、`parts.css`（いくつもの部品の規則。`:scope:where([data-floe-part~="quote"])` のように部品を名指す）、`<部品>.css`（その部品の範囲に入る）で、要らないものは省けます。ほかの名前のファイルは断ります。floe のテーマと同じ名前なら、同じ名前のファイルだけが代わり、ほかは floe のものが残ります。`themes/brutal/quote.css` を置けば、brutal で自分の quote の見た目を決められます。floe のファイルを消すには空のファイルを置きます。使えないテーマは、それを選んだデータファイルで断ります。
+
+公開したページとリンクしたページは、サーバーの部品で描きます。サーバーは、それを起動した `floe publish` か `floe serve` の部品を使います。部品のファイルを保存すると、リンクしたページを読み直します。
+
 ## 画像
 
 画像は、データのものも `assets/` のものも、png・jpeg・gif・webp・svg のファイルで、名前と中身の両方で判定し、1 MiB までです。macOS で作ったテンプレートが linux でも描けるよう、パスの各名前は大文字小文字まで書いたとおりに照らし、どこを指すものであれ symlink は通しません。データの画像の誤りは、その行と列で出します。`floe template check` は、`assets/` のすべての画像と、`page.html` が `asset` に渡すすべての名前を、見本が通らない分岐の中のものも含めて確かめます。`example.yaml` が書く画像はテンプレートのディレクトリから読むので、見本から始めたデータファイルには、その画像も隣に要ります。
