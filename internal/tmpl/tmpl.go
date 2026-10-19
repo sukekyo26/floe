@@ -225,10 +225,11 @@ func (t *Template) check(h *head, dir string, given Themes, problems yamlpos.Pro
 	if err != nil {
 		return err
 	}
-	partsThemes, err := PartsThemes()
+	set, err := t.parts()
 	if err != nil {
 		return err
 	}
+	partsThemes := set.themeNames()
 	// A theme of one kind named as one of the other is told where it goes.
 	unknown := misplaced(cmp.Or(given.Template, d.Theme), themes, partsThemes, "tmpl_unknown_theme", "tmpl_theme_of_parts")
 	more, err := pickTheme(d, &d.Theme, given.Template, themes, h.where["theme"], unknown)
@@ -288,7 +289,11 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 	if err = t.refuseShared(s); err != nil {
 		return err
 	}
-	err = validate(src, d, root)
+	set, err := t.parts()
+	if err != nil {
+		return err
+	}
+	err = validate(set, src, d, root)
 	var more yamlpos.Problems
 	switch {
 	case errors.As(err, &more):
@@ -429,7 +434,11 @@ func (d *Data) Render(title string) ([]byte, error) {
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	out := b.Bytes()
-	style, err := pageStyle(out, own, d.PartsTheme)
+	set, err := t.parts()
+	if err != nil {
+		return nil, err
+	}
+	style, err := set.pageStyle(out, own, d.PartsTheme)
 	if err != nil {
 		return nil, err
 	}
@@ -546,12 +555,12 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	set, err := builtinParts()
+	set, err := t.parts()
 	if err != nil {
 		return nil, err
 	}
 	if _, into := s.first("#", func(x *schema) bool { _, into := set.pointsInto(x.Ref); return into }); into != nil {
-		return nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(into.Ref))
+		return nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(set, into.Ref))
 	}
 	if ptr, as := s.first("#", func(x *schema) bool { return isGoPart(x.Format) }); as != nil {
 		return nil, usererr.New("tmpl_format_part", t.file("schema.json"), ptr, as.Format, as.Format)
@@ -566,7 +575,7 @@ func (t *Template) readSchema(b []byte) (*schema, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
 	}
-	set, err := builtinParts()
+	set, err := t.parts()
 	if err != nil {
 		return nil, err
 	}

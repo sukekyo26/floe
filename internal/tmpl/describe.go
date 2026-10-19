@@ -53,10 +53,11 @@ func (l *Library) Describe(name string) (*Description, error) {
 	if err != nil {
 		return nil, err
 	}
-	partsThemes, err := PartsThemes()
+	set, err := t.parts()
 	if err != nil {
 		return nil, err
 	}
+	partsThemes := set.themeNames()
 	d := &Description{
 		Name: name, Path: t.Path, About: s.Description, Floe: "", Series: "", Themes: themes, PartsThemes: partsThemes,
 		Items: s.items(), Example: nil,

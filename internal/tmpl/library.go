@@ -195,6 +195,11 @@ func (t *Template) file(name string) string {
 	return filepath.Join(cmp.Or(t.Path, t.Name), name)
 }
 
+// parts returns the parts t is drawn with and their themes.
+func (*Template) parts() (*partSet, error) {
+	return builtinParts()
+}
+
 // readFile reads the file name, a slash-separated path under the template. Under a template of one's
 // own, a symlink that leads out of it is refused.
 func (t *Template) readFile(name string) ([]byte, error) {

@@ -133,24 +133,31 @@ func isGoPart(name string) bool {
 	return ok
 }
 
-// partSet is floe's parts, and every schema under parts/, by URL: the parts' and those they share.
+// partSet is floe's parts, every schema under parts/, by URL: the parts' and those they share, and the
+// parts themes.
 type partSet struct {
 	parts   map[string]*part
-	docs    map[string]any     // as read, for jsonschema
-	schemas map[string]*schema // as floe reads them
+	docs    map[string]any         // as read, for jsonschema
+	schemas map[string]*schema     // as floe reads them
+	themes  map[string]*partsTheme // by name
 }
 
 // builtinParts reads floe's parts once.
 var builtinParts = sync.OnceValues(readParts)
 
 func readParts() (*partSet, error) {
-	set := &partSet{parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}}
+	set := &partSet{
+		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
+	}
 	entries, err := fs.ReadDir(partFiles, "parts")
 	if err != nil {
 		return nil, fmt.Errorf("read the parts: %w", err)
 	}
 	for _, e := range entries {
 		if e.Name() == themesDir {
+			if set.themes, err = readPartsThemes(); err != nil {
+				return nil, err
+			}
 			continue
 		}
 		file := path.Join("parts", e.Name())
@@ -536,18 +543,14 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
-func pageStyle(page []byte, own [][]byte, theme string) (string, error) {
-	themed, err := readPartsTheme(theme)
-	if err != nil {
-		return "", err
+func (set *partSet) pageStyle(page []byte, own [][]byte, theme string) (string, error) {
+	themed := set.themes[theme]
+	if themed == nil {
+		return "", fmt.Errorf("draw with the parts theme %s: %w", theme, fs.ErrNotExist)
 	}
 	var parts strings.Builder
 	themes := themed.base
 	if bytes.Contains(page, []byte("data-floe-part")) {
-		set, err := builtinParts()
-		if err != nil {
-			return "", err
-		}
 		if themed.shared != "" {
 			themes += everyPart(themed.shared)
 		}
@@ -620,16 +623,24 @@ var baseCSS string
 // themesDir is the directory of parts/ that holds the parts themes, and so is no part.
 const themesDir = "themes"
 
-// PartsThemes returns the themes of floe's parts, by name: a directory each.
-func PartsThemes() ([]string, error) {
+// themeNames returns the parts themes of set, by name.
+func (set *partSet) themeNames() []string {
+	return slices.Sorted(maps.Keys(set.themes))
+}
+
+// readPartsThemes reads the themes of floe's parts, a directory each.
+func readPartsThemes() (map[string]*partsTheme, error) {
 	entries, err := fs.ReadDir(partFiles, path.Join("parts", themesDir))
 	if err != nil {
 		return nil, fmt.Errorf("read the parts themes: %w", err)
 	}
-	var themes []string
+	themes := map[string]*partsTheme{}
 	for _, e := range entries {
-		if e.IsDir() {
-			themes = append(themes, e.Name())
+		if !e.IsDir() {
+			continue
+		}
+		if themes[e.Name()], err = readPartsTheme(e.Name()); err != nil {
+			return nil, err
 		}
 	}
 	return themes, nil
@@ -676,20 +687,12 @@ func (t *partsTheme) all() string {
 	return css
 }
 
-// partsThemeVariables returns the CSS variables the parts themes take from the page, those a theme uses
-// and does not define itself, once each, in the order of the themes' names.
-func partsThemeVariables() ([]string, error) {
-	themes, err := PartsThemes()
-	if err != nil {
-		return nil, err
-	}
+// themeVariables returns the CSS variables the parts themes of set take from the page, those a theme
+// uses and does not define itself, once each, in the order of the themes' names.
+func (set *partSet) themeVariables() []string {
 	var vars []string
-	for _, name := range themes {
-		t, err := readPartsTheme(name)
-		if err != nil {
-			return nil, err
-		}
-		css := []byte(t.all())
+	for _, name := range set.themeNames() {
+		css := []byte(set.themes[name].all())
 		defined := definedVariables(css)
 		for _, v := range appendFound(nil, usedVariable, string(css)) {
 			if !defined[v] && !slices.Contains(vars, v) {
@@ -697,7 +700,7 @@ func partsThemeVariables() ([]string, error) {
 			}
 		}
 	}
-	return vars, nil
+	return vars
 }
 
 var usedVariable = regexp.MustCompile(`var\(\s*(--[\w-]+)`)
@@ -765,13 +768,9 @@ var (
 	}
 )
 
-// partVariables returns the CSS variables the style of the parts named, and of those they are drawn in
-// the look of, takes from the theme, once each, in the order of the parts' names.
-func partVariables(names []string) ([]string, error) {
-	set, err := builtinParts()
-	if err != nil {
-		return nil, err
-	}
+// variables returns the CSS variables the style of the parts of set named, and of those they are drawn
+// in the look of, takes from the theme, once each, in the order of the parts' names.
+func (set *partSet) variables(names []string) []string {
 	// The parts used are followed to those they use in turn: tabs holds a stack, which holds a diff, drawn
 	// in the look of code.
 	used := map[string]bool{}
@@ -787,7 +786,7 @@ func partVariables(names []string) ([]string, error) {
 	for _, name := range slices.Sorted(maps.Keys(used)) {
 		vars = appendFound(vars, fallback, set.parts[name].css)
 	}
-	return vars, nil
+	return vars
 }
 
 // appendFound appends to found what re's first group finds in s, each once.

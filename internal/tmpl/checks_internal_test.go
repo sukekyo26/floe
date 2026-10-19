@@ -210,7 +210,11 @@ func TestDeclared(t *testing.T) {
 		{`{` + draft7 + `"definitions": {"l": {"type": "object", "properties": {"rows": {"type": "array"}}}}, "properties": {"a": {"$ref": "#/definitions/l", ` + closed + `"type": "string"}}}`, "a.rows", "", ""},
 		{`{` + draft7 + `"definitions": {"l": {"type": "array"}}, "properties": {"a": {"$ref": "#/definitions/l", "type": "string"}}}`, "a", "", ""},
 	} {
-		s, _, err := compileSchema("t", []byte(tt.schema))
+		set, err := builtinParts()
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, _, err := compileSchema(set, "t", []byte(tt.schema))
 		if err != nil {
 			t.Fatalf("%s: %v", tt.schema, err)
 		}

@@ -28,8 +28,8 @@ var formats = []string{"html", "image", "markdown"}
 
 // validate checks the values of d against the schema src, its template's schema.json, and reports
 // every mistake at its line and column under root, the data file's top mapping.
-func validate(src []byte, d *Data, root ast.Node) error {
-	sch, doc, err := compileSchema(d.Template, src)
+func validate(set *partSet, src []byte, d *Data, root ast.Node) error {
+	sch, doc, err := compileSchema(set, d.Template, src)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func validate(src []byte, d *Data, root ast.Node) error {
 	if !errors.As(err, &ve) {
 		return err //nolint:wrapcheck // nil, or not a mistake in the data
 	}
-	s := &schemaCheck{file: d.File, template: d.Template, root: root, schema: doc, problems: nil}
+	s := &schemaCheck{file: d.File, template: d.Template, root: root, schema: doc, set: set, problems: nil}
 	s.collect(ve)
 	if len(s.problems) == 0 {
 		// A failure without a mistake to point at is not one the data can fix.
@@ -47,20 +47,17 @@ func validate(src []byte, d *Data, root ast.Node) error {
 	return s.problems
 }
 
-// compileSchema compiles the schema src of the template name, and returns it as read too.
-func compileSchema(name string, src []byte) (*jsonschema.Schema, any, error) {
+// compileSchema compiles the schema src of the template name, which refers to the parts of set, and
+// returns it as read too.
+func compileSchema(set *partSet, name string, src []byte) (*jsonschema.Schema, any, error) {
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
 	if err != nil {
 		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
 	url := schemaURL(name)
-	c := newCompiler()
+	c := newCompiler(set)
 	if err = c.AddResource(url, doc); err != nil {
 		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
-	}
-	set, err := builtinParts()
-	if err != nil {
-		return nil, nil, err
 	}
 	for partURL, partDoc := range set.docs {
 		if err = c.AddResource(partURL, partDoc); err != nil {
@@ -79,11 +76,12 @@ func schemaURL(name string) string {
 	return "floe:///templates/" + name + "/schema.json"
 }
 
-func newCompiler() *jsonschema.Compiler {
+// newCompiler returns a compiler of a schema that refers to the parts of set.
+func newCompiler(set *partSet) *jsonschema.Compiler {
 	c := jsonschema.NewCompiler()
 	// A template's schema is one file: a URL it refers to, file:// above all, could read one out of the
 	// template.
-	c.UseLoader(noLoader{})
+	c.UseLoader(noLoader{set: set})
 	c.AssertFormat()
 	for _, f := range formats {
 		c.RegisterFormat(&jsonschema.Format{Name: f, Validate: func(any) error { return nil }})
@@ -94,9 +92,9 @@ func newCompiler() *jsonschema.Compiler {
 // knownFormat reports whether floe knows the format f: one of JSON Schema's that it checks, or one of
 // its own. jsonschema passes a value of a format it does not know, so a template that uses a format of
 // a later floe would be drawn as if it had none.
-func knownFormat(f string) bool {
+func knownFormat(set *partSet, f string) bool {
 	const url = "floe:///format.json"
-	c := newCompiler()
+	c := newCompiler(set)
 	if err := c.AddResource(url, map[string]any{"format": f}); err != nil {
 		return false
 	}
@@ -104,12 +102,8 @@ func knownFormat(f string) bool {
 	return err == nil && s.Format != nil
 }
 
-// unknownPart is the mistake of a $ref, ref, under floe:///parts/ that names no part of floe's whole.
-func unknownPart(ref string) error {
-	set, err := builtinParts()
-	if err != nil {
-		return err
-	}
+// unknownPart is the mistake of a $ref, ref, under floe:///parts/ that names no part of set whole.
+func unknownPart(set *partSet, ref string) error {
 	if whole, into := set.pointsInto(ref); into {
 		return usererr.New("tmpl_part_into", ref, whole)
 	}
@@ -118,11 +112,12 @@ func unknownPart(ref string) error {
 
 var errSchemaURL = errors.New("a schema refers to no other file or URL; write it in schema.json")
 
-type noLoader struct{}
+// noLoader loads no schema: those of the parts of set are added to the compiler before.
+type noLoader struct{ set *partSet }
 
-func (noLoader) Load(url string) (any, error) {
+func (n noLoader) Load(url string) (any, error) {
 	if strings.HasPrefix(url, partsURL) {
-		return nil, unknownPart(url)
+		return nil, unknownPart(n.set, url)
 	}
 	return nil, fmt.Errorf("%s: %w", url, errSchemaURL)
 }
@@ -130,7 +125,8 @@ func (noLoader) Load(url string) (any, error) {
 type schemaCheck struct {
 	file, template string
 	root           ast.Node
-	schema         any // schema.json as read, to list the items a mapping may hold
+	schema         any      // schema.json as read, to list the items a mapping may hold
+	set            *partSet // the parts it refers to
 	problems       yamlpos.Problems
 }
 
@@ -244,11 +240,7 @@ func (s *schemaCheck) properties(url string) []string {
 	base, frag, _ := strings.Cut(url, "#")
 	v := s.schema
 	if strings.HasPrefix(base, partsURL) {
-		set, err := builtinParts()
-		if err != nil {
-			return nil
-		}
-		v = set.docs[base]
+		v = s.set.docs[base]
 	}
 	for step := range strings.SplitSeq(frag, "/") {
 		if step == "" {
