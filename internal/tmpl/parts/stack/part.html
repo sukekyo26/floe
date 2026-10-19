@@ -1,3 +1,3 @@
-<div class="floe-stack" data-floe-part="stack">
+<div data-floe-part="stack">
 {{- range .}}{{with .text}}{{markdown .}}{{end}}{{with .code}}{{.}}{{end}}{{with .terminal}}{{.}}{{end}}{{with .diff}}{{.}}{{end}}{{with .note}}{{.}}{{end}}{{with .table}}{{.}}{{end}}{{end -}}
 </div>

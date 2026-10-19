@@ -1,9 +1,9 @@
 /* A pill: a short status in the colour of its tone */
-.floe-pill {
+:scope {
   display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
   background: var(--accent-soft, #dcebec); color: var(--accent, #1d6670);
 }
-.floe-pill.good { background: var(--good-soft, #dcefe3); color: var(--good, #1f7a45); }
-.floe-pill.warn { background: var(--warn-soft, #f6e8d2); color: var(--warn, #8a5a10); }
-.floe-pill.bad { background: var(--bad-soft, #fbe5e2); color: var(--bad, #b3261e); }
+:scope.good { background: var(--good-soft, #dcefe3); color: var(--good, #1f7a45); }
+:scope.warn { background: var(--warn-soft, #f6e8d2); color: var(--warn, #8a5a10); }
+:scope.bad { background: var(--bad-soft, #fbe5e2); color: var(--bad, #b3261e); }

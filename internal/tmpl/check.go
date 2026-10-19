@@ -592,8 +592,8 @@ func (l *schemaLint) variables() ([]string, error) {
 	}
 	// Whichever parts theme a data file picks styles the parts, and the quotes of Markdown, which counts
 	// as the table part.
-	// LIMIT: every variable of every parts theme, not those of the rules for the parts used; read the
-	// themes' rules by their classes if a template of few parts comes to be warned of others' colours.
+	// LIMIT: every variable of every parts theme, not those of its files of the parts used; read only those
+	// files if a template of few parts comes to be warned of others' colours.
 	if len(l.parts) > 0 {
 		themes, err := partsThemeVariables()
 		if err != nil {

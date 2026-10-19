@@ -1,4 +1,4 @@
-<form class="floe-tabs" data-floe-part="tabs">
+<form data-floe-part="tabs">
 {{- range $i, $t := .}}
 <label><input type="radio" name="tab"{{if not $i}} checked{{end}}>{{$t.title}}</label>{{$t.parts}}
 {{- end}}

@@ -1,0 +1,8 @@
+/* Set on the parts of code: page.html sets these at :root after a parts theme, and would win there */
+:scope { --code-bg: #1f1c19; --code-fg: #ece5d6; --code-prompt: #f0866b; }
+@media (prefers-color-scheme: dark) {
+  :scope { --code-bg: #14120f; }
+}
+:scope { border-radius: 0; box-shadow: none; border-top: 3px solid var(--washi-shu); }
+:scope figcaption { background: none; border: 0; font-family: var(--washi-font); }
+:scope .lang { border-radius: 0; background: none; border: 1.5px solid var(--code-prompt); color: var(--code-prompt); }

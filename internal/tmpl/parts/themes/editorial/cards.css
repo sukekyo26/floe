@@ -1,0 +1,2 @@
+.card { border-radius: 4px; border-top: 3px solid var(--accent); box-shadow: none; }
+:scope.numbered > .card::before { content: none; }

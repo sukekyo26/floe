@@ -1,4 +1,4 @@
-<div class="floe-table floe-fields" data-floe-part="table fields"><table>
+<div data-floe-part="table fields"><table>
 <tbody>
 {{- range .}}
 <tr><td class="name"><code>{{.name}}</code>{{if .required}}<span class="required">{{word "required"}}</span>{{end}}{{with .type}}<span class="type">{{.}}</span>{{end}}</td><td>{{with .text}}{{markdownLine .}}{{end}}{{if ne (printf "%T" .default) "<nil>"}}<span class="default">{{word "default"}} <code>{{.default}}</code></span>{{end}}</td></tr>

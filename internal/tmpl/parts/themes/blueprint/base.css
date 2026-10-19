@@ -1,0 +1,18 @@
+/* A drawing on squared paper in blue ink: every cell ruled, labels in capitals of a fixed width, notes as
+   dashed callouts and cards with their figure numbers */
+:root {
+  --bp-ink: #1f56b5; --bp-sheet: #f7faff; --bp-grid: rgb(31 86 181 / 0.08);
+  --bp-squares: linear-gradient(var(--bp-grid) 1px, transparent 1px), linear-gradient(90deg, var(--bp-grid) 1px, transparent 1px);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bp-ink: #7fb3ff; --bp-sheet: #0f1b2d; --bp-grid: rgb(127 179 255 / 0.08); }
+}
+blockquote {
+  background-color: var(--bp-sheet); background-image: var(--bp-squares); background-size: 16px 16px; border-radius: 0;
+  box-shadow: none;
+}
+blockquote { border: 1.5px solid var(--bp-ink); padding: 0.9rem 1.2rem; color: var(--fg); }
+blockquote::before {
+  content: "QUOTE"; display: block; margin-bottom: 0.3rem; color: var(--bp-ink);
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em;
+}

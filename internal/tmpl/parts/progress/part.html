@@ -1,5 +1,5 @@
-<div class="floe-progress" data-floe-part="progress">
+<div data-floe-part="progress">
 {{- range .}}
-<label class="floe-bar{{with .tone}} {{.}}{{end}}"><span class="label">{{.label}}</span><span class="count">{{.done}} / {{.of}}</span><progress value="{{.done}}" max="{{.of}}">{{.done}} / {{.of}}</progress></label>
+<label class="bar{{with .tone}} {{.}}{{end}}"><span class="label">{{.label}}</span><span class="count">{{.done}} / {{.of}}</span><progress value="{{.done}}" max="{{.of}}">{{.done}} / {{.of}}</progress></label>
 {{- end}}
 </div>

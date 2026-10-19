@@ -1,0 +1,13 @@
+.card {
+  background-color: var(--bp-sheet); background-image: var(--bp-squares); background-size: 16px 16px; border-radius: 0;
+  box-shadow: none;
+}
+.card {
+  border: 1.5px solid var(--bp-ink);
+}
+:scope.numbered > .card::before {
+  content: "FIG. " counter(floe-card, decimal-leading-zero); content: "FIG. " counter(floe-card, decimal-leading-zero) / "";
+  display: block; width: auto; height: auto; background: none; color: var(--bp-ink);
+  font-family: var(--mono); font-size: 0.7rem; font-weight: 400; letter-spacing: 0.12em;
+}
+.card h3 { color: var(--bp-ink); }

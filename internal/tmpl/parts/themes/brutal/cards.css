@@ -1,0 +1,11 @@
+:scope { gap: 1.5rem; padding: 0 6px 6px 0; }
+.card { border: 3px solid var(--brutal-ink); border-radius: 0; box-shadow: 6px 6px 0 var(--brutal-ink); }
+:scope.numbered > .card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / "";
+  display: block; width: auto; height: auto; background: none; color: inherit; font-size: 2.4rem; font-weight: 900; line-height: 1;
+}
+/* Plain cards and options take the primary faces in turn; numbers, facts and links stay on the surface */
+:scope.numbered > .card { background: var(--brutal-yellow); color: #0a0a0a; }
+:scope.numbered > .card:nth-child(3n + 2) { background: var(--brutal-blue); }
+:scope.numbered > .card:nth-child(3n) { background: var(--brutal-pink); }
+:scope.numbered > .card :is(p, ul, ol, li, a) { color: #0a0a0a; font-weight: 600; }

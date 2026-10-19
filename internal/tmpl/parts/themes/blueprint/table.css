@@ -1,0 +1,12 @@
+:scope {
+  background-color: var(--bp-sheet); background-image: var(--bp-squares); background-size: 16px 16px; border-radius: 0;
+  box-shadow: none;
+}
+:scope {
+  border: 1.5px solid var(--bp-ink);
+}
+:scope :is(th, td) { border: 1px solid var(--bp-ink); }
+:scope thead th {
+  background: none; color: var(--bp-ink); font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+}
+:scope tbody tr:nth-child(even) td { background: none; }

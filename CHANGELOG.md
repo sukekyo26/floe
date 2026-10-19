@@ -53,7 +53,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   draws it, and puts the part's style once into a page that names it, as a
   part's element does (`data-floe-part="table"`), a table of Markdown (in the
   table's look) and HTML that takes a part's look so
-  (`<span class="floe-pill good" data-floe-part="cell">`) included. A template's item of
+  (`<span class="good" data-floe-part="cell">`) included. A part's style
+  reaches its own elements, not a part held in it, and comes after the style
+  of the part it is drawn in the look of. A template's item of
   `"format": "markdown"` is Markdown text, which floe draws as HTML.
   `floe template show` tells a part's items, and `floe template check` warns
   of a theme that leaves out a CSS variable its parts take their colours from.
@@ -80,8 +82,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   and sticky notes), `swiss` (heavy black rules, large numbers and red, states
   told by shape) or `washi` (sumi and vermilion on washi in a Mincho face,
   seals and quotes ruled in vermilion), each in light and dark mode. A parts
-  theme restyles the parts by their classes, and Markdown's quotes, and goes
-  into every page after the parts' style; the template's theme (`theme:`,
+  theme restyles each part, its style reaching that part's elements but not
+  a part held in it, and Markdown's quotes, and goes into every page after the
+  parts' style; the template's theme (`theme:`,
   `report` has `default`) styles the page, in a layer under them. `floe
   template show` lists the parts themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,

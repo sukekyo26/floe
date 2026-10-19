@@ -508,38 +508,74 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 
 // pageStyle returns the one <style> of the page, in cascade layers that decide which wins whatever the
 // selectors: floe's base, under the template's own CSS (own: its page.css, then its theme), under the
-// parts'. The parts' are the style of the parts the page names, in the order of their names, the
-// diagrams' when it has diagrams, then the parts theme theme, which every page gets, as it styles
-// Markdown's quotes too. A part is named by its own element, a table of Markdown, or HTML that takes a
-// part's look (<span class="floe-pill good" data-floe-part="cell">).
-// The template's style reaches the boxes of the parts, so that it places them, but not what they hold.
-// LIMIT: the parts' style and the parts theme are not scoped: a part's rules reach the parts it holds,
-// and its theme's rule for a part drawn in another's look loses to the part's more specific one
-// (.floe-links > li::before over .floe-card::before), as that part needs. A scoped rule would win over
-// an unscoped one of the same specificity, so scope and layer the parts and their themes together, once
-// a theme is a file of each part.
-func pageStyle(page, own []byte, theme string, diagrams bool) (string, error) {
+// parts'. The parts' are the style of each part the page names, by its own element, a table of Markdown,
+// or HTML that takes a part's look (<span class="good" data-floe-part="cell">), after the parts it is
+// drawn in the look of, which it adjusts; then the parts theme theme, its base.css, which every page
+// gets, as it holds its variables and the look of Markdown's quotes, and its style of each of those
+// parts in the same order. Within the layer the more specific rule wins, else the later. The style of
+// the part diagram is the diagrams'.
+// A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
+// that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
+// they hold.
+func pageStyle(page, own []byte, theme string) (string, error) {
+	themed, err := readPartsTheme(theme)
+	if err != nil {
+		return "", err
+	}
 	var parts strings.Builder
+	themes := themed.base
 	if bytes.Contains(page, []byte("data-floe-part")) {
 		set, err := builtinParts()
 		if err != nil {
 			return "", err
 		}
-		for _, name := range set.partsNamedIn(string(page)) {
-			parts.WriteString(set.parts[name].css)
+		for _, name := range set.inOrder(set.partsNamedIn(string(page))) {
+			css := set.parts[name].css
+			if name == "diagram" {
+				css = diagram.Style()
+			}
+			parts.WriteString(scoped(name, css))
+			if t := themed.parts[name]; t != "" {
+				themes += scoped(name, t)
+			}
 		}
-	}
-	if diagrams {
-		parts.WriteString(diagram.Style())
-	}
-	css, err := readPartsTheme(theme)
-	if err != nil {
-		return "", err
 	}
 	return "<style>\n@layer floe.base, floe.page, floe.parts;\n" +
 		"@layer floe.base {\n" + baseCSS + "}\n" +
 		"@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(own) + "}\n}\n" +
-		"@layer floe.parts {\n" + parts.String() + string(css) + "}\n</style>\n", nil
+		"@layer floe.parts {\n" + parts.String() + themes + "}\n</style>\n", nil
+}
+
+// inOrder returns names, parts of set, each after the parts it uses that names holds, else in order.
+func (set *partSet) inOrder(names []string) []string {
+	given := map[string]bool{}
+	for _, name := range names {
+		given[name] = true
+	}
+	done := map[string]bool{}
+	ordered := make([]string, 0, len(names))
+	var visit func(name string)
+	visit = func(name string) {
+		done[name] = true
+		for _, used := range set.parts[name].uses {
+			if given[used] && !done[used] {
+				visit(used)
+			}
+		}
+		ordered = append(ordered, name)
+	}
+	for _, name := range names {
+		if !done[name] {
+			visit(name)
+		}
+	}
+	return ordered
+}
+
+// scoped is css, the style of the part name or its theme's for it, reaching the part's elements, from
+// its own on, short of what the parts in it hold.
+func scoped(name, css string) string {
+	return `@scope ([data-floe-part~="` + name + `"]) to (:scope [data-floe-part] > *) {` + "\n" + css + "}\n"
 }
 
 // baseCSS is what every page starts from: text, lists, links, code and quotes, for the template's own
@@ -551,21 +587,55 @@ var baseCSS string
 // themesDir is the directory of parts/ that holds the parts themes, and so is no part.
 const themesDir = "themes"
 
-// PartsThemes returns the themes of floe's parts, by name.
+// PartsThemes returns the themes of floe's parts, by name: a directory each.
 func PartsThemes() ([]string, error) {
-	themes, err := themesIn(partFiles, path.Join("parts", themesDir))
+	entries, err := fs.ReadDir(partFiles, path.Join("parts", themesDir))
 	if err != nil {
 		return nil, fmt.Errorf("read the parts themes: %w", err)
+	}
+	var themes []string
+	for _, e := range entries {
+		if e.IsDir() {
+			themes = append(themes, e.Name())
+		}
 	}
 	return themes, nil
 }
 
-func readPartsTheme(name string) ([]byte, error) {
-	css, err := partFiles.ReadFile(path.Join("parts", themesDir, name+".css"))
+// partsTheme is a parts theme: its base.css, for every page, and the style of each part it restyles.
+type partsTheme struct {
+	base  string
+	parts map[string]string // by the part's name
+}
+
+func readPartsTheme(name string) (*partsTheme, error) {
+	dir := path.Join("parts", themesDir, name)
+	entries, err := fs.ReadDir(partFiles, dir)
 	if err != nil {
 		return nil, fmt.Errorf("read the parts theme %s: %w", name, err)
 	}
-	return css, nil
+	t := &partsTheme{base: "", parts: map[string]string{}}
+	for _, e := range entries {
+		css, err := partFiles.ReadFile(path.Join(dir, e.Name()))
+		if err != nil {
+			return nil, fmt.Errorf("read the parts theme %s: %w", name, err)
+		}
+		if part := strings.TrimSuffix(e.Name(), ".css"); part == "base" {
+			t.base = string(css)
+		} else {
+			t.parts[part] = string(css)
+		}
+	}
+	return t, nil
+}
+
+// all is the whole CSS of t, its base first, then the parts' in the order of their names.
+func (t *partsTheme) all() string {
+	css := t.base
+	for _, name := range slices.Sorted(maps.Keys(t.parts)) {
+		css += t.parts[name]
+	}
+	return css
 }
 
 // partsThemeVariables returns the CSS variables the parts themes take from the page, those a theme uses
@@ -577,10 +647,11 @@ func partsThemeVariables() ([]string, error) {
 	}
 	var vars []string
 	for _, name := range themes {
-		css, err := readPartsTheme(name)
+		t, err := readPartsTheme(name)
 		if err != nil {
 			return nil, err
 		}
+		css := []byte(t.all())
 		defined := definedVariables(css)
 		for _, v := range appendFound(nil, usedVariable, string(css)) {
 			if !defined[v] && !slices.Contains(vars, v) {

@@ -430,7 +430,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	out := b.Bytes()
-	style, err := pageStyle(out, own, d.PartsTheme, d.diagrams)
+	style, err := pageStyle(out, own, d.PartsTheme)
 	if err != nil {
 		return nil, err
 	}
@@ -547,7 +547,7 @@ func markdownHTML(text string) (template.HTML, error) {
 		return "", err
 	}
 	// With raw HTML left out, every <table> in the output is one goldmark drew.
-	html = strings.ReplaceAll(html, "<table>", `<div class="floe-table" data-floe-part="table"><table>`)
+	html = strings.ReplaceAll(html, "<table>", `<div data-floe-part="table"><table>`)
 	html = strings.ReplaceAll(html, "</table>", "</table></div>")
 	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 }

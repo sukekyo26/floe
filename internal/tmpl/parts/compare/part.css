@@ -1,6 +1,6 @@
 /* In the table's look; an arrow leads into what a thing becomes */
-.floe-compare .what { font-weight: 600; }
-.floe-compare td.after { font-weight: 600; }
-.floe-compare td.after::before { content: "→ "; content: "→ " / ""; font-weight: 400; color: var(--muted, #57635f); }
-.floe-compare thead th.after { color: var(--accent, #1d6670); }
-.floe-compare tr.same td { color: var(--muted, #57635f); font-weight: 400; }
+:scope .what { font-weight: 600; }
+:scope td.after { font-weight: 600; }
+:scope td.after::before { content: "→ "; content: "→ " / ""; font-weight: 400; color: var(--muted, #57635f); }
+:scope thead th.after { color: var(--accent, #1d6670); }
+:scope tr.same td { color: var(--muted, #57635f); font-weight: 400; }

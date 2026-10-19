@@ -1,10 +1,10 @@
 /* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
-.floe-option.pick { outline: 2px solid var(--accent, #1d6670); outline-offset: -1px; }
-.floe-option h3 > span { margin-left: 0.4rem; vertical-align: 0.1em; }
-.floe-option ul { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
+.option.pick { outline: 2px solid var(--accent, #1d6670); outline-offset: -1px; }
+.option h3 > span { margin-left: 0.4rem; vertical-align: 0.1em; }
+.option ul { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
 /* The mark hangs at the left, so that a line of text and code flows as one */
-.floe-option li { position: relative; padding-left: 1.45rem; }
-.floe-option li::before { position: absolute; left: 0.1rem; font-weight: 800; }
-.floe-option li.pro { color: var(--fg, #18201e); }
-.floe-option li.pro::before { content: "+"; color: var(--good, #1f7a45); }
-.floe-option li.con::before { content: "−"; color: var(--bad, #b3261e); }
+.option li { position: relative; padding-left: 1.45rem; }
+.option li::before { position: absolute; left: 0.1rem; font-weight: 800; }
+.option li.pro { color: var(--fg, #18201e); }
+.option li.pro::before { content: "+"; color: var(--good, #1f7a45); }
+.option li.con::before { content: "−"; color: var(--bad, #b3261e); }

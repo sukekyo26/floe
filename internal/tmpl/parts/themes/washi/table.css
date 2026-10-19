@@ -1,0 +1,8 @@
+:scope {
+  font-family: var(--washi-font); background: var(--washi-paper); color: var(--washi-sumi); border-radius: 0; box-shadow: none;
+}
+:scope { border: 0; padding-inline: 1.4rem; }
+:scope table { border-top: 4px double var(--washi-sumi); border-bottom: 4px double var(--washi-sumi); }
+:scope thead th { background: none; color: var(--washi-sumi); font-size: 0.9rem; letter-spacing: 0.1em; border-bottom: 1px solid var(--washi-sumi); }
+:scope tbody tr:nth-child(even) td { background: none; }
+:scope tbody tr + tr td { border-top: 1px solid var(--washi-hair); }

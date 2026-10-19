@@ -62,9 +62,10 @@ func TestDiagrams(t *testing.T) {
 	if n := strings.Count(got, script); n != 1 || !strings.HasSuffix(got, script+"\n") {
 		t.Errorf("the page holds the zoom %d times, want once at its end", n)
 	}
-	// The diagrams' style goes in once, with the parts'.
-	if n := strings.Count(got, diagram.Style()); n != 1 || !strings.Contains(got, "@layer floe.parts {\n"+diagram.Style()) {
-		t.Errorf("the page holds the diagrams' style %d times, want once in the parts' layer", n)
+	// The diagrams' style goes in once, as the part diagram's.
+	scoped := `@scope ([data-floe-part~="diagram"]) to (:scope [data-floe-part] > *) {` + "\n" + diagram.Style()
+	if n := strings.Count(got, diagram.Style()); n != 1 || !strings.Contains(got, scoped) {
+		t.Errorf("the page holds the diagrams' style %d times, want once as the part diagram's", n)
 	}
 }
 

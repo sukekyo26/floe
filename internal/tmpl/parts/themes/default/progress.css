@@ -1,0 +1,2 @@
+:scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
+.bar progress { background: var(--surface); }
