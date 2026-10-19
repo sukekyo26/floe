@@ -319,8 +319,8 @@ func stamp(sources tmpl.Sources) string {
 	if sources.Templates != "" {
 		add(sources.Templates)
 	}
-	addTree(sources.Template, add, false)
-	addTree(sources.Parts, add, true)
+	addTree(sources.Template, add)
+	addTree(sources.Parts, add)
 	for _, file := range slices.Concat(sources.Images, sources.Icons) {
 		add(file)
 	}
@@ -328,32 +328,41 @@ func stamp(sources tmpl.Sources) string {
 }
 
 // addTree adds each file under dir, "" for none, to a stamp with add, but those of a name starting with a
-// dot (.git), no file of a template or a part. With links, an entry of dir that is a symlink, a part of
-// one's own kept elsewhere as a template may be, is walked through.
-func addTree(dir string, add func(string), links bool) {
-	if dir == "" {
-		return
-	}
-	//nolint:errcheck // a file that cannot be walked to is left out of the sum
-	_ = filepath.WalkDir(dir, func(p string, e fs.DirEntry, err error) error {
-		switch {
-		case err != nil:
-			return nil //nolint:nilerr // as above
-		case p != dir && strings.HasPrefix(e.Name(), "."):
-			if e.IsDir() {
-				return fs.SkipDir
-			}
-		case links && e.Type()&fs.ModeSymlink != 0 && filepath.Dir(p) == dir:
-			if to, err := filepath.EvalSymlinks(p); err == nil {
-				addTree(to, add, false)
-			} else {
+// dot (.git), no file of a template or a part. A symlink to a directory, dir itself among them (a part of
+// one's own, or the directory of them, kept elsewhere), is walked through, each directory once.
+func addTree(dir string, add func(string)) {
+	walked := map[string]bool{}
+	var walk func(dir string)
+	walk = func(dir string) {
+		to, err := filepath.EvalSymlinks(dir)
+		if err != nil || walked[to] {
+			return
+		}
+		walked[to] = true
+		//nolint:errcheck // a file that cannot be walked to is left out of the sum
+		_ = filepath.WalkDir(to, func(p string, e fs.DirEntry, err error) error {
+			switch {
+			case err != nil:
+				return nil //nolint:nilerr // as above
+			case p != to && strings.HasPrefix(e.Name(), "."):
+				if e.IsDir() {
+					return fs.SkipDir
+				}
+			case e.Type()&fs.ModeSymlink != 0:
+				if fi, err := os.Stat(p); err == nil && fi.IsDir() {
+					walk(p)
+				} else {
+					add(p)
+				}
+			case !e.IsDir():
 				add(p)
 			}
-		case !e.IsDir():
-			add(p)
-		}
-		return nil
-	})
+			return nil
+		})
+	}
+	if dir != "" {
+		walk(dir)
+	}
 }
 
 // Listed is an entry of the list. A link takes its title and update time from the file; Missing is

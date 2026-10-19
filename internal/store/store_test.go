@@ -1113,8 +1113,8 @@ func TestLinkDataFileIcons(t *testing.T) {
 	}
 }
 
-// A linked data file drawn with a part of one's own, kept elsewhere and linked into the directory of
-// parts, is drawn again when a file of the part is saved.
+// A linked data file drawn with a part and a parts theme of one's own, kept elsewhere and linked into the
+// directory of parts, itself a symlink, is drawn again when a file of either is saved.
 func TestLinkDataFileParts(t *testing.T) {
 	t.Parallel()
 
@@ -1123,15 +1123,22 @@ func TestLinkDataFileParts(t *testing.T) {
 	e.write(t, "kept/note/schema.json", `{"type": "object", "properties": {"text": {"type": "string"}}}`)
 	e.write(t, "kept/note/part.html", `<aside data-floe-part="note">{{.text}}</aside>`)
 	css := e.write(t, "kept/note/part.css", ":scope { margin: 0; }\n")
+	theme := e.write(t, "kept/mine/base.css", ":root { --mine-ink: #123; }\n")
+	under := filepath.Join(e.tmp, "real-parts")
+	if err := os.MkdirAll(filepath.Join(under, "themes"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for link, to := range map[string]string{
+		filepath.Join(under, "note"): kept, filepath.Join(under, "themes", "mine"): filepath.Dir(theme),
+		filepath.Join(e.tmp, "parts"): under,
+	} {
+		if err := os.Symlink(to, link); err != nil {
+			t.Fatal(err)
+		}
+	}
 	parts := filepath.Join(e.tmp, "parts")
-	if err := os.Mkdir(parts, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Symlink(kept, filepath.Join(parts, "note")); err != nil {
-		t.Fatal(err)
-	}
 	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", parts, ""))
-	data := e.write(t, "proj/spec.yaml", "template: report\nlang: en\nsections:\n  - parts:\n      - note: { text: Mine }\n")
+	data := e.write(t, "proj/spec.yaml", "template: report\nlang: en\nparts-theme: mine\nsections:\n  - parts:\n      - note: { text: Mine }\n")
 	m := store.Meta{Path: data}
 	page, version, err := s.Draw("spec", &m, data)
 	if err != nil || !strings.Contains(string(page), `<aside data-floe-part="note">Mine</aside>`) {
@@ -1140,12 +1147,15 @@ func TestLinkDataFileParts(t *testing.T) {
 	if v := s.Version("spec", &m, data); v != version {
 		t.Fatalf("the version moved from %q to %q with nothing changed", version, v)
 	}
-	later := time.Now().Add(time.Minute)
-	if err = os.Chtimes(css, later, later); err != nil {
-		t.Fatal(err)
-	}
-	if v := s.Version("spec", &m, data); v == version {
-		t.Errorf("the version stays %q once the part's part.css is saved", v)
+	for i, file := range []string{css, theme} {
+		later := time.Now().Add(time.Duration(i+1) * time.Minute)
+		if err = os.Chtimes(file, later, later); err != nil {
+			t.Fatal(err)
+		}
+		if v := s.Version("spec", &m, data); v == version {
+			t.Errorf("the version stays %q once %s is saved", v, file)
+		}
+		version = s.Version("spec", &m, data)
 	}
 }
 
