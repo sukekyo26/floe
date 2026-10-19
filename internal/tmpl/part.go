@@ -9,12 +9,15 @@ import (
 	"io/fs"
 	"maps"
 	"net/url"
+	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"unicode"
 	"unicode/utf8"
 
@@ -22,6 +25,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/sukekyo26/floe/internal/diagram"
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -140,41 +144,82 @@ type partSet struct {
 	docs    map[string]any         // as read, for jsonschema
 	schemas map[string]*schema     // as floe reads them
 	themes  map[string]*partsTheme // by name
+	broken  map[string]error       // the parts of one's own that cannot be used, by name, and why
 }
 
 // builtinParts reads floe's parts once.
-var builtinParts = sync.OnceValues(readParts)
+var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("") })
 
-func readParts() (*partSet, error) {
+// partsIn returns floe's parts with those of one's own in dir over them, "" for none: floe's alone, read
+// once, when dir holds nothing.
+func partsIn(dir string) (*partSet, error) {
+	if dir == "" {
+		return builtinParts()
+	}
+	entries, err := os.ReadDir(dir)
+	switch {
+	case errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) || err == nil && len(entries) == 0:
+		return builtinParts()
+	case err != nil:
+		return nil, usererr.New("tmpl_parts_dir_unreadable", dir, err.Error())
+	}
+	return readParts(dir)
+}
+
+// readParts reads floe's parts and, over them, those of one's own in dir, "" for none: one of the name
+// of one of floe's takes its place whole. One of one's own that cannot be used is left out, its mistake
+// kept for a template that uses it.
+func readParts(dir string) (*partSet, error) {
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
+		broken: map[string]error{},
 	}
-	entries, err := fs.ReadDir(partFiles, "parts")
-	if err != nil {
-		return nil, fmt.Errorf("read the parts: %w", err)
+	if err := set.readBuiltin(); err != nil {
+		return nil, err
 	}
-	for _, e := range entries {
-		if e.Name() == themesDir {
-			if set.themes, err = readPartsThemes(); err != nil {
-				return nil, err
-			}
-			continue
-		}
-		file := path.Join("parts", e.Name())
-		url := partsURL + e.Name()
-		if e.IsDir() {
-			file = path.Join(file, "schema.json")
-			url += ".json"
-		}
-		if err = set.readSchema(url, file); err != nil {
+	if dir != "" {
+		if err := set.readOwn(dir); err != nil {
 			return nil, err
 		}
-		if e.IsDir() {
-			p, err := readPart(e.Name(), set.schemas[url])
-			if err != nil {
-				return nil, err
+	}
+	for _, s := range set.schemas {
+		s.resolve(set)
+	}
+	for _, p := range set.parts {
+		p.uses = set.partsNamedIn(p.html)
+		p.schema.partsUnder(&p.uses)
+		slices.Sort(p.uses)
+		p.uses = slices.Compact(p.uses)
+	}
+	return set, nil
+}
+
+// readBuiltin reads floe's parts, those it draws in Go too, the schemas they share and the parts themes
+// into set.
+func (set *partSet) readBuiltin() error {
+	builtin, err := fs.Sub(partFiles, "parts")
+	if err != nil {
+		return fmt.Errorf("read the parts: %w", err)
+	}
+	entries, err := fs.ReadDir(builtin, ".")
+	if err != nil {
+		return fmt.Errorf("read the parts: %w", err)
+	}
+	for _, e := range entries {
+		switch {
+		case e.Name() == themesDir:
+			set.themes, err = readPartsThemes()
+		case e.IsDir():
+			var files fs.FS
+			if files, err = fs.Sub(builtin, e.Name()); err == nil {
+				err = set.readPart(files, e.Name(), path.Join("parts", e.Name()))
 			}
-			set.parts[e.Name()] = p
+		default:
+			// A schema the parts share.
+			err = set.readSchema(builtin, partsURL+e.Name(), e.Name(), path.Join("parts", e.Name()))
+		}
+		if err != nil {
+			return err
 		}
 	}
 	for name, p := range goParts {
@@ -188,16 +233,91 @@ func readParts() (*partSet, error) {
 			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: p.css, checks: nil, uses: nil,
 		}
 	}
-	for _, s := range set.schemas {
-		s.resolve(set)
+	return nil
+}
+
+// readOwn reads the parts of one's own in dir into set, over floe's of their names, a directory each, a
+// symlink followed. Those that cannot be used are left out of set, and kept in set.broken.
+func (set *partSet) readOwn(dir string) error {
+	entries, readErr := os.ReadDir(dir)
+	if readErr != nil {
+		return usererr.New("tmpl_parts_dir_unreadable", dir, readErr.Error())
 	}
-	for _, p := range set.parts {
-		p.uses = set.partsNamedIn(p.html)
-		p.schema.partsUnder(&p.uses)
-		slices.Sort(p.uses)
-		p.uses = slices.Compact(p.uses)
+	own := map[string]string{} // the directory of each, as its mistakes name it
+	for _, e := range entries {
+		name, at := e.Name(), filepath.Join(dir, e.Name())
+		if name == themesDir || !validName(name) {
+			continue
+		}
+		var fi fs.FileInfo
+		resolved, err := filepath.EvalSymlinks(at)
+		if err == nil {
+			fi, err = os.Stat(resolved)
+		}
+		switch {
+		case err != nil:
+			set.broken[name] = err
+			set.drop(name)
+			continue
+		case !fi.IsDir():
+			continue
+		case isGoPart(name) || name == "base" || name == "parts":
+			// Not dropped: a part floe draws in Go stays floe's.
+			set.broken[name] = usererr.New("tmpl_part_name", at, name)
+			continue
+		}
+		set.drop(name)
+		if err = set.readOwnPart(resolved, name, at); err != nil {
+			set.broken[name] = err
+			set.drop(name)
+			continue
+		}
+		own[name] = at
 	}
-	return set, nil
+	// Each names itself, and parts there are, once all are read.
+	for _, name := range slices.Sorted(maps.Keys(own)) {
+		if err := set.checkNames(name, own[name]); err != nil {
+			set.broken[name] = err
+			set.drop(name)
+		}
+	}
+	return nil
+}
+
+// readOwnPart reads the part name of one's own from the directory dir, shown in its mistakes as at. A
+// symlink in it that leads out of it is refused.
+func (set *partSet) readOwnPart(dir, name, at string) error {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return err //nolint:wrapcheck // kept as the part's mistake, which names it
+	}
+	defer root.Close()
+	return set.readPart(root.FS(), name, at)
+}
+
+// checkNames refuses the part name, whose directory is dir, when its part.html does not name it in a
+// data-floe-part, or names a part there is none of.
+func (set *partSet) checkNames(name, dir string) error {
+	p := set.parts[name]
+	names := namedParts(p.html)
+	if !slices.ContainsFunc(names, func(n namedPart) bool { return n.name == name }) {
+		return usererr.New("tmpl_part_unnamed", path.Join(dir, "part.html"), name, name)
+	}
+	for _, n := range names {
+		if _, ok := set.parts[n.name]; !ok {
+			return usererr.New("tmpl_part_names", path.Join(dir, "part.html"), lineAt([]byte(p.html), n.at), n.name,
+				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", "))
+		}
+	}
+	return nil
+}
+
+// drop leaves the part name out of set, with its schema.
+func (set *partSet) drop(name string) {
+	url := partsURL + name + ".json"
+	delete(set.parts, name)
+	delete(set.docs, url)
+	delete(set.schemas, url)
 }
 
 // partsUnder adds to names the parts the schemas under s refer to.
@@ -262,43 +382,46 @@ func namedParts(html string) []namedPart {
 // partAttr finds the value of a data-floe-part attribute: data-floe-part="table compare", '…' or x.
 var partAttr = regexp.MustCompile(`(?i)\sdata-floe-part\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` + "`" + `]+)`)
 
-// readSchema reads the schema file of floe's at url.
-func (set *partSet) readSchema(url, file string) error {
-	b, err := partFiles.ReadFile(file)
+// readSchema reads the schema file of files, shown in its mistakes as shown, at url.
+func (set *partSet) readSchema(files fs.FS, url, file, shown string) error {
+	b, err := fs.ReadFile(files, file)
 	if err != nil {
-		return fmt.Errorf("read %s: %w", file, err)
+		return fmt.Errorf("read %s: %w", shown, err)
 	}
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(b))
 	if err != nil {
-		return fmt.Errorf("read %s: %w", file, err)
+		return fmt.Errorf("read %s: %w", shown, err)
 	}
 	s, err := decodeSchema(b)
 	if err != nil {
-		return fmt.Errorf("read %s: %w", file, err)
+		return fmt.Errorf("read %s: %w", shown, err)
 	}
 	set.docs[url], set.schemas[url] = doc, s
 	return nil
 }
 
-// readPart reads the part name, whose schema is s.
-func readPart(name string, s *schema) (*part, error) {
-	dir := path.Join("parts", name)
-	html, err := partFiles.ReadFile(path.Join(dir, "part.html"))
+// readPart reads the part name from files, its directory, shown in its mistakes as dir, into set.
+func (set *partSet) readPart(files fs.FS, name, dir string) error {
+	url := partsURL + name + ".json"
+	if err := set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json")); err != nil {
+		return err
+	}
+	html, err := fs.ReadFile(files, "part.html")
 	if err != nil {
-		return nil, fmt.Errorf("read the part %s: %w", name, err)
+		return fmt.Errorf("read the part %s: %w", name, err)
 	}
 	file := path.Join(dir, "words.yaml")
-	w, err := readPartWords(file)
+	w, err := readPartWords(files, file)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	page, err := template.New(name).Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
 		Funcs(template.FuncMap{"word": w.word(file, fallbackLang)}).Parse(string(html))
 	if err != nil {
-		return nil, fmt.Errorf("parse the part %s: %w", name, err)
+		return fmt.Errorf("parse the part %s: %w", name, err)
 	}
 	if err = w.checkWords(page, path.Join(dir, "part.html"), file); err != nil {
-		return nil, err
+		return err
 	}
 	// One page per language of its words, word writing each of them: word "likely" is likely in words.yaml.
 	pages := map[string]*template.Template{fallbackLang: page}
@@ -307,40 +430,55 @@ func readPart(name string, s *schema) (*part, error) {
 			continue
 		}
 		if pages[lang], err = page.Clone(); err != nil {
-			return nil, fmt.Errorf("parse the part %s: %w", name, err)
+			return fmt.Errorf("parse the part %s: %w", name, err)
 		}
 		pages[lang].Funcs(template.FuncMap{"word": w.word(file, lang)})
 	}
-	css, err := partFiles.ReadFile(path.Join(dir, "part.css"))
+	css, err := fs.ReadFile(files, "part.css")
 	if err != nil {
-		return nil, fmt.Errorf("read the part %s: %w", name, err)
+		return fmt.Errorf("read the part %s: %w", name, err)
+	}
+	if err = refuseCSS(path.Join(dir, "part.css"), css, true); err != nil {
+		return err
 	}
 	p := &part{
-		name: name, schema: s, pages: pages, words: w, html: string(html), css: string(css), checks: nil, uses: nil,
+		name: name, schema: set.schemas[url], pages: pages, words: w, html: string(html), css: string(css), checks: nil,
+		uses: nil,
 	}
-	src, err := partFiles.ReadFile(path.Join(dir, "checks.yaml"))
-	switch {
-	case err == nil:
-		if p.checks, err = readChecks(path.Join(dir, "checks.yaml"), src, true); err != nil {
-			return nil, err
-		}
-		// Compiled once: the checks of a part run on each item it draws.
-		for i, c := range p.checks {
-			var e *yamlpos.Error
-			if p.checks[i].prog, e = c.program(); e != nil {
-				return nil, e
-			}
-		}
-	case !errors.Is(err, fs.ErrNotExist):
-		return nil, fmt.Errorf("read the part %s: %w", name, err)
+	if p.checks, err = readPartChecks(files, name, dir); err != nil {
+		return err
 	}
-	return p, nil
+	set.parts[name] = p
+	return nil
 }
 
-// readPartWords reads file, the words.yaml of a part; a part without one has the words of en alone, none,
-// so that it has a page all the same.
-func readPartWords(file string) (words, error) {
-	src, err := partFiles.ReadFile(file)
+// readPartChecks reads the checks.yaml of the part name in files, its directory, shown as dir, compiled
+// once: the checks of a part run on each item it draws. A part without one has none.
+func readPartChecks(files fs.FS, name, dir string) ([]relation, error) {
+	src, err := fs.ReadFile(files, "checks.yaml")
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return nil, nil
+	case err != nil:
+		return nil, fmt.Errorf("read the part %s: %w", name, err)
+	}
+	checks, err := readChecks(path.Join(dir, "checks.yaml"), src, true)
+	if err != nil {
+		return nil, err
+	}
+	for i, c := range checks {
+		var e *yamlpos.Error
+		if checks[i].prog, e = c.program(); e != nil {
+			return nil, e
+		}
+	}
+	return checks, nil
+}
+
+// readPartWords reads file, the words.yaml of a part in files, its directory; a part without one has the
+// words of en alone, none, so that it has a page all the same.
+func readPartWords(files fs.FS, file string) (words, error) {
+	src, err := fs.ReadFile(files, "words.yaml")
 	var w words
 	switch {
 	case err == nil:

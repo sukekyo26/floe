@@ -107,6 +107,9 @@ func unknownPart(set *partSet, ref string) error {
 	if whole, into := set.pointsInto(ref); into {
 		return usererr.New("tmpl_part_into", ref, whole)
 	}
+	if name, ok := partName(ref); ok && set.broken[name] != nil {
+		return usererr.New("tmpl_part_broken", name, set.broken[name])
+	}
 	return usererr.New("tmpl_part_unknown", ref, strings.Join(slices.Sorted(maps.Keys(set.parts)), ", "))
 }
 

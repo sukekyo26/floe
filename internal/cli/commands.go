@@ -35,7 +35,7 @@ func (a *app) store() *store.Store {
 }
 
 func (a *app) templates() *tmpl.Library {
-	return tmpl.NewLibrary(a.cfg.templates, a.cfg.icons)
+	return tmpl.NewLibrary(a.cfg.templates, a.cfg.parts, a.cfg.icons)
 }
 
 // abs puts a relative dir under the working directory; "" stays "".
@@ -185,7 +185,7 @@ func (a *app) noticeUpdate(e *store.Entry) {
 func (a *app) serverEnv() []string {
 	env := append([]string{}, a.env.Environ...)
 	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home,
-		"FLOE_TEMPLATES_DIR="+a.cfg.templates, "FLOE_ICONS_DIR="+a.cfg.icons)
+		"FLOE_TEMPLATES_DIR="+a.cfg.templates, "FLOE_PARTS_DIR="+a.cfg.parts, "FLOE_ICONS_DIR="+a.cfg.icons)
 }
 
 func localTime(iso string) string {

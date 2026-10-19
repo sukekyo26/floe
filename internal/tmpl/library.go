@@ -25,13 +25,20 @@ import (
 // the built-in ones. One of one's own takes the place of a built-in one of its name.
 type Library struct {
 	dir   string // "" without one
+	parts string // the directory of parts of one's own; "" for none
 	icons string // the directory of icons the diagrams of data files show; "" for none
 }
 
 // NewLibrary returns the templates of dir, a directory of templates of one's own ("" for none), and
-// the built-in ones, which draw the icons kept in iconsDir (FLOE_ICONS_DIR) in diagrams.
-func NewLibrary(dir, iconsDir string) *Library {
-	return &Library{dir: dir, icons: iconsDir}
+// the built-in ones, which draw with floe's parts and those of partsDir (FLOE_PARTS_DIR, "" for none),
+// and the icons kept in iconsDir (FLOE_ICONS_DIR) in diagrams.
+func NewLibrary(dir, partsDir, iconsDir string) *Library {
+	return &Library{dir: dir, parts: partsDir, icons: iconsDir}
+}
+
+// PartsDir is the directory of parts of one's own, "" for none.
+func (l *Library) PartsDir() string {
+	return l.parts
 }
 
 // Dir is the directory of templates of one's own, "" for none.
@@ -52,7 +59,9 @@ type Template struct {
 	// Path is where a template of one's own was found, as its mistakes name it; "" for a built-in one.
 	Path string
 
-	icons string // the directory of icons of the library it was found in
+	icons    string   // the directory of icons of the library it was found in
+	partsDir string   // the directory of parts of one's own of that library
+	set      *partSet // the parts it is drawn with, once read
 }
 
 // Names are the templates there are, by name. It fails when the directory of templates of one's own
@@ -137,7 +146,7 @@ func (l *Library) Find(name string) (*Template, error) {
 	case err != nil:
 		return nil, fmt.Errorf("find the template %s: %w", name, err)
 	}
-	return &Template{Name: name, Dir: "", Path: "", icons: l.icons}, nil
+	return &Template{Name: name, Dir: "", Path: "", icons: l.icons, partsDir: l.parts, set: nil}, nil
 }
 
 // own returns the template name of one's own, or nil without one. A file there is not a template, but
@@ -177,7 +186,7 @@ func (l *Library) resolve(name string) (*Template, error) {
 	if !fi.IsDir() {
 		return nil, nil //nolint:nilnil // a file, not a template
 	}
-	return &Template{Name: name, Dir: dir, Path: at, icons: l.icons}, nil
+	return &Template{Name: name, Dir: dir, Path: at, icons: l.icons, partsDir: l.parts, set: nil}, nil
 }
 
 // validName reports whether name can name a template: lower case letters, digits, - and _, so that it
@@ -195,9 +204,16 @@ func (t *Template) file(name string) string {
 	return filepath.Join(cmp.Or(t.Path, t.Name), name)
 }
 
-// parts returns the parts t is drawn with and their themes.
-func (*Template) parts() (*partSet, error) {
-	return builtinParts()
+// parts returns the parts t is drawn with and their themes, read once for t.
+func (t *Template) parts() (*partSet, error) {
+	if t.set == nil {
+		set, err := partsIn(t.partsDir)
+		if err != nil {
+			return nil, err
+		}
+		t.set = set
+	}
+	return t.set, nil
 }
 
 // readFile reads the file name, a slash-separated path under the template. Under a template of one's

@@ -37,7 +37,7 @@ func newEnv(t *testing.T) env {
 		t.Fatal(err)
 	}
 	mkdir(t, filepath.Join(tmp, "home"))
-	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary("", ""))}
+	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary("", "", ""))}
 }
 
 func mkdir(t *testing.T, dir string) {
@@ -694,7 +694,7 @@ func TestStoreUnderPatternPath(t *testing.T) {
 
 	e := newEnv(t)
 	root := filepath.Join(e.tmp, "[notes]", "store")
-	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", ""))
+	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", ""))
 	doc := e.page(t, "plan.yaml", "Plan")
 	for range 2 {
 		entry, err := st.Prepare(t.Context(), doc, store.Options{}, e.tmp)
@@ -717,7 +717,7 @@ func TestNoStore(t *testing.T) {
 
 	e := newEnv(t)
 	root := filepath.Join(e.tmp, "none")
-	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", ""))
+	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", ""))
 	wantUserErr(t, st.Remove("x"), "store_no_page", "x")
 	if _, err := st.Edit("x", store.Edit{Description: ptr("d")}); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("an edit in no store = %v", err)
@@ -1048,7 +1048,7 @@ func TestLinkDataFileTwice(t *testing.T) {
 	if err := os.CopyFS(filepath.Join(dir, "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
 		t.Fatal(err)
 	}
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, ""))
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, "", ""))
 	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nlang: en\n")
 	link := func(slug, theme string) store.Meta {
 		t.Helper()
@@ -1090,7 +1090,7 @@ func TestLinkDataFileIcons(t *testing.T) {
 
 	e := newEnv(t)
 	icons := filepath.Join(e.tmp, "icons")
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", icons))
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", icons))
 	data := e.write(t, "proj/spec.yaml", "template: report\nsections:\n  - parts:\n      - diagram:\n          id: a\n"+
 		"          width: 100\n          height: 50\n          title: t\n          parts:\n"+
 		"            - icon: { x: 10, y: 5, name: aws/aws-lambda, size: 24 }\nlang: en\n")

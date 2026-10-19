@@ -23,8 +23,9 @@ import (
 
 // Check checks the template at dir as a template of the directory's name, whatever its example.yaml
 // names: its files, then its example.yaml through every stage of a publish, drawing included, with the
-// icons kept in iconsDir in its diagrams. The mistakes stop it from being drawn, and the warnings do not.
-func Check(dir, iconsDir string) (warnings []*usererr.Error, mistakes []error) {
+// parts of partsDir and the icons kept in iconsDir in its diagrams. The mistakes stop it from being drawn,
+// and the warnings do not.
+func Check(dir, partsDir, iconsDir string) (warnings []*usererr.Error, mistakes []error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, []error{usererr.CannotRead(dir, err)}
@@ -37,7 +38,7 @@ func Check(dir, iconsDir string) (warnings []*usererr.Error, mistakes []error) {
 		return nil, []error{usererr.CannotRead(dir, err)}
 	}
 	// Found as a library of the directory above would find it, symlink and all.
-	t, err := NewLibrary(filepath.Dir(abs), iconsDir).resolve(name)
+	t, err := NewLibrary(filepath.Dir(abs), partsDir, iconsDir).resolve(name)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -132,7 +133,23 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	}
 	mistakes = append(mistakes, t.checkAssets(page)...)
 	mistakes = append(mistakes, t.checkCSS()...)
-	return warnings, append(mistakes, t.checkNamedParts(src)...)
+	return append(warnings, brokenParts(set, src)...), append(mistakes, t.checkNamedParts(src)...)
+}
+
+// brokenParts warns of each part of one's own in set that cannot be used, but those src, page.html,
+// names, which checkNamedParts refuses: the schema refers to none of them, as it compiled.
+func brokenParts(set *partSet, src []byte) []*usererr.Error {
+	named := map[string]bool{}
+	for _, n := range namedParts(string(src)) {
+		named[n.name] = true
+	}
+	var warnings []*usererr.Error
+	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
+		if !named[name] {
+			warnings = append(warnings, usererr.New("tmpl_part_broken", name, set.broken[name]))
+		}
+	}
+	return warnings
 }
 
 // checkCSS returns the mistakes of page.css and of each theme of t that ownCSS refuses.
@@ -163,6 +180,10 @@ func (t *Template) checkNamedParts(src []byte) []error {
 	}
 	var mistakes []error
 	for _, n := range namedParts(string(src)) {
+		if b := set.broken[n.name]; b != nil {
+			mistakes = append(mistakes, usererr.New("tmpl_part_broken", n.name, b))
+			continue
+		}
 		if _, ok := set.parts[n.name]; !ok {
 			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), lineAt(src, n.at), n.name,
 				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")))

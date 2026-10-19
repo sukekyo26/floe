@@ -8,31 +8,40 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// ownCSS returns name, a file of t's CSS, empty when t has none. It refuses the file where a } closes
-// no block, which would close floe's layer around it and leave the rules after it out of it, over the
-// parts' styles; where it imports a stylesheet, which a browser does not read in a layer; or where a
-// selector names the page's root as :root or html: floe scopes the template's CSS to the page,
-// @scope (:root), where :scope is the root and those name nothing.
+// ownCSS returns name, a file of t's CSS, empty when t has none, refused as refuseCSS refuses one of
+// @scope: floe scopes the template's CSS to the page, @scope (:root).
 func (t *Template) ownCSS(name string) ([]byte, error) {
 	css, _, err := t.readOptional(name)
 	if err != nil {
 		return nil, err
 	}
+	if err = refuseCSS(t.file(name), css, true); err != nil {
+		return nil, err
+	}
+	return css, nil
+}
+
+// refuseCSS refuses css, the file shown as file, that floe puts in a layer, where a } closes no block,
+// which would close the layer around it and leave the rules after it out of it, over the parts' styles,
+// or where it imports a stylesheet, which a browser does not read in a layer. CSS floe puts in @scope,
+// scoped, is refused too where a selector names the root as :root or html, where :scope is the root and
+// those name nothing.
+func refuseCSS(file string, css []byte, scoped bool) error {
 	rules, stray := cssRules(css)
 	if stray >= 0 {
-		return nil, usererr.New("tmpl_css_brace", t.file(name), lineAt(css, stray))
+		return usererr.New("tmpl_css_brace", file, lineAt(css, stray))
 	}
 	for _, r := range rules {
 		switch {
 		case !r.block && strings.HasPrefix(strings.ToLower(r.prelude), "@import"):
-			return nil, usererr.New("tmpl_css_import", t.file(name), lineAt(css, r.at))
-		case r.block && !strings.HasPrefix(r.prelude, "@"):
+			return usererr.New("tmpl_css_import", file, lineAt(css, r.at))
+		case scoped && r.block && !strings.HasPrefix(r.prelude, "@"):
 			if m := rootSelector.FindStringSubmatchIndex(r.prelude); m != nil {
-				return nil, usererr.New("tmpl_css_root", t.file(name), lineAt(css, r.at+m[2]), r.prelude[m[2]:m[3]])
+				return usererr.New("tmpl_css_root", file, lineAt(css, r.at+m[2]), r.prelude[m[2]:m[3]])
 			}
 		}
 	}
-	return css, nil
+	return nil
 }
 
 // lineAt is the line of src, from 1, that the offset at is on.
