@@ -16,6 +16,7 @@ import (
 	"math"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -451,12 +452,50 @@ func (t *Template) css(theme string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	css, err := t.readFile(path.Join("themes", theme+".css"))
+	if err = t.scopedCSS("page.css", page); err != nil {
+		return nil, err
+	}
+	name := path.Join("themes", theme+".css")
+	css, err := t.readFile(name)
 	if err != nil {
+		return nil, err
+	}
+	if err = t.scopedCSS(name, css); err != nil {
 		return nil, err
 	}
 	return slices.Concat(page, css), nil
 }
+
+// scopedCSS refuses css, the file name of t, where it names the page's root as :root or html: floe
+// scopes the template's CSS to the page, @scope (:root), where :scope is the root and those name nothing.
+func (t *Template) scopedCSS(name string, css []byte) error {
+	m := rootSelector.FindSubmatchIndex(withoutComments(css))
+	if m == nil {
+		return nil
+	}
+	line := bytes.Count(css[:m[2]], []byte("\n")) + 1
+	return usererr.New("tmpl_css_root", t.file(name), line, string(css[m[2]:m[3]]))
+}
+
+// rootSelector finds :root or html where a selector names it.
+// LIMIT: found as written, not as a CSS parser reads them (html in a string counts); parse the CSS if a
+// template comes to write one so.
+var rootSelector = regexp.MustCompile(`(?i)(?:^|[\s,{}>+~(])(:root|html)(?:[\s,{.:\[#>+~)]|$)`)
+
+// withoutComments returns css with its comments blanked out, its lines where they were.
+func withoutComments(css []byte) []byte {
+	return cssComment.ReplaceAllFunc(css, func(c []byte) []byte {
+		return bytes.Map(func(r rune) rune {
+			if r == '\n' {
+				return r
+			}
+			return ' '
+		}, c)
+	})
+}
+
+// cssComment finds a comment of CSS; one never closed runs to the end.
+var cssComment = regexp.MustCompile(`(?s)/\*.*?(?:\*/|$)`)
 
 // page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together.
 func (t *Template) page() (*template.Template, error) {
@@ -508,7 +547,7 @@ func markdownHTML(text string) (template.HTML, error) {
 		return "", err
 	}
 	// With raw HTML left out, every <table> in the output is one goldmark drew.
-	html = strings.ReplaceAll(html, "<table>", `<div class="floe-table"><table>`)
+	html = strings.ReplaceAll(html, "<table>", `<div class="floe-table" data-floe-part="table"><table>`)
 	html = strings.ReplaceAll(html, "</table>", "</table></div>")
 	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 }

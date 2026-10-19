@@ -1,4 +1,4 @@
-<div class="floe-bars">
+<div class="floe-bars" data-floe-part="bars">
 {{- range bars .}}
 <div{{with .Tone}} class="{{.}}"{{end}}><span class="label">{{.Label}}</span><span class="track"><span style="width: {{.Width}}%"></span></span><span class="value">{{num .Value}}</span></div>
 {{- end}}

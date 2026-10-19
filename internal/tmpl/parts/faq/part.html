@@ -1,4 +1,4 @@
-<div class="floe-faq">
+<div class="floe-faq" data-floe-part="faq">
 {{- range .}}
 <details{{if .open}} open{{end}}><summary>{{.q}}</summary><div>{{markdown .a}}</div></details>
 {{- end}}

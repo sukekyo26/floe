@@ -48,8 +48,11 @@ func checkDiagrams(s *schema, d *Data, root ast.Node, iconsDir string) error {
 		return err
 	}
 	d.diagrams = true
+	// The part's element holds the zoom toolbar too, which the script puts before the diagram's frame. It
+	// draws no box, so that the toolbar and the frame stand where they would without it.
 	for i, spec := range specs {
-		d.drew(paths[spec], template.HTML(svgs[i])) //nolint:gosec // G203: drawn by diagram, its values escaped
+		html := `<div data-floe-part="diagram" style="display: contents">` + svgs[i] + `</div>`
+		d.drew(paths[spec], template.HTML(html)) //nolint:gosec // G203: drawn by diagram, its values escaped
 	}
 	return nil
 }

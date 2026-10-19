@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"bytes"
 	"cmp"
 	"errors"
 	"fmt"
@@ -127,7 +128,62 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return warnings, append(mistakes, err)
 	}
-	return warnings, append(mistakes, t.checkAssets(page)...)
+	mistakes = append(mistakes, t.checkAssets(page)...)
+	mistakes = append(mistakes, t.checkCSS()...)
+	return warnings, append(mistakes, t.checkNamedParts()...)
+}
+
+// checkCSS returns a mistake for page.css and each theme of t that names the page's root otherwise than
+// as :scope.
+func (t *Template) checkCSS() []error {
+	themes, err := t.themes()
+	if err != nil {
+		return []error{err}
+	}
+	names := []string{"page.css"}
+	for _, theme := range themes {
+		names = append(names, path.Join("themes", theme+".css"))
+	}
+	var mistakes []error
+	for _, name := range names {
+		css, _, err := t.readOptional(name)
+		if err == nil {
+			err = t.scopedCSS(name, css)
+		}
+		if err != nil {
+			mistakes = append(mistakes, err)
+		}
+	}
+	return mistakes
+}
+
+// checkNamedParts returns a mistake for each part page.html takes the look of, by data-floe-part, that
+// floe does not have: the page would get no style for it. A name page.html puts together ({{.kind}})
+// is not looked at.
+func (t *Template) checkNamedParts() []error {
+	src, err := t.readFile("page.html")
+	if err != nil {
+		return []error{err}
+	}
+	set, err := builtinParts()
+	if err != nil {
+		return []error{err}
+	}
+	var mistakes []error
+	for _, m := range partAttr.FindAllSubmatchIndex(src, -1) {
+		value := string(src[m[2]:m[3]])
+		if strings.Contains(value, "{{") {
+			continue
+		}
+		for _, name := range strings.Fields(strings.Trim(value, `"'`)) {
+			if _, ok := set.parts[name]; !ok {
+				line := bytes.Count(src[:m[0]], []byte("\n")) + 1
+				mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), line, name,
+					strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")))
+			}
+		}
+	}
+	return mistakes
 }
 
 // checkThemeVariables warns of each theme of t that leaves out a CSS variable the parts and diagrams

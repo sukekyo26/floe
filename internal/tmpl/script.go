@@ -76,7 +76,7 @@ func drawScript(js string, data any) template.HTML {
 	// Values read from YAML, without .inf or .nan or keys other than text, always encode.
 	b, _ := json.Marshal(data)         //nolint:errcheck,errchkjson // see above
 	text, _ := json.Marshal(string(b)) //nolint:errcheck,errchkjson // text always encodes
-	html := "<div></div><script>{const floeScript = " + js + "\n" +
+	html := "<div data-floe-part=\"script\"></div><script>{const floeScript = " + js + "\n" +
 		";floeScript(document.currentScript.previousElementSibling, JSON.parse(" + string(text) + "));}</script>"
 	return template.HTML(html) //nolint:gosec // G203: the data file's own script, its end checked by scriptEnd
 }

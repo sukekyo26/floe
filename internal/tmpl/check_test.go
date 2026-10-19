@@ -216,7 +216,7 @@ func TestCheckMistakes(t *testing.T) {
 		{
 			name:    "a theme without the variables of a Markdown table",
 			files:   map[string]string{"schema.json": `"chart":|"aside": { "type": "string", "format": "markdown" },` + "\n    " + `"chart":`},
-			warning: "sizes/themes/default.css does not define --accent-soft, --accent, --good-soft, --good, --warn-soft, --warn, --bad-soft, --bad, --surface, --line, --muted,",
+			warning: "sizes/themes/default.css does not define --accent, --accent-soft, --surface, --line, --muted, --good-soft, --good, --warn-soft, --warn, --bad-soft, --bad,",
 		},
 		{
 			name: "formats of other types",
@@ -307,6 +307,36 @@ func TestPageStyleRefused(t *testing.T) {
 	}
 }
 
+// The template's CSS names the page's root as :scope, past a comment that names it otherwise, and
+// page.html takes the look of parts floe has, past a name it puts together.
+func TestTemplateCSSAndParts(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{
+		"page.css":           "/* not :root */\n:scope { --fg: #000; }\n:root .lead, a { color: red; }\n",
+		"themes/default.css": "body { font-family: sans-serif; }\nhtml{ color: red; }\n",
+		"page.html":          `<body>|<body><span data-floe-part="cell nope"></span><i data-floe-part="{{"cell"}}"></i>`,
+	})
+	_, mistakes := tmpl.Check(dir, "")
+	got := make([]string, 0, len(mistakes))
+	for _, m := range mistakes {
+		got = append(got, strings.TrimPrefix(m.Error(), dir+string(filepath.Separator)))
+	}
+	want := []string{
+		"page.css:3: write the page's root as :scope, not :root",
+		filepath.Join("themes", "default.css") + ":2: write the page's root as :scope, not html",
+		"page.html:4: page.html takes the look of the part nope, which floe does not have; use bars, ",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("Check = %q, want %q", got, want)
+	}
+	for i := range want {
+		if !strings.HasPrefix(got[i], want[i]) {
+			t.Errorf("Check = %q, want %q", got[i], want[i])
+		}
+	}
+}
+
 // The variables of diagrams that page.css defines, for every theme, are not missed in a theme.
 func TestCheckVariablesInPage(t *testing.T) {
 	t.Parallel()
@@ -315,7 +345,7 @@ func TestCheckVariablesInPage(t *testing.T) {
 	dir := sizes(t, map[string]string{
 		"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
 		"schema.json":   `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`,
-		"page.css":      ":root { " + strings.Join(diagram.Variables(), ": red; ") + ": red }",
+		"page.css":      ":scope { " + strings.Join(diagram.Variables(), ": red; ") + ": red }",
 	})
 	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
 		t.Errorf("Check = %v, %v", warnings, mistakes)

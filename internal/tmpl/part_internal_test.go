@@ -41,14 +41,13 @@ func TestPalette(t *testing.T) {
 		if bare := regexp.MustCompile(`var\(\s*--[\w-]+\s*\)`).FindString(p.css); bare != "" {
 			t.Errorf("the part %s takes %s without a value of its own", name, bare)
 		}
-		if p.pages != nil && p.classes == nil {
-			t.Errorf("the style of the part %s names no floe- class, so no page gets it", name)
+		// A part's element names it, so that a page that draws it gets its style, and every name is a part's.
+		if names := namedParts(p.html); p.pages != nil && !slices.Contains(names, name) {
+			t.Errorf("the HTML of the part %s does not name it in a data-floe-part", name)
 		}
-		// A part draws in another's look by naming its classes in its HTML, not in its style, which would
-		// bring its style to a page of the other's.
-		for other, q := range set.parts {
-			if c := slices.IndexFunc(p.classes, func(c string) bool { return slices.Contains(q.classes, c) }); other != name && c >= 0 {
-				t.Errorf("the styles of the parts %s and %s both name %s", name, other, p.classes[c])
+		for _, other := range namedParts(p.html) {
+			if _, ok := set.parts[other]; !ok {
+				t.Errorf("the HTML of the part %s names %s, which is no part", name, other)
 			}
 		}
 	}

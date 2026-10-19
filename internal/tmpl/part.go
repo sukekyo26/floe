@@ -101,15 +101,14 @@ func (s *schema) absolute(base string) {
 // part is a part of floe's: a template's schema refers to it, and floe checks it, draws it and puts its
 // style into the page.
 type part struct {
-	name    string
-	schema  *schema
-	pages   map[string]*template.Template // by the language of its words; nil for one floe draws in Go (goParts)
-	words   words
-	html    string // the template of pages, as written
-	css     string
-	checks  []relation
-	classes []string // the classes its style names, one of which in a page gives it the style
-	uses    []string // the parts its HTML names the classes of and its schema holds, itself among them
+	name   string
+	schema *schema
+	pages  map[string]*template.Template // by the language of its words; nil for one floe draws in Go (goParts)
+	words  words
+	html   string // the template of pages, as written
+	css    string
+	checks []relation
+	uses   []string // the parts its HTML names and its schema holds, itself among them
 }
 
 // goParts are the parts floe draws in Go, each a description: their schema takes an object, whose
@@ -173,8 +172,7 @@ func readParts() (*partSet, error) {
 			Required: nil,
 		}
 		set.parts[name] = &part{
-			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: "", checks: nil, classes: nil,
-			uses: nil,
+			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: "", checks: nil, uses: nil,
 		}
 	}
 	for _, s := range set.schemas {
@@ -207,22 +205,36 @@ func (s *schema) partsUnder(names *[]string) {
 	s.Items.partsUnder(names)
 }
 
-// partsNamedIn returns the names of the parts whose classes the class attributes of html name, in order.
+// partsNamedIn returns the names of the parts the data-floe-part attributes of html name, in order.
 func (set *partSet) partsNamedIn(html string) []string {
 	named := map[string]bool{}
-	for _, m := range classAttr.FindAllStringSubmatch(html, -1) {
-		for _, c := range strings.Fields(strings.Trim(m[1], `"'`)) {
-			named[c] = true
-		}
+	for _, name := range namedParts(html) {
+		named[name] = true
 	}
 	var names []string
 	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-		if slices.ContainsFunc(set.parts[name].classes, func(c string) bool { return named[c] }) {
+		if named[name] {
 			names = append(names, name)
 		}
 	}
 	return names
 }
+
+// namedParts returns the names the data-floe-part attributes of html give, as written: an element of a
+// part names it, after the parts it is drawn in the look of (data-floe-part="table compare").
+// LIMIT: the attributes are found as written, not as an HTML parser reads them (one in a script's string
+// counts); parse the page if a page comes to write one so.
+func namedParts(html string) []string {
+	found := partAttr.FindAllStringSubmatch(html, -1)
+	names := make([]string, 0, len(found))
+	for _, m := range found {
+		names = append(names, strings.Fields(strings.Trim(m[1], `"'`))...)
+	}
+	return names
+}
+
+// partAttr finds the value of a data-floe-part attribute: data-floe-part="table compare", '…' or x.
+var partAttr = regexp.MustCompile(`(?i)\sdata-floe-part\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` + "`" + `]+)`)
 
 // readSchema reads the schema file of floe's at url.
 func (set *partSet) readSchema(url, file string) error {
@@ -241,9 +253,6 @@ func (set *partSet) readSchema(url, file string) error {
 	set.docs[url], set.schemas[url] = doc, s
 	return nil
 }
-
-// styleClass finds the classes a part's style names: .floe-table.
-var styleClass = regexp.MustCompile(`\.(floe-[\w-]+)`)
 
 // readPart reads the part name, whose schema is s.
 func readPart(name string, s *schema) (*part, error) {
@@ -281,10 +290,8 @@ func readPart(name string, s *schema) (*part, error) {
 		return nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
 	p := &part{
-		name: name, schema: s, pages: pages, words: w, html: string(html), css: string(css), checks: nil, classes: nil,
-		uses: nil,
+		name: name, schema: s, pages: pages, words: w, html: string(html), css: string(css), checks: nil, uses: nil,
 	}
-	p.classes = appendFound(nil, styleClass, p.css)
 	src, err := partFiles.ReadFile(path.Join(dir, "checks.yaml"))
 	switch {
 	case err == nil:
@@ -500,20 +507,20 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 }
 
 // pageStyle returns the one <style> of the page, in cascade layers that decide which wins whatever the
-// selectors: the template's own CSS (own: its page.css, then its theme) under the parts'. The parts' are
-// the style of the parts whose classes page uses, in the order of their names, the diagrams' when it has
-// diagrams, then the parts theme theme, which every page gets, as it styles Markdown's quotes too. A part
-// is used by its own, a table of Markdown, or HTML that takes a part's look (<span class="floe-pill
-// good">). The classes are those of its class attributes, so that a theme or prose that names one brings
-// no style.
-// LIMIT: the parts theme shares the parts' layer, where its rule for a part drawn in another's look loses
-// to the part's more specific one (.floe-links > li::before over .floe-card::before), as that part
-// needs. Layer a theme after each part once a theme is a file of each part.
-// LIMIT: the attributes are found as written, not as an HTML parser reads them (class= in a script's
-// string counts); parse the page if a page comes to write one so.
+// selectors: floe's base, under the template's own CSS (own: its page.css, then its theme), under the
+// parts'. The parts' are the style of the parts the page names, in the order of their names, the
+// diagrams' when it has diagrams, then the parts theme theme, which every page gets, as it styles
+// Markdown's quotes too. A part is named by its own element, a table of Markdown, or HTML that takes a
+// part's look (<span class="floe-pill good" data-floe-part="cell">).
+// The template's style reaches the boxes of the parts, so that it places them, but not what they hold.
+// LIMIT: the parts' style and the parts theme are not scoped: a part's rules reach the parts it holds,
+// and its theme's rule for a part drawn in another's look loses to the part's more specific one
+// (.floe-links > li::before over .floe-card::before), as that part needs. A scoped rule would win over
+// an unscoped one of the same specificity, so scope and layer the parts and their themes together, once
+// a theme is a file of each part.
 func pageStyle(page, own []byte, theme string, diagrams bool) (string, error) {
 	var parts strings.Builder
-	if bytes.Contains(page, []byte("floe-")) {
+	if bytes.Contains(page, []byte("data-floe-part")) {
 		set, err := builtinParts()
 		if err != nil {
 			return "", err
@@ -529,10 +536,17 @@ func pageStyle(page, own []byte, theme string, diagrams bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "<style>\n@layer floe.page, floe.parts;\n" +
-		"@layer floe.page {\n" + string(own) + "}\n" +
+	return "<style>\n@layer floe.base, floe.page, floe.parts;\n" +
+		"@layer floe.base {\n" + baseCSS + "}\n" +
+		"@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(own) + "}\n}\n" +
 		"@layer floe.parts {\n" + parts.String() + string(css) + "}\n</style>\n", nil
 }
+
+// baseCSS is what every page starts from: text, lists, links, code and quotes, for the template's own
+// elements and, where its CSS does not reach, those of the parts.
+//
+//go:embed base.css
+var baseCSS string
 
 // themesDir is the directory of parts/ that holds the parts themes, and so is no part.
 const themesDir = "themes"
@@ -578,9 +592,6 @@ func partsThemeVariables() ([]string, error) {
 }
 
 var usedVariable = regexp.MustCompile(`var\(\s*(--[\w-]+)`)
-
-// classAttr finds the value of a class attribute: class="floe-pill good", class='…' or class=x.
-var classAttr = regexp.MustCompile(`(?i)\sclass\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` + "`" + `]+)`)
 
 // withStyles puts style into page before its </head>, else at its end. Where it goes decides nothing
 // else: the <link>s of page.html (fonts, libraries) are out of the layers, and win over them all.
@@ -663,7 +674,11 @@ func partVariables(names []string) ([]string, error) {
 			next = append(next, set.parts[name].uses...)
 		}
 	}
+	// floe's base styles the elements of every part floe draws from HTML.
 	var vars []string
+	if slices.ContainsFunc(names, func(name string) bool { return !isGoPart(name) }) {
+		vars = appendFound(nil, fallback, baseCSS)
+	}
 	for _, name := range slices.Sorted(maps.Keys(used)) {
 		vars = appendFound(vars, fallback, set.parts[name].css)
 	}
