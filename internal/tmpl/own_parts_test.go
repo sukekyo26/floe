@@ -78,8 +78,9 @@ func TestOwnParts(t *testing.T) {
 
 // A part of one's own that cannot be used is refused, with why, to a template that uses it, by its
 // schema or its page.html, and told as a warning to one that does not, which is drawn: one that takes the
-// look of one left out too. One named as a part floe draws in Go or a schema the parts share leaves
-// floe's in place, a symlink that leads nowhere too.
+// look of one left out too, floe's among them, and one that holds itself, which floe would follow
+// forever. One named as a part floe draws in Go or a schema the parts share leaves floe's in place, a
+// symlink that leads nowhere too, and page.html may name floe's.
 func TestBrokenOwnParts(t *testing.T) {
 	t.Parallel()
 
@@ -98,6 +99,19 @@ func TestBrokenOwnParts(t *testing.T) {
 		"borrower/part.css":    "",
 		"base/schema.json":     `{"type": "object"}`,
 		"diagram/schema.json":  `{"type": "object"}`,
+		"code/schema.json":     `{"type": "object"}`,
+		"code/part.html":       `<div data-floe-part="code"></div>`,
+		"code/part.css":        "}\n",
+		"loop/schema.json":     `{"type": "object", "properties": {"kids": {"type": "array", "items": {"$ref": "floe:///parts/loop.json"}}}}`,
+		"loop/part.html":       `<div data-floe-part="loop"></div>`,
+		"loop/part.css":        "",
+		"ping/schema.json":     `{"type": "object", "properties": {"pong": {"$ref": "floe:///parts/pong.json"}}}`,
+		"ping/part.html":       `<div data-floe-part="ping"></div>`,
+		"ping/part.css":        "",
+		"pong/schema.json":     `{"type": "object", "properties": {"ping": {"$ref": "floe:///parts/ping.json"}}}`,
+		"pong/part.html":       `<div data-floe-part="pong"></div>`,
+		"pong/part.css":        "",
+		"Quote/schema.json":    `{"type": "object"}`,
 	}
 	for _, name := range []string{"quote", "tone"} {
 		for file, body := range quote(name) {
@@ -109,17 +123,21 @@ func TestBrokenOwnParts(t *testing.T) {
 		t.Fatal(err)
 	}
 	whys := map[string]string{
-		"unnamed": "your own part unnamed cannot be used: " + filepath.Join(parts, "unnamed", "part.html") +
+		"unnamed": "the part unnamed cannot be used: " + filepath.Join(parts, "unnamed", "part.html") +
 			`: the part unnamed names itself in no data-floe-part`,
-		"brace": "your own part brace cannot be used: " + filepath.Join(parts, "brace", "part.css") + ":2: this } closes no block",
-		"lender": "your own part lender cannot be used: " + filepath.Join(parts, "lender", "part.html") +
+		"brace": "the part brace cannot be used: " + filepath.Join(parts, "brace", "part.css") + ":2: this } closes no block",
+		"lender": "the part lender cannot be used: " + filepath.Join(parts, "lender", "part.html") +
 			":1: the part takes the look of the part nope, which there is none of",
-		"base":    "your own part base cannot be used: " + filepath.Join(parts, "base") + ": a part of your own cannot be named base",
-		"diagram": "your own part diagram cannot be used: " + filepath.Join(parts, "diagram") + ": a part of your own cannot be named diagram",
-		"script":  "your own part script cannot be used: " + filepath.Join(parts, "script") + ": a part of your own cannot be named script",
-		"tone":    "your own part tone cannot be used: " + filepath.Join(parts, "tone") + ": a part of your own cannot be named tone",
-		"borrower": "your own part borrower cannot be used: " + filepath.Join(parts, "borrower", "part.html") +
-			":1: the part takes the look of the part unnamed, which there is none of",
+		"base":     "the part base cannot be used: " + filepath.Join(parts, "base") + ": a part of your own cannot be named base",
+		"diagram":  "the part diagram cannot be used: " + filepath.Join(parts, "diagram") + ": a part of your own cannot be named diagram",
+		"script":   "the part script cannot be used: " + filepath.Join(parts, "script") + ": a part of your own cannot be named script",
+		"tone":     "the part tone cannot be used: " + filepath.Join(parts, "tone") + ": a part of your own cannot be named tone",
+		"borrower": "the part borrower cannot be used: it takes the look of your own part unnamed, which cannot be used",
+		"code":     "the part code cannot be used: " + filepath.Join(parts, "code", "part.css") + ":1: this } closes no block",
+		"diff":     "the part diff cannot be used: it takes the look of your own part code, which cannot be used",
+		"loop":     "the part loop cannot be used: " + filepath.Join(parts, "loop") + ": the part loop holds itself (loop → loop)",
+		"ping":     "the part ping cannot be used: " + filepath.Join(parts, "ping") + ": the part ping holds itself (ping → pong → ping)",
+		"Quote":    "the part Quote cannot be used: " + filepath.Join(parts, "Quote") + ": a name is lower case letters",
 	}
 	for name, why := range whys {
 		dir := memo(t, `"risks": {"$ref": "floe:///parts/`+name+`.json"}, "aside": {"type": "string"}`)
@@ -135,6 +153,11 @@ func TestBrokenOwnParts(t *testing.T) {
 			t.Errorf("Check of a template of %s = %v, want %s", name, mistakes, why)
 		}
 	}
+	// pong holds ping, which is left out.
+	pong := memo(t, `"risks": {"$ref": "floe:///parts/pong.json"}, "aside": {"type": "string"}`)
+	if _, mistakes := tmpl.Check(filepath.Join(pong, "memo"), parts, ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), whys["ping"]) {
+		t.Errorf("Check of a template of pong = %v", mistakes)
+	}
 	// By page.html.
 	named := memo(t, memoItems)
 	page := filepath.Join(named, "memo", "page.html")
@@ -144,6 +167,13 @@ func TestBrokenOwnParts(t *testing.T) {
 	}
 	if _, mistakes := tmpl.Check(filepath.Join(named, "memo"), parts, ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), whys["brace"]) {
 		t.Errorf("Check of a page.html that names brace = %v", mistakes)
+	}
+	if err := os.WriteFile(page, []byte(`<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>`+
+		`<body><div data-floe-part="diagram">{{.Data.risks}}</div></body></html>`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, mistakes := tmpl.Check(filepath.Join(named, "memo"), parts, ""); len(mistakes) != 0 {
+		t.Errorf("Check of a page.html that names floe's diagram = %v", mistakes)
 	}
 	// A template that uses none of them is drawn, its check warned of each.
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/quote.json"}, "aside": {"type": "string"}`)
@@ -174,7 +204,9 @@ func TestBrokenOwnParts(t *testing.T) {
 // A parts theme of one's own is picked as floe's are. One of the name of one of floe's takes the place
 // of its files of their names, the rest staying floe's. floe's themes do not style a part of one's own
 // that took the place of floe's, whose rules would fit it ill: its file goes, and its parts.css does not
-// reach the part. One that cannot be used is refused to a data file that picks it.
+// reach the part. One that cannot be used is refused to a data file that picks it; a file of a name
+// starting with a dot, one not of CSS, and one for a part of one's own that cannot be used do not make
+// it so.
 func TestOwnPartsThemes(t *testing.T) {
 	t.Parallel()
 
@@ -182,6 +214,12 @@ func TestOwnPartsThemes(t *testing.T) {
 	files["themes/brutal/code.css"] = "/* brutal's code of one's own */\n"
 	files["themes/mine/base.css"] = "/* mine */\n:root { --mine-ink: #123; }\n"
 	files["themes/bad/nope.css"] = ""
+	files["themes/mine/.DS_Store"] = "x"
+	files["themes/mine/README.md"] = "x"
+	files["broken/schema.json"] = `{"type": "object"}`
+	files["broken/part.html"] = `<div></div>`
+	files["broken/part.css"] = ""
+	files["themes/brutal/broken.css"] = ""
 	parts := ownParts(t, files)
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/code.json"}, "aside": {"$ref": "floe:///parts/note.json"}`)
 	l := tmpl.NewLibrary(dir, parts, "")
@@ -194,8 +232,8 @@ func TestOwnPartsThemes(t *testing.T) {
 		t.Fatal(err)
 	}
 	for want, n := range map[string]int{
-		`@scope ([data-floe-part~="code"]) to (:scope [data-floe-part] > *) {` + "\n/* brutal's code of one's own */": 1,
-		`@scope ([data-floe-part]:not([data-floe-part~="code"])) to (:scope [data-floe-part] > *) {`:                  1,
+		`@scope ([data-floe-part~="code"]) to (:scope [data-floe-part] > *) {` + "\n/* brutal's code of one's own */":          1,
+		`@scope ([data-floe-part]:not([data-floe-part="code"], [data-floe-part$=" code"])) to (:scope [data-floe-part] > *) {`: 1,
 		string(note): 1,
 		":scope .lang { border-radius: 0; border: 2px solid var(--brutal-ink)": 0,
 	} {
@@ -209,8 +247,14 @@ func TestOwnPartsThemes(t *testing.T) {
 	}
 	why := "your own parts theme bad cannot be used: " + filepath.Join(parts, "themes", "bad", "nope.css") +
 		": a file of a parts theme is base.css, parts.css or the style of a part"
-	if _, err = draw(l, "template: memo\nlang: en\nparts-theme: bad\nrisks: { text: x }\n"); err == nil || !strings.HasPrefix(err.Error(), why) {
+	if _, err = draw(l, "template: memo\nlang: en\nparts-theme: bad\nrisks: { text: x }\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:3:14: "+why) {
 		t.Errorf("drawing with the parts theme bad = %v, want %s", err, why)
+	}
+	// Told beside the data's other mistakes.
+	if _, err = draw(l, "template: memo\nlang: en\ntheme: nope\nparts-theme: bad\nrisks: { text: x }\n"); err == nil ||
+		!strings.Contains(err.Error(), "data.yaml:3:8: ") || !strings.Contains(err.Error(), "data.yaml:4:14: "+why) {
+		t.Errorf("drawing with the theme nope and the parts theme bad = %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "memo", "example.yaml"), []byte("template: memo\nlang: en\nrisks: { text: x }\n"), 0o600); err != nil {
 		t.Fatal(err)

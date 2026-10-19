@@ -146,7 +146,8 @@ func brokenParts(set *partSet, src []byte) []*usererr.Error {
 	}
 	var warnings []*usererr.Error
 	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
-		if !named[name] {
+		// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
+		if !named[name] || set.parts[name] != nil {
 			warnings = append(warnings, usererr.New("tmpl_part_broken", name, set.broken[name]))
 		}
 	}
@@ -184,11 +185,11 @@ func (t *Template) checkNamedParts(src []byte) []error {
 	}
 	var mistakes []error
 	for _, n := range namedParts(string(src)) {
-		if b := set.broken[n.name]; b != nil {
-			mistakes = append(mistakes, usererr.New("tmpl_part_broken", n.name, b))
-			continue
-		}
-		if _, ok := set.parts[n.name]; !ok {
+		switch _, ok := set.parts[n.name]; {
+		case ok:
+		case set.broken[n.name] != nil:
+			mistakes = append(mistakes, usererr.New("tmpl_part_broken", n.name, set.broken[n.name]))
+		default:
 			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), lineAt(src, n.at), n.name,
 				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")))
 		}

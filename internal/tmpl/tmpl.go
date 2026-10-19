@@ -244,8 +244,12 @@ func (t *Template) check(h *head, dir string, given Themes, problems yamlpos.Pro
 	if err != nil {
 		return err
 	}
-	if broken := set.brokenThemes[d.PartsTheme]; broken != nil && more == nil {
+	broken := set.brokenThemes[d.PartsTheme]
+	switch {
+	case broken != nil && given.Parts != "":
 		return usererr.New("tmpl_parts_theme_broken", d.PartsTheme, broken)
+	case broken != nil && more == nil:
+		more = yamlpos.Problems{yamlpos.New(d.File, h.where["parts-theme"], "tmpl_parts_theme_broken", d.PartsTheme, broken)}
 	}
 	problems = append(problems, more...)
 	return checkValues(t, d, h.root, dir, problems)
