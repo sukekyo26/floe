@@ -333,6 +333,7 @@ var messagesEN = map[string]string{
 	"tmpl_page_style":              "%s:%d: page.html holds a <style>: write the template's CSS in page.css and its themes, which floe puts into the page in layers under the parts' and the parts theme's",
 	"tmpl_page_part":               "%s:%d: page.html takes the look of the part %s, which floe does not have; use %s",
 	"tmpl_css_root":                "%s:%d: write the page's root as :scope, not %s: floe puts the template's CSS in @scope (:root), where :root and html name nothing",
+	"tmpl_css_import":              "%s:%d: floe puts the template's CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",
 	"tmpl_html_style":              "HTML holds a <style> or a <link>: floe puts a page's CSS together, so style the HTML with style attributes",
 	"tmpl_checks_yaml":             "write checks.yaml as a list of checks, each with for, expr and message (and field if you like)",
 	"tmpl_checks_key":              "%s is not a key of a check; use for, field, expr and message",

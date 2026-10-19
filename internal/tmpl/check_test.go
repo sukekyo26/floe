@@ -337,6 +337,28 @@ func TestTemplateCSSAndParts(t *testing.T) {
 	}
 }
 
+// An @import of the template's CSS, which a browser does not read in floe's layer, is refused at its
+// line by floe template check and by the drawing, past comments that name it or hold more than ASCII.
+func TestCSSImportRefused(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{
+		"page.css":           "/* 色の定義です。\n   @import は書かない */\nbody { color: red; }\n@IMPORT url(x.css);\n",
+		"themes/default.css": "@import url(y.css);\n",
+	})
+	want := []string{
+		filepath.Join(dir, "page.css") + ":4: floe puts the template's CSS in a layer, where a browser reads no @import",
+		filepath.Join(dir, "themes", "default.css") + ":1: floe puts the template's CSS in a layer",
+	}
+	_, mistakes := tmpl.Check(dir, "")
+	if len(mistakes) != len(want) || !strings.HasPrefix(mistakes[0].Error(), want[0]) || !strings.HasPrefix(mistakes[1].Error(), want[1]) {
+		t.Errorf("Check = %v, want %q", mistakes, want)
+	}
+	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), want[0]) {
+		t.Errorf("drawing = %v, want %s", err, want[0])
+	}
+}
+
 // The variables of diagrams that page.css defines, for every theme, are not missed in a theme.
 func TestCheckVariablesInPage(t *testing.T) {
 	t.Parallel()

@@ -133,8 +133,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	return warnings, append(mistakes, t.checkNamedParts()...)
 }
 
-// checkCSS returns a mistake for page.css and each theme of t that names the page's root otherwise than
-// as :scope.
+// checkCSS returns the mistakes of page.css and of each theme of t that ownCSS refuses.
 func (t *Template) checkCSS() []error {
 	themes, err := t.themes()
 	if err != nil {
@@ -148,7 +147,7 @@ func (t *Template) checkCSS() []error {
 	for _, name := range names {
 		css, _, err := t.readOptional(name)
 		if err == nil {
-			err = t.scopedCSS(name, css)
+			err = t.ownCSS(name, css)
 		}
 		if err != nil {
 			mistakes = append(mistakes, err)
