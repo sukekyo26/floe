@@ -154,6 +154,8 @@ var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("
 
 // partsIn returns floe's parts with those of one's own in dir over them, "" for none: floe's alone, read
 // once, when dir holds nothing.
+// LIMIT: with parts of one's own, floe's are read again with them for each data file read, as the $refs
+// they resolve change. Keep a set by the mtimes of dir's files if drawing a page comes to be slow.
 func partsIn(dir string) (*partSet, error) {
 	if dir == "" {
 		return builtinParts()
