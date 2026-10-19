@@ -320,39 +320,42 @@ func stamp(sources tmpl.Sources) string {
 		add(sources.Templates)
 	}
 	addTree(sources.Template, add)
-	addTree(sources.Parts, add)
+	addParts(sources.Parts, add)
 	for _, file := range slices.Concat(sources.Images, sources.Icons) {
 		add(file)
 	}
 	return strconv.FormatUint(h.Sum64(), 36)
 }
 
-// addTree adds each file under dir, "" for none, to a stamp with add, but those of a name starting with a
-// dot (.git), no file of a template or a part. A symlink to a directory, dir itself among them (a part of
-// one's own, or the directory of them, kept elsewhere), is walked through, each directory once.
+// addTree adds each file under dir, "" for none, a symlink followed, to a stamp with add, but those of a
+// name starting with a dot (.git), no file of a template or a part. A symlink in it to a directory in it
+// is walked through, and one that leads out of it is not, as floe reads no file through it.
 func addTree(dir string, add func(string)) {
+	root, err := filepath.EvalSymlinks(dir)
+	if dir == "" || err != nil {
+		return
+	}
 	walked := map[string]bool{}
 	var walk func(dir string)
 	walk = func(dir string) {
-		to, err := filepath.EvalSymlinks(dir)
-		if err != nil || walked[to] {
-			return
-		}
-		walked[to] = true
+		walked[dir] = true
 		//nolint:errcheck // a file that cannot be walked to is left out of the sum
-		_ = filepath.WalkDir(to, func(p string, e fs.DirEntry, err error) error {
+		_ = filepath.WalkDir(dir, func(p string, e fs.DirEntry, err error) error {
 			switch {
 			case err != nil:
 				return nil //nolint:nilerr // as above
-			case p != to && strings.HasPrefix(e.Name(), "."):
+			case p != dir && strings.HasPrefix(e.Name(), "."):
 				if e.IsDir() {
 					return fs.SkipDir
 				}
 			case e.Type()&fs.ModeSymlink != 0:
-				if fi, err := os.Stat(p); err == nil && fi.IsDir() {
-					walk(p)
-				} else {
+				to, err := filepath.EvalSymlinks(p)
+				fi, statErr := os.Stat(p)
+				switch {
+				case err != nil || statErr != nil || !fi.IsDir():
 					add(p)
+				case !walked[to] && (to == root || strings.HasPrefix(to, root+string(filepath.Separator))):
+					walk(to)
 				}
 			case !e.IsDir():
 				add(p)
@@ -360,8 +363,27 @@ func addTree(dir string, add func(string)) {
 			return nil
 		})
 	}
-	if dir != "" {
-		walk(dir)
+	walk(root)
+}
+
+// addParts adds the files of the directory of parts of one's own, "" for none, to a stamp with add, as
+// floe reads them: each part and parts theme a directory, a symlink to one elsewhere followed, its files
+// as addTree adds them.
+func addParts(dir string, add func(string)) {
+	if dir == "" {
+		return
+	}
+	add(dir)
+	for _, under := range []string{dir, filepath.Join(dir, "themes")} {
+		entries, err := os.ReadDir(under)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			if !strings.HasPrefix(e.Name(), ".") && (under != dir || e.Name() != "themes") {
+				addTree(filepath.Join(under, e.Name()), add)
+			}
+		}
 	}
 }
 

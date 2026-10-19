@@ -1114,7 +1114,8 @@ func TestLinkDataFileIcons(t *testing.T) {
 }
 
 // A linked data file drawn with a part and a parts theme of one's own, kept elsewhere and linked into the
-// directory of parts, itself a symlink, is drawn again when a file of either is saved.
+// directory of parts, itself a symlink, is drawn again when a file of either is saved, and not when a
+// file a link in the part leads out to is, which floe does not read.
 func TestLinkDataFileParts(t *testing.T) {
 	t.Parallel()
 
@@ -1124,6 +1125,10 @@ func TestLinkDataFileParts(t *testing.T) {
 	e.write(t, "kept/note/part.html", `<aside data-floe-part="note">{{.text}}</aside>`)
 	css := e.write(t, "kept/note/part.css", ":scope { margin: 0; }\n")
 	theme := e.write(t, "kept/mine/base.css", ":root { --mine-ink: #123; }\n")
+	out := e.write(t, "elsewhere/notes.txt", "x")
+	if err := os.Symlink(filepath.Dir(out), filepath.Join(kept, "elsewhere")); err != nil {
+		t.Fatal(err)
+	}
 	under := filepath.Join(e.tmp, "real-parts")
 	if err := os.MkdirAll(filepath.Join(under, "themes"), 0o700); err != nil {
 		t.Fatal(err)
@@ -1146,6 +1151,13 @@ func TestLinkDataFileParts(t *testing.T) {
 	}
 	if v := s.Version("spec", &m, data); v != version {
 		t.Fatalf("the version moved from %q to %q with nothing changed", version, v)
+	}
+	later := time.Now().Add(time.Hour)
+	if err = os.Chtimes(out, later, later); err != nil {
+		t.Fatal(err)
+	}
+	if v := s.Version("spec", &m, data); v != version {
+		t.Errorf("the version moved from %q to %q once a file out of the part is saved", version, v)
 	}
 	for i, file := range []string{css, theme} {
 		later := time.Now().Add(time.Duration(i+1) * time.Minute)
