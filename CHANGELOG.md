@@ -144,8 +144,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   floe puts a page's CSS together in one `<style>`: the template's `page.css`
   and theme in a cascade layer under the parts' style and the parts theme,
   which they do not restyle whatever their selectors. `page.html` holds no
-  `<style>`, nor an item of `"format": "html"` a `<style>` or `<link>`, each
-  refused at its line.
+  `<style>`, nor an item of `"format": "html"` a `<style>` or `<link>`, nor
+  the template's CSS an `@import`, each refused at its line.
   Images go into the page as data URIs: an item of `"format": "image"`
   names an image under the data file's directory, and `page.html` shows one
   of the template's `assets/` with `asset`. An image is a png, jpeg, gif,

@@ -127,7 +127,31 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return warnings, append(mistakes, err)
 	}
-	return warnings, append(mistakes, t.checkAssets(page)...)
+	mistakes = append(mistakes, t.checkAssets(page)...)
+	return warnings, append(mistakes, t.checkCSS()...)
+}
+
+// checkCSS returns the mistakes of page.css and of each theme of t that ownCSS refuses.
+func (t *Template) checkCSS() []error {
+	themes, err := t.themes()
+	if err != nil {
+		return []error{err}
+	}
+	names := []string{"page.css"}
+	for _, theme := range themes {
+		names = append(names, path.Join("themes", theme+".css"))
+	}
+	var mistakes []error
+	for _, name := range names {
+		css, _, err := t.readOptional(name)
+		if err == nil {
+			err = t.ownCSS(name, css)
+		}
+		if err != nil {
+			mistakes = append(mistakes, err)
+		}
+	}
+	return mistakes
 }
 
 // checkThemeVariables warns of each theme of t that leaves out a CSS variable the parts and diagrams
