@@ -145,11 +145,7 @@ func (t *Template) checkCSS() []error {
 	}
 	var mistakes []error
 	for _, name := range names {
-		css, _, err := t.readOptional(name)
-		if err == nil {
-			err = t.ownCSS(name, css)
-		}
-		if err != nil {
+		if _, err := t.ownCSS(name); err != nil {
 			mistakes = append(mistakes, err)
 		}
 	}

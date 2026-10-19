@@ -348,17 +348,18 @@ func TestTemplateCSSAndParts(t *testing.T) {
 }
 
 // An @import of the template's CSS, which a browser does not read in floe's layer, is refused at its
-// line by floe template check and by the drawing, past comments that name it or hold more than ASCII.
+// line by floe template check and by the drawing, past comments that name it or hold more than ASCII,
+// and one the file ends without its ; too.
 func TestCSSImportRefused(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{
 		"page.css":           "/* 色の定義です。\n   @import は書かない */\nbody { color: red; }\n@IMPORT url(x.css);\n",
-		"themes/default.css": "@import url(y.css);\n",
+		"themes/default.css": "a { color: red; }\n@import url(y.css)",
 	})
 	want := []string{
 		filepath.Join(dir, "page.css") + ":4: floe puts the template's CSS in a layer, where a browser reads no @import",
-		filepath.Join(dir, "themes", "default.css") + ":1: floe puts the template's CSS in a layer",
+		filepath.Join(dir, "themes", "default.css") + ":2: floe puts the template's CSS in a layer",
 	}
 	_, mistakes := tmpl.Check(dir, "")
 	if len(mistakes) != len(want) || !strings.HasPrefix(mistakes[0].Error(), want[0]) || !strings.HasPrefix(mistakes[1].Error(), want[1]) {
@@ -370,14 +371,14 @@ func TestCSSImportRefused(t *testing.T) {
 }
 
 // A } of the template's CSS that closes no block, which would close floe's layer around it, is refused at
-// its line, past braces and an @import in strings and comments.
+// its line, past braces and an @import in strings and comments, and a /* in a string, which starts none.
 func TestCSSBraceRefused(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{
-		"page.css": "a::before { content: \"} @import x;\"; }\n/* } */\n@media print { p { color: red; } }\n}\nb { color: red; }\n",
+		"page.css": "a::before { content: \"} @import x; /*\"; }\n@media print { p { color: red; } }\n}\n/* } */\nb { color: red; }\n",
 	})
-	want := filepath.Join(dir, "page.css") + ":4: this } closes no block"
+	want := filepath.Join(dir, "page.css") + ":3: this } closes no block"
 	if _, mistakes := tmpl.Check(dir, ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %s", mistakes, want)
 	}

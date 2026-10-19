@@ -520,8 +520,8 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 }
 
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
-// selectors: floe's base, under the template's own CSS (own: its page.css, then its theme), under the
-// parts'. The parts' are the style of the parts the page names, in the order of their names, the
+// selectors: floe's base, under the template's own CSS (own: its page.css, then its theme, a style
+// sheet each), under the parts'. The parts' are the style of the parts the page names, in the order of their names, the
 // diagrams' when it has diagrams, then the parts theme theme, which every page gets, as it styles
 // Markdown's quotes too. A part is named by its own element, a table of Markdown, or HTML that takes a
 // part's look (<span class="floe-pill good" data-floe-part="cell">).
@@ -531,7 +531,7 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // (.floe-links > li::before over .floe-card::before), as that part needs. A scoped rule would win over
 // an unscoped one of the same specificity, so scope and layer the parts and their themes together, once
 // a theme is a file of each part.
-func pageStyle(page, own []byte, theme string, diagrams bool) (string, error) {
+func pageStyle(page []byte, own [][]byte, theme string, diagrams bool) (string, error) {
 	var parts strings.Builder
 	if bytes.Contains(page, []byte("data-floe-part")) {
 		set, err := builtinParts()
@@ -549,12 +549,18 @@ func pageStyle(page, own []byte, theme string, diagrams bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// The template's CSS is a style sheet of its own, so that a mistake in it, a comment or a block left
-	// open, ends with it; the first sheet names the layers, which puts them in that order.
-	return "<style>\n@layer floe.base, floe.page, floe.parts;\n" +
+	// Each file of the template's CSS is a style sheet of its own, so that a mistake in it, a comment or a
+	// block left open, ends with it; the first sheet names the layers, which puts them in that order.
+	style := "<style>\n@layer floe.base, floe.page, floe.parts;\n" +
 		"@layer floe.base {\n" + baseCSS + "}\n" +
-		"@layer floe.parts {\n" + parts.String() + string(css) + "}\n</style>\n" +
-		"<style>\n@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(own) + "}\n}\n</style>\n", nil
+		"@layer floe.parts {\n" + parts.String() + string(css) + "}\n</style>\n"
+	for _, css := range own {
+		if len(css) == 0 {
+			continue
+		}
+		style += "<style>\n@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(css) + "}\n}\n</style>\n"
+	}
+	return style, nil
 }
 
 // baseCSS is what every page starts from: text, lists, links, code and quotes, for the template's own
