@@ -295,7 +295,19 @@ func TestCheckMistakes(t *testing.T) {
 	}
 }
 
-// The variables of diagrams that page.html defines, for every theme, are not missed in a theme.
+// A <style> of page.html is refused at its line, as floe check and the drawing refuse it: floe puts a
+// page's CSS together.
+func TestPageStyleRefused(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{"page.html": "<body>|<body>\n<!-- <style> -->\n<style>p {}</style>"})
+	want := filepath.Join(dir, "page.html") + ":6: page.html holds a <style>: write the template's CSS in page.css"
+	if _, mistakes := tmpl.Check(dir, ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+		t.Errorf("Check = %v, want %s", mistakes, want)
+	}
+}
+
+// The variables of diagrams that page.css defines, for every theme, are not missed in a theme.
 func TestCheckVariablesInPage(t *testing.T) {
 	t.Parallel()
 
@@ -303,7 +315,7 @@ func TestCheckVariablesInPage(t *testing.T) {
 	dir := sizes(t, map[string]string{
 		"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
 		"schema.json":   `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`,
-		"page.html":     "<body>|<body><style>:root { " + strings.Join(diagram.Variables(), ": red; ") + ": red }</style>",
+		"page.css":      ":root { " + strings.Join(diagram.Variables(), ": red; ") + ": red }",
 	})
 	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
 		t.Errorf("Check = %v, %v", warnings, mistakes)

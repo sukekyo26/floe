@@ -69,7 +69,7 @@ func TestPalette(t *testing.T) {
 			t.Errorf("%s is not of the palette", v)
 		}
 	}
-	css, err := templateFiles.ReadFile("templates/report/page.html")
+	css, err := templateFiles.ReadFile("templates/report/page.css")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,25 +94,38 @@ func TestPalette(t *testing.T) {
 	}
 }
 
-// The parts' style goes before the template's own, which then wins over it: in the <head>, else before
-// the first <style> or <link> of a page without one, else at its end.
+// A page's style goes before its </head>, else at its end. A tag in a comment, a script or a noscript is
+// not one.
 func TestWithStyles(t *testing.T) {
 	t.Parallel()
 
 	for page, want := range map[string]string{
-		"<head><meta charset=utf-8><style>a{}</style></head><p>x</p>": "<head><meta charset=utf-8>S<style>a{}</style></head><p>x</p>",
-		"<head><title>t</title></HEAD><style>b{}</style>":             "<head><title>t</title>S</HEAD><style>b{}</style>",
-		"<p>x</p><link rel=stylesheet href=data:,>":                   "<p>x</p>S<link rel=stylesheet href=data:,>",
-		"<p>x</p>": "<p>x</p>S",
-		`<head><script>if (s.startsWith("<!--")) x()</script><style>f{}</style></head>`:                                       `<head><script>if (s.startsWith("<!--")) x()</script>S<style>f{}</style></head>`,
-		"<head><!-- no <script> here --><style>g{}</style></head><body><script>y()</script>":                                  "<head><!-- no <script> here -->S<style>g{}</style></head><body><script>y()</script>",
-		"<head><!-- styles before </head> --><style>d{}</style></head>":                                                       "<head><!-- styles before </head> -->S<style>d{}</style></head>",
-		"<head><!--><style>e{}</style><!-- x --></head>":                                                                      "<head><!-->S<style>e{}</style><!-- x --></head>",
-		"<head><noscript><link rel=stylesheet></noscript><!-- <style> --><script>'<style>'</script><style>c{}</style></head>": "<head><noscript><link rel=stylesheet></noscript><!-- <style> --><script>'<style>'</script>S<style>c{}</style></head>",
+		"<head><meta charset=utf-8></head><p>x</p>":                           "<head><meta charset=utf-8>S</head><p>x</p>",
+		"<head><title>t</title></HEAD><p>x</p>":                               "<head><title>t</title>S</HEAD><p>x</p>",
+		"<p>x</p>":                                                            "<p>x</p>S",
+		`<head><script>if (s.endsWith("</head>")) x()</script></head>`:        `<head><script>if (s.endsWith("</head>")) x()</script>S</head>`,
+		"<head><!-- styles before </head> --></head>":                         "<head><!-- styles before </head> -->S</head>",
+		"<head><!--></head>":                                                  "<head><!-->S</head>",
+		"<head><noscript></head></noscript></head><body><script>y()</script>": "<head><noscript></head></noscript>S</head><body><script>y()</script>",
 	} {
 		if got := string(withStyles([]byte(page), "S")); got != want {
 			t.Errorf("withStyles(%q) = %q, want %q", page, got, want)
 		}
+	}
+}
+
+// tagsOf finds the first <style> and <link> as an HTML parser would, case and all, past those in
+// comments, scripts and noscripts.
+func TestTagsOf(t *testing.T) {
+	t.Parallel()
+
+	page := "<!-- <style> --><script>'<style><link>'</script><noscript><style></noscript><LINK rel=x><Style>a{}</Style>"
+	want := tags{head: -1, style: strings.Index(page, "<Style>"), link: strings.Index(page, "<LINK")}
+	if got := tagsOf([]byte(page)); got != want {
+		t.Errorf("tagsOf(%q) = %+v, want %+v", page, got, want)
+	}
+	if got := tagsOf([]byte("<p>x</p>")); got != (tags{head: -1, style: -1, link: -1}) {
+		t.Errorf("tagsOf of a page without them = %+v", got)
 	}
 }
 

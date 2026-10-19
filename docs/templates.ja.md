@@ -17,6 +17,7 @@
 my-report/
 ├── template.yaml    # 必要な floe の版（任意）
 ├── page.html        # ページ。Go の html/template
+├── page.css         # ページの CSS。部品の CSS の下の層に入る（任意）
 ├── schema.json      # データファイルに書ける項目（JSON Schema）
 ├── example.yaml     # 書き始めに使うデータファイル
 ├── checks.yaml      # 項目どうしの関係（任意）
@@ -45,14 +46,15 @@ floe: 1.2
 |---|---|
 | `.Title` | ページのタイトル。`--title`、管理画面で固定したタイトル、データファイルの `title:`、slug の順に決まる |
 | `.Lang` | ページの言語（データファイルの `lang:`） |
-| `.Data` | データファイルの項目（floe が自分で読む `lang`・`parts-theme`・`template`・`theme`・`title` を除く。これらは `.Lang`・`.Title`・`.Theme` で使い、部品のテーマは floe が入れる。どれかを宣言する、または必須に挙げるスキーマは、どこで使っても断る）。スキーマで宣言していてデータに無い項目は nil なので、`{{with .Data.lead}}` と書ける。スキーマで宣言していない名前は描画を止める。`"format": "html"` の項目は HTML としてそのまま、`"format": "markdown"` の項目はその HTML として入る。図はその SVG として、スクリプトは置き場所の要素と関数の呼び出しとして入る |
+| `.Data` | データファイルの項目（floe が自分で読む `lang`・`parts-theme`・`template`・`theme`・`title` を除く。これらは `.Lang`・`.Title` で使い、テーマは floe が入れる。どれかを宣言する、または必須に挙げるスキーマは、どこで使っても断る）。スキーマで宣言していてデータに無い項目は nil なので、`{{with .Data.lead}}` と書ける。スキーマで宣言していない名前は描画を止める。`"format": "html"` の項目は HTML としてそのまま、`"format": "markdown"` の項目はその HTML として入る。図はその SVG として、スクリプトは置き場所の要素と関数の呼び出しとして入る |
 | `.Calc` | `computed.yaml` の値（名前で引く） |
-| `.Theme` | テンプレートのテーマの CSS。`<style>{{.Theme}}</style>` のように使う |
 | `markdown` | Markdown の文字列を HTML にする（`{{markdown .text}}`）。中の生の HTML は除き、表は表の部品の見た目にする（`<div class="floe-table">`） |
 | `markdownLine` | 表のセルのような 1 行の Markdown を、段落で包まずに HTML にする（`<td>{{markdownLine .}}</td>`）。コード・強調・リンクを書け、`-`・`1.`・`# x` のような行は文字のまま出る。複数の行は、字下げや空行があっても 1 つにつなぐ。中の生の HTML は除く |
 | `num` | 数を桁区切りで書く（`{{.Calc.total \| num}}` は `1,234,567`）。有効数字で丸めることもできる（`{{.Calc.rate \| num 3}}` は `0.00648`） |
 | `bytes` | バイト数を二進の単位で書く（`{{.Calc.size \| bytes}}` は `1.5 KiB`） |
 | `asset` | テンプレートの `assets/` の画像を data URI にする（`<img src="{{asset "logo.svg"}}">`） |
+
+`page.html` には `<style>` を書けません。書くと floe がその行を示して断ります。ページの CSS は floe が、`page.css` とデータファイルが選んだテーマから組み立てます（[部品](#部品)）。Google Fonts のようなスタイルシートへの `<link>` は書けます。floe の層の外にあり、層のどれよりも勝ちます。
 
 データファイルから描いたページは、出すものをすべて中に持ち、そのスクリプトはページの中身を外へ送れません。Content-Security-Policy により、読み込めるのは data URI（と `blob:`）の画像・フォント・音声と動画、インラインのスタイルとスクリプト、Google Fonts、cdnjs・jsDelivr・unpkg のライブラリ（スクリプト・スタイル・フォント。`eval` と WebAssembly は不可）だけです。`fetch`・XHR・ほかの場所の画像・フォームは止まり、管理画面の API にも届きません。ダウンロードしたファイルも、同じ制限を `<meta>` で持ちます。Google Fonts と CDN には、そこから読み込むものの要求が出ます。スクリプトによるページの移動・ウィンドウを開くこと・WebRTC・DNS の先読みは CSP では止められないので、これはうっかりした通信を防ぐもので、悪意のあるテンプレートを閉じ込めるものではありません。信頼できるテンプレートだけを使ってください。
 
@@ -63,6 +65,8 @@ floe: 1.2
 `format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）か、文字列の読み方を決める floe の format（`html`・`image`・`markdown`）を使います。それ以外の format は、この floe ではどんな値も通してしまうので、`floe template check` が誤りにします。floe の format は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれます。型は `"type": "string"` だけを宣言します。図とスクリプトは format ではなく[部品](#部品)です。`"format": "diagram"`・`"format": "script"` は、スキーマのどこに書いても `floe template check` が断ります。`properties` と `items` の下に書いたものは、テンプレートをどこで使っても断ります。
 
 `"format": "markdown"` の項目には Markdown を書きます。`{{.Data.text}}` が、`markdown` と同じく HTML に描きます。すでに HTML なので、`{{markdown .Data.text}}` と書くと描画が止まります。
+
+`"format": "html"` の項目はそのまま入りますが、`<style>` と `<link>` は書けず、その行と列を示して断ります。ページの CSS は floe が組み立てるので、HTML の見た目は `style` 属性で付けます。
 
 `"format": "image"` の項目には、画像のパスを、データファイルのディレクトリからの相対で、その配下に、`..` やドットで始まる名前を使わずに書きます。画像は data URI としてページに入るので、`<img src="{{.Data.chart}}">` と書けて、ページだけで表示が完結します。
 
@@ -80,9 +84,9 @@ floe には、テンプレートの項目を描く部品があります。`table
 
 `page.html` では、項目を置きたい場所に `{{.Data.risks}}` と書きます。floe は項目を部品の schema と検査で確かめ（誤りはデータファイルの行と列で出します）、HTML に描きます。`floe template show` は、`$ref` の横に書いた説明に続けて、部品の項目を出します。floe に無い部品を指す `$ref` は、floe にある部品を添えて断ります。
 
-ページには、クラスを使った部品のスタイルが 1 回ずつ（Markdown の表や、`<span class="floe-pill good">` のように部品のクラスを書いた HTML も含む）、`<head>` の中でテンプレート自身のスタイルより前に入り、その後に部品のテーマが続きます（`<head>` が無ければページの末尾）。部品のクラス名は `floe-` で始まります（`floe-table`・`floe-pill`・`floe-cards`・`floe-card`・`floe-note`・`floe-note-title`・`floe-code`・`floe-terminal`、その後の部品は `floe-stats`・`floe-progress`・`floe-steps` のように部品の名前から）。テーマに同じセレクタ（か、より詳しいセレクタ）の規則を書けば、後に来る分だけ部品の規則より優先されて、見た目を変えられます。`compare` は表の、`stats`・`options`・`facts`・`links` はカードの、`diff` はコードの見た目で描くので、テーマのそれらの規則がこれらにも効きます。
+ページには、クラスを使った部品のスタイルが 1 回ずつ（Markdown の表や、`<span class="floe-pill good">` のように部品のクラスを書いた HTML も含む）入り、その後に部品のテーマが続きます。部品のクラス名は `floe-` で始まります（`floe-table`・`floe-pill`・`floe-cards`・`floe-card`・`floe-note`・`floe-note-title`・`floe-code`・`floe-terminal`、その後の部品は `floe-stats`・`floe-progress`・`floe-steps` のように部品の名前から）。部品のテーマは、同じセレクタ（か、より詳しいセレクタ）の規則を書けば、後に来る分だけ部品の規則より優先されて、見た目を変えられます。`compare` は表の、`stats`・`options`・`facts`・`links` はカードの、`diff` はコードの見た目で描くので、部品のテーマのそれらの規則がこれらにも効きます。
 
-部品のテーマは floe が持つテーマで、どのテンプレートでも同じものを選べます。データファイルの `parts-theme:` で選びます（無ければ `default`。一覧は `floe template show` が出します）。部品のクラスと Markdown の引用（`blockquote`）の見た目を変え、部品を 1 つも使わないページにも入ります。テンプレートのスタイルとテーマは部品のテーマより後に来て、同じセレクタなら勝つので、部品の見た目は部品のテーマに任せます。`report` は引用の見た目を `:where(blockquote)` で書いているので、どの部品のテーマの規則もそれに勝ちます。部品のテーマはコードの色を `:root` ではなく `.floe-code` と `.floe-terminal` に書きます。`:root` では `page.html` が勝つからです。
+部品のテーマは floe が持つテーマで、どのテンプレートでも同じものを選べます。データファイルの `parts-theme:` で選びます（無ければ `default`。一覧は `floe template show` が出します）。部品のクラスと Markdown の引用（`blockquote`）の見た目を変え、部品を 1 つも使わないページにも入ります。floe はページの CSS を `</head>` の前（無ければページの末尾）の 1 つの `<style>` にまとめ、2 つのカスケードレイヤーに入れます。下の `floe.page` にはテンプレートの `page.css` とテーマを、上の `floe.parts` には部品のスタイル・図のスタイル・部品のテーマを、この順に入れます。上の層はセレクタにかかわらず下の層に勝つので、テンプレートは部品の見た目も、部品のテーマが決める引用の見た目も変えられません。テンプレートが決めるのは、部品の周りのページなど、それらが決めないところです。部品のテーマはコードの色を `.floe-code` と `.floe-terminal` に書き、`:root` には自分の名前の変数（`--brutal-ink`）だけを書きます。テンプレートが `:root` に書く変数と同じ名前だと、ページ全体で部品のテーマが勝つからです。
 
 部品と図は色・書体・注記の幅を、テーマの CSS 変数から取ります。変数の無いテーマでは、部品が持つ明るい値（report と同じ）を使います。
 
@@ -98,7 +102,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 | `--code-bg`・`--code-fg`・`--code-prompt` | コードとターミナルの地（ライトモードでも暗い）、その字（コマンドの出力はこれを薄くする）、ターミナルのプロンプトとコードの言語の札 |
 | `--code-add`・`--code-del` | 差分の足した行と消した行（暗い地の上） |
 
-変数はテーマで定義するか、すべてのテーマの分を `page.html` の `<style>` で定義します。`floe template check` は、部品や図、部品のテーマが使う変数のどれかを定義していないテーマを警告します。そのテーマの部品はダークモードでも明るい色のままになります（コードとターミナルは暗いまま）。`tone`（ピル・注記・図の部品）は `accent`・`good`・`warn`・`bad` のどれかで、`--accent`・`--good` などの色と、その `-soft` を使います。
+変数はテーマで定義するか、すべてのテーマの分を `page.css` で定義します。`floe template check` は、部品や図、部品のテーマが使う変数のどれかを定義していないテーマを警告します。そのテーマの部品はダークモードでも明るい色のままになります（コードとターミナルは暗いまま）。`tone`（ピル・注記・図の部品）は `accent`・`good`・`warn`・`bad` のどれかで、`--accent`・`--good` などの色と、その `-soft` を使います。
 
 ## 画像
 

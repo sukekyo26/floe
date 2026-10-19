@@ -17,6 +17,7 @@ A template draws a page from a data file (`floe publish <data.yaml>`). floe has 
 my-report/
 ├── template.yaml    # the floe it needs (optional)
 ├── page.html        # the page, a Go html/template
+├── page.css         # the page's CSS, under the parts' (optional)
 ├── schema.json      # the items a data file may hold (JSON Schema)
 ├── example.yaml     # a data file to start from
 ├── checks.yaml      # relations between items (optional)
@@ -45,14 +46,15 @@ The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor versi
 |---|---|
 | `.Title` | The page's title: `--title`, a title pinned on the management page, the data file's `title:`, else the slug |
 | `.Lang` | The page's language: the data file's `lang:` |
-| `.Data` | The data file's items, without `lang`, `parts-theme`, `template`, `theme` and `title`, which floe reads itself (`.Lang`, `.Title`, `.Theme`; the parts theme goes in by itself); a schema that declares one of them, or lists one as required, is refused wherever the template is used. An item the schema declares but the data leaves out is nil, so `{{with .Data.lead}}` works; a name the schema does not declare stops the drawing. An item of `"format": "html"` goes in as HTML and one of `"format": "markdown"` as its HTML; a diagram goes in as its SVG, and a script as its element and the call of its function |
+| `.Data` | The data file's items, without `lang`, `parts-theme`, `template`, `theme` and `title`, which floe reads itself (`.Lang`, `.Title`; floe puts the themes in by itself); a schema that declares one of them, or lists one as required, is refused wherever the template is used. An item the schema declares but the data leaves out is nil, so `{{with .Data.lead}}` works; a name the schema does not declare stops the drawing. An item of `"format": "html"` goes in as HTML and one of `"format": "markdown"` as its HTML; a diagram goes in as its SVG, and a script as its element and the call of its function |
 | `.Calc` | The values of `computed.yaml`, by name |
-| `.Theme` | The CSS of the template's theme, for `<style>{{.Theme}}</style>` |
 | `markdown` | Markdown text as HTML (`{{markdown .text}}`), raw HTML in it left out, a table in the look of the table part (`<div class="floe-table">`) |
 | `markdownLine` | A line of Markdown, such as a table cell, as HTML without a paragraph around it (`<td>{{markdownLine .}}</td>`): code, emphasis and links, while a line like `-`, `1.` or `# x` stays text. Lines, indented or apart, are joined as one. Raw HTML in it is left out |
 | `num` | A number with its digits grouped (`{{.Calc.total \| num}}` is `1,234,567`), or rounded to significant digits (`{{.Calc.rate \| num 3}}` is `0.00648`) |
 | `bytes` | A count of bytes in a binary unit (`{{.Calc.size \| bytes}}` is `1.5 KiB`) |
 | `asset` | An image of the template's `assets/` as a data URI (`<img src="{{asset "logo.svg"}}">`) |
+
+`page.html` holds no `<style>`, which floe refuses at its line: floe puts a page's CSS together (see [Parts](#parts)), from `page.css` and the theme the data file picks. A `<link>` to a stylesheet, such as Google Fonts, stays: it is out of floe's layers and wins over them.
 
 A page drawn from a data file holds all it shows, and its scripts cannot send what it holds out: its Content-Security-Policy lets it load only images, fonts and media of data URIs (and `blob:`), inline styles and scripts, Google Fonts, and libraries from cdnjs, jsDelivr and unpkg (their scripts, styles and fonts; not `eval` or WebAssembly). `fetch`, XHR, an image from elsewhere and a form are blocked, and so is the management page's API. Its download keeps the same policy in a `<meta>`. The page still asks Google Fonts and those CDNs for what it loads from them. CSP cannot stop a script from moving the page, opening a window, WebRTC or DNS prefetching, so this guards against a slip, not a hostile template: use templates you trust.
 
@@ -63,6 +65,8 @@ A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Wr
 A `format` is one of JSON Schema's that floe checks (`date`, `email`, `uri`…), or one of floe's that tells how to read a text: `html`, `image` or `markdown`; `floe template check` refuses another, which this floe would let any value pass. Floe's go under `properties` and `items` alone, where floe looks for them: under `anyOf`, `$defs` and the like, the item would be drawn as text. Declare `"type": "string"` alone for them. A diagram or a script is a [part](#parts), not a format: `floe template check` refuses `"format": "diagram"` and `"format": "script"` anywhere in a schema, and one under `properties` and `items` stops the template wherever it is used.
 
 An item of `"format": "markdown"` is Markdown text: `{{.Data.text}}` draws it as HTML, as `markdown` does. It is HTML already, so `{{markdown .Data.text}}` stops the drawing.
+
+An item of `"format": "html"` goes in as it is, but holds no `<style>` or `<link>`, refused at its line and column: floe puts a page's CSS together, so style the HTML with `style` attributes.
 
 An item of `"format": "image"` is the path of an image, relative to the data file's directory and under it, without `..` or names starting with a dot. The image goes into the page as a data URI, for `<img src="{{.Data.chart}}">`, so that the page holds all it shows.
 
@@ -80,9 +84,9 @@ floe has parts that draw items of a template: `table` (with pills in its cells),
 
 `page.html` puts the item where it goes, `{{.Data.risks}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML. `floe template show` tells the part's items, after the description written beside the `$ref`. A `$ref` to a part floe does not have is refused, with the parts it has.
 
-A page gets the style of each part whose classes it uses once, a table of Markdown and HTML that names them (`<span class="floe-pill good">`) included, in its `<head>` before the template's own styles (at its end without a `<head>`), followed by the parts theme. The parts' classes start with `floe-` (`floe-table`, `floe-pill`, `floe-cards`, `floe-card`, `floe-note`, `floe-note-title`, `floe-code`, `floe-terminal`, and of the parts that follow, `floe-stats`, `floe-progress`, `floe-steps`… named after them): a theme restyles them with a rule of its own for the same selector (or a more specific one), which wins as it comes later. `compare` is drawn in the table's look, `stats`, `options`, `facts` and `links` in the cards' and `diff` in code's, so that a theme's rules for those draw them too.
+A page gets the style of each part whose classes it uses once, a table of Markdown and HTML that names them (`<span class="floe-pill good">`) included, followed by the parts theme. The parts' classes start with `floe-` (`floe-table`, `floe-pill`, `floe-cards`, `floe-card`, `floe-note`, `floe-note-title`, `floe-code`, `floe-terminal`, and of the parts that follow, `floe-stats`, `floe-progress`, `floe-steps`… named after them): the parts theme restyles them with a rule of its own for the same selector (or a more specific one), which wins as it comes later. `compare` is drawn in the table's look, `stats`, `options`, `facts` and `links` in the cards' and `diff` in code's, so that the parts theme's rules for those draw them too.
 
-The parts theme is one of floe's, the same for every template, which the data file picks with `parts-theme:` (else `default`; `floe template show` lists them): it restyles the parts' classes and Markdown's quotes (`blockquote`), and goes into every page, one of no part too. The template's styles and its theme come after it and win for the same selector, so leave the parts to the parts theme; `report` writes the look of a quote as `:where(blockquote)`, which any parts theme's rule wins over. A parts theme sets the colours of code on `.floe-code` and `.floe-terminal`, not on `:root`, where `page.html` would win.
+The parts theme is one of floe's, the same for every template, which the data file picks with `parts-theme:` (else `default`; `floe template show` lists them): it restyles the parts' classes and Markdown's quotes (`blockquote`), and goes into every page, one of no part too. floe puts the page's CSS into one `<style>` before its `</head>` (at its end without one), in two cascade layers: `floe.page`, the template's `page.css` then its theme, under `floe.parts`, the parts' style, the diagrams' and then the parts theme. A layer wins over the one under it whatever the selectors, so the template does not restyle a part, nor a quote the parts theme styles; it styles what they leave alone, such as the page around them. A parts theme sets the colours of code on `.floe-code` and `.floe-terminal`, and on `:root` only variables of its own names (`--brutal-ink`): one the template defines there would lose to it on the whole page.
 
 Parts and diagrams take their colours, fonts and the width of a note from the theme's CSS variables, with light values of their own (report's) for a theme without them:
 
@@ -98,7 +102,7 @@ Parts and diagrams take their colours, fonts and the width of a note from the th
 | `--code-bg`, `--code-fg`, `--code-prompt` | The ground of code and a terminal, dark in light mode too; their text, faded for a command's output; a terminal's prompt and the badge of code's language |
 | `--code-add`, `--code-del` | A diff's lines added and removed, on the dark ground |
 
-A theme defines them, or `page.html` does for every theme in a `<style>` of its own; `floe template check` warns of a theme that leaves out one its parts or diagrams take, or the parts themes do, whose parts keep light colours in dark mode (code and a terminal stay dark). A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
+A theme defines them, or `page.css` does for every theme; `floe template check` warns of a theme that leaves out one its parts or diagrams take, or the parts themes do, whose parts keep light colours in dark mode (code and a terminal stay dark). A `tone` (of a pill, a note or a part of a diagram) is `accent`, `good`, `warn` or `bad`: the colour of `--accent`, `--good`… and its `-soft`.
 
 ## Images
 

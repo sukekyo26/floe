@@ -19,7 +19,7 @@ func memo(t *testing.T, items string) string {
 	dir := t.TempDir()
 	files := map[string]string{
 		"schema.json": `{"type": "object", "properties": {` + items + `}, "additionalProperties": false}`,
-		"page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title><style>{{.Theme}}</style></head>` +
+		"page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
 			`<body>{{.Data.risks}}{{with .Data.aside}}{{.}}{{end}}</body></html>`,
 		"themes/default.css": ":root { --fg: #000; }\n",
 		"example.yaml":       "template: memo\nlang: en\nrisks: { columns: [{title: Risk}], rows: [[Links]] }\n",
@@ -40,8 +40,8 @@ const memoItems = `"risks": {"$ref": "floe:///parts/table.json"}, "aside": {"$re
 	`"asides": {"type": "array", "items": {"$ref": "floe:///parts/note.json"}}`
 
 // A template of one's own draws an item by a part of floe's with a $ref: the part checks it, at the
-// data's lines and columns, draws it, and puts its style into the page's <head> once, the parts theme
-// after it.
+// data's lines and columns, draws it, and puts its style into the page's <head> once, in the layer over
+// the template's own, the parts theme after it.
 func TestPartsInOwnTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -53,11 +53,14 @@ func TestPartsInOwnTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	head, _, _ := strings.Cut(page, "</head>")
-	// Before the template's own style, which wins over a part's and the parts theme's where it says otherwise.
-	parts, theme, own := strings.Index(head, ".floe-table {"), strings.Index(head, "/* Faces with round corners"),
-		strings.Index(head, ":root { --fg: #000; }")
-	if parts < 0 || theme < parts || own < theme {
-		t.Errorf("the parts' style is at %d, the parts theme's at %d, the template's theme's at %d", parts, theme, own)
+	// One <style>, its layers in the order that decides which wins: the template's, then the parts' and the parts theme.
+	at := func(s string) int { return strings.Index(head, s) }
+	order := []int{
+		at("<style>\n@layer floe.page, floe.parts;\n@layer floe.page {\n"), at(":root { --fg: #000; }"),
+		at("@layer floe.parts {\n"), at(".floe-table {"), at("/* Faces with round corners"),
+	}
+	if !slices.IsSorted(order) || order[0] < 0 || strings.Count(page, "<style") != 1 {
+		t.Errorf("the layers, the template's theme, the parts' style and the parts theme's are at %v:\n%s", order, head)
 	}
 	for _, want := range []string{
 		`<div class="floe-table"><table>`, `<td class="num">120</td>`, `<span class="floe-pill bad">open</span>`,

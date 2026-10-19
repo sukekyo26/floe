@@ -33,9 +33,24 @@ var Variables = sync.OnceValue(func() []string {
 // Assets returns what a page holds once, before or after its diagrams: the style that colours them
 // from the page's CSS variables, and the script that zooms them, its toolbar worded in every
 // language with a catalog for the page's <html lang> to pick from. Holding it twice does no harm.
-var Assets = sync.OnceValues(assets)
+func Assets() (string, error) {
+	script, err := Script()
+	if err != nil {
+		return "", err
+	}
+	return script + "\n<style>\n" + diagramCSS + "</style>", nil
+}
 
-func assets() (string, error) {
+// Style is the style that colours diagrams from the page's CSS variables, for a page that puts its
+// styles together itself.
+func Style() string {
+	return diagramCSS
+}
+
+// Script is the script that zooms diagrams, as Assets holds it.
+var Script = sync.OnceValues(script)
+
+func script() (string, error) {
 	messages := map[i18n.Lang]map[string]string{}
 	for _, lang := range i18n.Supported() {
 		messages[lang] = i18n.New(lang).Formats("diagram_zoom_")
@@ -45,6 +60,5 @@ func assets() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("write the zoom messages: %w", err)
 	}
-	script := "<script>(" + strings.TrimSpace(zoomJS) + ")(" + string(words) + ");</script>"
-	return script + "\n<style>\n" + diagramCSS + "</style>", nil
+	return "<script>(" + strings.TrimSpace(zoomJS) + ")(" + string(words) + ");</script>", nil
 }

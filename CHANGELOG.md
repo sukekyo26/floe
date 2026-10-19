@@ -81,8 +81,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   seals and quotes ruled in vermilion), each in light and dark mode. A parts
   theme restyles the parts by their classes, and Markdown's quotes, and goes
   into every page after the parts' style; the template's theme (`theme:`,
-  `report` has `default`) styles the page and comes after it. `floe template
-  show` lists the parts themes.
+  `report` has `default`) styles the page, in a layer under them. `floe
+  template show` lists the parts themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as
@@ -135,12 +135,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   built-in template of its name. A published page is drawn with the server's
   templates; a publish whose `FLOE_TEMPLATES_DIR` or `FLOE_ICONS_DIR` is not
   the running server's is refused, pointing at `floe stop`. Besides
-  `page.html`, `schema.json` and themes, a template may check relations between items with `checks.yaml`
+  `page.html`, `page.css`, `schema.json` and themes, a template may check relations between items with `checks.yaml`
   (on the items of a list, lists on the way gone through: `sections.parts`)
   and compute values for the page with `computed.yaml`, in
   [expr](https://expr-lang.org/), each failure reported at the data file's
   line and column, and a mistake in those files at their own;
   `page.html` writes numbers with `num` and `bytes`.
+  floe puts a page's CSS together in one `<style>`: the template's `page.css`
+  and theme in a cascade layer under the parts' style and the parts theme,
+  which they do not restyle whatever their selectors. `page.html` holds no
+  `<style>`, nor an item of `"format": "html"` a `<style>` or `<link>`, each
+  refused at its line.
   Images go into the page as data URIs: an item of `"format": "image"`
   names an image under the data file's directory, and `page.html` shows one
   of the template's `assets/` with `asset`. An image is a png, jpeg, gif,
