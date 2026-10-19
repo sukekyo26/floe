@@ -1113,6 +1113,42 @@ func TestLinkDataFileIcons(t *testing.T) {
 	}
 }
 
+// A linked data file drawn with a part of one's own, kept elsewhere and linked into the directory of
+// parts, is drawn again when a file of the part is saved.
+func TestLinkDataFileParts(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	kept := filepath.Join(e.tmp, "kept", "note")
+	e.write(t, "kept/note/schema.json", `{"type": "object", "properties": {"text": {"type": "string"}}}`)
+	e.write(t, "kept/note/part.html", `<aside data-floe-part="note">{{.text}}</aside>`)
+	css := e.write(t, "kept/note/part.css", ":scope { margin: 0; }\n")
+	parts := filepath.Join(e.tmp, "parts")
+	if err := os.Mkdir(parts, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(kept, filepath.Join(parts, "note")); err != nil {
+		t.Fatal(err)
+	}
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", parts, ""))
+	data := e.write(t, "proj/spec.yaml", "template: report\nlang: en\nsections:\n  - parts:\n      - note: { text: Mine }\n")
+	m := store.Meta{Path: data}
+	page, version, err := s.Draw("spec", &m, data)
+	if err != nil || !strings.Contains(string(page), `<aside data-floe-part="note">Mine</aside>`) {
+		t.Fatalf("Draw with the note of one's own = %v:\n%s", err, page)
+	}
+	if v := s.Version("spec", &m, data); v != version {
+		t.Fatalf("the version moved from %q to %q with nothing changed", version, v)
+	}
+	later := time.Now().Add(time.Minute)
+	if err = os.Chtimes(css, later, later); err != nil {
+		t.Fatal(err)
+	}
+	if v := s.Version("spec", &m, data); v == version {
+		t.Errorf("the version stays %q once the part's part.css is saved", v)
+	}
+}
+
 // WriteAtomic gives the file the mode asked less the umask, as os.WriteFile does, writing over the file
 // there and leaving nothing beside it.
 func TestWriteAtomic(t *testing.T) { //nolint:paralleltest // sets the umask, which is the process's

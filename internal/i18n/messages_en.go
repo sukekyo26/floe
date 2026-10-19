@@ -393,7 +393,7 @@ var messagesEN = map[string]string{
 	"tmpl_unknown_parts_theme":        `there is no parts theme "%[1]s"; use %[3]s`,
 	"tmpl_theme_of_parts":             `template %[2]s has no theme "%[1]s", which is a parts theme: write parts-theme: %[1]s (or --parts-theme %[1]s), or a theme of the template: %[3]s`,
 	"tmpl_parts_theme_of_template":    `there is no parts theme "%[1]s", which is a theme of the template %[2]s: write theme: %[1]s (or --theme %[1]s), or a parts theme: %[3]s`,
-	"daemon_other_dirs":               "the server on port %d draws pages with the templates of %s and the icons of %s, and this command means the templates of %s and the icons of %s (FLOE_TEMPLATES_DIR, FLOE_ICONS_DIR); move yours where the server reads them, or run \"floe stop\" and publish again",
+	"daemon_other_dirs":               "the server on port %d draws pages with the templates of %s, the parts of %s and the icons of %s, and this command means the templates of %s, the parts of %s and the icons of %s (FLOE_TEMPLATES_DIR, FLOE_PARTS_DIR, FLOE_ICONS_DIR); move yours where the server reads them, or run \"floe stop\" and publish again",
 	"cli_relative_no_dir":             "the working directory cannot be read, so %s, the relative directory %s, means nothing; run floe from a directory that exists, or set it as an absolute path",
 	"cli_tilde_no_home":               "%s is %s, whose ~ stands for a home, but HOME is not set; set HOME, or %s as an absolute path",
 	"cli_tilde_name":                  "%s is %s: floe takes only ~ and ~/ at the start for your home, not ~name; write the path absolute, or ./%s for a directory of that name under the working directory",

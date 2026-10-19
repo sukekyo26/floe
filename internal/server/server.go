@@ -148,7 +148,7 @@ func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
 	templates := s.cfg.Store.Templates()
 	sendJSON(w, http.StatusOK, Health{
 		App: App, PID: os.Getpid(), Root: s.cfg.Store.Root(), Build: s.cfg.Build, Templates: templates.Dir(),
-		Icons: templates.IconsDir(),
+		Parts: templates.PartsDir(), Icons: templates.IconsDir(),
 	})
 }
 
@@ -158,8 +158,10 @@ type Health struct {
 	PID   int    `json:"pid"`
 	Root  string `json:"root"`
 	Build string `json:"build"`
-	// Templates and Icons are the directories of templates of one's own and of icons it draws pages with.
+	// Templates, Parts and Icons are the directories of templates and parts of one's own and of icons it
+	// draws pages with.
 	Templates string `json:"templates"`
+	Parts     string `json:"parts"`
 	Icons     string `json:"icons"`
 }
 
