@@ -404,7 +404,7 @@ func parse(file string, src []byte) (ast.Node, error) {
 // data was checked against.
 func (d *Data) Render(title string) ([]byte, error) {
 	t := d.tmpl
-	page, err := t.page()
+	page, _, err := t.page()
 	if err != nil {
 		return nil, err
 	}
@@ -452,7 +452,7 @@ func (t *Template) css(theme string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = t.scopedCSS("page.css", page); err != nil {
+	if err = t.ownCSS("page.css", page); err != nil {
 		return nil, err
 	}
 	name := path.Join("themes", theme+".css")
@@ -460,21 +460,25 @@ func (t *Template) css(theme string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = t.scopedCSS(name, css); err != nil {
+	if err = t.ownCSS(name, css); err != nil {
 		return nil, err
 	}
 	return slices.Concat(page, css), nil
 }
 
-// scopedCSS refuses css, the file name of t, where it names the page's root as :root or html: floe
-// scopes the template's CSS to the page, @scope (:root), where :scope is the root and those name nothing.
-func (t *Template) scopedCSS(name string, css []byte) error {
-	m := rootSelector.FindSubmatchIndex(withoutComments(css))
-	if m == nil {
-		return nil
+// ownCSS refuses css, the file name of t, where it imports a stylesheet, which a browser does not read in
+// floe's layer, or names the page's root as :root or html: floe scopes the template's CSS to the page,
+// @scope (:root), where :scope is the root and those name nothing.
+func (t *Template) ownCSS(name string, css []byte) error {
+	blank := withoutComments(css)
+	if at := cssImport.FindIndex(blank); at != nil {
+		return usererr.New("tmpl_css_import", t.file(name), bytes.Count(css[:at[0]], []byte("\n"))+1)
 	}
-	line := bytes.Count(css[:m[2]], []byte("\n")) + 1
-	return usererr.New("tmpl_css_root", t.file(name), line, string(css[m[2]:m[3]]))
+	if m := rootSelector.FindSubmatchIndex(blank); m != nil {
+		line := bytes.Count(css[:m[2]], []byte("\n")) + 1
+		return usererr.New("tmpl_css_root", t.file(name), line, string(css[m[2]:m[3]]))
+	}
+	return nil
 }
 
 // rootSelector finds :root or html where a selector names it.
@@ -482,37 +486,45 @@ func (t *Template) scopedCSS(name string, css []byte) error {
 // template comes to write one so.
 var rootSelector = regexp.MustCompile(`(?i)(?:^|[\s,{}>+~(])(:root|html)(?:[\s,{.:\[#>+~)]|$)`)
 
-// withoutComments returns css with its comments blanked out, its lines where they were.
+// cssImport finds an @import.
+// LIMIT: found as written, not as a CSS parser reads it (one in a string counts); parse the CSS if a
+// template comes to write one so.
+var cssImport = regexp.MustCompile(`(?i)@import\b`)
+
+// withoutComments returns css with each byte of its comments a space, but a line break, so that an
+// offset in it is one in css.
 func withoutComments(css []byte) []byte {
 	return cssComment.ReplaceAllFunc(css, func(c []byte) []byte {
-		return bytes.Map(func(r rune) rune {
-			if r == '\n' {
-				return r
+		blank := bytes.Clone(c)
+		for i, b := range blank {
+			if b != '\n' {
+				blank[i] = ' '
 			}
-			return ' '
-		}, c)
+		}
+		return blank
 	})
 }
 
 // cssComment finds a comment of CSS; one never closed runs to the end.
 var cssComment = regexp.MustCompile(`(?s)/\*.*?(?:\*/|$)`)
 
-// page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together.
-func (t *Template) page() (*template.Template, error) {
+// page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together. It
+// returns the source too.
+func (t *Template) page() (*template.Template, []byte, error) {
 	src, err := t.readFile("page.html")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if at := tagsOf(src).style; at >= 0 {
-		return nil, usererr.New("tmpl_page_style", t.file("page.html"), bytes.Count(src[:at], []byte("\n"))+1)
+		return nil, nil, usererr.New("tmpl_page_style", t.file("page.html"), bytes.Count(src[:at], []byte("\n"))+1)
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
 		Funcs(template.FuncMap{"asset": t.assets()}).Parse(string(src))
 	if err != nil {
-		return nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
+		return nil, nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
 	}
-	return page, nil
+	return page, src, nil
 }
 
 var funcs = template.FuncMap{

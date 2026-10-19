@@ -308,14 +308,15 @@ func TestPageStyleRefused(t *testing.T) {
 }
 
 // The template's CSS names the page's root as :scope, past a comment that names it otherwise, and
-// page.html takes the look of parts floe has, past a name it puts together.
+// page.html takes the look of parts floe has, past a name it puts together, a mistake told at the line of
+// the name.
 func TestTemplateCSSAndParts(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{
 		"page.css":           "/* not :root */\n:scope { --fg: #000; }\n:root .lead, a { color: red; }\n",
 		"themes/default.css": "body { font-family: sans-serif; }\nhtml{ color: red; }\n",
-		"page.html":          `<body>|<body><span data-floe-part="cell nope"></span><i data-floe-part="{{"cell"}}"></i>`,
+		"page.html":          "<body>|<body><span\n" + `data-floe-part="cell nope"></span><i data-floe-part="{{"cell"}}"></i>`,
 	})
 	_, mistakes := tmpl.Check(dir, "")
 	got := make([]string, 0, len(mistakes))
@@ -325,7 +326,7 @@ func TestTemplateCSSAndParts(t *testing.T) {
 	want := []string{
 		"page.css:3: write the page's root as :scope, not :root",
 		filepath.Join("themes", "default.css") + ":2: write the page's root as :scope, not html",
-		"page.html:4: page.html takes the look of the part nope, which floe does not have; use bars, ",
+		"page.html:5: page.html takes the look of the part nope, which floe does not have; use bars, ",
 	}
 	if len(got) != len(want) {
 		t.Fatalf("Check = %q, want %q", got, want)
@@ -334,6 +335,28 @@ func TestTemplateCSSAndParts(t *testing.T) {
 		if !strings.HasPrefix(got[i], want[i]) {
 			t.Errorf("Check = %q, want %q", got[i], want[i])
 		}
+	}
+}
+
+// An @import of the template's CSS, which a browser does not read in floe's layer, is refused at its
+// line by floe template check and by the drawing, past comments that name it or hold more than ASCII.
+func TestCSSImportRefused(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{
+		"page.css":           "/* 色の定義です。\n   @import は書かない */\nbody { color: red; }\n@IMPORT url(x.css);\n",
+		"themes/default.css": "@import url(y.css);\n",
+	})
+	want := []string{
+		filepath.Join(dir, "page.css") + ":4: floe puts the template's CSS in a layer, where a browser reads no @import",
+		filepath.Join(dir, "themes", "default.css") + ":1: floe puts the template's CSS in a layer",
+	}
+	_, mistakes := tmpl.Check(dir, "")
+	if len(mistakes) != len(want) || !strings.HasPrefix(mistakes[0].Error(), want[0]) || !strings.HasPrefix(mistakes[1].Error(), want[1]) {
+		t.Errorf("Check = %v, want %q", mistakes, want)
+	}
+	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), want[0]) {
+		t.Errorf("drawing = %v, want %s", err, want[0])
 	}
 }
 
