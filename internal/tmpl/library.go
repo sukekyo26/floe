@@ -196,6 +196,8 @@ func (t *Template) file(name string) string {
 }
 
 // parts returns the parts t is drawn with and their themes, read once for t.
+// LIMIT: read for each template, so floe template list reads parts of one's own once per template. Keep
+// them for a command, not in the Library a server keeps, if listing comes to be slow.
 func (t *Template) parts() (*partSet, error) {
 	if t.set == nil {
 		set, err := partsIn(t.partsDir)

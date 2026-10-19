@@ -145,7 +145,9 @@ type partSet struct {
 	broken  map[string]error       // the parts of one's own that cannot be used, by name, and why
 	// the parts themes of one's own that cannot be used, by name, and why
 	brokenThemes map[string]error
-	dirs         []string // the directories of one's own it read, the directory of parts first, by their real paths
+	// the directories of one's own it read, the directory of parts first, by their real paths
+	dirs   []string
+	strays []*usererr.Error // what of one's own goes into no page, to be warned of
 }
 
 // builtinParts reads floe's parts once.
@@ -157,7 +159,7 @@ var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("
 func readParts(dir string, entries []os.DirEntry) (*partSet, error) {
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
-		broken: map[string]error{}, brokenThemes: map[string]error{}, dirs: nil,
+		broken: map[string]error{}, brokenThemes: map[string]error{}, dirs: nil, strays: nil,
 	}
 	if err := set.readBuiltin(); err != nil {
 		return nil, err
@@ -626,6 +628,9 @@ func (set *partSet) pageStyle(page []byte, own [][]byte, theme string) (string, 
 	}
 	var names []string
 	if bytes.Contains(page, []byte("data-floe-part")) {
+		if err := set.refuseBroken(page); err != nil {
+			return "", err
+		}
 		names = set.inOrder(set.partsNamedIn(string(page)))
 	}
 	for _, name := range names {
@@ -648,6 +653,17 @@ func (set *partSet) pageStyle(page []byte, own [][]byte, theme string) (string, 
 		}
 	}
 	return style.String(), nil
+}
+
+// refuseBroken refuses page when it names a part that cannot be used, by a table of Markdown or HTML of the
+// data among others, which would leave it without its style.
+func (set *partSet) refuseBroken(page []byte) error {
+	for _, n := range namedParts(string(page)) {
+		if set.parts[n.name] == nil && set.broken[n.name] != nil {
+			return usererr.New("tmpl_part_broken", n.name, set.broken[n.name])
+		}
+	}
+	return nil
 }
 
 // inOrder returns names, parts of set, each after the parts it uses that names holds, else in order.
@@ -771,13 +787,14 @@ var (
 func (set *partSet) variables(names []string) []string {
 	// The parts used are followed to those they use in turn: tabs holds a stack, which holds a diff, drawn
 	// in the look of code.
+	// One left out (a table of one's own that cannot be used, for Markdown) takes none.
 	used := map[string]bool{}
 	for next := names; len(next) > 0; {
 		name := next[0]
 		next = next[1:]
-		if !used[name] {
+		if p := set.parts[name]; p != nil && !used[name] {
 			used[name] = true
-			next = append(next, set.parts[name].uses...)
+			next = append(next, p.uses...)
 		}
 	}
 	var vars []string

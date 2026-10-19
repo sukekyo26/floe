@@ -154,7 +154,7 @@ func brokenParts(set *partSet, src []byte) []*usererr.Error {
 	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
 		warnings = append(warnings, usererr.New("tmpl_parts_theme_broken", name, set.brokenThemes[name]))
 	}
-	return warnings
+	return append(warnings, set.strays...)
 }
 
 // checkCSS returns the mistakes of page.css and of each theme of t that ownCSS refuses.

@@ -105,6 +105,12 @@ func TestBrokenOwnParts(t *testing.T) {
 		"first/schema.json":    `{"type": "object"}`,
 		"first/part.html":      `<div data-floe-part="first cards"></div>`,
 		"first/part.css":       "",
+		"spaced/schema.json":   `{"type": "object"}`,
+		"spaced/part.html":     `<div data-floe-part="spaced "></div>`,
+		"spaced/part.css":      "",
+		"typo/schema.json":     `{"type": "object", "properties": {"c": {"$ref": "celll.json"}}}`,
+		"typo/part.html":       `<div data-floe-part="typo"></div>`,
+		"typo/part.css":        "",
 		"borrower/schema.json": `{"type": "object"}`,
 		"borrower/part.html":   `<div data-floe-part="unnamed borrower"></div>`,
 		"borrower/part.css":    "",
@@ -149,6 +155,10 @@ func TestBrokenOwnParts(t *testing.T) {
 		"pong":     "the part pong cannot be used: it holds the part ping, which cannot be used",
 		"first": "the part first cannot be used: " + filepath.Join(parts, "first", "part.html") +
 			`: the part first names itself last, after the parts it takes the look of, in no data-floe-part`,
+		"spaced": "the part spaced cannot be used: " + filepath.Join(parts, "spaced", "part.html") +
+			`: the part spaced names itself last, after the parts it takes the look of, in no data-floe-part`,
+		"typo": "the part typo cannot be used: " + filepath.Join(parts, "typo", "schema.json") +
+			": the part refers to floe:///parts/celll.json, which is no part",
 		"stack":   "the part stack cannot be used: it holds the part code, which cannot be used",
 		"tabs":    "the part tabs cannot be used: it holds the part stack, which cannot be used",
 		"details": "the part details cannot be used: it holds the part stack, which cannot be used",
@@ -217,8 +227,8 @@ func TestBrokenOwnParts(t *testing.T) {
 // of its files of their names, the rest staying floe's. floe's themes do not style a part of one's own
 // that took the place of floe's, whose rules would fit it ill: its file goes, and its parts.css does not
 // reach the part. One that cannot be used is refused to a data file that picks it; a file of a name
-// starting with a dot, one not of CSS, and one for a part of one's own that cannot be used do not make
-// it so.
+// starting with a dot, one not of CSS, one for a part of one's own that cannot be used, and one for no
+// part, which is warned of, do not make it so.
 func TestOwnPartsThemes(t *testing.T) {
 	t.Parallel()
 
@@ -234,6 +244,7 @@ func TestOwnPartsThemes(t *testing.T) {
 	files["themes/brutal/broken.css"] = ""
 	files["tone/schema.json"] = `{"type": "object"}`
 	files["themes/stray/tone.css"] = ""
+	files["themes/broke/table.css"] = "}\n"
 	parts := ownParts(t, files)
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/code.json"}, "aside": {"$ref": "floe:///parts/note.json"}`)
 	l := tmpl.NewLibrary(dir, parts, "")
@@ -259,30 +270,34 @@ func TestOwnPartsThemes(t *testing.T) {
 		!strings.Contains(page, "/* mine */") {
 		t.Errorf("drawing with the parts theme mine = %v:\n%s", err, page)
 	}
-	why := "your own parts theme bad cannot be used: " + filepath.Join(parts, "themes", "bad", "nope.css") +
-		": a file of a parts theme is base.css, parts.css or the style of a part"
-	if _, err = draw(l, "template: memo\nlang: en\nparts-theme: bad\nrisks: { text: x }\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), "data.yaml:3:14: "+why) {
-		t.Errorf("drawing with the parts theme bad = %v, want %s", err, why)
+	// A file of a name no part takes goes into no page, and leaves the theme to be used: tone.css too, a
+	// part of one's own named tone left out or not.
+	if _, err = draw(l, "template: memo\nlang: en\nparts-theme: bad\nrisks: { text: x }\n"); err != nil {
+		t.Errorf("drawing with the parts theme bad = %v", err)
 	}
-	// No part can be named tone, a part of one's own of the name left out or not.
-	stray := "your own parts theme stray cannot be used: " + filepath.Join(parts, "themes", "stray", "tone.css") +
-		": a file of a parts theme is"
-	if _, err = draw(l, "template: memo\nlang: en\nparts-theme: stray\nrisks: { text: x }\n"); err == nil ||
-		!strings.Contains(err.Error(), stray) {
-		t.Errorf("drawing with the parts theme stray = %v, want %s", err, stray)
+	strays := []string{
+		filepath.Join(parts, "themes", "bad", "nope.css") + " goes into no page",
+		filepath.Join(parts, "themes", "stray", "tone.css") + " goes into no page",
+	}
+	why := "your own parts theme broke cannot be used: " + filepath.Join(parts, "themes", "broke", "table.css") +
+		":1: this } closes no block"
+	if _, err = draw(l, "template: memo\nlang: en\nparts-theme: broke\nrisks: { text: x }\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:3:14: "+why) {
+		t.Errorf("drawing with the parts theme broke = %v, want %s", err, why)
 	}
 	// Told beside the data's other mistakes.
-	if _, err = draw(l, "template: memo\nlang: en\ntheme: nope\nparts-theme: bad\nrisks: { text: x }\n"); err == nil ||
+	if _, err = draw(l, "template: memo\nlang: en\ntheme: nope\nparts-theme: broke\nrisks: { text: x }\n"); err == nil ||
 		!strings.Contains(err.Error(), "data.yaml:3:8: ") || !strings.Contains(err.Error(), "data.yaml:4:14: "+why) {
-		t.Errorf("drawing with the theme nope and the parts theme bad = %v", err)
+		t.Errorf("drawing with the theme nope and the parts theme broke = %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "memo", "example.yaml"), []byte("template: memo\nlang: en\nrisks: { text: x }\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	warnings, mistakes := tmpl.Check(filepath.Join(dir, "memo"), parts, "")
-	if len(mistakes) != 0 || !slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), why) }) {
-		t.Errorf("Check = %v, %v, want %s", warnings, mistakes, why)
+	for _, want := range append(strays, why) {
+		if len(mistakes) != 0 || !slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), want) }) {
+			t.Errorf("Check = %v, %v, want %s", warnings, mistakes, want)
+		}
 	}
 }
 
@@ -308,5 +323,35 @@ func TestPartWordAtItem(t *testing.T) {
 	_, err := draw(l, "template: memo\nlang: en\nrisks: { level: mid }\naside: [{ label: Pages, done: 5, of: 3 }]\n")
 	if err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), "data.yaml:4:") {
 		t.Errorf("drawing a word the part has not beside a check that fails = %v", err)
+	}
+}
+
+// A page that names a part that cannot be used, by a table of Markdown of the data, is refused, rather
+// than published without its style; themes of one's own that cannot be read are warned of.
+func TestBrokenPartInPage(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"table/schema.json": `{"type": "object"}`,
+		"table/part.html":   `<div data-floe-part="table"></div>`,
+		"table/part.css":    "}\n",
+	})
+	if err := os.Symlink(filepath.Join(parts, "nowhere"), filepath.Join(parts, "themes")); err != nil {
+		t.Fatal(err)
+	}
+	dir := memo(t, `"risks": {"type": "string"}, "aside": {"type": "string", "format": "markdown"}`)
+	l := tmpl.NewLibrary(dir, parts, "")
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: x\naside: |\n  | a |\n  | --- |\n  | b |\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "the part table cannot be used: "+filepath.Join(parts, "table", "part.css")) {
+		t.Errorf("drawing a table of Markdown = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "memo", "example.yaml"), []byte("template: memo\nlang: en\nrisks: x\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	want := "the parts themes of your own in " + filepath.Join(parts, "themes") + " cannot be read"
+	if warnings, _ := tmpl.Check(filepath.Join(dir, "memo"), parts, ""); !slices.ContainsFunc(warnings, func(w *usererr.Error) bool {
+		return strings.HasPrefix(w.Error(), want)
+	}) {
+		t.Errorf("Check = %v, want %s", warnings, want)
 	}
 }

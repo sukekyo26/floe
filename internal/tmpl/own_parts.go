@@ -91,12 +91,9 @@ func (set *partSet) leaveOutUnusable(own map[string]string) {
 // of floe's of the name. One that cannot be used is kept in set.broken, and one of a name set keeps
 // leaves floe's in place.
 func (set *partSet) readOwnPart(name, at string) (read, replaces bool) {
-	dir, err := set.ownDir(at)
+	dir, err := set.ownEntry(name, at)
 	switch {
 	case dir == "" && err == nil:
-		return false, false
-	case !validName(name):
-		set.broken[name] = usererr.New("tmpl_part_bad_name", at)
 		return false, false
 	case set.reserved(name):
 		// Told whatever is there, which never takes the place of floe's.
@@ -119,13 +116,21 @@ func (set *partSet) readOwnPart(name, at string) (read, replaces bool) {
 // followed: one of the name of one of floe's takes the place of its files of their names. Those that
 // cannot be used are left out of set, and kept in set.brokenThemes.
 func (set *partSet) readOwnThemes(dir string) error {
+	themes, err := dirAt(dir)
+	if _, there := os.Lstat(dir); themes == "" && there == nil {
+		// A file, or a symlink that leads nowhere, where the themes go: none of them is read.
+		why := "not a directory"
+		if err != nil {
+			why = err.Error()
+		}
+		set.strays = append(set.strays, usererr.New("tmpl_parts_themes_unreadable", dir, why))
+		return nil
+	}
 	entries, err := entriesOf(dir)
 	if err != nil {
 		return usererr.New("tmpl_parts_dir_unreadable", dir, err.Error())
 	}
-	if themes, err := filepath.EvalSymlinks(dir); err == nil {
-		set.dirs = append(set.dirs, themes)
-	}
+	set.keepDir(themes)
 	for _, e := range entries {
 		name, at := e.Name(), filepath.Join(dir, e.Name())
 		if strings.HasPrefix(name, ".") {
@@ -135,12 +140,8 @@ func (set *partSet) readOwnThemes(dir string) error {
 		if t == nil {
 			t = newPartsTheme()
 		}
-		dir, err := set.ownDir(at)
-		switch {
-		case dir == "" && err == nil:
-			continue
-		case !validName(name):
-			set.brokenThemes[name] = usererr.New("tmpl_part_bad_name", at)
+		dir, err := set.ownEntry(name, at)
+		if dir == "" && err == nil {
 			continue
 		}
 		if err == nil {
@@ -156,14 +157,31 @@ func (set *partSet) readOwnThemes(dir string) error {
 	return nil
 }
 
-// ownDir returns the directory at of one's own, as dirAt does, and keeps it among the directories set
-// read, for a link drawn with set to be drawn again when a file in it is saved.
-func (set *partSet) ownDir(at string) (string, error) {
+// ownEntry returns the directory of name, a part or a parts theme of one's own at at, as dirAt does: ""
+// for a file. One of a name no part or theme can take is a mistake. It keeps the directory among those
+// set read, for a link drawn with set to be drawn again when a file in it is saved.
+func (set *partSet) ownEntry(name, at string) (string, error) {
 	dir, err := dirAt(at)
-	if dir != "" {
-		set.dirs = append(set.dirs, dir)
+	switch {
+	case dir == "" && err == nil:
+		return "", nil
+	case !validName(name):
+		return "", usererr.New("tmpl_part_bad_name", at)
 	}
+	set.keepDir(dir)
 	return dir, err
+}
+
+// keepDir keeps dir among the directories set read, but one under the first, the directory of parts, as
+// a reload walks that whole.
+func (set *partSet) keepDir(dir string) {
+	if dir == "" {
+		return
+	}
+	if set.dirs != nil && (dir == set.dirs[0] || strings.HasPrefix(dir, set.dirs[0]+string(filepath.Separator))) {
+		return
+	}
+	set.dirs = append(set.dirs, dir)
 }
 
 // reserved reports whether a part of one's own cannot be named name: a part floe draws in Go, a schema
@@ -178,13 +196,7 @@ func (set *partSet) reserved(name string) bool {
 func (set *partSet) checkNames(name, dir string) error {
 	p := set.parts[name]
 	names := namedParts(p.html)
-	// One's own names itself last, after the parts it takes the look of, as everyPart reads it: floe's do,
-	// as a test checks.
-	last := map[int]string{}
-	for _, n := range names {
-		last[n.at] = n.name
-	}
-	if dir != "" && !slices.Contains(slices.Collect(maps.Values(last)), name) {
+	if dir != "" && !namesItselfLast(p.html, name) {
 		return usererr.New("tmpl_part_unnamed", path.Join(dir, "part.html"), name, name)
 	}
 	for _, n := range names {
@@ -199,11 +211,28 @@ func (set *partSet) checkNames(name, dir string) error {
 	}
 	// One left out has no schema; one of a name set keeps (tone) leaves floe's in place.
 	for _, held := range p.schema.refsUnder(nil) {
-		if set.schemas[partsURL+held+".json"] == nil && set.broken[held] != nil {
+		switch {
+		case set.schemas[partsURL+held+".json"] != nil:
+		case set.broken[held] != nil:
 			return usererr.New("tmpl_part_holder_broken", held)
+		case dir != "":
+			return usererr.New("tmpl_part_holds_unknown", path.Join(dir, "schema.json"), held,
+				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", "))
 		}
 	}
 	return nil
+}
+
+// namesItselfLast reports whether an element of html, the HTML of the part name, names it last in its
+// data-floe-part, as everyPart's selector reads it: the value name, or ending in a space and name.
+// floe's parts do, as a test checks.
+func namesItselfLast(html, name string) bool {
+	for _, m := range partAttr.FindAllStringSubmatch(html, -1) {
+		if v := strings.Trim(m[1], `"'`); v == name || strings.HasSuffix(v, " "+name) {
+			return true
+		}
+	}
+	return false
 }
 
 // leaveOut leaves the part name out of set, kept in set.broken with why.
