@@ -11,7 +11,8 @@ import (
 // though its selectors are the more specific, loses to the part's style and to the parts theme's, and
 // still styles what neither of them does, such as where a part stands. It reaches the part's element but
 // not what the part holds, whose colour it gives by inheritance alone. Its @keyframes and @font-face,
-// in floe's @scope, work. A block page.css leaves open does not take in the theme.
+// in floe's @scope, work. A block page.css leaves open does not take in the theme. A part's style stops at
+// a part it holds.
 func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
 	e := newEnv(t)
 	b := newBrowser(t, e.base, i18n.English)
@@ -20,8 +21,8 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 		"page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
 			`<body><header>h</header><p id="own">own</p>{{.Data.note}}</body></html>`,
 		"page.css": "p { color: rgb(255, 0, 0); }\n" +
-			"body div.floe-note.warn { background-color: rgb(255, 0, 0); margin-top: 7px; }\n" +
-			"body div.floe-note.warn::before { top: 0px; }\n" +
+			"body div[data-floe-part=note].warn { background-color: rgb(255, 0, 0); margin-top: 7px; }\n" +
+			"body div[data-floe-part=note].warn::before { top: 0px; }\n" +
 			"@keyframes held { from { opacity: 0.5; } to { opacity: 0.5; } }\nheader { animation: held 1000s; }\n" +
 			`@font-face { font-family: "own face"; src: url(data:,); }` + "\nfooter { color: red;",
 		"themes/default.css": "body { color: rgb(0, 0, 2); }\n",
@@ -31,13 +32,24 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	slug := "layers"
 	e.publish(t, e.write(t, "layers.yaml", "template: layers\nlang: en\nnote: { text: x, tone: warn }\n"), store.Options{Slug: &slug})
 	b.navigate("/a/layers/?raw")
-	b.until("the note", "!!document.querySelector('.floe-note')")
+	b.until("the note", "!!document.querySelector('[data-floe-part=note]')")
 	// The part's background, the parts theme's top of the mark (0.85rem, over the part's 1.1rem), the
 	// template's margin; the template's own paragraph and the note's; the animation and the face.
-	got := b.eval(`(() => { const n = document.querySelector('.floe-note'), s = getComputedStyle(n);
+	got := b.eval(`(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n);
 		return [s.backgroundColor, getComputedStyle(n, '::before').top, s.marginTop,
 			getComputedStyle(document.getElementById('own')).color, getComputedStyle(n.querySelector('p')).color,
 			document.querySelector('header').getAnimations()[0]?.animationName,
 			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`)
 	check(t, "layers", []string{got}, "rgb(246, 232, 210) | 13.6px | 7px | rgb(255, 0, 0) | rgb(0, 0, 2) | held | true")
+
+	// A part's style stops at a part it holds: the note's code is on the surface, the code of the table in
+	// it on floe's base.
+	slug = "nested"
+	e.publish(t, e.write(t, "nested.yaml", "template: report\nlang: en\nparts-theme: soft\nsections:\n  - parts:\n      - html: >-\n"+
+		`          <div data-floe-part="note"><p><code id="own">a</code></p><div data-floe-part="table"><table><tbody><tr><td>`+
+		`<code id="held">b</code></td></tr></tbody></table></div></div>`+"\n"), store.Options{Slug: &slug})
+	b.navigate("/a/nested/?raw")
+	b.until("the code", "!!document.getElementById('held')")
+	got = b.eval(`['own', 'held'].map((id) => getComputedStyle(document.getElementById(id)).backgroundColor).join(' | ')`)
+	check(t, "nested", []string{got}, "rgb(255, 255, 255) | rgb(220, 235, 236)")
 }

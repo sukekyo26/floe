@@ -1,0 +1,11 @@
+/* A note of a tone sets its whole background, its size too, so it gets the squares again */
+:scope:is(.good, .warn, .bad) { background-color: var(--bp-sheet); background-image: var(--bp-squares); background-size: 16px 16px; }
+:scope { border: 1.5px dashed var(--bp-ink); }
+:scope.good { border-color: var(--good); }
+:scope.warn { border-color: var(--warn); }
+:scope.bad { border-color: var(--bad); }
+:scope::before { background: none; border: 1.5px solid currentColor; color: var(--bp-ink); font-family: var(--mono); }
+:scope.good::before { background: none; color: var(--good); }
+:scope.warn::before { background: none; color: var(--warn); }
+:scope.bad::before { background: none; color: var(--bad); }
+.title { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bp-ink); }

@@ -1,20 +1,20 @@
-/* On narrow screens, the table scrolls sideways inside .floe-table instead of squeezing its columns */
-.floe-table {
+/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns */
+:scope {
   overflow-x: auto; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 14px;
   box-shadow: 0 1px 2px rgb(24 32 30 / 0.06);
 }
-.floe-table table { border-collapse: collapse; width: 100%; }
-.floe-table :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.8rem 1.1rem; }
-.floe-table :is(th, td):not(.num) { min-width: 7em; }
+:scope table { border-collapse: collapse; width: 100%; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.8rem 1.1rem; }
+:scope :is(th, td):not(.num) { min-width: 7em; }
 /* A num column's heading wraps as long as it needs, but not a character a line */
-.floe-table th.num { min-width: 6em; }
-.floe-table thead th {
+:scope th.num { min-width: 6em; }
+:scope thead th {
   font-size: 0.8rem; font-weight: 600; color: var(--muted, #57635f);
   background: color-mix(in srgb, var(--line, #d4dbd8) 40%, var(--surface, #fff));
 }
-.floe-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line, #d4dbd8) 18%, var(--surface, #fff)); }
-.floe-table .num { text-align: right; }
-.floe-table td.num {
+:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line, #d4dbd8) 18%, var(--surface, #fff)); }
+:scope .num { text-align: right; }
+:scope td.num {
   min-width: auto; font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP");
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }

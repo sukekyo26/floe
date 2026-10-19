@@ -1,4 +1,4 @@
 {{- $d := diff .text -}}
-<figure class="floe-code floe-diff" data-floe-part="code diff"><figcaption>{{with .file}}<span class="file">{{.}}</span>{{end}}<span class="added">+{{$d.Added}}</span><span class="removed">−{{$d.Removed}}</span>{{with .lang}}<span class="lang">{{.}}</span>{{end}}</figcaption><pre><code>
+<figure data-floe-part="code diff"><figcaption>{{with .file}}<span class="file">{{.}}</span>{{end}}<span class="added">+{{$d.Added}}</span><span class="removed">−{{$d.Removed}}</span>{{with .lang}}<span class="lang">{{.}}</span>{{end}}</figcaption><pre><code>
 {{- range $d.Lines}}<span{{with .Kind}} class="{{.}}"{{end}}>{{.Text}}</span>{{end -}}
 </code></pre></figure>

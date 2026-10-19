@@ -1,0 +1,9 @@
+:scope { padding-left: 1.25rem; background: var(--surface); border: 1.5px solid var(--accent); }
+:scope.good { background: var(--surface); border-color: var(--good); }
+:scope.warn { background: var(--surface); border-color: var(--warn); }
+:scope.bad { background: var(--surface); border-color: var(--bad); }
+:scope::before, :scope:is(.good, .warn, .bad)::before { content: none; }
+.title { display: inline-block; font-size: 0.75rem; padding: 0 0.6rem; border-radius: 6px; background: var(--accent); color: var(--surface); }
+:scope.good .title { background: var(--good); color: var(--surface); }
+:scope.warn .title { background: var(--warn); color: var(--surface); }
+:scope.bad .title { background: var(--bad); color: var(--surface); }

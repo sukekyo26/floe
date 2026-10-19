@@ -1,0 +1,2 @@
+:scope:where([data-floe-part~="code"], [data-floe-part~="terminal"]) { border-radius: 4px; box-shadow: none; }
+:scope:where([data-floe-part~="progress"], [data-floe-part~="steps"], [data-floe-part~="checklist"], [data-floe-part~="tree"], [data-floe-part~="details"], [data-floe-part~="timeline"], [data-floe-part~="bars"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]) { border-radius: 4px; box-shadow: none; }

@@ -17,7 +17,6 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
-	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -571,13 +570,10 @@ func (l *schemaLint) variables() ([]string, error) {
 	// floe's base styles every page, the template's own text, lists, links, code and quotes, and those in
 	// the parts.
 	more := appendFound(nil, fallback, baseCSS)
-	if slices.Contains(l.parts, "diagram") {
-		more = append(more, diagram.Variables()...)
-	}
 	// Whichever parts theme a data file picks styles the parts, and the quotes of Markdown, which counts
 	// as the table part.
-	// LIMIT: every variable of every parts theme, not those of the rules for the parts used; read the
-	// themes' rules by their classes if a template of few parts comes to be warned of others' colours.
+	// LIMIT: every variable of every parts theme, not those of its files of the parts used; read only those
+	// files if a template of few parts comes to be warned of others' colours.
 	if len(l.parts) > 0 {
 		themes, err := partsThemeVariables()
 		if err != nil {
