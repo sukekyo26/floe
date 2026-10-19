@@ -211,10 +211,15 @@ code 0. Nothing is printed when the templates are right.`,
 		Args: usage(cobra.MinimumNArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
 			var found mistakes
+			// A warning of the parts of one's own is told for every template: once is enough.
+			told := map[string]bool{}
 			for _, dir := range args {
 				warnings, more := tmpl.Check(dir, a.cfg.parts, a.cfg.icons)
 				for _, w := range warnings {
-					_, _ = fmt.Fprintln(a.env.Stderr, w.Localize(a.cat)) //nolint:errcheck // nowhere left to report
+					if text := w.Localize(a.cat); !told[text] {
+						told[text] = true
+						_, _ = fmt.Fprintln(a.env.Stderr, text) //nolint:errcheck // nowhere left to report
+					}
 				}
 				found = append(found, more...)
 			}
