@@ -677,7 +677,12 @@ func checkParts(s *schema, d *Data, root ast.Node) error {
 			continue
 		}
 		html, err := f.part.draw(f.itemAt, d)
-		if err != nil {
+		var bad *usererr.Error
+		switch {
+		case errors.As(err, &bad):
+			// A word the data names (word .level) that the part has not: told at the item.
+			return itemMistake(d.File, root, f.at, false, bad)
+		case err != nil:
 			return err
 		}
 		d.drew(f.at, html)

@@ -201,3 +201,24 @@ func TestOwnPartsThemes(t *testing.T) {
 		t.Errorf("Check = %v, %v, want %s", warnings, mistakes, why)
 	}
 }
+
+// A word a part's HTML names from the data (word .level) that its words.yaml has not is told at the
+// data's item.
+func TestPartWordAtItem(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"level/schema.json": `{"type": "object", "properties": {"level": {"type": "string"}}}`,
+		"level/part.html":   `<span data-floe-part="level">{{word .level}}</span>`,
+		"level/part.css":    "",
+		"level/words.yaml":  "en: { low: Low }\n",
+	})
+	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/level.json"}, "aside": {"type": "string"}`), parts, "")
+	if page, err := draw(l, "template: memo\nlang: en\nrisks: { level: low }\n"); err != nil || !strings.Contains(page, ">Low</span>") {
+		t.Errorf("drawing a word the part has = %v", err)
+	}
+	want := "data.yaml:3:10: risks: " + filepath.Join(parts, "level", "words.yaml") + ` has no word "mid"`
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: { level: mid }\n"); err == nil || err.Error() != want {
+		t.Errorf("drawing a word the part has not = %v, want %s", err, want)
+	}
+}
