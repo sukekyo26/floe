@@ -5,14 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/goccy/go-yaml/ast"
 
@@ -25,13 +23,20 @@ import (
 // the built-in ones. One of one's own takes the place of a built-in one of its name.
 type Library struct {
 	dir   string // "" without one
+	parts string // the directory of parts of one's own; "" for none
 	icons string // the directory of icons the diagrams of data files show; "" for none
 }
 
 // NewLibrary returns the templates of dir, a directory of templates of one's own ("" for none), and
-// the built-in ones, which draw the icons kept in iconsDir (FLOE_ICONS_DIR) in diagrams.
-func NewLibrary(dir, iconsDir string) *Library {
-	return &Library{dir: dir, icons: iconsDir}
+// the built-in ones, which draw with floe's parts and those of partsDir (FLOE_PARTS_DIR, "" for none),
+// and the icons kept in iconsDir (FLOE_ICONS_DIR) in diagrams.
+func NewLibrary(dir, partsDir, iconsDir string) *Library {
+	return &Library{dir: dir, parts: partsDir, icons: iconsDir}
+}
+
+// PartsDir is the directory of parts of one's own, "" for none.
+func (l *Library) PartsDir() string {
+	return l.parts
 }
 
 // Dir is the directory of templates of one's own, "" for none.
@@ -52,7 +57,9 @@ type Template struct {
 	// Path is where a template of one's own was found, as its mistakes name it; "" for a built-in one.
 	Path string
 
-	icons string // the directory of icons of the library it was found in
+	icons    string   // the directory of icons of the library it was found in
+	partsDir string   // the directory of parts of one's own of that library
+	set      *partSet // the parts it is drawn with, once read
 }
 
 // Names are the templates there are, by name. It fails when the directory of templates of one's own
@@ -103,11 +110,8 @@ func (l *Library) ownNames() ([]string, error) {
 // its way.
 // LIMIT: read on every lookup. Keep the entries if a directory comes to hold thousands of them.
 func (l *Library) entries() ([]fs.DirEntry, error) {
-	entries, err := os.ReadDir(l.dir)
-	switch {
-	case errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR):
-		return nil, nil
-	case err != nil:
+	entries, err := entriesOf(l.dir)
+	if err != nil {
 		return nil, usererr.New("tmpl_dir_unreadable", l.dir, err.Error())
 	}
 	return entries, nil
@@ -137,7 +141,7 @@ func (l *Library) Find(name string) (*Template, error) {
 	case err != nil:
 		return nil, fmt.Errorf("find the template %s: %w", name, err)
 	}
-	return &Template{Name: name, Dir: "", Path: "", icons: l.icons}, nil
+	return &Template{Name: name, Dir: "", Path: "", icons: l.icons, partsDir: l.parts, set: nil}, nil
 }
 
 // own returns the template name of one's own, or nil without one. A file there is not a template, but
@@ -166,18 +170,14 @@ func (l *Library) own(name string) (*Template, error) {
 // resolve returns the template of one's own at the entry name, or nil when it is a file.
 func (l *Library) resolve(name string) (*Template, error) {
 	at := filepath.Join(l.dir, name)
-	dir, err := filepath.EvalSymlinks(at)
+	dir, err := dirAt(at)
 	if err != nil {
 		return nil, usererr.New("tmpl_own_broken", name, at, err.Error())
 	}
-	fi, err := os.Stat(dir)
-	if err != nil {
-		return nil, usererr.New("tmpl_own_broken", name, at, err.Error())
-	}
-	if !fi.IsDir() {
+	if dir == "" {
 		return nil, nil //nolint:nilnil // a file, not a template
 	}
-	return &Template{Name: name, Dir: dir, Path: at, icons: l.icons}, nil
+	return &Template{Name: name, Dir: dir, Path: at, icons: l.icons, partsDir: l.parts, set: nil}, nil
 }
 
 // validName reports whether name can name a template: lower case letters, digits, - and _, so that it
@@ -193,6 +193,20 @@ var templateName = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 // built-in one.
 func (t *Template) file(name string) string {
 	return filepath.Join(cmp.Or(t.Path, t.Name), name)
+}
+
+// parts returns the parts t is drawn with and their themes, read once for t.
+// LIMIT: read for each template, so floe template list reads parts of one's own once per template. Keep
+// them for a command, not in the Library a server keeps, if listing comes to be slow.
+func (t *Template) parts() (*partSet, error) {
+	if t.set == nil {
+		set, err := partsIn(t.partsDir)
+		if err != nil {
+			return nil, err
+		}
+		t.set = set
+	}
+	return t.set, nil
 }
 
 // readFile reads the file name, a slash-separated path under the template. Under a template of one's
@@ -263,13 +277,7 @@ func (t *Template) files(read func(fs.FS) error) error {
 		}
 		return read(sub)
 	}
-	// os.Root refuses a path, a symlink included, that leads out of the template.
-	root, err := os.OpenRoot(t.Dir)
-	if err != nil {
-		return fmt.Errorf("open the template %s: %w", t.Name, err)
-	}
-	defer root.Close()
-	return read(root.FS())
+	return readIn(t.Dir, read)
 }
 
 // checkVersion refuses t when the floe it needs is not this one: template.yaml's floe: 1.2 takes a

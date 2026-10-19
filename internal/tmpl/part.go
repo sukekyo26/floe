@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"maps"
 	"net/url"
+	"os"
 	"path"
 	"regexp"
 	"slices"
@@ -22,6 +23,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/sukekyo26/floe/internal/diagram"
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -133,52 +135,38 @@ func isGoPart(name string) bool {
 	return ok
 }
 
-// partSet is floe's parts, and every schema under parts/, by URL: the parts' and those they share.
+// partSet is floe's parts, every schema under parts/, by URL: the parts' and those they share, and the
+// parts themes.
 type partSet struct {
 	parts   map[string]*part
-	docs    map[string]any     // as read, for jsonschema
-	schemas map[string]*schema // as floe reads them
+	docs    map[string]any         // as read, for jsonschema
+	schemas map[string]*schema     // as floe reads them
+	themes  map[string]*partsTheme // by name
+	broken  map[string]error       // the parts of one's own that cannot be used, by name, and why
+	// the parts themes of one's own that cannot be used, by name, and why
+	brokenThemes map[string]error
+	// the directories of one's own it read, the directory of parts first, by their real paths
+	dirs   []string
+	strays []*usererr.Error // what of one's own goes into no page, to be warned of
 }
 
 // builtinParts reads floe's parts once.
-var builtinParts = sync.OnceValues(readParts)
+var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("", nil) })
 
-func readParts() (*partSet, error) {
-	set := &partSet{parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}}
-	entries, err := fs.ReadDir(partFiles, "parts")
-	if err != nil {
-		return nil, fmt.Errorf("read the parts: %w", err)
+// readParts reads floe's parts and, over them, those of one's own in dir, "" for none, which holds
+// entries: one of the name of one of floe's takes its place whole. One of one's own that cannot be used
+// is left out, its mistake kept for a template that uses it.
+func readParts(dir string, entries []os.DirEntry) (*partSet, error) {
+	set := &partSet{
+		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
+		broken: map[string]error{}, brokenThemes: map[string]error{}, dirs: nil, strays: nil,
 	}
-	for _, e := range entries {
-		if e.Name() == themesDir {
-			continue
-		}
-		file := path.Join("parts", e.Name())
-		url := partsURL + e.Name()
-		if e.IsDir() {
-			file = path.Join(file, "schema.json")
-			url += ".json"
-		}
-		if err = set.readSchema(url, file); err != nil {
+	if err := set.readBuiltin(); err != nil {
+		return nil, err
+	}
+	if dir != "" {
+		if err := set.readOwn(dir, entries); err != nil {
 			return nil, err
-		}
-		if e.IsDir() {
-			p, err := readPart(e.Name(), set.schemas[url])
-			if err != nil {
-				return nil, err
-			}
-			set.parts[e.Name()] = p
-		}
-	}
-	for name, p := range goParts {
-		url := partsURL + name + ".json"
-		set.docs[url] = map[string]any{"type": "object", "description": p.about}
-		set.schemas[url] = &schema{
-			Format: "", Ref: "", Properties: nil, Items: nil, part: nil, Description: p.about, Type: "object", Enum: nil,
-			Required: nil,
-		}
-		set.parts[name] = &part{
-			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: p.css, checks: nil, uses: nil,
 		}
 	}
 	for _, s := range set.schemas {
@@ -193,8 +181,69 @@ func readParts() (*partSet, error) {
 	return set, nil
 }
 
-// partsUnder adds to names the parts the schemas under s refer to.
-// LIMIT: a part that held itself, at any depth, would walk forever; keep the parts walked if one comes to.
+// readBuiltin reads floe's parts, those it draws in Go too, the schemas they share and the parts themes
+// into set.
+func (set *partSet) readBuiltin() error {
+	builtin, err := fs.Sub(partFiles, "parts")
+	if err != nil {
+		return fmt.Errorf("read the parts: %w", err)
+	}
+	entries, err := fs.ReadDir(builtin, ".")
+	if err != nil {
+		return fmt.Errorf("read the parts: %w", err)
+	}
+	for _, e := range entries {
+		switch {
+		case e.Name() == themesDir:
+			// Read once the parts are, whose names its files take.
+		case e.IsDir():
+			var files fs.FS
+			if files, err = fs.Sub(builtin, e.Name()); err == nil {
+				err = set.readPart(files, e.Name(), path.Join("parts", e.Name()))
+			}
+		default:
+			// A schema the parts share.
+			err = set.readSchema(builtin, partsURL+e.Name(), e.Name(), path.Join("parts", e.Name()))
+		}
+		if err != nil {
+			return err
+		}
+	}
+	for name, p := range goParts {
+		url := partsURL + name + ".json"
+		set.docs[url] = map[string]any{"type": "object", "description": p.about}
+		set.schemas[url] = &schema{
+			Format: "", Ref: "", Properties: nil, Items: nil, part: nil, Description: p.about, Type: "object", Enum: nil,
+			Required: nil,
+		}
+		set.parts[name] = &part{
+			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: p.css, checks: nil, uses: nil,
+		}
+	}
+	themes, err := fs.Sub(builtin, themesDir)
+	if err != nil {
+		return fmt.Errorf("read the parts themes: %w", err)
+	}
+	entries, err = fs.ReadDir(themes, ".")
+	if err != nil {
+		return fmt.Errorf("read the parts themes: %w", err)
+	}
+	for _, e := range entries {
+		t := newPartsTheme()
+		files, err := fs.Sub(themes, e.Name())
+		if err == nil {
+			err = set.readPartsTheme(files, path.Join("parts", themesDir, e.Name()), t)
+		}
+		if err != nil {
+			return err
+		}
+		set.themes[e.Name()] = t
+	}
+	return nil
+}
+
+// partsUnder adds to names the parts the schemas under s refer to. No part holds itself: readOwn leaves
+// out one that would.
 func (s *schema) partsUnder(names *[]string) {
 	if s == nil {
 		return
@@ -255,43 +304,48 @@ func namedParts(html string) []namedPart {
 // partAttr finds the value of a data-floe-part attribute: data-floe-part="table compare", '…' or x.
 var partAttr = regexp.MustCompile(`(?i)\sdata-floe-part\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` + "`" + `]+)`)
 
-// readSchema reads the schema file of floe's at url.
-func (set *partSet) readSchema(url, file string) error {
-	b, err := partFiles.ReadFile(file)
+// readSchema reads the schema file of files, shown in its mistakes as shown, at url.
+func (set *partSet) readSchema(files fs.FS, url, file, shown string) error {
+	b, err := fs.ReadFile(files, file)
 	if err != nil {
-		return fmt.Errorf("read %s: %w", file, err)
+		return fmt.Errorf("read %s: %w", shown, err)
 	}
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(b))
 	if err != nil {
-		return fmt.Errorf("read %s: %w", file, err)
+		return fmt.Errorf("read %s: %w", shown, err)
 	}
 	s, err := decodeSchema(b)
 	if err != nil {
-		return fmt.Errorf("read %s: %w", file, err)
+		return fmt.Errorf("read %s: %w", shown, err)
 	}
+	// As jsonschema reads a $ref: cell.json is floe:///parts/cell.json.
+	s.absolute(url)
 	set.docs[url], set.schemas[url] = doc, s
 	return nil
 }
 
-// readPart reads the part name, whose schema is s.
-func readPart(name string, s *schema) (*part, error) {
-	dir := path.Join("parts", name)
-	html, err := partFiles.ReadFile(path.Join(dir, "part.html"))
+// readPart reads the part name from files, its directory, shown in its mistakes as dir, into set.
+func (set *partSet) readPart(files fs.FS, name, dir string) error {
+	url := partsURL + name + ".json"
+	if err := set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json")); err != nil {
+		return err
+	}
+	html, err := fs.ReadFile(files, "part.html")
 	if err != nil {
-		return nil, fmt.Errorf("read the part %s: %w", name, err)
+		return fmt.Errorf("read the part %s: %w", name, err)
 	}
 	file := path.Join(dir, "words.yaml")
-	w, err := readPartWords(file)
+	w, err := readPartWords(files, file)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	page, err := template.New(name).Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
 		Funcs(template.FuncMap{"word": w.word(file, fallbackLang)}).Parse(string(html))
 	if err != nil {
-		return nil, fmt.Errorf("parse the part %s: %w", name, err)
+		return fmt.Errorf("parse the part %s: %w", name, err)
 	}
 	if err = w.checkWords(page, path.Join(dir, "part.html"), file); err != nil {
-		return nil, err
+		return err
 	}
 	// One page per language of its words, word writing each of them: word "likely" is likely in words.yaml.
 	pages := map[string]*template.Template{fallbackLang: page}
@@ -300,40 +354,55 @@ func readPart(name string, s *schema) (*part, error) {
 			continue
 		}
 		if pages[lang], err = page.Clone(); err != nil {
-			return nil, fmt.Errorf("parse the part %s: %w", name, err)
+			return fmt.Errorf("parse the part %s: %w", name, err)
 		}
 		pages[lang].Funcs(template.FuncMap{"word": w.word(file, lang)})
 	}
-	css, err := partFiles.ReadFile(path.Join(dir, "part.css"))
+	css, err := fs.ReadFile(files, "part.css")
 	if err != nil {
-		return nil, fmt.Errorf("read the part %s: %w", name, err)
+		return fmt.Errorf("read the part %s: %w", name, err)
+	}
+	if err = refuseCSS(path.Join(dir, "part.css"), css, true); err != nil {
+		return err
 	}
 	p := &part{
-		name: name, schema: s, pages: pages, words: w, html: string(html), css: string(css), checks: nil, uses: nil,
+		name: name, schema: set.schemas[url], pages: pages, words: w, html: string(html), css: string(css), checks: nil,
+		uses: nil,
 	}
-	src, err := partFiles.ReadFile(path.Join(dir, "checks.yaml"))
-	switch {
-	case err == nil:
-		if p.checks, err = readChecks(path.Join(dir, "checks.yaml"), src, true); err != nil {
-			return nil, err
-		}
-		// Compiled once: the checks of a part run on each item it draws.
-		for i, c := range p.checks {
-			var e *yamlpos.Error
-			if p.checks[i].prog, e = c.program(); e != nil {
-				return nil, e
-			}
-		}
-	case !errors.Is(err, fs.ErrNotExist):
-		return nil, fmt.Errorf("read the part %s: %w", name, err)
+	if p.checks, err = readPartChecks(files, name, dir); err != nil {
+		return err
 	}
-	return p, nil
+	set.parts[name] = p
+	return nil
 }
 
-// readPartWords reads file, the words.yaml of a part; a part without one has the words of en alone, none,
-// so that it has a page all the same.
-func readPartWords(file string) (words, error) {
-	src, err := partFiles.ReadFile(file)
+// readPartChecks reads the checks.yaml of the part name in files, its directory, shown as dir, compiled
+// once: the checks of a part run on each item it draws. A part without one has none.
+func readPartChecks(files fs.FS, name, dir string) ([]relation, error) {
+	src, err := fs.ReadFile(files, "checks.yaml")
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return nil, nil
+	case err != nil:
+		return nil, fmt.Errorf("read the part %s: %w", name, err)
+	}
+	checks, err := readChecks(path.Join(dir, "checks.yaml"), src, true)
+	if err != nil {
+		return nil, err
+	}
+	for i, c := range checks {
+		var e *yamlpos.Error
+		if checks[i].prog, e = c.program(); e != nil {
+			return nil, e
+		}
+	}
+	return checks, nil
+}
+
+// readPartWords reads file, the words.yaml of a part in files, its directory; a part without one has the
+// words of en alone, none, so that it has a page all the same.
+func readPartWords(files fs.FS, file string) (words, error) {
+	src, err := fs.ReadFile(files, "words.yaml")
 	var w words
 	switch {
 	case err == nil:
@@ -452,7 +521,13 @@ func checkParts(s *schema, d *Data, root ast.Node) error {
 			continue
 		}
 		html, err := f.part.draw(f.itemAt, d)
-		if err != nil {
+		var bad *usererr.Error
+		switch {
+		case errors.As(err, &bad) && bad.Key == "tmpl_words_unknown":
+			// A word the data names (word .level) that the part has not: told at the item, with the rest.
+			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
+			continue
+		case err != nil:
 			return err
 		}
 		d.drew(f.at, html)
@@ -526,51 +601,69 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 }
 
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
-// selectors: floe's base, under the template's own CSS (own: its page.css, then its theme, a style
-// sheet each), under the parts'. The parts' are the style of each part the page names, by its own
-// element, a table of Markdown, or HTML that takes a part's look (<span class="good" data-floe-part="cell">),
-// after the parts it is drawn in the look of, which it adjusts; then the parts theme theme: its base.css,
-// which every page gets, as it holds its variables and the look of Markdown's quotes, its parts.css, the
-// rules of several parts, and its style of each of those parts in the same order. Within the layer the
-// more specific rule wins, else the later.
+// selectors: floe's base, under the template's own CSS (own: its page.css, then its theme), under the
+// parts'. The parts' are the style of each part the page names, by its own element, a table of Markdown,
+// or HTML that takes a part's look (<span class="good" data-floe-part="cell">), after the parts it is
+// drawn in the look of, which it adjusts; then the parts theme theme: its base.css, which every page
+// gets, as it holds its variables and the look of Markdown's quotes, its parts.css, the rules of several
+// parts, and its style of each of those parts in the same order. Within the layer the more specific rule
+// wins, else the later.
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
-func pageStyle(page []byte, own [][]byte, theme string) (string, error) {
-	themed, err := readPartsTheme(theme)
-	if err != nil {
-		return "", err
+func (set *partSet) pageStyle(page []byte, own [][]byte, theme string) (string, error) {
+	themed := set.themes[theme]
+	if themed == nil {
+		return "", fmt.Errorf("draw with the parts theme %s: %w", theme, fs.ErrNotExist)
 	}
-	var parts strings.Builder
-	themes := themed.base
+	// The first sheet names the layers, which puts them in that order. Each file after it is a sheet of
+	// its own, so that a mistake in it, a comment or a block left open, ends with it.
+	var style strings.Builder
+	style.WriteString("<style>\n@layer floe.base, floe.page, floe.parts;\n@layer floe.base {\n" + baseCSS +
+		"}\n</style>\n")
+	sheet := func(layer, css string) {
+		if css != "" {
+			style.WriteString("<style>\n@layer " + layer + " {\n" + css + "}\n</style>\n")
+		}
+	}
+	var names []string
 	if bytes.Contains(page, []byte("data-floe-part")) {
-		set, err := builtinParts()
-		if err != nil {
+		if err := set.refuseBroken(page); err != nil {
 			return "", err
 		}
-		if themed.shared != "" {
-			themes += everyPart(themed.shared)
-		}
-		for _, name := range set.inOrder(set.partsNamedIn(string(page))) {
-			parts.WriteString(scoped(name, set.parts[name].css))
-			if t := themed.parts[name]; t != "" {
-				themes += scoped(name, t)
-			}
+		names = set.inOrder(set.partsNamedIn(string(page)))
+	}
+	for _, name := range names {
+		if css := set.parts[name].css; css != "" {
+			sheet("floe.parts", scoped(name, css))
 		}
 	}
-	// Each file of the template's CSS is a style sheet of its own, so that a mistake in it, a comment or a
-	// block left open, ends with it; the first sheet names the layers, which puts them in that order.
-	style := "<style>\n@layer floe.base, floe.page, floe.parts;\n" +
-		"@layer floe.base {\n" + baseCSS + "}\n" +
-		"@layer floe.parts {\n" + parts.String() + themes + "}\n</style>\n"
+	sheet("floe.parts", themed.base)
+	if names != nil && themed.shared != "" {
+		sheet("floe.parts", everyPart(themed.shared, themed.except))
+	}
+	for _, name := range names {
+		if t := themed.parts[name]; t != "" {
+			sheet("floe.parts", scoped(name, t))
+		}
+	}
 	for _, css := range own {
-		if len(css) == 0 {
-			continue
+		if len(css) != 0 {
+			sheet("floe.page", "@scope (:root) to ([data-floe-part] > *) {\n"+string(css)+"}\n")
 		}
-		style += "<style>\n@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(css) +
-			"}\n}\n</style>\n"
 	}
-	return style, nil
+	return style.String(), nil
+}
+
+// refuseBroken refuses page when it names a part that cannot be used, by a table of Markdown or HTML of the
+// data among others, which would leave it without its style.
+func (set *partSet) refuseBroken(page []byte) error {
+	for _, n := range namedParts(string(page)) {
+		if set.parts[n.name] == nil && set.broken[n.name] != nil {
+			return usererr.New("tmpl_part_broken", n.name, set.broken[n.name])
+		}
+	}
+	return nil
 }
 
 // inOrder returns names, parts of set, each after the parts it uses that names holds, else in order.
@@ -606,9 +699,18 @@ func scoped(name, css string) string {
 }
 
 // everyPart is css, rules of several parts that name each of them (:scope:where([data-floe-part~="code"])),
-// reaching the elements of every part as scoped does those of one.
-func everyPart(css string) string {
-	return "@scope ([data-floe-part]) to (:scope [data-floe-part] > *) {\n" + css + "}\n"
+// reaching the elements of every part as scoped does those of one, but the parts named except.
+func everyPart(css string, except []string) string {
+	root := "[data-floe-part]"
+	if except != nil {
+		// The parts whose own name, last in the attribute, is one of except: not those drawn in its look.
+		names := make([]string, 0, 2*len(except))
+		for _, name := range except {
+			names = append(names, `[data-floe-part="`+name+`"]`, `[data-floe-part$=" `+name+`"]`)
+		}
+		root += ":not(" + strings.Join(names, ", ") + ")"
+	}
+	return "@scope (" + root + ") to (:scope [data-floe-part] > *) {\n" + css + "}\n"
 }
 
 // baseCSS is what every page starts from: text, lists, links, code and quotes, for the template's own
@@ -616,91 +718,6 @@ func everyPart(css string) string {
 //
 //go:embed base.css
 var baseCSS string
-
-// themesDir is the directory of parts/ that holds the parts themes, and so is no part.
-const themesDir = "themes"
-
-// PartsThemes returns the themes of floe's parts, by name: a directory each.
-func PartsThemes() ([]string, error) {
-	entries, err := fs.ReadDir(partFiles, path.Join("parts", themesDir))
-	if err != nil {
-		return nil, fmt.Errorf("read the parts themes: %w", err)
-	}
-	var themes []string
-	for _, e := range entries {
-		if e.IsDir() {
-			themes = append(themes, e.Name())
-		}
-	}
-	return themes, nil
-}
-
-// partsTheme is a parts theme: its base.css, for every page, its parts.css, the rules of several parts,
-// and the style of each part it restyles alone.
-type partsTheme struct {
-	base   string
-	shared string
-	parts  map[string]string // by the part's name
-}
-
-func readPartsTheme(name string) (*partsTheme, error) {
-	dir := path.Join("parts", themesDir, name)
-	entries, err := fs.ReadDir(partFiles, dir)
-	if err != nil {
-		return nil, fmt.Errorf("read the parts theme %s: %w", name, err)
-	}
-	t := &partsTheme{base: "", shared: "", parts: map[string]string{}}
-	for _, e := range entries {
-		css, err := partFiles.ReadFile(path.Join(dir, e.Name()))
-		if err != nil {
-			return nil, fmt.Errorf("read the parts theme %s: %w", name, err)
-		}
-		switch part := strings.TrimSuffix(e.Name(), ".css"); part {
-		case "base":
-			t.base = string(css)
-		case "parts":
-			t.shared = string(css)
-		default:
-			t.parts[part] = string(css)
-		}
-	}
-	return t, nil
-}
-
-// all is the whole CSS of t, its base and parts.css first, then the parts' in the order of their names.
-func (t *partsTheme) all() string {
-	css := t.base + t.shared
-	for _, name := range slices.Sorted(maps.Keys(t.parts)) {
-		css += t.parts[name]
-	}
-	return css
-}
-
-// partsThemeVariables returns the CSS variables the parts themes take from the page, those a theme uses
-// and does not define itself, once each, in the order of the themes' names.
-func partsThemeVariables() ([]string, error) {
-	themes, err := PartsThemes()
-	if err != nil {
-		return nil, err
-	}
-	var vars []string
-	for _, name := range themes {
-		t, err := readPartsTheme(name)
-		if err != nil {
-			return nil, err
-		}
-		css := []byte(t.all())
-		defined := definedVariables(css)
-		for _, v := range appendFound(nil, usedVariable, string(css)) {
-			if !defined[v] && !slices.Contains(vars, v) {
-				vars = append(vars, v)
-			}
-		}
-	}
-	return vars, nil
-}
-
-var usedVariable = regexp.MustCompile(`var\(\s*(--[\w-]+)`)
 
 // withStyles puts style into page before its </head>, else at its end. Where it goes decides nothing
 // else: the <link>s of page.html (fonts, libraries) are out of the layers, and win over them all.
@@ -765,29 +782,26 @@ var (
 	}
 )
 
-// partVariables returns the CSS variables the style of the parts named, and of those they are drawn in
-// the look of, takes from the theme, once each, in the order of the parts' names.
-func partVariables(names []string) ([]string, error) {
-	set, err := builtinParts()
-	if err != nil {
-		return nil, err
-	}
+// variables returns the CSS variables the style of the parts of set named, and of those they are drawn
+// in the look of, takes from the theme, once each, in the order of the parts' names.
+func (set *partSet) variables(names []string) []string {
 	// The parts used are followed to those they use in turn: tabs holds a stack, which holds a diff, drawn
 	// in the look of code.
+	// One left out (a table of one's own that cannot be used, for Markdown) takes none.
 	used := map[string]bool{}
 	for next := names; len(next) > 0; {
 		name := next[0]
 		next = next[1:]
-		if !used[name] {
+		if p := set.parts[name]; p != nil && !used[name] {
 			used[name] = true
-			next = append(next, set.parts[name].uses...)
+			next = append(next, p.uses...)
 		}
 	}
 	var vars []string
 	for _, name := range slices.Sorted(maps.Keys(used)) {
 		vars = appendFound(vars, fallback, set.parts[name].css)
 	}
-	return vars, nil
+	return vars
 }
 
 // appendFound appends to found what re's first group finds in s, each once.

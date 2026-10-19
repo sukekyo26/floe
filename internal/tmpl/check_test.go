@@ -23,7 +23,7 @@ func TestDrawEveryStage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	l := tmpl.NewLibrary("testdata", "")
+	l := tmpl.NewLibrary("testdata", "", "")
 	d, err := l.Read(file, src, tmpl.Themes{}, "")
 	if err != nil {
 		t.Fatal(err)
@@ -51,7 +51,7 @@ func TestDrawEveryStage(t *testing.T) {
 func TestCheck(t *testing.T) {
 	t.Parallel()
 
-	warnings, mistakes := tmpl.Check("testdata/sizes", "")
+	warnings, mistakes := tmpl.Check("testdata/sizes", "", "")
 	if len(warnings) != 3 || len(mistakes) != 0 {
 		t.Fatalf("Check = %v, %v", warnings, mistakes)
 	}
@@ -69,7 +69,7 @@ func TestCheck(t *testing.T) {
 		"page.css": ":scope { --accent: #00f; --accent-soft: #eef; --surface: #fff; --line: #ccc; --muted: #666; " +
 			"--text-width: 50rem; --mono: monospace; }\n",
 	})
-	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
+	if warnings, mistakes := tmpl.Check(dir, "", ""); len(warnings) != 0 || len(mistakes) != 0 {
 		t.Errorf("Check with template.yaml = %v, %v", warnings, mistakes)
 	}
 }
@@ -283,7 +283,7 @@ func TestCheckMistakes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			warnings, mistakes := tmpl.Check(sizes(t, tt.files), "")
+			warnings, mistakes := tmpl.Check(sizes(t, tt.files), "", "")
 			lines := make([]string, 0, len(mistakes))
 			for _, m := range mistakes {
 				lines = append(lines, strings.Split(m.Error(), "\n")...)
@@ -310,7 +310,7 @@ func TestPageStyleRefused(t *testing.T) {
 
 	dir := sizes(t, map[string]string{"page.html": "<body>|<body>\n<!-- <style> -->\n<style>p {}</style>"})
 	want := filepath.Join(dir, "page.html") + ":6: page.html holds a <style>: write the template's CSS in page.css"
-	if _, mistakes := tmpl.Check(dir, ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+	if _, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %s", mistakes, want)
 	}
 }
@@ -326,15 +326,15 @@ func TestTemplateCSSAndParts(t *testing.T) {
 		"themes/default.css": "body { font-family: sans-serif; }\nhtml{ color: red; }\n",
 		"page.html":          "<body>|<body><span\n" + `data-floe-part="cell nope"></span><i data-floe-part="{{"cell"}}"></i>`,
 	})
-	_, mistakes := tmpl.Check(dir, "")
+	_, mistakes := tmpl.Check(dir, "", "")
 	got := make([]string, 0, len(mistakes))
 	for _, m := range mistakes {
 		got = append(got, strings.TrimPrefix(m.Error(), dir+string(filepath.Separator)))
 	}
 	want := []string{
-		"page.css:4: write the page's root as :scope, not :root",
-		filepath.Join("themes", "default.css") + ":2: write the page's root as :scope, not html",
-		"page.html:5: page.html takes the look of the part nope, which floe does not have; use bars, ",
+		"page.css:4: write the root as :scope, not :root",
+		filepath.Join("themes", "default.css") + ":2: write the root as :scope, not html",
+		"page.html:5: page.html takes the look of the part nope, which there is none of; use bars, ",
 	}
 	if len(got) != len(want) {
 		t.Fatalf("Check = %q, want %q", got, want)
@@ -357,14 +357,14 @@ func TestCSSImportRefused(t *testing.T) {
 		"themes/default.css": "a { color: red; }\n@import url(y.css)",
 	})
 	want := []string{
-		filepath.Join(dir, "page.css") + ":4: floe puts the template's CSS in a layer, where a browser reads no @import",
-		filepath.Join(dir, "themes", "default.css") + ":2: floe puts the template's CSS in a layer",
+		filepath.Join(dir, "page.css") + ":4: floe puts this CSS in a layer, where a browser reads no @import",
+		filepath.Join(dir, "themes", "default.css") + ":2: floe puts this CSS in a layer",
 	}
-	_, mistakes := tmpl.Check(dir, "")
+	_, mistakes := tmpl.Check(dir, "", "")
 	if len(mistakes) != len(want) || !strings.HasPrefix(mistakes[0].Error(), want[0]) || !strings.HasPrefix(mistakes[1].Error(), want[1]) {
 		t.Errorf("Check = %v, want %q", mistakes, want)
 	}
-	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), want[0]) {
+	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), want[0]) {
 		t.Errorf("drawing = %v, want %s", err, want[0])
 	}
 }
@@ -378,12 +378,12 @@ func TestCSSBraceRefused(t *testing.T) {
 		"page.css": "a::before { content: \"} @import x; /*\"; }\n@media print { p { color: red; } }\n}\n/* } */\nb { color: red; }\n",
 	})
 	want := filepath.Join(dir, "page.css") + ":3: this } closes no block"
-	if _, mistakes := tmpl.Check(dir, ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+	if _, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %s", mistakes, want)
 	}
 	// A block left open ends with the template's own <style>.
 	ok := sizes(t, map[string]string{"page.css": "@media print { p { color: red; }\n"})
-	if warnings, mistakes := tmpl.Check(ok, ""); len(mistakes) != 0 {
+	if warnings, mistakes := tmpl.Check(ok, "", ""); len(mistakes) != 0 {
 		t.Errorf("Check of a block left open = %v, %v", warnings, mistakes)
 	}
 }
@@ -404,7 +404,7 @@ func TestCheckVariablesInPage(t *testing.T) {
 			"schema.json":   `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`,
 			"page.css":      page,
 		})
-		warnings, mistakes := tmpl.Check(dir, "")
+		warnings, mistakes := tmpl.Check(dir, "", "")
 		if len(mistakes) != 0 || want == "" && len(warnings) != 0 ||
 			want != "" && (len(warnings) != 1 || !strings.Contains(warnings[0].Error(), want)) {
 			t.Errorf("Check with %s = %v, %v, want %q", page, warnings, mistakes, want)
@@ -420,7 +420,7 @@ func TestCheckName(t *testing.T) {
 	if err := os.CopyFS(dir, os.DirFS("testdata/sizes")); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir, "")
+	_, mistakes := tmpl.Check(dir, "", "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_new_name" {
 		t.Errorf("Check of %s = %v", dir, mistakes)
@@ -435,7 +435,7 @@ func TestCheckMissingFile(t *testing.T) {
 	if err := os.Remove(filepath.Join(dir, "example.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir, "")
+	_, mistakes := tmpl.Check(dir, "", "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_file_missing" {
 		t.Fatalf("Check without example.yaml = %v", mistakes)
@@ -456,7 +456,7 @@ func TestRenderBadAsset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := tmpl.NewLibrary(filepath.Dir(dir), "").Read(file, src, tmpl.Themes{}, "")
+	d, err := tmpl.NewLibrary(filepath.Dir(dir), "", "").Read(file, src, tmpl.Themes{}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -481,7 +481,7 @@ func TestCheckAssetsFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "assets"), nil, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir, "")
+	_, mistakes := tmpl.Check(dir, "", "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_assets_not_dir" {
 		t.Errorf("Check with a file named assets = %v", mistakes)
@@ -496,7 +496,7 @@ func TestCheckFile(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(file, "")
+	_, mistakes := tmpl.Check(file, "", "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_check_not_dir" {
 		t.Errorf("Check of a file = %v", mistakes)
@@ -513,7 +513,7 @@ func TestSchemaOfSharedKeys(t *testing.T) {
 		`"required": ["files"]`, `"required": ["files", "lang"]`, 1)), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := tmpl.NewLibrary(filepath.Dir(dir), "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), tmpl.Themes{}, "")
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), tmpl.Themes{}, "")
 	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json declares or requires lang, title, which floe reads") {
 		t.Errorf("Read with a template whose schema declares lang and title = %v", err)
 	}

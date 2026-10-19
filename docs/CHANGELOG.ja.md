@@ -8,6 +8,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 自分の部品を追加。`FLOE_PARTS_DIR`（既定は `$XDG_CONFIG_HOME/floe/parts`）に、floe の部品と同じファイルを部品ごとのディレクトリに置き、`floe:///parts/<名前>.json` で指す。floe の部品と同じ名前なら丸ごと代わり、floe の部品のテーマはその部品に当たらない。自分の部品のテーマは `FLOE_PARTS_DIR/themes/<名前>/` に置き、floe のテーマと同じ名前なら同じ名前のファイルだけが代わる。使えない部品やテーマは、それを使うページで断り、`floe template check` が警告する。部品のファイルを保存するとリンクしたページを描き直し、部品の置き場所が違うサーバーへの公開は断る。
 - 部品を 22 個追加。組み込みの `report` で使え、テンプレートからは `floe:///parts/<名前>.json` で指す。
   - `stats`: 大きな数と単位、tone の色の注記。`progress`: `of` のうち `done` まで埋まる棒。
   - `steps`: 番号付きの段。それぞれ `done`・`doing`・`todo`。`checklist`: `done` に印の付く項目と、済んだ数。

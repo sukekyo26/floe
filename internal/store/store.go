@@ -302,10 +302,10 @@ func modTime(file string) string {
 }
 
 // stamp sums up the state of sources: the size and mtime of each image, of each index of icons and of
-// every file under the template's directory, and the mtime of the directory of templates, where one
-// may come.
-// LIMIT: walks the template's directory on each look (every second for each open tab). Watch it with
-// fsnotify if templates grow to hundreds of files.
+// every file under the template's directory and under the directories of parts of one's own it read,
+// and the mtime of the directory of templates, where one may come.
+// LIMIT: walks the template's directory and the parts' on each look (every second for each open tab).
+// Watch them with fsnotify if they grow to hundreds of files.
 func stamp(sources tmpl.Sources) string {
 	h := fnv.New64a()
 	add := func(p string) {
@@ -319,25 +319,59 @@ func stamp(sources tmpl.Sources) string {
 	if sources.Templates != "" {
 		add(sources.Templates)
 	}
-	if sources.Template != "" {
-		// A name starting with a dot (.git) is no file of the template.
-		//nolint:errcheck // a file that cannot be walked to is left out of the sum
-		_ = filepath.WalkDir(sources.Template, func(p string, e fs.DirEntry, err error) error {
-			switch {
-			case err != nil:
-				return nil //nolint:nilerr // as above
-			case p != sources.Template && strings.HasPrefix(e.Name(), ".") && e.IsDir():
-				return fs.SkipDir
-			case !e.IsDir() && !strings.HasPrefix(e.Name(), "."):
-				add(p)
-			}
-			return nil
-		})
+	note := func(s string) {
+		_, _ = fmt.Fprintf(h, "%s\n", s) //nolint:errcheck // a hash takes every write
+	}
+	addTree(sources.Template, add, note)
+	for _, dir := range sources.Parts {
+		addTree(dir, add, note)
 	}
 	for _, file := range slices.Concat(sources.Images, sources.Icons) {
 		add(file)
 	}
 	return strconv.FormatUint(h.Sum64(), 36)
+}
+
+// addTree adds each file under dir, "" for none, a symlink followed, to a stamp with add, but those of a
+// name starting with a dot (.git), no file of a template or a part. A symlink in it to a directory in it
+// is walked through. One that leads out of it is noted with where it leads, not walked: floe reads no
+// file through it, or reads it as a directory of its own (a part kept elsewhere), which Sources names.
+func addTree(dir string, add, note func(string)) {
+	root, err := filepath.EvalSymlinks(dir)
+	if dir == "" || err != nil {
+		return
+	}
+	walked := map[string]bool{}
+	var walk func(dir string)
+	walk = func(dir string) {
+		walked[dir] = true
+		//nolint:errcheck // a file that cannot be walked to is left out of the sum
+		_ = filepath.WalkDir(dir, func(p string, e fs.DirEntry, err error) error {
+			switch {
+			case err != nil:
+				return nil //nolint:nilerr // as above
+			case p != dir && strings.HasPrefix(e.Name(), "."):
+				if e.IsDir() {
+					return fs.SkipDir
+				}
+			case e.Type()&fs.ModeSymlink != 0:
+				to, err := filepath.EvalSymlinks(p)
+				fi, statErr := os.Stat(p)
+				switch {
+				case err != nil || statErr != nil || !fi.IsDir():
+					add(p)
+				case to != root && !strings.HasPrefix(to, root+string(filepath.Separator)):
+					note(p + " -> " + to)
+				case !walked[to]:
+					walk(to)
+				}
+			case !e.IsDir():
+				add(p)
+			}
+			return nil
+		})
+	}
+	walk(root)
 }
 
 // Listed is an entry of the list. A link takes its title and update time from the file; Missing is

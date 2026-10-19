@@ -621,8 +621,8 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 	}
 }
 
-// A publish that means other icons than the server's is refused, from another build too, which would
-// otherwise replace the server with one drawing every page with them; the same directory written
+// A publish that means other icons or parts than the server's is refused, from another build too, which
+// would otherwise replace the server with one drawing every page with them; the same directory written
 // otherwise passes.
 func TestPublishOtherDirs(t *testing.T) {
 	t.Parallel()
@@ -644,13 +644,20 @@ func TestPublishOtherDirs(t *testing.T) {
 			r = e.exe(t, bin, "publish", page)
 		}
 		want(t, "publish from "+what+" with other icons", r, 1, "",
-			"floe: the server on port "+e.port+" draws pages with the templates of "+first.Templates+" and the icons of "+first.Icons)
+			"floe: the server on port "+e.port+" draws pages with the templates of "+first.Templates+", the parts of "+
+				first.Parts+" and the icons of "+first.Icons)
 	}
 	if h, _ := e.health(t); h.PID != first.PID {
 		t.Errorf("the server was replaced: pid %d, then %d", first.PID, h.PID)
 	}
 	e.vars["FLOE_ICONS_DIR"] = first.Icons + string(filepath.Separator)
 	want(t, "publish with the icons written with a slash at the end", e.run(t, "", "publish", page), 0, e.base()+"/a/dirs/\n", "updated")
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "other-parts")
+	if err := os.Mkdir(e.vars["FLOE_PARTS_DIR"], 0o700); err != nil {
+		t.Fatal(err)
+	}
+	want(t, "publish with other parts", e.run(t, "", "publish", page), 1, "",
+		"floe: the server on port "+e.port+" draws pages with the templates of "+first.Templates+", the parts of "+first.Parts)
 }
 
 // A relative FLOE_DIR is under the working directory: the server keeps the one it was started for, and

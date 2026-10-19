@@ -35,7 +35,7 @@ func (a *app) store() *store.Store {
 }
 
 func (a *app) templates() *tmpl.Library {
-	return tmpl.NewLibrary(a.cfg.templates, a.cfg.icons)
+	return tmpl.NewLibrary(a.cfg.templates, a.cfg.parts, a.cfg.icons)
 }
 
 // abs puts a relative dir under the working directory; "" stays "".
@@ -136,8 +136,9 @@ func (a *app) publish(ctx context.Context, file string, opts store.Options) erro
 		return err //nolint:wrapcheck // already says what failed
 	}
 	server := daemon.Server{
-		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.cfg.templates, Icons: a.cfg.icons,
-		Env: a.serverEnv(),
+		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.cfg.templates, Parts: a.cfg.parts,
+		Icons: a.cfg.icons,
+		Env:   a.serverEnv(),
 	}
 	// Before the check, which would find mistakes with templates the server does not draw with.
 	if err = daemon.CheckDirs(ctx, server); err != nil {
@@ -185,7 +186,7 @@ func (a *app) noticeUpdate(e *store.Entry) {
 func (a *app) serverEnv() []string {
 	env := append([]string{}, a.env.Environ...)
 	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home,
-		"FLOE_TEMPLATES_DIR="+a.cfg.templates, "FLOE_ICONS_DIR="+a.cfg.icons)
+		"FLOE_TEMPLATES_DIR="+a.cfg.templates, "FLOE_PARTS_DIR="+a.cfg.parts, "FLOE_ICONS_DIR="+a.cfg.icons)
 }
 
 func localTime(iso string) string {

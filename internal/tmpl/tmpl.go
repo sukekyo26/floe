@@ -104,6 +104,7 @@ func (l *Library) Read(file string, src []byte, themes Themes, cwd string) (*Dat
 // changes, whether the read found mistakes or not.
 type Sources struct {
 	Templates string   // the directory of templates of one's own, where one may come; "" for none
+	Parts     []string // the directories of parts of one's own read, whose files the data may be drawn with
 	Template  string   // the directory of the template of one's own the data names; "" for none
 	Images    []string // the images the data names, read or not
 	Icons     []string // the index files of the icon sets, when it has a diagram, fetched or not
@@ -111,7 +112,11 @@ type Sources struct {
 
 // ReadSources reads the data file src as Read does, and returns its Sources too.
 func (l *Library) ReadSources(file string, src []byte, themes Themes, cwd string) (*Data, Sources, error) {
-	sources := Sources{Templates: l.dir, Template: "", Images: nil, Icons: nil}
+	sources := Sources{Templates: l.dir, Parts: nil, Template: "", Images: nil, Icons: nil}
+	if l.parts != "" {
+		// Where one may come, when none has been read.
+		sources.Parts = []string{l.parts}
+	}
 	dir := filepath.Dir(file)
 	if !filepath.IsAbs(dir) {
 		dir = filepath.Join(cwd, dir)
@@ -151,6 +156,9 @@ func (l *Library) ReadSources(file string, src []byte, themes Themes, cwd string
 	}
 	err = t.check(h, dir, themes, problems)
 	sources.Images, sources.Icons = d.tried, d.icons
+	if t.set != nil && t.set.dirs != nil {
+		sources.Parts = t.set.dirs
+	}
 	if err != nil {
 		return nil, sources, err
 	}
@@ -225,10 +233,11 @@ func (t *Template) check(h *head, dir string, given Themes, problems yamlpos.Pro
 	if err != nil {
 		return err
 	}
-	partsThemes, err := PartsThemes()
+	set, err := t.parts()
 	if err != nil {
 		return err
 	}
+	partsThemes := set.themeNames()
 	// A theme of one kind named as one of the other is told where it goes.
 	unknown := misplaced(cmp.Or(given.Template, d.Theme), themes, partsThemes, "tmpl_unknown_theme", "tmpl_theme_of_parts")
 	more, err := pickTheme(d, &d.Theme, given.Template, themes, h.where["theme"], unknown)
@@ -241,6 +250,13 @@ func (t *Template) check(h *head, dir string, given Themes, problems yamlpos.Pro
 	more, err = pickTheme(d, &d.PartsTheme, given.Parts, partsThemes, h.where["parts-theme"], unknown)
 	if err != nil {
 		return err
+	}
+	broken := set.brokenThemes[d.PartsTheme]
+	switch {
+	case broken != nil && given.Parts != "":
+		return usererr.New("tmpl_parts_theme_broken", d.PartsTheme, broken)
+	case broken != nil && more == nil:
+		more = yamlpos.Problems{yamlpos.New(d.File, h.where["parts-theme"], "tmpl_parts_theme_broken", d.PartsTheme, broken)}
 	}
 	problems = append(problems, more...)
 	return checkValues(t, d, h.root, dir, problems)
@@ -288,7 +304,11 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 	if err = t.refuseShared(s); err != nil {
 		return err
 	}
-	err = validate(src, d, root)
+	set, err := t.parts()
+	if err != nil {
+		return err
+	}
+	err = validate(set, src, d, root)
 	var more yamlpos.Problems
 	switch {
 	case errors.As(err, &more):
@@ -429,7 +449,11 @@ func (d *Data) Render(title string) ([]byte, error) {
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	out := b.Bytes()
-	style, err := pageStyle(out, own, d.PartsTheme)
+	set, err := t.parts()
+	if err != nil {
+		return nil, err
+	}
+	style, err := set.pageStyle(out, own, d.PartsTheme)
 	if err != nil {
 		return nil, err
 	}
@@ -546,12 +570,12 @@ func (t *Template) decodeSchema(b []byte) (*schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	set, err := builtinParts()
+	set, err := t.parts()
 	if err != nil {
 		return nil, err
 	}
 	if _, into := s.first("#", func(x *schema) bool { _, into := set.pointsInto(x.Ref); return into }); into != nil {
-		return nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(into.Ref))
+		return nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(set, into.Ref))
 	}
 	if ptr, as := s.first("#", func(x *schema) bool { return isGoPart(x.Format) }); as != nil {
 		return nil, usererr.New("tmpl_format_part", t.file("schema.json"), ptr, as.Format, as.Format)
@@ -566,7 +590,7 @@ func (t *Template) readSchema(b []byte) (*schema, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
 	}
-	set, err := builtinParts()
+	set, err := t.parts()
 	if err != nil {
 		return nil, err
 	}

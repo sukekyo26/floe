@@ -37,7 +37,7 @@ func newEnv(t *testing.T) env {
 		t.Fatal(err)
 	}
 	mkdir(t, filepath.Join(tmp, "home"))
-	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary("", ""))}
+	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary("", "", ""))}
 }
 
 func mkdir(t *testing.T, dir string) {
@@ -694,7 +694,7 @@ func TestStoreUnderPatternPath(t *testing.T) {
 
 	e := newEnv(t)
 	root := filepath.Join(e.tmp, "[notes]", "store")
-	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", ""))
+	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", ""))
 	doc := e.page(t, "plan.yaml", "Plan")
 	for range 2 {
 		entry, err := st.Prepare(t.Context(), doc, store.Options{}, e.tmp)
@@ -717,7 +717,7 @@ func TestNoStore(t *testing.T) {
 
 	e := newEnv(t)
 	root := filepath.Join(e.tmp, "none")
-	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", ""))
+	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", ""))
 	wantUserErr(t, st.Remove("x"), "store_no_page", "x")
 	if _, err := st.Edit("x", store.Edit{Description: ptr("d")}); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("an edit in no store = %v", err)
@@ -1048,7 +1048,7 @@ func TestLinkDataFileTwice(t *testing.T) {
 	if err := os.CopyFS(filepath.Join(dir, "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
 		t.Fatal(err)
 	}
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, ""))
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, "", ""))
 	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nlang: en\n")
 	link := func(slug, theme string) store.Meta {
 		t.Helper()
@@ -1090,7 +1090,7 @@ func TestLinkDataFileIcons(t *testing.T) {
 
 	e := newEnv(t)
 	icons := filepath.Join(e.tmp, "icons")
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", icons))
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", icons))
 	data := e.write(t, "proj/spec.yaml", "template: report\nsections:\n  - parts:\n      - diagram:\n          id: a\n"+
 		"          width: 100\n          height: 50\n          title: t\n          parts:\n"+
 		"            - icon: { x: 10, y: 5, name: aws/aws-lambda, size: 24 }\nlang: en\n")
@@ -1110,6 +1110,90 @@ func TestLinkDataFileIcons(t *testing.T) {
 	}
 	if page, _, err := s.Draw("spec", &m, data); err != nil || !strings.Contains(string(page), `<use href="#a_icon-`) {
 		t.Errorf("Draw with the icons = %v", err)
+	}
+}
+
+// A linked data file drawn with a part and a parts theme of one's own, kept elsewhere and linked into the
+// directory of parts, itself a symlink, is drawn again when a file of either is saved, or the link is
+// pointed elsewhere or removed, and not when a file a link in the part leads out to is, which floe does
+// not read.
+func TestLinkDataFileParts(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	kept := filepath.Join(e.tmp, "kept", "note")
+	e.write(t, "kept/note/schema.json", `{"type": "object", "properties": {"text": {"type": "string"}}}`)
+	e.write(t, "kept/note/part.html", `<aside data-floe-part="note">{{.text}}</aside>`)
+	css := e.write(t, "kept/note/part.css", ":scope { margin: 0; }\n")
+	theme := e.write(t, "kept/mine/base.css", ":root { --mine-ink: #123; }\n")
+	out := e.write(t, "elsewhere/notes.txt", "x")
+	if err := os.Symlink(filepath.Dir(out), filepath.Join(kept, "elsewhere")); err != nil {
+		t.Fatal(err)
+	}
+	under := filepath.Join(e.tmp, "real-parts")
+	if err := os.MkdirAll(filepath.Join(under, "themes"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for link, to := range map[string]string{
+		filepath.Join(under, "note"): kept, filepath.Join(under, "themes", "mine"): filepath.Dir(theme),
+		filepath.Join(e.tmp, "parts"): under,
+	} {
+		if err := os.Symlink(to, link); err != nil {
+			t.Fatal(err)
+		}
+	}
+	parts := filepath.Join(e.tmp, "parts")
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", parts, ""))
+	data := e.write(t, "proj/spec.yaml", "template: report\nlang: en\nparts-theme: mine\nsections:\n  - parts:\n      - note: { text: Mine }\n")
+	m := store.Meta{Path: data}
+	page, version, err := s.Draw("spec", &m, data)
+	if err != nil || !strings.Contains(string(page), `<aside data-floe-part="note">Mine</aside>`) {
+		t.Fatalf("Draw with the note of one's own = %v:\n%s", err, page)
+	}
+	if v := s.Version("spec", &m, data); v != version {
+		t.Fatalf("the version moved from %q to %q with nothing changed", version, v)
+	}
+	later := time.Now().Add(time.Hour)
+	if err = os.Chtimes(out, later, later); err != nil {
+		t.Fatal(err)
+	}
+	if v := s.Version("spec", &m, data); v != version {
+		t.Errorf("the version moved from %q to %q once a file out of the part is saved", version, v)
+	}
+	for i, file := range []string{css, theme} {
+		later := time.Now().Add(time.Duration(i+1) * time.Minute)
+		if err = os.Chtimes(file, later, later); err != nil {
+			t.Fatal(err)
+		}
+		if v := s.Version("spec", &m, data); v == version {
+			t.Errorf("the version stays %q once %s is saved", v, file)
+		}
+		version = s.Version("spec", &m, data)
+	}
+	// The part's link pointed at another copy of it, then removed.
+	link := filepath.Join(under, "note")
+	e.write(t, "kept2/note/schema.json", `{"type": "object", "properties": {"text": {"type": "string"}}}`)
+	e.write(t, "kept2/note/part.html", `<aside data-floe-part="note">{{.text}}</aside>`)
+	e.write(t, "kept2/note/part.css", ":scope { margin: 0; }\n")
+	for _, step := range []struct {
+		what   string
+		change func() error
+	}{
+		{"pointed elsewhere", func() error {
+			if rmErr := os.Remove(link); rmErr != nil {
+				return rmErr
+			}
+			return os.Symlink(filepath.Join(e.tmp, "kept2", "note"), link)
+		}},
+		{"removed", func() error { return os.Remove(link) }},
+	} {
+		if err = step.change(); err != nil {
+			t.Fatal(err)
+		}
+		if v := s.Version("spec", &m, data); v == version {
+			t.Errorf("the version stays %q once the part's link is %s", v, step.what)
+		}
+		version = s.Version("spec", &m, data)
 	}
 }
 

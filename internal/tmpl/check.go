@@ -23,8 +23,9 @@ import (
 
 // Check checks the template at dir as a template of the directory's name, whatever its example.yaml
 // names: its files, then its example.yaml through every stage of a publish, drawing included, with the
-// icons kept in iconsDir in its diagrams. The mistakes stop it from being drawn, and the warnings do not.
-func Check(dir, iconsDir string) (warnings []*usererr.Error, mistakes []error) {
+// parts of partsDir and the icons kept in iconsDir in its diagrams. The mistakes stop it from being drawn,
+// and the warnings do not.
+func Check(dir, partsDir, iconsDir string) (warnings []*usererr.Error, mistakes []error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, []error{usererr.CannotRead(dir, err)}
@@ -37,7 +38,7 @@ func Check(dir, iconsDir string) (warnings []*usererr.Error, mistakes []error) {
 		return nil, []error{usererr.CannotRead(dir, err)}
 	}
 	// Found as a library of the directory above would find it, symlink and all.
-	t, err := NewLibrary(filepath.Dir(abs), iconsDir).resolve(name)
+	t, err := NewLibrary(filepath.Dir(abs), partsDir, iconsDir).resolve(name)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -92,7 +93,11 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	sch, doc, err := compileSchema(t.Name, src)
+	set, err := t.parts()
+	if err != nil {
+		return nil, []error{err}
+	}
+	sch, doc, err := compileSchema(set, t.Name, src)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -101,7 +106,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 		return nil, []error{err}
 	}
 	lint := &schemaLint{
-		file: t.file("schema.json"), base: schemaURL(t.Name), warnings: nil, mistakes: nil, parts: nil,
+		file: t.file("schema.json"), base: schemaURL(t.Name), warnings: nil, mistakes: nil, parts: nil, set: set,
 	}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
@@ -128,7 +133,28 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	}
 	mistakes = append(mistakes, t.checkAssets(page)...)
 	mistakes = append(mistakes, t.checkCSS()...)
-	return warnings, append(mistakes, t.checkNamedParts(src)...)
+	return append(warnings, brokenParts(set, src)...), append(mistakes, t.checkNamedParts(src)...)
+}
+
+// brokenParts warns of each part of one's own in set that cannot be used, but those src, page.html,
+// names, which checkNamedParts refuses: the schema refers to none of them, as it compiled. A parts theme
+// that cannot be used is warned of too: a data file picks it.
+func brokenParts(set *partSet, src []byte) []*usererr.Error {
+	named := map[string]bool{}
+	for _, n := range namedParts(string(src)) {
+		named[n.name] = true
+	}
+	var warnings []*usererr.Error
+	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
+		// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
+		if !named[name] || set.parts[name] != nil {
+			warnings = append(warnings, usererr.New("tmpl_part_broken", name, set.broken[name]))
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
+		warnings = append(warnings, usererr.New("tmpl_parts_theme_broken", name, set.brokenThemes[name]))
+	}
+	return append(warnings, set.strays...)
 }
 
 // checkCSS returns the mistakes of page.css and of each theme of t that ownCSS refuses.
@@ -153,13 +179,17 @@ func (t *Template) checkCSS() []error {
 // checkNamedParts returns a mistake for each part src, page.html, takes the look of, by data-floe-part,
 // that floe does not have: the page would get no style for it.
 func (t *Template) checkNamedParts(src []byte) []error {
-	set, err := builtinParts()
+	set, err := t.parts()
 	if err != nil {
 		return []error{err}
 	}
 	var mistakes []error
 	for _, n := range namedParts(string(src)) {
-		if _, ok := set.parts[n.name]; !ok {
+		switch _, ok := set.parts[n.name]; {
+		case ok:
+		case set.broken[n.name] != nil:
+			mistakes = append(mistakes, usererr.New("tmpl_part_broken", n.name, set.broken[n.name]))
+		default:
 			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), lineAt(src, n.at), n.name,
 				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")))
 		}
@@ -173,9 +203,9 @@ func (t *Template) checkNamedParts(src []byte) []error {
 // LIMIT: a variable is looked for as written (--fg:), not as CSS reads it. Parse the CSS if a theme
 // comes to define one otherwise (through @import, or in a comment that hides it).
 func (t *Template) checkThemeVariables(lint *schemaLint) ([]*usererr.Error, error) {
-	vars, err := lint.variables()
-	if vars == nil || err != nil {
-		return nil, err
+	vars := lint.variables()
+	if vars == nil {
+		return nil, nil
 	}
 	themes, err := t.themes()
 	if err != nil {
@@ -510,6 +540,7 @@ type schemaLint struct {
 	mistakes []error
 	base     string   // the schema's URL, which a relative $ref is read from
 	parts    []string // the parts of floe's that draw the items it declares, once each
+	set      *partSet // the parts the template is drawn with
 }
 
 // walk walks the schema v at the JSON pointer ptr. reached tells that prepare reaches it, through
@@ -543,7 +574,7 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 	case isGoPart(f):
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_part", l.file, ptr, f, f))
 		return true
-	case !knownFormat(f):
+	case !knownFormat(l.set, f):
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unknown", l.file, ptr, f))
 	case slices.Contains(formats, f) && !reached:
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unreached", l.file, ptr, f))
@@ -562,11 +593,8 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 
 // variables returns the CSS variables floe's base, the parts and diagrams l found, and the parts themes
 // take from the theme, once each.
-func (l *schemaLint) variables() ([]string, error) {
-	vars, err := partVariables(l.parts)
-	if err != nil {
-		return nil, err
-	}
+func (l *schemaLint) variables() []string {
+	vars := l.set.variables(l.parts)
 	// floe's base styles every page, the template's own text, lists, links, code and quotes, and those in
 	// the parts.
 	more := appendFound(nil, fallback, baseCSS)
@@ -575,18 +603,14 @@ func (l *schemaLint) variables() ([]string, error) {
 	// LIMIT: every variable of every parts theme, not those of its files of the parts used; read only those
 	// files if a template of few parts comes to be warned of others' colours.
 	if len(l.parts) > 0 {
-		themes, err := partsThemeVariables()
-		if err != nil {
-			return nil, err
-		}
-		more = append(more, themes...)
+		more = append(more, l.set.themeVariables()...)
 	}
 	for _, v := range more {
 		if !slices.Contains(vars, v) {
 			vars = append(vars, v)
 		}
 	}
-	return vars, nil
+	return vars
 }
 
 // part notes the part of floe's ref names, at ptr, and reports whether it names one: one prepare does
@@ -598,15 +622,12 @@ func (l *schemaLint) part(ref, ptr string, reached bool) bool {
 		return false
 	}
 	name, ok := partName(ref)
-	set, err := builtinParts()
-	if err != nil {
-		l.mistakes = append(l.mistakes, err)
-		return false
-	}
+	set := l.set
 	switch {
 	case !ok:
 		if _, into := set.pointsInto(ref); into {
-			l.mistakes = append(l.mistakes, usererr.New("tmpl_item", l.file, usererr.New("tmpl_item", ptr, unknownPart(ref))))
+			l.mistakes = append(l.mistakes,
+				usererr.New("tmpl_item", l.file, usererr.New("tmpl_item", ptr, unknownPart(set, ref))))
 		}
 		return false
 	case set.parts[name] == nil:

@@ -31,10 +31,7 @@ func TestPalette(t *testing.T) {
 	for name := range set.parts {
 		names = append(names, name)
 	}
-	vars, err := partVariables(names)
-	if err != nil {
-		t.Fatal(err)
-	}
+	vars := set.variables(names)
 	for name, p := range set.parts {
 		// The style of a part floe draws in Go is its package's: the diagrams' takes variables of its own.
 		if bare := regexp.MustCompile(`var\(\s*--[\w-]+\s*\)`).FindString(p.css); bare != "" && p.pages != nil {
@@ -53,24 +50,21 @@ func TestPalette(t *testing.T) {
 	}
 	// compare is drawn in the table's look, so a theme for it is warned of the table's variables too, and
 	// tabs of those of code, which a diff in it is drawn in the look of.
-	if compare, cerr := partVariables([]string{"compare"}); cerr != nil || !slices.Contains(compare, "--line") {
-		t.Errorf("the variables of compare = %v, %v", compare, cerr)
+	if compare := set.variables([]string{"compare"}); !slices.Contains(compare, "--line") {
+		t.Errorf("the variables of compare = %v", compare)
 	}
-	if tabs, terr := partVariables([]string{"tabs"}); terr != nil || !slices.Contains(tabs, "--code-bg") || !slices.Contains(tabs, "--code-add") {
-		t.Errorf("the variables of tabs = %v, %v", tabs, terr)
+	if tabs := set.variables([]string{"tabs"}); !slices.Contains(tabs, "--code-bg") || !slices.Contains(tabs, "--code-add") {
+		t.Errorf("the variables of tabs = %v", tabs)
 	}
 	// A theme defines these for diagrams to follow it.
 	want := []string{
 		"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
 		"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono",
 	}
-	if got, derr := partVariables([]string{"diagram"}); derr != nil || !slices.Equal(got, want) {
-		t.Errorf("the variables of diagram = %v, %v, want %v", got, derr, want)
+	if got := set.variables([]string{"diagram"}); !slices.Equal(got, want) {
+		t.Errorf("the variables of diagram = %v, want %v", got, want)
 	}
-	themes, err := partsThemeVariables()
-	if err != nil {
-		t.Fatal(err)
-	}
+	themes := set.themeVariables()
 	for _, v := range slices.Concat(vars, themes) {
 		if !slices.Contains(palette, v) {
 			t.Errorf("%s is not of the palette", v)
@@ -134,32 +128,6 @@ func TestTagsOf(t *testing.T) {
 	}
 	if got := tagsOf([]byte("<p>x</p>")); got != (tags{head: -1, style: -1, link: -1}) {
 		t.Errorf("tagsOf of a page without them = %+v", got)
-	}
-}
-
-// Every file of a parts theme is its base.css, its parts.css or the style of one of floe's parts: a file
-// of another name would go into no page.
-func TestPartsThemeFiles(t *testing.T) {
-	t.Parallel()
-
-	set, err := builtinParts()
-	if err != nil {
-		t.Fatal(err)
-	}
-	themes, err := PartsThemes()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, name := range themes {
-		theme, err := readPartsTheme(name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for part := range theme.parts {
-			if _, ok := set.parts[part]; !ok {
-				t.Errorf("the parts theme %s has %s.css, which is no part's", name, part)
-			}
-		}
 	}
 }
 

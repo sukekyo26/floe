@@ -98,9 +98,10 @@ type Server struct {
 	Port  int
 	Root  string
 	Build string
-	// Templates and Icons are the directories the server must draw pages with: those the publish checked
-	// the data file with.
+	// Templates, Parts and Icons are the directories the server must draw pages with: those the publish
+	// checked the data file with.
 	Templates string
+	Parts     string
 	Icons     string
 	// Env is the environment of the started server (it reads its settings from there).
 	Env []string
@@ -152,20 +153,22 @@ func Ensure(ctx context.Context, s Server) error {
 	}
 }
 
-// CheckDirs refuses a server of floe on the port that serves the root with other directories of templates
-// or icons, so that a publish says so before it checks a data file with its own. None there passes.
+// CheckDirs refuses a server of floe on the port that serves the root with other directories of
+// templates, parts or icons, so that a publish says so before it checks a data file with its own. None
+// there passes.
 func CheckDirs(ctx context.Context, s Server) error {
 	return s.otherDirs(Probe(ctx, s.base()))
 }
 
 // otherDirs refuses p, a server of floe that serves the root of s, when it draws with other directories
-// of templates or icons than s.
+// of templates, parts or icons than s.
 func (s Server) otherDirs(p Status) error {
-	if p.State != Ours || !sameDir(p.Health.Root, s.Root) ||
-		sameOrUnread(p.Health.Templates, s.Templates) && sameOrUnread(p.Health.Icons, s.Icons) {
+	if p.State != Ours || !sameDir(p.Health.Root, s.Root) || sameOrUnread(p.Health.Templates, s.Templates) &&
+		sameOrUnread(p.Health.Parts, s.Parts) && sameOrUnread(p.Health.Icons, s.Icons) {
 		return nil
 	}
-	return usererr.New("daemon_other_dirs", s.Port, p.Health.Templates, p.Health.Icons, s.Templates, s.Icons)
+	return usererr.New("daemon_other_dirs", s.Port, p.Health.Templates, p.Health.Parts, p.Health.Icons, s.Templates,
+		s.Parts, s.Icons)
 }
 
 // sameDir reports whether a and b name one directory: as written once cleaned, or through a symlink.

@@ -58,6 +58,15 @@ func TestTemplateCommands(t *testing.T) {
 	if err = os.WriteFile(filepath.Join(spec, "template.yaml"), floe, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
 		t.Fatal(err)
 	}
+	// A part of one's own that cannot be used is told once, however many templates are checked.
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	if err = os.MkdirAll(filepath.Join(e.tmp, "parts", "base"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if r := e.run(t, "", "template", "check", spec, spec); r.code != 0 || strings.Count(r.stderr, "the part base cannot be used") != 1 {
+		t.Errorf("template check of two templates with a part that cannot be used = %+v", r)
+	}
+	delete(e.vars, "FLOE_PARTS_DIR")
 	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.Contains(r.stdout, "\nspec\t"+spec+"\tdefault\t"+release[0]+"."+release[1]+".0\tA page of sections") {
 		t.Errorf("template list with a copy = %+v", r)
 	}

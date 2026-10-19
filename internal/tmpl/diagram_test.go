@@ -78,7 +78,7 @@ func TestDiagramIcons(t *testing.T) {
 	if err := os.CopyFS(dir, os.DirFS("../diagram/testdata/icons")); err != nil {
 		t.Fatal(err)
 	}
-	l := tmpl.NewLibrary("", dir)
+	l := tmpl.NewLibrary("", "", dir)
 	d, err := l.Read("data.yaml", []byte(src), tmpl.Themes{}, "")
 	if err != nil {
 		t.Fatal(err)
@@ -103,7 +103,7 @@ func TestDiagramIcons(t *testing.T) {
 		t.Errorf("Read after the icons changed = %v, want the icon unknown", err)
 	}
 	// Without the icons fetched, the drawing stops and says how to fetch them.
-	_, err = tmpl.NewLibrary("", t.TempDir()).Read("data.yaml", []byte(src), tmpl.Themes{}, "")
+	_, err = tmpl.NewLibrary("", "", t.TempDir()).Read("data.yaml", []byte(src), tmpl.Themes{}, "")
 	if err == nil || !strings.Contains(err.Error(), "floe icons fetch aws") {
 		t.Errorf("Read without the icons = %v", err)
 	}

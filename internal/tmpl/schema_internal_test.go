@@ -101,7 +101,11 @@ func TestSchemaRefersToNoFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	d, root := data(t, "a: x\n")
-	err := validate([]byte(`{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = validate(set, []byte(`{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
 	if err == nil || !strings.Contains(err.Error(), "a schema refers to no other file or URL") {
 		t.Errorf("validate of a $ref to a file = %v", err)
 	}
@@ -112,8 +116,12 @@ func schemaProblems(t *testing.T, schema, src string) yamlpos.Problems {
 
 	d, root := data(t, src)
 	d.Template = "report"
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var p yamlpos.Problems
-	if err := validate([]byte(schema), d, root); !errors.As(err, &p) {
+	if err := validate(set, []byte(schema), d, root); !errors.As(err, &p) {
 		t.Fatalf("validate = %v, want problems", err)
 	}
 	return p

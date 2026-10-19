@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add parts of your own: a directory each in `FLOE_PARTS_DIR` (default
+  `$XDG_CONFIG_HOME/floe/parts`) of the files floe's parts have, referred to
+  as `floe:///parts/<name>.json`. One of the name of one of floe's takes its
+  place whole, and floe's parts themes do not style it. Parts themes of your
+  own go in `FLOE_PARTS_DIR/themes/<name>/`, a theme of the name of one of
+  floe's taking the place of its files of their names. A part or theme that
+  cannot be used is refused to the pages that use it and warned of by
+  `floe template check`; a linked page is drawn again when a file of a part
+  is saved, and a publish to a server of other parts is refused.
 - Add twenty-two parts, which the built-in `report` takes and a template
   refers to as `floe:///parts/<name>.json`: `stats` (large numbers with a unit and a
   note in a tone), `progress` (bars of `done` of `of`), `steps` (numbered,
