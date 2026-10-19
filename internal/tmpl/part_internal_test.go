@@ -130,6 +130,47 @@ func TestTagsOf(t *testing.T) {
 	}
 }
 
+// Every file of a parts theme is its base.css, its parts.css or the style of one of floe's parts: a file
+// of another name would go into no page.
+func TestPartsThemeFiles(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	themes, err := PartsThemes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range themes {
+		theme, err := readPartsTheme(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for part := range theme.parts {
+			if _, ok := set.parts[part]; !ok {
+				t.Errorf("the parts theme %s has %s.css, which is no part's", name, part)
+			}
+		}
+	}
+}
+
+// A part's style comes after that of the parts it is drawn in the look of, which it adjusts, and of the
+// parts it holds; the others keep the order given.
+func TestInOrder(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := set.inOrder([]string{"compare", "details", "findings", "stack", "table"})
+	if want := []string{"table", "compare", "stack", "details", "findings"}; !slices.Equal(got, want) {
+		t.Errorf("inOrder = %v, want %v", got, want)
+	}
+}
+
 // A description beside a $ref is ended as a sentence of its script before the part's.
 func TestJoinDescriptions(t *testing.T) {
 	t.Parallel()
