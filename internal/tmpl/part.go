@@ -533,13 +533,13 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 }
 
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
-// selectors: floe's base, under the template's own CSS (own: its page.css, then its theme, a style
-// sheet each), under the parts'. The parts' are the style of each part the page names, by its own
-// element, a table of Markdown, or HTML that takes a part's look (<span class="good" data-floe-part="cell">),
-// after the parts it is drawn in the look of, which it adjusts; then the parts theme theme: its base.css,
-// which every page gets, as it holds its variables and the look of Markdown's quotes, its parts.css, the
-// rules of several parts, and its style of each of those parts in the same order. Within the layer the
-// more specific rule wins, else the later.
+// selectors: floe's base, under the template's own CSS (own: its page.css, then its theme), under the
+// parts'. The parts' are the style of each part the page names, by its own element, a table of Markdown,
+// or HTML that takes a part's look (<span class="good" data-floe-part="cell">), after the parts it is
+// drawn in the look of, which it adjusts; then the parts theme theme: its base.css, which every page
+// gets, as it holds its variables and the look of Markdown's quotes, its parts.css, the rules of several
+// parts, and its style of each of those parts in the same order. Within the layer the more specific rule
+// wins, else the later.
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
@@ -548,30 +548,36 @@ func (set *partSet) pageStyle(page []byte, own [][]byte, theme string) (string, 
 	if themed == nil {
 		return "", fmt.Errorf("draw with the parts theme %s: %w", theme, fs.ErrNotExist)
 	}
-	var parts strings.Builder
-	themes := themed.base
-	if bytes.Contains(page, []byte("data-floe-part")) {
-		if themed.shared != "" {
-			themes += everyPart(themed.shared)
-		}
-		for _, name := range set.inOrder(set.partsNamedIn(string(page))) {
-			parts.WriteString(scoped(name, set.parts[name].css))
-			if t := themed.parts[name]; t != "" {
-				themes += scoped(name, t)
-			}
+	// The first sheet names the layers, which puts them in that order. Each file after it is a sheet of
+	// its own, so that a mistake in it, a comment or a block left open, ends with it.
+	style := "<style>\n@layer floe.base, floe.page, floe.parts;\n@layer floe.base {\n" + baseCSS + "}\n</style>\n"
+	sheet := func(layer, css string) {
+		if css != "" {
+			style += "<style>\n@layer " + layer + " {\n" + css + "}\n</style>\n"
 		}
 	}
-	// Each file of the template's CSS is a style sheet of its own, so that a mistake in it, a comment or a
-	// block left open, ends with it; the first sheet names the layers, which puts them in that order.
-	style := "<style>\n@layer floe.base, floe.page, floe.parts;\n" +
-		"@layer floe.base {\n" + baseCSS + "}\n" +
-		"@layer floe.parts {\n" + parts.String() + themes + "}\n</style>\n"
-	for _, css := range own {
-		if len(css) == 0 {
-			continue
+	var names []string
+	if bytes.Contains(page, []byte("data-floe-part")) {
+		names = set.inOrder(set.partsNamedIn(string(page)))
+	}
+	for _, name := range names {
+		if css := set.parts[name].css; css != "" {
+			sheet("floe.parts", scoped(name, css))
 		}
-		style += "<style>\n@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(css) +
-			"}\n}\n</style>\n"
+	}
+	sheet("floe.parts", themed.base)
+	if names != nil && themed.shared != "" {
+		sheet("floe.parts", everyPart(themed.shared))
+	}
+	for _, name := range names {
+		if t := themed.parts[name]; t != "" {
+			sheet("floe.parts", scoped(name, t))
+		}
+	}
+	for _, css := range own {
+		if len(css) != 0 {
+			sheet("floe.page", "@scope (:root) to ([data-floe-part] > *) {\n"+string(css)+"}\n")
+		}
 	}
 	return style, nil
 }

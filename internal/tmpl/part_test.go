@@ -64,14 +64,17 @@ func TestPartsInOwnTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	head, _, _ := strings.Cut(page, "</head>")
-	// floe's <style> names the layers in the order that decides which wins, the template's under the parts'
-	// and the parts theme's; the template's CSS is a <style> of its own after it.
+	// floe's first <style> names the layers in the order that decides which wins, the template's under the
+	// parts' and the parts theme's. Each part's style, the parts theme's file and the template's CSS is a
+	// <style> of its own after it: the table, the cell and the note, soft's base.css, the template's theme.
 	at := func(s string) int { return strings.Index(head, s) }
 	order := []int{
-		at("<style>\n@layer floe.base, floe.page, floe.parts;\n@layer floe.base {\n"), at("@layer floe.parts {\n"), at(partStyle(t, "table")),
-		at("/* Faces with round corners"), at("</style>\n<style>\n@layer floe.page {\n"), at(":scope { --fg: #000; }"),
+		at("<style>\n@layer floe.base, floe.page, floe.parts;\n@layer floe.base {\n"),
+		at("<style>\n@layer floe.parts {\n" + partStyle(t, "table") + "}\n</style>\n"),
+		at("<style>\n@layer floe.parts {\n/* Faces with round corners"), at("</style>\n<style>\n@layer floe.page {\n"),
+		at(":scope { --fg: #000; }"),
 	}
-	if !slices.IsSorted(order) || order[0] < 0 || strings.Count(page, "<style") != 2 {
+	if !slices.IsSorted(order) || order[0] < 0 || strings.Count(page, "<style") != 6 {
 		t.Errorf("the layers, the template's theme, the parts' style and the parts theme's are at %v:\n%s", order, head)
 	}
 	for _, want := range []string{
