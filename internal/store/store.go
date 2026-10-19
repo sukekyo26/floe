@@ -302,8 +302,8 @@ func modTime(file string) string {
 }
 
 // stamp sums up the state of sources: the size and mtime of each image, of each index of icons and of
-// every file under the template's directory and under the directory of parts of one's own, and the mtime
-// of the directory of templates, where one may come.
+// every file under the template's directory and under the directories of parts of one's own it read,
+// and the mtime of the directory of templates, where one may come.
 // LIMIT: walks the template's directory and the parts' on each look (every second for each open tab).
 // Watch them with fsnotify if they grow to hundreds of files.
 func stamp(sources tmpl.Sources) string {
@@ -320,7 +320,9 @@ func stamp(sources tmpl.Sources) string {
 		add(sources.Templates)
 	}
 	addTree(sources.Template, add)
-	addParts(sources.Parts, add)
+	for _, dir := range sources.Parts {
+		addTree(dir, add)
+	}
 	for _, file := range slices.Concat(sources.Images, sources.Icons) {
 		add(file)
 	}
@@ -364,27 +366,6 @@ func addTree(dir string, add func(string)) {
 		})
 	}
 	walk(root)
-}
-
-// addParts adds the files of the directory of parts of one's own, "" for none, to a stamp with add, as
-// floe reads them: each part and parts theme a directory, a symlink to one elsewhere followed, its files
-// as addTree adds them.
-func addParts(dir string, add func(string)) {
-	if dir == "" {
-		return
-	}
-	add(dir)
-	for _, under := range []string{dir, filepath.Join(dir, "themes")} {
-		entries, err := os.ReadDir(under)
-		if err != nil {
-			continue
-		}
-		for _, e := range entries {
-			if !strings.HasPrefix(e.Name(), ".") && (under != dir || e.Name() != "themes") {
-				addTree(filepath.Join(under, e.Name()), add)
-			}
-		}
-	}
 }
 
 // Listed is an entry of the list. A link takes its title and update time from the file; Missing is

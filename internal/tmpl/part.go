@@ -11,13 +11,11 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"unicode"
 	"unicode/utf8"
 
@@ -147,28 +145,11 @@ type partSet struct {
 	broken  map[string]error       // the parts of one's own that cannot be used, by name, and why
 	// the parts themes of one's own that cannot be used, by name, and why
 	brokenThemes map[string]error
+	dirs         []string // the directories of one's own it read, the directory of parts first, by their real paths
 }
 
 // builtinParts reads floe's parts once.
 var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("", nil) })
-
-// partsIn returns floe's parts with those of one's own in dir over them, "" for none: floe's alone, read
-// once, when dir holds nothing.
-// LIMIT: with parts of one's own, floe's are read again with them for each data file read, as the $refs
-// they resolve change. Keep a set by the mtimes of dir's files if drawing a page comes to be slow.
-func partsIn(dir string) (*partSet, error) {
-	if dir == "" {
-		return builtinParts()
-	}
-	entries, err := os.ReadDir(dir)
-	switch {
-	case errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) || err == nil && len(entries) == 0:
-		return builtinParts()
-	case err != nil:
-		return nil, usererr.New("tmpl_parts_dir_unreadable", dir, err.Error())
-	}
-	return readParts(dir, entries)
-}
 
 // readParts reads floe's parts and, over them, those of one's own in dir, "" for none, which holds
 // entries: one of the name of one of floe's takes its place whole. One of one's own that cannot be used
@@ -176,7 +157,7 @@ func partsIn(dir string) (*partSet, error) {
 func readParts(dir string, entries []os.DirEntry) (*partSet, error) {
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
-		broken: map[string]error{}, brokenThemes: map[string]error{},
+		broken: map[string]error{}, brokenThemes: map[string]error{}, dirs: nil,
 	}
 	if err := set.readBuiltin(); err != nil {
 		return nil, err
@@ -259,219 +240,6 @@ func (set *partSet) readBuiltin() error {
 	return nil
 }
 
-// readOwn reads the parts of one's own in dir into set, over floe's of their names, a directory each, a
-// symlink followed. Those that cannot be used are left out of set, and kept in set.broken.
-func (set *partSet) readOwn(dir string, entries []os.DirEntry) error {
-	own := map[string]string{} // the directory of each, as its mistakes name it
-	var replaced []string
-	for _, e := range entries {
-		name, at := e.Name(), filepath.Join(dir, e.Name())
-		if name == themesDir || strings.HasPrefix(name, ".") {
-			continue
-		}
-		read, replaces := set.readOwnPart(name, at)
-		if replaces {
-			replaced = append(replaced, name)
-		}
-		if read {
-			own[name] = at
-		}
-	}
-	// None holds itself, through the parts it holds, which floe would follow forever.
-	for _, name := range slices.Sorted(maps.Keys(own)) {
-		if held := set.holdsItself(name); held != nil {
-			set.leaveOut(name, usererr.New("tmpl_part_cycle", own[name], name, strings.Join(held, " → ")))
-			delete(own, name)
-		}
-	}
-	// Each part names itself, and parts there are, once all are read: again while one is left out, as a
-	// part, floe's too, may take the look of the one left out.
-	for left := true; left; {
-		left = false
-		for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-			if err := set.checkNames(name, own[name]); err != nil {
-				set.leaveOut(name, err)
-				delete(own, name)
-				left = true
-			}
-		}
-	}
-	// floe's themes style floe's parts alone: their rules would fit a part of one's own of the name ill.
-	for _, t := range set.themes {
-		for _, name := range replaced {
-			delete(t.parts, name)
-		}
-		t.except = replaced
-	}
-	return set.readOwnThemes(filepath.Join(dir, themesDir))
-}
-
-// readOwnThemes reads the parts themes of one's own in dir into set, a directory each, a symlink
-// followed: one of the name of one of floe's takes the place of its files of their names. Those that
-// cannot be used are left out of set, and kept in set.brokenThemes.
-func (set *partSet) readOwnThemes(dir string) error {
-	entries, err := os.ReadDir(dir)
-	switch {
-	case errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR):
-		return nil
-	case err != nil:
-		return usererr.New("tmpl_parts_dir_unreadable", dir, err.Error())
-	}
-	for _, e := range entries {
-		name, at := e.Name(), filepath.Join(dir, e.Name())
-		if strings.HasPrefix(name, ".") {
-			continue
-		}
-		t := set.themes[name]
-		if t == nil {
-			t = newPartsTheme()
-		}
-		dir, err := dirAt(at)
-		switch {
-		case dir == "" && err == nil:
-			continue
-		case !validName(name):
-			set.brokenThemes[name] = usererr.New("tmpl_part_bad_name", at)
-			continue
-		}
-		var root *os.Root
-		if err == nil {
-			root, err = os.OpenRoot(dir)
-		}
-		if err == nil {
-			err = set.readPartsTheme(root.FS(), at, t)
-			_ = root.Close() //nolint:errcheck // read, so nothing is lost
-		}
-		if err != nil {
-			delete(set.themes, name)
-			set.brokenThemes[name] = err
-			continue
-		}
-		set.themes[name] = t
-	}
-	return nil
-}
-
-// readOwnPart reads the part name of one's own in the directory at into set, a symlink followed, and
-// one in it that leads out of it refused, and reports whether it read it and whether it took the place
-// of floe's of the name. One that cannot be used is kept in set.broken, and one of a name set keeps
-// leaves floe's in place.
-func (set *partSet) readOwnPart(name, at string) (read, replaces bool) {
-	dir, err := dirAt(at)
-	switch {
-	case dir == "" && err == nil:
-		return false, false
-	case !validName(name):
-		set.broken[name] = usererr.New("tmpl_part_bad_name", at)
-		return false, false
-	case set.reserved(name):
-		// Told whatever is there, which never takes the place of floe's.
-		set.broken[name] = usererr.New("tmpl_part_name", at, name)
-		return false, false
-	}
-	var root *os.Root
-	if err == nil {
-		root, err = os.OpenRoot(dir)
-	}
-	replaces = set.parts[name] != nil
-	set.drop(name)
-	if err == nil {
-		err = set.readPart(root.FS(), name, at)
-		_ = root.Close() //nolint:errcheck // read, so nothing is lost
-	}
-	if err != nil {
-		set.leaveOut(name, err)
-		return false, replaces
-	}
-	return true, replaces
-}
-
-// reserved reports whether a part of one's own cannot be named name: a part floe draws in Go, a schema
-// the parts share (tone), or a file of a parts theme (base and parts).
-func (set *partSet) reserved(name string) bool {
-	_, schema := set.docs[partsURL+name+".json"]
-	return isGoPart(name) || schema && set.parts[name] == nil || name == "base" || name == "parts"
-}
-
-// checkNames refuses the part name, whose directory is dir, when its part.html does not name it in a
-// data-floe-part, or names a part there is none of.
-func (set *partSet) checkNames(name, dir string) error {
-	p := set.parts[name]
-	names := namedParts(p.html)
-	// floe's own name themselves, as a test checks.
-	if dir != "" && !slices.ContainsFunc(names, func(n namedPart) bool { return n.name == name }) {
-		return usererr.New("tmpl_part_unnamed", path.Join(dir, "part.html"), name, name)
-	}
-	for _, n := range names {
-		switch _, ok := set.parts[n.name]; {
-		case ok:
-		case set.broken[n.name] != nil:
-			return usererr.New("tmpl_part_lender_broken", n.name)
-		default:
-			return usererr.New("tmpl_part_names", path.Join(dir, "part.html"), lineAt([]byte(p.html), n.at), n.name,
-				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", "))
-		}
-	}
-	return nil
-}
-
-// leaveOut leaves the part name out of set, kept in set.broken with why.
-func (set *partSet) leaveOut(name string, why error) {
-	set.broken[name] = why
-	set.drop(name)
-}
-
-// holdsItself returns the parts the part name holds, by the $refs of its schema, that lead back to it,
-// name first and last, or nil when none do.
-func (set *partSet) holdsItself(name string) []string {
-	var held []string
-	seen := map[string]bool{}
-	var reach func(at string) bool
-	reach = func(at string) bool {
-		held = append(held, at)
-		for _, next := range set.schemas[partsURL+at+".json"].refsUnder(nil) {
-			if next == name {
-				held = append(held, next)
-				return true
-			}
-			if !seen[next] {
-				seen[next] = true
-				if reach(next) {
-					return true
-				}
-			}
-		}
-		held = held[:len(held)-1]
-		return false
-	}
-	if reach(name) {
-		return held
-	}
-	return nil
-}
-
-// refsUnder adds to names the parts s and the schemas under it, as written, refer to.
-func (s *schema) refsUnder(names []string) []string {
-	if s == nil {
-		return names
-	}
-	if name, ok := partName(s.Ref); ok {
-		names = append(names, name)
-	}
-	for _, key := range slices.Sorted(maps.Keys(s.Properties)) {
-		names = s.Properties[key].refsUnder(names)
-	}
-	return s.Items.refsUnder(names)
-}
-
-// drop leaves the part name out of set, with its schema.
-func (set *partSet) drop(name string) {
-	url := partsURL + name + ".json"
-	delete(set.parts, name)
-	delete(set.docs, url)
-	delete(set.schemas, url)
-}
-
 // partsUnder adds to names the parts the schemas under s refer to. No part holds itself: readOwn leaves
 // out one that would.
 func (s *schema) partsUnder(names *[]string) {
@@ -548,6 +316,8 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown string) error {
 	if err != nil {
 		return fmt.Errorf("read %s: %w", shown, err)
 	}
+	// As jsonschema reads a $ref: cell.json is floe:///parts/cell.json.
+	s.absolute(url)
 	set.docs[url], set.schemas[url] = doc, s
 	return nil
 }
@@ -932,95 +702,6 @@ func everyPart(css string, except []string) string {
 //
 //go:embed base.css
 var baseCSS string
-
-// themesDir is the directory of parts/ that holds the parts themes, and so is no part.
-const themesDir = "themes"
-
-// themeNames returns the parts themes of set, by name, those that cannot be used among them.
-func (set *partSet) themeNames() []string {
-	return slices.Sorted(slices.Values(slices.Concat(slices.Collect(maps.Keys(set.themes)),
-		slices.Collect(maps.Keys(set.brokenThemes)))))
-}
-
-// partsTheme is a parts theme: its base.css, for every page, its parts.css, the rules of several parts,
-// and the style of each part it restyles alone.
-type partsTheme struct {
-	base   string
-	shared string
-	parts  map[string]string // by the part's name
-	except []string          // the parts its parts.css does not reach: floe's, whose names parts of one's own took
-}
-
-func newPartsTheme() *partsTheme {
-	return &partsTheme{base: "", shared: "", parts: map[string]string{}, except: nil}
-}
-
-// readPartsTheme reads the parts theme in files, its directory, shown in its mistakes as dir, over t:
-// each file takes the place of t's of its name. A file named for neither base.css, parts.css nor a part
-// of set is refused, as it would go into no page.
-func (set *partSet) readPartsTheme(files fs.FS, dir string, t *partsTheme) error {
-	entries, err := fs.ReadDir(files, ".")
-	if err != nil {
-		return fmt.Errorf("read the parts theme %s: %w", dir, err)
-	}
-	for _, e := range entries {
-		name, isCSS := strings.CutSuffix(e.Name(), ".css")
-		// A file of another kind, or of a name starting with a dot (.DS_Store), is none of the theme's.
-		if !isCSS || e.IsDir() || strings.HasPrefix(name, ".") {
-			continue
-		}
-		// One for a part of one's own that cannot be used is the theme's all the same.
-		_, isPart := set.parts[name]
-		if _, isOwn := set.broken[name]; name != "base" && name != "parts" && !isPart && !isOwn {
-			return usererr.New("tmpl_parts_theme_file", path.Join(dir, e.Name()),
-				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", "))
-		}
-		css, err := fs.ReadFile(files, e.Name())
-		if err != nil {
-			return fmt.Errorf("read the parts theme %s: %w", dir, err)
-		}
-		// base.css is for the whole page, out of the parts' scope.
-		if err = refuseCSS(path.Join(dir, e.Name()), css, name != "base"); err != nil {
-			return err
-		}
-		switch name {
-		case "base":
-			t.base = string(css)
-		case "parts":
-			t.shared, t.except = string(css), nil
-		default:
-			t.parts[name] = string(css)
-		}
-	}
-	return nil
-}
-
-// all is the whole CSS of t, its base and parts.css first, then the parts' in the order of their names.
-func (t *partsTheme) all() string {
-	css := t.base + t.shared
-	for _, name := range slices.Sorted(maps.Keys(t.parts)) {
-		css += t.parts[name]
-	}
-	return css
-}
-
-// themeVariables returns the CSS variables the parts themes of set that can be used take from the page,
-// those a theme uses and does not define itself, once each, in the order of the themes' names.
-func (set *partSet) themeVariables() []string {
-	var vars []string
-	for _, name := range slices.Sorted(maps.Keys(set.themes)) {
-		css := []byte(set.themes[name].all())
-		defined := definedVariables(css)
-		for _, v := range appendFound(nil, usedVariable, string(css)) {
-			if !defined[v] && !slices.Contains(vars, v) {
-				vars = append(vars, v)
-			}
-		}
-	}
-	return vars
-}
-
-var usedVariable = regexp.MustCompile(`var\(\s*(--[\w-]+)`)
 
 // withStyles puts style into page before its </head>, else at its end. Where it goes decides nothing
 // else: the <link>s of page.html (fonts, libraries) are out of the layers, and win over them all.

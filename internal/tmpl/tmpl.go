@@ -104,7 +104,7 @@ func (l *Library) Read(file string, src []byte, themes Themes, cwd string) (*Dat
 // changes, whether the read found mistakes or not.
 type Sources struct {
 	Templates string   // the directory of templates of one's own, where one may come; "" for none
-	Parts     string   // the directory of parts of one's own, whose files the data may be drawn with; "" for none
+	Parts     []string // the directories of parts of one's own read, whose files the data may be drawn with
 	Template  string   // the directory of the template of one's own the data names; "" for none
 	Images    []string // the images the data names, read or not
 	Icons     []string // the index files of the icon sets, when it has a diagram, fetched or not
@@ -112,7 +112,11 @@ type Sources struct {
 
 // ReadSources reads the data file src as Read does, and returns its Sources too.
 func (l *Library) ReadSources(file string, src []byte, themes Themes, cwd string) (*Data, Sources, error) {
-	sources := Sources{Templates: l.dir, Parts: l.parts, Template: "", Images: nil, Icons: nil}
+	sources := Sources{Templates: l.dir, Parts: nil, Template: "", Images: nil, Icons: nil}
+	if l.parts != "" {
+		// Where one may come, when none has been read.
+		sources.Parts = []string{l.parts}
+	}
 	dir := filepath.Dir(file)
 	if !filepath.IsAbs(dir) {
 		dir = filepath.Join(cwd, dir)
@@ -152,6 +156,9 @@ func (l *Library) ReadSources(file string, src []byte, themes Themes, cwd string
 	}
 	err = t.check(h, dir, themes, problems)
 	sources.Images, sources.Icons = d.tried, d.icons
+	if t.set != nil && t.set.dirs != nil {
+		sources.Parts = t.set.dirs
+	}
 	if err != nil {
 		return nil, sources, err
 	}

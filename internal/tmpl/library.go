@@ -5,14 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/goccy/go-yaml/ast"
 
@@ -112,11 +110,8 @@ func (l *Library) ownNames() ([]string, error) {
 // its way.
 // LIMIT: read on every lookup. Keep the entries if a directory comes to hold thousands of them.
 func (l *Library) entries() ([]fs.DirEntry, error) {
-	entries, err := os.ReadDir(l.dir)
-	switch {
-	case errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR):
-		return nil, nil
-	case err != nil:
+	entries, err := entriesOf(l.dir)
+	if err != nil {
 		return nil, usererr.New("tmpl_dir_unreadable", l.dir, err.Error())
 	}
 	return entries, nil
@@ -183,23 +178,6 @@ func (l *Library) resolve(name string) (*Template, error) {
 		return nil, nil //nolint:nilnil // a file, not a template
 	}
 	return &Template{Name: name, Dir: dir, Path: at, icons: l.icons, partsDir: l.parts, set: nil}, nil
-}
-
-// dirAt returns the directory at, a symlink followed, as its real path, or "" for a file. A symlink that
-// leads nowhere, or one that cannot be read, is its error.
-func dirAt(at string) (string, error) {
-	dir, err := filepath.EvalSymlinks(at)
-	if err != nil {
-		return "", err //nolint:wrapcheck // the callers say what it is
-	}
-	fi, err := os.Stat(dir)
-	if err != nil {
-		return "", err //nolint:wrapcheck // as above
-	}
-	if !fi.IsDir() {
-		return "", nil
-	}
-	return dir, nil
 }
 
 // validName reports whether name can name a template: lower case letters, digits, - and _, so that it
@@ -297,13 +275,7 @@ func (t *Template) files(read func(fs.FS) error) error {
 		}
 		return read(sub)
 	}
-	// os.Root refuses a path, a symlink included, that leads out of the template.
-	root, err := os.OpenRoot(t.Dir)
-	if err != nil {
-		return fmt.Errorf("open the template %s: %w", t.Name, err)
-	}
-	defer root.Close()
-	return read(root.FS())
+	return readIn(t.Dir, read)
 }
 
 // checkVersion refuses t when the floe it needs is not this one: template.yaml's floe: 1.2 takes a
