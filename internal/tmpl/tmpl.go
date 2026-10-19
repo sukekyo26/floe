@@ -16,7 +16,6 @@ import (
 	"math"
 	"path"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -465,37 +464,6 @@ func (t *Template) css(theme string) ([]byte, error) {
 	}
 	return slices.Concat(page, css), nil
 }
-
-// ownCSS refuses css, the file name of t, where it imports a stylesheet: floe puts the template's CSS in
-// a layer, where a browser reads no @import.
-func (t *Template) ownCSS(name string, css []byte) error {
-	if at := cssImport.FindIndex(withoutComments(css)); at != nil {
-		return usererr.New("tmpl_css_import", t.file(name), bytes.Count(css[:at[0]], []byte("\n"))+1)
-	}
-	return nil
-}
-
-// cssImport finds an @import.
-// LIMIT: found as written, not as a CSS parser reads it (one in a string counts); parse the CSS if a
-// template comes to write one so.
-var cssImport = regexp.MustCompile(`(?i)@import\b`)
-
-// withoutComments returns css with each byte of its comments a space, but a line break, so that an
-// offset in it is one in css.
-func withoutComments(css []byte) []byte {
-	return cssComment.ReplaceAllFunc(css, func(c []byte) []byte {
-		blank := bytes.Clone(c)
-		for i, b := range blank {
-			if b != '\n' {
-				blank[i] = ' '
-			}
-		}
-		return blank
-	})
-}
-
-// cssComment finds a comment of CSS; one never closed runs to the end.
-var cssComment = regexp.MustCompile(`(?s)/\*.*?(?:\*/|$)`)
 
 // page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together.
 func (t *Template) page() (*template.Template, error) {
