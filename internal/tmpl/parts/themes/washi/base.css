@@ -12,7 +12,7 @@
   }
 }
 blockquote {
-  font-family: var(--washi-font); background: var(--washi-paper); color: var(--washi-sumi); border-radius: 0; box-shadow: none;
+  font-family: var(--washi-font); --display: var(--washi-font); background: var(--washi-paper); color: var(--washi-sumi); border-radius: 0; box-shadow: none;
 }
 blockquote {
   padding: 1.3rem 1.8rem; border: 0; border-left: 3px solid var(--washi-shu); font-size: 1.15rem; line-height: 2;

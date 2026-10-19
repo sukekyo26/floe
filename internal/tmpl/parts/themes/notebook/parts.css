@@ -1,5 +1,6 @@
+/* --display too, the face floe's base gives headings */
 :scope:where([data-floe-part~="table"], [data-floe-part~="note"], [data-floe-part~="progress"], [data-floe-part~="steps"], [data-floe-part~="checklist"], [data-floe-part~="tree"], [data-floe-part~="details"], [data-floe-part~="timeline"], [data-floe-part~="bars"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]), :where(:scope[data-floe-part~="cards"]) .card {
-  font-family: var(--nb-font);
+  font-family: var(--nb-font); --display: var(--nb-font);
 }
 :scope:where([data-floe-part~="table"], [data-floe-part~="progress"], [data-floe-part~="steps"], [data-floe-part~="checklist"], [data-floe-part~="tree"], [data-floe-part~="details"], [data-floe-part~="timeline"], [data-floe-part~="bars"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]) {
   background-color: var(--nb-sheet); background-image: repeating-linear-gradient(transparent 0 35px, var(--nb-rule) 35px 36px);

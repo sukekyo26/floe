@@ -19,7 +19,7 @@
   }
 }
 blockquote {
-  font-family: var(--nb-font);
+  font-family: var(--nb-font); --display: var(--nb-font);
 }
 blockquote { border: 0; padding: 0; color: var(--fg); font-size: 1.15rem; font-weight: 700; }
 blockquote > p { display: inline; background: linear-gradient(transparent 62%, var(--nb-yellow) 62%); }
