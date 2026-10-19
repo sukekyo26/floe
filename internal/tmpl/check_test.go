@@ -220,7 +220,7 @@ func TestCheckMistakes(t *testing.T) {
 		{
 			name:    "a theme without the variables of diagrams",
 			files:   map[string]string{"schema.json": `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`},
-			warning: "sizes/themes/default.css does not define --bg, --surface, --fg, --muted, --line, --accent, --accent-soft",
+			warning: "sizes/themes/default.css does not define --accent, --accent-soft, --surface, --line, --muted, --bg, --fg,",
 		},
 		{
 			name:    "a theme without the variables of a Markdown table",
@@ -389,7 +389,8 @@ func TestCSSBraceRefused(t *testing.T) {
 	}
 }
 
-// The variables of diagrams that page.css defines, for every theme, are not missed in a theme.
+// The variables of diagrams and of floe's base that page.css defines, for every theme, are not missed in a
+// theme.
 func TestCheckVariablesInPage(t *testing.T) {
 	t.Parallel()
 
@@ -397,7 +398,7 @@ func TestCheckVariablesInPage(t *testing.T) {
 	dir := sizes(t, map[string]string{
 		"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
 		"schema.json":   `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`,
-		"page.css":      ":scope { " + strings.Join(diagram.Variables(), ": red; ") + ": red }",
+		"page.css":      ":scope { --text-width: 50rem; " + strings.Join(diagram.Variables(), ": red; ") + ": red }",
 	})
 	if warnings, mistakes := tmpl.Check(dir, ""); len(warnings) != 0 || len(mistakes) != 0 {
 		t.Errorf("Check = %v, %v", warnings, mistakes)

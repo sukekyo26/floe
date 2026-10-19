@@ -521,9 +521,9 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
 // selectors: floe's base, under the template's own CSS (own: its page.css, then its theme, a style
-// sheet each), under the parts'. The parts' are the style of the parts the page names, in the order of their names, the
-// diagrams' when it has diagrams, then the parts theme theme, which every page gets, as it styles
-// Markdown's quotes too. A part is named by its own element, a table of Markdown, or HTML that takes a
+// sheet each), under the parts'. The parts' are the style of the parts the page names, in the order of
+// their names, the diagrams' when it has diagrams, then the parts theme theme, which every page gets, as
+// it styles Markdown's quotes too. A part is named by its own element, a table of Markdown, or HTML that takes a
 // part's look (<span class="floe-pill good" data-floe-part="cell">).
 // The template's style reaches the boxes of the parts, so that it places them, but not what they hold.
 // LIMIT: the parts' style and the parts theme are not scoped: a part's rules reach the parts it holds,
@@ -558,7 +558,8 @@ func pageStyle(page []byte, own [][]byte, theme string, diagrams bool) (string, 
 		if len(css) == 0 {
 			continue
 		}
-		style += "<style>\n@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(css) + "}\n}\n</style>\n"
+		style += "<style>\n@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(css) +
+			"}\n}\n</style>\n"
 	}
 	return style, nil
 }
