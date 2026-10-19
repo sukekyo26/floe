@@ -519,7 +519,7 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
 }
 
-// pageStyle returns the one <style> of the page, in cascade layers that decide which wins whatever the
+// pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
 // selectors: floe's base, under the template's own CSS (own: its page.css, then its theme), under the
 // parts'. The parts' are the style of the parts the page names, in the order of their names, the
 // diagrams' when it has diagrams, then the parts theme theme, which every page gets, as it styles
@@ -549,10 +549,12 @@ func pageStyle(page, own []byte, theme string, diagrams bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// The template's CSS is a style sheet of its own, so that a mistake in it, a comment or a block left
+	// open, ends with it; the first sheet names the layers, which puts them in that order.
 	return "<style>\n@layer floe.base, floe.page, floe.parts;\n" +
 		"@layer floe.base {\n" + baseCSS + "}\n" +
-		"@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(own) + "}\n}\n" +
-		"@layer floe.parts {\n" + parts.String() + string(css) + "}\n</style>\n", nil
+		"@layer floe.parts {\n" + parts.String() + string(css) + "}\n</style>\n" +
+		"<style>\n@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(own) + "}\n}\n</style>\n", nil
 }
 
 // baseCSS is what every page starts from: text, lists, links, code and quotes, for the template's own
@@ -662,7 +664,7 @@ func tagsOf(page []byte) tags {
 
 var (
 	// tagOrText finds, in order, a comment, a script or a noscript, a style or a link, and </head>.
-	tagOrText = regexp.MustCompile(`(?i)(<!--)|<(script|noscript)\b[^>]*>|<(style|link)\b|</head\s*>`)
+	tagOrText = regexp.MustCompile(`(?i)(<!--)|<(script|noscript)(?:[\s/][^>]*)?>|<(style|link)[\s/>]|</head\s*>`)
 	endTag    = map[string]*regexp.Regexp{
 		"script":   regexp.MustCompile(`(?i)</script\s*>`),
 		"noscript": regexp.MustCompile(`(?i)</noscript\s*>`),

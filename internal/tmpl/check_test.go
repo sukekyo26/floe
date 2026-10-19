@@ -360,6 +360,25 @@ func TestCSSImportRefused(t *testing.T) {
 	}
 }
 
+// A } of the template's CSS that closes no block, which would close floe's layer around it, is refused at
+// its line, past braces and an @import in strings and comments.
+func TestCSSBraceRefused(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{
+		"page.css": "a::before { content: \"} @import x;\"; }\n/* } */\n@media print { p { color: red; } }\n}\nb { color: red; }\n",
+	})
+	want := filepath.Join(dir, "page.css") + ":4: this } closes no block"
+	if _, mistakes := tmpl.Check(dir, ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+		t.Errorf("Check = %v, want %s", mistakes, want)
+	}
+	// A block left open ends with the template's own <style>.
+	ok := sizes(t, map[string]string{"page.css": "@media print { p { color: red; }\n"})
+	if warnings, mistakes := tmpl.Check(ok, ""); len(mistakes) != 0 {
+		t.Errorf("Check of a block left open = %v, %v", warnings, mistakes)
+	}
+}
+
 // The variables of diagrams that page.css defines, for every theme, are not missed in a theme.
 func TestCheckVariablesInPage(t *testing.T) {
 	t.Parallel()

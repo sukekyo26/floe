@@ -142,13 +142,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   [expr](https://expr-lang.org/), each failure reported at the data file's
   line and column, and a mistake in those files at their own;
   `page.html` writes numbers with `num` and `bytes`.
-  floe puts a page's CSS together in one `<style>`: the template's `page.css`
+  floe puts a page's CSS together, the template's in a `<style>` of its own: its `page.css`
   and theme in a cascade layer over floe's base (text, lists, links, code and
   quotes) and under the parts' style and the parts theme, which they do not
   restyle whatever their selectors. The template's CSS is scoped to the page,
   `:scope` its root: it reaches a part's element but not what the part holds.
   `page.html` holds no `<style>`, nor an item of `"format": "html"` a `<style>`
-  or `<link>`, nor the template's CSS an `@import`, `:root` or `html`, each refused
+  or `<link>`, nor the template's CSS an `@import`, `:root`, `html` or a `}` that closes no block, each refused
   at its line, and `floe template check` refuses a part `page.html` names that floe
   does not have.
   Images go into the page as data URIs: an item of `"format": "image"`
