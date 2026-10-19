@@ -1,6 +1,6 @@
-<div class="floe-cards floe-options">
+<div class="floe-cards floe-options" data-floe-part="cards options">
 {{- range .}}
-<div class="floe-card floe-option{{if .pick}} pick{{end}}"><h3>{{.title}}{{with .pick}} <span class="floe-pill">{{.}}</span>{{end}}</h3>{{with .text}}{{markdown .}}{{end}}
+<div class="floe-card floe-option{{if .pick}} pick{{end}}"><h3>{{.title}}{{with .pick}} <span class="floe-pill" data-floe-part="cell">{{.}}</span>{{end}}</h3>{{with .text}}{{markdown .}}{{end}}
 {{- if or .pros .cons}}<ul>{{range .pros}}<li class="pro">{{markdownLine .}}</li>{{end}}{{range .cons}}<li class="con">{{markdownLine .}}</li>{{end}}</ul>{{end}}</div>
 {{- end}}
 </div>

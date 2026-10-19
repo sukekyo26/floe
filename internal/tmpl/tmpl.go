@@ -403,7 +403,7 @@ func parse(file string, src []byte) (ast.Node, error) {
 // data was checked against.
 func (d *Data) Render(title string) ([]byte, error) {
 	t := d.tmpl
-	page, err := t.page()
+	page, _, err := t.page()
 	if err != nil {
 		return nil, err
 	}
@@ -458,22 +458,23 @@ func (t *Template) css(theme string) ([][]byte, error) {
 	return [][]byte{page, css}, nil
 }
 
-// page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together.
-func (t *Template) page() (*template.Template, error) {
+// page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together. It
+// returns the source too.
+func (t *Template) page() (*template.Template, []byte, error) {
 	src, err := t.readFile("page.html")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if at := tagsOf(src).style; at >= 0 {
-		return nil, usererr.New("tmpl_page_style", t.file("page.html"), lineAt(src, at))
+		return nil, nil, usererr.New("tmpl_page_style", t.file("page.html"), lineAt(src, at))
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
 		Funcs(template.FuncMap{"asset": t.assets()}).Parse(string(src))
 	if err != nil {
-		return nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
+		return nil, nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
 	}
-	return page, nil
+	return page, src, nil
 }
 
 var funcs = template.FuncMap{
@@ -508,7 +509,7 @@ func markdownHTML(text string) (template.HTML, error) {
 		return "", err
 	}
 	// With raw HTML left out, every <table> in the output is one goldmark drew.
-	html = strings.ReplaceAll(html, "<table>", `<div class="floe-table"><table>`)
+	html = strings.ReplaceAll(html, "<table>", `<div class="floe-table" data-floe-part="table"><table>`)
 	html = strings.ReplaceAll(html, "</table>", "</table></div>")
 	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 }

@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"bytes"
+	"regexp"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -9,7 +10,9 @@ import (
 
 // ownCSS returns name, a file of t's CSS, empty when t has none. It refuses the file where a } closes
 // no block, which would close floe's layer around it and leave the rules after it out of it, over the
-// parts' styles, or where it imports a stylesheet, which a browser does not read in a layer.
+// parts' styles; where it imports a stylesheet, which a browser does not read in a layer; or where a
+// selector names the page's root as :root or html: floe scopes the template's CSS to the page,
+// @scope (:root), where :scope is the root and those name nothing.
 func (t *Template) ownCSS(name string) ([]byte, error) {
 	css, _, err := t.readOptional(name)
 	if err != nil {
@@ -20,8 +23,13 @@ func (t *Template) ownCSS(name string) ([]byte, error) {
 		return nil, usererr.New("tmpl_css_brace", t.file(name), lineAt(css, stray))
 	}
 	for _, r := range rules {
-		if !r.block && strings.HasPrefix(strings.ToLower(r.prelude), "@import") {
+		switch {
+		case !r.block && strings.HasPrefix(strings.ToLower(r.prelude), "@import"):
 			return nil, usererr.New("tmpl_css_import", t.file(name), lineAt(css, r.at))
+		case r.block && !strings.HasPrefix(r.prelude, "@"):
+			if m := rootSelector.FindStringSubmatchIndex(r.prelude); m != nil {
+				return nil, usererr.New("tmpl_css_root", t.file(name), lineAt(css, r.at+m[2]), r.prelude[m[2]:m[3]])
+			}
 		}
 	}
 	return css, nil
@@ -31,6 +39,9 @@ func (t *Template) ownCSS(name string) ([]byte, error) {
 func lineAt(src []byte, at int) int {
 	return bytes.Count(src[:at], []byte("\n")) + 1
 }
+
+// rootSelector finds :root or html in a selector.
+var rootSelector = regexp.MustCompile(`(?i)(?:^|[\s,>+~(])(:root|html)(?:[\s,.:\[#>+~)]|$)`)
 
 // cssRule is what comes before a block of CSS, a selector or an at-rule's prelude, or an at-rule
 // written as a statement (@import …;), as written, and the offset where it starts.

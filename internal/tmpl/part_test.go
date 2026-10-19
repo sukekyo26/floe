@@ -21,7 +21,7 @@ func memo(t *testing.T, items string) string {
 		"schema.json": `{"type": "object", "properties": {` + items + `}, "additionalProperties": false}`,
 		"page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
 			`<body>{{.Data.risks}}{{with .Data.aside}}{{.}}{{end}}</body></html>`,
-		"themes/default.css": ":root { --fg: #000; }\n",
+		"themes/default.css": ":scope { --fg: #000; }\n",
 		"example.yaml":       "template: memo\nlang: en\nrisks: { columns: [{title: Risk}], rows: [[Links]] }\n",
 	}
 	for name, body := range files {
@@ -57,15 +57,15 @@ func TestPartsInOwnTemplate(t *testing.T) {
 	// and the parts theme's; the template's CSS is a <style> of its own after it.
 	at := func(s string) int { return strings.Index(head, s) }
 	order := []int{
-		at("<style>\n@layer floe.page, floe.parts;\n@layer floe.parts {\n"), at(".floe-table {"), at("/* Faces with round corners"),
-		at("</style>\n<style>\n@layer floe.page {\n"), at(":root { --fg: #000; }"),
+		at("<style>\n@layer floe.base, floe.page, floe.parts;\n@layer floe.base {\n"), at("@layer floe.parts {\n"), at(".floe-table {"),
+		at("/* Faces with round corners"), at("</style>\n<style>\n@layer floe.page {\n"), at(":scope { --fg: #000; }"),
 	}
 	if !slices.IsSorted(order) || order[0] < 0 || strings.Count(page, "<style") != 2 {
 		t.Errorf("the layers, the template's theme, the parts' style and the parts theme's are at %v:\n%s", order, head)
 	}
 	for _, want := range []string{
-		`<div class="floe-table"><table>`, `<td class="num">120</td>`, `<span class="floe-pill bad">open</span>`,
-		`<div class="floe-note warn"><p>Keep the old host</p>`,
+		`<div class="floe-table" data-floe-part="table"><table>`, `<td class="num">120</td>`, `<span class="floe-pill bad" data-floe-part="cell">open</span>`,
+		`<div class="floe-note warn" data-floe-part="note"><p>Keep the old host</p>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page lacks %s:\n%s", want, page)
@@ -139,13 +139,13 @@ func TestCheckParts(t *testing.T) {
 		}
 	}
 	if !strings.Contains(told, "--accent") || !strings.Contains(told, "--good-soft") || strings.Contains(told, "--fg,") ||
-		!strings.Contains(told, "--muted, --bg, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, light colours in dark mode too, and the parts themes go without them\n") ||
-		!strings.Contains(told, "does not define --text-width, --mono, --font, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, and the parts themes go without them\n") {
+		!strings.Contains(told, "--muted, --bg, which floe's base, the template's parts and diagrams, or the parts themes take from it: the parts and diagrams keep values of their own, light colours in dark mode too, and the parts themes go without them\n") ||
+		!strings.Contains(told, "does not define --text-width, --mono, --font, which floe's base, the template's parts and diagrams, or the parts themes take from it: the parts and diagrams keep values of their own, and the parts themes go without them\n") {
 		t.Errorf("the warning of the theme = %q", told)
 	}
 	// A theme that leaves out no colour is not told of dark mode.
 	colours := memo(t, memoItems)
-	theme := ":root { --bg: #eee; --fg: #000; --surface: #fff; --line: #ccc; --muted: #666; --accent: #00f; --accent-soft: #eef; " +
+	theme := ":scope { --bg: #eee; --fg: #000; --surface: #fff; --line: #ccc; --muted: #666; --accent: #00f; --accent-soft: #eef; " +
 		"--good: #0a0; --good-soft: #efe; --warn: #a60; --warn-soft: #fed; --bad: #a00; --bad-soft: #fee; }\n"
 	if err := os.WriteFile(filepath.Join(colours, "memo", "themes", "default.css"), []byte(theme), 0o600); err != nil {
 		t.Fatal(err)
@@ -186,7 +186,7 @@ func TestCheckParts(t *testing.T) {
 	// One written relative to the schema is the part all the same.
 	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "../../parts/table.json"}, "aside": {"type": "string"}`), "")
 	if page, err := draw(l, "template: memo\nlang: en\nrisks: { columns: [{title: a}], rows: [[x]] }\n"); err != nil ||
-		!strings.Contains(page, `<div class="floe-table">`) {
+		!strings.Contains(page, `<div class="floe-table" data-floe-part="table">`) {
 		t.Errorf("a page of a part named relatively = %v", err)
 	}
 	// What a part's item holds is not looked into: a format beside the $ref would never be drawn.
@@ -214,7 +214,7 @@ func TestCheckParts(t *testing.T) {
 	// An empty fragment is the whole part.
 	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/table.json#"}, "aside": {"type": "string"}`), "")
 	if page, err := draw(l, "template: memo\nlang: en\nrisks: { columns: [{title: a}], rows: [[x]] }\n"); err != nil ||
-		!strings.Contains(page, `<div class="floe-table">`) {
+		!strings.Contains(page, `<div class="floe-table" data-floe-part="table">`) {
 		t.Errorf("a page of a part with an empty fragment = %v", err)
 	}
 	// One floe does not follow to would never be drawn.
@@ -231,10 +231,10 @@ func TestPartStylesByClass(t *testing.T) {
 	t.Parallel()
 
 	page := render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - text: |\n          | a | b |\n          | - | - |\n          | 1 | 2 |\n")
-	if !strings.Contains(page, `<div class="floe-table"><table>`) || strings.Count(page, ".floe-table {") != 1 {
+	if !strings.Contains(page, `<div class="floe-table" data-floe-part="table"><table>`) || strings.Count(page, ".floe-table {") != 1 {
 		t.Errorf("a page of a Markdown table:\n%s", page)
 	}
-	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"floe-pill good\">ok</span>\n")
+	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"floe-pill good\" data-floe-part=\"cell\">ok</span>\n")
 	if strings.Count(page, ".floe-pill {") != 1 || strings.Contains(page, ".floe-note {") {
 		t.Errorf("a page of a pill in HTML:\n%s", page)
 	}
@@ -300,12 +300,12 @@ func TestCodeAndTerminal(t *testing.T) {
 		"      - terminal: { shell: powershell, steps: [{ run: dir }] }\n"+
 		"      - terminal: { shell: zsh, steps: [{ run: ls }] }\n")
 	for _, want := range []string{
-		"<figure class=\"floe-code\"><figcaption><span class=\"file\">a.go</span><span class=\"lang\">go</span></figcaption><pre><code>if a &lt; b {\n\treturn\n}\n</code></pre></figure>",
-		`<figure class="floe-code"><figcaption><span class="lang">sh</span></figcaption><pre><code>x</code></pre></figure>`,
-		`<figure class="floe-code"><pre><code>y</code></pre></figure>`,
-		"<figure class=\"floe-terminal sh\"><pre><span class=\"run\">make \\\n  all</span><span class=\"out\">done</span><span class=\"run\">ls</span></pre></figure>",
-		`<figure class="floe-terminal powershell"><figcaption>PowerShell</figcaption><pre><span class="run">dir</span></pre></figure>`,
-		`<figure class="floe-terminal zsh"><figcaption>zsh</figcaption><pre><span class="run">ls</span></pre></figure>`,
+		"<figure class=\"floe-code\" data-floe-part=\"code\"><figcaption><span class=\"file\">a.go</span><span class=\"lang\">go</span></figcaption><pre><code>if a &lt; b {\n\treturn\n}\n</code></pre></figure>",
+		`<figure class="floe-code" data-floe-part="code"><figcaption><span class="lang">sh</span></figcaption><pre><code>x</code></pre></figure>`,
+		`<figure class="floe-code" data-floe-part="code"><pre><code>y</code></pre></figure>`,
+		"<figure class=\"floe-terminal sh\" data-floe-part=\"terminal\"><pre><span class=\"run\">make \\\n  all</span><span class=\"out\">done</span><span class=\"run\">ls</span></pre></figure>",
+		`<figure class="floe-terminal powershell" data-floe-part="terminal"><figcaption>PowerShell</figcaption><pre><span class="run">dir</span></pre></figure>`,
+		`<figure class="floe-terminal zsh" data-floe-part="terminal"><figcaption>zsh</figcaption><pre><span class="run">ls</span></pre></figure>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page lacks %s:\n%s", want, page)
@@ -391,8 +391,8 @@ func TestPartsOfNumbersAndChanges(t *testing.T) {
 		`<li class="done"><code>ci</code></li>`,
 		`<tr><td class="what">a</td><td>x</td><td class="after">y</td></tr>`,
 		`<tr class="same"><td class="what">b</td>`,
-		`<div class="floe-card floe-option pick"><h3>A <span class="floe-pill">Take</span></h3><ul><li class="pro">p</li><li class="con">c</li></ul></div>`,
-		`<dt>State</dt><dd><span class="floe-pill bad">open</span></dd>`,
+		`<div class="floe-card floe-option pick"><h3>A <span class="floe-pill" data-floe-part="cell">Take</span></h3><ul><li class="pro">p</li><li class="con">c</li></ul></div>`,
+		`<dt>State</dt><dd><span class="floe-pill bad" data-floe-part="cell">open</span></dd>`,
 		`<dt>Due</dt><dd><code>soon</code></dd>`,
 		`<span class="file">a.go</span><span class="added">+1</span><span class="removed">−1</span></figcaption><pre><code><span class="hunk">@@ -1 &#43;1 @@` + "\n" + `</span><span class="del">-a` + "\n",
 		`<li><span class="name dir">a/</span><ul>` + "\n" + `<li class="added"><span class="name">b.go</span><span class="note">B</span></li>`,
@@ -442,11 +442,11 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 		"      - tabs: [{ title: bash, parts: [{ code: { text: ls } }] }, { title: cmd, parts: [{ note: { text: n } }] }]\n"
 	page := render(t, fmt.Sprintf(src, "en"))
 	for _, want := range []string{
-		`<tr><td class="level"><span class="floe-pill bad">must</span></td><td><div class="head"><code class="at">a.go:1</code><span class="status"><span class="floe-pill good">fixed</span></span></div><div><code>x</code> leaks</div><div class="why">later</div></td></tr>`,
-		`<tr><td class="level"><span class="floe-pill nit">nit</span></td><td><div>y</div></td></tr>`,
-		`<details class="floe-details"><summary>Log</summary><div class="floe-stack"><figure class="floe-terminal sh"><pre><span class="run">make</span></pre></figure><p><strong>done</strong></p>` + "\n</div></details>",
+		`<tr><td class="level"><span class="floe-pill bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">a.go:1</code><span class="status"><span class="floe-pill good" data-floe-part="cell">fixed</span></span></div><div><code>x</code> leaks</div><div class="why">later</div></td></tr>`,
+		`<tr><td class="level"><span class="floe-pill nit" data-floe-part="cell">nit</span></td><td><div>y</div></td></tr>`,
+		`<details class="floe-details" data-floe-part="details"><summary>Log</summary><div class="floe-stack" data-floe-part="stack"><figure class="floe-terminal sh" data-floe-part="terminal"><pre><span class="run">make</span></pre></figure><p><strong>done</strong></p>` + "\n</div></details>",
 		`<td class="yes"><span class="mark"><span>Yes</span></span></td><td class="part"><span class="mark"><span>Partly</span></span><small>some</small></td>`,
-		`<p class="meta"><span class="floe-pill">decided</span><span>2026-10-12</span></p><h3>Take B</h3><p>Why</p>` + "\n" + `<p class="set-aside">Set aside</p><ul><li>A</li></ul>`,
+		`<p class="meta"><span class="floe-pill" data-floe-part="cell">decided</span><span>2026-10-12</span></p><h3>Take B</h3><p>Why</p>` + "\n" + `<p class="set-aside">Set aside</p><ul><li>A</li></ul>`,
 		`<th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col">Impact</th><th scope="col">What we do</th>`,
 		`<tr class="bad"><td class="what">r</td><td class="high"><span class="level">High</span></td><td class="mid"><span class="level">Medium</span></td><td>f</td></tr>`,
 		`<tr class="good"><td class="what">s</td>`,
@@ -460,8 +460,8 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 		`<details open><summary>Why?</summary><div><p><a href="https://example.com">See</a></p>`,
 		`<div><dt>part</dt><dd><p>A piece</p>`,
 		`<div><dt><kbd>Ctrl</kbd><span>+</span><kbd>K</kbd></dt><dd>Find</dd></div>`,
-		`<label><input type="radio" name="tab" checked>bash</label><div class="floe-stack"><figure class="floe-code"><pre><code>ls</code></pre></figure></div>`,
-		`<label><input type="radio" name="tab">cmd</label><div class="floe-stack"><div class="floe-note"><p>n</p>`,
+		`<label><input type="radio" name="tab" checked>bash</label><div class="floe-stack" data-floe-part="stack"><figure class="floe-code" data-floe-part="code"><pre><code>ls</code></pre></figure></div>`,
+		`<label><input type="radio" name="tab">cmd</label><div class="floe-stack" data-floe-part="stack"><div class="floe-note" data-floe-part="note"><p>n</p>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page lacks %s:\n%s", want, page)

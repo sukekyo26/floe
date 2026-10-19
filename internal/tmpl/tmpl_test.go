@@ -56,13 +56,13 @@ func TestReportExample(t *testing.T) {
 		`<p>The pages move over <strong>one weekend</strong>; the old wiki stays readable until the new one opens.</p>`,
 		`<li class="doing" aria-current="step"><strong>Copy the pages and check the links</strong></li>`,
 		`<tr class="same"><td class="what">Address</td>`,
-		`<div class="floe-table"><table>`,
+		`<div class="floe-table" data-floe-part="table"><table>`,
 		`<th scope="col">Likelihood</th>`,
 		`<td>Keep the old host for <strong>a month</strong></td>`,
 		`<td class="num">120</td>`,
-		`<td><span class="floe-pill warn">watching</span></td>`,
+		`<td><span class="floe-pill warn" data-floe-part="cell">watching</span></td>`,
 		`<div class="floe-card"><h3>Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>`,
-		`<div class="floe-note warn"><strong class="floe-note-title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>`,
+		`<div class="floe-note warn" data-floe-part="note"><strong class="floe-note-title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>`,
 		`<details><summary>What the freeze covers</summary>`,
 		`aria-label="The pages go from the old wiki to the new host"`,
 		`--accent: #1d6670;`,
@@ -89,7 +89,7 @@ func TestReportParts(t *testing.T) {
 	t.Parallel()
 
 	got := render(t, "template: report\nsections:\n  - parts:\n      - text: 'a <script>x()</script> <table> `</table>` **b**'\n  - heading: h\nlang: en\n")
-	if strings.Contains(got, "<script>x()") || !strings.Contains(got, "<strong>b</strong>") || strings.Contains(got, `<div class="floe-table">`) {
+	if strings.Contains(got, "<script>x()") || !strings.Contains(got, "<strong>b</strong>") || strings.Contains(got, `<div class="floe-table" data-floe-part="table">`) {
 		t.Errorf("Markdown with raw HTML = %s", got)
 	}
 	if strings.Contains(got, `class="eyebrow"`) || strings.Contains(got, `class="lead"`) {
@@ -119,9 +119,9 @@ func TestReportTableCardsNote(t *testing.T) {
 		{`"c  \nd"`, "c\nd"},
 		{`" \n "`, ""},
 		{`""`, ""},
-		{`{ pill: "#40 <b>", tone: good }`, `<span class="floe-pill good">#40 &lt;b&gt;</span>`},
-		{`{ pill: x }`, `<span class="floe-pill">x</span>`},
-		{`{ pill: y, tone: accent }`, `<span class="floe-pill accent">y</span>`},
+		{`{ pill: "#40 <b>", tone: good }`, `<span class="floe-pill good" data-floe-part="cell">#40 &lt;b&gt;</span>`},
+		{`{ pill: x }`, `<span class="floe-pill" data-floe-part="cell">x</span>`},
+		{`{ pill: y, tone: accent }`, `<span class="floe-pill accent" data-floe-part="cell">y</span>`},
 	}
 	src := "template: report\nsections:\n  - parts:\n      - table:\n          columns: [{title: Cell}, {title: '**N**', num: true}]\n          rows:\n"
 	want := make([]string, 0, len(cells)+3)
@@ -131,8 +131,8 @@ func TestReportTableCardsNote(t *testing.T) {
 		want = append(want, "<tr><td>"+c.html+`</td><td class="num">9</td></tr>`)
 	}
 	src += "      - cards:\n          - title: A & B\n      - note:\n          text: n\n      - note: { text: m, tone: good }\nlang: en\n"
-	want = append(want, `<div class="floe-card"><h3>A &amp; B</h3></div>`, `<div class="floe-note"><p>n</p>`,
-		`<div class="floe-note good"><p>m</p>`)
+	want = append(want, `<div class="floe-card"><h3>A &amp; B</h3></div>`, `<div class="floe-note" data-floe-part="note"><p>n</p>`,
+		`<div class="floe-note good" data-floe-part="note"><p>m</p>`)
 	got := render(t, src)
 	for _, w := range want {
 		if !strings.Contains(got, w) {

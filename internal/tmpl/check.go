@@ -123,12 +123,13 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		mistakes = append(mistakes, err)
 	}
-	page, err := t.page()
+	page, src, err := t.page()
 	if err != nil {
 		return warnings, append(mistakes, err)
 	}
 	mistakes = append(mistakes, t.checkAssets(page)...)
-	return warnings, append(mistakes, t.checkCSS()...)
+	mistakes = append(mistakes, t.checkCSS()...)
+	return warnings, append(mistakes, t.checkNamedParts(src)...)
 }
 
 // checkCSS returns the mistakes of page.css and of each theme of t that ownCSS refuses.
@@ -145,6 +146,23 @@ func (t *Template) checkCSS() []error {
 	for _, name := range names {
 		if _, err := t.ownCSS(name); err != nil {
 			mistakes = append(mistakes, err)
+		}
+	}
+	return mistakes
+}
+
+// checkNamedParts returns a mistake for each part src, page.html, takes the look of, by data-floe-part,
+// that floe does not have: the page would get no style for it.
+func (t *Template) checkNamedParts(src []byte) []error {
+	set, err := builtinParts()
+	if err != nil {
+		return []error{err}
+	}
+	var mistakes []error
+	for _, n := range namedParts(string(src)) {
+		if _, ok := set.parts[n.name]; !ok {
+			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), lineAt(src, n.at), n.name,
+				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")))
 		}
 	}
 	return mistakes
@@ -543,16 +561,18 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 	return false
 }
 
-// variables returns the CSS variables the parts and diagrams l found, and the parts themes, take from the
-// theme, once each.
+// variables returns the CSS variables floe's base, the parts and diagrams l found, and the parts themes
+// take from the theme, once each.
 func (l *schemaLint) variables() ([]string, error) {
 	vars, err := partVariables(l.parts)
 	if err != nil {
 		return nil, err
 	}
-	var more []string
+	// floe's base styles every page, the template's own text, lists, links, code and quotes, and those in
+	// the parts.
+	more := appendFound(nil, fallback, baseCSS)
 	if slices.Contains(l.parts, "diagram") {
-		more = diagram.Variables()
+		more = append(more, diagram.Variables()...)
 	}
 	// Whichever parts theme a data file picks styles the parts, and the quotes of Markdown, which counts
 	// as the table part.

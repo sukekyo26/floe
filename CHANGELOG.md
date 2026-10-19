@@ -50,9 +50,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `note` (Markdown `text` with a `tone`, under a `title` if one is given), each `tone` `accent`, `good`, `warn`
   or `bad`. The built-in `report` takes them, and a template of one's own
   refers to one with `"$ref": "floe:///parts/table.json"`: floe checks the item,
-  draws it, and puts the part's style once into a page that uses its classes,
-  a table of Markdown (in the table's look) and HTML that names them
-  (`<span class="floe-pill good">`) included. A template's item of
+  draws it, and puts the part's style once into a page that names it, as a
+  part's element does (`data-floe-part="table"`), a table of Markdown (in the
+  table's look) and HTML that takes a part's look so
+  (`<span class="floe-pill good" data-floe-part="cell">`) included. A template's item of
   `"format": "markdown"` is Markdown text, which floe draws as HTML.
   `floe template show` tells a part's items, and `floe template check` warns
   of a theme that leaves out a CSS variable its parts take their colours from.
@@ -142,11 +143,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   line and column, and a mistake in those files at their own;
   `page.html` writes numbers with `num` and `bytes`.
   floe puts a page's CSS together, the template's `page.css` and theme each
-  in a `<style>` of its own, in a cascade layer under the parts' style and
-  the parts theme, which they do not restyle whatever their selectors. `page.html` holds no
-  `<style>`, nor an item of `"format": "html"` a `<style>` or `<link>`, nor
-  the template's CSS an `@import` or a `}` that closes no block, each refused
-  at its line.
+  in a `<style>` of its own, in a cascade layer over floe's base (text, lists, links, code and
+  quotes) and under the parts' style and the parts theme, which they do not
+  restyle whatever their selectors. The template's CSS is scoped to the page,
+  `:scope` its root: it reaches a part's element but not what the part holds.
+  `page.html` holds no `<style>`, nor an item of `"format": "html"` a `<style>`
+  or `<link>`, nor the template's CSS an `@import`, `:root`, `html` or a `}` that closes no block, each refused
+  at its line, and `floe template check` refuses a part `page.html` names that floe
+  does not have.
   Images go into the page as data URIs: an item of `"format": "image"`
   names an image under the data file's directory, and `page.html` shows one
   of the template's `assets/` with `asset`. An image is a png, jpeg, gif,
