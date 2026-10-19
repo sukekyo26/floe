@@ -64,13 +64,14 @@ func TestPartsInOwnTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	head, _, _ := strings.Cut(page, "</head>")
-	// One <style>, its layers in the order that decides which wins: the template's, then the parts' and the parts theme.
+	// floe's <style> names the layers in the order that decides which wins, the template's under the parts'
+	// and the parts theme's; the template's CSS is a <style> of its own after it.
 	at := func(s string) int { return strings.Index(head, s) }
 	order := []int{
-		at("<style>\n@layer floe.base, floe.page, floe.parts;\n@layer floe.base {\n"), at("@layer floe.page {\n"), at(":scope { --fg: #000; }"),
-		at("@layer floe.parts {\n"), at(partStyle(t, "table")), at("/* Faces with round corners"),
+		at("<style>\n@layer floe.base, floe.page, floe.parts;\n@layer floe.base {\n"), at("@layer floe.parts {\n"), at(partStyle(t, "table")),
+		at("/* Faces with round corners"), at("</style>\n<style>\n@layer floe.page {\n"), at(":scope { --fg: #000; }"),
 	}
-	if !slices.IsSorted(order) || order[0] < 0 || strings.Count(page, "<style") != 1 {
+	if !slices.IsSorted(order) || order[0] < 0 || strings.Count(page, "<style") != 2 {
 		t.Errorf("the layers, the template's theme, the parts' style and the parts theme's are at %v:\n%s", order, head)
 	}
 	for _, want := range []string{
@@ -149,8 +150,8 @@ func TestCheckParts(t *testing.T) {
 		}
 	}
 	if !strings.Contains(told, "--accent") || !strings.Contains(told, "--good-soft") || strings.Contains(told, "--fg,") ||
-		!strings.Contains(told, "--bad, --bg, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, light colours in dark mode too, and the parts themes go without them\n") ||
-		!strings.Contains(told, "does not define --text-width, --mono, --font, which the template's parts and diagrams, or the parts themes, take from it: the parts and diagrams keep values of their own, and the parts themes go without them\n") {
+		!strings.Contains(told, "--muted, --bg, which floe's base, the template's parts and diagrams, or the parts themes take from it: the parts and diagrams keep values of their own, light colours in dark mode too, and the parts themes go without them\n") ||
+		!strings.Contains(told, "does not define --text-width, --mono, --font, which floe's base, the template's parts and diagrams, or the parts themes take from it: the parts and diagrams keep values of their own, and the parts themes go without them\n") {
 		t.Errorf("the warning of the theme = %q", told)
 	}
 	// A theme that leaves out no colour is not told of dark mode.

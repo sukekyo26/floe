@@ -519,7 +519,7 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
 }
 
-// pageStyle returns the one <style> of the page, in cascade layers that decide which wins whatever the
+// pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
 // selectors: floe's base, under the template's own CSS (own: its page.css, then its theme), under the
 // parts'. The parts' are the style of each part the page names, by its own element, a table of Markdown,
 // or HTML that takes a part's look (<span class="good" data-floe-part="cell">), after the parts it is
@@ -556,10 +556,12 @@ func pageStyle(page, own []byte, theme string) (string, error) {
 			}
 		}
 	}
+	// The template's CSS is a style sheet of its own, so that a mistake in it, a comment or a block left
+	// open, ends with it; the first sheet names the layers, which puts them in that order.
 	return "<style>\n@layer floe.base, floe.page, floe.parts;\n" +
 		"@layer floe.base {\n" + baseCSS + "}\n" +
-		"@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(own) + "}\n}\n" +
-		"@layer floe.parts {\n" + parts.String() + themes + "}\n</style>\n", nil
+		"@layer floe.parts {\n" + parts.String() + themes + "}\n</style>\n" +
+		"<style>\n@layer floe.page {\n@scope (:root) to ([data-floe-part] > *) {\n" + string(own) + "}\n}\n</style>\n", nil
 }
 
 // inOrder returns names, parts of set, each after the parts it uses that names holds, else in order.
@@ -747,7 +749,7 @@ func tagsOf(page []byte) tags {
 
 var (
 	// tagOrText finds, in order, a comment, a script or a noscript, a style or a link, and </head>.
-	tagOrText = regexp.MustCompile(`(?i)(<!--)|<(script|noscript)\b[^>]*>|<(style|link)\b|</head\s*>`)
+	tagOrText = regexp.MustCompile(`(?i)(<!--)|<(script|noscript)(?:[\s/][^>]*)?>|<(style|link)[\s/>]|</head\s*>`)
 	endTag    = map[string]*regexp.Regexp{
 		"script":   regexp.MustCompile(`(?i)</script\s*>`),
 		"noscript": regexp.MustCompile(`(?i)</noscript\s*>`),
@@ -772,11 +774,7 @@ func partVariables(names []string) ([]string, error) {
 			next = append(next, set.parts[name].uses...)
 		}
 	}
-	// floe's base styles the elements of every part floe draws from HTML.
 	var vars []string
-	if slices.ContainsFunc(names, func(name string) bool { return !isGoPart(name) }) {
-		vars = appendFound(nil, fallback, baseCSS)
-	}
 	for _, name := range slices.Sorted(maps.Keys(used)) {
 		vars = appendFound(vars, fallback, set.parts[name].css)
 	}

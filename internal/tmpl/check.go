@@ -567,14 +567,16 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 	return false
 }
 
-// variables returns the CSS variables the parts and diagrams l found, and the parts themes, take from the
-// theme, once each.
+// variables returns the CSS variables floe's base, the parts and diagrams l found, and the parts themes
+// take from the theme, once each.
 func (l *schemaLint) variables() ([]string, error) {
 	vars, err := partVariables(l.parts)
 	if err != nil {
 		return nil, err
 	}
-	var more []string
+	// floe's base styles every page, the template's own text, lists, links, code and quotes, and those in
+	// the parts.
+	more := appendFound(nil, fallback, baseCSS)
 	if slices.Contains(l.parts, "diagram") {
 		more = diagram.Variables()
 	}

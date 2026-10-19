@@ -115,12 +115,13 @@ func TestWithStyles(t *testing.T) {
 }
 
 // tagsOf finds the first <style> and <link> as an HTML parser would, case and all, past those in
-// comments, scripts and noscripts.
+// comments, scripts and noscripts, and past elements of other names that start so.
 func TestTagsOf(t *testing.T) {
 	t.Parallel()
 
-	page := "<!-- <style> --><script>'<style><link>'</script><noscript><style></noscript><LINK rel=x><Style>a{}</Style>"
-	want := tags{head: -1, style: strings.Index(page, "<Style>"), link: strings.Index(page, "<LINK")}
+	page := "<!-- <style> --><script>'<style><link>'</script><noscript><style></noscript><link-card></link-card><style-box>" +
+		"<script-x><link></script-x><LINK rel=x><Style>a{}</Style>"
+	want := tags{head: -1, style: strings.Index(page, "<Style>"), link: strings.Index(page, "<link></script-x>")}
 	if got := tagsOf([]byte(page)); got != want {
 		t.Errorf("tagsOf(%q) = %+v, want %+v", page, got, want)
 	}
