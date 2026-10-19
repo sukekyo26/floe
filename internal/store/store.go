@@ -319,9 +319,12 @@ func stamp(sources tmpl.Sources) string {
 	if sources.Templates != "" {
 		add(sources.Templates)
 	}
-	addTree(sources.Template, add)
+	note := func(s string) {
+		_, _ = fmt.Fprintf(h, "%s\n", s) //nolint:errcheck // a hash takes every write
+	}
+	addTree(sources.Template, add, note)
 	for _, dir := range sources.Parts {
-		addTree(dir, add)
+		addTree(dir, add, note)
 	}
 	for _, file := range slices.Concat(sources.Images, sources.Icons) {
 		add(file)
@@ -331,8 +334,9 @@ func stamp(sources tmpl.Sources) string {
 
 // addTree adds each file under dir, "" for none, a symlink followed, to a stamp with add, but those of a
 // name starting with a dot (.git), no file of a template or a part. A symlink in it to a directory in it
-// is walked through, and one that leads out of it is not, as floe reads no file through it.
-func addTree(dir string, add func(string)) {
+// is walked through. One that leads out of it is noted with where it leads, not walked: floe reads no
+// file through it, or reads it as a directory of its own (a part kept elsewhere), which Sources names.
+func addTree(dir string, add, note func(string)) {
 	root, err := filepath.EvalSymlinks(dir)
 	if dir == "" || err != nil {
 		return
@@ -356,7 +360,9 @@ func addTree(dir string, add func(string)) {
 				switch {
 				case err != nil || statErr != nil || !fi.IsDir():
 					add(p)
-				case !walked[to] && (to == root || strings.HasPrefix(to, root+string(filepath.Separator))):
+				case to != root && !strings.HasPrefix(to, root+string(filepath.Separator)):
+					note(p + " -> " + to)
+				case !walked[to]:
 					walk(to)
 				}
 			case !e.IsDir():

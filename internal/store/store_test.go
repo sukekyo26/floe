@@ -1114,8 +1114,9 @@ func TestLinkDataFileIcons(t *testing.T) {
 }
 
 // A linked data file drawn with a part and a parts theme of one's own, kept elsewhere and linked into the
-// directory of parts, itself a symlink, is drawn again when a file of either is saved, and not when a
-// file a link in the part leads out to is, which floe does not read.
+// directory of parts, itself a symlink, is drawn again when a file of either is saved, or the link is
+// pointed elsewhere or removed, and not when a file a link in the part leads out to is, which floe does
+// not read.
 func TestLinkDataFileParts(t *testing.T) {
 	t.Parallel()
 
@@ -1166,6 +1167,31 @@ func TestLinkDataFileParts(t *testing.T) {
 		}
 		if v := s.Version("spec", &m, data); v == version {
 			t.Errorf("the version stays %q once %s is saved", v, file)
+		}
+		version = s.Version("spec", &m, data)
+	}
+	// The part's link pointed at another copy of it, then removed.
+	link := filepath.Join(under, "note")
+	e.write(t, "kept2/note/schema.json", `{"type": "object", "properties": {"text": {"type": "string"}}}`)
+	e.write(t, "kept2/note/part.html", `<aside data-floe-part="note">{{.text}}</aside>`)
+	e.write(t, "kept2/note/part.css", ":scope { margin: 0; }\n")
+	for _, step := range []struct {
+		what   string
+		change func() error
+	}{
+		{"pointed elsewhere", func() error {
+			if rmErr := os.Remove(link); rmErr != nil {
+				return rmErr
+			}
+			return os.Symlink(filepath.Join(e.tmp, "kept2", "note"), link)
+		}},
+		{"removed", func() error { return os.Remove(link) }},
+	} {
+		if err = step.change(); err != nil {
+			t.Fatal(err)
+		}
+		if v := s.Version("spec", &m, data); v == version {
+			t.Errorf("the version stays %q once the part's link is %s", v, step.what)
 		}
 		version = s.Version("spec", &m, data)
 	}
