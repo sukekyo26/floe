@@ -744,6 +744,9 @@ func TestPublishImages(t *testing.T) {
 	want(t, "publish with an image", e.run(t, "", "publish", page("sizes", "img/chart.png")), 0, e.base()+"/a/sizes/\n", "")
 	e.opened(t)
 	m := store.New(e.vars["FLOE_DIR"], "", nil).ReadMeta("sizes")
+	if m == nil {
+		t.Fatal("no page sizes")
+	}
 	if b, readErr := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], "sizes", m.Source, "img", "chart.png")); readErr != nil || !bytes.Equal(b, png) {
 		t.Errorf("the image kept = %d bytes, %v", len(b), readErr)
 	}
