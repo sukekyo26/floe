@@ -89,14 +89,14 @@ func (e env) link(t *testing.T, file string, opts store.Options, cwd string) (*s
 	return e.save(t, e.s.PrepareLink, file, opts, cwd)
 }
 
-func (e env) save(t *testing.T, prepare func(context.Context, string, store.Options, string) (*store.Entry, error),
+func (e env) save(t *testing.T, prepareWith func(context.Context, string, store.Options, string) (*store.Entry, error),
 	file string, opts store.Options, cwd string,
 ) (*store.Entry, error) {
 	t.Helper()
 
 	dir := filepath.Join(e.tmp, cwd)
 	mkdir(t, dir)
-	entry, err := prepare(t.Context(), file, opts, dir)
+	entry, err := prepareWith(t.Context(), file, opts, dir)
 	if err != nil {
 		return nil, err
 	}
@@ -695,7 +695,7 @@ func TestSaveChecksAgain(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	prepare := func(file, cwd string) *store.Entry {
+	prepareIn := func(file, cwd string) *store.Entry {
 		t.Helper()
 		mkdir(t, filepath.Join(e.tmp, cwd))
 		entry, err := prepare(t.Context(), e.s, file, store.Options{}, filepath.Join(e.tmp, cwd))
@@ -707,7 +707,7 @@ func TestSaveChecksAgain(t *testing.T) {
 
 	doc := e.page(t, "kept.yaml", "Kept")
 	e.mustPublish(t, doc, store.Options{}, "proj")
-	entry := prepare(doc, "proj")
+	entry := prepareIn(doc, "proj")
 	if _, err := e.s.Edit("kept", store.Edit{Description: ptr("set meanwhile")}); err != nil {
 		t.Fatal(err)
 	}
@@ -716,14 +716,14 @@ func TestSaveChecksAgain(t *testing.T) {
 	}
 
 	race := e.page(t, "race.yaml", "Race")
-	first, second := prepare(race, "one"), prepare(race, "two")
+	first, second := prepareIn(race, "one"), prepareIn(race, "two")
 	if err := e.s.Save(first); err != nil {
 		t.Fatal(err)
 	}
 	wantUserErr(t, e.s.Save(second), "store_slug_owned", "race", "one")
 
 	e.mustPublish(t, e.page(t, "a.yaml", "A"), store.Options{}, "one")
-	onto := prepare(e.page(t, "b.yaml", "B"), "two")
+	onto := prepareIn(e.page(t, "b.yaml", "B"), "two")
 	if _, err := e.s.Edit("a", store.Edit{Slug: ptr("b")}); err != nil {
 		t.Fatal(err)
 	}
@@ -825,7 +825,7 @@ func TestLinkSlugPickedOnSave(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	prepare := func(file string) *store.Entry {
+	prepareIn := func(file string) *store.Entry {
 		t.Helper()
 		entry, err := e.s.PrepareLink(t.Context(), file, store.Options{}, e.tmp)
 		if err != nil {
@@ -833,7 +833,7 @@ func TestLinkSlugPickedOnSave(t *testing.T) {
 		}
 		return entry
 	}
-	one, two := prepare(e.write(t, "a/site/index.html", "<h1>A</h1>")), prepare(e.write(t, "b/site/index.html", "<h1>B</h1>"))
+	one, two := prepareIn(e.write(t, "a/site/index.html", "<h1>A</h1>")), prepareIn(e.write(t, "b/site/index.html", "<h1>B</h1>"))
 	for _, entry := range []*store.Entry{one, two} {
 		if err := e.s.Save(entry); err != nil {
 			t.Fatal(err)
@@ -843,7 +843,7 @@ func TestLinkSlugPickedOnSave(t *testing.T) {
 		t.Errorf("two links saved at once took %s and %s", one.Slug, two.Slug)
 	}
 
-	again := prepare(filepath.Join(e.tmp, "a", "site", "index.html"))
+	again := prepareIn(filepath.Join(e.tmp, "a", "site", "index.html"))
 	if _, err := e.s.Edit("site", store.Edit{Slug: ptr("renamed")}); err != nil {
 		t.Fatal(err)
 	}

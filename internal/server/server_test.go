@@ -121,9 +121,7 @@ func (e *env) write(t *testing.T, rel, body string) string {
 func (e *env) publish(t *testing.T, file string, opts store.Options) {
 	t.Helper()
 
-	e.save(t, func(ctx context.Context, file string, opts store.Options, cwd string) (*store.Entry, error) {
-		return e.prepare(ctx, file, opts, cwd)
-	}, file, opts)
+	e.save(t, e.prepare, file, opts)
 }
 
 // prepare checks a publish of the data file file on disk from cwd as the CLI has the server check it,

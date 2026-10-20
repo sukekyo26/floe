@@ -195,7 +195,7 @@ func (a *app) publishData(ctx context.Context, file string, opts store.Options) 
 	}
 	path := "/api/artifacts/" + slug
 	err = c.do(ctx, http.MethodPut, path, up, &saved)
-	if re := refused(err); re != nil && re.status == http.StatusUnprocessableEntity {
+	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusUnprocessableEntity {
 		var need server.ImagesNeeded
 		if err = json.Unmarshal(re.body, &need); err != nil {
 			return saved, fmt.Errorf("read the images the server asks for: %w", err)
@@ -206,7 +206,16 @@ func (a *app) publishData(ctx context.Context, file string, opts store.Options) 
 		// Sent with its images, it is not asked again.
 		err = c.do(ctx, http.MethodPut, path, up, &saved)
 	}
-	return saved, err
+	return saved, tooLarge(err)
+}
+
+// tooLarge tells a publish of a data file refused for its size how large one may be; any other error
+// it leaves as it is.
+func tooLarge(err error) error {
+	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusRequestEntityTooLarge {
+		return usererr.New("cli_publish_large", strconv.Itoa(server.MaxUpload>>20)+" MiB")
+	}
+	return err
 }
 
 // client makes sure the server of this store runs, of this build, and returns what calls it. anyDirs
@@ -290,7 +299,7 @@ func (a *app) rmCmd() *cobra.Command {
 			}
 			for _, slug := range args {
 				err = c.do(cmd.Context(), http.MethodDelete, "/api/artifacts/"+url.PathEscape(slug), nil, nil)
-				if re := refused(err); re != nil && re.status == http.StatusNotFound {
+				if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
 					return usererr.New("store_no_page", slug)
 				}
 				if err != nil {

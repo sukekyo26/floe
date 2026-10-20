@@ -9,20 +9,13 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
-
-// httpClient gives up on a server that does not answer, rather than wait for ever.
-// LIMIT: two minutes a request, while a publish checks and draws the page before it answers. Raise it if
-// pages come to take that long.
-var httpClient = &http.Client{Transport: nil, CheckRedirect: nil, Jar: nil, Timeout: 2 * time.Minute}
 
 // client calls the API of the server at base, in the language lang. The server is the only one that
 // writes the store: the CLI asks it.
@@ -54,10 +47,12 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 		if err != nil {
 			return fmt.Errorf("%s %s: %w", method, path, err)
 		}
-		// Told before sending: the server stops reading at its limit, which may break the sending off
-		// before its answer comes.
+		// Refused before sending, as the server would: it stops reading at its limit, which may break
+		// the sending off before its answer comes.
 		if len(b) > server.MaxUpload {
-			return tooLarge()
+			return &remoteError{
+				status: http.StatusRequestEntityTooLarge, message: "request body too large", mistakes: false, body: nil,
+			}
 		}
 		r = bytes.NewReader(b)
 	}
@@ -71,7 +66,9 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	res, err := httpClient.Do(req)
+	// No time limit: the server checks and saves the page before it answers, and a wait given up on
+	// would tell a publish failed that the server goes on to save. Ctrl-C stops it.
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("%s %s: %w", method, path, err)
 	}
@@ -79,10 +76,6 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
 		return fmt.Errorf("%s %s: %w", method, path, err)
-	}
-	// Only a publish sends so much.
-	if res.StatusCode == http.StatusRequestEntityTooLarge {
-		return tooLarge()
 	}
 	if res.StatusCode >= http.StatusMultipleChoices {
 		e := &remoteError{status: res.StatusCode, message: strings.TrimSpace(string(b)), mistakes: false, body: b}
@@ -98,20 +91,6 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 	}
 	if err = json.Unmarshal(b, out); err != nil {
 		return fmt.Errorf("%s %s: %w", method, path, err)
-	}
-	return nil
-}
-
-// tooLarge refuses a publish larger than the server takes, saying how large it may be.
-func tooLarge() error {
-	return usererr.New("cli_publish_large", strconv.Itoa(server.MaxUpload>>20)+" MiB")
-}
-
-// refused is the refusal err is, nil for an error of another kind.
-func refused(err error) *remoteError {
-	var re *remoteError
-	if errors.As(err, &re) {
-		return re
 	}
 	return nil
 }
