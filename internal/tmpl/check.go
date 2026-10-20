@@ -110,6 +110,10 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
+	page, src, pageErr := t.page()
+	if pageErr == nil {
+		lint.takeNamed(src)
+	}
 	// Told beside the other mistakes of the files, not instead of them.
 	if err = t.refuseShared(s); err != nil {
 		mistakes = append(mistakes, err)
@@ -120,20 +124,25 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 		mistakes = append(mistakes, err)
 	}
 	mistakes = append(mistakes, t.checkChecks(sch)...)
-	computed, found, err := t.readOptional("computed.yaml")
-	if err == nil && found {
-		_, err = readComputed(t.file("computed.yaml"), computed, slices.Sorted(maps.Keys(s.Properties)))
-	}
-	if err != nil {
+	if err = t.checkComputed(s); err != nil {
 		mistakes = append(mistakes, err)
 	}
-	page, src, err := t.page()
-	if err != nil {
-		return warnings, append(mistakes, err)
+	if pageErr != nil {
+		return warnings, append(mistakes, pageErr)
 	}
 	mistakes = append(mistakes, t.checkAssets(page)...)
 	mistakes = append(mistakes, t.checkCSS()...)
 	return append(warnings, brokenParts(set, src)...), append(mistakes, t.checkNamedParts(src)...)
+}
+
+// checkComputed returns the mistake of t's computed.yaml, of the items of its schema s, if it has one.
+func (t *Template) checkComputed(s *schema) error {
+	computed, found, err := t.readOptional("computed.yaml")
+	if err != nil || !found {
+		return err
+	}
+	_, err = readComputed(t.file("computed.yaml"), computed, slices.Sorted(maps.Keys(s.Properties)))
+	return err
 }
 
 // brokenParts warns of each part of one's own in set that cannot be used, but those src, page.html,
@@ -199,7 +208,7 @@ func (t *Template) checkNamedParts(src []byte) []error {
 		case nameBroken:
 			mistakes = append(mistakes, usererr.New("tmpl_part_broken", n.name, set.broken[n.name]))
 		case nameUnknown:
-			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), line, n.name, set.names(nil)))
+			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), line, n.name, set.candidates(n)))
 		case nameRight:
 		}
 	}
@@ -602,6 +611,12 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 
 // variables returns the CSS variables floe's base, the parts and diagrams l found, and the parts themes
 // take from the theme, once each.
+// takeNamed adds to the parts of l those src, page.html, names, which take colours from the theme as those
+// the schema refers to do.
+func (l *schemaLint) takeNamed(src []byte) {
+	l.parts = slices.Compact(slices.Sorted(slices.Values(append(l.parts, l.set.partsNamedIn(string(src))...))))
+}
+
 func (l *schemaLint) variables() []string {
 	vars := l.set.variables(l.parts)
 	// floe's base styles every page, the template's own text, lists, links, code and quotes, and those in

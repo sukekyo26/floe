@@ -261,6 +261,11 @@ func TestPartStylesByClass(t *testing.T) {
 	if strings.Contains(page, "@layer floe.parts {\n@scope") {
 		t.Errorf("a page of HTML in the table's look has a part's box:\n%s", page)
 	}
+	// A script that writes a data-floe-part is no attribute of one name to refuse.
+	if _, err := draw(tmpl.NewLibrary("", "", ""), "template: report\nlang: en\nsections:\n  - parts:\n      - script: { js: "+
+		`'function (el, k) { el.innerHTML = "<b data-floe-part=\"" + k + "\">x</b>" }'`+" }\n"); err != nil {
+		t.Errorf("drawing a script that writes a data-floe-part = %v", err)
+	}
 	// HTML of the data whose data-floe-part is not one name, or names a look, which has no box, is refused.
 	for html, want := range map[string]string{
 		`<div data-floe-part="table compare">x</div>`: `the page has data-floe-part="table compare", which is not the name of one part`,

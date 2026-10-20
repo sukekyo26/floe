@@ -70,13 +70,10 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry) error {
 func (set *partSet) leaveOutUnusable(own map[string]string) {
 	held := func(at string) []string { return set.schemas[partsURL+at+".json"].refsUnder(nil) }
 	looks := func(at string) []string {
-		var names []string
 		if p := set.parts[at]; p != nil {
-			for _, look := range p.looks {
-				names = append(names, look.name)
-			}
+			return p.lookNames()
 		}
-		return names
+		return nil
 	}
 	for _, name := range slices.Sorted(maps.Keys(own)) {
 		if chain := cycle(name, held); chain != nil {
@@ -230,14 +227,14 @@ func (set *partSet) checkNames(name, dir string) error {
 		case dir != "" && kind == nameLookBox:
 			return usererr.New("tmpl_look_box", html, line, n.name, n.name)
 		default:
-			if err := set.unlent(kind, n.name, html, line); err != nil {
+			if err := unlent(kind, n.name, html, line, set.candidates(n)); err != nil {
 				return err
 			}
 		}
 	}
 	for _, look := range p.looks {
-		kind := set.misnamed(namedPart{name: look.name, value: look.name, look: true, at: 0})
-		if err := set.unlent(kind, look.name, yaml, look.line); err != nil {
+		n := namedPart{name: look.name, value: look.name, look: true, inCode: false, at: 0}
+		if err := unlent(set.misnamed(n), look.name, yaml, look.line, set.candidates(n)); err != nil {
 			return err
 		}
 	}
@@ -260,10 +257,13 @@ const (
 func (set *partSet) misnamed(n namedPart) nameKind {
 	p := set.parts[n.name]
 	switch {
-	case n.notOne():
-		return nameNotOne
 	case p == nil && set.broken[n.name] != nil:
 		return nameBroken
+	case n.inCode:
+		// No attribute, but the text of a script or a comment that may write one: it brings the style alone.
+		return nameRight
+	case n.notOne():
+		return nameNotOne
 	case p == nil:
 		return nameUnknown
 	case !n.look && p.look:
@@ -273,16 +273,25 @@ func (set *partSet) misnamed(n namedPart) nameKind {
 }
 
 // unlent refuses name, a part another takes the look of, or names in file at line, by kind, what it is
-// to set: a part there is none of, or one that cannot be used.
-func (set *partSet) unlent(kind nameKind, name, file string, line int) error {
+// to set: a part there is none of, told with candidates, or one that cannot be used.
+func unlent(kind nameKind, name, file string, line int, candidates string) error {
 	switch kind {
 	case nameBroken:
 		return usererr.New("tmpl_part_lender_broken", name)
 	case nameUnknown:
-		return usererr.New("tmpl_part_names", file, line, name, set.names(nil))
+		return usererr.New("tmpl_part_names", file, line, name, candidates)
 	case nameRight, nameNotOne, nameLookBox:
 	}
 	return nil
+}
+
+// candidates lists the parts the attribute of n may name in place of one there is none of: every part
+// and look for data-floe-look, the parts that draw for a box.
+func (set *partSet) candidates(n namedPart) string {
+	if n.look {
+		return set.names(nil)
+	}
+	return set.names(drawing)
 }
 
 // checkHeld refuses the part p, whose files are at at, when its schema holds a part there is none of, of

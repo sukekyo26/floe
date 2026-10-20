@@ -155,6 +155,10 @@ func TestBrokenOwnParts(t *testing.T) {
 		"boxlook/part.css":     "",
 		"halfway/part.yaml":    "looks: [panel]\n",
 		"halfway/part.html":    `<div data-floe-part="halfway"></div>`,
+		"twodocs/schema.json":  `{"type": "object"}`,
+		"twodocs/part.html":    `<div data-floe-part="twodocs"></div>`,
+		"twodocs/part.css":     "",
+		"twodocs/part.yaml":    "looks: [panel]\n---\nlooks: [rows]\n",
 		"base/schema.json":     `{"type": "object"}`,
 		"diagram/schema.json":  `{"type": "object"}`,
 		"code/schema.json":     `{"type": "object"}`,
@@ -200,6 +204,7 @@ func TestBrokenOwnParts(t *testing.T) {
 		"keyed": "the part keyed cannot be used: " + filepath.Join(parts, "keyed", "part.yaml") + ":1:1: lookz is not a key of part.yaml",
 		"boxlook": "the part boxlook cannot be used: " + filepath.Join(parts, "boxlook", "part.html") +
 			":1: data-floe-part names the look panel, which has no box",
+		"twodocs": "the part twodocs cannot be used: " + filepath.Join(parts, "twodocs", "part.yaml") + ":2:1: part.yaml holds one YAML document",
 		"halfway": "the part halfway cannot be used: " + filepath.Join(parts, "halfway") +
 			": a part holds schema.json, part.html and part.css",
 		"code":     "the part code cannot be used: " + filepath.Join(parts, "code", "part.css") + ":1: this } closes no block",

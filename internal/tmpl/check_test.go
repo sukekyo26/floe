@@ -2,6 +2,7 @@ package tmpl_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -556,4 +557,26 @@ func sizes(t *testing.T, files map[string]string) string {
 		}
 	}
 	return dir
+}
+
+// The parts and looks page.html names take their colours from the theme, as those the schema refers to
+// do, and a name of no part is told with those the attribute may name: a look has no box.
+func TestCheckPageNames(t *testing.T) {
+	t.Parallel()
+
+	warned := func(page string) string {
+		t.Helper()
+		warnings, _ := tmpl.Check(sizes(t, map[string]string{"page.html": "<body>|<body>" + page}), "", "")
+		return fmt.Sprint(warnings)
+	}
+	if strings.Contains(warned(""), "--fg") || !strings.Contains(warned(`<section data-floe-look="panel"></section>`), "--fg") {
+		t.Errorf("the variables of a look page.html takes are not warned of")
+	}
+	for page, want := range map[string]bool{`<b data-floe-part="pannel"></b>`: false, `<b data-floe-look="pannel"></b>`: true} {
+		_, mistakes := tmpl.Check(sizes(t, map[string]string{"page.html": "<body>|<body>" + page}), "", "")
+		if got := fmt.Sprint(mistakes); !strings.Contains(got, "options, progress") && !strings.Contains(got, "options, panel, progress") ||
+			strings.Contains(got, "options, panel, progress") != want {
+			t.Errorf("Check of %s = %v, want panel among the names %v", page, mistakes, want)
+		}
+	}
 }
