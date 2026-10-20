@@ -258,7 +258,7 @@ Check each diagram spec and print the diagrams, in order, as one HTML fragment o
 - Layout mistakes are all reported: text too wide or too tall for its box, parts sticking out of the canvas, overlapping, or straddling the edge of a frame, edges running through boxes, labels or frame headings, and edges crossing like an X.
 - Every mistake of every spec is printed as `file:line:column: message`, and nothing is drawn until all are fixed (exit code 1).
 - The ids of the diagrams drawn together must differ, because they name the diagrams' markers and icons. Draw all the diagrams of a page with one `render`.
-- The fragment starts with the assets: the diagrams' style, which takes its colours from the CSS variables the `report` theme defines (so dark mode follows; a page without them gets that theme's light colours), and the script that zooms them. Each diagram sits in a frame that first shows it whole; readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. The toolbar is worded in the page's language (`<html lang>`). A page needs the assets once; holding them more than once does no harm.
+- The fragment starts with the assets: the diagrams' style, which takes its colours from the CSS variables of the palette (so dark mode follows; a page without them gets `default`'s light colours), and the script that zooms them. Each diagram sits in a frame that first shows it whole; readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. The toolbar is worded in the page's language (`<html lang>`). A page needs the assets once; holding them more than once does no harm.
 
 | Flag | Description |
 |---|---|

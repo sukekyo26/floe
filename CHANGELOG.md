@@ -80,8 +80,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   part's style reaches the elements that have its look, not a part held in
   them, and comes after the style of the looks it takes. A template's item of
   `"format": "markdown"` is Markdown text, which floe draws as HTML.
-  `floe template show` tells a part's items, and `floe template check` warns
-  of a theme that leaves out a CSS variable its parts take their colours from.
+  `floe template show` tells a part's items.
   A template's `page.html` takes `markdownLine`, which draws a line of
   Markdown without a paragraph around it, keeping a cell like `-` or `1.` as
   text.
@@ -109,15 +108,19 @@ adheres to [Semantic Versioning](https://semver.org/).
   panel), its style reaching the elements that have the look but not a part
   held in them, and Markdown's quotes, and goes into every page after the
   parts' style; the template's theme (`theme:`,
-  `report` has `default`) styles the page, in a layer under them. `floe
+  `report` has `default`) styles the page, in a layer under them. A parts
+  theme's `palette.css` sets the page's colours and faces as CSS variables, in
+  the bottom layer over `default`'s, which defines them all: the parts,
+  diagrams and the template draw with them (`--page-bg` the page's ground,
+  `--rule` its rules), and a template keeps colours of its own by setting
+  them on `:scope`. A part of your own cannot be named `palette`. `floe
   template show` lists the parts themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as
   `floe diagram render` checks one, its ids across the page, and every
   mistake is reported at the data file's line and column. The page gets the
-  diagrams' style and zoom once. `floe template check` warns of a theme that
-  leaves out the CSS variables diagrams take their colours from.
+  diagrams' style and zoom once.
 - Add `floe diagram render <spec.yaml>...`, which draws diagrams from YAML
   specs of parts placed at absolute coordinates and prints them as one HTML
   fragment of inline SVG. It first checks for text that does not fit, parts
