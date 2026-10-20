@@ -872,14 +872,19 @@ func (set *partSet) pageStyle(page string, found []tag, own [][]byte, theme stri
 	// The first sheet names the layers, which puts them in that order. Each file after it is a sheet of
 	// its own, so that a mistake in it, a comment or a block left open, ends with it.
 	var style strings.Builder
-	style.WriteString("<style>\n@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n" +
-		baseCSS + "}\n</style>\n")
-	// Every CSS is refused where it would close its <style> as it is read; this keeps out one that is not.
-	leaks := false
+	// Every CSS is refused where it would close its <style> as it is read; this keeps out one that is not,
+	// by what goes into the <style> as written.
+	leak := ""
+	write := func(layer, body string) {
+		if leak == "" && styleEnd.MatchString(body) {
+			leak = layer
+		}
+		style.WriteString("<style>\n" + body + "</style>\n")
+	}
+	write("floe.base", "@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n"+baseCSS+"}\n")
 	sheet := func(layer, css string) {
-		leaks = leaks || styleEnd.MatchString(css)
 		if css != "" {
-			style.WriteString("<style>\n@layer " + layer + " {\n" + css + "}\n</style>\n")
+			write(layer, "@layer "+layer+" {\n"+css+"}\n")
 		}
 	}
 	// floe's own default palette defines every variable; the theme's after it, default of one's own too,
@@ -912,13 +917,13 @@ func (set *partSet) pageStyle(page string, found []tag, own [][]byte, theme stri
 			sheet("floe.page", "@scope (:root) to ([data-floe-part] > *) {\n"+string(css)+"}\n")
 		}
 	}
-	if leaks {
-		return "", errStyleEnd
+	if leak != "" {
+		return "", fmt.Errorf("%w: a CSS of the layer %s", errStyleEnd, leak)
 	}
 	return style.String(), nil
 }
 
-var errStyleEnd = errors.New("draw the page's style: a CSS holds </style, which would close its <style>")
+var errStyleEnd = errors.New("draw the page's style: </style would close its <style>")
 
 // misnamedIn returns the mistake of the first name of named, the names of a page or of HTML of the data,
 // that the page is refused for, or nil: a part that cannot be used, by a table of Markdown or HTML of the

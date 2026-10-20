@@ -475,7 +475,8 @@ func TestReadWords(t *testing.T) {
 	}
 }
 
-// A CSS that would close its <style>, which no reader refused, is kept out of the page as it is drawn.
+// A CSS that would close its <style>, which no reader refused, is kept out of the page as it is drawn,
+// told by its layer; one that ends in </style does not close it, as floe writes a } after it.
 func TestPageStyleEnd(t *testing.T) {
 	t.Parallel()
 
@@ -483,10 +484,13 @@ func TestPageStyleEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = set.pageStyle("<body></body>", nil, [][]byte{[]byte("/* </style> */")}, "default"); !errors.Is(err, errStyleEnd) {
-		t.Errorf("pageStyle = %v, want %v", err, errStyleEnd)
+	if _, err = set.pageStyle("<body></body>", nil, [][]byte{[]byte("/* </style> */")}, "default"); !errors.Is(err, errStyleEnd) ||
+		!strings.HasSuffix(err.Error(), "of the layer floe.page") {
+		t.Errorf("pageStyle = %v, want %v of the layer floe.page", err, errStyleEnd)
 	}
-	if _, err = set.pageStyle("<body></body>", nil, [][]byte{[]byte("/* </styles */")}, "default"); err != nil {
-		t.Errorf("pageStyle = %v", err)
+	for _, css := range []string{"/* </styles */", "/* </style"} {
+		if _, err = set.pageStyle("<body></body>", nil, [][]byte{[]byte(css)}, "default"); err != nil {
+			t.Errorf("pageStyle of %q = %v", css, err)
+		}
 	}
 }

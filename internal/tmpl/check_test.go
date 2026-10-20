@@ -396,14 +396,14 @@ func TestCSSBraceRefused(t *testing.T) {
 
 // A </style of the template's CSS, which would close floe's <style> and leave what follows to be read as
 // the page's HTML, is refused at its line by floe template check and by the drawing, in a comment or a
-// string too, whatever its case, and at the end of the file; escaped in a string, or what HTML does not
-// read as the end of a <style>, it is the CSS's.
+// string too, whatever its case; escaped in a string, or what HTML does not read as the end of a <style>,
+// the end of the file's among them, after which floe writes a }, it is the CSS's.
 func TestCSSStyleEndRefused(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{
 		"page.css":           "a { color: red; }\n/* </STYLE><b id=\"x\">x</b><style> */\n",
-		"themes/default.css": "a::before { content: \"x\"; }\n/* </style",
+		"themes/default.css": "a::before { content: \"x\"; }\na::after { content: \"</style/\"; }",
 	})
 	want := []string{
 		filepath.Join(dir, "page.css") + ":2: floe puts this CSS in a <style>, which this </style would close",
@@ -417,7 +417,7 @@ func TestCSSStyleEndRefused(t *testing.T) {
 		t.Errorf("drawing = %v, want %s", err, want[0])
 	}
 	escaped := sizes(t, map[string]string{
-		"page.css": "a::before { content: \"<\\/style> </stylesheet>\"; }\n/* </styles.md </ſtyle> */\n",
+		"page.css": "a::before { content: \"<\\/style> </stylesheet>\"; }\n/* </styles.md </ſtyle> */\n/* </style",
 	})
 	if warnings, mistakes := tmpl.Check(escaped, "", ""); len(mistakes) != 0 {
 		t.Errorf("Check of what is no end of a <style> = %v, %v", warnings, mistakes)
