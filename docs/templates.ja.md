@@ -107,7 +107,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 | `--page-bg` | ページ全体の地。方眼のような模様も書ける（既定は `--bg`） |
 | `--rule` | 節の区切りのような、ページの区切り線の `border`（既定は `1px solid` の `--line`） |
 
-テンプレートは、ページの枠もこれらの変数で描きます（`background: var(--page-bg)`、`border-top: var(--rule)`）。テーマを替えると、ページの地や区切り線もそろって替わります。パレットは最下層なので、テンプレートが `page.css` の `:scope` に変数を書くと、どのテーマでもその値になります。ブランドの色に固定したいときだけ書いてください。そのときはダークモードの分も `@media (prefers-color-scheme: dark) { :scope { … } }` に書きます。ライトモードの分だけを書いた、モードで変わる色は、`floe template check` が警告します。本文と注記が広がる幅 `--text-width` も、`default` のパレットが `56rem` と決め、テンプレートは `:scope` で、テーマは `palette.css` で変えられます。`tone`（ピル・注記・図の部品）は `accent`・`good`・`warn`・`bad` のどれかで、`--accent`・`--good` などの色と、その `-soft` を使います。
+テンプレートは、ページの枠もこれらの変数で描きます（`background: var(--page-bg)`、`border-top: var(--rule)`）。テーマを替えると、ページの地や区切り線もそろって替わります。パレットは最下層なので、テンプレートが `page.css` の `:scope` に変数を書くと、どのテーマでもその値になります。ブランドの色に固定したいときだけ書いてください。そのときはダークモードの分も `@media (prefers-color-scheme: dark) { :scope { … } }` に書きます（`@media screen and (…)` のように条件を足しても、`@layer` や `@supports` で包んでも、`:scope` の中に入れ子にしてもかまいません）。ライトモードの分だけを書いた、モードで変わる色は、`floe template check` が警告します。本文と注記が広がる幅 `--text-width` も、`default` のパレットが `56rem` と決め、テンプレートは `:scope` で、テーマは `palette.css` で変えられます。`tone`（ピル・注記・図の部品）は `accent`・`good`・`warn`・`bad` のどれかで、`--accent`・`--good` などの色と、その `-soft` を使います。
 
 ## 自分の部品
 
