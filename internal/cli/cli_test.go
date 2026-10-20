@@ -43,7 +43,7 @@ func TestMain(m *testing.M) {
 	}
 	// The binary run as floe (another build, a started server) reads the real environment: English,
 	// whatever the developer's locale.
-	for k, v := range map[string]string{asCLI: "1", "FLOE_LANG": "en"} {
+	for k, v := range map[string]string{asCLI: "1"} {
 		if err := os.Setenv(k, v); err != nil {
 			panic(err)
 		}
@@ -388,18 +388,16 @@ func TestConfigErrors(t *testing.T) {
 	want(t, "no HOME", e.run(t, "", "list"), 1, "", "floe: HOME is not set; set HOME or FLOE_DIR")
 }
 
+// The command line speaks English whatever language the environment names: an agent reads it.
 func TestLanguage(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
 	e.vars["LANG"] = "ja_JP.UTF-8"
-	want(t, "stop in Japanese", e.run(t, "", "stop"), 0, "サーバーは動いていません\n", "")
+	e.vars["FLOE_LANG"] = "ja"
+	want(t, "stop", e.run(t, "", "stop"), 0, "server is not running\n", "")
 	e.vars["FLOE_PORT"] = "abc"
-	want(t, "a refusal in Japanese", e.run(t, "", "list"), 1, "",
-		"floe: FLOE_PORT「abc」は使えません。1 から 65535 のポート番号を指定してください")
-	want(t, "cobra's own errors stay in English", e.run(t, "", "list", "--nope"), 2, "", "floe: unknown flag: --nope")
-	e.vars["FLOE_LANG"] = "en"
-	want(t, "FLOE_LANG wins over LANG", e.run(t, "", "list"), 1, "", `floe: invalid FLOE_PORT "abc"`)
+	want(t, "a refusal", e.run(t, "", "list"), 1, "", `floe: invalid FLOE_PORT "abc": use a port number from 1 to 65535`)
 }
 
 func TestPublish(t *testing.T) {
@@ -710,16 +708,15 @@ func TestPublishDataFile(t *testing.T) {
 	if b := e.kept(t, "plan"); !bytes.Contains(b, []byte("title: The plan")) {
 		t.Errorf("the published data file = %s", b)
 	}
-	e.vars["FLOE_LANG"] = "ja"
 	bad := e.write(t, "bad.yaml", "title: t\n")
 	want(t, "publish a data file without a template", e.run(t, "", "publish", bad), 1, "",
-		bad+":1:1: 最上位に template: report のようにテンプレートを指定してください（テンプレート: report）")
+		bad+":1:1: name the template at the top level, like template: report (templates: report)")
 	want(t, "publish --theme of no theme", e.run(t, "", "publish", plan, "--theme", "print"), 1, "",
-		"floe: テンプレート report にテーマ「print」はありません。使えるのは default です")
-	want(t, "publish --theme empty", e.run(t, "", "publish", plan, "--theme", " "), 2, "", "floe: --theme が空です")
+		`floe: template report has no theme "print"; use default`)
+	want(t, "publish --theme empty", e.run(t, "", "publish", plan, "--theme", " "), 2, "", "floe: --theme is empty")
 	want(t, "publish --parts-theme of no theme", e.run(t, "", "publish", plan, "--parts-theme", "print"), 1, "",
-		"floe: 部品のテーマ「print」はありません。使えるのは blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi です")
-	want(t, "publish --parts-theme empty", e.run(t, "", "publish", plan, "--parts-theme", ""), 2, "", "floe: --parts-theme が空です")
+		`floe: there is no parts theme "print"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`)
+	want(t, "publish --parts-theme empty", e.run(t, "", "publish", plan, "--parts-theme", ""), 2, "", "floe: --parts-theme is empty")
 }
 
 // A data file's images go to the server when it asks for them, read under the data file's directory:

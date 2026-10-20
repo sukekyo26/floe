@@ -89,14 +89,12 @@ func TestTemplateCommands(t *testing.T) {
 	if err := os.Symlink(filepath.Join(e.tmp, "gone"), filepath.Join(e.tmp, "templates", "memo")); err != nil {
 		t.Fatal(err)
 	}
-	e.vars["FLOE_LANG"] = "ja"
 	r := e.run(t, "", "template", "list")
 	if r.code != 1 || !strings.Contains(r.stdout, "report\tbuilt-in\t") || !strings.Contains(r.stdout, "\tTwo lines. A page of sections") ||
 		!strings.Contains(r.stderr, "schema.json of the template drafts") || !strings.Contains(r.stderr, "memo") ||
 		strings.Count(r.stdout, "\n") != 2 {
 		t.Errorf("template list with broken templates = %+v", r)
 	}
-	delete(e.vars, "FLOE_LANG")
 
 	// A copy of a template of one's own keeps its template.yaml as written, and names itself.
 	kept := "# kept\nfloe: " + release[0] + "." + release[1] + ".0\n"
@@ -182,11 +180,6 @@ func TestTemplateShow(t *testing.T) {
 			t.Errorf("template show lacks %q:\n%s%s", want, r.stdout, r.stderr)
 		}
 	}
-	e.vars["FLOE_LANG"] = "ja"
-	if r := e.run(t, "", "template", "show", "report"); !strings.Contains(r.stdout, "      html: 文字列、形式 html — HTML that goes in as it is\n") {
-		t.Errorf("template show in Japanese:\n%s", r.stdout)
-	}
-	delete(e.vars, "FLOE_LANG")
 
 	// A list that may be null says so, and a description keeps to its line.
 	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")

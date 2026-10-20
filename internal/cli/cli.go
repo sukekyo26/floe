@@ -49,7 +49,7 @@ func (e usageError) Unwrap() error {
 
 // Run executes floe with args and returns the process exit code. The exit code is decided here only.
 func Run(ctx context.Context, args []string, env Env) int {
-	cat := i18n.New(i18n.Detect(env.Getenv))
+	cat := i18n.EnglishCatalog()
 	root := newRoot(env, cat) //nolint:contextcheck // cobra hands ctx to the commands through ExecuteContext
 	root.SetArgs(args)
 	root.SetOut(env.Stdout)

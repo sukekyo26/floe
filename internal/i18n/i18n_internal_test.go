@@ -56,28 +56,6 @@ func TestMatch(t *testing.T) {
 }
 
 //nolint:paralleltest // swaps the global catalogs
-func TestDetect(t *testing.T) {
-	testCatalogs(t)
-	tests := []struct {
-		env  map[string]string
-		want Lang
-	}{
-		{map[string]string{}, English},
-		{map[string]string{"LANG": "ja_JP.UTF-8"}, "ja"},
-		{map[string]string{"LANG": "ja_JP.UTF-8", "LC_MESSAGES": "en_US.UTF-8"}, English},
-		{map[string]string{"LANG": "en_US.UTF-8", "LC_ALL": "ja_JP.UTF-8"}, "ja"},
-		{map[string]string{"LC_ALL": "ja_JP.UTF-8", "FLOE_LANG": "en"}, English},
-		{map[string]string{"FLOE_LANG": "fr", "LANG": "ja_JP.UTF-8"}, "ja"},
-		{map[string]string{"LC_ALL": "C", "LANG": "ja_JP.UTF-8"}, "ja"},
-	}
-	for _, tt := range tests {
-		if got := Detect(func(k string) string { return tt.env[k] }); got != tt.want {
-			t.Errorf("Detect(%v) = %q, want %q", tt.env, got, tt.want)
-		}
-	}
-}
-
-//nolint:paralleltest // swaps the global catalogs
 func TestFromAcceptLanguage(t *testing.T) {
 	testCatalogs(t)
 	tests := map[string]Lang{
@@ -196,7 +174,7 @@ func TestVerbs(t *testing.T) {
 // mismatches lists what keeps the catalogs from matching English: a missing or extra key, a message
 // that formats other arguments or verbs than its English one, or a * width or precision in any
 // language, which verbs would not count.
-func mismatches(tables map[Lang]map[string]string) []string {
+func mismatches(tables map[Lang]map[string]string, cli map[string]string) []string {
 	var found []string
 	for lang, table := range tables {
 		for key, msg := range table {
@@ -211,14 +189,14 @@ func mismatches(tables map[Lang]map[string]string) []string {
 			continue
 		}
 		for key := range en {
-			if _, ok := table[key]; !ok {
+			if _, ok := table[key]; !ok && cli[key] == "" {
 				found = append(found, string(lang)+" lacks "+key)
 			}
 		}
 		for key, msg := range table {
 			ref, ok := en[key]
 			switch {
-			case !ok:
+			case !ok || cli[key] != "":
 				found = append(found, string(lang)+" has extra "+key)
 			case !sameVerbs(verbs(msg), verbs(ref)):
 				found = append(found, string(lang)+" formats "+key+" differently")
@@ -233,25 +211,25 @@ func TestMismatches(t *testing.T) {
 	t.Parallel()
 
 	got := mismatches(map[Lang]map[string]string{
-		English: {"a": "%s", "b": "%s %d", "c": "plain", "d": "%[1]s %[1]q", "e": "%*d", "f": "%d%%"},
-		"ja":    {"a": "%d", "b": "%[2]d %[1]s", "d": "%[1]s %[1]s", "e": "%*d", "f": "%.*f", "x": "extra"},
-	})
+		English: {"a": "%s", "b": "%s %d", "c": "plain", "d": "%[1]s %[1]q", "e": "%*d", "f": "%d%%", "g": "cli", "h": "cli"},
+		"ja":    {"a": "%d", "b": "%[2]d %[1]s", "d": "%[1]s %[1]s", "e": "%*d", "f": "%.*f", "x": "extra", "h": "訳"},
+	}, map[string]string{"g": "cli", "h": "cli"})
 	want := []string{
 		"en uses * in e", "ja formats a differently", "ja formats d differently", "ja formats f differently",
-		"ja has extra x", "ja lacks c", "ja uses * in e", "ja uses * in f",
+		"ja has extra h", "ja has extra x", "ja lacks c", "ja uses * in e", "ja uses * in f",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("mismatches = %q, want %q", got, want)
 	}
 }
 
-// TestCatalogsMatchEnglish guards the real catalogs: every language has exactly the English keys,
-// and each message formats the same arguments with the same verbs, so no translation drops or
-// misplaces a value.
+// TestCatalogsMatchEnglish guards the real catalogs: every language has exactly the English keys but the
+// command line's own, and each message formats the same arguments with the same verbs, so no
+// translation drops or misplaces a value.
 //
 //nolint:paralleltest // reads the global catalogs, which other tests swap
 func TestCatalogsMatchEnglish(t *testing.T) {
-	for _, m := range mismatches(catalogs) {
+	for _, m := range mismatches(catalogs, messagesCLI) {
 		t.Error(m)
 	}
 	if _, ok := catalogs["ja"]; !ok {

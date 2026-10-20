@@ -29,7 +29,7 @@ import (
 type app struct {
 	env Env
 	cfg *config
-	// cat is the language of the messages, from the environment (i18n.Detect).
+	// cat is the language of the messages: English, whatever the environment says.
 	cat *i18n.Catalog
 }
 

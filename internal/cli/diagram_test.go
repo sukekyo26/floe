@@ -56,14 +56,15 @@ func TestDiagramExample(t *testing.T) {
 	if r := e.run(t, "", "diagram", "render", "venn.yaml"); r.code != 0 {
 		t.Errorf("render of the venn example = %+v", r)
 	}
-	e.vars["FLOE_LANG"] = "ja"
-	if r := e.run(t, "", "diagram", "example"); r.code != 0 || !strings.HasPrefix(r.stdout, "architecture\t構成図: ") {
-		t.Errorf("example in Japanese = %+v, want the Japanese summaries", r)
+	// In English whatever language the environment names; --lang picks another.
+	e.vars["LANG"] = "ja_JP.UTF-8"
+	if r := e.run(t, "", "diagram", "example"); r.code != 0 || !strings.HasPrefix(r.stdout, "architecture\tArchitecture: ") {
+		t.Errorf("example with LANG=ja = %+v, want the English summaries", r)
 	}
 	if r := e.run(t, "", "diagram", "example", "venn", "--lang", "en"); r.code != 0 || !strings.HasPrefix(r.stdout, "# Venn diagram: ") {
 		t.Errorf("example venn --lang en = %+v, want the English spec", r)
 	}
-	delete(e.vars, "FLOE_LANG")
+	delete(e.vars, "LANG")
 	if r := e.run(t, "", "diagram", "example", "venn", "--lang", "ja"); r.code != 0 || !strings.HasPrefix(r.stdout, "# ベン図: ") {
 		t.Errorf("example venn --lang ja = %+v, want the Japanese spec", r)
 	}
