@@ -209,6 +209,10 @@ func TestBrokenOwnParts(t *testing.T) {
 		"zaliased/schema.json": `{"$ref": "floe:///parts/unnamed.json"}`,
 		"zaliased/part.html":   `<div data-floe-part="zaliased"></div>`,
 		"zaliased/part.css":    "",
+		// A look, which draws nothing, is told as a look, not as a part.
+		"paneled/schema.json": `{"$ref": "floe:///parts/panel.json"}`,
+		"paneled/part.html":   `<div data-floe-part="paneled"></div>`,
+		"paneled/part.css":    "",
 		// A name reserved for what is no part is not told as one.
 		"based/schema.json": `{"$ref": "floe:///parts/base.json"}`,
 		"based/part.html":   `<div data-floe-part="based"></div>`,
@@ -279,11 +283,11 @@ func TestBrokenOwnParts(t *testing.T) {
 			": the $ref at the root of the schema names the part note",
 		"plotted": "the part plotted cannot be used: " + filepath.Join(parts, "plotted", "schema.json") +
 			": the $ref at the root of the schema names the part diagram",
-		"aliased": "the part aliased cannot be used: " + filepath.Join(parts, "aliased", "schema.json") +
-			": the $ref at the root of the schema names the part unnamed",
-		"based": "the part based cannot be used: it holds the part base, which cannot be used",
-		"zaliased": "the part zaliased cannot be used: " + filepath.Join(parts, "zaliased", "schema.json") +
-			": the $ref at the root of the schema names the part unnamed",
+		"aliased":  "the part aliased cannot be used: it holds the part unnamed, which cannot be used",
+		"based":    "the part based cannot be used: it holds the part base, which cannot be used",
+		"zaliased": "the part zaliased cannot be used: it holds the part unnamed, which cannot be used",
+		"paneled": "the part paneled cannot be used: " + filepath.Join(parts, "paneled", "schema.json") +
+			": the part refers to floe:///parts/panel.json, a look",
 	}
 	for name, why := range whys {
 		dir := memo(t, `"risks": {"$ref": "floe:///parts/`+name+`.json"}, "aside": {"type": "string"}`)

@@ -110,13 +110,11 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	// Read first, as a data file of t is: its mistakes, a part at the root among them, come before what
-	// compiling it would say of them.
-	s, err := t.readSchema(src)
+	sch, doc, err := compileSchema(set, t.Name, src)
 	if err != nil {
 		return nil, []error{err}
 	}
-	sch, doc, err := compileSchema(set, t.Name, src)
+	s, err := t.readSchema(src)
 	if err != nil {
 		return nil, []error{err}
 	}

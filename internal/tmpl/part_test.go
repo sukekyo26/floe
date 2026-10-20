@@ -52,8 +52,8 @@ func partStyle(t *testing.T, name string) string {
 }
 
 // A template's schema names no part by the $ref at its root, which would draw the whole of the data: its
-// check refuses it, and a data file of it, with the same mistake, a relative $ref and a part of one's own
-// that cannot be used too. A look there is told as a look, which draws nothing.
+// check refuses it, and a data file of it, with the same mistake, a relative $ref too. A look there is told
+// as a look, which draws nothing, and a part of one's own that cannot be used as one.
 func TestTemplateRootPart(t *testing.T) {
 	t.Parallel()
 
@@ -61,7 +61,7 @@ func TestTemplateRootPart(t *testing.T) {
 	for ref, want := range map[string]string{
 		"floe:///parts/table.json": "the $ref at the root of the schema names the part table",
 		"../../parts/table.json":   "the $ref at the root of the schema names the part table",
-		"floe:///parts/bad.json":   "the $ref at the root of the schema names the part bad",
+		"floe:///parts/bad.json":   "the part bad cannot be used",
 		"floe:///parts/panel.json": "floe:///parts/panel.json is the look panel, which draws nothing",
 	} {
 		dir := memo(t, "")

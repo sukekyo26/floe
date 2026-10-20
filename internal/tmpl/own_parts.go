@@ -84,8 +84,9 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) err
 
 // leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own
 // that holds itself, through the parts it holds, or takes its own look, through the looks it takes, which
-// floe would follow forever, and a part, floe's too, that checkNames refuses, again while one is left out,
-// as a part may take the look of the one left out, or hold it.
+// floe would follow forever, a part, floe's too, that checkNames refuses, again while one is left out, as a
+// part may take the look of the one left out, or hold it, and then one whose schema names a usable part at
+// its root.
 func (set *partSet) leaveOutUnusable() {
 	held := func(at string) []string { return set.schemas[partsURL+at+".json"].refsUnder(nil) }
 	looks := func(at string) []string {
@@ -105,14 +106,32 @@ func (set *partSet) leaveOutUnusable() {
 			set.leaveOut(name, usererr.New("tmpl_look_cycle", dir, name, strings.Join(chain, " → ")))
 		}
 	}
-	for left := true; left; {
-		left = false
-		for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-			if err := set.checkNames(name, set.parts[name].dir); err != nil {
-				set.leaveOut(name, err)
-				left = true
+	settle := func() {
+		for left := true; left; {
+			left = false
+			for _, name := range slices.Sorted(maps.Keys(set.parts)) {
+				if err := set.checkNames(name, set.parts[name].dir); err != nil {
+					set.leaveOut(name, err)
+					left = true
+				}
 			}
 		}
+	}
+	settle()
+	// Once the rest are settled, and all at once, so that the part a root names is surely usable or not, and
+	// the answer hangs on no order; the parts that hold one left out so go then.
+	rooted := map[string]error{}
+	for name, p := range set.parts {
+		if named, ok := set.rootPart(p.schema); ok {
+			at := cmp.Or(p.dir, path.Join("parts", name))
+			rooted[name] = usererr.New("tmpl_schema_root_part", path.Join(at, "schema.json"), named)
+		}
+	}
+	for name, why := range rooted {
+		set.leaveOut(name, why)
+	}
+	if len(rooted) > 0 {
+		settle()
 	}
 }
 
@@ -229,8 +248,8 @@ func (set *partSet) reserved(name string) bool {
 
 // checkNames refuses the part name, whose directory is dir, when its part.html names it in no
 // data-floe-part, names more than one part in one, or names a part there is none of, when part.yaml has
-// it take the look of a part there is none of, and when its schema names a part at its root, or holds a
-// part there is none of, or a look alone. floe's parts name themselves, one each, as a test checks.
+// it take the look of a part there is none of, and when its schema holds a part there is none of, or a
+// look alone. floe's parts name themselves, one each, as a test checks.
 func (set *partSet) checkNames(name, dir string) error {
 	p := set.parts[name]
 	// floe's are named as reading them names them.
@@ -329,12 +348,9 @@ func (set *partSet) candidates(look bool) string {
 	return set.names(drawing)
 }
 
-// checkHeld refuses the part p, whose files are at at, when its schema names a part at its root, or holds a
-// part there is none of, of one's own when own, or a look alone.
+// checkHeld refuses the part p, whose files are at at, when its schema holds a part there is none of, of
+// one's own when own, or a look alone.
 func (set *partSet) checkHeld(p *part, at string, own bool) error {
-	if name, ok := set.rootPart(p.schema); ok {
-		return usererr.New("tmpl_schema_root_part", path.Join(at, "schema.json"), name)
-	}
 	// One left out has no schema; one of a name set keeps (tone) leaves floe's in place.
 	for _, held := range p.schema.refsUnder(nil) {
 		switch {
