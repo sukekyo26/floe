@@ -1116,10 +1116,16 @@
     const error = $('add-error');
     btn.disabled = true;
     try {
+      // A field sent is given, empty or not: one left blank is left out
+      const body = {};
+      for (const [key, id] of [['path', 'add-path'], ['slug', 'add-slug'], ['description', 'add-desc']]) {
+        const value = $(id).value.trim();
+        if (value) body[key] = value;
+      }
       const res = await api('/api/artifacts', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path: $('add-path').value, slug: $('add-slug').value, description: $('add-desc').value }),
+        body: JSON.stringify(body),
       });
       // The server answers with the reason as one line of text
       if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));

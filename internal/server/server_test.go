@@ -709,7 +709,7 @@ func TestAddLink(t *testing.T) {
 		t.Errorf("refused adds = %s", got)
 	}
 
-	r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+index+`","slug":"","description":"from ui"}`)
+	r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+index+`","description":"from ui"}`)
 	if m := e.store.ReadMeta("site"); r.status != http.StatusCreated || r.body != `{"slug":"site"}` || m == nil ||
 		m.Path != index || m.Description != "from ui" {
 		t.Errorf("add = %d %s, %+v", r.status, r.body, m)
@@ -726,7 +726,96 @@ func TestAddLink(t *testing.T) {
 	if list, err := e.store.List(); err != nil || len(list) != 1 {
 		t.Errorf("re-adding the same path made %d entries (%v), want it updated in place", len(list), err)
 	}
-	if r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":""}`); r.body != `{"slug":"p"}` {
+	if r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`"}`); r.body != `{"slug":"p"}` {
 		t.Errorf("an omitted slug = %s", r.body)
+	}
+
+	// A field sent is given, empty or not, as floe publish --link sends them: an empty slug is refused,
+	// an empty description clears it, and force replaces another file's link.
+	got = toString([]int{
+		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":""}`).status,
+		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","title":3}`).status,
+		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","force":"yes"}`).status,
+		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+index+`","description":""}`).status,
+		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":"site","title":"Sub","force":true}`).status,
+	})
+	if m := e.store.ReadMeta("site"); got != "400 400 400 200 200" || m == nil || m.Path != sub || m.Title != "Sub" {
+		t.Errorf("fields sent = %s, %+v", got, m)
+	}
+	if m := e.store.ReadMeta("p"); m == nil {
+		t.Error("the link p is gone")
+	}
+}
+
+// PUT /api/artifacts/{slug} stores the data file the CLI sends: it asks for the images the data names,
+// tells the mistakes at their lines and columns as JSON to a reader that takes it, and says what it
+// replaced.
+func TestSave(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	if err := os.CopyFS(filepath.Join(e.tmp, "templates", "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
+		t.Fatal(err)
+	}
+	png, err := os.ReadFile("../tmpl/testdata/sizes/chart.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := []byte("template: sizes\ntitle: Sizes\nlang: en\nfiles: [{ name: a, bytes: 1 }]\nchart: img/chart.png\n")
+	put := func(slug string, body map[string]any, header ...string) resp {
+		b, marshalErr := json.Marshal(body)
+		if marshalErr != nil {
+			t.Fatal(marshalErr)
+		}
+		return e.do(t, http.MethodPut, "/api/artifacts/"+slug, string(b),
+			append([]string{"Origin", e.origin, "Content-Type", "application/json", "Accept", "application/json"}, header...)...)
+	}
+	upload := func(images map[string][]byte, project string) map[string]any {
+		return map[string]any{"file": "plans/sizes.yaml", "dir": "/plans", "source": src, "images": images, "project": project}
+	}
+
+	got := toString([]int{
+		e.do(t, http.MethodPut, "/api/artifacts/sizes", `{}`, "Origin", "null", "Content-Type", "application/json").status,
+		e.do(t, http.MethodPut, "/api/artifacts/sizes", `{}`, "Origin", e.origin, "Content-Type", "text/plain").status,
+		put("Not%20a%20slug", upload(nil, "proj")).status,
+		put("sizes", map[string]any{"file": "plans/sizes.yaml", "dir": "/plans", "source": src, "extra": 1}).status,
+		put("sizes", map[string]any{"file": "plans/sizes.yaml", "source": src}).status,
+	})
+	if got != "403 415 404 400 400" {
+		t.Errorf("refused publishes = %s", got)
+	}
+
+	if r := put("sizes", upload(nil, "proj")); r.status != http.StatusUnprocessableEntity || r.body != `{"images":["img/chart.png"]}` {
+		t.Errorf("a publish without its images = %d %s", r.status, r.body)
+	}
+	r := put("sizes", upload(map[string][]byte{}, "proj"), "Accept-Language", "ja")
+	if r.status != http.StatusBadRequest || !strings.Contains(r.body, `"mistakes":true`) ||
+		!strings.Contains(r.body, `plans/sizes.yaml:5:8: chart: /plans の下に画像「img/chart.png」がありません`) {
+		t.Errorf("a publish missing its image = %d %s", r.status, r.body)
+	}
+	images := map[string][]byte{"img/chart.png": png}
+	if r = put("sizes", upload(images, "proj")); r.status != http.StatusCreated ||
+		r.body != `{"slug":"sizes","title":"Sizes","prev":null}` {
+		t.Errorf("a new publish = %d %s", r.status, r.body)
+	}
+	first := e.store.ReadMeta("sizes")
+	if r = put("sizes", upload(images, "proj")); r.status != http.StatusOK ||
+		r.body != `{"slug":"sizes","title":"Sizes","prev":{"title":"Sizes","updatedAt":"`+first.UpdatedAt+`"}}` {
+		t.Errorf("a publish again = %d %s", r.status, r.body)
+	}
+	if !strings.Contains(e.get(t, "/a/sizes/?raw").body, `<img src="data:image/png;base64,`) {
+		t.Error("the stored page does not show its image")
+	}
+	// A refusal that is not a data file's mistake, and one to a reader that does not take JSON.
+	if r = put("sizes", upload(nil, "other")); r.status != http.StatusBadRequest || !strings.Contains(r.body, `"mistakes":false`) {
+		t.Errorf("a publish over another project's page = %d %s", r.status, r.body)
+	}
+	b, err := json.Marshal(upload(nil, "other"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r = e.send(t, http.MethodPut, "/api/artifacts/sizes", string(b)); r.status != http.StatusBadRequest ||
+		!strings.HasPrefix(r.body, `slug "sizes" was published from project proj`) {
+		t.Errorf("a refusal as text = %d %s", r.status, r.body)
 	}
 }

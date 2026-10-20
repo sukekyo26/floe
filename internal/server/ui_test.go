@@ -455,6 +455,18 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	key("ArrowDown")
 	key("ArrowDown")
 	out = append(out, b.eval("document.activeElement.textContent"))
+	// The add form sends only the fields filled in, trimmed: a field sent is given, empty or not.
+	b.eval("document.querySelector('.tabs [data-tab=links]').click()")
+	b.eval(`(() => {
+		calls.length = 0;
+		document.getElementById('add-open').click();
+		document.getElementById('add-path').value = ' /tmp/x/n.html ';
+		document.getElementById('add-desc').value = ' a link ';
+		document.getElementById('add').requestSubmit();
+	})()`)
+	out = append(out, b.until("the add to be sent", "calls.join(',')"))
+	b.eval("document.getElementById('add-cancel').click()")
+	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
 	// The theme switch overrides the OS setting and is remembered; the system choice drops the override.
 	b.eval("document.querySelector('[data-theme-choice=dark]').click()")
 	out = append(out, b.eval("[document.documentElement.dataset.theme, getComputedStyle(document.body).backgroundColor, localStorage.getItem('artifacts.theme')].join(' ')"))
@@ -475,7 +487,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		`PATCH /api/artifacts/a {"favorite":true}|`+label("ui_created_at")+" "+label("ui_updated_at")+`|Beta|`+
 		msg("ui_selected", 1)+"|"+msg("ui_selected", 2)+"|"+msg("ui_delete_bulk_confirm", 2)+"|"+
 		`DELETE /api/artifacts/a,DELETE /api/artifacts/b|true old|PATCH /api/artifacts/a {"description":"new"}|true|true|`+
-		`copy /tmp/x/l.html|true|Missing|dark rgb(23, 25, 31) dark|undefined|/a/a/ /a/c/ 2 / 3 /?sort=title`)
+		`copy /tmp/x/l.html|true|Missing|POST /api/artifacts {"path":"/tmp/x/n.html","description":"a link"}|dark rgb(23, 25, 31) dark|undefined|/a/a/ /a/c/ 2 / 3 /?sort=title`)
 }
 
 // listening attaches one message listener per document and returns the last message the page sent.
