@@ -188,6 +188,10 @@ func TestBrokenOwnParts(t *testing.T) {
 		"marked/schema.json":   `{"type": "object", "properties": {"text": {"type": "string", "format": "markdown"}}}`,
 		"marked/part.html":     `<div data-floe-part="marked">{{.text}}</div>`,
 		"marked/part.css":      "",
+		// A schema the parts share is drawn as the part's own items, its formats too.
+		"anything/schema.json": `{"type": "object", "properties": {"inner": {"$ref": "any.json"}}}`,
+		"anything/part.html":   `<div data-floe-part="anything"></div>`,
+		"anything/part.css":    "",
 		// A format of JSON Schema's own is checked as the part's schema is, and stays.
 		"dated/schema.json":   `{"type": "object", "properties": {"on": {"type": "string", "format": "date"}}}`,
 		"dated/part.html":     `<div data-floe-part="dated">{{.on}}</div>`,
@@ -273,6 +277,8 @@ func TestBrokenOwnParts(t *testing.T) {
 		"Quote":   "the part Quote cannot be used: " + filepath.Join(parts, "Quote") + ": a name is lower case letters",
 		"blurb": "the part blurb cannot be used: " + filepath.Join(parts, "blurb", "schema.json") +
 			`: #/properties/body: a part's schema takes no "format": "html"`,
+		"anything": "the part anything cannot be used: " + filepath.Join(parts, "anything", "schema.json") +
+			`: #/properties/inner → floe:///parts/any.json#/properties/html: a part's schema takes no "format": "html"`,
 		"gallery": "the part gallery cannot be used: " + filepath.Join(parts, "gallery", "schema.json") +
 			`: #/items/properties/src: a part's schema takes no "format": "image"`,
 		"marked": "the part marked cannot be used: " + filepath.Join(parts, "marked", "schema.json") +

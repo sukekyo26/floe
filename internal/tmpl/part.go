@@ -103,6 +103,52 @@ func (s *schema) first(ptr string, ok func(*schema) bool) (string, *schema) {
 	return s.Items.first(ptr+"/items", ok)
 }
 
+// formatIn returns the first item of a format of floe's in the schema s, with its pointer under ptr, or
+// nil: in a schema the parts share that s refers to too, whose items are drawn as s's own, its pointer after
+// the $ref's.
+func (set *partSet) formatIn(s *schema, ptr string) (string, *schema) {
+	var under string
+	var item *schema
+	at, _ := s.first(ptr, func(s *schema) bool {
+		if slices.Contains(formats, s.Format) {
+			item = s
+			return true
+		}
+		if shared := set.shared(s.Ref); shared != nil {
+			under, item = set.formatIn(shared, s.Ref+"#")
+		}
+		return item != nil
+	})
+	if under != "" {
+		at += " → " + under
+	}
+	return at, item
+}
+
+// shared returns the schema the parts share that ref names, or nil: a file of floe's beside its parts,
+// which no part of one's own is named as.
+func (set *partSet) shared(ref string) *schema {
+	name, ok := partName(ref)
+	if !ok {
+		return nil
+	}
+	if info, err := fs.Stat(partFiles, path.Join("parts", name+".json")); err != nil || info.IsDir() {
+		return nil
+	}
+	return set.schemas[ref]
+}
+
+// dirsLast orders the entries a and b files before directories.
+func dirsLast(a, b fs.DirEntry) int {
+	switch {
+	case a.IsDir() == b.IsDir():
+		return 0
+	case a.IsDir():
+		return 1
+	}
+	return -1
+}
+
 // absolute makes the $ref of s, and those under it, absolute, read from the schema at base.
 func (s *schema) absolute(base string) {
 	if s == nil {
@@ -221,6 +267,8 @@ func (set *partSet) readBuiltin() error {
 	if err != nil {
 		return fmt.Errorf("read the parts: %w", err)
 	}
+	// The schemas the parts share first, which a part's schema is checked through.
+	slices.SortStableFunc(entries, dirsLast)
 	for _, e := range entries {
 		switch {
 		case e.Name() == themesDir:
@@ -428,8 +476,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		return err
 	}
 	// The data's checks of a format do not look into a part, which draws its items by its part.html.
-	isFormat := func(s *schema) bool { return slices.Contains(formats, s.Format) }
-	if ptr, s := set.schemas[url].first("#", isFormat); s != nil {
+	if ptr, s := set.formatIn(set.schemas[url], "#"); s != nil {
 		return usererr.New("tmpl_part_format", path.Join(dir, "schema.json"), ptr, s.Format)
 	}
 	html, err := fs.ReadFile(files, "part.html")
