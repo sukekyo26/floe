@@ -195,10 +195,12 @@ func TestCheckParts(t *testing.T) {
 	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table", "floe:///parts/themes.json"} {
 		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
 		want := ref + " is not a part; refer to one as floe:///parts/<name>.json, the name one of bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree, floe's and your own"
-		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
+		// Not wrapped in the words of jsonschema's loading.
+		want = "the schema of the template memo cannot be read: " + want
+		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 			t.Errorf("Check of %s = %v", ref, mistakes)
 		}
-		if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\n"); err == nil || !strings.Contains(err.Error(), want) {
+		if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
 			t.Errorf("Read of a template with %s = %v", ref, err)
 		}
 	}
