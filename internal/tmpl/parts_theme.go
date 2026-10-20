@@ -24,6 +24,17 @@ func (set *partSet) themeNames() []string {
 		slices.Collect(maps.Keys(set.brokenThemes)))))
 }
 
+// themesWith returns the parts themes of set that can be used with a file of the part name, by name.
+func (set *partSet) themesWith(name string) []string {
+	var themes []string
+	for _, theme := range slices.Sorted(maps.Keys(set.themes)) {
+		if _, ok := set.themes[theme].parts[name]; ok {
+			themes = append(themes, theme)
+		}
+	}
+	return themes
+}
+
 // partsTheme is a parts theme: its base.css, for every page, and the style of each part it restyles,
 // which reaches every element that has the part's look.
 type partsTheme struct {

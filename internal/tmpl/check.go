@@ -154,16 +154,9 @@ func brokenParts(set *partSet, named []namedPart) []*usererr.Error {
 			refused[n.name] = true
 		}
 	}
-	var warnings []*usererr.Error
-	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
-		// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
-		if !refused[name] || set.parts[name] != nil {
-			warnings = append(warnings, usererr.New("tmpl_part_broken", name, set.broken[name]))
-		}
-	}
-	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
-		warnings = append(warnings, usererr.New("tmpl_parts_theme_broken", name, set.brokenThemes[name]))
-	}
+	// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
+	warnings := set.unusable(func(name string) bool { return refused[name] && set.parts[name] == nil })
+	warnings = append(warnings, set.unusableThemes()...)
 	return append(warnings, set.strays...)
 }
 

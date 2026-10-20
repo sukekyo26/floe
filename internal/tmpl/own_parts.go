@@ -124,6 +124,7 @@ func (set *partSet) readOwnPart(name, at string) (read, replaces bool) {
 		set.leaveOut(name, err)
 		return false, replaces
 	}
+	set.parts[name].dir, set.parts[name].replaces = at, replaces
 	return true, replaces
 }
 
@@ -351,6 +352,38 @@ func namesItself(named []namedPart, name string) bool {
 		}
 	}
 	return false
+}
+
+// find returns the part name of set, refusing one that cannot be used, or that there is none of.
+func (set *partSet) find(name string) (*part, error) {
+	switch {
+	case set.parts[name] != nil:
+		return set.parts[name], nil
+	case set.broken[name] != nil:
+		return nil, usererr.New("tmpl_part_broken", name, set.broken[name])
+	}
+	return nil, usererr.New("tmpl_unknown_part", name, set.names(nil))
+}
+
+// unusable returns the mistake of each part of set that cannot be used, by name, but those skip skips (none
+// for nil).
+func (set *partSet) unusable(skip func(name string) bool) []*usererr.Error {
+	var found []*usererr.Error
+	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
+		if skip == nil || !skip(name) {
+			found = append(found, usererr.New("tmpl_part_broken", name, set.broken[name]))
+		}
+	}
+	return found
+}
+
+// unusableThemes returns the mistake of each parts theme of set that cannot be used, by name.
+func (set *partSet) unusableThemes() []*usererr.Error {
+	found := make([]*usererr.Error, 0, len(set.brokenThemes))
+	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
+		found = append(found, usererr.New("tmpl_parts_theme_broken", name, set.brokenThemes[name]))
+	}
+	return found
 }
 
 // leaveOut leaves the part name out of set, kept in set.broken with why.
