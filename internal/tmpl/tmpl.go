@@ -641,6 +641,9 @@ func (t *Template) readSchema(b []byte) (*schema, error) {
 		return nil, err
 	}
 	s.absolute(schemaURL(t.Name))
+	if name, ok := set.rootPart(s); ok {
+		return nil, usererr.New("tmpl_schema_root_part", t.file("schema.json"), name)
+	}
 	s.resolve(set)
 	return s, nil
 }

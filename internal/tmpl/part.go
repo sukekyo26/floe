@@ -63,6 +63,22 @@ func absolute(base, ref string) string {
 	return strings.TrimSuffix(b.ResolveReference(r).String(), "#")
 }
 
+// rootPart returns the part of set the $ref at the root of the schema s names, and false for none: a
+// schema declares its own items, and names a part under properties or items, which floe draws the item by. A
+// look, which draws nothing, and a part that cannot be used are told as they are elsewhere, and a schema the
+// parts share (tone) may be the root.
+func (set *partSet) rootPart(s *schema) (string, bool) {
+	if s == nil {
+		return "", false
+	}
+	name, ok := partName(s.Ref)
+	if !ok {
+		return "", false
+	}
+	p := set.parts[name]
+	return name, p != nil && !p.isLook()
+}
+
 // pointsInto returns the part of floe's, whole, that ref points into, and false when it does not: a
 // ref into a part would be checked as the part but drawn as plain data.
 func (set *partSet) pointsInto(ref string) (whole string, into bool) {

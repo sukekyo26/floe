@@ -51,6 +51,33 @@ func partStyle(t *testing.T, name string) string {
 	return `) to (:scope [data-floe-part] > *) {` + "\n" + string(b) + "}\n"
 }
 
+// A template's schema names no part by the $ref at its root, which would draw the whole of the data: its
+// check refuses it, and a data file of it, with the same mistake, a relative $ref too. A look there is told
+// as a look, which draws nothing, and a part of one's own that cannot be used as one.
+func TestTemplateRootPart(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{"bad/schema.json": `{"type": "object"}`, "bad/part.html": "<div></div>", "bad/part.css": ""})
+	for ref, want := range map[string]string{
+		"floe:///parts/table.json": "the $ref at the root of the schema names the part table",
+		"../../parts/table.json":   "the $ref at the root of the schema names the part table",
+		"floe:///parts/bad.json":   "the part bad cannot be used",
+		"floe:///parts/panel.json": "floe:///parts/panel.json is the look panel, which draws nothing",
+	} {
+		dir := memo(t, "")
+		if err := os.WriteFile(filepath.Join(dir, "memo", "schema.json"), []byte(`{"$ref": "`+ref+`"}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, mistakes := tmpl.Check(filepath.Join(dir, "memo"), parts, ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
+			t.Errorf("Check of a template of %s at its root = %v, want %s", ref, mistakes, want)
+		}
+		if _, err := draw(tmpl.NewLibrary(dir, parts, ""), "template: memo\nlang: en\ncolumns: [{title: A}]\nrows: [[a]]\n"); err == nil ||
+			!strings.Contains(err.Error(), want) {
+			t.Errorf("drawing a template of %s at its root = %v, want %s", ref, err, want)
+		}
+	}
+}
+
 // A template of one's own draws an item by a part of floe's with a $ref: the part checks it, at the
 // data's lines and columns, draws it, and puts its style into the page's <head> once, in the layer over
 // the template's own, the parts theme after it.

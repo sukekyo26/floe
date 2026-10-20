@@ -84,8 +84,9 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) err
 
 // leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own
 // that holds itself, through the parts it holds, or takes its own look, through the looks it takes, which
-// floe would follow forever, and a part, floe's too, that checkNames refuses, again while one is left out,
-// as a part may take the look of the one left out, or hold it.
+// floe would follow forever, a part, floe's too, that checkNames refuses, again while one is left out, as a
+// part may take the look of the one left out, or hold it, and then one whose schema names a usable part at
+// its root.
 func (set *partSet) leaveOutUnusable() {
 	held := func(at string) []string { return set.schemas[partsURL+at+".json"].refsUnder(nil) }
 	looks := func(at string) []string {
@@ -105,6 +106,14 @@ func (set *partSet) leaveOutUnusable() {
 			set.leaveOut(name, usererr.New("tmpl_look_cycle", dir, name, strings.Join(chain, " → ")))
 		}
 	}
+	set.settle()
+	if set.leaveOutRooted() {
+		set.settle()
+	}
+}
+
+// settle leaves out of set the parts checkNames refuses, again while one is left out.
+func (set *partSet) settle() {
 	for left := true; left; {
 		left = false
 		for _, name := range slices.Sorted(maps.Keys(set.parts)) {
@@ -114,6 +123,23 @@ func (set *partSet) leaveOutUnusable() {
 			}
 		}
 	}
+}
+
+// leaveOutRooted leaves out of set the parts whose schema names a part at its root, and reports whether it
+// left one out. It runs once the rest are settled, and leaves them out all at once, so that the part a root
+// names is surely usable or not, and the answer hangs on no order.
+func (set *partSet) leaveOutRooted() bool {
+	rooted := map[string]error{}
+	for name, p := range set.parts {
+		if named, ok := set.rootPart(p.schema); ok {
+			at := cmp.Or(p.dir, path.Join("parts", name))
+			rooted[name] = usererr.New("tmpl_schema_root_part", path.Join(at, "schema.json"), named)
+		}
+	}
+	for name, why := range rooted {
+		set.leaveOut(name, why)
+	}
+	return len(rooted) > 0
 }
 
 // readOwnPart reads the part name of one's own from the directory from, at at as its mistakes name it,
