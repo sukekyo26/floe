@@ -237,7 +237,7 @@ func (a *app) client(ctx context.Context, anyDirs bool) (client, error) {
 	if err != nil {
 		return client{}, err //nolint:wrapcheck // the message is for the user as is
 	}
-	return client{base: a.cfg.base(), lang: a.cat.Lang()}, nil
+	return client{base: a.cfg.base()}, nil
 }
 
 // noticeUpdate says that a page was overwritten, so that reusing a slug for another page (say "plan")

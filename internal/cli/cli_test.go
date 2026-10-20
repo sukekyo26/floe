@@ -41,12 +41,9 @@ func TestMain(m *testing.M) {
 			Getenv: os.Getenv, Dir: dir, Stdout: os.Stdout, Stderr: os.Stderr, Environ: os.Environ(),
 		}))
 	}
-	// The binary run as floe (another build, a started server) reads the real environment: English,
-	// whatever the developer's locale.
-	for k, v := range map[string]string{asCLI: "1"} {
-		if err := os.Setenv(k, v); err != nil {
-			panic(err)
-		}
+	// The binary run as floe (another build, a started server) reads the real environment.
+	if err := os.Setenv(asCLI, "1"); err != nil {
+		panic(err)
 	}
 	var err error
 	if shared, err = os.MkdirTemp("", "floe-cli-test-"); err != nil {

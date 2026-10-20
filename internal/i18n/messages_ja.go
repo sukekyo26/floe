@@ -222,18 +222,9 @@ var messagesJA = map[string]string{
 	"diagram_zoom_one_label":   "原寸で表示",
 
 	// icons
-	"icons_no_home":         "HOME が設定されていません。HOME か FLOE_ICONS_DIR を設定してください",
-	"icons_unknown_set":     "知らないアイコン集「%s」です。使えるのは %s です",
-	"icons_not_fetched":     "%[2]s に %[1]s アイコンがありません。floe icons fetch %[3]s を実行してから（%[5]s から約 %[4]s を取得します）やり直してください",
-	"icons_none_fetched":    "%s にアイコンがありません。floe icons fetch <アイコン集>（%s）で取得してからやり直してください",
-	"icons_bad_index":       "%s を読めません（%s）。floe icons fetch %s --force でアイコンを取り直してください",
-	"icons_download":        "%s を取得できません（%s）。ネットワークを確かめるか、ブラウザで取得してそのパスを渡してください",
-	"icons_no_package_link": "%s にパッケージへのリンクがありません。そこから zip を取得して floe icons fetch %s <パスか URL> を実行してください",
-	"icons_too_large":       "%s は %dMB を超えています。アイコンのパッケージにしては大きすぎるので、正しいファイルか確かめてください",
-	"icons_not_zip":         "%s は zip ではありません。%s にあるパッケージの zip を渡してください",
-	"icons_bad_zip":         "%[2]s の %[1]s を読めません（%[3]s）。zip を取得し直してください",
-	"icons_none_in_zip":     "%[2]s に %[1]s アイコンがありません。%[3]s にあるパッケージの zip を渡してください",
-	"icons_no_match":        "名前に %s をすべて含むアイコンはありません。短い語で試してください",
+	"icons_no_home":     "HOME が設定されていません。HOME か FLOE_ICONS_DIR を設定してください",
+	"icons_not_fetched": "%[2]s に %[1]s アイコンがありません。floe icons fetch %[3]s を実行してから（%[5]s から約 %[4]s を取得します）やり直してください",
+	"icons_bad_index":   "%s を読めません（%s）。floe icons fetch %s --force でアイコンを取り直してください",
 
 	// tmpl
 	"server_mistakes_head":         "データファイルに誤りがあります",

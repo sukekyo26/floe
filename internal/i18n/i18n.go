@@ -1,7 +1,8 @@
 // Package i18n renders the messages floe shows to people in their language. Catalogs are Go maps,
-// one file per language (messages_<lang>.go), registered at init; a language is added by adding a
-// file. Errors carry a key and arguments and are rendered at the boundary: the CLI's exit, in English, and an HTTP
-// response, in the reader's language.
+// one file per language (messages_<lang>.go, and messages_cli.go for the English the command line
+// alone shows), registered at init; a language is added by adding a file. Errors carry a key and
+// arguments and are rendered at the boundary: the CLI's exit, in English, and an HTTP response, in
+// the reader's language.
 //
 // A key missing from a language falls back to the language without its last subtag, one at a time
 // (zh-Hant-TW to zh-Hant to zh, pt-BR to pt), then to English, then to the key itself.

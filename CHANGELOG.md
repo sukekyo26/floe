@@ -148,8 +148,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   unknown name suggests close ones.
 - Add `floe diagram example [kind]`, which lists the built-in example specs
   (architecture, AWS, class, ER, flow, Git, sequence, state, timeline, Venn) or
-  prints one to copy. The examples come in English and Japanese and follow the
-  language of messages; `--lang` picks another.
+  prints one to copy. The examples come in English and Japanese: English, or
+  the language `--lang` picks.
 - Add `floe publish <data.yaml>`, which stores a data file with the images it
   shows (`<slug>/source-<id>/` in `FLOE_DIR`, where it can be taken back from) and
   prints the URL of its page on `http://127.0.0.1:7325`, drawn with the

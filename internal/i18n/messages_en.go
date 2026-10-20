@@ -4,8 +4,8 @@ func init() {
 	register(English, messagesEN)
 }
 
-// messagesEN is the reference catalog: every other language has exactly its keys. The command line's own,
-// in English alone, are messagesCLI.
+// messagesEN is the reference catalog of what a browser may show: every other language has exactly its keys.
+// The command line's own, in English alone, are messagesCLI.
 var messagesEN = map[string]string{
 	// shared: mistakes more than one command makes
 	"file_cannot_read":  "cannot read %s (%s); check the path and that the file exists",
@@ -224,18 +224,9 @@ var messagesEN = map[string]string{
 	"diagram_zoom_one_label":   "Show at actual size",
 
 	// icons: fetching and searching the AWS icons
-	"icons_no_home":         "HOME is not set; set HOME or FLOE_ICONS_DIR",
-	"icons_unknown_set":     `unknown icon set "%s"; use %s`,
-	"icons_not_fetched":     `%[1]s icons are not in %[2]s; run "floe icons fetch %[3]s" (downloads about %[4]s from %[5]s) and try again`,
-	"icons_none_fetched":    `no icons are in %s; fetch a set with "floe icons fetch <set>" (%s) and try again`,
-	"icons_bad_index":       `cannot read %s (%s); run "floe icons fetch %s --force" to fetch the icons again`,
-	"icons_download":        "cannot download %s (%s); check the network, or download it in a browser and pass its path",
-	"icons_no_package_link": "no link to the package on %s; download the zip there and run: floe icons fetch %s <path-or-url>",
-	"icons_too_large":       "%s is over %dMB, far larger than an icon package; check that it is the right file",
-	"icons_not_zip":         "%s is not a zip file; pass the zip of the package on %s",
-	"icons_bad_zip":         "cannot read %s in %s (%s); download the zip again",
-	"icons_none_in_zip":     "no %s icons in %s; pass the zip of the package on %s",
-	"icons_no_match":        "no icon name contains all of %s; try a shorter word",
+	"icons_no_home":     "HOME is not set; set HOME or FLOE_ICONS_DIR",
+	"icons_not_fetched": `%[1]s icons are not in %[2]s; run "floe icons fetch %[3]s" (downloads about %[4]s from %[5]s) and try again`,
+	"icons_bad_index":   `cannot read %s (%s); run "floe icons fetch %s --force" to fetch the icons again`,
 
 	// tmpl: reading data files and drawing them with templates
 	"server_mistakes_head":         "The data file has mistakes",

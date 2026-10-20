@@ -66,4 +66,13 @@ var messagesCLI = map[string]string{
 	"cli_relative_no_dir":             "the working directory cannot be read, so %s, the relative directory %s, means nothing; run floe from a directory that exists, or set it as an absolute path",
 	"cli_tilde_no_home":               "%s is %s, whose ~ stands for a home, but HOME is not set; set HOME, or %s as an absolute path",
 	"cli_tilde_name":                  "%s is %s: floe takes only ~ and ~/ at the start for your home, not ~name; write the path absolute, or ./%s for a directory of that name under the working directory",
+	"icons_unknown_set":               `unknown icon set "%s"; use %s`,
+	"icons_download":                  "cannot download %s (%s); check the network, or download it in a browser and pass its path",
+	"icons_no_package_link":           "no link to the package on %s; download the zip there and run: floe icons fetch %s <path-or-url>",
+	"icons_too_large":                 "%s is over %dMB, far larger than an icon package; check that it is the right file",
+	"icons_not_zip":                   "%s is not a zip file; pass the zip of the package on %s",
+	"icons_bad_zip":                   "cannot read %s in %s (%s); download the zip again",
+	"icons_none_in_zip":               "no %s icons in %s; pass the zip of the package on %s",
+	"icons_none_fetched":              `no icons are in %s; fetch a set with "floe icons fetch <set>" (%s) and try again`,
+	"icons_no_match":                  "no icon name contains all of %s; try a shorter word",
 }

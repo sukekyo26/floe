@@ -112,7 +112,7 @@ The examples are in English, or in the language of --lang. An example not writte
 is printed in the language without its region (ja-JP to ja), else in English.`,
 		Args: usage(cobra.MaximumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			in := a.cat.Lang()
+			in := i18n.English
 			if cmd.Flags().Changed("lang") {
 				if err := checkLang(lang); err != nil {
 					return err

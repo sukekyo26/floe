@@ -1,10 +1,15 @@
 package i18n
 
 import (
+	"bytes"
+	"io/fs"
 	"maps"
+	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -189,14 +194,16 @@ func mismatches(tables map[Lang]map[string]string, cli map[string]string) []stri
 			continue
 		}
 		for key := range en {
-			if _, ok := table[key]; !ok && cli[key] == "" {
+			_, has := table[key]
+			if _, isCLI := cli[key]; !has && !isCLI {
 				found = append(found, string(lang)+" lacks "+key)
 			}
 		}
 		for key, msg := range table {
 			ref, ok := en[key]
+			_, isCLI := cli[key]
 			switch {
-			case !ok || cli[key] != "":
+			case !ok || isCLI:
 				found = append(found, string(lang)+" has extra "+key)
 			case !sameVerbs(verbs(msg), verbs(ref)):
 				found = append(found, string(lang)+" formats "+key+" differently")
@@ -232,7 +239,50 @@ func TestCatalogsMatchEnglish(t *testing.T) {
 	for _, m := range mismatches(catalogs, messagesCLI) {
 		t.Error(m)
 	}
+	for key := range messagesCLI {
+		if _, ok := messagesEN[key]; ok {
+			t.Errorf("%s is both the command line's own and in messagesEN", key)
+		}
+	}
 	if _, ok := catalogs["ja"]; !ok {
 		t.Error("the Japanese catalog is not registered")
+	}
+}
+
+// The command line's own messages are used by the code of the command line alone: one used where the
+// server answers would reach a browser untranslated.
+// LIMIT: by package; internal/icons also looks icons up for diagrams, whose messages are messagesEN's.
+// Split it if a message of fetching or searching moves into a lookup.
+func TestCLIMessagesStayInTheCLI(t *testing.T) {
+	t.Parallel()
+
+	repo, err := os.OpenRoot(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer repo.Close() //nolint:errcheck // read only
+	allowed := []string{"internal/cli/", "internal/daemon/", "internal/icons/"}
+	err = fs.WalkDir(repo.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
+		switch {
+		case err != nil:
+			return err
+		case d.IsDir() && (d.Name() == ".git" || rel == "internal/i18n"):
+			return fs.SkipDir
+		case d.IsDir() || !strings.HasSuffix(rel, ".go") || strings.HasSuffix(rel, "_test.go"):
+			return nil
+		}
+		b, err := fs.ReadFile(repo.FS(), rel)
+		if err != nil {
+			return err
+		}
+		for key := range messagesCLI {
+			if bytes.Contains(b, []byte(`"`+key+`"`)) && !slices.ContainsFunc(allowed, func(p string) bool { return strings.HasPrefix(rel, p) }) {
+				t.Errorf("%s uses %s, the command line's own", rel, key)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
