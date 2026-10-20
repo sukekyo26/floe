@@ -63,6 +63,19 @@ func absolute(base, ref string) string {
 	return strings.TrimSuffix(b.ResolveReference(r).String(), "#")
 }
 
+// rootPart returns the part, or look, the $ref at the root of the schema s names, and false for none: a
+// schema declares its own items, and names a part under properties or items, which floe draws the item by.
+// A part of one's own that cannot be used is one too, so that the answer does not hang on whether it was
+// left out yet. A schema the parts share (tone) may be the root.
+func (set *partSet) rootPart(s *schema) (string, bool) {
+	if s == nil {
+		return "", false
+	}
+	name, ok := partName(s.Ref)
+	shared := set.schemas[partsURL+name+".json"] != nil && set.parts[name] == nil
+	return name, ok && !shared && (set.parts[name] != nil || set.broken[name] != nil)
+}
+
 // pointsInto returns the part of floe's, whole, that ref points into, and false when it does not: a
 // ref into a part would be checked as the part but drawn as plain data.
 func (set *partSet) pointsInto(ref string) (whole string, into bool) {
@@ -226,8 +239,8 @@ func (set *partSet) readBuiltin() error {
 		url := partsURL + name + ".json"
 		set.docs[url] = map[string]any{"type": "object", "description": p.about}
 		set.schemas[url] = &schema{
-			Format: "", Ref: "", Properties: nil, Items: nil, part: nil, resolved: false, Description: p.about, Type: "object",
-			Enum: nil, Required: nil,
+			Format: "", Ref: "", Properties: nil, Items: nil, part: nil, Description: p.about, Type: "object", Enum: nil,
+			Required: nil,
 		}
 		set.parts[name] = &part{
 			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: p.css, checks: nil,
@@ -669,34 +682,22 @@ func readPartWords(files fs.FS, file string) (words, error) {
 	return w, nil
 }
 
-// resolve fills what s, the root of a schema, and the schemas under it refer to among floe's in set: the
-// items, types and description of a part or a schema the parts share, after the description written beside
-// the $ref. Under the root, a $ref to a part is an item the part draws; at the root, it takes in the part's
-// items, as one to a schema the parts share does, for page.html or the part's part.html to draw.
+// resolve fills what s and the schemas under it refer to among floe's in set: the items, types and
+// description of a part or a schema the parts share, after the description written beside the $ref.
 func (s *schema) resolve(set *partSet) {
-	s.resolveIn(set, true)
-}
-
-func (s *schema) resolveIn(set *partSet, root bool) {
-	if s == nil || s.resolved {
+	if s == nil {
 		return
 	}
-	// Set first: a part that holds itself, which readOwn leaves out, would come back here.
-	s.resolved = true
 	for _, p := range s.Properties {
-		p.resolveIn(set, false)
+		p.resolve(set)
 	}
-	s.Items.resolveIn(set, false)
+	s.Items.resolve(set)
 	target, ok := set.schemas[s.Ref]
 	if !ok {
 		return
 	}
-	// What it names is filled in first, so that what is taken from it is whole, a $ref at its root too.
-	target.resolve(set)
-	if !root {
-		name, _ := partName(s.Ref)
-		s.part = set.parts[name]
-	}
+	name, _ := partName(s.Ref)
+	s.part = set.parts[name]
 	s.Description = joinDescriptions(s.Description, target.Description)
 	if s.Properties == nil {
 		s.Properties, s.Required = target.Properties, target.Required

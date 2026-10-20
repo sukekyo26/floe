@@ -540,9 +540,8 @@ func (l *schemaLint) walk(v any, ptr string, reached bool) {
 	if !ok {
 		return
 	}
-	// A $ref at the root takes in what it names, which prepare goes into; under it, prepare draws the part
-	// it names whole, and goes no further in.
-	if ref, ok := m["$ref"].(string); ok && l.part(ref, ptr, reached) && ptr != "#" {
+	if ref, ok := m["$ref"].(string); ok && l.part(ref, ptr, reached) {
+		// prepare draws it whole, and goes no further in.
 		reached = false
 	}
 	if f, ok := m["format"].(string); ok && l.format(f, m["type"], ptr, reached) {

@@ -641,6 +641,9 @@ func (t *Template) readSchema(b []byte) (*schema, error) {
 		return nil, err
 	}
 	s.absolute(schemaURL(t.Name))
+	if name, ok := set.rootPart(s); ok {
+		return nil, usererr.New("tmpl_schema_root_part", t.file("schema.json"), name)
+	}
 	s.resolve(set)
 	return s, nil
 }
@@ -688,8 +691,7 @@ type schema struct {
 	Properties map[string]*schema `json:"properties"`
 	Items      *schema            `json:"items"`
 
-	part     *part // the part of floe's $ref names; nil for none, and at the root, which takes in what it names
-	resolved bool  // whether resolve filled it in
+	part *part // the part of floe's $ref names; nil for none
 
 	// What floe template show tells of an item.
 	Description string   `json:"description"`

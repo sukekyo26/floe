@@ -51,28 +51,22 @@ func partStyle(t *testing.T, name string) string {
 	return `) to (:scope [data-floe-part] > *) {` + "\n" + string(b) + "}\n"
 }
 
-// A $ref at the root of a template's schema takes in the items of what it names, a part's too, for
-// page.html to draw, the parts they hold drawn; floe template check finds no mistake in it.
-func TestTemplateRootRef(t *testing.T) {
+// A template's schema names no part by the $ref at its root, which would draw the whole of the data: its
+// check refuses it, and so does a data file of it.
+func TestTemplateRootPart(t *testing.T) {
 	t.Parallel()
 
 	dir := memo(t, "")
-	for name, body := range map[string]string{
-		"schema.json": `{"$ref": "floe:///parts/table.json"}`,
-		"page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
-			`<body>{{range .Data.rows}}{{range .}}<i>{{.}}</i>{{end}}{{end}}</body></html>`,
-		"example.yaml": "template: memo\nlang: en\ncolumns: [{title: Risk}]\nrows: [[Links]]\n",
-	} {
-		if err := os.WriteFile(filepath.Join(dir, "memo", name), []byte(body), 0o600); err != nil {
-			t.Fatal(err)
-		}
+	if err := os.WriteFile(filepath.Join(dir, "memo", "schema.json"), []byte(`{"$ref": "floe:///parts/table.json"}`), 0o600); err != nil {
+		t.Fatal(err)
 	}
-	if _, mistakes := tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 0 {
-		t.Errorf("Check of a template of a $ref at its root = %v", mistakes)
+	want := filepath.Join(dir, "memo", "schema.json") + ": the $ref at the root of the schema names the part table"
+	if _, mistakes := tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
+		t.Errorf("Check of a template of a part at its root = %v, want %s", mistakes, want)
 	}
-	page, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\ncolumns: [{title: A}]\nrows: [[{ pill: ok, tone: bad }]]\n")
-	if want := `<i><span class="bad" data-floe-part="cell">ok</span></i>`; err != nil || !strings.Contains(page, want) {
-		t.Errorf("drawing a template of a $ref at its root = %v, want %s:\n%s", err, want, page)
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\ncolumns: [{title: A}]\nrows: [[a]]\n"); err == nil ||
+		!strings.Contains(err.Error(), want) {
+		t.Errorf("drawing a template of a part at its root = %v, want %s", err, want)
 	}
 }
 
