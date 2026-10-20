@@ -359,8 +359,12 @@ func TestRun(t *testing.T) {
 	want(t, "unknown flag", e.run(t, "", "list", "--nope"), 2, "", "floe: unknown flag: --nope")
 	want(t, "publish without a file", e.run(t, "", "publish"), 2, "", "floe: accepts 1 arg(s), received 0")
 	want(t, "rm without a slug", e.run(t, "", "rm"), 2, "", "floe: requires at least 1 arg(s)")
-	want(t, "an empty list", e.run(t, "", "list"), 0, "", "")
 	want(t, "stop without a server", e.run(t, "", "stop"), 0, "server is not running\n", "")
+	// list asks the server, which it starts.
+	want(t, "an empty list", e.run(t, "", "list"), 0, "", "")
+	if _, up := e.health(t); !up {
+		t.Error("list did not start the server")
+	}
 }
 
 func TestConfigErrors(t *testing.T) {
@@ -705,6 +709,44 @@ func TestPublishDataFile(t *testing.T) {
 	want(t, "publish --parts-theme of no theme", e.run(t, "", "publish", plan, "--parts-theme", "print"), 1, "",
 		"floe: 部品のテーマ「print」はありません。使えるのは blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi です")
 	want(t, "publish --parts-theme empty", e.run(t, "", "publish", plan, "--parts-theme", ""), 2, "", "floe: --parts-theme が空です")
+}
+
+// A data file's images go to the server when it asks for them, read under the data file's directory:
+// one that is not there is told at its line, and one the CLI will not send is told by it.
+func TestPublishImages(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	if err := os.CopyFS(filepath.Join(e.tmp, "templates", "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
+		t.Fatal(err)
+	}
+	png, err := os.ReadFile("../tmpl/testdata/sizes/chart.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	chart := e.write(t, "spec/img/chart.png", string(png))
+	page := func(name, image string) string {
+		return e.write(t, "spec/"+name+".yaml",
+			"template: sizes\ntitle: Sizes\nlang: en\nfiles: [{ name: a, bytes: 1 }]\nchart: "+image+"\n")
+	}
+	want(t, "publish with an image", e.run(t, "", "publish", page("sizes", "img/chart.png")), 0, e.base()+"/a/sizes/\n", "")
+	e.opened(t)
+	m := store.New(e.vars["FLOE_DIR"], "", nil).ReadMeta("sizes")
+	if b, readErr := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], "sizes", m.Source, "img", "chart.png")); readErr != nil || !bytes.Equal(b, png) {
+		t.Errorf("the image kept = %d bytes, %v", len(b), readErr)
+	}
+
+	missing := page("missing", "img/none.png")
+	r := e.run(t, "", "publish", missing)
+	if r.code != 1 || !strings.HasPrefix(r.stderr, missing+`:5:8: chart: there is no image "img/none.png" under `) {
+		t.Errorf("publish of a missing image = %d %q", r.code, r.stderr)
+	}
+	if err = os.Symlink(chart, filepath.Join(e.tmp, "spec", "img", "link.png")); err != nil {
+		t.Fatal(err)
+	}
+	want(t, "publish of an image through a symlink", e.run(t, "", "publish", page("linked", "img/link.png")), 1, "",
+		`floe: "img/link.png" is reached through a symlink`)
 }
 
 // floe check reports the mistakes of every file at once, without publishing or starting the server,

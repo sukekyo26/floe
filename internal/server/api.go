@@ -21,10 +21,10 @@ import (
 
 const maxBody = 64 << 10
 
-// maxUpload is the size of a publish of a data file, its images in it as base64.
+// MaxUpload is the size of a publish of a data file, its images in it as base64.
 // LIMIT: 32 MiB a publish, while an image may be 1 MiB and a page may show any number of them. Raise
 // it, or send the images apart, if pages come to need more.
-const maxUpload = 32 << 20
+const MaxUpload = 32 << 20
 
 var jsonTypeRe = regexp.MustCompile(`(?i)^application/json\b`)
 
@@ -90,10 +90,12 @@ func refuse(w http.ResponseWriter, r *http.Request, err error) {
 	}
 	var all yamlpos.Problems
 	var one *yamlpos.Error
-	sendJSON(w, status, refusal{Message: message, Mistakes: errors.As(err, &all) || errors.As(err, &one)})
+	sendJSON(w, status, Refusal{Message: message, Mistakes: errors.As(err, &all) || errors.As(err, &one)})
 }
 
-type refusal struct {
+// Refusal is a refusal to a reader that takes JSON: its reason in the reader's language, and whether it
+// is the mistakes of a data file at their lines and columns.
+type Refusal struct {
 	Message  string `json:"message"`
 	Mistakes bool   `json:"mistakes"`
 }
@@ -138,16 +140,12 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 		refuse(w, r, err)
 		return
 	}
-	status := http.StatusOK
-	if entry.Prev == nil {
-		status = http.StatusCreated
-	}
-	sendJSON(w, status, slugBody{Slug: entry.Slug})
+	sendSaved(w, entry)
 }
 
-// upload is a publish of a data file, as the CLI sends it: see store.Upload. Images left out or null
+// Upload is a publish of a data file, as the CLI sends it: see store.Upload. Images left out or null
 // asks which images the data names.
-type upload struct {
+type Upload struct {
 	File        string            `json:"file"`
 	Dir         string            `json:"dir"`
 	Source      []byte            `json:"source"`
@@ -160,26 +158,44 @@ type upload struct {
 	Force       bool              `json:"force"`
 }
 
-// saved is a page a publish stored, and what it replaced.
-type saved struct {
+// Saved is a page a publish or an added link stored, and what it replaced (nil for a new slug).
+type Saved struct {
 	Slug  string     `json:"slug"`
 	Title string     `json:"title"`
-	Prev  *savedPrev `json:"prev"`
+	Prev  *SavedPrev `json:"prev"`
 }
 
-type savedPrev struct {
+// SavedPrev is the page a publish replaced.
+type SavedPrev struct {
 	Title     string `json:"title"`
 	UpdatedAt string `json:"updatedAt"`
+}
+
+// ImagesNeeded answers a publish without images whose data names some: the images to send.
+type ImagesNeeded struct {
+	Images []string `json:"images"`
+}
+
+// sendSaved answers the entry a write saved: 201 for a new slug, 200 for one replaced.
+func sendSaved(w http.ResponseWriter, entry *store.Entry) {
+	status := http.StatusOK
+	var prev *SavedPrev
+	if entry.Prev == nil {
+		status = http.StatusCreated
+	} else {
+		prev = &SavedPrev{Title: entry.Prev.Title, UpdatedAt: entry.Prev.UpdatedAt}
+	}
+	sendJSON(w, status, Saved{Slug: entry.Slug, Title: entry.Meta.Title, Prev: prev})
 }
 
 // save stores the data file the CLI sends as the page slug: 201 for a new slug, 200 for one replaced,
 // and 422 with the images to send when it names some and sent none.
 func (s *Server) save(w http.ResponseWriter, r *http.Request) {
-	body, ok := s.readBody(w, r, maxUpload)
+	body, ok := s.readBody(w, r, MaxUpload)
 	if !ok {
 		return
 	}
-	var in upload
+	var in Upload
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&in); err != nil {
@@ -211,9 +227,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	entry, err := s.cfg.Store.PrepareData(up, opts)
 	var need *store.NeedImages
 	if errors.As(err, &need) {
-		sendJSON(w, http.StatusUnprocessableEntity, struct {
-			Images []string `json:"images"`
-		}{Images: need.Names})
+		sendJSON(w, http.StatusUnprocessableEntity, ImagesNeeded{Images: need.Names})
 		return
 	}
 	if err == nil {
@@ -223,14 +237,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		refuse(w, r, err)
 		return
 	}
-	status := http.StatusOK
-	var prev *savedPrev
-	if entry.Prev == nil {
-		status = http.StatusCreated
-	} else {
-		prev = &savedPrev{Title: entry.Prev.Title, UpdatedAt: entry.Prev.UpdatedAt}
-	}
-	sendJSON(w, status, saved{Slug: entry.Slug, Title: entry.Meta.Title, Prev: prev})
+	sendSaved(w, entry)
 }
 
 // imagesFS is the images a publish sent as the data file's directory, nil for none sent.

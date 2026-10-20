@@ -710,7 +710,7 @@ func TestAddLink(t *testing.T) {
 	}
 
 	r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+index+`","description":"from ui"}`)
-	if m := e.store.ReadMeta("site"); r.status != http.StatusCreated || r.body != `{"slug":"site"}` || m == nil ||
+	if m := e.store.ReadMeta("site"); r.status != http.StatusCreated || r.body != `{"slug":"site","title":"","prev":null}` || m == nil ||
 		m.Path != index || m.Description != "from ui" {
 		t.Errorf("add = %d %s, %+v", r.status, r.body, m)
 	}
@@ -726,7 +726,7 @@ func TestAddLink(t *testing.T) {
 	if list, err := e.store.List(); err != nil || len(list) != 1 {
 		t.Errorf("re-adding the same path made %d entries (%v), want it updated in place", len(list), err)
 	}
-	if r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`"}`); r.body != `{"slug":"p"}` {
+	if r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`"}`); r.body != `{"slug":"p","title":"","prev":null}` {
 		t.Errorf("an omitted slug = %s", r.body)
 	}
 

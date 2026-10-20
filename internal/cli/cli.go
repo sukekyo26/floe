@@ -70,7 +70,9 @@ func Run(ctx context.Context, args []string, env Env) int {
 	var all yamlpos.Problems
 	var one *yamlpos.Error
 	var checked mistakes
-	if errors.As(err, &all) || errors.As(err, &one) || errors.As(err, &checked) {
+	var refused *remoteError
+	if errors.As(err, &all) || errors.As(err, &one) || errors.As(err, &checked) ||
+		errors.As(err, &refused) && refused.mistakes {
 		prefix = ""
 	}
 	_, _ = fmt.Fprintf(env.Stderr, "%s%s\n", prefix, msg) //nolint:errcheck // nowhere left to report

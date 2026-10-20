@@ -153,13 +153,6 @@ func Ensure(ctx context.Context, s Server) error {
 	}
 }
 
-// CheckDirs refuses a server of floe on the port that serves the root with other directories of
-// templates, parts or icons, so that a publish says so before it checks a data file with its own. None
-// there passes.
-func CheckDirs(ctx context.Context, s Server) error {
-	return s.otherDirs(Probe(ctx, s.base()))
-}
-
 // otherDirs refuses p, a server of floe that serves the root of s, when it draws with other directories
 // of templates, parts or icons than s.
 func (s Server) otherDirs(p Status) error {
