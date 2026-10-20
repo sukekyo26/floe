@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"testing/fstest"
 
 	"golang.org/x/sys/unix"
 
@@ -66,7 +67,6 @@ func (s *Store) freeSlug(base, path string) string {
 
 // Options are the choices of a publish. A nil string is not given; an empty one is.
 type Options struct {
-	Link        bool
 	Slug        *string
 	Title       *string
 	Description *string
@@ -108,73 +108,140 @@ type Entry struct {
 	named string
 }
 
-// Prepare checks a publish of file and builds what Save writes, without writing anything. cwd
-// resolves a relative file and names the project of a stored page; a link's project is that of its
-// directory.
+// Upload is a data file read for a publish: what PrepareData checks and builds a stored page of, without
+// reading the publisher's disk.
+type Upload struct {
+	File   string // as the publisher named it, for its slug and its mistakes
+	Dir    string // its directory, as the mistakes name it
+	Source []byte
+	// Images is the directory of the data file, as an fs.FS that lists its directories; nil asks which
+	// images the data names (NeedImages).
+	Images  fs.FS
+	Project string // the project it is published from, which owns the page
+}
+
+// NeedImages answers an Upload without images whose data names some: Names, as it writes them.
+type NeedImages struct {
+	Names []string
+}
+
+func (e *NeedImages) Error() string {
+	return "the data names images to be sent with it: " + strings.Join(e.Names, ", ")
+}
+
+// Prepare checks a publish of the data file file on disk, as PrepareData does, with its images under
+// its directory. cwd resolves a relative file and names the project the page belongs to.
 func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
-	// A link is of the kind of its real file, whatever the name of a symlink to it says (see read).
-	if !opts.Link {
-		if err := checkKind(file, opts); err != nil {
-			return nil, err
-		}
+	// Before reading, as PrepareData would refuse it after.
+	if !IsDataFile(file) {
+		return nil, usererr.New("store_not_data", file)
 	}
-	path, src, err := s.read(file, opts, cwd)
+	abs := file
+	if !filepath.IsAbs(abs) {
+		abs = filepath.Join(cwd, abs)
+	}
+	src, err := os.ReadFile(abs) //nolint:gosec // G304: publishing the user's file is the point
+	if err != nil {
+		return nil, usererr.CannotRead(file, err)
+	}
+	up := Upload{File: file, Dir: filepath.Dir(abs), Source: src, Images: nil, Project: project.Name(ctx, cwd)}
+	e, err := s.PrepareData(up, opts)
+	var need *NeedImages
+	if !errors.As(err, &need) {
+		return e, err
+	}
+	// Opened only when the data names an image, as a drawing of a link opens it.
+	root, err := os.OpenRoot(up.Dir)
+	if err != nil {
+		return nil, usererr.CannotRead(up.Dir, err)
+	}
+	defer root.Close()
+	up.Images = root.FS()
+	return s.PrepareData(up, opts)
+}
+
+// PrepareData checks a publish of the data file up as a stored page and builds what Save writes,
+// without writing anything. Without up.Images, a data file that names images is answered NeedImages.
+func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
+	if !IsDataFile(up.File) {
+		return nil, usererr.New("store_not_data", up.File)
+	}
+	images := up.Images
+	if images == nil {
+		images = fstest.MapFS{}
+	}
+	themes := opts.themes()
+	data, named, err := s.templates.ReadFS(up.File, up.Source, images, up.Dir, themes)
+	// Asked before its mistakes, which may be of the images not sent.
+	if up.Images == nil && len(named) > 0 {
+		return nil, &NeedImages{Names: named}
+	}
+	if err != nil {
+		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
+	}
+	slug, err := s.slugFor(up.File, "", opts, "")
+	if err != nil {
+		return nil, err
+	}
+	return s.checked(&Entry{
+		Slug: slug, Meta: dataMeta("", data, themes), Source: nil, Images: nil, Prev: nil, opts: opts,
+		from: up.Project, named: "",
+	}, data, string(up.Source))
+}
+
+// PrepareLink checks a link to file and builds what Save writes, without writing anything. cwd resolves
+// a relative file; the project of a link is that of its directory. A data file linked is checked as a
+// stored page is, its images under its real directory.
+func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
+	path, src, err := s.readLink(file, opts, cwd)
 	if err != nil {
 		return nil, err
 	}
 	themes := opts.themes()
-	data, err := s.readData(file, path, src, themes, cwd)
-	if err != nil {
-		return nil, err
-	}
-	own := ""
-	if data != nil {
-		own = data.Title
+	var data *tmpl.Data
+	if IsDataFile(path) {
+		if data, err = s.templates.Read(path, src, themes, cwd); err != nil {
+			return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
+		}
 	}
 	slug, err := s.slugFor(file, path, opts, cwd)
 	if err != nil {
 		return nil, err
 	}
-	dir := cwd
-	if path != "" {
-		dir = filepath.Dir(path)
+	named := ""
+	if opts.Slug == nil {
+		named = SlugFromFile(file, cwd)
 	}
-	var seed Meta
-	seed.Path, seed.DataTitle = path, own
+	return s.checked(&Entry{
+		Slug: slug, Meta: dataMeta(path, data, themes), Source: nil, Images: nil, Prev: nil, opts: opts,
+		from: project.Name(ctx, filepath.Dir(path)), named: named,
+	}, data, string(src))
+}
+
+// dataMeta is the seed of the Meta settle builds: the link's path ("" for a stored page), and the title:
+// and themes of data, nil for HTML.
+func dataMeta(path string, data *tmpl.Data, themes tmpl.Themes) Meta {
+	var m Meta
+	m.Path = path
 	if data != nil {
-		seed.Theme, seed.PartsTheme = themes.Template, themes.Parts
+		m.DataTitle = data.Title
+		m.Theme, m.PartsTheme = themes.Template, themes.Parts
 	}
-	e := &Entry{
-		Slug: slug, Meta: seed, Source: nil, Images: nil, Prev: nil, opts: opts, from: project.Name(ctx, dir), named: "",
-	}
-	if opts.Slug == nil && path != "" {
-		e.named = SlugFromFile(file, cwd)
-	}
-	// Checked against the slug as it is now, to fail before drawing; Save checks again.
-	if err = e.settle(s.ReadMeta(slug)); err != nil {
+	return m
+}
+
+// checked checks e against its slug as it is now, to fail before drawing (Save checks again), then that
+// data, of content src, draws, nil for HTML.
+func (s *Store) checked(e *Entry, data *tmpl.Data, src string) (*Entry, error) {
+	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, err
 	}
 	if data != nil {
-		if err = e.draw(data, src); err != nil {
+		if err := e.draw(data, src); err != nil {
 			return nil, err
 		}
 	}
 	return e, nil
-}
-
-// readData reads and checks the data file file, of content src, if it is one: nil otherwise. A linked
-// one, of the real path path, is checked as a stored page is, its images under its real directory.
-func (s *Store) readData(file, path, src string, themes tmpl.Themes, cwd string) (*tmpl.Data, error) {
-	// A link is of the kind of its real file, whatever the name of a symlink to it says.
-	name := cmp.Or(path, file)
-	if !IsDataFile(name) {
-		return nil, nil //nolint:nilnil // a page, which is linked as it is
-	}
-	data, err := s.templates.Read(name, []byte(src), themes, cwd)
-	if err != nil {
-		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
-	}
-	return data, nil
 }
 
 // settle checks e against prev, the entry its slug holds (nil for none), and builds its meta.json on
@@ -209,44 +276,30 @@ func (e *Entry) draw(data *tmpl.Data, src string) error {
 	return err
 }
 
-// read returns the real path of a link ("" for a stored page) and the file's content. A link is
-// checked and stored by its real path: a symlink would otherwise reach into a hidden directory. It is
-// of the kind of its real file, whatever the name of a symlink to it says.
-func (s *Store) read(file string, opts Options, cwd string) (path, content string, err error) {
+// readLink returns the real path of the linked file and its content. A link is checked and stored by
+// its real path: a symlink would otherwise reach into a hidden directory. It is of the kind of its real
+// file, whatever the name of a symlink to it says: HTML is shown as it is, in its own look, so it takes
+// no theme.
+func (s *Store) readLink(file string, opts Options, cwd string) (string, []byte, error) {
 	abs := file
 	if !filepath.IsAbs(abs) {
 		abs = filepath.Join(cwd, abs)
 	}
-	if opts.Link {
-		if path, err = filepath.EvalSymlinks(abs); err != nil {
-			return "", "", usererr.CannotRead(file, err)
-		}
-		if err = link.Check(path, s.home); err != nil {
-			return "", "", err //nolint:wrapcheck // a usererr for the caller to show
-		}
-		if err = checkKind(path, opts); err != nil {
-			return "", "", err
-		}
-		abs = path
-	}
-	b, err := os.ReadFile(abs) //nolint:gosec // G304: publishing the user's file is the point
+	path, err := filepath.EvalSymlinks(abs)
 	if err != nil {
-		return "", "", usererr.CannotRead(file, err)
+		return "", nil, usererr.CannotRead(file, err)
 	}
-	return path, string(b), nil
-}
-
-// checkKind checks that the themes of opts fit the kind of file: a page is drawn from a data file in
-// them, stored or linked; HTML is only linked, and shown as it is, in its own look. A link's file is its
-// real path.
-func checkKind(file string, opts Options) error {
-	switch {
-	case !opts.Link && !IsDataFile(file):
-		return usererr.New("store_not_data", file)
-	case opts.Link && !IsDataFile(file) && (opts.Theme != nil || opts.PartsTheme != nil):
-		return usererr.New("store_theme_link")
+	if err = link.Check(path, s.home); err != nil {
+		return "", nil, err //nolint:wrapcheck // a usererr for the caller to show
 	}
-	return nil
+	if !IsDataFile(path) && (opts.Theme != nil || opts.PartsTheme != nil) {
+		return "", nil, usererr.New("store_theme_link")
+	}
+	b, err := os.ReadFile(path) //nolint:gosec // G304: publishing the user's file is the point
+	if err != nil {
+		return "", nil, usererr.CannotRead(file, err)
+	}
+	return path, b, nil
 }
 
 // newMeta keeps what was set on the management page (favourite, title, project), the description and

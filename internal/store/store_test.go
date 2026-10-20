@@ -1,6 +1,8 @@
 package store_test
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -9,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -59,13 +62,28 @@ func (e env) write(t *testing.T, rel, body string) string {
 	return path
 }
 
-// publish prepares and saves file from cwd (a directory under tmp, created when missing).
+// publish prepares and saves the data file file from cwd (a directory under tmp, created when missing).
 func (e env) publish(t *testing.T, file string, opts store.Options, cwd string) (*store.Entry, error) {
+	t.Helper()
+
+	return e.save(t, e.s.Prepare, file, opts, cwd)
+}
+
+// link prepares and saves a link to file from cwd, as publish does.
+func (e env) link(t *testing.T, file string, opts store.Options, cwd string) (*store.Entry, error) {
+	t.Helper()
+
+	return e.save(t, e.s.PrepareLink, file, opts, cwd)
+}
+
+func (e env) save(t *testing.T, prepare func(context.Context, string, store.Options, string) (*store.Entry, error),
+	file string, opts store.Options, cwd string,
+) (*store.Entry, error) {
 	t.Helper()
 
 	dir := filepath.Join(e.tmp, cwd)
 	mkdir(t, dir)
-	entry, err := e.s.Prepare(t.Context(), file, opts, dir)
+	entry, err := prepare(t.Context(), file, opts, dir)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +99,16 @@ func (e env) mustPublish(t *testing.T, file string, opts store.Options, cwd stri
 	entry, err := e.publish(t, file, opts, cwd)
 	if err != nil {
 		t.Fatalf("publish %s: %v", file, err)
+	}
+	return entry
+}
+
+func (e env) mustLink(t *testing.T, file string, opts store.Options, cwd string) *store.Entry {
+	t.Helper()
+
+	entry, err := e.link(t, file, opts, cwd)
+	if err != nil {
+		t.Fatalf("link %s: %v", file, err)
 	}
 	return entry
 }
@@ -221,7 +249,11 @@ func TestPublishNames(t *testing.T) {
 	// index.html, which only a link takes, is named after its directory.
 	for _, tt := range tests {
 		e.write(t, filepath.Join(tt.cwd, tt.file), "template: report\nlang: en\n")
-		entry := e.mustPublish(t, tt.file, store.Options{Link: !store.IsDataFile(tt.file)}, tt.cwd)
+		publish := e.mustLink
+		if store.IsDataFile(tt.file) {
+			publish = e.mustPublish
+		}
+		entry := publish(t, tt.file, store.Options{}, tt.cwd)
 		if entry.Slug != tt.want {
 			t.Errorf("publish %s from %s: slug %q, want %q", tt.file, tt.cwd, entry.Slug, tt.want)
 		}
@@ -294,7 +326,7 @@ func TestPublishLink(t *testing.T) {
 
 	e := newEnv(t)
 	file := e.write(t, "site/index.html", "<h1>Linked v1</h1>")
-	entry := e.mustPublish(t, file, store.Options{Link: true, Slug: ptr("site"), Description: ptr("d")}, "elsewhere")
+	entry := e.mustLink(t, file, store.Options{Slug: ptr("site"), Description: ptr("d")}, "elsewhere")
 	m := e.meta(t, "site")
 	if entry.Source != nil || m.Path != file || m.Project != "site" || m.PublishedFrom != "" || m.Title != "" {
 		t.Errorf("a link: %+v", m)
@@ -309,7 +341,7 @@ func TestPublishLink(t *testing.T) {
 	if err := os.Symlink(filepath.Join(e.tmp, "real/page.html"), filepath.Join(e.tmp, "pub/shown.html")); err != nil {
 		t.Fatal(err)
 	}
-	shown := e.mustPublish(t, filepath.Join(e.tmp, "pub/shown.html"), store.Options{Link: true}, "proj")
+	shown := e.mustLink(t, filepath.Join(e.tmp, "pub/shown.html"), store.Options{}, "proj")
 	if shown.Slug != "shown" || shown.Meta.Path != filepath.Join(e.tmp, "real/page.html") {
 		t.Errorf("a symlinked file: %s %s", shown.Slug, shown.Meta.Path)
 	}
@@ -319,16 +351,16 @@ func TestPublishLink(t *testing.T) {
 		t.Fatal(err)
 	}
 	other := e.write(t, "site/sub/p.html", "<title>Sub</title>")
-	_, err := e.publish(t, other, store.Options{Link: true, Slug: ptr("site")}, "proj")
+	_, err := e.link(t, other, store.Options{Slug: ptr("site")}, "proj")
 	if ue := wantUserErr(t, err, "store_slug_linked", "site", file); !ue.Conflict {
 		t.Errorf("the refusal is not a conflict for the management page: %+v", ue)
 	}
-	again := e.mustPublish(t, file, store.Options{Link: true, Slug: ptr("site")}, "proj")
+	again := e.mustLink(t, file, store.Options{Slug: ptr("site")}, "proj")
 	if m := e.meta(t, "site"); again.Prev == nil || m.Title != "Pinned" || !m.TitleEdited || !m.Favorite || m.Description != "d" {
 		t.Errorf("re-registering the same path should keep the pinned title and the rest: %+v", m)
 	}
 	created := e.meta(t, "site").CreatedAt
-	e.mustPublish(t, other, store.Options{Link: true, Slug: ptr("site"), Force: true}, "proj")
+	e.mustLink(t, other, store.Options{Slug: ptr("site"), Force: true}, "proj")
 	if m := e.meta(t, "site"); m.Path != other || m.Title != "" || m.TitleEdited || m.Favorite || m.Description != "" ||
 		m.CreatedAt == created {
 		t.Errorf("--force should replace the link afresh: %+v", m)
@@ -341,22 +373,22 @@ func TestPublishLinkSlugs(t *testing.T) {
 	e := newEnv(t)
 	site := e.write(t, "site/index.html", "<p>site</p>")
 	other := e.write(t, "other/site/index.html", "<p>other</p>")
-	if got := e.mustPublish(t, site, store.Options{Link: true}, "proj").Slug; got != "site" {
+	if got := e.mustLink(t, site, store.Options{}, "proj").Slug; got != "site" {
 		t.Fatalf("slug %q, want site", got)
 	}
-	if got := e.mustPublish(t, other, store.Options{Link: true}, "proj").Slug; got != "site-2" {
+	if got := e.mustLink(t, other, store.Options{}, "proj").Slug; got != "site-2" {
 		t.Errorf("an omitted slug another file uses: %q, want site-2", got)
 	}
 	if err := e.s.Remove("site-2"); err != nil {
 		t.Fatal(err)
 	}
-	e.mustPublish(t, other, store.Options{Link: true, Slug: ptr("by-hand")}, "proj")
-	if got := e.mustPublish(t, other, store.Options{Link: true}, "proj").Slug; got != "by-hand" {
+	e.mustLink(t, other, store.Options{Slug: ptr("by-hand")}, "proj")
+	if got := e.mustLink(t, other, store.Options{}, "proj").Slug; got != "by-hand" {
 		t.Errorf("an omitted slug should reuse the entry of the same path: %q", got)
 	}
 	long := strings.Repeat("b", 63)
-	e.mustPublish(t, e.write(t, "l1/"+long+"/index.html", "1"), store.Options{Link: true}, "proj")
-	if got := e.mustPublish(t, e.write(t, "l2/"+long+"/index.html", "2"), store.Options{Link: true}, "proj").Slug; got != strings.Repeat("b", 62)+"-2" {
+	e.mustLink(t, e.write(t, "l1/"+long+"/index.html", "1"), store.Options{}, "proj")
+	if got := e.mustLink(t, e.write(t, "l2/"+long+"/index.html", "2"), store.Options{}, "proj").Slug; got != strings.Repeat("b", 62)+"-2" {
 		t.Errorf("a numbered slug is cut to 64 characters: %q", got)
 	}
 
@@ -364,11 +396,11 @@ func TestPublishLinkSlugs(t *testing.T) {
 	_, err := e.publish(t, e.page(t, "untitled.yaml", ""), store.Options{Slug: ptr("site")}, "proj")
 	wantUserErr(t, err, "store_slug_is_link", "site")
 	e.mustPublish(t, filepath.Join(e.tmp, "untitled.yaml"), store.Options{}, "proj")
-	_, err = e.publish(t, site, store.Options{Link: true, Slug: ptr("untitled")}, "proj")
+	_, err = e.link(t, site, store.Options{Slug: ptr("untitled")}, "proj")
 	wantUserErr(t, err, "store_slug_is_page", "untitled")
 
 	// The link checks apply, by the real path.
-	_, err = e.publish(t, e.write(t, "home/top.html", "<p>t</p>"), store.Options{Link: true}, "proj")
+	_, err = e.link(t, e.write(t, "home/top.html", "<p>t</p>"), store.Options{}, "proj")
 	wantUserErr(t, err, "link_exposes_dir")
 	// A symlink outside home that points into its hidden directory is judged by where it points.
 	secret := e.write(t, "home/.secret/key.html", "<p>k</p>")
@@ -376,9 +408,9 @@ func TestPublishLinkSlugs(t *testing.T) {
 	if err = os.Symlink(secret, filepath.Join(e.tmp, "pub/key.html")); err != nil {
 		t.Fatal(err)
 	}
-	_, err = e.publish(t, filepath.Join(e.tmp, "pub/key.html"), store.Options{Link: true}, "proj")
+	_, err = e.link(t, filepath.Join(e.tmp, "pub/key.html"), store.Options{}, "proj")
 	wantUserErr(t, err, "link_hidden_home", secret)
-	_, err = e.publish(t, filepath.Join(e.tmp, "missing.html"), store.Options{Link: true}, "proj")
+	_, err = e.link(t, filepath.Join(e.tmp, "missing.html"), store.Options{}, "proj")
 	wantUserErr(t, err, "file_cannot_read")
 }
 
@@ -403,7 +435,7 @@ func TestList(t *testing.T) {
 	e.write(t, "store/Bad_Slug/meta.json", `{"title":"t","updatedAt":"2027-01-01T00:00:00.000Z"}`)
 	mkdir(t, filepath.Join(e.tmp, "store", "no-meta"))
 	file := e.write(t, "site/index.html", "<h1>Linked v1</h1>")
-	e.mustPublish(t, file, store.Options{Link: true}, "proj")
+	e.mustLink(t, file, store.Options{}, "proj")
 
 	slugs := func() string {
 		list, err := e.s.List()
@@ -528,7 +560,7 @@ func TestEdit(t *testing.T) {
 	}
 
 	file := e.write(t, "site/index.html", "<h1>L</h1>")
-	e.mustPublish(t, file, store.Options{Link: true}, "proj")
+	e.mustLink(t, file, store.Options{}, "proj")
 	if _, err := e.s.Edit("site", store.Edit{Title: ptr("Pinned")}); err != nil {
 		t.Fatal(err)
 	}
@@ -782,7 +814,7 @@ func TestLinkSlugPickedOnSave(t *testing.T) {
 	e := newEnv(t)
 	prepare := func(file string) *store.Entry {
 		t.Helper()
-		entry, err := e.s.Prepare(t.Context(), file, store.Options{Link: true}, e.tmp)
+		entry, err := e.s.PrepareLink(t.Context(), file, store.Options{}, e.tmp)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -812,7 +844,7 @@ func TestRemove(t *testing.T) {
 
 	e := newEnv(t)
 	file := e.write(t, "site/index.html", "<h1>L</h1>")
-	e.mustPublish(t, file, store.Options{Link: true}, "proj")
+	e.mustLink(t, file, store.Options{}, "proj")
 	if err := e.s.Remove("site"); err != nil {
 		t.Fatal(err)
 	}
@@ -918,9 +950,9 @@ func TestPublishLang(t *testing.T) {
 
 	// A linked file is shown as it is: --theme is refused.
 	site := e.write(t, "site/index.html", "<h1>A</h1>")
-	_, err = e.publish(t, site, store.Options{Link: true, Theme: ptr("default")}, "repo")
+	_, err = e.link(t, site, store.Options{Theme: ptr("default")}, "repo")
 	wantUserErr(t, err, "store_theme_link")
-	_, err = e.publish(t, site, store.Options{Link: true, PartsTheme: ptr("default")}, "repo")
+	_, err = e.link(t, site, store.Options{PartsTheme: ptr("default")}, "repo")
 	wantUserErr(t, err, "store_theme_link")
 }
 
@@ -959,7 +991,7 @@ func TestLinkDataFile(t *testing.T) {
 
 	e := newEnv(t)
 	data := e.write(t, "proj/spec.yaml", "template: report\ntitle: Spec\nlang: ja\n")
-	entry := e.mustPublish(t, data, store.Options{Link: true, Theme: ptr("default")}, "proj")
+	entry := e.mustLink(t, data, store.Options{Theme: ptr("default")}, "proj")
 	m := entry.Meta
 	if entry.Source != nil || m.Path != data || m.Theme != "default" || m.Title != "" {
 		t.Errorf("the entry = %+v, source %d bytes", m, len(entry.Source))
@@ -976,7 +1008,7 @@ func TestLinkDataFile(t *testing.T) {
 	}
 
 	// Linked again, it reloads its tab: the version holds the publish time.
-	again := e.mustPublish(t, data, store.Options{Link: true}, "proj").Meta
+	again := e.mustLink(t, data, store.Options{}, "proj").Meta
 	if e.s.Version("spec", &again, data) == e.s.Version("spec", &m, data) {
 		t.Error("linking again in another theme left the version as it was")
 	}
@@ -987,7 +1019,7 @@ func TestLinkDataFile(t *testing.T) {
 	}
 
 	bad := e.write(t, "proj/bad.yaml", "template: report\nsections: 3\nlang: en\n")
-	if _, err = e.publish(t, bad, store.Options{Link: true}, "proj"); err == nil || !strings.Contains(err.Error(), "bad.yaml:2:11: sections:") {
+	if _, err = e.link(t, bad, store.Options{}, "proj"); err == nil || !strings.Contains(err.Error(), "bad.yaml:2:11: sections:") {
 		t.Errorf("linking a data file with mistakes = %v", err)
 	}
 }
@@ -999,7 +1031,7 @@ func TestLinkDataFileEdges(t *testing.T) {
 
 	e := newEnv(t)
 	data := e.write(t, "proj/spec.yaml", "template: report\nlang: en\n")
-	m := e.mustPublish(t, data, store.Options{Link: true}, "proj").Meta
+	m := e.mustLink(t, data, store.Options{}, "proj").Meta
 	if err := os.Chmod(data, 0); err != nil {
 		t.Fatal(err)
 	}
@@ -1024,7 +1056,7 @@ func TestLinkDataFileEdges(t *testing.T) {
 	if err = os.Symlink(data, filepath.Join(e.tmp, "proj", "spec.html")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = e.publish(t, filepath.Join(e.tmp, "proj", "spec.html"), store.Options{Link: true, Theme: ptr("default")}, "proj"); err != nil {
+	if _, err = e.link(t, filepath.Join(e.tmp, "proj", "spec.html"), store.Options{Theme: ptr("default")}, "proj"); err != nil {
 		t.Errorf("linking a data file through a symlink named .html, with --theme = %v", err)
 	}
 
@@ -1032,7 +1064,7 @@ func TestLinkDataFileEdges(t *testing.T) {
 	if err = os.Symlink(bad, filepath.Join(e.tmp, "proj", "view.html")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = e.publish(t, filepath.Join(e.tmp, "proj", "view.html"), store.Options{Link: true}, "proj"); err == nil ||
+	if _, err = e.link(t, filepath.Join(e.tmp, "proj", "view.html"), store.Options{}, "proj"); err == nil ||
 		!strings.Contains(err.Error(), `unknown template "nosuch"`) {
 		t.Errorf("linking a data file with mistakes through a symlink named .html = %v", err)
 	}
@@ -1052,7 +1084,7 @@ func TestLinkDataFileTwice(t *testing.T) {
 	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nlang: en\n")
 	link := func(slug, theme string) store.Meta {
 		t.Helper()
-		entry, err := s.Prepare(t.Context(), data, store.Options{Link: true, Slug: ptr(slug), PartsTheme: ptr(theme)},
+		entry, err := s.PrepareLink(t.Context(), data, store.Options{Slug: ptr(slug), PartsTheme: ptr(theme)},
 			filepath.Join(e.tmp, "proj"))
 		if err != nil {
 			t.Fatal(err)
@@ -1216,5 +1248,41 @@ func TestWriteAtomic(t *testing.T) { //nolint:paralleltest // sets the umask, wh
 		if err != nil || fi.Mode().Perm() != c.want || len(entries) != 1 {
 			t.Errorf("under umask %o: %v, %v, %d files; want %v", c.umask, fi.Mode(), err, len(entries), c.want)
 		}
+	}
+}
+
+// PrepareData reads nothing from disk: a data file that names images is asked for them first, then
+// checked with those sent, which the entry keeps.
+func TestPrepareData(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("../tmpl/testdata", "", ""))
+	png, err := os.ReadFile("../tmpl/testdata/sizes/chart.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := []byte("template: sizes\nlang: en\nfiles: [{ name: a, bytes: 1 }]\nchart: img/chart.png\n")
+	up := store.Upload{File: "plans/sizes.yaml", Dir: "/plans", Source: src, Images: nil, Project: "proj"}
+	var need *store.NeedImages
+	if _, err = s.PrepareData(up, store.Options{}); !errors.As(err, &need) || !slices.Equal(need.Names, []string{"img/chart.png"}) {
+		t.Fatalf("PrepareData without images = %v, want img/chart.png asked for", err)
+	}
+	up.Images = fstest.MapFS{}
+	want := `plans/sizes.yaml:4:8: chart: there is no image "img/chart.png" under /plans`
+	if _, err = s.PrepareData(up, store.Options{}); err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("PrepareData with none of its images = %v, want %s", err, want)
+	}
+	up.Images = fstest.MapFS{"img/chart.png": {Data: png}}
+	entry, err := s.PrepareData(up, store.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry.Slug != "sizes" || entry.Meta.PublishedFrom != "proj" || !bytes.Equal(entry.Images["img/chart.png"], png) {
+		t.Errorf("entry = %s from %q, %d images", entry.Slug, entry.Meta.PublishedFrom, len(entry.Images))
+	}
+	up.File = "plans/page.html"
+	if _, err = s.PrepareData(up, store.Options{}); err == nil || !strings.Contains(err.Error(), "page.html") {
+		t.Errorf("PrepareData of HTML = %v, want it refused", err)
 	}
 }

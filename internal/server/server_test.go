@@ -118,17 +118,30 @@ func (e *env) write(t *testing.T, rel, body string) string {
 	return path
 }
 
-func (e *env) publish(t *testing.T, file string, opts store.Options) *store.Entry {
+func (e *env) publish(t *testing.T, file string, opts store.Options) {
 	t.Helper()
 
-	entry, err := e.store.Prepare(t.Context(), file, opts, e.tmp)
+	e.save(t, e.store.Prepare, file, opts)
+}
+
+func (e *env) link(t *testing.T, file string, opts store.Options) {
+	t.Helper()
+
+	e.save(t, e.store.PrepareLink, file, opts)
+}
+
+func (e *env) save(t *testing.T, prepare func(context.Context, string, store.Options, string) (*store.Entry, error),
+	file string, opts store.Options,
+) {
+	t.Helper()
+
+	entry, err := prepare(t.Context(), file, opts, e.tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := e.store.Save(entry); err != nil {
 		t.Fatal(err)
 	}
-	return entry
 }
 
 type resp struct {
@@ -478,7 +491,7 @@ func TestLinkedFileSwappedForSymlink(t *testing.T) {
 	e := newEnv(t)
 	page := e.write(t, "swap/page.html", "<title>Real</title><p>real</p>")
 	other := e.write(t, "swap/other.html", "<title>Other</title><p>other</p>")
-	e.publish(t, page, store.Options{Link: true, Slug: ptr("swap")})
+	e.link(t, page, store.Options{Slug: ptr("swap")})
 	if err := os.Remove(page); err != nil {
 		t.Fatal(err)
 	}
@@ -514,7 +527,7 @@ func site(t *testing.T, e *env) string {
 			t.Fatal(err)
 		}
 	}
-	e.publish(t, index, store.Options{Link: true, Slug: ptr("site")})
+	e.link(t, index, store.Options{Slug: ptr("site")})
 	return index
 }
 
@@ -592,7 +605,7 @@ func TestLinkedDocumentBytes(t *testing.T) {
 
 	e := newEnv(t)
 	doc := e.write(t, "doc/index.html", "<!doctype html><title>Doc</title><p>\xff</p>\n")
-	e.publish(t, doc, store.Options{Link: true, Slug: ptr("doc-link")})
+	e.link(t, doc, store.Options{Slug: ptr("doc-link")})
 	if dl := e.get(t, "/api/artifacts/doc-link/download"); dl.body != "<!doctype html><title>Doc</title><p>\xff</p>\n" {
 		t.Errorf("download of a linked document = %q", dl.body)
 	}
@@ -622,7 +635,7 @@ func TestHangUpClosesTheFile(t *testing.T) {
 	}
 	e := newEnv(t)
 	doc := e.write(t, "abort/index.html", "<!doctype html><title>Abort</title><p>"+strings.Repeat("x", 8<<20))
-	e.publish(t, doc, store.Options{Link: true, Slug: ptr("abort")})
+	e.link(t, doc, store.Options{Slug: ptr("abort")})
 	for range 10 {
 		for _, target := range []string{"/a/abort/?raw", "/api/artifacts/abort/download"} {
 			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.base+target, http.NoBody)
