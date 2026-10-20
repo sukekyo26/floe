@@ -411,6 +411,11 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	if err = set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json")); err != nil {
 		return err
 	}
+	// The data's checks of a format do not look into a part, which draws its items by its part.html.
+	isFormat := func(s *schema) bool { return slices.Contains(formats, s.Format) }
+	if ptr, s := set.schemas[url].first("#", isFormat); s != nil {
+		return usererr.New("tmpl_part_format", path.Join(dir, "schema.json"), ptr, s.Format)
+	}
 	html, err := fs.ReadFile(files, "part.html")
 	if err != nil {
 		return fmt.Errorf("read the part %s: %w", name, err)

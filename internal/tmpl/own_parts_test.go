@@ -179,6 +179,19 @@ func TestBrokenOwnParts(t *testing.T) {
 		"pong/part.html":       `<div data-floe-part="pong"></div>`,
 		"pong/part.css":        "",
 		"Quote/schema.json":    `{"type": "object"}`,
+		"blurb/schema.json":    `{"type": "object", "properties": {"body": {"type": "string", "format": "html"}}}`,
+		"blurb/part.html":      `<div data-floe-part="blurb">{{.body}}</div>`,
+		"blurb/part.css":       "",
+		"gallery/schema.json":  `{"type": "array", "items": {"type": "object", "properties": {"src": {"type": "string", "format": "image"}}}}`,
+		"gallery/part.html":    `<div data-floe-part="gallery"></div>`,
+		"gallery/part.css":     "",
+		"marked/schema.json":   `{"type": "object", "properties": {"text": {"type": "string", "format": "markdown"}}}`,
+		"marked/part.html":     `<div data-floe-part="marked">{{.text}}</div>`,
+		"marked/part.css":      "",
+		// A format of JSON Schema's own is checked as the part's schema is, and stays.
+		"dated/schema.json": `{"type": "object", "properties": {"on": {"type": "string", "format": "date"}}}`,
+		"dated/part.html":   `<div data-floe-part="dated">{{.on}}</div>`,
+		"dated/part.css":    "",
 	}
 	for _, name := range []string{"quote", "tone"} {
 		for file, body := range quote(name) {
@@ -229,6 +242,12 @@ func TestBrokenOwnParts(t *testing.T) {
 		"loop":    "the part loop cannot be used: " + filepath.Join(parts, "loop") + ": the part loop holds itself (loop → loop)",
 		"ping":    "the part ping cannot be used: " + filepath.Join(parts, "ping") + ": the part ping holds itself (ping → pong → ping)",
 		"Quote":   "the part Quote cannot be used: " + filepath.Join(parts, "Quote") + ": a name is lower case letters",
+		"blurb": "the part blurb cannot be used: " + filepath.Join(parts, "blurb", "schema.json") +
+			`: #/properties/body: a part's schema takes no "format": "html"`,
+		"gallery": "the part gallery cannot be used: " + filepath.Join(parts, "gallery", "schema.json") +
+			`: #/items/properties/src: a part's schema takes no "format": "image"`,
+		"marked": "the part marked cannot be used: " + filepath.Join(parts, "marked", "schema.json") +
+			`: #/properties/text: a part's schema takes no "format": "markdown"`,
 	}
 	for name, why := range whys {
 		dir := memo(t, `"risks": {"$ref": "floe:///parts/`+name+`.json"}, "aside": {"type": "string"}`)
@@ -274,6 +293,11 @@ func TestBrokenOwnParts(t *testing.T) {
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/quote.json"}, "aside": {"type": "string"}`)
 	if _, err := draw(tmpl.NewLibrary(dir, parts, ""), "template: memo\nlang: en\nrisks: { text: Hi }\n"); err != nil {
 		t.Errorf("drawing a template of the quote = %v", err)
+	}
+	dated := memo(t, `"risks": {"$ref": "floe:///parts/dated.json"}, "aside": {"type": "string"}`)
+	if page, err := draw(tmpl.NewLibrary(dated, parts, ""), "template: memo\nlang: en\nrisks: { on: 2026-10-20 }\n"); err != nil ||
+		!strings.Contains(page, `<div data-floe-part="dated">2026-10-20</div>`) {
+		t.Errorf("drawing a part of a format of JSON Schema's = %v", err)
 	}
 	// floe's tone stays the tone of its parts.
 	if page, err := draw(tmpl.NewLibrary(memo(t, memoItems), parts, ""), "template: memo\nlang: en\n"+

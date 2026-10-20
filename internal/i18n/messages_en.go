@@ -383,6 +383,7 @@ var messagesEN = map[string]string{
 	"tmpl_look_files":              "%s: the look %s holds no schema.json nor part.html, so it draws nothing and has no use for this file; remove it, or make it a part with those two",
 	"tmpl_part_look_ref":           "%s is the look %s, which draws nothing: refer to a part, and take a look by part.yaml's looks: or data-floe-look",
 	"tmpl_part_holds_look":         "%s: the part refers to floe:///parts/%s.json, a look, which draws nothing; take it by part.yaml's looks: instead",
+	"tmpl_part_format":             `%s: %s: a part's schema takes no "format": "%s": its part.html draws its items, which the checks of a format do not reach; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}`,
 	"tmpl_part_yaml":               "write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
 	"tmpl_part_yaml_key":           "%s is not a key of part.yaml; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
 	"tmpl_part_yaml_looks":         "write looks: as a list of the names of parts or looks, like looks: [panel]",
