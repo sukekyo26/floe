@@ -476,9 +476,11 @@ func (d *Data) Render(title string) ([]byte, error) {
 	styled, ok := withStyles(out, found, style)
 	if !ok {
 		// An item's open <script> may hide the </head>: its mistake, not the template's.
-		var k int
-		if k, err = d.headHider(page, title); err != nil {
-			return nil, err
+		k := -1
+		if d.htmlItems != nil {
+			if k, err = d.headHider(page, title); err != nil {
+				return nil, err
+			}
 		}
 		if k >= 0 {
 			it := d.htmlItems[k]
@@ -497,22 +499,6 @@ func (d *Data) Render(title string) ([]byte, error) {
 
 // execute draws d with page, the template's page.html, as a page titled title, without its styles.
 func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
-	out, err := d.run(page, title)
-	// Read checked the data against the schema, so this is the template's own mistake: an image of its
-	// assets/ that is not right, or page.html naming an item its schema does not declare, or using one
-	// as another type.
-	var bad *usererr.Error
-	switch {
-	case errors.As(err, &bad):
-		return nil, d.tmpl.assetMistake(bad)
-	case err != nil:
-		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
-	}
-	return out, nil
-}
-
-// run draws d with page as execute does, its mistake as page.Execute tells it.
-func (d *Data) run(page *template.Template, title string) ([]byte, error) {
 	var b bytes.Buffer
 	err := page.Execute(&b, map[string]any{
 		"Title": title,
@@ -520,7 +506,19 @@ func (d *Data) run(page *template.Template, title string) ([]byte, error) {
 		"Data":  d.schema.prepare(d.Values, nil, d),
 		"Calc":  d.Calc,
 	})
-	return b.Bytes(), err //nolint:wrapcheck // execute tells it
+	// Read checked the data against the schema, so this is the template's own mistake: an image of its
+	// assets/ that is not right, or page.html naming an item its schema does not declare, or using one
+	// as another type.
+	var bad *usererr.Error
+	switch {
+	case errors.As(err, &bad) && bad.Key == "tmpl_html_looked":
+		return nil, bad
+	case errors.As(err, &bad):
+		return nil, d.tmpl.assetMistake(bad)
+	case err != nil:
+		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
+	}
+	return b.Bytes(), nil
 }
 
 // withDiagrams returns out, a page of d, with the script of its diagrams after it, once at the end, as the
@@ -570,7 +568,7 @@ func (t *Template) page() (*template.Template, []byte, error) {
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
-		Funcs(template.FuncMap{"asset": t.assets()}).Parse(string(src))
+		Funcs(template.FuncMap{"asset": t.assets()}).Funcs(lookers(t.file("page.html"))).Parse(string(src))
 	if err != nil {
 		return nil, nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
 	}

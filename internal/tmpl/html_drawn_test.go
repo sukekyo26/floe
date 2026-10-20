@@ -403,7 +403,7 @@ func TestDrawnHTMLHidesHeadMarked(t *testing.T) {
 	page := filepath.Join(dir, "memo", "page.html")
 	for action, want := range map[string]string{
 		`{{if not .Data.risks}}{{index .Lang 9}}{{end}}`:         "data.yaml:3:8: risks: HTML changes the page around it",
-		`{{if gt (len .Data.risks) 20}}{{index .Lang 9}}{{end}}`: "looks into an item of format html",
+		`{{if gt (len .Data.risks) 20}}{{index .Lang 9}}{{end}}`: "looks into HTML floe draws",
 	} {
 		src := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.risks}}` + action + `</head><body><p>x</p></body></html>`
 		if err := os.WriteFile(page, []byte(src), 0o600); err != nil {
@@ -425,8 +425,9 @@ func TestDrawnHTMLHidesHeadMarked(t *testing.T) {
 	}
 }
 
-// An item is checked in the <head> or the <body>: one between them is the body's, with the attributes of
-// the page's <body>; page.html putting one after the </body> is refused, as is one looking into an item.
+// An item is checked in the <head> or the <body> of a page in standards mode: one between them is the
+// body's, with the attributes of the page's <body>; page.html putting one after the </body>, or leaving out
+// <!doctype html>, is refused, as is one looking into an item with len or slice, however long it is.
 func TestDrawnHTMLWherePageHasIt(t *testing.T) {
 	t.Parallel()
 
@@ -434,9 +435,12 @@ func TestDrawnHTMLWherePageHasIt(t *testing.T) {
 	page := filepath.Join(dir, "memo", "page.html")
 	head := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>`
 	for body, want := range map[string]string{
-		`{{.Data.risks}}<body class="r"><p>x</p></body></html>`:                       "",
-		`<body class="r"><p>x</p></body>{{.Data.risks}}</html>`:                       "outside its <head> and <body>",
-		`<body><p>{{slice .Data.risks 0 40}}</p><p>{{.Data.risks}}</p></body></html>`: "looks into an item of format html",
+		`{{.Data.risks}}<body class="r"><p>x</p></body></html>`:                                     "",
+		`<body class="r"><p>x</p></body>{{.Data.risks}}</html>`:                                     "outside its <head> and <body>",
+		`<body><p>{{slice .Data.risks 0 40}}</p><p>{{.Data.risks}}</p></body></html>`:               "looks into HTML floe draws",
+		`<body><p>{{slice .Data.risks 0 4}}</p></body></html>`:                                      "a part) with slice:",
+		`<body>{{if lt (len .Data.risks) 99}}<p>{{.Data.risks}}</p>{{end}}</body></html>`:           "a part) with len:",
+		`<body><div>{{slice .Lang 0 1}}{{len .Lang}}</div><div>{{.Data.risks}}</div></body></html>`: "",
 	} {
 		if err := os.WriteFile(page, []byte(head+body), 0o600); err != nil {
 			t.Fatal(err)
@@ -445,6 +449,13 @@ func TestDrawnHTMLWherePageHasIt(t *testing.T) {
 		if want == "" && err != nil || want != "" && (err == nil || !strings.Contains(err.Error(), want)) {
 			t.Errorf("%s = %v, want %q", body, err, want)
 		}
+	}
+	if err := os.WriteFile(page, []byte(`<html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body><div>{{.Data.risks}}</div></body></html>`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <p>a</p>\n"); err == nil ||
+		!strings.Contains(err.Error(), "does not start with <!doctype html>") {
+		t.Errorf("a page in quirks mode = %v", err)
 	}
 }
 
@@ -456,6 +467,10 @@ func TestDrawnHTMLTableAndForm(t *testing.T) {
 	foot := htmlIn(t, `<table><tr><td>a</td></tr>{{.Data.risks}}</table>`)
 	if _, err := draw(foot, "template: memo\nlang: en\nrisks: <tfoot><tr><td>s</td></tr></tfoot>\n"); err != nil {
 		t.Errorf("a <tfoot> after the rows = %v", err)
+	}
+	inTemplate := htmlIn(t, `<template>{{.Data.risks}}</template><input name=q>`)
+	if _, err := draw(inTemplate, "template: memo\nlang: en\nrisks: <form action=x><input name=a>\n"); err != nil {
+		t.Errorf("a <form> left open in a <template> = %v", err)
 	}
 	l := htmlIn(t, `<div>{{.Data.risks}}</div><input name=q><button>go</button>`)
 	for item, refused := range map[string]bool{

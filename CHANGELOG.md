@@ -195,7 +195,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   is refused, as is a drawing an action of it leaves it out of. It holds
   no `<style>`, nor an item of `"format": "html"` a `<style>`, `<link>`
   or `</head>`, or what changes the page around it as a browser reads it
-  (an `<svg>`, a comment or a `<form>` it leaves open, an end tag of the page's; a `page.html` that puts one outside its `<head>` and `<body>` or looks into it), nor the template's CSS an `@import`, `:root`, `html` or a `}` that closes no block, each refused
+  (an `<svg>`, a comment or a `<form>` it leaves open, an end tag of the page's; a `page.html` that puts one outside its `<head>` and `<body>`, leaves out `<!doctype html>`, or looks into HTML with `len` or `slice`), nor the template's CSS an `@import`, `:root`, `html` or a `}` that closes no block, each refused
   at its line, and `floe template check` refuses a part `page.html` names that floe
   does not have.
   Images go into the page as data URIs: an item of `"format": "image"`
