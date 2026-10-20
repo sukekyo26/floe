@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -35,26 +34,83 @@ var imageTypes = map[string]string{
 	".svg": "image/svg+xml",
 }
 
-// imageURI reads the image name, a slash-separated path under files, as a data URI, which html/template
-// takes for a src as it is. where names files in the mistake: name must be a path under it without
-// .. or a name starting with a dot, of an image floe takes, by its name and by what it holds.
+// imageDir is the directory a data file's images are read under: open gives it, and what lets it go,
+// when the data names an image, and its mistakes name it dir.
+type imageDir struct {
+	dir  string
+	open func() (fs.FS, func(), error)
+}
+
+// diskImages is the directory dir on disk.
+func diskImages(dir string) imageDir {
+	return imageDir{dir: dir, open: func() (fs.FS, func(), error) {
+		r, err := os.OpenRoot(dir)
+		if err != nil {
+			return nil, nil, usererr.CannotRead(dir, err)
+		}
+		return r.FS(), func() { _ = r.Close() }, nil //nolint:errcheck // only read from
+	}}
+}
+
+// fsImages is the directory dir as files holds it, which needs no opening.
+func fsImages(files fs.FS, dir string) imageDir {
+	return imageDir{dir: dir, open: func() (fs.FS, func(), error) { return files, func() {}, nil }}
+}
+
+// ReadImage reads the image name under files as a data file's check reads it, which where names in its
+// mistakes: see dataImage.
+func ReadImage(files fs.FS, name, where string) ([]byte, error) {
+	b, _, e := dataImage(files, name, where)
+	if e != nil {
+		return nil, e
+	}
+	return b, nil
+}
+
+// dataImage reads the image name a data file names, and its type, as image does, but not under
+// KeptName, in any case, where a stored page keeps its data file.
+func dataImage(files fs.FS, name, where string) ([]byte, string, *usererr.Error) {
+	// A name that is no path is told so first, under KeptName or not.
+	if first, _, under := strings.Cut(name, "/"); imagePath(name) && under && strings.EqualFold(first, KeptName) {
+		return nil, "", usererr.New("tmpl_image_kept_name", name, KeptName)
+	}
+	return image(files, name, where)
+}
+
+// imageURI reads the image name as a data URI, which html/template takes for a src as it is.
 func imageURI(files fs.FS, name, where string) (template.URL, *usererr.Error) {
-	if !imagePath(name) {
-		return "", usererr.New("tmpl_image_path", name, where)
-	}
-	typ, ok := imageTypes[strings.ToLower(path.Ext(name))]
-	if !ok {
-		return "", usererr.New("tmpl_image_type", name)
-	}
-	b, e := readImage(files, name, where)
+	b, typ, e := image(files, name, where)
 	if e != nil {
 		return "", e
 	}
-	if holds := http.DetectContentType(b); holds != typ && (typ != "image/svg+xml" || !isSVG(b)) {
-		return "", usererr.New("tmpl_image_content", name, typ)
-	}
+	return dataURI(b, typ), nil
+}
+
+// dataURI is the image b, of the type typ, as a data URI.
+func dataURI(b []byte, typ string) template.URL {
 	//nolint:gosec // G203: an image of a type floe takes, checked by what it holds
-	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b)), nil
+	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b))
+}
+
+// image reads the image name, a slash-separated path under files, and its type. where names files in
+// the mistake: name must be a path under it without .. or a name starting with a dot, of an image floe
+// takes, by its name and by what it holds.
+func image(files fs.FS, name, where string) ([]byte, string, *usererr.Error) {
+	if !imagePath(name) {
+		return nil, "", usererr.New("tmpl_image_path", name, where)
+	}
+	typ, ok := imageTypes[strings.ToLower(path.Ext(name))]
+	if !ok {
+		return nil, "", usererr.New("tmpl_image_type", name)
+	}
+	b, e := readImageFile(files, name, where)
+	if e != nil {
+		return nil, "", e
+	}
+	if holds := http.DetectContentType(b); holds != typ && (typ != "image/svg+xml" || !isSVG(b)) {
+		return nil, "", usererr.New("tmpl_image_content", name, typ)
+	}
+	return b, typ, nil
 }
 
 // imagePath reports whether name may name an image: a slash-separated path under its directory,
@@ -63,11 +119,11 @@ func imagePath(name string) bool {
 	return fs.ValidPath(name) && name != "." && !strings.HasPrefix(name, ".") && !strings.Contains(name, "/.")
 }
 
-// readImage reads the file name of files, a regular file up to maxImage. Each name on its path must be
+// readImageFile reads the file name of files, a regular file up to maxImage. Each name on its path must be
 // in its directory as written, case and all, so that a page drawn on macOS, which ignores case, draws
 // on linux too; and none may be a symlink, which could lead out of files or to a name starting with a
 // dot.
-func readImage(files fs.FS, name, where string) ([]byte, *usererr.Error) {
+func readImageFile(files fs.FS, name, where string) ([]byte, *usererr.Error) {
 	steps := strings.Split(name, "/")
 	for i := range steps {
 		entries, err := fs.ReadDir(files, path.Join(append([]string{"."}, steps[:i]...)...))
@@ -202,20 +258,20 @@ func (t *Template) assets() func(name string) (template.URL, error) {
 	}
 }
 
-// checkImages reads the images of d, its items its schema s declares of format image, under dir, the
+// checkImages reads the images of d, its items its schema s declares of format image, under images, the
 // directory of the data file, into d.images, and reports each mistake at its line and column under
 // root.
-func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
+func checkImages(s *schema, d *Data, root ast.Node, images imageDir) error {
 	var found []itemAt
 	s.find("image", d.Values, nil, &found)
 	if found == nil {
 		return nil
 	}
-	r, err := os.OpenRoot(dir)
+	files, release, err := images.open()
 	if err != nil {
-		return usererr.CannotRead(dir, err)
+		return err
 	}
-	defer r.Close()
+	defer release()
 	d.images = map[string]template.URL{}
 	refused := map[string]*usererr.Error{}
 	var problems yamlpos.Problems
@@ -230,13 +286,12 @@ func checkImages(s *schema, d *Data, root ast.Node, dir string) error {
 		e, seen := refused[name]
 		if !seen {
 			if imagePath(name) {
-				d.tried = append(d.tried, filepath.Join(dir, filepath.FromSlash(name)))
+				d.tried = append(d.tried, name)
 			}
-			var uri template.URL
-			if first, _, under := strings.Cut(name, "/"); under && strings.EqualFold(first, KeptName) {
-				e = usererr.New("tmpl_image_kept_name", name, KeptName)
-			} else if uri, e = imageURI(r.FS(), name, dir); e == nil {
-				d.images[name] = uri
+			var b []byte
+			var typ string
+			if b, typ, e = dataImage(files, name, images.dir); e == nil {
+				d.images[name] = dataURI(b, typ)
 			}
 			refused[name] = e
 		}

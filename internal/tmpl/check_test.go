@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
@@ -521,6 +523,26 @@ func TestSchemaOfSharedKeys(t *testing.T) {
 	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), tmpl.Themes{}, "")
 	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json declares or requires lang, title, which floe reads") {
 		t.Errorf("Read with a template whose schema declares lang and title = %v", err)
+	}
+}
+
+// ReadFS reads the images from the fs.FS given, as a server reads those a publish sent, and tells the
+// images the data names; without an fs.FS it fails.
+func TestReadFS(t *testing.T) {
+	t.Parallel()
+
+	png := mustRead(t, "testdata/sizes/chart.png")
+	l := tmpl.NewLibrary("testdata", "", "")
+	src := []byte("template: sizes\nlang: en\nfiles: [{ name: a, bytes: 1 }]\nchart: img/chart.png\n")
+	d, named, err := l.ReadFS("sizes.yaml", src, fstest.MapFS{"img/chart.png": {Data: []byte(png)}}, "/plans", tmpl.Themes{})
+	if err != nil || !slices.Equal(named, []string{"img/chart.png"}) {
+		t.Fatalf("ReadFS = %v, %v; want img/chart.png named", named, err)
+	}
+	if images, imgErr := d.Images(); imgErr != nil || string(images["img/chart.png"]) != png {
+		t.Errorf("the images = %d, %v; want img/chart.png as sent", len(images), imgErr)
+	}
+	if _, _, err = l.ReadFS("sizes.yaml", src, nil, "/plans", tmpl.Themes{}); err == nil {
+		t.Error("ReadFS without an fs.FS = nil error")
 	}
 }
 
