@@ -84,3 +84,34 @@ func TestPartNew(t *testing.T) {
 		t.Errorf("part new of a name there already = %+v", r)
 	}
 }
+
+// floe part check prints every mistake of the parts of one's own and exits 1, warns on stderr of what goes
+// into no page, and prints nothing when they are right.
+func TestPartCheck(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	if r := e.run(t, "", "part", "check"); r.code != 0 || r.stdout != "" || r.stderr != "" {
+		t.Errorf("part check without parts = %+v", r)
+	}
+	if r := e.run(t, "", "part", "new", "grid", "--from", "table"); r.code != 0 {
+		t.Fatalf("part new = %+v", r)
+	}
+	if r := e.run(t, "", "part", "check"); r.code != 0 || r.stdout != "" || r.stderr != "" {
+		t.Errorf("part check of a copy = %+v", r)
+	}
+	e.write(t, "parts/themes/default/nope.css", "")
+	if r := e.run(t, "", "part", "check"); r.code != 0 || !strings.Contains(r.stderr, "nope.css goes into no page") {
+		t.Errorf("part check with a stray file = %+v", r)
+	}
+	e.write(t, "parts/grid/part.html", "<table></table>")
+	e.write(t, "parts/themes/mine/grid.css", "}\n")
+	r := e.run(t, "", "part", "check")
+	if r.code != 1 || !strings.Contains(r.stderr, "the part grid cannot be used") || !strings.Contains(r.stderr, "your own parts theme mine cannot be used") {
+		t.Errorf("part check with mistakes = %+v", r)
+	}
+	if r := e.run(t, "", "part", "check", "parts"); r.code != 2 {
+		t.Errorf("part check with an argument = %+v", r)
+	}
+}

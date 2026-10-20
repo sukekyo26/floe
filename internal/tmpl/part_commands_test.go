@@ -224,3 +224,44 @@ func TestNewPartRefused(t *testing.T) {
 		t.Errorf("NewPart without a directory of parts = %v", err)
 	}
 }
+
+// CheckOwnParts refuses every part and parts theme of one's own that cannot be used, and warns of what goes
+// into no page; with none of them, or none wrong, it tells nothing.
+func TestCheckOwnParts(t *testing.T) {
+	t.Parallel()
+
+	for _, dir := range []string{"", filepath.Join(t.TempDir(), "none")} {
+		if warnings, mistakes := tmpl.CheckOwnParts(dir); warnings != nil || mistakes != nil {
+			t.Errorf("CheckOwnParts(%q) = %v, %v", dir, warnings, mistakes)
+		}
+	}
+	parts := ownParts(t, quote("quote"))
+	if _, err := tmpl.NewLibrary("", parts, "").NewPart("grid", "table"); err != nil {
+		t.Fatal(err)
+	}
+	if warnings, mistakes := tmpl.CheckOwnParts(parts); warnings != nil || mistakes != nil {
+		t.Errorf("CheckOwnParts of parts that are right = %v, %v", warnings, mistakes)
+	}
+
+	files := quote("quote")
+	files["unnamed/schema.json"] = `{"type": "object"}`
+	files["unnamed/part.html"] = "<p></p>"
+	files["unnamed/part.css"] = ""
+	files["diagram/part.css"] = ""
+	files["themes/mine/note.css"] = "}\n"
+	files["themes/default/nope.css"] = ""
+	parts = ownParts(t, files)
+	warnings, mistakes := tmpl.CheckOwnParts(parts)
+	if len(warnings) != 1 || !strings.Contains(warnings[0].Error(), filepath.Join(parts, "themes", "default", "nope.css")+" goes into no page") {
+		t.Errorf("warnings = %v", warnings)
+	}
+	told := make([]string, 0, len(mistakes))
+	for _, m := range mistakes {
+		told = append(told, m.Error())
+	}
+	if len(told) != 3 || !strings.HasPrefix(told[0], "the part diagram cannot be used: "+filepath.Join(parts, "diagram")+": a part of your own cannot be named diagram") ||
+		!strings.HasPrefix(told[1], "the part unnamed cannot be used: "+filepath.Join(parts, "unnamed", "part.html")+": no element of the part unnamed is its box") ||
+		!strings.HasPrefix(told[2], "your own parts theme mine cannot be used: "+filepath.Join(parts, "themes", "mine", "note.css")+":1:") {
+		t.Errorf("mistakes = %q", told)
+	}
+}

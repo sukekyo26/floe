@@ -2,6 +2,7 @@ package cli
 
 import (
 	"cmp"
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -19,7 +20,7 @@ func (a *app) partCmd() *cobra.Command {
 			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	}
-	cmd.AddCommand(a.partListCmd(), a.partShowCmd(), a.partNewCmd())
+	cmd.AddCommand(a.partListCmd(), a.partShowCmd(), a.partNewCmd(), a.partCheckCmd())
 	return cmd
 }
 
@@ -134,4 +135,28 @@ named like one of floe's parts takes its place.`,
 	}
 	cmd.Flags().StringVar(&from, "from", "", "the part to copy (required)")
 	return cmd
+}
+
+func (a *app) partCheckCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "check",
+		Short: "Check the parts and parts themes of your own before you use or share them",
+		Long: `Check the parts and parts themes of your own in $FLOE_PARTS_DIR, all of them, as a page would
+read them: their files, their names, the looks they take and the parts they hold. Every mistake is
+printed, at its line where it has one, and the exit code is 1 when there is one. What goes into no
+page is warned of on stderr, leaving the exit code 0. Nothing is printed when they are right. To
+check another directory, set FLOE_PARTS_DIR to it. A part is not drawn, as it has no data: floe
+template check draws a template's example with the parts it uses.`,
+		Args: usage(cobra.NoArgs),
+		RunE: func(*cobra.Command, []string) error {
+			warnings, found := tmpl.CheckOwnParts(a.cfg.parts)
+			for _, w := range warnings {
+				_, _ = fmt.Fprintln(a.env.Stderr, w.Localize(a.cat)) //nolint:errcheck // nowhere left to report
+			}
+			if found != nil {
+				return mistakes(found)
+			}
+			return nil
+		},
+	}
 }

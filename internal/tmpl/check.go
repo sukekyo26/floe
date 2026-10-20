@@ -73,6 +73,20 @@ func Check(dir, partsDir, iconsDir string) (warnings []*usererr.Error, mistakes 
 	return warnings, nil
 }
 
+// CheckOwnParts checks the parts and the parts themes of one's own in partsDir, "" for none, as a page
+// would read them: the mistakes are of those that cannot be used, and the warnings of what goes into no
+// page. It draws none of them, which have no data; a template that uses one draws its example with it.
+func CheckOwnParts(partsDir string) (warnings []*usererr.Error, mistakes []error) {
+	set, err := partsIn(partsDir)
+	if err != nil {
+		return nil, []error{err}
+	}
+	for _, why := range slices.Concat(set.unusable(nil), set.unusableThemes()) {
+		mistakes = append(mistakes, why)
+	}
+	return set.strays, mistakes
+}
+
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values,
 // page.html and the default theme.
 func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
