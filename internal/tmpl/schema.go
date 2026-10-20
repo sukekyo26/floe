@@ -53,6 +53,9 @@ func compileSchema(set *partSet, name string, src []byte) (*jsonschema.Schema, a
 	if err != nil {
 		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
+	if err = checkDraft(doc); err != nil {
+		return nil, nil, usererr.New("tmpl_schema_load", name, err)
+	}
 	url := schemaURL(name)
 	c := newCompiler(set)
 	if err = c.AddResource(url, doc); err != nil {
@@ -64,10 +67,50 @@ func compileSchema(set *partSet, name string, src []byte) (*jsonschema.Schema, a
 		}
 	}
 	sch, err := c.Compile(url)
-	if err != nil {
+	// jsonschema wraps noLoader's mistake in an error of its own, which does not unwrap: floe's own is told,
+	// so that it is worded in the reader's language.
+	// LIMIT: names the template, not the schema the $ref is in (its own or a part's); the schema map tells it (#90).
+	var load *jsonschema.LoadURLError
+	switch {
+	case errors.As(err, &load):
+		return nil, nil, usererr.New("tmpl_schema_load", name, load.Err)
+	case err != nil:
 		return nil, nil, fmt.Errorf("compile the schema of %s: %w", name, err)
 	}
 	return sch, doc, nil
+}
+
+// drafts are the drafts of JSON Schema a $schema may name.
+var drafts = []*jsonschema.Draft{
+	jsonschema.Draft4, jsonschema.Draft6, jsonschema.Draft7, jsonschema.Draft2019, jsonschema.Draft2020,
+}
+
+// checkDraft refuses the schema doc when its $schema names no draft of JSON Schema: jsonschema would take a
+// schema of floe's there, a part's, as the rules of the schema, and load any other.
+func checkDraft(doc any) error {
+	m, ok := doc.(map[string]any)
+	if !ok {
+		return nil
+	}
+	named, ok := m["$schema"].(string)
+	if !ok || slices.ContainsFunc(drafts, func(d *jsonschema.Draft) bool { return sameDraft(d.String(), named) }) ||
+		sameDraft("https://json-schema.org/schema", named) {
+		return nil
+	}
+	return usererr.New("tmpl_schema_draft", named)
+}
+
+// sameDraft reports whether the $schema named is the draft at url, as jsonschema reads it: by http or https,
+// with an empty fragment or none.
+func sameDraft(url, named string) bool {
+	bare := func(u string) string {
+		u = strings.TrimSuffix(u, "#")
+		if rest, ok := strings.CutPrefix(u, "http://"); ok {
+			return rest
+		}
+		return strings.TrimPrefix(u, "https://")
+	}
+	return bare(url) == bare(named)
 }
 
 // schemaURL is the URL of the schema of the template name, which a relative $ref is read from.
@@ -116,8 +159,6 @@ func unknownPart(set *partSet, ref string) error {
 	return usererr.New("tmpl_part_unknown", ref, set.names(drawing))
 }
 
-var errSchemaURL = errors.New("a schema refers to no other file or URL; write it in schema.json")
-
 // noLoader loads no schema: those of the parts of set are added to the compiler before.
 type noLoader struct{ set *partSet }
 
@@ -125,7 +166,7 @@ func (n noLoader) Load(url string) (any, error) {
 	if strings.HasPrefix(url, partsURL) {
 		return nil, unknownPart(n.set, url)
 	}
-	return nil, fmt.Errorf("%s: %w", url, errSchemaURL)
+	return nil, usererr.New("tmpl_schema_url", url)
 }
 
 type schemaCheck struct {

@@ -1,12 +1,14 @@
 package tmpl_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -192,6 +194,10 @@ func TestBrokenOwnParts(t *testing.T) {
 		"anything/schema.json": `{"type": "object", "properties": {"inner": {"$ref": "any.json"}}}`,
 		"anything/part.html":   `<div data-floe-part="anything"></div>`,
 		"anything/part.css":    "",
+		// Its $schema names a draft of JSON Schema, not a part.
+		"drafted/schema.json": `{"$schema": "floe:///parts/table.json", "type": "object"}`,
+		"drafted/part.html":   `<div data-floe-part="drafted"></div>`,
+		"drafted/part.css":    "",
 		// A format of JSON Schema's own is checked as the part's schema is, and stays.
 		"dated/schema.json":   `{"type": "object", "properties": {"on": {"type": "string", "format": "date"}}}`,
 		"dated/part.html":     `<div data-floe-part="dated">{{.on}}</div>`,
@@ -275,6 +281,8 @@ func TestBrokenOwnParts(t *testing.T) {
 		"loop":    "the part loop cannot be used: " + filepath.Join(parts, "loop") + ": the part loop holds itself (loop → loop)",
 		"ping":    "the part ping cannot be used: " + filepath.Join(parts, "ping") + ": the part ping holds itself (ping → pong → ping)",
 		"Quote":   "the part Quote cannot be used: " + filepath.Join(parts, "Quote") + ": a name is lower case letters",
+		"drafted": "the part drafted cannot be used: " + filepath.Join(parts, "drafted", "schema.json") +
+			": $schema floe:///parts/table.json names no draft of JSON Schema",
 		"blurb": "the part blurb cannot be used: " + filepath.Join(parts, "blurb", "schema.json") +
 			`: #/properties/body: a part's schema takes no "format": "html"`,
 		"anything": "the part anything cannot be used: " + filepath.Join(parts, "anything", "schema.json") +
@@ -305,9 +313,17 @@ func TestBrokenOwnParts(t *testing.T) {
 			}
 			continue
 		}
-		if len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), why) {
+		// Told as floe part check tells it, not wrapped in the words of jsonschema's loading.
+		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), "the schema of the template memo cannot be read: "+why) {
 			t.Errorf("Check of a template of %s = %v, want %s", name, mistakes, why)
 		}
+	}
+	// A data file of the template, as the page of its mistakes words it, in the reader's language.
+	braced := memo(t, `"risks": {"$ref": "floe:///parts/brace.json"}, "aside": {"type": "string"}`)
+	_, err := draw(tmpl.NewLibrary(braced, parts, ""), "template: memo\nlang: en\n")
+	var mistake i18n.Localizer
+	if !errors.As(err, &mistake) || !strings.HasPrefix(mistake.Localize(i18n.New("ja")), "テンプレート memo の schema を読めません: 部品 brace は使えません: ") {
+		t.Errorf("Read of a template of brace = %v", err)
 	}
 	// By page.html.
 	named := memo(t, memoItems)

@@ -440,6 +440,9 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown string) error {
 	if err != nil {
 		return fmt.Errorf("read %s: %w", shown, err)
 	}
+	if err = checkDraft(doc); err != nil {
+		return usererr.New("tmpl_item", shown, err)
+	}
 	// As jsonschema reads a $ref: cell.json is floe:///parts/cell.json.
 	s.absolute(url)
 	set.docs[url], set.schemas[url] = doc, s
