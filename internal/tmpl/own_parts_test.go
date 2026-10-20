@@ -294,6 +294,11 @@ func TestBrokenOwnParts(t *testing.T) {
 	if _, err := draw(tmpl.NewLibrary(dir, parts, ""), "template: memo\nlang: en\nrisks: { text: Hi }\n"); err != nil {
 		t.Errorf("drawing a template of the quote = %v", err)
 	}
+	dated := memo(t, `"risks": {"$ref": "floe:///parts/dated.json"}, "aside": {"type": "string"}`)
+	if page, err := draw(tmpl.NewLibrary(dated, parts, ""), "template: memo\nlang: en\nrisks: { on: 2026-10-20 }\n"); err != nil ||
+		!strings.Contains(page, `<div data-floe-part="dated">2026-10-20</div>`) {
+		t.Errorf("drawing a part of a format of JSON Schema's = %v", err)
+	}
 	// floe's tone stays the tone of its parts.
 	if page, err := draw(tmpl.NewLibrary(memo(t, memoItems), parts, ""), "template: memo\nlang: en\n"+
 		"risks: { columns: [{title: Risk}], rows: [[Links]] }\naside: { text: Hi, tone: warn }\n"); err != nil ||

@@ -701,7 +701,8 @@ type schema struct {
 // that page.html can test it under missingkey=error, an item a part draws becomes its HTML as d drew it
 // (a diagram its SVG, a script its element and the call of its function), an item of format html HTML
 // that goes in as it is, one of format markdown its HTML, and one of format image the data URI of its
-// image. A part readies its own item with d nil: it holds no item of a part or a format.
+// image. A part readies its own item too, the parts it holds drawn by d: its schema holds no format of
+// floe's, which readPart refuses.
 func (s *schema) prepare(v any, at []string, d *Data) any {
 	if s == nil {
 		return v
