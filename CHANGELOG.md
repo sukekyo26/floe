@@ -219,6 +219,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   (`~name` is refused). The defaults are under `XDG_DATA_HOME` and
   `XDG_CONFIG_HOME`, whose `~` stands for `HOME` too; a relative one of
   those is ignored, as the XDG spec says.
+  The management page may be framed by itself and by VS Code's Simple
+  Browser alone (`frame-ancestors 'self' vscode-webview: vscode-file:`), so
+  that another site, or a page, cannot have its buttons clicked unseen.
 - Show messages in English or Japanese. The command line follows `FLOE_LANG`,
   then `LC_ALL`, `LC_MESSAGES` and `LANG`; the management page follows the
   browser's language. English is the default.
