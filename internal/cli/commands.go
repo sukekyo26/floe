@@ -62,6 +62,7 @@ func (a *app) warn(key string, args ...any) {
 
 func (a *app) publishCmd() *cobra.Command {
 	var opts store.Options
+	var link bool
 	var slug, title, description, theme, partsTheme string
 	cmd := &cobra.Command{
 		Use:   "publish <data.yaml> | --link <file.html>",
@@ -113,11 +114,11 @@ refused unless --force.`,
 				}
 				*f.to = f.value
 			}
-			return a.publish(cmd.Context(), args[0], opts)
+			return a.publish(cmd.Context(), args[0], link, opts)
 		},
 	}
 	f := cmd.Flags()
-	f.BoolVar(&opts.Link, "link", false, "register the file in place: HTML shown as it is, a data file drawn when opened")
+	f.BoolVar(&link, "link", false, "register the file in place: HTML shown as it is, a data file drawn when opened")
 	f.StringVar(&slug, "slug", "", "the URL name (default: from the file name)")
 	f.StringVar(&title, "title", "", "the title (default: the data file's title:, or a link's <title> or <h1>)")
 	f.StringVar(&description, "description", "", "a description shown in the list")
@@ -130,7 +131,7 @@ refused unless --force.`,
 
 // publish checks, makes sure the server runs, then saves, so that a failed publish leaves nothing in
 // the store.
-func (a *app) publish(ctx context.Context, file string, opts store.Options) error {
+func (a *app) publish(ctx context.Context, file string, link bool, opts store.Options) error {
 	build, err := daemon.Build()
 	if err != nil {
 		return err //nolint:wrapcheck // already says what failed
@@ -145,7 +146,11 @@ func (a *app) publish(ctx context.Context, file string, opts store.Options) erro
 		return err //nolint:wrapcheck // the message is for the user as is
 	}
 	st := a.store()
-	entry, err := st.Prepare(ctx, file, opts, a.env.Dir)
+	prepare := st.Prepare
+	if link {
+		prepare = st.PrepareLink
+	}
+	entry, err := prepare(ctx, file, opts, a.env.Dir)
 	if err != nil {
 		return err //nolint:wrapcheck // the message is for the user as is
 	}
