@@ -121,7 +121,14 @@ func (e *env) write(t *testing.T, rel, body string) string {
 func (e *env) publish(t *testing.T, file string, opts store.Options) {
 	t.Helper()
 
-	e.save(t, e.store.Prepare, file, opts)
+	e.save(t, func(ctx context.Context, file string, opts store.Options, cwd string) (*store.Entry, error) {
+		up, err := store.ReadUpload(ctx, file, cwd)
+		if err != nil {
+			return nil, err
+		}
+		up.Images = os.DirFS(up.Dir)
+		return e.store.PrepareData(up, opts)
+	}, file, opts)
 }
 
 func (e *env) link(t *testing.T, file string, opts store.Options) {
@@ -744,6 +751,12 @@ func TestAddLink(t *testing.T) {
 	}
 	if m := e.store.ReadMeta("p"); m == nil {
 		t.Error("the link p is gone")
+	}
+	// The path is taken as sent: a file name may start with a space.
+	spaced := e.write(t, "site/ spaced.html", "<p>s</p>")
+	if r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+spaced+`","slug":"spaced"}`); r.status != http.StatusCreated ||
+		e.store.ReadMeta("spaced") == nil || e.store.ReadMeta("spaced").Path != spaced {
+		t.Errorf("a path with a space = %d %s", r.status, r.body)
 	}
 }
 

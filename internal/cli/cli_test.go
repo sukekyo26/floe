@@ -662,6 +662,11 @@ func TestPublishOtherDirs(t *testing.T) {
 	}
 	want(t, "publish with other parts", e.run(t, "", "publish", page), 1, "",
 		"floe: the server on port "+e.port+" draws pages with the templates of "+first.Templates+", the parts of "+first.Parts)
+	// Listing and removing draw nothing: they take the server as it is.
+	if r := e.run(t, "", "list"); r.code != 0 || !strings.Contains(r.stdout, "\tdirs\t") {
+		t.Errorf("list with other parts = %+v", r)
+	}
+	want(t, "rm with other parts", e.run(t, "", "rm", "dirs"), 0, "", "")
 }
 
 // A relative FLOE_DIR is under the working directory: the server keeps the one it was started for, and

@@ -104,34 +104,40 @@ type slugBody struct {
 	Slug string `json:"slug"`
 }
 
-// addLink registers a linked file, from the management page or floe publish --link. A field sent is
-// given, empty or not; one left out is not. The management page sends no force: a URL name another file
-// uses is refused (409) so that a typo never replaces another link.
+// Link is a link to add, as the management page and floe publish --link send it: a field sent is given,
+// empty or not, and one left out or null is not.
+type Link struct {
+	Path        string  `json:"path"`
+	Slug        *string `json:"slug,omitempty"`
+	Title       *string `json:"title,omitempty"`
+	Description *string `json:"description,omitempty"`
+	Theme       *string `json:"theme,omitempty"`
+	PartsTheme  *string `json:"partsTheme,omitempty"`
+	Force       bool    `json:"force,omitempty"`
+}
+
+// addLink registers a linked file, from the management page or floe publish --link. The management
+// page sends no force: a URL name another file uses is refused (409) so that a typo never replaces
+// another link.
 func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
-	input := s.readJSON(w, r)
-	if input == nil {
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok {
 		return
 	}
-	path := text(input["path"])
-	if path == nil || !filepath.IsAbs(*path) {
+	var in Link
+	if !decodeStrict(w, body, &in) {
+		return
+	}
+	// The path as sent: a file name may start or end with a space.
+	if !filepath.IsAbs(in.Path) {
 		send(w, http.StatusBadRequest, catalog(r).Msg("api_link_path"))
 		return
 	}
-	var opts store.Options
-	if !stringFields(input, map[string]**string{
-		"slug": &opts.Slug, "title": &opts.Title, "description": &opts.Description, "theme": &opts.Theme,
-		"partsTheme": &opts.PartsTheme,
-	}) {
-		send(w, http.StatusBadRequest, "send slug, title, description, theme and partsTheme as strings")
-		return
+	opts := store.Options{
+		Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, PartsTheme: in.PartsTheme,
+		Force: in.Force,
 	}
-	if raw, ok := input["force"]; ok {
-		if opts.Force, ok = decode[bool](raw); !ok {
-			send(w, http.StatusBadRequest, "send force as true or false")
-			return
-		}
-	}
-	entry, err := s.cfg.Store.PrepareLink(r.Context(), *path, opts, filepath.Dir(*path))
+	entry, err := s.cfg.Store.PrepareLink(r.Context(), in.Path, opts, filepath.Dir(in.Path))
 	if err != nil {
 		refuse(w, r, err)
 		return
@@ -141,6 +147,18 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendSaved(w, entry)
+}
+
+// decodeStrict reads body, a JSON object, into v, refusing a field v does not have. On refusal it has
+// answered and returns false.
+func decodeStrict(w http.ResponseWriter, body []byte, v any) bool {
+	dec := json.NewDecoder(bytes.NewReader(body))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(v); err != nil {
+		send(w, http.StatusBadRequest, "cannot read the request: "+err.Error())
+		return false
+	}
+	return true
 }
 
 // Upload is a publish of a data file, as the CLI sends it: see store.Upload. Images left out or null
@@ -196,10 +214,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in Upload
-	dec := json.NewDecoder(bytes.NewReader(body))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&in); err != nil {
-		send(w, http.StatusBadRequest, "cannot read the publish: "+err.Error())
+	if !decodeStrict(w, body, &in) {
 		return
 	}
 	if in.File == "" || in.Dir == "" || in.Source == nil {
@@ -252,16 +267,6 @@ func imagesFS(images map[string][]byte) fs.FS {
 		files[name] = &fstest.MapFile{Data: b, Mode: 0, ModTime: time.Time{}, Sys: nil}
 	}
 	return files
-}
-
-// text is a non-blank string, trimmed; anything else is nil.
-func text(raw json.RawMessage) *string {
-	var s string
-	if json.Unmarshal(raw, &s) != nil || strings.TrimSpace(s) == "" {
-		return nil
-	}
-	s = strings.TrimSpace(s)
-	return &s
 }
 
 // stringFields sets each of fields that input sends to its value, empty or not, leaving the rest nil;

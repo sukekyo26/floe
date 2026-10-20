@@ -20,7 +20,6 @@ import (
 
 	"github.com/sukekyo26/floe/internal/daemon"
 	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/project"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/tmpl"
@@ -136,20 +135,11 @@ refused unless --force.`,
 // publish checks what it can without the server, makes sure the server runs, then has it check and
 // save the page, so that a failed publish leaves nothing in the store.
 func (a *app) publish(ctx context.Context, file string, link bool, opts store.Options) error {
-	var save func(client) (server.Saved, error)
+	publish := a.publishData
 	if link {
-		save = a.link(ctx, file, opts)
-	} else {
-		var err error
-		if save, err = a.upload(ctx, file, opts); err != nil {
-			return err
-		}
+		publish = a.publishLink
 	}
-	c, err := a.client(ctx)
-	if err != nil {
-		return err
-	}
-	saved, err := save(c)
+	saved, err := publish(ctx, file, opts)
 	if err != nil {
 		return err
 	}
@@ -165,78 +155,73 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	return nil
 }
 
-// link is the save of a link to file, by its absolute path: the server reads it, as it draws it.
-func (a *app) link(ctx context.Context, file string, opts store.Options) func(client) (server.Saved, error) {
-	body := map[string]any{"path": a.abs(file), "force": opts.Force}
-	for key, v := range map[string]*string{
-		"slug": opts.Slug, "title": opts.Title, "description": opts.Description, "theme": opts.Theme,
-		"partsTheme": opts.PartsTheme,
-	} {
-		if v != nil {
-			body[key] = *v
-		}
+// publishLink links file, by its absolute path: the server reads it, as it draws it.
+func (a *app) publishLink(ctx context.Context, file string, opts store.Options) (server.Saved, error) {
+	var saved server.Saved
+	path := a.abs(file)
+	if _, err := os.Stat(path); err != nil {
+		return saved, usererr.CannotRead(file, err)
 	}
-	return func(c client) (server.Saved, error) {
-		var saved server.Saved
-		err := c.do(ctx, http.MethodPost, "/api/artifacts", body, &saved)
+	c, err := a.client(ctx, false)
+	if err != nil {
 		return saved, err
 	}
+	err = c.do(ctx, http.MethodPost, "/api/artifacts", server.Link{
+		Path: path, Slug: opts.Slug, Title: opts.Title, Description: opts.Description, Theme: opts.Theme,
+		PartsTheme: opts.PartsTheme, Force: opts.Force,
+	}, &saved)
+	return saved, err
 }
 
-// upload reads the data file file and is the save of it under its slug. The images the server asks
-// for are read under the data file's directory and sent with it again.
-func (a *app) upload(ctx context.Context, file string, opts store.Options) (func(client) (server.Saved, error), error) {
-	if !store.IsDataFile(file) {
-		return nil, usererr.New("store_not_data", file)
-	}
-	src, err := a.readArg(file)
+// publishData sends the data file file under its slug. The images the server asks for are read under
+// the data file's directory and sent with it again.
+func (a *app) publishData(ctx context.Context, file string, opts store.Options) (server.Saved, error) {
+	var saved server.Saved
+	read, err := store.ReadUpload(ctx, file, a.env.Dir)
 	if err != nil {
-		return nil, err
+		return saved, err //nolint:wrapcheck // a usererr for the user as is
 	}
 	slug := store.SlugFromFile(file, a.env.Dir)
 	if opts.Slug != nil {
 		slug = strings.TrimSpace(*opts.Slug)
 	}
 	if !store.ValidSlug(slug) {
-		return nil, usererr.New("store_invalid_slug", slug)
+		return saved, usererr.New("store_invalid_slug", slug)
+	}
+	c, err := a.client(ctx, false)
+	if err != nil {
+		return saved, err
 	}
 	up := server.Upload{
-		File: file, Dir: filepath.Dir(a.abs(file)), Source: src, Images: nil, Project: project.Name(ctx, a.env.Dir),
-		Title: opts.Title, Description: opts.Description, Theme: opts.Theme, PartsTheme: opts.PartsTheme, Force: opts.Force,
+		File: read.File, Dir: read.Dir, Source: read.Source, Images: nil, Project: read.Project, Title: opts.Title,
+		Description: opts.Description, Theme: opts.Theme, PartsTheme: opts.PartsTheme, Force: opts.Force,
 	}
 	path := "/api/artifacts/" + slug
-	return func(c client) (server.Saved, error) {
-		var saved server.Saved
-		err := c.do(ctx, http.MethodPut, path, up, &saved)
-		var re *remoteError
-		if errors.As(err, &re) && re.status == http.StatusUnprocessableEntity {
-			var need server.ImagesNeeded
-			if err = json.Unmarshal(re.body, &need); err != nil {
-				return saved, fmt.Errorf("read the images the server asks for: %w", err)
-			}
-			if up.Images, err = readImages(up.Dir, need.Images); err != nil {
-				return saved, err
-			}
-			// Sent with images, it is not asked again.
-			err = c.do(ctx, http.MethodPut, path, up, &saved)
+	err = c.do(ctx, http.MethodPut, path, up, &saved)
+	if re := refused(err); re != nil && re.status == http.StatusUnprocessableEntity {
+		var need server.ImagesNeeded
+		if err = json.Unmarshal(re.body, &need); err != nil {
+			return saved, fmt.Errorf("read the images the server asks for: %w", err)
 		}
-		if status(err) == http.StatusRequestEntityTooLarge {
-			return saved, usererr.New("cli_publish_large", strconv.Itoa(server.MaxUpload>>20)+" MiB")
+		if up.Images, err = readImages(up.Dir, need.Images); err != nil {
+			return saved, err
 		}
-		return saved, err
-	}, nil
+		// Sent with its images, it is not asked again.
+		err = c.do(ctx, http.MethodPut, path, up, &saved)
+	}
+	return saved, err
 }
 
-// client makes sure the server of this store runs, with these directories and this build, and returns
-// what calls it.
-func (a *app) client(ctx context.Context) (client, error) {
+// client makes sure the server of this store runs, of this build, and returns what calls it. anyDirs
+// takes a server that draws with other directories than this command's, for one that draws nothing.
+func (a *app) client(ctx context.Context, anyDirs bool) (client, error) {
 	build, err := daemon.Build()
 	if err != nil {
 		return client{}, err //nolint:wrapcheck // already says what failed
 	}
 	err = daemon.Ensure(ctx, daemon.Server{
 		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.cfg.templates, Parts: a.cfg.parts,
-		Icons: a.cfg.icons, Env: a.serverEnv(),
+		Icons: a.cfg.icons, AnyDirs: anyDirs, Env: a.serverEnv(),
 	})
 	if err != nil {
 		return client{}, err //nolint:wrapcheck // the message is for the user as is
@@ -280,7 +265,7 @@ func (a *app) listCmd() *cobra.Command {
 		Short: "List pages, newest first (updated, slug, title, linked path; tab-separated)",
 		Args:  usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			c, err := a.client(cmd.Context())
+			c, err := a.client(cmd.Context(), true)
 			if err != nil {
 				return err
 			}
@@ -302,13 +287,13 @@ func (a *app) rmCmd() *cobra.Command {
 		Short: "Delete pages in order, stopping at the first failure (a linked file itself is left alone)",
 		Args:  usage(cobra.MinimumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := a.client(cmd.Context())
+			c, err := a.client(cmd.Context(), true)
 			if err != nil {
 				return err
 			}
 			for _, slug := range args {
 				err = c.do(cmd.Context(), http.MethodDelete, "/api/artifacts/"+url.PathEscape(slug), nil, nil)
-				if status(err) == http.StatusNotFound {
+				if re := refused(err); re != nil && re.status == http.StatusNotFound {
 					return usererr.New("store_no_page", slug)
 				}
 				if err != nil {

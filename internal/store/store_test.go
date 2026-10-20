@@ -66,7 +66,20 @@ func (e env) write(t *testing.T, rel, body string) string {
 func (e env) publish(t *testing.T, file string, opts store.Options, cwd string) (*store.Entry, error) {
 	t.Helper()
 
-	return e.save(t, e.s.Prepare, file, opts, cwd)
+	return e.save(t, func(ctx context.Context, file string, opts store.Options, cwd string) (*store.Entry, error) {
+		return prepare(ctx, e.s, file, opts, cwd)
+	}, file, opts, cwd)
+}
+
+// prepare publishes the data file file on disk from cwd as the CLI does, but in process: read by
+// store.ReadUpload, its images read under its directory.
+func prepare(ctx context.Context, st *store.Store, file string, opts store.Options, cwd string) (*store.Entry, error) {
+	up, err := store.ReadUpload(ctx, file, cwd)
+	if err != nil {
+		return nil, err
+	}
+	up.Images = os.DirFS(up.Dir)
+	return st.PrepareData(up, opts)
 }
 
 // link prepares and saves a link to file from cwd, as publish does.
@@ -586,7 +599,7 @@ func TestSaveAtOnce(t *testing.T) {
 				_, errs[i] = e.s.Edit("race", store.Edit{Description: ptr("d")})
 				return
 			}
-			entry, err := e.s.Prepare(t.Context(), doc, store.Options{}, filepath.Join(e.tmp, "proj"))
+			entry, err := prepare(t.Context(), e.s, doc, store.Options{}, filepath.Join(e.tmp, "proj"))
 			if err == nil {
 				err = e.s.Save(entry)
 			}
@@ -621,7 +634,7 @@ func TestSaveFailureKeepsPage(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	entry, err := e.s.Prepare(t.Context(), e.page(t, "kept.yaml", "Changed"), store.Options{}, filepath.Join(e.tmp, "proj"))
+	entry, err := prepare(t.Context(), e.s, e.page(t, "kept.yaml", "Changed"), store.Options{}, filepath.Join(e.tmp, "proj"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -640,7 +653,7 @@ func TestSaveEditRemoveWait(t *testing.T) {
 	e := newEnv(t)
 	doc := e.page(t, "wait.yaml", "Wait")
 	e.mustPublish(t, doc, store.Options{}, "proj")
-	entry, err := e.s.Prepare(t.Context(), doc, store.Options{}, filepath.Join(e.tmp, "proj"))
+	entry, err := prepare(t.Context(), e.s, doc, store.Options{}, filepath.Join(e.tmp, "proj"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -685,7 +698,7 @@ func TestSaveChecksAgain(t *testing.T) {
 	prepare := func(file, cwd string) *store.Entry {
 		t.Helper()
 		mkdir(t, filepath.Join(e.tmp, cwd))
-		entry, err := e.s.Prepare(t.Context(), file, store.Options{}, filepath.Join(e.tmp, cwd))
+		entry, err := prepare(t.Context(), e.s, file, store.Options{}, filepath.Join(e.tmp, cwd))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -729,7 +742,7 @@ func TestStoreUnderPatternPath(t *testing.T) {
 	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", ""))
 	doc := e.page(t, "plan.yaml", "Plan")
 	for range 2 {
-		entry, err := st.Prepare(t.Context(), doc, store.Options{}, e.tmp)
+		entry, err := prepare(t.Context(), st, doc, store.Options{}, e.tmp)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -767,7 +780,7 @@ func TestFailedSave(t *testing.T) {
 	e := newEnv(t)
 	failing := func(file string) *store.Entry {
 		t.Helper()
-		entry, err := e.s.Prepare(t.Context(), file, store.Options{}, e.tmp)
+		entry, err := prepare(t.Context(), e.s, file, store.Options{}, e.tmp)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -93,16 +93,19 @@ func waitWhile(ctx context.Context, base string, p Status, cond func(Status) boo
 	return p
 }
 
-// Server is the server a publish needs.
+// Server is the server a command of the store needs.
 type Server struct {
 	Port  int
 	Root  string
 	Build string
-	// Templates, Parts and Icons are the directories the server must draw pages with: those the publish
-	// checked the data file with.
+	// Templates, Parts and Icons are the directories the server must draw pages with: those of the
+	// command, which a server it starts takes.
 	Templates string
 	Parts     string
 	Icons     string
+	// AnyDirs takes a running server that draws with other directories as it is, for a command that
+	// draws nothing (listing, removing).
+	AnyDirs bool
 	// Env is the environment of the started server (it reads its settings from there).
 	Env []string
 }
@@ -156,7 +159,7 @@ func Ensure(ctx context.Context, s Server) error {
 // otherDirs refuses p, a server of floe that serves the root of s, when it draws with other directories
 // of templates, parts or icons than s.
 func (s Server) otherDirs(p Status) error {
-	if p.State != Ours || !sameDir(p.Health.Root, s.Root) || sameOrUnread(p.Health.Templates, s.Templates) &&
+	if s.AnyDirs || p.State != Ours || !sameDir(p.Health.Root, s.Root) || sameOrUnread(p.Health.Templates, s.Templates) &&
 		sameOrUnread(p.Health.Parts, s.Parts) && sameOrUnread(p.Health.Icons, s.Icons) {
 		return nil
 	}
