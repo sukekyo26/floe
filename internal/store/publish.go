@@ -192,6 +192,7 @@ func checkData(file string) error {
 func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, themes tmpl.Themes, opts Options, from string) (
 	*Entry, error,
 ) {
+	// No cwd: it names only an index.html after its directory, and this is a data file.
 	slug, err := s.slugFor(file, "", opts, "")
 	if err != nil {
 		return nil, err

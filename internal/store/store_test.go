@@ -1252,8 +1252,8 @@ func TestWriteAtomic(t *testing.T) { //nolint:paralleltest // sets the umask, wh
 }
 
 // PrepareData reads nothing from disk: a data file that names images is asked for them first, then
-// checked with those sent, which the entry keeps; a publish refused whatever images come is refused
-// before they are asked for.
+// checked with those sent, which the entry keeps. A publish its slug, its owner or its schema refuses
+// is refused before they are asked for.
 func TestPrepareData(t *testing.T) {
 	t.Parallel()
 
@@ -1269,6 +1269,12 @@ func TestPrepareData(t *testing.T) {
 	if _, err = s.PrepareData(up, store.Options{}); !errors.As(err, &need) || !slices.Equal(need.Names, []string{"img/chart.png"}) {
 		t.Fatalf("PrepareData without images = %v, want img/chart.png asked for", err)
 	}
+	// The mistakes of the schema come first: what names an image is not looked at until it passes.
+	bad := up
+	bad.Source = []byte("template: sizes\nlang: en\nfiles: 3\nchart: img/chart.png\n")
+	if _, err = s.PrepareData(bad, store.Options{}); err == nil || errors.As(err, &need) || !strings.Contains(err.Error(), "plans/sizes.yaml:3:8") {
+		t.Errorf("PrepareData of data the schema refuses = %v, want its mistake before images are asked for", err)
+	}
 	up.Images = fstest.MapFS{}
 	want := `plans/sizes.yaml:4:8: chart: there is no image "img/chart.png" under /plans`
 	if _, err = s.PrepareData(up, store.Options{}); err == nil || !strings.Contains(err.Error(), want) {
@@ -1282,7 +1288,7 @@ func TestPrepareData(t *testing.T) {
 	if entry.Slug != "sizes" || entry.Meta.PublishedFrom != "proj" || !bytes.Equal(entry.Images["img/chart.png"], png) {
 		t.Errorf("entry = %s from %q, %d images", entry.Slug, entry.Meta.PublishedFrom, len(entry.Images))
 	}
-	// What refuses the publish whatever images come is told before they are asked for.
+	// So is a page of another project.
 	if err = s.Save(entry); err != nil {
 		t.Fatal(err)
 	}
