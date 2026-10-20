@@ -363,7 +363,8 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 // checkHTML refuses the items of d of format html that hold a <style> or a <link>, at their lines and
 // columns: floe puts a page's CSS together, in layers, and a style of the data would win over them all. It
 // refuses those that hold a </head>, which would stand in for page.html's, before which floe puts the
-// page's styles. It refuses those that name a part of set that the page would refuse too.
+// page's styles, and those that hold a <base> or a <meta>, which change the page without changing its
+// tree (baseOrMeta). It refuses those that name a part of set that the page would refuse too.
 func checkHTML(set *partSet, d *Data) error {
 	var problems yamlpos.Problems
 	for _, it := range d.htmlItems {
@@ -373,6 +374,9 @@ func checkHTML(set *partSet, d *Data) error {
 		}
 		if headEnd.MatchString(it.text) {
 			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_head")))
+		}
+		if baseOrMeta.MatchString(it.text) {
+			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_base")))
 		}
 		if bad := set.misnamedIn(namedIn(it.text, tagsIn(it.text, false))); bad != nil {
 			problems = append(problems, itemError(d.File, it.pos, it.path, bad))
@@ -563,6 +567,9 @@ func (t *Template) page() (*template.Template, []byte, error) {
 	}
 	if at := tagsOf(tagsIn(string(src), true)).style; at >= 0 {
 		return nil, nil, usererr.New("tmpl_page_style", t.file("page.html"), lineAt(src, at))
+	}
+	if at := base.FindIndex(src); at != nil {
+		return nil, nil, usererr.New("tmpl_page_base", t.file("page.html"), lineAt(src, at[0]))
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
