@@ -65,18 +65,20 @@ func TestPartsInOwnTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	head, _, _ := strings.Cut(page, "</head>")
-	// floe's first <style> names the layers in the order that decides which wins, the template's under the
-	// looks taken without a box and the parts' and the parts theme's. Each part's style, the parts theme's
-	// file and the template's CSS is a <style> of its own after it: the cell, the note, the panel the table
-	// takes the look of, the table, soft's base.css, the template's theme.
+	// floe's first <style> names the layers in the order that decides which wins, the palette under
+	// floe's base, the template's under the looks taken without a box and the parts' and the parts
+	// theme's. Each palette, part's style, the parts theme's file and the template's CSS is a <style> of
+	// its own after it: default's palette (soft has none), the cell, the note, the panel the table takes
+	// the look of, the table, soft's base.css, the template's theme.
 	at := func(s string) int { return strings.Index(head, s) }
 	order := []int{
-		at("<style>\n@layer floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n"),
+		at("<style>\n@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n"),
+		at("<style>\n@layer floe.palette {\n/* Every page's colours"),
 		at(partStyle(t, "table") + "}\n</style>\n"),
 		at("<style>\n@layer floe.parts {\n/* Faces with round corners"), at("</style>\n<style>\n@layer floe.page {\n"),
 		at(":scope { --fg: #000; }"),
 	}
-	if !slices.IsSorted(order) || order[0] < 0 || strings.Count(page, "<style") != 7 {
+	if !slices.IsSorted(order) || order[0] < 0 || strings.Count(page, "<style") != 8 {
 		t.Errorf("the layers, the template's theme, the parts' style and the parts theme's are at %v:\n%s", order, head)
 	}
 	for _, want := range []string{
@@ -139,40 +141,14 @@ func TestDescribePart(t *testing.T) {
 	}
 }
 
-// floe template check warns of a theme that leaves out a variable the parts its template uses take
-// their colours from, and refuses a part floe does not have, as a publish does.
+// floe template check refuses a part floe does not have, as a publish does.
 func TestCheckParts(t *testing.T) {
 	t.Parallel()
 
-	warnings, mistakes := tmpl.Check(filepath.Join(memo(t, memoItems), "memo"), "", "")
+	_, mistakes := tmpl.Check(filepath.Join(memo(t, memoItems), "memo"), "", "")
 	if mistakes != nil {
 		t.Fatalf("Check = %v", mistakes)
 	}
-	var told string
-	for _, w := range warnings {
-		if strings.Contains(w.Error(), "themes/default.css") {
-			told += w.Error() + "\n"
-		}
-	}
-	if !strings.Contains(told, "--accent") || !strings.Contains(told, "--good-soft") || strings.Contains(told, "--fg,") ||
-		!strings.Contains(told, "--muted, --bg, which floe's base, the template's parts and diagrams, or the parts themes take from it: the parts and diagrams keep values of their own, light colours in dark mode too, and the parts themes go without them\n") ||
-		!strings.Contains(told, "does not define --text-width, --mono, --font, which floe's base, the template's parts and diagrams, or the parts themes take from it: the parts and diagrams keep values of their own, and the parts themes go without them\n") {
-		t.Errorf("the warning of the theme = %q", told)
-	}
-	// A theme that leaves out no colour is not told of dark mode.
-	colours := memo(t, memoItems)
-	theme := ":scope { --bg: #eee; --fg: #000; --surface: #fff; --line: #ccc; --muted: #666; --accent: #00f; --accent-soft: #eef; " +
-		"--good: #0a0; --good-soft: #efe; --warn: #a60; --warn-soft: #fed; --bad: #a00; --bad-soft: #fee; }\n"
-	if err := os.WriteFile(filepath.Join(colours, "memo", "themes", "default.css"), []byte(theme), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	warnings, _ = tmpl.Check(filepath.Join(colours, "memo"), "", "")
-	for _, w := range warnings {
-		if strings.Contains(w.Error(), "themes/default.css") && (strings.Contains(w.Error(), "dark mode") || !strings.Contains(w.Error(), "--mono")) {
-			t.Errorf("the warning of a theme of every colour = %q", w.Error())
-		}
-	}
-
 	// A theme of the template named as the parts theme is told where it goes, as --parts-theme is.
 	own := memo(t, memoItems)
 	if err := os.WriteFile(filepath.Join(own, "memo", "themes", "print.css"), nil, 0o600); err != nil {

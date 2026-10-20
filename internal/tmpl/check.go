@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -120,20 +119,14 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 		return nil, []error{err}
 	}
 	lint := &schemaLint{
-		file: t.file("schema.json"), base: schemaURL(t.Name), warnings: nil, mistakes: nil, parts: nil, set: set,
+		file: t.file("schema.json"), base: schemaURL(t.Name), warnings: nil, mistakes: nil, set: set,
 	}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
 	page, pageSrc, pageErr := t.page()
 	named := namedParts(string(pageSrc))
-	lint.takeNamed(named)
 	// Told beside the other mistakes of the files, not instead of them.
 	if err = t.refuseShared(s); err != nil {
-		mistakes = append(mistakes, err)
-	}
-	more, err := t.checkThemeVariables(lint)
-	warnings = append(warnings, more...)
-	if err != nil {
 		mistakes = append(mistakes, err)
 	}
 	mistakes = append(mistakes, t.checkChecks(sch)...)
@@ -218,70 +211,6 @@ func (t *Template) checkNamedParts(set *partSet, src []byte, named []namedPart) 
 	}
 	return mistakes
 }
-
-// checkThemeVariables warns of each theme of t that leaves out a CSS variable the parts and diagrams
-// its schema declares, as lint found them, take their colours and fonts from, which page.css does not
-// define either: they would keep light colours in dark mode.
-// LIMIT: a variable is looked for as written (--fg:), not as CSS reads it. Parse the CSS if a theme
-// comes to define one otherwise (through @import, or in a comment that hides it).
-func (t *Template) checkThemeVariables(lint *schemaLint) ([]*usererr.Error, error) {
-	vars := lint.variables()
-	if vars == nil {
-		return nil, nil
-	}
-	themes, err := t.themes()
-	if err != nil {
-		return nil, err
-	}
-	// page.css may define them for every theme.
-	page, _, err := t.readOptional("page.css")
-	if err != nil {
-		return nil, err
-	}
-	inPage := definedVariables(page)
-	var warnings []*usererr.Error
-	for _, theme := range themes {
-		name := path.Join("themes", theme+".css")
-		css, err := t.readFile(name)
-		if err != nil {
-			return nil, err
-		}
-		defined := definedVariables(css)
-		var colours, others []string
-		for _, v := range vars {
-			switch {
-			case defined[v] || inPage[v]:
-			case slices.Contains(sameInDark, v):
-				others = append(others, v)
-			default:
-				colours = append(colours, v)
-			}
-		}
-		if colours != nil {
-			warnings = append(warnings, usererr.New("tmpl_theme_variables", t.file(name), andList(colours)))
-		}
-		if others != nil {
-			warnings = append(warnings, usererr.New("tmpl_theme_variables_plain", t.file(name), andList(others)))
-		}
-	}
-	return warnings, nil
-}
-
-// sameInDark are the CSS variables of the parts whose default serves dark mode as well: their fonts, the
-// width of a note, and the text of code, a terminal's prompt and a diff's lines, colours of a dark ground in light
-// mode too.
-var sameInDark = []string{"--font", "--mono", "--text-width", "--code-fg", "--code-prompt", "--code-add", "--code-del"}
-
-// definedVariables returns the CSS variables src defines (--fg: #000), by name.
-func definedVariables(src []byte) map[string]bool {
-	defined := map[string]bool{}
-	for _, m := range cssVariable.FindAllSubmatch(src, -1) {
-		defined[string(m[1])] = true
-	}
-	return defined
-}
-
-var cssVariable = regexp.MustCompile(`(?:^|[^\w-])(--[\w-]+)\s*:`)
 
 // checkAssets returns the mistakes of the images under the assets/ of t, if it has one, and of those
 // page.html names to asset, in every branch.
@@ -561,7 +490,6 @@ type schemaLint struct {
 	warnings []*usererr.Error
 	mistakes []error
 	base     string   // the schema's URL, which a relative $ref is read from
-	parts    []string // the parts of floe's that draw the items it declares, once each
 	set      *partSet // the parts the template is drawn with
 }
 
@@ -604,41 +532,9 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 		if typ != formatTypes[f] {
 			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_type", l.file, ptr, f, formatTypes[f]))
 		}
-		// Markdown draws its tables in the table part's look.
-		if f == "markdown" && !slices.Contains(l.parts, "table") {
-			l.parts = append(l.parts, "table")
-		}
 		return true
 	}
 	return false
-}
-
-// takeNamed adds to the parts of l those page.html names, of named, which take colours from the theme as
-// those the schema refers to do.
-func (l *schemaLint) takeNamed(named []namedPart) {
-	l.parts = slices.Compact(slices.Sorted(slices.Values(append(l.parts, l.set.namedBy(named, nil)...))))
-}
-
-// variables returns the CSS variables floe's base, the parts and diagrams l found, and the parts themes
-// take from the theme, once each.
-func (l *schemaLint) variables() []string {
-	vars := l.set.variables(l.parts)
-	// floe's base styles every page, the template's own text, lists, links, code and quotes, and those in
-	// the parts.
-	more := appendFound(nil, fallback, baseCSS)
-	// Whichever parts theme a data file picks styles the parts, and the quotes of Markdown, which counts
-	// as the table part.
-	// LIMIT: every variable of every parts theme, not those of its files of the parts used; read only those
-	// files if a template of few parts comes to be warned of others' colours.
-	if len(l.parts) > 0 {
-		more = append(more, l.set.themeVariables()...)
-	}
-	for _, v := range more {
-		if !slices.Contains(vars, v) {
-			vars = append(vars, v)
-		}
-	}
-	return vars
 }
 
 // part notes the part of floe's ref names, at ptr, and reports whether it names one: one prepare does
@@ -662,8 +558,6 @@ func (l *schemaLint) part(ref, ptr string, reached bool) bool {
 		return false
 	case !reached:
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_part_unreached", l.file, ptr, name))
-	case !slices.Contains(l.parts, name):
-		l.parts = append(l.parts, name)
 	}
 	return true
 }

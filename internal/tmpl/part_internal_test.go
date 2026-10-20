@@ -9,17 +9,17 @@ import (
 	"testing"
 )
 
-// palette are the CSS variables of a theme that parts and diagrams take their colours, fonts and width
-// from, as docs/templates.md lists them.
+// palette are the CSS variables default's palette defines, which the parts, diagrams, floe's base and
+// the parts themes take their colours and faces from, as docs/templates.md lists them.
 var palette = []string{
 	"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
-	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono", "--text-width", "--code-bg", "--code-fg",
-	"--code-prompt", "--code-add", "--code-del",
+	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--display", "--mono", "--code-bg", "--code-fg",
+	"--code-prompt", "--code-add", "--code-del", "--page-bg", "--rule",
 }
 
-// The parts and diagrams take their colours, fonts and width from the palette alone, which the report
-// theme defines whole. A part takes each with a value of its own for a theme without it: one taken
-// without would not be warned of by floe template check.
+// The parts, diagrams, floe's base and the parts themes take from the page only what default's palette
+// defines, or a template's width of prose, --text-width: every theme's palette goes over default's, so
+// none of them goes without. A part's value for one where nothing defines it is default's light one.
 func TestPalette(t *testing.T) {
 	t.Parallel()
 
@@ -27,16 +27,46 @@ func TestPalette(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := make([]string, 0, len(set.parts))
-	for name := range set.parts {
-		names = append(names, name)
-	}
-	vars := set.variables(names)
-	for name, p := range set.parts {
-		// The style of a part floe draws in Go is its package's: the diagrams' takes variables of its own.
-		if bare := regexp.MustCompile(`var\(\s*--[\w-]+\s*\)`).FindString(p.css); bare != "" && p.pages != nil {
-			t.Errorf("the part %s takes %s without a value of its own", name, bare)
+	under := set.themes[DefaultTheme].palette
+	defined := definedIn(under)
+	for _, v := range palette {
+		if !defined[v] {
+			t.Errorf("default's palette leaves %s out", v)
 		}
+	}
+	taken := map[string]string{"floe's base": baseCSS}
+	for name, p := range set.parts {
+		taken["the part "+name] = p.css
+	}
+	for name, theme := range set.themes {
+		css := theme.base + theme.palette
+		for _, part := range slices.Sorted(maps.Keys(theme.parts)) {
+			css += theme.parts[part]
+		}
+		taken["the parts theme "+name] = css
+	}
+	for who, css := range taken {
+		own := definedIn(css)
+		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)`).FindAllStringSubmatch(css, -1) {
+			if v := m[1]; !own[v] && !defined[v] && v != "--text-width" {
+				t.Errorf("%s takes %s, which default's palette does not define", who, v)
+			}
+		}
+	}
+	// A theme's palette changes those it writes: default's light values stand under them.
+	light, _, _ := strings.Cut(under, "@media")
+	values := map[string]string{}
+	for _, m := range regexp.MustCompile(`(--[\w-]+):\s*([^;]+);`).FindAllStringSubmatch(light, -1) {
+		values[m[1]] = strings.TrimSpace(m[2])
+	}
+	for name, p := range set.parts {
+		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,\s*([^)]*)\)`).FindAllStringSubmatch(p.css, -1) {
+			if want, ok := values[m[1]]; ok && want != strings.TrimSpace(m[2]) && p.pages != nil {
+				t.Errorf("the part %s takes %s with %s; default's palette has %s", name, m[1], m[2], want)
+			}
+		}
+	}
+	for name, p := range set.parts {
 		// A part's element is its box, data-floe-part="<its name>", so that a page that draws it gets its
 		// style; an element is the box of one part, and every name, and every look a part takes, is a part's.
 		if p.pages != nil && !namesItself(namedParts(p.html), name) {
@@ -60,51 +90,15 @@ func TestPalette(t *testing.T) {
 	if !set.parts["panel"].isLook() || set.parts["panel"].css == "" {
 		t.Errorf("the look panel = %+v", set.parts["panel"])
 	}
-	// compare is drawn in the table's look, so a theme for it is warned of the table's variables too, and
-	// tabs of those of code, which a diff in it is drawn in the look of.
-	if compare := set.variables([]string{"compare"}); !slices.Contains(compare, "--line") {
-		t.Errorf("the variables of compare = %v", compare)
+}
+
+// definedIn returns the CSS variables css defines (--fg: #000), by name.
+func definedIn(css string) map[string]bool {
+	defined := map[string]bool{}
+	for _, m := range regexp.MustCompile(`(?:^|[^\w-])(--[\w-]+)\s*:`).FindAllStringSubmatch(css, -1) {
+		defined[m[1]] = true
 	}
-	if tabs := set.variables([]string{"tabs"}); !slices.Contains(tabs, "--code-bg") || !slices.Contains(tabs, "--code-add") {
-		t.Errorf("the variables of tabs = %v", tabs)
-	}
-	// A theme defines these for diagrams to follow it.
-	want := []string{
-		"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
-		"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono",
-	}
-	if got := set.variables([]string{"diagram"}); !slices.Equal(got, want) {
-		t.Errorf("the variables of diagram = %v, want %v", got, want)
-	}
-	themes := set.themeVariables()
-	for _, v := range slices.Concat(vars, themes) {
-		if !slices.Contains(palette, v) {
-			t.Errorf("%s is not of the palette", v)
-		}
-	}
-	css, err := templateFiles.ReadFile("templates/report/page.css")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defined := definedVariables(css)
-	for _, v := range palette {
-		if !defined[v] {
-			t.Errorf("the report theme leaves %s out", v)
-		}
-	}
-	// A theme without a variable gets the report theme's light value, as docs/templates.md says.
-	light, _, _ := strings.Cut(string(css), "@media")
-	values := map[string]string{}
-	for _, m := range regexp.MustCompile(`(--[\w-]+):\s*([^;]+);`).FindAllStringSubmatch(light, -1) {
-		values[m[1]] = strings.TrimSpace(m[2])
-	}
-	for name, p := range set.parts {
-		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,\s*([^)]*)\)`).FindAllStringSubmatch(p.css, -1) {
-			if values[m[1]] != strings.TrimSpace(m[2]) && p.pages != nil {
-				t.Errorf("the part %s takes %s with %s; the report theme's is %s", name, m[1], m[2], values[m[1]])
-			}
-		}
-	}
+	return defined
 }
 
 // A page's style goes before its </head>, else at its end. A tag in a comment, a script or a noscript is
