@@ -209,6 +209,10 @@ func TestBrokenOwnParts(t *testing.T) {
 		"zaliased/schema.json": `{"$ref": "floe:///parts/unnamed.json"}`,
 		"zaliased/part.html":   `<div data-floe-part="zaliased"></div>`,
 		"zaliased/part.css":    "",
+		// A name reserved for what is no part is not told as one.
+		"based/schema.json": `{"$ref": "floe:///parts/base.json"}`,
+		"based/part.html":   `<div data-floe-part="based"></div>`,
+		"based/part.css":    "",
 		// A schema the parts share at the root is the part's own value.
 		"toned/schema.json": `{"$ref": "tone.json"}`,
 		"toned/part.html":   `<b data-floe-part="toned">{{.}}</b>`,
@@ -277,6 +281,7 @@ func TestBrokenOwnParts(t *testing.T) {
 			": the $ref at the root of the schema names the part diagram",
 		"aliased": "the part aliased cannot be used: " + filepath.Join(parts, "aliased", "schema.json") +
 			": the $ref at the root of the schema names the part unnamed",
+		"based": "the part based cannot be used: it holds the part base, which cannot be used",
 		"zaliased": "the part zaliased cannot be used: " + filepath.Join(parts, "zaliased", "schema.json") +
 			": the $ref at the root of the schema names the part unnamed",
 	}
