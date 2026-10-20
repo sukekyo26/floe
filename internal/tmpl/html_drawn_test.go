@@ -66,7 +66,7 @@ func TestDrawnHTML(t *testing.T) {
 		"<table><td>x</td></tr></table>": "...x...",
 		"<br></br>":                      ".......",
 		"<svg><text><![CDATA[ a > b </tspan> ]]></text></svg>": ".......",
-		"x</":         "xxxxxx.",
+		"x</":         "xxxxxxx", // ends where a tag starts: refused wherever it is
 		`<a title="x`: "xxxxxx.",
 	} {
 		for i, c := range contexts {
@@ -232,6 +232,23 @@ func TestDrawnHTMLManyItems(t *testing.T) {
 	}
 }
 
+// An item that ends where a tag starts is refused: the next item's text would go on with the tag, which
+// the marks of the drawing that checks it part.
+func TestDrawnHTMLTagStart(t *testing.T) {
+	t.Parallel()
+
+	l := htmlIn(t, `<div>{{.Data.risks}}{{.Data.aside}}</div><p>after</p>`)
+	for _, risks := range []string{"x <", "x </", "x <!", "x <!-", "x <?"} {
+		if _, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(risks)+"\naside: div class=y\n"); err == nil ||
+			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: HTML ends in a tag or a quote") {
+			t.Errorf("%q before a letter = %v", risks, err)
+		}
+	}
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: \"x < y\"\naside: div\n"); err != nil {
+		t.Errorf("a < before a space = %v", err)
+	}
+}
+
 // An item that leaves a <b> or an <a> open is refused where the text it would take in is the next item's,
 // with no text of the page's between them, and the item told is the one that leaves it open.
 func TestDrawnHTMLNextItem(t *testing.T) {
@@ -322,6 +339,21 @@ func TestDrawnHTMLEmpty(t *testing.T) {
 	if _, err := draw(l, "template: memo\nlang: en\naside: \"\"\nrisks: <p>a\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "data.yaml:4:8: risks: ") {
 		t.Errorf("an item drawn where an empty one leads page.html = %v", err)
+	}
+}
+
+// An item that hides the page's </head> is told as the data's: the page with it has no </head>.
+func TestDrawnHTMLHidesHead(t *testing.T) {
+	t.Parallel()
+
+	dir := memo(t, `"risks": {"type": "string", "format": "html"}, "aside": {"type": "string", "format": "html"}`)
+	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.aside}}{{.Data.risks}}</head><body><p>x</p></body></html>`
+	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\naside: <meta name=a content=b>\nrisks: <script>x\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:4:8: risks: ") {
+		t.Errorf("a <script> that hides </head> = %v", err)
 	}
 }
 

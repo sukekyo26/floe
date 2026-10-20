@@ -5,7 +5,6 @@ import (
 	"cmp"
 	"crypto/rand"
 	"html/template"
-	"maps"
 	"regexp"
 	"slices"
 	"strconv"
@@ -53,13 +52,12 @@ func htmlItemsOf(d *Data, root ast.Node) []htmlItem {
 }
 
 // htmlMarks marks the items of format html of a drawing that checks them: each between the comments
-// <!--mark:n--> and <!--/mark:n-->, n its index in the items of the file (pathKey), as written but the
-// item empty, -1 for none, or all of them with none.
+// <!--mark:n--> and <!--/mark:n-->, n its index in the items of the file (pathKey), as written where shown
+// says so, else empty.
 type htmlMarks struct {
 	mark  string
 	at    map[string]int
-	empty int
-	none  bool
+	shown func(n int) bool
 }
 
 // marked returns text, the item of format html at the path at, between its marks, as m draws it; as it
@@ -69,7 +67,7 @@ func (m *htmlMarks) marked(text string, at []string) string {
 	if !ok {
 		return text
 	}
-	if m.none || n == m.empty {
+	if !m.shown(n) {
 		text = ""
 	}
 	i := strconv.Itoa(n)
@@ -83,30 +81,30 @@ func (m *htmlMarks) marked(text string, at []string) string {
 // drawn with them all is compared, without the item, with the page drawn with it alone empty. d is drawn
 // as a copy, marked, so that d draws its page as it is.
 // LIMIT: page.html gets the items marked; one looking into an item's text (len, eq) may draw them otherwise.
-// LIMIT: each item draws the page once more, every time; check once per data and title if pages get slow.
+// LIMIT: each item draws and reads the page again, every view: 200 items, 0.2s; keep the result if slow.
 func (d *Data) checkDrawnHTML(page *template.Template, title string) error {
-	c := d.marked()
+	c := d.marked(func(int) bool { return true })
 	full, err := c.drawnPage(page, title)
 	if err != nil {
 		return err
 	}
 	for k, it := range d.htmlItems {
-		c.marks.empty = k
+		c.marks.shown = func(n int) bool { return n != k }
 		bare, err := c.drawnPage(page, title)
 		if err != nil {
 			return err
 		}
-		if why := changed(full, bare, c.marks.mark, strconv.Itoa(k), it.written); why != nil {
+		if why := changed(full, bare, c.marks.mark, k, it.written); why != nil {
 			return itemError(d.File, it.pos, it.path, why)
 		}
 	}
 	return nil
 }
 
-// marked returns a copy of d whose items of format html are marked, as written, so that d draws its page
-// as it is.
-func (d *Data) marked() *Data {
-	m := &htmlMarks{mark: rand.Text(), at: map[string]int{}, empty: -1, none: false}
+// marked returns a copy of d whose items of format html are marked, those shown as written, so that d
+// draws its page as it is.
+func (d *Data) marked(shown func(n int) bool) *Data {
+	m := &htmlMarks{mark: rand.Text(), at: map[string]int{}, shown: shown}
 	for i, it := range d.htmlItems {
 		m.at[pathKey(it.at)] = i
 	}
@@ -115,13 +113,21 @@ func (d *Data) marked() *Data {
 	return &c
 }
 
-// hidesHead reports whether d's items of format html hide the </head> of the page page draws, titled
-// title, which the page drawn with them empty has: an open <script> of one does.
-func (d *Data) hidesHead(page *template.Template, title string) bool {
-	c := d.marked()
-	c.marks.none = true
-	out, err := c.execute(page, title)
-	return err == nil && tagsOf(tagsIn(string(out), false)).head >= 0
+// headHider returns the index of the first item of format html of d, in the order of the file, with which
+// those before it hide the </head> of the page page draws, titled title, which the page drawn with them
+// empty has: an open <script> of one does. -1 for none: the page has no </head> without them either.
+func (d *Data) headHider(page *template.Template, title string) int {
+	for k := -1; k < len(d.htmlItems); k++ {
+		out, err := d.marked(func(n int) bool { return n <= k }).execute(page, title)
+		hidden := err != nil || tagsOf(tagsIn(string(out), false)).head < 0
+		switch {
+		case hidden && k < 0:
+			return -1
+		case hidden:
+			return k
+		}
+	}
+	return -1
 }
 
 // writtenIn returns the names of the elements item opens by a tag, lower case: the others an element of it
@@ -157,20 +163,24 @@ func (d *Data) drawnPage(page *template.Template, title string) ([]byte, error) 
 // holding the page after it; or the page without it not bare, by shape. An item drawn as no markup, in a
 // <title> or a value, has no marks, and is left alone; one whose start mark is text of the page's that it
 // ends (a <noscript>) leaves its end mark in the page, unlike bare.
-func changed(full, bare []byte, mark, n string, written map[string]bool) *usererr.Error {
+func changed(full, bare []byte, mark string, n int, written map[string]bool) *usererr.Error {
 	// A bytes.Reader fails no read, the one error Parse returns.
 	doc, _ := html.Parse(bytes.NewReader(full))     //nolint:errcheck // see above
 	without, _ := html.Parse(bytes.NewReader(bare)) //nolint:errcheck // see above
-	begins, ends := marksIn(doc, mark, n)
+	m := readMarks(doc, mark)
+	begins, ends := m.begins[n], m.ends[n]
 	switch {
 	case len(ends) > len(begins):
 		return usererr.New("tmpl_html_page") // a start mark is text of the page's that it ends
 	case len(ends) < len(begins):
-		return swallowed(doc, mark, n)
+		return swallowed(doc, mark, strconv.Itoa(n))
 	}
-	others := othersIn(doc, mark, n)
+	others := func(c *html.Node) bool {
+		j, ok := m.of[c]
+		return ok && j != n
+	}
 	for i := range begins {
-		if why := cut(doc, begins[i], ends[i], written, others); why != nil {
+		if why := cut(m.nodes[n][i], begins[i], ends[i], written, others); why != nil {
 			return why
 		}
 	}
@@ -183,32 +193,59 @@ func changed(full, bare []byte, mark, n string, written map[string]bool) *userer
 // markRe reads a mark of an item: / for its end, and its index.
 var markRe = regexp.MustCompile(`^(/?)([A-Z0-9]+):(\d+)$`)
 
-// marksIn returns the comments of doc that mark the item n, its starts and its ends, in order.
-func marksIn(doc *html.Node, mark, n string) (begins, ends []*html.Node) {
-	for c := range doc.Descendants() {
-		if c.Type != html.CommentNode {
-			continue
-		}
-		if m := markRe.FindStringSubmatch(c.Data); m != nil && m[2] == mark && m[3] == n {
-			if m[1] == "" {
-				begins = append(begins, c)
-			} else {
-				ends = append(ends, c)
-			}
-		}
-	}
-	return begins, ends
+// pageMarks are the marks of the items of a page, by index: the starts and the ends, in order, the nodes
+// that start between each start and its end, and the item each of those nodes is of.
+type pageMarks struct {
+	begins, ends map[int][]*html.Node
+	nodes        map[int][][]*html.Node
+	of           map[*html.Node]int
 }
 
-// cut takes the item between begin and end out of doc, its end mark put after begin: the nodes that start
-// between them, which are all where begin is, or out of what other items, of others, left open around it:
+// readMarks reads the marks of doc, mark, in one walk of it.
+func readMarks(doc *html.Node, mark string) *pageMarks {
+	m := &pageMarks{
+		begins: map[int][]*html.Node{}, ends: map[int][]*html.Node{}, nodes: map[int][][]*html.Node{},
+		of: map[*html.Node]int{},
+	}
+	in := -1
+	for c := range doc.Descendants() {
+		if s := markRe.FindStringSubmatch(c.Data); c.Type == html.CommentNode && s != nil && s[2] == mark {
+			n, _ := strconv.Atoi(s[3]) //nolint:errcheck // digits, as markRe reads them
+			switch {
+			case s[1] == "":
+				m.begins[n] = append(m.begins[n], c)
+				m.nodes[n] = append(m.nodes[n], nil)
+				in = n
+			case in == n:
+				m.ends[n] = append(m.ends[n], c)
+				in = -1
+			default:
+				m.ends[n] = append(m.ends[n], c)
+			}
+			continue
+		}
+		if in >= 0 {
+			last := len(m.nodes[in]) - 1
+			m.nodes[in][last] = append(m.nodes[in][last], c)
+			m.of[c] = in
+		}
+	}
+	return m
+}
+
+// cut takes the item, the nodes that start between begin and end, out of its page, its end mark put after
+// begin. They are all where begin is, or out of what other items, of others, left open around it:
 // one elsewhere closed an element of the page around the item (</td><td>). An element the parser made for
 // it, not of written, gives back to the page what it holds of the page, as a <tbody> around a <tr> does
 // the page's spaces, and so does one of its own what it holds of comments and spaces, which draw nothing:
 // the marks of the next item before a <li> of it closes this one's. It returns the mistake of an item one
 // of whose own elements holds any other node of the page.
-func cut(doc, begin, end *html.Node, written map[string]bool, others map[*html.Node]bool) *usererr.Error {
-	item, in := between(doc, begin, end)
+func cut(item []*html.Node, begin, end *html.Node, written map[string]bool, others func(*html.Node) bool,
+) *usererr.Error {
+	in := map[*html.Node]bool{}
+	for _, n := range item {
+		in[n] = true
+	}
 	if why := outOfPlace(item, in, others, begin); why != nil {
 		return why
 	}
@@ -232,13 +269,14 @@ func cut(doc, begin, end *html.Node, written map[string]bool, others map[*html.N
 }
 
 // outOfPlace returns the mistake of the nodes of an item, item and as the set in, of which one is not where
-// begin is, nor out of what other items, of others, left open around it, which a <li> of it closes: it
+// begin is, nor out of what other items (others) left open around it, which a <li> of it closes: it
 // closed the page's element around it. nil for none.
-func outOfPlace(item []*html.Node, in, others map[*html.Node]bool, begin *html.Node) *usererr.Error {
+func outOfPlace(item []*html.Node, in map[*html.Node]bool, others func(*html.Node) bool, begin *html.Node,
+) *usererr.Error {
 	place := map[*html.Node]bool{}
 	for p := begin.Parent; p != nil; p = p.Parent {
 		place[p] = true
-		if !others[p] {
+		if !others(p) {
 			break
 		}
 	}
@@ -259,49 +297,6 @@ func holdsPage(n *html.Node, in map[*html.Node]bool, end *html.Node) bool {
 		}
 	}
 	return false
-}
-
-// othersIn returns the nodes of doc of the items marked but the item n.
-func othersIn(doc *html.Node, mark, n string) map[*html.Node]bool {
-	others := map[*html.Node]bool{}
-	begins, ends := map[string][]*html.Node{}, map[string][]*html.Node{}
-	for c := range doc.Descendants() {
-		if c.Type != html.CommentNode {
-			continue
-		}
-		if m := markRe.FindStringSubmatch(c.Data); m != nil && m[2] == mark && m[3] != n {
-			if m[1] == "" {
-				begins[m[3]] = append(begins[m[3]], c)
-			} else {
-				ends[m[3]] = append(ends[m[3]], c)
-			}
-		}
-	}
-	for j, b := range begins {
-		for i := range min(len(b), len(ends[j])) {
-			_, in := between(doc, b[i], ends[j][i])
-			maps.Copy(others, in)
-		}
-	}
-	return others
-}
-
-// between returns the nodes of doc that start between begin and end, in order, and as a set.
-func between(doc, begin, end *html.Node) ([]*html.Node, map[*html.Node]bool) {
-	var item []*html.Node
-	in := map[*html.Node]bool{}
-	started := false
-	for n := range doc.Descendants() {
-		if n == end {
-			break
-		}
-		if started {
-			item = append(item, n)
-			in[n] = true
-		}
-		started = started || n == begin
-	}
-	return item, in
 }
 
 // blank reports whether n draws nothing: a comment, or a text of spaces.

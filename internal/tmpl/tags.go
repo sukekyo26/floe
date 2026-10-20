@@ -133,6 +133,9 @@ var endTag = func() map[string]*regexp.Regexp {
 // styleOrLink finds a <style> or a <link>, however the HTML around it reads.
 var styleOrLink = regexp.MustCompile(`(?i)<(style|link)[\s/>]`)
 
+// tagStart finds HTML that ends where a tag or a comment starts, which what comes after it would go on.
+var tagStart = regexp.MustCompile(`<(?:/|!-?|\?)?$`)
+
 // headEnd finds a </head>, however the HTML around it reads.
 var headEnd = regexp.MustCompile(`(?i)</head[\s/>]`)
 
