@@ -217,7 +217,8 @@ Make the part `<name>` of your own in `$FLOE_PARTS_DIR/<name>` as a copy of `<pa
 - Every file of `<part>` is copied, its `part.yaml` included, so the copy takes the looks it takes. Its `part.html` names `<name>` where it named `<part>` as its box, `data-floe-part="<part>"`; the parts it holds and the looks it takes keep their names.
 - The file of `<part>` of each parts theme that has one, floe's or your own, is copied into `$FLOE_PARTS_DIR/themes/<theme>/<name>.css`, so the copy starts with the original's look in every theme. What you copy is yours: floe's later changes to its part or its themes do not reach it.
 - A name is lower case letters, digits, `-` and `_`, and not `diagram`, `script`, `tone`, `base` or `themes`. A copy named like one of floe's parts takes its place. A part floe draws in Go has no files to copy.
-- Nothing is written over: with a part of that name, or a file of a parts theme for it, the command stops and makes nothing (exit code 1).
+- Nothing is written over: with a part of that name, or a file of a parts theme for it in any theme of yours, the command stops and makes nothing (exit code 1). It stops too at a parts theme of yours that cannot be used and may have a file of `<part>`, which the copy would lack: fix it first.
+- The copy is read as a page would read it. When the copy, or a part that takes its look or holds it, could not be used (a look alone in place of one of floe's parts that draws, a copy that would hold itself, as `cell` copied from `table`), the command removes what it made and tells why.
 
 ## `floe part check`
 

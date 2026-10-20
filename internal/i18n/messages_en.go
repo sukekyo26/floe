@@ -388,6 +388,7 @@ var messagesEN = map[string]string{
 	"tmpl_new_part_go":             "floe draws the part %s in Go, so it has no files to copy; copy another part",
 	"tmpl_new_part_theme_exists":   "the parts themes have a file of the part %s already: %s; remove them, or pick another name",
 	"tmpl_new_part_theme":          "%s cannot be written: %s; nothing was made",
+	"tmpl_new_part_unusable":       "%s was not made: with it, %s",
 	"tmpl_part_names":              "%s:%d: the part names the part %s, which there is none of; use %s",
 	"tmpl_part_broken":             "the part %s cannot be used: %s",
 	"tmpl_part_cycle":              "%s: the part %s holds itself (%s), which floe would follow forever; fix it, or remove it",

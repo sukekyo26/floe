@@ -81,7 +81,7 @@ func CheckOwnParts(partsDir string) (warnings []*usererr.Error, mistakes []error
 	if err != nil {
 		return nil, []error{err}
 	}
-	for _, why := range slices.Concat(set.unusable(nil), set.unusableThemes()) {
+	for _, why := range slices.Concat(set.unusable(nil), set.unusableThemes(nil)) {
 		mistakes = append(mistakes, why)
 	}
 	return set.strays, mistakes
@@ -170,7 +170,7 @@ func brokenParts(set *partSet, named []namedPart) []*usererr.Error {
 	}
 	// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
 	warnings := set.unusable(func(name string) bool { return refused[name] && set.parts[name] == nil })
-	warnings = append(warnings, set.unusableThemes()...)
+	warnings = append(warnings, set.unusableThemes(nil)...)
 	return append(warnings, set.strays...)
 }
 

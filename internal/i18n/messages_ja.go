@@ -387,6 +387,7 @@ var messagesJA = map[string]string{
 	"tmpl_new_part_go":             "部品 %s は floe が Go で描くので、写すファイルがありません。別の部品を写してください",
 	"tmpl_new_part_theme_exists":   "部品のテーマに部品 %s のファイルが既にあります: %s。消すか、別の名前にしてください",
 	"tmpl_new_part_theme":          "%s を書けません: %s。何も作っていません",
+	"tmpl_new_part_unusable":       "%s を作っていません。写すと次のようになります: %s",
 	"tmpl_part_names":              "%s:%d: 部品が名乗る部品 %s はありません。%s のどれかを書いてください",
 	"tmpl_part_broken":             "部品 %s は使えません: %s",
 	"tmpl_part_cycle":              "%s: 部品 %s が自分を持っていて（%s）、floe がたどり続けてしまいます。直すか、消してください",

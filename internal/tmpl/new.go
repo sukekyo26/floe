@@ -186,6 +186,9 @@ func (l *Library) NewPart(name, from string) (*MadePart, error) {
 	}
 	themes := &themeFiles{written: nil, made: nil}
 	made.At, err = install(l.parts, name, "part", func(dir string) error {
+		if cerr := set.checkThemeFiles(floe, src, made, name); cerr != nil {
+			return cerr
+		}
 		if cerr := src.copyTo(dir, name); cerr != nil {
 			return cerr
 		}
@@ -193,11 +196,78 @@ func (l *Library) NewPart(name, from string) (*MadePart, error) {
 		// page drawn meanwhile is warned of the files, of no part yet.
 		return themes.write(set, made, from, name)
 	})
+	if err == nil {
+		// Read as a page reads it, which may leave the copy out, or others with it (a look in place of one
+		// of floe's that draws, a part that holds itself): then nothing is kept. A page drawn meanwhile is
+		// refused, as it would be with the copy kept.
+		if err = set.unusableWith(l.parts, name); err != nil {
+			_ = os.RemoveAll(made.At) //nolint:errcheck // what is left is told by floe part check
+		}
+	}
 	if err != nil {
 		themes.undo()
 		return nil, err
 	}
 	return made, nil
+}
+
+// checkThemeFiles refuses to copy the part src as name, made, when a parts theme of one's own has a file
+// of name already, whether it has a file of src or not, or when one that cannot be used may have a file of
+// src, which the copy would then lack: of its own, or of floe's theme of its name for a part of floe's.
+func (set *partSet) checkThemeFiles(floe *partSet, src *part, made *MadePart, name string) error {
+	entries, err := entriesOf(made.ThemesAt)
+	if err != nil {
+		return usererr.New("tmpl_new_part_theme", made.ThemesAt, err.Error())
+	}
+	themes := slices.Clone(made.Themes)
+	for _, e := range entries {
+		if !strings.HasPrefix(e.Name(), ".") {
+			themes = append(themes, e.Name())
+		}
+	}
+	var there []string
+	for _, theme := range slices.Compact(slices.Sorted(slices.Values(themes))) {
+		dir := filepath.Join(made.ThemesAt, theme)
+		if why := set.brokenThemes[theme]; why != nil {
+			_, own := os.Lstat(filepath.Join(dir, src.name+".css"))
+			floes := false
+			if t := floe.themes[theme]; t != nil {
+				_, floes = t.parts[src.name]
+			}
+			if own == nil || src.dir == "" && floes {
+				return usererr.New("tmpl_parts_theme_broken", theme, why)
+			}
+		}
+		at := filepath.Join(dir, name+".css")
+		switch _, err := os.Lstat(at); {
+		case err == nil:
+			there = append(there, at)
+		case !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR):
+			return usererr.New("tmpl_new_part_theme", at, err.Error())
+		}
+	}
+	if there != nil {
+		return usererr.New("tmpl_new_part_theme_exists", name, strings.Join(there, ", "))
+	}
+	return nil
+}
+
+// unusableWith refuses the part name, just made in parts, when reading parts again leaves out a part or a
+// parts theme that set, read before it was made, did not: the copy, or one that takes its look or holds it.
+func (set *partSet) unusableWith(parts, name string) error {
+	after, err := partsIn(parts)
+	if err != nil {
+		return err
+	}
+	if after.broken[name] != nil {
+		return usererr.New("tmpl_new_part_unusable", name, usererr.New("tmpl_part_broken", name, after.broken[name]))
+	}
+	found := slices.Concat(after.unusable(func(n string) bool { return set.broken[n] != nil }),
+		after.unusableThemes(func(n string) bool { return set.brokenThemes[n] != nil }))
+	if found != nil {
+		return usererr.New("tmpl_new_part_unusable", name, found[0])
+	}
+	return nil
 }
 
 // copyTo writes the files of p into dir as the part name, its box renamed.
@@ -261,21 +331,8 @@ type themeFiles struct {
 }
 
 // write writes the file of the part name of each theme of made, a copy of the theme's file of from, in
-// the theme of its name of one's own. It refuses all when one is there already.
+// the theme of its name of one's own, refusing one written since checkThemeFiles.
 func (w *themeFiles) write(set *partSet, made *MadePart, from, name string) error {
-	var there []string
-	for _, theme := range made.Themes {
-		at := filepath.Join(made.ThemesAt, theme, name+".css")
-		switch _, err := os.Lstat(at); {
-		case err == nil:
-			there = append(there, at)
-		case !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR):
-			return usererr.New("tmpl_new_part_theme", at, err.Error())
-		}
-	}
-	if there != nil {
-		return usererr.New("tmpl_new_part_theme_exists", name, strings.Join(there, ", "))
-	}
 	for _, theme := range made.Themes {
 		at := filepath.Join(made.ThemesAt, theme, name+".css")
 		if err := w.writeFile(at, set.themes[theme].parts[from]); err != nil {

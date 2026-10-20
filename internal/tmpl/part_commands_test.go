@@ -200,14 +200,16 @@ func TestNewPartOfEach(t *testing.T) {
 	}
 }
 
-// NewPart refuses a name a part cannot take, one there is already, a part with nothing to copy, and a
-// file of a parts theme there already, leaving nothing.
+// NewPart refuses a name a part cannot take, one there is already, a part with nothing to copy, a file of
+// a parts theme there already, in a theme of the original's or another, a theme that cannot be used with
+// a file of the original, and a copy that could not be used, leaving nothing.
 func TestNewPartRefused(t *testing.T) {
 	t.Parallel()
 
 	parts := ownParts(t, map[string]string{
 		"quote/part.html":           "",
 		"themes/washi/details2.css": "",
+		"themes/mine/grid3.css":     "",
 	})
 	l := tmpl.NewLibrary("", parts, "")
 	for _, c := range []struct{ name, from, want string }{
@@ -223,6 +225,11 @@ func TestNewPartRefused(t *testing.T) {
 		{"grid", "nope", `unknown part "nope"`},
 		{"quote", "table", "quote is there already"},
 		{"details2", "details", "the parts themes have a file of the part details2 already: " + filepath.Join(parts, "themes", "washi", "details2.css")},
+		{"grid3", "steps", "the parts themes have a file of the part grid3 already: " + filepath.Join(parts, "themes", "mine", "grid3.css")},
+		// A look alone in place of floe's that draws, and a part that would hold itself, which reading
+		// leaves out, with the parts that take its look or hold it.
+		{"table", "panel", "table was not made: with it, the part table cannot be used: " + filepath.Join(parts, "table") + ": a look alone cannot"},
+		{"cell", "table", "cell was not made: with it, the part cell cannot be used: " + filepath.Join(parts, "cell") + ": the part cell holds itself"},
 	} {
 		if _, err := l.NewPart(c.name, c.from); err == nil || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("NewPart(%s, %s) = %v", c.name, c.from, err)
@@ -241,12 +248,32 @@ func TestNewPartRefused(t *testing.T) {
 		left = append(left, rel)
 		return cmp.Or(err, rerr)
 	})
-	if want := []string{".", "quote", "quote/part.html", "themes", "themes/ink", "themes/washi", "themes/washi/details2.css"}; err != nil ||
+	if want := []string{
+		".", "quote", "quote/part.html", "themes", "themes/ink", "themes/mine", "themes/mine/grid3.css", "themes/washi",
+		"themes/washi/details2.css",
+	}; err != nil ||
 		!slices.Equal(left, want) {
 		t.Errorf("left = %v, %v", left, err)
 	}
 	if _, err := tmpl.NewLibrary("", "", "").NewPart("grid", "table"); err == nil || !strings.Contains(err.Error(), "FLOE_PARTS_DIR") {
 		t.Errorf("NewPart without a directory of parts = %v", err)
+	}
+
+	// A theme of one's own that cannot be used may have a file of the original, its own or floe's of the
+	// theme's name; one that has neither is no matter.
+	broken := ownParts(t, map[string]string{
+		"themes/ink/base.css":  "}\n",
+		"themes/mine/tree.css": "}\n",
+	})
+	l = tmpl.NewLibrary("", broken, "")
+	if _, err := l.NewPart("aside", "note"); err == nil || !strings.Contains(err.Error(), "your own parts theme ink cannot be used") {
+		t.Errorf("NewPart with a theme that cannot be used = %v", err)
+	}
+	if _, err := l.NewPart("tree2", "tree"); err == nil || !strings.Contains(err.Error(), "your own parts theme mine cannot be used") {
+		t.Errorf("NewPart with a theme that cannot be used, of its own file of the original = %v", err)
+	}
+	if _, err := l.NewPart("steps2", "steps"); err != nil {
+		t.Errorf("NewPart with a theme that cannot be used, of no file of the original = %v", err)
 	}
 }
 
