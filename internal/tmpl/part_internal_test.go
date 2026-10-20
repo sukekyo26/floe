@@ -57,8 +57,10 @@ func TestPalette(t *testing.T) {
 	// width of prose is the template's. A diagram's style is the diagram package's, for pages of any kind.
 	delete(taken, "the part diagram")
 	for who, css := range taken {
-		if m := regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,`).FindStringSubmatch(css); m != nil && m[1] != "--text-width" {
-			t.Errorf("%s takes %s with a value of its own, which default's palette gives", who, m[1])
+		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,`).FindAllStringSubmatch(css, -1) {
+			if m[1] != "--text-width" {
+				t.Errorf("%s takes %s with a value of its own, which default's palette gives", who, m[1])
+			}
 		}
 	}
 	if set.strays != nil {
@@ -87,6 +89,40 @@ func TestPalette(t *testing.T) {
 	}
 	if !set.parts["panel"].isLook() || set.parts["panel"].css == "" {
 		t.Errorf("the look panel = %+v", set.parts["panel"])
+	}
+}
+
+// palette.css holds the palette's variables alone, set on :root and then for dark mode, without
+// !important; a colour set for light mode alone is warned of.
+func TestCheckPalette(t *testing.T) {
+	t.Parallel()
+
+	dark := "\n@media (prefers-color-scheme: dark) { :root { --bg: #000; --page-bg: none; color-scheme: dark; } }"
+	for css, want := range map[string]string{
+		":root { --bg: #fff; }" + dark: "",
+		":root { --bg: #fff; --page-bg: url(data:image/svg+xml;base64,PHN2Zz4=) repeat; }" + dark:  "",
+		":root { --bg: #fff; --font: \"a;b\", serif; color-scheme: light; } /* body { } */" + dark: "",
+		"@media (prefers-color-scheme: dark) { :root { --bg: #000; } }\n:root { --bg: #fff; }":     "p.css:2: write this :root before",
+		":root {\n  --bg: #fff !important;\n}":                                                     "p.css:2: palette.css takes no !important",
+		":root { --bg: #fff; }\nbody { margin: 0; }":                                               "p.css:2: palette.css holds only",
+		"--bg: #fff;": "p.css:1: palette.css holds only",
+		"@media (prefers-color-scheme: dark) {\n  --bg: #000;\n}": "p.css:2: palette.css holds only",
+		":root {\n  .x { color: red; }\n}":                        "p.css:2: palette.css holds only",
+		":root { color: red; }":                                   "p.css:1: palette.css holds only",
+		"@media print { :root { --bg: #fff; } }":                  "p.css:1: palette.css holds only",
+		":root { --bg: #fff; --code-bg: #222; --font: serif; --page-bg: var(--bg); --code-fg: #eee; }": "p.css sets --bg, --code-bg for light mode alone",
+	} {
+		warning, err := checkPalette("p.css", []byte(css))
+		got := ""
+		switch {
+		case err != nil:
+			got = err.Error()
+		case warning != nil:
+			got = warning.Error()
+		}
+		if want == "" && got != "" || !strings.HasPrefix(got, want) {
+			t.Errorf("checkPalette(%q) = %q, want %q", css, got, want)
+		}
 	}
 }
 

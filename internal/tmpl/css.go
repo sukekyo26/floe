@@ -53,11 +53,15 @@ func lineAt(src []byte, at int) int {
 var rootSelector = regexp.MustCompile(`(?i)(?:^|[\s,>+~(])(:root|html)(?:[\s,.:\[#>+~)]|$)`)
 
 // cssRule is what comes before a block of CSS, a selector or an at-rule's prelude, or an at-rule
-// written as a statement (@import …;), as written, and the offset where it starts.
+// written as a statement (@import …;), as written, and the offset where it starts. A block's depth is
+// how many blocks hold it, and open and end the offsets of its { and of its }, the end of the file for
+// one left open.
 type cssRule struct {
-	prelude string
-	at      int
-	block   bool
+	prelude   string
+	at        int
+	block     bool
+	depth     int
+	open, end int
 }
 
 // cssRules returns the rules of css in order, those in blocks too, past its comments and strings, and
@@ -66,40 +70,48 @@ type cssRule struct {
 // to check it. Use a CSS parser if a template comes to need more.
 func cssRules(css []byte) (rules []cssRule, stray int) {
 	blank := withoutComments(css)
-	depth, start := 0, 0
+	var open []int // the rules of the blocks open, innermost last
+	start := 0
 	for i := 0; i < len(blank); i++ {
 		switch blank[i] {
 		case '"', '\'':
 			i = stringEnd(blank, i)
 		case '{':
-			rules = append(rules, ruleOf(blank, start, i, true))
-			depth++
+			r := ruleOf(blank, start, i)
+			r.block, r.depth, r.open, r.end = true, len(open), i, len(blank)
+			open = append(open, len(rules))
+			rules = append(rules, r)
 			start = i + 1
 		case ';':
-			if r := ruleOf(blank, start, i, false); strings.HasPrefix(r.prelude, "@") {
+			if r := ruleOf(blank, start, i); strings.HasPrefix(r.prelude, "@") {
+				r.depth = len(open)
 				rules = append(rules, r)
 			}
 			start = i + 1
 		case '}':
-			if depth == 0 {
+			if len(open) == 0 {
 				return rules, i
 			}
-			depth--
+			rules[open[len(open)-1]].end = i
+			open = open[:len(open)-1]
 			start = i + 1
 		}
 	}
 	// A statement the file ends without its ;, which the browser reads all the same.
-	if r := ruleOf(blank, start, len(blank), false); strings.HasPrefix(r.prelude, "@") {
+	if r := ruleOf(blank, start, len(blank)); strings.HasPrefix(r.prelude, "@") {
+		r.depth = len(open)
 		rules = append(rules, r)
 	}
 	return rules, -1
 }
 
-// ruleOf is the rule written in css from start to end, its spaces trimmed.
-func ruleOf(css []byte, start, end int, block bool) cssRule {
+// ruleOf is the statement written in css from start to end, its spaces trimmed.
+func ruleOf(css []byte, start, end int) cssRule {
 	text := string(css[start:end])
 	trimmed := strings.TrimLeft(text, " \t\r\n\f")
-	return cssRule{prelude: strings.TrimSpace(trimmed), at: start + len(text) - len(trimmed), block: block}
+	return cssRule{
+		prelude: strings.TrimSpace(trimmed), at: start + len(text) - len(trimmed), block: false, depth: 0, open: -1, end: -1,
+	}
 }
 
 // stringEnd returns the offset of the end of the string of CSS that starts at the quote at i: its

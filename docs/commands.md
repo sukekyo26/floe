@@ -216,7 +216,7 @@ Make the part `<name>` of your own in `$FLOE_PARTS_DIR/<name>` as a copy of `<pa
 
 - Every file of `<part>` is copied, its `part.yaml` included, so the copy takes the looks it takes. Its `part.html` names `<name>` where it named `<part>` as its box, `data-floe-part="<part>"`; the parts it holds and the looks it takes keep their names.
 - The file of `<part>` of each parts theme that has one, floe's or your own, is copied into `$FLOE_PARTS_DIR/themes/<theme>/<name>.css`, so the copy starts with the original's look in every theme. What you copy is yours: floe's later changes to its part or its themes do not reach it.
-- A name is lower case letters, digits, `-` and `_`, and not `diagram`, `script`, `tone`, `base` or `themes`. A copy named like one of floe's parts takes its place. A part floe draws in Go has no files to copy.
+- A name is lower case letters, digits, `-` and `_`, and not `diagram`, `script`, `tone`, `base`, `palette` or `themes`. A copy named like one of floe's parts takes its place. A part floe draws in Go has no files to copy.
 - Nothing is written over: with a part of that name, or a file of a parts theme for it in any theme of yours, the command stops and makes nothing (exit code 1). It stops too at a parts theme of yours that cannot be used and may have a file of `<part>`, which the copy would lack: fix it first.
 - The copy is read as a page would read it in its place, before it is put there. When the copy, or a part that takes its look or holds it, could not be used (a look alone in place of one of floe's parts that draws, a copy that would hold itself, as `cell` copied from `table`), the command makes nothing and tells why. It stops too when your parts themes, or one of them, cannot be read at all.
 
@@ -224,8 +224,8 @@ Make the part `<name>` of your own in `$FLOE_PARTS_DIR/<name>` as a copy of `<pa
 
 Check every part and parts theme of your own in `$FLOE_PARTS_DIR`, as a page would read them, before you use or share them. To check another directory, set `FLOE_PARTS_DIR` to it: a part holds others and takes their looks by name, so a part is checked with the rest of its directory.
 
-- Every mistake is printed at once, at its line where it has one (exit code 1): of its files, its names, the looks it takes, the parts it holds, a part that holds itself or takes its own look, and the CSS of a parts theme. Nothing is printed when they are right, or when there are none (exit code 0).
-- Warnings go to stderr and leave the exit code 0: a file that goes into no page, such as a file of a parts theme named for no part.
+- Every mistake is printed at once, at its line where it has one (exit code 1): of its files, its names, the looks it takes, the parts it holds, a part that holds itself or takes its own look, and the CSS of a parts theme, a `palette.css` that holds more than the palette's variables among them. Nothing is printed when they are right, or when there are none (exit code 0).
+- Warnings go to stderr and leave the exit code 0: a file that goes into no page, such as a file of a parts theme named for no part, and a `palette.css` that sets a colour for light mode alone, which dark mode would keep.
 - A part is not drawn, as it has no data: `floe template check` draws the example of a template that uses it.
 
 [templates.md](templates.md) tells what a part holds.

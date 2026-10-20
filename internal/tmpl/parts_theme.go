@@ -108,40 +108,136 @@ func (set *partSet) themeFile(name string) bool {
 }
 
 // checkPalette refuses css, palette.css shown as file, where it holds anything but the palette's
-// variables (and color-scheme), set on :root, those of dark mode in @media (prefers-color-scheme: dark):
-// in the bottom layer, any other rule would lose to every other one. It returns the warning of the
-// colours it sets for light mode alone, which dark mode would keep over default's dark ground and text.
+// variables (and color-scheme) set on :root, those of dark mode in @media (prefers-color-scheme: dark)
+// after it: in the bottom layer any other rule would lose to every other one, a light :root after the
+// dark block would win in dark mode too, and !important would win over every layer, the template's too.
+// It returns the warning of the colours it sets for light mode alone, which dark mode would keep over
+// default's dark ground and text.
 func checkPalette(file string, css []byte) (*usererr.Error, error) {
-	r := &paletteReader{css: css, blank: withoutComments(css), at: 0}
-	light, dark := map[string]string{}, map[string]bool{}
-	for {
-		prelude, at, stop := r.upTo("{")
-		switch {
-		case stop == 0 && prelude == "":
-			return lightOnly(file, light, dark), nil
-		case stop == '{' && prelude == ":root":
-			if err := r.declarations(file, func(name, value string) { light[name] = value }); err != nil {
-				return nil, err
-			}
-			continue
-		case stop == '{' && darkMedia.MatchString(prelude):
-			if err := r.dark(file, dark); err != nil {
-				return nil, err
-			}
-			continue
-		}
-		return nil, usererr.New("tmpl_palette_rule", file, lineAt(css, at))
+	rules, _ := cssRules(css) // refuseCSS has refused a } that closes no block
+	p := &paletteCheck{
+		file: file, css: css, blank: withoutComments(css), rules: rules, media: nil, sawDark: false,
+		light: map[string]string{}, dark: map[string]bool{},
 	}
+	if err := p.onlyBlocks(0, len(p.blank), 0); err != nil {
+		return nil, err
+	}
+	for i := range rules {
+		if err := p.read(&rules[i]); err != nil {
+			return nil, err
+		}
+	}
+	return lightOnly(file, p.light, p.dark), nil
 }
 
-// lightOnly returns the warning of the colours of light, by name, that dark leaves out, or nil. A value
-// of var() follows the variables it takes, and faces and code, on a dark ground in light mode too, serve
-// both modes.
+// paletteCheck is what checkPalette reads of palette.css: blank is css without its comments, media the
+// dark block the rule read is in, nil at the top, and light and dark the variables set for each mode.
+type paletteCheck struct {
+	file       string
+	css, blank []byte
+	rules      []cssRule
+	media      *cssRule
+	sawDark    bool
+	light      map[string]string
+	dark       map[string]bool
+}
+
+// read reads the rule r, in the order of the file.
+func (p *paletteCheck) read(r *cssRule) error {
+	if p.media != nil && r.at > p.media.end {
+		p.media = nil
+	}
+	switch {
+	case !r.block:
+	case r.depth == 0 && r.prelude == ":root":
+		if p.sawDark {
+			return usererr.New("tmpl_palette_order", p.file, lineAt(p.css, r.at))
+		}
+		return p.declarations(r, func(name, value string) { p.light[name] = value })
+	case r.depth == 0 && darkMedia.MatchString(r.prelude):
+		p.media, p.sawDark = r, true
+		return p.onlyBlocks(r.open+1, r.end, 1)
+	case r.depth == 1 && p.media != nil && r.prelude == ":root":
+		return p.declarations(r, func(name, _ string) { p.dark[name] = true })
+	}
+	return usererr.New("tmpl_palette_rule", p.file, lineAt(p.css, r.at))
+}
+
+// onlyBlocks refuses what the file holds from from to to outside the blocks at depth, from the prelude
+// of each to its }: a declaration or a statement where only blocks go.
+func (p *paletteCheck) onlyBlocks(from, to, depth int) error {
+	i := from
+	for _, r := range p.rules {
+		if !r.block || r.depth != depth || r.at < from || r.at >= to {
+			continue
+		}
+		if err := p.blankFrom(i, r.at); err != nil {
+			return err
+		}
+		i = r.end + 1
+	}
+	return p.blankFrom(i, to)
+}
+
+// blankFrom refuses a byte from from to to that is no space.
+func (p *paletteCheck) blankFrom(from, to int) error {
+	for i := from; i < to && i < len(p.blank); i++ {
+		if !strings.ContainsRune(" \t\r\n\f", rune(p.blank[i])) {
+			return usererr.New("tmpl_palette_rule", p.file, lineAt(p.css, i))
+		}
+	}
+	return nil
+}
+
+// declarations reads the declarations of the block r, split at the ; outside strings and brackets
+// (url(data:…;base64,…) is one value), each a variable or color-scheme without !important, which it
+// gives to each.
+func (p *paletteCheck) declarations(r *cssRule, each func(name, value string)) error {
+	brackets, start := 0, r.open+1
+	for i := start; i <= r.end; i++ {
+		if i < r.end {
+			switch c := p.blank[i]; {
+			case c == '"' || c == '\'':
+				i = stringEnd(p.blank, i)
+				continue
+			case c == '(':
+				brackets++
+				continue
+			case c == ')':
+				brackets = max(brackets-1, 0)
+				continue
+			case c != ';' || brackets > 0:
+				continue
+			}
+		}
+		d := ruleOf(p.blank, start, i)
+		start = i + 1
+		if d.prelude == "" {
+			continue
+		}
+		name, value, ok := strings.Cut(d.prelude, ":")
+		name, value = strings.TrimSpace(name), strings.TrimSpace(value)
+		switch {
+		case !ok || !strings.HasPrefix(name, "--") && name != "color-scheme":
+			return usererr.New("tmpl_palette_rule", p.file, lineAt(p.css, d.at))
+		case important.MatchString(value):
+			return usererr.New("tmpl_palette_important", p.file, lineAt(p.css, d.at))
+		}
+		each(name, value)
+	}
+	return nil
+}
+
+var important = regexp.MustCompile(`(?i)!\s*important`)
+
+// lightOnly returns the warning of the colours of light, by name, that dark leaves out, or nil. Faces,
+// and the colours of code but its ground, which stays dark in light mode too, serve both modes.
+// LIMIT: a value of var() is taken to follow the modes, as --page-bg: var(--bg) does, though the variable
+// it takes may be one set for light mode alone. Follow what it takes if palettes come to chain them.
 func lightOnly(file string, light map[string]string, dark map[string]bool) *usererr.Error {
 	var names []string
 	for _, name := range slices.Sorted(maps.Keys(light)) {
-		if !dark[name] && !strings.Contains(light[name], "var(") && !slices.Contains(sameInDark, name) &&
-			!strings.HasPrefix(name, "--code-") {
+		if !dark[name] && !strings.Contains(light[name], "var(") && !slices.Contains(bothModes, name) {
 			names = append(names, name)
 		}
 	}
@@ -151,78 +247,7 @@ func lightOnly(file string, light map[string]string, dark map[string]bool) *user
 	return usererr.New("tmpl_palette_dark", file, strings.Join(names, ", "))
 }
 
-// sameInDark are the variables of the palette that are no colours.
-var sameInDark = []string{"--font", "--display", "--mono"}
+// bothModes are the variables of the palette whose one value serves light and dark mode alike.
+var bothModes = []string{"--font", "--display", "--mono", "--code-fg", "--code-prompt", "--code-add", "--code-del"}
 
 var darkMedia = regexp.MustCompile(`(?i)^@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)$`)
-
-// paletteReader reads palette.css, blank its copy without comments, from at.
-type paletteReader struct {
-	css, blank []byte
-	at         int
-}
-
-// upTo returns what r holds up to the first byte of stops past strings, trimmed, the offset where it
-// starts, and that byte, which r moves past: 0 at the end of the file, or a brace not of stops, which r
-// stays at.
-func (r *paletteReader) upTo(stops string) (string, int, byte) {
-	start := r.at
-	text := func() (string, int) {
-		raw := string(r.blank[start:r.at])
-		trimmed := strings.TrimLeft(raw, " \t\r\n\f")
-		return strings.TrimSpace(trimmed), start + len(raw) - len(trimmed)
-	}
-	for ; r.at < len(r.blank); r.at++ {
-		switch c := r.blank[r.at]; {
-		case c == '"' || c == '\'':
-			r.at = stringEnd(r.blank, r.at)
-		case strings.IndexByte(stops, c) >= 0:
-			s, at := text()
-			r.at++
-			return s, at, c
-		case c == '{' || c == '}':
-			s, at := text()
-			return s, at, c
-		}
-	}
-	s, at := text()
-	return s, at, 0
-}
-
-// dark reads the block of @media (prefers-color-scheme: dark), past its {: one :root block, whose
-// variables it notes in dark.
-func (r *paletteReader) dark(file string, dark map[string]bool) error {
-	if inner, at, stop := r.upTo("{"); stop != '{' || inner != ":root" {
-		return usererr.New("tmpl_palette_rule", file, lineAt(r.css, at))
-	}
-	if err := r.declarations(file, func(name, _ string) { dark[name] = true }); err != nil {
-		return err
-	}
-	if rest, at, stop := r.upTo("}"); stop != '}' || rest != "" {
-		return usererr.New("tmpl_palette_rule", file, lineAt(r.css, at))
-	}
-	return nil
-}
-
-// declarations reads the declarations of a block up to its }, each a variable or color-scheme, which
-// it gives to each.
-func (r *paletteReader) declarations(file string, each func(name, value string)) error {
-	for {
-		decl, at, stop := r.upTo(";}")
-		if decl != "" {
-			name, value, ok := strings.Cut(decl, ":")
-			name = strings.TrimSpace(name)
-			if !ok || !strings.HasPrefix(name, "--") && name != "color-scheme" {
-				return usererr.New("tmpl_palette_rule", file, lineAt(r.css, at))
-			}
-			each(name, strings.TrimSpace(value))
-		}
-		switch stop {
-		case ';':
-		case '}':
-			return nil
-		default:
-			return usererr.New("tmpl_palette_rule", file, lineAt(r.css, at))
-		}
-	}
-}
