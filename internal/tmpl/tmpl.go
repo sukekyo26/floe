@@ -511,8 +511,6 @@ func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
 	// as another type.
 	var bad *usererr.Error
 	switch {
-	case errors.As(err, &bad) && bad.Key == "tmpl_html_looked":
-		return nil, bad
 	case errors.As(err, &bad):
 		return nil, d.tmpl.assetMistake(bad)
 	case err != nil:
@@ -568,7 +566,7 @@ func (t *Template) page() (*template.Template, []byte, error) {
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
-		Funcs(template.FuncMap{"asset": t.assets()}).Funcs(lookers(t.file("page.html"))).Parse(string(src))
+		Funcs(template.FuncMap{"asset": t.assets()}).Parse(string(src))
 	if err != nil {
 		return nil, nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
 	}

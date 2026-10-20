@@ -4,11 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"crypto/rand"
-	"errors"
-	"fmt"
 	"html/template"
-	"math"
-	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -99,10 +95,9 @@ func (m *htmlMarks) drawnOrder(page []byte) []int {
 // items before it in the page change none, so that one that does is told, not the one after it. One that
 // leaves a <form> open, which the tree does not show, is refused too: the page's inputs after it would be
 // sent where the item says. d is drawn as a copy, marked, so that d draws its page as it is. An item is
-// checked in the <head> or the <body> of a page read in standards mode: page.html putting one outside
-// them, or leaving out <!doctype html>, is refused. page.html draws it whole, as len and slice refuse it
-// (lookers).
-// LIMIT: page.html branching on an item by eq or index is checked as the mark takes it; refuse them if seen.
+// checked in the <head> or after the <body> tag of a page read in standards mode (doctypeMistake): page.html
+// putting one elsewhere is refused. page.html draws it whole: what it makes of an item's text is its own.
+// LIMIT: page.html computing on an item's text (slice, len, eq) is checked as the mark makes it; theirs.
 // LIMIT: each item draws and reads the page again, every view (400 items, 0.25s); keep the result if slow.
 // LIMIT: an item left open for the next to close (<li>a, <li>b) is refused; read them together if pages need it.
 // LIMIT: a comment mark rebuilds no <b> page.html left open (<p><b>x</p>); mark with text if pages need it.
@@ -138,121 +133,32 @@ func (d *Data) checkDrawnHTML(page *template.Template, title string, drawn []byt
 }
 
 // standard reports whether a browser reads doc in standards mode, as html.ParseFragment reads an item: its
-// first node but comments is <!doctype html>. Without it, in quirks mode, a <table> ends no <p>.
+// first node but comments is <!doctype html>, or its legacy form. Without it, in quirks mode, a <table>
+// ends no <p>.
 func standard(doc *html.Node) bool {
 	for c := doc.FirstChild; c != nil; c = c.NextSibling {
 		if c.Type != html.CommentNode {
-			return c.Type == html.DoctypeNode && c.Data == "html" && len(c.Attr) == 0
+			legacy := []html.Attribute{{Namespace: "", Key: "system", Val: "about:legacy-compat"}}
+			return c.Type == html.DoctypeNode && c.Data == "html" &&
+				(len(c.Attr) == 0 || slices.EqualFunc(c.Attr, legacy, func(a, b html.Attribute) bool {
+					return a.Key == b.Key && strings.EqualFold(a.Val, b.Val)
+				}))
 		}
 	}
 	return false
 }
 
-var (
-	errLen   = errors.New("len takes a text, a list or a map")
-	errSlice = errors.New("slice takes a text or a list and up to 3 whole numbers in order")
-)
-
-// lookers are len and slice for page.html, file, which refuse HTML floe draws (an item of format html or
-// markdown, a part): checked where it goes as a mark, it is drawn whole, and a part of it may leave open
-// what takes in the page. Other values they take as the functions of text/template do.
-func lookers(file string) template.FuncMap {
-	refuse := func(fn string, item reflect.Value) error {
-		if item.IsValid() && item.Type() == reflect.TypeFor[template.HTML]() {
-			return usererr.New("tmpl_html_looked", file, fn)
-		}
+// doctypeMistake refuses src, the page.html file of a template whose schema s declares an item of format
+// html, that does not start with <!doctype html>: such an item is checked in standards mode only.
+func doctypeMistake(file string, s *schema, src []byte) error {
+	if _, item := s.first("", func(s *schema) bool { return s.Format == "html" }); item == nil {
 		return nil
 	}
-	return template.FuncMap{
-		"len": func(item reflect.Value) (int, error) {
-			item = indirect(item)
-			if err := refuse("len", item); err != nil {
-				return 0, err
-			}
-			switch item.Kind() {
-			case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice, reflect.String:
-				return item.Len(), nil
-			case reflect.Invalid:
-				return 0, fmt.Errorf("%w, not nil", errLen)
-			default:
-				return 0, fmt.Errorf("%w, not a %s", errLen, item.Type())
-			}
-		},
-		"slice": func(item reflect.Value, indexes ...reflect.Value) (reflect.Value, error) {
-			item = indirect(item)
-			if err := refuse("slice", item); err != nil {
-				return reflect.Value{}, err
-			}
-			return sliceOf(item, indexes)
-		},
+	// A bytes.Reader fails no read, the one error Parse returns.
+	if doc, _ := html.Parse(bytes.NewReader(src)); standard(doc) { //nolint:errcheck // see above
+		return nil
 	}
-}
-
-// indirect returns v without the pointers and interfaces around it, as text/template takes a value.
-func indirect(v reflect.Value) reflect.Value {
-	for v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface {
-		v = v.Elem()
-	}
-	return v
-}
-
-// sliceOf returns item[indexes...] as slice of text/template does.
-func sliceOf(item reflect.Value, indexes []reflect.Value) (reflect.Value, error) {
-	var capacity int
-	switch {
-	case len(indexes) > 3:
-		return reflect.Value{}, fmt.Errorf("%w, not %d", errSlice, len(indexes))
-	case item.Kind() == reflect.String && len(indexes) == 3:
-		return reflect.Value{}, fmt.Errorf("%w, 2 for a text", errSlice)
-	case item.Kind() == reflect.String:
-		capacity = item.Len()
-	case item.Kind() == reflect.Array || item.Kind() == reflect.Slice:
-		capacity = item.Cap()
-	case !item.IsValid():
-		return reflect.Value{}, fmt.Errorf("%w, not nil", errSlice)
-	default:
-		return reflect.Value{}, fmt.Errorf("%w, not a %s", errSlice, item.Type())
-	}
-	idx := [3]int{0, item.Len(), 0}
-	for i, index := range indexes {
-		x, err := sliceIndex(index, capacity)
-		if err != nil {
-			return reflect.Value{}, err
-		}
-		idx[i] = x
-	}
-	switch {
-	case idx[0] > idx[1]:
-		return reflect.Value{}, fmt.Errorf("%w, not %d > %d", errSlice, idx[0], idx[1])
-	case len(indexes) < 3:
-		return item.Slice(idx[0], idx[1]), nil
-	case idx[1] > idx[2]:
-		return reflect.Value{}, fmt.Errorf("%w, not %d > %d", errSlice, idx[1], idx[2])
-	default:
-		return item.Slice3(idx[0], idx[1], idx[2]), nil
-	}
-}
-
-// sliceIndex returns index, a whole number from 0 to capacity, as an int.
-func sliceIndex(index reflect.Value, capacity int) (int, error) {
-	var x int64
-	switch index.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		x = index.Int()
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		if index.Uint() > math.MaxInt64 {
-			return 0, fmt.Errorf("%w, not %d", errSlice, index.Uint())
-		}
-		x = int64(index.Uint()) //nolint:gosec // G115: at most MaxInt64
-	case reflect.Invalid:
-		return 0, fmt.Errorf("%w, not nil", errSlice)
-	default:
-		return 0, fmt.Errorf("%w, not a %s", errSlice, index.Type())
-	}
-	if x < 0 || x > int64(capacity) {
-		return 0, fmt.Errorf("%w, %d out of 0 to %d", errSlice, x, capacity)
-	}
-	return int(x), nil
+	return usererr.New("tmpl_html_doctype", file)
 }
 
 // marked returns a copy of d whose items of format html are drawn with mark, all shown till its marks'
@@ -324,11 +230,11 @@ func parseDrawn(page []byte) *html.Node {
 
 // inPlace puts item, read alone, in doc where the marks of the item n of mark are: in place of each, the
 // nodes of item read as a fragment of what holds the mark, and reports whether they hold a <form> out of
-// a <template>, whose content the parser keeps apart. What
-// holds it is the nearest element the parser may not make itself (implied), which the item may end as
-// the page's would (a <tfoot> ends a <tbody>). A mark between the <head> and the <body>, where what is
-// not of the head starts the body, is put at the body's start; one elsewhere outside them is outside. A
-// mark in what the parser reads as text (a <title>, a <script>) is that text's, which shape leaves out.
+// a <template>, whose content the parser keeps apart. What holds it is the nearest element the parser
+// may not make itself (implied), which the item may end as the page's would (a <tfoot> ends a <tbody>).
+// A mark of the <html> itself, before the <head>, between it and the <body> tag or after the </body>, is
+// outside: there the parser puts a space in the <html>, a <meta> in the head and a <p> in the body. A mark
+// in what the parser reads as text (a <title>, a <script>) is that text's, which shape leaves out.
 func inPlace(doc *html.Node, mark string, n int, item string) (formIn, outside bool) {
 	want := mark + ":" + strconv.Itoa(n)
 	var marks []*html.Node
@@ -338,48 +244,23 @@ func inPlace(doc *html.Node, mark string, n int, item string) (formIn, outside b
 		}
 	}
 	for _, m := range marks {
-		context, parent, before := m.Parent, m.Parent, m
-		for implied(context) && context.DataAtom != atom.Body && context.DataAtom != atom.Html {
-			context = context.Parent
+		if m.Parent.Type != html.ElementNode || m.Parent.DataAtom == atom.Html {
+			return formIn, true
 		}
-		if context.Type != html.ElementNode || context.DataAtom == atom.Html {
-			body := bodyAfter(m)
-			if body == nil {
-				return formIn, true
-			}
-			context, parent, before = body, body, body.FirstChild
+		context := m.Parent
+		for implied(context) && context.DataAtom != atom.Body {
+			context = context.Parent
 		}
 		// A strings.Reader fails no read, the one error ParseFragment returns.
 		nodes, _ := html.ParseFragment(strings.NewReader(item), context) //nolint:errcheck // see above
 		inTemplate := slices.ContainsFunc(slices.Collect(m.Ancestors()), isTemplate)
 		for _, c := range nodes {
 			formIn = formIn || !inTemplate && holdsForm(c)
-			parent.InsertBefore(c, before)
+			m.Parent.InsertBefore(c, m)
 		}
 		m.Parent.RemoveChild(m)
 	}
 	return formIn, false
-}
-
-// bodyAfter returns the <body> after m, a node of the <html> after its <head>; nil for none.
-func bodyAfter(m *html.Node) *html.Node {
-	if m.Parent.Type != html.ElementNode {
-		return nil
-	}
-	for c := m.Parent.FirstChild; c != nil; c = c.NextSibling {
-		switch {
-		case c == m:
-			return nil
-		case c.Type == html.ElementNode && c.DataAtom == atom.Head:
-			for b := m.NextSibling; b != nil; b = b.NextSibling {
-				if b.Type == html.ElementNode && b.DataAtom == atom.Body {
-					return b
-				}
-			}
-			return nil
-		}
-	}
-	return nil
 }
 
 // isTemplate reports whether n is a <template> of HTML.
