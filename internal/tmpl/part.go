@@ -226,8 +226,8 @@ func (set *partSet) readBuiltin() error {
 		url := partsURL + name + ".json"
 		set.docs[url] = map[string]any{"type": "object", "description": p.about}
 		set.schemas[url] = &schema{
-			Format: "", Ref: "", Properties: nil, Items: nil, part: nil, Description: p.about, Type: "object", Enum: nil,
-			Required: nil,
+			Format: "", Ref: "", Properties: nil, Items: nil, part: nil, resolved: false, Description: p.about, Type: "object",
+			Enum: nil, Required: nil,
 		}
 		set.parts[name] = &part{
 			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: p.css, checks: nil,
@@ -669,22 +669,34 @@ func readPartWords(files fs.FS, file string) (words, error) {
 	return w, nil
 }
 
-// resolve fills what s and the schemas under it refer to among floe's in set: the items, types and
-// description of a part or a schema the parts share, after the description written beside the $ref.
+// resolve fills what s, the root of a schema, and the schemas under it refer to among floe's in set: the
+// items, types and description of a part or a schema the parts share, after the description written beside
+// the $ref. Under the root, a $ref to a part is an item the part draws; at the root, it takes in the part's
+// items, as one to a schema the parts share does, for page.html or the part's part.html to draw.
 func (s *schema) resolve(set *partSet) {
-	if s == nil {
+	s.resolveIn(set, true)
+}
+
+func (s *schema) resolveIn(set *partSet, root bool) {
+	if s == nil || s.resolved {
 		return
 	}
+	// Set first: a part that holds itself, which readOwn leaves out, would come back here.
+	s.resolved = true
 	for _, p := range s.Properties {
-		p.resolve(set)
+		p.resolveIn(set, false)
 	}
-	s.Items.resolve(set)
+	s.Items.resolveIn(set, false)
 	target, ok := set.schemas[s.Ref]
 	if !ok {
 		return
 	}
-	name, _ := partName(s.Ref)
-	s.part = set.parts[name]
+	// What it names is filled in first, so that what is taken from it is whole, a $ref at its root too.
+	target.resolve(set)
+	if !root {
+		name, _ := partName(s.Ref)
+		s.part = set.parts[name]
+	}
 	s.Description = joinDescriptions(s.Description, target.Description)
 	if s.Properties == nil {
 		s.Properties, s.Required = target.Properties, target.Required

@@ -688,7 +688,8 @@ type schema struct {
 	Properties map[string]*schema `json:"properties"`
 	Items      *schema            `json:"items"`
 
-	part *part // the part of floe's $ref names; nil for none
+	part     *part // the part of floe's $ref names; nil for none, and at the root, which takes in what it names
+	resolved bool  // whether resolve filled it in
 
 	// What floe template show tells of an item.
 	Description string   `json:"description"`

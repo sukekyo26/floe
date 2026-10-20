@@ -230,8 +230,7 @@ func (set *partSet) reserved(name string) bool {
 // checkNames refuses the part name, whose directory is dir, when its part.html names it in no
 // data-floe-part, names more than one part in one, or names a part there is none of, when part.yaml has
 // it take the look of a part there is none of, and when its schema holds a part there is none of, or a
-// look alone, or is another part's by a $ref at its root. floe's parts name themselves, one each, as a test
-// checks.
+// look alone. floe's parts name themselves, one each, as a test checks.
 func (set *partSet) checkNames(name, dir string) error {
 	p := set.parts[name]
 	// floe's are named as reading them names them.
@@ -331,8 +330,7 @@ func (set *partSet) candidates(look bool) string {
 }
 
 // checkHeld refuses the part p, whose files are at at, when its schema holds a part there is none of, of
-// one's own when own, or a look alone, or is another part's by a $ref at its root: the item would be drawn
-// by that part, its HTML then handed to p's part.html for its items.
+// one's own when own, or a look alone.
 func (set *partSet) checkHeld(p *part, at string, own bool) error {
 	// One left out has no schema; one of a name set keeps (tone) leaves floe's in place.
 	for _, held := range p.schema.refsUnder(nil) {
@@ -345,13 +343,6 @@ func (set *partSet) checkHeld(p *part, at string, own bool) error {
 		case own:
 			return usererr.New("tmpl_part_holds_unknown", path.Join(at, "schema.json"), held, set.names(drawing))
 		}
-	}
-	if p.schema == nil {
-		return nil
-	}
-	// A schema the parts share (tone) at the root has no part to draw it.
-	if name, ok := partName(p.schema.Ref); ok && set.parts[name] != nil {
-		return usererr.New("tmpl_part_root_ref", path.Join(at, "schema.json"), p.name, name)
 	}
 	return nil
 }

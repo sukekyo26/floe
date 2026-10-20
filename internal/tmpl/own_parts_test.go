@@ -109,6 +109,32 @@ func TestOwnParts(t *testing.T) {
 	}
 }
 
+// A $ref at the root of a part's schema takes in the items of what it names, a part's too, for its
+// part.html to draw: the parts those hold are drawn, in a part that holds it too, whatever order the parts
+// are read in, and floe part show tells them as the part's.
+func TestRootRefTakesIn(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"grid/schema.json": `{"description": "A table again", "$ref": "table.json"}`,
+		"grid/part.html":   `<div data-floe-part="grid">{{range .rows}}{{range .}}<i>{{.}}</i>{{end}}{{end}}</div>`,
+		"grid/part.css":    "",
+		"box/schema.json":  `{"type": "object", "properties": {"g": {"$ref": "floe:///parts/grid.json"}}}`,
+		"box/part.html":    `<div data-floe-part="box">{{.g}}</div>`,
+		"box/part.css":     "",
+	})
+	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/box.json"}, "aside": {"type": "string"}`), parts, "")
+	page, err := draw(l, "template: memo\nlang: en\nrisks: { g: { columns: [{ title: A }], rows: [[{ pill: ok, tone: good }]] } }\n")
+	if want := `<div data-floe-part="box"><div data-floe-part="grid"><i><span class="good" data-floe-part="cell">ok</span></i></div></div>`; err != nil ||
+		!strings.Contains(page, want) {
+		t.Errorf("drawing a part that holds one of a $ref at its root = %v, want %s:\n%s", err, want, page)
+	}
+	grid, err := l.DescribePart("grid")
+	if err != nil || !slices.Equal(grid.Holds, []string{"cell"}) || !strings.HasPrefix(grid.About, "A table again. A table") {
+		t.Errorf("DescribePart(grid) = %+v, %v, want it to hold cell", grid, err)
+	}
+}
+
 // A part of one's own that cannot be used is refused, with why, to a template that uses it, by its
 // schema or its page.html, and told as a warning to one that does not, which is drawn: one that takes the
 // look of one left out too, or holds it, floe's among them, and one that holds itself, which floe would
@@ -189,22 +215,9 @@ func TestBrokenOwnParts(t *testing.T) {
 		"marked/part.html":     `<div data-floe-part="marked">{{.text}}</div>`,
 		"marked/part.css":      "",
 		// A format of JSON Schema's own is checked as the part's schema is, and stays.
-		"dated/schema.json":   `{"type": "object", "properties": {"on": {"type": "string", "format": "date"}}}`,
-		"dated/part.html":     `<div data-floe-part="dated">{{.on}}</div>`,
-		"dated/part.css":      "",
-		"grid/schema.json":    `{"$ref": "floe:///parts/table.json"}`,
-		"grid/part.html":      `<div data-floe-part="grid">{{.columns}}</div>`,
-		"grid/part.css":       "",
-		"jotted/schema.json":  `{"description": "A note again", "$ref": "note.json"}`,
-		"jotted/part.html":    `<div data-floe-part="jotted">{{.text}}</div>`,
-		"jotted/part.css":     "",
-		"plotted/schema.json": `{"$ref": "floe:///parts/diagram.json"}`,
-		"plotted/part.html":   `<div data-floe-part="plotted">{{.}}</div>`,
-		"plotted/part.css":    "",
-		// A schema the parts share at the root is the part's own value.
-		"toned/schema.json": `{"$ref": "tone.json"}`,
-		"toned/part.html":   `<b data-floe-part="toned">{{.}}</b>`,
-		"toned/part.css":    "",
+		"dated/schema.json": `{"type": "object", "properties": {"on": {"type": "string", "format": "date"}}}`,
+		"dated/part.html":   `<div data-floe-part="dated">{{.on}}</div>`,
+		"dated/part.css":    "",
 	}
 	for _, name := range []string{"quote", "tone"} {
 		for file, body := range quote(name) {
@@ -261,12 +274,6 @@ func TestBrokenOwnParts(t *testing.T) {
 			`: #/items/properties/src: a part's schema takes no "format": "image"`,
 		"marked": "the part marked cannot be used: " + filepath.Join(parts, "marked", "schema.json") +
 			`: #/properties/text: a part's schema takes no "format": "markdown"`,
-		"grid": "the part grid cannot be used: " + filepath.Join(parts, "grid", "schema.json") +
-			": the part grid is the part table by the $ref at the root of its schema",
-		"jotted": "the part jotted cannot be used: " + filepath.Join(parts, "jotted", "schema.json") +
-			": the part jotted is the part note by the $ref at the root of its schema",
-		"plotted": "the part plotted cannot be used: " + filepath.Join(parts, "plotted", "schema.json") +
-			": the part plotted is the part diagram by the $ref at the root of its schema",
 	}
 	for name, why := range whys {
 		dir := memo(t, `"risks": {"$ref": "floe:///parts/`+name+`.json"}, "aside": {"type": "string"}`)
@@ -317,11 +324,6 @@ func TestBrokenOwnParts(t *testing.T) {
 	if page, err := draw(tmpl.NewLibrary(dated, parts, ""), "template: memo\nlang: en\nrisks: { on: 2026-10-20 }\n"); err != nil ||
 		!strings.Contains(page, `<div data-floe-part="dated">2026-10-20</div>`) {
 		t.Errorf("drawing a part of a format of JSON Schema's = %v", err)
-	}
-	toned := memo(t, `"risks": {"$ref": "floe:///parts/toned.json"}, "aside": {"type": "string"}`)
-	if page, err := draw(tmpl.NewLibrary(toned, parts, ""), "template: memo\nlang: en\nrisks: good\n"); err != nil ||
-		!strings.Contains(page, `<b data-floe-part="toned">good</b>`) {
-		t.Errorf("drawing a part of a tone = %v", err)
 	}
 	// floe's tone stays the tone of its parts.
 	if page, err := draw(tmpl.NewLibrary(memo(t, memoItems), parts, ""), "template: memo\nlang: en\n"+
