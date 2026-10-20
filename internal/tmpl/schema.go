@@ -54,7 +54,7 @@ func compileSchema(set *partSet, name, file string, src []byte) (*jsonschema.Sch
 		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
 	url := schemaURL(name)
-	loader := &noLoader{set: set, mistake: nil}
+	loader := &noLoader{set: set, alone: false, mistake: nil}
 	c := newCompiler(loader)
 	if err = c.AddResource(url, doc); err != nil {
 		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
@@ -65,14 +65,34 @@ func compileSchema(set *partSet, name, file string, src []byte) (*jsonschema.Sch
 		}
 	}
 	sch, err := c.Compile(url)
-	switch {
-	case err != nil && loader.mistake != nil:
-		// jsonschema wraps the loader's mistake in an error of its own, which does not unwrap.
-		return nil, nil, usererr.New("tmpl_item", file, loader.mistake)
-	case err != nil:
-		return nil, nil, fmt.Errorf("compile the schema of %s: %w", name, err)
+	if err != nil {
+		return nil, nil, compileMistake(err, loader, file, name)
 	}
 	return sch, doc, nil
+}
+
+// compilePart compiles the schema of the part name, at file, alone, as noLoader reads it then: what it
+// refers to that cannot be loaded is told at file, not at a template that uses it.
+func (set *partSet) compilePart(name, file string) error {
+	url := partsURL + name + ".json"
+	loader := &noLoader{set: set, alone: true, mistake: nil}
+	c := newCompiler(loader)
+	if err := c.AddResource(url, set.docs[url]); err != nil {
+		return fmt.Errorf("read the schema of the part %s: %w", name, err)
+	}
+	if _, err := c.Compile(url); err != nil {
+		return compileMistake(err, loader, file, "the part "+name)
+	}
+	return nil
+}
+
+// compileMistake is the mistake of a compiling of the schema of what, at file, that failed with err: the
+// loader's own, which jsonschema wraps in an error of its own that does not unwrap, told at file.
+func compileMistake(err error, loader *noLoader, file, what string) error {
+	if loader.mistake != nil {
+		return usererr.New("tmpl_item", file, loader.mistake)
+	}
+	return fmt.Errorf("compile the schema of %s: %w", what, err)
 }
 
 // schemaURL is the URL of the schema of the template name, which a relative $ref is read from.
@@ -98,7 +118,7 @@ func newCompiler(loader *noLoader) *jsonschema.Compiler {
 // a later floe would be drawn as if it had none.
 func knownFormat(set *partSet, f string) bool {
 	const url = "floe:///format.json"
-	c := newCompiler(&noLoader{set: set, mistake: nil})
+	c := newCompiler(&noLoader{set: set, alone: false, mistake: nil})
 	if err := c.AddResource(url, map[string]any{"format": f}); err != nil {
 		return false
 	}
@@ -121,17 +141,25 @@ func unknownPart(set *partSet, ref string) error {
 	return usererr.New("tmpl_part_unknown", ref, set.names(drawing))
 }
 
-// noLoader loads no schema: those of the parts of set are added to the compiler before. It keeps the
-// mistake it gave, which stops the compiling.
+// noLoader loads no schema: those of the parts of set are added to the compiler before. Alone, a part's
+// schema is compiled without the others: a schema the parts share is loaded, and a part that can be used
+// read as any value, as it is compiled itself. It keeps the mistake it gave, which stops the compiling.
 type noLoader struct {
 	set     *partSet
+	alone   bool
 	mistake error
 }
 
 func (n *noLoader) Load(url string) (any, error) {
-	if strings.HasPrefix(url, partsURL) {
+	name, _ := partName(url)
+	switch p := n.set.parts[name]; {
+	case n.alone && n.set.sharedSchema(url) != nil:
+		return n.set.docs[url], nil
+	case n.alone && p != nil && !p.isLook():
+		return map[string]any{}, nil
+	case strings.HasPrefix(url, partsURL):
 		n.mistake = unknownPart(n.set, url)
-	} else {
+	default:
 		n.mistake = usererr.New("tmpl_schema_url", url)
 	}
 	return nil, n.mistake

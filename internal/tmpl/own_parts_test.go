@@ -194,6 +194,17 @@ func TestBrokenOwnParts(t *testing.T) {
 		"anything/schema.json": `{"type": "object", "properties": {"inner": {"$ref": "any.json"}}}`,
 		"anything/part.html":   `<div data-floe-part="anything"></div>`,
 		"anything/part.css":    "",
+		// What a part's schema refers to that cannot be loaded is told at the part, under anyOf too, and a
+		// part that refers to one left out so is left out after it.
+		"hosted/schema.json":  `{"type": "object", "properties": {"text": {"$ref": "file:///etc/hosts"}}}`,
+		"hosted/part.html":    `<div data-floe-part="hosted"></div>`,
+		"hosted/part.css":     "",
+		"anyed/schema.json":   `{"anyOf": [{"$ref": "floe:///parts/nope.json"}]}`,
+		"anyed/part.html":     `<div data-floe-part="anyed"></div>`,
+		"anyed/part.css":      "",
+		"chained/schema.json": `{"type": "object", "properties": {"x": {"anyOf": [{"$ref": "hosted.json"}]}}}`,
+		"chained/part.html":   `<div data-floe-part="chained"></div>`,
+		"chained/part.css":    "",
 		// A format of JSON Schema's own is checked as the part's schema is, and stays.
 		"dated/schema.json":   `{"type": "object", "properties": {"on": {"type": "string", "format": "date"}}}`,
 		"dated/part.html":     `<div data-floe-part="dated">{{.on}}</div>`,
@@ -277,6 +288,12 @@ func TestBrokenOwnParts(t *testing.T) {
 		"loop":    "the part loop cannot be used: " + filepath.Join(parts, "loop") + ": the part loop holds itself (loop → loop)",
 		"ping":    "the part ping cannot be used: " + filepath.Join(parts, "ping") + ": the part ping holds itself (ping → pong → ping)",
 		"Quote":   "the part Quote cannot be used: " + filepath.Join(parts, "Quote") + ": a name is lower case letters",
+		"hosted": "the part hosted cannot be used: " + filepath.Join(parts, "hosted", "schema.json") +
+			": file:///etc/hosts: a schema refers to no other file or URL",
+		"anyed": "the part anyed cannot be used: " + filepath.Join(parts, "anyed", "schema.json") +
+			": floe:///parts/nope.json is not a part",
+		"chained": "the part chained cannot be used: " + filepath.Join(parts, "chained", "schema.json") +
+			": the part hosted cannot be used: ",
 		"blurb": "the part blurb cannot be used: " + filepath.Join(parts, "blurb", "schema.json") +
 			`: #/properties/body: a part's schema takes no "format": "html"`,
 		"anything": "the part anything cannot be used: " + filepath.Join(parts, "anything", "schema.json") +
