@@ -872,11 +872,15 @@ func (set *partSet) pageStyle(page string, found []tag, own [][]byte, theme stri
 	// The first sheet names the layers, which puts them in that order. Each file after it is a sheet of
 	// its own, so that a mistake in it, a comment or a block left open, ends with it.
 	var style strings.Builder
-	style.WriteString("<style>\n@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n" +
-		baseCSS + "}\n</style>\n")
+	// No </style in a CSS, in a comment or a string too, closes its <style> and leaves what follows to be
+	// read as the page's HTML.
+	write := func(body string) {
+		style.WriteString("<style>\n" + styleEnd.ReplaceAllString(body, `<\/$1`) + "</style>\n")
+	}
+	write("@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n" + baseCSS + "}\n")
 	sheet := func(layer, css string) {
 		if css != "" {
-			style.WriteString("<style>\n@layer " + layer + " {\n" + css + "}\n</style>\n")
+			write("@layer " + layer + " {\n" + css + "}\n")
 		}
 	}
 	// floe's own default palette defines every variable; the theme's after it, default of one's own too,
@@ -911,6 +915,13 @@ func (set *partSet) pageStyle(page string, found []tag, own [][]byte, theme stri
 	}
 	return style.String(), nil
 }
+
+// styleEnd finds </style, of either case, which HTML reads as the end of a <style>. Written <\/style it is
+// the same CSS in a string, a comment or a url(): the / is escaped, and no comment starts at a / that a
+// letter follows.
+// LIMIT: elsewhere, as a variable's value (--x: </style>), the value keeps the \; written so, it closed the
+// <style> anyway.
+var styleEnd = regexp.MustCompile(`(?i)</(style)`)
 
 // misnamedIn returns the mistake of the first name of named, the names of a page or of HTML of the data,
 // that the page is refused for, or nil: a part that cannot be used, by a table of Markdown or HTML of the

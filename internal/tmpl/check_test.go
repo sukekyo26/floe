@@ -394,6 +394,27 @@ func TestCSSBraceRefused(t *testing.T) {
 	}
 }
 
+// A </style of the template's CSS, in a comment or a string, is written <\/style: it closes no <style>,
+// and what follows it stays CSS.
+func TestCSSStyleEndEscaped(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{
+		"page.css":           "/* </STYLE><b id=\"x\">x</b><style> */\n",
+		"themes/default.css": "a::before { content: \"</style>\"; }\n",
+	})
+	if warnings, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 0 {
+		t.Errorf("Check = %v, %v", warnings, mistakes)
+	}
+	page, err := draw(tmpl.NewLibrary(filepath.Dir(dir), "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(page, `/* <\/STYLE><b id="x">x</b><style> */`) || !strings.Contains(page, `content: "<\/style>"`) {
+		t.Errorf("drawn page = %s", page)
+	}
+}
+
 // A colour that changes with the mode, set on :scope for light mode alone, is warned of at the file that
 // sets it: over every palette, it would stay in dark mode too.
 func TestCheckScopeColours(t *testing.T) {

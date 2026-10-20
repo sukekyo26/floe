@@ -472,3 +472,23 @@ func TestReadWords(t *testing.T) {
 		}
 	}
 }
+
+// No CSS closes its <style>: each </style, of any case, is written <\/style, and the <style>s floe
+// writes are all that end.
+func TestPageStyleEnd(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	css := "/* </Style><b>x</b> */ a { background: url(data:image/svg+xml,<svg><style>p{}</style></svg>); }"
+	style, err := set.pageStyle("<body></body>", nil, [][]byte{[]byte(css)}, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ends, sheets := strings.Count(strings.ToLower(style), "</style"), strings.Count(style, "<style>\n"); ends != sheets ||
+		!strings.Contains(style, `/* <\/Style><b>x</b> */`) || !strings.Contains(style, `p{}<\/style></svg>`) {
+		t.Errorf("pageStyle = %s, %d ends of %d <style>s", style, ends, sheets)
+	}
+}
