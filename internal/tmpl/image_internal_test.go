@@ -147,7 +147,8 @@ func TestAssetsReadOnce(t *testing.T) {
 	}
 }
 
-// The images a drawing watches are those it may read, once each: not a path it refuses.
+// The images a drawing watches, and a publish asks for, are those it may read, once each: not a name it
+// refuses whatever file is there.
 func TestTriedImages(t *testing.T) {
 	t.Parallel()
 
@@ -155,7 +156,7 @@ func TestTriedImages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, root := data(t, "pics: [a.png, ../b.png, a.png, .c.png]\n")
+	d, root := data(t, "pics: [a.png, ../b.png, a.png, .c.png, notes.txt, Data.yaml/d.png]\n")
 	_ = checkImages(s, d, root, diskImages(t.TempDir())) //nolint:errcheck // the images are missing; what was tried is the point
 	if want := []string{"a.png"}; !slices.Equal(d.tried, want) {
 		t.Errorf("tried = %v, want %v", d.tried, want)

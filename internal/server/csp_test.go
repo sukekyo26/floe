@@ -87,7 +87,7 @@ func TestUICutOff(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	out = append(out, "out:"+got())
 
 	// Linked HTML gets out: the requests would be seen.
-	e.publish(t, e.write(t, filepath.Join("site", "out.html"), tries), store.Options{Link: true, Slug: ptr("out")})
+	e.link(t, e.write(t, filepath.Join("site", "out.html"), tries), store.Options{Slug: ptr("out")})
 	b.navigate("/a/out/?raw")
 	const gotOut = "/fetch /form /img /xhr"
 	for deadline := time.Now().Add(waitLimit); got() != gotOut && time.Now().Before(deadline); {

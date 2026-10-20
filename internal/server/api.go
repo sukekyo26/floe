@@ -84,10 +84,10 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	opts := store.Options{
-		Link: true, Slug: text(input["slug"]), Title: nil, Description: text(input["description"]),
-		Theme: nil, PartsTheme: nil, Force: false,
+		Slug: text(input["slug"]), Title: nil, Description: text(input["description"]), Theme: nil, PartsTheme: nil,
+		Force: false,
 	}
-	entry, err := s.cfg.Store.Prepare(r.Context(), *path, opts, filepath.Dir(*path))
+	entry, err := s.cfg.Store.PrepareLink(r.Context(), *path, opts, filepath.Dir(*path))
 	if err != nil {
 		refuse(w, r, err)
 		return

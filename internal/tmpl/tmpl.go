@@ -81,7 +81,7 @@ type Data struct {
 	// its items drawn by floe's parts, by the path of keys to each (pathKey); nil without one
 	parts    map[string]template.HTML
 	diagrams bool     // whether it has a diagram, for the page to get their style and zoom
-	tried    []string // the images it names, read or not, as it writes them
+	tried    []string // the images it names that a file can make right, read or not, as it writes them
 	icons    []string // the index files of the icon sets its diagrams may show, when it has one
 }
 
@@ -107,7 +107,7 @@ type Sources struct {
 	Templates string   // the directory of templates of one's own, where one may come; "" for none
 	Parts     []string // the directories of parts of one's own read, whose files the data may be drawn with
 	Template  string   // the directory of the template of one's own the data names; "" for none
-	Images    []string // the images the data names, read or not, as it writes them: under ImagesDir
+	Images    []string // the images it names that a file can make right, read or not, as written: under ImagesDir
 	ImagesDir string   // the directory of the data file on disk, its images under it
 	Icons     []string // the index files of the icon sets, when it has a diagram, fetched or not
 }
@@ -129,8 +129,8 @@ var errNoImages = errors.New("tmpl.ReadFS: no fs.FS to read the images from")
 // ReadFS reads the data file src as Read does, its images read from images, the directory of the data
 // file, which its mistakes name dir. images must list its directories (fs.ReadDir), as os.DirFS and
 // fstest.MapFS do: each name on an image's path is looked up in its directory, case and all. It returns
-// the images the data names, read or not, as it writes them (Sources.Images): nothing of it is on disk
-// to watch.
+// the images the data names that a file can make right, read or not, as it writes them (Sources.Images):
+// nothing of it is on disk to watch.
 func (l *Library) ReadFS(file string, src []byte, images fs.FS, dir string, themes Themes) (*Data, []string, error) {
 	if images == nil {
 		return nil, nil, errNoImages
