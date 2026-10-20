@@ -176,7 +176,7 @@ func TestDrawnStored(t *testing.T) {
 	// macOS ignores it.
 	e.write(t, "clash/Data.yaml/c.png", string(png))
 	clash := e.write(t, "clash/sizes.yaml", strings.Replace(right, "img/chart.png", "Data.yaml/c.png", 1))
-	if _, prepErr := e.store.Prepare(t.Context(), clash, store.Options{Slug: ptr("sizes")}, e.tmp); prepErr == nil ||
+	if _, prepErr := e.prepare(t.Context(), clash, store.Options{Slug: ptr("sizes")}, e.tmp); prepErr == nil ||
 		!strings.Contains(prepErr.Error(), `sizes.yaml:4:8: chart: "Data.yaml/c.png" is under a directory named data.yaml`) {
 		t.Errorf("publish of an image under Data.yaml/ = %v", prepErr)
 	}

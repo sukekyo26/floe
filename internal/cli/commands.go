@@ -2,9 +2,12 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -129,59 +132,124 @@ refused unless --force.`,
 	return cmd
 }
 
-// publish checks, makes sure the server runs, then saves, so that a failed publish leaves nothing in
-// the store.
+// publish checks what it can without the server, makes sure the server runs, then has it check and
+// save the page, so that a failed publish leaves nothing in the store.
 func (a *app) publish(ctx context.Context, file string, link bool, opts store.Options) error {
-	build, err := daemon.Build()
-	if err != nil {
-		return err //nolint:wrapcheck // already says what failed
-	}
-	server := daemon.Server{
-		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.cfg.templates, Parts: a.cfg.parts,
-		Icons: a.cfg.icons,
-		Env:   a.serverEnv(),
-	}
-	// Before the check, which would find mistakes with templates the server does not draw with.
-	if err = daemon.CheckDirs(ctx, server); err != nil {
-		return err //nolint:wrapcheck // the message is for the user as is
-	}
-	st := a.store()
-	prepare := st.Prepare
+	publish := a.publishData
 	if link {
-		prepare = st.PrepareLink
+		publish = a.publishLink
 	}
-	entry, err := prepare(ctx, file, opts, a.env.Dir)
+	saved, err := publish(ctx, file, opts)
 	if err != nil {
-		return err //nolint:wrapcheck // the message is for the user as is
+		return err
 	}
-	if err = daemon.Ensure(ctx, server); err != nil {
-		return err //nolint:wrapcheck // the message is for the user as is
-	}
-	if err := st.Save(entry); err != nil {
-		return err //nolint:wrapcheck // already says what failed
-	}
-	url := a.cfg.base() + "/a/" + entry.Slug + "/"
+	url := a.cfg.base() + "/a/" + saved.Slug + "/"
 	// A republish does not open another tab; the open one reloads itself.
-	if entry.Prev == nil {
+	if saved.Prev == nil {
 		daemon.OpenBrowser(ctx, a.env.Getenv("BROWSER"), url)
 	}
 	a.out("%s", url)
-	if entry.Prev != nil {
-		a.noticeUpdate(entry)
+	if saved.Prev != nil {
+		a.noticeUpdate(saved)
 	}
 	return nil
 }
 
+// publishLink links file, by its absolute path: the server reads it, as it draws it.
+func (a *app) publishLink(ctx context.Context, file string, opts store.Options) (server.Saved, error) {
+	var saved server.Saved
+	path := a.abs(file)
+	if _, err := os.Stat(path); err != nil {
+		return saved, usererr.CannotRead(file, err)
+	}
+	c, err := a.client(ctx, false)
+	if err != nil {
+		return saved, err
+	}
+	err = c.do(ctx, http.MethodPost, "/api/artifacts", server.Link{
+		Path: path, Slug: opts.Slug, Title: opts.Title, Description: opts.Description, Theme: opts.Theme,
+		PartsTheme: opts.PartsTheme, Force: opts.Force,
+	}, &saved)
+	return saved, err
+}
+
+// publishData sends the data file file under its slug. The images the server asks for are read under
+// the data file's directory and sent with it again.
+func (a *app) publishData(ctx context.Context, file string, opts store.Options) (server.Saved, error) {
+	var saved server.Saved
+	read, err := store.ReadUpload(ctx, file, a.env.Dir)
+	if err != nil {
+		return saved, err //nolint:wrapcheck // a usererr for the user as is
+	}
+	// Trimmed as the store trims the options, so that the URL names the slug the page is saved under.
+	if opts.Slug != nil {
+		trimmed := strings.TrimSpace(*opts.Slug)
+		opts.Slug = &trimmed
+	}
+	slug, err := store.DataSlug(file, opts.Slug)
+	if err != nil {
+		return saved, err //nolint:wrapcheck // a usererr for the user as is
+	}
+	c, err := a.client(ctx, false)
+	if err != nil {
+		return saved, err
+	}
+	up := server.Upload{
+		File: read.File, Dir: read.Dir, Source: read.Source, Images: nil, Project: read.Project, Title: opts.Title,
+		Description: opts.Description, Theme: opts.Theme, PartsTheme: opts.PartsTheme, Force: opts.Force,
+	}
+	path := "/api/artifacts/" + slug
+	err = c.do(ctx, http.MethodPut, path, up, &saved)
+	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusUnprocessableEntity {
+		var need server.ImagesNeeded
+		if err = json.Unmarshal(re.body, &need); err != nil {
+			return saved, fmt.Errorf("read the images the server asks for: %w", err)
+		}
+		if up.Images, err = readImages(up.Dir, need.Images); err != nil {
+			return saved, err
+		}
+		// Sent with its images, it is not asked again.
+		err = c.do(ctx, http.MethodPut, path, up, &saved)
+	}
+	return saved, tooLarge(err)
+}
+
+// tooLarge tells a publish of a data file refused for its size how large one may be; any other error
+// it leaves as it is.
+func tooLarge(err error) error {
+	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusRequestEntityTooLarge {
+		return usererr.New("cli_publish_large", strconv.Itoa(server.MaxUpload>>20)+" MiB")
+	}
+	return err
+}
+
+// client makes sure the server of this store runs, of this build, and returns what calls it. anyDirs
+// takes a server that draws with other directories than this command's, for one that draws nothing.
+func (a *app) client(ctx context.Context, anyDirs bool) (client, error) {
+	build, err := daemon.Build()
+	if err != nil {
+		return client{}, err //nolint:wrapcheck // already says what failed
+	}
+	err = daemon.Ensure(ctx, daemon.Server{
+		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.cfg.templates, Parts: a.cfg.parts,
+		Icons: a.cfg.icons, AnyDirs: anyDirs, Env: a.serverEnv(),
+	})
+	if err != nil {
+		return client{}, err //nolint:wrapcheck // the message is for the user as is
+	}
+	return client{base: a.cfg.base(), lang: a.cat.Lang()}, nil
+}
+
 // noticeUpdate says that a page was overwritten, so that reusing a slug for another page (say "plan")
 // does not go unnoticed. A link without a pinned title has no title of its own to compare.
-func (a *app) noticeUpdate(e *store.Entry) {
-	prev := e.Prev
+func (a *app) noticeUpdate(saved server.Saved) {
+	prev := saved.Prev
 	if prev.Title == "" {
-		a.warn("cli_updated", e.Slug, localTime(prev.UpdatedAt))
+		a.warn("cli_updated", saved.Slug, localTime(prev.UpdatedAt))
 		return
 	}
-	a.warn("cli_updated_titled", e.Slug, localTime(prev.UpdatedAt), prev.Title)
-	if e.Meta.Title != prev.Title {
+	a.warn("cli_updated_titled", saved.Slug, localTime(prev.UpdatedAt), prev.Title)
+	if saved.Title != prev.Title {
 		a.warn("cli_title_changed")
 	}
 }
@@ -207,10 +275,14 @@ func (a *app) listCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List pages, newest first (updated, slug, title, linked path; tab-separated)",
 		Args:  usage(cobra.NoArgs),
-		RunE: func(*cobra.Command, []string) error {
-			list, err := a.store().List()
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			c, err := a.client(cmd.Context(), true)
 			if err != nil {
-				return err //nolint:wrapcheck // already says what failed
+				return err
+			}
+			var list []store.Listed
+			if err = c.do(cmd.Context(), http.MethodGet, "/api/artifacts", nil, &list); err != nil {
+				return err
 			}
 			for _, l := range list {
 				a.out("%s\t%s\t%s\t%s", localTime(l.UpdatedAt), l.Slug, l.Title, l.Path)
@@ -225,11 +297,18 @@ func (a *app) rmCmd() *cobra.Command {
 		Use:   "rm <slug>...",
 		Short: "Delete pages in order, stopping at the first failure (a linked file itself is left alone)",
 		Args:  usage(cobra.MinimumNArgs(1)),
-		RunE: func(_ *cobra.Command, args []string) error {
-			st := a.store()
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := a.client(cmd.Context(), true)
+			if err != nil {
+				return err
+			}
 			for _, slug := range args {
-				if err := st.Remove(slug); err != nil {
-					return err //nolint:wrapcheck // the message is for the user as is
+				err = c.do(cmd.Context(), http.MethodDelete, "/api/artifacts/"+url.PathEscape(slug), nil, nil)
+				if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
+					return usererr.New("store_no_page", slug)
+				}
+				if err != nil {
+					return err
 				}
 			}
 			return nil

@@ -192,6 +192,7 @@ var messagesEN = map[string]string{
 	"cli_render_same_file_case":    "%s and %s would write %s and %s, which are one file where case is ignored (macOS); rename one of them",
 	"cli_render_missing":           "%s is missing: write it from %s with floe render",
 	"cli_render_stale":             "%s is not what %s draws: write it again with floe render",
+	"cli_publish_large":            "the data file and its images are larger than the %s a publish takes: make them smaller, or show fewer images",
 	"cli_title_empty":              "--title is empty: give the page a name, or omit --title to take the data file's title:, or a link's <title> or <h1>",
 	"cli_theme_empty":              "--theme is empty: name a theme of the template, or omit --theme to take the data file's theme:",
 	"cli_port_in_use":              "port %d is in use; stop that program or set FLOE_PORT",

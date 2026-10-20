@@ -100,7 +100,7 @@ sections:
 - `lang:` is the page's language (`<html lang>`), a BCP 47 tag (`en`, `ja`, `pt-BR`). Every data file names one.
 - `theme:` picks a theme of the template, which styles the page; `report` has `default`.
 - `parts-theme:` picks a theme of floe's parts, which styles the parts and Markdown's quotes, the same in every template: `default` (faces set in panels, notes in their tone's colour), `soft` (faces with round corners), `editorial` (rules and thin frames, as in print), `ink` (a table's heading in ink, states filled with their colour), `brutal` (thick black frames, primary faces and hard shadows), `blueprint` (blue ink on squared paper, every cell ruled), `notebook` (ruled paper, marker strokes and sticky notes), `swiss` (heavy black rules, large numbers and red, states told by shape) and `washi` (sumi and vermilion on washi in a Mincho face, seals and quotes ruled in vermilion).
-- An image the template takes (an item of `"format": "image"`) is a path under the data file's directory; the image goes into the page.
+- An image the template takes (an item of `"format": "image"`) is a path under the data file's directory; the image goes into the page. `floe publish` sends the server the images it asks for: one that is not there is told at its line and column, while one floe will not send (through a symlink, larger than 1 MiB, not a file, unreadable or not holding its type) is told without them.
 - A diagram (the part `diagram`, in `report` or a template's own) is a spec written in place, with the parts and checks of [`floe diagram render`](#floe-diagram-render-specyaml), its mistakes at the data file's lines and columns. The ids of the diagrams of a page must differ. Its icons come from `FLOE_ICONS_DIR`; for a published page, from that of the server, which draws it.
 - A script (the part `script`, in `report` or a template's own) is `js`, a function the page calls with an empty element in its place and `data`. A mapping in `data` comes in the order of its keys' names (write a list where the order matters), and the function runs where it stands, before the rest of the page is read. A `js` holding `</script` or `<!--` is refused; a mistake inside the function shows in the browser.
 - A template of your own, in `FLOE_TEMPLATES_DIR`, takes the place of a built-in one of its name. [templates.md](templates.md) tells how to write one.
@@ -133,7 +133,7 @@ A linked data file is drawn each time its page is opened, with `--theme` and `--
 - When it has mistakes, the tab shows them instead of the page, and comes back to the page once they are fixed and saved.
 - Nothing of its directory is served: its images are in its page. Its download is the page drawn, its CSP kept in a `<meta>`.
 - Its title in the list is its `title:`, read each time.
-- It is drawn with the server's templates of your own (`FLOE_TEMPLATES_DIR` of the `floe publish` or `floe serve` that started it), as every page is.
+- It is drawn with the server's templates of your own (`FLOE_TEMPLATES_DIR` of the `floe publish`, `floe list`, `floe rm` or `floe serve` that started it), as every page is.
 
 ---
 
@@ -234,15 +234,15 @@ Check every part and parts theme of your own in `$FLOE_PARTS_DIR`, as a page wou
 
 ## `floe list`
 
-Print the pages, newest first. Each line holds four tab-separated columns: the update time (local, `YYYY-MM-DD HH:MM`), the slug, the title and the linked path (empty for a stored page).
+Print the pages, newest first, as the server lists them (it is started when it is not running). Each line holds four tab-separated columns: the update time (local, `YYYY-MM-DD HH:MM`), the slug, the title and the linked path (empty for a stored page).
 
 ## `floe rm <slug>...`
 
-Delete the pages in order, stopping at the first failure (such as a page that does not exist). A linked file itself is left alone; only its registration is removed.
+Delete the pages in order through the server (it is started when it is not running), stopping at the first failure (such as a page that does not exist). A linked file itself is left alone; only its registration is removed.
 
 ## `floe serve`
 
-Run the server in the foreground on `127.0.0.1` until SIGTERM or SIGINT. `floe publish` starts the same server in the background, so this is mainly for seeing its errors.
+Run the server in the foreground on `127.0.0.1` until SIGTERM or SIGINT. `floe publish`, `floe list` and `floe rm` start the same server in the background, so this is mainly for seeing its errors.
 
 ## `floe stop`
 
@@ -332,9 +332,12 @@ List the fetched icons whose name contains every word (case does not matter), on
 
 ## The server
 
-- `floe publish` starts the server when it is not running, and keeps using it otherwise. Two publishes racing to start it both end up on the one that comes up.
-- After floe is reinstalled (another version, or a rebuilt binary), the next publish replaces the running server.
+- `floe publish`, `floe list` and `floe rm` start the server when it is not running, and keep using it otherwise. Two of them racing to start it both end up on the one that comes up.
+- They ask the server to check, save, list and delete pages: the server is the only one that writes the store, and a publish is checked with the server's templates, parts and icons.
+- After floe is reinstalled (another version, or a rebuilt binary), the next of them replaces the running server.
 - The server keeps running until `floe stop`, logout or reboot.
+- The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` and `FLOE_ICONS_DIR` of the command that started it, `floe list` and `floe rm` included. A publish with other ones is refused until `floe stop`, so set yours in the shell's environment, where every command takes them, rather than on one command.
+- A server serves one store (`FLOE_DIR`) on its port: while it runs, a command for another store is refused. Give that store another `FLOE_PORT`.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
 - Pages run in a sandbox, so their scripts cannot reach the management page's API.
 - The scripts of a page drawn from a data file cannot send what it holds out with `fetch`, XHR, images from elsewhere or forms, its download included; see [templates](templates.md#pagehtml). Linked HTML loads what it loads.
