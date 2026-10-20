@@ -65,8 +65,8 @@ func compileSchema(set *partSet, name string, src []byte) (*jsonschema.Schema, a
 	}
 	sch, err := c.Compile(url)
 	// jsonschema wraps noLoader's mistake in an error of its own, which does not unwrap: floe's own is told,
-	// so that it is worded in the reader's language. The schema it is in, the template's or a part's it
-	// refers to, is not known.
+	// so that it is worded in the reader's language.
+	// LIMIT: names the template, not the schema the $ref is in (its own or a part's); the schema map tells it (#90).
 	var load *jsonschema.LoadURLError
 	var mistake *usererr.Error
 	switch {
