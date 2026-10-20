@@ -75,15 +75,24 @@ type Options struct {
 	Force       bool
 }
 
-// trimmed is o with each string given trimmed, empty or not, whoever gave it.
-func (o Options) trimmed() Options {
+// normalized is o with each string given trimmed, whoever gave it. A title given empty is refused, as it
+// would leave the list blank, and so is a theme, which would take the data's.
+func (o Options) normalized() (Options, error) {
 	for _, field := range []**string{&o.Slug, &o.Title, &o.Description, &o.Theme, &o.PartsTheme} {
 		if *field != nil {
 			v := strings.TrimSpace(**field)
 			*field = &v
 		}
 	}
-	return o
+	for _, f := range []struct {
+		value *string
+		empty string
+	}{{o.Title, "cli_title_empty"}, {o.Theme, "cli_theme_empty"}, {o.PartsTheme, "cli_parts_theme_empty"}} {
+		if f.value != nil && *f.value == "" {
+			return o, usererr.New(f.empty)
+		}
+	}
+	return o, nil
 }
 
 // themes are the themes o gives over the data's.
@@ -144,9 +153,12 @@ func (e *NeedImages) Error() string {
 // directory, and builds what Save writes, without writing anything. cwd resolves a relative file and
 // names the project the page belongs to.
 func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
-	opts = opts.trimmed()
 	// Before reading: a page is drawn from a data file, whatever is or is not there.
 	if err := checkData(file); err != nil {
+		return nil, err
+	}
+	opts, err := opts.normalized()
+	if err != nil {
 		return nil, err
 	}
 	abs := file
@@ -169,8 +181,11 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 // the publisher's disk. Without up.Images, a data file that names images is answered NeedImages, once
 // nothing that needs no image refuses the publish (the slug, the page's owner).
 func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
-	opts = opts.trimmed()
 	if err := checkData(up.File); err != nil {
+		return nil, err
+	}
+	opts, err := opts.normalized()
+	if err != nil {
 		return nil, err
 	}
 	images := up.Images
@@ -220,7 +235,10 @@ func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, themes tmpl
 // a relative file; the project of a link is that of its directory. A data file linked is checked as a
 // stored page is, its images under its real directory.
 func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
-	opts = opts.trimmed()
+	opts, err := opts.normalized()
+	if err != nil {
+		return nil, err
+	}
 	path, src, err := s.readLink(file, opts, cwd)
 	if err != nil {
 		return nil, err

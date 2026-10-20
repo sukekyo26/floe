@@ -77,12 +77,12 @@ func refuse(w http.ResponseWriter, r *http.Request, err error) {
 	var ue *usererr.Error
 	// The mistakes of a data file, at their lines and columns, are worded too.
 	var l i18n.Localizer
-	status, message := http.StatusInternalServerError, err.Error()
+	status, message := http.StatusInternalServerError, mistakesText(catalog(r), err)
 	switch {
 	case errors.As(err, &ue) && ue.Conflict:
-		status, message = http.StatusConflict, ue.Localize(catalog(r))
+		status = http.StatusConflict
 	case errors.As(err, &l):
-		status, message = http.StatusBadRequest, l.Localize(catalog(r))
+		status = http.StatusBadRequest
 	}
 	if !strings.Contains(r.Header.Get("Accept"), "application/json") {
 		send(w, status, message)

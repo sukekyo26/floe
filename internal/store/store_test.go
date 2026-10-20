@@ -1253,7 +1253,7 @@ func TestWriteAtomic(t *testing.T) { //nolint:paralleltest // sets the umask, wh
 
 // PrepareData reads nothing from disk: a data file that names images is asked for them first, then
 // checked with those sent, which the entry keeps. A publish its slug, its owner or its schema refuses
-// is refused before they are asked for.
+// is refused before they are asked for, and so is a blank title.
 func TestPrepareData(t *testing.T) {
 	t.Parallel()
 
@@ -1274,6 +1274,13 @@ func TestPrepareData(t *testing.T) {
 	bad.Source = []byte("template: sizes\nlang: en\nfiles: 3\nchart: img/chart.png\n")
 	if _, err = s.PrepareData(bad, store.Options{}); err == nil || errors.As(err, &need) || !strings.Contains(err.Error(), "plans/sizes.yaml:3:8") {
 		t.Errorf("PrepareData of data the schema refuses = %v, want its mistake before images are asked for", err)
+	}
+	bad.Source = []byte("template: sizes\ntheme: nosuch\nlang: en\nfiles: []\nchart: img/chart.png\n")
+	if _, err = s.PrepareData(bad, store.Options{}); err == nil || errors.As(err, &need) || !strings.Contains(err.Error(), "nosuch") {
+		t.Errorf("PrepareData of data naming no theme of its template = %v, want its mistake before images are asked for", err)
+	}
+	if _, err = s.PrepareData(up, store.Options{Title: ptr(" ")}); err == nil || !strings.Contains(err.Error(), "--title is empty") {
+		t.Errorf("PrepareData with a blank title = %v, want it refused", err)
 	}
 	up.Images = fstest.MapFS{}
 	want := `plans/sizes.yaml:4:8: chart: there is no image "img/chart.png" under /plans`
