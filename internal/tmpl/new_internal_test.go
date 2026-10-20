@@ -29,3 +29,27 @@ func TestRenamed(t *testing.T) {
 		}
 	}
 }
+
+// A copy of a part names itself as its box, where the box of the original named it as written, and
+// nowhere else.
+func TestRenamedPart(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ src, want string }{
+		{`<div data-floe-part="table"><span data-floe-part="cell">x</span></div>`, `<div data-floe-part="grid"><span data-floe-part="cell">x</span></div>`},
+		{`<div DATA-FLOE-PART='table' class="t">`, `<div DATA-FLOE-PART='grid' class="t">`},
+		{`<div data-floe-part = table>`, `<div data-floe-part = grid>`},
+		// A look of the original, a name among others, one put together, and text are kept.
+		{`<p data-floe-look="table">`, `<p data-floe-look="table">`},
+		{`<p data-floe-part="table compare">`, `<p data-floe-part="table compare">`},
+		{`<p data-floe-part="{{.k}}table">`, `<p data-floe-part="{{.k}}table">`},
+		{`<!-- data-floe-part="table" --><p>data-floe-part="table"</p>`, `<!-- data-floe-part="table" --><p>data-floe-part="table"</p>`},
+		// An attribute a template writes as it likes is the box all the same.
+		{`<p title='data-floe-part="table"' {{if .x}}data-floe-part="table"{{end}}>`, `<p title='data-floe-part="table"' {{if .x}}data-floe-part="grid"{{end}}>`},
+		{`<a data-floe-part="table"></a><b data-floe-part="table"></b>`, `<a data-floe-part="grid"></a><b data-floe-part="grid"></b>`},
+	} {
+		if got := renamedPart(tt.src, "table", "grid"); got != tt.want {
+			t.Errorf("renamedPart(%q) = %q, want %q", tt.src, got, tt.want)
+		}
+	}
+}

@@ -73,6 +73,20 @@ func Check(dir, partsDir, iconsDir string) (warnings []*usererr.Error, mistakes 
 	return warnings, nil
 }
 
+// CheckOwnParts checks the parts and the parts themes of one's own in partsDir, "" for none, as a page
+// would read them: the mistakes are of those that cannot be used, and the warnings of what goes into no
+// page. It draws none of them, which have no data; a template that uses one draws its example with it.
+func CheckOwnParts(partsDir string) (warnings []*usererr.Error, mistakes []error) {
+	set, err := partsIn(partsDir)
+	if err != nil {
+		return nil, []error{err}
+	}
+	for _, why := range slices.Concat(set.unusable(nil), set.unusableThemes(nil)) {
+		mistakes = append(mistakes, why)
+	}
+	return set.strays, mistakes
+}
+
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values,
 // page.html and the default theme.
 func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
@@ -154,16 +168,9 @@ func brokenParts(set *partSet, named []namedPart) []*usererr.Error {
 			refused[n.name] = true
 		}
 	}
-	var warnings []*usererr.Error
-	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
-		// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
-		if !refused[name] || set.parts[name] != nil {
-			warnings = append(warnings, usererr.New("tmpl_part_broken", name, set.broken[name]))
-		}
-	}
-	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
-		warnings = append(warnings, usererr.New("tmpl_parts_theme_broken", name, set.brokenThemes[name]))
-	}
+	// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
+	warnings := set.unusable(func(name string) bool { return refused[name] && set.parts[name] == nil })
+	warnings = append(warnings, set.unusableThemes(nil)...)
 	return append(warnings, set.strays...)
 }
 

@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `floe part`: `list` the parts, floe's and your own, with where they are
+  and their descriptions; `show <name>` what a part takes and its items, the
+  looks it takes, the parts it holds and the parts themes with a file of it;
+  `new <name> --from <part>` a part of your own as a copy of another, its box
+  renamed and the file of the original of each parts theme copied, writing
+  nothing over; and `check` every part and parts theme of your own, a mistake
+  exiting 1. A look alone gives its description in `part.yaml`'s
+  `description:`.
 - Add parts of your own: a directory each in `FLOE_PARTS_DIR` (default
   `$XDG_CONFIG_HOME/floe/parts`) of the files floe's parts have, referred to
   as `floe:///parts/<name>.json`. One of the name of one of floe's takes its

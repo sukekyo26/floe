@@ -75,6 +75,79 @@ func (l *Library) Describe(name string) (*Description, error) {
 	return d, nil
 }
 
+// PartDescription is what floe part list and show tell of a part.
+type PartDescription struct {
+	Name     string
+	Path     string // where a part of one's own was found; "" for floe's
+	Replaces bool   // whether it is one of one's own in place of floe's of its name
+	Look     bool   // a look alone, which draws nothing, and so takes nothing
+	About    string // its schema's description, or a look's part.yaml's
+	// Takes is what it takes, the root of its schema: its Items are those of keys and values, or of the
+	// keys and values a list of them holds.
+	Takes  Item
+	Looks  []string // the looks it takes, and those they take in turn, in the order they go into a page
+	Holds  []string // the parts its schema holds, by name
+	Themes []string // the parts themes with a file of it, by name
+}
+
+// Parts tells of every part, floe's and one's own, by name, and returns the mistakes of the parts that
+// cannot be used, which it leaves out.
+func (l *Library) Parts() (parts []*PartDescription, broken []error, err error) {
+	set, err := partsIn(l.parts)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
+		parts = append(parts, set.describe(name))
+	}
+	for _, why := range set.unusable(nil) {
+		broken = append(broken, why)
+	}
+	return parts, broken, nil
+}
+
+// DescribePart tells of the part name.
+func (l *Library) DescribePart(name string) (*PartDescription, error) {
+	set, err := partsIn(l.parts)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = set.find(name); err != nil {
+		return nil, err
+	}
+	return set.describe(name), nil
+}
+
+// describe tells of the part name of set.
+func (set *partSet) describe(name string) *PartDescription {
+	p := set.parts[name]
+	about := p.about
+	var takes Item // nothing for a look
+	var holds []string
+	if !p.isLook() {
+		about, takes = p.schema.Description, p.schema.item(name, false)
+		holds = slices.Compact(slices.Sorted(slices.Values(p.schema.held(nil))))
+	}
+	return &PartDescription{
+		Name: name, Path: p.dir, Replaces: p.replaces, Look: p.isLook(), About: about, Takes: takes,
+		Looks: set.inOrder(p.taken), Holds: holds, Themes: set.themesWith(name),
+	}
+}
+
+// held adds to names the parts s and the schemas under it hold, short of what those hold in turn.
+func (s *schema) held(names []string) []string {
+	switch {
+	case s == nil:
+		return names
+	case s.part != nil:
+		return append(names, s.part.name)
+	}
+	for _, p := range s.Properties {
+		names = p.held(names)
+	}
+	return s.Items.held(names)
+}
+
 // SharedItems are the keys floe reads from every data file of the template name itself, to be told beside
 // the items of its schema; their descriptions are floe's, for the caller to word.
 func SharedItems(name string) []Item {
@@ -103,34 +176,38 @@ func (s *schema) items() []Item {
 	}
 	items := make([]Item, 0, len(names))
 	for _, n := range names {
-		p := s.Properties[n]
-		if p == nil {
-			p = new(schema) // null in schema.json: nothing to tell of it
-		}
-		it := Item{
-			Name: n, Types: p.types(), Of: nil, Format: p.Format, Part: "", Enum: nil,
-			Required: slices.Contains(s.Required, n), Description: p.Description, Items: nil,
-		}
-		enum := p.Enum
-		if p.Items != nil {
-			// A list described by its items: "a list of …", each one what it holds.
-			it.Of, it.Items = p.Items.types(), p.Items.items()
-			it.Format = cmp.Or(it.Format, p.Items.Format)
-			it.Part = p.Items.drawnBy()
-			it.Description = cmp.Or(it.Description, p.Items.Description)
-			if len(enum) == 0 {
-				enum = p.Items.Enum
-			}
-		} else {
-			it.Items = p.items()
-		}
-		it.Part = cmp.Or(p.drawnBy(), it.Part)
-		for _, e := range enum {
-			it.Enum = append(it.Enum, jsonText(e))
-		}
-		items = append(items, it)
+		items = append(items, s.Properties[n].item(n, slices.Contains(s.Required, n)))
 	}
 	return items
+}
+
+// item is the item name that s declares, required when required.
+func (s *schema) item(name string, required bool) Item {
+	if s == nil {
+		s = new(schema) // null in schema.json: nothing to tell of it
+	}
+	it := Item{
+		Name: name, Types: s.types(), Of: nil, Format: s.Format, Part: "", Enum: nil, Required: required,
+		Description: s.Description, Items: nil,
+	}
+	enum := s.Enum
+	if s.Items != nil {
+		// A list described by its items: "a list of …", each one what it holds.
+		it.Of, it.Items = s.Items.types(), s.Items.items()
+		it.Format = cmp.Or(it.Format, s.Items.Format)
+		it.Part = s.Items.drawnBy()
+		it.Description = cmp.Or(it.Description, s.Items.Description)
+		if len(enum) == 0 {
+			enum = s.Items.Enum
+		}
+	} else {
+		it.Items = s.items()
+	}
+	it.Part = cmp.Or(s.drawnBy(), it.Part)
+	for _, e := range enum {
+		it.Enum = append(it.Enum, jsonText(e))
+	}
+	return it
 }
 
 // drawnBy is the name of the part of floe's that draws s, or "".
