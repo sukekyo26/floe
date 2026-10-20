@@ -79,10 +79,12 @@ type Data struct {
 	schema *schema                 // the template's schema as Read read it, for drawing as checked
 	images map[string]template.URL // its images as data URIs, by the path written
 	// its items drawn by floe's parts, by the path of keys to each (pathKey); nil without one
-	parts    map[string]template.HTML
-	diagrams bool     // whether it has a diagram, for the page to get their style and zoom
-	tried    []string // the images it names that a file can make right, read or not, as it writes them
-	icons    []string // the index files of the icon sets its diagrams may show, when it has one
+	parts     map[string]template.HTML
+	diagrams  bool       // whether it has a diagram, for the page to get their style and zoom
+	tried     []string   // the images it names that a file can make right, read or not, as it writes them
+	icons     []string   // the index files of the icon sets its diagrams may show, when it has one
+	htmlItems []htmlItem // its items of format html, which Render checks the page drawn for
+	marks     *htmlMarks // its items of format html marked, while checkDrawnHTML draws it; nil else
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -241,7 +243,7 @@ func start(file string, src []byte, given Themes) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, PartsTheme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
-		tmpl: nil, schema: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil,
+		tmpl: nil, schema: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, htmlItems: nil, marks: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(given)
@@ -344,7 +346,8 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 		return problems.Sorted()
 	}
 	d.schema = s
-	err = checkItems(checkImages(s, d, root, images), checkHTML(set, s, d, root), checkDiagrams(s, d, root, t.icons),
+	d.htmlItems = htmlItemsOf(d, root)
+	err = checkItems(checkImages(s, d, root, images), checkHTML(set, d), checkDiagrams(s, d, root, t.icons),
 		checkScripts(s, d, root), checkParts(s, d, root))
 	if err != nil {
 		return err
@@ -357,29 +360,22 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	return checkComputed(t, d, root, s)
 }
 
-// checkHTML refuses the items of d of format html, as its schema s declares them, that hold a <style> or
-// a <link>, at their lines and columns under root: floe puts a page's CSS together, in layers, and a
-// style of the data would win over them all. It refuses those that hold a </head>, which would stand in
-// for page.html's, before which floe puts the page's styles. It refuses those that name a part of set that the page
-// would refuse too.
-func checkHTML(set *partSet, s *schema, d *Data, root ast.Node) error {
-	var found []itemAt
-	s.find("html", d.Values, nil, &found)
+// checkHTML refuses the items of d of format html that hold a <style> or a <link>, at their lines and
+// columns: floe puts a page's CSS together, in layers, and a style of the data would win over them all. It
+// refuses those that hold a </head>, which would stand in for page.html's, before which floe puts the
+// page's styles. It refuses those that name a part of set that the page would refuse too.
+func checkHTML(set *partSet, d *Data) error {
 	var problems yamlpos.Problems
-	for _, f := range found {
-		html, ok := f.value.(string)
-		if !ok {
-			continue
+	for _, it := range d.htmlItems {
+		// Wherever it is, a comment's text too.
+		if styleOrLink.MatchString(it.text) {
+			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_style")))
 		}
-		// Wherever it is: an item may leave a quote or a comment open to the next, which a browser reads on.
-		if styleOrLink.MatchString(html) {
-			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_style")))
+		if headEnd.MatchString(it.text) {
+			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_head")))
 		}
-		if headEnd.MatchString(html) {
-			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_head")))
-		}
-		if bad := set.misnamedIn(namedIn(html, tagsIn(html, false))); bad != nil {
-			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
+		if bad := set.misnamedIn(namedIn(it.text, tagsIn(it.text, false))); bad != nil {
+			problems = append(problems, itemError(d.File, it.pos, it.path, bad))
 		}
 	}
 	if problems != nil {
@@ -459,12 +455,52 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	out, err := d.execute(page, title)
+	if err != nil {
+		return nil, err
+	}
 	own, err := t.css(d.Theme)
 	if err != nil {
 		return nil, err
 	}
+	set, err := t.parts()
+	if err != nil {
+		return nil, err
+	}
+	html := string(out)
+	found := tagsIn(html, false)
+	style, err := set.pageStyle(html, found, own, d.PartsTheme)
+	if err != nil {
+		return nil, err
+	}
+	styled, ok := withStyles(out, found, style)
+	if !ok {
+		// An item's open <script> may hide the </head>: its mistake, not the template's.
+		k := -1
+		if d.htmlItems != nil {
+			if k, err = d.headHider(page, title); err != nil {
+				return nil, err
+			}
+		}
+		if k >= 0 {
+			it := d.htmlItems[k]
+			return nil, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
+		}
+		return nil, headMistake(t.file("page.html"), src)
+	}
+	// The data's HTML after the template's mistakes, which would be told as the data's.
+	if d.htmlItems != nil {
+		if err = d.checkDrawnHTML(page, title, out); err != nil {
+			return nil, err
+		}
+	}
+	return d.withDiagrams(styled)
+}
+
+// execute draws d with page, the template's page.html, as a page titled title, without its styles.
+func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
 	var b bytes.Buffer
-	err = page.Execute(&b, map[string]any{
+	err := page.Execute(&b, map[string]any{
 		"Title": title,
 		"Lang":  d.Lang,
 		"Data":  d.schema.prepare(d.Values, nil, d),
@@ -476,34 +512,24 @@ func (d *Data) Render(title string) ([]byte, error) {
 	var bad *usererr.Error
 	switch {
 	case errors.As(err, &bad):
-		return nil, t.assetMistake(bad)
+		return nil, d.tmpl.assetMistake(bad)
 	case err != nil:
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
-	out := b.Bytes()
-	set, err := t.parts()
+	return b.Bytes(), nil
+}
+
+// withDiagrams returns out, a page of d, with the script of its diagrams after it, once at the end, as the
+// reload script is: page.html picks which diagrams it draws, and where.
+func (d *Data) withDiagrams(out []byte) ([]byte, error) {
+	if !d.diagrams {
+		return out, nil
+	}
+	script, err := diagram.Script()
 	if err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck // already says what failed
 	}
-	html := string(out)
-	found := tagsIn(html, false)
-	style, err := set.pageStyle(html, found, own, d.PartsTheme)
-	if err != nil {
-		return nil, err
-	}
-	out, ok := withStyles(out, found, style)
-	if !ok {
-		return nil, headMistake(t.file("page.html"), src)
-	}
-	// Once at the end, as the reload script is: page.html picks which diagrams it draws, and where.
-	if d.diagrams {
-		script, err := diagram.Script()
-		if err != nil {
-			return nil, err //nolint:wrapcheck // already says what failed
-		}
-		out = append(out, "\n"+script+"\n"...)
-	}
-	return out, nil
+	return append(out, "\n"+script+"\n"...), nil
 }
 
 // css returns the template's own CSS: its page.css, empty if it has none, then its theme.
@@ -743,9 +769,11 @@ func (s *schema) drawn(v any, at []string, d *Data) (any, bool) {
 	case s.part != nil:
 		return d.parts[pathKey(at)], true
 	case s.Format == "markdown" && isText:
-		html, _ := markdownHTML(text) //nolint:errcheck // goldmark fails only to write, and a buffer does not
-		return html, true
+		return d.markdownHTML(text), true
 	case s.Format == "html" && isText:
+		if d != nil && d.marks != nil {
+			text = d.marks.marked(text, at)
+		}
 		return template.HTML(text), true //nolint:gosec // G203: the schema declares this item HTML
 	case s.Format == "image" && isText:
 		return d.images[text], true
@@ -796,11 +824,22 @@ func pathKey(at []string) string {
 // itemMistake is the mistake e in the item at the path at under root, of the data file file: at its
 // value, or at its key with onKey.
 func itemMistake(file string, root ast.Node, at []string, onKey bool, e *usererr.Error) *yamlpos.Error {
+	pos, path := itemPos(root, at, onKey)
+	return itemError(file, pos, path, e)
+}
+
+// itemPos returns where the item at the path at is written under root, its value or, onKey, its key, and
+// its path.
+func itemPos(root ast.Node, at []string, onKey bool) (yamlpos.Pos, string) {
 	key, value, path := yamlpos.Find(root, at)
-	pos := yamlpos.OfValue(key, value)
 	if onKey {
-		pos = yamlpos.Of(key)
+		return yamlpos.Of(key), path
 	}
+	return yamlpos.OfValue(key, value), path
+}
+
+// itemError is the mistake e in the item at path, written at pos in the data file file.
+func itemError(file string, pos yamlpos.Pos, path string, e *usererr.Error) *yamlpos.Error {
 	return &yamlpos.Error{File: file, Pos: pos, Err: usererr.New("tmpl_item", path, e)}
 }
 
