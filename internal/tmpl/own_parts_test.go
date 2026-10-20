@@ -1,12 +1,14 @@
 package tmpl_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -305,9 +307,17 @@ func TestBrokenOwnParts(t *testing.T) {
 			}
 			continue
 		}
-		if len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), why) {
+		// Told as floe part check tells it, not wrapped in the words of jsonschema's loading.
+		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), why) {
 			t.Errorf("Check of a template of %s = %v, want %s", name, mistakes, why)
 		}
+	}
+	// A data file of the template, as the page of its mistakes words it, in the reader's language.
+	braced := memo(t, `"risks": {"$ref": "floe:///parts/brace.json"}, "aside": {"type": "string"}`)
+	_, err := draw(tmpl.NewLibrary(braced, parts, ""), "template: memo\nlang: en\n")
+	var mistake *usererr.Error
+	if !errors.As(err, &mistake) || !strings.HasPrefix(mistake.Localize(i18n.New("ja")), "部品 brace は使えません: ") {
+		t.Errorf("Read of a template of brace = %v", err)
 	}
 	// By page.html.
 	named := memo(t, memoItems)

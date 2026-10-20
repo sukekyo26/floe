@@ -65,6 +65,13 @@ func compileSchema(set *partSet, name string, src []byte) (*jsonschema.Schema, a
 	}
 	sch, err := c.Compile(url)
 	if err != nil {
+		// jsonschema wraps what noLoader returns in an error that does not unwrap: floe's own mistake is told
+		// as it is, so that it is worded in the reader's language.
+		var load *jsonschema.LoadURLError
+		var mistake *usererr.Error
+		if errors.As(err, &load) && errors.As(load.Err, &mistake) {
+			return nil, nil, mistake
+		}
 		return nil, nil, fmt.Errorf("compile the schema of %s: %w", name, err)
 	}
 	return sch, doc, nil
