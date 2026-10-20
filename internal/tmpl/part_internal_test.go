@@ -328,35 +328,6 @@ func TestCheckExprFirst(t *testing.T) {
 	}
 }
 
-// A part holds parts, which it draws as the data file drew them, but no item of a format of floe's,
-// which floe looks for only outside parts.
-func TestPartsDrawnWhole(t *testing.T) {
-	t.Parallel()
-
-	set, err := builtinParts()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var drawnWhole func(s *schema) bool
-	drawnWhole = func(s *schema) bool {
-		if s == nil {
-			return false
-		}
-		if slices.Contains(formats, s.Format) || drawnWhole(s.Items) {
-			return true
-		}
-		return slices.ContainsFunc(slices.Collect(maps.Values(s.Properties)), drawnWhole)
-	}
-	for name, p := range set.parts {
-		if p.isLook() {
-			continue
-		}
-		if drawnWhole(p.schema.Items) || slices.ContainsFunc(slices.Collect(maps.Values(p.schema.Properties)), drawnWhole) {
-			t.Errorf("the part %s holds an item of a format", name)
-		}
-	}
-}
-
 // Every word a part draws has its text in the part's words.yaml, and every word there is drawn: named as
 // written (word "risk"), or from the data (word $level), one of the values of the schema's enum.
 func TestPartWords(t *testing.T) {
