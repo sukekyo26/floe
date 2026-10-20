@@ -28,7 +28,7 @@ import (
 )
 
 // partFiles holds a directory per part of floe's (schema.json, part.html, part.css, part.yaml, checks.yaml
-// and words.yaml) and per look alone (part.css and part.yaml), the schemas the parts share (tone.json),
+// and words.yaml) and per look alone (part.css and part.yaml), the schemas the parts share (tone.json and any.json),
 // and the parts themes (themes/).
 //
 //go:embed parts
@@ -66,7 +66,7 @@ func absolute(base, ref string) string {
 // rootPart returns the part of set the $ref at the root of the schema s names, and false for none: a
 // schema declares its own items, and names a part under properties or items, which floe draws the item by. A
 // look, which draws nothing, and a part that cannot be used are told as they are elsewhere, and a schema the
-// parts share (tone) may be the root.
+// parts share (tone, any) may be the root.
 func (set *partSet) rootPart(s *schema) (string, bool) {
 	if s == nil {
 		return "", false

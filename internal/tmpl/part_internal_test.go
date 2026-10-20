@@ -296,6 +296,27 @@ func TestInOrder(t *testing.T) {
 	}
 }
 
+// any.json offers every part floe draws, but cell and stack, which only other parts hold, and Markdown
+// and HTML: a part added to floe and not to any.json is no part of report's.
+func TestAnyOffersEveryPart(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"html", "text"}
+	for name, p := range set.parts {
+		if !p.isLook() && name != "cell" && name != "stack" {
+			want = append(want, name)
+		}
+	}
+	slices.Sort(want)
+	if got := slices.Sorted(maps.Keys(set.schemas[partsURL+"any.json"].Properties)); !slices.Equal(got, want) {
+		t.Errorf("any.json offers %v, want %v", got, want)
+	}
+}
+
 // A description beside a $ref is ended as a sentence of its script before the part's.
 func TestJoinDescriptions(t *testing.T) {
 	t.Parallel()

@@ -14,46 +14,7 @@
           "heading": { "type": "string" },
           "parts": {
             "type": "array",
-            "items": {
-              "type": "object",
-              "description": "One key naming the kind of the part",
-              "properties": {
-                "text": { "type": "string", "format": "markdown", "description": "Markdown; raw HTML in it is left out. Code goes in code and commands in terminal, short code in a sentence as `code`" },
-                "code": { "$ref": "floe:///parts/code.json", "description": "Write every block of code here" },
-                "terminal": { "$ref": "floe:///parts/terminal.json", "description": "Write every command here, without its prompt" },
-                "table": { "$ref": "floe:///parts/table.json" },
-                "cards": { "$ref": "floe:///parts/cards.json" },
-                "note": { "$ref": "floe:///parts/note.json" },
-                "stats": { "$ref": "floe:///parts/stats.json" },
-                "progress": { "$ref": "floe:///parts/progress.json" },
-                "steps": { "$ref": "floe:///parts/steps.json" },
-                "checklist": { "$ref": "floe:///parts/checklist.json" },
-                "compare": { "$ref": "floe:///parts/compare.json" },
-                "options": { "$ref": "floe:///parts/options.json" },
-                "facts": { "$ref": "floe:///parts/facts.json" },
-                "diff": { "$ref": "floe:///parts/diff.json" },
-                "tree": { "$ref": "floe:///parts/tree.json" },
-                "links": { "$ref": "floe:///parts/links.json" },
-                "findings": { "$ref": "floe:///parts/findings.json" },
-                "details": { "$ref": "floe:///parts/details.json" },
-                "matrix": { "$ref": "floe:///parts/matrix.json" },
-                "decision": { "$ref": "floe:///parts/decision.json" },
-                "risks": { "$ref": "floe:///parts/risks.json" },
-                "fields": { "$ref": "floe:///parts/fields.json" },
-                "timeline": { "$ref": "floe:///parts/timeline.json" },
-                "bars": { "$ref": "floe:///parts/bars.json" },
-                "faq": { "$ref": "floe:///parts/faq.json" },
-                "glossary": { "$ref": "floe:///parts/glossary.json" },
-                "keys": { "$ref": "floe:///parts/keys.json" },
-                "tabs": { "$ref": "floe:///parts/tabs.json" },
-                "html": { "type": "string", "format": "html", "description": "HTML that goes in as it is" },
-                "diagram": { "$ref": "floe:///parts/diagram.json" },
-                "script": { "$ref": "floe:///parts/script.json" }
-              },
-              "minProperties": 1,
-              "maxProperties": 1,
-              "additionalProperties": false
-            }
+            "items": { "$ref": "floe:///parts/any.json" }
           }
         },
         "additionalProperties": false

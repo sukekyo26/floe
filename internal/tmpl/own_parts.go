@@ -247,7 +247,7 @@ func (set *partSet) keepDir(dir string) {
 }
 
 // reserved reports whether a part of one's own cannot be named name: a part floe draws in Go, a schema
-// the parts share (tone), or a file of a parts theme that is no part's (base, palette).
+// the parts share (tone, any), or a file of a parts theme that is no part's (base, palette).
 func (set *partSet) reserved(name string) bool {
 	_, schema := set.docs[partsURL+name+".json"]
 	return isGoPart(name) || schema && set.parts[name] == nil || name == themeBase || name == themePalette
@@ -358,7 +358,7 @@ func (set *partSet) candidates(look bool) string {
 // checkHeld refuses the part p, whose files are at at, when its schema holds a part there is none of, of
 // one's own when own, or a look alone.
 func (set *partSet) checkHeld(p *part, at string, own bool) error {
-	// One left out has no schema; one of a name set keeps (tone) leaves floe's in place.
+	// One left out has no schema; one of a name set keeps (tone, any) leaves floe's in place.
 	for _, held := range p.schema.refsUnder(nil) {
 		switch {
 		case set.schemas[partsURL+held+".json"] != nil:
