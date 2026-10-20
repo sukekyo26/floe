@@ -168,10 +168,10 @@ func brokenParts(set *partSet, named []namedPart) []*usererr.Error {
 	return append(warnings, set.strays...)
 }
 
-// checkCSS returns the mistakes of t's CSS, page.css and its themes, that refuseCSS refuses, and the
-// warnings of the colours that change with the mode which it sets on :scope for light mode alone: over
-// every palette, they stay in dark mode too, where the others turn dark. Each is told once, at the file
-// that sets it.
+// checkCSS returns the mistakes of t's CSS, page.css and its themes, that cssSheet.refuse refuses, and
+// the warnings of the colours that change with the mode which it sets on :scope for light mode alone:
+// over every palette, they stay in dark mode too, where the others turn dark. Each file is told once,
+// of what it sets so with any theme.
 func (t *Template) checkCSS() ([]*usererr.Error, []error) {
 	themes, err := t.themes()
 	if err != nil {
@@ -181,37 +181,44 @@ func (t *Template) checkCSS() ([]*usererr.Error, []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	var warnings []*usererr.Error
 	var mistakes []error
 	// Every file is checked, page.css refused or not.
-	page, err := t.ownCSS("page.css")
-	if err != nil {
-		mistakes = append(mistakes, err)
-	}
 	under := newModeColours()
-	under.readScope(page, "page.css")
-	told := map[string]bool{}
+	if page, err := t.ownSheet("page.css"); err != nil {
+		mistakes = append(mistakes, err)
+	} else {
+		under.readScope(page, "page.css")
+	}
+	byFile := map[string]map[string]bool{} // the names each file sets for light mode alone
+	note := func(c *modeColours) {
+		for _, v := range c.lightOnly(modes) {
+			if byFile[c.from[v]] == nil {
+				byFile[c.from[v]] = map[string]bool{}
+			}
+			byFile[c.from[v]][v] = true
+		}
+	}
+	read := 0
 	for _, theme := range themes {
 		name := path.Join("themes", theme+".css")
-		css, err := t.ownCSS(name)
+		sheet, err := t.ownSheet(name)
 		if err != nil {
 			mistakes = append(mistakes, err)
 			continue
 		}
 		// The theme comes after page.css, and sets over it.
 		c := under.clone()
-		c.readScope(css, name)
-		byFile := map[string][]string{}
-		for _, v := range c.lightOnly(modes) {
-			byFile[c.from[v]] = append(byFile[c.from[v]], v)
-		}
-		for _, file := range slices.Sorted(maps.Keys(byFile)) {
-			w := usererr.New("tmpl_scope_dark", t.file(file), andList(byFile[file]))
-			if !told[w.Error()] {
-				told[w.Error()] = true
-				warnings = append(warnings, w)
-			}
-		}
+		c.readScope(sheet, name)
+		note(c)
+		read++
+	}
+	if read == 0 {
+		note(under)
+	}
+	var warnings []*usererr.Error
+	for _, file := range slices.Sorted(maps.Keys(byFile)) {
+		names := slices.Sorted(maps.Keys(byFile[file]))
+		warnings = append(warnings, usererr.New("tmpl_scope_dark", t.file(file), andList(names)))
 	}
 	return warnings, mistakes
 }

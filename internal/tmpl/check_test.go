@@ -370,6 +370,12 @@ func TestCSSBraceRefused(t *testing.T) {
 	if _, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %s", mistakes, want)
 	}
+	// The URL of url( runs to the first ), whatever it holds, as a browser reads it.
+	url := sizes(t, map[string]string{"page.css": "a { b: url(x(y) } }\nc { color: red; }\n"})
+	if _, mistakes := tmpl.Check(url, "", ""); len(mistakes) != 1 ||
+		!strings.HasPrefix(mistakes[0].Error(), filepath.Join(url, "page.css")+":1: this } closes no block") {
+		t.Errorf("Check of a } after url( = %v", mistakes)
+	}
 	// An escaped bracket is a name's, and leaves the } after it to be told.
 	escaped := sizes(t, map[string]string{"page.css": ".a\\( { color: red; }\n}\n"})
 	if _, mistakes := tmpl.Check(escaped, "", ""); len(mistakes) != 1 ||
@@ -396,12 +402,37 @@ func TestCheckScopeColours(t *testing.T) {
 		"body { --surface: #fff; }": "",
 		"@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n:scope { --bg: #fff; }":                                 "sizes/page.css sets --bg on :scope for light mode alone",
 		":scope { --line: #fff; &.x { --q: 1; } --fg: #000; }\n@media (prefers-color-scheme: dark) { :scope { --line: #222; } }": "sizes/page.css sets --fg on :scope",
+		":scope { --bg: #fff; }\n@media screen and (prefers-color-scheme: dark) { :scope { --bg: #000; } }":                      "",
 	} {
 		warnings, mistakes := tmpl.Check(sizes(t, map[string]string{"template.yaml": floe, "page.css": page}), "", "")
 		if len(mistakes) != 0 || want == "" && len(warnings) != 0 ||
 			want != "" && (len(warnings) != 1 || !strings.Contains(warnings[0].Error(), want)) {
 			t.Errorf("Check with %s = %v, %v, want %q", page, warnings, mistakes, want)
 		}
+	}
+}
+
+// page.css is told once, of what it sets for light mode alone with any theme, and with none when every
+// theme is refused.
+func TestCheckScopeColoursOnce(t *testing.T) {
+	t.Parallel()
+
+	release := strings.SplitN(version.Version, ".", 3)
+	floe := "floe: " + release[0] + "." + release[1] + "\n"
+	dir := sizes(t, map[string]string{
+		"template.yaml": floe, "page.css": ":scope { --bg: #fff; --fg: #000; }\n",
+		"themes/default.css": "@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n", "themes/print.css": "",
+	})
+	warnings, mistakes := tmpl.Check(dir, "", "")
+	if len(mistakes) != 0 || len(warnings) != 1 || !strings.Contains(warnings[0].Error(), "sizes/page.css sets --bg, --fg on :scope") {
+		t.Errorf("Check of two themes = %v, %v", warnings, mistakes)
+	}
+	refused := sizes(t, map[string]string{
+		"template.yaml": floe, "page.css": ":scope { --bg: #fff; }\n", "themes/default.css": ":root { --x: 1; }\n",
+	})
+	warnings, mistakes = tmpl.Check(refused, "", "")
+	if len(mistakes) != 1 || len(warnings) != 1 || !strings.Contains(warnings[0].Error(), "sizes/page.css sets --bg on :scope") {
+		t.Errorf("Check of a refused theme = %v, %v", warnings, mistakes)
 	}
 }
 

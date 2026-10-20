@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // palette are the CSS variables default's palette defines, which the parts, diagrams, floe's base and
@@ -64,7 +66,7 @@ func TestPalette(t *testing.T) {
 	}
 	// A diagram drawn into a page without the palette, by floe diagram render, takes default's light colours
 	// (and faces of its own, for a page of any language).
-	c, err := readPalette("palette.css", []byte(under))
+	c, err := readPalette("palette.css", readCSS([]byte(under)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,8 +146,16 @@ func TestCheckPalette(t *testing.T) {
 		":root { color: red; }":                                   "p.css:1: palette.css holds only",
 		"@media print { :root { --bg: #fff; } }":                  "p.css:1: palette.css holds only",
 		":root { --bg: #fff; --code-bg: #222; --font: serif; --page-bg: var(--bg); --code-fg: #eee; }": "p.css sets --bg, --code-bg for light mode alone",
+		":root { --a: url(x(y); } } body { background: red }":                                          "p.css:1: this } closes no block",
+		":root { Color-Scheme: light dark; --l: \"!important\"; --x: {a:b}; }":                         "",
+		":root { --x: {a:b}; --bg: #fff; }":                                                            "p.css sets --bg for light mode alone",
 	} {
-		warnings, err := checkPalette("p.css", []byte(css))
+		s := readCSS([]byte(css))
+		err := s.refuse("p.css", false)
+		var warnings []*usererr.Error
+		if err == nil {
+			warnings, err = checkPalette("p.css", s)
+		}
 		got := ""
 		switch {
 		case err != nil:
