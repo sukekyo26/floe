@@ -87,7 +87,7 @@ func (set *partSet) readPartsTheme(files fs.FS, dir string, t *partsTheme) error
 		case themeBase:
 			t.base = string(css)
 		case themePalette:
-			if paletteWarnings, err = set.checkPalette(path.Join(dir, e.Name()), css); err != nil {
+			if paletteWarnings, err = checkPalette(path.Join(dir, e.Name()), css); err != nil {
 				return err
 			}
 			t.palette = string(css)
@@ -109,60 +109,62 @@ func (set *partSet) themeFile(name string) bool {
 
 // checkPalette refuses css, palette.css shown as file, as readPalette does, and returns the warning of
 // the colours it sets for light mode alone.
-func (set *partSet) checkPalette(file string, css []byte) ([]*usererr.Error, error) {
-	light, dark, err := readPalette(file, css)
+func checkPalette(file string, css []byte) ([]*usererr.Error, error) {
+	c, err := readPalette(file, css)
 	if err != nil {
 		return nil, err
 	}
-	if names := lightOnly(light, dark, set.modes); names != nil {
+	modes, err := floeModes()
+	if err != nil {
+		return nil, err
+	}
+	if names := c.lightOnly(modes); names != nil {
 		return []*usererr.Error{usererr.New("tmpl_palette_dark", file, andList(names))}, nil
 	}
 	return nil, nil
 }
 
-// readPalette returns the variables (and color-scheme) palette.css, css shown as file, sets for light
-// mode, with their values, and for dark mode. It refuses anything but those set on :root, those of dark
-// mode in @media (prefers-color-scheme: dark) after it: in the bottom layer any other rule would lose to
-// every other one, a light :root after the dark block would win in dark mode too, and !important would
-// win over every layer, the template's too.
-func readPalette(file string, css []byte) (map[string]string, map[string]bool, error) {
+// readPalette returns the variables (and color-scheme) palette.css, css shown as file, sets for each
+// mode. It refuses anything but those set on :root, those of dark mode in
+// @media (prefers-color-scheme: dark) after it: in the bottom layer any other rule would lose to every
+// other one, a light :root after the dark block would win in dark mode too, and !important would win over
+// every layer, the template's too.
+func readPalette(file string, css []byte) (*modeColours, error) {
 	rules, _ := cssRules(css) // refuseCSS has refused a } that closes no block
-	p := &paletteCheck{
-		file: file, css: css, blank: withoutComments(css), rules: rules,
-		light: map[string]string{}, dark: map[string]bool{},
-	}
+	p := &paletteCheck{file: file, css: css, blank: withoutComments(css), rules: rules, colours: newModeColours()}
 	if err := p.onlyBlocks(0, len(p.blank), 0); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	for i, mode := range modesOfRules(rules, ":root") {
 		if err := p.read(&rules[i], mode); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
-	return p.light, p.dark, nil
+	return p.colours, nil
 }
 
-// paletteCheck is what readPalette reads of palette.css: blank is css without its comments, and light
-// and dark the variables set for each mode.
+// paletteCheck is what readPalette reads of palette.css, blank its copy without comments.
 type paletteCheck struct {
 	file       string
 	css, blank []byte
 	rules      []cssRule
-	light      map[string]string
-	dark       map[string]bool
+	colours    *modeColours
 }
 
 // read reads the rule r, which is mode to the modes.
 func (p *paletteCheck) read(r *cssRule, mode modeRule) error {
 	switch mode {
-	case modeLight:
-		return p.declarations(r, func(name, value string) { p.light[name] = value })
+	case modeLight, modeDark:
+		decls, err := p.declarations(r)
+		if err != nil {
+			return err
+		}
+		p.colours.add(decls, mode == modeDark, p.file)
+		return nil
 	case modeLateLight:
 		return usererr.New("tmpl_palette_order", p.file, lineAt(p.css, r.at))
 	case modeMedia:
 		return p.onlyBlocks(r.open+1, r.end, 1)
-	case modeDark:
-		return p.declarations(r, func(name, _ string) { p.dark[name] = true })
 	case modeOther:
 	}
 	return usererr.New("tmpl_palette_rule", p.file, lineAt(p.css, r.at))
@@ -194,19 +196,19 @@ func (p *paletteCheck) blankFrom(from, to int) error {
 	return nil
 }
 
-// declarations gives each the declarations of the block r, each a variable or color-scheme without
-// !important.
-func (p *paletteCheck) declarations(r *cssRule, each func(name, value string)) error {
-	for _, d := range declarationsIn(p.blank, r) {
+// declarations returns the declarations of the block r, refusing one that is no variable nor
+// color-scheme, and !important.
+func (p *paletteCheck) declarations(r *cssRule) ([]cssDeclaration, error) {
+	decls := declarationsIn(p.blank, r)
+	for _, d := range decls {
 		switch {
 		case !strings.HasPrefix(d.name, "--") && d.name != "color-scheme" || d.value == "":
-			return usererr.New("tmpl_palette_rule", p.file, lineAt(p.css, d.at))
+			return nil, usererr.New("tmpl_palette_rule", p.file, lineAt(p.css, d.at))
 		case important.MatchString(d.value):
-			return usererr.New("tmpl_palette_important", p.file, lineAt(p.css, d.at))
+			return nil, usererr.New("tmpl_palette_important", p.file, lineAt(p.css, d.at))
 		}
-		each(d.name, d.value)
 	}
-	return nil
+	return decls, nil
 }
 
 var important = regexp.MustCompile(`(?i)!\s*important`)
@@ -248,40 +250,94 @@ func modesOfRules(rules []cssRule, selector string) []modeRule {
 	return modes
 }
 
-// lightOnly returns the names of light that change with the mode, as modes tells, and dark leaves out,
-// in order, when the CSS leaves out too a colour that default's palette turns dark: in dark mode those
-// would stay as they are among default's dark ones, light text on a light ground. CSS that sets every
-// such colour for light mode alone is one look in both modes (a theme always dark), and is not told.
-// LIMIT: a value of var() is taken to follow the modes, as --page-bg: var(--bg) does, though the variable
-// it takes may be one set for light mode alone. Follow what it takes if palettes come to chain them.
-func lightOnly(light map[string]string, dark, modes map[string]bool) []string {
+// modeColours are the variables (and color-scheme) CSS sets for the modes: for light mode, with their
+// values and the file of each, and for dark mode.
+type modeColours struct {
+	light map[string]string
+	dark  map[string]bool
+	from  map[string]string
+}
+
+func newModeColours() *modeColours {
+	return &modeColours{light: map[string]string{}, dark: map[string]bool{}, from: map[string]string{}}
+}
+
+// clone returns a copy of c, to read more CSS into.
+func (c *modeColours) clone() *modeColours {
+	return &modeColours{light: maps.Clone(c.light), dark: maps.Clone(c.dark), from: maps.Clone(c.from)}
+}
+
+// add adds the variables (and color-scheme) of decls, set in file, for dark mode or for light. Those for
+// light mode, written later than the dark ones, win in dark mode too, which they leave unset.
+func (c *modeColours) add(decls []cssDeclaration, inDark bool, file string) {
+	for _, d := range decls {
+		switch {
+		case !strings.HasPrefix(d.name, "--") && d.name != "color-scheme":
+		case inDark:
+			c.dark[d.name] = true
+		default:
+			c.light[d.name], c.from[d.name] = d.value, file
+			delete(c.dark, d.name)
+		}
+	}
+}
+
+// readScope adds what a template's CSS, css of the file named file, sets on :scope, that of dark mode
+// in @media (prefers-color-scheme: dark), in order.
+// LIMIT: :scope alone as a selector, not in a list (:scope, body). Read the selectors if a template comes
+// to set colours so.
+func (c *modeColours) readScope(css []byte, file string) {
+	rules, _ := cssRules(css)
+	blank := withoutComments(css)
+	for i, mode := range modesOfRules(rules, ":scope") {
+		switch mode {
+		case modeLight, modeLateLight:
+			c.add(declarationsIn(blank, &rules[i]), false, file)
+		case modeDark:
+			c.add(declarationsIn(blank, &rules[i]), true, file)
+		case modeOther, modeMedia:
+		}
+	}
+}
+
+// lightOnly returns the names c sets for light mode alone that change with the mode, as modes tells, in
+// order, when they mix with colours of dark mode: in dark mode they would stay as they are among dark
+// ones, light text on a light ground. c that sets every colour default's palette turns dark for light
+// mode, and none for dark, is one look in both modes (a theme always dark), and is not told.
+// LIMIT: a value of var() or light-dark() is taken to follow the modes, as --page-bg: var(--bg) does,
+// though the variable it takes may be one set for light mode alone. Follow it if palettes come to chain them.
+func (c *modeColours) lightOnly(modes map[string]bool) []string {
 	var names []string
-	for _, name := range slices.Sorted(maps.Keys(light)) {
-		value := light[name]
+	for _, name := range slices.Sorted(maps.Keys(c.light)) {
+		value := c.light[name]
 		_, changes := modes[name]
 		switch {
-		case dark[name] || !changes || strings.Contains(value, "var("):
+		case c.dark[name] || !changes || strings.Contains(value, "var(") || strings.Contains(value, "light-dark("):
 		case name == "color-scheme" && strings.Contains(value, "light") && strings.Contains(value, "dark"):
 		default:
 			names = append(names, name)
 		}
 	}
+	if names == nil {
+		return nil
+	}
 	for name, own := range modes {
-		if _, set := light[name]; own && !set && !dark[name] {
+		_, set := c.light[name]
+		if c.dark[name] || own && !set {
 			return names
 		}
 	}
 	return nil
 }
 
-// modesOf returns the variables that change with the mode, of the palette that sets light and dark:
-// true for those it sets for dark mode too, false for those it sets to them (--page-bg: var(--bg)),
-// whose values a palette that writes them stops following.
-func modesOf(light map[string]string, dark map[string]bool) map[string]bool {
-	modes := maps.Clone(dark)
-	for name, value := range light {
+// modesOf returns the variables that change with the mode in c, floe's default palette: true for those
+// it sets for dark mode too, false for those it sets to them (--page-bg: var(--bg)), whose values a
+// palette that writes them stops following.
+func modesOf(c *modeColours) map[string]bool {
+	modes := maps.Clone(c.dark)
+	for name, value := range c.light {
 		for _, m := range usedVariable.FindAllStringSubmatch(value, -1) {
-			if dark[m[1]] && !dark[name] {
+			if c.dark[m[1]] && !c.dark[name] {
 				modes[name] = false
 			}
 		}
@@ -297,11 +353,11 @@ var floeModes = sync.OnceValues(func() (map[string]bool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the parts themes: %w", err)
 	}
-	light, dark, err := readPalette(file, css)
+	c, err := readPalette(file, css)
 	if err != nil {
 		return nil, err
 	}
-	return modesOf(light, dark), nil
+	return modesOf(c), nil
 })
 
 var usedVariable = regexp.MustCompile(`var\(\s*(--[\w-]+)`)

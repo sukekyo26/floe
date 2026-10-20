@@ -9,6 +9,8 @@
   --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #63b5be; --code-add: #6fcf97; --code-del: #f2b8b5;
   /* The page's ground, a pattern too, and the rule between its sections */
   --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {

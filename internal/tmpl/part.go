@@ -153,10 +153,8 @@ type partSet struct {
 	broken  map[string]error       // the parts of one's own that cannot be used, by name, and why
 	// the parts themes of one's own that cannot be used, by name, and why
 	brokenThemes map[string]error
-	// floe's own default palette, under every page's, whatever one's own themes change, and the variables
-	// that change with the mode in it
+	// floe's own default palette, under every page's, whatever one's own themes change
 	palette string
-	modes   map[string]bool
 	// the directories of one's own it read, the directory of parts first, by their real paths
 	dirs   []string
 	strays []*usererr.Error // what of one's own goes into no page, to be warned of
@@ -171,8 +169,7 @@ var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("
 func readParts(dir string, entries []os.DirEntry, stage staged) (*partSet, error) {
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
-		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", modes: nil, dirs: nil,
-		strays: nil,
+		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", dirs: nil, strays: nil,
 	}
 	if err := set.readBuiltin(); err != nil {
 		return nil, err
@@ -240,9 +237,6 @@ func (set *partSet) readBuiltin() error {
 	themes, err := fs.Sub(builtin, themesDir)
 	if err != nil {
 		return fmt.Errorf("read the parts themes: %w", err)
-	}
-	if set.modes, err = floeModes(); err != nil {
-		return err
 	}
 	entries, err = fs.ReadDir(themes, ".")
 	if err != nil {

@@ -14,12 +14,11 @@ import (
 var palette = []string{
 	"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
 	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--display", "--mono", "--code-bg", "--code-fg",
-	"--code-prompt", "--code-add", "--code-del", "--page-bg", "--rule",
+	"--code-prompt", "--code-add", "--code-del", "--page-bg", "--rule", "--text-width",
 }
 
 // The parts, diagrams, floe's base and the parts themes take from the page only what default's palette
-// or floe's base (the width of prose, --text-width) defines: every theme's palette goes over default's,
-// so none of them goes without.
+// defines: every theme's palette goes over default's, so none of them goes without.
 func TestPalette(t *testing.T) {
 	t.Parallel()
 
@@ -28,7 +27,7 @@ func TestPalette(t *testing.T) {
 		t.Fatal(err)
 	}
 	under := set.themes[DefaultTheme].palette
-	defined := definedIn(under + baseCSS)
+	defined := definedIn(under)
 	for _, v := range palette {
 		if !defined[v] {
 			t.Errorf("default's palette leaves %s out", v)
@@ -49,16 +48,15 @@ func TestPalette(t *testing.T) {
 		own := definedIn(css)
 		for _, m := range usedVariable.FindAllStringSubmatch(css, -1) {
 			if v := m[1]; !own[v] && !defined[v] {
-				t.Errorf("%s takes %s, which neither default's palette nor floe's base defines", who, v)
+				t.Errorf("%s takes %s, which default's palette does not define", who, v)
 			}
 		}
 	}
-	// default's palette and floe's base are under every page, so nothing takes a value of its own for a
-	// variable of theirs. A diagram's style is the diagram package's, for pages of any kind.
+	// default's palette is under every page, so nothing takes a value of its own for a variable of it. A diagram's style is the diagram package's, for pages of any kind.
 	delete(taken, "the part diagram")
 	for who, css := range taken {
 		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,`).FindAllStringSubmatch(css, -1) {
-			t.Errorf("%s takes %s with a value of its own, which default's palette or floe's base gives", who, m[1])
+			t.Errorf("%s takes %s with a value of its own, which default's palette gives", who, m[1])
 		}
 	}
 	if set.strays != nil {
@@ -66,13 +64,17 @@ func TestPalette(t *testing.T) {
 	}
 	// A diagram drawn into a page without the palette, by floe diagram render, takes default's light colours
 	// (and faces of its own, for a page of any language).
-	light, _, err := readPalette("palette.css", []byte(under))
+	c, err := readPalette("palette.css", []byte(under))
+	if err != nil {
+		t.Fatal(err)
+	}
+	modes, err := floeModes()
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,\s*([^)]*)\)`).FindAllStringSubmatch(set.parts["diagram"].css, -1) {
-		if _, colour := set.modes[m[1]]; colour && light[m[1]] != strings.TrimSpace(m[2]) {
-			want := light[m[1]]
+		if _, colour := modes[m[1]]; colour && c.light[m[1]] != strings.TrimSpace(m[2]) {
+			want := c.light[m[1]]
 			t.Errorf("a diagram takes %s with %s; default's palette has %s", m[1], m[2], want)
 		}
 	}
@@ -107,21 +109,27 @@ func TestPalette(t *testing.T) {
 func TestCheckPalette(t *testing.T) {
 	t.Parallel()
 
-	set, err := builtinParts()
+	modes, err := floeModes()
 	if err != nil {
 		t.Fatal(err)
 	}
 	dark := "\n@media (prefers-color-scheme: dark) { :root { --bg: #000; --page-bg: none; color-scheme: dark; } }"
-	// A palette always dark sets every colour default's turns dark, on :root alone.
-	var always strings.Builder
-	for _, name := range slices.Sorted(maps.Keys(set.modes)) {
-		if set.modes[name] {
+	// A palette always dark sets every colour default's turns dark, on :root alone; one that sets them
+	// all for dark mode too but --bg leaves that one light among dark ones.
+	var always, allButBg strings.Builder
+	for _, name := range slices.Sorted(maps.Keys(modes)) {
+		if modes[name] {
 			always.WriteString(name + ": black; ")
+			if name != "--bg" {
+				allButBg.WriteString(name + ": black; ")
+			}
 		}
 	}
 	for css, want := range map[string]string{
 		":root { " + always.String() + "}": "",
-		":root { --bg: #fff; }" + dark:     "",
+		":root { " + always.String() + "}\n@media (prefers-color-scheme: dark) { :root { " + allButBg.String() + "} }": "p.css sets --bg for light mode alone",
+		":root { --bg: light-dark(#fff, #000); --fg: light-dark(#000, #fff); }":                                        "",
+		":root { --bg: #fff; }" + dark: "",
 		":root { --bg: #fff; --page-bg: url(data:image/svg+xml;base64,PHN2Zz4=) repeat; }" + dark:                "",
 		":root { --bg: #fff; --page-bg: url(data:image/svg+xml,<svg><style>p{fill:red}</style></svg>); }" + dark: "",
 		":root { --radius: 4px; --text-width: 60rem; color-scheme: light dark; }":                                "",
@@ -137,7 +145,7 @@ func TestCheckPalette(t *testing.T) {
 		"@media print { :root { --bg: #fff; } }":                  "p.css:1: palette.css holds only",
 		":root { --bg: #fff; --code-bg: #222; --font: serif; --page-bg: var(--bg); --code-fg: #eee; }": "p.css sets --bg, --code-bg for light mode alone",
 	} {
-		warnings, err := set.checkPalette("p.css", []byte(css))
+		warnings, err := checkPalette("p.css", []byte(css))
 		got := ""
 		switch {
 		case err != nil:
