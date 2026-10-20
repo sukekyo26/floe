@@ -39,16 +39,12 @@ func refuseCSS(file string, src []byte, scoped bool) error {
 	return readCSS(src).refuse(file, scoped)
 }
 
-// refuse refuses s, the file shown as file, that floe puts in a layer of a <style>, where it holds </style,
-// in a comment or a string too, which would close the <style> and leave what follows to be read as the
-// page's HTML, where a } closes no block, which would close the layer around it and leave the rules after
-// it out of it, over the parts' styles, or where it imports a stylesheet, which a browser does not read in
-// a layer. CSS floe puts in @scope, scoped, is refused too where a selector names the root as :root or
-// html, where :scope is the root and those name nothing.
+// refuse refuses s, the file shown as file, that floe puts in a layer, where a } closes no block,
+// which would close the layer around it and leave the rules after it out of it, over the parts' styles,
+// or where it imports a stylesheet, which a browser does not read in a layer. CSS floe puts in @scope,
+// scoped, is refused too where a selector names the root as :root or html, where :scope is the root and
+// those name nothing.
 func (s *cssSheet) refuse(file string, scoped bool) error {
-	if m := styleEnd.FindIndex(s.src); m != nil {
-		return usererr.New("tmpl_css_style_end", file, lineAt(s.src, m[0]))
-	}
 	if s.stray >= 0 {
 		return usererr.New("tmpl_css_brace", file, lineAt(s.src, s.stray))
 	}
@@ -69,10 +65,6 @@ func (s *cssSheet) refuse(file string, scoped bool) error {
 func lineAt(src []byte, at int) int {
 	return bytes.Count(src[:at], []byte("\n")) + 1
 }
-
-// styleEnd finds what HTML reads as the end of a <style>, whatever CSS holds it: </style, its letters of
-// either case in ASCII alone, before a space, / or >. floe writes a } after every CSS.
-var styleEnd = regexp.MustCompile(`</[sS][tT][yY][lL][eE][\t\n\f\r />]`)
 
 // rootSelector finds :root or html in a selector.
 var rootSelector = regexp.MustCompile(`(?i)(?:^|[\s,>+~(])(:root|html)(?:[\s,.:\[#>+~)]|$)`)

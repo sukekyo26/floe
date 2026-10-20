@@ -345,7 +345,6 @@ var messagesEN = map[string]string{
 	"tmpl_page_part":               "%s:%d: page.html names the part %s, which there is none of; use %s",
 	"tmpl_css_root":                "%s:%d: write the root as :scope, not %s: floe puts this CSS in @scope, where :root and html name nothing",
 	"tmpl_css_import":              "%s:%d: floe puts this CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",
-	"tmpl_css_style_end":           "%s:%d: floe puts this CSS in a <style>, which this </style would close, leaving what follows to be read as the page's HTML: leave it out of comments, and write it as <\\/style in a string and as %%3C/style in a url()",
 	"tmpl_css_brace":               "%s:%d: this } closes no block: floe puts this CSS in a layer, which it would close, leaving the rules after it out of the layer and over the parts' styles",
 	"tmpl_html_style":              "HTML holds a <style> or a <link>: floe puts a page's CSS together, so style the HTML with style attributes",
 	"tmpl_checks_yaml":             "write checks.yaml as a list of checks, each with for, expr and message (and field if you like)",

@@ -24,9 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   it in every parts theme's panel), and a look alone of your own is a
   `part.css` without a schema. Parts themes of your
   own go in `FLOE_PARTS_DIR/themes/<name>/`, a theme of the name of one of
-  floe's taking the place of its files of their names. Their CSS is refused
-  at its line as the template's is, `</style` in a `url()` too. A part or
-  theme that cannot be used is refused to the pages that use it and warned of by
+  floe's taking the place of its files of their names. A part or theme that
+  cannot be used is refused to the pages that use it and warned of by
   `floe template check`; a linked page is drawn again when a file of a part
   is saved, and a publish to a server of other parts is refused.
 - Add twenty-two parts, which the built-in `report` takes and a template
@@ -184,8 +183,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   restyle whatever their selectors. The template's CSS is scoped to the page,
   `:scope` its root: it reaches a part's element but not what the part holds.
   `page.html` holds no `<style>`, nor an item of `"format": "html"` a `<style>`
-  or `<link>`, nor the template's CSS an `@import`, `:root`, `html`, a `}` that closes no block or `</style`,
-  which would close floe's `<style>`, each refused
+  or `<link>`, nor the template's CSS an `@import`, `:root`, `html` or a `}` that closes no block, each refused
   at its line, and `floe template check` refuses a part `page.html` names that floe
   does not have.
   Images go into the page as data URIs: an item of `"format": "image"`

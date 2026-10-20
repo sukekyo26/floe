@@ -1,7 +1,6 @@
 package tmpl
 
 import (
-	"errors"
 	"html/template"
 	"maps"
 	"regexp"
@@ -145,10 +144,9 @@ func TestCheckPalette(t *testing.T) {
 		":root { " + always.String() + "}\n@media (prefers-color-scheme: dark) { :root { " + allButBg.String() + "} }": "p.css sets --bg for light mode alone",
 		":root { --bg: light-dark(#fff, #000); --fg: light-dark(#000, #fff); }":                                        "",
 		":root { --bg: #fff; }" + dark: "",
-		":root { --bg: #fff; --page-bg: url(data:image/svg+xml;base64,PHN2Zz4=) repeat; }" + dark:                  "",
-		":root { --bg: #fff; --page-bg: url(data:image/svg+xml,<svg><style>p{fill:red}</style></svg>); }" + dark:   "p.css:1: floe puts this CSS in a <style>",
-		":root { --bg: #fff; --page-bg: url(data:image/svg+xml,<svg><style>p{fill:red}%3C/style></svg>); }" + dark: "",
-		":root { --radius: 4px; --text-width: 60rem; color-scheme: light dark; }":                                  "",
+		":root { --bg: #fff; --page-bg: url(data:image/svg+xml;base64,PHN2Zz4=) repeat; }" + dark:                "",
+		":root { --bg: #fff; --page-bg: url(data:image/svg+xml,<svg><style>p{fill:red}</style></svg>); }" + dark: "",
+		":root { --radius: 4px; --text-width: 60rem; color-scheme: light dark; }":                                "",
 		":root { color-scheme: light; }": "p.css sets color-scheme for light mode alone",
 		":root { --bg: #fff; --font: \"a;b\", serif; color-scheme: light; } /* body { } */" + dark: "",
 		"@media (prefers-color-scheme: dark) { :root { --bg: #000; } }\n:root { --bg: #fff; }":     "p.css:2: write this :root before",
@@ -475,8 +473,8 @@ func TestReadWords(t *testing.T) {
 	}
 }
 
-// A CSS that would close its <style>, which no reader refused, is kept out of the page as it is drawn,
-// told by its layer; one that ends in </style does not close it, as floe writes a } after it.
+// No CSS closes its <style>: each </style, of any case, is written <\/style, and the <style>s floe
+// writes are all that end.
 func TestPageStyleEnd(t *testing.T) {
 	t.Parallel()
 
@@ -484,13 +482,13 @@ func TestPageStyleEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = set.pageStyle("<body></body>", nil, [][]byte{[]byte("/* </style> */")}, "default"); !errors.Is(err, errStyleEnd) ||
-		!strings.HasSuffix(err.Error(), "of the layer floe.page") {
-		t.Errorf("pageStyle = %v, want %v of the layer floe.page", err, errStyleEnd)
+	css := "/* </Style><b>x</b> */ a { background: url(data:image/svg+xml,<svg><style>p{}</style></svg>); }"
+	style, err := set.pageStyle("<body></body>", nil, [][]byte{[]byte(css)}, "default")
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, css := range []string{"/* </styles */", "/* </style"} {
-		if _, err = set.pageStyle("<body></body>", nil, [][]byte{[]byte(css)}, "default"); err != nil {
-			t.Errorf("pageStyle of %q = %v", css, err)
-		}
+	if ends, sheets := strings.Count(strings.ToLower(style), "</style"), strings.Count(style, "<style>\n"); ends != sheets ||
+		!strings.Contains(style, `/* <\/Style><b>x</b> */`) || !strings.Contains(style, `p{}<\/style></svg>`) {
+		t.Errorf("pageStyle = %s, %d ends of %d <style>s", style, ends, sheets)
 	}
 }
