@@ -537,9 +537,7 @@ func (t *Template) checkExample() error {
 	}
 	// The later stages check it against t, and name t in their mistakes.
 	d.Template = t.Name
-	images, done := diskImages(t.Dir)
-	defer done()
-	if err = t.check(h, images, Themes{Template: "", Parts: ""}, problems); err != nil {
+	if err = t.check(h, diskImages(t.Dir), Themes{Template: "", Parts: ""}, problems); err != nil {
 		return err
 	}
 	_, err = d.Render(cmp.Or(d.Title, file))

@@ -34,41 +34,43 @@ var imageTypes = map[string]string{
 	".svg": "image/svg+xml",
 }
 
-// imageDir is the directory a data file's images are read under: open gives it, when the data names an
-// image, and its mistakes name it dir.
+// imageDir is the directory a data file's images are read under: open gives it, and what lets it go,
+// when the data names an image, and its mistakes name it dir.
 type imageDir struct {
 	dir  string
-	open func() (fs.FS, error)
+	open func() (fs.FS, func(), error)
 }
 
-// diskImages is the directory dir on disk, opened when the data names an image, and what closes it
-// after the reading.
-func diskImages(dir string) (imageDir, func()) {
-	var root *os.Root
-	open := func() (fs.FS, error) {
+// diskImages is the directory dir on disk.
+func diskImages(dir string) imageDir {
+	return imageDir{dir: dir, open: func() (fs.FS, func(), error) {
 		r, err := os.OpenRoot(dir)
 		if err != nil {
-			return nil, usererr.CannotRead(dir, err)
+			return nil, nil, usererr.CannotRead(dir, err)
 		}
-		root = r
-		return r.FS(), nil
-	}
-	done := func() {
-		if root != nil {
-			_ = root.Close() //nolint:errcheck // only read from
-		}
-	}
-	return imageDir{dir: dir, open: open}, done
+		return r.FS(), func() { _ = r.Close() }, nil //nolint:errcheck // only read from
+	}}
 }
 
 // ReadImage reads the image name under files as a data file's check reads it, which where names in its
-// mistakes: see imageURI.
+// mistakes: see keptName and image.
 func ReadImage(files fs.FS, name, where string) ([]byte, error) {
+	if e := keptName(name); e != nil {
+		return nil, e
+	}
 	b, _, e := image(files, name, where)
 	if e != nil {
 		return nil, e
 	}
 	return b, nil
+}
+
+// keptName refuses an image name under KeptName, in any case, where a stored page keeps its data file.
+func keptName(name string) *usererr.Error {
+	if first, _, under := strings.Cut(name, "/"); under && strings.EqualFold(first, KeptName) {
+		return usererr.New("tmpl_image_kept_name", name, KeptName)
+	}
+	return nil
 }
 
 // imageURI reads the image name as a data URI, which html/template takes for a src as it is.
@@ -256,10 +258,11 @@ func checkImages(s *schema, d *Data, root ast.Node, images imageDir) error {
 	if found == nil {
 		return nil
 	}
-	files, err := images.open()
+	files, release, err := images.open()
 	if err != nil {
 		return err
 	}
+	defer release()
 	d.images = map[string]template.URL{}
 	refused := map[string]*usererr.Error{}
 	var problems yamlpos.Problems
@@ -277,9 +280,10 @@ func checkImages(s *schema, d *Data, root ast.Node, images imageDir) error {
 				d.tried = append(d.tried, name)
 			}
 			var uri template.URL
-			if first, _, under := strings.Cut(name, "/"); under && strings.EqualFold(first, KeptName) {
-				e = usererr.New("tmpl_image_kept_name", name, KeptName)
-			} else if uri, e = imageURI(files, name, images.dir); e == nil {
+			if e = keptName(name); e == nil {
+				uri, e = imageURI(files, name, images.dir)
+			}
+			if e == nil {
 				d.images[name] = uri
 			}
 			refused[name] = e

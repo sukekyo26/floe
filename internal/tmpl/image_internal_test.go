@@ -116,9 +116,7 @@ func TestCheckImages(t *testing.T) {
 		t.Fatal(err)
 	}
 	d, root := data(t, "pics:\n  - a.png\n  - none.png\n  - a.png\n  - none.png\n")
-	images, done := diskImages(dir)
-	defer done()
-	err = checkImages(s, d, root, images)
+	err = checkImages(s, d, root, diskImages(dir))
 	want := "d.yaml:3:5: pics[1]: there is no image \"none.png\" under " + dir + "\n" +
 		"d.yaml:5:5: pics[3]: there is no image \"none.png\" under " + dir
 	if err == nil || err.Error() != want {
@@ -158,10 +156,8 @@ func TestTriedImages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	images, done := diskImages(t.TempDir())
-	defer done()
 	d, root := data(t, "pics: [a.png, ../b.png, a.png, .c.png]\n")
-	_ = checkImages(s, d, root, images) //nolint:errcheck // the images are missing; what was tried is the point
+	_ = checkImages(s, d, root, diskImages(t.TempDir())) //nolint:errcheck // the images are missing; what was tried is the point
 	if want := []string{"a.png"}; !slices.Equal(d.tried, want) {
 		t.Errorf("tried = %v, want %v", d.tried, want)
 	}
@@ -182,7 +178,7 @@ func TestImagesFromFS(t *testing.T) {
 		t.Fatal(err)
 	}
 	d, root := data(t, "pics: [sub/a.png, none.png]\n")
-	err = checkImages(s, d, root, imageDir{dir: "/plans", open: func() (fs.FS, error) { return files, nil }})
+	err = checkImages(s, d, root, imageDir{dir: "/plans", open: func() (fs.FS, func(), error) { return files, func() {}, nil }})
 	if want := `d.yaml:1:19: pics[1]: there is no image "none.png" under /plans`; err == nil || err.Error() != want {
 		t.Errorf("checkImages = %v\nwant %s", err, want)
 	}
@@ -192,7 +188,7 @@ func TestImagesFromFS(t *testing.T) {
 	if b, err := ReadImage(files, "sub/a.png", "/plans"); err != nil || !bytes.Equal(b, png) {
 		t.Errorf("ReadImage(sub/a.png) = %d bytes, %v", len(b), err)
 	}
-	for _, name := range []string{"../a.png", ".a.png", "sub/a.txt", "none.png"} {
+	for _, name := range []string{"../a.png", ".a.png", "sub/a.txt", "none.png", "Data.yaml/a.png"} {
 		if _, err := ReadImage(files, name, "/plans"); err == nil {
 			t.Errorf("ReadImage(%s) = nil error", name)
 		}
