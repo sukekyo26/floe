@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `floe:///parts/any.json`, one part of any kind, one key naming it, as
+  report's sections hold them: a template of your own lists parts with
+  `"items": { "$ref": "floe:///parts/any.json" }` and draws them with one
+  line in page.html, `{{range .parts}}{{range .}}{{with .}}{{.}}{{end}}{{end}}{{end}}`.
 - Add `floe part`: `list` the parts, floe's and your own, with where they are
   and their descriptions; `show <name>` what a part takes and its items, the
   looks it takes, the parts it holds and the parts themes with a file of it;
@@ -20,7 +24,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   `$XDG_CONFIG_HOME/floe/parts`) of the files floe's parts have, referred to
   as `floe:///parts/<name>.json`; its `part.html` draws its items, and its
   schema takes no format of floe's (`html`, `image`, `markdown`) under
-  `properties` and `items`; no schema, a template's too, names a part by
+  `properties` and `items`, nor through `any.json`; no schema, a template's too, names a part by
   the `$ref` at its root. One of the
   name of one of floe's takes its place whole, and floe's parts themes do not
   style it. A part takes the look

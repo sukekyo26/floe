@@ -217,7 +217,7 @@ func TestCheckParts(t *testing.T) {
 	// One into a part would be drawn as plain data: a publish refuses it too.
 	ref := "floe:///parts/table.json#/properties/columns"
 	dir = memo(t, `"risks": {"$ref": "`+ref+`"}`)
-	want := ref + " points into a part of floe's, which would be checked but not drawn as the part; refer to the whole part, floe:///parts/table.json"
+	want := ref + " points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, floe:///parts/table.json"
 	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "#/properties/risks: "+want) {
 		t.Errorf("Check of a ref into a part = %v", mistakes)
 	}
@@ -241,6 +241,23 @@ func TestCheckParts(t *testing.T) {
 	want = "#/properties/risks/anyOf/0: the part table draws an item"
 	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 		t.Errorf("Check of a part under anyOf = %v", mistakes)
+	}
+	// A schema the parts share is the items written where it is: one that holds parts is followed to as a
+	// part is, and one into it is refused as one into a part.
+	dir = memo(t, `"risks": {"anyOf": [{"$ref": "floe:///parts/any.json"}]}`)
+	want = "#/properties/risks/anyOf/0: floe:///parts/any.json holds parts"
+	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
+		t.Errorf("Check of any.json under anyOf = %v", mistakes)
+	}
+	dir = memo(t, `"risks": {"anyOf": [{"$ref": "floe:///parts/tone.json"}]}`)
+	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); slices.ContainsFunc(mistakes, func(err error) bool { return strings.Contains(err.Error(), "holds parts") }) {
+		t.Errorf("Check of tone.json under anyOf = %v", mistakes)
+	}
+	ref = "floe:///parts/any.json#/properties/code"
+	dir = memo(t, `"risks": {"$ref": "`+ref+`"}`)
+	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 ||
+		!strings.Contains(mistakes[0].Error(), ref+" points into a part of floe's or a schema the parts share") {
+		t.Errorf("Check of a ref into any.json = %v", mistakes)
 	}
 }
 

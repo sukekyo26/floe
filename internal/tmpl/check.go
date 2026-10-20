@@ -578,8 +578,8 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 }
 
 // part notes the part of floe's ref names, at ptr, and reports whether it names one: one prepare does
-// not reach would never be drawn. A ref into a part, wherever it is, would be checked as the part but
-// drawn as plain data.
+// not reach would never be drawn, nor would a schema the parts share that holds what floe draws. A ref
+// into either, wherever it is, would be checked as written but drawn as plain data.
 func (l *schemaLint) part(ref, ptr string, reached bool) bool {
 	ref = absolute(l.base, ref)
 	if !strings.HasPrefix(ref, partsURL) {
@@ -595,6 +595,9 @@ func (l *schemaLint) part(ref, ptr string, reached bool) bool {
 		}
 		return false
 	case set.parts[name] == nil:
+		if !reached && set.draws(set.sharedSchema(ref)) {
+			l.mistakes = append(l.mistakes, usererr.New("tmpl_shared_unreached", l.file, ptr, ref))
+		}
 		return false
 	case !reached:
 		l.mistakes = append(l.mistakes, usererr.New("tmpl_part_unreached", l.file, ptr, name))
