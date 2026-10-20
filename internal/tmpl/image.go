@@ -52,25 +52,29 @@ func diskImages(dir string) imageDir {
 	}}
 }
 
+// fsImages is the directory dir as files holds it, which needs no opening.
+func fsImages(files fs.FS, dir string) imageDir {
+	return imageDir{dir: dir, open: func() (fs.FS, func(), error) { return files, func() {}, nil }}
+}
+
 // ReadImage reads the image name under files as a data file's check reads it, which where names in its
-// mistakes: see keptName and image.
+// mistakes: see dataImage.
 func ReadImage(files fs.FS, name, where string) ([]byte, error) {
-	if e := keptName(name); e != nil {
-		return nil, e
-	}
-	b, _, e := image(files, name, where)
+	b, _, e := dataImage(files, name, where)
 	if e != nil {
 		return nil, e
 	}
 	return b, nil
 }
 
-// keptName refuses an image name under KeptName, in any case, where a stored page keeps its data file.
-func keptName(name string) *usererr.Error {
-	if first, _, under := strings.Cut(name, "/"); under && strings.EqualFold(first, KeptName) {
-		return usererr.New("tmpl_image_kept_name", name, KeptName)
+// dataImage reads the image name a data file names, and its type, as image does, but not under
+// KeptName, in any case, where a stored page keeps its data file.
+func dataImage(files fs.FS, name, where string) ([]byte, string, *usererr.Error) {
+	// A name that is no path is told so first, under KeptName or not.
+	if first, _, under := strings.Cut(name, "/"); imagePath(name) && under && strings.EqualFold(first, KeptName) {
+		return nil, "", usererr.New("tmpl_image_kept_name", name, KeptName)
 	}
-	return nil
+	return image(files, name, where)
 }
 
 // imageURI reads the image name as a data URI, which html/template takes for a src as it is.
@@ -79,8 +83,13 @@ func imageURI(files fs.FS, name, where string) (template.URL, *usererr.Error) {
 	if e != nil {
 		return "", e
 	}
+	return dataURI(b, typ), nil
+}
+
+// dataURI is the image b, of the type typ, as a data URI.
+func dataURI(b []byte, typ string) template.URL {
 	//nolint:gosec // G203: an image of a type floe takes, checked by what it holds
-	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b)), nil
+	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b))
 }
 
 // image reads the image name, a slash-separated path under files, and its type. where names files in
@@ -279,12 +288,10 @@ func checkImages(s *schema, d *Data, root ast.Node, images imageDir) error {
 			if imagePath(name) {
 				d.tried = append(d.tried, name)
 			}
-			var uri template.URL
-			if e = keptName(name); e == nil {
-				uri, e = imageURI(files, name, images.dir)
-			}
-			if e == nil {
-				d.images[name] = uri
+			var b []byte
+			var typ string
+			if b, typ, e = dataImage(files, name, images.dir); e == nil {
+				d.images[name] = dataURI(b, typ)
 			}
 			refused[name] = e
 		}

@@ -3,7 +3,6 @@ package tmpl
 import (
 	"bytes"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -178,7 +177,7 @@ func TestImagesFromFS(t *testing.T) {
 		t.Fatal(err)
 	}
 	d, root := data(t, "pics: [sub/a.png, none.png]\n")
-	err = checkImages(s, d, root, imageDir{dir: "/plans", open: func() (fs.FS, func(), error) { return files, func() {}, nil }})
+	err = checkImages(s, d, root, fsImages(files, "/plans"))
 	if want := `d.yaml:1:19: pics[1]: there is no image "none.png" under /plans`; err == nil || err.Error() != want {
 		t.Errorf("checkImages = %v\nwant %s", err, want)
 	}
@@ -187,6 +186,9 @@ func TestImagesFromFS(t *testing.T) {
 	}
 	if b, err := ReadImage(files, "sub/a.png", "/plans"); err != nil || !bytes.Equal(b, png) {
 		t.Errorf("ReadImage(sub/a.png) = %d bytes, %v", len(b), err)
+	}
+	if _, err := ReadImage(files, "data.yaml/../a.png", "/plans"); err == nil || !strings.Contains(err.Error(), "without ..") {
+		t.Errorf("ReadImage(data.yaml/../a.png) = %v, want the path refused", err)
 	}
 	for _, name := range []string{"../a.png", ".a.png", "sub/a.txt", "none.png", "Data.yaml/a.png"} {
 		if _, err := ReadImage(files, name, "/plans"); err == nil {

@@ -108,7 +108,7 @@ type Sources struct {
 	Parts     []string // the directories of parts of one's own read, whose files the data may be drawn with
 	Template  string   // the directory of the template of one's own the data names; "" for none
 	Images    []string // the images the data names, read or not, as it writes them: under ImagesDir
-	ImagesDir string   // the directory of the data file, its images under it
+	ImagesDir string   // the directory of the data file on disk, its images under it
 	Icons     []string // the index files of the icon sets, when it has a diagram, fetched or not
 }
 
@@ -121,11 +121,18 @@ func (l *Library) ReadSources(file string, src []byte, themes Themes, cwd string
 	return l.readWith(file, src, diskImages(dir), themes)
 }
 
-// ReadFS reads the data file src as ReadSources does, its images read from images, the directory of
-// the data file, which its mistakes and Sources.ImagesDir name dir.
-func (l *Library) ReadFS(file string, src []byte, images fs.FS, dir string, themes Themes) (*Data, Sources, error) {
-	open := func() (fs.FS, func(), error) { return images, func() {}, nil }
-	return l.readWith(file, src, imageDir{dir: dir, open: open}, themes)
+// errNoImages is a ReadFS without an fs.FS to read the images from: a mistake of its caller.
+var errNoImages = errors.New("tmpl.ReadFS: no fs.FS to read the images from")
+
+// ReadFS reads the data file src as Read does, its images read from images, the directory of the data
+// file, which its mistakes name dir. It returns the images the data names, read or not, as it writes
+// them (Sources.Images): nothing of it is on disk to watch.
+func (l *Library) ReadFS(file string, src []byte, images fs.FS, dir string, themes Themes) (*Data, []string, error) {
+	if images == nil {
+		return nil, nil, errNoImages
+	}
+	d, sources, err := l.readWith(file, src, fsImages(images, dir), themes)
+	return d, sources.Images, err
 }
 
 func (l *Library) readWith(file string, src []byte, images imageDir, themes Themes) (*Data, Sources, error) {
