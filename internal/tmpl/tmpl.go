@@ -80,9 +80,10 @@ type Data struct {
 	images map[string]template.URL // its images as data URIs, by the path written
 	// its items drawn by floe's parts, by the path of keys to each (pathKey); nil without one
 	parts    map[string]template.HTML
-	diagrams bool     // whether it has a diagram, for the page to get their style and zoom
-	tried    []string // the images it names that a file can make right, read or not, as it writes them
-	icons    []string // the index files of the icon sets its diagrams may show, when it has one
+	diagrams bool       // whether it has a diagram, for the page to get their style and zoom
+	tried    []string   // the images it names that a file can make right, read or not, as it writes them
+	icons    []string   // the index files of the icon sets its diagrams may show, when it has one
+	marks    *htmlMarks // its items of format html marked, while checkDrawnHTML draws it; nil else
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -241,7 +242,7 @@ func start(file string, src []byte, given Themes) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, PartsTheme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
-		tmpl: nil, schema: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil,
+		tmpl: nil, schema: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, marks: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(given)
@@ -354,7 +355,10 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	if err = checkRelations(t, d, root); err != nil {
 		return err
 	}
-	return checkComputed(t, d, root, s)
+	if err = checkComputed(t, d, root, s); err != nil {
+		return err
+	}
+	return checkDrawnHTML(d, root)
 }
 
 // checkHTML refuses the items of d of format html, as its schema s declares them, that hold a <style> or
@@ -743,6 +747,9 @@ func (s *schema) drawn(v any, at []string, d *Data) (any, bool) {
 		html, _ := markdownHTML(text) //nolint:errcheck // goldmark fails only to write, and a buffer does not
 		return html, true
 	case s.Format == "html" && isText:
+		if d != nil && d.marks != nil {
+			text = d.marks.marked(text, at)
+		}
 		return template.HTML(text), true //nolint:gosec // G203: the schema declares this item HTML
 	case s.Format == "image" && isText:
 		return d.images[text], true
