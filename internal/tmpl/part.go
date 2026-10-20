@@ -881,7 +881,8 @@ func (set *partSet) pageStyle(page string, found []tag, own [][]byte, theme stri
 		}
 		style.WriteString("<style>\n" + body + "</style>\n")
 	}
-	write("floe.base", "@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n"+baseCSS+"}\n")
+	write("floe.base", "@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;\n"+
+		"@layer floe.base {\n"+baseCSS+"}\n")
 	sheet := func(layer, css string) {
 		if css != "" {
 			write(layer, "@layer "+layer+" {\n"+css+"}\n")
