@@ -662,6 +662,12 @@ func TestPublishOtherDirs(t *testing.T) {
 	}
 	want(t, "publish with other parts", e.run(t, "", "publish", page), 1, "",
 		"floe: the server on port "+e.port+" draws pages with the templates of "+first.Templates+", the parts of "+first.Parts)
+	// Listing from another build would replace the server with one of other parts: refused, as a publish is.
+	want(t, "list from another build with other parts", e.exe(t, otherBuild, "list"), 1, "",
+		"floe: the server on port "+e.port+" draws pages with the templates of "+first.Templates+", the parts of "+first.Parts)
+	if h, _ := e.health(t); h.PID != first.PID {
+		t.Errorf("list from another build replaced the server: pid %d, then %d", first.PID, h.PID)
+	}
 	// Listing and removing draw nothing: they take the server as it is.
 	if r := e.run(t, "", "list"); r.code != 0 || !strings.Contains(r.stdout, "\tdirs\t") {
 		t.Errorf("list with other parts = %+v", r)

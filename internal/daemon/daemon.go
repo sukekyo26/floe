@@ -103,8 +103,8 @@ type Server struct {
 	Templates string
 	Parts     string
 	Icons     string
-	// AnyDirs takes a running server that draws with other directories as it is, for a command that
-	// draws nothing (listing, removing).
+	// AnyDirs takes a running server of this build that draws with other directories as it is, for a
+	// command that draws nothing (listing, removing). One of another build is not replaced by it.
 	AnyDirs bool
 	// Env is the environment of the started server (it reads its settings from there).
 	Env []string
@@ -123,19 +123,18 @@ func Addr(port int) string {
 // outdated one as needed.
 func Ensure(ctx context.Context, s Server) error {
 	p := Probe(ctx, s.base())
-	// One of other directories is refused before it is replaced, which would draw others' pages with these.
-	if err := s.otherDirs(p); err != nil {
-		return err
-	}
-	if p.State == Ours && sameDir(p.Health.Root, s.Root) && p.Health.Build != s.Build {
-		old := p.Health.PID
-		if err := Terminate(old); err != nil {
+	outdated := p.State == Ours && sameDir(p.Health.Root, s.Root) && p.Health.Build != s.Build
+	// One of other directories is refused before it is replaced, which would draw others' pages with these,
+	// whatever the command.
+	if !s.AnyDirs || outdated {
+		if err := s.otherDirs(p); err != nil {
 			return err
 		}
-		// Wait for that server only: a concurrent publish may have started the new one already.
-		p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
-		if p.State == Ours && p.Health.PID == old {
-			return usererr.New("daemon_outdated_alive", old)
+	}
+	if outdated {
+		var err error
+		if p, err = s.replace(ctx, p); err != nil {
+			return err
 		}
 	}
 	if p.State == Down {
@@ -151,15 +150,31 @@ func Ensure(ctx context.Context, s Server) error {
 		return usererr.New("daemon_not_started")
 	case !sameDir(p.Health.Root, s.Root):
 		return usererr.New("daemon_other_root", s.Port, p.Health.Root)
+	case s.AnyDirs:
+		return nil
 	default:
 		return s.otherDirs(p)
 	}
 }
 
+// replace stops p, a server of another build, and returns what serves the port once it is gone.
+func (s Server) replace(ctx context.Context, p Status) (Status, error) {
+	old := p.Health.PID
+	if err := Terminate(old); err != nil {
+		return p, err
+	}
+	// Wait for that server only: a concurrent command may have started the new one already.
+	p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
+	if p.State == Ours && p.Health.PID == old {
+		return p, usererr.New("daemon_outdated_alive", old)
+	}
+	return p, nil
+}
+
 // otherDirs refuses p, a server of floe that serves the root of s, when it draws with other directories
 // of templates, parts or icons than s.
 func (s Server) otherDirs(p Status) error {
-	if s.AnyDirs || p.State != Ours || !sameDir(p.Health.Root, s.Root) || sameOrUnread(p.Health.Templates, s.Templates) &&
+	if p.State != Ours || !sameDir(p.Health.Root, s.Root) || sameOrUnread(p.Health.Templates, s.Templates) &&
 		sameOrUnread(p.Health.Parts, s.Parts) && sameOrUnread(p.Health.Icons, s.Icons) {
 		return nil
 	}

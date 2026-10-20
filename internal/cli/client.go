@@ -54,6 +54,11 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 		if err != nil {
 			return fmt.Errorf("%s %s: %w", method, path, err)
 		}
+		// Told before sending: the server stops reading at its limit, which may break the sending off
+		// before its answer comes.
+		if len(b) > server.MaxUpload {
+			return tooLarge()
+		}
 		r = bytes.NewReader(b)
 	}
 	req, err := http.NewRequestWithContext(ctx, method, c.base+path, r)
@@ -77,7 +82,7 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 	}
 	// Only a publish sends so much.
 	if res.StatusCode == http.StatusRequestEntityTooLarge {
-		return usererr.New("cli_publish_large", strconv.Itoa(server.MaxUpload>>20)+" MiB")
+		return tooLarge()
 	}
 	if res.StatusCode >= http.StatusMultipleChoices {
 		e := &remoteError{status: res.StatusCode, message: strings.TrimSpace(string(b)), mistakes: false, body: b}
@@ -95,6 +100,11 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 		return fmt.Errorf("%s %s: %w", method, path, err)
 	}
 	return nil
+}
+
+// tooLarge refuses a publish larger than the server takes, saying how large it may be.
+func tooLarge() error {
+	return usererr.New("cli_publish_large", strconv.Itoa(server.MaxUpload>>20)+" MiB")
 }
 
 // refused is the refusal err is, nil for an error of another kind.

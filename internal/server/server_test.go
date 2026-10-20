@@ -122,13 +122,19 @@ func (e *env) publish(t *testing.T, file string, opts store.Options) {
 	t.Helper()
 
 	e.save(t, func(ctx context.Context, file string, opts store.Options, cwd string) (*store.Entry, error) {
-		up, err := store.ReadUpload(ctx, file, cwd)
-		if err != nil {
-			return nil, err
-		}
-		up.Images = os.DirFS(up.Dir)
-		return e.store.PrepareData(up, opts)
+		return e.prepare(ctx, file, opts, cwd)
 	}, file, opts)
+}
+
+// prepare checks a publish of the data file file on disk from cwd as the CLI has the server check it,
+// but in process: read by store.ReadUpload, its images read under its directory.
+func (e *env) prepare(ctx context.Context, file string, opts store.Options, cwd string) (*store.Entry, error) {
+	up, err := store.ReadUpload(ctx, file, cwd)
+	if err != nil {
+		return nil, err
+	}
+	up.Images = os.DirFS(up.Dir)
+	return e.store.PrepareData(up, opts)
 }
 
 func (e *env) link(t *testing.T, file string, opts store.Options) {

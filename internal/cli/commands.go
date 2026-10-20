@@ -181,12 +181,9 @@ func (a *app) publishData(ctx context.Context, file string, opts store.Options) 
 	if err != nil {
 		return saved, err //nolint:wrapcheck // a usererr for the user as is
 	}
-	slug := store.SlugFromFile(file, a.env.Dir)
-	if opts.Slug != nil {
-		slug = strings.TrimSpace(*opts.Slug)
-	}
-	if !store.ValidSlug(slug) {
-		return saved, usererr.New("store_invalid_slug", slug)
+	slug, err := store.DataSlug(file, opts.Slug)
+	if err != nil {
+		return saved, err //nolint:wrapcheck // a usererr for the user as is
 	}
 	c, err := a.client(ctx, false)
 	if err != nil {
