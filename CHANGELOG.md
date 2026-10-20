@@ -152,7 +152,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   images from elsewhere and forms, in its download too. A page is in the
   language its data file names (`lang:`, a BCP 47 tag such as `en` or `ja`),
   which every data file holds. It starts the server in the
-  background when needed and opens a new page in the browser. An HTML file is
+  background when needed, which checks and saves the page (the server is the
+  only one that writes the store), and opens a new page in the browser. An HTML file is
   not stored: `--link` registers it in place and shows it as it is, served
   with the files under its directory. A data file linked with `--link` is
   drawn from its place instead of stored. Saving a data file, an image it
@@ -188,7 +189,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   names an image under the data file's directory, and `page.html` shows one
   of the template's `assets/` with `asset`. An image is a png, jpeg, gif,
   webp or svg file up to 1 MiB, checked by its name and by what it holds,
-  and a mistake in one of the data is reported at its line and column.
+  and a mistake in one of the data is reported at its line and column, but
+  for one `floe publish` will not send the server (through a symlink, over
+  1 MiB, not a file, unreadable or not holding its type).
   `template.yaml` names the floe a template needs. A schema may not declare
   or require `lang`, `template`, `theme` or `title`, which floe reads from
   every data file itself. See [docs/templates.md](docs/templates.md).
@@ -205,8 +208,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   does and prints every mistake as `file:line:column`, without publishing them
   or starting the server, for the CI of a repository that keeps data files.
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, as well as the
-  management page with live reload. The server keeps running until
-  `floe stop`.
+  management page with live reload. `floe list` and `floe rm` ask the server,
+  starting it when needed, as `floe publish` does. The server keeps running
+  until `floe stop`.
   They are configured with `FLOE_DIR` and `FLOE_PORT` (default 7325). A
   relative `FLOE_DIR`, `FLOE_ICONS_DIR` or `FLOE_TEMPLATES_DIR` is under the
   working directory, and a `~` or `~/` at its start stands for `HOME`

@@ -121,7 +121,18 @@ func (e *env) write(t *testing.T, rel, body string) string {
 func (e *env) publish(t *testing.T, file string, opts store.Options) {
 	t.Helper()
 
-	e.save(t, e.store.Prepare, file, opts)
+	e.save(t, e.prepare, file, opts)
+}
+
+// prepare checks a publish of the data file file on disk from cwd as the CLI has the server check it,
+// but in process: read by store.ReadUpload, its images read under its directory.
+func (e *env) prepare(ctx context.Context, file string, opts store.Options, cwd string) (*store.Entry, error) {
+	up, err := store.ReadUpload(ctx, file, cwd)
+	if err != nil {
+		return nil, err
+	}
+	up.Images = os.DirFS(up.Dir)
+	return e.store.PrepareData(up, opts)
 }
 
 func (e *env) link(t *testing.T, file string, opts store.Options) {
@@ -710,7 +721,7 @@ func TestAddLink(t *testing.T) {
 	}
 
 	r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+index+`","description":"from ui"}`)
-	if m := e.store.ReadMeta("site"); r.status != http.StatusCreated || r.body != `{"slug":"site"}` || m == nil ||
+	if m := e.store.ReadMeta("site"); r.status != http.StatusCreated || r.body != `{"slug":"site","title":"","prev":null}` || m == nil ||
 		m.Path != index || m.Description != "from ui" {
 		t.Errorf("add = %d %s, %+v", r.status, r.body, m)
 	}
@@ -726,7 +737,7 @@ func TestAddLink(t *testing.T) {
 	if list, err := e.store.List(); err != nil || len(list) != 1 {
 		t.Errorf("re-adding the same path made %d entries (%v), want it updated in place", len(list), err)
 	}
-	if r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`"}`); r.body != `{"slug":"p"}` {
+	if r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`"}`); r.body != `{"slug":"p","title":"","prev":null}` {
 		t.Errorf("an omitted slug = %s", r.body)
 	}
 
@@ -744,6 +755,12 @@ func TestAddLink(t *testing.T) {
 	}
 	if m := e.store.ReadMeta("p"); m == nil {
 		t.Error("the link p is gone")
+	}
+	// The path is taken as sent: a file name may start with a space.
+	spaced := e.write(t, "site/ spaced.html", "<p>s</p>")
+	if r := e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+spaced+`","slug":"spaced"}`); r.status != http.StatusCreated ||
+		e.store.ReadMeta("spaced") == nil || e.store.ReadMeta("spaced").Path != spaced {
+		t.Errorf("a path with a space = %d %s", r.status, r.body)
 	}
 }
 

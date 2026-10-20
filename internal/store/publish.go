@@ -111,7 +111,7 @@ func (o Options) themes() tmpl.Themes {
 type Entry struct {
 	Slug string
 	// Meta is what Save writes as meta.json. Save builds it again on the slug as it is then, so a value
-	// set here between Prepare and Save does not stay.
+	// set here between PrepareData or PrepareLink and Save does not stay.
 	Meta Meta
 	// Source is the data file of a stored page, and Images the images it shows, by the path it names
 	// them by; nil for a link.
@@ -149,17 +149,12 @@ func (e *NeedImages) Error() string {
 	return "the data names images to be sent with it: " + strings.Join(e.Names, ", ")
 }
 
-// Prepare checks a publish of the data file file on disk as a stored page, its images under its
-// directory, and builds what Save writes, without writing anything. cwd resolves a relative file and
-// names the project the page belongs to.
-func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
+// ReadUpload reads the data file file on disk for a publish from cwd, which resolves a relative file and
+// names the project the page belongs to. Its images are left out, to be read when asked for.
+func ReadUpload(ctx context.Context, file, cwd string) (Upload, error) {
 	// Before reading: a page is drawn from a data file, whatever is or is not there.
 	if err := checkData(file); err != nil {
-		return nil, err
-	}
-	opts, err := opts.normalized()
-	if err != nil {
-		return nil, err
+		return Upload{}, err
 	}
 	abs := file
 	if !filepath.IsAbs(abs) {
@@ -167,19 +162,17 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	}
 	src, err := os.ReadFile(abs) //nolint:gosec // G304: publishing the user's file is the point
 	if err != nil {
-		return nil, usererr.CannotRead(file, err)
+		return Upload{}, usererr.CannotRead(file, err)
 	}
-	themes := opts.themes()
-	data, err := s.templates.Read(file, src, themes, cwd)
-	if err != nil {
-		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
-	}
-	return s.storedPage(file, data, src, themes, opts, project.Name(ctx, cwd))
+	return Upload{
+		File: file, Dir: filepath.Dir(abs), Source: src, Images: nil, Project: project.Name(ctx, cwd),
+	}, nil
 }
 
-// PrepareData checks a publish of the data file up as a stored page, as Prepare does without reading
-// the publisher's disk. Without up.Images, a data file that names images is answered NeedImages, once
-// nothing that needs no image refuses the publish (the slug, the page's owner).
+// PrepareData checks a publish of the data file up as a stored page and builds what Save writes,
+// without writing anything or reading the publisher's disk. Without up.Images, a data file that names
+// images is answered NeedImages, once nothing that needs no image refuses the publish (the slug, the
+// page's owner).
 func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
 	if err := checkData(up.File); err != nil {
 		return nil, err
@@ -220,8 +213,7 @@ func checkData(file string) error {
 func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, themes tmpl.Themes, opts Options, from string) (
 	*Entry, error,
 ) {
-	// No cwd: it names only an index.html after its directory, and this is a data file.
-	slug, err := s.slugFor(file, "", opts, "")
+	slug, err := DataSlug(file, opts.Slug)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +242,7 @@ func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd 
 			return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 		}
 	}
-	slug, err := s.slugFor(file, path, opts, cwd)
+	slug, err := s.linkSlug(file, path, opts, cwd)
 	if err != nil {
 		return nil, err
 	}
@@ -382,17 +374,29 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 	return m
 }
 
-func (s *Store) slugFor(file, path string, opts Options, cwd string) (string, error) {
-	slug := ""
-	switch {
-	case opts.Slug != nil:
-		slug = *opts.Slug
-	case path != "":
-		// Named after the given file, not the symlink's target.
-		slug = s.freeSlug(SlugFromFile(file, cwd), path)
-	default:
-		slug = SlugFromFile(file, cwd)
+// DataSlug is the slug of a stored page of the data file file: slug when given, else one made of its
+// name. One that cannot be a slug is refused.
+func DataSlug(file string, slug *string) (string, error) {
+	// No cwd: it names only an index.html after its directory, and this is a data file.
+	name := SlugFromFile(file, "")
+	if slug != nil {
+		name = *slug
 	}
+	return checkSlug(name)
+}
+
+// linkSlug is the slug of a link to path, given as file from cwd: the one given, else the slug of the
+// link to path, else one free made of file's name.
+func (s *Store) linkSlug(file, path string, opts Options, cwd string) (string, error) {
+	if opts.Slug != nil {
+		return checkSlug(*opts.Slug)
+	}
+	// Named after the given file, not the symlink's target.
+	return checkSlug(s.freeSlug(SlugFromFile(file, cwd), path))
+}
+
+// checkSlug refuses slug unless it can be one.
+func checkSlug(slug string) (string, error) {
 	if !ValidSlug(slug) {
 		return "", usererr.New("store_invalid_slug", slug)
 	}

@@ -191,6 +191,7 @@ var messagesJA = map[string]string{
 	"cli_render_same_file_case":    "%s と %s は %s と %s に書き出します。大文字小文字を区別しない所（macOS）では同じファイルなので、どちらかの名前を変えてください",
 	"cli_render_missing":           "%s がありません。floe render で %s から書き出してください",
 	"cli_render_stale":             "%s は %s から描いたものと違います。floe render で書き出し直してください",
+	"cli_publish_large":            "データファイルと画像が、publish で送れる %s を超えています。小さくするか、出す画像を減らしてください",
 	"cli_title_empty":              "--title が空です。ページの名前を指定するか、--title を省いてデータファイルの title:（リンクなら <title> か最初の <h1>）から取ってください",
 	"cli_theme_empty":              "--theme が空です。テンプレートのテーマを指定するか、--theme を省いてデータファイルの theme: から取ってください",
 	"cli_port_in_use":              "ポート %d は使われています。そのプログラムを止めるか、FLOE_PORT を設定してください",
