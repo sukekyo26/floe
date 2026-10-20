@@ -198,7 +198,7 @@ Check each directory as the template of its name, before you use or share it. A 
 - Its files first: `template.yaml`, `schema.json` (a `format` floe does not know is a mistake, as is an item, declared or required, named as a key floe reads from every data file: `lang`, `parts-theme`, `template`, `theme`, `title`), `checks.yaml` (the paths of `for` and `field` must be declared in `schema.json`), `computed.yaml`, `page.html`, `themes/default.css` and the images of `assets/`.
 - Then its `example.yaml` through every stage of `floe publish`, drawing the page included. It must name the template of the directory's name: the template drawn is always the one in the directory, never another of its name.
 - Every mistake is printed at once, as `file:line:column: message` where it has a place (exit code 1). Nothing is printed when every template is right (exit code 0).
-- Warnings go to stderr and leave the exit code 0: no `template.yaml`, or an object of `schema.json` that does not refuse a misspelt key (no `"additionalProperties": false`).
+- Warnings go to stderr and leave the exit code 0: no `template.yaml`, an object of `schema.json` that does not refuse a misspelt key (no `"additionalProperties": false`), or a colour that changes with the mode set on `:scope` for light mode alone, which would stay in dark mode too.
 
 [templates.md](templates.md) tells what each file holds.
 
