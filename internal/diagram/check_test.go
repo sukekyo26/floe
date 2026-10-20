@@ -138,9 +138,43 @@ func TestCheck(t *testing.T) {
 			// the corner icon is a part: a box may not cover it
 			name: "box over a frame icon",
 			parts: `  - frame: { x: 20, y: 120, w: 200, h: 60, label: Heading, icon: aws/group/region }
-  - box: { x: 40, y: 140, w: 60, h: 30, rows: [b] }
+  - box: { x: 40, y: 146, w: 60, h: 30, rows: [b] }
 `,
 			want: []string{`s.yaml:6:5: the icon of frame "Heading" overlaps box "b" (line 7)`},
+		},
+		{
+			name: "box over a frame heading",
+			parts: `  - frame: { x: 20, y: 120, w: 200, h: 60, label: Heading }
+  - box: { x: 40, y: 124, w: 60, h: 30, rows: [b] }
+`,
+			want: []string{`s.yaml:7:5: box "b" overlaps the heading of frame "Heading" (line 6)`},
+		},
+		{
+			// edges and lines may cross parts, but not leave the canvas
+			name: "edge and line off the canvas",
+			parts: `  - edge: { d: "M10,190 H400", end: none }
+  - line: { x1: -10, y1: 100, x2: 100, y2: 100 }
+  - line: { x1: 0, y1: 50, x2: 300, y2: 50, kind: divider }
+`,
+			want: []string{
+				`s.yaml:6:5: edge "M10,190 H400" sticks out of the 300x200 canvas`,
+				`s.yaml:7:5: line from -10,100 to 100,100 sticks out of the 300x200 canvas`,
+			},
+		},
+		{
+			name: "axis off the canvas",
+			parts: `  - axis: { x1: 20, x2: 400, y: 150, ticks: [[20, a]] }
+  - axis: { x1: 20, x2: 280, y: 150, ticks: [[100, b]], grid: -10 }
+`,
+			want: []string{
+				`s.yaml:6:5: axis from 20 to 400 at y 150 sticks out of the 300x200 canvas`,
+				`s.yaml:7:5: axis from 20 to 280 at y 150 sticks out of the 300x200 canvas`,
+			},
+		},
+		{
+			name:  "heading wider than its frame",
+			parts: "  - frame: { x: 20, y: 20, w: 100, h: 60, label: A heading longer than its frame }\n",
+			want:  []string{`s.yaml:6:5: frame "A heading longer than its frame": "A heading longer than its frame" needs about 148px more width`},
 		},
 		{
 			name: "icons not there",
@@ -184,7 +218,10 @@ func TestCheck(t *testing.T) {
 		{
 			name:  "the same mistake once",
 			parts: "  - axis: { x1: 10, x2: 290, y: 100, ticks: [[400, x], [500, x]] }\n",
-			want:  []string{`s.yaml:6:5: label "x" sticks out of the 300x200 canvas`},
+			want: []string{
+				`s.yaml:6:5: label "x" sticks out of the 300x200 canvas`,
+				`s.yaml:6:5: axis from 10 to 290 at y 100 sticks out of the 300x200 canvas`,
+			},
 		},
 	}
 	for _, tt := range tests {

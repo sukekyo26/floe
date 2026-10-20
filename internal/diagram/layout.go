@@ -57,6 +57,7 @@ type layout struct {
 	areas    []rect // may overlap (Venn circles)
 	labels   []rect
 	heads    []rect // frame headings, which edges may not cross
+	strokes  []rect // the spans of edges and lines, which must stay on the canvas
 	paths    []path
 	problems yamlpos.Problems
 	seen     map[string]bool
@@ -73,8 +74,8 @@ type layout struct {
 // newLayout lays out s. Icons not fetched stop it with an error, as no mistake of s does.
 func newLayout(s *Spec, store *icons.Store) (*layout, error) {
 	l := &layout{
-		spec: s, icons: store, err: nil, boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, paths: nil,
-		problems: nil, seen: map[string]bool{},
+		spec: s, icons: store, err: nil, boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil,
+		strokes: nil, paths: nil, problems: nil, seen: map[string]bool{},
 		areaSVG: nil, edgeSVG: nil, boxSVG: nil, labelSVG: nil, grids: nil, markers: nil,
 		iconDefs: nil, iconIDs: map[string]string{},
 	}
@@ -127,6 +128,8 @@ func (l *layout) add(p Part) {
 	case Label:
 		l.label(p.Pos, p.Text, p.X, p.Y, p.Anchor, p.Plain, p.Strong)
 	case Line:
+		what := usererr.New("diagram_what_line", formatNum(p.X1), formatNum(p.Y1), formatNum(p.X2), formatNum(p.Y2))
+		l.strokes = append(l.strokes, span([][4]float64{{p.X1, p.Y1, p.X2, p.Y2}}, what, p.Pos))
 		l.edgeSVG = append(l.edgeSVG,
 			line(p.X1, p.Y1, p.X2, p.Y2, p.Kind))
 	case Raw:
@@ -153,6 +156,8 @@ func (l *layout) addFrame(f Frame) {
 	if f.Label != "" {
 		head := usererr.New("diagram_what_heading", f.Label)
 		l.heads = append(l.heads, rect{hx, hy - 9, textWidth(f.Label, size, false), 18, head, f.Pos})
+		// The heading keeps the margin on its right that it has on its left.
+		l.fit(f.Pos, what, f.Label, size, false, f.W-(hx-f.X)-12)
 	}
 	rx, cls := 10.0, "frame"
 	if f.Icon != "" || f.Square {
@@ -359,6 +364,20 @@ func (l *layout) addEdge(e Edge) {
 		p.own = l.label(e.Pos, e.Label, e.LabelAt[0], e.LabelAt[1], "middle", false, false)
 	}
 	l.paths = append(l.paths, p)
+	if len(e.Segs) > 0 {
+		l.strokes = append(l.strokes, span(e.Segs, usererr.New("diagram_what_edge", e.D), e.Pos))
+	}
+}
+
+// span is the rect that straight runs take, for the canvas check alone: a line, a lifeline or an edge
+// may cross parts, but not leave the canvas.
+func span(runs [][4]float64, what *usererr.Error, at yamlpos.Pos) rect {
+	x0, y0, x1, y1 := math.Inf(1), math.Inf(1), math.Inf(-1), math.Inf(-1)
+	for _, s := range runs {
+		x0, x1 = min(x0, s[0], s[2]), max(x1, s[0], s[2])
+		y0, y1 = min(y0, s[1], s[3]), max(y1, s[1], s[3])
+	}
+	return rect{x0, y0, x1 - x0, y1 - y0, what, at}
 }
 
 // marker is the attribute that puts the marker kind at where (start or end) of an edge.
@@ -387,14 +406,19 @@ func (l *layout) addBar(b Bar) {
 }
 
 func (l *layout) addAxis(a Axis) {
+	runs := [][4]float64{{a.X1, a.Y, a.X2, a.Y}}
 	l.edgeSVG = append(l.edgeSVG, line(a.X1, a.Y, a.X2, a.Y, "axis"))
 	for _, t := range a.Ticks {
 		if a.Grid != nil {
+			runs = append(runs, [4]float64{t.X, *a.Grid, t.X, a.Y})
 			l.grids = append(l.grids, line(t.X, *a.Grid, t.X, a.Y, "grid"))
 		}
+		runs = append(runs, [4]float64{t.X, a.Y, t.X, a.Y + 5})
 		l.edgeSVG = append(l.edgeSVG, line(t.X, a.Y, t.X, a.Y+5, "axis"))
 		l.label(a.Pos, t.Text, t.X, a.Y+17, "middle", true, false)
 	}
+	what := usererr.New("diagram_what_axis", formatNum(a.X1), formatNum(a.X2), formatNum(a.Y))
+	l.strokes = append(l.strokes, span(runs, what, a.Pos))
 }
 
 // line draws a straight line of the class cls.

@@ -137,6 +137,7 @@ func sendUI(w http.ResponseWriter, r *http.Request, status int) {
 		send(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	w.Header().Set("Content-Security-Policy", uiCSP)
 	sendBytes(w, status, htmlType, page)
 }
 

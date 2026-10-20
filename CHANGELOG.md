@@ -126,9 +126,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   diagrams' style and zoom once.
 - Add `floe diagram render <spec.yaml>...`, which draws diagrams from YAML
   specs of parts placed at absolute coordinates and prints them as one HTML
-  fragment of inline SVG. It first checks for text that does not fit, parts
-  outside the canvas, overlaps, edges through boxes or labels, and crossing
-  edges, and reports every mistake as `file:line:column`. The fragment
+  fragment of inline SVG. It first checks for text that does not fit (frame
+  headings too), parts outside the canvas (edges, lines and axes too),
+  overlaps (with frame headings too), edges through boxes or labels, and
+  crossing edges, and reports every mistake as `file:line:column`. The fragment
   carries the diagrams' style and a zoom toolbar (buttons, Ctrl / ⌘ + wheel,
   pinch, drag, arrow keys) worded in the page's language; `--no-assets` leaves them out.
 - Add `floe icons fetch <set> [zip-or-url]`, which keeps an icon set (`aws`:
@@ -218,6 +219,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   (`~name` is refused). The defaults are under `XDG_DATA_HOME` and
   `XDG_CONFIG_HOME`, whose `~` stands for `HOME` too; a relative one of
   those is ignored, as the XDG spec says.
+  The management page may be framed by itself and by VS Code's Simple
+  Browser alone (`frame-ancestors 'self' vscode-webview: vscode-file:`), so
+  that another site, or a page, cannot have its buttons clicked unseen.
 - Show messages in English or Japanese. The command line follows `FLOE_LANG`,
   then `LC_ALL`, `LC_MESSAGES` and `LANG`; the management page follows the
   browser's language. English is the default.
