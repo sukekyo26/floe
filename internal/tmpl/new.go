@@ -289,6 +289,8 @@ func (w *themeFiles) write(set *partSet, made *MadePart, from, name string) erro
 }
 
 // writeFile writes css into the file at, a new one, making its directories.
+// LIMIT: a file system without hard links refuses the file, and so the copy. Create it with O_EXCL and
+// write it in place there if one comes to be used.
 func (w *themeFiles) writeFile(at, css string) error {
 	for _, dir := range []string{filepath.Dir(filepath.Dir(at)), filepath.Dir(at)} {
 		switch err := os.Mkdir(dir, 0o755); { //nolint:gosec // G301: parts themes are not secret

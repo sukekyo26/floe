@@ -175,6 +175,31 @@ func TestNewPart(t *testing.T) {
 	}
 }
 
+// Every part of floe's that has files, a look alone too, copies into a part of one's own of another name
+// that can be used: what its files refer to by name, the parts it holds and the looks it takes, reads
+// from the directory of parts of one's own as from floe's.
+func TestNewPartOfEach(t *testing.T) {
+	t.Parallel()
+
+	parts := filepath.Join(t.TempDir(), "parts")
+	l := tmpl.NewLibrary("", parts, "")
+	floe, _, err := tmpl.NewLibrary("", "", "").Parts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range floe {
+		if d.Name == "diagram" || d.Name == "script" {
+			continue
+		}
+		if _, err := l.NewPart(d.Name+"-copy", d.Name); err != nil {
+			t.Errorf("copying %s: %v", d.Name, err)
+		}
+	}
+	if warnings, mistakes := tmpl.CheckOwnParts(parts); warnings != nil || mistakes != nil {
+		t.Errorf("CheckOwnParts of the copies = %v, %v", warnings, mistakes)
+	}
+}
+
 // NewPart refuses a name a part cannot take, one there is already, a part with nothing to copy, and a
 // file of a parts theme there already, leaving nothing.
 func TestNewPartRefused(t *testing.T) {
