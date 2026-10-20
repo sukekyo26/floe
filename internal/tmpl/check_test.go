@@ -301,29 +301,32 @@ func TestPageStyleRefused(t *testing.T) {
 }
 
 // page.html holds a </head>, before which floe puts the page's styles: in the head, where no element the
-// data's HTML leaves open, such as an <svg>, takes them in. One in a comment is none, and one an action
-// leaves out is refused as the page is drawn.
+// page leaves open, such as an <svg>, takes them in. One in a comment is none, and its lack is told beside
+// the other mistakes of the files.
 func TestPageHeadRequired(t *testing.T) {
 	t.Parallel()
 
-	dir := sizes(t, map[string]string{"page.html": "</head>|<!-- </head> -->"})
+	dir := sizes(t, map[string]string{"page.html": "</head>|<!-- </head> -->", "page.css": ":root { color: red; }\n"})
 	want := filepath.Join(dir, "page.html") + " holds no </head>: floe puts the page's styles before it"
-	if _, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
-		t.Errorf("Check = %v, want %s", mistakes, want)
+	_, mistakes := tmpl.Check(dir, "", "")
+	if len(mistakes) != 2 || !slices.ContainsFunc(mistakes, func(e error) bool { return strings.HasPrefix(e.Error(), want) }) {
+		t.Errorf("Check = %v, want %s beside the :root", mistakes, want)
 	}
-	left := sizes(t, map[string]string{"page.html": "</head>|{{if false}}</head>{{end}}"})
-	if _, err := draw(tmpl.NewLibrary(filepath.Dir(left), "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), filepath.Join(left, "page.html")+" holds no </head>") {
-		t.Errorf("drawing without </head> = %v", err)
-	}
-	// Nor is one of the data's HTML, which an <svg> before it may hold.
+	// One an action leaves out is told as such, as the page is drawn; the data's HTML, which may leave an
+	// <svg> open before it, holds none to stand in for it.
 	data := memo(t, `"risks": {"type": "string", "format": "html"}`)
 	page := filepath.Join(data, "memo", "page.html")
-	if err := os.WriteFile(page, []byte(`<!doctype html><html lang="{{.Lang}}"><title>{{.Title}}</title><body>{{.Data.risks}}</body></html>`), 0o600); err != nil {
+	if err := os.WriteFile(page, []byte(`<!doctype html><html lang="{{.Lang}}"><title>{{.Title}}</title>{{if false}}</head>{{end}}`+
+		`<body>{{.Data.risks}}</body></html>`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(data, "", ""), "template: memo\nlang: en\nrisks: <svg></head>\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), page+" holds no </head>") {
+	l := tmpl.NewLibrary(data, "", "")
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: <b>x</b>\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "an action of "+page+" leaves out its </head>") {
+		t.Errorf("drawing without </head> = %v", err)
+	}
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: <svg></head>\n"); err == nil ||
+		!strings.Contains(err.Error(), "risks: HTML holds a </head>") {
 		t.Errorf("drawing with the data's </head> = %v", err)
 	}
 }

@@ -227,6 +227,8 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <p>a</p><STYLE>p{}</STYLE>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"},
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <a title=\"\n      - html: <b title='\"><style>p{}</style>'>\n", "data.yaml:6:15: sections[0].parts[1].html: HTML holds a <style> or a <link>"},
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <link rel=stylesheet href=x.css>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"},
+		// Nor a </head>, which would stand in for page.html's, before which floe puts the page's styles.
+		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <svg><!-- </HEAD> -->\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a </head>"},
 	} {
 		_, err := builtins.Read("data.yaml", []byte(c.src), tmpl.Themes{}, "")
 		var one *yamlpos.Error
