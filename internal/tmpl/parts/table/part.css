@@ -8,12 +8,12 @@
 /* A num column's heading wraps as long as it needs, but not a character a line */
 :scope th.num { min-width: 6em; }
 :scope thead th {
-  font-size: 0.8rem; font-weight: 600; color: var(--muted, #57635f);
-  background: color-mix(in srgb, var(--line, #d4dbd8) 40%, var(--surface, #fff));
+  font-size: 0.8rem; font-weight: 600; color: var(--muted);
+  background: color-mix(in srgb, var(--line) 40%, var(--surface));
 }
-:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line, #d4dbd8) 18%, var(--surface, #fff)); }
+:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line) 18%, var(--surface)); }
 :scope .num { text-align: right; }
 :scope td.num {
-  min-width: auto; font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP");
+  min-width: auto; font-family: var(--mono);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }

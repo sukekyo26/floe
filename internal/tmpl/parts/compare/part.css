@@ -1,6 +1,6 @@
 /* In the table's look; an arrow leads into what a thing becomes */
 :scope .what { font-weight: 600; }
 :scope td.after { font-weight: 600; }
-:scope td.after::before { content: "→ "; content: "→ " / ""; font-weight: 400; color: var(--muted, #57635f); }
-:scope thead th.after { color: var(--accent, #1d6670); }
-:scope tr.same td { color: var(--muted, #57635f); font-weight: 400; }
+:scope td.after::before { content: "→ "; content: "→ " / ""; font-weight: 400; color: var(--muted); }
+:scope thead th.after { color: var(--accent); }
+:scope tr.same td { color: var(--muted); font-weight: 400; }

@@ -4,7 +4,7 @@
 }
 :scope > summary::-webkit-details-marker { display: none; }
 :scope > summary::before {
-  content: ""; flex: none; width: 0.5rem; height: 0.5rem; margin-left: 0.15rem; border: solid var(--muted, #57635f);
+  content: ""; flex: none; width: 0.5rem; height: 0.5rem; margin-left: 0.15rem; border: solid var(--muted);
   border-width: 0 2px 2px 0; transform: rotate(-45deg); transition: transform 0.15s;
 }
 :scope[open] > summary::before { transform: rotate(45deg); margin-top: -0.25rem; }

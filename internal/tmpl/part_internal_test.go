@@ -19,7 +19,7 @@ var palette = []string{
 
 // The parts, diagrams, floe's base and the parts themes take from the page only what default's palette
 // defines, or a template's width of prose, --text-width: every theme's palette goes over default's, so
-// none of them goes without. A part's value for one where nothing defines it is default's light one.
+// none of them goes without.
 func TestPalette(t *testing.T) {
 	t.Parallel()
 
@@ -53,18 +53,16 @@ func TestPalette(t *testing.T) {
 			}
 		}
 	}
-	// A theme's palette changes those it writes: default's light values stand under them.
-	light, _, _ := strings.Cut(under, "@media")
-	values := map[string]string{}
-	for _, m := range regexp.MustCompile(`(--[\w-]+):\s*([^;]+);`).FindAllStringSubmatch(light, -1) {
-		values[m[1]] = strings.TrimSpace(m[2])
-	}
-	for name, p := range set.parts {
-		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,\s*([^)]*)\)`).FindAllStringSubmatch(p.css, -1) {
-			if want, ok := values[m[1]]; ok && want != strings.TrimSpace(m[2]) && p.pages != nil {
-				t.Errorf("the part %s takes %s with %s; default's palette has %s", name, m[1], m[2], want)
-			}
+	// default's palette is under every page, so nothing takes a value of its own for a variable of it: the
+	// width of prose is the template's. A diagram's style is the diagram package's, for pages of any kind.
+	delete(taken, "the part diagram")
+	for who, css := range taken {
+		if m := regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,`).FindStringSubmatch(css); m != nil && m[1] != "--text-width" {
+			t.Errorf("%s takes %s with a value of its own, which default's palette gives", who, m[1])
 		}
+	}
+	if set.strays != nil {
+		t.Errorf("floe's parts and themes are warned of: %v", set.strays)
 	}
 	for name, p := range set.parts {
 		// A part's element is its box, data-floe-part="<its name>", so that a page that draws it gets its

@@ -3,10 +3,10 @@
 :scope td.what { font-weight: 600; }
 :scope .mark { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; font-weight: 800; line-height: 1; vertical-align: middle; }
 :scope .mark > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-:scope .yes .mark { background: var(--good-soft, #dcefe3); color: var(--good, #1f7a45); }
-:scope .part .mark { background: var(--warn-soft, #f6e8d2); color: var(--warn, #8a5a10); }
-:scope .no .mark { background: var(--bad-soft, #fbe5e2); color: var(--bad, #b3261e); }
+:scope .yes .mark { background: var(--good-soft); color: var(--good); }
+:scope .part .mark { background: var(--warn-soft); color: var(--warn); }
+:scope .no .mark { background: var(--bad-soft); color: var(--bad); }
 :scope .yes .mark::before { content: "✓"; content: "✓" / ""; }
 :scope .part .mark::before { content: "△"; content: "△" / ""; font-size: 0.8em; }
 :scope .no .mark::before { content: "×"; content: "×" / ""; }
-:scope small { display: block; font-size: 0.75rem; color: var(--muted, #57635f); }
+:scope small { display: block; font-size: 0.75rem; color: var(--muted); }

@@ -153,6 +153,8 @@ type partSet struct {
 	broken  map[string]error       // the parts of one's own that cannot be used, by name, and why
 	// the parts themes of one's own that cannot be used, by name, and why
 	brokenThemes map[string]error
+	// floe's own default palette, under every page's, whatever one's own themes change
+	palette string
 	// the directories of one's own it read, the directory of parts first, by their real paths
 	dirs   []string
 	strays []*usererr.Error // what of one's own goes into no page, to be warned of
@@ -167,7 +169,7 @@ var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("
 func readParts(dir string, entries []os.DirEntry, stage staged) (*partSet, error) {
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
-		broken: map[string]error{}, brokenThemes: map[string]error{}, dirs: nil, strays: nil,
+		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", dirs: nil, strays: nil,
 	}
 	if err := set.readBuiltin(); err != nil {
 		return nil, err
@@ -251,6 +253,7 @@ func (set *partSet) readBuiltin() error {
 		}
 		set.themes[e.Name()] = t
 	}
+	set.palette = set.themes[DefaultTheme].palette
 	return nil
 }
 
@@ -844,13 +847,13 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 }
 
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
-// selectors: the palette, default's then the parts theme theme's, under floe's base, under the template's
+// selectors: the palette, floe's default one then the parts theme theme's, under floe's base, under the template's
 // own CSS (own: its page.css, then its theme), which may set the palette's variables over it, under the
 // parts'. The parts' are the style of each part the page names, by its own element, a table of Markdown,
 // or HTML that names a part (<span class="good" data-floe-part="cell">) or takes its look without being
 // its box (data-floe-look="panel"), and of each look those
 // take, before the parts that take it, which adjust it; then the parts theme theme: its base.css, which
-// every page gets, as it holds its variables and the look of Markdown's quotes, and its style of each
+// every page gets, as it holds variables of its own names and the look of Markdown's quotes, and its style of each
 // of those parts in the same order. Within the layer the more specific rule wins, else the later.
 // An element that takes a look without being a part's box (a card of cards) has it a layer under the
 // template's and the parts', floe.looks: the part it is in, or the template it is the template's own of,
@@ -876,13 +879,10 @@ func (set *partSet) pageStyle(page string, found []tag, own [][]byte, theme stri
 			style.WriteString("<style>\n@layer " + layer + " {\n" + css + "}\n</style>\n")
 		}
 	}
-	// default's palette defines every variable; a theme's after it changes those it writes.
-	under := set.themes[DefaultTheme]
-	if under == nil {
-		return "", usererr.New("tmpl_parts_theme_broken", DefaultTheme, set.brokenThemes[DefaultTheme])
-	}
-	sheet("floe.palette", under.palette)
-	if theme != DefaultTheme {
+	// floe's own default palette defines every variable; the theme's after it, default of one's own too,
+	// changes those it writes.
+	sheet("floe.palette", set.palette)
+	if themed.palette != set.palette {
 		sheet("floe.palette", themed.palette)
 	}
 	named := namedIn(page, found)

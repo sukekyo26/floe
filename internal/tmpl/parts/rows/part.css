@@ -1,2 +1,2 @@
 /* Rows in a panel, a rule between each and the next */
-:scope > * + * { border-top: 1px solid var(--line, #d4dbd8); }
+:scope > * + * { border-top: 1px solid var(--line); }

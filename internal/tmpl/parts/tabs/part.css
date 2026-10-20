@@ -2,15 +2,15 @@
 :scope { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0; }
 :scope > label {
   position: relative; padding: 0.3rem 0.95rem; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600;
-  color: var(--muted, #57635f);
+  color: var(--muted);
 }
-:scope > label:has(:checked) { background: var(--accent-soft, #dcebec); color: var(--accent, #1d6670); }
-:scope > label:has(:focus-visible) { outline: 2px solid var(--accent, #1d6670); outline-offset: 2px; }
+:scope > label:has(:checked) { background: var(--accent-soft); color: var(--accent); }
+:scope > label:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 :scope input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
 :scope > div { order: 1; flex-basis: 100%; display: none; margin-top: 0.3rem; }
 :scope > label:has(:checked) + div { display: grid; }
 /* On paper every tab shows, each under its title */
 @media print {
-  :scope > label, :scope > label:has(:checked) { flex-basis: 100%; padding-inline: 0; background: none; color: var(--fg, #18201e); }
+  :scope > label, :scope > label:has(:checked) { flex-basis: 100%; padding-inline: 0; background: none; color: var(--fg); }
   :scope > div { display: grid; order: 0; }
 }
