@@ -175,11 +175,6 @@ type savedPrev struct {
 // save stores the data file the CLI sends as the page slug: 201 for a new slug, 200 for one replaced,
 // and 422 with the images to send when it names some and sent none.
 func (s *Server) save(w http.ResponseWriter, r *http.Request) {
-	slug := r.PathValue("slug")
-	if !store.ValidSlug(slug) {
-		notFound(w)
-		return
-	}
 	body, ok := s.readBody(w, r, maxUpload)
 	if !ok {
 		return
@@ -195,11 +190,18 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		send(w, http.StatusBadRequest, "send file, dir and source")
 		return
 	}
+	// What fstest.MapFS can hold; which names a data file may give an image is tmpl's to say.
 	for name := range in.Images {
 		if !fs.ValidPath(name) || name == "." {
 			send(w, http.StatusBadRequest, "send each image by a slash-separated path under the data file's directory")
 			return
 		}
+	}
+	// A slug not to be is the publisher's mistake, told as one: the page is not there to be not found.
+	slug := r.PathValue("slug")
+	if !store.ValidSlug(slug) {
+		refuse(w, r, usererr.New("store_invalid_slug", slug))
+		return
 	}
 	up := store.Upload{File: in.File, Dir: in.Dir, Source: in.Source, Images: imagesFS(in.Images), Project: in.Project}
 	opts := store.Options{
@@ -255,8 +257,8 @@ func text(raw json.RawMessage) *string {
 	return &s
 }
 
-// stringFields sets each of fields that input sends to its value, trimmed, empty or not, leaving the rest
-// nil; false when one sent is not a string.
+// stringFields sets each of fields that input sends to its value, empty or not, leaving the rest nil;
+// false when one sent is not a string. The store trims them.
 func stringFields(input map[string]json.RawMessage, fields map[string]**string) bool {
 	for key, field := range fields {
 		if raw, ok := input[key]; ok {
@@ -264,7 +266,6 @@ func stringFields(input map[string]json.RawMessage, fields map[string]**string) 
 			if !isString {
 				return false
 			}
-			v = strings.TrimSpace(v)
 			*field = &v
 		}
 	}

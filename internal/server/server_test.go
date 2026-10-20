@@ -782,7 +782,7 @@ func TestSave(t *testing.T) {
 		put("sizes", map[string]any{"file": "plans/sizes.yaml", "source": src}).status,
 		put("sizes", upload(map[string][]byte{"../a.png": png}, "proj")).status,
 	})
-	if got != "403 415 404 400 400 400" {
+	if got != "403 415 400 400 400 400" {
 		t.Errorf("refused publishes = %s", got)
 	}
 
@@ -818,5 +818,11 @@ func TestSave(t *testing.T) {
 	if r = e.send(t, http.MethodPut, "/api/artifacts/sizes", string(b)); r.status != http.StatusConflict ||
 		!strings.HasPrefix(r.body, `slug "sizes" was published from project proj`) {
 		t.Errorf("a refusal as text = %d %s", r.status, r.body)
+	}
+	// The options are trimmed, as those of every publish are.
+	withTitle := upload(images, "proj")
+	withTitle["title"] = " Plan "
+	if r = put("sizes", withTitle); r.status != http.StatusOK || !strings.Contains(r.body, `"title":"Plan"`) {
+		t.Errorf("a publish with a title to trim = %d %s", r.status, r.body)
 	}
 }

@@ -75,6 +75,17 @@ type Options struct {
 	Force       bool
 }
 
+// trimmed is o with each string given trimmed, empty or not, whoever gave it.
+func (o Options) trimmed() Options {
+	for _, field := range []**string{&o.Slug, &o.Title, &o.Description, &o.Theme, &o.PartsTheme} {
+		if *field != nil {
+			v := strings.TrimSpace(**field)
+			*field = &v
+		}
+	}
+	return o
+}
+
 // themes are the themes o gives over the data's.
 func (o Options) themes() tmpl.Themes {
 	var themes tmpl.Themes
@@ -133,6 +144,7 @@ func (e *NeedImages) Error() string {
 // directory, and builds what Save writes, without writing anything. cwd resolves a relative file and
 // names the project the page belongs to.
 func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
+	opts = opts.trimmed()
 	// Before reading: a page is drawn from a data file, whatever is or is not there.
 	if err := checkData(file); err != nil {
 		return nil, err
@@ -157,6 +169,7 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 // the publisher's disk. Without up.Images, a data file that names images is answered NeedImages, once
 // nothing that needs no image refuses the publish (the slug, the page's owner).
 func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
+	opts = opts.trimmed()
 	if err := checkData(up.File); err != nil {
 		return nil, err
 	}
@@ -207,6 +220,7 @@ func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, themes tmpl
 // a relative file; the project of a link is that of its directory. A data file linked is checked as a
 // stored page is, its images under its real directory.
 func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
+	opts = opts.trimmed()
 	path, src, err := s.readLink(file, opts, cwd)
 	if err != nil {
 		return nil, err
@@ -379,7 +393,9 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 		if prev.IsLink() {
 			key = "store_slug_is_link"
 		}
-		return false, usererr.New(key, slug)
+		err := usererr.New(key, slug)
+		err.Conflict = true
+		return false, err
 	}
 	if path != "" {
 		if prev.Path == path {
