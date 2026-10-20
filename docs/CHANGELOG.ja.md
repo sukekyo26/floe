@@ -72,10 +72,7 @@ floe の主要な変更を記録します。フォーマットは
   - サーバーは `floe stop` で止めるまで動き続ける。
   - 管理画面を枠に入れられるのは、管理画面自身と VS Code の Simple Browser だけ（`frame-ancestors 'self' vscode-webview: vscode-file:`）。ほかのサイトやページが管理画面を重ねてボタンを押させることはできない。
   - 設定は `FLOE_DIR`・`FLOE_PORT`（既定は 7325）で行う。`FLOE_DIR`・`FLOE_ICONS_DIR`・`FLOE_TEMPLATES_DIR` の相対パスは作業ディレクトリが基準で、先頭の `~`・`~/` は `HOME` を指す（`~name` は断る）。既定は `XDG_DATA_HOME`・`XDG_CONFIG_HOME` の下で、その `~` も `HOME` を指す。相対パスの `XDG_DATA_HOME`・`XDG_CONFIG_HOME` は、XDG の仕様どおり無視する。
-- メッセージを英語と日本語で出すようにした。
-  - コマンドは `FLOE_LANG`、`LC_ALL`、`LC_MESSAGES`、`LANG` の順に見て言語を決める。
-  - 管理画面はブラウザの言語に従う。
-  - 既定は英語。
+- ブラウザに出る画面（管理画面と、データファイルの誤りのページ）を、ブラウザの言語に従って英語か日本語で出すようにした。コマンドの出力は、環境の言語によらず英語だけ。
 - `floe` コマンドと、インストール済みの版を表示する `floe version`
   （`floe --version` でも可）を追加。
 - linux と macOS（amd64 / arm64）向けのビルド済みバイナリを GitHub Releases で配布し、

@@ -301,7 +301,7 @@ Each part is one key naming its kind. Defaults are in parentheses; `tone` is `ac
 
 Without a kind, list the built-in examples, one per kind of diagram (architecture, AWS architecture, class, ER, flow, Git branches, sequence, state, timeline, Venn): each line holds the kind and a summary, tab-separated. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks. The AWS example draws AWS icons, so render it after `floe icons fetch aws`.
 
-The examples come in English and Japanese, text and comments alike. They follow the language of messages (`FLOE_LANG`, then `LC_ALL`, `LC_MESSAGES` and `LANG`), so copying an example in a Japanese environment starts a diagram in Japanese. An example not written in the language is printed in the language without its region (`ja-JP` to `ja`), else in English.
+The examples come in English and Japanese, text and comments alike. They are printed in English, or in the language of `--lang`: `--lang ja` starts a diagram in Japanese. An example not written in the language is printed in the language without its region (`ja-JP` to `ja`), else in English.
 
 | Flag | Description |
 |---|---|
@@ -351,7 +351,6 @@ List the fetched icons whose name contains every word (case does not matter), on
 | `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. A relative one is under the working directory. The diagrams of a published page show the icons of the server, which takes the one of the `floe publish` or `floe serve` that started it; a publish that means another is refused (run `floe stop` first). |
 | `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. A relative one is under the working directory. A published page is drawn with the server's, the one of the `floe publish` or `floe serve` that started it; a publish that means another is refused (move the templates there, or run `floe stop` first). |
 | `FLOE_PARTS_DIR` | Where parts and parts themes of your own are, a directory each ([templates.md](templates.md#parts-of-your-own)). Defaults to `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`. A relative one is under the working directory. A published page is drawn with the server's, as with `FLOE_TEMPLATES_DIR`; a publish that means another is refused. |
-| `FLOE_LANG` | The language of messages (`en`, `ja`). Falls back to `LC_ALL`, `LC_MESSAGES`, then `LANG`; a language without a catalog is skipped. English is the default. |
 | `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |
 
 In `FLOE_DIR`, `FLOE_ICONS_DIR`, `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `XDG_DATA_HOME` and `XDG_CONFIG_HOME`, a `~` or `~/` at the start stands for `HOME`, so that one written in quotes (a `.env` file, a service unit) is not a directory named `~`; a `FLOE_` one starting with `~name`, or with `~` without `HOME`, is refused. A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says, and so is one starting with `~name`, or with `~` without `HOME`.

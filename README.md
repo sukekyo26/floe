@@ -41,9 +41,9 @@ Open `http://127.0.0.1:7325` for the management page.
 
 ## i18n
 
-Messages are in English or Japanese. The command line follows `FLOE_LANG`,
-then `LC_ALL`, `LC_MESSAGES` and `LANG`; the management page follows the
-browser's language. English is the default.
+The command line speaks English, whatever the environment's language, as an
+agent reads it. What a browser shows, the management page and the page of a
+data file's mistakes, is in English or Japanese, by the browser's language.
 
 ## Documentation
 
