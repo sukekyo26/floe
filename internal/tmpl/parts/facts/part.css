@@ -1,5 +1,5 @@
 /* In the faces of cards, unnumbered */
 :scope { margin: 0; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem; }
 :scope > div { gap: 0.1rem; padding-block: 0.8rem; }
-:scope dt { font-size: 0.8rem; color: var(--muted, #57635f); }
+:scope dt { font-size: 0.8rem; color: var(--muted); }
 :scope dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }

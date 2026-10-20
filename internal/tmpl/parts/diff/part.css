@@ -2,9 +2,9 @@
 :scope pre { padding-inline: 0; }
 :scope code { display: grid; grid-template-columns: minmax(100%, max-content); }
 :scope code > span { padding-inline: 1.1rem; }
-:scope .add { background: color-mix(in srgb, var(--code-add, #6fcf97) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add, #6fcf97); }
-:scope .del { background: color-mix(in srgb, var(--code-del, #f2b8b5) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del, #f2b8b5); }
-:scope .hunk { color: var(--code-prompt, #63b5be); }
+:scope .add { background: color-mix(in srgb, var(--code-add) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add); }
+:scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
+:scope .hunk { color: var(--code-prompt); }
 :scope .meta { opacity: 0.65; }
-:scope figcaption .added { color: var(--code-add, #6fcf97); }
-:scope figcaption .removed { color: var(--code-del, #f2b8b5); }
+:scope figcaption .added { color: var(--code-add); }
+:scope figcaption .removed { color: var(--code-del); }

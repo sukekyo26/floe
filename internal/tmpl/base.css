@@ -3,16 +3,16 @@
 * { box-sizing: border-box; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
-p, ul, ol { margin: 0; max-width: var(--text-width, 56rem); }
+p, ul, ol { margin: 0; max-width: var(--text-width); }
 ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
-a { color: var(--accent, #1d6670); }
-:focus-visible { outline: 2px solid var(--accent, #1d6670); outline-offset: 2px; }
-code { font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP"); font-size: 0.86em; background: var(--accent-soft, #dcebec); padding: 0.1em 0.35em; border-radius: 4px; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
 pre {
-  margin: 0; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 6px;
-  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP"); font-size: 0.875rem; line-height: 1.65;
+  margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
 pre code { font-size: inherit; background: none; padding: 0; }
-blockquote { margin: 0; max-width: var(--text-width, 56rem); padding-left: 1rem; border-left: 3px solid var(--line, #d4dbd8); color: var(--muted, #57635f); }
+blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
 blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

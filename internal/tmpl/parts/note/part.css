@@ -1,24 +1,24 @@
 /* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
 :scope {
-  position: relative; background: var(--accent-soft, #dcebec); padding: 1rem 1.25rem 1rem 3.7rem;
-  border-radius: 14px; max-width: var(--text-width, 56rem);
+  position: relative; background: var(--accent-soft); padding: 1rem 1.25rem 1rem 3.7rem;
+  border-radius: 14px; max-width: var(--text-width);
 }
-:scope.good { background: var(--good-soft, #dcefe3); }
-:scope.warn { background: var(--warn-soft, #f6e8d2); }
-:scope.bad { background: var(--bad-soft, #fbe5e2); }
+:scope.good { background: var(--good-soft); }
+:scope.warn { background: var(--warn-soft); }
+:scope.bad { background: var(--bad-soft); }
 :scope::before {
   content: "i"; content: "i" / ""; position: absolute; left: 1.25rem; top: 1.1rem;
   display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%;
-  background: var(--accent, #1d6670); color: var(--surface, #fff); font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--accent); color: var(--surface); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
-:scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good, #1f7a45); }
-:scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn, #8a5a10); }
-:scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad, #b3261e); }
+:scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
+:scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }
+:scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad); }
 :scope > * { margin: 0; }
 :scope > * + * { margin-top: 0.5rem; }
-.title { display: block; font-size: 0.9rem; color: var(--accent, #1d6670); }
-:scope.good .title { color: var(--good, #1f7a45); }
-:scope.warn .title { color: var(--warn, #8a5a10); }
-:scope.bad .title { color: var(--bad, #b3261e); }
+.title { display: block; font-size: 0.9rem; color: var(--accent); }
+:scope.good .title { color: var(--good); }
+:scope.warn .title { color: var(--warn); }
+:scope.bad .title { color: var(--bad); }
 :scope > .title + * { margin-top: 0.1rem; }
-:scope code { background: var(--surface, #fff); }
+:scope code { background: var(--surface); }

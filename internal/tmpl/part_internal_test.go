@@ -7,19 +7,20 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// palette are the CSS variables of a theme that parts and diagrams take their colours, fonts and width
-// from, as docs/templates.md lists them.
+// palette are the CSS variables default's palette defines, which the parts, diagrams, floe's base and
+// the parts themes take their colours and faces from, as docs/templates.md lists them.
 var palette = []string{
 	"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
-	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono", "--text-width", "--code-bg", "--code-fg",
-	"--code-prompt", "--code-add", "--code-del",
+	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--display", "--mono", "--code-bg", "--code-fg",
+	"--code-prompt", "--code-add", "--code-del", "--page-bg", "--rule", "--text-width",
 }
 
-// The parts and diagrams take their colours, fonts and width from the palette alone, which the report
-// theme defines whole. A part takes each with a value of its own for a theme without it: one taken
-// without would not be warned of by floe template check.
+// The parts, diagrams, floe's base and the parts themes take from the page only what default's palette
+// defines: every theme's palette goes over default's, so none of them goes without.
 func TestPalette(t *testing.T) {
 	t.Parallel()
 
@@ -27,16 +28,71 @@ func TestPalette(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := make([]string, 0, len(set.parts))
-	for name := range set.parts {
-		names = append(names, name)
-	}
-	vars := set.variables(names)
-	for name, p := range set.parts {
-		// The style of a part floe draws in Go is its package's: the diagrams' takes variables of its own.
-		if bare := regexp.MustCompile(`var\(\s*--[\w-]+\s*\)`).FindString(p.css); bare != "" && p.pages != nil {
-			t.Errorf("the part %s takes %s without a value of its own", name, bare)
+	under := set.themes[DefaultTheme].palette
+	defined := definedIn(under)
+	for _, v := range palette {
+		if !defined[v] {
+			t.Errorf("default's palette leaves %s out", v)
 		}
+	}
+	taken := map[string]string{"floe's base": baseCSS}
+	for name, p := range set.parts {
+		taken["the part "+name] = p.css
+	}
+	for name, theme := range set.themes {
+		css := theme.base + theme.palette
+		for _, part := range slices.Sorted(maps.Keys(theme.parts)) {
+			css += theme.parts[part]
+		}
+		taken["the parts theme "+name] = css
+	}
+	for who, css := range taken {
+		own := definedIn(css)
+		for _, m := range usedVariable.FindAllStringSubmatch(css, -1) {
+			if v := m[1]; !own[v] && !defined[v] {
+				t.Errorf("%s takes %s, which default's palette does not define", who, v)
+			}
+		}
+	}
+	// default's palette is under every page, so nothing takes a value of its own for a variable of it. A diagram's style is the diagram package's, for pages of any kind.
+	delete(taken, "the part diagram")
+	for who, css := range taken {
+		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,`).FindAllStringSubmatch(css, -1) {
+			t.Errorf("%s takes %s with a value of its own, which default's palette gives", who, m[1])
+		}
+	}
+	if set.strays != nil {
+		t.Errorf("floe's parts and themes are warned of: %v", set.strays)
+	}
+	// A built-in template leaves the palette to the theme: one it set would hold over every theme's.
+	for _, name := range []string{"templates/report/page.css", "templates/report/themes/default.css"} {
+		src, readErr := templateFiles.ReadFile(name)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		for _, v := range palette {
+			if definedIn(string(src))[v] {
+				t.Errorf("%s sets %s, which the theme's palette should", name, v)
+			}
+		}
+	}
+	// A diagram drawn into a page without the palette, by floe diagram render, takes default's light colours
+	// (and faces of its own, for a page of any language).
+	c, err := readPalette("palette.css", readCSS([]byte(under)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	modes, err := floeModes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,\s*([^)]*)\)`).FindAllStringSubmatch(set.parts["diagram"].css, -1) {
+		if _, colour := modes[m[1]]; colour && c.light[m[1]] != strings.TrimSpace(m[2]) {
+			want := c.light[m[1]]
+			t.Errorf("a diagram takes %s with %s; default's palette has %s", m[1], m[2], want)
+		}
+	}
+	for name, p := range set.parts {
 		// A part's element is its box, data-floe-part="<its name>", so that a page that draws it gets its
 		// style; an element is the box of one part, and every name, and every look a part takes, is a part's.
 		if p.pages != nil && !namesItself(namedParts(p.html), name) {
@@ -60,51 +116,80 @@ func TestPalette(t *testing.T) {
 	if !set.parts["panel"].isLook() || set.parts["panel"].css == "" {
 		t.Errorf("the look panel = %+v", set.parts["panel"])
 	}
-	// compare is drawn in the table's look, so a theme for it is warned of the table's variables too, and
-	// tabs of those of code, which a diff in it is drawn in the look of.
-	if compare := set.variables([]string{"compare"}); !slices.Contains(compare, "--line") {
-		t.Errorf("the variables of compare = %v", compare)
-	}
-	if tabs := set.variables([]string{"tabs"}); !slices.Contains(tabs, "--code-bg") || !slices.Contains(tabs, "--code-add") {
-		t.Errorf("the variables of tabs = %v", tabs)
-	}
-	// A theme defines these for diagrams to follow it.
-	want := []string{
-		"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
-		"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono",
-	}
-	if got := set.variables([]string{"diagram"}); !slices.Equal(got, want) {
-		t.Errorf("the variables of diagram = %v, want %v", got, want)
-	}
-	themes := set.themeVariables()
-	for _, v := range slices.Concat(vars, themes) {
-		if !slices.Contains(palette, v) {
-			t.Errorf("%s is not of the palette", v)
-		}
-	}
-	css, err := templateFiles.ReadFile("templates/report/page.css")
+}
+
+// palette.css holds the palette's variables alone, set on :root and then for dark mode, without
+// !important; a colour set for light mode alone is warned of.
+func TestCheckPalette(t *testing.T) {
+	t.Parallel()
+
+	modes, err := floeModes()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defined := definedVariables(css)
-	for _, v := range palette {
-		if !defined[v] {
-			t.Errorf("the report theme leaves %s out", v)
-		}
-	}
-	// A theme without a variable gets the report theme's light value, as docs/templates.md says.
-	light, _, _ := strings.Cut(string(css), "@media")
-	values := map[string]string{}
-	for _, m := range regexp.MustCompile(`(--[\w-]+):\s*([^;]+);`).FindAllStringSubmatch(light, -1) {
-		values[m[1]] = strings.TrimSpace(m[2])
-	}
-	for name, p := range set.parts {
-		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,\s*([^)]*)\)`).FindAllStringSubmatch(p.css, -1) {
-			if values[m[1]] != strings.TrimSpace(m[2]) && p.pages != nil {
-				t.Errorf("the part %s takes %s with %s; the report theme's is %s", name, m[1], m[2], values[m[1]])
+	dark := "\n@media (prefers-color-scheme: dark) { :root { --bg: #000; --page-bg: none; color-scheme: dark; } }"
+	// A palette always dark sets every colour default's turns dark, on :root alone; one that sets them
+	// all for dark mode too but --bg leaves that one light among dark ones.
+	var always, allButBg strings.Builder
+	for _, name := range slices.Sorted(maps.Keys(modes)) {
+		if modes[name] {
+			always.WriteString(name + ": black; ")
+			if name != "--bg" {
+				allButBg.WriteString(name + ": black; ")
 			}
 		}
 	}
+	for css, want := range map[string]string{
+		":root { " + always.String() + "}": "",
+		":root { " + always.String() + "}\n@media (prefers-color-scheme: dark) { :root { " + allButBg.String() + "} }": "p.css sets --bg for light mode alone",
+		":root { --bg: light-dark(#fff, #000); --fg: light-dark(#000, #fff); }":                                        "",
+		":root { --bg: #fff; }" + dark: "",
+		":root { --bg: #fff; --page-bg: url(data:image/svg+xml;base64,PHN2Zz4=) repeat; }" + dark:                "",
+		":root { --bg: #fff; --page-bg: url(data:image/svg+xml,<svg><style>p{fill:red}</style></svg>); }" + dark: "",
+		":root { --radius: 4px; --text-width: 60rem; color-scheme: light dark; }":                                "",
+		":root { color-scheme: light; }": "p.css sets color-scheme for light mode alone",
+		":root { --bg: #fff; --font: \"a;b\", serif; color-scheme: light; } /* body { } */" + dark: "",
+		"@media (prefers-color-scheme: dark) { :root { --bg: #000; } }\n:root { --bg: #fff; }":     "p.css:2: write this :root before",
+		":root {\n  --bg: #fff !important;\n}":                                                     "p.css:2: palette.css takes no !important",
+		":root { --bg: #fff; }\nbody { margin: 0; }":                                               "p.css:2: palette.css holds only",
+		"--bg: #fff;": "p.css:1: palette.css holds only",
+		"@media (prefers-color-scheme: dark) {\n  --bg: #000;\n}": "p.css:2: palette.css holds only",
+		":root {\n  .x { color: red; }\n}":                        "p.css:2: palette.css holds only",
+		":root { color: red; }":                                   "p.css:1: palette.css holds only",
+		"@media print { :root { --bg: #fff; } }":                  "p.css:1: palette.css holds only",
+		":root { --bg: #fff; --code-bg: #222; --font: serif; --page-bg: var(--bg); --code-fg: #eee; }": "p.css sets --bg, --code-bg for light mode alone",
+		":root { --a: url(x(y); } } body { background: red }":                                          "p.css:1: this } closes no block",
+		":root { Color-Scheme: light dark; --l: \"!important\"; --x: {a:b}; }":                         "",
+		":root { --x: {a:b}; --bg: #fff; }":                                                            "p.css sets --bg for light mode alone",
+		":root { --a: f(]; color: red); }":                                                             "",
+		"\n{ --x: 1; }\n\n":                                                                            "p.css:2: palette.css holds only",
+	} {
+		s := readCSS([]byte(css))
+		err := s.refuse("p.css", false)
+		var warnings []*usererr.Error
+		if err == nil {
+			warnings, err = checkPalette("p.css", s)
+		}
+		got := ""
+		switch {
+		case err != nil:
+			got = err.Error()
+		case warnings != nil:
+			got = warnings[0].Error()
+		}
+		if want == "" && got != "" || !strings.HasPrefix(got, want) {
+			t.Errorf("checkPalette(%q) = %q, want %q", css, got, want)
+		}
+	}
+}
+
+// definedIn returns the CSS variables css defines (--fg: #000), by name.
+func definedIn(css string) map[string]bool {
+	defined := map[string]bool{}
+	for _, m := range regexp.MustCompile(`(?:^|[^\w-])(--[\w-]+)\s*:`).FindAllStringSubmatch(css, -1) {
+		defined[m[1]] = true
+	}
+	return defined
 }
 
 // A page's style goes before its </head>, else at its end. A tag in a comment, a script or a noscript is

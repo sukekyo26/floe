@@ -1,13 +1,13 @@
 /* A bar's length is set on it, as a share of the longest */
 :scope { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.6rem 1rem; align-items: center; padding: 1rem 1.3rem; }
-:scope > div { display: contents; color: var(--accent, #1d6670); }
-:scope > div.good { color: var(--good, #1f7a45); }
-:scope > div.warn { color: var(--warn, #8a5a10); }
-:scope > div.bad { color: var(--bad, #b3261e); }
-:scope .label { color: var(--fg, #18201e); font-size: 0.92rem; }
-:scope .track { height: 0.85rem; border-radius: 4px; background: color-mix(in srgb, var(--line, #d4dbd8) 45%, var(--surface, #fff)); }
+:scope > div { display: contents; color: var(--accent); }
+:scope > div.good { color: var(--good); }
+:scope > div.warn { color: var(--warn); }
+:scope > div.bad { color: var(--bad); }
+:scope .label { color: var(--fg); font-size: 0.92rem; }
+:scope .track { height: 0.85rem; border-radius: 4px; background: color-mix(in srgb, var(--line) 45%, var(--surface)); }
 :scope .track > span { display: block; height: 100%; min-width: 2px; border-radius: 4px; background: currentColor; }
 :scope .value {
-  text-align: right; font-size: 0.85rem; color: var(--fg, #18201e); font-variant-numeric: tabular-nums;
-  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP");
+  text-align: right; font-size: 0.85rem; color: var(--fg); font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
 }

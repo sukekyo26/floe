@@ -219,6 +219,7 @@ func TestNewPartRefused(t *testing.T) {
 		{"script", "table", "cannot be named script"},
 		{"tone", "table", "cannot be named tone"},
 		{"base", "table", "cannot be named base"},
+		{"palette", "table", "cannot be named palette"},
 		{"themes", "table", "cannot be named themes"},
 		{"grid", "diagram", "floe draws the part diagram in Go"},
 		{"grid", "quote", "the part quote cannot be used"},

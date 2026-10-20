@@ -164,6 +164,7 @@ func TestBrokenOwnParts(t *testing.T) {
 		"twodocs/part.css":     "",
 		"twodocs/part.yaml":    "looks: [panel]\n---\nlooks: [rows]\n",
 		"base/schema.json":     `{"type": "object"}`,
+		"palette/schema.json":  `{"type": "object"}`,
 		"diagram/schema.json":  `{"type": "object"}`,
 		"code/schema.json":     `{"type": "object"}`,
 		"code/part.html":       `<div data-floe-part="code"></div>`,
@@ -195,6 +196,7 @@ func TestBrokenOwnParts(t *testing.T) {
 		"lender": "the part lender cannot be used: " + filepath.Join(parts, "lender", "part.yaml") +
 			":2: the part names the part nope, which there is none of",
 		"base":     "the part base cannot be used: " + filepath.Join(parts, "base") + ": a part of your own cannot be named base",
+		"palette":  "the part palette cannot be used: " + filepath.Join(parts, "palette") + ": a part of your own cannot be named palette",
 		"diagram":  "the part diagram cannot be used: " + filepath.Join(parts, "diagram") + ": a part of your own cannot be named diagram",
 		"script":   "the part script cannot be used: " + filepath.Join(parts, "script") + ": a part of your own cannot be named script",
 		"tone":     "the part tone cannot be used: " + filepath.Join(parts, "tone") + ": a part of your own cannot be named tone",
@@ -306,6 +308,11 @@ func TestOwnPartsThemes(t *testing.T) {
 	files := quote("code")
 	files["themes/brutal/code.css"] = "/* brutal's code of one's own */\n"
 	files["themes/mine/base.css"] = "/* mine */\n:root { --mine-ink: #123; }\n"
+	files["themes/mine/palette.css"] = "/* mine's palette */\n:root { --bg: #123; }\n" +
+		"@media (prefers-color-scheme: dark) { :root { --bg: #321; } }\n"
+	files["themes/pale/palette.css"] = ":root { --bg: #fdf6e3; --font: serif; --rule: 2px solid var(--fg); }\n"
+	files["themes/rules/palette.css"] = ":root { --bg: #fff; }\nbody { margin: 0; }\n"
+	files["themes/default/palette.css"] = ":root { --accent: #c00; }\n@media (prefers-color-scheme: dark) { :root { --accent: #f66; } }\n"
 	files["themes/bad/nope.css"] = ""
 	files["themes/mine/.DS_Store"] = "x"
 	files["themes/mine/README.md"] = "x"
@@ -316,6 +323,7 @@ func TestOwnPartsThemes(t *testing.T) {
 	files["tone/schema.json"] = `{"type": "object"}`
 	files["themes/stray/tone.css"] = ""
 	files["themes/broke/table.css"] = "}\n"
+	files["themes/broke/palette.css"] = ":root { --bg: #fff; }\n"
 	parts := ownParts(t, files)
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/code.json"}, "aside": {"$ref": "floe:///parts/note.json"}`)
 	l := tmpl.NewLibrary(dir, parts, "")
@@ -339,6 +347,23 @@ func TestOwnPartsThemes(t *testing.T) {
 	if page, err = draw(l, "template: memo\nlang: en\nparts-theme: mine\nrisks: { text: x }\n"); err != nil ||
 		!strings.Contains(page, "/* mine */") {
 		t.Errorf("drawing with the parts theme mine = %v:\n%s", err, page)
+	}
+	// Its palette goes over floe's default one, which keeps the variables it leaves out, and so does a
+	// default of one's own, which does not take the place of floe's.
+	under, mine := strings.Index(page, "@layer floe.palette {\n/* Every page's colours"), strings.Index(page, "@layer floe.palette {\n/* mine's palette */")
+	if under < 0 || mine < under || strings.Contains(page, "--accent: #c00") {
+		t.Errorf("the palettes of the parts theme mine are at %d and %d:\n%s", under, mine, page)
+	}
+	if page, err = draw(l, "template: memo\nlang: en\nrisks: { text: x }\n"); err != nil ||
+		strings.Index(page, "/* Every page's colours") > strings.Index(page, ":root { --accent: #c00; }") {
+		t.Errorf("drawing with default of one's own = %v:\n%s", err, page)
+	}
+	// palette.css holds the palette's variables alone, and is warned of where it sets a colour for light
+	// mode alone: dark mode would keep it.
+	rules := "your own parts theme rules cannot be used: " + filepath.Join(parts, "themes", "rules", "palette.css") +
+		":2: palette.css holds only the palette's variables"
+	if _, err = draw(l, "template: memo\nlang: en\nparts-theme: rules\nrisks: { text: x }\n"); err == nil || !strings.Contains(err.Error(), rules) {
+		t.Errorf("drawing with the parts theme rules = %v, want %s", err, rules)
 	}
 	// A file of a name no part takes goes into no page, and leaves the theme to be used: tone.css too, a
 	// part of one's own named tone left out or not.
@@ -364,6 +389,13 @@ func TestOwnPartsThemes(t *testing.T) {
 		t.Fatal(err)
 	}
 	warnings, mistakes := tmpl.Check(filepath.Join(dir, "memo"), parts, "")
+	warned := func(prefix string) bool {
+		return slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), prefix) })
+	}
+	pale := filepath.Join(parts, "themes", "pale", "palette.css") + " sets --bg for light mode alone"
+	if !warned(pale) || warned(filepath.Join(parts, "themes", "mine")) || warned(filepath.Join(parts, "themes", "broke", "palette.css")) {
+		t.Errorf("Check = %v, want %s alone of the palettes", warnings, pale)
+	}
 	for _, want := range append(strays, why) {
 		if len(mistakes) != 0 || !slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), want) }) {
 			t.Errorf("Check = %v, %v, want %s", warnings, mistakes, want)

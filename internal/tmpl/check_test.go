@@ -49,29 +49,21 @@ func TestDrawEveryStage(t *testing.T) {
 	}
 }
 
-// A right template passes, warned that it does not name the floe it needs, and of the variables floe's
-// base takes that its theme leaves out, though it uses no part.
+// A right template passes, warned that it does not name the floe it needs.
 func TestCheck(t *testing.T) {
 	t.Parallel()
 
 	warnings, mistakes := tmpl.Check("testdata/sizes", "", "")
-	if len(warnings) != 3 || len(mistakes) != 0 {
+	if len(warnings) != 1 || len(mistakes) != 0 {
 		t.Fatalf("Check = %v, %v", warnings, mistakes)
-	}
-	if want := "testdata/sizes/themes/default.css does not define --accent, --accent-soft, --surface, --line, --muted, which floe's base"; !strings.HasPrefix(warnings[1].Error(), want) {
-		t.Errorf("the warning = %s, want %s", warnings[1], want)
 	}
 	release := strings.SplitN(version.Version, ".", 3)
 	if want := "testdata/sizes has no template.yaml: write floe: " + release[0] + "." + release[1] + " in it"; !strings.HasPrefix(warnings[0].Error(), want) {
 		t.Errorf("the warning = %s, want %s", warnings[0], want)
 	}
 
-	// With template.yaml, and a theme that defines the base's variables, nothing is told.
-	dir := sizes(t, map[string]string{
-		"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
-		"page.css": ":scope { --accent: #00f; --accent-soft: #eef; --surface: #fff; --line: #ccc; --muted: #666; " +
-			"--text-width: 50rem; --mono: monospace; }\n",
-	})
+	// With template.yaml, nothing is told.
+	dir := sizes(t, map[string]string{"template.yaml": "floe: " + release[0] + "." + release[1] + "\n"})
 	if warnings, mistakes := tmpl.Check(dir, "", ""); len(warnings) != 0 || len(mistakes) != 0 {
 		t.Errorf("Check with template.yaml = %v, %v", warnings, mistakes)
 	}
@@ -218,16 +210,6 @@ func TestCheckMistakes(t *testing.T) {
 			name:  "an asset in a branch the example does not reach",
 			files: map[string]string{"page.html": "<body>|<body>{{if false}}{{asset \"nope.svg\"}}{{else}}{{asset \"logo.svg\"}}{{end}}"},
 			want:  []string{`sizes/page.html: there is no image "nope.svg" under `},
-		},
-		{
-			name:    "a theme without the variables of diagrams",
-			files:   map[string]string{"schema.json": `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`},
-			warning: "sizes/themes/default.css does not define --bg, --surface, --fg, --muted, --line, --accent, --accent-soft",
-		},
-		{
-			name:    "a theme without the variables of a Markdown table",
-			files:   map[string]string{"schema.json": `"chart":|"aside": { "type": "string", "format": "markdown" },` + "\n    " + `"chart":`},
-			warning: "sizes/themes/default.css does not define --accent-soft, --accent, --good-soft, --good, --warn-soft, --warn, --bad-soft, --bad, --surface, --line, --muted,",
 		},
 		{
 			name: "formats of other types",
@@ -388,6 +370,23 @@ func TestCSSBraceRefused(t *testing.T) {
 	if _, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %s", mistakes, want)
 	}
+	// The URL of url( runs to the first ), whatever it holds, as a browser reads it.
+	url := sizes(t, map[string]string{"page.css": "a { b: url(x(y) } }\nc { color: red; }\n"})
+	if _, mistakes := tmpl.Check(url, "", ""); len(mistakes) != 1 ||
+		!strings.HasPrefix(mistakes[0].Error(), filepath.Join(url, "page.css")+":1: this } closes no block") {
+		t.Errorf("Check of a } after url( = %v", mistakes)
+	}
+	// :root is told at its line, past the comments before it.
+	root := sizes(t, map[string]string{"page.css": ".a, /* one\ntwo\nthree */ :root { color: red; }\n"})
+	if _, mistakes := tmpl.Check(root, "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "page.css:3:") {
+		t.Errorf("Check of :root after a comment = %v", mistakes)
+	}
+	// An escaped bracket is a name's, and leaves the } after it to be told.
+	escaped := sizes(t, map[string]string{"page.css": ".a\\( { color: red; }\n}\n"})
+	if _, mistakes := tmpl.Check(escaped, "", ""); len(mistakes) != 1 ||
+		!strings.HasPrefix(mistakes[0].Error(), filepath.Join(escaped, "page.css")+":2: this } closes no block") {
+		t.Errorf("Check of an escaped bracket = %v", mistakes)
+	}
 	// A block left open ends with the template's own <style>.
 	ok := sizes(t, map[string]string{"page.css": "@media print { p { color: red; }\n"})
 	if warnings, mistakes := tmpl.Check(ok, "", ""); len(mistakes) != 0 {
@@ -395,27 +394,54 @@ func TestCSSBraceRefused(t *testing.T) {
 	}
 }
 
-// The variables of diagrams and of floe's base that page.css defines, for every theme, are not missed in a
-// theme, and those of the base are not lost beside the diagrams'.
-func TestCheckVariablesInPage(t *testing.T) {
+// A colour that changes with the mode, set on :scope for light mode alone, is warned of at the file that
+// sets it: over every palette, it would stay in dark mode too.
+func TestCheckScopeColours(t *testing.T) {
 	t.Parallel()
 
 	release := strings.SplitN(version.Version, ".", 3)
-	diagrams := ":scope { " + strings.Join([]string{
-		"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
-		"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--mono",
-	}, ": red; ") + ": red; "
-	for page, want := range map[string]string{diagrams + "}": "does not define --text-width,", diagrams + "--text-width: 50rem; }": ""} {
-		dir := sizes(t, map[string]string{
-			"template.yaml": "floe: " + release[0] + "." + release[1] + "\n",
-			"schema.json":   `"chart":|"plan": { "$ref": "floe:///parts/diagram.json" },` + "\n    " + `"chart":`,
-			"page.css":      page,
-		})
-		warnings, mistakes := tmpl.Check(dir, "", "")
+	floe := "floe: " + release[0] + "." + release[1] + "\n"
+	for page, want := range map[string]string{
+		":scope { --surface: #fff; --accent: #c00; --page-width: 90rem; --rule: 2px solid var(--fg); }":    "sizes/page.css sets --accent, --surface on :scope for light mode alone",
+		":scope { --surface: #fff; }\n@media (prefers-color-scheme: dark) { :scope { --surface: #222; } }": "",
+		"body { --surface: #fff; }": "",
+		"@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n:scope { --bg: #fff; }":                                         "sizes/page.css sets --bg on :scope for light mode alone",
+		":scope { --line: #fff; &.x { --q: 1; } --fg: #000; }\n@media (prefers-color-scheme: dark) { :scope { --line: #222; } }":         "sizes/page.css sets --fg on :scope",
+		":scope { --bg: #fff; }\n@media screen and (prefers-color-scheme: dark) { :scope { --bg: #000; } }":                              "",
+		":scope { --bg: #fff; }\n@media not (prefers-color-scheme: dark) { :scope { --bg: #eee; } }":                                     "sizes/page.css sets --bg on :scope",
+		":scope { --bg: #fff; @media (prefers-color-scheme: dark) { --bg: #000; } }":                                                     "",
+		"@layer a { :scope { --bg: #fff; } }\n@supports (color: red) { @media (prefers-color-scheme: dark) { :scope { --bg: #000; } } }": "",
+		":scope { @media (prefers-color-scheme: dark) { --bg: #000; } --bg: #fff; }":                                                     "sizes/page.css sets --bg on :scope",
+	} {
+		warnings, mistakes := tmpl.Check(sizes(t, map[string]string{"template.yaml": floe, "page.css": page}), "", "")
 		if len(mistakes) != 0 || want == "" && len(warnings) != 0 ||
 			want != "" && (len(warnings) != 1 || !strings.Contains(warnings[0].Error(), want)) {
 			t.Errorf("Check with %s = %v, %v, want %q", page, warnings, mistakes, want)
 		}
+	}
+}
+
+// page.css is told once, of what it sets for light mode alone with any theme, and with none when every
+// theme is refused.
+func TestCheckScopeColoursOnce(t *testing.T) {
+	t.Parallel()
+
+	release := strings.SplitN(version.Version, ".", 3)
+	floe := "floe: " + release[0] + "." + release[1] + "\n"
+	dir := sizes(t, map[string]string{
+		"template.yaml": floe, "page.css": ":scope { --bg: #fff; --fg: #000; }\n",
+		"themes/default.css": "@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n", "themes/print.css": "",
+	})
+	warnings, mistakes := tmpl.Check(dir, "", "")
+	if len(mistakes) != 0 || len(warnings) != 1 || !strings.Contains(warnings[0].Error(), "sizes/page.css sets --bg, --fg on :scope") {
+		t.Errorf("Check of two themes = %v, %v", warnings, mistakes)
+	}
+	refused := sizes(t, map[string]string{
+		"template.yaml": floe, "page.css": ":scope { --bg: #fff; }\n", "themes/default.css": ":root { --x: 1; }\n",
+	})
+	warnings, mistakes = tmpl.Check(refused, "", "")
+	if len(mistakes) != 1 || len(warnings) != 1 || !strings.Contains(warnings[0].Error(), "sizes/page.css sets --bg on :scope") {
+		t.Errorf("Check of a refused theme = %v, %v", warnings, mistakes)
 	}
 }
 
@@ -581,19 +607,10 @@ func sizes(t *testing.T, files map[string]string) string {
 	return dir
 }
 
-// The parts and looks page.html names take their colours from the theme, as those the schema refers to
-// do, and a name of no part is told with those the attribute may name: a look has no box.
+// A name of no part page.html names is told with those the attribute may name: a look has no box.
 func TestCheckPageNames(t *testing.T) {
 	t.Parallel()
 
-	warned := func(page string) string {
-		t.Helper()
-		warnings, _ := tmpl.Check(sizes(t, map[string]string{"page.html": "<body>|<body>" + page}), "", "")
-		return fmt.Sprint(warnings)
-	}
-	if strings.Contains(warned(""), "--fg") || !strings.Contains(warned(`<section data-floe-look="panel"></section>`), "--fg") {
-		t.Errorf("the variables of a look page.html takes are not warned of")
-	}
 	for page, want := range map[string]bool{`<b data-floe-part="pannel"></b>`: false, `<b data-floe-look="pannel"></b>`: true} {
 		_, mistakes := tmpl.Check(sizes(t, map[string]string{"page.html": "<body>|<body>" + page}), "", "")
 		if got := fmt.Sprint(mistakes); !strings.Contains(got, "options, progress") && !strings.Contains(got, "options, panel, progress") ||
