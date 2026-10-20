@@ -114,6 +114,11 @@ type part struct {
 	looks  []takenLook // the looks it takes, as part.yaml names them, each before it
 	taken  []string    // those and the looks they take in turn, each once, once all are read
 	uses   []string    // the parts its HTML names and its schema holds, itself among them
+	about  string      // a look's description, from part.yaml; a part's is its schema's
+	// where one of one's own was found, as its mistakes name it, "" for floe's, and whether it takes the
+	// place of floe's of its name
+	dir      string
+	replaces bool
 }
 
 // goParts are the parts floe draws in Go, each a description and its style: their schema takes an object,
@@ -154,12 +159,12 @@ type partSet struct {
 }
 
 // builtinParts reads floe's parts once.
-var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("", nil) })
+var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("", nil, staged{name: "", dir: ""}) })
 
 // readParts reads floe's parts and, over them, those of one's own in dir, "" for none, which holds
-// entries: one of the name of one of floe's takes its place whole. One of one's own that cannot be used
-// is left out, its mistake kept for a template that uses it.
-func readParts(dir string, entries []os.DirEntry) (*partSet, error) {
+// entries, and stage: one of the name of one of floe's takes its place whole. One of one's own that cannot
+// be used is left out, its mistake kept for a template that uses it.
+func readParts(dir string, entries []os.DirEntry, stage staged) (*partSet, error) {
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
 		broken: map[string]error{}, brokenThemes: map[string]error{}, dirs: nil, strays: nil,
@@ -168,7 +173,7 @@ func readParts(dir string, entries []os.DirEntry) (*partSet, error) {
 		return nil, err
 	}
 	if dir != "" {
-		if err := set.readOwn(dir, entries); err != nil {
+		if err := set.readOwn(dir, entries, stage); err != nil {
 			return nil, err
 		}
 	}
@@ -224,7 +229,7 @@ func (set *partSet) readBuiltin() error {
 		}
 		set.parts[name] = &part{
 			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: p.css, checks: nil,
-			looks: nil, taken: nil, uses: nil,
+			looks: nil, taken: nil, uses: nil, about: "", dir: "", replaces: false,
 		}
 	}
 	themes, err := fs.Sub(builtin, themesDir)
@@ -392,12 +397,12 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	if err != nil {
 		return err
 	}
-	looks, err := readPartYAML(files, path.Join(dir, "part.yaml"))
+	yaml, err := readPartYAML(files, path.Join(dir, "part.yaml"), look)
 	if err != nil {
 		return err
 	}
 	if look {
-		return set.readLook(files, name, dir, looks)
+		return set.readLook(files, name, dir, yaml)
 	}
 	url := partsURL + name + ".json"
 	if err = set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json")); err != nil {
@@ -437,7 +442,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	}
 	p := &part{
 		name: name, schema: set.schemas[url], pages: pages, words: w, html: string(html), css: css, checks: nil,
-		looks: looks, taken: nil, uses: nil,
+		looks: yaml.looks, taken: nil, uses: nil, about: "", dir: "", replaces: false,
 	}
 	if p.checks, err = readPartChecks(files, name, dir); err != nil {
 		return err
@@ -480,7 +485,7 @@ func exists(files fs.FS, name, file string) (bool, error) {
 }
 
 // readLook reads the look alone name from files, its directory, shown in its mistakes as dir, into set.
-func (set *partSet) readLook(files fs.FS, name, dir string, looks []takenLook) error {
+func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error {
 	// A look draws nothing: words and checks of one would be read for nothing.
 	for _, file := range []string{"words.yaml", "checks.yaml"} {
 		there, err := exists(files, name, file)
@@ -496,8 +501,8 @@ func (set *partSet) readLook(files fs.FS, name, dir string, looks []takenLook) e
 		return err
 	}
 	set.parts[name] = &part{
-		name: name, schema: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: looks,
-		taken: nil, uses: nil,
+		name: name, schema: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: yaml.looks,
+		taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
 	}
 	return nil
 }
@@ -553,41 +558,65 @@ type takenLook struct {
 	line int
 }
 
-// readPartYAML reads the looks file, the part.yaml of a part in files, its directory, names; a part
-// without one takes no look.
-func readPartYAML(files fs.FS, file string) ([]takenLook, error) {
+// partYAML is what a part's part.yaml gives: the looks it takes, and a look's description.
+type partYAML struct {
+	looks []takenLook
+	about string
+}
+
+// readPartYAML reads file, the part.yaml of a part in files, its directory, a look alone when look; a part
+// without one takes no look. A part's description is its schema's: part.yaml gives a look's alone.
+func readPartYAML(files fs.FS, file string, look bool) (partYAML, error) {
+	var yaml partYAML
 	src, err := fs.ReadFile(files, "part.yaml")
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		return nil, nil
+		return yaml, nil
 	case err != nil:
-		return nil, fmt.Errorf("read %s: %w", file, err)
+		return yaml, fmt.Errorf("read %s: %w", file, err)
 	}
 	body, err := yamlpos.Parse(file, src, "tmpl_part_yaml_documents")
 	if errors.Is(err, yamlpos.ErrEmpty) {
-		return nil, nil
+		return yaml, nil
 	}
 	if err != nil {
-		return nil, err //nolint:wrapcheck // a mistake at its line and column
+		return yaml, err //nolint:wrapcheck // a mistake at its line and column
 	}
 	if err = plain(file, body); err != nil {
-		return nil, err
+		return yaml, err
 	}
 	m, ok := body.(*ast.MappingNode)
 	if !ok {
-		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_part_yaml")
+		return yaml, yamlpos.New(file, yamlpos.Of(body), "tmpl_part_yaml")
 	}
-	var looks []takenLook
 	for _, kv := range m.Values {
 		k := yamlpos.KeyOf(kv)
-		if key := k.GetToken().Value; key != "looks" {
-			return nil, yamlpos.New(file, yamlpos.Of(k), "tmpl_part_yaml_key", key)
+		switch key := k.GetToken().Value; {
+		case key == "looks":
+			yaml.looks, err = readLooks(file, k, kv.Value)
+		case key == "description" && !look:
+			return yaml, yamlpos.New(file, yamlpos.Of(k), "tmpl_part_yaml_description")
+		case key == "description":
+			yaml.about, err = readAbout(file, k, kv.Value)
+		default:
+			return yaml, yamlpos.New(file, yamlpos.Of(k), "tmpl_part_yaml_key", key)
 		}
-		if looks, err = readLooks(file, k, kv.Value); err != nil {
-			return nil, err
+		if err != nil {
+			return yaml, err
 		}
 	}
-	return looks, nil
+	return yaml, nil
+}
+
+// readAbout reads the description of a look part.yaml, file, gives the key k.
+func readAbout(file string, k, value ast.Node) (string, error) {
+	switch text := value.(type) {
+	case *ast.StringNode:
+		return text.Value, nil
+	case *ast.LiteralNode: // | or >: told on a line, as a part's description is
+		return text.Value.Value, nil
+	}
+	return "", yamlpos.New(file, yamlpos.OfValue(k, value), "tmpl_part_yaml_about")
 }
 
 // readPartChecks reads the checks.yaml of the part name in files, its directory, shown as dir, compiled

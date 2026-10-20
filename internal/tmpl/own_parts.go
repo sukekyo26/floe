@@ -29,31 +29,50 @@ func partsIn(dir string) (*partSet, error) {
 	if !slices.ContainsFunc(entries, func(e os.DirEntry) bool { return !strings.HasPrefix(e.Name(), ".") }) {
 		return builtinParts()
 	}
-	return readParts(dir, entries)
+	return readParts(dir, entries, staged{name: "", dir: ""})
+}
+
+// staged is a part of one's own read from another directory than its own, a copy not yet in place.
+type staged struct{ name, dir string }
+
+// partsWith returns the parts partsIn returns of dir, with the part of one's own name read from from, a
+// directory of its files not yet in place, as if it were.
+func partsWith(dir, name, from string) (*partSet, error) {
+	entries, err := entriesOf(dir)
+	if err != nil {
+		return nil, usererr.New("tmpl_parts_dir_unreadable", dir, err.Error())
+	}
+	return readParts(dir, entries, staged{name: name, dir: from})
 }
 
 // readOwn reads the parts of one's own in dir into set, over floe's of their names, a directory each, a
-// symlink followed. Those that cannot be used are left out of set, and kept in set.broken.
-func (set *partSet) readOwn(dir string, entries []os.DirEntry) error {
+// symlink followed, and the part stage names from its directory. Those that cannot be used are left out of
+// set, and kept in set.broken.
+func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) error {
 	if parts, err := filepath.EvalSymlinks(dir); err == nil {
 		set.dirs = append(set.dirs, parts)
 	}
-	own := map[string]string{} // the directory of each, as its mistakes name it
-	var replaced []string
+	var names []string
 	for _, e := range entries {
-		name, at := e.Name(), filepath.Join(dir, e.Name())
-		if name == themesDir || strings.HasPrefix(name, ".") {
-			continue
-		}
-		read, replaces := set.readOwnPart(name, at)
-		if replaces {
-			replaced = append(replaced, name)
-		}
-		if read {
-			own[name] = at
+		if name := e.Name(); name != themesDir && !strings.HasPrefix(name, ".") {
+			names = append(names, name)
 		}
 	}
-	set.leaveOutUnusable(own)
+	if stage.name != "" {
+		names = append(names, stage.name)
+	}
+	var replaced []string
+	for _, name := range names {
+		at := filepath.Join(dir, name)
+		from := at
+		if name == stage.name {
+			from = stage.dir
+		}
+		if set.readOwnPart(name, from, at) {
+			replaced = append(replaced, name)
+		}
+	}
+	set.leaveOutUnusable()
 	// floe's themes style floe's parts alone: their rules would fit a part of one's own of the name ill.
 	for _, t := range set.themes {
 		for _, name := range replaced {
@@ -63,11 +82,11 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry) error {
 	return set.readOwnThemes(filepath.Join(dir, themesDir))
 }
 
-// leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own,
-// in own by its directory, that holds itself, through the parts it holds, or takes its own look, through
-// the looks it takes, which floe would follow forever, and a part, floe's too, that checkNames refuses,
-// again while one is left out, as a part may take the look of the one left out, or hold it.
-func (set *partSet) leaveOutUnusable(own map[string]string) {
+// leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own
+// that holds itself, through the parts it holds, or takes its own look, through the looks it takes, which
+// floe would follow forever, and a part, floe's too, that checkNames refuses, again while one is left out,
+// as a part may take the look of the one left out, or hold it.
+func (set *partSet) leaveOutUnusable() {
 	held := func(at string) []string { return set.schemas[partsURL+at+".json"].refsUnder(nil) }
 	looks := func(at string) []string {
 		if p := set.parts[at]; p != nil {
@@ -75,44 +94,45 @@ func (set *partSet) leaveOutUnusable(own map[string]string) {
 		}
 		return nil
 	}
-	for _, name := range slices.Sorted(maps.Keys(own)) {
+	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
+		dir := set.parts[name].dir
+		if dir == "" {
+			continue
+		}
 		if chain := cycle(name, held); chain != nil {
-			set.leaveOut(name, usererr.New("tmpl_part_cycle", own[name], name, strings.Join(chain, " → ")))
-			delete(own, name)
+			set.leaveOut(name, usererr.New("tmpl_part_cycle", dir, name, strings.Join(chain, " → ")))
 		} else if chain := cycle(name, looks); chain != nil {
-			set.leaveOut(name, usererr.New("tmpl_look_cycle", own[name], name, strings.Join(chain, " → ")))
-			delete(own, name)
+			set.leaveOut(name, usererr.New("tmpl_look_cycle", dir, name, strings.Join(chain, " → ")))
 		}
 	}
 	for left := true; left; {
 		left = false
 		for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-			if err := set.checkNames(name, own[name]); err != nil {
+			if err := set.checkNames(name, set.parts[name].dir); err != nil {
 				set.leaveOut(name, err)
-				delete(own, name)
 				left = true
 			}
 		}
 	}
 }
 
-// readOwnPart reads the part name of one's own in the directory at into set, a symlink followed, and
-// one in it that leads out of it refused, and reports whether it read it and whether it took the place
-// of floe's of the name. One that cannot be used is kept in set.broken, and one of a name set keeps
-// leaves floe's in place. A look alone cannot take the place of one that draws, which floe's other parts,
-// Markdown's tables and templates draw by.
-func (set *partSet) readOwnPart(name, at string) (read, replaces bool) {
-	dir, err := set.ownEntry(name, at)
+// readOwnPart reads the part name of one's own from the directory from, at at as its mistakes name it,
+// into set, a symlink followed, and one in it that leads out of it refused, and reports whether it took
+// the place of floe's of the name. One that cannot be used is kept in set.broken, and one of a name set
+// keeps leaves floe's in place. A look alone cannot take the place of one that draws, which floe's other
+// parts, Markdown's tables and templates draw by.
+func (set *partSet) readOwnPart(name, from, at string) bool {
+	dir, err := set.ownEntry(name, from, at)
 	switch {
 	case dir == "" && err == nil:
-		return false, false
+		return false
 	case set.reserved(name):
 		// Told whatever is there, which never takes the place of floe's.
 		set.broken[name] = usererr.New("tmpl_part_name", at, name)
-		return false, false
+		return false
 	}
 	floe := set.parts[name]
-	replaces = floe != nil
+	replaces := floe != nil
 	set.drop(name)
 	if err == nil {
 		err = readIn(dir, func(files fs.FS) error { return set.readPart(files, name, at) })
@@ -122,9 +142,10 @@ func (set *partSet) readOwnPart(name, at string) (read, replaces bool) {
 	}
 	if err != nil {
 		set.leaveOut(name, err)
-		return false, replaces
+		return replaces
 	}
-	return true, replaces
+	set.parts[name].dir, set.parts[name].replaces = at, replaces
+	return replaces
 }
 
 // readOwnThemes reads the parts themes of one's own in dir into set, a directory each, a symlink
@@ -155,7 +176,7 @@ func (set *partSet) readOwnThemes(dir string) error {
 		if t == nil {
 			t = newPartsTheme()
 		}
-		dir, err := set.ownEntry(name, at)
+		dir, err := set.ownEntry(name, at, at)
 		if dir == "" && err == nil {
 			continue
 		}
@@ -172,11 +193,11 @@ func (set *partSet) readOwnThemes(dir string) error {
 	return nil
 }
 
-// ownEntry returns the directory of name, a part or a parts theme of one's own at at, as dirAt does: ""
-// for a file. One of a name no part or theme can take is a mistake. It keeps the directory among those
+// ownEntry returns the directory of name, a part or a parts theme of one's own at at, read from from, as
+// dirAt does: "" for a file. One of a name no part or theme can take is a mistake. It keeps the directory among those
 // set read, for a link drawn with set to be drawn again when a file in it is saved.
-func (set *partSet) ownEntry(name, at string) (string, error) {
-	dir, err := dirAt(at)
+func (set *partSet) ownEntry(name, from, at string) (string, error) {
+	dir, err := dirAt(from)
 	switch {
 	case dir == "" && err == nil:
 		return "", nil
@@ -351,6 +372,41 @@ func namesItself(named []namedPart, name string) bool {
 		}
 	}
 	return false
+}
+
+// find returns the part name of set, refusing one that cannot be used, or that there is none of.
+func (set *partSet) find(name string) (*part, error) {
+	switch {
+	case set.parts[name] != nil:
+		return set.parts[name], nil
+	case set.broken[name] != nil:
+		return nil, usererr.New("tmpl_part_broken", name, set.broken[name])
+	}
+	return nil, usererr.New("tmpl_unknown_part", name, set.names(nil))
+}
+
+// unusable returns the mistake of each part of set that cannot be used, by name, but those skip skips (none
+// for nil).
+func (set *partSet) unusable(skip func(name string) bool) []*usererr.Error {
+	var found []*usererr.Error
+	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
+		if skip == nil || !skip(name) {
+			found = append(found, usererr.New("tmpl_part_broken", name, set.broken[name]))
+		}
+	}
+	return found
+}
+
+// unusableThemes returns the mistake of each parts theme of set that cannot be used, by name, but those
+// skip skips (none for nil).
+func (set *partSet) unusableThemes(skip func(name string) bool) []*usererr.Error {
+	var found []*usererr.Error
+	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
+		if skip == nil || !skip(name) {
+			found = append(found, usererr.New("tmpl_parts_theme_broken", name, set.brokenThemes[name]))
+		}
+	}
+	return found
 }
 
 // leaveOut leaves the part name out of set, kept in set.broken with why.
