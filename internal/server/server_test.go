@@ -77,7 +77,7 @@ const (
 	cutOff  = "default-src 'none'; img-src data: blob:; media-src data: blob:; " +
 		"style-src 'unsafe-inline' https://fonts.googleapis.com " + cdns + "; " +
 		"font-src data: blob: https://fonts.gstatic.com " + cdns + "; script-src 'unsafe-inline' " + cdns + "; " +
-		"form-action 'none'; connect-src "
+		"form-action 'none'; base-uri 'none'; connect-src "
 	cutOffMeta = `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="` + cutOff + `'none'">`
 )
 

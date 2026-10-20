@@ -354,6 +354,7 @@ var messagesEN = map[string]string{
 	"tmpl_html_page":               "HTML changes the page around it: it leaves an element open (an <svg>, a comment, a <b> that makes the text after it bold), ends where a tag starts, or closes an element of the page; write it whole, closing in it what it opens, and only that",
 	"tmpl_html_outside":            "%s puts an item of format html outside its <head> and <body> (before <head>, between </head> and the <body> tag, or after </body>), where floe does not check it: put it in the head, or after the <body> tag",
 	"tmpl_html_doctype":            "%s does not start with <!doctype html>, without which a browser reads the page in quirks mode, where floe does not check an item of format html: write it first",
+	"tmpl_html_base":               "HTML holds a <base> or a <meta http-equiv>, which would point the page's links elsewhere, move the page away or change its policy: leave them out",
 	"tmpl_html_head":               "HTML holds a </head>: floe puts the page's styles before page.html's, which the data's would stand in for",
 	"tmpl_html_style":              "HTML holds a <style> or a <link>: floe puts a page's CSS together, so style the HTML with style attributes",
 	"tmpl_checks_yaml":             "write checks.yaml as a list of checks, each with for, expr and message (and field if you like)",

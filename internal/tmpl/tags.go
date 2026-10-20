@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -132,6 +133,15 @@ var endTag = func() map[string]*regexp.Regexp {
 
 // styleOrLink finds a <style> or a <link>, however the HTML around it reads.
 var styleOrLink = regexp.MustCompile(`(?i)<(style|link)[\s/>]`)
+
+// movesPage reports whether t changes the page without changing its tree: a <base>, which points its
+// relative links elsewhere, or a <meta http-equiv>, which may move it away (refresh) or change its policy.
+// CSP holds base-uri 'none' too (CutOff); this tells the data's mistake at its line.
+func movesPage(t tag) bool {
+	return !t.end && (t.name == "base" || t.name == "meta" && slices.ContainsFunc(t.attrs, func(a attr) bool {
+		return a.name == "http-equiv"
+	}))
+}
 
 // headEnd finds a </head>, however the HTML around it reads.
 var headEnd = regexp.MustCompile(`(?i)</head[\s/>]`)

@@ -374,7 +374,11 @@ func checkHTML(set *partSet, d *Data) error {
 		if headEnd.MatchString(it.text) {
 			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_head")))
 		}
-		if bad := set.misnamedIn(namedIn(it.text, tagsIn(it.text, false))); bad != nil {
+		tags := tagsIn(it.text, false)
+		if slices.ContainsFunc(tags, movesPage) {
+			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_base")))
+		}
+		if bad := set.misnamedIn(namedIn(it.text, tags)); bad != nil {
 			problems = append(problems, itemError(d.File, it.pos, it.path, bad))
 		}
 	}
