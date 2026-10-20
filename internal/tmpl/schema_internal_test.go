@@ -106,12 +106,12 @@ func TestSchemaRefersToNoFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = validate(set, []byte(`{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
-	if err == nil || err.Error() != "file://"+outside+": a schema refers to no other file or URL: write what a $ref refers to in schema.json, and a $schema as a draft of JSON Schema" {
+	if err == nil || !strings.HasPrefix(err.Error(), "the schema of the template t cannot be read: file://"+outside+": a schema refers to no other file or URL") {
 		t.Errorf("validate of a $ref to a file = %v", err)
 	}
 	// Nor to a metaschema of its own.
 	err = validate(set, []byte(`{"$schema": "https://example.com/meta"}`), d, root)
-	if err == nil || !strings.HasPrefix(err.Error(), "https://example.com/meta: a schema refers to no other file or URL") {
+	if err == nil || !strings.HasPrefix(err.Error(), "the schema of the template t cannot be read: https://example.com/meta: a schema refers to no other file or URL") {
 		t.Errorf("validate of a $schema of its own = %v", err)
 	}
 }

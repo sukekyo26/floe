@@ -54,7 +54,7 @@ func compileSchema(set *partSet, name string, src []byte) (*jsonschema.Schema, a
 		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
 	url := schemaURL(name)
-	c, loader := newCompiler(set)
+	c := newCompiler(set)
 	if err = c.AddResource(url, doc); err != nil {
 		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
@@ -64,11 +64,14 @@ func compileSchema(set *partSet, name string, src []byte) (*jsonschema.Schema, a
 		}
 	}
 	sch, err := c.Compile(url)
+	// jsonschema wraps noLoader's mistake in an error of its own, which does not unwrap: floe's own is told,
+	// so that it is worded in the reader's language. The schema it is in, the template's or a part's it
+	// refers to, is not known.
+	var load *jsonschema.LoadURLError
+	var mistake *usererr.Error
 	switch {
-	case err != nil && loader.mistake != nil:
-		// jsonschema wraps the loader's mistake in an error of its own, which does not unwrap: floe's own is
-		// told as it is, so that it is worded in the reader's language.
-		return nil, nil, loader.mistake
+	case errors.As(err, &load) && errors.As(load.Err, &mistake):
+		return nil, nil, usererr.New("tmpl_schema_load", name, mistake)
 	case err != nil:
 		return nil, nil, fmt.Errorf("compile the schema of %s: %w", name, err)
 	}
@@ -80,18 +83,17 @@ func schemaURL(name string) string {
 	return "floe:///templates/" + name + "/schema.json"
 }
 
-// newCompiler returns a compiler of a schema that refers to the parts of set, and its loader.
-func newCompiler(set *partSet) (*jsonschema.Compiler, *noLoader) {
-	loader := &noLoader{set: set, mistake: nil}
+// newCompiler returns a compiler of a schema that refers to the parts of set.
+func newCompiler(set *partSet) *jsonschema.Compiler {
 	c := jsonschema.NewCompiler()
 	// A template's schema is one file: a URL it refers to, file:// above all, could read one out of the
 	// template.
-	c.UseLoader(loader)
+	c.UseLoader(noLoader{set: set})
 	c.AssertFormat()
 	for _, f := range formats {
 		c.RegisterFormat(&jsonschema.Format{Name: f, Validate: func(any) error { return nil }})
 	}
-	return c, loader
+	return c
 }
 
 // knownFormat reports whether floe knows the format f: one of JSON Schema's that it checks, or one of
@@ -99,7 +101,7 @@ func newCompiler(set *partSet) (*jsonschema.Compiler, *noLoader) {
 // a later floe would be drawn as if it had none.
 func knownFormat(set *partSet, f string) bool {
 	const url = "floe:///format.json"
-	c, _ := newCompiler(set)
+	c := newCompiler(set)
 	if err := c.AddResource(url, map[string]any{"format": f}); err != nil {
 		return false
 	}
@@ -122,20 +124,14 @@ func unknownPart(set *partSet, ref string) error {
 	return usererr.New("tmpl_part_unknown", ref, set.names(drawing))
 }
 
-// noLoader loads no schema: those of the parts of set are added to the compiler before. It keeps the
-// mistake it gave, which stops the compiling.
-type noLoader struct {
-	set     *partSet
-	mistake error
-}
+// noLoader loads no schema: those of the parts of set are added to the compiler before.
+type noLoader struct{ set *partSet }
 
-func (n *noLoader) Load(url string) (any, error) {
+func (n noLoader) Load(url string) (any, error) {
 	if strings.HasPrefix(url, partsURL) {
-		n.mistake = unknownPart(n.set, url)
-	} else {
-		n.mistake = usererr.New("tmpl_schema_url", url)
+		return nil, unknownPart(n.set, url)
 	}
-	return nil, n.mistake
+	return nil, usererr.New("tmpl_schema_url", url)
 }
 
 type schemaCheck struct {
