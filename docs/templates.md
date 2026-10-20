@@ -90,7 +90,9 @@ The parts theme is one of floe's, the same for every template, which the data fi
 
 ### The palette
 
-The page's colours and faces are CSS variables a parts theme's `palette.css` sets, which the parts, diagrams, floe's base and the template draw with. `default`'s defines them all and goes into every page; another theme's goes after it and changes those it writes. The others, and every colour of a theme without a `palette.css`, are `default`'s.
+The page's colours and faces are CSS variables a parts theme's `palette.css` sets, which the parts, diagrams, floe's base and the template draw with. floe's `default` one defines them all and goes into every page, at the bottom; the picked theme's goes after it and changes those it writes, and a `default` of your own goes over floe's too, not in its place. The others, and every colour of a theme without a `palette.css`, are floe's `default`'s.
+
+`palette.css` sets the variables (and `color-scheme`) on `:root { --name: value; }`, those of dark mode in `@media (prefers-color-scheme: dark) { :root { … } }`; any other rule, which would lose to every other in the bottom layer, is refused at its line. A colour set for light mode alone would stay in dark mode, where the others turn dark, and the page would not read: `floe part check` and `floe template check` warn of one, so set each for both modes.
 
 | Variable | What it is |
 | --- | --- |

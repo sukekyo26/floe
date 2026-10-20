@@ -113,7 +113,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   the bottom layer over `default`'s, which defines them all: the parts,
   diagrams and the template draw with them (`--page-bg` the page's ground,
   `--rule` its rules), and a template keeps colours of its own by setting
-  them on `:scope`. A part of your own cannot be named `palette`. `floe
+  them on `:scope`. `palette.css` holds those variables alone, on `:root`
+  and in `@media (prefers-color-scheme: dark)`, and is warned of where it
+  sets a colour for light mode alone. A part of your own cannot be named `palette`. `floe
   template show` lists the parts themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
