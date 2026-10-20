@@ -346,7 +346,8 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 		return problems.Sorted()
 	}
 	d.schema = s
-	err = checkItems(checkImages(s, d, root, images), checkHTML(set, s, d, root), checkDiagrams(s, d, root, t.icons),
+	d.htmlItems = htmlItemsOf(d, root)
+	err = checkItems(checkImages(s, d, root, images), checkHTML(set, d), checkDiagrams(s, d, root, t.icons),
 		checkScripts(s, d, root), checkParts(s, d, root))
 	if err != nil {
 		return err
@@ -356,36 +357,25 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	if err = checkRelations(t, d, root); err != nil {
 		return err
 	}
-	if err = checkComputed(t, d, root, s); err != nil {
-		return err
-	}
-	d.htmlItems = htmlItemsOf(d, root)
-	return nil
+	return checkComputed(t, d, root, s)
 }
 
-// checkHTML refuses the items of d of format html, as its schema s declares them, that hold a <style> or
-// a <link>, at their lines and columns under root: floe puts a page's CSS together, in layers, and a
-// style of the data would win over them all. It refuses those that hold a </head>, which would stand in
-// for page.html's, before which floe puts the page's styles. It refuses those that name a part of set that the page
-// would refuse too.
-func checkHTML(set *partSet, s *schema, d *Data, root ast.Node) error {
-	var found []itemAt
-	s.find("html", d.Values, nil, &found)
+// checkHTML refuses the items of d of format html that hold a <style> or a <link>, at their lines and
+// columns: floe puts a page's CSS together, in layers, and a style of the data would win over them all. It
+// refuses those that hold a </head>, which would stand in for page.html's, before which floe puts the
+// page's styles. It refuses those that name a part of set that the page would refuse too.
+func checkHTML(set *partSet, d *Data) error {
 	var problems yamlpos.Problems
-	for _, f := range found {
-		html, ok := f.value.(string)
-		if !ok {
-			continue
+	for _, it := range d.htmlItems {
+		// Wherever it is, a comment's text too.
+		if styleOrLink.MatchString(it.text) {
+			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_style")))
 		}
-		// Wherever it is: an item may leave a quote or a comment open to the next, which a browser reads on.
-		if styleOrLink.MatchString(html) {
-			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_style")))
+		if headEnd.MatchString(it.text) {
+			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_head")))
 		}
-		if headEnd.MatchString(html) {
-			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_head")))
-		}
-		if bad := set.misnamedIn(namedIn(html, tagsIn(html, false))); bad != nil {
-			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
+		if bad := set.misnamedIn(namedIn(it.text, tagsIn(it.text, false))); bad != nil {
+			problems = append(problems, itemError(d.File, it.pos, it.path, bad))
 		}
 	}
 	if problems != nil {
@@ -484,12 +474,13 @@ func (d *Data) Render(title string) ([]byte, error) {
 		return nil, err
 	}
 	out, ok := withStyles(out, found, style)
-	if !ok && d.htmlItems != nil && d.hidesHead(page, title) {
-		if err = d.checkDrawnHTML(page, title); err != nil {
-			return nil, err
-		}
-	}
 	if !ok {
+		// An item's open <script> may hide the </head>: its mistake, not the template's.
+		if d.htmlItems != nil && d.hidesHead(page, title) {
+			if err = d.checkDrawnHTML(page, title); err != nil {
+				return nil, err
+			}
+		}
 		return nil, headMistake(t.file("page.html"), src)
 	}
 	// The data's HTML after the template's mistakes, which would be told as the data's.

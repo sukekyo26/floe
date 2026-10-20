@@ -250,6 +250,33 @@ func TestDrawnHTMLNextItem(t *testing.T) {
 	}
 }
 
+// The other items are drawn as written: a row in a table, which the parser puts in a <tbody> of its own,
+// and items next to each other that each close what the one before leaves open, as a <li> does, pass; an
+// item in the <head> after another is checked in the head.
+func TestDrawnHTMLOthers(t *testing.T) {
+	t.Parallel()
+
+	for page, data := range map[string]string{
+		"<table>\n{{.Data.risks}}\n</table>":                  "risks: <tr><td>a</td></tr>\n",
+		"<table>{{.Data.risks}}{{.Data.aside}}</table>":       "risks: <tr><td>a</td></tr>\naside: <tr><td>b</td></tr>\n",
+		"<ul>{{.Data.risks}}{{.Data.aside}}</ul>":             "risks: <li>a\naside: <li>b\n",
+		"<ul>{{.Data.risks}}{{.Data.aside}}</ul><p>after</p>": "risks: <li>a</li>\naside: <li>b</li>\n",
+	} {
+		if _, err := draw(htmlIn(t, page), "template: memo\nlang: en\n"+data); err != nil {
+			t.Errorf("%s with %q = %v", page, data, err)
+		}
+	}
+	dir := memo(t, `"risks": {"type": "string", "format": "html"}, "aside": {"type": "string", "format": "html"}`)
+	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.aside}}{{.Data.risks}}</head><body><p>x</p></body></html>`
+	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\naside: <meta name=a content=b>\nrisks: <div>x</div>\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:4:8: risks: HTML closes an element of the page") {
+		t.Errorf("a <div> in the head after a <meta> = %v", err)
+	}
+}
+
 // An action of page.html that leaves out its </head> is told as the template's, before the data's items.
 func TestDrawnHTMLAfterTheTemplate(t *testing.T) {
 	t.Parallel()
