@@ -18,12 +18,12 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// htmlItem is an item of format html of a data file: its path of keys, where it is written, and the
-// mistake of it at its line and column, which Read keeps for Render, which has no YAML.
+// htmlItem is an item of format html of a data file: its path of keys, and where it is written, which
+// Read keeps for Render to tell a mistake of it at, as Render has no YAML.
 type htmlItem struct {
-	at      []string
-	pos     yamlpos.Pos
-	mistake func(e *usererr.Error) *yamlpos.Error
+	at   []string
+	pos  yamlpos.Pos
+	path string
 }
 
 // htmlItemsOf returns the items of format html of d, text, in the order of the file under root; nil for
@@ -36,9 +36,8 @@ func htmlItemsOf(d *Data, root ast.Node) []htmlItem {
 		if _, isText := f.value.(string); !isText {
 			continue
 		}
-		key, value, _ := yamlpos.Find(root, f.at)
-		mistake := func(e *usererr.Error) *yamlpos.Error { return itemMistake(d.File, root, f.at, false, e) }
-		items = append(items, htmlItem{at: f.at, pos: yamlpos.OfValue(key, value), mistake: mistake})
+		key, value, path := yamlpos.Find(root, f.at)
+		items = append(items, htmlItem{at: f.at, pos: yamlpos.OfValue(key, value), path: path})
 	}
 	slices.SortFunc(items, func(a, b htmlItem) int {
 		return cmp.Or(cmp.Compare(a.pos.Line, b.pos.Line), cmp.Compare(a.pos.Column, b.pos.Column))
@@ -47,98 +46,116 @@ func htmlItemsOf(d *Data, root ast.Node) []htmlItem {
 }
 
 // htmlMarks marks the items of format html of a drawing that checks them: each between the comments
-// <!--mark:n--> and <!--/mark:n-->, n its index in the items of the file (pathKey), its text left out
-// when empty, or when n is past upTo.
+// <!--mark:n--> and <!--/mark:n-->, n its index in the items of the file (pathKey). The item only is drawn
+// as written and the item empty as nothing, -1 for none, and the others as a letter, which a <b> one leaves
+// open would be around.
 type htmlMarks struct {
-	mark  string
-	at    map[string]int
-	empty bool
-	upTo  int
+	mark        string
+	at          map[string]int
+	only, empty int
 }
 
 // marked returns text, the item of format html at the path at, between its marks, as m draws it.
 func (m *htmlMarks) marked(text string, at []string) string {
 	n := m.at[pathKey(at)]
-	if m.empty || n > m.upTo {
+	switch n {
+	case m.only:
+	case m.empty:
 		text = ""
+	default:
+		text = "z"
 	}
 	i := strconv.Itoa(n)
 	return "<!--" + m.mark + ":" + i + "-->" + text + "<!--/" + m.mark + ":" + i + "-->"
 }
 
-// checkDrawnHTML refuses the first item of format html of d that changes the page around it, as a
-// browser reads the page page draws, titled title: one that leaves open what takes in the page after it
-// (an <svg>, a comment, a <b>), or closes an element of the page. Whether it does depends on where
-// page.html puts it, so the page is drawn with its items marked and with them empty, and the two are
-// compared. When they change it, the item told is the first, in the order of the file, with which the
-// items before it do: two may do so only together, one closing what the other leaves open, which the
-// page with all of them shows, as the page between them is in an element of the first.
+// checkDrawnHTML refuses the first item of format html of d, in the order of the file, that changes the
+// page around it, as a browser reads the page page draws, titled title: one that leaves open what takes
+// in the page after it (an <svg>, a comment, a <b> around the next item's text), or closes an element of
+// the page. Whether it does depends on where page.html puts it, so each item is drawn as written, the
+// others as a letter, and the page, without the item, is compared with the page drawn with it empty: a
+// letter would end the page's <head> itself. d is drawn as a copy, marked, so that d draws its page as it
+// is.
 // LIMIT: page.html is given the items marked, so one that looks into an item's text (len, eq) may draw
-// them otherwise than the page it checks. Finding the item draws the page once more per item, but only
-// when they change it; halve the items drawn if pages of many come to be slow.
+// them otherwise than the page it checks. The page is drawn twice more per item, every time; draw them
+// all at once first if pages of many items come to be slow.
 func (d *Data) checkDrawnHTML(page *template.Template, title string) error {
-	m := &htmlMarks{mark: rand.Text(), at: map[string]int{}, empty: true, upTo: len(d.htmlItems) - 1}
-	for i, it := range d.htmlItems {
-		m.at[pathKey(it.at)] = i
-	}
-	d.marks = m
-	defer func() { d.marks = nil }()
-	bare, err := d.drawnTree(page, title)
-	if err != nil {
-		return err
-	}
-	m.empty = false
-	full, err := d.drawnTree(page, title)
-	if err != nil || changed(full, bare, m.mark) == nil {
-		return err
-	}
-	for k := range d.htmlItems {
-		m.upTo = k
-		if full, err = d.drawnTree(page, title); err != nil {
+	c := d.marked()
+	m := c.marks
+	for k, it := range d.htmlItems {
+		m.only, m.empty = -1, k
+		bare, err := c.drawnPage(page, title)
+		if err != nil {
 			return err
 		}
-		if why := changed(full, bare, m.mark); why != nil {
-			return d.htmlItems[k].mistake(why)
+		m.only, m.empty = k, -1
+		full, err := c.drawnPage(page, title)
+		if err != nil {
+			return err
+		}
+		if why := changed(full, bare, m.mark, strconv.Itoa(k)); why != nil {
+			return itemError(d.File, it.pos, it.path, why)
 		}
 	}
 	return nil
 }
 
-// drawnTree draws d, as it is marked, with page, and reads it as a browser does: without its styles, and
-// with a script after it, as floe puts the diagrams' and a served page's there, which an item may take in.
-func (d *Data) drawnTree(page *template.Template, title string) (*html.Node, error) {
+// marked returns a copy of d whose items of format html are marked, all of them as letters, so that d
+// draws its page as it is.
+func (d *Data) marked() *Data {
+	m := &htmlMarks{mark: rand.Text(), at: map[string]int{}, only: -1, empty: -1}
+	for i, it := range d.htmlItems {
+		m.at[pathKey(it.at)] = i
+	}
+	c := *d
+	c.marks = m
+	return &c
+}
+
+// hidesHead reports whether d's items of format html hide the </head> of the page page draws, titled
+// title, which the page drawn with them as letters has: an open <script> of one does.
+func (d *Data) hidesHead(page *template.Template, title string) bool {
+	out, err := d.marked().execute(page, title)
+	return err == nil && tagsOf(tagsIn(string(out), false)).head >= 0
+}
+
+// drawnPage draws d, as it is marked, with page: without its styles, and with a script after it, as floe
+// puts the diagrams' and a served page's there, which an item may take in.
+func (d *Data) drawnPage(page *template.Template, title string) ([]byte, error) {
 	out, err := d.execute(page, title)
 	if err != nil {
 		return nil, err
 	}
-	// A bytes.Reader fails no read, the one error Parse returns.
-	doc, _ := html.Parse(bytes.NewReader(append(out, "<script></script>"...))) //nolint:errcheck // see above
-	return doc, nil
+	return append(out, "<script></script>"...), nil
 }
 
-// changed returns the mistake of the items marked in full, the page drawn with them, against bare, the
-// page drawn with them empty, nil when they leave it as it is: an item whose end mark is gone, taken in by
-// what it leaves open, one of whose elements holds the page after it, or the page outside the items not
-// that of bare, by shape. An item drawn as no markup, in a <title> or a value, has no marks, and is left
-// alone; one whose start mark is text of the page's that it ends (a <noscript>) leaves its end mark in the
-// page, unlike bare.
-func changed(full, bare *html.Node, mark string) *usererr.Error {
-	begins, ends := marksIn(full, mark)
-	for n, b := range begins {
-		e := ends[n]
-		switch {
-		case len(e) > len(b):
-			return usererr.New("tmpl_html_page") // a start mark is text of the page's that it ends
-		case len(e) < len(b):
-			return swallowed(full, mark, n)
-		}
-		for i := range b {
-			if why := cut(full, b[i], e[i]); why != nil {
-				return why
-			}
+// changed returns the mistake of the item n of full, a page drawn with it as written, against bare, the
+// page drawn with it a letter, read as a browser reads them, nil when it leaves the page as it is: its end
+// mark gone, taken in by what it leaves open; one of its elements holding the page after it; or the page
+// without it not that of bare without it, by shape. An item drawn as no markup, in a <title> or a value,
+// has no marks, and is left alone; one whose start mark is text of the page's that it ends (a <noscript>)
+// leaves its end mark in the page, unlike bare.
+func changed(full, bare []byte, mark, n string) *usererr.Error {
+	// A bytes.Reader fails no read, the one error Parse returns.
+	doc, _ := html.Parse(bytes.NewReader(full))     //nolint:errcheck // see above
+	without, _ := html.Parse(bytes.NewReader(bare)) //nolint:errcheck // see above
+	begins, ends := marksIn(doc, mark, n)
+	switch {
+	case len(ends) > len(begins):
+		return usererr.New("tmpl_html_page") // a start mark is text of the page's that it ends
+	case len(ends) < len(begins):
+		return swallowed(doc, mark, n)
+	}
+	for i := range begins {
+		if why := cut(doc, begins[i], ends[i]); why != nil {
+			return why
 		}
 	}
-	if shape(full) != shape(bare) {
+	begins, ends = marksIn(without, mark, n)
+	for i := range min(len(begins), len(ends)) {
+		cut(without, begins[i], ends[i]) //nolint:errcheck // a letter holds no page
+	}
+	if shape(doc) != shape(without) {
 		return usererr.New("tmpl_html_page")
 	}
 	return nil
@@ -147,18 +164,17 @@ func changed(full, bare *html.Node, mark string) *usererr.Error {
 // markRe reads a mark of an item: / for its end, and its index.
 var markRe = regexp.MustCompile(`^(/?)([A-Z0-9]+):(\d+)$`)
 
-// marksIn returns the comments of doc that mark the items, the starts and the ends by index, in order.
-func marksIn(doc *html.Node, mark string) (begins, ends map[string][]*html.Node) {
-	begins, ends = map[string][]*html.Node{}, map[string][]*html.Node{}
-	for n := range doc.Descendants() {
-		if n.Type != html.CommentNode {
+// marksIn returns the comments of doc that mark the item n, its starts and its ends, in order.
+func marksIn(doc *html.Node, mark, n string) (begins, ends []*html.Node) {
+	for c := range doc.Descendants() {
+		if c.Type != html.CommentNode {
 			continue
 		}
-		if m := markRe.FindStringSubmatch(n.Data); m != nil && m[2] == mark {
+		if m := markRe.FindStringSubmatch(c.Data); m != nil && m[2] == mark && m[3] == n {
 			if m[1] == "" {
-				begins[m[3]] = append(begins[m[3]], n)
+				begins = append(begins, c)
 			} else {
-				ends[m[3]] = append(ends[m[3]], n)
+				ends = append(ends, c)
 			}
 		}
 	}

@@ -232,6 +232,40 @@ func TestDrawnHTMLManyItems(t *testing.T) {
 	}
 }
 
+// An item that leaves a <b> or an <a> open is refused where the text it would take in is the next item's,
+// with no text of the page's between them, and the item told is the one that leaves it open.
+func TestDrawnHTMLNextItem(t *testing.T) {
+	t.Parallel()
+
+	for _, page := range []string{
+		`<ul><li>{{.Data.risks}}</li><li>{{.Data.aside}}</li></ul>`,
+		`<p>{{.Data.risks}}</p><p>{{.Data.aside}}</p>`,
+	} {
+		for _, risks := range []string{"<b>x", "<a href=x>x"} {
+			_, err := draw(htmlIn(t, page), "template: memo\nlang: en\nrisks: "+yamlText(risks)+"\naside: plain\n")
+			if err == nil || !strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: ") {
+				t.Errorf("%q before another item in %s = %v, want risks refused", risks, page, err)
+			}
+		}
+	}
+}
+
+// An action of page.html that leaves out its </head> is told as the template's, before the data's items.
+func TestDrawnHTMLAfterTheTemplate(t *testing.T) {
+	t.Parallel()
+
+	dir := memo(t, `"risks": {"type": "string", "format": "html"}`)
+	page := filepath.Join(dir, "memo", "page.html")
+	src := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.risks}}{{if false}}</head>{{end}}<body><p>x</p></body></html>`
+	if err := os.WriteFile(page, []byte(src), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <div>x</div>\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "an action of "+page+" leaves out its </head>") {
+		t.Errorf("a page.html whose action leaves out </head> = %v", err)
+	}
+}
+
 // An item left open at the end of the page takes in the scripts floe puts after it, and is refused too.
 func TestDrawnHTMLAtTheEnd(t *testing.T) {
 	t.Parallel()

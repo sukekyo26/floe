@@ -65,7 +65,8 @@ func drawFile(a *app, file string) ([]byte, []error) {
 	case err != nil:
 		return nil, []error{err}
 	}
-	// Drawing is the last stage. Data that passed its schema fails here only by the template's mistake.
+	// Drawing is the last stage. Data that passed its schema fails here by the template's mistake, or by an
+	// item of HTML that changes the page around it, which is told at its line and column.
 	page, err := d.Render(cmp.Or(d.Title, store.SlugFromFile(file, a.env.Dir), baseName(file)))
 	if err != nil {
 		return nil, []error{err}

@@ -469,11 +469,6 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if d.htmlItems != nil {
-		if err = d.checkDrawnHTML(page, title); err != nil {
-			return nil, err
-		}
-	}
 	own, err := t.css(d.Theme)
 	if err != nil {
 		return nil, err
@@ -489,8 +484,19 @@ func (d *Data) Render(title string) ([]byte, error) {
 		return nil, err
 	}
 	out, ok := withStyles(out, found, style)
+	if !ok && d.htmlItems != nil && d.hidesHead(page, title) {
+		if err = d.checkDrawnHTML(page, title); err != nil {
+			return nil, err
+		}
+	}
 	if !ok {
 		return nil, headMistake(t.file("page.html"), src)
+	}
+	// The data's HTML after the template's mistakes, which would be told as the data's.
+	if d.htmlItems != nil {
+		if err = d.checkDrawnHTML(page, title); err != nil {
+			return nil, err
+		}
 	}
 	return d.withDiagrams(out)
 }
@@ -825,6 +831,11 @@ func itemMistake(file string, root ast.Node, at []string, onKey bool, e *usererr
 	if onKey {
 		pos = yamlpos.Of(key)
 	}
+	return itemError(file, pos, path, e)
+}
+
+// itemError is the mistake e in the item at path, written at pos in the data file file.
+func itemError(file string, pos yamlpos.Pos, path string, e *usererr.Error) *yamlpos.Error {
 	return &yamlpos.Error{File: file, Pos: pos, Err: usererr.New("tmpl_item", path, e)}
 }
 
