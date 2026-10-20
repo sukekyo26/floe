@@ -194,6 +194,10 @@ func TestBrokenOwnParts(t *testing.T) {
 		"anything/schema.json": `{"type": "object", "properties": {"inner": {"$ref": "any.json"}}}`,
 		"anything/part.html":   `<div data-floe-part="anything"></div>`,
 		"anything/part.css":    "",
+		// Its $schema names a draft of JSON Schema, not a part.
+		"drafted/schema.json": `{"$schema": "floe:///parts/table.json", "type": "object"}`,
+		"drafted/part.html":   `<div data-floe-part="drafted"></div>`,
+		"drafted/part.css":    "",
 		// A format of JSON Schema's own is checked as the part's schema is, and stays.
 		"dated/schema.json":   `{"type": "object", "properties": {"on": {"type": "string", "format": "date"}}}`,
 		"dated/part.html":     `<div data-floe-part="dated">{{.on}}</div>`,
@@ -277,6 +281,8 @@ func TestBrokenOwnParts(t *testing.T) {
 		"loop":    "the part loop cannot be used: " + filepath.Join(parts, "loop") + ": the part loop holds itself (loop → loop)",
 		"ping":    "the part ping cannot be used: " + filepath.Join(parts, "ping") + ": the part ping holds itself (ping → pong → ping)",
 		"Quote":   "the part Quote cannot be used: " + filepath.Join(parts, "Quote") + ": a name is lower case letters",
+		"drafted": "the part drafted cannot be used: " + filepath.Join(parts, "drafted", "schema.json") +
+			": $schema floe:///parts/table.json names no draft of JSON Schema",
 		"blurb": "the part blurb cannot be used: " + filepath.Join(parts, "blurb", "schema.json") +
 			`: #/properties/body: a part's schema takes no "format": "html"`,
 		"anything": "the part anything cannot be used: " + filepath.Join(parts, "anything", "schema.json") +
