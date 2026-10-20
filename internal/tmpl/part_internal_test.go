@@ -18,8 +18,8 @@ var palette = []string{
 }
 
 // The parts, diagrams, floe's base and the parts themes take from the page only what default's palette
-// defines, or a template's width of prose, --text-width: every theme's palette goes over default's, so
-// none of them goes without.
+// or floe's base (the width of prose, --text-width) defines: every theme's palette goes over default's,
+// so none of them goes without.
 func TestPalette(t *testing.T) {
 	t.Parallel()
 
@@ -28,7 +28,7 @@ func TestPalette(t *testing.T) {
 		t.Fatal(err)
 	}
 	under := set.themes[DefaultTheme].palette
-	defined := definedIn(under)
+	defined := definedIn(under + baseCSS)
 	for _, v := range palette {
 		if !defined[v] {
 			t.Errorf("default's palette leaves %s out", v)
@@ -48,19 +48,17 @@ func TestPalette(t *testing.T) {
 	for who, css := range taken {
 		own := definedIn(css)
 		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)`).FindAllStringSubmatch(css, -1) {
-			if v := m[1]; !own[v] && !defined[v] && v != "--text-width" {
-				t.Errorf("%s takes %s, which default's palette does not define", who, v)
+			if v := m[1]; !own[v] && !defined[v] {
+				t.Errorf("%s takes %s, which neither default's palette nor floe's base defines", who, v)
 			}
 		}
 	}
-	// default's palette is under every page, so nothing takes a value of its own for a variable of it: the
-	// width of prose is the template's. A diagram's style is the diagram package's, for pages of any kind.
+	// default's palette and floe's base are under every page, so nothing takes a value of its own for a
+	// variable of theirs. A diagram's style is the diagram package's, for pages of any kind.
 	delete(taken, "the part diagram")
 	for who, css := range taken {
 		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,`).FindAllStringSubmatch(css, -1) {
-			if m[1] != "--text-width" {
-				t.Errorf("%s takes %s with a value of its own, which default's palette gives", who, m[1])
-			}
+			t.Errorf("%s takes %s with a value of its own, which default's palette or floe's base gives", who, m[1])
 		}
 	}
 	if set.strays != nil {
@@ -97,10 +95,17 @@ func TestPalette(t *testing.T) {
 func TestCheckPalette(t *testing.T) {
 	t.Parallel()
 
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
 	dark := "\n@media (prefers-color-scheme: dark) { :root { --bg: #000; --page-bg: none; color-scheme: dark; } }"
 	for css, want := range map[string]string{
 		":root { --bg: #fff; }" + dark: "",
-		":root { --bg: #fff; --page-bg: url(data:image/svg+xml;base64,PHN2Zz4=) repeat; }" + dark:  "",
+		":root { --bg: #fff; --page-bg: url(data:image/svg+xml;base64,PHN2Zz4=) repeat; }" + dark:                "",
+		":root { --bg: #fff; --page-bg: url(data:image/svg+xml,<svg><style>p{fill:red}</style></svg>); }" + dark: "",
+		":root { --radius: 4px; --text-width: 60rem; color-scheme: light dark; }":                                "",
+		":root { color-scheme: light; }": "p.css sets color-scheme for light mode alone",
 		":root { --bg: #fff; --font: \"a;b\", serif; color-scheme: light; } /* body { } */" + dark: "",
 		"@media (prefers-color-scheme: dark) { :root { --bg: #000; } }\n:root { --bg: #fff; }":     "p.css:2: write this :root before",
 		":root {\n  --bg: #fff !important;\n}":                                                     "p.css:2: palette.css takes no !important",
@@ -112,13 +117,13 @@ func TestCheckPalette(t *testing.T) {
 		"@media print { :root { --bg: #fff; } }":                  "p.css:1: palette.css holds only",
 		":root { --bg: #fff; --code-bg: #222; --font: serif; --page-bg: var(--bg); --code-fg: #eee; }": "p.css sets --bg, --code-bg for light mode alone",
 	} {
-		warning, err := checkPalette("p.css", []byte(css))
+		warnings, err := set.checkPalette("p.css", []byte(css))
 		got := ""
 		switch {
 		case err != nil:
 			got = err.Error()
-		case warning != nil:
-			got = warning.Error()
+		case warnings != nil:
+			got = warnings[0].Error()
 		}
 		if want == "" && got != "" || !strings.HasPrefix(got, want) {
 			t.Errorf("checkPalette(%q) = %q, want %q", css, got, want)

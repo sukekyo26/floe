@@ -377,6 +377,26 @@ func TestCSSBraceRefused(t *testing.T) {
 	}
 }
 
+// A colour that changes with the mode, set on :scope for light mode alone, is warned of at the file that
+// sets it: over every palette, it would stay in dark mode too.
+func TestCheckScopeColours(t *testing.T) {
+	t.Parallel()
+
+	release := strings.SplitN(version.Version, ".", 3)
+	floe := "floe: " + release[0] + "." + release[1] + "\n"
+	for page, want := range map[string]string{
+		":scope { --surface: #fff; --accent: #c00; --page-width: 90rem; --rule: 2px solid var(--fg); }":    "sizes/page.css sets --accent, --surface on :scope for light mode alone",
+		":scope { --surface: #fff; }\n@media (prefers-color-scheme: dark) { :scope { --surface: #222; } }": "",
+		"body { --surface: #fff; }": "",
+	} {
+		warnings, mistakes := tmpl.Check(sizes(t, map[string]string{"template.yaml": floe, "page.css": page}), "", "")
+		if len(mistakes) != 0 || want == "" && len(warnings) != 0 ||
+			want != "" && (len(warnings) != 1 || !strings.Contains(warnings[0].Error(), want)) {
+			t.Errorf("Check with %s = %v, %v, want %q", page, warnings, mistakes, want)
+		}
+	}
+}
+
 // A directory is checked as a template of its name, which must be one.
 func TestCheckName(t *testing.T) {
 	t.Parallel()

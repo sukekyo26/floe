@@ -74,8 +74,8 @@ func cssRules(css []byte) (rules []cssRule, stray int) {
 	start := 0
 	for i := 0; i < len(blank); i++ {
 		switch blank[i] {
-		case '"', '\'':
-			i = stringEnd(blank, i)
+		case '"', '\'', '(':
+			i = skipNested(blank, i)
 		case '{':
 			r := ruleOf(blank, start, i)
 			r.block, r.depth, r.open, r.end = true, len(open), i, len(blank)
@@ -112,6 +112,56 @@ func ruleOf(css []byte, start, end int) cssRule {
 	return cssRule{
 		prelude: strings.TrimSpace(trimmed), at: start + len(text) - len(trimmed), block: false, depth: 0, open: -1, end: -1,
 	}
+}
+
+// cssDeclaration is a declaration of a block: its name and value, trimmed, and the offset it starts at.
+type cssDeclaration struct {
+	name, value string
+	at          int
+}
+
+// declarationsIn returns the declarations of the block r of blank, CSS without its comments, split at
+// the ; outside strings and brackets.
+func declarationsIn(blank []byte, r *cssRule) []cssDeclaration {
+	var decls []cssDeclaration
+	start := r.open + 1
+	for i := start; i <= r.end; i++ {
+		if i < r.end {
+			switch blank[i] {
+			case '"', '\'', '(':
+				i = skipNested(blank, i)
+				continue
+			case ';':
+			default:
+				continue
+			}
+		}
+		d := ruleOf(blank, start, min(i, r.end))
+		start = i + 1
+		if d.prelude != "" {
+			name, value, _ := strings.Cut(d.prelude, ":")
+			decls = append(decls, cssDeclaration{name: strings.TrimSpace(name), value: strings.TrimSpace(value), at: d.at})
+		}
+	}
+	return decls
+}
+
+// skipNested returns the offset of the end of the string or the brackets that start at i in css, past
+// the strings and brackets they hold: a ; or a brace in them (url(data:…;base64,…), a selector of an
+// SVG's <style> in url(…)) is no CSS's. A bracket never closed runs to the end.
+func skipNested(css []byte, i int) int {
+	if css[i] != '(' {
+		return stringEnd(css, i)
+	}
+	for j := i + 1; j < len(css); j++ {
+		switch css[j] {
+		case '"', '\'', '(':
+			j = skipNested(css, j)
+		case ')':
+			return j
+		}
+	}
+	return len(css) - 1
 }
 
 // stringEnd returns the offset of the end of the string of CSS that starts at the quote at i: its

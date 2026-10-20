@@ -138,6 +138,11 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	}
 	mistakes = append(mistakes, t.checkAssets(page)...)
 	mistakes = append(mistakes, t.checkCSS()...)
+	scope, err := t.checkScopeColours(set.modes)
+	warnings = append(warnings, scope...)
+	if err != nil {
+		mistakes = append(mistakes, err)
+	}
 	return append(warnings, brokenParts(set, named)...), append(mistakes, t.checkNamedParts(set, pageSrc, named)...)
 }
 
@@ -184,6 +189,89 @@ func (t *Template) checkCSS() []error {
 		}
 	}
 	return mistakes
+}
+
+// checkScopeColours warns of the colours that change with the mode, as modes tells, which t's CSS,
+// page.css with each of its themes, sets on :scope for light mode alone: over every palette, they stay
+// in dark mode too, where the others turn dark. Each is told once, at the file that sets it.
+func (t *Template) checkScopeColours(modes map[string]bool) ([]*usererr.Error, error) {
+	page, _, err := t.readOptional("page.css")
+	if err != nil {
+		return nil, err
+	}
+	themes, err := t.themes()
+	if err != nil {
+		return nil, err
+	}
+	var warnings []*usererr.Error
+	told := map[string]bool{}
+	for _, theme := range themes {
+		name := path.Join("themes", theme+".css")
+		css, err := t.readFile(name)
+		if err != nil {
+			return nil, err
+		}
+		// The theme comes after page.css, and sets over it.
+		c := scopeColours{light: map[string]string{}, dark: map[string]bool{}, from: map[string]string{}}
+		c.read(page, "page.css")
+		c.read(css, name)
+		byFile := map[string][]string{}
+		for _, v := range lightOnly(c.light, c.dark, modes) {
+			byFile[c.from[v]] = append(byFile[c.from[v]], v)
+		}
+		for _, file := range slices.Sorted(maps.Keys(byFile)) {
+			w := usererr.New("tmpl_scope_dark", t.file(file), andList(byFile[file]))
+			if !told[w.Error()] {
+				told[w.Error()] = true
+				warnings = append(warnings, w)
+			}
+		}
+	}
+	return warnings, nil
+}
+
+// scopeColours are the variables (and color-scheme) a template's CSS sets on :scope: for light mode,
+// with their values and the file of each, and for dark mode.
+type scopeColours struct {
+	light map[string]string
+	dark  map[string]bool
+	from  map[string]string
+}
+
+// read adds what css, the file named file, sets on :scope, that of dark mode in
+// @media (prefers-color-scheme: dark).
+// LIMIT: :scope alone as a selector, not in a list (:scope, body). Read the selectors if a template comes
+// to set colours so.
+func (c *scopeColours) read(css []byte, file string) {
+	rules, _ := cssRules(css)
+	blank := withoutComments(css)
+	var media *cssRule
+	for i := range rules {
+		r := &rules[i]
+		if media != nil && r.at > media.end {
+			media = nil
+		}
+		inDark := r.depth == 1 && media != nil
+		switch {
+		case r.block && r.depth == 0 && darkMedia.MatchString(r.prelude):
+			media = r
+		case r.block && r.prelude == ":scope" && (r.depth == 0 || inDark):
+			c.add(declarationsIn(blank, r), inDark, file)
+		}
+	}
+}
+
+// add adds the variables (and color-scheme) of decls, of dark mode or light, set in file.
+func (c *scopeColours) add(decls []cssDeclaration, inDark bool, file string) {
+	for _, d := range decls {
+		switch {
+		case !strings.HasPrefix(d.name, "--") && d.name != "color-scheme":
+		case inDark:
+			c.dark[d.name] = true
+		default:
+			c.light[d.name], c.from[d.name] = d.value, file
+		}
+	}
 }
 
 // checkNamedParts returns a mistake for each part src, page.html, names, of named, by data-floe-part or

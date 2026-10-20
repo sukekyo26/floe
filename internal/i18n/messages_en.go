@@ -402,6 +402,7 @@ var messagesEN = map[string]string{
 	"tmpl_palette_rule":            "%s:%d: palette.css holds only the palette's variables, :root { --name: value; }, and those of dark mode in @media (prefers-color-scheme: dark) { :root { … } }; write other rules in base.css or a part's file",
 	"tmpl_palette_order":           "%s:%d: write this :root before @media (prefers-color-scheme: dark): after it, its colours would win in dark mode too",
 	"tmpl_palette_important":       "%s:%d: palette.css takes no !important, which would win over every layer, the colours a template sets on :scope too",
+	"tmpl_scope_dark":              "%s sets %s on :scope for light mode alone: over every palette, it stays in dark mode too, where the rest turn dark; set it in @media (prefers-color-scheme: dark) { :scope { … } } too",
 	"tmpl_palette_dark":            "%s sets %s for light mode alone: dark mode keeps them, under default's dark colours for the rest; set them in @media (prefers-color-scheme: dark) { :root { … } } too",
 	"tmpl_parts_themes_unreadable": "the parts themes of your own in %s cannot be read: %s; make it a directory, or remove it",
 	"tmpl_part_unreached":          "%s: %s: the part %s draws an item; refer to it under properties or items, which floe follows",

@@ -1,7 +1,7 @@
 /* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
 :scope {
   position: relative; background: var(--accent-soft); padding: 1rem 1.25rem 1rem 3.7rem;
-  border-radius: 14px; max-width: var(--text-width, 56rem);
+  border-radius: 14px; max-width: var(--text-width);
 }
 :scope.good { background: var(--good-soft); }
 :scope.warn { background: var(--warn-soft); }

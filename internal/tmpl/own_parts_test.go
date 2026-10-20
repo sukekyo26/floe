@@ -323,6 +323,7 @@ func TestOwnPartsThemes(t *testing.T) {
 	files["tone/schema.json"] = `{"type": "object"}`
 	files["themes/stray/tone.css"] = ""
 	files["themes/broke/table.css"] = "}\n"
+	files["themes/broke/palette.css"] = ":root { --bg: #fff; }\n"
 	parts := ownParts(t, files)
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/code.json"}, "aside": {"$ref": "floe:///parts/note.json"}`)
 	l := tmpl.NewLibrary(dir, parts, "")
@@ -392,7 +393,7 @@ func TestOwnPartsThemes(t *testing.T) {
 		return slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), prefix) })
 	}
 	pale := filepath.Join(parts, "themes", "pale", "palette.css") + " sets --bg for light mode alone"
-	if !warned(pale) || warned(filepath.Join(parts, "themes", "mine")) {
+	if !warned(pale) || warned(filepath.Join(parts, "themes", "mine")) || warned(filepath.Join(parts, "themes", "broke", "palette.css")) {
 		t.Errorf("Check = %v, want %s alone of the palettes", warnings, pale)
 	}
 	for _, want := range append(strays, why) {

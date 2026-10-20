@@ -401,6 +401,7 @@ var messagesJA = map[string]string{
 	"tmpl_palette_rule":            "%s:%d: palette.css にはパレットの変数 :root { --名前: 値; } と、ダークモードの分の @media (prefers-color-scheme: dark) { :root { … } } だけを書きます。ほかの規則は base.css か部品のファイルに書いてください",
 	"tmpl_palette_order":           "%s:%d: この :root は @media (prefers-color-scheme: dark) より前に書いてください。後に書くと、その色がダークモードでも勝ちます",
 	"tmpl_palette_important":       "%s:%d: palette.css には !important を書けません。どの層にも勝ち、テンプレートが :scope に書いた色にも勝ってしまいます",
+	"tmpl_scope_dark":              "%s は :scope に %s をライトモードの分だけ書いています。どのパレットにも勝つので、ダークモードでもその値のままになり、ほかはダークの色になります。@media (prefers-color-scheme: dark) { :scope { … } } にも書いてください",
 	"tmpl_palette_dark":            "%s は %s をライトモードの分だけ書いています。ダークモードでもその値のままになり、ほかは default のダークの色になります。@media (prefers-color-scheme: dark) { :root { … } } にも書いてください",
 	"tmpl_parts_themes_unreadable": "自分の部品のテーマ %s を読めません: %s。ディレクトリにするか、消してください",
 	"tmpl_part_unreached":          "%s: %s: 部品 %s は項目を描きます。floe が辿る properties か items の下で参照してください",

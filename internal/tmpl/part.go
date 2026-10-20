@@ -153,8 +153,10 @@ type partSet struct {
 	broken  map[string]error       // the parts of one's own that cannot be used, by name, and why
 	// the parts themes of one's own that cannot be used, by name, and why
 	brokenThemes map[string]error
-	// floe's own default palette, under every page's, whatever one's own themes change
+	// floe's own default palette, under every page's, whatever one's own themes change, and the variables
+	// that change with the mode in it
 	palette string
+	modes   map[string]bool
 	// the directories of one's own it read, the directory of parts first, by their real paths
 	dirs   []string
 	strays []*usererr.Error // what of one's own goes into no page, to be warned of
@@ -169,7 +171,8 @@ var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("
 func readParts(dir string, entries []os.DirEntry, stage staged) (*partSet, error) {
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
-		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", dirs: nil, strays: nil,
+		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", modes: nil, dirs: nil,
+		strays: nil,
 	}
 	if err := set.readBuiltin(); err != nil {
 		return nil, err
@@ -238,6 +241,9 @@ func (set *partSet) readBuiltin() error {
 	if err != nil {
 		return fmt.Errorf("read the parts themes: %w", err)
 	}
+	if set.modes, err = readModes(themes); err != nil {
+		return err
+	}
 	entries, err = fs.ReadDir(themes, ".")
 	if err != nil {
 		return fmt.Errorf("read the parts themes: %w", err)
@@ -255,6 +261,21 @@ func (set *partSet) readBuiltin() error {
 	}
 	set.palette = set.themes[DefaultTheme].palette
 	return nil
+}
+
+// readModes returns the variables that change with the mode in floe's default palette, under themes,
+// which the themes' palettes are checked against.
+func readModes(themes fs.FS) (map[string]bool, error) {
+	file := path.Join(DefaultTheme, themePalette+".css")
+	css, err := fs.ReadFile(themes, file)
+	if err != nil {
+		return nil, fmt.Errorf("read the parts themes: %w", err)
+	}
+	light, dark, err := readPalette(path.Join("parts", themesDir, file), css)
+	if err != nil {
+		return nil, err
+	}
+	return modesOf(light, dark), nil
 }
 
 // partsUnder adds to names the parts the schemas under s refer to. No part holds itself: readOwn leaves
