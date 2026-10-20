@@ -2,7 +2,6 @@ package tmpl
 
 import (
 	"regexp"
-	"slices"
 	"strings"
 )
 
@@ -134,14 +133,13 @@ var endTag = func() map[string]*regexp.Regexp {
 // styleOrLink finds a <style> or a <link>, however the HTML around it reads.
 var styleOrLink = regexp.MustCompile(`(?i)<(style|link)[\s/>]`)
 
-// movesPage reports whether t changes the page without changing its tree: a <base>, which points its
-// relative links elsewhere, or a <meta http-equiv>, which may move it away (refresh) or change its policy.
-// CSP holds base-uri 'none' too (CutOff); this tells the data's mistake at its line.
-func movesPage(t tag) bool {
-	return !t.end && (t.name == "base" || t.name == "meta" && slices.ContainsFunc(t.attrs, func(a attr) bool {
-		return a.name == "http-equiv"
-	}))
-}
+// baseOrMeta finds a <base> or a <meta>, however the HTML around it reads (in an <svg>, a <meta> leaves
+// it): they change a page without changing its tree, pointing its links elsewhere, moving it away
+// (refresh) or changing its policy (referrer). CSP holds base-uri 'none' too (CutOff).
+var baseOrMeta = regexp.MustCompile(`(?i)<(base|meta)[\s/>]`)
+
+// base finds a <base> of page.html, which the CSP of a drawn page ignores.
+var base = regexp.MustCompile(`(?i)<base[\s/>]`)
 
 // headEnd finds a </head>, however the HTML around it reads.
 var headEnd = regexp.MustCompile(`(?i)</head[\s/>]`)

@@ -193,8 +193,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `:scope` its root: it reaches a part's element but not what the part holds.
   `page.html` holds a `</head>`, before which floe puts the page's styles, or
   is refused, as is a drawing an action of it leaves it out of. It holds
-  no `<style>`, nor an item of `"format": "html"` a `<style>`, `<link>`,
-  `</head>`, `<base>` or `<meta http-equiv>`, or what changes the page around it as a browser reads it
+  no `<style>` or `<base>`, nor an item of `"format": "html"` a `<style>`, `<link>`,
+  `</head>`, `<base>` or `<meta>`, or what changes the page around it as a browser reads it
   (an `<svg>`, a comment or a `<form>` it leaves open, an end tag of the page's; a `page.html` that puts one outside its `<head>` and `<body>` or leaves out `<!doctype html>`), nor the template's CSS an `@import`, `:root`, `html` or a `}` that closes no block, each refused
   at its line, and `floe template check` refuses a part `page.html` names that floe
   does not have.

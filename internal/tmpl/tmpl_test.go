@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/fs"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -228,10 +227,14 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <p>a</p><STYLE>p{}</STYLE>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"},
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <a title=\"\n      - html: <b title='\"><style>p{}</style>'>\n", "data.yaml:6:15: sections[0].parts[1].html: HTML holds a <style> or a <link>"},
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <link rel=stylesheet href=x.css>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"},
-		// Nor a <base> or a <meta http-equiv>, which change the page without changing its tree; one in a
-		// comment, or a <meta> of a name, is none.
-		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <p>a</p><BASE href=\"https://e.example/\">\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <base> or a <meta http-equiv>"},
-		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <meta content=\">\" http-equiv=refresh>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <base> or a <meta http-equiv>"},
+		// Nor a <base> or a <meta>, which change the page without changing its tree, wherever they are, as
+		// an <svg> reads a <script> or a <title> otherwise and a <meta> leaves it.
+		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: '<p>a</p><BASE href=\"https://e.example/\">'\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <base> or a <meta>"},
+		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: '<meta content=\">\" http-equiv=refresh>'\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <base> or a <meta>"},
+		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: '<meta name=referrer content=unsafe-url>'\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <base> or a <meta>"},
+		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: '<svg><script><meta http-equiv=refresh content=\"0;url=https://e.example/\"></script></svg>'\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <base> or a <meta>"},
+		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: '<svg><title><base href=https://e.example/></title></svg>'\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <base> or a <meta>"},
+		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: '<!-- <base href=x> -->'\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <base> or a <meta>"},
 		// Nor a </head>, which would stand in for page.html's, before which floe puts the page's styles.
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <svg><!-- </HEAD> -->\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a </head>"},
 	} {
@@ -362,18 +365,6 @@ func TestUnnamedBesideOtherMistakes(t *testing.T) {
 		want := `d.yaml:2:7: invalid language "` + bad + `": write lang: as a BCP 47 tag such as en, ja or pt-BR`
 		if _, err := tmpl.NewLibrary("", "", "").Read("d.yaml", []byte(src), tmpl.Themes{}, ""); err == nil || err.Error() != want {
 			t.Errorf("Read %q = %v\nwant %s", src, err, want)
-		}
-	}
-}
-
-// A <base> or a <meta http-equiv> in a comment, and a <meta> of a name, change nothing of the page.
-func TestHTMLMovesNoPage(t *testing.T) {
-	t.Parallel()
-
-	for _, html := range []string{`<!-- <base href=x> -->`, `<meta name=a content=b>`, `<p title="<base href=x>">a</p>`} {
-		src := "template: report\nlang: en\nsections:\n  - parts:\n      - html: " + strconv.Quote(html) + "\n"
-		if _, err := builtins.Read("data.yaml", []byte(src), tmpl.Themes{}, ""); err != nil {
-			t.Errorf("Read of %s = %v", html, err)
 		}
 	}
 }
