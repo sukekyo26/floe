@@ -374,10 +374,6 @@ func checkHTML(set *partSet, d *Data) error {
 		if headEnd.MatchString(it.text) {
 			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_head")))
 		}
-		// The page's text after it, or the next item, would end the tag; checkDrawnHTML's marks part them.
-		if tagStart.MatchString(it.text) {
-			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_tag")))
-		}
 		if bad := set.misnamedIn(namedIn(it.text, tagsIn(it.text, false))); bad != nil {
 			problems = append(problems, itemError(d.File, it.pos, it.path, bad))
 		}
@@ -477,13 +473,10 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	out, ok := withStyles(out, found, style)
+	styled, ok := withStyles(out, found, style)
 	if !ok {
 		// An item's open <script> may hide the </head>: its mistake, not the template's.
 		if k := d.headHider(page, title); k >= 0 {
-			if err = d.checkDrawnHTML(page, title); err != nil {
-				return nil, err
-			}
 			it := d.htmlItems[k]
 			return nil, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
 		}
@@ -491,11 +484,11 @@ func (d *Data) Render(title string) ([]byte, error) {
 	}
 	// The data's HTML after the template's mistakes, which would be told as the data's.
 	if d.htmlItems != nil {
-		if err = d.checkDrawnHTML(page, title); err != nil {
+		if err = d.checkDrawnHTML(page, title, out); err != nil {
 			return nil, err
 		}
 	}
-	return d.withDiagrams(out)
+	return d.withDiagrams(styled)
 }
 
 // execute draws d with page, the template's page.html, as a page titled title, without its styles.

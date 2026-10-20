@@ -66,7 +66,7 @@ func TestDrawnHTML(t *testing.T) {
 		"<table><td>x</td></tr></table>": "...x...",
 		"<br></br>":                      ".......",
 		"<svg><text><![CDATA[ a > b </tspan> ]]></text></svg>": ".......",
-		"x</":         "xxxxxxx", // ends where a tag starts: refused wherever it is
+		"x</":         "xxxxxx.",
 		`<a title="x`: "xxxxxx.",
 	} {
 		for i, c := range contexts {
@@ -88,12 +88,12 @@ func TestDrawnHTMLNames(t *testing.T) {
 
 	l := htmlIn(t, `<ul><li>{{.Data.risks}} tail</li></ul>`)
 	for item, want := range map[string]string{
-		"<svg><g><rect/>": "HTML leaves <svg> open",
-		"a <!-- note":     "HTML leaves <!-- open",
-		"<textarea>x":     "HTML leaves <textarea> open",
-		`<a title="x`:     "HTML ends in a tag or a quote",
-		"<b>bold":         "HTML leaves <b> open",
-		"<li>a</li>":      "HTML closes an element of the page, or changes the page after it",
+		"<svg><g><rect/>": "HTML changes the page around it",
+		"a <!-- note":     "HTML changes the page around it",
+		"<textarea>x":     "HTML changes the page around it",
+		`<a title="x`:     "HTML changes the page around it",
+		"<b>bold":         "HTML changes the page around it",
+		"<li>a</li>":      "HTML changes the page around it",
 	} {
 		if _, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n"); err == nil ||
 			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: "+want) {
@@ -109,7 +109,7 @@ func TestDrawnHTMLItems(t *testing.T) {
 
 	l := htmlIn(t, `<p>{{.Data.risks}}</p><ul><li>{{with .Data.aside}}{{.}}{{end}} tail</li></ul>`)
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: <b>a</b>\naside: <svg>\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), "data.yaml:4:8: aside: HTML leaves <svg> open") {
+		!strings.HasPrefix(err.Error(), "data.yaml:4:8: aside: HTML changes the page around it") {
 		t.Errorf("the second item's <svg> = %v", err)
 	}
 	twice := htmlIn(t, `<section>{{.Data.risks}}</section><p>{{.Data.risks}} tail</p>`)
@@ -151,9 +151,9 @@ func TestDrawnHTMLInHead(t *testing.T) {
 	for item, want := range map[string]string{
 		"<meta name=a content=b>": "",
 		"<noscript>x</noscript>":  "",
-		"<div>x</div>":            "HTML closes an element of the page, or changes the page after it",
-		"hello":                   "HTML closes an element of the page, or changes the page after it",
-		"<script>x":               "HTML leaves <script> open",
+		"<div>x</div>":            "HTML changes the page around it",
+		"hello":                   "HTML changes the page around it",
+		"<script>x":               "HTML changes the page around it",
 	} {
 		_, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n")
 		if want == "" && err != nil || want != "" && (err == nil || !strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: "+want)) {
@@ -181,7 +181,7 @@ func TestDrawnHTMLWhich(t *testing.T) {
 	}
 	for _, page := range []string{`<noscript>{{.Data.risks}}</noscript><p>x</p>`, `<noscript>{{.Data.risks}}</noscript><p>{{.Data.risks}}</p>`} {
 		if _, err := draw(htmlIn(t, page), "template: memo\nlang: en\nrisks: x</noscript><b>y</b>\n"); err == nil ||
-			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: HTML closes an element of the page") {
+			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: HTML changes the page around it") {
 			t.Errorf("an item that ends a <noscript> in %s = %v", page, err)
 		}
 	}
@@ -199,7 +199,7 @@ func TestDrawnHTMLAttributes(t *testing.T) {
 		`<p class="a">x</p>`:          false,
 	} {
 		if _, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n"); (err != nil) != refused ||
-			refused && !strings.Contains(err.Error(), "HTML closes an element of the page, or changes the page after it") {
+			refused && !strings.Contains(err.Error(), "HTML changes the page around it") {
 			t.Errorf("%q = %v, want refused %v", item, err, refused)
 		}
 	}
@@ -227,7 +227,7 @@ func TestDrawnHTMLManyItems(t *testing.T) {
 	}
 	data[1] = "i01: <textarea>x"
 	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\n"+strings.Join(data, "\n")+"\n"); err == nil ||
-		!strings.Contains(err.Error(), "i01: HTML leaves <textarea> open") {
+		!strings.Contains(err.Error(), "i01: HTML changes the page around it") {
 		t.Errorf("the second of eleven items = %v", err)
 	}
 }
@@ -240,7 +240,7 @@ func TestDrawnHTMLTagStart(t *testing.T) {
 	l := htmlIn(t, `<div>{{.Data.risks}}{{.Data.aside}}</div><p>after</p>`)
 	for _, risks := range []string{"x <", "x </", "x <!", "x <!-", "x <?"} {
 		if _, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(risks)+"\naside: div class=y\n"); err == nil ||
-			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: HTML ends in a tag or a quote") {
+			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: HTML changes the page around it") {
 			t.Errorf("%q before a letter = %v", risks, err)
 		}
 	}
@@ -268,20 +268,22 @@ func TestDrawnHTMLNextItem(t *testing.T) {
 }
 
 // The other items are drawn as written: a row in a table, which the parser puts in a <tbody> of its own,
-// and items next to each other that each close what the one before leaves open, as a <li> does, pass; an
-// item in the <head> after another is checked in the head.
+// and rows and list items next to each other pass; an item in the <head> after another is checked in the
+// head. An item that leaves a <li> open for the next to close is refused (LIMIT in checkDrawnHTML).
 func TestDrawnHTMLOthers(t *testing.T) {
 	t.Parallel()
 
 	for page, data := range map[string]string{
 		"<table>\n{{.Data.risks}}\n</table>":                  "risks: <tr><td>a</td></tr>\n",
 		"<table>{{.Data.risks}}{{.Data.aside}}</table>":       "risks: <tr><td>a</td></tr>\naside: <tr><td>b</td></tr>\n",
-		"<ul>{{.Data.risks}}{{.Data.aside}}</ul>":             "risks: <li>a\naside: <li>b\n",
 		"<ul>{{.Data.risks}}{{.Data.aside}}</ul><p>after</p>": "risks: <li>a</li>\naside: <li>b</li>\n",
 	} {
 		if _, err := draw(htmlIn(t, page), "template: memo\nlang: en\n"+data); err != nil {
 			t.Errorf("%s with %q = %v", page, data, err)
 		}
+	}
+	if _, err := draw(htmlIn(t, "<ul>{{.Data.risks}}{{.Data.aside}}</ul>"), "template: memo\nlang: en\nrisks: <li>a\naside: <li>b\n"); err == nil {
+		t.Error("a <li> left open for the next item to close passes")
 	}
 	dir := memo(t, `"risks": {"type": "string", "format": "html"}, "aside": {"type": "string", "format": "html"}`)
 	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.aside}}{{.Data.risks}}</head><body><p>x</p></body></html>`
@@ -289,7 +291,7 @@ func TestDrawnHTMLOthers(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\naside: <meta name=a content=b>\nrisks: <div>x</div>\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), "data.yaml:4:8: risks: HTML closes an element of the page") {
+		!strings.HasPrefix(err.Error(), "data.yaml:4:8: risks: HTML changes the page around it") {
 		t.Errorf("a <div> in the head after a <meta> = %v", err)
 	}
 }
@@ -306,7 +308,7 @@ func TestDrawnHTMLPlace(t *testing.T) {
 		"<div class=card>{{.Data.risks}}</div><p>after</p>":             "</div><div>out",
 	} {
 		if _, err := draw(htmlIn(t, page), "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n"); err == nil ||
-			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: HTML closes an element of the page") {
+			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: HTML changes the page around it") {
 			t.Errorf("%q in %s = %v", item, page, err)
 		}
 	}
@@ -378,7 +380,7 @@ func TestDrawnHTMLAtTheEnd(t *testing.T) {
 	t.Parallel()
 
 	if _, err := draw(htmlIn(t, `<p>x</p>{{.Data.risks}}`), "template: memo\nlang: en\nrisks: <svg>\n"); err == nil ||
-		!strings.Contains(err.Error(), "HTML leaves <svg> open") {
+		!strings.Contains(err.Error(), "HTML changes the page around it") {
 		t.Errorf("an <svg> at the end = %v", err)
 	}
 }
