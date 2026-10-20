@@ -195,8 +195,7 @@ func TestCheckParts(t *testing.T) {
 	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table", "floe:///parts/themes.json"} {
 		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
 		want := ref + " is not a part; refer to one as floe:///parts/<name>.json, the name one of bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree, floe's and your own"
-		// Told at the schema, not wrapped in the words of jsonschema's loading.
-		want = filepath.Join(dir, "memo", "schema.json") + ": " + want
+		// Not wrapped in the words of jsonschema's loading.
 		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 			t.Errorf("Check of %s = %v", ref, mistakes)
 		}

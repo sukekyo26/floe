@@ -85,8 +85,8 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) err
 // leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own
 // that holds itself, through the parts it holds, or takes its own look, through the looks it takes, which
 // floe would follow forever, a part, floe's too, that checkNames refuses, again while one is left out, as a
-// part may take the look of the one left out, or hold it, then one whose schema refers to what cannot be
-// loaded, and one whose schema names a usable part at its root.
+// part may take the look of the one left out, or hold it, and then one whose schema names a usable part at
+// its root.
 func (set *partSet) leaveOutUnusable() {
 	held := func(at string) []string { return set.schemas[partsURL+at+".json"].refsUnder(nil) }
 	looks := func(at string) []string {
@@ -107,15 +107,7 @@ func (set *partSet) leaveOutUnusable() {
 		}
 	}
 	set.settle()
-	// A root names a part surely usable or not once those that cannot be loaded are out, and one left out
-	// for its root may be held under anyOf, where settle does not look.
-	for {
-		for set.leaveOutUnloadable() {
-			set.settle()
-		}
-		if !set.leaveOutRooted() {
-			return
-		}
+	if set.leaveOutRooted() {
 		set.settle()
 	}
 }
@@ -148,27 +140,6 @@ func (set *partSet) leaveOutRooted() bool {
 		set.leaveOut(name, why)
 	}
 	return len(rooted) > 0
-}
-
-// leaveOutUnloadable leaves out of set the parts of one's own whose schema refers to what cannot be loaded,
-// as loadMistake tells it, and reports whether it left one out. It leaves them out all at once, so that the
-// answer hangs on no order: one that holds another left out is left out the next time.
-// LIMIT: compiles every part again each time; read for each data file, as the parts are. Compile only those
-// that refer to one just left out if a chain of them grows long.
-func (set *partSet) leaveOutUnloadable() bool {
-	unloadable := map[string]error{}
-	for name, p := range set.parts {
-		if p.dir == "" || p.isLook() {
-			continue
-		}
-		if err := set.loadMistake(name, path.Join(p.dir, "schema.json")); err != nil {
-			unloadable[name] = err
-		}
-	}
-	for name, why := range unloadable {
-		set.leaveOut(name, why)
-	}
-	return len(unloadable) > 0
 }
 
 // readOwnPart reads the part name of one's own from the directory from, at at as its mistakes name it,

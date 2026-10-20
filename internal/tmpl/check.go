@@ -110,7 +110,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	sch, doc, err := compileSchema(set, t.Name, t.file("schema.json"), src)
+	sch, doc, err := compileSchema(set, t.Name, src)
 	if err != nil {
 		return nil, []error{err}
 	}

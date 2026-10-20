@@ -194,31 +194,6 @@ func TestBrokenOwnParts(t *testing.T) {
 		"anything/schema.json": `{"type": "object", "properties": {"inner": {"$ref": "any.json"}}}`,
 		"anything/part.html":   `<div data-floe-part="anything"></div>`,
 		"anything/part.css":    "",
-		// What a part's schema refers to that cannot be loaded is told at the part, under anyOf too, and a
-		// part that refers to one left out so is left out after it.
-		"hosted/schema.json":  `{"type": "object", "properties": {"text": {"$ref": "file:///etc/hosts"}}}`,
-		"hosted/part.html":    `<div data-floe-part="hosted"></div>`,
-		"hosted/part.css":     "",
-		"anyed/schema.json":   `{"anyOf": [{"$ref": "floe:///parts/nope.json"}]}`,
-		"anyed/part.html":     `<div data-floe-part="anyed"></div>`,
-		"anyed/part.css":      "",
-		"chained/schema.json": `{"type": "object", "properties": {"x": {"anyOf": [{"$ref": "hosted.json"}]}}}`,
-		"chained/part.html":   `<div data-floe-part="chained"></div>`,
-		"chained/part.css":    "",
-		"noext/schema.json":   `{"anyOf": [{"$ref": "floe:///parts/table"}]}`,
-		"noext/part.html":     `<div data-floe-part="noext"></div>`,
-		"noext/part.css":      "",
-		// At its root too, told as the part it names, which cannot be used.
-		"hostroot/schema.json": `{"$ref": "floe:///parts/hosted.json"}`,
-		"hostroot/part.html":   `<div data-floe-part="hostroot"></div>`,
-		"hostroot/part.css":    "",
-		// One into a part that can be used is loaded as it is.
-		"other/schema.json":   `{"$defs": {"a": {"type": "string"}}, "type": "object"}`,
-		"other/part.html":     `<div data-floe-part="other"></div>`,
-		"other/part.css":      "",
-		"toother/schema.json": `{"type": "object", "properties": {"x": {"anyOf": [{"$ref": "other.json#/$defs/a"}]}}}`,
-		"toother/part.html":   `<div data-floe-part="toother">{{.x}}</div>`,
-		"toother/part.css":    "",
 		// A format of JSON Schema's own is checked as the part's schema is, and stays.
 		"dated/schema.json":   `{"type": "object", "properties": {"on": {"type": "string", "format": "date"}}}`,
 		"dated/part.html":     `<div data-floe-part="dated">{{.on}}</div>`,
@@ -302,15 +277,6 @@ func TestBrokenOwnParts(t *testing.T) {
 		"loop":    "the part loop cannot be used: " + filepath.Join(parts, "loop") + ": the part loop holds itself (loop → loop)",
 		"ping":    "the part ping cannot be used: " + filepath.Join(parts, "ping") + ": the part ping holds itself (ping → pong → ping)",
 		"Quote":   "the part Quote cannot be used: " + filepath.Join(parts, "Quote") + ": a name is lower case letters",
-		"hosted": "the part hosted cannot be used: " + filepath.Join(parts, "hosted", "schema.json") +
-			": file:///etc/hosts: a schema refers to no other file or URL",
-		"anyed": "the part anyed cannot be used: " + filepath.Join(parts, "anyed", "schema.json") +
-			": floe:///parts/nope.json is not a part",
-		"chained": "the part chained cannot be used: " + filepath.Join(parts, "chained", "schema.json") +
-			": the part hosted cannot be used: ",
-		"noext": "the part noext cannot be used: " + filepath.Join(parts, "noext", "schema.json") +
-			": floe:///parts/table is not a part",
-		"hostroot": "the part hostroot cannot be used: it holds the part hosted, which cannot be used",
 		"blurb": "the part blurb cannot be used: " + filepath.Join(parts, "blurb", "schema.json") +
 			`: #/properties/body: a part's schema takes no "format": "html"`,
 		"anything": "the part anything cannot be used: " + filepath.Join(parts, "anything", "schema.json") +
@@ -341,8 +307,8 @@ func TestBrokenOwnParts(t *testing.T) {
 			}
 			continue
 		}
-		// Told at the schema as floe part check tells it, not wrapped in the words of jsonschema's loading.
-		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), filepath.Join(dir, "memo", "schema.json")+": "+why) {
+		// Told as floe part check tells it, not wrapped in the words of jsonschema's loading.
+		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), why) {
 			t.Errorf("Check of a template of %s = %v, want %s", name, mistakes, why)
 		}
 	}
@@ -350,8 +316,7 @@ func TestBrokenOwnParts(t *testing.T) {
 	braced := memo(t, `"risks": {"$ref": "floe:///parts/brace.json"}, "aside": {"type": "string"}`)
 	_, err := draw(tmpl.NewLibrary(braced, parts, ""), "template: memo\nlang: en\n")
 	var mistake i18n.Localizer
-	if !errors.As(err, &mistake) ||
-		!strings.HasPrefix(mistake.Localize(i18n.New("ja")), filepath.Join(braced, "memo", "schema.json")+": 部品 brace は使えません: ") {
+	if !errors.As(err, &mistake) || !strings.HasPrefix(mistake.Localize(i18n.New("ja")), "部品 brace は使えません: ") {
 		t.Errorf("Read of a template of brace = %v", err)
 	}
 	// By page.html.
@@ -389,11 +354,6 @@ func TestBrokenOwnParts(t *testing.T) {
 	if page, err := draw(tmpl.NewLibrary(dated, parts, ""), "template: memo\nlang: en\nrisks: { on: 2026-10-20 }\n"); err != nil ||
 		!strings.Contains(page, `<div data-floe-part="dated">2026-10-20</div>`) {
 		t.Errorf("drawing a part of a format of JSON Schema's = %v", err)
-	}
-	toother := memo(t, `"risks": {"$ref": "floe:///parts/toother.json"}, "aside": {"type": "string"}`)
-	if page, err := draw(tmpl.NewLibrary(toother, parts, ""), "template: memo\nlang: en\nrisks: { x: Hi }\n"); err != nil ||
-		!strings.Contains(page, `<div data-floe-part="toother">Hi</div>`) {
-		t.Errorf("drawing a part that refers into another = %v", err)
 	}
 	toned := memo(t, `"risks": {"$ref": "floe:///parts/toned.json"}, "aside": {"type": "string"}`)
 	if page, err := draw(tmpl.NewLibrary(toned, parts, ""), "template: memo\nlang: en\nrisks: good\n"); err != nil ||

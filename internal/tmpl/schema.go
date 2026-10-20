@@ -25,10 +25,10 @@ import (
 // HTML, the path of an image or Markdown. Validating them is a no-op: they mark an item for drawing.
 var formats = []string{"html", "image", "markdown"}
 
-// validate checks the values of d against the schema src, its template's schema.json at file, and reports
+// validate checks the values of d against the schema src, its template's schema.json, and reports
 // every mistake at its line and column under root, the data file's top mapping.
-func validate(set *partSet, file string, src []byte, d *Data, root ast.Node) error {
-	sch, doc, err := compileSchema(set, d.Template, file, src)
+func validate(set *partSet, src []byte, d *Data, root ast.Node) error {
+	sch, doc, err := compileSchema(set, d.Template, src)
 	if err != nil {
 		return err
 	}
@@ -46,76 +46,33 @@ func validate(set *partSet, file string, src []byte, d *Data, root ast.Node) err
 	return s.problems
 }
 
-// compileSchema compiles the schema src of the template name, at file, which refers to the parts of set,
-// and returns it as read too.
-func compileSchema(set *partSet, name, file string, src []byte) (*jsonschema.Schema, any, error) {
+// compileSchema compiles the schema src of the template name, which refers to the parts of set, and
+// returns it as read too.
+func compileSchema(set *partSet, name string, src []byte) (*jsonschema.Schema, any, error) {
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
 	if err != nil {
 		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
 	url := schemaURL(name)
-	c, loader, err := set.compiler()
-	if err != nil {
-		return nil, nil, err
-	}
+	c, loader := newCompiler(set)
 	if err = c.AddResource(url, doc); err != nil {
 		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
+	}
+	for partURL, partDoc := range set.docs {
+		if err = c.AddResource(partURL, partDoc); err != nil {
+			return nil, nil, fmt.Errorf("read the schema %s: %w", partURL, err)
+		}
 	}
 	sch, err := c.Compile(url)
 	switch {
 	case err != nil && loader.mistake != nil:
-		// jsonschema wraps the loader's mistake in an error of its own, which does not unwrap.
-		return nil, nil, usererr.New("tmpl_item", file, loader.mistake)
+		// jsonschema wraps the loader's mistake in an error of its own, which does not unwrap: floe's own is
+		// told as it is, so that it is worded in the reader's language.
+		return nil, nil, loader.mistake
 	case err != nil:
 		return nil, nil, fmt.Errorf("compile the schema of %s: %w", name, err)
 	}
 	return sch, doc, nil
-}
-
-// loadMistake is the mistake, at file, of what the schema of the part name refers to that cannot be
-// loaded, by a $ref or a $schema of its own: one that comes through a part it holds is that part's, and
-// told at it. nil for none, and for a mistake of another kind, which a template that uses it tells.
-func (set *partSet) loadMistake(name, file string) error {
-	url := partsURL + name + ".json"
-	c, loader, err := set.compiler()
-	if err != nil {
-		return err
-	}
-	if _, err = c.Compile(url); err == nil || loader.mistake == nil || !refersTo(set.docs[url], url, loader.url) {
-		return nil
-	}
-	return usererr.New("tmpl_item", file, loader.mistake)
-}
-
-// refersTo reports whether the schema doc, at url, refers to the schema at to itself, by a $ref or a
-// $schema, a fragment aside.
-func refersTo(doc any, url, to string) bool {
-	switch v := doc.(type) {
-	case map[string]any:
-		for k, sub := range v {
-			if namesSchema(k, sub, url, to) || refersTo(sub, url, to) {
-				return true
-			}
-		}
-	case []any:
-		for _, sub := range v {
-			if refersTo(sub, url, to) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// namesSchema reports whether the keyword k of a schema at url, of the value v, is a $ref or a $schema of the
-// schema at to.
-func namesSchema(k string, v any, url, to string) bool {
-	ref, ok := v.(string)
-	if !ok || k != "$ref" && k != "$schema" {
-		return false
-	}
-	whole, _, _ := strings.Cut(absolute(url, ref), "#")
-	return whole == to
 }
 
 // schemaURL is the URL of the schema of the template name, which a relative $ref is read from.
@@ -123,21 +80,9 @@ func schemaURL(name string) string {
 	return "floe:///templates/" + name + "/schema.json"
 }
 
-// compiler returns a compiler of a schema that refers to the parts of set, which it holds, and its loader.
-func (set *partSet) compiler() (*jsonschema.Compiler, *noLoader, error) {
-	c, loader := newCompiler(set)
-	for partURL, partDoc := range set.docs {
-		if err := c.AddResource(partURL, partDoc); err != nil {
-			return nil, nil, fmt.Errorf("read the schema %s: %w", partURL, err)
-		}
-	}
-	return c, loader, nil
-}
-
-// newCompiler returns a compiler of a schema that refers to the parts of set, none of which it holds yet,
-// and its loader.
+// newCompiler returns a compiler of a schema that refers to the parts of set, and its loader.
 func newCompiler(set *partSet) (*jsonschema.Compiler, *noLoader) {
-	loader := &noLoader{set: set, url: "", mistake: nil}
+	loader := &noLoader{set: set, mistake: nil}
 	c := jsonschema.NewCompiler()
 	// A template's schema is one file: a URL it refers to, file:// above all, could read one out of the
 	// template.
@@ -177,16 +122,14 @@ func unknownPart(set *partSet, ref string) error {
 	return usererr.New("tmpl_part_unknown", ref, set.names(drawing))
 }
 
-// noLoader loads no schema: those of the parts of set are added to the compiler before. It keeps the URL
-// it could not load and the mistake it gave, which stops the compiling.
+// noLoader loads no schema: those of the parts of set are added to the compiler before. It keeps the
+// mistake it gave, which stops the compiling.
 type noLoader struct {
 	set     *partSet
-	url     string
 	mistake error
 }
 
 func (n *noLoader) Load(url string) (any, error) {
-	n.url, _, _ = strings.Cut(url, "#")
 	if strings.HasPrefix(url, partsURL) {
 		n.mistake = unknownPart(n.set, url)
 	} else {
