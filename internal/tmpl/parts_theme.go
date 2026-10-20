@@ -36,8 +36,8 @@ func newPartsTheme() *partsTheme {
 }
 
 // readPartsTheme reads the parts theme in files, its directory, shown in its mistakes as dir, over t:
-// each file takes the place of t's of its name. A file named for neither base.css, parts.css nor a part
-// of set is refused, as it would go into no page.
+// each file takes the place of t's of its name. A file named for neither base.css nor a part or a look of
+// set is warned of, as it goes into no page.
 func (set *partSet) readPartsTheme(files fs.FS, dir string, t *partsTheme) error {
 	entries, err := fs.ReadDir(files, ".")
 	if err != nil {

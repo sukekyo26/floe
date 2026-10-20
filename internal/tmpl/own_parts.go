@@ -220,21 +220,24 @@ func (set *partSet) checkNames(name, dir string) error {
 		return usererr.New("tmpl_part_unnamed", html, name, name)
 	}
 	for _, n := range named {
+		kind := set.misnamed(n)
+		if kind == nameRight {
+			continue
+		}
 		line := lineAt([]byte(p.html), n.at)
-		switch kind := set.misnamed(n); {
+		switch {
 		case dir != "" && kind == nameNotOne:
 			return usererr.New("tmpl_part_several", html, line, n.value)
 		case dir != "" && kind == nameLookBox:
 			return usererr.New("tmpl_look_box", html, line, n.name, n.name)
-		default:
-			if err := unlent(kind, n.name, html, line, set.candidates(n)); err != nil {
-				return err
-			}
+		}
+		if err := set.unlent(kind, n, html, line); err != nil {
+			return err
 		}
 	}
 	for _, look := range p.looks {
-		n := namedPart{name: look.name, value: look.name, look: true, inCode: false, at: 0}
-		if err := unlent(set.misnamed(n), look.name, yaml, look.line, set.candidates(n)); err != nil {
+		n := namedPart{name: look.name, value: look.name, look: true, text: false, at: 0}
+		if err := set.unlent(set.misnamed(n), n, yaml, look.line); err != nil {
 			return err
 		}
 	}
@@ -257,11 +260,11 @@ const (
 func (set *partSet) misnamed(n namedPart) nameKind {
 	p := set.parts[n.name]
 	switch {
+	case n.text:
+		// No attribute, but text that tells of one, or a script that may write one: it brings the style alone.
+		return nameRight
 	case p == nil && set.broken[n.name] != nil:
 		return nameBroken
-	case n.inCode:
-		// No attribute, but the text of a script or a comment that may write one: it brings the style alone.
-		return nameRight
 	case n.notOne():
 		return nameNotOne
 	case p == nil:
@@ -272,14 +275,14 @@ func (set *partSet) misnamed(n namedPart) nameKind {
 	return nameRight
 }
 
-// unlent refuses name, a part another takes the look of, or names in file at line, by kind, what it is
-// to set: a part there is none of, told with candidates, or one that cannot be used.
-func unlent(kind nameKind, name, file string, line int, candidates string) error {
+// unlent refuses n, the name of a part another takes the look of, or names in file at line, by kind, what
+// it is to set: a part there is none of, told with those its attribute may name, or one that cannot be used.
+func (set *partSet) unlent(kind nameKind, n namedPart, file string, line int) error {
 	switch kind {
 	case nameBroken:
-		return usererr.New("tmpl_part_lender_broken", name)
+		return usererr.New("tmpl_part_lender_broken", n.name)
 	case nameUnknown:
-		return usererr.New("tmpl_part_names", file, line, name, candidates)
+		return usererr.New("tmpl_part_names", file, line, n.name, set.candidates(n))
 	case nameRight, nameNotOne, nameLookBox:
 	}
 	return nil
@@ -332,7 +335,7 @@ func drawing(p *part) bool {
 // name: its data-floe-part is name.
 func namesItself(named []namedPart, name string) bool {
 	for _, n := range named {
-		if !n.look && n.value == name {
+		if !n.look && !n.text && n.value == name {
 			return true
 		}
 	}

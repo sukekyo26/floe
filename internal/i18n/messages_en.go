@@ -360,7 +360,7 @@ var messagesEN = map[string]string{
 	"tmpl_look_box":                `%s:%d: data-floe-part names the look %s, which has no box; take it with data-floe-look="%s"`,
 	"tmpl_page_several":            `the page has data-floe-part="%s", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
 	"tmpl_page_look_box":           `the page has data-floe-part="%[1]s", but %[1]s is a look, which has no box: take it with data-floe-look="%[1]s"`,
-	"tmpl_part_files":              "%s: a part holds schema.json, part.html and part.css, and a look alone part.css alone; add what it lacks, or remove what a look has no use for",
+	"tmpl_part_files":              "%s: a part holds schema.json, part.html and part.css, and a look alone part.css without the other two (and part.yaml if it takes looks); add what it lacks, or remove what a look has no use for",
 	"tmpl_part_several":            `%s:%d: data-floe-part="%s" is not the name of one part: an element is the box of one, data-floe-part="<name>", as written; take the look of others with data-floe-look="<name> …"`,
 	"tmpl_look_cycle":              "%s: the part %s takes its own look (%s), which floe would follow forever; fix its part.yaml",
 	"tmpl_look_files":              "%s: the look %s holds no schema.json nor part.html, so it draws nothing and has no use for this file; remove it, or make it a part with those two",

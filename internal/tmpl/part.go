@@ -295,11 +295,11 @@ func (set *partSet) namedBy(named []namedPart, keep func(namedPart) bool) []stri
 // namedPart is a name a data-floe-part or data-floe-look attribute gives, the attribute's whole value, and
 // the offset where the value starts.
 type namedPart struct {
-	name   string
-	value  string
-	look   bool // named by data-floe-look
-	inCode bool // in a comment or a script's text, where it is no attribute but brings the part's style
-	at     int
+	name  string
+	value string
+	look  bool // named by data-floe-look
+	text  bool // no attribute of a tag: in text, a comment or a script's text, where it brings the style alone
+	at    int
 }
 
 // notOne reports whether n is of a data-floe-part that is not the name of one part as written, which the
@@ -312,8 +312,8 @@ func (n namedPart) notOne() bool {
 // namedParts returns the names the data-floe-part and data-floe-look attributes of html give, as written:
 // an element of a part names it (data-floe-part="note"), and one that takes a part's look without being
 // its box names that (data-floe-look="panel"). A name that html puts together ({{.kind}}) is not one.
-// LIMIT: the attributes are found as written, not as an HTML parser reads them (one in a script's string
-// counts); parse the page if a page comes to write one so.
+// LIMIT: an attribute is told from text by the < and > before it, not as an HTML parser reads it (a > in
+// the value of an attribute before it makes it text); parse the page if a page comes to write one so.
 func namedParts(html string) []namedPart {
 	found := partAttr.FindAllStringSubmatchIndex(html, -1)
 	if found == nil {
@@ -326,8 +326,23 @@ func namedParts(html string) []namedPart {
 		}
 	}
 	names := make([]namedPart, 0, len(found))
+	// The matches and the spans of code are in order: one walk tells where each match is.
+	c, from, lt, gt := 0, 0, -1, -1
 	for _, m := range found {
-		inCode := slices.ContainsFunc(code, func(sp span) bool { return sp.start <= m[0] && m[0] < sp.end })
+		// It is in a tag when a < comes after the last > before it: a > of text is escaped.
+		for i := from; i < m[0]; i++ {
+			switch html[i] {
+			case '<':
+				lt = i
+			case '>':
+				gt = i
+			}
+		}
+		from = m[0]
+		for c < len(code) && code[c].end <= m[0] {
+			c++
+		}
+		text := lt <= gt || c < len(code) && code[c].start <= m[0]
 		value := html[m[4]:m[5]]
 		if strings.Contains(value, "{{") {
 			continue
@@ -335,7 +350,7 @@ func namedParts(html string) []namedPart {
 		value = strings.Trim(value, `"'`)
 		look := strings.EqualFold(html[m[2]:m[3]], "look")
 		for _, name := range strings.Fields(value) {
-			names = append(names, namedPart{name: name, value: value, look: look, inCode: inCode, at: m[4]})
+			names = append(names, namedPart{name: name, value: value, look: look, text: text, at: m[4]})
 		}
 	}
 	return names
@@ -429,33 +444,46 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 // isLook reports whether files, the directory of the part name, shown as dir, is a look alone: it holds
 // part.css alone of schema.json, part.html and part.css. A part holds the three.
 func isLook(files fs.FS, name, dir string) (bool, error) {
-	missing := map[string]bool{}
+	var missing []string
 	for _, file := range []string{"schema.json", "part.html", "part.css"} {
-		switch _, err := fs.Stat(files, file); {
-		case errors.Is(err, fs.ErrNotExist):
-			missing[file] = true
-		case err != nil:
-			return false, fmt.Errorf("read the part %s: %w", name, err)
+		there, err := exists(files, name, file)
+		if err != nil {
+			return false, err
+		}
+		if !there {
+			missing = append(missing, file)
 		}
 	}
 	switch {
-	case len(missing) == 0:
+	case missing == nil:
 		return false, nil
-	case len(missing) == 2 && !missing["part.css"]:
+	case slices.Equal(missing, []string{"schema.json", "part.html"}):
 		return true, nil
 	}
 	return false, usererr.New("tmpl_part_files", dir)
+}
+
+// exists reports whether files, the directory of the part name, holds file.
+func exists(files fs.FS, name, file string) (bool, error) {
+	switch _, err := fs.Stat(files, file); {
+	case errors.Is(err, fs.ErrNotExist):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("read the part %s: %w", name, err)
+	}
+	return true, nil
 }
 
 // readLook reads the look alone name from files, its directory, shown in its mistakes as dir, into set.
 func (set *partSet) readLook(files fs.FS, name, dir string, looks []takenLook) error {
 	// A look draws nothing: words and checks of one would be read for nothing.
 	for _, file := range []string{"words.yaml", "checks.yaml"} {
-		switch _, err := fs.Stat(files, file); {
-		case err == nil:
+		there, err := exists(files, name, file)
+		if err != nil {
+			return err
+		}
+		if there {
 			return usererr.New("tmpl_look_files", path.Join(dir, file), name)
-		case !errors.Is(err, fs.ErrNotExist):
-			return fmt.Errorf("read the part %s: %w", name, err)
 		}
 	}
 	css, err := readPartCSS(files, name, dir)
@@ -1006,8 +1034,8 @@ func spansOf(page []byte) []span {
 				next = start + n
 			}
 		case m[4] >= 0:
-			// A script's or a noscript's text runs to its end tag.
-			kind, next = spanCode, len(page)
+			// A script's or a noscript's text, after its start tag, runs to its end tag.
+			kind, start, next = spanCode, i+m[1], len(page)
 			if closing := endTag[strings.ToLower(string(page[i+m[4]:i+m[5]]))].FindIndex(page[i+m[1]:]); closing != nil {
 				next = i + m[1] + closing[1]
 			}

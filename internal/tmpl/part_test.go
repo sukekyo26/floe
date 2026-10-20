@@ -266,10 +266,17 @@ func TestPartStylesByClass(t *testing.T) {
 		`'function (el, k) { el.innerHTML = "<b data-floe-part=\"" + k + "\">x</b>" }'`+" }\n"); err != nil {
 		t.Errorf("drawing a script that writes a data-floe-part = %v", err)
 	}
-	// HTML of the data whose data-floe-part is not one name, or names a look, which has no box, is refused.
+	// Nor is text that tells of one, which a page about floe writes.
+	if _, err := draw(tmpl.NewLibrary("", "", ""), "template: report\nlang: en\nsections:\n  - parts:\n      - note: { text: "+
+		`"Write data-floe-look=panel, not data-floe-part=panel, nor `+"`<div data-floe-part='table compare'>`"+`" }`+"\n"); err != nil {
+		t.Errorf("drawing text that tells of a data-floe-part = %v", err)
+	}
+	// HTML of the data whose data-floe-part is not one name, or names a look, which has no box, is refused,
+	// on a script's own tag too.
 	for html, want := range map[string]string{
-		`<div data-floe-part="table compare">x</div>`: `the page has data-floe-part="table compare", which is not the name of one part`,
-		`<div data-floe-part="panel">x</div>`:         `the page has data-floe-part="panel", but panel is a look`,
+		`<noscript data-floe-part="panel">x</noscript>`: `the page has data-floe-part="panel", but panel is a look`,
+		`<div data-floe-part="table compare">x</div>`:   `the page has data-floe-part="table compare", which is not the name of one part`,
+		`<div data-floe-part="panel">x</div>`:           `the page has data-floe-part="panel", but panel is a look`,
 	} {
 		_, err := draw(tmpl.NewLibrary("", "", ""), "template: report\nlang: en\nsections:\n  - parts:\n      - html: '"+html+"'\n")
 		if err == nil || !strings.Contains(err.Error(), want) {

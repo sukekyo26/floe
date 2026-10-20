@@ -110,9 +110,9 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
-	page, src, pageErr := t.page()
+	page, pageSrc, pageErr := t.page()
 	if pageErr == nil {
-		lint.takeNamed(src)
+		lint.takeNamed(pageSrc)
 	}
 	// Told beside the other mistakes of the files, not instead of them.
 	if err = t.refuseShared(s); err != nil {
@@ -132,7 +132,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	}
 	mistakes = append(mistakes, t.checkAssets(page)...)
 	mistakes = append(mistakes, t.checkCSS()...)
-	return append(warnings, brokenParts(set, src)...), append(mistakes, t.checkNamedParts(src)...)
+	return append(warnings, brokenParts(set, pageSrc)...), append(mistakes, t.checkNamedParts(pageSrc)...)
 }
 
 // checkComputed returns the mistake of t's computed.yaml, of the items of its schema s, if it has one.
@@ -609,14 +609,14 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 	return false
 }
 
-// variables returns the CSS variables floe's base, the parts and diagrams l found, and the parts themes
-// take from the theme, once each.
 // takeNamed adds to the parts of l those src, page.html, names, which take colours from the theme as those
 // the schema refers to do.
 func (l *schemaLint) takeNamed(src []byte) {
 	l.parts = slices.Compact(slices.Sorted(slices.Values(append(l.parts, l.set.partsNamedIn(string(src))...))))
 }
 
+// variables returns the CSS variables floe's base, the parts and diagrams l found, and the parts themes
+// take from the theme, once each.
 func (l *schemaLint) variables() []string {
 	vars := l.set.variables(l.parts)
 	// floe's base styles every page, the template's own text, lists, links, code and quotes, and those in

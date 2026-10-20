@@ -359,7 +359,7 @@ var messagesJA = map[string]string{
 	"tmpl_look_box":                `%s:%d: data-floe-part が見た目 %s を名乗っていますが、見た目には箱がありません。data-floe-look="%s" で借りてください`,
 	"tmpl_page_several":            `ページの data-floe-part="%s" は 1 つの部品の名前ではありません。data-floe-part="<名前>" と名前をそのまま書き、ほかの部品の見た目は data-floe-look="<名前> …" で借りてください`,
 	"tmpl_page_look_box":           `ページに data-floe-part="%[1]s" がありますが、%[1]s は見た目で箱がありません。data-floe-look="%[1]s" で借りてください`,
-	"tmpl_part_files":              "%s: 部品は schema.json・part.html・part.css の 3 つを、見た目だけの部品は part.css だけを置きます。足りないものを足すか、見た目に要らないものを消してください",
+	"tmpl_part_files":              "%s: 部品は schema.json・part.html・part.css の 3 つを、見た目だけの部品はほかの 2 つを置かずに part.css を（見た目を借りるなら part.yaml も）置きます。足りないものを足すか、見た目に要らないものを消してください",
 	"tmpl_part_several":            `%s:%d: data-floe-part="%s" は 1 つの部品の名前ではありません。要素は 1 つの部品の箱で、名前をそのまま書きます（data-floe-part="<名前>"）。ほかの部品の見た目は data-floe-look="<名前> …" で借りてください`,
 	"tmpl_look_cycle":              "%s: 部品 %s が自分の見た目を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",
 	"tmpl_look_files":              "%s: 見た目 %s は schema.json も part.html も持たず何も描かないので、このファイルは使われません。消すか、その 2 つを足して部品にしてください",
