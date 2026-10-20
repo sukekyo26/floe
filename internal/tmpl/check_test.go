@@ -376,6 +376,11 @@ func TestCSSBraceRefused(t *testing.T) {
 		!strings.HasPrefix(mistakes[0].Error(), filepath.Join(url, "page.css")+":1: this } closes no block") {
 		t.Errorf("Check of a } after url( = %v", mistakes)
 	}
+	// :root is told at its line, past the comments before it.
+	root := sizes(t, map[string]string{"page.css": ".a, /* one\ntwo\nthree */ :root { color: red; }\n"})
+	if _, mistakes := tmpl.Check(root, "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "page.css:3:") {
+		t.Errorf("Check of :root after a comment = %v", mistakes)
+	}
 	// An escaped bracket is a name's, and leaves the } after it to be told.
 	escaped := sizes(t, map[string]string{"page.css": ".a\\( { color: red; }\n}\n"})
 	if _, mistakes := tmpl.Check(escaped, "", ""); len(mistakes) != 1 ||
@@ -400,9 +405,13 @@ func TestCheckScopeColours(t *testing.T) {
 		":scope { --surface: #fff; --accent: #c00; --page-width: 90rem; --rule: 2px solid var(--fg); }":    "sizes/page.css sets --accent, --surface on :scope for light mode alone",
 		":scope { --surface: #fff; }\n@media (prefers-color-scheme: dark) { :scope { --surface: #222; } }": "",
 		"body { --surface: #fff; }": "",
-		"@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n:scope { --bg: #fff; }":                                 "sizes/page.css sets --bg on :scope for light mode alone",
-		":scope { --line: #fff; &.x { --q: 1; } --fg: #000; }\n@media (prefers-color-scheme: dark) { :scope { --line: #222; } }": "sizes/page.css sets --fg on :scope",
-		":scope { --bg: #fff; }\n@media screen and (prefers-color-scheme: dark) { :scope { --bg: #000; } }":                      "",
+		"@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n:scope { --bg: #fff; }":                                         "sizes/page.css sets --bg on :scope for light mode alone",
+		":scope { --line: #fff; &.x { --q: 1; } --fg: #000; }\n@media (prefers-color-scheme: dark) { :scope { --line: #222; } }":         "sizes/page.css sets --fg on :scope",
+		":scope { --bg: #fff; }\n@media screen and (prefers-color-scheme: dark) { :scope { --bg: #000; } }":                              "",
+		":scope { --bg: #fff; }\n@media not (prefers-color-scheme: dark) { :scope { --bg: #eee; } }":                                     "sizes/page.css sets --bg on :scope",
+		":scope { --bg: #fff; @media (prefers-color-scheme: dark) { --bg: #000; } }":                                                     "",
+		"@layer a { :scope { --bg: #fff; } }\n@supports (color: red) { @media (prefers-color-scheme: dark) { :scope { --bg: #000; } } }": "",
+		":scope { @media (prefers-color-scheme: dark) { --bg: #000; } --bg: #fff; }":                                                     "sizes/page.css sets --bg on :scope",
 	} {
 		warnings, mistakes := tmpl.Check(sizes(t, map[string]string{"template.yaml": floe, "page.css": page}), "", "")
 		if len(mistakes) != 0 || want == "" && len(warnings) != 0 ||

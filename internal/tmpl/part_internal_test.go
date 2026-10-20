@@ -64,6 +64,18 @@ func TestPalette(t *testing.T) {
 	if set.strays != nil {
 		t.Errorf("floe's parts and themes are warned of: %v", set.strays)
 	}
+	// A built-in template leaves the palette to the theme: one it set would hold over every theme's.
+	for _, name := range []string{"templates/report/page.css", "templates/report/themes/default.css"} {
+		src, readErr := templateFiles.ReadFile(name)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		for _, v := range palette {
+			if definedIn(string(src))[v] {
+				t.Errorf("%s sets %s, which the theme's palette should", name, v)
+			}
+		}
+	}
 	// A diagram drawn into a page without the palette, by floe diagram render, takes default's light colours
 	// (and faces of its own, for a page of any language).
 	c, err := readPalette("palette.css", readCSS([]byte(under)))
@@ -149,6 +161,8 @@ func TestCheckPalette(t *testing.T) {
 		":root { --a: url(x(y); } } body { background: red }":                                          "p.css:1: this } closes no block",
 		":root { Color-Scheme: light dark; --l: \"!important\"; --x: {a:b}; }":                         "",
 		":root { --x: {a:b}; --bg: #fff; }":                                                            "p.css sets --bg for light mode alone",
+		":root { --a: f(]; color: red); }":                                                             "",
+		"\n{ --x: 1; }\n\n":                                                                            "p.css:2: palette.css holds only",
 	} {
 		s := readCSS([]byte(css))
 		err := s.refuse("p.css", false)

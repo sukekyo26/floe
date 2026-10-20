@@ -136,7 +136,7 @@ func readPalette(file string, s *cssSheet) (*modeColours, error) {
 	if err := p.onlyBlocks(0, len(s.tokens), 0); err != nil {
 		return nil, err
 	}
-	for i, mode := range modesOfRules(s.rules, ":root", darkMedia.MatchString) {
+	for i, mode := range modesOfRules(s.rules) {
 		if err := p.read(&s.rules[i], mode); err != nil {
 			return nil, err
 		}
@@ -159,7 +159,9 @@ func (p *paletteCheck) read(r *cssRule, mode modeRule) error {
 		if err != nil {
 			return err
 		}
-		p.colours.add(decls, mode == modeDark, p.file)
+		for _, d := range decls {
+			p.colours.add(d, mode == modeDark, p.file)
+		}
 		return nil
 	case modeLateLight:
 		return p.mistake("tmpl_palette_order", r.at)
@@ -199,7 +201,7 @@ func (p *paletteCheck) blankFrom(from, to int) error {
 // declarations returns the declarations of the block r, refusing one that is no variable nor
 // color-scheme, and !important.
 func (p *paletteCheck) declarations(r *cssRule) ([]cssDeclaration, error) {
-	decls := p.sheet.declarations(r)
+	decls := r.decls
 	for _, d := range decls {
 		switch {
 		case !strings.HasPrefix(d.name, "--") && d.name != "color-scheme" || d.value == "":
@@ -227,27 +229,22 @@ const (
 	modeDark                      // the element's block in it, for dark mode
 )
 
-// modesOfRules returns what each of rules, in order, is to the modes, selector naming the element they
-// set colours on, :root in a palette and :scope in a template, and dark telling the prelude of the block
-// for dark mode.
-func modesOfRules(rules []cssRule, selector string, dark func(string) bool) []modeRule {
+// modesOfRules returns what each of rules, in order, is to the modes of a palette: :root at the top, and
+// in @media (prefers-color-scheme: dark), nothing else.
+func modesOfRules(rules []cssRule) []modeRule {
 	modes := make([]modeRule, len(rules))
-	var media *cssRule // the dark block the rules are in, nil at the top
 	sawDark := false
 	for i := range rules {
 		r := &rules[i]
-		if media != nil && r.first > media.end {
-			media = nil
-		}
 		switch {
 		case !r.block:
-		case r.depth == 0 && r.prelude == selector && sawDark:
+		case r.depth == 0 && r.prelude == ":root" && sawDark:
 			modes[i] = modeLateLight
-		case r.depth == 0 && r.prelude == selector:
+		case r.depth == 0 && r.prelude == ":root":
 			modes[i] = modeLight
-		case r.depth == 0 && dark(r.prelude):
-			modes[i], media, sawDark = modeMedia, r, true
-		case r.depth == 1 && media != nil && r.prelude == selector:
+		case r.depth == 0 && darkMedia.MatchString(r.prelude):
+			modes[i], sawDark = modeMedia, true
+		case r.depth == 1 && modes[r.parent] == modeMedia && r.prelude == ":root":
 			modes[i] = modeDark
 		}
 	}
@@ -271,35 +268,68 @@ func (c *modeColours) clone() *modeColours {
 	return &modeColours{light: maps.Clone(c.light), dark: maps.Clone(c.dark), from: maps.Clone(c.from)}
 }
 
-// add adds the variables (and color-scheme) of decls, set in file, for dark mode or for light. Those for
-// light mode, written later than the dark ones, win in dark mode too, which they leave unset.
-func (c *modeColours) add(decls []cssDeclaration, inDark bool, file string) {
-	for _, d := range decls {
-		switch {
-		case !strings.HasPrefix(d.name, "--") && d.name != "color-scheme":
-		case inDark:
-			c.dark[d.name] = true
-		default:
-			c.light[d.name], c.from[d.name] = d.value, file
-			delete(c.dark, d.name)
-		}
+// add adds d, a declaration set in file, for dark mode or for light, if it sets a variable or
+// color-scheme. One for light mode, written later than the dark one, wins in dark mode too, which it
+// leaves unset.
+func (c *modeColours) add(d cssDeclaration, inDark bool, file string) {
+	switch {
+	case !strings.HasPrefix(d.name, "--") && d.name != "color-scheme":
+	case inDark:
+		c.dark[d.name] = true
+	default:
+		c.light[d.name], c.from[d.name] = d.value, file
+		delete(c.dark, d.name)
 	}
 }
 
-// readScope adds what a template's CSS, s of the file named file, sets on :scope, that of dark mode in
-// @media … (prefers-color-scheme: dark), in order.
+// readScope adds what a template's CSS, s of the file named file, sets on :scope, in the order it is
+// written: in a block of :scope, or of an at-rule in it (:scope { @media … { … } }), under at-rules or
+// none (@layer, @supports), for dark mode where one of them is a dark one, as darkCondition tells.
 // LIMIT: :scope alone as a selector, not in a list (:scope, body). Read the selectors if a template comes
 // to set colours so.
 func (c *modeColours) readScope(s *cssSheet, file string) {
-	for i, mode := range modesOfRules(s.rules, ":scope", darkCondition.MatchString) {
-		switch mode {
-		case modeLight, modeLateLight:
-			c.add(s.declarations(&s.rules[i]), false, file)
-		case modeDark:
-			c.add(s.declarations(&s.rules[i]), true, file)
-		case modeOther, modeMedia:
+	type modeDecl struct {
+		d    cssDeclaration
+		dark bool
+	}
+	var decls []modeDecl
+	for i := range s.rules {
+		if !s.rules[i].block || !s.onScope(i) {
+			continue
+		}
+		dark := s.under(i, darkCondition)
+		for _, d := range s.rules[i].decls {
+			decls = append(decls, modeDecl{d: d, dark: dark})
 		}
 	}
+	slices.SortFunc(decls, func(a, b modeDecl) int { return a.d.at - b.d.at })
+	for _, m := range decls {
+		c.add(m.d, m.dark, file)
+	}
+}
+
+// onScope reports whether the declarations of the rule i of s set on :scope: it is :scope's, or an
+// at-rule's in it.
+func (s *cssSheet) onScope(i int) bool {
+	for ; i >= 0; i = s.rules[i].parent {
+		switch r := &s.rules[i]; {
+		case r.prelude == ":scope":
+			return true
+		case !strings.HasPrefix(r.prelude, "@"):
+			return false
+		}
+	}
+	return false
+}
+
+// under reports whether the rule i of s, or one that holds it, is an at-rule of a prelude match tells.
+func (s *cssSheet) under(i int, match func(string) bool) bool {
+	for ; i >= 0; i = s.rules[i].parent {
+		if r := &s.rules[i]; strings.HasPrefix(r.prelude, "@") && match(r.prelude) {
+			return true
+		}
+	}
+	return false
 }
 
 // lightOnly returns the names c sets for light mode alone that change with the mode, as modes tells, in
@@ -364,8 +394,16 @@ var floeModes = sync.OnceValues(func() (map[string]bool, error) {
 
 var usedVariable = regexp.MustCompile(`var\(\s*(--[\w-]+)`)
 
-// darkCondition is the prelude of a block of a template's CSS for dark mode, which may add to it.
-var darkCondition = regexp.MustCompile(`(?i)^@media\b[^{]*\(\s*prefers-color-scheme\s*:\s*dark\s*\)`)
+// darkCondition reports whether prelude is that of a block of a template's CSS for dark mode alone, which
+// may add to it (@media screen and (prefers-color-scheme: dark)), but not negate it nor give other cases.
+func darkCondition(prelude string) bool {
+	return darkQuery.MatchString(prelude) && !otherQuery.MatchString(prelude)
+}
+
+var (
+	darkQuery  = regexp.MustCompile(`(?is)^@media\b.*\(\s*prefers-color-scheme\s*:\s*dark\s*\)`)
+	otherQuery = regexp.MustCompile(`(?i)\bnot\b|\bor\b|,`)
+)
 
 // darkMedia is that of a palette's, which holds nothing else.
 var darkMedia = regexp.MustCompile(`(?i)^@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)$`)

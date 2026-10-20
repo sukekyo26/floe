@@ -1,7 +1,7 @@
 /* The colours and faces are the parts theme's palette; the page lays them out */
 :scope {
-  /* The width of the whole body, and the shorter width that keeps prose readable */
-  --page-width: 96rem; --text-width: 56rem;
+  /* The width of the whole body; that of prose is the palette's */
+  --page-width: 96rem;
 }
 body {
   margin: 0; background: var(--page-bg); color: var(--fg); font-family: var(--font);

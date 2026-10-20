@@ -86,15 +86,18 @@ type cssToken struct {
 }
 
 // cssRule is what comes before a block of CSS, a selector or an at-rule's prelude, or an at-rule written
-// as a statement (@import …;), as written without its comments, and the offset where it starts. A block's
-// depth is how many blocks hold it; first, open and end are the indices of the tokens of the prelude's
-// start, of its { and of its }, the end of the tokens for one left open, open and end -1 for a statement.
+// as a statement (@import …;), as written, its comments spaces, and the offset where it starts, so that an
+// offset in it is one in the file from there. A block's depth is how many blocks hold it, parent the index
+// of the rule of the innermost, -1 for none; first, open and end are the indices of the tokens of the
+// prelude's start, of its { and of its }, the end of the tokens for one left open, open and end -1 for a
+// statement. decls are the declarations of the block, but those of the rules it holds.
 type cssRule struct {
 	prelude          string
 	at               int
 	block            bool
-	depth            int
+	depth, parent    int
 	first, open, end int
+	decls            []cssDeclaration
 }
 
 // readCSS reads src, which floe's lexer of CSS Syntax reads as a browser does: a string, a comment, an
@@ -121,8 +124,8 @@ type opened struct {
 	rule   int
 }
 
-// readRules reads the rules of s from its tokens. Within brackets, as in a function, a brace or a ; is the
-// value's: a browser reads to the ) that closes them, or to the end.
+// readRules reads the rules of s from its tokens, and the declarations of their blocks. Within brackets, as
+// in a function, a brace or a ; is the value's: a browser reads to the ) that closes them, or to the end.
 func (s *cssSheet) readRules() {
 	r := &ruleReader{s: s, stack: nil, open: 0, start: 0}
 	for i, t := range s.tokens {
@@ -130,12 +133,13 @@ func (s *cssSheet) readRules() {
 			return
 		}
 	}
-	// A statement the file ends without its ;, which the browser reads all the same.
-	r.statement(len(s.tokens))
+	// What the file ends with: a declaration of the block left open, or a statement without its ;, which
+	// the browser reads all the same.
+	r.segment(len(s.tokens))
 }
 
 // ruleReader reads the rules of s: the blocks and brackets open, innermost last, the rule blocks among
-// them, and the token the next rule starts at.
+// them, and the token the next rule or declaration starts at.
 type ruleReader struct {
 	s           *cssSheet
 	stack       []opened
@@ -156,12 +160,22 @@ func (r *ruleReader) read(i int, t cssToken) bool {
 		return r.close(i, t)
 	case css.SemicolonToken:
 		if !inValue {
-			r.statement(i)
+			r.segment(i)
 			r.start = i + 1
 		}
 	default:
 	}
 	return true
+}
+
+// innermost returns the index of the rule of the innermost block open, -1 for none.
+func (r *ruleReader) innermost() int {
+	for j := len(r.stack) - 1; j >= 0; j-- {
+		if r.stack[j].rule >= 0 {
+			return r.stack[j].rule
+		}
+	}
+	return -1
 }
 
 // brace reads the { at i: a rule's block, or one of a value (--x: { … }) or in brackets.
@@ -171,7 +185,7 @@ func (r *ruleReader) brace(i int, inValue bool) {
 		return
 	}
 	rule := r.s.ruleOf(r.start, i)
-	rule.block, rule.depth, rule.open, rule.end = true, r.open, i, len(r.s.tokens)
+	rule.block, rule.depth, rule.parent, rule.open, rule.end = true, r.open, r.innermost(), i, len(r.s.tokens)
 	r.stack = append(r.stack, opened{closer: css.RightBraceToken, rule: len(r.s.rules)})
 	r.s.rules = append(r.s.rules, rule)
 	r.open++
@@ -189,6 +203,9 @@ func (r *ruleReader) close(i int, t cssToken) bool {
 		return true
 	}
 	top := r.stack[len(r.stack)-1]
+	if top.rule >= 0 {
+		r.segment(i) // the block's last declaration, without its ;
+	}
 	r.stack = r.stack[:len(r.stack)-1]
 	if top.rule >= 0 {
 		r.s.rules[top.rule].end = i
@@ -198,11 +215,18 @@ func (r *ruleReader) close(i int, t cssToken) bool {
 	return true
 }
 
-// statement notes the at-rule written as a statement from the start up to end, if it is one.
-func (r *ruleReader) statement(end int) {
-	if rule := r.s.ruleOf(r.start, end); strings.HasPrefix(rule.prelude, "@") {
-		rule.depth = r.open
+// segment notes what is written from the start up to end: an at-rule written as a statement, or a
+// declaration of the innermost block open.
+func (r *ruleReader) segment(end int) {
+	rule := r.s.ruleOf(r.start, end)
+	switch in := r.innermost(); {
+	case strings.HasPrefix(rule.prelude, "@"):
+		rule.depth, rule.parent = r.open, in
 		r.s.rules = append(r.s.rules, rule)
+	case in >= 0:
+		if d, ok := r.s.declarationOf(r.start, end); ok {
+			r.s.rules[in].decls = append(r.s.rules[in].decls, d)
+		}
 	}
 }
 
@@ -218,22 +242,38 @@ func (s *cssSheet) customProperty(start, end int) bool {
 	return len(kinds) >= 2 && kinds[0] == css.CustomPropertyNameToken && kinds[1] == css.ColonToken
 }
 
-// ruleOf is the statement written in the tokens of s from start to end, without its comments and the
-// spaces around it.
+// ruleOf is the statement written in the tokens of s from start to end, from its first token but spaces
+// and comments, its comments spaces but their line breaks, and without the spaces after it. One of no
+// token is at end, the { of a block of no prelude.
 func (s *cssSheet) ruleOf(start, end int) cssRule {
-	r := cssRule{prelude: "", at: len(s.src), block: false, depth: 0, first: end, open: -1, end: -1}
+	r := cssRule{
+		prelude: "", at: len(s.src), block: false, depth: 0, parent: -1, first: end, open: -1, end: -1, decls: nil,
+	}
+	if end < len(s.tokens) {
+		r.at = s.tokens[end].at
+	}
 	var text strings.Builder
 	for i := start; i < end; i++ {
 		t := s.tokens[i]
-		if t.typ == css.CommentToken || text.Len() == 0 && t.typ == css.WhitespaceToken {
+		blank := t.typ == css.CommentToken || t.typ == css.WhitespaceToken
+		switch {
+		case text.Len() == 0 && blank:
 			continue
-		}
-		if text.Len() == 0 {
+		case text.Len() == 0:
 			r.at, r.first = t.at, i
+		}
+		if t.typ == css.CommentToken {
+			text.WriteString(strings.Map(func(c rune) rune {
+				if c == '\n' {
+					return c
+				}
+				return ' '
+			}, t.text))
+			continue
 		}
 		text.WriteString(t.text)
 	}
-	r.prelude = strings.TrimSpace(text.String())
+	r.prelude = strings.TrimRight(text.String(), " \t\r\n\f")
 	return r
 }
 
@@ -243,54 +283,6 @@ type cssDeclaration struct {
 	name, value string
 	important   bool
 	at          int
-}
-
-// declarations returns the declarations of the block r of s, split at the ; outside brackets and the
-// blocks of values, and at a rule it holds (&.x { … }), which it leaves out.
-func (s *cssSheet) declarations(r *cssRule) []cssDeclaration {
-	var decls []cssDeclaration
-	depth, start := 0, r.open+1
-	for i := start; i <= r.end; i++ {
-		if i < r.end && i < len(s.tokens) {
-			switch s.tokens[i].typ {
-			case css.FunctionToken, css.LeftParenthesisToken, css.LeftBracketToken:
-				depth++
-				continue
-			case css.RightParenthesisToken, css.RightBracketToken, css.RightBraceToken:
-				depth = max(depth-1, 0)
-				continue
-			case css.LeftBraceToken:
-				if depth == 0 && !s.customProperty(start, i) {
-					i = s.ruleOpenAt(i).end
-					start = i + 1
-					continue
-				}
-				depth++
-				continue
-			case css.SemicolonToken:
-				if depth > 0 {
-					continue
-				}
-			default:
-				continue
-			}
-		}
-		if d, ok := s.declarationOf(start, min(i, len(s.tokens))); ok {
-			decls = append(decls, d)
-		}
-		start = i + 1
-	}
-	return decls
-}
-
-// ruleOpenAt returns the rule of s whose { is the token at i.
-func (s *cssSheet) ruleOpenAt(i int) *cssRule {
-	for j := range s.rules {
-		if s.rules[j].open == i {
-			return &s.rules[j]
-		}
-	}
-	return &cssRule{prelude: "", at: 0, block: true, depth: 0, first: i, open: i, end: len(s.tokens)}
 }
 
 // declarationOf returns the declaration in the tokens of s from start to end, false for none.
