@@ -330,7 +330,8 @@ func (set *partSet) candidates(look bool) string {
 }
 
 // checkHeld refuses the part p, whose files are at at, when its schema holds a part there is none of, of
-// one's own when own, or a look alone.
+// one's own when own, or a look alone, or is another part's by a $ref at its root: the item would be drawn
+// by that part, its HTML then handed to p's part.html for its items.
 func (set *partSet) checkHeld(p *part, at string, own bool) error {
 	// One left out has no schema; one of a name set keeps (tone) leaves floe's in place.
 	for _, held := range p.schema.refsUnder(nil) {
@@ -343,6 +344,13 @@ func (set *partSet) checkHeld(p *part, at string, own bool) error {
 		case own:
 			return usererr.New("tmpl_part_holds_unknown", path.Join(at, "schema.json"), held, set.names(drawing))
 		}
+	}
+	if p.schema == nil {
+		return nil
+	}
+	// A schema the parts share (tone) at the root has no part to draw it.
+	if name, ok := partName(p.schema.Ref); ok && set.parts[name] != nil {
+		return usererr.New("tmpl_part_root_ref", path.Join(at, "schema.json"), p.name, name, name)
 	}
 	return nil
 }
