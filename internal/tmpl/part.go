@@ -916,10 +916,12 @@ func (set *partSet) pageStyle(page string, found []tag, own [][]byte, theme stri
 	return style.String(), nil
 }
 
-// styleEnd finds </style, of either case in ASCII, which HTML reads as the end of a <style> before a
-// space, / or >. Written <\/style it is the same CSS, in a string, a comment or a url() alike: the / is
-// escaped, and no comment starts at a / that a letter follows.
-var styleEnd = regexp.MustCompile(`</([sS][tT][yY][lL][eE])`)
+// styleEnd finds </style, of either case, which HTML reads as the end of a <style>. Written <\/style it is
+// the same CSS in a string, a comment or a url(): the / is escaped, and no comment starts at a / that a
+// letter follows.
+// LIMIT: elsewhere, as a variable's value (--x: </style>), the value keeps the \; written so, it closed the
+// <style> anyway.
+var styleEnd = regexp.MustCompile(`(?i)</(style)`)
 
 // misnamedIn returns the mistake of the first name of named, the names of a page or of HTML of the data,
 // that the page is refused for, or nil: a part that cannot be used, by a table of Markdown or HTML of the
