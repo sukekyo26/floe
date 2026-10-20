@@ -136,6 +136,9 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if pageErr != nil {
 		return warnings, append(mistakes, pageErr)
 	}
+	if tagsOf(tagsIn(string(pageSrc), true)).head < 0 {
+		mistakes = append(mistakes, usererr.New("tmpl_page_head", t.file("page.html")))
+	}
 	mistakes = append(mistakes, t.checkAssets(page)...)
 	scope, css := t.checkCSS()
 	warnings, mistakes = append(warnings, scope...), append(mistakes, css...)

@@ -133,6 +133,9 @@ var endTag = func() map[string]*regexp.Regexp {
 // styleOrLink finds a <style> or a <link>, however the HTML around it reads.
 var styleOrLink = regexp.MustCompile(`(?i)<(style|link)[\s/>]`)
 
+// headEnd finds a </head>, however the HTML around it reads.
+var headEnd = regexp.MustCompile(`(?i)</head[\s/>]`)
+
 // readTag reads the tag of page at at, a < before a letter or a /, and returns it and where it ends; an
 // action of a template is read whole when actions.
 func readTag(page string, at int, actions bool) (tag, int) {

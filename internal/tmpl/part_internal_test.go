@@ -192,7 +192,7 @@ func definedIn(css string) map[string]bool {
 	return defined
 }
 
-// A page's style goes before its </head>, else at its end. A tag in a comment, a script or a noscript is
+// A page's style goes before its </head>, and into no page without one. A tag in a comment, a script or a noscript is
 // not one.
 func TestWithStyles(t *testing.T) {
 	t.Parallel()
@@ -200,14 +200,15 @@ func TestWithStyles(t *testing.T) {
 	for page, want := range map[string]string{
 		"<head><meta charset=utf-8></head><p>x</p>":                           "<head><meta charset=utf-8>S</head><p>x</p>",
 		"<head><title>t</title></HEAD><p>x</p>":                               "<head><title>t</title>S</HEAD><p>x</p>",
-		"<p>x</p>":                                                            "<p>x</p>S",
+		"<p>x</p><!-- </head> -->":                                            "",
 		`<head><script>if (s.endsWith("</head>")) x()</script></head>`:        `<head><script>if (s.endsWith("</head>")) x()</script>S</head>`,
 		"<head><!-- styles before </head> --></head>":                         "<head><!-- styles before </head> -->S</head>",
 		"<head><!--></head>":                                                  "<head><!-->S</head>",
 		"<head><noscript></head></noscript></head><body><script>y()</script>": "<head><noscript></head></noscript>S</head><body><script>y()</script>",
 	} {
-		if got := string(withStyles([]byte(page), tagsIn(page, false), "S")); got != want {
-			t.Errorf("withStyles(%q) = %q, want %q", page, got, want)
+		got, ok := withStyles([]byte(page), tagsIn(page, false), "S")
+		if string(got) != want || ok != (want != "") {
+			t.Errorf("withStyles(%q) = %q, %v, want %q", page, got, ok, want)
 		}
 	}
 }

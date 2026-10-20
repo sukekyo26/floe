@@ -359,7 +359,8 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 
 // checkHTML refuses the items of d of format html, as its schema s declares them, that hold a <style> or
 // a <link>, at their lines and columns under root: floe puts a page's CSS together, in layers, and a
-// style of the data would win over them all. It refuses those that name a part of set that the page
+// style of the data would win over them all. It refuses those that hold a </head>, which would stand in
+// for page.html's, before which floe puts the page's styles. It refuses those that name a part of set that the page
 // would refuse too.
 func checkHTML(set *partSet, s *schema, d *Data, root ast.Node) error {
 	var found []itemAt
@@ -373,6 +374,9 @@ func checkHTML(set *partSet, s *schema, d *Data, root ast.Node) error {
 		// Wherever it is: an item may leave a quote or a comment open to the next, which a browser reads on.
 		if styleOrLink.MatchString(html) {
 			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_style")))
+		}
+		if headEnd.MatchString(html) {
+			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_head")))
 		}
 		if bad := set.misnamedIn(namedIn(html, tagsIn(html, false))); bad != nil {
 			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
@@ -451,7 +455,7 @@ func parse(file string, src []byte) (ast.Node, error) {
 // data was checked against.
 func (d *Data) Render(title string) ([]byte, error) {
 	t := d.tmpl
-	page, _, err := t.page()
+	page, src, err := t.page()
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +491,10 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	out = withStyles(out, found, style)
+	out, ok := withStyles(out, found, style)
+	if !ok {
+		return nil, headMistake(t.file("page.html"), src)
+	}
 	// Once at the end, as the reload script is: page.html picks which diagrams it draws, and where.
 	if d.diagrams {
 		script, err := diagram.Script()
@@ -510,6 +517,15 @@ func (t *Template) css(theme string) ([][]byte, error) {
 		return nil, err
 	}
 	return [][]byte{page, css}, nil
+}
+
+// headMistake is the mistake of page.html, src, shown as file, whose drawing holds no </head>: it holds
+// none, or an action of it leaves its own out. The data's HTML holds none, which checkHTML refuses.
+func headMistake(file string, src []byte) *usererr.Error {
+	if tagsOf(tagsIn(string(src), true)).head >= 0 {
+		return usererr.New("tmpl_page_head_action", file)
+	}
+	return usererr.New("tmpl_page_head", file)
 }
 
 // page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together. It

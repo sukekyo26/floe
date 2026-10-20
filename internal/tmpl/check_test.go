@@ -300,6 +300,37 @@ func TestPageStyleRefused(t *testing.T) {
 	}
 }
 
+// page.html holds a </head>, before which floe puts the page's styles: in the head, where no element the
+// page leaves open, such as an <svg>, takes them in. One in a comment is none, and its lack is told beside
+// the other mistakes of the files.
+func TestPageHeadRequired(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{"page.html": "</head>|<!-- </head> -->", "page.css": ":root { color: red; }\n"})
+	want := filepath.Join(dir, "page.html") + " holds no </head>: floe puts the page's styles before it"
+	_, mistakes := tmpl.Check(dir, "", "")
+	if len(mistakes) != 2 || !slices.ContainsFunc(mistakes, func(e error) bool { return strings.HasPrefix(e.Error(), want) }) {
+		t.Errorf("Check = %v, want %s beside the :root", mistakes, want)
+	}
+	// One an action leaves out is told as such, as the page is drawn; the data's HTML, which may leave an
+	// <svg> open before it, holds none to stand in for it.
+	data := memo(t, `"risks": {"type": "string", "format": "html"}`)
+	page := filepath.Join(data, "memo", "page.html")
+	if err := os.WriteFile(page, []byte(`<!doctype html><html lang="{{.Lang}}"><title>{{.Title}}</title>{{if false}}</head>{{end}}`+
+		`<body>{{.Data.risks}}</body></html>`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	l := tmpl.NewLibrary(data, "", "")
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: <b>x</b>\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "an action of "+page+" leaves out its </head>") {
+		t.Errorf("drawing without </head> = %v", err)
+	}
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: <svg></head>\n"); err == nil ||
+		!strings.Contains(err.Error(), "risks: HTML holds a </head>") {
+		t.Errorf("drawing with the data's </head> = %v", err)
+	}
+}
+
 // The template's CSS names the page's root as :scope, past a comment and values that name it otherwise, and
 // page.html names parts floe has, past a name it puts together, an element the box of one, a mistake told
 // at the line of the name.
