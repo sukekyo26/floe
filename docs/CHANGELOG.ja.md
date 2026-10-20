@@ -69,7 +69,7 @@ floe の主要な変更を記録します。フォーマットは
 - `floe list`・`floe rm`・`floe serve`・`floe stop` と、ライブリロード付きの管理画面を追加。
   - `floe list`・`floe rm` も `floe publish` と同じくサーバーに頼み、動いていなければ起動する。
   - サーバーは `floe stop` で止めるまで動き続ける。
-  - 管理画面はほかのページの枠に入れられない（`frame-ancestors 'none'`）。ほかのサイトが管理画面を重ねてボタンを押させることはできない。
+  - 管理画面を枠に入れられるのは管理画面自身だけ（`frame-ancestors 'self'`）。ほかのサイトやページが管理画面を重ねてボタンを押させることはできない。
   - 設定は `FLOE_DIR`・`FLOE_PORT`（既定は 7325）で行う。`FLOE_DIR`・`FLOE_ICONS_DIR`・`FLOE_TEMPLATES_DIR` の相対パスは作業ディレクトリが基準で、先頭の `~`・`~/` は `HOME` を指す（`~name` は断る）。既定は `XDG_DATA_HOME`・`XDG_CONFIG_HOME` の下で、その `~` も `HOME` を指す。相対パスの `XDG_DATA_HOME`・`XDG_CONFIG_HOME` は、XDG の仕様どおり無視する。
 - メッセージを英語と日本語で出すようにした。
   - コマンドは `FLOE_LANG`、`LC_ALL`、`LC_MESSAGES`、`LANG` の順に見て言語を決める。

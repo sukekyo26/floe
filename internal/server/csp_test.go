@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -96,6 +99,41 @@ func TestUICutOff(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	out = append(out, "out:"+got())
 
 	check(t, "cut off", out, want+"|out:|reloaded|"+want+"|out:|out:"+gotOut)
+}
+
+// Another site cannot frame the management page (Chrome shows its error page in the frame instead),
+// while a page that moves its own frame to the management page shows it nested.
+func TestUIFraming(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
+	e := newEnv(t)
+	b := newBrowser(t, e.base, i18n.English)
+	out := make([]string, 0, 2)
+
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = fmt.Fprint(w, `<iframe src="`+e.base+`/"></iframe>`) //nolint:errcheck // the test checks the frame
+	}))
+	defer other.Close()
+	if err := chromedp.Do(b.ctx, chromedp.Navigate(other.URL)); err != nil {
+		t.Fatal(err)
+	}
+	framed := ""
+	for deadline := time.Now().Add(waitLimit); framed == "" && time.Now().Before(deadline); {
+		res, err := chromedp.Call(b.ctx, page.GetFrameTree, cdp.Empty{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if kids := res.FrameTree.ChildFrames; len(kids) == 1 && kids[0].Frame.URL != "about:blank" {
+			framed = kids[0].Frame.URL
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	out = append(out, "framed:"+framed)
+
+	e.link(t, e.write(t, filepath.Join("site", "mover.html"), "<script>location.href = '/'</script>"),
+		store.Options{Slug: ptr("mover")})
+	b.navigate("/a/mover/")
+	out = append(out, b.until("the management page in the frame", "frames[0].document.title"))
+
+	check(t, "framing", out, "framed:chrome-error://chromewebdata/|floe")
 }
 
 // A script part runs under the CSP of a page drawn from a data file: its function gets the element in

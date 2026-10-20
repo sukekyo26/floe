@@ -211,15 +211,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, as well as the
   management page with live reload. `floe list` and `floe rm` ask the server,
   starting it when needed, as `floe publish` does. The server keeps running
-  until `floe stop`. The management page refuses to be framed
-  (`frame-ancestors 'none'`), so that another site cannot have its buttons
-  clicked unseen.
+  until `floe stop`.
   They are configured with `FLOE_DIR` and `FLOE_PORT` (default 7325). A
   relative `FLOE_DIR`, `FLOE_ICONS_DIR` or `FLOE_TEMPLATES_DIR` is under the
   working directory, and a `~` or `~/` at its start stands for `HOME`
   (`~name` is refused). The defaults are under `XDG_DATA_HOME` and
   `XDG_CONFIG_HOME`, whose `~` stands for `HOME` too; a relative one of
   those is ignored, as the XDG spec says.
+  The management page may be framed by itself alone
+  (`frame-ancestors 'self'`), so that another site, or a page, cannot have
+  its buttons clicked unseen.
 - Show messages in English or Japanese. The command line follows `FLOE_LANG`,
   then `LC_ALL`, `LC_MESSAGES` and `LANG`; the management page follows the
   browser's language. English is the default.
