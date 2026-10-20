@@ -18,8 +18,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `description:`.
 - Add parts of your own: a directory each in `FLOE_PARTS_DIR` (default
   `$XDG_CONFIG_HOME/floe/parts`) of the files floe's parts have, referred to
-  as `floe:///parts/<name>.json`. One of the name of one of floe's takes its
-  place whole, and floe's parts themes do not style it. A part takes the look
+  as `floe:///parts/<name>.json`; its `part.html` draws its items, and its
+  schema takes no format of floe's (`html`, `image`, `markdown`). One of the
+  name of one of floe's takes its place whole, and floe's parts themes do not
+  style it. A part takes the look
   of floe's, and those it takes, by its `part.yaml` (`looks: [panel]` draws
   it in every parts theme's panel), and a look alone of your own is a
   `part.css` without a schema. Parts themes of your
