@@ -476,7 +476,11 @@ func (d *Data) Render(title string) ([]byte, error) {
 	styled, ok := withStyles(out, found, style)
 	if !ok {
 		// An item's open <script> may hide the </head>: its mistake, not the template's.
-		if k := d.headHider(page, title); k >= 0 {
+		var k int
+		if k, err = d.headHider(page, title); err != nil {
+			return nil, err
+		}
+		if k >= 0 {
 			it := d.htmlItems[k]
 			return nil, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
 		}
@@ -763,8 +767,7 @@ func (s *schema) drawn(v any, at []string, d *Data) (any, bool) {
 	case s.part != nil:
 		return d.parts[pathKey(at)], true
 	case s.Format == "markdown" && isText:
-		html, _ := markdownHTML(text) //nolint:errcheck // goldmark fails only to write, and a buffer does not
-		return html, true
+		return d.markdownHTML(text), true
 	case s.Format == "html" && isText:
 		if d != nil && d.marks != nil {
 			text = d.marks.marked(text, at)

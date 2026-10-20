@@ -282,8 +282,13 @@ func TestDrawnHTMLOthers(t *testing.T) {
 			t.Errorf("%s with %q = %v", page, data, err)
 		}
 	}
-	if _, err := draw(htmlIn(t, "<ul>{{.Data.risks}}{{.Data.aside}}</ul>"), "template: memo\nlang: en\nrisks: <li>a\naside: <li>b\n"); err == nil {
-		t.Error("a <li> left open for the next item to close passes")
+	for page, data := range map[string]string{
+		"<ul>{{.Data.risks}}{{.Data.aside}}</ul>":       "risks: <li>a\naside: <li>b\n",
+		"<table>{{.Data.risks}}{{.Data.aside}}</table>": "risks: <td>a</td>\naside: <td>b</td>\n",
+	} {
+		if _, err := draw(htmlIn(t, page), "template: memo\nlang: en\n"+data); err == nil {
+			t.Errorf("%s with %q, the first left open for the next, passes", page, data)
+		}
 	}
 	dir := memo(t, `"risks": {"type": "string", "format": "html"}, "aside": {"type": "string", "format": "html"}`)
 	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.aside}}{{.Data.risks}}</head><body><p>x</p></body></html>`
@@ -303,6 +308,7 @@ func TestDrawnHTMLPlace(t *testing.T) {
 
 	for page, item := range map[string]string{
 		"<table><tr><td>{{.Data.risks}}</td><td>next</td></tr></table>": "</td><td>evil",
+		"<table><tr><td>a</td>{{.Data.risks}}<td>b</td></tr></table>":   "</tr><tr>",
 		"<section>{{.Data.risks}}</section><p>after</p>":                "</section><section>evil",
 		"<ul><li>{{.Data.risks}}</li></ul>":                             "</li><li>fake",
 		"<div class=card>{{.Data.risks}}</div><p>after</p>":             "</div><div>out",
@@ -332,6 +338,26 @@ func TestDrawnHTMLImplied(t *testing.T) {
 	}
 }
 
+// What the parser reads as text is the item's text, however html/template writes it there: a script's,
+// a <textarea>'s with a character reference, a <pre>'s after the newline the parser drops. One that ends a
+// <noscript> is refused (TestDrawnHTMLWhich).
+func TestDrawnHTMLAsText(t *testing.T) {
+	t.Parallel()
+
+	for page, items := range map[string][]string{
+		`<script type="application/json">{{.Data.risks}}</script><p>x</p>`: {"hello", "<b>a</b>"},
+		`<script>var x = {{.Data.risks}};</script><p>x</p>`:                {"hello", "</script><b>"},
+		`<textarea>{{.Data.risks}}</textarea><p>x</p>`:                     {"Q&amp;A", "<b>"},
+		`<pre>{{.Data.risks}}</pre><p>x</p>`:                               {"\nfoo", "\n\nfoo", "a\nb"},
+	} {
+		for _, item := range items {
+			if _, err := draw(htmlIn(t, page), "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n"); err != nil {
+				t.Errorf("%q in %s = %v", item, page, err)
+			}
+		}
+	}
+}
+
 // An empty item is drawn as it is, so that page.html tests it as the page does: the item checked is where
 // the page draws it.
 func TestDrawnHTMLEmpty(t *testing.T) {
@@ -356,6 +382,22 @@ func TestDrawnHTMLHidesHead(t *testing.T) {
 	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\naside: <meta name=a content=b>\nrisks: <script>x\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "data.yaml:4:8: risks: ") {
 		t.Errorf("a <script> that hides </head> = %v", err)
+	}
+}
+
+// A page.html that fails drawn with the data's items left out, while looking for the one that hides its
+// </head>, is told so, not as the template's </head>.
+func TestDrawnHTMLHidesHeadFails(t *testing.T) {
+	t.Parallel()
+
+	dir := memo(t, `"risks": {"type": "string", "format": "html"}`)
+	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.risks}}{{if not .Data.risks}}{{index .Lang 9}}{{end}}</head><body><p>x</p></body></html>`
+	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <script>x\n"); err == nil ||
+		!strings.Contains(err.Error(), "does not fit the template") {
+		t.Errorf("a page.html that fails without the item = %v", err)
 	}
 }
 
