@@ -159,12 +159,12 @@ type partSet struct {
 }
 
 // builtinParts reads floe's parts once.
-var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("", nil) })
+var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("", nil, staged{name: "", dir: ""}) })
 
 // readParts reads floe's parts and, over them, those of one's own in dir, "" for none, which holds
-// entries: one of the name of one of floe's takes its place whole. One of one's own that cannot be used
-// is left out, its mistake kept for a template that uses it.
-func readParts(dir string, entries []os.DirEntry) (*partSet, error) {
+// entries, and stage: one of the name of one of floe's takes its place whole. One of one's own that cannot
+// be used is left out, its mistake kept for a template that uses it.
+func readParts(dir string, entries []os.DirEntry, stage staged) (*partSet, error) {
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
 		broken: map[string]error{}, brokenThemes: map[string]error{}, dirs: nil, strays: nil,
@@ -173,7 +173,7 @@ func readParts(dir string, entries []os.DirEntry) (*partSet, error) {
 		return nil, err
 	}
 	if dir != "" {
-		if err := set.readOwn(dir, entries); err != nil {
+		if err := set.readOwn(dir, entries, stage); err != nil {
 			return nil, err
 		}
 	}

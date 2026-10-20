@@ -108,8 +108,10 @@ func (a *app) partNewCmd() *cobra.Command {
 		Long: `Make a part of your own in $FLOE_PARTS_DIR/<name> as a copy of another part, floe's or your
 own, to edit, and copy the file of that part of each parts theme that has one into
 $FLOE_PARTS_DIR/themes/<theme>/<name>.css. The copy's part.html names it as its box. Nothing is
-written over: with a part of that name, or a file of a parts theme for it, nothing is made. A copy
-named like one of floe's parts takes its place.`,
+written over: with a part of that name, or a file of any parts theme of yours for it, nothing is
+made. Nor is it made with a parts theme of yours that cannot be used and may have a file of the
+part, or when the copy, or a part that takes its look or holds it, could not be used. A copy named
+like one of floe's parts takes its place.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
 			if from == "" {

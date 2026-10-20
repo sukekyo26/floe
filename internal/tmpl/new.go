@@ -151,7 +151,8 @@ type MadePart struct {
 // NewPart makes the part name of one's own as a copy of the part from, floe's or one's own, with a
 // copy of the file of from of each parts theme that has one, and tells of what it made. The box of the
 // copy names it; what else its part.html names is kept. Nothing is written over: with a file of a parts
-// theme for name there already, nothing is made.
+// theme for name there already, nothing is made, nor is a copy that reading the parts would leave out,
+// which is read in its place before it is put there.
 // LIMIT: a symlink in a part of one's own is not copied (os.CopyFS refuses it), nor is a data-floe-part
 // that part.html puts together ({{…}}) renamed, which the check of its names then refuses. Copy what the
 // link leads to, or follow the template, if a part of one's own comes to need that.
@@ -194,16 +195,13 @@ func (l *Library) NewPart(name, from string) (*MadePart, error) {
 		}
 		// Before the part is renamed into place, so that a theme that cannot be written leaves nothing: a
 		// page drawn meanwhile is warned of the files, of no part yet.
-		return themes.write(set, made, from, name)
-	})
-	if err == nil {
-		// Read as a page reads it, which may leave the copy out, or others with it (a look in place of one
-		// of floe's that draws, a part that holds itself): then nothing is kept. A page drawn meanwhile is
-		// refused, as it would be with the copy kept.
-		if err = set.unusableWith(l.parts, name); err != nil {
-			_ = os.RemoveAll(made.At) //nolint:errcheck // what is left is told by floe part check
+		if cerr := themes.write(set, made, from, name); cerr != nil {
+			return cerr
 		}
-	}
+		// Read as a page would read it in place, which may leave it out, or others with it (a look in place
+		// of one of floe's that draws, a part that holds itself): then it is not put in place.
+		return set.unusableWith(l.parts, name, dir)
+	})
 	if err != nil {
 		themes.undo()
 		return nil, err
@@ -213,30 +211,23 @@ func (l *Library) NewPart(name, from string) (*MadePart, error) {
 
 // checkThemeFiles refuses to copy the part src as name, made, when a parts theme of one's own has a file
 // of name already, whether it has a file of src or not, or when one that cannot be used may have a file of
-// src, which the copy would then lack: of its own, or of floe's theme of its name for a part of floe's.
+// src, which the copy would then lack: of its own, read or not, or of floe's theme of its name for a part
+// of floe's. The parts themes of one's own that cannot be read at all are such.
 func (set *partSet) checkThemeFiles(floe *partSet, src *part, made *MadePart, name string) error {
-	entries, err := entriesOf(made.ThemesAt)
-	if err != nil {
-		return usererr.New("tmpl_new_part_theme", made.ThemesAt, err.Error())
-	}
-	themes := slices.Clone(made.Themes)
-	for _, e := range entries {
-		if !strings.HasPrefix(e.Name(), ".") {
-			themes = append(themes, e.Name())
+	if _, err := os.Lstat(made.ThemesAt); err == nil {
+		if dir, derr := dirAt(made.ThemesAt); dir == "" {
+			why := "not a directory"
+			if derr != nil {
+				why = derr.Error()
+			}
+			return usererr.New("tmpl_parts_themes_unreadable", made.ThemesAt, why)
 		}
 	}
 	var there []string
-	for _, theme := range slices.Compact(slices.Sorted(slices.Values(themes))) {
+	for _, theme := range set.themeNames() {
 		dir := filepath.Join(made.ThemesAt, theme)
-		if why := set.brokenThemes[theme]; why != nil {
-			_, own := os.Lstat(filepath.Join(dir, src.name+".css"))
-			floes := false
-			if t := floe.themes[theme]; t != nil {
-				_, floes = t.parts[src.name]
-			}
-			if own == nil || src.dir == "" && floes {
-				return usererr.New("tmpl_parts_theme_broken", theme, why)
-			}
+		if set.lacks(floe, src, theme, dir) {
+			return usererr.New("tmpl_parts_theme_broken", theme, set.brokenThemes[theme])
 		}
 		at := filepath.Join(dir, name+".css")
 		switch _, err := os.Lstat(at); {
@@ -252,10 +243,26 @@ func (set *partSet) checkThemeFiles(floe *partSet, src *part, made *MadePart, na
 	return nil
 }
 
-// unusableWith refuses the part name, just made in parts, when reading parts again leaves out a part or a
-// parts theme that set, read before it was made, did not: the copy, or one that takes its look or holds it.
-func (set *partSet) unusableWith(parts, name string) error {
-	after, err := partsIn(parts)
+// lacks reports whether the parts theme of one's own theme, in dir, cannot be used and may have a file of
+// the part src, of its own, read or not, or of floe's theme of its name for a part of floe's.
+func (set *partSet) lacks(floe *partSet, src *part, theme, dir string) bool {
+	if set.brokenThemes[theme] == nil {
+		return false
+	}
+	_, unread := dirAt(dir)
+	_, own := os.Lstat(filepath.Join(dir, src.name+".css"))
+	floes := false
+	if t := floe.themes[theme]; t != nil {
+		_, floes = t.parts[src.name]
+	}
+	return unread != nil || own == nil || src.dir == "" && floes
+}
+
+// unusableWith refuses the part name, made in the directory dir to be put in parts, when reading parts with
+// it in place leaves out a part or a parts theme that set, read before, did not: the copy, or one that
+// takes its look or holds it.
+func (set *partSet) unusableWith(parts, name, dir string) error {
+	after, err := partsWith(parts, name, dir)
 	if err != nil {
 		return err
 	}

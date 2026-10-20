@@ -29,22 +29,46 @@ func partsIn(dir string) (*partSet, error) {
 	if !slices.ContainsFunc(entries, func(e os.DirEntry) bool { return !strings.HasPrefix(e.Name(), ".") }) {
 		return builtinParts()
 	}
-	return readParts(dir, entries)
+	return readParts(dir, entries, staged{name: "", dir: ""})
+}
+
+// staged is a part of one's own read from another directory than its own, a copy not yet in place.
+type staged struct{ name, dir string }
+
+// partsWith returns the parts partsIn returns of dir, with the part of one's own name read from from, a
+// directory of its files not yet in place, as if it were.
+func partsWith(dir, name, from string) (*partSet, error) {
+	entries, err := entriesOf(dir)
+	if err != nil {
+		return nil, usererr.New("tmpl_parts_dir_unreadable", dir, err.Error())
+	}
+	return readParts(dir, entries, staged{name: name, dir: from})
 }
 
 // readOwn reads the parts of one's own in dir into set, over floe's of their names, a directory each, a
-// symlink followed. Those that cannot be used are left out of set, and kept in set.broken.
-func (set *partSet) readOwn(dir string, entries []os.DirEntry) error {
+// symlink followed, and the part stage names from its directory. Those that cannot be used are left out of
+// set, and kept in set.broken.
+func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) error {
 	if parts, err := filepath.EvalSymlinks(dir); err == nil {
 		set.dirs = append(set.dirs, parts)
 	}
-	var replaced []string
+	var names []string
 	for _, e := range entries {
-		name, at := e.Name(), filepath.Join(dir, e.Name())
-		if name == themesDir || strings.HasPrefix(name, ".") {
-			continue
+		if name := e.Name(); name != themesDir && !strings.HasPrefix(name, ".") {
+			names = append(names, name)
 		}
-		if set.readOwnPart(name, at) {
+	}
+	if stage.name != "" {
+		names = append(names, stage.name)
+	}
+	var replaced []string
+	for _, name := range names {
+		at := filepath.Join(dir, name)
+		from := at
+		if name == stage.name {
+			from = stage.dir
+		}
+		if set.readOwnPart(name, from, at) {
 			replaced = append(replaced, name)
 		}
 	}
@@ -92,13 +116,13 @@ func (set *partSet) leaveOutUnusable() {
 	}
 }
 
-// readOwnPart reads the part name of one's own in the directory at into set, a symlink followed, and
-// one in it that leads out of it refused, and reports whether it took the place of floe's of the
-// name. One that cannot be used is kept in set.broken, and one of a name set keeps
-// leaves floe's in place. A look alone cannot take the place of one that draws, which floe's other parts,
-// Markdown's tables and templates draw by.
-func (set *partSet) readOwnPart(name, at string) bool {
-	dir, err := set.ownEntry(name, at)
+// readOwnPart reads the part name of one's own from the directory from, at at as its mistakes name it,
+// into set, a symlink followed, and one in it that leads out of it refused, and reports whether it took
+// the place of floe's of the name. One that cannot be used is kept in set.broken, and one of a name set
+// keeps leaves floe's in place. A look alone cannot take the place of one that draws, which floe's other
+// parts, Markdown's tables and templates draw by.
+func (set *partSet) readOwnPart(name, from, at string) bool {
+	dir, err := set.ownEntry(name, from, at)
 	switch {
 	case dir == "" && err == nil:
 		return false
@@ -152,7 +176,7 @@ func (set *partSet) readOwnThemes(dir string) error {
 		if t == nil {
 			t = newPartsTheme()
 		}
-		dir, err := set.ownEntry(name, at)
+		dir, err := set.ownEntry(name, at, at)
 		if dir == "" && err == nil {
 			continue
 		}
@@ -169,11 +193,11 @@ func (set *partSet) readOwnThemes(dir string) error {
 	return nil
 }
 
-// ownEntry returns the directory of name, a part or a parts theme of one's own at at, as dirAt does: ""
-// for a file. One of a name no part or theme can take is a mistake. It keeps the directory among those
+// ownEntry returns the directory of name, a part or a parts theme of one's own at at, read from from, as
+// dirAt does: "" for a file. One of a name no part or theme can take is a mistake. It keeps the directory among those
 // set read, for a link drawn with set to be drawn again when a file in it is saved.
-func (set *partSet) ownEntry(name, at string) (string, error) {
-	dir, err := dirAt(at)
+func (set *partSet) ownEntry(name, from, at string) (string, error) {
+	dir, err := dirAt(from)
 	switch {
 	case dir == "" && err == nil:
 		return "", nil

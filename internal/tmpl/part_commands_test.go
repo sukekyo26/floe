@@ -272,6 +272,28 @@ func TestNewPartRefused(t *testing.T) {
 	if _, err := l.NewPart("tree2", "tree"); err == nil || !strings.Contains(err.Error(), "your own parts theme mine cannot be used") {
 		t.Errorf("NewPart with a theme that cannot be used, of its own file of the original = %v", err)
 	}
+	// A theme, or the directory of the themes, that cannot be read at all may have a file of any part.
+	unread := ownParts(t, quote("quote"))
+	if err := os.Symlink(filepath.Join(unread, "gone"), filepath.Join(unread, "themes")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tmpl.NewLibrary("", unread, "").NewPart("quote2", "quote"); err == nil ||
+		!strings.Contains(err.Error(), "the parts themes of your own in "+filepath.Join(unread, "themes")+" cannot be read") {
+		t.Errorf("NewPart with the themes a symlink that leads nowhere = %v", err)
+	}
+	if err := os.Remove(filepath.Join(unread, "themes")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(unread, "themes"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(unread, "gone"), filepath.Join(unread, "themes", "mine")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tmpl.NewLibrary("", unread, "").NewPart("quote2", "quote"); err == nil ||
+		!strings.Contains(err.Error(), "your own parts theme mine cannot be used") {
+		t.Errorf("NewPart with a theme a symlink that leads nowhere = %v", err)
+	}
 	if _, err := l.NewPart("steps2", "steps"); err != nil {
 		t.Errorf("NewPart with a theme that cannot be used, of no file of the original = %v", err)
 	}
