@@ -183,7 +183,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   restyle whatever their selectors. The template's CSS is scoped to the page,
   `:scope` its root: it reaches a part's element but not what the part holds.
   `page.html` holds no `<style>`, nor an item of `"format": "html"` a `<style>`
-  or `<link>`, nor the template's CSS an `@import`, `:root`, `html` or a `}` that closes no block, each refused
+  or `<link>`, nor the template's CSS an `@import`, `:root`, `html`, a `}` that closes no block or `</style`,
+  which would close floe's `<style>`, each refused
   at its line, and `floe template check` refuses a part `page.html` names that floe
   does not have.
   Images go into the page as data URIs: an item of `"format": "image"`

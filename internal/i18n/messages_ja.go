@@ -344,6 +344,7 @@ var messagesJA = map[string]string{
 	"tmpl_page_part":               "%s:%d: page.html が名乗る部品 %s はありません。%s のどれかを書いてください",
 	"tmpl_css_root":                "%s:%d: 根は %s ではなく :scope と書いてください。floe はこの CSS を @scope に入れるので、その中の :root と html は何も指しません",
 	"tmpl_css_import":              "%s:%d: floe はこの CSS を層に入れるので、ブラウザは @import を読みません。スタイルシートは page.html の <link> で読んでください",
+	"tmpl_css_style_end":           "%s:%d: floe はこの CSS を <style> に入れるので、この </style が <style> を閉じ、後ろがページの HTML として読まれます。コメントからは消し、文字列の中では <\\/style と書いてください",
 	"tmpl_css_brace":               "%s:%d: この } はどのブロックも閉じていません。floe はこの CSS を層に入れるので、この } が層を閉じ、後の規則が層の外に出て部品のスタイルに勝ちます",
 	"tmpl_html_style":              "HTML に <style> か <link> があります。ページの CSS は floe が組み立てるので、HTML には style 属性で見た目を付けてください",
 	"tmpl_checks_yaml":             "checks.yaml は検査のリストとして書き、各検査に for・expr・message（任意で field）を書いてください",

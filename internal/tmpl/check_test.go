@@ -394,6 +394,33 @@ func TestCSSBraceRefused(t *testing.T) {
 	}
 }
 
+// A </style of the template's CSS, which would close floe's <style> and leave what follows to be read as
+// the page's HTML, is refused at its line by floe template check and by the drawing, in a comment or a
+// string too, whatever its case; escaped in a string, it is the CSS's.
+func TestCSSStyleEndRefused(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{
+		"page.css":           "a { color: red; }\n/* </STYLE><b id=\"x\">x</b><style> */\n",
+		"themes/default.css": "a::before { content: \"</style\"; }",
+	})
+	want := []string{
+		filepath.Join(dir, "page.css") + ":2: floe puts this CSS in a <style>, which this </style would close",
+		filepath.Join(dir, "themes", "default.css") + ":1: floe puts this CSS in a <style>",
+	}
+	_, mistakes := tmpl.Check(dir, "", "")
+	if len(mistakes) != len(want) || !strings.HasPrefix(mistakes[0].Error(), want[0]) || !strings.HasPrefix(mistakes[1].Error(), want[1]) {
+		t.Errorf("Check = %v, want %q", mistakes, want)
+	}
+	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), want[0]) {
+		t.Errorf("drawing = %v, want %s", err, want[0])
+	}
+	escaped := sizes(t, map[string]string{"page.css": "a::before { content: \"<\\/style>\"; }\n"})
+	if warnings, mistakes := tmpl.Check(escaped, "", ""); len(mistakes) != 0 {
+		t.Errorf("Check of an escaped </style = %v, %v", warnings, mistakes)
+	}
+}
+
 // A colour that changes with the mode, set on :scope for light mode alone, is warned of at the file that
 // sets it: over every palette, it would stay in dark mode too.
 func TestCheckScopeColours(t *testing.T) {
