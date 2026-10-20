@@ -296,6 +296,49 @@ func TestInOrder(t *testing.T) {
 	}
 }
 
+// any.json offers every part floe draws, but cell and stack, which only other parts hold, and Markdown
+// and HTML: a part added to floe and not to any.json is no part of report's.
+func TestAnyOffersEveryPart(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"html", "text"}
+	for name, p := range set.parts {
+		if !p.isLook() && name != "cell" && name != "stack" {
+			want = append(want, name)
+		}
+	}
+	slices.Sort(want)
+	offered := set.schemas[partsURL+"any.json"].Properties
+	if got := slices.Sorted(maps.Keys(offered)); !slices.Equal(got, want) {
+		t.Errorf("any.json offers %v, want %v", got, want)
+	}
+	for name, s := range offered {
+		if s.part != set.parts[name] {
+			t.Errorf("any.json's %s draws by %s", name, s.Ref)
+		}
+	}
+}
+
+// floe's parts hold no item of a format of floe's, through a schema the parts share neither, whatever
+// order they are read in: their part.html draws their items, which the checks of a format do not reach.
+func TestPartsHoldNoFormat(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, p := range set.parts {
+		if at, _, s := set.formatIn(p.schema, "#"); s != nil {
+			t.Errorf("the part %s holds the format %s at %s", name, s.Format, at)
+		}
+	}
+}
+
 // A description beside a $ref is ended as a sentence of its script before the part's.
 func TestJoinDescriptions(t *testing.T) {
 	t.Parallel()

@@ -218,6 +218,7 @@ func TestNewPartRefused(t *testing.T) {
 		{"diagram", "table", "cannot be named diagram"},
 		{"script", "table", "cannot be named script"},
 		{"tone", "table", "cannot be named tone"},
+		{"any", "table", "cannot be named any"},
 		{"base", "table", "cannot be named base"},
 		{"palette", "table", "cannot be named palette"},
 		{"themes", "table", "cannot be named themes"},

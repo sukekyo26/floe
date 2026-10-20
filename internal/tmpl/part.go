@@ -28,7 +28,7 @@ import (
 )
 
 // partFiles holds a directory per part of floe's (schema.json, part.html, part.css, part.yaml, checks.yaml
-// and words.yaml) and per look alone (part.css and part.yaml), the schemas the parts share (tone.json),
+// and words.yaml) and per look alone (part.css and part.yaml), the schemas the parts share (tone.json and any.json),
 // and the parts themes (themes/).
 //
 //go:embed parts
@@ -66,7 +66,7 @@ func absolute(base, ref string) string {
 // rootPart returns the part of set the $ref at the root of the schema s names, and false for none: a
 // schema declares its own items, and names a part under properties or items, which floe draws the item by. A
 // look, which draws nothing, and a part that cannot be used are told as they are elsewhere, and a schema the
-// parts share (tone) may be the root.
+// parts share may be the root, its items the schema's own.
 func (set *partSet) rootPart(s *schema) (string, bool) {
 	if s == nil {
 		return "", false
@@ -79,12 +79,13 @@ func (set *partSet) rootPart(s *schema) (string, bool) {
 	return name, p != nil && !p.isLook()
 }
 
-// pointsInto returns the part of floe's, whole, that ref points into, and false when it does not: a
-// ref into a part would be checked as the part but drawn as plain data.
+// pointsInto returns the part of floe's, or the schema the parts share that holds what floe draws, whole,
+// that ref points into, and false when it does not: a ref into one would be checked as written but drawn as
+// plain data.
 func (set *partSet) pointsInto(ref string) (whole string, into bool) {
 	whole, _, into = strings.Cut(ref, "#")
 	name, ok := partName(whole)
-	return whole, into && ok && set.parts[name] != nil && !set.parts[name].isLook()
+	return whole, into && ok && (set.parts[name] != nil && !set.parts[name].isLook() || set.draws(set.sharedSchema(whole)))
 }
 
 // first returns the first of s and the schemas under it that ok takes, with its pointer under ptr, or nil.
@@ -101,6 +102,39 @@ func (s *schema) first(ptr string, ok func(*schema) bool) (string, *schema) {
 		}
 	}
 	return s.Items.first(ptr+"/items", ok)
+}
+
+// formatIn returns the first item of a format of floe's in the schema s, with its pointer under ptr, or
+// nil, and the schema the parts share that s refers to and that holds it, whose items are drawn as s's
+// own, "" for one of s's own: its pointer goes on after the $ref's.
+func (set *partSet) formatIn(s *schema, ptr string) (at, in string, item *schema) {
+	at, item = s.first(ptr, func(x *schema) bool {
+		_, _, held := set.formatIn(set.sharedSchema(x.Ref), x.Ref+"#")
+		return slices.Contains(formats, x.Format) || held != nil
+	})
+	if item == nil || slices.Contains(formats, item.Format) {
+		return at, "", item
+	}
+	in = item.Ref
+	under, _, item := set.formatIn(set.sharedSchema(in), in+"#")
+	return at + " → " + under, in, item
+}
+
+// sharedSchema returns the schema the parts share that ref names, or nil.
+func (set *partSet) sharedSchema(ref string) *schema {
+	if !set.shares[ref] {
+		return nil
+	}
+	return set.schemas[ref]
+}
+
+// draws reports whether floe draws an item of s, once set is read: it holds a part or an item of a format
+// of floe's, in a schema the parts share that it refers to too.
+func (set *partSet) draws(s *schema) bool {
+	_, found := s.first("#", func(x *schema) bool {
+		return x.part != nil || slices.Contains(formats, x.Format) || set.draws(set.sharedSchema(x.Ref))
+	})
+	return found != nil
 }
 
 // absolute makes the $ref of s, and those under it, absolute, read from the schema at base.
@@ -165,6 +199,7 @@ type partSet struct {
 	parts   map[string]*part
 	docs    map[string]any         // as read, for jsonschema
 	schemas map[string]*schema     // as floe reads them
+	shares  map[string]bool        // the URLs of the schemas the parts share, floe's alone
 	themes  map[string]*partsTheme // by name
 	broken  map[string]error       // the parts of one's own that cannot be used, by name, and why
 	// the parts themes of one's own that cannot be used, by name, and why
@@ -184,7 +219,8 @@ var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("
 // be used is left out, its mistake kept for a template that uses it.
 func readParts(dir string, entries []os.DirEntry, stage staged) (*partSet, error) {
 	set := &partSet{
-		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, themes: map[string]*partsTheme{},
+		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, shares: map[string]bool{},
+		themes: map[string]*partsTheme{},
 		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", dirs: nil, strays: nil,
 	}
 	if err := set.readBuiltin(); err != nil {
@@ -232,6 +268,7 @@ func (set *partSet) readBuiltin() error {
 			}
 		default:
 			// A schema the parts share.
+			set.shares[partsURL+e.Name()] = true
 			err = set.readSchema(builtin, partsURL+e.Name(), e.Name(), path.Join("parts", e.Name()))
 		}
 		if err != nil {
@@ -427,10 +464,8 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	if err = set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json")); err != nil {
 		return err
 	}
-	// The data's checks of a format do not look into a part, which draws its items by its part.html.
-	isFormat := func(s *schema) bool { return slices.Contains(formats, s.Format) }
-	if ptr, s := set.schemas[url].first("#", isFormat); s != nil {
-		return usererr.New("tmpl_part_format", path.Join(dir, "schema.json"), ptr, s.Format)
+	if err = set.checkFormats(url, dir); err != nil {
+		return err
 	}
 	html, err := fs.ReadFile(files, "part.html")
 	if err != nil {
@@ -527,6 +562,20 @@ func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error
 	set.parts[name] = &part{
 		name: name, schema: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: yaml.looks,
 		taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
+	}
+	return nil
+}
+
+// checkFormats refuses the schema at url of the part whose files are at dir when it holds an item of a
+// format of floe's: the data's checks of a format do not look into a part, which draws its items by its
+// part.html. One of floe's may be read before a schema the parts share that it refers to, which
+// TestPartsHoldNoFormat checks it through once all are read.
+func (set *partSet) checkFormats(url, dir string) error {
+	switch ptr, in, s := set.formatIn(set.schemas[url], "#"); {
+	case s != nil && in != "":
+		return usererr.New("tmpl_part_shared_format", path.Join(dir, "schema.json"), ptr, s.Format, in, in)
+	case s != nil:
+		return usererr.New("tmpl_part_format", path.Join(dir, "schema.json"), ptr, s.Format)
 	}
 	return nil
 }
