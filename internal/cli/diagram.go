@@ -117,8 +117,6 @@ is printed in the language without its region (ja-JP to ja), else in English.`,
 				if err := checkLang(lang); err != nil {
 					return err
 				}
-				// A language without messages has no examples either: those are in English.
-				in = i18n.English
 				if matched, ok := i18n.Match(lang); ok {
 					in = matched
 				}

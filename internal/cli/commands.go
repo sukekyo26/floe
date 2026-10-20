@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/daemon"
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/tmpl"
@@ -29,8 +28,6 @@ import (
 type app struct {
 	env Env
 	cfg *config
-	// cat is the language of the messages: English, whatever the environment says.
-	cat *i18n.Catalog
 }
 
 func (a *app) store() *store.Store {
@@ -55,12 +52,12 @@ func (a *app) out(format string, args ...any) {
 
 // say prints the catalog message key to stdout.
 func (a *app) say(key string, args ...any) {
-	a.out("%s", a.cat.Msg(key, args...))
+	a.out("%s", english.Msg(key, args...))
 }
 
 // warn prints the catalog message key to stderr.
 func (a *app) warn(key string, args ...any) {
-	_, _ = fmt.Fprintln(a.env.Stderr, a.cat.Msg(key, args...)) //nolint:errcheck // nowhere left to report
+	_, _ = fmt.Fprintln(a.env.Stderr, english.Msg(key, args...)) //nolint:errcheck // nowhere left to report
 }
 
 func (a *app) publishCmd() *cobra.Command {

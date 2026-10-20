@@ -77,14 +77,14 @@ func (a *app) showPart(d *tmpl.PartDescription) {
 	a.out("%s", head)
 	switch {
 	case d.Path == "":
-		a.say("cli_template_where", a.cat.Msg("cli_template_builtin"))
+		a.say("cli_template_where", english.Msg("cli_template_builtin"))
 	case d.Replaces:
 		a.say("cli_part_where_replaces", d.Path, d.Name)
 	default:
 		a.say("cli_template_where", d.Path)
 	}
 	if !d.Look {
-		a.say("cli_part_takes", a.takes(d.Takes))
+		a.say("cli_part_takes", takes(d.Takes))
 	}
 	for _, line := range []struct {
 		key   string
@@ -123,7 +123,7 @@ like one of floe's parts takes its place.`,
 			}
 			original := from
 			if made.Builtin {
-				original = a.cat.Msg("cli_part_floes", from)
+				original = english.Msg("cli_part_floes", from)
 			}
 			a.say("cli_part_made", args[0], made.At, original)
 			if made.Replaces {
@@ -153,7 +153,7 @@ template check draws a template's example with the parts it uses.`,
 		RunE: func(*cobra.Command, []string) error {
 			warnings, found := tmpl.CheckOwnParts(a.cfg.parts)
 			for _, w := range warnings {
-				_, _ = fmt.Fprintln(a.env.Stderr, w.Localize(a.cat)) //nolint:errcheck // nowhere left to report
+				_, _ = fmt.Fprintln(a.env.Stderr, w.Localize(english)) //nolint:errcheck // nowhere left to report
 			}
 			if found != nil {
 				return mistakes(found)

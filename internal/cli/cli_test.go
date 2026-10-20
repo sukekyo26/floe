@@ -41,7 +41,6 @@ func TestMain(m *testing.M) {
 			Getenv: os.Getenv, Dir: dir, Stdout: os.Stdout, Stderr: os.Stderr, Environ: os.Environ(),
 		}))
 	}
-	// The binary run as floe (another build, a started server) reads the real environment.
 	if err := os.Setenv(asCLI, "1"); err != nil {
 		panic(err)
 	}

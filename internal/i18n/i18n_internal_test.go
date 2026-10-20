@@ -251,8 +251,9 @@ func TestCatalogsMatchEnglish(t *testing.T) {
 
 // The command line's own messages are used by the code of the command line alone: one used where the
 // server answers would reach a browser untranslated.
-// LIMIT: by package; internal/icons also looks icons up for diagrams, whose messages are messagesEN's.
-// Split it if a message of fetching or searching moves into a lookup.
+// A key built from a prefix is told by a prefix only the command line's own have, cli_template_shared_.
+// LIMIT: by package; internal/icons also looks icons up for diagrams, whose messages are messagesEN's,
+// and its keys are told whole alone. Split it if a message of fetching or searching moves into a lookup.
 func TestCLIMessagesStayInTheCLI(t *testing.T) {
 	t.Parallel()
 
@@ -262,11 +263,23 @@ func TestCLIMessagesStayInTheCLI(t *testing.T) {
 	}
 	defer repo.Close() //nolint:errcheck // read only
 	allowed := []string{"internal/cli/", "internal/daemon/", "internal/icons/"}
+	// The keys, and the prefixes a key may be built from that only the command line's own have.
+	var cliOwn []string
+	for key := range messagesCLI {
+		cliOwn = append(cliOwn, key)
+		for i, r := range key {
+			prefix := key[:i+1]
+			if r == '_' && !slices.ContainsFunc(slices.Collect(maps.Keys(messagesEN)), func(k string) bool { return strings.HasPrefix(k, prefix) }) {
+				cliOwn = append(cliOwn, prefix)
+			}
+		}
+	}
 	err = fs.WalkDir(repo.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
 		switch {
 		case err != nil:
 			return err
-		case d.IsDir() && (d.Name() == ".git" || rel == "internal/i18n"):
+		// A directory of dots, a worktree under .claude among them, is no part of the module, as go ./... reads it.
+		case d.IsDir() && rel != "." && strings.HasPrefix(d.Name(), ".") || rel == "internal/i18n":
 			return fs.SkipDir
 		case d.IsDir() || !strings.HasSuffix(rel, ".go") || strings.HasSuffix(rel, "_test.go"):
 			return nil
@@ -275,8 +288,11 @@ func TestCLIMessagesStayInTheCLI(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		for key := range messagesCLI {
-			if bytes.Contains(b, []byte(`"`+key+`"`)) && !slices.ContainsFunc(allowed, func(p string) bool { return strings.HasPrefix(rel, p) }) {
+		if slices.ContainsFunc(allowed, func(p string) bool { return strings.HasPrefix(rel, p) }) {
+			return nil
+		}
+		for _, key := range cliOwn {
+			if bytes.Contains(b, []byte(`"`+key+`"`)) {
 				t.Errorf("%s uses %s, the command line's own", rel, key)
 			}
 		}
