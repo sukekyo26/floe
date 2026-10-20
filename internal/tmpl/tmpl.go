@@ -346,11 +346,11 @@ func checkHTML(set *partSet, s *schema, d *Data, root ast.Node) error {
 		if !ok {
 			continue
 		}
-		found := tagsIn(html, false)
-		if at := tagsOf(found); at.style >= 0 || at.link >= 0 {
+		// Wherever it is: an item may leave a quote or a comment open to the next, which a browser reads on.
+		if styleOrLink.MatchString(html) {
 			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_style")))
 		}
-		if bad := set.misnamedIn(namedIn(html, found)); bad != nil {
+		if bad := set.misnamedIn(namedIn(html, tagsIn(html, false))); bad != nil {
 			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
 		}
 	}

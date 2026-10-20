@@ -66,7 +66,7 @@ A `format` is one of JSON Schema's that floe checks (`date`, `email`, `uri`…),
 
 An item of `"format": "markdown"` is Markdown text: `{{.Data.text}}` draws it as HTML, as `markdown` does. It is HTML already, so `{{markdown .Data.text}}` stops the drawing.
 
-An item of `"format": "html"` goes in as it is, but holds no `<style>` or `<link>`, refused at its line and column: floe puts a page's CSS together, so style the HTML with `style` attributes.
+An item of `"format": "html"` goes in as it is, but holds no `<style>` or `<link>`, wherever it is (a comment's text too, as an item may leave markup open that the next ends), refused at its line and column: floe puts a page's CSS together, so style the HTML with `style` attributes.
 
 An item of `"format": "image"` is the path of an image, relative to the data file's directory and under it, without `..` or names starting with a dot. The image goes into the page as a data URI, for `<img src="{{.Data.chart}}">`, so that the page holds all it shows.
 

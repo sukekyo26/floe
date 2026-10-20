@@ -170,6 +170,29 @@ func TestNamedPartsInTags(t *testing.T) {
 	if at := tagsOf(tagsIn(html, false)); at.style != strings.Index(html, "<style>") {
 		t.Errorf("tagsOf(%q) = %+v", html, at)
 	}
+	// A textarea's text, as a title's, runs to its end tag, past a quote: tags in it are text, and those
+	// after it tags.
+	for html, want := range map[string]bool{
+		`<textarea><a title="</textarea><div data-floe-part="panel">x</div>"></a></textarea>`: false,
+		`<textarea><div data-floe-part="panel">x</div></textarea>`:                            true,
+		`<title>a</title><div data-floe-part="panel">`:                                        false,
+	} {
+		if named := namedIn(html, tagsIn(html, false)); len(named) != 1 || named[0].text != want {
+			t.Errorf("namedIn(%q) = %+v, want text %v", html, named, want)
+		}
+	}
+	// A template's action is no markup of the page's, out of a tag too.
+	for html, want := range map[string]bool{
+		`{{/* <div data-floe-part="panel"> */}}`:                true,
+		`<p>{{ "<!--" }}</p><div data-floe-part="panel"></div>`: false,
+	} {
+		if named := namedParts(html); len(named) != 1 || named[0].text != want {
+			t.Errorf("namedParts(%q) = %+v, want text %v", html, named, want)
+		}
+	}
+	if at := tagsOf(tagsIn(`{{/* no <style> here */}}<p>x</p>`, true)); at.style != -1 {
+		t.Errorf("tagsOf of a <style> in a template's comment = %+v", at)
+	}
 }
 
 // A part's style comes after that of the looks it takes, which it adjusts, given or not, and of the

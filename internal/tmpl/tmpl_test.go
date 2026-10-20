@@ -221,8 +221,11 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\nparts-theme: [x]\nlang: en\n", "data.yaml:2:14: parts-theme must be text"},
 		{"template: report\ntitle: [a]\nlang: en\n", "data.yaml:2:8: title must be text"},
 		{"template: report\ntitle: 'a\nlang: en\n", "data.yaml:2:8: this is not valid YAML: "},
-		// floe puts a page's CSS together: HTML of the data holds none, past a <style> in a comment.
-		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <!-- <style> --><b>b</b>\n      - html: <p>a</p><STYLE>p{}</STYLE>\n", "data.yaml:6:15: sections[0].parts[1].html: HTML holds a <style> or a <link>"},
+		// floe puts a page's CSS together: HTML of the data holds none, wherever it is, a comment's text too,
+		// as an item may leave markup open that the next ends.
+		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <!-- <style> --><b>b</b>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"},
+		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <p>a</p><STYLE>p{}</STYLE>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"},
+		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <a title=\"\n      - html: <b title='\"><style>p{}</style>'>\n", "data.yaml:6:15: sections[0].parts[1].html: HTML holds a <style> or a <link>"},
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <link rel=stylesheet href=x.css>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"},
 	} {
 		_, err := builtins.Read("data.yaml", []byte(c.src), tmpl.Themes{}, "")
