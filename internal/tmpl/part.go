@@ -79,12 +79,12 @@ func (set *partSet) rootPart(s *schema) (string, bool) {
 	return name, p != nil && !p.isLook()
 }
 
-// pointsInto returns the part of floe's, whole, that ref points into, and false when it does not: a
-// ref into a part would be checked as the part but drawn as plain data.
+// pointsInto returns the part of floe's or the schema the parts share, whole, that ref points into, and
+// false when it does not: a ref into one would be checked as written but drawn as plain data.
 func (set *partSet) pointsInto(ref string) (whole string, into bool) {
 	whole, _, into = strings.Cut(ref, "#")
 	name, ok := partName(whole)
-	return whole, into && ok && set.parts[name] != nil && !set.parts[name].isLook()
+	return whole, into && ok && (set.parts[name] != nil && !set.parts[name].isLook() || set.shared(whole) != nil)
 }
 
 // first returns the first of s and the schemas under it that ok takes, with its pointer under ptr, or nil.
@@ -136,6 +136,13 @@ func (set *partSet) shared(ref string) *schema {
 		return nil
 	}
 	return set.schemas[ref]
+}
+
+// draws reports whether floe draws an item of s, once its parts are read: it holds a part or an item of a
+// format of floe's.
+func (s *schema) draws() bool {
+	_, found := s.first("#", func(x *schema) bool { return x.part != nil || slices.Contains(formats, x.Format) })
+	return found != nil
 }
 
 // dirsLast orders the entries a and b files before directories.

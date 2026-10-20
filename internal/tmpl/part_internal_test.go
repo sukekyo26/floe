@@ -312,8 +312,14 @@ func TestAnyOffersEveryPart(t *testing.T) {
 		}
 	}
 	slices.Sort(want)
-	if got := slices.Sorted(maps.Keys(set.schemas[partsURL+"any.json"].Properties)); !slices.Equal(got, want) {
+	offered := set.schemas[partsURL+"any.json"].Properties
+	if got := slices.Sorted(maps.Keys(offered)); !slices.Equal(got, want) {
 		t.Errorf("any.json offers %v, want %v", got, want)
+	}
+	for name, s := range offered {
+		if s.part != set.parts[name] {
+			t.Errorf("any.json's %s draws by %s", name, s.Ref)
+		}
 	}
 }
 
