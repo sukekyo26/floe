@@ -355,7 +355,7 @@ var messagesEN = map[string]string{
 	"tmpl_parts_dir_unreadable":    "the directory of your own parts %s cannot be read: %s; fix it, or set FLOE_PARTS_DIR",
 	"tmpl_part_name":               "%s: a part of your own cannot be named %s: floe draws diagram and script itself, tone is the tones the parts share, and base names the file of a parts theme for every page; rename it",
 	"tmpl_part_unnamed":            `%s: no element of the part %s is its box, data-floe-part="%s"; write it on the part's element`,
-	"tmpl_part_yaml_documents":     "part.yaml holds one YAML document: remove the --- between the parts",
+	"tmpl_part_yaml_documents":     "part.yaml holds one YAML document: remove the --- between the documents",
 	"tmpl_look_replaces":           "%s: a look alone cannot take the place of floe's part %s, which draws, and which floe's other parts, Markdown's tables and templates draw by; give it schema.json and part.html, or another name",
 	"tmpl_look_box":                `%s:%d: data-floe-part names the look %[3]s, which has no box; take it with data-floe-look="%[3]s"`,
 	"tmpl_page_several":            `the page has data-floe-part="%s", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,

@@ -276,11 +276,14 @@ func TestPartStylesByClass(t *testing.T) {
 	for html, want := range map[string]string{
 		`<noscript data-floe-part="panel">x</noscript>`:         `the page has data-floe-part="panel", but panel is a look`,
 		`<a title="a > b" data-floe-part="table compare">x</a>`: `the page has data-floe-part="table compare", which is not`,
+		`<i title="{{"></i><div data-floe-part="a b">x</div>`:   `the page has data-floe-part="a b", which is not`,
+		`<a title="{{">x</a><style>p{}</style>`:                 `<style>`,
 		`<div data-floe-part="table compare">x</div>`:           `the page has data-floe-part="table compare", which is not the name of one part`,
 		`<div data-floe-part="panel">x</div>`:                   `the page has data-floe-part="panel", but panel is a look`,
 	} {
 		_, err := draw(tmpl.NewLibrary("", "", ""), "template: report\nlang: en\nsections:\n  - parts:\n      - html: '"+html+"'\n")
-		if err == nil || !strings.Contains(err.Error(), want) {
+		// At the item of the data.
+		if err == nil || !strings.Contains(err.Error(), want) || !strings.HasPrefix(err.Error(), "data.yaml:5:15: ") {
 			t.Errorf("drawing HTML of %s = %v, want %s", html, err, want)
 		}
 	}

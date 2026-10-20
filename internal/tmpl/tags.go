@@ -14,19 +14,21 @@ type tag struct {
 	attrs []attr
 }
 
-// attr is an attribute of a tag: its name in lower case, and where its value starts as written, a quote
-// included, -1 for one without a value.
+// attr is an attribute of a tag: its name in lower case, its value without its quotes, and where the value
+// starts as written, a quote included, -1 for one without a value.
 type attr struct {
 	name    string
+	value   string
 	valueAt int
 }
 
 // tagsIn reads the tags of page in order: a comment, a doctype, and the text of a script, a noscript or a
 // style hold none (a sandboxed page runs its scripts, so a noscript's text is never read as HTML). In a
-// tag, a quoted value and an action of a template ({{…}}) are read whole, a > in them too.
+// tag, a quoted value is read whole, a > in it too, and so is an action of a template ({{…}}) when page
+// is one (actions): HTML that is drawn, or the data's, holds none, so {{ there is text.
 // LIMIT: the tags are read as an HTML parser reads them but for the rarer states (the text of a textarea or
 // a title holds tags here); follow the parser's states if a page comes to write tags in those.
-func tagsIn(page string) []tag {
+func tagsIn(page string, actions bool) []tag {
 	var found []tag
 	for i := 0; i < len(page); {
 		lt := strings.IndexByte(page[i:], '<')
@@ -43,7 +45,7 @@ func tagsIn(page string) []tag {
 			}
 			i += n
 		case len(rest) > 1 && isLetter(rest[1]), len(rest) > 2 && rest[1] == '/' && isLetter(rest[2]):
-			t, next := readTag(page, i)
+			t, next := readTag(page, i, actions)
 			found = append(found, t)
 			i = next
 			// The text of a script, a noscript or a style runs to its end tag.
@@ -77,8 +79,9 @@ var endTag = map[string]*regexp.Regexp{
 	"style":    regexp.MustCompile(`(?i)</style[\s/>]`),
 }
 
-// readTag reads the tag of page at at, a < before a letter or a /, and returns it and where it ends.
-func readTag(page string, at int) (tag, int) {
+// readTag reads the tag of page at at, a < before a letter or a /, and returns it and where it ends; an
+// action of a template is read whole when actions.
+func readTag(page string, at int, actions bool) (tag, int) {
 	t := tag{name: "", end: false, start: at, attrs: nil}
 	i := at + 1
 	if page[i] == '/' {
@@ -95,11 +98,11 @@ func readTag(page string, at int) (tag, int) {
 			return t, i + 1
 		case isSpace(c), c == '/':
 			i++
-		case strings.HasPrefix(page[i:], "{{"):
+		case actions && strings.HasPrefix(page[i:], "{{"):
 			i = pastAction(page, i)
 		default:
 			var a attr
-			a, i = readAttr(page, i)
+			a, i = readAttr(page, i, actions)
 			t.attrs = append(t.attrs, a)
 		}
 	}
@@ -107,31 +110,33 @@ func readTag(page string, at int) (tag, int) {
 }
 
 // readAttr reads the attribute of page at at, its name and its value after an =, and returns it and where
-// it ends. An = before any name is one of its own, as an HTML parser reads it.
-func readAttr(page string, at int) (attr, int) {
+// it ends, an action of a template read whole when actions. An = before any name is one of its own, as an
+// HTML parser reads it.
+func readAttr(page string, at int, actions bool) (attr, int) {
 	i := at + 1
 	for i < len(page) && !isSpace(page[i]) && !strings.ContainsRune("/>=", rune(page[i])) &&
-		!strings.HasPrefix(page[i:], "{{") {
+		(!actions || !strings.HasPrefix(page[i:], "{{")) {
 		i++
 	}
-	a := attr{name: strings.ToLower(page[at:i]), valueAt: -1}
+	a := attr{name: strings.ToLower(page[at:i]), value: "", valueAt: -1}
 	if j := pastSpace(page, i); j < len(page) && page[j] == '=' {
 		a.valueAt = pastSpace(page, j+1)
-		i = pastValue(page, a.valueAt)
+		i = pastValue(page, a.valueAt, actions)
+		a.value = strings.Trim(page[a.valueAt:i], `"'`)
 	}
 	return a, i
 }
 
 // pastValue returns where the value of an attribute that starts at at in page ends: at its closing quote,
-// or before a space or a >, an action of a template read whole.
-func pastValue(page string, at int) int {
+// or before a space or a >, an action of a template read whole when actions.
+func pastValue(page string, at int, actions bool) int {
 	quote := byte(0)
 	if at < len(page) && (page[at] == '"' || page[at] == '\'') {
 		quote, at = page[at], at+1
 	}
 	for at < len(page) {
 		switch c := page[at]; {
-		case strings.HasPrefix(page[at:], "{{"):
+		case actions && strings.HasPrefix(page[at:], "{{"):
 			at = pastAction(page, at)
 		case quote != 0 && c == quote:
 			return at + 1

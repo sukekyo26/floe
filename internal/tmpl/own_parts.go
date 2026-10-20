@@ -231,13 +231,12 @@ func (set *partSet) checkNames(name, dir string) error {
 		case dir != "" && kind == nameLookBox:
 			return usererr.New("tmpl_look_box", html, line, n.name)
 		}
-		if err := set.unlent(kind, n, html, line); err != nil {
+		if err := set.unlent(kind, n.name, html, line, n.look); err != nil {
 			return err
 		}
 	}
 	for _, look := range p.looks {
-		n := namedPart{name: look.name, value: look.name, look: true, text: false, at: 0}
-		if err := set.unlent(set.misnamed(n), n, yaml, look.line); err != nil {
+		if err := set.unlent(set.known(look.name), look.name, yaml, look.line, true); err != nil {
 			return err
 		}
 	}
@@ -259,15 +258,15 @@ const (
 // of a page drawn tell each kind in their own words.
 func (set *partSet) misnamed(n namedPart) nameKind {
 	p := set.parts[n.name]
-	switch {
+	switch kind := set.known(n.name); {
 	case n.text:
 		// No attribute, but text that tells of one, or a script that may write one: it brings the style alone.
 		return nameRight
-	case p == nil && set.broken[n.name] != nil:
+	case kind == nameBroken:
 		return nameBroken
 	case n.notOne():
 		return nameNotOne
-	case p == nil:
+	case kind == nameUnknown:
 		return nameUnknown
 	case !n.look && p.isLook():
 		return nameLookBox
@@ -275,23 +274,35 @@ func (set *partSet) misnamed(n namedPart) nameKind {
 	return nameRight
 }
 
-// unlent refuses n, the name of a part another takes the look of, or names in file at line, by kind, what
-// it is to set: a part there is none of, told with those its attribute may name, or one that cannot be used.
-func (set *partSet) unlent(kind nameKind, n namedPart, file string, line int) error {
+// known tells what name is to set: a part's, one that cannot be used, or none.
+func (set *partSet) known(name string) nameKind {
+	switch {
+	case set.parts[name] != nil:
+		return nameRight
+	case set.broken[name] != nil:
+		return nameBroken
+	}
+	return nameUnknown
+}
+
+// unlent refuses name, a part another takes the look of, or names in file at line, by kind, what it is to
+// set: a part there is none of, told with those a look (when look) or a box may name, or one that cannot
+// be used.
+func (set *partSet) unlent(kind nameKind, name, file string, line int, look bool) error {
 	switch kind {
 	case nameBroken:
-		return usererr.New("tmpl_part_lender_broken", n.name)
+		return usererr.New("tmpl_part_lender_broken", name)
 	case nameUnknown:
-		return usererr.New("tmpl_part_names", file, line, n.name, set.candidates(n))
+		return usererr.New("tmpl_part_names", file, line, name, set.candidates(look))
 	case nameRight, nameNotOne, nameLookBox:
 	}
 	return nil
 }
 
-// candidates lists the parts the attribute of n may name in place of one there is none of: every part
-// and look for data-floe-look, the parts that draw for a box.
-func (set *partSet) candidates(n namedPart) string {
-	if n.look {
+// candidates lists the parts a look may name (when look) in place of one there is none of, every part and
+// look, or a box may, the parts that draw.
+func (set *partSet) candidates(look bool) string {
+	if look {
 		return set.names(nil)
 	}
 	return set.names(drawing)

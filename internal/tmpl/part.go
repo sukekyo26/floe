@@ -314,41 +314,55 @@ func (n namedPart) notOne() bool {
 // name written so elsewhere than in a tag's attribute, in text, a comment or a script that writes one, is
 // text: it brings the part's style alone.
 func namedParts(html string) []namedPart {
-	return namedIn(html, tagsIn(html))
-}
-
-// namedIn returns the names namedParts returns of html, whose tags are found.
-func namedIn(html string, found []tag) []namedPart {
-	matches := partAttr.FindAllStringSubmatchIndex(html, -1)
-	if matches == nil {
+	if !floeAttr.MatchString(html) {
 		return nil
 	}
-	// Where the values of the tags' data-floe-part and data-floe-look start: a match elsewhere is text.
-	values := map[int]bool{}
+	return namedIn(html, tagsIn(html, true))
+}
+
+// namedIn returns the names namedParts returns of html, whose tags are found, in order.
+func namedIn(html string, found []tag) []namedPart {
+	var names []namedPart
+	values := map[int]bool{} // where the values of the attributes start
 	for _, t := range found {
 		for _, a := range t.attrs {
-			if !t.end && a.valueAt >= 0 && (a.name == "data-floe-part" || a.name == "data-floe-look") {
-				values[a.valueAt] = true
+			look := a.name == "data-floe-look"
+			if t.end || a.valueAt < 0 || !look && a.name != "data-floe-part" {
+				continue
 			}
+			values[a.valueAt] = true
+			names = append(names, namesOf(a.value, look, false, a.valueAt)...)
 		}
 	}
-	names := make([]namedPart, 0, len(matches))
-	for _, m := range matches {
-		value := html[m[4]:m[5]]
-		if strings.Contains(value, "{{") {
-			continue
+	for _, m := range partAttr.FindAllStringSubmatchIndex(html, -1) {
+		if !values[m[4]] {
+			look := strings.EqualFold(html[m[2]:m[3]], "look")
+			names = append(names, namesOf(strings.Trim(html[m[4]:m[5]], `"'`), look, true, m[4])...)
 		}
-		value = strings.Trim(value, `"'`)
-		look := strings.EqualFold(html[m[2]:m[3]], "look")
-		for _, name := range strings.Fields(value) {
-			names = append(names, namedPart{name: name, value: value, look: look, text: !values[m[4]], at: m[4]})
-		}
+	}
+	slices.SortStableFunc(names, func(x, y namedPart) int { return x.at - y.at })
+	return names
+}
+
+// namesOf returns the names value, of a data-floe-look when look, else of a data-floe-part, at at, gives,
+// in text when text; none when a template puts it together ({{.kind}}).
+func namesOf(value string, look, text bool, at int) []namedPart {
+	if strings.Contains(value, "{{") {
+		return nil
+	}
+	fields := strings.Fields(value)
+	names := make([]namedPart, 0, len(fields))
+	for _, name := range fields {
+		names = append(names, namedPart{name: name, value: value, look: look, text: text, at: at})
 	}
 	return names
 }
 
-// partAttr finds the value of a data-floe-part or data-floe-look attribute: data-floe-look="table cards",
-// '…' or x.
+// floeAttr finds a data-floe-part or a data-floe-look, as an attribute or in text.
+var floeAttr = regexp.MustCompile(`(?i)data-floe-(part|look)`)
+
+// partAttr finds the value of a data-floe-part or data-floe-look written as an attribute, in text too:
+// data-floe-look="table cards", '…' or x.
 var partAttr = regexp.MustCompile(`(?i)\sdata-floe-(part|look)\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` + "`" + `]+)`)
 
 // readSchema reads the schema file of files, shown in its mistakes as shown, at url.
@@ -508,11 +522,13 @@ func readLooks(file string, k, value ast.Node) ([]takenLook, error) {
 	}
 	looks := make([]takenLook, 0, len(seq.Values))
 	for _, v := range seq.Values {
-		name, text := v.(*ast.StringNode)
-		if !text || !validName(name.Value) {
+		// As written: YAML reads a name of digits (404) as a number.
+		_, scalar := v.(ast.ScalarNode)
+		name := v.GetToken().Value
+		if !scalar || !validName(name) {
 			return nil, yamlpos.New(file, yamlpos.Of(v), "tmpl_part_yaml_looks")
 		}
-		looks = append(looks, takenLook{name: name.Value, line: yamlpos.Of(v).Line})
+		looks = append(looks, takenLook{name: name, line: yamlpos.Of(v).Line})
 	}
 	return looks, nil
 }
@@ -815,7 +831,7 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
-func (set *partSet) pageStyle(page []byte, found []tag, own [][]byte, theme string) (string, error) {
+func (set *partSet) pageStyle(page string, found []tag, own [][]byte, theme string) (string, error) {
 	themed := set.themes[theme]
 	if themed == nil {
 		return "", fmt.Errorf("draw with the parts theme %s: %w", theme, fs.ErrNotExist)
@@ -830,9 +846,9 @@ func (set *partSet) pageStyle(page []byte, found []tag, own [][]byte, theme stri
 			style.WriteString("<style>\n@layer " + layer + " {\n" + css + "}\n</style>\n")
 		}
 	}
-	named := namedIn(string(page), found)
-	if err := set.refuseBroken(named); err != nil {
-		return "", err
+	named := namedIn(page, found)
+	if bad := set.misnamedIn(named); bad != nil {
+		return "", bad
 	}
 	boxes := set.namedBy(named, func(n namedPart) bool { return !n.look })
 	looks := set.namedBy(named, func(n namedPart) bool { return n.look })
@@ -857,10 +873,11 @@ func (set *partSet) pageStyle(page []byte, found []tag, own [][]byte, theme stri
 	return style.String(), nil
 }
 
-// refuseBroken refuses a page that names, as named gives its names, a part that cannot be used, by a table
-// of Markdown or HTML of the data among others, or has a data-floe-part that is not the name of one part,
-// or names a look alone, which has no box: the elements would be left without their style.
-func (set *partSet) refuseBroken(named []namedPart) error {
+// misnamedIn returns the mistake of the first name of named, the names of a page or of HTML of the data,
+// that the page is refused for, or nil: a part that cannot be used, by a table of Markdown or HTML of the
+// data among others, a data-floe-part not of one part's name, or one that names a look alone, which has
+// no box. The elements would be left without their style.
+func (set *partSet) misnamedIn(named []namedPart) *usererr.Error {
 	for _, n := range named {
 		switch set.misnamed(n) {
 		case nameBroken:

@@ -121,7 +121,7 @@ func TestWithStyles(t *testing.T) {
 		"<head><!--></head>":                                                  "<head><!-->S</head>",
 		"<head><noscript></head></noscript></head><body><script>y()</script>": "<head><noscript></head></noscript>S</head><body><script>y()</script>",
 	} {
-		if got := string(withStyles([]byte(page), tagsIn(page), "S")); got != want {
+		if got := string(withStyles([]byte(page), tagsIn(page, false), "S")); got != want {
 			t.Errorf("withStyles(%q) = %q, want %q", page, got, want)
 		}
 	}
@@ -135,10 +135,10 @@ func TestTagsOf(t *testing.T) {
 	page := "<!-- <style> --><script>'<style><link>'</script><noscript><style></noscript><link-card></link-card><style-box>" +
 		"<script-x><link></script-x><LINK rel=x><Style>a{}</Style>"
 	want := tags{head: -1, style: strings.Index(page, "<Style>"), link: strings.Index(page, "<link></script-x>")}
-	if got := tagsOf(tagsIn(page)); got != want {
+	if got := tagsOf(tagsIn(page, false)); got != want {
 		t.Errorf("tagsOf(%q) = %+v, want %+v", page, got, want)
 	}
-	if got := tagsOf(tagsIn("<p>x</p>")); got != (tags{head: -1, style: -1, link: -1}) {
+	if got := tagsOf(tagsIn("<p>x</p>", false)); got != (tags{head: -1, style: -1, link: -1}) {
 		t.Errorf("tagsOf of a page without them = %+v", got)
 	}
 }
@@ -156,10 +156,19 @@ func TestNamedPartsInTags(t *testing.T) {
 		`<p>write data-floe-part=table</p>`:                                                     true,
 		`<script>'<b data-floe-part="table">'</script>`:                                         true,
 		`<!-- <b data-floe-part="table"> -->`:                                                   true,
+		`<div/data-floe-part="table">`:                                                          false,
 	} {
 		if named := namedParts(html); len(named) != 1 || named[0].name != "table" || named[0].text != want {
 			t.Errorf("namedParts(%q) = %+v, want table, text %v", html, named, want)
 		}
+	}
+	// HTML that is drawn, or the data's, holds no actions: {{ in a value is text, which hides no tag.
+	html := `<a title="{{">x</a><div data-floe-part="a b"></div><style>p{}</style>`
+	if named := namedIn(html, tagsIn(html, false)); len(named) != 2 || named[0].text || !named[0].notOne() {
+		t.Errorf("namedIn(%q) = %+v, want an attribute of two names", html, named)
+	}
+	if at := tagsOf(tagsIn(html, false)); at.style != strings.Index(html, "<style>") {
+		t.Errorf("tagsOf(%q) = %+v", html, at)
 	}
 }
 

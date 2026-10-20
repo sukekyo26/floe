@@ -88,8 +88,9 @@ func TestOwnParts(t *testing.T) {
 		t.Errorf("compare takes the look of floe's panel through a table of one's own that does not:\n%s", page)
 	}
 	looked := quote("boxed")
-	looked["boxed/part.yaml"] = "looks: [rows, shaded]\n"
+	looked["boxed/part.yaml"] = "looks: [rows, shaded, 404]\n"
 	looked["shaded/part.css"] = "/* a look of one's own */\n"
+	looked["404/part.css"] = "/* a look named in digits */\n"
 	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/boxed.json"}, "aside": {"type": "string"}`), ownParts(t, looked), "")
 	if page, err = draw(l, "template: memo\nlang: en\nrisks: { text: Hi }\n"); err != nil {
 		t.Fatal(err)
@@ -100,7 +101,10 @@ func TestOwnParts(t *testing.T) {
 			t.Errorf("the page holds the look %s of boxed %d times, want once:\n%s", look, strings.Count(page, want), page)
 		}
 	}
-	if order := []int{at(partStyle(t, "panel")), at(partStyle(t, "rows")), at("/* a look of one's own */"), at("/* the boxed of one's own */")}; !slices.IsSorted(order) || order[0] < 0 {
+	if order := []int{
+		at(partStyle(t, "panel")), at(partStyle(t, "rows")), at("/* a look of one's own */"), at("/* a look named in digits */"),
+		at("/* the boxed of one's own */"),
+	}; !slices.IsSorted(order) || order[0] < 0 {
 		t.Errorf("the looks and the part are at %v, want each look before what takes it:\n%s", order, page)
 	}
 }

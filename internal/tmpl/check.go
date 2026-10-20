@@ -205,7 +205,7 @@ func (t *Template) checkNamedParts(set *partSet, src []byte, named []namedPart) 
 		case nameBroken:
 			mistakes = append(mistakes, usererr.New("tmpl_part_broken", n.name, set.broken[n.name]))
 		case nameUnknown:
-			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), line, n.name, set.candidates(n)))
+			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), line, n.name, set.candidates(n.look)))
 		case nameRight:
 		}
 	}
