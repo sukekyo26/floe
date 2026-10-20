@@ -2,6 +2,7 @@ package tmpl_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -183,6 +184,51 @@ func TestDrawnHTMLWhich(t *testing.T) {
 			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: HTML closes an element of the page") {
 			t.Errorf("an item that ends a <noscript> in %s = %v", page, err)
 		}
+	}
+}
+
+// An item that gives the page's <body> or <html> an attribute changes the page, which may hide it; one
+// whose attribute the page's has keeps the page's.
+func TestDrawnHTMLAttributes(t *testing.T) {
+	t.Parallel()
+
+	l := htmlIn(t, `<div>{{.Data.risks}}</div><p>after</p>`)
+	for item, refused := range map[string]bool{
+		`<body style="display:none">`: true,
+		`<html dir=rtl hidden>`:       true,
+		`<p class="a">x</p>`:          false,
+	} {
+		if _, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n"); (err != nil) != refused ||
+			refused && !strings.Contains(err.Error(), "HTML closes an element of the page, or changes the page after it") {
+			t.Errorf("%q = %v, want refused %v", item, err, refused)
+		}
+	}
+}
+
+// The mark of an item is told whole: the first of eleven, left open, is not taken for the tenth, whose end
+// mark the page draws before it.
+func TestDrawnHTMLManyItems(t *testing.T) {
+	t.Parallel()
+
+	props, body, data := make([]string, 0, 11), make([]string, 0, 11), make([]string, 0, 11)
+	for i := range 11 {
+		name := fmt.Sprintf("i%02d", i)
+		props = append(props, `"`+name+`": {"type": "string", "format": "html"}`)
+		data = append(data, name+": x")
+	}
+	body = append(body, "<p>{{.Data.i10}}</p>")
+	for i := range 10 {
+		body = append(body, fmt.Sprintf("<p>{{.Data.i%02d}}</p>", i))
+	}
+	dir := memo(t, strings.Join(props, ", "))
+	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body>` + strings.Join(body, "") + `</body></html>`
+	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	data[1] = "i01: <textarea>x"
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\n"+strings.Join(data, "\n")+"\n"); err == nil ||
+		!strings.Contains(err.Error(), "i01: HTML leaves <textarea> open") {
+		t.Errorf("the second of eleven items = %v", err)
 	}
 }
 
