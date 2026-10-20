@@ -150,11 +150,11 @@ func TestDrawnHTMLInHead(t *testing.T) {
 	}
 	l := tmpl.NewLibrary(dir, "", "")
 	for item, want := range map[string]string{
-		"<meta name=a content=b>": "",
-		"<noscript>x</noscript>":  "",
-		"<div>x</div>":            "HTML changes the page around it",
-		"hello":                   "HTML changes the page around it",
-		"<script>x":               "HTML changes the page around it",
+		"<template>t</template>": "",
+		"<noscript>x</noscript>": "",
+		"<div>x</div>":           "HTML changes the page around it",
+		"hello":                  "HTML changes the page around it",
+		"<script>x":              "HTML changes the page around it",
 	} {
 		_, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n")
 		if want == "" && err != nil || want != "" && (err == nil || !strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: "+want)) {
@@ -304,9 +304,9 @@ func TestDrawnHTMLOthers(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\naside: <meta name=a content=b>\nrisks: <div>x</div>\n"); err == nil ||
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\naside: <template>t</template>\nrisks: <div>x</div>\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "data.yaml:4:8: risks: HTML changes the page around it") {
-		t.Errorf("a <div> in the head after a <meta> = %v", err)
+		t.Errorf("a <div> in the head after a <template> = %v", err)
 	}
 }
 
@@ -389,7 +389,7 @@ func TestDrawnHTMLHidesHead(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\naside: <meta name=a content=b>\nrisks: <script>x\n"); err == nil ||
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\naside: <template>t</template>\nrisks: <script>x\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "data.yaml:4:8: risks: ") {
 		t.Errorf("a <script> that hides </head> = %v", err)
 	}

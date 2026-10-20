@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io/fs"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"os"
@@ -92,16 +93,36 @@ type env struct {
 // closed for a server to take later is free again, and the system may give it out once more.
 var handedOut sync.Map
 
-// freePort returns a port free now, for a server a test starts on it.
+// closedFrom and closedTo bound where freePort picks: below the ports the system gives out for :0 (from
+// 32768 on Linux, 49152 on macOS), so that a test of another package, run meanwhile in a process of its
+// own and listening on :0, is never given the port between freePort's close and the server's listen.
+// LIMIT: a system set to give out ports from below 32768 may still; read its range if a CI comes to.
+const closedFrom, closedTo = 20000, 32768
+
+// freePort returns a port free now and given to no other test running now, for a server a test starts
+// on it later (floe serve, or the one a publish starts, which binds the port itself).
 func freePort(t *testing.T) int {
 	t.Helper()
 
-	ln := listenFree(t)
-	port := portOf(t, ln)
-	if ln.Close() != nil {
-		t.Fatal("no free port")
+	for range 100 {
+		port := closedFrom + rand.IntN(closedTo-closedFrom) //nolint:gosec // G404: a port to try, no secret
+		if _, taken := handedOut.LoadOrStore(port, true); taken {
+			continue
+		}
+		var lc net.ListenConfig
+		ln, err := lc.Listen(t.Context(), "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
+		if err != nil { // another program's
+			handedOut.Delete(port)
+			continue
+		}
+		t.Cleanup(func() { handedOut.Delete(port) })
+		if ln.Close() != nil {
+			t.Fatal("no free port")
+		}
+		return port
 	}
-	return port
+	t.Fatal("no free port")
+	return 0
 }
 
 // listenFree listens on a port given to no other test running now, and keeps it given until t ends.
@@ -782,5 +803,16 @@ func TestCheck(t *testing.T) {
 	want(t, "check without a file", e.run(t, "", "check"), 2, "", "floe: requires at least 1 arg(s)")
 	if _, err := os.Stat(e.vars["FLOE_DIR"]); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("check wrote to the store: %v", err)
+	}
+}
+
+// freePort picks below the ports the system gives out for :0, which a test of another package may be
+// given meanwhile.
+func TestFreePortBelowEphemeral(t *testing.T) {
+	t.Parallel()
+
+	ln := listenFree(t)
+	if port, given := freePort(t), portOf(t, ln); port >= closedTo || given < closedTo {
+		t.Errorf("freePort = %d, a port given for :0 = %d, want them on either side of %d", port, given, closedTo)
 	}
 }

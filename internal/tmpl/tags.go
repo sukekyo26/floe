@@ -133,6 +133,14 @@ var endTag = func() map[string]*regexp.Regexp {
 // styleOrLink finds a <style> or a <link>, however the HTML around it reads.
 var styleOrLink = regexp.MustCompile(`(?i)<(style|link)[\s/>]`)
 
+// baseOrMeta finds a <base> or a <meta>, however the HTML around it reads (in an <svg>, a <meta> leaves
+// it): they change a page without changing its tree, pointing its links elsewhere, moving it away
+// (refresh) or changing its policy (referrer). CSP holds base-uri 'none' too (CutOff).
+var baseOrMeta = regexp.MustCompile(`(?i)<(base|meta)[\s/>]`)
+
+// base finds a <base> of page.html, which the CSP of a drawn page ignores.
+var base = regexp.MustCompile(`(?i)<base[\s/>]`)
+
 // headEnd finds a </head>, however the HTML around it reads.
 var headEnd = regexp.MustCompile(`(?i)</head[\s/>]`)
 

@@ -300,6 +300,17 @@ func TestPageStyleRefused(t *testing.T) {
 	}
 }
 
+// page.html holds no <base>, which the CSP of a drawn page ignores: told at its line.
+func TestPageBase(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{"page.html": "<head>|<head>\n<BASE href=\"https://e.example/\">"})
+	want := filepath.Join(dir, "page.html") + ":4: page.html holds a <base>, which the page's CSP ignores"
+	if _, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+		t.Errorf("Check = %v, want %s", mistakes, want)
+	}
+}
+
 // page.html holds a </head>, before which floe puts the page's styles: in the head, where no element the
 // page leaves open, such as an <svg>, takes them in. One in a comment is none, and its lack is told beside
 // the other mistakes of the files.
