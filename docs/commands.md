@@ -336,6 +336,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 - They ask the server to check, save, list and delete pages: the server is the only one that writes the store, and a publish is checked with the server's templates, parts and icons.
 - After floe is reinstalled (another version, or a rebuilt binary), the next of them replaces the running server.
 - The server keeps running until `floe stop`, logout or reboot.
+- The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` and `FLOE_ICONS_DIR` of the command that started it, `floe list` and `floe rm` included. A publish with other ones is refused until `floe stop`, so set yours in the shell's environment, where every command takes them, rather than on one command.
 - A server serves one store (`FLOE_DIR`) on its port: while it runs, a command for another store is refused. Give that store another `FLOE_PORT`.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
 - Pages run in a sandbox, so their scripts cannot reach the management page's API.
