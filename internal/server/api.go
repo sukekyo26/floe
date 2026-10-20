@@ -195,6 +195,12 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		send(w, http.StatusBadRequest, "send file, dir and source")
 		return
 	}
+	for name := range in.Images {
+		if !fs.ValidPath(name) || name == "." {
+			send(w, http.StatusBadRequest, "send each image by a slash-separated path under the data file's directory")
+			return
+		}
+	}
 	up := store.Upload{File: in.File, Dir: in.Dir, Source: in.Source, Images: imagesFS(in.Images), Project: in.Project}
 	opts := store.Options{
 		Slug: &slug, Title: in.Title, Description: in.Description, Theme: in.Theme, PartsTheme: in.PartsTheme,
@@ -226,6 +232,8 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 }
 
 // imagesFS is the images a publish sent as the data file's directory, nil for none sent.
+// LIMIT: fstest.MapFS goes through every name at each step of an image's path, so thousands of images
+// in one publish take quadratic time. Index the directories if pages come to show that many.
 func imagesFS(images map[string][]byte) fs.FS {
 	if images == nil {
 		return nil
@@ -247,8 +255,8 @@ func text(raw json.RawMessage) *string {
 	return &s
 }
 
-// stringFields sets each of fields that input sends to its value, empty or not, leaving the rest nil; false
-// when one sent is not a string.
+// stringFields sets each of fields that input sends to its value, trimmed, empty or not, leaving the rest
+// nil; false when one sent is not a string.
 func stringFields(input map[string]json.RawMessage, fields map[string]**string) bool {
 	for key, field := range fields {
 		if raw, ok := input[key]; ok {
@@ -256,6 +264,7 @@ func stringFields(input map[string]json.RawMessage, fields map[string]**string) 
 			if !isString {
 				return false
 			}
+			v = strings.TrimSpace(v)
 			*field = &v
 		}
 	}

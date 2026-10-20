@@ -399,7 +399,9 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 	if force {
 		return true, nil
 	}
-	return false, usererr.New("store_slug_owned", slug, owner)
+	err := usererr.New("store_slug_owned", slug, owner)
+	err.Conflict = true
+	return false, err
 }
 
 // title is --title, else the title pinned on the management page, else (for a stored page) the data's

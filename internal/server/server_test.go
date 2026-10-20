@@ -730,14 +730,14 @@ func TestAddLink(t *testing.T) {
 		t.Errorf("an omitted slug = %s", r.body)
 	}
 
-	// A field sent is given, empty or not, as floe publish --link sends them: an empty slug is refused,
-	// an empty description clears it, and force replaces another file's link.
+	// A field sent is given, trimmed, empty or not, as floe publish --link sends them: an empty slug is
+	// refused, a blank description clears it, and force replaces another file's link.
 	got = toString([]int{
 		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":""}`).status,
 		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","title":3}`).status,
 		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","force":"yes"}`).status,
-		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+index+`","description":""}`).status,
-		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":"site","title":"Sub","force":true}`).status,
+		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+index+`","description":" "}`).status,
+		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":" site ","title":"Sub","force":true}`).status,
 	})
 	if m := e.store.ReadMeta("site"); got != "400 400 400 200 200" || m == nil || m.Path != sub || m.Title != "Sub" {
 		t.Errorf("fields sent = %s, %+v", got, m)
@@ -780,8 +780,9 @@ func TestSave(t *testing.T) {
 		put("Not%20a%20slug", upload(nil, "proj")).status,
 		put("sizes", map[string]any{"file": "plans/sizes.yaml", "dir": "/plans", "source": src, "extra": 1}).status,
 		put("sizes", map[string]any{"file": "plans/sizes.yaml", "source": src}).status,
+		put("sizes", upload(map[string][]byte{"../a.png": png}, "proj")).status,
 	})
-	if got != "403 415 404 400 400" {
+	if got != "403 415 404 400 400 400" {
 		t.Errorf("refused publishes = %s", got)
 	}
 
@@ -807,14 +808,14 @@ func TestSave(t *testing.T) {
 		t.Error("the stored page does not show its image")
 	}
 	// A refusal that is not a data file's mistake, and one to a reader that does not take JSON.
-	if r = put("sizes", upload(nil, "other")); r.status != http.StatusBadRequest || !strings.Contains(r.body, `"mistakes":false`) {
+	if r = put("sizes", upload(nil, "other")); r.status != http.StatusConflict || !strings.Contains(r.body, `"mistakes":false`) {
 		t.Errorf("a publish over another project's page = %d %s", r.status, r.body)
 	}
 	b, err := json.Marshal(upload(nil, "other"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r = e.send(t, http.MethodPut, "/api/artifacts/sizes", string(b)); r.status != http.StatusBadRequest ||
+	if r = e.send(t, http.MethodPut, "/api/artifacts/sizes", string(b)); r.status != http.StatusConflict ||
 		!strings.HasPrefix(r.body, `slug "sizes" was published from project proj`) {
 		t.Errorf("a refusal as text = %d %s", r.status, r.body)
 	}
