@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"errors"
 	"html/template"
 	"maps"
 	"regexp"
@@ -471,5 +472,21 @@ func TestReadWords(t *testing.T) {
 		if err = zh.checkWords(page, "p.html", "w.yaml"); (err == nil) != (want == "") || err != nil && err.Error() != want {
 			t.Errorf("checkWords(%s) = %v, want %q", src, err, want)
 		}
+	}
+}
+
+// A CSS that would close its <style>, which no reader refused, is kept out of the page as it is drawn.
+func TestPageStyleEnd(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = set.pageStyle("<body></body>", nil, [][]byte{[]byte("/* </style> */")}, "default"); !errors.Is(err, errStyleEnd) {
+		t.Errorf("pageStyle = %v, want %v", err, errStyleEnd)
+	}
+	if _, err = set.pageStyle("<body></body>", nil, [][]byte{[]byte("/* </styles */")}, "default"); err != nil {
+		t.Errorf("pageStyle = %v", err)
 	}
 }

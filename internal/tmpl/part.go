@@ -874,7 +874,10 @@ func (set *partSet) pageStyle(page string, found []tag, own [][]byte, theme stri
 	var style strings.Builder
 	style.WriteString("<style>\n@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n" +
 		baseCSS + "}\n</style>\n")
+	// Every CSS is refused where it would close its <style> as it is read; this keeps out one that is not.
+	leaks := false
 	sheet := func(layer, css string) {
+		leaks = leaks || styleEnd.MatchString(css)
 		if css != "" {
 			style.WriteString("<style>\n@layer " + layer + " {\n" + css + "}\n</style>\n")
 		}
@@ -909,8 +912,13 @@ func (set *partSet) pageStyle(page string, found []tag, own [][]byte, theme stri
 			sheet("floe.page", "@scope (:root) to ([data-floe-part] > *) {\n"+string(css)+"}\n")
 		}
 	}
+	if leaks {
+		return "", errStyleEnd
+	}
 	return style.String(), nil
 }
+
+var errStyleEnd = errors.New("draw the page's style: a CSS holds </style, which would close its <style>")
 
 // misnamedIn returns the mistake of the first name of named, the names of a page or of HTML of the data,
 // that the page is refused for, or nil: a part that cannot be used, by a table of Markdown or HTML of the

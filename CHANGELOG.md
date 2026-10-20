@@ -24,8 +24,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   it in every parts theme's panel), and a look alone of your own is a
   `part.css` without a schema. Parts themes of your
   own go in `FLOE_PARTS_DIR/themes/<name>/`, a theme of the name of one of
-  floe's taking the place of its files of their names. A part or theme that
-  cannot be used is refused to the pages that use it and warned of by
+  floe's taking the place of its files of their names. Their CSS is refused
+  at its line as the template's is, `</style` in a `url()` too. A part or
+  theme that cannot be used is refused to the pages that use it and warned of by
   `floe template check`; a linked page is drawn again when a file of a part
   is saved, and a publish to a server of other parts is refused.
 - Add twenty-two parts, which the built-in `report` takes and a template

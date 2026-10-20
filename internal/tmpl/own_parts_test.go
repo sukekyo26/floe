@@ -124,6 +124,9 @@ func TestBrokenOwnParts(t *testing.T) {
 		"brace/schema.json":    `{"type": "object"}`,
 		"brace/part.html":      `<div data-floe-part="brace"></div>`,
 		"brace/part.css":       ":scope { color: red; }\n}\n",
+		"ender/schema.json":    `{"type": "object"}`,
+		"ender/part.html":      `<div data-floe-part="ender"></div>`,
+		"ender/part.css":       ":scope { color: red; }\n/* </style> */\n",
 		"lender/schema.json":   `{"type": "object"}`,
 		"lender/part.html":     `<div data-floe-part="lender"></div>`,
 		"lender/part.css":      "",
@@ -193,6 +196,8 @@ func TestBrokenOwnParts(t *testing.T) {
 		"unnamed": "the part unnamed cannot be used: " + filepath.Join(parts, "unnamed", "part.html") +
 			`: no element of the part unnamed is its box, data-floe-part="unnamed"`,
 		"brace": "the part brace cannot be used: " + filepath.Join(parts, "brace", "part.css") + ":2: this } closes no block",
+		"ender": "the part ender cannot be used: " + filepath.Join(parts, "ender", "part.css") +
+			":2: floe puts this CSS in a <style>, which this </style would close",
 		"lender": "the part lender cannot be used: " + filepath.Join(parts, "lender", "part.yaml") +
 			":2: the part names the part nope, which there is none of",
 		"base":     "the part base cannot be used: " + filepath.Join(parts, "base") + ": a part of your own cannot be named base",
@@ -324,6 +329,7 @@ func TestOwnPartsThemes(t *testing.T) {
 	files["themes/stray/tone.css"] = ""
 	files["themes/broke/table.css"] = "}\n"
 	files["themes/broke/palette.css"] = ":root { --bg: #fff; }\n"
+	files["themes/leak/code.css"] = "/* </STYLE\n */\n"
 	parts := ownParts(t, files)
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/code.json"}, "aside": {"$ref": "floe:///parts/note.json"}`)
 	l := tmpl.NewLibrary(dir, parts, "")
@@ -379,6 +385,11 @@ func TestOwnPartsThemes(t *testing.T) {
 	if _, err = draw(l, "template: memo\nlang: en\nparts-theme: broke\nrisks: { text: x }\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "data.yaml:3:14: "+why) {
 		t.Errorf("drawing with the parts theme broke = %v, want %s", err, why)
+	}
+	leak := "your own parts theme leak cannot be used: " + filepath.Join(parts, "themes", "leak", "code.css") +
+		":1: floe puts this CSS in a <style>"
+	if _, err = draw(l, "template: memo\nlang: en\nparts-theme: leak\nrisks: { text: x }\n"); err == nil || !strings.Contains(err.Error(), leak) {
+		t.Errorf("drawing with the parts theme leak = %v, want %s", err, leak)
 	}
 	// Told beside the data's other mistakes.
 	if _, err = draw(l, "template: memo\nlang: en\ntheme: nope\nparts-theme: broke\nrisks: { text: x }\n"); err == nil ||

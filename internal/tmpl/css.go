@@ -70,8 +70,9 @@ func lineAt(src []byte, at int) int {
 	return bytes.Count(src[:at], []byte("\n")) + 1
 }
 
-// styleEnd finds what HTML reads as the end of a <style>, whatever comes after it.
-var styleEnd = regexp.MustCompile(`(?i)</style`)
+// styleEnd finds what HTML reads as the end of a <style>: </style, its letters of either case in ASCII
+// alone, before a space, / or >, or the end of the CSS, where what floe writes after it would decide.
+var styleEnd = regexp.MustCompile(`</[sS][tT][yY][lL][eE](?:[\t\n\f\r />]|$)`)
 
 // rootSelector finds :root or html in a selector.
 var rootSelector = regexp.MustCompile(`(?i)(?:^|[\s,>+~(])(:root|html)(?:[\s,.:\[#>+~)]|$)`)
