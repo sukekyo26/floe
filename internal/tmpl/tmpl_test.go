@@ -225,7 +225,7 @@ func TestReadRefusals(t *testing.T) {
 		// as an item may leave markup open that the next ends.
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <!-- <style> --><b>b</b>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"},
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <p>a</p><STYLE>p{}</STYLE>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"},
-		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <a title=\"\n      - html: <b title='\"><style>p{}</style>'>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML leaves <a> open"},
+		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <a title=\"\n      - html: <b title='\"><style>p{}</style>'>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML ends in a tag or a quote"},
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <link rel=stylesheet href=x.css>\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"},
 		// Nor a </head>, which would stand in for page.html's, before which floe puts the page's styles.
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <svg><!-- </HEAD> -->\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a </head>"},
@@ -236,6 +236,12 @@ func TestReadRefusals(t *testing.T) {
 		if !errors.As(err, &one) && !errors.As(err, &all) || !strings.HasPrefix(err.Error(), c.want) {
 			t.Errorf("Read %q = %v, want %s", c.src, err, c.want)
 		}
+	}
+	// The <style> of the item after one left open is told too, beside it.
+	src := "template: report\nlang: en\nsections:\n  - parts:\n      - html: <a title=\"\n      - html: <b title='\"><style>p{}</style>'>\n"
+	if _, err := builtins.Read("data.yaml", []byte(src), tmpl.Themes{}, ""); err == nil ||
+		!strings.Contains(err.Error(), "\ndata.yaml:6:15: sections[0].parts[1].html: HTML holds a <style> or a <link>") {
+		t.Errorf("Read of two items = %v", err)
 	}
 	// An empty file misses both keys every data file needs.
 	if _, err := builtins.Read("data.yaml", nil, tmpl.Themes{}, ""); err == nil || !strings.Contains(err.Error(), "\ndata.yaml:1:1: name the template at the top level") {
