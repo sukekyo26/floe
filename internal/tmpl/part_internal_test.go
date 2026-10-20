@@ -43,7 +43,7 @@ func TestPalette(t *testing.T) {
 			t.Errorf("the HTML of the part %s is not its box, data-floe-part=%q", name, name)
 		}
 		for _, other := range namedParts(p.html) {
-			if _, ok := set.parts[other.name]; !ok || other.several() {
+			if _, ok := set.parts[other.name]; !ok || other.notOne() {
 				t.Errorf("the HTML of the part %s names %s, which is no part, or data-floe-part=%q", name, other.name, other.value)
 			}
 		}
@@ -57,7 +57,7 @@ func TestPalette(t *testing.T) {
 	if looks := set.looksOf("risks"); !slices.Equal(looks, []string{"table", "panel"}) {
 		t.Errorf("the looks of risks = %v", looks)
 	}
-	if !set.parts["panel"].look || set.parts["panel"].css == "" || set.parts["panel"].about == "" {
+	if !set.parts["panel"].look || set.parts["panel"].css == "" {
 		t.Errorf("the look panel = %+v", set.parts["panel"])
 	}
 	// compare is drawn in the table's look, so a theme for it is warned of the table's variables too, and

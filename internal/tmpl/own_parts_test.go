@@ -90,7 +90,6 @@ func TestOwnParts(t *testing.T) {
 	looked := quote("boxed")
 	looked["boxed/part.yaml"] = "looks: [rows, shaded]\n"
 	looked["shaded/part.css"] = "/* a look of one's own */\n"
-	looked["shaded/part.yaml"] = "description: Shaded\n"
 	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/boxed.json"}, "aside": {"type": "string"}`), ownParts(t, looked), "")
 	if page, err = draw(l, "template: memo\nlang: en\nrisks: { text: Hi }\n"); err != nil {
 		t.Fatal(err)
@@ -151,10 +150,11 @@ func TestBrokenOwnParts(t *testing.T) {
 		"keyed/part.html":      `<div data-floe-part="keyed"></div>`,
 		"keyed/part.css":       "",
 		"keyed/part.yaml":      "lookz: [panel]\n",
-		"told/schema.json":     `{"type": "object"}`,
-		"told/part.html":       `<div data-floe-part="told"></div>`,
-		"told/part.css":        "",
-		"told/part.yaml":       "description: Told\n",
+		"boxlook/schema.json":  `{"type": "object"}`,
+		"boxlook/part.html":    `<div data-floe-part="boxlook"><i data-floe-part="panel"></i></div>`,
+		"boxlook/part.css":     "",
+		"halfway/part.yaml":    "looks: [panel]\n",
+		"halfway/part.html":    `<div data-floe-part="halfway"></div>`,
 		"base/schema.json":     `{"type": "object"}`,
 		"diagram/schema.json":  `{"type": "object"}`,
 		"code/schema.json":     `{"type": "object"}`,
@@ -198,14 +198,16 @@ func TestBrokenOwnParts(t *testing.T) {
 		"holder": "the part holder cannot be used: " + filepath.Join(parts, "holder", "schema.json") +
 			": the part refers to floe:///parts/panel.json, a look",
 		"keyed": "the part keyed cannot be used: " + filepath.Join(parts, "keyed", "part.yaml") + ":1:1: lookz is not a key of part.yaml",
-		"told": "the part told cannot be used: " + filepath.Join(parts, "told", "part.yaml") +
-			":1:1: a part tells what it is in its schema.json's description",
+		"boxlook": "the part boxlook cannot be used: " + filepath.Join(parts, "boxlook", "part.html") +
+			":1: data-floe-part names the look panel, which has no box",
+		"halfway": "the part halfway cannot be used: " + filepath.Join(parts, "halfway") +
+			": a part holds schema.json, part.html and part.css",
 		"code":     "the part code cannot be used: " + filepath.Join(parts, "code", "part.css") + ":1: this } closes no block",
 		"diff":     "the part diff cannot be used: it names the part code, or takes its look, which cannot be used",
 		"terminal": "the part terminal cannot be used: it names the part code, or takes its look, which cannot be used",
 		"pong":     "the part pong cannot be used: it holds the part ping, which cannot be used",
 		"first": "the part first cannot be used: " + filepath.Join(parts, "first", "part.html") +
-			`:1: data-floe-part="cards first" names more than one part`,
+			`:1: data-floe-part="cards first" is not the name of one part`,
 		"spaced": "the part spaced cannot be used: " + filepath.Join(parts, "spaced", "part.html") +
 			`: no element of the part spaced is its box, data-floe-part="spaced"`,
 		"typo": "the part typo cannot be used: " + filepath.Join(parts, "typo", "schema.json") +

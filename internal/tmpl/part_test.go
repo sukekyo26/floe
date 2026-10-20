@@ -261,6 +261,16 @@ func TestPartStylesByClass(t *testing.T) {
 	if strings.Contains(page, "@layer floe.parts {\n@scope") {
 		t.Errorf("a page of HTML in the table's look has a part's box:\n%s", page)
 	}
+	// HTML of the data whose data-floe-part is not one name, or names a look, which has no box, is refused.
+	for html, want := range map[string]string{
+		`<div data-floe-part="table compare">x</div>`: `the page has data-floe-part="table compare", which is not the name of one part`,
+		`<div data-floe-part="panel">x</div>`:         `the page has data-floe-part="panel", but panel is a look`,
+	} {
+		_, err := draw(tmpl.NewLibrary("", "", ""), "template: report\nlang: en\nsections:\n  - parts:\n      - html: '"+html+"'\n")
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("drawing HTML of %s = %v, want %s", html, err, want)
+		}
+	}
 	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"good\" data-floe-part=\"cell\">ok</span>\n")
 	if strings.Count(page, partStyle(t, "cell")) != 1 || strings.Contains(page, partStyle(t, "note")) {
 		t.Errorf("a page of a pill in HTML:\n%s", page)
@@ -533,7 +543,7 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 func TestLookRefused(t *testing.T) {
 	t.Parallel()
 
-	dir := memo(t, `"risks": {"$ref": "floe:///parts/panel.json"}, "aside": {"$ref": "floe:///parts/rowz.json"}`)
+	dir := memo(t, `"risks": {"$ref": "floe:///parts/panel.json"}, "aside": {"type": "string"}`)
 	_, mistakes := tmpl.Check(filepath.Join(dir, "memo"), "", "")
 	got := fmt.Sprint(mistakes)
 	if !strings.Contains(got, "floe:///parts/panel.json is the look panel, which draws nothing") {

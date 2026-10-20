@@ -52,7 +52,7 @@ func (set *partSet) readPartsTheme(files fs.FS, dir string, t *partsTheme) error
 		if !set.themeFile(name) {
 			// Warned of, the theme used all the same: a file of a part since removed would stop every page.
 			set.strays = append(set.strays, usererr.New("tmpl_parts_theme_file", path.Join(dir, e.Name()),
-				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")))
+				set.names()))
 			continue
 		}
 		css, err := fs.ReadFile(files, e.Name())

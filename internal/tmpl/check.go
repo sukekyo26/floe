@@ -185,20 +185,23 @@ func (t *Template) checkNamedParts(src []byte) []error {
 		return []error{err}
 	}
 	var mistakes []error
-	told := map[int]bool{} // the attributes of several names told, by where each is
+	told := map[int]bool{} // the attributes not of one name told, by where each is
 	for _, n := range namedParts(string(src)) {
-		switch _, ok := set.parts[n.name]; {
-		case n.several():
+		line := lineAt(src, n.at)
+		p, ok := set.parts[n.name]
+		switch {
+		case n.notOne():
 			if !told[n.at] {
 				told[n.at] = true
-				mistakes = append(mistakes, usererr.New("tmpl_part_several", t.file("page.html"), lineAt(src, n.at), n.value))
+				mistakes = append(mistakes, usererr.New("tmpl_part_several", t.file("page.html"), line, n.value))
 			}
+		case ok && !n.look && p.look:
+			mistakes = append(mistakes, usererr.New("tmpl_look_box", t.file("page.html"), line, n.name, n.name))
 		case ok:
 		case set.broken[n.name] != nil:
 			mistakes = append(mistakes, usererr.New("tmpl_part_broken", n.name, set.broken[n.name]))
 		default:
-			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), lineAt(src, n.at), n.name,
-				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")))
+			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), line, n.name, set.names()))
 		}
 	}
 	return mistakes

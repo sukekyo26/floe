@@ -215,8 +215,12 @@ func (set *partSet) checkNames(name, dir string) error {
 	}
 	for _, n := range namedParts(p.html) {
 		line := lineAt([]byte(p.html), n.at)
-		if dir != "" && n.several() {
+		switch {
+		case dir == "":
+		case n.notOne():
 			return usererr.New("tmpl_part_several", html, line, n.value)
+		case !n.look && set.parts[n.name] != nil && set.parts[n.name].look:
+			return usererr.New("tmpl_look_box", html, line, n.name, n.name)
 		}
 		if err := set.lend(n.name, html, line); err != nil {
 			return err
@@ -257,7 +261,12 @@ func (set *partSet) lend(name, file string, line int) error {
 	case set.broken[name] != nil:
 		return usererr.New("tmpl_part_lender_broken", name)
 	}
-	return usererr.New("tmpl_part_names", file, line, name, strings.Join(slices.Sorted(maps.Keys(set.parts)), ", "))
+	return usererr.New("tmpl_part_names", file, line, name, set.names())
+}
+
+// names lists the parts of set by name.
+func (set *partSet) names() string {
+	return strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")
 }
 
 // drawnNames lists the parts of set that a schema can refer to, those that draw, by name: a look alone

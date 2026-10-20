@@ -325,7 +325,7 @@ func TestTemplateCSSAndParts(t *testing.T) {
 		"page.css":           "/* not :root */\n:scope { --fg: #000; }\nb { background: url(html.svg); animation: html 1s; }\n:root .lead, a { color: red; }\n",
 		"themes/default.css": "body { font-family: sans-serif; }\nhtml{ color: red; }\n",
 		"page.html": "<body>|<body><span\n" + `data-floe-look="cell nope"></span><b data-floe-part="cell note"></b>` +
-			`<i data-floe-part="{{"cell"}}"></i>`,
+			`<u data-floe-part=" cell"></u><s data-floe-part="panel"></s><i data-floe-part="{{"cell"}}"></i>`,
 	})
 	_, mistakes := tmpl.Check(dir, "", "")
 	got := make([]string, 0, len(mistakes))
@@ -336,7 +336,9 @@ func TestTemplateCSSAndParts(t *testing.T) {
 		"page.css:4: write the root as :scope, not :root",
 		filepath.Join("themes", "default.css") + ":2: write the root as :scope, not html",
 		"page.html:5: page.html names the part nope, which there is none of; use bars, ",
-		`page.html:5: data-floe-part="cell note" names more than one part`,
+		`page.html:5: data-floe-part="cell note" is not the name of one part`,
+		`page.html:5: data-floe-part=" cell" is not the name of one part`,
+		"page.html:5: data-floe-part names the look panel, which has no box",
 	}
 	if len(got) != len(want) {
 		t.Fatalf("Check = %q, want %q", got, want)
