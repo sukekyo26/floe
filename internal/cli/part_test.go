@@ -58,3 +58,29 @@ items:
 		}
 	}
 }
+
+// floe part new tells where the copy is, what of floe's it takes the place of, and the files of the parts
+// themes it copied.
+func TestPartNew(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	parts := filepath.Join(e.tmp, "parts")
+	e.vars["FLOE_PARTS_DIR"] = parts
+	if r := e.run(t, "", "part", "new", "note", "--from", "note"); r.code != 0 || r.stdout != "made the part note in "+filepath.Join(parts, "note")+", a copy of floe's note\n"+
+		"it takes the place of floe's note\n"+
+		"copied the files of its parts themes too: blueprint, brutal, default, editorial, ink, notebook, swiss, washi ("+filepath.Join(parts, "themes")+"/<theme>/note.css)\n" {
+		t.Errorf("part new in place of floe's = %+v", r)
+	}
+	e.vars["FLOE_LANG"] = "ja"
+	if r := e.run(t, "", "part", "new", "aside", "--from", "note"); r.code != 0 || !strings.HasPrefix(r.stdout, "部品 aside を "+filepath.Join(parts, "aside")+" に作りました（note の写し）\n部品のテーマのファイルも写しました: ") {
+		t.Errorf("part new of one's own = %+v", r)
+	}
+	delete(e.vars, "FLOE_LANG")
+	if r := e.run(t, "", "part", "new", "aside"); r.code != 2 || !strings.Contains(r.stderr, "name the part to copy with --from") {
+		t.Errorf("part new without --from = %+v", r)
+	}
+	if r := e.run(t, "", "part", "new", "aside", "--from", "note"); r.code != 1 || !strings.Contains(r.stderr, "aside is there already") {
+		t.Errorf("part new of a name there already = %+v", r)
+	}
+}

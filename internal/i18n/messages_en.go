@@ -186,7 +186,7 @@ var messagesEN = map[string]string{
 	"cli_part_made":                "made the part %s in %s, a copy of %s",
 	"cli_part_floes":               "floe's %s",
 	"cli_part_replaces":            "it takes the place of floe's %s",
-	"cli_part_themes_copied":       "copied the files of its parts themes too: %s (%s)",
+	"cli_part_themes_copied":       "copied the files of its parts themes too: %[1]s (%[2]s/<theme>/%[3]s.css)",
 	"cli_check_not_data":           "%s is not a data file (.yaml or .yml)",
 	"cli_render_same_file":         "%s and %s would both write %s; rename one of them",
 	"cli_render_same_file_case":    "%s and %s would write %s and %s, which are one file where case is ignored (macOS); rename one of them",

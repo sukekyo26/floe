@@ -1,6 +1,8 @@
 package tmpl_test
 
 import (
+	"cmp"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -110,5 +112,115 @@ func TestDescribeParts(t *testing.T) {
 		if _, err := l.DescribePart(name); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("describing %s = %v", name, err)
 		}
+	}
+}
+
+// NewPart copies a part, floe's or one's own, and the files of the parts themes for it: the copy names
+// itself as its box, takes the looks the original takes, and draws as it does; one of the name of floe's
+// takes its place, and every page draws as before.
+func TestNewPart(t *testing.T) {
+	t.Parallel()
+
+	themes := []string{"blueprint", "brutal", "default", "editorial", "ink", "notebook", "swiss", "washi"}
+	parts := filepath.Join(t.TempDir(), "parts")
+	l := tmpl.NewLibrary("", parts, "")
+	made, err := l.NewPart("grid", "table")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if made.At != filepath.Join(parts, "grid") || !made.Builtin || made.Replaces || !slices.Equal(made.Themes, themes) ||
+		made.ThemesAt != filepath.Join(parts, "themes") {
+		t.Errorf("made = %+v", made)
+	}
+	html, err := os.ReadFile(filepath.Join(parts, "grid", "part.html"))
+	if err != nil || !strings.Contains(string(html), `data-floe-part="grid"`) || strings.Contains(string(html), `data-floe-part="table"`) {
+		t.Errorf("the copy's part.html = %s, %v", html, err)
+	}
+	if b, rerr := os.ReadFile(filepath.Join(parts, "grid", "part.yaml")); rerr != nil || string(b) != "looks: [panel]\n" {
+		t.Errorf("the copy's part.yaml = %q, %v", b, rerr)
+	}
+	for _, theme := range themes {
+		got, gerr := os.ReadFile(filepath.Join(parts, "themes", theme, "grid.css"))
+		want, werr := os.ReadFile(filepath.Join("parts", "themes", theme, "table.css"))
+		if gerr != nil || werr != nil || string(got) != string(want) {
+			t.Errorf("%s/grid.css = %v, %v: not a copy of table.css", theme, gerr, werr)
+		}
+	}
+	// A copy of one's own, and a copy that takes the place of floe's.
+	if made, err = l.NewPart("grid2", "grid"); err != nil || made.Builtin || made.Replaces || !slices.Equal(made.Themes, themes) {
+		t.Errorf("a copy of one's own = %+v, %v", made, err)
+	}
+	memo := memo(t, `"risks": {"$ref": "floe:///parts/terminal.json"}, "aside": {"$ref": "floe:///parts/code.json"}`)
+	pages := map[string]string{}
+	for _, theme := range themes {
+		src := "template: memo\nlang: en\nparts-theme: " + theme + "\nrisks: { steps: [{ run: ls }] }\naside: { text: x }\n"
+		if pages[theme], err = draw(tmpl.NewLibrary(memo, "", ""), src); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if made, err = l.NewPart("code", "code"); err != nil || !made.Replaces {
+		t.Fatalf("a copy in place of floe's = %+v, %v", made, err)
+	}
+	for _, theme := range themes {
+		src := "template: memo\nlang: en\nparts-theme: " + theme + "\nrisks: { steps: [{ run: ls }] }\naside: { text: x }\n"
+		if page, err := draw(tmpl.NewLibrary(memo, parts, ""), src); err != nil || page != pages[theme] {
+			t.Errorf("%s: the page drawn with the copy of code = %v:\n%s\nnot as with floe's:\n%s", theme, err, page, pages[theme])
+		}
+	}
+	if d, err := l.DescribePart("code"); err != nil || d.Path != filepath.Join(parts, "code") || !slices.Equal(d.Themes, themes) {
+		t.Errorf("the copy of code = %+v, %v", d, err)
+	}
+	if _, broken, err := l.Parts(); err != nil || broken != nil {
+		t.Errorf("the parts made = %v, %v", broken, err)
+	}
+}
+
+// NewPart refuses a name a part cannot take, one there is already, a part with nothing to copy, and a
+// file of a parts theme there already, leaving nothing.
+func TestNewPartRefused(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"quote/part.html":           "",
+		"themes/washi/details2.css": "",
+	})
+	l := tmpl.NewLibrary("", parts, "")
+	for _, c := range []struct{ name, from, want string }{
+		{"Grid", "table", "Grid cannot name a part"},
+		{"a/b", "table", "a/b cannot name a part"},
+		{"diagram", "table", "cannot be named diagram"},
+		{"script", "table", "cannot be named script"},
+		{"tone", "table", "cannot be named tone"},
+		{"base", "table", "cannot be named base"},
+		{"themes", "table", "cannot be named themes"},
+		{"grid", "diagram", "floe draws the part diagram in Go"},
+		{"grid", "quote", "the part quote cannot be used"},
+		{"grid", "nope", `unknown part "nope"`},
+		{"quote", "table", "quote is there already"},
+		{"details2", "details", "the parts themes have a file of the part details2 already: " + filepath.Join(parts, "themes", "washi", "details2.css")},
+	} {
+		if _, err := l.NewPart(c.name, c.from); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("NewPart(%s, %s) = %v", c.name, c.from, err)
+		}
+	}
+	// A theme that cannot be written leaves nothing, the files written before it included.
+	if err := os.WriteFile(filepath.Join(parts, "themes", "ink"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := l.NewPart("grid", "table"); err == nil || !strings.Contains(err.Error(), filepath.Join(parts, "themes", "ink", "grid.css")+" cannot be written") {
+		t.Errorf("NewPart with a theme that cannot be written = %v", err)
+	}
+	var left []string
+	err := filepath.WalkDir(parts, func(at string, _ os.DirEntry, err error) error {
+		rel, rerr := filepath.Rel(parts, at)
+		left = append(left, rel)
+		return cmp.Or(err, rerr)
+	})
+	if want := []string{".", "quote", "quote/part.html", "themes", "themes/ink", "themes/washi", "themes/washi/details2.css"}; err != nil ||
+		!slices.Equal(left, want) {
+		t.Errorf("left = %v, %v", left, err)
+	}
+	if _, err := tmpl.NewLibrary("", "", "").NewPart("grid", "table"); err == nil || !strings.Contains(err.Error(), "FLOE_PARTS_DIR") {
+		t.Errorf("NewPart without a directory of parts = %v", err)
 	}
 }

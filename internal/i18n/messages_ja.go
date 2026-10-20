@@ -185,7 +185,7 @@ var messagesJA = map[string]string{
 	"cli_part_made":                "部品 %s を %s に作りました（%s の写し）",
 	"cli_part_floes":               "floe の %s",
 	"cli_part_replaces":            "floe の %s に代わります",
-	"cli_part_themes_copied":       "部品のテーマのファイルも写しました: %s（%s）",
+	"cli_part_themes_copied":       "部品のテーマのファイルも写しました: %[1]s（%[2]s/<テーマ>/%[3]s.css）",
 	"cli_check_not_data":           "%s はデータファイル（.yaml か .yml）ではありません",
 	"cli_render_same_file":         "%s と %s が同じ %s に書き出します。どちらかの名前を変えてください",
 	"cli_render_same_file_case":    "%s と %s は %s と %s に書き出します。大文字小文字を区別しない所（macOS）では同じファイルなので、どちらかの名前を変えてください",

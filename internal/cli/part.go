@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/tmpl"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 func (a *app) partCmd() *cobra.Command {
@@ -18,7 +19,7 @@ func (a *app) partCmd() *cobra.Command {
 			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	}
-	cmd.AddCommand(a.partListCmd(), a.partShowCmd())
+	cmd.AddCommand(a.partListCmd(), a.partShowCmd(), a.partNewCmd())
 	return cmd
 }
 
@@ -96,4 +97,41 @@ func (a *app) showPart(d *tmpl.PartDescription) {
 		a.say("cli_template_items")
 		a.showItems(d.Takes.Items, "  ")
 	}
+}
+
+func (a *app) partNewCmd() *cobra.Command {
+	var from string
+	cmd := &cobra.Command{
+		Use:   "new <name> --from <part>",
+		Short: "Make a part of your own as a copy of another, to edit",
+		Long: `Make a part of your own in $FLOE_PARTS_DIR/<name> as a copy of another part, floe's or your
+own, to edit, and copy the file of that part of each parts theme that has one into
+$FLOE_PARTS_DIR/themes/<theme>/<name>.css. The copy's part.html names it as its box. Nothing is
+written over: with a part of that name, or a file of a parts theme for it, nothing is made. A copy
+named like one of floe's parts takes its place.`,
+		Args: usage(cobra.ExactArgs(1)),
+		RunE: func(_ *cobra.Command, args []string) error {
+			if from == "" {
+				return usageError{err: usererr.New("cli_part_no_from")}
+			}
+			made, err := a.templates().NewPart(args[0], from)
+			if err != nil {
+				return err //nolint:wrapcheck // already says what failed
+			}
+			original := from
+			if made.Builtin {
+				original = a.cat.Msg("cli_part_floes", from)
+			}
+			a.say("cli_part_made", args[0], made.At, original)
+			if made.Replaces {
+				a.say("cli_part_replaces", args[0])
+			}
+			if made.Themes != nil {
+				a.say("cli_part_themes_copied", strings.Join(made.Themes, ", "), made.ThemesAt, args[0])
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&from, "from", "", "the part to copy (required)")
+	return cmd
 }
