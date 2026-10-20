@@ -595,7 +595,7 @@ func (l *schemaLint) part(ref, ptr string, reached bool) bool {
 		}
 		return false
 	case set.parts[name] == nil:
-		if !reached && set.shared(ref).draws() {
+		if !reached && set.draws(set.sharedSchema(ref)) {
 			l.mistakes = append(l.mistakes, usererr.New("tmpl_shared_unreached", l.file, ptr, ref))
 		}
 		return false

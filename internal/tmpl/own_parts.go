@@ -249,7 +249,7 @@ func (set *partSet) keepDir(dir string) {
 // reserved reports whether a part of one's own cannot be named name: a part floe draws in Go, a schema
 // the parts share (tone, any), or a file of a parts theme that is no part's (base, palette).
 func (set *partSet) reserved(name string) bool {
-	return isGoPart(name) || set.shared(partsURL+name+".json") != nil || name == themeBase || name == themePalette
+	return isGoPart(name) || set.shares[partsURL+name+".json"] || name == themeBase || name == themePalette
 }
 
 // checkNames refuses the part name, whose directory is dir, when its part.html names it in no
