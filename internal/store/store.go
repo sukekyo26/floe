@@ -326,7 +326,10 @@ func stamp(sources tmpl.Sources) string {
 	for _, dir := range sources.Parts {
 		addTree(dir, add, note)
 	}
-	for _, file := range slices.Concat(sources.Images, sources.Icons) {
+	for _, name := range sources.Images {
+		add(filepath.Join(sources.ImagesDir, filepath.FromSlash(name)))
+	}
+	for _, file := range sources.Icons {
 		add(file)
 	}
 	return strconv.FormatUint(h.Sum64(), 36)

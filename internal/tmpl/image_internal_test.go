@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"testing/fstest"
 )
 
 // An image is taken only under its directory, by a name of its type, holding what the name says and
@@ -114,7 +115,7 @@ func TestCheckImages(t *testing.T) {
 		t.Fatal(err)
 	}
 	d, root := data(t, "pics:\n  - a.png\n  - none.png\n  - a.png\n  - none.png\n")
-	err = checkImages(s, d, root, dir)
+	err = checkImages(s, d, root, diskImages(dir))
 	want := "d.yaml:3:5: pics[1]: there is no image \"none.png\" under " + dir + "\n" +
 		"d.yaml:5:5: pics[3]: there is no image \"none.png\" under " + dir
 	if err == nil || err.Error() != want {
@@ -154,10 +155,44 @@ func TestTriedImages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir := t.TempDir()
 	d, root := data(t, "pics: [a.png, ../b.png, a.png, .c.png]\n")
-	_ = checkImages(s, d, root, dir) //nolint:errcheck // the images are missing; what was tried is the point
-	if want := []string{filepath.Join(dir, "a.png")}; !slices.Equal(d.tried, want) {
+	_ = checkImages(s, d, root, diskImages(t.TempDir())) //nolint:errcheck // the images are missing; what was tried is the point
+	if want := []string{"a.png"}; !slices.Equal(d.tried, want) {
 		t.Errorf("tried = %v, want %v", d.tried, want)
+	}
+}
+
+// Images are read from any fs.FS, as a server reads those a publish sent: its mistakes name the
+// directory given, and ReadImage refuses what the check refuses.
+func TestImagesFromFS(t *testing.T) {
+	t.Parallel()
+
+	png, err := os.ReadFile("testdata/sizes/chart.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := fstest.MapFS{"sub/a.png": {Data: png}}
+	s, err := decodeSchema([]byte(`{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, root := data(t, "pics: [sub/a.png, none.png]\n")
+	err = checkImages(s, d, root, fsImages(files, "/plans"))
+	if want := `d.yaml:1:19: pics[1]: there is no image "none.png" under /plans`; err == nil || err.Error() != want {
+		t.Errorf("checkImages = %v\nwant %s", err, want)
+	}
+	if _, ok := d.images["sub/a.png"]; !ok {
+		t.Errorf("the images = %v, want sub/a.png", d.images)
+	}
+	if b, err := ReadImage(files, "sub/a.png", "/plans"); err != nil || !bytes.Equal(b, png) {
+		t.Errorf("ReadImage(sub/a.png) = %d bytes, %v", len(b), err)
+	}
+	if _, err := ReadImage(files, "data.yaml/../a.png", "/plans"); err == nil || !strings.Contains(err.Error(), "without ..") {
+		t.Errorf("ReadImage(data.yaml/../a.png) = %v, want the path refused", err)
+	}
+	for _, name := range []string{"../a.png", ".a.png", "sub/a.txt", "none.png", "Data.yaml/a.png"} {
+		if _, err := ReadImage(files, name, "/plans"); err == nil {
+			t.Errorf("ReadImage(%s) = nil error", name)
+		}
 	}
 }
