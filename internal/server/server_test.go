@@ -247,7 +247,7 @@ func TestManagementPageAndFrame(t *testing.T) {
 	for _, target := range []string{"/", "/a/untitled/"} {
 		r := e.get(t, target)
 		if r.status != http.StatusOK || !strings.Contains(r.body, "<title>floe</title>") ||
-			r.header.Get("Content-Security-Policy") != "frame-ancestors 'self'" {
+			r.header.Get("Content-Security-Policy") != "frame-ancestors 'self' vscode-webview: vscode-file:" {
 			t.Errorf("GET %s = %d, CSP %q", target, r.status, r.header.Get("Content-Security-Policy"))
 		}
 		if !strings.Contains(r.body, `<html lang="en">`) {
@@ -259,7 +259,7 @@ func TestManagementPageAndFrame(t *testing.T) {
 		}
 	}
 	if r := e.get(t, "/a/no-such/"); r.status != http.StatusNotFound || !strings.Contains(r.body, `id="notfound"`) ||
-		r.header.Get("Content-Security-Policy") != "frame-ancestors 'self'" {
+		r.header.Get("Content-Security-Policy") != "frame-ancestors 'self' vscode-webview: vscode-file:" {
 		t.Errorf("an unknown page URL = %d, CSP %q, want the frame with 404", r.status, r.header.Get("Content-Security-Policy"))
 	}
 	if r := e.get(t, "/a/untitled"); r.status != http.StatusMovedPermanently || r.header.Get("Location") != "/a/untitled/" {

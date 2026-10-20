@@ -24,10 +24,12 @@ const (
 	// allow-popups-to-escape-sandbox: a site opened in a new tab does not inherit the sandbox (it has no
 	// opener, so it cannot reach the API either).
 	pageCSP = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"
-	// Only the management page itself may frame it, so another site cannot lay it under its own buttons
-	// and have its delete clicked (clickjacking). A page's frame moved to the management page shows it
-	// nested. (A page that frames it frames it in the sandbox it hands down, whose API calls are refused.)
-	uiCSP = "frame-ancestors 'self'"
+	// Only the management page itself and VS Code may frame it, so another site cannot lay it under its
+	// own buttons and have its delete clicked (clickjacking). A page's frame moved to the management page
+	// shows it nested. (A page that frames it frames it in the sandbox it hands down, whose API calls are
+	// refused.) VS Code's Simple Browser frames it in a webview of the workbench, and frame-ancestors
+	// checks every ancestor: those two. An extension that could frame it so runs on the machine anyway.
+	uiCSP = "frame-ancestors 'self' vscode-webview: vscode-file:"
 )
 
 // types are the files served from a link's directory. The registered file itself is HTML whatever its
