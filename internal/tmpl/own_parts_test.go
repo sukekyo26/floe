@@ -407,3 +407,17 @@ func TestBrokenPartInPage(t *testing.T) {
 		t.Errorf("Check = %v, want %s", warnings, want)
 	}
 }
+
+// A look alone of one's own cannot take the place of one of floe's that draws, which Markdown's tables,
+// floe's other parts and templates draw by: it is refused, with what to do, and floe's is not used either.
+func TestLookReplacesDrawing(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{"table/part.css": ":scope { color: red; }\n"})
+	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/table.json"}, "aside": {"type": "string"}`), parts, "")
+	_, err := draw(l, "template: memo\nlang: en\nrisks: { columns: [{title: A}], rows: [[x]] }\n")
+	want := "the part table cannot be used: " + filepath.Join(parts, "table") + ": a look alone cannot take the place of floe's part table"
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("drawing a table with a look alone named table = %v, want %s", err, want)
+	}
+}

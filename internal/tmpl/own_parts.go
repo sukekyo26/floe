@@ -70,10 +70,13 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry) error {
 func (set *partSet) leaveOutUnusable(own map[string]string) {
 	held := func(at string) []string { return set.schemas[partsURL+at+".json"].refsUnder(nil) }
 	looks := func(at string) []string {
+		var names []string
 		if p := set.parts[at]; p != nil {
-			return p.looks
+			for _, look := range p.looks {
+				names = append(names, look.name)
+			}
 		}
-		return nil
+		return names
 	}
 	for _, name := range slices.Sorted(maps.Keys(own)) {
 		if chain := cycle(name, held); chain != nil {
@@ -99,7 +102,8 @@ func (set *partSet) leaveOutUnusable(own map[string]string) {
 // readOwnPart reads the part name of one's own in the directory at into set, a symlink followed, and
 // one in it that leads out of it refused, and reports whether it read it and whether it took the place
 // of floe's of the name. One that cannot be used is kept in set.broken, and one of a name set keeps
-// leaves floe's in place.
+// leaves floe's in place. A look alone cannot take the place of one that draws, which floe's other parts,
+// Markdown's tables and templates draw by.
 func (set *partSet) readOwnPart(name, at string) (read, replaces bool) {
 	dir, err := set.ownEntry(name, at)
 	switch {
@@ -110,10 +114,14 @@ func (set *partSet) readOwnPart(name, at string) (read, replaces bool) {
 		set.broken[name] = usererr.New("tmpl_part_name", at, name)
 		return false, false
 	}
-	replaces = set.parts[name] != nil
+	floe := set.parts[name]
+	replaces = floe != nil
 	set.drop(name)
 	if err == nil {
 		err = readIn(dir, func(files fs.FS) error { return set.readPart(files, name, at) })
+	}
+	if err == nil && replaces && !floe.look && set.parts[name].look {
+		err = usererr.New("tmpl_look_replaces", at, name)
 	}
 	if err != nil {
 		set.leaveOut(name, err)
@@ -210,28 +218,71 @@ func (set *partSet) checkNames(name, dir string) error {
 	// floe's are named as reading them names them.
 	at := cmp.Or(dir, path.Join("parts", name))
 	html, yaml := path.Join(at, "part.html"), path.Join(at, "part.yaml")
-	if dir != "" && !p.look && !namesItself(p.html, name) {
+	named := namedParts(p.html)
+	if dir != "" && !p.look && !namesItself(named, name) {
 		return usererr.New("tmpl_part_unnamed", html, name, name)
 	}
-	for _, n := range namedParts(p.html) {
+	for _, n := range named {
 		line := lineAt([]byte(p.html), n.at)
-		switch {
-		case dir == "":
-		case n.notOne():
+		switch kind := set.misnamed(n); {
+		case dir != "" && kind == nameNotOne:
 			return usererr.New("tmpl_part_several", html, line, n.value)
-		case !n.look && set.parts[n.name] != nil && set.parts[n.name].look:
+		case dir != "" && kind == nameLookBox:
 			return usererr.New("tmpl_look_box", html, line, n.name, n.name)
-		}
-		if err := set.lend(n.name, html, line); err != nil {
-			return err
+		default:
+			if err := set.unlent(kind, n.name, html, line); err != nil {
+				return err
+			}
 		}
 	}
-	for i, look := range p.looks {
-		if err := set.lend(look, yaml, p.looksAt[i]); err != nil {
+	for _, look := range p.looks {
+		kind := set.misnamed(namedPart{name: look.name, value: look.name, look: true, at: 0})
+		if err := set.unlent(kind, look.name, yaml, look.line); err != nil {
 			return err
 		}
 	}
 	return set.checkHeld(p, at, dir != "")
+}
+
+// nameKind is what a name an attribute gives is to a part set.
+type nameKind int
+
+const (
+	nameRight   nameKind = iota // a part's, as the attribute names it
+	nameNotOne                  // of a data-floe-part not of one name as written
+	nameLookBox                 // of a data-floe-part that names a look alone, which has no box
+	nameBroken                  // a part's that cannot be used
+	nameUnknown                 // no part's
+)
+
+// misnamed tells what the name n is to set: the checks of a part's HTML, of a template's page.html and
+// of a page drawn tell each kind in their own words.
+func (set *partSet) misnamed(n namedPart) nameKind {
+	p := set.parts[n.name]
+	switch {
+	case n.notOne():
+		return nameNotOne
+	case p == nil && set.broken[n.name] != nil:
+		return nameBroken
+	case p == nil:
+		return nameUnknown
+	case !n.look && p.look:
+		return nameLookBox
+	}
+	return nameRight
+}
+
+// unlent refuses name, a part another takes the look of, or names in file at line, by kind, what it is
+// to set: a part there is none of, or one that cannot be used.
+func (set *partSet) unlent(kind nameKind, name, file string, line int) error {
+	switch kind {
+	case nameBroken:
+		return usererr.New("tmpl_part_lender_broken", name)
+	case nameUnknown:
+		return usererr.New("tmpl_part_names", file, line, name, set.names(nil))
+	case nameRight, nameNotOne, nameLookBox:
+	}
+	return nil
 }
 
 // checkHeld refuses the part p, whose files are at at, when its schema holds a part there is none of, of
@@ -246,45 +297,32 @@ func (set *partSet) checkHeld(p *part, at string, own bool) error {
 		case set.parts[held] != nil && set.parts[held].look:
 			return usererr.New("tmpl_part_holds_look", path.Join(at, "schema.json"), held)
 		case own:
-			return usererr.New("tmpl_part_holds_unknown", path.Join(at, "schema.json"), held, set.drawnNames())
+			return usererr.New("tmpl_part_holds_unknown", path.Join(at, "schema.json"), held, set.names(drawing))
 		}
 	}
 	return nil
 }
 
-// lend refuses name, a part another takes the look of, or names in file at line, when set has none of
-// it, or it cannot be used.
-func (set *partSet) lend(name, file string, line int) error {
-	switch _, ok := set.parts[name]; {
-	case ok:
-		return nil
-	case set.broken[name] != nil:
-		return usererr.New("tmpl_part_lender_broken", name)
-	}
-	return usererr.New("tmpl_part_names", file, line, name, set.names())
-}
-
-// names lists the parts of set by name.
-func (set *partSet) names() string {
-	return strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")
-}
-
-// drawnNames lists the parts of set that a schema can refer to, those that draw, by name: a look alone
-// draws nothing.
-func (set *partSet) drawnNames() string {
+// names lists the parts of set that keep keeps, every one for nil, by name.
+func (set *partSet) names(keep func(*part) bool) string {
 	var names []string
 	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-		if !set.parts[name].look {
+		if keep == nil || keep(set.parts[name]) {
 			names = append(names, name)
 		}
 	}
 	return strings.Join(names, ", ")
 }
 
-// namesItself reports whether an element of html, the HTML of the part name, is the part's box: its
-// data-floe-part is name.
-func namesItself(html, name string) bool {
-	for _, n := range namedParts(html) {
+// drawing keeps the parts that draw, which a schema can refer to: a look alone draws nothing.
+func drawing(p *part) bool {
+	return !p.look
+}
+
+// namesItself reports whether an element of a part's HTML, whose names are named, is the box of the part
+// name: its data-floe-part is name.
+func namesItself(named []namedPart, name string) bool {
+	for _, n := range named {
 		if !n.look && n.value == name {
 			return true
 		}

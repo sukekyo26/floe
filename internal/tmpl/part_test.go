@@ -71,7 +71,7 @@ func TestPartsInOwnTemplate(t *testing.T) {
 	// takes the look of, the table, soft's base.css, the template's theme.
 	at := func(s string) int { return strings.Index(head, s) }
 	order := []int{
-		at("<style>\n@layer floe.base, floe.page, floe.looks, floe.parts;\n@layer floe.base {\n"),
+		at("<style>\n@layer floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n"),
 		at(partStyle(t, "table") + "}\n</style>\n"),
 		at("<style>\n@layer floe.parts {\n/* Faces with round corners"), at("</style>\n<style>\n@layer floe.page {\n"),
 		at(":scope { --fg: #000; }"),

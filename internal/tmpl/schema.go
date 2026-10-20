@@ -113,7 +113,7 @@ func unknownPart(set *partSet, ref string) error {
 	case ok && set.parts[name] != nil && set.parts[name].look:
 		return usererr.New("tmpl_part_look_ref", ref, name)
 	}
-	return usererr.New("tmpl_part_unknown", ref, set.drawnNames())
+	return usererr.New("tmpl_part_unknown", ref, set.names(drawing))
 }
 
 var errSchemaURL = errors.New("a schema refers to no other file or URL; write it in schema.json")

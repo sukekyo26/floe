@@ -354,6 +354,7 @@ var messagesJA = map[string]string{
 	"tmpl_parts_dir_unreadable":    "自分の部品のディレクトリ %s を読めません: %s。直すか、FLOE_PARTS_DIR を設定してください",
 	"tmpl_part_name":               "%s: 自分の部品に %s という名前は付けられません。diagram と script は floe が描き、tone は部品が共有する色合い、base はどのページにも入る部品のテーマのファイルの名前です。名前を変えてください",
 	"tmpl_part_unnamed":            `%s: 部品 %s の箱になる要素（data-floe-part="%s"）がありません。部品の要素に書いてください`,
+	"tmpl_look_replaces":           "%s: 見た目だけの部品は、描く floe の部品 %s には代われません（floe のほかの部品、Markdown の表、テンプレートがそれで描くため）。schema.json と part.html を足すか、別の名前にしてください",
 	"tmpl_look_box":                `%s:%d: data-floe-part が見た目 %s を名乗っていますが、見た目には箱がありません。data-floe-look="%s" で借りてください`,
 	"tmpl_page_several":            `ページの data-floe-part="%s" は 1 つの部品の名前ではありません。data-floe-part="<名前>" と名前をそのまま書き、ほかの部品の見た目は data-floe-look="<名前> …" で借りてください`,
 	"tmpl_page_look_box":           `ページに data-floe-part="%[1]s" がありますが、%[1]s は見た目で箱がありません。data-floe-look="%[1]s" で借りてください`,

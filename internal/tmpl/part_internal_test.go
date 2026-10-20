@@ -39,17 +39,17 @@ func TestPalette(t *testing.T) {
 		}
 		// A part's element is its box, data-floe-part="<its name>", so that a page that draws it gets its
 		// style; an element is the box of one part, and every name, and every look a part takes, is a part's.
-		if p.pages != nil && !namesItself(p.html, name) {
+		if p.pages != nil && !namesItself(namedParts(p.html), name) {
 			t.Errorf("the HTML of the part %s is not its box, data-floe-part=%q", name, name)
 		}
 		for _, other := range namedParts(p.html) {
-			if _, ok := set.parts[other.name]; !ok || other.notOne() {
+			if set.misnamed(other) != nameRight {
 				t.Errorf("the HTML of the part %s names %s, which is no part, or data-floe-part=%q", name, other.name, other.value)
 			}
 		}
 		for _, look := range p.looks {
-			if set.parts[look] == nil {
-				t.Errorf("the part %s takes the look of %s, which is no part", name, look)
+			if set.parts[look.name] == nil {
+				t.Errorf("the part %s takes the look of %s, which is no part", name, look.name)
 			}
 		}
 	}
@@ -143,8 +143,8 @@ func TestTagsOf(t *testing.T) {
 	}
 }
 
-// A part's style comes after that of the parts it is drawn in the look of, which it adjusts, and of the
-// parts it holds; the others keep the order given.
+// A part's style comes after that of the looks it takes, which it adjusts, given or not, and of the
+// parts it holds that are given; the others keep the order of their names.
 func TestInOrder(t *testing.T) {
 	t.Parallel()
 
@@ -152,8 +152,8 @@ func TestInOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := set.inOrder([]string{"compare", "details", "findings", "stack", "table"})
-	if want := []string{"table", "compare", "stack", "details", "findings"}; !slices.Equal(got, want) {
+	got := set.inOrder([]string{"findings", "compare", "details", "stack", "compare"})
+	if want := []string{"panel", "table", "compare", "stack", "details", "findings"}; !slices.Equal(got, want) {
 		t.Errorf("inOrder = %v, want %v", got, want)
 	}
 }
