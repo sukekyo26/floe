@@ -426,7 +426,7 @@ var messagesEN = map[string]string{
 	"tmpl_file_missing":            "%s is missing: a template has %s",
 	"tmpl_schema_shared":           "%s declares or requires %s, which floe reads from every data file itself (%s): give the items of the schema other names",
 	"tmpl_item":                    "%s: %s",
-	"tmpl_schema_url":              "%s: a schema refers to no other file or URL; write it in schema.json",
+	"tmpl_schema_url":              "%s: a schema refers to no other file or URL; write what it refers to in schema.json, and give $schema a draft of JSON Schema",
 	"tmpl_image_path":              `"%s" is not a file under %s: write a path relative to it, without .. or names starting with a dot`,
 	"tmpl_image_type":              `"%s" is not an image floe takes: use png, jpeg, gif, webp or svg`,
 	"tmpl_image_kept_name":         `"%[1]s" is under a directory named %[2]s, the name a published page keeps its data file by: rename that directory`,

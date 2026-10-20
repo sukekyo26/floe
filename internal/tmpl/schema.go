@@ -122,16 +122,17 @@ func unknownPart(set *partSet, ref string) error {
 }
 
 // noLoader loads no schema: those of the parts of set are added to the compiler before. It keeps the
-// mistake it gave last.
+// mistake it gave, which stops the compiling.
 type noLoader struct {
 	set     *partSet
 	mistake error
 }
 
 func (n *noLoader) Load(url string) (any, error) {
-	n.mistake = usererr.New("tmpl_schema_url", url)
 	if strings.HasPrefix(url, partsURL) {
 		n.mistake = unknownPart(n.set, url)
+	} else {
+		n.mistake = usererr.New("tmpl_schema_url", url)
 	}
 	return nil, n.mistake
 }

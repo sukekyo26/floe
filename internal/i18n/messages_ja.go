@@ -425,7 +425,7 @@ var messagesJA = map[string]string{
 	"tmpl_file_missing":            "%s がありません。テンプレートには %s が要ります",
 	"tmpl_schema_shared":           "%s が %s を宣言するか必須に挙げています。%s は floe がどのデータファイルからも自分で読むので、スキーマの項目は別の名前にしてください",
 	"tmpl_item":                    "%s: %s",
-	"tmpl_schema_url":              "%s: schema はほかのファイルや URL を参照できません。schema.json の中に書いてください",
+	"tmpl_schema_url":              "%s: schema はほかのファイルや URL を参照できません。参照するものは schema.json の中に書き、$schema には JSON Schema の版を書いてください",
 	"tmpl_image_path":              "「%s」は %s の下のファイルではありません。.. やドットで始まる名前を使わずに、そこからの相対パスで書いてください",
 	"tmpl_image_type":              "「%s」は floe が扱う画像ではありません。png・jpeg・gif・webp・svg を使ってください",
 	"tmpl_image_kept_name":         "「%[1]s」は %[2]s という名前のディレクトリの下にあります。公開したページはデータファイルをその名前で写すので、ディレクトリの名前を変えてください",
