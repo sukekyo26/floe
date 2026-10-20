@@ -316,15 +316,16 @@ func TestPageStyleRefused(t *testing.T) {
 }
 
 // The template's CSS names the page's root as :scope, past a comment and values that name it otherwise, and
-// page.html takes the look of parts floe has, past a name it puts together, a mistake told at the line of
-// the name.
+// page.html names parts floe has, past a name it puts together, an element the box of one, a mistake told
+// at the line of the name.
 func TestTemplateCSSAndParts(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{
 		"page.css":           "/* not :root */\n:scope { --fg: #000; }\nb { background: url(html.svg); animation: html 1s; }\n:root .lead, a { color: red; }\n",
 		"themes/default.css": "body { font-family: sans-serif; }\nhtml{ color: red; }\n",
-		"page.html":          "<body>|<body><span\n" + `data-floe-part="cell nope"></span><i data-floe-part="{{"cell"}}"></i>`,
+		"page.html": "<body>|<body><span\n" + `data-floe-look="cell nope"></span><b data-floe-part="cell note"></b>` +
+			`<i data-floe-part="{{"cell"}}"></i>`,
 	})
 	_, mistakes := tmpl.Check(dir, "", "")
 	got := make([]string, 0, len(mistakes))
@@ -334,7 +335,8 @@ func TestTemplateCSSAndParts(t *testing.T) {
 	want := []string{
 		"page.css:4: write the root as :scope, not :root",
 		filepath.Join("themes", "default.css") + ":2: write the root as :scope, not html",
-		"page.html:5: page.html takes the look of the part nope, which there is none of; use bars, ",
+		"page.html:5: page.html names the part nope, which there is none of; use bars, ",
+		`page.html:5: data-floe-part="cell note" names more than one part`,
 	}
 	if len(got) != len(want) {
 		t.Fatalf("Check = %q, want %q", got, want)

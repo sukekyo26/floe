@@ -1,8 +1,6 @@
 :scope { gap: 1.75rem; padding: 0.75rem 0.25rem 0.25rem; }
-.card {
-  position: relative; border: 2px solid var(--nb-ink); border-radius: var(--nb-hand); box-shadow: none;
-  background: var(--nb-sheet); color: var(--nb-ink);
-}
+/* The panel of a card, on plain paper */
+.card { position: relative; background: var(--nb-sheet); }
 :scope.numbered > .card::before { content: none; }
 /* Plain cards and options are sticky notes, each held by a strip of tape and set a little askew */
 :scope.numbered > .card {

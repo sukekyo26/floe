@@ -61,7 +61,7 @@ func TestReportExample(t *testing.T) {
 		`<td>Keep the old host for <strong>a month</strong></td>`,
 		`<td class="num">120</td>`,
 		`<td><span class="warn" data-floe-part="cell">watching</span></td>`,
-		`<div class="card"><h3>Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>`,
+		`<div class="card" data-floe-look="panel"><h3>Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>`,
 		`<div class="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>`,
 		`<details><summary>What the freeze covers</summary>`,
 		`aria-label="The pages go from the old wiki to the new host"`,
@@ -127,7 +127,7 @@ func TestReportTableCardsNote(t *testing.T) {
 		want = append(want, "<tr><td>"+c.html+`</td><td class="num">9</td></tr>`)
 	}
 	src += "      - cards:\n          - title: A & B\n      - note:\n          text: n\n      - note: { text: m, tone: good }\nlang: en\n"
-	want = append(want, `<div class="card"><h3>A &amp; B</h3></div>`, `<div data-floe-part="note"><p>n</p>`,
+	want = append(want, `<div class="card" data-floe-look="panel"><h3>A &amp; B</h3></div>`, `<div data-floe-part="note"><p>n</p>`,
 		`<div class="good" data-floe-part="note"><p>m</p>`)
 	got := render(t, src)
 	for _, w := range want {

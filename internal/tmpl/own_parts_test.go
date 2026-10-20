@@ -42,7 +42,8 @@ func quote(name string) map[string]string {
 
 // A part of one's own is referred to as floe's are, drawn with its words in the page's language, and its
 // style goes into the page once, in its scope; it holds a part by a $ref relative to its own schema too.
-// One of the name of one of floe's takes its place whole, for the parts drawn in its look too.
+// One of the name of one of floe's takes its place whole, for the parts drawn in its look too. One takes
+// the look of floe's by its part.yaml, the looks those take with it, and a look alone of one's own too.
 func TestOwnParts(t *testing.T) {
 	t.Parallel()
 
@@ -67,7 +68,7 @@ func TestOwnParts(t *testing.T) {
 	for _, want := range []string{
 		`<figure data-floe-part="quote"><blockquote>Hi</blockquote><figcaption class="source">出典 Ann</figcaption></figure>`,
 		`<figure data-floe-part="table"><blockquote>Rows</blockquote></figure>`,
-		`@scope ([data-floe-part~="quote"]) to (:scope [data-floe-part] > *) {` + "\n/* the quote of one's own */",
+		`@scope ([data-floe-part="quote"]) to (:scope [data-floe-part] > *) {` + "\n/* the quote of one's own */",
 	} {
 		if strings.Count(page, want) != 1 {
 			t.Errorf("the page holds %s %d times:\n%s", want, strings.Count(page, want), page)
@@ -81,6 +82,27 @@ func TestOwnParts(t *testing.T) {
 	}
 	if !strings.Contains(page, "/* the table of one's own */") || strings.Contains(page, partStyle(t, "table")) {
 		t.Errorf("compare is not drawn in the look of the table of one's own:\n%s", page)
+	}
+	// It takes no look of floe's then: the table of one's own has no part.yaml.
+	if strings.Contains(page, partStyle(t, "panel")) {
+		t.Errorf("compare takes the look of floe's panel through a table of one's own that does not:\n%s", page)
+	}
+	looked := quote("boxed")
+	looked["boxed/part.yaml"] = "looks: [rows, shaded]\n"
+	looked["shaded/part.css"] = "/* a look of one's own */\n"
+	looked["shaded/part.yaml"] = "description: Shaded\n"
+	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/boxed.json"}, "aside": {"type": "string"}`), ownParts(t, looked), "")
+	if page, err = draw(l, "template: memo\nlang: en\nrisks: { text: Hi }\n"); err != nil {
+		t.Fatal(err)
+	}
+	at := func(s string) int { return strings.Index(page, s) }
+	for _, look := range []string{"panel", "rows"} {
+		if want := `@scope ([data-floe-part="boxed"]` + partStyle(t, look); strings.Count(page, want) != 1 {
+			t.Errorf("the page holds the look %s of boxed %d times, want once:\n%s", look, strings.Count(page, want), page)
+		}
+	}
+	if order := []int{at(partStyle(t, "panel")), at(partStyle(t, "rows")), at("/* a look of one's own */"), at("/* the boxed of one's own */")}; !slices.IsSorted(order) || order[0] < 0 {
+		t.Errorf("the looks and the part are at %v, want each look before what takes it:\n%s", order, page)
 	}
 }
 
@@ -100,10 +122,11 @@ func TestBrokenOwnParts(t *testing.T) {
 		"brace/part.html":      `<div data-floe-part="brace"></div>`,
 		"brace/part.css":       ":scope { color: red; }\n}\n",
 		"lender/schema.json":   `{"type": "object"}`,
-		"lender/part.html":     `<div data-floe-part="nope lender"></div>`,
+		"lender/part.html":     `<div data-floe-part="lender"></div>`,
 		"lender/part.css":      "",
+		"lender/part.yaml":     "looks: [panel,\n  nope]\n",
 		"first/schema.json":    `{"type": "object"}`,
-		"first/part.html":      `<div data-floe-part="first cards"></div>`,
+		"first/part.html":      `<div data-floe-part="first"><b data-floe-part="cards first"></b></div>`,
 		"first/part.css":       "",
 		"spaced/schema.json":   `{"type": "object"}`,
 		"spaced/part.html":     `<div data-floe-part="spaced "></div>`,
@@ -112,8 +135,26 @@ func TestBrokenOwnParts(t *testing.T) {
 		"typo/part.html":       `<div data-floe-part="typo"></div>`,
 		"typo/part.css":        "",
 		"borrower/schema.json": `{"type": "object"}`,
-		"borrower/part.html":   `<div data-floe-part="unnamed borrower"></div>`,
+		"borrower/part.html":   `<div data-floe-part="borrower"></div>`,
 		"borrower/part.css":    "",
+		"borrower/part.yaml":   "looks: [unnamed]\n",
+		"ring/part.css":        "",
+		"ring/part.yaml":       "looks: [round]\n",
+		"round/part.css":       "",
+		"round/part.yaml":      "looks: [ring]\n",
+		"wordy/part.css":       "",
+		"wordy/words.yaml":     "en: { a: A }\n",
+		"holder/schema.json":   `{"type": "object", "properties": {"p": {"$ref": "floe:///parts/panel.json"}}}`,
+		"holder/part.html":     `<div data-floe-part="holder"></div>`,
+		"holder/part.css":      "",
+		"keyed/schema.json":    `{"type": "object"}`,
+		"keyed/part.html":      `<div data-floe-part="keyed"></div>`,
+		"keyed/part.css":       "",
+		"keyed/part.yaml":      "lookz: [panel]\n",
+		"told/schema.json":     `{"type": "object"}`,
+		"told/part.html":       `<div data-floe-part="told"></div>`,
+		"told/part.css":        "",
+		"told/part.yaml":       "description: Told\n",
 		"base/schema.json":     `{"type": "object"}`,
 		"diagram/schema.json":  `{"type": "object"}`,
 		"code/schema.json":     `{"type": "object"}`,
@@ -141,22 +182,32 @@ func TestBrokenOwnParts(t *testing.T) {
 	}
 	whys := map[string]string{
 		"unnamed": "the part unnamed cannot be used: " + filepath.Join(parts, "unnamed", "part.html") +
-			`: the part unnamed names itself last, after the parts it takes the look of, in no data-floe-part`,
+			`: no element of the part unnamed is its box, data-floe-part="unnamed"`,
 		"brace": "the part brace cannot be used: " + filepath.Join(parts, "brace", "part.css") + ":2: this } closes no block",
-		"lender": "the part lender cannot be used: " + filepath.Join(parts, "lender", "part.html") +
-			":1: the part takes the look of the part nope, which there is none of",
+		"lender": "the part lender cannot be used: " + filepath.Join(parts, "lender", "part.yaml") +
+			":2: the part names the part nope, which there is none of",
 		"base":     "the part base cannot be used: " + filepath.Join(parts, "base") + ": a part of your own cannot be named base",
 		"diagram":  "the part diagram cannot be used: " + filepath.Join(parts, "diagram") + ": a part of your own cannot be named diagram",
 		"script":   "the part script cannot be used: " + filepath.Join(parts, "script") + ": a part of your own cannot be named script",
 		"tone":     "the part tone cannot be used: " + filepath.Join(parts, "tone") + ": a part of your own cannot be named tone",
-		"borrower": "the part borrower cannot be used: it takes the look of the part unnamed, which cannot be used",
+		"borrower": "the part borrower cannot be used: it names the part unnamed, or takes its look, which cannot be used",
+		"ring":     "the part ring cannot be used: " + filepath.Join(parts, "ring") + ": the part ring takes its own look (ring → round → ring)",
+		"round":    "the part round cannot be used: it names the part ring, or takes its look, which cannot be used",
+		"wordy": "the part wordy cannot be used: " + filepath.Join(parts, "wordy", "words.yaml") +
+			": the look wordy holds no schema.json nor part.html",
+		"holder": "the part holder cannot be used: " + filepath.Join(parts, "holder", "schema.json") +
+			": the part refers to floe:///parts/panel.json, a look",
+		"keyed": "the part keyed cannot be used: " + filepath.Join(parts, "keyed", "part.yaml") + ":1:1: lookz is not a key of part.yaml",
+		"told": "the part told cannot be used: " + filepath.Join(parts, "told", "part.yaml") +
+			":1:1: a part tells what it is in its schema.json's description",
 		"code":     "the part code cannot be used: " + filepath.Join(parts, "code", "part.css") + ":1: this } closes no block",
-		"diff":     "the part diff cannot be used: it takes the look of the part code, which cannot be used",
+		"diff":     "the part diff cannot be used: it names the part code, or takes its look, which cannot be used",
+		"terminal": "the part terminal cannot be used: it names the part code, or takes its look, which cannot be used",
 		"pong":     "the part pong cannot be used: it holds the part ping, which cannot be used",
 		"first": "the part first cannot be used: " + filepath.Join(parts, "first", "part.html") +
-			`: the part first names itself last, after the parts it takes the look of, in no data-floe-part`,
+			`:1: data-floe-part="cards first" names more than one part`,
 		"spaced": "the part spaced cannot be used: " + filepath.Join(parts, "spaced", "part.html") +
-			`: the part spaced names itself last, after the parts it takes the look of, in no data-floe-part`,
+			`: no element of the part spaced is its box, data-floe-part="spaced"`,
 		"typo": "the part typo cannot be used: " + filepath.Join(parts, "typo", "schema.json") +
 			": the part refers to floe:///parts/celll.json, which is no part",
 		"stack":   "the part stack cannot be used: it holds the part code, which cannot be used",
@@ -225,8 +276,8 @@ func TestBrokenOwnParts(t *testing.T) {
 
 // A parts theme of one's own is picked as floe's are. One of the name of one of floe's takes the place
 // of its files of their names, the rest staying floe's. floe's themes do not style a part of one's own
-// that took the place of floe's, whose rules would fit it ill: its file goes, and its parts.css does not
-// reach the part. One that cannot be used is refused to a data file that picks it; a file of a name
+// that took the place of floe's, whose rules would fit it ill: its file goes, for the parts that take its
+// look too. One that cannot be used is refused to a data file that picks it; a file of a name
 // starting with a dot, one not of CSS, one for a part of one's own that cannot be used, and one for no
 // part, which is warned of, do not make it so.
 func TestOwnPartsThemes(t *testing.T) {
@@ -257,8 +308,7 @@ func TestOwnPartsThemes(t *testing.T) {
 		t.Fatal(err)
 	}
 	for want, n := range map[string]int{
-		`@scope ([data-floe-part~="code"]) to (:scope [data-floe-part] > *) {` + "\n/* brutal's code of one's own */":          1,
-		`@scope ([data-floe-part]:not([data-floe-part="code"], [data-floe-part$=" code"])) to (:scope [data-floe-part] > *) {`: 1,
+		`@scope ([data-floe-part="code"]) to (:scope [data-floe-part] > *) {` + "\n/* brutal's code of one's own */": 1,
 		string(note): 1,
 		":scope .lang { border-radius: 0; border: 2px solid var(--brutal-ink)": 0,
 	} {

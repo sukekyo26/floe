@@ -27,8 +27,9 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// partFiles holds a directory per part of floe's (schema.json, part.html, part.css, checks.yaml and
-// words.yaml), the schemas the parts share (tone.json), and the parts themes (themes/).
+// partFiles holds a directory per part of floe's (schema.json, part.html, part.css, part.yaml, checks.yaml
+// and words.yaml) and per look alone (part.css and part.yaml), the schemas the parts share (tone.json),
+// and the parts themes (themes/).
 //
 //go:embed parts
 var partFiles embed.FS
@@ -67,7 +68,7 @@ func absolute(base, ref string) string {
 func (set *partSet) pointsInto(ref string) (whole string, into bool) {
 	whole, _, into = strings.Cut(ref, "#")
 	name, ok := partName(whole)
-	return whole, into && ok && set.parts[name] != nil
+	return whole, into && ok && set.parts[name] != nil && !set.parts[name].look
 }
 
 // first returns the first of s and the schemas under it that ok takes, with its pointer under ptr, or nil.
@@ -101,16 +102,20 @@ func (s *schema) absolute(base string) {
 }
 
 // part is a part of floe's: a template's schema refers to it, and floe checks it, draws it and puts its
-// style into the page.
+// style into the page. A look alone (panel) is a style other parts and HTML take, which draws nothing.
 type part struct {
-	name   string
-	schema *schema
-	pages  map[string]*template.Template // by the language of its words; nil for one floe draws in Go (goParts)
-	words  words
-	html   string // the template of pages, as written
-	css    string
-	checks []relation
-	uses   []string // the parts its HTML names and its schema holds, itself among them
+	name    string
+	schema  *schema                       // nil for a look alone
+	pages   map[string]*template.Template // by the language of its words; nil for one floe draws in Go (goParts)
+	words   words
+	html    string // the template of pages, as written
+	css     string
+	checks  []relation
+	looks   []string // the looks it takes, as part.yaml names them, each before it
+	looksAt []int    // the line of each in part.yaml
+	look    bool     // a look alone: a part.css and a part.yaml, no schema.json nor part.html
+	about   string   // what a look alone is, part.yaml's description
+	uses    []string // the parts its HTML names, its schema holds and it takes the look of, itself among them
 }
 
 // goParts are the parts floe draws in Go, each a description and its style: their schema takes an object,
@@ -173,7 +178,7 @@ func readParts(dir string, entries []os.DirEntry) (*partSet, error) {
 		s.resolve(set)
 	}
 	for _, p := range set.parts {
-		p.uses = set.partsNamedIn(p.html)
+		p.uses = append(set.partsNamedIn(p.html), p.looks...)
 		p.schema.partsUnder(&p.uses)
 		slices.Sort(p.uses)
 		p.uses = slices.Compact(p.uses)
@@ -217,7 +222,8 @@ func (set *partSet) readBuiltin() error {
 			Required: nil,
 		}
 		set.parts[name] = &part{
-			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: p.css, checks: nil, uses: nil,
+			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: p.css, checks: nil, looks: nil,
+			looksAt: nil, look: false, about: "", uses: nil,
 		}
 	}
 	themes, err := fs.Sub(builtin, themesDir)
@@ -260,11 +266,20 @@ func (s *schema) partsUnder(names *[]string) {
 	s.Items.partsUnder(names)
 }
 
-// partsNamedIn returns the names of the parts the data-floe-part attributes of html name, in order.
+// partsNamedIn returns the names of the parts the data-floe-part and data-floe-look attributes of html
+// name, in order.
 func (set *partSet) partsNamedIn(html string) []string {
+	return slices.Concat(set.namedBy(html, false), set.namedBy(html, true))
+}
+
+// namedBy returns the names of the parts of set the data-floe-look attributes of html name when look,
+// else its data-floe-part attributes, in order.
+func (set *partSet) namedBy(html string, look bool) []string {
 	named := map[string]bool{}
 	for _, n := range namedParts(html) {
-		named[n.name] = true
+		if n.look == look {
+			named[n.name] = true
+		}
 	}
 	var names []string
 	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
@@ -275,34 +290,46 @@ func (set *partSet) partsNamedIn(html string) []string {
 	return names
 }
 
-// namedPart is a name a data-floe-part attribute gives, and the offset where the attribute's value starts.
+// namedPart is a name a data-floe-part or data-floe-look attribute gives, the attribute's whole value, and
+// the offset where the value starts.
 type namedPart struct {
-	name string
-	at   int
+	name  string
+	value string
+	look  bool // named by data-floe-look
+	at    int
 }
 
-// namedParts returns the names the data-floe-part attributes of html give, as written: an element of a
-// part names it, after the parts it is drawn in the look of (data-floe-part="table compare"). A name
-// that html puts together ({{.kind}}) is not one.
+// several reports whether n is of a data-floe-part that names more than one part: an element is the box
+// of one part, and takes the look of others by data-floe-look.
+func (n namedPart) several() bool {
+	return !n.look && strings.ContainsFunc(strings.TrimSpace(n.value), unicode.IsSpace)
+}
+
+// namedParts returns the names the data-floe-part and data-floe-look attributes of html give, as written:
+// an element of a part names it (data-floe-part="note"), and one that takes a part's look without being
+// its box names that (data-floe-look="panel"). A name that html puts together ({{.kind}}) is not one.
 // LIMIT: the attributes are found as written, not as an HTML parser reads them (one in a script's string
 // counts); parse the page if a page comes to write one so.
 func namedParts(html string) []namedPart {
 	found := partAttr.FindAllStringSubmatchIndex(html, -1)
 	names := make([]namedPart, 0, len(found))
 	for _, m := range found {
-		value := html[m[2]:m[3]]
+		value := html[m[4]:m[5]]
 		if strings.Contains(value, "{{") {
 			continue
 		}
-		for _, name := range strings.Fields(strings.Trim(value, `"'`)) {
-			names = append(names, namedPart{name: name, at: m[2]})
+		value = strings.Trim(value, `"'`)
+		look := strings.EqualFold(html[m[2]:m[3]], "look")
+		for _, name := range strings.Fields(value) {
+			names = append(names, namedPart{name: name, value: value, look: look, at: m[4]})
 		}
 	}
 	return names
 }
 
-// partAttr finds the value of a data-floe-part attribute: data-floe-part="table compare", '…' or x.
-var partAttr = regexp.MustCompile(`(?i)\sdata-floe-part\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` + "`" + `]+)`)
+// partAttr finds the value of a data-floe-part or data-floe-look attribute: data-floe-look="table cards",
+// '…' or x.
+var partAttr = regexp.MustCompile(`(?i)\sdata-floe-(part|look)\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>` + "`" + `]+)`)
 
 // readSchema reads the schema file of files, shown in its mistakes as shown, at url.
 func (set *partSet) readSchema(files fs.FS, url, file, shown string) error {
@@ -324,10 +351,22 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown string) error {
 	return nil
 }
 
-// readPart reads the part name from files, its directory, shown in its mistakes as dir, into set.
+// readPart reads the part name from files, its directory, shown in its mistakes as dir, into set: a
+// directory without schema.json and part.html is a look alone.
 func (set *partSet) readPart(files fs.FS, name, dir string) error {
+	look, err := isLook(files, name)
+	if err != nil {
+		return err
+	}
+	spec, err := readPartYAML(files, path.Join(dir, "part.yaml"), look)
+	if err != nil {
+		return err
+	}
+	if look {
+		return set.readLook(files, name, dir, spec)
+	}
 	url := partsURL + name + ".json"
-	if err := set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json")); err != nil {
+	if err = set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json")); err != nil {
 		return err
 	}
 	html, err := fs.ReadFile(files, "part.html")
@@ -358,22 +397,139 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		}
 		pages[lang].Funcs(template.FuncMap{"word": w.word(file, lang)})
 	}
-	css, err := fs.ReadFile(files, "part.css")
+	css, err := readPartCSS(files, name, dir)
 	if err != nil {
-		return fmt.Errorf("read the part %s: %w", name, err)
-	}
-	if err = refuseCSS(path.Join(dir, "part.css"), css, true); err != nil {
 		return err
 	}
 	p := &part{
-		name: name, schema: set.schemas[url], pages: pages, words: w, html: string(html), css: string(css), checks: nil,
-		uses: nil,
+		name: name, schema: set.schemas[url], pages: pages, words: w, html: string(html), css: css, checks: nil,
+		looks: spec.looks, looksAt: spec.looksAt, look: false, about: "", uses: nil,
 	}
 	if p.checks, err = readPartChecks(files, name, dir); err != nil {
 		return err
 	}
 	set.parts[name] = p
 	return nil
+}
+
+// isLook reports whether files, the directory of the part name, is a look alone: it holds neither
+// schema.json nor part.html. One of them without the other is the mistake reading it reports.
+func isLook(files fs.FS, name string) (bool, error) {
+	var missing int
+	for _, file := range []string{"schema.json", "part.html"} {
+		switch _, err := fs.Stat(files, file); {
+		case errors.Is(err, fs.ErrNotExist):
+			missing++
+		case err != nil:
+			return false, fmt.Errorf("read the part %s: %w", name, err)
+		}
+	}
+	return missing == 2, nil
+}
+
+// readLook reads the look alone name from files, its directory, shown in its mistakes as dir, into set.
+func (set *partSet) readLook(files fs.FS, name, dir string, spec partSpec) error {
+	// A look draws nothing: words and checks of one would be read for nothing.
+	for _, file := range []string{"words.yaml", "checks.yaml"} {
+		if _, err := fs.Stat(files, file); err == nil {
+			return usererr.New("tmpl_look_files", path.Join(dir, file), name)
+		}
+	}
+	css, err := readPartCSS(files, name, dir)
+	if err != nil {
+		return err
+	}
+	set.parts[name] = &part{
+		name: name, schema: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: spec.looks,
+		looksAt: spec.looksAt, look: true, about: spec.about, uses: nil,
+	}
+	return nil
+}
+
+// readPartCSS reads the part.css of the part name in files, its directory, shown as dir.
+func readPartCSS(files fs.FS, name, dir string) (string, error) {
+	css, err := fs.ReadFile(files, "part.css")
+	if err != nil {
+		return "", fmt.Errorf("read the part %s: %w", name, err)
+	}
+	if err = refuseCSS(path.Join(dir, "part.css"), css, true); err != nil {
+		return "", err
+	}
+	return string(css), nil
+}
+
+// readLooks reads the looks part.yaml, file, gives the key k, with the line of each.
+func readLooks(file string, k, value ast.Node) ([]string, []int, error) {
+	seq, ok := value.(*ast.SequenceNode)
+	if !ok {
+		return nil, nil, yamlpos.New(file, yamlpos.OfValue(k, value), "tmpl_part_yaml_looks")
+	}
+	var looks []string
+	var lines []int
+	for _, v := range seq.Values {
+		name, text := v.(*ast.StringNode)
+		if !text || !validName(name.Value) {
+			return nil, nil, yamlpos.New(file, yamlpos.Of(v), "tmpl_part_yaml_looks")
+		}
+		looks, lines = append(looks, name.Value), append(lines, yamlpos.Of(v).Line)
+	}
+	return looks, lines, nil
+}
+
+// partSpec is what part.yaml says of a part: the looks it takes, each with its line, and, of a look
+// alone, what it is.
+type partSpec struct {
+	looks   []string
+	looksAt []int
+	about   string
+}
+
+// readPartYAML reads file, the part.yaml of a part in files, its directory, look telling whether the part
+// is a look alone; a part without one takes no look.
+func readPartYAML(files fs.FS, file string, look bool) (partSpec, error) {
+	var spec partSpec
+	src, err := fs.ReadFile(files, "part.yaml")
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return spec, nil
+	case err != nil:
+		return spec, fmt.Errorf("read %s: %w", file, err)
+	}
+	body, err := yamlpos.Parse(file, src, "tmpl_part_yaml")
+	if errors.Is(err, yamlpos.ErrEmpty) {
+		return spec, nil
+	}
+	if err != nil {
+		return spec, err //nolint:wrapcheck // a mistake at its line and column
+	}
+	if err = plain(file, body); err != nil {
+		return spec, err
+	}
+	m, ok := body.(*ast.MappingNode)
+	if !ok {
+		return spec, yamlpos.New(file, yamlpos.Of(body), "tmpl_part_yaml")
+	}
+	for _, kv := range m.Values {
+		k := yamlpos.KeyOf(kv)
+		switch key := k.GetToken().Value; {
+		case key == "looks":
+			if spec.looks, spec.looksAt, err = readLooks(file, k, kv.Value); err != nil {
+				return spec, err
+			}
+		case key == "description" && look:
+			text, ok := kv.Value.(*ast.StringNode)
+			if !ok {
+				return spec, yamlpos.New(file, yamlpos.OfValue(k, kv.Value), "tmpl_part_yaml_description")
+			}
+			spec.about = text.Value
+		case key == "description":
+			// A part's description is its schema's, which floe template show tells beside its items.
+			return spec, yamlpos.New(file, yamlpos.Of(k), "tmpl_part_yaml_described")
+		default:
+			return spec, yamlpos.New(file, yamlpos.Of(k), "tmpl_part_yaml_key", key)
+		}
+	}
+	return spec, nil
 }
 
 // readPartChecks reads the checks.yaml of the part name in files, its directory, shown as dir, compiled
@@ -603,11 +759,13 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
 // selectors: floe's base, under the template's own CSS (own: its page.css, then its theme), under the
 // parts'. The parts' are the style of each part the page names, by its own element, a table of Markdown,
-// or HTML that takes a part's look (<span class="good" data-floe-part="cell">), after the parts it is
-// drawn in the look of, which it adjusts; then the parts theme theme: its base.css, which every page
-// gets, as it holds its variables and the look of Markdown's quotes, its parts.css, the rules of several
-// parts, and its style of each of those parts in the same order. Within the layer the more specific rule
-// wins, else the later.
+// or HTML that takes a part's look (<span class="good" data-floe-look="cell">), and of each look those
+// take, before the parts that take it, which adjust it; then the parts theme theme: its base.css, which
+// every page gets, as it holds its variables and the look of Markdown's quotes, and its style of each
+// of those parts in the same order. Within the layer the more specific rule wins, else the later.
+// An element that takes a look without being a part's box (a card of cards) has it a layer under the
+// parts', floe.looks: the part it is in adjusts it whatever the selectors, as a part does the looks it
+// takes, where the nearer scope would win otherwise.
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
@@ -619,33 +777,32 @@ func (set *partSet) pageStyle(page []byte, own [][]byte, theme string) (string, 
 	// The first sheet names the layers, which puts them in that order. Each file after it is a sheet of
 	// its own, so that a mistake in it, a comment or a block left open, ends with it.
 	var style strings.Builder
-	style.WriteString("<style>\n@layer floe.base, floe.page, floe.parts;\n@layer floe.base {\n" + baseCSS +
+	style.WriteString("<style>\n@layer floe.base, floe.page, floe.looks, floe.parts;\n@layer floe.base {\n" + baseCSS +
 		"}\n</style>\n")
 	sheet := func(layer, css string) {
 		if css != "" {
 			style.WriteString("<style>\n@layer " + layer + " {\n" + css + "}\n</style>\n")
 		}
 	}
-	var names []string
-	if bytes.Contains(page, []byte("data-floe-part")) {
+	var names, boxes, looks []string
+	if bytes.Contains(page, []byte("data-floe-")) {
 		if err := set.refuseBroken(page); err != nil {
 			return "", err
 		}
-		names = set.inOrder(set.partsNamedIn(string(page)))
+		boxes, looks = set.namedBy(string(page), false), set.namedBy(string(page), true)
+		names = set.inOrder(set.withLooks(slices.Concat(boxes, looks)))
+	}
+	// Each style goes to the boxes that have its look, and to the other elements that take it, a layer under.
+	styled := func(name, css string) {
+		sheet("floe.parts", set.scoped(name, boxes, false, css))
+		sheet("floe.looks", set.scoped(name, looks, true, css))
 	}
 	for _, name := range names {
-		if css := set.parts[name].css; css != "" {
-			sheet("floe.parts", scoped(name, css))
-		}
+		styled(name, set.parts[name].css)
 	}
 	sheet("floe.parts", themed.base)
-	if names != nil && themed.shared != "" {
-		sheet("floe.parts", everyPart(themed.shared, themed.except))
-	}
 	for _, name := range names {
-		if t := themed.parts[name]; t != "" {
-			sheet("floe.parts", scoped(name, t))
-		}
+		styled(name, themed.parts[name])
 	}
 	for _, css := range own {
 		if len(css) != 0 {
@@ -692,25 +849,57 @@ func (set *partSet) inOrder(names []string) []string {
 	return ordered
 }
 
-// scoped is css, the style of the part name or its theme's for it, reaching the part's elements, from
-// its own on, short of what the parts in it hold.
-func scoped(name, css string) string {
-	return `@scope ([data-floe-part~="` + name + `"]) to (:scope [data-floe-part] > *) {` + "\n" + css + "}\n"
+// scoped is css, the style of the part name or its theme's for it, reaching the elements that have its
+// look, from their own on, short of what the parts in them hold: of named, the parts a page names, each
+// that is name or takes its look, the boxes (data-floe-part="table"), or the elements that take it
+// without being a box when look (data-floe-look="table"). It is "" when none of them has the look, or
+// css is "".
+func (set *partSet) scoped(name string, named []string, look bool, css string) string {
+	var roots []string
+	for _, n := range named {
+		switch {
+		case n != name && !slices.Contains(set.looksOf(n), name):
+		case look:
+			roots = append(roots, `[data-floe-look~="`+n+`"]`)
+		default:
+			roots = append(roots, `[data-floe-part="`+n+`"]`)
+		}
+	}
+	if roots == nil || css == "" {
+		return ""
+	}
+	return "@scope (" + strings.Join(roots, ", ") + ") to (:scope [data-floe-part] > *) {\n" + css + "}\n"
 }
 
-// everyPart is css, rules of several parts that name each of them (:scope:where([data-floe-part~="code"])),
-// reaching the elements of every part as scoped does those of one, but the parts named except.
-func everyPart(css string, except []string) string {
-	root := "[data-floe-part]"
-	if except != nil {
-		// The parts whose own name, last in the attribute, is one of except: not those drawn in its look.
-		names := make([]string, 0, 2*len(except))
-		for _, name := range except {
-			names = append(names, `[data-floe-part="`+name+`"]`, `[data-floe-part$=" `+name+`"]`)
+// looksOf returns the looks the part name takes, and those they take in turn, each once. No look takes
+// itself: readOwn leaves out one that would.
+func (set *partSet) looksOf(name string) []string {
+	var found []string
+	var follow func(at string)
+	follow = func(at string) {
+		p := set.parts[at]
+		if p == nil {
+			return
 		}
-		root += ":not(" + strings.Join(names, ", ") + ")"
+		for _, look := range p.looks {
+			if !slices.Contains(found, look) {
+				found = append(found, look)
+				follow(look)
+			}
+		}
 	}
-	return "@scope (" + root + ") to (:scope [data-floe-part] > *) {\n" + css + "}\n"
+	follow(name)
+	return found
+}
+
+// withLooks returns names, parts of set, with the looks they take, in the order of their names.
+func (set *partSet) withLooks(names []string) []string {
+	all := slices.Clone(names)
+	for _, name := range names {
+		all = append(all, set.looksOf(name)...)
+	}
+	slices.Sort(all)
+	return slices.Compact(all)
 }
 
 // baseCSS is what every page starts from: text, lists, links, code and quotes, for the template's own

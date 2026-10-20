@@ -39,7 +39,8 @@ func memo(t *testing.T, items string) string {
 const memoItems = `"risks": {"$ref": "floe:///parts/table.json"}, "aside": {"$ref": "floe:///parts/note.json", "description": "An aside"}, ` +
 	`"asides": {"type": "array", "items": {"$ref": "floe:///parts/note.json"}}`
 
-// partStyle is the style of floe's part name as a page holds it, reaching the part's elements.
+// partStyle is the style of floe's part name as a page holds it, reaching the elements that have its look,
+// the roots of its scope, which the parts of the page decide, left out.
 func partStyle(t *testing.T, name string) string {
 	t.Helper()
 
@@ -47,7 +48,7 @@ func partStyle(t *testing.T, name string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return `@scope ([data-floe-part~="` + name + `"]) to (:scope [data-floe-part] > *) {` + "\n" + string(b) + "}\n"
+	return `) to (:scope [data-floe-part] > *) {` + "\n" + string(b) + "}\n"
 }
 
 // A template of one's own draws an item by a part of floe's with a $ref: the part checks it, at the
@@ -65,16 +66,17 @@ func TestPartsInOwnTemplate(t *testing.T) {
 	}
 	head, _, _ := strings.Cut(page, "</head>")
 	// floe's first <style> names the layers in the order that decides which wins, the template's under the
-	// parts' and the parts theme's. Each part's style, the parts theme's file and the template's CSS is a
-	// <style> of its own after it: the table, the cell and the note, soft's base.css, the template's theme.
+	// looks taken without a box and the parts' and the parts theme's. Each part's style, the parts theme's
+	// file and the template's CSS is a <style> of its own after it: the cell, the note, the panel the table
+	// takes the look of, the table, soft's base.css, the template's theme.
 	at := func(s string) int { return strings.Index(head, s) }
 	order := []int{
-		at("<style>\n@layer floe.base, floe.page, floe.parts;\n@layer floe.base {\n"),
-		at("<style>\n@layer floe.parts {\n" + partStyle(t, "table") + "}\n</style>\n"),
+		at("<style>\n@layer floe.base, floe.page, floe.looks, floe.parts;\n@layer floe.base {\n"),
+		at(partStyle(t, "table") + "}\n</style>\n"),
 		at("<style>\n@layer floe.parts {\n/* Faces with round corners"), at("</style>\n<style>\n@layer floe.page {\n"),
 		at(":scope { --fg: #000; }"),
 	}
-	if !slices.IsSorted(order) || order[0] < 0 || strings.Count(page, "<style") != 6 {
+	if !slices.IsSorted(order) || order[0] < 0 || strings.Count(page, "<style") != 7 {
 		t.Errorf("the layers, the template's theme, the parts' style and the parts theme's are at %v:\n%s", order, head)
 	}
 	for _, want := range []string{
@@ -245,8 +247,19 @@ func TestPartStylesByClass(t *testing.T) {
 	t.Parallel()
 
 	page := render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - text: |\n          | a | b |\n          | - | - |\n          | 1 | 2 |\n")
-	if !strings.Contains(page, `<div data-floe-part="table"><table>`) || strings.Count(page, partStyle(t, "table")) != 1 {
-		t.Errorf("a page of a Markdown table:\n%s", page)
+	if !strings.Contains(page, `<div data-floe-part="table"><table>`) || strings.Count(page, partStyle(t, "table")) != 1 ||
+		strings.Count(page, `@scope ([data-floe-part="table"]`+partStyle(t, "panel")) != 1 {
+		t.Errorf("a page of a Markdown table, in the table's look and the panel's it takes:\n%s", page)
+	}
+	// HTML takes a look without being its box, the looks that takes with it, a layer under the parts'.
+	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - html: <div data-floe-look=\"table\">x</div>\n")
+	for _, look := range []string{"table", "panel"} {
+		if want := "<style>\n@layer floe.looks {\n" + `@scope ([data-floe-look~="table"]` + partStyle(t, look); strings.Count(page, want) != 1 {
+			t.Errorf("a page of HTML in the table's look lacks the look %s once:\n%s", look, page)
+		}
+	}
+	if strings.Contains(page, "@layer floe.parts {\n@scope") {
+		t.Errorf("a page of HTML in the table's look has a part's box:\n%s", page)
 	}
 	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"good\" data-floe-part=\"cell\">ok</span>\n")
 	if strings.Count(page, partStyle(t, "cell")) != 1 || strings.Contains(page, partStyle(t, "note")) {
@@ -397,7 +410,7 @@ func TestPartsOfNumbersAndChanges(t *testing.T) {
 		"      - tree: [{ path: a/b.go, note: B, change: added }]\n"+
 		"      - links: [{ title: PR, url: 'https://example.com/1', text: merged }]\n")
 	for _, want := range []string{
-		`<div class="card stat good"><dt>Pages</dt><dd class="value">18<span class="unit">MB</span></dd><dd class="note">&#43;5</dd></div>`,
+		`<div class="card stat good" data-floe-look="panel"><dt>Pages</dt><dd class="value">18<span class="unit">MB</span></dd><dd class="note">&#43;5</dd></div>`,
 		`<label class="bar warn"><span class="label">Copy</span><span class="count">5 / 8</span><progress value="5" max="8">5 / 8</progress></label>`,
 		`<li class="done"><strong>A</strong></li>`,
 		`<li class="doing" aria-current="step"><strong>B</strong><p><strong>now</strong></p>`,
@@ -405,12 +418,12 @@ func TestPartsOfNumbersAndChanges(t *testing.T) {
 		`<li class="done"><code>ci</code></li>`,
 		`<tr><td class="what">a</td><td>x</td><td class="after">y</td></tr>`,
 		`<tr class="same"><td class="what">b</td>`,
-		`<div class="card option pick"><h3>A <span data-floe-part="cell">Take</span></h3><ul><li class="pro">p</li><li class="con">c</li></ul></div>`,
+		`<div class="card option pick" data-floe-look="panel"><h3>A <span data-floe-part="cell">Take</span></h3><ul><li class="pro">p</li><li class="con">c</li></ul></div>`,
 		`<dt>State</dt><dd><span class="bad" data-floe-part="cell">open</span></dd>`,
 		`<dt>Due</dt><dd><code>soon</code></dd>`,
 		`<span class="file">a.go</span><span class="added">+1</span><span class="removed">−1</span></figcaption><pre><code><span class="hunk">@@ -1 &#43;1 @@` + "\n" + `</span><span class="del">-a` + "\n",
 		`<li><span class="name dir">a/</span><ul>` + "\n" + `<li class="added"><span class="name">b.go</span><span class="note">B</span></li>`,
-		`<li class="card"><a href="https://example.com/1">PR</a><p>merged</p><span class="url">https://example.com/1</span></li>`,
+		`<li class="card" data-floe-look="panel"><a href="https://example.com/1">PR</a><p>merged</p><span class="url">https://example.com/1</span></li>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page lacks %s:\n%s", want, page)
@@ -512,5 +525,23 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 		if err != nil && strings.Contains(err.Error(), ok) {
 			t.Errorf("%s refused: %v", ok, err)
 		}
+	}
+}
+
+// A look alone draws nothing: a template's schema that refers to one is refused, the parts it may name
+// told without the looks.
+func TestLookRefused(t *testing.T) {
+	t.Parallel()
+
+	dir := memo(t, `"risks": {"$ref": "floe:///parts/panel.json"}, "aside": {"$ref": "floe:///parts/rowz.json"}`)
+	_, mistakes := tmpl.Check(filepath.Join(dir, "memo"), "", "")
+	got := fmt.Sprint(mistakes)
+	if !strings.Contains(got, "floe:///parts/panel.json is the look panel, which draws nothing") {
+		t.Errorf("Check of a $ref to a look = %v", mistakes)
+	}
+	dir = memo(t, `"risks": {"$ref": "floe:///parts/rowz.json"}, "aside": {"type": "string"}`)
+	_, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", "")
+	if got = fmt.Sprint(mistakes); !strings.Contains(got, "is not a part") || strings.Contains(got, "panel") {
+		t.Errorf("Check of a $ref to no part = %v, want the parts that draw", mistakes)
 	}
 }

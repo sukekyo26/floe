@@ -1,9 +1,0 @@
-:scope:where([data-floe-part~="code"], [data-floe-part~="terminal"]) {
-  border: 3px solid var(--brutal-ink); border-radius: 0; box-shadow: 6px 6px 0 var(--brutal-blue); margin: 0 6px 6px 0;
-}
-:scope:where([data-floe-part~="code"], [data-floe-part~="terminal"]) figcaption {
-  background: var(--surface); color: var(--fg); opacity: 1; font-weight: 800; border-bottom: 3px solid var(--brutal-ink);
-}
-:scope:where([data-floe-part~="progress"], [data-floe-part~="steps"], [data-floe-part~="checklist"], [data-floe-part~="tree"], [data-floe-part~="details"], [data-floe-part~="timeline"], [data-floe-part~="bars"], [data-floe-part~="faq"], [data-floe-part~="glossary"], [data-floe-part~="keys"]) {
-  border: 3px solid var(--brutal-ink); border-radius: 0; box-shadow: 6px 6px 0 var(--brutal-ink); margin: 0 6px 6px 0;
-}

@@ -1,4 +1,4 @@
-:scope { border: 0; border-radius: 0; box-shadow: none; background: none; }
+:scope { border: 0; }
 :scope thead th { background: none; color: var(--swiss-ink); font-weight: 800; border-bottom: 2px solid var(--swiss-ink); }
 :scope tbody td, :scope tbody tr:nth-child(even) td { background: none; border-bottom: 1px solid var(--swiss-ink); }
 :scope :is(th, td):first-child { padding-left: 0; }

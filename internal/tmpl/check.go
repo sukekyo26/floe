@@ -176,16 +176,23 @@ func (t *Template) checkCSS() []error {
 	return mistakes
 }
 
-// checkNamedParts returns a mistake for each part src, page.html, takes the look of, by data-floe-part,
-// that floe does not have: the page would get no style for it.
+// checkNamedParts returns a mistake for each part src, page.html, names, by data-floe-part or
+// data-floe-look, that floe does not have, as the page would get no style for it, and for each
+// data-floe-part that names more than one.
 func (t *Template) checkNamedParts(src []byte) []error {
 	set, err := t.parts()
 	if err != nil {
 		return []error{err}
 	}
 	var mistakes []error
+	told := map[int]bool{} // the attributes of several names told, by where each is
 	for _, n := range namedParts(string(src)) {
 		switch _, ok := set.parts[n.name]; {
+		case n.several():
+			if !told[n.at] {
+				told[n.at] = true
+				mistakes = append(mistakes, usererr.New("tmpl_part_several", t.file("page.html"), lineAt(src, n.at), n.value))
+			}
 		case ok:
 		case set.broken[n.name] != nil:
 			mistakes = append(mistakes, usererr.New("tmpl_part_broken", n.name, set.broken[n.name]))

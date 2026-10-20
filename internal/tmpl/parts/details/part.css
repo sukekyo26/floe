@@ -1,5 +1,5 @@
 /* The mark before the title turns down when open */
-:scope { background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 14px; box-shadow: 0 1px 2px rgb(24 32 30 / 0.06); }
+:scope { }
 :scope > summary {
   display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 1.2rem; cursor: pointer; font-weight: 700; list-style: none;
 }

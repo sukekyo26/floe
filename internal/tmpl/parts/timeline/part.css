@@ -1,5 +1,5 @@
 /* The date at the left of a dot on a line that runs down to the next */
-:scope { list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; max-width: none; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 14px; box-shadow: 0 1px 2px rgb(24 32 30 / 0.06); }
+:scope { list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; max-width: none; }
 :scope > li { position: relative; display: grid; grid-template-columns: 7rem minmax(0, 1fr); column-gap: 2rem; padding-bottom: 1.1rem; }
 :scope > li:last-child { padding-bottom: 0; }
 :scope > li::before {

@@ -1,17 +1,5 @@
-/* Dark in light mode too, as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
-:scope {
-  margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px rgb(24 32 30 / 0.12);
-  background: var(--code-bg, #1b2120); color: var(--code-fg, #e2e9e7);
-  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP");
-}
-:scope figcaption {
-  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1.1rem; font-size: 0.78rem; opacity: 0.85;
-  background: rgb(255 255 255 / 0.05); border-bottom: 1px solid rgb(255 255 255 / 0.08);
-}
-:scope pre {
-  margin: 0; padding: 0.95rem 1.1rem; overflow-x: auto; background: none; border: 0; border-radius: 0; color: inherit;
-  font-family: inherit; font-size: 0.875rem; line-height: 1.65; tab-size: 4;
-}
+/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
+:scope figcaption { opacity: 0.85; }
 :scope :is(.run, .out) { display: block; }
 :scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
 :scope .run::before { content: "$ "; color: var(--code-prompt, #63b5be); }

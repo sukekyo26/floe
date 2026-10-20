@@ -1,6 +1,4 @@
-:scope {
-  background: var(--default-panel); border: 0; border-radius: 20px; padding: 6px; box-shadow: none;
-}
+:scope { padding: 6px; }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope thead th { background: none; padding-block: 0.6rem 0.5rem; }
 :scope tbody td, :scope tbody tr:nth-child(even) td { background: var(--surface); }

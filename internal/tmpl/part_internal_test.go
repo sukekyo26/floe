@@ -37,16 +37,28 @@ func TestPalette(t *testing.T) {
 		if bare := regexp.MustCompile(`var\(\s*--[\w-]+\s*\)`).FindString(p.css); bare != "" && p.pages != nil {
 			t.Errorf("the part %s takes %s without a value of its own", name, bare)
 		}
-		// A part's element names it, so that a page that draws it gets its style, and every name is a part's.
-		names := namedParts(p.html)
-		if p.pages != nil && !slices.ContainsFunc(names, func(n namedPart) bool { return n.name == name }) {
-			t.Errorf("the HTML of the part %s does not name it in a data-floe-part", name)
+		// A part's element is its box, data-floe-part="<its name>", so that a page that draws it gets its
+		// style; an element is the box of one part, and every name, and every look a part takes, is a part's.
+		if p.pages != nil && !namesItself(p.html, name) {
+			t.Errorf("the HTML of the part %s is not its box, data-floe-part=%q", name, name)
 		}
-		for _, other := range names {
-			if _, ok := set.parts[other.name]; !ok {
-				t.Errorf("the HTML of the part %s names %s, which is no part", name, other.name)
+		for _, other := range namedParts(p.html) {
+			if _, ok := set.parts[other.name]; !ok || other.several() {
+				t.Errorf("the HTML of the part %s names %s, which is no part, or data-floe-part=%q", name, other.name, other.value)
 			}
 		}
+		for _, look := range p.looks {
+			if set.parts[look] == nil {
+				t.Errorf("the part %s takes the look of %s, which is no part", name, look)
+			}
+		}
+	}
+	// The boxes of floe's parts take their looks from part.yaml: the panel, through the table for risks.
+	if looks := set.looksOf("risks"); !slices.Equal(looks, []string{"table", "panel"}) {
+		t.Errorf("the looks of risks = %v", looks)
+	}
+	if !set.parts["panel"].look || set.parts["panel"].css == "" || set.parts["panel"].about == "" {
+		t.Errorf("the look panel = %+v", set.parts["panel"])
 	}
 	// compare is drawn in the table's look, so a theme for it is warned of the table's variables too, and
 	// tabs of those of code, which a diff in it is drawn in the look of.
@@ -198,6 +210,9 @@ func TestPartsDrawnWhole(t *testing.T) {
 		return slices.ContainsFunc(slices.Collect(maps.Values(s.Properties)), drawnWhole)
 	}
 	for name, p := range set.parts {
+		if p.look {
+			continue
+		}
 		if drawnWhole(p.schema.Items) || slices.ContainsFunc(slices.Collect(maps.Values(p.schema.Properties)), drawnWhole) {
 			t.Errorf("the part %s holds an item of a format", name)
 		}

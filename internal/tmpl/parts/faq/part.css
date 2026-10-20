@@ -1,6 +1,5 @@
 /* Each question a row; Q leads it, and its answer opens under it */
-:scope { display: grid; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 14px; box-shadow: 0 1px 2px rgb(24 32 30 / 0.06); }
-:scope > details + details { border-top: 1px solid var(--line, #d4dbd8); }
+:scope { display: grid; }
 :scope summary {
   display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.5rem; padding: 0.75rem 1.2rem;
   cursor: pointer; font-weight: 700; list-style: none;
