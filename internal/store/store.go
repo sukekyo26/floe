@@ -285,7 +285,7 @@ func (s *Store) Version(slug string, m *Meta, file string) string {
 	s.mu.Lock()
 	last := s.drawn[sourceKey(slug, file)]
 	s.mu.Unlock()
-	v += "+" + m.UpdatedAt + "+" + stamp(last.sources)
+	v += "+" + m.UpdatedAt + "+" + stamp(last.sources, filepath.Dir(file))
 	if unix.Access(file, unix.R_OK) != nil {
 		return v + "+unreadable"
 	}
@@ -303,10 +303,11 @@ func modTime(file string) string {
 
 // stamp sums up the state of sources: the size and mtime of each image, of each index of icons and of
 // every file under the template's directory and under the directories of parts of one's own it read,
-// and the mtime of the directory of templates, where one may come.
+// and the mtime of the directory of templates, where one may come. The images are under dir, the
+// directory of the data file.
 // LIMIT: walks the template's directory and the parts' on each look (every second for each open tab).
 // Watch them with fsnotify if they grow to hundreds of files.
-func stamp(sources tmpl.Sources) string {
+func stamp(sources tmpl.Sources, dir string) string {
 	h := fnv.New64a()
 	add := func(p string) {
 		fi, err := os.Stat(p)
@@ -326,7 +327,10 @@ func stamp(sources tmpl.Sources) string {
 	for _, dir := range sources.Parts {
 		addTree(dir, add, note)
 	}
-	for _, file := range slices.Concat(sources.Images, sources.Icons) {
+	for _, name := range sources.Images {
+		add(filepath.Join(dir, filepath.FromSlash(name)))
+	}
+	for _, file := range sources.Icons {
 		add(file)
 	}
 	return strconv.FormatUint(h.Sum64(), 36)

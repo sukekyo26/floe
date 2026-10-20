@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"math"
 	"path"
 	"path/filepath"
@@ -80,7 +81,7 @@ type Data struct {
 	// its items drawn by floe's parts, by the path of keys to each (pathKey); nil without one
 	parts    map[string]template.HTML
 	diagrams bool     // whether it has a diagram, for the page to get their style and zoom
-	tried    []string // the files of the images it names, read or not
+	tried    []string // the images it names, read or not, as it writes them
 	icons    []string // the index files of the icon sets its diagrams may show, when it has one
 }
 
@@ -106,20 +107,32 @@ type Sources struct {
 	Templates string   // the directory of templates of one's own, where one may come; "" for none
 	Parts     []string // the directories of parts of one's own read, whose files the data may be drawn with
 	Template  string   // the directory of the template of one's own the data names; "" for none
-	Images    []string // the images the data names, read or not
+	Images    []string // the images the data names, read or not, as it writes them: under its directory
 	Icons     []string // the index files of the icon sets, when it has a diagram, fetched or not
 }
 
 // ReadSources reads the data file src as Read does, and returns its Sources too.
 func (l *Library) ReadSources(file string, src []byte, themes Themes, cwd string) (*Data, Sources, error) {
+	dir := filepath.Dir(file)
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(cwd, dir)
+	}
+	images, done := diskImages(dir)
+	defer done()
+	return l.readWith(file, src, images, themes)
+}
+
+// ReadFS reads the data file src as ReadSources does, its images read from images, the directory of
+// the data file, which its mistakes name dir.
+func (l *Library) ReadFS(file string, src []byte, images fs.FS, dir string, themes Themes) (*Data, Sources, error) {
+	return l.readWith(file, src, imageDir{dir: dir, open: func() (fs.FS, error) { return images, nil }}, themes)
+}
+
+func (l *Library) readWith(file string, src []byte, images imageDir, themes Themes) (*Data, Sources, error) {
 	sources := Sources{Templates: l.dir, Parts: nil, Template: "", Images: nil, Icons: nil}
 	if l.parts != "" {
 		// Where one may come, when none has been read.
 		sources.Parts = []string{l.parts}
-	}
-	dir := filepath.Dir(file)
-	if !filepath.IsAbs(dir) {
-		dir = filepath.Join(cwd, dir)
 	}
 	h, err := start(file, src, themes)
 	if err != nil {
@@ -154,7 +167,7 @@ func (l *Library) ReadSources(file string, src []byte, themes Themes, cwd string
 	if err = t.checkVersion(); err != nil {
 		return nil, sources, err
 	}
-	err = t.check(h, dir, themes, problems)
+	err = t.check(h, images, themes, problems)
 	sources.Images, sources.Icons = d.tried, d.icons
 	if t.set != nil && t.set.dirs != nil {
 		sources.Parts = t.set.dirs
@@ -224,9 +237,9 @@ func start(file string, src []byte, given Themes) (*head, error) {
 	return h, nil
 }
 
-// check checks h.d, whose images are under dir, against t, which then draws it: with the themes given,
-// else the data's. problems are those found before in the keys every template shares.
-func (t *Template) check(h *head, dir string, given Themes, problems yamlpos.Problems) error {
+// check checks h.d, whose images are under images, against t, which then draws it: with the themes
+// given, else the data's. problems are those found before in the keys every template shares.
+func (t *Template) check(h *head, images imageDir, given Themes, problems yamlpos.Problems) error {
 	d := h.d
 	d.tmpl = t
 	themes, err := t.themes()
@@ -259,7 +272,7 @@ func (t *Template) check(h *head, dir string, given Themes, problems yamlpos.Pro
 		more = yamlpos.Problems{yamlpos.New(d.File, h.where["parts-theme"], "tmpl_parts_theme_broken", d.PartsTheme, broken)}
 	}
 	problems = append(problems, more...)
-	return checkValues(t, d, h.root, dir, problems)
+	return checkValues(t, d, h.root, images, problems)
 }
 
 // misplaced returns the message of the theme name that is not one of names: elsewhere when it is one of
@@ -288,10 +301,10 @@ func pickTheme(d *Data, theme *string, given string, names []string, pos yamlpos
 	return nil, nil
 }
 
-// checkValues checks d against its template's schema, reads its images under dir, checks it against
+// checkValues checks d against its template's schema, reads its images under images, checks it against
 // its checks and computes its values, reporting the schema's mistakes with problems, those found before
 // in the keys every template shares.
-func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlpos.Problems) error {
+func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems yamlpos.Problems) error {
 	src, err := t.readFile("schema.json")
 	if err != nil {
 		return err
@@ -320,7 +333,7 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 		return problems.Sorted()
 	}
 	d.schema = s
-	err = checkItems(checkImages(s, d, root, dir), checkHTML(set, s, d, root), checkDiagrams(s, d, root, t.icons),
+	err = checkItems(checkImages(s, d, root, images), checkHTML(set, s, d, root), checkDiagrams(s, d, root, t.icons),
 		checkScripts(s, d, root), checkParts(s, d, root))
 	if err != nil {
 		return err
