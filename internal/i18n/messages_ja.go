@@ -383,7 +383,7 @@ var messagesJA = map[string]string{
 	"tmpl_part_look_ref":           "%s は見た目 %s で、何も描きません。部品を指し、見た目は part.yaml の looks: か data-floe-look で借りてください",
 	"tmpl_part_holds_look":         "%s: 部品が指す floe:///parts/%s.json は見た目で、何も描きません。part.yaml の looks: で借りてください",
 	"tmpl_part_format":             "%s: %s: 部品の schema には \"format\": \"%s\" を書けません。部品の項目は part.html が描き、format の検査は届きません。その項目はテンプレートの schema に書くか、Markdown なら \"type\": \"string\" だけにして {{markdown .<名前>}} で描いてください",
-	"tmpl_part_root_ref":           "%s: 部品 %s の schema の根の $ref が部品 %s を指しているので、floe はその部品として描いてしまいます。floe part new <名前> --from %s が書くように自分の項目を書くか、その部品をキーの下に置いてください",
+	"tmpl_part_root_ref":           "%s: 部品 %s の schema の根の $ref が部品 %s を指しているので、floe はその部品として描いてしまいます。schema に部品自身の項目を書くか、その部品をキーの下に置いてください",
 	"tmpl_part_yaml":               "part.yaml はキーと値で書いてください。looks: に部品が借りる見た目のリスト（looks: [panel]）、見た目だけの部品なら description: にその説明です",
 	"tmpl_part_yaml_key":           "%s は part.yaml のキーではありません。looks: に部品が借りる見た目のリスト（looks: [panel]）、見た目だけの部品なら description: にその説明を書いてください",
 	"tmpl_part_yaml_looks":         "looks: は部品か見た目の名前のリストで書いてください（looks: [panel]）",

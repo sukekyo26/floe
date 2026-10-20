@@ -189,15 +189,18 @@ func TestBrokenOwnParts(t *testing.T) {
 		"marked/part.html":     `<div data-floe-part="marked">{{.text}}</div>`,
 		"marked/part.css":      "",
 		// A format of JSON Schema's own is checked as the part's schema is, and stays.
-		"dated/schema.json":  `{"type": "object", "properties": {"on": {"type": "string", "format": "date"}}}`,
-		"dated/part.html":    `<div data-floe-part="dated">{{.on}}</div>`,
-		"dated/part.css":     "",
-		"grid/schema.json":   `{"$ref": "floe:///parts/table.json"}`,
-		"grid/part.html":     `<div data-floe-part="grid">{{.columns}}</div>`,
-		"grid/part.css":      "",
-		"jotted/schema.json": `{"description": "A note again", "$ref": "note.json"}`,
-		"jotted/part.html":   `<div data-floe-part="jotted">{{.text}}</div>`,
-		"jotted/part.css":    "",
+		"dated/schema.json":   `{"type": "object", "properties": {"on": {"type": "string", "format": "date"}}}`,
+		"dated/part.html":     `<div data-floe-part="dated">{{.on}}</div>`,
+		"dated/part.css":      "",
+		"grid/schema.json":    `{"$ref": "floe:///parts/table.json"}`,
+		"grid/part.html":      `<div data-floe-part="grid">{{.columns}}</div>`,
+		"grid/part.css":       "",
+		"jotted/schema.json":  `{"description": "A note again", "$ref": "note.json"}`,
+		"jotted/part.html":    `<div data-floe-part="jotted">{{.text}}</div>`,
+		"jotted/part.css":     "",
+		"plotted/schema.json": `{"$ref": "floe:///parts/diagram.json"}`,
+		"plotted/part.html":   `<div data-floe-part="plotted">{{.}}</div>`,
+		"plotted/part.css":    "",
 		// A schema the parts share at the root is the part's own value.
 		"toned/schema.json": `{"$ref": "tone.json"}`,
 		"toned/part.html":   `<b data-floe-part="toned">{{.}}</b>`,
@@ -262,6 +265,8 @@ func TestBrokenOwnParts(t *testing.T) {
 			": the part grid is the part table by the $ref at the root of its schema",
 		"jotted": "the part jotted cannot be used: " + filepath.Join(parts, "jotted", "schema.json") +
 			": the part jotted is the part note by the $ref at the root of its schema",
+		"plotted": "the part plotted cannot be used: " + filepath.Join(parts, "plotted", "schema.json") +
+			": the part plotted is the part diagram by the $ref at the root of its schema",
 	}
 	for name, why := range whys {
 		dir := memo(t, `"risks": {"$ref": "floe:///parts/`+name+`.json"}, "aside": {"type": "string"}`)

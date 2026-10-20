@@ -230,7 +230,8 @@ func (set *partSet) reserved(name string) bool {
 // checkNames refuses the part name, whose directory is dir, when its part.html names it in no
 // data-floe-part, names more than one part in one, or names a part there is none of, when part.yaml has
 // it take the look of a part there is none of, and when its schema holds a part there is none of, or a
-// look alone. floe's parts name themselves, one each, as a test checks.
+// look alone, or is another part's by a $ref at its root. floe's parts name themselves, one each, as a test
+// checks.
 func (set *partSet) checkNames(name, dir string) error {
 	p := set.parts[name]
 	// floe's are named as reading them names them.
@@ -350,7 +351,7 @@ func (set *partSet) checkHeld(p *part, at string, own bool) error {
 	}
 	// A schema the parts share (tone) at the root has no part to draw it.
 	if name, ok := partName(p.schema.Ref); ok && set.parts[name] != nil {
-		return usererr.New("tmpl_part_root_ref", path.Join(at, "schema.json"), p.name, name, name)
+		return usererr.New("tmpl_part_root_ref", path.Join(at, "schema.json"), p.name, name)
 	}
 	return nil
 }
