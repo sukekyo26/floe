@@ -162,6 +162,21 @@ func TestCheck(t *testing.T) {
 			},
 		},
 		{
+			name: "axis off the canvas",
+			parts: `  - axis: { x1: 20, x2: 400, y: 150, ticks: [[20, a]] }
+  - axis: { x1: 20, x2: 280, y: 150, ticks: [[100, b]], grid: -10 }
+`,
+			want: []string{
+				`s.yaml:6:5: axis from 20 to 400 at y 150 sticks out of the 300x200 canvas`,
+				`s.yaml:7:5: axis from 20 to 280 at y 150 sticks out of the 300x200 canvas`,
+			},
+		},
+		{
+			name:  "heading wider than its frame",
+			parts: "  - frame: { x: 20, y: 20, w: 100, h: 60, label: A heading longer than its frame }\n",
+			want:  []string{`s.yaml:6:5: frame "A heading longer than its frame": "A heading longer than its frame" needs about 148px more width`},
+		},
+		{
 			name: "icons not there",
 			parts: `  - icon: { x: 10, y: 10, name: lambda }
   - icon: { x: 70, y: 10, name: aws/lambda }
@@ -203,7 +218,10 @@ func TestCheck(t *testing.T) {
 		{
 			name:  "the same mistake once",
 			parts: "  - axis: { x1: 10, x2: 290, y: 100, ticks: [[400, x], [500, x]] }\n",
-			want:  []string{`s.yaml:6:5: label "x" sticks out of the 300x200 canvas`},
+			want: []string{
+				`s.yaml:6:5: label "x" sticks out of the 300x200 canvas`,
+				`s.yaml:6:5: axis from 10 to 290 at y 100 sticks out of the 300x200 canvas`,
+			},
 		},
 	}
 	for _, tt := range tests {

@@ -156,6 +156,8 @@ func (l *layout) addFrame(f Frame) {
 	if f.Label != "" {
 		head := usererr.New("diagram_what_heading", f.Label)
 		l.heads = append(l.heads, rect{hx, hy - 9, textWidth(f.Label, size, false), 18, head, f.Pos})
+		// The heading keeps the margin on its right that it has on its left.
+		l.fit(f.Pos, what, f.Label, size, false, f.W-(hx-f.X)-12)
 	}
 	rx, cls := 10.0, "frame"
 	if f.Icon != "" || f.Square {
@@ -404,14 +406,19 @@ func (l *layout) addBar(b Bar) {
 }
 
 func (l *layout) addAxis(a Axis) {
+	runs := [][4]float64{{a.X1, a.Y, a.X2, a.Y}}
 	l.edgeSVG = append(l.edgeSVG, line(a.X1, a.Y, a.X2, a.Y, "axis"))
 	for _, t := range a.Ticks {
 		if a.Grid != nil {
+			runs = append(runs, [4]float64{t.X, *a.Grid, t.X, a.Y})
 			l.grids = append(l.grids, line(t.X, *a.Grid, t.X, a.Y, "grid"))
 		}
+		runs = append(runs, [4]float64{t.X, a.Y, t.X, a.Y + 5})
 		l.edgeSVG = append(l.edgeSVG, line(t.X, a.Y, t.X, a.Y+5, "axis"))
 		l.label(a.Pos, t.Text, t.X, a.Y+17, "middle", true, false)
 	}
+	what := usererr.New("diagram_what_axis", formatNum(a.X1), formatNum(a.X2), formatNum(a.Y))
+	l.strokes = append(l.strokes, span(runs, what, a.Pos))
 }
 
 // line draws a straight line of the class cls.
