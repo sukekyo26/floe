@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"crypto/rand"
+	"html/template"
 	"regexp"
 	"slices"
 	"strconv"
@@ -14,112 +15,137 @@ import (
 	"golang.org/x/net/html/atom"
 
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
+// htmlItem is an item of format html of a data file: its path of keys, and the mistake of it at its
+// line and column, which Read keeps for Render, which has no YAML.
+type htmlItem struct {
+	at      []string
+	mistake func(e *usererr.Error) *yamlpos.Error
+}
+
+// htmlItemsOf returns the items of format html of d, text, in the order of the file under root.
+func htmlItemsOf(d *Data, root ast.Node) []htmlItem {
+	var found []itemAt
+	d.schema.find("html", d.Values, nil, &found)
+	var items []htmlItem
+	var at []yamlpos.Pos
+	for _, f := range found {
+		if _, isText := f.value.(string); !isText {
+			continue
+		}
+		key, value, path := yamlpos.Find(root, f.at)
+		pos := yamlpos.OfValue(key, value)
+		items = append(items, htmlItem{at: f.at, mistake: func(e *usererr.Error) *yamlpos.Error {
+			return &yamlpos.Error{File: d.File, Pos: pos, Err: usererr.New("tmpl_item", path, e)}
+		}})
+		at = append(at, pos)
+	}
+	order := make([]int, len(items))
+	for i := range order {
+		order[i] = i
+	}
+	slices.SortFunc(order, func(a, b int) int {
+		return cmp.Or(cmp.Compare(at[a].Line, at[b].Line), cmp.Compare(at[a].Column, at[b].Column))
+	})
+	sorted := make([]htmlItem, len(items))
+	for i, o := range order {
+		sorted[i] = items[o]
+	}
+	return sorted
+}
+
 // htmlMarks marks the items of format html of a drawing that checks them: each between the comments
-// <!--mark:n--> and <!--/mark:n-->, n its index by its path of keys (pathKey), its text left out when
-// empty, or when only is another's, -1 for none.
+// <!--mark:n--> and <!--/mark:n-->, n its index in the items of the file (pathKey), its text left out
+// when empty, or when n is past upTo.
 type htmlMarks struct {
 	mark  string
 	at    map[string]int
 	empty bool
-	only  int
+	upTo  int
 }
 
 // marked returns text, the item of format html at the path at, between its marks, as m draws it.
 func (m *htmlMarks) marked(text string, at []string) string {
 	n := m.at[pathKey(at)]
-	if m.empty || m.only >= 0 && m.only != n {
+	if m.empty || n > m.upTo {
 		text = ""
 	}
 	i := strconv.Itoa(n)
 	return "<!--" + m.mark + ":" + i + "-->" + text + "<!--/" + m.mark + ":" + i + "-->"
 }
 
-// checkDrawnHTML refuses the first item of format html of d that changes the page around it, at its line
-// and column under root, as a browser reads the page drawn: one that leaves open what takes in the page
-// after it (an <svg>, a comment, a <b>), or closes an element of the page. Whether it does depends on
-// where page.html puts it, so d is drawn, with its items marked and with them empty, and the two are
-// compared. A drawing that fails is left to Render to tell.
-// LIMIT: finding the item draws d once more per item, but only when one changes the page; halve the items
-// left in each drawing if pages of many items come to be slow.
-func checkDrawnHTML(d *Data, root ast.Node) error {
-	var found []itemAt
-	d.schema.find("html", d.Values, nil, &found)
-	found = slices.DeleteFunc(found, func(f itemAt) bool {
-		_, isText := f.value.(string)
-		return !isText
-	})
-	if found == nil {
-		return nil
-	}
-	m := &htmlMarks{mark: rand.Text(), at: map[string]int{}, empty: true, only: -1}
-	for i, f := range found {
-		m.at[pathKey(f.at)] = i
+// checkDrawnHTML refuses the first item of format html of d that changes the page around it, as a
+// browser reads the page page draws, titled title: one that leaves open what takes in the page after it
+// (an <svg>, a comment, a <b>), or closes an element of the page. Whether it does depends on where
+// page.html puts it, so the page is drawn with its items marked and with them empty, and the two are
+// compared. The item told is the first, in the order of the file, with which the items before it change
+// the page: two may do so only together, one closing what the other leaves open.
+// LIMIT: page.html is given the items marked, so one that looks into an item's text (len, eq) may draw
+// them otherwise than the page it checks. Finding the item draws the page once more per item, but only
+// when they change it; halve the items drawn if pages of many come to be slow.
+func (d *Data) checkDrawnHTML(page *template.Template, title string) error {
+	m := &htmlMarks{mark: rand.Text(), at: map[string]int{}, empty: true, upTo: len(d.htmlItems) - 1}
+	for i, it := range d.htmlItems {
+		m.at[pathKey(it.at)] = i
 	}
 	d.marks = m
 	defer func() { d.marks = nil }()
-	bare, ok := d.drawnTree()
-	if !ok {
-		return nil
+	bare, err := d.drawnTree(page, title)
+	if err != nil {
+		return err
 	}
 	m.empty = false
-	full, ok := d.drawnTree()
-	if !ok {
-		return nil
-	}
-	why := changed(full, bare, m.mark)
-	if why == nil {
-		return nil
-	}
-	for i := range found {
-		m.only = i
-		page, ok := d.drawnTree()
-		if !ok {
-			return nil
+	for k := range d.htmlItems {
+		m.upTo = k
+		full, err := d.drawnTree(page, title)
+		if err != nil {
+			return err
 		}
-		if one := changed(page, bare, m.mark); one != nil {
-			return itemMistake(d.File, root, found[i].at, false, one)
+		if why := changed(full, bare, m.mark); why != nil {
+			return d.htmlItems[k].mistake(why)
 		}
 	}
-	// Items that change it only together, one closing what another leaves open: told at the first.
-	return itemMistake(d.File, root, found[0].at, false, why)
+	return nil
 }
 
-// drawnTree draws d as it is marked, without its styles, and reads the page as a browser does, false for
-// a drawing that fails. A script ends it, as the one a served page gets: an item that takes it in changes
-// the page too.
-func (d *Data) drawnTree() (*html.Node, bool) {
-	page, err := d.Render(d.Title)
+// drawnTree draws d, as it is marked, with page, and reads it as a browser does: without its styles, and
+// with the scripts floe puts after it, the one a served page gets too, which an item may take in.
+func (d *Data) drawnTree(page *template.Template, title string) (*html.Node, error) {
+	out, err := d.execute(page, title)
 	if err != nil {
-		return nil, false
+		return nil, err
+	}
+	if out, err = d.withDiagrams(out); err != nil {
+		return nil, err
 	}
 	// A bytes.Reader fails no read, the one error Parse returns.
-	doc, _ := html.Parse(bytes.NewReader(append(page, "<script></script>"...))) //nolint:errcheck // see above
-	return doc, true
+	doc, _ := html.Parse(bytes.NewReader(append(out, "<script></script>"...))) //nolint:errcheck // see above
+	return doc, nil
 }
 
 // changed returns the mistake of the items marked in full, the page drawn with them, against bare, the
 // page drawn with them empty, nil when they leave it as it is: an item whose end mark is gone, taken in by
 // what it leaves open, one of whose elements holds the page after it, or the page outside the items not
 // that of bare, whose text and attributes, which an item drawn as text or in a value changes, are not
-// compared. An item drawn as no markup, in a <title> or a value, has no marks, and is left alone.
+// compared. An item drawn as no markup, in a <title> or a value, has no marks, and is left alone; one whose
+// start mark is text of the page's that it ends (a <noscript>) leaves its end mark in the page, unlike
+// bare.
 func changed(full, bare *html.Node, mark string) *usererr.Error {
 	begins, ends := marksIn(full, mark)
 	for n, b := range begins {
 		e := ends[n]
-		if len(e) != len(b) {
+		switch {
+		case len(e) > len(b):
+			return usererr.New("tmpl_html_page") // a start mark is text of the page's that it ends
+		case len(e) < len(b):
 			return swallowed(full, mark, n)
 		}
 		for i := range b {
 			if why := cut(full, b[i], e[i]); why != nil {
 				return why
 			}
-		}
-	}
-	for n, e := range ends {
-		if len(begins[n]) != len(e) {
-			return swallowed(full, mark, n)
 		}
 	}
 	if shape(full) != shape(bare) {
@@ -197,7 +223,7 @@ func swallowed(doc *html.Node, mark, n string) *usererr.Error {
 	end := "/" + mark + ":" + n
 	for c := range doc.Descendants() {
 		switch {
-		case c.Type == html.CommentNode && strings.Contains(c.Data, end):
+		case c.Type == html.CommentNode && c.Data != end && strings.Contains(c.Data, end):
 			return usererr.New("tmpl_html_open", "<!--")
 		case c.Type == html.TextNode && strings.Contains(c.Data, end) && c.Parent != nil &&
 			c.Parent.Type == html.ElementNode:

@@ -115,9 +115,13 @@ func TestDrawnHTMLItems(t *testing.T) {
 	if _, err := draw(twice, "template: memo\nlang: en\nrisks: <div>d</div>\n"); err == nil {
 		t.Error("an item that changes the page where it is drawn the second time passes")
 	}
-	title := htmlIn(t, `<p>{{.Data.risks}}</p>`)
-	if _, err := draw(title, "template: memo\nlang: en\nrisks: <b>x</b>\n"); err != nil {
-		t.Errorf("an item left as it is = %v", err)
+	dir := memo(t, `"risks": {"type": "string", "format": "html"}`)
+	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Data.risks}}</title></head><body><p>x</p></body></html>`
+	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <svg>\n"); err != nil {
+		t.Errorf("an item in a <title> = %v", err)
 	}
 	inTitle := htmlIn(t, `<h1 title="{{.Data.risks}}">t</h1><p>x</p>`)
 	if _, err := draw(inTitle, "template: memo\nlang: en\nrisks: <svg>\n"); err != nil {
@@ -153,6 +157,31 @@ func TestDrawnHTMLInHead(t *testing.T) {
 		_, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n")
 		if want == "" && err != nil || want != "" && (err == nil || !strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: "+want)) {
 			t.Errorf("%q in the head = %v, want %q", item, err, want)
+		}
+	}
+}
+
+// The item told is the first in the file that changes the page, whatever the order Go keeps them in; the
+// page is checked as it is drawn, with its title; and an item that ends an element of the page whose text
+// hides its start is told as one that closes an element of the page.
+func TestDrawnHTMLWhich(t *testing.T) {
+	t.Parallel()
+
+	l := htmlIn(t, `<ul><li>{{.Data.risks}} a</li><li>{{with .Data.aside}}{{.}}{{end}} b</li></ul>`)
+	for range 20 {
+		if _, err := draw(l, "template: memo\nlang: en\nrisks: <svg>\naside: <svg>\n"); err == nil ||
+			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: ") {
+			t.Fatalf("two items that change the page = %v, want risks", err)
+		}
+	}
+	titled := htmlIn(t, `{{if eq .Title "t"}}<ul><li>{{.Data.risks}} tail</li></ul>{{else}}<div>{{.Data.risks}}</div>{{end}}`)
+	if _, err := draw(titled, "template: memo\nlang: en\nrisks: <b>bold\n"); err == nil {
+		t.Error("an item checked under another title than the page's passes")
+	}
+	for _, page := range []string{`<noscript>{{.Data.risks}}</noscript><p>x</p>`, `<noscript>{{.Data.risks}}</noscript><p>{{.Data.risks}}</p>`} {
+		if _, err := draw(htmlIn(t, page), "template: memo\nlang: en\nrisks: x</noscript><b>y</b>\n"); err == nil ||
+			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: HTML closes an element of the page") {
+			t.Errorf("an item that ends a <noscript> in %s = %v", page, err)
 		}
 	}
 }

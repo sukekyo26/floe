@@ -79,11 +79,12 @@ type Data struct {
 	schema *schema                 // the template's schema as Read read it, for drawing as checked
 	images map[string]template.URL // its images as data URIs, by the path written
 	// its items drawn by floe's parts, by the path of keys to each (pathKey); nil without one
-	parts    map[string]template.HTML
-	diagrams bool       // whether it has a diagram, for the page to get their style and zoom
-	tried    []string   // the images it names that a file can make right, read or not, as it writes them
-	icons    []string   // the index files of the icon sets its diagrams may show, when it has one
-	marks    *htmlMarks // its items of format html marked, while checkDrawnHTML draws it; nil else
+	parts     map[string]template.HTML
+	diagrams  bool       // whether it has a diagram, for the page to get their style and zoom
+	tried     []string   // the images it names that a file can make right, read or not, as it writes them
+	icons     []string   // the index files of the icon sets its diagrams may show, when it has one
+	htmlItems []htmlItem // its items of format html, which Render checks the page drawn for
+	marks     *htmlMarks // its items of format html marked, while checkDrawnHTML draws it; nil else
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -242,7 +243,7 @@ func start(file string, src []byte, given Themes) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, PartsTheme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
-		tmpl: nil, schema: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, marks: nil,
+		tmpl: nil, schema: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, htmlItems: nil, marks: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(given)
@@ -358,7 +359,8 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	if err = checkComputed(t, d, root, s); err != nil {
 		return err
 	}
-	return checkDrawnHTML(d, root)
+	d.htmlItems = htmlItemsOf(d, root)
+	return nil
 }
 
 // checkHTML refuses the items of d of format html, as its schema s declares them, that hold a <style> or
@@ -463,32 +465,18 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	own, err := t.css(d.Theme)
+	out, err := d.execute(page, title)
 	if err != nil {
 		return nil, err
 	}
-	var b bytes.Buffer
-	err = page.Execute(&b, map[string]any{
-		"Title": title,
-		"Lang":  d.Lang,
-		"Data":  d.schema.prepare(d.Values, nil, d),
-		"Calc":  d.Calc,
-	})
-	// Read checked the data against the schema, so this is the template's own mistake: an image of its
-	// assets/ that is not right, or page.html naming an item its schema does not declare, or using one
-	// as another type.
-	var bad *usererr.Error
-	switch {
-	case errors.As(err, &bad):
-		return nil, t.assetMistake(bad)
-	case err != nil:
-		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
+	if d.htmlItems != nil {
+		if err = d.checkDrawnHTML(page, title); err != nil {
+			return nil, err
+		}
 	}
-	out := b.Bytes()
-	// A drawing that checks the items of format html has no styles: one such item may hide the </head>
-	// they go before, as an open <script> does, which checkDrawnHTML tells of.
-	if d.marks != nil {
-		return out, nil
+	own, err := t.css(d.Theme)
+	if err != nil {
+		return nil, err
 	}
 	set, err := t.parts()
 	if err != nil {
@@ -504,15 +492,42 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if !ok {
 		return nil, headMistake(t.file("page.html"), src)
 	}
-	// Once at the end, as the reload script is: page.html picks which diagrams it draws, and where.
-	if d.diagrams {
-		script, err := diagram.Script()
-		if err != nil {
-			return nil, err //nolint:wrapcheck // already says what failed
-		}
-		out = append(out, "\n"+script+"\n"...)
+	return d.withDiagrams(out)
+}
+
+// execute draws d with page, the template's page.html, as a page titled title, without its styles.
+func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
+	var b bytes.Buffer
+	err := page.Execute(&b, map[string]any{
+		"Title": title,
+		"Lang":  d.Lang,
+		"Data":  d.schema.prepare(d.Values, nil, d),
+		"Calc":  d.Calc,
+	})
+	// Read checked the data against the schema, so this is the template's own mistake: an image of its
+	// assets/ that is not right, or page.html naming an item its schema does not declare, or using one
+	// as another type.
+	var bad *usererr.Error
+	switch {
+	case errors.As(err, &bad):
+		return nil, d.tmpl.assetMistake(bad)
+	case err != nil:
+		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
-	return out, nil
+	return b.Bytes(), nil
+}
+
+// withDiagrams returns out, a page of d, with the script of its diagrams after it, once at the end, as the
+// reload script is: page.html picks which diagrams it draws, and where.
+func (d *Data) withDiagrams(out []byte) ([]byte, error) {
+	if !d.diagrams {
+		return out, nil
+	}
+	script, err := diagram.Script()
+	if err != nil {
+		return nil, err //nolint:wrapcheck // already says what failed
+	}
+	return append(out, "\n"+script+"\n"...), nil
 }
 
 // css returns the template's own CSS: its page.css, empty if it has none, then its theme.
