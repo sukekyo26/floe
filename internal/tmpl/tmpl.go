@@ -497,13 +497,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 
 // execute draws d with page, the template's page.html, as a page titled title, without its styles.
 func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
-	var b bytes.Buffer
-	err := page.Execute(&b, map[string]any{
-		"Title": title,
-		"Lang":  d.Lang,
-		"Data":  d.schema.prepare(d.Values, nil, d),
-		"Calc":  d.Calc,
-	})
+	out, err := d.run(page, title)
 	// Read checked the data against the schema, so this is the template's own mistake: an image of its
 	// assets/ that is not right, or page.html naming an item its schema does not declare, or using one
 	// as another type.
@@ -514,7 +508,19 @@ func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
 	case err != nil:
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
-	return b.Bytes(), nil
+	return out, nil
+}
+
+// run draws d with page as execute does, its mistake as page.Execute tells it.
+func (d *Data) run(page *template.Template, title string) ([]byte, error) {
+	var b bytes.Buffer
+	err := page.Execute(&b, map[string]any{
+		"Title": title,
+		"Lang":  d.Lang,
+		"Data":  d.schema.prepare(d.Values, nil, d),
+		"Calc":  d.Calc,
+	})
+	return b.Bytes(), err //nolint:wrapcheck // execute tells it
 }
 
 // withDiagrams returns out, a page of d, with the script of its diagrams after it, once at the end, as the

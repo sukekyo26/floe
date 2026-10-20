@@ -394,7 +394,8 @@ func TestDrawnHTMLHidesHead(t *testing.T) {
 }
 
 // Looking for the item that hides the </head>, page.html draws the items not yet added as marks, taking
-// the branches it takes with them; one that fails so is told so, not as the template's </head>.
+// the branches it takes with them; one that fails so looks into an item, and is told so. The item told
+// is the first the page draws: aside's <script>, which takes in risks' comment.
 func TestDrawnHTMLHidesHeadMarked(t *testing.T) {
 	t.Parallel()
 
@@ -402,7 +403,7 @@ func TestDrawnHTMLHidesHeadMarked(t *testing.T) {
 	page := filepath.Join(dir, "memo", "page.html")
 	for action, want := range map[string]string{
 		`{{if not .Data.risks}}{{index .Lang 9}}{{end}}`:         "data.yaml:3:8: risks: HTML changes the page around it",
-		`{{if gt (len .Data.risks) 20}}{{index .Lang 9}}{{end}}`: "data.yaml does not fit the template",
+		`{{if gt (len .Data.risks) 20}}{{index .Lang 9}}{{end}}`: "looks into an item of format html",
 	} {
 		src := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.risks}}` + action + `</head><body><p>x</p></body></html>`
 		if err := os.WriteFile(page, []byte(src), 0o600); err != nil {
@@ -411,6 +412,38 @@ func TestDrawnHTMLHidesHeadMarked(t *testing.T) {
 		if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <script>x\n"); err == nil ||
 			!strings.Contains(err.Error(), want) {
 			t.Errorf("%s = %v, want %s", action, err, want)
+		}
+	}
+	dir = memo(t, `"risks": {"type": "string", "format": "html"}, "aside": {"type": "string", "format": "html"}`)
+	src := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.aside}}{{.Data.risks}}</head><body><p>x</p></body></html>`
+	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(src), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <!-- c\naside: <script>\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:4:8: aside: ") {
+		t.Errorf("a <script> drawn before a comment = %v, want aside", err)
+	}
+}
+
+// An item is checked in the <head> or the <body>: one between them is the body's, with the attributes of
+// the page's <body>; page.html putting one after the </body> is refused, as is one looking into an item.
+func TestDrawnHTMLWherePageHasIt(t *testing.T) {
+	t.Parallel()
+
+	dir := memo(t, `"risks": {"type": "string", "format": "html"}`)
+	page := filepath.Join(dir, "memo", "page.html")
+	head := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>`
+	for body, want := range map[string]string{
+		`{{.Data.risks}}<body class="r"><p>x</p></body></html>`:                       "",
+		`<body class="r"><p>x</p></body>{{.Data.risks}}</html>`:                       "outside its <head> and <body>",
+		`<body><p>{{slice .Data.risks 0 40}}</p><p>{{.Data.risks}}</p></body></html>`: "looks into an item of format html",
+	} {
+		if err := os.WriteFile(page, []byte(head+body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <p>hello there, a paragraph longer than a mark</p>\n")
+		if want == "" && err != nil || want != "" && (err == nil || !strings.Contains(err.Error(), want)) {
+			t.Errorf("%s = %v, want %q", body, err, want)
 		}
 	}
 }
@@ -430,6 +463,7 @@ func TestDrawnHTMLTableAndForm(t *testing.T) {
 		"<form action=//e.x><input></form>":           false,
 		"<svg><form></form></svg><p>x</p>":            false,
 		"<form action=//e.x></form><form action=//f>": true,
+		"<template><form></form><form></template>":    false,
 	} {
 		if _, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n"); (err != nil) != refused {
 			t.Errorf("%q = %v, want refused %v", item, err, refused)
