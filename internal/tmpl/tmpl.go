@@ -332,7 +332,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	if err != nil {
 		return err
 	}
-	err = validate(set, src, d, root)
+	err = validate(set, t.file("schema.json"), src, d, root)
 	var more yamlpos.Problems
 	switch {
 	case errors.As(err, &more):

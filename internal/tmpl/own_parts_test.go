@@ -307,16 +307,17 @@ func TestBrokenOwnParts(t *testing.T) {
 			}
 			continue
 		}
-		// Told as floe part check tells it, not wrapped in the words of jsonschema's loading.
-		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), why) {
+		// Told at the schema as floe part check tells it, not wrapped in the words of jsonschema's loading.
+		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), filepath.Join(dir, "memo", "schema.json")+": "+why) {
 			t.Errorf("Check of a template of %s = %v, want %s", name, mistakes, why)
 		}
 	}
 	// A data file of the template, as the page of its mistakes words it, in the reader's language.
 	braced := memo(t, `"risks": {"$ref": "floe:///parts/brace.json"}, "aside": {"type": "string"}`)
 	_, err := draw(tmpl.NewLibrary(braced, parts, ""), "template: memo\nlang: en\n")
-	var mistake *usererr.Error
-	if !errors.As(err, &mistake) || !strings.HasPrefix(mistake.Localize(i18n.New("ja")), "部品 brace は使えません: ") {
+	var mistake i18n.Localizer
+	if !errors.As(err, &mistake) ||
+		!strings.HasPrefix(mistake.Localize(i18n.New("ja")), filepath.Join(braced, "memo", "schema.json")+": 部品 brace は使えません: ") {
 		t.Errorf("Read of a template of brace = %v", err)
 	}
 	// By page.html.
