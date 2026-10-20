@@ -33,25 +33,31 @@ func (l *Library) New(name, from string) (string, error) {
 	if src == nil {
 		return "", l.unknown(from)
 	}
-	at := filepath.Join(l.dir, name)
+	return install(l.dir, name, "template", func(dir string) error { return src.copyTo(dir, name) })
+}
+
+// install makes the directory name, a template or a part (what), in parent of what fill writes into dir,
+// and returns where it is. One there already is left as it is.
+func install(parent, name, what string, fill func(dir string) error) (string, error) {
+	at := filepath.Join(parent, name)
 	switch _, lerr := os.Lstat(at); {
 	case lerr == nil:
 		return "", usererr.New("tmpl_new_exists", name, at)
 	case !errors.Is(lerr, fs.ErrNotExist):
-		return "", fmt.Errorf("make the template %s: %w", name, lerr)
+		return "", fmt.Errorf("make the %s %s: %w", what, name, lerr)
 	}
-	if err = os.MkdirAll(l.dir, 0o755); err != nil { //nolint:gosec // G301: templates are not secret
-		return "", fmt.Errorf("make the template %s: %w", name, err)
+	if err := os.MkdirAll(parent, 0o755); err != nil { //nolint:gosec // G301: templates and parts are not secret
+		return "", fmt.Errorf("make the %s %s: %w", what, name, err)
 	}
-	// Made under a name starting with a dot, which is no template, and renamed when whole.
-	tmp, err := os.MkdirTemp(l.dir, ".new-"+name+"-")
+	// Made under a name starting with a dot, which is no template nor part, and renamed when whole.
+	tmp, err := os.MkdirTemp(parent, ".new-"+name+"-")
 	if err != nil {
-		return "", fmt.Errorf("make the template %s: %w", name, err)
+		return "", fmt.Errorf("make the %s %s: %w", what, name, err)
 	}
 	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory
-	// MkdirTemp makes it 0700; a template is no more secret than the directory of templates.
-	if err = src.copyTo(tmp, name); err == nil {
-		err = os.Chmod(tmp, 0o755) //nolint:gosec // G302: templates are not secret
+	// MkdirTemp makes it 0700; a template or a part is no more secret than the directory it is in.
+	if err = fill(tmp); err == nil {
+		err = os.Chmod(tmp, 0o755) //nolint:gosec // G302: templates and parts are not secret
 	}
 	if err == nil {
 		// os.Rename refuses a directory there, so one made since the check above is not written over.
@@ -61,7 +67,7 @@ func (l *Library) New(name, from string) (string, error) {
 		return "", usererr.New("tmpl_new_exists", name, at)
 	}
 	if err != nil {
-		return "", fmt.Errorf("make the template %s: %w", name, err)
+		return "", fmt.Errorf("make the %s %s: %w", what, name, err)
 	}
 	return at, nil
 }
