@@ -64,9 +64,9 @@ func oneLine(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
 
-func (a *app) where(d *tmpl.Description) string {
+func where(d *tmpl.Description) string {
 	if d.Path == "" {
-		return a.cat.Msg("cli_template_builtin")
+		return english.Msg("cli_template_builtin")
 	}
 	return d.Path
 }
@@ -95,34 +95,34 @@ func (a *app) showTemplate(d *tmpl.Description) {
 		head += ": " + oneLine(d.About)
 	}
 	a.out("%s", head)
-	a.out("%s", a.cat.Msg("cli_template_where", a.where(d)))
-	a.out("%s", a.cat.Msg("cli_template_themes", strings.Join(d.Themes, ", ")))
-	a.out("%s", a.cat.Msg("cli_template_parts_themes", strings.Join(d.PartsThemes, ", ")))
+	a.out("%s", english.Msg("cli_template_where", where(d)))
+	a.out("%s", english.Msg("cli_template_themes", strings.Join(d.Themes, ", ")))
+	a.out("%s", english.Msg("cli_template_parts_themes", strings.Join(d.PartsThemes, ", ")))
 	if d.Floe != "" {
-		a.out("%s", a.cat.Msg("cli_template_floe", d.Floe, d.Series))
+		a.out("%s", english.Msg("cli_template_floe", d.Floe, d.Series))
 	}
 	a.out("")
-	a.out("%s", a.cat.Msg("cli_template_items"))
-	items := append(a.sharedItems(d.Name), d.Items...)
+	a.out("%s", english.Msg("cli_template_items"))
+	items := append(sharedItems(d.Name), d.Items...)
 	slices.SortFunc(items, func(x, y tmpl.Item) int { return cmp.Compare(x.Name, y.Name) })
 	a.showItems(items, "  ")
 	if d.Example != nil {
 		a.out("")
-		a.out("%s", a.cat.Msg("cli_template_example"))
+		a.out("%s", english.Msg("cli_template_example"))
 		a.out("%s", strings.TrimRight(string(d.Example), "\n"))
 	}
 }
 
-// sharedItems are the keys floe reads from every data file of the template name itself, worded in the
-// reader's language.
-func (a *app) sharedItems(name string) []tmpl.Item {
+// sharedItems are the keys floe reads from every data file of the template name itself, with their
+// descriptions.
+func sharedItems(name string) []tmpl.Item {
 	items := tmpl.SharedItems(name)
 	for i, it := range items {
 		var args []any
 		if it.Name == "theme" || it.Name == "parts-theme" {
 			args = []any{tmpl.DefaultTheme}
 		}
-		items[i].Description = a.cat.Msg("cli_template_shared_"+strings.ReplaceAll(it.Name, "-", "_"), args...)
+		items[i].Description = english.Msg("cli_template_shared_"+strings.ReplaceAll(it.Name, "-", "_"), args...)
 	}
 	return items
 }
@@ -131,26 +131,26 @@ func (a *app) sharedItems(name string) []tmpl.Item {
 // under it indented.
 func (a *app) showItems(items []tmpl.Item, indent string) {
 	for _, it := range items {
-		what := a.takes(it)
+		what := takes(it)
 		parts := []string{}
 		if what != "" {
 			parts = append(parts, what)
 		}
 		if it.Format != "" {
-			parts = append(parts, a.cat.Msg("cli_template_format", it.Format))
+			parts = append(parts, english.Msg("cli_template_format", it.Format))
 		}
 		if it.Part != "" {
-			parts = append(parts, a.cat.Msg("cli_template_part", it.Part))
+			parts = append(parts, english.Msg("cli_template_part", it.Part))
 		}
 		if len(it.Enum) > 0 {
-			parts = append(parts, a.cat.Msg("cli_template_enum", strings.Join(it.Enum, ", ")))
+			parts = append(parts, english.Msg("cli_template_enum", strings.Join(it.Enum, ", ")))
 		}
 		if it.Required {
-			parts = append(parts, a.cat.Msg("cli_template_required"))
+			parts = append(parts, english.Msg("cli_template_required"))
 		}
 		line := indent + it.Name
 		if len(parts) > 0 {
-			line += ": " + strings.Join(parts, a.cat.Msg("tmpl_and"))
+			line += ": " + strings.Join(parts, english.Msg("tmpl_and"))
 		}
 		if it.Description != "" {
 			line += " — " + oneLine(it.Description)
@@ -162,15 +162,15 @@ func (a *app) showItems(items []tmpl.Item, indent string) {
 
 // takes words the types an item takes, a list as a list of what its items take: a list of text or
 // nothing.
-func (a *app) takes(it tmpl.Item) string {
+func takes(it tmpl.Item) string {
 	words := make([]string, len(it.Types))
 	for i, t := range it.Types {
-		words[i] = tmpl.Types([]string{t}).Localize(a.cat)
+		words[i] = tmpl.Types([]string{t}).Localize(english)
 		if t == "array" && len(it.Of) > 0 {
-			words[i] = a.cat.Msg("cli_template_list_of", tmpl.Types(it.Of).Localize(a.cat))
+			words[i] = english.Msg("cli_template_list_of", tmpl.Types(it.Of).Localize(english))
 		}
 	}
-	return strings.Join(words, a.cat.Msg("tmpl_or"))
+	return strings.Join(words, english.Msg("tmpl_or"))
 }
 
 func (a *app) templateNewCmd() *cobra.Command {
@@ -216,7 +216,7 @@ code 0. Nothing is printed when the templates are right.`,
 			for _, dir := range args {
 				warnings, more := tmpl.Check(dir, a.cfg.parts, a.cfg.icons)
 				for _, w := range warnings {
-					if text := w.Localize(a.cat); !told[text] {
+					if text := w.Localize(english); !told[text] {
 						told[text] = true
 						_, _ = fmt.Fprintln(a.env.Stderr, text) //nolint:errcheck // nowhere left to report
 					}

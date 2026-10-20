@@ -72,11 +72,9 @@ func TestPartNew(t *testing.T) {
 		"copied the files of its parts themes too: blueprint, brutal, default, editorial, ink, notebook, swiss, washi ("+filepath.Join(parts, "themes")+"/<theme>/note.css)\n" {
 		t.Errorf("part new in place of floe's = %+v", r)
 	}
-	e.vars["FLOE_LANG"] = "ja"
-	if r := e.run(t, "", "part", "new", "aside", "--from", "note"); r.code != 0 || !strings.HasPrefix(r.stdout, "部品 aside を "+filepath.Join(parts, "aside")+" に作りました（note の写し）\n部品のテーマのファイルも写しました: ") {
+	if r := e.run(t, "", "part", "new", "aside", "--from", "note"); r.code != 0 || !strings.HasPrefix(r.stdout, "made the part aside in "+filepath.Join(parts, "aside")+", a copy of note\ncopied the files of its parts themes too: ") {
 		t.Errorf("part new of one's own = %+v", r)
 	}
-	delete(e.vars, "FLOE_LANG")
 	if r := e.run(t, "", "part", "new", "aside"); r.code != 2 || !strings.Contains(r.stderr, "name the part to copy with --from") {
 		t.Errorf("part new without --from = %+v", r)
 	}

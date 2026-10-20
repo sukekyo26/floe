@@ -1,10 +1,15 @@
 package i18n
 
 import (
+	"bytes"
+	"io/fs"
 	"maps"
+	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -52,28 +57,6 @@ func TestMatch(t *testing.T) {
 	}
 	if got := Supported(); !slices.Equal(got, []Lang{English, "ja", "pt", "pt-br"}) {
 		t.Errorf("Supported() = %v", got)
-	}
-}
-
-//nolint:paralleltest // swaps the global catalogs
-func TestDetect(t *testing.T) {
-	testCatalogs(t)
-	tests := []struct {
-		env  map[string]string
-		want Lang
-	}{
-		{map[string]string{}, English},
-		{map[string]string{"LANG": "ja_JP.UTF-8"}, "ja"},
-		{map[string]string{"LANG": "ja_JP.UTF-8", "LC_MESSAGES": "en_US.UTF-8"}, English},
-		{map[string]string{"LANG": "en_US.UTF-8", "LC_ALL": "ja_JP.UTF-8"}, "ja"},
-		{map[string]string{"LC_ALL": "ja_JP.UTF-8", "FLOE_LANG": "en"}, English},
-		{map[string]string{"FLOE_LANG": "fr", "LANG": "ja_JP.UTF-8"}, "ja"},
-		{map[string]string{"LC_ALL": "C", "LANG": "ja_JP.UTF-8"}, "ja"},
-	}
-	for _, tt := range tests {
-		if got := Detect(func(k string) string { return tt.env[k] }); got != tt.want {
-			t.Errorf("Detect(%v) = %q, want %q", tt.env, got, tt.want)
-		}
 	}
 }
 
@@ -196,7 +179,7 @@ func TestVerbs(t *testing.T) {
 // mismatches lists what keeps the catalogs from matching English: a missing or extra key, a message
 // that formats other arguments or verbs than its English one, or a * width or precision in any
 // language, which verbs would not count.
-func mismatches(tables map[Lang]map[string]string) []string {
+func mismatches(tables map[Lang]map[string]string, cli map[string]string) []string {
 	var found []string
 	for lang, table := range tables {
 		for key, msg := range table {
@@ -211,14 +194,16 @@ func mismatches(tables map[Lang]map[string]string) []string {
 			continue
 		}
 		for key := range en {
-			if _, ok := table[key]; !ok {
+			_, has := table[key]
+			if _, isCLI := cli[key]; !has && !isCLI {
 				found = append(found, string(lang)+" lacks "+key)
 			}
 		}
 		for key, msg := range table {
 			ref, ok := en[key]
+			_, isCLI := cli[key]
 			switch {
-			case !ok:
+			case !ok || isCLI:
 				found = append(found, string(lang)+" has extra "+key)
 			case !sameVerbs(verbs(msg), verbs(ref)):
 				found = append(found, string(lang)+" formats "+key+" differently")
@@ -233,28 +218,87 @@ func TestMismatches(t *testing.T) {
 	t.Parallel()
 
 	got := mismatches(map[Lang]map[string]string{
-		English: {"a": "%s", "b": "%s %d", "c": "plain", "d": "%[1]s %[1]q", "e": "%*d", "f": "%d%%"},
-		"ja":    {"a": "%d", "b": "%[2]d %[1]s", "d": "%[1]s %[1]s", "e": "%*d", "f": "%.*f", "x": "extra"},
-	})
+		English: {"a": "%s", "b": "%s %d", "c": "plain", "d": "%[1]s %[1]q", "e": "%*d", "f": "%d%%", "g": "cli", "h": "cli"},
+		"ja":    {"a": "%d", "b": "%[2]d %[1]s", "d": "%[1]s %[1]s", "e": "%*d", "f": "%.*f", "x": "extra", "h": "訳"},
+	}, map[string]string{"g": "cli", "h": "cli"})
 	want := []string{
 		"en uses * in e", "ja formats a differently", "ja formats d differently", "ja formats f differently",
-		"ja has extra x", "ja lacks c", "ja uses * in e", "ja uses * in f",
+		"ja has extra h", "ja has extra x", "ja lacks c", "ja uses * in e", "ja uses * in f",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("mismatches = %q, want %q", got, want)
 	}
 }
 
-// TestCatalogsMatchEnglish guards the real catalogs: every language has exactly the English keys,
-// and each message formats the same arguments with the same verbs, so no translation drops or
-// misplaces a value.
+// TestCatalogsMatchEnglish guards the real catalogs: every language has exactly the English keys but the
+// command line's own, and each message formats the same arguments with the same verbs, so no
+// translation drops or misplaces a value.
 //
 //nolint:paralleltest // reads the global catalogs, which other tests swap
 func TestCatalogsMatchEnglish(t *testing.T) {
-	for _, m := range mismatches(catalogs) {
+	for _, m := range mismatches(catalogs, messagesCLI) {
 		t.Error(m)
+	}
+	for key := range messagesCLI {
+		if _, ok := messagesEN[key]; ok {
+			t.Errorf("%s is both the command line's own and in messagesEN", key)
+		}
 	}
 	if _, ok := catalogs["ja"]; !ok {
 		t.Error("the Japanese catalog is not registered")
+	}
+}
+
+// The command line's own messages are used by the code of the command line alone: one used where the
+// server answers would reach a browser untranslated.
+// A key built from a prefix is told by a prefix only the command line's own have, cli_template_shared_.
+// LIMIT: by package; internal/icons also looks icons up for diagrams, whose messages are messagesEN's,
+// and its keys are told whole alone. Split it if a message of fetching or searching moves into a lookup.
+func TestCLIMessagesStayInTheCLI(t *testing.T) {
+	t.Parallel()
+
+	repo, err := os.OpenRoot(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer repo.Close() //nolint:errcheck // read only
+	allowed := []string{"internal/cli/", "internal/daemon/", "internal/icons/"}
+	// The keys, and the prefixes a key may be built from that only the command line's own have.
+	var cliOwn []string
+	for key := range messagesCLI {
+		cliOwn = append(cliOwn, key)
+		for i, r := range key {
+			prefix := key[:i+1]
+			if r == '_' && !slices.ContainsFunc(slices.Collect(maps.Keys(messagesEN)), func(k string) bool { return strings.HasPrefix(k, prefix) }) {
+				cliOwn = append(cliOwn, prefix)
+			}
+		}
+	}
+	err = fs.WalkDir(repo.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
+		switch {
+		case err != nil:
+			return err
+		// A directory of dots, a worktree under .claude among them, is no part of the module, as go ./... reads it.
+		case d.IsDir() && rel != "." && strings.HasPrefix(d.Name(), ".") || rel == "internal/i18n":
+			return fs.SkipDir
+		case d.IsDir() || !strings.HasSuffix(rel, ".go") || strings.HasSuffix(rel, "_test.go"):
+			return nil
+		}
+		b, err := fs.ReadFile(repo.FS(), rel)
+		if err != nil {
+			return err
+		}
+		if slices.ContainsFunc(allowed, func(p string) bool { return strings.HasPrefix(rel, p) }) {
+			return nil
+		}
+		for _, key := range cliOwn {
+			if bytes.Contains(b, []byte(`"`+key+`"`)) {
+				t.Errorf("%s uses %s, the command line's own", rel, key)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }

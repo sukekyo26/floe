@@ -42,10 +42,8 @@ func TestIcons(t *testing.T) {
 		t.Fatal(err)
 	}
 	want(t, "fetch", e.run(t, "", "icons", "fetch", "aws", "Icon-package.zip"), 0, "fetched 2 AWS icons (01022030) into "+dir+"\n", "")
-	e.vars["FLOE_LANG"] = "ja"
 	want(t, "fetch again", e.run(t, "", "icons", "fetch", "aws", "Icon-package.zip"), 0,
-		"AWS アイコン 01022030 は "+dir+" に取得済みです（取り直すには --force を付けてください）\n", "")
-	delete(e.vars, "FLOE_LANG")
+		"AWS icons 01022030 are already in "+dir+" (add --force to fetch them again)\n", "")
 	want(t, "search", e.run(t, "", "icons", "search", "aws", "Lambda"), 0, "aws/aws-lambda\tCompute\n", "")
 	want(t, "fetch an unknown set", e.run(t, "", "icons", "fetch", "gcp"), 2, "",
 		`floe: unknown icon set "gcp"; use aws`)

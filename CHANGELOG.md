@@ -148,8 +148,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   unknown name suggests close ones.
 - Add `floe diagram example [kind]`, which lists the built-in example specs
   (architecture, AWS, class, ER, flow, Git, sequence, state, timeline, Venn) or
-  prints one to copy. The examples come in English and Japanese and follow the
-  language of messages; `--lang` picks another.
+  prints one to copy. The examples come in English and Japanese: English, or
+  the language `--lang` picks.
 - Add `floe publish <data.yaml>`, which stores a data file with the images it
   shows (`<slug>/source-<id>/` in `FLOE_DIR`, where it can be taken back from) and
   prints the URL of its page on `http://127.0.0.1:7325`, drawn with the
@@ -233,9 +233,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   The management page may be framed by itself and by VS Code's Simple
   Browser alone (`frame-ancestors 'self' vscode-webview: vscode-file:`), so
   that another site, or a page, cannot have its buttons clicked unseen.
-- Show messages in English or Japanese. The command line follows `FLOE_LANG`,
-  then `LC_ALL`, `LC_MESSAGES` and `LANG`; the management page follows the
-  browser's language. English is the default.
+- Show what a browser shows, the management page and the page of a data
+  file's mistakes, in English or Japanese by the browser's language. The
+  command line speaks English alone, whatever the environment's language.
 - Add the `floe` command with `floe version` (also `floe --version`), which
   prints the installed version.
 - Add prebuilt binaries for linux and macOS (amd64 / arm64) on GitHub Releases

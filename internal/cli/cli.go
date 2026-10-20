@@ -49,8 +49,7 @@ func (e usageError) Unwrap() error {
 
 // Run executes floe with args and returns the process exit code. The exit code is decided here only.
 func Run(ctx context.Context, args []string, env Env) int {
-	cat := i18n.New(i18n.Detect(env.Getenv))
-	root := newRoot(env, cat) //nolint:contextcheck // cobra hands ctx to the commands through ExecuteContext
+	root := newRoot(env) //nolint:contextcheck // cobra hands ctx to the commands through ExecuteContext
 	root.SetArgs(args)
 	root.SetOut(env.Stdout)
 	root.SetErr(env.Stderr)
@@ -58,12 +57,11 @@ func Run(ctx context.Context, args []string, env Env) int {
 	if err == nil {
 		return exitOK
 	}
-	// SilenceErrors leaves printing to this single boundary, which words a usererr in the user's
-	// language. Cobra's own errors (an unknown flag) stay in English.
+	// SilenceErrors leaves printing to this single boundary, which words a usererr in English.
 	msg := err.Error()
 	var l i18n.Localizer
 	if errors.As(err, &l) {
-		msg = l.Localize(cat)
+		msg = l.Localize(english)
 	}
 	// Mistakes at lines and columns go out as they are, one per line, for editors and CI to read.
 	prefix := "floe: "
@@ -100,7 +98,10 @@ func usage(validate cobra.PositionalArgs) cobra.PositionalArgs {
 	}
 }
 
-func newRoot(env Env, cat *i18n.Catalog) *cobra.Command {
+// english is the language of the command line, whatever the environment's: an agent reads it.
+var english = i18n.EnglishCatalog()
+
+func newRoot(env Env) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "floe",
 		Short:         "Serve agent-written HTML pages on a local server",
@@ -127,7 +128,7 @@ func newRoot(env Env, cat *i18n.Catalog) *cobra.Command {
 			return err //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	})
-	app := &app{env: env, cfg: nil, cat: cat}
+	app := &app{env: env, cfg: nil}
 	// The environment is checked before any command runs, so a typo fails the same way everywhere.
 	root.PersistentPreRunE = func(*cobra.Command, []string) error {
 		cfg, err := loadConfig(env.Getenv, env.Dir)

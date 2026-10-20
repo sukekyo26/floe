@@ -1,7 +1,8 @@
 // Package i18n renders the messages floe shows to people in their language. Catalogs are Go maps,
-// one file per language (messages_<lang>.go), registered at init; a language is added by adding a
-// file. Errors carry a key and arguments and are rendered at the boundary (the CLI's exit, an HTTP
-// response), so the same error reads in English in logs and in the reader's language on screen.
+// one file per language (messages_<lang>.go, and messages_cli.go for the English the command line
+// alone shows), registered at init; a language is added by adding a file. Errors carry a key and
+// arguments and are rendered at the boundary: the CLI's exit, in English, and an HTTP response, in
+// the reader's language.
 //
 // A key missing from a language falls back to the language without its last subtag, one at a time
 // (zh-Hant-TW to zh-Hant to zh, pt-BR to pt), then to English, then to the key itself.
@@ -87,18 +88,6 @@ func parent(tag string) string {
 		return ""
 	}
 	return tag[:i]
-}
-
-// Detect picks the language of the CLI from the environment: FLOE_LANG, LC_ALL, LC_MESSAGES, then
-// LANG. A variable naming a language without a catalog is skipped, so FLOE_LANG=fr with LANG=ja_JP
-// gives Japanese; nothing matching gives English.
-func Detect(getenv func(string) string) Lang {
-	for _, name := range []string{"FLOE_LANG", "LC_ALL", "LC_MESSAGES", "LANG"} {
-		if lang, ok := Match(getenv(name)); ok {
-			return lang
-		}
-	}
-	return English
 }
 
 // FromAcceptLanguage picks the language of an HTTP response from an Accept-Language header: the

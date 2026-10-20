@@ -19,14 +19,13 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// client calls the API of the server at base, in the language lang. The server is the only one that
-// writes the store: the CLI asks it.
+// client calls the API of the server at base, in English as the command line speaks. The server is the
+// only one that writes the store: the CLI asks it.
 type client struct {
 	base string
-	lang i18n.Lang
 }
 
-// remoteError is a refusal of the server, in the user's language. mistakes is set for those of a data
+// remoteError is a refusal of the server, in English. mistakes is set for those of a data
 // file at their lines and columns, which go out without "floe: "; body is the answer as sent.
 type remoteError struct {
 	status   int
@@ -64,7 +63,7 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 	}
 	req.Header.Set("Origin", c.base)
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Accept-Language", string(c.lang))
+	req.Header.Set("Accept-Language", string(i18n.English))
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
