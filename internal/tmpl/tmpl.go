@@ -118,15 +118,19 @@ func (l *Library) ReadSources(file string, src []byte, themes Themes, cwd string
 	if !filepath.IsAbs(dir) {
 		dir = filepath.Join(cwd, dir)
 	}
-	return l.readWith(file, src, diskImages(dir), themes)
+	d, sources, err := l.readWith(file, src, diskImages(dir), themes)
+	sources.ImagesDir = dir
+	return d, sources, err
 }
 
 // errNoImages is a ReadFS without an fs.FS to read the images from: a mistake of its caller.
 var errNoImages = errors.New("tmpl.ReadFS: no fs.FS to read the images from")
 
 // ReadFS reads the data file src as Read does, its images read from images, the directory of the data
-// file, which its mistakes name dir. It returns the images the data names, read or not, as it writes
-// them (Sources.Images): nothing of it is on disk to watch.
+// file, which its mistakes name dir. images must list its directories (fs.ReadDir), as os.DirFS and
+// fstest.MapFS do: each name on an image's path is looked up in its directory, case and all. It returns
+// the images the data names, read or not, as it writes them (Sources.Images): nothing of it is on disk
+// to watch.
 func (l *Library) ReadFS(file string, src []byte, images fs.FS, dir string, themes Themes) (*Data, []string, error) {
 	if images == nil {
 		return nil, nil, errNoImages
@@ -136,7 +140,7 @@ func (l *Library) ReadFS(file string, src []byte, images fs.FS, dir string, them
 }
 
 func (l *Library) readWith(file string, src []byte, images imageDir, themes Themes) (*Data, Sources, error) {
-	sources := Sources{Templates: l.dir, Parts: nil, Template: "", Images: nil, ImagesDir: images.dir, Icons: nil}
+	sources := Sources{Templates: l.dir, Parts: nil, Template: "", Images: nil, ImagesDir: "", Icons: nil}
 	if l.parts != "" {
 		// Where one may come, when none has been read.
 		sources.Parts = []string{l.parts}
