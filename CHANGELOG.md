@@ -126,9 +126,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   diagrams' style and zoom once.
 - Add `floe diagram render <spec.yaml>...`, which draws diagrams from YAML
   specs of parts placed at absolute coordinates and prints them as one HTML
-  fragment of inline SVG. It first checks for text that does not fit, parts
-  outside the canvas, overlaps, edges through boxes or labels, and crossing
-  edges, and reports every mistake as `file:line:column`. The fragment
+  fragment of inline SVG. It first checks for text that does not fit (frame
+  headings too), parts outside the canvas (edges, lines and axes too),
+  overlaps (with frame headings too), edges through boxes or labels, and
+  crossing edges, and reports every mistake as `file:line:column`. The fragment
   carries the diagrams' style and a zoom toolbar (buttons, Ctrl / ⌘ + wheel,
   pinch, drag, arrow keys) worded in the page's language; `--no-assets` leaves them out.
 - Add `floe icons fetch <set> [zip-or-url]`, which keeps an icon set (`aws`:
