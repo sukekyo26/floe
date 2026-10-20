@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `floe:///parts/any.json`, one part of any kind, one key naming it, as
+  report's sections hold them: a template of your own lists parts with
+  `"items": { "$ref": "floe:///parts/any.json" }` and draws them with one
+  line in page.html, `{{range .parts}}{{range .}}{{with .}}{{.}}{{end}}{{end}}{{end}}`.
 - Add `floe part`: `list` the parts, floe's and your own, with where they are
   and their descriptions; `show <name>` what a part takes and its items, the
   looks it takes, the parts it holds and the parts themes with a file of it;
