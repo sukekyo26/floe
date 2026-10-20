@@ -37,16 +37,28 @@ func TestPalette(t *testing.T) {
 		if bare := regexp.MustCompile(`var\(\s*--[\w-]+\s*\)`).FindString(p.css); bare != "" && p.pages != nil {
 			t.Errorf("the part %s takes %s without a value of its own", name, bare)
 		}
-		// A part's element names it, so that a page that draws it gets its style, and every name is a part's.
-		names := namedParts(p.html)
-		if p.pages != nil && !slices.ContainsFunc(names, func(n namedPart) bool { return n.name == name }) {
-			t.Errorf("the HTML of the part %s does not name it in a data-floe-part", name)
+		// A part's element is its box, data-floe-part="<its name>", so that a page that draws it gets its
+		// style; an element is the box of one part, and every name, and every look a part takes, is a part's.
+		if p.pages != nil && !namesItself(namedParts(p.html), name) {
+			t.Errorf("the HTML of the part %s is not its box, data-floe-part=%q", name, name)
 		}
-		for _, other := range names {
-			if _, ok := set.parts[other.name]; !ok {
-				t.Errorf("the HTML of the part %s names %s, which is no part", name, other.name)
+		for _, other := range namedParts(p.html) {
+			if set.misnamed(other) != nameRight {
+				t.Errorf("the HTML of the part %s names %s, which is no part, or data-floe-part=%q", name, other.name, other.value)
 			}
 		}
+		for _, look := range p.looks {
+			if set.parts[look.name] == nil {
+				t.Errorf("the part %s takes the look of %s, which is no part", name, look.name)
+			}
+		}
+	}
+	// The boxes of floe's parts take their looks from part.yaml: the panel, through the table for risks.
+	if looks := set.looksOf("risks"); !slices.Equal(looks, []string{"table", "panel"}) {
+		t.Errorf("the looks of risks = %v", looks)
+	}
+	if !set.parts["panel"].isLook() || set.parts["panel"].css == "" {
+		t.Errorf("the look panel = %+v", set.parts["panel"])
 	}
 	// compare is drawn in the table's look, so a theme for it is warned of the table's variables too, and
 	// tabs of those of code, which a diff in it is drawn in the look of.
@@ -109,7 +121,7 @@ func TestWithStyles(t *testing.T) {
 		"<head><!--></head>":                                                  "<head><!-->S</head>",
 		"<head><noscript></head></noscript></head><body><script>y()</script>": "<head><noscript></head></noscript>S</head><body><script>y()</script>",
 	} {
-		if got := string(withStyles([]byte(page), "S")); got != want {
+		if got := string(withStyles([]byte(page), tagsIn(page, false), "S")); got != want {
 			t.Errorf("withStyles(%q) = %q, want %q", page, got, want)
 		}
 	}
@@ -123,16 +135,68 @@ func TestTagsOf(t *testing.T) {
 	page := "<!-- <style> --><script>'<style><link>'</script><noscript><style></noscript><link-card></link-card><style-box>" +
 		"<script-x><link></script-x><LINK rel=x><Style>a{}</Style>"
 	want := tags{head: -1, style: strings.Index(page, "<Style>"), link: strings.Index(page, "<link></script-x>")}
-	if got := tagsOf([]byte(page)); got != want {
+	if got := tagsOf(tagsIn(page, false)); got != want {
 		t.Errorf("tagsOf(%q) = %+v, want %+v", page, got, want)
 	}
-	if got := tagsOf([]byte("<p>x</p>")); got != (tags{head: -1, style: -1, link: -1}) {
+	if got := tagsOf(tagsIn("<p>x</p>", false)); got != (tags{head: -1, style: -1, link: -1}) {
 		t.Errorf("tagsOf of a page without them = %+v", got)
 	}
 }
 
-// A part's style comes after that of the parts it is drawn in the look of, which it adjusts, and of the
-// parts it holds; the others keep the order given.
+// A data-floe-part is an attribute when a tag holds it, past a > in a quoted value or in a template's
+// action before it, and not in a value or in text.
+func TestNamedPartsInTags(t *testing.T) {
+	t.Parallel()
+
+	for html, want := range map[string]bool{
+		`<a title="a > b" data-floe-part="table">x</a>`:                                         false,
+		`<div {{if ne (printf "%T" .v) "<nil>"}}class="x"{{end}} data-floe-part="table"></div>`: false,
+		`<div class="{{or .k "a>b"}}" data-floe-part='table'>`:                                  false,
+		`<p title="see data-floe-part=table">x</p>`:                                             true,
+		`<p>write data-floe-part=table</p>`:                                                     true,
+		`<script>'<b data-floe-part="table">'</script>`:                                         true,
+		`<!-- <b data-floe-part="table"> -->`:                                                   true,
+		`<div/data-floe-part="table">`:                                                          false,
+	} {
+		if named := namedParts(html); len(named) != 1 || named[0].name != "table" || named[0].text != want {
+			t.Errorf("namedParts(%q) = %+v, want table, text %v", html, named, want)
+		}
+	}
+	// HTML that is drawn, or the data's, holds no actions: {{ in a value is text, which hides no tag.
+	html := `<a title="{{">x</a><div data-floe-part="a b"></div><style>p{}</style>`
+	if named := namedIn(html, tagsIn(html, false)); len(named) != 2 || named[0].text || !named[0].notOne() {
+		t.Errorf("namedIn(%q) = %+v, want an attribute of two names", html, named)
+	}
+	if at := tagsOf(tagsIn(html, false)); at.style != strings.Index(html, "<style>") {
+		t.Errorf("tagsOf(%q) = %+v", html, at)
+	}
+	// A textarea's text, as a title's, runs to its end tag, past a quote: tags in it are text, and those
+	// after it tags.
+	for html, want := range map[string]bool{
+		`<textarea><a title="</textarea><div data-floe-part="panel">x</div>"></a></textarea>`: false,
+		`<textarea><div data-floe-part="panel">x</div></textarea>`:                            true,
+		`<title>a</title><div data-floe-part="panel">`:                                        false,
+	} {
+		if named := namedIn(html, tagsIn(html, false)); len(named) != 1 || named[0].text != want {
+			t.Errorf("namedIn(%q) = %+v, want text %v", html, named, want)
+		}
+	}
+	// A template's action is no markup of the page's, out of a tag too.
+	for html, want := range map[string]bool{
+		`{{/* <div data-floe-part="panel"> */}}`:                true,
+		`<p>{{ "<!--" }}</p><div data-floe-part="panel"></div>`: false,
+	} {
+		if named := namedParts(html); len(named) != 1 || named[0].text != want {
+			t.Errorf("namedParts(%q) = %+v, want text %v", html, named, want)
+		}
+	}
+	if at := tagsOf(tagsIn(`{{/* no <style> here */}}<p>x</p>`, true)); at.style != -1 {
+		t.Errorf("tagsOf of a <style> in a template's comment = %+v", at)
+	}
+}
+
+// A part's style comes after that of the looks it takes, which it adjusts, given or not, and of the
+// parts it holds that are given; the others keep the order of their names.
 func TestInOrder(t *testing.T) {
 	t.Parallel()
 
@@ -140,8 +204,8 @@ func TestInOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := set.inOrder([]string{"compare", "details", "findings", "stack", "table"})
-	if want := []string{"table", "compare", "stack", "details", "findings"}; !slices.Equal(got, want) {
+	got := set.inOrder([]string{"findings", "compare", "details", "stack", "compare"})
+	if want := []string{"panel", "table", "compare", "stack", "details", "findings"}; !slices.Equal(got, want) {
 		t.Errorf("inOrder = %v, want %v", got, want)
 	}
 }
@@ -198,6 +262,9 @@ func TestPartsDrawnWhole(t *testing.T) {
 		return slices.ContainsFunc(slices.Collect(maps.Values(s.Properties)), drawnWhole)
 	}
 	for name, p := range set.parts {
+		if p.isLook() {
+			continue
+		}
 		if drawnWhole(p.schema.Items) || slices.ContainsFunc(slices.Collect(maps.Values(p.schema.Properties)), drawnWhole) {
 			t.Errorf("the part %s holds an item of a format", name)
 		}

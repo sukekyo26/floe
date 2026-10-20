@@ -20,10 +20,11 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	for name, body := range map[string]string{
 		"schema.json": `{"type": "object", "properties": {"note": {"$ref": "floe:///parts/note.json"}}, "additionalProperties": false}`,
 		"page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
-			`<body><header>h</header><p id="own">own</p>{{.Data.note}}</body></html>`,
+			`<body><header>h</header><p id="own">own</p><div id="boxed" data-floe-look="panel">b</div>{{.Data.note}}</body></html>`,
 		"page.css": "p { color: rgb(255, 0, 0); }\n" +
 			"body div[data-floe-part=note].warn { background-color: rgb(255, 0, 0); margin-top: 7px; }\n" +
 			"body div[data-floe-part=note].warn::before { top: 0px; }\n" +
+			"#boxed { background-color: rgb(0, 0, 4); }\n" +
 			"@keyframes held { from { opacity: 0.5; } to { opacity: 0.5; } }\nheader { animation: held 1000s; }\n" +
 			`@font-face { font-family: "own face"; src: url(data:,); }` + "\nfooter { color: red;",
 		"themes/default.css": "body { color: rgb(0, 0, 2); }\n",
@@ -42,6 +43,10 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 			document.querySelector('header').getAnimations()[0]?.animationName,
 			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`)
 	check(t, "layers", []string{got}, "rgb(246, 232, 210) | 13.6px | 7px | rgb(255, 0, 0) | rgb(0, 0, 2) | held | true")
+	// The template's own element that takes the panel's look has it under the template's CSS, which
+	// adjusts it: its background, the corners of default's panel.
+	got = b.eval(`(() => { const s = getComputedStyle(document.getElementById('boxed')); return s.backgroundColor + ' ' + s.borderTopLeftRadius })()`)
+	check(t, "a look of the template's own", []string{got}, "rgb(0, 0, 4) 20px")
 
 	// A part's style stops at a part it holds: the note's code is on the surface, the code of the table in
 	// it on floe's base.
@@ -72,18 +77,32 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 		getComputedStyle(document.querySelector('[data-floe-part=note]')).backgroundColor].join(' | ')`)
 	check(t, "leaky", []string{got}, "rgb(0, 0, 3) | rgb(246, 232, 210)")
 
-	// A table of one's own takes the place of floe's: floe's washi does not style it, but still styles
-	// compare, drawn in the table's look ("table compare"), by its parts.css.
+	// A table of one's own takes the place of floe's, and the panel's look by its part.yaml: floe's washi
+	// styles it and compare, drawn in the table's look, by the panel's file (its double rules), not by the
+	// table's, which would take the rules off.
 	e.write(t, "parts/table/schema.json", `{"type": "object", "properties": {"text": {"type": "string"}}}`)
 	e.write(t, "parts/table/part.html", `<div data-floe-part="table">{{.text}}</div>`)
 	e.write(t, "parts/table/part.css", "")
+	e.write(t, "parts/table/part.yaml", "looks: [panel]\n")
 	slug = "own-table"
 	e.publish(t, e.write(t, "own-table.yaml", "template: report\nlang: en\nparts-theme: washi\nsections:\n  - parts:\n"+
 		"      - table: { text: mine }\n      - compare: { before: a, after: b, rows: [{ what: x, before: p, after: q }] }\n"),
 		store.Options{Slug: &slug})
 	b.navigate("/a/own-table/?raw")
-	b.until("the compare", "!!document.querySelector('[data-floe-part~=compare]')")
-	got = b.eval(`[getComputedStyle(document.querySelector('[data-floe-part=table]')).backgroundColor,
-		getComputedStyle(document.querySelector('[data-floe-part~=compare]')).backgroundColor].join(' | ')`)
-	check(t, "own table", []string{got}, "rgba(0, 0, 0, 0) | rgb(247, 241, 227)")
+	b.until("the compare", "!!document.querySelector('[data-floe-part=compare]')")
+	got = b.eval(`['table', 'compare'].map((name) => {
+		const s = getComputedStyle(document.querySelector('[data-floe-part=' + name + ']'));
+		return s.backgroundColor + ' ' + s.borderTopStyle; }).join(' | ')`)
+	check(t, "own table", []string{got}, "rgb(247, 241, 227) double | rgb(247, 241, 227) double")
+
+	// A card takes the panel's look without being a part's box, a layer under the parts': the cards and
+	// default's file for them keep it a face of the surface on the panel of default, the nearer scope though.
+	slug = "cards"
+	e.publish(t, e.write(t, "cards.yaml", "template: report\nlang: en\nsections:\n  - parts:\n"+
+		"      - cards: [{ title: a }]\n      - steps: [{ title: b }]\n"), store.Options{Slug: &slug})
+	b.navigate("/a/cards/?raw")
+	b.until("the card", "!!document.querySelector('.card')")
+	got = b.eval(`['.card', '[data-floe-part=steps]'].map((at) => {
+		const s = getComputedStyle(document.querySelector(at)); return s.backgroundColor + ' ' + s.borderTopLeftRadius; }).join(' | ')`)
+	check(t, "cards", []string{got}, "rgb(255, 255, 255) 14px | color(srgb 0.898235 0.914902 0.907451) 20px")
 }

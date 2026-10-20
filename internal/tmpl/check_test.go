@@ -2,6 +2,7 @@ package tmpl_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -316,15 +317,16 @@ func TestPageStyleRefused(t *testing.T) {
 }
 
 // The template's CSS names the page's root as :scope, past a comment and values that name it otherwise, and
-// page.html takes the look of parts floe has, past a name it puts together, a mistake told at the line of
-// the name.
+// page.html names parts floe has, past a name it puts together, an element the box of one, a mistake told
+// at the line of the name.
 func TestTemplateCSSAndParts(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{
 		"page.css":           "/* not :root */\n:scope { --fg: #000; }\nb { background: url(html.svg); animation: html 1s; }\n:root .lead, a { color: red; }\n",
 		"themes/default.css": "body { font-family: sans-serif; }\nhtml{ color: red; }\n",
-		"page.html":          "<body>|<body><span\n" + `data-floe-part="cell nope"></span><i data-floe-part="{{"cell"}}"></i>`,
+		"page.html": "<body>|<body><span\n" + `data-floe-look="cell nope"></span><b data-floe-part="cell note"></b>` +
+			`<u data-floe-part=" cell"></u><s data-floe-part="panel"></s><i data-floe-part="{{"cell"}}"></i>`,
 	})
 	_, mistakes := tmpl.Check(dir, "", "")
 	got := make([]string, 0, len(mistakes))
@@ -334,7 +336,10 @@ func TestTemplateCSSAndParts(t *testing.T) {
 	want := []string{
 		"page.css:4: write the root as :scope, not :root",
 		filepath.Join("themes", "default.css") + ":2: write the root as :scope, not html",
-		"page.html:5: page.html takes the look of the part nope, which there is none of; use bars, ",
+		"page.html:5: page.html names the part nope, which there is none of; use bars, ",
+		`page.html:5: data-floe-part="cell note" is not the name of one part`,
+		`page.html:5: data-floe-part=" cell" is not the name of one part`,
+		"page.html:5: data-floe-part names the look panel, which has no box",
 	}
 	if len(got) != len(want) {
 		t.Fatalf("Check = %q, want %q", got, want)
@@ -552,4 +557,26 @@ func sizes(t *testing.T, files map[string]string) string {
 		}
 	}
 	return dir
+}
+
+// The parts and looks page.html names take their colours from the theme, as those the schema refers to
+// do, and a name of no part is told with those the attribute may name: a look has no box.
+func TestCheckPageNames(t *testing.T) {
+	t.Parallel()
+
+	warned := func(page string) string {
+		t.Helper()
+		warnings, _ := tmpl.Check(sizes(t, map[string]string{"page.html": "<body>|<body>" + page}), "", "")
+		return fmt.Sprint(warnings)
+	}
+	if strings.Contains(warned(""), "--fg") || !strings.Contains(warned(`<section data-floe-look="panel"></section>`), "--fg") {
+		t.Errorf("the variables of a look page.html takes are not warned of")
+	}
+	for page, want := range map[string]bool{`<b data-floe-part="pannel"></b>`: false, `<b data-floe-look="pannel"></b>`: true} {
+		_, mistakes := tmpl.Check(sizes(t, map[string]string{"page.html": "<body>|<body>" + page}), "", "")
+		if got := fmt.Sprint(mistakes); !strings.Contains(got, "options, progress") && !strings.Contains(got, "options, panel, progress") ||
+			strings.Contains(got, "options, panel, progress") != want {
+			t.Errorf("Check of %s = %v, want panel among the names %v", page, mistakes, want)
+		}
+	}
 }

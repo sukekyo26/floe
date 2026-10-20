@@ -8,7 +8,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
-- 自分の部品を追加。`FLOE_PARTS_DIR`（既定は `$XDG_CONFIG_HOME/floe/parts`）に、floe の部品と同じファイルを部品ごとのディレクトリに置き、`floe:///parts/<名前>.json` で指す。floe の部品と同じ名前なら丸ごと代わり、floe の部品のテーマはその部品に当たらない。自分の部品のテーマは `FLOE_PARTS_DIR/themes/<名前>/` に置き、floe のテーマと同じ名前なら同じ名前のファイルだけが代わる。使えない部品やテーマは、それを使うページで断り、`floe template check` が警告する。部品のファイルを保存するとリンクしたページを描き直し、部品の置き場所が違うサーバーへの公開は断る。
+- 自分の部品を追加。`FLOE_PARTS_DIR`（既定は `$XDG_CONFIG_HOME/floe/parts`）に、floe の部品と同じファイルを部品ごとのディレクトリに置き、`floe:///parts/<名前>.json` で指す。floe の部品と同じ名前なら丸ごと代わり、floe の部品のテーマはその部品に当たらない。部品は `part.yaml` で floe の見た目を借り（`looks: [panel]` と書けば、どの部品のテーマでもパネルで描く）、借りた見た目が借りる見た目も付く。schema を持たない `part.css` だけの、自分の見た目だけの部品も作れる。自分の部品のテーマは `FLOE_PARTS_DIR/themes/<名前>/` に置き、floe のテーマと同じ名前なら同じ名前のファイルだけが代わる。使えない部品やテーマは、それを使うページで断り、`floe template check` が警告する。部品のファイルを保存するとリンクしたページを描き直し、部品の置き場所が違うサーバーへの公開は断る。
 - 部品を 22 個追加。組み込みの `report` で使え、テンプレートからは `floe:///parts/<名前>.json` で指す。
   - `stats`: 大きな数と単位、tone の色の注記。`progress`: `of` のうち `done` まで埋まる棒。
   - `steps`: 番号付きの段。それぞれ `done`・`doing`・`todo`。`checklist`: `done` に印の付く項目と、済んだ数。
@@ -26,14 +26,14 @@ floe の主要な変更を記録します。フォーマットは
   - `--check` は何も書き出さず、無いページとデータファイルから描いたものと違うページがあれば失敗する。CI で使う。
 - データファイルの中にスクリプトを書けるようにした。組み込みの `report` は部品 `script` を、テンプレートは部品 `floe:///parts/script.json` を指す。`js` に関数を書き、ページはその場所の空の要素と、任意の値の `data` を渡して呼ぶ。`</script` か `<!--` を含む `js` は、その `js` を指して断る。
 - データファイルに表・カード・注記を書けるようにした。floe の部品 `table`（`columns` と `rows`。`num` の列は右に揃える。セルは 1 行の Markdown で、数は引用符で囲む。`{ pill, tone }` で状態の札も書ける。各行のセルは列の数だけ書く）・`cards`（`title` と Markdown の `text` の並び）・`note`（Markdown の `text` と `tone`。`title` を書けば上に見出しを出す）で、`tone` は `accent`・`good`・`warn`・`bad` のどれか。
-  - 組み込みの `report` はこれらを受け取る。自作のテンプレートは `"$ref": "floe:///parts/table.json"` で部品を指す。floe が項目を検査して描き、部品の要素のように部品を名乗る（`data-floe-part="table"`）ページに、部品のスタイルを 1 回だけ入れる。Markdown の表（表の部品の見た目になる）と、そうして部品の見た目を借りる HTML（`<span class="good" data-floe-part="cell">`）も含む。部品のスタイルはその部品の要素に届き、中に持つ部品には届かず、見た目を借りる部品のスタイルの後に入る。
+  - 組み込みの `report` はこれらを受け取る。自作のテンプレートは `"$ref": "floe:///parts/table.json"` で部品を指す。floe が項目を検査して描き、部品の要素のように部品を名乗る（`data-floe-part="table"`。要素は 1 つの部品の箱）ページに、部品のスタイルを 1 回だけ入れる。Markdown の表（表の部品の見た目になる）と、そうして部品を名乗る HTML（`<span class="good" data-floe-part="cell">`）や、箱にならずに部品の見た目を借りる HTML（`data-floe-look="panel"`）も含む。部品は `part.yaml` でほかの部品の見た目を借り（`looks: [table]`）、借りた見た目が借りる見た目も付く。見た目だけの部品 `panel`・`rows` は、多くの部品が描かれる箱。部品のスタイルはその見た目を持つ要素に届き、中に持つ部品には届かず、借りる見た目のスタイルの後に入る。
   - テンプレートの `"format": "markdown"` の項目は Markdown で、floe が HTML に描く。
   - `floe template show` は部品の項目を出す。`floe template check` は、部品が色を取る CSS 変数を定義していないテーマを警告する。
   - テンプレートの `page.html` から `markdownLine` を使える。1 行の Markdown を段落で包まずに描き、`-` や `1.` のようなセルは文字のまま出す。
 - データファイルにコードとコマンドを書けるようにした。floe の部品 `code`（`text` にコードをそのまま書き、上にファイル名（`file`）を、その右端に言語（`lang`）を出す）と `terminal`（`steps` に、打つコマンドの `run` と出力の `out` を並べ、`shell` の名前を上に出してプロンプトを付ける。`bash`・`sh` は `$`、`zsh` は `%`、`powershell` は `PS>`、`cmd` は `>`）で、組み込みの `report` も受け取る。
   - プロンプトはスタイルで描くので、コマンドをコピーしても入らない。コードとターミナルはライトモードでも暗い地で、色は `--code-bg`・`--code-fg`・`--code-prompt` から取る。
   - 最初の語がプロンプト（`~/app$`・`C:\work>` のように `$`・`#`・`%`・`>`・`❯` で終わる語）の `run` は断る。`report` は、`text` の中のフェンスのコードブロックを、書くべき部品を添えて断る。
-- floe の部品の見た目を、どのテンプレートでも部品のテーマで選べるようにした（データファイルの `parts-theme:`、`floe publish --parts-theme`）。`default`（区画に面を並べ、注記は tone の色の地）・`soft`（角の丸い面）・`editorial`（印刷物のような罫と細い枠）・`ink`（表の見出しを墨の地に、状態を色で塗る）・`brutal`（太い黒枠、原色の面、硬い影）・`blueprint`（方眼紙に青いペンで引いた図面。表は全部のマスに罫）・`notebook`（罫線の紙、蛍光ペン、付箋）・`swiss`（太い黒の罫、大きな数、赤。状態は形でも分ける）・`washi`（和紙に墨と朱、明朝、印、朱の罫の引用）で、どれもライトとダークの両方に対応する。部品のテーマは部品ごとに見た目を上書きし（その部品の要素に届き、中に持つ部品には届かない）、Markdown の引用の見た目も変える。どのページにも部品のスタイルの後に入り、ページの見た目を変えるテンプレートのテーマ（`theme:`。`report` には `default`）はそれらの下の層に入る。`floe template show` が部品のテーマの一覧を出す。
+- floe の部品の見た目を、どのテンプレートでも部品のテーマで選べるようにした（データファイルの `parts-theme:`、`floe publish --parts-theme`）。`default`（区画に面を並べ、注記は tone の色の地）・`soft`（角の丸い面）・`editorial`（印刷物のような罫と細い枠）・`ink`（表の見出しを墨の地に、状態を色で塗る）・`brutal`（太い黒枠、原色の面、硬い影）・`blueprint`（方眼紙に青いペンで引いた図面。表は全部のマスに罫）・`notebook`（罫線の紙、蛍光ペン、付箋）・`swiss`（太い黒の罫、大きな数、赤。状態は形でも分ける）・`washi`（和紙に墨と朱、明朝、印、朱の罫の引用）で、どれもライトとダークの両方に対応する。部品のテーマは部品や見た目ごとのファイルで見た目を上書きし（`panel.css` はすべてのパネル。その見た目を持つ要素に届き、中に持つ部品には届かない）、Markdown の引用の見た目も変える。どのページにも部品のスタイルの後に入り、ページの見た目を変えるテンプレートのテーマ（`theme:`。`report` には `default`）はそれらの下の層に入る。`floe template show` が部品のテーマの一覧を出す。
 - データファイルの中に図を書けるようにした。組み込みの `report` は部品 `diagram` を、テンプレートは部品 `floe:///parts/diagram.json` を指し、`floe diagram render` に渡すのと同じ spec をその場に書く。
   - 図は `floe diagram render` と同じく検査し（id の重複はページ全体で）、誤りはすべてデータファイルの行と列で出す。
   - ページには図のスタイルとズームが 1 回だけ付く。
@@ -60,7 +60,7 @@ floe の主要な変更を記録します。フォーマットは
   - `--theme` でテンプレートの別のテーマを選べる。ほかに `--slug`・`--title`・`--description`・`--force` を使える。
   - 同じ slug で公開し直すと、そのことを stderr に出す。タイトルが変わっていれば警告も出す。
 - 自分のテンプレートを使えるようにした。`FLOE_TEMPLATES_DIR`（既定は `~/.config/floe/templates`）に置いたディレクトリ（symlink でもよい）が、同じ名前の組み込みのテンプレートの代わりに使われる。公開したページはサーバーのテンプレートで描き、`FLOE_TEMPLATES_DIR` か `FLOE_ICONS_DIR` が動いているサーバーと違う公開は、`floe stop` を案内して断る。
-  - `page.html`・`page.css`・`schema.json`・テーマのほか、`checks.yaml` で項目どうしの関係を（リストの要素ごとに。`sections.parts` のように途中のリストも辿る）検査し、`computed.yaml` でページに出す値を計算できる。式は [expr](https://expr-lang.org/) で書き、誤りはデータファイルの行と列で、これらのファイルそのものの誤りはそのファイルの行と列で出す。`page.html` は `num` と `bytes` で数を書ける。floe はページの CSS をまとめ（テンプレートの `page.css` とテーマはそれぞれ別の `<style>`）、テンプレートの `page.css` とテーマを、floe の基本の見た目（文章・リスト・リンク・コード・引用）の上、部品のスタイルと部品のテーマの下のカスケードレイヤーに入れる。セレクタにかかわらず、テンプレートは部品の見た目を変えない。テンプレートの CSS はページに閉じた範囲に入り（根は `:scope`）、部品の要素には届くが部品の中には届かない。`page.html` の `<style>`、`"format": "html"` の項目の `<style>`・`<link>`、テンプレートの CSS の `@import`・`:root`・`html`・どのブロックも閉じない `}` は、その行を示して断る。`page.html` が floe に無い部品を名乗ると、`floe template check` が断る。
+  - `page.html`・`page.css`・`schema.json`・テーマのほか、`checks.yaml` で項目どうしの関係を（リストの要素ごとに。`sections.parts` のように途中のリストも辿る）検査し、`computed.yaml` でページに出す値を計算できる。式は [expr](https://expr-lang.org/) で書き、誤りはデータファイルの行と列で、これらのファイルそのものの誤りはそのファイルの行と列で出す。`page.html` は `num` と `bytes` で数を書ける。floe はページの CSS をまとめ（テンプレートの `page.css` とテーマはそれぞれ別の `<style>`）、テンプレートの `page.css` とテーマを、floe の基本の見た目（文章・リスト・リンク・コード・引用）と箱にならずに見た目を借りる要素の見た目の上、部品のスタイルと部品のテーマの下のカスケードレイヤーに入れる。セレクタにかかわらず、テンプレートは部品の見た目を変えない。テンプレートの CSS はページに閉じた範囲に入り（根は `:scope`）、部品の要素には届くが部品の中には届かない。`page.html` の `<style>`、`"format": "html"` の項目の `<style>`・`<link>`、テンプレートの CSS の `@import`・`:root`・`html`・どのブロックも閉じない `}` は、その行を示して断る。`page.html` が floe に無い部品を名乗ると、`floe template check` が断る。
   - 画像は data URI としてページに入る。`"format": "image"` の項目にはデータファイルのディレクトリの配下の画像を書き、`page.html` はテンプレートの `assets/` の画像を `asset` で出す。画像は 1 MiB までの png・jpeg・gif・webp・svg で、名前と中身の両方で判定し、データの画像の誤りは行と列で出す。
   - `template.yaml` に、テンプレートが要る floe の版を書く。書き方は [docs/templates.ja.md](templates.ja.md) にある。
   - スキーマは、floe がどのデータファイルからも自分で読む `lang`・`template`・`theme`・`title` を宣言したり必須に挙げたりできない。

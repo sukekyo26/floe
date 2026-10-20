@@ -1,5 +1,5 @@
 /* A bar's length is set on it, as a share of the longest */
-:scope { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.6rem 1rem; align-items: center; padding: 1rem 1.3rem; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 14px; box-shadow: 0 1px 2px rgb(24 32 30 / 0.06); }
+:scope { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.6rem 1rem; align-items: center; padding: 1rem 1.3rem; }
 :scope > div { display: contents; color: var(--accent, #1d6670); }
 :scope > div.good { color: var(--good, #1f7a45); }
 :scope > div.warn { color: var(--warn, #8a5a10); }

@@ -1,8 +1,7 @@
 /* A step's mark is its number, a tick once done; a line joins it to the next, coloured once it is done */
 :scope {
   list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; counter-reset: floe-step;
-  max-width: none; background: var(--surface, #fff); border: 1px solid var(--line, #d4dbd8); border-radius: 14px;
-  box-shadow: 0 1px 2px rgb(24 32 30 / 0.06);
+  max-width: none;
 }
 :scope > li { position: relative; counter-increment: floe-step; display: grid; gap: 0.15rem; padding: 0.2rem 0 1.3rem 3rem; min-height: 2rem; }
 :scope > li:last-child { padding-bottom: 0.2rem; }

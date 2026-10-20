@@ -1,5 +1,5 @@
-<dl data-floe-part="cards stats">
+<dl data-floe-part="stats">
 {{- range .}}
-<div class="card stat{{with .tone}} {{.}}{{end}}"><dt>{{.label}}</dt><dd class="value">{{.value}}{{with .unit}}<span class="unit">{{.}}</span>{{end}}</dd>{{with .note}}<dd class="note">{{.}}</dd>{{end}}</div>
+<div class="card stat{{with .tone}} {{.}}{{end}}" data-floe-look="panel"><dt>{{.label}}</dt><dd class="value">{{.value}}{{with .unit}}<span class="unit">{{.}}</span>{{end}}</dd>{{with .note}}<dd class="note">{{.}}</dd>{{end}}</div>
 {{- end}}
 </dl>

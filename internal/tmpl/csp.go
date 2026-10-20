@@ -42,9 +42,10 @@ func CutOffPage(page []byte) []byte {
 // cutOffAt returns where in page the <meta> of CutOff goes, and the <meta>.
 func cutOffAt(page []byte) (int, string) {
 	at := len(page) - len(bytes.TrimPrefix(page, []byte("\uFEFF")))
+	text := string(page)
 	for {
 		at = len(page) - len(bytes.TrimLeft(page[at:], " \t\n\f\r"))
-		n := comment(page[at:])
+		n := comment(text[at:])
 		if n == 0 {
 			break
 		}
@@ -60,27 +61,34 @@ func cutOffAt(page []byte) (int, string) {
 	return at, meta
 }
 
-// comment returns the length of the comment b starts with, ended where an HTML parser ends it, or 0 for
+// comment returns the length of the comment s starts with, ended where an HTML parser ends it, or 0 for
 // none or one never closed: <!-- … --> or --!>, the empty <!--> and <!--->, and <? … >.
-func comment(b []byte) int {
+func comment(s string) int {
 	switch {
-	case bytes.HasPrefix(b, []byte("<?")):
-		return bytes.IndexByte(b, '>') + 1
-	case !bytes.HasPrefix(b, []byte("<!--")):
+	case strings.HasPrefix(s, "<?"):
+		return strings.IndexByte(s, '>') + 1
+	case !strings.HasPrefix(s, "<!--"):
 		return 0
 	}
-	body := b[len("<!--"):]
+	body := s[len("<!--"):]
 	switch {
-	case bytes.HasPrefix(body, []byte(">")):
+	case strings.HasPrefix(body, ">"):
 		return len("<!-->")
-	case bytes.HasPrefix(body, []byte("->")):
+	case strings.HasPrefix(body, "->"):
 		return len("<!--->")
 	}
-	end := 0
-	for _, closing := range []string{"-->", "--!>"} {
-		if i := bytes.Index(body, []byte(closing)); i >= 0 && (end == 0 || len("<!--")+i+len(closing) < end) {
-			end = len("<!--") + i + len(closing)
+	// The first -- that a > or a !> follows ends it.
+	for at := 0; ; {
+		i := strings.Index(body[at:], "--")
+		if i < 0 {
+			return 0
 		}
+		switch rest := body[at+i+len("--"):]; {
+		case strings.HasPrefix(rest, ">"):
+			return len("<!--") + at + i + len("-->")
+		case strings.HasPrefix(rest, "!>"):
+			return len("<!--") + at + i + len("--!>")
+		}
+		at += i + 1
 	}
-	return end
 }

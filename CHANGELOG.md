@@ -11,7 +11,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add parts of your own: a directory each in `FLOE_PARTS_DIR` (default
   `$XDG_CONFIG_HOME/floe/parts`) of the files floe's parts have, referred to
   as `floe:///parts/<name>.json`. One of the name of one of floe's takes its
-  place whole, and floe's parts themes do not style it. Parts themes of your
+  place whole, and floe's parts themes do not style it. A part takes the look
+  of floe's, and those it takes, by its `part.yaml` (`looks: [panel]` draws
+  it in every parts theme's panel), and a look alone of your own is a
+  `part.css` without a schema. Parts themes of your
   own go in `FLOE_PARTS_DIR/themes/<name>/`, a theme of the name of one of
   floe's taking the place of its files of their names. A part or theme that
   cannot be used is refused to the pages that use it and warned of by
@@ -60,11 +63,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   or `bad`. The built-in `report` takes them, and a template of one's own
   refers to one with `"$ref": "floe:///parts/table.json"`: floe checks the item,
   draws it, and puts the part's style once into a page that names it, as a
-  part's element does (`data-floe-part="table"`), a table of Markdown (in the
-  table's look) and HTML that takes a part's look so
-  (`<span class="good" data-floe-part="cell">`) included. A part's style
-  reaches its own elements, not a part held in it, and comes after the style
-  of the part it is drawn in the look of. A template's item of
+  part's element does (`data-floe-part="table"`, the box of one part), a
+  table of Markdown (in the table's look) and HTML that names a part so
+  (`<span class="good" data-floe-part="cell">`) or takes a part's look without
+  being its box (`data-floe-look="panel"`) included. A part takes the look of
+  others by its `part.yaml` (`looks: [table]`), and the looks those take:
+  `panel` and `rows`, looks alone, are the box most parts are drawn in. A
+  part's style reaches the elements that have its look, not a part held in
+  them, and comes after the style of the looks it takes. A template's item of
   `"format": "markdown"` is Markdown text, which floe draws as HTML.
   `floe template show` tells a part's items, and `floe template check` warns
   of a theme that leaves out a CSS variable its parts take their colours from.
@@ -91,8 +97,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   and sticky notes), `swiss` (heavy black rules, large numbers and red, states
   told by shape) or `washi` (sumi and vermilion on washi in a Mincho face,
   seals and quotes ruled in vermilion), each in light and dark mode. A parts
-  theme restyles each part, its style reaching that part's elements but not
-  a part held in it, and Markdown's quotes, and goes into every page after the
+  theme restyles each part and look in a file of each (`panel.css` every
+  panel), its style reaching the elements that have the look but not a part
+  held in them, and Markdown's quotes, and goes into every page after the
   parts' style; the template's theme (`theme:`,
   `report` has `default`) styles the page, in a layer under them. `floe
   template show` lists the parts themes.
@@ -156,7 +163,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `page.html` writes numbers with `num` and `bytes`.
   floe puts a page's CSS together, the template's `page.css` and theme each
   in a `<style>` of its own, in a cascade layer over floe's base (text, lists, links, code and
-  quotes) and under the parts' style and the parts theme, which they do not
+  quotes) and the looks of elements that take one without being a part's
+  box, and under the parts' style and the parts theme, which they do not
   restyle whatever their selectors. The template's CSS is scoped to the page,
   `:scope` its root: it reaches a part's element but not what the part holds.
   `page.html` holds no `<style>`, nor an item of `"format": "html"` a `<style>`

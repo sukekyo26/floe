@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"math/big"
 	"slices"
 	"strconv"
@@ -107,10 +106,14 @@ func unknownPart(set *partSet, ref string) error {
 	if whole, into := set.pointsInto(ref); into {
 		return usererr.New("tmpl_part_into", ref, whole)
 	}
-	if name, ok := partName(ref); ok && set.broken[name] != nil {
+	name, ok := partName(ref)
+	switch {
+	case ok && set.broken[name] != nil:
 		return usererr.New("tmpl_part_broken", name, set.broken[name])
+	case ok && set.parts[name] != nil && set.parts[name].isLook():
+		return usererr.New("tmpl_part_look_ref", ref, name)
 	}
-	return usererr.New("tmpl_part_unknown", ref, strings.Join(slices.Sorted(maps.Keys(set.parts)), ", "))
+	return usererr.New("tmpl_part_unknown", ref, set.names(drawing))
 }
 
 var errSchemaURL = errors.New("a schema refers to no other file or URL; write it in schema.json")

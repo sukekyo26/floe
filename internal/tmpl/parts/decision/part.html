@@ -1,4 +1,4 @@
-<div data-floe-part="cards decision"><div class="card">
+<div data-floe-part="decision"><div class="card" data-floe-look="panel">
 {{- if or .status .date}}<p class="meta">{{with .status}}{{.}}{{end}}{{with .date}}<span>{{.}}</span>{{end}}</p>{{end -}}
 <h3>{{.title}}</h3>{{with .text}}{{markdown .}}{{end}}
 {{- with .rejected}}<p class="set-aside">{{word "rejected"}}</p><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul>{{end -}}

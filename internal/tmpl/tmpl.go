@@ -320,7 +320,7 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 		return problems.Sorted()
 	}
 	d.schema = s
-	err = checkItems(checkImages(s, d, root, dir), checkHTML(s, d, root), checkDiagrams(s, d, root, t.icons),
+	err = checkItems(checkImages(s, d, root, dir), checkHTML(set, s, d, root), checkDiagrams(s, d, root, t.icons),
 		checkScripts(s, d, root), checkParts(s, d, root))
 	if err != nil {
 		return err
@@ -335,8 +335,9 @@ func checkValues(t *Template, d *Data, root ast.Node, dir string, problems yamlp
 
 // checkHTML refuses the items of d of format html, as its schema s declares them, that hold a <style> or
 // a <link>, at their lines and columns under root: floe puts a page's CSS together, in layers, and a
-// style of the data would win over them all.
-func checkHTML(s *schema, d *Data, root ast.Node) error {
+// style of the data would win over them all. It refuses those that name a part of set that the page
+// would refuse too.
+func checkHTML(set *partSet, s *schema, d *Data, root ast.Node) error {
 	var found []itemAt
 	s.find("html", d.Values, nil, &found)
 	var problems yamlpos.Problems
@@ -345,9 +346,12 @@ func checkHTML(s *schema, d *Data, root ast.Node) error {
 		if !ok {
 			continue
 		}
-		at := tagsOf([]byte(html))
-		if at.style >= 0 || at.link >= 0 {
+		// Wherever it is: an item may leave a quote or a comment open to the next, which a browser reads on.
+		if styleOrLink.MatchString(html) {
 			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_style")))
+		}
+		if bad := set.misnamedIn(namedIn(html, tagsIn(html, false))); bad != nil {
+			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
 		}
 	}
 	if problems != nil {
@@ -453,11 +457,13 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	style, err := set.pageStyle(out, own, d.PartsTheme)
+	html := string(out)
+	found := tagsIn(html, false)
+	style, err := set.pageStyle(html, found, own, d.PartsTheme)
 	if err != nil {
 		return nil, err
 	}
-	out = withStyles(out, style)
+	out = withStyles(out, found, style)
 	// Once at the end, as the reload script is: page.html picks which diagrams it draws, and where.
 	if d.diagrams {
 		script, err := diagram.Script()
@@ -489,7 +495,7 @@ func (t *Template) page() (*template.Template, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	if at := tagsOf(src).style; at >= 0 {
+	if at := tagsOf(tagsIn(string(src), true)).style; at >= 0 {
 		return nil, nil, usererr.New("tmpl_page_style", t.file("page.html"), lineAt(src, at))
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.

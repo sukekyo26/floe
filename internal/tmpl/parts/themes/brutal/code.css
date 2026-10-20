@@ -1,1 +1,5 @@
+:scope { border: 3px solid var(--brutal-ink); border-radius: 0; box-shadow: 6px 6px 0 var(--brutal-blue); margin: 0 6px 6px 0; }
+:scope figcaption {
+  background: var(--surface); color: var(--fg); opacity: 1; font-weight: 800; border-bottom: 3px solid var(--brutal-ink);
+}
 :scope .lang { border-radius: 0; border: 2px solid var(--brutal-ink); background: var(--brutal-blue); color: #0a0a0a; font-weight: 900; }

@@ -110,6 +110,9 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	}
 	lint.walk(doc, "#", true)
 	warnings, mistakes = lint.warnings, lint.mistakes
+	page, pageSrc, pageErr := t.page()
+	named := namedParts(string(pageSrc))
+	lint.takeNamed(named)
 	// Told beside the other mistakes of the files, not instead of them.
 	if err = t.refuseShared(s); err != nil {
 		mistakes = append(mistakes, err)
@@ -120,34 +123,41 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 		mistakes = append(mistakes, err)
 	}
 	mistakes = append(mistakes, t.checkChecks(sch)...)
-	computed, found, err := t.readOptional("computed.yaml")
-	if err == nil && found {
-		_, err = readComputed(t.file("computed.yaml"), computed, slices.Sorted(maps.Keys(s.Properties)))
-	}
-	if err != nil {
+	if err = t.checkComputed(s); err != nil {
 		mistakes = append(mistakes, err)
 	}
-	page, src, err := t.page()
-	if err != nil {
-		return warnings, append(mistakes, err)
+	if pageErr != nil {
+		return warnings, append(mistakes, pageErr)
 	}
 	mistakes = append(mistakes, t.checkAssets(page)...)
 	mistakes = append(mistakes, t.checkCSS()...)
-	return append(warnings, brokenParts(set, src)...), append(mistakes, t.checkNamedParts(src)...)
+	return append(warnings, brokenParts(set, named)...), append(mistakes, t.checkNamedParts(set, pageSrc, named)...)
 }
 
-// brokenParts warns of each part of one's own in set that cannot be used, but those src, page.html,
-// names, which checkNamedParts refuses: the schema refers to none of them, as it compiled. A parts theme
-// that cannot be used is warned of too: a data file picks it.
-func brokenParts(set *partSet, src []byte) []*usererr.Error {
-	named := map[string]bool{}
-	for _, n := range namedParts(string(src)) {
-		named[n.name] = true
+// checkComputed returns the mistake of t's computed.yaml, of the items of its schema s, if it has one.
+func (t *Template) checkComputed(s *schema) error {
+	computed, found, err := t.readOptional("computed.yaml")
+	if err != nil || !found {
+		return err
+	}
+	_, err = readComputed(t.file("computed.yaml"), computed, slices.Sorted(maps.Keys(s.Properties)))
+	return err
+}
+
+// brokenParts warns of each part of one's own in set that cannot be used, but those page.html names by an
+// attribute, of named, which checkNamedParts refuses: the schema refers to none of them, as it compiled. A
+// parts theme that cannot be used is warned of too: a data file picks it.
+func brokenParts(set *partSet, named []namedPart) []*usererr.Error {
+	refused := map[string]bool{}
+	for _, n := range named {
+		if !n.text {
+			refused[n.name] = true
+		}
 	}
 	var warnings []*usererr.Error
 	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
 		// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
-		if !named[name] || set.parts[name] != nil {
+		if !refused[name] || set.parts[name] != nil {
 			warnings = append(warnings, usererr.New("tmpl_part_broken", name, set.broken[name]))
 		}
 	}
@@ -176,22 +186,27 @@ func (t *Template) checkCSS() []error {
 	return mistakes
 }
 
-// checkNamedParts returns a mistake for each part src, page.html, takes the look of, by data-floe-part,
-// that floe does not have: the page would get no style for it.
-func (t *Template) checkNamedParts(src []byte) []error {
-	set, err := t.parts()
-	if err != nil {
-		return []error{err}
-	}
+// checkNamedParts returns a mistake for each part src, page.html, names, of named, by data-floe-part or
+// data-floe-look, that set does not have, as the page would get no style for it, and for each
+// data-floe-part that is not one part's name or names a look.
+func (t *Template) checkNamedParts(set *partSet, src []byte, named []namedPart) []error {
 	var mistakes []error
-	for _, n := range namedParts(string(src)) {
-		switch _, ok := set.parts[n.name]; {
-		case ok:
-		case set.broken[n.name] != nil:
+	told := map[int]bool{} // the attributes not of one name told, by where each is
+	for _, n := range named {
+		line := lineAt(src, n.at)
+		switch set.misnamed(n) {
+		case nameNotOne:
+			if !told[n.at] {
+				told[n.at] = true
+				mistakes = append(mistakes, usererr.New("tmpl_part_several", t.file("page.html"), line, n.value))
+			}
+		case nameLookBox:
+			mistakes = append(mistakes, usererr.New("tmpl_look_box", t.file("page.html"), line, n.name))
+		case nameBroken:
 			mistakes = append(mistakes, usererr.New("tmpl_part_broken", n.name, set.broken[n.name]))
-		default:
-			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), lineAt(src, n.at), n.name,
-				strings.Join(slices.Sorted(maps.Keys(set.parts)), ", ")))
+		case nameUnknown:
+			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), line, n.name, set.candidates(n.look)))
+		case nameRight:
 		}
 	}
 	return mistakes
@@ -589,6 +604,12 @@ func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
 		return true
 	}
 	return false
+}
+
+// takeNamed adds to the parts of l those page.html names, of named, which take colours from the theme as
+// those the schema refers to do.
+func (l *schemaLint) takeNamed(named []namedPart) {
+	l.parts = slices.Compact(slices.Sorted(slices.Values(append(l.parts, l.set.namedBy(named, nil)...))))
 }
 
 // variables returns the CSS variables floe's base, the parts and diagrams l found, and the parts themes
