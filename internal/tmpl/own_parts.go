@@ -106,20 +106,29 @@ func (set *partSet) leaveOutUnusable() {
 			set.leaveOut(name, usererr.New("tmpl_look_cycle", dir, name, strings.Join(chain, " → ")))
 		}
 	}
-	settle := func() {
-		for left := true; left; {
-			left = false
-			for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-				if err := set.checkNames(name, set.parts[name].dir); err != nil {
-					set.leaveOut(name, err)
-					left = true
-				}
+	set.settle()
+	if set.leaveOutRooted() {
+		set.settle()
+	}
+}
+
+// settle leaves out of set the parts checkNames refuses, again while one is left out.
+func (set *partSet) settle() {
+	for left := true; left; {
+		left = false
+		for _, name := range slices.Sorted(maps.Keys(set.parts)) {
+			if err := set.checkNames(name, set.parts[name].dir); err != nil {
+				set.leaveOut(name, err)
+				left = true
 			}
 		}
 	}
-	settle()
-	// Once the rest are settled, and all at once, so that the part a root names is surely usable or not, and
-	// the answer hangs on no order; the parts that hold one left out so go then.
+}
+
+// leaveOutRooted leaves out of set the parts whose schema names a part at its root, and reports whether it
+// left one out. It runs once the rest are settled, and leaves them out all at once, so that the part a root
+// names is surely usable or not, and the answer hangs on no order.
+func (set *partSet) leaveOutRooted() bool {
 	rooted := map[string]error{}
 	for name, p := range set.parts {
 		if named, ok := set.rootPart(p.schema); ok {
@@ -130,9 +139,7 @@ func (set *partSet) leaveOutUnusable() {
 	for name, why := range rooted {
 		set.leaveOut(name, why)
 	}
-	if len(rooted) > 0 {
-		settle()
-	}
+	return len(rooted) > 0
 }
 
 // readOwnPart reads the part name of one's own from the directory from, at at as its mistakes name it,
