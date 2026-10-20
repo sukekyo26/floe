@@ -24,6 +24,9 @@ const (
 	// allow-popups-to-escape-sandbox: a site opened in a new tab does not inherit the sandbox (it has no
 	// opener, so it cannot reach the API either).
 	pageCSP = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"
+	// The management page may not be framed, so another site cannot lay it under its own buttons and
+	// have its delete clicked (clickjacking). It frames the pages; nothing frames it.
+	uiCSP = "frame-ancestors 'none'"
 )
 
 // types are the files served from a link's directory. The registered file itself is HTML whatever its

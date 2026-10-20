@@ -246,7 +246,8 @@ func TestManagementPageAndFrame(t *testing.T) {
 
 	for _, target := range []string{"/", "/a/untitled/"} {
 		r := e.get(t, target)
-		if r.status != http.StatusOK || !strings.Contains(r.body, "<title>floe</title>") || r.header.Get("Content-Security-Policy") != "" {
+		if r.status != http.StatusOK || !strings.Contains(r.body, "<title>floe</title>") ||
+			r.header.Get("Content-Security-Policy") != "frame-ancestors 'none'" {
 			t.Errorf("GET %s = %d, CSP %q", target, r.status, r.header.Get("Content-Security-Policy"))
 		}
 		if !strings.Contains(r.body, `<html lang="en">`) {
