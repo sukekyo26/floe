@@ -186,7 +186,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `page.html` holds a `</head>`, before which floe puts the page's styles, or
   is refused, as is a drawing an action of it leaves it out of. It holds
   no `<style>`, nor an item of `"format": "html"` a `<style>`, `<link>`
-  or `</head>`, nor the template's CSS an `@import`, `:root`, `html` or a `}` that closes no block, each refused
+  or `</head>`, or what it leaves open to take in the page after it (an
+  `<svg>`, a comment, a `<table>`…) or closes without opening it, nor the template's CSS an `@import`, `:root`, `html` or a `}` that closes no block, each refused
   at its line, and `floe template check` refuses a part `page.html` names that floe
   does not have.
   Images go into the page as data URIs: an item of `"format": "image"`

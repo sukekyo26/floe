@@ -360,8 +360,9 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 // checkHTML refuses the items of d of format html, as its schema s declares them, that hold a <style> or
 // a <link>, at their lines and columns under root: floe puts a page's CSS together, in layers, and a
 // style of the data would win over them all. It refuses those that hold a </head>, which would stand in
-// for page.html's, before which floe puts the page's styles. It refuses those that name a part of set that the page
-// would refuse too.
+// for page.html's, before which floe puts the page's styles, and those that leave open what would take in
+// the page after them, an <svg> among them. It refuses those that name a part of set that the page would
+// refuse too.
 func checkHTML(set *partSet, s *schema, d *Data, root ast.Node) error {
 	var found []itemAt
 	s.find("html", d.Values, nil, &found)
@@ -371,12 +372,15 @@ func checkHTML(set *partSet, s *schema, d *Data, root ast.Node) error {
 		if !ok {
 			continue
 		}
-		// Wherever it is: an item may leave a quote or a comment open to the next, which a browser reads on.
+		// Wherever it is, a comment's text too, though no item leaves one open.
 		if styleOrLink.MatchString(html) {
 			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_style")))
 		}
 		if headEnd.MatchString(html) {
 			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_head")))
+		}
+		if open := openIn(html); open != nil {
+			problems = append(problems, itemMistake(d.File, root, f.at, false, open))
 		}
 		if bad := set.misnamedIn(namedIn(html, tagsIn(html, false))); bad != nil {
 			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
