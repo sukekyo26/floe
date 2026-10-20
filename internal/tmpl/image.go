@@ -58,28 +58,36 @@ func fsImages(files fs.FS, dir string) imageDir {
 }
 
 // ReadImage reads the image name under files as a data file's check reads it, which where names in its
-// mistakes: see dataImage.
+// mistakes: see dataImageName and imageOf.
 func ReadImage(files fs.FS, name, where string) ([]byte, error) {
-	b, _, e := dataImage(files, name, where)
+	typ, e := dataImageName(name, where)
+	if e != nil {
+		return nil, e
+	}
+	b, e := imageOf(files, name, where, typ)
 	if e != nil {
 		return nil, e
 	}
 	return b, nil
 }
 
-// dataImage reads the image name a data file names, and its type, as image does, but not under
-// KeptName, in any case, where a stored page keeps its data file.
-func dataImage(files fs.FS, name, where string) ([]byte, string, *usererr.Error) {
+// dataImageName checks the name a data file gives an image, as imageName does, but not under KeptName,
+// in any case, where a stored page keeps its data file.
+func dataImageName(name, where string) (string, *usererr.Error) {
 	// A name that is no path is told so first, under KeptName or not.
 	if first, _, under := strings.Cut(name, "/"); imagePath(name) && under && strings.EqualFold(first, KeptName) {
-		return nil, "", usererr.New("tmpl_image_kept_name", name, KeptName)
+		return "", usererr.New("tmpl_image_kept_name", name, KeptName)
 	}
-	return image(files, name, where)
+	return imageName(name, where)
 }
 
 // imageURI reads the image name as a data URI, which html/template takes for a src as it is.
 func imageURI(files fs.FS, name, where string) (template.URL, *usererr.Error) {
-	b, typ, e := image(files, name, where)
+	typ, e := imageName(name, where)
+	if e != nil {
+		return "", e
+	}
+	b, e := imageOf(files, name, where, typ)
 	if e != nil {
 		return "", e
 	}
@@ -92,25 +100,30 @@ func dataURI(b []byte, typ string) template.URL {
 	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b))
 }
 
-// image reads the image name, a slash-separated path under files, and its type. where names files in
-// the mistake: name must be a path under it without .. or a name starting with a dot, of an image floe
-// takes, by its name and by what it holds.
-func image(files fs.FS, name, where string) ([]byte, string, *usererr.Error) {
+// imageName checks name, which names an image, whatever file is there, and returns its type: a
+// slash-separated path under the directory where names, without .. or a name starting with a dot, of
+// an image floe takes by its name.
+func imageName(name, where string) (string, *usererr.Error) {
 	if !imagePath(name) {
-		return nil, "", usererr.New("tmpl_image_path", name, where)
+		return "", usererr.New("tmpl_image_path", name, where)
 	}
 	typ, ok := imageTypes[strings.ToLower(path.Ext(name))]
 	if !ok {
-		return nil, "", usererr.New("tmpl_image_type", name)
+		return "", usererr.New("tmpl_image_type", name)
 	}
+	return typ, nil
+}
+
+// imageOf reads the image name under files, of the type typ its name gives, holding what that says.
+func imageOf(files fs.FS, name, where, typ string) ([]byte, *usererr.Error) {
 	b, e := readImageFile(files, name, where)
 	if e != nil {
-		return nil, "", e
+		return nil, e
 	}
 	if holds := http.DetectContentType(b); holds != typ && (typ != "image/svg+xml" || !isSVG(b)) {
-		return nil, "", usererr.New("tmpl_image_content", name, typ)
+		return nil, usererr.New("tmpl_image_content", name, typ)
 	}
-	return b, typ, nil
+	return b, nil
 }
 
 // imagePath reports whether name may name an image: a slash-separated path under its directory,
@@ -285,13 +298,14 @@ func checkImages(s *schema, d *Data, root ast.Node, images imageDir) error {
 		// holds nil for one read.
 		e, seen := refused[name]
 		if !seen {
-			if imagePath(name) {
-				d.tried = append(d.tried, name)
-			}
-			var b []byte
+			// Only a name that a file can make right is tried, and watched.
 			var typ string
-			if b, typ, e = dataImage(files, name, images.dir); e == nil {
-				d.images[name] = dataURI(b, typ)
+			if typ, e = dataImageName(name, images.dir); e == nil {
+				d.tried = append(d.tried, name)
+				var b []byte
+				if b, e = imageOf(files, name, images.dir, typ); e == nil {
+					d.images[name] = dataURI(b, typ)
+				}
 			}
 			refused[name] = e
 		}

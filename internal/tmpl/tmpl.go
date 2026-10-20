@@ -81,7 +81,7 @@ type Data struct {
 	// its items drawn by floe's parts, by the path of keys to each (pathKey); nil without one
 	parts    map[string]template.HTML
 	diagrams bool     // whether it has a diagram, for the page to get their style and zoom
-	tried    []string // the images it names, read or not, as it writes them
+	tried    []string // the images it names that a file can make right, read or not, as it writes them
 	icons    []string // the index files of the icon sets its diagrams may show, when it has one
 }
 

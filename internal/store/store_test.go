@@ -1252,7 +1252,8 @@ func TestWriteAtomic(t *testing.T) { //nolint:paralleltest // sets the umask, wh
 }
 
 // PrepareData reads nothing from disk: a data file that names images is asked for them first, then
-// checked with those sent, which the entry keeps.
+// checked with those sent, which the entry keeps; a publish refused whatever images come is refused
+// before they are asked for.
 func TestPrepareData(t *testing.T) {
 	t.Parallel()
 
@@ -1280,6 +1281,14 @@ func TestPrepareData(t *testing.T) {
 	}
 	if entry.Slug != "sizes" || entry.Meta.PublishedFrom != "proj" || !bytes.Equal(entry.Images["img/chart.png"], png) {
 		t.Errorf("entry = %s from %q, %d images", entry.Slug, entry.Meta.PublishedFrom, len(entry.Images))
+	}
+	// What refuses the publish whatever images come is told before they are asked for.
+	if err = s.Save(entry); err != nil {
+		t.Fatal(err)
+	}
+	up.Images, up.Project = nil, "other"
+	if _, err = s.PrepareData(up, store.Options{}); err == nil || errors.As(err, &need) || !strings.Contains(err.Error(), "proj") {
+		t.Errorf("PrepareData of a page of another project = %v, want it refused before images are asked for", err)
 	}
 	up.File = "plans/page.html"
 	if _, err = s.PrepareData(up, store.Options{}); err == nil || !strings.Contains(err.Error(), "page.html") {

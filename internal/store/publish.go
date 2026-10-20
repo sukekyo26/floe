@@ -129,12 +129,13 @@ func (e *NeedImages) Error() string {
 	return "the data names images to be sent with it: " + strings.Join(e.Names, ", ")
 }
 
-// Prepare checks a publish of the data file file on disk, as PrepareData does, with its images under
-// its directory. cwd resolves a relative file and names the project the page belongs to.
+// Prepare checks a publish of the data file file on disk as a stored page, its images under its
+// directory, and builds what Save writes, without writing anything. cwd resolves a relative file and
+// names the project the page belongs to.
 func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
-	// Before reading, as PrepareData would refuse it after.
-	if !IsDataFile(file) {
-		return nil, usererr.New("store_not_data", file)
+	// Before reading: a page is drawn from a data file, whatever is or is not there.
+	if err := checkData(file); err != nil {
+		return nil, err
 	}
 	abs := file
 	if !filepath.IsAbs(abs) {
@@ -144,27 +145,20 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	if err != nil {
 		return nil, usererr.CannotRead(file, err)
 	}
-	up := Upload{File: file, Dir: filepath.Dir(abs), Source: src, Images: nil, Project: project.Name(ctx, cwd)}
-	e, err := s.PrepareData(up, opts)
-	var need *NeedImages
-	if !errors.As(err, &need) {
-		return e, err
-	}
-	// Opened only when the data names an image, as a drawing of a link opens it.
-	root, err := os.OpenRoot(up.Dir)
+	themes := opts.themes()
+	data, err := s.templates.Read(file, src, themes, cwd)
 	if err != nil {
-		return nil, usererr.CannotRead(up.Dir, err)
+		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 	}
-	defer root.Close()
-	up.Images = root.FS()
-	return s.PrepareData(up, opts)
+	return s.storedPage(file, data, src, themes, opts, project.Name(ctx, cwd))
 }
 
-// PrepareData checks a publish of the data file up as a stored page and builds what Save writes,
-// without writing anything. Without up.Images, a data file that names images is answered NeedImages.
+// PrepareData checks a publish of the data file up as a stored page, as Prepare does without reading
+// the publisher's disk. Without up.Images, a data file that names images is answered NeedImages, once
+// nothing that needs no image refuses the publish (the slug, the page's owner).
 func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
-	if !IsDataFile(up.File) {
-		return nil, usererr.New("store_not_data", up.File)
+	if err := checkData(up.File); err != nil {
+		return nil, err
 	}
 	images := up.Images
 	if images == nil {
@@ -172,21 +166,40 @@ func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
 	}
 	themes := opts.themes()
 	data, named, err := s.templates.ReadFS(up.File, up.Source, images, up.Dir, themes)
-	// Asked before its mistakes, which may be of the images not sent.
+	// Asked before the mistakes, which may be of the images not sent.
 	if up.Images == nil && len(named) > 0 {
+		if _, refused := s.storedPage(up.File, nil, nil, themes, opts, up.Project); refused != nil {
+			return nil, refused
+		}
 		return nil, &NeedImages{Names: named}
 	}
 	if err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 	}
-	slug, err := s.slugFor(up.File, "", opts, "")
+	return s.storedPage(up.File, data, up.Source, themes, opts, up.Project)
+}
+
+// checkData refuses file unless it is a data file, which a stored page is drawn from.
+func checkData(file string) error {
+	if !IsDataFile(file) {
+		return usererr.New("store_not_data", file)
+	}
+	return nil
+}
+
+// storedPage builds the entry of the data file file as a stored page, drawn from data, of content src,
+// and published from the project from; data nil checks its slug and owner only.
+func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, themes tmpl.Themes, opts Options, from string) (
+	*Entry, error,
+) {
+	slug, err := s.slugFor(file, "", opts, "")
 	if err != nil {
 		return nil, err
 	}
 	return s.checked(&Entry{
-		Slug: slug, Meta: dataMeta("", data, themes), Source: nil, Images: nil, Prev: nil, opts: opts,
-		from: up.Project, named: "",
-	}, data, string(up.Source))
+		Slug: slug, Meta: seedMeta("", data, themes), Source: nil, Images: nil, Prev: nil, opts: opts, from: from,
+		named: "",
+	}, data, string(src))
 }
 
 // PrepareLink checks a link to file and builds what Save writes, without writing anything. cwd resolves
@@ -213,14 +226,14 @@ func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd 
 		named = SlugFromFile(file, cwd)
 	}
 	return s.checked(&Entry{
-		Slug: slug, Meta: dataMeta(path, data, themes), Source: nil, Images: nil, Prev: nil, opts: opts,
+		Slug: slug, Meta: seedMeta(path, data, themes), Source: nil, Images: nil, Prev: nil, opts: opts,
 		from: project.Name(ctx, filepath.Dir(path)), named: named,
 	}, data, string(src))
 }
 
-// dataMeta is the seed of the Meta settle builds: the link's path ("" for a stored page), and the title:
+// seedMeta is the seed of the Meta settle builds: the link's path ("" for a stored page), and the title:
 // and themes of data, nil for HTML.
-func dataMeta(path string, data *tmpl.Data, themes tmpl.Themes) Meta {
+func seedMeta(path string, data *tmpl.Data, themes tmpl.Themes) Meta {
 	var m Meta
 	m.Path = path
 	if data != nil {
