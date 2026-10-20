@@ -86,8 +86,9 @@ func checkDrawnHTML(d *Data, root ast.Node) error {
 	return itemMistake(d.File, root, found[0].at, false, why)
 }
 
-// drawnTree draws d as it is marked and reads the page as a browser does, false for a drawing that fails.
-// A script ends it, as the one a served page gets: an item that takes it in changes the page too.
+// drawnTree draws d as it is marked, without its styles, and reads the page as a browser does, false for
+// a drawing that fails. A script ends it, as the one a served page gets: an item that takes it in changes
+// the page too.
 func (d *Data) drawnTree() (*html.Node, bool) {
 	page, err := d.Render(d.Title)
 	if err != nil {
@@ -103,7 +104,6 @@ func (d *Data) drawnTree() (*html.Node, bool) {
 // what it leaves open, one of whose elements holds the page after it, or the page outside the items not
 // that of bare, whose text and attributes, which an item drawn as text or in a value changes, are not
 // compared. An item drawn as no markup, in a <title> or a value, has no marks, and is left alone.
-// The <body>s are compared.
 func changed(full, bare *html.Node, mark string) *usererr.Error {
 	begins, ends := marksIn(full, mark)
 	for n, b := range begins {
@@ -122,21 +122,10 @@ func changed(full, bare *html.Node, mark string) *usererr.Error {
 			return swallowed(full, mark, n)
 		}
 	}
-	if shape(bodyOf(full)) != shape(bodyOf(bare)) {
+	if shape(full) != shape(bare) {
 		return usererr.New("tmpl_html_page")
 	}
 	return nil
-}
-
-// bodyOf returns the <body> of doc: the items are drawn in it, and the head holds the styles of the parts
-// they name, which a page without them does not.
-func bodyOf(doc *html.Node) *html.Node {
-	for n := range doc.Descendants() {
-		if n.Type == html.ElementNode && n.DataAtom == atom.Body {
-			return n
-		}
-	}
-	return doc
 }
 
 // markRe reads a mark of an item: / for its end, and its index.
@@ -183,9 +172,13 @@ func cut(doc, begin, end *html.Node) *usererr.Error {
 	// The outermost first: the order of the page.
 	for _, n := range item {
 		for c := range n.Descendants() {
-			if !in[c] && c != end {
-				return usererr.New("tmpl_html_open", "<"+n.Data+">")
+			if in[c] || c == end {
+				continue
 			}
+			if n.DataAtom == atom.Body {
+				return usererr.New("tmpl_html_page") // what it draws in the page's <head> ends it
+			}
+			return usererr.New("tmpl_html_open", "<"+n.Data+">")
 		}
 	}
 	end.Parent.RemoveChild(end)

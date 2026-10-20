@@ -132,6 +132,31 @@ func TestDrawnHTMLItems(t *testing.T) {
 	}
 }
 
+// An item page.html draws in the <head> is refused where it ends the head, or hides its </head>; one that
+// belongs there passes.
+func TestDrawnHTMLInHead(t *testing.T) {
+	t.Parallel()
+
+	dir := memo(t, `"risks": {"type": "string", "format": "html"}`)
+	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.risks}}</head><body><p>x</p></body></html>`
+	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	l := tmpl.NewLibrary(dir, "", "")
+	for item, want := range map[string]string{
+		"<meta name=a content=b>": "",
+		"<noscript>x</noscript>":  "",
+		"<div>x</div>":            "HTML closes an element of the page, or changes the page after it",
+		"hello":                   "HTML closes an element of the page, or changes the page after it",
+		"<script>x":               "HTML leaves <script> open",
+	} {
+		_, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n")
+		if want == "" && err != nil || want != "" && (err == nil || !strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: "+want)) {
+			t.Errorf("%q in the head = %v, want %q", item, err, want)
+		}
+	}
+}
+
 // An item left open at the end of the page takes in the scripts floe puts after it, and is refused too.
 func TestDrawnHTMLAtTheEnd(t *testing.T) {
 	t.Parallel()

@@ -485,6 +485,11 @@ func (d *Data) Render(title string) ([]byte, error) {
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
 	out := b.Bytes()
+	// A drawing that checks the items of format html has no styles: one such item may hide the </head>
+	// they go before, as an open <script> does, which checkDrawnHTML tells of.
+	if d.marks != nil {
+		return out, nil
+	}
 	set, err := t.parts()
 	if err != nil {
 		return nil, err
