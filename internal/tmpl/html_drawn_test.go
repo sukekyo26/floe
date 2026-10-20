@@ -277,6 +277,54 @@ func TestDrawnHTMLOthers(t *testing.T) {
 	}
 }
 
+// An item stays in its place: one that closes the page's element around it and opens another is refused,
+// though the page without it is the page without it.
+func TestDrawnHTMLPlace(t *testing.T) {
+	t.Parallel()
+
+	for page, item := range map[string]string{
+		"<table><tr><td>{{.Data.risks}}</td><td>next</td></tr></table>": "</td><td>evil",
+		"<section>{{.Data.risks}}</section><p>after</p>":                "</section><section>evil",
+		"<ul><li>{{.Data.risks}}</li></ul>":                             "</li><li>fake",
+		"<div class=card>{{.Data.risks}}</div><p>after</p>":             "</div><div>out",
+	} {
+		if _, err := draw(htmlIn(t, page), "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n"); err == nil ||
+			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: HTML closes an element of the page") {
+			t.Errorf("%q in %s = %v", item, page, err)
+		}
+	}
+}
+
+// Where the parser makes an element itself, around an item or after it, is no change of the page: a page
+// that leaves out its <body>, and a cell straight in a <table>.
+func TestDrawnHTMLImplied(t *testing.T) {
+	t.Parallel()
+
+	dir := memo(t, `"risks": {"type": "string", "format": "html"}`)
+	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>{{.Data.risks}}<p>x</p></html>`
+	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: hello\n"); err != nil {
+		t.Errorf("text where the <body> starts = %v", err)
+	}
+	if _, err := draw(htmlIn(t, `<table>{{.Data.risks}}</table>`), "template: memo\nlang: en\nrisks: <td>z</td>\n"); err != nil {
+		t.Errorf("a cell straight in a table = %v", err)
+	}
+}
+
+// An empty item is drawn as it is, so that page.html tests it as the page does: the item checked is where
+// the page draws it.
+func TestDrawnHTMLEmpty(t *testing.T) {
+	t.Parallel()
+
+	l := htmlIn(t, `{{if .Data.aside}}<table><tr><td>{{.Data.risks}}</td></tr></table>{{else}}<span>{{.Data.risks}}</span> tail{{end}}`)
+	if _, err := draw(l, "template: memo\nlang: en\naside: \"\"\nrisks: <p>a\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:4:8: risks: ") {
+		t.Errorf("an item drawn where an empty one leads page.html = %v", err)
+	}
+}
+
 // An action of page.html that leaves out its </head> is told as the template's, before the data's items.
 func TestDrawnHTMLAfterTheTemplate(t *testing.T) {
 	t.Parallel()

@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"crypto/rand"
 	"html/template"
+	"maps"
 	"regexp"
 	"slices"
 	"strconv"
@@ -21,25 +22,28 @@ import (
 // htmlItem is an item of format html of a data file: its path of keys, its text, and where it is written,
 // which Read keeps for Render to tell a mistake of it at, as Render has no YAML.
 type htmlItem struct {
-	at   []string
-	text string
-	pos  yamlpos.Pos
-	path string
+	at      []string
+	text    string
+	written map[string]bool // the elements it opens by a tag (writtenIn)
+	pos     yamlpos.Pos
+	path    string
 }
 
-// htmlItemsOf returns the items of format html of d, text, in the order of the file under root, those at
-// one place (an alias) by their paths; nil for none.
+// htmlItemsOf returns the items of format html of d, text but empty, which draws nothing, in the order of
+// the file under root, those at one place (an alias) by their paths; nil for none.
 func htmlItemsOf(d *Data, root ast.Node) []htmlItem {
 	var found []itemAt
 	d.schema.find("html", d.Values, nil, &found)
 	var items []htmlItem
 	for _, f := range found {
 		text, isText := f.value.(string)
-		if !isText {
+		if !isText || text == "" {
 			continue
 		}
 		key, value, path := yamlpos.Find(root, f.at)
-		items = append(items, htmlItem{at: f.at, text: text, pos: yamlpos.OfValue(key, value), path: path})
+		items = append(items, htmlItem{
+			at: f.at, text: text, written: writtenIn(text), pos: yamlpos.OfValue(key, value), path: path,
+		})
 	}
 	slices.SortStableFunc(items, func(a, b htmlItem) int {
 		return cmp.Or(cmp.Compare(a.pos.Line, b.pos.Line), cmp.Compare(a.pos.Column, b.pos.Column),
@@ -58,9 +62,13 @@ type htmlMarks struct {
 	none  bool
 }
 
-// marked returns text, the item of format html at the path at, between its marks, as m draws it.
+// marked returns text, the item of format html at the path at, between its marks, as m draws it; as it
+// is if it is none of the items, an empty one, whose marks would make it no longer empty to page.html.
 func (m *htmlMarks) marked(text string, at []string) string {
-	n := m.at[pathKey(at)]
+	n, ok := m.at[pathKey(at)]
+	if !ok {
+		return text
+	}
 	if m.none || n == m.empty {
 		text = ""
 	}
@@ -88,7 +96,7 @@ func (d *Data) checkDrawnHTML(page *template.Template, title string) error {
 		if err != nil {
 			return err
 		}
-		if why := changed(full, bare, c.marks.mark, strconv.Itoa(k), writtenIn(it.text)); why != nil {
+		if why := changed(full, bare, c.marks.mark, strconv.Itoa(k), it.written); why != nil {
 			return itemError(d.File, it.pos, it.path, why)
 		}
 	}
@@ -160,8 +168,9 @@ func changed(full, bare []byte, mark, n string, written map[string]bool) *userer
 	case len(ends) < len(begins):
 		return swallowed(doc, mark, n)
 	}
+	others := othersIn(doc, mark, n)
 	for i := range begins {
-		if why := cut(doc, begins[i], ends[i], written); why != nil {
+		if why := cut(doc, begins[i], ends[i], written, others); why != nil {
 			return why
 		}
 	}
@@ -192,21 +201,20 @@ func marksIn(doc *html.Node, mark, n string) (begins, ends []*html.Node) {
 }
 
 // cut takes the item between begin and end out of doc, its end mark put after begin: the nodes that start
-// between them. An element the parser made for it, not of written, gives back to the page what it holds of
-// the page, as a <tbody> around a <tr> does the page's spaces, and so does one of its own what it holds of
-// comments and spaces, which draw nothing: the marks of the next item before a <li> of it closes this
-// one's. It returns the mistake of an item one of whose own elements holds any other node of the page.
-func cut(doc, begin, end *html.Node, written map[string]bool) *usererr.Error {
+// between them, which are all where begin is, or out of what other items, of others, left open around it:
+// one elsewhere closed an element of the page around the item (</td><td>). An element the parser made for
+// it, not of written, gives back to the page what it holds of the page, as a <tbody> around a <tr> does
+// the page's spaces, and so does one of its own what it holds of comments and spaces, which draw nothing:
+// the marks of the next item before a <li> of it closes this one's. It returns the mistake of an item one
+// of whose own elements holds any other node of the page.
+func cut(doc, begin, end *html.Node, written map[string]bool, others map[*html.Node]bool) *usererr.Error {
 	item, in := between(doc, begin, end)
-	// The outermost first: the order of the page.
+	if why := outOfPlace(item, in, others, begin); why != nil {
+		return why
+	}
 	for _, n := range item {
-		if n.Type != html.ElementNode || !written[strings.ToLower(n.Data)] {
-			continue
-		}
-		for c := range n.Descendants() {
-			if !in[c] && c != end && !blank(c) {
-				return usererr.New("tmpl_html_open", "<"+n.Data+">")
-			}
+		if n.Type == html.ElementNode && written[strings.ToLower(n.Data)] && holdsPage(n, in, end) {
+			return usererr.New("tmpl_html_open", "<"+n.Data+">")
 		}
 	}
 	end.Parent.RemoveChild(end)
@@ -221,6 +229,61 @@ func cut(doc, begin, end *html.Node, written map[string]bool) *usererr.Error {
 		}
 	}
 	return nil
+}
+
+// outOfPlace returns the mistake of the nodes of an item, item and as the set in, of which one is not where
+// begin is, nor out of what other items, of others, left open around it, which a <li> of it closes: it
+// closed the page's element around it. nil for none.
+func outOfPlace(item []*html.Node, in, others map[*html.Node]bool, begin *html.Node) *usererr.Error {
+	place := map[*html.Node]bool{}
+	for p := begin.Parent; p != nil; p = p.Parent {
+		place[p] = true
+		if !others[p] {
+			break
+		}
+	}
+	for _, n := range item {
+		if !in[n.Parent] && !place[n.Parent] {
+			return usererr.New("tmpl_html_page")
+		}
+	}
+	return nil
+}
+
+// holdsPage reports whether n, an element of an item of the set in, holds a node of the page that draws,
+// not end, the item's end mark, nor a comment or spaces.
+func holdsPage(n *html.Node, in map[*html.Node]bool, end *html.Node) bool {
+	for c := range n.Descendants() {
+		if !in[c] && c != end && !blank(c) {
+			return true
+		}
+	}
+	return false
+}
+
+// othersIn returns the nodes of doc of the items marked but the item n.
+func othersIn(doc *html.Node, mark, n string) map[*html.Node]bool {
+	others := map[*html.Node]bool{}
+	begins, ends := map[string][]*html.Node{}, map[string][]*html.Node{}
+	for c := range doc.Descendants() {
+		if c.Type != html.CommentNode {
+			continue
+		}
+		if m := markRe.FindStringSubmatch(c.Data); m != nil && m[2] == mark && m[3] != n {
+			if m[1] == "" {
+				begins[m[3]] = append(begins[m[3]], c)
+			} else {
+				ends[m[3]] = append(ends[m[3]], c)
+			}
+		}
+	}
+	for j, b := range begins {
+		for i := range min(len(b), len(ends[j])) {
+			_, in := between(doc, b[i], ends[j][i])
+			maps.Copy(others, in)
+		}
+	}
+	return others
 }
 
 // between returns the nodes of doc that start between begin and end, in order, and as a set.
@@ -288,25 +351,39 @@ func holdsMark(text, end string) bool {
 	return false
 }
 
+// implied reports whether n is an element of HTML the parser may make itself, around what comes in it:
+// where it is made, around an item's text or the page's after it, is the parser's, not the page's.
+func implied(n *html.Node) bool {
+	switch n.DataAtom {
+	case atom.Html, atom.Head, atom.Body, atom.Tbody, atom.Tr, atom.Colgroup:
+		return n.Namespace == ""
+	default:
+		return false
+	}
+}
+
 // shape writes the elements, comments and texts of n in order, by their names, and the names of the
 // elements' attributes: an item that gives the page's <body> one (<body hidden>) changes the page. The
 // texts' words and the attributes' values are left out, which an item drawn as text or in a value changes,
-// and so are the <tbody> and <colgroup> the parser makes around the first row or column, an item's or
-// the next's.
+// and so are the elements the parser may make itself (implied), but their attributes: cut keeps an item in
+// its place, so that where one starts is the parser's.
 func shape(n *html.Node) string {
 	var b strings.Builder
 	var write func(n *html.Node)
 	write = func(n *html.Node) {
 		switch n.Type {
 		case html.ElementNode:
-			if n.DataAtom == atom.Tbody || n.DataAtom == atom.Colgroup {
-				break
-			}
 			keys := make([]string, 0, len(n.Attr))
 			for _, a := range n.Attr {
 				keys = append(keys, a.Namespace+":"+a.Key)
 			}
 			slices.Sort(keys)
+			if implied(n) {
+				if len(keys) > 0 { // one the parser makes has none
+					b.WriteString("@" + n.Data + " " + strings.Join(keys, " ") + "@")
+				}
+				break
+			}
 			b.WriteString("<" + cmp.Or(n.Namespace, "html") + ":" + n.Data + " " + strings.Join(keys, " ") + ">")
 		case html.TextNode:
 			b.WriteString("#text")
@@ -317,7 +394,7 @@ func shape(n *html.Node) string {
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			write(c)
 		}
-		if n.Type == html.ElementNode && n.DataAtom != atom.Tbody && n.DataAtom != atom.Colgroup {
+		if n.Type == html.ElementNode && !implied(n) {
 			b.WriteString("</>")
 		}
 	}
