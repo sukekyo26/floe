@@ -24,7 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `$XDG_CONFIG_HOME/floe/parts`) of the files floe's parts have, referred to
   as `floe:///parts/<name>.json`; its `part.html` draws its items, and its
   schema takes no format of floe's (`html`, `image`, `markdown`) under
-  `properties` and `items`, nor through `any.json`; no schema, a template's too, names a part by
+  `properties` and `items`, nor through `any.json`, and refers to no other
+  file or URL, nor to a part there is none of; no schema, a template's too, names a part by
   the `$ref` at its root. One of the
   name of one of floe's takes its place whole, and floe's parts themes do not
   style it. A part takes the look

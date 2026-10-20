@@ -106,7 +106,7 @@ func TestSchemaRefersToNoFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = validate(set, "schema.json", []byte(`{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
-	if err == nil || err.Error() != "schema.json: file://"+outside+": a schema refers to no other file or URL; write what it refers to in schema.json, and give $schema a draft of JSON Schema" {
+	if err == nil || err.Error() != "schema.json: file://"+outside+": a schema refers to no other file or URL: write what a $ref refers to in schema.json, and a $schema as a draft of JSON Schema" {
 		t.Errorf("validate of a $ref to a file = %v", err)
 	}
 	// Nor to a metaschema of its own.
