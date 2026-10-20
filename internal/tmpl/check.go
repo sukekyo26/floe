@@ -239,24 +239,20 @@ type scopeColours struct {
 }
 
 // read adds what css, the file named file, sets on :scope, that of dark mode in
-// @media (prefers-color-scheme: dark).
+// @media (prefers-color-scheme: dark), in order: a value for light mode after the dark one wins in dark
+// mode too, so that it leaves dark mode unset.
 // LIMIT: :scope alone as a selector, not in a list (:scope, body). Read the selectors if a template comes
 // to set colours so.
 func (c *scopeColours) read(css []byte, file string) {
 	rules, _ := cssRules(css)
 	blank := withoutComments(css)
-	var media *cssRule
-	for i := range rules {
-		r := &rules[i]
-		if media != nil && r.at > media.end {
-			media = nil
-		}
-		inDark := r.depth == 1 && media != nil
-		switch {
-		case r.block && r.depth == 0 && darkMedia.MatchString(r.prelude):
-			media = r
-		case r.block && r.prelude == ":scope" && (r.depth == 0 || inDark):
-			c.add(declarationsIn(blank, r), inDark, file)
+	for i, mode := range modesOfRules(rules, ":scope") {
+		switch mode {
+		case modeLight, modeLateLight:
+			c.add(declarationsIn(blank, &rules[i]), false, file)
+		case modeDark:
+			c.add(declarationsIn(blank, &rules[i]), true, file)
+		case modeOther, modeMedia:
 		}
 	}
 }
@@ -270,6 +266,7 @@ func (c *scopeColours) add(decls []cssDeclaration, inDark bool, file string) {
 			c.dark[d.name] = true
 		default:
 			c.light[d.name], c.from[d.name] = d.value, file
+			delete(c.dark, d.name)
 		}
 	}
 }

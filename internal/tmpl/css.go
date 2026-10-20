@@ -74,6 +74,8 @@ func cssRules(css []byte) (rules []cssRule, stray int) {
 	start := 0
 	for i := 0; i < len(blank); i++ {
 		switch blank[i] {
+		case '\\':
+			i++ // an escaped character, \( or \}, is a name's
 		case '"', '\'', '(':
 			i = skipNested(blank, i)
 		case '{':
@@ -121,15 +123,22 @@ type cssDeclaration struct {
 }
 
 // declarationsIn returns the declarations of the block r of blank, CSS without its comments, split at
-// the ; outside strings and brackets.
+// the ; outside strings and brackets, and at a block it holds (&.x { … }), which it leaves out.
 func declarationsIn(blank []byte, r *cssRule) []cssDeclaration {
 	var decls []cssDeclaration
 	start := r.open + 1
 	for i := start; i <= r.end; i++ {
 		if i < r.end {
 			switch blank[i] {
+			case '\\':
+				i++
+				continue
 			case '"', '\'', '(':
 				i = skipNested(blank, i)
+				continue
+			case '{':
+				i = skipNested(blank, i)
+				start = i + 1
 				continue
 			case ';':
 			default:
@@ -146,18 +155,25 @@ func declarationsIn(blank []byte, r *cssRule) []cssDeclaration {
 	return decls
 }
 
-// skipNested returns the offset of the end of the string or the brackets that start at i in css, past
-// the strings and brackets they hold: a ; or a brace in them (url(data:…;base64,…), a selector of an
-// SVG's <style> in url(…)) is no CSS's. A bracket never closed runs to the end.
+// skipNested returns the offset of the end of the string, the brackets or the block that starts at i in
+// css, past the strings, brackets and blocks they hold and escaped characters: a ; or a brace in
+// brackets (url(data:…;base64,…), a selector of an SVG's <style> in url(…)) is no CSS's. One never
+// closed runs to the end.
 func skipNested(css []byte, i int) int {
-	if css[i] != '(' {
+	end := byte(')')
+	switch css[i] {
+	case '"', '\'':
 		return stringEnd(css, i)
+	case '{':
+		end = '}'
 	}
 	for j := i + 1; j < len(css); j++ {
 		switch css[j] {
-		case '"', '\'', '(':
+		case '\\':
+			j++
+		case '"', '\'', '(', '{':
 			j = skipNested(css, j)
-		case ')':
+		case end:
 			return j
 		}
 	}
@@ -184,6 +200,8 @@ func withoutComments(css []byte) []byte {
 	blank := bytes.Clone(css)
 	for i := 0; i < len(blank); i++ {
 		switch {
+		case blank[i] == '\\':
+			i++ // an escaped character, \" too, starts no string
 		case blank[i] == '"' || blank[i] == '\'':
 			i = stringEnd(blank, i)
 		case bytes.HasPrefix(blank[i:], []byte("/*")):

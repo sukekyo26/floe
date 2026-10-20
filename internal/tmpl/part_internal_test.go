@@ -47,7 +47,7 @@ func TestPalette(t *testing.T) {
 	}
 	for who, css := range taken {
 		own := definedIn(css)
-		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)`).FindAllStringSubmatch(css, -1) {
+		for _, m := range usedVariable.FindAllStringSubmatch(css, -1) {
 			if v := m[1]; !own[v] && !defined[v] {
 				t.Errorf("%s takes %s, which neither default's palette nor floe's base defines", who, v)
 			}
@@ -63,6 +63,18 @@ func TestPalette(t *testing.T) {
 	}
 	if set.strays != nil {
 		t.Errorf("floe's parts and themes are warned of: %v", set.strays)
+	}
+	// A diagram drawn into a page without the palette, by floe diagram render, takes default's light colours
+	// (and faces of its own, for a page of any language).
+	light, _, err := readPalette("palette.css", []byte(under))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,\s*([^)]*)\)`).FindAllStringSubmatch(set.parts["diagram"].css, -1) {
+		if _, colour := set.modes[m[1]]; colour && light[m[1]] != strings.TrimSpace(m[2]) {
+			want := light[m[1]]
+			t.Errorf("a diagram takes %s with %s; default's palette has %s", m[1], m[2], want)
+		}
 	}
 	for name, p := range set.parts {
 		// A part's element is its box, data-floe-part="<its name>", so that a page that draws it gets its
@@ -100,8 +112,16 @@ func TestCheckPalette(t *testing.T) {
 		t.Fatal(err)
 	}
 	dark := "\n@media (prefers-color-scheme: dark) { :root { --bg: #000; --page-bg: none; color-scheme: dark; } }"
+	// A palette always dark sets every colour default's turns dark, on :root alone.
+	var always strings.Builder
+	for _, name := range slices.Sorted(maps.Keys(set.modes)) {
+		if set.modes[name] {
+			always.WriteString(name + ": black; ")
+		}
+	}
 	for css, want := range map[string]string{
-		":root { --bg: #fff; }" + dark: "",
+		":root { " + always.String() + "}": "",
+		":root { --bg: #fff; }" + dark:     "",
 		":root { --bg: #fff; --page-bg: url(data:image/svg+xml;base64,PHN2Zz4=) repeat; }" + dark:                "",
 		":root { --bg: #fff; --page-bg: url(data:image/svg+xml,<svg><style>p{fill:red}</style></svg>); }" + dark: "",
 		":root { --radius: 4px; --text-width: 60rem; color-scheme: light dark; }":                                "",

@@ -241,7 +241,7 @@ func (set *partSet) readBuiltin() error {
 	if err != nil {
 		return fmt.Errorf("read the parts themes: %w", err)
 	}
-	if set.modes, err = readModes(themes); err != nil {
+	if set.modes, err = floeModes(); err != nil {
 		return err
 	}
 	entries, err = fs.ReadDir(themes, ".")
@@ -261,21 +261,6 @@ func (set *partSet) readBuiltin() error {
 	}
 	set.palette = set.themes[DefaultTheme].palette
 	return nil
-}
-
-// readModes returns the variables that change with the mode in floe's default palette, under themes,
-// which the themes' palettes are checked against.
-func readModes(themes fs.FS) (map[string]bool, error) {
-	file := path.Join(DefaultTheme, themePalette+".css")
-	css, err := fs.ReadFile(themes, file)
-	if err != nil {
-		return nil, fmt.Errorf("read the parts themes: %w", err)
-	}
-	light, dark, err := readPalette(path.Join("parts", themesDir, file), css)
-	if err != nil {
-		return nil, err
-	}
-	return modesOf(light, dark), nil
 }
 
 // partsUnder adds to names the parts the schemas under s refer to. No part holds itself: readOwn leaves

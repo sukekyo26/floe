@@ -370,6 +370,12 @@ func TestCSSBraceRefused(t *testing.T) {
 	if _, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %s", mistakes, want)
 	}
+	// An escaped bracket is a name's, and leaves the } after it to be told.
+	escaped := sizes(t, map[string]string{"page.css": ".a\\( { color: red; }\n}\n"})
+	if _, mistakes := tmpl.Check(escaped, "", ""); len(mistakes) != 1 ||
+		!strings.HasPrefix(mistakes[0].Error(), filepath.Join(escaped, "page.css")+":2: this } closes no block") {
+		t.Errorf("Check of an escaped bracket = %v", mistakes)
+	}
 	// A block left open ends with the template's own <style>.
 	ok := sizes(t, map[string]string{"page.css": "@media print { p { color: red; }\n"})
 	if warnings, mistakes := tmpl.Check(ok, "", ""); len(mistakes) != 0 {
@@ -388,6 +394,8 @@ func TestCheckScopeColours(t *testing.T) {
 		":scope { --surface: #fff; --accent: #c00; --page-width: 90rem; --rule: 2px solid var(--fg); }":    "sizes/page.css sets --accent, --surface on :scope for light mode alone",
 		":scope { --surface: #fff; }\n@media (prefers-color-scheme: dark) { :scope { --surface: #222; } }": "",
 		"body { --surface: #fff; }": "",
+		"@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n:scope { --bg: #fff; }":                                 "sizes/page.css sets --bg on :scope for light mode alone",
+		":scope { --line: #fff; &.x { --q: 1; } --fg: #000; }\n@media (prefers-color-scheme: dark) { :scope { --line: #222; } }": "sizes/page.css sets --fg on :scope",
 	} {
 		warnings, mistakes := tmpl.Check(sizes(t, map[string]string{"template.yaml": floe, "page.css": page}), "", "")
 		if len(mistakes) != 0 || want == "" && len(warnings) != 0 ||
