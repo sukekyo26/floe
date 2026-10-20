@@ -323,6 +323,22 @@ func TestAnyOffersEveryPart(t *testing.T) {
 	}
 }
 
+// floe's parts hold no item of a format of floe's, through a schema the parts share neither, whatever
+// order they are read in: their part.html draws their items, which the checks of a format do not reach.
+func TestPartsHoldNoFormat(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, p := range set.parts {
+		if at, _, s := set.formatIn(p.schema, "#"); s != nil {
+			t.Errorf("the part %s holds the format %s at %s", name, s.Format, at)
+		}
+	}
+}
+
 // A description beside a $ref is ended as a sentence of its script before the part's.
 func TestJoinDescriptions(t *testing.T) {
 	t.Parallel()

@@ -278,7 +278,7 @@ func TestBrokenOwnParts(t *testing.T) {
 		"blurb": "the part blurb cannot be used: " + filepath.Join(parts, "blurb", "schema.json") +
 			`: #/properties/body: a part's schema takes no "format": "html"`,
 		"anything": "the part anything cannot be used: " + filepath.Join(parts, "anything", "schema.json") +
-			`: #/properties/inner → floe:///parts/any.json#/properties/html: a part's schema takes no "format": "html"`,
+			`: #/properties/inner → floe:///parts/any.json#/properties/html: a part's schema takes no "format": "html", which floe:///parts/any.json brings in`,
 		"gallery": "the part gallery cannot be used: " + filepath.Join(parts, "gallery", "schema.json") +
 			`: #/items/properties/src: a part's schema takes no "format": "image"`,
 		"marked": "the part marked cannot be used: " + filepath.Join(parts, "marked", "schema.json") +

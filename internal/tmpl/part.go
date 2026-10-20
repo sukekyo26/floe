@@ -66,7 +66,7 @@ func absolute(base, ref string) string {
 // rootPart returns the part of set the $ref at the root of the schema s names, and false for none: a
 // schema declares its own items, and names a part under properties or items, which floe draws the item by. A
 // look, which draws nothing, and a part that cannot be used are told as they are elsewhere, and a schema the
-// parts share (tone, any) may be the root.
+// parts share (tone) may be the root.
 func (set *partSet) rootPart(s *schema) (string, bool) {
 	if s == nil {
 		return "", false
@@ -104,25 +104,19 @@ func (s *schema) first(ptr string, ok func(*schema) bool) (string, *schema) {
 }
 
 // formatIn returns the first item of a format of floe's in the schema s, with its pointer under ptr, or
-// nil: in a schema the parts share that s refers to too, whose items are drawn as s's own, its pointer after
-// the $ref's.
-func (set *partSet) formatIn(s *schema, ptr string) (string, *schema) {
-	var under string
-	var item *schema
-	at, _ := s.first(ptr, func(s *schema) bool {
-		if slices.Contains(formats, s.Format) {
-			item = s
-			return true
-		}
-		if shared := set.shared(s.Ref); shared != nil {
-			under, item = set.formatIn(shared, s.Ref+"#")
-		}
-		return item != nil
+// nil, and the schema the parts share that s refers to and that holds it, whose items are drawn as s's
+// own, "" for one of s's own: its pointer goes on after the $ref's.
+func (set *partSet) formatIn(s *schema, ptr string) (at, in string, item *schema) {
+	at, item = s.first(ptr, func(x *schema) bool {
+		_, _, held := set.formatIn(set.shared(x.Ref), x.Ref+"#")
+		return slices.Contains(formats, x.Format) || held != nil
 	})
-	if under != "" {
-		at += " → " + under
+	if item == nil || slices.Contains(formats, item.Format) {
+		return at, "", item
 	}
-	return at, item
+	in = item.Ref
+	under, _, item := set.formatIn(set.shared(in), in+"#")
+	return at + " → " + under, in, item
 }
 
 // shared returns the schema the parts share that ref names, or nil: a file of floe's beside its parts,
@@ -143,17 +137,6 @@ func (set *partSet) shared(ref string) *schema {
 func (s *schema) draws() bool {
 	_, found := s.first("#", func(x *schema) bool { return x.part != nil || slices.Contains(formats, x.Format) })
 	return found != nil
-}
-
-// dirsLast orders the entries a and b files before directories.
-func dirsLast(a, b fs.DirEntry) int {
-	switch {
-	case a.IsDir() == b.IsDir():
-		return 0
-	case a.IsDir():
-		return 1
-	}
-	return -1
 }
 
 // absolute makes the $ref of s, and those under it, absolute, read from the schema at base.
@@ -274,8 +257,6 @@ func (set *partSet) readBuiltin() error {
 	if err != nil {
 		return fmt.Errorf("read the parts: %w", err)
 	}
-	// The schemas the parts share first, which a part's schema is checked through.
-	slices.SortStableFunc(entries, dirsLast)
 	for _, e := range entries {
 		switch {
 		case e.Name() == themesDir:
@@ -482,9 +463,8 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	if err = set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json")); err != nil {
 		return err
 	}
-	// The data's checks of a format do not look into a part, which draws its items by its part.html.
-	if ptr, s := set.formatIn(set.schemas[url], "#"); s != nil {
-		return usererr.New("tmpl_part_format", path.Join(dir, "schema.json"), ptr, s.Format)
+	if err = set.checkFormats(url, dir); err != nil {
+		return err
 	}
 	html, err := fs.ReadFile(files, "part.html")
 	if err != nil {
@@ -581,6 +561,19 @@ func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error
 	set.parts[name] = &part{
 		name: name, schema: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: yaml.looks,
 		taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
+	}
+	return nil
+}
+
+// checkFormats refuses the schema at url of the part whose files are at dir when it holds an item of a
+// format of floe's: the data's checks of a format do not look into a part, which draws its items by its
+// part.html.
+func (set *partSet) checkFormats(url, dir string) error {
+	switch ptr, in, s := set.formatIn(set.schemas[url], "#"); {
+	case s != nil && in != "":
+		return usererr.New("tmpl_part_shared_format", path.Join(dir, "schema.json"), ptr, s.Format, in, in)
+	case s != nil:
+		return usererr.New("tmpl_part_format", path.Join(dir, "schema.json"), ptr, s.Format)
 	}
 	return nil
 }
