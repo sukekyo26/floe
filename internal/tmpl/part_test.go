@@ -274,9 +274,10 @@ func TestPartStylesByClass(t *testing.T) {
 	// HTML of the data whose data-floe-part is not one name, or names a look, which has no box, is refused,
 	// on a script's own tag too.
 	for html, want := range map[string]string{
-		`<noscript data-floe-part="panel">x</noscript>`: `the page has data-floe-part="panel", but panel is a look`,
-		`<div data-floe-part="table compare">x</div>`:   `the page has data-floe-part="table compare", which is not the name of one part`,
-		`<div data-floe-part="panel">x</div>`:           `the page has data-floe-part="panel", but panel is a look`,
+		`<noscript data-floe-part="panel">x</noscript>`:         `the page has data-floe-part="panel", but panel is a look`,
+		`<a title="a > b" data-floe-part="table compare">x</a>`: `the page has data-floe-part="table compare", which is not`,
+		`<div data-floe-part="table compare">x</div>`:           `the page has data-floe-part="table compare", which is not the name of one part`,
+		`<div data-floe-part="panel">x</div>`:                   `the page has data-floe-part="panel", but panel is a look`,
 	} {
 		_, err := draw(tmpl.NewLibrary("", "", ""), "template: report\nlang: en\nsections:\n  - parts:\n      - html: '"+html+"'\n")
 		if err == nil || !strings.Contains(err.Error(), want) {

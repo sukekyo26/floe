@@ -345,7 +345,7 @@ func checkHTML(s *schema, d *Data, root ast.Node) error {
 		if !ok {
 			continue
 		}
-		at := tagsOf([]byte(html))
+		at := tagsOf(tagsIn(html))
 		if at.style >= 0 || at.link >= 0 {
 			problems = append(problems, itemMistake(d.File, root, f.at, false, usererr.New("tmpl_html_style")))
 		}
@@ -453,11 +453,12 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	style, err := set.pageStyle(out, own, d.PartsTheme)
+	found := tagsIn(string(out))
+	style, err := set.pageStyle(out, found, own, d.PartsTheme)
 	if err != nil {
 		return nil, err
 	}
-	out = withStyles(out, style)
+	out = withStyles(out, found, style)
 	// Once at the end, as the reload script is: page.html picks which diagrams it draws, and where.
 	if d.diagrams {
 		script, err := diagram.Script()
@@ -489,7 +490,7 @@ func (t *Template) page() (*template.Template, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	if at := tagsOf(src).style; at >= 0 {
+	if at := tagsOf(tagsIn(string(src))).style; at >= 0 {
 		return nil, nil, usererr.New("tmpl_page_style", t.file("page.html"), lineAt(src, at))
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.

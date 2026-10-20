@@ -110,7 +110,7 @@ func unknownPart(set *partSet, ref string) error {
 	switch {
 	case ok && set.broken[name] != nil:
 		return usererr.New("tmpl_part_broken", name, set.broken[name])
-	case ok && set.parts[name] != nil && set.parts[name].look:
+	case ok && set.parts[name] != nil && set.parts[name].isLook():
 		return usererr.New("tmpl_part_look_ref", ref, name)
 	}
 	return usererr.New("tmpl_part_unknown", ref, set.names(drawing))

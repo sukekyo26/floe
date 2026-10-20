@@ -68,7 +68,7 @@ func absolute(base, ref string) string {
 func (set *partSet) pointsInto(ref string) (whole string, into bool) {
 	whole, _, into = strings.Cut(ref, "#")
 	name, ok := partName(whole)
-	return whole, into && ok && set.parts[name] != nil && !set.parts[name].look
+	return whole, into && ok && set.parts[name] != nil && !set.parts[name].isLook()
 }
 
 // first returns the first of s and the schemas under it that ok takes, with its pointer under ptr, or nil.
@@ -113,7 +113,6 @@ type part struct {
 	checks []relation
 	looks  []takenLook // the looks it takes, as part.yaml names them, each before it
 	taken  []string    // those and the looks they take in turn, each once, once all are read
-	look   bool        // a look alone: a part.css and a part.yaml, no schema.json nor part.html
 	uses   []string    // the parts its HTML names and its schema holds, itself among them
 }
 
@@ -225,7 +224,7 @@ func (set *partSet) readBuiltin() error {
 		}
 		set.parts[name] = &part{
 			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: p.css, checks: nil,
-			looks: nil, taken: nil, look: false, uses: nil,
+			looks: nil, taken: nil, uses: nil,
 		}
 	}
 	themes, err := fs.Sub(builtin, themesDir)
@@ -311,38 +310,30 @@ func (n namedPart) notOne() bool {
 
 // namedParts returns the names the data-floe-part and data-floe-look attributes of html give, as written:
 // an element of a part names it (data-floe-part="note"), and one that takes a part's look without being
-// its box names that (data-floe-look="panel"). A name that html puts together ({{.kind}}) is not one.
-// LIMIT: an attribute is told from text by the < and > before it, not as an HTML parser reads it (a > in
-// the value of an attribute before it makes it text); parse the page if a page comes to write one so.
+// its box names that (data-floe-look="panel"). A name that html puts together ({{.kind}}) is not one. A
+// name written so elsewhere than in a tag's attribute, in text, a comment or a script that writes one, is
+// text: it brings the part's style alone.
 func namedParts(html string) []namedPart {
-	found := partAttr.FindAllStringSubmatchIndex(html, -1)
-	if found == nil {
+	return namedIn(html, tagsIn(html))
+}
+
+// namedIn returns the names namedParts returns of html, whose tags are found.
+func namedIn(html string, found []tag) []namedPart {
+	matches := partAttr.FindAllStringSubmatchIndex(html, -1)
+	if matches == nil {
 		return nil
 	}
-	var code []span
-	for _, sp := range spansOf([]byte(html)) {
-		if sp.kind == spanCode {
-			code = append(code, sp)
-		}
-	}
-	names := make([]namedPart, 0, len(found))
-	// The matches and the spans of code are in order: one walk tells where each match is.
-	c, from, lt, gt := 0, 0, -1, -1
-	for _, m := range found {
-		// It is in a tag when a < comes after the last > before it: a > of text is escaped.
-		for i := from; i < m[0]; i++ {
-			switch html[i] {
-			case '<':
-				lt = i
-			case '>':
-				gt = i
+	// Where the values of the tags' data-floe-part and data-floe-look start: a match elsewhere is text.
+	values := map[int]bool{}
+	for _, t := range found {
+		for _, a := range t.attrs {
+			if !t.end && a.valueAt >= 0 && (a.name == "data-floe-part" || a.name == "data-floe-look") {
+				values[a.valueAt] = true
 			}
 		}
-		from = m[0]
-		for c < len(code) && code[c].end <= m[0] {
-			c++
-		}
-		text := lt <= gt || c < len(code) && code[c].start <= m[0]
+	}
+	names := make([]namedPart, 0, len(matches))
+	for _, m := range matches {
 		value := html[m[4]:m[5]]
 		if strings.Contains(value, "{{") {
 			continue
@@ -350,7 +341,7 @@ func namedParts(html string) []namedPart {
 		value = strings.Trim(value, `"'`)
 		look := strings.EqualFold(html[m[2]:m[3]], "look")
 		for _, name := range strings.Fields(value) {
-			names = append(names, namedPart{name: name, value: value, look: look, text: text, at: m[4]})
+			names = append(names, namedPart{name: name, value: value, look: look, text: !values[m[4]], at: m[4]})
 		}
 	}
 	return names
@@ -383,7 +374,7 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown string) error {
 // readPart reads the part name from files, its directory, shown in its mistakes as dir, into set: a
 // directory without schema.json and part.html is a look alone.
 func (set *partSet) readPart(files fs.FS, name, dir string) error {
-	look, err := isLook(files, name, dir)
+	look, err := isLookDir(files, name, dir)
 	if err != nil {
 		return err
 	}
@@ -432,7 +423,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	}
 	p := &part{
 		name: name, schema: set.schemas[url], pages: pages, words: w, html: string(html), css: css, checks: nil,
-		looks: looks, taken: nil, look: false, uses: nil,
+		looks: looks, taken: nil, uses: nil,
 	}
 	if p.checks, err = readPartChecks(files, name, dir); err != nil {
 		return err
@@ -441,9 +432,9 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	return nil
 }
 
-// isLook reports whether files, the directory of the part name, shown as dir, is a look alone: it holds
+// isLookDir reports whether files, the directory of the part name, shown as dir, is a look alone: it holds
 // part.css alone of schema.json, part.html and part.css. A part holds the three.
-func isLook(files fs.FS, name, dir string) (bool, error) {
+func isLookDir(files fs.FS, name, dir string) (bool, error) {
 	var missing []string
 	for _, file := range []string{"schema.json", "part.html", "part.css"} {
 		there, err := exists(files, name, file)
@@ -492,7 +483,7 @@ func (set *partSet) readLook(files fs.FS, name, dir string, looks []takenLook) e
 	}
 	set.parts[name] = &part{
 		name: name, schema: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: looks,
-		taken: nil, look: true, uses: nil,
+		taken: nil, uses: nil,
 	}
 	return nil
 }
@@ -524,6 +515,11 @@ func readLooks(file string, k, value ast.Node) ([]takenLook, error) {
 		looks = append(looks, takenLook{name: name.Value, line: yamlpos.Of(v).Line})
 	}
 	return looks, nil
+}
+
+// isLook reports whether p is a look alone: a part.css and a part.yaml, no schema.json nor part.html.
+func (p *part) isLook() bool {
+	return p.schema == nil
 }
 
 // lookNames returns the names of the looks p takes, in order.
@@ -819,7 +815,7 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
-func (set *partSet) pageStyle(page []byte, own [][]byte, theme string) (string, error) {
+func (set *partSet) pageStyle(page []byte, found []tag, own [][]byte, theme string) (string, error) {
 	themed := set.themes[theme]
 	if themed == nil {
 		return "", fmt.Errorf("draw with the parts theme %s: %w", theme, fs.ErrNotExist)
@@ -834,7 +830,7 @@ func (set *partSet) pageStyle(page []byte, own [][]byte, theme string) (string, 
 			style.WriteString("<style>\n@layer " + layer + " {\n" + css + "}\n</style>\n")
 		}
 	}
-	named := namedParts(string(page))
+	named := namedIn(string(page), found)
 	if err := set.refuseBroken(named); err != nil {
 		return "", err
 	}
@@ -965,100 +961,13 @@ var baseCSS string
 
 // withStyles puts style into page before its </head>, else at its end. Where it goes decides nothing
 // else: the <link>s of page.html (fonts, libraries) are out of the layers, and win over them all.
-func withStyles(page []byte, style string) []byte {
-	at := tagsOf(page).head
+func withStyles(page []byte, found []tag, style string) []byte {
+	at := tagsOf(found).head
 	if at < 0 {
 		at = len(page)
 	}
 	return slices.Concat(page[:at], []byte(style), page[at:])
 }
-
-// tags are the offsets of the first </head>, <style> and <link> of a page, -1 for one it lacks.
-type tags struct{ head, style, link int }
-
-// tagsOf finds the tags of page. A tag in a comment, a script or a noscript is not one: a sandboxed page
-// runs its scripts, so a noscript's text is never read as HTML.
-// LIMIT: the tags are found as written, not as an HTML parser reads them (a <style in an attribute's
-// value is taken for one). Parse the page if a template comes to write one so.
-func tagsOf(page []byte) tags {
-	found := tags{head: -1, style: -1, link: -1}
-	for _, sp := range spansOf(page) {
-		at := &found.head
-		switch sp.kind {
-		case spanCode:
-			continue
-		case spanStyle:
-			at = &found.style
-		case spanLink:
-			at = &found.link
-		case spanHead:
-		}
-		if *at < 0 {
-			*at = sp.start
-		}
-	}
-	return found
-}
-
-// span is a stretch of a page that tagOrText finds, from start to end: a comment or a script's or a
-// noscript's text, which is no markup (code), a style or link tag, or </head>.
-type span struct {
-	kind       spanKind
-	start, end int
-}
-
-type spanKind int
-
-const (
-	spanCode spanKind = iota
-	spanStyle
-	spanLink
-	spanHead
-)
-
-// spansOf returns the spans of page in order.
-func spansOf(page []byte) []span {
-	var found []span
-	for i := 0; i < len(page); {
-		m := tagOrText.FindSubmatchIndex(page[i:])
-		if m == nil {
-			break
-		}
-		start, next := i+m[0], i+m[1]
-		kind := spanHead
-		switch {
-		case m[2] >= 0:
-			// A comment, ended as an HTML parser ends it; one never closed runs to the end.
-			kind, next = spanCode, len(page)
-			if n := comment(page[start:]); n > 0 {
-				next = start + n
-			}
-		case m[4] >= 0:
-			// A script's or a noscript's text, after its start tag, runs to its end tag.
-			kind, start, next = spanCode, i+m[1], len(page)
-			if closing := endTag[strings.ToLower(string(page[i+m[4]:i+m[5]]))].FindIndex(page[i+m[1]:]); closing != nil {
-				next = i + m[1] + closing[1]
-			}
-		case m[6] >= 0:
-			kind = spanLink
-			if strings.EqualFold(string(page[i+m[6]:i+m[7]]), "style") {
-				kind = spanStyle
-			}
-		}
-		found = append(found, span{kind: kind, start: start, end: next})
-		i = next
-	}
-	return found
-}
-
-var (
-	// tagOrText finds, in order, a comment, a script or a noscript, a style or a link, and </head>.
-	tagOrText = regexp.MustCompile(`(?i)(<!--)|<(script|noscript)(?:[\s/][^>]*)?>|<(style|link)[\s/>]|</head\s*>`)
-	endTag    = map[string]*regexp.Regexp{
-		"script":   regexp.MustCompile(`(?i)</script\s*>`),
-		"noscript": regexp.MustCompile(`(?i)</noscript\s*>`),
-	}
-)
 
 // variables returns the CSS variables the style of the parts of set named, and of those they are drawn
 // in the look of, takes from the theme, once each, in the order of the parts' names.

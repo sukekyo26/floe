@@ -357,7 +357,7 @@ var messagesEN = map[string]string{
 	"tmpl_part_unnamed":            `%s: no element of the part %s is its box, data-floe-part="%s"; write it on the part's element`,
 	"tmpl_part_yaml_documents":     "part.yaml holds one YAML document: remove the --- between the parts",
 	"tmpl_look_replaces":           "%s: a look alone cannot take the place of floe's part %s, which draws, and which floe's other parts, Markdown's tables and templates draw by; give it schema.json and part.html, or another name",
-	"tmpl_look_box":                `%s:%d: data-floe-part names the look %s, which has no box; take it with data-floe-look="%s"`,
+	"tmpl_look_box":                `%s:%d: data-floe-part names the look %[3]s, which has no box; take it with data-floe-look="%[3]s"`,
 	"tmpl_page_several":            `the page has data-floe-part="%s", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
 	"tmpl_page_look_box":           `the page has data-floe-part="%[1]s", but %[1]s is a look, which has no box: take it with data-floe-look="%[1]s"`,
 	"tmpl_part_files":              "%s: a part holds schema.json, part.html and part.css, and a look alone part.css without the other two (and part.yaml if it takes looks); add what it lacks, or remove what a look has no use for",

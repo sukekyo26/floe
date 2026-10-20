@@ -117,7 +117,7 @@ func (set *partSet) readOwnPart(name, at string) (read, replaces bool) {
 	if err == nil {
 		err = readIn(dir, func(files fs.FS) error { return set.readPart(files, name, at) })
 	}
-	if err == nil && replaces && !floe.look && set.parts[name].look {
+	if err == nil && replaces && !floe.isLook() && set.parts[name].isLook() {
 		err = usererr.New("tmpl_look_replaces", at, name)
 	}
 	if err != nil {
@@ -216,7 +216,7 @@ func (set *partSet) checkNames(name, dir string) error {
 	at := cmp.Or(dir, path.Join("parts", name))
 	html, yaml := path.Join(at, "part.html"), path.Join(at, "part.yaml")
 	named := namedParts(p.html)
-	if dir != "" && !p.look && !namesItself(named, name) {
+	if dir != "" && !p.isLook() && !namesItself(named, name) {
 		return usererr.New("tmpl_part_unnamed", html, name, name)
 	}
 	for _, n := range named {
@@ -229,7 +229,7 @@ func (set *partSet) checkNames(name, dir string) error {
 		case dir != "" && kind == nameNotOne:
 			return usererr.New("tmpl_part_several", html, line, n.value)
 		case dir != "" && kind == nameLookBox:
-			return usererr.New("tmpl_look_box", html, line, n.name, n.name)
+			return usererr.New("tmpl_look_box", html, line, n.name)
 		}
 		if err := set.unlent(kind, n, html, line); err != nil {
 			return err
@@ -269,7 +269,7 @@ func (set *partSet) misnamed(n namedPart) nameKind {
 		return nameNotOne
 	case p == nil:
 		return nameUnknown
-	case !n.look && p.look:
+	case !n.look && p.isLook():
 		return nameLookBox
 	}
 	return nameRight
@@ -306,7 +306,7 @@ func (set *partSet) checkHeld(p *part, at string, own bool) error {
 		case set.schemas[partsURL+held+".json"] != nil:
 		case set.broken[held] != nil:
 			return usererr.New("tmpl_part_holder_broken", held)
-		case set.parts[held] != nil && set.parts[held].look:
+		case set.parts[held] != nil && set.parts[held].isLook():
 			return usererr.New("tmpl_part_holds_look", path.Join(at, "schema.json"), held)
 		case own:
 			return usererr.New("tmpl_part_holds_unknown", path.Join(at, "schema.json"), held, set.names(drawing))
@@ -328,7 +328,7 @@ func (set *partSet) names(keep func(*part) bool) string {
 
 // drawing keeps the parts that draw, which a schema can refer to: a look alone draws nothing.
 func drawing(p *part) bool {
-	return !p.look
+	return !p.isLook()
 }
 
 // namesItself reports whether an element of a part's HTML, whose names are named, is the box of the part

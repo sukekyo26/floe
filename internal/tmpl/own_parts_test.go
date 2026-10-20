@@ -255,6 +255,15 @@ func TestBrokenOwnParts(t *testing.T) {
 	if _, mistakes := tmpl.Check(filepath.Join(named, "memo"), parts, ""); len(mistakes) != 0 {
 		t.Errorf("Check of a page.html that names floe's diagram = %v", mistakes)
 	}
+	// Named in a comment alone, which is no attribute, brace is warned of, not refused.
+	if err := os.WriteFile(page, []byte(`<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>`+
+		`<body><!-- data-floe-part="brace" -->{{.Data.risks}}</body></html>`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if warnings, mistakes := tmpl.Check(filepath.Join(named, "memo"), parts, ""); len(mistakes) != 0 ||
+		!slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), whys["brace"]) }) {
+		t.Errorf("Check of a page.html that names brace in a comment = %v, %v", warnings, mistakes)
+	}
 	// A template that uses none of them is drawn, its check warned of each.
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/quote.json"}, "aside": {"type": "string"}`)
 	if _, err := draw(tmpl.NewLibrary(dir, parts, ""), "template: memo\nlang: en\nrisks: { text: Hi }\n"); err != nil {

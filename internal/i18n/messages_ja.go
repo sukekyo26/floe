@@ -356,7 +356,7 @@ var messagesJA = map[string]string{
 	"tmpl_part_unnamed":            `%s: 部品 %s の箱になる要素（data-floe-part="%s"）がありません。部品の要素に書いてください`,
 	"tmpl_part_yaml_documents":     "part.yaml に書ける YAML の文書は 1 つです。間の --- を消してください",
 	"tmpl_look_replaces":           "%s: 見た目だけの部品は、描く floe の部品 %s には代われません（floe のほかの部品、Markdown の表、テンプレートがそれで描くため）。schema.json と part.html を足すか、別の名前にしてください",
-	"tmpl_look_box":                `%s:%d: data-floe-part が見た目 %s を名乗っていますが、見た目には箱がありません。data-floe-look="%s" で借りてください`,
+	"tmpl_look_box":                `%s:%d: data-floe-part が見た目 %[3]s を名乗っていますが、見た目には箱がありません。data-floe-look="%[3]s" で借りてください`,
 	"tmpl_page_several":            `ページの data-floe-part="%s" は 1 つの部品の名前ではありません。data-floe-part="<名前>" と名前をそのまま書き、ほかの部品の見た目は data-floe-look="<名前> …" で借りてください`,
 	"tmpl_page_look_box":           `ページに data-floe-part="%[1]s" がありますが、%[1]s は見た目で箱がありません。data-floe-look="%[1]s" で借りてください`,
 	"tmpl_part_files":              "%s: 部品は schema.json・part.html・part.css の 3 つを、見た目だけの部品はほかの 2 つを置かずに part.css を（見た目を借りるなら part.yaml も）置きます。足りないものを足すか、見た目に要らないものを消してください",

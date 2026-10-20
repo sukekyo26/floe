@@ -57,7 +57,7 @@ func TestPalette(t *testing.T) {
 	if looks := set.looksOf("risks"); !slices.Equal(looks, []string{"table", "panel"}) {
 		t.Errorf("the looks of risks = %v", looks)
 	}
-	if !set.parts["panel"].look || set.parts["panel"].css == "" {
+	if !set.parts["panel"].isLook() || set.parts["panel"].css == "" {
 		t.Errorf("the look panel = %+v", set.parts["panel"])
 	}
 	// compare is drawn in the table's look, so a theme for it is warned of the table's variables too, and
@@ -121,7 +121,7 @@ func TestWithStyles(t *testing.T) {
 		"<head><!--></head>":                                                  "<head><!-->S</head>",
 		"<head><noscript></head></noscript></head><body><script>y()</script>": "<head><noscript></head></noscript>S</head><body><script>y()</script>",
 	} {
-		if got := string(withStyles([]byte(page), "S")); got != want {
+		if got := string(withStyles([]byte(page), tagsIn(page), "S")); got != want {
 			t.Errorf("withStyles(%q) = %q, want %q", page, got, want)
 		}
 	}
@@ -135,11 +135,31 @@ func TestTagsOf(t *testing.T) {
 	page := "<!-- <style> --><script>'<style><link>'</script><noscript><style></noscript><link-card></link-card><style-box>" +
 		"<script-x><link></script-x><LINK rel=x><Style>a{}</Style>"
 	want := tags{head: -1, style: strings.Index(page, "<Style>"), link: strings.Index(page, "<link></script-x>")}
-	if got := tagsOf([]byte(page)); got != want {
+	if got := tagsOf(tagsIn(page)); got != want {
 		t.Errorf("tagsOf(%q) = %+v, want %+v", page, got, want)
 	}
-	if got := tagsOf([]byte("<p>x</p>")); got != (tags{head: -1, style: -1, link: -1}) {
+	if got := tagsOf(tagsIn("<p>x</p>")); got != (tags{head: -1, style: -1, link: -1}) {
 		t.Errorf("tagsOf of a page without them = %+v", got)
+	}
+}
+
+// A data-floe-part is an attribute when a tag holds it, past a > in a quoted value or in a template's
+// action before it, and not in a value or in text.
+func TestNamedPartsInTags(t *testing.T) {
+	t.Parallel()
+
+	for html, want := range map[string]bool{
+		`<a title="a > b" data-floe-part="table">x</a>`:                                         false,
+		`<div {{if ne (printf "%T" .v) "<nil>"}}class="x"{{end}} data-floe-part="table"></div>`: false,
+		`<div class="{{or .k "a>b"}}" data-floe-part='table'>`:                                  false,
+		`<p title="see data-floe-part=table">x</p>`:                                             true,
+		`<p>write data-floe-part=table</p>`:                                                     true,
+		`<script>'<b data-floe-part="table">'</script>`:                                         true,
+		`<!-- <b data-floe-part="table"> -->`:                                                   true,
+	} {
+		if named := namedParts(html); len(named) != 1 || named[0].name != "table" || named[0].text != want {
+			t.Errorf("namedParts(%q) = %+v, want table, text %v", html, named, want)
+		}
 	}
 }
 
@@ -210,7 +230,7 @@ func TestPartsDrawnWhole(t *testing.T) {
 		return slices.ContainsFunc(slices.Collect(maps.Values(s.Properties)), drawnWhole)
 	}
 	for name, p := range set.parts {
-		if p.look {
+		if p.isLook() {
 			continue
 		}
 		if drawnWhole(p.schema.Items) || slices.ContainsFunc(slices.Collect(maps.Values(p.schema.Properties)), drawnWhole) {
