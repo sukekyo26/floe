@@ -9,8 +9,9 @@ import (
 )
 
 // Check reports the layout mistakes of s, as diagram.mjs does: text too wide or tall for its box,
-// parts sticking out of the canvas, overlapping, straddling the edge of a frame, edges running
-// through boxes, labels or frame headings, and edges crossing. Icons are looked up in store.
+// parts (edges and lines too) sticking out of the canvas, overlapping (frame headings too),
+// straddling the edge of a frame, edges running through boxes, labels or frame headings, and edges
+// crossing. Icons are looked up in store.
 func Check(s *Spec, store *icons.Store) error {
 	l, err := newLayout(s, store)
 	if err != nil {
@@ -29,16 +30,17 @@ func (l *layout) check() yamlpos.Problems {
 	return l.problems
 }
 
-// checkPlacement reports parts sticking out of the canvas, overlapping and straddling frames.
+// checkPlacement reports parts sticking out of the canvas, overlapping (a frame's heading too) and
+// straddling frames.
 func (l *layout) checkPlacement() {
 	s := l.spec
 	canvas := rect{0, 0, s.Width, s.Height, nil, yamlpos.Pos{Line: 0, Column: 0}} // not a part, so written nowhere
-	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas) {
+	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
 		if !r.inside(canvas) {
 			l.problem(r.at, "diagram_outside", r.what, formatNum(s.Width), formatNum(s.Height))
 		}
 	}
-	solids := slices.Concat(l.boxes, l.marks, l.labels)
+	solids := slices.Concat(l.boxes, l.marks, l.labels, l.heads)
 	// LIMIT: every pair is compared (O(n²)), here and for edges. If diagrams of hundreds of parts get
 	// slow, compare only the parts that share a cell of a grid.
 	for i, a := range solids {

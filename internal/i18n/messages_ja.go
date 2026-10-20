@@ -248,6 +248,8 @@ var messagesJA = map[string]string{
 	"diagram_what_bar":         "bar「%s」",
 	"diagram_what_dot":         "dot（%s,%s）",
 	"diagram_what_circle":      "circle（%s,%s）",
+	"diagram_what_edge":        "edge「%s」",
+	"diagram_what_line":        "line（%s,%s〜%s,%s）",
 	"diagram_too_narrow":       "%s: 「%s」には幅があと約 %dpx 要ります",
 	"diagram_too_short":        "%s: 文字を収めるには高さが %dpx 以上要ります（今は %spx）",
 	"diagram_outside":          "%sが %s×%s のキャンバスからはみ出しています",
