@@ -300,6 +300,34 @@ func TestPageStyleRefused(t *testing.T) {
 	}
 }
 
+// page.html holds a </head>, before which floe puts the page's styles: in the head, where no element the
+// data's HTML leaves open, such as an <svg>, takes them in. One in a comment is none, and one an action
+// leaves out is refused as the page is drawn.
+func TestPageHeadRequired(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{"page.html": "</head>|<!-- </head> -->"})
+	want := filepath.Join(dir, "page.html") + " holds no </head>: floe puts the page's styles before it"
+	if _, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+		t.Errorf("Check = %v, want %s", mistakes, want)
+	}
+	left := sizes(t, map[string]string{"page.html": "</head>|{{if false}}</head>{{end}}"})
+	if _, err := draw(tmpl.NewLibrary(filepath.Dir(left), "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), filepath.Join(left, "page.html")+" holds no </head>") {
+		t.Errorf("drawing without </head> = %v", err)
+	}
+	// Nor is one of the data's HTML, which an <svg> before it may hold.
+	data := memo(t, `"risks": {"type": "string", "format": "html"}`)
+	page := filepath.Join(data, "memo", "page.html")
+	if err := os.WriteFile(page, []byte(`<!doctype html><html lang="{{.Lang}}"><title>{{.Title}}</title><body>{{.Data.risks}}</body></html>`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := draw(tmpl.NewLibrary(data, "", ""), "template: memo\nlang: en\nrisks: <svg></head>\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), page+" holds no </head>") {
+		t.Errorf("drawing with the data's </head> = %v", err)
+	}
+}
+
 // The template's CSS names the page's root as :scope, past a comment and values that name it otherwise, and
 // page.html names parts floe has, past a name it puts together, an element the box of one, a mistake told
 // at the line of the name.

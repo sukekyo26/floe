@@ -487,7 +487,10 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	out = withStyles(out, found, style)
+	out, ok := withStyles(out, found, style)
+	if !ok {
+		return nil, usererr.New("tmpl_page_head", t.file("page.html")) // left out by an action of page.html
+	}
 	// Once at the end, as the reload script is: page.html picks which diagrams it draws, and where.
 	if d.diagrams {
 		script, err := diagram.Script()
@@ -519,14 +522,18 @@ func (t *Template) page() (*template.Template, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	if at := tagsOf(tagsIn(string(src), true)).style; at >= 0 {
-		return nil, nil, usererr.New("tmpl_page_style", t.file("page.html"), lineAt(src, at))
+	at := tagsOf(tagsIn(string(src), true))
+	if at.style >= 0 {
+		return nil, nil, usererr.New("tmpl_page_style", t.file("page.html"), lineAt(src, at.style))
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
 		Funcs(template.FuncMap{"asset": t.assets()}).Parse(string(src))
 	if err != nil {
 		return nil, nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
+	}
+	if at.head < 0 {
+		return nil, nil, usererr.New("tmpl_page_head", t.file("page.html"))
 	}
 	return page, src, nil
 }

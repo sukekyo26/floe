@@ -343,6 +343,7 @@ var messagesJA = map[string]string{
 	"tmpl_new_name":                "%s はテンプレートの名前にできません。英小文字・数字・- ・_ で、英小文字か数字で始めてください",
 	"tmpl_new_exists":              "%s は既にあります（%s）。別の名前にするか、消してください",
 	"tmpl_render":                  "%s はテンプレート %s に合いません: %s",
+	"tmpl_page_head":               "%s に </head> がありません。floe はページのスタイルをその前、head の中に入れます。そこなら、データの HTML の <svg> のようにページが閉じずに残した要素に取り込まれません",
 	"tmpl_page_style":              "%s:%d: page.html に <style> があります。テンプレートの CSS は page.css とテーマに書いてください。floe がページに入れ、部品と部品のテーマの下の層に置きます",
 	"tmpl_page_part":               "%s:%d: page.html が名乗る部品 %s はありません。%s のどれかを書いてください",
 	"tmpl_css_root":                "%s:%d: 根は %s ではなく :scope と書いてください。floe はこの CSS を @scope に入れるので、その中の :root と html は何も指しません",

@@ -923,6 +923,18 @@ func (set *partSet) pageStyle(page string, found []tag, own [][]byte, theme stri
 // <style> anyway.
 var styleEnd = regexp.MustCompile(`(?i)</(style)`)
 
+// withStyles puts style into page before its </head>, false for a page without one: there, in the head,
+// no element the page leaves open, an <svg> of the data's HTML among them, takes the styles in. Where it
+// goes decides nothing else: the <link>s of page.html (fonts, libraries) are out of the layers, and win
+// over them all.
+func withStyles(page []byte, found []tag, style string) ([]byte, bool) {
+	at := tagsOf(found).head
+	if at < 0 {
+		return nil, false
+	}
+	return slices.Concat(page[:at], []byte(style), page[at:]), true
+}
+
 // misnamedIn returns the mistake of the first name of named, the names of a page or of HTML of the data,
 // that the page is refused for, or nil: a part that cannot be used, by a table of Markdown or HTML of the
 // data among others, a data-floe-part not of one part's name, or one that names a look alone, which has
@@ -1025,13 +1037,3 @@ func (set *partSet) looksOf(name string) []string {
 //
 //go:embed base.css
 var baseCSS string
-
-// withStyles puts style into page before its </head>, else at its end. Where it goes decides nothing
-// else: the <link>s of page.html (fonts, libraries) are out of the layers, and win over them all.
-func withStyles(page []byte, found []tag, style string) []byte {
-	at := tagsOf(found).head
-	if at < 0 {
-		at = len(page)
-	}
-	return slices.Concat(page[:at], []byte(style), page[at:])
-}

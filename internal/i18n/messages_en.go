@@ -344,6 +344,7 @@ var messagesEN = map[string]string{
 	"tmpl_new_name":                "%s cannot name a template: use lower case letters, digits, - and _, starting with a letter or a digit",
 	"tmpl_new_exists":              "%s is there already (%s); pick another name, or remove it",
 	"tmpl_render":                  "%s does not fit the template %s: %s",
+	"tmpl_page_head":               "%s holds no </head>: floe puts the page's styles before it, in the head, where no element the page leaves open, such as an <svg> of the data's HTML, takes them in",
 	"tmpl_page_style":              "%s:%d: page.html holds a <style>: write the template's CSS in page.css and its themes, which floe puts into the page in layers under the parts' and the parts theme's",
 	"tmpl_page_part":               "%s:%d: page.html names the part %s, which there is none of; use %s",
 	"tmpl_css_root":                "%s:%d: write the root as :scope, not %s: floe puts this CSS in @scope, where :root and html name nothing",
