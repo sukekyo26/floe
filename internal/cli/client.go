@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -78,7 +80,9 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 		return fmt.Errorf("%s %s: %w", method, path, err)
 	}
 	if res.StatusCode >= http.StatusMultipleChoices {
-		e := &remoteError{status: res.StatusCode, message: strings.TrimSpace(string(b)), mistakes: false, body: b}
+		// A refusal without a reason still says what the server answered.
+		message := cmp.Or(strings.TrimSpace(string(b)), strconv.Itoa(res.StatusCode)+" "+http.StatusText(res.StatusCode))
+		e := &remoteError{status: res.StatusCode, message: message, mistakes: false, body: b}
 		var refusal server.Refusal
 		if strings.HasPrefix(res.Header.Get("Content-Type"), "application/json") && json.Unmarshal(b, &refusal) == nil &&
 			refusal.Message != "" {

@@ -374,13 +374,13 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 	return m
 }
 
-// DataSlug is the slug of a stored page of the data file file: slug when given, trimmed, else one made
-// of its name. One that cannot be a slug is refused.
+// DataSlug is the slug of a stored page of the data file file: slug when given, else one made of its
+// name. One that cannot be a slug is refused.
 func DataSlug(file string, slug *string) (string, error) {
 	// No cwd: it names only an index.html after its directory, and this is a data file.
 	name := SlugFromFile(file, "")
 	if slug != nil {
-		name = strings.TrimSpace(*slug)
+		name = *slug
 	}
 	return checkSlug(name)
 }

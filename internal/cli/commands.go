@@ -181,6 +181,11 @@ func (a *app) publishData(ctx context.Context, file string, opts store.Options) 
 	if err != nil {
 		return saved, err //nolint:wrapcheck // a usererr for the user as is
 	}
+	// Trimmed as the store trims the options, so that the URL names the slug the page is saved under.
+	if opts.Slug != nil {
+		trimmed := strings.TrimSpace(*opts.Slug)
+		opts.Slug = &trimmed
+	}
 	slug, err := store.DataSlug(file, opts.Slug)
 	if err != nil {
 		return saved, err //nolint:wrapcheck // a usererr for the user as is

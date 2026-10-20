@@ -29,6 +29,15 @@ func TestTooLarge(t *testing.T) {
 		strings.Contains(re.Error(), "32 MiB") {
 		t.Errorf("a refusal for its size of the client = %v, want it as the server sent it", refused)
 	}
+	// A refusal without a reason says what the server answered.
+	empty := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	t.Cleanup(empty.Close)
+	if err := (client{base: empty.URL, lang: i18n.English}).do(t.Context(), http.MethodGet, "/api/artifacts", nil, nil); err == nil ||
+		err.Error() != "502 Bad Gateway" {
+		t.Errorf("a refusal without a reason = %v", err)
+	}
 	large := map[string]string{"source": strings.Repeat("x", server.MaxUpload)}
 	unsent := client{base: "http://127.0.0.1:1", lang: i18n.English}.do(t.Context(), http.MethodPut, "/api/artifacts/p", large, nil)
 	if err := tooLarge(unsent); err == nil || !strings.Contains(err.Error(), "32 MiB") {
