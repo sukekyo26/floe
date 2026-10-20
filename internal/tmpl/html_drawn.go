@@ -37,10 +37,8 @@ func htmlItemsOf(d *Data, root ast.Node) []htmlItem {
 		if !isText || text == "" {
 			continue
 		}
-		key, value, path := yamlpos.Find(root, f.at)
-		items = append(items, htmlItem{
-			at: f.at, text: text, pos: yamlpos.OfValue(key, value), path: path,
-		})
+		pos, path := itemPos(root, f.at, false)
+		items = append(items, htmlItem{at: f.at, text: text, pos: pos, path: path})
 	}
 	slices.SortStableFunc(items, func(a, b htmlItem) int {
 		return cmp.Or(cmp.Compare(a.pos.Line, b.pos.Line), cmp.Compare(a.pos.Column, b.pos.Column),
@@ -50,8 +48,8 @@ func htmlItemsOf(d *Data, root ast.Node) []htmlItem {
 }
 
 // htmlMarks marks the items of format html of a drawing that checks them: one shown is drawn as written,
-// one not shown as nothing, or, with a mark, as the comment <!--mark:n-->, n its index in the items of the
-// file (pathKey). markdown keeps the HTML of the items of format markdown, which each drawing draws again.
+// one not shown as the comment <!--mark:n-->, n its index in the items of the file (pathKey). markdown
+// keeps the HTML of the items of format markdown, which each drawing draws again.
 type htmlMarks struct {
 	mark     string
 	at       map[string]int
@@ -62,53 +60,78 @@ type htmlMarks struct {
 // marked returns text, the item of format html at the path at, as m draws it; as it is if it is none of
 // the items, an empty one, which a mark would make no longer empty to page.html.
 func (m *htmlMarks) marked(text string, at []string) string {
-	n, ok := m.at[pathKey(at)]
-	switch {
-	case !ok || m.shown(n):
-		return text
-	case m.mark == "":
-		return ""
-	default:
-		return "<!--" + m.mark + ":" + strconv.Itoa(n) + "-->"
+	if n, ok := m.at[pathKey(at)]; ok && !m.shown(n) {
+		return m.comment(n)
 	}
+	return text
 }
 
-// checkDrawnHTML refuses the first item of format html of d, in the order of the file, that changes the
-// page around it, as a browser reads page, the page page drew, titled title, without its styles: one that
+// comment returns the mark of the item n.
+func (m *htmlMarks) comment(n int) string {
+	return "<!--" + m.mark + ":" + strconv.Itoa(n) + "-->"
+}
+
+// drawnOrder returns the items whose marks page, drawn with every item a mark, holds as they are, in the
+// order page draws them. An item escaped there (in a value, a <title>, a <script>) or not drawn is no
+// markup of the page's and changes none.
+func (m *htmlMarks) drawnOrder(page []byte) []int {
+	where := make([]int, len(m.at))
+	order := make([]int, 0, len(m.at))
+	for n := range where {
+		where[n] = bytes.Index(page, []byte(m.comment(n)))
+		if where[n] >= 0 {
+			order = append(order, n)
+		}
+	}
+	slices.SortFunc(order, func(a, b int) int { return cmp.Compare(where[a], where[b]) })
+	return order
+}
+
+// checkDrawnHTML refuses the first item of format html of d, in the order the page draws them, that changes
+// the page around it, as a browser reads page, the page page drew, titled title, without its styles: one that
 // leaves open what takes in the page after it (an <svg>, a comment, a <b> around the next item's text),
 // ends where a tag starts, which the page after it goes on, or closes an element of the page. Whether it
 // does depends on where page.html puts it, and on the items around it, so the page is compared with the
-// page drawn with the item a mark, there the item read alone, as a fragment of what holds the mark. d is
-// drawn as a copy, marked, so that d draws its page as it is.
+// page drawn with the item a mark, there the item read alone, as a fragment of what holds the mark. The
+// items before it in the page change none, so that one that does is told, not the one after it. One that
+// leaves a <form> open, which the tree does not show, is refused too: the page's inputs after it would be
+// sent where the item says. d is drawn as a copy, marked, so that d draws its page as it is.
 // LIMIT: page.html gets the item a mark; one looking into an item's text (len, eq) may draw it otherwise.
 // LIMIT: each item draws and reads the page again, every view: 400 items, 0.25s; keep the result if slow.
 // LIMIT: an item read alone is put where its mark is, in what the item before left open (<li>a then <li>b,
 // or <td>a</td> then <td>b</td> straight in a <table>).
+// LIMIT: a mark is a comment, which brings back no <b> the page left open (<p><b>x</p>); an item after it is
+// refused. Mark with what the parser takes as text if a page.html comes to need it.
 func (d *Data) checkDrawnHTML(page *template.Template, title string, drawn []byte) error {
 	want := shape(parseDrawn(drawn))
-	c := d.marked(rand.Text(), nil)
-	for k, it := range d.htmlItems {
+	c := d.marked(rand.Text())
+	c.marks.shown = func(int) bool { return false }
+	all, err := c.execute(page, title)
+	if err != nil {
+		return err
+	}
+	for _, k := range c.marks.drawnOrder(all) {
+		it := d.htmlItems[k]
 		c.marks.shown = func(n int) bool { return n != k }
 		bare, err := c.execute(page, title)
 		if err != nil {
 			return err
 		}
 		doc := parseDrawn(bare)
-		inPlace(doc, c.marks.mark, k, it.text)
-		if !slices.Equal(shape(doc), want) {
+		formIn := inPlace(doc, c.marks.mark, k, it.text)
+		if formIn && leavesForm(it.text) || !slices.Equal(shape(doc), want) {
 			return itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
 		}
 	}
 	return nil
 }
 
-// marked returns a copy of d whose items of format html are drawn as m draws them with mark and shown,
-// nil for all, so that d draws its page as it is.
-func (d *Data) marked(mark string, shown func(n int) bool) *Data {
-	if shown == nil {
-		shown = func(int) bool { return true }
+// marked returns a copy of d whose items of format html are drawn with mark, all shown till its marks'
+// shown says otherwise, so that d draws its page as it is.
+func (d *Data) marked(mark string) *Data {
+	m := &htmlMarks{
+		mark: mark, at: map[string]int{}, shown: func(int) bool { return true }, markdown: map[string]template.HTML{},
 	}
-	m := &htmlMarks{mark: mark, at: map[string]int{}, shown: shown, markdown: map[string]template.HTML{}}
 	for i, it := range d.htmlItems {
 		m.at[pathKey(it.at)] = i
 	}
@@ -119,10 +142,13 @@ func (d *Data) marked(mark string, shown func(n int) bool) *Data {
 
 // headHider returns the index of the first item of format html of d, in the order of the file, with which
 // those before it hide the </head> of the page page draws, titled title, which the page drawn without them
-// has: an open <script> or tag of one does. -1 for none: the page has no </head> without them either.
+// has: an open <script> or tag of one does. -1 for none: the page has no </head> without them either. They
+// are drawn as marks, so that page.html takes the branches it takes with them ({{with}}).
 func (d *Data) headHider(page *template.Template, title string) (int, error) {
+	c := d.marked(rand.Text())
 	for k := -1; k < len(d.htmlItems); k++ {
-		out, err := d.marked("", func(n int) bool { return n <= k }).execute(page, title)
+		c.marks.shown = func(n int) bool { return n <= k }
+		out, err := c.execute(page, title)
 		if err != nil {
 			return -1, err
 		}
@@ -137,15 +163,15 @@ func (d *Data) headHider(page *template.Template, title string) (int, error) {
 // items of format html.
 func (d *Data) markdownHTML(text string) template.HTML {
 	if d != nil && d.marks != nil {
-		if html, ok := d.marks.markdown[text]; ok {
-			return html
+		if out, ok := d.marks.markdown[text]; ok {
+			return out
 		}
 	}
-	html, _ := markdownHTML(text) //nolint:errcheck // goldmark fails only to write, and a buffer does not
+	out, _ := markdownHTML(text) //nolint:errcheck // goldmark fails only to write, and a buffer does not
 	if d != nil && d.marks != nil {
-		d.marks.markdown[text] = html
+		d.marks.markdown[text] = out
 	}
-	return html
+	return out
 }
 
 // parseDrawn reads page as a browser does, with a script after it, as floe puts the diagrams' and a served
@@ -157,10 +183,12 @@ func parseDrawn(page []byte) *html.Node {
 }
 
 // inPlace puts item, read alone, in doc where the marks of the item n of mark are: in place of each, the
-// nodes of item read as a fragment of what holds the mark, a <body> for the <html>, where what is not of
-// the head starts one. A mark in what the parser reads as text (a <title>, a <script>) is that text's,
-// which shape leaves out.
-func inPlace(doc *html.Node, mark string, n int, item string) {
+// nodes of item read as a fragment of what holds the mark, and reports whether they hold a <form>. What
+// holds it is the nearest element the parser may not make itself (implied), which the item may end as
+// the page's would (a <tfoot> ends a <tbody>), a <body> for the <html>, where what is not of the head
+// starts one. A mark in what the parser reads as text (a <title>, a <script>) is that text's, which shape
+// leaves out.
+func inPlace(doc *html.Node, mark string, n int, item string) bool {
 	want := mark + ":" + strconv.Itoa(n)
 	var marks []*html.Node
 	for c := range doc.Descendants() {
@@ -168,9 +196,13 @@ func inPlace(doc *html.Node, mark string, n int, item string) {
 			marks = append(marks, c)
 		}
 	}
+	formIn := false
 	for _, m := range marks {
 		context := m.Parent
-		if context.Type != html.ElementNode || context.DataAtom == atom.Html {
+		for implied(context) && context.DataAtom != atom.Body {
+			context = context.Parent
+		}
+		if context.Type != html.ElementNode {
 			context = &html.Node{
 				Parent: nil, FirstChild: nil, LastChild: nil, PrevSibling: nil, NextSibling: nil,
 				Type: html.ElementNode, DataAtom: atom.Body, Data: "body", Namespace: "", Attr: nil,
@@ -179,9 +211,39 @@ func inPlace(doc *html.Node, mark string, n int, item string) {
 		// A strings.Reader fails no read, the one error ParseFragment returns.
 		nodes, _ := html.ParseFragment(strings.NewReader(item), context) //nolint:errcheck // see above
 		for _, c := range nodes {
+			formIn = formIn || holdsForm(c)
 			m.Parent.InsertBefore(c, m)
 		}
 		m.Parent.RemoveChild(m)
+	}
+	return formIn
+}
+
+// holdsForm reports whether n is or holds a <form> of HTML.
+func holdsForm(n *html.Node) bool {
+	for c := range n.Descendants() {
+		if c.Type == html.ElementNode && c.DataAtom == atom.Form && c.Namespace == "" {
+			return true
+		}
+	}
+	return n.Type == html.ElementNode && n.DataAtom == atom.Form && n.Namespace == ""
+}
+
+// leavesForm reports whether the last tag of a form item writes, read as the parser does, is a start tag:
+// the parser keeps that form, out of the tree, as the form of the inputs after it, till a </form>.
+func leavesForm(item string) bool {
+	open := false
+	z := html.NewTokenizer(strings.NewReader(item))
+	for {
+		switch tt := z.Next(); tt {
+		case html.ErrorToken:
+			return open
+		case html.StartTagToken, html.SelfClosingTagToken, html.EndTagToken:
+			if name, _ := z.TagName(); string(name) == "form" {
+				open = tt != html.EndTagToken
+			}
+		default:
+		}
 	}
 }
 

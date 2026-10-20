@@ -162,7 +162,7 @@ func TestDrawnHTMLInHead(t *testing.T) {
 	}
 }
 
-// The item told is the first in the file that changes the page, whatever the order Go keeps them in; the
+// The item told is the first the page draws that changes the page, whatever the order Go keeps them in; the
 // page is checked as it is drawn, with its title; and an item that ends an element of the page whose text
 // hides its start is told as one that closes an element of the page.
 func TestDrawnHTMLWhich(t *testing.T) {
@@ -173,6 +173,14 @@ func TestDrawnHTMLWhich(t *testing.T) {
 		if _, err := draw(l, "template: memo\nlang: en\nrisks: <svg>\naside: <svg>\n"); err == nil ||
 			!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: ") {
 			t.Fatalf("two items that change the page = %v, want risks", err)
+		}
+	}
+	// aside, later in the file, leaves open a comment or a <b> before risks, which is not told for it.
+	before := htmlIn(t, `<p>{{.Data.aside}}</p><p>{{.Data.risks}}</p><p>z</p>`)
+	for _, aside := range []string{"a <!-- note", "<b>x"} {
+		if _, err := draw(before, "template: memo\nlang: en\nrisks: <b>x</b>\naside: "+yamlText(aside)+"\n"); err == nil ||
+			!strings.HasPrefix(err.Error(), "data.yaml:4:8: aside: ") {
+			t.Errorf("%q drawn before risks = %v, want aside refused", aside, err)
 		}
 	}
 	titled := htmlIn(t, `{{if eq .Title "t"}}<ul><li>{{.Data.risks}} tail</li></ul>{{else}}<div>{{.Data.risks}}</div>{{end}}`)
@@ -385,19 +393,47 @@ func TestDrawnHTMLHidesHead(t *testing.T) {
 	}
 }
 
-// A page.html that fails drawn with the data's items left out, while looking for the one that hides its
-// </head>, is told so, not as the template's </head>.
-func TestDrawnHTMLHidesHeadFails(t *testing.T) {
+// Looking for the item that hides the </head>, page.html draws the items not yet added as marks, taking
+// the branches it takes with them; one that fails so is told so, not as the template's </head>.
+func TestDrawnHTMLHidesHeadMarked(t *testing.T) {
 	t.Parallel()
 
 	dir := memo(t, `"risks": {"type": "string", "format": "html"}`)
-	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.risks}}{{if not .Data.risks}}{{index .Lang 9}}{{end}}</head><body><p>x</p></body></html>`
-	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
-		t.Fatal(err)
+	page := filepath.Join(dir, "memo", "page.html")
+	for action, want := range map[string]string{
+		`{{if not .Data.risks}}{{index .Lang 9}}{{end}}`:         "data.yaml:3:8: risks: HTML changes the page around it",
+		`{{if gt (len .Data.risks) 20}}{{index .Lang 9}}{{end}}`: "data.yaml does not fit the template",
+	} {
+		src := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.risks}}` + action + `</head><body><p>x</p></body></html>`
+		if err := os.WriteFile(page, []byte(src), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <script>x\n"); err == nil ||
+			!strings.Contains(err.Error(), want) {
+			t.Errorf("%s = %v, want %s", action, err, want)
+		}
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <script>x\n"); err == nil ||
-		!strings.Contains(err.Error(), "does not fit the template") {
-		t.Errorf("a page.html that fails without the item = %v", err)
+}
+
+// An item that ends what the parser made itself in the page, as the page's own would, passes: a <tfoot>
+// after the rows. One that leaves a <form> open, whose inputs the page's after it would be, is refused.
+func TestDrawnHTMLTableAndForm(t *testing.T) {
+	t.Parallel()
+
+	foot := htmlIn(t, `<table><tr><td>a</td></tr>{{.Data.risks}}</table>`)
+	if _, err := draw(foot, "template: memo\nlang: en\nrisks: <tfoot><tr><td>s</td></tr></tfoot>\n"); err != nil {
+		t.Errorf("a <tfoot> after the rows = %v", err)
+	}
+	l := htmlIn(t, `<div>{{.Data.risks}}</div><input name=q><button>go</button>`)
+	for item, refused := range map[string]bool{
+		"<form action=//e.x><input>":                  true,
+		"<form action=//e.x><input></form>":           false,
+		"<svg><form></form></svg><p>x</p>":            false,
+		"<form action=//e.x></form><form action=//f>": true,
+	} {
+		if _, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n"); (err != nil) != refused {
+			t.Errorf("%q = %v, want refused %v", item, err, refused)
+		}
 	}
 }
 

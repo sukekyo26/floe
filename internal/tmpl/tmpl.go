@@ -822,12 +822,18 @@ func pathKey(at []string) string {
 // itemMistake is the mistake e in the item at the path at under root, of the data file file: at its
 // value, or at its key with onKey.
 func itemMistake(file string, root ast.Node, at []string, onKey bool, e *usererr.Error) *yamlpos.Error {
-	key, value, path := yamlpos.Find(root, at)
-	pos := yamlpos.OfValue(key, value)
-	if onKey {
-		pos = yamlpos.Of(key)
-	}
+	pos, path := itemPos(root, at, onKey)
 	return itemError(file, pos, path, e)
+}
+
+// itemPos returns where the item at the path at is written under root, its value or, onKey, its key, and
+// its path.
+func itemPos(root ast.Node, at []string, onKey bool) (yamlpos.Pos, string) {
+	key, value, path := yamlpos.Find(root, at)
+	if onKey {
+		return yamlpos.Of(key), path
+	}
+	return yamlpos.OfValue(key, value), path
 }
 
 // itemError is the mistake e in the item at path, written at pos in the data file file.
