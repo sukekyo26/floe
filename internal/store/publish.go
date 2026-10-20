@@ -75,6 +75,26 @@ type Options struct {
 	Force       bool
 }
 
+// normalized is o with each string given trimmed, whoever gave it. A title given empty is refused, as it
+// would leave the list blank, and so is a theme, which would take the data's.
+func (o Options) normalized() (Options, error) {
+	for _, field := range []**string{&o.Slug, &o.Title, &o.Description, &o.Theme, &o.PartsTheme} {
+		if *field != nil {
+			v := strings.TrimSpace(**field)
+			*field = &v
+		}
+	}
+	for _, f := range []struct {
+		value *string
+		empty string
+	}{{o.Title, "cli_title_empty"}, {o.Theme, "cli_theme_empty"}, {o.PartsTheme, "cli_parts_theme_empty"}} {
+		if f.value != nil && *f.value == "" {
+			return o, usererr.New(f.empty)
+		}
+	}
+	return o, nil
+}
+
 // themes are the themes o gives over the data's.
 func (o Options) themes() tmpl.Themes {
 	var themes tmpl.Themes
@@ -137,6 +157,10 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 	if err := checkData(file); err != nil {
 		return nil, err
 	}
+	opts, err := opts.normalized()
+	if err != nil {
+		return nil, err
+	}
 	abs := file
 	if !filepath.IsAbs(abs) {
 		abs = filepath.Join(cwd, abs)
@@ -158,6 +182,10 @@ func (s *Store) Prepare(ctx context.Context, file string, opts Options, cwd stri
 // nothing that needs no image refuses the publish (the slug, the page's owner).
 func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
 	if err := checkData(up.File); err != nil {
+		return nil, err
+	}
+	opts, err := opts.normalized()
+	if err != nil {
 		return nil, err
 	}
 	images := up.Images
@@ -207,6 +235,10 @@ func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, themes tmpl
 // a relative file; the project of a link is that of its directory. A data file linked is checked as a
 // stored page is, its images under its real directory.
 func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
+	opts, err := opts.normalized()
+	if err != nil {
+		return nil, err
+	}
 	path, src, err := s.readLink(file, opts, cwd)
 	if err != nil {
 		return nil, err
@@ -379,7 +411,9 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 		if prev.IsLink() {
 			key = "store_slug_is_link"
 		}
-		return false, usererr.New(key, slug)
+		err := usererr.New(key, slug)
+		err.Conflict = true
+		return false, err
 	}
 	if path != "" {
 		if prev.Path == path {
@@ -399,7 +433,9 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 	if force {
 		return true, nil
 	}
-	return false, usererr.New("store_slug_owned", slug, owner)
+	err := usererr.New("store_slug_owned", slug, owner)
+	err.Conflict = true
+	return false, err
 }
 
 // title is --title, else the title pinned on the management page, else (for a stored page) the data's

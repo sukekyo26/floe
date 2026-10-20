@@ -58,6 +58,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/health", s.health)
 	mux.HandleFunc("GET /api/artifacts", s.list)
 	mux.HandleFunc("POST /api/artifacts", s.addLink)
+	mux.HandleFunc("PUT /api/artifacts/{slug}", s.save)
 	mux.HandleFunc("PATCH /api/artifacts/{slug}", s.edit)
 	mux.HandleFunc("DELETE /api/artifacts/{slug}", s.remove)
 	mux.HandleFunc("GET /api/artifacts/{slug}/download", s.download)
