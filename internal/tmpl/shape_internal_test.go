@@ -135,3 +135,77 @@ func TestShapeMistakes(t *testing.T) {
 		}
 	}
 }
+
+// The items floe draws whole are listed once, a part after the parts it holds, which it draws as they were
+// drawn, and an item of a format of floe's among them.
+func TestDrawnWhole(t *testing.T) {
+	t.Parallel()
+
+	s := shapeOf(t, `{"properties": {"t": {"$ref": "floe:///parts/table.json"}, "m": {"type": "string", "format": "markdown"}}}`)
+	table := map[string]any{"columns": []any{map[string]any{"title": "a"}}, "rows": []any{[]any{"x", "y"}}}
+	found := s.drawnWhole(map[string]any{"t": table, "m": "hi"})
+	got := listed(found)
+	want := []string{"m:markdown", "t.rows.0.0:cell", "t.rows.0.1:cell", "t:table"}
+	if sorted := slices.Sorted(slices.Values(got)); !slices.Equal(sorted, want) {
+		t.Errorf("drawnWhole = %v, want %v", got, want)
+	}
+	if at := slices.Index(got, "t:table"); at < slices.Index(got, "t.rows.0.0:cell") || at < slices.Index(got, "t.rows.0.1:cell") {
+		t.Errorf("drawnWhole = %v, the table before its cells", got)
+	}
+}
+
+// listed writes each item of found as its path and what draws it whole, its part or its format.
+func listed(found drawnItems) []string {
+	got := make([]string, 0, len(found))
+	for _, f := range found {
+		drawer := f.format
+		if f.part != nil {
+			drawer = f.part.name
+		}
+		got = append(got, strings.Join(f.at, ".")+":"+drawer)
+	}
+	return got
+}
+
+// What an item of a format of floe's holds is not looked into, a part wins over a format, and an item of a
+// format in a part is the part's to draw, not listed.
+func TestDrawnWholeStops(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	table := set.parts["table"]
+	rows := map[string]any{"columns": []any{map[string]any{"title": "a"}}, "rows": []any{[]any{"x"}}}
+	named := func(p *part, format string) *shape {
+		s := new(shape)
+		s.part, s.named, s.format = p, p.shape, format
+		return s
+	}
+	html := new(shape)
+	html.format, html.keys = "html", map[string]*shape{"t": named(table, "")}
+	marked := new(shape)
+	marked.format = "markdown"
+	inner := new(shape)
+	inner.keys = map[string]*shape{"m": marked}
+	holder := &part{
+		name: "holder", shape: inner, pages: nil, words: nil, html: "", css: "", checks: nil, looks: nil, taken: nil, uses: nil,
+		about: "", dir: "", replaces: false,
+	}
+	for _, c := range []struct {
+		s    *shape
+		v    any
+		want []string
+	}{
+		{html, map[string]any{"t": rows}, []string{":html"}},
+		{named(table, "markdown"), rows, []string{"rows.0.0:cell", ":table"}},
+		{named(holder, ""), map[string]any{"m": "x"}, []string{":holder"}},
+	} {
+		found := c.s.drawnWhole(c.v)
+		got := listed(found)
+		if !slices.Equal(got, c.want) {
+			t.Errorf("drawnWhole = %v, want %v", got, c.want)
+		}
+	}
+}

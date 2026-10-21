@@ -26,13 +26,11 @@ type htmlItem struct {
 	path string
 }
 
-// htmlItemsOf returns the items of format html of d, text but empty, which draws nothing, in the order of
-// the file under root; nil for none.
-func htmlItemsOf(d *Data, root ast.Node) []htmlItem {
-	var found []itemAt
-	d.shape.find("html", d.Values, nil, &found)
+// htmlItemsOf returns the items of whole of format html, text but empty, which draws nothing, in the order
+// of the file under root; nil for none.
+func htmlItemsOf(whole drawnItems, root ast.Node) []htmlItem {
 	var items []htmlItem
-	for _, f := range found {
+	for _, f := range whole.ofFormat("html") {
 		text, isText := f.value.(string)
 		if !isText || text == "" {
 			continue

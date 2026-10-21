@@ -424,3 +424,75 @@ func (s *shape) values() []any {
 	}
 	return s.enum
 }
+
+// drawnItem is an item of a data file floe draws whole: by the part part, or as the format of floe's
+// format, one of the two.
+type drawnItem struct {
+	itemAt
+
+	part   *part
+	format string
+}
+
+// drawnItems are the items of a data file floe draws whole, the parts a part holds before it, which every
+// check of them picks its own from.
+type drawnItems []drawnItem
+
+// drawnWhole returns the items v holds that floe draws whole (walkWhole).
+func (s *shape) drawnWhole(v any) drawnItems {
+	var found drawnItems
+	s.walkWhole(v, nil, false, &found)
+	return found
+}
+
+// walkWhole adds to found the items v, at the path at, holds that floe draws whole: the parts a part holds
+// before it, which draws them as they were drawn. What an item of a format of floe's holds is not looked
+// into, and a part wins over a format, as in drawn. Under a part, inPart, an item of a format of floe's is
+// the part's to draw, by its part.html, and none of floe's to check, as none is meant to be there
+// (partSet.mistakes).
+func (s *shape) walkWhole(v any, at []string, inPart bool, found *drawnItems) {
+	if s == nil {
+		return
+	}
+	if s.part == nil && slices.Contains(formats, s.format) {
+		if !inPart {
+			*found = append(*found, drawnItem{itemAt: itemAt{value: v, at: at}, part: nil, format: s.format})
+		}
+		return
+	}
+	in, held := s.inside(), inPart || s.part != nil
+	switch v := v.(type) {
+	case map[string]any:
+		for k, item := range v {
+			in.keys[k].walkWhole(item, append(at[:len(at):len(at)], k), held, found)
+		}
+	case []any:
+		for i, item := range v {
+			in.each.walkWhole(item, append(at[:len(at):len(at)], strconv.Itoa(i)), held, found)
+		}
+	}
+	if s.part != nil {
+		*found = append(*found, drawnItem{itemAt: itemAt{value: v, at: at}, part: s.part, format: ""})
+	}
+}
+
+// ofFormat returns the items of w of the format of floe's format.
+func (w drawnItems) ofFormat(format string) []itemAt {
+	return w.where(func(f drawnItem) bool { return f.part == nil && f.format == format })
+}
+
+// ofPart returns the items of w the part name draws, those it holds before it.
+func (w drawnItems) ofPart(name string) []itemAt {
+	return w.where(func(f drawnItem) bool { return f.part != nil && f.part.name == name })
+}
+
+// where returns the items of w that keep keeps, in order.
+func (w drawnItems) where(keep func(drawnItem) bool) []itemAt {
+	var items []itemAt
+	for _, f := range w {
+		if keep(f) {
+			items = append(items, f.itemAt)
+		}
+	}
+	return items
+}
