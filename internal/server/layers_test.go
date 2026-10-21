@@ -93,14 +93,17 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	b.navigate("/a/bare/?raw")
 	b.until("its ground", "getComputedStyle(document.documentElement).backgroundColor === 'rgb(0, 0, 5)'")
 	check(t, "bare of its own ground", []string{b.eval(ground)}, `rgb(0, 0, 5) | rgba(0, 0, 0, 0) | rgb(0, 0, 6) | own`)
-	// A ground of a pattern, blueprint's squares, is drawn whole.
-	e.write(t, "templates/bare/page.css", "")
+	// A ground of a pattern, blueprint's squares, is drawn whole: its layers, their size, the colour under them.
+	e.write(t, "templates/squares/schema.json", `{"type": "object", "additionalProperties": false}`)
+	e.write(t, "templates/squares/page.html", `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>`+
+		`<body><p>a</p></body></html>`)
 	slug = "squares"
-	e.publish(t, e.write(t, "squares.yaml", "template: bare\nlang: en\ntheme: blueprint\n"), store.Options{Slug: &slug})
+	e.publish(t, e.write(t, "squares.yaml", "template: squares\nlang: en\ntheme: blueprint\n"), store.Options{Slug: &slug})
 	b.navigate("/a/squares/?raw")
 	b.until("the text", "!!document.querySelector('p')")
-	got = b.eval(`getComputedStyle(document.documentElement).backgroundImage.split('linear-gradient').length - 1`)
-	check(t, "squares", []string{got}, "2")
+	got = b.eval(`(() => { const r = getComputedStyle(document.documentElement);
+		return [r.backgroundImage.split('linear-gradient').length - 1, r.backgroundSize, r.backgroundColor].join(' | ') })()`)
+	check(t, "squares", []string{got}, "2 | 16px 16px, 16px 16px, auto | rgb(238, 244, 252)")
 
 	// A table of one's own takes the place of floe's, and the panel's look by its part.yaml: floe's washi
 	// styles it and compare, drawn in the table's look, by the panel's file (its double rules), not by the

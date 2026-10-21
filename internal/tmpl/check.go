@@ -171,9 +171,10 @@ func brokenParts(set *partSet, named []namedPart) []*usererr.Error {
 	return append(warnings, set.strays...)
 }
 
-// checkCSS returns the mistake of t's CSS, page.css, that cssSheet.refuse refuses, and the warning of the
+// checkCSS returns the mistake of t's CSS, page.css, that cssSheet.refuse refuses, the warning of the
 // colours that change with the mode which it sets on :scope for light mode alone: over every palette, they
-// stay in dark mode too, where the others turn dark.
+// stay in dark mode too, where the others turn dark, and those of the ground, colour or face it sets on
+// body, which floe's base draws on the root.
 func (t *Template) checkCSS() ([]*usererr.Error, []error) {
 	modes, err := floeModes()
 	if err != nil {
@@ -183,12 +184,35 @@ func (t *Template) checkCSS() ([]*usererr.Error, []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
+	warnings := bodyGround(t.file("page.css"), page)
 	c := newModeColours()
 	c.readScope(page)
 	if names := c.lightOnly(modes); names != nil {
-		return []*usererr.Error{usererr.New("tmpl_scope_dark", t.file("page.css"), andList(names))}, nil
+		warnings = append(warnings, usererr.New("tmpl_scope_dark", t.file("page.css"), andList(names)))
 	}
-	return nil, nil
+	return warnings, nil
+}
+
+// bodyGround returns the warning of each ground, or variable of the ground, colour or face, s, page.css
+// shown as file, sets on body: floe's base draws them on the root, whose ground a body's covers in the
+// body's box alone, and which a variable set on body does not reach.
+// LIMIT: body alone as a selector, or one of a list. Read the selectors if templates come to write body
+// in a compound one (html > body).
+func bodyGround(file string, s *cssSheet) []*usererr.Error {
+	var warnings []*usererr.Error
+	for _, r := range s.rules {
+		if !r.block || !slices.ContainsFunc(strings.Split(r.prelude, ","), func(sel string) bool {
+			return strings.EqualFold(strings.TrimSpace(sel), "body")
+		}) {
+			continue
+		}
+		for _, d := range r.decls {
+			if strings.HasPrefix(d.name, "background") || d.name == "--page-bg" || d.name == "--fg" || d.name == "--font" {
+				warnings = append(warnings, usererr.New("tmpl_body_ground", file, lineAt(s.src, d.at), d.name))
+			}
+		}
+	}
+	return warnings
 }
 
 // checkNamedParts returns a mistake for each part src, page.html, names, of named, by data-floe-part or

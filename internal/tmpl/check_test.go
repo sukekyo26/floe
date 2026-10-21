@@ -454,7 +454,8 @@ func TestCSSStyleEndEscaped(t *testing.T) {
 }
 
 // A colour that changes with the mode, set on :scope for light mode alone, is warned of at the file that
-// sets it: over every palette, it would stay in dark mode too.
+// sets it: over every palette, it would stay in dark mode too. So is a ground, or a variable of the
+// ground, colour or face, set on body, which floe's base draws on the root.
 func TestCheckScopeColours(t *testing.T) {
 	t.Parallel()
 
@@ -463,8 +464,12 @@ func TestCheckScopeColours(t *testing.T) {
 	for page, want := range map[string]string{
 		":scope { --surface: #fff; --accent: #c00; --page-width: 90rem; --rule: 2px solid var(--fg); }":    "sizes/page.css sets --accent, --surface on :scope for light mode alone",
 		":scope { --surface: #fff; }\n@media (prefers-color-scheme: dark) { :scope { --surface: #222; } }": "",
-		"body { --surface: #fff; }": "",
-		"@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n:scope { --bg: #fff; }":                                         "sizes/page.css sets --bg on :scope for light mode alone",
+		"body { --surface: #fff; }":                                                              "",
+		"main, body {\n  background-color: #fff;\n}":                                             "sizes/page.css:2: body sets background-color",
+		"@media print { BODY { --page-bg: none; } }":                                             "sizes/page.css:1: body sets --page-bg",
+		"body { color: red; margin: 0; font-size: 16px; }":                                       "",
+		"body > main { background: #fff; }":                                                      "",
+		"@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n:scope { --bg: #fff; }": "sizes/page.css sets --bg on :scope for light mode alone",
 		":scope { --line: #fff; &.x { --q: 1; } --fg: #000; }\n@media (prefers-color-scheme: dark) { :scope { --line: #222; } }":         "sizes/page.css sets --fg on :scope",
 		":scope { --bg: #fff; }\n@media screen and (prefers-color-scheme: dark) { :scope { --bg: #000; } }":                              "",
 		":scope { --bg: #fff; }\n@media not (prefers-color-scheme: dark) { :scope { --bg: #eee; } }":                                     "sizes/page.css sets --bg on :scope",

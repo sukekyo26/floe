@@ -124,10 +124,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   them, and a template has no themes of its own. A
   theme's `palette.css` sets the page's colours and faces as CSS variables, in
   the bottom layer over `default`'s, which defines them all: the parts,
-  diagrams and the template draw with them (`--rule` the page's rules), floe's
-  base the page's ground, colour and face (`--page-bg`, `--fg`, `--font`) under
-  any template, and a template keeps colours of its own by setting
-  them on `:scope`. `palette.css` holds those variables alone, without
+  diagrams and the template draw with them (`--rule` the page's rules), and
+  floe's base draws the page's ground, colour and face with them (`--page-bg`,
+  `--fg`, `--font`) on its root under any template, which `floe template
+  check` warns of where a template sets them on `body` instead of `:scope`; a
+  template keeps colours of its own by setting them on `:scope`. `palette.css` holds those variables alone, without
   `!important`, on `:root` and then in `@media (prefers-color-scheme: dark)`,
   and is warned of where it sets a colour for light mode alone, as is a
   template that sets one so on `:scope`. A part of your own cannot be named `palette`. `floe

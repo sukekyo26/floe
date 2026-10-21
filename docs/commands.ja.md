@@ -197,7 +197,7 @@ floe render --check docs/*.yaml            # CI で: 書き出し直していな
 - まずファイルを検査します。`template.yaml`、`schema.json`（floe が知らない `format` と、floe がどのデータファイルからも読むキー `lang`・`template`・`theme`・`title` と同じ名前の項目を宣言する、または必須に挙げるのは誤り）、`checks.yaml`（`for`・`field` のパスが `schema.json` で宣言されていること）、`computed.yaml`、`page.html`、`page.css`、`assets/` の画像です。
 - 次に `example.yaml` を、ページの描画まで `floe publish` のすべての段に通します。`example.yaml` はディレクトリ名のテンプレートを指定します。描くのは常にそのディレクトリのテンプレートで、同じ名前の別のテンプレートではありません。
 - 誤りはすべてまとめて、位置のあるものは `ファイル:行:列: メッセージ` の形で出します（終了コード 1）。どのテンプレートも正しければ何も出しません（終了コード 0）。
-- 警告は stderr に出し、終了コードは 0 のままです。`template.yaml` が無いとき、`schema.json` のオブジェクトが打ち間違えたキーを断らない（`"additionalProperties": false` が無い）とき、モードで変わる色を `:scope` にライトモードの分だけ書いた（ダークモードでもその値のままになる）ときに出します。
+- 警告は stderr に出し、終了コードは 0 のままです。`template.yaml` が無いとき、`schema.json` のオブジェクトが打ち間違えたキーを断らない（`"additionalProperties": false` が無い）とき、モードで変わる色を `:scope` にライトモードの分だけ書いた（ダークモードでもその値のままになる）とき、`body` に地か `--page-bg`・`--fg`・`--font` を書いた（floe の基本の見た目はページの根に描く）ときに出します。
 
 各ファイルに書くものは [templates.ja.md](templates.ja.md) にあります。
 
