@@ -162,6 +162,12 @@ var messagesJA = map[string]string{
 	// yaml
 	"yaml_syntax":     "YAML として読めません: %s",
 	"yaml_no_anchors": "アンカー・エイリアス・マージキー（<<）・タグは使えません。値をそのまま書いてください",
+	// 文が YAML に別のものと読まれたときの、誤りの後の一言
+	"yaml_syntax_hint":       "YAML として読めません: %s。%s",
+	"yaml_hint_colon":        "「: 」を含む文はキーと値として読まれます。文を引用符で囲んでください",
+	"yaml_hint_comment":      "空白の後の # からはコメントになり、{ } や [ ] が途中で切れます。# を含む文は引用符で囲んでください",
+	"yaml_hint_reserved":     "` や @ で始まる値は、引用符で囲んでください",
+	"yaml_hint_expr_comment": "空白の後の # から後ろが YAML のコメントになり、式が途中で切れました。式を引用符で囲んでください",
 
 	// diagram
 	"diagram_documents":        "spec には図を 1 つだけ書きます。--- で区切った文書は、それぞれ別のファイルにしてください",
@@ -242,6 +248,7 @@ var messagesJA = map[string]string{
 	"tmpl_schema_required":         "%s は必須の項目ですが、ありません",
 	"tmpl_schema_unknown":          "%s はテンプレート %s に無い項目です（打ち間違い？）。使えるのは %s です",
 	"tmpl_schema_type":             "%s: %[2]sではなく%[3]sで書いてください",
+	"tmpl_schema_type_hint":        "%s: %[2]sではなく%[3]sで書いてください。%[4]s",
 	"tmpl_schema_enum":             "%s: 「%s」は使えません。使えるのは %s です",
 	"tmpl_schema_min_items":        "%s: %d 個以上書いてください",
 	"tmpl_schema_max_items":        "%s: %d 個までにしてください",
@@ -303,6 +310,7 @@ var messagesJA = map[string]string{
 	"tmpl_checks_not_array":        "for: %s は schema.json でリストとして宣言されていません",
 	"tmpl_checks_field":            "field: %s は schema.json で %s の要素の下に宣言されていません",
 	"tmpl_expr":                    "%s は式として読めません: %s",
+	"tmpl_expr_hint":               "%s は式として読めません: %s。%s",
 	"tmpl_computed_yaml":           "computed.yaml は total: sum(items, .price) のように、名前と式で書いてください",
 	"tmpl_computed_name":           "%s は式や page.html で使える名前ではありません。文字で始めて文字・数字・_ を続け、expr の語や関数と重ねないでください",
 	"tmpl_computed_clash":          "%s はデータの項目にもあり、式から区別できません。名前を変えてください",

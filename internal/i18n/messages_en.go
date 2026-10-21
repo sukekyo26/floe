@@ -164,6 +164,12 @@ var messagesEN = map[string]string{
 	// yaml: reading a YAML file (diagram specs and data files)
 	"yaml_syntax":     "this is not valid YAML: %s",
 	"yaml_no_anchors": "anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
+	// the hints, after a mistake, for text that YAML reads as something else
+	"yaml_syntax_hint":       "this is not valid YAML: %s; %s",
+	"yaml_hint_colon":        `text with ": " in it reads as keys and values: put the text in quotes`,
+	"yaml_hint_comment":      `a # after a space begins a comment, which cut { } or [ ] short: put text with # in it in quotes`,
+	"yaml_hint_reserved":     "a value cannot begin with ` or @ unless it is in quotes",
+	"yaml_hint_expr_comment": "a # after a space began a YAML comment, which cut the expression short: put the expression in quotes",
 
 	// diagram: reading a diagram spec (kinds and keys such as box and rows are spec names, not words)
 	"diagram_documents":        "a spec holds one diagram; put each --- separated document in a file of its own",
@@ -244,6 +250,7 @@ var messagesEN = map[string]string{
 	"tmpl_schema_required":         "%s is required but missing",
 	"tmpl_schema_unknown":          "%s is not an item of the template %s (a typo?); use %s",
 	"tmpl_schema_type":             "%s: write %[3]s, not %[2]s",
+	"tmpl_schema_type_hint":        "%s: write %[3]s, not %[2]s; %[4]s",
 	"tmpl_schema_enum":             `%s: "%s" is not allowed; use %s`,
 	"tmpl_schema_min_items":        "%s: the number of items must be at least %d",
 	"tmpl_schema_max_items":        "%s: the number of items must be at most %d",
@@ -305,6 +312,7 @@ var messagesEN = map[string]string{
 	"tmpl_checks_not_array":        "for: schema.json does not declare %s a list",
 	"tmpl_checks_field":            "field: schema.json does not declare %s under the items of %s",
 	"tmpl_expr":                    "%s cannot be read as an expression: %s",
+	"tmpl_expr_hint":               "%s cannot be read as an expression: %s; %s",
 	"tmpl_computed_yaml":           "write computed.yaml as names and expressions, like total: sum(items, .price)",
 	"tmpl_computed_name":           "%s is not a name an expression or page.html can use: write a letter, then letters, digits and _, and not a word or function of expr",
 	"tmpl_computed_clash":          "%s is an item of the data too, so an expression could not tell them apart; rename it",

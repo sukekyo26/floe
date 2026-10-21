@@ -162,7 +162,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   The built-in template `report` lays out a header and sections of Markdown
   text, with HTML parts for what Markdown cannot say. The data is checked
   against the template's schema first, and every mistake is reported at its
-  line and column (`file:line:column`). The scripts of a page drawn from a
+  line and column (`file:line:column`). Where YAML read text as something
+  else (a `: ` or a ` #` in plain text, a value beginning with `` ` `` or `@`,
+  a `computed.yaml` or `checks.yaml` expression a `#` cut short), the mistake
+  says to put the text in quotes. The scripts of a page drawn from a
   data file cannot send what it holds out: its CSP blocks `fetch`, XHR,
   images from elsewhere and forms, and a `<base>`, in its download too. A page is in the
   language its data file names (`lang:`, a BCP 47 tag such as `en` or `ja`),

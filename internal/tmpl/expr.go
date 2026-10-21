@@ -10,6 +10,9 @@ import (
 	"github.com/expr-lang/expr/file"
 	"github.com/expr-lang/expr/vm"
 	"github.com/expr-lang/expr/vm/runtime"
+
+	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // arithmetic makes / and ** (^) fail where expr would give NaN or ±Inf, a division by zero above all,
@@ -42,6 +45,22 @@ func compile(src string, env any, opts ...expr.Option) (*vm.Program, error) {
 		return nil, fmt.Errorf("%s: %w", src, err)
 	}
 	return p, nil
+}
+
+// compileWritten compiles src, an expression as YAML read it at at in file, for env with opts. rest is
+// the text of the YAML comment after it on its line, or "". When src fails and src with the comment put
+// back compiles, a # in the expression began the comment, and the mistake says to quote it.
+func compileWritten(
+	file string, at yamlpos.Pos, src, rest string, env any, opts ...expr.Option,
+) (*vm.Program, *yamlpos.Error) {
+	p, err := compile(src, env, opts...)
+	if err == nil {
+		return p, nil
+	}
+	if _, whole := compile(src+" #"+rest, env, opts...); rest != "" && whole == nil {
+		return nil, yamlpos.New(file, at, "tmpl_expr_hint", src, brief(err), usererr.New("yaml_hint_expr_comment"))
+	}
+	return nil, yamlpos.New(file, at, "tmpl_expr", src, brief(err))
 }
 
 // brief words an error of expr on one line, without the snippet it draws under the message.

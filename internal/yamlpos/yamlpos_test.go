@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -103,6 +104,59 @@ func TestParse(t *testing.T) {
 		if !errors.As(err, &e) || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("Parse(%q) = %v, want %s", tt.src, err, tt.want)
 		}
+	}
+}
+
+// A syntax error says to quote text when its tokens show YAML read the text as something else, and
+// only then.
+func TestSyntaxHints(t *testing.T) {
+	t.Parallel()
+
+	const (
+		colon    = `; text with ": " in it reads as keys and values: put the text in quotes`
+		comment  = "; a # after a space begins a comment, which cut { } or [ ] short: put text with # in it in quotes"
+		reserved = "; a value cannot begin with ` or @ unless it is in quotes"
+	)
+	for _, tt := range []struct{ src, want string }{
+		{"lead: parts-shape: drop\n", "a.yaml:1:7: this is not valid YAML: mapping value is not allowed in this context" + colon},
+		{"a:\n  - { title: layer #73, from: 2 }\n  - b\n", "a.yaml:3:3: this is not valid YAML: ',' or '}' must be specified" + comment},
+		{"a: [x #y, z]\n", "a.yaml:1:4: this is not valid YAML: sequence end token ']' not found" + comment},
+		{"rows:\n  - [a, the `: ` case, c]\n", "a.yaml:2:16: this is not valid YAML: '`' is a reserved character" + reserved},
+		// A comment inside a { } or [ ] that closes is the author's, and another mistake gets no hint.
+		{"a: [x, # y\n  z]\nb: 'c\n", "a.yaml:3:4: this is not valid YAML: could not find end character of single-quoted text"},
+		{"a: 1\na: 2\n", `a.yaml:2:1: this is not valid YAML: mapping key "a" already defined at [1:1]`},
+	} {
+		_, err := yamlpos.Parse("a.yaml", []byte(tt.src), "diagram_documents")
+		if err == nil || err.Error() != tt.want {
+			t.Errorf("Parse(%q) = %v, want %s", tt.src, err, tt.want)
+		}
+	}
+}
+
+// ColonText is a plain key and its value on one line; CommentAfter, the text of a comment on the line
+// of a value.
+func TestColonTextAndCommentAfter(t *testing.T) {
+	t.Parallel()
+
+	doc, err := parser.ParseBytes([]byte("- a: b\n- a: b\n  c: d\n- {a: b}\n- \"a\": b\n- a:\n    b\n- x # y z\n- x\n"), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seq, ok := doc.Docs[0].Body.(*ast.SequenceNode)
+	if !ok {
+		t.Fatalf("the body is %T", doc.Docs[0].Body)
+	}
+	items := seq.Values
+	for i, want := range []bool{true, false, false, false, false, false, false} {
+		if got := yamlpos.ColonText(items[i]); got != want {
+			t.Errorf("ColonText(item %d) = %v, want %v", i, got, want)
+		}
+	}
+	if got := yamlpos.CommentAfter(items[5]); got != " y z" {
+		t.Errorf("CommentAfter(x # y z) = %q", got)
+	}
+	if got := yamlpos.CommentAfter(items[6]); got != "" {
+		t.Errorf("CommentAfter(x) = %q", got)
 	}
 }
 

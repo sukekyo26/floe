@@ -168,13 +168,92 @@ type Error struct {
 	Err  *usererr.Error
 }
 
-// Syntax places an error of goccy/go-yaml at its token, or at the start of file without one.
+// Syntax places an error of goccy/go-yaml at its token, or at the start of file without one. When the
+// tokens around it show text that YAML read as something else, a hint says to quote it.
 func Syntax(file string, err error) *Error {
 	var se *yaml.SyntaxError
 	if errors.As(err, &se) && se.Token != nil {
-		return New(file, Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}, "yaml_syntax", se.Message)
+		at := Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}
+		if hint := syntaxHint(se.Token); hint != "" {
+			return New(file, at, "yaml_syntax_hint", se.Message, usererr.New(hint))
+		}
+		return New(file, at, "yaml_syntax", se.Message)
 	}
 	return New(file, Pos{Line: 1, Column: 1}, "yaml_syntax", err.Error())
+}
+
+// syntaxHint returns the key of the hint for a syntax error at tk, or "" for none: text with ": " in
+// it, a second key on the line of one (a: b: c); a comment inside { } or [ ] left open, " #" having
+// cut it short; or a value beginning with a reserved ` or @.
+func syntaxHint(tk *token.Token) string {
+	value := strings.TrimSpace(tk.Value)
+	switch {
+	case onLine(tk.Prev, tk, token.MappingValueType) && onLine(tk.Next, tk, token.MappingValueType):
+		return "yaml_hint_colon"
+	case commentLeftOpen(tk):
+		return "yaml_hint_comment"
+	case tk.Type == token.InvalidType && (strings.HasPrefix(value, "`") || strings.HasPrefix(value, "@")):
+		return "yaml_hint_reserved"
+	}
+	return ""
+}
+
+// onLine reports whether t is a token of the type typ on the line of on.
+func onLine(t, on *token.Token, typ token.Type) bool {
+	return t != nil && t.Type == typ && t.Position.Line == on.Position.Line
+}
+
+// commentLeftOpen reports whether a comment begins inside a { } or [ ] of the file of tk that is never
+// closed. A comment inside one that closes is the author's.
+func commentLeftOpen(tk *token.Token) bool {
+	for tk.Prev != nil {
+		tk = tk.Prev
+	}
+	var open []bool // for each { or [ open, whether a comment begins inside it
+	for ; tk != nil; tk = tk.Next {
+		switch tk.Type {
+		case token.MappingStartType, token.SequenceStartType:
+			open = append(open, false)
+		case token.MappingEndType, token.SequenceEndType:
+			if len(open) > 0 {
+				open = open[:len(open)-1]
+			}
+		case token.CommentType:
+			if len(open) > 0 {
+				open[len(open)-1] = true
+			}
+		default:
+		}
+	}
+	return slices.Contains(open, true)
+}
+
+// ColonText reports whether n is how YAML reads a line of plain text with ": " in it: one plain key,
+// its value on the key's line.
+func ColonText(n ast.Node) bool {
+	var pair *ast.MappingValueNode
+	switch m := n.(type) {
+	case *ast.MappingNode:
+		if len(m.Values) != 1 || m.IsFlowStyle {
+			return false
+		}
+		pair = m.Values[0]
+	case *ast.MappingValueNode:
+		pair = m
+	default:
+		return false
+	}
+	k, v := KeyOf(pair).GetToken(), pair.Value.GetToken()
+	return k != nil && v != nil && k.Type == token.StringType && v.Position.Line == k.Position.Line
+}
+
+// CommentAfter returns the text of the comment after the token of n on its line, without its #, or ""
+// for none: what YAML makes of " #" and the rest of a plain value.
+func CommentAfter(n ast.Node) string {
+	if tk := n.GetToken(); tk != nil && onLine(tk.Next, tk, token.CommentType) {
+		return tk.Next.Value
+	}
+	return ""
 }
 
 // New returns the mistake worded by the catalog message key with args, at at in file.

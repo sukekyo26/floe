@@ -191,6 +191,29 @@ func TestReportScript(t *testing.T) {
 }
 
 // Each refusal of Read points at the line and column it is about.
+// Text with ": " in it, which YAML reads as a key and its value, is told to be quoted where the schema
+// wants text; keys and values written as such are not.
+func TestReadColonTextHint(t *testing.T) {
+	t.Parallel()
+
+	const options = "template: report\nlang: en\nsections:\n  - parts:\n      - options:\n          - title: a\n            pros:\n"
+	for _, c := range []struct{ src, want string }{
+		{
+			options + "              - draw it in the page's language (en for lang: en)\n",
+			`data.yaml:8:17: sections[0].parts[0].options[0].pros[0]: write text, not keys and values; text with ": " in it reads as keys and values: put the text in quotes`,
+		},
+		{
+			options + "              - k: v\n                w: z\n",
+			"data.yaml:8:17: sections[0].parts[0].options[0].pros[0]: write text, not keys and values",
+		},
+	} {
+		_, err := builtins.Read("data.yaml", []byte(c.src), "", "")
+		if err == nil || err.Error() != c.want {
+			t.Errorf("Read(%q) = %v, want %s", c.src, err, c.want)
+		}
+	}
+}
+
 func TestReadRefusals(t *testing.T) {
 	t.Parallel()
 
