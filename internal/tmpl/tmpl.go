@@ -79,11 +79,12 @@ type Data struct {
 	images map[string]template.URL // its images as data URIs, by the path written
 	// its items drawn by floe's parts, by the path of keys to each (pathKey); nil without one
 	parts     map[string]template.HTML
-	diagrams  bool       // whether it has a diagram, for the page to get their style and zoom
-	tried     []string   // the images it names that a file can make right, read or not, as it writes them
-	icons     []string   // the index files of the icon sets its diagrams may show, when it has one
-	htmlItems []htmlItem // its items of format html, which Render checks the page drawn for
-	marks     *htmlMarks // its items of format html marked, while checkDrawnHTML draws it; nil else
+	diagrams  bool        // whether it has a diagram, for the page to get their style and zoom
+	tried     []string    // the images it names that a file can make right, read or not, as it writes them
+	icons     []string    // the index files of the icon sets its diagrams may show, when it has one
+	drawn     []drawnItem // its items floe draws whole, by a part or a format of floe's, those a part holds before it
+	htmlItems []htmlItem  // its items of format html, which Render checks the page drawn for
+	marks     *htmlMarks  // its items of format html marked, while checkDrawnHTML draws it; nil else
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -242,7 +243,8 @@ func start(file string, src []byte, given Themes) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, PartsTheme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
-		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, htmlItems: nil, marks: nil,
+		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, drawn: nil, htmlItems: nil,
+		marks: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(given)
@@ -338,9 +340,10 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 		return problems.Sorted()
 	}
 	d.shape = s
+	s.drawnWhole(d.Values, nil, &d.drawn)
 	d.htmlItems = htmlItemsOf(d, root)
-	err = checkItems(checkImages(s, d, root, images), checkHTML(set, d), checkDiagrams(s, d, root, t.icons),
-		checkScripts(s, d, root), checkParts(s, d, root))
+	err = checkItems(checkImages(d, root, images), checkHTML(set, d), checkDiagrams(d, root, t.icons),
+		checkScripts(d, root), checkParts(d, root))
 	if err != nil {
 		return err
 	}
@@ -755,34 +758,6 @@ func (s *shape) drawn(v any, at []string, d *Data) (any, bool) {
 type itemAt struct {
 	value any
 	at    []string
-}
-
-// find adds to found the items v holds where s declares the format, v being at the path at.
-func (s *shape) find(format string, v any, at []string, found *[]itemAt) {
-	if s == nil {
-		return
-	}
-	// A part, or an item of a format of floe's, is drawn whole: what it holds is not looked into.
-	if s.part != nil {
-		return
-	}
-	if slices.Contains(formats, s.format) {
-		if s.format == format {
-			*found = append(*found, itemAt{value: v, at: at})
-		}
-		return
-	}
-	in := s.inside()
-	switch v := v.(type) {
-	case map[string]any:
-		for k, item := range v {
-			in.keys[k].find(format, item, append(at[:len(at):len(at)], k), found)
-		}
-	case []any:
-		for i, item := range v {
-			in.each.find(format, item, append(at[:len(at):len(at)], strconv.Itoa(i)), found)
-		}
-	}
 }
 
 // pathKey keys an item by its path of keys.

@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"cmp"
 	"fmt"
 	"slices"
 	"strings"
@@ -133,5 +134,27 @@ func TestShapeMistakes(t *testing.T) {
 		if c.want == "" && got != "[]" || c.want != "" && !strings.Contains(got, c.want) {
 			t.Errorf("mistakes of %s = %s, want %q", c.src, got, c.want)
 		}
+	}
+}
+
+// The items floe draws whole are listed once, a part after the parts it holds, which it draws as they were
+// drawn, and an item of a format of floe's among them.
+func TestDrawnWhole(t *testing.T) {
+	t.Parallel()
+
+	s := shapeOf(t, `{"properties": {"t": {"$ref": "floe:///parts/table.json"}, "m": {"type": "string", "format": "markdown"}}}`)
+	table := map[string]any{"columns": []any{map[string]any{"title": "a"}}, "rows": []any{[]any{"x", "y"}}}
+	var found []drawnItem
+	s.drawnWhole(map[string]any{"t": table, "m": "hi"}, nil, &found)
+	got := make([]string, 0, len(found))
+	for _, f := range found {
+		got = append(got, strings.Join(f.at, ".")+":"+cmp.Or(f.shape.format, f.shape.drawnBy()))
+	}
+	want := []string{"m:markdown", "t.rows.0.0:cell", "t.rows.0.1:cell", "t:table"}
+	if sorted := slices.Sorted(slices.Values(got)); !slices.Equal(sorted, want) {
+		t.Errorf("drawnWhole = %v, want %v", got, want)
+	}
+	if at := slices.Index(got, "t:table"); at < slices.Index(got, "t.rows.0.0:cell") || at < slices.Index(got, "t.rows.0.1:cell") {
+		t.Errorf("drawnWhole = %v, the table before its cells", got)
 	}
 }

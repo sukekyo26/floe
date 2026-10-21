@@ -13,7 +13,6 @@ import (
 	"path"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"unicode"
@@ -732,51 +731,17 @@ func joinDescriptions(beside, named string) string {
 	return beside + " " + named
 }
 
-// partAt is an item of a data file drawn by a part, and the path of keys to it.
-type partAt struct {
-	itemAt
-
-	part *part
-}
-
-// findParts adds to found the items v holds that s draws by a part, v being at the path at.
-func (s *shape) findParts(v any, at []string, found *[]partAt) {
-	if s == nil {
-		return
-	}
-	// An item of a format of floe's is drawn whole: what it holds is not looked into. A part is drawn
-	// after the parts it holds, which it draws as they were drawn.
-	if slices.Contains(formats, s.format) {
-		return
-	}
-	if s.part != nil {
-		defer func() { *found = append(*found, partAt{itemAt: itemAt{value: v, at: at}, part: s.part}) }()
-	}
-	in := s.inside()
-	switch v := v.(type) {
-	case map[string]any:
-		for k, item := range v {
-			in.keys[k].findParts(item, append(at[:len(at):len(at)], k), found)
-		}
-	case []any:
-		for i, item := range v {
-			in.each.findParts(item, append(at[:len(at):len(at)], strconv.Itoa(i)), found)
-		}
-	}
-}
-
-// checkParts checks the items of d its schema s draws by parts against the checks of their parts, and
-// draws them into d.parts, by the path of keys to each, reporting every failure at its line and column
-// under root.
-func checkParts(s *shape, d *Data, root ast.Node) error {
-	var found []partAt
-	s.findParts(d.Values, nil, &found)
+// checkParts checks the items of d floe draws by parts against the checks of their parts, and draws them
+// into d.parts, by the path of keys to each, those a part holds before it, reporting every failure at its
+// line and column under root.
+func checkParts(d *Data, root ast.Node) error {
 	var problems yamlpos.Problems
-	for _, f := range found {
-		if f.part.pages == nil {
-			continue // drawn in Go, by its own check
+	for _, f := range d.drawn {
+		p := f.shape.part
+		if p == nil || p.pages == nil {
+			continue // a format of floe's, or a part drawn in Go, by its own check
 		}
-		more, err := f.part.check(d.File, f.itemAt, root)
+		more, err := p.check(d.File, f.itemAt, root)
 		if err != nil {
 			return err
 		}
@@ -784,7 +749,7 @@ func checkParts(s *shape, d *Data, root ast.Node) error {
 			problems = append(problems, more...)
 			continue
 		}
-		html, err := f.part.draw(f.itemAt, d)
+		html, err := p.draw(f.itemAt, d)
 		var bad *usererr.Error
 		switch {
 		case errors.As(err, &bad) && bad.Key == "tmpl_words_unknown":
@@ -800,19 +765,6 @@ func checkParts(s *shape, d *Data, root ast.Node) error {
 		return problems.Sorted()
 	}
 	return nil
-}
-
-// partsNamed returns the items of d its schema s draws by the part name.
-func partsNamed(s *shape, d *Data, name string) []itemAt {
-	var found []partAt
-	s.findParts(d.Values, nil, &found)
-	var named []itemAt
-	for _, f := range found {
-		if f.part.name == name {
-			named = append(named, f.itemAt)
-		}
-	}
-	return named
 }
 
 // drew notes html, a part's drawing of the item at the path at.

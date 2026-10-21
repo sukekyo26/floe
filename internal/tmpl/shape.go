@@ -424,3 +424,59 @@ func (s *shape) values() []any {
 	}
 	return s.enum
 }
+
+// drawnItem is an item of a data file floe draws whole, by a part or as a format of floe's, and its shape.
+type drawnItem struct {
+	itemAt
+
+	shape *shape
+}
+
+// drawnWhole adds to found the items v, at the path at, holds that floe draws whole: those a part holds
+// before it, which draws them as they were drawn. What an item of a format of floe's holds is not looked
+// into, nor is a part's schema, which holds no format of floe's.
+func (s *shape) drawnWhole(v any, at []string, found *[]drawnItem) {
+	if s == nil {
+		return
+	}
+	if slices.Contains(formats, s.format) {
+		*found = append(*found, drawnItem{itemAt: itemAt{value: v, at: at}, shape: s})
+		return
+	}
+	in := s.inside()
+	switch v := v.(type) {
+	case map[string]any:
+		for k, item := range v {
+			in.keys[k].drawnWhole(item, append(at[:len(at):len(at)], k), found)
+		}
+	case []any:
+		for i, item := range v {
+			in.each.drawnWhole(item, append(at[:len(at):len(at)], strconv.Itoa(i)), found)
+		}
+	}
+	if s.part != nil {
+		*found = append(*found, drawnItem{itemAt: itemAt{value: v, at: at}, shape: s})
+	}
+}
+
+// formatted returns the items of d of the format of floe's format.
+func (d *Data) formatted(format string) []itemAt {
+	var items []itemAt
+	for _, f := range d.drawn {
+		if f.shape.format == format {
+			items = append(items, f.itemAt)
+		}
+	}
+	return items
+}
+
+// drawnBy returns the items of d the part name draws, those it holds before it.
+func (d *Data) drawnBy(name string) []itemAt {
+	var items []itemAt
+	for _, f := range d.drawn {
+		if f.shape.part != nil && f.shape.part.name == name {
+			items = append(items, f.itemAt)
+		}
+	}
+	return items
+}

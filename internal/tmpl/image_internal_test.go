@@ -112,7 +112,8 @@ func TestCheckImages(t *testing.T) {
 	}
 	s := shapeOf(t, `{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`)
 	d, root := data(t, "pics:\n  - a.png\n  - none.png\n  - a.png\n  - none.png\n")
-	err = checkImages(s, d, root, diskImages(dir))
+	s.drawnWhole(d.Values, nil, &d.drawn)
+	err = checkImages(d, root, diskImages(dir))
 	want := "d.yaml:3:5: pics[1]: there is no image \"none.png\" under " + dir + "\n" +
 		"d.yaml:5:5: pics[3]: there is no image \"none.png\" under " + dir
 	if err == nil || err.Error() != want {
@@ -151,7 +152,8 @@ func TestTriedImages(t *testing.T) {
 
 	s := shapeOf(t, `{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`)
 	d, root := data(t, "pics: [a.png, ../b.png, a.png, .c.png, notes.txt, Data.yaml/d.png]\n")
-	_ = checkImages(s, d, root, diskImages(t.TempDir())) //nolint:errcheck // the images are missing; what was tried is the point
+	s.drawnWhole(d.Values, nil, &d.drawn)
+	_ = checkImages(d, root, diskImages(t.TempDir())) //nolint:errcheck // the images are missing; what was tried is the point
 	if want := []string{"a.png"}; !slices.Equal(d.tried, want) {
 		t.Errorf("tried = %v, want %v", d.tried, want)
 	}
@@ -169,7 +171,8 @@ func TestImagesFromFS(t *testing.T) {
 	files := fstest.MapFS{"sub/a.png": {Data: png}}
 	s := shapeOf(t, `{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`)
 	d, root := data(t, "pics: [sub/a.png, none.png]\n")
-	err = checkImages(s, d, root, fsImages(files, "/plans"))
+	s.drawnWhole(d.Values, nil, &d.drawn)
+	err = checkImages(d, root, fsImages(files, "/plans"))
 	if want := `d.yaml:1:19: pics[1]: there is no image "none.png" under /plans`; err == nil || err.Error() != want {
 		t.Errorf("checkImages = %v\nwant %s", err, want)
 	}

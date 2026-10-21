@@ -13,13 +13,13 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// checkDiagrams reads the diagrams of d, its items its schema s declares of the part diagram, from their
-// nodes under root, checks them and draws them into d.parts with the icons kept in iconsDir. The
-// icons are read afresh for each data file: a server that kept them would draw those a fetch replaced.
+// checkDiagrams reads the diagrams of d, its items of the part diagram, from their nodes under root,
+// checks them and draws them into d.parts with the icons kept in iconsDir. The icons are read afresh for
+// each data file: a server that kept them would draw those a fetch replaced.
 // As floe diagram render does, a spec stops at the first mistake in its shape, and every mistake of
 // its placement is reported. The ids are checked across the page: they name the markers and icons its diagrams define.
-func checkDiagrams(s *shape, d *Data, root ast.Node, iconsDir string) error {
-	found := partsNamed(s, d, "diagram")
+func checkDiagrams(d *Data, root ast.Node, iconsDir string) error {
+	found := d.drawnBy("diagram")
 	if found == nil {
 		return nil
 	}

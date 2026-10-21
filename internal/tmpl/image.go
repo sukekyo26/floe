@@ -271,12 +271,10 @@ func (t *Template) assets() func(name string) (template.URL, error) {
 	}
 }
 
-// checkImages reads the images of d, its items its schema s declares of format image, under images, the
-// directory of the data file, into d.images, and reports each mistake at its line and column under
-// root.
-func checkImages(s *shape, d *Data, root ast.Node, images imageDir) error {
-	var found []itemAt
-	s.find("image", d.Values, nil, &found)
+// checkImages reads the images of d, its items of format image, under images, the directory of the data
+// file, into d.images, and reports each mistake at its line and column under root.
+func checkImages(d *Data, root ast.Node, images imageDir) error {
+	found := d.formatted("image")
 	if found == nil {
 		return nil
 	}
