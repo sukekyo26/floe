@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"maps"
@@ -31,20 +32,21 @@ type shape struct {
 }
 
 // readShape reads doc, a schema as jsonschema reads it, at url, which a relative $ref is read from, into
-// its shape. It refuses $ref, format, description, enum, required, properties and items of another JSON
-// type than JSON Schema's; type, which floe only tells, is kept as written.
+// its shape. It refuses $ref, format, description, enum, required, properties and items in another form
+// than floe reads, the first it meets; type, which floe only tells, is kept as written.
 func readShape(doc any, url string) (*shape, error) {
 	return readShapeAt(doc, url, "#")
 }
 
-// errKeyword is a keyword floe reads, of another JSON type than JSON Schema's.
-var errKeyword = errors.New("a keyword of the wrong JSON type")
+// errUnread is a schema floe reads only in another form than the one written: a boolean schema, or a list
+// of them, is JSON Schema all the same.
+var errUnread = errors.New("a schema floe does not read")
 
 // readShapeAt reads the schema v, at the JSON pointer ptr of the schema at url, into its shape.
 func readShapeAt(v any, url, ptr string) (*shape, error) {
 	m, ok := v.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("%w: %s must be an object", errKeyword, ptr)
+		return nil, fmt.Errorf("%w: floe reads %s only as an object", errUnread, ptr)
 	}
 	ref, errRef := keyword[string](m, "$ref", ptr, "text")
 	format, errFormat := keyword[string](m, "format", ptr, "text")
@@ -52,8 +54,8 @@ func readShapeAt(v any, url, ptr string) (*shape, error) {
 	enum, errEnum := keyword[[]any](m, "enum", ptr, "a list")
 	required, errRequired := keyword[[]any](m, "required", ptr, "a list")
 	props, errProps := keyword[map[string]any](m, "properties", ptr, "an object")
-	if err := errors.Join(errRef, errFormat, errAbout, errEnum, errRequired, errProps); err != nil {
-		return nil, err
+	if err := cmp.Or(errRef, errFormat, errAbout, errEnum, errRequired, errProps); err != nil {
+		return nil, err //nolint:wrapcheck // the first of keyword's mistakes, made here
 	}
 	s := &shape{
 		keys: nil, each: nil, ref: "", format: format, named: nil, part: nil, about: about, typ: m["type"], enum: enum,
@@ -65,7 +67,7 @@ func readShapeAt(v any, url, ptr string) (*shape, error) {
 	for _, r := range required {
 		name, ok := r.(string)
 		if !ok {
-			return nil, fmt.Errorf("%w: %s/required must be a list of text", errKeyword, ptr)
+			return nil, fmt.Errorf("%w: floe reads %s/required only as a list of text", errUnread, ptr)
 		}
 		s.required = append(s.required, name)
 	}
@@ -100,7 +102,7 @@ func keyword[T any](m map[string]any, kw, ptr, want string) (T, error) {
 		return t, nil
 	}
 	if t, ok = v.(T); !ok {
-		return t, fmt.Errorf("%w: %s/%s must be %s", errKeyword, ptr, kw, want)
+		return t, fmt.Errorf("%w: floe reads %s/%s only as %s", errUnread, ptr, kw, want)
 	}
 	return t, nil
 }

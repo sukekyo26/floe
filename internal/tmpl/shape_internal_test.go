@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -54,19 +55,31 @@ func TestShapeNamesPart(t *testing.T) {
 	}
 }
 
-// A keyword floe reads of another JSON type than JSON Schema's is refused, at its pointer.
+// A keyword floe reads in another form than it reads is refused, at its pointer.
 func TestShapeRefusesWrongTypes(t *testing.T) {
 	t.Parallel()
 
 	for src, want := range map[string]string{
-		`{"properties": {"a": true}}`:          "a keyword of the wrong JSON type: #/properties/a must be an object",
-		`{"items": [{"type": "string"}]}`:      "a keyword of the wrong JSON type: #/items must be an object",
-		`{"properties": {"a": {"format": 1}}}`: "a keyword of the wrong JSON type: #/properties/a/format must be text",
-		`{"required": ["a", 1]}`:               "a keyword of the wrong JSON type: #/required must be a list of text",
-		`{"enum": "a"}`:                        "a keyword of the wrong JSON type: #/enum must be a list",
+		`{"properties": {"a": true}}`:          "a schema floe does not read: floe reads #/properties/a only as an object",
+		`{"items": [{"type": "string"}]}`:      "a schema floe does not read: floe reads #/items only as an object",
+		`{"properties": {"a": {"format": 1}}}`: "a schema floe does not read: floe reads #/properties/a/format only as text",
+		`{"required": ["a", 1]}`:               "a schema floe does not read: floe reads #/required only as a list of text",
+		`{"enum": "a"}`:                        "a schema floe does not read: floe reads #/enum only as a list",
 	} {
 		if _, err := readShape(jsonDoc(t, src), schemaURL("t")); err == nil || err.Error() != want {
 			t.Errorf("readShape of %s = %v, want %s", src, err, want)
 		}
+	}
+}
+
+// A key declared null declares nothing of it: the parts under the shape are found past it.
+func TestShapeNullKey(t *testing.T) {
+	t.Parallel()
+
+	s := shapeOf(t, `{"properties": {"a": null, "b": {"$ref": "floe:///parts/table.json"}}}`)
+	var names []string
+	s.partsUnder(&names)
+	if !slices.Contains(names, "table") {
+		t.Errorf("partsUnder = %v, want table among them", names)
 	}
 }

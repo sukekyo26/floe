@@ -318,7 +318,7 @@ func pickTheme(d *Data, theme *string, given string, names []string, pos yamlpos
 // in the keys every template shares.
 func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems yamlpos.Problems) error {
 	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
-	s, doc, err := t.shape()
+	s, doc, err := t.checkedShape()
 	if err != nil {
 		return err
 	}
@@ -618,10 +618,10 @@ func convert(md goldmark.Markdown, name, text string) (string, error) {
 	return b.String(), nil
 }
 
-// shape reads the schema of t into its shape, and returns it as jsonschema reads it too. It refuses a ref
-// into a part, a part floe draws in Go written as a format, which would be drawn as its text, and a key
-// floe reads itself (refuseShared).
-func (t *Template) shape() (*shape, any, error) {
+// checkedShape reads the schema of t into its shape, and returns it as jsonschema reads it too. It refuses
+// a ref into a part, a part floe draws in Go written as a format, which would be drawn as its text, and a
+// key floe reads itself (refuseShared).
+func (t *Template) checkedShape() (*shape, any, error) {
 	doc, err := t.schemaDoc()
 	if err != nil {
 		return nil, nil, err
