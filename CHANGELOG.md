@@ -129,9 +129,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `--fg`, `--font`) on its root under any template; a template keeps colours
   of its own, those among them, by setting them on `:scope`. `palette.css`
   holds those variables alone, without `!important`, on `:root` and then in
-  `@media (prefers-color-scheme: dark)`, and is warned of where it sets a colour for light mode alone, as is a
-  template that sets one so on `:scope`. A part of your own cannot be named `palette`. `floe
-  template show` lists the themes.
+  `@media (prefers-color-scheme: dark)`, and is warned of where it sets a
+  colour for light mode alone, as is a template that sets one so on `:scope`.
+  A part of your own cannot be named `palette`. `floe template show` lists the
+  themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as
