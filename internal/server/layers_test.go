@@ -14,7 +14,8 @@ import (
 // in floe's @scope, work. A block page.css leaves open does not take in the theme, nor one a part of one's
 // own leaves open the parts after it. A part's style stops at a part it holds. floe's theme does not
 // style a part of one's own that took the place of floe's, but does those drawn in its look. floe's base
-// draws the page's ground, colour and face in the theme's, under a template that draws none of them.
+// draws the page's ground, colour and face in the theme's, under a template that draws none of them, and
+// the theme the parts in the colours a template sets.
 func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
 	e := newEnv(t)
 	b := newBrowser(t, e.base, i18n.English)
@@ -104,6 +105,20 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	got = b.eval(`(() => { const r = getComputedStyle(document.documentElement);
 		return [r.backgroundImage.split('linear-gradient').length - 1, r.backgroundSize, r.backgroundColor].join(' | ') })()`)
 	check(t, "squares", []string{got}, "2 | 16px 16px, 16px 16px, auto | rgb(238, 244, 252)")
+
+	// The colours a template sets on :scope reach what the theme draws in the parts, the text on a filled
+	// face among them, which takes the surface the template set.
+	e.write(t, "templates/brand/schema.json", `{"type": "object", "properties": {"note": {"$ref": "floe:///parts/note.json"}}, "additionalProperties": false}`)
+	e.write(t, "templates/brand/page.html", `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>`+
+		`<body>{{.Data.note}}</body></html>`)
+	e.write(t, "templates/brand/page.css", ":scope { --accent: rgb(1, 2, 3); --surface: rgb(4, 5, 6); }\n")
+	slug = "brand"
+	e.publish(t, e.write(t, "brand.yaml", "template: brand\nlang: en\ntheme: ink\nnote: { title: t, text: x }\n"), store.Options{Slug: &slug})
+	b.navigate("/a/brand/?raw")
+	b.until("the note", "!!document.querySelector('[data-floe-part=note] .title')")
+	got = b.eval(`(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n.querySelector('.title'));
+		return [getComputedStyle(n).borderTopColor, s.backgroundColor, s.color].join(' | ') })()`)
+	check(t, "brand", []string{got}, "rgb(1, 2, 3) | rgb(1, 2, 3) | rgb(4, 5, 6)")
 
 	// A table of one's own takes the place of floe's, and the panel's look by its part.yaml: floe's washi
 	// styles it and compare, drawn in the table's look, by the panel's file (its double rules), not by the

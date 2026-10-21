@@ -1,1 +1,4 @@
 :scope figcaption :is(.added, .removed) { font-weight: 900; }
+/* Its heading is on the surface, where the colours of the code's dark ground cannot be read */
+:scope figcaption .added { color: var(--good); }
+:scope figcaption .removed { color: var(--bad); }

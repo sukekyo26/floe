@@ -1,17 +1,17 @@
 :scope {
-  font-family: var(--washi-font); --display: var(--washi-font); background: var(--washi-paper); color: var(--washi-sumi); border-radius: 0; box-shadow: none;
+  background: var(--surface); color: var(--fg); border-radius: 0; box-shadow: none;
 }
-:scope, :scope:is(.good, .warn, .bad) { background: var(--washi-paper); border: 0; border-top: 2px solid var(--washi-ai); padding-left: 4rem; }
-:scope.good { border-top-color: var(--washi-matcha); }
-:scope.warn { border-top-color: var(--washi-kincha); }
-:scope.bad { border-top-color: var(--washi-shu); }
+:scope, :scope:is(.good, .warn, .bad) { background: var(--surface); border: 0; border-top: 2px solid var(--accent); padding-left: 4rem; }
+:scope.good { border-top-color: var(--good); }
+:scope.warn { border-top-color: var(--warn); }
+:scope.bad { border-top-color: var(--bad); }
 /* The seals are the kanji for a note, good, a warning and a danger, escaped to keep the source in English */
-:scope::before { content: "\6CE8"; content: "\6CE8" / ""; width: 2rem; height: 2rem; border-radius: 4px; background: var(--washi-ai); color: var(--washi-paper); font-size: 1.05rem; }
-:scope.good::before { content: "\826F"; content: "\826F" / ""; background: var(--washi-matcha); color: var(--washi-paper); }
-:scope.warn::before { content: "\6212"; content: "\6212" / ""; background: var(--washi-kincha); color: var(--washi-paper); }
-:scope.bad::before { content: "\5371"; content: "\5371" / ""; background: var(--washi-shu); color: var(--washi-paper); }
-.title { color: var(--washi-ai); letter-spacing: 0.1em; }
-:scope.good .title { color: var(--washi-matcha); }
-:scope.warn .title { color: var(--washi-kincha); }
-:scope.bad .title { color: var(--washi-shu); }
-:scope code { background: rgb(0 0 0 / 0.06); }
+:scope::before { content: "\6CE8"; content: "\6CE8" / ""; width: 2rem; height: 2rem; border-radius: 4px; background: var(--accent); color: var(--on-fill); font-size: 1.05rem; }
+:scope.good::before { content: "\826F"; content: "\826F" / ""; background: var(--good); color: var(--on-fill); }
+:scope.warn::before { content: "\6212"; content: "\6212" / ""; background: var(--warn); color: var(--on-fill); }
+:scope.bad::before { content: "\5371"; content: "\5371" / ""; background: var(--bad); color: var(--on-fill); }
+.title { color: var(--accent); letter-spacing: 0.1em; }
+:scope.good .title { color: var(--good); }
+:scope.warn .title { color: var(--warn); }
+:scope.bad .title { color: var(--bad); }
+:scope code { background: color-mix(in srgb, var(--fg) 6%, transparent); }

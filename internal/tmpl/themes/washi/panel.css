@@ -1,5 +1,4 @@
-/* --display too, the face floe's base gives headings */
 :scope {
-  font-family: var(--washi-font); --display: var(--washi-font); background: var(--washi-paper); color: var(--washi-sumi); border-radius: 0; box-shadow: none;
-  border: 0; border-top: 4px double var(--washi-sumi); border-bottom: 4px double var(--washi-sumi);
+  background: var(--surface); color: var(--fg); border-radius: 0; box-shadow: none;
+  border: 0; border-top: 4px double var(--fg); border-bottom: 4px double var(--fg);
 }

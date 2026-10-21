@@ -1,0 +1,359 @@
+template: report
+lang: ja
+title: floe の部品の一覧
+eyebrow: 見本 · 2026-10-17
+lead: floe が持つ部品（table・cards・note・code・terminal・stats・progress・steps・checklist・compare・options・facts・diff・tree・links・findings・details・matrix・decision・risks・fields・timeline・bars・faq・glossary・keys・tabs・diagram・script）と、Markdown の文章（text）・HTML（html）を、色の種類（tone）とあわせてすべて描いたページ。部品の見た目を直したときに、ここで確かめる。
+sections:
+  - heading: 文章（text）
+    parts:
+      - text: |
+          Markdown の文章。**太字**、*斜体*、[リンク](/a/floe-parts/)、文中の短いコード `floe list` を書ける。
+
+          - 箇条書き
+            - 入れ子の箇条書き
+          - 2 つ目
+
+          1. 番号付き
+          2. 2 つ目
+
+          > 引用
+
+          Markdown の表は、表の部品と同じ見た目になる。
+
+          | 名前 | 数 |
+          | --- | --: |
+          | report | 1 |
+          | memo | 12 |
+  - heading: 表（table）
+    parts:
+      - table:
+          columns:
+            - title: 部品
+            - { title: 行, num: true }
+            - title: 説明
+            - title: 状態
+          rows:
+            - [table, '12', 'セルは 1 行の Markdown（`code`・**太字**・[リンク](/a/floe-parts/)）', { pill: accent, tone: accent }]
+            - [cards, '3', 横に並ぶカード, { pill: good, tone: good }]
+            - [note, '1', 文章から分けた注記, { pill: warn, tone: warn }]
+            - [code, '1024', コード, { pill: bad, tone: bad }]
+            - [terminal, '-', コマンドと出力, { pill: tone なし }]
+  - heading: カード（cards）
+    parts:
+      - cards:
+          - title: 1 枚目
+            text: 見出しと **Markdown** の文章。`code` と[リンク](/a/floe-parts/)も書ける。
+          - title: 2 枚目
+            text: |
+              - 箇条書きも
+              - 書ける
+          - title: 見出しだけ
+  - heading: 注記（note）
+    parts:
+      - note:
+          text: tone なし（accent と同じ）の注記。`code` も書ける。
+      - note:
+          tone: accent
+          title: 補足
+          text: accent の注記。
+      - note:
+          tone: good
+          title: よい点
+          text: good の注記。
+      - note:
+          tone: warn
+          title: 注意
+          text: warn の注記。
+      - note:
+          tone: bad
+          title: 危険
+          text: bad の注記。
+  - heading: コード（code）
+    parts:
+      - code:
+          file: internal/store/store.go
+          lang: go
+          text: |
+            // Draw draws the page of slug.
+            func (s *Store) Draw(slug string) ([]byte, error) {
+            	return s.lib.Render(s.File(slug), slug) // 長い行は枠の中で横にスクロールする。長い行は枠の中で横にスクロールする。
+            }
+      - code:
+          lang: yaml
+          text: |
+            template: report
+            lang: ja
+      - code:
+          text: 見出しなし（file も lang も無いとき）
+  - heading: ターミナル（terminal）
+    parts:
+      - terminal:
+          shell: bash
+          steps:
+            - run: floe publish plan.yaml
+              out: http://127.0.0.1:7325/a/plan/
+            - run: |
+                go test ./... \
+                  -run TestX
+              out: |
+                ok  	github.com/sukekyo26/floe/internal/tmpl	0.522s
+                ok  	github.com/sukekyo26/floe/internal/cli	8.415s
+      - terminal:
+          shell: zsh
+          steps:
+            - run: brew install go
+      - terminal:
+          shell: sh
+          steps:
+            - run: ./configure && make
+      - terminal:
+          shell: powershell
+          steps:
+            - run: Get-ChildItem
+      - terminal:
+          shell: cmd
+          steps:
+            - run: dir
+      - terminal:
+          steps:
+            - run: floe list
+              out: （shell を省くと名前は出さず、プロンプトは $）
+  - heading: 数の並び（stats）
+    parts:
+      - stats:
+          - { label: 保存したページ, value: '18', note: ＋5 先週から, tone: good }
+          - { label: テスト, value: '301', note: すべて通過, tone: good }
+          - { label: バイナリ, value: '14.9', unit: MB, note: ＋0.3 MB, tone: warn }
+          - { label: 失敗した CI, value: '2', note: ＋2, tone: bad }
+          - { label: 部品, value: '17', note: tone なし }
+          - { label: テーマ, value: '9', note: accent, tone: accent }
+  - heading: 進み具合（progress）
+    parts:
+      - progress:
+          - { label: 計画ページの書き直し, done: 5, of: 8 }
+          - { label: 見直したテーマ, done: 6, of: 9, tone: accent }
+          - { label: 部品の PR, done: 4, of: 5, tone: good }
+          - { label: 直す警告, done: 1, of: 6, tone: warn }
+          - { label: 落ちたテスト, done: 3, of: 3, tone: bad }
+  - heading: 手順（steps）
+    parts:
+      - steps:
+          - { title: 部品の仕組み, text: '#51 でマージ', state: done }
+          - { title: コードとターミナル, text: '#53 でマージ。report のコードを部品に寄せた', state: done }
+          - { title: 自作の部品, text: '`~/.config/floe/parts` に置いた部品を使えるようにする', state: doing }
+          - { title: コードの色分け, text: chroma を入れるか決める, state: todo }
+          - title: 説明のない段
+  - heading: 確認項目（checklist）
+    parts:
+      - checklist:
+          - { text: CI が通る, done: true }
+          - { text: 自己レビューを済ませる, done: true }
+          - text: 計画ページを **書き直す**
+  - heading: 今とこれから（compare）
+    parts:
+      - compare:
+          before: 今
+          after: これから
+          rows:
+            - { what: 表の置き場所, before: report の中だけ, after: floe の部品 }
+            - { what: 部品の見た目, before: テーマに散らばる, after: '部品の `part.css`' }
+            - { what: 自作の部品, before: 作れない, after: '`~/.config/floe/parts`' }
+            - { what: データファイル, before: '`- table: {…}`', after: '`- table: {…}`' }
+  - heading: 案の比べ（options）
+    parts:
+      - options:
+          - title: 色分けしない
+            pros: [バイナリが増えない, 今の部品のまま出せる]
+            cons: [単色で読みにくい]
+          - title: chroma で色分け
+            pick: 勧める
+            text: エディタと同じ規則で色を付ける。`chroma` の[規則](/a/floe-parts/)を使う。
+            pros: [エディタに近い見た目, 言語の規則がそろう]
+            cons: [約 4.7MB 増える]
+          - title: 自前で色分け
+            cons: [言語ごとに規則を書く, 直し続けることになる]
+  - heading: 項目と値（facts）
+    parts:
+      - facts:
+          - { name: 担当, value: エージェント }
+          - { name: 期日, value: 2026-10-24 }
+          - { name: 状態, value: { pill: 設計中 } }
+          - { name: レビュー, value: { pill: 要修正, tone: bad } }
+          - { name: 関連, value: '[#54](https://github.com/sukekyo26/floe/pull/54)' }
+  - heading: 差分（diff）
+    parts:
+      - diff:
+          file: internal/tmpl/part.go
+          lang: go
+          text: |
+            diff --git a/internal/tmpl/part.go b/internal/tmpl/part.go
+            index 3f1c2a0..8b9d4e1 100644
+            --- a/internal/tmpl/part.go
+            +++ b/internal/tmpl/part.go
+            @@ -408,4 +408,6 @@ func partStyles(page []byte) (string, error) {
+             func partStyles(page []byte) (string, error) {
+            -	used := map[string]bool{}
+            +	if !bytes.Contains(page, []byte("floe-")) {
+            +		return "", nil
+            +	}
+             	set, err := builtinParts()
+      - diff:
+          text: |
+            -old line
+            +new line that is much longer than the width of the page so that the face of the line has to scroll sideways with it
+             same
+  - heading: ファイルの木（tree）
+    parts:
+      - tree:
+          - { path: internal/tmpl/part.go, note: 部品の読み込み・検査・描画, change: changed }
+          - { path: internal/tmpl/partfuncs.go, note: diff と tree を組み立てる, change: added }
+          - { path: internal/tmpl/parts/stats/, change: added }
+          - { path: internal/tmpl/parts/table/, note: 表の部品 }
+          - { path: internal/tmpl/builtin/report/themes/, note: 5 つのテーマ }
+          - { path: internal/tmpl/old.go, change: removed }
+          - { path: docs/templates.md }
+  - heading: 参照（links）
+    parts:
+      - links:
+          - { title: '#54 部品の見た目とテーマ', url: 'https://github.com/sukekyo26/floe/pull/54', text: マージ済み }
+          - { title: floe の部品, url: /a/floe-parts/, text: 部品の設計 }
+  - heading: レビューの指摘（findings）
+    parts:
+      - findings:
+          - { level: must, at: 'internal/tmpl/part.go:412', text: テーマのクラス名だけで、すべての部品の CSS がページに入る, status: { pill: 直した, tone: good } }
+          - { level: should, at: 'internal/tmpl/parts/note/part.css:9', text: C と E のテーマで色ごとの印が残る, status: { pill: 直した, tone: good } }
+          - { level: nit, at: 'docs/templates.md:88', text: 例の YAML が古い, why: ドキュメントを書き直す別の PR で直す, status: { pill: 見送り } }
+          - { level: should, text: 場所の無い指摘 }
+  - heading: 畳む（details）
+    parts:
+      - details:
+          title: just ci の出力（312 行）
+          parts:
+            - terminal:
+                shell: bash
+                steps:
+                  - run: just ci
+                    out: |
+                      ok  github.com/sukekyo26/floe/internal/tmpl  0.995s
+                      Total coverage: 93.9% (threshold: 90%)
+      - details:
+          title: '付録: 調べたプロンプトの形'
+          open: true
+          parts:
+            - text: bash・zsh・fish・PowerShell・cmd の既定のプロンプトと、よく使われる設定（starship・oh-my-zsh）を調べた。
+            - note: { tone: warn, text: fish はまだ対応していない。 }
+  - heading: 対応表（matrix）
+    parts:
+      - matrix:
+          columns: [linux, darwin, windows, WSL]
+          rows:
+            - { what: floe serve, cells: [yes, yes, no, yes] }
+            - { what: リンクの検査, cells: [yes, yes, no, { mark: part, note: /mnt 以外 }] }
+            - { what: ブラウザで開く, cells: [yes, yes, no, { mark: part, note: wslview }] }
+  - heading: 決めたこと（decision）
+    parts:
+      - decision:
+          title: プロンプトの見分けは「最初の語」だけで行う
+          status: { pill: 決定, tone: good }
+          date: 2026-10-12
+          text: 形を並べて足していくと、見逃しが出るたびに直すことになる。最初の語なら規則が 1 つで済む。
+          rejected:
+            - プロンプトの形を列挙する（見逃しが残る）
+            - 文の中も調べる（誤検知が多い）
+  - heading: リスク（risks）
+    parts:
+      - risks:
+          - { what: chroma でバイナリが太る, likely: high, impact: low, fix: 言語を絞って入れる }
+          - { what: 古いページが開けなくなる, likely: low, impact: high, fix: 描くたびに検査して直し方を知らせる }
+          - { what: テーマの CSS が部品と食い違う, likely: mid, impact: mid, fix: すべての部品を描くページで見る }
+          - { what: 保存先が壊れる, likely: high, impact: high }
+          - { what: 小さな見た目のずれ, likely: low, impact: mid }
+  - heading: 項目の説明（fields）
+    parts:
+      - fields:
+          - { name: --template, type: string, required: true, text: 使うテンプレートの名前 }
+          - { name: --port, type: number, default: 7325, text: サーバーが待つポート }
+          - { name: --open, type: boolean, default: false, text: 公開したらブラウザで開く }
+          - { name: theme }
+  - heading: 日付の並び（timeline）
+    parts:
+      - timeline:
+          - { date: 2026-10-02, title: 部品の仕組み, text: '#51 をマージ。表・カード・注意書きが部品になった' }
+          - { date: 2026-10-06, title: 図とスクリプトも部品に, text: '#52 をマージ' }
+          - { date: 2026-10-09, title: コードとターミナル, text: '#53 をマージ', tone: good }
+          - { date: 2026-10-14, title: 見た目とテーマ, tone: warn }
+          - { date: 2026-10-20, title: パレット, text: '#102 をマージ', tone: accent }
+          - { date: 2026-10-21, title: 取りこぼし, text: '#104 を閉じた', tone: bad }
+  - heading: 棒グラフ（bars）
+    parts:
+      - bars:
+          - { label: tmpl, value: 4.2 }
+          - { label: diagram, value: 2.8 }
+          - { label: store, value: 1.1, tone: good }
+          - { label: ui, value: 3.5, tone: accent }
+          - { label: cli, value: 6, tone: warn }
+          - { label: server, value: 24.2, tone: bad }
+  - heading: 問いと答え（faq）
+    parts:
+      - faq:
+          - { q: 保存したページは、テンプレートを直すとどうなる？, a: 開くたびに今のテンプレートで描き直し、検査も通し直す。, open: true }
+          - { q: Windows で動く？, a: '動かない。[WSL](https://learn.microsoft.com/windows/wsl/) を使う。' }
+  - heading: 用語（glossary）
+    parts:
+      - glossary:
+          - { term: 部品, text: 'テンプレートが `$ref` で使う、floe の描き方のひとまとまり' }
+          - { term: テーマ, text: report の見た目。部品のクラスに色と形を当て直す }
+          - { term: データファイル, text: ページの中身を書いた YAML }
+  - heading: キー操作（keys）
+    parts:
+      - keys:
+          - { keys: [Ctrl, K], text: ページを探す }
+          - { keys: [J], text: 次のページ }
+          - { keys: [Ctrl, Shift, P], text: '`floe` のコマンドを開く' }
+  - heading: 切り替え（tabs）
+    parts:
+      - tabs:
+          - title: bash
+            parts:
+              - terminal: { shell: bash, steps: [{ run: floe publish plan.yaml }] }
+          - title: PowerShell
+            parts:
+              - terminal: { shell: powershell, steps: [{ run: floe publish plan.yaml }] }
+              - text: PowerShell では引用符に気を付ける。
+      - tabs:
+          - { title: 前, parts: [{ code: { lang: go, text: "used := map[string]bool{}\n" } }] }
+          - { title: 後, parts: [{ diff: { lang: go, text: "-a\n+b\n" } }] }
+  - heading: 図（diagram）
+    parts:
+      - diagram:
+          id: tones
+          width: 640
+          height: 140
+          title: 図の部品の色の種類
+          parts:
+            - box: { x: 16, y: 40, w: 104, h: 60, rows: [tone なし] }
+            - box: { x: 144, y: 40, w: 104, h: 60, tone: accent, rows: [accent] }
+            - box: { x: 272, y: 40, w: 104, h: 60, tone: good, rows: [good] }
+            - box: { x: 400, y: 40, w: 104, h: 60, tone: warn, rows: [warn] }
+            - box: { x: 528, y: 40, w: 96, h: 60, tone: bad, rows: [bad] }
+            - edge: { d: "M120,70 H144" }
+            - edge: { d: "M248,70 H272" }
+            - edge: { d: "M376,70 H400" }
+            - edge: { d: "M504,70 H528" }
+  - heading: スクリプト（script）
+    parts:
+      - script:
+          data: { start: 3 }
+          js: |
+            function (el, data) {
+              el.innerHTML = '<label>数 <input type="range" min="0" max="10" value="' + data.start + '"></label> <output></output>';
+              const input = el.querySelector('input'), out = el.querySelector('output');
+              const update = () => { out.textContent = input.value; };
+              input.addEventListener('input', update);
+              update();
+            }
+  - heading: HTML（html）
+    parts:
+      - html: |
+          <p>HTML はそのまま入る。`data-floe-part` で部品を名乗れば部品の見た目になる: <span class="good" data-floe-part="cell">good</span> <span class="bad" data-floe-part="cell">bad</span></p>
+          <details><summary>開閉できる要素</summary><p>中身。</p></details>

@@ -9,7 +9,7 @@
 :scope::before {
   content: "i"; content: "i" / ""; position: absolute; left: 1.25rem; top: 1.1rem;
   display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%;
-  background: var(--accent); color: var(--surface); font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
 :scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
 :scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }

@@ -1,6 +1,6 @@
 /* In the table's look, without a heading: a level's pill, then where it is and what became of it over what it is */
 :scope td.level { width: 1%; min-width: auto; white-space: nowrap; }
-:scope .level .nit { background: color-mix(in srgb, var(--line) 55%, var(--surface)); color: var(--muted); }
+:scope .level .nit { background: color-mix(in srgb, var(--fg) 8%, var(--surface)); color: var(--muted); }
 :scope .head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem; }
 :scope .at { padding: 0; background: none; font-size: 0.8rem; color: var(--accent); overflow-wrap: anywhere; }
 :scope .status { margin-left: auto; }

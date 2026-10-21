@@ -50,7 +50,7 @@ func quote(name string) map[string]string {
 		name + "/part.html": `<figure data-floe-part="` + name + `"><blockquote>{{.text}}</blockquote>` +
 			`{{with .source}}<figcaption class="source">{{word "by"}} {{.}}</figcaption>{{end}}</figure>`,
 		name + "/words.yaml": "en: { by: by }\nja: { by: 出典 }\n",
-		name + "/part.css":   "/* the " + name + " of one's own */\n:scope { margin: 0; }\n.source { color: var(--muted, #57635f); }\n",
+		name + "/part.css":   "/* the " + name + " of one's own */\n:scope { margin: 0; }\n.source { color: var(--muted); }\n",
 	}
 }
 
@@ -425,7 +425,8 @@ func TestOwnPartsThemes(t *testing.T) {
 
 	files := quote("code")
 	files["themes/brutal/code.css"] = "/* brutal's code of one's own */\n"
-	files["themes/mine/base.css"] = "/* mine */\n:root { --mine-ink: #123; }\n"
+	files["themes/brutal/palette.css"] = "/* brutal's palette of one's own */\n:root { --brutal-yellow: #ff0; --brutal-head-bg: #c00; }\n"
+	files["themes/mine/base.css"] = "/* mine */\nblockquote { color: var(--fg); }\n"
 	files["themes/mine/palette.css"] = "/* mine's palette */\n:root { --bg: #123; }\n" +
 		"@media (prefers-color-scheme: dark) { :root { --bg: #321; } }\n"
 	files["themes/pale/palette.css"] = ":root { --bg: #fdf6e3; --font: serif; --rule: 2px solid var(--fg); }\n"
@@ -453,10 +454,14 @@ func TestOwnPartsThemes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A palette of one's own goes over floe's of its name, which keeps the theme's variables it leaves out.
+	if floe, mine := strings.Index(page, "/* Black on cream"), strings.Index(page, "/* brutal's palette of one's own */"); floe < 0 || mine < floe {
+		t.Errorf("the palettes of brutal are at %d and %d:\n%s", floe, mine, page)
+	}
 	for want, n := range map[string]int{
 		`@scope ([data-floe-part="code"]) to (:scope [data-floe-part] > *) {` + "\n/* brutal's code of one's own */": 1,
 		string(note): 1,
-		":scope .lang { border-radius: 0; border: 2px solid var(--brutal-ink)": 0,
+		":scope .lang { border-radius: 0; border: 2px solid var(--fg)": 0,
 	} {
 		if strings.Count(page, want) != n {
 			t.Errorf("the page holds %s %d times, want %d:\n%s", want, strings.Count(page, want), n, page)
@@ -528,8 +533,10 @@ func TestOwnPartsThemes(t *testing.T) {
 		return slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), prefix) })
 	}
 	pale := filepath.Join(themesOf(parts), "pale", "palette.css") + " sets --bg for light mode alone"
-	if !warned(pale) || warned(filepath.Join(themesOf(parts), "mine")) || warned(filepath.Join(themesOf(parts), "broke", "palette.css")) {
-		t.Errorf("Check = %v, want %s alone of the palettes", warnings, pale)
+	// Over floe's of its name, a palette of one's own is told of that palette's colours too.
+	head := filepath.Join(themesOf(parts), "brutal", "palette.css") + " sets --brutal-head-bg for light mode alone"
+	if !warned(pale) || !warned(head) || warned(filepath.Join(themesOf(parts), "mine")) || warned(filepath.Join(themesOf(parts), "broke", "palette.css")) {
+		t.Errorf("Check = %v, want %s and %s alone of the palettes", warnings, pale, head)
 	}
 	for _, want := range append(strays, why) {
 		if len(mistakes) != 0 || !slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), want) }) {

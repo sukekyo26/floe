@@ -5,6 +5,6 @@
 :scope .type {
   display: block; width: fit-content; margin-top: 0.2rem; padding: 0 0.45rem; border-radius: 5px; font-size: 0.75rem;
   font-family: var(--mono);
-  background: color-mix(in srgb, var(--line) 45%, var(--surface)); color: var(--muted);
+  background: color-mix(in srgb, var(--fg) 8%, var(--surface)); color: var(--muted);
 }
 :scope .default { display: block; margin-top: 0.15rem; font-size: 0.85rem; color: var(--muted); }

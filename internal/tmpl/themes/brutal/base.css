@@ -1,14 +1,6 @@
 /* Thick black frames, flat primary faces and hard offset shadows; no corner is rounded */
-:root {
-  --brutal-ink: #0a0a0a; --brutal-yellow: #ffde21; --brutal-blue: #6fa2ff; --brutal-pink: #ff8acb;
-  --brutal-green: #3ddc84; --brutal-orange: #ffa62b; --brutal-red: #ff5c5c;
-  --brutal-head-bg: #0a0a0a; --brutal-head-fg: #ffde21;
-}
-@media (prefers-color-scheme: dark) {
-  :root { --brutal-ink: #f2f2f2; --brutal-head-bg: #ffde21; --brutal-head-fg: #0a0a0a; }
-}
 blockquote {
-  border: 3px solid var(--brutal-ink); border-radius: 0; padding: 1.1rem 1.4rem; background: var(--brutal-yellow); color: #0a0a0a;
-  font-size: 1.2rem; font-weight: 800; box-shadow: 6px 6px 0 var(--brutal-ink); margin-right: 6px;
+  border: 3px solid var(--fg); border-radius: 0; padding: 1.1rem 1.4rem; background: var(--brutal-yellow); color: var(--brutal-ink);
+  font-size: 1.2rem; font-weight: 800; box-shadow: 6px 6px 0 var(--fg); margin-right: 6px;
 }
 blockquote :is(a, code) { color: inherit; }

@@ -1,2 +1,2 @@
 :scope { box-shadow: none; }
-:scope figcaption { background: rgb(255 255 255 / 0.07); font-weight: 600; }
+:scope figcaption { background: color-mix(in srgb, var(--code-fg) 7%, transparent); font-weight: 600; }

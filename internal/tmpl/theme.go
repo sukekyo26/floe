@@ -50,28 +50,30 @@ func (set *partSet) themesWith(name string) []string {
 }
 
 // theme is a theme: its base.css and palette.css, for every page, and the style of each part it restyles,
-// which reaches every element that has the part's look.
+// which reaches every element that has the part's look. Its palettes are floe's and, over it, one's own of
+// its name: a palette of one's own changes the variables it writes, the theme's own names among them.
 type theme struct {
-	base    string
-	palette string
-	parts   map[string]string // by the part's name
+	base     string
+	palettes []string
+	parts    map[string]string // by the part's name
 }
 
 func newTheme() *theme {
-	return &theme{base: "", palette: "", parts: map[string]string{}}
+	return &theme{base: "", palettes: nil, parts: map[string]string{}}
 }
 
-// readTheme reads the theme in files, its directory, shown in its mistakes as dir, over t:
-// each file takes the place of t's of its name. A file named for none of base.css, palette.css, a part
-// or a look of set is warned of, as it goes into no page, and so is a palette that sets a colour for light
-// mode alone.
+// readTheme reads the theme in files, its directory, shown in its mistakes as dir, over t: each file
+// takes the place of t's of its name, but palette.css, which goes over t's. A file named for none of
+// base.css, palette.css, a part or a look of set is warned of, as it goes into no page, and so is a
+// palette that sets a colour for light mode alone, and another file that writes a colour or sets a
+// variable, as colourWarnings tells.
 func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
 	entries, err := fs.ReadDir(files, ".")
 	if err != nil {
 		return fmt.Errorf("read the theme %s: %w", dir, err)
 	}
 	// Warned of once the theme is read whole: one that cannot be used goes into no page.
-	var paletteWarnings []*usererr.Error
+	var warnings []*usererr.Error
 	for _, e := range entries {
 		name, isCSS := strings.CutSuffix(e.Name(), ".css")
 		// A file of another kind, or of a name starting with a dot (.DS_Store), is none of the theme's.
@@ -89,23 +91,27 @@ func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
 			return fmt.Errorf("read the theme %s: %w", dir, err)
 		}
 		// base.css and palette.css are for the whole page, out of the parts' scope.
-		sheet := readCSS(css)
-		if err = sheet.refuse(path.Join(dir, e.Name()), name != themeBase && name != themePalette); err != nil {
+		file, sheet := path.Join(dir, e.Name()), readCSS(css)
+		if err = sheet.refuse(file, name != themeBase && name != themePalette); err != nil {
 			return err
 		}
-		switch name {
-		case themeBase:
-			t.base = string(css)
-		case themePalette:
-			if paletteWarnings, err = checkPalette(path.Join(dir, e.Name()), sheet); err != nil {
+		if name == themePalette {
+			var more []*usererr.Error
+			if more, err = checkPalette(file, sheet, t.palettes); err != nil {
 				return err
 			}
-			t.palette = string(css)
-		default:
+			warnings = append(warnings, more...)
+			t.palettes = append(t.palettes, string(css))
+			continue
+		}
+		warnings = append(warnings, colourWarnings(file, sheet, false)...)
+		if name == themeBase {
+			t.base = string(css)
+		} else {
 			t.parts[name] = string(css)
 		}
 	}
-	set.strays = append(set.strays, paletteWarnings...)
+	set.strays = append(set.strays, warnings...)
 	return nil
 }
 
@@ -118,8 +124,9 @@ func (set *partSet) themeFile(name string) bool {
 }
 
 // checkPalette refuses s, palette.css shown as file, as readPalette does, and returns the warning of
-// the colours it sets for light mode alone.
-func checkPalette(file string, s *cssSheet) ([]*usererr.Error, error) {
+// the colours it sets for light mode alone, of those that change with the mode in default's palette and
+// in under, floe's palettes of its theme it goes over.
+func checkPalette(file string, s *cssSheet, under []string) ([]*usererr.Error, error) {
 	c, err := readPalette(file, s)
 	if err != nil {
 		return nil, err
@@ -127,6 +134,17 @@ func checkPalette(file string, s *cssSheet) ([]*usererr.Error, error) {
 	modes, err := floeModes()
 	if err != nil {
 		return nil, err
+	}
+	modes = maps.Clone(modes)
+	for _, palette := range under {
+		u, err := readPalette(file, readCSS([]byte(palette)))
+		if err != nil {
+			return nil, err
+		}
+		// One that changes with the mode in either stays so.
+		for name, own := range modesOf(u) {
+			modes[name] = modes[name] || own
+		}
 	}
 	if names := c.lightOnly(modes); names != nil {
 		return []*usererr.Error{usererr.New("tmpl_palette_dark", file, andList(names))}, nil
@@ -283,9 +301,10 @@ func (c *modeColours) add(d cssDeclaration, inDark bool) {
 	}
 }
 
-// readScope adds what a template's CSS, s, sets on :scope, in the order it is
-// written: in a block of :scope, or of an at-rule in it (:scope { @media … { … } }), under at-rules or
-// none (@layer, @supports), for dark mode where one of them is a dark one, as darkCondition tells.
+// readScope adds what a template's CSS, s, sets on :scope, in the order it is written: outside any block,
+// which floe's @scope applies to :scope, in a block of :scope, or of an at-rule in it (:scope { @media …
+// { … } }), under at-rules or none (@layer, @supports), for dark mode where one of them is a dark one, as
+// darkCondition tells.
 // LIMIT: :scope alone as a selector, not in a list (:scope, body). Read the selectors if a template comes
 // to set colours so.
 func (c *modeColours) readScope(s *cssSheet) {
@@ -294,6 +313,10 @@ func (c *modeColours) readScope(s *cssSheet) {
 		dark bool
 	}
 	var decls []modeDecl
+	// One outside any block, in floe's @scope, is :scope's.
+	for _, d := range s.decls {
+		decls = append(decls, modeDecl{d: d, dark: false})
+	}
 	for i := range s.rules {
 		if !s.rules[i].block || !s.onScope(i) {
 			continue
@@ -310,7 +333,7 @@ func (c *modeColours) readScope(s *cssSheet) {
 }
 
 // onScope reports whether the declarations of the rule i of s set on :scope: it is :scope's, or an
-// at-rule's in it.
+// at-rule's in it or in none, which floe's @scope applies to :scope.
 func (s *cssSheet) onScope(i int) bool {
 	for ; i >= 0; i = s.rules[i].parent {
 		switch r := &s.rules[i]; {
@@ -320,7 +343,7 @@ func (s *cssSheet) onScope(i int) bool {
 			return false
 		}
 	}
-	return false
+	return true
 }
 
 // under reports whether the rule i of s, or one that holds it, is an at-rule of a prelude match tells.

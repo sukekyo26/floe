@@ -1,6 +1,6 @@
 :scope {
-  border: 2px solid var(--brutal-ink); border-radius: 0; font-weight: 900; color: #0a0a0a; background: var(--brutal-blue);
+  border: 2px solid var(--fg); border-radius: 0; font-weight: 900; color: var(--brutal-ink); background: var(--brutal-blue);
 }
-:scope.good { background: var(--brutal-green); color: #0a0a0a; }
-:scope.warn { background: var(--brutal-orange); color: #0a0a0a; }
-:scope.bad { background: var(--brutal-red); color: #0a0a0a; }
+:scope.good { background: var(--brutal-green); color: var(--brutal-ink); }
+:scope.warn { background: var(--brutal-orange); color: var(--brutal-ink); }
+:scope.bad { background: var(--brutal-red); color: var(--brutal-ink); }

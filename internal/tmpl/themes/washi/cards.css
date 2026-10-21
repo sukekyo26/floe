@@ -1,8 +1,8 @@
-.card { position: relative; border: 1px solid var(--washi-sumi); outline: 1px solid var(--washi-sumi); outline-offset: -6px; padding: 1.4rem 3.6rem 1.3rem 1.5rem; }
+.card { position: relative; border: 1px solid var(--fg); outline: 1px solid var(--fg); outline-offset: -6px; padding: 1.4rem 3.6rem 1.3rem 1.5rem; }
 :scope.numbered > .card::before {
   content: counter(floe-card, cjk-decimal); content: counter(floe-card, cjk-decimal) / "";
   position: absolute; top: 1rem; right: 1rem; display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%;
-  background: var(--washi-shu); color: var(--washi-paper); font-size: 1rem; font-weight: 700; transform: rotate(-8deg);
+  background: var(--washi-shu); color: var(--on-fill); font-size: 1rem; font-weight: 700; transform: rotate(-8deg);
 }
 .card h3 { letter-spacing: 0.08em; }
-.card :is(p, ul, ol) { color: var(--washi-nezumi); }
+.card :is(p, ul, ol) { color: var(--muted); }

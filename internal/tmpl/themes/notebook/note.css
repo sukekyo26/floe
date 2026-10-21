@@ -1,16 +1,15 @@
-:scope { font-family: var(--nb-font); --display: var(--nb-font); }
 :scope, :scope:is(.good, .warn, .bad) {
-  background: var(--nb-sheet); color: var(--nb-ink); border: 2px solid var(--nb-pen);
+  background: var(--surface); color: var(--fg); border: 2px solid var(--accent);
   border-radius: 22px 8px 18px 10px / 10px 18px 8px 22px;
 }
-:scope.good { border-color: var(--nb-pen-good); }
-:scope.warn { border-color: var(--nb-pen-warn); }
-:scope.bad { border-color: var(--nb-pen-bad); }
-:scope::before { background: none; border: 2px solid currentColor; border-radius: 48% 52% 45% 55%; color: var(--nb-pen); }
-:scope.good::before { background: none; color: var(--nb-pen-good); }
-:scope.warn::before { background: none; color: var(--nb-pen-warn); }
-:scope.bad::before { background: none; color: var(--nb-pen-bad); }
-.title { color: var(--nb-pen); }
-:scope.good .title { color: var(--nb-pen-good); }
-:scope.warn .title { color: var(--nb-pen-warn); }
-:scope.bad .title { color: var(--nb-pen-bad); }
+:scope.good { border-color: var(--good); }
+:scope.warn { border-color: var(--warn); }
+:scope.bad { border-color: var(--bad); }
+:scope::before { background: none; border: 2px solid currentColor; border-radius: 48% 52% 45% 55%; color: var(--accent); }
+:scope.good::before { background: none; color: var(--good); }
+:scope.warn::before { background: none; color: var(--warn); }
+:scope.bad::before { background: none; color: var(--bad); }
+.title { color: var(--accent); }
+:scope.good .title { color: var(--good); }
+:scope.warn .title { color: var(--warn); }
+:scope.bad .title { color: var(--bad); }

@@ -90,7 +90,7 @@ func TestDescribeParts(t *testing.T) {
 			looks: []string{"table"},
 		},
 		{l: l, name: "cell", types: []string{"string", "object"}, items: []string{"pill", "tone"}, themes: []string{"blueprint", "brutal", "default", "editorial", "ink", "notebook", "swiss", "washi"}},
-		{l: l, name: "details", types: []string{"object"}, items: []string{"open", "parts", "title"}, looks: []string{"panel"}, holds: []string{"stack"}, themes: []string{"washi"}},
+		{l: l, name: "details", types: []string{"object"}, items: []string{"open", "parts", "title"}, looks: []string{"panel"}, holds: []string{"stack"}, themes: nil},
 		{l: l, name: "rows", look: true, about: "Rows in a panel", looks: []string{"panel"}, themes: []string{"default"}},
 		{l: l, name: "diagram", about: "A diagram", types: []string{"object"}},
 	} {

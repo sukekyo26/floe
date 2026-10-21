@@ -1,12 +1,12 @@
 /* Dark in light mode too, as code in an editor is; the language stands at the right of the heading */
 :scope {
-  margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px rgb(24 32 30 / 0.12);
+  margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
   background: var(--code-bg); color: var(--code-fg);
   font-family: var(--mono);
 }
 :scope figcaption {
   display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1.1rem; font-size: 0.78rem;
-  background: rgb(255 255 255 / 0.05); border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  background: color-mix(in srgb, var(--code-fg) 5%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
 }
 :scope pre {
   margin: 0; padding: 0.95rem 1.1rem; overflow-x: auto; background: none; border: 0; border-radius: 0; color: inherit;

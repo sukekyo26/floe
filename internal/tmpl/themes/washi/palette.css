@@ -6,6 +6,9 @@
   --font: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", "Noto Serif CJK JP", serif;
   --code-bg: #1f1c19; --code-fg: #ece5d6; --code-prompt: #f0866b;
   --rule: 4px double var(--fg);
+  /* The vermilion of its marks (seals, the tab picked, the rules of code and quotes), kept apart from --bad,
+     which a template may set otherwise, and the hairlines of its tables, in the ink */
+  --washi-shu: #c13b23; --washi-hair: color-mix(in srgb, var(--fg) 18%, transparent);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -13,5 +16,6 @@
     --accent: #8fb3dc; --accent-soft: #22303f;
     --good: #a9c98a; --good-soft: #263020; --warn: #e1b25a; --warn-soft: #362a14; --bad: #e8775c; --bad-soft: #3a201a;
     --code-bg: #14120f;
+    --washi-shu: #e8775c;
   }
 }

@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"html/template"
+	"io/fs"
 	"maps"
 	"regexp"
 	"slices"
@@ -16,7 +17,7 @@ import (
 var palette = []string{
 	"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
 	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--display", "--mono", "--code-bg", "--code-fg",
-	"--code-prompt", "--code-add", "--code-del", "--page-bg", "--rule", "--text-width",
+	"--code-prompt", "--code-add", "--code-del", "--page-bg", "--rule", "--on-fill", "--shadow", "--text-width",
 }
 
 // The parts, diagrams, floe's base and the themes take from the page only what default's palette
@@ -28,7 +29,7 @@ func TestPalette(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	under := set.themes[DefaultTheme].palette
+	under := set.palette
 	defined := definedIn(under)
 	for _, v := range palette {
 		if !defined[v] {
@@ -40,7 +41,7 @@ func TestPalette(t *testing.T) {
 		taken["the part "+name] = p.css
 	}
 	for name, theme := range set.themes {
-		css := theme.base + theme.palette
+		css := theme.base + strings.Join(theme.palettes, "")
 		for _, part := range slices.Sorted(maps.Keys(theme.parts)) {
 			css += theme.parts[part]
 		}
@@ -54,18 +55,25 @@ func TestPalette(t *testing.T) {
 			}
 		}
 	}
-	// default's palette is under every page, so nothing takes a value of its own for a variable of it. A diagram's style is the diagram package's, for pages of any kind.
+	// default's palette is under every page, and a theme's sets its variables of its own names with it, so
+	// nothing takes a value of its own for a variable. A diagram's style is the diagram package's, for pages
+	// of any kind.
 	delete(taken, "the part diagram")
 	for who, css := range taken {
 		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,`).FindAllStringSubmatch(css, -1) {
-			t.Errorf("%s takes %s with a value of its own, which default's palette gives", who, m[1])
+			t.Errorf("%s takes %s with a value of its own, which the palette gives", who, m[1])
 		}
 	}
 	if set.strays != nil {
 		t.Errorf("floe's parts and themes are warned of: %v", set.strays)
 	}
-	// A built-in template leaves the palette to the theme: one it set would hold over every theme's.
-	for _, name := range []string{"templates/report/page.css"} {
+	// A built-in template leaves the palette to the theme: a colour or a variable of it that it set would
+	// hold over every theme's.
+	pages, err := fs.Glob(templateFiles, "templates/*/page.css")
+	if err != nil || pages == nil {
+		t.Fatalf("the built-in templates' page.css = %v, %v", pages, err)
+	}
+	for _, name := range pages {
 		src, readErr := templateFiles.ReadFile(name)
 		if readErr != nil {
 			t.Fatal(readErr)
@@ -74,6 +82,9 @@ func TestPalette(t *testing.T) {
 			if definedIn(string(src))[v] {
 				t.Errorf("%s sets %s, which the theme's palette should", name, v)
 			}
+		}
+		if w := colourWarnings(name, readCSS(src), true); w != nil {
+			t.Errorf("%s writes colours: %v", name, w)
 		}
 	}
 	// A diagram drawn into a page without the palette, by floe diagram render, takes default's light colours
@@ -168,7 +179,7 @@ func TestCheckPalette(t *testing.T) {
 		err := s.refuse("p.css", false)
 		var warnings []*usererr.Error
 		if err == nil {
-			warnings, err = checkPalette("p.css", s)
+			warnings, err = checkPalette("p.css", s, nil)
 		}
 		got := ""
 		switch {
@@ -180,6 +191,54 @@ func TestCheckPalette(t *testing.T) {
 		if want == "" && got != "" || !strings.HasPrefix(got, want) {
 			t.Errorf("checkPalette(%q) = %q, want %q", css, got, want)
 		}
+	}
+}
+
+// A part's part.css and a theme's files but palette.css take their colours from the palette: a colour
+// written as a value is warned of, and a variable a theme's file sets. A colour's name counts only in a
+// property that takes a colour; a mask's colours, transparent, currentColor and mixes of variables pass.
+func TestColourWarnings(t *testing.T) {
+	t.Parallel()
+
+	for css, want := range map[string]string{
+		":scope { color: #fff; }":                                         "c.css:1: #fff is a colour",
+		":scope {\n  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);\n}":          "c.css:2: rgb(0 0 0 / 0.1) is a colour",
+		":scope { background: linear-gradient(OKLCH(50% 0.1 20), red); }": "c.css:1: OKLCH(50% 0.1 20) is a colour",
+		":scope { border: 1px solid White; }":                             "c.css:1: White is a colour",
+		":scope { --x: #123; }":                                           "c.css:1: #123 is a colour",
+		":scope { color: var(--fg, #000); }":                              "c.css:1: #000 is a colour",
+		":scope { color: Canvas; }":                                       "c.css:1: Canvas is a colour",
+		"@media (hover) { :scope:hover { outline-color: tomato; } }":      "c.css:1: tomato is a colour",
+		"color: #abc;": "c.css:1: #abc is a colour",
+		":scope { filter: drop-shadow(0 0 2px black); }":                                              "c.css:1: black is a colour",
+		":scope { -webkit-box-shadow: 0 0 1px red; }":                                                 "c.css:1: red is a colour",
+		":scope { -webkit-tap-highlight-color: red; }":                                                "c.css:1: red is a colour",
+		":scope { text-emphasis: dot red; }":                                                          "c.css:1: red is a colour",
+		":scope { color: rgb(from #fff r g b / 50%); }":                                               "c.css:1: #fff is a colour",
+		":scope { backdrop-filter: drop-shadow(0 0 4px black); }":                                     "c.css:1: black is a colour",
+		":scope { color: rgb(from var(--accent) r g b / 50%); }":                                      "",
+		":scope { font-family: Arial Black, serif; white-space: nowrap; }":                            "",
+		":scope { content: \"#fff red\"; grid-area: red; }":                                           "",
+		":scope { --x: white; }":                                                                      "c.css:1: white is a colour",
+		":scope { color: WindowText; }":                                                               "c.css:1: WindowText is a colour",
+		":scope { -ms-filter: drop-shadow(0 0 1px red); }":                                            "c.css:1: red is a colour",
+		"@property --c { syntax: '<color>'; initial-value: white; inherits: false; }":                 "c.css:1: white is a colour",
+		":scope { --face: \"Arial Black\"; transition-property: background; }":                        "",
+		":scope { color: var(--fg); background: color-mix(in srgb, var(--accent) 8%, transparent); }": "",
+		":scope { border-color: currentColor transparent; }":                                          "",
+		":scope { mask: linear-gradient(#000, transparent); -webkit-mask-image: url(\"#a\"); }":       "",
+	} {
+		got := ""
+		if w := colourWarnings("c.css", readCSS([]byte(css)), true); w != nil {
+			got = w[0].Error()
+		}
+		if want == "" && got != "" || !strings.HasPrefix(got, want) {
+			t.Errorf("colourWarnings(%q) = %q, want %q", css, got, want)
+		}
+	}
+	w := colourWarnings("base.css", readCSS([]byte(":root {\n  --x: var(--fg); --y: 1px;\n}\n.a { color: var(--x); }\n--z: 0;\n--e: ;")), false)
+	if len(w) != 4 || !strings.HasPrefix(w[2].Error(), "base.css:5: --z is set") || !strings.HasPrefix(w[3].Error(), "base.css:6: --e is set") || !strings.HasPrefix(w[0].Error(), "base.css:2: --x is set") || !strings.HasPrefix(w[1].Error(), "base.css:2: --y is set") {
+		t.Errorf("colourWarnings of a theme's file = %v, want --x and --y told", w)
 	}
 }
 

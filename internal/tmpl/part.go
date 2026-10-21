@@ -193,8 +193,10 @@ type partSet struct {
 	// floe's own default palette, under every page's, whatever one's own themes change
 	palette string
 	// the directories of one's own it read, those of parts and themes among them, by their real paths
-	dirs   []string
-	strays []*usererr.Error // what of one's own goes into no page, to be warned of
+	dirs []string
+	// what to warn of: what of one's own goes into no page, and the colours of the parts and themes
+	// written where the palette is to give them
+	strays []*usererr.Error
 }
 
 // builtinParts reads floe's parts once.
@@ -296,7 +298,7 @@ func (set *partSet) readBuiltin() error {
 		}
 		set.themes[e.Name()] = t
 	}
-	set.palette = set.themes[DefaultTheme].palette
+	set.palette = set.themes[DefaultTheme].palettes[0]
 	return nil
 }
 
@@ -490,7 +492,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		}
 		pages[lang].Funcs(template.FuncMap{"word": w.word(file, lang)})
 	}
-	css, err := readPartCSS(files, name, dir)
+	css, warnings, err := readPartCSS(files, name, dir)
 	if err != nil {
 		return err
 	}
@@ -502,6 +504,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		return err
 	}
 	set.parts[name] = p
+	set.strays = append(set.strays, warnings...)
 	return nil
 }
 
@@ -550,10 +553,11 @@ func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error
 			return usererr.New("tmpl_look_files", path.Join(dir, file), name)
 		}
 	}
-	css, err := readPartCSS(files, name, dir)
+	css, warnings, err := readPartCSS(files, name, dir)
 	if err != nil {
 		return err
 	}
+	set.strays = append(set.strays, warnings...)
 	set.parts[name] = &part{
 		name: name, shape: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: yaml.looks,
 		taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
@@ -561,16 +565,18 @@ func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error
 	return nil
 }
 
-// readPartCSS reads the part.css of the part name in files, its directory, shown as dir.
-func readPartCSS(files fs.FS, name, dir string) (string, error) {
+// readPartCSS reads the part.css of the part name in files, its directory, shown as dir, and returns the
+// warnings of the colours it writes as values, to be told once the part is read whole.
+func readPartCSS(files fs.FS, name, dir string) (string, []*usererr.Error, error) {
 	css, err := fs.ReadFile(files, "part.css")
 	if err != nil {
-		return "", fmt.Errorf("read the part %s: %w", name, err)
+		return "", nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
-	if err = refuseCSS(path.Join(dir, "part.css"), css, true); err != nil {
-		return "", err
+	file, sheet := path.Join(dir, "part.css"), readCSS(css)
+	if err = sheet.refuse(file, true); err != nil {
+		return "", nil, err
 	}
-	return string(css), nil
+	return string(css), colourWarnings(file, sheet, true), nil
 }
 
 // readLooks reads the looks part.yaml, file, gives the key k.
@@ -821,14 +827,14 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 }
 
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
-// selectors: the palette, floe's default one then the theme theme's, under floe's base, under the
-// template's own CSS (own, its page.css), which may set the palette's variables over it, under the parts',
-// in the theme's shape. The parts' are the style of each part the page names, by its own
+// selectors: the palette, floe's default one then the theme theme's and one's own of its name, under
+// floe's base, under the template's own CSS (own, its page.css), which may set the palette's variables over
+// it, under the parts', in the theme's shape. The parts' are the style of each part the page names, by its own
 // element, a table of Markdown, or HTML that names a part (<span class="good" data-floe-part="cell">) or
 // takes its look without being its box (data-floe-look="panel"), and of each look those take, before the
 // parts that take it, which adjust it; then the theme's: its base.css, which every page gets, as it
-// holds variables of its own names and the look of Markdown's quotes, and its style of each of those parts
-// in the same order. Within the layer the more specific rule wins, else the later.
+// holds the look of Markdown's quotes, and its style of each of those parts in the same order. Within the
+// layer the more specific rule wins, else the later.
 // An element that takes a look without being a part's box (a card of cards) has it a layer under the
 // template's and the parts', floe.looks: the part it is in, or the template it is the template's own of,
 // adjusts it whatever the selectors, as a part does the looks it takes, where the nearer scope would win
@@ -857,11 +863,13 @@ func (set *partSet) pageStyle(page string, found []tag, own []byte, theme string
 			write("@layer " + layer + " {\n" + css + "}\n")
 		}
 	}
-	// floe's own default palette defines every variable; the theme's after it, default of one's own too,
-	// changes those it writes.
+	// floe's own default palette defines every variable; the theme's after it, then one's own of its name,
+	// default of one's own too, change those they write.
 	sheet("floe.palette", set.palette)
-	if themed.palette != set.palette {
-		sheet("floe.palette", themed.palette)
+	for i, palette := range themed.palettes {
+		if theme != DefaultTheme || i > 0 {
+			sheet("floe.palette", palette)
+		}
 	}
 	named := namedIn(page, found)
 	if bad := set.misnamedIn(named); bad != nil {

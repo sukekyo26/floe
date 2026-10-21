@@ -5,9 +5,19 @@
   --good: #2c7730; --good-soft: #def0df; --warn: #995b00; --warn-soft: #fbebd0; --bad: #c22727; --bad-soft: #fbe0e0;
   --font: "Hiragino Maru Gothic ProN", "Zen Maru Gothic", "BIZ UDPGothic", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
   --code-bg: #2e2c27; --code-fg: #f4f0e4; --code-prompt: #f6e27a;
-  /* The rules in the pen, so that they turn with it on the blackboard */
-  --page-bg: repeating-linear-gradient(transparent 0 29px, color-mix(in srgb, var(--accent) 14%, transparent) 29px 30px), var(--bg);
+  /* The rules of its paper, in the pen, in chalk on the blackboard */
+  --nb-rule: color-mix(in srgb, var(--accent) 14%, transparent);
+  --page-bg: repeating-linear-gradient(transparent 0 29px, var(--nb-rule) 29px 30px), var(--bg);
   --rule: 2px dashed var(--muted);
+  --shadow: rgb(0 0 0 / 0.5);
+  /* Its markers, the tape and the sticky notes, with the ink on them and their shadow, and the corners of
+     a frame drawn round by hand */
+  --nb-tape: rgb(220 205 160 / 0.75);
+  --nb-yellow: rgb(255 224 64 / 0.65); --nb-green: rgb(120 220 130 / 0.55); --nb-pink: rgb(255 140 185 / 0.5);
+  --nb-blue: rgb(120 190 255 / 0.5); --nb-orange: rgb(255 170 80 / 0.55);
+  --nb-stick-1: #fff1a6; --nb-stick-2: #ffd2e1; --nb-stick-3: #cfe8ff;
+  --nb-stick-ink: #2b2a26; --nb-stick-shadow: rgb(40 30 10 / 0.45);
+  --nb-hand: 14px 6px 12px 8px / 8px 12px 6px 14px;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -15,5 +25,9 @@
     --accent: #9cc8ff; --accent-soft: #22374a;
     --good: #9be39f; --good-soft: #1f3a26; --warn: #ffcf7a; --warn-soft: #3d3218; --bad: #ff9e9e; --bad-soft: #3d2222;
     --code-bg: #141c18;
+    --nb-rule: color-mix(in srgb, var(--fg) 7%, transparent); --nb-tape: rgb(220 205 160 / 0.45);
+    --nb-yellow: rgb(246 226 122 / 0.32); --nb-green: rgb(150 230 150 / 0.35); --nb-pink: rgb(255 160 200 / 0.35);
+    --nb-blue: rgb(150 205 255 / 0.35); --nb-orange: rgb(255 185 110 / 0.38);
+    --nb-stick-1: #f3e38f; --nb-stick-2: #f6c2d4; --nb-stick-3: #bfdcf7;
   }
 }
