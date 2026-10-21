@@ -55,7 +55,7 @@ func TestDrawnLink(t *testing.T) {
 
 	// Each source reloads the tab: the image, a file of the template, and the data file itself.
 	since := regexp.MustCompile(`since=([^"]+)`).FindStringSubmatch(r.body)[1]
-	for _, file := range []string{chart, filepath.Join(e.tmp, "templates", "sizes", "themes", "default.css"), data} {
+	for _, file := range []string{chart, filepath.Join(e.tmp, "templates", "sizes", "page.html"), data} {
 		later := time.Now().Add(time.Minute)
 		if err = os.Chtimes(file, later, later); err != nil {
 			t.Fatal(err)

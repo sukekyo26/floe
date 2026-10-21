@@ -729,11 +729,11 @@ func TestPublishDataFile(t *testing.T) {
 	want(t, "publish a data file without a template", e.run(t, "", "publish", bad), 1, "",
 		bad+":1:1: name the template at the top level, like template: report (templates: report)")
 	want(t, "publish --theme of no theme", e.run(t, "", "publish", plan, "--theme", "print"), 1, "",
-		`floe: template report has no theme "print"; use default`)
+		`floe: there is no theme "print"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`)
 	want(t, "publish --theme empty", e.run(t, "", "publish", plan, "--theme", " "), 2, "", "floe: --theme is empty")
-	want(t, "publish --parts-theme of no theme", e.run(t, "", "publish", plan, "--parts-theme", "print"), 1, "",
-		`floe: there is no parts theme "print"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`)
-	want(t, "publish --parts-theme empty", e.run(t, "", "publish", plan, "--parts-theme", ""), 2, "", "floe: --parts-theme is empty")
+	want(t, "publish --parts-shape of no theme", e.run(t, "", "publish", plan, "--parts-shape", "print"), 1, "",
+		`floe: there is no theme "print" for the parts to take their shape from; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`)
+	want(t, "publish --parts-shape empty", e.run(t, "", "publish", plan, "--parts-shape", ""), 2, "", "floe: --parts-shape is empty")
 }
 
 // A data file's images go to the server when it asks for them, read under the data file's directory:
@@ -788,8 +788,8 @@ func TestCheck(t *testing.T) {
 	e.write(t, "bad.yml", "template: report\ntheme: print\nlang: en\n")
 	want(t, "check a right file", e.run(t, "", "check", "ok.yaml"), 0, "", "")
 	want(t, "check files with mistakes", e.run(t, "", "check", "ok.yaml", "bad.yaml", "bad.yml"), 1, "",
-		"bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, parts-theme, sections, template, theme, title\n"+
-			`bad.yml:2:8: template report has no theme "print"; use default`)
+		"bad.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, parts-shape, sections, template, theme, title\n"+
+			`bad.yml:2:8: there is no theme "print"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`)
 	// Mistakes at lines and columns go out as they are, for editors and CI to read.
 	if r := e.run(t, "", "check", "bad.yaml"); !strings.HasPrefix(r.stderr, "bad.yaml:2:1: ") {
 		t.Errorf("check prefixed its mistakes: %q", r.stderr)

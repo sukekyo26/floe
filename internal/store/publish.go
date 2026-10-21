@@ -71,14 +71,14 @@ type Options struct {
 	Title       *string
 	Description *string
 	Theme       *string
-	PartsTheme  *string
+	PartsShape  *string
 	Force       bool
 }
 
 // normalized is o with each string given trimmed, whoever gave it. A title given empty is refused, as it
 // would leave the list blank, and so is a theme, which would take the data's.
 func (o Options) normalized() (Options, error) {
-	for _, field := range []**string{&o.Slug, &o.Title, &o.Description, &o.Theme, &o.PartsTheme} {
+	for _, field := range []**string{&o.Slug, &o.Title, &o.Description, &o.Theme, &o.PartsShape} {
 		if *field != nil {
 			v := strings.TrimSpace(**field)
 			*field = &v
@@ -87,7 +87,7 @@ func (o Options) normalized() (Options, error) {
 	for _, f := range []struct {
 		value *string
 		empty string
-	}{{o.Title, "cli_title_empty"}, {o.Theme, "cli_theme_empty"}, {o.PartsTheme, "cli_parts_theme_empty"}} {
+	}{{o.Title, "cli_title_empty"}, {o.Theme, "cli_theme_empty"}, {o.PartsShape, "cli_parts_shape_empty"}} {
 		if f.value != nil && *f.value == "" {
 			return o, usererr.New(f.empty)
 		}
@@ -99,10 +99,10 @@ func (o Options) normalized() (Options, error) {
 func (o Options) themes() tmpl.Themes {
 	var themes tmpl.Themes
 	if o.Theme != nil {
-		themes.Template = *o.Theme
+		themes.Theme = *o.Theme
 	}
-	if o.PartsTheme != nil {
-		themes.Parts = *o.PartsTheme
+	if o.PartsShape != nil {
+		themes.Shape = *o.PartsShape
 	}
 	return themes
 }
@@ -263,7 +263,7 @@ func seedMeta(path string, data *tmpl.Data, themes tmpl.Themes) Meta {
 	m.Path = path
 	if data != nil {
 		m.DataTitle = data.Title
-		m.Theme, m.PartsTheme = themes.Template, themes.Parts
+		m.Theme, m.PartsShape = themes.Theme, themes.Shape
 	}
 	return m
 }
@@ -296,7 +296,7 @@ func (e *Entry) settle(prev *Meta) error {
 		base = &none
 	}
 	e.Meta = newMeta(e.opts, was.Path, e.from, base, was.DataTitle, e.Slug)
-	e.Meta.Theme, e.Meta.PartsTheme = was.Theme, was.PartsTheme
+	e.Meta.Theme, e.Meta.PartsShape = was.Theme, was.PartsShape
 	e.Prev = prev
 	return nil
 }
@@ -330,7 +330,7 @@ func (s *Store) readLink(file string, opts Options, cwd string) (string, []byte,
 	if err = link.Check(path, s.home); err != nil {
 		return "", nil, err //nolint:wrapcheck // a usererr for the caller to show
 	}
-	if !IsDataFile(path) && (opts.Theme != nil || opts.PartsTheme != nil) {
+	if !IsDataFile(path) && (opts.Theme != nil || opts.PartsShape != nil) {
 		return "", nil, usererr.New("store_theme_link")
 	}
 	b, err := os.ReadFile(path) //nolint:gosec // G304: publishing the user's file is the point
@@ -352,7 +352,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		TitleEdited:   keepTitle,
 		Description:   base.Description,
 		Theme:         "",
-		PartsTheme:    "",
+		PartsShape:    "",
 		DataTitle:     own,
 		Source:        "",
 		Project:       from,

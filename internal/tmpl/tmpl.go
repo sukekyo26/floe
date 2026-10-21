@@ -13,7 +13,6 @@ import (
 	"html/template"
 	"io/fs"
 	"math"
-	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -33,21 +32,21 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// templateFiles holds a directory per built-in template: page.html, schema.json, example.yaml and themes/.
+// templateFiles holds a directory per built-in template: page.html, schema.json, example.yaml and page.css.
 //
 //go:embed templates
 var templateFiles embed.FS
 
 const (
-	// DefaultTheme is the theme of a page, and of its parts, whose data names none.
+	// DefaultTheme is the theme of a page whose data names none.
 	DefaultTheme = "default"
 )
 
 // Themes are the themes to draw a page with instead of those its data names (floe publish --theme and
-// --parts-theme), each "" for the data's.
+// --parts-shape), each "" for the data's.
 type Themes struct {
-	Template string
-	Parts    string
+	Theme string
+	Shape string // the theme the parts take their shape from
 }
 
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
@@ -66,9 +65,10 @@ var markdownLine = goldmark.New(
 type Data struct {
 	File     string
 	Template string
-	Theme    string
-	// PartsTheme is the theme of floe's parts it is drawn with.
-	PartsTheme string
+	// Theme is the theme it is drawn with: its palette, and the shape of the parts but where PartsShape
+	// names another.
+	Theme      string
+	PartsShape string // the theme the parts take their shape from
 	Title      string // "" when the data names none
 	Lang       string // the language of the page, a BCP 47 tag
 	Values     map[string]any
@@ -87,7 +87,7 @@ type Data struct {
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
-var shared = []string{"lang", "parts-theme", "template", "theme", "title"}
+var shared = []string{"lang", "parts-shape", "template", "theme", "title"}
 
 // Read reads the data file src, checks it against its template's schema, then its checks, and
 // computes the values of its computed.yaml; file names it in errors. A mistake is a *yamlpos.Error,
@@ -95,7 +95,7 @@ var shared = []string{"lang", "parts-theme", "template", "theme", "title"}
 // yamlpos.Problems.
 //
 // A theme of themes, when not "", is drawn with instead of the one the data names: the data's theme:
-// or parts-theme: is then not used, and a theme that does not exist is refused as a *usererr.Error, as
+// or parts-shape: is then not used, and a theme that does not exist is refused as a *usererr.Error, as
 // is a template that needs another floe. A relative file is under cwd.
 func (l *Library) Read(file string, src []byte, themes Themes, cwd string) (*Data, error) {
 	d, _, err := l.ReadSources(file, src, themes, cwd)
@@ -208,7 +208,7 @@ func (d *Data) Images() (map[string][]byte, error) {
 
 // TitleOf returns the title: of the data file src, or "" when it names none or cannot be read.
 func TitleOf(src []byte) string {
-	h, err := start("", src, Themes{Template: "", Parts: ""})
+	h, err := start("", src, Themes{Theme: "", Shape: ""})
 	if err != nil {
 		return ""
 	}
@@ -223,6 +223,7 @@ type head struct {
 	where    map[string]yamlpos.Pos
 	problems yamlpos.Problems // the mistakes in those keys
 	unnamed  bool             // template: is left out or empty, a mistake left to the caller to word
+	shaped   bool             // parts-shape: is written, empty too, which is no theme
 }
 
 // start reads the data file src, file in its mistakes, up to its template, leaving out the data's
@@ -241,10 +242,10 @@ func start(file string, src []byte, given Themes) (*head, error) {
 		return nil, err
 	}
 	d := &Data{
-		File: file, Template: "", Theme: DefaultTheme, PartsTheme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
+		File: file, Template: "", Theme: DefaultTheme, PartsShape: "", Title: "", Lang: "", Values: top, Calc: nil,
 		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, htmlItems: nil, marks: nil,
 	}
-	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
+	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false, shaped: false}
 	h.readShared(given)
 	return h, nil
 }
@@ -254,62 +255,50 @@ func start(file string, src []byte, given Themes) (*head, error) {
 func (t *Template) check(h *head, images imageDir, given Themes, problems yamlpos.Problems) error {
 	d := h.d
 	d.tmpl = t
-	themes, err := t.themes()
-	if err != nil {
-		return err
-	}
 	set, err := t.parts()
 	if err != nil {
 		return err
 	}
-	partsThemes := set.themeNames()
-	// A theme of one kind named as one of the other is told where it goes.
-	unknown := misplaced(cmp.Or(given.Template, d.Theme), themes, partsThemes, "tmpl_unknown_theme", "tmpl_theme_of_parts")
-	more, err := pickTheme(d, &d.Theme, given.Template, themes, h.where["theme"], unknown)
+	names := set.themeNames()
+	more, err := pickTheme(set, names, d, &d.Theme, given.Theme, h.where["theme"], "tmpl_unknown_theme")
 	if err != nil {
 		return err
 	}
 	problems = append(problems, more...)
-	unknown = misplaced(cmp.Or(given.Parts, d.PartsTheme), partsThemes, themes, "tmpl_unknown_parts_theme",
-		"tmpl_parts_theme_of_template")
-	more, err = pickTheme(d, &d.PartsTheme, given.Parts, partsThemes, h.where["parts-theme"], unknown)
-	if err != nil {
-		return err
+	// The parts take their shape from the theme, but where parts-shape: names another.
+	if !h.shaped && given.Shape == "" {
+		d.PartsShape = d.Theme
+	} else {
+		more, err = pickTheme(set, names, d, &d.PartsShape, given.Shape, h.where["parts-shape"], "tmpl_unknown_parts_shape")
+		if err != nil {
+			return err
+		}
+		problems = append(problems, more...)
 	}
-	broken := set.brokenThemes[d.PartsTheme]
-	switch {
-	case broken != nil && given.Parts != "":
-		return usererr.New("tmpl_parts_theme_broken", d.PartsTheme, broken)
-	case broken != nil && more == nil:
-		more = yamlpos.Problems{yamlpos.New(d.File, h.where["parts-theme"], "tmpl_parts_theme_broken", d.PartsTheme, broken)}
-	}
-	problems = append(problems, more...)
 	return checkValues(t, d, h.root, images, problems)
 }
 
-// misplaced returns the message of the theme name that is not one of names: elsewhere when it is one of
-// others, the themes of the other kind, else unknown.
-func misplaced(name string, names, others []string, unknown, elsewhere string) string {
-	if !slices.Contains(names, name) && slices.Contains(others, name) {
-		return elsewhere
-	}
-	return unknown
-}
-
-// pickTheme sets *theme, a theme of d, to given when not "", which must be one of names, else leaves the
-// data's, reported at pos, where the data names it, when it is not one of them. unknown is the message
-// of a theme that is not.
-func pickTheme(d *Data, theme *string, given string, names []string, pos yamlpos.Pos, unknown string) (
+// pickTheme sets *theme, a theme of d, to given when not "", which must be one of names, the themes of set,
+// else leaves the data's, reported at pos, where the data names it, when it is not one. unknown is the
+// message of a theme there is none of; one of one's own that cannot be used is told why.
+func pickTheme(set *partSet, names []string, d *Data, theme *string, given string, pos yamlpos.Pos, unknown string) (
 	yamlpos.Problems, error,
 ) {
+	name := cmp.Or(given, *theme)
+	var why *usererr.Error
 	switch {
-	case given != "" && !slices.Contains(names, given):
-		return nil, usererr.New(unknown, given, d.Template, strings.Join(names, ", "))
-	case given != "":
-		*theme = given
-	case !slices.Contains(names, *theme):
-		return yamlpos.Problems{yamlpos.New(d.File, pos, unknown, *theme, d.Template, strings.Join(names, ", "))}, nil
+	case !slices.Contains(names, name):
+		why = usererr.New(unknown, name, strings.Join(names, ", "))
+	case set.brokenThemes[name] != nil:
+		why = usererr.New("tmpl_parts_theme_broken", name, set.brokenThemes[name])
 	}
+	switch {
+	case why != nil && given != "":
+		return nil, why
+	case why != nil:
+		return yamlpos.Problems{&yamlpos.Error{File: d.File, Pos: pos, Err: why}}, nil
+	}
+	*theme = name
 	return nil, nil
 }
 
@@ -383,13 +372,14 @@ func checkHTML(set *partSet, d *Data) error {
 
 // readShared moves the keys every template shares from h.d.Values to h.d, and notes where each is
 // written (the top of the file for one left out), the mistakes in them, and whether template: names
-// none. A theme given over the data's leaves the data's theme: or parts-theme: unread.
+// none. A theme given over the data's leaves the data's theme: or parts-shape: unread.
 func (h *head) readShared(given Themes) {
 	d := h.d
 	to := map[string]*string{
-		"lang": &d.Lang, "parts-theme": &d.PartsTheme, "template": &d.Template, "theme": &d.Theme, "title": &d.Title,
+		"lang": &d.Lang, "parts-shape": &d.PartsShape, "template": &d.Template, "theme": &d.Theme, "title": &d.Title,
 	}
 	h.unnamed = true
+	read := map[string]bool{} // the keys written as text, empty too
 	for _, key := range shared {
 		h.where[key] = yamlpos.Of(h.root)
 		v, ok := d.Values[key]
@@ -403,7 +393,7 @@ func (h *head) readShared(given Themes) {
 		k, n, _ := yamlpos.Find(h.root, []string{key})
 		h.where[key] = yamlpos.OfValue(k, n)
 		delete(d.Values, key)
-		if key == "theme" && given.Template != "" || key == "parts-theme" && given.Parts != "" {
+		if key == "theme" && given.Theme != "" || key == "parts-shape" && given.Shape != "" {
 			continue
 		}
 		s, text := v.(string)
@@ -416,10 +406,12 @@ func (h *head) readShared(given Themes) {
 			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_lang_invalid", s))
 		case text:
 			*to[key] = s
+			read[key] = true
 		default:
 			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_not_text", key))
 		}
 	}
+	h.shaped = read["parts-shape"]
 	// A title of spaces names none, as an empty --title does.
 	d.Title = strings.TrimSpace(d.Title)
 }
@@ -456,7 +448,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	own, err := t.css(d.Theme)
+	own, err := t.ownCSS("page.css")
 	if err != nil {
 		return nil, err
 	}
@@ -466,7 +458,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 	}
 	html := string(out)
 	found := tagsIn(html, false)
-	style, err := set.pageStyle(html, found, own, d.PartsTheme)
+	style, err := set.pageStyle(html, found, own, d.Theme, d.PartsShape)
 	if err != nil {
 		return nil, err
 	}
@@ -527,19 +519,6 @@ func (d *Data) withDiagrams(out []byte) ([]byte, error) {
 		return nil, err //nolint:wrapcheck // already says what failed
 	}
 	return append(out, "\n"+script+"\n"...), nil
-}
-
-// css returns the template's own CSS: its page.css, empty if it has none, then its theme.
-func (t *Template) css(theme string) ([][]byte, error) {
-	page, err := t.ownCSS("page.css")
-	if err != nil {
-		return nil, err
-	}
-	css, err := t.ownCSS(path.Join("themes", theme+".css"))
-	if err != nil {
-		return nil, err
-	}
-	return [][]byte{page, css}, nil
 }
 
 // headMistake is the mistake of page.html, src, shown as file, whose drawing holds no </head>: it holds

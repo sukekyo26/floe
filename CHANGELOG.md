@@ -102,8 +102,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   word is a prompt (ending in `$`, `#`, `%`, `>` or `❯`, such as `~/app$` or
   `C:\work>`) is refused. `report` refuses a fenced block of code in `text`,
   pointing at the parts to write code and commands in.
-- Pick the look of floe's parts, in any template, by a parts theme
-  (`parts-theme:` in a data file, `floe publish --parts-theme`): `default`
+- Pick the look of a page, in any template, by one of floe's themes
+  (`theme:` in a data file, `floe publish --theme`): `default`
   (faces set in panels, notes in their tone's colour), `soft` (faces with
   round corners), `editorial` (rules and thin frames, as in print), `ink` (a
   table's heading in ink, states filled with their colour), `brutal` (thick
@@ -111,12 +111,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   squared paper, every cell ruled), `notebook` (ruled paper, marker strokes
   and sticky notes), `swiss` (heavy black rules, large numbers and red, states
   told by shape) or `washi` (sumi and vermilion on washi in a Mincho face,
-  seals and quotes ruled in vermilion), each in light and dark mode. A parts
+  seals and quotes ruled in vermilion), each in light and dark mode. A
   theme restyles each part and look in a file of each (`panel.css` every
   panel), its style reaching the elements that have the look but not a part
   held in them, and Markdown's quotes, and goes into every page after the
-  parts' style; the template's theme (`theme:`,
-  `report` has `default`) styles the page, in a layer under them. A parts
+  parts' style; the template's `page.css` places the page, in a layer under
+  them, and a template has no themes of its own. `parts-shape:`
+  (`floe publish --parts-shape`) takes the parts' shape from another theme,
+  the palette staying the theme's. A
   theme's `palette.css` sets the page's colours and faces as CSS variables, in
   the bottom layer over `default`'s, which defines them all: the parts,
   diagrams and the template draw with them (`--page-bg` the page's ground,
@@ -125,7 +127,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   `!important`, on `:root` and then in `@media (prefers-color-scheme: dark)`,
   and is warned of where it sets a colour for light mode alone, as is a
   template that sets one so on `:scope`. A part of your own cannot be named `palette`. `floe
-  template show` lists the parts themes.
+  template show` lists the themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as
@@ -170,7 +172,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   shows or a file of its template, or fetching the icons its diagrams show,
   reloads the open tab, and while it has mistakes the tab shows them in place
   of the page.
-  `--theme` picks another theme of the template, and `--slug`, `--title`,
+  `--theme` and `--parts-shape` pick other themes, and `--slug`, `--title`,
   `--description` and `--force` are also available.
   Republishing a slug says so on stderr, with a warning when the title
   changed.
@@ -179,14 +181,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   built-in template of its name. A published page is drawn with the server's
   templates; a publish whose `FLOE_TEMPLATES_DIR` or `FLOE_ICONS_DIR` is not
   the running server's is refused, pointing at `floe stop`. Besides
-  `page.html`, `page.css`, `schema.json` and themes, a template may check relations between items with `checks.yaml`
+  `page.html`, `page.css` and `schema.json`, a template may check relations between items with `checks.yaml`
   (on the items of a list, lists on the way gone through: `sections.parts`)
   and compute values for the page with `computed.yaml`, in
   [expr](https://expr-lang.org/), each failure reported at the data file's
   line and column, and a mistake in those files at their own;
   `page.html` writes numbers with `num` and `bytes`.
-  floe puts a page's CSS together, the template's `page.css` and theme each
-  in a `<style>` of its own, in a cascade layer over floe's base (text, lists, links, code and
+  floe puts a page's CSS together, the template's `page.css` in a
+  `<style>` of its own, in a cascade layer over floe's base (text, lists, links, code and
   quotes) and the looks of elements that take one without being a part's
   box, and under the parts' style and the parts theme, which they do not
   restyle whatever their selectors. The template's CSS is scoped to the page,
@@ -215,8 +217,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `template.yaml` names the floe a template needs. A schema may not declare
   or require `lang`, `template`, `theme` or `title`, which floe reads from
   every data file itself. See [docs/templates.md](docs/templates.md).
-- Add `floe template list`, which lists the templates with where they are,
-  their themes and the floe they need; `floe template show <name>`, which
+- Add `floe template list`, which lists the templates with where they are
+  and the floe they need; `floe template show <name>`, which
   prints the items a data file of a template may hold and its example, to
   read before writing one; `floe template new <name> --from <template>`,
   which copies a template into a template of your own to edit; and

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
-	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -86,9 +85,9 @@ func CheckOwnParts(partsDir string) (warnings []*usererr.Error, mistakes []error
 }
 
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values,
-// page.html and the default theme.
+// page.html and page.css.
 func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
-	needed := []string{"page.html", "schema.json", "example.yaml", "themes/" + DefaultTheme + ".css"}
+	needed := []string{"page.html", "schema.json", "example.yaml"}
 	for _, name := range needed {
 		_, found, err := t.readOptional(name)
 		switch {
@@ -172,59 +171,24 @@ func brokenParts(set *partSet, named []namedPart) []*usererr.Error {
 	return append(warnings, set.strays...)
 }
 
-// checkCSS returns the mistakes of t's CSS, page.css and its themes, that cssSheet.refuse refuses, and
-// the warnings of the colours that change with the mode which it sets on :scope for light mode alone:
-// over every palette, they stay in dark mode too, where the others turn dark. Each file is told once,
-// of what it sets so with any theme.
+// checkCSS returns the mistake of t's CSS, page.css, that cssSheet.refuse refuses, and the warning of the
+// colours that change with the mode which it sets on :scope for light mode alone: over every palette, they
+// stay in dark mode too, where the others turn dark.
 func (t *Template) checkCSS() ([]*usererr.Error, []error) {
-	themes, err := t.themes()
-	if err != nil {
-		return nil, []error{err}
-	}
 	modes, err := floeModes()
 	if err != nil {
 		return nil, []error{err}
 	}
-	var mistakes []error
-	// Every file is checked, page.css refused or not.
-	under := newModeColours()
-	if page, err := t.ownSheet("page.css"); err != nil {
-		mistakes = append(mistakes, err)
-	} else {
-		under.readScope(page, "page.css")
+	page, err := t.ownSheet("page.css")
+	if err != nil {
+		return nil, []error{err}
 	}
-	byFile := map[string]map[string]bool{} // the names each file sets for light mode alone
-	note := func(c *modeColours) {
-		for _, v := range c.lightOnly(modes) {
-			if byFile[c.from[v]] == nil {
-				byFile[c.from[v]] = map[string]bool{}
-			}
-			byFile[c.from[v]][v] = true
-		}
+	c := newModeColours()
+	c.readScope(page)
+	if names := c.lightOnly(modes); names != nil {
+		return []*usererr.Error{usererr.New("tmpl_scope_dark", t.file("page.css"), andList(names))}, nil
 	}
-	read := 0
-	for _, theme := range themes {
-		name := path.Join("themes", theme+".css")
-		sheet, err := t.ownSheet(name)
-		if err != nil {
-			mistakes = append(mistakes, err)
-			continue
-		}
-		// The theme comes after page.css, and sets over it.
-		c := under.clone()
-		c.readScope(sheet, name)
-		note(c)
-		read++
-	}
-	if read == 0 {
-		note(under)
-	}
-	var warnings []*usererr.Error
-	for _, file := range slices.Sorted(maps.Keys(byFile)) {
-		names := slices.Sorted(maps.Keys(byFile[file]))
-		warnings = append(warnings, usererr.New("tmpl_scope_dark", t.file(file), andList(names)))
-	}
-	return warnings, mistakes
+	return nil, nil
 }
 
 // checkNamedParts returns a mistake for each part src, page.html, names, of named, by data-floe-part or
@@ -504,7 +468,7 @@ func (t *Template) checkExample() error {
 	if err != nil {
 		return err
 	}
-	h, err := start(file, src, Themes{Template: "", Parts: ""})
+	h, err := start(file, src, Themes{Theme: "", Shape: ""})
 	if err != nil {
 		return err
 	}
@@ -518,7 +482,7 @@ func (t *Template) checkExample() error {
 	}
 	// The later stages check it against t, and name t in their mistakes.
 	d.Template = t.Name
-	if err = t.check(h, diskImages(t.Dir), Themes{Template: "", Parts: ""}, problems); err != nil {
+	if err = t.check(h, diskImages(t.Dir), Themes{Theme: "", Shape: ""}, problems); err != nil {
 		return err
 	}
 	_, err = d.Render(cmp.Or(d.Title, file))

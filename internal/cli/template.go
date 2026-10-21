@@ -28,9 +28,9 @@ func (a *app) templateCmd() *cobra.Command {
 func (a *app) templateListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
-		Short: "List the templates (name, where, themes, the floe it needs, description; tab-separated)",
+		Short: "List the templates (name, where, the floe it needs, description; tab-separated)",
 		Long: `List the templates, one per line: its name, where it is (a directory of your own, or
-built-in), its themes, the floe it needs, and its description, tab-separated. A template of
+built-in), the floe it needs, and its description, tab-separated. A template of
 your own takes the place of the built-in one of its name.`,
 		Args: usage(cobra.NoArgs),
 		RunE: func(*cobra.Command, []string) error {
@@ -49,7 +49,7 @@ your own takes the place of the built-in one of its name.`,
 				}
 				// The columns are for scripts to read, in every language: built-in is not translated.
 				where := cmp.Or(d.Path, "built-in")
-				a.out("%s\t%s\t%s\t%s\t%s", d.Name, oneLine(where), oneLine(strings.Join(d.Themes, ",")), d.Floe, oneLine(d.About))
+				a.out("%s\t%s\t%s\t%s", d.Name, oneLine(where), d.Floe, oneLine(d.About))
 			}
 			if broken != nil {
 				return broken
@@ -75,7 +75,7 @@ func (a *app) templateShowCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "show <name>",
 		Short: "Show the items a data file of a template may hold, and its example",
-		Long: `Show a template: where it is, its themes, the parts themes, the floe it needs, the items a
+		Long: `Show a template: where it is, the themes a data file of it may pick, the floe it needs, the items a
 data file of it may hold (from its schema.json), and its example.yaml to start a data file from.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -97,7 +97,6 @@ func (a *app) showTemplate(d *tmpl.Description) {
 	a.out("%s", head)
 	a.out("%s", english.Msg("cli_template_where", where(d)))
 	a.out("%s", english.Msg("cli_template_themes", strings.Join(d.Themes, ", ")))
-	a.out("%s", english.Msg("cli_template_parts_themes", strings.Join(d.PartsThemes, ", ")))
 	if d.Floe != "" {
 		a.out("%s", english.Msg("cli_template_floe", d.Floe, d.Series))
 	}
@@ -119,7 +118,7 @@ func sharedItems(name string) []tmpl.Item {
 	items := tmpl.SharedItems(name)
 	for i, it := range items {
 		var args []any
-		if it.Name == "theme" || it.Name == "parts-theme" {
+		if it.Name == "theme" {
 			args = []any{tmpl.DefaultTheme}
 		}
 		items[i].Description = english.Msg("cli_template_shared_"+strings.ReplaceAll(it.Name, "-", "_"), args...)

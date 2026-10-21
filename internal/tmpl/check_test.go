@@ -180,7 +180,7 @@ func TestCheckMistakes(t *testing.T) {
 			files: map[string]string{"example.yaml": "template: report\ntheme: print\nfiles: []\nlang: en\n"},
 			want: []string{
 				"sizes/example.yaml:1:11: example.yaml names the template report; name it sizes",
-				`sizes/example.yaml:2:8: template sizes has no theme "print"`,
+				`sizes/example.yaml:2:8: there is no theme "print"; use blueprint`,
 			},
 		},
 		{
@@ -243,7 +243,7 @@ func TestCheckMistakes(t *testing.T) {
 			name:  "an item floe reads itself",
 			files: map[string]string{"schema.json": `"chart":|"lang": { "type": "string" },` + "\n    " + `"chart":`},
 			want: []string{
-				"sizes/schema.json declares or requires lang, which floe reads from every data file itself (lang, parts-theme, template, theme, title): give the items of the schema other names",
+				"sizes/schema.json declares or requires lang, which floe reads from every data file itself (lang, parts-shape, template, theme, title): give the items of the schema other names",
 			},
 		},
 		{
@@ -352,8 +352,7 @@ func TestTemplateCSSAndParts(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{
-		"page.css":           "/* not :root */\n:scope { --fg: #000; }\nb { background: url(html.svg); animation: html 1s; }\n:root .lead, a { color: red; }\n",
-		"themes/default.css": "body { font-family: sans-serif; }\nhtml{ color: red; }\n",
+		"page.css": "/* not :root */\n:scope { --fg: #000; }\nb { background: url(html.svg); animation: html 1s; }\n:root .lead, a { color: red; }\n",
 		"page.html": "<body>|<body><span\n" + `data-floe-look="cell nope"></span><b data-floe-part="cell note"></b>` +
 			`<u data-floe-part=" cell"></u><s data-floe-part="panel"></s><i data-floe-part="{{"cell"}}"></i>`,
 	})
@@ -364,7 +363,6 @@ func TestTemplateCSSAndParts(t *testing.T) {
 	}
 	want := []string{
 		"page.css:4: write the root as :scope, not :root",
-		filepath.Join("themes", "default.css") + ":2: write the root as :scope, not html",
 		"page.html:5: page.html names the part nope, which there is none of; use bars, ",
 		`page.html:5: data-floe-part="cell note" is not the name of one part`,
 		`page.html:5: data-floe-part=" cell" is not the name of one part`,
@@ -387,19 +385,15 @@ func TestCSSImportRefused(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{
-		"page.css":           "/* 色の定義です。\n   @import は書かない */\nbody { color: red; }\n@IMPORT url(x.css);\n",
-		"themes/default.css": "a { color: red; }\n@import url(y.css)",
+		"page.css": "/* 色の定義です。\n   @import は書かない */\nbody { color: red; }\n@IMPORT url(x.css);\n",
 	})
-	want := []string{
-		filepath.Join(dir, "page.css") + ":4: floe puts this CSS in a layer, where a browser reads no @import",
-		filepath.Join(dir, "themes", "default.css") + ":2: floe puts this CSS in a layer",
-	}
+	want := filepath.Join(dir, "page.css") + ":4: floe puts this CSS in a layer, where a browser reads no @import"
 	_, mistakes := tmpl.Check(dir, "", "")
-	if len(mistakes) != len(want) || !strings.HasPrefix(mistakes[0].Error(), want[0]) || !strings.HasPrefix(mistakes[1].Error(), want[1]) {
+	if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %q", mistakes, want)
 	}
-	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), want[0]) {
-		t.Errorf("drawing = %v, want %s", err, want[0])
+	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("drawing = %v, want %s", err, want)
 	}
 }
 
@@ -445,8 +439,7 @@ func TestCSSStyleEndEscaped(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{
-		"page.css":           "/* </STYLE><b id=\"x\">x</b><style> */\n",
-		"themes/default.css": "a::before { content: \"</style>\"; }\n",
+		"page.css": "/* </STYLE><b id=\"x\">x</b><style> */\na::before { content: \"</style>\"; }\n",
 	})
 	if warnings, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 0 {
 		t.Errorf("Check = %v, %v", warnings, mistakes)
@@ -487,30 +480,6 @@ func TestCheckScopeColours(t *testing.T) {
 	}
 }
 
-// page.css is told once, of what it sets for light mode alone with any theme, and with none when every
-// theme is refused.
-func TestCheckScopeColoursOnce(t *testing.T) {
-	t.Parallel()
-
-	release := strings.SplitN(version.Version, ".", 3)
-	floe := "floe: " + release[0] + "." + release[1] + "\n"
-	dir := sizes(t, map[string]string{
-		"template.yaml": floe, "page.css": ":scope { --bg: #fff; --fg: #000; }\n",
-		"themes/default.css": "@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n", "themes/print.css": "",
-	})
-	warnings, mistakes := tmpl.Check(dir, "", "")
-	if len(mistakes) != 0 || len(warnings) != 1 || !strings.Contains(warnings[0].Error(), "sizes/page.css sets --bg, --fg on :scope") {
-		t.Errorf("Check of two themes = %v, %v", warnings, mistakes)
-	}
-	refused := sizes(t, map[string]string{
-		"template.yaml": floe, "page.css": ":scope { --bg: #fff; }\n", "themes/default.css": ":root { --x: 1; }\n",
-	})
-	warnings, mistakes = tmpl.Check(refused, "", "")
-	if len(mistakes) != 1 || len(warnings) != 1 || !strings.Contains(warnings[0].Error(), "sizes/page.css sets --bg on :scope") {
-		t.Errorf("Check of a refused theme = %v, %v", warnings, mistakes)
-	}
-}
-
 // A directory is checked as a template of its name, which must be one.
 func TestCheckName(t *testing.T) {
 	t.Parallel()
@@ -539,7 +508,7 @@ func TestCheckMissingFile(t *testing.T) {
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_file_missing" {
 		t.Fatalf("Check without example.yaml = %v", mistakes)
 	}
-	if ja := e.Localize(i18n.New("ja")); !strings.Contains(ja, "page.html、schema.json、example.yaml、themes/default.css") {
+	if ja := e.Localize(i18n.New("ja")); !strings.Contains(ja, "page.html、schema.json、example.yaml が要ります") {
 		t.Errorf("the mistake in Japanese = %s", ja)
 	}
 }

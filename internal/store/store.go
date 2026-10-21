@@ -54,11 +54,11 @@ type Meta struct {
 	// TitleEdited and ProjectEdited mark values set on the management page, kept across republishes.
 	TitleEdited bool   `json:"titleEdited,omitempty"`
 	Description string `json:"description"`
-	// Theme and PartsTheme are the themes a data file is drawn with over the data's (floe publish --theme
-	// and --parts-theme), and DataTitle its title: when published, which clearing the title on the
+	// Theme and PartsShape are the themes a data file is drawn with over the data's (floe publish --theme
+	// and --parts-shape), and DataTitle its title: when published, which clearing the title on the
 	// management page gives back.
 	Theme      string `json:"theme,omitempty"`
-	PartsTheme string `json:"partsTheme,omitempty"`
+	PartsShape string `json:"partsShape,omitempty"`
 	DataTitle  string `json:"dataTitle,omitempty"`
 	// Source is the directory of a stored page's copy of its data file and images, under its own.
 	Source        string `json:"source,omitempty"`
@@ -251,7 +251,7 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 
 // themes are the themes m draws its data file with over the data's.
 func (m *Meta) themes() tmpl.Themes {
-	return tmpl.Themes{Template: m.Theme, Parts: m.PartsTheme}
+	return tmpl.Themes{Theme: m.Theme, Shape: m.PartsShape}
 }
 
 // drawing is what a drawing of a data file read besides it, and the publish it drew (its

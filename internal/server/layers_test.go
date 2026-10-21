@@ -21,13 +21,12 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 		"schema.json": `{"type": "object", "properties": {"note": {"$ref": "floe:///parts/note.json"}}, "additionalProperties": false}`,
 		"page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
 			`<body><header>h</header><p id="own">own</p><div id="boxed" data-floe-look="panel">b</div>{{.Data.note}}</body></html>`,
-		"page.css": "p { color: rgb(255, 0, 0); }\n" +
+		"page.css": "body { color: rgb(0, 0, 2); }\np { color: rgb(255, 0, 0); }\n" +
 			"body div[data-floe-part=note].warn { background-color: rgb(255, 0, 0); margin-top: 7px; }\n" +
 			"body div[data-floe-part=note].warn::before { top: 0px; }\n" +
 			"#boxed { background-color: rgb(0, 0, 4); }\n" +
 			"@keyframes held { from { opacity: 0.5; } to { opacity: 0.5; } }\nheader { animation: held 1000s; }\n" +
 			`@font-face { font-family: "own face"; src: url(data:,); }` + "\nfooter { color: red;",
-		"themes/default.css": "body { color: rgb(0, 0, 2); }\n",
 	} {
 		e.write(t, "templates/layers/"+name, body)
 	}
@@ -51,7 +50,7 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	// A part's style stops at a part it holds: the note's code is on the surface, the code of the table in
 	// it on floe's base.
 	slug = "nested"
-	e.publish(t, e.write(t, "nested.yaml", "template: report\nlang: en\nparts-theme: soft\nsections:\n  - parts:\n      - html: >-\n"+
+	e.publish(t, e.write(t, "nested.yaml", "template: report\nlang: en\nparts-shape: soft\nsections:\n  - parts:\n      - html: >-\n"+
 		`          <div data-floe-part="note"><p><code id="own">a</code></p><div data-floe-part="table"><table><tbody><tr><td>`+
 		`<code id="held">b</code></td></tr></tbody></table></div></div>`+"\n"), store.Options{Slug: &slug})
 	b.navigate("/a/nested/?raw")
@@ -67,7 +66,7 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 		`"note": {"$ref": "floe:///parts/note.json"}}, "additionalProperties": false}`)
 	e.write(t, "templates/leaky/page.html", `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>`+
 		`<body>{{.Data.leaky}}{{.Data.note}}</body></html>`)
-	e.write(t, "templates/leaky/themes/default.css", ":scope { --fg: #000; }\n")
+	e.write(t, "templates/leaky/page.css", ":scope { --fg: #000; }\n")
 	slug = "leaky"
 	e.publish(t, e.write(t, "leaky.yaml", "template: leaky\nlang: en\nleaky: { text: a }\nnote: { text: b, tone: warn }\n"),
 		store.Options{Slug: &slug})
@@ -85,7 +84,7 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	e.write(t, "parts/table/part.css", "")
 	e.write(t, "parts/table/part.yaml", "looks: [panel]\n")
 	slug = "own-table"
-	e.publish(t, e.write(t, "own-table.yaml", "template: report\nlang: en\nparts-theme: washi\nsections:\n  - parts:\n"+
+	e.publish(t, e.write(t, "own-table.yaml", "template: report\nlang: en\nparts-shape: washi\nsections:\n  - parts:\n"+
 		"      - table: { text: mine }\n      - compare: { before: a, after: b, rows: [{ what: x, before: p, after: q }] }\n"),
 		store.Options{Slug: &slug})
 	b.navigate("/a/own-table/?raw")

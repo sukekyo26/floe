@@ -106,15 +106,15 @@ func TestBrokenOwnTemplates(t *testing.T) {
 	if err := os.WriteFile(outside, []byte("body{}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	theme := filepath.Join(own(t, leaky, "report"), "themes", "default.css")
-	if err := os.Remove(theme); err != nil {
+	css := filepath.Join(own(t, leaky, "report"), "page.css")
+	if err := os.Remove(css); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(outside, theme); err != nil {
+	if err := os.Symlink(outside, css); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(leaky, "", ""), "template: report\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "themes/default.css") {
-		t.Errorf("a theme that leads out of the template = %v", err)
+	if _, err := draw(tmpl.NewLibrary(leaky, "", ""), "template: report\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "page.css") {
+		t.Errorf("a page.css that leads out of the template = %v", err)
 	}
 
 	// A template of one's own named in another case is refused, not passed over for the built-in one.

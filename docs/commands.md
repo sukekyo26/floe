@@ -44,8 +44,8 @@ Pages are drawn from data files (`.yaml`, `.yml`). The data file is copied to `<
 | `--slug <name>` | The URL name. Lowercase letters, digits and hyphens, up to 64 characters. Defaults to the file name; a linked `index.html` takes the name of its directory. |
 | `--title <text>` | The title shown in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
 | `--description <text>` | A description shown in the list. |
-| `--theme <name>` | The template's theme to draw the page with, over the data file's `theme:`, which is then not used. Defaults to `theme:`, else `default`; a republish without it goes back to `theme:`. An empty value is a usage error. Refused with `--link` of an HTML file. |
-| `--parts-theme <name>` | The theme to draw floe's parts (and Markdown's quotes) with, over the data file's `parts-theme:`, which is then not used. Defaults to `parts-theme:`, else `default`; a republish without it goes back to `parts-theme:`. An empty value is a usage error. Refused with `--link` of an HTML file. |
+| `--theme <name>` | The theme to draw the page with, its palette and the parts' shape, over the data file's `theme:`, which is then not used. Defaults to `theme:`, else `default`; a republish without it goes back to `theme:`. An empty value is a usage error. Refused with `--link` of an HTML file. |
+| `--parts-shape <name>` | The theme floe's parts (and Markdown's quotes) take their shape from, over the data file's `parts-shape:`, which is then not used. Defaults to `parts-shape:`, else the theme; a republish without it goes back to `parts-shape:`. An empty value is a usage error. Refused with `--link` of an HTML file. |
 | `--force` | Replace a page published from another project, or a link to another file. |
 
 ### Data files
@@ -98,8 +98,8 @@ sections:
 ```
 
 - `lang:` is the page's language (`<html lang>`), a BCP 47 tag (`en`, `ja`, `pt-BR`). Every data file names one.
-- `theme:` picks a theme of the template, which styles the page; `report` has `default`.
-- `parts-theme:` picks a theme of floe's parts, which styles the parts and Markdown's quotes, the same in every template: `default` (faces set in panels, notes in their tone's colour), `soft` (faces with round corners), `editorial` (rules and thin frames, as in print), `ink` (a table's heading in ink, states filled with their colour), `brutal` (thick black frames, primary faces and hard shadows), `blueprint` (blue ink on squared paper, every cell ruled), `notebook` (ruled paper, marker strokes and sticky notes), `swiss` (heavy black rules, large numbers and red, states told by shape) and `washi` (sumi and vermilion on washi in a Mincho face, seals and quotes ruled in vermilion).
+- `theme:` picks one of floe's themes, the same in every template, which sets the page's colours and faces (its palette) and the shape of the parts and Markdown's quotes: `default` (faces set in panels, notes in their tone's colour), `soft` (faces with round corners), `editorial` (rules and thin frames, as in print), `ink` (a table's heading in ink, states filled with their colour), `brutal` (thick black frames, primary faces and hard shadows), `blueprint` (blue ink on squared paper, every cell ruled), `notebook` (ruled paper, marker strokes and sticky notes), `swiss` (heavy black rules, large numbers and red, states told by shape) and `washi` (sumi and vermilion on washi in a Mincho face, seals and quotes ruled in vermilion).
+- `parts-shape:` takes the parts' shape from another theme, the palette staying `theme:`'s: `parts-shape: washi` draws the parts as washi in `default`'s colours. Left out, the parts take `theme:`'s shape.
 - An image the template takes (an item of `"format": "image"`) is a path under the data file's directory; the image goes into the page. `floe publish` sends the server the images it asks for: one that is not there is told at its line and column, while one floe will not send (through a symlink, larger than 1 MiB, not a file, unreadable or not holding its type) is told without them.
 - A diagram (the part `diagram`, in `report` or a template's own) is a spec written in place, with the parts and checks of [`floe diagram render`](#floe-diagram-render-specyaml), its mistakes at the data file's lines and columns. The ids of the diagrams of a page must differ. Its icons come from `FLOE_ICONS_DIR`; for a published page, from that of the server, which draws it.
 - A script (the part `script`, in `report` or a template's own) is `js`, a function the page calls with an empty element in its place and `data`. A mapping in `data` comes in the order of its keys' names (write a list where the order matters), and the function runs where it stands, before the rest of the page is read. A `js` holding `</script` or `<!--` is refused; a mistake inside the function shows in the browser.
@@ -126,7 +126,7 @@ Each page belongs to the project it is published from. The project is the reposi
 - A link without `--slug` reuses the slug of the same file, else takes the first free one of `name`, `name-2`, `name-3` …
 - The same slug for another file is refused unless `--force`.
 
-A linked data file is drawn each time its page is opened, with `--theme` and `--parts-theme` as given when it was linked, so that a page written in a repository can be read while it is written:
+A linked data file is drawn each time its page is opened, with `--theme` and `--parts-shape` as given when it was linked, so that a page written in a repository can be read while it is written:
 
 - It is checked when it is linked, as `floe publish` checks it, and refused with its mistakes.
 - Saving the data file, an image it shows or a file of its template, or fetching the icons its diagrams show, reloads the open tab.
@@ -166,7 +166,7 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 - A page is written only when it changes, and its path is printed; a page that would not change is left as it is, so running it again does nothing.
 - A page there is written over: keep the pages in version control to get one back. A page that is a symlink is written where it leads, and stays a symlink.
 - Every mistake of every file is printed at once as `file:line:column: message`, as `floe check` prints them, and nothing is written until all are fixed (exit code 1). Nothing is written either when two data files would write the same page (`a/spec.yaml` and `b/spec.yaml` with one `--out-dir`, `spec.yaml` and `spec.yml`, or the same through a symlinked directory).
-- The page's language, themes and title are the data file's `lang:`, `theme:`, `parts-theme:` and `title:` (else the slug `floe publish` would give it, else, for a name of no letter a slug takes, the name), so that writing a page and checking it take the same arguments.
+- The page's language, themes and title are the data file's `lang:`, `theme:`, `parts-shape:` and `title:` (else the slug `floe publish` would give it, else, for a name of no letter a slug takes, the name), so that writing a page and checking it take the same arguments.
 - A data file named twice (by two globs, through a symlinked directory, or in another case on macOS) is written once; a symlink of another name is a page of its own.
 - Nothing is published, and the server is not started.
 - A page depends on the floe, the templates and the icons that draw it: in CI, use the floe version and the templates the pages were written with, and write the pages again when you upgrade.
@@ -176,11 +176,11 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 
 ## `floe template list`
 
-Print the templates, one per line in five tab-separated columns: the name, where it is (the directory of a template of your own, or `built-in` in every language, for scripts), its themes (comma-separated), the floe it needs (from its `template.yaml`; empty without one) and the description of its `schema.json`. A template of your own takes the place of the built-in one of its name. [templates.md](templates.md) tells how templates are written.
+Print the templates, one per line in four tab-separated columns: the name, where it is (the directory of a template of your own, or `built-in` in every language, for scripts), the floe it needs (from its `template.yaml`; empty without one) and the description of its `schema.json`. A template of your own takes the place of the built-in one of its name. [templates.md](templates.md) tells how templates are written.
 
 ## `floe template show <name>`
 
-Print what a data file of the template may hold, to read before writing one: where the template is, its themes, the parts themes, the floe it needs, its items (the keys floe reads from every data file, `lang` and `template` required, `parts-theme`, `theme` and `title`, and those of `schema.json`; each with what it takes and its description, the items under it indented) and its `example.yaml`.
+Print what a data file of the template may hold, to read before writing one: where the template is, the themes a data file may pick, the floe it needs, its items (the keys floe reads from every data file, `lang` and `template` required, `parts-shape`, `theme` and `title`, and those of `schema.json`; each with what it takes and its description, the items under it indented) and its `example.yaml`.
 
 ## `floe template new <name> --from <template>`
 
@@ -195,7 +195,7 @@ Make the template `<name>` of your own in `$FLOE_TEMPLATES_DIR/<name>` as a copy
 
 Check each directory as the template of its name, before you use or share it. A relative path is resolved against the working directory.
 
-- Its files first: `template.yaml`, `schema.json` (a `format` floe does not know is a mistake, as is an item, declared or required, named as a key floe reads from every data file: `lang`, `parts-theme`, `template`, `theme`, `title`), `checks.yaml` (the paths of `for` and `field` must be declared in `schema.json`), `computed.yaml`, `page.html`, `themes/default.css` and the images of `assets/`.
+- Its files first: `template.yaml`, `schema.json` (a `format` floe does not know is a mistake, as is an item, declared or required, named as a key floe reads from every data file: `lang`, `parts-shape`, `template`, `theme`, `title`), `checks.yaml` (the paths of `for` and `field` must be declared in `schema.json`), `computed.yaml`, `page.html`, `page.css` and the images of `assets/`.
 - Then its `example.yaml` through every stage of `floe publish`, drawing the page included. It must name the template of the directory's name: the template drawn is always the one in the directory, never another of its name.
 - Every mistake is printed at once, as `file:line:column: message` where it has a place (exit code 1). Nothing is printed when every template is right (exit code 0).
 - Warnings go to stderr and leave the exit code 0: no `template.yaml`, an object of `schema.json` that does not refuse a misspelt key (no `"additionalProperties": false`), or a colour that changes with the mode set on `:scope` for light mode alone, which would stay in dark mode too.
@@ -363,4 +363,4 @@ The command line speaks English, whatever the environment's language; the manage
 |---|---|
 | `0` | Success |
 | `1` | Failure (a refused publish, a missing page, a port in use, a data file or diagram spec with mistakes …) |
-| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`, `--theme` or `--parts-theme`, an unknown example, a `--lang` that is not a BCP 47 tag) |
+| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title`, `--theme` or `--parts-shape`, an unknown example, a `--lang` that is not a BCP 47 tag) |
