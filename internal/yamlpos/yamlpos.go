@@ -176,17 +176,24 @@ func Syntax(file string, err error) *Error {
 	if !errors.As(err, &se) || se.Token == nil {
 		return New(file, Pos{Line: 1, Column: 1}, "yaml_syntax", err.Error())
 	}
-	mistake := usererr.New("yaml_syntax", se.Message)
 	hint, cause := syntaxHint(se.Token)
+	var detail any = se.Message
 	if hint != "" {
-		mistake = Hinted(mistake, hint)
+		detail = HintFirst(hint, se.Message)
 	}
-	return &Error{File: file, Pos: Pos{Line: cause.Position.Line, Column: cause.Position.Column}, Err: mistake}
+	at := Pos{Line: cause.Position.Line, Column: cause.Position.Column}
+	return &Error{File: file, Pos: at, Err: usererr.New("yaml_syntax", detail)}
 }
 
 // Hinted adds to the mistake e the hint worded by the catalog message key hint.
 func Hinted(e *usererr.Error, hint string) *usererr.Error {
 	return usererr.New("yaml_hinted", e, usererr.New(hint))
+}
+
+// HintFirst words the hint by the catalog message key hint, with what a library said of the mistake,
+// detail, after it: the hint names the cause, which the library's words may hide.
+func HintFirst(hint, detail string) *usererr.Error {
+	return usererr.New("yaml_hint_first", usererr.New(hint), detail)
 }
 
 // syntaxHint returns the key of the hint for a syntax error at tk, or "" for none, and the token where

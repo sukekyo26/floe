@@ -164,6 +164,7 @@ var messagesJA = map[string]string{
 	"yaml_no_anchors": "アンカー・エイリアス・マージキー（<<）・タグは使えません。値をそのまま書いてください",
 	// 文が YAML に別のものと読まれたときの、誤りの後の一言
 	"yaml_hinted":            "%s。%s",
+	"yaml_hint_first":        "%s（%s）",
 	"yaml_hint_colon":        "「: 」を含む文はキーと値として読まれます。文を引用符で囲んでください",
 	"yaml_hint_comment":      "空白の後の # からはコメントになり、{ } や [ ] が途中で切れます。# を含む文は引用符で囲んでください",
 	"yaml_hint_reserved":     "` や @ で始まる値は、引用符で囲んでください",

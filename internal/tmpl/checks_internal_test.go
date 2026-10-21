@@ -124,7 +124,7 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 		{"- for: a\n  expr: 'itme.x'\n  message: m\n", "checks.yaml:2:9: itme.x cannot be read as an expression: unknown name itme"},
 		{"- for: a\n  expr: 'item.x +'\n  message: m\n", "checks.yaml:2:9: item.x + cannot be read as an expression: unexpected token EOF"},
 		{"- for: a\n  expr: len(filter(doc.a, # > 0)) > 0\n  message: m\n", "checks.yaml:2:9: len(filter(doc.a, cannot be read as an expression: " +
-			"unexpected token EOF; a # after a space began a YAML comment, which cut the expression short: put the expression in quotes"},
+			"a # after a space began a YAML comment, which cut the expression short: put the expression in quotes (unexpected token EOF)"},
 		{"- for: b.c\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b.c does not lead to a list in d.yaml"},
 		{"- for: b\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b does not lead to a list in d.yaml"},
 	} {

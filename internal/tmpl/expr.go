@@ -57,15 +57,15 @@ func compileWritten(
 	if err == nil {
 		return p, nil
 	}
-	mistake := usererr.New("tmpl_expr", src, brief(err))
+	var detail any = brief(err)
 	// LIMIT: the hint needs the expression with its comment put back to compile, so one cut short that
 	// has another mistake too gets none. Compare where the two fail if that hides a cut.
 	if rest != "" {
 		if _, e := compile(src+" #"+rest, env, opts...); e == nil {
-			mistake = yamlpos.Hinted(mistake, "yaml_hint_expr_comment")
+			detail = yamlpos.HintFirst("yaml_hint_expr_comment", brief(err))
 		}
 	}
-	return nil, &yamlpos.Error{File: file, Pos: at, Err: mistake}
+	return nil, &yamlpos.Error{File: file, Pos: at, Err: usererr.New("tmpl_expr", src, detail)}
 }
 
 // brief words an error of expr on one line, without the snippet it draws under the message.

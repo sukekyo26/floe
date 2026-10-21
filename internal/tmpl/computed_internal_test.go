@@ -122,11 +122,11 @@ func TestComputeQuoteHint(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ src, want string }{
-		{"a: map([1], # * reads_per_sec)\n", "computed.yaml:1:4: map([1], cannot be read as an expression: unexpected token EOF; " +
-			"a # after a space began a YAML comment, which cut the expression short: put the expression in quotes"},
+		{"a: map([1], # * reads_per_sec)\n", "computed.yaml:1:4: map([1], cannot be read as an expression: " +
+			"a # after a space began a YAML comment, which cut the expression short: put the expression in quotes (unexpected token EOF)"},
 		// The comment that cut it is on the last line of an expression written over lines.
 		{"a: reads_per_sec > 0 &&\n  len(filter([1], # > 0)) > 0\n", "computed.yaml:1:4: reads_per_sec > 0 && len(filter([1], cannot be read as " +
-			"an expression: unexpected token EOF; a # after a space began a YAML comment, which cut the expression short: put the expression in quotes"},
+			"an expression: a # after a space began a YAML comment, which cut the expression short: put the expression in quotes (unexpected token EOF)"},
 		{"a: nope + 1 # a note\n", "computed.yaml:1:4: nope + 1 cannot be read as an expression: unknown name nope"},
 	} {
 		d, root := data(t, "reads_per_sec: 1\n")

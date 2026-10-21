@@ -113,27 +113,34 @@ func TestSyntaxHints(t *testing.T) {
 	t.Parallel()
 
 	const (
-		colon    = `; text with ": " in it reads as keys and values: put the text in quotes`
-		comment  = "; a # after a space begins a comment, which cut { } or [ ] short: put text with # in it in quotes"
-		reserved = "; a value cannot begin with ` or @ unless it is in quotes"
+		bad      = "this is not valid YAML: "
+		colon    = `text with ": " in it reads as keys and values: put the text in quotes`
+		comment  = "a # after a space begins a comment, which cut { } or [ ] short: put text with # in it in quotes"
+		reserved = "a value cannot begin with ` or @ unless it is in quotes"
 	)
 	for _, tt := range []struct{ src, want string }{
-		{"lead: parts-shape: drop\n", "a.yaml:1:7: this is not valid YAML: mapping value is not allowed in this context" + colon},
-		{"a:\n  - { title: layer #73, from: 2 }\n  - b\n", "a.yaml:2:20: this is not valid YAML: ',' or '}' must be specified" + comment},
-		{"a: [x #y, z]\n", "a.yaml:1:7: this is not valid YAML: sequence end token ']' not found" + comment},
+		{"lead: parts-shape: drop\n", "a.yaml:1:7: " + bad + colon + " (mapping value is not allowed in this context)"},
+		{"a:\n  - { title: layer #73, from: 2 }\n  - b\n", "a.yaml:2:20: " + bad + comment + " (',' or '}' must be specified)"},
+		{"a: [x #y, z]\n", "a.yaml:1:7: " + bad + comment + " (sequence end token ']' not found)"},
 		// A ` after the ": " of text is the ": "'s doing, which the hint names, at that ":".
-		{"rows:\n  - [a, the `: ` case, c]\n", "a.yaml:2:14: this is not valid YAML: '`' is a reserved character" + colon},
-		{"a: `b`\n", "a.yaml:1:4: this is not valid YAML: '`' is a reserved character" + reserved},
-		{"a: { k: `v` }\n", "a.yaml:1:9: this is not valid YAML: '`' is a reserved character" + reserved},
-		{"a: b: `c`\n", "a.yaml:1:5: this is not valid YAML: '`' is a reserved character" + colon},
+		{"rows:\n  - [a, the `: ` case, c]\n", "a.yaml:2:14: " + bad + colon + " ('`' is a reserved character)"},
+		{"a: `b`\n", "a.yaml:1:4: " + bad + reserved + " ('`' is a reserved character)"},
+		{"a: { k: `v` }\n", "a.yaml:1:9: " + bad + reserved + " ('`' is a reserved character)"},
+		{"a: b: `c`\n", "a.yaml:1:5: " + bad + colon + " ('`' is a reserved character)"},
 		// A comment inside a { } or [ ] that closes is the author's, and another mistake gets no hint.
-		{"a: [x, # y\n  z]\nb: 'c\n", "a.yaml:3:4: this is not valid YAML: could not find end character of single-quoted text"},
-		{"a: 1\na: 2\n", `a.yaml:2:1: this is not valid YAML: mapping key "a" already defined at [1:1]`},
+		{"a: [x, # y\n  z]\nb: 'c\n", "a.yaml:3:4: " + bad + "could not find end character of single-quoted text"},
+		{"a: 1\na: 2\n", "a.yaml:2:1: " + bad + `mapping key "a" already defined at [1:1]`},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src), "diagram_documents")
 		if err == nil || err.Error() != tt.want {
 			t.Errorf("Parse(%q) = %v, want %s", tt.src, err, tt.want)
 		}
+	}
+	var e *yamlpos.Error
+	if _, err := yamlpos.Parse("a.yaml", []byte("lead: parts-shape: drop\n"), "diagram_documents"); !errors.As(err, &e) ||
+		e.Localize(i18n.New("ja")) != "a.yaml:1:7: YAML として読めません: 「: 」を含む文はキーと値として読まれます。"+
+			"文を引用符で囲んでください（mapping value is not allowed in this context）" {
+		t.Errorf("Parse in Japanese = %v", e.Localize(i18n.New("ja")))
 	}
 }
 
