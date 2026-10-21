@@ -492,7 +492,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		}
 		pages[lang].Funcs(template.FuncMap{"word": w.word(file, lang)})
 	}
-	css, err := set.readPartCSS(files, name, dir)
+	css, warnings, err := readPartCSS(files, name, dir)
 	if err != nil {
 		return err
 	}
@@ -504,6 +504,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		return err
 	}
 	set.parts[name] = p
+	set.strays = append(set.strays, warnings...)
 	return nil
 }
 
@@ -552,10 +553,11 @@ func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error
 			return usererr.New("tmpl_look_files", path.Join(dir, file), name)
 		}
 	}
-	css, err := set.readPartCSS(files, name, dir)
+	css, warnings, err := readPartCSS(files, name, dir)
 	if err != nil {
 		return err
 	}
+	set.strays = append(set.strays, warnings...)
 	set.parts[name] = &part{
 		name: name, shape: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: yaml.looks,
 		taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
@@ -563,19 +565,18 @@ func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error
 	return nil
 }
 
-// readPartCSS reads the part.css of the part name in files, its directory, shown as dir, and warns of the
-// colours it writes as values.
-func (set *partSet) readPartCSS(files fs.FS, name, dir string) (string, error) {
+// readPartCSS reads the part.css of the part name in files, its directory, shown as dir, and returns the
+// warnings of the colours it writes as values, to be told once the part is read whole.
+func readPartCSS(files fs.FS, name, dir string) (string, []*usererr.Error, error) {
 	css, err := fs.ReadFile(files, "part.css")
 	if err != nil {
-		return "", fmt.Errorf("read the part %s: %w", name, err)
+		return "", nil, fmt.Errorf("read the part %s: %w", name, err)
 	}
 	file, sheet := path.Join(dir, "part.css"), readCSS(css)
 	if err = sheet.refuse(file, true); err != nil {
-		return "", err
+		return "", nil, err
 	}
-	set.strays = append(set.strays, colourWarnings(file, sheet, true)...)
-	return string(css), nil
+	return string(css), colourWarnings(file, sheet, true), nil
 }
 
 // readLooks reads the looks part.yaml, file, gives the key k.

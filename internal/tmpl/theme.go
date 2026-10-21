@@ -141,7 +141,10 @@ func checkPalette(file string, s *cssSheet, under []string) ([]*usererr.Error, e
 		if err != nil {
 			return nil, err
 		}
-		maps.Copy(modes, modesOf(u))
+		// One that changes with the mode in either stays so.
+		for name, own := range modesOf(u) {
+			modes[name] = modes[name] || own
+		}
 	}
 	if names := c.lightOnly(modes); names != nil {
 		return []*usererr.Error{usererr.New("tmpl_palette_dark", file, andList(names))}, nil
@@ -330,7 +333,7 @@ func (c *modeColours) readScope(s *cssSheet) {
 }
 
 // onScope reports whether the declarations of the rule i of s set on :scope: it is :scope's, or an
-// at-rule's in it.
+// at-rule's in it or in none, which floe's @scope applies to :scope.
 func (s *cssSheet) onScope(i int) bool {
 	for ; i >= 0; i = s.rules[i].parent {
 		switch r := &s.rules[i]; {
@@ -340,7 +343,7 @@ func (s *cssSheet) onScope(i int) bool {
 			return false
 		}
 	}
-	return false
+	return true
 }
 
 // under reports whether the rule i of s, or one that holds it, is an at-rule of a prelude match tells.

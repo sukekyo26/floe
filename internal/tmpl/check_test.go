@@ -465,6 +465,7 @@ func TestCheckScopeColours(t *testing.T) {
 		":scope { --surface: #fff; }\n@media (prefers-color-scheme: dark) { :scope { --surface: #222; } }": "",
 		"body { --surface: #fff; }": "",
 		"--accent: #fff;":           "sizes/page.css sets --accent on :scope for light mode alone",
+		"--accent: #fff;\n@media (prefers-color-scheme: dark) { --accent: #000; }":                                                       "",
 		"@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n:scope { --bg: #fff; }":                                         "sizes/page.css sets --bg on :scope for light mode alone",
 		":scope { --line: #fff; &.x { --q: 1; } --fg: #000; }\n@media (prefers-color-scheme: dark) { :scope { --line: #222; } }":         "sizes/page.css sets --fg on :scope",
 		":scope { --bg: #fff; }\n@media screen and (prefers-color-scheme: dark) { :scope { --bg: #000; } }":                              "",

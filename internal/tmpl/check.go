@@ -72,7 +72,7 @@ func Check(dir, partsDir, themesDir, iconsDir string) (warnings []*usererr.Error
 
 // CheckOwnParts checks the parts of one's own in partsDir and the themes in themesDir, "" for none, as a
 // page would read them: the mistakes are of those that cannot be used, and the warnings of what goes into
-// no page. It draws none of them, which have no data; a template that uses one draws its example with it.
+// no page and of the colours written where the palette is to give them. It draws none of them, which have no data; a template that uses one draws its example with it.
 func CheckOwnParts(partsDir, themesDir string) (warnings []*usererr.Error, mistakes []error) {
 	set, err := partsIn(ownDirs{parts: partsDir, themes: themesDir})
 	if err != nil {

@@ -536,7 +536,7 @@ func TestOwnPartsThemes(t *testing.T) {
 	// Over floe's of its name, a palette of one's own is told of that palette's colours too.
 	head := filepath.Join(themesOf(parts), "brutal", "palette.css") + " sets --brutal-head-bg for light mode alone"
 	if !warned(pale) || !warned(head) || warned(filepath.Join(themesOf(parts), "mine")) || warned(filepath.Join(themesOf(parts), "broke", "palette.css")) {
-		t.Errorf("Check = %v, want %s alone of the palettes", warnings, pale)
+		t.Errorf("Check = %v, want %s and %s alone of the palettes", warnings, pale, head)
 	}
 	for _, want := range append(strays, why) {
 		if len(mistakes) != 0 || !slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), want) }) {
