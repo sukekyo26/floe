@@ -145,7 +145,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   fragment of inline SVG. It first checks for text that does not fit (frame
   headings too), parts outside the canvas (edges, lines and axes too),
   overlaps (with frame headings too), edges through boxes or labels, and
-  crossing edges, and reports every mistake as `file:line:column`. The fragment
+  crossing edges, and reports every mistake as `file:line:column`, saying to
+  quote text that YAML read as something else, as a data file's does. The fragment
   carries the diagrams' style and a zoom toolbar (buttons, Ctrl / ⌘ + wheel,
   pinch, drag, arrow keys) worded in the page's language; `--no-assets` leaves them out.
 - Add `floe icons fetch <set> [zip-or-url]`, which keeps an icon set (`aws`:
@@ -165,7 +166,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   The built-in template `report` lays out a header and sections of Markdown
   text, with HTML parts for what Markdown cannot say. The data is checked
   against the template's schema first, and every mistake is reported at its
-  line and column (`file:line:column`). The scripts of a page drawn from a
+  line and column (`file:line:column`). Where YAML read text as something
+  else (a `: ` or a ` #` in plain text, written over lines too, a value
+  beginning with `` ` `` or `@`, a `computed.yaml` or `checks.yaml` expression a
+  `#` cut short), the mistake
+  says to put the text in quotes, at where the text was split or the comment
+  began. The scripts of a page drawn from a
   data file cannot send what it holds out: its CSP blocks `fetch`, XHR,
   images from elsewhere and forms, and a `<base>`, in its download too. A page is in the
   language its data file names (`lang:`, a BCP 47 tag such as `en` or `ja`),
