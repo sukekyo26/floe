@@ -63,16 +63,16 @@ func (a *app) warn(key string, args ...any) {
 func (a *app) publishCmd() *cobra.Command {
 	var opts store.Options
 	var link bool
-	var slug, title, description, theme, partsShape string
+	var slug, title, description, theme string
 	cmd := &cobra.Command{
 		Use:   "publish <data.yaml> | --link <file.html>",
 		Short: "Store a page drawn from a data file (or --link an HTML file in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
 store it and print its URL. The same slug from the same project overwrites it, and a slug
 published from another project is refused unless --force. A page is in the language its
-data names (lang:), and in the theme its data names (theme:, else default), the parts in the
-shape of another where parts-shape: names one, unless --theme or --parts-shape names another. A new
-slug is also opened in the browser ($BROWSER, open, wslview, xdg-open).
+data names (lang:), and in the theme its data names (theme:, else default), its palette and the
+parts' shape, unless --theme names another. A new slug is also opened in the browser ($BROWSER,
+open, wslview, xdg-open).
 
 --link registers a file in place instead of storing a page. An HTML file is shown as it is:
 it is read on every request, and the files under its directory are served for its relative
@@ -96,23 +96,12 @@ refused unless --force.`,
 			if flags.Changed("description") {
 				opts.Description = &description
 			}
-			// A theme given is trimmed, and an empty one refused: it would take the data's.
-			for _, f := range []struct {
-				name, empty string
-				value       *string
-				to          **string
-			}{
-				{"theme", "cli_theme_empty", &theme, &opts.Theme},
-				{"parts-shape", "cli_parts_shape_empty", &partsShape, &opts.PartsShape},
-			} {
-				if !flags.Changed(f.name) {
-					continue
+			if flags.Changed("theme") {
+				// An empty theme would take the data's.
+				if strings.TrimSpace(theme) == "" {
+					return usageError{err: usererr.New("cli_theme_empty")}
 				}
-				*f.value = strings.TrimSpace(*f.value)
-				if *f.value == "" {
-					return usageError{err: usererr.New(f.empty)}
-				}
-				*f.to = f.value
+				opts.Theme = &theme
 			}
 			return a.publish(cmd.Context(), args[0], link, opts)
 		},
@@ -124,8 +113,6 @@ refused unless --force.`,
 	f.StringVar(&description, "description", "", "a description shown in the list")
 	f.StringVar(&theme, "theme", "",
 		"the theme to draw with: its palette and the parts' shape (default: the data file's theme:, else default)")
-	f.StringVar(&partsShape, "parts-shape", "",
-		"the theme floe's parts take their shape from (default: the data file's parts-shape:, else the theme)")
 	f.BoolVar(&opts.Force, "force", false, "replace a page of another project, or a link to another file")
 	return cmd
 }
@@ -166,7 +153,7 @@ func (a *app) publishLink(ctx context.Context, file string, opts store.Options) 
 	}
 	err = c.do(ctx, http.MethodPost, "/api/artifacts", server.Link{
 		Path: path, Slug: opts.Slug, Title: opts.Title, Description: opts.Description, Theme: opts.Theme,
-		PartsShape: opts.PartsShape, Force: opts.Force,
+		Force: opts.Force,
 	}, &saved)
 	return saved, err
 }
@@ -194,7 +181,7 @@ func (a *app) publishData(ctx context.Context, file string, opts store.Options) 
 	}
 	up := server.Upload{
 		File: read.File, Dir: read.Dir, Source: read.Source, Images: nil, Project: read.Project, Title: opts.Title,
-		Description: opts.Description, Theme: opts.Theme, PartsShape: opts.PartsShape, Force: opts.Force,
+		Description: opts.Description, Theme: opts.Theme, Force: opts.Force,
 	}
 	path := "/api/artifacts/" + slug
 	err = c.do(ctx, http.MethodPut, path, up, &saved)

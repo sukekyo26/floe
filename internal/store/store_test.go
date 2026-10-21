@@ -948,20 +948,10 @@ func TestPublishLang(t *testing.T) {
 	e.mustPublish(t, listed, store.Options{Theme: ptr("default")}, "other")
 	_, err = e.publish(t, frag, store.Options{Theme: ptr("print")}, "other")
 	wantUserErr(t, err, "tmpl_unknown_theme", "print", "blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi")
-	// --parts-shape does so for the theme the parts take their shape from, whenever the page is opened.
-	parts := e.write(t, "parts.yaml", "template: report\nparts-shape: [dark]\nlang: en\n")
-	e.mustPublish(t, parts, store.Options{PartsShape: ptr("brutal")}, "other")
-	if m := e.meta(t, "parts"); m.PartsShape != "brutal" || m.Theme != "" {
-		t.Errorf("--parts-shape brutal: theme %q, parts' shape %q", m.Theme, m.PartsShape)
-	}
-	_, err = e.publish(t, frag, store.Options{PartsShape: ptr("print")}, "other")
-	wantUserErr(t, err, "tmpl_unknown_parts_shape", "print", "blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi")
 
 	// A linked file is shown as it is: --theme is refused.
 	site := e.write(t, "site/index.html", "<h1>A</h1>")
 	_, err = e.link(t, site, store.Options{Theme: ptr("default")}, "repo")
-	wantUserErr(t, err, "store_theme_link")
-	_, err = e.link(t, site, store.Options{PartsShape: ptr("default")}, "repo")
 	wantUserErr(t, err, "store_theme_link")
 }
 
@@ -1093,7 +1083,7 @@ func TestLinkDataFileTwice(t *testing.T) {
 	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nlang: en\n")
 	link := func(slug, theme string) store.Meta {
 		t.Helper()
-		entry, err := s.PrepareLink(t.Context(), data, store.Options{Slug: ptr(slug), PartsShape: ptr(theme)},
+		entry, err := s.PrepareLink(t.Context(), data, store.Options{Slug: ptr(slug), Theme: ptr(theme)},
 			filepath.Join(e.tmp, "proj"))
 		if err != nil {
 			t.Fatal(err)
@@ -1187,7 +1177,7 @@ func TestLinkDataFileParts(t *testing.T) {
 	}
 	parts := filepath.Join(e.tmp, "parts")
 	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", parts, filepath.Join(e.tmp, "themes"), ""))
-	data := e.write(t, "proj/spec.yaml", "template: report\nlang: en\nparts-shape: mine\nsections:\n  - parts:\n      - note: { text: Mine }\n")
+	data := e.write(t, "proj/spec.yaml", "template: report\nlang: en\ntheme: mine\nsections:\n  - parts:\n      - note: { text: Mine }\n")
 	m := store.Meta{Path: data}
 	page, version, err := s.Draw("spec", &m, data)
 	if err != nil || !strings.Contains(string(page), `<aside data-floe-part="note">Mine</aside>`) {

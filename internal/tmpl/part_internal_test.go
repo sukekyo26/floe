@@ -499,7 +499,7 @@ func TestPageStyleEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	css := "/* </Style><b>x</b> */ a { background: url(data:image/svg+xml,<svg><style>p{}</style></svg>); }"
-	style, err := set.pageStyle("<body></body>", nil, []byte(css), "default", "default")
+	style, err := set.pageStyle("<body></body>", nil, []byte(css), "default")
 	if err != nil {
 		t.Fatal(err)
 	}

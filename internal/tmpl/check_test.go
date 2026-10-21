@@ -27,7 +27,7 @@ func TestDrawEveryStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	l := tmpl.NewLibrary("testdata", "", "", "")
-	d, err := l.Read(file, src, tmpl.Themes{}, "")
+	d, err := l.Read(file, src, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestDrawEveryStage(t *testing.T) {
 		}
 	}
 	twice := strings.Replace(string(src), "b.png", "a.txt", 1)
-	if _, err := l.Read(file, []byte(twice), tmpl.Themes{}, ""); err == nil || !strings.Contains(err.Error(), file+":8:11: files[1].name: give each file its own name") {
+	if _, err := l.Read(file, []byte(twice), "", ""); err == nil || !strings.Contains(err.Error(), file+":8:11: files[1].name: give each file its own name") {
 		t.Errorf("a check that fails = %v", err)
 	}
 }
@@ -243,7 +243,7 @@ func TestCheckMistakes(t *testing.T) {
 			name:  "an item floe reads itself",
 			files: map[string]string{"schema.json": `"chart":|"lang": { "type": "string" },` + "\n    " + `"chart":`},
 			want: []string{
-				"sizes/schema.json declares or requires lang, which floe reads from every data file itself (lang, parts-shape, template, theme, title): give the items of the schema other names",
+				"sizes/schema.json declares or requires lang, which floe reads from every data file itself (lang, template, theme, title): give the items of the schema other names",
 			},
 		},
 		{
@@ -524,7 +524,7 @@ func TestRenderBadAsset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, src, tmpl.Themes{}, "")
+	d, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, src, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -581,7 +581,7 @@ func TestSchemaOfSharedKeys(t *testing.T) {
 		`"required": ["files"]`, `"required": ["files", "lang"]`, 1)), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), tmpl.Themes{}, "")
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), "", "")
 	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json declares or requires lang, title, which floe reads") {
 		t.Errorf("Read with a template whose schema declares lang and title = %v", err)
 	}
@@ -595,14 +595,14 @@ func TestReadFS(t *testing.T) {
 	png := mustRead(t, "testdata/sizes/chart.png")
 	l := tmpl.NewLibrary("testdata", "", "", "")
 	src := []byte("template: sizes\nlang: en\nfiles: [{ name: a, bytes: 1 }]\nchart: img/chart.png\n")
-	d, named, err := l.ReadFS("sizes.yaml", src, fstest.MapFS{"img/chart.png": {Data: []byte(png)}}, "/plans", tmpl.Themes{})
+	d, named, err := l.ReadFS("sizes.yaml", src, fstest.MapFS{"img/chart.png": {Data: []byte(png)}}, "/plans", "")
 	if err != nil || !slices.Equal(named, []string{"img/chart.png"}) {
 		t.Fatalf("ReadFS = %v, %v; want img/chart.png named", named, err)
 	}
 	if images, imgErr := d.Images(); imgErr != nil || string(images["img/chart.png"]) != png {
 		t.Errorf("the images = %d, %v; want img/chart.png as sent", len(images), imgErr)
 	}
-	if _, _, err = l.ReadFS("sizes.yaml", src, nil, "/plans", tmpl.Themes{}); err == nil {
+	if _, _, err = l.ReadFS("sizes.yaml", src, nil, "/plans", ""); err == nil {
 		t.Error("ReadFS without an fs.FS = nil error")
 	}
 }
