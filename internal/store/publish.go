@@ -184,7 +184,7 @@ func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
 	data, named, err := s.templates.ReadFS(up.File, up.Source, images, up.Dir, theme)
 	// Asked before the mistakes, which may be of the images not sent.
 	if up.Images == nil && len(named) > 0 {
-		if _, refused := s.storedPage(up.File, nil, nil, theme, opts, up.Project); refused != nil {
+		if _, refused := s.storedPage(up.File, nil, nil, opts, up.Project); refused != nil {
 			return nil, refused
 		}
 		return nil, &NeedImages{Names: named}
@@ -192,7 +192,7 @@ func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 	}
-	return s.storedPage(up.File, data, up.Source, theme, opts, up.Project)
+	return s.storedPage(up.File, data, up.Source, opts, up.Project)
 }
 
 // checkData refuses file unless it is a data file, which a stored page is drawn from.
@@ -205,7 +205,7 @@ func checkData(file string) error {
 
 // storedPage builds the entry of the data file file as a stored page, drawn from data, of content src,
 // and published from the project from; data nil checks its slug and owner only.
-func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, theme string, opts Options, from string) (
+func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, opts Options, from string) (
 	*Entry, error,
 ) {
 	slug, err := DataSlug(file, opts.Slug)
@@ -213,7 +213,7 @@ func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, theme strin
 		return nil, err
 	}
 	return s.checked(&Entry{
-		Slug: slug, Meta: seedMeta("", data, theme), Source: nil, Images: nil, Prev: nil, opts: opts, from: from,
+		Slug: slug, Meta: seedMeta("", data, opts.theme()), Source: nil, Images: nil, Prev: nil, opts: opts, from: from,
 		named: "",
 	}, data, string(src))
 }

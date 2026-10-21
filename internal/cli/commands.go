@@ -96,10 +96,9 @@ refused unless --force.`,
 			if flags.Changed("description") {
 				opts.Description = &description
 			}
-			// A theme given is trimmed, and an empty one refused: it would take the data's.
 			if flags.Changed("theme") {
-				theme = strings.TrimSpace(theme)
-				if theme == "" {
+				// An empty theme would take the data's.
+				if strings.TrimSpace(theme) == "" {
 					return usageError{err: usererr.New("cli_theme_empty")}
 				}
 				opts.Theme = &theme

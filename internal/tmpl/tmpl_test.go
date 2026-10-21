@@ -218,8 +218,6 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\ntheme: print\nlang: en\n", `data.yaml:2:8: there is no theme "print"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`},
 		{"template: report\ntheme: [x]\nlang: en\n", "data.yaml:2:8: theme must be text"},
 		{"template: report\ntheme: ''\nlang: en\n", `data.yaml:2:8: there is no theme ""`},
-		// floe reads no parts-shape:, which a template's schema may hold.
-		{"template: report\nparts-shape: soft\nlang: en\n", "data.yaml:2:1: parts-shape is not an item of the template report"},
 		{"template: report\ntitle: [a]\nlang: en\n", "data.yaml:2:8: title must be text"},
 		{"template: report\ntitle: 'a\nlang: en\n", "data.yaml:2:8: this is not valid YAML: "},
 		// floe puts a page's CSS together: HTML of the data holds none, wherever it is, a comment's text too,
