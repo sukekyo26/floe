@@ -39,12 +39,12 @@ var identifier = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 
 // checkComputed computes the values of d's template's computed.yaml, if it has one, into d.Calc, from
 // the items its schema s declares, and reports at the top of root those its data cannot give.
-func checkComputed(t *Template, d *Data, root ast.Node, s *schema) error {
+func checkComputed(t *Template, d *Data, root ast.Node, s *shape) error {
 	src, found, err := t.readOptional("computed.yaml")
 	if !found || err != nil {
 		return err
 	}
-	return compute(t.file("computed.yaml"), src, d, slices.Sorted(maps.Keys(s.Properties)), root)
+	return compute(t.file("computed.yaml"), src, d, s.keyNames(), root)
 }
 
 // compute computes the values of the computed.yaml src, file in its mistakes, from the values of d,

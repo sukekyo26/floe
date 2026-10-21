@@ -105,21 +105,21 @@ func TestSchemaRefersToNoFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = validate(set, []byte(`{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
+	err = validate(set, jsonDoc(t, `{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
 	if err == nil || !strings.HasPrefix(err.Error(), "the schema of the template t cannot be read: file://"+outside+": a schema refers to no other file or URL") {
 		t.Errorf("validate of a $ref to a file = %v", err)
 	}
 	// Its $schema names a draft of JSON Schema, not a schema of its own nor a part's, which jsonschema would
 	// take as the rules of the schema.
 	for _, named := range []string{"https://example.com/meta", "floe:///parts/table.json", "floe:///templates/t/schema.json"} {
-		err = validate(set, []byte(`{"$schema": "`+named+`"}`), d, root)
+		err = validate(set, jsonDoc(t, `{"$schema": "`+named+`"}`), d, root)
 		if err == nil || err.Error() != "the schema of the template t cannot be read: $schema "+named+
 			" names no draft of JSON Schema; name one, such as https://json-schema.org/draft/2020-12/schema, or leave it out" {
 			t.Errorf("validate of the $schema %s = %v", named, err)
 		}
 	}
 	for _, named := range []string{"https://json-schema.org/draft/2020-12/schema", "http://json-schema.org/draft-07/schema#", "https://json-schema.org/schema"} {
-		if err = validate(set, []byte(`{"$schema": "`+named+`"}`), d, root); err != nil {
+		if err = validate(set, jsonDoc(t, `{"$schema": "`+named+`"}`), d, root); err != nil {
 			t.Errorf("validate of the $schema %s = %v", named, err)
 		}
 	}
@@ -135,7 +135,7 @@ func schemaProblems(t *testing.T, schema, src string) yamlpos.Problems {
 		t.Fatal(err)
 	}
 	var p yamlpos.Problems
-	if err := validate(set, []byte(schema), d, root); !errors.As(err, &p) {
+	if err := validate(set, jsonDoc(t, schema), d, root); !errors.As(err, &p) {
 		t.Fatalf("validate = %v, want problems", err)
 	}
 	return p

@@ -88,7 +88,7 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) err
 // part may take the look of the one left out, or hold it, and then one whose schema names a usable part at
 // its root.
 func (set *partSet) leaveOutUnusable() {
-	held := func(at string) []string { return set.schemas[partsURL+at+".json"].refsUnder(nil) }
+	held := func(at string) []string { return set.shapes[partsURL+at+".json"].refsUnder(nil) }
 	looks := func(at string) []string {
 		if p := set.parts[at]; p != nil {
 			return p.lookNames()
@@ -131,7 +131,7 @@ func (set *partSet) settle() {
 func (set *partSet) leaveOutRooted() bool {
 	rooted := map[string]error{}
 	for name, p := range set.parts {
-		if named, ok := set.rootPart(p.schema); ok {
+		if named, ok := set.rootPart(p.shape); ok {
 			at := cmp.Or(p.dir, path.Join("parts", name))
 			rooted[name] = usererr.New("tmpl_schema_root_part", path.Join(at, "schema.json"), named)
 		}
@@ -358,9 +358,9 @@ func (set *partSet) candidates(look bool) string {
 // one's own when own, or a look alone.
 func (set *partSet) checkHeld(p *part, at string, own bool) error {
 	// One left out has no schema; one of a name set keeps (tone, any) leaves floe's in place.
-	for _, held := range p.schema.refsUnder(nil) {
+	for _, held := range p.shape.refsUnder(nil) {
 		switch {
-		case set.schemas[partsURL+held+".json"] != nil:
+		case set.shapes[partsURL+held+".json"] != nil:
 		case set.broken[held] != nil:
 			return usererr.New("tmpl_part_holder_broken", held)
 		case set.parts[held] != nil && set.parts[held].isLook():
@@ -469,18 +469,19 @@ func cycle(name string, next func(at string) []string) []string {
 	return nil
 }
 
-// refsUnder adds to names the parts s and the schemas under it, as written, refer to.
-func (s *schema) refsUnder(names []string) []string {
+// refsUnder adds to names the parts, and the schemas the parts share, that s and the shapes under it refer
+// to, as written.
+func (s *shape) refsUnder(names []string) []string {
 	if s == nil {
 		return names
 	}
-	if name, ok := partName(s.Ref); ok {
+	if name, ok := partName(s.ref); ok {
 		names = append(names, name)
 	}
-	for _, key := range slices.Sorted(maps.Keys(s.Properties)) {
-		names = s.Properties[key].refsUnder(names)
+	for _, key := range slices.Sorted(maps.Keys(s.keys)) {
+		names = s.keys[key].refsUnder(names)
 	}
-	return s.Items.refsUnder(names)
+	return s.each.refsUnder(names)
 }
 
 // drop leaves the part name out of set, with its schema.
@@ -488,5 +489,5 @@ func (set *partSet) drop(name string) {
 	url := partsURL + name + ".json"
 	delete(set.parts, name)
 	delete(set.docs, url)
-	delete(set.schemas, url)
+	delete(set.shapes, url)
 }

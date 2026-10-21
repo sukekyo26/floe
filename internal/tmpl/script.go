@@ -15,7 +15,7 @@ import (
 // checkScripts draws the scripts of d, its items its schema s declares of the part script, into
 // d.parts, by the path of keys to each, and reports each mistake in their shape at its line and
 // column under root. What a function does is the browser's to tell.
-func checkScripts(s *schema, d *Data, root ast.Node) error {
+func checkScripts(s *shape, d *Data, root ast.Node) error {
 	found := partsNamed(s, d, "script")
 	if found == nil {
 		return nil

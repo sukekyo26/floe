@@ -67,11 +67,11 @@ func absolute(base, ref string) string {
 // schema declares its own items, and names a part under properties or items, which floe draws the item by. A
 // look, which draws nothing, and a part that cannot be used are told as they are elsewhere, and a schema the
 // parts share may be the root, its items the schema's own.
-func (set *partSet) rootPart(s *schema) (string, bool) {
+func (set *partSet) rootPart(s *shape) (string, bool) {
 	if s == nil {
 		return "", false
 	}
-	name, ok := partName(s.Ref)
+	name, ok := partName(s.ref)
 	if !ok {
 		return "", false
 	}
@@ -88,74 +88,61 @@ func (set *partSet) pointsInto(ref string) (whole string, into bool) {
 	return whole, into && ok && (set.parts[name] != nil && !set.parts[name].isLook() || set.draws(set.sharedSchema(whole)))
 }
 
-// first returns the first of s and the schemas under it that ok takes, with its pointer under ptr, or nil.
-func (s *schema) first(ptr string, ok func(*schema) bool) (string, *schema) {
+// first returns the first of s and the shapes under it that ok takes, with its pointer under ptr, or nil.
+func (s *shape) first(ptr string, ok func(*shape) bool) (string, *shape) {
 	if s == nil {
 		return "", nil
 	}
 	if ok(s) {
 		return ptr, s
 	}
-	for _, name := range slices.Sorted(maps.Keys(s.Properties)) {
-		if at, found := s.Properties[name].first(ptr+"/properties/"+pointerKey.Replace(name), ok); found != nil {
+	in := s.inside()
+	for _, name := range slices.Sorted(maps.Keys(in.keys)) {
+		if at, found := in.keys[name].first(ptr+"/properties/"+pointerKey.Replace(name), ok); found != nil {
 			return at, found
 		}
 	}
-	return s.Items.first(ptr+"/items", ok)
+	return in.each.first(ptr+"/items", ok)
 }
 
 // formatIn returns the first item of a format of floe's in the schema s, with its pointer under ptr, or
 // nil, and the schema the parts share that s refers to and that holds it, whose items are drawn as s's
 // own, "" for one of s's own: its pointer goes on after the $ref's.
-func (set *partSet) formatIn(s *schema, ptr string) (at, in string, item *schema) {
-	at, item = s.first(ptr, func(x *schema) bool {
-		_, _, held := set.formatIn(set.sharedSchema(x.Ref), x.Ref+"#")
-		return slices.Contains(formats, x.Format) || held != nil
+func (set *partSet) formatIn(s *shape, ptr string) (at, in string, item *shape) {
+	at, item = s.first(ptr, func(x *shape) bool {
+		_, _, held := set.formatIn(set.sharedSchema(x.ref), x.ref+"#")
+		return slices.Contains(formats, x.format) || held != nil
 	})
-	if item == nil || slices.Contains(formats, item.Format) {
+	if item == nil || slices.Contains(formats, item.format) {
 		return at, "", item
 	}
-	in = item.Ref
+	in = item.ref
 	under, _, item := set.formatIn(set.sharedSchema(in), in+"#")
 	return at + " → " + under, in, item
 }
 
-// sharedSchema returns the schema the parts share that ref names, or nil.
-func (set *partSet) sharedSchema(ref string) *schema {
+// sharedSchema returns the shape of the schema the parts share that ref names, or nil.
+func (set *partSet) sharedSchema(ref string) *shape {
 	if !set.shares[ref] {
 		return nil
 	}
-	return set.schemas[ref]
+	return set.shapes[ref]
 }
 
 // draws reports whether floe draws an item of s, once set is read: it holds a part or an item of a format
 // of floe's, in a schema the parts share that it refers to too.
-func (set *partSet) draws(s *schema) bool {
-	_, found := s.first("#", func(x *schema) bool {
-		return x.part != nil || slices.Contains(formats, x.Format) || set.draws(set.sharedSchema(x.Ref))
+func (set *partSet) draws(s *shape) bool {
+	_, found := s.first("#", func(x *shape) bool {
+		return x.part != nil || slices.Contains(formats, x.format) || set.draws(set.sharedSchema(x.ref))
 	})
 	return found != nil
-}
-
-// absolute makes the $ref of s, and those under it, absolute, read from the schema at base.
-func (s *schema) absolute(base string) {
-	if s == nil {
-		return
-	}
-	if s.Ref != "" {
-		s.Ref = absolute(base, s.Ref)
-	}
-	for _, p := range s.Properties {
-		p.absolute(base)
-	}
-	s.Items.absolute(base)
 }
 
 // part is a part of floe's: a template's schema refers to it, and floe checks it, draws it and puts its
 // style into the page. A look alone (panel) is a style other parts and HTML take, which draws nothing.
 type part struct {
 	name   string
-	schema *schema                       // nil for a look alone
+	shape  *shape                        // its schema's; nil for a look alone
 	pages  map[string]*template.Template // by the language of its words; nil for one floe draws in Go (goParts)
 	words  words
 	html   string // the template of pages, as written
@@ -196,12 +183,12 @@ func isGoPart(name string) bool {
 // partSet is floe's parts, every schema under parts/, by URL: the parts' and those they share, and the
 // parts themes.
 type partSet struct {
-	parts   map[string]*part
-	docs    map[string]any         // as read, for jsonschema
-	schemas map[string]*schema     // as floe reads them
-	shares  map[string]bool        // the URLs of the schemas the parts share, floe's alone
-	themes  map[string]*partsTheme // by name
-	broken  map[string]error       // the parts of one's own that cannot be used, by name, and why
+	parts  map[string]*part
+	docs   map[string]any         // as read, for jsonschema
+	shapes map[string]*shape      // as floe reads them
+	shares map[string]bool        // the URLs of the schemas the parts share, floe's alone
+	themes map[string]*partsTheme // by name
+	broken map[string]error       // the parts of one's own that cannot be used, by name, and why
 	// the parts themes of one's own that cannot be used, by name, and why
 	brokenThemes map[string]error
 	// floe's own default palette, under every page's, whatever one's own themes change
@@ -219,7 +206,7 @@ var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("
 // be used is left out, its mistake kept for a template that uses it.
 func readParts(dir string, entries []os.DirEntry, stage staged) (*partSet, error) {
 	set := &partSet{
-		parts: map[string]*part{}, docs: map[string]any{}, schemas: map[string]*schema{}, shares: map[string]bool{},
+		parts: map[string]*part{}, docs: map[string]any{}, shapes: map[string]*shape{}, shares: map[string]bool{},
 		themes: map[string]*partsTheme{},
 		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", dirs: nil, strays: nil,
 	}
@@ -231,12 +218,12 @@ func readParts(dir string, entries []os.DirEntry, stage staged) (*partSet, error
 			return nil, err
 		}
 	}
-	for _, s := range set.schemas {
-		s.resolve(set)
+	for _, s := range set.shapes {
+		s.bind(set)
 	}
 	for _, p := range set.parts {
 		p.uses = set.partsNamedIn(p.html)
-		p.schema.partsUnder(&p.uses)
+		p.shape.partsUnder(&p.uses)
 		slices.Sort(p.uses)
 		p.uses = slices.Compact(p.uses)
 	}
@@ -278,12 +265,12 @@ func (set *partSet) readBuiltin() error {
 	for name, p := range goParts {
 		url := partsURL + name + ".json"
 		set.docs[url] = map[string]any{"type": "object", "description": p.about}
-		set.schemas[url] = &schema{
-			Format: "", Ref: "", Properties: nil, Items: nil, part: nil, Description: p.about, Type: "object", Enum: nil,
-			Required: nil,
+		set.shapes[url] = &shape{
+			keys: nil, each: nil, ref: "", format: "", named: nil, part: nil, about: p.about, typ: "object", enum: nil,
+			required: nil,
 		}
 		set.parts[name] = &part{
-			name: name, schema: set.schemas[url], pages: nil, words: nil, html: "", css: p.css, checks: nil,
+			name: name, shape: set.shapes[url], pages: nil, words: nil, html: "", css: p.css, checks: nil,
 			looks: nil, taken: nil, uses: nil, about: "", dir: "", replaces: false,
 		}
 	}
@@ -310,22 +297,23 @@ func (set *partSet) readBuiltin() error {
 	return nil
 }
 
-// partsUnder adds to names the parts the schemas under s refer to. No part holds itself: readOwn leaves
-// out one that would.
-func (s *schema) partsUnder(names *[]string) {
+// partsUnder adds to names the parts the shapes under s are drawn by, and those the parts hold in turn. No
+// part holds itself: readOwn leaves out one that would.
+func (s *shape) partsUnder(names *[]string) {
 	if s == nil {
 		return
 	}
-	for _, p := range s.Properties {
-		if p.part != nil {
-			*names = append(*names, p.part.name)
+	in := s.inside()
+	for _, k := range in.keys {
+		if k != nil && k.part != nil {
+			*names = append(*names, k.part.name)
 		}
-		p.partsUnder(names)
+		k.partsUnder(names)
 	}
-	if s.Items != nil && s.Items.part != nil {
-		*names = append(*names, s.Items.part.name)
+	if in.each != nil && in.each.part != nil {
+		*names = append(*names, in.each.part.name)
 	}
-	s.Items.partsUnder(names)
+	in.each.partsUnder(names)
 }
 
 // partsNamedIn returns the names of the parts the data-floe-part and data-floe-look attributes of html
@@ -436,16 +424,15 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown string) error {
 	if err != nil {
 		return fmt.Errorf("read %s: %w", shown, err)
 	}
-	s, err := decodeSchema(b)
+	// As jsonschema reads a $ref: cell.json is floe:///parts/cell.json.
+	s, err := readShape(doc, url)
 	if err != nil {
 		return fmt.Errorf("read %s: %w", shown, err)
 	}
 	if err = checkDraft(doc); err != nil {
 		return usererr.New("tmpl_item", shown, err)
 	}
-	// As jsonschema reads a $ref: cell.json is floe:///parts/cell.json.
-	s.absolute(url)
-	set.docs[url], set.schemas[url] = doc, s
+	set.docs[url], set.shapes[url] = doc, s
 	return nil
 }
 
@@ -503,7 +490,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		return err
 	}
 	p := &part{
-		name: name, schema: set.schemas[url], pages: pages, words: w, html: string(html), css: css, checks: nil,
+		name: name, shape: set.shapes[url], pages: pages, words: w, html: string(html), css: css, checks: nil,
 		looks: yaml.looks, taken: nil, uses: nil, about: "", dir: "", replaces: false,
 	}
 	if p.checks, err = readPartChecks(files, name, dir); err != nil {
@@ -563,7 +550,7 @@ func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error
 		return err
 	}
 	set.parts[name] = &part{
-		name: name, schema: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: yaml.looks,
+		name: name, shape: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: yaml.looks,
 		taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
 	}
 	return nil
@@ -574,11 +561,11 @@ func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error
 // part.html. One of floe's may be read before a schema the parts share that it refers to, which
 // TestPartsHoldNoFormat checks it through once all are read.
 func (set *partSet) checkFormats(url, dir string) error {
-	switch ptr, in, s := set.formatIn(set.schemas[url], "#"); {
+	switch ptr, in, s := set.formatIn(set.shapes[url], "#"); {
 	case s != nil && in != "":
-		return usererr.New("tmpl_part_shared_format", path.Join(dir, "schema.json"), ptr, s.Format, in, in)
+		return usererr.New("tmpl_part_shared_format", path.Join(dir, "schema.json"), ptr, s.format, in, in)
 	case s != nil:
-		return usererr.New("tmpl_part_format", path.Join(dir, "schema.json"), ptr, s.Format)
+		return usererr.New("tmpl_part_format", path.Join(dir, "schema.json"), ptr, s.format)
 	}
 	return nil
 }
@@ -616,7 +603,7 @@ func readLooks(file string, k, value ast.Node) ([]takenLook, error) {
 
 // isLook reports whether p is a look alone: a part.css and a part.yaml, no schema.json nor part.html.
 func (p *part) isLook() bool {
-	return p.schema == nil
+	return p.shape == nil
 }
 
 // lookNames returns the names of the looks p takes, in order.
@@ -737,37 +724,6 @@ func readPartWords(files fs.FS, file string) (words, error) {
 	return w, nil
 }
 
-// resolve fills what s and the schemas under it refer to among floe's in set: the items, types and
-// description of a part or a schema the parts share, after the description written beside the $ref.
-func (s *schema) resolve(set *partSet) {
-	if s == nil {
-		return
-	}
-	for _, p := range s.Properties {
-		p.resolve(set)
-	}
-	s.Items.resolve(set)
-	target, ok := set.schemas[s.Ref]
-	if !ok {
-		return
-	}
-	name, _ := partName(s.Ref)
-	s.part = set.parts[name]
-	s.Description = joinDescriptions(s.Description, target.Description)
-	if s.Properties == nil {
-		s.Properties, s.Required = target.Properties, target.Required
-	}
-	if s.Items == nil {
-		s.Items = target.Items
-	}
-	if s.Type == nil {
-		s.Type = target.Type
-	}
-	if s.Enum == nil {
-		s.Enum = target.Enum
-	}
-}
-
 // joinDescriptions writes the description beside a $ref, a sentence ended if it is not, before that
 // of what the $ref names.
 func joinDescriptions(beside, named string) string {
@@ -796,26 +752,27 @@ type partAt struct {
 }
 
 // findParts adds to found the items v holds that s draws by a part, v being at the path at.
-func (s *schema) findParts(v any, at []string, found *[]partAt) {
+func (s *shape) findParts(v any, at []string, found *[]partAt) {
 	if s == nil {
 		return
 	}
 	// An item of a format of floe's is drawn whole: what it holds is not looked into. A part is drawn
 	// after the parts it holds, which it draws as they were drawn.
-	if slices.Contains(formats, s.Format) {
+	if slices.Contains(formats, s.format) {
 		return
 	}
 	if s.part != nil {
 		defer func() { *found = append(*found, partAt{itemAt: itemAt{value: v, at: at}, part: s.part}) }()
 	}
+	in := s.inside()
 	switch v := v.(type) {
 	case map[string]any:
 		for k, item := range v {
-			s.Properties[k].findParts(item, append(at[:len(at):len(at)], k), found)
+			in.keys[k].findParts(item, append(at[:len(at):len(at)], k), found)
 		}
 	case []any:
 		for i, item := range v {
-			s.Items.findParts(item, append(at[:len(at):len(at)], strconv.Itoa(i)), found)
+			in.each.findParts(item, append(at[:len(at):len(at)], strconv.Itoa(i)), found)
 		}
 	}
 }
@@ -823,7 +780,7 @@ func (s *schema) findParts(v any, at []string, found *[]partAt) {
 // checkParts checks the items of d its schema s draws by parts against the checks of their parts, and
 // draws them into d.parts, by the path of keys to each, reporting every failure at its line and column
 // under root.
-func checkParts(s *schema, d *Data, root ast.Node) error {
+func checkParts(s *shape, d *Data, root ast.Node) error {
 	var found []partAt
 	s.findParts(d.Values, nil, &found)
 	var problems yamlpos.Problems
@@ -858,7 +815,7 @@ func checkParts(s *schema, d *Data, root ast.Node) error {
 }
 
 // partsNamed returns the items of d its schema s draws by the part name.
-func partsNamed(s *schema, d *Data, name string) []itemAt {
+func partsNamed(s *shape, d *Data, name string) []itemAt {
 	var found []partAt
 	s.findParts(d.Values, nil, &found)
 	var named []itemAt
@@ -913,7 +870,7 @@ func (p *part) check(file string, f itemAt, root ast.Node) (yamlpos.Problems, er
 // drew them.
 func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 	var b bytes.Buffer
-	if err := p.pages[p.words.lang(d.Lang)].Execute(&b, p.schema.prepare(f.value, f.at, d)); err != nil {
+	if err := p.pages[p.words.lang(d.Lang)].Execute(&b, p.shape.prepare(f.value, f.at, d)); err != nil {
 		return "", fmt.Errorf("draw the part %s: %w", p.name, err)
 	}
 	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template

@@ -214,7 +214,7 @@ func TestDeclared(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s, _, err := compileSchema(set, "t", []byte(tt.schema))
+		s, err := compileSchema(set, "t", jsonDoc(t, tt.schema))
 		if err != nil {
 			t.Fatalf("%s: %v", tt.schema, err)
 		}

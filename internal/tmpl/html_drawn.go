@@ -30,7 +30,7 @@ type htmlItem struct {
 // the file under root; nil for none.
 func htmlItemsOf(d *Data, root ast.Node) []htmlItem {
 	var found []itemAt
-	d.schema.find("html", d.Values, nil, &found)
+	d.shape.find("html", d.Values, nil, &found)
 	var items []htmlItem
 	for _, f := range found {
 		text, isText := f.value.(string)
@@ -106,7 +106,7 @@ func (d *Data) checkDrawnHTML(page *template.Template, title string, drawn []byt
 	if !standard(doc) {
 		return usererr.New("tmpl_html_doctype", d.tmpl.file("page.html"))
 	}
-	want := shape(doc)
+	want := treeShape(doc)
 	c := d.marked(rand.Text())
 	c.marks.shown = func(int) bool { return false }
 	all, err := c.execute(page, title)
@@ -125,7 +125,7 @@ func (d *Data) checkDrawnHTML(page *template.Template, title string, drawn []byt
 		switch {
 		case outside:
 			return usererr.New("tmpl_html_outside", d.tmpl.file("page.html"))
-		case formIn && leavesForm(it.text) || !slices.Equal(shape(doc), want):
+		case formIn && leavesForm(it.text) || !slices.Equal(treeShape(doc), want):
 			return itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
 		}
 	}
@@ -150,8 +150,8 @@ func standard(doc *html.Node) bool {
 
 // doctypeMistake refuses src, the page.html file of a template whose schema s declares an item of format
 // html, that does not start with <!doctype html>: such an item is checked in standards mode only.
-func doctypeMistake(file string, s *schema, src []byte) error {
-	if _, item := s.first("", func(s *schema) bool { return s.Format == "html" }); item == nil {
+func doctypeMistake(file string, s *shape, src []byte) error {
+	if _, item := s.first("", func(s *shape) bool { return s.format == "html" }); item == nil {
 		return nil
 	}
 	// A bytes.Reader fails no read, the one error Parse returns.
@@ -362,13 +362,13 @@ func newlineDropped(n *html.Node) bool {
 	return (n.DataAtom == atom.Pre || n.DataAtom == atom.Listing) && n.Namespace == ""
 }
 
-// shape returns the elements, comments and texts of n in order, by their names, the names of the elements'
+// treeShape returns the elements, comments and texts of n in order, by their names, the names of the elements'
 // attributes, and the texts' words, those next to each other as one, as an item's text and the page's
 // after it are in the page drawn. An item that gives the page's <body> an attribute (<body hidden>) changes
 // the page, and so does one that takes in the page's text (x </). The attributes' values are left out,
 // which an item drawn in a value is in, read or not, and so are the elements the parser may make itself
 // (implied), but their attributes, and the text the parser reads an element's content as (readAsText).
-func shape(n *html.Node) []string {
+func treeShape(n *html.Node) []string {
 	var out []string
 	var text strings.Builder
 	dropNewline := false

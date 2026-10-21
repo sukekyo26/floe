@@ -8,11 +8,9 @@ import (
 	"cmp"
 	"embed"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"io/fs"
 	"math"
 	"path"
@@ -23,6 +21,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -76,7 +75,7 @@ type Data struct {
 	Calc       map[string]any // the values of the template's computed.yaml, by name; nil without one
 
 	tmpl   *Template               // the template Read checked the data against, which draws it
-	schema *schema                 // the template's schema as Read read it, for drawing as checked
+	shape  *shape                  // the shape of the template's schema as Read read it, for drawing as checked
 	images map[string]template.URL // its images as data URIs, by the path written
 	// its items drawn by floe's parts, by the path of keys to each (pathKey); nil without one
 	parts     map[string]template.HTML
@@ -243,7 +242,7 @@ func start(file string, src []byte, given Themes) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, PartsTheme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
-		tmpl: nil, schema: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, htmlItems: nil, marks: nil,
+		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, htmlItems: nil, marks: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(given)
@@ -318,23 +317,16 @@ func pickTheme(d *Data, theme *string, given string, names []string, pos yamlpos
 // its checks and computes its values, reporting the schema's mistakes with problems, those found before
 // in the keys every template shares.
 func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems yamlpos.Problems) error {
-	src, err := t.readFile("schema.json")
-	if err != nil {
-		return err
-	}
 	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
-	s, err := t.decodeSchema(src)
+	s, doc, err := t.checkedShape()
 	if err != nil {
-		return err
-	}
-	if err = t.refuseShared(s); err != nil {
 		return err
 	}
 	set, err := t.parts()
 	if err != nil {
 		return err
 	}
-	err = validate(set, src, d, root)
+	err = validate(set, doc, d, root)
 	var more yamlpos.Problems
 	switch {
 	case errors.As(err, &more):
@@ -345,7 +337,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	if problems != nil {
 		return problems.Sorted()
 	}
-	d.schema = s
+	d.shape = s
 	d.htmlItems = htmlItemsOf(d, root)
 	err = checkItems(checkImages(s, d, root, images), checkHTML(set, d), checkDiagrams(s, d, root, t.icons),
 		checkScripts(s, d, root), checkParts(s, d, root))
@@ -507,7 +499,7 @@ func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
 	err := page.Execute(&b, map[string]any{
 		"Title": title,
 		"Lang":  d.Lang,
-		"Data":  d.schema.prepare(d.Values, nil, d),
+		"Data":  d.shape.prepare(d.Values, nil, d),
 		"Calc":  d.Calc,
 	})
 	// Read checked the data against the schema, so this is the template's own mistake: an image of its
@@ -626,46 +618,51 @@ func convert(md goldmark.Markdown, name, text string) (string, error) {
 	return b.String(), nil
 }
 
-// schemaOf reads the schema of t.
-func schemaOf(t *Template) (*schema, error) {
-	b, err := t.readFile("schema.json")
+// checkedShape reads the schema of t into its shape, and returns it as jsonschema reads it too. It refuses
+// a ref into a part, a part floe draws in Go written as a format, which would be drawn as its text, and a
+// key floe reads itself (refuseShared).
+func (t *Template) checkedShape() (*shape, any, error) {
+	doc, err := t.schemaDoc()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	s, err := t.decodeSchema(b)
-	if err == nil {
-		err = t.refuseShared(s)
-	}
+	s, err := t.readShape(doc)
 	if err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-// decodeSchema reads b, the schema.json of t, with what it refers to among floe's parts, and refuses a
-// ref into a part and a part floe draws in Go written as a format, which would be drawn as its text.
-func (t *Template) decodeSchema(b []byte) (*schema, error) {
-	s, err := t.readSchema(b)
-	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	set, err := t.parts()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if _, into := s.first("#", func(x *schema) bool { _, into := set.pointsInto(x.Ref); return into }); into != nil {
-		return nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(set, into.Ref))
+	if _, into := s.first("#", func(x *shape) bool { _, into := set.pointsInto(x.ref); return into }); into != nil {
+		return nil, nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(set, into.ref))
 	}
-	if ptr, as := s.first("#", func(x *schema) bool { return isGoPart(x.Format) }); as != nil {
-		return nil, usererr.New("tmpl_format_part", t.file("schema.json"), ptr, as.Format, as.Format)
+	if ptr, as := s.first("#", func(x *shape) bool { return isGoPart(x.format) }); as != nil {
+		return nil, nil, usererr.New("tmpl_format_part", t.file("schema.json"), ptr, as.format, as.format)
 	}
-	return s, nil
+	if err = t.refuseShared(s); err != nil {
+		return nil, nil, err
+	}
+	return s, doc, nil
 }
 
-// readSchema reads b, the schema.json of t, with what it refers to among floe's parts, a ref into a
-// part left for the caller to refuse.
-func (t *Template) readSchema(b []byte) (*schema, error) {
-	s, err := decodeSchema(b)
+// schemaDoc reads the schema.json of t as jsonschema reads it.
+func (t *Template) schemaDoc() (any, error) {
+	src, err := t.readFile("schema.json")
+	if err != nil {
+		return nil, err
+	}
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
+	if err != nil {
+		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
+	}
+	return doc, nil
+}
+
+// readShape reads doc, the schema of t, into its shape, bound to floe's parts, a ref into a part left
+// for the caller to refuse.
+func (t *Template) readShape(doc any) (*shape, error) {
+	s, err := readShape(doc, schemaURL(t.Name))
 	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
 	}
@@ -673,23 +670,23 @@ func (t *Template) readSchema(b []byte) (*schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.absolute(schemaURL(t.Name))
 	if name, ok := set.rootPart(s); ok {
 		return nil, usererr.New("tmpl_schema_root_part", t.file("schema.json"), name)
 	}
-	s.resolve(set)
+	s.bind(set)
 	return s, nil
 }
 
 // refuseShared refuses a schema that declares, or requires, a key floe reads from every data file itself:
 // floe takes it out of the data before the schema sees it, so the item would always be empty, and a
 // required one always missing.
-// LIMIT: the top of the schema only, not through $ref or allOf; look there if a schema comes to put its
-// items so.
-func (t *Template) refuseShared(s *schema) error {
+// LIMIT: the top of the schema, or what its root $ref names where it declares no items of its own (inside),
+// not allOf; look there if a schema comes to put its items so.
+func (t *Template) refuseShared(s *shape) error {
+	in := s.inside()
 	var named []string
 	for _, key := range shared {
-		if _, ok := s.Properties[key]; ok || slices.Contains(s.Required, key) {
+		if _, ok := in.keys[key]; ok || slices.Contains(in.required, key) {
 			named = append(named, key)
 		}
 	}
@@ -699,60 +696,27 @@ func (t *Template) refuseShared(s *schema) error {
 	return nil
 }
 
-var errAfterSchema = errors.New("text after the schema")
-
-// decodeSchema reads the JSON Schema b, its numbers as written, so that an enum of 1000000 is not
-// shown as 1e+06.
-func decodeSchema(b []byte) (*schema, error) {
-	var s schema
-	dec := json.NewDecoder(bytes.NewReader(b))
-	dec.UseNumber()
-	if err := dec.Decode(&s); err != nil {
-		return nil, err //nolint:wrapcheck // wrapped by schemaOf
-	}
-	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
-		return nil, errAfterSchema
-	}
-	return &s, nil
-}
-
-// schema is the part of a template's JSON Schema that floe reads: the items it declares, their format
-// or the part of floe's that draws them, and what floe template show tells of them.
-type schema struct {
-	Format     string             `json:"format"`
-	Ref        string             `json:"$ref"`
-	Properties map[string]*schema `json:"properties"`
-	Items      *schema            `json:"items"`
-
-	part *part // the part of floe's $ref names; nil for none
-
-	// What floe template show tells of an item.
-	Description string   `json:"description"`
-	Type        any      `json:"type"` // a JSON type, or a list of them
-	Enum        []any    `json:"enum"`
-	Required    []string `json:"required"`
-}
-
 // prepare readies v, at the path at, for page.html: an item declared but not given becomes nil, so
 // that page.html can test it under missingkey=error, an item a part draws becomes its HTML as d drew it
 // (a diagram its SVG, a script its element and the call of its function), an item of format html HTML
 // that goes in as it is, one of format markdown its HTML, and one of format image the data URI of its
 // image. A part readies its own item too, the parts it holds drawn by d: its schema holds no format of
 // floe's, which readPart refuses.
-func (s *schema) prepare(v any, at []string, d *Data) any {
+func (s *shape) prepare(v any, at []string, d *Data) any {
 	if s == nil {
 		return v
 	}
 	if drawn, whole := s.drawn(v, at, d); whole {
 		return drawn
 	}
+	in := s.inside()
 	switch v := v.(type) {
 	case map[string]any:
-		out := make(map[string]any, len(v)+len(s.Properties))
+		out := make(map[string]any, len(v)+len(in.keys))
 		for k, item := range v {
-			out[k] = s.Properties[k].prepare(item, append(at[:len(at):len(at)], k), d)
+			out[k] = in.keys[k].prepare(item, append(at[:len(at):len(at)], k), d)
 		}
-		for k := range s.Properties {
+		for k := range in.keys {
 			if _, ok := out[k]; !ok {
 				out[k] = nil
 			}
@@ -761,7 +725,7 @@ func (s *schema) prepare(v any, at []string, d *Data) any {
 	case []any:
 		out := make([]any, len(v))
 		for i, item := range v {
-			out[i] = s.Items.prepare(item, append(at[:len(at):len(at)], strconv.Itoa(i)), d)
+			out[i] = in.each.prepare(item, append(at[:len(at):len(at)], strconv.Itoa(i)), d)
 		}
 		return out
 	}
@@ -770,21 +734,21 @@ func (s *schema) prepare(v any, at []string, d *Data) any {
 
 // drawn returns v, at the path at, as d drew it whole, by a part or as an item of a format of floe's,
 // and false when it is not drawn whole.
-func (s *schema) drawn(v any, at []string, d *Data) (any, bool) {
+func (s *shape) drawn(v any, at []string, d *Data) (any, bool) {
 	text, isText := v.(string)
 	switch {
 	case s.part != nil:
 		return d.parts[pathKey(at)], true
-	case s.Format == "markdown" && isText:
+	case s.format == "markdown" && isText:
 		return d.markdownHTML(text), true
-	case s.Format == "html" && isText:
+	case s.format == "html" && isText:
 		if d != nil && d.marks != nil {
 			text = d.marks.marked(text, at)
 		}
 		return template.HTML(text), true //nolint:gosec // G203: the schema declares this item HTML
-	case s.Format == "image" && isText:
+	case s.format == "image" && isText:
 		return d.images[text], true
-	case slices.Contains(formats, s.Format):
+	case slices.Contains(formats, s.format):
 		return v, true
 	}
 	return nil, false
@@ -797,7 +761,7 @@ type itemAt struct {
 }
 
 // find adds to found the items v holds where s declares the format, v being at the path at.
-func (s *schema) find(format string, v any, at []string, found *[]itemAt) {
+func (s *shape) find(format string, v any, at []string, found *[]itemAt) {
 	if s == nil {
 		return
 	}
@@ -805,20 +769,21 @@ func (s *schema) find(format string, v any, at []string, found *[]itemAt) {
 	if s.part != nil {
 		return
 	}
-	if slices.Contains(formats, s.Format) {
-		if s.Format == format {
+	if slices.Contains(formats, s.format) {
+		if s.format == format {
 			*found = append(*found, itemAt{value: v, at: at})
 		}
 		return
 	}
+	in := s.inside()
 	switch v := v.(type) {
 	case map[string]any:
 		for k, item := range v {
-			s.Properties[k].find(format, item, append(at[:len(at):len(at)], k), found)
+			in.keys[k].find(format, item, append(at[:len(at):len(at)], k), found)
 		}
 	case []any:
 		for i, item := range v {
-			s.Items.find(format, item, append(at[:len(at):len(at)], strconv.Itoa(i)), found)
+			in.each.find(format, item, append(at[:len(at):len(at)], strconv.Itoa(i)), found)
 		}
 	}
 }
