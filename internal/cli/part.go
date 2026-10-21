@@ -146,8 +146,8 @@ func (a *app) partCheckCmd() *cobra.Command {
 		Long: `Check the parts of your own in $FLOE_PARTS_DIR and the themes in $FLOE_THEMES_DIR, all of
 them, as a page would read them: their files, their names, the looks they take and the parts they
 hold. Every mistake is printed, at its line where it has one, and the exit code is 1 when there is
-one. What goes into no page, and a colour written where the palette is to give it, are warned of on
-stderr, leaving the exit code 0. Nothing is printed when
+one. What goes into no page, a colour written where the palette is to give it, and a variable a
+theme sets outside its palette.css are warned of on stderr, leaving the exit code 0. Nothing is printed when
 they are right. To check other directories, set FLOE_PARTS_DIR and FLOE_THEMES_DIR to them. A part
 is not drawn, as it has no data: floe template check draws a template's example with the parts it
 uses.`,

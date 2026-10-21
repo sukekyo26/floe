@@ -220,6 +220,10 @@ func TestColourWarnings(t *testing.T) {
 		":scope { font-family: Arial Black, serif; white-space: nowrap; }":                            "",
 		":scope { content: \"#fff red\"; grid-area: red; }":                                           "",
 		":scope { --x: white; }":                                                                      "c.css:1: white is a colour",
+		":scope { color: WindowText; }":                                                               "c.css:1: WindowText is a colour",
+		":scope { -ms-filter: drop-shadow(0 0 1px red); }":                                            "c.css:1: red is a colour",
+		"@property --c { syntax: '<color>'; initial-value: white; inherits: false; }":                 "c.css:1: white is a colour",
+		":scope { --face: \"Arial Black\"; transition-property: background; }":                        "",
 		":scope { color: var(--fg); background: color-mix(in srgb, var(--accent) 8%, transparent); }": "",
 		":scope { border-color: currentColor transparent; }":                                          "",
 		":scope { mask: linear-gradient(#000, transparent); -webkit-mask-image: url(\"#a\"); }":       "",
@@ -232,8 +236,8 @@ func TestColourWarnings(t *testing.T) {
 			t.Errorf("colourWarnings(%q) = %q, want %q", css, got, want)
 		}
 	}
-	w := colourWarnings("base.css", readCSS([]byte(":root {\n  --x: var(--fg); --y: 1px;\n}\n.a { color: var(--x); }\n--z: 0;")), false)
-	if len(w) != 3 || !strings.HasPrefix(w[2].Error(), "base.css:5: --z is set") || !strings.HasPrefix(w[0].Error(), "base.css:2: --x is set") || !strings.HasPrefix(w[1].Error(), "base.css:2: --y is set") {
+	w := colourWarnings("base.css", readCSS([]byte(":root {\n  --x: var(--fg); --y: 1px;\n}\n.a { color: var(--x); }\n--z: 0;\n--e: ;")), false)
+	if len(w) != 4 || !strings.HasPrefix(w[2].Error(), "base.css:5: --z is set") || !strings.HasPrefix(w[3].Error(), "base.css:6: --e is set") || !strings.HasPrefix(w[0].Error(), "base.css:2: --x is set") || !strings.HasPrefix(w[1].Error(), "base.css:2: --y is set") {
 		t.Errorf("colourWarnings of a theme's file = %v, want --x and --y told", w)
 	}
 }

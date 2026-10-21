@@ -24,9 +24,9 @@ func colourWarnings(file string, s *cssSheet, ownVariables bool) []*usererr.Erro
 	var warnings []*usererr.Error
 	for _, d := range decls {
 		switch property := unprefixed(d.name); {
-		case d.value == "":
 		case strings.HasPrefix(d.name, "--") && !ownVariables:
 			warnings = append(warnings, usererr.New("tmpl_theme_variable", file, lineAt(s.src, d.at), d.name))
+		case d.value == "":
 		case strings.HasPrefix(property, "mask"):
 		default:
 			// A variable may take a colour, and is read as one.
@@ -43,7 +43,7 @@ func unprefixed(name string) string {
 	if strings.HasPrefix(name, "--") {
 		return name
 	}
-	for _, prefix := range []string{"-webkit-", "-moz-"} {
+	for _, prefix := range []string{"-webkit-", "-moz-", "-ms-", "-o-"} {
 		name = strings.TrimPrefix(name, prefix)
 	}
 	return name
@@ -93,8 +93,9 @@ func functionText(toks []cssToken) string {
 }
 
 // takesColour reports whether the property name, without a browser's prefix, takes a colour, so that a word
-// of its value that is a colour's name is one: elsewhere it may be another word (font-family: Arial Black,
-// a variable's value).
+// of its value that is a colour's name is one: elsewhere it may be another word (font-family: Arial Black).
+// LIMIT: told by the names' prefixes and suffixes and a list. Add to them if a part or a theme comes to
+// write a colour's name in a property they miss.
 func takesColour(name string) bool {
 	for _, prefix := range colourPrefixes {
 		if strings.HasPrefix(name, prefix) {
@@ -108,11 +109,12 @@ var colourPrefixes = []string{
 	"background", "border", "outline", "column-rule", "text-decoration", "text-emphasis", "text-stroke",
 }
 
-var colourProperties = setOf("color fill stroke filter backdrop-filter caret")
+var colourProperties = setOf("color fill stroke filter backdrop-filter caret initial-value")
 
 var colourFunctions = setOf("rgb rgba hsl hsla hwb lab lch oklab oklch color")
 
-// colourNames are CSS's named colours and its system colours.
+// colourNames are CSS's named colours and its system colours, the deprecated ones too but Background, which
+// is a property's name as well (transition-property: background).
 var colourNames = setOf(`aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue
 	blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue
 	darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid
@@ -128,7 +130,10 @@ var colourNames = setOf(`aliceblue antiquewhite aqua aquamarine azure beige bisq
 	saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow
 	springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen
 	accentcolor accentcolortext activetext buttonborder buttonface buttontext canvas canvastext field fieldtext
-	graytext highlight highlighttext linktext mark marktext selecteditem selecteditemtext visitedtext`)
+	graytext highlight highlighttext linktext mark marktext selecteditem selecteditemtext visitedtext
+	activeborder activecaption appworkspace buttonhighlight buttonshadow captiontext inactiveborder
+	inactivecaption inactivecaptiontext infobackground infotext menu menutext scrollbar threeddarkshadow
+	threedface threedhighlight threedlightshadow threedshadow window windowframe windowtext`)
 
 func setOf(words string) map[string]bool {
 	set := map[string]bool{}
