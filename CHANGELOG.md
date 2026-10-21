@@ -127,7 +127,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   diagrams and the template draw with them (`--rule` the page's rules), and
   floe's base draws the page's ground, colour and face with them (`--page-bg`,
   `--fg`, `--font`) on its root under any template; a template keeps colours
-  of its own, those among them, by setting them on `:scope`. `palette.css`
+  of its own, those among them, by setting them on `:scope`, as a ground it
+  draws on `body` covers the body's box alone. `palette.css`
   holds those variables alone, without `!important`, on `:root` and then in
   `@media (prefers-color-scheme: dark)`, and is warned of where it sets a
   colour for light mode alone, as is a template that sets one so on `:scope`.
