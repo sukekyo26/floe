@@ -185,7 +185,7 @@ func TestTemplateShow(t *testing.T) {
 	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
 	e.write(t, "templates/memo/schema.json", `{"properties": {"tags": {"type": ["array", "null"], "items": {"type": "string"},
   "description": "Two\nlines"}, "gone": null}}`)
-	if r := e.run(t, "", "template", "show", "memo"); !strings.Contains(r.stdout, "\n  gone\n  lang: text, required — The page's language, a BCP 47 tag such as en, ja or pt-BR\n  parts-shape: text — The theme floe's parts take their shape from, one of the themes above (default: the theme)\n  tags: a list of text or nothing — Two lines\n") {
+	if r := e.run(t, "", "template", "show", "memo"); !strings.Contains(r.stdout, "\n  gone\n  lang: text, required — The page's language, a BCP 47 tag such as en, ja or pt-BR\n  tags: a list of text or nothing — Two lines\n") {
 		t.Errorf("template show of a list that may be null:\n%s%s", r.stdout, r.stderr)
 	}
 }

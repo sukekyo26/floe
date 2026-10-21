@@ -71,14 +71,13 @@ type Options struct {
 	Title       *string
 	Description *string
 	Theme       *string
-	PartsShape  *string
 	Force       bool
 }
 
 // normalized is o with each string given trimmed, whoever gave it. A title given empty is refused, as it
 // would leave the list blank, and so is a theme, which would take the data's.
 func (o Options) normalized() (Options, error) {
-	for _, field := range []**string{&o.Slug, &o.Title, &o.Description, &o.Theme, &o.PartsShape} {
+	for _, field := range []**string{&o.Slug, &o.Title, &o.Description, &o.Theme} {
 		if *field != nil {
 			v := strings.TrimSpace(**field)
 			*field = &v
@@ -87,7 +86,7 @@ func (o Options) normalized() (Options, error) {
 	for _, f := range []struct {
 		value *string
 		empty string
-	}{{o.Title, "cli_title_empty"}, {o.Theme, "cli_theme_empty"}, {o.PartsShape, "cli_parts_shape_empty"}} {
+	}{{o.Title, "cli_title_empty"}, {o.Theme, "cli_theme_empty"}} {
 		if f.value != nil && *f.value == "" {
 			return o, usererr.New(f.empty)
 		}
@@ -95,16 +94,12 @@ func (o Options) normalized() (Options, error) {
 	return o, nil
 }
 
-// themes are the themes o gives over the data's.
-func (o Options) themes() tmpl.Themes {
-	var themes tmpl.Themes
-	if o.Theme != nil {
-		themes.Theme = *o.Theme
+// theme is the theme o gives over the data's, "" for none.
+func (o Options) theme() string {
+	if o.Theme == nil {
+		return ""
 	}
-	if o.PartsShape != nil {
-		themes.Shape = *o.PartsShape
-	}
-	return themes
+	return *o.Theme
 }
 
 // Entry is a checked publish, ready to be saved.
@@ -120,7 +115,7 @@ type Entry struct {
 	// Prev is the entry this one overwrites, nil for a new slug.
 	Prev *Meta
 
-	// What settle builds Meta from, with the link's path, the data's title: and the themes of the Meta
+	// What settle builds Meta from, with the link's path, the data's title: and the theme of the Meta
 	// it replaces: the publish's options and the project published from.
 	opts Options
 	from string
@@ -185,11 +180,11 @@ func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
 	if images == nil {
 		images = fstest.MapFS{}
 	}
-	themes := opts.themes()
-	data, named, err := s.templates.ReadFS(up.File, up.Source, images, up.Dir, themes)
+	theme := opts.theme()
+	data, named, err := s.templates.ReadFS(up.File, up.Source, images, up.Dir, theme)
 	// Asked before the mistakes, which may be of the images not sent.
 	if up.Images == nil && len(named) > 0 {
-		if _, refused := s.storedPage(up.File, nil, nil, themes, opts, up.Project); refused != nil {
+		if _, refused := s.storedPage(up.File, nil, nil, theme, opts, up.Project); refused != nil {
 			return nil, refused
 		}
 		return nil, &NeedImages{Names: named}
@@ -197,7 +192,7 @@ func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 	}
-	return s.storedPage(up.File, data, up.Source, themes, opts, up.Project)
+	return s.storedPage(up.File, data, up.Source, theme, opts, up.Project)
 }
 
 // checkData refuses file unless it is a data file, which a stored page is drawn from.
@@ -210,7 +205,7 @@ func checkData(file string) error {
 
 // storedPage builds the entry of the data file file as a stored page, drawn from data, of content src,
 // and published from the project from; data nil checks its slug and owner only.
-func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, themes tmpl.Themes, opts Options, from string) (
+func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, theme string, opts Options, from string) (
 	*Entry, error,
 ) {
 	slug, err := DataSlug(file, opts.Slug)
@@ -218,7 +213,7 @@ func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, themes tmpl
 		return nil, err
 	}
 	return s.checked(&Entry{
-		Slug: slug, Meta: seedMeta("", data, themes), Source: nil, Images: nil, Prev: nil, opts: opts, from: from,
+		Slug: slug, Meta: seedMeta("", data, theme), Source: nil, Images: nil, Prev: nil, opts: opts, from: from,
 		named: "",
 	}, data, string(src))
 }
@@ -235,10 +230,10 @@ func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd 
 	if err != nil {
 		return nil, err
 	}
-	themes := opts.themes()
+	theme := opts.theme()
 	var data *tmpl.Data
 	if IsDataFile(path) {
-		if data, err = s.templates.Read(path, src, themes, cwd); err != nil {
+		if data, err = s.templates.Read(path, src, theme, cwd); err != nil {
 			return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 		}
 	}
@@ -251,19 +246,19 @@ func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd 
 		named = SlugFromFile(file, cwd)
 	}
 	return s.checked(&Entry{
-		Slug: slug, Meta: seedMeta(path, data, themes), Source: nil, Images: nil, Prev: nil, opts: opts,
+		Slug: slug, Meta: seedMeta(path, data, theme), Source: nil, Images: nil, Prev: nil, opts: opts,
 		from: project.Name(ctx, filepath.Dir(path)), named: named,
 	}, data, string(src))
 }
 
 // seedMeta is the seed of the Meta settle builds: the link's path ("" for a stored page), and the title:
-// and themes of data, nil for HTML.
-func seedMeta(path string, data *tmpl.Data, themes tmpl.Themes) Meta {
+// and theme of data, nil for HTML.
+func seedMeta(path string, data *tmpl.Data, theme string) Meta {
 	var m Meta
 	m.Path = path
 	if data != nil {
 		m.DataTitle = data.Title
-		m.Theme, m.PartsShape = themes.Theme, themes.Shape
+		m.Theme = theme
 	}
 	return m
 }
@@ -296,7 +291,7 @@ func (e *Entry) settle(prev *Meta) error {
 		base = &none
 	}
 	e.Meta = newMeta(e.opts, was.Path, e.from, base, was.DataTitle, e.Slug)
-	e.Meta.Theme, e.Meta.PartsShape = was.Theme, was.PartsShape
+	e.Meta.Theme = was.Theme
 	e.Prev = prev
 	return nil
 }
@@ -330,7 +325,7 @@ func (s *Store) readLink(file string, opts Options, cwd string) (string, []byte,
 	if err = link.Check(path, s.home); err != nil {
 		return "", nil, err //nolint:wrapcheck // a usererr for the caller to show
 	}
-	if !IsDataFile(path) && (opts.Theme != nil || opts.PartsShape != nil) {
+	if !IsDataFile(path) && opts.Theme != nil {
 		return "", nil, usererr.New("store_theme_link")
 	}
 	b, err := os.ReadFile(path) //nolint:gosec // G304: publishing the user's file is the point
@@ -352,7 +347,6 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		TitleEdited:   keepTitle,
 		Description:   base.Description,
 		Theme:         "",
-		PartsShape:    "",
 		DataTitle:     own,
 		Source:        "",
 		Project:       from,

@@ -25,7 +25,7 @@ var messagesJA = map[string]string{
 	"store_slug_taken":    "URL 名「%s」は使われています。別の URL 名を入力してください",
 	"store_project_slash": "プロジェクト名に / だけは使えません",
 	"store_not_data":      "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
-	"store_theme_link":    "--theme と --parts-shape はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
+	"store_theme_link":    "--theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
 	"store_no_page":       "ページ「%s」はありません（floe list で確かめられます）",
 
 	// server
@@ -387,8 +387,6 @@ var messagesJA = map[string]string{
 	"tmpl_script_key":              "script に書けるのは js と data です。%s は書けません",
 	"tmpl_script_end":              "js に %s があり、ページはそこでスクリプトが終わると読みます。文字列なら '<' + '%s' のように分けてください",
 
-	"cli_parts_shape_empty":       "--parts-shape が空です。テーマを指定するか、--parts-shape を省いてデータファイルの parts-shape: から取ってください",
-	"tmpl_unknown_parts_shape":    "部品の形を取るテーマ「%s」はありません。使えるのは %s です",
 	"tmpl_words_yaml":             "words.yaml は言語タグごとに、言葉の名前とその文字列を書いてください",
 	"tmpl_words_lang":             "%s は en・ja・pt-BR のような言語タグではありません",
 	"tmpl_words_lang_not_mapping": "%s: 言葉の名前とその文字列を書いてください",

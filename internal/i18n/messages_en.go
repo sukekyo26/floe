@@ -27,7 +27,7 @@ var messagesEN = map[string]string{
 	"store_slug_taken":    `slug "%s" is already in use; choose another slug`,
 	"store_project_slash": `a project name cannot be just "/"`,
 	"store_not_data":      "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
-	"store_theme_link":    "--theme and --parts-shape pick the themes of a page drawn from a data file: a linked file is shown as it is",
+	"store_theme_link":    "--theme picks the theme of a page drawn from a data file: a linked file is shown as it is",
 	"store_no_page":       `no page "%s" (see floe list)`,
 
 	// server: refusals of the management page's API
@@ -389,8 +389,6 @@ var messagesEN = map[string]string{
 	"tmpl_script_key":              "a script takes js and data, not %s",
 	"tmpl_script_end":              "js holds %s, where the page would end its script; split it in a string, as '<' + '%s'",
 
-	"cli_parts_shape_empty":       "--parts-shape is empty: name a theme, or omit --parts-shape to take the data file's parts-shape:",
-	"tmpl_unknown_parts_shape":    `there is no theme "%s" for the parts to take their shape from; use %s`,
 	"tmpl_words_yaml":             "write words.yaml as language tags, each the names of the words and their text",
 	"tmpl_words_lang":             "%s is not a language tag such as en, ja or pt-BR",
 	"tmpl_words_lang_not_mapping": "%s: write the names of the words and their text",

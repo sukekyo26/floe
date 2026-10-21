@@ -121,7 +121,7 @@ func sharedItems(name string) []tmpl.Item {
 		if it.Name == "theme" {
 			args = []any{tmpl.DefaultTheme}
 		}
-		items[i].Description = english.Msg("cli_template_shared_"+strings.ReplaceAll(it.Name, "-", "_"), args...)
+		items[i].Description = english.Msg("cli_template_shared_"+it.Name, args...)
 	}
 	return items
 }

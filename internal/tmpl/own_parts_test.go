@@ -445,7 +445,7 @@ func TestOwnPartsThemes(t *testing.T) {
 	parts := ownParts(t, files)
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/code.json"}, "aside": {"$ref": "floe:///parts/note.json"}`)
 	l := tmpl.NewLibrary(dir, parts, themesOf(parts), "")
-	page, err := draw(l, "template: memo\nlang: en\nparts-shape: brutal\nrisks: { text: x }\naside: { text: y }\n")
+	page, err := draw(l, "template: memo\nlang: en\ntheme: brutal\nrisks: { text: x }\naside: { text: y }\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -462,17 +462,13 @@ func TestOwnPartsThemes(t *testing.T) {
 			t.Errorf("the page holds %s %d times, want %d:\n%s", want, strings.Count(page, want), n, page)
 		}
 	}
-	// The parts' shape of mine alone leaves the page in default's palette.
-	if page, err = draw(l, "template: memo\nlang: en\nparts-shape: mine\nrisks: { text: x }\n"); err != nil ||
-		!strings.Contains(page, "/* mine */") || strings.Contains(page, "/* mine's palette */") {
-		t.Errorf("drawing with the parts' shape of mine = %v:\n%s", err, page)
-	}
+	// The theme mine gives its palette and the parts' shape.
 	if page, err = draw(l, "template: memo\nlang: en\ntheme: mine\nrisks: { text: x }\n"); err != nil ||
-		!strings.Contains(page, "/* mine */") {
+		!strings.Contains(page, "/* mine */") || !strings.Contains(page, "/* mine's palette */") {
 		t.Errorf("drawing with the theme mine = %v:\n%s", err, page)
 	}
-	// A theme given over the data's gives the parts' shape too, but where the data's parts-shape: names one.
-	read := func(src string, given tmpl.Themes) string {
+	// A theme given over the data's gives both too, the data's left unread.
+	read := func(src, given string) string {
 		d, rerr := l.Read("data.yaml", []byte(src), given, "")
 		if rerr != nil {
 			t.Fatal(rerr)
@@ -483,12 +479,9 @@ func TestOwnPartsThemes(t *testing.T) {
 		}
 		return string(out)
 	}
-	if page = read("template: memo\nlang: en\nrisks: { text: x }\n", tmpl.Themes{Theme: "mine", Shape: ""}); !strings.Contains(page, "/* mine */") {
-		t.Errorf("drawing with --theme mine lacks mine's shape:\n%s", page)
-	}
-	if page = read("template: memo\nlang: en\nparts-shape: brutal\nrisks: { text: x }\n", tmpl.Themes{Theme: "mine", Shape: ""}); strings.Contains(page, "/* mine */") ||
-		!strings.Contains(page, "/* mine's palette */") {
-		t.Errorf("drawing with --theme mine and parts-shape: brutal = \n%s", page)
+	if page = read("template: memo\nlang: en\ntheme: brutal\nrisks: { text: x }\n", "mine"); !strings.Contains(page, "/* mine */") ||
+		!strings.Contains(page, "/* mine's palette */") || strings.Contains(page, "brutal's code of one's own") {
+		t.Errorf("drawing with --theme mine over theme: brutal = \n%s", page)
 	}
 	// Its palette goes over floe's default one, which keeps the variables it leaves out, and so does a
 	// default of one's own, which does not take the place of floe's.
@@ -504,12 +497,12 @@ func TestOwnPartsThemes(t *testing.T) {
 	// mode alone: dark mode would keep it.
 	rules := "your own theme rules cannot be used: " + filepath.Join(themesOf(parts), "rules", "palette.css") +
 		":2: palette.css holds only the palette's variables"
-	if _, err = draw(l, "template: memo\nlang: en\nparts-shape: rules\nrisks: { text: x }\n"); err == nil || !strings.Contains(err.Error(), rules) {
+	if _, err = draw(l, "template: memo\nlang: en\ntheme: rules\nrisks: { text: x }\n"); err == nil || !strings.Contains(err.Error(), rules) {
 		t.Errorf("drawing with the theme rules = %v, want %s", err, rules)
 	}
 	// A file of a name no part takes goes into no page, and leaves the theme to be used: tone.css too, a
 	// part of one's own named tone left out or not.
-	if _, err = draw(l, "template: memo\nlang: en\nparts-shape: bad\nrisks: { text: x }\n"); err != nil {
+	if _, err = draw(l, "template: memo\nlang: en\ntheme: bad\nrisks: { text: x }\n"); err != nil {
 		t.Errorf("drawing with the theme bad = %v", err)
 	}
 	strays := []string{
@@ -518,14 +511,14 @@ func TestOwnPartsThemes(t *testing.T) {
 	}
 	why := "your own theme broke cannot be used: " + filepath.Join(themesOf(parts), "broke", "table.css") +
 		":1: this } closes no block"
-	if _, err = draw(l, "template: memo\nlang: en\nparts-shape: broke\nrisks: { text: x }\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), "data.yaml:3:14: "+why) {
+	if _, err = draw(l, "template: memo\nlang: en\ntheme: broke\nrisks: { text: x }\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:3:8: "+why) {
 		t.Errorf("drawing with the theme broke = %v, want %s", err, why)
 	}
 	// Told beside the data's other mistakes.
-	if _, err = draw(l, "template: memo\nlang: en\ntheme: nope\nparts-shape: broke\nrisks: { text: x }\n"); err == nil ||
-		!strings.Contains(err.Error(), "data.yaml:3:8: ") || !strings.Contains(err.Error(), "data.yaml:4:14: "+why) {
-		t.Errorf("drawing with the theme nope and the theme broke = %v", err)
+	if _, err = draw(l, "template: memo\nlang: en\ntheme: broke\nrisks: { text: x }\nleed: x\n"); err == nil ||
+		!strings.Contains(err.Error(), "data.yaml:3:8: "+why) || !strings.Contains(err.Error(), "data.yaml:5:1: leed is not an item") {
+		t.Errorf("drawing with the theme broke and an item of no name = %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "memo", "example.yaml"), []byte("template: memo\nlang: en\nrisks: { text: x }\n"), 0o600); err != nil {
 		t.Fatal(err)

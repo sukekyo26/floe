@@ -50,7 +50,7 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	// A part's style stops at a part it holds: the note's code is on the surface, the code of the table in
 	// it on floe's base.
 	slug = "nested"
-	e.publish(t, e.write(t, "nested.yaml", "template: report\nlang: en\nparts-shape: soft\nsections:\n  - parts:\n      - html: >-\n"+
+	e.publish(t, e.write(t, "nested.yaml", "template: report\nlang: en\ntheme: soft\nsections:\n  - parts:\n      - html: >-\n"+
 		`          <div data-floe-part="note"><p><code id="own">a</code></p><div data-floe-part="table"><table><tbody><tr><td>`+
 		`<code id="held">b</code></td></tr></tbody></table></div></div>`+"\n"), store.Options{Slug: &slug})
 	b.navigate("/a/nested/?raw")
@@ -84,7 +84,7 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	e.write(t, "parts/table/part.css", "")
 	e.write(t, "parts/table/part.yaml", "looks: [panel]\n")
 	slug = "own-table"
-	e.publish(t, e.write(t, "own-table.yaml", "template: report\nlang: en\nparts-shape: washi\nsections:\n  - parts:\n"+
+	e.publish(t, e.write(t, "own-table.yaml", "template: report\nlang: en\ntheme: washi\nsections:\n  - parts:\n"+
 		"      - table: { text: mine }\n      - compare: { before: a, after: b, rows: [{ what: x, before: p, after: q }] }\n"),
 		store.Options{Slug: &slug})
 	b.navigate("/a/own-table/?raw")

@@ -838,10 +838,10 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
-func (set *partSet) pageStyle(page string, found []tag, own []byte, theme, shape string) (string, error) {
-	themed, shaped := set.themes[theme], set.themes[shape]
-	if themed == nil || shaped == nil {
-		return "", fmt.Errorf("draw with the themes %s and %s: %w", theme, shape, fs.ErrNotExist)
+func (set *partSet) pageStyle(page string, found []tag, own []byte, theme string) (string, error) {
+	themed := set.themes[theme]
+	if themed == nil {
+		return "", fmt.Errorf("draw with the theme %s: %w", theme, fs.ErrNotExist)
 	}
 	// The first sheet names the layers, which puts them in that order. Each file after it is a sheet of
 	// its own, so that a mistake in it, a comment or a block left open, ends with it.
@@ -878,9 +878,9 @@ func (set *partSet) pageStyle(page string, found []tag, own []byte, theme, shape
 	for _, name := range names {
 		styled(name, set.parts[name].css)
 	}
-	sheet("floe.parts", shaped.base)
+	sheet("floe.parts", themed.base)
 	for _, name := range names {
-		styled(name, shaped.parts[name])
+		styled(name, themed.parts[name])
 	}
 	if len(own) != 0 {
 		sheet("floe.page", "@scope (:root) to ([data-floe-part] > *) {\n"+string(own)+"}\n")

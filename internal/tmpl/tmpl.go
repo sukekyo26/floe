@@ -42,13 +42,6 @@ const (
 	DefaultTheme = "default"
 )
 
-// Themes are the themes to draw a page with instead of those its data names (floe publish --theme and
-// --parts-shape), each "" for the data's.
-type Themes struct {
-	Theme string
-	Shape string // the theme the parts take their shape from
-}
-
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
 
 // markdownLine reads paragraphs alone, without the paragraph transformers that make a line a table or a
@@ -65,14 +58,11 @@ var markdownLine = goldmark.New(
 type Data struct {
 	File     string
 	Template string
-	// Theme is the theme it is drawn with: its palette, and the shape of the parts but where PartsShape
-	// names another.
-	Theme      string
-	PartsShape string // the theme the parts take their shape from
-	Title      string // "" when the data names none
-	Lang       string // the language of the page, a BCP 47 tag
-	Values     map[string]any
-	Calc       map[string]any // the values of the template's computed.yaml, by name; nil without one
+	Theme    string // the theme it is drawn with: its palette and the shape of the parts
+	Title    string // "" when the data names none
+	Lang     string // the language of the page, a BCP 47 tag
+	Values   map[string]any
+	Calc     map[string]any // the values of the template's computed.yaml, by name; nil without one
 
 	tmpl   *Template               // the template Read checked the data against, which draws it
 	shape  *shape                  // the shape of the template's schema as Read read it, for drawing as checked
@@ -87,18 +77,18 @@ type Data struct {
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
-var shared = []string{"lang", "parts-shape", "template", "theme", "title"}
+var shared = []string{"lang", "template", "theme", "title"}
 
 // Read reads the data file src, checks it against its template's schema, then its checks, and
 // computes the values of its computed.yaml; file names it in errors. A mistake is a *yamlpos.Error,
 // and those of the schema, of the checks or of the computing are all reported at once as
 // yamlpos.Problems.
 //
-// A theme of themes, when not "", is drawn with instead of the one the data names: the data's theme:
-// or parts-shape: is then not used, and a theme that does not exist is refused as a *usererr.Error, as
-// is a template that needs another floe. A relative file is under cwd.
-func (l *Library) Read(file string, src []byte, themes Themes, cwd string) (*Data, error) {
-	d, _, err := l.ReadSources(file, src, themes, cwd)
+// theme, when not "", is drawn with instead of the one the data names: the data's theme: is then not
+// used, and a theme that does not exist is refused as a *usererr.Error, as is a template that needs
+// another floe. A relative file is under cwd.
+func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error) {
+	d, _, err := l.ReadSources(file, src, theme, cwd)
 	return d, err
 }
 
@@ -114,12 +104,12 @@ type Sources struct {
 }
 
 // ReadSources reads the data file src as Read does, and returns its Sources too.
-func (l *Library) ReadSources(file string, src []byte, themes Themes, cwd string) (*Data, Sources, error) {
+func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data, Sources, error) {
 	dir := filepath.Dir(file)
 	if !filepath.IsAbs(dir) {
 		dir = filepath.Join(cwd, dir)
 	}
-	d, sources, err := l.readWith(file, src, diskImages(dir), themes)
+	d, sources, err := l.readWith(file, src, diskImages(dir), theme)
 	sources.ImagesDir = dir
 	return d, sources, err
 }
@@ -132,15 +122,15 @@ var errNoImages = errors.New("tmpl.ReadFS: no fs.FS to read the images from")
 // fstest.MapFS do: each name on an image's path is looked up in its directory, case and all. It returns
 // the images the data names that a file can make right, read or not, as it writes them (Sources.Images):
 // nothing of it is on disk to watch.
-func (l *Library) ReadFS(file string, src []byte, images fs.FS, dir string, themes Themes) (*Data, []string, error) {
+func (l *Library) ReadFS(file string, src []byte, images fs.FS, dir, theme string) (*Data, []string, error) {
 	if images == nil {
 		return nil, nil, errNoImages
 	}
-	d, sources, err := l.readWith(file, src, fsImages(images, dir), themes)
+	d, sources, err := l.readWith(file, src, fsImages(images, dir), theme)
 	return d, sources.Images, err
 }
 
-func (l *Library) readWith(file string, src []byte, images imageDir, themes Themes) (*Data, Sources, error) {
+func (l *Library) readWith(file string, src []byte, images imageDir, theme string) (*Data, Sources, error) {
 	sources := Sources{Templates: l.dir, Own: nil, Template: "", Images: nil, ImagesDir: "", Icons: nil}
 	// Where one may come, when none has been read.
 	for _, dir := range []string{l.mine.parts, l.mine.themes} {
@@ -148,7 +138,7 @@ func (l *Library) readWith(file string, src []byte, images imageDir, themes Them
 			sources.Own = append(sources.Own, dir)
 		}
 	}
-	h, err := start(file, src, themes)
+	h, err := start(file, src, theme)
 	if err != nil {
 		return nil, sources, err
 	}
@@ -181,7 +171,7 @@ func (l *Library) readWith(file string, src []byte, images imageDir, themes Them
 	if err = t.checkVersion(); err != nil {
 		return nil, sources, err
 	}
-	err = t.check(h, images, themes, problems)
+	err = t.check(h, images, theme, problems)
 	sources.Images, sources.Icons = d.tried, d.icons
 	if t.set != nil && t.set.dirs != nil {
 		sources.Own = t.set.dirs
@@ -210,7 +200,7 @@ func (d *Data) Images() (map[string][]byte, error) {
 
 // TitleOf returns the title: of the data file src, or "" when it names none or cannot be read.
 func TitleOf(src []byte) string {
-	h, err := start("", src, Themes{Theme: "", Shape: ""})
+	h, err := start("", src, "")
 	if err != nil {
 		return ""
 	}
@@ -225,12 +215,11 @@ type head struct {
 	where    map[string]yamlpos.Pos
 	problems yamlpos.Problems // the mistakes in those keys
 	unnamed  bool             // template: is left out or empty, a mistake left to the caller to word
-	shaped   bool             // parts-shape: is written, empty too, which is no theme
 }
 
 // start reads the data file src, file in its mistakes, up to its template, leaving out the data's
-// themes that given replaces. It fails with yamlpos.ErrEmpty for a file without a document.
-func start(file string, src []byte, given Themes) (*head, error) {
+// theme when given replaces it. It fails with yamlpos.ErrEmpty for a file without a document.
+func start(file string, src []byte, given string) (*head, error) {
 	root, err := parse(file, src)
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		// As an empty mapping, which is told every key it misses at its top.
@@ -244,53 +233,40 @@ func start(file string, src []byte, given Themes) (*head, error) {
 		return nil, err
 	}
 	d := &Data{
-		File: file, Template: "", Theme: DefaultTheme, PartsShape: "", Title: "", Lang: "", Values: top, Calc: nil,
+		File: file, Template: "", Theme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
 		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, htmlItems: nil, marks: nil,
 	}
-	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false, shaped: false}
+	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(given)
 	return h, nil
 }
 
-// check checks h.d, whose images are under images, against t, which then draws it: with the themes
+// check checks h.d, whose images are under images, against t, which then draws it: with the theme
 // given, else the data's. problems are those found before in the keys every template shares.
-func (t *Template) check(h *head, images imageDir, given Themes, problems yamlpos.Problems) error {
+func (t *Template) check(h *head, images imageDir, given string, problems yamlpos.Problems) error {
 	d := h.d
 	d.tmpl = t
 	set, err := t.parts()
 	if err != nil {
 		return err
 	}
-	names := set.themeNames()
-	more, err := pickTheme(set, names, d, &d.Theme, given.Theme, h.where["theme"], "tmpl_unknown_theme")
+	more, err := pickTheme(set, d, given, h.where["theme"])
 	if err != nil {
 		return err
 	}
-	problems = append(problems, more...)
-	// The parts take their shape from the theme, but where parts-shape: names another.
-	if !h.shaped && given.Shape == "" {
-		d.PartsShape = d.Theme
-	} else {
-		more, err = pickTheme(set, names, d, &d.PartsShape, given.Shape, h.where["parts-shape"], "tmpl_unknown_parts_shape")
-		if err != nil {
-			return err
-		}
-		problems = append(problems, more...)
-	}
-	return checkValues(t, d, h.root, images, problems)
+	return checkValues(t, d, h.root, images, append(problems, more...))
 }
 
-// pickTheme sets *theme, a theme of d, to given when not "", which must be one of names, the themes of set,
-// else leaves the data's, reported at pos, where the data names it, when it is not one. unknown is the
-// message of a theme there is none of; one of one's own that cannot be used is told why.
-func pickTheme(set *partSet, names []string, d *Data, theme *string, given string, pos yamlpos.Pos, unknown string) (
-	yamlpos.Problems, error,
-) {
-	name := cmp.Or(given, *theme)
+// pickTheme sets d.Theme to given when not "", which must be one of the themes of set, else leaves the
+// data's, reported at pos, where the data names it, when it is not one; one of one's own that cannot be
+// used is told why.
+func pickTheme(set *partSet, d *Data, given string, pos yamlpos.Pos) (yamlpos.Problems, error) {
+	name := cmp.Or(given, d.Theme)
+	names := set.themeNames()
 	var why *usererr.Error
 	switch {
 	case !slices.Contains(names, name):
-		why = usererr.New(unknown, name, strings.Join(names, ", "))
+		why = usererr.New("tmpl_unknown_theme", name, strings.Join(names, ", "))
 	case set.brokenThemes[name] != nil:
 		why = usererr.New("tmpl_theme_broken", name, set.brokenThemes[name])
 	}
@@ -300,7 +276,7 @@ func pickTheme(set *partSet, names []string, d *Data, theme *string, given strin
 	case why != nil:
 		return yamlpos.Problems{&yamlpos.Error{File: d.File, Pos: pos, Err: why}}, nil
 	}
-	*theme = name
+	d.Theme = name
 	return nil, nil
 }
 
@@ -374,14 +350,11 @@ func checkHTML(set *partSet, d *Data) error {
 
 // readShared moves the keys every template shares from h.d.Values to h.d, and notes where each is
 // written (the top of the file for one left out), the mistakes in them, and whether template: names
-// none. A theme given over the data's leaves the data's theme: or parts-shape: unread.
-func (h *head) readShared(given Themes) {
+// none. A theme given over the data's leaves the data's theme: unread.
+func (h *head) readShared(given string) {
 	d := h.d
-	to := map[string]*string{
-		"lang": &d.Lang, "parts-shape": &d.PartsShape, "template": &d.Template, "theme": &d.Theme, "title": &d.Title,
-	}
+	to := map[string]*string{"lang": &d.Lang, "template": &d.Template, "theme": &d.Theme, "title": &d.Title}
 	h.unnamed = true
-	read := map[string]bool{} // the keys written as text, empty too
 	for _, key := range shared {
 		h.where[key] = yamlpos.Of(h.root)
 		v, ok := d.Values[key]
@@ -395,7 +368,7 @@ func (h *head) readShared(given Themes) {
 		k, n, _ := yamlpos.Find(h.root, []string{key})
 		h.where[key] = yamlpos.OfValue(k, n)
 		delete(d.Values, key)
-		if key == "theme" && given.Theme != "" || key == "parts-shape" && given.Shape != "" {
+		if key == "theme" && given != "" {
 			continue
 		}
 		s, text := v.(string)
@@ -408,12 +381,10 @@ func (h *head) readShared(given Themes) {
 			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_lang_invalid", s))
 		case text:
 			*to[key] = s
-			read[key] = true
 		default:
 			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_not_text", key))
 		}
 	}
-	h.shaped = read["parts-shape"]
 	// A title of spaces names none, as an empty --title does.
 	d.Title = strings.TrimSpace(d.Title)
 }
@@ -460,7 +431,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 	}
 	html := string(out)
 	found := tagsIn(html, false)
-	style, err := set.pageStyle(html, found, own, d.Theme, d.PartsShape)
+	style, err := set.pageStyle(html, found, own, d.Theme)
 	if err != nil {
 		return nil, err
 	}
