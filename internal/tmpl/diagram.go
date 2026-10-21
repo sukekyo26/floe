@@ -19,7 +19,7 @@ import (
 // As floe diagram render does, a spec stops at the first mistake in its shape, and every mistake of
 // its placement is reported. The ids are checked across the page: they name the markers and icons its diagrams define.
 func checkDiagrams(d *Data, root ast.Node, iconsDir string) error {
-	found := d.drawnBy("diagram")
+	found := d.itemsOfPart("diagram")
 	if found == nil {
 		return nil
 	}

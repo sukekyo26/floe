@@ -16,7 +16,7 @@ import (
 // each, and reports each mistake in their shape at its line and column under root. What a function does
 // is the browser's to tell.
 func checkScripts(d *Data, root ast.Node) error {
-	found := d.drawnBy("script")
+	found := d.itemsOfPart("script")
 	if found == nil {
 		return nil
 	}

@@ -30,7 +30,7 @@ type htmlItem struct {
 // the file under root; nil for none.
 func htmlItemsOf(d *Data, root ast.Node) []htmlItem {
 	var items []htmlItem
-	for _, f := range d.formatted("html") {
+	for _, f := range d.itemsOfFormat("html") {
 		text, isText := f.value.(string)
 		if !isText || text == "" {
 			continue

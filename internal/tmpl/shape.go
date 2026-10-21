@@ -432,14 +432,15 @@ type drawnItem struct {
 	shape *shape
 }
 
-// drawnWhole adds to found the items v, at the path at, holds that floe draws whole: those a part holds
-// before it, which draws them as they were drawn. What an item of a format of floe's holds is not looked
-// into, nor is a part's schema, which holds no format of floe's.
+// drawnWhole adds to found the items v, at the path at, holds that floe draws whole: the parts a part
+// holds before it, which draws them as they were drawn. What an item of a format of floe's holds is not
+// looked into. A part, which wins over a format as it does in drawn, holds no item of a format of floe's,
+// which readShape refuses in its schema.
 func (s *shape) drawnWhole(v any, at []string, found *[]drawnItem) {
 	if s == nil {
 		return
 	}
-	if slices.Contains(formats, s.format) {
+	if s.part == nil && slices.Contains(formats, s.format) {
 		*found = append(*found, drawnItem{itemAt: itemAt{value: v, at: at}, shape: s})
 		return
 	}
@@ -459,10 +460,17 @@ func (s *shape) drawnWhole(v any, at []string, found *[]drawnItem) {
 	}
 }
 
-// formatted returns the items of d of the format of floe's format.
-func (d *Data) formatted(format string) []itemAt {
+// setShape sets s, the shape of d's template's schema, as d's, with the items of d it draws whole, which
+// every check of them picks its own from.
+func (d *Data) setShape(s *shape) {
+	d.shape, d.whole = s, nil
+	s.drawnWhole(d.Values, nil, &d.whole)
+}
+
+// itemsOfFormat returns the items of d of the format of floe's format.
+func (d *Data) itemsOfFormat(format string) []itemAt {
 	var items []itemAt
-	for _, f := range d.drawn {
+	for _, f := range d.whole {
 		if f.shape.format == format {
 			items = append(items, f.itemAt)
 		}
@@ -470,11 +478,11 @@ func (d *Data) formatted(format string) []itemAt {
 	return items
 }
 
-// drawnBy returns the items of d the part name draws, those it holds before it.
-func (d *Data) drawnBy(name string) []itemAt {
+// itemsOfPart returns the items of d the part name draws, those it holds before it.
+func (d *Data) itemsOfPart(name string) []itemAt {
 	var items []itemAt
-	for _, f := range d.drawn {
-		if f.shape.part != nil && f.shape.part.name == name {
+	for _, f := range d.whole {
+		if f.shape.drawnBy() == name {
 			items = append(items, f.itemAt)
 		}
 	}

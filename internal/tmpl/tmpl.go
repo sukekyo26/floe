@@ -82,7 +82,7 @@ type Data struct {
 	diagrams  bool        // whether it has a diagram, for the page to get their style and zoom
 	tried     []string    // the images it names that a file can make right, read or not, as it writes them
 	icons     []string    // the index files of the icon sets its diagrams may show, when it has one
-	drawn     []drawnItem // its items floe draws whole, by a part or a format of floe's, those a part holds before it
+	whole     []drawnItem // its items floe draws whole, by a part or a format of floe's, set with shape (setShape)
 	htmlItems []htmlItem  // its items of format html, which Render checks the page drawn for
 	marks     *htmlMarks  // its items of format html marked, while checkDrawnHTML draws it; nil else
 }
@@ -243,7 +243,7 @@ func start(file string, src []byte, given Themes) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, PartsTheme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
-		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, drawn: nil, htmlItems: nil,
+		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, whole: nil, htmlItems: nil,
 		marks: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
@@ -339,8 +339,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	if problems != nil {
 		return problems.Sorted()
 	}
-	d.shape = s
-	s.drawnWhole(d.Values, nil, &d.drawn)
+	d.setShape(s)
 	d.htmlItems = htmlItemsOf(d, root)
 	err = checkItems(checkImages(d, root, images), checkHTML(set, d), checkDiagrams(d, root, t.icons),
 		checkScripts(d, root), checkParts(d, root))

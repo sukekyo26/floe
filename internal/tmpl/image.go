@@ -274,7 +274,7 @@ func (t *Template) assets() func(name string) (template.URL, error) {
 // checkImages reads the images of d, its items of format image, under images, the directory of the data
 // file, into d.images, and reports each mistake at its line and column under root.
 func checkImages(d *Data, root ast.Node, images imageDir) error {
-	found := d.formatted("image")
+	found := d.itemsOfFormat("image")
 	if found == nil {
 		return nil
 	}
