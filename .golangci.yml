@@ -144,6 +144,7 @@ linters:
         - usererr.CannotWrite(
         - yamlpos.New(
         - yamlpos.Syntax(
+        # A sig matches as part of the one reported, func (github.com/…/yamlpos.Problems).Sorted(): no "(" before.
         - yamlpos.Problems).Sorted(
     sloglint:
       no-mixed-args: true
