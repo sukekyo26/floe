@@ -480,7 +480,7 @@ func TestOwnPartsThemes(t *testing.T) {
 		return string(out)
 	}
 	if page = read("template: memo\nlang: en\ntheme: brutal\nrisks: { text: x }\n", "mine"); !strings.Contains(page, "/* mine */") ||
-		!strings.Contains(page, "/* mine's palette */") || strings.Contains(page, "brutal's code of one's own") {
+		!strings.Contains(page, "/* mine's palette */") || strings.Contains(page, "/* Black on cream") {
 		t.Errorf("drawing with --theme mine over theme: brutal = \n%s", page)
 	}
 	// Its palette goes over floe's default one, which keeps the variables it leaves out, and so does a

@@ -823,10 +823,10 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
 // selectors: the palette, floe's default one then the theme theme's, under floe's base, under the
 // template's own CSS (own, its page.css), which may set the palette's variables over it, under the parts',
-// in the shape of the theme shape. The parts' are the style of each part the page names, by its own
+// in the theme's shape. The parts' are the style of each part the page names, by its own
 // element, a table of Markdown, or HTML that names a part (<span class="good" data-floe-part="cell">) or
 // takes its look without being its box (data-floe-look="panel"), and of each look those take, before the
-// parts that take it, which adjust it; then the theme shape: its base.css, which every page gets, as it
+// parts that take it, which adjust it; then the theme's: its base.css, which every page gets, as it
 // holds variables of its own names and the look of Markdown's quotes, and its style of each of those parts
 // in the same order. Within the layer the more specific rule wins, else the later.
 // An element that takes a look without being a part's box (a card of cards) has it a layer under the

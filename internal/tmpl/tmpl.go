@@ -1,6 +1,6 @@
 // Package tmpl draws pages from data files: a YAML file names a template, and the template's page.html
-// lays its data out. The templates are built in (report). A page has two themes: its template's, a CSS
-// file of the template for the page, and its parts', a CSS file of floe's for the parts.
+// lays its data out. The templates are built in (report), or of one's own. A page is drawn in one of floe's
+// themes, which gives its palette and the parts' shape, and the template's page.css lays the page out.
 package tmpl
 
 import (
