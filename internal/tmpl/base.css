@@ -1,6 +1,7 @@
-/* What every page starts from, under the template's CSS and the parts': its text, lists, links, code and quotes, inside the
-   parts too, where the template's CSS does not reach */
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face, and its text, lists,
+   links, code and quotes, inside the parts too, where the template's CSS does not reach */
 * { box-sizing: border-box; }
+body { background: var(--page-bg); color: var(--fg); font-family: var(--font); }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
 p, ul, ol { margin: 0; max-width: var(--text-width); }
