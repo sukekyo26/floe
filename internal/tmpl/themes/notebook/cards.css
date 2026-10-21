@@ -15,4 +15,4 @@
 }
 /* Every text on a sticky note is in its ink, marks and pills among them, whose colours are for the paper */
 :scope.numbered > .card *, :scope.numbered > .card ::before { color: var(--nb-stick-ink); }
-:scope.numbered > .card code { background: color-mix(in srgb, var(--nb-stick-ink) 10%, transparent); }
+:scope.numbered > .card :not(pre) > code { background: color-mix(in srgb, currentColor 10%, transparent); }
