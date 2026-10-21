@@ -22,8 +22,8 @@ import (
 //go:embed themes
 var themeFiles embed.FS
 
-// themesDir is the directory of themeFiles that holds the themes.
-const themesDir = "themes"
+// floeThemesDir is the directory of themeFiles that holds floe's themes.
+const floeThemesDir = "themes"
 
 // themeBase and themePalette are the files of a theme that are no part's, for every page: base.css,
 // and palette.css, the colours and faces under the template's own, which default's fills in.
@@ -381,7 +381,7 @@ func modesOf(c *modeColours) map[string]bool {
 // floeModes are the variables that change with the mode in floe's default palette, which the palettes
 // and the colours a template sets are checked against.
 var floeModes = sync.OnceValues(func() (map[string]bool, error) {
-	file := path.Join(themesDir, DefaultTheme, themePalette+".css")
+	file := path.Join(floeThemesDir, DefaultTheme, themePalette+".css")
 	css, err := themeFiles.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("read the themes: %w", err)

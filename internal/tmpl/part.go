@@ -217,11 +217,15 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 	for _, dir := range []string{own.parts, own.themes} {
 		set.keepRoot(dir)
 	}
+	// Each may be in the other, as neither is the other's part or theme.
+	//nolint:errcheck // nil for one that is not there
+	parts, _ := os.Stat(own.parts)
+	themes, _ := os.Stat(own.themes) //nolint:errcheck // as above
 	if own.parts != "" {
-		set.readOwn(own.parts, entries, stage)
+		set.readOwn(own.parts, entries, stage, themes)
 	}
 	if own.themes != "" {
-		if err := set.readOwnThemes(own.themes); err != nil {
+		if err := set.readOwnThemes(own.themes, parts); err != nil {
 			return nil, err
 		}
 	}
@@ -280,13 +284,13 @@ func (set *partSet) readBuiltin() error {
 		}
 	}
 	// Once the parts are read, whose names the themes' files take.
-	entries, err = fs.ReadDir(themeFiles, themesDir)
+	entries, err = fs.ReadDir(themeFiles, floeThemesDir)
 	if err != nil {
 		return fmt.Errorf("read the themes: %w", err)
 	}
 	for _, e := range entries {
 		t := newTheme()
-		at := path.Join(themesDir, e.Name())
+		at := path.Join(floeThemesDir, e.Name())
 		files, err := fs.Sub(themeFiles, at)
 		if err == nil {
 			err = set.readTheme(files, at, t)

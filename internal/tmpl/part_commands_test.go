@@ -2,6 +2,8 @@ package tmpl_test
 
 import (
 	"cmp"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -267,6 +269,19 @@ func TestNewPartRefused(t *testing.T) {
 	if _, err := tmpl.NewLibrary("", parts, "", "").NewPart("grid", "table"); err == nil || !strings.Contains(err.Error(), "FLOE_THEMES_DIR") {
 		t.Errorf("NewPart without a directory of themes = %v", err)
 	}
+	// One with no file of a theme to copy needs none.
+	if _, err := tmpl.NewLibrary("", ownParts(t, quote("quote")), "", "").NewPart("quote2", "quote"); err != nil {
+		t.Errorf("NewPart of a part without themes, without a directory of themes = %v", err)
+	}
+	// A copy not made leaves none of the directories it made for the themes, those above theirs too.
+	deep := ownParts(t, nil)
+	above := filepath.Join(filepath.Dir(deep), "a")
+	if _, err := tmpl.NewLibrary("", deep, filepath.Join(above, "b", "themes"), "").NewPart("cell", "table"); err == nil {
+		t.Error("NewPart of a cell that holds itself was made")
+	}
+	if _, err := os.Lstat(above); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("the directories above the themes after a copy not made = %v", err)
+	}
 
 	// A theme of one's own that cannot be used may have a file of the original, its own or floe's of the
 	// theme's name; one that has neither is no matter.
@@ -324,6 +339,20 @@ func TestCheckOwnParts(t *testing.T) {
 	}
 	if warnings, mistakes := tmpl.CheckOwnParts(parts, themesOf(parts)); warnings != nil || mistakes != nil {
 		t.Errorf("CheckOwnParts of parts that are right = %v, %v", warnings, mistakes)
+	}
+
+	// The directory of themes in that of parts, or that of parts in that of themes, is neither's part or
+	// theme.
+	nested := ownParts(t, quote("quote"))
+	if err := os.CopyFS(filepath.Join(nested, "themes", "ink"), os.DirFS(filepath.Join("themes", "ink"))); err != nil {
+		t.Fatal(err)
+	}
+	if warnings, mistakes := tmpl.CheckOwnParts(nested, filepath.Join(nested, "themes")); warnings != nil || mistakes != nil {
+		t.Errorf("CheckOwnParts with the themes in the parts = %v, %v", warnings, mistakes)
+	}
+	inside := ownParts(t, quote("quote"))
+	if warnings, mistakes := tmpl.CheckOwnParts(inside, filepath.Dir(inside)); warnings != nil || mistakes != nil {
+		t.Errorf("CheckOwnParts with the parts in the themes = %v, %v", warnings, mistakes)
 	}
 
 	files := quote("quote")

@@ -157,11 +157,8 @@ type MadePart struct {
 // that part.html puts together ({{…}}) renamed, which the check of its names then refuses. Copy what the
 // link leads to, or follow the template, if a part of one's own comes to need that.
 func (l *Library) NewPart(name, from string) (*MadePart, error) {
-	switch {
-	case l.mine.parts == "":
+	if l.mine.parts == "" {
 		return nil, usererr.New("tmpl_no_parts_dir")
-	case l.mine.themes == "":
-		return nil, usererr.New("tmpl_no_themes_dir")
 	}
 	if !validName(name) {
 		return nil, usererr.New("tmpl_new_part_name", name)
@@ -187,6 +184,9 @@ func (l *Library) NewPart(name, from string) (*MadePart, error) {
 	made := &MadePart{
 		At: "", Builtin: src.dir == "", Replaces: floe.parts[name] != nil, Themes: set.themesWith(from),
 		ThemesAt: l.mine.themes,
+	}
+	if made.Themes != nil && made.ThemesAt == "" {
+		return nil, usererr.New("tmpl_no_themes_dir")
 	}
 	themes := &themeCopies{written: nil, made: nil}
 	made.At, err = install(l.mine.parts, name, "part", func(dir string) error {
@@ -217,13 +217,16 @@ func (l *Library) NewPart(name, from string) (*MadePart, error) {
 // src, which the copy would then lack: of its own, read or not, or of floe's theme of its name for a part
 // of floe's. The themes of one's own that cannot be read at all are such.
 func (set *partSet) checkThemeFiles(floe *partSet, src *part, made *MadePart, name string) error {
+	if made.ThemesAt == "" {
+		return nil // no theme of one's own, nor a file of one
+	}
 	if _, err := os.Lstat(made.ThemesAt); err == nil {
 		if dir, derr := dirAt(made.ThemesAt); dir == "" {
 			why := "not a directory"
 			if derr != nil {
 				why = derr.Error()
 			}
-			return usererr.New("tmpl_themes_unreadable", made.ThemesAt, why)
+			return usererr.New("tmpl_themes_dir_unreadable", made.ThemesAt, why)
 		}
 	}
 	var there []string
@@ -345,7 +348,7 @@ type themeCopies struct {
 func (w *themeCopies) write(set *partSet, made *MadePart, from, name string) error {
 	for _, theme := range made.Themes {
 		at := filepath.Join(made.ThemesAt, theme, name+".css")
-		if err := w.writeFile(at, set.themes[theme].parts[from]); err != nil {
+		if err := w.writeFile(made.ThemesAt, at, set.themes[theme].parts[from]); err != nil {
 			if errors.Is(err, fs.ErrExist) {
 				return usererr.New("tmpl_new_part_theme_exists", name, at)
 			}
@@ -355,16 +358,20 @@ func (w *themeCopies) write(set *partSet, made *MadePart, from, name string) err
 	return nil
 }
 
-// writeFile writes css into the file at, a new one, making its directories: those above the directory of
-// themes are kept, as they hold more than the themes.
+// writeFile writes css into the file at, a new one, of a theme in themes, the directory of themes of one's
+// own, making the directories it needs, those above themes among them.
 // LIMIT: a file system without hard links refuses the file, and so the copy. Create it with O_EXCL and
 // write it in place there if one comes to be used.
-func (w *themeCopies) writeFile(at, css string) error {
-	above := filepath.Dir(filepath.Dir(filepath.Dir(at)))
-	if err := os.MkdirAll(above, 0o755); err != nil { //nolint:gosec // G301: themes are not secret
-		return err //nolint:wrapcheck // told by write
+func (w *themeCopies) writeFile(themes, at, css string) error {
+	var above []string
+	for dir := filepath.Dir(themes); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+		if _, err := os.Lstat(dir); err == nil {
+			break
+		}
+		above = append(above, dir)
 	}
-	for _, dir := range []string{filepath.Dir(filepath.Dir(at)), filepath.Dir(at)} {
+	slices.Reverse(above)
+	for _, dir := range append(above, themes, filepath.Dir(at)) {
 		switch err := os.Mkdir(dir, 0o755); { //nolint:gosec // G301: themes are not secret
 		case err == nil:
 			w.made = append(w.made, dir)
