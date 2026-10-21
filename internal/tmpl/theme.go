@@ -64,14 +64,14 @@ func newTheme() *theme {
 // readTheme reads the theme in files, its directory, shown in its mistakes as dir, over t:
 // each file takes the place of t's of its name. A file named for none of base.css, palette.css, a part
 // or a look of set is warned of, as it goes into no page, and so is a palette that sets a colour for light
-// mode alone.
+// mode alone, and another file that writes a colour or sets a variable, as colourWarnings tells.
 func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
 	entries, err := fs.ReadDir(files, ".")
 	if err != nil {
 		return fmt.Errorf("read the theme %s: %w", dir, err)
 	}
 	// Warned of once the theme is read whole: one that cannot be used goes into no page.
-	var paletteWarnings []*usererr.Error
+	var warnings []*usererr.Error
 	for _, e := range entries {
 		name, isCSS := strings.CutSuffix(e.Name(), ".css")
 		// A file of another kind, or of a name starting with a dot (.DS_Store), is none of the theme's.
@@ -89,23 +89,27 @@ func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
 			return fmt.Errorf("read the theme %s: %w", dir, err)
 		}
 		// base.css and palette.css are for the whole page, out of the parts' scope.
-		sheet := readCSS(css)
-		if err = sheet.refuse(path.Join(dir, e.Name()), name != themeBase && name != themePalette); err != nil {
+		file, sheet := path.Join(dir, e.Name()), readCSS(css)
+		if err = sheet.refuse(file, name != themeBase && name != themePalette); err != nil {
 			return err
 		}
-		switch name {
-		case themeBase:
-			t.base = string(css)
-		case themePalette:
-			if paletteWarnings, err = checkPalette(path.Join(dir, e.Name()), sheet); err != nil {
+		if name == themePalette {
+			var more []*usererr.Error
+			if more, err = checkPalette(file, sheet); err != nil {
 				return err
 			}
+			warnings = append(warnings, more...)
 			t.palette = string(css)
-		default:
+			continue
+		}
+		warnings = append(warnings, colourWarnings(file, sheet, false)...)
+		if name == themeBase {
+			t.base = string(css)
+		} else {
 			t.parts[name] = string(css)
 		}
 	}
-	set.strays = append(set.strays, paletteWarnings...)
+	set.strays = append(set.strays, warnings...)
 	return nil
 }
 

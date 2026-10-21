@@ -50,7 +50,7 @@ func quote(name string) map[string]string {
 		name + "/part.html": `<figure data-floe-part="` + name + `"><blockquote>{{.text}}</blockquote>` +
 			`{{with .source}}<figcaption class="source">{{word "by"}} {{.}}</figcaption>{{end}}</figure>`,
 		name + "/words.yaml": "en: { by: by }\nja: { by: 出典 }\n",
-		name + "/part.css":   "/* the " + name + " of one's own */\n:scope { margin: 0; }\n.source { color: var(--muted, #57635f); }\n",
+		name + "/part.css":   "/* the " + name + " of one's own */\n:scope { margin: 0; }\n.source { color: var(--muted); }\n",
 	}
 }
 
@@ -425,7 +425,7 @@ func TestOwnPartsThemes(t *testing.T) {
 
 	files := quote("code")
 	files["themes/brutal/code.css"] = "/* brutal's code of one's own */\n"
-	files["themes/mine/base.css"] = "/* mine */\n:root { --mine-ink: #123; }\n"
+	files["themes/mine/base.css"] = "/* mine */\nblockquote { color: var(--fg); }\n"
 	files["themes/mine/palette.css"] = "/* mine's palette */\n:root { --bg: #123; }\n" +
 		"@media (prefers-color-scheme: dark) { :root { --bg: #321; } }\n"
 	files["themes/pale/palette.css"] = ":root { --bg: #fdf6e3; --font: serif; --rule: 2px solid var(--fg); }\n"

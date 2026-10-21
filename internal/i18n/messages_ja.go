@@ -354,6 +354,8 @@ var messagesJA = map[string]string{
 	"tmpl_palette_order":           "%s:%d: この :root は @media (prefers-color-scheme: dark) より前に書いてください。後に書くと、その色がダークモードでも勝ちます",
 	"tmpl_palette_important":       "%s:%d: palette.css には !important を書けません。どの層にも勝ち、テンプレートが :scope に書いた色にも勝ってしまいます",
 	"tmpl_scope_dark":              "%s は :scope に %s をライトモードの分だけ書いています。どのパレットにも勝つので、ダークモードでもその値のままになり、ほかはダークの色になります。@media (prefers-color-scheme: dark) { :scope { … } } にも書いてください",
+	"tmpl_css_colour":              "%s:%d: 色 %s を値で書いています。パレットの変数（var(--accent)）で描き、テーマ自身の色はそのテーマの palette.css に書いてください",
+	"tmpl_theme_variable":          "%s:%d: %s を palette.css の外で書いています。テーマの変数は、テンプレートが :scope に書いた色より下になる palette.css に書き、ここでは var() で取ってください",
 	"tmpl_palette_dark":            "%s は %s をライトモードの分だけ書いています。ダークモードでもその値のままになり、ほかは default のダークの色になります。@media (prefers-color-scheme: dark) { :root { … } } にも書いてください",
 	"tmpl_themes_dir_unreadable":   "自分のテーマのディレクトリ %s を読めません: %s。読めるディレクトリにするか、FLOE_THEMES_DIR を設定してください",
 	"tmpl_part_unreached":          "%s: %s: 部品 %s は項目を描きます。floe が辿る properties か items の下で参照してください",

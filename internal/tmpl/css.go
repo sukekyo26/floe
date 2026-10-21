@@ -11,7 +11,7 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// ownCSS returns name, a file of t's CSS, empty when t has none, refused as refuseCSS refuses one of
+// ownCSS returns name, a file of t's CSS, empty when t has none, refused as cssSheet.refuse refuses one of
 // @scope: floe scopes the template's CSS to the page, @scope (:root).
 func (t *Template) ownCSS(name string) ([]byte, error) {
 	s, err := t.ownSheet(name)
@@ -32,11 +32,6 @@ func (t *Template) ownSheet(name string) (*cssSheet, error) {
 		return nil, err
 	}
 	return s, nil
-}
-
-// refuseCSS refuses css, the file shown as file, as cssSheet.refuse does.
-func refuseCSS(file string, src []byte, scoped bool) error {
-	return readCSS(src).refuse(file, scoped)
 }
 
 // refuse refuses s, the file shown as file, that floe puts in a layer, where a } closes no block,

@@ -193,8 +193,10 @@ type partSet struct {
 	// floe's own default palette, under every page's, whatever one's own themes change
 	palette string
 	// the directories of one's own it read, those of parts and themes among them, by their real paths
-	dirs   []string
-	strays []*usererr.Error // what of one's own goes into no page, to be warned of
+	dirs []string
+	// what to warn of: what of one's own goes into no page, and the colours of the parts and themes
+	// written where the palette is to give them
+	strays []*usererr.Error
 }
 
 // builtinParts reads floe's parts once.
@@ -490,7 +492,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		}
 		pages[lang].Funcs(template.FuncMap{"word": w.word(file, lang)})
 	}
-	css, err := readPartCSS(files, name, dir)
+	css, err := set.readPartCSS(files, name, dir)
 	if err != nil {
 		return err
 	}
@@ -550,7 +552,7 @@ func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error
 			return usererr.New("tmpl_look_files", path.Join(dir, file), name)
 		}
 	}
-	css, err := readPartCSS(files, name, dir)
+	css, err := set.readPartCSS(files, name, dir)
 	if err != nil {
 		return err
 	}
@@ -561,15 +563,18 @@ func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error
 	return nil
 }
 
-// readPartCSS reads the part.css of the part name in files, its directory, shown as dir.
-func readPartCSS(files fs.FS, name, dir string) (string, error) {
+// readPartCSS reads the part.css of the part name in files, its directory, shown as dir, and warns of the
+// colours it writes as values.
+func (set *partSet) readPartCSS(files fs.FS, name, dir string) (string, error) {
 	css, err := fs.ReadFile(files, "part.css")
 	if err != nil {
 		return "", fmt.Errorf("read the part %s: %w", name, err)
 	}
-	if err = refuseCSS(path.Join(dir, "part.css"), css, true); err != nil {
+	file, sheet := path.Join(dir, "part.css"), readCSS(css)
+	if err = sheet.refuse(file, true); err != nil {
 		return "", err
 	}
+	set.strays = append(set.strays, colourWarnings(file, sheet, true)...)
 	return string(css), nil
 }
 
