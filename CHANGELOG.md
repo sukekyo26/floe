@@ -127,7 +127,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   diagrams, the template and the themes' files of the parts draw with them
   (`--page-bg` the page's ground, `--rule` its rules), and a template keeps
   colours of its own by setting them on `:scope`, which the parts take in
-  every theme. `palette.css` holds those variables alone, without
+  every theme but for the colours a theme keeps of its own, which the
+  palette has no name for (brutal's primaries, notebook's markers). `palette.css` holds those variables alone, without
   `!important`, on `:root` and then in `@media (prefers-color-scheme: dark)`,
   and is warned of where it sets a colour for light mode alone, as is a
   template that sets one so on `:scope`. A part of your own cannot be named `palette`. `floe

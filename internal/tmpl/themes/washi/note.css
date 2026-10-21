@@ -14,4 +14,4 @@
 :scope.good .title { color: var(--good); }
 :scope.warn .title { color: var(--warn); }
 :scope.bad .title { color: var(--bad); }
-:scope code { background: rgb(0 0 0 / 0.06); }
+:scope code { background: color-mix(in srgb, var(--fg) 6%, transparent); }

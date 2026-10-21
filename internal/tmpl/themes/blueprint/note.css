@@ -1,9 +1,8 @@
-:scope {
+/* A note of a tone too, whose own background of its tone this takes the place of */
+:scope, :scope:is(.good, .warn, .bad) {
   background: var(--bp-squares, none), var(--surface); border-radius: 0;
   box-shadow: none;
 }
-/* A note of a tone sets its whole background, its size too, so it gets the squares again */
-:scope:is(.good, .warn, .bad) { background: var(--bp-squares, none), var(--surface); }
 :scope { border: 1.5px dashed var(--accent); }
 :scope.good { border-color: var(--good); }
 :scope.warn { border-color: var(--warn); }
