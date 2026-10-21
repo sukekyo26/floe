@@ -13,7 +13,8 @@ import (
 // not what the part holds, whose colour it gives by inheritance alone. Its @keyframes and @font-face,
 // in floe's @scope, work. A block page.css leaves open does not take in the theme, nor one a part of one's
 // own leaves open the parts after it. A part's style stops at a part it holds. floe's theme does not
-// style a part of one's own that took the place of floe's, but does those drawn in its look.
+// style a part of one's own that took the place of floe's, but does those drawn in its look. floe's base
+// draws the page's ground, colour and face in the theme's, under a template that draws none of them.
 func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
 	e := newEnv(t)
 	b := newBrowser(t, e.base, i18n.English)
@@ -75,6 +76,16 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	got = b.eval(`[getComputedStyle(document.querySelector('[data-floe-part=leaky]')).color,
 		getComputedStyle(document.querySelector('[data-floe-part=note]')).backgroundColor].join(' | ')`)
 	check(t, "leaky", []string{got}, "rgb(0, 0, 3) | rgb(246, 232, 210)")
+
+	e.write(t, "templates/bare/schema.json", `{"type": "object", "additionalProperties": false}`)
+	e.write(t, "templates/bare/page.html", `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>`+
+		`<body><p>a</p></body></html>`)
+	slug = "bare"
+	e.publish(t, e.write(t, "bare.yaml", "template: bare\nlang: en\ntheme: washi\n"), store.Options{Slug: &slug})
+	b.navigate("/a/bare/?raw")
+	b.until("the text", "!!document.querySelector('p')")
+	got = b.eval(`(() => { const s = getComputedStyle(document.body); return [s.backgroundColor, s.color, s.fontFamily.split(',')[0]].join(' | ') })()`)
+	check(t, "bare", []string{got}, `rgb(237, 228, 207) | rgb(29, 27, 24) | "Hiragino Mincho ProN"`)
 
 	// A table of one's own takes the place of floe's, and the panel's look by its part.yaml: floe's washi
 	// styles it and compare, drawn in the table's look, by the panel's file (its double rules), not by the
