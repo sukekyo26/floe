@@ -129,7 +129,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   (`--rule` the page's rules), and floe's base draws the page's ground, colour
   and face with them (`--page-bg`, `--fg`, `--font`) on its root under any
   template; a template keeps colours of its own, those among them, by setting
-  them on `:scope`, which the parts take in every theme but for the colours a
+  them on `:scope`, as a ground it draws on `body` covers the body's box alone,
+  and the parts take them in every theme but for the colours a
   theme keeps of its own, which the palette has no name for (brutal's
   primaries, notebook's markers); `--on-fill` is the text on a face filled
   with the accent or a tone's colour, `--shadow` the colour of shadows.
