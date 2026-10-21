@@ -64,7 +64,7 @@ floe: 1.2
 
 `format` には、floe が検査する JSON Schema の format（`date`・`email`・`uri` など）か、文字列の読み方を決める floe の format（`html`・`image`・`markdown`）を使います。それ以外の format は、この floe ではどんな値も通してしまうので断ります。floe の format は floe が探す `properties` と `items` の下だけに書きます。`anyOf` や `$defs` などの下に書くと、その項目は文字列として描かれるので断ります。型は `"type": "string"` だけを宣言します。図とスクリプトは format ではなく[部品](#部品)です。`"format": "diagram"`・`"format": "script"` は、スキーマのどこに書いても断ります。
 
-`$ref` で指せるのは、部品か共有 schema の全体（`floe:///parts/table.json`。`properties` と `items` の下で指す）と、schema 自身のファイルの中（`#/$defs/row`）です。ファイルの中は floe が辿らず、そこに宣言したものを書いたとおりに描きます。floe の外（`file://`・`https://`）、部品の中（`floe:///parts/table.json#/properties/rows`）、floe が辿らない場所からの部品を指す `$ref` は断ります。部品か共有 schema を指す `$ref` と並べて書けるのは、`description`・`title`・`$comment` と、根では `$schema` だけです。項目は `$ref` の先が宣言し、`description` は先の説明の前に付きます。
+`$ref` で指せるのは、部品か共有 schema の全体（`floe:///parts/table.json`。`properties` と `items` の下で指す）と、schema 自身のファイルの中（`#/$defs/row`）です。ファイルの中は floe が辿らず、そこに宣言したものを書いたとおりに描きます。floe の外（`file://`・`https://`）、部品の中（`floe:///parts/table.json#/properties/rows`）、floe が辿らない場所からの部品を指す `$ref` は断ります。部品か共有 schema を指す `$ref` と並べて書けるのは、JSON Schema の注釈（`description`・`title`・`default`・`examples`・`$comment` など）と、根では `$schema` だけです。項目は `$ref` の先が宣言し、`description` は先の説明の前に付きます。
 
 schema のこれらの誤りは、`floe template check` が JSON ポインタの場所を付けて断ります。テンプレートを使ってデータファイルを読むときも、どこで使っても同じく断ります。
 

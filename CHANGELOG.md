@@ -208,7 +208,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   A schema's mistakes, a format of floe's or a part's `$ref` where floe does
   not follow to it (under `anyOf`, `$defs` and the like), a format floe does
   not know, a `$ref` out of floe or into a part, or a keyword beside a `$ref`
-  to a part but `description`, `title` and `$comment`, are refused at their
+  to a part but annotations (`description`, `title`, `default`…), are refused at their
   JSON pointers, by `floe template check` and wherever the template is used,
   and a part's by `floe part check`; a `$ref` into the schema's own file
   (`#/$defs/row`) is followed by JSON Schema alone.
