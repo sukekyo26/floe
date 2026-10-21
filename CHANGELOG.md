@@ -187,8 +187,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   [expr](https://expr-lang.org/), each failure reported at the data file's
   line and column, and a mistake in those files at their own;
   `page.html` writes numbers with `num` and `bytes`.
-  floe puts a page's CSS together, the template's `page.css` and theme each
-  in a `<style>` of its own, in a cascade layer over floe's base (text, lists, links, code and
+  floe puts a page's CSS together, the template's `page.css` in a
+  `<style>` of its own, in a cascade layer over floe's base (text, lists, links, code and
   quotes) and the looks of elements that take one without being a part's
   box, and under the parts' style and the parts theme, which they do not
   restyle whatever their selectors. The template's CSS is scoped to the page,
@@ -217,8 +217,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `template.yaml` names the floe a template needs. A schema may not declare
   or require `lang`, `template`, `theme` or `title`, which floe reads from
   every data file itself. See [docs/templates.md](docs/templates.md).
-- Add `floe template list`, which lists the templates with where they are,
-  their themes and the floe they need; `floe template show <name>`, which
+- Add `floe template list`, which lists the templates with where they are
+  and the floe they need; `floe template show <name>`, which
   prints the items a data file of a template may hold and its example, to
   read before writing one; `floe template new <name> --from <template>`,
   which copies a template into a template of your own to edit; and

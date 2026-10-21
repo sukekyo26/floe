@@ -177,7 +177,7 @@ floe render --check docs/*.yaml            # CI で: 書き出し直していな
 
 ## `floe template list`
 
-テンプレートを 1 行に 1 つ出します。各行はタブ区切りの 5 列で、名前、置き場所（自分のテンプレートのディレクトリか `built-in`。スクリプトが読めるよう、どの言語でも同じ）、テーマ（カンマ区切り）、要る floe の版（`template.yaml` から。無ければ空）、`schema.json` の説明です。自分のテンプレートは、同じ名前の組み込みのテンプレートの代わりに使われます。テンプレートの書き方は [templates.ja.md](templates.ja.md) にあります。
+テンプレートを 1 行に 1 つ出します。各行はタブ区切りの 4 列で、名前、置き場所（自分のテンプレートのディレクトリか `built-in`。スクリプトが読めるよう、どの言語でも同じ）、要る floe の版（`template.yaml` から。無ければ空）、`schema.json` の説明です。自分のテンプレートは、同じ名前の組み込みのテンプレートの代わりに使われます。テンプレートの書き方は [templates.ja.md](templates.ja.md) にあります。
 
 ## `floe template show <name>`
 

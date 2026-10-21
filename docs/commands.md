@@ -176,7 +176,7 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 
 ## `floe template list`
 
-Print the templates, one per line in five tab-separated columns: the name, where it is (the directory of a template of your own, or `built-in` in every language, for scripts), its themes (comma-separated), the floe it needs (from its `template.yaml`; empty without one) and the description of its `schema.json`. A template of your own takes the place of the built-in one of its name. [templates.md](templates.md) tells how templates are written.
+Print the templates, one per line in four tab-separated columns: the name, where it is (the directory of a template of your own, or `built-in` in every language, for scripts), the floe it needs (from its `template.yaml`; empty without one) and the description of its `schema.json`. A template of your own takes the place of the built-in one of its name. [templates.md](templates.md) tells how templates are written.
 
 ## `floe template show <name>`
 
