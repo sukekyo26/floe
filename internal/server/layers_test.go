@@ -84,8 +84,15 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	e.publish(t, e.write(t, "bare.yaml", "template: bare\nlang: en\ntheme: washi\n"), store.Options{Slug: &slug})
 	b.navigate("/a/bare/?raw")
 	b.until("the text", "!!document.querySelector('p')")
-	got = b.eval(`(() => { const s = getComputedStyle(document.body); return [s.backgroundColor, s.color, s.fontFamily.split(',')[0]].join(' | ') })()`)
-	check(t, "bare", []string{got}, `rgb(237, 228, 207) | rgb(29, 27, 24) | "Hiragino Mincho ProN"`)
+	ground := `(() => { const r = getComputedStyle(document.documentElement), s = getComputedStyle(document.querySelector('p'));
+		return [r.backgroundColor, getComputedStyle(document.body).backgroundColor, s.color, s.fontFamily.split(',')[0]].join(' | ') })()`
+	check(t, "bare", []string{b.eval(ground)}, `rgb(237, 228, 207) | rgba(0, 0, 0, 0) | rgb(29, 27, 24) | "Hiragino Mincho ProN"`)
+	// One that draws them on :scope draws its own, the base's under it.
+	e.write(t, "templates/bare/page.css", ":scope { background: rgb(0, 0, 5); color: rgb(0, 0, 6); font-family: own; }\n")
+	e.publish(t, e.write(t, "bare.yaml", "template: bare\nlang: en\ntheme: washi\n"), store.Options{Slug: &slug})
+	b.navigate("/a/bare/?raw")
+	b.until("the text", "!!document.querySelector('p')")
+	check(t, "bare of its own ground", []string{b.eval(ground)}, `rgb(0, 0, 5) | rgba(0, 0, 0, 0) | rgb(0, 0, 6) | own`)
 
 	// A table of one's own takes the place of floe's, and the panel's look by its part.yaml: floe's washi
 	// styles it and compare, drawn in the table's look, by the panel's file (its double rules), not by the

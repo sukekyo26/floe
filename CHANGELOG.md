@@ -125,7 +125,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   theme's `palette.css` sets the page's colours and faces as CSS variables, in
   the bottom layer over `default`'s, which defines them all: the parts,
   diagrams and the template draw with them (`--rule` the page's rules), floe's
-  base the page's ground, text and face (`--page-bg`, `--fg`, `--font`) under
+  base the page's ground, colour and face (`--page-bg`, `--fg`, `--font`) under
   any template, and a template keeps colours of its own by setting
   them on `:scope`. `palette.css` holds those variables alone, without
   `!important`, on `:root` and then in `@media (prefers-color-scheme: dark)`,
