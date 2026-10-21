@@ -121,9 +121,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   panel), its style reaching the elements that have the look but not a part
   held in them, and Markdown's quotes, and goes into every page after the
   parts' style; the template's `page.css` places the page, in a layer under
-  them, and a template has no themes of its own. `parts-shape:`
-  (`floe publish --parts-shape`) takes the parts' shape from another theme,
-  the palette staying the theme's. A
+  them, and a template has no themes of its own. A
   theme's `palette.css` sets the page's colours and faces as CSS variables, in
   the bottom layer over `default`'s, which defines them all: the parts,
   diagrams and the template draw with them (`--page-bg` the page's ground,
@@ -177,7 +175,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   shows or a file of its template, or fetching the icons its diagrams show,
   reloads the open tab, and while it has mistakes the tab shows them in place
   of the page.
-  `--theme` and `--parts-shape` pick other themes, and `--slug`, `--title`,
+  `--theme` picks another theme, and `--slug`, `--title`,
   `--description` and `--force` are also available.
   Republishing a slug says so on stderr, with a warning when the title
   changed.
