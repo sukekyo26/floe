@@ -14,9 +14,9 @@ Reference for every command of the `floe` binary.
 | `floe template new <name> --from <template>` | Make a template of your own as a copy of another, to edit |
 | `floe template check <dir>...` | Check templates before you use or share them |
 | `floe part list` | List the parts |
-| `floe part show <name>` | Show what a part takes, the looks it takes, the parts it holds and its parts themes |
+| `floe part show <name>` | Show what a part takes, the looks it takes, the parts it holds and its themes |
 | `floe part new <name> --from <part>` | Make a part of your own as a copy of another, to edit |
-| `floe part check` | Check the parts and parts themes of your own before you use or share them |
+| `floe part check` | Check the parts and themes of your own before you use or share them |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe serve` | Run the server in the foreground |
@@ -208,24 +208,24 @@ Print the parts, floe's and those of your own in `$FLOE_PARTS_DIR`, one per line
 
 ## `floe part show <name>`
 
-Print what a part takes, to read before writing it in a schema or making a copy of it: where it is (and whether it takes the place of floe's), what it takes (keys and values, a list of them, or text), the looks it takes (from its `part.yaml`, and those they take in turn, in the order they go into a page), the parts its schema holds, the parts themes with a file of it, and its items, each with what it takes and its description, the items under it indented. A look alone takes nothing, and a part floe draws in Go has no items to tell: floe checks its shape where it draws it.
+Print what a part takes, to read before writing it in a schema or making a copy of it: where it is (and whether it takes the place of floe's), what it takes (keys and values, a list of them, or text), the looks it takes (from its `part.yaml`, and those they take in turn, in the order they go into a page), the parts its schema holds, the themes with a file of it, and its items, each with what it takes and its description, the items under it indented. A look alone takes nothing, and a part floe draws in Go has no items to tell: floe checks its shape where it draws it.
 
 ## `floe part new <name> --from <part>`
 
 Make the part `<name>` of your own in `$FLOE_PARTS_DIR/<name>` as a copy of `<part>`, floe's or your own, to edit.
 
 - Every file of `<part>` is copied, its `part.yaml` included, so the copy takes the looks it takes. Its `part.html` names `<name>` where it named `<part>` as its box, `data-floe-part="<part>"`; the parts it holds and the looks it takes keep their names.
-- The file of `<part>` of each parts theme that has one, floe's or your own, is copied into `$FLOE_PARTS_DIR/themes/<theme>/<name>.css`, so the copy starts with the original's look in every theme. What you copy is yours: floe's later changes to its part or its themes do not reach it.
+- The file of `<part>` of each theme that has one, floe's or your own, is copied into `$FLOE_THEMES_DIR/<theme>/<name>.css`, so the copy starts with the original's look in every theme. What you copy is yours: floe's later changes to its part or its themes do not reach it.
 - A name is lower case letters, digits, `-` and `_`, and not `diagram`, `script`, `tone`, `any`, `base`, `palette` or `themes`. A copy named like one of floe's parts takes its place. A part floe draws in Go has no files to copy.
-- Nothing is written over: with a part of that name, or a file of a parts theme for it in any theme of yours, the command stops and makes nothing (exit code 1). It stops too at a parts theme of yours that cannot be used and may have a file of `<part>`, which the copy would lack: fix it first.
-- The copy is read as a page would read it in its place, before it is put there. When the copy, or a part that takes its look or holds it, could not be used (a look alone in place of one of floe's parts that draws, a copy that would hold itself, as `cell` copied from `table`), the command makes nothing and tells why. It stops too when your parts themes, or one of them, cannot be read at all.
+- Nothing is written over: with a part of that name, or a file of it in any theme of yours, the command stops and makes nothing (exit code 1). It stops too at a theme of yours that cannot be used and may have a file of `<part>`, which the copy would lack: fix it first.
+- The copy is read as a page would read it in its place, before it is put there. When the copy, or a part that takes its look or holds it, could not be used (a look alone in place of one of floe's parts that draws, a copy that would hold itself, as `cell` copied from `table`), the command makes nothing and tells why. It stops too when the directory of your themes, or one of them, cannot be read at all.
 
 ## `floe part check`
 
-Check every part and parts theme of your own in `$FLOE_PARTS_DIR`, as a page would read them, before you use or share them. To check another directory, set `FLOE_PARTS_DIR` to it: a part holds others and takes their looks by name, so a part is checked with the rest of its directory.
+Check every part of your own in `$FLOE_PARTS_DIR` and every theme in `$FLOE_THEMES_DIR`, as a page would read them, before you use or share them. To check other directories, set `FLOE_PARTS_DIR` and `FLOE_THEMES_DIR` to them: a part holds others and takes their looks by name, so a part is checked with the rest of its directory.
 
-- Every mistake is printed at once, at its line where it has one (exit code 1): of its files, its names, the looks it takes, the parts it holds, a part that holds itself or takes its own look, and the CSS of a parts theme, a `palette.css` that holds more than the palette's variables among them. Nothing is printed when they are right, or when there are none (exit code 0).
-- Warnings go to stderr and leave the exit code 0: a file that goes into no page, such as a file of a parts theme named for no part, and a `palette.css` that sets a colour for light mode alone, which dark mode would keep.
+- Every mistake is printed at once, at its line where it has one (exit code 1): of its files, its names, the looks it takes, the parts it holds, a part that holds itself or takes its own look, and the CSS of a theme, a `palette.css` that holds more than the palette's variables among them. Nothing is printed when they are right, or when there are none (exit code 0).
+- Warnings go to stderr and leave the exit code 0: a file that goes into no page, such as a file of a theme named for no part, and a `palette.css` that sets a colour for light mode alone, which dark mode would keep.
 - A part is not drawn, as it has no data: `floe template check` draws the example of a template that uses it.
 
 [templates.md](templates.md) tells what a part holds.
@@ -336,7 +336,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 - They ask the server to check, save, list and delete pages: the server is the only one that writes the store, and a publish is checked with the server's templates, parts and icons.
 - After floe is reinstalled (another version, or a rebuilt binary), the next of them replaces the running server.
 - The server keeps running until `floe stop`, logout or reboot.
-- The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` and `FLOE_ICONS_DIR` of the command that started it, `floe list` and `floe rm` included. A publish with other ones is refused until `floe stop`, so set yours in the shell's environment, where every command takes them, rather than on one command.
+- The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_ICONS_DIR` of the command that started it, `floe list` and `floe rm` included. A publish with other ones is refused until `floe stop`, so set yours in the shell's environment, where every command takes them, rather than on one command.
 - A server serves one store (`FLOE_DIR`) on its port: while it runs, a command for another store is refused. Give that store another `FLOE_PORT`.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
 - Pages run in a sandbox, so their scripts cannot reach the management page's API.
@@ -350,10 +350,11 @@ List the fetched icons whose name contains every word (case does not matter), on
 | `FLOE_PORT` | The port (default `7325`). A decimal number from 1 to 65535. |
 | `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. A relative one is under the working directory. The diagrams of a published page show the icons of the server, which takes the one of the `floe publish` or `floe serve` that started it; a publish that means another is refused (run `floe stop` first). |
 | `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. A relative one is under the working directory. A published page is drawn with the server's, the one of the `floe publish` or `floe serve` that started it; a publish that means another is refused (move the templates there, or run `floe stop` first). |
-| `FLOE_PARTS_DIR` | Where parts and parts themes of your own are, a directory each ([templates.md](templates.md#parts-of-your-own)). Defaults to `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`. A relative one is under the working directory. A published page is drawn with the server's, as with `FLOE_TEMPLATES_DIR`; a publish that means another is refused. |
+| `FLOE_PARTS_DIR` | Where parts of your own are, a directory each ([templates.md](templates.md#parts-of-your-own)). Defaults to `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`. A relative one is under the working directory. A published page is drawn with the server's, as with `FLOE_TEMPLATES_DIR`; a publish that means another is refused. |
+| `FLOE_THEMES_DIR` | Where themes of your own are, a directory each ([templates.md](templates.md#themes-of-your-own)). Defaults to `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`. A relative one is under the working directory. A published page is drawn with the server's, as with `FLOE_TEMPLATES_DIR`; a publish that means another is refused. |
 | `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |
 
-In `FLOE_DIR`, `FLOE_ICONS_DIR`, `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `XDG_DATA_HOME` and `XDG_CONFIG_HOME`, a `~` or `~/` at the start stands for `HOME`, so that one written in quotes (a `.env` file, a service unit) is not a directory named `~`; a `FLOE_` one starting with `~name`, or with `~` without `HOME`, is refused. A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says, and so is one starting with `~name`, or with `~` without `HOME`.
+In `FLOE_DIR`, `FLOE_ICONS_DIR`, `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR`, `XDG_DATA_HOME` and `XDG_CONFIG_HOME`, a `~` or `~/` at the start stands for `HOME`, so that one written in quotes (a `.env` file, a service unit) is not a directory named `~`; a `FLOE_` one starting with `~name`, or with `~` without `HOME`, is refused. A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says, and so is one starting with `~name`, or with `~` without `HOME`.
 
 The command line speaks English, whatever the environment's language; the management page and the page of a data file's mistakes follow the browser's language.
 
