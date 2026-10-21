@@ -126,19 +126,21 @@ adheres to [Semantic Versioning](https://semver.org/).
   theme's `palette.css` sets the page's colours and faces as CSS variables, in
   the bottom layer over `default`'s, which defines them all: the parts,
   diagrams, the template and the themes' files of the parts draw with them
-  (`--rule` the page's rules), floe's base the page's ground, colour and face
-  (`--page-bg`, `--fg`, `--font`) under any template, and a template keeps
-  colours of its own by setting them on `:scope`, which the parts take in
-  every theme but for the colours a theme keeps of its own, which the
-  palette has no name for (brutal's primaries, notebook's markers);
-  `--on-fill` is the text on a face filled with the accent or a tone's colour,
-  `--shadow` the colour of shadows. `palette.css` holds those variables, a
-  theme's of its own names too, alone, without `!important`, on `:root` and
-  then in `@media (prefers-color-scheme: dark)`, and is warned of where it sets
-  a colour for light mode alone, as is a template that sets one so on
-  `:scope`. `floe part check` and `floe template check` warn of a colour a
-  part's `part.css`, or a theme's `base.css` or file of a part, writes as a
-  value, and of a variable those files of a theme set. A part of your own cannot be named `palette`. `floe
+  (`--rule` the page's rules), and floe's base draws the page's ground, colour
+  and face with them (`--page-bg`, `--fg`, `--font`) on its root under any
+  template, which `floe template check` warns of where a template sets them on
+  `body` instead of `:scope`; a template keeps colours of its own by setting
+  them on `:scope`, which the parts take in every theme but for the colours a
+  theme keeps of its own, which the palette has no name for (brutal's
+  primaries, notebook's markers); `--on-fill` is the text on a face filled
+  with the accent or a tone's colour, `--shadow` the colour of shadows.
+  `palette.css` holds those variables, a theme's of its own names too, alone,
+  without `!important`, on `:root` and then in `@media (prefers-color-scheme:
+  dark)`, and is warned of where it sets a colour for light mode alone, as is a
+  template that sets one so on `:scope`. `floe part check` and `floe template
+  check` warn of a colour a part's `part.css`, or a theme's `base.css` or file
+  of a part, writes as a value, and of a variable those files of a theme set.
+  A part of your own cannot be named `palette`. `floe
   template show` lists the themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as

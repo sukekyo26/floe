@@ -355,6 +355,7 @@ var messagesEN = map[string]string{
 	"tmpl_palette_rule":            "%s:%d: palette.css holds only the palette's variables, :root { --name: value; }, and those of dark mode in @media (prefers-color-scheme: dark) { :root { … } }; write other rules in base.css or a part's file",
 	"tmpl_palette_order":           "%s:%d: write this :root before @media (prefers-color-scheme: dark): after it, its colours would win in dark mode too",
 	"tmpl_palette_important":       "%s:%d: palette.css takes no !important, which would win over every layer, the colours a template sets on :scope too",
+	"tmpl_body_ground":             "%s:%d: body sets %s, but floe's base draws the page's ground, colour and face on the root, where a ground on body covers the body's box alone and a variable set on body does not reach: set it on :scope",
 	"tmpl_scope_dark":              "%s sets %s on :scope for light mode alone: over every palette, it stays in dark mode too, where the rest turn dark; set it in @media (prefers-color-scheme: dark) { :scope { … } } too",
 	"tmpl_css_colour":              "%s:%d: %s is a colour written as a value: draw with the palette's variables (var(--accent)), and write a theme's colours of its own in its palette.css",
 	"tmpl_theme_variable":          "%s:%d: %s is set outside palette.css: write a theme's variables in its palette.css, under the colours a template sets on :scope, and take them here with var()",
