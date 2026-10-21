@@ -333,7 +333,7 @@ func TestPartsHoldNoFormat(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, p := range set.parts {
-		if at, _, s := set.formatIn(p.shape, "#"); s != nil {
+		if at, s := set.formatIn(p.shape, "#"); s != nil {
 			t.Errorf("the part %s holds the format %s at %s", name, s.format, at)
 		}
 	}

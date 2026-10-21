@@ -619,14 +619,14 @@ func convert(md goldmark.Markdown, name, text string) (string, error) {
 }
 
 // checkedShape reads the schema of t into its shape, and returns it as jsonschema reads it too. It refuses
-// a ref into a part, a part floe draws in Go written as a format, which would be drawn as its text, and a
-// key floe reads itself (refuseShared).
+// the first of the schema's mistakes floe template check tells (partSet.mistakes), and a key floe reads
+// itself (refuseShared).
 func (t *Template) checkedShape() (*shape, any, error) {
 	doc, err := t.schemaDoc()
 	if err != nil {
 		return nil, nil, err
 	}
-	s, err := t.readShape(doc)
+	s, notes, err := t.readShape(doc)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -634,11 +634,8 @@ func (t *Template) checkedShape() (*shape, any, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	if _, into := s.first("#", func(x *shape) bool { _, into := set.pointsInto(x.ref); return into }); into != nil {
-		return nil, nil, usererr.New("tmpl_item", t.file("schema.json"), unknownPart(set, into.ref))
-	}
-	if ptr, as := s.first("#", func(x *shape) bool { return isGoPart(x.format) }); as != nil {
-		return nil, nil, usererr.New("tmpl_format_part", t.file("schema.json"), ptr, as.format, as.format)
+	if mistakes := set.mistakes(notes); mistakes != nil {
+		return nil, nil, mistakes[0]
 	}
 	if err = t.refuseShared(s); err != nil {
 		return nil, nil, err
@@ -659,22 +656,22 @@ func (t *Template) schemaDoc() (any, error) {
 	return doc, nil
 }
 
-// readShape reads doc, the schema of t, into its shape, bound to floe's parts, a ref into a part left
-// for the caller to refuse.
-func (t *Template) readShape(doc any) (*shape, error) {
-	s, err := readShape(doc, schemaURL(t.Name))
+// readShape reads doc, the schema of t, into its shape, bound to floe's parts, and returns with it what
+// floe refuses of the schema, for the caller to refuse (partSet.mistakes).
+func (t *Template) readShape(doc any) (*shape, *schemaNotes, error) {
+	s, notes, err := readShape(doc, schemaURL(t.Name), t.file("schema.json"), "")
 	if err != nil {
-		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
+		return nil, nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
 	}
 	set, err := t.parts()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if name, ok := set.rootPart(s); ok {
-		return nil, usererr.New("tmpl_schema_root_part", t.file("schema.json"), name)
+		return nil, nil, usererr.New("tmpl_schema_root_part", t.file("schema.json"), name)
 	}
 	s.bind(set)
-	return s, nil
+	return s, notes, nil
 }
 
 // refuseShared refuses a schema that declares, or requires, a key floe reads from every data file itself:

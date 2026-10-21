@@ -195,8 +195,8 @@ func TestCheckParts(t *testing.T) {
 	for _, ref := range []string{"floe:///parts/chart.json", "floe:///parts/table", "floe:///parts/themes.json"} {
 		dir := memo(t, `"risks": {"$ref": "`+ref+`"}`)
 		want := ref + " is not a part; refer to one as floe:///parts/<name>.json, the name one of bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree, floe's and your own"
-		// Not wrapped in the words of jsonschema's loading.
-		want = "the schema of the template memo cannot be read: " + want
+		// At the schema and the pointer of the $ref, not in the words of jsonschema's loading.
+		want = filepath.Join(dir, "memo", "schema.json") + ": #/properties/risks: " + want
 		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 			t.Errorf("Check of %s = %v", ref, mistakes)
 		}
@@ -210,10 +210,12 @@ func TestCheckParts(t *testing.T) {
 		!strings.Contains(page, `<div data-floe-part="table">`) {
 		t.Errorf("a page of a part named relatively = %v", err)
 	}
-	// What a part's item holds is not looked into: a format beside the $ref would never be drawn.
+	// What a part's item holds is not looked into: properties beside the $ref, and a format in them, would
+	// never be drawn.
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/table.json", "properties": {"x": {"type": "string", "format": "image"}}}`)
-	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 ||
-		!strings.Contains(mistakes[0].Error(), "#/properties/risks/properties/x: the format image marks an item to draw") {
+	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 2 ||
+		!strings.Contains(mistakes[0].Error(), "#/properties/risks: beside its $ref to floe:///parts/table.json") ||
+		!strings.Contains(mistakes[1].Error(), "#/properties/risks/properties/x: the format image marks an item to draw") {
 		t.Errorf("Check of a format beside a part = %v", mistakes)
 	}
 	// One into a part would be drawn as plain data: a publish refuses it too.
@@ -223,7 +225,7 @@ func TestCheckParts(t *testing.T) {
 	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "#/properties/risks: "+want) {
 		t.Errorf("Check of a ref into a part = %v", mistakes)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "schema.json: "+want) {
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "schema.json: #/properties/risks: "+want) {
 		t.Errorf("Read of a template with a ref into a part = %v", err)
 	}
 	// Through $defs too, beside the schema's other mistakes.
@@ -243,6 +245,10 @@ func TestCheckParts(t *testing.T) {
 	want = "#/properties/risks/anyOf/0: the part table draws an item"
 	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 		t.Errorf("Check of a part under anyOf = %v", mistakes)
+	}
+	// Refused where the template is used, as floe template check refuses it.
+	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\n"); err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("Read of a template with a part under anyOf = %v", err)
 	}
 	// A schema the parts share is the items written where it is: one that holds parts is followed to as a
 	// part is, and one into it is refused as one into a part.

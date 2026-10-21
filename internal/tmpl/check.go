@@ -11,7 +11,6 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -110,19 +109,18 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	sch, err := compileSchema(set, t.Name, doc)
+	s, notes, err := t.readShape(doc)
 	if err != nil {
 		return nil, []error{err}
 	}
-	s, err := t.readShape(doc)
-	if err != nil {
-		return nil, []error{err}
+	warnings, mistakes = notes.warnings, set.mistakes(notes)
+	// Those mistakes, of $refs among them, would fail the compiling, without their pointers.
+	var sch *jsonschema.Schema
+	if len(mistakes) == 0 {
+		if sch, err = compileSchema(set, t.Name, doc); err != nil {
+			return nil, []error{err}
+		}
 	}
-	lint := &schemaLint{
-		file: t.file("schema.json"), base: schemaURL(t.Name), warnings: nil, mistakes: nil, set: set,
-	}
-	lint.walk(doc, "#", true)
-	warnings, mistakes = lint.warnings, lint.mistakes
 	page, pageSrc, pageErr := t.page()
 	named := namedParts(string(pageSrc))
 	// Told beside the other mistakes of the files, not instead of them.
@@ -331,9 +329,13 @@ func assetsNamed(page *template.Template) []string {
 	return callsOf(page, "asset").names
 }
 
-// checkChecks returns the mistakes of the checks.yaml of t, if it has one, against its schema doc as
-// read, in the order of the file.
+// checkChecks returns the mistakes of the checks.yaml of t, if it has one, against its schema s as
+// compiled, in the order of the file: none while the schema has mistakes of its own, nil, which its
+// checks would be told against for nothing.
 func (t *Template) checkChecks(s *jsonschema.Schema) []error {
+	if s == nil {
+		return nil
+	}
 	src, found, err := t.readOptional("checks.yaml")
 	if err != nil {
 		return []error{err}
@@ -521,123 +523,6 @@ func (t *Template) checkExample() error {
 	}
 	_, err = d.Render(cmp.Or(d.Title, file))
 	return err
-}
-
-// formatTypes are the JSON types of the items of floe's formats: the text of HTML, of an image's path,
-// or of Markdown.
-var formatTypes = map[string]string{"html": "string", "image": "string", "markdown": "string"}
-
-// schemaLint finds what jsonschema compiles but floe would not draw as the schema means.
-type schemaLint struct {
-	file     string
-	warnings []*usererr.Error
-	mistakes []error
-	base     string   // the schema's URL, which a relative $ref is read from
-	set      *partSet // the parts the template is drawn with
-}
-
-// walk walks the schema v at the JSON pointer ptr. reached tells that prepare reaches it, through
-// properties and items alone, so that a format of floe's own there marks an item for drawing.
-func (l *schemaLint) walk(v any, ptr string, reached bool) {
-	m, ok := v.(map[string]any)
-	if !ok {
-		return
-	}
-	if ref, ok := m["$ref"].(string); ok && l.part(ref, ptr, reached) {
-		// prepare draws it whole, and goes no further in.
-		reached = false
-	}
-	if f, ok := m["format"].(string); ok && l.format(f, m["type"], ptr, reached) {
-		// prepare draws it whole, and goes no further in: a format below is not reached.
-		reached = false
-	}
-	closed := m["additionalProperties"] == false || m["unevaluatedProperties"] == false
-	if _, ok := m["properties"]; ok && reached && !closed {
-		l.warnings = append(l.warnings, usererr.New("tmpl_schema_open", l.file, ptr))
-	}
-	for _, kw := range slices.Sorted(maps.Keys(m)) {
-		l.keyword(kw, m[kw], ptr+"/"+pointerKey.Replace(kw), reached)
-	}
-}
-
-// format checks the format f of the schema at ptr, of the type typ, and reports whether prepare draws
-// the item whole.
-func (l *schemaLint) format(f string, typ any, ptr string, reached bool) bool {
-	switch {
-	case isGoPart(f):
-		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_part", l.file, ptr, f, f))
-		return true
-	case !knownFormat(l.set, f):
-		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unknown", l.file, ptr, f))
-	case slices.Contains(formats, f) && !reached:
-		l.mistakes = append(l.mistakes, usererr.New("tmpl_format_unreached", l.file, ptr, f))
-	case slices.Contains(formats, f):
-		if typ != formatTypes[f] {
-			l.mistakes = append(l.mistakes, usererr.New("tmpl_format_type", l.file, ptr, f, formatTypes[f]))
-		}
-		return true
-	}
-	return false
-}
-
-// part notes the part of floe's ref names, at ptr, and reports whether it names one: one prepare does
-// not reach would never be drawn, nor would a schema the parts share that holds what floe draws. A ref
-// into either, wherever it is, would be checked as written but drawn as plain data.
-func (l *schemaLint) part(ref, ptr string, reached bool) bool {
-	ref = absolute(l.base, ref)
-	if !strings.HasPrefix(ref, partsURL) {
-		return false
-	}
-	name, ok := partName(ref)
-	set := l.set
-	switch {
-	case !ok:
-		if _, into := set.pointsInto(ref); into {
-			l.mistakes = append(l.mistakes,
-				usererr.New("tmpl_item", l.file, usererr.New("tmpl_item", ptr, unknownPart(set, ref))))
-		}
-		return false
-	case set.parts[name] == nil:
-		if !reached && set.draws(set.sharedSchema(ref)) {
-			l.mistakes = append(l.mistakes, usererr.New("tmpl_shared_unreached", l.file, ptr, ref))
-		}
-		return false
-	case !reached:
-		l.mistakes = append(l.mistakes, usererr.New("tmpl_part_unreached", l.file, ptr, name))
-	}
-	return true
-}
-
-// keyword walks the schemas the keyword kw of a schema holds in v, at ptr.
-func (l *schemaLint) keyword(kw string, v any, ptr string, reached bool) {
-	switch sub := v.(type) {
-	case map[string]any:
-		switch kw {
-		case "properties":
-			l.each(sub, ptr, reached)
-		case "items":
-			l.walk(sub, ptr, reached)
-		case "$defs", "definitions", "patternProperties", "dependentSchemas":
-			l.each(sub, ptr, false)
-		case "additionalProperties", "unevaluatedProperties", "propertyNames", "additionalItems",
-			"unevaluatedItems", "contains", "not", "if", "then", "else", "contentSchema":
-			l.walk(sub, ptr, false)
-		}
-	case []any:
-		switch kw {
-		case "allOf", "anyOf", "oneOf", "prefixItems", "items":
-			for i, s := range sub {
-				l.walk(s, ptr+"/"+strconv.Itoa(i), false)
-			}
-		}
-	}
-}
-
-// each walks the schemas of a keyword that maps names to them, at ptr.
-func (l *schemaLint) each(m map[string]any, ptr string, reached bool) {
-	for _, k := range slices.Sorted(maps.Keys(m)) {
-		l.walk(m[k], ptr+"/"+pointerKey.Replace(k), reached)
-	}
 }
 
 // pointerKey escapes a key as a step of a JSON pointer.

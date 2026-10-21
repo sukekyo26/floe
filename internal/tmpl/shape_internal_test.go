@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
+
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // jsonDoc reads src as jsonschema reads a schema.
@@ -23,7 +25,7 @@ func jsonDoc(t *testing.T, src string) any {
 func shapeOf(t *testing.T, src string) *shape {
 	t.Helper()
 
-	s, err := readShape(jsonDoc(t, src), schemaURL("t"))
+	s, _, err := readShape(jsonDoc(t, src), schemaURL("t"), "t/schema.json", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +68,7 @@ func TestShapeRefusesWrongTypes(t *testing.T) {
 		`{"required": ["a", 1]}`:               "a schema floe does not read: floe reads #/required only as a list of text",
 		`{"enum": "a"}`:                        "a schema floe does not read: floe reads #/enum only as a list",
 	} {
-		if _, err := readShape(jsonDoc(t, src), schemaURL("t")); err == nil || err.Error() != want {
+		if _, _, err := readShape(jsonDoc(t, src), schemaURL("t"), "t/schema.json", ""); err == nil || err.Error() != want {
 			t.Errorf("readShape of %s = %v, want %s", src, err, want)
 		}
 	}
@@ -81,5 +83,28 @@ func TestShapeNullKey(t *testing.T) {
 	s.partsUnder(&names)
 	if !slices.Contains(names, "table") {
 		t.Errorf("partsUnder = %v, want table among them", names)
+	}
+}
+
+// Beside a $ref to a part or a schema the parts share, a schema takes what declares nothing, and the root
+// its draft too: what the $ref names declares the item (決定 6).
+func TestShapeBesideRef(t *testing.T) {
+	t.Parallel()
+
+	for src, refused := range map[string]bool{
+		`{"properties": {"a": {"$ref": "floe:///parts/tone.json", "description": "d", "title": "t", "$comment": "c"}}}`:         false,
+		`{"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": "floe:///parts/any.json"}`:                         false,
+		`{"properties": {"a": {"$ref": "#/$defs/a", "type": "string"}}, "$defs": {"a": {}}}`:                                    false,
+		`{"properties": {"a": {"$ref": "floe:///parts/any.json", "items": {}}}}`:                                                true,
+		`{"properties": {"a": {"$ref": "floe:///parts/table.json", "required": ["rows"]}}}`:                                     true,
+		`{"properties": {"a": {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": "floe:///parts/tone.json"}}}`: true,
+	} {
+		_, notes, err := readShape(jsonDoc(t, src), schemaURL("t"), "t/schema.json", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := slices.ContainsFunc(notes.mistakes, func(e *usererr.Error) bool { return e.Key == "tmpl_ref_beside" }); got != refused {
+			t.Errorf("readShape of %s refuses beside the $ref: %v, want %v", src, got, refused)
+		}
 	}
 }

@@ -64,7 +64,8 @@ func compileSchema(set *partSet, name string, doc any) (*jsonschema.Schema, erro
 	sch, err := c.Compile(url)
 	// jsonschema wraps noLoader's mistake in an error of its own, which does not unwrap: floe's own is told,
 	// so that it is worded in the reader's language.
-	// LIMIT: names the template, not the schema the $ref is in (its own or a part's); the schema map tells it (#90).
+	// LIMIT: names the template, not the schema the $ref is in: the shape's mistakes tell those it sees, at
+	// their pointers, before (partSet.mistakes), but not those of $dynamicRef. Note those there if they come.
 	var load *jsonschema.LoadURLError
 	switch {
 	case errors.As(err, &load):
@@ -88,11 +89,16 @@ func checkDraft(doc any) error {
 		return nil
 	}
 	named, ok := m["$schema"].(string)
-	if !ok || slices.ContainsFunc(drafts, func(d *jsonschema.Draft) bool { return sameDraft(d.String(), named) }) ||
-		sameDraft("https://json-schema.org/schema", named) {
+	if !ok || isDraft(named) {
 		return nil
 	}
 	return usererr.New("tmpl_schema_draft", named)
+}
+
+// isDraft reports whether url names a draft of JSON Schema, as jsonschema reads it, which it holds itself.
+func isDraft(url string) bool {
+	return slices.ContainsFunc(drafts, func(d *jsonschema.Draft) bool { return sameDraft(d.String(), url) }) ||
+		sameDraft("https://json-schema.org/schema", url)
 }
 
 // sameDraft reports whether the $schema named is the draft at url, as jsonschema reads it: by http or https,
@@ -129,9 +135,10 @@ func newCompiler(set *partSet) *jsonschema.Compiler {
 // knownFormat reports whether floe knows the format f: one of JSON Schema's that it checks, or one of
 // its own. jsonschema passes a value of a format it does not know, so a template that uses a format of
 // a later floe would be drawn as if it had none.
-func knownFormat(set *partSet, f string) bool {
+func knownFormat(f string) bool {
 	const url = "floe:///format.json"
-	c := newCompiler(set)
+	// A schema of a format alone refers to no part: none are needed.
+	c := newCompiler(nil)
 	if err := c.AddResource(url, map[string]any{"format": f}); err != nil {
 		return false
 	}

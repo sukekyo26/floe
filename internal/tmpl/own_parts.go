@@ -286,7 +286,7 @@ func (set *partSet) checkNames(name, dir string) error {
 			return err
 		}
 	}
-	return set.checkHeld(p, at, dir != "")
+	return set.checkHeld(name)
 }
 
 // nameKind is what a name an attribute gives is to a part set.
@@ -354,20 +354,15 @@ func (set *partSet) candidates(look bool) string {
 	return set.names(drawing)
 }
 
-// checkHeld refuses the part p, whose files are at at, when its schema holds a part there is none of, of
-// one's own when own, or a look alone.
-func (set *partSet) checkHeld(p *part, at string, own bool) error {
-	// One left out has no schema; one of a name set keeps (tone, any) leaves floe's in place.
-	for _, held := range p.shape.refsUnder(nil) {
-		switch {
-		case set.shapes[partsURL+held+".json"] != nil:
-		case set.broken[held] != nil:
-			return usererr.New("tmpl_part_holder_broken", held)
-		case set.parts[held] != nil && set.parts[held].isLook():
-			return usererr.New("tmpl_part_holds_look", path.Join(at, "schema.json"), held)
-		case own:
-			return usererr.New("tmpl_part_holds_unknown", path.Join(at, "schema.json"), held, set.names(drawing))
-		}
+// checkHeld refuses the part name when what its schema refers to is refused (partSet.mistakes), now that
+// every part is read: a part there is none of, that cannot be used or draws nothing, among them.
+func (set *partSet) checkHeld(name string) error {
+	n := set.notes[partsURL+name+".json"]
+	if n == nil {
+		return nil // a look alone, or one floe draws in Go
+	}
+	if mistakes := set.mistakes(n); mistakes != nil {
+		return mistakes[0]
 	}
 	return nil
 }
@@ -490,4 +485,5 @@ func (set *partSet) drop(name string) {
 	delete(set.parts, name)
 	delete(set.docs, url)
 	delete(set.shapes, url)
+	delete(set.notes, url)
 }
