@@ -168,13 +168,187 @@ type Error struct {
 	Err  *usererr.Error
 }
 
-// Syntax places an error of goccy/go-yaml at its token, or at the start of file without one.
+// Syntax places an error of goccy/go-yaml at its token, or at the start of file without one. When the
+// tokens around it show text that YAML read as something else, a hint says to quote it, at where that
+// began when it is elsewhere.
 func Syntax(file string, err error) *Error {
 	var se *yaml.SyntaxError
-	if errors.As(err, &se) && se.Token != nil {
-		return New(file, Pos{Line: se.Token.Position.Line, Column: se.Token.Position.Column}, "yaml_syntax", se.Message)
+	if !errors.As(err, &se) || se.Token == nil {
+		return New(file, Pos{Line: 1, Column: 1}, "yaml_syntax", err.Error())
 	}
-	return New(file, Pos{Line: 1, Column: 1}, "yaml_syntax", err.Error())
+	hint, cause := syntaxHint(se.Token)
+	var detail any = se.Message
+	if hint != "" {
+		detail = HintFirst(hint, se.Message)
+	}
+	return New(file, Pos{Line: cause.Position.Line, Column: cause.Position.Column}, "yaml_syntax", detail)
+}
+
+// NewHinted returns the mistake worded by the catalog message key with args, at at in file, with the
+// hint worded by the key hint after it.
+func NewHinted(file string, at Pos, hint, key string, args ...any) *Error {
+	return New(file, at, "yaml_hinted", usererr.New(key, args...), usererr.New(hint))
+}
+
+// HintFirst words the hint by the catalog message key hint, with what a library said of the mistake,
+// detail, after it: the hint names the cause, which the library's words may hide.
+func HintFirst(hint, detail string) *usererr.Error {
+	return usererr.New("yaml_hint_first", usererr.New(hint), detail)
+}
+
+// syntaxHint returns the key of the hint for a syntax error at tk, or "" for none, and the token where
+// what the hint names began (tk when it began there):
+//   - text with ": " in it: a second key on the line of one (a: b: c), or a value beginning with a
+//     reserved ` or @ after a ": " that ends no key, at that ":";
+//   - a comment that " #" began in text, at the comment: one that took the } or ] closing its { } or
+//     [ ], or one after which the text goes on, on the next line;
+//   - a value beginning with ` or @.
+func syntaxHint(tk *token.Token) (string, *token.Token) {
+	value := strings.TrimSpace(tk.Value)
+	reserved := tk.Type == token.InvalidType && (strings.HasPrefix(value, "`") || strings.HasPrefix(value, "@"))
+	switch {
+	case onLine(tk.Prev, tk, token.MappingValueType) && onLine(tk.Next, tk, token.MappingValueType):
+		return "yaml_hint_colon", tk
+	case reserved && colonInText(tk.Prev):
+		return "yaml_hint_colon", tk.Prev
+	case textGoesOn(tk):
+		return "yaml_hint_comment", tk.Prev
+	}
+	if c := closerInComment(tk); c != nil {
+		return "yaml_hint_comment", c
+	}
+	if reserved {
+		return "yaml_hint_reserved", tk
+	}
+	return "", tk
+}
+
+// colonInText reports whether colon is a ":" that ends no key: one after another ":" on its line
+// (a: b: c), or one in a [ ] after text in which a ` opens inline code, `: ` being in it.
+func colonInText(colon *token.Token) bool {
+	if !onLine(colon, colon, token.MappingValueType) || !onLine(colon.Prev, colon, token.StringType) {
+		return false
+	}
+	before := colon.Prev.Prev
+	switch {
+	case onLine(before, colon, token.MappingValueType):
+		return true
+	case onLine(before, colon, token.SequenceStartType), onLine(before, colon, token.CollectEntryType):
+		return strings.Count(colon.Prev.Value, "`")%2 == 1
+	}
+	return false
+}
+
+// textGoesOn reports whether tk, the token of a syntax error, begins the line after a comment that
+// follows text on its line, further in than that line and not as a key: text written over lines that
+// " #" cut.
+// LIMIT: text that goes on in a line with ": " in it reads as a key indented too far, and gets no
+// hint. Look past the first ": " if that hides a cut.
+func textGoesOn(tk *token.Token) bool {
+	c := tk.Prev
+	if c == nil || c.Type != token.CommentType || tk.Position.Line != c.Position.Line+1 ||
+		c.Prev == nil || c.Prev.Type != token.StringType || lastLine(c.Prev) != c.Position.Line ||
+		onLine(tk.Next, tk, token.MappingValueType) {
+		return false
+	}
+	first := c.Prev // the first token on the line the text begins on
+	for first.Prev != nil && first.Prev.Position.Line == c.Prev.Position.Line {
+		first = first.Prev
+	}
+	return tk.Position.Column > first.Position.Column
+}
+
+// lastLine returns the line the text of tk ends on, which a plain value written over lines does after
+// the line it begins on.
+func lastLine(tk *token.Token) int {
+	return tk.Position.Line + strings.Count(strings.TrimSpace(tk.Origin), "\n")
+}
+
+// onLine reports whether t is a token of the type typ on the line of on.
+func onLine(t, on *token.Token, typ token.Type) bool {
+	return t != nil && t.Type == typ && t.Position.Line == on.Position.Line
+}
+
+// closerInComment returns the first comment, in the file of tk, that holds the } or ] of the { } or [ ]
+// it begins in, which is left open: " #" took the rest of the line, its closer too. nil for none.
+func closerInComment(tk *token.Token) *token.Token {
+	for tk.Prev != nil {
+		tk = tk.Prev
+	}
+	type collection struct {
+		closer string
+		cut    *token.Token // the first comment in it that holds its closer
+	}
+	var open []collection
+	for ; tk != nil; tk = tk.Next {
+		switch tk.Type {
+		case token.MappingStartType:
+			open = append(open, collection{closer: "}", cut: nil})
+		case token.SequenceStartType:
+			open = append(open, collection{closer: "]", cut: nil})
+		case token.MappingEndType, token.SequenceEndType:
+			if len(open) > 0 {
+				open = open[:len(open)-1]
+			}
+		case token.CommentType:
+			if n := len(open); n > 0 && open[n-1].cut == nil && strings.Contains(tk.Value, open[n-1].closer) {
+				open[n-1].cut = tk
+			}
+		default:
+		}
+	}
+	for _, c := range open {
+		if c.cut != nil {
+			return c.cut
+		}
+	}
+	return nil
+}
+
+// ColonText reports whether n is how YAML reads a line of plain text with ": " in it: one key, not in
+// quotes, right after the - or the [ or , it is an entry of, and a value of text on its line.
+// LIMIT: a mapping of one such key and value meant as one is taken for text too. Ask for more of the
+// line (a second ": ", a space in the key) if the hint misleads.
+func ColonText(n ast.Node) bool {
+	var pair *ast.MappingValueNode
+	switch m := n.(type) {
+	case *ast.MappingNode:
+		if len(m.Values) != 1 || m.IsFlowStyle {
+			return false
+		}
+		pair = m.Values[0]
+	case *ast.MappingValueNode:
+		pair = m
+	default:
+		return false
+	}
+	switch pair.Value.(type) {
+	case *ast.NullNode, *ast.LiteralNode:
+		return false
+	}
+	k := KeyOf(pair).GetToken()
+	if _, text := pair.Value.(ast.ScalarNode); !text || k == nil || k.Type == token.SingleQuoteType ||
+		k.Type == token.DoubleQuoteType {
+		return false
+	}
+	entry := onLine(k.Prev, k, token.SequenceEntryType) || onLine(k.Prev, k, token.SequenceStartType) ||
+		onLine(k.Prev, k, token.CollectEntryType)
+	return entry && pair.Value.GetToken().Position.Line == k.Position.Line
+}
+
+// CommentAfter returns the text of the comment after the token of n on its last line, without its #,
+// or "" for none: what YAML makes of " #" and the rest of a plain value, written over lines or not. A
+// value in quotes ends at its quote, before any comment.
+func CommentAfter(n ast.Node) string {
+	tk := n.GetToken()
+	if tk == nil || tk.Type == token.SingleQuoteType || tk.Type == token.DoubleQuoteType ||
+		tk.Next == nil || tk.Next.Type != token.CommentType {
+		return ""
+	}
+	if tk.Next.Position.Line != lastLine(tk) {
+		return ""
+	}
+	return tk.Next.Value
 }
 
 // New returns the mistake worded by the catalog message key with args, at at in file.
