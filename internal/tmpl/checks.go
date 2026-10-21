@@ -23,7 +23,7 @@ type relation struct {
 
 	file string                 // checks.yaml, as its mistakes name it
 	at   map[string]yamlpos.Pos // where each key is written, and "" where the check is
-	rest string                 // the text of a YAML comment after expr on its line, or ""
+	rest string                 // the text of a YAML comment after expr on its last line, or ""
 	prog *vm.Program            // expr compiled ahead, for a part's; nil to compile it when run
 }
 

@@ -115,20 +115,26 @@ func TestSyntaxHints(t *testing.T) {
 	const (
 		bad      = "this is not valid YAML: "
 		colon    = `text with ": " in it reads as keys and values: put the text in quotes`
-		comment  = "a # after a space begins a comment, which cut { } or [ ] short: put text with # in it in quotes"
+		comment  = "a # after a space began a comment, which cut the text short: put text with # in it in quotes"
 		reserved = "a value cannot begin with ` or @ unless it is in quotes"
 	)
 	for _, tt := range []struct{ src, want string }{
 		{"lead: parts-shape: drop\n", "a.yaml:1:7: " + bad + colon + " (mapping value is not allowed in this context)"},
 		{"a:\n  - { title: layer #73, from: 2 }\n  - b\n", "a.yaml:2:20: " + bad + comment + " (',' or '}' must be specified)"},
-		{"a: [x #y, z]\n", "a.yaml:1:7: " + bad + comment + " (sequence end token ']' not found)"},
+		{"a: [x #y], z]\n", "a.yaml:1:7: " + bad + comment + " (sequence end token ']' not found)"},
+		// Text that goes on after the comment that cut it, on the next line.
+		{"a: one two # three\n  four\n", "a.yaml:1:12: " + bad + comment + " (value is not allowed in this context. map key-value is pre-defined)"},
 		// A ` after the ": " of text is the ": "'s doing, which the hint names, at that ":".
 		{"rows:\n  - [a, the `: ` case, c]\n", "a.yaml:2:14: " + bad + colon + " ('`' is a reserved character)"},
 		{"a: `b`\n", "a.yaml:1:4: " + bad + reserved + " ('`' is a reserved character)"},
 		{"a: { k: `v` }\n", "a.yaml:1:9: " + bad + reserved + " ('`' is a reserved character)"},
+		{"a: [b: `c`]\n", "a.yaml:1:8: " + bad + reserved + " ('`' is a reserved character)"},
 		{"a: b: `c`\n", "a.yaml:1:5: " + bad + colon + " ('`' is a reserved character)"},
 		// A comment inside a { } or [ ] that closes is the author's, and another mistake gets no hint.
 		{"a: [x, # y\n  z]\nb: 'c\n", "a.yaml:3:4: " + bad + "could not find end character of single-quoted text"},
+		// Nor is one that does not hold the ] of a [ ] left open, or one before a key indented too far.
+		{"a: [x, # y\n  z\nb: c\n", "a.yaml:3:1: " + bad + "',' or ']' must be specified"},
+		{"a: x # note\n  b: c\n", "a.yaml:2:3: " + bad + "value is not allowed in this context. map key-value is pre-defined"},
 		{"a: 1\na: 2\n", "a.yaml:2:1: " + bad + `mapping key "a" already defined at [1:1]`},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src), "diagram_documents")
@@ -137,15 +143,17 @@ func TestSyntaxHints(t *testing.T) {
 		}
 	}
 	var e *yamlpos.Error
-	if _, err := yamlpos.Parse("a.yaml", []byte("lead: parts-shape: drop\n"), "diagram_documents"); !errors.As(err, &e) ||
-		e.Localize(i18n.New("ja")) != "a.yaml:1:7: YAML として読めません: 「: 」を含む文はキーと値として読まれます。"+
-			"文を引用符で囲んでください（mapping value is not allowed in this context）" {
-		t.Errorf("Parse in Japanese = %v", e.Localize(i18n.New("ja")))
+	if _, err := yamlpos.Parse("a.yaml", []byte("lead: parts-shape: drop\n"), "diagram_documents"); !errors.As(err, &e) {
+		t.Fatalf("Parse = %v", err)
+	}
+	if got := e.Localize(i18n.New("ja")); got != "a.yaml:1:7: YAML として読めません: 「: 」を含む文はキーと値として読まれます。"+
+		"文を引用符で囲んでください（mapping value is not allowed in this context）" {
+		t.Errorf("Parse in Japanese = %s", got)
 	}
 }
 
-// ColonText is a plain key and its value on one line; CommentAfter, the text of a comment on the line
-// of a value.
+// ColonText is a plain key and its value of text on one line; CommentAfter, the text of a comment on
+// the last line of a value.
 func TestColonTextAndCommentAfter(t *testing.T) {
 	t.Parallel()
 
@@ -173,6 +181,22 @@ func TestColonTextAndCommentAfter(t *testing.T) {
 	// On the last line of a value written over lines.
 	if got := yamlpos.CommentAfter(items[12]); got != " z" {
 		t.Errorf("CommentAfter(x y # z) = %q", got)
+	}
+	// A key and its value under the key of the mapping is no line of text, a value in quotes ends at its
+	// quote, and a comment on the next line is not after the value.
+	other, err := parser.ParseBytes([]byte("t:\n  en: Hello\nq: 'x' # y\nr: x\n# note\ns: 1\n"), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, ok := other.Docs[0].Body.(*ast.MappingNode)
+	if !ok {
+		t.Fatalf("the body is %T", other.Docs[0].Body)
+	}
+	if yamlpos.ColonText(m.Values[0].Value) {
+		t.Error("ColonText(t:\\n  en: Hello) = true")
+	}
+	if got := yamlpos.CommentAfter(m.Values[1].Value) + yamlpos.CommentAfter(m.Values[2].Value); got != "" {
+		t.Errorf("CommentAfter of a value in quotes and of one before a comment line = %q", got)
 	}
 }
 

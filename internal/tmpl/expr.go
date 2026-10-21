@@ -11,7 +11,6 @@ import (
 	"github.com/expr-lang/expr/vm"
 	"github.com/expr-lang/expr/vm/runtime"
 
-	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -48,7 +47,7 @@ func compile(src string, env any, opts ...expr.Option) (*vm.Program, error) {
 }
 
 // compileWritten compiles src, an expression as YAML read it at at in file, for env with opts. rest is
-// the text of the YAML comment after it on its line, or "". When src fails and src with the comment put
+// the text of the YAML comment after it on its last line, or "". When src fails and src with the comment put
 // back compiles, a # in the expression began the comment, and the mistake says to quote it.
 func compileWritten(
 	file string, at yamlpos.Pos, src, rest string, env any, opts ...expr.Option,
@@ -65,7 +64,7 @@ func compileWritten(
 			detail = yamlpos.HintFirst("yaml_hint_expr_comment", brief(err))
 		}
 	}
-	return nil, &yamlpos.Error{File: file, Pos: at, Err: usererr.New("tmpl_expr", src, detail)}
+	return nil, yamlpos.New(file, at, "tmpl_expr", src, detail)
 }
 
 // brief words an error of expr on one line, without the snippet it draws under the message.

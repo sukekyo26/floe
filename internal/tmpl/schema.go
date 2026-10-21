@@ -224,11 +224,12 @@ func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
 	case *kind.AdditionalProperties:
 		s.unknown(e, k.Properties, where)
 	case *kind.Type:
-		mistake := usererr.New("tmpl_schema_type", label(at), usererr.New("tmpl_type_"+k.Got), Types(k.Want))
+		args := []any{label(at), usererr.New("tmpl_type_" + k.Got), Types(k.Want)}
 		if k.Got == "object" && slices.Contains(k.Want, "string") && yamlpos.ColonText(value) {
-			mistake = yamlpos.Hinted(mistake, "yaml_hint_colon")
+			s.problems = append(s.problems, yamlpos.NewHinted(s.file, where, "yaml_hint_colon", "tmpl_schema_type", args...))
+			return
 		}
-		s.problems = append(s.problems, &yamlpos.Error{File: s.file, Pos: where, Err: mistake})
+		s.add(where, "tmpl_schema_type", args...)
 	case *kind.Enum:
 		want := make([]string, len(k.Want))
 		for i, w := range k.Want {

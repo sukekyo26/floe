@@ -181,13 +181,13 @@ func Syntax(file string, err error) *Error {
 	if hint != "" {
 		detail = HintFirst(hint, se.Message)
 	}
-	at := Pos{Line: cause.Position.Line, Column: cause.Position.Column}
-	return &Error{File: file, Pos: at, Err: usererr.New("yaml_syntax", detail)}
+	return New(file, Pos{Line: cause.Position.Line, Column: cause.Position.Column}, "yaml_syntax", detail)
 }
 
-// Hinted adds to the mistake e the hint worded by the catalog message key hint.
-func Hinted(e *usererr.Error, hint string) *usererr.Error {
-	return usererr.New("yaml_hinted", e, usererr.New(hint))
+// NewHinted returns the mistake worded by the catalog message key with args, at at in file, with the
+// hint worded by the key hint after it.
+func NewHinted(file string, at Pos, hint, key string, args ...any) *Error {
+	return New(file, at, "yaml_hinted", usererr.New(key, args...), usererr.New(hint))
 }
 
 // HintFirst words the hint by the catalog message key hint, with what a library said of the mistake,
@@ -199,8 +199,9 @@ func HintFirst(hint, detail string) *usererr.Error {
 // syntaxHint returns the key of the hint for a syntax error at tk, or "" for none, and the token where
 // what the hint names began (tk when it began there):
 //   - text with ": " in it: a second key on the line of one (a: b: c), or a value beginning with a
-//     reserved ` or @ after a ": " that cannot end a key, at that ":";
-//   - a comment begun inside a { } or [ ] left open, " #" having cut it short, at the comment;
+//     reserved ` or @ after a ": " that ends no key, at that ":";
+//   - a comment that " #" began in text, at the comment: one that took the } or ] closing its { } or
+//     [ ], or one after which the text goes on, on the next line;
 //   - a value beginning with ` or @.
 func syntaxHint(tk *token.Token) (string, *token.Token) {
 	value := strings.TrimSpace(tk.Value)
@@ -210,8 +211,10 @@ func syntaxHint(tk *token.Token) (string, *token.Token) {
 		return "yaml_hint_colon", tk
 	case reserved && colonInText(tk.Prev):
 		return "yaml_hint_colon", tk.Prev
+	case textGoesOn(tk):
+		return "yaml_hint_comment", tk.Prev
 	}
-	if c := commentLeftOpen(tk); c != nil {
+	if c := closerInComment(tk); c != nil {
 		return "yaml_hint_comment", c
 	}
 	if reserved {
@@ -220,15 +223,45 @@ func syntaxHint(tk *token.Token) (string, *token.Token) {
 	return "", tk
 }
 
-// colonInText reports whether colon is a ":" after text that no key is written so: text in a [ ] (after
-// its [ or a ,), or text after another ":" on the line (a: b: c).
+// colonInText reports whether colon is a ":" that ends no key: one after another ":" on its line
+// (a: b: c), or one in a [ ] after text in which a ` opens inline code, `: ` being in it.
 func colonInText(colon *token.Token) bool {
 	if !onLine(colon, colon, token.MappingValueType) || !onLine(colon.Prev, colon, token.StringType) {
 		return false
 	}
 	before := colon.Prev.Prev
-	return onLine(before, colon, token.SequenceStartType) || onLine(before, colon, token.CollectEntryType) ||
-		onLine(before, colon, token.MappingValueType)
+	switch {
+	case onLine(before, colon, token.MappingValueType):
+		return true
+	case onLine(before, colon, token.SequenceStartType), onLine(before, colon, token.CollectEntryType):
+		return strings.Count(colon.Prev.Value, "`")%2 == 1
+	}
+	return false
+}
+
+// textGoesOn reports whether tk, the token of a syntax error, begins the line after a comment that
+// follows text on its line, further in than that line and not as a key: text written over lines that
+// " #" cut.
+// LIMIT: text that goes on in a line with ": " in it reads as a key indented too far, and gets no
+// hint. Look past the first ": " if that hides a cut.
+func textGoesOn(tk *token.Token) bool {
+	c := tk.Prev
+	if c == nil || c.Type != token.CommentType || tk.Position.Line != c.Position.Line+1 ||
+		c.Prev == nil || c.Prev.Type != token.StringType || lastLine(c.Prev) != c.Position.Line ||
+		onLine(tk.Next, tk, token.MappingValueType) {
+		return false
+	}
+	first := c.Prev // the first token on the line the text begins on
+	for first.Prev != nil && first.Prev.Position.Line == c.Prev.Position.Line {
+		first = first.Prev
+	}
+	return tk.Position.Column > first.Position.Column
+}
+
+// lastLine returns the line the text of tk ends on, which a plain value written over lines does after
+// the line it begins on.
+func lastLine(tk *token.Token) int {
+	return tk.Position.Line + strings.Count(strings.TrimSpace(tk.Origin), "\n")
 }
 
 // onLine reports whether t is a token of the type typ on the line of on.
@@ -236,40 +269,44 @@ func onLine(t, on *token.Token, typ token.Type) bool {
 	return t != nil && t.Type == typ && t.Position.Line == on.Position.Line
 }
 
-// commentLeftOpen returns the first comment that begins inside a { } or [ ] of the file of tk that is
-// never closed, or nil. A comment inside one that closes is the author's.
-// LIMIT: a { } or [ ] left open for another reason, with a comment of the author's in it, gets the hint
-// too. Tell the two apart, by where the parser stopped, if that misleads.
-func commentLeftOpen(tk *token.Token) *token.Token {
+// closerInComment returns the first comment, in the file of tk, that holds the } or ] of the { } or [ ]
+// it begins in, which is left open: " #" took the rest of the line, its closer too. nil for none.
+func closerInComment(tk *token.Token) *token.Token {
 	for tk.Prev != nil {
 		tk = tk.Prev
 	}
-	var open []*token.Token // for each { or [ open, the first comment that begins inside it
+	type collection struct {
+		closer string
+		cut    *token.Token // the first comment in it that holds its closer
+	}
+	var open []collection
 	for ; tk != nil; tk = tk.Next {
 		switch tk.Type {
-		case token.MappingStartType, token.SequenceStartType:
-			open = append(open, nil)
+		case token.MappingStartType:
+			open = append(open, collection{closer: "}", cut: nil})
+		case token.SequenceStartType:
+			open = append(open, collection{closer: "]", cut: nil})
 		case token.MappingEndType, token.SequenceEndType:
 			if len(open) > 0 {
 				open = open[:len(open)-1]
 			}
 		case token.CommentType:
-			if len(open) > 0 && open[len(open)-1] == nil {
-				open[len(open)-1] = tk
+			if n := len(open); n > 0 && open[n-1].cut == nil && strings.Contains(tk.Value, open[n-1].closer) {
+				open[n-1].cut = tk
 			}
 		default:
 		}
 	}
 	for _, c := range open {
-		if c != nil {
-			return c
+		if c.cut != nil {
+			return c.cut
 		}
 	}
 	return nil
 }
 
 // ColonText reports whether n is how YAML reads a line of plain text with ": " in it: one key, not in
-// quotes, and a value of text on the key's line.
+// quotes, right after the - or the [ or , it is an entry of, and a value of text on its line.
 // LIMIT: a mapping of one such key and value meant as one is taken for text too. Ask for more of the
 // line (a second ": ", a space in the key) if the hint misleads.
 func ColonText(n ast.Node) bool {
@@ -285,28 +322,30 @@ func ColonText(n ast.Node) bool {
 	default:
 		return false
 	}
-	k := KeyOf(pair).GetToken()
 	switch pair.Value.(type) {
 	case *ast.NullNode, *ast.LiteralNode:
 		return false
 	}
-	if _, text := pair.Value.(ast.ScalarNode); !text || k == nil {
+	k := KeyOf(pair).GetToken()
+	if _, text := pair.Value.(ast.ScalarNode); !text || k == nil || k.Type == token.SingleQuoteType ||
+		k.Type == token.DoubleQuoteType {
 		return false
 	}
-	v := pair.Value.GetToken()
-	quoted := k.Type == token.SingleQuoteType || k.Type == token.DoubleQuoteType
-	return !quoted && v.Position.Line == k.Position.Line
+	entry := onLine(k.Prev, k, token.SequenceEntryType) || onLine(k.Prev, k, token.SequenceStartType) ||
+		onLine(k.Prev, k, token.CollectEntryType)
+	return entry && pair.Value.GetToken().Position.Line == k.Position.Line
 }
 
 // CommentAfter returns the text of the comment after the token of n on its last line, without its #,
-// or "" for none: what YAML makes of " #" and the rest of a plain value, written over lines or not.
+// or "" for none: what YAML makes of " #" and the rest of a plain value, written over lines or not. A
+// value in quotes ends at its quote, before any comment.
 func CommentAfter(n ast.Node) string {
 	tk := n.GetToken()
-	if tk == nil || tk.Next == nil || tk.Next.Type != token.CommentType {
+	if tk == nil || tk.Type == token.SingleQuoteType || tk.Type == token.DoubleQuoteType ||
+		tk.Next == nil || tk.Next.Type != token.CommentType {
 		return ""
 	}
-	last := tk.Position.Line + strings.Count(strings.TrimLeft(tk.Origin, " \t\r\n"), "\n")
-	if tk.Next.Position.Line != last {
+	if tk.Next.Position.Line != lastLine(tk) {
 		return ""
 	}
 	return tk.Next.Value

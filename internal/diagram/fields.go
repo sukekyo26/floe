@@ -159,6 +159,9 @@ func (f *fields) text(key string, n ast.Node) string {
 	case *ast.IntegerNode, *ast.FloatNode, *ast.BoolNode:
 		return n.GetToken().Value
 	default:
+		if f.err == nil && yamlpos.ColonText(n) {
+			f.err = yamlpos.NewHinted(f.file, yamlpos.Of(n), "yaml_hint_colon", "diagram_not_text", f.kind, key)
+		}
 		f.fail(n, "diagram_not_text", f.kind, key)
 		return ""
 	}

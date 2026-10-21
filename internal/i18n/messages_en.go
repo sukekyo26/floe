@@ -164,11 +164,11 @@ var messagesEN = map[string]string{
 	// yaml: reading a YAML file (diagram specs and data files)
 	"yaml_syntax":     "this is not valid YAML: %s",
 	"yaml_no_anchors": "anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
-	// the hints, after a mistake, for text that YAML reads as something else
+	// hints for text that YAML reads as something else, after a mistake or before what a library said of it
 	"yaml_hinted":            "%s; %s",
 	"yaml_hint_first":        "%s (%s)",
 	"yaml_hint_colon":        `text with ": " in it reads as keys and values: put the text in quotes`,
-	"yaml_hint_comment":      `a # after a space begins a comment, which cut { } or [ ] short: put text with # in it in quotes`,
+	"yaml_hint_comment":      `a # after a space began a comment, which cut the text short: put text with # in it in quotes`,
 	"yaml_hint_reserved":     "a value cannot begin with ` or @ unless it is in quotes",
 	"yaml_hint_expr_comment": "a # after a space began a YAML comment, which cut the expression short: put the expression in quotes",
 
