@@ -737,7 +737,7 @@ func joinDescriptions(beside, named string) string {
 func checkParts(d *Data, root ast.Node) error {
 	var problems yamlpos.Problems
 	for _, f := range d.whole {
-		p := f.shape.part
+		p := f.part
 		if p == nil || p.pages == nil {
 			continue // a format of floe's, or a part drawn in Go, by its own check
 		}

@@ -425,38 +425,48 @@ func (s *shape) values() []any {
 	return s.enum
 }
 
-// drawnItem is an item of a data file floe draws whole, by a part or as a format of floe's, and its shape.
+// drawnItem is an item of a data file floe draws whole: by the part part, or as the format of floe's
+// format, one of the two.
 type drawnItem struct {
 	itemAt
 
-	shape *shape
+	part   *part
+	format string
 }
 
 // drawnWhole adds to found the items v, at the path at, holds that floe draws whole: the parts a part
 // holds before it, which draws them as they were drawn. What an item of a format of floe's holds is not
-// looked into. A part, which wins over a format as it does in drawn, holds no item of a format of floe's,
-// which readShape refuses in its schema.
+// looked into, and a part wins over a format, as in drawn.
 func (s *shape) drawnWhole(v any, at []string, found *[]drawnItem) {
+	s.walkWhole(v, at, false, found)
+}
+
+// walkWhole adds to found what drawnWhole does of v, at the path at, held by a part when inPart: an item
+// of a format of floe's there is the part's to draw, by its part.html, and none of floe's to check, as
+// none is meant to be there (partSet.mistakes).
+func (s *shape) walkWhole(v any, at []string, inPart bool, found *[]drawnItem) {
 	if s == nil {
 		return
 	}
 	if s.part == nil && slices.Contains(formats, s.format) {
-		*found = append(*found, drawnItem{itemAt: itemAt{value: v, at: at}, shape: s})
+		if !inPart {
+			*found = append(*found, drawnItem{itemAt: itemAt{value: v, at: at}, part: nil, format: s.format})
+		}
 		return
 	}
-	in := s.inside()
+	in, held := s.inside(), inPart || s.part != nil
 	switch v := v.(type) {
 	case map[string]any:
 		for k, item := range v {
-			in.keys[k].drawnWhole(item, append(at[:len(at):len(at)], k), found)
+			in.keys[k].walkWhole(item, append(at[:len(at):len(at)], k), held, found)
 		}
 	case []any:
 		for i, item := range v {
-			in.each.drawnWhole(item, append(at[:len(at):len(at)], strconv.Itoa(i)), found)
+			in.each.walkWhole(item, append(at[:len(at):len(at)], strconv.Itoa(i)), held, found)
 		}
 	}
 	if s.part != nil {
-		*found = append(*found, drawnItem{itemAt: itemAt{value: v, at: at}, shape: s})
+		*found = append(*found, drawnItem{itemAt: itemAt{value: v, at: at}, part: s.part, format: ""})
 	}
 }
 
@@ -469,20 +479,19 @@ func (d *Data) setShape(s *shape) {
 
 // itemsOfFormat returns the items of d of the format of floe's format.
 func (d *Data) itemsOfFormat(format string) []itemAt {
-	var items []itemAt
-	for _, f := range d.whole {
-		if f.shape.format == format {
-			items = append(items, f.itemAt)
-		}
-	}
-	return items
+	return d.itemsWhere(func(f drawnItem) bool { return f.format == format })
 }
 
 // itemsOfPart returns the items of d the part name draws, those it holds before it.
 func (d *Data) itemsOfPart(name string) []itemAt {
+	return d.itemsWhere(func(f drawnItem) bool { return f.part != nil && f.part.name == name })
+}
+
+// itemsWhere returns the items of d floe draws whole that keep keeps, in order.
+func (d *Data) itemsWhere(keep func(drawnItem) bool) []itemAt {
 	var items []itemAt
 	for _, f := range d.whole {
-		if f.shape.drawnBy() == name {
+		if keep(f) {
 			items = append(items, f.itemAt)
 		}
 	}

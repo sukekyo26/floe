@@ -1,7 +1,6 @@
 package tmpl
 
 import (
-	"cmp"
 	"fmt"
 	"slices"
 	"strings"
@@ -148,7 +147,7 @@ func TestDrawnWhole(t *testing.T) {
 	s.drawnWhole(map[string]any{"t": table, "m": "hi"}, nil, &found)
 	got := make([]string, 0, len(found))
 	for _, f := range found {
-		got = append(got, strings.Join(f.at, ".")+":"+cmp.Or(f.shape.format, f.shape.drawnBy()))
+		got = append(got, strings.Join(f.at, ".")+":"+drawerOf(f))
 	}
 	want := []string{"m:markdown", "t.rows.0.0:cell", "t.rows.0.1:cell", "t:table"}
 	if sorted := slices.Sorted(slices.Values(got)); !slices.Equal(sorted, want) {
@@ -156,5 +155,60 @@ func TestDrawnWhole(t *testing.T) {
 	}
 	if at := slices.Index(got, "t:table"); at < slices.Index(got, "t.rows.0.0:cell") || at < slices.Index(got, "t.rows.0.1:cell") {
 		t.Errorf("drawnWhole = %v, the table before its cells", got)
+	}
+}
+
+// drawerOf names what draws f whole: its format, or its part.
+func drawerOf(f drawnItem) string {
+	if f.part != nil {
+		return f.part.name
+	}
+	return f.format
+}
+
+// What an item of a format of floe's holds is not looked into, a part wins over a format, and an item of a
+// format in a part is the part's to draw, not listed.
+func TestDrawnWholeStops(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	table := set.parts["table"]
+	rows := map[string]any{"columns": []any{map[string]any{"title": "a"}}, "rows": []any{[]any{"x"}}}
+	named := func(p *part, format string) *shape {
+		s := new(shape)
+		s.part, s.named, s.format = p, p.shape, format
+		return s
+	}
+	html := new(shape)
+	html.format, html.keys = "html", map[string]*shape{"t": named(table, "")}
+	marked := new(shape)
+	marked.format = "markdown"
+	inner := new(shape)
+	inner.keys = map[string]*shape{"m": marked}
+	holder := &part{
+		name: "holder", shape: inner, pages: nil, words: nil, html: "", css: "", checks: nil, looks: nil, taken: nil, uses: nil,
+		about: "", dir: "", replaces: false,
+	}
+	for _, c := range []struct {
+		s    *shape
+		v    any
+		want []string
+	}{
+		{html, map[string]any{"t": rows}, []string{":html"}},
+		{named(table, "markdown"), rows, []string{"rows.0.0:cell", ":table"}},
+		{named(holder, ""), map[string]any{"m": "x"}, []string{":holder"}},
+	} {
+		var found []drawnItem
+		c.s.drawnWhole(c.v, nil, &found)
+		got := make([]string, 0, len(found))
+		for _, f := range found {
+			got = append(got, strings.Join(f.at, ".")+":"+drawerOf(f))
+		}
+		if !slices.Equal(got, c.want) {
+			t.Errorf("drawnWhole = %v, want %v", got, c.want)
+		}
 	}
 }
