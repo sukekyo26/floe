@@ -4,4 +4,4 @@
 :scope::before { content: "●"; content: "●" / ""; margin-right: 0.35em; color: var(--accent); }
 :scope.good::before { content: "✓"; content: "✓" / ""; color: var(--fg); }
 :scope.warn::before { content: "▲"; content: "▲" / ""; }
-:scope.bad::before { content: "×"; content: "×" / ""; }
+:scope.bad::before { content: "×"; content: "×" / ""; color: var(--bad); }

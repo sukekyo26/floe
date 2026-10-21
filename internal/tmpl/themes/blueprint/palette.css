@@ -4,12 +4,8 @@
   --accent: #1f56b5; --accent-soft: #dde8fa;
   --good: #1c764d; --good-soft: #dcefe5; --warn: #925d00; --warn-soft: #f6ead3; --bad: #c0302b; --bad-soft: #fbe3e1;
   --code-bg: #0d3266; --code-fg: #eaf2ff; --code-prompt: #7fdcff;
-  /* The squares in the ink, so that they turn with it in dark mode: the page's ground, and that of its
-     panels, notes and quotes */
-  --bp-squares:
-    linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px,
-    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px;
-  --page-bg: var(--bp-squares), var(--bg);
+  /* On the squares of blueprint's base.css */
+  --page-bg: var(--bp-squares, none), var(--bg);
   --rule: 1.5px solid var(--accent);
 }
 @media (prefers-color-scheme: dark) {

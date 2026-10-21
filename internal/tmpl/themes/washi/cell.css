@@ -1,5 +1,5 @@
 :scope, :scope:is(.good, .warn, .bad) {
-  font-family: var(--font); background: none; border: 2px solid currentColor; border-radius: 3px;
+  background: none; border: 2px solid currentColor; border-radius: 3px;
   letter-spacing: 0.15em; font-weight: 700; transform: rotate(-2deg); color: var(--accent);
 }
 :scope.good { color: var(--good); }

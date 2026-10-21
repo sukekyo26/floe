@@ -1,7 +1,14 @@
 /* A drawing on squared paper in blue ink: every cell ruled, labels in capitals of a fixed width, notes as
    dashed callouts and cards with their figure numbers */
+/* The squares, in the palette's ink so that they turn with it in dark mode: the page's ground, and that of
+   its panels, notes and quotes */
+:root {
+  --bp-squares:
+    linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px;
+}
 blockquote {
-  background: var(--bp-squares), var(--surface); border-radius: 0;
+  background: var(--bp-squares, none), var(--surface); border-radius: 0;
   box-shadow: none;
 }
 blockquote { border: 1.5px solid var(--accent); padding: 0.9rem 1.2rem; color: var(--fg); }
