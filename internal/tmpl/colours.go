@@ -16,7 +16,7 @@ import (
 // LIMIT: the text of url() and strings goes unread, a data: image's colours among them. Read them if a
 // part or a theme comes to draw an image but in a mask.
 func colourWarnings(file string, s *cssSheet, ownVariables bool) []*usererr.Error {
-	decls := s.decls
+	decls := slices.Clone(s.decls)
 	for _, r := range s.rules {
 		decls = append(decls, r.decls...)
 	}
@@ -95,7 +95,7 @@ func functionText(toks []cssToken) string {
 // of its value that is a colour's name is one: elsewhere it may be another word (font-family: Arial Black,
 // a variable's value).
 func takesColour(name string) bool {
-	for _, prefix := range []string{"background", "border", "outline", "column-rule", "text-decoration", "text-emphasis", "text-stroke"} {
+	for _, prefix := range colourPrefixes {
 		if strings.HasPrefix(name, prefix) {
 			return true
 		}
@@ -103,7 +103,11 @@ func takesColour(name string) bool {
 	return strings.HasSuffix(name, "-color") || strings.HasSuffix(name, "shadow") || colourProperties[name]
 }
 
-var colourProperties = setOf("color fill stroke filter")
+var colourPrefixes = []string{
+	"background", "border", "outline", "column-rule", "text-decoration", "text-emphasis", "text-stroke",
+}
+
+var colourProperties = setOf("color fill stroke filter backdrop-filter caret")
 
 var colourFunctions = setOf("rgb rgba hsl hsla hwb lab lch oklab oklch color")
 

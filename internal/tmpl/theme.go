@@ -62,10 +62,11 @@ func newTheme() *theme {
 	return &theme{base: "", palettes: nil, parts: map[string]string{}}
 }
 
-// readTheme reads the theme in files, its directory, shown in its mistakes as dir, over t:
-// each file takes the place of t's of its name, but palette.css, which goes over t's. A file named for none of base.css, palette.css, a part
-// or a look of set is warned of, as it goes into no page, and so is a palette that sets a colour for light
-// mode alone, and another file that writes a colour or sets a variable, as colourWarnings tells.
+// readTheme reads the theme in files, its directory, shown in its mistakes as dir, over t: each file
+// takes the place of t's of its name, but palette.css, which goes over t's. A file named for none of
+// base.css, palette.css, a part or a look of set is warned of, as it goes into no page, and so is a
+// palette that sets a colour for light mode alone, and another file that writes a colour or sets a
+// variable, as colourWarnings tells.
 func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
 	entries, err := fs.ReadDir(files, ".")
 	if err != nil {
@@ -96,7 +97,7 @@ func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
 		}
 		if name == themePalette {
 			var more []*usererr.Error
-			if more, err = checkPalette(file, sheet); err != nil {
+			if more, err = checkPalette(file, sheet, t.palettes); err != nil {
 				return err
 			}
 			warnings = append(warnings, more...)
@@ -123,8 +124,9 @@ func (set *partSet) themeFile(name string) bool {
 }
 
 // checkPalette refuses s, palette.css shown as file, as readPalette does, and returns the warning of
-// the colours it sets for light mode alone.
-func checkPalette(file string, s *cssSheet) ([]*usererr.Error, error) {
+// the colours it sets for light mode alone, of those that change with the mode in default's palette and
+// in under, floe's palettes of its theme it goes over.
+func checkPalette(file string, s *cssSheet, under []string) ([]*usererr.Error, error) {
 	c, err := readPalette(file, s)
 	if err != nil {
 		return nil, err
@@ -132,6 +134,14 @@ func checkPalette(file string, s *cssSheet) ([]*usererr.Error, error) {
 	modes, err := floeModes()
 	if err != nil {
 		return nil, err
+	}
+	modes = maps.Clone(modes)
+	for _, palette := range under {
+		u, err := readPalette(file, readCSS([]byte(palette)))
+		if err != nil {
+			return nil, err
+		}
+		maps.Copy(modes, modesOf(u))
 	}
 	if names := c.lightOnly(modes); names != nil {
 		return []*usererr.Error{usererr.New("tmpl_palette_dark", file, andList(names))}, nil
@@ -288,9 +298,10 @@ func (c *modeColours) add(d cssDeclaration, inDark bool) {
 	}
 }
 
-// readScope adds what a template's CSS, s, sets on :scope, in the order it is
-// written: in a block of :scope, or of an at-rule in it (:scope { @media … { … } }), under at-rules or
-// none (@layer, @supports), for dark mode where one of them is a dark one, as darkCondition tells.
+// readScope adds what a template's CSS, s, sets on :scope, in the order it is written: outside any block,
+// which floe's @scope applies to :scope, in a block of :scope, or of an at-rule in it (:scope { @media …
+// { … } }), under at-rules or none (@layer, @supports), for dark mode where one of them is a dark one, as
+// darkCondition tells.
 // LIMIT: :scope alone as a selector, not in a list (:scope, body). Read the selectors if a template comes
 // to set colours so.
 func (c *modeColours) readScope(s *cssSheet) {
@@ -299,6 +310,10 @@ func (c *modeColours) readScope(s *cssSheet) {
 		dark bool
 	}
 	var decls []modeDecl
+	// One outside any block, in floe's @scope, is :scope's.
+	for _, d := range s.decls {
+		decls = append(decls, modeDecl{d: d, dark: false})
+	}
 	for i := range s.rules {
 		if !s.rules[i].block || !s.onScope(i) {
 			continue

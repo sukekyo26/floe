@@ -179,7 +179,7 @@ func TestCheckPalette(t *testing.T) {
 		err := s.refuse("p.css", false)
 		var warnings []*usererr.Error
 		if err == nil {
-			warnings, err = checkPalette("p.css", s)
+			warnings, err = checkPalette("p.css", s, nil)
 		}
 		got := ""
 		switch {
@@ -215,6 +215,7 @@ func TestColourWarnings(t *testing.T) {
 		":scope { -webkit-tap-highlight-color: red; }":                                                "c.css:1: red is a colour",
 		":scope { text-emphasis: dot red; }":                                                          "c.css:1: red is a colour",
 		":scope { color: rgb(from #fff r g b / 50%); }":                                               "c.css:1: #fff is a colour",
+		":scope { backdrop-filter: drop-shadow(0 0 4px black); }":                                     "c.css:1: black is a colour",
 		":scope { color: rgb(from var(--accent) r g b / 50%); }":                                      "",
 		":scope { font-family: Arial Black, serif; white-space: nowrap; }":                            "",
 		":scope { --x: white; content: \"#fff red\"; grid-area: red; }":                               "",

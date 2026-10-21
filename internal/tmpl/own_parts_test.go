@@ -425,7 +425,7 @@ func TestOwnPartsThemes(t *testing.T) {
 
 	files := quote("code")
 	files["themes/brutal/code.css"] = "/* brutal's code of one's own */\n"
-	files["themes/brutal/palette.css"] = "/* brutal's palette of one's own */\n:root { --brutal-yellow: #ff0; }\n"
+	files["themes/brutal/palette.css"] = "/* brutal's palette of one's own */\n:root { --brutal-yellow: #ff0; --brutal-head-bg: #c00; }\n"
 	files["themes/mine/base.css"] = "/* mine */\nblockquote { color: var(--fg); }\n"
 	files["themes/mine/palette.css"] = "/* mine's palette */\n:root { --bg: #123; }\n" +
 		"@media (prefers-color-scheme: dark) { :root { --bg: #321; } }\n"
@@ -533,7 +533,9 @@ func TestOwnPartsThemes(t *testing.T) {
 		return slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), prefix) })
 	}
 	pale := filepath.Join(themesOf(parts), "pale", "palette.css") + " sets --bg for light mode alone"
-	if !warned(pale) || warned(filepath.Join(themesOf(parts), "mine")) || warned(filepath.Join(themesOf(parts), "broke", "palette.css")) {
+	// Over floe's of its name, a palette of one's own is told of that palette's colours too.
+	head := filepath.Join(themesOf(parts), "brutal", "palette.css") + " sets --brutal-head-bg for light mode alone"
+	if !warned(pale) || !warned(head) || warned(filepath.Join(themesOf(parts), "mine")) || warned(filepath.Join(themesOf(parts), "broke", "palette.css")) {
 		t.Errorf("Check = %v, want %s alone of the palettes", warnings, pale)
 	}
 	for _, want := range append(strays, why) {
