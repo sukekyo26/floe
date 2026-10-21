@@ -6,8 +6,8 @@
 }
 :scope.good::before { color: var(--fg); }
 :scope.warn { background: color-mix(in srgb, var(--fg) 7%, transparent); }
-:scope.bad { background: var(--bad); color: var(--surface); border: 0; border-radius: 0; padding-left: 2.6rem; }
-:scope.bad::before { left: 0.6rem; background: none; color: var(--surface); font-weight: 900; }
-:scope.bad .title, :scope.bad a, :scope.bad code { color: var(--surface); }
-:scope.bad code { background: color-mix(in srgb, var(--surface) 20%, transparent); }
+:scope.bad { background: var(--bad); color: var(--on-fill); border: 0; border-radius: 0; padding-left: 2.6rem; }
+:scope.bad::before { left: 0.6rem; background: none; color: var(--on-fill); font-weight: 900; }
+:scope.bad .title, :scope.bad a, :scope.bad code { color: var(--on-fill); }
+:scope.bad code { background: color-mix(in srgb, var(--on-fill) 20%, transparent); }
 .title, :scope:is(.good, .warn) .title { color: var(--fg); font-weight: 900; }

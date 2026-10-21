@@ -1,11 +1,5 @@
 /* Sumi and vermilion printed on washi, in a Mincho face: tables closed by double rules, states and notes as
    seals, cards marked with a seal of their number in kanji, and quotes ruled in vermilion */
-/* The vermilion of its marks (seals, the tab picked, the rules of code and quotes), not the colour of a
-   mistake, and the hairlines of its tables, in the ink */
-:root { --washi-shu: #c13b23; --washi-hair: color-mix(in srgb, var(--fg) 18%, transparent); }
-@media (prefers-color-scheme: dark) {
-  :root { --washi-shu: #e8775c; --washi-hair: color-mix(in srgb, var(--fg) 16%, transparent); }
-}
 blockquote {
   background: var(--surface); color: var(--fg); border-radius: 0; box-shadow: none;
 }

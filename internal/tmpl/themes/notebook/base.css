@@ -1,19 +1,4 @@
 /* Scraps of a handwritten notebook: ruled paper, marker strokes for states, sticky notes for cards and
    frames drawn round by hand, in a rounded face; a blackboard in dark mode */
-:root {
-  --nb-rule: color-mix(in srgb, var(--accent) 14%, transparent); --nb-tape: rgb(220 205 160 / 0.75);
-  --nb-yellow: rgb(255 224 64 / 0.65); --nb-green: rgb(120 220 130 / 0.55); --nb-pink: rgb(255 140 185 / 0.5);
-  --nb-blue: rgb(120 190 255 / 0.5); --nb-orange: rgb(255 170 80 / 0.55);
-  --nb-stick-1: #fff1a6; --nb-stick-2: #ffd2e1; --nb-stick-3: #cfe8ff;
-  --nb-hand: 14px 6px 12px 8px / 8px 12px 6px 14px;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --nb-rule: color-mix(in srgb, var(--fg) 7%, transparent); --nb-tape: rgb(220 205 160 / 0.45);
-    --nb-yellow: rgb(246 226 122 / 0.4); --nb-green: rgb(150 230 150 / 0.35); --nb-pink: rgb(255 160 200 / 0.35);
-    --nb-blue: rgb(150 205 255 / 0.35); --nb-orange: rgb(255 185 110 / 0.38);
-    --nb-stick-1: #f3e38f; --nb-stick-2: #f6c2d4; --nb-stick-3: #bfdcf7;
-  }
-}
 blockquote { border: 0; padding: 0; color: var(--fg); font-size: 1.15rem; font-weight: 700; }
 blockquote > p { display: inline; background: linear-gradient(transparent 62%, var(--nb-yellow) 62%); }

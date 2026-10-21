@@ -9,6 +9,10 @@
   --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #63b5be; --code-add: #6fcf97; --code-del: #f2b8b5;
   /* The page's ground, a pattern too, and the rule between its sections */
   --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(24 32 30 / 0.12);
+  /* Its panels' quiet ground, which holds faces of the surface */
+  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
   /* How wide prose grows, which a template sets for its page on :scope */
   --text-width: 56rem;
   color-scheme: light;

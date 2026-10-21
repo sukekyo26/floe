@@ -1,5 +1,5 @@
 :scope { border: 1.5px solid var(--accent); border-radius: 0; box-shadow: none; }
 :scope figcaption {
-  background: none; border-bottom: 1px solid rgb(170 205 255 / 0.4); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+  background: none; border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 40%, transparent); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
 }
 :scope .lang { border-radius: 0; background: none; border: 1.5px solid var(--code-prompt); color: var(--code-prompt); }

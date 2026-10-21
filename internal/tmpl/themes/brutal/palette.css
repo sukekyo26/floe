@@ -5,6 +5,12 @@
   --good: #0d7941; --good-soft: #d4f5e2; --warn: #a35400; --warn-soft: #ffe9c7; --bad: #c71d1d; --bad-soft: #ffdede;
   --code-bg: #0a0a0a; --code-fg: #f2f2f2; --code-prompt: #ffde21;
   --rule: 3px solid var(--fg);
+  /* Its primary faces, in both modes, and the black text on them */
+  --brutal-yellow: #ffde21; --brutal-blue: #6fa2ff; --brutal-pink: #ff8acb;
+  --brutal-green: #3ddc84; --brutal-orange: #ffa62b; --brutal-red: #ff5c5c;
+  --brutal-ink: #0a0a0a;
+  /* The heads of its tables: black in light mode, yellow in dark */
+  --brutal-head-bg: #0a0a0a; --brutal-head-fg: #ffde21;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -12,5 +18,6 @@
     --accent: #6fa2ff; --accent-soft: #1c2a4a;
     --good: #3ddc84; --good-soft: #10301f; --warn: #ffa62b; --warn-soft: #3a2a10; --bad: #ff5c5c; --bad-soft: #3d1616;
     --code-bg: #000;
+    --brutal-head-bg: #ffde21; --brutal-head-fg: #0a0a0a;
   }
 }

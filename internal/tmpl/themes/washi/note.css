@@ -6,10 +6,10 @@
 :scope.warn { border-top-color: var(--warn); }
 :scope.bad { border-top-color: var(--bad); }
 /* The seals are the kanji for a note, good, a warning and a danger, escaped to keep the source in English */
-:scope::before { content: "\6CE8"; content: "\6CE8" / ""; width: 2rem; height: 2rem; border-radius: 4px; background: var(--accent); color: var(--surface); font-size: 1.05rem; }
-:scope.good::before { content: "\826F"; content: "\826F" / ""; background: var(--good); color: var(--surface); }
-:scope.warn::before { content: "\6212"; content: "\6212" / ""; background: var(--warn); color: var(--surface); }
-:scope.bad::before { content: "\5371"; content: "\5371" / ""; background: var(--bad); color: var(--surface); }
+:scope::before { content: "\6CE8"; content: "\6CE8" / ""; width: 2rem; height: 2rem; border-radius: 4px; background: var(--accent); color: var(--on-fill); font-size: 1.05rem; }
+:scope.good::before { content: "\826F"; content: "\826F" / ""; background: var(--good); color: var(--on-fill); }
+:scope.warn::before { content: "\6212"; content: "\6212" / ""; background: var(--warn); color: var(--on-fill); }
+:scope.bad::before { content: "\5371"; content: "\5371" / ""; background: var(--bad); color: var(--on-fill); }
 .title { color: var(--accent); letter-spacing: 0.1em; }
 :scope.good .title { color: var(--good); }
 :scope.warn .title { color: var(--warn); }

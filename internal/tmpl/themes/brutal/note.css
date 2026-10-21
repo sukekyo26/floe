@@ -6,9 +6,9 @@
 :scope.warn { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-orange); }
 :scope.bad { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-red); }
 :scope::before {
-  width: 1.9rem; height: 1.9rem; border-radius: 0; border: 2px solid var(--fg); background: var(--brutal-blue); color: #0a0a0a; font-weight: 900;
+  width: 1.9rem; height: 1.9rem; border-radius: 0; border: 2px solid var(--fg); background: var(--brutal-blue); color: var(--brutal-ink); font-weight: 900;
 }
-:scope.good::before { background: var(--brutal-green); color: #0a0a0a; }
-:scope.warn::before { background: var(--brutal-orange); color: #0a0a0a; }
-:scope.bad::before { background: var(--brutal-red); color: #0a0a0a; }
+:scope.good::before { background: var(--brutal-green); color: var(--brutal-ink); }
+:scope.warn::before { background: var(--brutal-orange); color: var(--brutal-ink); }
+:scope.bad::before { background: var(--brutal-red); color: var(--brutal-ink); }
 .title, :scope:is(.good, .warn, .bad) .title { color: var(--fg); font-weight: 900; }

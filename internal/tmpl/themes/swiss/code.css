@@ -1,3 +1,3 @@
 :scope { border-radius: 0; box-shadow: none; }
 :scope figcaption { font-weight: 800; background: none; }
-:scope .lang { border-radius: 0; background: var(--accent); color: var(--surface); }
+:scope .lang { border-radius: 0; background: var(--accent); color: var(--on-fill); }
