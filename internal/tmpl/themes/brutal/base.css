@@ -1,11 +1,11 @@
 /* Thick black frames, flat primary faces and hard offset shadows; no corner is rounded */
 :root {
-  --brutal-ink: var(--fg); --brutal-yellow: #ffde21; --brutal-blue: #6fa2ff; --brutal-pink: #ff8acb;
+  --brutal-ink: #0a0a0a; --brutal-yellow: #ffde21; --brutal-blue: #6fa2ff; --brutal-pink: #ff8acb;
   --brutal-green: #3ddc84; --brutal-orange: #ffa62b; --brutal-red: #ff5c5c;
   --brutal-head-bg: #0a0a0a; --brutal-head-fg: #ffde21;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --brutal-head-bg: #ffde21; --brutal-head-fg: #0a0a0a; }
+  :root { --brutal-ink: #f2f2f2; --brutal-head-bg: #ffde21; --brutal-head-fg: #0a0a0a; }
 }
 blockquote {
   border: 3px solid var(--brutal-ink); border-radius: 0; padding: 1.1rem 1.4rem; background: var(--brutal-yellow); color: #0a0a0a;
