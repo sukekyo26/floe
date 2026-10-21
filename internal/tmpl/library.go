@@ -22,21 +22,26 @@ import (
 // Library is the templates floe draws with: those of a directory of one's own, a directory each, then
 // the built-in ones. One of one's own takes the place of a built-in one of its name.
 type Library struct {
-	dir   string // "" without one
-	parts string // the directory of parts of one's own; "" for none
-	icons string // the directory of icons the diagrams of data files show; "" for none
+	dir   string  // "" without one
+	mine  ownDirs // the directories of parts and themes of one's own
+	icons string  // the directory of icons the diagrams of data files show; "" for none
 }
 
 // NewLibrary returns the templates of dir, a directory of templates of one's own ("" for none), and
-// the built-in ones, which draw with floe's parts and those of partsDir (FLOE_PARTS_DIR, "" for none),
-// and the icons kept in iconsDir (FLOE_ICONS_DIR) in diagrams.
-func NewLibrary(dir, partsDir, iconsDir string) *Library {
-	return &Library{dir: dir, parts: partsDir, icons: iconsDir}
+// the built-in ones, which draw with floe's parts and themes and those of partsDir (FLOE_PARTS_DIR) and
+// themesDir (FLOE_THEMES_DIR), "" for none, and the icons kept in iconsDir (FLOE_ICONS_DIR) in diagrams.
+func NewLibrary(dir, partsDir, themesDir, iconsDir string) *Library {
+	return &Library{dir: dir, mine: ownDirs{parts: partsDir, themes: themesDir}, icons: iconsDir}
 }
 
 // PartsDir is the directory of parts of one's own, "" for none.
 func (l *Library) PartsDir() string {
-	return l.parts
+	return l.mine.parts
+}
+
+// ThemesDir is the directory of themes of one's own, "" for none.
+func (l *Library) ThemesDir() string {
+	return l.mine.themes
 }
 
 // Dir is the directory of templates of one's own, "" for none.
@@ -57,9 +62,9 @@ type Template struct {
 	// Path is where a template of one's own was found, as its mistakes name it; "" for a built-in one.
 	Path string
 
-	icons    string   // the directory of icons of the library it was found in
-	partsDir string   // the directory of parts of one's own of that library
-	set      *partSet // the parts it is drawn with, once read
+	icons string   // the directory of icons of the library it was found in
+	own   ownDirs  // the directories of parts and themes of one's own of that library
+	set   *partSet // the parts it is drawn with, once read
 }
 
 // Names are the templates there are, by name. It fails when the directory of templates of one's own
@@ -141,7 +146,7 @@ func (l *Library) Find(name string) (*Template, error) {
 	case err != nil:
 		return nil, fmt.Errorf("find the template %s: %w", name, err)
 	}
-	return &Template{Name: name, Dir: "", Path: "", icons: l.icons, partsDir: l.parts, set: nil}, nil
+	return &Template{Name: name, Dir: "", Path: "", icons: l.icons, own: l.mine, set: nil}, nil
 }
 
 // own returns the template name of one's own, or nil without one. A file there is not a template, but
@@ -177,7 +182,7 @@ func (l *Library) resolve(name string) (*Template, error) {
 	if dir == "" {
 		return nil, nil //nolint:nilnil // a file, not a template
 	}
-	return &Template{Name: name, Dir: dir, Path: at, icons: l.icons, partsDir: l.parts, set: nil}, nil
+	return &Template{Name: name, Dir: dir, Path: at, icons: l.icons, own: l.mine, set: nil}, nil
 }
 
 // validName reports whether name can name a template: lower case letters, digits, - and _, so that it
@@ -200,7 +205,7 @@ func (t *Template) file(name string) string {
 // them for a command, not in the Library a server keeps, if listing comes to be slow.
 func (t *Template) parts() (*partSet, error) {
 	if t.set == nil {
-		set, err := partsIn(t.partsDir)
+		set, err := partsIn(t.own)
 		if err != nil {
 			return nil, err
 		}

@@ -302,9 +302,9 @@ func modTime(file string) string {
 }
 
 // stamp sums up the state of sources: the size and mtime of each image, of each index of icons and of
-// every file under the template's directory and under the directories of parts of one's own it read,
+// every file under the template's directory and under the directories of parts and themes of one's own it read,
 // and the mtime of the directory of templates, where one may come.
-// LIMIT: walks the template's directory and the parts' on each look (every second for each open tab).
+// LIMIT: walks the template's directory, the parts' and the themes' on each look (every second for each open tab).
 // Watch them with fsnotify if they grow to hundreds of files.
 func stamp(sources tmpl.Sources) string {
 	h := fnv.New64a()
@@ -323,7 +323,7 @@ func stamp(sources tmpl.Sources) string {
 		_, _ = fmt.Fprintf(h, "%s\n", s) //nolint:errcheck // a hash takes every write
 	}
 	addTree(sources.Template, add, note)
-	for _, dir := range sources.Parts {
+	for _, dir := range sources.Own {
 		addTree(dir, add, note)
 	}
 	for _, name := range sources.Images {

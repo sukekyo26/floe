@@ -106,7 +106,7 @@ func (l *Library) Read(file string, src []byte, themes Themes, cwd string) (*Dat
 // changes, whether the read found mistakes or not.
 type Sources struct {
 	Templates string   // the directory of templates of one's own, where one may come; "" for none
-	Parts     []string // the directories of parts of one's own read, whose files the data may be drawn with
+	Own       []string // the directories of parts and themes of one's own read, whose files the data may be drawn with
 	Template  string   // the directory of the template of one's own the data names; "" for none
 	Images    []string // the images it names that a file can make right, read or not, as written: under ImagesDir
 	ImagesDir string   // the directory of the data file on disk, its images under it
@@ -141,10 +141,12 @@ func (l *Library) ReadFS(file string, src []byte, images fs.FS, dir string, them
 }
 
 func (l *Library) readWith(file string, src []byte, images imageDir, themes Themes) (*Data, Sources, error) {
-	sources := Sources{Templates: l.dir, Parts: nil, Template: "", Images: nil, ImagesDir: "", Icons: nil}
-	if l.parts != "" {
-		// Where one may come, when none has been read.
-		sources.Parts = []string{l.parts}
+	sources := Sources{Templates: l.dir, Own: nil, Template: "", Images: nil, ImagesDir: "", Icons: nil}
+	// Where one may come, when none has been read.
+	for _, dir := range []string{l.mine.parts, l.mine.themes} {
+		if dir != "" {
+			sources.Own = append(sources.Own, dir)
+		}
 	}
 	h, err := start(file, src, themes)
 	if err != nil {
@@ -182,7 +184,7 @@ func (l *Library) readWith(file string, src []byte, images imageDir, themes Them
 	err = t.check(h, images, themes, problems)
 	sources.Images, sources.Icons = d.tried, d.icons
 	if t.set != nil && t.set.dirs != nil {
-		sources.Parts = t.set.dirs
+		sources.Own = t.set.dirs
 	}
 	if err != nil {
 		return nil, sources, err
@@ -290,7 +292,7 @@ func pickTheme(set *partSet, names []string, d *Data, theme *string, given strin
 	case !slices.Contains(names, name):
 		why = usererr.New(unknown, name, strings.Join(names, ", "))
 	case set.brokenThemes[name] != nil:
-		why = usererr.New("tmpl_parts_theme_broken", name, set.brokenThemes[name])
+		why = usererr.New("tmpl_theme_broken", name, set.brokenThemes[name])
 	}
 	switch {
 	case why != nil && given != "":

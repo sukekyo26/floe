@@ -20,9 +20,9 @@ import (
 
 // Check checks the template at dir as a template of the directory's name, whatever its example.yaml
 // names: its files, then its example.yaml through every stage of a publish, drawing included, with the
-// parts of partsDir and the icons kept in iconsDir in its diagrams. The mistakes stop it from being drawn,
-// and the warnings do not.
-func Check(dir, partsDir, iconsDir string) (warnings []*usererr.Error, mistakes []error) {
+// parts of partsDir, the themes of themesDir and the icons kept in iconsDir in its diagrams. The mistakes
+// stop it from being drawn, and the warnings do not.
+func Check(dir, partsDir, themesDir, iconsDir string) (warnings []*usererr.Error, mistakes []error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, []error{usererr.CannotRead(dir, err)}
@@ -35,7 +35,7 @@ func Check(dir, partsDir, iconsDir string) (warnings []*usererr.Error, mistakes 
 		return nil, []error{usererr.CannotRead(dir, err)}
 	}
 	// Found as a library of the directory above would find it, symlink and all.
-	t, err := NewLibrary(filepath.Dir(abs), partsDir, iconsDir).resolve(name)
+	t, err := NewLibrary(filepath.Dir(abs), partsDir, themesDir, iconsDir).resolve(name)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -70,11 +70,11 @@ func Check(dir, partsDir, iconsDir string) (warnings []*usererr.Error, mistakes 
 	return warnings, nil
 }
 
-// CheckOwnParts checks the parts and the parts themes of one's own in partsDir, "" for none, as a page
-// would read them: the mistakes are of those that cannot be used, and the warnings of what goes into no
-// page. It draws none of them, which have no data; a template that uses one draws its example with it.
-func CheckOwnParts(partsDir string) (warnings []*usererr.Error, mistakes []error) {
-	set, err := partsIn(partsDir)
+// CheckOwnParts checks the parts of one's own in partsDir and the themes in themesDir, "" for none, as a
+// page would read them: the mistakes are of those that cannot be used, and the warnings of what goes into
+// no page. It draws none of them, which have no data; a template that uses one draws its example with it.
+func CheckOwnParts(partsDir, themesDir string) (warnings []*usererr.Error, mistakes []error) {
+	set, err := partsIn(ownDirs{parts: partsDir, themes: themesDir})
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -157,7 +157,7 @@ func (t *Template) checkComputed(s *shape) error {
 
 // brokenParts warns of each part of one's own in set that cannot be used, but those page.html names by an
 // attribute, of named, which checkNamedParts refuses: the schema refers to none of them, as it compiled. A
-// parts theme that cannot be used is warned of too: a data file picks it.
+// theme that cannot be used is warned of too: a data file picks it.
 func brokenParts(set *partSet, named []namedPart) []*usererr.Error {
 	refused := map[string]bool{}
 	for _, n := range named {

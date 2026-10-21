@@ -1,4 +1,4 @@
-/* The colours and faces are the parts theme's palette; the page lays them out */
+/* The colours and faces are the theme's palette; the page lays them out */
 :scope {
   /* The width of the whole body; that of prose is the palette's */
   --page-width: 96rem;

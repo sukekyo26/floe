@@ -14,7 +14,7 @@ import (
 // Parts tells of floe's parts and those of one's own by name, one in place of floe's of its name once,
 // and the mistakes of those that cannot be used after; DescribePart tells what a part takes, as its
 // schema's root does, the looks it takes in the order they go into a page, the parts it holds and the
-// parts themes with a file of it.
+// themes with a file of it.
 func TestDescribeParts(t *testing.T) {
 	t.Parallel()
 
@@ -32,7 +32,7 @@ func TestDescribeParts(t *testing.T) {
 	files["bad/schema.json"] = `{"type": "object"}`
 	files["bad/part.html"] = `<p data-floe-part="bad"></p>`
 	dir := ownParts(t, files)
-	l := tmpl.NewLibrary("", dir, "")
+	l := tmpl.NewLibrary("", dir, themesOf(dir), "")
 
 	parts, broken, err := l.Parts()
 	if err != nil {
@@ -75,11 +75,11 @@ func TestDescribeParts(t *testing.T) {
 		{l: l, name: "frame", path: filepath.Join(dir, "frame"), look: true, about: "A frame\n", looks: []string{"panel"}},
 		{
 			// floe's table takes the panel's look; the table of one's own in l takes none.
-			l: tmpl.NewLibrary("", "", ""), name: "risks", types: []string{"array"}, of: []string{"object"}, items: []string{"fix", "impact", "likely", "what"},
+			l: tmpl.NewLibrary("", "", "", ""), name: "risks", types: []string{"array"}, of: []string{"object"}, items: []string{"fix", "impact", "likely", "what"},
 			looks: []string{"panel", "table"},
 		},
 		{
-			l: tmpl.NewLibrary("", "", ""), name: "table", types: []string{"object"}, items: []string{"columns", "rows"},
+			l: tmpl.NewLibrary("", "", "", ""), name: "table", types: []string{"object"}, items: []string{"columns", "rows"},
 			looks: []string{"panel"}, holds: []string{"cell"},
 			themes: []string{"blueprint", "brutal", "default", "editorial", "ink", "notebook", "swiss", "washi"},
 		},
@@ -115,7 +115,7 @@ func TestDescribeParts(t *testing.T) {
 	}
 }
 
-// NewPart copies a part, floe's or one's own, and the files of the parts themes for it: the copy names
+// NewPart copies a part, floe's or one's own, and the files of the themes for it: the copy names
 // itself as its box, takes the looks the original takes, and draws as it does; one of the name of floe's
 // takes its place, and every page draws as before.
 func TestNewPart(t *testing.T) {
@@ -123,13 +123,13 @@ func TestNewPart(t *testing.T) {
 
 	themes := []string{"blueprint", "brutal", "default", "editorial", "ink", "notebook", "swiss", "washi"}
 	parts := filepath.Join(t.TempDir(), "parts")
-	l := tmpl.NewLibrary("", parts, "")
+	l := tmpl.NewLibrary("", parts, themesOf(parts), "")
 	made, err := l.NewPart("grid", "table")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if made.At != filepath.Join(parts, "grid") || !made.Builtin || made.Replaces || !slices.Equal(made.Themes, themes) ||
-		made.ThemesAt != filepath.Join(parts, "themes") {
+		made.ThemesAt != themesOf(parts) {
 		t.Errorf("made = %+v", made)
 	}
 	html, err := os.ReadFile(filepath.Join(parts, "grid", "part.html"))
@@ -140,8 +140,8 @@ func TestNewPart(t *testing.T) {
 		t.Errorf("the copy's part.yaml = %q, %v", b, rerr)
 	}
 	for _, theme := range themes {
-		got, gerr := os.ReadFile(filepath.Join(parts, "themes", theme, "grid.css"))
-		want, werr := os.ReadFile(filepath.Join("parts", "themes", theme, "table.css"))
+		got, gerr := os.ReadFile(filepath.Join(themesOf(parts), theme, "grid.css"))
+		want, werr := os.ReadFile(filepath.Join("themes", theme, "table.css"))
 		if gerr != nil || werr != nil || string(got) != string(want) {
 			t.Errorf("%s/grid.css = %v, %v: not a copy of table.css", theme, gerr, werr)
 		}
@@ -154,7 +154,7 @@ func TestNewPart(t *testing.T) {
 	pages := map[string]string{}
 	for _, theme := range themes {
 		src := "template: memo\nlang: en\nparts-shape: " + theme + "\nrisks: { steps: [{ run: ls }] }\naside: { text: x }\n"
-		if pages[theme], err = draw(tmpl.NewLibrary(memo, "", ""), src); err != nil {
+		if pages[theme], err = draw(tmpl.NewLibrary(memo, "", "", ""), src); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -163,9 +163,13 @@ func TestNewPart(t *testing.T) {
 	}
 	for _, theme := range themes {
 		src := "template: memo\nlang: en\nparts-shape: " + theme + "\nrisks: { steps: [{ run: ls }] }\naside: { text: x }\n"
-		if page, err := draw(tmpl.NewLibrary(memo, parts, ""), src); err != nil || page != pages[theme] {
-			t.Errorf("%s: the page drawn with the copy of code = %v:\n%s\nnot as with floe's:\n%s", theme, err, page, pages[theme])
+		if page, derr := draw(tmpl.NewLibrary(memo, parts, themesOf(parts), ""), src); derr != nil || page != pages[theme] {
+			t.Errorf("%s: the page drawn with the copy of code = %v:\n%s\nnot as with floe's:\n%s", theme, derr, page, pages[theme])
 		}
+	}
+	// floe's themes are not in the parts' directory, which a part named themes may take.
+	if _, err = l.NewPart("themes", "table"); err != nil {
+		t.Errorf("a copy named themes = %v", err)
 	}
 	if d, err := l.DescribePart("code"); err != nil || d.Path != filepath.Join(parts, "code") || !slices.Equal(d.Themes, themes) {
 		t.Errorf("the copy of code = %+v, %v", d, err)
@@ -182,8 +186,8 @@ func TestNewPartOfEach(t *testing.T) {
 	t.Parallel()
 
 	parts := filepath.Join(t.TempDir(), "parts")
-	l := tmpl.NewLibrary("", parts, "")
-	floe, _, err := tmpl.NewLibrary("", "", "").Parts()
+	l := tmpl.NewLibrary("", parts, themesOf(parts), "")
+	floe, _, err := tmpl.NewLibrary("", "", "", "").Parts()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,13 +199,13 @@ func TestNewPartOfEach(t *testing.T) {
 			t.Errorf("copying %s: %v", d.Name, err)
 		}
 	}
-	if warnings, mistakes := tmpl.CheckOwnParts(parts); warnings != nil || mistakes != nil {
+	if warnings, mistakes := tmpl.CheckOwnParts(parts, themesOf(parts)); warnings != nil || mistakes != nil {
 		t.Errorf("CheckOwnParts of the copies = %v, %v", warnings, mistakes)
 	}
 }
 
 // NewPart refuses a name a part cannot take, one there is already, a part with nothing to copy, a file of
-// a parts theme there already, in a theme of the original's or another, a theme that cannot be used with
+// a theme there already, in a theme of the original's or another, a theme that cannot be used with
 // a file of the original, and a copy that could not be used, leaving nothing.
 func TestNewPartRefused(t *testing.T) {
 	t.Parallel()
@@ -211,7 +215,7 @@ func TestNewPartRefused(t *testing.T) {
 		"themes/washi/details2.css": "",
 		"themes/mine/grid3.css":     "",
 	})
-	l := tmpl.NewLibrary("", parts, "")
+	l := tmpl.NewLibrary("", parts, themesOf(parts), "")
 	for _, c := range []struct{ name, from, want string }{
 		{"Grid", "table", "Grid cannot name a part"},
 		{"a/b", "table", "a/b cannot name a part"},
@@ -221,13 +225,12 @@ func TestNewPartRefused(t *testing.T) {
 		{"any", "table", "cannot be named any"},
 		{"base", "table", "cannot be named base"},
 		{"palette", "table", "cannot be named palette"},
-		{"themes", "table", "cannot be named themes"},
 		{"grid", "diagram", "floe draws the part diagram in Go"},
 		{"grid", "quote", "the part quote cannot be used"},
 		{"grid", "nope", `unknown part "nope"`},
 		{"quote", "table", "quote is there already"},
-		{"details2", "details", "the parts themes have a file of the part details2 already: " + filepath.Join(parts, "themes", "washi", "details2.css")},
-		{"grid3", "steps", "the parts themes have a file of the part grid3 already: " + filepath.Join(parts, "themes", "mine", "grid3.css")},
+		{"details2", "details", "your own themes have a file of the part details2 already: " + filepath.Join(themesOf(parts), "washi", "details2.css")},
+		{"grid3", "steps", "your own themes have a file of the part grid3 already: " + filepath.Join(themesOf(parts), "mine", "grid3.css")},
 		// A look alone in place of floe's that draws, and a part that would hold itself, which reading
 		// leaves out, with the parts that take its look or hold it.
 		{"table", "panel", "table was not made: with it, the part table cannot be used: " + filepath.Join(parts, "table") + ": a look alone cannot"},
@@ -238,27 +241,31 @@ func TestNewPartRefused(t *testing.T) {
 		}
 	}
 	// A theme that cannot be written leaves nothing, the files written before it included.
-	if err := os.WriteFile(filepath.Join(parts, "themes", "ink"), nil, 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(themesOf(parts), "ink"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := l.NewPart("grid", "table"); err == nil || !strings.Contains(err.Error(), filepath.Join(parts, "themes", "ink", "grid.css")+" cannot be written") {
+	if _, err := l.NewPart("grid", "table"); err == nil || !strings.Contains(err.Error(), filepath.Join(themesOf(parts), "ink", "grid.css")+" cannot be written") {
 		t.Errorf("NewPart with a theme that cannot be written = %v", err)
 	}
 	var left []string
-	err := filepath.WalkDir(parts, func(at string, _ os.DirEntry, err error) error {
-		rel, rerr := filepath.Rel(parts, at)
+	root := filepath.Dir(parts)
+	err := filepath.WalkDir(root, func(at string, _ os.DirEntry, err error) error {
+		rel, rerr := filepath.Rel(root, at)
 		left = append(left, rel)
 		return cmp.Or(err, rerr)
 	})
 	if want := []string{
-		".", "quote", "quote/part.html", "themes", "themes/ink", "themes/mine", "themes/mine/grid3.css", "themes/washi",
-		"themes/washi/details2.css",
+		".", "parts", "parts/quote", "parts/quote/part.html", "themes", "themes/ink", "themes/mine", "themes/mine/grid3.css",
+		"themes/washi", "themes/washi/details2.css",
 	}; err != nil ||
 		!slices.Equal(left, want) {
 		t.Errorf("left = %v, %v", left, err)
 	}
-	if _, err := tmpl.NewLibrary("", "", "").NewPart("grid", "table"); err == nil || !strings.Contains(err.Error(), "FLOE_PARTS_DIR") {
+	if _, err := tmpl.NewLibrary("", "", "", "").NewPart("grid", "table"); err == nil || !strings.Contains(err.Error(), "FLOE_PARTS_DIR") {
 		t.Errorf("NewPart without a directory of parts = %v", err)
+	}
+	if _, err := tmpl.NewLibrary("", parts, "", "").NewPart("grid", "table"); err == nil || !strings.Contains(err.Error(), "FLOE_THEMES_DIR") {
+		t.Errorf("NewPart without a directory of themes = %v", err)
 	}
 
 	// A theme of one's own that cannot be used may have a file of the original, its own or floe's of the
@@ -267,33 +274,33 @@ func TestNewPartRefused(t *testing.T) {
 		"themes/ink/base.css":  "}\n",
 		"themes/mine/tree.css": "}\n",
 	})
-	l = tmpl.NewLibrary("", broken, "")
-	if _, err := l.NewPart("aside", "note"); err == nil || !strings.Contains(err.Error(), "your own parts theme ink cannot be used") {
+	l = tmpl.NewLibrary("", broken, themesOf(broken), "")
+	if _, err := l.NewPart("aside", "note"); err == nil || !strings.Contains(err.Error(), "your own theme ink cannot be used") {
 		t.Errorf("NewPart with a theme that cannot be used = %v", err)
 	}
-	if _, err := l.NewPart("tree2", "tree"); err == nil || !strings.Contains(err.Error(), "your own parts theme mine cannot be used") {
+	if _, err := l.NewPart("tree2", "tree"); err == nil || !strings.Contains(err.Error(), "your own theme mine cannot be used") {
 		t.Errorf("NewPart with a theme that cannot be used, of its own file of the original = %v", err)
 	}
 	// A theme, or the directory of the themes, that cannot be read at all may have a file of any part.
 	unread := ownParts(t, quote("quote"))
-	if err := os.Symlink(filepath.Join(unread, "gone"), filepath.Join(unread, "themes")); err != nil {
+	if err := os.Symlink(filepath.Join(unread, "gone"), themesOf(unread)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tmpl.NewLibrary("", unread, "").NewPart("quote2", "quote"); err == nil ||
-		!strings.Contains(err.Error(), "the parts themes of your own in "+filepath.Join(unread, "themes")+" cannot be read") {
+	if _, err := tmpl.NewLibrary("", unread, themesOf(unread), "").NewPart("quote2", "quote"); err == nil ||
+		!strings.Contains(err.Error(), "the directory of your own themes "+themesOf(unread)+" cannot be read") {
 		t.Errorf("NewPart with the themes a symlink that leads nowhere = %v", err)
 	}
-	if err := os.Remove(filepath.Join(unread, "themes")); err != nil {
+	if err := os.Remove(themesOf(unread)); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(unread, "themes"), 0o750); err != nil {
+	if err := os.MkdirAll(themesOf(unread), 0o750); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(filepath.Join(unread, "gone"), filepath.Join(unread, "themes", "mine")); err != nil {
+	if err := os.Symlink(filepath.Join(unread, "gone"), filepath.Join(themesOf(unread), "mine")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tmpl.NewLibrary("", unread, "").NewPart("quote2", "quote"); err == nil ||
-		!strings.Contains(err.Error(), "your own parts theme mine cannot be used") {
+	if _, err := tmpl.NewLibrary("", unread, themesOf(unread), "").NewPart("quote2", "quote"); err == nil ||
+		!strings.Contains(err.Error(), "your own theme mine cannot be used") {
 		t.Errorf("NewPart with a theme a symlink that leads nowhere = %v", err)
 	}
 	if _, err := l.NewPart("steps2", "steps"); err != nil {
@@ -301,21 +308,21 @@ func TestNewPartRefused(t *testing.T) {
 	}
 }
 
-// CheckOwnParts refuses every part and parts theme of one's own that cannot be used, and warns of what goes
+// CheckOwnParts refuses every part and theme of one's own that cannot be used, and warns of what goes
 // into no page; with none of them, or none wrong, it tells nothing.
 func TestCheckOwnParts(t *testing.T) {
 	t.Parallel()
 
 	for _, dir := range []string{"", filepath.Join(t.TempDir(), "none")} {
-		if warnings, mistakes := tmpl.CheckOwnParts(dir); warnings != nil || mistakes != nil {
+		if warnings, mistakes := tmpl.CheckOwnParts(dir, ""); warnings != nil || mistakes != nil {
 			t.Errorf("CheckOwnParts(%q) = %v, %v", dir, warnings, mistakes)
 		}
 	}
 	parts := ownParts(t, quote("quote"))
-	if _, err := tmpl.NewLibrary("", parts, "").NewPart("grid", "table"); err != nil {
+	if _, err := tmpl.NewLibrary("", parts, themesOf(parts), "").NewPart("grid", "table"); err != nil {
 		t.Fatal(err)
 	}
-	if warnings, mistakes := tmpl.CheckOwnParts(parts); warnings != nil || mistakes != nil {
+	if warnings, mistakes := tmpl.CheckOwnParts(parts, themesOf(parts)); warnings != nil || mistakes != nil {
 		t.Errorf("CheckOwnParts of parts that are right = %v, %v", warnings, mistakes)
 	}
 
@@ -327,8 +334,8 @@ func TestCheckOwnParts(t *testing.T) {
 	files["themes/mine/note.css"] = "}\n"
 	files["themes/default/nope.css"] = ""
 	parts = ownParts(t, files)
-	warnings, mistakes := tmpl.CheckOwnParts(parts)
-	if len(warnings) != 1 || !strings.Contains(warnings[0].Error(), filepath.Join(parts, "themes", "default", "nope.css")+" goes into no page") {
+	warnings, mistakes := tmpl.CheckOwnParts(parts, themesOf(parts))
+	if len(warnings) != 1 || !strings.Contains(warnings[0].Error(), filepath.Join(themesOf(parts), "default", "nope.css")+" goes into no page") {
 		t.Errorf("warnings = %v", warnings)
 	}
 	told := make([]string, 0, len(mistakes))
@@ -337,7 +344,7 @@ func TestCheckOwnParts(t *testing.T) {
 	}
 	if len(told) != 3 || !strings.HasPrefix(told[0], "the part diagram cannot be used: "+filepath.Join(parts, "diagram")+": a part of your own cannot be named diagram") ||
 		!strings.HasPrefix(told[1], "the part unnamed cannot be used: "+filepath.Join(parts, "unnamed", "part.html")+": no element of the part unnamed is its box") ||
-		!strings.HasPrefix(told[2], "your own parts theme mine cannot be used: "+filepath.Join(parts, "themes", "mine", "note.css")+":1:") {
+		!strings.HasPrefix(told[2], "your own theme mine cannot be used: "+filepath.Join(themesOf(parts), "mine", "note.css")+":1:") {
 		t.Errorf("mistakes = %q", told)
 	}
 }

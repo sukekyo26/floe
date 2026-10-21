@@ -12,7 +12,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 	getenv := func(k string) string { return vars[k] }
 	c, err := loadConfig(getenv, "/w")
 	if err != nil || c.root != "/h/.local/share/floe" || c.icons != "/h/.local/share/floe-icons" || c.port != 7325 ||
-		c.templates != "/h/.config/floe/templates" || c.parts != "/h/.config/floe/parts" {
+		c.templates != "/h/.config/floe/templates" || c.parts != "/h/.config/floe/parts" || c.themes != "/h/.config/floe/themes" {
 		t.Errorf("defaults = %+v, %v", c, err)
 	}
 	vars["XDG_DATA_HOME"] = "/x"
@@ -21,20 +21,24 @@ func TestLoadConfigDefaults(t *testing.T) {
 		t.Errorf("XDG_DATA_HOME and a port = %+v, %v", c, err)
 	}
 	vars["XDG_CONFIG_HOME"] = "/c"
-	if c, err := loadConfig(getenv, "/w"); err != nil || c.templates != "/c/floe/templates" || c.parts != "/c/floe/parts" {
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.templates != "/c/floe/templates" || c.parts != "/c/floe/parts" ||
+		c.themes != "/c/floe/themes" {
 		t.Errorf("XDG_CONFIG_HOME = %+v, %v", c, err)
 	}
 	vars["FLOE_DIR"] = "/d"
 	vars["FLOE_ICONS_DIR"] = "/i"
 	vars["FLOE_TEMPLATES_DIR"] = "/t"
 	vars["FLOE_PARTS_DIR"] = "/p"
-	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/d" || c.icons != "/i" || c.templates != "/t" || c.parts != "/p" {
-		t.Errorf("FLOE_DIR, FLOE_ICONS_DIR, FLOE_TEMPLATES_DIR and FLOE_PARTS_DIR = %+v, %v", c, err)
+	vars["FLOE_THEMES_DIR"] = "/th"
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/d" || c.icons != "/i" || c.templates != "/t" || c.parts != "/p" ||
+		c.themes != "/th" {
+		t.Errorf("FLOE_DIR, FLOE_ICONS_DIR, FLOE_TEMPLATES_DIR, FLOE_PARTS_DIR and FLOE_THEMES_DIR = %+v, %v", c, err)
 	}
 	// Without a home, FLOE_DIR is enough for pages; the icons are refused when used, and the built-in
 	// templates are the only ones.
 	vars = map[string]string{"FLOE_DIR": "/d"}
-	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/d" || c.icons != "" || c.templates != "" || c.parts != "" {
+	if c, err := loadConfig(getenv, "/w"); err != nil || c.root != "/d" || c.icons != "" || c.templates != "" || c.parts != "" ||
+		c.themes != "" {
 		t.Errorf("FLOE_DIR without a home = %+v, %v", c, err)
 	}
 	// A relative directory is under the working directory; a relative XDG directory is none, as its spec

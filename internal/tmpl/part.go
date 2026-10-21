@@ -27,8 +27,8 @@ import (
 )
 
 // partFiles holds a directory per part of floe's (schema.json, part.html, part.css, part.yaml, checks.yaml
-// and words.yaml) and per look alone (part.css and part.yaml), the schemas the parts share (tone.json and any.json),
-// and the parts themes (themes/).
+// and words.yaml) and per look alone (part.css and part.yaml), and the schemas the parts share (tone.json and
+// any.json).
 //
 //go:embed parts
 var partFiles embed.FS
@@ -179,41 +179,49 @@ func isGoPart(name string) bool {
 }
 
 // partSet is floe's parts, every schema under parts/, by URL: the parts' and those they share, and the
-// parts themes.
+// themes.
 type partSet struct {
 	parts  map[string]*part
 	docs   map[string]any          // as read, for jsonschema
 	shapes map[string]*shape       // as floe reads them
 	notes  map[string]*schemaNotes // what floe checks of them once all are read
 	shares map[string]bool         // the URLs of the schemas the parts share, floe's alone
-	themes map[string]*partsTheme  // by name
+	themes map[string]*theme       // by name
 	broken map[string]error        // the parts of one's own that cannot be used, by name, and why
-	// the parts themes of one's own that cannot be used, by name, and why
+	// the themes of one's own that cannot be used, by name, and why
 	brokenThemes map[string]error
 	// floe's own default palette, under every page's, whatever one's own themes change
 	palette string
-	// the directories of one's own it read, the directory of parts first, by their real paths
+	// the directories of one's own it read, those of parts and themes first, by their real paths
 	dirs   []string
 	strays []*usererr.Error // what of one's own goes into no page, to be warned of
 }
 
 // builtinParts reads floe's parts once.
-var builtinParts = sync.OnceValues(func() (*partSet, error) { return readParts("", nil, staged{name: "", dir: ""}) })
+var builtinParts = sync.OnceValues(func() (*partSet, error) {
+	return readParts(ownDirs{parts: "", themes: ""}, nil, staged{name: "", dir: ""})
+})
 
-// readParts reads floe's parts and, over them, those of one's own in dir, "" for none, which holds
-// entries, and stage: one of the name of one of floe's takes its place whole. One of one's own that cannot
-// be used is left out, its mistake kept for a template that uses it.
-func readParts(dir string, entries []os.DirEntry, stage staged) (*partSet, error) {
+// readParts reads floe's parts and themes and, over them, those of one's own in own, the parts' holding
+// entries, and stage: a part of the name of one of floe's takes its place whole. One of one's own that
+// cannot be used is left out, its mistake kept for a template that uses it.
+func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, error) {
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, shapes: map[string]*shape{}, notes: map[string]*schemaNotes{},
-		shares: map[string]bool{}, themes: map[string]*partsTheme{},
+		shares: map[string]bool{}, themes: map[string]*theme{},
 		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", dirs: nil, strays: nil,
 	}
 	if err := set.readBuiltin(); err != nil {
 		return nil, err
 	}
-	if dir != "" {
-		if err := set.readOwn(dir, entries, stage); err != nil {
+	for _, dir := range []string{own.parts, own.themes} {
+		set.keepRoot(dir)
+	}
+	if own.parts != "" {
+		set.readOwn(own.parts, entries, stage)
+	}
+	if own.themes != "" {
+		if err := set.readOwnThemes(own.themes); err != nil {
 			return nil, err
 		}
 	}
@@ -232,8 +240,8 @@ func readParts(dir string, entries []os.DirEntry, stage staged) (*partSet, error
 	return set, nil
 }
 
-// readBuiltin reads floe's parts, those it draws in Go too, the schemas they share and the parts themes
-// into set.
+// readBuiltin reads floe's parts, those it draws in Go too, the schemas they share and the themes into
+// set.
 func (set *partSet) readBuiltin() error {
 	builtin, err := fs.Sub(partFiles, "parts")
 	if err != nil {
@@ -245,8 +253,6 @@ func (set *partSet) readBuiltin() error {
 	}
 	for _, e := range entries {
 		switch {
-		case e.Name() == themesDir:
-			// Read once the parts are, whose names its files take.
 		case e.IsDir():
 			var files fs.FS
 			if files, err = fs.Sub(builtin, e.Name()); err == nil {
@@ -273,19 +279,17 @@ func (set *partSet) readBuiltin() error {
 			looks: nil, taken: nil, uses: nil, about: "", dir: "", replaces: false,
 		}
 	}
-	themes, err := fs.Sub(builtin, themesDir)
+	// Once the parts are read, whose names the themes' files take.
+	entries, err = fs.ReadDir(themeFiles, themesDir)
 	if err != nil {
-		return fmt.Errorf("read the parts themes: %w", err)
-	}
-	entries, err = fs.ReadDir(themes, ".")
-	if err != nil {
-		return fmt.Errorf("read the parts themes: %w", err)
+		return fmt.Errorf("read the themes: %w", err)
 	}
 	for _, e := range entries {
-		t := newPartsTheme()
-		files, err := fs.Sub(themes, e.Name())
+		t := newTheme()
+		at := path.Join(themesDir, e.Name())
+		files, err := fs.Sub(themeFiles, at)
 		if err == nil {
-			err = set.readPartsTheme(files, path.Join("parts", themesDir, e.Name()), t)
+			err = set.readTheme(files, at, t)
 		}
 		if err != nil {
 			return err

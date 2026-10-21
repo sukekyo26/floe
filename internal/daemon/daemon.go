@@ -98,10 +98,11 @@ type Server struct {
 	Port  int
 	Root  string
 	Build string
-	// Templates, Parts and Icons are the directories the server must draw pages with: those of the
+	// Templates, Parts, Themes and Icons are the directories the server must draw pages with: those of the
 	// command, which a server it starts takes.
 	Templates string
 	Parts     string
+	Themes    string
 	Icons     string
 	// AnyDirs takes a running server of this build that draws with other directories as it is, for a
 	// command that draws nothing (listing, removing). One of another build is not replaced by it.
@@ -172,14 +173,15 @@ func (s Server) replace(ctx context.Context, p Status) (Status, error) {
 }
 
 // otherDirs refuses p, a server of floe that serves the root of s, when it draws with other directories
-// of templates, parts or icons than s.
+// of templates, parts, themes or icons than s.
 func (s Server) otherDirs(p Status) error {
 	if p.State != Ours || !sameDir(p.Health.Root, s.Root) || sameOrUnread(p.Health.Templates, s.Templates) &&
-		sameOrUnread(p.Health.Parts, s.Parts) && sameOrUnread(p.Health.Icons, s.Icons) {
+		sameOrUnread(p.Health.Parts, s.Parts) && sameOrUnread(p.Health.Themes, s.Themes) &&
+		sameOrUnread(p.Health.Icons, s.Icons) {
 		return nil
 	}
-	return usererr.New("daemon_other_dirs", s.Port, p.Health.Templates, p.Health.Parts, p.Health.Icons, s.Templates,
-		s.Parts, s.Icons)
+	return usererr.New("daemon_other_dirs", s.Port, p.Health.Templates, p.Health.Parts, p.Health.Themes,
+		p.Health.Icons, s.Templates, s.Parts, s.Themes, s.Icons)
 }
 
 // sameDir reports whether a and b name one directory: as written once cleaned, or through a symlink.

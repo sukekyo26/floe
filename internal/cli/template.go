@@ -213,7 +213,7 @@ code 0. Nothing is printed when the templates are right.`,
 			// A warning of the parts of one's own is told for every template: once is enough.
 			told := map[string]bool{}
 			for _, dir := range args {
-				warnings, more := tmpl.Check(dir, a.cfg.parts, a.cfg.icons)
+				warnings, more := tmpl.Check(dir, a.cfg.parts, a.cfg.themes, a.cfg.icons)
 				for _, w := range warnings {
 					if text := w.Localize(english); !told[text] {
 						told[text] = true

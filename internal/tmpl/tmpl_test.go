@@ -13,7 +13,7 @@ import (
 )
 
 // builtins are the built-in templates alone.
-var builtins = tmpl.NewLibrary("", "", "")
+var builtins = tmpl.NewLibrary("", "", "", "")
 
 func render(t *testing.T, src string) string {
 	t.Helper()
@@ -328,7 +328,7 @@ func TestBuiltins(t *testing.T) {
 		if render(t, string(src)) == "" {
 			t.Errorf("the example of %s draws nothing", name)
 		}
-		if warnings, mistakes := tmpl.Check("templates/"+name, "", ""); len(warnings) != 1 || len(mistakes) != 0 {
+		if warnings, mistakes := tmpl.Check("templates/"+name, "", "", ""); len(warnings) != 1 || len(mistakes) != 0 {
 			t.Errorf("Check of %s = %v, %v", name, warnings, mistakes)
 		}
 	}
@@ -339,14 +339,14 @@ func TestBuiltins(t *testing.T) {
 func TestUnnamedBesideOtherMistakes(t *testing.T) {
 	t.Parallel()
 
-	_, err := tmpl.NewLibrary("", "", "").Read("d.yaml", []byte("title: 3\ntheme: [x]\nlang: ja_JP\n"), tmpl.Themes{}, "")
+	_, err := tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte("title: 3\ntheme: [x]\nlang: ja_JP\n"), tmpl.Themes{}, "")
 	want := "d.yaml:1:1: name the template at the top level, like template: report (templates: report)\n" +
 		"d.yaml:1:8: title must be text\nd.yaml:2:8: theme must be text\n" +
 		`d.yaml:3:7: invalid language "ja_JP": write lang: as a BCP 47 tag such as en, ja or pt-BR`
 	if err == nil || err.Error() != want {
 		t.Errorf("Read = %v\nwant %s", err, want)
 	}
-	_, err = tmpl.NewLibrary("", "", "").Read("d.yaml", []byte("template: report\ntheme: [x]\nlang: en\n"), tmpl.Themes{}, "")
+	_, err = tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte("template: report\ntheme: [x]\nlang: en\n"), tmpl.Themes{}, "")
 	if want = "d.yaml:2:8: theme must be text"; err == nil || err.Error() != want {
 		t.Errorf("Read of a theme not text = %v\nwant %s", err, want)
 	}
@@ -355,7 +355,7 @@ func TestUnnamedBesideOtherMistakes(t *testing.T) {
 		"template: report\n":             "d.yaml:1:1: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)",
 		"template: report\nlang: [ja]\n": "d.yaml:2:7: lang must be text",
 	} {
-		if _, err := tmpl.NewLibrary("", "", "").Read("d.yaml", []byte(src), tmpl.Themes{}, ""); err == nil || err.Error() != want {
+		if _, err := tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte(src), tmpl.Themes{}, ""); err == nil || err.Error() != want {
 			t.Errorf("Read %q = %v\nwant %s", src, err, want)
 		}
 	}
@@ -363,7 +363,7 @@ func TestUnnamedBesideOtherMistakes(t *testing.T) {
 	for _, bad := range []string{"", "x", "ja_JP", "en-", `ja"><script>`} {
 		src := "template: report\nlang: '" + bad + "'\n"
 		want := `d.yaml:2:7: invalid language "` + bad + `": write lang: as a BCP 47 tag such as en, ja or pt-BR`
-		if _, err := tmpl.NewLibrary("", "", "").Read("d.yaml", []byte(src), tmpl.Themes{}, ""); err == nil || err.Error() != want {
+		if _, err := tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte(src), tmpl.Themes{}, ""); err == nil || err.Error() != want {
 			t.Errorf("Read %q = %v\nwant %s", src, err, want)
 		}
 	}
