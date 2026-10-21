@@ -337,6 +337,7 @@ var messagesEN = map[string]string{
 	"tmpl_part_yaml_about":         "write description: as text, what the look is",
 	"tmpl_unknown_part":            `unknown part "%s"; use %s`,
 	"tmpl_no_parts_dir":            "HOME is not set; set HOME or FLOE_PARTS_DIR for parts of your own",
+	"tmpl_own_dirs_overlap":        "the directory of your own parts %s and that of your own themes %s are one, or one is in the other, where a part would be read as a theme or a theme as a part; set FLOE_PARTS_DIR and FLOE_THEMES_DIR apart",
 	"tmpl_no_themes_dir":           "HOME is not set; set HOME or FLOE_THEMES_DIR for themes of your own",
 	"tmpl_new_part_name":           "%s cannot name a part: use lower case letters, digits, - and _, starting with a letter or a digit",
 	"tmpl_new_part_reserved":       "a part of your own cannot be named %s: floe draws diagram and script itself, tone and any are schemas the parts share, and base and palette name the files of a theme for every page; pick another name",

@@ -192,7 +192,7 @@ type partSet struct {
 	brokenThemes map[string]error
 	// floe's own default palette, under every page's, whatever one's own themes change
 	palette string
-	// the directories of one's own it read, those of parts and themes first, by their real paths
+	// the directories of one's own it read, those of parts and themes among them, by their real paths
 	dirs   []string
 	strays []*usererr.Error // what of one's own goes into no page, to be warned of
 }
@@ -217,15 +217,11 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 	for _, dir := range []string{own.parts, own.themes} {
 		set.keepRoot(dir)
 	}
-	// Each may be in the other, as neither is the other's part or theme.
-	//nolint:errcheck // nil for one that is not there
-	parts, _ := os.Stat(own.parts)
-	themes, _ := os.Stat(own.themes) //nolint:errcheck // as above
 	if own.parts != "" {
-		set.readOwn(own.parts, entries, stage, themes)
+		set.readOwn(own.parts, entries, stage)
 	}
 	if own.themes != "" {
-		if err := set.readOwnThemes(own.themes, parts); err != nil {
+		if err := set.readOwnThemes(own.themes); err != nil {
 			return nil, err
 		}
 	}

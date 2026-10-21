@@ -335,6 +335,7 @@ var messagesJA = map[string]string{
 	"tmpl_part_yaml_about":         "description: は、その見た目が何かを文字列で書いてください",
 	"tmpl_unknown_part":            "知らない部品「%s」です。使えるのは %s です",
 	"tmpl_no_parts_dir":            "HOME が設定されていません。自分の部品には HOME か FLOE_PARTS_DIR を設定してください",
+	"tmpl_own_dirs_overlap":        "自分の部品のディレクトリ %s と自分のテーマのディレクトリ %s が同じか、一方がもう一方の中にあります。部品がテーマとして、テーマが部品として読まれてしまうので、FLOE_PARTS_DIR と FLOE_THEMES_DIR を別々の場所にしてください",
 	"tmpl_no_themes_dir":           "HOME が設定されていません。自分のテーマには HOME か FLOE_THEMES_DIR を設定してください",
 	"tmpl_new_part_name":           "%s は部品の名前にできません。英小文字・数字・- ・_ で、英小文字か数字で始めてください",
 	"tmpl_new_part_reserved":       "自分の部品に %s という名前は付けられません。diagram と script は floe が描き、tone と any は部品が共有する schema、base と palette はどのページにも入るテーマのファイルの名前です。別の名前にしてください",

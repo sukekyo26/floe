@@ -341,18 +341,21 @@ func TestCheckOwnParts(t *testing.T) {
 		t.Errorf("CheckOwnParts of parts that are right = %v, %v", warnings, mistakes)
 	}
 
-	// The directory of themes in that of parts, or that of parts in that of themes, is neither's part or
-	// theme.
-	nested := ownParts(t, quote("quote"))
-	if err := os.CopyFS(filepath.Join(nested, "themes", "ink"), os.DirFS(filepath.Join("themes", "ink"))); err != nil {
+	// The directories of parts and of themes one, or one in the other, there or not, as written or through a
+	// symlink, are refused, as a part would be read as a theme there, or a theme as a part.
+	apart := ownParts(t, quote("quote"))
+	linked := filepath.Join(t.TempDir(), "linked")
+	if err := os.Symlink(apart, linked); err != nil {
 		t.Fatal(err)
 	}
-	if warnings, mistakes := tmpl.CheckOwnParts(nested, filepath.Join(nested, "themes")); warnings != nil || mistakes != nil {
-		t.Errorf("CheckOwnParts with the themes in the parts = %v, %v", warnings, mistakes)
+	for _, themes := range []string{apart, apart + "/", filepath.Join(apart, "themes"), filepath.Dir(apart), filepath.Join(linked, "mine")} {
+		if _, mistakes := tmpl.CheckOwnParts(apart, themes); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "set FLOE_PARTS_DIR and FLOE_THEMES_DIR apart") {
+			t.Errorf("CheckOwnParts(%s, %s) = %v", apart, themes, mistakes)
+		}
 	}
-	inside := ownParts(t, quote("quote"))
-	if warnings, mistakes := tmpl.CheckOwnParts(inside, filepath.Dir(inside)); warnings != nil || mistakes != nil {
-		t.Errorf("CheckOwnParts with the parts in the themes = %v, %v", warnings, mistakes)
+	if _, err := tmpl.NewLibrary("", apart, filepath.Join(apart, "mine"), "").NewPart("mine", "steps"); err == nil ||
+		!strings.Contains(err.Error(), "set FLOE_PARTS_DIR and FLOE_THEMES_DIR apart") {
+		t.Errorf("NewPart with the themes in the parts = %v", err)
 	}
 
 	files := quote("quote")
