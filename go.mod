@@ -1,6 +1,6 @@
 module github.com/sukekyo26/floe
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/chromedp/cdproto v0.157.9
