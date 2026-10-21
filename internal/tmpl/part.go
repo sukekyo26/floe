@@ -731,12 +731,12 @@ func joinDescriptions(beside, named string) string {
 	return beside + " " + named
 }
 
-// checkParts checks the items of d floe draws by parts against the checks of their parts, and draws them
-// into d.parts, by the path of keys to each, those a part holds before it, reporting every failure at its
+// checkParts checks the items of d of whole floe draws by parts against the checks of their parts, and
+// draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every failure at its
 // line and column under root.
-func checkParts(d *Data, root ast.Node) error {
+func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 	var problems yamlpos.Problems
-	for _, f := range d.whole {
+	for _, f := range whole {
 		p := f.part
 		if p == nil || p.pages == nil {
 			continue // a format of floe's, or a part drawn in Go, by its own check

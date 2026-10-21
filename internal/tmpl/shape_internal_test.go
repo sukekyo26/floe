@@ -143,8 +143,7 @@ func TestDrawnWhole(t *testing.T) {
 
 	s := shapeOf(t, `{"properties": {"t": {"$ref": "floe:///parts/table.json"}, "m": {"type": "string", "format": "markdown"}}}`)
 	table := map[string]any{"columns": []any{map[string]any{"title": "a"}}, "rows": []any{[]any{"x", "y"}}}
-	var found []drawnItem
-	s.drawnWhole(map[string]any{"t": table, "m": "hi"}, nil, &found)
+	found := s.drawnWhole(map[string]any{"t": table, "m": "hi"})
 	got := make([]string, 0, len(found))
 	for _, f := range found {
 		got = append(got, strings.Join(f.at, ".")+":"+drawerOf(f))
@@ -201,8 +200,7 @@ func TestDrawnWholeStops(t *testing.T) {
 		{named(table, "markdown"), rows, []string{"rows.0.0:cell", ":table"}},
 		{named(holder, ""), map[string]any{"m": "x"}, []string{":holder"}},
 	} {
-		var found []drawnItem
-		c.s.drawnWhole(c.v, nil, &found)
+		found := c.s.drawnWhole(c.v)
 		got := make([]string, 0, len(found))
 		for _, f := range found {
 			got = append(got, strings.Join(f.at, ".")+":"+drawerOf(f))

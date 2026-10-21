@@ -12,11 +12,11 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// checkScripts draws the scripts of d, its items of the part script, into d.parts, by the path of keys to
+// checkScripts draws the scripts of d, its items of whole of the part script, into d.parts, by the path of keys to
 // each, and reports each mistake in their shape at its line and column under root. What a function does
 // is the browser's to tell.
-func checkScripts(d *Data, root ast.Node) error {
-	found := d.itemsOfPart("script")
+func checkScripts(whole drawnItems, d *Data, root ast.Node) error {
+	found := whole.ofPart("script")
 	if found == nil {
 		return nil
 	}

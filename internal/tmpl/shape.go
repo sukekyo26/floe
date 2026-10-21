@@ -434,17 +434,23 @@ type drawnItem struct {
 	format string
 }
 
-// drawnWhole adds to found the items v, at the path at, holds that floe draws whole: the parts a part
-// holds before it, which draws them as they were drawn. What an item of a format of floe's holds is not
-// looked into, and a part wins over a format, as in drawn.
-func (s *shape) drawnWhole(v any, at []string, found *[]drawnItem) {
-	s.walkWhole(v, at, false, found)
+// drawnItems are the items of a data file floe draws whole, the parts a part holds before it, which every
+// check of them picks its own from.
+type drawnItems []drawnItem
+
+// drawnWhole returns the items v holds that floe draws whole (walkWhole).
+func (s *shape) drawnWhole(v any) drawnItems {
+	var found drawnItems
+	s.walkWhole(v, nil, false, &found)
+	return found
 }
 
-// walkWhole adds to found what drawnWhole does of v, at the path at, held by a part when inPart: an item
-// of a format of floe's there is the part's to draw, by its part.html, and none of floe's to check, as
-// none is meant to be there (partSet.mistakes).
-func (s *shape) walkWhole(v any, at []string, inPart bool, found *[]drawnItem) {
+// walkWhole adds to found the items v, at the path at, holds that floe draws whole: the parts a part holds
+// before it, which draws them as they were drawn. What an item of a format of floe's holds is not looked
+// into, and a part wins over a format, as in drawn. Under a part, inPart, an item of a format of floe's is
+// the part's to draw, by its part.html, and none of floe's to check, as none is meant to be there
+// (partSet.mistakes).
+func (s *shape) walkWhole(v any, at []string, inPart bool, found *drawnItems) {
 	if s == nil {
 		return
 	}
@@ -470,27 +476,20 @@ func (s *shape) walkWhole(v any, at []string, inPart bool, found *[]drawnItem) {
 	}
 }
 
-// setShape sets s, the shape of d's template's schema, as d's, with the items of d it draws whole, which
-// every check of them picks its own from.
-func (d *Data) setShape(s *shape) {
-	d.shape, d.whole = s, nil
-	s.drawnWhole(d.Values, nil, &d.whole)
+// ofFormat returns the items of w of the format of floe's format.
+func (w drawnItems) ofFormat(format string) []itemAt {
+	return w.where(func(f drawnItem) bool { return f.part == nil && f.format == format })
 }
 
-// itemsOfFormat returns the items of d of the format of floe's format.
-func (d *Data) itemsOfFormat(format string) []itemAt {
-	return d.itemsWhere(func(f drawnItem) bool { return f.format == format })
+// ofPart returns the items of w the part name draws, those it holds before it.
+func (w drawnItems) ofPart(name string) []itemAt {
+	return w.where(func(f drawnItem) bool { return f.part != nil && f.part.name == name })
 }
 
-// itemsOfPart returns the items of d the part name draws, those it holds before it.
-func (d *Data) itemsOfPart(name string) []itemAt {
-	return d.itemsWhere(func(f drawnItem) bool { return f.part != nil && f.part.name == name })
-}
-
-// itemsWhere returns the items of d floe draws whole that keep keeps, in order.
-func (d *Data) itemsWhere(keep func(drawnItem) bool) []itemAt {
+// where returns the items of w that keep keeps, in order.
+func (w drawnItems) where(keep func(drawnItem) bool) []itemAt {
 	var items []itemAt
-	for _, f := range d.whole {
+	for _, f := range w {
 		if keep(f) {
 			items = append(items, f.itemAt)
 		}
