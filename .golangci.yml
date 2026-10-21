@@ -138,6 +138,13 @@ linters:
         - errors.New(
         - errors.Unwrap(
         - errors.Join(
+        # floe's own mistakes, worded and placed for the reader: wrapping them would change what they say.
+        - usererr.New(
+        - usererr.CannotRead(
+        - usererr.CannotWrite(
+        - yamlpos.New(
+        - yamlpos.Syntax(
+        - yamlpos.Problems).Sorted(
     sloglint:
       no-mixed-args: true
       kv-only: false

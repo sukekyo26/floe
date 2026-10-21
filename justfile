@@ -23,7 +23,7 @@ setup:
     # The pinned install.sh SHA256-verifies the downloaded golangci-lint binary.
     curl -sSfL --proto '=https' --tlsv1.2 \
         https://raw.githubusercontent.com/golangci/golangci-lint/114493f9b3e7257d29e4130f2b4a4aadefbb6845/install.sh \
-        | sh -s -- -b "${bindir}" v2.14.0
+        | sh -s -- -b "${bindir}" v2.15.0
     command -v shellcheck >/dev/null 2>&1 \
         || echo >&2 "NOTE: shellcheck not found — install via 'apt-get install shellcheck' or 'brew install shellcheck'"
     echo "Done. Ensure ${bindir} is on your PATH, then run 'just ci'."
