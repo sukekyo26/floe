@@ -1004,8 +1004,8 @@ func (set *partSet) looksOf(name string) []string {
 	return found
 }
 
-// baseCSS is what every page starts from: text, lists, links, code and quotes, for the template's own
-// elements and, where its CSS does not reach, those of the parts.
+// baseCSS is what every page starts from: its ground, colour and face, and text, lists, links, code and
+// quotes, for the template's own elements and, where its CSS does not reach, those of the parts.
 //
 //go:embed base.css
 var baseCSS string

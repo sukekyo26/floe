@@ -4,8 +4,7 @@
   --page-width: 96rem;
 }
 body {
-  margin: 0; background: var(--page-bg); color: var(--fg); font-family: var(--font);
-  font-size: 16px; line-height: 1.85; padding-inline: 16px; padding-block: 2.5rem 4rem;
+  margin: 0; font-size: 16px; line-height: 1.85; padding-inline: 16px; padding-block: 2.5rem 4rem;
 }
 main { max-width: var(--page-width); margin-inline: auto; display: grid; gap: 2.5rem; }
 main > *, section > * { min-width: 0; }

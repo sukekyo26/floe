@@ -124,13 +124,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   them, and a template has no themes of its own. A
   theme's `palette.css` sets the page's colours and faces as CSS variables, in
   the bottom layer over `default`'s, which defines them all: the parts,
-  diagrams and the template draw with them (`--page-bg` the page's ground,
-  `--rule` its rules), and a template keeps colours of its own by setting
-  them on `:scope`. `palette.css` holds those variables alone, without
-  `!important`, on `:root` and then in `@media (prefers-color-scheme: dark)`,
-  and is warned of where it sets a colour for light mode alone, as is a
-  template that sets one so on `:scope`. A part of your own cannot be named `palette`. `floe
-  template show` lists the themes.
+  diagrams and the template draw with them (`--rule` the page's rules), and
+  floe's base draws the page's ground, colour and face with them (`--page-bg`,
+  `--fg`, `--font`) on its root under any template; a template keeps colours
+  of its own, those among them, by setting them on `:scope`, as a ground it
+  draws on `body` covers the body's box alone. `palette.css`
+  holds those variables alone, without `!important`, on `:root` and then in
+  `@media (prefers-color-scheme: dark)`, and is warned of where it sets a
+  colour for light mode alone, as is a template that sets one so on `:scope`.
+  A part of your own cannot be named `palette`. `floe template show` lists the
+  themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as
@@ -197,8 +200,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   line and column, and a mistake in those files at their own;
   `page.html` writes numbers with `num` and `bytes`.
   floe puts a page's CSS together, the template's `page.css` in a
-  `<style>` of its own, in a cascade layer over floe's base (text, lists, links, code and
-  quotes) and the looks of elements that take one without being a part's
+  `<style>` of its own, in a cascade layer over floe's base (the page's ground, colour and
+  face, text, lists, links, code and quotes) and the looks of elements that take one without being a part's
   box, and under the parts' style and the theme's, which they do not
   restyle whatever their selectors. The template's CSS is scoped to the page,
   `:scope` its root: it reaches a part's element but not what the part holds.
