@@ -1,7 +1,7 @@
 :scope, :scope:is(.good, .warn, .bad) {
-  font-family: var(--washi-font); background: none; border: 2px solid currentColor; border-radius: 3px;
-  letter-spacing: 0.15em; font-weight: 700; transform: rotate(-2deg); color: var(--washi-ai);
+  font-family: var(--font); background: none; border: 2px solid currentColor; border-radius: 3px;
+  letter-spacing: 0.15em; font-weight: 700; transform: rotate(-2deg); color: var(--accent);
 }
-:scope.good { color: var(--washi-matcha); }
-:scope.warn { color: var(--washi-kincha); }
-:scope.bad { color: var(--washi-shu); }
+:scope.good { color: var(--good); }
+:scope.warn { color: var(--warn); }
+:scope.bad { color: var(--bad); }

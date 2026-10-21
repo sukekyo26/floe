@@ -1,25 +1,19 @@
 /* Scraps of a handwritten notebook: ruled paper, marker strokes for states, sticky notes for cards and
    frames drawn round by hand, in a rounded face; a blackboard in dark mode */
 :root {
-  --nb-font: "Hiragino Maru Gothic ProN", "Zen Maru Gothic", "BIZ UDPGothic", var(--font);
-  --nb-sheet: #fffcf2; --nb-rule: rgb(70 110 170 / 0.14); --nb-ink: #2e2c27; --nb-tape: rgb(220 205 160 / 0.75);
+  --nb-rule: rgb(70 110 170 / 0.14); --nb-tape: rgb(220 205 160 / 0.75);
   --nb-yellow: rgb(255 224 64 / 0.65); --nb-green: rgb(120 220 130 / 0.55); --nb-pink: rgb(255 140 185 / 0.5);
   --nb-blue: rgb(120 190 255 / 0.5); --nb-orange: rgb(255 170 80 / 0.55);
-  --nb-pen: #2f5fa8; --nb-pen-good: #2e7d32; --nb-pen-warn: #b26a00; --nb-pen-bad: #c62828;
   --nb-stick-1: #fff1a6; --nb-stick-2: #ffd2e1; --nb-stick-3: #cfe8ff;
   --nb-hand: 14px 6px 12px 8px / 8px 12px 6px 14px;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --nb-sheet: #22302a; --nb-rule: rgb(240 238 230 / 0.07); --nb-ink: #efede4; --nb-tape: rgb(220 205 160 / 0.45);
+    --nb-rule: rgb(240 238 230 / 0.07); --nb-tape: rgb(220 205 160 / 0.45);
     --nb-yellow: rgb(246 226 122 / 0.4); --nb-green: rgb(150 230 150 / 0.35); --nb-pink: rgb(255 160 200 / 0.35);
     --nb-blue: rgb(150 205 255 / 0.35); --nb-orange: rgb(255 185 110 / 0.38);
-    --nb-pen: #9cc8ff; --nb-pen-good: #9be39f; --nb-pen-warn: #ffcf7a; --nb-pen-bad: #ff9e9e;
     --nb-stick-1: #f3e38f; --nb-stick-2: #f6c2d4; --nb-stick-3: #bfdcf7;
   }
-}
-blockquote {
-  font-family: var(--nb-font); --display: var(--nb-font);
 }
 blockquote { border: 0; padding: 0; color: var(--fg); font-size: 1.15rem; font-weight: 700; }
 blockquote > p { display: inline; background: linear-gradient(transparent 62%, var(--nb-yellow) 62%); }

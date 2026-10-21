@@ -1,13 +1,13 @@
 :scope, :scope:is(.good, .warn) {
-  background: none; border: 0; border-top: 2px solid var(--swiss-ink); border-radius: 0; padding-left: 2.6rem;
+  background: none; border: 0; border-top: 2px solid var(--fg); border-radius: 0; padding-left: 2.6rem;
 }
 :scope::before, :scope:is(.good, .warn)::before {
-  left: 0.2rem; background: none; width: 1.6rem; color: var(--swiss-red); font-size: 1rem; font-weight: 900;
+  left: 0.2rem; background: none; width: 1.6rem; color: var(--accent); font-size: 1rem; font-weight: 900;
 }
-:scope.good::before { color: var(--swiss-ink); }
-:scope.warn { background: color-mix(in srgb, var(--swiss-ink) 7%, transparent); }
-:scope.bad { background: var(--swiss-red); color: #fff; border: 0; border-radius: 0; padding-left: 2.6rem; }
+:scope.good::before { color: var(--fg); }
+:scope.warn { background: color-mix(in srgb, var(--fg) 7%, transparent); }
+:scope.bad { background: var(--accent); color: #fff; border: 0; border-radius: 0; padding-left: 2.6rem; }
 :scope.bad::before { left: 0.6rem; background: none; color: #fff; font-weight: 900; }
 :scope.bad .title, :scope.bad a, :scope.bad code { color: #fff; }
 :scope.bad code { background: rgb(255 255 255 / 0.2); }
-.title, :scope:is(.good, .warn) .title { color: var(--swiss-ink); font-weight: 900; }
+.title, :scope:is(.good, .warn) .title { color: var(--fg); font-weight: 900; }
