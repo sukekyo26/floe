@@ -150,7 +150,7 @@ type MadePart struct {
 
 // NewPart makes the part name of one's own as a copy of the part from, floe's or one's own, with a
 // copy of the file of from of each theme that has one, and tells of what it made. The box of the
-// copy names it; what else its part.html names is kept. Nothing is written over: with a file of a parts
+// copy names it; what else its part.html names is kept. Nothing is written over: with a file of a
 // theme for name there already, nothing is made, nor is a copy that reading the parts would leave out,
 // which is read in its place before it is put there.
 // LIMIT: a symlink in a part of one's own is not copied (os.CopyFS refuses it), nor is a data-floe-part

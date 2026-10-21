@@ -93,7 +93,7 @@ func TestPartsInOwnTemplate(t *testing.T) {
 	}
 	head, _, _ := strings.Cut(page, "</head>")
 	// floe's first <style> names the layers in the order that decides which wins, the palette under
-	// floe's base, the template's under the looks taken without a box and the parts' and the parts
+	// floe's base, the template's under the looks taken without a box and the parts' and the
 	// theme's. Each palette, part's style, the theme's file and the template's CSS is a <style> of
 	// its own after it: default's palette (soft has none), the cell, the note, the panel the table takes
 	// the look of, the table, soft's base.css, the template's page.css.

@@ -353,6 +353,22 @@ func TestCheckOwnParts(t *testing.T) {
 			t.Errorf("CheckOwnParts(%s, %s) = %v", apart, themes, mistakes)
 		}
 	}
+	// A directory of themes that cannot be reached is told, with no part of one's own too.
+	if os.Getuid() != 0 {
+		locked := t.TempDir()
+		if err := os.Chmod(locked, 0); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if err := os.Chmod(locked, 0o700); err != nil {
+				t.Error(err)
+			}
+		})
+		if _, mistakes := tmpl.CheckOwnParts("", filepath.Join(locked, "themes")); len(mistakes) != 1 ||
+			!strings.Contains(mistakes[0].Error(), "the directory of your own themes") {
+			t.Errorf("CheckOwnParts with the themes in a directory that cannot be read = %v", mistakes)
+		}
+	}
 	if _, err := tmpl.NewLibrary("", apart, filepath.Join(apart, "mine"), "").NewPart("mine", "steps"); err == nil ||
 		!strings.Contains(err.Error(), "set FLOE_PARTS_DIR and FLOE_THEMES_DIR apart") {
 		t.Errorf("NewPart with the themes in the parts = %v", err)

@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"cmp"
+	"errors"
 	"io/fs"
 	"maps"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -34,30 +36,48 @@ func partsIn(own ownDirs) (*partSet, error) {
 	return readParts(own, entries, staged{name: "", dir: ""})
 }
 
-// apart refuses own when one of its directories is the other or is in it, as written or through a
-// symlink: a part would be read as a theme there, or a theme as a part.
+// apart refuses own when one of its directories is the other or is in it: a part would be read as a theme
+// there, or a theme as a part.
 func (own ownDirs) apart() error {
-	if own.parts == "" || own.themes == "" {
-		return nil
-	}
-	// A directory not there yet resolves through the nearest one above it that is.
-	resolve := func(dir string) string {
-		rest := ""
-		for at := filepath.Clean(dir); ; at = filepath.Dir(at) {
-			if resolved, err := filepath.EvalSymlinks(at); err == nil || at == filepath.Dir(at) {
-				return filepath.Join(cmp.Or(resolved, at), rest)
-			}
-			rest = filepath.Join(filepath.Base(at), rest)
-		}
-	}
-	for _, pair := range [][2]string{
-		{filepath.Clean(own.parts), filepath.Clean(own.themes)}, {resolve(own.parts), resolve(own.themes)},
-	} {
-		if within(pair[0], pair[1]) || within(pair[1], pair[0]) {
-			return usererr.New("tmpl_own_dirs_overlap", own.parts, own.themes)
-		}
+	if own.parts != "" && own.themes != "" && (inside(own.parts, own.themes) || inside(own.themes, own.parts)) {
+		return usererr.New("tmpl_own_dirs_overlap", own.parts, own.themes)
 	}
 	return nil
+}
+
+// inside reports whether the directory a is b or is in it: as written once cleaned, through a symlink, or,
+// where b is there, by a name of another case on a file system that ignores it (macOS), as os.SameFile
+// tells. A directory not there yet resolves through the nearest one above it that is.
+// LIMIT: a symlink that leads nowhere is not followed: one that comes to overlap the other directory is
+// refused once what it leads to is there. Follow it if that comes to matter.
+func inside(a, b string) bool {
+	if within(filepath.Clean(a), filepath.Clean(b)) || within(resolve(a), resolve(b)) {
+		return true
+	}
+	at, err := os.Stat(b)
+	if err != nil {
+		return false
+	}
+	for dir := resolve(a); ; dir = filepath.Dir(dir) {
+		if fi, err := os.Stat(dir); err == nil && os.SameFile(fi, at) {
+			return true
+		}
+		if dir == filepath.Dir(dir) {
+			return false
+		}
+	}
+}
+
+// resolve returns the real path of dir, symlinks followed, one not there yet through the nearest directory
+// above it that is.
+func resolve(dir string) string {
+	rest := ""
+	for at := filepath.Clean(dir); ; at = filepath.Dir(at) {
+		if resolved, err := filepath.EvalSymlinks(at); err == nil || at == filepath.Dir(at) {
+			return filepath.Join(cmp.Or(resolved, at), rest)
+		}
+		rest = filepath.Join(filepath.Base(at), rest)
+	}
 }
 
 // within reports whether the directory a is b or is under it, both cleaned.
@@ -71,9 +91,9 @@ func holdsOwn(entries []os.DirEntry) bool {
 }
 
 // themesThere reports whether something of one's own is at dir, where the themes of one's own go: a theme,
-// or what stands in the way of the directory, which readOwnThemes tells of.
+// or what stands in the way of the directory or keeps it from being read, which readOwnThemes tells of.
 func themesThere(dir string) bool {
-	if _, err := os.Lstat(dir); dir == "" || err != nil {
+	if _, err := os.Lstat(dir); dir == "" || errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
 		return false
 	}
 	entries, err := os.ReadDir(dir)
