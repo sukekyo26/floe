@@ -1,8 +1,8 @@
 /* Black on cream, flat primaries, its sections ruled thick */
 :root {
   --bg: #f5f0e6; --surface: #fff; --fg: #0a0a0a; --muted: #3d3d3d; --line: #0a0a0a;
-  --accent: #2f6bff; --accent-soft: #dbe6ff;
-  --good: #0f8a4a; --good-soft: #d4f5e2; --warn: #b35c00; --warn-soft: #ffe9c7; --bad: #d61f1f; --bad-soft: #ffdede;
+  --accent: #285cdb; --accent-soft: #dbe6ff;
+  --good: #0d7941; --good-soft: #d4f5e2; --warn: #a35400; --warn-soft: #ffe9c7; --bad: #c71d1d; --bad-soft: #ffdede;
   --code-bg: #0a0a0a; --code-fg: #f2f2f2; --code-prompt: #ffde21;
   --rule: 3px solid var(--fg);
 }

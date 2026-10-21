@@ -1,10 +1,9 @@
 /* Pen on ruled paper in a rounded face; a blackboard in dark mode */
 :root {
-  --bg: #fffcf2; --surface: #fffefa; --fg: #2e2c27; --muted: #6b665b; --line: #e2dccb;
+  --bg: #f6f1e1; --surface: #fffcf2; --fg: #2e2c27; --muted: #6b665b; --line: #e2dccb;
   --accent: #2f5fa8; --accent-soft: #dfe8f6;
-  --good: #2e7d32; --good-soft: #def0df; --warn: #b26a00; --warn-soft: #fbebd0; --bad: #c62828; --bad-soft: #fbe0e0;
-  --font: "Hiragino Maru Gothic ProN", "Zen Maru Gothic", "BIZ UDPGothic", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
-  --display: var(--font);
+  --good: #2c7730; --good-soft: #def0df; --warn: #995b00; --warn-soft: #fbebd0; --bad: #c22727; --bad-soft: #fbe0e0;
+  --font: "Hiragino Maru Gothic ProN", "Zen Maru Gothic", "BIZ UDPGothic", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
   --code-bg: #2e2c27; --code-fg: #f4f0e4; --code-prompt: #f6e27a;
   /* The rules in the pen, so that they turn with it on the blackboard */
   --page-bg: repeating-linear-gradient(transparent 0 29px, color-mix(in srgb, var(--accent) 14%, transparent) 29px 30px), var(--bg);

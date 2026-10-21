@@ -1,15 +1,9 @@
 /* Sumi and vermilion printed on washi, in a Mincho face: tables closed by double rules, states and notes as
    seals, cards marked with a seal of their number in kanji, and quotes ruled in vermilion */
 :root {
-  --washi-font: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", "Noto Serif CJK JP", serif;
-  --washi-paper: #f7f1e3; --washi-sumi: #1d1b18; --washi-hair: rgb(29 27 24 / 0.18); --washi-nezumi: #5f594f;
-  --washi-shu: #c13b23; --washi-ai: #264c78; --washi-matcha: #4f6f2e; --washi-kincha: #94640f;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --washi-paper: #26221d; --washi-sumi: #ece5d6; --washi-hair: rgb(236 229 214 / 0.16); --washi-nezumi: #b8ae9c;
-    --washi-shu: #e8775c; --washi-ai: #8fb3dc; --washi-matcha: #a9c98a; --washi-kincha: #e1b25a;
-  }
+  --washi-font: var(--font); --washi-paper: var(--surface); --washi-sumi: var(--fg);
+  --washi-hair: color-mix(in srgb, var(--fg) 18%, transparent); --washi-nezumi: var(--muted);
+  --washi-shu: var(--bad); --washi-ai: var(--accent); --washi-matcha: var(--good); --washi-kincha: var(--warn);
 }
 blockquote {
   font-family: var(--washi-font); --display: var(--washi-font); background: var(--washi-paper); color: var(--washi-sumi); border-radius: 0; box-shadow: none;

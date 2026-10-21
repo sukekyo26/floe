@@ -1,10 +1,9 @@
 /* Red and black in print, in a grotesque face, its sections ruled heavy */
 :root {
   --bg: #f7f7f5; --surface: #fff; --fg: #111; --muted: #555; --line: #d0d0d0;
-  --accent: #e3000f; --accent-soft: #fde0e2;
-  --good: #2b7a3d; --good-soft: #e0efe3; --warn: #a35c00; --warn-soft: #f7e9d4; --bad: #9e0008; --bad-soft: #fbe0e2;
+  --accent: #e3000f; --accent-soft: #fff4f5;
+  --good: #2a763b; --good-soft: #e0efe3; --warn: #9c5800; --warn-soft: #f7e9d4; --bad: #9e0008; --bad-soft: #fbe0e2;
   --font: "Helvetica Neue", Helvetica, Arial, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
-  --display: var(--font);
   --code-bg: #111; --code-fg: #f2f2f2; --code-prompt: #ff3b3b;
   --rule: 4px solid var(--fg);
 }
