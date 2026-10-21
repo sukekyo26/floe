@@ -32,7 +32,7 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// templateFiles holds a directory per built-in template: page.html, schema.json, example.yaml and themes/.
+// templateFiles holds a directory per built-in template: page.html, schema.json, example.yaml and page.css.
 //
 //go:embed templates
 var templateFiles embed.FS
@@ -95,7 +95,7 @@ var shared = []string{"lang", "parts-shape", "template", "theme", "title"}
 // yamlpos.Problems.
 //
 // A theme of themes, when not "", is drawn with instead of the one the data names: the data's theme:
-// or parts-theme: is then not used, and a theme that does not exist is refused as a *usererr.Error, as
+// or parts-shape: is then not used, and a theme that does not exist is refused as a *usererr.Error, as
 // is a template that needs another floe. A relative file is under cwd.
 func (l *Library) Read(file string, src []byte, themes Themes, cwd string) (*Data, error) {
 	d, _, err := l.ReadSources(file, src, themes, cwd)

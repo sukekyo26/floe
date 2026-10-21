@@ -85,7 +85,7 @@ func CheckOwnParts(partsDir string) (warnings []*usererr.Error, mistakes []error
 }
 
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values,
-// page.html and the default theme.
+// page.html and page.css.
 func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	needed := []string{"page.html", "schema.json", "example.yaml"}
 	for _, name := range needed {
@@ -184,7 +184,7 @@ func (t *Template) checkCSS() ([]*usererr.Error, []error) {
 		return nil, []error{err}
 	}
 	c := newModeColours()
-	c.readScope(page, "page.css")
+	c.readScope(page)
 	if names := c.lightOnly(modes); names != nil {
 		return []*usererr.Error{usererr.New("tmpl_scope_dark", t.file("page.css"), andList(names))}, nil
 	}

@@ -160,7 +160,7 @@ func (p *paletteCheck) read(r *cssRule, mode modeRule) error {
 			return err
 		}
 		for _, d := range decls {
-			p.colours.add(d, mode == modeDark, p.file)
+			p.colours.add(d, mode == modeDark)
 		}
 		return nil
 	case modeLateLight:
@@ -252,37 +252,36 @@ func modesOfRules(rules []cssRule) []modeRule {
 }
 
 // modeColours are the variables (and color-scheme) CSS sets for the modes: for light mode, with their
-// values and the file of each, and for dark mode.
+// values, and for dark mode.
 type modeColours struct {
 	light map[string]string
 	dark  map[string]bool
-	from  map[string]string
 }
 
 func newModeColours() *modeColours {
-	return &modeColours{light: map[string]string{}, dark: map[string]bool{}, from: map[string]string{}}
+	return &modeColours{light: map[string]string{}, dark: map[string]bool{}}
 }
 
-// add adds d, a declaration set in file, for dark mode or for light, if it sets a variable or
+// add adds d, a declaration, for dark mode or for light, if it sets a variable or
 // color-scheme. One for light mode, written later than the dark one, wins in dark mode too, which it
 // leaves unset.
-func (c *modeColours) add(d cssDeclaration, inDark bool, file string) {
+func (c *modeColours) add(d cssDeclaration, inDark bool) {
 	switch {
 	case !strings.HasPrefix(d.name, "--") && d.name != "color-scheme":
 	case inDark:
 		c.dark[d.name] = true
 	default:
-		c.light[d.name], c.from[d.name] = d.value, file
+		c.light[d.name] = d.value
 		delete(c.dark, d.name)
 	}
 }
 
-// readScope adds what a template's CSS, s of the file named file, sets on :scope, in the order it is
+// readScope adds what a template's CSS, s, sets on :scope, in the order it is
 // written: in a block of :scope, or of an at-rule in it (:scope { @media … { … } }), under at-rules or
 // none (@layer, @supports), for dark mode where one of them is a dark one, as darkCondition tells.
 // LIMIT: :scope alone as a selector, not in a list (:scope, body). Read the selectors if a template comes
 // to set colours so.
-func (c *modeColours) readScope(s *cssSheet, file string) {
+func (c *modeColours) readScope(s *cssSheet) {
 	type modeDecl struct {
 		d    cssDeclaration
 		dark bool
@@ -299,7 +298,7 @@ func (c *modeColours) readScope(s *cssSheet, file string) {
 	}
 	slices.SortFunc(decls, func(a, b modeDecl) int { return a.d.at - b.d.at })
 	for _, m := range decls {
-		c.add(m.d, m.dark, file)
+		c.add(m.d, m.dark)
 	}
 }
 
