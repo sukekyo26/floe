@@ -153,7 +153,7 @@ func TestNewPart(t *testing.T) {
 	memo := memo(t, `"risks": {"$ref": "floe:///parts/terminal.json"}, "aside": {"$ref": "floe:///parts/code.json"}`)
 	pages := map[string]string{}
 	for _, theme := range themes {
-		src := "template: memo\nlang: en\nparts-theme: " + theme + "\nrisks: { steps: [{ run: ls }] }\naside: { text: x }\n"
+		src := "template: memo\nlang: en\nparts-shape: " + theme + "\nrisks: { steps: [{ run: ls }] }\naside: { text: x }\n"
 		if pages[theme], err = draw(tmpl.NewLibrary(memo, "", ""), src); err != nil {
 			t.Fatal(err)
 		}
@@ -162,7 +162,7 @@ func TestNewPart(t *testing.T) {
 		t.Fatalf("a copy in place of floe's = %+v, %v", made, err)
 	}
 	for _, theme := range themes {
-		src := "template: memo\nlang: en\nparts-theme: " + theme + "\nrisks: { steps: [{ run: ls }] }\naside: { text: x }\n"
+		src := "template: memo\nlang: en\nparts-shape: " + theme + "\nrisks: { steps: [{ run: ls }] }\naside: { text: x }\n"
 		if page, err := draw(tmpl.NewLibrary(memo, parts, ""), src); err != nil || page != pages[theme] {
 			t.Errorf("%s: the page drawn with the copy of code = %v:\n%s\nnot as with floe's:\n%s", theme, err, page, pages[theme])
 		}

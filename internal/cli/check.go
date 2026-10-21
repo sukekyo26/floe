@@ -53,7 +53,7 @@ func drawFile(a *app, file string) ([]byte, []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	d, err := a.templates().Read(file, src, tmpl.Themes{Template: "", Parts: ""}, a.env.Dir)
+	d, err := a.templates().Read(file, src, tmpl.Themes{Theme: "", Shape: ""}, a.env.Dir)
 	var all yamlpos.Problems
 	switch {
 	case errors.As(err, &all):

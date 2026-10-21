@@ -112,7 +112,7 @@ type Link struct {
 	Title       *string `json:"title,omitempty"`
 	Description *string `json:"description,omitempty"`
 	Theme       *string `json:"theme,omitempty"`
-	PartsTheme  *string `json:"partsTheme,omitempty"`
+	PartsShape  *string `json:"partsShape,omitempty"`
 	Force       bool    `json:"force,omitempty"`
 }
 
@@ -134,7 +134,7 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	opts := store.Options{
-		Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, PartsTheme: in.PartsTheme,
+		Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, PartsShape: in.PartsShape,
 		Force: in.Force,
 	}
 	entry, err := s.cfg.Store.PrepareLink(r.Context(), in.Path, opts, filepath.Dir(in.Path))
@@ -172,7 +172,7 @@ type Upload struct {
 	Title       *string           `json:"title"`
 	Description *string           `json:"description"`
 	Theme       *string           `json:"theme"`
-	PartsTheme  *string           `json:"partsTheme"`
+	PartsShape  *string           `json:"partsShape"`
 	Force       bool              `json:"force"`
 }
 
@@ -236,7 +236,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	}
 	up := store.Upload{File: in.File, Dir: in.Dir, Source: in.Source, Images: imagesFS(in.Images), Project: in.Project}
 	opts := store.Options{
-		Slug: &slug, Title: in.Title, Description: in.Description, Theme: in.Theme, PartsTheme: in.PartsTheme,
+		Slug: &slug, Title: in.Title, Description: in.Description, Theme: in.Theme, PartsShape: in.PartsShape,
 		Force: in.Force,
 	}
 	entry, err := s.cfg.Store.PrepareData(up, opts)

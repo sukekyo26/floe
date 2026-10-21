@@ -263,11 +263,6 @@ func newModeColours() *modeColours {
 	return &modeColours{light: map[string]string{}, dark: map[string]bool{}, from: map[string]string{}}
 }
 
-// clone returns a copy of c, to read more CSS into.
-func (c *modeColours) clone() *modeColours {
-	return &modeColours{light: maps.Clone(c.light), dark: maps.Clone(c.dark), from: maps.Clone(c.from)}
-}
-
 // add adds d, a declaration set in file, for dark mode or for light, if it sets a variable or
 // color-scheme. One for light mode, written later than the dark one, wins in dark mode too, which it
 // leaves unset.

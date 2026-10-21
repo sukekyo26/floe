@@ -242,32 +242,6 @@ func (t *Template) readOptional(name string) (b []byte, found bool, err error) {
 	return b, found, nil
 }
 
-// themes are the themes of t, by name.
-func (t *Template) themes() ([]string, error) {
-	var themes []string
-	err := t.files(func(files fs.FS) error {
-		var err error
-		themes, err = themesIn(files, "themes")
-		return err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("read the themes of %s: %w", t.Name, err)
-	}
-	return themes, nil
-}
-
-// themesIn returns the themes in the directory dir of files, its CSS files, by name.
-func themesIn(files fs.FS, dir string) ([]string, error) {
-	entries, err := fs.ReadDir(files, dir)
-	var themes []string
-	for _, e := range entries {
-		if name, ok := strings.CutSuffix(e.Name(), ".css"); ok && !e.IsDir() {
-			themes = append(themes, name)
-		}
-	}
-	return themes, err //nolint:wrapcheck // wrapped by the callers
-}
-
 // files calls read with the files of t, as a file system rooted at t.
 func (t *Template) files(read func(fs.FS) error) error {
 	if t.Dir == "" {

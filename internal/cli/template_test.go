@@ -19,7 +19,7 @@ func TestTemplateCommands(t *testing.T) {
 
 	e := newEnv(t)
 	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
-	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.HasPrefix(r.stdout, "report\tbuilt-in\tdefault\t\tA page of sections") {
+	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.HasPrefix(r.stdout, "report\tbuilt-in\t\tA page of sections") {
 		t.Fatalf("template list = %+v", r)
 	}
 
@@ -67,7 +67,7 @@ func TestTemplateCommands(t *testing.T) {
 		t.Errorf("template check of two templates with a part that cannot be used = %+v", r)
 	}
 	delete(e.vars, "FLOE_PARTS_DIR")
-	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.Contains(r.stdout, "\nspec\t"+spec+"\tdefault\t"+release[0]+"."+release[1]+".0\tA page of sections") {
+	if r := e.run(t, "", "template", "list"); r.code != 0 || !strings.Contains(r.stdout, "\nspec\t"+spec+"\t"+release[0]+"."+release[1]+".0\tA page of sections") {
 		t.Errorf("template list with a copy = %+v", r)
 	}
 	if fi, serr := os.Stat(spec); serr != nil || fi.Mode().Perm() != 0o755 {
@@ -167,7 +167,7 @@ func TestTemplateShow(t *testing.T) {
 	r := e.run(t, "", "template", "show", "report")
 	for _, want := range []string{
 		"report: A page of sections",
-		"\nwhere: built-in\nthemes: default\nparts themes: blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi\n\nitems:\n",
+		"\nwhere: built-in\nthemes: blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi\n\nitems:\n",
 		"\n  eyebrow: text — A short line above the title",
 		"\n  lang: text, required — The page's language, a BCP 47 tag such as en, ja or pt-BR\n",
 		"\n  template: text, one of report, required — The template that draws the page\n",
@@ -185,8 +185,7 @@ func TestTemplateShow(t *testing.T) {
 	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
 	e.write(t, "templates/memo/schema.json", `{"properties": {"tags": {"type": ["array", "null"], "items": {"type": "string"},
   "description": "Two\nlines"}, "gone": null}}`)
-	e.write(t, "templates/memo/themes/default.css", "")
-	if r := e.run(t, "", "template", "show", "memo"); !strings.Contains(r.stdout, "\n  gone\n  lang: text, required — The page's language, a BCP 47 tag such as en, ja or pt-BR\n  parts-theme: text — The theme to draw floe's parts with, one of the parts themes above (default: default)\n  tags: a list of text or nothing — Two lines\n") {
+	if r := e.run(t, "", "template", "show", "memo"); !strings.Contains(r.stdout, "\n  gone\n  lang: text, required — The page's language, a BCP 47 tag such as en, ja or pt-BR\n  parts-shape: text — The theme floe's parts take their shape from, one of the themes above (default: the theme)\n  tags: a list of text or nothing — Two lines\n") {
 		t.Errorf("template show of a list that may be null:\n%s%s", r.stdout, r.stderr)
 	}
 }

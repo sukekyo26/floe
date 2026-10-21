@@ -16,11 +16,10 @@ type Description struct {
 	// it takes (its major, or its minor under major 0); "" without template.yaml.
 	Floe   string
 	Series string
-	Themes []string
-	// PartsThemes are the themes of floe's parts, which a data file of any template may pick.
-	PartsThemes []string
-	Items       []Item // the items a data file may hold
-	Example     []byte // example.yaml; nil without one
+	// Themes are floe's, which a data file of any template may pick, for the page and the parts' shape.
+	Themes  []string
+	Items   []Item // the items a data file may hold
+	Example []byte // example.yaml; nil without one
 }
 
 // Item is an item a template's schema declares.
@@ -49,17 +48,12 @@ func (l *Library) Describe(name string) (*Description, error) {
 	if err != nil {
 		return nil, err
 	}
-	themes, err := t.themes()
-	if err != nil {
-		return nil, err
-	}
 	set, err := t.parts()
 	if err != nil {
 		return nil, err
 	}
-	partsThemes := set.themeNames()
 	d := &Description{
-		Name: name, Path: t.Path, About: s.description(), Floe: "", Series: "", Themes: themes, PartsThemes: partsThemes,
+		Name: name, Path: t.Path, About: s.description(), Floe: "", Series: "", Themes: set.themeNames(),
 		Items: s.items(), Example: nil,
 	}
 	needs, err := t.needs()

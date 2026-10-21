@@ -12,7 +12,7 @@ import (
 )
 
 // memo writes a template of one's own, memo, whose items are drawn by floe's parts, with schema as its
-// items and a theme that defines --fg alone.
+// items and a page.css that defines --fg alone.
 func memo(t *testing.T, items string) string {
 	t.Helper()
 
@@ -21,8 +21,8 @@ func memo(t *testing.T, items string) string {
 		"schema.json": `{"type": "object", "properties": {` + items + `}, "additionalProperties": false}`,
 		"page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
 			`<body>{{.Data.risks}}{{with .Data.aside}}{{.}}{{end}}</body></html>`,
-		"themes/default.css": ":scope { --fg: #000; }\n",
-		"example.yaml":       "template: memo\nlang: en\nrisks: { columns: [{title: Risk}], rows: [[Links]] }\n",
+		"page.css":     ":scope { --fg: #000; }\n",
+		"example.yaml": "template: memo\nlang: en\nrisks: { columns: [{title: Risk}], rows: [[Links]] }\n",
 	}
 	for name, body := range files {
 		path := filepath.Join(dir, "memo", name)
@@ -85,7 +85,7 @@ func TestPartsInOwnTemplate(t *testing.T) {
 	t.Parallel()
 
 	l := tmpl.NewLibrary(memo(t, memoItems), "", "")
-	page, err := draw(l, "template: memo\nlang: en\nparts-theme: soft\n"+
+	page, err := draw(l, "template: memo\nlang: en\nparts-shape: soft\n"+
 		"risks: { columns: [{title: Risk}, {title: Pages, num: true}], rows: [[Links, '120'], [Search, { pill: open, tone: bad }]] }\n"+
 		"aside: { text: Keep the old host, tone: warn }\n")
 	if err != nil {
@@ -96,7 +96,7 @@ func TestPartsInOwnTemplate(t *testing.T) {
 	// floe's base, the template's under the looks taken without a box and the parts' and the parts
 	// theme's. Each palette, part's style, the parts theme's file and the template's CSS is a <style> of
 	// its own after it: default's palette (soft has none), the cell, the note, the panel the table takes
-	// the look of, the table, soft's base.css, the template's theme.
+	// the look of, the table, soft's base.css, the template's page.css.
 	at := func(s string) int { return strings.Index(head, s) }
 	order := []int{
 		at("<style>\n@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n"),
@@ -106,7 +106,7 @@ func TestPartsInOwnTemplate(t *testing.T) {
 		at(":scope { --fg: #000; }"),
 	}
 	if !slices.IsSorted(order) || order[0] < 0 || strings.Count(page, "<style") != 8 {
-		t.Errorf("the layers, the template's theme, the parts' style and the parts theme's are at %v:\n%s", order, head)
+		t.Errorf("the layers, the template's page.css, the parts' style and the parts theme's are at %v:\n%s", order, head)
 	}
 	for _, want := range []string{
 		`<div data-floe-part="table"><table>`, `<td class="num">120</td>`, `<span class="bad" data-floe-part="cell">open</span>`,
@@ -176,19 +176,16 @@ func TestCheckParts(t *testing.T) {
 	if mistakes != nil {
 		t.Fatalf("Check = %v", mistakes)
 	}
-	// A theme of the template named as the parts theme is told where it goes, as --parts-theme is.
+	// A theme there is none of for the parts' shape is told at parts-shape:, as --parts-shape is.
 	own := memo(t, memoItems)
-	if err := os.WriteFile(filepath.Join(own, "memo", "themes", "print.css"), nil, 0o600); err != nil {
-		t.Fatal(err)
+	unknown := `there is no theme "print" for the parts to take their shape from; use blueprint, brutal, default`
+	if _, err := draw(tmpl.NewLibrary(own, "", ""), "template: memo\nlang: en\nparts-shape: print\n"); err == nil ||
+		!strings.Contains(err.Error(), "data.yaml:3:14: "+unknown) {
+		t.Errorf("Read of parts-shape: print = %v", err)
 	}
-	misplaced := `there is no parts theme "print", which is a theme of the template memo: write theme: print`
-	if _, err := draw(tmpl.NewLibrary(own, "", ""), "template: memo\nlang: en\nparts-theme: print\n"); err == nil ||
-		!strings.Contains(err.Error(), "data.yaml:3:14: "+misplaced) {
-		t.Errorf("Read of parts-theme: print = %v", err)
-	}
-	if _, err := tmpl.NewLibrary(own, "", "").Read("d.yaml", []byte("template: memo\nlang: en\n"), tmpl.Themes{Parts: "print"}, ""); err == nil ||
-		!strings.HasPrefix(err.Error(), misplaced) {
-		t.Errorf("Read with the parts theme print = %v", err)
+	if _, err := tmpl.NewLibrary(own, "", "").Read("d.yaml", []byte("template: memo\nlang: en\n"), tmpl.Themes{Shape: "print"}, ""); err == nil ||
+		!strings.HasPrefix(err.Error(), unknown) {
+		t.Errorf("Read with the parts' shape of print = %v", err)
 	}
 
 	// themes/ holds the parts themes, and is no part.
@@ -274,13 +271,13 @@ func TestCheckParts(t *testing.T) {
 func TestPartStylesByClass(t *testing.T) {
 	t.Parallel()
 
-	page := render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - text: |\n          | a | b |\n          | - | - |\n          | 1 | 2 |\n")
+	page := render(t, "template: report\nparts-shape: soft\nlang: en\nsections:\n  - parts:\n      - text: |\n          | a | b |\n          | - | - |\n          | 1 | 2 |\n")
 	if !strings.Contains(page, `<div data-floe-part="table"><table>`) || strings.Count(page, partStyle(t, "table")) != 1 ||
 		strings.Count(page, `@scope ([data-floe-part="table"]`+partStyle(t, "panel")) != 1 {
 		t.Errorf("a page of a Markdown table, in the table's look and the panel's it takes:\n%s", page)
 	}
 	// HTML takes a look without being its box, the looks that takes with it, a layer under the parts'.
-	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - html: <div data-floe-look=\"table\">x</div>\n")
+	page = render(t, "template: report\nparts-shape: soft\nlang: en\nsections:\n  - parts:\n      - html: <div data-floe-look=\"table\">x</div>\n")
 	for _, look := range []string{"table", "panel"} {
 		if want := "<style>\n@layer floe.looks {\n" + `@scope ([data-floe-look~="table"]` + partStyle(t, look); strings.Count(page, want) != 1 {
 			t.Errorf("a page of HTML in the table's look lacks the look %s once:\n%s", look, page)
@@ -315,19 +312,19 @@ func TestPartStylesByClass(t *testing.T) {
 			t.Errorf("drawing HTML of %s = %v, want %s", html, err, want)
 		}
 	}
-	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"good\" data-floe-part=\"cell\">ok</span>\n")
+	page = render(t, "template: report\nparts-shape: soft\nlang: en\nsections:\n  - parts:\n      - html: <span class=\"good\" data-floe-part=\"cell\">ok</span>\n")
 	if strings.Count(page, partStyle(t, "cell")) != 1 || strings.Contains(page, partStyle(t, "note")) {
 		t.Errorf("a page of a pill in HTML:\n%s", page)
 	}
-	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - html: <p class=\"floe-note-own\">x</p>\n")
+	page = render(t, "template: report\nparts-shape: soft\nlang: en\nsections:\n  - parts:\n      - html: <p class=\"floe-note-own\">x</p>\n")
 	if strings.Contains(page, partStyle(t, "note")) {
 		t.Errorf("a class a part's starts gets the part's style:\n%s", page)
 	}
-	page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - text: the `floe-note` class\n")
+	page = render(t, "template: report\nparts-shape: soft\nlang: en\nsections:\n  - parts:\n      - text: the `floe-note` class\n")
 	if strings.Contains(page, partStyle(t, "note")) {
 		t.Errorf("a class named in prose gets the part's style:\n%s", page)
 	}
-	if page = render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n      - text: plain\n"); strings.Contains(page, "data-floe-part~=") {
+	if page = render(t, "template: report\nparts-shape: soft\nlang: en\nsections:\n  - parts:\n      - text: plain\n"); strings.Contains(page, "data-floe-part~=") {
 		t.Errorf("a page of no part holds a part's style:\n%s", page)
 	}
 	// The parts theme styles Markdown's quotes too, so a page of no part gets it all the same.
@@ -452,7 +449,7 @@ func TestReportRefusesCodeInText(t *testing.T) {
 func TestPartsOfNumbersAndChanges(t *testing.T) {
 	t.Parallel()
 
-	page := render(t, "template: report\nparts-theme: soft\nlang: en\nsections:\n  - parts:\n"+
+	page := render(t, "template: report\nparts-shape: soft\nlang: en\nsections:\n  - parts:\n"+
 		"      - stats: [{ label: Pages, value: '18', unit: MB, note: '+5', tone: good }]\n"+
 		"      - progress: [{ label: Copy, done: 5, of: 8, tone: warn }]\n"+
 		"      - steps: [{ title: A, state: done }, { title: B, text: '**now**', state: doing }, { title: C }]\n"+
@@ -508,7 +505,7 @@ func TestPartsOfNumbersAndChanges(t *testing.T) {
 func TestPartsOfReviewsAndReferences(t *testing.T) {
 	t.Parallel()
 
-	src := "template: report\nparts-theme: soft\nlang: %s\nsections:\n  - parts:\n" +
+	src := "template: report\nparts-shape: soft\nlang: %s\nsections:\n  - parts:\n" +
 		"      - findings: [{ level: must, at: 'a.go:1', text: '`x` leaks', why: later, status: { pill: fixed, tone: good } }, { level: nit, text: y }]\n" +
 		"      - details: { title: Log, parts: [{ terminal: { steps: [{ run: make }] } }, { text: '**done**' }] }\n" +
 		"      - matrix: { columns: [linux, mac], rows: [{ what: serve, cells: [yes, { mark: part, note: some }] }] }\n" +

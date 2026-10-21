@@ -65,7 +65,7 @@ func TestPalette(t *testing.T) {
 		t.Errorf("floe's parts and themes are warned of: %v", set.strays)
 	}
 	// A built-in template leaves the palette to the theme: one it set would hold over every theme's.
-	for _, name := range []string{"templates/report/page.css", "templates/report/themes/default.css"} {
+	for _, name := range []string{"templates/report/page.css"} {
 		src, readErr := templateFiles.ReadFile(name)
 		if readErr != nil {
 			t.Fatal(readErr)
@@ -499,7 +499,7 @@ func TestPageStyleEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	css := "/* </Style><b>x</b> */ a { background: url(data:image/svg+xml,<svg><style>p{}</style></svg>); }"
-	style, err := set.pageStyle("<body></body>", nil, [][]byte{[]byte(css)}, "default")
+	style, err := set.pageStyle("<body></body>", nil, []byte(css), "default", "default")
 	if err != nil {
 		t.Fatal(err)
 	}

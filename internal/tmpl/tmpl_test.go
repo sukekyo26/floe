@@ -213,12 +213,11 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\nlead: .inf\nlang: en\n", "data.yaml:2:7: .inf is not a value a data file can hold"},
 		{"template: report\nsections:\n  - heading: .NaN\nlang: en\n", "data.yaml:3:14: .NaN is not a value a data file can hold"},
 		// The shared keys and the schema are reported together.
-		{"template: report\ntheme: print\nleed: x\nlang: en\n", "data.yaml:2:8: template report has no theme \"print\"; use default\ndata.yaml:3:1: leed is not an item"},
+		{"template: report\ntheme: print\nleed: x\nlang: en\n", "data.yaml:2:8: there is no theme \"print\"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi\ndata.yaml:3:1: leed is not an item"},
 		{"template: deck\nlang: en\n", `data.yaml:1:11: unknown template "deck"; use report`},
-		{"template: report\ntheme: print\nlang: en\n", `data.yaml:2:8: template report has no theme "print"; use default`},
-		{"template: report\ntheme: brutal\nlang: en\n", `data.yaml:2:8: template report has no theme "brutal", which is a parts theme: write parts-theme: brutal (or --parts-theme brutal), or a theme of the template: default`},
-		{"template: report\nparts-theme: print\nlang: en\n", `data.yaml:2:14: there is no parts theme "print"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`},
-		{"template: report\nparts-theme: [x]\nlang: en\n", "data.yaml:2:14: parts-theme must be text"},
+		{"template: report\ntheme: print\nlang: en\n", `data.yaml:2:8: there is no theme "print"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`},
+		{"template: report\nparts-shape: print\nlang: en\n", `data.yaml:2:14: there is no theme "print" for the parts to take their shape from; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`},
+		{"template: report\nparts-shape: [x]\nlang: en\n", "data.yaml:2:14: parts-shape must be text"},
 		{"template: report\ntitle: [a]\nlang: en\n", "data.yaml:2:8: title must be text"},
 		{"template: report\ntitle: 'a\nlang: en\n", "data.yaml:2:8: this is not valid YAML: "},
 		// floe puts a page's CSS together: HTML of the data holds none, wherever it is, a comment's text too,
@@ -291,7 +290,7 @@ lang: en
 		t.Fatalf("Read = %v, want problems", err)
 	}
 	want := []string{
-		"bad.yaml:3:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, parts-theme, sections, template, theme, title",
+		"bad.yaml:3:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, parts-shape, sections, template, theme, title",
 		"bad.yaml:5:14: sections[0].heading: write text, not a number",
 		"bad.yaml:7:9: sections[0].parts[0].txt is not an item of the template report (a typo?); use bars, cards, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, html, keys, links, matrix, note, options, progress, risks, script, stats, steps, table, tabs, terminal, text, timeline, tree",
 		"bad.yaml:8:9: sections[0].parts[1]: the number of keys must be at most 1",
@@ -316,7 +315,7 @@ func TestBuiltins(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, name := range names {
-		for _, f := range []string{"page.html", "schema.json", "example.yaml", "themes/default.css"} {
+		for _, f := range []string{"page.html", "schema.json", "example.yaml"} {
 			if _, err := fs.Stat(os.DirFS("templates/"+name), f); err != nil {
 				t.Errorf("template %s: %v", name, err)
 			}

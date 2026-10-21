@@ -63,15 +63,15 @@ func (a *app) warn(key string, args ...any) {
 func (a *app) publishCmd() *cobra.Command {
 	var opts store.Options
 	var link bool
-	var slug, title, description, theme, partsTheme string
+	var slug, title, description, theme, partsShape string
 	cmd := &cobra.Command{
 		Use:   "publish <data.yaml> | --link <file.html>",
 		Short: "Store a page drawn from a data file (or --link an HTML file in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
 store it and print its URL. The same slug from the same project overwrites it, and a slug
 published from another project is refused unless --force. A page is in the language its
-data names (lang:), and in the themes its data names (theme: for the template's, parts-theme:
-for floe's parts, each else default) unless --theme or --parts-theme names another. A new
+data names (lang:), and in the theme its data names (theme:, else default), the parts in the
+shape of another where parts-shape: names one, unless --theme or --parts-shape names another. A new
 slug is also opened in the browser ($BROWSER, open, wslview, xdg-open).
 
 --link registers a file in place instead of storing a page. An HTML file is shown as it is:
@@ -103,7 +103,7 @@ refused unless --force.`,
 				to          **string
 			}{
 				{"theme", "cli_theme_empty", &theme, &opts.Theme},
-				{"parts-theme", "cli_parts_theme_empty", &partsTheme, &opts.PartsTheme},
+				{"parts-shape", "cli_parts_shape_empty", &partsShape, &opts.PartsShape},
 			} {
 				if !flags.Changed(f.name) {
 					continue
@@ -122,9 +122,10 @@ refused unless --force.`,
 	f.StringVar(&slug, "slug", "", "the URL name (default: from the file name)")
 	f.StringVar(&title, "title", "", "the title (default: the data file's title:, or a link's <title> or <h1>)")
 	f.StringVar(&description, "description", "", "a description shown in the list")
-	f.StringVar(&theme, "theme", "", "the template's theme to draw with (default: the data file's theme:, else default)")
-	f.StringVar(&partsTheme, "parts-theme", "",
-		"the theme to draw floe's parts with (default: the data file's parts-theme:, else default)")
+	f.StringVar(&theme, "theme", "",
+		"the theme to draw with: its palette and the parts' shape (default: the data file's theme:, else default)")
+	f.StringVar(&partsShape, "parts-shape", "",
+		"the theme floe's parts take their shape from (default: the data file's parts-shape:, else the theme)")
 	f.BoolVar(&opts.Force, "force", false, "replace a page of another project, or a link to another file")
 	return cmd
 }
@@ -165,7 +166,7 @@ func (a *app) publishLink(ctx context.Context, file string, opts store.Options) 
 	}
 	err = c.do(ctx, http.MethodPost, "/api/artifacts", server.Link{
 		Path: path, Slug: opts.Slug, Title: opts.Title, Description: opts.Description, Theme: opts.Theme,
-		PartsTheme: opts.PartsTheme, Force: opts.Force,
+		PartsShape: opts.PartsShape, Force: opts.Force,
 	}, &saved)
 	return saved, err
 }
@@ -193,7 +194,7 @@ func (a *app) publishData(ctx context.Context, file string, opts store.Options) 
 	}
 	up := server.Upload{
 		File: read.File, Dir: read.Dir, Source: read.Source, Images: nil, Project: read.Project, Title: opts.Title,
-		Description: opts.Description, Theme: opts.Theme, PartsTheme: opts.PartsTheme, Force: opts.Force,
+		Description: opts.Description, Theme: opts.Theme, PartsShape: opts.PartsShape, Force: opts.Force,
 	}
 	path := "/api/artifacts/" + slug
 	err = c.do(ctx, http.MethodPut, path, up, &saved)
