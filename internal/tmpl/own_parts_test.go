@@ -456,7 +456,7 @@ func TestOwnPartsThemes(t *testing.T) {
 	for want, n := range map[string]int{
 		`@scope ([data-floe-part="code"]) to (:scope [data-floe-part] > *) {` + "\n/* brutal's code of one's own */": 1,
 		string(note): 1,
-		":scope .lang { border-radius: 0; border: 2px solid var(--brutal-ink)": 0,
+		":scope .lang { border-radius: 0; border: 2px solid var(--fg)": 0,
 	} {
 		if strings.Count(page, want) != n {
 			t.Errorf("the page holds %s %d times, want %d:\n%s", want, strings.Count(page, want), n, page)

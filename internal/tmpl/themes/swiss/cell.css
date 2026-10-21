@@ -1,7 +1,7 @@
 :scope, :scope:is(.good, .warn, .bad) {
-  background: none; padding: 0; border-radius: 0; font-size: 0.9rem; font-weight: 800; color: var(--swiss-ink);
+  background: none; padding: 0; border-radius: 0; font-size: 0.9rem; font-weight: 800; color: var(--fg);
 }
-:scope::before { content: "●"; content: "●" / ""; margin-right: 0.35em; color: var(--swiss-red); }
-:scope.good::before { content: "✓"; content: "✓" / ""; color: var(--swiss-ink); }
+:scope::before { content: "●"; content: "●" / ""; margin-right: 0.35em; color: var(--accent); }
+:scope.good::before { content: "✓"; content: "✓" / ""; color: var(--fg); }
 :scope.warn::before { content: "▲"; content: "▲" / ""; }
-:scope.bad::before { content: "×"; content: "×" / ""; }
+:scope.bad::before { content: "×"; content: "×" / ""; color: var(--bad); }

@@ -1,6 +1,6 @@
 :scope { gap: 1.75rem; padding: 0.75rem 0.25rem 0.25rem; }
 /* The panel of a card, on plain paper */
-.card { position: relative; background: var(--nb-sheet); }
+.card { position: relative; background: var(--surface); }
 :scope.numbered > .card::before { content: none; }
 /* Plain cards and options are sticky notes, each held by a strip of tape and set a little askew */
 :scope.numbered > .card {

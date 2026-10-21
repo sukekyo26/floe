@@ -54,11 +54,15 @@ func TestPalette(t *testing.T) {
 			}
 		}
 	}
-	// default's palette is under every page, so nothing takes a value of its own for a variable of it. A diagram's style is the diagram package's, for pages of any kind.
+	// default's palette is under every page, so nothing takes a value of its own for a variable of it; a
+	// theme's of its own name may be left out with the file of the theme that sets it. A diagram's style is
+	// the diagram package's, for pages of any kind.
 	delete(taken, "the part diagram")
 	for who, css := range taken {
 		for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,`).FindAllStringSubmatch(css, -1) {
-			t.Errorf("%s takes %s with a value of its own, which default's palette gives", who, m[1])
+			if defined[m[1]] || !strings.HasPrefix(who, "the theme ") {
+				t.Errorf("%s takes %s with a value of its own, which default's palette gives", who, m[1])
+			}
 		}
 	}
 	if set.strays != nil {
