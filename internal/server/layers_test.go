@@ -78,7 +78,8 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 
 	// A table of one's own takes the place of floe's, and the panel's look by its part.yaml: floe's washi
 	// styles it and compare, drawn in the table's look, by the panel's file (its double rules), not by the
-	// table's, which would take the rules off.
+	// table's, which would take the rules off, on the surface of the palette, default's, as washi is the
+	// parts' shape alone.
 	e.write(t, "parts/table/schema.json", `{"type": "object", "properties": {"text": {"type": "string"}}}`)
 	e.write(t, "parts/table/part.html", `<div data-floe-part="table">{{.text}}</div>`)
 	e.write(t, "parts/table/part.css", "")
@@ -92,7 +93,7 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	got = b.eval(`['table', 'compare'].map((name) => {
 		const s = getComputedStyle(document.querySelector('[data-floe-part=' + name + ']'));
 		return s.backgroundColor + ' ' + s.borderTopStyle; }).join(' | ')`)
-	check(t, "own table", []string{got}, "rgb(247, 241, 227) double | rgb(247, 241, 227) double")
+	check(t, "own table", []string{got}, "rgb(255, 255, 255) double | rgb(255, 255, 255) double")
 
 	// A card takes the panel's look without being a part's box, a layer under the parts': the cards and
 	// default's file for them keep it a face of the surface on the panel of default, the nearer scope though.
