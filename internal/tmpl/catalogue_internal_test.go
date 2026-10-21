@@ -57,15 +57,20 @@ func TestCatalogueDrawsEveryPart(t *testing.T) {
 	if err = yaml.Unmarshal(src, &data); err != nil {
 		t.Fatal(err)
 	}
-	// The values written in each part's data, by the part's name: at any key, as a value may be written short
-	// (matrix's cells: [yes], for { mark: yes }).
-	written := map[string]map[string]bool{}
+	written := map[string]map[string]bool{} // path=value of each part's data, by the part's name
 	readOccurrences(data, set, written)
 	for name, p := range set.parts {
-		for key, values := range enumsOf(set.docs[partsURL+name+".json"], "") {
+		if p.shape == nil {
+			continue
+		}
+		enums := map[string][]string{}
+		enumsOf(p.shape, "", enums, true)
+		for path, values := range enums {
+			// One may be written short, for the object it is a key of (matrix's cells: [yes], for { mark: yes }).
+			parent := path[:max(0, strings.LastIndex(path, "."))]
 			for _, v := range values {
-				if p.pages != nil && !written[name][v] {
-					t.Errorf("%s draws %s with no %s: %s", catalogue, name, key, v)
+				if !written[name][path+"="+v] && !written[name][parent+"="+v] {
+					t.Errorf("%s draws %s with no %s: %s", catalogue, name, strings.TrimPrefix(path, "."), v)
 				}
 			}
 		}
@@ -76,7 +81,7 @@ func TestCatalogueDrawsEveryPart(t *testing.T) {
 			// A look draws nothing of its own, and a part of no style (script) no colour.
 		case drawn[name] == nil:
 			t.Errorf("%s draws no %s", catalogue, name)
-		case takesTone(set.docs[partsURL+name+".json"]):
+		case takesTone(p.shape, true):
 			for _, tone := range tones {
 				if !drawn[name].has(tone) {
 					t.Errorf("%s draws %s in no tone %q", catalogue, name, tone)
@@ -92,15 +97,14 @@ type drawnTones struct {
 	found, toned, plain map[string]bool
 }
 
-// read reads the box n and the elements it holds, the boxes of the parts it holds but not what they hold:
-// their tones are theirs, but for that of their box (a pill's, which draws a decision's status).
+// read reads the box n and the elements it holds but the parts it holds, whose tones are theirs.
 func (d *drawnTones) read(n *html.Node) {
 	elements := []*html.Node{n}
 	var hold func(*html.Node)
 	hold = func(p *html.Node) {
 		for c := p.FirstChild; c != nil; c = c.NextSibling {
-			elements = append(elements, c)
 			if nodeAttr(c, "data-floe-part") == "" {
+				elements = append(elements, c)
 				hold(c)
 			}
 		}
@@ -142,8 +146,8 @@ func (d *drawnTones) has(tone string) bool {
 	return false
 }
 
-// readOccurrences adds to written each value written in the data of each part in v, a data file read, by
-// the key it is written at: a part is an object of one key, its name, in a list of parts.
+// readOccurrences adds to written each value written in the data of each part in v, a data file read, as
+// valuesIn tells: a part is an object of one key, its name, in a list of parts.
 func readOccurrences(v any, set *partSet, written map[string]map[string]bool) {
 	switch v := v.(type) {
 	case map[string]any:
@@ -156,7 +160,7 @@ func readOccurrences(v any, set *partSet, written map[string]map[string]bool) {
 								if written[name] == nil {
 									written[name] = map[string]bool{}
 								}
-								maps.Copy(written[name], valuesIn(data))
+								maps.Copy(written[name], valuesIn(data, ""))
 							}
 						}
 					}
@@ -171,82 +175,61 @@ func readOccurrences(v any, set *partSet, written map[string]map[string]bool) {
 	}
 }
 
-// valuesIn returns each string written in v, the data of a part, but in the lists of the parts it holds.
-func valuesIn(v any) map[string]bool {
+// valuesIn returns each string written in v, the data of a part at path, as path=value, path the keys it
+// is written at from the part's (rows.cells.mark), but in the lists of the parts it holds.
+func valuesIn(v any, path string) map[string]bool {
 	found := map[string]bool{}
 	switch v := v.(type) {
 	case string:
-		found[v] = true
+		found[path+"="+v] = true
 	case map[string]any:
 		for k, w := range v {
 			if k != "parts" {
-				maps.Copy(found, valuesIn(w))
+				maps.Copy(found, valuesIn(w, path+"."+k))
 			}
 		}
 	case []any:
 		for _, w := range v {
-			maps.Copy(found, valuesIn(w))
+			maps.Copy(found, valuesIn(w, path))
 		}
 	}
 	return found
 }
 
-// enumsOf returns the values of each enum in doc, a part's schema, by the key it is at, key the one doc
-// is at; a $ref, to the tones or to another part, is that schema's.
-func enumsOf(doc any, key string) map[string][]string {
-	found := map[string][]string{}
-	add := func(more map[string][]string) {
-		for k, values := range more {
-			found[k] = append(found[k], values...)
+// enumsOf adds to enums the values of each enum under s, a part's shape at path, by its path as valuesIn
+// writes it; a part's own, root, but not those of the parts it holds, nor the tones, which a part draws in
+// a class of each.
+func enumsOf(s *shape, path string, enums map[string][]string, root bool) {
+	if s == nil || !root && s.part != nil || strings.HasSuffix(s.ref, "tone.json") {
+		return
+	}
+	for _, v := range s.enum {
+		if value, ok := v.(string); ok {
+			enums[path] = append(enums[path], value)
 		}
 	}
-	switch v := doc.(type) {
-	case map[string]any:
-		for k, w := range v {
-			switch k {
-			case "$ref":
-			case "enum":
-				if values, ok := w.([]any); ok {
-					for _, value := range values {
-						if s, ok := value.(string); ok {
-							found[key] = append(found[key], s)
-						}
-					}
-				}
-			case "properties":
-				if props, ok := w.(map[string]any); ok {
-					for name, prop := range props {
-						add(enumsOf(prop, name))
-					}
-				}
-			default:
-				add(enumsOf(w, key))
-			}
-		}
-	case []any:
-		for _, w := range v {
-			add(enumsOf(w, key))
-		}
+	in := s.inside()
+	for k, sub := range in.keys {
+		enumsOf(sub, path+"."+k, enums, false)
 	}
-	return found
+	enumsOf(in.each, path, enums, false)
 }
 
-// takesTone reports whether doc, a part's schema, refers to the schema of a tone, in it or under it.
-func takesTone(doc any) bool {
-	switch v := doc.(type) {
-	case map[string]any:
-		if ref, ok := v["$ref"].(string); ok && strings.HasSuffix(ref, "tone.json") {
+// takesTone reports whether s, a part's shape, takes a tone, root, but not through a part it holds.
+func takesTone(s *shape, root bool) bool {
+	switch {
+	case s == nil || !root && s.part != nil:
+		return false
+	case strings.HasSuffix(s.ref, "tone.json"):
+		return true
+	}
+	in := s.inside()
+	for _, sub := range in.keys {
+		if takesTone(sub, false) {
 			return true
 		}
-		for _, w := range v {
-			if takesTone(w) {
-				return true
-			}
-		}
-	case []any:
-		return slices.ContainsFunc(v, takesTone)
 	}
-	return false
+	return takesTone(in.each, false)
 }
 
 func nodeAttr(n *html.Node, key string) string {

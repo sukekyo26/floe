@@ -14,7 +14,7 @@ import (
 
 // measureContrast is the script that measures, on the page, the contrast of every text shown against the
 // ground under it: an element's own text, the text of its ::before and ::after (a string, a counter() or an
-// attr()) and its list ::marker, with every details open and each tab picked in turn, but a control that is
+// attr()) and its list ::marker, as the page is drawn, then with every details open and each tab picked in turn, but a control that is
 // disabled, which WCAG leaves out, and a progress bar's text, which is not shown. The ground is the
 // background colours of the element and those around it laid one over another on the root's, each faded by
 // the opacity over it, as the text is. It returns one line for each below 4.5:1, 3:1 for large text (24px,
@@ -24,11 +24,13 @@ import (
 // each ground on its own rather than the group, and a diagram's text, in SVG, is not measured. Measure them
 // if a theme comes to put text on such a ground.
 const measureContrast = `(() => {
-  const canvas = new OffscreenCanvas(1, 1), cx = canvas.getContext('2d', { willReadFrequently: true });
+  // A computed colour, rgb(), rgba() or color(srgb …), as [r, g, b] of 255 and its alpha.
   const rgba = (colour) => {
-    cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#0000'; cx.fillStyle = colour; cx.fillRect(0, 0, 1, 1);
-    const d = cx.getImageData(0, 0, 1, 1).data;
-    return [d[0], d[1], d[2], d[3] / 255];
+    let m = colour.match(/^rgba?\(([\d.]+), ([\d.]+), ([\d.]+)(?:, ([\d.]+))?\)$/);
+    if (m) return [Number(m[1]), Number(m[2]), Number(m[3]), m[4] === undefined ? 1 : Number(m[4])];
+    m = colour.match(/^color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.e-]+))?\)$/);
+    if (m) return [Number(m[1]) * 255, Number(m[2]) * 255, Number(m[3]) * 255, m[4] === undefined ? 1 : Number(m[4])];
+    throw new Error('a colour not read: ' + colour);
   };
   const over = (top, under) => {
     const a = top[3] + under[3] * (1 - top[3]);
@@ -81,6 +83,7 @@ const measureContrast = `(() => {
       if (s.display === 'list-item' && s.listStyleType !== 'none') measure(e, getComputedStyle(e, '::marker'), ground(e), '::marker', s.listStyleType);
     }
   };
+  measureAll();
   for (const d of document.querySelectorAll('details')) d.open = true;
   const tabs = [...document.querySelectorAll('[data-floe-part=tabs]')].map((t) => [...t.querySelectorAll('input[type=radio]')]);
   for (let i = 0; i < Math.max(1, ...tabs.map((g) => g.length)); i++) {
