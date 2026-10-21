@@ -235,7 +235,7 @@ func TestCheckMistakes(t *testing.T) {
 			files: map[string]string{"schema.json": `"chart":|"plan": { "$ref": "floe:///parts/diagram.json", ` +
 				`"properties": { "logo": { "type": "string", "format": "image" } } },` + "\n    " + `"chart":`},
 			want: []string{
-				"sizes/schema.json: #/properties/plan: beside its $ref to floe:///parts/diagram.json, a schema takes description, title and $comment alone, not properties",
+				"sizes/schema.json: #/properties/plan: beside its $ref to floe:///parts/diagram.json, a schema takes no properties",
 				"sizes/schema.json: #/properties/plan/properties/logo: the format image marks an item to draw",
 			},
 		},

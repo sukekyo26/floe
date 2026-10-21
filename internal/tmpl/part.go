@@ -434,8 +434,8 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown, part string) error
 	if err = checkDraft(doc); err != nil {
 		return usererr.New("tmpl_item", shown, err)
 	}
-	if notes.mistakes != nil {
-		return notes.mistakes[0]
+	if m := notes.first(); m != nil {
+		return m
 	}
 	set.docs[url], set.shapes[url], set.notes[url] = doc, s, notes
 	return nil

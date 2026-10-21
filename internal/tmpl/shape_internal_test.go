@@ -1,13 +1,12 @@
 package tmpl
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
-
-	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // jsonDoc reads src as jsonschema reads a schema.
@@ -103,8 +102,36 @@ func TestShapeBesideRef(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := slices.ContainsFunc(notes.mistakes, func(e *usererr.Error) bool { return e.Key == "tmpl_ref_beside" }); got != refused {
+		if got := slices.ContainsFunc(notes.met, func(x noted) bool { return x.mistake != nil && x.mistake.Key == "tmpl_ref_beside" }); got != refused {
 			t.Errorf("readShape of %s refuses beside the $ref: %v, want %v", src, got, refused)
+		}
+	}
+}
+
+// A $ref out of floe is refused at its pointer, but for what jsonschema holds itself, the drafts and their
+// vocabularies; a format of floe's in a part's schema is refused as such wherever it is.
+func TestShapeMistakes(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct{ src, part, want string }{
+		{`{"$ref": "https://json-schema.org/draft/2020-12/meta/core"}`, "", ""},
+		{
+			`{"properties": {"a": {"anyOf": [{"$ref": "file:///etc/hosts"}]}}}`, "",
+			"t/schema.json: #/properties/a/anyOf/0: file:///etc/hosts: a schema refers to no other file or URL",
+		},
+		{`{"anyOf": [{"type": "string", "format": "markdown"}]}`, "p", `t/schema.json: #/anyOf/0: a part's schema takes no "format": "markdown"`},
+	} {
+		_, notes, err := readShape(jsonDoc(t, c.src), schemaURL("t"), "t/schema.json", c.part)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := fmt.Sprint(set.mistakes(notes))
+		if c.want == "" && got != "[]" || c.want != "" && !strings.Contains(got, c.want) {
+			t.Errorf("mistakes of %s = %s, want %q", c.src, got, c.want)
 		}
 	}
 }

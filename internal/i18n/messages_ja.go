@@ -355,7 +355,7 @@ var messagesJA = map[string]string{
 	"tmpl_palette_dark":            "%s は %s をライトモードの分だけ書いています。ダークモードでもその値のままになり、ほかは default のダークの色になります。@media (prefers-color-scheme: dark) { :root { … } } にも書いてください",
 	"tmpl_parts_themes_unreadable": "自分の部品のテーマ %s を読めません: %s。ディレクトリにするか、消してください",
 	"tmpl_part_unreached":          "%s: %s: 部品 %s は項目を描きます。floe が辿る properties か items の下で参照してください",
-	"tmpl_ref_beside":              "%s: %s: %s を指す $ref と並べて書けるのは description・title・$comment だけで、%s は書けません。$ref の先が項目を宣言します。取り除くか、$ref を使わずに項目を宣言してください",
+	"tmpl_ref_beside":              "%s: %s: %s を指す $ref と並べて %s は書けません。書けるのは %s と、根の $schema だけです。$ref の先が項目を宣言します。取り除くか、$ref を使わずに項目を宣言してください",
 	"tmpl_shared_unreached":        "%s: %s: %s は floe が描く部品か format の項目を持ちます。floe が辿る properties か items の下で参照してください",
 	"tmpl_format_unreached":        "%s: %s: format %s は描く項目の印です。floe が辿る properties か items の下で宣言してください",
 	"tmpl_schema_open":             `%s: %s は "additionalProperties": false を書かずに properties を宣言しているので、打ち間違えたキーを断れません`,

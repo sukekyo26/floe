@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/goccy/go-yaml/ast"
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -64,8 +65,7 @@ func compileSchema(set *partSet, name string, doc any) (*jsonschema.Schema, erro
 	sch, err := c.Compile(url)
 	// jsonschema wraps noLoader's mistake in an error of its own, which does not unwrap: floe's own is told,
 	// so that it is worded in the reader's language.
-	// LIMIT: names the template, not the schema the $ref is in: the shape's mistakes tell those it sees, at
-	// their pointers, before (partSet.mistakes), but not those of $dynamicRef. Note those there if they come.
+	// partSet.mistakes told a $ref's at its pointer before; those it does not see (its LIMIT) name the template.
 	var load *jsonschema.LoadURLError
 	switch {
 	case errors.As(err, &load):
@@ -134,16 +134,41 @@ func newCompiler(set *partSet) *jsonschema.Compiler {
 
 // knownFormat reports whether floe knows the format f: one of JSON Schema's that it checks, or one of
 // its own. jsonschema passes a value of a format it does not know, so a template that uses a format of
-// a later floe would be drawn as if it had none.
+// a later floe would be drawn as if it had none. Each is asked once, as every schema read asks again.
 func knownFormat(f string) bool {
-	const url = "floe:///format.json"
-	// A schema of a format alone refers to no part: none are needed.
+	if known, ok := knownFormats.Load(f); ok {
+		b, isBool := known.(bool)
+		return b && isBool
+	}
+	s, err := compileAlone(map[string]any{"format": f})
+	known := err == nil && s.Format != nil
+	knownFormats.Store(f, known)
+	return known
+}
+
+// knownFormats are the formats knownFormat was asked of, by name, and whether floe knows each.
+var knownFormats sync.Map
+
+// heldByJSONSchema reports whether jsonschema holds the schema at url itself, as it holds the drafts and
+// their vocabularies, so that a $ref to it reads no other file.
+func heldByJSONSchema(url string) bool {
+	_, err := compileAlone(map[string]any{"$ref": url})
+	return err == nil
+}
+
+// compileAlone compiles the schema doc, which refers to no part: none are given, and any other file it
+// refers to is refused as it is in a template.
+func compileAlone(doc any) (*jsonschema.Schema, error) {
+	const url = "floe:///alone.json"
 	c := newCompiler(nil)
-	if err := c.AddResource(url, map[string]any{"format": f}); err != nil {
-		return false
+	if err := c.AddResource(url, doc); err != nil {
+		return nil, fmt.Errorf("read a schema alone: %w", err)
 	}
 	s, err := c.Compile(url)
-	return err == nil && s.Format != nil
+	if err != nil {
+		return nil, fmt.Errorf("compile a schema alone: %w", err)
+	}
+	return s, nil
 }
 
 // unknownPart is the mistake of a $ref, ref, under floe:///parts/ that names no part of set whole.

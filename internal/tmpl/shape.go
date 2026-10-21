@@ -43,7 +43,7 @@ type shape struct {
 // kept as written.
 func readShape(doc any, url, file, part string) (*shape, *schemaNotes, error) {
 	n := &schemaNotes{
-		file: file, part: part, own: map[string]bool{url: true}, refs: nil, mistakes: nil, seqs: nil, warnings: nil,
+		file: file, part: part, own: map[string]bool{url: true}, met: nil, warnings: nil,
 	}
 	s, err := n.read(doc, url, "#")
 	if err != nil {
@@ -62,24 +62,36 @@ type schemaNotes struct {
 	part string // the part whose schema it is; "" for a template's or one the parts share
 	// the URLs of the schema's own file, its own and those its $ids give, which its $refs may point into
 	own      map[string]bool
-	refs     []refAt
-	mistakes []*usererr.Error
-	seqs     []int            // where each mistake was met among them and the refs, so they are told in order
+	met      []noted          // in the order of the schema
 	warnings []*usererr.Error // told by floe template check alone
 }
 
+// noted is a mistake met in a schema, or a $ref of it, which floe checks once the parts are read.
+type noted struct {
+	mistake *usererr.Error
+	ref     *refAt
+}
+
 // refAt is a $ref of a schema, absolute, at the JSON pointer ptr, reached when floe follows properties and
-// items to it, the seq-th of the refs and mistakes met.
+// items to it.
 type refAt struct {
 	ptr, ref string
 	reached  bool
-	seq      int
 }
 
 // refuse notes the mistake m.
 func (n *schemaNotes) refuse(m *usererr.Error) {
-	n.mistakes = append(n.mistakes, m)
-	n.seqs = append(n.seqs, len(n.mistakes)+len(n.refs))
+	n.met = append(n.met, noted{mistake: m, ref: nil})
+}
+
+// first returns the first mistake noted, which the schema is refused for as it is read, or nil.
+func (n *schemaNotes) first() *usererr.Error {
+	for _, x := range n.met {
+		if x.mistake != nil {
+			return x.mistake
+		}
+	}
+	return nil
 }
 
 // read reads the schema v at ptr, which floe follows properties and items to, into its shape, base the
@@ -169,7 +181,7 @@ func (n *schemaNotes) under(kw string, v any, base, ptr string) {
 	switch sub := v.(type) {
 	case map[string]any:
 		switch kw {
-		case "properties", "$defs", "definitions", "patternProperties", "dependentSchemas":
+		case "properties", "$defs", "definitions", "patternProperties", "dependentSchemas", "dependencies":
 			for _, k := range slices.Sorted(maps.Keys(sub)) {
 				n.walk(sub[k], base, ptr+"/"+pointerKey.Replace(k))
 			}
@@ -189,6 +201,7 @@ func (n *schemaNotes) under(kw string, v any, base, ptr string) {
 
 // idOf returns the URL a relative $ref of the schema m is read from, base or that its $id gives, which is
 // the schema's own file too.
+// LIMIT: draft-4's id is not read, so a $ref to what it names is refused as out of floe; read it if one comes.
 func (n *schemaNotes) idOf(m map[string]any, base string) string {
 	id, ok := m["$id"].(string)
 	if !ok {
@@ -205,10 +218,11 @@ func (n *schemaNotes) note(m map[string]any, base, ptr string, reached bool) boo
 	elsewhere := false
 	if ref, ok := m["$ref"].(string); ok {
 		ref = absolute(base, ref)
-		n.refs = append(n.refs, refAt{ptr: ptr, ref: ref, reached: reached, seq: len(n.mistakes) + len(n.refs) + 1})
+		n.met = append(n.met, noted{mistake: nil, ref: &refAt{ptr: ptr, ref: ref, reached: reached}})
 		if _, floe := partName(ref); floe {
+			// A format beside it is refused there, once.
 			n.beside(m, ptr, ref)
-			elsewhere = true
+			return true
 		}
 	}
 	if f, ok := m["format"].(string); ok && n.format(f, m["type"], ptr, reached) {
@@ -222,8 +236,11 @@ func (n *schemaNotes) note(m map[string]any, base, ptr string, reached bool) boo
 }
 
 // besideRef are the keywords a schema may write beside a $ref to a part or a schema the parts share, which
-// declare nothing: what the $ref names declares the item, and the description is told before its own.
-var besideRef = []string{"$ref", "description", "title", "$comment"}
+// declare nothing, JSON Schema's annotations: what the $ref names declares the item, and the description is
+// told before its own.
+var besideRef = []string{
+	"$comment", "default", "deprecated", "description", "examples", "readOnly", "title", "writeOnly",
+}
 
 // beside refuses the keywords of the schema m at ptr, beside its $ref to ref, a part or a schema the parts
 // share, that declare something of the item, which floe would not draw as JSON Schema reads them. The root
@@ -231,12 +248,12 @@ var besideRef = []string{"$ref", "description", "title", "$comment"}
 func (n *schemaNotes) beside(m map[string]any, ptr, ref string) {
 	var more []string
 	for _, kw := range slices.Sorted(maps.Keys(m)) {
-		if !slices.Contains(besideRef, kw) && (kw != "$schema" || ptr != "#") {
+		if kw != "$ref" && !slices.Contains(besideRef, kw) && (kw != "$schema" || ptr != "#") {
 			more = append(more, kw)
 		}
 	}
 	if more != nil {
-		n.refuse(usererr.New("tmpl_ref_beside", n.file, ptr, ref, strings.Join(more, ", ")))
+		n.refuse(usererr.New("tmpl_ref_beside", n.file, ptr, ref, strings.Join(more, ", "), strings.Join(besideRef, ", ")))
 	}
 }
 
@@ -249,13 +266,14 @@ func (n *schemaNotes) format(f string, typ any, ptr string, reached bool) bool {
 		return true
 	case !knownFormat(f):
 		n.refuse(usererr.New("tmpl_format_unknown", n.file, ptr, f))
+	case slices.Contains(formats, f) && n.part != "":
+		// Wherever it is: under properties and items, it would be refused all the same.
+		n.refuse(usererr.New("tmpl_part_format", n.file, ptr, f))
+		return true
 	case slices.Contains(formats, f) && !reached:
 		n.refuse(usererr.New("tmpl_format_unreached", n.file, ptr, f))
 	case slices.Contains(formats, f):
-		switch {
-		case n.part != "":
-			n.refuse(usererr.New("tmpl_part_format", n.file, ptr, f))
-		case typ != "string":
+		if typ != "string" {
 			n.refuse(usererr.New("tmpl_format_type", n.file, ptr, f, "string"))
 		}
 		return true
@@ -268,29 +286,17 @@ func (n *schemaNotes) format(f string, typ any, ptr string, reached bool) bool {
 // share that holds what floe draws, at one where floe does not follow to it, or, from a part's schema, at
 // a schema the parts share that holds a format of floe's. A $ref into the schema's own file is followed
 // by jsonschema alone.
-// LIMIT: $dynamicRef and $recursiveRef are not looked at: a URL they name is refused when the schema is
-// compiled, not at its pointer. Look at them here if a schema comes to use them.
+// LIMIT: $dynamicRef and $recursiveRef go unchecked, refused at compiling without a pointer; check them here if used.
 func (set *partSet) mistakes(n *schemaNotes) []error {
-	type met struct {
-		seq int
-		err error
-	}
-	var all []met
-	for i, m := range n.mistakes {
-		all = append(all, met{seq: n.seqs[i], err: m})
-	}
-	for _, r := range n.refs {
-		if err := set.refMistake(n, r); err != nil {
-			all = append(all, met{seq: r.seq, err: err})
+	var mistakes []error
+	for _, x := range n.met {
+		m := x.mistake
+		if x.ref != nil {
+			m = set.refMistake(n, *x.ref)
 		}
-	}
-	if all == nil {
-		return nil
-	}
-	slices.SortFunc(all, func(a, b met) int { return a.seq - b.seq })
-	mistakes := make([]error, 0, len(all))
-	for _, m := range all {
-		mistakes = append(mistakes, m.err)
+		if m != nil {
+			mistakes = append(mistakes, m)
+		}
 	}
 	return mistakes
 }
@@ -299,12 +305,14 @@ func (set *partSet) mistakes(n *schemaNotes) []error {
 func (set *partSet) refMistake(n *schemaNotes, r refAt) *usererr.Error {
 	base, _, _ := strings.Cut(r.ref, "#")
 	switch {
-	case n.own[base] || isDraft(base):
+	case n.own[base]:
 		return nil
-	case !strings.HasPrefix(base, partsURL):
+	case strings.HasPrefix(base, partsURL):
+		return set.partMistake(n, r, base)
+	case !heldByJSONSchema(base):
 		return n.at(r, usererr.New("tmpl_schema_url", base))
 	}
-	return set.partMistake(n, r, base)
+	return nil
 }
 
 // at is the mistake err of r, a $ref of the schema of n, at the schema and its pointer.

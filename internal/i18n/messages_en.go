@@ -357,7 +357,7 @@ var messagesEN = map[string]string{
 	"tmpl_palette_dark":            "%s sets %s for light mode alone: dark mode keeps them, under default's dark colours for the rest; set them in @media (prefers-color-scheme: dark) { :root { … } } too",
 	"tmpl_parts_themes_unreadable": "the parts themes of your own in %s cannot be read: %s; make it a directory, or remove it",
 	"tmpl_part_unreached":          "%s: %s: the part %s draws an item; refer to it under properties or items, which floe follows",
-	"tmpl_ref_beside":              "%s: %s: beside its $ref to %s, a schema takes description, title and $comment alone, not %s: what the $ref names declares the item; take them out, or declare the item without the $ref",
+	"tmpl_ref_beside":              "%s: %s: beside its $ref to %s, a schema takes no %s, but %s alone, and $schema at its root: what the $ref names declares the item; take them out, or declare the item without the $ref",
 	"tmpl_shared_unreached":        "%s: %s: %s holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows",
 	"tmpl_format_unreached":        "%s: %s: the format %s marks an item to draw; declare it under properties or items, which floe follows",
 	"tmpl_schema_open":             `%s: %s declares properties without "additionalProperties": false, so a misspelt key is not refused`,

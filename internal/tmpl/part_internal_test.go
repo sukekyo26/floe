@@ -323,18 +323,19 @@ func TestAnyOffersEveryPart(t *testing.T) {
 	}
 }
 
-// floe's parts hold no item of a format of floe's, through a schema the parts share neither, whatever
-// order they are read in: their part.html draws their items, which the checks of a format do not reach.
-func TestPartsHoldNoFormat(t *testing.T) {
+// floe's parts and the schemas they share hold no mistake floe refuses of a part of one's own (a format of
+// floe's, through a schema the parts share too, a $ref floe does not follow to or cannot read), whatever
+// order they are read in: floe's are read without the checks that wait for every part to be read.
+func TestFloePartsHaveNoMistakes(t *testing.T) {
 	t.Parallel()
 
 	set, err := builtinParts()
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, p := range set.parts {
-		if at, s := set.formatIn(p.shape, "#"); s != nil {
-			t.Errorf("the part %s holds the format %s at %s", name, s.format, at)
+	for url, n := range set.notes {
+		if mistakes := set.mistakes(n); mistakes != nil {
+			t.Errorf("%s: %v", url, mistakes)
 		}
 	}
 }
