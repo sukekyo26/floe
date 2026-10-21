@@ -1,0 +1,18 @@
+/* Sumi, indigo and vermilion on washi, in a Mincho face, its sections ruled double */
+:root {
+  --bg: #ede4cf; --surface: #f7f1e3; --fg: #1d1b18; --muted: #5f594f; --line: #d3c9b4;
+  --accent: #264c78; --accent-soft: #dde5ef;
+  --good: #4f6f2e; --good-soft: #e3ead5; --warn: #94640f; --warn-soft: #f1e4c8; --bad: #c13b23; --bad-soft: #f5ddd6;
+  --font: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", "Noto Serif CJK JP", serif;
+  --display: var(--font);
+  --code-bg: #1f1c19; --code-fg: #ece5d6; --code-prompt: #f0866b;
+  --rule: 4px double var(--fg);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1915; --surface: #26221d; --fg: #ece5d6; --muted: #b8ae9c; --line: #3d372f;
+    --accent: #8fb3dc; --accent-soft: #22303f;
+    --good: #a9c98a; --good-soft: #263020; --warn: #e1b25a; --warn-soft: #362a14; --bad: #e8775c; --bad-soft: #3a201a;
+    --code-bg: #14120f;
+  }
+}

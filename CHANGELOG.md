@@ -112,7 +112,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   squared paper, every cell ruled), `notebook` (ruled paper, marker strokes
   and sticky notes), `swiss` (heavy black rules, large numbers and red, states
   told by shape) or `washi` (sumi and vermilion on washi in a Mincho face,
-  seals and quotes ruled in vermilion), each in light and dark mode. A
+  seals and quotes ruled in vermilion), each in light and dark mode.
+  `blueprint`, `brutal`, `ink`, `notebook`, `swiss` and `washi` give the
+  whole page their colours too, its ground and its rules (blueprint's squared
+  ground, notebook's ruled one in a rounded face, washi's double rules in a
+  Mincho face), and `default`, `editorial` and `soft` draw it in default's. A
   theme restyles each part and look in a file of each (`panel.css` every
   panel), its style reaching the elements that have the look but not a part
   held in them, and Markdown's quotes, and goes into every page after the
