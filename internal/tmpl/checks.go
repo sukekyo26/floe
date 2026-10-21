@@ -23,6 +23,7 @@ type relation struct {
 
 	file string                 // checks.yaml, as its mistakes name it
 	at   map[string]yamlpos.Pos // where each key is written, and "" where the check is
+	rest string                 // the text of a YAML comment after expr on its last line, or ""
 	prog *vm.Program            // expr compiled ahead, for a part's; nil to compile it when run
 }
 
@@ -99,7 +100,8 @@ func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 
 func readCheck(file string, n ast.Node, ofPart bool) (relation, *yamlpos.Error) {
 	c := relation{
-		For: "", Field: "", Expr: "", Message: "", file: file, at: map[string]yamlpos.Pos{"": yamlpos.Of(n)}, prog: nil,
+		For: "", Field: "", Expr: "", Message: "",
+		file: file, at: map[string]yamlpos.Pos{"": yamlpos.Of(n)}, rest: "", prog: nil,
 	}
 	m, ok := n.(*ast.MappingNode)
 	if !ok {
@@ -114,6 +116,9 @@ func readCheck(file string, n ast.Node, ofPart bool) (relation, *yamlpos.Error) 
 			return c, yamlpos.New(file, yamlpos.Of(k), "tmpl_checks_key", key)
 		}
 		c.at[key] = yamlpos.OfValue(k, kv.Value)
+		if key == "expr" {
+			c.rest = yamlpos.CommentAfter(kv.Value)
+		}
 		if *dst, ok = text(kv.Value); !ok {
 			return c, yamlpos.New(file, c.at[key], "tmpl_not_text", key)
 		}
@@ -143,11 +148,7 @@ func text(n ast.Node) (string, bool) {
 
 // program compiles the expression of c.
 func (c relation) program() (*vm.Program, *yamlpos.Error) {
-	p, err := compile(c.Expr, scope{Item: nil, Doc: nil}, expr.AsBool())
-	if err != nil {
-		return nil, yamlpos.New(c.file, c.at["expr"], "tmpl_expr", c.Expr, brief(err))
-	}
-	return p, nil
+	return compileWritten(c.file, c.at["expr"], c.Expr, c.rest, scope{Item: nil, Doc: nil}, expr.AsBool())
 }
 
 // check runs c on each item of its list in doc, the values of file. An error is the template's mistake,

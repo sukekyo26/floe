@@ -126,6 +126,10 @@ func TestParseErrors(t *testing.T) {
 		{"missing part key", head + "  - dot: { cx: 1 }\n", "s.yaml:6:5: dot: give cy"},
 		{"not a number", head + "  - dot: { cx: 1, cy: '2' }\n", "s.yaml:6:23: dot: cy must be a number"},
 		{"not text", head + "  - label: { text: [a], x: 1, y: 1 }\n", "s.yaml:6:20: label: text must be text"},
+		{
+			"text with \": \"", head + "  - box:\n      x: 1\n      y: 1\n      w: 1\n      h: 1\n      rows:\n        - read-only: from Friday\n",
+			`s.yaml:12:11: box: rows must be text; text with ": " in it reads as keys and values: put the text in quotes`,
+		},
 		{"not a bool", head + "  - dot: { cx: 1, cy: 2, hollow: yes }\n", "s.yaml:6:34: dot: hollow must be true or false"},
 		{"unknown tone", head + "  - dot: { cx: 1, cy: 2, tone: red }\n", `s.yaml:6:32: dot: unknown tone "red"; use accent, good, warn, bad`},
 		{"unknown marker", head + "  - edge: { d: 'M0,0 H1', end: dot }\n", `s.yaml:6:32: edge: unknown end "dot"; use none, arrow, triangle, diamond, odiamond, one, many, zero-one, zero-many`},
