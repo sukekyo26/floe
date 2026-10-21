@@ -69,10 +69,6 @@ func lineAt(src []byte, at int) int {
 // rootSelector finds :root or html in a selector.
 var rootSelector = regexp.MustCompile(`(?i)(?:^|[\s,>+~(])(:root|html)(?:[\s,.:\[#>+~)]|$)`)
 
-// bodySubject finds a selector that ends in body, of its classes, attributes and pseudo-classes or none
-// (:scope > body:not(.x)).
-var bodySubject = regexp.MustCompile(`(?i)(?:^|[\s>+~])body(?:[.:#\[][^\s>+~]*)?$`)
-
 // cssSheet is CSS read as CSS Syntax reads it: its tokens, spaces and comments among them, its rules in
 // order, those in blocks too, and the offset of a } that closes no block, -1 for none.
 type cssSheet struct {

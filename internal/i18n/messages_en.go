@@ -355,7 +355,6 @@ var messagesEN = map[string]string{
 	"tmpl_palette_rule":            "%s:%d: palette.css holds only the palette's variables, :root { --name: value; }, and those of dark mode in @media (prefers-color-scheme: dark) { :root { … } }; write other rules in base.css or a part's file",
 	"tmpl_palette_order":           "%s:%d: write this :root before @media (prefers-color-scheme: dark): after it, its colours would win in dark mode too",
 	"tmpl_palette_important":       "%s:%d: palette.css takes no !important, which would win over every layer, the colours a template sets on :scope too",
-	"tmpl_body_ground":             "%s:%d: body sets %s, but floe's base draws the page's ground, colour and face on the root, where a ground on body covers the body's box alone and a variable set on body does not reach: set --page-bg, --fg or --font on :scope",
 	"tmpl_scope_dark":              "%s sets %s on :scope for light mode alone: over every palette, it stays in dark mode too, where the rest turn dark; set it in @media (prefers-color-scheme: dark) { :scope { … } } too",
 	"tmpl_palette_dark":            "%s sets %s for light mode alone: dark mode keeps them, under default's dark colours for the rest; set them in @media (prefers-color-scheme: dark) { :root { … } } too",
 	"tmpl_themes_dir_unreadable":   "the directory of your own themes %s cannot be read: %s; make it a directory you can read, or set FLOE_THEMES_DIR",
