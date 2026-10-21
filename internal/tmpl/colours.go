@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/tdewolff/parse/v2/css"
@@ -15,41 +16,62 @@ import (
 // LIMIT: the text of url() and strings goes unread, a data: image's colours among them. Read them if a
 // part or a theme comes to draw an image but in a mask.
 func colourWarnings(file string, s *cssSheet, ownVariables bool) []*usererr.Error {
-	var warnings []*usererr.Error
+	decls := s.decls
 	for _, r := range s.rules {
-		for _, d := range r.decls {
-			line := lineAt(s.src, d.at)
-			switch {
-			case d.value == "":
-			case strings.HasPrefix(d.name, "--") && !ownVariables:
-				warnings = append(warnings, usererr.New("tmpl_theme_variable", file, line, d.name))
-			case strings.HasPrefix(strings.TrimPrefix(d.name, "-webkit-"), "mask"):
-			default:
-				if c := colourIn(d.value, takesColour(d.name)); c != "" {
-					warnings = append(warnings, usererr.New("tmpl_css_colour", file, line, c))
-				}
+		decls = append(decls, r.decls...)
+	}
+	slices.SortFunc(decls, func(a, b cssDeclaration) int { return a.at - b.at })
+	var warnings []*usererr.Error
+	for _, d := range decls {
+		switch property := unprefixed(d.name); {
+		case d.value == "":
+		case strings.HasPrefix(d.name, "--") && !ownVariables:
+			warnings = append(warnings, usererr.New("tmpl_theme_variable", file, lineAt(s.src, d.at), d.name))
+		case strings.HasPrefix(property, "mask"):
+		default:
+			if c := colourIn(d.value, takesColour(property)); c != "" {
+				warnings = append(warnings, usererr.New("tmpl_css_colour", file, lineAt(s.src, d.at), c))
 			}
 		}
 	}
 	return warnings
 }
 
+// unprefixed is the property name without a browser's prefix (-webkit-mask is mask).
+func unprefixed(name string) string {
+	if strings.HasPrefix(name, "--") {
+		return name
+	}
+	for _, prefix := range []string{"-webkit-", "-moz-"} {
+		name = strings.TrimPrefix(name, prefix)
+	}
+	return name
+}
+
 // colourIn returns the first colour value writes, as written, "" for none: a hex colour, a colour function
 // with its arguments, or, where named is true, a colour's name. transparent and currentColor take no colour
-// of their own, and color-mix() and light-dark() are told by the colours they mix.
+// of their own, and color-mix(), light-dark() and a colour made from another (rgb(from var(--accent) r g b
+// / 50%)) are told by the colours they take.
 func colourIn(value string, named bool) string {
 	toks := readCSS([]byte(value)).tokens
 	for i, t := range toks {
 		switch {
 		case t.typ == css.HashToken:
 			return t.text
-		case t.typ == css.FunctionToken && colourFunctions[strings.ToLower(strings.TrimSuffix(t.text, "("))]:
+		case t.typ == css.FunctionToken && colourFunctions[strings.ToLower(strings.TrimSuffix(t.text, "("))] &&
+			!madeFrom(toks[i+1:]):
 			return functionText(toks[i:])
 		case named && t.typ == css.IdentToken && colourNames[strings.ToLower(t.text)]:
 			return t.text
 		}
 	}
 	return ""
+}
+
+// madeFrom reports whether the arguments toks starts with make a colour from another: from, then it.
+func madeFrom(toks []cssToken) bool {
+	toks = trimSpaces(toks)
+	return len(toks) > 0 && toks[0].typ == css.IdentToken && strings.EqualFold(toks[0].text, "from")
 }
 
 // functionText returns the text of the function toks starts with, to the ) that closes it.
@@ -69,19 +91,19 @@ func functionText(toks []cssToken) string {
 	return joinTokens(toks)
 }
 
-// takesColour reports whether the property name takes a colour, so that a word of its value that is a
-// colour's name is one: elsewhere it may be another word (font-family: Arial Black, a variable's value).
+// takesColour reports whether the property name, without a browser's prefix, takes a colour, so that a word
+// of its value that is a colour's name is one: elsewhere it may be another word (font-family: Arial Black,
+// a variable's value).
 func takesColour(name string) bool {
-	for _, prefix := range []string{"background", "border", "outline", "column-rule", "text-decoration", "-webkit-text-"} {
+	for _, prefix := range []string{"background", "border", "outline", "column-rule", "text-decoration", "text-emphasis", "text-stroke"} {
 		if strings.HasPrefix(name, prefix) {
 			return true
 		}
 	}
-	return colourProperties[name]
+	return strings.HasSuffix(name, "-color") || strings.HasSuffix(name, "shadow") || colourProperties[name]
 }
 
-var colourProperties = setOf(`color box-shadow text-shadow fill stroke caret-color accent-color
-	text-emphasis-color scrollbar-color stop-color flood-color lighting-color`)
+var colourProperties = setOf("color fill stroke filter")
 
 var colourFunctions = setOf("rgb rgba hsl hsla hwb lab lch oklab oklch color")
 

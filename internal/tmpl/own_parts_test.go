@@ -425,6 +425,7 @@ func TestOwnPartsThemes(t *testing.T) {
 
 	files := quote("code")
 	files["themes/brutal/code.css"] = "/* brutal's code of one's own */\n"
+	files["themes/brutal/palette.css"] = "/* brutal's palette of one's own */\n:root { --brutal-yellow: #ff0; }\n"
 	files["themes/mine/base.css"] = "/* mine */\nblockquote { color: var(--fg); }\n"
 	files["themes/mine/palette.css"] = "/* mine's palette */\n:root { --bg: #123; }\n" +
 		"@media (prefers-color-scheme: dark) { :root { --bg: #321; } }\n"
@@ -452,6 +453,10 @@ func TestOwnPartsThemes(t *testing.T) {
 	note, err := os.ReadFile(filepath.Join("themes", "brutal", "note.css"))
 	if err != nil {
 		t.Fatal(err)
+	}
+	// A palette of one's own goes over floe's of its name, which keeps the theme's variables it leaves out.
+	if floe, mine := strings.Index(page, "/* Black on cream"), strings.Index(page, "/* brutal's palette of one's own */"); floe < 0 || mine < floe {
+		t.Errorf("the palettes of brutal are at %d and %d:\n%s", floe, mine, page)
 	}
 	for want, n := range map[string]int{
 		`@scope ([data-floe-part="code"]) to (:scope [data-floe-part] > *) {` + "\n/* brutal's code of one's own */": 1,

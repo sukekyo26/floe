@@ -50,19 +50,20 @@ func (set *partSet) themesWith(name string) []string {
 }
 
 // theme is a theme: its base.css and palette.css, for every page, and the style of each part it restyles,
-// which reaches every element that has the part's look.
+// which reaches every element that has the part's look. Its palettes are floe's and, over it, one's own of
+// its name: a palette of one's own changes the variables it writes, the theme's own names among them.
 type theme struct {
-	base    string
-	palette string
-	parts   map[string]string // by the part's name
+	base     string
+	palettes []string
+	parts    map[string]string // by the part's name
 }
 
 func newTheme() *theme {
-	return &theme{base: "", palette: "", parts: map[string]string{}}
+	return &theme{base: "", palettes: nil, parts: map[string]string{}}
 }
 
 // readTheme reads the theme in files, its directory, shown in its mistakes as dir, over t:
-// each file takes the place of t's of its name. A file named for none of base.css, palette.css, a part
+// each file takes the place of t's of its name, but palette.css, which goes over t's. A file named for none of base.css, palette.css, a part
 // or a look of set is warned of, as it goes into no page, and so is a palette that sets a colour for light
 // mode alone, and another file that writes a colour or sets a variable, as colourWarnings tells.
 func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
@@ -99,7 +100,7 @@ func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
 				return err
 			}
 			warnings = append(warnings, more...)
-			t.palette = string(css)
+			t.palettes = append(t.palettes, string(css))
 			continue
 		}
 		warnings = append(warnings, colourWarnings(file, sheet, false)...)

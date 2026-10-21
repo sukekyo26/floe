@@ -298,7 +298,7 @@ func (set *partSet) readBuiltin() error {
 		}
 		set.themes[e.Name()] = t
 	}
-	set.palette = set.themes[DefaultTheme].palette
+	set.palette = set.themes[DefaultTheme].palettes[0]
 	return nil
 }
 
@@ -826,7 +826,7 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 }
 
 // pageStyle returns the <style>s of the page, in cascade layers that decide which wins whatever the
-// selectors: the palette, floe's default one then the theme theme's, under floe's base, under the
+// selectors: the palette, floe's default one then the theme theme's and one's own of its name, under floe's base, under the
 // template's own CSS (own, its page.css), which may set the palette's variables over it, under the parts',
 // in the theme's shape. The parts' are the style of each part the page names, by its own
 // element, a table of Markdown, or HTML that names a part (<span class="good" data-floe-part="cell">) or
@@ -862,11 +862,13 @@ func (set *partSet) pageStyle(page string, found []tag, own []byte, theme string
 			write("@layer " + layer + " {\n" + css + "}\n")
 		}
 	}
-	// floe's own default palette defines every variable; the theme's after it, default of one's own too,
-	// changes those it writes.
+	// floe's own default palette defines every variable; the theme's after it, then one's own of its name,
+	// default of one's own too, change those they write.
 	sheet("floe.palette", set.palette)
-	if themed.palette != set.palette {
-		sheet("floe.palette", themed.palette)
+	for i, palette := range themed.palettes {
+		if theme != DefaultTheme || i > 0 {
+			sheet("floe.palette", palette)
+		}
 	}
 	named := namedIn(page, found)
 	if bad := set.misnamedIn(named); bad != nil {

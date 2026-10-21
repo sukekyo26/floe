@@ -29,7 +29,7 @@ func TestPalette(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	under := set.themes[DefaultTheme].palette
+	under := set.palette
 	defined := definedIn(under)
 	for _, v := range palette {
 		if !defined[v] {
@@ -41,7 +41,7 @@ func TestPalette(t *testing.T) {
 		taken["the part "+name] = p.css
 	}
 	for name, theme := range set.themes {
-		css := theme.base + theme.palette
+		css := theme.base + strings.Join(theme.palettes, "")
 		for _, part := range slices.Sorted(maps.Keys(theme.parts)) {
 			css += theme.parts[part]
 		}
@@ -201,14 +201,21 @@ func TestColourWarnings(t *testing.T) {
 	t.Parallel()
 
 	for css, want := range map[string]string{
-		":scope { color: #fff; }":                                                                     "c.css:1: #fff is a colour",
-		":scope {\n  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);\n}":                                      "c.css:2: rgb(0 0 0 / 0.1) is a colour",
-		":scope { background: linear-gradient(OKLCH(50% 0.1 20), red); }":                             "c.css:1: OKLCH(50% 0.1 20) is a colour",
-		":scope { border: 1px solid White; }":                                                         "c.css:1: White is a colour",
-		":scope { --x: #123; }":                                                                       "c.css:1: #123 is a colour",
-		":scope { color: var(--fg, #000); }":                                                          "c.css:1: #000 is a colour",
-		":scope { color: Canvas; }":                                                                   "c.css:1: Canvas is a colour",
-		"@media (hover) { :scope:hover { outline-color: tomato; } }":                                  "c.css:1: tomato is a colour",
+		":scope { color: #fff; }":                                         "c.css:1: #fff is a colour",
+		":scope {\n  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);\n}":          "c.css:2: rgb(0 0 0 / 0.1) is a colour",
+		":scope { background: linear-gradient(OKLCH(50% 0.1 20), red); }": "c.css:1: OKLCH(50% 0.1 20) is a colour",
+		":scope { border: 1px solid White; }":                             "c.css:1: White is a colour",
+		":scope { --x: #123; }":                                           "c.css:1: #123 is a colour",
+		":scope { color: var(--fg, #000); }":                              "c.css:1: #000 is a colour",
+		":scope { color: Canvas; }":                                       "c.css:1: Canvas is a colour",
+		"@media (hover) { :scope:hover { outline-color: tomato; } }":      "c.css:1: tomato is a colour",
+		"color: #abc;": "c.css:1: #abc is a colour",
+		":scope { filter: drop-shadow(0 0 2px black); }":                                              "c.css:1: black is a colour",
+		":scope { -webkit-box-shadow: 0 0 1px red; }":                                                 "c.css:1: red is a colour",
+		":scope { -webkit-tap-highlight-color: red; }":                                                "c.css:1: red is a colour",
+		":scope { text-emphasis: dot red; }":                                                          "c.css:1: red is a colour",
+		":scope { color: rgb(from #fff r g b / 50%); }":                                               "c.css:1: #fff is a colour",
+		":scope { color: rgb(from var(--accent) r g b / 50%); }":                                      "",
 		":scope { font-family: Arial Black, serif; white-space: nowrap; }":                            "",
 		":scope { --x: white; content: \"#fff red\"; grid-area: red; }":                               "",
 		":scope { color: var(--fg); background: color-mix(in srgb, var(--accent) 8%, transparent); }": "",
@@ -223,8 +230,8 @@ func TestColourWarnings(t *testing.T) {
 			t.Errorf("colourWarnings(%q) = %q, want %q", css, got, want)
 		}
 	}
-	w := colourWarnings("base.css", readCSS([]byte(":root {\n  --x: var(--fg); --y: 1px;\n}\n.a { color: var(--x); }")), false)
-	if len(w) != 2 || !strings.HasPrefix(w[0].Error(), "base.css:2: --x is set") || !strings.HasPrefix(w[1].Error(), "base.css:2: --y is set") {
+	w := colourWarnings("base.css", readCSS([]byte(":root {\n  --x: var(--fg); --y: 1px;\n}\n.a { color: var(--x); }\n--z: 0;")), false)
+	if len(w) != 3 || !strings.HasPrefix(w[2].Error(), "base.css:5: --z is set") || !strings.HasPrefix(w[0].Error(), "base.css:2: --x is set") || !strings.HasPrefix(w[1].Error(), "base.css:2: --y is set") {
 		t.Errorf("colourWarnings of a theme's file = %v, want --x and --y told", w)
 	}
 }

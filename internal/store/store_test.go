@@ -1156,7 +1156,7 @@ func TestLinkDataFileParts(t *testing.T) {
 	e.write(t, "kept/note/schema.json", `{"type": "object", "properties": {"text": {"type": "string"}}}`)
 	e.write(t, "kept/note/part.html", `<aside data-floe-part="note">{{.text}}</aside>`)
 	css := e.write(t, "kept/note/part.css", ":scope { margin: 0; }\n")
-	theme := e.write(t, "kept/mine/base.css", ":root { --mine-ink: #123; }\n")
+	theme := e.write(t, "kept/mine/base.css", "blockquote { color: var(--fg); }\n")
 	out := e.write(t, "elsewhere/notes.txt", "x")
 	if err := os.Symlink(filepath.Dir(out), filepath.Join(kept, "elsewhere")); err != nil {
 		t.Fatal(err)

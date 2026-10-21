@@ -6,8 +6,8 @@
   --font: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", "Noto Serif CJK JP", serif;
   --code-bg: #1f1c19; --code-fg: #ece5d6; --code-prompt: #f0866b;
   --rule: 4px double var(--fg);
-  /* The vermilion of its marks (seals, the tab picked, the rules of code and quotes), not the colour of a
-     mistake, and the hairlines of its tables, in the ink */
+  /* The vermilion of its marks (seals, the tab picked, the rules of code and quotes), kept apart from --bad,
+     which a template may set otherwise, and the hairlines of its tables, in the ink */
   --washi-shu: #c13b23; --washi-hair: color-mix(in srgb, var(--fg) 18%, transparent);
 }
 @media (prefers-color-scheme: dark) {

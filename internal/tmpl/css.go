@@ -65,11 +65,13 @@ func lineAt(src []byte, at int) int {
 var rootSelector = regexp.MustCompile(`(?i)(?:^|[\s,>+~(])(:root|html)(?:[\s,.:\[#>+~)]|$)`)
 
 // cssSheet is CSS read as CSS Syntax reads it: its tokens, spaces and comments among them, its rules in
-// order, those in blocks too, and the offset of a } that closes no block, -1 for none.
+// order, those in blocks too, the declarations written outside any block, which floe's @scope applies to
+// :scope, and the offset of a } that closes no block, -1 for none.
 type cssSheet struct {
 	src    []byte
 	tokens []cssToken
 	rules  []cssRule
+	decls  []cssDeclaration
 	stray  int
 }
 
@@ -98,7 +100,7 @@ type cssRule struct {
 // readCSS reads src, which floe's lexer of CSS Syntax reads as a browser does: a string, a comment, an
 // escaped character or the URL of url(…) holds no brace or ; of the CSS's.
 func readCSS(src []byte) *cssSheet {
-	s := &cssSheet{src: src, tokens: nil, rules: nil, stray: -1}
+	s := &cssSheet{src: src, tokens: nil, rules: nil, decls: nil, stray: -1}
 	l := css.NewLexer(tparse.NewInputString(string(src)))
 	for at := 0; at < len(src); {
 		typ, text := l.Next()
@@ -211,17 +213,22 @@ func (r *ruleReader) close(i int, t cssToken) bool {
 }
 
 // segment notes what is written from the start up to end: an at-rule written as a statement, or a
-// declaration of the innermost block open.
+// declaration of the innermost block open, or of none.
 func (r *ruleReader) segment(end int) {
 	rule := r.s.ruleOf(r.start, end)
-	switch in := r.innermost(); {
-	case strings.HasPrefix(rule.prelude, "@"):
+	in := r.innermost()
+	if strings.HasPrefix(rule.prelude, "@") {
 		rule.depth, rule.parent = r.open, in
 		r.s.rules = append(r.s.rules, rule)
+		return
+	}
+	d, ok := r.s.declarationOf(r.start, end)
+	switch {
+	case !ok:
 	case in >= 0:
-		if d, ok := r.s.declarationOf(r.start, end); ok {
-			r.s.rules[in].decls = append(r.s.rules[in].decls, d)
-		}
+		r.s.rules[in].decls = append(r.s.rules[in].decls, d)
+	default:
+		r.s.decls = append(r.s.decls, d)
 	}
 }
 
