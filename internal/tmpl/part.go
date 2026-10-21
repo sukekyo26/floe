@@ -97,7 +97,7 @@ func (s *shape) first(ptr string, ok func(*shape) bool) (string, *shape) {
 		return ptr, s
 	}
 	in := s.inside()
-	for _, name := range s.keyNames() {
+	for _, name := range slices.Sorted(maps.Keys(in.keys)) {
 		if at, found := in.keys[name].first(ptr+"/properties/"+pointerKey.Replace(name), ok); found != nil {
 			return at, found
 		}

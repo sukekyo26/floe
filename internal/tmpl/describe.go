@@ -171,11 +171,11 @@ func SharedItems(name string) []Item {
 
 // items are the items s declares, by name.
 func (s *shape) items() []Item {
-	names := s.keyNames()
+	in := s.inside()
+	names := slices.Sorted(maps.Keys(in.keys))
 	if len(names) == 0 {
 		return nil
 	}
-	in := s.inside()
 	items := make([]Item, 0, len(names))
 	for _, n := range names {
 		items = append(items, in.keys[n].item(n, slices.Contains(in.required, n)))

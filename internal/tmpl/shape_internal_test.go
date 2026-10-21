@@ -59,11 +59,11 @@ func TestShapeRefusesWrongTypes(t *testing.T) {
 	t.Parallel()
 
 	for src, want := range map[string]string{
-		`{"properties": {"a": true}}`:          "a keyword of the wrong JSON type: #/properties/a, which is an object",
-		`{"items": [{"type": "string"}]}`:      "a keyword of the wrong JSON type: #/items, which is an object",
-		`{"properties": {"a": {"format": 1}}}`: "a keyword of the wrong JSON type: #/properties/a/format, which is text",
-		`{"required": ["a", 1]}`:               "a keyword of the wrong JSON type: #/required, which is a list of text",
-		`{"enum": "a"}`:                        "a keyword of the wrong JSON type: #/enum, which is a list",
+		`{"properties": {"a": true}}`:          "a keyword of the wrong JSON type: #/properties/a must be an object",
+		`{"items": [{"type": "string"}]}`:      "a keyword of the wrong JSON type: #/items must be an object",
+		`{"properties": {"a": {"format": 1}}}`: "a keyword of the wrong JSON type: #/properties/a/format must be text",
+		`{"required": ["a", 1]}`:               "a keyword of the wrong JSON type: #/required must be a list of text",
+		`{"enum": "a"}`:                        "a keyword of the wrong JSON type: #/enum must be a list",
 	} {
 		if _, err := readShape(jsonDoc(t, src), schemaURL("t")); err == nil || err.Error() != want {
 			t.Errorf("readShape of %s = %v, want %s", src, err, want)

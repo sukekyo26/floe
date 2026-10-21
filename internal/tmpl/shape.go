@@ -31,7 +31,8 @@ type shape struct {
 }
 
 // readShape reads doc, a schema as jsonschema reads it, at url, which a relative $ref is read from, into
-// its shape. It refuses a keyword floe reads that is of another JSON type than JSON Schema's.
+// its shape. It refuses $ref, format, description, enum, required, properties and items of another JSON
+// type than JSON Schema's; type, which floe only tells, is kept as written.
 func readShape(doc any, url string) (*shape, error) {
 	return readShapeAt(doc, url, "#")
 }
@@ -43,7 +44,7 @@ var errKeyword = errors.New("a keyword of the wrong JSON type")
 func readShapeAt(v any, url, ptr string) (*shape, error) {
 	m, ok := v.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("%w: %s, which is an object", errKeyword, ptr)
+		return nil, fmt.Errorf("%w: %s must be an object", errKeyword, ptr)
 	}
 	ref, errRef := keyword[string](m, "$ref", ptr, "text")
 	format, errFormat := keyword[string](m, "format", ptr, "text")
@@ -64,33 +65,30 @@ func readShapeAt(v any, url, ptr string) (*shape, error) {
 	for _, r := range required {
 		name, ok := r.(string)
 		if !ok {
-			return nil, fmt.Errorf("%w: %s/required, which is a list of text", errKeyword, ptr)
+			return nil, fmt.Errorf("%w: %s/required must be a list of text", errKeyword, ptr)
 		}
 		s.required = append(s.required, name)
 	}
 	if props != nil {
 		s.keys = make(map[string]*shape, len(props))
 		for _, k := range slices.Sorted(maps.Keys(props)) {
-			var err error
-			if s.keys[k], err = readShapeOrNull(props[k], url, ptr+"/properties/"+pointerKey.Replace(k)); err != nil {
-				return nil, err
+			// null declares the key, and nothing of it.
+			s.keys[k] = nil
+			if props[k] != nil {
+				var err error
+				if s.keys[k], err = readShapeAt(props[k], url, ptr+"/properties/"+pointerKey.Replace(k)); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
-	var err error
-	if s.each, err = readShapeOrNull(m["items"], url, ptr+"/items"); err != nil {
-		return nil, err
+	if items := m["items"]; items != nil {
+		var err error
+		if s.each, err = readShapeAt(items, url, ptr+"/items"); err != nil {
+			return nil, err
+		}
 	}
 	return s, nil
-}
-
-// readShapeOrNull reads the schema v as readShapeAt does, nil for none or null, which declares nothing.
-func readShapeOrNull(v any, url, ptr string) (*shape, error) {
-	if v == nil {
-		var none *shape
-		return none, nil
-	}
-	return readShapeAt(v, url, ptr)
 }
 
 // keyword returns the keyword kw of the schema m, at ptr, as a T, which want words: its zero value when m
@@ -102,7 +100,7 @@ func keyword[T any](m map[string]any, kw, ptr, want string) (T, error) {
 		return t, nil
 	}
 	if t, ok = v.(T); !ok {
-		return t, fmt.Errorf("%w: %s/%s, which is %s", errKeyword, ptr, kw, want)
+		return t, fmt.Errorf("%w: %s/%s must be %s", errKeyword, ptr, kw, want)
 	}
 	return t, nil
 }

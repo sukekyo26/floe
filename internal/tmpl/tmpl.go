@@ -680,8 +680,8 @@ func (t *Template) readShape(doc any) (*shape, error) {
 // refuseShared refuses a schema that declares, or requires, a key floe reads from every data file itself:
 // floe takes it out of the data before the schema sees it, so the item would always be empty, and a
 // required one always missing.
-// LIMIT: the top of the schema only, not through $ref or allOf; look there if a schema comes to put its
-// items so.
+// LIMIT: the top of the schema, or what its root $ref names where it declares no items of its own (inside),
+// not allOf; look there if a schema comes to put its items so.
 func (t *Template) refuseShared(s *shape) error {
 	in := s.inside()
 	var named []string
