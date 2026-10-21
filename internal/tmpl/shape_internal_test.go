@@ -144,10 +144,7 @@ func TestDrawnWhole(t *testing.T) {
 	s := shapeOf(t, `{"properties": {"t": {"$ref": "floe:///parts/table.json"}, "m": {"type": "string", "format": "markdown"}}}`)
 	table := map[string]any{"columns": []any{map[string]any{"title": "a"}}, "rows": []any{[]any{"x", "y"}}}
 	found := s.drawnWhole(map[string]any{"t": table, "m": "hi"})
-	got := make([]string, 0, len(found))
-	for _, f := range found {
-		got = append(got, strings.Join(f.at, ".")+":"+drawerOf(f))
-	}
+	got := listed(found)
 	want := []string{"m:markdown", "t.rows.0.0:cell", "t.rows.0.1:cell", "t:table"}
 	if sorted := slices.Sorted(slices.Values(got)); !slices.Equal(sorted, want) {
 		t.Errorf("drawnWhole = %v, want %v", got, want)
@@ -157,12 +154,17 @@ func TestDrawnWhole(t *testing.T) {
 	}
 }
 
-// drawerOf names what draws f whole: its format, or its part.
-func drawerOf(f drawnItem) string {
-	if f.part != nil {
-		return f.part.name
+// listed writes each item of found as its path and what draws it whole, its part or its format.
+func listed(found drawnItems) []string {
+	got := make([]string, 0, len(found))
+	for _, f := range found {
+		drawer := f.format
+		if f.part != nil {
+			drawer = f.part.name
+		}
+		got = append(got, strings.Join(f.at, ".")+":"+drawer)
 	}
-	return f.format
+	return got
 }
 
 // What an item of a format of floe's holds is not looked into, a part wins over a format, and an item of a
@@ -201,10 +203,7 @@ func TestDrawnWholeStops(t *testing.T) {
 		{named(holder, ""), map[string]any{"m": "x"}, []string{":holder"}},
 	} {
 		found := c.s.drawnWhole(c.v)
-		got := make([]string, 0, len(found))
-		for _, f := range found {
-			got = append(got, strings.Join(f.at, ".")+":"+drawerOf(f))
-		}
+		got := listed(found)
 		if !slices.Equal(got, c.want) {
 			t.Errorf("drawnWhole = %v, want %v", got, c.want)
 		}
