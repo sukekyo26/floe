@@ -91,7 +91,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 
 ### パレット
 
-ページの色と書体は、テーマの `palette.css` が CSS 変数で決めます。部品・図・floe の基本の見た目・テンプレートは、これらの変数で描きます。floe の `default` の `palette.css` はすべての変数を定義し、どのページにもいちばん下に入ります。`theme:` で選んだテーマの `palette.css` はその後に入って、書いた変数だけを変えます。`parts-shape:` で部品の形を別のテーマから取っても、パレットは変わりません。自分の `default` の `palette.css` も、floe のものに代わらずその上に重なります。書かなかった変数と、`palette.css` を持たないテーマの色は floe の `default` のものです。
+ページの色と書体は、テーマの `palette.css` が CSS 変数で決めます。部品・図・floe の基本の見た目・テンプレートは、これらの変数で描きます。floe の `default` の `palette.css` はすべての変数を定義し、どのページにもいちばん下に入ります。`theme:` で選んだテーマの `palette.css` はその後に入って、書いた変数だけを変えます。`parts-shape:` で部品の形を別のテーマから取っても、パレットは変わりません。自分の `default` の `palette.css` も、floe のものに代わらずその上に重なります。書かなかった変数と、`palette.css` を持たないテーマの色は floe の `default` のものです。floe のテーマのうち、`blueprint`・`brutal`・`ink`・`notebook`・`swiss`・`washi` は `palette.css` を持ち、`editorial`・`soft` は持ちません。
 
 `palette.css` には、`:root { --名前: 値; }` で変数（と `color-scheme`）を書き、ダークモードの分をその後の `@media (prefers-color-scheme: dark) { :root { … } }` に書きます。ほかの規則は最下層では効かないので、`:root` をダークの分より後に書くとその色がダークモードでも勝つので、`!important` はどの層にも勝ってテンプレートの色を崩すので、それぞれ行を示して断ります。ライトモードの分だけを書いた色は、ダークモードでもその値のまま、ほかの色だけが `default` のダークの色になって読めなくなるので、`floe part check` と `floe template check` が警告します。色は両方のモードの分を書いてください。`default` がダークモードで変える色をすべて `:root` に書き、ダークモードの分を 1 つも書かない、いつも同じ見た目のパレット（いつも暗いテーマなど）は、色が混ざらないので警告しません。`light-dark(#fff, #000)` のように値そのものがモードで切り替わるものも警告しません。
 
