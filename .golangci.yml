@@ -138,6 +138,14 @@ linters:
         - errors.New(
         - errors.Unwrap(
         - errors.Join(
+        # floe's own mistakes, worded and placed for the reader: wrapping them would change what they say.
+        - usererr.New(
+        - usererr.CannotRead(
+        - usererr.CannotWrite(
+        - yamlpos.New(
+        - yamlpos.Syntax(
+        # A sig matches as part of the one reported, func (github.com/…/yamlpos.Problems).Sorted(): no "(" before.
+        - yamlpos.Problems).Sorted(
     sloglint:
       no-mixed-args: true
       kv-only: false
