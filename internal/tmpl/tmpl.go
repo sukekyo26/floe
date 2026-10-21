@@ -223,6 +223,7 @@ type head struct {
 	where    map[string]yamlpos.Pos
 	problems yamlpos.Problems // the mistakes in those keys
 	unnamed  bool             // template: is left out or empty, a mistake left to the caller to word
+	shaped   bool             // parts-shape: is written, empty too, which is no theme
 }
 
 // start reads the data file src, file in its mistakes, up to its template, leaving out the data's
@@ -244,7 +245,7 @@ func start(file string, src []byte, given Themes) (*head, error) {
 		File: file, Template: "", Theme: DefaultTheme, PartsShape: "", Title: "", Lang: "", Values: top, Calc: nil,
 		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, htmlItems: nil, marks: nil,
 	}
-	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
+	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false, shaped: false}
 	h.readShared(given)
 	return h, nil
 }
@@ -258,16 +259,17 @@ func (t *Template) check(h *head, images imageDir, given Themes, problems yamlpo
 	if err != nil {
 		return err
 	}
-	more, err := pickTheme(set, d, &d.Theme, given.Theme, h.where["theme"], "tmpl_unknown_theme")
+	names := set.themeNames()
+	more, err := pickTheme(set, names, d, &d.Theme, given.Theme, h.where["theme"], "tmpl_unknown_theme")
 	if err != nil {
 		return err
 	}
 	problems = append(problems, more...)
 	// The parts take their shape from the theme, but where parts-shape: names another.
-	if d.PartsShape == "" && given.Shape == "" {
+	if !h.shaped && given.Shape == "" {
 		d.PartsShape = d.Theme
 	} else {
-		more, err = pickTheme(set, d, &d.PartsShape, given.Shape, h.where["parts-shape"], "tmpl_unknown_parts_shape")
+		more, err = pickTheme(set, names, d, &d.PartsShape, given.Shape, h.where["parts-shape"], "tmpl_unknown_parts_shape")
 		if err != nil {
 			return err
 		}
@@ -276,13 +278,12 @@ func (t *Template) check(h *head, images imageDir, given Themes, problems yamlpo
 	return checkValues(t, d, h.root, images, problems)
 }
 
-// pickTheme sets *theme, a theme of d, to given when not "", which must be a theme of set, else leaves the
-// data's, reported at pos, where the data names it, when it is not one. unknown is the message of a theme
-// there is none of; one of one's own that cannot be used is told why.
-func pickTheme(set *partSet, d *Data, theme *string, given string, pos yamlpos.Pos, unknown string) (
+// pickTheme sets *theme, a theme of d, to given when not "", which must be one of names, the themes of set,
+// else leaves the data's, reported at pos, where the data names it, when it is not one. unknown is the
+// message of a theme there is none of; one of one's own that cannot be used is told why.
+func pickTheme(set *partSet, names []string, d *Data, theme *string, given string, pos yamlpos.Pos, unknown string) (
 	yamlpos.Problems, error,
 ) {
-	names := set.themeNames()
 	name := cmp.Or(given, *theme)
 	var why *usererr.Error
 	switch {
@@ -378,6 +379,7 @@ func (h *head) readShared(given Themes) {
 		"lang": &d.Lang, "parts-shape": &d.PartsShape, "template": &d.Template, "theme": &d.Theme, "title": &d.Title,
 	}
 	h.unnamed = true
+	read := map[string]bool{} // the keys written as text, empty too
 	for _, key := range shared {
 		h.where[key] = yamlpos.Of(h.root)
 		v, ok := d.Values[key]
@@ -404,10 +406,12 @@ func (h *head) readShared(given Themes) {
 			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_lang_invalid", s))
 		case text:
 			*to[key] = s
+			read[key] = true
 		default:
 			h.problems = append(h.problems, yamlpos.New(d.File, h.where[key], "tmpl_not_text", key))
 		}
 	}
+	h.shaped = read["parts-shape"]
 	// A title of spaces names none, as an empty --title does.
 	d.Title = strings.TrimSpace(d.Title)
 }

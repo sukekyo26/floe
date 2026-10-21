@@ -459,6 +459,25 @@ func TestOwnPartsThemes(t *testing.T) {
 		!strings.Contains(page, "/* mine */") {
 		t.Errorf("drawing with the theme mine = %v:\n%s", err, page)
 	}
+	// A theme given over the data's gives the parts' shape too, but where the data's parts-shape: names one.
+	read := func(src string, given tmpl.Themes) string {
+		d, rerr := l.Read("data.yaml", []byte(src), given, "")
+		if rerr != nil {
+			t.Fatal(rerr)
+		}
+		out, rerr := d.Render("t")
+		if rerr != nil {
+			t.Fatal(rerr)
+		}
+		return string(out)
+	}
+	if page = read("template: memo\nlang: en\nrisks: { text: x }\n", tmpl.Themes{Theme: "mine", Shape: ""}); !strings.Contains(page, "/* mine */") {
+		t.Errorf("drawing with --theme mine lacks mine's shape:\n%s", page)
+	}
+	if page = read("template: memo\nlang: en\nparts-shape: brutal\nrisks: { text: x }\n", tmpl.Themes{Theme: "mine", Shape: ""}); strings.Contains(page, "/* mine */") ||
+		!strings.Contains(page, "/* mine's palette */") {
+		t.Errorf("drawing with --theme mine and parts-shape: brutal = \n%s", page)
+	}
 	// Its palette goes over floe's default one, which keeps the variables it leaves out, and so does a
 	// default of one's own, which does not take the place of floe's.
 	under, mine := strings.Index(page, "@layer floe.palette {\n/* Every page's colours"), strings.Index(page, "@layer floe.palette {\n/* mine's palette */")
