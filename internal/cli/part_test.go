@@ -7,7 +7,7 @@ import (
 )
 
 // floe part list tells of every part a line, a part that cannot be used after them; floe part show tells
-// what a part takes and its items, the looks it takes, the parts it holds and its parts themes.
+// what a part takes and its items, the looks it takes, the parts it holds and its themes.
 func TestPartListAndShow(t *testing.T) {
 	t.Parallel()
 
@@ -30,7 +30,7 @@ items:
 ` {
 		t.Errorf("part show risks = %+v", r)
 	}
-	if r := e.run(t, "", "part", "show", "table"); r.code != 0 || !strings.Contains(r.stdout, "\nholds: cell\nparts themes with a file of it: blueprint, brutal, ") ||
+	if r := e.run(t, "", "part", "show", "table"); r.code != 0 || !strings.Contains(r.stdout, "\nholds: cell\nthemes with a file of it: blueprint, brutal, ") ||
 		!strings.Contains(r.stdout, "\n  columns: a list of keys and values, required\n    num: ") {
 		t.Errorf("part show table = %+v", r)
 	}
@@ -59,8 +59,8 @@ items:
 	}
 }
 
-// floe part new tells where the copy is, what of floe's it takes the place of, and the files of the parts
-// themes it copied.
+// floe part new tells where the copy is, what of floe's it takes the place of, and the files of the themes
+// it copied, into the directory of themes of one's own, made with those above it.
 func TestPartNew(t *testing.T) {
 	t.Parallel()
 
@@ -69,10 +69,10 @@ func TestPartNew(t *testing.T) {
 	e.vars["FLOE_PARTS_DIR"] = parts
 	if r := e.run(t, "", "part", "new", "note", "--from", "note"); r.code != 0 || r.stdout != "made the part note in "+filepath.Join(parts, "note")+", a copy of floe's note\n"+
 		"it takes the place of floe's note\n"+
-		"copied the files of its parts themes too: blueprint, brutal, default, editorial, ink, notebook, swiss, washi ("+filepath.Join(parts, "themes")+"/<theme>/note.css)\n" {
+		"copied the files of its themes too: blueprint, brutal, default, editorial, ink, notebook, swiss, washi ("+filepath.Join(e.tmp, "home", ".config", "floe", "themes")+"/<theme>/note.css)\n" {
 		t.Errorf("part new in place of floe's = %+v", r)
 	}
-	if r := e.run(t, "", "part", "new", "aside", "--from", "note"); r.code != 0 || !strings.HasPrefix(r.stdout, "made the part aside in "+filepath.Join(parts, "aside")+", a copy of note\ncopied the files of its parts themes too: ") {
+	if r := e.run(t, "", "part", "new", "aside", "--from", "note"); r.code != 0 || !strings.HasPrefix(r.stdout, "made the part aside in "+filepath.Join(parts, "aside")+", a copy of note\ncopied the files of its themes too: ") {
 		t.Errorf("part new of one's own = %+v", r)
 	}
 	if r := e.run(t, "", "part", "new", "aside"); r.code != 2 || !strings.Contains(r.stderr, "name the part to copy with --from") {
@@ -90,6 +90,7 @@ func TestPartCheck(t *testing.T) {
 
 	e := newEnv(t)
 	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.vars["FLOE_THEMES_DIR"] = filepath.Join(e.tmp, "themes")
 	if r := e.run(t, "", "part", "check"); r.code != 0 || r.stdout != "" || r.stderr != "" {
 		t.Errorf("part check without parts = %+v", r)
 	}
@@ -99,14 +100,14 @@ func TestPartCheck(t *testing.T) {
 	if r := e.run(t, "", "part", "check"); r.code != 0 || r.stdout != "" || r.stderr != "" {
 		t.Errorf("part check of a copy = %+v", r)
 	}
-	e.write(t, "parts/themes/default/nope.css", "")
+	e.write(t, "themes/default/nope.css", "")
 	if r := e.run(t, "", "part", "check"); r.code != 0 || !strings.Contains(r.stderr, "nope.css goes into no page") {
 		t.Errorf("part check with a stray file = %+v", r)
 	}
 	e.write(t, "parts/grid/part.html", "<table></table>")
-	e.write(t, "parts/themes/mine/grid.css", "}\n")
+	e.write(t, "themes/mine/grid.css", "}\n")
 	r := e.run(t, "", "part", "check")
-	if r.code != 1 || !strings.Contains(r.stderr, "the part grid cannot be used") || !strings.Contains(r.stderr, "your own parts theme mine cannot be used") {
+	if r.code != 1 || !strings.Contains(r.stderr, "the part grid cannot be used") || !strings.Contains(r.stderr, "your own theme mine cannot be used") {
 		t.Errorf("part check with mistakes = %+v", r)
 	}
 	if r := e.run(t, "", "part", "check", "parts"); r.code != 2 {

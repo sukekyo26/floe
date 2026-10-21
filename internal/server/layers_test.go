@@ -8,11 +8,11 @@ import (
 )
 
 // TestUILayers checks, in the browser, how floe puts a page's CSS together. The template's page.css,
-// though its selectors are the more specific, loses to the part's style and to the parts theme's, and
+// though its selectors are the more specific, loses to the part's style and to the theme's, and
 // still styles what neither of them does, such as where a part stands. It reaches the part's element but
 // not what the part holds, whose colour it gives by inheritance alone. Its @keyframes and @font-face,
 // in floe's @scope, work. A block page.css leaves open does not take in the theme, nor one a part of one's
-// own leaves open the parts after it. A part's style stops at a part it holds. floe's parts theme does not
+// own leaves open the parts after it. A part's style stops at a part it holds. floe's theme does not
 // style a part of one's own that took the place of floe's, but does those drawn in its look.
 func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
 	e := newEnv(t)
@@ -34,7 +34,7 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	e.publish(t, e.write(t, "layers.yaml", "template: layers\nlang: en\nnote: { text: x, tone: warn }\n"), store.Options{Slug: &slug})
 	b.navigate("/a/layers/?raw")
 	b.until("the note", "!!document.querySelector('[data-floe-part=note]')")
-	// The part's background, the parts theme's top of the mark (0.85rem, over the part's 1.1rem), the
+	// The part's background, the theme's top of the mark (0.85rem, over the part's 1.1rem), the
 	// template's margin; the template's own paragraph and the note's; the animation and the face.
 	got := b.eval(`(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n);
 		return [s.backgroundColor, getComputedStyle(n, '::before').top, s.marginTop,

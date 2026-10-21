@@ -40,7 +40,7 @@ func newEnv(t *testing.T) env {
 		t.Fatal(err)
 	}
 	mkdir(t, filepath.Join(tmp, "home"))
-	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary("", "", ""))}
+	return env{tmp: tmp, s: store.New(filepath.Join(tmp, "store"), filepath.Join(tmp, "home"), tmpl.NewLibrary("", "", "", ""))}
 }
 
 func mkdir(t *testing.T, dir string) {
@@ -739,7 +739,7 @@ func TestStoreUnderPatternPath(t *testing.T) {
 
 	e := newEnv(t)
 	root := filepath.Join(e.tmp, "[notes]", "store")
-	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", ""))
+	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", "", ""))
 	doc := e.page(t, "plan.yaml", "Plan")
 	for range 2 {
 		entry, err := prepare(t.Context(), st, doc, store.Options{}, e.tmp)
@@ -762,7 +762,7 @@ func TestNoStore(t *testing.T) {
 
 	e := newEnv(t)
 	root := filepath.Join(e.tmp, "none")
-	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", ""))
+	st := store.New(root, filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", "", ""))
 	wantUserErr(t, st.Remove("x"), "store_no_page", "x")
 	if _, err := st.Edit("x", store.Edit{Description: ptr("d")}); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("an edit in no store = %v", err)
@@ -1079,7 +1079,7 @@ func TestLinkDataFileEdges(t *testing.T) {
 	}
 }
 
-// One data file linked under two slugs, drawn with two parts themes, is watched apart: drawing one does
+// One data file linked under two slugs, drawn with two themes, is watched apart: drawing one does
 // not move the version of the other.
 func TestLinkDataFileTwice(t *testing.T) {
 	t.Parallel()
@@ -1089,7 +1089,7 @@ func TestLinkDataFileTwice(t *testing.T) {
 	if err := os.CopyFS(filepath.Join(dir, "sizes"), os.DirFS("../tmpl/testdata/sizes")); err != nil {
 		t.Fatal(err)
 	}
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, "", ""))
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary(dir, "", "", ""))
 	data := e.write(t, "proj/sizes.yaml", "template: sizes\nfiles: [{name: a, bytes: 1}]\nlang: en\n")
 	link := func(slug, theme string) store.Meta {
 		t.Helper()
@@ -1131,7 +1131,7 @@ func TestLinkDataFileIcons(t *testing.T) {
 
 	e := newEnv(t)
 	icons := filepath.Join(e.tmp, "icons")
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", icons))
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", "", icons))
 	data := e.write(t, "proj/spec.yaml", "template: report\nsections:\n  - parts:\n      - diagram:\n          id: a\n"+
 		"          width: 100\n          height: 50\n          title: t\n          parts:\n"+
 		"            - icon: { x: 10, y: 5, name: aws/aws-lambda, size: 24 }\nlang: en\n")
@@ -1154,8 +1154,8 @@ func TestLinkDataFileIcons(t *testing.T) {
 	}
 }
 
-// A linked data file drawn with a part and a parts theme of one's own, kept elsewhere and linked into the
-// directory of parts, itself a symlink, is drawn again when a file of either is saved, or the link is
+// A linked data file drawn with a part and a theme of one's own, kept elsewhere and linked into the
+// directories of parts and of themes, themselves symlinks, is drawn again when a file of either is saved, or the link is
 // pointed elsewhere or removed, and not when a file a link in the part leads out to is, which floe does
 // not read.
 func TestLinkDataFileParts(t *testing.T) {
@@ -1171,20 +1171,22 @@ func TestLinkDataFileParts(t *testing.T) {
 	if err := os.Symlink(filepath.Dir(out), filepath.Join(kept, "elsewhere")); err != nil {
 		t.Fatal(err)
 	}
-	under := filepath.Join(e.tmp, "real-parts")
-	if err := os.MkdirAll(filepath.Join(under, "themes"), 0o700); err != nil {
-		t.Fatal(err)
+	under, themes := filepath.Join(e.tmp, "real-parts"), filepath.Join(e.tmp, "real-themes")
+	for _, dir := range []string{under, themes} {
+		if err := os.Mkdir(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
 	}
 	for link, to := range map[string]string{
-		filepath.Join(under, "note"): kept, filepath.Join(under, "themes", "mine"): filepath.Dir(theme),
-		filepath.Join(e.tmp, "parts"): under,
+		filepath.Join(under, "note"): kept, filepath.Join(themes, "mine"): filepath.Dir(theme),
+		filepath.Join(e.tmp, "parts"): under, filepath.Join(e.tmp, "themes"): themes,
 	} {
 		if err := os.Symlink(to, link); err != nil {
 			t.Fatal(err)
 		}
 	}
 	parts := filepath.Join(e.tmp, "parts")
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", parts, ""))
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", parts, filepath.Join(e.tmp, "themes"), ""))
 	data := e.write(t, "proj/spec.yaml", "template: report\nlang: en\nparts-shape: mine\nsections:\n  - parts:\n      - note: { text: Mine }\n")
 	m := store.Meta{Path: data}
 	page, version, err := s.Draw("spec", &m, data)
@@ -1267,7 +1269,7 @@ func TestPrepareData(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("../tmpl/testdata", "", ""))
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("../tmpl/testdata", "", "", ""))
 	png, err := os.ReadFile("../tmpl/testdata/sizes/chart.png")
 	if err != nil {
 		t.Fatal(err)

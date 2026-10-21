@@ -14,10 +14,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   line in page.html, `{{range .parts}}{{range .}}{{with .}}{{.}}{{end}}{{end}}{{end}}`.
 - Add `floe part`: `list` the parts, floe's and your own, with where they are
   and their descriptions; `show <name>` what a part takes and its items, the
-  looks it takes, the parts it holds and the parts themes with a file of it;
+  looks it takes, the parts it holds and the themes with a file of it;
   `new <name> --from <part>` a part of your own as a copy of another, its box
-  renamed and the file of the original of each parts theme copied, writing
-  nothing over; and `check` every part and parts theme of your own, a mistake
+  renamed and the file of the original of each theme copied, writing
+  nothing over; and `check` every part and theme of your own, a mistake
   exiting 1. A look alone gives its description in `part.yaml`'s
   `description:`.
 - Add parts of your own: a directory each in `FLOE_PARTS_DIR` (default
@@ -26,16 +26,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   schema takes no format of floe's (`html`, `image`, `markdown`), nor
   `any.json`; no schema, a template's too, names a part by
   the `$ref` at its root. One of the
-  name of one of floe's takes its place whole, and floe's parts themes do not
+  name of one of floe's takes its place whole, and floe's themes do not
   style it. A part takes the look
   of floe's, and those it takes, by its `part.yaml` (`looks: [panel]` draws
-  it in every parts theme's panel), and a look alone of your own is a
-  `part.css` without a schema. Parts themes of your
-  own go in `FLOE_PARTS_DIR/themes/<name>/`, a theme of the name of one of
-  floe's taking the place of its files of their names. A part or theme that
-  cannot be used is refused to the pages that use it and warned of by
-  `floe template check`; a linked page is drawn again when a file of a part
-  is saved, and a publish to a server of other parts is refused.
+  it in every theme's panel), and a look alone of your own is a
+  `part.css` without a schema. Themes of your own go in `FLOE_THEMES_DIR`
+  (default `$XDG_CONFIG_HOME/floe/themes`), a directory each, a theme of the
+  name of one of floe's taking the place of its files of their names. A part
+  or theme that cannot be used is refused to the pages that use it and warned
+  of by `floe template check`; a linked page is drawn again when a file of a
+  part or a theme is saved, and a publish to a server of other parts or
+  themes is refused.
 - Add twenty-two parts, which the built-in `report` takes and a template
   refers to as `floe:///parts/<name>.json`: `stats` (large numbers with a unit and a
   note in a tone), `progress` (bars of `done` of `of`), `steps` (numbered,
@@ -190,7 +191,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   floe puts a page's CSS together, the template's `page.css` in a
   `<style>` of its own, in a cascade layer over floe's base (text, lists, links, code and
   quotes) and the looks of elements that take one without being a part's
-  box, and under the parts' style and the parts theme, which they do not
+  box, and under the parts' style and the theme's, which they do not
   restyle whatever their selectors. The template's CSS is scoped to the page,
   `:scope` its root: it reaches a part's element but not what the part holds.
   `page.html` holds a `</head>`, before which floe puts the page's styles, or

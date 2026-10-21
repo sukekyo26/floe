@@ -53,9 +53,9 @@ your own takes the place of floe's of its name.`,
 func (a *app) partShowCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "show <name>",
-		Short: "Show what a part takes, the looks it takes, the parts it holds and its parts themes",
+		Short: "Show what a part takes, the looks it takes, the parts it holds and its themes",
 		Long: `Show a part: where it is, what it takes and its items (from its schema.json), the looks it
-takes (from its part.yaml, and those they take in turn), the parts it holds, and the parts themes
+takes (from its part.yaml, and those they take in turn), the parts it holds, and the themes
 with a file of it.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -106,10 +106,10 @@ func (a *app) partNewCmd() *cobra.Command {
 		Use:   "new <name> --from <part>",
 		Short: "Make a part of your own as a copy of another, to edit",
 		Long: `Make a part of your own in $FLOE_PARTS_DIR/<name> as a copy of another part, floe's or your
-own, to edit, and copy the file of that part of each parts theme that has one into
-$FLOE_PARTS_DIR/themes/<theme>/<name>.css. The copy's part.html names it as its box. Nothing is
-written over: with a part of that name, or a file of any parts theme of yours for it, nothing is
-made. Nor is it made with a parts theme of yours that cannot be used and may have a file of the
+own, to edit, and copy the file of that part of each theme that has one into
+$FLOE_THEMES_DIR/<theme>/<name>.css. The copy's part.html names it as its box. Nothing is
+written over: with a part of that name, or a file of any theme of yours for it, nothing is
+made. Nor is it made with a theme of yours that cannot be used and may have a file of the
 part, or when the copy, or a part that takes its look or holds it, could not be used. A copy named
 like one of floe's parts takes its place.`,
 		Args: usage(cobra.ExactArgs(1)),
@@ -142,16 +142,17 @@ like one of floe's parts takes its place.`,
 func (a *app) partCheckCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check",
-		Short: "Check the parts and parts themes of your own before you use or share them",
-		Long: `Check the parts and parts themes of your own in $FLOE_PARTS_DIR, all of them, as a page would
-read them: their files, their names, the looks they take and the parts they hold. Every mistake is
-printed, at its line where it has one, and the exit code is 1 when there is one. What goes into no
-page is warned of on stderr, leaving the exit code 0. Nothing is printed when they are right. To
-check another directory, set FLOE_PARTS_DIR to it. A part is not drawn, as it has no data: floe
-template check draws a template's example with the parts it uses.`,
+		Short: "Check the parts and themes of your own before you use or share them",
+		Long: `Check the parts of your own in $FLOE_PARTS_DIR and the themes in $FLOE_THEMES_DIR, all of
+them, as a page would read them: their files, their names, the looks they take and the parts they
+hold. Every mistake is printed, at its line where it has one, and the exit code is 1 when there is
+one. What goes into no page is warned of on stderr, leaving the exit code 0. Nothing is printed when
+they are right. To check other directories, set FLOE_PARTS_DIR and FLOE_THEMES_DIR to them. A part
+is not drawn, as it has no data: floe template check draws a template's example with the parts it
+uses.`,
 		Args: usage(cobra.NoArgs),
 		RunE: func(*cobra.Command, []string) error {
-			warnings, found := tmpl.CheckOwnParts(a.cfg.parts)
+			warnings, found := tmpl.CheckOwnParts(a.cfg.parts, a.cfg.themes)
 			for _, w := range warnings {
 				_, _ = fmt.Fprintln(a.env.Stderr, w.Localize(english)) //nolint:errcheck // nowhere left to report
 			}

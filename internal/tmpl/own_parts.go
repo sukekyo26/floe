@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"cmp"
+	"errors"
 	"io/fs"
 	"maps"
 	"os"
@@ -9,52 +10,119 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// partsIn returns floe's parts with those of one's own in dir over them, "" for none: floe's alone, read
-// once, when dir holds nothing.
-// LIMIT: with parts of one's own, floe's are read again with them for each data file read, as the $refs
-// they resolve change. Keep a set by the mtimes of dir's files if drawing a page comes to be slow.
-func partsIn(dir string) (*partSet, error) {
-	if dir == "" {
-		return builtinParts()
+// ownDirs are the directories of parts and of themes of one's own, "" for none.
+type ownDirs struct{ parts, themes string }
+
+// partsIn returns floe's parts and themes with those of one's own in own over them: floe's alone, read
+// once, when neither directory holds anything.
+// LIMIT: with parts or themes of one's own, floe's are read again with them for each data file read, as the
+// $refs they resolve change. Keep a set by the mtimes of their files if drawing a page comes to be slow.
+func partsIn(own ownDirs) (*partSet, error) {
+	if err := own.apart(); err != nil {
+		return nil, err
 	}
-	entries, err := entriesOf(dir)
+	entries, err := entriesOf(own.parts)
 	if err != nil {
-		return nil, usererr.New("tmpl_parts_dir_unreadable", dir, err.Error())
+		return nil, usererr.New("tmpl_parts_dir_unreadable", own.parts, err.Error())
 	}
-	// A name starting with a dot (.DS_Store) is none of one's own.
-	if !slices.ContainsFunc(entries, func(e os.DirEntry) bool { return !strings.HasPrefix(e.Name(), ".") }) {
+	if !holdsOwn(entries) && !themesThere(own.themes) {
 		return builtinParts()
 	}
-	return readParts(dir, entries, staged{name: "", dir: ""})
+	return readParts(own, entries, staged{name: "", dir: ""})
+}
+
+// apart refuses own when one of its directories is the other or is in it: a part would be read as a theme
+// there, or a theme as a part.
+func (own ownDirs) apart() error {
+	if own.parts != "" && own.themes != "" && (inside(own.parts, own.themes) || inside(own.themes, own.parts)) {
+		return usererr.New("tmpl_own_dirs_overlap", own.parts, own.themes)
+	}
+	return nil
+}
+
+// inside reports whether the directory a is b or is in it: as written once cleaned, through a symlink, or,
+// where b is there, by a name of another case on a file system that ignores it (macOS), as os.SameFile
+// tells. A directory not there yet resolves through the nearest one above it that is.
+// LIMIT: a symlink that leads nowhere is not followed: one that comes to overlap the other directory is
+// refused once what it leads to is there. Follow it if that comes to matter.
+func inside(a, b string) bool {
+	if within(filepath.Clean(a), filepath.Clean(b)) || within(resolve(a), resolve(b)) {
+		return true
+	}
+	at, err := os.Stat(b)
+	if err != nil {
+		return false
+	}
+	for dir := resolve(a); ; dir = filepath.Dir(dir) {
+		if fi, err := os.Stat(dir); err == nil && os.SameFile(fi, at) {
+			return true
+		}
+		if dir == filepath.Dir(dir) {
+			return false
+		}
+	}
+}
+
+// resolve returns the real path of dir, symlinks followed, one not there yet through the nearest directory
+// above it that is.
+func resolve(dir string) string {
+	rest := ""
+	for at := filepath.Clean(dir); ; at = filepath.Dir(at) {
+		if resolved, err := filepath.EvalSymlinks(at); err == nil || at == filepath.Dir(at) {
+			return filepath.Join(cmp.Or(resolved, at), rest)
+		}
+		rest = filepath.Join(filepath.Base(at), rest)
+	}
+}
+
+// within reports whether the directory a is b or is under it, both cleaned.
+func within(a, b string) bool {
+	return a == b || strings.HasPrefix(a, b+string(filepath.Separator))
+}
+
+// holdsOwn reports whether entries hold one of one's own: a name starting with a dot (.DS_Store) is none.
+func holdsOwn(entries []os.DirEntry) bool {
+	return slices.ContainsFunc(entries, func(e os.DirEntry) bool { return !strings.HasPrefix(e.Name(), ".") })
+}
+
+// themesThere reports whether something of one's own is at dir, where the themes of one's own go: a theme,
+// or what stands in the way of the directory or keeps it from being read, which readOwnThemes tells of.
+func themesThere(dir string) bool {
+	if _, err := os.Lstat(dir); dir == "" || errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
+		return false
+	}
+	entries, err := os.ReadDir(dir)
+	return err != nil || holdsOwn(entries)
 }
 
 // staged is a part of one's own read from another directory than its own, a copy not yet in place.
 type staged struct{ name, dir string }
 
-// partsWith returns the parts partsIn returns of dir, with the part of one's own name read from from, a
+// partsWith returns the parts partsIn returns of own, with the part of one's own name read from from, a
 // directory of its files not yet in place, as if it were.
-func partsWith(dir, name, from string) (*partSet, error) {
-	entries, err := entriesOf(dir)
-	if err != nil {
-		return nil, usererr.New("tmpl_parts_dir_unreadable", dir, err.Error())
+func partsWith(own ownDirs, name, from string) (*partSet, error) {
+	if err := own.apart(); err != nil {
+		return nil, err
 	}
-	return readParts(dir, entries, staged{name: name, dir: from})
+	entries, err := entriesOf(own.parts)
+	if err != nil {
+		return nil, usererr.New("tmpl_parts_dir_unreadable", own.parts, err.Error())
+	}
+	return readParts(own, entries, staged{name: name, dir: from})
 }
 
 // readOwn reads the parts of one's own in dir into set, over floe's of their names, a directory each, a
 // symlink followed, and the part stage names from its directory. Those that cannot be used are left out of
 // set, and kept in set.broken.
-func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) error {
-	if parts, err := filepath.EvalSymlinks(dir); err == nil {
-		set.dirs = append(set.dirs, parts)
-	}
+func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) {
 	var names []string
 	for _, e := range entries {
-		if name := e.Name(); name != themesDir && !strings.HasPrefix(name, ".") {
+		if name := e.Name(); !strings.HasPrefix(name, ".") {
 			names = append(names, name)
 		}
 	}
@@ -79,7 +147,6 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) err
 			delete(t.parts, name)
 		}
 	}
-	return set.readOwnThemes(filepath.Join(dir, themesDir))
 }
 
 // leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own
@@ -174,9 +241,9 @@ func (set *partSet) readOwnPart(name, from, at string) bool {
 	return replaces
 }
 
-// readOwnThemes reads the parts themes of one's own in dir into set, a directory each, a symlink
-// followed: one of the name of one of floe's takes the place of its files of their names. Those that
-// cannot be used are left out of set, and kept in set.brokenThemes.
+// readOwnThemes reads the themes of one's own in dir into set, a directory each, a symlink followed: one
+// of the name of one of floe's takes the place of its files of their names. Those that cannot be used are
+// left out of set, and kept in set.brokenThemes.
 func (set *partSet) readOwnThemes(dir string) error {
 	themes, err := dirAt(dir)
 	if _, there := os.Lstat(dir); themes == "" && there == nil {
@@ -185,14 +252,13 @@ func (set *partSet) readOwnThemes(dir string) error {
 		if err != nil {
 			why = err.Error()
 		}
-		set.strays = append(set.strays, usererr.New("tmpl_parts_themes_unreadable", dir, why))
+		set.strays = append(set.strays, usererr.New("tmpl_themes_dir_unreadable", dir, why))
 		return nil
 	}
 	entries, err := entriesOf(dir)
 	if err != nil {
-		return usererr.New("tmpl_parts_dir_unreadable", dir, err.Error())
+		return usererr.New("tmpl_themes_dir_unreadable", dir, err.Error())
 	}
-	set.keepDir(themes)
 	for _, e := range entries {
 		name, at := e.Name(), filepath.Join(dir, e.Name())
 		if strings.HasPrefix(name, ".") {
@@ -200,14 +266,14 @@ func (set *partSet) readOwnThemes(dir string) error {
 		}
 		t := set.themes[name]
 		if t == nil {
-			t = newPartsTheme()
+			t = newTheme()
 		}
 		dir, err := set.ownEntry(name, at, at)
 		if dir == "" && err == nil {
 			continue
 		}
 		if err == nil {
-			err = readIn(dir, func(files fs.FS) error { return set.readPartsTheme(files, at, t) })
+			err = readIn(dir, func(files fs.FS) error { return set.readTheme(files, at, t) })
 		}
 		if err != nil {
 			delete(set.themes, name)
@@ -219,7 +285,7 @@ func (set *partSet) readOwnThemes(dir string) error {
 	return nil
 }
 
-// ownEntry returns the directory of name, a part or a parts theme of one's own at at, read from from, as
+// ownEntry returns the directory of name, a part or a theme of one's own at at, read from from, as
 // dirAt does: "" for a file. One of a name no part or theme can take is a mistake. It keeps the directory among those
 // set read, for a link drawn with set to be drawn again when a file in it is saved.
 func (set *partSet) ownEntry(name, from, at string) (string, error) {
@@ -234,20 +300,26 @@ func (set *partSet) ownEntry(name, from, at string) (string, error) {
 	return dir, err
 }
 
-// keepDir keeps dir among the directories set read, but one under the first, the directory of parts, as
-// a reload walks that whole.
+// keepRoot keeps dir, the directory of parts or of themes of one's own, "" for none, among the directories
+// set read, by its real path, or as written while there is none, where one may come.
+func (set *partSet) keepRoot(dir string) {
+	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
+		dir = resolved
+	}
+	set.keepDir(dir)
+}
+
+// keepDir keeps dir among the directories set read, but one under one kept, and in place of those under it,
+// as a reload walks each whole.
 func (set *partSet) keepDir(dir string) {
-	if dir == "" {
+	if dir == "" || slices.ContainsFunc(set.dirs, func(kept string) bool { return within(dir, kept) }) {
 		return
 	}
-	if set.dirs != nil && (dir == set.dirs[0] || strings.HasPrefix(dir, set.dirs[0]+string(filepath.Separator))) {
-		return
-	}
-	set.dirs = append(set.dirs, dir)
+	set.dirs = append(slices.DeleteFunc(set.dirs, func(kept string) bool { return within(kept, dir) }), dir)
 }
 
 // reserved reports whether a part of one's own cannot be named name: a part floe draws in Go, a schema
-// the parts share (tone, any), or a file of a parts theme that is no part's (base, palette).
+// the parts share (tone, any), or a file of a theme that is no part's (base, palette).
 func (set *partSet) reserved(name string) bool {
 	return isGoPart(name) || set.shares[partsURL+name+".json"] || name == themeBase || name == themePalette
 }
@@ -417,13 +489,13 @@ func (set *partSet) unusable(skip func(name string) bool) []*usererr.Error {
 	return found
 }
 
-// unusableThemes returns the mistake of each parts theme of set that cannot be used, by name, but those
+// unusableThemes returns the mistake of each theme of set that cannot be used, by name, but those
 // skip skips (none for nil).
 func (set *partSet) unusableThemes(skip func(name string) bool) []*usererr.Error {
 	var found []*usererr.Error
 	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
 		if skip == nil || !skip(name) {
-			found = append(found, usererr.New("tmpl_parts_theme_broken", name, set.brokenThemes[name]))
+			found = append(found, usererr.New("tmpl_theme_broken", name, set.brokenThemes[name]))
 		}
 	}
 	return found

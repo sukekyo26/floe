@@ -35,7 +35,7 @@ func (a *app) store() *store.Store {
 }
 
 func (a *app) templates() *tmpl.Library {
-	return tmpl.NewLibrary(a.cfg.templates, a.cfg.parts, a.cfg.icons)
+	return tmpl.NewLibrary(a.cfg.templates, a.cfg.parts, a.cfg.themes, a.cfg.icons)
 }
 
 // abs puts a relative dir under the working directory; "" stays "".
@@ -230,7 +230,7 @@ func (a *app) client(ctx context.Context, anyDirs bool) (client, error) {
 	}
 	err = daemon.Ensure(ctx, daemon.Server{
 		Port: a.cfg.port, Root: a.cfg.root, Build: build, Templates: a.cfg.templates, Parts: a.cfg.parts,
-		Icons: a.cfg.icons, AnyDirs: anyDirs, Env: a.serverEnv(),
+		Themes: a.cfg.themes, Icons: a.cfg.icons, AnyDirs: anyDirs, Env: a.serverEnv(),
 	})
 	if err != nil {
 		return client{}, err //nolint:wrapcheck // the message is for the user as is
@@ -257,7 +257,8 @@ func (a *app) noticeUpdate(saved server.Saved) {
 func (a *app) serverEnv() []string {
 	env := append([]string{}, a.env.Environ...)
 	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home,
-		"FLOE_TEMPLATES_DIR="+a.cfg.templates, "FLOE_PARTS_DIR="+a.cfg.parts, "FLOE_ICONS_DIR="+a.cfg.icons)
+		"FLOE_TEMPLATES_DIR="+a.cfg.templates, "FLOE_PARTS_DIR="+a.cfg.parts, "FLOE_THEMES_DIR="+a.cfg.themes,
+		"FLOE_ICONS_DIR="+a.cfg.icons)
 }
 
 func localTime(iso string) string {

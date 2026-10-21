@@ -81,13 +81,13 @@ type PartDescription struct {
 	Takes  Item
 	Looks  []string // the looks it takes, and those they take in turn, in the order they go into a page
 	Holds  []string // the parts its schema holds, by name
-	Themes []string // the parts themes with a file of it, by name
+	Themes []string // the themes with a file of it, by name
 }
 
 // Parts tells of every part, floe's and one's own, by name, and returns the mistakes of the parts that
 // cannot be used, which it leaves out.
 func (l *Library) Parts() (parts []*PartDescription, broken []error, err error) {
-	set, err := partsIn(l.parts)
+	set, err := partsIn(l.mine)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -102,7 +102,7 @@ func (l *Library) Parts() (parts []*PartDescription, broken []error, err error) 
 
 // DescribePart tells of the part name.
 func (l *Library) DescribePart(name string) (*PartDescription, error) {
-	set, err := partsIn(l.parts)
+	set, err := partsIn(l.mine)
 	if err != nil {
 		return nil, err
 	}

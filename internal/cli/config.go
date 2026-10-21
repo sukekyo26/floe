@@ -21,6 +21,7 @@ type config struct {
 	icons     string // empty when there is nowhere to put it, which the icons commands refuse
 	templates string // the templates of one's own; empty when there is nowhere to put them
 	parts     string // the parts of one's own; empty when there is nowhere to put them
+	themes    string // the themes of one's own; empty when there is nowhere to put them
 	home      string
 	port      int
 }
@@ -33,7 +34,7 @@ func (c *config) base() string {
 // it cannot be read), so that a server a command starts or finds, whatever its own, means the ones the
 // command does.
 func loadConfig(getenv func(string) string, dir string) (*config, error) {
-	c := &config{root: "", icons: "", templates: "", parts: "", home: getenv("HOME"), port: defaultPort}
+	c := &config{root: "", icons: "", templates: "", parts: "", themes: "", home: getenv("HOME"), port: defaultPort}
 	if raw := getenv("FLOE_PORT"); raw != "" {
 		// Decimal only: hex (0x10) and exponents (1e3) are typos, not ports.
 		port, err := strconv.Atoi(raw)
@@ -49,9 +50,9 @@ func loadConfig(getenv func(string) string, dir string) (*config, error) {
 }
 
 // readDirs reads floe's directories: each its setting, else a default under the XDG base directory, else
-// under the home. With none of them, the icons and the templates and parts of one's own are none (the
-// icons commands refuse that, and floe's templates and parts are the only ones), and the pages are
-// refused.
+// under the home. With none of them, the icons and the templates, parts and themes of one's own are none
+// (the icons commands refuse that, and floe's templates, parts and themes are the only ones), and the pages
+// are refused.
 func (c *config) readDirs(getenv func(string) string, dir string) error {
 	data := xdgDir(getenv, "XDG_DATA_HOME", c.home, ".local", "share")
 	conf := xdgDir(getenv, "XDG_CONFIG_HOME", c.home, ".config")
@@ -65,6 +66,7 @@ func (c *config) readDirs(getenv func(string) string, dir string) error {
 		{"FLOE_ICONS_DIR", data, "floe-icons", &c.icons},
 		{"FLOE_TEMPLATES_DIR", conf, filepath.Join("floe", "templates"), &c.templates},
 		{"FLOE_PARTS_DIR", conf, filepath.Join("floe", "parts"), &c.parts},
+		{"FLOE_THEMES_DIR", conf, filepath.Join("floe", "themes"), &c.themes},
 	} {
 		v, err := floeDir(getenv, d.key, c.home, dir)
 		if err != nil {

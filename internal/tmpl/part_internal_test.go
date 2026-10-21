@@ -12,14 +12,14 @@ import (
 )
 
 // palette are the CSS variables default's palette defines, which the parts, diagrams, floe's base and
-// the parts themes take their colours and faces from, as docs/templates.md lists them.
+// the themes take their colours and faces from, as docs/templates.md lists them.
 var palette = []string{
 	"--bg", "--surface", "--fg", "--muted", "--line", "--accent", "--accent-soft", "--good", "--good-soft",
 	"--warn", "--warn-soft", "--bad", "--bad-soft", "--font", "--display", "--mono", "--code-bg", "--code-fg",
 	"--code-prompt", "--code-add", "--code-del", "--page-bg", "--rule", "--text-width",
 }
 
-// The parts, diagrams, floe's base and the parts themes take from the page only what default's palette
+// The parts, diagrams, floe's base and the themes take from the page only what default's palette
 // defines: every theme's palette goes over default's, so none of them goes without.
 func TestPalette(t *testing.T) {
 	t.Parallel()
@@ -44,7 +44,7 @@ func TestPalette(t *testing.T) {
 		for _, part := range slices.Sorted(maps.Keys(theme.parts)) {
 			css += theme.parts[part]
 		}
-		taken["the parts theme "+name] = css
+		taken["the theme "+name] = css
 	}
 	for who, css := range taken {
 		own := definedIn(css)

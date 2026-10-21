@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"embed"
 	"fmt"
 	"io/fs"
 	"maps"
@@ -15,23 +16,29 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// themesDir is the directory of parts/ that holds the parts themes, and so is no part.
-const themesDir = "themes"
+// themeFiles holds a directory per theme of floe's: its palette.css, its base.css and the style of each part
+// it restyles.
+//
+//go:embed themes
+var themeFiles embed.FS
 
-// themeBase and themePalette are the files of a parts theme that are no part's, for every page: base.css,
+// floeThemesDir is the directory of themeFiles that holds floe's themes.
+const floeThemesDir = "themes"
+
+// themeBase and themePalette are the files of a theme that are no part's, for every page: base.css,
 // and palette.css, the colours and faces under the template's own, which default's fills in.
 const (
 	themeBase    = "base"
 	themePalette = "palette"
 )
 
-// themeNames returns the parts themes of set, by name, those that cannot be used among them.
+// themeNames returns the themes of set, by name, those that cannot be used among them.
 func (set *partSet) themeNames() []string {
 	return slices.Sorted(slices.Values(slices.Concat(slices.Collect(maps.Keys(set.themes)),
 		slices.Collect(maps.Keys(set.brokenThemes)))))
 }
 
-// themesWith returns the parts themes of set that can be used with a file of the part name, by name.
+// themesWith returns the themes of set that can be used with a file of the part name, by name.
 func (set *partSet) themesWith(name string) []string {
 	var themes []string
 	for _, theme := range slices.Sorted(maps.Keys(set.themes)) {
@@ -42,26 +49,26 @@ func (set *partSet) themesWith(name string) []string {
 	return themes
 }
 
-// partsTheme is a parts theme: its base.css and palette.css, for every page, and the style of each part
-// it restyles, which reaches every element that has the part's look.
-type partsTheme struct {
+// theme is a theme: its base.css and palette.css, for every page, and the style of each part it restyles,
+// which reaches every element that has the part's look.
+type theme struct {
 	base    string
 	palette string
 	parts   map[string]string // by the part's name
 }
 
-func newPartsTheme() *partsTheme {
-	return &partsTheme{base: "", palette: "", parts: map[string]string{}}
+func newTheme() *theme {
+	return &theme{base: "", palette: "", parts: map[string]string{}}
 }
 
-// readPartsTheme reads the parts theme in files, its directory, shown in its mistakes as dir, over t:
+// readTheme reads the theme in files, its directory, shown in its mistakes as dir, over t:
 // each file takes the place of t's of its name. A file named for none of base.css, palette.css, a part
 // or a look of set is warned of, as it goes into no page, and so is a palette that sets a colour for light
 // mode alone.
-func (set *partSet) readPartsTheme(files fs.FS, dir string, t *partsTheme) error {
+func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
 	entries, err := fs.ReadDir(files, ".")
 	if err != nil {
-		return fmt.Errorf("read the parts theme %s: %w", dir, err)
+		return fmt.Errorf("read the theme %s: %w", dir, err)
 	}
 	// Warned of once the theme is read whole: one that cannot be used goes into no page.
 	var paletteWarnings []*usererr.Error
@@ -73,13 +80,13 @@ func (set *partSet) readPartsTheme(files fs.FS, dir string, t *partsTheme) error
 		}
 		if !set.themeFile(name) {
 			// Warned of, the theme used all the same: a file of a part since removed would stop every page.
-			set.strays = append(set.strays, usererr.New("tmpl_parts_theme_file", path.Join(dir, e.Name()),
+			set.strays = append(set.strays, usererr.New("tmpl_theme_file", path.Join(dir, e.Name()),
 				set.names(nil)))
 			continue
 		}
 		css, err := fs.ReadFile(files, e.Name())
 		if err != nil {
-			return fmt.Errorf("read the parts theme %s: %w", dir, err)
+			return fmt.Errorf("read the theme %s: %w", dir, err)
 		}
 		// base.css and palette.css are for the whole page, out of the parts' scope.
 		sheet := readCSS(css)
@@ -102,7 +109,7 @@ func (set *partSet) readPartsTheme(files fs.FS, dir string, t *partsTheme) error
 	return nil
 }
 
-// themeFile reports whether name.css is a file of a parts theme: its base.css, its palette.css or the style of a part,
+// themeFile reports whether name.css is a file of a theme: its base.css, its palette.css or the style of a part,
 // one of one's own that cannot be used among them, but not one of a name no part can take.
 func (set *partSet) themeFile(name string) bool {
 	_, isPart := set.parts[name]
@@ -374,10 +381,10 @@ func modesOf(c *modeColours) map[string]bool {
 // floeModes are the variables that change with the mode in floe's default palette, which the palettes
 // and the colours a template sets are checked against.
 var floeModes = sync.OnceValues(func() (map[string]bool, error) {
-	file := path.Join("parts", themesDir, DefaultTheme, themePalette+".css")
-	css, err := partFiles.ReadFile(file)
+	file := path.Join(floeThemesDir, DefaultTheme, themePalette+".css")
+	css, err := themeFiles.ReadFile(file)
 	if err != nil {
-		return nil, fmt.Errorf("read the parts themes: %w", err)
+		return nil, fmt.Errorf("read the themes: %w", err)
 	}
 	c, err := readPalette(file, readCSS(css))
 	if err != nil {

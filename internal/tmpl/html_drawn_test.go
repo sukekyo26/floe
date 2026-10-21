@@ -22,7 +22,7 @@ func htmlIn(t *testing.T, body string) *tmpl.Library {
 	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	return tmpl.NewLibrary(dir, "", "")
+	return tmpl.NewLibrary(dir, "", "", "")
 }
 
 // yamlText writes s as a YAML string.
@@ -122,7 +122,7 @@ func TestDrawnHTMLItems(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <svg>\n"); err != nil {
+	if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: <svg>\n"); err != nil {
 		t.Errorf("an item in a <title> = %v", err)
 	}
 	inTitle := htmlIn(t, `<h1 title="{{.Data.risks}}">t</h1><p>x</p>`)
@@ -148,7 +148,7 @@ func TestDrawnHTMLInHead(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	l := tmpl.NewLibrary(dir, "", "")
+	l := tmpl.NewLibrary(dir, "", "", "")
 	for item, want := range map[string]string{
 		"<template>t</template>": "",
 		"<noscript>x</noscript>": "",
@@ -235,7 +235,7 @@ func TestDrawnHTMLManyItems(t *testing.T) {
 		t.Fatal(err)
 	}
 	data[1] = "i01: <textarea>x"
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\n"+strings.Join(data, "\n")+"\n"); err == nil ||
+	if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\n"+strings.Join(data, "\n")+"\n"); err == nil ||
 		!strings.Contains(err.Error(), "i01: HTML changes the page around it") {
 		t.Errorf("the second of eleven items = %v", err)
 	}
@@ -304,7 +304,7 @@ func TestDrawnHTMLOthers(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\naside: <template>t</template>\nrisks: <div>x</div>\n"); err == nil ||
+	if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\naside: <template>t</template>\nrisks: <div>x</div>\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "data.yaml:4:8: risks: HTML changes the page around it") {
 		t.Errorf("a <div> in the head after a <template> = %v", err)
 	}
@@ -339,7 +339,7 @@ func TestDrawnHTMLImplied(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: hello\n"); err == nil ||
+	if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: hello\n"); err == nil ||
 		!strings.Contains(err.Error(), "outside its <head> and <body>") {
 		t.Errorf("text where the <body> starts = %v", err)
 	}
@@ -389,7 +389,7 @@ func TestDrawnHTMLHidesHead(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(page), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\naside: <template>t</template>\nrisks: <script>x\n"); err == nil ||
+	if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\naside: <template>t</template>\nrisks: <script>x\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "data.yaml:4:8: risks: ") {
 		t.Errorf("a <script> that hides </head> = %v", err)
 	}
@@ -411,7 +411,7 @@ func TestDrawnHTMLHidesHeadMarked(t *testing.T) {
 		if err := os.WriteFile(page, []byte(src), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <script>x\n"); err == nil ||
+		if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: <script>x\n"); err == nil ||
 			!strings.Contains(err.Error(), want) {
 			t.Errorf("%s = %v, want %s", action, err, want)
 		}
@@ -421,7 +421,7 @@ func TestDrawnHTMLHidesHeadMarked(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "memo", "page.html"), []byte(src), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <!-- c\naside: <script>\n"); err == nil ||
+	if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: <!-- c\naside: <script>\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "data.yaml:4:8: aside: ") {
 		t.Errorf("a <script> drawn before a comment = %v, want aside", err)
 	}
@@ -444,7 +444,7 @@ func TestDrawnHTMLWherePageHasIt(t *testing.T) {
 		if err := os.WriteFile(page, []byte(head+body), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		_, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <p>hello there, a paragraph longer than a mark</p>\n")
+		_, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: <p>hello there, a paragraph longer than a mark</p>\n")
 		if want == "" && err != nil || want != "" && (err == nil || !strings.Contains(err.Error(), want)) {
 			t.Errorf("%s = %v, want %q", body, err, want)
 		}
@@ -452,7 +452,7 @@ func TestDrawnHTMLWherePageHasIt(t *testing.T) {
 	if err := os.WriteFile(page, []byte(`<html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body><div>{{.Data.risks}}</div></body></html>`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <p>a</p>\n"); err == nil ||
+	if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: <p>a</p>\n"); err == nil ||
 		!strings.Contains(err.Error(), "does not start with <!doctype html>") {
 		t.Errorf("a page in quirks mode = %v", err)
 	}
@@ -461,7 +461,7 @@ func TestDrawnHTMLWherePageHasIt(t *testing.T) {
 		if err := os.WriteFile(page, []byte(src), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		_, mistakes := tmpl.Check(filepath.Join(dir, "memo"), "", "")
+		_, mistakes := tmpl.Check(filepath.Join(dir, "memo"), "", "", "")
 		told := slices.ContainsFunc(mistakes, func(e error) bool { return strings.Contains(e.Error(), "<!doctype html>") })
 		if told != refused {
 			t.Errorf("floe template check of %q = %v, want the doctype told %v", doctype, mistakes, refused)
@@ -506,7 +506,7 @@ func TestDrawnHTMLAfterTheTemplate(t *testing.T) {
 	if err := os.WriteFile(page, []byte(src), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", ""), "template: memo\nlang: en\nrisks: <div>x</div>\n"); err == nil ||
+	if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: <div>x</div>\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "an action of "+page+" leaves out its </head>") {
 		t.Errorf("a page.html whose action leaves out </head> = %v", err)
 	}

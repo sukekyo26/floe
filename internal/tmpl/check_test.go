@@ -26,7 +26,7 @@ func TestDrawEveryStage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	l := tmpl.NewLibrary("testdata", "", "")
+	l := tmpl.NewLibrary("testdata", "", "", "")
 	d, err := l.Read(file, src, tmpl.Themes{}, "")
 	if err != nil {
 		t.Fatal(err)
@@ -53,7 +53,7 @@ func TestDrawEveryStage(t *testing.T) {
 func TestCheck(t *testing.T) {
 	t.Parallel()
 
-	warnings, mistakes := tmpl.Check("testdata/sizes", "", "")
+	warnings, mistakes := tmpl.Check("testdata/sizes", "", "", "")
 	if len(warnings) != 1 || len(mistakes) != 0 {
 		t.Fatalf("Check = %v, %v", warnings, mistakes)
 	}
@@ -64,7 +64,7 @@ func TestCheck(t *testing.T) {
 
 	// With template.yaml, nothing is told.
 	dir := sizes(t, map[string]string{"template.yaml": "floe: " + release[0] + "." + release[1] + "\n"})
-	if warnings, mistakes := tmpl.Check(dir, "", ""); len(warnings) != 0 || len(mistakes) != 0 {
+	if warnings, mistakes := tmpl.Check(dir, "", "", ""); len(warnings) != 0 || len(mistakes) != 0 {
 		t.Errorf("Check with template.yaml = %v, %v", warnings, mistakes)
 	}
 }
@@ -271,7 +271,7 @@ func TestCheckMistakes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			warnings, mistakes := tmpl.Check(sizes(t, tt.files), "", "")
+			warnings, mistakes := tmpl.Check(sizes(t, tt.files), "", "", "")
 			lines := make([]string, 0, len(mistakes))
 			for _, m := range mistakes {
 				lines = append(lines, strings.Split(m.Error(), "\n")...)
@@ -298,7 +298,7 @@ func TestPageStyleRefused(t *testing.T) {
 
 	dir := sizes(t, map[string]string{"page.html": "<body>|<body>\n<!-- <style> -->\n<style>p {}</style>"})
 	want := filepath.Join(dir, "page.html") + ":6: page.html holds a <style>: write the template's CSS in page.css"
-	if _, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %s", mistakes, want)
 	}
 }
@@ -309,7 +309,7 @@ func TestPageBase(t *testing.T) {
 
 	dir := sizes(t, map[string]string{"page.html": "<head>|<head>\n<BASE href=\"https://e.example/\">"})
 	want := filepath.Join(dir, "page.html") + ":4: page.html holds a <base>, which the page's CSP ignores"
-	if _, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %s", mistakes, want)
 	}
 }
@@ -322,7 +322,7 @@ func TestPageHeadRequired(t *testing.T) {
 
 	dir := sizes(t, map[string]string{"page.html": "</head>|<!-- </head> -->", "page.css": ":root { color: red; }\n"})
 	want := filepath.Join(dir, "page.html") + " holds no </head>: floe puts the page's styles before it"
-	_, mistakes := tmpl.Check(dir, "", "")
+	_, mistakes := tmpl.Check(dir, "", "", "")
 	if len(mistakes) != 2 || !slices.ContainsFunc(mistakes, func(e error) bool { return strings.HasPrefix(e.Error(), want) }) {
 		t.Errorf("Check = %v, want %s beside the :root", mistakes, want)
 	}
@@ -334,7 +334,7 @@ func TestPageHeadRequired(t *testing.T) {
 		`<body>{{.Data.risks}}</body></html>`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	l := tmpl.NewLibrary(data, "", "")
+	l := tmpl.NewLibrary(data, "", "", "")
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: <b>x</b>\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "an action of "+page+" leaves out its </head>") {
 		t.Errorf("drawing without </head> = %v", err)
@@ -356,7 +356,7 @@ func TestTemplateCSSAndParts(t *testing.T) {
 		"page.html": "<body>|<body><span\n" + `data-floe-look="cell nope"></span><b data-floe-part="cell note"></b>` +
 			`<u data-floe-part=" cell"></u><s data-floe-part="panel"></s><i data-floe-part="{{"cell"}}"></i>`,
 	})
-	_, mistakes := tmpl.Check(dir, "", "")
+	_, mistakes := tmpl.Check(dir, "", "", "")
 	got := make([]string, 0, len(mistakes))
 	for _, m := range mistakes {
 		got = append(got, strings.TrimPrefix(m.Error(), dir+string(filepath.Separator)))
@@ -388,11 +388,11 @@ func TestCSSImportRefused(t *testing.T) {
 		"page.css": "/* 色の定義です。\n   @import は書かない */\nbody { color: red; }\n@IMPORT url(x.css);\n",
 	})
 	want := filepath.Join(dir, "page.css") + ":4: floe puts this CSS in a layer, where a browser reads no @import"
-	_, mistakes := tmpl.Check(dir, "", "")
+	_, mistakes := tmpl.Check(dir, "", "", "")
 	if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %q", mistakes, want)
 	}
-	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
+	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), "", "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
 		t.Errorf("drawing = %v, want %s", err, want)
 	}
 }
@@ -406,29 +406,29 @@ func TestCSSBraceRefused(t *testing.T) {
 		"page.css": "a::before { content: \"} @import x; /*\"; }\n@media print { p { color: red; } }\n}\n/* } */\nb { color: red; }\n",
 	})
 	want := filepath.Join(dir, "page.css") + ":3: this } closes no block"
-	if _, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %s", mistakes, want)
 	}
 	// The URL of url( runs to the first ), whatever it holds, as a browser reads it.
 	url := sizes(t, map[string]string{"page.css": "a { b: url(x(y) } }\nc { color: red; }\n"})
-	if _, mistakes := tmpl.Check(url, "", ""); len(mistakes) != 1 ||
+	if _, mistakes := tmpl.Check(url, "", "", ""); len(mistakes) != 1 ||
 		!strings.HasPrefix(mistakes[0].Error(), filepath.Join(url, "page.css")+":1: this } closes no block") {
 		t.Errorf("Check of a } after url( = %v", mistakes)
 	}
 	// :root is told at its line, past the comments before it.
 	root := sizes(t, map[string]string{"page.css": ".a, /* one\ntwo\nthree */ :root { color: red; }\n"})
-	if _, mistakes := tmpl.Check(root, "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "page.css:3:") {
+	if _, mistakes := tmpl.Check(root, "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "page.css:3:") {
 		t.Errorf("Check of :root after a comment = %v", mistakes)
 	}
 	// An escaped bracket is a name's, and leaves the } after it to be told.
 	escaped := sizes(t, map[string]string{"page.css": ".a\\( { color: red; }\n}\n"})
-	if _, mistakes := tmpl.Check(escaped, "", ""); len(mistakes) != 1 ||
+	if _, mistakes := tmpl.Check(escaped, "", "", ""); len(mistakes) != 1 ||
 		!strings.HasPrefix(mistakes[0].Error(), filepath.Join(escaped, "page.css")+":2: this } closes no block") {
 		t.Errorf("Check of an escaped bracket = %v", mistakes)
 	}
 	// A block left open ends with the template's own <style>.
 	ok := sizes(t, map[string]string{"page.css": "@media print { p { color: red; }\n"})
-	if warnings, mistakes := tmpl.Check(ok, "", ""); len(mistakes) != 0 {
+	if warnings, mistakes := tmpl.Check(ok, "", "", ""); len(mistakes) != 0 {
 		t.Errorf("Check of a block left open = %v, %v", warnings, mistakes)
 	}
 }
@@ -441,10 +441,10 @@ func TestCSSStyleEndEscaped(t *testing.T) {
 	dir := sizes(t, map[string]string{
 		"page.css": "/* </STYLE><b id=\"x\">x</b><style> */\na::before { content: \"</style>\"; }\n",
 	})
-	if warnings, mistakes := tmpl.Check(dir, "", ""); len(mistakes) != 0 {
+	if warnings, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 0 {
 		t.Errorf("Check = %v, %v", warnings, mistakes)
 	}
-	page, err := draw(tmpl.NewLibrary(filepath.Dir(dir), "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n")
+	page, err := draw(tmpl.NewLibrary(filepath.Dir(dir), "", "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -472,7 +472,7 @@ func TestCheckScopeColours(t *testing.T) {
 		"@layer a { :scope { --bg: #fff; } }\n@supports (color: red) { @media (prefers-color-scheme: dark) { :scope { --bg: #000; } } }": "",
 		":scope { @media (prefers-color-scheme: dark) { --bg: #000; } --bg: #fff; }":                                                     "sizes/page.css sets --bg on :scope",
 	} {
-		warnings, mistakes := tmpl.Check(sizes(t, map[string]string{"template.yaml": floe, "page.css": page}), "", "")
+		warnings, mistakes := tmpl.Check(sizes(t, map[string]string{"template.yaml": floe, "page.css": page}), "", "", "")
 		if len(mistakes) != 0 || want == "" && len(warnings) != 0 ||
 			want != "" && (len(warnings) != 1 || !strings.Contains(warnings[0].Error(), want)) {
 			t.Errorf("Check with %s = %v, %v, want %q", page, warnings, mistakes, want)
@@ -488,7 +488,7 @@ func TestCheckName(t *testing.T) {
 	if err := os.CopyFS(dir, os.DirFS("testdata/sizes")); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir, "", "")
+	_, mistakes := tmpl.Check(dir, "", "", "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_new_name" {
 		t.Errorf("Check of %s = %v", dir, mistakes)
@@ -503,7 +503,7 @@ func TestCheckMissingFile(t *testing.T) {
 	if err := os.Remove(filepath.Join(dir, "example.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir, "", "")
+	_, mistakes := tmpl.Check(dir, "", "", "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_file_missing" {
 		t.Fatalf("Check without example.yaml = %v", mistakes)
@@ -524,7 +524,7 @@ func TestRenderBadAsset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := tmpl.NewLibrary(filepath.Dir(dir), "", "").Read(file, src, tmpl.Themes{}, "")
+	d, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, src, tmpl.Themes{}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -549,7 +549,7 @@ func TestCheckAssetsFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "assets"), nil, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(dir, "", "")
+	_, mistakes := tmpl.Check(dir, "", "", "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_assets_not_dir" {
 		t.Errorf("Check with a file named assets = %v", mistakes)
@@ -564,7 +564,7 @@ func TestCheckFile(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, mistakes := tmpl.Check(file, "", "")
+	_, mistakes := tmpl.Check(file, "", "", "")
 	var e *usererr.Error
 	if len(mistakes) != 1 || !errors.As(mistakes[0], &e) || e.Key != "tmpl_check_not_dir" {
 		t.Errorf("Check of a file = %v", mistakes)
@@ -581,7 +581,7 @@ func TestSchemaOfSharedKeys(t *testing.T) {
 		`"required": ["files"]`, `"required": ["files", "lang"]`, 1)), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), tmpl.Themes{}, "")
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), tmpl.Themes{}, "")
 	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json declares or requires lang, title, which floe reads") {
 		t.Errorf("Read with a template whose schema declares lang and title = %v", err)
 	}
@@ -593,7 +593,7 @@ func TestReadFS(t *testing.T) {
 	t.Parallel()
 
 	png := mustRead(t, "testdata/sizes/chart.png")
-	l := tmpl.NewLibrary("testdata", "", "")
+	l := tmpl.NewLibrary("testdata", "", "", "")
 	src := []byte("template: sizes\nlang: en\nfiles: [{ name: a, bytes: 1 }]\nchart: img/chart.png\n")
 	d, named, err := l.ReadFS("sizes.yaml", src, fstest.MapFS{"img/chart.png": {Data: []byte(png)}}, "/plans", tmpl.Themes{})
 	if err != nil || !slices.Equal(named, []string{"img/chart.png"}) {
@@ -647,7 +647,7 @@ func TestCheckPageNames(t *testing.T) {
 	t.Parallel()
 
 	for page, want := range map[string]bool{`<b data-floe-part="pannel"></b>`: false, `<b data-floe-look="pannel"></b>`: true} {
-		_, mistakes := tmpl.Check(sizes(t, map[string]string{"page.html": "<body>|<body>" + page}), "", "")
+		_, mistakes := tmpl.Check(sizes(t, map[string]string{"page.html": "<body>|<body>" + page}), "", "", "")
 		if got := fmt.Sprint(mistakes); !strings.Contains(got, "options, progress") && !strings.Contains(got, "options, panel, progress") ||
 			strings.Contains(got, "options, panel, progress") != want {
 			t.Errorf("Check of %s = %v, want panel among the names %v", page, mistakes, want)
