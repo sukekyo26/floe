@@ -42,7 +42,7 @@ sections:
     parts:
       - cards:
           - title: 1 枚目
-            text: 見出しと **Markdown** の文章。
+            text: 見出しと **Markdown** の文章。`code` と[リンク](/a/floe-parts/)も書ける。
           - title: 2 枚目
             text: |
               - 箇条書きも
@@ -141,7 +141,7 @@ sections:
           - { title: 部品の仕組み, text: '#51 でマージ', state: done }
           - { title: コードとターミナル, text: '#53 でマージ。report のコードを部品に寄せた', state: done }
           - { title: 自作の部品, text: '`~/.config/floe/parts` に置いた部品を使えるようにする', state: doing }
-          - { title: コードの色分け, text: chroma を入れるか決める }
+          - { title: コードの色分け, text: chroma を入れるか決める, state: todo }
           - title: 説明のない段
   - heading: 確認項目（checklist）
     parts:
@@ -167,7 +167,7 @@ sections:
             cons: [単色で読みにくい]
           - title: chroma で色分け
             pick: 勧める
-            text: エディタと同じ規則で色を付ける。
+            text: エディタと同じ規則で色を付ける。`chroma` の[規則](/a/floe-parts/)を使う。
             pros: [エディタに近い見た目, 言語の規則がそろう]
             cons: [約 4.7MB 増える]
           - title: 自前で色分け
