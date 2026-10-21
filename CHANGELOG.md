@@ -23,8 +23,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add parts of your own: a directory each in `FLOE_PARTS_DIR` (default
   `$XDG_CONFIG_HOME/floe/parts`) of the files floe's parts have, referred to
   as `floe:///parts/<name>.json`; its `part.html` draws its items, and its
-  schema takes no format of floe's (`html`, `image`, `markdown`) under
-  `properties` and `items`, nor through `any.json`; no schema, a template's too, names a part by
+  schema takes no format of floe's (`html`, `image`, `markdown`), nor
+  `any.json`; no schema, a template's too, names a part by
   the `$ref` at its root. One of the
   name of one of floe's takes its place whole, and floe's parts themes do not
   style it. A part takes the look
@@ -205,6 +205,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   and a mistake in one of the data is reported at its line and column, but
   for one `floe publish` will not send the server (through a symlink, over
   1 MiB, not a file, unreadable or not holding its type).
+  A schema's mistakes, a format of floe's or a part's `$ref` where floe does
+  not follow to it (under `anyOf`, `$defs` and the like), a format floe does
+  not know, a `$ref` out of floe or into a part, or a keyword beside a `$ref`
+  to a part but annotations (`description`, `title`, `default`…), are refused at their
+  JSON pointers, by `floe template check` and wherever the template is used,
+  and a part's by `floe part check`; a `$ref` into the schema's own file
+  (`#/$defs/row`) is followed by JSON Schema alone.
   `template.yaml` names the floe a template needs. A schema may not declare
   or require `lang`, `template`, `theme` or `title`, which floe reads from
   every data file itself. See [docs/templates.md](docs/templates.md).

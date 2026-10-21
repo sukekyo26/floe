@@ -149,47 +149,55 @@ func TestBrokenOwnParts(t *testing.T) {
 		"round/part.yaml":      "looks: [ring]\n",
 		"wordy/part.css":       "",
 		"wordy/words.yaml":     "en: { a: A }\n",
-		"holder/schema.json":   `{"type": "object", "properties": {"p": {"$ref": "floe:///parts/panel.json"}}}`,
-		"holder/part.html":     `<div data-floe-part="holder"></div>`,
-		"holder/part.css":      "",
-		"keyed/schema.json":    `{"type": "object"}`,
-		"keyed/part.html":      `<div data-floe-part="keyed"></div>`,
-		"keyed/part.css":       "",
-		"keyed/part.yaml":      "lookz: [panel]\n",
-		"boxlook/schema.json":  `{"type": "object"}`,
-		"boxlook/part.html":    `<div data-floe-part="boxlook"><i data-floe-part="panel"></i></div>`,
-		"boxlook/part.css":     "",
-		"halfway/part.yaml":    "looks: [panel]\n",
-		"halfway/part.html":    `<div data-floe-part="halfway"></div>`,
-		"twodocs/schema.json":  `{"type": "object"}`,
-		"twodocs/part.html":    `<div data-floe-part="twodocs"></div>`,
-		"twodocs/part.css":     "",
-		"twodocs/part.yaml":    "looks: [panel]\n---\nlooks: [rows]\n",
-		"base/schema.json":     `{"type": "object"}`,
-		"palette/schema.json":  `{"type": "object"}`,
-		"diagram/schema.json":  `{"type": "object"}`,
-		"code/schema.json":     `{"type": "object"}`,
-		"code/part.html":       `<div data-floe-part="code"></div>`,
-		"code/part.css":        "}\n",
-		"loop/schema.json":     `{"type": "object", "properties": {"kids": {"type": "array", "items": {"$ref": "floe:///parts/loop.json"}}}}`,
-		"loop/part.html":       `<div data-floe-part="loop"></div>`,
-		"loop/part.css":        "",
-		"ping/schema.json":     `{"type": "object", "properties": {"pong": {"$ref": "floe:///parts/pong.json"}}}`,
-		"ping/part.html":       `<div data-floe-part="ping"></div>`,
-		"ping/part.css":        "",
-		"pong/schema.json":     `{"type": "object", "properties": {"ping": {"$ref": "floe:///parts/ping.json"}}}`,
-		"pong/part.html":       `<div data-floe-part="pong"></div>`,
-		"pong/part.css":        "",
-		"Quote/schema.json":    `{"type": "object"}`,
-		"blurb/schema.json":    `{"type": "object", "properties": {"body": {"type": "string", "format": "html"}}}`,
-		"blurb/part.html":      `<div data-floe-part="blurb">{{.body}}</div>`,
-		"blurb/part.css":       "",
-		"gallery/schema.json":  `{"type": "array", "items": {"type": "object", "properties": {"src": {"type": "string", "format": "image"}}}}`,
-		"gallery/part.html":    `<div data-floe-part="gallery"></div>`,
-		"gallery/part.css":     "",
-		"marked/schema.json":   `{"type": "object", "properties": {"text": {"type": "string", "format": "markdown"}}}`,
-		"marked/part.html":     `<div data-floe-part="marked">{{.text}}</div>`,
-		"marked/part.css":      "",
+		// What floe cannot read, out of floe, wherever the $ref is (#90).
+		"hosted/schema.json": `{"type": "object", "properties": {"text": {"anyOf": [{"$ref": "file:///etc/hosts"}]}}}`,
+		"hosted/part.html":   `<div data-floe-part="hosted"></div>`,
+		"hosted/part.css":    "",
+		// Its own file, which floe does not follow to, but jsonschema does: usable.
+		"defined/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/$defs/t"}}, "$defs": {"t": {"type": "string"}}}`,
+		"defined/part.html":   `<div data-floe-part="defined">{{.t}}</div>`,
+		"defined/part.css":    "",
+		"holder/schema.json":  `{"type": "object", "properties": {"p": {"$ref": "floe:///parts/panel.json"}}}`,
+		"holder/part.html":    `<div data-floe-part="holder"></div>`,
+		"holder/part.css":     "",
+		"keyed/schema.json":   `{"type": "object"}`,
+		"keyed/part.html":     `<div data-floe-part="keyed"></div>`,
+		"keyed/part.css":      "",
+		"keyed/part.yaml":     "lookz: [panel]\n",
+		"boxlook/schema.json": `{"type": "object"}`,
+		"boxlook/part.html":   `<div data-floe-part="boxlook"><i data-floe-part="panel"></i></div>`,
+		"boxlook/part.css":    "",
+		"halfway/part.yaml":   "looks: [panel]\n",
+		"halfway/part.html":   `<div data-floe-part="halfway"></div>`,
+		"twodocs/schema.json": `{"type": "object"}`,
+		"twodocs/part.html":   `<div data-floe-part="twodocs"></div>`,
+		"twodocs/part.css":    "",
+		"twodocs/part.yaml":   "looks: [panel]\n---\nlooks: [rows]\n",
+		"base/schema.json":    `{"type": "object"}`,
+		"palette/schema.json": `{"type": "object"}`,
+		"diagram/schema.json": `{"type": "object"}`,
+		"code/schema.json":    `{"type": "object"}`,
+		"code/part.html":      `<div data-floe-part="code"></div>`,
+		"code/part.css":       "}\n",
+		"loop/schema.json":    `{"type": "object", "properties": {"kids": {"type": "array", "items": {"$ref": "floe:///parts/loop.json"}}}}`,
+		"loop/part.html":      `<div data-floe-part="loop"></div>`,
+		"loop/part.css":       "",
+		"ping/schema.json":    `{"type": "object", "properties": {"pong": {"$ref": "floe:///parts/pong.json"}}}`,
+		"ping/part.html":      `<div data-floe-part="ping"></div>`,
+		"ping/part.css":       "",
+		"pong/schema.json":    `{"type": "object", "properties": {"ping": {"$ref": "floe:///parts/ping.json"}}}`,
+		"pong/part.html":      `<div data-floe-part="pong"></div>`,
+		"pong/part.css":       "",
+		"Quote/schema.json":   `{"type": "object"}`,
+		"blurb/schema.json":   `{"type": "object", "properties": {"body": {"type": "string", "format": "html"}}}`,
+		"blurb/part.html":     `<div data-floe-part="blurb">{{.body}}</div>`,
+		"blurb/part.css":      "",
+		"gallery/schema.json": `{"type": "array", "items": {"type": "object", "properties": {"src": {"type": "string", "format": "image"}}}}`,
+		"gallery/part.html":   `<div data-floe-part="gallery"></div>`,
+		"gallery/part.css":    "",
+		"marked/schema.json":  `{"type": "object", "properties": {"text": {"type": "string", "format": "markdown"}}}`,
+		"marked/part.html":    `<div data-floe-part="marked">{{.text}}</div>`,
+		"marked/part.css":     "",
 		// A schema the parts share is drawn as the part's own items, its formats too.
 		"anything/schema.json": `{"type": "object", "properties": {"inner": {"$ref": "any.json"}}}`,
 		"anything/part.html":   `<div data-floe-part="anything"></div>`,
@@ -258,7 +266,7 @@ func TestBrokenOwnParts(t *testing.T) {
 		"wordy": "the part wordy cannot be used: " + filepath.Join(parts, "wordy", "words.yaml") +
 			": the look wordy holds no schema.json nor part.html",
 		"holder": "the part holder cannot be used: " + filepath.Join(parts, "holder", "schema.json") +
-			": the part refers to floe:///parts/panel.json, a look",
+			": #/properties/p: floe:///parts/panel.json is the look panel, which draws nothing",
 		"keyed": "the part keyed cannot be used: " + filepath.Join(parts, "keyed", "part.yaml") + ":1:1: lookz is not a key of part.yaml",
 		"boxlook": "the part boxlook cannot be used: " + filepath.Join(parts, "boxlook", "part.html") +
 			":1: data-floe-part names the look panel, which has no box",
@@ -268,16 +276,19 @@ func TestBrokenOwnParts(t *testing.T) {
 		"code":     "the part code cannot be used: " + filepath.Join(parts, "code", "part.css") + ":1: this } closes no block",
 		"diff":     "the part diff cannot be used: it names the part code, or takes its look, which cannot be used",
 		"terminal": "the part terminal cannot be used: it names the part code, or takes its look, which cannot be used",
-		"pong":     "the part pong cannot be used: it holds the part ping, which cannot be used",
+		"pong": "the part pong cannot be used: " + filepath.Join(parts, "pong", "schema.json") +
+			": #/properties/ping: the part ping cannot be used",
 		"first": "the part first cannot be used: " + filepath.Join(parts, "first", "part.html") +
 			`:1: data-floe-part="cards first" is not the name of one part`,
 		"spaced": "the part spaced cannot be used: " + filepath.Join(parts, "spaced", "part.html") +
 			`: no element of the part spaced is its box, data-floe-part="spaced"`,
+		"hosted": "the part hosted cannot be used: " + filepath.Join(parts, "hosted", "schema.json") +
+			": #/properties/text/anyOf/0: file:///etc/hosts: a schema refers to no other file or URL",
 		"typo": "the part typo cannot be used: " + filepath.Join(parts, "typo", "schema.json") +
-			": the part refers to floe:///parts/celll.json, which is no part",
-		"stack":   "the part stack cannot be used: it holds the part code, which cannot be used",
-		"tabs":    "the part tabs cannot be used: it holds the part stack, which cannot be used",
-		"details": "the part details cannot be used: it holds the part stack, which cannot be used",
+			": #/properties/c: floe:///parts/celll.json is not a part",
+		"stack":   "the part stack cannot be used: parts/stack/schema.json: #/items/properties/code: the part code cannot be used",
+		"tabs":    "the part tabs cannot be used: parts/tabs/schema.json: #/items/properties/parts: the part stack cannot be used",
+		"details": "the part details cannot be used: parts/details/schema.json: #/properties/parts: the part stack cannot be used",
 		"loop":    "the part loop cannot be used: " + filepath.Join(parts, "loop") + ": the part loop holds itself (loop → loop)",
 		"ping":    "the part ping cannot be used: " + filepath.Join(parts, "ping") + ": the part ping holds itself (ping → pong → ping)",
 		"Quote":   "the part Quote cannot be used: " + filepath.Join(parts, "Quote") + ": a name is lower case letters",
@@ -297,11 +308,14 @@ func TestBrokenOwnParts(t *testing.T) {
 			": the $ref at the root of the schema names the part note",
 		"plotted": "the part plotted cannot be used: " + filepath.Join(parts, "plotted", "schema.json") +
 			": the $ref at the root of the schema names the part diagram",
-		"aliased":  "the part aliased cannot be used: it holds the part unnamed, which cannot be used",
-		"based":    "the part based cannot be used: it holds the part base, which cannot be used",
-		"zaliased": "the part zaliased cannot be used: it holds the part unnamed, which cannot be used",
+		"aliased": "the part aliased cannot be used: " + filepath.Join(parts, "aliased", "schema.json") +
+			": #: the part unnamed cannot be used",
+		"based": "the part based cannot be used: " + filepath.Join(parts, "based", "schema.json") +
+			": #: the part base cannot be used",
+		"zaliased": "the part zaliased cannot be used: " + filepath.Join(parts, "zaliased", "schema.json") +
+			": #: the part unnamed cannot be used",
 		"paneled": "the part paneled cannot be used: " + filepath.Join(parts, "paneled", "schema.json") +
-			": the part refers to floe:///parts/panel.json, a look",
+			": #: floe:///parts/panel.json is the look panel, which draws nothing",
 	}
 	for name, why := range whys {
 		dir := memo(t, `"risks": {"$ref": "floe:///parts/`+name+`.json"}, "aside": {"type": "string"}`)
@@ -313,8 +327,9 @@ func TestBrokenOwnParts(t *testing.T) {
 			}
 			continue
 		}
-		// Told as floe part check tells it, not wrapped in the words of jsonschema's loading.
-		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), "the schema of the template memo cannot be read: "+why) {
+		// Told as floe part check tells it, at the $ref, not in the words of jsonschema's loading.
+		at := filepath.Join(dir, "memo", "schema.json") + ": #/properties/risks: "
+		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), at+why) {
 			t.Errorf("Check of a template of %s = %v, want %s", name, mistakes, why)
 		}
 	}
@@ -322,7 +337,7 @@ func TestBrokenOwnParts(t *testing.T) {
 	braced := memo(t, `"risks": {"$ref": "floe:///parts/brace.json"}, "aside": {"type": "string"}`)
 	_, err := draw(tmpl.NewLibrary(braced, parts, ""), "template: memo\nlang: en\n")
 	var mistake i18n.Localizer
-	if !errors.As(err, &mistake) || !strings.HasPrefix(mistake.Localize(i18n.New("ja")), "テンプレート memo の schema を読めません: 部品 brace は使えません: ") {
+	if !errors.As(err, &mistake) || !strings.HasPrefix(mistake.Localize(i18n.New("ja")), filepath.Join(braced, "memo", "schema.json")+": #/properties/risks: 部品 brace は使えません: ") {
 		t.Errorf("Read of a template of brace = %v", err)
 	}
 	// By page.html.

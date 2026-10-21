@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -23,7 +24,7 @@ func jsonDoc(t *testing.T, src string) any {
 func shapeOf(t *testing.T, src string) *shape {
 	t.Helper()
 
-	s, err := readShape(jsonDoc(t, src), schemaURL("t"))
+	s, _, err := readShape(jsonDoc(t, src), schemaURL("t"), "t/schema.json", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +67,7 @@ func TestShapeRefusesWrongTypes(t *testing.T) {
 		`{"required": ["a", 1]}`:               "a schema floe does not read: floe reads #/required only as a list of text",
 		`{"enum": "a"}`:                        "a schema floe does not read: floe reads #/enum only as a list",
 	} {
-		if _, err := readShape(jsonDoc(t, src), schemaURL("t")); err == nil || err.Error() != want {
+		if _, _, err := readShape(jsonDoc(t, src), schemaURL("t"), "t/schema.json", ""); err == nil || err.Error() != want {
 			t.Errorf("readShape of %s = %v, want %s", src, err, want)
 		}
 	}
@@ -81,5 +82,56 @@ func TestShapeNullKey(t *testing.T) {
 	s.partsUnder(&names)
 	if !slices.Contains(names, "table") {
 		t.Errorf("partsUnder = %v, want table among them", names)
+	}
+}
+
+// Beside a $ref to a part or a schema the parts share, a schema takes what declares nothing, and the root
+// its draft too: what the $ref names declares the item (決定 6).
+func TestShapeBesideRef(t *testing.T) {
+	t.Parallel()
+
+	for src, refused := range map[string]bool{
+		`{"properties": {"a": {"$ref": "floe:///parts/tone.json", "description": "d", "title": "t", "$comment": "c"}}}`:         false,
+		`{"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": "floe:///parts/any.json"}`:                         false,
+		`{"properties": {"a": {"$ref": "#/$defs/a", "type": "string"}}, "$defs": {"a": {}}}`:                                    false,
+		`{"properties": {"a": {"$ref": "floe:///parts/any.json", "items": {}}}}`:                                                true,
+		`{"properties": {"a": {"$ref": "floe:///parts/table.json", "required": ["rows"]}}}`:                                     true,
+		`{"properties": {"a": {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": "floe:///parts/tone.json"}}}`: true,
+	} {
+		_, notes, err := readShape(jsonDoc(t, src), schemaURL("t"), "t/schema.json", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := slices.ContainsFunc(notes.met, func(x noted) bool { return x.mistake != nil && x.mistake.Key == "tmpl_ref_beside" }); got != refused {
+			t.Errorf("readShape of %s refuses beside the $ref: %v, want %v", src, got, refused)
+		}
+	}
+}
+
+// A $ref out of floe is refused at its pointer, but for what jsonschema holds itself, the drafts and their
+// vocabularies; a format of floe's in a part's schema is refused as such wherever it is.
+func TestShapeMistakes(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct{ src, part, want string }{
+		{`{"$ref": "https://json-schema.org/draft/2020-12/meta/core"}`, "", ""},
+		{
+			`{"properties": {"a": {"anyOf": [{"$ref": "file:///etc/hosts"}]}}}`, "",
+			"t/schema.json: #/properties/a/anyOf/0: file:///etc/hosts: a schema refers to no other file or URL",
+		},
+		{`{"anyOf": [{"type": "string", "format": "markdown"}]}`, "p", `t/schema.json: #/anyOf/0: a part's schema takes no "format": "markdown"`},
+	} {
+		_, notes, err := readShape(jsonDoc(t, c.src), schemaURL("t"), "t/schema.json", c.part)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := fmt.Sprint(set.mistakes(notes))
+		if c.want == "" && got != "[]" || c.want != "" && !strings.Contains(got, c.want) {
+			t.Errorf("mistakes of %s = %s, want %q", c.src, got, c.want)
+		}
 	}
 }
