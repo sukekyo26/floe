@@ -832,7 +832,8 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // element, a table of Markdown, or HTML that names a part (<span class="good" data-floe-part="cell">) or
 // takes its look without being its box (data-floe-look="panel"), and of each look those take, before the
 // parts that take it, which adjust it; then the theme's: its base.css, which every page gets, as it
-// holds the look of Markdown's quotes, and its style of each of those parts in the same order. Within the layer the more specific rule wins, else the later.
+// holds the look of Markdown's quotes, and its style of each of those parts in the same order. Within the
+// layer the more specific rule wins, else the later.
 // An element that takes a look without being a part's box (a card of cards) has it a layer under the
 // template's and the parts', floe.looks: the part it is in, or the template it is the template's own of,
 // adjusts it whatever the selectors, as a part does the looks it takes, where the nearer scope would win
