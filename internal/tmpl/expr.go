@@ -57,10 +57,15 @@ func compileWritten(
 	if err == nil {
 		return p, nil
 	}
-	if _, whole := compile(src+" #"+rest, env, opts...); rest != "" && whole == nil {
-		return nil, yamlpos.New(file, at, "tmpl_expr_hint", src, brief(err), usererr.New("yaml_hint_expr_comment"))
+	mistake := usererr.New("tmpl_expr", src, brief(err))
+	// LIMIT: the hint needs the expression with its comment put back to compile, so one cut short that
+	// has another mistake too gets none. Compare where the two fail if that hides a cut.
+	if rest != "" {
+		if _, e := compile(src+" #"+rest, env, opts...); e == nil {
+			mistake = yamlpos.Hinted(mistake, "yaml_hint_expr_comment")
+		}
 	}
-	return nil, yamlpos.New(file, at, "tmpl_expr", src, brief(err))
+	return nil, &yamlpos.Error{File: file, Pos: at, Err: mistake}
 }
 
 // brief words an error of expr on one line, without the snippet it draws under the message.

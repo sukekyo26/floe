@@ -119,9 +119,13 @@ func TestSyntaxHints(t *testing.T) {
 	)
 	for _, tt := range []struct{ src, want string }{
 		{"lead: parts-shape: drop\n", "a.yaml:1:7: this is not valid YAML: mapping value is not allowed in this context" + colon},
-		{"a:\n  - { title: layer #73, from: 2 }\n  - b\n", "a.yaml:3:3: this is not valid YAML: ',' or '}' must be specified" + comment},
-		{"a: [x #y, z]\n", "a.yaml:1:4: this is not valid YAML: sequence end token ']' not found" + comment},
-		{"rows:\n  - [a, the `: ` case, c]\n", "a.yaml:2:16: this is not valid YAML: '`' is a reserved character" + reserved},
+		{"a:\n  - { title: layer #73, from: 2 }\n  - b\n", "a.yaml:2:20: this is not valid YAML: ',' or '}' must be specified" + comment},
+		{"a: [x #y, z]\n", "a.yaml:1:7: this is not valid YAML: sequence end token ']' not found" + comment},
+		// A ` after the ": " of text is the ": "'s doing, which the hint names, at that ":".
+		{"rows:\n  - [a, the `: ` case, c]\n", "a.yaml:2:14: this is not valid YAML: '`' is a reserved character" + colon},
+		{"a: `b`\n", "a.yaml:1:4: this is not valid YAML: '`' is a reserved character" + reserved},
+		{"a: { k: `v` }\n", "a.yaml:1:9: this is not valid YAML: '`' is a reserved character" + reserved},
+		{"a: b: `c`\n", "a.yaml:1:5: this is not valid YAML: '`' is a reserved character" + colon},
 		// A comment inside a { } or [ ] that closes is the author's, and another mistake gets no hint.
 		{"a: [x, # y\n  z]\nb: 'c\n", "a.yaml:3:4: this is not valid YAML: could not find end character of single-quoted text"},
 		{"a: 1\na: 2\n", `a.yaml:2:1: this is not valid YAML: mapping key "a" already defined at [1:1]`},
@@ -138,7 +142,8 @@ func TestSyntaxHints(t *testing.T) {
 func TestColonTextAndCommentAfter(t *testing.T) {
 	t.Parallel()
 
-	doc, err := parser.ParseBytes([]byte("- a: b\n- a: b\n  c: d\n- {a: b}\n- \"a\": b\n- a:\n    b\n- x # y z\n- x\n"), 0)
+	doc, err := parser.ParseBytes([]byte("- a: b\n- a: b\n  c: d\n- {a: b}\n- \"a\": b\n- a:\n    b\n- x # y z\n- x\n"+
+		"- 2024: done\n- a: {b: c}\n- a: [b]\n- a: |\n    x\n- Note:\n- x\n  y # z\n"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +152,7 @@ func TestColonTextAndCommentAfter(t *testing.T) {
 		t.Fatalf("the body is %T", doc.Docs[0].Body)
 	}
 	items := seq.Values
-	for i, want := range []bool{true, false, false, false, false, false, false} {
+	for i, want := range []bool{true, false, false, false, false, false, false, true, false, false, false, false, false} {
 		if got := yamlpos.ColonText(items[i]); got != want {
 			t.Errorf("ColonText(item %d) = %v, want %v", i, got, want)
 		}
@@ -157,6 +162,10 @@ func TestColonTextAndCommentAfter(t *testing.T) {
 	}
 	if got := yamlpos.CommentAfter(items[6]); got != "" {
 		t.Errorf("CommentAfter(x) = %q", got)
+	}
+	// On the last line of a value written over lines.
+	if got := yamlpos.CommentAfter(items[12]); got != " z" {
+		t.Errorf("CommentAfter(x y # z) = %q", got)
 	}
 }
 

@@ -190,7 +190,6 @@ func TestReportScript(t *testing.T) {
 	}
 }
 
-// Each refusal of Read points at the line and column it is about.
 // Text with ": " in it, which YAML reads as a key and its value, is told to be quoted where the schema
 // wants text; keys and values written as such are not.
 func TestReadColonTextHint(t *testing.T) {
@@ -214,6 +213,7 @@ func TestReadColonTextHint(t *testing.T) {
 	}
 }
 
+// Each refusal of Read points at the line and column it is about.
 func TestReadRefusals(t *testing.T) {
 	t.Parallel()
 
