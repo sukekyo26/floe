@@ -140,8 +140,8 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 		mistakes = append(mistakes, usererr.New("tmpl_page_head", t.file("page.html")))
 	}
 	mistakes = append(mistakes, t.checkAssets(page)...)
-	cssWarnings, css := t.checkCSS()
-	warnings, mistakes = append(warnings, cssWarnings...), append(mistakes, css...)
+	scope, css := t.checkCSS()
+	warnings, mistakes = append(warnings, scope...), append(mistakes, css...)
 	return append(warnings, brokenParts(set, named)...), append(mistakes, t.checkNamedParts(set, pageSrc, named)...)
 }
 
@@ -171,10 +171,9 @@ func brokenParts(set *partSet, named []namedPart) []*usererr.Error {
 	return append(warnings, set.strays...)
 }
 
-// checkCSS returns the mistake of t's CSS, page.css, that cssSheet.refuse refuses, the warning of the
+// checkCSS returns the mistake of t's CSS, page.css, that cssSheet.refuse refuses, and the warning of the
 // colours that change with the mode which it sets on :scope for light mode alone: over every palette, they
-// stay in dark mode too, where the others turn dark, and those of the ground, colour or face it sets on
-// body, which floe's base draws on the root.
+// stay in dark mode too, where the others turn dark.
 func (t *Template) checkCSS() ([]*usererr.Error, []error) {
 	modes, err := floeModes()
 	if err != nil {
@@ -184,47 +183,12 @@ func (t *Template) checkCSS() ([]*usererr.Error, []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	warnings := bodyGround(t.file("page.css"), page)
 	c := newModeColours()
 	c.readScope(page)
 	if names := c.lightOnly(modes); names != nil {
-		warnings = append(warnings, usererr.New("tmpl_scope_dark", t.file("page.css"), andList(names)))
+		return []*usererr.Error{usererr.New("tmpl_scope_dark", t.file("page.css"), andList(names))}, nil
 	}
-	return warnings, nil
-}
-
-// bodyGround returns the warning of each block of s, page.css shown as file, that sets a ground, or a
-// variable of the ground, colour or face, on body: floe's base draws them on the root, whose ground a
-// body's covers in the body's box alone, and which a variable set on body does not reach.
-func bodyGround(file string, s *cssSheet) []*usererr.Error {
-	var warnings []*usererr.Error
-	for i, r := range s.rules {
-		var names []string
-		for _, d := range r.decls {
-			if strings.HasPrefix(d.name, "background") || d.name == "--page-bg" || d.name == "--fg" || d.name == "--font" {
-				names = append(names, d.name)
-			}
-		}
-		if names != nil && s.namesBody(i) {
-			warnings = append(warnings, usererr.New("tmpl_body_ground", file, lineAt(s.src, r.decls[0].at), andList(names)))
-		}
-	}
-	return warnings
-}
-
-// namesBody reports whether the declarations of the rule i of s are body's: the selector nearest them,
-// its own or that of a rule around an at-rule it is, ends in body, one of its list.
-// LIMIT: a list is split at its commas, those in :is() and :where() too, which leaves out body in them.
-// Read the selectors if templates come to write body so.
-func (s *cssSheet) namesBody(i int) bool {
-	for ; i >= 0; i = s.rules[i].parent {
-		if r := &s.rules[i]; !strings.HasPrefix(r.prelude, "@") {
-			return slices.ContainsFunc(strings.Split(r.prelude, ","), func(sel string) bool {
-				return bodySubject.MatchString(strings.TrimSpace(sel))
-			})
-		}
-	}
-	return false
+	return nil, nil
 }
 
 // checkNamedParts returns a mistake for each part src, page.html, names, of named, by data-floe-part or
