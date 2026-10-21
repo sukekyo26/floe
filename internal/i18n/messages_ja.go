@@ -353,7 +353,7 @@ var messagesJA = map[string]string{
 	"tmpl_palette_rule":            "%s:%d: palette.css にはパレットの変数 :root { --名前: 値; } と、ダークモードの分の @media (prefers-color-scheme: dark) { :root { … } } だけを書きます。ほかの規則は base.css か部品のファイルに書いてください",
 	"tmpl_palette_order":           "%s:%d: この :root は @media (prefers-color-scheme: dark) より前に書いてください。後に書くと、その色がダークモードでも勝ちます",
 	"tmpl_palette_important":       "%s:%d: palette.css には !important を書けません。どの層にも勝ち、テンプレートが :scope に書いた色にも勝ってしまいます",
-	"tmpl_body_ground":             "%s:%d: body に %s を書いています。floe の基本の見た目はページの地・文字の色・書体をページの根に描くので、body に書いた地は body の箱だけを塗り、body に書いた変数は根に届きません。:scope に書いてください",
+	"tmpl_body_ground":             "%s:%d: body に %s を書いています。floe の基本の見た目はページの地・文字の色・書体をページの根に描くので、body に書いた地は body の箱だけを塗り、body に書いた変数は根に届きません。:scope に --page-bg・--fg・--font を書いてください",
 	"tmpl_scope_dark":              "%s は :scope に %s をライトモードの分だけ書いています。どのパレットにも勝つので、ダークモードでもその値のままになり、ほかはダークの色になります。@media (prefers-color-scheme: dark) { :scope { … } } にも書いてください",
 	"tmpl_palette_dark":            "%s は %s をライトモードの分だけ書いています。ダークモードでもその値のままになり、ほかは default のダークの色になります。@media (prefers-color-scheme: dark) { :root { … } } にも書いてください",
 	"tmpl_themes_dir_unreadable":   "自分のテーマのディレクトリ %s を読めません: %s。読めるディレクトリにするか、FLOE_THEMES_DIR を設定してください",
