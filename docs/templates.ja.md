@@ -91,7 +91,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 
 ### パレット
 
-ページの色と書体は、テーマの `palette.css` が CSS 変数で決めます。部品・図・floe の基本の見た目・テンプレートは、これらの変数で描きます。floe の `default` の `palette.css` はすべての変数を定義し、どのページにもいちばん下に入ります。`theme:` で選んだテーマの `palette.css` はその後に入って、書いた変数だけを変えます。自分の `default` の `palette.css` も、floe のものに代わらずその上に重なります。書かなかった変数と、`palette.css` を持たないテーマの色は floe の `default` のものです。floe のテーマのうち、`blueprint`・`brutal`・`ink`・`notebook`・`swiss`・`washi` は `palette.css` を持ち、`editorial`・`soft` は持ちません。
+ページの色と書体は、テーマの `palette.css` が CSS 変数で決めます。部品・図・floe の基本の見た目・テンプレートは、これらの変数で描きます。floe の `default` の `palette.css` はすべての変数を定義し、どのページにもいちばん下に入ります。`theme:` で選んだテーマの `palette.css` はその後に入って、書いた変数だけを変えます。floe のテーマと同じ名前の自分のテーマの `palette.css` も（`default` も）、floe のものに代わらずその上に重なります。書かなかった変数と、`palette.css` を持たないテーマの色は floe の `default` のものです。floe のテーマのうち、`blueprint`・`brutal`・`ink`・`notebook`・`swiss`・`washi` は `palette.css` を持ち、`editorial`・`soft` は持ちません。
 
 `palette.css` には、`:root { --名前: 値; }` で変数（と `color-scheme`）を書き、ダークモードの分をその後の `@media (prefers-color-scheme: dark) { :root { … } }` に書きます。ほかの規則は最下層では効かないので、`:root` をダークの分より後に書くとその色がダークモードでも勝つので、`!important` はどの層にも勝ってテンプレートの色を崩すので、それぞれ行を示して断ります。ライトモードの分だけを書いた色は、ダークモードでもその値のまま、ほかの色だけが `default` のダークの色になって読めなくなるので、`floe part check` と `floe template check` が警告します。色は両方のモードの分を書いてください。`default` がダークモードで変える色をすべて `:root` に書き、ダークモードの分を 1 つも書かない、いつも同じ見た目のパレット（いつも暗いテーマなど）は、色が混ざらないので警告しません。`light-dark(#fff, #000)` のように値そのものがモードで切り替わるものも警告しません。
 
@@ -130,7 +130,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 
 ## 自分のテーマ
 
-自分のテーマは、ディレクトリ `$FLOE_THEMES_DIR/<名前>/` に floe のテーマと同じファイルを置きます。`base.css`（どのページにも入る。自分の名前の変数と Markdown の引用）、`palette.css`（どのページにも入る。[パレット](#パレット)の変数）と `<名前>.css`（部品や見た目のスタイル。その見た目を持つ要素の範囲に入る）で、要らないものは省けます。ほかの名前の CSS ファイルはどのページにも入らず、`floe template check` が警告します。CSS でないファイルと、ドットで始まるファイル（`.DS_Store`）は無視します。floe のテーマと同じ名前なら、同じ名前のファイルだけが代わり、ほかは floe のものが残ります。`brutal/quote.css` を置けば、brutal で自分の quote の見た目を決められます。floe のファイルを消すには空のファイルを置きます（パレットは例外で、floe の `default` のパレットはいつもいちばん下に入ります）。使えないテーマは、それを選んだデータファイルで断ります。自分のテーマはまとめて `floe part check` で検査できます。`FLOE_THEMES_DIR` の既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes` です。`FLOE_PARTS_DIR` と同じか、一方がもう一方の中にあれば断ります。ディレクトリもその中のテーマもシンボリックリンクでかまいません。テーマの中からシンボリックリンクで外へ出るファイルは断ります。
+自分のテーマは、ディレクトリ `$FLOE_THEMES_DIR/<名前>/` に floe のテーマと同じファイルを置きます。`base.css`（どのページにも入る。自分の名前の変数と Markdown の引用）、`palette.css`（どのページにも入る。[パレット](#パレット)の変数）と `<名前>.css`（部品や見た目のスタイル。その見た目を持つ要素の範囲に入る）で、要らないものは省けます。ほかの名前の CSS ファイルはどのページにも入らず、`floe template check` が警告します。CSS でないファイルと、ドットで始まるファイル（`.DS_Store`）は無視します。floe のテーマと同じ名前なら、同じ名前のファイルだけが代わり、ほかは floe のものが残ります。`brutal/quote.css` を置けば、brutal で自分の quote の見た目を決められます。floe のファイルを消すには空のファイルを置きます。ただし `palette.css` は floe のものの上に重なり、書いた変数だけを変えます。`--accent` だけを書いた `brutal/palette.css` でも、brutal の原色は残ります。使えないテーマは、それを選んだデータファイルで断ります。自分のテーマはまとめて `floe part check` で検査できます。`FLOE_THEMES_DIR` の既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes` です。`FLOE_PARTS_DIR` と同じか、一方がもう一方の中にあれば断ります。ディレクトリもその中のテーマもシンボリックリンクでかまいません。テーマの中からシンボリックリンクで外へ出るファイルは断ります。
 
 公開したページとリンクしたページは、サーバーの部品とテーマで描きます。サーバーは、それを起動した `floe publish` か `floe serve` の部品とテーマを使います。部品やテーマのファイルを保存すると、リンクしたページを読み直します。
 
