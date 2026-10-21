@@ -9,4 +9,6 @@
 :scope.numbered > .card { background: var(--brutal-yellow); color: var(--brutal-ink); }
 :scope.numbered > .card:nth-child(3n + 2) { background: var(--brutal-blue); }
 :scope.numbered > .card:nth-child(3n) { background: var(--brutal-pink); }
-:scope.numbered > .card :is(p, ul, ol, li, a) { color: var(--brutal-ink); font-weight: 600; }
+:scope.numbered > .card :is(p, ul, ol, li, a) { font-weight: 600; }
+/* Every text on a primary face is in its ink, marks and pills among them, whose colours are for the surface */
+:scope.numbered > .card *, :scope.numbered > .card ::before { color: var(--brutal-ink); }

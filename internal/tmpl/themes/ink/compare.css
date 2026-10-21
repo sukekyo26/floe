@@ -1,0 +1,2 @@
+/* The heading of what comes after, on the ink of ink's table heads */
+:scope thead th.after { color: var(--bg); }

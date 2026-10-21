@@ -26,7 +26,7 @@
     --good: #9be39f; --good-soft: #1f3a26; --warn: #ffcf7a; --warn-soft: #3d3218; --bad: #ff9e9e; --bad-soft: #3d2222;
     --code-bg: #141c18;
     --nb-rule: color-mix(in srgb, var(--fg) 7%, transparent); --nb-tape: rgb(220 205 160 / 0.45);
-    --nb-yellow: rgb(246 226 122 / 0.4); --nb-green: rgb(150 230 150 / 0.35); --nb-pink: rgb(255 160 200 / 0.35);
+    --nb-yellow: rgb(246 226 122 / 0.32); --nb-green: rgb(150 230 150 / 0.35); --nb-pink: rgb(255 160 200 / 0.35);
     --nb-blue: rgb(150 205 255 / 0.35); --nb-orange: rgb(255 185 110 / 0.38);
     --nb-stick-1: #f3e38f; --nb-stick-2: #f6c2d4; --nb-stick-3: #bfdcf7;
   }

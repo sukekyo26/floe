@@ -1,0 +1,2 @@
+/* The heading of what comes after, on the black (in dark mode yellow) head of brutal's tables */
+:scope thead th.after { color: var(--brutal-head-fg); }
