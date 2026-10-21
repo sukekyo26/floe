@@ -102,7 +102,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if mistakes != nil {
 		return nil, mistakes
 	}
-	src, err := t.readFile("schema.json")
+	doc, err := t.schemaDoc()
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -110,11 +110,11 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	sch, doc, err := compileSchema(set, t.Name, src)
+	sch, err := compileSchema(set, t.Name, doc)
 	if err != nil {
 		return nil, []error{err}
 	}
-	s, err := t.readSchema(src)
+	s, err := t.readShape(doc)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -149,12 +149,12 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 }
 
 // checkComputed returns the mistake of t's computed.yaml, of the items of its schema s, if it has one.
-func (t *Template) checkComputed(s *schema) error {
+func (t *Template) checkComputed(s *shape) error {
 	computed, found, err := t.readOptional("computed.yaml")
 	if err != nil || !found {
 		return err
 	}
-	_, err = readComputed(t.file("computed.yaml"), computed, slices.Sorted(maps.Keys(s.Properties)))
+	_, err = readComputed(t.file("computed.yaml"), computed, s.keyNames())
 	return err
 }
 

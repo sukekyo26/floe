@@ -110,10 +110,7 @@ func TestCheckImages(t *testing.T) {
 	if err = os.WriteFile(filepath.Join(dir, "a.png"), png, 0o600); err != nil { //nolint:gosec // G703: the test's own directory
 		t.Fatal(err)
 	}
-	s, err := decodeSchema([]byte(`{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`))
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := shapeOf(t, `{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`)
 	d, root := data(t, "pics:\n  - a.png\n  - none.png\n  - a.png\n  - none.png\n")
 	err = checkImages(s, d, root, diskImages(dir))
 	want := "d.yaml:3:5: pics[1]: there is no image \"none.png\" under " + dir + "\n" +
@@ -152,10 +149,7 @@ func TestAssetsReadOnce(t *testing.T) {
 func TestTriedImages(t *testing.T) {
 	t.Parallel()
 
-	s, err := decodeSchema([]byte(`{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`))
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := shapeOf(t, `{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`)
 	d, root := data(t, "pics: [a.png, ../b.png, a.png, .c.png, notes.txt, Data.yaml/d.png]\n")
 	_ = checkImages(s, d, root, diskImages(t.TempDir())) //nolint:errcheck // the images are missing; what was tried is the point
 	if want := []string{"a.png"}; !slices.Equal(d.tried, want) {
@@ -173,10 +167,7 @@ func TestImagesFromFS(t *testing.T) {
 		t.Fatal(err)
 	}
 	files := fstest.MapFS{"sub/a.png": {Data: png}}
-	s, err := decodeSchema([]byte(`{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`))
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := shapeOf(t, `{"properties": {"pics": {"type": "array", "items": {"type": "string", "format": "image"}}}}`)
 	d, root := data(t, "pics: [sub/a.png, none.png]\n")
 	err = checkImages(s, d, root, fsImages(files, "/plans"))
 	if want := `d.yaml:1:19: pics[1]: there is no image "none.png" under /plans`; err == nil || err.Error() != want {

@@ -312,13 +312,13 @@ func TestAnyOffersEveryPart(t *testing.T) {
 		}
 	}
 	slices.Sort(want)
-	offered := set.schemas[partsURL+"any.json"].Properties
+	offered := set.shapes[partsURL+"any.json"].keys
 	if got := slices.Sorted(maps.Keys(offered)); !slices.Equal(got, want) {
 		t.Errorf("any.json offers %v, want %v", got, want)
 	}
 	for name, s := range offered {
 		if s.part != set.parts[name] {
-			t.Errorf("any.json's %s draws by %s", name, s.Ref)
+			t.Errorf("any.json's %s draws by %s", name, s.ref)
 		}
 	}
 }
@@ -333,8 +333,8 @@ func TestPartsHoldNoFormat(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, p := range set.parts {
-		if at, _, s := set.formatIn(p.schema, "#"); s != nil {
-			t.Errorf("the part %s holds the format %s at %s", name, s.Format, at)
+		if at, _, s := set.formatIn(p.shape, "#"); s != nil {
+			t.Errorf("the part %s holds the format %s at %s", name, s.format, at)
 		}
 	}
 }

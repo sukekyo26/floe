@@ -45,7 +45,7 @@ func (l *Library) Describe(name string) (*Description, error) {
 	if t == nil {
 		return nil, l.unknown(name)
 	}
-	s, err := schemaOf(t)
+	s, _, err := t.shape()
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (l *Library) Describe(name string) (*Description, error) {
 	}
 	partsThemes := set.themeNames()
 	d := &Description{
-		Name: name, Path: t.Path, About: s.Description, Floe: "", Series: "", Themes: themes, PartsThemes: partsThemes,
+		Name: name, Path: t.Path, About: s.description(), Floe: "", Series: "", Themes: themes, PartsThemes: partsThemes,
 		Items: s.items(), Example: nil,
 	}
 	needs, err := t.needs()
@@ -125,8 +125,8 @@ func (set *partSet) describe(name string) *PartDescription {
 	var takes Item // nothing for a look
 	var holds []string
 	if !p.isLook() {
-		about, takes = p.schema.Description, p.schema.item(name, false)
-		holds = slices.Compact(slices.Sorted(slices.Values(p.schema.held(nil))))
+		about, takes = p.shape.description(), p.shape.item(name, false)
+		holds = slices.Compact(slices.Sorted(slices.Values(p.shape.held(nil))))
 	}
 	return &PartDescription{
 		Name: name, Path: p.dir, Replaces: p.replaces, Look: p.isLook(), About: about, Takes: takes,
@@ -134,18 +134,19 @@ func (set *partSet) describe(name string) *PartDescription {
 	}
 }
 
-// held adds to names the parts s and the schemas under it hold, short of what those hold in turn.
-func (s *schema) held(names []string) []string {
+// held adds to names the parts s and the shapes under it hold, short of what those hold in turn.
+func (s *shape) held(names []string) []string {
 	switch {
 	case s == nil:
 		return names
 	case s.part != nil:
 		return append(names, s.part.name)
 	}
-	for _, p := range s.Properties {
-		names = p.held(names)
+	in := s.inside()
+	for _, k := range in.keys {
+		names = k.held(names)
 	}
-	return s.Items.held(names)
+	return in.each.held(names)
 }
 
 // SharedItems are the keys floe reads from every data file of the template name itself, to be told beside
@@ -169,36 +170,37 @@ func SharedItems(name string) []Item {
 }
 
 // items are the items s declares, by name.
-func (s *schema) items() []Item {
-	names := slices.Sorted(maps.Keys(s.Properties))
+func (s *shape) items() []Item {
+	names := s.keyNames()
 	if len(names) == 0 {
 		return nil
 	}
+	in := s.inside()
 	items := make([]Item, 0, len(names))
 	for _, n := range names {
-		items = append(items, s.Properties[n].item(n, slices.Contains(s.Required, n)))
+		items = append(items, in.keys[n].item(n, slices.Contains(in.required, n)))
 	}
 	return items
 }
 
 // item is the item name that s declares, required when required.
-func (s *schema) item(name string, required bool) Item {
+func (s *shape) item(name string, required bool) Item {
 	if s == nil {
-		s = new(schema) // null in schema.json: nothing to tell of it
+		s = new(shape) // null in schema.json: nothing to tell of it
 	}
 	it := Item{
-		Name: name, Types: s.types(), Of: nil, Format: s.Format, Part: "", Enum: nil, Required: required,
-		Description: s.Description, Items: nil,
+		Name: name, Types: s.types(), Of: nil, Format: s.format, Part: "", Enum: nil, Required: required,
+		Description: s.description(), Items: nil,
 	}
-	enum := s.Enum
-	if s.Items != nil {
+	enum := s.values()
+	if each := s.inside().each; each != nil {
 		// A list described by its items: "a list of …", each one what it holds.
-		it.Of, it.Items = s.Items.types(), s.Items.items()
-		it.Format = cmp.Or(it.Format, s.Items.Format)
-		it.Part = s.Items.drawnBy()
-		it.Description = cmp.Or(it.Description, s.Items.Description)
+		it.Of, it.Items = each.types(), each.items()
+		it.Format = cmp.Or(it.Format, each.format)
+		it.Part = each.drawnBy()
+		it.Description = cmp.Or(it.Description, each.description())
 		if len(enum) == 0 {
-			enum = s.Items.Enum
+			enum = each.values()
 		}
 	} else {
 		it.Items = s.items()
@@ -211,7 +213,7 @@ func (s *schema) item(name string, required bool) Item {
 }
 
 // drawnBy is the name of the part of floe's that draws s, or "".
-func (s *schema) drawnBy() string {
+func (s *shape) drawnBy() string {
 	if s.part == nil {
 		return ""
 	}
@@ -219,8 +221,8 @@ func (s *schema) drawnBy() string {
 }
 
 // types are the JSON types s takes: those it names, else those its keywords imply.
-func (s *schema) types() []string {
-	switch t := s.Type.(type) {
+func (s *shape) types() []string {
+	switch t := s.jsonType().(type) {
 	case string:
 		return []string{t}
 	case []any:
@@ -230,10 +232,10 @@ func (s *schema) types() []string {
 		}
 		return types
 	}
-	switch {
-	case s.Properties != nil:
+	switch in := s.inside(); {
+	case in.keys != nil:
 		return []string{"object"}
-	case s.Items != nil:
+	case in.each != nil:
 		return []string{"array"}
 	}
 	return nil

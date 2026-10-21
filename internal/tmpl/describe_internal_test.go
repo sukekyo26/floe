@@ -19,10 +19,7 @@ func TestItems(t *testing.T) {
     "gone": null
   }
 }`
-	s, err := decodeSchema([]byte(src))
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := shapeOf(t, src)
 	want := []Item{
 		{Name: "gone", Types: nil, Of: nil, Format: "", Enum: nil, Required: false, Description: "", Items: nil},
 		{Name: "kind", Types: []string{"strng"}, Of: nil, Format: "", Enum: nil, Required: false, Description: "", Items: nil},
@@ -32,8 +29,5 @@ func TestItems(t *testing.T) {
 	}
 	if got := s.items(); !reflect.DeepEqual(got, want) {
 		t.Errorf("items =\n%+v\nwant\n%+v", got, want)
-	}
-	if _, err := decodeSchema([]byte(`{} garbage`)); err == nil {
-		t.Error("decodeSchema took text after the schema")
 	}
 }

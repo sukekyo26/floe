@@ -1,7 +1,6 @@
 package tmpl
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,8 +26,8 @@ var formats = []string{"html", "image", "markdown"}
 
 // validate checks the values of d against the schema src, its template's schema.json, and reports
 // every mistake at its line and column under root, the data file's top mapping.
-func validate(set *partSet, src []byte, d *Data, root ast.Node) error {
-	sch, doc, err := compileSchema(set, d.Template, src)
+func validate(set *partSet, doc any, d *Data, root ast.Node) error {
+	sch, err := compileSchema(set, d.Template, doc)
 	if err != nil {
 		return err
 	}
@@ -46,24 +45,20 @@ func validate(set *partSet, src []byte, d *Data, root ast.Node) error {
 	return s.problems
 }
 
-// compileSchema compiles the schema src of the template name, which refers to the parts of set, and
-// returns it as read too.
-func compileSchema(set *partSet, name string, src []byte) (*jsonschema.Schema, any, error) {
-	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
-	if err != nil {
-		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
-	}
-	if err = checkDraft(doc); err != nil {
-		return nil, nil, usererr.New("tmpl_schema_load", name, err)
+// compileSchema compiles doc, the schema of the template name as jsonschema reads it, which refers to the
+// parts of set.
+func compileSchema(set *partSet, name string, doc any) (*jsonschema.Schema, error) {
+	if err := checkDraft(doc); err != nil {
+		return nil, usererr.New("tmpl_schema_load", name, err)
 	}
 	url := schemaURL(name)
 	c := newCompiler(set)
-	if err = c.AddResource(url, doc); err != nil {
-		return nil, nil, fmt.Errorf("read the schema of %s: %w", name, err)
+	if err := c.AddResource(url, doc); err != nil {
+		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
 	for partURL, partDoc := range set.docs {
-		if err = c.AddResource(partURL, partDoc); err != nil {
-			return nil, nil, fmt.Errorf("read the schema %s: %w", partURL, err)
+		if err := c.AddResource(partURL, partDoc); err != nil {
+			return nil, fmt.Errorf("read the schema %s: %w", partURL, err)
 		}
 	}
 	sch, err := c.Compile(url)
@@ -73,11 +68,11 @@ func compileSchema(set *partSet, name string, src []byte) (*jsonschema.Schema, a
 	var load *jsonschema.LoadURLError
 	switch {
 	case errors.As(err, &load):
-		return nil, nil, usererr.New("tmpl_schema_load", name, load.Err)
+		return nil, usererr.New("tmpl_schema_load", name, load.Err)
 	case err != nil:
-		return nil, nil, fmt.Errorf("compile the schema of %s: %w", name, err)
+		return nil, fmt.Errorf("compile the schema of %s: %w", name, err)
 	}
-	return sch, doc, nil
+	return sch, nil
 }
 
 // drafts are the drafts of JSON Schema a $schema may name.
