@@ -1,6 +1,5 @@
-/* What every page starts from, under the template's CSS and the parts': its ground, colour and face, on the root, which
-   a template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too, where the template's
-   CSS does not reach */
+/* What every page starts from, under the template's CSS and the parts', inside the parts too. The ground goes on the
+   root, which a template's :scope sets over: on body it would cover the root's */
 * { box-sizing: border-box; }
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }

@@ -91,8 +91,16 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the UI tests share on
 	e.write(t, "templates/bare/page.css", ":scope { background: rgb(0, 0, 5); color: rgb(0, 0, 6); font-family: own; }\n")
 	e.publish(t, e.write(t, "bare.yaml", "template: bare\nlang: en\ntheme: washi\n"), store.Options{Slug: &slug})
 	b.navigate("/a/bare/?raw")
-	b.until("the text", "!!document.querySelector('p')")
+	b.until("its ground", "getComputedStyle(document.documentElement).backgroundColor === 'rgb(0, 0, 5)'")
 	check(t, "bare of its own ground", []string{b.eval(ground)}, `rgb(0, 0, 5) | rgba(0, 0, 0, 0) | rgb(0, 0, 6) | own`)
+	// A ground of a pattern, blueprint's squares, is drawn whole.
+	e.write(t, "templates/bare/page.css", "")
+	slug = "squares"
+	e.publish(t, e.write(t, "squares.yaml", "template: bare\nlang: en\ntheme: blueprint\n"), store.Options{Slug: &slug})
+	b.navigate("/a/squares/?raw")
+	b.until("the text", "!!document.querySelector('p')")
+	got = b.eval(`getComputedStyle(document.documentElement).backgroundImage.split('linear-gradient').length - 1`)
+	check(t, "squares", []string{got}, "2")
 
 	// A table of one's own takes the place of floe's, and the panel's look by its part.yaml: floe's washi
 	// styles it and compare, drawn in the table's look, by the panel's file (its double rules), not by the
