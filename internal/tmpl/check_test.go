@@ -578,7 +578,7 @@ func TestTemplateWords(t *testing.T) {
 	}
 
 	dir = sizes(t, map[string]string{"words.yaml": words, "page.html": "</body>|{{word \"totl\"}}</body>"})
-	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), filepath.Join(dir, "page.html")+": names the words totl, which words.yaml does not have") {
+	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), filepath.Join(dir, "page.html")+": it names the words totl, which words.yaml does not have") {
 		t.Errorf("Check of a misspelt word = %v", mistakes)
 	}
 	// A mistake of words.yaml is told beside those of the other files, not instead of them.

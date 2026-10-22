@@ -532,11 +532,11 @@ func TestReadWords(t *testing.T) {
 	// A word named as written that the part has none of is refused as it is read, in any branch; one named
 	// from the data is left to the drawing.
 	for src, want := range map[string]string{
-		`{{if .x}}{{with .y}}{{word "b"}}{{end}}{{end}}`:    `p.html: names the words b, which words.yaml does not have`,
+		`{{if .x}}{{with .y}}{{word "b"}}{{end}}{{end}}`:    `p.html: it names the words b, which words.yaml does not have`,
 		`{{range .x}}{{word "a"}}{{word .}}{{end}}`:         "",
-		`{{define "d"}}{{word "c"}}{{end}}{{template "d"}}`: `p.html: names the words c, which words.yaml does not have`,
-		`{{"d" | word}}`:   `p.html: names the words d, which words.yaml does not have`,
-		`{{(word "e").x}}`: `p.html: names the words e, which words.yaml does not have`,
+		`{{define "d"}}{{word "c"}}{{end}}{{template "d"}}`: `p.html: it names the words c, which words.yaml does not have`,
+		`{{"d" | word}}`:   `p.html: it names the words d, which words.yaml does not have`,
+		`{{(word "e").x}}`: `p.html: it names the words e, which words.yaml does not have`,
 	} {
 		page, err := template.New("p").Funcs(template.FuncMap{"word": zh.word("w.yaml", "en")}).Parse(src)
 		if err != nil {

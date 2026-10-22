@@ -408,5 +408,5 @@ var messagesEN = map[string]string{
 	"tmpl_words_unknown":          `words.yaml has no word "%s"`,
 	"tmpl_words_documents":        "words.yaml holds one YAML document: remove the --- between the parts",
 	"tmpl_words_lang_twice":       "%s is the language %s again: a tag's case does not tell languages apart",
-	"tmpl_words_unnamed":          `names the words %s, which words.yaml does not have`,
+	"tmpl_words_unnamed":          `it names the words %s, which words.yaml does not have`,
 }
