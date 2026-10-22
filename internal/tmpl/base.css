@@ -1,7 +1,10 @@
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
 * { box-sizing: border-box; }
-:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; but in a
+   table, which widens and scrolls instead of squeezing its columns */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; }
+table { overflow-wrap: normal; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
 p, ul, ol { margin: 0; max-width: var(--text-width); }
