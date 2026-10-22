@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/santhosh-tekuri/jsonschema/v6"
+
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -130,4 +132,26 @@ func schemaProblems(t *testing.T, schema, src string) usererr.List {
 		t.Fatalf("validate = %v, want problems", err)
 	}
 	return p
+}
+
+// A mistake that stopped the compiling is placed at its pointer in the template's schema.json; one of
+// another schema, or of a kind floe does not know, stays a failure.
+func TestCompileMistakes(t *testing.T) {
+	t.Parallel()
+
+	url := schemaURL("t")
+	regex := &jsonschema.InvalidRegexError{URL: url + "#/patternProperties", Regex: "([", Err: errors.New("missing )")}
+	err := compileMistakes(url, "t/schema.json", regex)
+	var e *usererr.Error
+	if !errors.As(err, &e) || e.File != "t/schema.json" || e.At != "#/patternProperties" {
+		t.Errorf("compileMistakes of a regex = %#v", err)
+	}
+	for _, other := range []error{
+		&jsonschema.InvalidRegexError{URL: "floe:///parts/p.json#/pattern", Regex: "([", Err: errors.New("missing )")},
+		errors.New("some other failure"),
+	} {
+		if err = compileMistakes(url, "t/schema.json", other); errors.As(err, &e) {
+			t.Errorf("compileMistakes of %v = %v, want a failure", other, err)
+		}
+	}
 }

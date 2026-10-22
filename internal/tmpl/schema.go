@@ -84,11 +84,8 @@ func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema
 }
 
 // compileMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of
-// file: those the metaschema refuses at their JSON pointers, and any other that names url (a $ref in it
-// that finds nothing, an $anchor written twice) in jsonschema's words, url left out of them so that the
-// pointer it is followed by is the one in file. One that does not name url, of a part's schema, is a failure.
-// LIMIT: in the library's English, and one that is not the metaschema's is told at the top of file, not
-// where it is written. Word them in the catalogs, at their place, if a template comes to meet them.
+// file: those the metaschema refuses, and those of a kind floe knows, each at its JSON pointer. One of
+// another schema, a part's, or of a kind floe does not know is a failure.
 func compileMistakes(url, file string, err error) error {
 	var invalid *jsonschema.SchemaValidationError
 	if errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url {
@@ -96,11 +93,62 @@ func compileMistakes(url, file string, err error) error {
 			return refused
 		}
 	}
-	text := err.Error()
-	if !strings.Contains(text, url) {
-		return fmt.Errorf("compile the schema %s: %w", file, err)
+	if e := compileMistake(url, err); e != nil {
+		return e.Placed(file, 0, 0, e.At)
 	}
-	return usererr.NewIn(file, "#", "tmpl_schema_invalid", strings.ReplaceAll(text, url, ""))
+	return fmt.Errorf("compile the schema %s: %w", file, err)
+}
+
+// compileMistake returns err, what stopped the compiling of the schema at url, as a mistake at its JSON
+// pointer in it, and nil for one of another schema or of a kind floe does not know.
+// LIMIT: a $ref that finds nothing is told at the top of the file, as jsonschema says where it leads, not
+// where it is written. Find the $ref in the schema if a template comes to need its place.
+func compileMistake(url string, err error) *usererr.Error {
+	// in returns the JSON pointer u, a URL, holds in the schema at url, and false for another schema.
+	in := func(u string) (string, bool) {
+		base, ptr, _ := strings.Cut(u, "#")
+		return "#" + ptr, base == url
+	}
+	var (
+		nothing  *jsonschema.JSONPointerNotFoundError
+		badPtr   *jsonschema.InvalidJsonPointerError
+		noAnchor *jsonschema.AnchorNotFoundError
+		anchor   *jsonschema.ParseAnchorError
+		anchors  *jsonschema.DuplicateAnchorError
+		ids      *jsonschema.DuplicateIDError
+		regex    *jsonschema.InvalidRegexError
+	)
+	switch {
+	case errors.As(err, &nothing):
+		if to, ok := in(nothing.URL); ok {
+			return usererr.NewIn("", "#", "tmpl_schema_ref_nothing", to)
+		}
+	case errors.As(err, &badPtr):
+		if to, ok := in(badPtr.URL); ok {
+			return usererr.NewIn("", "#", "tmpl_schema_ref_pointer", to)
+		}
+	case errors.As(err, &noAnchor):
+		if _, ok := in(noAnchor.URL); ok {
+			return usererr.NewIn("", "#", "tmpl_schema_ref_anchor", strings.TrimPrefix(noAnchor.Reference, url))
+		}
+	case errors.As(err, &anchor):
+		if at, ok := in(anchor.URL); ok {
+			return usererr.NewIn("", at, "tmpl_schema_anchor")
+		}
+	case errors.As(err, &anchors):
+		if _, ok := in(anchors.URL); ok {
+			return usererr.NewIn("", "#"+anchors.Ptr2, "tmpl_schema_anchor_twice", anchors.Anchor, "#"+anchors.Ptr1)
+		}
+	case errors.As(err, &ids):
+		if _, ok := in(ids.URL); ok {
+			return usererr.NewIn("", "#"+ids.Ptr2, "tmpl_schema_id_twice", ids.ID, "#"+ids.Ptr1)
+		}
+	case errors.As(err, &regex):
+		if at, ok := in(regex.URL); ok {
+			return usererr.NewIn("", at, "tmpl_schema_regex", regex.Regex, regex.Err)
+		}
+	}
+	return nil
 }
 
 // drafts are the drafts of JSON Schema a $schema may name.

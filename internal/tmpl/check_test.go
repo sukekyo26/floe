@@ -235,10 +235,16 @@ func TestCheckMistakes(t *testing.T) {
 			},
 		},
 		{
+			name:  "an $anchor written twice",
+			files: map[string]string{"schema.json": `"properties": {|"$defs": { "a": { "$anchor": "x" }, "b": { "$anchor": "x" } }, "properties": {`},
+			// Which of the two is met first is the order jsonschema walks $defs in.
+			want: []string{"the $anchor x is written at #/$defs/"},
+		},
+		{
 			name:  "a $ref in the schema that finds nothing",
 			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "#/$defs/nope" },` + "\n    " + `"chart":`, "page.css": ":root { color: red; }\n"},
 			want: []string{
-				`sizes/schema.json: #: JSON Schema does not take this: json-pointer in "#/$defs/nope" not found`,
+				`sizes/schema.json: #: a $ref to #/$defs/nope finds nothing in schema.json`,
 				"sizes/page.css:1: write the root as :scope",
 			},
 		},
