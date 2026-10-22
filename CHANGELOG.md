@@ -186,7 +186,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   began. A comment on the line of a plain value, in any YAML floe reads, is
   refused at its `#`, as it may have cut the value short (`lead: PR #100`
   reads as `PR`): the value goes in quotes, or the comment on a line of its
-  own. The scripts of a page drawn from a
+  own. A key without a value in `{ }`, the rest of text a `,` ended
+  (`{ label: 1,500 words }`), is refused too. The scripts of a page drawn from a
   data file cannot send what it holds out: its CSP blocks `fetch`, XHR,
   images from elsewhere and forms, and a `<base>`, in its download too. A page is in the
   language its data file names (`lang:`, a BCP 47 tag such as `en` or `ja`),

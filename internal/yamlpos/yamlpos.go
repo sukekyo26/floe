@@ -79,7 +79,8 @@ var ErrEmpty = errors.New("no YAML document")
 
 // Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A
 // syntax error is reported at its token, a second document at its start, worded by the key
-// documents, and each value a comment on its line may have cut short at the comment (cutShort).
+// documents, and each value a comment on its line may have cut short at the comment, and each key in
+// { } without a value at the key (cutShort).
 func Parse(file string, src []byte, documents string) (ast.Node, error) {
 	body, err := Document(file, src, documents)
 	if err != nil {
@@ -132,19 +133,27 @@ func Document(file string, src []byte, documents string) (ast.Node, error) {
 	return body, nil
 }
 
-// cutShort returns a mistake for each value of body that a comment on its line may have cut short, in the
-// order of the file: YAML reads " #" in a plain value as the start of a comment, and the value as what
-// is before it, which no later check sees is short. The comment may be the author's, which floe cannot
-// tell from text cut short, so either is refused. A comment after a quoted value, the head of a block
-// (|, >), a key or a { } cuts nothing.
+// cutShort returns a mistake for each value of body that a comment on its line may have cut short, and
+// for each key in { } without a value, in the order of the file. YAML reads " #" in a plain value as the
+// start of a comment, and the value as what is before it, which no later check sees is short. The
+// comment may be the author's, which floe cannot tell from text cut short, so either is refused. A
+// comment after a quoted value, the head of a block (|, >), a key or a { } cuts nothing. A key without a
+// value in { } may be the half after a , that ended plain text in it ({ label: 1,500 words } reads as
+// label: 1 and a key 500 words).
 // LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
-// is an item as right as any. Catch it if a schema comes to take such lists of text.
+// is an item as right as any. Nor is a , in { } before a rest with ": " in it ({ label: 1,500 words: many }
+// reads a key 500 words of the value many), which a schema refuses as an item it does not declare, but
+// not words.yaml, which takes any key. Catch them if a schema comes to take such text.
 func cutShort(file string, body ast.Node) usererr.List {
 	var found usererr.List
 	ast.Walk(visitor(func(n ast.Node) bool {
-		switch n.(type) {
+		switch n := n.(type) {
 		case *ast.AliasNode, *ast.AnchorNode, *ast.TagNode:
 			return false // refused whole after Parse, as written, not by the value under them
+		case *ast.MappingNode:
+			if n.IsFlowStyle {
+				found = append(found, keysAlone(file, n)...)
+			}
 		case *ast.LiteralNode:
 		case ast.ScalarNode:
 			if c := commentAfter(n); c != nil {
@@ -154,11 +163,34 @@ func cutShort(file string, body ast.Node) usererr.List {
 		}
 		return true
 	}), body)
+	return found.Sorted()
+}
+
+// keysAlone returns a mistake for each key of m, a { }, written without a ":" after it, which YAML gives
+// an empty value: { a, b: 1 } or { a: b, c }, not { a: } or { a: , b: 1 }.
+func keysAlone(file string, m *ast.MappingNode) usererr.List {
+	var found usererr.List
+	for _, v := range m.Values {
+		if v.Start.Type != token.MappingValueType {
+			k := KeyOf(v)
+			found = append(found, New(file, Of(k), "yaml_flow_key_alone", headOf(k.GetToken().Value)))
+		}
+	}
 	return found
 }
 
 // shownEnd is how many characters of a value cut short its mistake shows: its end, where the cut is.
 const shownEnd = 40
+
+// headOf returns the head of key, the rest of text a , may have ended, to show in its mistake on one line:
+// only the first shownEnd characters before "…" of a longer one.
+func headOf(key string) string {
+	r := []rune(key)
+	if len(r) <= shownEnd {
+		return key
+	}
+	return string(r[:shownEnd]) + "…"
+}
 
 // endOf returns the end of value, a value cut short, to show in its mistake on one line: a line break,
 // which a blank line in a value over lines makes, as a space, and only the last shownEnd characters
