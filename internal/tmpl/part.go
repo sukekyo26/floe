@@ -19,7 +19,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/goccy/go-yaml/ast"
-	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -427,19 +426,20 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown, part string) error
 	if err != nil {
 		return usererr.CannotRead(shown, err)
 	}
-	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(b))
+	doc, err := schemaJSON(shown, b)
 	if err != nil {
-		return usererr.NewAt(shown, 0, 0, "tmpl_json", err.Error())
+		return err
 	}
 	// As jsonschema reads a $ref: cell.json is floe:///parts/cell.json.
 	s, notes, err := readShape(doc, url, shown, part)
 	if err != nil {
 		return err
 	}
+	refused := notes.refused()
 	if bad := checkDraft(doc); bad != nil {
-		return bad.Placed(shown, 0, 0, "")
+		refused = append(usererr.List{bad.Placed(shown, 0, 0, "")}, refused...)
 	}
-	if refused := notes.refused(); refused != nil {
+	if refused != nil {
 		return refused
 	}
 	set.docs[url], set.shapes[url], set.notes[url] = doc, s, notes
@@ -454,26 +454,26 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	if err != nil {
 		return err
 	}
-	var found usererr.List
-	yaml, err := readPartYAML(files, path.Join(dir, "part.yaml"), look)
-	if failed := found.Add(err); failed != nil {
-		return failed //nolint:wrapcheck // what failed, as it is
-	}
+	yaml, yamlErr := readPartYAML(files, path.Join(dir, "part.yaml"), look)
 	if look {
-		return set.readLook(files, name, dir, yaml, found)
+		css, warnings, lookErr := readLook(files, name, dir)
+		if err = usererr.Collect(yamlErr, lookErr); err != nil {
+			return err //nolint:wrapcheck // its mistakes, or what failed
+		}
+		set.strays = append(set.strays, warnings...)
+		set.parts[name] = &part{
+			name: name, shape: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: yaml.looks,
+			taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
+		}
+		return nil
 	}
 	url := partsURL + name + ".json"
 	html, w, pages, pagesErr := readPartPages(files, name, dir)
 	css, warnings, cssErr := readPartCSS(files, dir)
 	checks, checksErr := readPartChecks(files, dir)
 	schemaErr := set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json"), name)
-	for _, err := range []error{schemaErr, pagesErr, cssErr, checksErr} {
-		if failed := found.Add(err); failed != nil {
-			return failed //nolint:wrapcheck // what failed, as it is
-		}
-	}
-	if found != nil {
-		return found
+	if err = usererr.Collect(yamlErr, schemaErr, pagesErr, cssErr, checksErr); err != nil {
+		return err //nolint:wrapcheck // its mistakes, or what failed
 	}
 	set.parts[name] = &part{
 		name: name, shape: set.shapes[url], pages: pages, words: w, html: html, css: css, checks: checks,
@@ -494,21 +494,17 @@ func readPartPages(files fs.FS, name, dir string) (string, words, map[string]*te
 	}
 	file := path.Join(dir, "words.yaml")
 	w, wordsErr := readPartWords(files, file)
-	var found usererr.List
-	if failed := found.Add(wordsErr); failed != nil {
-		return "", nil, nil, failed //nolint:wrapcheck // what failed, as it is
-	}
 	page, err := template.New(name).Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
 		Funcs(template.FuncMap{"word": w.word(file, fallbackLang)}).Parse(string(html))
-	if err != nil {
-		found = append(found, usererr.NewAt(shown, 0, 0, "tmpl_go_template", err.Error()))
-	} else if wordsErr == nil {
-		if failed := found.Add(w.checkWords(page, shown)); failed != nil {
-			return "", nil, nil, failed //nolint:wrapcheck // what failed, as it is
-		}
+	var pageErr error
+	switch {
+	case err != nil:
+		pageErr = usererr.NewAt(shown, 0, 0, "tmpl_go_template", err.Error())
+	case wordsErr == nil:
+		pageErr = w.checkWords(page, shown)
 	}
-	if found != nil {
-		return "", nil, nil, found
+	if err = usererr.Collect(wordsErr, pageErr); err != nil {
+		return "", nil, nil, err //nolint:wrapcheck // its mistakes, or what failed
 	}
 	// One page per language of its words, word writing each of them: word "likely" is likely in words.yaml.
 	pages := map[string]*template.Template{fallbackLang: page}
@@ -557,32 +553,23 @@ func exists(files fs.FS, dir, file string) (bool, error) {
 	return true, nil
 }
 
-// readLook reads the look alone name from files, its directory, shown in its mistakes as dir, into set,
-// its part.yaml read as yaml, found the mistakes of that, told with those of its other files.
-func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML, found usererr.List) error {
+// readLook reads the files of the look alone name in files, its directory, shown in its mistakes as dir,
+// but its part.yaml, and returns its CSS and the warnings of the colours it writes as values.
+func readLook(files fs.FS, name, dir string) (string, []*usererr.Error, error) {
 	// A look draws nothing: words and checks of one would be read for nothing.
+	errs := make([]error, 0, 3)
 	for _, file := range []string{"words.yaml", "checks.yaml"} {
 		there, err := exists(files, dir, file)
-		if failed := found.Add(err); failed != nil {
-			return failed //nolint:wrapcheck // what failed, as it is
-		}
 		if there {
-			found = append(found, usererr.NewAt(path.Join(dir, file), 0, 0, "tmpl_look_files", name))
+			err = usererr.NewAt(path.Join(dir, file), 0, 0, "tmpl_look_files", name)
 		}
+		errs = append(errs, err)
 	}
 	css, warnings, err := readPartCSS(files, dir)
-	if failed := found.Add(err); failed != nil {
-		return failed //nolint:wrapcheck // what failed, as it is
+	if err = usererr.Collect(append(errs, err)...); err != nil {
+		return "", nil, err //nolint:wrapcheck // its mistakes, or what failed
 	}
-	if found != nil {
-		return found
-	}
-	set.strays = append(set.strays, warnings...)
-	set.parts[name] = &part{
-		name: name, shape: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: yaml.looks,
-		taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
-	}
-	return nil
+	return css, warnings, nil
 }
 
 // readPartCSS reads the part.css of a part in files, its directory, shown as dir, and returns the

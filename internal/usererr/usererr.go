@@ -163,6 +163,18 @@ func (l *List) AddPlaced(err error) error {
 	return l.Add(err)
 }
 
+// Collect returns the mistakes of errs together, as Add takes them, nil for none, or the first failure
+// among them: for the checks of a stage that do not depend on one another.
+func Collect(errs ...error) error {
+	var l List
+	for _, err := range errs {
+		if failed := l.Add(err); failed != nil {
+			return failed
+		}
+	}
+	return l.Err()
+}
+
 // Err returns l as it is, or nil when it holds none: a List of none is no error.
 func (l List) Err() error {
 	if len(l) == 0 {
@@ -210,7 +222,8 @@ func (l List) Localize(c *i18n.Catalog) string {
 
 // Shown is how an error is told: its text in the reader's language; whether the user can fix it (a
 // refusal, 400, not floe's failure, 500); whether it is placed mistakes, told as they are, one per line,
-// for editors and CI to read, without floe's name before them; and whether it is a name in use (409).
+// those one stands for indented on the lines after it, for editors and CI to read, without floe's name
+// before them; and whether it is a name in use (409).
 type Shown struct {
 	Text     string
 	Fixable  bool

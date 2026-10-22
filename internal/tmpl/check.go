@@ -103,7 +103,10 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	warnings, mistakes = notes.warnings, set.mistakes(notes)
+	warnings = notes.warnings
+	for _, m := range set.mistakes(notes) {
+		mistakes = append(mistakes, m)
+	}
 	// Those mistakes, of $refs among them, would fail the compiling, without their pointers.
 	var sch *jsonschema.Schema
 	if len(mistakes) == 0 {

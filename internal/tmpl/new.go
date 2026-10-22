@@ -272,10 +272,13 @@ func (set *partSet) unusableWith(own ownDirs, name, dir string) error {
 	if err != nil {
 		return err
 	}
+	// The copy first, then those it leaves out with it.
+	var found usererr.List
 	if after.broken[name] != nil {
-		return usererr.Over("", usererr.List{after.brokenPart(name)}, "tmpl_new_part_unusable", name)
+		found = append(found, after.brokenPart(name))
 	}
-	found := slices.Concat(after.unusable(func(n string) bool { return set.broken[n] != nil }),
+	found = slices.Concat(found,
+		after.unusable(func(n string) bool { return n == name || set.broken[n] != nil }),
 		after.unusableThemes(func(n string) bool { return set.brokenThemes[n] != nil }))
 	if found != nil {
 		return usererr.Over("", found, "tmpl_new_part_unusable", name)

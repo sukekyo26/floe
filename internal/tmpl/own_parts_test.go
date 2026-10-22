@@ -510,7 +510,7 @@ func TestOwnPartsThemes(t *testing.T) {
 	}
 	// palette.css holds the palette's variables alone, and is warned of where it sets a colour for light
 	// mode alone: dark mode would keep it.
-	rules := "your own theme rules cannot be used; fix it, or remove it\n  " + filepath.Join(themesOf(parts), "rules", "palette.css") +
+	rules := "your own theme rules cannot be used\n  " + filepath.Join(themesOf(parts), "rules", "palette.css") +
 		":2: palette.css holds only the palette's variables"
 	if _, err = draw(l, "template: memo\nlang: en\ntheme: rules\nrisks: { text: x }\n"); err == nil || !strings.Contains(err.Error(), rules) {
 		t.Errorf("drawing with the theme rules = %v, want %s", err, rules)
@@ -524,7 +524,7 @@ func TestOwnPartsThemes(t *testing.T) {
 		filepath.Join(themesOf(parts), "bad", "nope.css") + ": this file goes into no page",
 		filepath.Join(themesOf(parts), "stray", "tone.css") + ": this file goes into no page",
 	}
-	why := "your own theme broke cannot be used; fix it, or remove it\n  " + filepath.Join(themesOf(parts), "broke", "table.css") +
+	why := "your own theme broke cannot be used\n  " + filepath.Join(themesOf(parts), "broke", "table.css") +
 		":1: this } closes no block"
 	if _, err = draw(l, "template: memo\nlang: en\ntheme: broke\nrisks: { text: x }\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "data.yaml:3:8: "+why) {
@@ -621,5 +621,36 @@ func TestLookReplacesDrawing(t *testing.T) {
 	want := "the part table cannot be used\n  " + filepath.Join(parts, "table") + ": a look alone cannot take the place of floe's part table"
 	if err == nil || !strings.Contains(err.Error(), want) {
 		t.Errorf("drawing a table with a look alone named table = %v, want %s", err, want)
+	}
+}
+
+// The mistakes of a part's schema are told together, and those of its names with those of what it refers
+// to.
+func TestPartMistakesTogether(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"both/schema.json":  `{"$schema": "floe:///parts/table.json", "type": "object", "properties": {"b": {"type": "string", "format": "html"}}}`,
+		"both/part.html":    `<div data-floe-part="both"></div>`,
+		"both/part.css":     "",
+		"named/schema.json": `{"type": "object", "properties": {"c": {"$ref": "floe:///parts/nope.json"}}}`,
+		"named/part.html":   `<div class="x"></div>`,
+		"named/part.css":    "",
+	})
+	_, mistakes := tmpl.CheckOwnParts(parts, "")
+	lines := make([]string, 0, len(mistakes))
+	for _, m := range mistakes {
+		lines = append(lines, m.Error())
+	}
+	got := strings.Join(lines, "\n")
+	for _, want := range []string{
+		"\n  " + filepath.Join(parts, "both", "schema.json") + ": $schema floe:///parts/table.json names no draft of JSON Schema",
+		"\n  " + filepath.Join(parts, "both", "schema.json") + `: #/properties/b: a part's schema takes no "format": "html"`,
+		"\n  " + filepath.Join(parts, "named", "part.html") + ": no element of the part named is its box",
+		"\n  " + filepath.Join(parts, "named", "schema.json") + ": #/properties/c: floe:///parts/nope.json is not a part",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("CheckOwnParts = %s\nwant %s", got, want)
+		}
 	}
 }

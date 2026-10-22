@@ -282,8 +282,8 @@ func (n *schemaNotes) format(f string, typ any, ptr string, reached bool) bool {
 // a schema the parts share that holds a format of floe's. A $ref into the schema's own file is followed
 // by jsonschema alone.
 // LIMIT: $dynamicRef and $recursiveRef go unchecked, refused at compiling without a pointer; check them here if used.
-func (set *partSet) mistakes(n *schemaNotes) []error {
-	var mistakes []error
+func (set *partSet) mistakes(n *schemaNotes) usererr.List {
+	var mistakes usererr.List
 	for _, x := range n.met {
 		m := x.mistake
 		if x.ref != nil {

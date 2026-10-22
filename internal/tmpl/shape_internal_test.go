@@ -130,7 +130,7 @@ func TestShapeMistakes(t *testing.T) {
 			t.Fatal(err)
 		}
 		got := fmt.Sprint(set.mistakes(notes))
-		if c.want == "" && got != "[]" || c.want != "" && !strings.Contains(got, c.want) {
+		if c.want == "" && got != "" || c.want != "" && !strings.Contains(got, c.want) {
 			t.Errorf("mistakes of %s = %s, want %q", c.src, got, c.want)
 		}
 	}

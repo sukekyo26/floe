@@ -332,7 +332,7 @@ func TestCheckOwnThemeFiles(t *testing.T) {
 	parts := ownParts(t, map[string]string{"themes/twice/note.css": "}\n", "themes/twice/table.css": ":root {}\n"})
 	_, mistakes := tmpl.CheckOwnParts(parts, themesOf(parts))
 	at := filepath.Join(themesOf(parts), "twice")
-	want := "your own theme twice cannot be used; fix it, or remove it\n  " + filepath.Join(at, "note.css") + ":1: this } closes no block"
+	want := "your own theme twice cannot be used\n  " + filepath.Join(at, "note.css") + ":1: this } closes no block"
 	if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) ||
 		!strings.Contains(mistakes[0].Error(), "\n  "+filepath.Join(at, "table.css")+":1: write the root as :scope") {
 		t.Errorf("CheckOwnParts = %v, want %s and the mistake of table.css", mistakes, want)
@@ -406,7 +406,7 @@ func TestCheckOwnParts(t *testing.T) {
 	}
 	if len(told) != 3 || !strings.HasPrefix(told[0], "the part diagram cannot be used\n  "+filepath.Join(parts, "diagram")+": a part of your own cannot be named diagram") ||
 		!strings.HasPrefix(told[1], "the part unnamed cannot be used\n  "+filepath.Join(parts, "unnamed", "part.html")+": no element of the part unnamed is its box") ||
-		!strings.HasPrefix(told[2], "your own theme mine cannot be used; fix it, or remove it\n  "+filepath.Join(themesOf(parts), "mine", "note.css")+":1:") {
+		!strings.HasPrefix(told[2], "your own theme mine cannot be used\n  "+filepath.Join(themesOf(parts), "mine", "note.css")+":1:") {
 		t.Errorf("mistakes = %q", told)
 	}
 }
