@@ -158,8 +158,10 @@ An image, of the data or of `assets/`, is a png, jpeg, gif, webp or svg file, by
 Relations between items that a schema cannot say, each checked on every item of a list:
 
 ```yaml
-- for: access_patterns            # a path of keys to a list (sections.parts: the parts of every section)
-  field: key                      # the item's key to point at when it fails (optional)
+# a path of keys to a list (sections.parts: the parts of every section)
+- for: access_patterns
+  # the item's key to point at when it fails (optional)
+  field: key
   expr: item.key in map(doc.attributes, .name)
   message: use an attribute as the key
 ```

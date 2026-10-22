@@ -181,10 +181,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   against the template's schema first, and every mistake is reported at its
   line and column (`file:line:column`). Where YAML read text as something
   else (a `: ` or a ` #` in plain text, written over lines too, a value
-  beginning with `` ` `` or `@`, a `computed.yaml` or `checks.yaml` expression a
-  `#` cut short), the mistake
+  beginning with `` ` `` or `@`), the mistake
   says to put the text in quotes, at where the text was split or the comment
-  began. The scripts of a page drawn from a
+  began. A comment on the line of a plain value, in any YAML floe reads, is
+  refused at its `#`, as it may have cut the value short (`lead: PR #100`
+  reads as `PR`): the value goes in quotes, or the comment on a line of its
+  own. The scripts of a page drawn from a
   data file cannot send what it holds out: its CSP blocks `fetch`, XHR,
   images from elsewhere and forms, and a `<base>`, in its download too. A page is in the
   language its data file names (`lang:`, a BCP 47 tag such as `en` or `ja`),

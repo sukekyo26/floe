@@ -158,8 +158,10 @@ floe には、テンプレートの項目を描く部品があります。`table
 スキーマでは書けない、項目どうしの関係です。リストの要素 1 つずつに検査を当てます。
 
 ```yaml
-- for: access_patterns            # リストまでのキーのパス（sections.parts ならすべての節の部品）
-  field: key                      # 落ちたときに指す、要素のキー（任意）
+# リストまでのキーのパス（sections.parts ならすべての節の部品）
+- for: access_patterns
+  # 落ちたときに指す、要素のキー（任意）
+  field: key
   expr: item.key in map(doc.attributes, .name)
   message: キーには属性一覧にある属性を使う
 ```

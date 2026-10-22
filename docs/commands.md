@@ -52,11 +52,15 @@ Pages are drawn from data files (`.yaml`, `.yml`). The data file is copied to `<
 A data file names a template, and the template draws the page from its data. The built-in template is `report`: a header over sections, each a heading over parts: Markdown text, `code` and `terminal` parts for code and commands, `table`, `cards` and `note` parts, parts for numbers, steps, what changes, options, diffs, file trees, review findings, decisions, risks and more, `tabs` and `details` that hold parts (all told in [Parts](templates.md#parts)), `diagram` parts for diagrams, `script` parts for what moves, and `html` parts for what they cannot say.
 
 ```yaml
-template: report               # the template that draws the page
-lang: en                       # the page's language
+# the template that draws the page
+template: report
+# the page's language
+lang: en
 title: Moving the team wiki
-eyebrow: Plan · 2030-04        # a short line above the title (optional)
-lead: The wiki moves in two weekends.   # a sentence under the title (optional)
+# a short line above the title (optional)
+eyebrow: Plan · 2030-04
+# a sentence under the title (optional)
+lead: The wiki moves in two weekends.
 sections:
   - heading: Steps
     parts:
@@ -93,7 +97,8 @@ sections:
           data: { pages: 1840 }
           js: |
             function (el, data) { el.textContent = `${Math.ceil(data.pages / 300)} hours`; }
-      - html: <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>   # HTML as it is
+      # HTML as it is
+      - html: <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>
 ```
 
 - `lang:` is the page's language (`<html lang>`), a BCP 47 tag (`en`, `ja`, `pt-BR`). Every data file names one.
@@ -104,6 +109,8 @@ sections:
 - A template of your own, in `FLOE_TEMPLATES_DIR`, takes the place of a built-in one of its name. [templates.md](templates.md) tells how to write one.
 - The data is checked against the template's schema and its checks (`checks.yaml`) before the page is drawn. Every mistake is printed at once as `file:line:column: message` (one that a part or a theme of your own cannot be used is followed by that part's or theme's mistakes, each on a line of its own, indented by two spaces), and nothing is published until all are fixed (exit code 1): a missing or unknown template, a missing `lang:` or one that is not a BCP 47 tag, an item the template does not have (a typo), a value of the wrong type, a row of a `table` with more or fewer cells than its columns, and the like. `report` refuses a fenced block of code (a line starting with ```` ``` ```` or `~~~`, indented or in a list or a quote too) in `text`: write code in `code` and commands in `terminal`. A `terminal`'s `run` whose first word is a prompt, ending in `$`, `#`, `%`, `>` or `❯` (`$ `, `~/app$ `, `root@host:~# `, `C:\work> `, `❯ `; after `(venv) `, and `[me@host app]$ ` and `PS C:\work> ` too), is refused.
 - A data file is one YAML document of keys and values: one with `---` between documents, or with anchors, aliases or tags, is refused.
+- Write text with a `: `, a ` #` or, in `{ }` or `[ ]`, a `,` in it in quotes (`"…"`) or as a block (`|-`): YAML reads them as a key and its value, the start of a comment, or the end of the text. A comment on the line of a value not in quotes is refused, in every YAML file floe reads, as it may have cut the value short (`lead: PR #100` reads as `PR`): write the comment on a line of its own. A `,` in `[ ]` is not caught: `[1,500 words]` is two items.
+- To change a data file from a program, read it with a YAML library, change the values and write it out: the library quotes the text that needs it. Set it to write no anchors or aliases, which floe refuses, and to keep non-ASCII text as it is and the keys in their order (in PyYAML: `allow_unicode=True`, `sort_keys=False`, and a Dumper whose `ignore_aliases` returns true).
 - The page is drawn each time it is opened, from the copy of the data file kept when it was published: changing the data file changes nothing until it is published again, but changing its template does. A data file linked with `--link` is drawn from its place instead.
 
 ### Projects and overwriting
@@ -267,10 +274,12 @@ Check each diagram spec and print the diagrams, in order, as one HTML fragment o
 A spec is a YAML file holding one diagram: a canvas and the parts placed on it at absolute coordinates (the top left is 0, 0).
 
 ```yaml
-id: api                        # lowercase letters, digits and hyphens
+# lowercase letters, digits and hyphens
+id: api
 width: 640
 height: 200
-title: How the API is laid out # read aloud by screen readers
+# read aloud by screen readers
+title: How the API is laid out
 parts:
   - frame: { x: 16, y: 16, w: 608, h: 168, label: VPC }
   - box: { x: 40, y: 72, w: 200, h: 56, tone: accent, rows: [[ALB, main code], public entry] }
