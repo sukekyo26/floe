@@ -102,7 +102,7 @@ func (m *htmlMarks) drawnOrder(page []byte) []int {
 func (d *Data) checkDrawnHTML(page *template.Template, title string, drawn []byte) error {
 	doc := parseDrawn(drawn)
 	if !standard(doc) {
-		return usererr.New("tmpl_html_doctype", d.tmpl.file("page.html"))
+		return usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_doctype")
 	}
 	want := treeShape(doc)
 	c := d.marked(rand.Text())
@@ -122,7 +122,7 @@ func (d *Data) checkDrawnHTML(page *template.Template, title string, drawn []byt
 		formIn, outside := inPlace(doc, c.marks.mark, k, it.text)
 		switch {
 		case outside:
-			return usererr.New("tmpl_html_outside", d.tmpl.file("page.html"))
+			return usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_outside")
 		case formIn && leavesForm(it.text) || !slices.Equal(treeShape(doc), want):
 			return itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
 		}
@@ -156,7 +156,7 @@ func doctypeMistake(file string, s *shape, src []byte) error {
 	if doc, _ := html.Parse(bytes.NewReader(src)); standard(doc) { //nolint:errcheck // see above
 		return nil
 	}
-	return usererr.New("tmpl_html_doctype", file)
+	return usererr.NewAt(file, 0, 0, "tmpl_html_doctype")
 }
 
 // marked returns a copy of d whose items of format html are drawn with mark, all shown till its marks'

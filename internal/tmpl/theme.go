@@ -82,7 +82,7 @@ func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
 		}
 		if !set.themeFile(name) {
 			// Warned of, the theme used all the same: a file of a part since removed would stop every page.
-			set.strays = append(set.strays, usererr.New("tmpl_theme_file", path.Join(dir, e.Name()),
+			set.strays = append(set.strays, usererr.NewAt(path.Join(dir, e.Name()), 0, 0, "tmpl_theme_file",
 				set.names(nil)))
 			continue
 		}
@@ -147,7 +147,7 @@ func checkPalette(file string, s *cssSheet, under []string) ([]*usererr.Error, e
 		}
 	}
 	if names := c.lightOnly(modes); names != nil {
-		return []*usererr.Error{usererr.New("tmpl_palette_dark", file, andList(names))}, nil
+		return []*usererr.Error{usererr.NewAt(file, 0, 0, "tmpl_palette_dark", andList(names))}, nil
 	}
 	return nil, nil
 }

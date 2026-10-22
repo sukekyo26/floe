@@ -409,7 +409,7 @@ func (set *partSet) known(name string) nameKind {
 func (set *partSet) unlent(kind nameKind, name, file string, line int, look bool) error {
 	switch kind {
 	case nameBroken:
-		return usererr.New("tmpl_part_lender_broken", name)
+		return usererr.NewAt(file, line, 0, "tmpl_part_lender_broken", name)
 	case nameUnknown:
 		return usererr.NewAt(file, line, 0, "tmpl_part_names", name, set.candidates(look))
 	case nameRight, nameNotOne, nameLookBox:

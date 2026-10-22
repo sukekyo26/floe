@@ -22,7 +22,7 @@ type Error struct {
 	File     string
 	Line     int    // 0: no line
 	Column   int    // 0: no column
-	At       string // a JSON pointer or an item's path, "" for none
+	At       string // a JSON pointer in a schema, "" for none
 }
 
 // New returns an *Error for the catalog message key with args, without a place.
@@ -36,8 +36,7 @@ func NewAt(file string, line, column int, key string, args ...any) *Error {
 	return &Error{Key: key, Args: args, Conflict: false, File: file, Line: line, Column: column, At: ""}
 }
 
-// NewIn returns an *Error for the catalog message key with args, at at, a JSON pointer or an item's path,
-// in file.
+// NewIn returns an *Error for the catalog message key with args, at at, a JSON pointer, in file.
 func NewIn(file, at, key string, args ...any) *Error {
 	return &Error{Key: key, Args: args, Conflict: false, File: file, Line: 0, Column: 0, At: at}
 }

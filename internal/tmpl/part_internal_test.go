@@ -152,13 +152,13 @@ func TestCheckPalette(t *testing.T) {
 	}
 	for css, want := range map[string]string{
 		":root { " + always.String() + "}": "",
-		":root { " + always.String() + "}\n@media (prefers-color-scheme: dark) { :root { " + allButBg.String() + "} }": "p.css sets --bg for light mode alone",
+		":root { " + always.String() + "}\n@media (prefers-color-scheme: dark) { :root { " + allButBg.String() + "} }": "p.css: palette.css sets --bg for light mode alone",
 		":root { --bg: light-dark(#fff, #000); --fg: light-dark(#000, #fff); }":                                        "",
 		":root { --bg: #fff; }" + dark: "",
 		":root { --bg: #fff; --page-bg: url(data:image/svg+xml;base64,PHN2Zz4=) repeat; }" + dark:                "",
 		":root { --bg: #fff; --page-bg: url(data:image/svg+xml,<svg><style>p{fill:red}</style></svg>); }" + dark: "",
 		":root { --radius: 4px; --text-width: 60rem; color-scheme: light dark; }":                                "",
-		":root { color-scheme: light; }": "p.css sets color-scheme for light mode alone",
+		":root { color-scheme: light; }": "p.css: palette.css sets color-scheme for light mode alone",
 		":root { --bg: #fff; --font: \"a;b\", serif; color-scheme: light; } /* body { } */" + dark: "",
 		"@media (prefers-color-scheme: dark) { :root { --bg: #000; } }\n:root { --bg: #fff; }":     "p.css:2: write this :root before",
 		":root {\n  --bg: #fff !important;\n}":                                                     "p.css:2: palette.css takes no !important",
@@ -168,10 +168,10 @@ func TestCheckPalette(t *testing.T) {
 		":root {\n  .x { color: red; }\n}":                        "p.css:2: palette.css holds only",
 		":root { color: red; }":                                   "p.css:1: palette.css holds only",
 		"@media print { :root { --bg: #fff; } }":                  "p.css:1: palette.css holds only",
-		":root { --bg: #fff; --code-bg: #222; --font: serif; --page-bg: var(--bg); --code-fg: #eee; }": "p.css sets --bg, --code-bg for light mode alone",
+		":root { --bg: #fff; --code-bg: #222; --font: serif; --page-bg: var(--bg); --code-fg: #eee; }": "p.css: palette.css sets --bg, --code-bg for light mode alone",
 		":root { --a: url(x(y); } } body { background: red }":                                          "p.css:1: this } closes no block",
 		":root { Color-Scheme: light dark; --l: \"!important\"; --x: {a:b}; }":                         "",
-		":root { --x: {a:b}; --bg: #fff; }":                                                            "p.css sets --bg for light mode alone",
+		":root { --x: {a:b}; --bg: #fff; }":                                                            "p.css: palette.css sets --bg for light mode alone",
 		":root { --a: f(]; color: red); }":                                                             "",
 		"\n{ --x: 1; }\n\n":                                                                            "p.css:2: palette.css holds only",
 	} {
@@ -486,7 +486,7 @@ func TestReadWords(t *testing.T) {
 	if got, err := w.word("w.yaml", "ja")("a"); got != "あ" || err != nil {
 		t.Errorf("word a in ja = %q, %v", got, err)
 	}
-	if _, err := w.word("w.yaml", "en")("c"); err == nil || err.Error() != `w.yaml has no word "c"` {
+	if _, err := w.word("w.yaml", "en")("c"); err == nil || err.Error() != `w.yaml: words.yaml has no word "c"` {
 		t.Errorf("word c = %v", err)
 	}
 	for src, want := range map[string]string{
@@ -532,17 +532,17 @@ func TestReadWords(t *testing.T) {
 	// A word named as written that the part has none of is refused as it is read, in any branch; one named
 	// from the data is left to the drawing.
 	for src, want := range map[string]string{
-		`{{if .x}}{{with .y}}{{word "b"}}{{end}}{{end}}`:    `p.html names the words b, which w.yaml does not have`,
+		`{{if .x}}{{with .y}}{{word "b"}}{{end}}{{end}}`:    `p.html: names the words b, which words.yaml does not have`,
 		`{{range .x}}{{word "a"}}{{word .}}{{end}}`:         "",
-		`{{define "d"}}{{word "c"}}{{end}}{{template "d"}}`: `p.html names the words c, which w.yaml does not have`,
-		`{{"d" | word}}`:   `p.html names the words d, which w.yaml does not have`,
-		`{{(word "e").x}}`: `p.html names the words e, which w.yaml does not have`,
+		`{{define "d"}}{{word "c"}}{{end}}{{template "d"}}`: `p.html: names the words c, which words.yaml does not have`,
+		`{{"d" | word}}`:   `p.html: names the words d, which words.yaml does not have`,
+		`{{(word "e").x}}`: `p.html: names the words e, which words.yaml does not have`,
 	} {
 		page, err := template.New("p").Funcs(template.FuncMap{"word": zh.word("w.yaml", "en")}).Parse(src)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err = zh.checkWords(page, "p.html", "w.yaml"); (err == nil) != (want == "") || err != nil && err.Error() != want {
+		if err = zh.checkWords(page, "p.html"); (err == nil) != (want == "") || err != nil && err.Error() != want {
 			t.Errorf("checkWords(%s) = %v, want %q", src, err, want)
 		}
 	}

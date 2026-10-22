@@ -230,7 +230,7 @@ func (n *schemaNotes) note(m map[string]any, base, ptr string, reached bool) boo
 	}
 	closed := m["additionalProperties"] == false || m["unevaluatedProperties"] == false
 	if _, ok := m["properties"]; ok && reached && !elsewhere && !closed && n.part == "" {
-		n.warnings = append(n.warnings, usererr.NewAt(n.file, 0, 0, "tmpl_schema_open", ptr))
+		n.warnings = append(n.warnings, usererr.NewIn(n.file, ptr, "tmpl_schema_open"))
 	}
 	return elsewhere
 }

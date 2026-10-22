@@ -478,7 +478,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	if err != nil {
 		return fmt.Errorf("parse the part %s: %w", name, err)
 	}
-	if err = w.checkWords(page, path.Join(dir, "part.html"), file); err != nil {
+	if err = w.checkWords(page, path.Join(dir, "part.html")); err != nil {
 		return err
 	}
 	// One page per language of its words, word writing each of them: word "likely" is likely in words.yaml.

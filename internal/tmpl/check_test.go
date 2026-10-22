@@ -91,9 +91,16 @@ func TestCheckMistakes(t *testing.T) {
 			want:  []string{"sizes/schema.json: #/properties/note/anyOf/0: the format html marks an item to draw"},
 		},
 		{
+			// Its $schema names a draft of JSON Schema, not a schema of its own nor a part's, which jsonschema
+			// would take as the rules of the schema: refused at the schema.
+			name:  "a $schema of no draft",
+			files: map[string]string{"schema.json": "https://json-schema.org/draft/2020-12/schema|floe:///templates/sizes/schema.json"},
+			want:  []string{"sizes/schema.json: $schema floe:///templates/sizes/schema.json names no draft of JSON Schema"},
+		},
+		{
 			name:    "open schema",
 			files:   map[string]string{"schema.json": `"required": ["name", "bytes"],` + "\n" + `        "additionalProperties": false` + "|" + `"required": ["name", "bytes"]`},
-			warning: `sizes/schema.json: #/properties/files/items declares properties without "additionalProperties": false`,
+			warning: `sizes/schema.json: #/properties/files/items: it declares properties without "additionalProperties": false`,
 		},
 		{
 			name: "checks",
@@ -112,7 +119,7 @@ func TestCheckMistakes(t *testing.T) {
 		{
 			name:    "open to any key",
 			files:   map[string]string{"schema.json": `"additionalProperties": false` + "|" + `"unevaluatedProperties": true`},
-			warning: `sizes/schema.json: #/properties/files/items declares properties without "additionalProperties": false`,
+			warning: `sizes/schema.json: #/properties/files/items: it declares properties without "additionalProperties": false`,
 		},
 		{
 			name:  "anchors",
@@ -243,7 +250,7 @@ func TestCheckMistakes(t *testing.T) {
 			name:  "an item floe reads itself",
 			files: map[string]string{"schema.json": `"chart":|"lang": { "type": "string" },` + "\n    " + `"chart":`},
 			want: []string{
-				"sizes/schema.json declares or requires lang, which floe reads from every data file itself (lang, template, theme, title): give the items of the schema other names",
+				"sizes/schema.json: schema.json declares or requires lang, which floe reads from every data file itself (lang, template, theme, title): give the items of the schema other names",
 			},
 		},
 		{
@@ -251,7 +258,7 @@ func TestCheckMistakes(t *testing.T) {
 			files: map[string]string{
 				"schema.json": `"chart":|"title": { "type": "string" },` + "\n    " + `"chart":`, "page.html": "{{if}}",
 			},
-			want: []string{"sizes/schema.json declares or requires title, which floe reads", "parse the template sizes: "},
+			want: []string{"sizes/schema.json: schema.json declares or requires title, which floe reads", "parse the template sizes: "},
 		},
 		{
 			name:  "an empty example",
@@ -327,7 +334,7 @@ func TestPageHeadRequired(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{"page.html": "</head>|<!-- </head> -->", "page.css": ":root { color: red; }\n"})
-	want := filepath.Join(dir, "page.html") + " holds no </head>: floe puts the page's styles before it"
+	want := filepath.Join(dir, "page.html") + ": page.html holds no </head>: floe puts the page's styles before it"
 	_, mistakes := tmpl.Check(dir, "", "", "")
 	if len(mistakes) != 2 || !slices.ContainsFunc(mistakes, func(e error) bool { return strings.HasPrefix(e.Error(), want) }) {
 		t.Errorf("Check = %v, want %s beside the :root", mistakes, want)
@@ -342,7 +349,7 @@ func TestPageHeadRequired(t *testing.T) {
 	}
 	l := tmpl.NewLibrary(data, "", "", "")
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: <b>x</b>\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), "an action of "+page+" leaves out its </head>") {
+		!strings.HasPrefix(err.Error(), page+": an action of page.html leaves out its </head>") {
 		t.Errorf("drawing without </head> = %v", err)
 	}
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: <svg></head>\n"); err == nil ||
@@ -467,18 +474,18 @@ func TestCheckScopeColours(t *testing.T) {
 	release := strings.SplitN(version.Version, ".", 3)
 	floe := "floe: " + release[0] + "." + release[1] + "\n"
 	for page, want := range map[string]string{
-		":scope { --surface: #fff; --accent: #c00; --page-width: 90rem; --rule: 2px solid var(--fg); }":    "sizes/page.css sets --accent, --surface on :scope for light mode alone",
+		":scope { --surface: #fff; --accent: #c00; --page-width: 90rem; --rule: 2px solid var(--fg); }":    "sizes/page.css: page.css sets --accent, --surface on :scope for light mode alone",
 		":scope { --surface: #fff; }\n@media (prefers-color-scheme: dark) { :scope { --surface: #222; } }": "",
 		"body { --surface: #fff; }": "",
-		"--accent: #fff;":           "sizes/page.css sets --accent on :scope for light mode alone",
+		"--accent: #fff;":           "sizes/page.css: page.css sets --accent on :scope for light mode alone",
 		"--accent: #fff;\n@media (prefers-color-scheme: dark) { --accent: #000; }":                                                       "",
-		"@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n:scope { --bg: #fff; }":                                         "sizes/page.css sets --bg on :scope for light mode alone",
-		":scope { --line: #fff; &.x { --q: 1; } --fg: #000; }\n@media (prefers-color-scheme: dark) { :scope { --line: #222; } }":         "sizes/page.css sets --fg on :scope",
+		"@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n:scope { --bg: #fff; }":                                         "sizes/page.css: page.css sets --bg on :scope for light mode alone",
+		":scope { --line: #fff; &.x { --q: 1; } --fg: #000; }\n@media (prefers-color-scheme: dark) { :scope { --line: #222; } }":         "sizes/page.css: page.css sets --fg on :scope",
 		":scope { --bg: #fff; }\n@media screen and (prefers-color-scheme: dark) { :scope { --bg: #000; } }":                              "",
-		":scope { --bg: #fff; }\n@media not (prefers-color-scheme: dark) { :scope { --bg: #eee; } }":                                     "sizes/page.css sets --bg on :scope",
+		":scope { --bg: #fff; }\n@media not (prefers-color-scheme: dark) { :scope { --bg: #eee; } }":                                     "sizes/page.css: page.css sets --bg on :scope",
 		":scope { --bg: #fff; @media (prefers-color-scheme: dark) { --bg: #000; } }":                                                     "",
 		"@layer a { :scope { --bg: #fff; } }\n@supports (color: red) { @media (prefers-color-scheme: dark) { :scope { --bg: #000; } } }": "",
-		":scope { @media (prefers-color-scheme: dark) { --bg: #000; } --bg: #fff; }":                                                     "sizes/page.css sets --bg on :scope",
+		":scope { @media (prefers-color-scheme: dark) { --bg: #000; } --bg: #fff; }":                                                     "sizes/page.css: page.css sets --bg on :scope",
 	} {
 		warnings, mistakes := tmpl.Check(sizes(t, map[string]string{"template.yaml": floe, "page.css": page}), "", "", "")
 		if len(mistakes) != 0 || want == "" && len(warnings) != 0 ||
@@ -571,7 +578,7 @@ func TestTemplateWords(t *testing.T) {
 	}
 
 	dir = sizes(t, map[string]string{"words.yaml": words, "page.html": "</body>|{{word \"totl\"}}</body>"})
-	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "page.html names the words totl, which "+filepath.Join(dir, "words.yaml")+" does not have") {
+	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), filepath.Join(dir, "page.html")+": names the words totl, which words.yaml does not have") {
 		t.Errorf("Check of a misspelt word = %v", mistakes)
 	}
 	// A mistake of words.yaml is told beside those of the other files, not instead of them.
@@ -593,7 +600,7 @@ func TestTemplateWords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = d.Render("t"); err == nil || err.Error() != filepath.Join(dir, "words.yaml")+` has no word "a.txt"` {
+	if _, err = d.Render("t"); err == nil || err.Error() != filepath.Join(dir, "words.yaml")+`: words.yaml has no word "a.txt"` {
 		t.Errorf("Render of a word named from the data = %v", err)
 	}
 }
@@ -642,7 +649,7 @@ func TestSchemaOfSharedKeys(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), "", "")
-	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json declares or requires lang, title, which floe reads") {
+	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json: schema.json declares or requires lang, title, which floe reads") {
 		t.Errorf("Read with a template whose schema declares lang and title = %v", err)
 	}
 }

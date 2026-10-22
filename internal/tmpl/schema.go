@@ -49,9 +49,6 @@ func validate(set *partSet, doc any, d *Data, root ast.Node) error {
 // compileSchema compiles doc, the schema of the template name as jsonschema reads it, which refers to the
 // parts of set.
 func compileSchema(set *partSet, name string, doc any) (*jsonschema.Schema, error) {
-	if err := checkDraft(doc); err != nil {
-		return nil, usererr.New("tmpl_schema_load", name, err)
-	}
 	url := schemaURL(name)
 	c := newCompiler(set)
 	if err := c.AddResource(url, doc); err != nil {

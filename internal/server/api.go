@@ -69,8 +69,8 @@ func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]jso
 }
 
 // refuse answers a usererr with its reason in the reader's language, 409 for a name in use; anything
-// else is 500. A reader that takes JSON (the CLI) gets {"message", "mistakes"}, mistakes set for those
-// of a data file at their lines and columns, which it shows as they are.
+// else is 500. A reader that takes JSON (the CLI) gets {"message", "mistakes"}, mistakes set for placed
+// mistakes (usererr.Show), of a data file, a template, a part or a theme, which it shows as they are.
 func refuse(w http.ResponseWriter, r *http.Request, err error) {
 	shown := usererr.Show(catalog(r), err)
 	status := http.StatusInternalServerError
@@ -88,7 +88,7 @@ func refuse(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 // Refusal is a refusal to a reader that takes JSON: its reason in the reader's language, and whether it
-// is the mistakes of a data file at their lines and columns.
+// is placed mistakes, each at its file and, where it has them, its line, column or JSON pointer.
 type Refusal struct {
 	Message  string `json:"message"`
 	Mistakes bool   `json:"mistakes"`

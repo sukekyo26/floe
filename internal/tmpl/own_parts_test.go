@@ -272,9 +272,9 @@ func TestBrokenOwnParts(t *testing.T) {
 		"diagram":  "the part diagram cannot be used: " + filepath.Join(parts, "diagram") + ": a part of your own cannot be named diagram",
 		"script":   "the part script cannot be used: " + filepath.Join(parts, "script") + ": a part of your own cannot be named script",
 		"tone":     "the part tone cannot be used: " + filepath.Join(parts, "tone") + ": a part of your own cannot be named tone",
-		"borrower": "the part borrower cannot be used: it names the part unnamed, or takes its look, which cannot be used",
+		"borrower": "the part borrower cannot be used: " + filepath.Join(parts, "borrower", "part.yaml") + ":1: it names the part unnamed, or takes its look, which cannot be used",
 		"ring":     "the part ring cannot be used: " + filepath.Join(parts, "ring") + ": the part ring takes its own look (ring → round → ring)",
-		"round":    "the part round cannot be used: it names the part ring, or takes its look, which cannot be used",
+		"round":    "the part round cannot be used: " + filepath.Join(parts, "round", "part.yaml") + ":1: it names the part ring, or takes its look, which cannot be used",
 		"wordy": "the part wordy cannot be used: " + filepath.Join(parts, "wordy", "words.yaml") +
 			": the look wordy holds no schema.json nor part.html",
 		"holder": "the part holder cannot be used: " + filepath.Join(parts, "holder", "schema.json") +
@@ -286,8 +286,8 @@ func TestBrokenOwnParts(t *testing.T) {
 		"halfway": "the part halfway cannot be used: " + filepath.Join(parts, "halfway") +
 			": a part holds schema.json, part.html and part.css",
 		"code":     "the part code cannot be used: " + filepath.Join(parts, "code", "part.css") + ":1: this } closes no block",
-		"diff":     "the part diff cannot be used: it names the part code, or takes its look, which cannot be used",
-		"terminal": "the part terminal cannot be used: it names the part code, or takes its look, which cannot be used",
+		"diff":     "the part diff cannot be used: parts/diff/part.yaml:1: it names the part code, or takes its look, which cannot be used",
+		"terminal": "the part terminal cannot be used: parts/terminal/part.yaml:1: it names the part code, or takes its look, which cannot be used",
 		"pong": "the part pong cannot be used: " + filepath.Join(parts, "pong", "schema.json") +
 			": #/properties/ping: the part ping cannot be used",
 		"first": "the part first cannot be used: " + filepath.Join(parts, "first", "part.html") +
@@ -511,8 +511,8 @@ func TestOwnPartsThemes(t *testing.T) {
 		t.Errorf("drawing with the theme bad = %v", err)
 	}
 	strays := []string{
-		filepath.Join(themesOf(parts), "bad", "nope.css") + " goes into no page",
-		filepath.Join(themesOf(parts), "stray", "tone.css") + " goes into no page",
+		filepath.Join(themesOf(parts), "bad", "nope.css") + ": this file goes into no page",
+		filepath.Join(themesOf(parts), "stray", "tone.css") + ": this file goes into no page",
 	}
 	why := "your own theme broke cannot be used: " + filepath.Join(themesOf(parts), "broke", "table.css") +
 		":1: this } closes no block"
@@ -532,9 +532,9 @@ func TestOwnPartsThemes(t *testing.T) {
 	warned := func(prefix string) bool {
 		return slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), prefix) })
 	}
-	pale := filepath.Join(themesOf(parts), "pale", "palette.css") + " sets --bg for light mode alone"
+	pale := filepath.Join(themesOf(parts), "pale", "palette.css") + ": palette.css sets --bg for light mode alone"
 	// Over floe's of its name, a palette of one's own is told of that palette's colours too.
-	head := filepath.Join(themesOf(parts), "brutal", "palette.css") + " sets --brutal-head-bg for light mode alone"
+	head := filepath.Join(themesOf(parts), "brutal", "palette.css") + ": palette.css sets --brutal-head-bg for light mode alone"
 	if !warned(pale) || !warned(head) || warned(filepath.Join(themesOf(parts), "mine")) || warned(filepath.Join(themesOf(parts), "broke", "palette.css")) {
 		t.Errorf("Check = %v, want %s and %s alone of the palettes", warnings, pale, head)
 	}
@@ -560,7 +560,7 @@ func TestPartWordAtItem(t *testing.T) {
 	if page, err := draw(l, "template: memo\nlang: en\nrisks: { level: low }\n"); err != nil || !strings.Contains(page, ">Low</span>") {
 		t.Errorf("drawing a word the part has = %v", err)
 	}
-	want := "data.yaml:3:10: risks: " + filepath.Join(parts, "level", "words.yaml") + ` has no word "mid"`
+	want := "data.yaml:3:10: risks: " + filepath.Join(parts, "level", "words.yaml") + `: words.yaml has no word "mid"`
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: { level: mid }\n"); err == nil || err.Error() != want {
 		t.Errorf("drawing a word the part has not = %v, want %s", err, want)
 	}
