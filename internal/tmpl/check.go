@@ -121,7 +121,7 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 			return nil, []error{err}
 		}
 	}
-	page, pageSrc, pageErr := t.page()
+	page, pageSrc, pageErr := t.page(fallbackLang)
 	named := namedParts(string(pageSrc))
 	// Told beside the other mistakes of the files, not instead of them.
 	if err = t.refuseShared(s); err != nil {

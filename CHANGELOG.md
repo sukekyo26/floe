@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add a template's `words.yaml`, written as a part's: its `page.html` draws
+  the words with `{{word "status_doing"}}` in the page's `lang:`, else in
+  `en`, so that a template draws its own words in every language.
+  `floe template check` refuses a word `page.html` names that `words.yaml`
+  does not have.
 - Add `floe:///parts/any.json`, one part of any kind, one key naming it, as
   report's sections hold them: a template of your own lists parts with
   `"items": { "$ref": "floe:///parts/any.json" }` and draws them with one

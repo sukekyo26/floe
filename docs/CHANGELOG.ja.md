@@ -8,6 +8,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- テンプレートの `words.yaml` を追加。部品と同じ形で書き、`page.html` は `{{word "status_doing"}}` で言葉をページの `lang:` で描く（言葉の無い言語は `en`）。テンプレートが自分の言葉をどの言語のページにも描ける。`page.html` が呼ぶ言葉が `words.yaml` に無ければ、`floe template check` が断る。
 - どの種類の部品でも 1 つのキーで書ける `floe:///parts/any.json` を追加。report の節と同じく、自分のテンプレートは `"items": { "$ref": "floe:///parts/any.json" }` で部品を並べ、page.html の 1 行（`{{range .parts}}{{range .}}{{with .}}{{.}}{{end}}{{end}}{{end}}`）で描ける。
 - `floe part` を追加。`list` は floe の部品と自分の部品を置き場所と説明つきで並べる。`show <名前>` は部品が受け取るものと項目、借りる見た目、持つ部品、その部品のファイルを持つテーマを出す。`new <名前> --from <部品>` はほかの部品を写して自分の部品を作り、箱の名乗りを書き換え、テーマごとの元のファイルも写す（何も上書きしない）。`check` は自分の部品とテーマをすべて検査し、誤りがあれば終了コード 1。見た目だけの部品は `part.yaml` の `description:` に説明を書く。
 - 自分の部品を追加。`FLOE_PARTS_DIR`（既定は `$XDG_CONFIG_HOME/floe/parts`）に、floe の部品と同じファイルを部品ごとのディレクトリに置き、`floe:///parts/<名前>.json` で指す。項目は `part.html` が描き、schema には floe の format（`html`・`image`・`markdown`）を書けず、それを持つ `any.json` も指せない。テンプレートでも部品でも、schema の根の `$ref` で部品は指せない。floe の部品と同じ名前なら丸ごと代わり、floe のテーマはその部品に当たらない。部品は `part.yaml` で floe の見た目を借り（`looks: [panel]` と書けば、どのテーマでもパネルで描く）、借りた見た目が借りる見た目も付く。schema を持たない `part.css` だけの、自分の見た目だけの部品も作れる。自分のテーマは `FLOE_THEMES_DIR`（既定は `$XDG_CONFIG_HOME/floe/themes`）にテーマごとのディレクトリで置き、floe のテーマと同じ名前なら同じ名前のファイルだけが代わる（`palette.css` は floe のものの上に重なり、書いた変数だけを変える）。使えない部品やテーマは、それを使うページで断り、`floe template check` が警告する。部品やテーマのファイルを保存するとリンクしたページを描き直し、部品やテーマの置き場所が違うサーバーへの公開は断る。

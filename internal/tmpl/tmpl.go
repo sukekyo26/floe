@@ -413,7 +413,7 @@ func parse(file string, src []byte) (ast.Node, error) {
 // data was checked against.
 func (d *Data) Render(title string) ([]byte, error) {
 	t := d.tmpl
-	page, src, err := t.page()
+	page, src, err := t.page(d.Lang)
 	if err != nil {
 		return nil, err
 	}
@@ -470,9 +470,12 @@ func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
 	})
 	// Read checked the data against the schema, so this is the template's own mistake: an image of its
 	// assets/ that is not right, or page.html naming an item its schema does not declare, or using one
-	// as another type.
+	// as another type. A word it names from the data (word .status) that its words.yaml has not names
+	// that file itself.
 	var bad *usererr.Error
 	switch {
+	case errors.As(err, &bad) && bad.Key == "tmpl_words_unknown":
+		return nil, bad
 	case errors.As(err, &bad):
 		return nil, d.tmpl.assetMistake(bad)
 	case err != nil:
@@ -503,9 +506,9 @@ func headMistake(file string, src []byte) *usererr.Error {
 	return usererr.New("tmpl_page_head", file)
 }
 
-// page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together. It
-// returns the source too.
-func (t *Template) page() (*template.Template, []byte, error) {
+// page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together, its
+// words in the language tag lang as its words.yaml has them, else en. It returns the source too.
+func (t *Template) page(lang string) (*template.Template, []byte, error) {
 	src, err := t.readFile("page.html")
 	if err != nil {
 		return nil, nil, err
@@ -516,11 +519,22 @@ func (t *Template) page() (*template.Template, []byte, error) {
 	if at := base.FindIndex(src); at != nil {
 		return nil, nil, usererr.New("tmpl_page_base", t.file("page.html"), lineAt(src, at[0]))
 	}
+	file := t.file("words.yaml")
+	var w words
+	if err = t.files(func(files fs.FS) error {
+		w, err = readWordsIn(files, file)
+		return err
+	}); err != nil {
+		return nil, nil, err
+	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
-		Funcs(template.FuncMap{"asset": t.assets()}).Parse(string(src))
+		Funcs(template.FuncMap{"asset": t.assets(), "word": w.word(file, w.lang(lang))}).Parse(string(src))
 	if err != nil {
 		return nil, nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
+	}
+	if err = w.checkWords(page, t.file("page.html"), file); err != nil {
+		return nil, nil, err
 	}
 	return page, src, nil
 }

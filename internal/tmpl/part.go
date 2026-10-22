@@ -469,7 +469,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		return fmt.Errorf("read the part %s: %w", name, err)
 	}
 	file := path.Join(dir, "words.yaml")
-	w, err := readPartWords(files, file)
+	w, err := readWordsIn(files, file)
 	if err != nil {
 		return err
 	}
@@ -702,9 +702,9 @@ func readPartChecks(files fs.FS, name, dir string) ([]relation, error) {
 	return checks, nil
 }
 
-// readPartWords reads file, the words.yaml of a part in files, its directory; a part without one has the
-// words of en alone, none, so that it has a page all the same.
-func readPartWords(files fs.FS, file string) (words, error) {
+// readWordsIn reads file, the words.yaml of a part or a template in files, its directory; one without it
+// has the words of en alone, none, so that it has a page all the same.
+func readWordsIn(files fs.FS, file string) (words, error) {
 	src, err := fs.ReadFile(files, "words.yaml")
 	var w words
 	switch {

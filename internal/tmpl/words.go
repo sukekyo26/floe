@@ -13,14 +13,14 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// words are the words a part writes in the page's language (the headings of risks), by the language tag,
-// lowercased, and their names: a part's words.yaml. A part without one has en alone, without words.
+// words are the words a part or a template writes in the page's language (the headings of risks), by the
+// language tag, lowercased, and their names: its words.yaml. One without it has en alone, without words.
 type words map[string]map[string]string
 
-// fallbackLang is the language of words a page of a language a part has none of is drawn in.
+// fallbackLang is the language of words a page of a language a part or a template has none of is drawn in.
 const fallbackLang = "en"
 
-// readWords reads src, the words.yaml of a part, file in its mistakes: language tags, en among them,
+// readWords reads src, the words.yaml of a part or a template, file in its mistakes: language tags, en among them,
 // each the names of the words and their text, every language naming the words en names. One without a
 // document has no words.
 func readWords(file string, src []byte) (words, error) {
@@ -144,8 +144,8 @@ func (w words) lang(tag string) string {
 	return fallbackLang
 }
 
-// word returns the function word of a part's HTML in the language lang of w: the text of a word by its
-// name. A name w does not have stops the drawing, file naming where the words are.
+// word returns the function word of a part's HTML or a template's page.html in the language lang of w:
+// the text of a word by its name. A name w does not have stops the drawing, file naming where the words are.
 func (w words) word(file, lang string) func(string) (string, error) {
 	return func(name string) (string, error) {
 		if text, ok := w[lang][name]; ok {
@@ -156,8 +156,8 @@ func (w words) word(file, lang string) func(string) (string, error) {
 }
 
 // checkWords refuses a word page, and the templates it defines, name as written (word "likely") that w
-// does not have, so that a misspelt one stops the part when it is read, not a page that happens to take
-// that branch; html and file name the part's HTML and its words in the mistake. A word named from the
+// does not have, so that a misspelt one stops the part or the template when it is read, not a page that
+// happens to take that branch; html and file name its HTML and its words in the mistake. A word named from the
 // data (word $level) is checked when it is drawn.
 func (w words) checkWords(page *template.Template, html, file string) error {
 	var missing []string

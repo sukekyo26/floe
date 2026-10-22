@@ -203,7 +203,7 @@ func (a *app) templateCheckCmd() *cobra.Command {
 		Use:   "check <dir>...",
 		Short: "Check templates before you use or share them",
 		Long: `Check each directory as a template of its name: its template.yaml, schema.json, checks.yaml,
-computed.yaml, page.html, default theme and assets/, and then its example.yaml through every stage of
+computed.yaml, page.html, words.yaml, default theme and assets/, and then its example.yaml through every stage of
 floe publish, drawing the page included. Every mistake is printed, at its line and column where
 it has one, and the exit code is 1 when there is one. Warnings go to stderr and leave the exit
 code 0. Nothing is printed when the templates are right.`,
