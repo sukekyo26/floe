@@ -6,5 +6,6 @@
 :scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
 :scope .hunk { color: var(--code-prompt); }
 :scope .meta { opacity: 0.65; }
+:scope figcaption :is(.added, .removed) { flex: none; }
 :scope figcaption .added { color: var(--code-add); }
 :scope figcaption .removed { color: var(--code-del); }

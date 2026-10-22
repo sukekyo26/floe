@@ -2,6 +2,7 @@
 :scope {
   overflow-x: auto;
 }
+:scope table { overflow-wrap: normal; }
 :scope table { border-collapse: collapse; width: 100%; }
 :scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.8rem 1.1rem; }
 :scope :is(th, td):not(.num) { min-width: 7em; }
