@@ -13,7 +13,7 @@ import (
 
 // wrapPage holds a path and a URL in cards, which have no place to break a line, words beside narrow
 // columns (keys' text beside its keycaps, the language of code and the counts of a diff beside a long file
-// name) and a path in a table, which scrolls instead.
+// name) and a path in a table and in a tree's note, which scroll instead.
 const wrapPage = `template: report
 lang: en
 title: Wrap
@@ -31,17 +31,26 @@ sections:
           columns: [{ title: file }, { title: what }]
           rows:
             - ['` + "`internal/tmpl/parts/findings/part_internal_test.go`" + `', a test of the findings]
+      - tree:
+          - { path: internal/tmpl/parts/, note: internal/tmpl/parts/findings/part_internal_test.go }
 `
 
-// measureWrap returns one line for each box a text overflows and for each word that breaks across lines in
-// keys' text, code's language, a diff's counts and a table.
+// measureWrap returns one line for each box a text overflows, out of those that scroll sideways, and for each
+// word that breaks across lines in keys' text, code's language, a diff's counts, a table and a tree's note.
 const measureWrap = `(() => {
   const out = [];
+  // What is in a box that scrolls sideways may be wider than it.
+  const scrolled = (e) => {
+    for (let a = e.parentElement; a; a = a.parentElement) {
+      if (['auto', 'scroll'].includes(getComputedStyle(a).overflowX)) return true;
+    }
+    return false;
+  };
   for (const e of document.querySelectorAll('[data-floe-part] *')) {
-    if (e.closest('pre') || getComputedStyle(e).display === 'inline') continue;
+    if (scrolled(e) || getComputedStyle(e).display === 'inline') continue;
     if (e.scrollWidth > e.clientWidth + 1) out.push('overflows: ' + e.textContent.trim().slice(0, 40));
   }
-  const whole = '[data-floe-part=keys] dd, [data-floe-part=code] .lang, [data-floe-part=diff] figcaption > :not(.file), td';
+  const whole = '[data-floe-part=keys] dd, [data-floe-part=code] .lang, [data-floe-part=diff] figcaption > :not(.file), td, [data-floe-part=tree] .note';
   for (const e of document.querySelectorAll(whole)) {
     const walk = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
     for (let n; (n = walk.nextNode()); ) {
@@ -68,7 +77,6 @@ func TestUIWrap(t *testing.T) { //nolint:paralleltest // the UI tests share one 
 		t.Fatal(err)
 	}
 	b.navigate("/a/" + slug + "/?raw")
-	b.until("the parts", "!!document.querySelector('[data-floe-part=code]')")
 	if got := b.eval(measureWrap); got != "" {
 		t.Errorf("at 390 px:\n  %s", strings.ReplaceAll(got, "\n", "\n  "))
 	}
