@@ -251,6 +251,12 @@ func TestBrokenOwnParts(t *testing.T) {
 		"toned/schema.json": `{"$ref": "tone.json"}`,
 		"toned/part.html":   `<b data-floe-part="toned">{{.}}</b>`,
 		"toned/part.css":    "",
+		// The mistakes of several files are told together, under the part.
+		"wrongs/schema.json": `{"type": "object"}`,
+		"wrongs/part.html":   `<div data-floe-part="wrongs"></div>`,
+		"wrongs/part.css":    "}\n",
+		"wrongs/part.yaml":   "lookz: [panel]\n",
+		"wrongs/words.yaml":  "en: { a: A }\nja: {}\n",
 	}
 	for _, name := range []string{"quote", "tone"} {
 		for file, body := range quote(name) {
@@ -262,72 +268,76 @@ func TestBrokenOwnParts(t *testing.T) {
 		t.Fatal(err)
 	}
 	whys := map[string]string{
-		"unnamed": "the part unnamed cannot be used: " + filepath.Join(parts, "unnamed", "part.html") +
+		"unnamed": "the part unnamed cannot be used\n  " + filepath.Join(parts, "unnamed", "part.html") +
 			`: no element of the part unnamed is its box, data-floe-part="unnamed"`,
-		"brace": "the part brace cannot be used: " + filepath.Join(parts, "brace", "part.css") + ":2: this } closes no block",
-		"lender": "the part lender cannot be used: " + filepath.Join(parts, "lender", "part.yaml") +
+		"brace": "the part brace cannot be used\n  " + filepath.Join(parts, "brace", "part.css") + ":2: this } closes no block",
+		"lender": "the part lender cannot be used\n  " + filepath.Join(parts, "lender", "part.yaml") +
 			":2: the part names the part nope, which there is none of",
-		"base":     "the part base cannot be used: " + filepath.Join(parts, "base") + ": a part of your own cannot be named base",
-		"palette":  "the part palette cannot be used: " + filepath.Join(parts, "palette") + ": a part of your own cannot be named palette",
-		"diagram":  "the part diagram cannot be used: " + filepath.Join(parts, "diagram") + ": a part of your own cannot be named diagram",
-		"script":   "the part script cannot be used: " + filepath.Join(parts, "script") + ": a part of your own cannot be named script",
-		"tone":     "the part tone cannot be used: " + filepath.Join(parts, "tone") + ": a part of your own cannot be named tone",
-		"borrower": "the part borrower cannot be used: " + filepath.Join(parts, "borrower", "part.yaml") + ":1: it names the part unnamed, or takes its look, which cannot be used",
-		"ring":     "the part ring cannot be used: " + filepath.Join(parts, "ring") + ": the part ring takes its own look (ring → round → ring)",
-		"round":    "the part round cannot be used: " + filepath.Join(parts, "round", "part.yaml") + ":1: it names the part ring, or takes its look, which cannot be used",
-		"wordy": "the part wordy cannot be used: " + filepath.Join(parts, "wordy", "words.yaml") +
+		"base":     "the part base cannot be used\n  " + filepath.Join(parts, "base") + ": a part of your own cannot be named base",
+		"palette":  "the part palette cannot be used\n  " + filepath.Join(parts, "palette") + ": a part of your own cannot be named palette",
+		"diagram":  "the part diagram cannot be used\n  " + filepath.Join(parts, "diagram") + ": a part of your own cannot be named diagram",
+		"script":   "the part script cannot be used\n  " + filepath.Join(parts, "script") + ": a part of your own cannot be named script",
+		"tone":     "the part tone cannot be used\n  " + filepath.Join(parts, "tone") + ": a part of your own cannot be named tone",
+		"borrower": "the part borrower cannot be used\n  " + filepath.Join(parts, "borrower", "part.yaml") + ":1: it names the part unnamed, or takes its look, which cannot be used",
+		"ring":     "the part ring cannot be used\n  " + filepath.Join(parts, "ring") + ": the part ring takes its own look (ring → round → ring)",
+		"round":    "the part round cannot be used\n  " + filepath.Join(parts, "round", "part.yaml") + ":1: it names the part ring, or takes its look, which cannot be used",
+		"wordy": "the part wordy cannot be used\n  " + filepath.Join(parts, "wordy", "words.yaml") +
 			": the look wordy holds no schema.json nor part.html",
-		"holder": "the part holder cannot be used: " + filepath.Join(parts, "holder", "schema.json") +
+		"holder": "the part holder cannot be used\n  " + filepath.Join(parts, "holder", "schema.json") +
 			": #/properties/p: floe:///parts/panel.json is the look panel, which draws nothing",
-		"keyed": "the part keyed cannot be used: " + filepath.Join(parts, "keyed", "part.yaml") + ":1:1: lookz is not a key of part.yaml",
-		"boxlook": "the part boxlook cannot be used: " + filepath.Join(parts, "boxlook", "part.html") +
+		"keyed": "the part keyed cannot be used\n  " + filepath.Join(parts, "keyed", "part.yaml") + ":1:1: lookz is not a key of part.yaml",
+		"boxlook": "the part boxlook cannot be used\n  " + filepath.Join(parts, "boxlook", "part.html") +
 			":1: data-floe-part names the look panel, which has no box",
-		"twodocs": "the part twodocs cannot be used: " + filepath.Join(parts, "twodocs", "part.yaml") + ":2:1: part.yaml holds one YAML document",
-		"halfway": "the part halfway cannot be used: " + filepath.Join(parts, "halfway") +
+		"twodocs": "the part twodocs cannot be used\n  " + filepath.Join(parts, "twodocs", "part.yaml") + ":2:1: part.yaml holds one YAML document",
+		"halfway": "the part halfway cannot be used\n  " + filepath.Join(parts, "halfway") +
 			": a part holds schema.json, part.html and part.css",
-		"code":     "the part code cannot be used: " + filepath.Join(parts, "code", "part.css") + ":1: this } closes no block",
-		"diff":     "the part diff cannot be used: parts/diff/part.yaml:1: it names the part code, or takes its look, which cannot be used",
-		"terminal": "the part terminal cannot be used: parts/terminal/part.yaml:1: it names the part code, or takes its look, which cannot be used",
-		"pong": "the part pong cannot be used: " + filepath.Join(parts, "pong", "schema.json") +
+		"code":     "the part code cannot be used\n  " + filepath.Join(parts, "code", "part.css") + ":1: this } closes no block",
+		"diff":     "the part diff cannot be used\n  parts/diff/part.yaml:1: it names the part code, or takes its look, which cannot be used",
+		"terminal": "the part terminal cannot be used\n  parts/terminal/part.yaml:1: it names the part code, or takes its look, which cannot be used",
+		"pong": "the part pong cannot be used\n  " + filepath.Join(parts, "pong", "schema.json") +
 			": #/properties/ping: the part ping cannot be used",
-		"first": "the part first cannot be used: " + filepath.Join(parts, "first", "part.html") +
+		"first": "the part first cannot be used\n  " + filepath.Join(parts, "first", "part.html") +
 			`:1: data-floe-part="cards first" is not the name of one part`,
-		"spaced": "the part spaced cannot be used: " + filepath.Join(parts, "spaced", "part.html") +
+		"spaced": "the part spaced cannot be used\n  " + filepath.Join(parts, "spaced", "part.html") +
 			`: no element of the part spaced is its box, data-floe-part="spaced"`,
-		"hosted": "the part hosted cannot be used: " + filepath.Join(parts, "hosted", "schema.json") +
+		"hosted": "the part hosted cannot be used\n  " + filepath.Join(parts, "hosted", "schema.json") +
 			": #/properties/text/anyOf/0: file:///etc/hosts: a schema refers to no other file or URL",
-		"typo": "the part typo cannot be used: " + filepath.Join(parts, "typo", "schema.json") +
+		"typo": "the part typo cannot be used\n  " + filepath.Join(parts, "typo", "schema.json") +
 			": #/properties/c: floe:///parts/celll.json is not a part",
-		"stack":   "the part stack cannot be used: parts/stack/schema.json: #/items/properties/code: the part code cannot be used",
-		"tabs":    "the part tabs cannot be used: parts/tabs/schema.json: #/items/properties/parts: the part stack cannot be used",
-		"details": "the part details cannot be used: parts/details/schema.json: #/properties/parts: the part stack cannot be used",
-		"loop":    "the part loop cannot be used: " + filepath.Join(parts, "loop") + ": the part loop holds itself (loop → loop)",
-		"ping":    "the part ping cannot be used: " + filepath.Join(parts, "ping") + ": the part ping holds itself (ping → pong → ping)",
-		"Quote":   "the part Quote cannot be used: " + filepath.Join(parts, "Quote") + ": a name is lower case letters",
-		"drafted": "the part drafted cannot be used: " + filepath.Join(parts, "drafted", "schema.json") +
+		"stack":   "the part stack cannot be used\n  parts/stack/schema.json: #/items/properties/code: the part code cannot be used",
+		"tabs":    "the part tabs cannot be used\n  parts/tabs/schema.json: #/items/properties/parts: the part stack cannot be used",
+		"details": "the part details cannot be used\n  parts/details/schema.json: #/properties/parts: the part stack cannot be used",
+		"loop":    "the part loop cannot be used\n  " + filepath.Join(parts, "loop") + ": the part loop holds itself (loop → loop)",
+		"ping":    "the part ping cannot be used\n  " + filepath.Join(parts, "ping") + ": the part ping holds itself (ping → pong → ping)",
+		"Quote":   "the part Quote cannot be used\n  " + filepath.Join(parts, "Quote") + ": a name is lower case letters",
+		"drafted": "the part drafted cannot be used\n  " + filepath.Join(parts, "drafted", "schema.json") +
 			": $schema floe:///parts/table.json names no draft of JSON Schema",
-		"blurb": "the part blurb cannot be used: " + filepath.Join(parts, "blurb", "schema.json") +
+		"blurb": "the part blurb cannot be used\n  " + filepath.Join(parts, "blurb", "schema.json") +
 			`: #/properties/body: a part's schema takes no "format": "html"`,
-		"anything": "the part anything cannot be used: " + filepath.Join(parts, "anything", "schema.json") +
+		"anything": "the part anything cannot be used\n  " + filepath.Join(parts, "anything", "schema.json") +
 			`: #/properties/inner → floe:///parts/any.json#/properties/html: a part's schema takes no "format": "html", which floe:///parts/any.json brings in`,
-		"gallery": "the part gallery cannot be used: " + filepath.Join(parts, "gallery", "schema.json") +
+		"gallery": "the part gallery cannot be used\n  " + filepath.Join(parts, "gallery", "schema.json") +
 			`: #/items/properties/src: a part's schema takes no "format": "image"`,
-		"marked": "the part marked cannot be used: " + filepath.Join(parts, "marked", "schema.json") +
+		"marked": "the part marked cannot be used\n  " + filepath.Join(parts, "marked", "schema.json") +
 			`: #/properties/text: a part's schema takes no "format": "markdown"`,
-		"grid": "the part grid cannot be used: " + filepath.Join(parts, "grid", "schema.json") +
+		"grid": "the part grid cannot be used\n  " + filepath.Join(parts, "grid", "schema.json") +
 			": the $ref at the root of the schema names the part table",
-		"jotted": "the part jotted cannot be used: " + filepath.Join(parts, "jotted", "schema.json") +
+		"jotted": "the part jotted cannot be used\n  " + filepath.Join(parts, "jotted", "schema.json") +
 			": the $ref at the root of the schema names the part note",
-		"plotted": "the part plotted cannot be used: " + filepath.Join(parts, "plotted", "schema.json") +
+		"plotted": "the part plotted cannot be used\n  " + filepath.Join(parts, "plotted", "schema.json") +
 			": the $ref at the root of the schema names the part diagram",
-		"aliased": "the part aliased cannot be used: " + filepath.Join(parts, "aliased", "schema.json") +
+		"aliased": "the part aliased cannot be used\n  " + filepath.Join(parts, "aliased", "schema.json") +
 			": #: the part unnamed cannot be used",
-		"based": "the part based cannot be used: " + filepath.Join(parts, "based", "schema.json") +
+		"based": "the part based cannot be used\n  " + filepath.Join(parts, "based", "schema.json") +
 			": #: the part base cannot be used",
-		"zaliased": "the part zaliased cannot be used: " + filepath.Join(parts, "zaliased", "schema.json") +
+		"zaliased": "the part zaliased cannot be used\n  " + filepath.Join(parts, "zaliased", "schema.json") +
 			": #: the part unnamed cannot be used",
-		"paneled": "the part paneled cannot be used: " + filepath.Join(parts, "paneled", "schema.json") +
+		"paneled": "the part paneled cannot be used\n  " + filepath.Join(parts, "paneled", "schema.json") +
 			": #: floe:///parts/panel.json is the look panel, which draws nothing",
+		"wrongs": "the part wrongs cannot be used\n  " + filepath.Join(parts, "wrongs", "part.yaml") + ":1:1: lookz is not a key of part.yaml" +
+			"; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:\n  " +
+			filepath.Join(parts, "wrongs", "words.yaml") + ":2:1: ja leaves out a, which en has\n  " +
+			filepath.Join(parts, "wrongs", "part.css") + ":1: this } closes no block",
 	}
 	for name, why := range whys {
 		dir := memo(t, `"risks": {"$ref": "floe:///parts/`+name+`.json"}, "aside": {"type": "string"}`)
@@ -349,7 +359,7 @@ func TestBrokenOwnParts(t *testing.T) {
 	braced := memo(t, `"risks": {"$ref": "floe:///parts/brace.json"}, "aside": {"type": "string"}`)
 	_, err := draw(tmpl.NewLibrary(braced, parts, themesOf(parts), ""), "template: memo\nlang: en\n")
 	var mistake i18n.Localizer
-	if !errors.As(err, &mistake) || !strings.HasPrefix(mistake.Localize(i18n.New("ja")), filepath.Join(braced, "memo", "schema.json")+": #/properties/risks: 部品 brace は使えません: ") {
+	if !errors.As(err, &mistake) || !strings.HasPrefix(mistake.Localize(i18n.New("ja")), filepath.Join(braced, "memo", "schema.json")+": #/properties/risks: 部品 brace は使えません\n  "+filepath.Join(parts, "brace", "part.css")+":2: ") {
 		t.Errorf("Read of a template of brace = %v", err)
 	}
 	// By page.html.
@@ -500,7 +510,7 @@ func TestOwnPartsThemes(t *testing.T) {
 	}
 	// palette.css holds the palette's variables alone, and is warned of where it sets a colour for light
 	// mode alone: dark mode would keep it.
-	rules := "your own theme rules cannot be used: " + filepath.Join(themesOf(parts), "rules", "palette.css") +
+	rules := "your own theme rules cannot be used; fix it, or remove it\n  " + filepath.Join(themesOf(parts), "rules", "palette.css") +
 		":2: palette.css holds only the palette's variables"
 	if _, err = draw(l, "template: memo\nlang: en\ntheme: rules\nrisks: { text: x }\n"); err == nil || !strings.Contains(err.Error(), rules) {
 		t.Errorf("drawing with the theme rules = %v, want %s", err, rules)
@@ -514,7 +524,7 @@ func TestOwnPartsThemes(t *testing.T) {
 		filepath.Join(themesOf(parts), "bad", "nope.css") + ": this file goes into no page",
 		filepath.Join(themesOf(parts), "stray", "tone.css") + ": this file goes into no page",
 	}
-	why := "your own theme broke cannot be used: " + filepath.Join(themesOf(parts), "broke", "table.css") +
+	why := "your own theme broke cannot be used; fix it, or remove it\n  " + filepath.Join(themesOf(parts), "broke", "table.css") +
 		":1: this } closes no block"
 	if _, err = draw(l, "template: memo\nlang: en\ntheme: broke\nrisks: { text: x }\n"); err == nil ||
 		!strings.HasPrefix(err.Error(), "data.yaml:3:8: "+why) {
@@ -586,7 +596,7 @@ func TestBrokenPartInPage(t *testing.T) {
 	dir := memo(t, `"risks": {"type": "string"}, "aside": {"type": "string", "format": "markdown"}`)
 	l := tmpl.NewLibrary(dir, parts, themesOf(parts), "")
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: x\naside: |\n  | a |\n  | --- |\n  | b |\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), "the part table cannot be used: "+filepath.Join(parts, "table", "part.css")) {
+		!strings.HasPrefix(err.Error(), "the part table cannot be used\n  "+filepath.Join(parts, "table", "part.css")) {
 		t.Errorf("drawing a table of Markdown = %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "memo", "example.yaml"), []byte("template: memo\nlang: en\nrisks: x\n"), 0o600); err != nil {
@@ -608,7 +618,7 @@ func TestLookReplacesDrawing(t *testing.T) {
 	parts := ownParts(t, map[string]string{"table/part.css": ":scope { color: red; }\n"})
 	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/table.json"}, "aside": {"type": "string"}`), parts, themesOf(parts), "")
 	_, err := draw(l, "template: memo\nlang: en\nrisks: { columns: [{title: A}], rows: [[x]] }\n")
-	want := "the part table cannot be used: " + filepath.Join(parts, "table") + ": a look alone cannot take the place of floe's part table"
+	want := "the part table cannot be used\n  " + filepath.Join(parts, "table") + ": a look alone cannot take the place of floe's part table"
 	if err == nil || !strings.Contains(err.Error(), want) {
 		t.Errorf("drawing a table with a look alone named table = %v, want %s", err, want)
 	}

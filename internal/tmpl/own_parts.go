@@ -433,10 +433,13 @@ func (set *partSet) checkHeld(name string) error {
 	if n == nil {
 		return nil // a look alone, or one floe draws in Go
 	}
-	if mistakes := set.mistakes(n); mistakes != nil {
-		return mistakes[0]
+	var found usererr.List
+	for _, m := range set.mistakes(n) {
+		if failed := found.Add(m); failed != nil {
+			return failed //nolint:wrapcheck // what failed, as it is
+		}
 	}
-	return nil
+	return found.Err()
 }
 
 // names lists the parts of set that keep keeps, every one for nil, by name.
@@ -472,7 +475,7 @@ func (set *partSet) find(name string) (*part, error) {
 	case set.parts[name] != nil:
 		return set.parts[name], nil
 	case set.broken[name] != nil:
-		return nil, usererr.New("tmpl_part_broken", name, set.broken[name])
+		return nil, set.brokenPart(name)
 	}
 	return nil, usererr.New("tmpl_unknown_part", name, set.names(nil))
 }
@@ -483,7 +486,7 @@ func (set *partSet) unusable(skip func(name string) bool) []*usererr.Error {
 	var found []*usererr.Error
 	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
 		if skip == nil || !skip(name) {
-			found = append(found, usererr.New("tmpl_part_broken", name, set.broken[name]))
+			found = append(found, set.brokenPart(name))
 		}
 	}
 	return found
@@ -495,10 +498,30 @@ func (set *partSet) unusableThemes(skip func(name string) bool) []*usererr.Error
 	var found []*usererr.Error
 	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
 		if skip == nil || !skip(name) {
-			found = append(found, usererr.New("tmpl_theme_broken", name, set.brokenThemes[name]))
+			found = append(found, set.brokenTheme(name))
 		}
 	}
 	return found
+}
+
+// brokenPart is the mistake of the part name of set, which cannot be used, standing for why it cannot.
+func (set *partSet) brokenPart(name string) *usererr.Error {
+	return usererr.Over("part:"+name, reasons(set.broken[name]), "tmpl_part_broken", name)
+}
+
+// brokenTheme is the mistake of the theme name of set, which cannot be used, standing for why it cannot.
+func (set *partSet) brokenTheme(name string) *usererr.Error {
+	return usererr.Over("theme:"+name, reasons(set.brokenThemes[name]), "tmpl_theme_broken", name)
+}
+
+// reasons are why, why a part or a theme cannot be used, as mistakes: a failure among them, which is not
+// the user's, is told as floe's.
+func reasons(why error) usererr.List {
+	var l usererr.List
+	if failed := l.Add(why); failed != nil {
+		l = append(l, usererr.New("tmpl_part_failed", failed))
+	}
+	return l
 }
 
 // leaveOut leaves the part name out of set, kept in set.broken with why.

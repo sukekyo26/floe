@@ -220,7 +220,7 @@ func (t *Template) checkNamedParts(set *partSet, src []byte, named []namedPart) 
 		case nameLookBox:
 			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_look_box", n.name))
 		case nameBroken:
-			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_part_broken", n.name, set.broken[n.name]))
+			mistakes = append(mistakes, set.brokenPart(n.name).Placed(page, line, 0, ""))
 		case nameUnknown:
 			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_page_part", n.name, set.candidates(n.look)))
 		case nameRight:

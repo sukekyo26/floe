@@ -10,6 +10,7 @@ var messagesEN = map[string]string{
 	// shared: mistakes more than one command makes
 	"file_cannot_read":  "cannot read %s (%s); check the path and that the file exists",
 	"file_cannot_write": "cannot write %s (%s); check that its directory can be written to",
+	"told_above":        ", as told above", // after a mistake whose own mistakes are told under another before it
 
 	// link: which files may be linked
 	"link_not_real":        "%s is not its absolute real path; pass it through filepath.Abs and filepath.EvalSymlinks (symlinks resolved, path cleaned) first",
@@ -277,6 +278,7 @@ var messagesEN = map[string]string{
 	"tmpl_type_integer":            "a whole number",
 	"tmpl_type_boolean":            "true or false",
 	"tmpl_type_null":               "nothing",
+	"tmpl_type_string_list":        "a list of text",
 	"tmpl_check":                   `%s: %s ("%s")`,
 	"tmpl_check_error":             "%s: %s (the check could not run: %s)",
 	"tmpl_computed_error":          "%s = %s cannot be computed from this file: %s",
@@ -351,13 +353,17 @@ var messagesEN = map[string]string{
 	"tmpl_new_part_go":             "floe draws the part %s in Go, so it has no files to copy; copy another part",
 	"tmpl_new_part_theme_exists":   "your own themes have a file of the part %s already: %s; remove them, or pick another name",
 	"tmpl_new_part_theme":          "%s cannot be written: %s; nothing was made",
-	"tmpl_new_part_unusable":       "%s was not made: with it, %s",
+	"tmpl_new_part_unusable":       "%s was not made: with it, these cannot be used",
 	"tmpl_part_names":              "the part names the part %s, which there is none of; use %s",
-	"tmpl_part_broken":             "the part %s cannot be used: %s",
+	"tmpl_part_broken":             "the part %s cannot be used",
+	"tmpl_part_failed":             "floe could not read it: %s",
+	"tmpl_json":                    "this is not valid JSON: %s",
+	"tmpl_go_template":             "this is not a valid Go template: %s",
+	"tmpl_schema_unread":           "floe reads it only as %s",
 	"tmpl_part_cycle":              "the part %s holds itself (%s), which floe would follow forever; fix it, or remove it",
 	"tmpl_part_lender_broken":      "it names the part %s, or takes its look, which cannot be used; fix that part, or remove it",
 	"tmpl_part_bad_name":           "a name is lower case letters, digits, - and _, starting with a letter or a digit; rename it",
-	"tmpl_theme_broken":            "your own theme %s cannot be used: %s; fix it, or remove it",
+	"tmpl_theme_broken":            "your own theme %s cannot be used; fix it, or remove it",
 	"tmpl_theme_file":              "this file goes into no page: a file of a theme is base.css, palette.css or the style of a part or a look, <name>.css, the name one of %s",
 	"tmpl_palette_rule":            "palette.css holds only the palette's variables, :root { --name: value; }, and those of dark mode in @media (prefers-color-scheme: dark) { :root { … } }; write other rules in base.css or a part's file",
 	"tmpl_palette_order":           "write this :root before @media (prefers-color-scheme: dark): after it, its colours would win in dark mode too",

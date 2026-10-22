@@ -235,8 +235,8 @@ func TestNewPartRefused(t *testing.T) {
 		{"grid3", "steps", "your own themes have a file of the part grid3 already: " + filepath.Join(themesOf(parts), "mine", "grid3.css")},
 		// A look alone in place of floe's that draws, and a part that would hold itself, which reading
 		// leaves out, with the parts that take its look or hold it.
-		{"table", "panel", "table was not made: with it, the part table cannot be used: " + filepath.Join(parts, "table") + ": a look alone cannot"},
-		{"cell", "table", "cell was not made: with it, the part cell cannot be used: " + filepath.Join(parts, "cell") + ": the part cell holds itself"},
+		{"table", "panel", "table was not made: with it, these cannot be used\n  the part table cannot be used\n    " + filepath.Join(parts, "table") + ": a look alone cannot"},
+		{"cell", "table", "cell was not made: with it, these cannot be used\n  the part cell cannot be used\n    " + filepath.Join(parts, "cell") + ": the part cell holds itself"},
 	} {
 		if _, err := l.NewPart(c.name, c.from); err == nil || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("NewPart(%s, %s) = %v", c.name, c.from, err)
@@ -325,6 +325,20 @@ func TestNewPartRefused(t *testing.T) {
 
 // CheckOwnParts refuses every part and theme of one's own that cannot be used, and warns of what goes
 // into no page; with none of them, or none wrong, it tells nothing.
+// The mistakes of every file of a theme of one's own are told under it.
+func TestCheckOwnThemeFiles(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{"themes/twice/note.css": "}\n", "themes/twice/table.css": ":root {}\n"})
+	_, mistakes := tmpl.CheckOwnParts(parts, themesOf(parts))
+	at := filepath.Join(themesOf(parts), "twice")
+	want := "your own theme twice cannot be used; fix it, or remove it\n  " + filepath.Join(at, "note.css") + ":1: this } closes no block"
+	if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) ||
+		!strings.Contains(mistakes[0].Error(), "\n  "+filepath.Join(at, "table.css")+":1: write the root as :scope") {
+		t.Errorf("CheckOwnParts = %v, want %s and the mistake of table.css", mistakes, want)
+	}
+}
+
 func TestCheckOwnParts(t *testing.T) {
 	t.Parallel()
 
@@ -390,9 +404,9 @@ func TestCheckOwnParts(t *testing.T) {
 	for _, m := range mistakes {
 		told = append(told, m.Error())
 	}
-	if len(told) != 3 || !strings.HasPrefix(told[0], "the part diagram cannot be used: "+filepath.Join(parts, "diagram")+": a part of your own cannot be named diagram") ||
-		!strings.HasPrefix(told[1], "the part unnamed cannot be used: "+filepath.Join(parts, "unnamed", "part.html")+": no element of the part unnamed is its box") ||
-		!strings.HasPrefix(told[2], "your own theme mine cannot be used: "+filepath.Join(themesOf(parts), "mine", "note.css")+":1:") {
+	if len(told) != 3 || !strings.HasPrefix(told[0], "the part diagram cannot be used\n  "+filepath.Join(parts, "diagram")+": a part of your own cannot be named diagram") ||
+		!strings.HasPrefix(told[1], "the part unnamed cannot be used\n  "+filepath.Join(parts, "unnamed", "part.html")+": no element of the part unnamed is its box") ||
+		!strings.HasPrefix(told[2], "your own theme mine cannot be used; fix it, or remove it\n  "+filepath.Join(themesOf(parts), "mine", "note.css")+":1:") {
 		t.Errorf("mistakes = %q", told)
 	}
 }

@@ -144,6 +144,7 @@ linters:
         - usererr.CannotWrite(
         - usererr.NewAt(
         - usererr.NewIn(
+        - usererr.Over(
         - usererr.Error).Placed(
         - yamlpos.New(
         - yamlpos.Syntax(

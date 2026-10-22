@@ -8,6 +8,7 @@ var messagesJA = map[string]string{
 	// 共通
 	"file_cannot_read":  "%s を読めません（%s）。パスとファイルがあるかを確かめてください",
 	"file_cannot_write": "%s に書き出せません（%s）。そのディレクトリに書き込めるかを確かめてください",
+	"told_above":        "（上に出したとおり）", // after a mistake whose own mistakes are told under another before it
 
 	// link
 	"link_not_real":        "%s は絶対パスの実パス（symlink を解決して正規化したパス）ではないので、登録できるかを確かめられません",
@@ -275,6 +276,7 @@ var messagesJA = map[string]string{
 	"tmpl_type_integer":            "整数",
 	"tmpl_type_boolean":            "true か false",
 	"tmpl_type_null":               "空",
+	"tmpl_type_string_list":        "文字列のリスト",
 	"tmpl_check":                   "%s: %s（「%s」）",
 	"tmpl_check_error":             "%s: %s（検査を実行できませんでした: %s）",
 	"tmpl_computed_error":          "%s = %s をこのファイルから計算できません: %s",
@@ -349,13 +351,17 @@ var messagesJA = map[string]string{
 	"tmpl_new_part_go":             "部品 %s は floe が Go で描くので、写すファイルがありません。別の部品を写してください",
 	"tmpl_new_part_theme_exists":   "自分のテーマに部品 %s のファイルが既にあります: %s。消すか、別の名前にしてください",
 	"tmpl_new_part_theme":          "%s を書けません: %s。何も作っていません",
-	"tmpl_new_part_unusable":       "%s を作っていません。写すと次のようになります: %s",
+	"tmpl_new_part_unusable":       "%s を作っていません。写すと次のものが使えなくなります",
 	"tmpl_part_names":              "部品が名乗る部品 %s はありません。%s のどれかを書いてください",
-	"tmpl_part_broken":             "部品 %s は使えません: %s",
+	"tmpl_part_broken":             "部品 %s は使えません",
+	"tmpl_part_failed":             "floe が読めませんでした: %s",
+	"tmpl_json":                    "JSON として読めません: %s",
+	"tmpl_go_template":             "Go のテンプレートとして読めません: %s",
+	"tmpl_schema_unread":           "floe はこれを %s としてだけ読みます",
 	"tmpl_part_cycle":              "部品 %s が自分を持っていて（%s）、floe がたどり続けてしまいます。直すか、消してください",
 	"tmpl_part_lender_broken":      "名乗るか見た目を借りる部品 %s が使えません。その部品を直すか、消してください",
 	"tmpl_part_bad_name":           "名前は英小文字・数字・-・_ で、英小文字か数字で始めます。名前を変えてください",
-	"tmpl_theme_broken":            "自分のテーマ %s は使えません: %s。直すか、消してください",
+	"tmpl_theme_broken":            "自分のテーマ %s は使えません。直すか、消してください",
 	"tmpl_theme_file":              "このファイルはどのページにも入りません。テーマのファイルは base.css か palette.css か、部品や見た目のスタイルの <名前>.css です。名前は %s のどれかです",
 	"tmpl_palette_rule":            "palette.css にはパレットの変数 :root { --名前: 値; } と、ダークモードの分の @media (prefers-color-scheme: dark) { :root { … } } だけを書きます。ほかの規則は base.css か部品のファイルに書いてください",
 	"tmpl_palette_order":           "この :root は @media (prefers-color-scheme: dark) より前に書いてください。後に書くと、その色がダークモードでも勝ちます",

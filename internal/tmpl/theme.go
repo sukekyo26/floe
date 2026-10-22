@@ -70,8 +70,10 @@ func newTheme() *theme {
 func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
 	entries, err := fs.ReadDir(files, ".")
 	if err != nil {
-		return fmt.Errorf("read the theme %s: %w", dir, err)
+		return usererr.CannotRead(dir, err)
 	}
+	// The mistakes of its files are told together, so that floe part check tells them all at once.
+	var found usererr.List
 	// Warned of once the theme is read whole: one that cannot be used goes into no page.
 	var warnings []*usererr.Error
 	for _, e := range entries {
@@ -86,33 +88,45 @@ func (set *partSet) readTheme(files fs.FS, dir string, t *theme) error {
 				set.names(nil)))
 			continue
 		}
-		css, err := fs.ReadFile(files, e.Name())
-		if err != nil {
-			return fmt.Errorf("read the theme %s: %w", dir, err)
+		more, err := readThemeFile(files, name, path.Join(dir, e.Name()), t)
+		if failed := found.Add(err); failed != nil {
+			return failed //nolint:wrapcheck // what failed, as it is
 		}
-		// base.css and palette.css are for the whole page, out of the parts' scope.
-		file, sheet := path.Join(dir, e.Name()), readCSS(css)
-		if err = sheet.refuse(file, name != themeBase && name != themePalette); err != nil {
-			return err
-		}
-		if name == themePalette {
-			var more []*usererr.Error
-			if more, err = checkPalette(file, sheet, t.palettes); err != nil {
-				return err
-			}
-			warnings = append(warnings, more...)
-			t.palettes = append(t.palettes, string(css))
-			continue
-		}
-		warnings = append(warnings, colourWarnings(file, sheet, false)...)
-		if name == themeBase {
-			t.base = string(css)
-		} else {
-			t.parts[name] = string(css)
-		}
+		warnings = append(warnings, more...)
+	}
+	if found != nil {
+		return found
 	}
 	set.strays = append(set.strays, warnings...)
 	return nil
+}
+
+// readThemeFile reads name.css of the theme t in files, shown in its mistakes as file, into t, and returns
+// the warnings of the colours it sets.
+func readThemeFile(files fs.FS, name, file string, t *theme) ([]*usererr.Error, error) {
+	css, err := fs.ReadFile(files, name+".css")
+	if err != nil {
+		return nil, usererr.CannotRead(file, err)
+	}
+	// base.css and palette.css are for the whole page, out of the parts' scope.
+	sheet := readCSS(css)
+	if err = sheet.refuse(file, name != themeBase && name != themePalette); err != nil {
+		return nil, err
+	}
+	if name == themePalette {
+		more, err := checkPalette(file, sheet, t.palettes)
+		if err != nil {
+			return nil, err
+		}
+		t.palettes = append(t.palettes, string(css))
+		return more, nil
+	}
+	if name == themeBase {
+		t.base = string(css)
+	} else {
+		t.parts[name] = string(css)
+	}
+	return colourWarnings(file, sheet, false), nil
 }
 
 // themeFile reports whether name.css is a file of a theme: its base.css, its palette.css or the style of a part,

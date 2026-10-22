@@ -176,7 +176,7 @@ func unknownPart(set *partSet, ref string) *usererr.Error {
 	name, ok := partName(ref)
 	switch {
 	case ok && set.broken[name] != nil:
-		return usererr.New("tmpl_part_broken", name, set.broken[name])
+		return set.brokenPart(name)
 	case ok && set.parts[name] != nil && set.parts[name].isLook():
 		return usererr.New("tmpl_part_look_ref", ref, name)
 	}

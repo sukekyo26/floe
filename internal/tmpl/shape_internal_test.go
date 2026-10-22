@@ -61,11 +61,11 @@ func TestShapeRefusesWrongTypes(t *testing.T) {
 	t.Parallel()
 
 	for src, want := range map[string]string{
-		`{"properties": {"a": true}}`:          "a schema floe does not read: floe reads #/properties/a only as an object",
-		`{"items": [{"type": "string"}]}`:      "a schema floe does not read: floe reads #/items only as an object",
-		`{"properties": {"a": {"format": 1}}}`: "a schema floe does not read: floe reads #/properties/a/format only as text",
-		`{"required": ["a", 1]}`:               "a schema floe does not read: floe reads #/required only as a list of text",
-		`{"enum": "a"}`:                        "a schema floe does not read: floe reads #/enum only as a list",
+		`{"properties": {"a": true}}`:          "t/schema.json: #/properties/a: floe reads it only as keys and values",
+		`{"items": [{"type": "string"}]}`:      "t/schema.json: #/items: floe reads it only as keys and values",
+		`{"properties": {"a": {"format": 1}}}`: "t/schema.json: #/properties/a/format: floe reads it only as text",
+		`{"required": ["a", 1]}`:               "t/schema.json: #/required: floe reads it only as a list of text",
+		`{"enum": "a"}`:                        "t/schema.json: #/enum: floe reads it only as a list",
 	} {
 		if _, _, err := readShape(jsonDoc(t, src), schemaURL("t"), "t/schema.json", ""); err == nil || err.Error() != want {
 			t.Errorf("readShape of %s = %v, want %s", src, err, want)

@@ -124,3 +124,24 @@ func TestPlace(t *testing.T) {
 		t.Errorf("Placed changed the mistake it copies: %+v", e)
 	}
 }
+
+// A mistake that stands for others tells them under it, indented, once in a list: another of the same
+// says they are told above.
+func TestOver(t *testing.T) {
+	t.Parallel()
+
+	under := usererr.List{usererr.NewAt("parts/q/part.css", 1, 0, "tmpl_no_lang")}
+	l := usererr.List{
+		usererr.Over("part:q", under, "tmpl_part_broken", "q").Placed("a.json", 0, 0, "#/x"),
+		usererr.Over("part:q", under, "tmpl_part_broken", "q").Placed("a.json", 0, 0, "#/y"),
+	}
+	want := "a.json: #/x: the part q cannot be used\n" +
+		"  parts/q/part.css:1: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\n" +
+		"a.json: #/y: the part q cannot be used, as told above"
+	if got := l.Error(); got != want {
+		t.Errorf("the list = %q, want %q", got, want)
+	}
+	if got := l[1].Error(); !strings.Contains(got, "\n  parts/q/part.css:1: ") {
+		t.Errorf("one alone = %q, want its mistakes under it", got)
+	}
+}

@@ -2,8 +2,6 @@ package tmpl
 
 import (
 	"cmp"
-	"errors"
-	"fmt"
 	"maps"
 	"slices"
 	"strconv"
@@ -52,10 +50,6 @@ func readShape(doc any, url, file, part string) (*shape, *schemaNotes, error) {
 	return s, n, nil
 }
 
-// errUnread is a schema floe reads only in another form than the one written: a boolean schema, or a list
-// of them, is JSON Schema all the same.
-var errUnread = errors.New("a schema floe does not read")
-
 // schemaNotes is what floe refuses of a schema as written, and the $refs it checks once the parts are read.
 type schemaNotes struct {
 	file string // the schema, as its mistakes name it
@@ -84,14 +78,15 @@ func (n *schemaNotes) refuse(m *usererr.Error) {
 	n.met = append(n.met, noted{mistake: m, ref: nil})
 }
 
-// first returns the first mistake noted, which the schema is refused for as it is read, or nil.
-func (n *schemaNotes) first() *usererr.Error {
+// refused returns the mistakes noted, which the schema is refused for as it is read.
+func (n *schemaNotes) refused() usererr.List {
+	var found usererr.List
 	for _, x := range n.met {
 		if x.mistake != nil {
-			return x.mistake
+			found = append(found, x.mistake)
 		}
 	}
-	return nil
+	return found
 }
 
 // read reads the schema v at ptr, which floe follows properties and items to, into its shape, base the
@@ -99,15 +94,15 @@ func (n *schemaNotes) first() *usererr.Error {
 func (n *schemaNotes) read(v any, base, ptr string) (*shape, error) {
 	m, ok := v.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("%w: floe reads %s only as an object", errUnread, ptr)
+		return nil, usererr.NewIn(n.file, ptr, "tmpl_schema_unread", usererr.New("tmpl_type_object"))
 	}
 	base = n.idOf(m, base)
-	ref, errRef := keyword[string](m, "$ref", ptr, "text")
-	format, errFormat := keyword[string](m, "format", ptr, "text")
-	about, errAbout := keyword[string](m, "description", ptr, "text")
-	enum, errEnum := keyword[[]any](m, "enum", ptr, "a list")
-	required, errRequired := keyword[[]any](m, "required", ptr, "a list")
-	props, errProps := keyword[map[string]any](m, "properties", ptr, "an object")
+	ref, errRef := keyword[string](n.file, m, "$ref", ptr, "tmpl_type_string")
+	format, errFormat := keyword[string](n.file, m, "format", ptr, "tmpl_type_string")
+	about, errAbout := keyword[string](n.file, m, "description", ptr, "tmpl_type_string")
+	enum, errEnum := keyword[[]any](n.file, m, "enum", ptr, "tmpl_type_array")
+	required, errRequired := keyword[[]any](n.file, m, "required", ptr, "tmpl_type_array")
+	props, errProps := keyword[map[string]any](n.file, m, "properties", ptr, "tmpl_type_object")
 	if err := cmp.Or(errRef, errFormat, errAbout, errEnum, errRequired, errProps); err != nil {
 		return nil, err //nolint:wrapcheck // the first of keyword's mistakes, made here
 	}
@@ -121,7 +116,7 @@ func (n *schemaNotes) read(v any, base, ptr string) (*shape, error) {
 	for _, r := range required {
 		name, ok := r.(string)
 		if !ok {
-			return nil, fmt.Errorf("%w: floe reads %s/required only as a list of text", errUnread, ptr)
+			return nil, usererr.NewIn(n.file, ptr+"/required", "tmpl_schema_unread", usererr.New("tmpl_type_string_list"))
 		}
 		s.required = append(s.required, name)
 	}
@@ -354,16 +349,17 @@ func (set *partSet) sharedMistake(n *schemaNotes, r refAt) *usererr.Error {
 	return nil
 }
 
-// keyword returns the keyword kw of the schema m, at ptr, as a T, which want words: its zero value when m
-// has none, or null.
-func keyword[T any](m map[string]any, kw, ptr, want string) (T, error) {
+// keyword returns the keyword kw of the schema m in file, at ptr, as a T, which the type word want words:
+// its zero value when m has none, or null. A boolean schema, or a list of them, is JSON Schema all the
+// same, but floe reads only the form it draws.
+func keyword[T any](file string, m map[string]any, kw, ptr, want string) (T, error) {
 	var t T
 	v, ok := m[kw]
 	if !ok || v == nil {
 		return t, nil
 	}
 	if t, ok = v.(T); !ok {
-		return t, fmt.Errorf("%w: floe reads %s/%s only as %s", errUnread, ptr, kw, want)
+		return t, usererr.NewIn(file, ptr+"/"+kw, "tmpl_schema_unread", usererr.New(want))
 	}
 	return t, nil
 }
