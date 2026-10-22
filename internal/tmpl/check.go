@@ -79,8 +79,8 @@ func CheckOwnParts(partsDir, themesDir string) (warnings usererr.List, err error
 }
 
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values, its
-// words, page.html and page.css. A check of what another check reads (page.html as parsed) is left out
-// while that has mistakes.
+// words, page.html and page.css. A check of what another made (page.html as parsed, the schema as
+// compiled) is left out while that has mistakes.
 func (t *Template) checkFiles() (usererr.List, error) {
 	if err := t.missingFiles(); err != nil {
 		return nil, err
@@ -91,38 +91,60 @@ func (t *Template) checkFiles() (usererr.List, error) {
 	}
 	warnings, s, schemaErr := t.checkSchema(set)
 	w, wordsErr := t.words()
-	// Parsed without words when words.yaml has mistakes, so that its own are told beside them.
-	page, src, pageErr := t.page(w, fallbackLang)
-	named := namedParts(string(src))
-	var pageChecks error
+	src, pageErr := t.readFile("page.html")
+	var named []namedPart
 	if pageErr == nil {
-		pageChecks = usererr.Collect(t.checkHead(s, src), t.checkAssets(page), t.checkNamedParts(set, src, named))
+		named = namedParts(string(src))
+		pageErr = t.checkPage(set, s, w, src, named)
 	}
 	scope, cssErr := t.checkCSS()
 	warnings = append(append(warnings, scope...), brokenParts(set, named)...)
-	return warnings, usererr.Collect(schemaErr, wordsErr, pageErr, pageChecks, cssErr)
+	return warnings, usererr.Collect(schemaErr, wordsErr, pageErr, cssErr)
+}
+
+// checkPage checks src, the page.html of t, which names the parts named of set: its tags, as text, and,
+// parsed, the words it names of w, its words.yaml, nil when it has mistakes, and the assets it names. s is
+// the schema of t, nil when it cannot be read.
+func (t *Template) checkPage(set *partSet, s *shape, w words, src []byte, named []namedPart) error {
+	text := usererr.Collect(t.refuseInPage(src), t.checkHead(s, src), t.checkNamedParts(set, src, named))
+	page, err := t.parsePage(src, w, fallbackLang)
+	if err != nil {
+		return usererr.Collect(text, err)
+	}
+	return usererr.Collect(text, t.pageWords(page, w), t.checkAssets(page))
 }
 
 // checkSchema checks the schema of t, which refers to the parts of set, and its checks.yaml and
 // computed.yaml, which name its items. It returns the schema's warnings, and its shape, nil when it
 // cannot be read.
 func (t *Template) checkSchema(set *partSet) (usererr.List, *shape, error) {
+	s, notes, sch, err := t.compileShape(set)
+	var warnings usererr.List
+	var computed error
+	if s != nil {
+		warnings, computed = notes.warnings, t.checkComputed(s)
+	}
+	return warnings, s, usererr.Collect(err, t.checkChecks(sch), computed)
+}
+
+// compileShape reads the schema of t into its shape, bound to the parts of set, with what floe refuses of
+// it, and compiles it. The shape and the notes are nil when it cannot be read, and the compiled schema
+// while it has mistakes.
+func (t *Template) compileShape(set *partSet) (*shape, *schemaNotes, *jsonschema.Schema, error) {
 	doc, err := t.schemaDoc()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	s, notes, err := t.readShape(doc)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	refused := t.refused(s, notes)
 	// Those mistakes, of $refs among them, would fail the compiling, without their pointers.
-	var sch *jsonschema.Schema
-	var compileErr error
-	if refused == nil {
-		sch, compileErr = compileSchema(set, t.Name, t.file("schema.json"), doc)
+	if err = t.refused(s, notes); err != nil {
+		return s, notes, nil, err
 	}
-	return notes.warnings, s, usererr.Collect(refused, compileErr, t.checkChecks(sch), t.checkComputed(s))
+	sch, err := compileSchema(set, t.Name, t.file("schema.json"), doc)
+	return s, notes, sch, err
 }
 
 // checkHead refuses src, page.html, without a <head>, and one without a standard doctype where s, the
@@ -236,7 +258,7 @@ func (t *Template) checkAssets(page *template.Template) error {
 		case errors.Is(err, fs.ErrNotExist):
 			return nil
 		case err != nil:
-			return err //nolint:wrapcheck // wrapped below
+			return usererr.CannotRead(t.file("assets"), err)
 		case !fi.IsDir():
 			return usererr.New("tmpl_assets_not_dir", t.file("assets"))
 		}
@@ -247,10 +269,10 @@ func (t *Template) checkAssets(page *template.Template) error {
 		mistakes, checked, err = t.assetImages(sub)
 		return err
 	})
-	var notDir *usererr.Error
+	var mistake *usererr.Error
 	switch {
-	case errors.As(err, &notDir):
-		return notDir
+	case errors.As(err, &mistake):
+		return mistake
 	case err != nil:
 		return usererr.CannotRead(t.file("assets"), err)
 	}
@@ -274,7 +296,7 @@ func (t *Template) assetImages(assets fs.FS) (mistakes usererr.List, checked map
 	err = fs.WalkDir(assets, ".", func(name string, e fs.DirEntry, err error) error {
 		switch {
 		case err != nil:
-			return err
+			return usererr.CannotRead(filepath.Join(t.file("assets"), filepath.FromSlash(name)), err)
 		case name != "." && strings.HasPrefix(e.Name(), ".") && e.IsDir():
 			return fs.SkipDir
 		case e.IsDir() || strings.HasPrefix(e.Name(), "."):
@@ -288,7 +310,7 @@ func (t *Template) assetImages(assets fs.FS) (mistakes usererr.List, checked map
 		}
 		return nil
 	})
-	return mistakes, checked, err //nolint:wrapcheck // wrapped by checkAssets
+	return mistakes, checked, err //nolint:wrapcheck // a mistake at its path
 }
 
 // assetsNamed returns the names page passes to asset as written, {{asset "logo.svg"}} or {{"logo.svg" |
@@ -297,13 +319,9 @@ func assetsNamed(page *template.Template) []string {
 	return callsOf(page, "asset").names
 }
 
-// checkChecks returns the mistakes of the checks.yaml of t, if it has one, against its schema s as
-// compiled, in the order of the file: none while the schema has mistakes of its own, nil, which its
-// checks would be told against for nothing.
+// checkChecks returns the mistakes of the checks.yaml of t, if it has one: of its YAML and its expressions,
+// and, against its schema s as compiled, nil while the schema has mistakes of its own, of the lists it names.
 func (t *Template) checkChecks(s *jsonschema.Schema) error {
-	if s == nil {
-		return nil
-	}
 	src, found, err := t.readOptional("checks.yaml")
 	if err != nil || !found {
 		return err
@@ -314,14 +332,16 @@ func (t *Template) checkChecks(s *jsonschema.Schema) error {
 		return failed //nolint:wrapcheck // already says what failed
 	}
 	for _, c := range list {
-		if e := c.declared(s); e != nil {
-			problems = append(problems, e)
+		if s != nil {
+			if e := c.declared(s); e != nil {
+				problems = append(problems, e)
+			}
 		}
 		if _, e := c.program(); e != nil {
 			problems = append(problems, e)
 		}
 	}
-	return problems.Sorted().Err()
+	return problems.Err()
 }
 
 // declared checks that the compiled schema s declares the list at c.For and c.Field under its items:

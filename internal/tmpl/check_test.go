@@ -175,6 +175,18 @@ func TestCheckMistakes(t *testing.T) {
 			},
 		},
 		{
+			// Only whether the lists it names are declared waits for a schema that compiles.
+			name: "checks beside a schema with a mistake",
+			files: map[string]string{
+				"schema.json": "{", "checks.yaml": "- for: files\n  expr: 'true'\n- for: filez\n  expr: itme\n  message: m\n",
+			},
+			want: []string{
+				"sizes/schema.json:",
+				"sizes/checks.yaml:1:3: write message in the check",
+				"sizes/checks.yaml:4:9: itme cannot be read as an expression",
+			},
+		},
+		{
 			name:  "a broken check beside others",
 			files: map[string]string{"checks.yaml": "- for: files\n  expr: 'true'\n- for: filez\n  expr: itme\n  message: m\n"},
 			want: []string{
@@ -203,19 +215,32 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			name:  "page",
-			files: map[string]string{"page.html": "{{if}}"},
-			want:  []string{"sizes/page.html: this is not a valid Go template: template: page.html:1:"},
+			files: map[string]string{"page.html": "</body>|{{if}}</body>"},
+			want:  []string{"sizes/page.html: this is not a valid Go template: template: page.html:"},
 		},
 		{
 			// Each file is checked whatever the others hold: none of them reads what another made.
 			name:  "page beside the schema and the CSS",
-			files: map[string]string{"schema.json": "{", "page.html": "{{if}}", "page.css": ":root { color: red; }\n"},
+			files: map[string]string{"schema.json": "{", "page.html": "</body>|{{if}}</body>", "page.css": ":root { color: red; }\n"},
 			want:  []string{"sizes/schema.json:", "sizes/page.html: this is not a valid Go template", "sizes/page.css:1: write the root as :scope"},
 		},
 		{
-			name:  "a schema JSON Schema does not take",
-			files: map[string]string{"schema.json": `"chart":|"code": { "type": "string", "pattern": "([" },` + "\n    " + `"chart":`},
-			want:  []string{"sizes/schema.json: /properties/code/pattern: JSON Schema does not take this: '([' is not valid regex"},
+			name: "a schema JSON Schema does not take",
+			files: map[string]string{
+				"schema.json": `"properties": {|"minProperties": "a", "properties": { "code": { "type": "string", "pattern": "([" },`,
+			},
+			want: []string{
+				"sizes/schema.json: #/minProperties: JSON Schema does not take this: ",
+				"sizes/schema.json: #/properties/code/pattern: JSON Schema does not take this: '([' is not valid regex",
+			},
+		},
+		{
+			name:  "a $ref in the schema that finds nothing",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "#/$defs/nope" },` + "\n    " + `"chart":`, "page.css": ":root { color: red; }\n"},
+			want: []string{
+				`sizes/schema.json: #: JSON Schema does not take this: json-pointer in "#/$defs/nope" not found`,
+				"sizes/page.css:1: write the root as :scope",
+			},
 		},
 		{
 			name:  "example",
@@ -299,9 +324,9 @@ func TestCheckMistakes(t *testing.T) {
 		{
 			name: "an item floe reads itself beside another mistake",
 			files: map[string]string{
-				"schema.json": `"chart":|"title": { "type": "string" },` + "\n    " + `"chart":`, "page.html": "{{if}}",
+				"schema.json": `"chart":|"title": { "type": "string" },` + "\n    " + `"chart":`, "page.html": "</body>|{{if}}</body>",
 			},
-			want: []string{"sizes/schema.json: schema.json declares or requires title, which floe reads", "sizes/page.html: this is not a valid Go template: template: page.html:1:"},
+			want: []string{"sizes/schema.json: schema.json declares or requires title, which floe reads", "sizes/page.html: this is not a valid Go template: template: page.html:"},
 		},
 		{
 			name:  "an empty example",
@@ -645,6 +670,30 @@ func TestTemplateWords(t *testing.T) {
 	}
 	if _, err = d.Render("t"); err == nil || err.Error() != filepath.Join(dir, "words.yaml")+`: words.yaml has no word "a.txt"` {
 		t.Errorf("Render of a word named from the data = %v", err)
+	}
+}
+
+// A mistake of page.html leaves out only the checks of what it would have made: the names of the parts in
+// its text are checked whatever else it holds, and its assets once it parses, whatever words it names.
+func TestCheckPageMistakesTogether(t *testing.T) {
+	t.Parallel()
+
+	nope := `<b data-floe-part="nope"></b></body>`
+	for name, page := range map[string]string{
+		"style":    "</body>|<style>b {}</style>" + nope,
+		"parse":    "</body>|{{if}}" + nope,
+		"a word":   "</body>|{{word \"totl\"}}" + nope,
+		"an asset": "</body>|{{word \"totl\"}}{{asset \"nope.png\"}}</body>",
+	} {
+		dir := sizes(t, map[string]string{"words.yaml": "en: { total: total }\n", "page.html": page})
+		_, mistakes := check(dir, "", "")
+		want := "names the part nope"
+		if name == "an asset" {
+			want = "nope.png"
+		}
+		if len(mistakes) != 2 || !strings.Contains(fmt.Sprint(mistakes), want) {
+			t.Errorf("Check of page.html with %s = %v, want it and %s", name, mistakes, want)
+		}
 	}
 }
 

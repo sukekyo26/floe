@@ -39,7 +39,7 @@ func validate(set *partSet, schemaFile string, doc any, d *Data, root ast.Node) 
 		return err //nolint:wrapcheck // nil, or not a mistake in the data
 	}
 	s := &schemaCheck{file: d.File, template: d.Template, root: root, schema: doc, set: set, problems: nil}
-	s.collect(ve)
+	leaves(ve, s.leaf)
 	if len(s.problems) == 0 {
 		// A failure without a mistake to point at is not one the data can fix.
 		return fmt.Errorf("check %s against its schema: %w", d.File, ve)
@@ -74,19 +74,33 @@ func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema
 	// so that it is worded in the reader's language.
 	// partSet.mistakes told a $ref's at its pointer before; those it does not see (its LIMIT) name the template.
 	var load *jsonschema.LoadURLError
-	var invalid *jsonschema.SchemaValidationError
 	switch {
 	case errors.As(err, &load):
 		return nil, usererr.New("tmpl_schema_load", name, load.Err)
-	case errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url:
-		if refused := metaschemaMistakes(file, invalid.Err); refused != nil {
-			return nil, refused
-		}
-		fallthrough
 	case err != nil:
-		return nil, fmt.Errorf("compile the schema of %s: %w", name, err)
+		return nil, compileMistakes(url, file, err)
 	}
 	return sch, nil
+}
+
+// compileMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of
+// file: those the metaschema refuses at their JSON pointers, and any other that names url (a $ref in it
+// that finds nothing, an $anchor written twice) in jsonschema's words, url left out of them so that the
+// pointer it is followed by is the one in file. One that does not name url, of a part's schema, is a failure.
+// LIMIT: in the library's English, and one that is not the metaschema's is told at the top of file, not
+// where it is written. Word them in the catalogs, at their place, if a template comes to meet them.
+func compileMistakes(url, file string, err error) error {
+	var invalid *jsonschema.SchemaValidationError
+	if errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url {
+		if refused := metaschemaMistakes(file, invalid.Err); refused != nil {
+			return refused
+		}
+	}
+	text := err.Error()
+	if !strings.Contains(text, url) {
+		return fmt.Errorf("compile the schema %s: %w", file, err)
+	}
+	return usererr.NewIn(file, "#", "tmpl_schema_invalid", strings.ReplaceAll(text, url, ""))
 }
 
 // drafts are the drafts of JSON Schema a $schema may name.
@@ -200,32 +214,36 @@ func unknownPart(set *partSet, ref string) *usererr.Error {
 }
 
 // metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's, holds, each at
-// its JSON pointer, such as a pattern that is no regular expression; nil when it holds none.
-// LIMIT: in the library's English, and the branches of the metaschema's anyOf (a type, or a list of them)
-// are told as one. Word them in the catalogs if a template comes to meet them.
+// its JSON pointer, in the order of the pointers, such as a pattern that is no regular expression; nil when
+// it holds none.
 func metaschemaMistakes(file string, err error) error {
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
 		return nil
 	}
 	var mistakes usererr.List
-	var collect func(e *jsonschema.ValidationError)
-	collect = func(e *jsonschema.ValidationError) {
-		switch e.ErrorKind.(type) {
-		case *kind.Schema, *kind.Group, *kind.AllOf, *kind.Reference:
-			for _, c := range e.Causes {
-				collect(c)
-			}
-			return
-		}
-		at := ""
+	leaves(ve, func(e *jsonschema.ValidationError) {
+		at := "#"
 		for _, step := range e.InstanceLocation {
 			at += "/" + pointerKey.Replace(step)
 		}
 		mistakes = append(mistakes, usererr.NewIn(file, at, "tmpl_schema_invalid", e.ErrorKind.LocalizedString(english)))
-	}
-	collect(ve)
+	})
+	slices.SortStableFunc(mistakes, func(a, b *usererr.Error) int { return strings.Compare(a.At, b.At) })
 	return mistakes.Err()
+}
+
+// leaves calls leaf with each mistake of e that is not only the mistakes under it. A branch of anyOf or
+// oneOf would say why each choice failed; it is one leaf instead.
+func leaves(e *jsonschema.ValidationError, leaf func(*jsonschema.ValidationError)) {
+	switch e.ErrorKind.(type) {
+	case *kind.Schema, *kind.Group, *kind.AllOf, *kind.Reference:
+		for _, c := range e.Causes {
+			leaves(c, leaf)
+		}
+		return
+	}
+	leaf(e)
 }
 
 // noLoader loads no schema: those of the parts of set are added to the compiler before.
@@ -246,16 +264,8 @@ type schemaCheck struct {
 	problems       usererr.List
 }
 
-// collect turns the leaves of e into problems. A branch of anyOf or oneOf would say why each choice
-// failed; the item is reported once instead.
-func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
-	switch e.ErrorKind.(type) {
-	case *kind.Schema, *kind.Group, *kind.AllOf, *kind.Reference:
-		for _, c := range e.Causes {
-			s.collect(c)
-		}
-		return
-	}
+// leaf turns e, a leaf of the mistakes of the data (leaves), into problems.
+func (s *schemaCheck) leaf(e *jsonschema.ValidationError) {
 	key, value, at := yamlpos.Find(s.root, e.InstanceLocation)
 	where := yamlpos.OfValue(key, value)
 	switch k := e.ErrorKind.(type) {

@@ -341,7 +341,7 @@ func checkHTML(set *partSet, d *Data) error {
 			problems = append(problems, itemError(d.File, it.pos, it.path, bad))
 		}
 	}
-	return problems.Sorted().Err()
+	return problems.Err()
 }
 
 // readShared moves the keys every template shares from h.d.Values to h.d, and notes where each is
@@ -504,32 +504,57 @@ func headMistake(file string, src []byte) *usererr.Error {
 }
 
 // page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together, its
-// words w, t's words.yaml, in the language tag lang, else en. It returns the source too. Without w (nil,
-// as when words.yaml has a mistake told beside), a word page.html names is not checked.
+// words w, t's words.yaml, in the language tag lang, else en. It returns the source too.
 func (t *Template) page(w words, lang string) (*template.Template, []byte, error) {
 	src, err := t.readFile("page.html")
 	if err != nil {
 		return nil, nil, err
 	}
+	if err = t.refuseInPage(src); err != nil {
+		return nil, nil, err
+	}
+	page, err := t.parsePage(src, w, lang)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = t.pageWords(page, w); err != nil {
+		return nil, nil, err
+	}
+	return page, src, nil
+}
+
+// refuseInPage refuses src, the page.html of t, holding a <style>, as floe puts a page's CSS together, or
+// a <base>.
+func (t *Template) refuseInPage(src []byte) error {
+	var style, b error
 	if at := tagsOf(tagsIn(string(src), true)).style; at >= 0 {
-		return nil, nil, usererr.NewAt(t.file("page.html"), lineAt(src, at), 0, "tmpl_page_style")
+		style = usererr.NewAt(t.file("page.html"), lineAt(src, at), 0, "tmpl_page_style")
 	}
 	if at := base.FindIndex(src); at != nil {
-		return nil, nil, usererr.NewAt(t.file("page.html"), lineAt(src, at[0]), 0, "tmpl_page_base")
+		b = usererr.NewAt(t.file("page.html"), lineAt(src, at[0]), 0, "tmpl_page_base")
 	}
+	return usererr.Collect(style, b)
+}
+
+// parsePage parses src, the page.html of t, with its words w in the language tag lang, else en.
+func (t *Template) parsePage(src []byte, w words, lang string) (*template.Template, error) {
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
 		Funcs(template.FuncMap{"asset": t.assets(), "word": w.word(t.file("words.yaml"), w.lang(lang))}).
 		Parse(string(src))
 	if err != nil {
-		return nil, nil, usererr.NewAt(t.file("page.html"), 0, 0, "tmpl_go_template", err.Error())
+		return nil, usererr.NewAt(t.file("page.html"), 0, 0, "tmpl_go_template", err.Error())
 	}
-	if w != nil {
-		if err = w.checkWords(page, t.file("page.html")); err != nil {
-			return nil, nil, err
-		}
+	return page, nil
+}
+
+// pageWords refuses a word page, t's page.html as parsed, names that w does not have. Without w (nil, as
+// when words.yaml has a mistake told beside), none is checked.
+func (t *Template) pageWords(page *template.Template, w words) error {
+	if w == nil {
+		return nil
 	}
-	return page, src, nil
+	return w.checkWords(page, t.file("page.html"))
 }
 
 // words reads the words.yaml of t, as readWords does.

@@ -236,7 +236,7 @@ func (t *Template) asset(name string) (template.URL, error) {
 		return nil
 	})
 	if err != nil {
-		return "", err
+		return "", usererr.CannotRead(t.file("assets"), err)
 	}
 	if e != nil {
 		return "", t.assetMistake(e)
@@ -311,5 +311,5 @@ func checkImages(whole drawnItems, d *Data, root ast.Node, images imageDir) erro
 		}
 		problems = append(problems, itemMistake(d.File, root, f.at, false, e))
 	}
-	return problems.Sorted().Err()
+	return problems.Err()
 }

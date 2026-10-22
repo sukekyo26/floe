@@ -28,7 +28,7 @@ func checkScripts(whole drawnItems, d *Data, root ast.Node) error {
 		}
 		d.drew(f.at, drawScript(js, data))
 	}
-	return problems.Sorted().Err()
+	return problems.Err()
 }
 
 // readScript reads the script f of the data file file under root: its js and data, or the mistakes in

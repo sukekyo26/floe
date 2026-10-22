@@ -768,7 +768,7 @@ func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 		}
 		d.drew(f.at, html)
 	}
-	return problems.Sorted().Err()
+	return problems.Err()
 }
 
 // drew notes html, a part's drawing of the item at the path at.

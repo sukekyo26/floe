@@ -2,7 +2,6 @@ package tmpl_test
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -345,7 +344,8 @@ func TestBrokenOwnParts(t *testing.T) {
 		_, mistakes := check(filepath.Join(dir, "memo"), parts, themesOf(parts))
 		if name == "diagram" || name == "script" || name == "tone" {
 			// floe's stays: the schema is right, and only the example, which fits none of them, fails.
-			if mistakes == nil || strings.Contains(fmt.Sprint(mistakes), "cannot be used") {
+			example := filepath.Join(dir, "memo", "example.yaml") + ":"
+			if mistakes == nil || slices.ContainsFunc(mistakes, func(e error) bool { return !strings.HasPrefix(e.Error(), example) }) {
 				t.Errorf("Check of a template of %s = %v", name, mistakes)
 			}
 			continue
