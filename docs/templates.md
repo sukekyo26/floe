@@ -22,6 +22,7 @@ my-report/
 ├── example.yaml     # a data file to start from
 ├── checks.yaml      # relations between items (optional)
 ├── computed.yaml    # values computed from the data (optional)
+├── words.yaml       # the template's words, by language (optional)
 └── assets/          # images page.html shows with asset (optional)
 ```
 
@@ -50,10 +51,24 @@ The template needs floe 1.2.0 or later, of major 1. Under major 0, a minor versi
 | `num` | A number with its digits grouped (`{{.Calc.total \| num}}` is `1,234,567`), or rounded to significant digits (`{{.Calc.rate \| num 3}}` is `0.00648`) |
 | `bytes` | A count of bytes in a binary unit (`{{.Calc.size \| bytes}}` is `1.5 KiB`) |
 | `asset` | An image of the template's `assets/` as a data URI (`<img src="{{asset "logo.svg"}}">`) |
+| `word` | A word of the template's [`words.yaml`](#wordsyaml) in the page's language (`{{word "status_doing"}}`) |
 
 `page.html` holds no `<style>`, which floe refuses at its line: floe puts a page's CSS together (see [Parts](#parts)), from `page.css` and the theme the data file picks. They are scoped to the page, where `:scope` is its root: write the page's variables on `:scope`, as `:root` and `html` name nothing there and are refused at their line. A `<link>` to a stylesheet, such as Google Fonts, stays: it is out of floe's layers and wins over them. Load a stylesheet so, as `page.css` holds no `@import`, which a browser does not read in a layer and floe refuses at its line, nor a `}` that closes no block, which would close floe's layer around them. `page.html` holds a `</head>`, outside `{{if}}`, `{{with}}` and `{{range}}`, before which floe puts the page's styles: in the head, no element the page leaves open, such as an `<svg>`, takes them in. floe refuses a `page.html` without one, and a drawing an action leaves it out of.
 
 A page drawn from a data file holds all it shows, and its scripts cannot send what it holds out: its Content-Security-Policy lets it load only images, fonts and media of data URIs (and `blob:`), inline styles and scripts, Google Fonts, and libraries from cdnjs, jsDelivr and unpkg (their scripts, styles and fonts; not `eval` or WebAssembly). `fetch`, XHR, an image from elsewhere and a form are blocked, and so is the management page's API; a `<base>` points no link elsewhere, and `page.html` holding one is refused at its line. Its download keeps the same policy in a `<meta>`. The page still asks Google Fonts and those CDNs for what it loads from them. CSP cannot stop a script from moving the page, opening a window, WebRTC or DNS prefetching, so this guards against a slip, not a hostile template: use templates you trust.
+
+## words.yaml
+
+The words the template draws itself, such as the name of a status or a heading, by language, as a part's `words.yaml` is written:
+
+```yaml
+en:
+  status_doing: In progress
+ja:
+  status_doing: 進行中
+```
+
+Each key is a language tag, `en` among them, and each language names the words `en` names, no more and no fewer. `{{word "status_doing"}}` draws the word in the page's `lang:`, `ja-JP` taking `ja`, and in `en` for a language the file has no words of. `floe template check` refuses a word `page.html` names as written that `en` does not have, in branches the example does not reach too; one named from the data (`{{word .Data.status}}`) that it does not have stops the drawing, naming `words.yaml`.
 
 ## schema.json
 
