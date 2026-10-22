@@ -211,14 +211,14 @@ code 0. Nothing is printed when the templates are right.`,
 			// mistakes of a part that several stand for are told under the first, as a List tells them.
 			told := map[string]bool{}
 			for _, dir := range args {
-				warnings, more := tmpl.Check(dir, a.cfg.parts, a.cfg.themes, a.cfg.icons)
+				warnings, err := tmpl.Check(dir, a.cfg.parts, a.cfg.themes, a.cfg.icons)
 				for _, w := range warnings {
 					if text := w.Error(); !told[text] {
 						told[text] = true
 						warned = append(warned, w)
 					}
 				}
-				tell(&found, more...)
+				tell(&found, err)
 			}
 			if warned != nil {
 				_, _ = fmt.Fprintln(a.env.Stderr, warned.Localize(english)) //nolint:errcheck // nowhere left to report

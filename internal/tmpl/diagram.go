@@ -44,7 +44,7 @@ func checkDiagrams(whole drawnItems, d *Data, root ast.Node, iconsDir string) er
 	// Watched for a link: the fetch a mistake asks for, or one that replaces them, draws it again.
 	d.icons = store.Indexes()
 	svgs, err := diagram.Render(specs, store)
-	if err = checkItems(append(errs, err)...); err != nil {
+	if err = usererr.Collect(append(errs, err)...); err != nil {
 		return err
 	}
 	d.diagrams = true
@@ -55,17 +55,4 @@ func checkDiagrams(whole drawnItems, d *Data, root ast.Node, iconsDir string) er
 		d.drew(paths[spec], template.HTML(html)) //nolint:gosec // G203: drawn by diagram, its values escaped
 	}
 	return nil
-}
-
-// checkItems returns the mistakes of the checks of a stage, errs, together: those at a line and column
-// all at once, sorted, unless one is a mistake without a place, about the whole stage, or a failure,
-// returned alone.
-func checkItems(errs ...error) error {
-	var problems usererr.List
-	for _, err := range errs {
-		if failed := problems.AddPlaced(err); failed != nil {
-			return failed //nolint:wrapcheck // a mistake about the whole stage, or what failed
-		}
-	}
-	return problems.Sorted().Err()
 }

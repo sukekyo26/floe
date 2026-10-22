@@ -145,6 +145,7 @@ linters:
         - usererr.NewAt(
         - usererr.NewIn(
         - usererr.Over(
+        - usererr.Collect(
         - usererr.Error).Placed(
         - yamlpos.New(
         - yamlpos.Syntax(

@@ -153,18 +153,8 @@ func (l *List) Add(err error) error {
 	return nil
 }
 
-// AddPlaced adds err to l as Add does, but returns a mistake without a place, as it returns a failure:
-// for a stage that stops at a mistake about the whole of it (icons not fetched), told alone.
-func (l *List) AddPlaced(err error) error {
-	var one *Error
-	if errors.As(err, &one) && one != nil && one.File == "" {
-		return err
-	}
-	return l.Add(err)
-}
-
-// Collect returns the mistakes of errs together, as Add takes them, nil for none, or the first failure
-// among them: for the checks of a stage that do not depend on one another.
+// Collect returns the mistakes of errs together, as Add takes them, sorted, nil for none, or the first
+// failure among them: for the checks of a stage that do not depend on one another.
 func Collect(errs ...error) error {
 	var l List
 	for _, err := range errs {
@@ -172,7 +162,7 @@ func Collect(errs ...error) error {
 			return failed
 		}
 	}
-	return l.Err()
+	return l.Sorted().Err()
 }
 
 // Err returns l as it is, or nil when it holds none: a List of none is no error.

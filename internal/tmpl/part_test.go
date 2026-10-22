@@ -68,7 +68,7 @@ func TestTemplateRootPart(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dir, "memo", "schema.json"), []byte(`{"$ref": "`+ref+`"}`), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if _, mistakes := tmpl.Check(filepath.Join(dir, "memo"), parts, themesOf(parts), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
+		if _, mistakes := check(filepath.Join(dir, "memo"), parts, themesOf(parts)); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 			t.Errorf("Check of a template of %s at its root = %v, want %s", ref, mistakes, want)
 		}
 		if _, err := draw(tmpl.NewLibrary(dir, parts, themesOf(parts), ""), "template: memo\nlang: en\ncolumns: [{title: A}]\nrows: [[a]]\n"); err == nil ||
@@ -172,7 +172,7 @@ func TestDescribePart(t *testing.T) {
 func TestCheckParts(t *testing.T) {
 	t.Parallel()
 
-	_, mistakes := tmpl.Check(filepath.Join(memo(t, memoItems), "memo"), "", "", "")
+	_, mistakes := check(filepath.Join(memo(t, memoItems), "memo"), "", "")
 	if mistakes != nil {
 		t.Fatalf("Check = %v", mistakes)
 	}
@@ -183,7 +183,7 @@ func TestCheckParts(t *testing.T) {
 		want := ref + " is not a part; refer to one as floe:///parts/<name>.json, the name one of bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree, floe's and your own"
 		// At the schema and the pointer of the $ref, not in the words of jsonschema's loading.
 		want = filepath.Join(dir, "memo", "schema.json") + ": #/properties/risks: " + want
-		if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+		if _, mistakes = check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 			t.Errorf("Check of %s = %v", ref, mistakes)
 		}
 		if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
@@ -199,7 +199,7 @@ func TestCheckParts(t *testing.T) {
 	// What a part's item holds is not looked into: properties beside the $ref, and a format in them, would
 	// never be drawn.
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/table.json", "properties": {"x": {"type": "string", "format": "image"}}}`)
-	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", "", ""); len(mistakes) != 2 ||
+	if _, mistakes = check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 2 ||
 		!strings.Contains(mistakes[0].Error(), "#/properties/risks: beside its $ref to floe:///parts/table.json") ||
 		!strings.Contains(mistakes[1].Error(), "#/properties/risks/properties/x: the format image marks an item to draw") {
 		t.Errorf("Check of a format beside a part = %v", mistakes)
@@ -208,7 +208,7 @@ func TestCheckParts(t *testing.T) {
 	ref := "floe:///parts/table.json#/properties/columns"
 	dir = memo(t, `"risks": {"$ref": "`+ref+`"}`)
 	want := ref + " points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, floe:///parts/table.json"
-	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "#/properties/risks: "+want) {
+	if _, mistakes = check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "#/properties/risks: "+want) {
 		t.Errorf("Check of a ref into a part = %v", mistakes)
 	}
 	if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "schema.json: #/properties/risks: "+want) {
@@ -216,7 +216,7 @@ func TestCheckParts(t *testing.T) {
 	}
 	// Through $defs too, beside the schema's other mistakes.
 	dir = memo(t, `"risks": {"$ref": "#/$defs/rows"}, "aside": {"type": "string", "format": "colour"}}, "$defs": {"rows": {"$ref": "`+ref+`"}`)
-	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", "", ""); len(mistakes) != 2 ||
+	if _, mistakes = check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 2 ||
 		!strings.Contains(mistakes[0].Error()+mistakes[1].Error(), "#/$defs/rows: "+want) {
 		t.Errorf("Check of a ref into a part through $defs = %v", mistakes)
 	}
@@ -229,7 +229,7 @@ func TestCheckParts(t *testing.T) {
 	// One floe does not follow to would never be drawn.
 	dir = memo(t, `"risks": {"anyOf": [{"$ref": "floe:///parts/table.json"}]}`)
 	want = "#/properties/risks/anyOf/0: the part table draws an item"
-	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
+	if _, mistakes = check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 		t.Errorf("Check of a part under anyOf = %v", mistakes)
 	}
 	// Refused where the template is used, as floe template check refuses it.
@@ -240,16 +240,16 @@ func TestCheckParts(t *testing.T) {
 	// part is, and one into it is refused as one into a part.
 	dir = memo(t, `"risks": {"anyOf": [{"$ref": "floe:///parts/any.json"}]}`)
 	want = "#/properties/risks/anyOf/0: floe:///parts/any.json holds parts"
-	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
+	if _, mistakes = check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) {
 		t.Errorf("Check of any.json under anyOf = %v", mistakes)
 	}
 	dir = memo(t, `"risks": {"anyOf": [{"$ref": "floe:///parts/tone.json"}]}`)
-	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", "", ""); slices.ContainsFunc(mistakes, func(err error) bool { return strings.Contains(err.Error(), "holds parts") }) {
+	if _, mistakes = check(filepath.Join(dir, "memo"), "", ""); slices.ContainsFunc(mistakes, func(err error) bool { return strings.Contains(err.Error(), "holds parts") }) {
 		t.Errorf("Check of tone.json under anyOf = %v", mistakes)
 	}
 	ref = "floe:///parts/any.json#/properties/code"
 	dir = memo(t, `"risks": {"$ref": "`+ref+`"}`)
-	if _, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", "", ""); len(mistakes) != 1 ||
+	if _, mistakes = check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 ||
 		!strings.Contains(mistakes[0].Error(), ref+" points into a part of floe's or a schema the parts share") {
 		t.Errorf("Check of a ref into any.json = %v", mistakes)
 	}
@@ -574,13 +574,13 @@ func TestLookRefused(t *testing.T) {
 	t.Parallel()
 
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/panel.json"}, "aside": {"type": "string"}`)
-	_, mistakes := tmpl.Check(filepath.Join(dir, "memo"), "", "", "")
+	_, mistakes := check(filepath.Join(dir, "memo"), "", "")
 	got := fmt.Sprint(mistakes)
 	if !strings.Contains(got, "floe:///parts/panel.json is the look panel, which draws nothing") {
 		t.Errorf("Check of a $ref to a look = %v", mistakes)
 	}
 	dir = memo(t, `"risks": {"$ref": "floe:///parts/rowz.json"}, "aside": {"type": "string"}`)
-	_, mistakes = tmpl.Check(filepath.Join(dir, "memo"), "", "", "")
+	_, mistakes = check(filepath.Join(dir, "memo"), "", "")
 	if got = fmt.Sprint(mistakes); !strings.Contains(got, "is not a part") || strings.Contains(got, "panel") {
 		t.Errorf("Check of a $ref to no part = %v, want the parts that draw", mistakes)
 	}

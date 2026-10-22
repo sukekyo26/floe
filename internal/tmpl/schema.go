@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	neturl "net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -26,20 +27,17 @@ import (
 // HTML, the path of an image or Markdown. Validating them is a no-op: they mark an item for drawing.
 var formats = []string{"html", "image", "markdown"}
 
-// validate checks the values of d against the schema src, its template's schema.json, and reports
-// every mistake at its line and column under root, the data file's top mapping.
-func validate(set *partSet, doc any, d *Data, root ast.Node) error {
-	sch, err := compileSchema(set, d.Template, doc)
-	if err != nil {
-		return err
-	}
-	err = sch.Validate(d.Values)
+// validate checks the values of d against sch, its template's schema.json as compiled, doc as read, which
+// refers to the parts of set, and reports every mistake at its line and column under root, the data
+// file's top mapping.
+func validate(set *partSet, sch *jsonschema.Schema, doc any, d *Data, root ast.Node) error {
+	err := sch.Validate(d.Values)
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
 		return err //nolint:wrapcheck // nil, or not a mistake in the data
 	}
 	s := &schemaCheck{file: d.File, template: d.Template, root: root, schema: doc, set: set, problems: nil}
-	s.collect(ve)
+	leaves(ve, s.leaf)
 	if len(s.problems) == 0 {
 		// A failure without a mistake to point at is not one the data can fix.
 		return fmt.Errorf("check %s against its schema: %w", d.File, ve)
@@ -57,8 +55,8 @@ func schemaJSON(file string, src []byte) (any, error) {
 }
 
 // compileSchema compiles doc, the schema of the template name as jsonschema reads it, which refers to the
-// parts of set.
-func compileSchema(set *partSet, name string, doc any) (*jsonschema.Schema, error) {
+// parts of set; file is where it is, in its mistakes.
+func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema, error) {
 	url := schemaURL(name)
 	c := newCompiler(set)
 	if err := c.AddResource(url, doc); err != nil {
@@ -78,9 +76,74 @@ func compileSchema(set *partSet, name string, doc any) (*jsonschema.Schema, erro
 	case errors.As(err, &load):
 		return nil, usererr.New("tmpl_schema_load", name, load.Err)
 	case err != nil:
-		return nil, fmt.Errorf("compile the schema of %s: %w", name, err)
+		return nil, compileMistakes(url, file, err)
 	}
 	return sch, nil
+}
+
+// compileMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of
+// file: those the metaschema refuses, and those of a kind floe knows, each at its JSON pointer. One of
+// another schema, a part's, or of a kind floe does not know is a failure.
+func compileMistakes(url, file string, err error) error {
+	var invalid *jsonschema.SchemaValidationError
+	if errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url {
+		if refused := metaschemaMistakes(file, invalid.Err); refused != nil {
+			return refused
+		}
+	}
+	if e := compileMistake(url, file, err); e != nil {
+		return e
+	}
+	return fmt.Errorf("compile the schema %s: %w", file, err)
+}
+
+// compileMistake returns err, what stopped the compiling of the schema at url, file, as a mistake at its
+// JSON pointer in file, and nil for one of another schema or of a kind floe does not know.
+// LIMIT: a $ref that finds nothing is told at the top of the file, as jsonschema says where it leads, not
+// where it is written. Find the $ref in the schema if a template comes to need its place.
+func compileMistake(url, file string, err error) *usererr.Error {
+	in := func(u string) (string, bool) { return pointerIn(url, u) }
+	var (
+		nothing  *jsonschema.JSONPointerNotFoundError
+		badPtr   *jsonschema.InvalidJsonPointerError
+		noAnchor *jsonschema.AnchorNotFoundError
+		anchor   *jsonschema.ParseAnchorError
+		anchors  *jsonschema.DuplicateAnchorError
+		ids      *jsonschema.DuplicateIDError
+		regex    *jsonschema.InvalidRegexError
+	)
+	switch {
+	case errors.As(err, &nothing):
+		if to, ok := in(nothing.URL); ok {
+			return usererr.NewIn(file, "#", "tmpl_schema_ref_nothing", to)
+		}
+	case errors.As(err, &badPtr):
+		if to, ok := in(badPtr.URL); ok {
+			return usererr.NewIn(file, "#", "tmpl_schema_ref_pointer", to)
+		}
+	case errors.As(err, &noAnchor):
+		if _, ok := in(noAnchor.URL); ok {
+			to, _ := in(noAnchor.Reference)
+			return usererr.NewIn(file, "#", "tmpl_schema_ref_anchor", to)
+		}
+	case errors.As(err, &anchor):
+		if at, ok := in(anchor.URL); ok {
+			return usererr.NewIn(file, at, "tmpl_schema_anchor")
+		}
+	case errors.As(err, &anchors):
+		if _, ok := in(anchors.URL); ok {
+			return usererr.NewIn(file, "#"+anchors.Ptr2, "tmpl_schema_anchor_twice", anchors.Anchor, "#"+anchors.Ptr1)
+		}
+	case errors.As(err, &ids):
+		if _, ok := in(ids.URL); ok {
+			return usererr.NewIn(file, "#"+ids.Ptr2, "tmpl_schema_id_twice", "#"+ids.Ptr1)
+		}
+	case errors.As(err, &regex):
+		if at, ok := in(regex.URL); ok {
+			return usererr.NewIn(file, at, "tmpl_schema_regex", regex.Regex, regex.Err)
+		}
+	}
+	return nil
 }
 
 // drafts are the drafts of JSON Schema a $schema may name.
@@ -193,6 +256,49 @@ func unknownPart(set *partSet, ref string) *usererr.Error {
 	return usererr.New("tmpl_part_unknown", ref, set.names(drawing))
 }
 
+// pointerIn returns the JSON pointer u, a URL, holds in the schema at url, as the schema writes it, not
+// escaped as a URL's fragment is, and false for another schema.
+func pointerIn(url, u string) (string, bool) {
+	base, ptr, _ := strings.Cut(u, "#")
+	if written, bad := neturl.PathUnescape(ptr); bad == nil {
+		ptr = written
+	}
+	return "#" + ptr, base == url
+}
+
+// metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's, holds, each at
+// its JSON pointer, in the order of the pointers, such as a pattern that is no regular expression; nil when
+// it holds none.
+func metaschemaMistakes(file string, err error) error {
+	var ve *jsonschema.ValidationError
+	if !errors.As(err, &ve) {
+		return nil
+	}
+	var mistakes usererr.List
+	leaves(ve, func(e *jsonschema.ValidationError) {
+		at := "#"
+		for _, step := range e.InstanceLocation {
+			at += "/" + pointerKey.Replace(step)
+		}
+		mistakes = append(mistakes, usererr.NewIn(file, at, "tmpl_schema_invalid", e.ErrorKind.LocalizedString(english)))
+	})
+	slices.SortStableFunc(mistakes, func(a, b *usererr.Error) int { return strings.Compare(a.At, b.At) })
+	return mistakes.Err()
+}
+
+// leaves calls leaf with each mistake of e that is not only the mistakes under it. A branch of anyOf or
+// oneOf would say why each choice failed; it is one leaf instead.
+func leaves(e *jsonschema.ValidationError, leaf func(*jsonschema.ValidationError)) {
+	switch e.ErrorKind.(type) {
+	case *kind.Schema, *kind.Group, *kind.AllOf, *kind.Reference:
+		for _, c := range e.Causes {
+			leaves(c, leaf)
+		}
+		return
+	}
+	leaf(e)
+}
+
 // noLoader loads no schema: those of the parts of set are added to the compiler before.
 type noLoader struct{ set *partSet }
 
@@ -211,16 +317,8 @@ type schemaCheck struct {
 	problems       usererr.List
 }
 
-// collect turns the leaves of e into problems. A branch of anyOf or oneOf would say why each choice
-// failed; the item is reported once instead.
-func (s *schemaCheck) collect(e *jsonschema.ValidationError) {
-	switch e.ErrorKind.(type) {
-	case *kind.Schema, *kind.Group, *kind.AllOf, *kind.Reference:
-		for _, c := range e.Causes {
-			s.collect(c)
-		}
-		return
-	}
+// leaf turns e, a leaf of the mistakes of the data (leaves), into problems.
+func (s *schemaCheck) leaf(e *jsonschema.ValidationError) {
 	key, value, at := yamlpos.Find(s.root, e.InstanceLocation)
 	where := yamlpos.OfValue(key, value)
 	switch k := e.ErrorKind.(type) {

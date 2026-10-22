@@ -20,6 +20,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -283,16 +284,17 @@ func pickTheme(set *partSet, d *Data, given string, pos yamlpos.Pos) (usererr.Li
 // its checks and computes its values, reporting the schema's mistakes with problems, those found before
 // in the keys every template shares.
 func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems usererr.List) error {
-	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
-	s, doc, err := t.checkedShape()
-	if err != nil {
-		return err
-	}
 	set, err := t.parts()
 	if err != nil {
 		return err
 	}
-	err = validate(set, doc, d, root)
+	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
+	read, err := t.compileShape(set)
+	if err != nil {
+		return err
+	}
+	s := read.shape
+	err = validate(set, read.compiled, read.doc, d, root)
 	var more usererr.List
 	switch {
 	case errors.As(err, &more):
@@ -306,7 +308,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	d.shape = s
 	whole := s.drawnWhole(d.Values)
 	d.htmlItems = htmlItemsOf(whole, root)
-	err = checkItems(checkImages(whole, d, root, images), checkHTML(set, d), checkDiagrams(whole, d, root, t.icons),
+	err = usererr.Collect(checkImages(whole, d, root, images), checkHTML(set, d), checkDiagrams(whole, d, root, t.icons),
 		checkScripts(whole, d, root), checkParts(whole, d, root))
 	if err != nil {
 		return err
@@ -341,7 +343,7 @@ func checkHTML(set *partSet, d *Data) error {
 			problems = append(problems, itemError(d.File, it.pos, it.path, bad))
 		}
 	}
-	return problems.Sorted().Err()
+	return problems.Err()
 }
 
 // readShared moves the keys every template shares from h.d.Values to h.d, and notes where each is
@@ -504,32 +506,59 @@ func headMistake(file string, src []byte) *usererr.Error {
 }
 
 // page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together, its
-// words w, t's words.yaml, in the language tag lang, else en. It returns the source too. Without w (nil,
-// as when words.yaml has a mistake told beside), a word page.html names is not checked.
+// words w, t's words.yaml, in the language tag lang, else en. It returns the source too.
 func (t *Template) page(w words, lang string) (*template.Template, []byte, error) {
 	src, err := t.readFile("page.html")
 	if err != nil {
 		return nil, nil, err
 	}
+	if err = t.refuseInPage(src); err != nil {
+		return nil, nil, err
+	}
+	page, err := t.parsePage(src, w, lang)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = t.pageWords(page, w); err != nil {
+		return nil, nil, err
+	}
+	return page, src, nil
+}
+
+// refuseInPage refuses src, the page.html of t, holding a <style>, as floe puts a page's CSS together, or
+// a <base>.
+func (t *Template) refuseInPage(src []byte) error {
+	var style, b error
 	if at := tagsOf(tagsIn(string(src), true)).style; at >= 0 {
-		return nil, nil, usererr.NewAt(t.file("page.html"), lineAt(src, at), 0, "tmpl_page_style")
+		style = usererr.NewAt(t.file("page.html"), lineAt(src, at), 0, "tmpl_page_style")
 	}
 	if at := base.FindIndex(src); at != nil {
-		return nil, nil, usererr.NewAt(t.file("page.html"), lineAt(src, at[0]), 0, "tmpl_page_base")
+		b = usererr.NewAt(t.file("page.html"), lineAt(src, at[0]), 0, "tmpl_page_base")
 	}
+	return usererr.Collect(style, b)
+}
+
+// parsePage parses src, the page.html of t, with its words w in the language tag lang, else en.
+func (t *Template) parsePage(src []byte, w words, lang string) (*template.Template, error) {
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
 		Funcs(template.FuncMap{"asset": t.assets(), "word": w.word(t.file("words.yaml"), w.lang(lang))}).
 		Parse(string(src))
 	if err != nil {
-		return nil, nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
+		// LIMIT: text/template says the line of a mistake in its text alone, which is left there: reading it
+		// back would hang on its wording. Move it to Line if text/template comes to give it apart.
+		return nil, usererr.NewAt(t.file("page.html"), 0, 0, "tmpl_go_template", err.Error())
 	}
-	if w != nil {
-		if err = w.checkWords(page, t.file("page.html")); err != nil {
-			return nil, nil, err
-		}
+	return page, nil
+}
+
+// pageWords refuses a word page, t's page.html as parsed, names that w does not have. Without w (nil, as
+// when words.yaml has a mistake told beside), none is checked.
+func (t *Template) pageWords(page *template.Template, w words) error {
+	if w == nil {
+		return nil
 	}
-	return page, src, nil
+	return w.checkWords(page, t.file("page.html"))
 }
 
 // words reads the words.yaml of t, as readWords does.
@@ -587,29 +616,45 @@ func convert(md goldmark.Markdown, name, text string) (string, error) {
 	return b.String(), nil
 }
 
-// checkedShape reads the schema of t into its shape, and returns it as jsonschema reads it too. It refuses
-// the first of the schema's mistakes floe template check tells (partSet.mistakes), and a key floe reads
-// itself (refuseShared).
-func (t *Template) checkedShape() (*shape, any, error) {
-	doc, err := t.schemaDoc()
-	if err != nil {
-		return nil, nil, err
+// schemaRead is the schema of a template as floe reads it: each part nil when what it needs failed.
+type schemaRead struct {
+	doc      any                // as jsonschema reads it
+	shape    *shape             // bound to the parts of the template
+	notes    *schemaNotes       // what floe refuses of it, and its warnings
+	refused  usererr.List       // the mistakes the parts tell of it (partSet.mistakes), which stop its compiling
+	compiled *jsonschema.Schema // nil, too, while the parts refuse it
+}
+
+// readSchema reads the schema of t into its shape, bound to the parts of set, and returns the mistakes
+// floe tells of it but those of its compiling: those set tells of it, and a key floe reads itself
+// (refuseShared).
+func (t *Template) readSchema(set *partSet) (schemaRead, error) {
+	var read schemaRead
+	var err error
+	if read.doc, err = t.schemaDoc(); err != nil {
+		return read, err
 	}
-	s, notes, err := t.readShape(doc)
-	if err != nil {
-		return nil, nil, err
+	if read.shape, read.notes, err = t.readShape(read.doc); err != nil {
+		return read, err
 	}
-	set, err := t.parts()
-	if err != nil {
-		return nil, nil, err
+	read.refused = set.mistakes(read.notes)
+	return read, usererr.Collect(read.refused.Err(), t.refuseShared(read.shape))
+}
+
+// compileShape reads the schema of t as readSchema does and compiles it, and returns every mistake floe
+// template check and a data file tell of it, those of its compiling too.
+func (t *Template) compileShape(set *partSet) (schemaRead, error) {
+	read, err := t.readSchema(set)
+	// The parts' mistakes, of $refs among them, would fail the compiling, without their pointers.
+	if read.shape == nil || read.refused != nil {
+		return read, err
 	}
-	if mistakes := set.mistakes(notes); mistakes != nil {
-		return nil, nil, mistakes[0]
+	compiled, compileErr := compileSchema(set, t.Name, t.file("schema.json"), read.doc)
+	if compileErr != nil {
+		return read, usererr.Collect(err, compileErr)
 	}
-	if err = t.refuseShared(s); err != nil {
-		return nil, nil, err
-	}
-	return s, doc, nil
+	read.compiled = compiled
+	return read, err
 }
 
 // schemaDoc reads the schema.json of t as jsonschema reads it.

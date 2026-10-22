@@ -341,10 +341,11 @@ func TestBrokenOwnParts(t *testing.T) {
 	}
 	for name, why := range whys {
 		dir := memo(t, `"risks": {"$ref": "floe:///parts/`+name+`.json"}, "aside": {"type": "string"}`)
-		_, mistakes := tmpl.Check(filepath.Join(dir, "memo"), parts, themesOf(parts), "")
+		_, mistakes := check(filepath.Join(dir, "memo"), parts, themesOf(parts))
 		if name == "diagram" || name == "script" || name == "tone" {
 			// floe's stays: the schema is right, and only the example, which fits none of them, fails.
-			if len(mistakes) != 1 || strings.Contains(mistakes[0].Error(), "cannot be used") {
+			example := filepath.Join(dir, "memo", "example.yaml") + ":"
+			if mistakes == nil || slices.ContainsFunc(mistakes, func(e error) bool { return !strings.HasPrefix(e.Error(), example) }) {
 				t.Errorf("Check of a template of %s = %v", name, mistakes)
 			}
 			continue
@@ -369,14 +370,14 @@ func TestBrokenOwnParts(t *testing.T) {
 		`<body><div data-floe-part="brace">{{.Data.risks}}</div></body></html>`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, mistakes := tmpl.Check(filepath.Join(named, "memo"), parts, themesOf(parts), ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), whys["brace"]) {
+	if _, mistakes := check(filepath.Join(named, "memo"), parts, themesOf(parts)); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), whys["brace"]) {
 		t.Errorf("Check of a page.html that names brace = %v", mistakes)
 	}
 	if err := os.WriteFile(page, []byte(`<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>`+
 		`<body><div data-floe-part="diagram">{{.Data.risks}}</div></body></html>`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, mistakes := tmpl.Check(filepath.Join(named, "memo"), parts, themesOf(parts), ""); len(mistakes) != 0 {
+	if _, mistakes := check(filepath.Join(named, "memo"), parts, themesOf(parts)); len(mistakes) != 0 {
 		t.Errorf("Check of a page.html that names floe's diagram = %v", mistakes)
 	}
 	// Named in a comment alone, which is no attribute, brace is warned of, not refused.
@@ -384,7 +385,7 @@ func TestBrokenOwnParts(t *testing.T) {
 		`<body><!-- data-floe-part="brace" -->{{.Data.risks}}</body></html>`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if warnings, mistakes := tmpl.Check(filepath.Join(named, "memo"), parts, themesOf(parts), ""); len(mistakes) != 0 ||
+	if warnings, mistakes := check(filepath.Join(named, "memo"), parts, themesOf(parts)); len(mistakes) != 0 ||
 		!slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), whys["brace"]) }) {
 		t.Errorf("Check of a page.html that names brace in a comment = %v, %v", warnings, mistakes)
 	}
@@ -412,7 +413,7 @@ func TestBrokenOwnParts(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "memo", "example.yaml"), []byte("template: memo\nlang: en\nrisks: { text: Hi }\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	warnings, mistakes := tmpl.Check(filepath.Join(dir, "memo"), parts, themesOf(parts), "")
+	warnings, mistakes := check(filepath.Join(dir, "memo"), parts, themesOf(parts))
 	var told []string
 	for _, w := range warnings {
 		if strings.Contains(w.Error(), "cannot be used") {
@@ -538,7 +539,7 @@ func TestOwnPartsThemes(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "memo", "example.yaml"), []byte("template: memo\nlang: en\nrisks: { text: x }\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	warnings, mistakes := tmpl.Check(filepath.Join(dir, "memo"), parts, themesOf(parts), "")
+	warnings, mistakes := check(filepath.Join(dir, "memo"), parts, themesOf(parts))
 	warned := func(prefix string) bool {
 		return slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), prefix) })
 	}
@@ -603,7 +604,7 @@ func TestBrokenPartInPage(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := "the directory of your own themes " + themesOf(parts) + " cannot be read"
-	if warnings, _ := tmpl.Check(filepath.Join(dir, "memo"), parts, themesOf(parts), ""); !slices.ContainsFunc(warnings, func(w *usererr.Error) bool {
+	if warnings, _ := check(filepath.Join(dir, "memo"), parts, themesOf(parts)); !slices.ContainsFunc(warnings, func(w *usererr.Error) bool {
 		return strings.HasPrefix(w.Error(), want)
 	}) {
 		t.Errorf("Check = %v, want %s", warnings, want)
@@ -637,7 +638,7 @@ func TestPartMistakesTogether(t *testing.T) {
 		"named/part.html":   `<div class="x"></div>`,
 		"named/part.css":    "",
 	})
-	_, mistakes := tmpl.CheckOwnParts(parts, "")
+	_, mistakes := checkOwn(parts, "")
 	lines := make([]string, 0, len(mistakes))
 	for _, m := range mistakes {
 		lines = append(lines, m.Error())

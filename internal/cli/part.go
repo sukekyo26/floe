@@ -42,9 +42,7 @@ your own takes the place of floe's of its name.`,
 				a.out("%s\t%s\t%s", d.Name, oneLine(cmp.Or(d.Path, "built-in")), oneLine(d.About))
 			}
 			// A part that cannot be used does not hide the others: it is reported after them (exit code 1).
-			var found usererr.List
-			tell(&found, broken...)
-			return found.Err()
+			return broken.Err()
 		},
 	}
 }
@@ -152,14 +150,11 @@ is not drawn, as it has no data: floe template check draws a template's example 
 uses.`,
 		Args: usage(cobra.NoArgs),
 		RunE: func(*cobra.Command, []string) error {
-			warnings, found := tmpl.CheckOwnParts(a.cfg.parts, a.cfg.themes)
+			warnings, err := tmpl.CheckOwnParts(a.cfg.parts, a.cfg.themes)
 			if warnings != nil {
-				told := usererr.List(warnings).Localize(english)
-				_, _ = fmt.Fprintln(a.env.Stderr, told) //nolint:errcheck // nowhere left to report
+				_, _ = fmt.Fprintln(a.env.Stderr, warnings.Localize(english)) //nolint:errcheck // nowhere left to report
 			}
-			var all usererr.List
-			tell(&all, found...)
-			return all.Err()
+			return err //nolint:wrapcheck // already says what failed
 		},
 	}
 }

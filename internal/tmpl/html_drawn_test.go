@@ -461,7 +461,7 @@ func TestDrawnHTMLWherePageHasIt(t *testing.T) {
 		if err := os.WriteFile(page, []byte(src), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		_, mistakes := tmpl.Check(filepath.Join(dir, "memo"), "", "", "")
+		_, mistakes := check(filepath.Join(dir, "memo"), "", "")
 		told := slices.ContainsFunc(mistakes, func(e error) bool { return strings.Contains(e.Error(), "<!doctype html>") })
 		if told != refused {
 			t.Errorf("floe template check of %q = %v, want the doctype told %v", doctype, mistakes, refused)

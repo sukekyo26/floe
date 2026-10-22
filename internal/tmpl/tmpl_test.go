@@ -29,19 +29,20 @@ func render(t *testing.T, src string) string {
 	return string(b)
 }
 
-// A mistake about the whole stage of the items, icons not fetched, is told alone, without the mistakes of
-// the items at their lines.
-func TestItemsStopAtMistakeWithoutPlace(t *testing.T) {
+// A mistake about the whole stage of the items, icons not fetched, is told beside the mistakes of the
+// items at their lines.
+func TestItemsTellMistakeWithoutPlace(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
 	src := "template: report\nlang: en\nsections:\n  - parts:\n      - html: <style>p {}</style>\n" +
 		"      - diagram: { id: d, title: t, width: 100, height: 100, parts: [{ icon: { x: 10, y: 10, name: aws/aws-lambda } }] }\n"
 	_, err := tmpl.NewLibrary("", "", "", dir).Read("r.yaml", []byte(src), "", "")
-	want := "AWS icons are not in " + filepath.Join(dir, "aws") + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
+	want := "r.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"
+	fetch := "\nAWS icons are not in " + filepath.Join(dir, "aws") + `; run "floe icons fetch aws"`
 	var all usererr.List
-	if err == nil || errors.As(err, &all) || err.Error() != want {
-		t.Errorf("Read = %v, want %s alone", err, want)
+	if !errors.As(err, &all) || len(all) != 2 || !strings.HasPrefix(err.Error(), want) || !strings.Contains(err.Error(), fetch) {
+		t.Errorf("Read = %v, want %s and %s", err, want, fetch)
 	}
 }
 
@@ -367,7 +368,7 @@ func TestBuiltins(t *testing.T) {
 		if render(t, string(src)) == "" {
 			t.Errorf("the example of %s draws nothing", name)
 		}
-		if warnings, mistakes := tmpl.Check("templates/"+name, "", "", ""); len(warnings) != 1 || len(mistakes) != 0 {
+		if warnings, mistakes := check("templates/"+name, "", ""); len(warnings) != 1 || len(mistakes) != 0 {
 			t.Errorf("Check of %s = %v, %v", name, warnings, mistakes)
 		}
 	}

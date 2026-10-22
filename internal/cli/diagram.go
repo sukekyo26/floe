@@ -59,20 +59,21 @@ func (a *app) render(files []string, assets bool) error {
 		}
 		s, err := diagram.Parse(file, src)
 		if err != nil {
-			if failed := problems.AddPlaced(err); failed != nil {
-				return failed //nolint:wrapcheck // a mistake about the whole spec, or what failed
+			if failed := problems.Add(err); failed != nil {
+				return failed //nolint:wrapcheck // already says what failed
 			}
 			continue
 		}
 		specs = append(specs, s)
 	}
 	svgs, err := diagram.Render(specs, icons.New(a.cfg.icons))
-	if failed := problems.AddPlaced(err); failed != nil {
-		return failed //nolint:wrapcheck // a mistake about the whole of the diagrams, or what failed
+	if failed := problems.Add(err); failed != nil {
+		return failed //nolint:wrapcheck // already says what failed
 	}
 	if len(problems) > 0 {
-		// The mistakes of each file together, in the order the files were given.
-		order := map[string]int{}
+		// The mistakes of each file together, in the order the files were given; those about all of the
+		// diagrams (icons not fetched) after them.
+		order := map[string]int{"": len(files)}
 		for i, f := range files {
 			if _, ok := order[f]; !ok {
 				order[f] = i
