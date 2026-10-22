@@ -50,10 +50,11 @@ func (l *Library) Describe(name string) (*Description, error) {
 	if err != nil {
 		return nil, err
 	}
-	s, _, err := t.checkedShape(set)
+	read, err := t.readSchema(set)
 	if err != nil {
 		return nil, err
 	}
+	s := read.shape
 	d := &Description{
 		Name: name, Path: t.Path, About: s.description(), Floe: "", Series: "", Themes: set.themeNames(),
 		Items: s.items(), Example: nil,

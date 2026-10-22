@@ -20,6 +20,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -288,15 +289,12 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 		return err
 	}
 	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
-	s, doc, err := t.checkedShape(set)
+	read, err := t.compileShape(set)
 	if err != nil {
 		return err
 	}
-	sch, err := compileSchema(set, t.Name, t.file("schema.json"), doc)
-	if err != nil {
-		return err
-	}
-	err = validate(set, sch, doc, d, root)
+	s := read.shape
+	err = validate(set, read.compiled, read.doc, d, root)
 	var more usererr.List
 	switch {
 	case errors.As(err, &more):
@@ -618,22 +616,45 @@ func convert(md goldmark.Markdown, name, text string) (string, error) {
 	return b.String(), nil
 }
 
-// checkedShape reads the schema of t into its shape, bound to set, the parts of t, and returns it as
-// jsonschema reads it too. It refuses the schema's mistakes floe template check tells, but those of its
-// compiling: those set tells of it (partSet.mistakes), and a key floe reads itself (refuseShared).
-func (t *Template) checkedShape(set *partSet) (*shape, any, error) {
-	doc, err := t.schemaDoc()
-	if err != nil {
-		return nil, nil, err
+// schemaRead is the schema of a template as floe reads it: each part nil when what it needs failed.
+type schemaRead struct {
+	doc      any                // as jsonschema reads it
+	shape    *shape             // bound to the parts of the template
+	notes    *schemaNotes       // what floe refuses of it, and its warnings
+	refused  usererr.List       // the mistakes the parts tell of it (partSet.mistakes), which stop its compiling
+	compiled *jsonschema.Schema // nil, too, while the parts refuse it
+}
+
+// readSchema reads the schema of t into its shape, bound to the parts of set, and returns the mistakes
+// floe tells of it but those of its compiling: those set tells of it, and a key floe reads itself
+// (refuseShared).
+func (t *Template) readSchema(set *partSet) (schemaRead, error) {
+	var read schemaRead
+	var err error
+	if read.doc, err = t.schemaDoc(); err != nil {
+		return read, err
 	}
-	s, notes, err := t.readShape(doc)
-	if err != nil {
-		return nil, nil, err
+	if read.shape, read.notes, err = t.readShape(read.doc); err != nil {
+		return read, err
 	}
-	if err = usererr.Collect(set.mistakes(notes).Err(), t.refuseShared(s)); err != nil {
-		return nil, nil, err
+	read.refused = set.mistakes(read.notes)
+	return read, usererr.Collect(read.refused.Err(), t.refuseShared(read.shape))
+}
+
+// compileShape reads the schema of t as readSchema does and compiles it, and returns every mistake floe
+// template check and a data file tell of it, those of its compiling too.
+func (t *Template) compileShape(set *partSet) (schemaRead, error) {
+	read, err := t.readSchema(set)
+	// The parts' mistakes, of $refs among them, would fail the compiling, without their pointers.
+	if read.shape == nil || read.refused != nil {
+		return read, err
 	}
-	return s, doc, nil
+	compiled, compileErr := compileSchema(set, t.Name, t.file("schema.json"), read.doc)
+	if compileErr != nil {
+		return read, usererr.Collect(err, compileErr)
+	}
+	read.compiled = compiled
+	return read, err
 }
 
 // schemaDoc reads the schema.json of t as jsonschema reads it.

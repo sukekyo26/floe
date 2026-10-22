@@ -837,6 +837,22 @@ func TestReadTellsEverySchemaMistake(t *testing.T) {
 	}
 }
 
+// A data file of a template whose schema declares a key floe reads and does not compile is told both, as
+// floe template check tells them.
+func TestReadTellsSharedKeyAndCompileMistake(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{
+		"schema.json": `"properties": {|"properties": { "title": { "type": "string" }, "code": { "pattern": "([" },`,
+	})
+	file := filepath.Join(dir, "example.yaml")
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(mustRead(t, file)), "", "")
+	got := fmt.Sprint(mistakesOf(err))
+	if len(mistakesOf(err)) != 2 || !strings.Contains(got, "requires title") || !strings.Contains(got, "#/properties/code/pattern: ") {
+		t.Errorf("Read = %v, want title and the pattern told", got)
+	}
+}
+
 // A data file of a template whose schema does not compile is told the template's mistakes alone, not
 // beside those of its keys every template shares.
 func TestReadTellsCompileMistakeAlone(t *testing.T) {

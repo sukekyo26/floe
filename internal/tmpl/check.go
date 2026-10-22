@@ -121,37 +121,13 @@ func (t *Template) checkPage(
 // computed.yaml, which name its items. It returns the schema's warnings, and its shape, nil when it
 // cannot be read.
 func (t *Template) checkSchema(set *partSet) (usererr.List, *shape, error) {
-	s, notes, sch, err := t.compileShape(set)
+	read, err := t.compileShape(set)
 	var warnings usererr.List
 	var computed error
-	if s != nil {
-		warnings, computed = notes.warnings, t.checkComputed(s)
+	if read.shape != nil {
+		warnings, computed = read.notes.warnings, t.checkComputed(read.shape)
 	}
-	return warnings, s, usererr.Collect(err, t.checkChecks(sch), computed)
-}
-
-// compileShape reads the schema of t into its shape, bound to the parts of set, with what floe refuses of
-// it, and compiles it. The shape and the notes are nil when it cannot be read, and the compiled schema
-// when it cannot be compiled, or set refuses it.
-func (t *Template) compileShape(set *partSet) (*shape, *schemaNotes, *jsonschema.Schema, error) {
-	doc, err := t.schemaDoc()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	s, notes, err := t.readShape(doc)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	shared := t.refuseShared(s)
-	// Those mistakes, of $refs among them, would fail the compiling, without their pointers.
-	if mistakes := set.mistakes(notes); mistakes != nil {
-		return s, notes, nil, usererr.Collect(mistakes.Err(), shared)
-	}
-	sch, err := compileSchema(set, t.Name, t.file("schema.json"), doc)
-	if err != nil {
-		return s, notes, nil, usererr.Collect(shared, err)
-	}
-	return s, notes, sch, shared
+	return warnings, read.shape, usererr.Collect(err, t.checkChecks(read.compiled), computed)
 }
 
 // checkHead refuses src, page.html, without a <head>, and one without a standard doctype where s, the
