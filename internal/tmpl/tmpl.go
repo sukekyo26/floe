@@ -292,7 +292,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	if err != nil {
 		return err
 	}
-	err = validate(set, doc, d, root)
+	err = validate(set, t.file("schema.json"), doc, d, root)
 	var more usererr.List
 	switch {
 	case errors.As(err, &more):
@@ -306,7 +306,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	d.shape = s
 	whole := s.drawnWhole(d.Values)
 	d.htmlItems = htmlItemsOf(whole, root)
-	err = checkItems(checkImages(whole, d, root, images), checkHTML(set, d), checkDiagrams(whole, d, root, t.icons),
+	err = usererr.Collect(checkImages(whole, d, root, images), checkHTML(set, d), checkDiagrams(whole, d, root, t.icons),
 		checkScripts(whole, d, root), checkParts(whole, d, root))
 	if err != nil {
 		return err
@@ -522,7 +522,7 @@ func (t *Template) page(w words, lang string) (*template.Template, []byte, error
 		Funcs(template.FuncMap{"asset": t.assets(), "word": w.word(t.file("words.yaml"), w.lang(lang))}).
 		Parse(string(src))
 	if err != nil {
-		return nil, nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
+		return nil, nil, usererr.NewAt(t.file("page.html"), 0, 0, "tmpl_go_template", err.Error())
 	}
 	if w != nil {
 		if err = w.checkWords(page, t.file("page.html")); err != nil {
@@ -588,8 +588,7 @@ func convert(md goldmark.Markdown, name, text string) (string, error) {
 }
 
 // checkedShape reads the schema of t into its shape, and returns it as jsonschema reads it too. It refuses
-// the first of the schema's mistakes floe template check tells (partSet.mistakes), and a key floe reads
-// itself (refuseShared).
+// the schema's mistakes floe template check tells (refused).
 func (t *Template) checkedShape() (*shape, any, error) {
 	doc, err := t.schemaDoc()
 	if err != nil {
@@ -599,17 +598,20 @@ func (t *Template) checkedShape() (*shape, any, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	set, err := t.parts()
-	if err != nil {
-		return nil, nil, err
-	}
-	if mistakes := set.mistakes(notes); mistakes != nil {
-		return nil, nil, mistakes[0]
-	}
-	if err = t.refuseShared(s); err != nil {
+	if err = t.refused(s, notes); err != nil {
 		return nil, nil, err
 	}
 	return s, doc, nil
+}
+
+// refused returns the mistakes of s, the schema of t, as notes and the parts of t tell them
+// (partSet.mistakes), and a key floe reads itself (refuseShared).
+func (t *Template) refused(s *shape, notes *schemaNotes) error {
+	set, err := t.parts()
+	if err != nil {
+		return err
+	}
+	return usererr.Collect(set.mistakes(notes).Err(), t.refuseShared(s))
 }
 
 // schemaDoc reads the schema.json of t as jsonschema reads it.

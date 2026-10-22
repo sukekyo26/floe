@@ -386,6 +386,7 @@ var messagesJA = map[string]string{
 	"tmpl_item":                    "%s: %s",
 	"tmpl_schema_url":              "%s: schema はほかのファイルや URL を参照できません。$ref が指すものは schema.json の中に書いてください",
 	"tmpl_schema_load":             "テンプレート %s の schema を読めません: %s",
+	"tmpl_schema_invalid":          "JSON Schema はこれを受け付けません: %s",
 	"tmpl_schema_draft":            "$schema の %s は JSON Schema の版ではありません。https://json-schema.org/draft/2020-12/schema のような版を書くか、$schema を消してください",
 	"tmpl_image_path":              "「%s」は %s の下のファイルではありません。.. やドットで始まる名前を使わずに、そこからの相対パスで書いてください",
 	"tmpl_image_type":              "「%s」は floe が扱う画像ではありません。png・jpeg・gif・webp・svg を使ってください",

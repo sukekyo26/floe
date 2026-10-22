@@ -224,7 +224,7 @@ func (t *Template) readFile(name string) ([]byte, error) {
 		return err //nolint:wrapcheck // wrapped below
 	})
 	if err != nil {
-		return nil, fmt.Errorf("read %s of the template %s: %w", name, t.Name, err)
+		return nil, usererr.CannotRead(t.file(name), err)
 	}
 	return b, nil
 }
@@ -242,7 +242,7 @@ func (t *Template) readOptional(name string) (b []byte, found bool, err error) {
 		return readErr //nolint:wrapcheck // wrapped below
 	})
 	if err != nil {
-		return nil, false, fmt.Errorf("read %s of the template %s: %w", name, t.Name, err)
+		return nil, false, usererr.CannotRead(t.file(name), err)
 	}
 	return b, found, nil
 }

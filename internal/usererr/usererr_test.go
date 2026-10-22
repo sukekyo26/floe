@@ -49,13 +49,18 @@ func TestListAdd(t *testing.T) {
 	if got := l.Error(); got != "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\na.yaml:2:3: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)" {
 		t.Errorf("the list told = %q", got)
 	}
-	// AddPlaced returns a mistake without a place, as a failure, and takes those with one.
-	var placed usererr.List
-	if err := placed.AddPlaced(usererr.New("tmpl_no_lang")); err == nil || len(placed) != 0 {
-		t.Errorf("AddPlaced of a mistake without a place = %v, %v", err, placed)
+	// Collect takes them as Add does, sorted, and returns a failure among them alone.
+	collected := usererr.Collect(usererr.NewAt("a.yaml", 5, 1, "tmpl_no_lang"), nil,
+		usererr.List{usererr.NewAt("a.yaml", 2, 1, "tmpl_no_lang")})
+	var both usererr.List
+	if !errors.As(collected, &both) || len(both) != 2 || both[0].Line != 2 {
+		t.Errorf("Collect of mistakes = %v", collected)
 	}
-	if err := placed.AddPlaced(usererr.NewAt("a.yaml", 1, 1, "tmpl_no_lang")); err != nil || len(placed) != 1 {
-		t.Errorf("AddPlaced of a placed mistake = %v, %v", err, placed)
+	if got := usererr.Collect(usererr.New("tmpl_no_lang"), failure); !errors.Is(got, failure) {
+		t.Errorf("Collect with a failure = %v", got)
+	}
+	if got := usererr.Collect(nil, nil); got != nil {
+		t.Errorf("Collect of none = %v", got)
 	}
 }
 

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // Description is what floe template list and show tell of a template.
@@ -86,7 +88,7 @@ type PartDescription struct {
 
 // Parts tells of every part, floe's and one's own, by name, and returns the mistakes of the parts that
 // cannot be used, which it leaves out.
-func (l *Library) Parts() (parts []*PartDescription, broken []error, err error) {
+func (l *Library) Parts() (parts []*PartDescription, broken usererr.List, err error) {
 	set, err := partsIn(l.mine)
 	if err != nil {
 		return nil, nil, err
@@ -94,10 +96,7 @@ func (l *Library) Parts() (parts []*PartDescription, broken []error, err error) 
 	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
 		parts = append(parts, set.describe(name))
 	}
-	for _, why := range set.unusable(nil) {
-		broken = append(broken, why)
-	}
-	return parts, broken, nil
+	return parts, set.unusable(nil), nil
 }
 
 // DescribePart tells of the part name.

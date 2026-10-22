@@ -105,12 +105,12 @@ func TestSchemaRefersToNoFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = validate(set, jsonDoc(t, `{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
+	err = validate(set, "t/schema.json", jsonDoc(t, `{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
 	if err == nil || !strings.HasPrefix(err.Error(), "the schema of the template t cannot be read: file://"+outside+": a schema refers to no other file or URL") {
 		t.Errorf("validate of a $ref to a file = %v", err)
 	}
 	for _, named := range []string{"https://json-schema.org/draft/2020-12/schema", "http://json-schema.org/draft-07/schema#", "https://json-schema.org/schema"} {
-		if err = validate(set, jsonDoc(t, `{"$schema": "`+named+`"}`), d, root); err != nil {
+		if err = validate(set, "t/schema.json", jsonDoc(t, `{"$schema": "`+named+`"}`), d, root); err != nil {
 			t.Errorf("validate of the $schema %s = %v", named, err)
 		}
 	}
@@ -126,7 +126,7 @@ func schemaProblems(t *testing.T, schema, src string) usererr.List {
 		t.Fatal(err)
 	}
 	var p usererr.List
-	if err := validate(set, jsonDoc(t, schema), d, root); !errors.As(err, &p) {
+	if err := validate(set, "t/schema.json", jsonDoc(t, schema), d, root); !errors.As(err, &p) {
 		t.Fatalf("validate = %v, want problems", err)
 	}
 	return p

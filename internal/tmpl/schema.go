@@ -26,10 +26,10 @@ import (
 // HTML, the path of an image or Markdown. Validating them is a no-op: they mark an item for drawing.
 var formats = []string{"html", "image", "markdown"}
 
-// validate checks the values of d against the schema src, its template's schema.json, and reports
+// validate checks the values of d against doc, its template's schema.json at schemaFile, and reports
 // every mistake at its line and column under root, the data file's top mapping.
-func validate(set *partSet, doc any, d *Data, root ast.Node) error {
-	sch, err := compileSchema(set, d.Template, doc)
+func validate(set *partSet, schemaFile string, doc any, d *Data, root ast.Node) error {
+	sch, err := compileSchema(set, d.Template, schemaFile, doc)
 	if err != nil {
 		return err
 	}
@@ -57,8 +57,8 @@ func schemaJSON(file string, src []byte) (any, error) {
 }
 
 // compileSchema compiles doc, the schema of the template name as jsonschema reads it, which refers to the
-// parts of set.
-func compileSchema(set *partSet, name string, doc any) (*jsonschema.Schema, error) {
+// parts of set; file is where it is, in its mistakes.
+func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema, error) {
 	url := schemaURL(name)
 	c := newCompiler(set)
 	if err := c.AddResource(url, doc); err != nil {
@@ -74,9 +74,15 @@ func compileSchema(set *partSet, name string, doc any) (*jsonschema.Schema, erro
 	// so that it is worded in the reader's language.
 	// partSet.mistakes told a $ref's at its pointer before; those it does not see (its LIMIT) name the template.
 	var load *jsonschema.LoadURLError
+	var invalid *jsonschema.SchemaValidationError
 	switch {
 	case errors.As(err, &load):
 		return nil, usererr.New("tmpl_schema_load", name, load.Err)
+	case errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url:
+		if refused := metaschemaMistakes(file, invalid.Err); refused != nil {
+			return nil, refused
+		}
+		fallthrough
 	case err != nil:
 		return nil, fmt.Errorf("compile the schema of %s: %w", name, err)
 	}
@@ -191,6 +197,35 @@ func unknownPart(set *partSet, ref string) *usererr.Error {
 		return usererr.New("tmpl_part_look_ref", ref, name)
 	}
 	return usererr.New("tmpl_part_unknown", ref, set.names(drawing))
+}
+
+// metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's, holds, each at
+// its JSON pointer, such as a pattern that is no regular expression; nil when it holds none.
+// LIMIT: in the library's English, and the branches of the metaschema's anyOf (a type, or a list of them)
+// are told as one. Word them in the catalogs if a template comes to meet them.
+func metaschemaMistakes(file string, err error) error {
+	var ve *jsonschema.ValidationError
+	if !errors.As(err, &ve) {
+		return nil
+	}
+	var mistakes usererr.List
+	var collect func(e *jsonschema.ValidationError)
+	collect = func(e *jsonschema.ValidationError) {
+		switch e.ErrorKind.(type) {
+		case *kind.Schema, *kind.Group, *kind.AllOf, *kind.Reference:
+			for _, c := range e.Causes {
+				collect(c)
+			}
+			return
+		}
+		at := ""
+		for _, step := range e.InstanceLocation {
+			at += "/" + pointerKey.Replace(step)
+		}
+		mistakes = append(mistakes, usererr.NewIn(file, at, "tmpl_schema_invalid", e.ErrorKind.LocalizedString(english)))
+	}
+	collect(ve)
+	return mistakes.Err()
 }
 
 // noLoader loads no schema: those of the parts of set are added to the compiler before.

@@ -388,6 +388,7 @@ var messagesEN = map[string]string{
 	"tmpl_item":                    "%s: %s",
 	"tmpl_schema_url":              "%s: a schema refers to no other file or URL; write what a $ref refers to in schema.json",
 	"tmpl_schema_load":             "the schema of the template %s cannot be read: %s",
+	"tmpl_schema_invalid":          "JSON Schema does not take this: %s",
 	"tmpl_schema_draft":            "$schema %s names no draft of JSON Schema; name one, such as https://json-schema.org/draft/2020-12/schema, or leave it out",
 	"tmpl_image_path":              `"%s" is not a file under %s: write a path relative to it, without .. or names starting with a dot`,
 	"tmpl_image_type":              `"%s" is not an image floe takes: use png, jpeg, gif, webp or svg`,

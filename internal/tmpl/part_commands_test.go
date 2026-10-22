@@ -189,9 +189,9 @@ func TestNewPartOfEach(t *testing.T) {
 
 	parts := filepath.Join(t.TempDir(), "parts")
 	l := tmpl.NewLibrary("", parts, themesOf(parts), "")
-	floe, _, err := tmpl.NewLibrary("", "", "", "").Parts()
-	if err != nil {
-		t.Fatal(err)
+	floe, broken, err := tmpl.NewLibrary("", "", "", "").Parts()
+	if err != nil || broken != nil {
+		t.Fatal(err, broken)
 	}
 	for _, d := range floe {
 		if d.Name == "diagram" || d.Name == "script" {
@@ -201,7 +201,7 @@ func TestNewPartOfEach(t *testing.T) {
 			t.Errorf("copying %s: %v", d.Name, err)
 		}
 	}
-	if warnings, mistakes := tmpl.CheckOwnParts(parts, themesOf(parts)); warnings != nil || mistakes != nil {
+	if warnings, mistakes := checkOwn(parts, themesOf(parts)); warnings != nil || mistakes != nil {
 		t.Errorf("CheckOwnParts of the copies = %v, %v", warnings, mistakes)
 	}
 }
@@ -330,7 +330,7 @@ func TestCheckOwnThemeFiles(t *testing.T) {
 	t.Parallel()
 
 	parts := ownParts(t, map[string]string{"themes/twice/note.css": "}\n", "themes/twice/table.css": ":root {}\n"})
-	_, mistakes := tmpl.CheckOwnParts(parts, themesOf(parts))
+	_, mistakes := checkOwn(parts, themesOf(parts))
 	at := filepath.Join(themesOf(parts), "twice")
 	want := "your own theme twice cannot be used\n  " + filepath.Join(at, "note.css") + ":1: this } closes no block"
 	if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) ||
@@ -343,7 +343,7 @@ func TestCheckOwnParts(t *testing.T) {
 	t.Parallel()
 
 	for _, dir := range []string{"", filepath.Join(t.TempDir(), "none")} {
-		if warnings, mistakes := tmpl.CheckOwnParts(dir, ""); warnings != nil || mistakes != nil {
+		if warnings, mistakes := checkOwn(dir, ""); warnings != nil || mistakes != nil {
 			t.Errorf("CheckOwnParts(%q) = %v, %v", dir, warnings, mistakes)
 		}
 	}
@@ -351,7 +351,7 @@ func TestCheckOwnParts(t *testing.T) {
 	if _, err := tmpl.NewLibrary("", parts, themesOf(parts), "").NewPart("grid", "table"); err != nil {
 		t.Fatal(err)
 	}
-	if warnings, mistakes := tmpl.CheckOwnParts(parts, themesOf(parts)); warnings != nil || mistakes != nil {
+	if warnings, mistakes := checkOwn(parts, themesOf(parts)); warnings != nil || mistakes != nil {
 		t.Errorf("CheckOwnParts of parts that are right = %v, %v", warnings, mistakes)
 	}
 
@@ -363,7 +363,7 @@ func TestCheckOwnParts(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, themes := range []string{apart, apart + "/", filepath.Join(apart, "themes"), filepath.Dir(apart), filepath.Join(linked, "mine")} {
-		if _, mistakes := tmpl.CheckOwnParts(apart, themes); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "set FLOE_PARTS_DIR and FLOE_THEMES_DIR apart") {
+		if _, mistakes := checkOwn(apart, themes); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "set FLOE_PARTS_DIR and FLOE_THEMES_DIR apart") {
 			t.Errorf("CheckOwnParts(%s, %s) = %v", apart, themes, mistakes)
 		}
 	}
@@ -378,7 +378,7 @@ func TestCheckOwnParts(t *testing.T) {
 				t.Error(err)
 			}
 		})
-		if _, mistakes := tmpl.CheckOwnParts("", filepath.Join(locked, "themes")); len(mistakes) != 1 ||
+		if _, mistakes := checkOwn("", filepath.Join(locked, "themes")); len(mistakes) != 1 ||
 			!strings.Contains(mistakes[0].Error(), "the directory of your own themes") {
 			t.Errorf("CheckOwnParts with the themes in a directory that cannot be read = %v", mistakes)
 		}
@@ -396,7 +396,7 @@ func TestCheckOwnParts(t *testing.T) {
 	files["themes/mine/note.css"] = "}\n"
 	files["themes/default/nope.css"] = ""
 	parts = ownParts(t, files)
-	warnings, mistakes := tmpl.CheckOwnParts(parts, themesOf(parts))
+	warnings, mistakes := checkOwn(parts, themesOf(parts))
 	if len(warnings) != 1 || !strings.Contains(warnings[0].Error(), filepath.Join(themesOf(parts), "default", "nope.css")+": this file goes into no page") {
 		t.Errorf("warnings = %v", warnings)
 	}

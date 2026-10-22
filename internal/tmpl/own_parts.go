@@ -474,8 +474,8 @@ func (set *partSet) find(name string) (*part, error) {
 
 // unusable returns the mistake of each part of set that cannot be used, by name, but those skip skips (none
 // for nil).
-func (set *partSet) unusable(skip func(name string) bool) []*usererr.Error {
-	var found []*usererr.Error
+func (set *partSet) unusable(skip func(name string) bool) usererr.List {
+	var found usererr.List
 	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
 		if skip == nil || !skip(name) {
 			found = append(found, set.brokenPart(name))
@@ -486,8 +486,8 @@ func (set *partSet) unusable(skip func(name string) bool) []*usererr.Error {
 
 // unusableThemes returns the mistake of each theme of set that cannot be used, by name, but those
 // skip skips (none for nil).
-func (set *partSet) unusableThemes(skip func(name string) bool) []*usererr.Error {
-	var found []*usererr.Error
+func (set *partSet) unusableThemes(skip func(name string) bool) usererr.List {
+	var found usererr.List
 	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
 		if skip == nil || !skip(name) {
 			found = append(found, set.brokenTheme(name))

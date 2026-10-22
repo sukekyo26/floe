@@ -91,7 +91,7 @@ func TestTemplateCommands(t *testing.T) {
 	}
 	r := e.run(t, "", "template", "list")
 	if r.code != 1 || !strings.Contains(r.stdout, "report\tbuilt-in\t") || !strings.Contains(r.stdout, "\tTwo lines. A page of sections") ||
-		!strings.Contains(r.stderr, "schema.json of the template drafts") || !strings.Contains(r.stderr, "memo") ||
+		!strings.Contains(r.stderr, "cannot read "+filepath.Join(e.tmp, "templates", "drafts", "schema.json")) || !strings.Contains(r.stderr, "memo") ||
 		strings.Count(r.stdout, "\n") != 2 {
 		t.Errorf("template list with broken templates = %+v", r)
 	}
