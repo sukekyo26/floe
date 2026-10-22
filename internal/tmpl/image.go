@@ -311,8 +311,5 @@ func checkImages(whole drawnItems, d *Data, root ast.Node, images imageDir) erro
 		}
 		problems = append(problems, itemMistake(d.File, root, f.at, false, e))
 	}
-	if problems != nil {
-		return problems.Sorted()
-	}
-	return nil
+	return problems.Sorted().Err()
 }

@@ -85,7 +85,7 @@ func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
 			continue
 		}
 		page, err := drawFile(a, file)
-		found.Tell(err)
+		tell(&found, err)
 		switch {
 		case taken && other.real == p.real:
 			found = append(found, usererr.New("cli_render_same_file", other.from, file, p.to))
@@ -161,8 +161,5 @@ func (a *app) checkPages(pages []rendered) error {
 			found = append(found, usererr.New("cli_render_stale", p.to, p.from))
 		}
 	}
-	if len(found) > 0 {
-		return found
-	}
-	return nil
+	return found.Err()
 }

@@ -43,7 +43,7 @@ your own takes the place of floe's of its name.`,
 			}
 			// A part that cannot be used does not hide the others: it is reported after them (exit code 1).
 			var found usererr.List
-			found.Tell(broken...)
+			tell(&found, broken...)
 			return found.Err()
 		},
 	}
@@ -157,7 +157,7 @@ uses.`,
 				_, _ = fmt.Fprintln(a.env.Stderr, w.Localize(english)) //nolint:errcheck // nowhere left to report
 			}
 			var all usererr.List
-			all.Tell(found...)
+			tell(&all, found...)
 			return all.Err()
 		},
 	}

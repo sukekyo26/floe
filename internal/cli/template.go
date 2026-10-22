@@ -44,7 +44,7 @@ your own takes the place of the built-in one of its name.`,
 			for _, name := range names {
 				d, err := l.Describe(name)
 				if err != nil {
-					broken.Tell(err)
+					tell(&broken, err)
 					continue
 				}
 				// The columns are for scripts to read, in every language: built-in is not translated.
@@ -217,7 +217,7 @@ code 0. Nothing is printed when the templates are right.`,
 						_, _ = fmt.Fprintln(a.env.Stderr, text) //nolint:errcheck // nowhere left to report
 					}
 				}
-				found.Tell(more...)
+				tell(&found, more...)
 			}
 			return found.Err()
 		},

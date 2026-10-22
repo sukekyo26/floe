@@ -30,9 +30,20 @@ func (a *app) check(files []string) error {
 	var found usererr.List
 	for _, file := range files {
 		_, err := drawFile(a, file)
-		found.Tell(err)
+		tell(&found, err)
 	}
 	return found.Err()
+}
+
+// tell adds each of errs to l as usererr.List.Add does, and any other error too, as a mistake of its own:
+// for the list of the outcomes of things apart a command tells at its exit, such as the files floe check
+// checks, where the failure of one does not hide the others.
+func tell(l *usererr.List, errs ...error) {
+	for _, err := range errs {
+		if failed := l.Add(err); failed != nil {
+			*l = append(*l, usererr.New("cli_failure", failed))
+		}
+	}
 }
 
 // drawFile draws the page of the data file file, titled as floe publish titles it (its title:, else the

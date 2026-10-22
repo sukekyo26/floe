@@ -8,6 +8,7 @@ func init() {
 // it, so no other language has them; what a browser shows, the management page and the page of a data
 // file's mistakes, is in messagesEN and in every language.
 var messagesCLI = map[string]string{
+	"cli_failure":                  "%s", // a failure told among the mistakes of things apart (tell), as it is
 	"lang_invalid":                 `invalid language "%s": give --lang a BCP 47 tag such as en, ja or pt-BR`,
 	"cli_invalid_port":             "invalid FLOE_PORT \"%s\": use a port number from 1 to 65535",
 	"cli_no_home":                  "HOME is not set; set HOME or FLOE_DIR",

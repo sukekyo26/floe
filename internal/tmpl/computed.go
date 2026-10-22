@@ -84,10 +84,7 @@ func compute(file string, src []byte, d *Data, declared []string, root ast.Node)
 			c.env.Field(c.field[n]).Set(reflect.ValueOf(out))
 		}
 	}
-	if problems != nil {
-		return problems
-	}
-	return nil
+	return problems.Err()
 }
 
 // computed is computed.yaml compiled: an expression and the computed names it uses, by name, the order

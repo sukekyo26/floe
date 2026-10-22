@@ -108,15 +108,14 @@ func (l *List) Add(err error) error {
 	return nil
 }
 
-// Tell adds each of errs to l as Add does, and any other error too, as a mistake of its own: for a list
-// of the outcomes of things apart, such as the files floe check checks, where the failure of one does not
-// hide the others.
-func (l *List) Tell(errs ...error) {
-	for _, err := range errs {
-		if failed := l.Add(err); failed != nil {
-			*l = append(*l, New("error_text", failed))
-		}
+// AddPlaced adds err to l as Add does, but returns a mistake without a place, as it returns a failure:
+// for a stage that stops at a mistake about the whole of it (icons not fetched), told alone.
+func (l *List) AddPlaced(err error) error {
+	var one *Error
+	if errors.As(err, &one) && one != nil && one.File == "" {
+		return err
 	}
+	return l.Add(err)
 }
 
 // Err returns l as it is, or nil when it holds none: a List of none is no error.

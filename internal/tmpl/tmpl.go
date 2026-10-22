@@ -342,10 +342,7 @@ func checkHTML(set *partSet, d *Data) error {
 			problems = append(problems, itemError(d.File, it.pos, it.path, bad))
 		}
 	}
-	if problems != nil {
-		return problems.Sorted()
-	}
-	return nil
+	return problems.Sorted().Err()
 }
 
 // readShared moves the keys every template shares from h.d.Values to h.d, and notes where each is

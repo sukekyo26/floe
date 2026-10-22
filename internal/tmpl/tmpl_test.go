@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -26,6 +27,22 @@ func render(t *testing.T, src string) string {
 		t.Fatal(err)
 	}
 	return string(b)
+}
+
+// A mistake about the whole stage of the items, icons not fetched, is told alone, without the mistakes of
+// the items at their lines.
+func TestItemsStopAtMistakeWithoutPlace(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	src := "template: report\nlang: en\nsections:\n  - parts:\n      - html: <style>p {}</style>\n" +
+		"      - diagram: { id: d, title: t, width: 100, height: 100, parts: [{ icon: { x: 10, y: 10, name: aws/aws-lambda } }] }\n"
+	_, err := tmpl.NewLibrary("", "", "", dir).Read("r.yaml", []byte(src), "", "")
+	want := "AWS icons are not in " + filepath.Join(dir, "aws") + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
+	var all usererr.List
+	if err == nil || errors.As(err, &all) || err.Error() != want {
+		t.Errorf("Read = %v, want %s alone", err, want)
+	}
 }
 
 // The report's example draws: Markdown text, HTML as it is, and the header from the data.

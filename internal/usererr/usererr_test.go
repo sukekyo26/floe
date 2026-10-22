@@ -46,9 +46,16 @@ func TestListAdd(t *testing.T) {
 	if err := (usererr.List{}).Err(); err != nil {
 		t.Errorf("Err of none = %v", err)
 	}
-	l.Tell(failure)
-	if got := l.Error(); got != "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\na.yaml:2:3: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\ndisk on fire" {
+	if got := l.Error(); got != "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\na.yaml:2:3: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)" {
 		t.Errorf("the list told = %q", got)
+	}
+	// AddPlaced returns a mistake without a place, as a failure, and takes those with one.
+	var placed usererr.List
+	if err := placed.AddPlaced(usererr.New("tmpl_no_lang")); err == nil || len(placed) != 0 {
+		t.Errorf("AddPlaced of a mistake without a place = %v, %v", err, placed)
+	}
+	if err := placed.AddPlaced(usererr.NewAt("a.yaml", 1, 1, "tmpl_no_lang")); err != nil || len(placed) != 1 {
+		t.Errorf("AddPlaced of a placed mistake = %v, %v", err, placed)
 	}
 }
 

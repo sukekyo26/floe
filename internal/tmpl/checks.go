@@ -58,10 +58,7 @@ func relate(checks string, src []byte, d *Data, root ast.Node) error {
 		}
 		problems = append(problems, more...)
 	}
-	if problems != nil {
-		return problems.Sorted()
-	}
-	return nil
+	return problems.Sorted().Err()
 }
 
 // readChecks reads the checks src of file, a mistake in them at its line and column: the mistakes of
