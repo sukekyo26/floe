@@ -16,7 +16,6 @@ import (
 	"github.com/goccy/go-yaml/ast"
 
 	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // KeptName is the name a published page keeps its data file by, beside the images it shows: an image
@@ -285,7 +284,7 @@ func checkImages(whole drawnItems, d *Data, root ast.Node, images imageDir) erro
 	defer release()
 	d.images = map[string]template.URL{}
 	refused := map[string]*usererr.Error{}
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for _, f := range found {
 		// Not text where the schema gives no type: drawn as written.
 		name, ok := f.value.(string)
@@ -312,8 +311,5 @@ func checkImages(whole drawnItems, d *Data, root ast.Node, images imageDir) erro
 		}
 		problems = append(problems, itemMistake(d.File, root, f.at, false, e))
 	}
-	if problems != nil {
-		return problems.Sorted()
-	}
-	return nil
+	return problems.Sorted().Err()
 }

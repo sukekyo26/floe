@@ -13,7 +13,6 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
-	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // Exit codes.
@@ -58,22 +57,15 @@ func Run(ctx context.Context, args []string, env Env) int {
 		return exitOK
 	}
 	// SilenceErrors leaves printing to this single boundary, which words a usererr in English.
-	msg := err.Error()
-	var l i18n.Localizer
-	if errors.As(err, &l) {
-		msg = l.Localize(english)
-	}
-	// Mistakes at lines and columns go out as they are, one per line, for editors and CI to read.
+	shown := usererr.Show(english, err)
+	// Placed mistakes go out as they are, one per line, for editors and CI to read, and so do those the
+	// server placed.
 	prefix := "floe: "
-	var all yamlpos.Problems
-	var one *yamlpos.Error
-	var checked mistakes
 	var remote *remoteError
-	if errors.As(err, &all) || errors.As(err, &one) || errors.As(err, &checked) ||
-		errors.As(err, &remote) && remote.mistakes {
+	if shown.Placed || errors.As(err, &remote) && remote.mistakes {
 		prefix = ""
 	}
-	_, _ = fmt.Fprintf(env.Stderr, "%s%s\n", prefix, msg) //nolint:errcheck // nowhere left to report
+	_, _ = fmt.Fprintf(env.Stderr, "%s%s\n", prefix, shown.Text) //nolint:errcheck // nowhere left to report
 	if errors.As(err, new(usageError)) {
 		return exitUsage
 	}

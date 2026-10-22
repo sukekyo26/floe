@@ -694,7 +694,7 @@ func readPartChecks(files fs.FS, name, dir string) ([]relation, error) {
 		return nil, err
 	}
 	for i, c := range checks {
-		var e *yamlpos.Error
+		var e *usererr.Error
 		if checks[i].prog, e = c.program(); e != nil {
 			return nil, e
 		}
@@ -735,7 +735,7 @@ func joinDescriptions(beside, named string) string {
 // draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every failure at its
 // line and column under root.
 func checkParts(whole drawnItems, d *Data, root ast.Node) error {
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for _, f := range whole {
 		p := f.part
 		if p == nil || p.pages == nil {
@@ -761,10 +761,7 @@ func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 		}
 		d.drew(f.at, html)
 	}
-	if problems != nil {
-		return problems.Sorted()
-	}
-	return nil
+	return problems.Sorted().Err()
 }
 
 // drew notes html, a part's drawing of the item at the path at.
@@ -777,8 +774,8 @@ func (d *Data) drew(at []string, html template.HTML) {
 
 // check runs the checks of p on the item f of the data file file, under root. An error is p's own
 // mistake, and the problems are the data's.
-func (p *part) check(file string, f itemAt, root ast.Node) (yamlpos.Problems, error) {
-	var problems yamlpos.Problems
+func (p *part) check(file string, f itemAt, root ast.Node) (usererr.List, error) {
+	var problems usererr.List
 	var doc map[string]any
 	if m, ok := f.value.(map[string]any); ok {
 		doc = m

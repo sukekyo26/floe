@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 var declared = []string{"attributes", "records", "reads_per_sec", "writes_per_sec", "count"}
@@ -63,7 +63,7 @@ list: '[1, 1e308 * 10]'
 table: '{"a": [1e308 * 10]}'
 `
 	err := compute("computed.yaml", []byte(src), d, declared, root)
-	var p yamlpos.Problems
+	var p usererr.List
 	if !errors.As(err, &p) {
 		t.Fatalf("compute = %v, want problems", err)
 	}

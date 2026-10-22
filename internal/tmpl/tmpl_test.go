@@ -4,12 +4,13 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // builtins are the built-in templates alone.
@@ -26,6 +27,22 @@ func render(t *testing.T, src string) string {
 		t.Fatal(err)
 	}
 	return string(b)
+}
+
+// A mistake about the whole stage of the items, icons not fetched, is told alone, without the mistakes of
+// the items at their lines.
+func TestItemsStopAtMistakeWithoutPlace(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	src := "template: report\nlang: en\nsections:\n  - parts:\n      - html: <style>p {}</style>\n" +
+		"      - diagram: { id: d, title: t, width: 100, height: 100, parts: [{ icon: { x: 10, y: 10, name: aws/aws-lambda } }] }\n"
+	_, err := tmpl.NewLibrary("", "", "", dir).Read("r.yaml", []byte(src), "", "")
+	want := "AWS icons are not in " + filepath.Join(dir, "aws") + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
+	var all usererr.List
+	if err == nil || errors.As(err, &all) || err.Error() != want {
+		t.Errorf("Read = %v, want %s alone", err, want)
+	}
 }
 
 // The report's example draws: Markdown text, HTML as it is, and the header from the data.
@@ -261,8 +278,8 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <svg><!-- </HEAD> -->\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a </head>"},
 	} {
 		_, err := builtins.Read("data.yaml", []byte(c.src), "", "")
-		var one *yamlpos.Error
-		var all yamlpos.Problems
+		var one *usererr.Error
+		var all usererr.List
 		if !errors.As(err, &one) && !errors.As(err, &all) || !strings.HasPrefix(err.Error(), c.want) {
 			t.Errorf("Read %q = %v, want %s", c.src, err, c.want)
 		}
@@ -308,7 +325,7 @@ sections:
 lang: en
 `
 	_, err := builtins.Read("bad.yaml", []byte(src), "", "")
-	var p yamlpos.Problems
+	var p usererr.List
 	if !errors.As(err, &p) {
 		t.Fatalf("Read = %v, want problems", err)
 	}

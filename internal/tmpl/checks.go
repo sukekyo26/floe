@@ -11,6 +11,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -49,7 +50,7 @@ func relate(checks string, src []byte, d *Data, root ast.Node) error {
 	if err != nil {
 		return err
 	}
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for _, c := range list {
 		more, err := c.check(d.File, d.Values, root)
 		if err != nil {
@@ -57,14 +58,11 @@ func relate(checks string, src []byte, d *Data, root ast.Node) error {
 		}
 		problems = append(problems, more...)
 	}
-	if problems != nil {
-		return problems.Sorted()
-	}
-	return nil
+	return problems.Sorted().Err()
 }
 
 // readChecks reads the checks src of file, a mistake in them at its line and column: the mistakes of
-// some are yamlpos.Problems, returned with the others. A part's checks may leave for out, to check the
+// some are usererr.List, returned with the others. A part's checks may leave for out, to check the
 // part itself, or each of its items when it is a list.
 func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 	body, err := yamlpos.Parse(file, src, "tmpl_checks_yaml")
@@ -82,7 +80,7 @@ func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_checks_yaml")
 	}
 	var list []relation
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for _, n := range seq.Values {
 		c, e := readCheck(file, n, ofPart)
 		if e != nil {
@@ -98,7 +96,7 @@ func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 	return list, nil
 }
 
-func readCheck(file string, n ast.Node, ofPart bool) (relation, *yamlpos.Error) {
+func readCheck(file string, n ast.Node, ofPart bool) (relation, *usererr.Error) {
 	c := relation{
 		For: "", Field: "", Expr: "", Message: "",
 		file: file, at: map[string]yamlpos.Pos{"": yamlpos.Of(n)}, rest: "", prog: nil,
@@ -147,16 +145,16 @@ func text(n ast.Node) (string, bool) {
 }
 
 // program compiles the expression of c.
-func (c relation) program() (*vm.Program, *yamlpos.Error) {
+func (c relation) program() (*vm.Program, *usererr.Error) {
 	return compileWritten(c.file, c.at["expr"], c.Expr, c.rest, scope{Item: nil, Doc: nil}, expr.AsBool())
 }
 
 // check runs c on each item of its list in doc, the values of file. An error is the template's mistake,
 // and the problems are the data's.
-func (c relation) check(file string, doc map[string]any, root ast.Node) (yamlpos.Problems, error) {
+func (c relation) check(file string, doc map[string]any, root ast.Node) (usererr.List, error) {
 	// A mistake in the expression first: it is the template's whatever the data.
 	if c.prog == nil {
-		var err *yamlpos.Error
+		var err *usererr.Error
 		if c.prog, err = c.program(); err != nil {
 			return nil, err
 		}
@@ -169,9 +167,9 @@ func (c relation) check(file string, doc map[string]any, root ast.Node) (yamlpos
 }
 
 // run runs c, its expression compiled, on each of items of the values doc of file.
-func (c relation) run(file string, doc map[string]any, items []itemAt, root ast.Node) (yamlpos.Problems, error) {
+func (c relation) run(file string, doc map[string]any, items []itemAt, root ast.Node) (usererr.List, error) {
 	p := c.prog
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for _, item := range items {
 		out, err := expr.Run(p, scope{Item: item.value, Doc: doc})
 		if held, ok := out.(bool); ok && held && err == nil {
@@ -188,7 +186,7 @@ func (c relation) run(file string, doc map[string]any, items []itemAt, root ast.
 
 // failure reports c failed, or could not run with err, at the node at under root: with its value when
 // it is one line of text. A block scalar's token is its | or >, not its text.
-func (c relation) failure(file string, root ast.Node, at []string, err error) *yamlpos.Error {
+func (c relation) failure(file string, root ast.Node, at []string, err error) *usererr.Error {
 	key, value, path := yamlpos.Find(root, at)
 	pos := yamlpos.OfValue(key, value)
 	var shown string

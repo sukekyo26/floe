@@ -40,21 +40,18 @@ your own takes the place of the built-in one of its name.`,
 				return err //nolint:wrapcheck // already says what failed
 			}
 			// A broken template does not hide the others: it is reported after them (exit code 1).
-			var broken mistakes
+			var broken usererr.List
 			for _, name := range names {
 				d, err := l.Describe(name)
 				if err != nil {
-					broken = append(broken, err)
+					tell(&broken, err)
 					continue
 				}
 				// The columns are for scripts to read, in every language: built-in is not translated.
 				where := cmp.Or(d.Path, "built-in")
 				a.out("%s\t%s\t%s\t%s", d.Name, oneLine(where), d.Floe, oneLine(d.About))
 			}
-			if broken != nil {
-				return broken
-			}
-			return nil
+			return broken.Err()
 		},
 	}
 }
@@ -209,7 +206,7 @@ it has one, and the exit code is 1 when there is one. Warnings go to stderr and 
 code 0. Nothing is printed when the templates are right.`,
 		Args: usage(cobra.MinimumNArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
-			var found mistakes
+			var found usererr.List
 			// A warning of the parts of one's own is told for every template: once is enough.
 			told := map[string]bool{}
 			for _, dir := range args {
@@ -220,12 +217,9 @@ code 0. Nothing is printed when the templates are right.`,
 						_, _ = fmt.Fprintln(a.env.Stderr, text) //nolint:errcheck // nowhere left to report
 					}
 				}
-				found = append(found, more...)
+				tell(&found, more...)
 			}
-			if found != nil {
-				return found
-			}
-			return nil
+			return found.Err()
 		},
 	}
 }

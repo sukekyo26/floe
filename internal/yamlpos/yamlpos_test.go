@@ -9,6 +9,7 @@ import (
 	"github.com/goccy/go-yaml/parser"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -100,7 +101,7 @@ func TestParse(t *testing.T) {
 		{"a: 1\na: 2\n", "a.yaml:2:1: this is not valid YAML: mapping key \"a\" already defined"},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src), "diagram_documents")
-		var e *yamlpos.Error
+		var e *usererr.Error
 		if !errors.As(err, &e) || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("Parse(%q) = %v, want %s", tt.src, err, tt.want)
 		}
@@ -142,7 +143,7 @@ func TestSyntaxHints(t *testing.T) {
 			t.Errorf("Parse(%q) = %v, want %s", tt.src, err, tt.want)
 		}
 	}
-	var e *yamlpos.Error
+	var e *usererr.Error
 	if _, err := yamlpos.Parse("a.yaml", []byte("lead: parts-shape: drop\n"), "diagram_documents"); !errors.As(err, &e) {
 		t.Fatalf("Parse = %v", err)
 	}
@@ -200,19 +201,21 @@ func TestColonTextAndCommentAfter(t *testing.T) {
 	}
 }
 
-func TestProblems(t *testing.T) {
+// New places a mistake at its line and column, worded in the reader's language.
+func TestNew(t *testing.T) {
 	t.Parallel()
 
-	p := yamlpos.Problems{
-		yamlpos.New("a.yaml", yamlpos.Pos{Line: 1, Column: 2}, "yaml_syntax", "x"),
-		yamlpos.New("a.yaml", yamlpos.Pos{Line: 3, Column: 4}, "yaml_no_anchors"),
-	}
-	if got, want := p.Error(), "a.yaml:1:2: this is not valid YAML: x\n"+
-		"a.yaml:3:4: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"; got != want {
+	e := yamlpos.New("a.yaml", yamlpos.Pos{Line: 3, Column: 4}, "yaml_no_anchors")
+	if got, want := e.Error(), "a.yaml:3:4: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"; got != want {
 		t.Errorf("Error = %q, want %q", got, want)
 	}
-	if got, want := p.Localize(i18n.New("ja")), "a.yaml:1:2: YAML として読めません: x\n"+
-		"a.yaml:3:4: アンカー・エイリアス・マージキー（<<）・タグは使えません。値をそのまま書いてください"; got != want {
+	if got, want := e.Localize(i18n.New("ja")), "a.yaml:3:4: アンカー・エイリアス・マージキー（<<）・タグは使えません。値をそのまま書いてください"; got != want {
 		t.Errorf("Localize = %q, want %q", got, want)
+	}
+	// Place moves a mistake, keeping what it is.
+	conflict := usererr.New("yaml_no_anchors")
+	conflict.Conflict = true
+	if p := yamlpos.Place("b.yaml", yamlpos.Pos{Line: 1, Column: 2}, conflict); p.Error() != "b.yaml:1:2: "+conflict.Error() || !p.Conflict || conflict.File != "" {
+		t.Errorf("Place = %+v, the mistake placed = %+v", p, conflict)
 	}
 }

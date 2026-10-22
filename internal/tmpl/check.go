@@ -314,7 +314,7 @@ func (t *Template) checkChecks(s *jsonschema.Schema) []error {
 		return nil
 	}
 	list, err := readChecks(t.file("checks.yaml"), src, false)
-	var problems yamlpos.Problems
+	var problems usererr.List
 	if err != nil && !errors.As(err, &problems) {
 		return []error{err}
 	}
@@ -335,7 +335,7 @@ func (t *Template) checkChecks(s *jsonschema.Schema) []error {
 // declared checks that the compiled schema s declares the list at c.For and c.Field under its items:
 // a path misspelt would find nothing in the data to check, and fail no data. A path is refused only
 // where the schema surely refuses it, a list only where its types leave array out.
-func (c relation) declared(s *jsonschema.Schema) *yamlpos.Error {
+func (c relation) declared(s *jsonschema.Schema) *usererr.Error {
 	list, sure := declaredAt(s, strings.Split(c.For, "."), true)
 	switch {
 	case list == nil && sure:

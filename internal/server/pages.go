@@ -16,6 +16,7 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/tmpl"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 const (
@@ -151,7 +152,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 			notFound(w)
 			return
 		case err != nil:
-			send(w, http.StatusConflict, mistakesText(catalog(r), err))
+			send(w, http.StatusConflict, usererr.Show(catalog(r), err).Text)
 			return
 		}
 		body = tmpl.WithCutOff(page)
@@ -265,15 +266,6 @@ func (s *Server) version(slug, rest string) string {
 	return s.cfg.Store.Version(slug, m, file)
 }
 
-// mistakesText words why a data file cannot be drawn, in the language of c.
-func mistakesText(c *i18n.Catalog, err error) string {
-	var l i18n.Localizer
-	if errors.As(err, &l) {
-		return l.Localize(c)
-	}
-	return err.Error()
-}
-
 // mistakes is the page shown for a data file with mistakes, in the reader's language.
 var mistakes = template.Must(template.New("mistakes").Parse(`<!doctype html>
 <html lang="{{.Lang}}">
@@ -292,7 +284,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.6 ui-monospac
 // mistakesPage words the mistakes of file, the data file of slug, whose meta.json is m: a linked one
 // is put right by saving it, a stored one, a copy, by publishing the data file again.
 func mistakesPage(c *i18n.Catalog, slug string, m *store.Meta, file string, err error) []byte {
-	text := mistakesText(c, err)
+	text := usererr.Show(c, err).Text
 	lead := c.Msg("server_mistakes_lead")
 	switch {
 	case m.IsLink():

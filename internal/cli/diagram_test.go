@@ -35,6 +35,10 @@ func TestDiagramRender(t *testing.T) {
 	want(t, "mistakes in the order of the files", e.run(t, "specs", "diagram", "render", "layout.yaml", "shape.yaml"), 1, "",
 		"layout.yaml:6:5: dot at 0,25 sticks out of the 100x50 canvas\n"+
 			"shape.yaml:6:5: dot: give cy\n")
+	// A mistake about the whole of the diagrams, icons not fetched, is told alone, as floe's.
+	e.write(t, "specs/icon.yaml", "id: i\n"+head+"  - icon: { x: 10, y: 10, name: aws/aws-lambda }\n")
+	want(t, "render with icons not fetched", e.run(t, "specs", "diagram", "render", "shape.yaml", "icon.yaml"), 1, "",
+		"floe: AWS icons are not in ")
 	want(t, "render a missing file", e.run(t, "specs", "diagram", "render", "a.yaml", "nope.yaml"), 1, "",
 		"floe: cannot read nope.yaml (no such file or directory)")
 	want(t, "render nothing", e.run(t, "", "diagram", "render"), 2, "", "floe: requires at least 1 arg(s)")

@@ -9,7 +9,6 @@ import (
 	"github.com/goccy/go-yaml/ast"
 
 	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // checkScripts draws the scripts of d, its items of whole of the part script, into d.parts, by the path of keys to
@@ -20,7 +19,7 @@ func checkScripts(whole drawnItems, d *Data, root ast.Node) error {
 	if found == nil {
 		return nil
 	}
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for _, f := range found {
 		js, data, mistakes := readScript(d.File, root, f)
 		if mistakes != nil {
@@ -29,15 +28,12 @@ func checkScripts(whole drawnItems, d *Data, root ast.Node) error {
 		}
 		d.drew(f.at, drawScript(js, data))
 	}
-	if problems != nil {
-		return problems.Sorted()
-	}
-	return nil
+	return problems.Sorted().Err()
 }
 
 // readScript reads the script f of the data file file under root: its js and data, or the mistakes in
 // its shape.
-func readScript(file string, root ast.Node, f itemAt) (js string, data any, mistakes yamlpos.Problems) {
+func readScript(file string, root ast.Node, f itemAt) (js string, data any, mistakes usererr.List) {
 	m := map[string]any{}
 	if keys, ok := f.value.(map[string]any); ok {
 		m = keys

@@ -2,16 +2,13 @@ package cli
 
 import (
 	"cmp"
-	"errors"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 func (a *app) checkCmd() *cobra.Command {
@@ -30,45 +27,45 @@ the server is not started, and nothing is printed when the files are right.`,
 }
 
 func (a *app) check(files []string) error {
-	found := make(mistakes, 0, len(files))
+	var found usererr.List
 	for _, file := range files {
-		_, errs := drawFile(a, file)
-		found = append(found, errs...)
+		_, err := drawFile(a, file)
+		tell(&found, err)
 	}
-	if len(found) > 0 {
-		return found
+	return found.Err()
+}
+
+// tell adds each of errs to l as usererr.List.Add does, and any other error too, as a mistake of its own:
+// for the list of the outcomes of things apart a command tells at its exit, such as the files floe check
+// checks, where the failure of one does not hide the others.
+func tell(l *usererr.List, errs ...error) {
+	for _, err := range errs {
+		if failed := l.Add(err); failed != nil {
+			*l = append(*l, usererr.New("cli_failure", failed))
+		}
 	}
-	return nil
 }
 
 // drawFile draws the page of the data file file, titled as floe publish titles it (its title:, else the
 // slug of its name, else, for a name without a letter a slug takes, the name itself), or returns its
 // mistakes: each at its line and column, or one about the whole file.
-func drawFile(a *app, file string) ([]byte, []error) {
+func drawFile(a *app, file string) ([]byte, error) {
 	if !store.IsDataFile(file) {
-		return nil, []error{usererr.New("cli_check_not_data", file)}
+		return nil, usererr.New("cli_check_not_data", file)
 	}
 	src, err := a.readArg(file)
 	if err != nil {
-		return nil, []error{err}
+		return nil, err
 	}
 	d, err := a.templates().Read(file, src, "", a.env.Dir)
-	var all yamlpos.Problems
-	switch {
-	case errors.As(err, &all):
-		found := make([]error, len(all))
-		for i, e := range all {
-			found[i] = e
-		}
-		return nil, found
-	case err != nil:
-		return nil, []error{err}
+	if err != nil {
+		return nil, err //nolint:wrapcheck // its mistakes, or what failed
 	}
 	// Drawing is the last stage. Data that passed its schema fails here by the template's mistake, or by an
 	// item of HTML that changes the page around it, which is told at its line and column.
 	page, err := d.Render(cmp.Or(d.Title, store.SlugFromFile(file, a.env.Dir), baseName(file)))
 	if err != nil {
-		return nil, []error{err}
+		return nil, err //nolint:wrapcheck // its mistakes, or what failed
 	}
 	return page, nil
 }
@@ -77,23 +74,4 @@ func drawFile(a *app, file string) ([]byte, []error) {
 // of last resort.
 func baseName(file string) string {
 	return strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
-}
-
-// mistakes are the mistakes of every file checked, one per line, in the order of the files.
-type mistakes []error
-
-func (m mistakes) Error() string {
-	return m.Localize(i18n.EnglishCatalog())
-}
-
-func (m mistakes) Localize(c *i18n.Catalog) string {
-	lines := make([]string, len(m))
-	for i, e := range m {
-		lines[i] = e.Error()
-		var l i18n.Localizer
-		if errors.As(e, &l) {
-			lines[i] = l.Localize(c)
-		}
-	}
-	return strings.Join(lines, "\n")
 }

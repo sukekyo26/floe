@@ -13,10 +13,8 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 const maxBody = 64 << 10
@@ -74,23 +72,19 @@ func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]jso
 // else is 500. A reader that takes JSON (the CLI) gets {"message", "mistakes"}, mistakes set for those
 // of a data file at their lines and columns, which it shows as they are.
 func refuse(w http.ResponseWriter, r *http.Request, err error) {
-	var ue *usererr.Error
-	// The mistakes of a data file, at their lines and columns, are worded too.
-	var l i18n.Localizer
-	status, message := http.StatusInternalServerError, mistakesText(catalog(r), err)
+	shown := usererr.Show(catalog(r), err)
+	status := http.StatusInternalServerError
 	switch {
-	case errors.As(err, &ue) && ue.Conflict:
+	case shown.Conflict:
 		status = http.StatusConflict
-	case errors.As(err, &l):
+	case shown.Fixable:
 		status = http.StatusBadRequest
 	}
 	if !strings.Contains(r.Header.Get("Accept"), "application/json") {
-		send(w, status, message)
+		send(w, status, shown.Text)
 		return
 	}
-	var all yamlpos.Problems
-	var one *yamlpos.Error
-	sendJSON(w, status, Refusal{Message: message, Mistakes: errors.As(err, &all) || errors.As(err, &one)})
+	sendJSON(w, status, Refusal{Message: shown.Text, Mistakes: shown.Placed})
 }
 
 // Refusal is a refusal to a reader that takes JSON: its reason in the reader's language, and whether it

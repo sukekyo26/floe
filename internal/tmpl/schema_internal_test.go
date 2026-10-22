@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // Each kind of mistake a template's schema can name is worded in English and Japanese, and one the
@@ -125,7 +125,7 @@ func TestSchemaRefersToNoFile(t *testing.T) {
 	}
 }
 
-func schemaProblems(t *testing.T, schema, src string) yamlpos.Problems {
+func schemaProblems(t *testing.T, schema, src string) usererr.List {
 	t.Helper()
 
 	d, root := data(t, src)
@@ -134,7 +134,7 @@ func schemaProblems(t *testing.T, schema, src string) yamlpos.Problems {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var p yamlpos.Problems
+	var p usererr.List
 	if err := validate(set, jsonDoc(t, schema), d, root); !errors.As(err, &p) {
 		t.Fatalf("validate = %v, want problems", err)
 	}

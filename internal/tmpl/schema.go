@@ -201,7 +201,7 @@ type schemaCheck struct {
 	root           ast.Node
 	schema         any      // schema.json as read, to list the items a mapping may hold
 	set            *partSet // the parts it refers to
-	problems       yamlpos.Problems
+	problems       usererr.List
 }
 
 // collect turns the leaves of e into problems. A branch of anyOf or oneOf would say why each choice

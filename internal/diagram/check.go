@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -23,7 +24,7 @@ func Check(s *Spec, store *icons.Store) error {
 	return nil
 }
 
-func (l *layout) check() yamlpos.Problems {
+func (l *layout) check() usererr.List {
 	l.checkPlacement()
 	l.checkEdges()
 	l.checkCrossings()

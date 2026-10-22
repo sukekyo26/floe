@@ -262,7 +262,7 @@ func sourceKey(slug, file string) string {
 
 // drawData draws d, the data file of slug, under the title pinned for it, else its title:, else slug.
 func drawData(d *tmpl.Data, m *Meta, slug string) ([]byte, error) {
-	return d.Render(cmp.Or(m.Title, d.Title, slug)) //nolint:wrapcheck // a usererr or a yamlpos.Error to show
+	return d.Render(cmp.Or(m.Title, d.Title, slug)) //nolint:wrapcheck // a usererr.Error or a List to show
 }
 
 // Version is what live reload compares: a linked file's mtime, and for a data file of slug, stored or

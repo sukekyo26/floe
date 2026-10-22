@@ -1,9 +1,8 @@
 // Package yamlpos points at where something was written in a YAML file: the line and column of a
-// node, and mistakes reported there, so that a diagram spec and a data file word theirs alike.
+// node, and the mistakes there, so that a diagram spec and a data file place theirs alike.
 package yamlpos
 
 import (
-	"cmp"
 	"errors"
 	"fmt"
 	"slices"
@@ -16,7 +15,6 @@ import (
 	"github.com/goccy/go-yaml/parser"
 	"github.com/goccy/go-yaml/token"
 
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -161,17 +159,10 @@ func OfValue(key, value ast.Node) Pos {
 	return Of(value)
 }
 
-// Error is a mistake in a YAML file, at a line and column of it.
-type Error struct {
-	File string
-	Pos  Pos
-	Err  *usererr.Error
-}
-
 // Syntax places an error of goccy/go-yaml at its token, or at the start of file without one. When the
 // tokens around it show text that YAML read as something else, a hint says to quote it, at where that
 // began when it is elsewhere.
-func Syntax(file string, err error) *Error {
+func Syntax(file string, err error) *usererr.Error {
 	var se *yaml.SyntaxError
 	if !errors.As(err, &se) || se.Token == nil {
 		return New(file, Pos{Line: 1, Column: 1}, "yaml_syntax", err.Error())
@@ -186,7 +177,7 @@ func Syntax(file string, err error) *Error {
 
 // NewHinted returns the mistake worded by the catalog message key with args, at at in file, with the
 // hint worded by the key hint after it.
-func NewHinted(file string, at Pos, hint, key string, args ...any) *Error {
+func NewHinted(file string, at Pos, hint, key string, args ...any) *usererr.Error {
 	return New(file, at, "yaml_hinted", usererr.New(key, args...), usererr.New(hint))
 }
 
@@ -352,44 +343,15 @@ func CommentAfter(n ast.Node) string {
 }
 
 // New returns the mistake worded by the catalog message key with args, at at in file.
-func New(file string, at Pos, key string, args ...any) *Error {
-	return &Error{File: file, Pos: at, Err: usererr.New(key, args...)}
+func New(file string, at Pos, key string, args ...any) *usererr.Error {
+	return usererr.NewAt(file, at.Line, at.Column, key, args...)
 }
 
-// Error words the mistake in English.
-func (e *Error) Error() string {
-	return e.Localize(i18n.EnglishCatalog())
-}
-
-// Localize words the mistake in the language of c, after the file, line and column.
-func (e *Error) Localize(c *i18n.Catalog) string {
-	return fmt.Sprintf("%s:%d:%d: %s", e.File, e.Pos.Line, e.Pos.Column, e.Err.Localize(c))
-}
-
-// Problems are mistakes reported all at once, each at its own line and column.
-type Problems []*Error
-
-// Sorted returns p in the order of the file.
-func (p Problems) Sorted() Problems {
-	slices.SortStableFunc(p, func(x, y *Error) int {
-		return cmp.Or(cmp.Compare(x.File, y.File), cmp.Compare(x.Pos.Line, y.Pos.Line),
-			cmp.Compare(x.Pos.Column, y.Pos.Column))
-	})
-	return p
-}
-
-// Error words the mistakes in English, one per line.
-func (p Problems) Error() string {
-	return p.Localize(i18n.EnglishCatalog())
-}
-
-// Localize words the mistakes in the language of c, one per line.
-func (p Problems) Localize(c *i18n.Catalog) string {
-	lines := make([]string, len(p))
-	for i, e := range p {
-		lines[i] = e.Localize(c)
-	}
-	return strings.Join(lines, "\n")
+// Place returns e at at in file, in place of any place it had.
+func Place(file string, at Pos, e *usererr.Error) *usererr.Error {
+	placed := *e
+	placed.File, placed.Line, placed.Column = file, at.Line, at.Column
+	return &placed
 }
 
 // FirstAnchor returns the first anchor, alias, merge key (<<) or tag under n, or nil. Callers refuse them, so that
