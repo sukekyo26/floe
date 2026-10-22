@@ -20,7 +20,6 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
-	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -268,7 +267,7 @@ func pickTheme(set *partSet, d *Data, given string, pos yamlpos.Pos) (usererr.Li
 	case !slices.Contains(names, name):
 		why = usererr.New("tmpl_unknown_theme", name, strings.Join(names, ", "))
 	case set.brokenThemes[name] != nil:
-		why = usererr.New("tmpl_theme_broken", name, set.brokenThemes[name])
+		why = set.brokenTheme(name)
 	}
 	switch {
 	case why != nil && given != "":
@@ -619,9 +618,9 @@ func (t *Template) schemaDoc() (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
+	doc, err := schemaJSON(t.file("schema.json"), src)
 	if err != nil {
-		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
+		return nil, err
 	}
 	if bad := checkDraft(doc); bad != nil {
 		return nil, bad.Placed(t.file("schema.json"), 0, 0, "")
@@ -634,7 +633,7 @@ func (t *Template) schemaDoc() (any, error) {
 func (t *Template) readShape(doc any) (*shape, *schemaNotes, error) {
 	s, notes, err := readShape(doc, schemaURL(t.Name), t.file("schema.json"), "")
 	if err != nil {
-		return nil, nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
+		return nil, nil, err
 	}
 	set, err := t.parts()
 	if err != nil {

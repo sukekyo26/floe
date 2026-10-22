@@ -103,7 +103,10 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	warnings, mistakes = notes.warnings, set.mistakes(notes)
+	warnings = notes.warnings
+	for _, m := range set.mistakes(notes) {
+		mistakes = append(mistakes, m)
+	}
 	// Those mistakes, of $refs among them, would fail the compiling, without their pointers.
 	var sch *jsonschema.Schema
 	if len(mistakes) == 0 {
@@ -220,7 +223,7 @@ func (t *Template) checkNamedParts(set *partSet, src []byte, named []namedPart) 
 		case nameLookBox:
 			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_look_box", n.name))
 		case nameBroken:
-			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_part_broken", n.name, set.broken[n.name]))
+			mistakes = append(mistakes, set.brokenPart(n.name).Placed(page, line, 0, ""))
 		case nameUnknown:
 			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_page_part", n.name, set.candidates(n.look)))
 		case nameRight:

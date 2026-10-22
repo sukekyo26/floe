@@ -233,7 +233,7 @@ func (set *partSet) checkThemeFiles(floe *partSet, src *part, made *MadePart, na
 	for _, theme := range set.themeNames() {
 		dir := filepath.Join(made.ThemesAt, theme)
 		if set.lacks(floe, src, theme, dir) {
-			return usererr.New("tmpl_theme_broken", theme, set.brokenThemes[theme])
+			return set.brokenTheme(theme)
 		}
 		at := filepath.Join(dir, name+".css")
 		switch _, err := os.Lstat(at); {
@@ -272,13 +272,16 @@ func (set *partSet) unusableWith(own ownDirs, name, dir string) error {
 	if err != nil {
 		return err
 	}
+	// The copy first, then those it leaves out with it.
+	var found usererr.List
 	if after.broken[name] != nil {
-		return usererr.New("tmpl_new_part_unusable", name, usererr.New("tmpl_part_broken", name, after.broken[name]))
+		found = append(found, after.brokenPart(name))
 	}
-	found := slices.Concat(after.unusable(func(n string) bool { return set.broken[n] != nil }),
+	found = slices.Concat(found,
+		after.unusable(func(n string) bool { return n == name || set.broken[n] != nil }),
 		after.unusableThemes(func(n string) bool { return set.brokenThemes[n] != nil }))
 	if found != nil {
-		return usererr.New("tmpl_new_part_unusable", name, found[0])
+		return usererr.Over("", found, "tmpl_new_part_unusable", name)
 	}
 	return nil
 }

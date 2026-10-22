@@ -98,6 +98,11 @@ func TestCheckMistakes(t *testing.T) {
 			want:  []string{"sizes/schema.json: $schema floe:///templates/sizes/schema.json names no draft of JSON Schema"},
 		},
 		{
+			name:  "a schema of no JSON",
+			files: map[string]string{"schema.json": "{|{ x"},
+			want:  []string{"sizes/schema.json: this is not valid JSON: "},
+		},
+		{
 			name:    "open schema",
 			files:   map[string]string{"schema.json": `"required": ["name", "bytes"],` + "\n" + `        "additionalProperties": false` + "|" + `"required": ["name", "bytes"]`},
 			warning: `sizes/schema.json: #/properties/files/items: it declares properties without "additionalProperties": false`,

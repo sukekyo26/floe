@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -44,6 +45,15 @@ func validate(set *partSet, doc any, d *Data, root ast.Node) error {
 		return fmt.Errorf("check %s against its schema: %w", d.File, ve)
 	}
 	return s.problems
+}
+
+// schemaJSON reads src, a schema.json shown as file in its mistakes, as jsonschema reads it.
+func schemaJSON(file string, src []byte) (any, error) {
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
+	if err != nil {
+		return nil, usererr.NewAt(file, 0, 0, "tmpl_json", err.Error())
+	}
+	return doc, nil
 }
 
 // compileSchema compiles doc, the schema of the template name as jsonschema reads it, which refers to the
@@ -176,7 +186,7 @@ func unknownPart(set *partSet, ref string) *usererr.Error {
 	name, ok := partName(ref)
 	switch {
 	case ok && set.broken[name] != nil:
-		return usererr.New("tmpl_part_broken", name, set.broken[name])
+		return set.brokenPart(name)
 	case ok && set.parts[name] != nil && set.parts[name].isLook():
 		return usererr.New("tmpl_part_look_ref", ref, name)
 	}

@@ -206,18 +206,22 @@ it has one, and the exit code is 1 when there is one. Warnings go to stderr and 
 code 0. Nothing is printed when the templates are right.`,
 		Args: usage(cobra.MinimumNArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
-			var found usererr.List
-			// A warning of the parts of one's own is told for every template: once is enough.
+			var found, warned usererr.List
+			// A warning of the parts of one's own is told for every template: once is enough, and the
+			// mistakes of a part that several stand for are told under the first, as a List tells them.
 			told := map[string]bool{}
 			for _, dir := range args {
 				warnings, more := tmpl.Check(dir, a.cfg.parts, a.cfg.themes, a.cfg.icons)
 				for _, w := range warnings {
-					if text := w.Localize(english); !told[text] {
+					if text := w.Error(); !told[text] {
 						told[text] = true
-						_, _ = fmt.Fprintln(a.env.Stderr, text) //nolint:errcheck // nowhere left to report
+						warned = append(warned, w)
 					}
 				}
 				tell(&found, more...)
+			}
+			if warned != nil {
+				_, _ = fmt.Fprintln(a.env.Stderr, warned.Localize(english)) //nolint:errcheck // nowhere left to report
 			}
 			return found.Err()
 		},

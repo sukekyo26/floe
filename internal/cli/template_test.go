@@ -290,3 +290,27 @@ func TestLinkDataFileOfRelativeIcons(t *testing.T) {
 		t.Errorf("the linked page:\n%s", page)
 	}
 }
+
+// floe template check tells the mistakes of a part of one's own once, though the parts that hold it, or
+// take its look, are each warned of.
+func TestTemplateCheckBrokenPartOnce(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.write(t, "parts/code/schema.json", `{"type": "object"}`)
+	e.write(t, "parts/code/part.html", `<div data-floe-part="code"></div>`)
+	e.write(t, "parts/code/part.css", "}\n")
+	// A template that holds none of the parts code leaves out.
+	e.write(t, "templates/spec/template.yaml", "floe: "+strings.Join(strings.SplitN(version.Version, ".", 3)[:2], ".")+"\n")
+	e.write(t, "templates/spec/schema.json", `{"type": "object", "properties": {"lead": {"type": "string"}}, "additionalProperties": false}`)
+	e.write(t, "templates/spec/page.html", "<!doctype html><html><head><title>{{.Title}}</title></head><body>{{.Data.lead}}</body></html>")
+	e.write(t, "templates/spec/example.yaml", "template: spec\nlang: en\nlead: x\n")
+	spec := filepath.Join(e.tmp, "templates", "spec")
+	r := e.run(t, "", "template", "check", spec)
+	css := filepath.Join(e.tmp, "parts", "code", "part.css") + ":1: this } closes no block"
+	if r.code != 0 || strings.Count(r.stderr, css) != 1 || !strings.Contains(r.stderr, "the part stack cannot be used") {
+		t.Errorf("template check = %+v, want %s once", r, css)
+	}
+}

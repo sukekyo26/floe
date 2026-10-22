@@ -334,8 +334,9 @@ func (set *partSet) checkNames(name, dir string) error {
 	at := cmp.Or(dir, path.Join("parts", name))
 	html, yaml := path.Join(at, "part.html"), path.Join(at, "part.yaml")
 	named := namedParts(p.html)
+	var errs []error
 	if dir != "" && !p.isLook() && !namesItself(named, name) {
-		return usererr.NewAt(html, 0, 0, "tmpl_part_unnamed", name, name)
+		errs = append(errs, usererr.NewAt(html, 0, 0, "tmpl_part_unnamed", name, name))
 	}
 	for _, n := range named {
 		kind := set.misnamed(n)
@@ -345,20 +346,17 @@ func (set *partSet) checkNames(name, dir string) error {
 		line := lineAt([]byte(p.html), n.at)
 		switch {
 		case dir != "" && kind == nameNotOne:
-			return usererr.NewAt(html, line, 0, "tmpl_part_several", n.value)
+			errs = append(errs, usererr.NewAt(html, line, 0, "tmpl_part_several", n.value))
 		case dir != "" && kind == nameLookBox:
-			return usererr.NewAt(html, line, 0, "tmpl_look_box", n.name)
-		}
-		if err := set.unlent(kind, n.name, html, line, n.look); err != nil {
-			return err
+			errs = append(errs, usererr.NewAt(html, line, 0, "tmpl_look_box", n.name))
+		default:
+			errs = append(errs, set.unlent(kind, n.name, html, line, n.look))
 		}
 	}
 	for _, look := range p.looks {
-		if err := set.unlent(set.known(look.name), look.name, yaml, look.line, true); err != nil {
-			return err
-		}
+		errs = append(errs, set.unlent(set.known(look.name), look.name, yaml, look.line, true))
 	}
-	return set.checkHeld(name)
+	return usererr.Collect(append(errs, set.checkHeld(name))...) //nolint:wrapcheck // its mistakes, or what failed
 }
 
 // nameKind is what a name an attribute gives is to a part set.
@@ -433,10 +431,7 @@ func (set *partSet) checkHeld(name string) error {
 	if n == nil {
 		return nil // a look alone, or one floe draws in Go
 	}
-	if mistakes := set.mistakes(n); mistakes != nil {
-		return mistakes[0]
-	}
-	return nil
+	return set.mistakes(n).Err()
 }
 
 // names lists the parts of set that keep keeps, every one for nil, by name.
@@ -472,7 +467,7 @@ func (set *partSet) find(name string) (*part, error) {
 	case set.parts[name] != nil:
 		return set.parts[name], nil
 	case set.broken[name] != nil:
-		return nil, usererr.New("tmpl_part_broken", name, set.broken[name])
+		return nil, set.brokenPart(name)
 	}
 	return nil, usererr.New("tmpl_unknown_part", name, set.names(nil))
 }
@@ -483,7 +478,7 @@ func (set *partSet) unusable(skip func(name string) bool) []*usererr.Error {
 	var found []*usererr.Error
 	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
 		if skip == nil || !skip(name) {
-			found = append(found, usererr.New("tmpl_part_broken", name, set.broken[name]))
+			found = append(found, set.brokenPart(name))
 		}
 	}
 	return found
@@ -495,10 +490,31 @@ func (set *partSet) unusableThemes(skip func(name string) bool) []*usererr.Error
 	var found []*usererr.Error
 	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
 		if skip == nil || !skip(name) {
-			found = append(found, usererr.New("tmpl_theme_broken", name, set.brokenThemes[name]))
+			found = append(found, set.brokenTheme(name))
 		}
 	}
 	return found
+}
+
+// brokenPart is the mistake of the part name of set, which cannot be used, standing for why it cannot.
+func (set *partSet) brokenPart(name string) *usererr.Error {
+	return usererr.Over("part:"+name, reasons(set.broken[name]), "tmpl_part_broken", name)
+}
+
+// brokenTheme is the mistake of the theme name of set, which cannot be used, standing for why it cannot.
+func (set *partSet) brokenTheme(name string) *usererr.Error {
+	return usererr.Over("theme:"+name, reasons(set.brokenThemes[name]), "tmpl_theme_broken", name)
+}
+
+// reasons are why, why a part or a theme cannot be used, as mistakes: a failure among them, which is not
+// the user's, is told as floe's. An exception to "a failure stops at once": the failure of one part or
+// theme of one's own does not stop the pages that do not use it.
+func reasons(why error) usererr.List {
+	var l usererr.List
+	if failed := l.Add(why); failed != nil {
+		l = append(l, usererr.New("tmpl_own_failed", failed))
+	}
+	return l
 }
 
 // leaveOut leaves the part name out of set, kept in set.broken with why.

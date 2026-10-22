@@ -23,22 +23,33 @@ type Error struct {
 	Line     int    // 0: no line
 	Column   int    // 0: no column
 	At       string // a JSON pointer in a schema, "" for none
+	Under    List   // the mistakes it stands for: those of a part that cannot be used
+	Of       string // what Under is the mistakes of, such as "part:quote", told once in a list
 }
 
 // New returns an *Error for the catalog message key with args, without a place.
 func New(key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: ""}
+	return &Error{Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: nil, Of: ""}
 }
 
 // NewAt returns an *Error for the catalog message key with args, at the line and column of file, 0 for
 // none.
 func NewAt(file string, line, column int, key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, Conflict: false, File: file, Line: line, Column: column, At: ""}
+	return &Error{
+		Key: key, Args: args, Conflict: false, File: file, Line: line, Column: column, At: "", Under: nil, Of: "",
+	}
 }
 
 // NewIn returns an *Error for the catalog message key with args, at at, a JSON pointer, in file.
 func NewIn(file, at, key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, Conflict: false, File: file, Line: 0, Column: 0, At: at}
+	return &Error{Key: key, Args: args, Conflict: false, File: file, Line: 0, Column: 0, At: at, Under: nil, Of: ""}
+}
+
+// Over returns an *Error for the catalog message key with args that stands for the mistakes under, those
+// of of, such as "part:quote": told under it, once in a list, where another that stands for them says
+// they are told above.
+func Over(of string, under List, key string, args ...any) *Error {
+	return &Error{Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: under, Of: of}
 }
 
 // Placed returns e at the line and column of file, 0 for none, and at, "" for none, in place of any
@@ -55,9 +66,14 @@ func (e *Error) Error() string {
 }
 
 // Localize words the refusal in the language of c, after where it is, file:line:column: at, or as much of
-// it as it has. An argument that is itself a Localizer (a worded part of the message, such as the name of
-// a diagram part) is worded in c too.
+// it as it has, and the mistakes it stands for under it, indented. An argument that is itself a Localizer
+// (a worded part of the message, such as the name of a diagram part) is worded in c too.
 func (e *Error) Localize(c *i18n.Catalog) string {
+	return e.told(c, map[string]bool{})
+}
+
+// told words e as Localize does, the mistakes it stands for told once of all those that told notes.
+func (e *Error) told(c *i18n.Catalog, told map[string]bool) string {
 	args := make([]any, len(e.Args))
 	for i, a := range e.Args {
 		if l, ok := a.(i18n.Localizer); ok {
@@ -78,7 +94,17 @@ func (e *Error) Localize(c *i18n.Catalog) string {
 	if e.At != "" {
 		where = append(where, e.At)
 	}
-	return strings.Join(append(where, c.Msg(e.Key, args...)), ": ")
+	text := strings.Join(append(where, c.Msg(e.Key, args...)), ": ")
+	switch {
+	case e.Of != "" && told[e.Of]:
+		return text + c.Msg("told_above")
+	case e.Of != "":
+		told[e.Of] = true
+	}
+	for _, u := range e.Under {
+		text += "\n  " + strings.ReplaceAll(u.told(c, told), "\n", "\n  ")
+	}
+	return text
 }
 
 // CannotRead is the refusal for a file the user named that cannot be read, with the reason (no such
@@ -137,6 +163,18 @@ func (l *List) AddPlaced(err error) error {
 	return l.Add(err)
 }
 
+// Collect returns the mistakes of errs together, as Add takes them, nil for none, or the first failure
+// among them: for the checks of a stage that do not depend on one another.
+func Collect(errs ...error) error {
+	var l List
+	for _, err := range errs {
+		if failed := l.Add(err); failed != nil {
+			return failed
+		}
+	}
+	return l.Err()
+}
+
 // Err returns l as it is, or nil when it holds none: a List of none is no error.
 func (l List) Err() error {
 	if len(l) == 0 {
@@ -171,18 +209,21 @@ func (l List) Error() string {
 	return l.Localize(i18n.EnglishCatalog())
 }
 
-// Localize words the mistakes in the language of c, one per line.
+// Localize words the mistakes in the language of c, one per line, the mistakes of a part or a theme that
+// several stand for told under the first.
 func (l List) Localize(c *i18n.Catalog) string {
+	told := map[string]bool{}
 	lines := make([]string, len(l))
 	for i, e := range l {
-		lines[i] = e.Localize(c)
+		lines[i] = e.told(c, told)
 	}
 	return strings.Join(lines, "\n")
 }
 
 // Shown is how an error is told: its text in the reader's language; whether the user can fix it (a
 // refusal, 400, not floe's failure, 500); whether it is placed mistakes, told as they are, one per line,
-// for editors and CI to read, without floe's name before them; and whether it is a name in use (409).
+// those one stands for indented on the lines after it, for editors and CI to read, without floe's name
+// before them; and whether it is a name in use (409).
 type Shown struct {
 	Text     string
 	Fixable  bool

@@ -153,8 +153,9 @@ uses.`,
 		Args: usage(cobra.NoArgs),
 		RunE: func(*cobra.Command, []string) error {
 			warnings, found := tmpl.CheckOwnParts(a.cfg.parts, a.cfg.themes)
-			for _, w := range warnings {
-				_, _ = fmt.Fprintln(a.env.Stderr, w.Localize(english)) //nolint:errcheck // nowhere left to report
+			if warnings != nil {
+				told := usererr.List(warnings).Localize(english)
+				_, _ = fmt.Fprintln(a.env.Stderr, told) //nolint:errcheck // nowhere left to report
 			}
 			var all usererr.List
 			tell(&all, found...)
