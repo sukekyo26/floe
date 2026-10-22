@@ -11,8 +11,9 @@ import (
 	"github.com/sukekyo26/floe/internal/store"
 )
 
-// wrapPage holds a path and a URL in cards, which have no place to break a line, and words beside narrow
-// columns: keys' text beside its keycaps, a code's language beside a long file name.
+// wrapPage holds a path and a URL in cards, which have no place to break a line, words beside narrow
+// columns (keys' text beside its keycaps, the language of code and the counts of a diff beside a long file
+// name) and a path in a table, which scrolls instead.
 const wrapPage = `template: report
 lang: en
 title: Wrap
@@ -25,23 +26,31 @@ sections:
       - keys:
           - { keys: [Control, Shift, Escape], text: open the task manager }
       - code: { file: internal/tmpl/parts/findings/part_internal_test.go, lang: typescript, text: let a = 1 }
+      - diff: { file: internal/tmpl/parts/findings/part_internal_test.go, text: "+1\n+2\n+3\n+4\n+5\n+6\n+7\n+8\n+9\n+10\n+11\n+12\n-x\n" }
+      - table:
+          columns: [{ title: file }, { title: what }]
+          rows:
+            - ['` + "`internal/tmpl/parts/findings/part_internal_test.go`" + `', a test of the findings]
 `
 
-// measureWrap returns one line for each box a text overflows and for each word of keys' text or of
-// code's language that breaks across lines.
+// measureWrap returns one line for each box a text overflows and for each word that breaks across lines in
+// keys' text, code's language, a diff's counts and a table.
 const measureWrap = `(() => {
   const out = [];
   for (const e of document.querySelectorAll('[data-floe-part] *')) {
     if (e.closest('pre') || getComputedStyle(e).display === 'inline') continue;
     if (e.scrollWidth > e.clientWidth + 1) out.push('overflows: ' + e.textContent.trim().slice(0, 40));
   }
-  for (const e of document.querySelectorAll('[data-floe-part=keys] dd, [data-floe-part=code] .lang')) {
-    const n = e.firstChild;
-    for (const m of n.data.matchAll(/\w{2,}/g)) {
-      const r = document.createRange();
-      r.setStart(n, m.index);
-      r.setEnd(n, m.index + m[0].length);
-      if (new Set([...r.getClientRects()].map((c) => Math.round(c.top))).size > 1) out.push('breaks: ' + m[0]);
+  const whole = '[data-floe-part=keys] dd, [data-floe-part=code] .lang, [data-floe-part=diff] figcaption > :not(.file), td';
+  for (const e of document.querySelectorAll(whole)) {
+    const walk = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+    for (let n; (n = walk.nextNode()); ) {
+      for (const m of n.data.matchAll(/[\w+−]{2,}/g)) {
+        const r = document.createRange();
+        r.setStart(n, m.index);
+        r.setEnd(n, m.index + m[0].length);
+        if (new Set([...r.getClientRects()].map((c) => Math.round(c.top))).size > 1) out.push('breaks: ' + m[0]);
+      }
     }
   }
   return out.join('\n');
