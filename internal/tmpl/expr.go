@@ -11,6 +11,7 @@ import (
 	"github.com/expr-lang/expr/vm"
 	"github.com/expr-lang/expr/vm/runtime"
 
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -51,7 +52,7 @@ func compile(src string, env any, opts ...expr.Option) (*vm.Program, error) {
 // back compiles, a # in the expression began the comment, and the mistake says to quote it.
 func compileWritten(
 	file string, at yamlpos.Pos, src, rest string, env any, opts ...expr.Option,
-) (*vm.Program, *yamlpos.Error) {
+) (*vm.Program, *usererr.Error) {
 	p, err := compile(src, env, opts...)
 	if err == nil {
 		return p, nil

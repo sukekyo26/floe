@@ -142,10 +142,14 @@ linters:
         - usererr.New(
         - usererr.CannotRead(
         - usererr.CannotWrite(
+        - usererr.NewAt(
         - yamlpos.New(
         - yamlpos.Syntax(
-        # A sig matches as part of the one reported, func (github.com/…/yamlpos.Problems).Sorted(): no "(" before.
-        - yamlpos.Problems).Sorted(
+        # A sig matches as part of the one reported, func (github.com/…/usererr.List).Sorted(): no "(" before.
+        # Add returns a failure as it is, for the caller to stop at.
+        - usererr.List).Sorted(
+        - usererr.List).Err(
+        - usererr.List).Add(
     sloglint:
       no-mixed-args: true
       kv-only: false

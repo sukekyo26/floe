@@ -7,6 +7,7 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -18,7 +19,7 @@ type fields struct {
 	at     yamlpos.Pos // where a missing key is reported
 	values []*ast.MappingValueNode
 	asked  []string
-	err    *yamlpos.Error
+	err    *usererr.Error
 }
 
 func newFields(file, kind string, at yamlpos.Pos, n ast.Node) (*fields, error) {
@@ -34,7 +35,7 @@ func newFields(file, kind string, at yamlpos.Pos, n ast.Node) (*fields, error) {
 	return f, nil
 }
 
-func (f *fields) errAt(at yamlpos.Pos, key string, args ...any) *yamlpos.Error {
+func (f *fields) errAt(at yamlpos.Pos, key string, args ...any) *usererr.Error {
 	return yamlpos.New(f.file, at, key, args...)
 }
 

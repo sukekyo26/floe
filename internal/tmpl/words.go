@@ -40,7 +40,7 @@ func readWords(file string, src []byte) (words, error) {
 	}
 	w := words{}
 	seen := map[string]writtenTag{}
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for _, v := range top.Values {
 		key := yamlpos.KeyOf(v)
 		tag := key.GetToken().Value
@@ -77,13 +77,13 @@ type writtenTag struct {
 
 // readLang reads n, the words of the language tag written as key: names and their text; nil when it
 // is not names and their text.
-func readLang(file, tag string, key, n ast.Node) (map[string]string, yamlpos.Problems) {
+func readLang(file, tag string, key, n ast.Node) (map[string]string, usererr.List) {
 	m, ok := n.(*ast.MappingNode)
 	if !ok {
-		return nil, yamlpos.Problems{yamlpos.New(file, yamlpos.OfValue(key, n), "tmpl_words_lang_not_mapping", tag)}
+		return nil, usererr.List{yamlpos.New(file, yamlpos.OfValue(key, n), "tmpl_words_lang_not_mapping", tag)}
 	}
 	ws := map[string]string{}
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for _, v := range m.Values {
 		name := yamlpos.KeyOf(v).GetToken().Value
 		switch text := v.Value.(type) {
@@ -103,15 +103,15 @@ func readLang(file, tag string, key, n ast.Node) (map[string]string, yamlpos.Pro
 
 // checkNames refuses w without en, at top, and a language of w, written as seen says, that leaves out a
 // word en names or names one en does not.
-func (w words) checkNames(file string, seen map[string]writtenTag, top yamlpos.Pos) yamlpos.Problems {
+func (w words) checkNames(file string, seen map[string]writtenTag, top yamlpos.Pos) usererr.List {
 	en, ok := w[fallbackLang]
 	switch {
 	case !ok && seen[fallbackLang].tag != "":
 		return nil // written, but not read: told already
 	case !ok:
-		return yamlpos.Problems{yamlpos.New(file, top, "tmpl_words_no_en")}
+		return usererr.List{yamlpos.New(file, top, "tmpl_words_no_en")}
 	}
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for lang, ws := range w {
 		var missing, extra []string
 		for name := range en {

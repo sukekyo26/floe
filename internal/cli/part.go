@@ -42,10 +42,9 @@ your own takes the place of floe's of its name.`,
 				a.out("%s\t%s\t%s", d.Name, oneLine(cmp.Or(d.Path, "built-in")), oneLine(d.About))
 			}
 			// A part that cannot be used does not hide the others: it is reported after them (exit code 1).
-			if broken != nil {
-				return mistakes(broken)
-			}
-			return nil
+			var found usererr.List
+			found.Tell(broken...)
+			return found.Err()
 		},
 	}
 }
@@ -157,10 +156,9 @@ uses.`,
 			for _, w := range warnings {
 				_, _ = fmt.Fprintln(a.env.Stderr, w.Localize(english)) //nolint:errcheck // nowhere left to report
 			}
-			if found != nil {
-				return mistakes(found)
-			}
-			return nil
+			var all usererr.List
+			all.Tell(found...)
+			return all.Err()
 		},
 	}
 }

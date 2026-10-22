@@ -1,6 +1,8 @@
 package usererr_test
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -20,5 +22,71 @@ func TestError(t *testing.T) {
 	}
 	if e.Conflict {
 		t.Error("New marks a conflict")
+	}
+}
+
+// A List takes mistakes and Lists, leaves out a nil *Error, and returns a failure; of none it is no error.
+func TestListAdd(t *testing.T) {
+	t.Parallel()
+
+	var none *usererr.Error
+	var l usererr.List
+	failure := errors.New("disk on fire")
+	for _, err := range []error{nil, none, usererr.New("tmpl_no_lang"), usererr.List{usererr.NewAt("a.yaml", 2, 3, "tmpl_no_lang")}} {
+		if got := l.Add(err); got != nil {
+			t.Errorf("Add(%v) = %v", err, got)
+		}
+	}
+	if got := l.Add(failure); !errors.Is(got, failure) {
+		t.Errorf("Add of a failure = %v", got)
+	}
+	if len(l) != 2 {
+		t.Fatalf("the list = %v", l)
+	}
+	if err := (usererr.List{}).Err(); err != nil {
+		t.Errorf("Err of none = %v", err)
+	}
+	l.Tell(failure)
+	if got := l.Error(); got != "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\na.yaml:2:3: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\ndisk on fire" {
+		t.Errorf("the list told = %q", got)
+	}
+}
+
+// Sorted keeps the files in the order they first come, and sorts the mistakes of each by line and column.
+func TestListSorted(t *testing.T) {
+	t.Parallel()
+
+	l := usererr.List{
+		usererr.NewAt("b.yaml", 9, 1, "tmpl_no_lang"), usererr.NewAt("a.yaml", 3, 1, "tmpl_no_lang"),
+		usererr.NewAt("b.yaml", 2, 5, "tmpl_no_lang"), usererr.NewAt("b.yaml", 2, 1, "tmpl_no_lang"),
+	}
+	got := make([]string, 0, len(l))
+	for _, e := range l.Sorted() {
+		got = append(got, fmt.Sprintf("%s:%d:%d", e.File, e.Line, e.Column))
+	}
+	if want := "b.yaml:2:1 b.yaml:2:5 b.yaml:9:1 a.yaml:3:1"; strings.Join(got, " ") != want {
+		t.Errorf("Sorted = %v, want %s", got, want)
+	}
+}
+
+// Show tells a placed mistake, a list and a name in use from a refusal and from floe's failure.
+func TestShow(t *testing.T) {
+	t.Parallel()
+
+	conflict := usererr.New("tmpl_no_lang")
+	conflict.Conflict = true
+	for _, tt := range []struct {
+		err  error
+		want usererr.Shown
+	}{
+		{usererr.New("tmpl_no_lang"), usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: false}},
+		{usererr.NewAt("a.yaml", 1, 2, "tmpl_no_lang"), usererr.Shown{Text: "a.yaml:1:2: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: true, Conflict: false}},
+		{usererr.List{usererr.New("tmpl_no_lang")}, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: true, Conflict: false}},
+		{conflict, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: true}},
+		{errors.New("disk on fire"), usererr.Shown{Text: "disk on fire", Fixable: false, Placed: false, Conflict: false}},
+	} {
+		if got := usererr.Show(i18n.EnglishCatalog(), tt.err); got != tt.want {
+			t.Errorf("Show(%v) = %+v, want %+v", tt.err, got, tt.want)
+		}
 	}
 }

@@ -59,7 +59,7 @@ type layout struct {
 	heads    []rect // frame headings, which edges may not cross
 	strokes  []rect // the spans of edges and lines, which must stay on the canvas
 	paths    []path
-	problems yamlpos.Problems
+	problems usererr.List
 	seen     map[string]bool
 	// The SVG of the layers, drawn bottom to top.
 	areaSVG, edgeSVG, boxSVG, labelSVG []markup

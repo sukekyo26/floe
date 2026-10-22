@@ -9,7 +9,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // builtins are the built-in templates alone.
@@ -261,8 +261,8 @@ func TestReadRefusals(t *testing.T) {
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <svg><!-- </HEAD> -->\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a </head>"},
 	} {
 		_, err := builtins.Read("data.yaml", []byte(c.src), "", "")
-		var one *yamlpos.Error
-		var all yamlpos.Problems
+		var one *usererr.Error
+		var all usererr.List
 		if !errors.As(err, &one) && !errors.As(err, &all) || !strings.HasPrefix(err.Error(), c.want) {
 			t.Errorf("Read %q = %v, want %s", c.src, err, c.want)
 		}
@@ -308,7 +308,7 @@ sections:
 lang: en
 `
 	_, err := builtins.Read("bad.yaml", []byte(src), "", "")
-	var p yamlpos.Problems
+	var p usererr.List
 	if !errors.As(err, &p) {
 		t.Fatalf("Read = %v, want problems", err)
 	}

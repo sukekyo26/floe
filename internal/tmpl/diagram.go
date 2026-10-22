@@ -2,7 +2,6 @@ package tmpl
 
 import (
 	"cmp"
-	"errors"
 	"html/template"
 	"slices"
 
@@ -10,6 +9,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -60,17 +60,10 @@ func checkDiagrams(whole drawnItems, d *Data, root ast.Node, iconsDir string) er
 // checkItems returns the mistakes of the checks of a stage, errs, together: those at a line and column
 // all at once, sorted, unless one failed otherwise.
 func checkItems(errs ...error) error {
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for _, err := range errs {
-		var more yamlpos.Problems
-		var one *yamlpos.Error
-		switch {
-		case errors.As(err, &more):
-			problems = append(problems, more...)
-		case errors.As(err, &one):
-			problems = append(problems, one)
-		case err != nil:
-			return err
+		if failed := problems.Add(err); failed != nil {
+			return failed
 		}
 	}
 	if problems != nil {

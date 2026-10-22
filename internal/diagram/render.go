@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -52,9 +53,9 @@ var markerKinds = func() []string {
 
 // Render checks the specs and draws each, in order, as an HTML fragment of inline SVG, with the icons
 // of store. The ids of the diagrams name their markers and icons, so they must differ between the
-// specs drawn together. On a mistake it draws nothing and returns the Problems of every spec.
+// specs drawn together. On a mistake it draws nothing and returns the mistakes of every spec.
 func Render(specs []*Spec, store *icons.Store) ([]string, error) {
-	var problems yamlpos.Problems
+	var problems usererr.List
 	layouts := make([]*layout, len(specs))
 	first := map[string]*Spec{}
 	for i, s := range specs {

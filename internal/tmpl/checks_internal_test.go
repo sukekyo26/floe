@@ -8,6 +8,7 @@ import (
 	"github.com/goccy/go-yaml/ast"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -152,11 +153,11 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 	}
 }
 
-func failures(t *testing.T, checks, src string) yamlpos.Problems {
+func failures(t *testing.T, checks, src string) usererr.List {
 	t.Helper()
 
 	d, root := data(t, src)
-	var p yamlpos.Problems
+	var p usererr.List
 	if err := relate("checks.yaml", []byte(checks), d, root); !errors.As(err, &p) {
 		t.Fatalf("relate = %v, want problems", err)
 	}
@@ -233,7 +234,7 @@ func TestDeclared(t *testing.T) {
 		switch {
 		case tt.want == "" && e != nil:
 			t.Errorf("%s, for %s, field %s = %v", tt.schema, tt.for_, tt.field, e)
-		case tt.want != "" && (e == nil || e.Err.Key != tt.want):
+		case tt.want != "" && (e == nil || e.Key != tt.want):
 			t.Errorf("%s, for %s, field %s = %v, want %s", tt.schema, tt.for_, tt.field, e, tt.want)
 		}
 	}

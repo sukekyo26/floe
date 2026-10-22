@@ -9,7 +9,7 @@ import (
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/icons"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // check parses a spec of a 300x200 canvas (or w x h when given in head) with parts and checks it.
@@ -261,7 +261,7 @@ func TestCheckIconsNotFetched(t *testing.T) {
 	dir := t.TempDir()
 	s := parse(t, "s.yaml", "id: d\ntitle: t\nwidth: 100\nheight: 100\nparts:\n  - icon: { x: 10, y: 10, name: aws/aws-lambda }\n")
 	err := diagram.Check(s, icons.New(dir))
-	var p yamlpos.Problems
+	var p usererr.List
 	want := "AWS icons are not in " + filepath.Join(dir, "aws") + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
 	if errors.As(err, &p) || errString(err) != want {
 		t.Errorf("Check = %v, want %s", err, want)

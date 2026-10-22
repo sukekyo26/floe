@@ -80,9 +80,9 @@ type Data struct {
 var shared = []string{"lang", "template", "theme", "title"}
 
 // Read reads the data file src, checks it against its template's schema, then its checks, and
-// computes the values of its computed.yaml; file names it in errors. A mistake is a *yamlpos.Error,
-// and those of the schema, of the checks or of the computing are all reported at once as
-// yamlpos.Problems.
+// computes the values of its computed.yaml; file names it in errors. A mistake is a *usererr.Error,
+// and those of the schema, of the checks or of the computing are all reported at once, as a
+// usererr.List.
 //
 // theme, when not "", is drawn with instead of the one the data names: the data's theme: is then not
 // used, and a theme that does not exist is refused as a *usererr.Error, as is a template that needs
@@ -213,8 +213,8 @@ type head struct {
 	root ast.Node
 	// where each key every template shares is written, the top of the file for one left out
 	where    map[string]yamlpos.Pos
-	problems yamlpos.Problems // the mistakes in those keys
-	unnamed  bool             // template: is left out or empty, a mistake left to the caller to word
+	problems usererr.List // the mistakes in those keys
+	unnamed  bool         // template: is left out or empty, a mistake left to the caller to word
 }
 
 // start reads the data file src, file in its mistakes, up to its template, leaving out the data's
@@ -243,7 +243,7 @@ func start(file string, src []byte, given string) (*head, error) {
 
 // check checks h.d, whose images are under images, against t, which then draws it: with the theme
 // given, else the data's. problems are those found before in the keys every template shares.
-func (t *Template) check(h *head, images imageDir, given string, problems yamlpos.Problems) error {
+func (t *Template) check(h *head, images imageDir, given string, problems usererr.List) error {
 	d := h.d
 	d.tmpl = t
 	set, err := t.parts()
@@ -260,7 +260,7 @@ func (t *Template) check(h *head, images imageDir, given string, problems yamlpo
 // pickTheme sets d.Theme to given when not "", which must be one of the themes of set, else leaves the
 // data's, reported at pos, where the data names it, when it is not one; one of one's own that cannot be
 // used is told why.
-func pickTheme(set *partSet, d *Data, given string, pos yamlpos.Pos) (yamlpos.Problems, error) {
+func pickTheme(set *partSet, d *Data, given string, pos yamlpos.Pos) (usererr.List, error) {
 	name := cmp.Or(given, d.Theme)
 	names := set.themeNames()
 	var why *usererr.Error
@@ -274,7 +274,7 @@ func pickTheme(set *partSet, d *Data, given string, pos yamlpos.Pos) (yamlpos.Pr
 	case why != nil && given != "":
 		return nil, why
 	case why != nil:
-		return yamlpos.Problems{&yamlpos.Error{File: d.File, Pos: pos, Err: why}}, nil
+		return usererr.List{yamlpos.Place(d.File, pos, why)}, nil
 	}
 	d.Theme = name
 	return nil, nil
@@ -283,7 +283,7 @@ func pickTheme(set *partSet, d *Data, given string, pos yamlpos.Pos) (yamlpos.Pr
 // checkValues checks d against its template's schema, reads its images under images, checks it against
 // its checks and computes its values, reporting the schema's mistakes with problems, those found before
 // in the keys every template shares.
-func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems yamlpos.Problems) error {
+func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems usererr.List) error {
 	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
 	s, doc, err := t.checkedShape()
 	if err != nil {
@@ -294,7 +294,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 		return err
 	}
 	err = validate(set, doc, d, root)
-	var more yamlpos.Problems
+	var more usererr.List
 	switch {
 	case errors.As(err, &more):
 		problems = append(problems, more...)
@@ -326,7 +326,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 // page's styles, and those that hold a <base> or a <meta>, which change the page without changing its
 // tree (baseOrMeta). It refuses those that name a part of set that the page would refuse too.
 func checkHTML(set *partSet, d *Data) error {
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for _, it := range d.htmlItems {
 		// Wherever it is, a comment's text too.
 		if styleOrLink.MatchString(it.text) {
@@ -737,7 +737,7 @@ func pathKey(at []string) string {
 
 // itemMistake is the mistake e in the item at the path at under root, of the data file file: at its
 // value, or at its key with onKey.
-func itemMistake(file string, root ast.Node, at []string, onKey bool, e *usererr.Error) *yamlpos.Error {
+func itemMistake(file string, root ast.Node, at []string, onKey bool, e *usererr.Error) *usererr.Error {
 	pos, path := itemPos(root, at, onKey)
 	return itemError(file, pos, path, e)
 }
@@ -753,8 +753,8 @@ func itemPos(root ast.Node, at []string, onKey bool) (yamlpos.Pos, string) {
 }
 
 // itemError is the mistake e in the item at path, written at pos in the data file file.
-func itemError(file string, pos yamlpos.Pos, path string, e *usererr.Error) *yamlpos.Error {
-	return &yamlpos.Error{File: file, Pos: pos, Err: usererr.New("tmpl_item", path, e)}
+func itemError(file string, pos yamlpos.Pos, path string, e *usererr.Error) *usererr.Error {
+	return yamlpos.Place(file, pos, usererr.New("tmpl_item", path, e))
 }
 
 // decode reads the values under root. goccy/go-yaml reads a whole number above 0 as uint64, which

@@ -17,6 +17,7 @@ import (
 	"github.com/expr-lang/expr/vm"
 	"github.com/goccy/go-yaml/ast"
 
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -62,7 +63,7 @@ func compute(file string, src []byte, d *Data, declared []string, root ast.Node)
 		}
 	}
 	d.Calc = map[string]any{}
-	var problems yamlpos.Problems
+	var problems usererr.List
 	failed := map[string]bool{}
 	for _, n := range c.order {
 		if slices.ContainsFunc(c.uses[n], func(u string) bool { return failed[u] }) {
@@ -107,7 +108,7 @@ type computed struct {
 func readComputed(file string, src []byte, declared []string) (*computed, error) {
 	// The names of the expressions read are checked beside the mistakes of the others.
 	exprs, where, err := readExprs(file, src)
-	var problems yamlpos.Problems
+	var problems usererr.List
 	if err != nil && !errors.As(err, &problems) {
 		return nil, err
 	}
@@ -170,7 +171,7 @@ func readComputed(file string, src []byte, declared []string) (*computed, error)
 }
 
 // readExprs reads the names and expressions of the computed.yaml src of file, and where each is written.
-// Those whose expression is not text are left out, and their mistakes returned as yamlpos.Problems.
+// Those whose expression is not text are left out, and their mistakes returned as usererr.List.
 func readExprs(file string, src []byte) (map[string]string, map[string]*ast.MappingValueNode, error) {
 	exprs, where := map[string]string{}, map[string]*ast.MappingValueNode{}
 	body, err := yamlpos.Parse(file, src, "tmpl_computed_yaml")
@@ -187,7 +188,7 @@ func readExprs(file string, src []byte) (map[string]string, map[string]*ast.Mapp
 	if !ok {
 		return nil, nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_computed_yaml")
 	}
-	var problems yamlpos.Problems
+	var problems usererr.List
 	for _, kv := range m.Values {
 		n := yamlpos.KeyOf(kv).GetToken().Value
 		s, ok := text(kv.Value)

@@ -65,7 +65,7 @@ func (a *app) renderPages(files []string, outDir string, check bool) error {
 // drawPages draws the page of each data file and names the HTML file it goes to, or returns the
 // mistakes of every file, and the pages two data files would write.
 func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
-	found := make(mistakes, 0, len(files))
+	var found usererr.List
 	pages := make([]rendered, 0, len(files))
 	// The first page to each real path in lower case: through a symlink, and on a filesystem that
 	// ignores case (macOS), two paths may be one file.
@@ -84,14 +84,14 @@ func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
 		if taken && !a.twoFiles(other.from, file) {
 			continue
 		}
-		page, errs := drawFile(a, file)
-		found = append(found, errs...)
+		page, err := drawFile(a, file)
+		found.Tell(err)
 		switch {
 		case taken && other.real == p.real:
 			found = append(found, usererr.New("cli_render_same_file", other.from, file, p.to))
 		case taken:
 			found = append(found, usererr.New("cli_render_same_file_case", other.from, file, other.to, p.to))
-		case len(errs) == 0:
+		case err == nil:
 			p.page = tmpl.CutOffPage(page)
 			pages = append(pages, p)
 			fallthrough
@@ -149,7 +149,7 @@ func (a *app) writePages(pages []rendered, outDir string) error {
 
 // checkPages returns a mistake for each page that is missing or is not what its data file draws.
 func (a *app) checkPages(pages []rendered) error {
-	found := make(mistakes, 0, len(pages))
+	var found usererr.List
 	for _, p := range pages {
 		old, err := os.ReadFile(a.abs(p.to))
 		switch {

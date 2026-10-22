@@ -6,6 +6,7 @@ func init() {
 
 var messagesJA = map[string]string{
 	// 共通
+	"error_text":        "%s", // a failure told among mistakes (usererr.List.Tell), as it is
 	"file_cannot_read":  "%s を読めません（%s）。パスとファイルがあるかを確かめてください",
 	"file_cannot_write": "%s に書き出せません（%s）。そのディレクトリに書き込めるかを確かめてください",
 
