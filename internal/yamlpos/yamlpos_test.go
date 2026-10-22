@@ -153,9 +153,8 @@ func TestSyntaxHints(t *testing.T) {
 	}
 }
 
-// ColonText is a plain key and its value of text on one line; CommentAfter, the text of a comment on
-// the last line of a value.
-func TestColonTextAndCommentAfter(t *testing.T) {
+// ColonText is a plain key and its value of text on one line.
+func TestColonText(t *testing.T) {
 	t.Parallel()
 
 	doc, err := parser.ParseBytes([]byte("- a: b\n- a: b\n  c: d\n- {a: b}\n- \"a\": b\n- a:\n    b\n- x # y z\n- x\n"+
@@ -173,19 +172,8 @@ func TestColonTextAndCommentAfter(t *testing.T) {
 			t.Errorf("ColonText(item %d) = %v, want %v", i, got, want)
 		}
 	}
-	if got := yamlpos.CommentAfter(items[5]); got != " y z" {
-		t.Errorf("CommentAfter(x # y z) = %q", got)
-	}
-	if got := yamlpos.CommentAfter(items[6]); got != "" {
-		t.Errorf("CommentAfter(x) = %q", got)
-	}
-	// On the last line of a value written over lines.
-	if got := yamlpos.CommentAfter(items[12]); got != " z" {
-		t.Errorf("CommentAfter(x y # z) = %q", got)
-	}
-	// A key and its value under the key of the mapping is no line of text, a value in quotes ends at its
-	// quote, and a comment on the next line is not after the value.
-	other, err := parser.ParseBytes([]byte("t:\n  en: Hello\nq: 'x' # y\nr: x\n# note\ns: 1\n"), 0)
+	// A key and its value under the key of the mapping is no line of text.
+	other, err := parser.ParseBytes([]byte("t:\n  en: Hello\n"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,8 +184,42 @@ func TestColonTextAndCommentAfter(t *testing.T) {
 	if yamlpos.ColonText(m.Values[0].Value) {
 		t.Error("ColonText(t:\\n  en: Hello) = true")
 	}
-	if got := yamlpos.CommentAfter(m.Values[1].Value) + yamlpos.CommentAfter(m.Values[2].Value); got != "" {
-		t.Errorf("CommentAfter of a value in quotes and of one before a comment line = %q", got)
+}
+
+// Parse refuses each plain value a comment on its line cut short, at the comment, in the order of the
+// file: text, written over lines or not, numbers and the like too. A comment after a value in quotes,
+// the head of a block, a key, an empty value or a { }, or on a line of its own, cuts nothing.
+func TestParseCutShort(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ src, want string }{
+		{"lead: PR #100 で\n", "a.yaml:1:10: a # after a space began a YAML comment, which may have cut the value short, to PR: " +
+			"put the value in quotes if the # is part of it, or write the comment on a line of its own"},
+		{"a: x\n  y # z\n", "a.yaml:2:5: a # after a space began a YAML comment, which may have cut the value short, to x y: "},
+		{"n: 1 # one\nm: .inf # c\n", "a.yaml:1:6: a # after a space began a YAML comment, which may have cut the value short, to 1: " +
+			"put the value in quotes if the # is part of it, or write the comment on a line of its own\n" +
+			"a.yaml:2:9: a # after a space began a YAML comment, which may have cut the value short, to .inf: "},
+		{"a: x #\n", "a.yaml:1:6: a # after a space began a YAML comment, which may have cut the value short, to x: "},
+		// A blank line in a value over lines is a line break in it, told on the one line of the mistake.
+		{"lead: a\n\n  b # c\n", "a.yaml:3:5: a # after a space began a YAML comment, which may have cut the value short, to a b: "},
+		// The end of a long value, where it was cut, without a line too long to read.
+		{"lead: " + strings.Repeat("a", 50) + "bcd # c\n", "a.yaml:1:61: a # after a space began a YAML comment, which may have cut the value short, to …" +
+			strings.Repeat("a", 37) + "bcd: "},
+		{"- x # y\n", "a.yaml:1:5: a # after a space began a YAML comment, which may have cut the value short, to x: "},
+	} {
+		if _, err := yamlpos.Parse("a.yaml", []byte(tt.src), "tmpl_documents"); err == nil || !strings.HasPrefix(err.Error(), tt.want) {
+			t.Errorf("Parse(%q) = %v, want %s", tt.src, err, tt.want)
+		}
+	}
+	for _, src := range []string{
+		"q: 'x' # y\nr: \"x\" # y\n", "r: x\n# note\ns: 1\n", "t: |- # Markdown\n  x # y\n", "sections: # c\n  - a\n",
+		"a: # c\nb:\n", "- # c\n", "a: {b: 1} # c\n", "a: [b] # c\n",
+		// After an alias, an anchor or a tag, left to the caller that refuses those as written.
+		"a: &x 1\nb: *x # c\n", "a: !t x # c\n",
+	} {
+		if _, err := yamlpos.Parse("a.yaml", []byte(src), "tmpl_documents"); err != nil {
+			t.Errorf("Parse(%q) = %v, want no mistake", src, err)
+		}
 	}
 }
 

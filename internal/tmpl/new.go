@@ -110,7 +110,9 @@ func (t *Template) copyTo(dir, name string) error {
 // renamed returns the data file src naming the template name, its other text as it was: the value of
 // its top-level template: is written over. A file that does not read as one names none to rename.
 func renamed(src []byte, name string) []byte {
-	root, err := parse("example.yaml", src)
+	// Read as written, a comment on a line too: the copy names itself all the same, and its check tells
+	// the rest.
+	root, err := yamlpos.Document("example.yaml", src, "tmpl_documents")
 	if err != nil {
 		return src
 	}

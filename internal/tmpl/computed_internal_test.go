@@ -116,24 +116,22 @@ func TestComputeOfABrokenTemplate(t *testing.T) {
 	}
 }
 
-// An expression a # in it cut short, YAML having read a comment there, is told to be quoted; one that
-// fails with the author's comment after it is not.
-func TestComputeQuoteHint(t *testing.T) {
+// An expression a # in it cut short, YAML having read a comment there, is refused as YAML reads it, at
+// the comment, the author's comment after it too; one in quotes, or before a comment line, is not cut.
+func TestComputeCutShort(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ src, want string }{
-		{"a: map([1], # * reads_per_sec)\n", "computed.yaml:1:4: map([1], cannot be read as an expression: " +
-			"a # after a space began a YAML comment, which cut the expression short: put the expression in quotes (unexpected token EOF)"},
+		{"a: map([1], # * reads_per_sec)\n", "computed.yaml:1:13: a # after a space began a YAML comment, which may have cut the value short, to map([1],: put the value in quotes if the # is part of it, or write the comment on a line of its own"},
 		// The comment that cut it is on the last line of an expression written over lines.
-		{"a: reads_per_sec > 0 &&\n  len(filter([1], # > 0)) > 0\n", "computed.yaml:1:4: reads_per_sec > 0 && len(filter([1], cannot be read as " +
-			"an expression: a # after a space began a YAML comment, which cut the expression short: put the expression in quotes (unexpected token EOF)"},
+		{"a: reads_per_sec > 0 &&\n  len(filter([1], # > 0)) > 0\n", "computed.yaml:2:19: a # after a space began a YAML comment, which may have cut the value short, to reads_per_sec > 0 && len(filter([1],: put the value in quotes if the # is part of it, or write the comment on a line of its own"},
 		// An expression in quotes ends at its quote, and a comment on the next line is the author's.
 		{"a: 'len(filter([1],' # > 0)) > 0\n", "computed.yaml:1:4: len(filter([1], cannot be read as an expression: unexpected token EOF"},
 		{"a: len(filter([1],\n# > 0)) > 0\nb: 1\n", "computed.yaml:1:4: len(filter([1], cannot be read as an expression: unexpected token EOF"},
 		// Cut before its last line, the rest is no YAML.
 		{"a: reads_per_sec > 0 &&\n  len(filter([1], # > 0)) > 0 &&\n  reads_per_sec < 9\n", "computed.yaml:2:19: this is not valid YAML: " +
 			"a # after a space began a comment, which cut the text short: put text with # in it in quotes (value is not allowed in this context. map key-value is pre-defined)"},
-		{"a: nope + 1 # a note\n", "computed.yaml:1:4: nope + 1 cannot be read as an expression: unknown name nope"},
+		{"a: nope + 1 # a note\n", "computed.yaml:1:13: a # after a space began a YAML comment, which may have cut the value short, to nope + 1: put the value in quotes if the # is part of it, or write the comment on a line of its own"},
 	} {
 		d, root := data(t, "reads_per_sec: 1\n")
 		err := compute("computed.yaml", []byte(tt.src), d, declared, root)

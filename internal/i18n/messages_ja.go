@@ -164,12 +164,12 @@ var messagesJA = map[string]string{
 	"yaml_syntax":     "YAML として読めません: %s",
 	"yaml_no_anchors": "アンカー・エイリアス・マージキー（<<）・タグは使えません。値をそのまま書いてください",
 	// 文が YAML に別のものと読まれたときの一言。誤りの後か、ライブラリの文の前に置く
-	"yaml_hinted":            "%s。%s",
-	"yaml_hint_first":        "%s（%s）",
-	"yaml_hint_colon":        "「: 」を含む文はキーと値として読まれます。文を引用符で囲んでください",
-	"yaml_hint_comment":      "空白の後の # からはコメントになり、文が途中で切れました。# を含む文は引用符で囲んでください",
-	"yaml_hint_reserved":     "` や @ で始まる値は、引用符で囲んでください",
-	"yaml_hint_expr_comment": "空白の後の # から後ろが YAML のコメントになり、式が途中で切れました。式を引用符で囲んでください",
+	"yaml_hinted":        "%s。%s",
+	"yaml_hint_first":    "%s（%s）",
+	"yaml_hint_colon":    "「: 」を含む文はキーと値として読まれます。文を引用符で囲んでください",
+	"yaml_comment_cut":   "空白の後の # が YAML のコメントを始め、値が %s で切れたかもしれません。# が値の一部なら値を引用符で囲み、コメントなら次の行に書いてください",
+	"yaml_hint_comment":  "空白の後の # からはコメントになり、文が途中で切れました。# を含む文は引用符で囲んでください",
+	"yaml_hint_reserved": "` や @ で始まる値は、引用符で囲んでください",
 
 	// diagram
 	"diagram_documents":        "spec には図を 1 つだけ書きます。--- で区切った文書は、それぞれ別のファイルにしてください",

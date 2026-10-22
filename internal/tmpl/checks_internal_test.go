@@ -124,8 +124,7 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 		{"- a\n", "checks.yaml:1:3: write checks.yaml as a list of checks"},
 		{"- for: a\n  expr: 'itme.x'\n  message: m\n", "checks.yaml:2:9: itme.x cannot be read as an expression: unknown name itme"},
 		{"- for: a\n  expr: 'item.x +'\n  message: m\n", "checks.yaml:2:9: item.x + cannot be read as an expression: unexpected token EOF"},
-		{"- for: a\n  expr: len(filter(doc.a, # > 0)) > 0\n  message: m\n", "checks.yaml:2:9: len(filter(doc.a, cannot be read as an expression: " +
-			"a # after a space began a YAML comment, which cut the expression short: put the expression in quotes (unexpected token EOF)"},
+		{"- for: a\n  expr: len(filter(doc.a, # > 0)) > 0\n  message: m\n", "checks.yaml:2:27: a # after a space began a YAML comment, which may have cut the value short, to len(filter(doc.a,"},
 		{"- for: b.c\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b.c does not lead to a list in d.yaml"},
 		{"- for: b\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b does not lead to a list in d.yaml"},
 	} {
@@ -143,13 +142,14 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 && -item / 2 == -0.5\n  message: m\n"), d, root); err != nil {
 		t.Errorf("relate of data that holds = %v", err)
 	}
-	// The author's comment after an expression is no cut.
-	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 # one\n  message: m\n"), d, root); err != nil {
+	// The author's comment after an expression is refused too, as floe cannot tell it from a # of the
+	// expression; on a line of its own, it is the author's.
+	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 # one\n  message: m\n"), d, root); err == nil ||
+		!strings.HasPrefix(err.Error(), "checks.yaml:2:19: a # after a space began a YAML comment, which may have cut the value short, to item == 1:") {
 		t.Errorf("relate of an expression and a comment = %v", err)
 	}
-	if err := relate("checks.yaml", []byte("- for: a\n  expr: itme == 1 # one\n  message: m\n"), d, root); err == nil ||
-		err.Error() != "checks.yaml:2:9: itme == 1 cannot be read as an expression: unknown name itme" {
-		t.Errorf("relate of a misspelt expression and a comment = %v", err)
+	if err := relate("checks.yaml", []byte("- for: a\n  # one\n  expr: item == 1\n  message: m\n"), d, root); err != nil {
+		t.Errorf("relate of an expression under a comment = %v", err)
 	}
 }
 
