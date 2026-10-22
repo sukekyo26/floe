@@ -1,4 +1,4 @@
-/* Keycaps at the left of what they do */
+/* Keycaps at the left of what they do, over it on a narrow screen */
 :scope { margin: 0; display: grid; }
 :scope > div { display: grid; grid-template-columns: minmax(7rem, auto) minmax(0, 1fr); gap: 0.2rem 1.5rem; align-items: center; padding: 0.65rem 1.2rem; }
 :scope dt { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; color: var(--muted); font-size: 0.8rem; }
@@ -7,4 +7,7 @@
   min-width: 1.8rem; padding: 0.05rem 0.5rem; border-radius: 6px; text-align: center; color: var(--fg);
   font-family: var(--mono); font-size: 0.8rem;
   background: var(--bg); box-shadow: inset 0 -2px 0 var(--line), 0 0 0 1px var(--line);
+}
+@media (max-width: 36rem) {
+  :scope > div { grid-template-columns: minmax(0, 1fr); }
 }

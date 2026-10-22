@@ -217,7 +217,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `page.html` writes numbers with `num` and `bytes`.
   floe puts a page's CSS together, the template's `page.css` in a
   `<style>` of its own, in a cascade layer over floe's base (the page's ground, colour and
-  face, text, lists, links, code and quotes) and the looks of elements that take one without being a part's
+  face, text, lists, links, code and quotes, and a long word, path or URL broken
+  anywhere so that it does not overflow its box, but in a part that scrolls sideways instead, a table or a tree) and the looks of elements that take one without being a part's
   box, and under the parts' style and the theme's, which they do not
   restyle whatever their selectors. The template's CSS is scoped to the page,
   `:scope` its root: it reaches a part's element but not what the part holds.
