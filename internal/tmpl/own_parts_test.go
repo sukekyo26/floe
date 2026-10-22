@@ -251,6 +251,12 @@ func TestBrokenOwnParts(t *testing.T) {
 		"toned/schema.json": `{"$ref": "tone.json"}`,
 		"toned/part.html":   `<b data-floe-part="toned">{{.}}</b>`,
 		"toned/part.css":    "",
+		// The mistakes of several files are told together.
+		"wrongs/schema.json": `{"type": "object"}`,
+		"wrongs/part.html":   `<div data-floe-part="wrongs"></div>`,
+		"wrongs/part.css":    "}\n",
+		"wrongs/part.yaml":   "lookz: [panel]\n",
+		"wrongs/words.yaml":  "en: { a: A }\nja: {}\n",
 	}
 	for _, name := range []string{"quote", "tone"} {
 		for file, body := range quote(name) {
@@ -328,6 +334,9 @@ func TestBrokenOwnParts(t *testing.T) {
 			": #: the part unnamed cannot be used",
 		"paneled": "the part paneled cannot be used: " + filepath.Join(parts, "paneled", "schema.json") +
 			": #: floe:///parts/panel.json is the look panel, which draws nothing",
+		"wrongs": "the part wrongs cannot be used: " + filepath.Join(parts, "wrongs", "part.yaml") + ":1:1: lookz is not a key of part.yaml; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:\n" +
+			filepath.Join(parts, "wrongs", "words.yaml") + ":2:1: ja leaves out a, which en has\n" +
+			filepath.Join(parts, "wrongs", "part.css") + ":1: this } closes no block",
 	}
 	for name, why := range whys {
 		dir := memo(t, `"risks": {"$ref": "floe:///parts/`+name+`.json"}, "aside": {"type": "string"}`)
