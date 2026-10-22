@@ -540,6 +540,58 @@ func TestRenderBadAsset(t *testing.T) {
 	}
 }
 
+// page.html draws the words of the template's words.yaml in the page's language, else en; a word it does
+// not have is refused by floe template check when named as written, and at the drawing when named from
+// the data.
+func TestTemplateWords(t *testing.T) {
+	t.Parallel()
+
+	const words = "en: { total: total }\nja: { total: 合計 }\n"
+	dir := sizes(t, map[string]string{
+		"words.yaml": words,
+		"page.html":  "bytes,|{{word \"total\"}},",
+	})
+	file := filepath.Join(dir, "example.yaml")
+	l := tmpl.NewLibrary(filepath.Dir(dir), "", "", "")
+	for lang, want := range map[string]string{"en": "2,049,536 total, 1 of them", "ja": "2,049,536 合計, 1 of them", "fr": "2,049,536 total, 1 of them"} {
+		src := strings.Replace(mustRead(t, file), "lang: en", "lang: "+lang, 1)
+		d, err := l.Read(file, []byte(src), "", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b, err := d.Render("t"); err != nil || !strings.Contains(string(b), want) {
+			t.Errorf("the page in %s = %s, %v; want %s", lang, b, err, want)
+		}
+	}
+
+	dir = sizes(t, map[string]string{"words.yaml": words, "page.html": "</body>|{{word \"totl\"}}</body>"})
+	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "page.html names the words totl, which "+filepath.Join(dir, "words.yaml")+" does not have") {
+		t.Errorf("Check of a misspelt word = %v", mistakes)
+	}
+	// A mistake of words.yaml is told beside those of the other files, not instead of them.
+	dir = sizes(t, map[string]string{"words.yaml": "en: { total: total }\nja: {}\n", "page.css": "@import url(a.css);\n"})
+	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 2 || !strings.Contains(fmt.Sprint(mistakes), "words.yaml:2:1: ja leaves out total") {
+		t.Errorf("Check of words missing = %v", mistakes)
+	}
+	dir = sizes(t, nil)
+	if err := os.Symlink("nowhere.yaml", filepath.Join(dir, "words.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "read words.yaml of the template sizes") {
+		t.Errorf("Check of words.yaml leading nowhere = %v", mistakes)
+	}
+
+	dir = sizes(t, map[string]string{"words.yaml": words, "page.html": "</body>|{{word (index .Data.files 0).name}}</body>"})
+	file = filepath.Join(dir, "example.yaml")
+	d, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(mustRead(t, file)), "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = d.Render("t"); err == nil || err.Error() != filepath.Join(dir, "words.yaml")+` has no word "a.txt"` {
+		t.Errorf("Render of a word named from the data = %v", err)
+	}
+}
+
 // A file named assets is not the directory of assets.
 func TestCheckAssetsFile(t *testing.T) {
 	t.Parallel()

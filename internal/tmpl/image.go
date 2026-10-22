@@ -240,7 +240,7 @@ func (t *Template) asset(name string) (template.URL, error) {
 		return "", err
 	}
 	if e != nil {
-		return "", e
+		return "", t.assetMistake(e)
 	}
 	return uri, nil
 }

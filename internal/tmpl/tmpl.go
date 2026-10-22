@@ -413,7 +413,11 @@ func parse(file string, src []byte) (ast.Node, error) {
 // data was checked against.
 func (d *Data) Render(title string) ([]byte, error) {
 	t := d.tmpl
-	page, src, err := t.page()
+	w, err := t.words()
+	if err != nil {
+		return nil, err
+	}
+	page, src, err := t.page(w, d.Lang)
 	if err != nil {
 		return nil, err
 	}
@@ -468,13 +472,13 @@ func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
 		"Data":  d.shape.prepare(d.Values, nil, d),
 		"Calc":  d.Calc,
 	})
-	// Read checked the data against the schema, so this is the template's own mistake: an image of its
-	// assets/ that is not right, or page.html naming an item its schema does not declare, or using one
-	// as another type.
+	// Read checked the data against the schema, so this is the template's own mistake: one a function of
+	// page.html places itself (an image of its assets/ that is not right, a word its words.yaml has not),
+	// or page.html naming an item its schema does not declare, or using one as another type.
 	var bad *usererr.Error
 	switch {
 	case errors.As(err, &bad):
-		return nil, d.tmpl.assetMistake(bad)
+		return nil, bad
 	case err != nil:
 		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
 	}
@@ -503,9 +507,10 @@ func headMistake(file string, src []byte) *usererr.Error {
 	return usererr.New("tmpl_page_head", file)
 }
 
-// page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together. It
-// returns the source too.
-func (t *Template) page() (*template.Template, []byte, error) {
+// page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together, its
+// words w, t's words.yaml, in the language tag lang, else en. It returns the source too. Without w (nil,
+// as when words.yaml has a mistake told beside), a word page.html names is not checked.
+func (t *Template) page(w words, lang string) (*template.Template, []byte, error) {
 	src, err := t.readFile("page.html")
 	if err != nil {
 		return nil, nil, err
@@ -518,11 +523,26 @@ func (t *Template) page() (*template.Template, []byte, error) {
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
-		Funcs(template.FuncMap{"asset": t.assets()}).Parse(string(src))
+		Funcs(template.FuncMap{"asset": t.assets(), "word": w.word(t.file("words.yaml"), w.lang(lang))}).
+		Parse(string(src))
 	if err != nil {
 		return nil, nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
 	}
+	if w != nil {
+		if err = w.checkWords(page, t.file("page.html"), t.file("words.yaml")); err != nil {
+			return nil, nil, err
+		}
+	}
 	return page, src, nil
+}
+
+// words reads the words.yaml of t, as readWords does.
+func (t *Template) words() (words, error) {
+	src, _, err := t.readOptional("words.yaml")
+	if err != nil {
+		return nil, err
+	}
+	return readWords(t.file("words.yaml"), src)
 }
 
 var funcs = template.FuncMap{

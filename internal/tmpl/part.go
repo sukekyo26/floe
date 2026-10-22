@@ -702,23 +702,13 @@ func readPartChecks(files fs.FS, name, dir string) ([]relation, error) {
 	return checks, nil
 }
 
-// readPartWords reads file, the words.yaml of a part in files, its directory; a part without one has the
-// words of en alone, none, so that it has a page all the same.
+// readPartWords reads file, the words.yaml of a part in files, its directory, as readWords does.
 func readPartWords(files fs.FS, file string) (words, error) {
 	src, err := fs.ReadFile(files, "words.yaml")
-	var w words
-	switch {
-	case err == nil:
-		if w, err = readWords(file, src); err != nil {
-			return nil, err
-		}
-	case !errors.Is(err, fs.ErrNotExist):
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("read %s: %w", file, err)
 	}
-	if w == nil {
-		w = words{fallbackLang: nil}
-	}
-	return w, nil
+	return readWords(file, src)
 }
 
 // joinDescriptions writes the description beside a $ref, a sentence ended if it is not, before that

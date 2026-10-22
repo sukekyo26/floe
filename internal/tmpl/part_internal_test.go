@@ -521,7 +521,7 @@ func TestReadWords(t *testing.T) {
 			t.Errorf("readWords(%q) = %v, want %s", src, err, want)
 		}
 	}
-	if w, err := readWords("w.yaml", nil); w != nil || err != nil {
+	if w, err := readWords("w.yaml", nil); !slices.Equal(slices.Collect(maps.Keys(w)), []string{fallbackLang}) || w[fallbackLang] != nil || err != nil {
 		t.Errorf("readWords of nothing = %v, %v", w, err)
 	}
 	// A language of more subtags is looked up a subtag at a time.

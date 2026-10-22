@@ -22,6 +22,7 @@ my-report/
 ├── example.yaml     # 書き始めに使うデータファイル
 ├── checks.yaml      # 項目どうしの関係（任意）
 ├── computed.yaml    # データから計算する値（任意）
+├── words.yaml       # テンプレートの言葉。言語ごと（任意）
 └── assets/          # page.html が asset で出す画像（任意）
 ```
 
@@ -50,10 +51,24 @@ floe: 1.2
 | `num` | 数を桁区切りで書く（`{{.Calc.total \| num}}` は `1,234,567`）。有効数字で丸めることもできる（`{{.Calc.rate \| num 3}}` は `0.00648`） |
 | `bytes` | バイト数を二進の単位で書く（`{{.Calc.size \| bytes}}` は `1.5 KiB`） |
 | `asset` | テンプレートの `assets/` の画像を data URI にする（`<img src="{{asset "logo.svg"}}">`） |
+| `word` | テンプレートの [`words.yaml`](#wordsyaml) の言葉を、ページの言語で出す（`{{word "status_doing"}}`） |
 
 `page.html` には `<style>` を書けません。書くと floe がその行を示して断ります。ページの CSS は floe が、`page.css` とデータファイルが選んだテーマから組み立てます（[部品](#部品)）。これらはページに閉じた範囲（`@scope`）に入り、その根を `:scope` が指します。ページの変数は `:scope` に書きます。そこでは `:root` と `html` は何も指さないので、書くとその行を示して断ります。Google Fonts のようなスタイルシートへの `<link>` は書けます。floe の層の外にあり、層のどれよりも勝ちます。スタイルシートはこの `<link>` で読みます。`page.css` の `@import` は、層の中ではブラウザが読まないので、floe がその行を示して断ります。どのブロックも閉じない `}` も、floe の層を閉じてしまうので断ります。`page.html` には `</head>` を、`{{if}}`・`{{with}}`・`{{range}}` の外に書きます。floe はページのスタイルをその前、head の中に入れます。そこなら、`<svg>` のようにページが閉じずに残した要素に取り込まれません。`</head>` の無い `page.html` と、action が `</head>` を外した描画は断ります。
 
 データファイルから描いたページは、出すものをすべて中に持ち、そのスクリプトはページの中身を外へ送れません。Content-Security-Policy により、読み込めるのは data URI（と `blob:`）の画像・フォント・音声と動画、インラインのスタイルとスクリプト、Google Fonts、cdnjs・jsDelivr・unpkg のライブラリ（スクリプト・スタイル・フォント。`eval` と WebAssembly は不可）だけです。`fetch`・XHR・ほかの場所の画像・フォームは止まり、管理画面の API にも届きません。`<base>` はリンク先を外へ向けられず、`page.html` に書けばその行を示して断ります。ダウンロードしたファイルも、同じ制限を `<meta>` で持ちます。Google Fonts と CDN には、そこから読み込むものの要求が出ます。スクリプトによるページの移動・ウィンドウを開くこと・WebRTC・DNS の先読みは CSP では止められないので、これはうっかりした通信を防ぐもので、悪意のあるテンプレートを閉じ込めるものではありません。信頼できるテンプレートだけを使ってください。
+
+## words.yaml
+
+状態の名前や見出しのような、テンプレートが自分で描く言葉を、言語ごとに書きます。書き方は部品の `words.yaml` と同じです。
+
+```yaml
+en:
+  status_doing: In progress
+ja:
+  status_doing: 進行中
+```
+
+キーは言語タグで、`en` は必ず書きます。ほかの言語は、`en` と同じ名前の言葉を過不足なく書きます。`{{word "status_doing"}}` は、ページの `lang:` の言葉を出します（`ja-JP` なら `ja`）。言葉の無い言語のページでは `en` の言葉を出します。`page.html` がそのまま書いた名前の言葉が `en` に無ければ、例が通らない分岐の中でも `floe template check` が断ります。データから引いた名前（`{{word .Data.status}}`）の言葉が無いときは、`words.yaml` を示して描画が止まります。
 
 ## schema.json
 
