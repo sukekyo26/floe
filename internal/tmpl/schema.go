@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	neturl "net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -93,22 +94,18 @@ func compileMistakes(url, file string, err error) error {
 			return refused
 		}
 	}
-	if e := compileMistake(url, err); e != nil {
-		return e.Placed(file, 0, 0, e.At)
+	if e := compileMistake(url, file, err); e != nil {
+		return e
 	}
 	return fmt.Errorf("compile the schema %s: %w", file, err)
 }
 
-// compileMistake returns err, what stopped the compiling of the schema at url, as a mistake at its JSON
-// pointer in it, and nil for one of another schema or of a kind floe does not know.
+// compileMistake returns err, what stopped the compiling of the schema at url, file, as a mistake at its
+// JSON pointer in file, and nil for one of another schema or of a kind floe does not know.
 // LIMIT: a $ref that finds nothing is told at the top of the file, as jsonschema says where it leads, not
 // where it is written. Find the $ref in the schema if a template comes to need its place.
-func compileMistake(url string, err error) *usererr.Error {
-	// in returns the JSON pointer u, a URL, holds in the schema at url, and false for another schema.
-	in := func(u string) (string, bool) {
-		base, ptr, _ := strings.Cut(u, "#")
-		return "#" + ptr, base == url
-	}
+func compileMistake(url, file string, err error) *usererr.Error {
+	in := func(u string) (string, bool) { return pointerIn(url, u) }
 	var (
 		nothing  *jsonschema.JSONPointerNotFoundError
 		badPtr   *jsonschema.InvalidJsonPointerError
@@ -121,31 +118,32 @@ func compileMistake(url string, err error) *usererr.Error {
 	switch {
 	case errors.As(err, &nothing):
 		if to, ok := in(nothing.URL); ok {
-			return usererr.NewIn("", "#", "tmpl_schema_ref_nothing", to)
+			return usererr.NewIn(file, "#", "tmpl_schema_ref_nothing", to)
 		}
 	case errors.As(err, &badPtr):
 		if to, ok := in(badPtr.URL); ok {
-			return usererr.NewIn("", "#", "tmpl_schema_ref_pointer", to)
+			return usererr.NewIn(file, "#", "tmpl_schema_ref_pointer", to)
 		}
 	case errors.As(err, &noAnchor):
 		if _, ok := in(noAnchor.URL); ok {
-			return usererr.NewIn("", "#", "tmpl_schema_ref_anchor", strings.TrimPrefix(noAnchor.Reference, url))
+			to, _ := in(noAnchor.Reference)
+			return usererr.NewIn(file, "#", "tmpl_schema_ref_anchor", to)
 		}
 	case errors.As(err, &anchor):
 		if at, ok := in(anchor.URL); ok {
-			return usererr.NewIn("", at, "tmpl_schema_anchor")
+			return usererr.NewIn(file, at, "tmpl_schema_anchor")
 		}
 	case errors.As(err, &anchors):
 		if _, ok := in(anchors.URL); ok {
-			return usererr.NewIn("", "#"+anchors.Ptr2, "tmpl_schema_anchor_twice", anchors.Anchor, "#"+anchors.Ptr1)
+			return usererr.NewIn(file, "#"+anchors.Ptr2, "tmpl_schema_anchor_twice", anchors.Anchor, "#"+anchors.Ptr1)
 		}
 	case errors.As(err, &ids):
 		if _, ok := in(ids.URL); ok {
-			return usererr.NewIn("", "#"+ids.Ptr2, "tmpl_schema_id_twice", ids.ID, "#"+ids.Ptr1)
+			return usererr.NewIn(file, "#"+ids.Ptr2, "tmpl_schema_id_twice", ids.ID, "#"+ids.Ptr1)
 		}
 	case errors.As(err, &regex):
 		if at, ok := in(regex.URL); ok {
-			return usererr.NewIn("", at, "tmpl_schema_regex", regex.Regex, regex.Err)
+			return usererr.NewIn(file, at, "tmpl_schema_regex", regex.Regex, regex.Err)
 		}
 	}
 	return nil
@@ -259,6 +257,16 @@ func unknownPart(set *partSet, ref string) *usererr.Error {
 		return usererr.New("tmpl_part_look_ref", ref, name)
 	}
 	return usererr.New("tmpl_part_unknown", ref, set.names(drawing))
+}
+
+// pointerIn returns the JSON pointer u, a URL, holds in the schema at url, as the schema writes it, not
+// escaped as a URL's fragment is, and false for another schema.
+func pointerIn(url, u string) (string, bool) {
+	base, ptr, _ := strings.Cut(u, "#")
+	if written, bad := neturl.PathUnescape(ptr); bad == nil {
+		ptr = written
+	}
+	return "#" + ptr, base == url
 }
 
 // metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's, holds, each at

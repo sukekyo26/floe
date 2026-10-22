@@ -146,6 +146,11 @@ func TestCompileMistakes(t *testing.T) {
 	if !errors.As(err, &e) || e.File != "t/schema.json" || e.At != "#/patternProperties" {
 		t.Errorf("compileMistakes of a regex = %#v", err)
 	}
+	// The pointer is told as the schema writes it, not escaped as the fragment of a URL is.
+	regex.URL = url + "#/properties/%E5%90%8D/pattern"
+	if err = compileMistakes(url, "t/schema.json", regex); !errors.As(err, &e) || e.At != "#/properties/名/pattern" {
+		t.Errorf("compileMistakes of a regex under 名 = %#v", err)
+	}
 	for _, other := range []error{
 		&jsonschema.InvalidRegexError{URL: "floe:///parts/p.json#/pattern", Regex: "([", Err: errors.New("missing )")},
 		errors.New("some other failure"),
