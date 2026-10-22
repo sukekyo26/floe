@@ -141,27 +141,45 @@ func Document(file string, src []byte, documents string) (ast.Node, error) {
 // is an item as right as any. Catch it if a schema comes to take such lists of text.
 func cutShort(file string, body ast.Node) usererr.List {
 	var found usererr.List
-	ast.Walk(visitor(func(n ast.Node) {
+	ast.Walk(visitor(func(n ast.Node) bool {
 		switch n.(type) {
+		case *ast.AliasNode, *ast.AnchorNode, *ast.TagNode:
+			return false // refused whole after Parse, as written, not by the value under them
 		case *ast.LiteralNode:
 		case ast.ScalarNode:
-			if commentAfter(n) {
-				at := n.GetToken().Next.Position
-				// A value over lines with a blank line between holds a line break: told on one line.
-				value := strings.ReplaceAll(n.GetToken().Value, "\n", " ")
-				found = append(found, usererr.NewAt(file, at.Line, at.Column, "yaml_comment_cut", value))
+			if c := commentAfter(n); c != nil {
+				found = append(found, usererr.NewAt(file, c.Position.Line, c.Position.Column, "yaml_comment_cut",
+					endOf(n.GetToken().Value)))
 			}
 		}
+		return true
 	}), body)
 	return found
 }
 
-// visitor is ast.Walk's visitor of a function, called with each node.
-type visitor func(ast.Node)
+// shownEnd is how many characters of a value cut short its mistake shows: its end, where the cut is.
+const shownEnd = 40
+
+// endOf returns the end of value, a value cut short, to show in its mistake on one line: a line break,
+// which a blank line in a value over lines makes, as a space, and only the last shownEnd characters
+// after "…" of a longer one.
+func endOf(value string) string {
+	r := []rune(strings.ReplaceAll(value, "\n", " "))
+	if len(r) <= shownEnd {
+		return string(r)
+	}
+	return "…" + string(r[len(r)-shownEnd:])
+}
+
+// visitor is ast.Walk's visitor of a function, called with each node, which goes under it when it
+// returns true.
+type visitor func(ast.Node) bool
 
 func (v visitor) Visit(n ast.Node) ast.Visitor {
-	v(n)
-	return v
+	if v(n) {
+		return v
+	}
+	return nil
 }
 
 // startOf returns where d starts: at its ---, or at at without one.
@@ -372,16 +390,16 @@ func ColonText(n ast.Node) bool {
 	return entry && pair.Value.GetToken().Position.Line == k.Position.Line
 }
 
-// commentAfter reports whether a comment follows the token of n on its last line, an empty one too: what
-// YAML makes of " #" and the rest of a plain value, written over lines or not. A value in quotes ends at
-// its quote, before any comment.
-func commentAfter(n ast.Node) bool {
+// commentAfter returns the comment after the token of n on its last line, an empty one too, or nil for
+// none: what YAML makes of " #" and the rest of a plain value, written over lines or not. A value in
+// quotes ends at its quote, before any comment.
+func commentAfter(n ast.Node) *token.Token {
 	tk := n.GetToken()
 	if tk == nil || tk.Type == token.SingleQuoteType || tk.Type == token.DoubleQuoteType ||
-		tk.Next == nil || tk.Next.Type != token.CommentType {
-		return false
+		tk.Next == nil || tk.Next.Type != token.CommentType || tk.Next.Position.Line != lastLine(tk) {
+		return nil
 	}
-	return tk.Next.Position.Line == lastLine(tk)
+	return tk.Next
 }
 
 // New returns the mistake worded by the catalog message key with args, at at in file.

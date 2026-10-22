@@ -202,6 +202,9 @@ func TestParseCutShort(t *testing.T) {
 		{"a: x #\n", "a.yaml:1:6: a # after a space began a YAML comment, which may have cut the value short, to x: "},
 		// A blank line in a value over lines is a line break in it, told on the one line of the mistake.
 		{"lead: a\n\n  b # c\n", "a.yaml:3:5: a # after a space began a YAML comment, which may have cut the value short, to a b: "},
+		// The end of a long value, where it was cut, without a line too long to read.
+		{"lead: " + strings.Repeat("a", 50) + "bcd # c\n", "a.yaml:1:61: a # after a space began a YAML comment, which may have cut the value short, to …" +
+			strings.Repeat("a", 37) + "bcd: "},
 		{"- x # y\n", "a.yaml:1:5: a # after a space began a YAML comment, which may have cut the value short, to x: "},
 	} {
 		if _, err := yamlpos.Parse("a.yaml", []byte(tt.src), "tmpl_documents"); err == nil || !strings.HasPrefix(err.Error(), tt.want) {
@@ -211,6 +214,8 @@ func TestParseCutShort(t *testing.T) {
 	for _, src := range []string{
 		"q: 'x' # y\nr: \"x\" # y\n", "r: x\n# note\ns: 1\n", "t: |- # Markdown\n  x # y\n", "sections: # c\n  - a\n",
 		"a: # c\nb:\n", "- # c\n", "a: {b: 1} # c\n", "a: [b] # c\n",
+		// After an alias, an anchor or a tag, left to the caller that refuses those as written.
+		"a: &x 1\nb: *x # c\n", "a: !t x # c\n",
 	} {
 		if _, err := yamlpos.Parse("a.yaml", []byte(src), "tmpl_documents"); err != nil {
 			t.Errorf("Parse(%q) = %v, want no mistake", src, err)
