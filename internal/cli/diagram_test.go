@@ -37,7 +37,7 @@ func TestDiagramRender(t *testing.T) {
 			"shape.yaml:6:5: dot: give cy\n")
 	// A mistake about the whole of the diagrams, icons not fetched, is told beside those of the specs.
 	e.write(t, "specs/icon.yaml", "id: i\n"+head+"  - icon: { x: 10, y: 10, name: aws/aws-lambda }\n")
-	want(t, "render with icons not fetched", e.run(t, "specs", "diagram", "render", "shape.yaml", "icon.yaml"), 1, "",
+	want(t, "render with icons not fetched", e.run(t, "specs", "diagram", "render", "icon.yaml", "shape.yaml"), 1, "",
 		"shape.yaml:6:5: dot: give cy\nAWS icons are not in ")
 	want(t, "render a missing file", e.run(t, "specs", "diagram", "render", "a.yaml", "nope.yaml"), 1, "",
 		"floe: cannot read nope.yaml (no such file or directory)")

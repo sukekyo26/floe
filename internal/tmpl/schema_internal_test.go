@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml/ast"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -107,12 +108,12 @@ func TestSchemaRefersToNoFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = validate(set, "t/schema.json", jsonDoc(t, `{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
+	err = validateDoc(set, jsonDoc(t, `{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
 	if err == nil || !strings.HasPrefix(err.Error(), "the schema of the template t cannot be read: file://"+outside+": a schema refers to no other file or URL") {
 		t.Errorf("validate of a $ref to a file = %v", err)
 	}
 	for _, named := range []string{"https://json-schema.org/draft/2020-12/schema", "http://json-schema.org/draft-07/schema#", "https://json-schema.org/schema"} {
-		if err = validate(set, "t/schema.json", jsonDoc(t, `{"$schema": "`+named+`"}`), d, root); err != nil {
+		if err = validateDoc(set, jsonDoc(t, `{"$schema": "`+named+`"}`), d, root); err != nil {
 			t.Errorf("validate of the $schema %s = %v", named, err)
 		}
 	}
@@ -128,7 +129,7 @@ func schemaProblems(t *testing.T, schema, src string) usererr.List {
 		t.Fatal(err)
 	}
 	var p usererr.List
-	if err := validate(set, "t/schema.json", jsonDoc(t, schema), d, root); !errors.As(err, &p) {
+	if err := validateDoc(set, jsonDoc(t, schema), d, root); !errors.As(err, &p) {
 		t.Fatalf("validate = %v, want problems", err)
 	}
 	return p
@@ -151,6 +152,12 @@ func TestCompileMistakes(t *testing.T) {
 	if err = compileMistakes(url, "t/schema.json", regex); !errors.As(err, &e) || e.At != "#/properties/名/pattern" {
 		t.Errorf("compileMistakes of a regex under 名 = %#v", err)
 	}
+	// An $id written twice is told by where the other is, not by the URL jsonschema makes of it.
+	ids := &jsonschema.DuplicateIDError{ID: "floe:///templates/t/x.json", URL: url, Ptr1: "/$defs/a", Ptr2: "/$defs/b"}
+	if err = compileMistakes(url, "t/schema.json", ids); !errors.As(err, &e) || e.At != "#/$defs/b" ||
+		strings.Contains(err.Error(), "floe:///") || !strings.Contains(err.Error(), "#/$defs/a") {
+		t.Errorf("compileMistakes of an $id twice = %v", err)
+	}
 	for _, other := range []error{
 		&jsonschema.InvalidRegexError{URL: "floe:///parts/p.json#/pattern", Regex: "([", Err: errors.New("missing )")},
 		errors.New("some other failure"),
@@ -159,4 +166,13 @@ func TestCompileMistakes(t *testing.T) {
 			t.Errorf("compileMistakes of %v = %v, want a failure", other, err)
 		}
 	}
+}
+
+// validateDoc compiles doc, the schema of d's template, and validates d against it, as checkValues does.
+func validateDoc(set *partSet, doc any, d *Data, root ast.Node) error {
+	sch, err := compileSchema(set, d.Template, "t/schema.json", doc)
+	if err != nil {
+		return err
+	}
+	return validate(set, sch, doc, d, root)
 }

@@ -27,14 +27,11 @@ import (
 // HTML, the path of an image or Markdown. Validating them is a no-op: they mark an item for drawing.
 var formats = []string{"html", "image", "markdown"}
 
-// validate checks the values of d against doc, its template's schema.json at schemaFile, and reports
-// every mistake at its line and column under root, the data file's top mapping.
-func validate(set *partSet, schemaFile string, doc any, d *Data, root ast.Node) error {
-	sch, err := compileSchema(set, d.Template, schemaFile, doc)
-	if err != nil {
-		return err
-	}
-	err = sch.Validate(d.Values)
+// validate checks the values of d against sch, its template's schema.json as compiled, doc as read, which
+// refers to the parts of set, and reports every mistake at its line and column under root, the data
+// file's top mapping.
+func validate(set *partSet, sch *jsonschema.Schema, doc any, d *Data, root ast.Node) error {
+	err := sch.Validate(d.Values)
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
 		return err //nolint:wrapcheck // nil, or not a mistake in the data
@@ -139,7 +136,7 @@ func compileMistake(url, file string, err error) *usererr.Error {
 		}
 	case errors.As(err, &ids):
 		if _, ok := in(ids.URL); ok {
-			return usererr.NewIn(file, "#"+ids.Ptr2, "tmpl_schema_id_twice", ids.ID, "#"+ids.Ptr1)
+			return usererr.NewIn(file, "#"+ids.Ptr2, "tmpl_schema_id_twice", "#"+ids.Ptr1)
 		}
 	case errors.As(err, &regex):
 		if at, ok := in(regex.URL); ok {

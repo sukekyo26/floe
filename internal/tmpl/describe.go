@@ -46,11 +46,11 @@ func (l *Library) Describe(name string) (*Description, error) {
 	if t == nil {
 		return nil, l.unknown(name)
 	}
-	s, _, err := t.checkedShape()
+	set, err := t.parts()
 	if err != nil {
 		return nil, err
 	}
-	set, err := t.parts()
+	s, _, err := t.checkedShape(set)
 	if err != nil {
 		return nil, err
 	}

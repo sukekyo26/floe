@@ -71,8 +71,9 @@ func (a *app) render(files []string, assets bool) error {
 		return failed //nolint:wrapcheck // already says what failed
 	}
 	if len(problems) > 0 {
-		// The mistakes of each file together, in the order the files were given.
-		order := map[string]int{}
+		// The mistakes of each file together, in the order the files were given; those about all of the
+		// diagrams (icons not fetched) after them.
+		order := map[string]int{"": len(files)}
 		for i, f := range files {
 			if _, ok := order[f]; !ok {
 				order[f] = i

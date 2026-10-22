@@ -283,16 +283,20 @@ func pickTheme(set *partSet, d *Data, given string, pos yamlpos.Pos) (usererr.Li
 // its checks and computes its values, reporting the schema's mistakes with problems, those found before
 // in the keys every template shares.
 func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems usererr.List) error {
-	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
-	s, doc, err := t.checkedShape()
-	if err != nil {
-		return err
-	}
 	set, err := t.parts()
 	if err != nil {
 		return err
 	}
-	err = validate(set, t.file("schema.json"), doc, d, root)
+	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
+	s, doc, err := t.checkedShape(set)
+	if err != nil {
+		return err
+	}
+	sch, err := compileSchema(set, t.Name, t.file("schema.json"), doc)
+	if err != nil {
+		return err
+	}
+	err = validate(set, sch, doc, d, root)
 	var more usererr.List
 	switch {
 	case errors.As(err, &more):
@@ -543,6 +547,8 @@ func (t *Template) parsePage(src []byte, w words, lang string) (*template.Templa
 		Funcs(template.FuncMap{"asset": t.assets(), "word": w.word(t.file("words.yaml"), w.lang(lang))}).
 		Parse(string(src))
 	if err != nil {
+		// LIMIT: text/template says the line of a mistake in its text alone, which is left there: reading it
+		// back would hang on its wording. Move it to Line if text/template comes to give it apart.
 		return nil, usererr.NewAt(t.file("page.html"), 0, 0, "tmpl_go_template", err.Error())
 	}
 	return page, nil
@@ -612,9 +618,10 @@ func convert(md goldmark.Markdown, name, text string) (string, error) {
 	return b.String(), nil
 }
 
-// checkedShape reads the schema of t into its shape, and returns it as jsonschema reads it too. It refuses
-// the schema's mistakes floe template check tells (refused).
-func (t *Template) checkedShape() (*shape, any, error) {
+// checkedShape reads the schema of t into its shape, bound to set, the parts of t, and returns it as
+// jsonschema reads it too. It refuses the schema's mistakes floe template check tells, but those of its
+// compiling: those set tells of it (partSet.mistakes), and a key floe reads itself (refuseShared).
+func (t *Template) checkedShape(set *partSet) (*shape, any, error) {
 	doc, err := t.schemaDoc()
 	if err != nil {
 		return nil, nil, err
@@ -623,20 +630,10 @@ func (t *Template) checkedShape() (*shape, any, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	if err = t.refused(s, notes); err != nil {
+	if err = usererr.Collect(set.mistakes(notes).Err(), t.refuseShared(s)); err != nil {
 		return nil, nil, err
 	}
 	return s, doc, nil
-}
-
-// refused returns the mistakes of s, the schema of t, as notes and the parts of t tell them
-// (partSet.mistakes), and a key floe reads itself (refuseShared).
-func (t *Template) refused(s *shape, notes *schemaNotes) error {
-	set, err := t.parts()
-	if err != nil {
-		return err
-	}
-	return usererr.Collect(set.mistakes(notes).Err(), t.refuseShared(s))
 }
 
 // schemaDoc reads the schema.json of t as jsonschema reads it.

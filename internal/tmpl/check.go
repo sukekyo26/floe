@@ -91,27 +91,30 @@ func (t *Template) checkFiles() (usererr.List, error) {
 	}
 	warnings, s, schemaErr := t.checkSchema(set)
 	w, wordsErr := t.words()
+	checked, assetsErr := t.checkAssets()
 	src, pageErr := t.readFile("page.html")
 	var named []namedPart
 	if pageErr == nil {
 		named = namedParts(string(src))
-		pageErr = t.checkPage(set, s, w, src, named)
+		pageErr = t.checkPage(set, s, w, checked, src, named)
 	}
 	scope, cssErr := t.checkCSS()
 	warnings = append(append(warnings, scope...), brokenParts(set, named)...)
-	return warnings, usererr.Collect(schemaErr, wordsErr, pageErr, cssErr)
+	return warnings, usererr.Collect(schemaErr, wordsErr, pageErr, assetsErr, cssErr)
 }
 
 // checkPage checks src, the page.html of t, which names the parts named of set: its tags, as text, and,
-// parsed, the words it names of w, its words.yaml, nil when it has mistakes, and the assets it names. s is
-// the schema of t, nil when it cannot be read.
-func (t *Template) checkPage(set *partSet, s *shape, w words, src []byte, named []namedPart) error {
+// parsed, the words it names of w, its words.yaml, nil when it has mistakes, and the images it names to
+// asset but those checked (checkAssets). s is the schema of t, nil when it cannot be read.
+func (t *Template) checkPage(
+	set *partSet, s *shape, w words, checked map[string]bool, src []byte, named []namedPart,
+) error {
 	text := usererr.Collect(t.refuseInPage(src), t.checkHead(s, src), t.checkNamedParts(set, src, named))
 	page, err := t.parsePage(src, w, fallbackLang)
 	if err != nil {
 		return usererr.Collect(text, err)
 	}
-	return usererr.Collect(text, t.pageWords(page, w), t.checkAssets(page))
+	return usererr.Collect(text, t.pageWords(page, w), t.checkPageAssets(page, checked))
 }
 
 // checkSchema checks the schema of t, which refers to the parts of set, and its checks.yaml and
@@ -129,7 +132,7 @@ func (t *Template) checkSchema(set *partSet) (usererr.List, *shape, error) {
 
 // compileShape reads the schema of t into its shape, bound to the parts of set, with what floe refuses of
 // it, and compiles it. The shape and the notes are nil when it cannot be read, and the compiled schema
-// while it has mistakes.
+// when it cannot be compiled, or set refuses it.
 func (t *Template) compileShape(set *partSet) (*shape, *schemaNotes, *jsonschema.Schema, error) {
 	doc, err := t.schemaDoc()
 	if err != nil {
@@ -139,12 +142,16 @@ func (t *Template) compileShape(set *partSet) (*shape, *schemaNotes, *jsonschema
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	shared := t.refuseShared(s)
 	// Those mistakes, of $refs among them, would fail the compiling, without their pointers.
-	if err = t.refused(s, notes); err != nil {
-		return s, notes, nil, err
+	if mistakes := set.mistakes(notes); mistakes != nil {
+		return s, notes, nil, usererr.Collect(mistakes.Err(), shared)
 	}
 	sch, err := compileSchema(set, t.Name, t.file("schema.json"), doc)
-	return s, notes, sch, err
+	if err != nil {
+		return s, notes, nil, usererr.Collect(shared, err)
+	}
+	return s, notes, sch, shared
 }
 
 // checkHead refuses src, page.html, without a <head>, and one without a standard doctype where s, the
@@ -247,11 +254,11 @@ func (t *Template) checkNamedParts(set *partSet, src []byte, named []namedPart) 
 	return mistakes.Err()
 }
 
-// checkAssets returns the mistakes of the images under the assets/ of t, if it has one, and of those
-// page.html names to asset, in every branch.
-func (t *Template) checkAssets(page *template.Template) error {
+// checkAssets returns the mistakes of the images under the assets/ of t, if it has one, and the names of
+// those it checked; nil for none when assets/ cannot be read, which is its mistake.
+func (t *Template) checkAssets() (map[string]bool, error) {
 	var mistakes usererr.List
-	var checked map[string]bool
+	checked := map[string]bool{}
 	err := t.files(func(files fs.FS) error {
 		fi, err := fs.Stat(files, "assets")
 		switch {
@@ -272,15 +279,25 @@ func (t *Template) checkAssets(page *template.Template) error {
 	var mistake *usererr.Error
 	switch {
 	case errors.As(err, &mistake):
-		return mistake
+		return nil, mistake
 	case err != nil:
-		return usererr.CannotRead(t.file("assets"), err)
+		return nil, usererr.CannotRead(t.file("assets"), err)
 	}
+	return checked, mistakes.Err()
+}
+
+// checkPageAssets returns the mistakes of the images page, page.html, names to asset, in every branch,
+// but those checked, told already; none while checked is nil, assets/ unread, which is told already.
+func (t *Template) checkPageAssets(page *template.Template, checked map[string]bool) error {
+	if checked == nil {
+		return nil
+	}
+	var mistakes usererr.List
 	for _, name := range assetsNamed(page) {
 		if checked[name] {
-			continue // its mistake, if it has one, is told already
+			continue
 		}
-		_, err = t.asset(name)
+		_, err := t.asset(name)
 		if failed := mistakes.Add(err); failed != nil {
 			return failed //nolint:wrapcheck // already says what failed
 		}

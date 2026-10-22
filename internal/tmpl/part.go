@@ -499,6 +499,7 @@ func readPartPages(files fs.FS, name, dir string) (string, words, map[string]*te
 	var pageErr error
 	switch {
 	case err != nil:
+		// LIMIT: the line left in text/template's words, as parsePage leaves it.
 		pageErr = usererr.NewAt(shown, 0, 0, "tmpl_go_template", err.Error())
 	case wordsErr == nil:
 		pageErr = w.checkWords(page, shown)

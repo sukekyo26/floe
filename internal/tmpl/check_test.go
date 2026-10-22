@@ -235,6 +235,15 @@ func TestCheckMistakes(t *testing.T) {
 			},
 		},
 		{
+			// A key floe reads itself does not stop the compiling, which needs none of it.
+			name:  "an item floe reads itself beside a compile mistake",
+			files: map[string]string{"schema.json": `"properties": {|"properties": { "title": { "type": "string" }, "code": { "type": "string", "pattern": "([" },`},
+			want: []string{
+				"sizes/schema.json: schema.json declares or requires title",
+				"sizes/schema.json: #/properties/code/pattern: JSON Schema does not take this: '([' is not valid regex",
+			},
+		},
+		{
 			name:  "an $anchor written twice",
 			files: map[string]string{"schema.json": `"properties": {|"$defs": { "a": { "$anchor": "x" }, "b": { "$anchor": "x" } }, "properties": {`},
 			// Which of the two is met first is the order jsonschema walks $defs in.
@@ -281,6 +290,12 @@ func TestCheckMistakes(t *testing.T) {
 			name:  "an asset",
 			files: map[string]string{"assets/notes.png": "not an image", "assets/.DS_Store": "x", "assets/README.md": "x"},
 			want:  []string{`"notes.png" does not hold the image/png its name says`},
+		},
+		{
+			// The images of assets/ are checked whatever page.html holds: only those it names wait for it.
+			name:  "an asset beside a page.html that does not parse",
+			files: map[string]string{"assets/notes.png": "not an image", "page.html": "</body>|{{if}}</body>"},
+			want:  []string{"sizes/page.html: this is not a valid Go template", `"notes.png" does not hold the image/png its name says`},
 		},
 		{
 			name:  "an asset page.html names",
@@ -819,6 +834,20 @@ func TestReadTellsEverySchemaMistake(t *testing.T) {
 	got := mistakesOf(err)
 	if len(got) != 2 || !strings.Contains(fmt.Sprint(got), "/properties/x: ") || !strings.Contains(fmt.Sprint(got), "requires title") {
 		t.Errorf("Read = %v, want the $ref and title told", got)
+	}
+}
+
+// A data file of a template whose schema does not compile is told the template's mistakes alone, not
+// beside those of its keys every template shares.
+func TestReadTellsCompileMistakeAlone(t *testing.T) {
+	t.Parallel()
+
+	dir := sizes(t, map[string]string{"schema.json": `"properties": {|"properties": { "code": { "pattern": "([" },`})
+	file := filepath.Join(dir, "example.yaml")
+	src := strings.Replace(mustRead(t, file), "lang: en", "lang: 1", 1)
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(src), "", "")
+	if got := mistakesOf(err); len(got) != 1 || !strings.Contains(got[0].Error(), "#/properties/code/pattern: ") {
+		t.Errorf("Read = %v, want the pattern alone", got)
 	}
 }
 

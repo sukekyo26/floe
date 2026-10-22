@@ -356,7 +356,7 @@ func (set *partSet) checkNames(name, dir string) error {
 	for _, look := range p.looks {
 		errs = append(errs, set.unlent(set.known(look.name), look.name, yaml, look.line, true))
 	}
-	return usererr.Collect(append(errs, set.checkHeld(name))...) //nolint:wrapcheck // its mistakes, or what failed
+	return usererr.Collect(append(errs, set.checkHeld(name))...)
 }
 
 // nameKind is what a name an attribute gives is to a part set.
