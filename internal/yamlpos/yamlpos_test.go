@@ -206,9 +206,14 @@ func TestParseCutShort(t *testing.T) {
 		{"lead: " + strings.Repeat("a", 50) + "bcd # c\n", "a.yaml:1:61: a # after a space began a YAML comment, which may have cut the value short, to …" +
 			strings.Repeat("a", 37) + "bcd: "},
 		// A , in { } ends plain text, the rest a key without a value.
-		{"stats: { label: 1,500 字を超える段落, value: \"7\" }\n", "a.yaml:1:19: 500 字を超える段落 is a key without a value in { }: " +
-			"a , in text ends the text there, the rest of it read as a key; put the text in quotes"},
-		{"a: { b: c, d }\n", "a.yaml:1:12: d is a key without a value in { }: "},
+		{"stats: { label: 1,500 字を超える段落, value: \"7\" }\n", "a.yaml:1:19: \"500 字を超える段落\" is a key without a value in { }: " +
+			"write its value after a \":\", or, if a , in text ended the text before it, put that text in quotes"},
+		{"a: { b: c, d }\n", "a.yaml:1:12: \"d\" is a key without a value in { }: "},
+		{"a: { \"\" }\n", "a.yaml:1:6: \"\" is a key without a value in { }: "},
+		{"a: { " + strings.Repeat("b", 50) + " }\n", "a.yaml:1:6: \"" + strings.Repeat("b", 40) + "…\" is a key without a value in { }: "},
+		// Told in the order of the file, a value cut short before a key without one in the same { }.
+		{"a: { b: x # c\n  , d }\n", "a.yaml:1:11: a # after a space began a YAML comment, which may have cut the value short, to x: " +
+			"put the value in quotes if the # is part of it, or write the comment on a line of its own\na.yaml:2:5: \"d\" is a key without a value in { }: "},
 		{"- x # y\n", "a.yaml:1:5: a # after a space began a YAML comment, which may have cut the value short, to x: "},
 	} {
 		if _, err := yamlpos.Parse("a.yaml", []byte(tt.src), "tmpl_documents"); err == nil || !strings.HasPrefix(err.Error(), tt.want) {

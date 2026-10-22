@@ -170,7 +170,7 @@ var messagesEN = map[string]string{
 	"yaml_hint_first":     "%s (%s)",
 	"yaml_hint_colon":     `text with ": " in it reads as keys and values: put the text in quotes`,
 	"yaml_comment_cut":    "a # after a space began a YAML comment, which may have cut the value short, to %s: put the value in quotes if the # is part of it, or write the comment on a line of its own",
-	"yaml_flow_key_alone": "%s is a key without a value in { }: a , in text ends the text there, the rest of it read as a key; put the text in quotes",
+	"yaml_flow_key_alone": "%q is a key without a value in { }: write its value after a \":\", or, if a , in text ended the text before it, put that text in quotes",
 	"yaml_hint_comment":   `a # after a space began a comment, which cut the text short: put text with # in it in quotes`,
 	"yaml_hint_reserved":  "a value cannot begin with ` or @ unless it is in quotes",
 
