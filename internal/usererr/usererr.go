@@ -20,18 +20,33 @@ type Error struct {
 	Args     []any
 	Conflict bool
 	File     string
-	Line     int // 0: no line
-	Column   int // 0: no column
+	Line     int    // 0: no line
+	Column   int    // 0: no column
+	At       string // a JSON pointer in a schema, "" for none
 }
 
 // New returns an *Error for the catalog message key with args, without a place.
 func New(key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0}
+	return &Error{Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: ""}
 }
 
-// NewAt returns an *Error for the catalog message key with args, at the line and column of file.
+// NewAt returns an *Error for the catalog message key with args, at the line and column of file, 0 for
+// none.
 func NewAt(file string, line, column int, key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, Conflict: false, File: file, Line: line, Column: column}
+	return &Error{Key: key, Args: args, Conflict: false, File: file, Line: line, Column: column, At: ""}
+}
+
+// NewIn returns an *Error for the catalog message key with args, at at, a JSON pointer, in file.
+func NewIn(file, at, key string, args ...any) *Error {
+	return &Error{Key: key, Args: args, Conflict: false, File: file, Line: 0, Column: 0, At: at}
+}
+
+// Placed returns e at the line and column of file, 0 for none, and at, "" for none, in place of any
+// place it had.
+func (e *Error) Placed(file string, line, column int, at string) *Error {
+	placed := *e
+	placed.File, placed.Line, placed.Column, placed.At = file, line, column, at
+	return &placed
 }
 
 // Error words the refusal in English, for logs and for callers that do not localize.
@@ -39,7 +54,7 @@ func (e *Error) Error() string {
 	return e.Localize(i18n.EnglishCatalog())
 }
 
-// Localize words the refusal in the language of c, after where it is: file:line:column, or as much of
+// Localize words the refusal in the language of c, after where it is, file:line:column: at, or as much of
 // it as it has. An argument that is itself a Localizer (a worded part of the message, such as the name of
 // a diagram part) is worded in c too.
 func (e *Error) Localize(c *i18n.Catalog) string {
@@ -50,16 +65,20 @@ func (e *Error) Localize(c *i18n.Catalog) string {
 		}
 		args[i] = a
 	}
-	what := c.Msg(e.Key, args...)
+	var where []string
 	switch {
 	case e.File == "":
-		return what
 	case e.Line == 0:
-		return fmt.Sprintf("%s: %s", e.File, what)
+		where = append(where, e.File)
 	case e.Column == 0:
-		return fmt.Sprintf("%s:%d: %s", e.File, e.Line, what)
+		where = append(where, fmt.Sprintf("%s:%d", e.File, e.Line))
+	default:
+		where = append(where, fmt.Sprintf("%s:%d:%d", e.File, e.Line, e.Column))
 	}
-	return fmt.Sprintf("%s:%d:%d: %s", e.File, e.Line, e.Column, what)
+	if e.At != "" {
+		where = append(where, e.At)
+	}
+	return strings.Join(append(where, c.Msg(e.Key, args...)), ": ")
 }
 
 // CannotRead is the refusal for a file the user named that cannot be read, with the reason (no such

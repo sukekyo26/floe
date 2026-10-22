@@ -49,9 +49,6 @@ func validate(set *partSet, doc any, d *Data, root ast.Node) error {
 // compileSchema compiles doc, the schema of the template name as jsonschema reads it, which refers to the
 // parts of set.
 func compileSchema(set *partSet, name string, doc any) (*jsonschema.Schema, error) {
-	if err := checkDraft(doc); err != nil {
-		return nil, usererr.New("tmpl_schema_load", name, err)
-	}
 	url := schemaURL(name)
 	c := newCompiler(set)
 	if err := c.AddResource(url, doc); err != nil {
@@ -83,7 +80,7 @@ var drafts = []*jsonschema.Draft{
 
 // checkDraft refuses the schema doc when its $schema names no draft of JSON Schema: jsonschema would take a
 // schema of floe's there, a part's, as the rules of the schema, and load any other.
-func checkDraft(doc any) error {
+func checkDraft(doc any) *usererr.Error {
 	m, ok := doc.(map[string]any)
 	if !ok {
 		return nil
@@ -172,7 +169,7 @@ func compileAlone(doc any) (*jsonschema.Schema, error) {
 }
 
 // unknownPart is the mistake of a $ref, ref, under floe:///parts/ that names no part of set whole.
-func unknownPart(set *partSet, ref string) error {
+func unknownPart(set *partSet, ref string) *usererr.Error {
 	if whole, into := set.pointsInto(ref); into {
 		return usererr.New("tmpl_part_into", ref, whole)
 	}

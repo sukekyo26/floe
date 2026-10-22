@@ -499,9 +499,9 @@ func (d *Data) withDiagrams(out []byte) ([]byte, error) {
 // none, or an action of it leaves its own out. The data's HTML holds none, which checkHTML refuses.
 func headMistake(file string, src []byte) *usererr.Error {
 	if tagsOf(tagsIn(string(src), true)).head >= 0 {
-		return usererr.New("tmpl_page_head_action", file)
+		return usererr.NewAt(file, 0, 0, "tmpl_page_head_action")
 	}
-	return usererr.New("tmpl_page_head", file)
+	return usererr.NewAt(file, 0, 0, "tmpl_page_head")
 }
 
 // page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together, its
@@ -513,10 +513,10 @@ func (t *Template) page(w words, lang string) (*template.Template, []byte, error
 		return nil, nil, err
 	}
 	if at := tagsOf(tagsIn(string(src), true)).style; at >= 0 {
-		return nil, nil, usererr.New("tmpl_page_style", t.file("page.html"), lineAt(src, at))
+		return nil, nil, usererr.NewAt(t.file("page.html"), lineAt(src, at), 0, "tmpl_page_style")
 	}
 	if at := base.FindIndex(src); at != nil {
-		return nil, nil, usererr.New("tmpl_page_base", t.file("page.html"), lineAt(src, at[0]))
+		return nil, nil, usererr.NewAt(t.file("page.html"), lineAt(src, at[0]), 0, "tmpl_page_base")
 	}
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
@@ -526,7 +526,7 @@ func (t *Template) page(w words, lang string) (*template.Template, []byte, error
 		return nil, nil, fmt.Errorf("parse the template %s: %w", t.Name, err)
 	}
 	if w != nil {
-		if err = w.checkWords(page, t.file("page.html"), t.file("words.yaml")); err != nil {
+		if err = w.checkWords(page, t.file("page.html")); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -623,6 +623,9 @@ func (t *Template) schemaDoc() (any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read the schema of %s: %w", t.Name, err)
 	}
+	if bad := checkDraft(doc); bad != nil {
+		return nil, bad.Placed(t.file("schema.json"), 0, 0, "")
+	}
 	return doc, nil
 }
 
@@ -638,7 +641,7 @@ func (t *Template) readShape(doc any) (*shape, *schemaNotes, error) {
 		return nil, nil, err
 	}
 	if name, ok := set.rootPart(s); ok {
-		return nil, nil, usererr.New("tmpl_schema_root_part", t.file("schema.json"), name)
+		return nil, nil, usererr.NewAt(t.file("schema.json"), 0, 0, "tmpl_schema_root_part", name)
 	}
 	s.bind(set)
 	return s, notes, nil
@@ -658,7 +661,7 @@ func (t *Template) refuseShared(s *shape) error {
 		}
 	}
 	if named != nil {
-		return usererr.New("tmpl_schema_shared", t.file("schema.json"), andList(named), andList(shared))
+		return usererr.NewAt(t.file("schema.json"), 0, 0, "tmpl_schema_shared", andList(named), andList(shared))
 	}
 	return nil
 }
@@ -750,6 +753,8 @@ func itemPos(root ast.Node, at []string, onKey bool) (yamlpos.Pos, string) {
 }
 
 // itemError is the mistake e in the item at path, written at pos in the data file file.
+// LIMIT: the path stays in the words, not in At: the top level is worded in the reader's language. Give At a
+// worded type if a reader comes to need the path apart, such as mistakes sent as a list with their places.
 func itemError(file string, pos yamlpos.Pos, path string, e *usererr.Error) *usererr.Error {
 	return yamlpos.Place(file, pos, usererr.New("tmpl_item", path, e))
 }

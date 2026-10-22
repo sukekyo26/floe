@@ -383,7 +383,7 @@ func TestCheckOwnParts(t *testing.T) {
 	files["themes/default/nope.css"] = ""
 	parts = ownParts(t, files)
 	warnings, mistakes := tmpl.CheckOwnParts(parts, themesOf(parts))
-	if len(warnings) != 1 || !strings.Contains(warnings[0].Error(), filepath.Join(themesOf(parts), "default", "nope.css")+" goes into no page") {
+	if len(warnings) != 1 || !strings.Contains(warnings[0].Error(), filepath.Join(themesOf(parts), "default", "nope.css")+": this file goes into no page") {
 		t.Errorf("warnings = %v", warnings)
 	}
 	told := make([]string, 0, len(mistakes))

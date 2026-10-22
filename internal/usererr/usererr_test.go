@@ -97,3 +97,30 @@ func TestShow(t *testing.T) {
 		}
 	}
 }
+
+// A mistake is worded after as much of its place as it has, and Placed places a copy.
+func TestPlace(t *testing.T) {
+	t.Parallel()
+
+	const what = "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)"
+	e := usererr.New("tmpl_no_lang")
+	for _, tt := range []struct {
+		got  *usererr.Error
+		want string
+	}{
+		{e, what},
+		{e.Placed("a.yaml", 0, 0, ""), "a.yaml: " + what},
+		{e.Placed("a.css", 3, 0, ""), "a.css:3: " + what},
+		{e.Placed("a.yaml", 3, 4, ""), "a.yaml:3:4: " + what},
+		{e.Placed("s.json", 0, 0, "#/properties/x"), "s.json: #/properties/x: " + what},
+		{e.Placed("s.json", 2, 5, "#/properties/x"), "s.json:2:5: #/properties/x: " + what},
+		{e.Placed("", 0, 0, "#/properties/x"), "#/properties/x: " + what},
+	} {
+		if got := tt.got.Error(); got != tt.want {
+			t.Errorf("Error = %q, want %q", got, tt.want)
+		}
+	}
+	if e.File != "" || e.At != "" {
+		t.Errorf("Placed changed the mistake it copies: %+v", e)
+	}
+}

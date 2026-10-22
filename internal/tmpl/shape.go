@@ -230,7 +230,7 @@ func (n *schemaNotes) note(m map[string]any, base, ptr string, reached bool) boo
 	}
 	closed := m["additionalProperties"] == false || m["unevaluatedProperties"] == false
 	if _, ok := m["properties"]; ok && reached && !elsewhere && !closed && n.part == "" {
-		n.warnings = append(n.warnings, usererr.New("tmpl_schema_open", n.file, ptr))
+		n.warnings = append(n.warnings, usererr.NewIn(n.file, ptr, "tmpl_schema_open"))
 	}
 	return elsewhere
 }
@@ -253,7 +253,7 @@ func (n *schemaNotes) beside(m map[string]any, ptr, ref string) {
 		}
 	}
 	if more != nil {
-		n.refuse(usererr.New("tmpl_ref_beside", n.file, ptr, ref, strings.Join(more, ", "), strings.Join(besideRef, ", ")))
+		n.refuse(usererr.NewIn(n.file, ptr, "tmpl_ref_beside", ref, strings.Join(more, ", "), strings.Join(besideRef, ", ")))
 	}
 }
 
@@ -262,19 +262,19 @@ func (n *schemaNotes) beside(m map[string]any, ptr, ref string) {
 func (n *schemaNotes) format(f string, typ any, ptr string, reached bool) bool {
 	switch {
 	case isGoPart(f):
-		n.refuse(usererr.New("tmpl_format_part", n.file, ptr, f, f))
+		n.refuse(usererr.NewIn(n.file, ptr, "tmpl_format_part", f, f))
 		return true
 	case !knownFormat(f):
-		n.refuse(usererr.New("tmpl_format_unknown", n.file, ptr, f))
+		n.refuse(usererr.NewIn(n.file, ptr, "tmpl_format_unknown", f))
 	case slices.Contains(formats, f) && n.part != "":
 		// Wherever it is: under properties and items, it would be refused all the same.
-		n.refuse(usererr.New("tmpl_part_format", n.file, ptr, f))
+		n.refuse(usererr.NewIn(n.file, ptr, "tmpl_part_format", f))
 		return true
 	case slices.Contains(formats, f) && !reached:
-		n.refuse(usererr.New("tmpl_format_unreached", n.file, ptr, f))
+		n.refuse(usererr.NewIn(n.file, ptr, "tmpl_format_unreached", f))
 	case slices.Contains(formats, f):
 		if typ != "string" {
-			n.refuse(usererr.New("tmpl_format_type", n.file, ptr, f, "string"))
+			n.refuse(usererr.NewIn(n.file, ptr, "tmpl_format_type", f, "string"))
 		}
 		return true
 	}
@@ -315,9 +315,9 @@ func (set *partSet) refMistake(n *schemaNotes, r refAt) *usererr.Error {
 	return nil
 }
 
-// at is the mistake err of r, a $ref of the schema of n, at the schema and its pointer.
-func (n *schemaNotes) at(r refAt, err error) *usererr.Error {
-	return usererr.New("tmpl_item", n.file, usererr.New("tmpl_item", r.ptr, err))
+// at is the mistake e of r, a $ref of the schema of n, at the schema and its pointer.
+func (n *schemaNotes) at(r refAt, e *usererr.Error) *usererr.Error {
+	return e.Placed(n.file, 0, 0, r.ptr)
 }
 
 // partMistake returns what set refuses of r, a $ref of the schema of n to base under floe:///parts/, or nil.
@@ -325,7 +325,7 @@ func (set *partSet) partMistake(n *schemaNotes, r refAt, base string) *usererr.E
 	name, whole := partName(r.ref)
 	switch p := set.parts[name]; {
 	case whole && p != nil && !p.isLook() && !r.reached:
-		return usererr.New("tmpl_part_unreached", n.file, r.ptr, name)
+		return usererr.NewIn(n.file, r.ptr, "tmpl_part_unreached", name)
 	case whole && p != nil && !p.isLook():
 		return nil
 	case whole && set.shares[r.ref]:
@@ -345,10 +345,10 @@ func (set *partSet) sharedMistake(n *schemaNotes, r refAt) *usererr.Error {
 	shared := set.shapes[r.ref]
 	switch {
 	case !r.reached && set.draws(shared):
-		return usererr.New("tmpl_shared_unreached", n.file, r.ptr, r.ref)
+		return usererr.NewIn(n.file, r.ptr, "tmpl_shared_unreached", r.ref)
 	case r.reached && n.part != "":
 		if under, item := set.formatIn(shared, r.ref+"#"); item != nil {
-			return usererr.New("tmpl_part_shared_format", n.file, r.ptr+" → "+under, item.format, r.ref, r.ref)
+			return usererr.NewIn(n.file, r.ptr+" → "+under, "tmpl_part_shared_format", item.format, r.ref, r.ref)
 		}
 	}
 	return nil

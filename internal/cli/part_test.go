@@ -101,7 +101,7 @@ func TestPartCheck(t *testing.T) {
 		t.Errorf("part check of a copy = %+v", r)
 	}
 	e.write(t, "themes/default/nope.css", "")
-	if r := e.run(t, "", "part", "check"); r.code != 0 || !strings.Contains(r.stderr, "nope.css goes into no page") {
+	if r := e.run(t, "", "part", "check"); r.code != 0 || !strings.Contains(r.stderr, "nope.css: this file goes into no page") {
 		t.Errorf("part check with a stray file = %+v", r)
 	}
 	e.write(t, "parts/grid/part.html", "<table></table>")

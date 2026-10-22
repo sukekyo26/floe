@@ -151,15 +151,15 @@ func (w words) word(file, lang string) func(string) (string, error) {
 		if text, ok := w[lang][name]; ok {
 			return text, nil
 		}
-		return "", usererr.New("tmpl_words_unknown", file, name)
+		return "", usererr.NewAt(file, 0, 0, "tmpl_words_unknown", name)
 	}
 }
 
 // checkWords refuses a word page, and the templates it defines, name as written (word "likely") that w
 // does not have, so that a misspelt one stops the part or the template when it is read, not a page that
-// happens to take that branch; html and file name its HTML and its words in the mistake. A word named from the
-// data (word $level) is checked when it is drawn.
-func (w words) checkWords(page *template.Template, html, file string) error {
+// happens to take that branch, at html, its HTML. A word named from the data (word $level) is checked when
+// it is drawn.
+func (w words) checkWords(page *template.Template, html string) error {
 	var missing []string
 	for _, name := range namedWords(page) {
 		if _, ok := w[fallbackLang][name]; !ok {
@@ -167,7 +167,7 @@ func (w words) checkWords(page *template.Template, html, file string) error {
 		}
 	}
 	if missing != nil {
-		return usererr.New("tmpl_words_unnamed", html, andList(missing), file)
+		return usererr.NewAt(html, 0, 0, "tmpl_words_unnamed", andList(missing))
 	}
 	return nil
 }

@@ -25,8 +25,8 @@ type client struct {
 	base string
 }
 
-// remoteError is a refusal of the server, in English. mistakes is set for those of a data
-// file at their lines and columns, which go out without "floe: "; body is the answer as sent.
+// remoteError is a refusal of the server, in English. mistakes is set for placed mistakes, each at its
+// file, which go out without "floe: "; body is the answer as sent.
 type remoteError struct {
 	status   int
 	message  string
