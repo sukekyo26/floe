@@ -136,15 +136,20 @@ func Document(file string, src []byte, documents string) (ast.Node, error) {
 // order of the file: YAML reads " #" in a plain value as the start of a comment, and the value as what
 // is before it, which no later check sees is short. The comment may be the author's, which floe cannot
 // tell from text cut short, so either is refused. A comment after a quoted value, the head of a block
-// (|, >), a key or a { } cuts nothing.
+// (|, >), a key or a { } cuts nothing. A key without a value in { } is refused too: the half after a ,
+// that ended plain text in it ({ label: 1,500 words } reads as label: 1 and a key 500 words).
 // LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
 // is an item as right as any. Catch it if a schema comes to take such lists of text.
 func cutShort(file string, body ast.Node) usererr.List {
 	var found usererr.List
 	ast.Walk(visitor(func(n ast.Node) bool {
-		switch n.(type) {
+		switch n := n.(type) {
 		case *ast.AliasNode, *ast.AnchorNode, *ast.TagNode:
 			return false // refused whole after Parse, as written, not by the value under them
+		case *ast.MappingNode:
+			if n.IsFlowStyle {
+				found = append(found, keysAlone(file, n)...)
+			}
 		case *ast.LiteralNode:
 		case ast.ScalarNode:
 			if c := commentAfter(n); c != nil {
@@ -154,6 +159,19 @@ func cutShort(file string, body ast.Node) usererr.List {
 		}
 		return true
 	}), body)
+	return found.Sorted()
+}
+
+// keysAlone returns a mistake for each key of m, a { }, written without a ":" after it, which YAML gives
+// an empty value: { a, b: 1 } or { a: b, c }, not { a: } or { a: , b: 1 }.
+func keysAlone(file string, m *ast.MappingNode) usererr.List {
+	var found usererr.List
+	for _, v := range m.Values {
+		if v.Start.Type != token.MappingValueType {
+			k := KeyOf(v)
+			found = append(found, New(file, Of(k), "yaml_flow_key_alone", k.GetToken().Value))
+		}
+	}
 	return found
 }
 

@@ -205,6 +205,10 @@ func TestParseCutShort(t *testing.T) {
 		// The end of a long value, where it was cut, without a line too long to read.
 		{"lead: " + strings.Repeat("a", 50) + "bcd # c\n", "a.yaml:1:61: a # after a space began a YAML comment, which may have cut the value short, to …" +
 			strings.Repeat("a", 37) + "bcd: "},
+		// A , in { } ends plain text, the rest a key without a value.
+		{"stats: { label: 1,500 字を超える段落, value: \"7\" }\n", "a.yaml:1:19: 500 字を超える段落 is a key without a value in { }: " +
+			"a , in text ends the text there, the rest of it read as a key; put the text in quotes"},
+		{"a: { b: c, d }\n", "a.yaml:1:12: d is a key without a value in { }: "},
 		{"- x # y\n", "a.yaml:1:5: a # after a space began a YAML comment, which may have cut the value short, to x: "},
 	} {
 		if _, err := yamlpos.Parse("a.yaml", []byte(tt.src), "tmpl_documents"); err == nil || !strings.HasPrefix(err.Error(), tt.want) {
@@ -214,6 +218,8 @@ func TestParseCutShort(t *testing.T) {
 	for _, src := range []string{
 		"q: 'x' # y\nr: \"x\" # y\n", "r: x\n# note\ns: 1\n", "t: |- # Markdown\n  x # y\n", "sections: # c\n  - a\n",
 		"a: # c\nb:\n", "- # c\n", "a: {b: 1} # c\n", "a: [b] # c\n",
+		// A key in { } with its ":" has a value, an empty one too; [ ] holds no keys.
+		"a: { b: , c: 1 }\nd: { e: }\nf: [g, h]\ni: { label: \"1,500 字\" }\n",
 		// After an alias, an anchor or a tag, left to the caller that refuses those as written.
 		"a: &x 1\nb: *x # c\n", "a: !t x # c\n",
 	} {
