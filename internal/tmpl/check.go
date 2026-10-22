@@ -88,17 +88,7 @@ func CheckOwnParts(partsDir, themesDir string) (warnings []*usererr.Error, mista
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values,
 // page.html and page.css.
 func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
-	needed := []string{"page.html", "schema.json", "example.yaml"}
-	for _, name := range needed {
-		_, found, err := t.readOptional(name)
-		switch {
-		case err != nil:
-			mistakes = append(mistakes, err)
-		case !found:
-			mistakes = append(mistakes, usererr.New("tmpl_file_missing", t.file(name), andList(needed)))
-		}
-	}
-	if mistakes != nil {
+	if mistakes = t.missingFiles(); mistakes != nil {
 		return nil, mistakes
 	}
 	doc, err := t.schemaDoc()
@@ -121,9 +111,13 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 			return nil, []error{err}
 		}
 	}
-	page, pageSrc, pageErr := t.page(fallbackLang)
+	w, err := t.words()
+	page, pageSrc, pageErr := t.page(w, fallbackLang)
 	named := namedParts(string(pageSrc))
 	// Told beside the other mistakes of the files, not instead of them.
+	if err != nil {
+		mistakes = append(mistakes, err)
+	}
 	if err = t.refuseShared(s); err != nil {
 		mistakes = append(mistakes, err)
 	}
@@ -144,6 +138,22 @@ func (t *Template) checkFiles() (warnings []*usererr.Error, mistakes []error) {
 	scope, css := t.checkCSS()
 	warnings, mistakes = append(warnings, scope...), append(mistakes, css...)
 	return append(warnings, brokenParts(set, named)...), append(mistakes, t.checkNamedParts(set, pageSrc, named)...)
+}
+
+// missingFiles returns the mistake of each file t needs that it does not have, or that cannot be read.
+func (t *Template) missingFiles() []error {
+	var mistakes []error
+	needed := []string{"page.html", "schema.json", "example.yaml"}
+	for _, name := range needed {
+		_, found, err := t.readOptional(name)
+		switch {
+		case err != nil:
+			mistakes = append(mistakes, err)
+		case !found:
+			mistakes = append(mistakes, usererr.New("tmpl_file_missing", t.file(name), andList(needed)))
+		}
+	}
+	return mistakes
 }
 
 // checkComputed returns the mistake of t's computed.yaml, of the items of its schema s, if it has one.
@@ -251,12 +261,7 @@ func (t *Template) checkAssets(page *template.Template) []error {
 		if checked[name] {
 			continue // its mistake, if it has one, is told already
 		}
-		var bad *usererr.Error
-		_, err = t.asset(name)
-		switch {
-		case errors.As(err, &bad):
-			mistakes = append(mistakes, t.assetMistake(bad))
-		case err != nil:
+		if _, err = t.asset(name); err != nil {
 			mistakes = append(mistakes, err)
 		}
 	}

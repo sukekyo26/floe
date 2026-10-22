@@ -22,11 +22,11 @@ const fallbackLang = "en"
 
 // readWords reads src, the words.yaml of a part or a template, file in its mistakes: language tags, en among them,
 // each the names of the words and their text, every language naming the words en names. One without a
-// document has no words.
+// document, or none (nil), has the words of en alone, none, so that it has a page all the same.
 func readWords(file string, src []byte) (words, error) {
 	body, err := yamlpos.Parse(file, src, "tmpl_words_documents")
 	if errors.Is(err, yamlpos.ErrEmpty) {
-		return nil, nil //nolint:nilnil // no words
+		return words{fallbackLang: nil}, nil
 	}
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a mistake at its line and column

@@ -568,9 +568,17 @@ func TestTemplateWords(t *testing.T) {
 	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "page.html names the words totl, which "+filepath.Join(dir, "words.yaml")+" does not have") {
 		t.Errorf("Check of a misspelt word = %v", mistakes)
 	}
-	dir = sizes(t, map[string]string{"words.yaml": "en: { total: total }\nja: {}\n"})
-	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "words.yaml:2:1: ja leaves out total") {
+	// A mistake of words.yaml is told beside those of the other files, not instead of them.
+	dir = sizes(t, map[string]string{"words.yaml": "en: { total: total }\nja: {}\n", "page.css": "@import url(a.css);\n"})
+	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 2 || !strings.Contains(fmt.Sprint(mistakes), "words.yaml:2:1: ja leaves out total") {
 		t.Errorf("Check of words missing = %v", mistakes)
+	}
+	dir = sizes(t, nil)
+	if err := os.Symlink("nowhere.yaml", filepath.Join(dir, "words.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "read words.yaml of the template sizes") {
+		t.Errorf("Check of words.yaml leading nowhere = %v", mistakes)
 	}
 
 	dir = sizes(t, map[string]string{"words.yaml": words, "page.html": "</body>|{{word (index .Data.files 0).name}}</body>"})

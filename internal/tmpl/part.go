@@ -469,7 +469,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		return fmt.Errorf("read the part %s: %w", name, err)
 	}
 	file := path.Join(dir, "words.yaml")
-	w, err := readWordsIn(files, file)
+	w, err := readPartWords(files, file)
 	if err != nil {
 		return err
 	}
@@ -702,23 +702,13 @@ func readPartChecks(files fs.FS, name, dir string) ([]relation, error) {
 	return checks, nil
 }
 
-// readWordsIn reads file, the words.yaml of a part or a template in files, its directory; one without it
-// has the words of en alone, none, so that it has a page all the same.
-func readWordsIn(files fs.FS, file string) (words, error) {
+// readPartWords reads file, the words.yaml of a part in files, its directory, as readWords does.
+func readPartWords(files fs.FS, file string) (words, error) {
 	src, err := fs.ReadFile(files, "words.yaml")
-	var w words
-	switch {
-	case err == nil:
-		if w, err = readWords(file, src); err != nil {
-			return nil, err
-		}
-	case !errors.Is(err, fs.ErrNotExist):
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("read %s: %w", file, err)
 	}
-	if w == nil {
-		w = words{fallbackLang: nil}
-	}
-	return w, nil
+	return readWords(file, src)
 }
 
 // joinDescriptions writes the description beside a $ref, a sentence ended if it is not, before that
