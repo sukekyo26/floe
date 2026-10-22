@@ -2,9 +2,12 @@
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
 * { box-sizing: border-box; }
 /* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; but in a
-   table, which widens and scrolls instead of squeezing its columns */
+   part's table, which scrolls sideways instead of squeezing its columns.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language does;
+   a pill (cell), kept on one line, still overflows. Give such a part a layout for narrow screens, as keys has */
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; }
-table { overflow-wrap: normal; }
+[data-floe-part] > table { overflow-wrap: normal; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
 p, ul, ol { margin: 0; max-width: var(--text-width); }

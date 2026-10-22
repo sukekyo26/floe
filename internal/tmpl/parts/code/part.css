@@ -14,7 +14,7 @@
 }
 :scope .file { opacity: 0.85; }
 :scope .lang {
-  margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: 5px;
+  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: 5px;
   background: var(--code-prompt); color: var(--code-bg);
 }
 /* A block, so that the code's last line break draws no empty line */
