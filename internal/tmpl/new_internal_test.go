@@ -7,7 +7,9 @@ func TestRenamed(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ src, want string }{
-		{"# report\ntemplate: report # the report\ntitle: report\n", "# report\ntemplate: spec # the report\ntitle: report\n"},
+		{"# report\ntemplate: report\n# the report\ntitle: report\n", "# report\ntemplate: spec\n# the report\ntitle: report\n"},
+		// A value a comment cut short is refused, so the file names no template to rename.
+		{"template: report # the report\n", "template: report # the report\n"},
 		{"title: t\ntemplate: 'report'\n", "title: t\ntemplate: 'spec'\n"},
 		{"template: \"report\"\r\n", "template: \"spec\"\r\n"},
 		{"title: no template\n", "title: no template\n"},
@@ -16,7 +18,7 @@ func TestRenamed(t *testing.T) {
 		{"not: [valid\n", "not: [valid\n"},
 		// Blanks after the value, or a value on a line of its own, do not lose it.
 		{"template: report   \n", "template: spec   \n"},
-		{"template:   report \t# r\n", "template:   spec \t# r\n"},
+		{"template:   report \t\n# r\n", "template:   spec \t\n# r\n"},
 		{"template:\n  report\n", "template:\n  spec\n"},
 		// A key in quotes is not written over.
 		{"\"template\": report\n", "\"template\": spec\n"},

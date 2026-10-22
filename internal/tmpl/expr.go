@@ -47,25 +47,15 @@ func compile(src string, env any, opts ...expr.Option) (*vm.Program, error) {
 	return p, nil
 }
 
-// compileWritten compiles src, an expression as YAML read it at at in file, for env with opts. rest is
-// the text of the YAML comment after it on its last line, or "". When src fails and src with the comment put
-// back compiles, a # in the expression began the comment, and the mistake says to quote it.
+// compileWritten compiles src, an expression as YAML read it at at in file, for env with opts.
 func compileWritten(
-	file string, at yamlpos.Pos, src, rest string, env any, opts ...expr.Option,
+	file string, at yamlpos.Pos, src string, env any, opts ...expr.Option,
 ) (*vm.Program, *usererr.Error) {
 	p, err := compile(src, env, opts...)
-	if err == nil {
-		return p, nil
+	if err != nil {
+		return nil, yamlpos.New(file, at, "tmpl_expr", src, brief(err))
 	}
-	var detail any = brief(err)
-	// LIMIT: the hint needs the expression with its comment put back to compile, so one cut short that
-	// has another mistake too gets none. Compare where the two fail if that hides a cut.
-	if rest != "" {
-		if _, e := compile(src+" #"+rest, env, opts...); e == nil {
-			detail = yamlpos.HintFirst("yaml_hint_expr_comment", brief(err))
-		}
-	}
-	return nil, yamlpos.New(file, at, "tmpl_expr", src, detail)
+	return p, nil
 }
 
 // brief words an error of expr on one line, without the snippet it draws under the message.

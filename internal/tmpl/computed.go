@@ -144,7 +144,7 @@ func readComputed(file string, src []byte, declared []string) (*computed, error)
 	c.env = reflect.New(reflect.StructOf(fields)).Elem()
 	for _, n := range names {
 		at := yamlpos.OfValue(yamlpos.KeyOf(where[n]), where[n].Value)
-		p, e := compileWritten(file, at, exprs[n], yamlpos.CommentAfter(where[n].Value), c.env.Interface())
+		p, e := compileWritten(file, at, exprs[n], c.env.Interface())
 		if e != nil {
 			problems = append(problems, e)
 			continue

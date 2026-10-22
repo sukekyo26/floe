@@ -116,7 +116,39 @@ func Parse(file string, src []byte, documents string) (ast.Node, error) {
 	if body == nil {
 		return nil, ErrEmpty
 	}
+	if cut := cutShort(file, body); cut != nil {
+		return nil, cut.Err()
+	}
 	return body, nil
+}
+
+// cutShort returns a mistake for each value of body that a comment on its line cut short, in the order
+// of the file: YAML reads " #" in a plain value as the start of a comment, and the value as what is
+// before it, which no later check sees is short. A comment after a quoted value, the head of a block
+// (|, >), a key or a { } cuts nothing.
+// LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
+// is an item as right as any. Catch it if a schema comes to take such lists of text.
+func cutShort(file string, body ast.Node) usererr.List {
+	var found usererr.List
+	ast.Walk(visitor(func(n ast.Node) {
+		switch n.(type) {
+		case *ast.LiteralNode:
+		case ast.ScalarNode:
+			if commentAfter(n) != "" {
+				at := n.GetToken().Next.Position
+				found = append(found, usererr.NewAt(file, at.Line, at.Column, "yaml_comment_cut", n.GetToken().Value))
+			}
+		}
+	}), body)
+	return found
+}
+
+// visitor is ast.Walk's visitor of a function, called with each node.
+type visitor func(ast.Node)
+
+func (v visitor) Visit(n ast.Node) ast.Visitor {
+	v(n)
+	return v
 }
 
 // startOf returns where d starts: at its ---, or at at without one.
@@ -170,7 +202,7 @@ func Syntax(file string, err error) *usererr.Error {
 	hint, cause := syntaxHint(se.Token)
 	var detail any = se.Message
 	if hint != "" {
-		detail = HintFirst(hint, se.Message)
+		detail = hintFirst(hint, se.Message)
 	}
 	return New(file, Pos{Line: cause.Position.Line, Column: cause.Position.Column}, "yaml_syntax", detail)
 }
@@ -181,9 +213,9 @@ func NewHinted(file string, at Pos, hint, key string, args ...any) *usererr.Erro
 	return New(file, at, "yaml_hinted", usererr.New(key, args...), usererr.New(hint))
 }
 
-// HintFirst words the hint by the catalog message key hint, with what a library said of the mistake,
+// hintFirst words the hint by the catalog message key hint, with what a library said of the mistake,
 // detail, after it: the hint names the cause, which the library's words may hide.
-func HintFirst(hint, detail string) *usererr.Error {
+func hintFirst(hint, detail string) *usererr.Error {
 	return usererr.New("yaml_hint_first", usererr.New(hint), detail)
 }
 
@@ -327,10 +359,10 @@ func ColonText(n ast.Node) bool {
 	return entry && pair.Value.GetToken().Position.Line == k.Position.Line
 }
 
-// CommentAfter returns the text of the comment after the token of n on its last line, without its #,
+// commentAfter returns the text of the comment after the token of n on its last line, without its #,
 // or "" for none: what YAML makes of " #" and the rest of a plain value, written over lines or not. A
 // value in quotes ends at its quote, before any comment.
-func CommentAfter(n ast.Node) string {
+func commentAfter(n ast.Node) string {
 	tk := n.GetToken()
 	if tk == nil || tk.Type == token.SingleQuoteType || tk.Type == token.DoubleQuoteType ||
 		tk.Next == nil || tk.Next.Type != token.CommentType {
