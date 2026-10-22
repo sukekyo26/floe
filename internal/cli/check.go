@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -30,7 +29,7 @@ the server is not started, and nothing is printed when the files are right.`,
 }
 
 func (a *app) check(files []string) error {
-	found := make(mistakes, 0, len(files))
+	found := make(usererr.List, 0, len(files))
 	for _, file := range files {
 		_, errs := drawFile(a, file)
 		found = append(found, errs...)
@@ -77,23 +76,4 @@ func drawFile(a *app, file string) ([]byte, []error) {
 // of last resort.
 func baseName(file string) string {
 	return strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
-}
-
-// mistakes are the mistakes of every file checked, one per line, in the order of the files.
-type mistakes []error
-
-func (m mistakes) Error() string {
-	return m.Localize(i18n.EnglishCatalog())
-}
-
-func (m mistakes) Localize(c *i18n.Catalog) string {
-	lines := make([]string, len(m))
-	for i, e := range m {
-		lines[i] = e.Error()
-		var l i18n.Localizer
-		if errors.As(e, &l) {
-			lines[i] = l.Localize(c)
-		}
-	}
-	return strings.Join(lines, "\n")
 }

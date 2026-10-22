@@ -65,7 +65,7 @@ func (a *app) renderPages(files []string, outDir string, check bool) error {
 // drawPages draws the page of each data file and names the HTML file it goes to, or returns the
 // mistakes of every file, and the pages two data files would write.
 func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
-	found := make(mistakes, 0, len(files))
+	found := make(usererr.List, 0, len(files))
 	pages := make([]rendered, 0, len(files))
 	// The first page to each real path in lower case: through a symlink, and on a filesystem that
 	// ignores case (macOS), two paths may be one file.
@@ -149,7 +149,7 @@ func (a *app) writePages(pages []rendered, outDir string) error {
 
 // checkPages returns a mistake for each page that is missing or is not what its data file draws.
 func (a *app) checkPages(pages []rendered) error {
-	found := make(mistakes, 0, len(pages))
+	found := make(usererr.List, 0, len(pages))
 	for _, p := range pages {
 		old, err := os.ReadFile(a.abs(p.to))
 		switch {

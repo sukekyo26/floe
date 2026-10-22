@@ -67,7 +67,7 @@ func Run(ctx context.Context, args []string, env Env) int {
 	prefix := "floe: "
 	var all yamlpos.Problems
 	var one *yamlpos.Error
-	var checked mistakes
+	var checked usererr.List
 	var remote *remoteError
 	if errors.As(err, &all) || errors.As(err, &one) || errors.As(err, &checked) ||
 		errors.As(err, &remote) && remote.mistakes {

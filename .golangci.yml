@@ -142,6 +142,7 @@ linters:
         - usererr.New(
         - usererr.CannotRead(
         - usererr.CannotWrite(
+        - usererr.Join(
         - yamlpos.New(
         - yamlpos.Syntax(
         # A sig matches as part of the one reported, func (github.com/…/yamlpos.Problems).Sorted(): no "(" before.

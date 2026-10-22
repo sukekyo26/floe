@@ -5,6 +5,7 @@ package usererr
 import (
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 )
@@ -61,4 +62,42 @@ func reason(err error) string {
 		return le.Err.Error()
 	}
 	return err.Error()
+}
+
+// List is mistakes told together, one per line, each in the reader's language where it can be.
+type List []error
+
+// Error words the mistakes in English, one per line.
+func (l List) Error() string {
+	return l.Localize(i18n.EnglishCatalog())
+}
+
+// Localize words the mistakes in the language of c, one per line.
+func (l List) Localize(c *i18n.Catalog) string {
+	lines := make([]string, len(l))
+	for i, e := range l {
+		lines[i] = e.Error()
+		var loc i18n.Localizer
+		if errors.As(e, &loc) {
+			lines[i] = loc.Localize(c)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// Join returns the mistakes of errs that are not nil: nil for none, the one alone, else a List of them.
+func Join(errs ...error) error {
+	var l List
+	for _, err := range errs {
+		if err != nil {
+			l = append(l, err)
+		}
+	}
+	switch len(l) {
+	case 0:
+		return nil
+	case 1:
+		return l[0]
+	}
+	return l
 }
