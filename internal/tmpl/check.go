@@ -214,14 +214,15 @@ func (t *Template) checkNamedParts(set *partSet, src []byte, named []namedPart) 
 		case nameNotOne:
 			if !told[n.at] {
 				told[n.at] = true
-				mistakes = append(mistakes, usererr.New("tmpl_part_several", t.file("page.html"), line, n.value))
+				mistakes = append(mistakes, usererr.NewAt(t.file("page.html"), line, 0, "tmpl_part_several", n.value))
 			}
 		case nameLookBox:
-			mistakes = append(mistakes, usererr.New("tmpl_look_box", t.file("page.html"), line, n.name))
+			mistakes = append(mistakes, usererr.NewAt(t.file("page.html"), line, 0, "tmpl_look_box", n.name))
 		case nameBroken:
 			mistakes = append(mistakes, usererr.New("tmpl_part_broken", n.name, set.broken[n.name]))
 		case nameUnknown:
-			mistakes = append(mistakes, usererr.New("tmpl_page_part", t.file("page.html"), line, n.name, set.candidates(n.look)))
+			page := t.file("page.html")
+			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_page_part", n.name, set.candidates(n.look)))
 		case nameRight:
 		}
 	}
@@ -285,7 +286,7 @@ func (t *Template) assetImages(assets fs.FS) (mistakes []error, checked map[stri
 		if _, image := imageTypes[strings.ToLower(path.Ext(name))]; image {
 			checked[name] = true
 			if _, bad := imageURI(assets, name, t.file("assets")); bad != nil {
-				mistakes = append(mistakes, usererr.New("tmpl_item", t.file("assets"), bad))
+				mistakes = append(mistakes, bad.Placed(t.file("assets"), 0, 0, ""))
 			}
 		}
 		return nil

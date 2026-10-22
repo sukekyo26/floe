@@ -349,9 +349,7 @@ func New(file string, at Pos, key string, args ...any) *usererr.Error {
 
 // Place returns e at at in file, in place of any place it had.
 func Place(file string, at Pos, e *usererr.Error) *usererr.Error {
-	placed := *e
-	placed.File, placed.Line, placed.Column = file, at.Line, at.Column
-	return &placed
+	return e.Placed(file, at.Line, at.Column, "")
 }
 
 // FirstAnchor returns the first anchor, alias, merge key (<<) or tag under n, or nil. Callers refuse them, so that

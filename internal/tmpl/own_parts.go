@@ -168,9 +168,9 @@ func (set *partSet) leaveOutUnusable() {
 			continue
 		}
 		if chain := cycle(name, held); chain != nil {
-			set.leaveOut(name, usererr.New("tmpl_part_cycle", dir, name, strings.Join(chain, " → ")))
+			set.leaveOut(name, usererr.NewAt(dir, 0, 0, "tmpl_part_cycle", name, strings.Join(chain, " → ")))
 		} else if chain := cycle(name, looks); chain != nil {
-			set.leaveOut(name, usererr.New("tmpl_look_cycle", dir, name, strings.Join(chain, " → ")))
+			set.leaveOut(name, usererr.NewAt(dir, 0, 0, "tmpl_look_cycle", name, strings.Join(chain, " → ")))
 		}
 	}
 	set.settle()
@@ -200,7 +200,7 @@ func (set *partSet) leaveOutRooted() bool {
 	for name, p := range set.parts {
 		if named, ok := set.rootPart(p.shape); ok {
 			at := cmp.Or(p.dir, path.Join("parts", name))
-			rooted[name] = usererr.New("tmpl_schema_root_part", path.Join(at, "schema.json"), named)
+			rooted[name] = usererr.NewAt(path.Join(at, "schema.json"), 0, 0, "tmpl_schema_root_part", named)
 		}
 	}
 	for name, why := range rooted {
@@ -221,7 +221,7 @@ func (set *partSet) readOwnPart(name, from, at string) bool {
 		return false
 	case set.reserved(name):
 		// Told whatever is there, which never takes the place of floe's.
-		set.broken[name] = usererr.New("tmpl_part_name", at, name)
+		set.broken[name] = usererr.NewAt(at, 0, 0, "tmpl_part_name", name)
 		return false
 	}
 	floe := set.parts[name]
@@ -231,7 +231,7 @@ func (set *partSet) readOwnPart(name, from, at string) bool {
 		err = readIn(dir, func(files fs.FS) error { return set.readPart(files, name, at) })
 	}
 	if err == nil && replaces && !floe.isLook() && set.parts[name].isLook() {
-		err = usererr.New("tmpl_look_replaces", at, name)
+		err = usererr.NewAt(at, 0, 0, "tmpl_look_replaces", name)
 	}
 	if err != nil {
 		set.leaveOut(name, err)
@@ -294,7 +294,7 @@ func (set *partSet) ownEntry(name, from, at string) (string, error) {
 	case dir == "" && err == nil:
 		return "", nil
 	case !validName(name):
-		return "", usererr.New("tmpl_part_bad_name", at)
+		return "", usererr.NewAt(at, 0, 0, "tmpl_part_bad_name")
 	}
 	set.keepDir(dir)
 	return dir, err
@@ -335,7 +335,7 @@ func (set *partSet) checkNames(name, dir string) error {
 	html, yaml := path.Join(at, "part.html"), path.Join(at, "part.yaml")
 	named := namedParts(p.html)
 	if dir != "" && !p.isLook() && !namesItself(named, name) {
-		return usererr.New("tmpl_part_unnamed", html, name, name)
+		return usererr.NewAt(html, 0, 0, "tmpl_part_unnamed", name, name)
 	}
 	for _, n := range named {
 		kind := set.misnamed(n)
@@ -345,9 +345,9 @@ func (set *partSet) checkNames(name, dir string) error {
 		line := lineAt([]byte(p.html), n.at)
 		switch {
 		case dir != "" && kind == nameNotOne:
-			return usererr.New("tmpl_part_several", html, line, n.value)
+			return usererr.NewAt(html, line, 0, "tmpl_part_several", n.value)
 		case dir != "" && kind == nameLookBox:
-			return usererr.New("tmpl_look_box", html, line, n.name)
+			return usererr.NewAt(html, line, 0, "tmpl_look_box", n.name)
 		}
 		if err := set.unlent(kind, n.name, html, line, n.look); err != nil {
 			return err
@@ -411,7 +411,7 @@ func (set *partSet) unlent(kind nameKind, name, file string, line int, look bool
 	case nameBroken:
 		return usererr.New("tmpl_part_lender_broken", name)
 	case nameUnknown:
-		return usererr.New("tmpl_part_names", file, line, name, set.candidates(look))
+		return usererr.NewAt(file, line, 0, "tmpl_part_names", name, set.candidates(look))
 	case nameRight, nameNotOne, nameLookBox:
 	}
 	return nil

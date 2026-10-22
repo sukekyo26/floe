@@ -41,15 +41,15 @@ func (t *Template) ownSheet(name string) (*cssSheet, error) {
 // those name nothing.
 func (s *cssSheet) refuse(file string, scoped bool) error {
 	if s.stray >= 0 {
-		return usererr.New("tmpl_css_brace", file, lineAt(s.src, s.stray))
+		return usererr.NewAt(file, lineAt(s.src, s.stray), 0, "tmpl_css_brace")
 	}
 	for _, r := range s.rules {
 		switch {
 		case !r.block && strings.HasPrefix(strings.ToLower(r.prelude), "@import"):
-			return usererr.New("tmpl_css_import", file, lineAt(s.src, r.at))
+			return usererr.NewAt(file, lineAt(s.src, r.at), 0, "tmpl_css_import")
 		case scoped && r.block && !strings.HasPrefix(r.prelude, "@"):
 			if m := rootSelector.FindStringSubmatchIndex(r.prelude); m != nil {
-				return usererr.New("tmpl_css_root", file, lineAt(s.src, r.at+m[2]), r.prelude[m[2]:m[3]])
+				return usererr.NewAt(file, lineAt(s.src, r.at+m[2]), 0, "tmpl_css_root", r.prelude[m[2]:m[3]])
 			}
 		}
 	}

@@ -143,6 +143,8 @@ linters:
         - usererr.CannotRead(
         - usererr.CannotWrite(
         - usererr.NewAt(
+        - usererr.NewIn(
+        - usererr.Error).Placed(
         - yamlpos.New(
         - yamlpos.Syntax(
         # A sig matches as part of the one reported, func (github.com/…/usererr.List).Sorted(): no "(" before.

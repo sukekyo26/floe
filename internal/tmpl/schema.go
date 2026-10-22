@@ -83,7 +83,7 @@ var drafts = []*jsonschema.Draft{
 
 // checkDraft refuses the schema doc when its $schema names no draft of JSON Schema: jsonschema would take a
 // schema of floe's there, a part's, as the rules of the schema, and load any other.
-func checkDraft(doc any) error {
+func checkDraft(doc any) *usererr.Error {
 	m, ok := doc.(map[string]any)
 	if !ok {
 		return nil
@@ -172,7 +172,7 @@ func compileAlone(doc any) (*jsonschema.Schema, error) {
 }
 
 // unknownPart is the mistake of a $ref, ref, under floe:///parts/ that names no part of set whole.
-func unknownPart(set *partSet, ref string) error {
+func unknownPart(set *partSet, ref string) *usererr.Error {
 	if whole, into := set.pointsInto(ref); into {
 		return usererr.New("tmpl_part_into", ref, whole)
 	}

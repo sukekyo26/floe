@@ -25,13 +25,13 @@ func colourWarnings(file string, s *cssSheet, ownVariables bool) []*usererr.Erro
 	for _, d := range decls {
 		switch property := unprefixed(d.name); {
 		case strings.HasPrefix(d.name, "--") && !ownVariables:
-			warnings = append(warnings, usererr.New("tmpl_theme_variable", file, lineAt(s.src, d.at), d.name))
+			warnings = append(warnings, usererr.NewAt(file, lineAt(s.src, d.at), 0, "tmpl_theme_variable", d.name))
 		case d.value == "":
 		case strings.HasPrefix(property, "mask"):
 		default:
 			// A variable may take a colour, and is read as one.
 			if c := colourIn(d.value, strings.HasPrefix(d.name, "--") || takesColour(property)); c != "" {
-				warnings = append(warnings, usererr.New("tmpl_css_colour", file, lineAt(s.src, d.at), c))
+				warnings = append(warnings, usererr.NewAt(file, lineAt(s.src, d.at), 0, "tmpl_css_colour", c))
 			}
 		}
 	}

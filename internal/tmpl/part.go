@@ -436,8 +436,8 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown, part string) error
 	if err != nil {
 		return fmt.Errorf("read %s: %w", shown, err)
 	}
-	if err = checkDraft(doc); err != nil {
-		return usererr.New("tmpl_item", shown, err)
+	if bad := checkDraft(doc); bad != nil {
+		return bad.Placed(shown, 0, 0, "")
 	}
 	if m := notes.first(); m != nil {
 		return m
@@ -527,7 +527,7 @@ func isLookDir(files fs.FS, name, dir string) (bool, error) {
 	case slices.Equal(missing, []string{"schema.json", "part.html"}):
 		return true, nil
 	}
-	return false, usererr.New("tmpl_part_files", dir)
+	return false, usererr.NewAt(dir, 0, 0, "tmpl_part_files")
 }
 
 // exists reports whether files, the directory of the part name, holds file.
@@ -550,7 +550,7 @@ func (set *partSet) readLook(files fs.FS, name, dir string, yaml partYAML) error
 			return err
 		}
 		if there {
-			return usererr.New("tmpl_look_files", path.Join(dir, file), name)
+			return usererr.NewAt(path.Join(dir, file), 0, 0, "tmpl_look_files", name)
 		}
 	}
 	css, warnings, err := readPartCSS(files, name, dir)

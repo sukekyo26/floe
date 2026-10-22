@@ -240,7 +240,7 @@ func (p *paletteCheck) declarations(r *cssRule) ([]cssDeclaration, error) {
 
 // mistake is the mistake key of palette.css at the offset at.
 func (p *paletteCheck) mistake(key string, at int) error {
-	return usererr.New(key, p.file, lineAt(p.sheet.src, at))
+	return usererr.NewAt(p.file, lineAt(p.sheet.src, at), 0, key)
 }
 
 // modeRule is what a rule of CSS that sets colours for the modes is to them.

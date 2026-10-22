@@ -298,8 +298,14 @@ func TestPageStyleRefused(t *testing.T) {
 
 	dir := sizes(t, map[string]string{"page.html": "<body>|<body>\n<!-- <style> -->\n<style>p {}</style>"})
 	want := filepath.Join(dir, "page.html") + ":6: page.html holds a <style>: write the template's CSS in page.css"
-	if _, mistakes := tmpl.Check(dir, "", "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
-		t.Errorf("Check = %v, want %s", mistakes, want)
+	_, mistakes := tmpl.Check(dir, "", "", "")
+	if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+		t.Fatalf("Check = %v, want %s", mistakes, want)
+	}
+	// Placed in the mistake, not in its words: told as it is, without floe's name before it.
+	var e *usererr.Error
+	if !errors.As(mistakes[0], &e) || e.File != filepath.Join(dir, "page.html") || e.Line != 6 || !usererr.Show(i18n.EnglishCatalog(), e).Placed {
+		t.Errorf("the mistake = %+v, want it placed at page.html:6", e)
 	}
 }
 
@@ -532,7 +538,7 @@ func TestRenderBadAsset(t *testing.T) {
 	}
 	_, err = d.Render("t")
 	var e *usererr.Error
-	if !errors.As(err, &e) || e.Key != "tmpl_item" {
+	if !errors.As(err, &e) || e.File != filepath.Join(dir, "assets") {
 		t.Fatalf("Render = %v", err)
 	}
 	if ja := e.Localize(i18n.New("ja")); ja != filepath.Join(dir, "assets")+": 「logo.svg」の中身は、名前が示す image/svg+xml ではありません" {

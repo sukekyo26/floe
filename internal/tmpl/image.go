@@ -252,7 +252,7 @@ func (t *Template) assetMistake(e *usererr.Error) *usererr.Error {
 	case "tmpl_image_path", "tmpl_image_type", "tmpl_image_missing":
 		where = "page.html"
 	}
-	return usererr.New("tmpl_item", t.file(where), e)
+	return e.Placed(t.file(where), 0, 0, "")
 }
 
 // assets returns asset for one drawing: an image shown many times is read once.
