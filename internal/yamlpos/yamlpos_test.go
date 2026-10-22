@@ -193,13 +193,16 @@ func TestParseCutShort(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ src, want string }{
-		{"lead: PR #100 で\n", "a.yaml:1:10: a # after a space began a YAML comment, which cut the value short, leaving PR: " +
+		{"lead: PR #100 で\n", "a.yaml:1:10: a # after a space began a YAML comment, which may have cut the value short, to PR: " +
 			"put the value in quotes if the # is part of it, or write the comment on a line of its own"},
-		{"a: x\n  y # z\n", "a.yaml:2:5: a # after a space began a YAML comment, which cut the value short, leaving x y: "},
-		{"n: 1 # one\nm: .inf # c\n", "a.yaml:1:6: a # after a space began a YAML comment, which cut the value short, leaving 1: " +
+		{"a: x\n  y # z\n", "a.yaml:2:5: a # after a space began a YAML comment, which may have cut the value short, to x y: "},
+		{"n: 1 # one\nm: .inf # c\n", "a.yaml:1:6: a # after a space began a YAML comment, which may have cut the value short, to 1: " +
 			"put the value in quotes if the # is part of it, or write the comment on a line of its own\n" +
-			"a.yaml:2:9: a # after a space began a YAML comment, which cut the value short, leaving .inf: "},
-		{"- x # y\n", "a.yaml:1:5: a # after a space began a YAML comment, which cut the value short, leaving x: "},
+			"a.yaml:2:9: a # after a space began a YAML comment, which may have cut the value short, to .inf: "},
+		{"a: x #\n", "a.yaml:1:6: a # after a space began a YAML comment, which may have cut the value short, to x: "},
+		// A blank line in a value over lines is a line break in it, told on the one line of the mistake.
+		{"lead: a\n\n  b # c\n", "a.yaml:3:5: a # after a space began a YAML comment, which may have cut the value short, to a b: "},
+		{"- x # y\n", "a.yaml:1:5: a # after a space began a YAML comment, which may have cut the value short, to x: "},
 	} {
 		if _, err := yamlpos.Parse("a.yaml", []byte(tt.src), "tmpl_documents"); err == nil || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("Parse(%q) = %v, want %s", tt.src, err, tt.want)

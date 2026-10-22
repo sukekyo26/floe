@@ -8,8 +8,9 @@ func TestRenamed(t *testing.T) {
 
 	for _, tt := range []struct{ src, want string }{
 		{"# report\ntemplate: report\n# the report\ntitle: report\n", "# report\ntemplate: spec\n# the report\ntitle: report\n"},
-		// A value a comment cut short is refused, so the file names no template to rename.
-		{"template: report # the report\n", "template: report # the report\n"},
+		// A comment after the value, which its check refuses, does not stop the copy naming itself.
+		{"template: report # the report\n", "template: spec # the report\n"},
+		{"template:   report \t# r\n", "template:   spec \t# r\n"},
 		{"title: t\ntemplate: 'report'\n", "title: t\ntemplate: 'spec'\n"},
 		{"template: \"report\"\r\n", "template: \"spec\"\r\n"},
 		{"title: no template\n", "title: no template\n"},

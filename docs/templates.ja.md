@@ -174,7 +174,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 orders.yaml:13:12: access_patterns[0].key: キーには属性一覧にある属性を使う（「user_id」）
 ```
 
-`for`・`field` のパスは、`schema.json` の `properties` と `items` で宣言されている必要があります。打ち間違えたパスはデータの中に検査するものが見つからず、何も検査しません。`floe template check` は `properties` と `$ref` を（`for` は `items` も）辿り、キーを持たないスキーマがほかのキーを断る（`"additionalProperties": false`、`"unevaluatedProperties": false`、または `object` 以外の `type`）位置のパスと、型に `array` を含まない `for` を誤りにします。`patternProperties`・`allOf`・`anyOf`、許したほかのキーなどで宣言されうるパスは通します。`checks.yaml` そのものの誤りは、`checks.yaml` の行と列で出します。データファイルと同じく、アンカー・エイリアス・タグは使えません。
+`for`・`field` のパスは、`schema.json` の `properties` と `items` で宣言されている必要があります。打ち間違えたパスはデータの中に検査するものが見つからず、何も検査しません。`floe template check` は `properties` と `$ref` を（`for` は `items` も）辿り、キーを持たないスキーマがほかのキーを断る（`"additionalProperties": false`、`"unevaluatedProperties": false`、または `object` 以外の `type`）位置のパスと、型に `array` を含まない `for` を誤りにします。`patternProperties`・`allOf`・`anyOf`、許したほかのキーなどで宣言されうるパスは通します。`checks.yaml` そのものの誤りは、`checks.yaml` の行と列で出します。データファイルと同じく、アンカー・エイリアス・タグは使えません。`filter(xs, # > 1)` の要素を指す `#` のように、空白の後の `#` を含む式は引用符で囲みます。囲まないと、YAML がそこからをコメントとして読みます。
 
 ## computed.yaml
 
@@ -185,7 +185,7 @@ item_bytes: sum(attributes, .avg_bytes)
 storage_gb: item_bytes * records.in_1_year / 1e9
 ```
 
-式からは、スキーマで宣言したデータファイルの項目と、ほかの計算の値が、名前でそのまま見えます。書く順番は自由です。名前は文字で始まり、文字・数字・`_` が続くもので、データの項目とも、expr の語や関数とも重ねられません。データから計算できない値（0 で割った、式に要る項目が無い）は誤りとして出します。値が NaN や ±Inf になるときも同じです。`computed.yaml` そのものの誤りは、`computed.yaml` の行と列で出します。データファイルと同じく、アンカー・エイリアス・タグは使えません。
+式からは、スキーマで宣言したデータファイルの項目と、ほかの計算の値が、名前でそのまま見えます。書く順番は自由です。名前は文字で始まり、文字・数字・`_` が続くもので、データの項目とも、expr の語や関数とも重ねられません。データから計算できない値（0 で割った、式に要る項目が無い）は誤りとして出します。値が NaN や ±Inf になるときも同じです。`computed.yaml` そのものの誤りは、`computed.yaml` の行と列で出します。データファイルと同じく、アンカー・エイリアス・タグは使えません。`filter(xs, # > 1)` の要素を指す `#` のように、空白の後の `#` を含む式は引用符で囲みます。囲まないと、YAML がそこからをコメントとして読みます。
 
 ## 検査の順番
 

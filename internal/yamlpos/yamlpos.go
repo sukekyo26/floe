@@ -78,9 +78,22 @@ func Find(root ast.Node, at []string) (key, value ast.Node, path string) {
 var ErrEmpty = errors.New("no YAML document")
 
 // Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A
-// syntax error is reported at its token, and a second document at its start, worded by the key
-// documents.
+// syntax error is reported at its token, a second document at its start, worded by the key
+// documents, and each value a comment on its line may have cut short at the comment (cutShort).
 func Parse(file string, src []byte, documents string) (ast.Node, error) {
+	body, err := Document(file, src, documents)
+	if err != nil {
+		return nil, err
+	}
+	if cut := cutShort(file, body); cut != nil {
+		return nil, cut.Err()
+	}
+	return body, nil
+}
+
+// Document reads src as Parse does, but leaves the values a comment may have cut short as they are: for
+// a caller that only finds where a value is written, to write it over.
+func Document(file string, src []byte, documents string) (ast.Node, error) {
 	doc, err := parser.ParseBytes(src, 0)
 	if err != nil {
 		return nil, Syntax(file, err)
@@ -116,15 +129,13 @@ func Parse(file string, src []byte, documents string) (ast.Node, error) {
 	if body == nil {
 		return nil, ErrEmpty
 	}
-	if cut := cutShort(file, body); cut != nil {
-		return nil, cut.Err()
-	}
 	return body, nil
 }
 
-// cutShort returns a mistake for each value of body that a comment on its line cut short, in the order
-// of the file: YAML reads " #" in a plain value as the start of a comment, and the value as what is
-// before it, which no later check sees is short. A comment after a quoted value, the head of a block
+// cutShort returns a mistake for each value of body that a comment on its line may have cut short, in the
+// order of the file: YAML reads " #" in a plain value as the start of a comment, and the value as what
+// is before it, which no later check sees is short. The comment may be the author's, which floe cannot
+// tell from text cut short, so either is refused. A comment after a quoted value, the head of a block
 // (|, >), a key or a { } cuts nothing.
 // LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
 // is an item as right as any. Catch it if a schema comes to take such lists of text.
@@ -134,9 +145,11 @@ func cutShort(file string, body ast.Node) usererr.List {
 		switch n.(type) {
 		case *ast.LiteralNode:
 		case ast.ScalarNode:
-			if commentAfter(n) != "" {
+			if commentAfter(n) {
 				at := n.GetToken().Next.Position
-				found = append(found, usererr.NewAt(file, at.Line, at.Column, "yaml_comment_cut", n.GetToken().Value))
+				// A value over lines with a blank line between holds a line break: told on one line.
+				value := strings.ReplaceAll(n.GetToken().Value, "\n", " ")
+				found = append(found, usererr.NewAt(file, at.Line, at.Column, "yaml_comment_cut", value))
 			}
 		}
 	}), body)
@@ -359,19 +372,16 @@ func ColonText(n ast.Node) bool {
 	return entry && pair.Value.GetToken().Position.Line == k.Position.Line
 }
 
-// commentAfter returns the text of the comment after the token of n on its last line, without its #,
-// or "" for none: what YAML makes of " #" and the rest of a plain value, written over lines or not. A
-// value in quotes ends at its quote, before any comment.
-func commentAfter(n ast.Node) string {
+// commentAfter reports whether a comment follows the token of n on its last line, an empty one too: what
+// YAML makes of " #" and the rest of a plain value, written over lines or not. A value in quotes ends at
+// its quote, before any comment.
+func commentAfter(n ast.Node) bool {
 	tk := n.GetToken()
 	if tk == nil || tk.Type == token.SingleQuoteType || tk.Type == token.DoubleQuoteType ||
 		tk.Next == nil || tk.Next.Type != token.CommentType {
-		return ""
+		return false
 	}
-	if tk.Next.Position.Line != lastLine(tk) {
-		return ""
-	}
-	return tk.Next.Value
+	return tk.Next.Position.Line == lastLine(tk)
 }
 
 // New returns the mistake worded by the catalog message key with args, at at in file.

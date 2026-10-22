@@ -167,7 +167,7 @@ var messagesJA = map[string]string{
 	"yaml_hinted":        "%s。%s",
 	"yaml_hint_first":    "%s（%s）",
 	"yaml_hint_colon":    "「: 」を含む文はキーと値として読まれます。文を引用符で囲んでください",
-	"yaml_comment_cut":   "空白の後の # が YAML のコメントを始め、値が %s で切れました。# が値の一部なら値を引用符で囲み、コメントなら次の行に書いてください",
+	"yaml_comment_cut":   "空白の後の # が YAML のコメントを始め、値が %s で切れたかもしれません。# が値の一部なら値を引用符で囲み、コメントなら次の行に書いてください",
 	"yaml_hint_comment":  "空白の後の # からはコメントになり、文が途中で切れました。# を含む文は引用符で囲んでください",
 	"yaml_hint_reserved": "` や @ で始まる値は、引用符で囲んでください",
 
