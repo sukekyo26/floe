@@ -263,6 +263,15 @@ func TestBrokenOwnParts(t *testing.T) {
 		"aregexed/schema.json": `{"type": "object", "properties": {"r": {"$ref": "regexed.json"}}}`,
 		"aregexed/part.html":   `<div data-floe-part="aregexed"></div>`,
 		"aregexed/part.css":    "",
+		// A mistake of compiling does not hide those of its names.
+		"unboxed/schema.json": `{"type": "object", "properties": {"text": {"type": "string", "pattern": "(["}}}`,
+		"unboxed/part.html":   `<div class="x"></div>`,
+		"unboxed/part.css":    "",
+		// A stop in a schema floe can use, which no check places, is told all the same: a template that uses
+		// the part never stops at it.
+		"deadptr/schema.json": `{"type": "object", "properties": {"t": {"$ref": "tone.json#/nope"}}}`,
+		"deadptr/part.html":   `<div data-floe-part="deadptr"></div>`,
+		"deadptr/part.css":    "",
 		// The mistakes of several files are told together, under the part.
 		"wrongs/schema.json": `{"type": "object"}`,
 		"wrongs/part.html":   `<div data-floe-part="wrongs"></div>`,
@@ -352,6 +361,11 @@ func TestBrokenOwnParts(t *testing.T) {
 			": #: a $ref to #/$defs/nope finds nothing in schema.json",
 		"aregexed": "the part aregexed cannot be used\n  " + filepath.Join(parts, "aregexed", "schema.json") +
 			": #/properties/r: the part regexed cannot be used",
+		"unboxed": "the part unboxed cannot be used\n  " + filepath.Join(parts, "unboxed", "part.html") +
+			`: no element of the part unboxed is its box, data-floe-part="unboxed"; write it on the part's element` + "\n  " +
+			filepath.Join(parts, "unboxed", "schema.json") + ": #/properties/text/pattern: JSON Schema does not take this: '([' is not valid regex",
+		"deadptr": "the part deadptr cannot be used\n  floe could not read it: compile the schema " +
+			filepath.Join(parts, "deadptr", "schema.json") + `: json-pointer in "floe:///parts/tone.json#/nope" not found`,
 		"wrongs": "the part wrongs cannot be used\n  " + filepath.Join(parts, "wrongs", "part.yaml") + ":1:1: lookz is not a key of part.yaml" +
 			"; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:\n  " +
 			filepath.Join(parts, "wrongs", "words.yaml") + ":2:1: ja leaves out a, which en has\n  " +
