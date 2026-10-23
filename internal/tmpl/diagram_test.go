@@ -30,7 +30,8 @@ sections:
 `
 
 // The diagrams of a data file are checked as floe diagram render checks them, at the lines and columns
-// of the data file, their ids across the page. A spec stops at its first mistake in shape.
+// of the data file, their ids across the page. Every mistake in a spec's shape is told; one so told is not
+// counted among the ids, which may be its very mistake.
 func TestDiagramMistakes(t *testing.T) {
 	t.Parallel()
 
@@ -42,6 +43,12 @@ func TestDiagramMistakes(t *testing.T) {
 		"data.yaml:19:11: diagram: give height"
 	if err == nil || err.Error() != want {
 		t.Errorf("Read = %v\nwant %s", err, want)
+	}
+	src = strings.Replace(strings.Replace(twoDiagrams, "%s", "{ cx: a, cy: b }", 1), "%s", "a", 1)
+	_, err = builtins.Read("data.yaml", []byte(src), "", "")
+	want = "data.yaml:11:26: dot: cx must be a number\ndata.yaml:11:33: dot: cy must be a number"
+	if err == nil || err.Error() != want {
+		t.Errorf("Read of a refused diagram and another of its id = %v\nwant %s", err, want)
 	}
 }
 

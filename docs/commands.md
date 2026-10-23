@@ -261,8 +261,8 @@ Stop the background server. Without one, it prints `server is not running` and e
 
 Check each diagram spec and print the diagrams, in order, as one HTML fragment of inline SVG on stdout, to paste into an HTML page of your own: a whole document with `<!doctype html>` and `<html lang>`, since `floe publish --link` shows the file as it is. A relative path is resolved against the working directory.
 
-- A mistake in the shape of a spec (an unknown key, a wrong type, a value that is not allowed) stops that spec at the first one.
-- Layout mistakes are all reported: text too wide or too tall for its box (or a heading for its frame), parts sticking out of the canvas (edges, lines and axes too), overlapping (each other or a frame's heading), or straddling the edge of a frame, edges running through boxes, labels or frame headings, and edges crossing like an X.
+- Mistakes in the shape of a spec (an unknown key, a wrong type, a value that is not allowed) are all reported, one to a value; a key not given is not, while a key is unknown, which may be it misspelt.
+- Layout mistakes are all reported, once the spec's shape has none: text too wide or too tall for its box (or a heading for its frame), parts sticking out of the canvas (edges, lines and axes too), overlapping (each other or a frame's heading), or straddling the edge of a frame, edges running through boxes, labels or frame headings, and edges crossing like an X.
 - Every mistake of every spec is printed as `file:line:column: message`, in the order the specs were given, and nothing is drawn until all are fixed (exit code 1).
 - A spec named twice (by two globs, through a symlinked directory, or in another case on macOS) is drawn once. A link of another name or in another directory, symbolic or hard, is a spec of its own, whose id must differ too.
 - The ids of the diagrams drawn together must differ, because they name the diagrams' markers and icons. Draw all the diagrams of a page with one `render`.

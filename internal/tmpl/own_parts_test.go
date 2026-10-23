@@ -885,6 +885,29 @@ func TestPartHoldingOneNotDrawn(t *testing.T) {
 	}
 }
 
+// A diagram refused leaves the others drawn: the page is refused, and a part of one's own holding a right one
+// is checked, its mistakes told with the diagram's.
+func TestPartHoldingRightDiagram(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"dd/schema.json": `{"type": "object", "properties": {"plan": {"$ref": "floe:///parts/diagram.json"}}}`,
+		"dd/part.html":   `<div data-floe-part="dd">{{.plan}}{{num "x"}}</div>`,
+		"dd/part.css":    "",
+	})
+	items := `"risks": {"$ref": "floe:///parts/diagram.json"}, "plan": {"$ref": "floe:///parts/dd.json"}`
+	l := tmpl.NewLibrary(memo(t, items), parts, "", "")
+	_, err := draw(l, "template: memo\nlang: en\n"+
+		"risks: { id: b, width: 100, height: 50, title: B, parts: [{ dot: { cx: a, cy: 1 } }] }\n"+
+		"plan: { plan: { id: a, width: 100, height: 50, title: A, parts: [] } }\n")
+	var all usererr.List
+	if !errors.As(err, &all) || len(all) != 2 || !strings.HasPrefix(all[0].Error(), "data.yaml:3:") ||
+		!strings.Contains(all[0].Error(), "dot: cx must be a number") ||
+		!strings.HasPrefix(all[1].Error(), filepath.Join(parts, "dd", "part.html")+": ") {
+		t.Errorf("drawing a wrong diagram and a part holding a right one = %v, want the mistakes of both", err)
+	}
+}
+
 // A page that names a part that cannot be used, by a table of Markdown of the data, is refused, rather
 // than published without its style; themes of one's own that cannot be read are warned of.
 func TestBrokenPartInPage(t *testing.T) {

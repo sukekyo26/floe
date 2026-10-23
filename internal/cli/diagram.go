@@ -33,8 +33,8 @@ func (a *app) diagramRenderCmd() *cobra.Command {
 		Annotations: uses(map[setting]use{iconsSetting: reads}),
 		Short:       "Check diagram specs and print them as one HTML fragment of inline SVG",
 		Long: `Check each spec and print the diagrams, in order, as one HTML fragment of inline SVG
-to paste into a page. A mistake in a spec's shape stops that spec at the first one; layout
-mistakes (overflowing text, overlaps, edges through boxes, crossings …) are all reported.
+to paste into a page. The mistakes in a spec's shape are all reported, one to a value, and
+then its layout mistakes (overflowing text, overlaps, edges through boxes, crossings …).
 An icon part takes the icons that floe icons fetch <set> keeps.
 Every mistake is printed as file:line:column, and nothing is drawn until all are fixed.
 The ids of the diagrams drawn together must differ.

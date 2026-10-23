@@ -895,8 +895,8 @@ func nonTextKey(n ast.Node) ast.Node {
 // plain refuses in body, the file's, what would hide where a value is written (an anchor, alias, merge
 // key or tag) or read a key as another name than the one written.
 func plain(file string, body ast.Node) error {
-	if a := yamlpos.FirstAnchor(body); a != nil {
-		return yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
+	if err := yamlpos.Anchors(file, body); err != nil {
+		return err //nolint:wrapcheck // mistakes at their lines and columns
 	}
 	if k := first(body, nonTextKey); k != nil {
 		return yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value)
