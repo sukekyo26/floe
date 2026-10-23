@@ -33,6 +33,14 @@ func TestOfAndAnchors(t *testing.T) {
 	if err != nil || yamlpos.Anchors("d.yaml", merge.Docs[0].Body) == nil {
 		t.Error("Anchors missed a merge key")
 	}
+	// What an anchor holds is told too.
+	nested, err := parser.ParseBytes([]byte("parts: &p\n  - dot: { cx: &x 1, cy: *x }\n"), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = yamlpos.Anchors("d.yaml", nested.Docs[0].Body); err == nil || strings.Count(err.Error(), told) != 3 {
+		t.Errorf("Anchors of anchors under one = %v, want 3", err)
+	}
 	// A merge key is told once, not again for the alias it takes; the anchor apart is told too.
 	merged, err := parser.ParseBytes([]byte("b: &b {x: 1}\nc: { <<: *b, y: 1 }\n"), 0)
 	if err != nil {

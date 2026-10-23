@@ -1,6 +1,6 @@
 // Package diagram reads a diagram spec: a YAML mapping of a canvas and the parts placed on it at
-// absolute coordinates. A mistake in the spec's shape stops at the first one, with its line and
-// column.
+// absolute coordinates. Every mistake in the spec's shape is told at once, one to a value, with its line
+// and column.
 package diagram
 
 import (

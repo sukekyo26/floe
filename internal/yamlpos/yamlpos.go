@@ -465,11 +465,10 @@ func (a *anchors) Visit(n ast.Node) ast.Visitor {
 			return nil
 		}
 	}
+	// Each is told, and what it holds too: each is to be written out.
 	switch n.(type) {
-	case *ast.AnchorNode, *ast.AliasNode, *ast.TagNode, *ast.MergeKeyNode:
+	case *ast.AnchorNode, *ast.AliasNode, *ast.TagNode:
 		a.found = append(a.found, New(a.file, Of(n), "yaml_no_anchors"))
-		return nil
-	default:
-		return a
 	}
+	return a
 }
