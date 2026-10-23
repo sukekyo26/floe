@@ -170,6 +170,11 @@ func TestComputeLeftOut(t *testing.T) {
 		"n: let s = records; s.in_1_year * prs\n":          "prs",
 		"n: lists[-1].a.b * 2\n":                           "lists[0].a",
 		"n: attributes?.x + 1\n":                           "attributes",
+		"n: \"prs ? 1 : 0\"\n":                             "prs",
+		"n: if prs { 1 } else { 0 }\n":                     "prs",
+		"n: lists[prs]\n":                                  "prs",
+		"n: parts[0:prs]\n":                                "prs",
+		"n: \"prs ? writes_per_sec.a : 0\"\n":              "prs",
 	} {
 		err := compute("computed.yaml", []byte(src), d, items)
 		if err == nil || !strings.Contains(err.Error(), "from d.yaml, which gives no value for "+want+" that it uses; ") {

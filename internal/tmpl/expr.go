@@ -80,6 +80,8 @@ type dataVar struct {
 // stopped at (a.b.c, or a?.b when a is nil), or of a read p handed to the function or operator it stopped at
 // (count(prs, …), w + 1). A read through anything else, a function's result, a variable of let or # in a
 // predicate, is not looked at: expr refuses a let named as one of vars.
+// LIMIT: a computed value that is nil, as it took one the data leaves out (p: prs), is not followed to it,
+// and expr's words are told. Follow computed.yaml's names to the items if templates come to chain them so.
 func unvalued(p *vm.Program, err error, vars map[string]dataVar) []string {
 	var stop *file.Error
 	if !errors.As(err, &stop) {
@@ -102,10 +104,15 @@ func (s *stopAt) Visit(n *exprast.Node) {
 	if (*n).Location() != s.at {
 		return
 	}
+	// What the node reads before it goes on, alone: a branch not taken is not read.
 	var handed []exprast.Node
 	switch n := (*n).(type) {
-	case *exprast.IdentifierNode, *exprast.MemberNode:
+	case *exprast.IdentifierNode:
 		handed = []exprast.Node{n}
+	case *exprast.MemberNode:
+		handed = []exprast.Node{n, n.Property}
+	case *exprast.ConditionalNode:
+		handed = []exprast.Node{n.Cond}
 	case *exprast.BuiltinNode:
 		handed = n.Arguments
 	case *exprast.CallNode:
@@ -115,7 +122,7 @@ func (s *stopAt) Visit(n *exprast.Node) {
 	case *exprast.UnaryNode:
 		handed = []exprast.Node{n.Node}
 	case *exprast.SliceNode:
-		handed = []exprast.Node{n.Node}
+		handed = []exprast.Node{n.Node, n.From, n.To}
 	}
 	for _, h := range handed {
 		if c, ok := h.(*exprast.ChainNode); ok {

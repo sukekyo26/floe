@@ -170,18 +170,21 @@ func (c relation) run(
 ) (usererr.List, error) {
 	p := c.prog
 	var problems usererr.List
-	vars := map[string]dataVar{}
-	// A part's value that is not keys and values gives doc no value to read into.
-	if doc != nil {
-		_, docPath := itemPos(root, docAt, false)
-		vars["doc"] = dataVar{value: doc, at: docPath}
-	}
+	var vars map[string]dataVar
 	for _, item := range items {
 		out, err := expr.Run(p, scope{Item: item.value, Doc: doc})
 		if held, ok := out.(bool); ok && held && err == nil {
 			continue
 		}
 		if err != nil {
+			if vars == nil {
+				vars = map[string]dataVar{}
+				// A part's value that is not keys and values gives doc no value to read into.
+				if doc != nil {
+					_, docPath := itemPos(root, docAt, false)
+					vars["doc"] = dataVar{value: doc, at: docPath}
+				}
+			}
 			_, itemPath := itemPos(root, item.at, false)
 			vars["item"] = dataVar{value: item.value, at: itemPath}
 			if missing := unvalued(p, err, vars); missing != nil {
