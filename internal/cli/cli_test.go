@@ -884,35 +884,57 @@ func TestSettingsByUse(t *testing.T) {
 	}
 }
 
-// A default a file holds up is nothing to a command that only reads it, and stops one that needs it, told by
-// the file in its way; a setting a file holds up stops every command that uses it.
+// A default a file holds up is nothing to a command that only reads it, which is warned of it once for each
+// file in the way and goes on; it stops one that needs it, told by that file, without a warning. A default
+// that is none for want of a home is told nothing of. A setting a file holds up stops every command that uses
+// it.
 func TestSettingDirsHeldUp(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
 	e.write(t, "ok.yaml", "template: report\ntitle: OK\nlang: en\n")
-	home := e.vars["HOME"]
+	home, store := e.vars["HOME"], e.vars["FLOE_DIR"]
 	delete(e.vars, "FLOE_DIR")
 	e.vars["HOME"] = "/dev/null"
-	want(t, "check with a home that is a file", e.run(t, "", "check", "ok.yaml"), 0, "", "")
+	const devNull = "floe: /dev/null is not a directory, which leaves no default place for FLOE_ICONS_DIR, FLOE_TEMPLATES_DIR, " +
+		"FLOE_PARTS_DIR, FLOE_THEMES_DIR; "
+	want(t, "check with a home that is a file", e.run(t, "", "check", "ok.yaml"), 0, "", devNull+"floe check goes on with none\n")
 	if r := e.run(t, "", "list"); r.code != 1 || r.stderr != "floe: /dev/null is not a directory, and FLOE_DIR would be there or under "+
 		"it by default; set XDG_DATA_HOME or FLOE_DIR elsewhere, or make it a directory\n" {
 		t.Errorf("list with a home that is a file = %d %q", r.code, r.stderr)
 	}
-	e.vars["HOME"] = home
-	e.write(t, "home/.config/floe/parts", "")
-	if r := e.run(t, "", "part", "check"); r.code != 1 || r.stderr != "floe: "+home+"/.config/floe/parts is not a directory, and "+
-		"FLOE_PARTS_DIR would be there or under it by default; set XDG_CONFIG_HOME or FLOE_PARTS_DIR elsewhere, or make it a directory\n" {
-		t.Errorf("part check where the parts are a file = %d %q", r.code, r.stderr)
+	// The server it starts reads the same, and warns where nothing is shown (its stderr is not the terminal).
+	e.vars["FLOE_DIR"] = store
+	if r := e.run(t, "", "list"); r.code != 0 || r.stderr != devNull+"floe list goes on with none\n" {
+		t.Errorf("list with a store and a home that is a file = %d %q", r.code, r.stderr)
 	}
-	want(t, "check where the parts are a file", e.run(t, "", "check", "ok.yaml"), 0, "", "")
-	e.vars["XDG_CONFIG_HOME"] = filepath.Join(home, ".config", "floe", "parts")
+	delete(e.vars, "HOME")
+	want(t, "check without a home", e.run(t, "", "check", "ok.yaml"), 0, "", "")
+	e.vars["HOME"] = home
+	e.write(t, "home/.config/floe/themes", "")
+	themes := "floe: " + home + "/.config/floe/themes is not a directory, which leaves no default place for FLOE_THEMES_DIR; "
+	if r := e.run(t, "", "part", "check"); r.code != 0 || r.stderr != themes+"floe part check goes on with none\n" {
+		t.Errorf("part check where the themes are a file = %d %q", r.code, r.stderr)
+	}
+	if r := e.run(t, "", "check", "ok.yaml"); r.code != 0 || r.stderr != themes+"floe check goes on with none\n" {
+		t.Errorf("check where the themes are a file = %d %q", r.code, r.stderr)
+	}
+	if r := e.run(t, "", "part", "new", "aside", "--from", "note"); r.code != 1 ||
+		r.stderr != themes+"floe part new goes on with none\nfloe: there is no directory for themes of your own; set FLOE_THEMES_DIR\n" {
+		t.Errorf("part new of a part with themes where the themes are a file = %d %q", r.code, r.stderr)
+	}
+	e.vars["XDG_CONFIG_HOME"] = filepath.Join(home, ".config", "floe", "themes")
+	if r := e.run(t, "", "part", "check"); r.code != 1 || r.stderr != "floe: "+home+"/.config/floe/themes is not a directory, and "+
+		"FLOE_PARTS_DIR would be there or under it by default; set XDG_CONFIG_HOME or FLOE_PARTS_DIR elsewhere, or make it a "+
+		"directory\n" {
+		t.Errorf("part check where the config is a file = %d %q", r.code, r.stderr)
+	}
 	want(t, "template new under a file", e.run(t, "", "template", "new", "x", "--from", "report"), 1, "",
-		"floe: "+home+"/.config/floe/parts is not a directory, and FLOE_TEMPLATES_DIR would be there or under it by default")
+		"floe: "+home+"/.config/floe/themes is not a directory, and FLOE_TEMPLATES_DIR would be there or under it by default")
 	delete(e.vars, "XDG_CONFIG_HOME")
-	e.vars["FLOE_PARTS_DIR"] = filepath.Join(home, ".config", "floe", "parts", "x")
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(home, ".config", "floe", "themes", "x")
 	want(t, "check with parts set under a file", e.run(t, "", "check", "ok.yaml"), 1, "",
-		"floe: FLOE_PARTS_DIR, "+home+"/.config/floe/parts/x, is under "+home+"/.config/floe/parts, which is not a directory")
+		"floe: FLOE_PARTS_DIR, "+home+"/.config/floe/themes/x, is under "+home+"/.config/floe/themes, which is not a directory")
 }
 
 // freePort picks below the ports the system gives out for :0, which a test of another package may be

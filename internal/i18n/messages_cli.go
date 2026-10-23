@@ -63,6 +63,7 @@ var messagesCLI = map[string]string{
 	"icons_already":                "%s icons %s are already in %s (add --force to fetch them again)",
 	"daemon_other_dirs":            "the server on port %d draws pages with the templates of %s, the parts of %s, the themes of %s and the icons of %s, and this command means the templates of %s, the parts of %s, the themes of %s and the icons of %s (FLOE_TEMPLATES_DIR, FLOE_PARTS_DIR, FLOE_THEMES_DIR, FLOE_ICONS_DIR); move yours where the server reads them, or run \"floe stop\" and publish again",
 	"cli_default_held_up":          "%[1]s is not a directory, and %[2]s would be there or under it by default; set %[3]s or %[2]s elsewhere, or make it a directory",
+	"cli_defaults_held_up_read":    "%[1]s is not a directory, which leaves no default place for %[2]s; %[3]s goes on with none",
 	"cli_dir_is_file":              "%s, %s, is not a directory; set %s to a directory",
 	"cli_dir_under_file":           "%s, %s, is under %s, which is not a directory; set %s to a directory",
 	"cli_relative_no_dir":          "the working directory cannot be read, so %s, the relative directory %s, means nothing; run floe from a directory that exists, or set it as an absolute path",

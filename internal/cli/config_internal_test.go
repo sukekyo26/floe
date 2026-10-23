@@ -167,7 +167,8 @@ func TestLoadConfigDirs(t *testing.T) {
 	store := file + " is not a directory, and FLOE_DIR would be there or under it by default; " +
 		"set XDG_DATA_HOME or FLOE_DIR elsewhere, or make it a directory"
 	if err != nil || c.parts != "" || c.root != "" || c.absent[partsSetting] == nil || c.absent[partsSetting].Error() != parts ||
-		c.absent[storeSetting] == nil || c.absent[storeSetting].Error() != store || c.themes != home+"/.config/floe/themes" {
+		c.absent[storeSetting] == nil || c.absent[storeSetting].Error() != store || c.themes != home+"/.config/floe/themes" ||
+		c.heldBy[partsSetting] != home+"/.config/floe/parts" || c.heldBy[storeSetting] != file || c.heldBy[themesSetting] != "" {
 		t.Errorf("defaults a file holds up = %+v, %v", c, err)
 	}
 	vars = map[string]string{"HOME": tmp, "FLOE_DIR": filepath.Join(tmp, "new", "pages"), "FLOE_PARTS_DIR": filepath.Join(tmp, "link")}
