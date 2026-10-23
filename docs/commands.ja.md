@@ -367,6 +367,17 @@ parts:
 
 `FLOE_DIR`・`FLOE_ICONS_DIR`・`FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR`・`XDG_DATA_HOME`・`XDG_CONFIG_HOME` の先頭の `~`・`~/` は `HOME` を指します。引用符の中（`.env` ファイルやサービスのユニット）に書いても、`~` という名前のディレクトリにはなりません。`FLOE_` の変数が `~name` で始まるとき、`HOME` が無いのに `~` で始まるときは断ります。相対パスの `XDG_DATA_HOME`・`XDG_CONFIG_HOME` は XDG の仕様どおり無視し、`~name` で始まるもの、`HOME` が無いのに `~` で始まるものも無視します。
 
+コマンドは、自分が使う設定についてだけ伝えます。設定は、読むものと、書く・無いと困るものに分かれます。
+
+- 書いた設定が使えない（`~name`、誤った `FLOE_PORT` など）と、その設定を使うコマンドは止まり、ほかの誤りもまとめて出します（終了コード 1）。
+- 設定していないディレクトリに既定が無い（`HOME` が無いなど）と、そこに書く・無いと困るコマンドは止まります。次の組み合わせです。
+  - `publish`・`list`・`rm`・`serve`：`FLOE_DIR`
+  - `floe template new`：`FLOE_TEMPLATES_DIR`
+  - `floe part new`・`floe part check`：`FLOE_PARTS_DIR`（テーマのファイルを持つ部品の `floe part new` では `FLOE_THEMES_DIR` も）
+  - アイコンのコマンド：`FLOE_ICONS_DIR`
+- 読むだけのコマンドには、既定の無いディレクトリは無いものとして扱います。`floe check` は `HOME` が無くても、floe のテンプレート・部品・テーマだけで動きます。
+- `floe stop` は `FLOE_PORT` だけを使います。`floe check`・`floe render` は `FLOE_PORT` も `FLOE_DIR` も使いません。
+
 コマンドの出力は、環境の言語によらず英語です。管理画面とデータファイルの誤りのページは、ブラウザの言語に従います。
 
 ## 終了コード

@@ -281,7 +281,7 @@ func TestFetchRefusals(t *testing.T) {
 	_, serr := nowhere.Search([]string{"lambda"})
 	_, ferr := nowhere.Fetch(context.Background(), "aws", empty, false)
 	for _, err := range []error{serr, ferr} {
-		if want := "HOME is not set; set HOME or FLOE_ICONS_DIR"; err == nil || err.Error() != want {
+		if want := `there is no directory for icons; set FLOE_ICONS_DIR, then fetch a set with "floe icons fetch <set>"`; err == nil || err.Error() != want {
 			t.Errorf("icons without a root = %v, want %s", err, want)
 		}
 	}

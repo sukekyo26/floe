@@ -95,6 +95,7 @@ const named = "floe: "
 func newRoot(env Env) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "floe",
+		Annotations:   uses(nil),
 		Short:         "Serve agent-written HTML pages on a local server",
 		Version:       version.Version,
 		Args:          usage(cobra.NoArgs),
@@ -111,20 +112,21 @@ func newRoot(env Env) *cobra.Command {
 		return usageError{err: err}
 	})
 	root.AddCommand(&cobra.Command{
-		Use:   "version",
-		Short: "Print the floe version",
-		Args:  usage(cobra.NoArgs),
+		Use:         "version",
+		Annotations: uses(nil),
+		Short:       "Print the floe version",
+		Args:        usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			_, err := fmt.Fprintf(cmd.OutOrStdout(), "floe %s\n", version.Version)
 			return err //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	})
 	app := &app{env: env, cfg: nil}
-	// The environment is checked before any command runs, so a typo fails the same way everywhere.
-	root.PersistentPreRunE = func(*cobra.Command, []string) error {
-		cfg, err := loadConfig(env.Getenv, env.Dir)
-		app.cfg = cfg
-		return err
+	// The environment is read before any command runs; each command is told the mistakes of the settings it
+	// uses, as it declares them.
+	root.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
+		app.cfg = loadConfig(env.Getenv, env.Dir)
+		return app.settle(cmd)
 	}
 	root.AddCommand(app.publishCmd(), app.checkCmd(), app.templateCmd(), app.partCmd(), app.listCmd(), app.rmCmd(),
 		app.serveCmd(), app.stopCmd(), app.diagramCmd(), app.iconsCmd(), app.renderCmd())

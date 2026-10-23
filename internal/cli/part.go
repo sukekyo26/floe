@@ -2,7 +2,6 @@ package cli
 
 import (
 	"cmp"
-	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -13,9 +12,10 @@ import (
 
 func (a *app) partCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "part",
-		Short: "List the parts, show what one takes, make one of your own, and check yours",
-		Args:  usage(cobra.NoArgs),
+		Use:         "part",
+		Annotations: uses(nil),
+		Short:       "List the parts, show what one takes, make one of your own, and check yours",
+		Args:        usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
 		},
@@ -26,8 +26,9 @@ func (a *app) partCmd() *cobra.Command {
 
 func (a *app) partListCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "list",
-		Short: "List the parts (name, where, description; tab-separated)",
+		Use:         "list",
+		Annotations: uses(map[setting]use{partsSetting: reads, themesSetting: reads}),
+		Short:       "List the parts (name, where, description; tab-separated)",
 		Long: `List the parts, floe's and those of your own in $FLOE_PARTS_DIR, one per line: its name,
 where it is (a directory of your own, or built-in) and its description, tab-separated. A part of
 your own takes the place of floe's of its name.`,
@@ -49,8 +50,9 @@ your own takes the place of floe's of its name.`,
 
 func (a *app) partShowCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "show <name>",
-		Short: "Show what a part takes, the looks it takes, the parts it holds and its themes",
+		Use:         "show <name>",
+		Annotations: uses(map[setting]use{partsSetting: reads, themesSetting: reads}),
+		Short:       "Show what a part takes, the looks it takes, the parts it holds and its themes",
 		Long: `Show a part: where it is, what it takes and its items (from its schema.json), the looks it
 takes (from its part.yaml, and those they take in turn), the parts it holds, and the themes
 with a file of it.`,
@@ -100,8 +102,9 @@ func (a *app) showPart(d *tmpl.PartDescription) {
 func (a *app) partNewCmd() *cobra.Command {
 	var from string
 	cmd := &cobra.Command{
-		Use:   "new <name> --from <part>",
-		Short: "Make a part of your own as a copy of another, to edit",
+		Use:         "new <name> --from <part>",
+		Annotations: uses(map[setting]use{partsSetting: needs, themesSetting: reads}),
+		Short:       "Make a part of your own as a copy of another, to edit",
 		Long: `Make a part of your own in $FLOE_PARTS_DIR/<name> as a copy of another part, floe's or your
 own, to edit, and copy the file of that part of each theme that has one into
 $FLOE_THEMES_DIR/<theme>/<name>.css. The copy's part.html names it as its box. Nothing is
@@ -138,8 +141,9 @@ like one of floe's parts takes its place.`,
 
 func (a *app) partCheckCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "check",
-		Short: "Check the parts and themes of your own before you use or share them",
+		Use:         "check",
+		Annotations: uses(map[setting]use{partsSetting: needs, themesSetting: reads}),
+		Short:       "Check the parts and themes of your own before you use or share them",
 		Long: `Check the parts of your own in $FLOE_PARTS_DIR and the themes in $FLOE_THEMES_DIR, all of
 them, as a page would read them: their files, their names, the looks they take and the parts they
 hold. Every mistake is printed, at its line where it has one, and the exit code is 1 when there is
@@ -151,10 +155,7 @@ uses.`,
 		Args: usage(cobra.NoArgs),
 		RunE: func(*cobra.Command, []string) error {
 			warnings, err := tmpl.CheckOwnParts(a.cfg.parts, a.cfg.themes)
-			if warnings != nil {
-				//nolint:errcheck // nowhere left to report
-				_, _ = fmt.Fprintln(a.env.Stderr, usererr.Tell(english, warnings).Render(named))
-			}
+			a.tellWarnings(warnings)
 			return err //nolint:wrapcheck // already says what failed
 		},
 	}

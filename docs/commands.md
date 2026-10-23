@@ -366,6 +366,8 @@ List the fetched icons whose name contains every word (case does not matter), on
 
 In `FLOE_DIR`, `FLOE_ICONS_DIR`, `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR`, `XDG_DATA_HOME` and `XDG_CONFIG_HOME`, a `~` or `~/` at the start stands for `HOME`, so that one written in quotes (a `.env` file, a service unit) is not a directory named `~`; a `FLOE_` one starting with `~name`, or with `~` without `HOME`, is refused. A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says, and so is one starting with `~name`, or with `~` without `HOME`.
 
+A command is told of the settings it uses alone; it reads from some of them, and writes in or cannot do without the others. A setting written wrong (a `~name`, a bad `FLOE_PORT` …) stops every command that uses it, with every other such mistake at once (exit code 1). A directory not set that has no default (no `HOME`, say) stops a command that writes there or cannot do without it (`FLOE_DIR` for `publish`, `list`, `rm` and `serve`, `FLOE_TEMPLATES_DIR` for `floe template new`, `FLOE_PARTS_DIR` for `floe part new` and `floe part check` (and `FLOE_THEMES_DIR` for `floe part new` of a part with files of themes), `FLOE_ICONS_DIR` for the icons commands), and is nothing to a command that only reads it: `floe check` runs without `HOME`, with floe's templates, parts and themes alone. `floe stop` uses `FLOE_PORT` alone, and `floe check` and `floe render` do not use `FLOE_PORT` or `FLOE_DIR`.
+
 The command line speaks English, whatever the environment's language; the management page and the page of a data file's mistakes follow the browser's language.
 
 ## Exit codes

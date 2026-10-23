@@ -11,7 +11,7 @@ var messagesCLI = map[string]string{
 	"cli_failure":                  "%s", // a failure told among the mistakes of things apart (tell), as it is
 	"lang_invalid":                 `invalid language "%s": give --lang a BCP 47 tag such as en, ja or pt-BR`,
 	"cli_invalid_port":             "invalid FLOE_PORT \"%s\": use a port number from 1 to 65535",
-	"cli_no_home":                  "HOME is not set; set HOME or FLOE_DIR",
+	"cli_no_default":               "HOME is not set, so %s has no default; set HOME or %s",
 	"cli_template_builtin":         "built-in",
 	"cli_template_where":           "where: %s",
 	"cli_template_themes":          "themes: %s",
