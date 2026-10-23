@@ -395,14 +395,15 @@ func parse(file string, src []byte) (ast.Node, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a mistake at its line and column, or ErrEmpty
 	}
-	if err = plain(file, body); err != nil {
-		return nil, err
-	}
-	if n := first(body, nonFinite); n != nil {
-		return nil, yamlpos.New(file, yamlpos.Of(n), "tmpl_not_finite", n.GetToken().Value)
+	var found usererr.List
+	for _, n := range every(body, nonFinite) {
+		found = append(found, yamlpos.New(file, yamlpos.Of(n), "tmpl_not_finite", n.GetToken().Value))
 	}
 	if _, ok := body.(*ast.MappingNode); !ok {
-		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_not_mapping")
+		found = append(found, yamlpos.New(file, yamlpos.Of(body), "tmpl_not_mapping"))
+	}
+	if err = usererr.Collect(plain(file, body), found.Err()); err != nil {
+		return nil, err //nolint:wrapcheck // mistakes at their lines and columns
 	}
 	return body, nil
 }
@@ -856,8 +857,9 @@ func ints(v any) any {
 	return v
 }
 
-// first returns the first node under n that pick picks, or nil.
-func first(n ast.Node, pick func(ast.Node) ast.Node) ast.Node {
+// every returns the nodes under n that pick picks, in the order of the tree. It goes on under each node
+// picked: a key's value holds keys of its own.
+func every(n ast.Node, pick func(ast.Node) ast.Node) []ast.Node {
 	f := &finder{pick: pick, found: nil}
 	ast.Walk(f, n)
 	return f.found
@@ -865,43 +867,41 @@ func first(n ast.Node, pick func(ast.Node) ast.Node) ast.Node {
 
 type finder struct {
 	pick  func(ast.Node) ast.Node
-	found ast.Node
+	found []ast.Node
 }
 
 func (f *finder) Visit(n ast.Node) ast.Visitor {
-	if f.found != nil {
-		return nil
-	}
-	if f.found = f.pick(n); f.found != nil {
-		return nil
+	if picked := f.pick(n); picked != nil {
+		f.found = append(f.found, picked)
 	}
 	return f
 }
 
 // nonTextKey picks the key of n that is not text. A key is a name: 0x10, ~ or 1.0 would be read as
-// another name than the one written, and not found where it was written.
+// another name than the one written, and not found where it was written. A merge key (<<) is not
+// picked: yamlpos.Anchors tells it.
 func nonTextKey(n ast.Node) ast.Node {
 	v, ok := n.(*ast.MappingValueNode)
 	if !ok {
 		return nil
 	}
 	key := yamlpos.KeyOf(v)
-	if _, text := key.(*ast.StringNode); text {
+	switch key.(type) {
+	case *ast.StringNode, *ast.MergeKeyNode:
 		return nil
 	}
 	return key
 }
 
-// plain refuses in body, the file's, what would hide where a value is written (an anchor, alias, merge
-// key or tag) or read a key as another name than the one written.
+// plain refuses in body, the file's, every place that would hide where a value is written (an anchor,
+// alias, merge key or tag) or read a key as another name than the one written.
 func plain(file string, body ast.Node) error {
-	if err := yamlpos.Anchors(file, body); err != nil {
-		return err //nolint:wrapcheck // mistakes at their lines and columns
+	picked := every(body, nonTextKey)
+	keys := make(usererr.List, 0, len(picked))
+	for _, k := range picked {
+		keys = append(keys, yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value))
 	}
-	if k := first(body, nonTextKey); k != nil {
-		return yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value)
-	}
-	return nil
+	return usererr.Collect(yamlpos.Anchors(file, body), keys.Err())
 }
 
 // nonFinite picks .inf and .nan.
