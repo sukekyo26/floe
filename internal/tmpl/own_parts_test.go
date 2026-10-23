@@ -176,6 +176,9 @@ func TestBrokenOwnParts(t *testing.T) {
 		"deadptr/schema.json": `{"type": "object", "properties": {"t": {"$ref": "tone.json#/nope"}}}`,
 		"deadptr/part.html":   `<div data-floe-part="deadptr"></div>`,
 		"deadptr/part.css":    "",
+		"unread/schema.json":  `{"type": "object", "properties": {"t": {"$ref": "http://[::1"}}}`,
+		"unread/part.html":    `<div data-floe-part="unread"></div>`,
+		"unread/part.css":     "",
 		"holder/schema.json":  `{"type": "object", "properties": {"p": {"$ref": "floe:///parts/panel.json"}}}`,
 		"holder/part.html":    `<div data-floe-part="holder"></div>`,
 		"holder/part.css":     "",
@@ -388,6 +391,8 @@ func TestBrokenOwnParts(t *testing.T) {
 			": #/properties/t: a $ref to #/$defs/nope finds nothing in schema.json",
 		"deadptr": "the part deadptr cannot be used\n  " + filepath.Join(parts, "deadptr", "schema.json") +
 			": #/properties/t: a $ref to floe:///parts/tone.json#/nope finds nothing in floe:///parts/tone.json",
+		"unread": "the part unread cannot be used\n  " + filepath.Join(parts, "unread", "schema.json") +
+			": #/properties/t: the $ref http://[::1 cannot be read as a URL (missing ']' in host)",
 		"wrongs": "the part wrongs cannot be used\n  " + filepath.Join(parts, "wrongs", "part.yaml") + ":1:1: lookz is not a key of part.yaml" +
 			"; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:\n  " +
 			filepath.Join(parts, "wrongs", "words.yaml") + ":2:1: ja leaves out a, which en has\n  " +

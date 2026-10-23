@@ -540,7 +540,11 @@ func (set *partSet) checkHeld(name string) error {
 	if n == nil {
 		return nil // a look alone, or one floe draws in Go
 	}
-	return set.mistakes(n).Err()
+	mistakes, err := set.mistakes(n)
+	if err != nil {
+		return err
+	}
+	return mistakes.Err()
 }
 
 // names lists the parts of set that keep keeps, every one for nil, by name.

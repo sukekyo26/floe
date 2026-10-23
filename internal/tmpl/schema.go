@@ -72,9 +72,10 @@ func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema
 	return sch, nil
 }
 
-// compileMistakes returns err, what stopped the compiling of the template's schema at url, file, as the
-// mistakes of file (ownMistakes), a $ref of it that finds nothing (strayRefMistake), or what noLoader
-// refused (loadedOrFailed). One of a part's schema, or of a kind floe does not know, is a failure.
+// compileMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of
+// file (ownMistakes), a $ref of it that finds nothing (strayRefMistake), or what noLoader refused
+// (loadedOrFailed): of a template's schema, or of a part's none of whose parts stop. One of another
+// schema, or of a kind floe does not know, is a failure.
 func compileMistakes(url, file string, err error) error {
 	if own := ownMistakes(url, file, err); own != nil {
 		return own
@@ -115,34 +116,19 @@ func ownMistakes(url, file string, err error) error {
 	return nil
 }
 
-// strayRefMistake returns err, what stopped the compiling of the template's schema at url, file, as the
-// mistake of a $ref that finds nothing in it, at the top of file, and nil for another. Where a $ref leads
-// is all jsonschema says, which names the template: none but its own $refs lead into a template's schema.
-// LIMIT: told at the top of the file, of a $ref refMistake did not check. Note the $ref in
-// schemaNotes.walk if one comes.
+// strayRefMistake returns err, what stopped the compiling of the schema at url, file, as the mistake of a
+// $ref that finds nothing in it, at the top of file, and nil for another. Where a $ref leads is all
+// jsonschema says: compileMistakes calls it where none but the schema's own $refs lead into it, a
+// template's, or a part's none of whose parts stop.
+// LIMIT: told at the top of the file, of a $ref refMistake did not check (its LIMITs). Check it there if
+// one comes.
 func strayRefMistake(url, file string, err error) *usererr.Error {
-	in := func(u string) (string, bool) { return pointerIn(url, u) }
-	var (
-		nothing  *jsonschema.JSONPointerNotFoundError
-		badPtr   *jsonschema.InvalidJsonPointerError
-		noAnchor *jsonschema.AnchorNotFoundError
-	)
-	switch {
-	case errors.As(err, &nothing):
-		if to, ok := in(nothing.URL); ok {
-			return usererr.NewIn(file, "#", "tmpl_schema_ref_nothing", to, "schema.json")
-		}
-	case errors.As(err, &badPtr):
-		if to, ok := in(badPtr.URL); ok {
-			return usererr.NewIn(file, "#", "tmpl_schema_ref_pointer", to)
-		}
-	case errors.As(err, &noAnchor):
-		if _, ok := in(noAnchor.URL); ok {
-			to, _ := in(noAnchor.Reference)
-			return usererr.NewIn(file, "#", "tmpl_schema_ref_anchor", to, "schema.json")
-		}
+	key, schema, leads := missingTarget(err)
+	if _, ok := pointerIn(url, schema); key == "" || !ok {
+		return nil
 	}
-	return nil
+	to, _ := pointerIn(url, leads)
+	return notFound(key, to, "schema.json").Placed(file, 0, 0, "#")
 }
 
 // compileMistake returns err, what stopped the compiling of the schema at url, file, as a mistake of what
@@ -181,26 +167,41 @@ func compileMistake(url, file string, err error) *usererr.Error {
 // of the $ref, a $ref to `to` in `in`, when jsonschema found nothing there: no JSON pointer, nothing at it,
 // or no $anchor of its name. It returns nil for none, and for a stop elsewhere, another $ref's or schema's.
 func refTargetMistake(ref string, err error, to, in string) *usererr.Error {
+	key, _, leads := missingTarget(err)
 	base, _, _ := strings.Cut(ref, "#")
 	want, _ := pointerIn(base, ref)
-	at := func(u string) bool {
-		got, ok := pointerIn(base, u)
-		return ok && got == want
+	if got, ok := pointerIn(base, leads); key == "" || !ok || got != want {
+		return nil
 	}
+	return notFound(key, to, in)
+}
+
+// missingTarget reads err as jsonschema's word that a $ref finds nothing where it points: no JSON pointer,
+// nothing at it, or no $anchor of its name. It returns the key of floe's words for it, the URL of the
+// schema jsonschema looked in, and where the $ref leads; "" for another error.
+func missingTarget(err error) (key, schema, leads string) {
 	var (
 		nothing  *jsonschema.JSONPointerNotFoundError
 		badPtr   *jsonschema.InvalidJsonPointerError
 		noAnchor *jsonschema.AnchorNotFoundError
 	)
 	switch {
-	case errors.As(err, &nothing) && at(nothing.URL):
-		return usererr.New("tmpl_schema_ref_nothing", to, in)
-	case errors.As(err, &badPtr) && at(badPtr.URL):
-		return usererr.New("tmpl_schema_ref_pointer", to)
-	case errors.As(err, &noAnchor) && at(noAnchor.Reference):
-		return usererr.New("tmpl_schema_ref_anchor", to, in)
+	case errors.As(err, &nothing):
+		return "tmpl_schema_ref_nothing", nothing.URL, nothing.URL
+	case errors.As(err, &badPtr):
+		return "tmpl_schema_ref_pointer", badPtr.URL, badPtr.URL
+	case errors.As(err, &noAnchor):
+		return "tmpl_schema_ref_anchor", noAnchor.URL, noAnchor.Reference
 	}
-	return nil
+	return "", "", ""
+}
+
+// notFound is the mistake of key (missingTarget) of a $ref to `to`, which finds nothing in `in`.
+func notFound(key, to, in string) *usererr.Error {
+	if key == "tmpl_schema_ref_pointer" {
+		return usererr.New(key, to) // no pointer: nothing was looked for
+	}
+	return usererr.New(key, to, in)
 }
 
 // drafts are the drafts of JSON Schema a $schema may name.

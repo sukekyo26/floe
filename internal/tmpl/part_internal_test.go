@@ -393,8 +393,8 @@ func TestFloePartsHaveNoMistakes(t *testing.T) {
 		t.Fatal(err)
 	}
 	for url, n := range set.notes {
-		if mistakes := set.mistakes(n); mistakes != nil {
-			t.Errorf("%s: %v", url, mistakes)
+		if mistakes, err := set.mistakes(n); mistakes != nil || err != nil {
+			t.Errorf("%s: %v, %v", url, mistakes, err)
 		}
 	}
 }

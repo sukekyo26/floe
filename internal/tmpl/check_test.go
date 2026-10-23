@@ -268,10 +268,15 @@ func TestCheckMistakes(t *testing.T) {
 			},
 		},
 		{
-			// Told by the metaschema alone, not as a URL out of floe.
+			// At the $ref, not as a URL out of floe; under draft-04 too, whose metaschema does not check it.
 			name:  "a $ref that is no URL",
 			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "http://[::1" },` + "\n    " + `"chart":`},
-			want:  []string{`sizes/schema.json: #/properties/code/$ref: JSON Schema does not take this: 'http://[::1' is not valid uri-reference`},
+			want:  []string{`sizes/schema.json: #/properties/code: the $ref http://[::1 cannot be read as a URL (missing ']' in host)`},
+		},
+		{
+			name:  "a $ref that is no URL under draft-04",
+			files: map[string]string{"schema.json": `"properties": {|"$schema": "http://json-schema.org/draft-04/schema#", "properties": { "code": { "$ref": "http://[::1" },`},
+			want:  []string{`sizes/schema.json: #/properties/code: the $ref http://[::1 cannot be read as a URL (missing ']' in host)`},
 		},
 		{
 			name:  "example",

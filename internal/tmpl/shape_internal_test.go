@@ -129,7 +129,11 @@ func TestShapeMistakes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := fmt.Sprint(set.mistakes(notes))
+		mistakes, err := set.mistakes(notes)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := fmt.Sprint(mistakes)
 		if c.want == "" && got != "" || c.want != "" && !strings.Contains(got, c.want) {
 			t.Errorf("mistakes of %s = %s, want %q", c.src, got, c.want)
 		}
