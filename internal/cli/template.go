@@ -14,7 +14,7 @@ import (
 func (a *app) templateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:         "template",
-		Annotations: uses(nil, nil),
+		Annotations: uses(nil),
 		Short:       "List the templates, show what a data file of one may hold, make one of your own, and check it",
 		Args:        usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -28,7 +28,7 @@ func (a *app) templateCmd() *cobra.Command {
 func (a *app) templateListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:         "list",
-		Annotations: uses(nil, []setting{templatesSetting, partsSetting, themesSetting}),
+		Annotations: uses(map[setting]use{templatesSetting: reads, partsSetting: reads, themesSetting: reads}),
 		Short:       "List the templates (name, where, the floe it needs, description; tab-separated)",
 		Long: `List the templates, one per line: its name, where it is (a directory of your own, or
 built-in), the floe it needs, and its description, tab-separated. A template of
@@ -72,7 +72,7 @@ func where(d *tmpl.Description) string {
 func (a *app) templateShowCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:         "show <name>",
-		Annotations: uses(nil, []setting{templatesSetting, partsSetting, themesSetting}),
+		Annotations: uses(map[setting]use{templatesSetting: reads, partsSetting: reads, themesSetting: reads}),
 		Short:       "Show the items a data file of a template may hold, and its example",
 		Long: `Show a template: where it is, the themes a data file of it may pick, the floe it needs, the items a
 data file of it may hold (from its schema.json), and its example.yaml to start a data file from.`,
@@ -175,7 +175,7 @@ func (a *app) templateNewCmd() *cobra.Command {
 	var from string
 	cmd := &cobra.Command{
 		Use:         "new <name> --from <template>",
-		Annotations: uses([]setting{templatesSetting}, nil),
+		Annotations: uses(map[setting]use{templatesSetting: writes}),
 		Short:       "Make a template of your own as a copy of another, to edit",
 		Long: `Make a template of your own in $FLOE_TEMPLATES_DIR/<name> as a copy of another template,
 built-in or your own, to edit. Its template.yaml names the floe it needs (this floe, for a copy of
@@ -201,7 +201,7 @@ is left as it is. A copy named like a built-in template takes its place.`,
 func (a *app) templateCheckCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:         "check <dir>...",
-		Annotations: uses(nil, []setting{iconsSetting, partsSetting, themesSetting}),
+		Annotations: uses(map[setting]use{iconsSetting: reads, partsSetting: reads, themesSetting: reads}),
 		Short:       "Check templates before you use or share them",
 		Long: `Check each directory as a template of its name: its template.yaml, schema.json, checks.yaml,
 computed.yaml, page.html, words.yaml, default theme and assets/, and then its example.yaml through every stage of

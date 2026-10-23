@@ -69,9 +69,12 @@ func (a *app) publishCmd() *cobra.Command {
 	var link bool
 	var slug, title, description, theme string
 	cmd := &cobra.Command{
-		Use:         "publish <data.yaml> | --link <file.html>",
-		Annotations: uses(settings, nil),
-		Short:       "Store a page drawn from a data file (or --link an HTML file in place) and print its URL",
+		Use: "publish <data.yaml> | --link <file.html>",
+		Annotations: uses(map[setting]use{
+			portSetting: writes, storeSetting: writes, iconsSetting: reads, templatesSetting: reads,
+			partsSetting: reads, themesSetting: reads,
+		}),
+		Short: "Store a page drawn from a data file (or --link an HTML file in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
 store it and print its URL. The same slug from the same project overwrites it, and a slug
 published from another project is refused unless --force. A page is in the language its
@@ -246,8 +249,6 @@ func (a *app) noticeUpdate(saved server.Saved) {
 
 // serverEnv is the environment of a server that a publish starts: the settings this command read win
 // over the process's own.
-// LIMIT: the server cannot be told "none", so the commands that start it need every directory; pass none
-// explicitly if a stray default comes to stop publishing.
 func (a *app) serverEnv() []string {
 	env := append([]string{}, a.env.Environ...)
 	return append(env, "FLOE_DIR="+a.cfg.root, "FLOE_PORT="+strconv.Itoa(a.cfg.port), "HOME="+a.cfg.home,
@@ -265,10 +266,13 @@ func localTime(iso string) string {
 
 func (a *app) listCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:         "list",
-		Annotations: uses(settings, nil),
-		Short:       "List pages, newest first (updated, slug, title, linked path; tab-separated)",
-		Args:        usage(cobra.NoArgs),
+		Use: "list",
+		Annotations: uses(map[setting]use{
+			portSetting: writes, storeSetting: writes, iconsSetting: reads, templatesSetting: reads,
+			partsSetting: reads, themesSetting: reads,
+		}),
+		Short: "List pages, newest first (updated, slug, title, linked path; tab-separated)",
+		Args:  usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := a.client(cmd.Context(), true)
 			if err != nil {
@@ -288,10 +292,13 @@ func (a *app) listCmd() *cobra.Command {
 
 func (a *app) rmCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:         "rm <slug>...",
-		Annotations: uses(settings, nil),
-		Short:       "Delete pages in order, stopping at the first failure (a linked file itself is left alone)",
-		Args:        usage(cobra.MinimumNArgs(1)),
+		Use: "rm <slug>...",
+		Annotations: uses(map[setting]use{
+			portSetting: writes, storeSetting: writes, iconsSetting: reads, templatesSetting: reads,
+			partsSetting: reads, themesSetting: reads,
+		}),
+		Short: "Delete pages in order, stopping at the first failure (a linked file itself is left alone)",
+		Args:  usage(cobra.MinimumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := a.client(cmd.Context(), true)
 			if err != nil {
@@ -313,10 +320,13 @@ func (a *app) rmCmd() *cobra.Command {
 
 func (a *app) serveCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:         "serve",
-		Annotations: uses(settings, nil),
-		Short:       "Run the server in the foreground",
-		Args:        usage(cobra.NoArgs),
+		Use: "serve",
+		Annotations: uses(map[setting]use{
+			portSetting: writes, storeSetting: writes, iconsSetting: reads, templatesSetting: reads,
+			partsSetting: reads, themesSetting: reads,
+		}),
+		Short: "Run the server in the foreground",
+		Args:  usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return a.serve(cmd.Context())
 		},
@@ -363,7 +373,7 @@ func (a *app) listen() (net.Listener, error) {
 func (a *app) stopCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:         "stop",
-		Annotations: uses([]setting{portSetting}, nil),
+		Annotations: uses(map[setting]use{portSetting: writes}),
 		Short:       "Stop the background server",
 		Args:        usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {

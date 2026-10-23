@@ -231,7 +231,7 @@ var messagesJA = map[string]string{
 	"diagram_zoom_one_label":   "原寸で表示",
 
 	// icons
-	"icons_no_home":     "HOME が設定されていません。HOME か FLOE_ICONS_DIR を設定してください",
+	"icons_no_dir":      "アイコンのディレクトリがありません。FLOE_ICONS_DIR を設定してから「floe icons fetch」を実行してください",
 	"icons_not_fetched": "%[2]s に %[1]s アイコンがありません。floe icons fetch %[3]s を実行してから（%[5]s から約 %[4]s を取得します）やり直してください",
 	"icons_bad_index":   "%s を読めません（%s）。floe icons fetch %s --force でアイコンを取り直してください",
 
@@ -291,7 +291,7 @@ var messagesJA = map[string]string{
 	"tmpl_floe_older":               "テンプレート %s には floe %s 以降が要ります（この floe は %s）。floe を更新してください",
 	"tmpl_template_yaml":            "template.yaml には、キー floe: を 1 つだけ書き、テンプレートが要る floe の版を floe: 1.2 のように書いてください",
 	"tmpl_template_yaml_key":        "%s は template.yaml のキーではありません。テンプレートが要る floe の版を floe: 1.2 のように書いてください",
-	"tmpl_no_dir":                   "HOME が設定されていません。自分のテンプレートには HOME か FLOE_TEMPLATES_DIR を設定してください",
+	"tmpl_no_dir":                   "自分のテンプレートのディレクトリがありません。FLOE_TEMPLATES_DIR を設定してください",
 	"tmpl_new_name":                 "%s はテンプレートの名前にできません。英小文字・数字・- ・_ で、英小文字か数字で始めてください",
 	"tmpl_new_exists":               "%s は既にあります（%s）。別の名前にするか、消してください",
 	"tmpl_render":                   "%s を描けません: %s。schema.json が取るどの値でも描けるように書いてください（書かれていない項目は {{with}} の中で描く、リストや文は読む所より短いことがある、など）",
@@ -348,9 +348,9 @@ var messagesJA = map[string]string{
 	"tmpl_part_yaml_description":    "部品の説明は schema.json の description に書いてください。part.yaml の description: は、schema の無い見た目だけの部品のものです",
 	"tmpl_part_yaml_about":          "description: は、その見た目が何かを文字列で書いてください",
 	"tmpl_unknown_part":             "知らない部品「%s」です。使えるのは %s です",
-	"tmpl_no_parts_dir":             "HOME が設定されていません。自分の部品には HOME か FLOE_PARTS_DIR を設定してください",
+	"tmpl_no_parts_dir":             "自分の部品のディレクトリがありません。FLOE_PARTS_DIR を設定してください",
 	"tmpl_own_dirs_overlap":         "自分の部品のディレクトリ %s と自分のテーマのディレクトリ %s が同じか、一方がもう一方の中にあります。部品がテーマとして、テーマが部品として読まれてしまうので、FLOE_PARTS_DIR と FLOE_THEMES_DIR を別々の場所にしてください",
-	"tmpl_no_themes_dir":            "HOME が設定されていません。自分のテーマには HOME か FLOE_THEMES_DIR を設定してください",
+	"tmpl_no_themes_dir":            "自分のテーマのディレクトリがありません。FLOE_THEMES_DIR を設定してください",
 	"tmpl_new_part_name":            "%s は部品の名前にできません。英小文字・数字・- ・_ で、英小文字か数字で始めてください",
 	"tmpl_new_part_reserved":        "自分の部品に %s という名前は付けられません。diagram と script は floe が描き、tone と any は部品が共有する schema、base と palette はどのページにも入るテーマのファイルの名前です。別の名前にしてください",
 	"tmpl_new_part_go":              "部品 %s は floe が Go で描くので、写すファイルがありません。別の部品を写してください",

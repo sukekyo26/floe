@@ -74,7 +74,7 @@ floe の主要な変更を記録します。フォーマットは
   - `floe list`・`floe rm` も `floe publish` と同じくサーバーに頼み、動いていなければ起動する。
   - サーバーは `floe stop` で止めるまで動き続ける。
   - 管理画面を枠に入れられるのは、管理画面自身と VS Code の Simple Browser だけ（`frame-ancestors 'self' vscode-webview: vscode-file:`）。ほかのサイトやページが管理画面を重ねてボタンを押させることはできない。
-  - 設定は `FLOE_DIR`・`FLOE_PORT`（既定は 7325）で行う。`FLOE_DIR`・`FLOE_ICONS_DIR`・`FLOE_TEMPLATES_DIR` の相対パスは作業ディレクトリが基準で、先頭の `~`・`~/` は `HOME` を指す（`~name` は断る）。既定は `XDG_DATA_HOME`・`XDG_CONFIG_HOME` の下で、その `~` も `HOME` を指す。相対パスの `XDG_DATA_HOME`・`XDG_CONFIG_HOME` は、XDG の仕様どおり無視する。コマンドは、自分が使う設定の誤りだけを伝える。必須の設定の誤りでは止まり、ほかの誤りもまとめて出す。読むだけの設定の誤りは警告して、その設定なしで続ける。使わない設定の誤りは何も言わない（`floe check` は `HOME` が無くても動く）。
+  - 設定は `FLOE_DIR`・`FLOE_PORT`（既定は 7325）で行う。`FLOE_DIR`・`FLOE_ICONS_DIR`・`FLOE_TEMPLATES_DIR` の相対パスは作業ディレクトリが基準で、先頭の `~`・`~/` は `HOME` を指す（`~name` は断る）。既定は `XDG_DATA_HOME`・`XDG_CONFIG_HOME` の下で、その `~` も `HOME` を指す。相対パスの `XDG_DATA_HOME`・`XDG_CONFIG_HOME` は、XDG の仕様どおり無視する。コマンドは、自分が使う設定についてだけ伝える。書いた設定が使えなければ止まり、ほかの誤りもまとめて出す。既定の無いディレクトリは、そこに書く・無いと困るコマンドを止め、読むだけのコマンドには無いものになる（`floe check` は `HOME` が無くても動く）。
 - ブラウザに出る画面（管理画面と、データファイルの誤りのページ）を、ブラウザの言語に従って英語か日本語で出すようにした。コマンドの出力は、環境の言語によらず英語だけ。
 - `floe` コマンドと、インストール済みの版を表示する `floe version`
   （`floe --version` でも可）を追加。

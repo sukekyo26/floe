@@ -124,7 +124,7 @@ type entry struct {
 // readIndex returns nil when the set has not been fetched.
 func (s *Store) readIndex(k *kit) (*index, error) {
 	if s.root == "" {
-		return nil, usererr.New("icons_no_home")
+		return nil, usererr.New("icons_no_dir")
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -177,7 +177,7 @@ func (s *Store) Fetch(ctx context.Context, set, source string, force bool) (Fetc
 	k := kitOf(set)
 	got := Fetched{Title: k.title, Dir: s.dir(k), Version: "", Count: 0, Already: false}
 	if s.root == "" {
-		return got, usererr.New("icons_no_home")
+		return got, usererr.New("icons_no_dir")
 	}
 	from, err := k.packageURL(ctx, source)
 	if err != nil {

@@ -402,7 +402,7 @@ func TestConfigErrors(t *testing.T) {
 	}
 	delete(e.vars, "FLOE_DIR")
 	delete(e.vars, "HOME")
-	want(t, "no HOME", e.run(t, "", "list"), 1, "", "floe: HOME is not set; set HOME or FLOE_DIR")
+	want(t, "no HOME", e.run(t, "", "list"), 1, "", "floe: HOME is not set, so FLOE_DIR has no default; set HOME or FLOE_DIR")
 }
 
 // The command line speaks English whatever language the environment names: an agent reads it.
@@ -826,33 +826,49 @@ func TestCheck(t *testing.T) {
 	}
 }
 
-// A command is told the mistakes of the settings it uses alone: those it needs stop it, all at once; those
-// it reads it is warned of and goes on without; those it does not use it is not told.
+// A command is told the mistakes of the settings it uses alone. One written wrong stops it, whether it
+// reads or writes there; one without a default stops it only when it writes there or cannot do without
+// it, and is none to one that only reads it. Every reason is told at once.
 func TestSettingsByUse(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
 	e.write(t, "ok.yaml", "template: report\ntitle: OK\nlang: en\n")
-	store := e.vars["FLOE_DIR"]
+	e.write(t, "aws.yaml", "id: i\nwidth: 100\nheight: 50\ntitle: t\nparts:\n  - icon: { x: 10, y: 10, name: aws/aws-lambda }\n")
+	home := e.vars["HOME"]
 	delete(e.vars, "HOME")
-	delete(e.vars, "FLOE_DIR")
-	want(t, "check without a home or a store", e.run(t, "", "check", "ok.yaml"), 0, "", "")
+	want(t, "check without a home", e.run(t, "", "check", "ok.yaml"), 0, "", "")
+	want(t, "template new without a home", e.run(t, "", "template", "new", "x", "--from", "report"), 1, "",
+		"floe: HOME is not set, so FLOE_TEMPLATES_DIR has no default; set HOME or FLOE_TEMPLATES_DIR\n")
+	want(t, "diagram render of icons without a home", e.run(t, "", "diagram", "render", "aws.yaml"), 1, "",
+		`floe: there is no directory for icons; set FLOE_ICONS_DIR, then run "floe icons fetch"`)
+	// The server a command starts reads the same: no home, no default, for it too.
+	want(t, "list without a home", e.run(t, "", "list"), 0, "", "")
+	e.vars["HOME"] = home
 	e.vars["FLOE_PORT"] = "0"
 	want(t, "check with a wrong port", e.run(t, "", "check", "ok.yaml"), 0, "", "")
-	e.vars["FLOE_DIR"] = store
-	want(t, "list with a wrong port", e.run(t, "", "list"), 1, "", `floe: invalid FLOE_PORT "0": use a port number from 1 to 65535`)
-	e.vars["FLOE_PARTS_DIR"] = "~x"
-	const parts = "floe: FLOE_PARTS_DIR is ~x: floe takes only ~ and ~/ at the start for your home, not ~name; write the path " +
-		"absolute, or ./~x for a directory of that name under the working directory"
-	if r := e.run(t, "", "publish", "ok.yaml"); r.code != 1 ||
-		r.stderr != "floe: invalid FLOE_PORT \"0\": use a port number from 1 to 65535\n"+parts+"\n" {
-		t.Errorf("publish with a wrong port and parts = %d %q", r.code, r.stderr)
+	if r := e.run(t, "", "list"); r.code != 1 || r.stderr != "floe: invalid FLOE_PORT \"0\": use a port number from 1 to 65535\n" {
+		t.Errorf("list with a wrong port = %d %q", r.code, r.stderr)
 	}
 	e.vars["FLOE_PORT"] = e.port
-	if r := e.run(t, "", "check", "ok.yaml"); r.code != 0 || r.stderr != parts+"; floe check goes on without it\n" {
-		t.Errorf("check with parts it reads wrong = %d %q", r.code, r.stderr)
+	tilde := func(key string) string {
+		return "floe: " + key + " is ~x: floe takes only ~ and ~/ at the start for your home, not ~name; write the path " +
+			"absolute, or ./~x for a directory of that name under the working directory\n"
 	}
-	want(t, "part check with parts it needs wrong", e.run(t, "", "part", "check"), 1, "", parts)
+	for _, c := range []struct {
+		key  string
+		args []string
+	}{
+		{"FLOE_PARTS_DIR", []string{"check", "ok.yaml"}},
+		{"FLOE_ICONS_DIR", []string{"diagram", "render", "aws.yaml"}},
+		{"FLOE_THEMES_DIR", []string{"part", "new", "x", "--from", "cards"}},
+	} {
+		e.vars[c.key] = "~x"
+		if r := e.run(t, "", c.args...); r.code != 1 || r.stderr != tilde(c.key) {
+			t.Errorf("%v with %s written wrong = %d %q", c.args, c.key, r.code, r.stderr)
+		}
+		delete(e.vars, c.key)
+	}
 }
 
 // freePort picks below the ports the system gives out for :0, which a test of another package may be

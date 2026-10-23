@@ -233,7 +233,7 @@ var messagesEN = map[string]string{
 	"diagram_zoom_one_label":   "Show at actual size",
 
 	// icons: fetching and searching the AWS icons
-	"icons_no_home":     "HOME is not set; set HOME or FLOE_ICONS_DIR",
+	"icons_no_dir":      "there is no directory for icons; set FLOE_ICONS_DIR, then run \"floe icons fetch\"",
 	"icons_not_fetched": `%[1]s icons are not in %[2]s; run "floe icons fetch %[3]s" (downloads about %[4]s from %[5]s) and try again`,
 	"icons_bad_index":   `cannot read %s (%s); run "floe icons fetch %s --force" to fetch the icons again`,
 
@@ -293,7 +293,7 @@ var messagesEN = map[string]string{
 	"tmpl_floe_older":               "template %s needs floe %s or later, and this is floe %s; update floe",
 	"tmpl_template_yaml":            "write template.yaml as one key, floe:, and the version of floe the template needs, like floe: 1.2",
 	"tmpl_template_yaml_key":        "%s is not a key of template.yaml; write floe: and the version of floe the template needs, like floe: 1.2",
-	"tmpl_no_dir":                   "HOME is not set; set HOME or FLOE_TEMPLATES_DIR for templates of your own",
+	"tmpl_no_dir":                   "there is no directory for templates of your own; set FLOE_TEMPLATES_DIR",
 	"tmpl_new_name":                 "%s cannot name a template: use lower case letters, digits, - and _, starting with a letter or a digit",
 	"tmpl_new_exists":               "%s is there already (%s); pick another name, or remove it",
 	"tmpl_render":                   "it cannot draw %s: %s; write it to draw every value its schema.json takes, such as an item left out (draw it in {{with}}) or a list or text shorter than it reads",
@@ -350,9 +350,9 @@ var messagesEN = map[string]string{
 	"tmpl_part_yaml_description":    "a part's description is its schema.json's description; part.yaml's description: is a look alone's, which has no schema",
 	"tmpl_part_yaml_about":          "write description: as text, what the look is",
 	"tmpl_unknown_part":             `unknown part "%s"; use %s`,
-	"tmpl_no_parts_dir":             "HOME is not set; set HOME or FLOE_PARTS_DIR for parts of your own",
+	"tmpl_no_parts_dir":             "there is no directory for parts of your own; set FLOE_PARTS_DIR",
 	"tmpl_own_dirs_overlap":         "the directory of your own parts %s and that of your own themes %s are one, or one is in the other, where a part would be read as a theme or a theme as a part; set FLOE_PARTS_DIR and FLOE_THEMES_DIR apart",
-	"tmpl_no_themes_dir":            "HOME is not set; set HOME or FLOE_THEMES_DIR for themes of your own",
+	"tmpl_no_themes_dir":            "there is no directory for themes of your own; set FLOE_THEMES_DIR",
 	"tmpl_new_part_name":            "%s cannot name a part: use lower case letters, digits, - and _, starting with a letter or a digit",
 	"tmpl_new_part_reserved":        "a part of your own cannot be named %s: floe draws diagram and script itself, tone and any are schemas the parts share, and base and palette name the files of a theme for every page; pick another name",
 	"tmpl_new_part_go":              "floe draws the part %s in Go, so it has no files to copy; copy another part",

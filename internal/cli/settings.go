@@ -23,49 +23,43 @@ const (
 // settings are floe's settings, in the order their mistakes are told.
 var settings = []setting{portSetting, storeSetting, iconsSetting, templatesSetting, partsSetting, themesSetting}
 
+// use is how a command uses a setting: it reads what is there, or it writes there or cannot do without it.
+type use string
+
 const (
-	// declared marks a command that declares the settings it uses, those it does not included.
-	declared = "settings"
-	needs    = "need"
-	reads    = "read"
+	reads  use = "read"
+	writes use = "write"
 )
 
-// uses declares, as the Annotations of a command, the settings it needs, whose mistakes stop it, and those
-// it reads when they are right, whose mistakes it is warned of and goes on without. A setting it declares
-// neither way it does not use, and its mistakes are not told.
-func uses(need, read []setting) map[string]string {
+// declared marks a command that declares the settings it uses, those it does not included.
+const declared = "settings"
+
+// uses declares, as the Annotations of a command, how it uses each setting it uses; one it does not name it
+// does not use, and is told nothing of.
+func uses(each map[setting]use) map[string]string {
 	marks := map[string]string{declared: ""}
-	for _, s := range need {
-		marks[string(s)] = needs
-	}
-	for _, s := range read {
-		marks[string(s)] = reads
+	for s, u := range each {
+		marks[string(s)] = string(u)
 	}
 	return marks
 }
 
-// settle stops cmd on the mistakes of the settings it needs, all at once, and warns of those of the
-// settings it reads, which it then goes on without: the one place that tells the mistakes of the settings.
+// settle stops cmd, telling every reason at once, on a setting it uses that is written wrong, and on one it
+// writes or cannot do without that has no default; one it only reads that has no default it goes on
+// without, its value none. It is the one place that tells the mistakes of the settings.
 func (a *app) settle(cmd *cobra.Command) error {
-	var found, warned usererr.List
+	var found usererr.List
 	for _, s := range settings {
-		switch cmd.Annotations[string(s)] {
-		case needs:
-			found = append(found, a.cfg.wrong[s]...)
-		case reads:
-			for _, w := range a.cfg.wrong[s] {
-				warned = append(warned, usererr.New("cli_setting_left_out", w, cmd.CommandPath()))
-			}
-			if dir := a.cfg.dir(s); dir != nil && a.cfg.wrong[s] != nil {
-				*dir = ""
-			}
+		u := use(cmd.Annotations[string(s)])
+		switch {
+		case u == "":
+		case a.cfg.wrong[s] != nil:
+			found = append(found, a.cfg.wrong[s])
+		case u == writes && a.cfg.absent[s] != nil:
+			found = append(found, a.cfg.absent[s])
 		}
 	}
-	if err := found.Err(); err != nil {
-		return err
-	}
-	a.tellWarnings(warned)
-	return nil
+	return found.Err()
 }
 
 // tellWarnings prints warned to stderr, as every mistake is laid out, for the command to go on.

@@ -15,7 +15,7 @@ import (
 func (a *app) diagramCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:         "diagram",
-		Annotations: uses(nil, nil),
+		Annotations: uses(nil),
 		Short:       "Draw diagrams from specs of parts at absolute coordinates",
 		Args:        usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -30,7 +30,7 @@ func (a *app) diagramRenderCmd() *cobra.Command {
 	var noAssets bool
 	cmd := &cobra.Command{
 		Use:         "render <spec.yaml>...",
-		Annotations: uses(nil, []setting{iconsSetting}),
+		Annotations: uses(map[setting]use{iconsSetting: reads}),
 		Short:       "Check diagram specs and print them as one HTML fragment of inline SVG",
 		Long: `Check each spec and print the diagrams, in order, as one HTML fragment of inline SVG
 to paste into a page. A mistake in a spec's shape stops that spec at the first one; layout
@@ -101,7 +101,7 @@ func (a *app) diagramExampleCmd() *cobra.Command {
 	var lang string
 	cmd := &cobra.Command{
 		Use:         "example [kind]",
-		Annotations: uses(nil, nil),
+		Annotations: uses(nil),
 		Short:       "List the built-in example specs, or print the one of a kind",
 		Long: `Without a kind, list the built-in examples: one per kind of diagram, each a spec that
 passes the checks. With a kind, print its spec, whose comments explain its grid.

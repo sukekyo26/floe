@@ -95,7 +95,7 @@ const named = "floe: "
 func newRoot(env Env) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "floe",
-		Annotations:   uses(nil, nil),
+		Annotations:   uses(nil),
 		Short:         "Serve agent-written HTML pages on a local server",
 		Version:       version.Version,
 		Args:          usage(cobra.NoArgs),
@@ -113,7 +113,7 @@ func newRoot(env Env) *cobra.Command {
 	})
 	root.AddCommand(&cobra.Command{
 		Use:         "version",
-		Annotations: uses(nil, nil),
+		Annotations: uses(nil),
 		Short:       "Print the floe version",
 		Args:        usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {

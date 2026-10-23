@@ -7,12 +7,15 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// load reads the settings as loadConfig does, and returns every mistake of them, in their order.
+// load reads the settings as loadConfig does, and returns every mistake they are written with, in their
+// order.
 func load(getenv func(string) string, dir string) (*config, error) {
 	c := loadConfig(getenv, dir)
 	var all usererr.List
 	for _, s := range settings {
-		all = append(all, c.wrong[s]...)
+		if c.wrong[s] != nil {
+			all = append(all, c.wrong[s])
+		}
 	}
 	return c, all.Err()
 }
@@ -89,10 +92,11 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if c, err := load(getenv, "/w"); err != nil || c.root != "/d" || c.icons != "" {
 		t.Errorf("an XDG directory with ~ without a home = %+v, %v", c, err)
 	}
-	// Without a place for the pages, that is told first.
-	vars = map[string]string{"FLOE_ICONS_DIR": "~/icons"}
-	if _, err := load(getenv, "/w"); err == nil || !strings.Contains(err.Error(), "HOME is not set; set HOME or FLOE_DIR") {
-		t.Errorf("no place for the pages and an icons directory of ~ = %v", err)
+	// Without a home, a directory not set has no default, which is why it is none.
+	vars = map[string]string{"FLOE_ICONS_DIR": "/i"}
+	if c, err := load(getenv, "/w"); err != nil || c.root != "" || c.absent[storeSetting] == nil || c.icons != "/i" ||
+		c.absent[storeSetting].Error() != "HOME is not set, so FLOE_DIR has no default; set HOME or FLOE_DIR" {
+		t.Errorf("no home for the pages = %+v, %v", c, err)
 	}
 	// An XDG directory is not floe's: one of ~name is ignored, as a relative one is.
 	vars = map[string]string{"HOME": "/h", "XDG_CONFIG_HOME": "~foo"}
