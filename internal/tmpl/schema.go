@@ -67,25 +67,46 @@ func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema
 		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
 	sch, err := c.Compile(url)
-	// jsonschema wraps noLoader's mistake in an error of its own, which does not unwrap: floe's own is told,
-	// so that it is worded in the reader's language.
-	// partSet.mistakes told a $ref's at its pointer before; those it does not see (its LIMIT) name the template.
-	var load *jsonschema.LoadURLError
-	switch {
-	case errors.As(err, &load):
-		return nil, usererr.New("tmpl_schema_load", name, load.Err)
-	case err != nil:
+	if err != nil {
 		return nil, compileMistakes(url, file, err)
 	}
 	return sch, nil
 }
 
 // compileMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of
-// file: those the metaschema refuses of the file, and those of a kind floe knows, each at its JSON pointer.
-// The metaschema refuses what a $ref points at, at a pointer under the file, for the $ref, whosever it is:
-// refMistake tells it at the $ref. One of another schema, a part's, or of a kind floe does not know is a
-// failure.
+// file (ownMistakes), a $ref of it that finds nothing (strayRefMistake), or what noLoader refused
+// (loadedOrFailed): of a template's schema, or of a part's none of whose parts stop. One of another
+// schema, or of a kind floe does not know, is a failure.
 func compileMistakes(url, file string, err error) error {
+	if own := ownMistakes(url, file, err); own != nil {
+		return own
+	}
+	if e := strayRefMistake(url, file, err); e != nil {
+		return e
+	}
+	return loadedOrFailed(file, err)
+}
+
+// loadedOrFailed returns err, what stopped the compiling of the schema file, as the mistake noLoader made
+// of a URL it refused, placed in file, or else as floe's failure. jsonschema wraps noLoader's mistake in an
+// error of its own, which does not unwrap: floe's own is told, in the reader's language.
+func loadedOrFailed(file string, err error) error {
+	var (
+		load *jsonschema.LoadURLError
+		e    *usererr.Error
+	)
+	if errors.As(err, &load) && errors.As(load.Err, &e) {
+		return e.Placed(file, 0, 0, "")
+	}
+	return fmt.Errorf("compile the schema %s: %w", file, err)
+}
+
+// ownMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of file:
+// those the metaschema refuses of the file, and those of a kind floe knows (compileMistake), each at its
+// JSON pointer. It returns nil for one of another schema or of a kind floe does not know. The metaschema
+// refuses what a $ref points at, at a pointer under a file, for the $ref, whosever it is: refMistake tells
+// it at the $ref.
+func ownMistakes(url, file string, err error) error {
 	var invalid *jsonschema.SchemaValidationError
 	if errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url {
 		if refused := metaschemaMistakes(file, invalid.Err); refused != nil {
@@ -95,15 +116,13 @@ func compileMistakes(url, file string, err error) error {
 	if e := compileMistake(url, file, err); e != nil {
 		return e
 	}
-	if e := strayRefMistake(url, file, err); e != nil {
-		return e
-	}
-	return fmt.Errorf("compile the schema %s: %w", file, err)
+	return nil
 }
 
-// strayRefMistake returns err, what stopped the compiling of the template's schema at url, file, as the
-// mistake of a $ref that finds nothing in it, at the top of file, and nil for another. Where a $ref leads
-// is all jsonschema says, which names the template: none but its own $refs lead into a template's schema.
+// strayRefMistake returns err, what stopped the compiling of the schema at url, file, as the mistake of a
+// $ref that finds nothing in it, at the top of file, and nil for another. Where a $ref leads is all
+// jsonschema says: compileMistakes calls it where none but the schema's own $refs lead into it, a
+// template's, or a part's none of whose parts stop.
 // LIMIT: told at the top of the file, of a $ref refMistake did not check (its LIMITs), by where it leads
 // as jsonschema resolves it: under a nested $id, a pointer not as written. Check it there if one comes.
 func strayRefMistake(url, file string, err error) *usererr.Error {
@@ -394,7 +413,8 @@ func pointerIn(url, u string) (string, bool) {
 
 // metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's, holds, each at its
 // JSON pointer, in the order of the pointers, such as a pattern that is no regular expression; nil when it
-// holds none.
+// holds none. A $ref that is no URL is left out: its caller checks the schema's $refs (partSet.mistakes)
+// before, which tells it at the $ref.
 // LIMIT: why, in jsonschema's English.
 func metaschemaMistakes(file string, err error) error {
 	var ve *jsonschema.ValidationError
@@ -403,8 +423,13 @@ func metaschemaMistakes(file string, err error) error {
 	}
 	var mistakes usererr.List
 	leaves(ve, func(e *jsonschema.ValidationError) {
+		loc := e.InstanceLocation
+		if _, format := e.ErrorKind.(*kind.Format); format && len(loc) > 0 && loc[len(loc)-1] == "$ref" {
+			// A $ref no URL: partSet.mistakes tells it at the $ref, by the same check (notURIReference).
+			return
+		}
 		why := e.ErrorKind.LocalizedString(english)
-		mistakes = append(mistakes, usererr.NewIn(file, pointerTo(e.InstanceLocation), "tmpl_schema_invalid", why))
+		mistakes = append(mistakes, usererr.NewIn(file, pointerTo(loc), "tmpl_schema_invalid", why))
 	})
 	slices.SortStableFunc(mistakes, func(a, b *usererr.Error) int { return strings.Compare(a.At, b.At) })
 	return mistakes.Err()

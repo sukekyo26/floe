@@ -261,6 +261,57 @@ func TestBrokenOwnParts(t *testing.T) {
 		"toned/schema.json": `{"$ref": "tone.json"}`,
 		"toned/part.html":   `<b data-floe-part="toned">{{.}}</b>`,
 		"toned/part.css":    "",
+		// What compiling the schema finds, at its pointer: a pattern that is no regular expression.
+		"regexed/schema.json": `{"type": "object", "properties": {"text": {"type": "string", "pattern": "(["}}}`,
+		"regexed/part.html":   `<div data-floe-part="regexed">{{.text}}</div>`,
+		"regexed/part.css":    "",
+		// Named before regexed, whose compiling stops at regexed's: told as a part that cannot be used.
+		"aregexed/schema.json": `{"type": "object", "properties": {"r": {"$ref": "regexed.json"}}}`,
+		"aregexed/part.html":   `<div data-floe-part="aregexed"></div>`,
+		"aregexed/part.css":    "",
+		// A mistake of compiling does not hide those of its names.
+		"unboxed/schema.json": `{"type": "object", "properties": {"text": {"type": "string", "pattern": "(["}}}`,
+		"unboxed/part.html":   `<div class="x"></div>`,
+		"unboxed/part.css":    "",
+		// yb's $ref into ya, which finds nothing, is yb's: ya's compiling stops there too, which jsonschema tells
+		// as ya's file.
+		"ya/schema.json": `{"type": "object", "properties": {"b": {"$ref": "yb.json"}}}`,
+		"ya/part.html":   `<div data-floe-part="ya"></div>`,
+		"ya/part.css":    "",
+		"yb/schema.json": `{"type": "object", "properties": {"t": {"$ref": "ya.json#/$defs/nope"}}}`,
+		"yb/part.html":   `<div data-floe-part="yb"></div>`,
+		"yb/part.css":    "",
+		// What no check of a $ref sees, a $ref through an $id, in the part's own file, at its top, as a
+		// template's would be, and a part that holds it, whose compiling stops there too, told as one that
+		// holds a part that cannot be used.
+		"idd/schema.json":  `{"$id": "https://example.com/p.json", "type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"idd/part.html":    `<div data-floe-part="idd"></div>`,
+		"idd/part.css":     "",
+		"aidd/schema.json": `{"type": "object", "properties": {"d": {"$ref": "idd.json"}}}`,
+		"aidd/part.html":   `<div data-floe-part="aidd"></div>`,
+		"aidd/part.css":    "",
+		// zy's $ref into zx at what is no schema is zy's, though the metaschema refuses it under zx's file.
+		"zx/schema.json": `{"type": "object", "properties": {"y": {"$ref": "zy.json"}}}`,
+		"zx/part.html":   `<div data-floe-part="zx"></div>`,
+		"zx/part.css":    "",
+		"zy/schema.json": `{"type": "object", "properties": {"t": {"$ref": "zx.json#/type"}}}`,
+		"zy/part.html":   `<div data-floe-part="zy"></div>`,
+		"zy/part.css":    "",
+		// A $ref to a value of its own enum, right as it is: at the $ref.
+		"enumref/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/properties/u/enum/0"}, "u": {"enum": ["a"]}}}`,
+		"enumref/part.html":   `<div data-floe-part="enumref"></div>`,
+		"enumref/part.css":    "",
+		// No URL to JSON Schema, though net/url reads it: told at the $ref, once, not by the metaschema too.
+		"bslash/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/$defs/a\\b"}}, "$defs": {"a\\b": {"type": "string"}}}`,
+		"bslash/part.html":   `<div data-floe-part="bslash"></div>`,
+		"bslash/part.css":    "",
+		// A $dynamicRef in a part, which another holds.
+		"dyn/schema.json":  `{"type": "object", "properties": {"t": {"type": "object", "$dynamicRef": "https://example.com/x.json"}}}`,
+		"dyn/part.html":    `<div data-floe-part="dyn"></div>`,
+		"dyn/part.css":     "",
+		"adyn/schema.json": `{"type": "object", "properties": {"t": {"type": "object", "$dynamicRef": "floe:///parts/dyn.json"}}}`,
+		"adyn/part.html":   `<div data-floe-part="adyn"></div>`,
+		"adyn/part.css":    "",
 		// The mistakes of several files are told together, under the part.
 		"wrongs/schema.json": `{"type": "object"}`,
 		"wrongs/part.html":   `<div data-floe-part="wrongs"></div>`,
@@ -344,6 +395,33 @@ func TestBrokenOwnParts(t *testing.T) {
 			": #: the part unnamed cannot be used",
 		"paneled": "the part paneled cannot be used\n  " + filepath.Join(parts, "paneled", "schema.json") +
 			": #: floe:///parts/panel.json is the look panel, which draws nothing",
+		"regexed": "the part regexed cannot be used\n  " + filepath.Join(parts, "regexed", "schema.json") +
+			": #/properties/text/pattern: JSON Schema does not take this: '([' is not valid regex",
+		"aregexed": "the part aregexed cannot be used\n  " + filepath.Join(parts, "aregexed", "schema.json") +
+			": #/properties/r: the part regexed cannot be used",
+		"unboxed": "the part unboxed cannot be used\n  " + filepath.Join(parts, "unboxed", "part.html") +
+			`: no element of the part unboxed is its box, data-floe-part="unboxed"; write it on the part's element` + "\n  " +
+			filepath.Join(parts, "unboxed", "schema.json") + ": #/properties/text/pattern: JSON Schema does not take this: '([' is not valid regex",
+		"ya": "the part ya cannot be used\n  " + filepath.Join(parts, "ya", "schema.json") + ": #/properties/b: the part yb cannot be used\n    " +
+			filepath.Join(parts, "yb", "schema.json") + ": #/properties/t: floe:///parts/ya.json#/$defs/nope points into a part",
+		"yb": "the part yb cannot be used\n  " + filepath.Join(parts, "yb", "schema.json") +
+			": #/properties/t: floe:///parts/ya.json#/$defs/nope points into a part",
+		"idd": "the part idd cannot be used\n  " + filepath.Join(parts, "idd", "schema.json") +
+			": #: a $ref to #/$defs/nope finds nothing in schema.json",
+		"aidd": "the part aidd cannot be used\n  " + filepath.Join(parts, "aidd", "schema.json") + ": #/properties/d: the part idd cannot be used\n    " +
+			filepath.Join(parts, "idd", "schema.json") + ": #: a $ref to #/$defs/nope finds nothing in schema.json",
+		"zx": "the part zx cannot be used\n  " + filepath.Join(parts, "zx", "schema.json") + ": #/properties/y: the part zy cannot be used\n    " +
+			filepath.Join(parts, "zy", "schema.json") + ": #/properties/t: floe:///parts/zx.json#/type points into a part",
+		"zy": "the part zy cannot be used\n  " + filepath.Join(parts, "zy", "schema.json") +
+			": #/properties/t: floe:///parts/zx.json#/type points into a part",
+		"enumref": "the part enumref cannot be used\n  " + filepath.Join(parts, "enumref", "schema.json") +
+			": #/properties/t: a $ref to #/properties/u/enum/0 points at what is no schema",
+		"bslash": "the part bslash cannot be used\n  " + filepath.Join(parts, "bslash", "schema.json") +
+			`: #/properties/t: the $ref #/$defs/a\b cannot be read as a URL (contains \)`,
+		"dyn": "the part dyn cannot be used\n  " + filepath.Join(parts, "dyn", "schema.json") +
+			": #/properties/t: floe does not follow $dynamicRef",
+		"adyn": "the part adyn cannot be used\n  " + filepath.Join(parts, "adyn", "schema.json") +
+			": #/properties/t: floe does not follow $dynamicRef",
 		"pointed": "the part pointed cannot be used\n  " + filepath.Join(parts, "pointed", "schema.json") +
 			": #/properties/t: a $ref to #/$defs/nope finds nothing in schema.json",
 		"deadptr": "the part deadptr cannot be used\n  " + filepath.Join(parts, "deadptr", "schema.json") +
@@ -368,7 +446,9 @@ func TestBrokenOwnParts(t *testing.T) {
 		}
 		// Told as floe part check tells it, at the $ref, not in the words of jsonschema's loading.
 		at := filepath.Join(dir, "memo", "schema.json") + ": #/properties/risks: "
-		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), at+why) {
+		// A $ref is told once, at the $ref, not again by the compiling, at the top, or by the metaschema.
+		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), at+why) ||
+			strings.Count(mistakes[0].Error(), "finds nothing") > 1 || strings.Contains(mistakes[0].Error(), "uri-reference") {
 			t.Errorf("Check of a template of %s = %v, want %s", name, mistakes, why)
 		}
 	}
@@ -438,6 +518,27 @@ func TestBrokenOwnParts(t *testing.T) {
 	}
 	if len(mistakes) != 0 || len(told) != len(whys) {
 		t.Errorf("Check of a template of the quote = %v, %v", told, mistakes)
+	}
+}
+
+// A part that holds, through a part of floe's, one of one's own whose schema stops is told as one that holds
+// a part that cannot be used, not as stopping at that one's schema.
+func TestHeldThroughFloesPart(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"cell/schema.json": `{"$id": "https://example.com/p.json", "type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"cell/part.html":   `<div data-floe-part="cell"></div>`,
+		"cell/part.css":    "",
+		"mine/schema.json": `{"type": "object", "properties": {"t": {"$ref": "floe:///parts/table.json"}}}`,
+		"mine/part.html":   `<div data-floe-part="mine"></div>`,
+		"mine/part.css":    "",
+	})
+	dir := memo(t, `"risks": {"$ref": "floe:///parts/mine.json"}, "aside": {"type": "string"}`)
+	_, mistakes := check(filepath.Join(dir, "memo"), parts, themesOf(parts))
+	want := filepath.Join(parts, "mine", "schema.json") + ": #/properties/t: the part table cannot be used"
+	if len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) || strings.Contains(mistakes[0].Error(), "could not read") {
+		t.Errorf("Check of a template of mine = %v, want %s", mistakes, want)
 	}
 }
 

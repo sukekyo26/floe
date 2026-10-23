@@ -109,7 +109,7 @@ func TestSchemaRefersToNoFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = validateDoc(set, jsonDoc(t, `{"properties": {"a": {"$ref": "file://`+outside+`"}}}`), d, root)
-	if err == nil || !strings.HasPrefix(err.Error(), "the schema of the template t cannot be read: file://"+outside+": a schema refers to no other file or URL") {
+	if err == nil || !strings.HasPrefix(err.Error(), "t/schema.json: file://"+outside+": a schema refers to no other file or URL") {
 		t.Errorf("validate of a $ref to a file = %v", err)
 	}
 	for _, named := range []string{"https://json-schema.org/draft/2020-12/schema", "http://json-schema.org/draft-07/schema#", "https://json-schema.org/schema"} {
