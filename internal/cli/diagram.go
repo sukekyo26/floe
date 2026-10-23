@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"cmp"
 	"slices"
 	"strings"
 
@@ -50,16 +49,19 @@ is enough; more does no harm). --no-assets leaves them out.`,
 }
 
 func (a *app) render(files []string, assets bool) error {
-	var problems usererr.List
+	files = a.namedFiles(files)
+	// The mistakes of each file, in the order the files were given; those about all of the diagrams (icons
+	// not fetched) after them.
+	told := make([]usererr.List, len(files)+1)
 	specs := make([]*diagram.Spec, 0, len(files))
-	for _, file := range files {
+	for i, file := range files {
 		src, err := a.readArg(file)
-		if err != nil {
-			return err
+		var s *diagram.Spec
+		if err == nil {
+			s, err = diagram.Parse(file, src)
 		}
-		s, err := diagram.Parse(file, src)
 		if err != nil {
-			if failed := problems.Add(err); failed != nil {
+			if failed := told[i].Add(err); failed != nil {
 				return failed //nolint:wrapcheck // already says what failed
 			}
 			continue
@@ -67,20 +69,19 @@ func (a *app) render(files []string, assets bool) error {
 		specs = append(specs, s)
 	}
 	svgs, err := diagram.Render(specs, icons.New(a.cfg.icons))
-	if failed := problems.Add(err); failed != nil {
+	var drawn usererr.List
+	if failed := drawn.Add(err); failed != nil {
 		return failed //nolint:wrapcheck // already says what failed
 	}
-	if len(problems) > 0 {
-		// The mistakes of each file together, in the order the files were given; those about all of the
-		// diagrams (icons not fetched) after them.
-		order := map[string]int{"": len(files)}
-		for i, f := range files {
-			if _, ok := order[f]; !ok {
-				order[f] = i
-			}
+	for _, e := range drawn {
+		i := slices.Index(files, e.File)
+		if i < 0 {
+			i = len(files)
 		}
-		slices.SortStableFunc(problems, func(x, y *usererr.Error) int { return cmp.Compare(order[x.File], order[y.File]) })
-		return problems
+		told[i] = append(told[i], e)
+	}
+	if err := slices.Concat(told...).Err(); err != nil {
+		return err
 	}
 	out := strings.Join(svgs, "\n")
 	if assets {

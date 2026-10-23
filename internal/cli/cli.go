@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -136,4 +138,55 @@ func (a *app) readArg(file string) ([]byte, error) {
 		return nil, usererr.CannotRead(file, err)
 	}
 	return src, nil
+}
+
+// namedFiles is the files or directories given, in order, each once, by the path it was first given as: two
+// paths that name one entry of one directory (./a.yaml and a.yaml, through a symlinked directory, in another
+// case on macOS) are read and told once. A link of another name or in another directory, symbolic or hard,
+// is one of its own, as its name names its page or template.
+// LIMIT: each file is compared with each kept; enough for the files of a command line.
+func (a *app) namedFiles(files []string) []string {
+	var named []string
+	var kept []entry
+next:
+	for _, file := range files {
+		e := a.entryOf(file)
+		for _, k := range kept {
+			if e.same(k) {
+				continue next
+			}
+		}
+		named, kept = append(named, file), append(kept, e)
+	}
+	return named
+}
+
+// entry is a path as a name in a directory: its absolute path, its directory and itself, nil when they
+// cannot be read.
+type entry struct {
+	abs       string
+	dir, info os.FileInfo
+}
+
+func (a *app) entryOf(file string) entry {
+	e := entry{abs: a.abs(file), dir: nil, info: nil}
+	if dir, err := os.Stat(filepath.Dir(e.abs)); err == nil {
+		e.dir = dir
+	}
+	if info, err := os.Lstat(e.abs); err == nil {
+		e.info = info
+	}
+	return e
+}
+
+// same reports whether e and o name one entry of one directory: one directory, and one name, or names that
+// differ only in case for one file (on a file system that ignores case). Without a directory, one path.
+// LIMIT: on a case-sensitive file system, two hard links in one directory whose names differ only in case are one.
+func (e entry) same(o entry) bool {
+	if e.dir == nil || o.dir == nil {
+		return e.abs == o.abs
+	}
+	x, y := filepath.Base(e.abs), filepath.Base(o.abs)
+	return os.SameFile(e.dir, o.dir) &&
+		(x == y || strings.EqualFold(x, y) && e.info != nil && o.info != nil && os.SameFile(e.info, o.info))
 }

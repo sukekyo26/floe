@@ -805,6 +805,21 @@ func TestCheck(t *testing.T) {
 	if r := e.run(t, "", "check", "bad.yaml", "nope.yaml"); !strings.Contains(r.stderr, "\nfloe: cannot read nope.yaml") {
 		t.Errorf("check of a missing file after one with mistakes = %q", r.stderr)
 	}
+	// A file named twice is checked once, and told by the path it was first given as.
+	if r := e.run(t, "", "check", "bad.yaml", "./bad.yaml", "bad.yaml"); r.code != 1 || strings.Count(r.stderr, "\n") != 1 ||
+		!strings.HasPrefix(r.stderr, "bad.yaml:2:1: ") {
+		t.Errorf("check of a file named twice = %d %q", r.code, r.stderr)
+	}
+	// An absolute path is read as a relative one is, its .. folded by its letters: the file read is the one
+	// told apart, not work/twice.yaml that the system would reach through the symlink.
+	e.write(t, "twice.yaml", "template: report\ntitle: OK\nlang: en\n")
+	e.write(t, "work/twice.yaml", "template: report\nleed: x\nlang: en\n")
+	e.write(t, "work/sub/.keep", "")
+	if err := os.Symlink(filepath.Join(e.tmp, "work", "sub"), filepath.Join(e.tmp, "link")); err != nil {
+		t.Fatal(err)
+	}
+	want(t, "check of a file named twice by an absolute path with ..",
+		e.run(t, "", "check", e.tmp+"/link/../twice.yaml", filepath.Join(e.tmp, "twice.yaml")), 0, "", "")
 	want(t, "check without a file", e.run(t, "", "check"), 2, "", "floe: requires at least 1 arg(s)")
 	if _, err := os.Stat(e.vars["FLOE_DIR"]); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("check wrote to the store: %v", err)
