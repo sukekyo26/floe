@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -136,4 +137,29 @@ func (a *app) readArg(file string) ([]byte, error) {
 		return nil, usererr.CannotRead(file, err)
 	}
 	return src, nil
+}
+
+// namedFiles is files in the order given, each file once, by the path it was first given as: a file named
+// twice (by two globs, as ./a.yaml and a.yaml, in another case on macOS, or through a symlinked directory)
+// is read and told once. A symlink of another name is a file of its own, as its name names its page, and
+// one that is not there is told apart by its path, for readArg to tell.
+// LIMIT: each file is compared with each kept; enough for the files of a command line.
+func (a *app) namedFiles(files []string) []string {
+	var named []string
+	var infos []os.FileInfo
+next:
+	for _, file := range files {
+		info, err := os.Lstat(a.abs(file))
+		if err != nil {
+			info = nil
+		}
+		for i, other := range infos {
+			if info != nil && other != nil && os.SameFile(info, other) ||
+				info == nil && other == nil && filepath.Clean(a.abs(file)) == filepath.Clean(a.abs(named[i])) {
+				continue next
+			}
+		}
+		named, infos = append(named, file), append(infos, info)
+	}
+	return named
 }

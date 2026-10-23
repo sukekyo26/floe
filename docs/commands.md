@@ -150,6 +150,7 @@ Check each data file as `floe publish` does before it stores the page: its YAML,
 - Nothing is printed when every file is right (exit code 0).
 - Nothing is published, and the server is not started, so a repository's CI can run it over its data files.
 - A file that is not a data file (`.yaml`, `.yml`) is refused.
+- A data file named twice (by two globs, through a symlinked directory, or in another case on macOS) is checked once, and told by the path it was first given as; a symlink of another name is a file of its own.
 
 ---
 
@@ -261,7 +262,8 @@ Check each diagram spec and print the diagrams, in order, as one HTML fragment o
 
 - A mistake in the shape of a spec (an unknown key, a wrong type, a value that is not allowed) stops that spec at the first one.
 - Layout mistakes are all reported: text too wide or too tall for its box (or a heading for its frame), parts sticking out of the canvas (edges, lines and axes too), overlapping (each other or a frame's heading), or straddling the edge of a frame, edges running through boxes, labels or frame headings, and edges crossing like an X.
-- Every mistake of every spec is printed as `file:line:column: message`, and nothing is drawn until all are fixed (exit code 1).
+- Every mistake of every spec is printed as `file:line:column: message`, in the order the specs were given, and nothing is drawn until all are fixed (exit code 1).
+- A spec named twice (by two globs, through a symlinked directory, or in another case on macOS) is drawn once; a symlink of another name is a spec of its own, whose id must differ too.
 - The ids of the diagrams drawn together must differ, because they name the diagrams' markers and icons. Draw all the diagrams of a page with one `render`.
 - The fragment starts with the assets: the diagrams' style, which takes its colours from the CSS variables of the palette (so dark mode follows; a page without them gets `default`'s light colours), and the script that zooms them. Each diagram sits in a frame that first shows it whole; readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. The toolbar is worded in the page's language (`<html lang>`). A page needs the assets once; holding them more than once does no harm.
 

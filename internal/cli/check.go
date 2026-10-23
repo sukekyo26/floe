@@ -28,7 +28,7 @@ the server is not started, and nothing is printed when the files are right.`,
 
 func (a *app) check(files []string) error {
 	var found usererr.List
-	for _, file := range files {
+	for _, file := range a.namedFiles(files) {
 		_, err := drawFile(a, file)
 		tell(&found, err)
 	}

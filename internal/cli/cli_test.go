@@ -805,6 +805,11 @@ func TestCheck(t *testing.T) {
 	if r := e.run(t, "", "check", "bad.yaml", "nope.yaml"); !strings.Contains(r.stderr, "\nfloe: cannot read nope.yaml") {
 		t.Errorf("check of a missing file after one with mistakes = %q", r.stderr)
 	}
+	// A file named twice is checked once, and told by the path it was first given as.
+	if r := e.run(t, "", "check", "bad.yaml", "./bad.yaml", "bad.yaml"); r.code != 1 || strings.Count(r.stderr, "\n") != 1 ||
+		!strings.HasPrefix(r.stderr, "bad.yaml:2:1: ") {
+		t.Errorf("check of a file named twice = %d %q", r.code, r.stderr)
+	}
 	want(t, "check without a file", e.run(t, "", "check"), 2, "", "floe: requires at least 1 arg(s)")
 	if _, err := os.Stat(e.vars["FLOE_DIR"]); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("check wrote to the store: %v", err)

@@ -71,7 +71,7 @@ func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
 	// ignores case (macOS), two paths may be one file.
 	// LIMIT: case only. APFS also takes the NFC and NFD of a name as one; fold Unicode if pages collide so.
 	first := map[string]rendered{}
-	for _, file := range files {
+	for _, file := range a.namedFiles(files) {
 		dir := outDir
 		if dir == "" {
 			dir = filepath.Dir(file)
@@ -79,11 +79,6 @@ func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
 		p := rendered{from: file, to: filepath.Join(dir, baseName(file)+".html"), real: "", page: nil}
 		p.real = a.realPath(p.to)
 		other, taken := first[strings.ToLower(p.real)]
-		// One file named twice (by two globs, as ./spec.yaml and spec.yaml, in another case on macOS, or
-		// through a symlinked directory) writes its page once.
-		if taken && !a.twoFiles(other.from, file) {
-			continue
-		}
 		page, err := drawFile(a, file)
 		tell(&found, err)
 		switch {
@@ -116,14 +111,6 @@ func (a *app) realPath(file string) string {
 		return filepath.Join(dir, filepath.Base(abs))
 	}
 	return abs
-}
-
-// twoFiles reports whether the data files x and y are two files, not one; a file that cannot be read is
-// left to drawFile to tell, and is not told apart.
-func (a *app) twoFiles(x, y string) bool {
-	fx, errX := os.Stat(a.abs(x))
-	fy, errY := os.Stat(a.abs(y))
-	return errX == nil && errY == nil && !os.SameFile(fx, fy)
 }
 
 // writePages writes each page that changes, and prints its path.
