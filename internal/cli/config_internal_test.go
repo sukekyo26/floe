@@ -163,9 +163,9 @@ func TestLoadConfigDirs(t *testing.T) {
 	vars = map[string]string{"HOME": home, "XDG_DATA_HOME": file}
 	c, err := load(func(k string) string { return vars[k] }, tmp)
 	parts := home + "/.config/floe/parts is not a directory, and FLOE_PARTS_DIR would be there or under it by default; " +
-		"make it a directory, or set XDG_CONFIG_HOME or FLOE_PARTS_DIR elsewhere"
+		"set XDG_CONFIG_HOME or FLOE_PARTS_DIR elsewhere, or make it a directory"
 	store := file + " is not a directory, and FLOE_DIR would be there or under it by default; " +
-		"make it a directory, or set XDG_DATA_HOME or FLOE_DIR elsewhere"
+		"set XDG_DATA_HOME or FLOE_DIR elsewhere, or make it a directory"
 	if err != nil || c.parts != "" || c.root != "" || c.absent[partsSetting] == nil || c.absent[partsSetting].Error() != parts ||
 		c.absent[storeSetting] == nil || c.absent[storeSetting].Error() != store || c.themes != home+"/.config/floe/themes" {
 		t.Errorf("defaults a file holds up = %+v, %v", c, err)

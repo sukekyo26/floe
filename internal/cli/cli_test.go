@@ -896,14 +896,13 @@ func TestSettingDirsHeldUp(t *testing.T) {
 	e.vars["HOME"] = "/dev/null"
 	want(t, "check with a home that is a file", e.run(t, "", "check", "ok.yaml"), 0, "", "")
 	if r := e.run(t, "", "list"); r.code != 1 || r.stderr != "floe: /dev/null is not a directory, and FLOE_DIR would be there or under "+
-		"it by default; make it a directory, or set XDG_DATA_HOME or FLOE_DIR elsewhere\n" {
+		"it by default; set XDG_DATA_HOME or FLOE_DIR elsewhere, or make it a directory\n" {
 		t.Errorf("list with a home that is a file = %d %q", r.code, r.stderr)
 	}
 	e.vars["HOME"] = home
 	e.write(t, "home/.config/floe/parts", "")
 	if r := e.run(t, "", "part", "check"); r.code != 1 || r.stderr != "floe: "+home+"/.config/floe/parts is not a directory, and "+
-		"FLOE_PARTS_DIR would be there or under it by default; make it a directory, or set XDG_CONFIG_HOME or FLOE_PARTS_DIR "+
-		"elsewhere\n" {
+		"FLOE_PARTS_DIR would be there or under it by default; set XDG_CONFIG_HOME or FLOE_PARTS_DIR elsewhere, or make it a directory\n" {
 		t.Errorf("part check where the parts are a file = %d %q", r.code, r.stderr)
 	}
 	want(t, "check where the parts are a file", e.run(t, "", "check", "ok.yaml"), 0, "", "")
