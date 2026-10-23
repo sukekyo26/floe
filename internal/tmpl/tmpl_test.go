@@ -302,6 +302,13 @@ func TestReadRefusals(t *testing.T) {
 			"data.yaml:1:3: .inf is not a value a data file can hold; write a number in digits, or quote it as text",
 		"template: report\n1: {true: a}\nlang: en\n": "data.yaml:2:1: a key is a name: write 1 as text, in quotes\n" +
 			"data.yaml:2:5: a key is a name: write true as text, in quotes",
+		// One mistake to a place: a key is told as a key, and an anchor or a tag tells itself, what it holds
+		// judged on its own.
+		"template: report\n.inf: a\nlang: en\n":    "data.yaml:2:1: a key is a name: write .inf as text, in quotes",
+		"template: report\n&k x: a\nlang: en\n":    "data.yaml:2:1: " + anchor,
+		"template: report\n!!str x: a\nlang: en\n": "data.yaml:2:1: " + anchor,
+		"&a\ntemplate: report\nlang: en\n":         "data.yaml:1:1: " + anchor,
+		"--- !!map\ntemplate: report\nlang: en\n":  "data.yaml:1:5: " + anchor,
 	} {
 		if _, err := builtins.Read("data.yaml", []byte(src), "", ""); err == nil || err.Error() != want {
 			t.Errorf("Read %q = %v\nwant %s", src, err, want)

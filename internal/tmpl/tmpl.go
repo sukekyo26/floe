@@ -395,14 +395,12 @@ func parse(file string, src []byte) (ast.Node, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a mistake at its line and column, or ErrEmpty
 	}
-	var found usererr.List
-	for _, n := range every(body, nonFinite) {
-		found = append(found, yamlpos.New(file, yamlpos.Of(n), "tmpl_not_finite", n.GetToken().Value))
+	// Of what anchors and tags hold, which tell themselves.
+	var shape error
+	if _, ok := yamlpos.Unwrap(body).(*ast.MappingNode); !ok {
+		shape = yamlpos.New(file, yamlpos.Of(body), "tmpl_not_mapping")
 	}
-	if _, ok := body.(*ast.MappingNode); !ok {
-		found = append(found, yamlpos.New(file, yamlpos.Of(body), "tmpl_not_mapping"))
-	}
-	if err = usererr.Collect(plain(file, body), found.Err()); err != nil {
+	if err = usererr.Collect(refuse(file, body, true), shape); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns
 	}
 	return body, nil
@@ -857,58 +855,57 @@ func ints(v any) any {
 	return v
 }
 
-// every returns the nodes under n that pick picks, in the order of the tree. It goes on under each node
-// picked: a key's value holds keys of its own.
-func every(n ast.Node, pick func(ast.Node) ast.Node) []ast.Node {
-	f := &finder{pick: pick, found: nil}
-	ast.Walk(f, n)
-	return f.found
-}
-
-type finder struct {
-	pick  func(ast.Node) ast.Node
-	found []ast.Node
-}
-
-func (f *finder) Visit(n ast.Node) ast.Visitor {
-	if picked := f.pick(n); picked != nil {
-		f.found = append(f.found, picked)
-	}
-	return f
-}
-
-// nonTextKey picks the key of n that is not text. A key is a name: 0x10, ~ or 1.0 would be read as
-// another name than the one written, and not found where it was written. A merge key (<<) is not
-// picked: yamlpos.Anchors tells it.
-func nonTextKey(n ast.Node) ast.Node {
-	v, ok := n.(*ast.MappingValueNode)
-	if !ok {
-		return nil
-	}
-	key := yamlpos.KeyOf(v)
-	switch key.(type) {
-	case *ast.StringNode, *ast.MergeKeyNode:
-		return nil
-	}
-	return key
-}
-
 // plain refuses in body, the file's, every place that would hide where a value is written (an anchor,
 // alias, merge key or tag) or read a key as another name than the one written.
 func plain(file string, body ast.Node) error {
-	picked := every(body, nonTextKey)
-	keys := make(usererr.List, 0, len(picked))
-	for _, k := range picked {
-		keys = append(keys, yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value))
-	}
-	return usererr.Collect(yamlpos.Anchors(file, body), keys.Err())
+	return refuse(file, body, false)
 }
 
-// nonFinite picks .inf and .nan.
-func nonFinite(n ast.Node) ast.Node {
-	switch n.(type) {
-	case *ast.InfinityNode, *ast.NanNode:
-		return n
+// refuse is plain, refusing every value .inf or .nan too when finite: JSON has no number for them, and they
+// would make a comparison of the checks silently hold or fail. It goes through body once, telling one
+// mistake of a node: an anchor or a tag tells itself, and what it holds is judged on its own.
+func refuse(file string, body ast.Node, finite bool) error {
+	r := &refusals{file: file, finite: finite, found: nil}
+	ast.Walk(r, body)
+	return r.found.Sorted().Err()
+}
+
+type refusals struct {
+	file   string
+	finite bool
+	found  usererr.List
+}
+
+func (r *refusals) Visit(n ast.Node) ast.Visitor {
+	e, merge := yamlpos.Anchor(r.file, n)
+	if e != nil {
+		r.found = append(r.found, e)
 	}
-	return nil
+	if merge {
+		return nil
+	}
+	switch n := n.(type) {
+	case *ast.MappingValueNode:
+		// A key is a name: 0x10, ~ or 1.0 would be read as another name than the one written, and not
+		// found where it was written. Its anchors and tags are told as such; a key is not a value.
+		key := yamlpos.KeyOf(n)
+		if err := yamlpos.Anchors(r.file, key); err != nil {
+			_ = r.found.Add(err) //nolint:errcheck // Anchors tells only mistakes
+		}
+		if k := yamlpos.Unwrap(key); !isText(k) {
+			r.found = append(r.found, yamlpos.New(r.file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value))
+		}
+		ast.Walk(r, n.Value)
+		return nil
+	case *ast.InfinityNode, *ast.NanNode:
+		if r.finite {
+			r.found = append(r.found, yamlpos.New(r.file, yamlpos.Of(n), "tmpl_not_finite", n.GetToken().Value))
+		}
+	}
+	return r
+}
+
+func isText(n ast.Node) bool {
+	_, text := n.(*ast.StringNode)
+	return text
 }
