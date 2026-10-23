@@ -268,6 +268,13 @@ func TestCheckMistakes(t *testing.T) {
 			},
 		},
 		{
+			// A $ref to the root, which recurses, is right: what the metaschema refuses of the file is told where
+			// it is, not as the $ref's.
+			name:  "a $ref to the root beside what JSON Schema does not take",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "#" }, "kind": { "type": "string", "pattern": "(" },` + "\n    " + `"chart":`},
+			want:  []string{`sizes/schema.json: #/properties/kind/pattern: JSON Schema does not take this: '(' is not valid regex`},
+		},
+		{
 			// At the $ref, not as a URL out of floe; under draft-04 too, whose metaschema does not check it.
 			name:  "a $ref that is no URL",
 			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "http://[::1" },` + "\n    " + `"chart":`},

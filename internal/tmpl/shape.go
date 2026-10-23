@@ -350,9 +350,8 @@ func (set *partSet) refMistake(n *schemaNotes, r refAt, resolve func(ref string)
 // are checked once that is fixed.
 func (n *schemaNotes) targetMistake(r refAt, base string, resolve func(ref string) error) *usererr.Error {
 	own := n.own[base]
-	to, in := r.ref, base
+	to, in := r.written, base // the $ref as written, which the user finds in the file
 	if own {
-		to, _ = pointerIn(base, r.ref)
 		in = path.Base(n.file)
 	}
 	err := resolve(r.ref)
