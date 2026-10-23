@@ -111,7 +111,7 @@ func TestParseErrors(t *testing.T) {
 		{"YAML syntax", "id: a\nid: b\n", `s.yaml:2:1: this is not valid YAML: mapping key "id" already defined at [1:1]`},
 		{"empty", "", "s.yaml:1:1: the spec is empty; write a diagram with id, width, height, title and parts"},
 		{"two documents", head + "---\nid: e\n", "s.yaml:6:1: a spec holds one diagram; put each --- separated document in a file of its own"},
-		{"anchor", head + "  - dot: { cx: &x 1, cy: *x }\n", "s.yaml:6:16: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"},
+		{"anchor and alias", head + "  - dot: { cx: &x 1, cy: *x }\n", "s.yaml:6:16: anchors, aliases, merge keys (<<) and tags are not supported; write the value out\ns.yaml:6:26: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"},
 		{"not a mapping", "- a\n", "s.yaml:1:1: diagram: write a mapping of keys and values"},
 		{"unknown top key", head + "  []\nwidht: 3\n", `s.yaml:7:1: diagram: unknown key "widht"; use id, width, height, title, parts`},
 		{"missing key", "id: d\nheight: 1\ntitle: T\nparts: []\n", "s.yaml:1:1: diagram: give width"},
@@ -156,6 +156,31 @@ func TestParseErrors(t *testing.T) {
 		{"missing rows", head + "  - box: { x: 1, y: 1, w: 1, h: 1 }\n", "s.yaml:6:5: box: give rows"},
 		{"missing ticks", head + "  - axis: { x1: 1, x2: 2, y: 3 }\n", "s.yaml:6:5: axis: give ticks"},
 		{"edge label without at", head + "  - edge: { d: 'M0,0 H1', label: a }\n", `s.yaml:6:34: edge "M0,0 H1" has a label but no at: [x, y]`},
+		// Every mistake is told at once, one to a value, but for what a mistake told already leaves wrong.
+		{
+			"every part's", head + "  - edge: { d: 'M60,30 H90 ;' }\n  - edge: { d: 'M60,30 H90 ?' }\n",
+			`s.yaml:6:16: edge "M60,30 H90 ;": unexpected ";"; write only M, H, V, L, numbers, spaces and commas` + "\n" +
+				`s.yaml:7:16: edge "M60,30 H90 ?": unexpected "?"; write only M, H, V, L, numbers, spaces and commas`,
+		},
+		{
+			"the diagram's and its parts'", "id: Arch\nwidth: 0\nheight: 1\ntitle: ' '\nparts:\n  - dot: { cx: a, cy: 1 }\n",
+			`s.yaml:1:5: diagram id "Arch": use lowercase letters, digits and hyphens` + "\n" +
+				"s.yaml:2:8: diagram: width must be greater than 0\n" +
+				`s.yaml:4:8: diagram "Arch": give a title (read aloud by screen readers)` + "\n" +
+				"s.yaml:6:16: dot: cx must be a number",
+		},
+		{
+			"an unknown key and a value, not the key it meant", head + "  - box: { x: '1', y: 1, wdth: 1, h: 1, rows: a }\n",
+			"s.yaml:6:15: box: x must be a number\n" + `s.yaml:6:26: box: unknown key "wdth"; use x, y, w, h, rows, tone, shape`,
+		},
+		{"each key missing", head + "  - dot: {}\n", "s.yaml:6:5: dot: give cx\ns.yaml:6:5: dot: give cy"},
+		{"no number, so not its size", head + "  - box: { x: 1, y: 1, w: a, h: 1, rows: b }\n", "s.yaml:6:27: box: w must be a number"},
+		{"no text, so not its value", head + "  - dot: { cx: 1, cy: 2, tone: [a] }\n", "s.yaml:6:32: dot: tone must be text"},
+		{
+			"each row", head + "  - box: { x: 1, y: 1, w: 1, h: 1, rows: [[a, b, c], [d]] }\n",
+			"s.yaml:6:43: box: write each row as text or [text, style]\ns.yaml:6:54: box: write each row as text or [text, style]",
+		},
+		{"an at given wrong, not missing", head + "  - edge: { d: 'M0,0 H1', label: a, at: [1] }\n", "s.yaml:6:41: edge: at must be a pair of numbers, like [320, 100]"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

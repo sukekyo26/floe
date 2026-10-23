@@ -444,25 +444,23 @@ func Place(file string, at Pos, e *usererr.Error) *usererr.Error {
 	return e.Placed(file, at.Line, at.Column, e.At)
 }
 
-// FirstAnchor returns the first anchor, alias, merge key (<<) or tag under n, or nil. Callers refuse them, so that
-// every value is written where its position points.
-func FirstAnchor(n ast.Node) ast.Node {
-	a := &anchors{found: nil}
+// Anchors refuses every anchor, alias, merge key (<<) or tag under n, of file, so that every value is written
+// where its position points; nil for none.
+func Anchors(file string, n ast.Node) error {
+	a := &anchors{file: file, found: nil}
 	ast.Walk(a, n)
-	return a.found
+	return a.found.Err()
 }
 
 type anchors struct {
-	found ast.Node
+	file  string
+	found usererr.List
 }
 
 func (a *anchors) Visit(n ast.Node) ast.Visitor {
-	if a.found != nil {
-		return nil
-	}
 	switch n.(type) {
 	case *ast.AnchorNode, *ast.AliasNode, *ast.TagNode, *ast.MergeKeyNode:
-		a.found = n
+		a.found = append(a.found, New(a.file, Of(n), "yaml_no_anchors"))
 		return nil
 	default:
 		return a

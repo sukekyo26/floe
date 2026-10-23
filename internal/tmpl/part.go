@@ -744,8 +744,6 @@ func joinDescriptions(beside, named string) string {
 // checkParts checks the items of d of whole floe draws by parts against the checks of their parts, and
 // draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every failure at its
 // line and column under root. It runs after checkDiagrams and checkScripts, which draw theirs into d.parts.
-// LIMIT: checkDiagrams draws no diagram when one is refused, so a part holding a right one waits, untold of its
-// own mistakes, for that one to be fixed. Draw each that is right when diagrams come to be told all at once.
 func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
 	escaped := map[*part]bool{}

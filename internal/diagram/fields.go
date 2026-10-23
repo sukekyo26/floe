@@ -11,19 +11,20 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// fields reads the keys of one mapping and keeps the first mistake, so a decoder reads every key
-// in a row and checks once at the end. The keys a decoder asks for are the keys it knows.
+// fields reads the keys of one mapping and keeps every mistake, one to a value, so a decoder reads every
+// key in a row and checks once at the end. The keys a decoder asks for are the keys it knows.
 type fields struct {
-	file   string
-	kind   string      // names the mapping in messages: diagram, box, edge…
-	at     yamlpos.Pos // where a missing key is reported
-	values []*ast.MappingValueNode
-	asked  []string
-	err    *usererr.Error
+	file     string
+	kind     string      // names the mapping in messages: diagram, box, edge…
+	at       yamlpos.Pos // where a missing key is reported
+	values   []*ast.MappingValueNode
+	asked    []string
+	mistakes usererr.List
+	missed   usererr.List // the keys not given, told unless one given is unknown
 }
 
 func newFields(file, kind string, at yamlpos.Pos, n ast.Node) (*fields, error) {
-	f := &fields{file: file, kind: kind, at: at, values: nil, asked: nil, err: nil}
+	f := &fields{file: file, kind: kind, at: at, values: nil, asked: nil, mistakes: nil, missed: nil}
 	m, ok := n.(*ast.MappingNode)
 	if !ok {
 		if _, null := n.(*ast.NullNode); !null {
@@ -39,10 +40,28 @@ func (f *fields) errAt(at yamlpos.Pos, key string, args ...any) *usererr.Error {
 	return yamlpos.New(f.file, at, key, args...)
 }
 
+// fail tells the mistake key of the value n, unless it has one: what is checked of a value it does not hold
+// would only say again what is wrong with it.
 func (f *fields) fail(n ast.Node, key string, args ...any) {
-	if f.err == nil {
-		f.err = f.errAt(yamlpos.Of(n), key, args...)
+	f.add(f.errAt(yamlpos.Of(n), key, args...))
+}
+
+func (f *fields) add(e *usererr.Error) {
+	if !f.failed(yamlpos.Pos{Line: e.Line, Column: e.Column}) {
+		f.mistakes = append(f.mistakes, e)
 	}
+}
+
+func (f *fields) failed(at yamlpos.Pos) bool {
+	return slices.ContainsFunc(f.mistakes, func(e *usererr.Error) bool {
+		return e.Line == at.Line && e.Column == at.Column
+	})
+}
+
+// ok reports whether key is given and its value read without a mistake, for a check that reads it.
+func (f *fields) ok(key string) bool {
+	n := f.lookup(key)
+	return n != nil && !f.failed(yamlpos.Of(n))
 }
 
 // get returns the value of key, or nil when the mapping does not have it.
@@ -62,23 +81,23 @@ func (f *fields) lookup(key string) ast.Node {
 }
 
 func (f *fields) missing(key string) {
-	if f.err == nil {
-		f.err = f.errAt(f.at, "diagram_missing_key", f.kind, key)
-	}
+	f.missed = append(f.missed, f.errAt(f.at, "diagram_missing_key", f.kind, key))
 }
 
-// done reports an unknown key before any other mistake: a misspelt key also leaves the key it
-// meant missing, and the misspelling is what to fix.
+// done returns every mistake: each unknown key, the mistakes of the values, then the keys not given, unless
+// a key is unknown: a misspelt key also leaves the key it meant missing, and the misspelling is what to fix.
 func (f *fields) done() error {
+	var unknown usererr.List
 	for _, v := range f.values {
 		if !slices.Contains(f.asked, v.Key.String()) {
-			return f.errAt(yamlpos.Of(v.Key), "diagram_unknown_key", f.kind, v.Key.String(), strings.Join(f.asked, ", "))
+			unknown = append(unknown,
+				f.errAt(yamlpos.Of(v.Key), "diagram_unknown_key", f.kind, v.Key.String(), strings.Join(f.asked, ", ")))
 		}
 	}
-	if f.err != nil {
-		return f.err
+	if len(unknown) > 0 {
+		return slices.Concat(unknown, f.mistakes).Err()
 	}
-	return nil
+	return slices.Concat(f.mistakes, f.missed).Err()
 }
 
 func (f *fields) number(key string, n ast.Node) float64 {
@@ -160,8 +179,8 @@ func (f *fields) text(key string, n ast.Node) string {
 	case *ast.IntegerNode, *ast.FloatNode, *ast.BoolNode:
 		return n.GetToken().Value
 	default:
-		if f.err == nil && yamlpos.ColonText(n) {
-			f.err = yamlpos.NewHinted(f.file, yamlpos.Of(n), "yaml_hint_colon", "diagram_not_text", f.kind, key)
+		if yamlpos.ColonText(n) {
+			f.add(yamlpos.NewHinted(f.file, yamlpos.Of(n), "yaml_hint_colon", "diagram_not_text", f.kind, key))
 		}
 		f.fail(n, "diagram_not_text", f.kind, key)
 		return ""
@@ -211,7 +230,7 @@ func (f *fields) oneOf(key, def string, allowed ...string) string {
 }
 
 func (f *fields) allow(n ast.Node, key, v string, allowed []string) {
-	if f.err == nil && !slices.Contains(allowed, v) {
+	if !slices.Contains(allowed, v) {
 		f.fail(n, "diagram_unknown_value", f.kind, key, v, strings.Join(allowed, ", "))
 	}
 }

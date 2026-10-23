@@ -13,11 +13,11 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// A mapping is at its first key, not at the indentation before it, and an anchor is found anywhere.
-func TestOfAndFirstAnchor(t *testing.T) {
+// A mapping is at its first key, not at the indentation before it, and every anchor is refused, wherever it is.
+func TestOfAndAnchors(t *testing.T) {
 	t.Parallel()
 
-	doc, err := parser.ParseBytes([]byte("list:\n  - a: 1\n    b: &x 2\n"), 0)
+	doc, err := parser.ParseBytes([]byte("list:\n  - a: &y 1\n    b: &x 2\n"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,17 +25,17 @@ func TestOfAndFirstAnchor(t *testing.T) {
 	if got := yamlpos.Of(body); got != (yamlpos.Pos{Line: 1, Column: 1}) {
 		t.Errorf("Of(the top mapping) = %+v", got)
 	}
-	a := yamlpos.FirstAnchor(body)
-	if a == nil || yamlpos.Of(a) != (yamlpos.Pos{Line: 3, Column: 8}) {
-		t.Errorf("FirstAnchor = %v", a)
+	const told = "anchors, aliases, merge keys (<<) and tags are not supported; write the value out"
+	if err = yamlpos.Anchors("d.yaml", body); err == nil || err.Error() != "d.yaml:2:8: "+told+"\nd.yaml:3:8: "+told {
+		t.Errorf("Anchors = %v, want both", err)
 	}
 	merge, err := parser.ParseBytes([]byte("a: 1\n<<: {b: 2}\n"), 0)
-	if err != nil || yamlpos.FirstAnchor(merge.Docs[0].Body) == nil {
-		t.Error("FirstAnchor missed a merge key")
+	if err != nil || yamlpos.Anchors("d.yaml", merge.Docs[0].Body) == nil {
+		t.Error("Anchors missed a merge key")
 	}
 	clean, err := parser.ParseBytes([]byte("a: 1\n"), 0)
-	if err != nil || yamlpos.FirstAnchor(clean.Docs[0].Body) != nil {
-		t.Error("FirstAnchor found one in plain YAML")
+	if err != nil || yamlpos.Anchors("d.yaml", clean.Docs[0].Body) != nil {
+		t.Error("Anchors found one in plain YAML")
 	}
 }
 

@@ -53,14 +53,17 @@ var markerKinds = func() []string {
 
 // Render checks the specs and draws each, in order, as an HTML fragment of inline SVG, with the icons
 // of store. The ids of the diagrams name their markers and icons, so they must differ between the
-// specs drawn together. On a mistake it draws nothing and returns the mistakes of every spec.
+// specs drawn together. It returns the mistakes of every spec, and draws each spec without one: that of a
+// spec with a mistake is "". A caller that uses the drawing only when every spec is drawn stops on the
+// error; one that uses each drawn spec skips the "". On a failure (icons that cannot be read) it draws none.
 func Render(specs []*Spec, store *icons.Store) ([]string, error) {
 	var problems usererr.List
 	layouts := make([]*layout, len(specs))
 	first := map[string]*Spec{}
 	for i, s := range specs {
+		var own usererr.List
 		if f, ok := first[s.ID]; ok {
-			problems = append(problems, yamlpos.New(s.File, s.Pos, "diagram_id_used", s.ID, f.File, f.Line))
+			own = append(own, yamlpos.New(s.File, s.Pos, "diagram_id_used", s.ID, f.File, f.Line))
 		} else {
 			first[s.ID] = s
 		}
@@ -68,17 +71,18 @@ func Render(specs []*Spec, store *icons.Store) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		layouts[i] = l
-		problems = append(problems, layouts[i].check()...)
-	}
-	if len(problems) > 0 {
-		return nil, problems
+		if own = append(own, l.check()...); len(own) == 0 {
+			layouts[i] = l
+		}
+		problems = append(problems, own...)
 	}
 	out := make([]string, len(layouts))
 	for i, l := range layouts {
-		out[i] = string(l.svg())
+		if l != nil {
+			out[i] = string(l.svg())
+		}
 	}
-	return out, nil
+	return out, problems.Err()
 }
 
 func (l *layout) svg() markup {

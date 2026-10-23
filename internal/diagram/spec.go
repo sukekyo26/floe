@@ -205,8 +205,9 @@ func Parse(file string, src []byte) (*Spec, error) {
 // FromNode reads a spec from a node of YAML already parsed, such as a diagram inside a data file,
 // so that its errors point at the lines and columns of that file.
 func FromNode(file string, n ast.Node) (*Spec, error) {
-	if a := yamlpos.FirstAnchor(n); a != nil {
-		return nil, yamlpos.New(file, yamlpos.Of(a), "yaml_no_anchors")
+	// Nothing else is read: a value is not written where an alias's position points.
+	if err := yamlpos.Anchors(file, n); err != nil {
+		return nil, err //nolint:wrapcheck // mistakes at their lines and columns
 	}
 	f, err := newFields(file, "diagram", yamlpos.Of(n), n)
 	if err != nil {
@@ -220,25 +221,31 @@ func FromNode(file string, n ast.Node) (*Spec, error) {
 	if f.lookup("parts") == nil {
 		f.missing("parts")
 	}
-	if err := f.done(); err != nil {
-		return nil, err
+	if f.ok("id") && !idRe.MatchString(spec.ID) {
+		f.fail(f.lookup("id"), "diagram_bad_id", spec.ID)
 	}
-	if !idRe.MatchString(spec.ID) {
-		return nil, f.errAt(yamlpos.Of(f.lookup("id")), "diagram_bad_id", spec.ID)
+	// No title is told as a key not given is; one of spaces alone always.
+	if n := f.lookup("title"); n == nil {
+		f.missed = append(f.missed, f.errAt(f.at, "diagram_no_title", spec.ID))
+	} else if strings.TrimSpace(spec.Title) == "" {
+		f.fail(n, "diagram_no_title", spec.ID)
 	}
-	if strings.TrimSpace(spec.Title) == "" {
-		at := f.at
-		if n := f.lookup("title"); n != nil {
-			at = yamlpos.Of(n)
-		}
-		return nil, f.errAt(at, "diagram_no_title", spec.ID)
+	var found usererr.List
+	if failed := found.Add(f.done()); failed != nil {
+		return nil, failed //nolint:wrapcheck // already says what failed
 	}
+	// Each part on its own: a part told wrong is left out, and the others read.
 	for _, item := range items {
 		p, err := decodePart(file, item)
-		if err != nil {
-			return nil, err
+		if failed := found.Add(err); failed != nil {
+			return nil, failed //nolint:wrapcheck // already says what failed
 		}
-		spec.Parts = append(spec.Parts, p)
+		if err == nil {
+			spec.Parts = append(spec.Parts, p)
+		}
+	}
+	if len(found) > 0 {
+		return nil, found.Sorted()
 	}
 	return spec, nil
 }
@@ -304,7 +311,7 @@ func boxRows(f *fields) []Row {
 		if s, ok := item.(*ast.SequenceNode); ok {
 			if len(s.Values) != 2 {
 				f.fail(item, "diagram_box_row", f.kind)
-				return nil
+				continue
 			}
 			item = s.Values[0]
 			style = f.text("rows", s.Values[1])
@@ -340,7 +347,7 @@ func tableRows(f *fields) []TableRow {
 			}
 		default:
 			f.fail(item, "diagram_table_row", f.kind)
-			return nil
+			continue
 		}
 		rows = append(rows, row)
 	}
@@ -361,16 +368,17 @@ func decodeEdge(f *fields) Part {
 		Start: f.oneOf("start", "none", markerKinds...), End: f.oneOf("end", "arrow", markerKinds...),
 		Crossing: f.flag("crossing"),
 	}
-	if f.err != nil {
+	// Read of d, which names the edge in the mistakes.
+	if !f.ok("d") {
 		return e
 	}
 	segs, err := segments(e.D)
 	if err != nil {
 		f.fail(f.lookup("d"), err.Key, err.Args...)
-		return e
 	}
 	e.Segs = segs
-	if e.Label != "" && e.LabelAt == nil {
+	// An at given wrong is told as such.
+	if e.Label != "" && f.lookup("at") == nil {
 		f.fail(f.lookup("label"), "diagram_edge_no_at", e.D)
 	}
 	return e
@@ -471,7 +479,7 @@ func ticks(f *fields) []Tick {
 		pair, ok := item.(*ast.SequenceNode)
 		if !ok || len(pair.Values) != 2 {
 			f.fail(item, "diagram_tick", f.kind)
-			return nil
+			continue
 		}
 		out = append(out, Tick{X: f.number("ticks", pair.Values[0]), Text: f.text("ticks", pair.Values[1])})
 	}

@@ -16,8 +16,9 @@ import (
 // checkDiagrams reads the diagrams of d, its items of whole of the part diagram, from their nodes under root,
 // checks them and draws them into d.parts with the icons kept in iconsDir. The icons are read afresh for
 // each data file: a server that kept them would draw those a fetch replaced.
-// As floe diagram render does, a spec stops at the first mistake in its shape, and every mistake of
-// its placement is reported. The ids are checked across the page: they name the markers and icons its diagrams define.
+// As floe diagram render does, every mistake of a spec's shape is reported, and those of its placement once
+// it has none. The ids are checked across the page: they name the markers and icons its diagrams define. Each
+// diagram without a mistake is drawn, for the parts holding it to be checked.
 func checkDiagrams(whole drawnItems, d *Data, root ast.Node, iconsDir string) error {
 	found := whole.ofPart("diagram")
 	if found == nil {
@@ -44,15 +45,15 @@ func checkDiagrams(whole drawnItems, d *Data, root ast.Node, iconsDir string) er
 	// Watched for a link: the fetch a mistake asks for, or one that replaces them, draws it again.
 	d.icons = store.Indexes()
 	svgs, err := diagram.Render(specs, store)
-	if err = usererr.Collect(append(errs, err)...); err != nil {
-		return err
-	}
-	d.diagrams = true
 	// The part's element holds the zoom toolbar too, which the script puts before the diagram's frame. It
 	// draws no box, so that the toolbar and the frame stand where they would without it.
-	for i, spec := range specs {
-		html := `<div data-floe-part="diagram" style="display: contents">` + svgs[i] + `</div>`
-		d.drew(paths[spec], template.HTML(html)) //nolint:gosec // G203: drawn by diagram, its values escaped
+	for i, svg := range svgs {
+		if svg == "" {
+			continue
+		}
+		d.diagrams = true
+		html := `<div data-floe-part="diagram" style="display: contents">` + svg + `</div>`
+		d.drew(paths[specs[i]], template.HTML(html)) //nolint:gosec // G203: drawn by diagram, its values escaped
 	}
-	return nil
+	return usererr.Collect(append(errs, err)...)
 }

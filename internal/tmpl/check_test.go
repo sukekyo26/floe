@@ -156,7 +156,10 @@ func TestCheckMistakes(t *testing.T) {
 		{
 			name:  "anchors",
 			files: map[string]string{"checks.yaml": "- for: files\n  expr: 'true'\n  message: &m m\n- for: files\n  expr: 'true'\n  message: *m\n"},
-			want:  []string{"sizes/checks.yaml:3:12: anchors, aliases, merge keys (<<) and tags are not supported"},
+			want: []string{
+				"sizes/checks.yaml:3:12: anchors, aliases, merge keys (<<) and tags are not supported",
+				"sizes/checks.yaml:6:12: anchors, aliases, merge keys (<<) and tags are not supported",
+			},
 		},
 		{
 			name:  "missing key",
