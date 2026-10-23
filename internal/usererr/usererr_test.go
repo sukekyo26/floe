@@ -81,7 +81,8 @@ func TestListSorted(t *testing.T) {
 	}
 }
 
-// Show tells a placed mistake, a list and a name in use from a refusal and from floe's failure.
+// Show tells a placed mistake, a list of them, one of a placed one among others, and a name in use from a
+// refusal and from floe's failure.
 func TestShow(t *testing.T) {
 	t.Parallel()
 
@@ -93,7 +94,9 @@ func TestShow(t *testing.T) {
 	}{
 		{usererr.New("tmpl_no_lang"), usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: false}},
 		{usererr.NewAt("a.yaml", 1, 2, "tmpl_no_lang"), usererr.Shown{Text: "a.yaml:1:2: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: true, Conflict: false}},
-		{usererr.List{usererr.New("tmpl_no_lang")}, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: true, Conflict: false}},
+		{usererr.List{usererr.New("tmpl_no_lang")}, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: false}},
+		{usererr.List{usererr.New("tmpl_no_lang"), usererr.NewAt("a.yaml", 1, 2, "tmpl_no_lang")}, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\na.yaml:1:2: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: true, Conflict: false}},
+		{usererr.List{conflict}, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: true}},
 		{conflict, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: true}},
 		{errors.New("disk on fire"), usererr.Shown{Text: "disk on fire", Fixable: false, Placed: false, Conflict: false}},
 	} {

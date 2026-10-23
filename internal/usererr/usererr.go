@@ -232,7 +232,10 @@ func Show(c *i18n.Catalog, err error) Shown {
 	var one *Error
 	switch {
 	case errors.As(err, &all):
-		s.Placed = true
+		// Placed when one of them is: a list of none, such as settings that are not right, goes out with
+		// floe's name before it, as one of them alone does.
+		s.Placed = slices.ContainsFunc(all, func(e *Error) bool { return e.File != "" })
+		s.Conflict = !slices.ContainsFunc(all, func(e *Error) bool { return !e.Conflict })
 	case errors.As(err, &one):
 		s.Placed, s.Conflict = one.File != "", one.Conflict
 	}
