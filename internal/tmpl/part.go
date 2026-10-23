@@ -749,7 +749,7 @@ func joinDescriptions(beside, named string) string {
 func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
 	escaped := map[*part]bool{}
-	var undrawn [][]string // the paths of the items not drawn
+	holding := map[string]bool{} // by pathKey, the items holding one not drawn
 	for _, f := range whole {
 		p := f.part
 		if p == nil {
@@ -758,7 +758,7 @@ func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 		if p.pages == nil {
 			// A part drawn in Go, by its own check before this one, which may have refused it.
 			if _, drawn := d.parts[pathKey(f.at)]; !drawn {
-				undrawn = append(undrawn, f.at)
+				holdUndrawn(holding, f.at)
 			}
 			continue
 		}
@@ -768,12 +768,12 @@ func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 		}
 		if more != nil {
 			problems = append(problems, more...)
-			undrawn = append(undrawn, f.at)
+			holdUndrawn(holding, f.at)
 			continue
 		}
-		if holdsOne(f.at, undrawn) {
+		if holding[pathKey(f.at)] {
 			// It holds an item not drawn: drawn without it, it would fail, or be told to, for that one's mistake.
-			undrawn = append(undrawn, f.at)
+			// Those holding it are noted already, as they hold that item too.
 			continue
 		}
 		html, err := p.draw(f.itemAt, d)
@@ -781,18 +781,18 @@ func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 			d.drew(f.at, html)
 			continue
 		}
-		undrawn = append(undrawn, f.at)
-		if err = problems.Add(p.drawMistake(err, f.at, d, root, escaped)); err != nil {
+		holdUndrawn(holding, f.at)
+		if err = problems.Add(p.drawnMistake(err, f.at, d, root, escaped)); err != nil {
 			return err //nolint:wrapcheck // already says what failed
 		}
 	}
 	return problems.Err()
 }
 
-// drawMistake is the mistake err of p drawing the item at the path at of d, under root, or nil when it was
+// drawnMistake is the mistake err of p drawing the item at the path at of d, under root, or nil when it was
 // told already: what html/template cannot escape in p, the same whatever the item, is told once, noted in
 // escaped.
-func (p *part) drawMistake(err error, at []string, d *Data, root ast.Node, escaped map[*part]bool) error {
+func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node, escaped map[*part]bool) error {
 	var bad *usererr.Error
 	var escape *template.Error
 	isEscape := errors.As(err, &escape)
@@ -810,11 +810,12 @@ func (p *part) drawMistake(err error, at []string, d *Data, root ast.Node, escap
 	return drawMistake(err, p.file("part.html"), p.dir != "", "tmpl_render_item", item, d.File)
 }
 
-// holdsOne reports whether the item at the path at holds one at a path of paths.
-// LIMIT: looks through every path, for each item drawn by a part. Keep the paths' prefixes in a set if a page
-// comes to fail on thousands of items, such as cells of a table.
-func holdsOne(at []string, paths [][]string) bool {
-	return slices.ContainsFunc(paths, func(u []string) bool { return len(u) > len(at) && slices.Equal(u[:len(at)], at) })
+// holdUndrawn notes in holding the items that hold the one at the path at, not drawn: walkWhole puts them
+// after it.
+func holdUndrawn(holding map[string]bool, at []string) {
+	for i := range at {
+		holding[pathKey(at[:i])] = true
+	}
 }
 
 // drew notes html, a part's drawing of the item at the path at.
