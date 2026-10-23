@@ -131,7 +131,7 @@ func strayRefMistake(url, file string, err error) *usererr.Error {
 		return nil
 	}
 	to, _ := pointerIn(url, leads)
-	return notFound(key, to, "schema.json").Placed(file, 0, 0, "#")
+	return notFound(key, to, "schema.json", true).Placed(file, 0, 0, "#")
 }
 
 // compileMistake returns err, what stopped the compiling of the schema at url, file, as a mistake of what
@@ -140,12 +140,17 @@ func strayRefMistake(url, file string, err error) *usererr.Error {
 func compileMistake(url, file string, err error) *usererr.Error {
 	in := func(u string) (string, bool) { return pointerIn(url, u) }
 	var (
+		id      *jsonschema.ParseIDError
 		anchor  *jsonschema.ParseAnchorError
 		anchors *jsonschema.DuplicateAnchorError
 		ids     *jsonschema.DuplicateIDError
 		regex   *jsonschema.InvalidRegexError
 	)
 	switch {
+	case errors.As(err, &id):
+		if at, ok := in(id.URL); ok {
+			return usererr.NewIn(file, at, "tmpl_schema_id")
+		}
 	case errors.As(err, &anchor):
 		if at, ok := in(anchor.URL); ok {
 			return usererr.NewIn(file, at, "tmpl_schema_anchor")
@@ -167,16 +172,41 @@ func compileMistake(url, file string, err error) *usererr.Error {
 }
 
 // refTargetMistake returns err, what stopped the compiling of what the $ref ref points at, as the mistake
-// of the $ref, a $ref to `to` in `in`, when jsonschema found nothing there: no JSON pointer, nothing at it,
-// or no $anchor of its name. It returns nil for none, and for a stop elsewhere, another $ref's or schema's.
-func refTargetMistake(ref string, err error, to, in string) *usererr.Error {
+// of the $ref, a $ref to `to` in `in`, the user's own file when own, when jsonschema found nothing there: no
+// JSON pointer, nothing at it, or no $anchor of its name. It returns nil for none, and for a stop
+// elsewhere, another $ref's or schema's.
+func refTargetMistake(ref string, err error, to, in string, own bool) *usererr.Error {
 	key, _, leads := missingTarget(err)
-	base, _, _ := strings.Cut(ref, "#")
-	want, _ := pointerIn(base, ref)
-	if got, ok := pointerIn(base, leads); key == "" || !ok || got != want {
+	if key == "" || !samePlace(ref, leads) {
 		return nil
 	}
-	return notFound(key, to, in)
+	return notFound(key, to, in, own)
+}
+
+// refNoSchemaMistake returns err, what stopped the compiling of what the $ref ref points at, as the mistake
+// of the $ref when what it points at is no schema JSON Schema takes, such as a value of an enum, and nil
+// for another.
+// LIMIT: why, in jsonschema's English.
+func refNoSchemaMistake(ref string, err error) *usererr.Error {
+	var invalid *jsonschema.SchemaValidationError
+	if !errors.As(err, &invalid) || !samePlace(ref, invalid.URL) {
+		return nil
+	}
+	why := invalid.Err.Error()
+	var ve *jsonschema.ValidationError
+	if errors.As(invalid.Err, &ve) {
+		leaves(ve, func(e *jsonschema.ValidationError) { why = e.ErrorKind.LocalizedString(english) })
+	}
+	return usererr.New("tmpl_schema_ref_no_schema", ref, why)
+}
+
+// samePlace reports whether the URL u, as jsonschema says it, is where ref points: the same schema and
+// JSON pointer, its fragment escaped or not.
+func samePlace(ref, u string) bool {
+	base, _, _ := strings.Cut(ref, "#")
+	want, _ := pointerIn(base, ref)
+	got, ok := pointerIn(base, u)
+	return ok && got == want
 }
 
 // missingTarget reads err as jsonschema's word that a $ref finds nothing where it points: no JSON pointer,
@@ -199,10 +229,16 @@ func missingTarget(err error) (key, schema, leads string) {
 	return "", "", ""
 }
 
-// notFound is the mistake of key (missingTarget) of a $ref to `to`, which finds nothing in `in`.
-func notFound(key, to, in string) *usererr.Error {
-	if key == "tmpl_schema_ref_pointer" {
+// notFound is the mistake of key (missingTarget) of a $ref to `to`, which finds nothing in `in`, the user's
+// own file when own, where what it refers to may be written.
+func notFound(key, to, in string, own bool) *usererr.Error {
+	switch {
+	case key == "tmpl_schema_ref_pointer":
 		return usererr.New(key, to) // no pointer: nothing was looked for
+	case !own && key == "tmpl_schema_ref_nothing":
+		return usererr.New("tmpl_schema_ref_nothing_there", to, in)
+	case !own && key == "tmpl_schema_ref_anchor":
+		return usererr.New("tmpl_schema_ref_anchor_there", to, in)
 	}
 	return usererr.New(key, to, in)
 }

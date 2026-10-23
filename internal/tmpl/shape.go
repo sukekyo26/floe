@@ -329,28 +329,37 @@ func (set *partSet) refMistake(n *schemaNotes, r refAt, resolve func(ref string)
 	base, _, _ := strings.Cut(r.ref, "#")
 	switch {
 	case n.own[base]:
-		return n.targetMistake(r, resolve)
+		return n.targetMistake(r, base, resolve)
 	case strings.HasPrefix(base, partsURL):
 		return set.partMistake(n, r, base, resolve)
 	case !heldByJSONSchema(base):
 		return n.at(r, usererr.New("tmpl_schema_url", base))
 	}
-	return n.targetMistake(r, resolve) // into a draft of JSON Schema, which jsonschema holds
+	return n.targetMistake(r, base, resolve) // into a draft of JSON Schema, which jsonschema holds
 }
 
-// targetMistake returns the mistake of r, a $ref of the schema of n into a schema floe holds, when
-// jsonschema finds nothing where it points (refTargetMistake), at the $ref, or nil; resolve compiles what
-// it points at.
+// targetMistake returns the mistake of r, a $ref of the schema of n into base, a schema floe holds, when
+// jsonschema finds nothing where it points (refTargetMistake), or what is no schema in another file
+// (refNoSchemaMistake), at the $ref, or nil; resolve compiles what it points at. What is no schema in its
+// own file is told by the compiling, under its own pointer.
 // LIMIT: a $ref to the URL an $id gives is not resolved: noLoader refuses that URL, which is told by the
-// compiling at the top of the file. Resolve it from where the $id is if a schema comes to need it.
-func (n *schemaNotes) targetMistake(r refAt, resolve func(ref string) error) *usererr.Error {
-	base, _, _ := strings.Cut(r.ref, "#")
+// compiling at the top of the file, a part's where floe compiles parts' schemas. Resolve it from where the
+// $id is if a schema comes to need it.
+// LIMIT: jsonschema refuses a schema the metaschema refuses before it resolves a $ref of it, so its $refs
+// are checked once that is fixed.
+func (n *schemaNotes) targetMistake(r refAt, base string, resolve func(ref string) error) *usererr.Error {
+	own := n.own[base]
 	to, in := r.ref, base
-	if n.own[base] {
+	if own {
 		to, _ = pointerIn(base, r.ref)
 		in = "schema.json"
 	}
-	if e := refTargetMistake(r.ref, resolve(r.ref), to, in); e != nil {
+	err := resolve(r.ref)
+	e := refTargetMistake(r.ref, err, to, in, own)
+	if e == nil && !own {
+		e = refNoSchemaMistake(r.ref, err)
+	}
+	if e != nil {
 		return n.at(r, e)
 	}
 	return nil
@@ -374,7 +383,7 @@ func (set *partSet) partMistake(n *schemaNotes, r refAt, base string, resolve fu
 	case !whole && set.docs[base] != nil:
 		if _, into := set.pointsInto(r.ref); !into {
 			// into what holds nothing floe draws, as tone.json's enum: drawn as written, once it is there
-			return n.targetMistake(r, resolve)
+			return n.targetMistake(r, base, resolve)
 		}
 	}
 	return n.at(r, unknownPart(set, r.ref))

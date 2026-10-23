@@ -263,7 +263,7 @@ func TestCheckMistakes(t *testing.T) {
 			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "floe:///parts/tone.json#/nope" }, "mark": { "$ref": "floe:///parts/tone.json#nope" },` +
 				"\n    " + `"chart":`},
 			want: []string{
-				`sizes/schema.json: #/properties/code: a $ref to floe:///parts/tone.json#/nope finds nothing in floe:///parts/tone.json`,
+				`sizes/schema.json: #/properties/code: a $ref to floe:///parts/tone.json#/nope finds nothing in floe:///parts/tone.json: refer to what is there`,
 				`sizes/schema.json: #/properties/mark: a $ref to floe:///parts/tone.json#nope finds no $anchor of that name in floe:///parts/tone.json`,
 			},
 		},
@@ -291,6 +291,17 @@ func TestCheckMistakes(t *testing.T) {
 			name:  "a $ref to what JSON Schema does not take",
 			files: map[string]string{"schema.json": `"properties": {|"foo": { "type": 5 }, "properties": { "code": { "$ref": "#/foo" },`},
 			want:  []string{`sizes/schema.json: #/foo/type: JSON Schema does not take this: `},
+		},
+		{
+			// In another file, at the $ref, which is all the user can change.
+			name:  "a $ref to what is no schema in a part",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "floe:///parts/tone.json#/enum/0" },` + "\n    " + `"chart":`},
+			want:  []string{`sizes/schema.json: #/properties/code: a $ref to floe:///parts/tone.json#/enum/0 points at what is no schema`},
+		},
+		{
+			name:  "an $id that is no URL",
+			files: map[string]string{"schema.json": `"properties": {|"$id": "http://[::1", "properties": {`},
+			want:  []string{`sizes/schema.json: #: this $id cannot be read as a URL`},
 		},
 		{
 			name:  "a $dynamicRef",
