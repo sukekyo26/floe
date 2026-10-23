@@ -1,10 +1,11 @@
 package cli
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -16,8 +17,9 @@ const defaultPort = 7325
 
 var decimalIntRe = regexp.MustCompile(`^[0-9]+$`)
 
-// config is what floe reads from the environment. Every command checks it first, and is told every mistake
-// of it at once. A directory is nowhere without its setting, an XDG base directory and a home.
+// config is what floe reads from the environment: for each setting, its value, the mistake it is written
+// with (wrong), or why it has no default (absent), its value then none. A command is told of them as it
+// uses the setting (settle).
 type config struct {
 	root      string
 	icons     string // empty when there is nowhere to put it, which the icons commands refuse
@@ -26,6 +28,8 @@ type config struct {
 	themes    string // the themes of one's own; empty when there is nowhere to put them
 	home      string
 	port      int
+	wrong     map[setting]*usererr.Error
+	absent    map[setting]*usererr.Error
 }
 
 func (c *config) base() string {
@@ -35,105 +39,86 @@ func (c *config) base() string {
 // loadConfig reads the settings from getenv, a relative directory under dir, the working directory ("" when
 // it cannot be read), so that a server a command starts or finds, whatever its own, means the ones the
 // command does.
-func loadConfig(getenv func(string) string, dir string) (*config, error) {
-	c := &config{root: "", icons: "", templates: "", parts: "", themes: "", home: getenv("HOME"), port: defaultPort}
-	var found usererr.List
+func loadConfig(getenv func(string) string, dir string) *config {
+	c := &config{
+		root: "", icons: "", templates: "", parts: "", themes: "", home: getenv("HOME"), port: defaultPort,
+		wrong: map[setting]*usererr.Error{}, absent: map[setting]*usererr.Error{},
+	}
 	if raw := getenv("FLOE_PORT"); raw != "" {
 		// Decimal only: hex (0x10) and exponents (1e3) are typos, not ports.
 		port, err := strconv.Atoi(raw)
 		if !decimalIntRe.MatchString(raw) || err != nil || port < 1 || port > 65535 {
-			found = append(found, usererr.New("cli_invalid_port", raw))
+			c.wrong[portSetting] = usererr.New("cli_invalid_port", raw)
 		} else {
 			c.port = port
 		}
 	}
-	c.readDirs(getenv, dir, &found)
-	if err := found.Err(); err != nil {
-		return nil, err
-	}
-	return c, nil
+	c.readDirs(getenv, dir)
+	return c
 }
 
 // readDirs reads floe's directories: each its setting, else a default under the XDG base directory, else
-// under the home. With none of them, the icons and the templates, parts and themes of one's own are none
-// (the icons commands refuse that, and floe's templates, parts and themes are the only ones), and the pages
-// are refused. Each set that cannot be a directory is a mistake of its setting, added to found; the defaults
-// that cannot be are told by what is in their way, once for all it holds up.
-func (c *config) readDirs(getenv func(string) string, dir string, found *usererr.List) {
+// under the home. A setting that cannot be a directory is written wrong. A default that cannot be one, or
+// none at all, is absent, and none to a command that only reads it.
+func (c *config) readDirs(getenv func(string) string, dir string) {
 	data := xdgDir(getenv, "XDG_DATA_HOME", c.home, ".local", "share")
 	conf := xdgDir(getenv, "XDG_CONFIG_HOME", c.home, ".config")
-	var defaults []*heldUp
 	for _, d := range []struct {
+		s                    setting
 		key, xdg, base, name string
 		to                   *string
 	}{
-		// First, so that one without a place for the pages is told that before the rest.
-		{"FLOE_DIR", "XDG_DATA_HOME", data, "floe", &c.root},
+		{storeSetting, "FLOE_DIR", "XDG_DATA_HOME", data, "floe", &c.root},
 		// Not under FLOE_DIR: icons is a valid slug, so a page could take its place.
-		{"FLOE_ICONS_DIR", "XDG_DATA_HOME", data, "floe-icons", &c.icons},
-		{"FLOE_TEMPLATES_DIR", "XDG_CONFIG_HOME", conf, filepath.Join("floe", "templates"), &c.templates},
-		{"FLOE_PARTS_DIR", "XDG_CONFIG_HOME", conf, filepath.Join("floe", "parts"), &c.parts},
-		{"FLOE_THEMES_DIR", "XDG_CONFIG_HOME", conf, filepath.Join("floe", "themes"), &c.themes},
+		{iconsSetting, "FLOE_ICONS_DIR", "XDG_DATA_HOME", data, "floe-icons", &c.icons},
+		{templatesSetting, "FLOE_TEMPLATES_DIR", "XDG_CONFIG_HOME", conf, filepath.Join("floe", "templates"), &c.templates},
+		{partsSetting, "FLOE_PARTS_DIR", "XDG_CONFIG_HOME", conf, filepath.Join("floe", "parts"), &c.parts},
+		{themesSetting, "FLOE_THEMES_DIR", "XDG_CONFIG_HOME", conf, filepath.Join("floe", "themes"), &c.themes},
 	} {
 		v, mistake := floeDir(getenv, d.key, c.home, dir)
 		switch {
 		case mistake != nil:
-			*found = append(*found, mistake)
-			continue
+			c.wrong[d.s] = mistake
 		case v != "":
-			if at := notDir(v); at == v {
-				*found = append(*found, usererr.New("cli_dir_is_file", d.key, v, d.key))
-			} else if at != "" {
-				*found = append(*found, usererr.New("cli_dir_under_file", d.key, v, at, d.key))
+			if wrong := setNotDir(d.key, v); wrong != nil {
+				c.wrong[d.s] = wrong
+			} else {
+				*d.to = v
 			}
 		case d.base != "":
 			v = filepath.Join(d.base, d.name)
-			defaults = holdUp(defaults, notDir(v), d.key, d.xdg)
-		case d.to == &c.root:
-			*found = append(*found, usererr.New("cli_no_home"))
-			continue
+			if at := notDir(v); at != "" {
+				c.absent[d.s] = usererr.New("cli_default_held_up", at, d.key, d.xdg)
+			} else {
+				*d.to = v
+			}
+		default:
+			c.absent[d.s] = usererr.New("cli_no_default", d.key, d.key)
 		}
-		*d.to = v
-	}
-	for _, h := range defaults {
-		keys, xdgs := strings.Join(h.keys, ", "), strings.Join(h.xdgs, ", ")
-		*found = append(*found, usererr.New("cli_dirs_default_not_dir", h.at, keys, xdgs))
 	}
 }
 
-// heldUp is what at, not a directory, holds up: the settings whose defaults would be under it, and the XDG
-// base directories that put them there.
-type heldUp struct {
-	at         string
-	keys, xdgs []string
-}
-
-// holdUp adds the default of the setting key, which xdg puts under at, to what at holds up ("" for nothing).
-func holdUp(all []*heldUp, at, key, xdg string) []*heldUp {
-	if at == "" {
-		return all
+// setNotDir is the mistake of the setting key, v, when v cannot be a directory; nil when it can.
+func setNotDir(key, v string) *usererr.Error {
+	switch at := notDir(v); at {
+	case "":
+		return nil
+	case v:
+		return usererr.New("cli_dir_is_file", key, v, key)
+	default:
+		return usererr.New("cli_dir_under_file", key, v, at, key)
 	}
-	i := slices.IndexFunc(all, func(h *heldUp) bool { return h.at == at })
-	if i < 0 {
-		all, i = append(all, &heldUp{at: at, keys: nil, xdgs: nil}), len(all)
-	}
-	h := all[i]
-	h.keys = append(h.keys, key)
-	if !slices.Contains(h.xdgs, xdg) {
-		h.xdgs = append(h.xdgs, xdg)
-	}
-	return all
 }
 
 // notDir is where dir cannot be a directory: dir, or the nearest of its parents that is there, when that is
-// not a directory (a symlink that leads nowhere is there, and not one); "" when it is one. Whether floe may
-// write there is left to the commands that write, so that one that only reads is not stopped, and nothing
-// is made.
+// not a directory (a symlink that leads nowhere is there, and not one); "" when it is one, or may be. Whether
+// floe may write there is left to the commands that write, so that one that only reads is not stopped, and
+// nothing is made.
 func notDir(dir string) string {
 	for at := dir; ; at = filepath.Dir(at) {
 		info, err := os.Stat(at)
 		switch {
-		case err == nil && info.IsDir():
+		case err == nil && info.IsDir(), errors.Is(err, fs.ErrPermission):
 			return ""
 		case err == nil:
 			return at

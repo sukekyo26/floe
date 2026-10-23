@@ -402,7 +402,7 @@ func TestConfigErrors(t *testing.T) {
 	}
 	delete(e.vars, "FLOE_DIR")
 	delete(e.vars, "HOME")
-	want(t, "no HOME", e.run(t, "", "list"), 1, "", "floe: HOME is not set; set HOME or FLOE_DIR")
+	want(t, "no HOME", e.run(t, "", "list"), 1, "", "floe: HOME is not set, so FLOE_DIR has no default; set HOME or FLOE_DIR")
 }
 
 // The command line speaks English whatever language the environment names: an agent reads it.
@@ -824,6 +824,96 @@ func TestCheck(t *testing.T) {
 	if _, err := os.Stat(e.vars["FLOE_DIR"]); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("check wrote to the store: %v", err)
 	}
+}
+
+// A command is told the mistakes of the settings it uses alone. One written wrong stops it, whether it
+// reads or writes there; one without a default stops it only when it writes there or cannot do without
+// it, and is none to one that only reads it. Every reason is told at once.
+func TestSettingsByUse(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.write(t, "ok.yaml", "template: report\ntitle: OK\nlang: en\n")
+	e.write(t, "aws.yaml", "id: i\nwidth: 100\nheight: 50\ntitle: t\nparts:\n  - icon: { x: 10, y: 10, name: aws/aws-lambda }\n")
+	home := e.vars["HOME"]
+	delete(e.vars, "HOME")
+	want(t, "check without a home", e.run(t, "", "check", "ok.yaml"), 0, "", "")
+	want(t, "template new without a home", e.run(t, "", "template", "new", "x", "--from", "report"), 1, "",
+		"floe: HOME is not set, so FLOE_TEMPLATES_DIR has no default; set HOME or FLOE_TEMPLATES_DIR\n")
+	want(t, "diagram render of icons without a home", e.run(t, "", "diagram", "render", "aws.yaml"), 1, "",
+		`floe: there is no directory for icons; set FLOE_ICONS_DIR, then fetch a set with "floe icons fetch <set>"`)
+	// The server a command starts reads the same: no home, no default, for it too.
+	want(t, "list without a home", e.run(t, "", "list"), 0, "", "")
+	// Themes of one's own are read by part check, and wanted by part new only for a part with files of themes.
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	want(t, "part check without a home", e.run(t, "", "part", "check"), 0, "", "")
+	want(t, "part new of a part with themes without a home", e.run(t, "", "part", "new", "aside", "--from", "note"), 1, "",
+		"floe: there is no directory for themes of your own; set FLOE_THEMES_DIR\n")
+	delete(e.vars, "FLOE_PARTS_DIR")
+	e.vars["HOME"] = home
+	e.vars["FLOE_PORT"] = "0"
+	want(t, "check with a wrong port", e.run(t, "", "check", "ok.yaml"), 0, "", "")
+	if r := e.run(t, "", "list"); r.code != 1 || r.stderr != "floe: invalid FLOE_PORT \"0\": use a port number from 1 to 65535\n" {
+		t.Errorf("list with a wrong port = %d %q", r.code, r.stderr)
+	}
+	tilde := func(key string) string {
+		return "floe: " + key + " is ~x: floe takes only ~ and ~/ at the start for your home, not ~name; write the path " +
+			"absolute, or ./~x for a directory of that name under the working directory\n"
+	}
+	// Every reason is told at once, not the first alone.
+	e.vars["FLOE_PARTS_DIR"] = "~x"
+	if r := e.run(t, "", "publish", "ok.yaml"); r.code != 1 ||
+		r.stderr != "floe: invalid FLOE_PORT \"0\": use a port number from 1 to 65535\n"+tilde("FLOE_PARTS_DIR") {
+		t.Errorf("publish with a wrong port and parts = %d %q", r.code, r.stderr)
+	}
+	delete(e.vars, "FLOE_PARTS_DIR")
+	e.vars["FLOE_PORT"] = e.port
+	for _, c := range []struct {
+		key  string
+		args []string
+	}{
+		{"FLOE_PARTS_DIR", []string{"check", "ok.yaml"}},
+		{"FLOE_ICONS_DIR", []string{"diagram", "render", "aws.yaml"}},
+		{"FLOE_THEMES_DIR", []string{"part", "new", "x", "--from", "cards"}},
+	} {
+		e.vars[c.key] = "~x"
+		if r := e.run(t, "", c.args...); r.code != 1 || r.stderr != tilde(c.key) {
+			t.Errorf("%v with %s written wrong = %d %q", c.args, c.key, r.code, r.stderr)
+		}
+		delete(e.vars, c.key)
+	}
+}
+
+// A default a file holds up is nothing to a command that only reads it, and stops one that needs it, told by
+// the file in its way; a setting a file holds up stops every command that uses it.
+func TestSettingDirsHeldUp(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.write(t, "ok.yaml", "template: report\ntitle: OK\nlang: en\n")
+	home := e.vars["HOME"]
+	delete(e.vars, "FLOE_DIR")
+	e.vars["HOME"] = "/dev/null"
+	want(t, "check with a home that is a file", e.run(t, "", "check", "ok.yaml"), 0, "", "")
+	if r := e.run(t, "", "list"); r.code != 1 || r.stderr != "floe: /dev/null is not a directory, and FLOE_DIR would be there or under "+
+		"it by default; make it a directory, or set XDG_DATA_HOME or FLOE_DIR elsewhere\n" {
+		t.Errorf("list with a home that is a file = %d %q", r.code, r.stderr)
+	}
+	e.vars["HOME"] = home
+	e.write(t, "home/.config/floe/parts", "")
+	if r := e.run(t, "", "part", "check"); r.code != 1 || r.stderr != "floe: "+home+"/.config/floe/parts is not a directory, and "+
+		"FLOE_PARTS_DIR would be there or under it by default; make it a directory, or set XDG_CONFIG_HOME or FLOE_PARTS_DIR "+
+		"elsewhere\n" {
+		t.Errorf("part check where the parts are a file = %d %q", r.code, r.stderr)
+	}
+	want(t, "check where the parts are a file", e.run(t, "", "check", "ok.yaml"), 0, "", "")
+	e.vars["XDG_CONFIG_HOME"] = filepath.Join(home, ".config", "floe", "parts")
+	want(t, "template new under a file", e.run(t, "", "template", "new", "x", "--from", "report"), 1, "",
+		"floe: "+home+"/.config/floe/parts is not a directory, and FLOE_TEMPLATES_DIR would be there or under it by default")
+	delete(e.vars, "XDG_CONFIG_HOME")
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(home, ".config", "floe", "parts", "x")
+	want(t, "check with parts set under a file", e.run(t, "", "check", "ok.yaml"), 1, "",
+		"floe: FLOE_PARTS_DIR, "+home+"/.config/floe/parts/x, is under "+home+"/.config/floe/parts, which is not a directory")
 }
 
 // freePort picks below the ports the system gives out for :0, which a test of another package may be

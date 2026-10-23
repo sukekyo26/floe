@@ -272,9 +272,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   working directory, and a `~` or `~/` at its start stands for `HOME`
   (`~name` is refused). The defaults are under `XDG_DATA_HOME` and
   `XDG_CONFIG_HOME`, whose `~` stands for `HOME` too; a relative one of
-  those is ignored, as the XDG spec says. floe's directories, set or by
-  default, must be directories, or not there yet under one; else every
-  command refuses, telling every mistake of the settings at once.
+  those is ignored, as the XDG spec says. A command is told of the settings
+  it uses alone: one written wrong stops it, with the others at once; a
+  directory without a default stops a command that writes there or cannot
+  do without it, and is nothing to one that only reads it (`floe check`
+  runs without `HOME`). A directory set to a file, or under one, is
+  refused by its name; a default that is a file, or under one, counts as
+  none, told by the file in its way to a command that needs it.
   The management page may be framed by itself and by VS Code's Simple
   Browser alone (`frame-ancestors 'self' vscode-webview: vscode-file:`), so
   that another site, or a page, cannot have its buttons clicked unseen.
