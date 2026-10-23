@@ -743,16 +743,18 @@ func TestAddLink(t *testing.T) {
 		t.Errorf("an omitted slug = %s", r.body)
 	}
 
-	// A field sent is given, trimmed, empty or not, as floe publish --link sends them: an empty slug is
-	// refused, a blank description clears it, and force replaces another file's link.
+	// A field sent is given, empty or not, as floe publish --link sends them: an empty slug is refused, and
+	// so is one with spaces, a name checked as given; a blank description, trimmed, clears it, and force
+	// replaces another file's link.
 	got = toString([]int{
 		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":""}`).status,
 		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","title":3}`).status,
 		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","force":"yes"}`).status,
 		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+index+`","description":" "}`).status,
-		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":" site ","title":"Sub","force":true}`).status,
+		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":" site ","force":true}`).status,
+		e.send(t, http.MethodPost, "/api/artifacts", `{"path":"`+sub+`","slug":"site","title":"Sub","force":true}`).status,
 	})
-	if m := e.store.ReadMeta("site"); got != "400 400 400 200 200" || m == nil || m.Path != sub || m.Title != "Sub" {
+	if m := e.store.ReadMeta("site"); got != "400 400 400 200 400 200" || m == nil || m.Path != sub || m.Title != "Sub" {
 		t.Errorf("fields sent = %s, %+v", got, m)
 	}
 	if m := e.store.ReadMeta("p"); m == nil {
@@ -812,6 +814,11 @@ func TestSave(t *testing.T) {
 		!strings.HasPrefix(r.body, `{"mistakes":[{"text":"invalid slug \"Bad Slug\": use only lowercase letters, digits and hyphens"},`+
 			`{"text":"--title is empty: give the page a name`) {
 		t.Errorf("a publish of a bad slug and a blank title = %d %s", r.status, r.body)
+	}
+	// A slug is checked as the URL names it, not trimmed.
+	if r := put("%20sizes%20", upload(nil, "proj")); r.status != http.StatusBadRequest ||
+		!strings.Contains(r.body, `invalid slug \" sizes \"`) {
+		t.Errorf("a publish of the slug ' sizes ' = %d %s", r.status, r.body)
 	}
 	notData := upload(nil, "proj")
 	notData["file"] = "plans/page.html"

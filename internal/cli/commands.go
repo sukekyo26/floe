@@ -119,28 +119,26 @@ refused unless --force.`,
 func (a *app) publish(ctx context.Context, file string, link bool, opts store.Options) error {
 	// Checked as the server checks, to be refused before it starts, and sent so, as the slug names the URL.
 	opts, err := store.Accept(file, link, opts)
-	path := a.abs(file)
-	var up store.Upload
-	var readErr error
-	if link {
-		// The server reads a link, as it draws it.
-		if _, readErr = os.Stat(path); readErr != nil {
-			readErr = usererr.CannotRead(file, readErr)
-		}
-	} else {
-		up, readErr = store.ReadUpload(ctx, file, a.env.Dir)
-	}
-	if err = usererr.Collect(err, readErr); err != nil {
-		return err //nolint:wrapcheck // usererrs for the user as they are
-	}
 	var saved server.Saved
-	if link {
-		saved, err = a.publishLink(ctx, path, opts)
-	} else {
-		saved, err = a.publishData(ctx, up, opts)
+	switch {
+	case link:
+		path := a.abs(file)
+		// The server reads a link, as it draws it.
+		if _, statErr := os.Stat(path); statErr != nil {
+			err = usererr.Collect(err, usererr.CannotRead(file, statErr))
+		}
+		if err == nil {
+			saved, err = a.publishLink(ctx, path, opts)
+		}
+	// Read as data only when it is a data file: Accept has told that it is not.
+	case store.IsDataFile(file):
+		up, readErr := store.ReadUpload(ctx, file, a.env.Dir)
+		if err = usererr.Collect(err, readErr); err == nil {
+			saved, err = a.publishData(ctx, up, opts)
+		}
 	}
 	if err != nil {
-		return err
+		return err //nolint:wrapcheck // usererrs for the user as they are
 	}
 	url := a.cfg.base() + "/a/" + saved.Slug + "/"
 	// A republish does not open another tab; the open one reloads itself.

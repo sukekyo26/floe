@@ -466,6 +466,12 @@ func TestPublish(t *testing.T) {
 		!strings.Contains(r.stderr, "\nfloe: --title is empty") || !strings.Contains(r.stderr, "\nfloe: --theme is empty") {
 		t.Errorf("publish with a bad slug, title and theme = %d %q, want all three", r.code, r.stderr)
 	}
+	want(t, "a --slug with spaces", e.run(t, "repo", "publish", demo, "--slug", " plan "), 1, "", `floe: invalid slug " plan "`)
+	// A file that is not a data file is not read as one: a missing one is pointed to --link alone.
+	if r := e.run(t, "repo", "publish", "missing.html"); r.code != 1 || r.stderr != "floe: missing.html is not a data file: "+
+		"publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link\n" {
+		t.Errorf("publish of a missing HTML file = %d %q, want the one line", r.code, r.stderr)
+	}
 	// So is what is checked of the file.
 	if r := e.run(t, "repo", "publish", "page.html", "--title", " "); r.code != 1 ||
 		r.stderr != "floe: page.html is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link\n"+blankTitle+"\n" {

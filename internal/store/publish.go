@@ -75,12 +75,13 @@ type Options struct {
 }
 
 // Accept checks a publish of file, a link or a data file, for what needs neither the store nor the disk,
-// and returns o with each string given trimmed, whoever gave it, and a data file's slug made of its name
-// when none is given. Its mistakes: a data file that is not one, a slug that cannot be one, a title given
-// empty, as it would leave the list blank, and a theme, which would take the data's. The command line
-// checks with it before it sends, and the server again.
+// and returns o with each text given trimmed, whoever gave it, and a data file's slug made of its name
+// when none is given. A slug is a name, checked as given: trimmed, it would not be the one a URL names.
+// Its mistakes: a data file that is not one, a slug that cannot be one, a title given empty, as it would
+// leave the list blank, and a theme, which would take the data's. The command line checks with it before
+// it sends, and the server again.
 func Accept(file string, link bool, o Options) (Options, error) {
-	for _, field := range []**string{&o.Slug, &o.Title, &o.Description, &o.Theme} {
+	for _, field := range []**string{&o.Title, &o.Description, &o.Theme} {
 		if *field != nil {
 			v := strings.TrimSpace(**field)
 			*field = &v
@@ -96,8 +97,10 @@ func Accept(file string, link bool, o Options) (Options, error) {
 		slug := SlugFromFile(file, "")
 		o.Slug = &slug
 	}
-	if o.Slug != nil && !ValidSlug(*o.Slug) {
-		found = append(found, usererr.New("store_invalid_slug", *o.Slug))
+	if o.Slug != nil {
+		if mistake := slugMistake(*o.Slug); mistake != nil {
+			found = append(found, mistake)
+		}
 	}
 	for _, f := range []struct {
 		value *string
@@ -204,8 +207,9 @@ func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
 	return s.storedPage(data, up.Source, opts, up.Project)
 }
 
-// storedPage builds the entry of the data file file as a stored page, drawn from data, of content src,
-// and published from the project from; data nil checks its owner only. opts are those Accept returned.
+// storedPage builds the entry of a data file as a stored page, drawn from data, of content src, and
+// published from the project from; data nil checks its owner only. opts are those Accept returned without
+// a mistake, whose Slug is set and can be one.
 func (s *Store) storedPage(data *tmpl.Data, src []byte, opts Options, from string) (*Entry, error) {
 	return s.checked(&Entry{
 		Slug: *opts.Slug, Meta: seedMeta("", data, opts.theme()), Source: nil, Images: nil, Prev: nil, opts: opts, from: from,
@@ -367,15 +371,19 @@ func (s *Store) linkSlug(file, path string, opts Options, cwd string) (string, e
 		return *opts.Slug, nil
 	}
 	// Named after the given file, not the symlink's target.
-	return checkSlug(s.freeSlug(SlugFromFile(file, cwd), path))
-}
-
-// checkSlug refuses slug unless it can be one.
-func checkSlug(slug string) (string, error) {
-	if !ValidSlug(slug) {
-		return "", usererr.New("store_invalid_slug", slug)
+	slug := s.freeSlug(SlugFromFile(file, cwd), path)
+	if mistake := slugMistake(slug); mistake != nil {
+		return "", mistake
 	}
 	return slug, nil
+}
+
+// slugMistake is the mistake of slug if it cannot be one, nil else.
+func slugMistake(slug string) *usererr.Error {
+	if !ValidSlug(slug) {
+		return usererr.New("store_invalid_slug", slug)
+	}
+	return nil
 }
 
 // checkOwner refuses to overwrite another's entry without force, and reports whether the publish

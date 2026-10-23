@@ -72,10 +72,13 @@ func (e env) publish(t *testing.T, file string, opts store.Options, cwd string) 
 	}, file, opts, cwd)
 }
 
-// prepare publishes the data file file on disk from cwd as the CLI does, but in process: accepted and read
-// by store.ReadUpload, its images read under its directory.
+// prepare publishes the data file file on disk from cwd as the CLI does, but in process: accepted and, a
+// data file, read by store.ReadUpload, its images read under its directory.
 func prepare(ctx context.Context, st *store.Store, file string, opts store.Options, cwd string) (*store.Entry, error) {
 	_, err := store.Accept(file, false, opts)
+	if !store.IsDataFile(file) {
+		return nil, err
+	}
 	up, readErr := store.ReadUpload(ctx, file, cwd)
 	if err = usererr.Collect(err, readErr); err != nil {
 		return nil, err
@@ -236,12 +239,10 @@ func TestPublishNeedsDataFile(t *testing.T) {
 	frag := e.write(t, "frag.html", "<h1>A</h1>")
 	_, err := e.publish(t, frag, store.Options{}, "proj")
 	wantUserErr(t, err, "store_not_data", frag)
-	// A missing HTML file is pointed to --link too.
+	// A file that is not a data file is not read as one, so a missing HTML file is pointed to --link alone.
 	missing := filepath.Join(e.tmp, "missing.html")
 	_, err = e.publish(t, missing, store.Options{}, "proj")
-	if err == nil || !strings.HasPrefix(err.Error(), missing+" is not a data file") || !strings.Contains(err.Error(), "\ncannot read "+missing) {
-		t.Errorf("publish of a missing HTML file = %v, want it not a data file, and not read", err)
-	}
+	wantUserErr(t, err, "store_not_data", missing)
 	e.mustPublish(t, e.page(t, "untitled.yaml", ""), store.Options{}, "proj")
 	if m := e.meta(t, "untitled"); m.Title != "untitled" || !strings.Contains(e.drawn(t, "untitled"), "<h1>untitled</h1>") {
 		t.Errorf("a data file without a title: is titled %q", m.Title)
@@ -1372,6 +1373,10 @@ func TestAccept(t *testing.T) {
 	if twice, err2 := store.Accept("plans/My Plan.yaml", false, once); err != nil || err2 != nil ||
 		!reflect.DeepEqual(once, twice) || *once.Slug != "my-plan" || *once.Title != "A" {
 		t.Errorf("Accept twice = %+v, then %+v (%v, %v), want alike, of slug my-plan", once, twice, err, err2)
+	}
+	// A slug is a name, checked as given, not trimmed as a text is.
+	if _, err = store.Accept("plan.yaml", false, store.Options{Slug: ptr(" plan ")}); err == nil || err.Error() != `invalid slug " plan ": use only lowercase letters, digits and hyphens` {
+		t.Errorf("Accept of the slug ' plan ' = %v, want it refused as given", err)
 	}
 	// A slug made of a name that has none is told; a link's is made later, of a free one.
 	if _, err = store.Accept("plans/__.yaml", false, store.Options{}); err == nil || err.Error() != `invalid slug "": use only lowercase letters, digits and hyphens` {
