@@ -357,7 +357,7 @@ var messagesEN = map[string]string{
 	"tmpl_new_part_reserved":        "a part of your own cannot be named %s: floe draws diagram and script itself, tone and any are schemas the parts share, and base and palette name the files of a theme for every page; pick another name",
 	"tmpl_new_part_go":              "floe draws the part %s in Go, so it has no files to copy; copy another part",
 	"tmpl_new_part_theme_exists":    "your own themes have a file of the part %s already: %s; remove them, or pick another name",
-	"tmpl_new_part_theme":           "%s cannot be written: %s; nothing was made",
+	"tmpl_new_part_theme":           "%s; nothing was made",
 	"tmpl_new_part_unusable":        "%s was not made: with it, these cannot be used",
 	"tmpl_part_names":               "the part names the part %s, which there is none of; use %s",
 	"tmpl_part_broken":              "the part %s cannot be used",

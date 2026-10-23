@@ -242,7 +242,7 @@ func (set *partSet) checkThemeFiles(floe *partSet, src *part, made *MadePart, na
 		case err == nil:
 			there = append(there, at)
 		case !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR):
-			return usererr.New("tmpl_new_part_theme", at, err.Error())
+			return usererr.New("tmpl_new_part_theme", usererr.CannotWrite(at, err))
 		}
 	}
 	if there != nil {
@@ -357,7 +357,7 @@ func (w *themeCopies) write(set *partSet, made *MadePart, from, name string) err
 			if errors.Is(err, fs.ErrExist) {
 				return usererr.New("tmpl_new_part_theme_exists", name, at)
 			}
-			return usererr.New("tmpl_new_part_theme", at, err.Error())
+			return usererr.New("tmpl_new_part_theme", usererr.CannotWrite(at, err))
 		}
 	}
 	return nil

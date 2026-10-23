@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -194,3 +196,21 @@ type reported struct{ report usererr.Report }
 func (r reported) Error() string { return r.report.Render("") }
 
 func (r reported) Report() usererr.Report { return r.report }
+
+// A file that cannot be written is told by the step that could not be made when the error names it or a
+// directory above it, so that "its directory" is the one to check; else by the file.
+func TestCannotWrite(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ path, want string }{
+		{"/a/b", "cannot write /a/b (permission denied)"},           // a directory above /a/b/c could not be made
+		{"/a/b/c", "cannot write /a/b/c (permission denied)"},       // the file itself
+		{"/a/b.tmp-123", "cannot write /a/b/c (permission denied)"}, // what floe made beside it, by a name of its own
+		{"/a/bc", "cannot write /a/b/c (permission denied)"},        // not above it, though it starts alike
+	} {
+		err := usererr.CannotWrite("/a/b/c", &fs.PathError{Op: "mkdir", Path: c.path, Err: syscall.EACCES})
+		if got := err.Error(); !strings.HasPrefix(got, c.want+"; ") {
+			t.Errorf("CannotWrite of an error at %s = %q, want %q", c.path, got, c.want)
+		}
+	}
+}

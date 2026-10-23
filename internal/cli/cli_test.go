@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -938,9 +939,9 @@ func TestSettingDirsHeldUp(t *testing.T) {
 		"floe: FLOE_PARTS_DIR, "+home+"/.config/floe/themes/x, is under "+home+"/.config/floe/themes, which is not a directory")
 }
 
-// A place the user set that floe cannot write in is told as that, with what floe was making there, so that
-// "its directory" is the one to check; a port floe may not bind is told with the reason.
-func TestCannotWriteOrListen(t *testing.T) {
+// A place the user set that floe cannot write in is told as that, by the first step floe could not make
+// there, so that "its directory" is the one to check.
+func TestCannotWrite(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
@@ -964,23 +965,41 @@ func TestCannotWriteOrListen(t *testing.T) {
 		made     string
 	}{
 		{"FLOE_DIR", "store", []string{"serve"}, "store"},
-		{"FLOE_ICONS_DIR", "icons", []string{"icons", "fetch", "aws", asked.URL + "/icons.zip"}, "icons/aws"},
+		// The first step that cannot be made is told: the directory in locked, or what floe makes in it.
+		{"FLOE_ICONS_DIR", "icons", []string{"icons", "fetch", "aws", asked.URL + "/icons.zip"}, "icons"},
 		{"FLOE_ICONS_DIR", "", []string{"icons", "fetch", "aws", asked.URL + "/icons.zip"}, "aws"},
-		{"FLOE_TEMPLATES_DIR", "templates", []string{"template", "new", "x", "--from", "report"}, "templates/x"},
+		{"FLOE_TEMPLATES_DIR", "templates", []string{"template", "new", "x", "--from", "report"}, "templates"},
 		{"FLOE_TEMPLATES_DIR", "", []string{"template", "new", "x", "--from", "report"}, "x"},
-		{"FLOE_PARTS_DIR", "parts", []string{"part", "new", "aside", "--from", "note"}, "parts/aside"},
+		{"FLOE_PARTS_DIR", "parts", []string{"part", "new", "aside", "--from", "note"}, "parts"},
+		// The files of a part's themes too, with what was not made.
+		{"FLOE_THEMES_DIR", "themes", []string{"part", "new", "aside", "--from", "note"}, "themes"},
 	} {
 		saved := e.vars[c.key]
 		e.vars[c.key] = filepath.Join(locked, c.dir)
-		if r := e.run(t, "", c.args...); r.code != 1 || r.stderr != "floe: cannot write "+filepath.Join(locked, c.made)+cannot {
+		told := "floe: cannot write " + filepath.Join(locked, c.made) + cannot
+		if c.key == "FLOE_THEMES_DIR" {
+			told = strings.TrimSuffix(told, "\n") + "; nothing was made\n"
+		}
+		if r := e.run(t, "", c.args...); r.code != 1 || r.stderr != told {
 			t.Errorf("%v with %s in a directory floe cannot write to = %d %q", c.args, c.key, r.code, r.stderr)
 		}
 		e.vars[c.key] = saved
 	}
+}
+
+// A port floe may not bind is told with the reason.
+func TestServeOnPrivilegedPort(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
 	// Port 1 is privileged on linux, unless unprivileged ports start lower (WSL, containers) or this is root.
-	if ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:1"); err == nil {
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:1")
+	if err == nil {
 		_ = ln.Close() //nolint:errcheck // only to know
-		return
+		t.Skip("port 1 is not refused here")
+	}
+	if !errors.Is(err, syscall.EACCES) {
+		t.Skipf("port 1 is refused for another reason than a privilege here: %v", err)
 	}
 	e.vars["FLOE_PORT"] = "1"
 	want(t, "serve on a privileged port", e.run(t, "", "serve"), 1, "",

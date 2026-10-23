@@ -6,7 +6,9 @@ package usererr
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 )
@@ -103,8 +105,17 @@ func CannotRead(file string, err error) *Error {
 	return New("file_cannot_read", file, reason(err))
 }
 
-// CannotWrite is the refusal for a file floe cannot write where the user asked, with the reason.
+// CannotWrite is the refusal for a file floe cannot write where the user asked, with the reason: told by
+// the step that could not be made when err names file or one of the directories above it (MkdirAll stops at
+// the first it cannot make), so that "its directory" is the one to check; else by file.
 func CannotWrite(file string, err error) *Error {
+	var pe *os.PathError
+	if errors.As(err, &pe) {
+		if at := filepath.Clean(pe.Path); at == filepath.Clean(file) ||
+			strings.HasPrefix(filepath.Clean(file), at+string(filepath.Separator)) {
+			file = at
+		}
+	}
 	return New("file_cannot_write", file, reason(err))
 }
 
