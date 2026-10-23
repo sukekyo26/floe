@@ -179,6 +179,15 @@ func (s *Store) Fetch(ctx context.Context, set, source string, force bool) (Fetc
 	if s.root == "" {
 		return got, usererr.New("icons_no_dir")
 	}
+	// Before anything is fetched: a directory that cannot be written to is no reason to download.
+	if err := os.MkdirAll(s.root, 0o700); err != nil {
+		return got, usererr.CannotWrite(got.Dir, err)
+	}
+	tmp, err := os.MkdirTemp(s.root, k.name+".tmp-")
+	if err != nil {
+		return got, usererr.CannotWrite(got.Dir, err)
+	}
+	defer os.RemoveAll(tmp) //nolint:errcheck // a leftover is harmless
 	from, err := k.packageURL(ctx, source)
 	if err != nil {
 		return got, err
@@ -195,14 +204,6 @@ func (s *Store) Fetch(ctx context.Context, set, source string, force bool) (Fetc
 	if err != nil {
 		return got, err
 	}
-	if err = os.MkdirAll(s.root, 0o700); err != nil {
-		return got, fmt.Errorf("create %s: %w", s.root, err)
-	}
-	tmp, err := os.MkdirTemp(s.root, k.name+".tmp-")
-	if err != nil {
-		return got, fmt.Errorf("create a directory in %s: %w", s.root, err)
-	}
-	defer os.RemoveAll(tmp) //nolint:errcheck // a leftover is harmless
 	idx, err := k.extract(buf, from, tmp)
 	if err != nil {
 		return got, err

@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -573,7 +574,7 @@ func TestPublishToAnotherServer(t *testing.T) {
 	want(t, "another program", o.run(t, "", "publish", demo), 1, "",
 		"floe: port "+o.vars["FLOE_PORT"]+" is used by another program; set FLOE_PORT to a free port")
 	want(t, "serve on a busy port", o.run(t, "", "serve"), 1, "",
-		"floe: port "+o.vars["FLOE_PORT"]+" is in use; stop that program or set FLOE_PORT")
+		"floe: port "+o.vars["FLOE_PORT"]+" is in use; stop that program (floe stop, if it is floe's server) or set FLOE_PORT")
 }
 
 func TestServeInProcess(t *testing.T) {
@@ -935,6 +936,56 @@ func TestSettingDirsHeldUp(t *testing.T) {
 	e.vars["FLOE_PARTS_DIR"] = filepath.Join(home, ".config", "floe", "themes", "x")
 	want(t, "check with parts set under a file", e.run(t, "", "check", "ok.yaml"), 1, "",
 		"floe: FLOE_PARTS_DIR, "+home+"/.config/floe/themes/x, is under "+home+"/.config/floe/themes, which is not a directory")
+}
+
+// A place the user set that floe cannot write in is told as that, with what floe was making there, so that
+// "its directory" is the one to check; a port floe may not bind is told with the reason.
+func TestCannotWriteOrListen(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	if os.Geteuid() == 0 {
+		t.Skip("root writes anywhere")
+	}
+	locked := filepath.Join(e.tmp, "locked")
+	if err := os.Mkdir(locked, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	// Nothing is fetched for a directory that cannot be written to.
+	asked := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Error("icons fetch went to the network for a directory it cannot write to")
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(asked.Close)
+	const cannot = " (permission denied); check that its directory can be written to\n"
+	for _, c := range []struct {
+		key, dir string
+		args     []string
+		made     string
+	}{
+		{"FLOE_DIR", "store", []string{"serve"}, "store"},
+		{"FLOE_ICONS_DIR", "icons", []string{"icons", "fetch", "aws", asked.URL + "/icons.zip"}, "icons/aws"},
+		{"FLOE_ICONS_DIR", "", []string{"icons", "fetch", "aws", asked.URL + "/icons.zip"}, "aws"},
+		{"FLOE_TEMPLATES_DIR", "templates", []string{"template", "new", "x", "--from", "report"}, "templates/x"},
+		{"FLOE_TEMPLATES_DIR", "", []string{"template", "new", "x", "--from", "report"}, "x"},
+		{"FLOE_PARTS_DIR", "parts", []string{"part", "new", "aside", "--from", "note"}, "parts/aside"},
+	} {
+		saved := e.vars[c.key]
+		e.vars[c.key] = filepath.Join(locked, c.dir)
+		if r := e.run(t, "", c.args...); r.code != 1 || r.stderr != "floe: cannot write "+filepath.Join(locked, c.made)+cannot {
+			t.Errorf("%v with %s in a directory floe cannot write to = %d %q", c.args, c.key, r.code, r.stderr)
+		}
+		e.vars[c.key] = saved
+	}
+	// Port 1 is privileged on linux, unless unprivileged ports start lower (WSL, containers) or this is root.
+	if ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:1"); err == nil {
+		_ = ln.Close() //nolint:errcheck // only to know
+		return
+	}
+	e.vars["FLOE_PORT"] = "1"
+	want(t, "serve on a privileged port", e.run(t, "", "serve"), 1, "",
+		"floe: cannot listen on 127.0.0.1:1 (permission denied); set FLOE_PORT to another port\n")
+	e.vars["FLOE_PORT"] = e.port
 }
 
 // freePort picks below the ports the system gives out for :0, which a test of another package may be

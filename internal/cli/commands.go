@@ -326,7 +326,7 @@ func (a *app) serve(ctx context.Context) error {
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 	if err := os.MkdirAll(a.cfg.root, 0o700); err != nil {
-		return fmt.Errorf("create %s: %w", a.cfg.root, err)
+		return usererr.CannotWrite(a.cfg.root, err)
 	}
 	build, err := daemon.Build()
 	if err != nil {
@@ -349,11 +349,8 @@ func (a *app) listen() (net.Listener, error) {
 		return ln, err                      //nolint:wrapcheck // already says what failed
 	}
 	ln, err := daemon.Listen(a.cfg.port)
-	if errors.Is(err, syscall.EADDRINUSE) {
-		return nil, usererr.New("cli_port_in_use", a.cfg.port)
-	}
 	if err != nil {
-		return nil, fmt.Errorf("listen: %w", err)
+		return nil, daemon.CannotListen(a.cfg.port, err)
 	}
 	return ln, nil
 }

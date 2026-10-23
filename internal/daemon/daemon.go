@@ -238,6 +238,20 @@ var errLowFD = errors.New("not a descriptor handed down")
 // ErrHandedAddr is a listener handed down on another address than the server's.
 var ErrHandedAddr = errors.New("the listener handed down is not on the server's address")
 
+// CannotListen is the mistake of FLOE_PORT, port, that err keeps from being bound: in use by another
+// program, or refused (a privileged port) for the reason it gives.
+func CannotListen(port int, err error) *usererr.Error {
+	if errors.Is(err, syscall.EADDRINUSE) {
+		return usererr.New("daemon_port_in_use", port)
+	}
+	reason := err.Error()
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		reason = errno.Error()
+	}
+	return usererr.New("daemon_cannot_listen", port, reason)
+}
+
 // Listen binds Addr(port).
 func Listen(port int) (*net.TCPListener, error) {
 	addr, err := net.ResolveTCPAddr("tcp", Addr(port))
@@ -289,12 +303,7 @@ func start(ctx context.Context, s Server) (bool, error) {
 		return false, nil
 	}
 	if err != nil {
-		reason := err.Error()
-		var errno syscall.Errno
-		if errors.As(err, &errno) {
-			reason = errno.Error()
-		}
-		return false, usererr.New("daemon_cannot_listen", s.Port, reason)
+		return false, CannotListen(s.Port, err)
 	}
 	defer ln.Close() //nolint:errcheck // the server holds its own copy
 	f, err := ln.File()
