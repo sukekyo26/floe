@@ -543,8 +543,9 @@ func (s *shape) walkWhole(v any, at []string, inPart bool, found *drawnItems) {
 	in, held := s.inside(), inPart || s.part != nil
 	switch v := v.(type) {
 	case map[string]any:
-		for k, item := range v {
-			in.keys[k].walkWhole(item, append(at[:len(at):len(at)], k), held, found)
+		// By the keys' order, not the map's, so that the mistakes told without a line come in the same order.
+		for _, k := range slices.Sorted(maps.Keys(v)) {
+			in.keys[k].walkWhole(v[k], append(at[:len(at):len(at)], k), held, found)
 		}
 	case []any:
 		for i, item := range v {

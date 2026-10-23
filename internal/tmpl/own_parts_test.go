@@ -775,7 +775,7 @@ func TestPartWordAtItem(t *testing.T) {
 }
 
 // A part of one's own whose part.html fails to draw an item is told at its part.html, naming the item, for
-// every item it fails on: the part's mistake, which its maker fixes, not floe's.
+// every item it fails on, in the order of their keys: the part's mistake, which its maker fixes, not floe's.
 func TestPartDrawMistake(t *testing.T) {
 	t.Parallel()
 
@@ -795,8 +795,8 @@ func TestPartDrawMistake(t *testing.T) {
 			`template: part.html:1:45: executing "part.html" at <num .text>: error calling num: num: ` + value +
 			" (string) is not a number; name only the items its schema.json declares, and use each as its type"
 	}
-	if !errors.As(err, &all) || len(all) != 2 || all[0].Error() != failed("risks", "hello") || all[1].Error() != failed("aside", "there") {
-		t.Errorf("drawing what is not a number = %v, want\n%s\n%s", err, failed("risks", "hello"), failed("aside", "there"))
+	if !errors.As(err, &all) || len(all) != 2 || all[0].Error() != failed("aside", "there") || all[1].Error() != failed("risks", "hello") {
+		t.Errorf("drawing what is not a number = %v, want\n%s\n%s", err, failed("aside", "there"), failed("risks", "hello"))
 	}
 	// What html/template cannot escape, whatever the data, is told once, at its line.
 	parts = ownParts(t, map[string]string{
