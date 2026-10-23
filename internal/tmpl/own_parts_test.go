@@ -281,21 +281,26 @@ func TestBrokenOwnParts(t *testing.T) {
 		"yb/schema.json": `{"type": "object", "properties": {"t": {"$ref": "ya.json#/$defs/nope"}}}`,
 		"yb/part.html":   `<div data-floe-part="yb"></div>`,
 		"yb/part.css":    "",
-		// What noLoader refuses, which no check of a $ref sees, at the part's schema.json, and a part that holds
-		// it, whose compiling stops there too, told as one that holds a part that cannot be used.
-		"dyn/schema.json":  `{"type": "object", "properties": {"t": {"$dynamicRef": "https://example.com/x.json"}}}`,
+		// What no check of a $ref sees, a $ref through an $id, in the part's own file, at its top, as a
+		// template's would be, and a part that holds it, whose compiling stops there too, told as one that
+		// holds a part that cannot be used.
+		"idd/schema.json":  `{"$id": "https://example.com/p.json", "type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"idd/part.html":    `<div data-floe-part="idd"></div>`,
+		"idd/part.css":     "",
+		"aidd/schema.json": `{"type": "object", "properties": {"d": {"$ref": "idd.json"}}}`,
+		"aidd/part.html":   `<div data-floe-part="aidd"></div>`,
+		"aidd/part.css":    "",
+		// No URL to JSON Schema, though net/url reads it: told at the $ref, once, not by the metaschema too.
+		"bslash/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/$defs/a\\b"}}, "$defs": {"a\\b": {"type": "string"}}}`,
+		"bslash/part.html":   `<div data-floe-part="bslash"></div>`,
+		"bslash/part.css":    "",
+		// A $dynamicRef in a part, which another holds.
+		"dyn/schema.json":  `{"type": "object", "properties": {"t": {"type": "object", "$dynamicRef": "https://example.com/x.json"}}}`,
 		"dyn/part.html":    `<div data-floe-part="dyn"></div>`,
 		"dyn/part.css":     "",
-		"adyn/schema.json": `{"type": "object", "properties": {"d": {"$ref": "dyn.json"}}}`,
+		"adyn/schema.json": `{"type": "object", "properties": {"t": {"type": "object", "$dynamicRef": "floe:///parts/dyn.json"}}}`,
 		"adyn/part.html":   `<div data-floe-part="adyn"></div>`,
 		"adyn/part.css":    "",
-		// What no check of a $ref sees, in the part's own file, at its top, as a template's would be.
-		"selfdyn/schema.json": `{"type": "object", "properties": {"a": {"type": "string", "$dynamicRef": "#/$defs/nope"}}}`,
-		"selfdyn/part.html":   `<div data-floe-part="selfdyn"></div>`,
-		"selfdyn/part.css":    "",
-		"idd/schema.json":     `{"$id": "https://example.com/p.json", "type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
-		"idd/part.html":       `<div data-floe-part="idd"></div>`,
-		"idd/part.css":        "",
 		// The mistakes of several files are told together, under the part.
 		"wrongs/schema.json": `{"type": "object"}`,
 		"wrongs/part.html":   `<div data-floe-part="wrongs"></div>`,
@@ -390,14 +395,16 @@ func TestBrokenOwnParts(t *testing.T) {
 			filepath.Join(parts, "yb", "schema.json") + ": #/properties/t: floe:///parts/ya.json#/$defs/nope points into a part",
 		"yb": "the part yb cannot be used\n  " + filepath.Join(parts, "yb", "schema.json") +
 			": #/properties/t: floe:///parts/ya.json#/$defs/nope points into a part",
-		"dyn": "the part dyn cannot be used\n  " + filepath.Join(parts, "dyn", "schema.json") +
-			": https://example.com/x.json: a schema refers to no other file or URL",
-		"adyn": "the part adyn cannot be used\n  " + filepath.Join(parts, "adyn", "schema.json") + ": #/properties/d: the part dyn cannot be used\n    " +
-			filepath.Join(parts, "dyn", "schema.json") + ": https://example.com/x.json: a schema refers to no other file or URL",
-		"selfdyn": "the part selfdyn cannot be used\n  " + filepath.Join(parts, "selfdyn", "schema.json") +
-			": #: a $ref to #/$defs/nope finds nothing in schema.json",
 		"idd": "the part idd cannot be used\n  " + filepath.Join(parts, "idd", "schema.json") +
 			": #: a $ref to #/$defs/nope finds nothing in schema.json",
+		"aidd": "the part aidd cannot be used\n  " + filepath.Join(parts, "aidd", "schema.json") + ": #/properties/d: the part idd cannot be used\n    " +
+			filepath.Join(parts, "idd", "schema.json") + ": #: a $ref to #/$defs/nope finds nothing in schema.json",
+		"bslash": "the part bslash cannot be used\n  " + filepath.Join(parts, "bslash", "schema.json") +
+			`: #/properties/t: the $ref #/$defs/a\b cannot be read as a URL (contains \)`,
+		"dyn": "the part dyn cannot be used\n  " + filepath.Join(parts, "dyn", "schema.json") +
+			": #/properties/t: floe does not follow $dynamicRef",
+		"adyn": "the part adyn cannot be used\n  " + filepath.Join(parts, "adyn", "schema.json") +
+			": #/properties/t: floe does not follow $dynamicRef",
 		"pointed": "the part pointed cannot be used\n  " + filepath.Join(parts, "pointed", "schema.json") +
 			": #/properties/t: a $ref to #/$defs/nope finds nothing in schema.json",
 		"deadptr": "the part deadptr cannot be used\n  " + filepath.Join(parts, "deadptr", "schema.json") +

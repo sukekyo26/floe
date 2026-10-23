@@ -101,13 +101,16 @@ func loadedOrFailed(file string, err error) error {
 }
 
 // ownMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of file:
-// those the metaschema refuses, and those of a kind floe knows (compileMistake), each at its JSON pointer.
+// those the metaschema refuses, of the file or of what a $ref points at in it, and those of a kind floe
+// knows (compileMistake), each at its JSON pointer.
 // It returns nil for one of another schema or of a kind floe does not know.
 func ownMistakes(url, file string, err error) error {
 	var invalid *jsonschema.SchemaValidationError
-	if errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url {
-		if refused := metaschemaMistakes(file, invalid.Err); refused != nil {
-			return refused
+	if errors.As(err, &invalid) {
+		if under, ok := pointerIn(url, invalid.URL); ok {
+			if refused := metaschemaMistakes(file, under, invalid.Err); refused != nil {
+				return refused
+			}
 		}
 	}
 	if e := compileMistake(url, file, err); e != nil {
@@ -288,6 +291,34 @@ func knownFormat(f string) bool {
 // knownFormats are the formats knownFormat was asked of, by name, and whether floe knows each.
 var knownFormats sync.Map
 
+// notURIReference returns why ref, a $ref as written, is no URL, as uri, the schema of the format
+// uri-reference, reads it, the one the metaschemas from draft-06 check a $ref with, and "" for one that is:
+// draft-04's checks none.
+// LIMIT: why, in jsonschema's English.
+func notURIReference(uri *jsonschema.Schema, ref string) string {
+	var ve *jsonschema.ValidationError
+	if !errors.As(uri.Validate(ref), &ve) {
+		return ""
+	}
+	why := ve.ErrorKind.LocalizedString(english)
+	leaves(ve, func(e *jsonschema.ValidationError) {
+		if f, ok := e.ErrorKind.(*kind.Format); ok && f.Err != nil {
+			why = f.Err.Error()
+			var bad *neturl.Error
+			if errors.As(f.Err, &bad) {
+				why = bad.Err.Error()
+			}
+		}
+	})
+	return why
+}
+
+// uriReference compiles, once, the schema of a URI reference, as JSON Schema's format uri-reference checks
+// it.
+var uriReference = sync.OnceValues(func() (*jsonschema.Schema, error) {
+	return compileAlone(map[string]any{"type": "string", "format": "uri-reference"})
+})
+
 // heldByJSONSchema reports whether jsonschema holds the schema at url itself, as it holds the drafts and
 // their vocabularies, so that a $ref to it reads no other file.
 func heldByJSONSchema(url string) bool {
@@ -335,10 +366,10 @@ func pointerIn(url, u string) (string, bool) {
 	return "#" + ptr, base == url
 }
 
-// metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's, holds, each at
-// its JSON pointer, in the order of the pointers, such as a pattern that is no regular expression; nil when
-// it holds none.
-func metaschemaMistakes(file string, err error) error {
+// metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's of the schema at the
+// JSON pointer under in it, holds, each at its JSON pointer, in the order of the pointers, such as a pattern
+// that is no regular expression; nil when it holds none.
+func metaschemaMistakes(file, under string, err error) error {
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
 		return nil
@@ -347,9 +378,10 @@ func metaschemaMistakes(file string, err error) error {
 	leaves(ve, func(e *jsonschema.ValidationError) {
 		loc := e.InstanceLocation
 		if _, format := e.ErrorKind.(*kind.Format); format && len(loc) > 0 && loc[len(loc)-1] == "$ref" {
-			return // a $ref no URL: refMistake tells it at the $ref
+			// A $ref no URL: partSet.mistakes tells it at the $ref, by the same check (notURIReference).
+			return
 		}
-		at := "#"
+		at := under
 		for _, step := range e.InstanceLocation {
 			at += "/" + pointerKey.Replace(step)
 		}
