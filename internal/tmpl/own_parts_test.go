@@ -426,7 +426,7 @@ func TestBrokenOwnParts(t *testing.T) {
 		"pointed": "the part pointed cannot be used\n  " + filepath.Join(parts, "pointed", "schema.json") +
 			": #/properties/t: a $ref to #/$defs/nope finds nothing in schema.json",
 		"deadptr": "the part deadptr cannot be used\n  " + filepath.Join(parts, "deadptr", "schema.json") +
-			": #/properties/t: a $ref to floe:///parts/tone.json#/nope finds nothing in floe:///parts/tone.json",
+			": #/properties/t: a $ref to tone.json#/nope finds nothing in floe:///parts/tone.json: refer to what is there",
 		"unread": "the part unread cannot be used\n  " + filepath.Join(parts, "unread", "schema.json") +
 			": #/properties/t: the $ref http://[::1 cannot be read as a URL (missing ']' in host)",
 		"wrongs": "the part wrongs cannot be used\n  " + filepath.Join(parts, "wrongs", "part.yaml") + ":1:1: lookz is not a key of part.yaml" +

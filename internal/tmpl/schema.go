@@ -109,7 +109,7 @@ func loadedOrFailed(file string, err error) error {
 func ownMistakes(url, file string, err error) error {
 	var invalid *jsonschema.SchemaValidationError
 	if errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url {
-		if refused := metaschemaMistakes(file, "#", invalid.Err); refused != nil {
+		if refused := metaschemaMistakes(file, invalid.Err); refused != nil {
 			return refused
 		}
 	}
@@ -189,7 +189,9 @@ func refTargetMistake(ref string, err error, to, in string, own bool) *usererr.E
 // LIMIT: why, in jsonschema's English.
 func refNoSchemaMistake(ref, to string, err error) *usererr.Error {
 	var invalid *jsonschema.SchemaValidationError
-	if !errors.As(err, &invalid) || !samePlace(ref, invalid.URL) {
+	base, _, _ := strings.Cut(ref, "#")
+	// To the root, it is what the metaschema refuses of the file, which compileMistakes tells where it is.
+	if at, _ := pointerIn(base, ref); at == "#" || !errors.As(err, &invalid) || !samePlace(ref, invalid.URL) {
 		return nil
 	}
 	whys := []string{invalid.Err.Error()}
@@ -199,7 +201,7 @@ func refNoSchemaMistake(ref, to string, err error) *usererr.Error {
 		leaves(ve, func(e *jsonschema.ValidationError) {
 			why := e.ErrorKind.LocalizedString(english)
 			if len(e.InstanceLocation) > 0 {
-				why = "/" + strings.Join(e.InstanceLocation, "/") + ": " + why
+				why = pointerTo(e.InstanceLocation)[1:] + ": " + why
 			}
 			whys = append(whys, why)
 		})
@@ -413,11 +415,11 @@ func pointerIn(url, u string) (string, bool) {
 	return "#" + ptr, base == url
 }
 
-// metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's of the schema at the
-// JSON pointer under in it, holds, each at its JSON pointer, in the order of the pointers, such as a pattern
-// that is no regular expression; nil when it holds none. A $ref that is no URL is left out: its caller
-// checks the schema's $refs (partSet.mistakes) before, which tells it at the $ref.
-func metaschemaMistakes(file, under string, err error) error {
+// metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's, holds, each at its
+// JSON pointer, in the order of the pointers, such as a pattern that is no regular expression; nil when it
+// holds none. A $ref that is no URL is left out: its caller checks the schema's $refs (partSet.mistakes)
+// before, which tells it at the $ref.
+func metaschemaMistakes(file string, err error) error {
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
 		return nil
@@ -429,14 +431,20 @@ func metaschemaMistakes(file, under string, err error) error {
 			// A $ref no URL: partSet.mistakes tells it at the $ref, by the same check (notURIReference).
 			return
 		}
-		at := under
-		for _, step := range e.InstanceLocation {
-			at += "/" + pointerKey.Replace(step)
-		}
-		mistakes = append(mistakes, usererr.NewIn(file, at, "tmpl_schema_invalid", e.ErrorKind.LocalizedString(english)))
+		why := e.ErrorKind.LocalizedString(english)
+		mistakes = append(mistakes, usererr.NewIn(file, pointerTo(loc), "tmpl_schema_invalid", why))
 	})
 	slices.SortStableFunc(mistakes, func(a, b *usererr.Error) int { return strings.Compare(a.At, b.At) })
 	return mistakes.Err()
+}
+
+// pointerTo is the JSON pointer of the place of steps, the keys and indexes jsonschema gives, under the root.
+func pointerTo(steps []string) string {
+	at := "#"
+	for _, step := range steps {
+		at += "/" + pointerKey.Replace(step)
+	}
+	return at
 }
 
 // leaves calls leaf with each mistake of e that is not only the mistakes under it. A branch of anyOf or
