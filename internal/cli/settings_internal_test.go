@@ -17,7 +17,7 @@ func TestEveryCommandDeclaresItsSettings(t *testing.T) {
 			t.Errorf("%s declares no settings", cmd.CommandPath())
 		}
 		dirs := 0
-		for _, s := range []setting{storeSetting, iconsSetting, templatesSetting, partsSetting, themesSetting} {
+		for s := range dirKeys {
 			if use(cmd.Annotations[string(s)]) == needs {
 				dirs++
 			}

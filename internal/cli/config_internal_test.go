@@ -130,7 +130,7 @@ func TestLoadConfigDirs(t *testing.T) {
 	if err := os.Symlink(filepath.Join(tmp, "nowhere"), dangling); err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"FLOE_DIR", "FLOE_ICONS_DIR", "FLOE_TEMPLATES_DIR", "FLOE_PARTS_DIR", "FLOE_THEMES_DIR"} {
+	for _, key := range dirKeys {
 		vars := map[string]string{"HOME": tmp, key: filepath.Join(file, "x")}
 		_, err := load(func(k string) string { return vars[k] }, tmp)
 		want := key + ", " + file + "/x, is under " + file + ", which is not a directory; set " + key + " to a directory"

@@ -898,14 +898,14 @@ func TestSettingDirsHeldUp(t *testing.T) {
 	e.vars["HOME"] = "/dev/null"
 	const devNull = "floe: /dev/null is not a directory, which leaves no default place for FLOE_ICONS_DIR, FLOE_TEMPLATES_DIR, " +
 		"FLOE_PARTS_DIR, FLOE_THEMES_DIR; "
-	want(t, "check with a home that is a file", e.run(t, "", "check", "ok.yaml"), 0, "", devNull+"floe check goes on with none\n")
+	want(t, "check with a home that is a file", e.run(t, "", "check", "ok.yaml"), 0, "", devNull+"floe check goes on with none (set them elsewhere to use your own)\n")
 	if r := e.run(t, "", "list"); r.code != 1 || r.stderr != "floe: /dev/null is not a directory, and FLOE_DIR would be there or under "+
 		"it by default; set XDG_DATA_HOME or FLOE_DIR elsewhere, or make it a directory\n" {
 		t.Errorf("list with a home that is a file = %d %q", r.code, r.stderr)
 	}
 	// The server it starts reads the same, and warns where nothing is shown (its stderr is not the terminal).
 	e.vars["FLOE_DIR"] = store
-	if r := e.run(t, "", "list"); r.code != 0 || r.stderr != devNull+"floe list goes on with none\n" {
+	if r := e.run(t, "", "list"); r.code != 0 || r.stderr != devNull+"floe list goes on with none (set them elsewhere to use your own)\n" {
 		t.Errorf("list with a store and a home that is a file = %d %q", r.code, r.stderr)
 	}
 	delete(e.vars, "HOME")
@@ -913,14 +913,14 @@ func TestSettingDirsHeldUp(t *testing.T) {
 	e.vars["HOME"] = home
 	e.write(t, "home/.config/floe/themes", "")
 	themes := "floe: " + home + "/.config/floe/themes is not a directory, which leaves no default place for FLOE_THEMES_DIR; "
-	if r := e.run(t, "", "part", "check"); r.code != 0 || r.stderr != themes+"floe part check goes on with none\n" {
+	if r := e.run(t, "", "part", "check"); r.code != 0 || r.stderr != themes+"floe part check goes on with none (set them elsewhere to use your own)\n" {
 		t.Errorf("part check where the themes are a file = %d %q", r.code, r.stderr)
 	}
-	if r := e.run(t, "", "check", "ok.yaml"); r.code != 0 || r.stderr != themes+"floe check goes on with none\n" {
+	if r := e.run(t, "", "check", "ok.yaml"); r.code != 0 || r.stderr != themes+"floe check goes on with none (set them elsewhere to use your own)\n" {
 		t.Errorf("check where the themes are a file = %d %q", r.code, r.stderr)
 	}
 	if r := e.run(t, "", "part", "new", "aside", "--from", "note"); r.code != 1 ||
-		r.stderr != themes+"floe part new goes on with none\nfloe: there is no directory for themes of your own; set FLOE_THEMES_DIR\n" {
+		r.stderr != themes+"floe part new goes on with none (set them elsewhere to use your own)\nfloe: there is no directory for themes of your own; set FLOE_THEMES_DIR\n" {
 		t.Errorf("part new of a part with themes where the themes are a file = %d %q", r.code, r.stderr)
 	}
 	e.vars["XDG_CONFIG_HOME"] = filepath.Join(home, ".config", "floe", "themes")
