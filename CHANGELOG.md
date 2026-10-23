@@ -238,7 +238,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   1 MiB, not a file, unreadable or not holding its type).
   A schema's mistakes, a format of floe's or a part's `$ref` where floe does
   not follow to it (under `anyOf`, `$defs` and the like), a format floe does
-  not know, a `$ref` out of floe or into a part, a `$ref` that is no URL, a
+  not know, a `$ref` out of floe or into a part, a `$ref` or an `$id` that is no URL,
+  a `$ref` to what is no schema (a value of an enum), a
   `$dynamicRef` or `$recursiveRef`, which floe does not follow, or a keyword beside a `$ref`
   to a part but annotations (`description`, `title`, `default`…), are refused at their
   JSON pointers, by `floe template check` and wherever the template is used,
