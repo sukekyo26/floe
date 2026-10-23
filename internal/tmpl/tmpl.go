@@ -397,8 +397,8 @@ func parse(file string, src []byte) (ast.Node, error) {
 	}
 	// Of what anchors and tags hold, which tell themselves.
 	var shape error
-	if _, ok := yamlpos.Unwrap(body).(*ast.MappingNode); !ok {
-		shape = yamlpos.New(file, yamlpos.Of(body), "tmpl_not_mapping")
+	if top := yamlpos.Unwrap(body); !isMapping(top) {
+		shape = yamlpos.New(file, yamlpos.Of(top), "tmpl_not_mapping")
 	}
 	if err = usererr.Collect(refuse(file, body, true), shape); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns
@@ -887,12 +887,13 @@ func (r *refusals) Visit(n ast.Node) ast.Visitor {
 	switch n := n.(type) {
 	case *ast.MappingValueNode:
 		// A key is a name: 0x10, ~ or 1.0 would be read as another name than the one written, and not
-		// found where it was written. Its anchors and tags are told as such; a key is not a value.
+		// found where it was written. Its anchors, aliases and tags are told as such, and what they hold is
+		// judged when it is written there; a key is not a value.
 		key := yamlpos.KeyOf(n)
 		if err := yamlpos.Anchors(r.file, key); err != nil {
 			_ = r.found.Add(err) //nolint:errcheck // Anchors tells only mistakes
 		}
-		if k := yamlpos.Unwrap(key); !isText(k) {
+		if k := yamlpos.Unwrap(key); written(k, k != key) && !isText(k) {
 			r.found = append(r.found, yamlpos.New(r.file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value))
 		}
 		ast.Walk(r, n.Value)
@@ -903,6 +904,24 @@ func (r *refusals) Visit(n ast.Node) ast.Visitor {
 		}
 	}
 	return r
+}
+
+// written reports whether n, held by an anchor or a tag when wrapped, is written in place: an alias is
+// written elsewhere. The null a wrapper holds is not told from one it holds of nothing, which
+// go-yaml writes as null, so it is left to the wrapper's mistake.
+func written(n ast.Node, wrapped bool) bool {
+	switch n.(type) {
+	case *ast.AliasNode:
+		return false
+	case *ast.NullNode:
+		return !wrapped
+	}
+	return true
+}
+
+func isMapping(n ast.Node) bool {
+	_, ok := n.(*ast.MappingNode)
+	return ok
 }
 
 func isText(n ast.Node) bool {
