@@ -224,9 +224,13 @@ func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, opts Option
 // a relative file; the project of a link is that of its directory. A data file linked is checked as a
 // stored page is, its images under its real directory.
 func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
+	// Not with readLink's checks, which look at the theme too: a theme given empty is told alone.
 	opts, err := opts.Normalized()
-	path, src, rerr := s.readLink(file, opts, cwd)
-	if err = usererr.Collect(err, rerr); err != nil {
+	if err != nil {
+		return nil, err
+	}
+	path, src, err := s.readLink(file, opts, cwd)
+	if err != nil {
 		return nil, err
 	}
 	theme := opts.theme()

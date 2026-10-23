@@ -1306,9 +1306,19 @@ func TestPrepareData(t *testing.T) {
 		!strings.Contains(err.Error(), "--title is empty") {
 		t.Errorf("PrepareData of no data file with a blank title = %v, want both", err)
 	}
+	// A link's file is checked after its options, which its checks look at too (a theme given empty to a link
+	// is told once, as empty, not also as one a link does not take).
 	if _, err = s.PrepareLink(t.Context(), "nope.html", store.Options{Title: ptr(" ")}, e.tmp); err == nil ||
-		strings.Count(err.Error(), "\n") != 1 || !strings.Contains(err.Error(), "--title is empty") {
-		t.Errorf("PrepareLink of no file with a blank title = %v, want both", err)
+		strings.Contains(err.Error(), "\n") || !strings.Contains(err.Error(), "--title is empty") {
+		t.Errorf("PrepareLink of no file with a blank title = %v, want the title alone", err)
+	}
+	page := filepath.Join(e.tmp, "page.html")
+	if err = os.WriteFile(page, []byte("<!doctype html><title>x</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.PrepareLink(t.Context(), page, store.Options{Theme: ptr("")}, e.tmp); err == nil ||
+		strings.Contains(err.Error(), "\n") || !strings.Contains(err.Error(), "--theme is empty") {
+		t.Errorf("PrepareLink of an HTML file with a blank theme = %v, want one line", err)
 	}
 	up.Images = fstest.MapFS{}
 	want := `plans/sizes.yaml:4:8: chart: there is no image "img/chart.png" under /plans`
