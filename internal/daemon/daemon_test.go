@@ -84,3 +84,24 @@ func TestCannotListen(t *testing.T) {
 		t.Errorf("Ensure on a privileged port = %#v", err)
 	}
 }
+
+// Only what another port mends is the user's mistake: a port in use or refused; any other is floe's failure.
+func TestCannotListenWhy(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		err error
+		key string
+	}{
+		{syscall.EADDRINUSE, "daemon_port_in_use"},
+		{syscall.EACCES, "daemon_cannot_listen"},
+		{syscall.EMFILE, ""},
+		{errors.New("no loopback"), ""},
+	} {
+		err := daemon.CannotListen(7325, c.err)
+		var ue *usererr.Error
+		if ok := errors.As(err, &ue); ok != (c.key != "") || ok && ue.Key != c.key {
+			t.Errorf("CannotListen(%v) = %#v, want %q", c.err, err, c.key)
+		}
+	}
+}

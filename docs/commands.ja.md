@@ -250,7 +250,7 @@ floe の部品と `$FLOE_PARTS_DIR` の自分の部品を、1 行に 1 つ出し
 
 ## `floe serve`
 
-サーバーを前面で動かし、`127.0.0.1` で SIGTERM か SIGINT を受けるまで配信します。`floe publish`・`floe list`・`floe rm` も同じサーバーを裏で起動するので、主にエラーを確かめるときに使います。
+サーバーを前面で動かし、`127.0.0.1` で SIGTERM か SIGINT を受けるまで配信します。`floe publish`・`floe list`・`floe rm` も同じサーバーを裏で起動するので、主にエラーを確かめるときに使います。`FLOE_DIR`（無ければ作ります）に書けないとき、`FLOE_PORT` を使えないときは起動しません。裏で起動するサーバーがそのために起動しなかったときは、「the server did not start; run "floe serve" to see the error」と出ます。
 
 ## `floe stop`
 

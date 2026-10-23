@@ -8,9 +8,10 @@ func init() {
 // The command line's own, in English alone, are messagesCLI.
 var messagesEN = map[string]string{
 	// shared: mistakes more than one command makes
-	"file_cannot_read":  "cannot read %s (%s); check the path and that the file exists",
-	"file_cannot_write": "cannot write %s (%s); check that its directory can be written to",
-	"told_above":        ", as told above", // after a mistake whose own mistakes are told under another before it
+	"file_cannot_read":     "cannot read %s (%s); check the path and that the file exists",
+	"file_cannot_write":    "cannot write %s (%s); check that its directory can be written to",
+	"file_cannot_write_in": "cannot write in %s (%s); check that it can be written to",
+	"told_above":           ", as told above", // after a mistake whose own mistakes are told under another before it
 
 	// link: which files may be linked
 	"link_not_real":        "%s is not its absolute real path; pass it through filepath.Abs and filepath.EvalSymlinks (symlinks resolved, path cleaned) first",

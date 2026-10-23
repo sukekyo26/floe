@@ -13,5 +13,6 @@ func CheckWritable(dir, prefix string) error {
 	if err != nil {
 		return err //nolint:wrapcheck // as above
 	}
-	return os.Remove(tmp) //nolint:wrapcheck // as above
+	_ = os.Remove(tmp) //nolint:errcheck // written, so it can be; a leftover is harmless
+	return nil
 }

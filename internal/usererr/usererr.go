@@ -107,13 +107,18 @@ func CannotRead(file string, err error) *Error {
 
 // CannotWrite is the refusal for a file floe cannot write where the user asked, with the reason: told by
 // the step that could not be made when err names file or one of the directories above it (MkdirAll stops at
-// the first it cannot make), so that "its directory" is the one to check; else by file.
+// the first it cannot make), so that "its directory" is the one to check; as file not to be written in when
+// err names what floe made in it; else by file.
 func CannotWrite(file string, err error) *Error {
 	var pe *os.PathError
 	if errors.As(err, &pe) {
-		if at := filepath.Clean(pe.Path); at == filepath.Clean(file) ||
-			strings.HasPrefix(filepath.Clean(file), at+string(filepath.Separator)) {
+		at, in := filepath.Clean(pe.Path), filepath.Clean(file)
+		switch {
+		case at == in || strings.HasPrefix(in, at+string(filepath.Separator)):
 			file = at
+		case strings.HasPrefix(at, in+string(filepath.Separator)):
+			// What floe made in file, a directory there already: it is file that cannot be written in.
+			return New("file_cannot_write_in", file, reason(err))
 		}
 	}
 	return New("file_cannot_write", file, reason(err))

@@ -965,7 +965,7 @@ func TestCannotWrite(t *testing.T) {
 		made     string
 	}{
 		{"FLOE_DIR", "store", []string{"serve"}, "store"},
-		{"FLOE_DIR", "", []string{"serve"}, ""}, // there already, and floe cannot write in it
+		{"FLOE_DIR", "", []string{"serve"}, ""}, // there already: it is the one to check, not its directory
 		// The first step that cannot be made is told: the directory in locked, or what floe makes in it.
 		{"FLOE_ICONS_DIR", "icons", []string{"icons", "fetch", "aws", asked.URL + "/icons.zip"}, "icons"},
 		{"FLOE_ICONS_DIR", "", []string{"icons", "fetch", "aws", asked.URL + "/icons.zip"}, "aws"},
@@ -978,6 +978,9 @@ func TestCannotWrite(t *testing.T) {
 		saved := e.vars[c.key]
 		e.vars[c.key] = filepath.Join(locked, c.dir)
 		told := "floe: cannot write " + filepath.Join(locked, c.made) + cannot
+		if c.made == "" {
+			told = "floe: cannot write in " + locked + " (permission denied); check that it can be written to\n"
+		}
 		if c.key == "FLOE_THEMES_DIR" {
 			told = strings.TrimSuffix(told, "\n") + "; nothing was made\n"
 		}

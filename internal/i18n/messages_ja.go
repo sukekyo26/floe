@@ -6,9 +6,10 @@ func init() {
 
 var messagesJA = map[string]string{
 	// 共通
-	"file_cannot_read":  "%s を読めません（%s）。パスとファイルがあるかを確かめてください",
-	"file_cannot_write": "%s に書き出せません（%s）。そのディレクトリに書き込めるかを確かめてください",
-	"told_above":        "（上に出したとおり）", // after a mistake whose own mistakes are told under another before it
+	"file_cannot_read":     "%s を読めません（%s）。パスとファイルがあるかを確かめてください",
+	"file_cannot_write":    "%s に書き出せません（%s）。そのディレクトリに書き込めるかを確かめてください",
+	"file_cannot_write_in": "%s の中に書き出せません（%s）。そこに書き込めるかを確かめてください",
+	"told_above":           "（上に出したとおり）", // after a mistake whose own mistakes are told under another before it
 
 	// link
 	"link_not_real":        "%s は絶対パスの実パス（symlink を解決して正規化したパス）ではないので、登録できるかを確かめられません",

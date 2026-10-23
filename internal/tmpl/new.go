@@ -46,8 +46,10 @@ func install(parent, name, what string, fill func(dir string) error) (string, er
 	switch _, lerr := os.Lstat(at); {
 	case lerr == nil:
 		return "", usererr.New("tmpl_new_exists", name, at)
-	case !errors.Is(lerr, fs.ErrNotExist):
+	case errors.Is(lerr, fs.ErrPermission):
 		return "", usererr.CannotWrite(at, lerr)
+	case !errors.Is(lerr, fs.ErrNotExist):
+		return "", fmt.Errorf("make the %s %s: %w", what, name, lerr)
 	}
 	if err := os.MkdirAll(parent, 0o755); err != nil { //nolint:gosec // G301: templates and parts are not secret
 		return "", usererr.CannotWrite(at, err)
@@ -241,8 +243,10 @@ func (set *partSet) checkThemeFiles(floe *partSet, src *part, made *MadePart, na
 		switch _, err := os.Lstat(at); {
 		case err == nil:
 			there = append(there, at)
-		case !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR):
+		case errors.Is(err, fs.ErrPermission):
 			return usererr.New("tmpl_new_part_theme", usererr.CannotWrite(at, err))
+		case !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR):
+			return fmt.Errorf("look for %s: %w", at, err)
 		}
 	}
 	if there != nil {
