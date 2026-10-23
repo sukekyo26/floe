@@ -290,6 +290,17 @@ func TestBrokenOwnParts(t *testing.T) {
 		"aidd/schema.json": `{"type": "object", "properties": {"d": {"$ref": "idd.json"}}}`,
 		"aidd/part.html":   `<div data-floe-part="aidd"></div>`,
 		"aidd/part.css":    "",
+		// zy's $ref into zx at what is no schema is zy's, though the metaschema refuses it under zx's file.
+		"zx/schema.json": `{"type": "object", "properties": {"y": {"$ref": "zy.json"}}}`,
+		"zx/part.html":   `<div data-floe-part="zx"></div>`,
+		"zx/part.css":    "",
+		"zy/schema.json": `{"type": "object", "properties": {"t": {"$ref": "zx.json#/type"}}}`,
+		"zy/part.html":   `<div data-floe-part="zy"></div>`,
+		"zy/part.css":    "",
+		// A $ref to a value of its own enum, right as it is: at the $ref.
+		"enumref/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/properties/u/enum/0"}, "u": {"enum": ["a"]}}}`,
+		"enumref/part.html":   `<div data-floe-part="enumref"></div>`,
+		"enumref/part.css":    "",
 		// No URL to JSON Schema, though net/url reads it: told at the $ref, once, not by the metaschema too.
 		"bslash/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/$defs/a\\b"}}, "$defs": {"a\\b": {"type": "string"}}}`,
 		"bslash/part.html":   `<div data-floe-part="bslash"></div>`,
@@ -399,6 +410,12 @@ func TestBrokenOwnParts(t *testing.T) {
 			": #: a $ref to #/$defs/nope finds nothing in schema.json",
 		"aidd": "the part aidd cannot be used\n  " + filepath.Join(parts, "aidd", "schema.json") + ": #/properties/d: the part idd cannot be used\n    " +
 			filepath.Join(parts, "idd", "schema.json") + ": #: a $ref to #/$defs/nope finds nothing in schema.json",
+		"zx": "the part zx cannot be used\n  " + filepath.Join(parts, "zx", "schema.json") + ": #/properties/y: the part zy cannot be used\n    " +
+			filepath.Join(parts, "zy", "schema.json") + ": #/properties/t: floe:///parts/zx.json#/type points into a part",
+		"zy": "the part zy cannot be used\n  " + filepath.Join(parts, "zy", "schema.json") +
+			": #/properties/t: floe:///parts/zx.json#/type points into a part",
+		"enumref": "the part enumref cannot be used\n  " + filepath.Join(parts, "enumref", "schema.json") +
+			": #/properties/t: a $ref to #/properties/u/enum/0 points at what is no schema",
 		"bslash": "the part bslash cannot be used\n  " + filepath.Join(parts, "bslash", "schema.json") +
 			`: #/properties/t: the $ref #/$defs/a\b cannot be read as a URL (contains \)`,
 		"dyn": "the part dyn cannot be used\n  " + filepath.Join(parts, "dyn", "schema.json") +
