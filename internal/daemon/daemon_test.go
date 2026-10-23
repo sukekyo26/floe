@@ -80,7 +80,28 @@ func TestCannotListen(t *testing.T) {
 	}
 	err := daemon.Ensure(t.Context(), daemon.Server{Port: 1, Root: t.TempDir(), Build: "b", Env: nil})
 	var ue *usererr.Error
-	if !errors.As(err, &ue) || ue.Key != "daemon_cannot_listen" || len(ue.Args) != 2 || ue.Args[1] != "permission denied" {
+	if !errors.As(err, &ue) || ue.Key != "daemon_cannot_listen" || len(ue.Args) != 1 {
 		t.Errorf("Ensure on a privileged port = %#v", err)
+	}
+}
+
+// Only what another port mends is the user's mistake: a port in use or refused; any other is floe's failure.
+func TestCannotListenWhy(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		err error
+		key string
+	}{
+		{syscall.EADDRINUSE, "daemon_port_in_use"},
+		{syscall.EACCES, "daemon_cannot_listen"},
+		{syscall.EMFILE, ""},
+		{errors.New("no loopback"), ""},
+	} {
+		err := daemon.CannotListen(7325, c.err)
+		var ue *usererr.Error
+		if ok := errors.As(err, &ue); ok != (c.key != "") || ok && ue.Key != c.key {
+			t.Errorf("CannotListen(%v) = %#v, want %q", c.err, err, c.key)
+		}
 	}
 }

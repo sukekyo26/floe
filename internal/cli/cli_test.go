@@ -8,12 +8,14 @@ import (
 	"math/rand/v2"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -573,7 +575,7 @@ func TestPublishToAnotherServer(t *testing.T) {
 	want(t, "another program", o.run(t, "", "publish", demo), 1, "",
 		"floe: port "+o.vars["FLOE_PORT"]+" is used by another program; set FLOE_PORT to a free port")
 	want(t, "serve on a busy port", o.run(t, "", "serve"), 1, "",
-		"floe: port "+o.vars["FLOE_PORT"]+" is in use; stop that program or set FLOE_PORT")
+		"floe: port "+o.vars["FLOE_PORT"]+" is in use; stop that program (floe stop, if it is floe's server) or set FLOE_PORT")
 }
 
 func TestServeInProcess(t *testing.T) {
@@ -935,6 +937,89 @@ func TestSettingDirsHeldUp(t *testing.T) {
 	e.vars["FLOE_PARTS_DIR"] = filepath.Join(home, ".config", "floe", "themes", "x")
 	want(t, "check with parts set under a file", e.run(t, "", "check", "ok.yaml"), 1, "",
 		"floe: FLOE_PARTS_DIR, "+home+"/.config/floe/themes/x, is under "+home+"/.config/floe/themes, which is not a directory")
+}
+
+// A place the user set that floe cannot write in is told as that, by the first step floe could not make
+// there, so that "its directory" is the one to check.
+func TestCannotWrite(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	if os.Geteuid() == 0 {
+		t.Skip("root writes anywhere")
+	}
+	locked := filepath.Join(e.tmp, "locked")
+	if err := os.Mkdir(locked, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	// Nothing is fetched for a directory that cannot be written to.
+	asked := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Error("icons fetch went to the network for a directory it cannot write to")
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(asked.Close)
+	const cannot = " (permission denied); check that its directory can be written to\n"
+	for _, c := range []struct {
+		key, dir string
+		args     []string
+		made     string
+	}{
+		{"FLOE_DIR", "store", []string{"serve"}, "store"},
+		{"FLOE_DIR", "", []string{"serve"}, ""}, // there already: it is the one to check, not its directory
+		// The first step that cannot be made is told: the directory in locked, or what floe makes in it.
+		{"FLOE_ICONS_DIR", "icons", []string{"icons", "fetch", "aws", asked.URL + "/icons.zip"}, "icons"},
+		{"FLOE_ICONS_DIR", "", []string{"icons", "fetch", "aws", asked.URL + "/icons.zip"}, "aws"},
+		{"FLOE_TEMPLATES_DIR", "templates", []string{"template", "new", "x", "--from", "report"}, "templates"},
+		{"FLOE_TEMPLATES_DIR", "", []string{"template", "new", "x", "--from", "report"}, "x"},
+		{"FLOE_PARTS_DIR", "parts", []string{"part", "new", "aside", "--from", "note"}, "parts"},
+		// The files of a part's themes too, with what was not made.
+		{"FLOE_THEMES_DIR", "themes", []string{"part", "new", "aside", "--from", "note"}, "themes"},
+	} {
+		saved := e.vars[c.key]
+		e.vars[c.key] = filepath.Join(locked, c.dir)
+		told := "floe: cannot write " + filepath.Join(locked, c.made) + cannot
+		if c.made == "" {
+			told = "floe: cannot write in " + locked + " (permission denied); check that it can be written to\n"
+		}
+		if c.key == "FLOE_THEMES_DIR" {
+			told = strings.TrimSuffix(told, "\n") + "; nothing was made\n"
+		}
+		// A serve that is not refused would serve on: a time limit makes that a failure, not a hang.
+		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+		r := e.runIn(ctx, t, "", c.args...)
+		cancel()
+		if r.code != 1 || r.stderr != told {
+			t.Errorf("%v with %s in a directory floe cannot write to = %d %q", c.args, c.key, r.code, r.stderr)
+		}
+		e.vars[c.key] = saved
+	}
+	// A relative --out-dir is told by the step that could not be made too.
+	e.write(t, "ok.yaml", "template: report\ntitle: OK\nlang: en\n")
+	want(t, "render into a directory floe cannot write to", e.run(t, "", "render", "ok.yaml", "--out-dir", "locked/sub/out"), 1, "",
+		"floe: cannot write "+filepath.Join(locked, "sub")+cannot)
+	// A server a publish starts tells it alike, where nothing is shown: the publish says to run floe serve.
+	e.vars["FLOE_DIR"] = locked
+	want(t, "publish into a store floe cannot write in", e.run(t, "", "publish", "ok.yaml"), 1, "",
+		`floe: the server did not start; run "floe serve" to see the error`)
+}
+
+// A port floe may not bind is told with the reason.
+func TestServeOnPrivilegedPort(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	// Port 1 is privileged on linux, unless unprivileged ports start lower (WSL, containers) or this is root.
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:1")
+	if err == nil {
+		_ = ln.Close() //nolint:errcheck // only to know
+		t.Skip("port 1 is not refused here")
+	}
+	if !errors.Is(err, syscall.EACCES) {
+		t.Skipf("port 1 is refused for another reason than a privilege here: %v", err)
+	}
+	e.vars["FLOE_PORT"] = "1"
+	want(t, "serve on a privileged port", e.run(t, "", "serve"), 1, "",
+		"floe: cannot listen on 127.0.0.1:1 (permission denied); set FLOE_PORT to another port\n")
 }
 
 // freePort picks below the ports the system gives out for :0, which a test of another package may be

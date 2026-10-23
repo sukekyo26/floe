@@ -45,6 +45,17 @@ func TestIcons(t *testing.T) {
 	want(t, "fetch again", e.run(t, "", "icons", "fetch", "aws", "Icon-package.zip"), 0,
 		"AWS icons 01022030 are already in "+dir+" (add --force to fetch them again)\n", "")
 	want(t, "search", e.run(t, "", "icons", "search", "aws", "Lambda"), 0, "aws/aws-lambda\tCompute\n", "")
+	// Icons already there are enough where floe may not write: nothing is fetched, nor checked for writing.
+	if os.Geteuid() != 0 {
+		if err = os.Chmod(root, 0o500); err != nil {
+			t.Fatal(err)
+		}
+		want(t, "fetch again where it cannot write", e.run(t, "", "icons", "fetch", "aws", "http://127.0.0.1:1/Icon-package_01022030.zip"), 0,
+			"AWS icons 01022030 are already in "+dir+" (add --force to fetch them again)\n", "")
+		if err = os.Chmod(root, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
 	want(t, "fetch an unknown set", e.run(t, "", "icons", "fetch", "gcp"), 2, "",
 		`floe: unknown icon set "gcp"; use aws`)
 	want(t, "fetch without a set", e.run(t, "", "icons", "fetch"), 2, "", "floe: accepts between 1 and 2 arg(s), received 0")

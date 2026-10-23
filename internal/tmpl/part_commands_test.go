@@ -246,7 +246,7 @@ func TestNewPartRefused(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(themesOf(parts), "ink"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := l.NewPart("grid", "table"); err == nil || !strings.Contains(err.Error(), filepath.Join(themesOf(parts), "ink", "grid.css")+" cannot be written") {
+	if _, err := l.NewPart("grid", "table"); err == nil || !strings.Contains(err.Error(), "cannot write "+filepath.Join(themesOf(parts), "ink", "grid.css")+" (not a directory); check that its directory can be written to; nothing was made") {
 		t.Errorf("NewPart with a theme that cannot be written = %v", err)
 	}
 	var left []string

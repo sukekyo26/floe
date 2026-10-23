@@ -6,9 +6,10 @@ func init() {
 
 var messagesJA = map[string]string{
 	// 共通
-	"file_cannot_read":  "%s を読めません（%s）。パスとファイルがあるかを確かめてください",
-	"file_cannot_write": "%s に書き出せません（%s）。そのディレクトリに書き込めるかを確かめてください",
-	"told_above":        "（上に出したとおり）", // after a mistake whose own mistakes are told under another before it
+	"file_cannot_read":     "%s を読めません（%s）。パスとファイルがあるかを確かめてください",
+	"file_cannot_write":    "%s に書き出せません（%s）。そのディレクトリに書き込めるかを確かめてください",
+	"file_cannot_write_in": "%s の中に書き出せません（%s）。そこに書き込めるかを確かめてください",
+	"told_above":           "（上に出したとおり）", // after a mistake whose own mistakes are told under another before it
 
 	// link
 	"link_not_real":        "%s は絶対パスの実パス（symlink を解決して正規化したパス）ではないので、登録できるかを確かめられません",
@@ -355,7 +356,7 @@ var messagesJA = map[string]string{
 	"tmpl_new_part_reserved":        "自分の部品に %s という名前は付けられません。diagram と script は floe が描き、tone と any は部品が共有する schema、base と palette はどのページにも入るテーマのファイルの名前です。別の名前にしてください",
 	"tmpl_new_part_go":              "部品 %s は floe が Go で描くので、写すファイルがありません。別の部品を写してください",
 	"tmpl_new_part_theme_exists":    "自分のテーマに部品 %s のファイルが既にあります: %s。消すか、別の名前にしてください",
-	"tmpl_new_part_theme":           "%s を書けません: %s。何も作っていません",
+	"tmpl_new_part_theme":           "%s。何も作っていません",
 	"tmpl_new_part_unusable":        "%s を作っていません。写すと次のものが使えなくなります",
 	"tmpl_part_names":               "部品が名乗る部品 %s はありません。%s のどれかを書いてください",
 	"tmpl_part_broken":              "部品 %s は使えません",

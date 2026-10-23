@@ -46,16 +46,18 @@ func install(parent, name, what string, fill func(dir string) error) (string, er
 	switch _, lerr := os.Lstat(at); {
 	case lerr == nil:
 		return "", usererr.New("tmpl_new_exists", name, at)
+	case errors.Is(lerr, fs.ErrPermission):
+		return "", usererr.CannotWrite(at, lerr)
 	case !errors.Is(lerr, fs.ErrNotExist):
 		return "", fmt.Errorf("make the %s %s: %w", what, name, lerr)
 	}
 	if err := os.MkdirAll(parent, 0o755); err != nil { //nolint:gosec // G301: templates and parts are not secret
-		return "", fmt.Errorf("make the %s %s: %w", what, name, err)
+		return "", usererr.CannotWrite(at, err)
 	}
 	// Made under a name starting with a dot, which is no template nor part, and renamed when whole.
 	tmp, err := os.MkdirTemp(parent, ".new-"+name+"-")
 	if err != nil {
-		return "", fmt.Errorf("make the %s %s: %w", what, name, err)
+		return "", usererr.CannotWrite(at, err)
 	}
 	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory
 	// MkdirTemp makes it 0700; a template or a part is no more secret than the directory it is in.
@@ -241,8 +243,10 @@ func (set *partSet) checkThemeFiles(floe *partSet, src *part, made *MadePart, na
 		switch _, err := os.Lstat(at); {
 		case err == nil:
 			there = append(there, at)
+		case errors.Is(err, fs.ErrPermission):
+			return usererr.New("tmpl_new_part_theme", usererr.CannotWrite(at, err))
 		case !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR):
-			return usererr.New("tmpl_new_part_theme", at, err.Error())
+			return fmt.Errorf("look for %s: %w", at, err)
 		}
 	}
 	if there != nil {
@@ -357,7 +361,7 @@ func (w *themeCopies) write(set *partSet, made *MadePart, from, name string) err
 			if errors.Is(err, fs.ErrExist) {
 				return usererr.New("tmpl_new_part_theme_exists", name, at)
 			}
-			return usererr.New("tmpl_new_part_theme", at, err.Error())
+			return usererr.New("tmpl_new_part_theme", usererr.CannotWrite(at, err))
 		}
 	}
 	return nil

@@ -249,7 +249,7 @@ Delete the pages in order through the server (it is started when it is not runni
 
 ## `floe serve`
 
-Run the server in the foreground on `127.0.0.1` until SIGTERM or SIGINT. `floe publish`, `floe list` and `floe rm` start the same server in the background, so this is mainly for seeing its errors.
+Run the server in the foreground on `127.0.0.1` until SIGTERM or SIGINT. `floe publish`, `floe list` and `floe rm` start the same server in the background, so this is mainly for seeing its errors. It does not start when it cannot write in `FLOE_DIR`, made when missing, nor bind `FLOE_PORT`; a background server that does not start for that is told as `the server did not start; run "floe serve" to see the error`.
 
 ## `floe stop`
 
