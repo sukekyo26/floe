@@ -201,7 +201,7 @@ func (set *partSet) compiledMistakes(name string, stop error) (mistakes, failed 
 	if failed != nil {
 		return nil, failed
 	}
-	url, file := partsURL+name+".json", set.parts[name].schemaFile()
+	url, file := partsURL+name+".json", set.parts[name].file("schema.json")
 	told := func() bool {
 		_, _, leads := missingTarget(stop)
 		var load *jsonschema.LoadURLError
@@ -287,9 +287,9 @@ func (p *part) ownSchema() bool {
 	return p.dir != "" && !p.isLook()
 }
 
-// schemaFile is the schema.json of p, a part of one's own, as its mistakes name it.
-func (p *part) schemaFile() string {
-	return path.Join(p.dir, "schema.json")
+// file is the file name of p, as its mistakes name it: in its directory, or under parts/ for floe's.
+func (p *part) file(name string) string {
+	return path.Join(cmp.Or(p.dir, path.Join("parts", p.name)), name)
 }
 
 // leaveOutRooted leaves out of set the parts whose schema names a part at its root, and reports whether it
@@ -299,8 +299,7 @@ func (set *partSet) leaveOutRooted() bool {
 	rooted := map[string]error{}
 	for name, p := range set.parts {
 		if named, ok := set.rootPart(p.shape); ok {
-			at := cmp.Or(p.dir, path.Join("parts", name))
-			rooted[name] = usererr.NewAt(path.Join(at, "schema.json"), 0, 0, "tmpl_schema_root_part", named)
+			rooted[name] = usererr.NewAt(p.file("schema.json"), 0, 0, "tmpl_schema_root_part", named)
 		}
 	}
 	for name, why := range rooted {

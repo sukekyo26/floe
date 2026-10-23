@@ -809,6 +809,46 @@ func TestPartDrawMistake(t *testing.T) {
 	if _, err = draw(l, "template: memo\nlang: en\nrisks: { text: hello }\naside: { text: there }\n"); err == nil || err.Error() != want {
 		t.Errorf("drawing what cannot be escaped = %v, want %s", err, want)
 	}
+	// One html/template places at a node alone keeps the line in its words.
+	parts = ownParts(t, map[string]string{
+		"pp/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
+		"pp/part.html":   "<p data-floe-part=\"pp\">\n<script>{{if eq .text `a`}}var a = '{{end}}</script></p>",
+		"pp/part.css":    "",
+	})
+	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pp.json"}`), parts, "", "")
+	want = filepath.Join(parts, "pp", "part.html") + ": this is not a valid Go template: html/template:part.html:2:13: {{if}} branches end in different contexts: "
+	if _, err = draw(l, "template: memo\nlang: en\nrisks: { text: hello }\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("drawing branches that end apart = %v, want %s", err, want)
+	}
+}
+
+// An item holding one that fails to draw, or to pass its part's checks, is not drawn: its part, one's own or
+// floe's, would draw it without what it holds and fail, or be told to.
+func TestPartHoldingOneNotDrawn(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"inner/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
+		"inner/part.html":   `<b data-floe-part="inner">{{num .text}}</b>`,
+		"inner/part.css":    "",
+		"outer/schema.json": `{"type": "object", "properties": {"in": {"$ref": "inner.json"}, "x": {"type": "array"}}}`,
+		"outer/part.html":   `<p data-floe-part="outer">{{if not .in}}{{index .x 3}}{{end}}{{.in}}</p>`,
+		"outer/part.css":    "",
+		"cell/schema.json":  `{"type": "string"}`,
+		"cell/part.html":    `<span data-floe-part="cell">{{num .}}</span>`,
+		"cell/part.css":     "",
+	})
+	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/outer.json"}, "aside": {"$ref": "floe:///parts/table.json"}`), parts, "", "")
+	for data, failed := range map[string]string{
+		"risks: { in: { text: hello } }\n":                         "inner",
+		"aside: { columns: [{ title: Risk }], rows: [[hello]] }\n": "cell",
+	} {
+		_, err := draw(l, "template: memo\nlang: en\n"+data)
+		var all usererr.List
+		if !errors.As(err, &all) || len(all) != 1 || !strings.HasPrefix(all[0].Error(), filepath.Join(parts, failed, "part.html")+": ") {
+			t.Errorf("drawing %s = %v, want the mistake of %s alone", data, err, failed)
+		}
+	}
 }
 
 // A page that names a part that cannot be used, by a table of Markdown of the data, is refused, rather

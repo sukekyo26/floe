@@ -2,7 +2,6 @@ package tmpl
 
 import (
 	"bytes"
-	"cmp"
 	"embed"
 	"errors"
 	"fmt"
@@ -748,6 +747,7 @@ func joinDescriptions(beside, named string) string {
 func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
 	escaped := map[*part]bool{}
+	var undrawn [][]string // the paths of the items not drawn
 	for _, f := range whole {
 		p := f.part
 		if p == nil || p.pages == nil {
@@ -759,9 +759,20 @@ func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 		}
 		if more != nil {
 			problems = append(problems, more...)
+			undrawn = append(undrawn, f.at)
+			continue
+		}
+		if holdsOne(f.at, undrawn) {
+			// It holds an item not drawn: drawn without it, it would fail, or be told to, for that one's mistake.
+			undrawn = append(undrawn, f.at)
 			continue
 		}
 		html, err := p.draw(f.itemAt, d)
+		if err == nil {
+			d.drew(f.at, html)
+			continue
+		}
+		undrawn = append(undrawn, f.at)
 		var bad *usererr.Error
 		var escape *template.Error
 		isEscape := errors.As(err, &escape)
@@ -771,19 +782,21 @@ func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
 		case isEscape && escaped[p]:
 			// html/template fails to escape the page of p whatever the item: told once.
-		case err != nil:
+		default:
 			escaped[p] = escaped[p] || isEscape
 			_, at := itemPos(root, f.at, false)
-			file := path.Join(cmp.Or(p.dir, path.Join("parts", p.name)), "part.html")
-			err = drawMistake(err, file, p.dir != "", "tmpl_render_item", at, d.File)
+			err = drawMistake(err, p.file("part.html"), p.dir != "", "tmpl_render_item", at, d.File)
 			if err = problems.Add(err); err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}
-		default:
-			d.drew(f.at, html)
 		}
 	}
 	return problems.Err()
+}
+
+// holdsOne reports whether the item at the path at holds one at a path of paths.
+func holdsOne(at []string, paths [][]string) bool {
+	return slices.ContainsFunc(paths, func(u []string) bool { return len(u) > len(at) && slices.Equal(u[:len(at)], at) })
 }
 
 // drew notes html, a part's drawing of the item at the path at.

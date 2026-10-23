@@ -490,8 +490,13 @@ func drawMistake(err error, file string, own bool, key string, args ...any) erro
 	case !own:
 		return fmt.Errorf("draw with %s: %w", file, err)
 	case errors.As(err, &escape):
-		// html/template escapes file at its first drawing, whatever the data, and says the line apart.
-		// LIMIT: html/template's English. Word each ErrorCode if a reader comes to need it in its language.
+		// html/template escapes file at its first drawing, whatever the data, and says the line apart, but for
+		// a mistake it places at a node alone.
+		// LIMIT: html/template's English, with that line in it. Word each ErrorCode if a reader comes to need it
+		// in its language, and take the line from the node if the source comes to be at hand here.
+		if escape.Line == 0 {
+			return usererr.NewAt(file, 0, 0, "tmpl_go_template", err.Error())
+		}
 		return usererr.NewAt(file, escape.Line, 0, "tmpl_go_template", escape.Description)
 	}
 	// LIMIT: text/template's English, which alone says where in file it failed. Move the line to Line if
