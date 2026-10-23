@@ -169,7 +169,7 @@ type entry struct {
 }
 
 func (a *app) entryOf(file string) entry {
-	e := entry{abs: filepath.Clean(a.abs(file)), dir: nil, info: nil}
+	e := entry{abs: a.abs(file), dir: nil, info: nil}
 	if dir, err := os.Stat(filepath.Dir(e.abs)); err == nil {
 		e.dir = dir
 	}
