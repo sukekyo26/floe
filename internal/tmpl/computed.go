@@ -100,7 +100,6 @@ func (c *computed) failure(file, n, data string, err error, vars map[string]data
 	if missing := unvalued(c.programs[n], err, vars); missing != nil {
 		return yamlpos.New(file, c.at[n], "tmpl_computed_missing", n, data, strings.Join(missing, ", "), without(data))
 	}
-	// LIMIT: expr's English. Word the failures floe can tell apart, as it does the values left out.
 	return yamlpos.New(file, c.at[n], "tmpl_computed_error", n, data, brief(err))
 }
 

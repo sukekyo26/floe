@@ -61,6 +61,7 @@ func compileWritten(
 }
 
 // brief words an error of expr on one line, without the snippet it draws under the message.
+// LIMIT: expr's English. Word the failures floe can tell apart, as it does the values left out.
 func brief(err error) string {
 	if fe := (*file.Error)(nil); errors.As(err, &fe) {
 		return fe.Message
@@ -123,7 +124,9 @@ func (s *stopAt) Visit(n *exprast.Node) {
 	case *exprast.CallNode:
 		handed = n.Arguments
 	case *exprast.BinaryNode:
-		handed = []exprast.Node{n.Left, n.Right}
+		if !nilTaking[n.Operator] {
+			handed = []exprast.Node{n.Left, n.Right}
+		}
 	case *exprast.UnaryNode:
 		handed = []exprast.Node{n.Node}
 	case *exprast.SliceNode:
@@ -137,6 +140,12 @@ func (s *stopAt) Visit(n *exprast.Node) {
 			s.found = append(s.found, at)
 		}
 	}
+}
+
+// nilTaking are the operators that take nil on either side: one of them stops for another reason (true &&
+// a value that is not true or false).
+var nilTaking = map[string]bool{
+	"&&": true, "||": true, "and": true, "or": true, "??": true, "==": true, "!=": true, "in": true,
 }
 
 // nilAt returns the path to the first nil the read n, a.b.c from a variable of vars, comes to, and false

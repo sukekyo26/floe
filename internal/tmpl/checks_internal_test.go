@@ -99,6 +99,18 @@ notes:
 	}
 }
 
+// A check that stops for another reason than a value left out, which it reads where it stopped, is told at the
+// item in expr's words: || takes nil on either side.
+func TestRelationsStoppedOtherwise(t *testing.T) {
+	t.Parallel()
+
+	checks := "- for: rows\n  expr: item.public || item.draft\n  message: m\n"
+	got := failures(t, checks, "rows:\n  - public: 'yes'\n").Error()
+	if want := "d.yaml:2:5: rows[0]: m (the check could not run: "; !strings.HasPrefix(got, want) {
+		t.Errorf("the failures = %s, want %s", got, want)
+	}
+}
+
 // A list on the way of for is gone through item by item, an item without the list holding none, and
 // so does a value beside the keys and values, as a schema may take.
 func TestRelationsThroughLists(t *testing.T) {

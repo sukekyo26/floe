@@ -185,6 +185,7 @@ func TestComputeLeftOut(t *testing.T) {
 		"n: \"prs == nil ? total / len(parts) : len(prs)\"\n": "1 / 0 is not a finite number",
 		"n: \"prs == nil ? parts[5] : 0\"\n":                  "index out of range: 5",
 		"n: (writes_per_sec ?? records.y ?? 0) + 1 / r\n":     "1 / 0 is not a finite number",
+		"n: total && prs\n":                                   "interface conversion: interface {} is int, not bool",
 	} {
 		err := compute("computed.yaml", []byte(src), d, items, true)
 		if err == nil || !strings.Contains(err.Error(), "n cannot be computed from d.yaml: "+want) {

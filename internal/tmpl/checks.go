@@ -221,7 +221,6 @@ func (c relation) failure(file string, root ast.Node, at []string, err error) *u
 	}
 	switch {
 	case err != nil:
-		// LIMIT: expr's English. Word the failures floe can tell apart, as it does the values left out.
 		return yamlpos.New(file, pos, "tmpl_check_error", path, c.Message, brief(err))
 	case shown != "" && !strings.Contains(shown, "\n"):
 		return yamlpos.New(file, pos, "tmpl_check", path, c.Message, shown)
