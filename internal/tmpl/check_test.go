@@ -290,7 +290,14 @@ func TestCheckMistakes(t *testing.T) {
 			// What a $ref points at is checked as a schema where it is.
 			name:  "a $ref to what JSON Schema does not take",
 			files: map[string]string{"schema.json": `"properties": {|"foo": { "type": 5 }, "properties": { "code": { "$ref": "#/foo" },`},
-			want:  []string{`sizes/schema.json: #/foo/type: JSON Schema does not take this: `},
+			want:  []string{`sizes/schema.json: #/properties/code: a $ref to #/foo points at what is no schema (/type: `},
+		},
+		{
+			// At the $ref, its owner, not at the value of the enum, right as it is.
+			name: "a $ref to a value of an enum in the schema",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "#/properties/kind/enum/0" }, "kind": { "enum": ["a"] },` +
+				"\n    " + `"chart":`},
+			want: []string{`sizes/schema.json: #/properties/code: a $ref to #/properties/kind/enum/0 points at what is no schema (got string, want boolean or object)`},
 		},
 		{
 			// In another file, at the $ref, which is all the user can change.

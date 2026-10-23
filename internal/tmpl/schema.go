@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	neturl "net/url"
+	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -80,16 +81,15 @@ func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema
 }
 
 // compileMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of
-// file: those the metaschema refuses, of the file or of what a $ref points at in it, and those of a kind
-// floe knows, each at its JSON pointer. One of another schema, a part's, or of a kind floe does not know
-// is a failure.
+// file: those the metaschema refuses of the file, and those of a kind floe knows, each at its JSON pointer.
+// The metaschema refuses what a $ref points at, at a pointer under the file, for the $ref, whosever it is:
+// refMistake tells it at the $ref. One of another schema, a part's, or of a kind floe does not know is a
+// failure.
 func compileMistakes(url, file string, err error) error {
 	var invalid *jsonschema.SchemaValidationError
-	if errors.As(err, &invalid) {
-		if under, ok := pointerIn(url, invalid.URL); ok {
-			if refused := metaschemaMistakes(file, under, invalid.Err); refused != nil {
-				return refused
-			}
+	if errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url {
+		if refused := metaschemaMistakes(file, "#", invalid.Err); refused != nil {
+			return refused
 		}
 	}
 	if e := compileMistake(url, file, err); e != nil {
@@ -112,7 +112,7 @@ func strayRefMistake(url, file string, err error) *usererr.Error {
 		return nil
 	}
 	to, _ := pointerIn(url, leads)
-	return notFound(key, to, "schema.json", true).Placed(file, 0, 0, "#")
+	return notFound(key, to, path.Base(file), true).Placed(file, 0, 0, "#")
 }
 
 // compileMistake returns err, what stopped the compiling of the schema at url, file, as a mistake of what
@@ -165,20 +165,27 @@ func refTargetMistake(ref string, err error, to, in string, own bool) *usererr.E
 }
 
 // refNoSchemaMistake returns err, what stopped the compiling of what the $ref ref points at, as the mistake
-// of the $ref when what it points at is no schema JSON Schema takes, such as a value of an enum, and nil
-// for another.
+// of the $ref, a $ref to `to`, when what it points at is no schema JSON Schema takes, such as a value of an
+// enum, or one the metaschema refuses, each why at its pointer under it, and nil for another.
 // LIMIT: why, in jsonschema's English.
-func refNoSchemaMistake(ref string, err error) *usererr.Error {
+func refNoSchemaMistake(ref, to string, err error) *usererr.Error {
 	var invalid *jsonschema.SchemaValidationError
 	if !errors.As(err, &invalid) || !samePlace(ref, invalid.URL) {
 		return nil
 	}
-	why := invalid.Err.Error()
+	whys := []string{invalid.Err.Error()}
 	var ve *jsonschema.ValidationError
 	if errors.As(invalid.Err, &ve) {
-		leaves(ve, func(e *jsonschema.ValidationError) { why = e.ErrorKind.LocalizedString(english) })
+		whys = nil
+		leaves(ve, func(e *jsonschema.ValidationError) {
+			why := e.ErrorKind.LocalizedString(english)
+			if len(e.InstanceLocation) > 0 {
+				why = "/" + strings.Join(e.InstanceLocation, "/") + ": " + why
+			}
+			whys = append(whys, why)
+		})
 	}
-	return usererr.New("tmpl_schema_ref_no_schema", ref, why)
+	return usererr.New("tmpl_schema_ref_no_schema", to, strings.Join(whys, "; "))
 }
 
 // samePlace reports whether the URL u, as jsonschema says it, is where ref points: the same schema and

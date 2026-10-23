@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"maps"
+	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -339,9 +340,9 @@ func (set *partSet) refMistake(n *schemaNotes, r refAt, resolve func(ref string)
 }
 
 // targetMistake returns the mistake of r, a $ref of the schema of n into base, a schema floe holds, when
-// jsonschema finds nothing where it points (refTargetMistake), or what is no schema in another file
-// (refNoSchemaMistake), at the $ref, or nil; resolve compiles what it points at. What is no schema in its
-// own file is told by the compiling, under its own pointer.
+// jsonschema finds nothing where it points (refTargetMistake), or what is no schema (refNoSchemaMistake),
+// at the $ref, or nil; resolve compiles what it points at. The $ref is the mistake's owner: what it points
+// at is a value of an enum, say, right as it is.
 // LIMIT: a $ref to the URL an $id gives is not resolved: noLoader refuses that URL, which is told by the
 // compiling at the top of the file, a part's where floe compiles parts' schemas. Resolve it from where the
 // $id is if a schema comes to need it.
@@ -352,12 +353,12 @@ func (n *schemaNotes) targetMistake(r refAt, base string, resolve func(ref strin
 	to, in := r.ref, base
 	if own {
 		to, _ = pointerIn(base, r.ref)
-		in = "schema.json"
+		in = path.Base(n.file)
 	}
 	err := resolve(r.ref)
 	e := refTargetMistake(r.ref, err, to, in, own)
-	if e == nil && !own {
-		e = refNoSchemaMistake(r.ref, err)
+	if e == nil {
+		e = refNoSchemaMistake(r.ref, to, err)
 	}
 	if e != nil {
 		return n.at(r, e)
