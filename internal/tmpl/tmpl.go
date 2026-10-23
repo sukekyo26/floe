@@ -395,14 +395,13 @@ func parse(file string, src []byte) (ast.Node, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a mistake at its line and column, or ErrEmpty
 	}
-	if err = plain(file, body); err != nil {
-		return nil, err
+	// Of what anchors and tags hold, which tell themselves.
+	var shape error
+	if top := yamlpos.Unwrap(body); !isMapping(top) {
+		shape = yamlpos.New(file, yamlpos.Of(top), "tmpl_not_mapping")
 	}
-	if n := first(body, nonFinite); n != nil {
-		return nil, yamlpos.New(file, yamlpos.Of(n), "tmpl_not_finite", n.GetToken().Value)
-	}
-	if _, ok := body.(*ast.MappingNode); !ok {
-		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_not_mapping")
+	if err = usererr.Collect(refuse(file, body, true), shape); err != nil {
+		return nil, err //nolint:wrapcheck // mistakes at their lines and columns
 	}
 	return body, nil
 }
@@ -856,59 +855,76 @@ func ints(v any) any {
 	return v
 }
 
-// first returns the first node under n that pick picks, or nil.
-func first(n ast.Node, pick func(ast.Node) ast.Node) ast.Node {
-	f := &finder{pick: pick, found: nil}
-	ast.Walk(f, n)
-	return f.found
-}
-
-type finder struct {
-	pick  func(ast.Node) ast.Node
-	found ast.Node
-}
-
-func (f *finder) Visit(n ast.Node) ast.Visitor {
-	if f.found != nil {
-		return nil
-	}
-	if f.found = f.pick(n); f.found != nil {
-		return nil
-	}
-	return f
-}
-
-// nonTextKey picks the key of n that is not text. A key is a name: 0x10, ~ or 1.0 would be read as
-// another name than the one written, and not found where it was written.
-func nonTextKey(n ast.Node) ast.Node {
-	v, ok := n.(*ast.MappingValueNode)
-	if !ok {
-		return nil
-	}
-	key := yamlpos.KeyOf(v)
-	if _, text := key.(*ast.StringNode); text {
-		return nil
-	}
-	return key
-}
-
-// plain refuses in body, the file's, what would hide where a value is written (an anchor, alias, merge
-// key or tag) or read a key as another name than the one written.
+// plain refuses in body, the file's, every place that would hide where a value is written (an anchor,
+// alias, merge key or tag) or read a key as another name than the one written.
 func plain(file string, body ast.Node) error {
-	if err := yamlpos.Anchors(file, body); err != nil {
-		return err //nolint:wrapcheck // mistakes at their lines and columns
-	}
-	if k := first(body, nonTextKey); k != nil {
-		return yamlpos.New(file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value)
-	}
-	return nil
+	return refuse(file, body, false)
 }
 
-// nonFinite picks .inf and .nan.
-func nonFinite(n ast.Node) ast.Node {
-	switch n.(type) {
-	case *ast.InfinityNode, *ast.NanNode:
-		return n
+// refuse is plain, refusing every value .inf or .nan too when finite: JSON has no number for them, and they
+// would make a comparison of the checks silently hold or fail. It goes through body once, telling one
+// mistake of a node: an anchor or a tag tells itself, and what it holds is judged on its own.
+func refuse(file string, body ast.Node, finite bool) error {
+	r := &refusals{file: file, finite: finite, found: nil}
+	ast.Walk(r, body)
+	return r.found.Sorted().Err()
+}
+
+type refusals struct {
+	file   string
+	finite bool
+	found  usererr.List
+}
+
+func (r *refusals) Visit(n ast.Node) ast.Visitor {
+	e, merge := yamlpos.Anchor(r.file, n)
+	if e != nil {
+		r.found = append(r.found, e)
 	}
-	return nil
+	if merge {
+		return nil
+	}
+	switch n := n.(type) {
+	case *ast.MappingValueNode:
+		// A key is a name: 0x10, ~ or 1.0 would be read as another name than the one written, and not
+		// found where it was written. Its anchors, aliases and tags are told as such, and what they hold is
+		// judged when it is written there; a key is not a value.
+		key := yamlpos.KeyOf(n)
+		if err := yamlpos.Anchors(r.file, key); err != nil {
+			_ = r.found.Add(err) //nolint:errcheck // Anchors tells only mistakes
+		}
+		if k := yamlpos.Unwrap(key); written(k, k != key) && !isText(k) {
+			r.found = append(r.found, yamlpos.New(r.file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value))
+		}
+		ast.Walk(r, n.Value)
+		return nil
+	case *ast.InfinityNode, *ast.NanNode:
+		if r.finite {
+			r.found = append(r.found, yamlpos.New(r.file, yamlpos.Of(n), "tmpl_not_finite", n.GetToken().Value))
+		}
+	}
+	return r
+}
+
+// written reports whether n, held by an anchor or a tag when wrapped, is written in place: an alias is
+// written elsewhere. The null a wrapper holds is not told from one it holds of nothing, which
+// go-yaml writes as null, so it is left to the wrapper's mistake.
+func written(n ast.Node, wrapped bool) bool {
+	switch n.(type) {
+	case *ast.AliasNode:
+		return false
+	case *ast.NullNode:
+		return !wrapped
+	}
+	return true
+}
+
+func isMapping(n ast.Node) bool {
+	_, ok := n.(*ast.MappingNode)
+	return ok
+}
+
+func isText(n ast.Node) bool {
+	_, text := n.(*ast.StringNode)
+	return text
 }

@@ -458,17 +458,41 @@ type anchors struct {
 }
 
 func (a *anchors) Visit(n ast.Node) ast.Visitor {
-	// A merge key is one way of writing, told once with the alias or mapping it takes.
-	if v, ok := n.(*ast.MappingValueNode); ok {
-		if _, merge := v.Key.(*ast.MergeKeyNode); merge {
-			a.found = append(a.found, New(a.file, Of(v.Key), "yaml_no_anchors"))
-			return nil
-		}
+	e, merge := Anchor(a.file, n)
+	if e != nil {
+		a.found = append(a.found, e)
 	}
-	// Each is told, and what it holds too: each is to be written out.
-	switch n.(type) {
-	case *ast.AnchorNode, *ast.AliasNode, *ast.TagNode:
-		a.found = append(a.found, New(a.file, Of(n), "yaml_no_anchors"))
+	if merge {
+		return nil
 	}
 	return a
+}
+
+// Anchor is the mistake of n itself, of file, if it is an anchor, alias or tag, or a key and value of a
+// merge key (<<), told at the key; nil else. What an anchor or a tag holds is to be told too, each to be
+// written out; merge reports a merge key, one way of writing, told once with the alias or mapping it takes.
+func Anchor(file string, n ast.Node) (e *usererr.Error, merge bool) {
+	switch n := n.(type) {
+	case *ast.MappingValueNode:
+		if _, merge = n.Key.(*ast.MergeKeyNode); merge {
+			return New(file, Of(n.Key), "yaml_no_anchors"), true
+		}
+	case *ast.AnchorNode, *ast.AliasNode, *ast.TagNode:
+		return New(file, Of(n), "yaml_no_anchors"), false
+	}
+	return nil, false
+}
+
+// Unwrap returns what the anchors and tags around n hold, n itself without one.
+func Unwrap(n ast.Node) ast.Node {
+	for {
+		switch w := n.(type) {
+		case *ast.AnchorNode:
+			n = w.Value
+		case *ast.TagNode:
+			n = w.Value
+		default:
+			return n
+		}
+	}
 }

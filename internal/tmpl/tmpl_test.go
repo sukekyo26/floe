@@ -285,6 +285,38 @@ func TestReadRefusals(t *testing.T) {
 			t.Errorf("Read %q = %v, want %s", c.src, err, c.want)
 		}
 	}
+	// What the reading refuses is told all at once, as the whole of it: each key that is not text, each
+	// value no number can be, an anchor beside them, and a top level that is not keys and values. A merge
+	// key is told as one, not again as a key that is not text.
+	const anchor = "anchors, aliases, merge keys (<<) and tags are not supported; write the value out"
+	for src, want := range map[string]string{
+		"template: report\n1: a\ntrue: b\nlang: en\n": "data.yaml:2:1: a key is a name: write 1 as text, in quotes\n" +
+			"data.yaml:3:1: a key is a name: write true as text, in quotes",
+		"template: report\nlead: .inf\nsections:\n  - heading: .nan\nlang: en\n": "data.yaml:2:7: .inf is not a value a data file can hold; " +
+			"write a number in digits, or quote it as text\ndata.yaml:4:14: .nan is not a value a data file can hold; write a number in digits, or quote it as text",
+		"template: report\nlead: &a x\n1: b\nlang: en\n": "data.yaml:2:7: " + anchor + "\ndata.yaml:3:1: a key is a name: write 1 as text, in quotes",
+		"template: report\nlead: &a x\ntitle: .inf\nlang: en\n": "data.yaml:2:7: " + anchor + "\n" +
+			"data.yaml:3:8: .inf is not a value a data file can hold; write a number in digits, or quote it as text",
+		"template: report\nb: &b {lead: x}\nc: {<<: *b}\nlang: en\n": "data.yaml:2:4: " + anchor + "\ndata.yaml:3:5: " + anchor,
+		"- .inf\n": "data.yaml:1:1: write the top level as keys and values, like template: report\n" +
+			"data.yaml:1:3: .inf is not a value a data file can hold; write a number in digits, or quote it as text",
+		"template: report\n1: {true: a}\nlang: en\n": "data.yaml:2:1: a key is a name: write 1 as text, in quotes\n" +
+			"data.yaml:2:5: a key is a name: write true as text, in quotes",
+		// One mistake to a place: a key is told as a key, and an anchor or a tag tells itself, what it holds
+		// judged on its own.
+		"template: report\n.inf: a\nlang: en\n":            "data.yaml:2:1: a key is a name: write .inf as text, in quotes",
+		"template: report\n&k x: a\nlang: en\n":            "data.yaml:2:1: " + anchor,
+		"template: report\n!!str x: a\nlang: en\n":         "data.yaml:2:1: " + anchor,
+		"&a\ntemplate: report\nlang: en\n":                 "data.yaml:1:1: " + anchor,
+		"--- !!map\ntemplate: report\nlang: en\n":          "data.yaml:1:5: " + anchor,
+		"template: report\nlead: &a x\n*a : b\nlang: en\n": "data.yaml:2:7: " + anchor + "\ndata.yaml:3:1: " + anchor,
+		"template: report\n? !!str\n: b\nlang: en\n":       "data.yaml:2:3: " + anchor,
+		"&a\n- x\n": "data.yaml:1:1: " + anchor + "\ndata.yaml:2:1: write the top level as keys and values, like template: report",
+	} {
+		if _, err := builtins.Read("data.yaml", []byte(src), "", ""); err == nil || err.Error() != want {
+			t.Errorf("Read %q = %v\nwant %s", src, err, want)
+		}
+	}
 	// An empty file misses both keys every data file needs.
 	if _, err := builtins.Read("data.yaml", nil, "", ""); err == nil || !strings.Contains(err.Error(), "\ndata.yaml:1:1: name the template at the top level") {
 		t.Errorf("Read of an empty file = %v", err)
