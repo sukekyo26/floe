@@ -35,16 +35,18 @@ func (c *config) base() string {
 // command does.
 func loadConfig(getenv func(string) string, dir string) (*config, error) {
 	c := &config{root: "", icons: "", templates: "", parts: "", themes: "", home: getenv("HOME"), port: defaultPort}
+	var portErr error
 	if raw := getenv("FLOE_PORT"); raw != "" {
 		// Decimal only: hex (0x10) and exponents (1e3) are typos, not ports.
 		port, err := strconv.Atoi(raw)
 		if !decimalIntRe.MatchString(raw) || err != nil || port < 1 || port > 65535 {
-			return nil, usererr.New("cli_invalid_port", raw)
+			portErr = usererr.New("cli_invalid_port", raw)
+		} else {
+			c.port = port
 		}
-		c.port = port
 	}
-	if err := c.readDirs(getenv, dir); err != nil {
-		return nil, err
+	if err := usererr.Collect(portErr, c.readDirs(getenv, dir)); err != nil {
+		return nil, err //nolint:wrapcheck // its mistakes, or what failed
 	}
 	return c, nil
 }

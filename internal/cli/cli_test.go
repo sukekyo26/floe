@@ -808,8 +808,8 @@ func TestCheck(t *testing.T) {
 	}
 	// A file that cannot be checked is reported with the others, not instead of them.
 	want(t, "check files that cannot be checked", e.run(t, "", "check", "page.html", "bad.yaml", "nope.yaml"), 1, "",
-		"page.html is not a data file (.yaml or .yml)\nbad.yaml:2:1: leed is not an item")
-	if r := e.run(t, "", "check", "bad.yaml", "nope.yaml"); !strings.Contains(r.stderr, "\ncannot read nope.yaml") {
+		"floe: page.html is not a data file (.yaml or .yml)\nbad.yaml:2:1: leed is not an item")
+	if r := e.run(t, "", "check", "bad.yaml", "nope.yaml"); !strings.Contains(r.stderr, "\nfloe: cannot read nope.yaml") {
 		t.Errorf("check of a missing file after one with mistakes = %q", r.stderr)
 	}
 	want(t, "check without a file", e.run(t, "", "check"), 2, "", "floe: requires at least 1 arg(s)")

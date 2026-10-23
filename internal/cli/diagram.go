@@ -2,6 +2,7 @@ package cli
 
 import (
 	"cmp"
+	"errors"
 	"slices"
 	"strings"
 
@@ -52,11 +53,16 @@ is enough; more does no harm). --no-assets leaves them out.`,
 func (a *app) render(files []string, assets bool) error {
 	var problems usererr.List
 	specs := make([]*diagram.Spec, 0, len(files))
-	for _, file := range files {
+	// A file that cannot be read is told by its path, not at a place: in the order it was given.
+	unread := map[*usererr.Error]int{}
+	for i, file := range files {
 		var s *diagram.Spec
 		src, err := a.readArg(file)
+		var e *usererr.Error
 		if err == nil {
 			s, err = diagram.Parse(file, src)
+		} else if errors.As(err, &e) {
+			unread[e] = i
 		}
 		if err != nil {
 			if failed := problems.Add(err); failed != nil {
@@ -71,16 +77,7 @@ func (a *app) render(files []string, assets bool) error {
 		return failed //nolint:wrapcheck // already says what failed
 	}
 	if len(problems) > 0 {
-		// The mistakes of each file together, in the order the files were given; those about all of the
-		// diagrams (icons not fetched) after them.
-		order := map[string]int{"": len(files)}
-		for i, f := range files {
-			if _, ok := order[f]; !ok {
-				order[f] = i
-			}
-		}
-		slices.SortStableFunc(problems, func(x, y *usererr.Error) int { return cmp.Compare(order[x.File], order[y.File]) })
-		return problems
+		return inFileOrder(problems, files, unread)
 	}
 	out := strings.Join(svgs, "\n")
 	if assets {
@@ -139,4 +136,24 @@ is printed in the language without its region (ja-JP to ja), else in English.`,
 	}
 	cmd.Flags().StringVar(&lang, "lang", "", "the language of the examples, as a BCP 47 tag (en, ja)")
 	return cmd
+}
+
+// inFileOrder puts problems of the diagrams of files in the order the files were given, those of each file
+// together, by the file each is at, else its index in unread; those about all of the diagrams (icons not
+// fetched) after them.
+func inFileOrder(problems usererr.List, files []string, unread map[*usererr.Error]int) usererr.List {
+	order := map[string]int{"": len(files)}
+	for i, f := range files {
+		if _, ok := order[f]; !ok {
+			order[f] = i
+		}
+	}
+	at := func(e *usererr.Error) int {
+		if i, ok := unread[e]; ok {
+			return i
+		}
+		return order[e.File]
+	}
+	slices.SortStableFunc(problems, func(x, y *usererr.Error) int { return cmp.Compare(at(x), at(y)) })
+	return problems
 }

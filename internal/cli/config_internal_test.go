@@ -8,16 +8,16 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// Every directory setting that is not right is told at once, without floe's place in a file: they are
+// Every setting that is not right, the port and the directories, is told at once, without floe's place in a file: they are
 // apart from each other.
 func TestLoadConfigMistakes(t *testing.T) {
 	t.Parallel()
 
-	vars := map[string]string{"HOME": "/h", "FLOE_PARTS_DIR": "~bob/p", "FLOE_THEMES_DIR": "~bob/t"}
+	vars := map[string]string{"HOME": "/h", "FLOE_PORT": "abc", "FLOE_PARTS_DIR": "~bob/p", "FLOE_THEMES_DIR": "~bob/t"}
 	_, err := loadConfig(func(k string) string { return vars[k] }, "/w")
 	shown := usererr.Show(i18n.EnglishCatalog(), err)
-	if lines := strings.Split(shown.Text, "\n"); len(lines) != 2 || !strings.HasPrefix(lines[0], "FLOE_PARTS_DIR is ~bob/p") ||
-		!strings.HasPrefix(lines[1], "FLOE_THEMES_DIR is ~bob/t") || shown.Placed {
+	if lines := strings.Split(shown.Named, "\n"); len(lines) != 3 || !strings.HasPrefix(lines[0], "floe: invalid FLOE_PORT") ||
+		!strings.HasPrefix(lines[1], "floe: FLOE_PARTS_DIR is ~bob/p") || !strings.HasPrefix(lines[2], "floe: FLOE_THEMES_DIR is ~bob/t") || shown.Placed {
 		t.Errorf("two directories not right = %+v", shown)
 	}
 }

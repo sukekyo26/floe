@@ -47,15 +47,16 @@ func install(parent, name, what string, fill func(dir string) error) (string, er
 	case lerr == nil:
 		return "", usererr.New("tmpl_new_exists", name, at)
 	case !errors.Is(lerr, fs.ErrNotExist):
-		return "", fmt.Errorf("make the %s %s: %w", what, name, lerr)
+		// FLOE_TEMPLATES_DIR or FLOE_PARTS_DIR, which the user picks, under a file, or not theirs.
+		return "", usererr.CannotWrite(parent, lerr)
 	}
 	if err := os.MkdirAll(parent, 0o755); err != nil { //nolint:gosec // G301: templates and parts are not secret
-		return "", fmt.Errorf("make the %s %s: %w", what, name, err)
+		return "", usererr.CannotWrite(parent, err)
 	}
 	// Made under a name starting with a dot, which is no template nor part, and renamed when whole.
 	tmp, err := os.MkdirTemp(parent, ".new-"+name+"-")
 	if err != nil {
-		return "", fmt.Errorf("make the %s %s: %w", what, name, err)
+		return "", usererr.CannotWrite(parent, err)
 	}
 	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory
 	// MkdirTemp makes it 0700; a template or a part is no more secret than the directory it is in.

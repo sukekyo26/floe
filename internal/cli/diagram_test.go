@@ -38,12 +38,18 @@ func TestDiagramRender(t *testing.T) {
 	// A mistake about the whole of the diagrams, icons not fetched, is told beside those of the specs.
 	e.write(t, "specs/icon.yaml", "id: i\n"+head+"  - icon: { x: 10, y: 10, name: aws/aws-lambda }\n")
 	want(t, "render with icons not fetched", e.run(t, "specs", "diagram", "render", "icon.yaml", "shape.yaml"), 1, "",
-		"shape.yaml:6:5: dot: give cy\nAWS icons are not in ")
+		"shape.yaml:6:5: dot: give cy\nfloe: AWS icons are not in ")
 	want(t, "render a missing file", e.run(t, "specs", "diagram", "render", "a.yaml", "nope.yaml"), 1, "",
 		"floe: cannot read nope.yaml (no such file or directory)")
 	want(t, "render two missing files", e.run(t, "specs", "diagram", "render", "nope.yaml", "gone.yaml"), 1, "",
 		"floe: cannot read nope.yaml (no such file or directory); check the path and that the file exists\n"+
-			"cannot read gone.yaml (no such file or directory)")
+			"floe: cannot read gone.yaml (no such file or directory)")
+	// One that cannot be read is told in the order the files were given, before the mistakes of those after.
+	e.write(t, "specs/bad.yaml", "id: b\n"+head+"  - dot: { cx: 0 }\n")
+	r = e.run(t, "specs", "diagram", "render", "nope.yaml", "bad.yaml")
+	if i, j := strings.Index(r.stderr, "nope.yaml"), strings.Index(r.stderr, "bad.yaml:"); r.code != 1 || i < 0 || j < 0 || i > j {
+		t.Errorf("render a missing file before one with mistakes = %d %q", r.code, r.stderr)
+	}
 	want(t, "render nothing", e.run(t, "", "diagram", "render"), 2, "", "floe: requires at least 1 arg(s)")
 }
 

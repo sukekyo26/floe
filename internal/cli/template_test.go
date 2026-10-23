@@ -154,7 +154,7 @@ func TestTemplateNewUnderAFile(t *testing.T) {
 	e := newEnv(t)
 	e.vars["FLOE_TEMPLATES_DIR"] = e.write(t, "templates", "")
 	if r := e.run(t, "", "template", "new", "spec", "--from", "report"); r.code != 1 || strings.Contains(r.stderr, "is there already") ||
-		!strings.Contains(r.stderr, "make the template spec") {
+		!strings.Contains(r.stderr, "floe: cannot write "+e.vars["FLOE_TEMPLATES_DIR"]+" (not a directory)") {
 		t.Errorf("template new under a file = %+v", r)
 	}
 }
