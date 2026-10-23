@@ -199,18 +199,35 @@ func (set *partSet) settle(stopped map[string]error) {
 	}
 }
 
-// compileOwn compiles the schema of each part of one's own in set with the schemas of the other parts, and
-// returns what stopped each, by name. Each is compiled once: a part left out later changes no mistake of
-// another's own file, only where its compiling stops, and checkHeld refuses a part that refers to it.
+// compileOwn compiles the schema of each part of one's own in set, and returns what stopped each, by name,
+// for settle to tell those of their own files. These hold while settle leaves parts out: a part left out
+// changes no mistake of another's own file, only where its compiling stops, and checkHeld refuses a part
+// that refers to it. leaveOutUncompiled compiles again those that stopped elsewhere.
 // LIMIT: jsonschema stops at the first mistake: those the metaschema refuses are told always, but an
 // $anchor or $id written twice waits for those met before it.
 func (set *partSet) compileOwn() map[string]error {
-	stopped := map[string]error{}
+	var own []string
 	for name, p := range set.parts {
 		if p.ownSchema() {
-			if err := set.compilePart(name); err != nil {
-				stopped[name] = err
-			}
+			own = append(own, name)
+		}
+	}
+	return set.compileEach(own)
+}
+
+// compileEach compiles the schema of each part of set named with the schemas of the parts, one compiler
+// for them all, and returns what stopped each, by name: jsonschema's, or the failure of making the
+// compiler.
+func (set *partSet) compileEach(names []string) map[string]error {
+	stopped := map[string]error{}
+	c, failed := set.compiler()
+	for _, name := range names {
+		err := failed
+		if err == nil {
+			_, err = c.Compile(partsURL + name + ".json")
+		}
+		if err != nil {
+			stopped[name] = err
 		}
 	}
 	return stopped
@@ -227,32 +244,36 @@ func (set *partSet) schemaMistakes(name string, err error) error {
 }
 
 // leaveOutUncompiled leaves out of set each part of one's own whose compiling, in stopped, stopped
-// elsewhere than at a mistake of its own schema.json, and still does once the rest are settled, with what
-// stops it (loadedOrFailed): a template that uses a part floe part check passes never stops at the part. A
-// part that refers to another that stops is left to checkHeld, which refuses it as one that refers to a
-// part that cannot be used. It reports whether it left one out.
+// elsewhere than at a mistake of its own schema.json, and still does once the rest are settled, but one
+// that holds a part that stops, which checkHeld refuses as one that holds a part that cannot be used. None
+// of the parts it holds stops, so what stops it is its own (compileMistakes): a template that uses a part
+// floe part check passes never stops at the part. It reports whether it left one out.
 // LIMIT: what floe cannot place is told in jsonschema's English, as floe's failure (tmpl_own_failed).
 func (set *partSet) leaveOutUncompiled(stopped map[string]error) bool {
-	still := map[string]error{}
-	for name, err := range stopped {
-		// One that compiled stays so: the parts it refers to are all left in, or checkHeld refused it.
-		if set.parts[name] == nil || set.schemaMistakes(name, err) != nil {
-			continue
+	var again []string
+	for name := range stopped {
+		// One that stopped at its own file is left out by settle, and one that compiled stays so.
+		if set.parts[name] != nil {
+			again = append(again, name)
 		}
-		if err = set.compilePart(name); err != nil {
-			still[name] = err
-		}
+	}
+	still := set.compileEach(again)
+	holdsStopped := func(name string) bool {
+		return slices.ContainsFunc(set.shapes[partsURL+name+".json"].refsUnder(nil), func(to string) bool {
+			return to != name && still[to] != nil
+		})
 	}
 	refused := map[string]error{}
 	for name, err := range still {
-		if !slices.ContainsFunc(set.partsReferredBy(name), func(to string) bool { return to != name && still[to] != nil }) {
-			refused[name] = cmp.Or(set.schemaMistakes(name, err), loadedOrFailed(set.parts[name].schemaFile(), err))
+		if !holdsStopped(name) {
+			refused[name] = compileMistakes(partsURL+name+".json", set.parts[name].schemaFile(), err)
 		}
 	}
 	if len(refused) == 0 {
-		// Parts that refer to one another, each stopping: none comes first, and each is told.
+		// A guard of the promise, which no part reaches today: parts that hold one another are left out as a
+		// cycle first, and a $ref into a part by settle.
 		for name, err := range still {
-			refused[name] = cmp.Or(set.schemaMistakes(name, err), loadedOrFailed(set.parts[name].schemaFile(), err))
+			refused[name] = compileMistakes(partsURL+name+".json", set.parts[name].schemaFile(), err)
 		}
 	}
 	// Left out once all are compiled: leaveOut drops the part's schema, which the compiling of others reads.
@@ -260,35 +281,6 @@ func (set *partSet) leaveOutUncompiled(stopped map[string]error) bool {
 		set.leaveOut(name, why)
 	}
 	return len(refused) > 0
-}
-
-// partsReferredBy returns the parts the $refs of the schema of the part name of set refer to, wherever in
-// it, into them too.
-func (set *partSet) partsReferredBy(name string) []string {
-	var names []string
-	if n := set.notes[partsURL+name+".json"]; n != nil {
-		for _, x := range n.met {
-			if x.ref == nil {
-				continue
-			}
-			base, _, _ := strings.Cut(x.ref.ref, "#")
-			if to, ok := partName(base); ok {
-				names = append(names, to)
-			}
-		}
-	}
-	return names
-}
-
-// compilePart compiles the schema of the part name of set with the schemas of the other parts, and returns
-// what stopped it, nil for none.
-func (set *partSet) compilePart(name string) error {
-	c, err := set.compiler()
-	if err != nil {
-		return err
-	}
-	_, err = c.Compile(partsURL + name + ".json")
-	return err //nolint:wrapcheck // jsonschema's, which compileMistakes reads by its type
 }
 
 // ownSchema reports whether p is a part of one's own that draws, whose schema.json floe compiles.

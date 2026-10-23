@@ -345,6 +345,10 @@ func metaschemaMistakes(file string, err error) error {
 	}
 	var mistakes usererr.List
 	leaves(ve, func(e *jsonschema.ValidationError) {
+		loc := e.InstanceLocation
+		if _, format := e.ErrorKind.(*kind.Format); format && len(loc) > 0 && loc[len(loc)-1] == "$ref" {
+			return // a $ref no URL: refMistake tells it at the $ref
+		}
 		at := "#"
 		for _, step := range e.InstanceLocation {
 			at += "/" + pointerKey.Replace(step)

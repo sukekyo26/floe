@@ -289,6 +289,13 @@ func TestBrokenOwnParts(t *testing.T) {
 		"adyn/schema.json": `{"type": "object", "properties": {"d": {"$ref": "dyn.json"}}}`,
 		"adyn/part.html":   `<div data-floe-part="adyn"></div>`,
 		"adyn/part.css":    "",
+		// What no check of a $ref sees, in the part's own file, at its top, as a template's would be.
+		"selfdyn/schema.json": `{"type": "object", "properties": {"a": {"type": "string", "$dynamicRef": "#/$defs/nope"}}}`,
+		"selfdyn/part.html":   `<div data-floe-part="selfdyn"></div>`,
+		"selfdyn/part.css":    "",
+		"idd/schema.json":     `{"$id": "https://example.com/p.json", "type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"idd/part.html":       `<div data-floe-part="idd"></div>`,
+		"idd/part.css":        "",
 		// The mistakes of several files are told together, under the part.
 		"wrongs/schema.json": `{"type": "object"}`,
 		"wrongs/part.html":   `<div data-floe-part="wrongs"></div>`,
@@ -387,6 +394,10 @@ func TestBrokenOwnParts(t *testing.T) {
 			": https://example.com/x.json: a schema refers to no other file or URL",
 		"adyn": "the part adyn cannot be used\n  " + filepath.Join(parts, "adyn", "schema.json") + ": #/properties/d: the part dyn cannot be used\n    " +
 			filepath.Join(parts, "dyn", "schema.json") + ": https://example.com/x.json: a schema refers to no other file or URL",
+		"selfdyn": "the part selfdyn cannot be used\n  " + filepath.Join(parts, "selfdyn", "schema.json") +
+			": #: a $ref to #/$defs/nope finds nothing in schema.json",
+		"idd": "the part idd cannot be used\n  " + filepath.Join(parts, "idd", "schema.json") +
+			": #: a $ref to #/$defs/nope finds nothing in schema.json",
 		"pointed": "the part pointed cannot be used\n  " + filepath.Join(parts, "pointed", "schema.json") +
 			": #/properties/t: a $ref to #/$defs/nope finds nothing in schema.json",
 		"deadptr": "the part deadptr cannot be used\n  " + filepath.Join(parts, "deadptr", "schema.json") +
@@ -411,9 +422,9 @@ func TestBrokenOwnParts(t *testing.T) {
 		}
 		// Told as floe part check tells it, at the $ref, not in the words of jsonschema's loading.
 		at := filepath.Join(dir, "memo", "schema.json") + ": #/properties/risks: "
-		// A $ref that finds nothing is told once, at the $ref, not again by the compiling, at the top.
+		// A $ref is told once, at the $ref, not again by the compiling, at the top, or by the metaschema.
 		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), at+why) ||
-			strings.Count(mistakes[0].Error(), "finds nothing") > 1 {
+			strings.Count(mistakes[0].Error(), "finds nothing") > 1 || strings.Contains(mistakes[0].Error(), "uri-reference") {
 			t.Errorf("Check of a template of %s = %v, want %s", name, mistakes, why)
 		}
 	}
