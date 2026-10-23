@@ -774,6 +774,35 @@ func TestPartWordAtItem(t *testing.T) {
 	}
 }
 
+// A check of a part that stops for want of a value the data gives none for is told at its expression in the
+// part's checks.yaml, the item and the value named from the top of the data file.
+func TestPartCheckLeftOut(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"pc/schema.json": `{"type": "object", "properties": {"a": {"type": "object", "properties": {"n": {"type": "number"}}}}}`,
+		"pc/part.html":   `<p data-floe-part="pc"></p>`,
+		"pc/part.css":    "",
+		"pc/checks.yaml": "- expr: doc.a.n > 0\n  message: m\n",
+	})
+	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pc.json"}`), parts, "", "")
+	want := filepath.Join(parts, "pc", "checks.yaml") + ":1:9: risks of data.yaml cannot be checked, as data.yaml gives no value for risks.a that the expression uses; "
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: {}\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("checking what the data leaves out = %v, want %s", err, want)
+	}
+	// A part that is a list gives doc no keys: what the check reads from it is not the data's to give.
+	parts = ownParts(t, map[string]string{
+		"pl/schema.json": `{"type": "array", "items": {"type": "object"}}`,
+		"pl/part.html":   `<p data-floe-part="pl"></p>`,
+		"pl/part.css":    "",
+		"pl/checks.yaml": "- expr: doc.max > 0\n  message: m\n",
+	})
+	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pl.json"}`), parts, "", "")
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: [{ a: 1 }]\n"); err == nil || strings.Contains(err.Error(), "gives no value") {
+		t.Errorf("checking a list's doc = %v", err)
+	}
+}
+
 // A part of one's own whose part.html fails to draw an item is told at its part.html, naming the item, for
 // every item it fails on, in the order of their keys: the part's mistake, which its maker fixes, not floe's.
 func TestPartDrawMistake(t *testing.T) {

@@ -42,7 +42,8 @@ const relations = `
 `
 
 // Each item a check fails for is reported at its field, with the field's value when it has one; an
-// expression that cannot run on an item, a division by zero among them, is reported there too.
+// expression that cannot run on an item, a division by zero among them, is reported there too, but one
+// that stops for want of a value the data gives none for is the check's, told at its expression.
 func TestRelations(t *testing.T) {
 	t.Parallel()
 
@@ -67,20 +68,22 @@ notes:
       a long note
   - text:
 `
-	got := failures(t, relations, src)
+	got := failures(t, relations, src, `{"type": "object", "properties": {"attributes": {}, "notes": {},
+		"model": {"type": "object", "properties": {"patterns": {"type": "array", "items": {"type": "object",
+			"properties": {"id": {}, "key": {}, "reads": {}, "rate": {"type": "object", "properties": {"per_sec": {}}}}}}}}}}`)
 	want := []string{
 		"d.yaml:3:5: attributes[1]: the name secret is taken",
 		`d.yaml:6:11: model.patterns[0].id: give each pattern its own id ("AP-1")`,
 		`d.yaml:10:11: model.patterns[1].id: give each pattern its own id ("AP-1")`,
 		`d.yaml:11:12: model.patterns[1].key: use an attribute as the key ("user_id")`,
 		"d.yaml:13:24: model.patterns[1].rate.per_sec: keep reads per second under 10 (the check could not run: 1 / 0 is not a finite number)",
-		"d.yaml:14:7: model.patterns[2]: keep reads per second under 10 (the check could not run: ",
 		"d.yaml:15:12: model.patterns[2].key: use an attribute as the key",
 		"d.yaml:18:11: notes[0].text: keep notes short",
 		"d.yaml:20:5: notes[1].text: write the note",
+		"checks.yaml:12:9: model.patterns[2] of d.yaml cannot be checked, as d.yaml gives no value for model.patterns[2].rate that the expression uses; ",
 	}
 	lines := strings.Split(got.Error(), "\n")
-	for _, i := range []int{len(want) - 2, len(want) - 1} {
+	for _, i := range []int{len(want) - 3, len(want) - 2} {
 		if len(lines) == len(want) && lines[i] != want[i] {
 			t.Errorf("a block of text or an empty value is quoted: %s", lines[i])
 		}
@@ -98,6 +101,18 @@ notes:
 	}
 }
 
+// A check that stops for another reason than a value left out, which it reads where it stopped, is told at the
+// item in expr's words: || stopped on a value that is not true or false, not on the nil on its right.
+func TestRelationsStoppedOtherwise(t *testing.T) {
+	t.Parallel()
+
+	checks := "- for: rows\n  expr: item.public || item.draft\n  message: m\n"
+	got := failures(t, checks, "rows:\n  - public: 'yes'\n", `{"properties": {"rows": {"items": {"properties": {"public": {}, "draft": {}}}}}}`).Error()
+	if want := "d.yaml:2:5: rows[0]: m (the check could not run: "; !strings.HasPrefix(got, want) {
+		t.Errorf("the failures = %s, want %s", got, want)
+	}
+}
+
 // A list on the way of for is gone through item by item, an item without the list holding none, and
 // so does a value beside the keys and values, as a schema may take.
 func TestRelationsThroughLists(t *testing.T) {
@@ -105,7 +120,7 @@ func TestRelationsThroughLists(t *testing.T) {
 
 	checks := "- for: groups.members\n  field: name\n  expr: item.name != 'bad'\n  message: no bad members\n"
 	src := "groups:\n  - members:\n      - name: ok\n  - {}\n  - members:\n      - name: ok\n      - name: bad\n  - text\n"
-	if got, want := failures(t, checks, src).Error(), `d.yaml:7:15: groups[2].members[1].name: no bad members ("bad")`; got != want {
+	if got, want := failures(t, checks, src, `{}`).Error(), `d.yaml:7:15: groups[2].members[1].name: no bad members ("bad")`; got != want {
 		t.Errorf("the failures = %s, want %s", got, want)
 	}
 }
@@ -129,36 +144,37 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 		{"- for: b\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b does not lead to a list in d.yaml"},
 	} {
 		d, root := data(t, "a: [1]\nb: x\n")
-		err := relate("checks.yaml", []byte(tt.checks), d, root)
+		err := relate("checks.yaml", []byte(tt.checks), d, root, true)
 		if err == nil || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("relate(%q) = %v, want %s", tt.checks, err, tt.want)
 		}
 	}
 	d, root := data(t, "a: [1]\n")
 	both := "- for: a\n  expr: 'true'\n- for: a\n  message: m\n"
-	if err := relate("checks.yaml", []byte(both), d, root); err == nil || err.Error() != "checks.yaml:1:3: write message in the check\nchecks.yaml:3:3: write expr in the check" {
+	if err := relate("checks.yaml", []byte(both), d, root, true); err == nil || err.Error() != "checks.yaml:1:3: write message in the check\nchecks.yaml:3:3: write expr in the check" {
 		t.Errorf("relate of two broken checks = %v", err)
 	}
-	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 && -item / 2 == -0.5\n  message: m\n"), d, root); err != nil {
+	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 && -item / 2 == -0.5\n  message: m\n"), d, root, true); err != nil {
 		t.Errorf("relate of data that holds = %v", err)
 	}
 	// The author's comment after an expression is refused too, as floe cannot tell it from a # of the
 	// expression; on a line of its own, it is the author's.
-	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 # one\n  message: m\n"), d, root); err == nil ||
+	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 # one\n  message: m\n"), d, root, true); err == nil ||
 		!strings.HasPrefix(err.Error(), "checks.yaml:2:19: a # after a space began a YAML comment, which may have cut the value short, to item == 1:") {
 		t.Errorf("relate of an expression and a comment = %v", err)
 	}
-	if err := relate("checks.yaml", []byte("- for: a\n  # one\n  expr: item == 1\n  message: m\n"), d, root); err != nil {
+	if err := relate("checks.yaml", []byte("- for: a\n  # one\n  expr: item == 1\n  message: m\n"), d, root, true); err != nil {
 		t.Errorf("relate of an expression under a comment = %v", err)
 	}
 }
 
-func failures(t *testing.T, checks, src string) usererr.List {
+func failures(t *testing.T, checks, src, schema string) usererr.List {
 	t.Helper()
 
 	d, root := data(t, src)
+	d.shape = shapeOf(t, schema)
 	var p usererr.List
-	if err := relate("checks.yaml", []byte(checks), d, root); !errors.As(err, &p) {
+	if err := relate("checks.yaml", []byte(checks), d, root, true); !errors.As(err, &p) {
 		t.Fatalf("relate = %v, want problems", err)
 	}
 	return p

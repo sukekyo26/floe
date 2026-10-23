@@ -200,6 +200,12 @@ func (t *Template) file(name string) string {
 	return filepath.Join(cmp.Or(t.Path, t.Name), name)
 }
 
+// isOwn reports whether t is one's own, not built in: a file of it that fails on data its schema took is its
+// maker's mistake, else floe's failure.
+func (t *Template) isOwn() bool {
+	return t.Dir != ""
+}
+
 // parts returns the parts t is drawn with and their themes, read once for t.
 // LIMIT: read for each template, so floe template list reads parts of one's own once per template. Keep
 // them for a command, not in the Library a server keeps, if listing comes to be slow.

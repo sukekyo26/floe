@@ -282,9 +282,15 @@ func (set *partSet) compileOwn() (map[string]error, error) {
 	return mistakes, nil
 }
 
+// isOwn reports whether p is a part of one's own, not floe's: a file of it that fails on data its schema took
+// is its maker's mistake, else floe's failure.
+func (p *part) isOwn() bool {
+	return p.dir != ""
+}
+
 // ownSchema reports whether p is a part of one's own that draws, whose schema.json floe compiles.
 func (p *part) ownSchema() bool {
-	return p.dir != "" && !p.isLook()
+	return p.isOwn() && !p.isLook()
 }
 
 // file is the file name of p, as its mistakes name it: in its directory, or under parts/ for floe's.
@@ -429,7 +435,7 @@ func (set *partSet) reserved(name string) bool {
 // look alone. floe's parts name themselves, one each, as a test checks.
 func (set *partSet) checkNames(name string) error {
 	p := set.parts[name]
-	own := p.dir != ""
+	own := p.isOwn()
 	html, yaml := p.file("part.html"), p.file("part.yaml")
 	named := namedParts(p.html)
 	var errs []error

@@ -39,28 +39,31 @@ func usable(n string) bool {
 var identifier = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 
 // checkComputed computes the values of d's template's computed.yaml, if it has one, into d.Calc, from
-// the items its schema s declares, and reports at the top of root those its data cannot give.
-func checkComputed(t *Template, d *Data, root ast.Node, s *shape) error {
+// the items its schema declares, and reports at their expressions those its data cannot give.
+func checkComputed(t *Template, d *Data) error {
 	src, found, err := t.readOptional("computed.yaml")
 	if !found || err != nil {
 		return err
 	}
-	return compute(t.file("computed.yaml"), src, d, s.keyNames(), root)
+	return compute(t.file("computed.yaml"), src, d, t.isOwn())
 }
 
-// compute computes the values of the computed.yaml src, file in its mistakes, from the values of d,
-// whose items the schema declares, in declared. An expression sees the items and the other computed
-// values by name, and a value is computed after those it uses, in whatever order src writes them.
-func compute(file string, src []byte, d *Data, declared []string, root ast.Node) error {
-	c, err := readComputed(file, src, declared)
+// compute computes the values of the computed.yaml src, file in its mistakes, of a template of one's own
+// when own, from the values of d, whose items its schema declares, d.shape. An expression sees the items
+// and the other computed values by name, and a value is computed after those it uses, in whatever order src
+// writes them. floe's own src stopping on data its schema took is floe's failure.
+func compute(file string, src []byte, d *Data, own bool) error {
+	c, err := readComputed(file, src, d.shape.keyNames())
 	if err != nil {
 		return err
 	}
 	// An item the data leaves out stays nil.
+	vars := map[string]dataVar{}
 	for _, n := range c.items {
 		if v := d.Values[n]; v != nil {
 			c.env.Field(c.field[n]).Set(reflect.ValueOf(v))
 		}
+		vars[n] = dataVar{value: d.Values[n], at: n, shape: d.shape.inside().keys[n]}
 	}
 	d.Calc = map[string]any{}
 	var problems usererr.List
@@ -74,8 +77,11 @@ func compute(file string, src []byte, d *Data, declared []string, root ast.Node)
 		if err == nil {
 			err = finiteValue(out)
 		}
+		if err != nil && !own {
+			return fmt.Errorf("compute %s of %s: %w", n, file, err)
+		}
 		if err != nil {
-			problems = append(problems, yamlpos.New(d.File, yamlpos.Of(root), "tmpl_computed_error", n, c.exprs[n], brief(err)))
+			problems = append(problems, c.failure(file, n, d.File, err, vars))
 			failed[n] = true
 			continue
 		}
@@ -84,7 +90,17 @@ func compute(file string, src []byte, d *Data, declared []string, root ast.Node)
 			c.env.Field(c.field[n]).Set(reflect.ValueOf(out))
 		}
 	}
-	return problems.Err()
+	return problems.Sorted().Err()
+}
+
+// failure is the mistake of the expression n of c, in file, stopping with err on the data of the file data,
+// whose items vars are: the items it stopped on that the data gives no value for, which computed.yaml is to
+// do without as the schema let the data leave them out, else err.
+func (c *computed) failure(file, n, data string, err error, vars map[string]dataVar) *usererr.Error {
+	if missing := unvalued(c.programs[n], err, vars); missing != nil {
+		return yamlpos.New(file, c.at[n], "tmpl_computed_missing", n, data, strings.Join(missing, ", "), without(data))
+	}
+	return yamlpos.New(file, c.at[n], "tmpl_computed_error", n, data, brief(err))
 }
 
 // computed is computed.yaml compiled: an expression and the computed names it uses, by name, the order
@@ -94,7 +110,8 @@ type computed struct {
 	programs map[string]*vm.Program
 	uses     map[string][]string
 	order    []string
-	items    []string // the items of the data the expressions see
+	items    []string               // the items of the data the expressions see
+	at       map[string]yamlpos.Pos // where each expression is written
 	field    map[string]int
 	env      reflect.Value
 }
@@ -131,7 +148,7 @@ func readComputed(file string, src []byte, declared []string) (*computed, error)
 	fields := make([]reflect.StructField, len(vars))
 	c := &computed{
 		exprs: exprs, programs: map[string]*vm.Program{}, uses: map[string][]string{}, order: nil,
-		items: items, field: map[string]int{}, env: reflect.Value{},
+		items: items, at: map[string]yamlpos.Pos{}, field: map[string]int{}, env: reflect.Value{},
 	}
 	for i, v := range vars {
 		// Each variable is typed any, so that an expression may use it as whatever the data holds.
@@ -144,6 +161,7 @@ func readComputed(file string, src []byte, declared []string) (*computed, error)
 	c.env = reflect.New(reflect.StructOf(fields)).Elem()
 	for _, n := range names {
 		at := yamlpos.OfValue(yamlpos.KeyOf(where[n]), where[n].Value)
+		c.at[n] = at
 		p, e := compileWritten(file, at, exprs[n], c.env.Interface())
 		if e != nil {
 			problems = append(problems, e)

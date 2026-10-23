@@ -807,7 +807,7 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node, esca
 		escaped[p] = true
 	}
 	_, item := itemPos(root, at, false)
-	return drawMistake(err, p.file("part.html"), p.dir != "", "tmpl_render_item", item, d.File)
+	return drawMistake(err, p.file("part.html"), p.isOwn(), "tmpl_render_item", item, d.File)
 }
 
 // holdUndrawn notes in holding the items that hold the one at the path at, not drawn: walkWhole puts them
@@ -830,10 +830,6 @@ func (d *Data) drew(at []string, html template.HTML) {
 // mistake, and the problems are the data's.
 func (p *part) check(file string, f itemAt, root ast.Node) (usererr.List, error) {
 	var problems usererr.List
-	var doc map[string]any
-	if m, ok := f.value.(map[string]any); ok {
-		doc = m
-	}
 	_, isList := f.value.([]any)
 	for _, c := range p.checks {
 		items := []itemAt{f}
@@ -848,7 +844,8 @@ func (p *part) check(file string, f itemAt, root ast.Node) (usererr.List, error)
 				return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
 			}
 		}
-		more, err := c.run(file, doc, items, root)
+		c.floes = !p.isOwn()
+		more, err := c.run(file, f, p.shape, items, root)
 		if err != nil {
 			return nil, err
 		}

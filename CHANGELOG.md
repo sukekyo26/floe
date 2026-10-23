@@ -212,8 +212,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `page.html`, `page.css` and `schema.json`, a template may check relations between items with `checks.yaml`
   (on the items of a list, lists on the way gone through: `sections.parts`)
   and compute values for the page with `computed.yaml`, in
-  [expr](https://expr-lang.org/), each failure reported at the data file's
-  line and column, and a mistake in those files at their own;
+  [expr](https://expr-lang.org/), a check's failure reported at the data
+  file's line and column, a value that cannot be computed at its expression,
+  as is an expression that stops for want of a value the data leaves out,
+  naming it, and a mistake in those files at their own;
   `page.html` writes numbers with `num` and `bytes`.
   floe puts a page's CSS together, the template's `page.css` in a
   `<style>` of its own, in a cascade layer over floe's base (the page's ground, colour and
