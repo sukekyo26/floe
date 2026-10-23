@@ -744,6 +744,8 @@ func joinDescriptions(beside, named string) string {
 // checkParts checks the items of d of whole floe draws by parts against the checks of their parts, and
 // draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every failure at its
 // line and column under root. It runs after checkDiagrams and checkScripts, which draw theirs into d.parts.
+// LIMIT: checkDiagrams draws no diagram when one is refused, so a part holding a right one waits, untold of its
+// own mistakes, for that one to be fixed. Draw each that is right when diagrams come to be told all at once.
 func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
 	escaped := map[*part]bool{}
@@ -794,14 +796,14 @@ func (p *part) drawMistake(err error, at []string, d *Data, root ast.Node, escap
 	var bad *usererr.Error
 	var escape *template.Error
 	isEscape := errors.As(err, &escape)
-	switch {
-	case errors.As(err, &bad) && bad.Key == "tmpl_words_unknown":
+	if errors.As(err, &bad) && bad.Key == "tmpl_words_unknown" {
 		// A word the data names (word .level) that the part has not: told at the item, with the rest.
 		return itemMistake(d.File, root, at, false, bad)
-	case isEscape && escaped[p]:
-		return nil
 	}
 	if isEscape {
+		if escaped[p] {
+			return nil
+		}
 		escaped[p] = true
 	}
 	_, item := itemPos(root, at, false)
