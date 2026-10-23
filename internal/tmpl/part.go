@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"bytes"
+	"cmp"
 	"embed"
 	"errors"
 	"fmt"
@@ -746,7 +747,7 @@ func joinDescriptions(beside, named string) string {
 // line and column under root.
 func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
-	escaped := map[*template.Error]bool{}
+	escaped := map[*part]bool{}
 	for _, f := range whole {
 		p := f.part
 		if p == nil || p.pages == nil {
@@ -763,18 +764,18 @@ func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 		html, err := p.draw(f.itemAt, d)
 		var bad *usererr.Error
 		var escape *template.Error
+		isEscape := errors.As(err, &escape)
 		switch {
 		case errors.As(err, &bad) && bad.Key == "tmpl_words_unknown":
 			// A word the data names (word .level) that the part has not: told at the item, with the rest.
 			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
-		case errors.As(err, &escape) && escaped[escape]:
-			// html/template fails to escape the page of p whatever the item, with the same error: told once.
+		case isEscape && escaped[p]:
+			// html/template fails to escape the page of p whatever the item: told once.
 		case err != nil:
-			if escape != nil {
-				escaped[escape] = true
-			}
+			escaped[p] = escaped[p] || isEscape
 			_, at := itemPos(root, f.at, false)
-			err = drawMistake(err, path.Join(p.dir, "part.html"), p.dir != "", "tmpl_render_item", at, d.File)
+			file := path.Join(cmp.Or(p.dir, path.Join("parts", p.name)), "part.html")
+			err = drawMistake(err, file, p.dir != "", "tmpl_render_item", at, d.File)
 			if err = problems.Add(err); err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}

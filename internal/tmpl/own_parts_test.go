@@ -793,7 +793,7 @@ func TestPartDrawMistake(t *testing.T) {
 	failed := func(item, value string) string {
 		return filepath.Join(parts, "pp", "part.html") + ": it cannot draw " + item + " of data.yaml: " +
 			`template: part.html:1:45: executing "part.html" at <num .text>: error calling num: num: ` + value +
-			" (string) is not a number; name only the items its schema.json declares, and use each as its type"
+			" (string) is not a number; write it to draw every value its schema.json takes, such as an item left out (draw it in {{with}}) or a list or text shorter than it reads"
 	}
 	if !errors.As(err, &all) || len(all) != 2 || all[0].Error() != failed("aside", "there") || all[1].Error() != failed("risks", "hello") {
 		t.Errorf("drawing what is not a number = %v, want\n%s\n%s", err, failed("aside", "there"), failed("risks", "hello"))
@@ -805,8 +805,7 @@ func TestPartDrawMistake(t *testing.T) {
 		"pp/part.css":    "",
 	})
 	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pp.json"}, "aside": {"$ref": "floe:///parts/pp.json"}`), parts, "", "")
-	want := filepath.Join(parts, "pp", "part.html") + ":2: this is not a valid Go template: " +
-		"html/template:part.html:2:53: {{.text}} appears in an ambiguous context within a URL"
+	want := filepath.Join(parts, "pp", "part.html") + ":2: this is not a valid Go template: {{.text}} appears in an ambiguous context within a URL"
 	if _, err = draw(l, "template: memo\nlang: en\nrisks: { text: hello }\naside: { text: there }\n"); err == nil || err.Error() != want {
 		t.Errorf("drawing what cannot be escaped = %v, want %s", err, want)
 	}

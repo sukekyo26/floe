@@ -479,8 +479,8 @@ func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
 // drawMistake is the mistake err of drawing data with file, a page.html or a part's part.html, which the
 // data's schema took, with args, what was drawn, before err's words. A function of file placed its own
 // mistake (an image of its assets/ that is not right, a word its words.yaml has not); any other is file's:
-// one html/template cannot escape, or file naming an item its schema does not declare or using one as
-// another type. It is its maker's mistake when file is one's own, else floe's failure.
+// one html/template cannot escape, or file not drawing a value its schema takes (an item left out, a list
+// shorter than it reads). It is its maker's mistake when file is one's own, else floe's failure.
 func drawMistake(err error, file string, own bool, key string, args ...any) error {
 	var bad *usererr.Error
 	var escape *template.Error
@@ -491,9 +491,11 @@ func drawMistake(err error, file string, own bool, key string, args ...any) erro
 		return fmt.Errorf("draw with %s: %w", file, err)
 	case errors.As(err, &escape):
 		// html/template escapes file at its first drawing, whatever the data, and says the line apart.
-		return usererr.NewAt(file, escape.Line, 0, "tmpl_go_template", err.Error())
+		// LIMIT: html/template's English. Word each ErrorCode if a reader comes to need it in its language.
+		return usererr.NewAt(file, escape.Line, 0, "tmpl_go_template", escape.Description)
 	}
-	// LIMIT: text/template's words, which alone say where in file it failed.
+	// LIMIT: text/template's English, which alone says where in file it failed. Move the line to Line if
+	// text/template comes to give an ExecError's apart.
 	return usererr.NewAt(file, 0, 0, key, append(args, err.Error())...)
 }
 
