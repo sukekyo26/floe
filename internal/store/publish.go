@@ -164,7 +164,8 @@ func (e *NeedImages) Error() string {
 }
 
 // ReadUpload reads the data file file on disk for a publish from cwd, which resolves a relative file and
-// names the project the page belongs to. Its images are left out, to be read when asked for.
+// names the project the page belongs to. Its images are left out, to be read when asked for. The caller
+// checks first that file is a data file (IsDataFile).
 func ReadUpload(ctx context.Context, file, cwd string) (Upload, error) {
 	abs := file
 	if !filepath.IsAbs(abs) {
@@ -666,9 +667,10 @@ func (s *Store) renameTo(slug string, to *string) (string, error) {
 	if to == nil {
 		return slug, nil
 	}
-	name := strings.TrimSpace(*to)
-	if !ValidSlug(name) {
-		return "", usererr.New("store_invalid_slug", name)
+	// Checked as given, as a publish's slug is.
+	name := *to
+	if mistake := slugMistake(name); mistake != nil {
+		return "", mistake
 	}
 	if _, err := os.Lstat(s.dir(name)); name != slug && !errors.Is(err, os.ErrNotExist) {
 		err := usererr.New("store_slug_taken", name)

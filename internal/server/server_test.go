@@ -453,6 +453,11 @@ func TestEdit(t *testing.T) {
 	if got := toString(codes); got != "404 404 400 400 400 400 400 400 400 409 400 400 415 413" {
 		t.Errorf("PATCH refusals = %s", got)
 	}
+	// A new slug is checked as given, as a publish's is: the management page trims it before it sends.
+	if r := e.send(t, http.MethodPatch, "/api/artifacts/my-demo", `{"slug":" renamed "}`); r.status != http.StatusBadRequest ||
+		!strings.HasPrefix(r.body, `invalid slug " renamed "`) {
+		t.Errorf("PATCH a slug with spaces = %d %s", r.status, r.body)
+	}
 	if r := e.send(t, http.MethodPatch, "/api/artifacts/my-demo", `{"slug":"renamed","title":"T","project":"p","favorite":true}`); r.body != `{"slug":"renamed"}` {
 		t.Errorf("PATCH rename = %d %s", r.status, r.body)
 	}

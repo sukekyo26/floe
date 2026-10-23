@@ -530,7 +530,10 @@ func TestEdit(t *testing.T) {
 	if m := e.meta(t, "my-demo"); m.Description != "edited" || m.UpdatedAt != before.UpdatedAt {
 		t.Errorf("Edit description: %+v", m)
 	}
-	to, err := e.s.Edit("my-demo", store.Edit{Slug: ptr(" renamed "), Title: ptr("T"), Project: ptr("p")})
+	// A new slug is checked as given, as a publish's is.
+	_, err := e.s.Edit("my-demo", store.Edit{Slug: ptr(" renamed ")})
+	wantUserErr(t, err, "store_invalid_slug", " renamed ")
+	to, err := e.s.Edit("my-demo", store.Edit{Slug: ptr("renamed"), Title: ptr("T"), Project: ptr("p")})
 	if m := e.meta(t, "renamed"); err != nil || to != "renamed" || m.Title != "T" || !m.TitleEdited || m.Project != "p" || !m.ProjectEdited {
 		t.Errorf("Edit rename: %q %v %+v", to, err, m)
 	}
