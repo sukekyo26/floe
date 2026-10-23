@@ -37,6 +37,11 @@ func (e *remoteError) Error() string {
 	return e.report.Render("")
 }
 
+// Report is the server's report, which usererr.Tell tells as it is.
+func (e *remoteError) Report() usererr.Report {
+	return e.report
+}
+
 // do sends body as JSON (nil for none) and reads a 2xx answer into out (nil to leave it). It sends
 // Origin: base, which the server takes as its own, and Accept: JSON for its refusals; one comes back as
 // a *remoteError, in JSON or, before the server reads the request, as text.

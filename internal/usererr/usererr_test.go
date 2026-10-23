@@ -110,7 +110,9 @@ func TestTell(t *testing.T) {
 		{"one in the words of another", usererr.New("tmpl_item", "x", over()), "x: " + part, "floe: x: " + part, 400},
 		{"one in the words of another, told before", usererr.List{over(), usererr.New("tmpl_item", "x", over())}, part + "\nx: " + part, part + "\nfloe: x: " + part, 400},
 		{"a name in use", conflict, lang, "floe: " + lang, 409},
-		{"an empty list", usererr.List{}, "", "", 400},
+		{"an empty list", usererr.List{}, "usererr.List with no mistake", "floe: usererr.List with no mistake", 500},
+		{"no mistake", (*usererr.Error)(nil), "*usererr.Error with no mistake", "floe: *usererr.Error with no mistake", 500},
+		{"a report told already", reported{usererr.Report{Mistakes: []usererr.Told{{Text: "told"}}}}, "told", "floe: told", 400},
 		{"floe's failure", errors.New("disk on fire"), "disk on fire", "floe: disk on fire", 500},
 	} {
 		r := usererr.Tell(i18n.EnglishCatalog(), tt.err)
@@ -185,3 +187,10 @@ func TestOver(t *testing.T) {
 		t.Errorf("one alone = %q, want its mistakes under it", got)
 	}
 }
+
+// reported is an error that carries a report already told, as the server's does to the command line.
+type reported struct{ report usererr.Report }
+
+func (r reported) Error() string { return r.report.Render("") }
+
+func (r reported) Report() usererr.Report { return r.report }

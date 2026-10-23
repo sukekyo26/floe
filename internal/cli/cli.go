@@ -56,15 +56,10 @@ func Run(ctx context.Context, args []string, env Env) int {
 	if err == nil {
 		return exitOK
 	}
-	// SilenceErrors leaves printing to this single boundary, which tells err in English, or the server's
-	// report as it sent it, and lays it out as every mistake is: those at a place as they are, one per
+	// SilenceErrors leaves printing to this single boundary, which tells err in English (the server's
+	// report as it sent it) and lays it out as every mistake is: those at a place as they are, one per
 	// line, for editors and CI to read, floe's name before the others.
-	report := usererr.Tell(english, err)
-	var remote *remoteError
-	if errors.As(err, &remote) {
-		report = remote.report
-	}
-	_, _ = fmt.Fprintln(env.Stderr, report.Render(named)) //nolint:errcheck // nowhere left to report
+	_, _ = fmt.Fprintln(env.Stderr, usererr.Tell(english, err).Render(named)) //nolint:errcheck // nowhere left to report
 	if errors.As(err, new(usageError)) {
 		return exitUsage
 	}

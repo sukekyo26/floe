@@ -31,18 +31,21 @@ type Report struct {
 	Failure  string `json:"failure,omitempty"`
 }
 
-// Tell words err in the language of c: its mistakes, those of a part or a theme that several stand for told
-// under the first, or, for an error that is not the user's, floe's failure. It is the only place a mistake
-// is worded.
+// Tell words err in the language of c: its mistakes, as List.Add takes them, those of a part or a theme
+// that several stand for told under the first, or, for an error that is not the user's or holds no
+// mistake, floe's failure. An error that carries a report already told (the server's, to the command line)
+// is told as it is. It is the only place a mistake is worded.
 func Tell(c *i18n.Catalog, err error) Report {
+	var reported interface{ Report() Report }
+	if errors.As(err, &reported) {
+		return reported.Report()
+	}
 	var all List
-	var one *Error
-	switch {
-	case errors.As(err, &all):
-	case errors.As(err, &one):
-		all = List{one}
-	default:
-		return Report{Mistakes: nil, Failure: cmp.Or(err.Error(), fmt.Sprintf("%T", err))}
+	if failed := all.Add(err); failed != nil {
+		return Report{Mistakes: nil, Failure: cmp.Or(failed.Error(), fmt.Sprintf("%T", failed))}
+	}
+	if len(all) == 0 {
+		return Report{Mistakes: nil, Failure: fmt.Sprintf("%T with no mistake", err)}
 	}
 	told := map[string]bool{}
 	r := Report{Mistakes: make([]Told, len(all)), Failure: ""}
