@@ -402,7 +402,8 @@ func metaschemaMistakes(file string, err error) error {
 	}
 	var mistakes usererr.List
 	leaves(ve, func(e *jsonschema.ValidationError) {
-		mistakes = append(mistakes, usererr.NewIn(file, pointerTo(e.InstanceLocation), "tmpl_schema_invalid", e.ErrorKind.LocalizedString(english)))
+		why := e.ErrorKind.LocalizedString(english)
+		mistakes = append(mistakes, usererr.NewIn(file, pointerTo(e.InstanceLocation), "tmpl_schema_invalid", why))
 	})
 	slices.SortStableFunc(mistakes, func(a, b *usererr.Error) int { return strings.Compare(a.At, b.At) })
 	return mistakes.Err()
