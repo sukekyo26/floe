@@ -140,10 +140,10 @@ func (a *app) readArg(file string) ([]byte, error) {
 	return src, nil
 }
 
-// namedFiles is files in the order given, each once, by the path it was first given as: two paths that name
-// one entry of one directory (./a.yaml and a.yaml, through a symlinked directory, in another case on macOS)
-// are read and told once. A link of another name or in another directory, symbolic or hard, is a file of its
-// own, as its name names its page.
+// namedFiles is the files or directories given, in order, each once, by the path it was first given as: two
+// paths that name one entry of one directory (./a.yaml and a.yaml, through a symlinked directory, in another
+// case on macOS) are read and told once. A link of another name or in another directory, symbolic or hard,
+// is one of its own, as its name names its page or template.
 // LIMIT: each file is compared with each kept; enough for the files of a command line.
 func (a *app) namedFiles(files []string) []string {
 	var named []string

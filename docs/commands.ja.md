@@ -205,6 +205,7 @@ floe render --check docs/*.yaml            # CI で: 書き出し直していな
 - まずファイルを検査します。`template.yaml`、`schema.json`（floe が知らない `format` と、floe がどのデータファイルからも読むキー `lang`・`template`・`theme`・`title` と同じ名前の項目を宣言する、または必須に挙げるのは誤り）、`checks.yaml`（`for`・`field` のパスが `schema.json` で宣言されていること）、`computed.yaml`、`page.html` と `words.yaml`（`page.html` が呼ぶ言葉があること）、`page.css`、`assets/` の画像です。
 - 次に `example.yaml` を、ページの描画まで `floe publish` のすべての段に通します。`example.yaml` はディレクトリ名のテンプレートを指定します。描くのは常にそのディレクトリのテンプレートで、同じ名前の別のテンプレートではありません。
 - 誤りはすべてまとめて、位置のあるものは `ファイル:行:列: メッセージ` の形で出します（自分の部品やテーマが使えないという誤りは、その部品・テーマの誤りを、次の行から 1 つずつ 2 字下げて並べます）（終了コード 1）。どのテンプレートも正しければ何も出しません（終了コード 0）。
+- 同じディレクトリを 2 度渡しても（2 つの glob に当たる、symlink のディレクトリ経由、macOS で大文字小文字だけ違うなど）、検査するのは 1 度で、最初に渡したパスで誤りを出します。名前が違うか、別のディレクトリにあるリンクは、別のテンプレートです。
 - 警告は stderr に出し、終了コードは 0 のままです。`template.yaml` が無いとき、`schema.json` のオブジェクトが打ち間違えたキーを断らない（`"additionalProperties": false` が無い）とき、モードで変わる色を `:scope` にライトモードの分だけ書いた（ダークモードでもその値のままになる）ときに出します。
 
 各ファイルに書くものは [templates.ja.md](templates.ja.md) にあります。

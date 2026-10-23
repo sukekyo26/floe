@@ -52,6 +52,9 @@ func TestTemplateCommands(t *testing.T) {
 	if r := e.run(t, "", "template", "check", spec); r.code != 1 || !strings.Contains(r.stderr, "\n"+computed+":1:8: nope cannot be read as an expression: unknown name nope\n") {
 		t.Errorf("template check of a broken template = %+v", r)
 	}
+	if r := e.run(t, "", "template", "check", spec, spec+"/."); r.code != 1 || strings.Count(r.stderr, "nope cannot be read") != 1 {
+		t.Errorf("template check of a template named twice = %+v", r)
+	}
 	if err = os.Remove(computed); err != nil {
 		t.Fatal(err)
 	}
