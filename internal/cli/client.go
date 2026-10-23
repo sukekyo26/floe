@@ -25,8 +25,8 @@ type client struct {
 	base string
 }
 
-// remoteError is a refusal of the server, told in English: the report it sent, or, for a refusal before it
-// reads the request (not JSON), its text as floe's failure; body is the answer as sent.
+// remoteError is a refusal of the server, told in English: the report it sent, or, for an answer that is not
+// a report (a refusal before it reads the request), its text as floe's failure; body is the answer as sent.
 type remoteError struct {
 	status int
 	report usererr.Report
