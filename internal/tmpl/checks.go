@@ -159,17 +159,31 @@ func (c relation) check(file string, doc map[string]any, root ast.Node) (usererr
 	if !itemsAt(doc, strings.Split(c.For, "."), nil, &items) {
 		return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
 	}
-	return c.run(file, doc, items, root)
+	return c.run(file, doc, nil, items, root)
 }
 
-// run runs c, its expression compiled, on each of items of the values doc of file.
-func (c relation) run(file string, doc map[string]any, items []itemAt, root ast.Node) (usererr.List, error) {
+// run runs c, its expression compiled, on each of items of the values doc, at the path docAt, of file. One
+// that stops on an item for want of a value the data gives none for is the mistake of c, which is to do
+// without it as the schema let the data leave it out.
+func (c relation) run(
+	file string, doc map[string]any, docAt []string, items []itemAt, root ast.Node,
+) (usererr.List, error) {
 	p := c.prog
 	var problems usererr.List
 	for _, item := range items {
 		out, err := expr.Run(p, scope{Item: item.value, Doc: doc})
 		if held, ok := out.(bool); ok && held && err == nil {
 			continue
+		}
+		_, itemPath := itemPos(root, item.at, false)
+		if err != nil {
+			_, docPath := itemPos(root, docAt, false)
+			vars := map[string]dataVar{"item": {value: item.value, at: itemPath}, "doc": {value: doc, at: docPath}}
+			if missing := unvalued(p, vars); missing != nil {
+				e := yamlpos.New(c.file, c.at["expr"], "tmpl_check_missing", itemPath, file, strings.Join(missing, ", "))
+				problems = append(problems, e)
+				continue
+			}
 		}
 		at := item.at
 		if c.Field != "" {
@@ -193,6 +207,7 @@ func (c relation) failure(file string, root ast.Node, at []string, err error) *u
 	}
 	switch {
 	case err != nil:
+		// LIMIT: expr's English. Word the failures floe can tell apart, as it does the values left out.
 		return yamlpos.New(file, pos, "tmpl_check_error", path, c.Message, brief(err))
 	case shown != "" && !strings.Contains(shown, "\n"):
 		return yamlpos.New(file, pos, "tmpl_check", path, c.Message, shown)

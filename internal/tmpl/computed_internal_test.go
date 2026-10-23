@@ -18,7 +18,7 @@ var declared = []string{"attributes", "records", "reads_per_sec", "writes_per_se
 func TestCompute(t *testing.T) {
 	t.Parallel()
 
-	d, root := data(t, `attributes:
+	d, _ := data(t, `attributes:
   - { name: pk, avg_bytes: 18 }
   - { name: sk, avg_bytes: 12 }
 records: { in_1_year: 1000000 }
@@ -30,7 +30,7 @@ item_bytes: sum(attributes, .avg_bytes) + count(attributes, .avg_bytes > 100)
 read_units: ceil(item_bytes / 4096) * reads_per_sec
 writes: writes_per_sec ?? 0
 `
-	if err := compute("computed.yaml", []byte(src), d, declared, root); err != nil {
+	if err := compute("computed.yaml", []byte(src), d, declared); err != nil {
 		t.Fatal(err)
 	}
 	want := map[string]any{"item_bytes": 30, "storage_gb": 0.03, "read_units": 10.0, "writes": 0}
@@ -43,18 +43,18 @@ writes: writes_per_sec ?? 0
 func TestComputeSeesDeclaredItemsOnly(t *testing.T) {
 	t.Parallel()
 
-	d, root := data(t, "t: 5\n")
-	if err := compute("computed.yaml", []byte("t: 'nil'\nu: t ?? 0\n"), d, declared, root); err != nil || d.Calc["u"] != 0 {
+	d, _ := data(t, "t: 5\n")
+	if err := compute("computed.yaml", []byte("t: 'nil'\nu: t ?? 0\n"), d, declared); err != nil || d.Calc["u"] != 0 {
 		t.Errorf("Calc = %v, %v; want u 0", d.Calc, err)
 	}
 }
 
-// A value the data cannot give is reported at the top of the file, each once: one that uses it is not
-// computed.
+// A value the data cannot give is reported at its expression, each once, naming the data file: one that
+// uses it is not computed. One that stops for want of a value the data gives none for names that value.
 func TestComputeFailures(t *testing.T) {
 	t.Parallel()
 
-	d, root := data(t, "reads_per_sec: 0\nattributes: []\n")
+	d, _ := data(t, "reads_per_sec: 0\nattributes: []\n")
 	src := `per_read: 1 / reads_per_sec
 twice: per_read * 2
 writes: writes_per_sec * 2
@@ -62,22 +62,24 @@ huge: 1e308 * 10
 list: '[1, 1e308 * 10]'
 table: '{"a": [1e308 * 10]}'
 `
-	err := compute("computed.yaml", []byte(src), d, declared, root)
+	err := compute("computed.yaml", []byte(src), d, declared)
 	var p usererr.List
 	if !errors.As(err, &p) {
 		t.Fatalf("compute = %v, want problems", err)
 	}
 	want := []string{
-		"d.yaml:1:1: huge = 1e308 * 10 cannot be computed from this file: the value +Inf is not a finite number",
-		"d.yaml:1:1: list = [1, 1e308 * 10] cannot be computed from this file: the value +Inf is not a finite number",
-		"d.yaml:1:1: per_read = 1 / reads_per_sec cannot be computed from this file: 1 / 0 is not a finite number",
-		"d.yaml:1:1: table = {\"a\": [1e308 * 10]} cannot be computed from this file: the value +Inf is not a finite number",
-		"d.yaml:1:1: writes = writes_per_sec * 2 cannot be computed from this file: invalid operation: <nil> * int",
+		"computed.yaml:1:11: per_read cannot be computed from d.yaml: 1 / 0 is not a finite number",
+		"computed.yaml:3:9: writes cannot be computed from d.yaml, which gives no value for writes_per_sec that it uses; " +
+			"write the expression to do without one, giving the value for when it is left out with ?? (x ?? []) and reading into it with ?. (x?.y), " +
+			"or give it a value in d.yaml",
+		"computed.yaml:4:7: huge cannot be computed from d.yaml: the value +Inf is not a finite number",
+		"computed.yaml:5:7: list cannot be computed from d.yaml: the value +Inf is not a finite number",
+		"computed.yaml:6:8: table cannot be computed from d.yaml: the value +Inf is not a finite number",
 	}
 	if got := p.Error(); got != strings.Join(want, "\n") {
 		t.Errorf("the failures =\n%s\nwant\n%s", got, strings.Join(want, "\n"))
 	}
-	if ja := p.Localize(i18n.New("ja")); !strings.Contains(ja, "d.yaml:1:1: per_read = 1 / reads_per_sec をこのファイルから計算できません: ") {
+	if ja := p.Localize(i18n.New("ja")); !strings.Contains(ja, "computed.yaml:1:11: per_read を d.yaml から計算できません: ") {
 		t.Errorf("the failures in Japanese:\n%s", ja)
 	}
 }
@@ -108,8 +110,8 @@ func TestComputeOfABrokenTemplate(t *testing.T) {
 		{"in: 1\nsum: 1\n", "computed.yaml:1:1: in is not a name an expression or page.html can use: write a letter, then letters, digits and _, and not a word or function of expr\ncomputed.yaml:2:1: sum is not a name"},
 		{"a: 1 +\nb: nope\n", "computed.yaml:1:4: 1 + cannot be read as an expression: unexpected token EOF\ncomputed.yaml:2:4: nope cannot be read"},
 	} {
-		d, root := data(t, "reads_per_sec: 1\n")
-		err := compute("computed.yaml", []byte(tt.src), d, declared, root)
+		d, _ := data(t, "reads_per_sec: 1\n")
+		err := compute("computed.yaml", []byte(tt.src), d, declared)
 		if err == nil || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("compute(%q) = %v, want %s", tt.src, err, tt.want)
 		}
@@ -133,8 +135,8 @@ func TestComputeCutShort(t *testing.T) {
 			"a # after a space began a comment, which cut the text short: put text with # in it in quotes (value is not allowed in this context. map key-value is pre-defined)"},
 		{"a: nope + 1 # a note\n", "computed.yaml:1:13: a # after a space began a YAML comment, which may have cut the value short, to nope + 1: put the value in quotes if the # is part of it, or write the comment on a line of its own"},
 	} {
-		d, root := data(t, "reads_per_sec: 1\n")
-		err := compute("computed.yaml", []byte(tt.src), d, declared, root)
+		d, _ := data(t, "reads_per_sec: 1\n")
+		err := compute("computed.yaml", []byte(tt.src), d, declared)
 		if err == nil || err.Error() != tt.want {
 			t.Errorf("compute(%q) = %v, want %s", tt.src, err, tt.want)
 		}
@@ -145,8 +147,34 @@ func TestComputeCutShort(t *testing.T) {
 func TestComputeExplicitKey(t *testing.T) {
 	t.Parallel()
 
-	d, root := data(t, "reads_per_sec: 1\n")
-	if err := compute("computed.yaml", []byte("? twice\n: reads_per_sec * 2\n"), d, declared, root); err != nil || d.Calc["twice"] != 2 {
+	d, _ := data(t, "reads_per_sec: 1\n")
+	if err := compute("computed.yaml", []byte("? twice\n: reads_per_sec * 2\n"), d, declared); err != nil || d.Calc["twice"] != 2 {
 		t.Errorf("Calc = %v, %v; want twice 2", d.Calc, err)
+	}
+}
+
+// The items an expression that stops uses and the data gives no value for, left out or null, are named, but
+// those it does without: the last step before ??, and what ?. reads into.
+func TestComputeLeftOut(t *testing.T) {
+	t.Parallel()
+
+	d, _ := data(t, "records: { x: 1 }\nattributes: ~\n")
+	for src, want := range map[string]string{
+		"merged: count(prs, .state == 'merged')\n":         "prs",
+		"n: records.in_1_year * 2\n":                       "records.in_1_year",
+		"n: attributes.x ?? 0\n":                           "attributes",
+		"n: len(attributes ?? []) + writes_per_sec\n":      "writes_per_sec",
+		"n: (records?.in_1_year ?? 0) + attributes[0].x\n": "attributes",
+		"n: let r = records; r.in_1_year * prs\n":          "prs",
+	} {
+		err := compute("computed.yaml", []byte(src), d, []string{"prs", "records", "attributes", "writes_per_sec"})
+		if err == nil || !strings.Contains(err.Error(), "from d.yaml, which gives no value for "+want+" that it uses; ") {
+			t.Errorf("%s = %v, want %s left out", src, err, want)
+		}
+	}
+	for _, src := range []string{"merged: count(prs ?? [], .state == 'merged')\n", "n: attributes?.x ?? records.x\n"} {
+		if err := compute("computed.yaml", []byte(src), d, []string{"prs", "records", "attributes"}); err != nil {
+			t.Errorf("%s = %v", src, err)
+		}
 	}
 }

@@ -848,7 +848,7 @@ func (p *part) check(file string, f itemAt, root ast.Node) (usererr.List, error)
 				return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
 			}
 		}
-		more, err := c.run(file, doc, items, root)
+		more, err := c.run(file, doc, f.at, items, root)
 		if err != nil {
 			return nil, err
 		}

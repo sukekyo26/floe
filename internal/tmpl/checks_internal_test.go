@@ -42,7 +42,8 @@ const relations = `
 `
 
 // Each item a check fails for is reported at its field, with the field's value when it has one; an
-// expression that cannot run on an item, a division by zero among them, is reported there too.
+// expression that cannot run on an item, a division by zero among them, is reported there too, but one
+// that stops for want of a value the data gives none for is the check's, told at its expression.
 func TestRelations(t *testing.T) {
 	t.Parallel()
 
@@ -74,13 +75,13 @@ notes:
 		`d.yaml:10:11: model.patterns[1].id: give each pattern its own id ("AP-1")`,
 		`d.yaml:11:12: model.patterns[1].key: use an attribute as the key ("user_id")`,
 		"d.yaml:13:24: model.patterns[1].rate.per_sec: keep reads per second under 10 (the check could not run: 1 / 0 is not a finite number)",
-		"d.yaml:14:7: model.patterns[2]: keep reads per second under 10 (the check could not run: ",
 		"d.yaml:15:12: model.patterns[2].key: use an attribute as the key",
 		"d.yaml:18:11: notes[0].text: keep notes short",
 		"d.yaml:20:5: notes[1].text: write the note",
+		"checks.yaml:12:9: model.patterns[2] of d.yaml cannot be checked, as d.yaml gives no value for model.patterns[2].rate that the expression uses; ",
 	}
 	lines := strings.Split(got.Error(), "\n")
-	for _, i := range []int{len(want) - 2, len(want) - 1} {
+	for _, i := range []int{len(want) - 3, len(want) - 2} {
 		if len(lines) == len(want) && lines[i] != want[i] {
 			t.Errorf("a block of text or an empty value is quoted: %s", lines[i])
 		}
