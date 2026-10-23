@@ -169,7 +169,7 @@ Relations between items that a schema cannot say, each checked on every item of 
 
 A list on the way of `for` is gone through item by item: `sections.parts` checks the parts of every section, and a failure is reported at `sections[1].parts[0]`. `field` is a path of keys under the item alone.
 
-`expr` is an [expr](https://expr-lang.org/) expression that must hold. It sees the list's item as `item` and the data file's items as `doc`. Each item it fails for is reported at its field, with the field's value:
+`expr` is an [expr](https://expr-lang.org/) expression that must hold. It sees the list's item as `item` and the data file's items as `doc`. Each item it fails for is reported at its field, with the field's value, and so is one it cannot run on (a division by zero); one it stops on for want of a value the data gives none for is the check's, reported at `expr` with the item and the value, to be written to do without it as `computed.yaml`'s expressions are:
 
 ```text
 orders.yaml:13:12: access_patterns[0].key: use an attribute as the key ("user_id")
@@ -186,7 +186,7 @@ item_bytes: sum(attributes, .avg_bytes)
 storage_gb: item_bytes * records.in_1_year / 1e9
 ```
 
-An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in. A name is a letter followed by letters, digits and `_`, and is neither one of the data's items nor a word or function of expr. A value the data cannot give (a division by zero, an item left out that the expression needs) is reported, and a value that would be NaN or ±Inf is too. A mistake in `computed.yaml` itself is reported at its line and column there; like a data file, it takes no anchors, aliases or tags. An expression with a ` #` in it, as expr's `#` for the item in `filter(xs, # > 1)`, goes in quotes: YAML would read a comment from there.
+An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in. A name is a letter followed by letters, digits and `_`, and is neither one of the data's items nor a word or function of expr. A value the data cannot give (a division by zero, an item left out that the expression needs) is reported at its expression, naming the data file, and a value that would be NaN or ±Inf is too. An expression that stops on a value the data gives none for, left out or null, which the schema lets it, names the value: write it to do without one, giving the value for when it is left out with `??` (`count(prs ?? [], .state == "merged")`) and reading into one with `?.` (`records?.in_1_year ?? 0`); `??` stands in for the last step alone, so `records.in_1_year ?? 0` still stops when `records` is left out. A mistake in `computed.yaml` itself is reported at its line and column there; like a data file, it takes no anchors, aliases or tags. An expression with a ` #` in it, as expr's `#` for the item in `filter(xs, # > 1)`, goes in quotes: YAML would read a comment from there.
 
 ## The order of the checks
 
