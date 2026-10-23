@@ -5,10 +5,8 @@ package usererr
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"slices"
-	"strings"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 )
@@ -65,15 +63,16 @@ func (e *Error) Error() string {
 	return e.Localize(i18n.EnglishCatalog())
 }
 
-// Localize words the refusal in the language of c, after where it is, file:line:column: at, or as much of
-// it as it has, and the mistakes it stands for under it, indented. An argument that is itself a Localizer
-// (a worded part of the message, such as the name of a diagram part) is worded in c too.
+// Localize words the refusal in the language of c, as Render lays it out without floe's name: the mistakes
+// it stands for told under it, all of them, whatever was told before it. An argument that is itself a
+// Localizer (a worded part of the message, such as the name of a diagram part) is worded in c too.
 func (e *Error) Localize(c *i18n.Catalog) string {
-	return e.told(c, map[string]bool{})
+	return Tell(c, e).Render("")
 }
 
-// told words e as Localize does, the mistakes it stands for told once of all those that told notes.
-func (e *Error) told(c *i18n.Catalog, told map[string]bool) string {
+// tell words e in the language of c, and the mistakes it stands for under it, told once of all those that
+// told notes: another that stands for them says they are told above.
+func (e *Error) tell(c *i18n.Catalog, told map[string]bool) Told {
 	args := make([]any, len(e.Args))
 	for i, a := range e.Args {
 		if l, ok := a.(i18n.Localizer); ok {
@@ -81,30 +80,19 @@ func (e *Error) told(c *i18n.Catalog, told map[string]bool) string {
 		}
 		args[i] = a
 	}
-	var where []string
-	switch {
-	case e.File == "":
-	case e.Line == 0:
-		where = append(where, e.File)
-	case e.Column == 0:
-		where = append(where, fmt.Sprintf("%s:%d", e.File, e.Line))
-	default:
-		where = append(where, fmt.Sprintf("%s:%d:%d", e.File, e.Line, e.Column))
+	t := Told{
+		File: e.File, Line: e.Line, Column: e.Column, At: e.At, Text: c.Msg(e.Key, args...), Conflict: e.Conflict,
+		Under: nil, Above: e.Of != "" && told[e.Of],
 	}
-	if e.At != "" {
-		where = append(where, e.At)
-	}
-	text := strings.Join(append(where, c.Msg(e.Key, args...)), ": ")
-	switch {
-	case e.Of != "" && told[e.Of]:
-		return text + c.Msg("told_above")
-	case e.Of != "":
+	if t.Above {
+		t.Text += c.Msg("told_above")
+	} else if e.Of != "" {
 		told[e.Of] = true
 	}
 	for _, u := range e.Under {
-		text += "\n  " + strings.ReplaceAll(u.told(c, told), "\n", "\n  ")
+		t.Under = append(t.Under, u.tell(c, told))
 	}
-	return text
+	return t
 }
 
 // CannotRead is the refusal for a file the user named that cannot be read, with the reason (no such
@@ -199,42 +187,8 @@ func (l List) Error() string {
 	return l.Localize(i18n.EnglishCatalog())
 }
 
-// Localize words the mistakes in the language of c, one per line, the mistakes of a part or a theme that
-// several stand for told under the first.
+// Localize words the mistakes in the language of c, one per line, as Render lays them out without floe's
+// name: the mistakes of a part or a theme that several stand for told under the first.
 func (l List) Localize(c *i18n.Catalog) string {
-	told := map[string]bool{}
-	lines := make([]string, len(l))
-	for i, e := range l {
-		lines[i] = e.told(c, told)
-	}
-	return strings.Join(lines, "\n")
-}
-
-// Shown is how an error is told: its text in the reader's language; whether the user can fix it (a
-// refusal, 400, not floe's failure, 500); whether it is placed mistakes, told as they are, one per line,
-// those one stands for indented on the lines after it, for editors and CI to read, without floe's name
-// before them; and whether it is a name in use (409).
-type Shown struct {
-	Text     string
-	Fixable  bool
-	Placed   bool
-	Conflict bool
-}
-
-// Show tells how err is shown in the language of c: a List is placed, and so is an Error with a file.
-func Show(c *i18n.Catalog, err error) Shown {
-	s := Shown{Text: err.Error(), Fixable: false, Placed: false, Conflict: false}
-	var l i18n.Localizer
-	if errors.As(err, &l) {
-		s.Text, s.Fixable = l.Localize(c), true
-	}
-	var all List
-	var one *Error
-	switch {
-	case errors.As(err, &all):
-		s.Placed = true
-	case errors.As(err, &one):
-		s.Placed, s.Conflict = one.File != "", one.Conflict
-	}
-	return s
+	return Tell(c, l).Render("")
 }

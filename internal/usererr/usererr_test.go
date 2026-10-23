@@ -1,6 +1,7 @@
 package usererr_test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -81,24 +82,58 @@ func TestListSorted(t *testing.T) {
 	}
 }
 
-// Show tells a placed mistake, a list and a name in use from a refusal and from floe's failure.
-func TestShow(t *testing.T) {
+// Tell words a mistake, a list of them, one standing for placed ones, its second time, one in the words of
+// another, a name in use and floe's failure; Render lays them out as develop's Show worded them, floe's name
+// before each that is not at a place; Status answers as refuse did. A report read back from JSON, as the
+// command line reads the server's, lays out the same to the letter.
+func TestTell(t *testing.T) {
 	t.Parallel()
 
+	const lang = "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)"
+	const part = "the part p cannot be used\n  a.yaml:1:2: " + lang
+	placed := usererr.NewAt("a.yaml", 1, 2, "tmpl_no_lang")
 	conflict := usererr.New("tmpl_no_lang")
 	conflict.Conflict = true
+	over := func() *usererr.Error { return usererr.Over("p", usererr.List{placed}, "tmpl_part_broken", "p") }
 	for _, tt := range []struct {
-		err  error
-		want usererr.Shown
+		name        string
+		err         error
+		text, named string
+		status      int
 	}{
-		{usererr.New("tmpl_no_lang"), usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: false}},
-		{usererr.NewAt("a.yaml", 1, 2, "tmpl_no_lang"), usererr.Shown{Text: "a.yaml:1:2: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: true, Conflict: false}},
-		{usererr.List{usererr.New("tmpl_no_lang")}, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: true, Conflict: false}},
-		{conflict, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: true}},
-		{errors.New("disk on fire"), usererr.Shown{Text: "disk on fire", Fixable: false, Placed: false, Conflict: false}},
+		{"one not at a place", usererr.New("tmpl_no_lang"), lang, "floe: " + lang, 400},
+		{"one at a place", placed, "a.yaml:1:2: " + lang, "a.yaml:1:2: " + lang, 400},
+		{"one at a pointer", usererr.NewIn("s.json", "#/a", "tmpl_no_lang"), "s.json: #/a: " + lang, "s.json: #/a: " + lang, 400},
+		{"a list of both", usererr.List{usererr.New("tmpl_no_lang"), placed}, lang + "\na.yaml:1:2: " + lang, "floe: " + lang + "\na.yaml:1:2: " + lang, 400},
+		{"one standing for a placed one", usererr.List{over()}, part, part, 400},
+		{"its second time", usererr.List{over(), over()}, part + "\nthe part p cannot be used, as told above", part + "\nthe part p cannot be used, as told above", 400},
+		{"one in the words of another", usererr.New("tmpl_item", "x", over()), "x: " + part, "floe: x: " + part, 400},
+		{"one in the words of another, told before", usererr.List{over(), usererr.New("tmpl_item", "x", over())}, part + "\nx: " + part, part + "\nfloe: x: " + part, 400},
+		{"a name in use", conflict, lang, "floe: " + lang, 409},
+		{"an empty list", usererr.List{}, "", "", 400},
+		{"floe's failure", errors.New("disk on fire"), "disk on fire", "floe: disk on fire", 500},
 	} {
-		if got := usererr.Show(i18n.EnglishCatalog(), tt.err); got != tt.want {
-			t.Errorf("Show(%v) = %+v, want %+v", tt.err, got, tt.want)
+		r := usererr.Tell(i18n.EnglishCatalog(), tt.err)
+		if got := r.Render(""); got != tt.text {
+			t.Errorf("%s: Render(\"\") = %q, want %q", tt.name, got, tt.text)
+		}
+		if got := r.Render("floe: "); got != tt.named {
+			t.Errorf("%s: Render(\"floe: \") = %q, want %q", tt.name, got, tt.named)
+		}
+		if r.Status() != tt.status {
+			t.Errorf("%s: Status = %d, want %d", tt.name, r.Status(), tt.status)
+		}
+		var l i18n.Localizer
+		if errors.As(tt.err, &l) && tt.err.Error() != tt.text {
+			t.Errorf("%s: Error = %q, want %q", tt.name, tt.err.Error(), tt.text)
+		}
+		b, err := json.Marshal(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var back usererr.Report
+		if err = json.Unmarshal(b, &back); err != nil || back.Render("floe: ") != tt.named || back.Status() != tt.status {
+			t.Errorf("%s: read back from %s = %q %d, %v", tt.name, b, back.Render("floe: "), back.Status(), err)
 		}
 	}
 }

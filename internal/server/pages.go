@@ -152,7 +152,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 			notFound(w)
 			return
 		case err != nil:
-			send(w, http.StatusConflict, usererr.Show(catalog(r), err).Text)
+			send(w, http.StatusConflict, usererr.Tell(catalog(r), err).Render(""))
 			return
 		}
 		body = tmpl.WithCutOff(page)
@@ -284,7 +284,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.6 ui-monospac
 // mistakesPage words the mistakes of file, the data file of slug, whose meta.json is m: a linked one
 // is put right by saving it, a stored one, a copy, by publishing the data file again.
 func mistakesPage(c *i18n.Catalog, slug string, m *store.Meta, file string, err error) []byte {
-	text := usererr.Show(c, err).Text
+	text := usererr.Tell(c, err).Render("")
 	lead := c.Msg("server_mistakes_lead")
 	switch {
 	case m.IsLink():

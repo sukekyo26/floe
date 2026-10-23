@@ -25,17 +25,16 @@ type client struct {
 	base string
 }
 
-// remoteError is a refusal of the server, in English. mistakes is set for placed mistakes, each at its
-// file, which go out without "floe: "; body is the answer as sent.
+// remoteError is a refusal of the server, told in English: the report it sent, or, for a refusal before it
+// reads the request (not JSON), its text as floe's failure; body is the answer as sent.
 type remoteError struct {
-	status   int
-	message  string
-	mistakes bool
-	body     []byte
+	status int
+	report usererr.Report
+	body   []byte
 }
 
 func (e *remoteError) Error() string {
-	return e.message
+	return e.report.Render("")
 }
 
 // do sends body as JSON (nil for none) and reads a 2xx answer into out (nil to leave it). It sends
@@ -51,9 +50,8 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 		// Refused before sending, as the server would: it stops reading at its limit, which may break
 		// the sending off before its answer comes.
 		if len(b) > server.MaxUpload {
-			return &remoteError{
-				status: http.StatusRequestEntityTooLarge, message: "request body too large", mistakes: false, body: nil,
-			}
+			tooLarge := usererr.Report{Mistakes: nil, Failure: "request body too large"}
+			return &remoteError{status: http.StatusRequestEntityTooLarge, report: tooLarge, body: nil}
 		}
 		r = bytes.NewReader(b)
 	}
@@ -81,11 +79,11 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 	if res.StatusCode >= http.StatusMultipleChoices {
 		// A refusal without a reason still says what the server answered.
 		message := cmp.Or(strings.TrimSpace(string(b)), strconv.Itoa(res.StatusCode)+" "+http.StatusText(res.StatusCode))
-		e := &remoteError{status: res.StatusCode, message: message, mistakes: false, body: b}
-		var refusal server.Refusal
-		if strings.HasPrefix(res.Header.Get("Content-Type"), "application/json") && json.Unmarshal(b, &refusal) == nil &&
-			refusal.Message != "" {
-			e.message, e.mistakes = refusal.Message, refusal.Mistakes
+		e := &remoteError{status: res.StatusCode, report: usererr.Report{Mistakes: nil, Failure: message}, body: b}
+		var told usererr.Report
+		if strings.HasPrefix(res.Header.Get("Content-Type"), "application/json") && json.Unmarshal(b, &told) == nil &&
+			(told.Mistakes != nil || told.Failure != "") {
+			e.report = told
 		}
 		return e
 	}

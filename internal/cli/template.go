@@ -221,7 +221,8 @@ code 0. Nothing is printed when the templates are right.`,
 				tell(&found, err)
 			}
 			if warned != nil {
-				_, _ = fmt.Fprintln(a.env.Stderr, warned.Localize(english)) //nolint:errcheck // nowhere left to report
+				//nolint:errcheck // nowhere left to report
+				_, _ = fmt.Fprintln(a.env.Stderr, usererr.Tell(english, warned).Render(named))
 			}
 			return found.Err()
 		},

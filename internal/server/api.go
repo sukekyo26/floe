@@ -68,30 +68,16 @@ func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]jso
 	return input
 }
 
-// refuse answers a usererr with its reason in the reader's language, 409 for a name in use; anything
-// else is 500. A reader that takes JSON (the CLI) gets {"message", "mistakes"}, mistakes set for placed
-// mistakes (usererr.Show), of a data file, a template, a part or a theme, which it shows as they are.
+// refuse answers err told in the reader's language (usererr.Report), with its status: 400 for the user's
+// mistakes, 409 for names in use, 500 for floe's failure. A reader that takes JSON (the CLI) gets the
+// report itself, which it lays out as it does its own mistakes; another, the management page, its text.
 func refuse(w http.ResponseWriter, r *http.Request, err error) {
-	shown := usererr.Show(catalog(r), err)
-	status := http.StatusInternalServerError
-	switch {
-	case shown.Conflict:
-		status = http.StatusConflict
-	case shown.Fixable:
-		status = http.StatusBadRequest
-	}
+	report := usererr.Tell(catalog(r), err)
 	if !strings.Contains(r.Header.Get("Accept"), "application/json") {
-		send(w, status, shown.Text)
+		send(w, report.Status(), report.Render(""))
 		return
 	}
-	sendJSON(w, status, Refusal{Message: shown.Text, Mistakes: shown.Placed})
-}
-
-// Refusal is a refusal to a reader that takes JSON: its reason in the reader's language, and whether it
-// is placed mistakes, each at its file and, where it has them, its line, column or JSON pointer.
-type Refusal struct {
-	Message  string `json:"message"`
-	Mistakes bool   `json:"mistakes"`
+	sendJSON(w, report.Status(), report)
 }
 
 type slugBody struct {
