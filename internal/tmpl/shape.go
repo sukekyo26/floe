@@ -3,9 +3,12 @@ package tmpl
 import (
 	"cmp"
 	"maps"
+	neturl "net/url"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -41,7 +44,7 @@ type shape struct {
 // kept as written.
 func readShape(doc any, url, file, part string) (*shape, *schemaNotes, error) {
 	n := &schemaNotes{
-		file: file, part: part, own: map[string]bool{url: true}, met: nil, warnings: nil,
+		file: file, part: part, url: url, doc: doc, own: map[string]bool{url: true}, met: nil, warnings: nil,
 	}
 	s, err := n.read(doc, url, "#")
 	if err != nil {
@@ -54,6 +57,8 @@ func readShape(doc any, url, file, part string) (*shape, *schemaNotes, error) {
 type schemaNotes struct {
 	file string // the schema, as its mistakes name it
 	part string // the part whose schema it is; "" for a template's or one the parts share
+	url  string // the schema's URL, which a relative $ref is read from
+	doc  any    // the schema, as jsonschema reads it, where its $refs into itself are resolved
 	// the URLs of the schema's own file, its own and those its $ids give, which its $refs may point into
 	own      map[string]bool
 	met      []noted          // in the order of the schema
@@ -279,15 +284,16 @@ func (n *schemaNotes) format(f string, typ any, ptr string, reached bool) bool {
 // mistakes returns what set refuses of the schema of n: what n noted, then each $ref that points out of
 // floe, at a part it does not have, cannot use or that draws nothing, into a part or a schema the parts
 // share that holds what floe draws, at one where floe does not follow to it, or, from a part's schema, at
-// a schema the parts share that holds a format of floe's. A $ref into the schema's own file is followed
-// by jsonschema alone.
+// a schema the parts share that holds a format of floe's, and one into the schema's own file, a part or a
+// schema the parts share that finds nothing there.
 // LIMIT: $dynamicRef and $recursiveRef go unchecked, refused at compiling without a pointer; check them here if used.
 func (set *partSet) mistakes(n *schemaNotes) usererr.List {
 	var mistakes usererr.List
+	resolve := set.resolver(n)
 	for _, x := range n.met {
 		m := x.mistake
 		if x.ref != nil {
-			m = set.refMistake(n, *x.ref)
+			m = set.refMistake(n, *x.ref, resolve)
 		}
 		if m != nil {
 			mistakes = append(mistakes, m)
@@ -296,18 +302,66 @@ func (set *partSet) mistakes(n *schemaNotes) usererr.List {
 	return mistakes
 }
 
-// refMistake returns what set refuses of r, a $ref of the schema of n, or nil.
-func (set *partSet) refMistake(n *schemaNotes, r refAt) *usererr.Error {
+// refMistake returns what set refuses of r, a $ref of the schema of n, or nil; resolve compiles what a $ref
+// points at (resolver).
+func (set *partSet) refMistake(n *schemaNotes, r refAt, resolve func(ref string) error) *usererr.Error {
+	if !isURL(r.ref) {
+		return nil // the metaschema refuses it at the $ref as the schema compiles
+	}
 	base, _, _ := strings.Cut(r.ref, "#")
 	switch {
 	case n.own[base]:
-		return nil
+		return n.targetMistake(r, resolve)
 	case strings.HasPrefix(base, partsURL):
-		return set.partMistake(n, r, base)
+		return set.partMistake(n, r, base, resolve)
 	case !heldByJSONSchema(base):
 		return n.at(r, usererr.New("tmpl_schema_url", base))
 	}
 	return nil
+}
+
+// isURL reports whether ref reads as a URL, as jsonschema reads a $ref.
+func isURL(ref string) bool {
+	_, err := neturl.Parse(ref)
+	return err == nil
+}
+
+// targetMistake returns the mistake of r, a $ref of the schema of n into a schema floe holds, when
+// jsonschema finds nothing where it points (refTargetMistake), at the $ref, or nil; resolve compiles what
+// it points at.
+func (n *schemaNotes) targetMistake(r refAt, resolve func(ref string) error) *usererr.Error {
+	base, _, _ := strings.Cut(r.ref, "#")
+	to, in := r.ref, base
+	if n.own[base] {
+		to, _ = pointerIn(base, r.ref)
+		in = "schema.json"
+	}
+	if e := refTargetMistake(r.ref, resolve(r.ref), to, in); e != nil {
+		return n.at(r, e)
+	}
+	return nil
+}
+
+// resolver returns a function that compiles what a $ref of the schema of n points at, with the schemas of
+// the parts, one compiler for all its $refs, made at the first, and returns what stopped it.
+func (set *partSet) resolver(n *schemaNotes) func(ref string) error {
+	var (
+		c      *jsonschema.Compiler
+		failed error
+	)
+	return func(ref string) error {
+		if c == nil && failed == nil {
+			c, failed = set.compiler()
+			if failed == nil && set.docs[n.url] == nil {
+				failed = c.AddResource(n.url, n.doc)
+			}
+		}
+		if failed != nil {
+			return failed //nolint:wrapcheck // not a mistake of the $ref: refTargetMistake passes it
+		}
+		_, err := c.Compile(ref)
+		return err //nolint:wrapcheck // jsonschema's, which refTargetMistake reads by its type
+	}
 }
 
 // at is the mistake e of r, a $ref of the schema of n, at the schema and its pointer.
@@ -316,7 +370,7 @@ func (n *schemaNotes) at(r refAt, e *usererr.Error) *usererr.Error {
 }
 
 // partMistake returns what set refuses of r, a $ref of the schema of n to base under floe:///parts/, or nil.
-func (set *partSet) partMistake(n *schemaNotes, r refAt, base string) *usererr.Error {
+func (set *partSet) partMistake(n *schemaNotes, r refAt, base string, resolve func(ref string) error) *usererr.Error {
 	name, whole := partName(r.ref)
 	switch p := set.parts[name]; {
 	case whole && p != nil && !p.isLook() && !r.reached:
@@ -327,7 +381,8 @@ func (set *partSet) partMistake(n *schemaNotes, r refAt, base string) *usererr.E
 		return set.sharedMistake(n, r)
 	case !whole && set.docs[base] != nil:
 		if _, into := set.pointsInto(r.ref); !into {
-			return nil // into what holds nothing floe draws, as tone.json's enum: drawn as written
+			// into what holds nothing floe draws, as tone.json's enum: drawn as written, once it is there
+			return n.targetMistake(r, resolve)
 		}
 	}
 	return n.at(r, unknownPart(set, r.ref))

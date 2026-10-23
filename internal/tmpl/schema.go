@@ -58,14 +58,12 @@ func schemaJSON(file string, src []byte) (any, error) {
 // parts of set; file is where it is, in its mistakes.
 func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema, error) {
 	url := schemaURL(name)
-	c := newCompiler(set)
-	if err := c.AddResource(url, doc); err != nil {
-		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
+	c, err := set.compiler()
+	if err != nil {
+		return nil, err
 	}
-	for partURL, partDoc := range set.docs {
-		if err := c.AddResource(partURL, partDoc); err != nil {
-			return nil, fmt.Errorf("read the schema %s: %w", partURL, err)
-		}
+	if err = c.AddResource(url, doc); err != nil {
+		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
 	sch, err := c.Compile(url)
 	// jsonschema wraps noLoader's mistake in an error of its own, which does not unwrap: floe's own is told,
@@ -99,8 +97,8 @@ func compileMistakes(url, file string, err error) error {
 
 // compileMistake returns err, what stopped the compiling of the schema at url, file, as a mistake at its
 // JSON pointer in file, and nil for one of another schema or of a kind floe does not know.
-// LIMIT: a $ref that finds nothing is told at the top of the file, as jsonschema says where it leads, not
-// where it is written. Find the $ref in the schema if a template comes to need its place.
+// LIMIT: a $ref that finds nothing, which refMistake did not check, is told at the top of the file, as
+// jsonschema says where it leads, not where it is written. Note the $ref in schemaNotes.walk if one comes.
 func compileMistake(url, file string, err error) *usererr.Error {
 	in := func(u string) (string, bool) { return pointerIn(url, u) }
 	var (
@@ -115,7 +113,7 @@ func compileMistake(url, file string, err error) *usererr.Error {
 	switch {
 	case errors.As(err, &nothing):
 		if to, ok := in(nothing.URL); ok {
-			return usererr.NewIn(file, "#", "tmpl_schema_ref_nothing", to)
+			return usererr.NewIn(file, "#", "tmpl_schema_ref_nothing", to, "schema.json")
 		}
 	case errors.As(err, &badPtr):
 		if to, ok := in(badPtr.URL); ok {
@@ -124,7 +122,7 @@ func compileMistake(url, file string, err error) *usererr.Error {
 	case errors.As(err, &noAnchor):
 		if _, ok := in(noAnchor.URL); ok {
 			to, _ := in(noAnchor.Reference)
-			return usererr.NewIn(file, "#", "tmpl_schema_ref_anchor", to)
+			return usererr.NewIn(file, "#", "tmpl_schema_ref_anchor", to, "schema.json")
 		}
 	case errors.As(err, &anchor):
 		if at, ok := in(anchor.URL); ok {
@@ -142,6 +140,32 @@ func compileMistake(url, file string, err error) *usererr.Error {
 		if at, ok := in(regex.URL); ok {
 			return usererr.NewIn(file, at, "tmpl_schema_regex", regex.Regex, regex.Err)
 		}
+	}
+	return nil
+}
+
+// refTargetMistake returns err, what stopped the compiling of what the $ref ref points at, as the mistake
+// of the $ref, a $ref to `to` in `in`, when jsonschema found nothing there: no JSON pointer, nothing at it,
+// or no $anchor of its name. It returns nil for none, and for a stop elsewhere, another $ref's or schema's.
+func refTargetMistake(ref string, err error, to, in string) *usererr.Error {
+	base, _, _ := strings.Cut(ref, "#")
+	want, _ := pointerIn(base, ref)
+	at := func(u string) bool {
+		got, ok := pointerIn(base, u)
+		return ok && got == want
+	}
+	var (
+		nothing  *jsonschema.JSONPointerNotFoundError
+		badPtr   *jsonschema.InvalidJsonPointerError
+		noAnchor *jsonschema.AnchorNotFoundError
+	)
+	switch {
+	case errors.As(err, &nothing) && at(nothing.URL):
+		return usererr.New("tmpl_schema_ref_nothing", to, in)
+	case errors.As(err, &badPtr) && at(badPtr.URL):
+		return usererr.New("tmpl_schema_ref_pointer", to)
+	case errors.As(err, &noAnchor) && at(noAnchor.Reference):
+		return usererr.New("tmpl_schema_ref_anchor", to, in)
 	}
 	return nil
 }
@@ -200,6 +224,17 @@ func newCompiler(set *partSet) *jsonschema.Compiler {
 		c.RegisterFormat(&jsonschema.Format{Name: f, Validate: func(any) error { return nil }})
 	}
 	return c
+}
+
+// compiler returns a compiler that holds the schemas of the parts of set.
+func (set *partSet) compiler() (*jsonschema.Compiler, error) {
+	c := newCompiler(set)
+	for url, doc := range set.docs {
+		if err := c.AddResource(url, doc); err != nil {
+			return nil, fmt.Errorf("read the schema %s: %w", url, err)
+		}
+	}
+	return c, nil
 }
 
 // knownFormat reports whether floe knows the format f: one of JSON Schema's that it checks, or one of

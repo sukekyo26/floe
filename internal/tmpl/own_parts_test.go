@@ -169,6 +169,13 @@ func TestBrokenOwnParts(t *testing.T) {
 		"defined/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/$defs/t"}}, "$defs": {"t": {"type": "string"}}}`,
 		"defined/part.html":   `<div data-floe-part="defined">{{.t}}</div>`,
 		"defined/part.css":    "",
+		// A $ref that finds nothing where it points, in its own file or in a schema the parts share: at the $ref.
+		"pointed/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"pointed/part.html":   `<div data-floe-part="pointed"></div>`,
+		"pointed/part.css":    "",
+		"deadptr/schema.json": `{"type": "object", "properties": {"t": {"$ref": "tone.json#/nope"}}}`,
+		"deadptr/part.html":   `<div data-floe-part="deadptr"></div>`,
+		"deadptr/part.css":    "",
 		"holder/schema.json":  `{"type": "object", "properties": {"p": {"$ref": "floe:///parts/panel.json"}}}`,
 		"holder/part.html":    `<div data-floe-part="holder"></div>`,
 		"holder/part.css":     "",
@@ -334,6 +341,10 @@ func TestBrokenOwnParts(t *testing.T) {
 			": #: the part unnamed cannot be used",
 		"paneled": "the part paneled cannot be used\n  " + filepath.Join(parts, "paneled", "schema.json") +
 			": #: floe:///parts/panel.json is the look panel, which draws nothing",
+		"pointed": "the part pointed cannot be used\n  " + filepath.Join(parts, "pointed", "schema.json") +
+			": #/properties/t: a $ref to #/$defs/nope finds nothing in schema.json",
+		"deadptr": "the part deadptr cannot be used\n  " + filepath.Join(parts, "deadptr", "schema.json") +
+			": #/properties/t: a $ref to floe:///parts/tone.json#/nope finds nothing in floe:///parts/tone.json",
 		"wrongs": "the part wrongs cannot be used\n  " + filepath.Join(parts, "wrongs", "part.yaml") + ":1:1: lookz is not a key of part.yaml" +
 			"; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:\n  " +
 			filepath.Join(parts, "wrongs", "words.yaml") + ":2:1: ja leaves out a, which en has\n  " +
