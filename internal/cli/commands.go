@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/daemon"
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/tmpl"
@@ -325,7 +326,7 @@ func (a *app) serveCmd() *cobra.Command {
 func (a *app) serve(ctx context.Context) error {
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
-	if err := os.MkdirAll(a.cfg.root, 0o700); err != nil {
+	if err := dirs.CheckWritable(a.cfg.root, ".check-"); err != nil {
 		return usererr.CannotWrite(a.cfg.root, err)
 	}
 	build, err := daemon.Build()

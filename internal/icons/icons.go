@@ -21,6 +21,7 @@ import (
 	"sync"
 	"unicode"
 
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -192,7 +193,7 @@ func (s *Store) Fetch(ctx context.Context, set, source string, force bool) (Fetc
 		return got, nil
 	}
 	// Before the download: a directory that cannot be written to is no reason to fetch the set.
-	if err = canWrite(s.root, k.name); err != nil {
+	if err = dirs.CheckWritable(s.root, k.name+".tmp-"); err != nil {
 		return got, usererr.CannotWrite(got.Dir, err)
 	}
 	buf, err := read(ctx, from)
@@ -241,19 +242,6 @@ func (k *kit) packageURL(ctx context.Context, source string) (string, error) {
 // IsURL tells a source that Fetch downloads from one it reads as a path.
 func IsURL(source string) bool {
 	return strings.HasPrefix(source, "https://") || strings.HasPrefix(source, "http://")
-}
-
-// canWrite makes root, and a directory in it it removes at once, to know before a download that the set
-// can be put there.
-func canWrite(root, name string) error {
-	if err := os.MkdirAll(root, 0o700); err != nil {
-		return err //nolint:wrapcheck // told by the caller
-	}
-	tmp, err := os.MkdirTemp(root, name+".tmp-")
-	if err != nil {
-		return err //nolint:wrapcheck // as above
-	}
-	return os.Remove(tmp) //nolint:wrapcheck // as above
 }
 
 // replace puts the icons in tmp in place of dir as a whole. When that fails, the previous icons stay.

@@ -965,6 +965,7 @@ func TestCannotWrite(t *testing.T) {
 		made     string
 	}{
 		{"FLOE_DIR", "store", []string{"serve"}, "store"},
+		{"FLOE_DIR", "", []string{"serve"}, ""}, // there already, and floe cannot write in it
 		// The first step that cannot be made is told: the directory in locked, or what floe makes in it.
 		{"FLOE_ICONS_DIR", "icons", []string{"icons", "fetch", "aws", asked.URL + "/icons.zip"}, "icons"},
 		{"FLOE_ICONS_DIR", "", []string{"icons", "fetch", "aws", asked.URL + "/icons.zip"}, "aws"},
@@ -980,11 +981,22 @@ func TestCannotWrite(t *testing.T) {
 		if c.key == "FLOE_THEMES_DIR" {
 			told = strings.TrimSuffix(told, "\n") + "; nothing was made\n"
 		}
-		if r := e.run(t, "", c.args...); r.code != 1 || r.stderr != told {
+		// A serve that is not refused would serve on: a time limit makes that a failure, not a hang.
+		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+		r := e.runIn(ctx, t, "", c.args...)
+		cancel()
+		if r.code != 1 || r.stderr != told {
 			t.Errorf("%v with %s in a directory floe cannot write to = %d %q", c.args, c.key, r.code, r.stderr)
 		}
 		e.vars[c.key] = saved
 	}
+	// A server a publish starts tells it alike, where nothing is shown: the publish says to run floe serve.
+	e.write(t, "ok.yaml", "template: report\ntitle: OK\nlang: en\n")
+	saved := e.vars["FLOE_DIR"]
+	e.vars["FLOE_DIR"] = locked
+	want(t, "publish into a store floe cannot write in", e.run(t, "", "publish", "ok.yaml"), 1, "",
+		`floe: the server did not start; run "floe serve" to see the error`)
+	e.vars["FLOE_DIR"] = saved
 }
 
 // A port floe may not bind is told with the reason.
