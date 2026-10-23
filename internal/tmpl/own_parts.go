@@ -263,10 +263,7 @@ func (set *partSet) leaveOutUncompiled(stopped map[string]error) bool {
 	}
 	refused := map[string]error{}
 	for name := range still {
-		holdsStopped := slices.ContainsFunc(set.shapes[partsURL+name+".json"].refsUnder(nil), func(to string) bool {
-			return to != name && still[to] != nil
-		})
-		if !holdsStopped {
+		if !set.holds(name, func(to string) bool { return still[to] != nil }) {
 			refused[name] = why[name]
 		}
 	}
@@ -280,6 +277,26 @@ func (set *partSet) leaveOutUncompiled(stopped map[string]error) bool {
 		set.leaveOut(name, why)
 	}
 	return len(refused) > 0
+}
+
+// holds reports whether the part name of set holds one that stops reports true of, through the parts it
+// holds in turn, floe's too: a part of floe's may hold one of one's own of the name of one of floe's.
+func (set *partSet) holds(name string, stops func(part string) bool) bool {
+	seen := map[string]bool{name: true}
+	next := set.shapes[partsURL+name+".json"].refsUnder(nil)
+	for len(next) > 0 {
+		to := next[len(next)-1]
+		next = next[:len(next)-1]
+		if seen[to] {
+			continue
+		}
+		seen[to] = true
+		if stops(to) {
+			return true
+		}
+		next = append(next, set.shapes[partsURL+to+".json"].refsUnder(nil)...)
+	}
+	return false
 }
 
 // ownSchema reports whether p is a part of one's own that draws, whose schema.json floe compiles.

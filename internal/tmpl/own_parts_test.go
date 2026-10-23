@@ -504,6 +504,27 @@ func TestBrokenOwnParts(t *testing.T) {
 	}
 }
 
+// A part that holds, through a part of floe's, one of one's own whose schema stops is told as one that holds
+// a part that cannot be used, not as stopping at that one's schema.
+func TestHeldThroughFloesPart(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"cell/schema.json": `{"$id": "https://example.com/p.json", "type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"cell/part.html":   `<div data-floe-part="cell"></div>`,
+		"cell/part.css":    "",
+		"mine/schema.json": `{"type": "object", "properties": {"t": {"$ref": "floe:///parts/table.json"}}}`,
+		"mine/part.html":   `<div data-floe-part="mine"></div>`,
+		"mine/part.css":    "",
+	})
+	dir := memo(t, `"risks": {"$ref": "floe:///parts/mine.json"}, "aside": {"type": "string"}`)
+	_, mistakes := check(filepath.Join(dir, "memo"), parts, themesOf(parts))
+	want := filepath.Join(parts, "mine", "schema.json") + ": #/properties/t: the part table cannot be used"
+	if len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) || strings.Contains(mistakes[0].Error(), "could not read") {
+		t.Errorf("Check of a template of mine = %v, want %s", mistakes, want)
+	}
+}
+
 // A theme of one's own is picked as floe's are. One of the name of one of floe's takes the place
 // of its files of their names, the rest staying floe's. floe's themes do not style a part of one's own
 // that took the place of floe's, whose rules would fit it ill: its file goes, for the parts that take its
