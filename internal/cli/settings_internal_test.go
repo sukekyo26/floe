@@ -16,6 +16,16 @@ func TestEveryCommandDeclaresItsSettings(t *testing.T) {
 		if _, ok := cmd.Annotations[declared]; cmd.Runnable() && !ok {
 			t.Errorf("%s declares no settings", cmd.CommandPath())
 		}
+		dirs := 0
+		for s := range dirKeys {
+			if use(cmd.Annotations[string(s)]) == needs {
+				dirs++
+			}
+		}
+		if dirs > 1 {
+			t.Errorf("%s needs %d directories; tell the defaults one file holds up in one line (see the LIMIT in settle)",
+				cmd.CommandPath(), dirs)
+		}
 		for _, sub := range cmd.Commands() {
 			walk(sub)
 		}

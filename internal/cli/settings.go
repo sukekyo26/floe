@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -58,21 +59,39 @@ func uses(each map[setting]use) map[string]string {
 }
 
 // settle stops cmd, telling every reason at once, on a setting it uses that is written wrong, and on one it
-// needs that has no default; one it only reads that has no default it goes on
-// without, its value none. It is the one place that tells the mistakes of the settings.
+// needs that has no default; one it only reads that has no default it goes on without, its value none, and
+// is warned of when a file is in its way, once for each such file. It is the one place that tells the
+// mistakes of the settings.
+// LIMIT: a command needs one directory at most, so a default a file holds up is told once; tell those one file
+// holds up in one line if a command comes to need two (TestEveryCommandDeclaresItsSettings guards it).
 func (a *app) settle(cmd *cobra.Command) error {
 	var found usererr.List
+	var heldBy []string // the files in the way of defaults cmd reads, in the order first met
+	held := map[string][]string{}
 	for _, s := range settings {
 		u := use(cmd.Annotations[string(s)])
-		switch {
+		switch at := a.cfg.heldBy[s]; {
 		case u == "":
 		case a.cfg.wrong[s] != nil:
 			found = append(found, a.cfg.wrong[s])
 		case u == needs && a.cfg.absent[s] != nil:
 			found = append(found, a.cfg.absent[s])
+		case at != "":
+			if held[at] == nil {
+				heldBy = append(heldBy, at)
+			}
+			held[at] = append(held[at], dirKeys[s])
 		}
 	}
-	return found.Err()
+	if err := found.Err(); err != nil {
+		return err
+	}
+	var warned usererr.List
+	for _, at := range heldBy {
+		warned = append(warned, usererr.New("cli_defaults_held_up_read", at, strings.Join(held[at], ", "), cmd.CommandPath()))
+	}
+	a.tellWarnings(warned)
+	return nil
 }
 
 // tellWarnings prints warned to stderr, as every mistake is laid out, for the command to go on.

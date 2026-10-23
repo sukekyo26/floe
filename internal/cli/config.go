@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"errors"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -27,6 +30,13 @@ type config struct {
 	port      int
 	wrong     map[setting]*usererr.Error
 	absent    map[setting]*usererr.Error
+	heldBy    map[setting]string // the file in the way of an absent default
+}
+
+// dirKeys are the variables that set floe's directories.
+var dirKeys = map[setting]string{
+	storeSetting: "FLOE_DIR", iconsSetting: "FLOE_ICONS_DIR", templatesSetting: "FLOE_TEMPLATES_DIR",
+	partsSetting: "FLOE_PARTS_DIR", themesSetting: "FLOE_THEMES_DIR",
 }
 
 func (c *config) base() string {
@@ -39,7 +49,7 @@ func (c *config) base() string {
 func loadConfig(getenv func(string) string, dir string) *config {
 	c := &config{
 		root: "", icons: "", templates: "", parts: "", themes: "", home: getenv("HOME"), port: defaultPort,
-		wrong: map[setting]*usererr.Error{}, absent: map[setting]*usererr.Error{},
+		wrong: map[setting]*usererr.Error{}, absent: map[setting]*usererr.Error{}, heldBy: map[setting]string{},
 	}
 	if raw := getenv("FLOE_PORT"); raw != "" {
 		// Decimal only: hex (0x10) and exponents (1e3) are typos, not ports.
@@ -55,32 +65,78 @@ func loadConfig(getenv func(string) string, dir string) *config {
 }
 
 // readDirs reads floe's directories: each its setting, else a default under the XDG base directory, else
-// under the home. With none of them, it has no default, and is none to a command that only reads it.
+// under the home. A setting that cannot be a directory is written wrong. A default that cannot be one, or
+// none at all, is absent, and none to a command that only reads it.
 func (c *config) readDirs(getenv func(string) string, dir string) {
 	data := xdgDir(getenv, "XDG_DATA_HOME", c.home, ".local", "share")
 	conf := xdgDir(getenv, "XDG_CONFIG_HOME", c.home, ".config")
 	for _, d := range []struct {
 		s               setting
-		key, base, name string
+		xdg, base, name string
 		to              *string
 	}{
-		{storeSetting, "FLOE_DIR", data, "floe", &c.root},
+		{storeSetting, "XDG_DATA_HOME", data, "floe", &c.root},
 		// Not under FLOE_DIR: icons is a valid slug, so a page could take its place.
-		{iconsSetting, "FLOE_ICONS_DIR", data, "floe-icons", &c.icons},
-		{templatesSetting, "FLOE_TEMPLATES_DIR", conf, filepath.Join("floe", "templates"), &c.templates},
-		{partsSetting, "FLOE_PARTS_DIR", conf, filepath.Join("floe", "parts"), &c.parts},
-		{themesSetting, "FLOE_THEMES_DIR", conf, filepath.Join("floe", "themes"), &c.themes},
+		{iconsSetting, "XDG_DATA_HOME", data, "floe-icons", &c.icons},
+		{templatesSetting, "XDG_CONFIG_HOME", conf, filepath.Join("floe", "templates"), &c.templates},
+		{partsSetting, "XDG_CONFIG_HOME", conf, filepath.Join("floe", "parts"), &c.parts},
+		{themesSetting, "XDG_CONFIG_HOME", conf, filepath.Join("floe", "themes"), &c.themes},
 	} {
-		v, mistake := floeDir(getenv, d.key, c.home, dir)
+		key := dirKeys[d.s]
+		v, mistake := floeDir(getenv, key, c.home, dir)
 		switch {
 		case mistake != nil:
 			c.wrong[d.s] = mistake
 		case v != "":
-			*d.to = v
+			if wrong := setNotDir(key, v); wrong != nil {
+				c.wrong[d.s] = wrong
+			} else {
+				*d.to = v
+			}
 		case d.base != "":
-			*d.to = filepath.Join(d.base, d.name)
+			v = filepath.Join(d.base, d.name)
+			if at := notDir(v); at != "" {
+				c.absent[d.s] = usererr.New("cli_default_held_up", at, key, d.xdg)
+				c.heldBy[d.s] = at
+			} else {
+				*d.to = v
+			}
 		default:
-			c.absent[d.s] = usererr.New("cli_no_default", d.key, d.key)
+			c.absent[d.s] = usererr.New("cli_no_default", key, key)
+		}
+	}
+}
+
+// setNotDir is the mistake of the setting key, v, when v cannot be a directory; nil when it can.
+func setNotDir(key, v string) *usererr.Error {
+	switch at := notDir(v); at {
+	case "":
+		return nil
+	case v:
+		return usererr.New("cli_dir_is_file", key, v, key)
+	default:
+		return usererr.New("cli_dir_under_file", key, v, at, key)
+	}
+}
+
+// notDir is where dir cannot be a directory: dir, or the nearest of its parents that is there, when that is
+// not a directory (a symlink that leads nowhere is there, and not one); "" when it is one, or may be. Whether
+// floe may write there is left to the commands that write, so that one that only reads is not stopped, and
+// nothing is made.
+func notDir(dir string) string {
+	for at := dir; ; at = filepath.Dir(at) {
+		info, err := os.Stat(at)
+		switch {
+		case err == nil && info.IsDir(), errors.Is(err, fs.ErrPermission):
+			return ""
+		case err == nil:
+			return at
+		}
+		if _, err := os.Lstat(at); err == nil {
+			return at
+		}
+		if filepath.Dir(at) == at {
+			return ""
 		}
 	}
 }

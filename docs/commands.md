@@ -368,6 +368,8 @@ In `FLOE_DIR`, `FLOE_ICONS_DIR`, `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_T
 
 A command is told of the settings it uses alone; it reads from some of them, and writes in or cannot do without the others. A setting written wrong (a `~name`, a bad `FLOE_PORT` …) stops every command that uses it, with every other such mistake at once (exit code 1). A directory not set that has no default (no `HOME`, say) stops a command that writes there or cannot do without it (`FLOE_DIR` for `publish`, `list`, `rm` and `serve`, `FLOE_TEMPLATES_DIR` for `floe template new`, `FLOE_PARTS_DIR` for `floe part new` and `floe part check` (and `FLOE_THEMES_DIR` for `floe part new` of a part with files of themes), `FLOE_ICONS_DIR` for the icons commands), and is nothing to a command that only reads it: `floe check` runs without `HOME`, with floe's templates, parts and themes alone. `floe stop` uses `FLOE_PORT` alone, and `floe check` and `floe render` do not use `FLOE_PORT` or `FLOE_DIR`.
 
+A directory must be a directory, or not there yet under one. One set that is a file, or under a file, is written wrong: it is refused by its variable's name. A default that is a file, or under a file, is told by the file in its way to a command that writes there or cannot do without it; a command that only reads it goes on without it, warned once for each file in the way (`HOME=/dev/null floe check` passes with a warning). A default that is none for want of `HOME` is told nothing of. Nothing is made then, and whether floe may write there is told by the command that writes.
+
 The command line speaks English, whatever the environment's language; the management page and the page of a data file's mistakes follow the browser's language.
 
 ## Exit codes

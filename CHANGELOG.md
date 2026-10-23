@@ -276,7 +276,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   it uses alone: one written wrong stops it, with the others at once; a
   directory without a default stops a command that writes there or cannot
   do without it, and is nothing to one that only reads it (`floe check`
-  runs without `HOME`).
+  runs without `HOME`). A directory set to a file, or under one, is
+  refused by its name; a default that is a file, or under one, counts as
+  none, told by the file in its way to a command that needs it, and warned
+  of to one that only reads it.
   The management page may be framed by itself and by VS Code's Simple
   Browser alone (`frame-ancestors 'self' vscode-webview: vscode-file:`), so
   that another site, or a page, cannot have its buttons clicked unseen.
