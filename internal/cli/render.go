@@ -118,8 +118,9 @@ func (a *app) realPath(file string) string {
 func (a *app) writePages(pages []rendered, outDir string) error {
 	if outDir != "" {
 		// As the pages in it, for others to read.
-		if err := os.MkdirAll(a.abs(outDir), 0o755); err != nil { //nolint:gosec // G301: pages to share
-			return usererr.CannotWrite(a.abs(outDir), err)
+		dir := a.abs(outDir)
+		if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: pages to share
+			return usererr.CannotWrite(dir, err)
 		}
 	}
 	for _, p := range pages {

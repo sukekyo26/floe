@@ -998,11 +998,9 @@ func TestCannotWrite(t *testing.T) {
 	want(t, "render into a directory floe cannot write to", e.run(t, "", "render", "ok.yaml", "--out-dir", "locked/sub/out"), 1, "",
 		"floe: cannot write "+filepath.Join(locked, "sub")+cannot)
 	// A server a publish starts tells it alike, where nothing is shown: the publish says to run floe serve.
-	saved := e.vars["FLOE_DIR"]
 	e.vars["FLOE_DIR"] = locked
 	want(t, "publish into a store floe cannot write in", e.run(t, "", "publish", "ok.yaml"), 1, "",
 		`floe: the server did not start; run "floe serve" to see the error`)
-	e.vars["FLOE_DIR"] = saved
 }
 
 // A port floe may not bind is told with the reason.
@@ -1022,7 +1020,6 @@ func TestServeOnPrivilegedPort(t *testing.T) {
 	e.vars["FLOE_PORT"] = "1"
 	want(t, "serve on a privileged port", e.run(t, "", "serve"), 1, "",
 		"floe: cannot listen on 127.0.0.1:1 (permission denied); set FLOE_PORT to another port\n")
-	e.vars["FLOE_PORT"] = e.port
 }
 
 // freePort picks below the ports the system gives out for :0, which a test of another package may be

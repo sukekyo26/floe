@@ -109,6 +109,7 @@ func CannotRead(file string, err error) *Error {
 // the step that could not be made when err names file or one of the directories above it (MkdirAll stops at
 // the first it cannot make), so that "its directory" is the one to check; as file not to be written in when
 // err names what floe made in it; else by file.
+// LIMIT: matched by the paths' letters, not symlinks or relative paths: pass the path the system call was given
 func CannotWrite(file string, err error) *Error {
 	var pe *os.PathError
 	if errors.As(err, &pe) {
