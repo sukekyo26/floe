@@ -172,8 +172,8 @@ func TestComputeExplicitKey(t *testing.T) {
 func TestComputeLeftOut(t *testing.T) {
 	t.Parallel()
 
-	d, _ := data(t, "records: { x: 1 }\nattributes: ~\nparts: []\ntotal: 1\nr: 0\nlists: [{ a: ~ }]\n")
-	d.shape = shapeOf(t, `{"type": "object", "properties": {"prs": {}, "writes_per_sec": {}, "total": {}, "r": {}, "parts": {},
+	d, _ := data(t, "records: { x: 1 }\nattributes: ~\nparts: []\ntotal: 1\nr: 0\nlists: [{ a: ~ }]\nflag: true\n")
+	d.shape = shapeOf(t, `{"type": "object", "properties": {"prs": {}, "writes_per_sec": {}, "total": {}, "r": {}, "parts": {}, "flag": {},
 		"records": {"type": "object", "properties": {"x": {}, "y": {}, "in_1_year": {}}, "additionalProperties": false},
 		"attributes": {"type": "array", "items": {"type": "object", "properties": {"x": {}}}},
 		"lists": {"type": "array", "items": {"type": "object", "properties": {"a": {"type": "object", "properties": {"b": {}}}}}}}}`)
@@ -186,6 +186,7 @@ func TestComputeLeftOut(t *testing.T) {
 		"n: let s = records; s.in_1_year * prs\n":          "prs",
 		"n: lists[-1].a.b * 2\n":                           "lists[0].a",
 		"n: attributes?.x + 1\n":                           "attributes",
+		"n: prs || flag\n":                                 "prs",
 		"n: \"prs ? 1 : 0\"\n":                             "prs",
 		"n: if prs { 1 } else { 0 }\n":                     "prs",
 		"n: lists[prs]\n":                                  "prs",
@@ -211,7 +212,7 @@ func TestComputeLeftOut(t *testing.T) {
 			t.Errorf("%s = %v, want %s", src, err, want)
 		}
 	}
-	for _, src := range []string{"merged: count(prs ?? [], .state == 'merged')\n", "n: attributes?.x ?? records.x\n"} {
+	for _, src := range []string{"merged: count(prs ?? [], .state == 'merged')\n", "n: attributes?.x ?? records.x\n", "n: flag && prs\n"} {
 		if err := compute("computed.yaml", []byte(src), d, true); err != nil {
 			t.Errorf("%s = %v", src, err)
 		}

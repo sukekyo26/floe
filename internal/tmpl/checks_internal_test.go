@@ -102,7 +102,7 @@ notes:
 }
 
 // A check that stops for another reason than a value left out, which it reads where it stopped, is told at the
-// item in expr's words: || takes nil on either side.
+// item in expr's words: || stopped on a value that is not true or false, not on the nil on its right.
 func TestRelationsStoppedOtherwise(t *testing.T) {
 	t.Parallel()
 

@@ -113,29 +113,7 @@ func (s *stopAt) Visit(n *exprast.Node) {
 	if (*n).Location() != s.at {
 		return
 	}
-	// What the node reads before it goes on, alone: a branch not taken is not read.
-	var handed []exprast.Node
-	switch n := (*n).(type) {
-	case *exprast.IdentifierNode:
-		handed = []exprast.Node{n}
-	case *exprast.MemberNode:
-		handed = []exprast.Node{n, n.Property}
-	case *exprast.ConditionalNode:
-		handed = []exprast.Node{n.Cond}
-	case *exprast.BuiltinNode:
-		handed = n.Arguments
-	case *exprast.CallNode:
-		handed = n.Arguments
-	case *exprast.BinaryNode:
-		if !nilTaking[n.Operator] {
-			handed = []exprast.Node{n.Left, n.Right}
-		}
-	case *exprast.UnaryNode:
-		handed = []exprast.Node{n.Node}
-	case *exprast.SliceNode:
-		handed = []exprast.Node{n.Node, n.From, n.To}
-	}
-	for _, h := range handed {
+	for _, h := range readFirst(*n) {
 		if c, ok := h.(*exprast.ChainNode); ok {
 			h = c.Node
 		}
@@ -143,6 +121,35 @@ func (s *stopAt) Visit(n *exprast.Node) {
 			s.found = append(s.found, at)
 		}
 	}
+}
+
+// readFirst is what the node n reads before it goes on, alone, which it may stop on: a branch not taken is
+// not read.
+func readFirst(n exprast.Node) []exprast.Node {
+	switch n := n.(type) {
+	case *exprast.IdentifierNode:
+		return []exprast.Node{n}
+	case *exprast.MemberNode:
+		return []exprast.Node{n, n.Property}
+	case *exprast.ConditionalNode:
+		return []exprast.Node{n.Cond}
+	case *exprast.BuiltinNode:
+		return n.Arguments
+	case *exprast.CallNode:
+		return n.Arguments
+	case *exprast.BinaryNode:
+		switch {
+		case logical[n.Operator]:
+			return []exprast.Node{n.Left}
+		case !nilTaking[n.Operator]:
+			return []exprast.Node{n.Left, n.Right}
+		}
+	case *exprast.UnaryNode:
+		return []exprast.Node{n.Node}
+	case *exprast.SliceNode:
+		return []exprast.Node{n.Node, n.From, n.To}
+	}
+	return nil
 }
 
 // stoppedOnNil reports whether expr says, in message, that it stopped on a nil: a function or an operator
@@ -157,11 +164,16 @@ func stoppedOnNil(message string) bool {
 	return false
 }
 
-// nilTaking are the operators that take nil on either side: one of them stops for another reason (true &&
-// a value that is not true or false).
+// nilTaking are the operators that take nil on either side: one of them stops for another reason, two values
+// of types it cannot compare.
 var nilTaking = map[string]bool{
-	"&&": true, "||": true, "and": true, "or": true, "??": true, "==": true, "!=": true, "in": true,
+	"??": true, "==": true, "!=": true, "in": true,
+	"matches": true, "contains": true, "startsWith": true, "endsWith": true,
 }
+
+// logical are the operators that stop on a nil on their left alone: the right is not true or false to them,
+// but the result (true && nil is nil).
+var logical = map[string]bool{"&&": true, "||": true, "and": true, "or": true}
 
 // nilAt returns the path to the first nil the read n, a.b.c from a variable of vars, comes to, and false
 // when it comes to none or is not such a read.
@@ -194,30 +206,29 @@ func (s *stopAt) nilAt(n exprast.Node) (string, bool) {
 
 // step returns what the property of a read, a key or an index written as such, leads to in value, of the
 // shape sh, at the path at: its value, its path, written as yamlpos.Find writes one, and its shape; false
-// when it is neither, value is not keys or a list or has no such index, or sh declares no such key or items.
+// when it is neither or down cannot go there.
 func step(value any, at string, sh *shape, property exprast.Node) (any, string, *shape, bool) {
-	if sh == nil {
-		return nil, "", nil, false
-	}
-	in := sh.inside()
 	switch p := property.(type) {
 	case *exprast.StringNode:
-		m, ok := value.(map[string]any)
-		next, declared := in.keys[p.Value]
+		if _, ok := value.(map[string]any); !ok {
+			return nil, "", nil, false
+		}
+		v, next, ok := down(value, sh, p.Value)
 		if at != "" {
 			at += "."
 		}
-		return m[p.Value], at + p.Value, next, ok && declared
+		return v, at + p.Value, next, ok
 	case *exprast.IntegerNode:
 		l, ok := value.([]any)
 		i := p.Value
 		if i < 0 {
 			i += len(l)
 		}
-		if !ok || i < 0 || i >= len(l) || in.each == nil {
+		if !ok {
 			return nil, "", nil, false
 		}
-		return l[i], at + "[" + strconv.Itoa(i) + "]", in.each, true
+		v, next, ok := down(value, sh, strconv.Itoa(i))
+		return v, at + "[" + strconv.Itoa(i) + "]", next, ok
 	}
 	return nil, "", nil, false
 }
@@ -225,21 +236,32 @@ func step(value any, at string, sh *shape, property exprast.Node) (any, string, 
 // shapeAt is the shape s declares for what the path at leads to in value, nil when it declares none.
 func shapeAt(s *shape, value any, at []string) *shape {
 	for _, k := range at {
-		if s == nil {
-			return nil
-		}
-		switch v := value.(type) {
-		case map[string]any:
-			s, value = s.inside().keys[k], v[k]
-		case []any:
-			i, err := strconv.Atoi(k)
-			if err != nil || i < 0 || i >= len(v) {
-				return nil
-			}
-			s, value = s.inside().each, v[i]
-		default:
+		var ok bool
+		if value, s, ok = down(value, s, k); !ok {
 			return nil
 		}
 	}
 	return s
+}
+
+// down goes one step, k, into value, of the shape sh: a key of keys and values, or an index of a list. It
+// returns what is there and its shape, and false when value is neither, has no such index, or sh declares
+// no such key or items.
+func down(value any, sh *shape, k string) (any, *shape, bool) {
+	if sh == nil {
+		return nil, nil, false
+	}
+	in := sh.inside()
+	switch v := value.(type) {
+	case map[string]any:
+		next, declared := in.keys[k]
+		return v[k], next, declared
+	case []any:
+		i, err := strconv.Atoi(k)
+		if err != nil || i < 0 || i >= len(v) || in.each == nil {
+			return nil, nil, false
+		}
+		return v[i], in.each, true
+	}
+	return nil, nil, false
 }
