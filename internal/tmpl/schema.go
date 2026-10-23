@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	neturl "net/url"
+	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -58,14 +59,12 @@ func schemaJSON(file string, src []byte) (any, error) {
 // parts of set; file is where it is, in its mistakes.
 func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema, error) {
 	url := schemaURL(name)
-	c := newCompiler(set)
-	if err := c.AddResource(url, doc); err != nil {
-		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
+	c, err := set.compiler()
+	if err != nil {
+		return nil, err
 	}
-	for partURL, partDoc := range set.docs {
-		if err := c.AddResource(partURL, partDoc); err != nil {
-			return nil, fmt.Errorf("read the schema %s: %w", partURL, err)
-		}
+	if err = c.AddResource(url, doc); err != nil {
+		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
 	sch, err := c.Compile(url)
 	// jsonschema wraps noLoader's mistake in an error of its own, which does not unwrap: floe's own is told,
@@ -82,8 +81,10 @@ func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema
 }
 
 // compileMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of
-// file: those the metaschema refuses, and those of a kind floe knows, each at its JSON pointer. One of
-// another schema, a part's, or of a kind floe does not know is a failure.
+// file: those the metaschema refuses of the file, and those of a kind floe knows, each at its JSON pointer.
+// The metaschema refuses what a $ref points at, at a pointer under the file, for the $ref, whosever it is:
+// refMistake tells it at the $ref. One of another schema, a part's, or of a kind floe does not know is a
+// failure.
 func compileMistakes(url, file string, err error) error {
 	var invalid *jsonschema.SchemaValidationError
 	if errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url {
@@ -94,37 +95,42 @@ func compileMistakes(url, file string, err error) error {
 	if e := compileMistake(url, file, err); e != nil {
 		return e
 	}
+	if e := strayRefMistake(url, file, err); e != nil {
+		return e
+	}
 	return fmt.Errorf("compile the schema %s: %w", file, err)
 }
 
-// compileMistake returns err, what stopped the compiling of the schema at url, file, as a mistake at its
-// JSON pointer in file, and nil for one of another schema or of a kind floe does not know.
-// LIMIT: a $ref that finds nothing is told at the top of the file, as jsonschema says where it leads, not
-// where it is written. Find the $ref in the schema if a template comes to need its place.
+// strayRefMistake returns err, what stopped the compiling of the template's schema at url, file, as the
+// mistake of a $ref that finds nothing in it, at the top of file, and nil for another. Where a $ref leads
+// is all jsonschema says, which names the template: none but its own $refs lead into a template's schema.
+// LIMIT: told at the top of the file, of a $ref refMistake did not check (its LIMITs), by where it leads
+// as jsonschema resolves it: under a nested $id, a pointer not as written. Check it there if one comes.
+func strayRefMistake(url, file string, err error) *usererr.Error {
+	key, schema, leads := missingTarget(err)
+	if _, ok := pointerIn(url, schema); key == "" || !ok {
+		return nil
+	}
+	to, _ := pointerIn(url, leads)
+	return notFound(key, to, path.Base(file), true).Placed(file, 0, 0, "#")
+}
+
+// compileMistake returns err, what stopped the compiling of the schema at url, file, as a mistake of what
+// file holds at its JSON pointer, and nil for one of another schema or of a kind floe does not know. A $ref
+// that finds nothing is not one: jsonschema says where it leads, which may be the file of another's $ref.
 func compileMistake(url, file string, err error) *usererr.Error {
 	in := func(u string) (string, bool) { return pointerIn(url, u) }
 	var (
-		nothing  *jsonschema.JSONPointerNotFoundError
-		badPtr   *jsonschema.InvalidJsonPointerError
-		noAnchor *jsonschema.AnchorNotFoundError
-		anchor   *jsonschema.ParseAnchorError
-		anchors  *jsonschema.DuplicateAnchorError
-		ids      *jsonschema.DuplicateIDError
-		regex    *jsonschema.InvalidRegexError
+		id      *jsonschema.ParseIDError
+		anchor  *jsonschema.ParseAnchorError
+		anchors *jsonschema.DuplicateAnchorError
+		ids     *jsonschema.DuplicateIDError
+		regex   *jsonschema.InvalidRegexError
 	)
 	switch {
-	case errors.As(err, &nothing):
-		if to, ok := in(nothing.URL); ok {
-			return usererr.NewIn(file, "#", "tmpl_schema_ref_nothing", to)
-		}
-	case errors.As(err, &badPtr):
-		if to, ok := in(badPtr.URL); ok {
-			return usererr.NewIn(file, "#", "tmpl_schema_ref_pointer", to)
-		}
-	case errors.As(err, &noAnchor):
-		if _, ok := in(noAnchor.URL); ok {
-			to, _ := in(noAnchor.Reference)
-			return usererr.NewIn(file, "#", "tmpl_schema_ref_anchor", to)
+	case errors.As(err, &id):
+		if at, ok := in(id.URL); ok {
+			return usererr.NewIn(file, at, "tmpl_schema_id")
 		}
 	case errors.As(err, &anchor):
 		if at, ok := in(anchor.URL); ok {
@@ -144,6 +150,87 @@ func compileMistake(url, file string, err error) *usererr.Error {
 		}
 	}
 	return nil
+}
+
+// refTargetMistake returns err, what stopped the compiling of what the $ref ref points at, as the mistake
+// of the $ref, a $ref to `to` in `in`, the user's own file when own, when jsonschema found nothing there: no
+// JSON pointer, nothing at it, or no $anchor of its name. It returns nil for none, and for a stop
+// elsewhere, another $ref's or schema's.
+func refTargetMistake(ref string, err error, to, in string, own bool) *usererr.Error {
+	key, _, leads := missingTarget(err)
+	if key == "" || !samePlace(ref, leads) {
+		return nil
+	}
+	return notFound(key, to, in, own)
+}
+
+// refNoSchemaMistake returns err, what stopped the compiling of what the $ref ref points at, as the mistake
+// of the $ref, a $ref to `to`, when what it points at is no schema JSON Schema takes, such as a value of an
+// enum, or one the metaschema refuses, each why at its pointer under it, and nil for another.
+// LIMIT: why, in jsonschema's English.
+func refNoSchemaMistake(ref, to string, err error) *usererr.Error {
+	var invalid *jsonschema.SchemaValidationError
+	base, _, _ := strings.Cut(ref, "#")
+	// To the root, it is what the metaschema refuses of the file, which compileMistakes tells where it is.
+	if at, _ := pointerIn(base, ref); at == "#" || !errors.As(err, &invalid) || !samePlace(ref, invalid.URL) {
+		return nil
+	}
+	whys := []string{invalid.Err.Error()}
+	var ve *jsonschema.ValidationError
+	if errors.As(invalid.Err, &ve) {
+		whys = nil
+		leaves(ve, func(e *jsonschema.ValidationError) {
+			why := e.ErrorKind.LocalizedString(english)
+			if len(e.InstanceLocation) > 0 {
+				why = pointerTo(e.InstanceLocation)[1:] + ": " + why
+			}
+			whys = append(whys, why)
+		})
+	}
+	return usererr.New("tmpl_schema_ref_no_schema", to, strings.Join(whys, "; "))
+}
+
+// samePlace reports whether the URL u, as jsonschema says it, is where ref points: the same schema and
+// JSON pointer, its fragment escaped or not.
+func samePlace(ref, u string) bool {
+	base, _, _ := strings.Cut(ref, "#")
+	want, _ := pointerIn(base, ref)
+	got, ok := pointerIn(base, u)
+	return ok && got == want
+}
+
+// missingTarget reads err as jsonschema's word that a $ref finds nothing where it points: no JSON pointer,
+// nothing at it, or no $anchor of its name. It returns the key of floe's words for it, the URL of the
+// schema jsonschema looked in, and where the $ref leads; "" for another error.
+func missingTarget(err error) (key, schema, leads string) {
+	var (
+		nothing  *jsonschema.JSONPointerNotFoundError
+		badPtr   *jsonschema.InvalidJsonPointerError
+		noAnchor *jsonschema.AnchorNotFoundError
+	)
+	switch {
+	case errors.As(err, &nothing):
+		return "tmpl_schema_ref_nothing", nothing.URL, nothing.URL
+	case errors.As(err, &badPtr):
+		return "tmpl_schema_ref_pointer", badPtr.URL, badPtr.URL
+	case errors.As(err, &noAnchor):
+		return "tmpl_schema_ref_anchor", noAnchor.URL, noAnchor.Reference
+	}
+	return "", "", ""
+}
+
+// notFound is the mistake of key (missingTarget) of a $ref to `to`, which finds nothing in `in`, the user's
+// own file when own, where what it refers to may be written.
+func notFound(key, to, in string, own bool) *usererr.Error {
+	switch {
+	case key == "tmpl_schema_ref_pointer":
+		return usererr.New(key, to) // no pointer: nothing was looked for
+	case !own && key == "tmpl_schema_ref_nothing":
+		return usererr.New("tmpl_schema_ref_nothing_there", to, in)
+	case !own && key == "tmpl_schema_ref_anchor":
+		return usererr.New("tmpl_schema_ref_anchor_there", to, in)
+	}
+	return usererr.New(key, to, in)
 }
 
 // drafts are the drafts of JSON Schema a $schema may name.
@@ -202,6 +289,17 @@ func newCompiler(set *partSet) *jsonschema.Compiler {
 	return c
 }
 
+// compiler returns a compiler that holds the schemas of the parts of set.
+func (set *partSet) compiler() (*jsonschema.Compiler, error) {
+	c := newCompiler(set)
+	for url, doc := range set.docs {
+		if err := c.AddResource(url, doc); err != nil {
+			return nil, fmt.Errorf("read the schema %s: %w", url, err)
+		}
+	}
+	return c, nil
+}
+
 // knownFormat reports whether floe knows the format f: one of JSON Schema's that it checks, or one of
 // its own. jsonschema passes a value of a format it does not know, so a template that uses a format of
 // a later floe would be drawn as if it had none. Each is asked once, as every schema read asks again.
@@ -218,6 +316,34 @@ func knownFormat(f string) bool {
 
 // knownFormats are the formats knownFormat was asked of, by name, and whether floe knows each.
 var knownFormats sync.Map
+
+// notURIReference returns why ref, a $ref as written, is no URL, as uri, the schema of the format
+// uri-reference, reads it, the one the metaschemas from draft-06 check a $ref with, and "" for one that is:
+// draft-04's checks none.
+// LIMIT: why, in jsonschema's English.
+func notURIReference(uri *jsonschema.Schema, ref string) string {
+	var ve *jsonschema.ValidationError
+	if !errors.As(uri.Validate(ref), &ve) {
+		return ""
+	}
+	why := ve.ErrorKind.LocalizedString(english)
+	leaves(ve, func(e *jsonschema.ValidationError) {
+		if f, ok := e.ErrorKind.(*kind.Format); ok && f.Err != nil {
+			why = f.Err.Error()
+			var bad *neturl.Error
+			if errors.As(f.Err, &bad) {
+				why = bad.Err.Error()
+			}
+		}
+	})
+	return why
+}
+
+// uriReference compiles, once, the schema of a URI reference, as JSON Schema's format uri-reference checks
+// it.
+var uriReference = sync.OnceValues(func() (*jsonschema.Schema, error) {
+	return compileAlone(map[string]any{"type": "string", "format": "uri-reference"})
+})
 
 // heldByJSONSchema reports whether jsonschema holds the schema at url itself, as it holds the drafts and
 // their vocabularies, so that a $ref to it reads no other file.
@@ -266,9 +392,10 @@ func pointerIn(url, u string) (string, bool) {
 	return "#" + ptr, base == url
 }
 
-// metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's, holds, each at
-// its JSON pointer, in the order of the pointers, such as a pattern that is no regular expression; nil when
-// it holds none.
+// metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's, holds, each at its
+// JSON pointer, in the order of the pointers, such as a pattern that is no regular expression; nil when it
+// holds none.
+// LIMIT: why, in jsonschema's English.
 func metaschemaMistakes(file string, err error) error {
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
@@ -276,14 +403,20 @@ func metaschemaMistakes(file string, err error) error {
 	}
 	var mistakes usererr.List
 	leaves(ve, func(e *jsonschema.ValidationError) {
-		at := "#"
-		for _, step := range e.InstanceLocation {
-			at += "/" + pointerKey.Replace(step)
-		}
-		mistakes = append(mistakes, usererr.NewIn(file, at, "tmpl_schema_invalid", e.ErrorKind.LocalizedString(english)))
+		why := e.ErrorKind.LocalizedString(english)
+		mistakes = append(mistakes, usererr.NewIn(file, pointerTo(e.InstanceLocation), "tmpl_schema_invalid", why))
 	})
 	slices.SortStableFunc(mistakes, func(a, b *usererr.Error) int { return strings.Compare(a.At, b.At) })
 	return mistakes.Err()
+}
+
+// pointerTo is the JSON pointer of the place of steps, the keys and indexes jsonschema gives, under the root.
+func pointerTo(steps []string) string {
+	at := "#"
+	for _, step := range steps {
+		at += "/" + pointerKey.Replace(step)
+	}
+	return at
 }
 
 // leaves calls leaf with each mistake of e that is not only the mistakes under it. A branch of anyOf or

@@ -253,9 +253,92 @@ func TestCheckMistakes(t *testing.T) {
 			name:  "a $ref in the schema that finds nothing",
 			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "#/$defs/nope" },` + "\n    " + `"chart":`, "page.css": ":root { color: red; }\n"},
 			want: []string{
-				`sizes/schema.json: #: a $ref to #/$defs/nope finds nothing in schema.json`,
+				`sizes/schema.json: #/properties/code: a $ref to #/$defs/nope finds nothing in schema.json`,
 				"sizes/page.css:1: write the root as :scope",
 			},
+		},
+		{
+			// Into a schema of floe's, by a pointer and by an anchor, at each $ref.
+			name: "a $ref into a part that finds nothing",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "floe:///parts/tone.json#/nope" }, "mark": { "$ref": "floe:///parts/tone.json#nope" },` +
+				"\n    " + `"chart":`},
+			want: []string{
+				`sizes/schema.json: #/properties/code: a $ref to floe:///parts/tone.json#/nope finds nothing in floe:///parts/tone.json: refer to what is there`,
+				`sizes/schema.json: #/properties/mark: a $ref to floe:///parts/tone.json#nope finds no $anchor of that name in floe:///parts/tone.json`,
+			},
+		},
+		{
+			// A $ref to the root, which recurses, is right: what the metaschema refuses of the file is told where
+			// it is, not as the $ref's.
+			name:  "a $ref to the root beside what JSON Schema does not take",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "#" }, "kind": { "type": "string", "pattern": "(" },` + "\n    " + `"chart":`},
+			want:  []string{`sizes/schema.json: #/properties/kind/pattern: JSON Schema does not take this: '(' is not valid regex`},
+		},
+		{
+			// At the $ref, not as a URL out of floe; under draft-04 too, whose metaschema does not check it.
+			name:  "a $ref that is no URL",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "http://[::1" },` + "\n    " + `"chart":`},
+			want:  []string{`sizes/schema.json: #/properties/code: the $ref http://[::1 cannot be read as a URL (missing ']' in host)`},
+		},
+		{
+			// As JSON Schema's uri-reference reads it, which a \ fails, though net/url reads it.
+			name:  "a $ref with a backslash",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "#/$defs/a\\b" },` + "\n    " + `"chart":`},
+			want:  []string{`sizes/schema.json: #/properties/code: the $ref #/$defs/a\b cannot be read as a URL (contains \)`},
+		},
+		{
+			name:  "a $ref into a draft of JSON Schema that finds nothing",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "https://json-schema.org/draft/2020-12/schema#/$defs/nope" },` + "\n    " + `"chart":`},
+			want: []string{
+				`sizes/schema.json: #/properties/code: a $ref to https://json-schema.org/draft/2020-12/schema#/$defs/nope finds nothing in https://json-schema.org/draft/2020-12/schema`,
+			},
+		},
+		{
+			// What a $ref points at is checked as a schema where it is.
+			name:  "a $ref to what JSON Schema does not take",
+			files: map[string]string{"schema.json": `"properties": {|"foo": { "type": 5 }, "properties": { "code": { "$ref": "#/foo" },`},
+			want:  []string{`sizes/schema.json: #/properties/code: a $ref to #/foo points at what is no schema (/type: `},
+		},
+		{
+			// At the $ref, its owner, not at the value of the enum, right as it is.
+			name: "a $ref to a value of an enum in the schema",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "#/properties/kind/enum/0" }, "kind": { "enum": ["a"] },` +
+				"\n    " + `"chart":`},
+			want: []string{`sizes/schema.json: #/properties/code: a $ref to #/properties/kind/enum/0 points at what is no schema (got string, want boolean or object)`},
+		},
+		{
+			// In another file, at the $ref, which is all the user can change.
+			name:  "a $ref to what is no schema in a part",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "floe:///parts/tone.json#/enum/0" },` + "\n    " + `"chart":`},
+			want:  []string{`sizes/schema.json: #/properties/code: a $ref to floe:///parts/tone.json#/enum/0 points at what is no schema`},
+		},
+		{
+			name:  "an $id that is no URL",
+			files: map[string]string{"schema.json": `"properties": {|"$id": "http://[::1", "properties": {`},
+			want:  []string{`sizes/schema.json: #: this $id cannot be read as a URL`},
+		},
+		{
+			// The $id is told, not a $ref read from it, which has no URL.
+			name: "an $id that is no URL and a $ref under it",
+			files: map[string]string{"schema.json": `"properties": {|"$id": "http://[::1", "$defs": { "x": { "type": "string" } },` +
+				` "properties": { "code": { "$ref": "#/$defs/x" },`},
+			want: []string{`sizes/schema.json: #: this $id cannot be read as a URL`},
+		},
+		{
+			name:  "a $dynamicRef",
+			files: map[string]string{"schema.json": `"chart":|"code": { "$dynamicRef": "#/$defs/x" },` + "\n    " + `"chart":`},
+			want:  []string{`sizes/schema.json: #/properties/code: floe does not follow $dynamicRef`},
+		},
+		{
+			// A $ref through an $id is left to the compiling, at the top of the file (refMistake's LIMIT).
+			name:  "a $ref under an $id that finds nothing",
+			files: map[string]string{"schema.json": `"properties": {|"$id": "https://example.com/t.json", "properties": { "code": { "$ref": "#/$defs/nope" },`},
+			want:  []string{`sizes/schema.json: #: a $ref to #/$defs/nope finds nothing in schema.json`},
+		},
+		{
+			name:  "a $ref that is no URL under draft-04",
+			files: map[string]string{"schema.json": `"properties": {|"$schema": "http://json-schema.org/draft-04/schema#", "properties": { "code": { "$ref": "http://[::1" },`},
+			want:  []string{`sizes/schema.json: #/properties/code: the $ref http://[::1 cannot be read as a URL (missing ']' in host)`},
 		},
 		{
 			name:  "example",
