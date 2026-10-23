@@ -74,9 +74,9 @@ type Options struct {
 	Force       bool
 }
 
-// Normalized is o with each string given trimmed, whoever gave it, and every mistake of them: a title given
-// empty, as it would leave the list blank, and a theme, which would take the data's. The command line checks
-// with it before it sends, and the server again.
+// Normalized is o with each string given trimmed, whoever gave it, and every mistake of them: a slug given
+// that cannot be one, a title given empty, as it would leave the list blank, and a theme, which would take
+// the data's. The command line checks with it before it sends, and the server again.
 func (o Options) Normalized() (Options, error) {
 	for _, field := range []**string{&o.Slug, &o.Title, &o.Description, &o.Theme} {
 		if *field != nil {
@@ -85,6 +85,9 @@ func (o Options) Normalized() (Options, error) {
 		}
 	}
 	var found usererr.List
+	if o.Slug != nil && !ValidSlug(*o.Slug) {
+		found = append(found, usererr.New("store_invalid_slug", *o.Slug))
+	}
 	for _, f := range []struct {
 		value *string
 		empty string
@@ -171,11 +174,8 @@ func ReadUpload(ctx context.Context, file, cwd string) (Upload, error) {
 // images is answered NeedImages, once nothing that needs no image refuses the publish (the slug, the
 // page's owner).
 func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
-	if err := checkData(up.File); err != nil {
-		return nil, err
-	}
 	opts, err := opts.Normalized()
-	if err != nil {
+	if err = usererr.Collect(checkData(up.File), err); err != nil {
 		return nil, err
 	}
 	images := up.Images
@@ -225,11 +225,8 @@ func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, opts Option
 // stored page is, its images under its real directory.
 func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
 	opts, err := opts.Normalized()
-	if err != nil {
-		return nil, err
-	}
-	path, src, err := s.readLink(file, opts, cwd)
-	if err != nil {
+	path, src, rerr := s.readLink(file, opts, cwd)
+	if err = usererr.Collect(err, rerr); err != nil {
 		return nil, err
 	}
 	theme := opts.theme()

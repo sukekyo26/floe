@@ -12,7 +12,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -101,11 +100,12 @@ refused unless --force.`,
 			if flags.Changed("theme") {
 				opts.Theme = &theme
 			}
-			// Checked as the server checks, to be refused before it starts; sent as given, for it to check again.
-			if _, err := opts.Normalized(); err != nil {
+			// Checked as the server checks, to be refused before it starts, and sent so, as the slug names the URL.
+			normalized, err := opts.Normalized()
+			if err != nil {
 				return usageError{err: err}
 			}
-			return a.publish(cmd.Context(), args[0], link, opts)
+			return a.publish(cmd.Context(), args[0], link, normalized)
 		},
 	}
 	f := cmd.Flags()
@@ -167,11 +167,6 @@ func (a *app) publishData(ctx context.Context, file string, opts store.Options) 
 	read, err := store.ReadUpload(ctx, file, a.env.Dir)
 	if err != nil {
 		return saved, err //nolint:wrapcheck // a usererr for the user as is
-	}
-	// Trimmed as the store trims the options, so that the URL names the slug the page is saved under.
-	if opts.Slug != nil {
-		trimmed := strings.TrimSpace(*opts.Slug)
-		opts.Slug = &trimmed
 	}
 	slug, err := store.DataSlug(file, opts.Slug)
 	if err != nil {

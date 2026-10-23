@@ -124,7 +124,8 @@ func readImages(dir string, names []string) (map[string][]byte, error) {
 			if failed := found.Add(err); failed != nil {
 				return nil, failed //nolint:wrapcheck // already says what failed
 			}
-		default:
+		case len(found) == 0:
+			// Kept only while all can be sent.
 			images[name] = b
 		}
 	}

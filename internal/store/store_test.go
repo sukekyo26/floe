@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -185,6 +186,10 @@ func (e env) page(t *testing.T, rel, title string) string {
 func wantUserErr(t *testing.T, err error, key string, args ...any) usererr.Error {
 	t.Helper()
 
+	// A stage that collects its mistakes returns one alone in a List.
+	if l, ok := errors.AsType[usererr.List](err); ok && len(l) == 1 {
+		err = l[0]
+	}
 	var ue *usererr.Error
 	if !errors.As(err, &ue) || ue.Key != key || len(args) > 0 && !slices.Equal(ue.Args, args) {
 		t.Fatalf("err = %#v, want a usererr %s%v", err, key, args)
@@ -1287,6 +1292,23 @@ func TestPrepareData(t *testing.T) {
 	if _, err = (store.Options{Title: ptr(" "), Theme: ptr("")}).Normalized(); err == nil ||
 		!strings.HasPrefix(err.Error(), "--title is empty") || !strings.Contains(err.Error(), "\n--theme is empty") {
 		t.Errorf("Normalized with a blank title and theme = %v, want both", err)
+	}
+	// The command line sends the options it normalized, which the server's normalizing leaves as they are.
+	given := store.Options{Slug: ptr(" plan "), Title: ptr(" A "), Description: ptr(" d "), Theme: ptr(" ink ")}
+	once, err := given.Normalized()
+	if twice, err2 := once.Normalized(); err != nil || err2 != nil || !reflect.DeepEqual(once, twice) || *once.Slug != "plan" {
+		t.Errorf("Normalized twice = %+v, then %+v (%v, %v), want alike", once, twice, err, err2)
+	}
+	// What is checked of the file is told with what is checked of the options.
+	notData := up
+	notData.File = "plans/page.html"
+	if _, err = s.PrepareData(notData, store.Options{Title: ptr(" ")}); err == nil || strings.Count(err.Error(), "\n") != 1 ||
+		!strings.Contains(err.Error(), "--title is empty") {
+		t.Errorf("PrepareData of no data file with a blank title = %v, want both", err)
+	}
+	if _, err = s.PrepareLink(t.Context(), "nope.html", store.Options{Title: ptr(" ")}, e.tmp); err == nil ||
+		strings.Count(err.Error(), "\n") != 1 || !strings.Contains(err.Error(), "--title is empty") {
+		t.Errorf("PrepareLink of no file with a blank title = %v, want both", err)
 	}
 	up.Images = fstest.MapFS{}
 	want := `plans/sizes.yaml:4:8: chart: there is no image "img/chart.png" under /plans`
