@@ -93,21 +93,17 @@ refused unless --force.`,
 				opts.Slug = &slug
 			}
 			if flags.Changed("title") {
-				// An empty title cannot be told from none, and would leave the list blank.
-				if strings.TrimSpace(title) == "" {
-					return usageError{err: usererr.New("cli_title_empty")}
-				}
 				opts.Title = &title
 			}
 			if flags.Changed("description") {
 				opts.Description = &description
 			}
 			if flags.Changed("theme") {
-				// An empty theme would take the data's.
-				if strings.TrimSpace(theme) == "" {
-					return usageError{err: usererr.New("cli_theme_empty")}
-				}
 				opts.Theme = &theme
+			}
+			// Checked as the server checks, to be refused before it starts; sent as given, for it to check again.
+			if _, err := opts.Normalized(); err != nil {
+				return usageError{err: err}
 			}
 			return a.publish(cmd.Context(), args[0], link, opts)
 		},

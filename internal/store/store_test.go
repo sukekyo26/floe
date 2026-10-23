@@ -1283,6 +1283,11 @@ func TestPrepareData(t *testing.T) {
 	if _, err = s.PrepareData(up, store.Options{Title: ptr(" ")}); err == nil || !strings.Contains(err.Error(), "--title is empty") {
 		t.Errorf("PrepareData with a blank title = %v, want it refused", err)
 	}
+	// Every option given empty is told at once.
+	if _, err = (store.Options{Title: ptr(" "), Theme: ptr("")}).Normalized(); err == nil ||
+		!strings.HasPrefix(err.Error(), "--title is empty") || !strings.Contains(err.Error(), "\n--theme is empty") {
+		t.Errorf("Normalized with a blank title and theme = %v, want both", err)
+	}
 	up.Images = fstest.MapFS{}
 	want := `plans/sizes.yaml:4:8: chart: there is no image "img/chart.png" under /plans`
 	if _, err = s.PrepareData(up, store.Options{}); err == nil || !strings.Contains(err.Error(), want) {

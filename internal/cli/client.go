@@ -102,7 +102,8 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 }
 
 // readImages reads names, the images the server asked for, under dir, the data file's directory, as its
-// check reads them. One that is not there is not sent, for the server to tell at its line and column.
+// check reads them, telling every one it will not send at once. One that is not there is not sent, for the
+// server to tell at its line and column.
 // LIMIT: an image refused here (a symlink, too large, not a file, unreadable, not holding its type) is
 // told without its line and column, which only the server's check knows. Send the server why if that
 // comes to matter.
@@ -113,16 +114,22 @@ func readImages(dir string, names []string) (map[string][]byte, error) {
 	}
 	defer root.Close()
 	images := make(map[string][]byte, len(names))
+	var found usererr.List
 	for _, name := range names {
 		b, err := tmpl.ReadImage(root.FS(), name, dir)
 		var ue *usererr.Error
-		if errors.As(err, &ue) && ue.Key == "tmpl_image_missing" {
-			continue
+		switch {
+		case errors.As(err, &ue) && ue.Key == "tmpl_image_missing":
+		case err != nil:
+			if failed := found.Add(err); failed != nil {
+				return nil, failed //nolint:wrapcheck // already says what failed
+			}
+		default:
+			images[name] = b
 		}
-		if err != nil {
-			return nil, err //nolint:wrapcheck // a usererr for the user as is
-		}
-		images[name] = b
+	}
+	if err := found.Err(); err != nil {
+		return nil, err
 	}
 	return images, nil
 }
