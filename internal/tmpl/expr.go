@@ -85,8 +85,8 @@ type dataVar struct {
 // stopped at (a.b.c, or a?.b when a is nil), or of a read p handed to the function or operator it stopped at
 // (count(prs, …), w + 1). A read through anything else, a function's result, a variable of let or # in a
 // predicate, is not looked at: expr refuses a let named as one of vars.
-// LIMIT: a computed value that is nil, as it took one the data leaves out (p: prs), is not followed to it,
-// and expr's words are told. Follow computed.yaml's names to the items if templates come to chain them so.
+// A computed value that is nil, as it took one the data leaves out (p: prs), is not followed to it.
+// LIMIT: a nil computed value is told in expr's words; follow computed.yaml's names if templates chain them so.
 func unvalued(p *vm.Program, err error, vars map[string]dataVar) []string {
 	var stop *file.Error
 	if !errors.As(err, &stop) {

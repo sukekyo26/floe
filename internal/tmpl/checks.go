@@ -23,10 +23,10 @@ import (
 type relation struct {
 	For, Field, Expr, Message string
 
-	file string                 // checks.yaml, as its mistakes name it
-	at   map[string]yamlpos.Pos // where each key is written, and "" where the check is
-	prog *vm.Program            // expr compiled ahead, for a part's; nil to compile it when run
-	own  bool                   // of a template or a part of one's own: its failing to run is its maker's mistake
+	file  string                 // checks.yaml, as its mistakes name it
+	at    map[string]yamlpos.Pos // where each key is written, and "" where the check is
+	prog  *vm.Program            // expr compiled ahead, for a part's; nil to compile it when run
+	floes bool                   // of floe's template or part: its failing to run is floe's failure, not a mistake
 }
 
 // scope is what the expression of a check sees.
@@ -54,7 +54,7 @@ func relate(checks string, src []byte, d *Data, root ast.Node, own bool) error {
 	}
 	var problems usererr.List
 	for _, c := range list {
-		c.own = own
+		c.floes = !own
 		more, err := c.check(d.File, d.Values, root)
 		if err != nil {
 			return err
@@ -102,7 +102,7 @@ func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 func readCheck(file string, n ast.Node, ofPart bool) (relation, *usererr.Error) {
 	c := relation{
 		For: "", Field: "", Expr: "", Message: "",
-		file: file, at: map[string]yamlpos.Pos{"": yamlpos.Of(n)}, prog: nil, own: false,
+		file: file, at: map[string]yamlpos.Pos{"": yamlpos.Of(n)}, prog: nil, floes: false,
 	}
 	m, ok := n.(*ast.MappingNode)
 	if !ok {
@@ -186,7 +186,7 @@ func (c relation) run(
 		if held, ok := out.(bool); ok && held && err == nil {
 			continue
 		}
-		if err != nil && !c.own {
+		if err != nil && c.floes {
 			return nil, fmt.Errorf("check %s: %s: %w", c.file, c.Expr, err)
 		}
 		if err != nil {
