@@ -743,15 +743,22 @@ func joinDescriptions(beside, named string) string {
 
 // checkParts checks the items of d of whole floe draws by parts against the checks of their parts, and
 // draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every failure at its
-// line and column under root.
+// line and column under root. It runs after checkDiagrams and checkScripts, which draw theirs into d.parts.
 func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
 	escaped := map[*part]bool{}
 	var undrawn [][]string // the paths of the items not drawn
 	for _, f := range whole {
 		p := f.part
-		if p == nil || p.pages == nil {
-			continue // a format of floe's, or a part drawn in Go, by its own check
+		if p == nil {
+			continue // a format of floe's, which page.html draws
+		}
+		if p.pages == nil {
+			// A part drawn in Go, by its own check before this one, which may have refused it.
+			if _, drawn := d.parts[pathKey(f.at)]; !drawn {
+				undrawn = append(undrawn, f.at)
+			}
+			continue
 		}
 		more, err := p.check(d.File, f.itemAt, root)
 		if err != nil {
@@ -773,28 +780,37 @@ func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 			continue
 		}
 		undrawn = append(undrawn, f.at)
-		var bad *usererr.Error
-		var escape *template.Error
-		isEscape := errors.As(err, &escape)
-		switch {
-		case errors.As(err, &bad) && bad.Key == "tmpl_words_unknown":
-			// A word the data names (word .level) that the part has not: told at the item, with the rest.
-			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
-		case isEscape && escaped[p]:
-			// html/template fails to escape the page of p whatever the item: told once.
-		default:
-			escaped[p] = escaped[p] || isEscape
-			_, at := itemPos(root, f.at, false)
-			err = drawMistake(err, p.file("part.html"), p.dir != "", "tmpl_render_item", at, d.File)
-			if err = problems.Add(err); err != nil {
-				return err //nolint:wrapcheck // already says what failed
-			}
+		if err = problems.Add(p.drawMistake(err, f.at, d, root, escaped)); err != nil {
+			return err //nolint:wrapcheck // already says what failed
 		}
 	}
 	return problems.Err()
 }
 
+// drawMistake is the mistake err of p drawing the item at the path at of d, under root, or nil when it was
+// told already: what html/template cannot escape in p, the same whatever the item, is told once, noted in
+// escaped.
+func (p *part) drawMistake(err error, at []string, d *Data, root ast.Node, escaped map[*part]bool) error {
+	var bad *usererr.Error
+	var escape *template.Error
+	isEscape := errors.As(err, &escape)
+	switch {
+	case errors.As(err, &bad) && bad.Key == "tmpl_words_unknown":
+		// A word the data names (word .level) that the part has not: told at the item, with the rest.
+		return itemMistake(d.File, root, at, false, bad)
+	case isEscape && escaped[p]:
+		return nil
+	}
+	if isEscape {
+		escaped[p] = true
+	}
+	_, item := itemPos(root, at, false)
+	return drawMistake(err, p.file("part.html"), p.dir != "", "tmpl_render_item", item, d.File)
+}
+
 // holdsOne reports whether the item at the path at holds one at a path of paths.
+// LIMIT: looks through every path, for each item drawn by a part. Keep the paths' prefixes in a set if a page
+// comes to fail on thousands of items, such as cells of a table.
 func holdsOne(at []string, paths [][]string) bool {
 	return slices.ContainsFunc(paths, func(u []string) bool { return len(u) > len(at) && slices.Equal(u[:len(at)], at) })
 }

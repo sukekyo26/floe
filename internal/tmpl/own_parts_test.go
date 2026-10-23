@@ -822,8 +822,8 @@ func TestPartDrawMistake(t *testing.T) {
 	}
 }
 
-// An item holding one that fails to draw, or to pass its part's checks, is not drawn: its part, one's own or
-// floe's, would draw it without what it holds and fail, or be told to.
+// An item holding one that fails to draw, or to pass its part's checks, or a diagram refused, is not drawn:
+// its part, one's own or floe's, would draw it without what it holds and fail, or be told to.
 func TestPartHoldingOneNotDrawn(t *testing.T) {
 	t.Parallel()
 
@@ -837,15 +837,20 @@ func TestPartHoldingOneNotDrawn(t *testing.T) {
 		"cell/schema.json":  `{"type": "string"}`,
 		"cell/part.html":    `<span data-floe-part="cell">{{num .}}</span>`,
 		"cell/part.css":     "",
+		"dd/schema.json":    `{"type": "object", "properties": {"plan": {"$ref": "floe:///parts/diagram.json"}}}`,
+		"dd/part.html":      `<div data-floe-part="dd">{{if not .plan}}{{num "x"}}{{end}}{{.plan}}</div>`,
+		"dd/part.css":       "",
 	})
-	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/outer.json"}, "aside": {"$ref": "floe:///parts/table.json"}`), parts, "", "")
+	items := `"risks": {"$ref": "floe:///parts/outer.json"}, "aside": {"$ref": "floe:///parts/table.json"}, "plan": {"$ref": "floe:///parts/dd.json"}`
+	l := tmpl.NewLibrary(memo(t, items), parts, "", "")
 	for data, failed := range map[string]string{
-		"risks: { in: { text: hello } }\n":                         "inner",
-		"aside: { columns: [{ title: Risk }], rows: [[hello]] }\n": "cell",
+		"risks: { in: { text: hello } }\n":                         filepath.Join(parts, "inner", "part.html") + ": ",
+		"aside: { columns: [{ title: Risk }], rows: [[hello]] }\n": filepath.Join(parts, "cell", "part.html") + ": ",
+		"plan: { plan: { nodes: x } }\n":                           "data.yaml:3:17: diagram: unknown key",
 	} {
 		_, err := draw(l, "template: memo\nlang: en\n"+data)
 		var all usererr.List
-		if !errors.As(err, &all) || len(all) != 1 || !strings.HasPrefix(all[0].Error(), filepath.Join(parts, failed, "part.html")+": ") {
+		if !errors.As(err, &all) || len(all) != 1 || !strings.HasPrefix(all[0].Error(), failed) {
 			t.Errorf("drawing %s = %v, want the mistake of %s alone", data, err, failed)
 		}
 	}
