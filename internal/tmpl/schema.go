@@ -75,7 +75,7 @@ func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema
 
 // compileMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of
 // file (ownMistakes), a $ref of it that finds nothing (strayRefMistake), or what noLoader refused
-// (loadedOrFailed): of a template's schema, or of a part's, whose parts that stop stand as true
+// (loadedOrFailed): of a template's schema, or of a part's, the other parts standing as true
 // (compileOwn). One of another schema, or of a kind floe does not know, is a failure.
 func compileMistakes(url, file string, err error) error {
 	if own := ownMistakes(url, file, err); own != nil {
@@ -122,9 +122,9 @@ func ownMistakes(url, file string, err error) error {
 // strayRefMistake returns err, what stopped the compiling of the schema at url, file, as the mistake of a
 // $ref that finds nothing in it, at the top of file, and nil for another. Where a $ref leads is all
 // jsonschema says: compileMistakes calls it where none but the schema's own $refs lead into it, a
-// template's, or a part's, the other parts of one's own standing as true (compileOwn).
-// LIMIT: told at the top of the file, of a $ref refMistake did not check (its LIMITs). Check it there if
-// one comes.
+// template's, or a part's, the other parts standing as true (compileOwn).
+// LIMIT: told at the top of the file, of a $ref refMistake did not check (its LIMITs), by where it leads
+// as jsonschema resolves it: under a nested $id, a pointer not as written. Check it there if one comes.
 func strayRefMistake(url, file string, err error) *usererr.Error {
 	key, schema, leads := missingTarget(err)
 	if _, ok := pointerIn(url, schema); key == "" || !ok {
@@ -369,12 +369,8 @@ var uriReference = sync.OnceValues(func() (*jsonschema.Schema, error) {
 })
 
 // heldByJSONSchema reports whether jsonschema holds the schema at url itself, as it holds the drafts and
-// their vocabularies, so that a $ref to it reads no other file. "" is no schema's URL: that of a $ref read
-// from an $id that is no URL.
+// their vocabularies, so that a $ref to it reads no other file.
 func heldByJSONSchema(url string) bool {
-	if url == "" {
-		return false
-	}
 	_, err := compileAlone(map[string]any{"$ref": url})
 	return err == nil
 }
