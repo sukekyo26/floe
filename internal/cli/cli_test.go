@@ -844,6 +844,12 @@ func TestSettingsByUse(t *testing.T) {
 		`floe: there is no directory for icons; set FLOE_ICONS_DIR, then run "floe icons fetch"`)
 	// The server a command starts reads the same: no home, no default, for it too.
 	want(t, "list without a home", e.run(t, "", "list"), 0, "", "")
+	// Themes of one's own are read by part check, and wanted by part new only for a part with files of themes.
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	want(t, "part check without a home", e.run(t, "", "part", "check"), 0, "", "")
+	want(t, "part new of a part with themes without a home", e.run(t, "", "part", "new", "aside", "--from", "note"), 1, "",
+		"floe: there is no directory for themes of your own; set FLOE_THEMES_DIR\n")
+	delete(e.vars, "FLOE_PARTS_DIR")
 	e.vars["HOME"] = home
 	e.vars["FLOE_PORT"] = "0"
 	want(t, "check with a wrong port", e.run(t, "", "check", "ok.yaml"), 0, "", "")

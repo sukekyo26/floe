@@ -373,7 +373,7 @@ parts:
 - 設定していないディレクトリに既定が無い（`HOME` が無いなど）と、そこに書く・無いと困るコマンドは止まります。次の組み合わせです。
   - `publish`・`list`・`rm`・`serve`：`FLOE_DIR`
   - `floe template new`：`FLOE_TEMPLATES_DIR`
-  - `floe part new`・`floe part check`：`FLOE_PARTS_DIR` と `FLOE_THEMES_DIR`
+  - `floe part new`・`floe part check`：`FLOE_PARTS_DIR`（テーマのファイルを持つ部品の `floe part new` では `FLOE_THEMES_DIR` も）
   - アイコンのコマンド：`FLOE_ICONS_DIR`
 - 読むだけのコマンドには、既定の無いディレクトリは無いものとして扱います。`floe check` は `HOME` が無くても、floe のテンプレート・部品・テーマだけで動きます。
 - `floe stop` は `FLOE_PORT` だけを使います。`floe check`・`floe render` は `FLOE_PORT` も `FLOE_DIR` も使いません。

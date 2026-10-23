@@ -103,7 +103,7 @@ func (a *app) partNewCmd() *cobra.Command {
 	var from string
 	cmd := &cobra.Command{
 		Use:         "new <name> --from <part>",
-		Annotations: uses(map[setting]use{partsSetting: writes, themesSetting: writes}),
+		Annotations: uses(map[setting]use{partsSetting: writes, themesSetting: reads}),
 		Short:       "Make a part of your own as a copy of another, to edit",
 		Long: `Make a part of your own in $FLOE_PARTS_DIR/<name> as a copy of another part, floe's or your
 own, to edit, and copy the file of that part of each theme that has one into
@@ -142,7 +142,7 @@ like one of floe's parts takes its place.`,
 func (a *app) partCheckCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:         "check",
-		Annotations: uses(map[setting]use{partsSetting: writes, themesSetting: writes}),
+		Annotations: uses(map[setting]use{partsSetting: writes, themesSetting: reads}),
 		Short:       "Check the parts and themes of your own before you use or share them",
 		Long: `Check the parts of your own in $FLOE_PARTS_DIR and the themes in $FLOE_THEMES_DIR, all of
 them, as a page would read them: their files, their names, the looks they take and the parts they
