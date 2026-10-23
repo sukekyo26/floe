@@ -98,14 +98,19 @@ func (c *config) readDirs(getenv func(string) string, dir string, found *usererr
 }
 
 // notDir is where dir cannot be a directory: dir, or the nearest of its parents that is there, when that is
-// not a directory; "" when it is one. Whether floe may write there is left to the commands that write, so
-// that one that only reads is not stopped, and nothing is made.
+// not a directory (a symlink that leads nowhere is there, and not one); "" when it is one. Whether floe may
+// write there is left to the commands that write, so that one that only reads is not stopped, and nothing
+// is made.
 func notDir(dir string) string {
 	for at := dir; ; at = filepath.Dir(at) {
-		if info, err := os.Stat(at); err == nil {
-			if info.IsDir() {
-				return ""
-			}
+		info, err := os.Stat(at)
+		switch {
+		case err == nil && info.IsDir():
+			return ""
+		case err == nil:
+			return at
+		}
+		if _, err := os.Lstat(at); err == nil {
 			return at
 		}
 		if filepath.Dir(at) == at {

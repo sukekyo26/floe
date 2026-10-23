@@ -109,6 +109,10 @@ func TestLoadConfigDirs(t *testing.T) {
 	if err := os.Symlink(tmp, filepath.Join(tmp, "link")); err != nil {
 		t.Fatal(err)
 	}
+	dangling := filepath.Join(tmp, "dangling")
+	if err := os.Symlink(filepath.Join(tmp, "nowhere"), dangling); err != nil {
+		t.Fatal(err)
+	}
 	for _, key := range []string{"FLOE_DIR", "FLOE_ICONS_DIR", "FLOE_TEMPLATES_DIR", "FLOE_PARTS_DIR", "FLOE_THEMES_DIR"} {
 		vars := map[string]string{"HOME": tmp, key: filepath.Join(file, "x")}
 		_, err := loadConfig(func(k string) string { return vars[k] }, tmp)
@@ -122,6 +126,13 @@ func TestLoadConfigDirs(t *testing.T) {
 		"FLOE_PARTS_DIR, "+file+", is not a directory; set FLOE_PARTS_DIR to a directory\n"+
 		"FLOE_THEMES_DIR, "+file+"/x, is under "+file+", which is not a directory; set FLOE_THEMES_DIR to a directory" {
 		t.Errorf("several mistakes of the settings = %v", err)
+	}
+	// A symlink that leads nowhere cannot be made a directory, nor can what is under it.
+	vars = map[string]string{"HOME": tmp, "FLOE_DIR": dangling, "FLOE_THEMES_DIR": filepath.Join(dangling, "x")}
+	_, err = loadConfig(func(k string) string { return vars[k] }, tmp)
+	if err == nil || err.Error() != "FLOE_DIR, "+dangling+", is not a directory; set FLOE_DIR to a directory\n"+
+		"FLOE_THEMES_DIR, "+dangling+"/x, is under "+dangling+", which is not a directory; set FLOE_THEMES_DIR to a directory" {
+		t.Errorf("a symlink that leads nowhere = %v", err)
 	}
 	vars = map[string]string{"HOME": tmp, "FLOE_DIR": filepath.Join(tmp, "new", "pages"), "FLOE_PARTS_DIR": filepath.Join(tmp, "link")}
 	if c, err := loadConfig(func(k string) string { return vars[k] }, tmp); err != nil || c.root != filepath.Join(tmp, "new", "pages") {
