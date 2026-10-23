@@ -2,6 +2,7 @@ package tmpl_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -539,6 +540,81 @@ func TestHeldThroughFloesPart(t *testing.T) {
 	want := filepath.Join(parts, "mine", "schema.json") + ": #/properties/t: the part table cannot be used"
 	if len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) || strings.Contains(mistakes[0].Error(), "could not read") {
 		t.Errorf("Check of a template of mine = %v, want %s", mistakes, want)
+	}
+}
+
+// A part's schema is compiled with the other parts of one's own standing as true: its own mistake is told
+// whatever order jsonschema walks it in, and one that another's $ref into it meets is not taken for its own.
+func TestPartCompileOrder(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		// pa's under draft-04, whose metaschema checks no regular expression, met as it compiles, and qb's,
+		// which its metaschema refuses as it is read, which compiling pa reads too.
+		"pa/schema.json": `{"$schema": "http://json-schema.org/draft-04/schema#", "type": "object",` +
+			` "properties": {"a": {"$ref": "qb.json"}, "z": {"patternProperties": {"([": {}}}}}`,
+		"pa/part.html":   `<div data-floe-part="pa"></div>`,
+		"pa/part.css":    "",
+		"qb/schema.json": `{"type": "object", "properties": {"t": {"type": "string", "pattern": "[["}}}`,
+		"qb/part.html":   `<div data-floe-part="qb"></div>`,
+		"qb/part.css":    "",
+		// xid's own $ref through its $id, which no check of a $ref resolves, finds nothing; yref, which xid
+		// does not hold, points at the same place: xid's is still xid's. aref and zid are the two of them, the
+		// other way round by name.
+		"xid/schema.json":  `{"$id": "https://example.com/x.json", "type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"xid/part.html":    `<div data-floe-part="xid"></div>`,
+		"xid/part.css":     "",
+		"yref/schema.json": `{"type": "object", "properties": {"u": {"$ref": "xid.json#/$defs/nope"}}}`,
+		"yref/part.html":   `<div data-floe-part="yref"></div>`,
+		"yref/part.css":    "",
+		"zid/schema.json":  `{"$id": "https://example.com/z.json", "type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"zid/part.html":    `<div data-floe-part="zid"></div>`,
+		"zid/part.css":     "",
+		"aref/schema.json": `{"type": "object", "properties": {"u": {"$ref": "zid.json#/$defs/nope"}}}`,
+		"aref/part.html":   `<div data-floe-part="aref"></div>`,
+		"aref/part.css":    "",
+		// A mistake of a $ref of it, where floe does not follow to a part, does not hide one of its own file
+		// the compiling finds.
+		"xa/schema.json": `{"$id": "https://example.com/a.json", "type": "object",` +
+			` "properties": {"t": {"$ref": "#/$defs/nope"}}, "$defs": {"q": {"$ref": "floe:///parts/note.json"}}}`,
+		"xa/part.html": `<div data-floe-part="xa"></div>`,
+		"xa/part.css":  "",
+		// cell, in place of floe's, holds itself through yy and is left out first: aa and zz, which hold floe's
+		// table, which holds cell, are told as holding table, which cannot be used, whatever their names.
+		"cell/schema.json": `{"type": "object", "properties": {"y": {"$ref": "yy.json"}}}`,
+		"cell/part.html":   `<div data-floe-part="cell"></div>`,
+		"cell/part.css":    "",
+		"yy/schema.json":   `{"type": "object", "properties": {"c": {"$ref": "cell.json"}}}`,
+		"yy/part.html":     `<div data-floe-part="yy"></div>`,
+		"yy/part.css":      "",
+		"aa/schema.json":   `{"type": "object", "properties": {"t": {"$ref": "table.json"}}}`,
+		"aa/part.html":     `<div data-floe-part="aa"></div>`,
+		"aa/part.css":      "",
+		"zz/schema.json":   `{"type": "object", "properties": {"t": {"$ref": "table.json"}}}`,
+		"zz/part.html":     `<div data-floe-part="zz"></div>`,
+		"zz/part.css":      "",
+	})
+	want := []string{
+		filepath.Join(parts, "pa", "schema.json") + ": #/properties/z/patternProperties: ",
+		filepath.Join(parts, "xid", "schema.json") + ": #: a $ref to #/$defs/nope finds nothing",
+		filepath.Join(parts, "zid", "schema.json") + ": #: a $ref to #/$defs/nope finds nothing",
+		filepath.Join(parts, "yref", "schema.json") + ": #/properties/u: ",
+		filepath.Join(parts, "aref", "schema.json") + ": #/properties/u: ",
+		filepath.Join(parts, "xa", "schema.json") + ": #: a $ref to #/$defs/nope finds nothing",
+		filepath.Join(parts, "xa", "schema.json") + ": #/$defs/q: ",
+		filepath.Join(parts, "aa", "schema.json") + ": #/properties/t: the part table cannot be used",
+		filepath.Join(parts, "zz", "schema.json") + ": #/properties/t: the part table cannot be used",
+	}
+	first := ""
+	for range 20 {
+		warnings, err := tmpl.CheckOwnParts(parts, themesOf(parts))
+		got := fmt.Sprint(warnings, err)
+		if first == "" {
+			first = got
+		}
+		if got != first || slices.ContainsFunc(want, func(w string) bool { return !strings.Contains(got, w) }) {
+			t.Fatalf("CheckOwnParts = %s, want the same every time, with %q", got, want)
+		}
 	}
 }
 

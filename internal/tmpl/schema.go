@@ -59,7 +59,7 @@ func schemaJSON(file string, src []byte) (any, error) {
 // parts of set; file is where it is, in its mistakes.
 func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema, error) {
 	url := schemaURL(name)
-	c, err := set.compiler()
+	c, err := set.compiler(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +75,8 @@ func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema
 
 // compileMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of
 // file (ownMistakes), a $ref of it that finds nothing (strayRefMistake), or what noLoader refused
-// (loadedOrFailed): of a template's schema, or of a part's none of whose parts stop. One of another
-// schema, or of a kind floe does not know, is a failure.
+// (loadedOrFailed): of a template's schema, or of a part's, the other parts standing as true
+// (compileOwn). One of another schema, or of a kind floe does not know, is a failure.
 func compileMistakes(url, file string, err error) error {
 	if own := ownMistakes(url, file, err); own != nil {
 		return own
@@ -122,7 +122,7 @@ func ownMistakes(url, file string, err error) error {
 // strayRefMistake returns err, what stopped the compiling of the schema at url, file, as the mistake of a
 // $ref that finds nothing in it, at the top of file, and nil for another. Where a $ref leads is all
 // jsonschema says: compileMistakes calls it where none but the schema's own $refs lead into it, a
-// template's, or a part's none of whose parts stop.
+// template's, or a part's, the other parts standing as true (compileOwn).
 // LIMIT: told at the top of the file, of a $ref refMistake did not check (its LIMITs), by where it leads
 // as jsonschema resolves it: under a nested $id, a pointer not as written. Check it there if one comes.
 func strayRefMistake(url, file string, err error) *usererr.Error {
@@ -308,10 +308,14 @@ func newCompiler(set *partSet) *jsonschema.Compiler {
 	return c
 }
 
-// compiler returns a compiler that holds the schemas of the parts of set.
-func (set *partSet) compiler() (*jsonschema.Compiler, error) {
+// compiler returns a compiler that holds the schemas of the parts of set, true, a schema anything fits, for
+// those at the URLs stands has.
+func (set *partSet) compiler(stands map[string]bool) (*jsonschema.Compiler, error) {
 	c := newCompiler(set)
 	for url, doc := range set.docs {
+		if stands[url] {
+			doc = true
+		}
 		if err := c.AddResource(url, doc); err != nil {
 			return nil, fmt.Errorf("read the schema %s: %w", url, err)
 		}

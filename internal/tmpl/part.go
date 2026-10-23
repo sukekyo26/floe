@@ -219,7 +219,9 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 		set.keepRoot(dir)
 	}
 	if own.parts != "" {
-		set.readOwn(own.parts, entries, stage)
+		if err := set.readOwn(own.parts, entries, stage); err != nil {
+			return nil, err
+		}
 	}
 	if own.themes != "" {
 		if err := set.readOwnThemes(own.themes); err != nil {
