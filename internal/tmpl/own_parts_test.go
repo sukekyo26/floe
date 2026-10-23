@@ -169,6 +169,13 @@ func TestBrokenOwnParts(t *testing.T) {
 		"defined/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/$defs/t"}}, "$defs": {"t": {"type": "string"}}}`,
 		"defined/part.html":   `<div data-floe-part="defined">{{.t}}</div>`,
 		"defined/part.css":    "",
+		// A $ref that finds nothing where it points, in its own file or in a schema the parts share: at the $ref.
+		"pointed/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"pointed/part.html":   `<div data-floe-part="pointed"></div>`,
+		"pointed/part.css":    "",
+		"deadptr/schema.json": `{"type": "object", "properties": {"t": {"$ref": "tone.json#/nope"}}}`,
+		"deadptr/part.html":   `<div data-floe-part="deadptr"></div>`,
+		"deadptr/part.css":    "",
 		"holder/schema.json":  `{"type": "object", "properties": {"p": {"$ref": "floe:///parts/panel.json"}}}`,
 		"holder/part.html":    `<div data-floe-part="holder"></div>`,
 		"holder/part.css":     "",
@@ -251,14 +258,10 @@ func TestBrokenOwnParts(t *testing.T) {
 		"toned/schema.json": `{"$ref": "tone.json"}`,
 		"toned/part.html":   `<b data-floe-part="toned">{{.}}</b>`,
 		"toned/part.css":    "",
-		// What compiling the schema alone finds, at its pointer: a pattern that is no regular expression, and a
-		// $ref into its own file that finds nothing.
+		// What compiling the schema finds, at its pointer: a pattern that is no regular expression.
 		"regexed/schema.json": `{"type": "object", "properties": {"text": {"type": "string", "pattern": "(["}}}`,
 		"regexed/part.html":   `<div data-floe-part="regexed">{{.text}}</div>`,
 		"regexed/part.css":    "",
-		"pointed/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
-		"pointed/part.html":   `<div data-floe-part="pointed"></div>`,
-		"pointed/part.css":    "",
 		// Named before regexed, whose compiling stops at regexed's: told as a part that cannot be used.
 		"aregexed/schema.json": `{"type": "object", "properties": {"r": {"$ref": "regexed.json"}}}`,
 		"aregexed/part.html":   `<div data-floe-part="aregexed"></div>`,
@@ -267,11 +270,6 @@ func TestBrokenOwnParts(t *testing.T) {
 		"unboxed/schema.json": `{"type": "object", "properties": {"text": {"type": "string", "pattern": "(["}}}`,
 		"unboxed/part.html":   `<div class="x"></div>`,
 		"unboxed/part.css":    "",
-		// A stop in a schema floe can use, which no check places, is told all the same: a template that uses
-		// the part never stops at it.
-		"deadptr/schema.json": `{"type": "object", "properties": {"t": {"$ref": "tone.json#/nope"}}}`,
-		"deadptr/part.html":   `<div data-floe-part="deadptr"></div>`,
-		"deadptr/part.css":    "",
 		// The mistakes of several files are told together, under the part.
 		"wrongs/schema.json": `{"type": "object"}`,
 		"wrongs/part.html":   `<div data-floe-part="wrongs"></div>`,
@@ -357,15 +355,15 @@ func TestBrokenOwnParts(t *testing.T) {
 			": #: floe:///parts/panel.json is the look panel, which draws nothing",
 		"regexed": "the part regexed cannot be used\n  " + filepath.Join(parts, "regexed", "schema.json") +
 			": #/properties/text/pattern: JSON Schema does not take this: '([' is not valid regex",
-		"pointed": "the part pointed cannot be used\n  " + filepath.Join(parts, "pointed", "schema.json") +
-			": #: a $ref to #/$defs/nope finds nothing in schema.json",
 		"aregexed": "the part aregexed cannot be used\n  " + filepath.Join(parts, "aregexed", "schema.json") +
 			": #/properties/r: the part regexed cannot be used",
 		"unboxed": "the part unboxed cannot be used\n  " + filepath.Join(parts, "unboxed", "part.html") +
 			`: no element of the part unboxed is its box, data-floe-part="unboxed"; write it on the part's element` + "\n  " +
 			filepath.Join(parts, "unboxed", "schema.json") + ": #/properties/text/pattern: JSON Schema does not take this: '([' is not valid regex",
-		"deadptr": "the part deadptr cannot be used\n  floe could not read it: compile the schema " +
-			filepath.Join(parts, "deadptr", "schema.json") + `: json-pointer in "floe:///parts/tone.json#/nope" not found`,
+		"pointed": "the part pointed cannot be used\n  " + filepath.Join(parts, "pointed", "schema.json") +
+			": #/properties/t: a $ref to #/$defs/nope finds nothing in schema.json",
+		"deadptr": "the part deadptr cannot be used\n  " + filepath.Join(parts, "deadptr", "schema.json") +
+			": #/properties/t: a $ref to floe:///parts/tone.json#/nope finds nothing in floe:///parts/tone.json",
 		"wrongs": "the part wrongs cannot be used\n  " + filepath.Join(parts, "wrongs", "part.yaml") + ":1:1: lookz is not a key of part.yaml" +
 			"; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:\n  " +
 			filepath.Join(parts, "wrongs", "words.yaml") + ":2:1: ja leaves out a, which en has\n  " +
