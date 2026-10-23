@@ -25,8 +25,8 @@ type client struct {
 	base string
 }
 
-// remoteError is a refusal of the server, told in English: the report it sent, or, for a refusal before it
-// reads the request (not JSON), its text as floe's failure; body is the answer as sent.
+// remoteError is a refusal of the server, told in English: the report it sent, or, for an answer that is not
+// a report (a refusal before it reads the request), its text as floe's failure; body is the answer as sent.
 type remoteError struct {
 	status int
 	report usererr.Report
@@ -87,7 +87,7 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 		e := &remoteError{status: res.StatusCode, report: usererr.Report{Mistakes: nil, Failure: message}, body: b}
 		var told usererr.Report
 		if strings.HasPrefix(res.Header.Get("Content-Type"), "application/json") && json.Unmarshal(b, &told) == nil &&
-			(told.Mistakes != nil || told.Failure != "") {
+			(len(told.Mistakes) > 0 || told.Failure != "") {
 			e.report = told
 		}
 		return e

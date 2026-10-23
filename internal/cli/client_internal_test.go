@@ -37,6 +37,17 @@ func TestTooLarge(t *testing.T) {
 		err.Error() != "502 Bad Gateway" {
 		t.Errorf("a refusal without a reason = %v", err)
 	}
+	// Nor does a report of no mistake (from a proxy, say) go out as an empty line.
+	none := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"mistakes":[]}`)) //nolint:errcheck // the test reads what arrives
+	}))
+	t.Cleanup(none.Close)
+	if err := (client{base: none.URL}).do(t.Context(), http.MethodGet, "/api/artifacts", nil, nil); err == nil ||
+		err.Error() != `{"mistakes":[]}` {
+		t.Errorf("a report of no mistake = %v, want the answer as sent", err)
+	}
 	large := map[string]string{"source": strings.Repeat("x", server.MaxUpload)}
 	unsent := client{base: "http://127.0.0.1:1"}.do(t.Context(), http.MethodPut, "/api/artifacts/p", large, nil)
 	if err := tooLarge(unsent); err == nil || !strings.Contains(err.Error(), "32 MiB") {
