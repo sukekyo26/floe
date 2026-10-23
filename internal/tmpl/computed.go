@@ -39,21 +39,21 @@ func usable(n string) bool {
 var identifier = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 
 // checkComputed computes the values of d's template's computed.yaml, if it has one, into d.Calc, from
-// the items its schema s declares, and reports at their expressions those its data cannot give.
-func checkComputed(t *Template, d *Data, s *shape) error {
+// the items its schema declares, and reports at their expressions those its data cannot give.
+func checkComputed(t *Template, d *Data) error {
 	src, found, err := t.readOptional("computed.yaml")
 	if !found || err != nil {
 		return err
 	}
-	return compute(t.file("computed.yaml"), src, d, s.keyNames(), t.isOwn())
+	return compute(t.file("computed.yaml"), src, d, t.isOwn())
 }
 
 // compute computes the values of the computed.yaml src, file in its mistakes, of a template of one's own
-// when own, from the values of d, whose items the schema declares, in declared. An expression sees the
-// items and the other computed values by name, and a value is computed after those it uses, in whatever
-// order src writes them. floe's own src stopping on data its schema took is floe's failure.
-func compute(file string, src []byte, d *Data, declared []string, own bool) error {
-	c, err := readComputed(file, src, declared)
+// when own, from the values of d, whose items its schema declares, d.shape. An expression sees the items
+// and the other computed values by name, and a value is computed after those it uses, in whatever order src
+// writes them. floe's own src stopping on data its schema took is floe's failure.
+func compute(file string, src []byte, d *Data, own bool) error {
+	c, err := readComputed(file, src, d.shape.keyNames())
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func compute(file string, src []byte, d *Data, declared []string, own bool) erro
 		if v := d.Values[n]; v != nil {
 			c.env.Field(c.field[n]).Set(reflect.ValueOf(v))
 		}
-		vars[n] = dataVar{value: d.Values[n], at: n}
+		vars[n] = dataVar{value: d.Values[n], at: n, shape: d.shape.inside().keys[n]}
 	}
 	d.Calc = map[string]any{}
 	var problems usererr.List

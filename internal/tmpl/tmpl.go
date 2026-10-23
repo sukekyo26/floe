@@ -318,7 +318,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	if err = checkRelations(t, d, root); err != nil {
 		return err
 	}
-	return checkComputed(t, d, s)
+	return checkComputed(t, d)
 }
 
 // checkHTML refuses the items of d of format html that hold a <style> or a <link>, at their lines and

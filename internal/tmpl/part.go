@@ -830,10 +830,6 @@ func (d *Data) drew(at []string, html template.HTML) {
 // mistake, and the problems are the data's.
 func (p *part) check(file string, f itemAt, root ast.Node) (usererr.List, error) {
 	var problems usererr.List
-	var doc map[string]any
-	if m, ok := f.value.(map[string]any); ok {
-		doc = m
-	}
 	_, isList := f.value.([]any)
 	for _, c := range p.checks {
 		items := []itemAt{f}
@@ -849,7 +845,7 @@ func (p *part) check(file string, f itemAt, root ast.Node) (usererr.List, error)
 			}
 		}
 		c.floes = !p.isOwn()
-		more, err := c.run(file, doc, f.at, items, root)
+		more, err := c.run(file, f, p.shape, items, root)
 		if err != nil {
 			return nil, err
 		}

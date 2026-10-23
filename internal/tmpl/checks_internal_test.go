@@ -68,7 +68,9 @@ notes:
       a long note
   - text:
 `
-	got := failures(t, relations, src)
+	got := failures(t, relations, src, `{"type": "object", "properties": {"attributes": {}, "notes": {},
+		"model": {"type": "object", "properties": {"patterns": {"type": "array", "items": {"type": "object",
+			"properties": {"id": {}, "key": {}, "reads": {}, "rate": {"type": "object", "properties": {"per_sec": {}}}}}}}}}}`)
 	want := []string{
 		"d.yaml:3:5: attributes[1]: the name secret is taken",
 		`d.yaml:6:11: model.patterns[0].id: give each pattern its own id ("AP-1")`,
@@ -105,7 +107,7 @@ func TestRelationsStoppedOtherwise(t *testing.T) {
 	t.Parallel()
 
 	checks := "- for: rows\n  expr: item.public || item.draft\n  message: m\n"
-	got := failures(t, checks, "rows:\n  - public: 'yes'\n").Error()
+	got := failures(t, checks, "rows:\n  - public: 'yes'\n", `{"properties": {"rows": {"items": {"properties": {"public": {}, "draft": {}}}}}}`).Error()
 	if want := "d.yaml:2:5: rows[0]: m (the check could not run: "; !strings.HasPrefix(got, want) {
 		t.Errorf("the failures = %s, want %s", got, want)
 	}
@@ -118,7 +120,7 @@ func TestRelationsThroughLists(t *testing.T) {
 
 	checks := "- for: groups.members\n  field: name\n  expr: item.name != 'bad'\n  message: no bad members\n"
 	src := "groups:\n  - members:\n      - name: ok\n  - {}\n  - members:\n      - name: ok\n      - name: bad\n  - text\n"
-	if got, want := failures(t, checks, src).Error(), `d.yaml:7:15: groups[2].members[1].name: no bad members ("bad")`; got != want {
+	if got, want := failures(t, checks, src, `{}`).Error(), `d.yaml:7:15: groups[2].members[1].name: no bad members ("bad")`; got != want {
 		t.Errorf("the failures = %s, want %s", got, want)
 	}
 }
@@ -166,10 +168,11 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 	}
 }
 
-func failures(t *testing.T, checks, src string) usererr.List {
+func failures(t *testing.T, checks, src, schema string) usererr.List {
 	t.Helper()
 
 	d, root := data(t, src)
+	d.shape = shapeOf(t, schema)
 	var p usererr.List
 	if err := relate("checks.yaml", []byte(checks), d, root, true); !errors.As(err, &p) {
 		t.Fatalf("relate = %v, want problems", err)

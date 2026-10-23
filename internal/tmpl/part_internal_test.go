@@ -425,7 +425,7 @@ func TestCheckExprFirst(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	problems, err := list[0].check("data.yaml", map[string]any{"title": "t"}, nil)
+	problems, err := list[0].check("data.yaml", map[string]any{"title": "t"}, nil, nil)
 	if problems != nil || err == nil || !strings.Contains(err.Error(), "item +") {
 		t.Errorf("check = %v, %v, want the mistake in the expression", problems, err)
 	}

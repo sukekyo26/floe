@@ -55,7 +55,7 @@ func relate(checks string, src []byte, d *Data, root ast.Node, own bool) error {
 	var problems usererr.List
 	for _, c := range list {
 		c.floes = !own
-		more, err := c.check(d.File, d.Values, root)
+		more, err := c.check(d.File, d.Values, d.shape, root)
 		if err != nil {
 			return err
 		}
@@ -149,9 +149,9 @@ func (c relation) program() (*vm.Program, *usererr.Error) {
 	return compileWritten(c.file, c.at["expr"], c.Expr, scope{Item: nil, Doc: nil}, expr.AsBool())
 }
 
-// check runs c on each item of its list in doc, the values of file. An error is the template's mistake,
-// and the problems are the data's.
-func (c relation) check(file string, doc map[string]any, root ast.Node) (usererr.List, error) {
+// check runs c on each item of its list in doc, the values of file, of the shape sh. An error is the
+// template's mistake, and the problems are the data's.
+func (c relation) check(file string, doc map[string]any, sh *shape, root ast.Node) (usererr.List, error) {
 	// A mistake in the expression first: it is the template's whatever the data.
 	if c.prog == nil {
 		var err *usererr.Error
@@ -163,23 +163,22 @@ func (c relation) check(file string, doc map[string]any, root ast.Node) (usererr
 	if !itemsAt(doc, strings.Split(c.For, "."), nil, &items) {
 		return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
 	}
-	return c.run(file, doc, nil, items, root)
+	return c.run(file, itemAt{value: doc, at: nil}, sh, items, root)
 }
 
-// run runs c, its expression compiled, on each of items of the values doc, at the path docAt, of file. One
+// run runs c, its expression compiled, on each of items under whole, doc to it, of the shape sh, of file. One
 // that stops on an item for want of a value the data gives none for is the mistake of c, which is to do
 // without it as the schema let the data leave it out. floe's own c stopping on data its schema took is
 // floe's failure.
-func (c relation) run(
-	file string, doc map[string]any, docAt []string, items []itemAt, root ast.Node,
-) (usererr.List, error) {
+func (c relation) run(file string, whole itemAt, sh *shape, items []itemAt, root ast.Node) (usererr.List, error) {
 	p := c.prog
 	var problems usererr.List
 	vars := map[string]dataVar{}
 	// A part's value that is not keys and values gives doc no value to read into.
-	if doc != nil {
-		_, docPath := itemPos(root, docAt, false)
-		vars["doc"] = dataVar{value: doc, at: docPath}
+	doc, isMap := whole.value.(map[string]any)
+	if isMap {
+		_, docPath := itemPos(root, whole.at, false)
+		vars["doc"] = dataVar{value: doc, at: docPath, shape: sh}
 	}
 	for _, item := range items {
 		out, err := expr.Run(p, scope{Item: item.value, Doc: doc})
@@ -191,7 +190,7 @@ func (c relation) run(
 		}
 		if err != nil {
 			_, itemPath := itemPos(root, item.at, false)
-			vars["item"] = dataVar{value: item.value, at: itemPath}
+			vars["item"] = dataVar{value: item.value, at: itemPath, shape: shapeAt(sh, whole.value, item.at[len(whole.at):])}
 			if missing := unvalued(p, err, vars); missing != nil {
 				left := strings.Join(missing, ", ")
 				e := yamlpos.New(c.file, c.at["expr"], "tmpl_check_missing", itemPath, file, left, without(file))
