@@ -100,12 +100,7 @@ refused unless --force.`,
 			if flags.Changed("theme") {
 				opts.Theme = &theme
 			}
-			// Checked as the server checks, to be refused before it starts, and sent so, as the slug names the URL.
-			normalized, err := opts.Normalized()
-			if err != nil {
-				return usageError{err: err}
-			}
-			return a.publish(cmd.Context(), args[0], link, normalized)
+			return a.publish(cmd.Context(), args[0], link, opts)
 		},
 	}
 	f := cmd.Flags()
@@ -122,13 +117,28 @@ refused unless --force.`,
 // publish checks what it can without the server, makes sure the server runs, then has it check and
 // save the page, so that a failed publish leaves nothing in the store.
 func (a *app) publish(ctx context.Context, file string, link bool, opts store.Options) error {
-	publish := a.publishData
-	if link {
-		publish = a.publishLink
+	// Checked as the server checks, to be refused before it starts, and sent so, as the slug names the URL.
+	opts, err := store.Accept(file, link, opts)
+	var saved server.Saved
+	switch {
+	case link:
+		path := a.abs(file)
+		// The server reads a link, as it draws it.
+		if _, statErr := os.Stat(path); statErr != nil {
+			err = usererr.Collect(err, usererr.CannotRead(file, statErr))
+		}
+		if err == nil {
+			saved, err = a.publishLink(ctx, path, opts)
+		}
+	// Read as data only when it is a data file: Accept has told that it is not.
+	case store.IsDataFile(file):
+		up, readErr := store.ReadUpload(ctx, file, a.env.Dir)
+		if err = usererr.Collect(err, readErr); err == nil {
+			saved, err = a.publishData(ctx, up, opts)
+		}
 	}
-	saved, err := publish(ctx, file, opts)
 	if err != nil {
-		return err
+		return err //nolint:wrapcheck // usererrs for the user as they are
 	}
 	url := a.cfg.base() + "/a/" + saved.Slug + "/"
 	// A republish does not open another tab; the open one reloads itself.
@@ -142,13 +152,9 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	return nil
 }
 
-// publishLink links file, by its absolute path: the server reads it, as it draws it.
-func (a *app) publishLink(ctx context.Context, file string, opts store.Options) (server.Saved, error) {
+// publishLink links the file at the absolute path, with opts Accept returned.
+func (a *app) publishLink(ctx context.Context, path string, opts store.Options) (server.Saved, error) {
 	var saved server.Saved
-	path := a.abs(file)
-	if _, err := os.Stat(path); err != nil {
-		return saved, usererr.CannotRead(file, err)
-	}
 	c, err := a.client(ctx, false)
 	if err != nil {
 		return saved, err
@@ -160,18 +166,10 @@ func (a *app) publishLink(ctx context.Context, file string, opts store.Options) 
 	return saved, err
 }
 
-// publishData sends the data file file under its slug. The images the server asks for are read under
-// the data file's directory and sent with it again.
-func (a *app) publishData(ctx context.Context, file string, opts store.Options) (server.Saved, error) {
+// publishData sends the data file read under the slug of opts, which Accept returned. The images the
+// server asks for are read under the data file's directory and sent with it again.
+func (a *app) publishData(ctx context.Context, read store.Upload, opts store.Options) (server.Saved, error) {
 	var saved server.Saved
-	read, err := store.ReadUpload(ctx, file, a.env.Dir)
-	if err != nil {
-		return saved, err //nolint:wrapcheck // a usererr for the user as is
-	}
-	slug, err := store.DataSlug(file, opts.Slug)
-	if err != nil {
-		return saved, err //nolint:wrapcheck // a usererr for the user as is
-	}
 	c, err := a.client(ctx, false)
 	if err != nil {
 		return saved, err
@@ -180,7 +178,7 @@ func (a *app) publishData(ctx context.Context, file string, opts store.Options) 
 		File: read.File, Dir: read.Dir, Source: read.Source, Images: nil, Project: read.Project, Title: opts.Title,
 		Description: opts.Description, Theme: opts.Theme, Force: opts.Force,
 	}
-	path := "/api/artifacts/" + slug
+	path := "/api/artifacts/" + *opts.Slug
 	err = c.do(ctx, http.MethodPut, path, up, &saved)
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusUnprocessableEntity {
 		var need server.ImagesNeeded

@@ -56,7 +56,7 @@ func TestIcons(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	want(t, "fetch an unknown set", e.run(t, "", "icons", "fetch", "gcp"), 2, "",
+	want(t, "fetch an unknown set", e.run(t, "", "icons", "fetch", "gcp"), 1, "",
 		`floe: unknown icon set "gcp"; use aws`)
 	want(t, "fetch without a set", e.run(t, "", "icons", "fetch"), 2, "", "floe: accepts between 1 and 2 arg(s), received 0")
 	want(t, "search nothing", e.run(t, "", "icons", "search"), 2, "", "floe: requires at least 1 arg(s)")

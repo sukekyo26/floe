@@ -39,7 +39,7 @@ already there is kept unless --force.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			set := args[0]
 			if err := icons.CheckSet(set); err != nil {
-				return usageError{err: err}
+				return err //nolint:wrapcheck // a usererr for the user as is
 			}
 			source := ""
 			if len(args) == 2 {

@@ -42,9 +42,9 @@ Pages are drawn from data files (`.yaml`, `.yml`). The data file is copied to `<
 |---|---|
 | `--link` | Register an HTML file in place and show it as it is (see [Linked files](#linked-files)). |
 | `--slug <name>` | The URL name. Lowercase letters, digits and hyphens, up to 64 characters. Defaults to the file name; a linked `index.html` takes the name of its directory. |
-| `--title <text>` | The title shown in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. An empty value is a usage error. |
+| `--title <text>` | The title shown in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. An empty value is refused. |
 | `--description <text>` | A description shown in the list. |
-| `--theme <name>` | The theme to draw the page with, its palette and the parts' shape, over the data file's `theme:`, which is then not used. Defaults to `theme:`, else `default`; a republish without it goes back to `theme:`. An empty value is a usage error. Refused with `--link` of an HTML file. |
+| `--theme <name>` | The theme to draw the page with, its palette and the parts' shape, over the data file's `theme:`, which is then not used. Defaults to `theme:`, else `default`; a republish without it goes back to `theme:`. An empty value is refused, and so is any with `--link` of an HTML file. |
 | `--force` | Replace a page published from another project, or a link to another file. |
 
 ### Data files
@@ -377,5 +377,5 @@ The command line speaks English, whatever the environment's language; the manage
 | Code | Meaning |
 |---|---|
 | `0` | Success |
-| `1` | Failure (a refused publish, a missing page, a port in use, a data file or diagram spec with mistakes …) |
-| `2` | Usage error (an unknown flag or command, missing arguments, an empty `--title` or `--theme`, an unknown example, a `--lang` that is not a BCP 47 tag) |
+| `1` | Failure, and a value floe refuses (a refused publish, a missing page, a port in use, a data file or diagram spec with mistakes, an empty `--title` or `--theme`, an unknown example, a `--lang` that is not a BCP 47 tag …) |
+| `2` | A command line floe cannot read, or that lacks what it needs (an unknown flag or command, missing arguments, `template new` or `part new` without `--from`) |

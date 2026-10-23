@@ -135,7 +135,7 @@ is printed in the language without its region (ja-JP to ja), else in English.`,
 				for i, e := range examples {
 					names[i] = e.Name
 				}
-				return usageError{err: usererr.New("diagram_unknown_example", args[0], strings.Join(names, ", "))}
+				return usererr.New("diagram_unknown_example", args[0], strings.Join(names, ", "))
 			}
 			a.out("%s", strings.TrimSuffix(string(examples[i].Spec), "\n"))
 			return nil

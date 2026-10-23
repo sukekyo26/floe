@@ -72,11 +72,15 @@ func (e env) publish(t *testing.T, file string, opts store.Options, cwd string) 
 	}, file, opts, cwd)
 }
 
-// prepare publishes the data file file on disk from cwd as the CLI does, but in process: read by
-// store.ReadUpload, its images read under its directory.
+// prepare publishes the data file file on disk from cwd as the CLI does, but in process: accepted and, a
+// data file, read by store.ReadUpload, its images read under its directory.
 func prepare(ctx context.Context, st *store.Store, file string, opts store.Options, cwd string) (*store.Entry, error) {
-	up, err := store.ReadUpload(ctx, file, cwd)
-	if err != nil {
+	_, err := store.Accept(file, false, opts)
+	if !store.IsDataFile(file) {
+		return nil, err
+	}
+	up, readErr := store.ReadUpload(ctx, file, cwd)
+	if err = usererr.Collect(err, readErr); err != nil {
 		return nil, err
 	}
 	up.Images = os.DirFS(up.Dir)
@@ -235,7 +239,7 @@ func TestPublishNeedsDataFile(t *testing.T) {
 	frag := e.write(t, "frag.html", "<h1>A</h1>")
 	_, err := e.publish(t, frag, store.Options{}, "proj")
 	wantUserErr(t, err, "store_not_data", frag)
-	// The refusal comes before reading, so a missing HTML file is pointed to --link too.
+	// A file that is not a data file is not read as one, so a missing HTML file is pointed to --link alone.
 	missing := filepath.Join(e.tmp, "missing.html")
 	_, err = e.publish(t, missing, store.Options{}, "proj")
 	wantUserErr(t, err, "store_not_data", missing)
@@ -526,7 +530,10 @@ func TestEdit(t *testing.T) {
 	if m := e.meta(t, "my-demo"); m.Description != "edited" || m.UpdatedAt != before.UpdatedAt {
 		t.Errorf("Edit description: %+v", m)
 	}
-	to, err := e.s.Edit("my-demo", store.Edit{Slug: ptr(" renamed "), Title: ptr("T"), Project: ptr("p")})
+	// A new slug is checked as given, as a publish's is.
+	_, err := e.s.Edit("my-demo", store.Edit{Slug: ptr(" renamed ")})
+	wantUserErr(t, err, "store_invalid_slug", " renamed ")
+	to, err := e.s.Edit("my-demo", store.Edit{Slug: ptr("renamed"), Title: ptr("T"), Project: ptr("p")})
 	if m := e.meta(t, "renamed"); err != nil || to != "renamed" || m.Title != "T" || !m.TitleEdited || m.Project != "p" || !m.ProjectEdited {
 		t.Errorf("Edit rename: %q %v %+v", to, err, m)
 	}
@@ -1288,17 +1295,6 @@ func TestPrepareData(t *testing.T) {
 	if _, err = s.PrepareData(up, store.Options{Title: ptr(" ")}); err == nil || !strings.Contains(err.Error(), "--title is empty") {
 		t.Errorf("PrepareData with a blank title = %v, want it refused", err)
 	}
-	// Every option given empty is told at once.
-	if _, err = (store.Options{Title: ptr(" "), Theme: ptr("")}).Normalized(); err == nil ||
-		!strings.HasPrefix(err.Error(), "--title is empty") || !strings.Contains(err.Error(), "\n--theme is empty") {
-		t.Errorf("Normalized with a blank title and theme = %v, want both", err)
-	}
-	// The command line sends the options it normalized, which the server's normalizing leaves as they are.
-	given := store.Options{Slug: ptr(" plan "), Title: ptr(" A "), Description: ptr(" d "), Theme: ptr(" ink ")}
-	once, err := given.Normalized()
-	if twice, err2 := once.Normalized(); err != nil || err2 != nil || !reflect.DeepEqual(once, twice) || *once.Slug != "plan" {
-		t.Errorf("Normalized twice = %+v, then %+v (%v, %v), want alike", once, twice, err, err2)
-	}
 	// What is checked of the file is told with what is checked of the options.
 	notData := up
 	notData.File = "plans/page.html"
@@ -1306,19 +1302,37 @@ func TestPrepareData(t *testing.T) {
 		!strings.Contains(err.Error(), "--title is empty") {
 		t.Errorf("PrepareData of no data file with a blank title = %v, want both", err)
 	}
-	// A link's file is checked after its options, which its checks look at too (a theme given empty to a link
-	// is told once, as empty, not also as one a link does not take).
-	if _, err = s.PrepareLink(t.Context(), "nope.html", store.Options{Title: ptr(" ")}, e.tmp); err == nil ||
-		strings.Contains(err.Error(), "\n") || !strings.Contains(err.Error(), "--title is empty") {
-		t.Errorf("PrepareLink of no file with a blank title = %v, want the title alone", err)
+	home := filepath.Join(e.tmp, "home", "site")
+	mkdir(t, home)
+	if _, err = s.PrepareLink(t.Context(), filepath.Join(home, "nope.html"), store.Options{Title: ptr(" ")}, e.tmp); err == nil ||
+		strings.Count(err.Error(), "\n") != 1 || !strings.Contains(err.Error(), "--title is empty") ||
+		!strings.Contains(err.Error(), "cannot read") {
+		t.Errorf("PrepareLink of no file with a blank title = %v, want both", err)
 	}
-	page := filepath.Join(e.tmp, "page.html")
+	page := filepath.Join(home, "page.html")
 	if err = os.WriteFile(page, []byte("<!doctype html><title>x</title>"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	// A theme given empty is told as empty, not also as one a link to HTML does not take.
 	if _, err = s.PrepareLink(t.Context(), page, store.Options{Theme: ptr("")}, e.tmp); err == nil ||
 		strings.Contains(err.Error(), "\n") || !strings.Contains(err.Error(), "--theme is empty") {
 		t.Errorf("PrepareLink of an HTML file with a blank theme = %v, want one line", err)
+	}
+	// A link is of the kind of its real file, whatever a symlink to it is named.
+	toHTML := filepath.Join(home, "page.yaml")
+	toData := filepath.Join(home, "data.html")
+	if err = errors.Join(os.Symlink(page, toHTML), os.WriteFile(filepath.Join(home, "d.yaml"), src, 0o600),
+		os.Symlink(filepath.Join(home, "d.yaml"), toData)); err != nil {
+		t.Fatal(err)
+	}
+	const themeLink = "--theme picks the theme"
+	if _, err = s.PrepareLink(t.Context(), toHTML, store.Options{Theme: ptr("ink")}, e.tmp); err == nil ||
+		!strings.Contains(err.Error(), themeLink) {
+		t.Errorf("PrepareLink of page.yaml, a symlink to HTML, with a theme = %v, want it refused", err)
+	}
+	if _, err = s.PrepareLink(t.Context(), toData, store.Options{Theme: ptr("ink")}, e.tmp); err != nil &&
+		strings.Contains(err.Error(), themeLink) {
+		t.Errorf("PrepareLink of data.html, a symlink to a data file, with a theme = %v, want the theme taken", err)
 	}
 	up.Images = fstest.MapFS{}
 	want := `plans/sizes.yaml:4:8: chart: there is no image "img/chart.png" under /plans`
@@ -1344,5 +1358,34 @@ func TestPrepareData(t *testing.T) {
 	up.File = "plans/page.html"
 	if _, err = s.PrepareData(up, store.Options{}); err == nil || !strings.Contains(err.Error(), "page.html") {
 		t.Errorf("PrepareData of HTML = %v, want it refused", err)
+	}
+}
+
+// Accept tells every mistake of a publish it can see without the store or the disk at once, and the options
+// it returns, as the command line sends them, are accepted again as they are.
+func TestAccept(t *testing.T) {
+	t.Parallel()
+
+	_, err := store.Accept("page.html", false, store.Options{Title: ptr(" "), Theme: ptr(""), Slug: ptr("Bad Slug")})
+	want := `page.html is not a data file`
+	if err == nil || strings.Count(err.Error(), "\n") != 3 || !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("Accept of no data file with every option wrong = %v, want 4 lines from %q", err, want)
+	}
+	given := store.Options{Title: ptr(" A "), Description: ptr(" d "), Theme: ptr(" ink ")}
+	once, err := store.Accept("plans/My Plan.yaml", false, given)
+	if twice, err2 := store.Accept("plans/My Plan.yaml", false, once); err != nil || err2 != nil ||
+		!reflect.DeepEqual(once, twice) || *once.Slug != "my-plan" || *once.Title != "A" {
+		t.Errorf("Accept twice = %+v, then %+v (%v, %v), want alike, of slug my-plan", once, twice, err, err2)
+	}
+	// A slug is a name, checked as given, not trimmed as a text is.
+	if _, err = store.Accept("plan.yaml", false, store.Options{Slug: ptr(" plan ")}); err == nil || err.Error() != `invalid slug " plan ": use only lowercase letters, digits and hyphens` {
+		t.Errorf("Accept of the slug ' plan ' = %v, want it refused as given", err)
+	}
+	// A slug made of a name that has none is told; a link's is made later, of a free one.
+	if _, err = store.Accept("plans/__.yaml", false, store.Options{}); err == nil || err.Error() != `invalid slug "": use only lowercase letters, digits and hyphens` {
+		t.Errorf("Accept of a data file named __.yaml = %v, want its slug refused", err)
+	}
+	if opts, err := store.Accept("__.html", true, store.Options{}); err != nil || opts.Slug != nil {
+		t.Errorf("Accept of a link = %+v, %v, want no slug made", opts, err)
 	}
 }
