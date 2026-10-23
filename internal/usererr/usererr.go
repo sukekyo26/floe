@@ -72,7 +72,8 @@ func (e *Error) Localize(c *i18n.Catalog) string {
 
 // tell words e in the language of c, and the mistakes it stands for under it, told once of all those that
 // told notes: another that stands for them says they are told above. It still tells the Under of one told
-// above, into told, on the ground that the same Of stands for the same Under, which notes nothing new.
+// above, into told, which notes nothing new as long as the same Of stands for the same Under.
+// LIMIT: same Of, same Under, as every template reads its parts from the same dirs; if not, skip a told Under
 func (e *Error) tell(c *i18n.Catalog, told map[string]bool) Told {
 	args := make([]any, len(e.Args))
 	for i, a := range e.Args {
