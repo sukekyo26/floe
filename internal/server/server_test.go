@@ -844,4 +844,16 @@ func TestSave(t *testing.T) {
 	if r = put("sizes", withTitle); r.status != http.StatusOK || !strings.Contains(r.body, `"title":"Plan"`) {
 		t.Errorf("a publish with a title to trim = %d %s", r.status, r.body)
 	}
+	// A part of one's own that fails to draw the data is the part's mistake, not floe's failure.
+	e.write(t, "parts/pp/schema.json", `{"type": "object", "properties": {"text": {"type": "string"}}}`)
+	e.write(t, "parts/pp/part.html", `<p data-floe-part="pp">{{num .text}}</p>`)
+	e.write(t, "parts/pp/part.css", "")
+	e.write(t, "templates/memo/schema.json", `{"type": "object", "properties": {"aside": {"$ref": "floe:///parts/pp.json"}}}`)
+	e.write(t, "templates/memo/page.html",
+		`<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body>{{.Data.aside}}</body></html>`)
+	memo := map[string]any{"file": "plans/d.yaml", "dir": "/plans", "source": []byte("template: memo\nlang: en\naside: { text: hello }\n")}
+	if r = put("memo", memo); r.status != http.StatusBadRequest || !strings.Contains(r.body, `"mistakes":true`) ||
+		!strings.Contains(r.body, `it cannot draw aside of plans/d.yaml`) {
+		t.Errorf("a publish its own part fails to draw = %d %s", r.status, r.body)
+	}
 }

@@ -774,6 +774,88 @@ func TestPartWordAtItem(t *testing.T) {
 	}
 }
 
+// A part of one's own whose part.html fails to draw an item is told at its part.html, naming the item, for
+// every item it fails on, in the order of their keys: the part's mistake, which its maker fixes, not floe's.
+func TestPartDrawMistake(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"pp/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
+		"pp/part.html":   `<p data-floe-part="pp">{{if ne .text "ok"}}{{num .text}}{{end}}</p>`,
+		"pp/part.css":    "",
+	})
+	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pp.json"}, "aside": {"$ref": "floe:///parts/pp.json"}`), parts, "", "")
+	if page, err := draw(l, "template: memo\nlang: en\nrisks: { text: ok }\n"); err != nil || !strings.Contains(page, `data-floe-part="pp"></p>`) {
+		t.Errorf("drawing what the part takes = %v", err)
+	}
+	_, err := draw(l, "template: memo\nlang: en\nrisks: { text: hello }\naside: { text: there }\n")
+	var all usererr.List
+	failed := func(item, value string) string {
+		return filepath.Join(parts, "pp", "part.html") + ": it cannot draw " + item + " of data.yaml: " +
+			`template: part.html:1:45: executing "part.html" at <num .text>: error calling num: num: ` + value +
+			" (string) is not a number; write it to draw every value its schema.json takes, such as an item left out (draw it in {{with}}) or a list or text shorter than it reads"
+	}
+	if !errors.As(err, &all) || len(all) != 2 || all[0].Error() != failed("aside", "there") || all[1].Error() != failed("risks", "hello") {
+		t.Errorf("drawing what is not a number = %v, want\n%s\n%s", err, failed("aside", "there"), failed("risks", "hello"))
+	}
+	// What html/template cannot escape, whatever the data, is told once, at its line.
+	parts = ownParts(t, map[string]string{
+		"pp/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
+		"pp/part.html":   "<p data-floe-part=\"pp\">\n<a href=\"{{if eq .text `a`}}/x/{{else}}/s?q={{end}}{{.text}}\">x</a></p>",
+		"pp/part.css":    "",
+	})
+	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pp.json"}, "aside": {"$ref": "floe:///parts/pp.json"}`), parts, "", "")
+	want := filepath.Join(parts, "pp", "part.html") + ":2: this is not a valid Go template: {{.text}} appears in an ambiguous context within a URL"
+	if _, err = draw(l, "template: memo\nlang: en\nrisks: { text: hello }\naside: { text: there }\n"); err == nil || err.Error() != want {
+		t.Errorf("drawing what cannot be escaped = %v, want %s", err, want)
+	}
+	// One html/template places at a node alone keeps the line in its words.
+	parts = ownParts(t, map[string]string{
+		"pp/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
+		"pp/part.html":   "<p data-floe-part=\"pp\">\n<script>{{if eq .text `a`}}var a = '{{end}}</script></p>",
+		"pp/part.css":    "",
+	})
+	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pp.json"}`), parts, "", "")
+	want = filepath.Join(parts, "pp", "part.html") + ": this is not a valid Go template: html/template:part.html:2:13: {{if}} branches end in different contexts: "
+	if _, err = draw(l, "template: memo\nlang: en\nrisks: { text: hello }\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("drawing branches that end apart = %v, want %s", err, want)
+	}
+}
+
+// An item holding one that fails to draw, or to pass its part's checks, or a diagram refused, is not drawn:
+// its part, one's own or floe's, would draw it without what it holds and fail, or be told to.
+func TestPartHoldingOneNotDrawn(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"inner/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
+		"inner/part.html":   `<b data-floe-part="inner">{{num .text}}</b>`,
+		"inner/part.css":    "",
+		"outer/schema.json": `{"type": "object", "properties": {"in": {"$ref": "inner.json"}, "x": {"type": "array"}}}`,
+		"outer/part.html":   `<p data-floe-part="outer">{{if not .in}}{{index .x 3}}{{end}}{{.in}}</p>`,
+		"outer/part.css":    "",
+		"cell/schema.json":  `{"type": "string"}`,
+		"cell/part.html":    `<span data-floe-part="cell">{{num .}}</span>`,
+		"cell/part.css":     "",
+		"dd/schema.json":    `{"type": "object", "properties": {"plan": {"$ref": "floe:///parts/diagram.json"}}}`,
+		"dd/part.html":      `<div data-floe-part="dd">{{if not .plan}}{{num "x"}}{{end}}{{.plan}}</div>`,
+		"dd/part.css":       "",
+	})
+	items := `"risks": {"$ref": "floe:///parts/outer.json"}, "aside": {"$ref": "floe:///parts/table.json"}, "plan": {"$ref": "floe:///parts/dd.json"}`
+	l := tmpl.NewLibrary(memo(t, items), parts, "", "")
+	for data, failed := range map[string]string{
+		"risks: { in: { text: hello } }\n":                         filepath.Join(parts, "inner", "part.html") + ": ",
+		"aside: { columns: [{ title: Risk }], rows: [[hello]] }\n": filepath.Join(parts, "cell", "part.html") + ": ",
+		"plan: { plan: { nodes: x } }\n":                           "data.yaml:3:17: diagram: unknown key",
+	} {
+		_, err := draw(l, "template: memo\nlang: en\n"+data)
+		var all usererr.List
+		if !errors.As(err, &all) || len(all) != 1 || !strings.HasPrefix(all[0].Error(), failed) {
+			t.Errorf("drawing %s = %v, want the mistake of %s alone", data, err, failed)
+		}
+	}
+}
+
 // A page that names a part that cannot be used, by a table of Markdown of the data, is refused, rather
 // than published without its style; themes of one's own that cannot be read are warned of.
 func TestBrokenPartInPage(t *testing.T) {

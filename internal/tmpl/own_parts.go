@@ -201,7 +201,7 @@ func (set *partSet) compiledMistakes(name string, stop error) (mistakes, failed 
 	if failed != nil {
 		return nil, failed
 	}
-	url, file := partsURL+name+".json", set.parts[name].schemaFile()
+	url, file := partsURL+name+".json", set.parts[name].file("schema.json")
 	told := func() bool {
 		_, _, leads := missingTarget(stop)
 		var load *jsonschema.LoadURLError
@@ -230,7 +230,7 @@ func (set *partSet) settle(mistakes map[string]error) {
 	for left := true; left; {
 		left = false
 		for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-			if err := usererr.Collect(set.checkNames(name, set.parts[name].dir), mistakes[name]); err != nil {
+			if err := usererr.Collect(set.checkNames(name), mistakes[name]); err != nil {
 				set.leaveOut(name, err)
 				left = true
 			}
@@ -287,9 +287,9 @@ func (p *part) ownSchema() bool {
 	return p.dir != "" && !p.isLook()
 }
 
-// schemaFile is the schema.json of p, a part of one's own, as its mistakes name it.
-func (p *part) schemaFile() string {
-	return path.Join(p.dir, "schema.json")
+// file is the file name of p, as its mistakes name it: in its directory, or under parts/ for floe's.
+func (p *part) file(name string) string {
+	return path.Join(cmp.Or(p.dir, path.Join("parts", p.name)), name)
 }
 
 // leaveOutRooted leaves out of set the parts whose schema names a part at its root, and reports whether it
@@ -299,8 +299,7 @@ func (set *partSet) leaveOutRooted() bool {
 	rooted := map[string]error{}
 	for name, p := range set.parts {
 		if named, ok := set.rootPart(p.shape); ok {
-			at := cmp.Or(p.dir, path.Join("parts", name))
-			rooted[name] = usererr.NewAt(path.Join(at, "schema.json"), 0, 0, "tmpl_schema_root_part", named)
+			rooted[name] = usererr.NewAt(p.file("schema.json"), 0, 0, "tmpl_schema_root_part", named)
 		}
 	}
 	for name, why := range rooted {
@@ -424,18 +423,17 @@ func (set *partSet) reserved(name string) bool {
 	return isGoPart(name) || set.shares[partsURL+name+".json"] || name == themeBase || name == themePalette
 }
 
-// checkNames refuses the part name, whose directory is dir, when its part.html names it in no
+// checkNames refuses the part name when its part.html names it in no
 // data-floe-part, names more than one part in one, or names a part there is none of, when part.yaml has
 // it take the look of a part there is none of, and when its schema holds a part there is none of, or a
 // look alone. floe's parts name themselves, one each, as a test checks.
-func (set *partSet) checkNames(name, dir string) error {
+func (set *partSet) checkNames(name string) error {
 	p := set.parts[name]
-	// floe's are named as reading them names them.
-	at := cmp.Or(dir, path.Join("parts", name))
-	html, yaml := path.Join(at, "part.html"), path.Join(at, "part.yaml")
+	own := p.dir != ""
+	html, yaml := p.file("part.html"), p.file("part.yaml")
 	named := namedParts(p.html)
 	var errs []error
-	if dir != "" && !p.isLook() && !namesItself(named, name) {
+	if own && !p.isLook() && !namesItself(named, name) {
 		errs = append(errs, usererr.NewAt(html, 0, 0, "tmpl_part_unnamed", name, name))
 	}
 	for _, n := range named {
@@ -445,9 +443,9 @@ func (set *partSet) checkNames(name, dir string) error {
 		}
 		line := lineAt([]byte(p.html), n.at)
 		switch {
-		case dir != "" && kind == nameNotOne:
+		case own && kind == nameNotOne:
 			errs = append(errs, usererr.NewAt(html, line, 0, "tmpl_part_several", n.value))
-		case dir != "" && kind == nameLookBox:
+		case own && kind == nameLookBox:
 			errs = append(errs, usererr.NewAt(html, line, 0, "tmpl_look_box", n.name))
 		default:
 			errs = append(errs, set.unlent(kind, n.name, html, line, n.look))

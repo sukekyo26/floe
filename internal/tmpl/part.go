@@ -496,7 +496,7 @@ func readPartPages(files fs.FS, name, dir string) (string, words, map[string]*te
 	}
 	file := path.Join(dir, "words.yaml")
 	w, wordsErr := readPartWords(files, file)
-	page, err := template.New(name).Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
+	page, err := template.New("part.html").Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
 		Funcs(template.FuncMap{"word": w.word(file, fallbackLang)}).Parse(string(html))
 	var pageErr error
 	switch {
@@ -743,13 +743,24 @@ func joinDescriptions(beside, named string) string {
 
 // checkParts checks the items of d of whole floe draws by parts against the checks of their parts, and
 // draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every failure at its
-// line and column under root.
+// line and column under root. It runs after checkDiagrams and checkScripts, which draw theirs into d.parts.
+// LIMIT: checkDiagrams draws no diagram when one is refused, so a part holding a right one waits, untold of its
+// own mistakes, for that one to be fixed. Draw each that is right when diagrams come to be told all at once.
 func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
+	escaped := map[*part]bool{}
+	holding := map[string]bool{} // by pathKey, the items holding one not drawn
 	for _, f := range whole {
 		p := f.part
-		if p == nil || p.pages == nil {
-			continue // a format of floe's, or a part drawn in Go, by its own check
+		if p == nil {
+			continue // a format of floe's, which page.html draws
+		}
+		if p.pages == nil {
+			// A part drawn in Go, by its own check before this one, which may have refused it.
+			if _, drawn := d.parts[pathKey(f.at)]; !drawn {
+				holdUndrawn(holding, f.at)
+			}
+			continue
 		}
 		more, err := p.check(d.File, f.itemAt, root)
 		if err != nil {
@@ -757,21 +768,54 @@ func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 		}
 		if more != nil {
 			problems = append(problems, more...)
+			holdUndrawn(holding, f.at)
+			continue
+		}
+		if holding[pathKey(f.at)] {
+			// It holds an item not drawn: drawn without it, it would fail, or be told to, for that one's mistake.
+			// Those holding it are noted already, as they hold that item too.
 			continue
 		}
 		html, err := p.draw(f.itemAt, d)
-		var bad *usererr.Error
-		switch {
-		case errors.As(err, &bad) && bad.Key == "tmpl_words_unknown":
-			// A word the data names (word .level) that the part has not: told at the item, with the rest.
-			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
+		if err == nil {
+			d.drew(f.at, html)
 			continue
-		case err != nil:
-			return err
 		}
-		d.drew(f.at, html)
+		holdUndrawn(holding, f.at)
+		if err = problems.Add(p.drawnMistake(err, f.at, d, root, escaped)); err != nil {
+			return err //nolint:wrapcheck // already says what failed
+		}
 	}
 	return problems.Err()
+}
+
+// drawnMistake is the mistake err of p drawing the item at the path at of d, under root, or nil when it was
+// told already: what html/template cannot escape in p, the same whatever the item, is told once, noted in
+// escaped.
+func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node, escaped map[*part]bool) error {
+	var bad *usererr.Error
+	var escape *template.Error
+	isEscape := errors.As(err, &escape)
+	if errors.As(err, &bad) && bad.Key == "tmpl_words_unknown" {
+		// A word the data names (word .level) that the part has not: told at the item, with the rest.
+		return itemMistake(d.File, root, at, false, bad)
+	}
+	if isEscape {
+		if escaped[p] {
+			return nil
+		}
+		escaped[p] = true
+	}
+	_, item := itemPos(root, at, false)
+	return drawMistake(err, p.file("part.html"), p.dir != "", "tmpl_render_item", item, d.File)
+}
+
+// holdUndrawn notes in holding the items that hold the one at the path at, not drawn: walkWhole puts them
+// after it.
+func holdUndrawn(holding map[string]bool, at []string) {
+	for i := range at {
+		holding[pathKey(at[:i])] = true
+	}
 }
 
 // drew notes html, a part's drawing of the item at the path at.
@@ -818,7 +862,7 @@ func (p *part) check(file string, f itemAt, root ast.Node) (usererr.List, error)
 func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 	var b bytes.Buffer
 	if err := p.pages[p.words.lang(d.Lang)].Execute(&b, p.shape.prepare(f.value, f.at, d)); err != nil {
-		return "", fmt.Errorf("draw the part %s: %w", p.name, err)
+		return "", err //nolint:wrapcheck // sorted by checkParts, at the item
 	}
 	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
 }
