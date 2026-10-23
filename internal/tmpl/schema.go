@@ -346,8 +346,12 @@ var uriReference = sync.OnceValues(func() (*jsonschema.Schema, error) {
 })
 
 // heldByJSONSchema reports whether jsonschema holds the schema at url itself, as it holds the drafts and
-// their vocabularies, so that a $ref to it reads no other file.
+// their vocabularies, so that a $ref to it reads no other file. "" is no schema's URL: that of a $ref read
+// from an $id that is no URL.
 func heldByJSONSchema(url string) bool {
+	if url == "" {
+		return false
+	}
 	_, err := compileAlone(map[string]any{"$ref": url})
 	return err == nil
 }
@@ -395,6 +399,7 @@ func pointerIn(url, u string) (string, bool) {
 // metaschemaMistakes returns the mistakes of the schema file that err, the metaschema's, holds, each at its
 // JSON pointer, in the order of the pointers, such as a pattern that is no regular expression; nil when it
 // holds none.
+// LIMIT: why, in jsonschema's English.
 func metaschemaMistakes(file string, err error) error {
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
