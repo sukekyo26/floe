@@ -180,6 +180,14 @@ func TestParseErrors(t *testing.T) {
 			"each row", head + "  - box: { x: 1, y: 1, w: 1, h: 1, rows: [[a, b, c], [d]] }\n",
 			"s.yaml:6:43: box: write each row as text or [text, style]\ns.yaml:6:54: box: write each row as text or [text, style]",
 		},
+		{
+			"a misspelt at, not the at it meant", head + "  - edge: { d: 'M0,0 H1', label: a, att: [1, 2] }\n",
+			`s.yaml:6:37: edge: unknown key "att"; use d, label, at, dashed, bold, tone, start, end, crossing`,
+		},
+		{
+			"no id, so no name", "width: 1\nheight: 1\nparts: []\n",
+			"s.yaml:1:1: diagram: give id\ns.yaml:1:1: diagram: give a title (read aloud by screen readers)",
+		},
 		{"an at given wrong, not missing", head + "  - edge: { d: 'M0,0 H1', label: a, at: [1] }\n", "s.yaml:6:41: edge: at must be a pair of numbers, like [320, 100]"},
 	}
 	for _, tt := range tests {

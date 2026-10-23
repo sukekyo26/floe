@@ -458,6 +458,13 @@ type anchors struct {
 }
 
 func (a *anchors) Visit(n ast.Node) ast.Visitor {
+	// A merge key is one way of writing, told once with the alias or mapping it takes.
+	if v, ok := n.(*ast.MappingValueNode); ok {
+		if _, merge := v.Key.(*ast.MergeKeyNode); merge {
+			a.found = append(a.found, New(a.file, Of(v.Key), "yaml_no_anchors"))
+			return nil
+		}
+	}
 	switch n.(type) {
 	case *ast.AnchorNode, *ast.AliasNode, *ast.TagNode, *ast.MergeKeyNode:
 		a.found = append(a.found, New(a.file, Of(n), "yaml_no_anchors"))

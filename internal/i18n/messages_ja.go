@@ -189,6 +189,7 @@ var messagesJA = map[string]string{
 	"diagram_unknown_value":    "%s: %s の「%s」は使えません。使えるのは %s です",
 	"diagram_bad_id":           "図の id「%s」は使えません。英小文字・数字・ハイフンで書いてください",
 	"diagram_no_title":         "図「%s」: title を指定してください（スクリーンリーダーが読み上げます）",
+	"diagram_no_title_unnamed": "図: title を指定してください（スクリーンリーダーが読み上げます）",
 	"diagram_part_shape":       "部品は、種類の名前を 1 つのキーにして書いてください（- box: {x: 40, y: 72, ...} のように）",
 	"diagram_unknown_part":     "知らない部品「%s」です。使えるのは %s です",
 	"diagram_box_row":          "%s: 各行は文字列か [文字列, スタイル] で書いてください",

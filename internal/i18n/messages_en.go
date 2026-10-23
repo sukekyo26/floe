@@ -191,6 +191,7 @@ var messagesEN = map[string]string{
 	"diagram_unknown_value":    `%s: unknown %s "%s"; use %s`,
 	"diagram_bad_id":           `diagram id "%s": use lowercase letters, digits and hyphens`,
 	"diagram_no_title":         `diagram "%s": give a title (read aloud by screen readers)`,
+	"diagram_no_title_unnamed": "diagram: give a title (read aloud by screen readers)",
 	"diagram_part_shape":       "write each part as one key naming its kind, like - box: {x: 40, y: 72, ...}",
 	"diagram_unknown_part":     `unknown part "%s"; use %s`,
 	"diagram_box_row":          "%s: write each row as text or [text, style]",

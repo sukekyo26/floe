@@ -221,14 +221,19 @@ func FromNode(file string, n ast.Node) (*Spec, error) {
 	if f.lookup("parts") == nil {
 		f.missing("parts")
 	}
-	if f.ok("id") && !idRe.MatchString(spec.ID) {
-		f.fail(f.lookup("id"), "diagram_bad_id", spec.ID)
+	// No title is told as a key not given is; one of spaces alone always. It names the diagram by its id,
+	// once read as text, whether or not it can be one.
+	noTitle, named := "diagram_no_title_unnamed", []any{}
+	if f.ok("id") {
+		noTitle, named = "diagram_no_title", []any{spec.ID}
+		if !idRe.MatchString(spec.ID) {
+			f.fail(f.lookup("id"), "diagram_bad_id", spec.ID)
+		}
 	}
-	// No title is told as a key not given is; one of spaces alone always.
 	if n := f.lookup("title"); n == nil {
-		f.missed = append(f.missed, f.errAt(f.at, "diagram_no_title", spec.ID))
+		f.absent(f.at, noTitle, named...)
 	} else if strings.TrimSpace(spec.Title) == "" {
-		f.fail(n, "diagram_no_title", spec.ID)
+		f.fail(n, noTitle, named...)
 	}
 	var found usererr.List
 	if failed := found.Add(f.done()); failed != nil {
@@ -379,7 +384,7 @@ func decodeEdge(f *fields) Part {
 	e.Segs = segs
 	// An at given wrong is told as such.
 	if e.Label != "" && f.lookup("at") == nil {
-		f.fail(f.lookup("label"), "diagram_edge_no_at", e.D)
+		f.absent(yamlpos.Of(f.lookup("label")), "diagram_edge_no_at", e.D)
 	}
 	return e
 }

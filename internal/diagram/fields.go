@@ -20,7 +20,7 @@ type fields struct {
 	values   []*ast.MappingValueNode
 	asked    []string
 	mistakes usererr.List
-	missed   usererr.List // the keys not given, told unless one given is unknown
+	missed   usererr.List // of keys not given, told unless one given is unknown
 }
 
 func newFields(file, kind string, at yamlpos.Pos, n ast.Node) (*fields, error) {
@@ -81,7 +81,12 @@ func (f *fields) lookup(key string) ast.Node {
 }
 
 func (f *fields) missing(key string) {
-	f.missed = append(f.missed, f.errAt(f.at, "diagram_missing_key", f.kind, key))
+	f.absent(f.at, "diagram_missing_key", f.kind, key)
+}
+
+// absent tells the mistake key, at at, of a key not given, which done tells only if no key given is unknown.
+func (f *fields) absent(at yamlpos.Pos, key string, args ...any) {
+	f.missed = append(f.missed, f.errAt(at, key, args...))
 }
 
 // done returns every mistake: each unknown key, the mistakes of the values, then the keys not given, unless
