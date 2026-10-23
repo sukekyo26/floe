@@ -2,13 +2,13 @@ package tmpl
 
 import (
 	"cmp"
+	"errors"
+	"fmt"
 	"maps"
 	neturl "net/url"
 	"slices"
 	"strconv"
 	"strings"
-
-	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -286,10 +286,21 @@ func (n *schemaNotes) format(f string, typ any, ptr string, reached bool) bool {
 // share that holds what floe draws, at one where floe does not follow to it, or, from a part's schema, at
 // a schema the parts share that holds a format of floe's, and one into the schema's own file, a part or a
 // schema the parts share that finds nothing there.
+// The failure is floe's: making the compiler that resolves the $refs.
 // LIMIT: $dynamicRef and $recursiveRef go unchecked, refused at compiling without a pointer; check them here if used.
-func (set *partSet) mistakes(n *schemaNotes) usererr.List {
+func (set *partSet) mistakes(n *schemaNotes) (usererr.List, error) {
+	c, err := set.compiler()
+	if err == nil && set.docs[n.url] == nil {
+		err = c.AddResource(n.url, n.doc)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("check the $refs of %s: %w", n.file, err)
+	}
+	resolve := func(ref string) error {
+		_, err := c.Compile(ref)
+		return err //nolint:wrapcheck // jsonschema's, which refTargetMistake reads by its type
+	}
 	var mistakes usererr.List
-	resolve := set.resolver(n)
 	for _, x := range n.met {
 		m := x.mistake
 		if x.ref != nil {
@@ -299,14 +310,20 @@ func (set *partSet) mistakes(n *schemaNotes) usererr.List {
 			mistakes = append(mistakes, m)
 		}
 	}
-	return mistakes
+	return mistakes, nil
 }
 
 // refMistake returns what set refuses of r, a $ref of the schema of n, or nil; resolve compiles what a $ref
-// points at (resolver).
+// points at, with the schemas of the parts and of n, one compiler for all its $refs.
 func (set *partSet) refMistake(n *schemaNotes, r refAt, resolve func(ref string) error) *usererr.Error {
-	if !isURL(r.ref) {
-		return nil // the metaschema refuses it at the $ref as the schema compiles
+	if _, err := neturl.Parse(r.ref); err != nil {
+		// LIMIT: why, in net/url's English.
+		why := err.Error()
+		var bad *neturl.Error
+		if errors.As(err, &bad) {
+			why = bad.Err.Error()
+		}
+		return n.at(r, usererr.New("tmpl_schema_ref_url", r.ref, why))
 	}
 	base, _, _ := strings.Cut(r.ref, "#")
 	switch {
@@ -320,15 +337,11 @@ func (set *partSet) refMistake(n *schemaNotes, r refAt, resolve func(ref string)
 	return nil
 }
 
-// isURL reports whether ref reads as a URL, as jsonschema reads a $ref.
-func isURL(ref string) bool {
-	_, err := neturl.Parse(ref)
-	return err == nil
-}
-
 // targetMistake returns the mistake of r, a $ref of the schema of n into a schema floe holds, when
 // jsonschema finds nothing where it points (refTargetMistake), at the $ref, or nil; resolve compiles what
 // it points at.
+// LIMIT: a $ref to the URL an $id gives is not resolved: noLoader refuses that URL, which is told by the
+// compiling at the top of the file. Resolve it from where the $id is if a schema comes to need it.
 func (n *schemaNotes) targetMistake(r refAt, resolve func(ref string) error) *usererr.Error {
 	base, _, _ := strings.Cut(r.ref, "#")
 	to, in := r.ref, base
@@ -340,28 +353,6 @@ func (n *schemaNotes) targetMistake(r refAt, resolve func(ref string) error) *us
 		return n.at(r, e)
 	}
 	return nil
-}
-
-// resolver returns a function that compiles what a $ref of the schema of n points at, with the schemas of
-// the parts, one compiler for all its $refs, made at the first, and returns what stopped it.
-func (set *partSet) resolver(n *schemaNotes) func(ref string) error {
-	var (
-		c      *jsonschema.Compiler
-		failed error
-	)
-	return func(ref string) error {
-		if c == nil && failed == nil {
-			c, failed = set.compiler()
-			if failed == nil && set.docs[n.url] == nil {
-				failed = c.AddResource(n.url, n.doc)
-			}
-		}
-		if failed != nil {
-			return failed //nolint:wrapcheck // not a mistake of the $ref: refTargetMistake passes it
-		}
-		_, err := c.Compile(ref)
-		return err //nolint:wrapcheck // jsonschema's, which refTargetMistake reads by its type
-	}
 }
 
 // at is the mistake e of r, a $ref of the schema of n, at the schema and its pointer.

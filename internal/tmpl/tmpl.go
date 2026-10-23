@@ -637,7 +637,9 @@ func (t *Template) readSchema(set *partSet) (schemaRead, error) {
 	if read.shape, read.notes, err = t.readShape(read.doc); err != nil {
 		return read, err
 	}
-	read.refused = set.mistakes(read.notes)
+	if read.refused, err = set.mistakes(read.notes); err != nil {
+		return read, err
+	}
 	return read, usererr.Collect(read.refused.Err(), t.refuseShared(read.shape))
 }
 

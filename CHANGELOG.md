@@ -242,7 +242,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   to a part but annotations (`description`, `title`, `default`…), are refused at their
   JSON pointers, by `floe template check` and wherever the template is used,
   and a part's by `floe part check`; a `$ref` into the schema's own file
-  (`#/$defs/row`) is followed by JSON Schema alone.
+  (`#/$defs/row`) is followed by JSON Schema alone, and one that finds nothing
+  where it points, there or in a part, is refused at the `$ref`.
   `template.yaml` names the floe a template needs. A schema may not declare
   or require `lang`, `template`, `theme` or `title`, which floe reads from
   every data file itself. See [docs/templates.md](docs/templates.md).
