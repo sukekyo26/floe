@@ -41,6 +41,9 @@ func TestDiagramRender(t *testing.T) {
 		"shape.yaml:6:5: dot: give cy\nAWS icons are not in ")
 	want(t, "render a missing file", e.run(t, "specs", "diagram", "render", "a.yaml", "nope.yaml"), 1, "",
 		"floe: cannot read nope.yaml (no such file or directory)")
+	want(t, "render two missing files", e.run(t, "specs", "diagram", "render", "nope.yaml", "gone.yaml"), 1, "",
+		"floe: cannot read nope.yaml (no such file or directory); check the path and that the file exists\n"+
+			"cannot read gone.yaml (no such file or directory)")
 	want(t, "render nothing", e.run(t, "", "diagram", "render"), 2, "", "floe: requires at least 1 arg(s)")
 }
 

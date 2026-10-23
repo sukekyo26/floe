@@ -247,6 +247,17 @@ func Listen(port int) (*net.TCPListener, error) {
 	return net.ListenTCP("tcp", addr) //nolint:wrapcheck // as above
 }
 
+// CannotListen is the refusal for the port floe could not bind with err, but for one in use, which a
+// caller tells otherwise: a port it may not take, below 1024, or no such address.
+func CannotListen(port int, err error) *usererr.Error {
+	reason := err.Error()
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		reason = errno.Error()
+	}
+	return usererr.New("daemon_cannot_listen", port, reason)
+}
+
 // Handed returns the listener the publish that started this server bound on port, in the variables
 // getenv reads, or nil when none was handed down.
 func Handed(getenv func(string) string, port int) (net.Listener, error) {
@@ -289,12 +300,7 @@ func start(ctx context.Context, s Server) (bool, error) {
 		return false, nil
 	}
 	if err != nil {
-		reason := err.Error()
-		var errno syscall.Errno
-		if errors.As(err, &errno) {
-			reason = errno.Error()
-		}
-		return false, usererr.New("daemon_cannot_listen", s.Port, reason)
+		return false, CannotListen(s.Port, err)
 	}
 	defer ln.Close() //nolint:errcheck // the server holds its own copy
 	f, err := ln.File()

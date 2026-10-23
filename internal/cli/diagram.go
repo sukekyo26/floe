@@ -53,11 +53,11 @@ func (a *app) render(files []string, assets bool) error {
 	var problems usererr.List
 	specs := make([]*diagram.Spec, 0, len(files))
 	for _, file := range files {
+		var s *diagram.Spec
 		src, err := a.readArg(file)
-		if err != nil {
-			return err
+		if err == nil {
+			s, err = diagram.Parse(file, src)
 		}
-		s, err := diagram.Parse(file, src)
 		if err != nil {
 			if failed := problems.Add(err); failed != nil {
 				return failed //nolint:wrapcheck // already says what failed

@@ -195,12 +195,13 @@ func (s *Store) Fetch(ctx context.Context, set, source string, force bool) (Fetc
 	if err != nil {
 		return got, err
 	}
+	// FLOE_ICONS_DIR, which the user picks, may be a file, or not theirs to write.
 	if err = os.MkdirAll(s.root, 0o700); err != nil {
-		return got, fmt.Errorf("create %s: %w", s.root, err)
+		return got, usererr.CannotWrite(s.root, err)
 	}
 	tmp, err := os.MkdirTemp(s.root, k.name+".tmp-")
 	if err != nil {
-		return got, fmt.Errorf("create a directory in %s: %w", s.root, err)
+		return got, usererr.CannotWrite(s.root, err)
 	}
 	defer os.RemoveAll(tmp) //nolint:errcheck // a leftover is harmless
 	idx, err := k.extract(buf, from, tmp)

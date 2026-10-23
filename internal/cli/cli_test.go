@@ -400,6 +400,13 @@ func TestConfigErrors(t *testing.T) {
 		want(t, tt.key+"="+tt.value, e.run(t, "", "list"), 1, "", tt.msg)
 		e.vars[tt.key] = saved
 	}
+	// A FLOE_DIR floe cannot make is the user's to fix.
+	saved := e.vars["FLOE_DIR"]
+	file := e.write(t, "file", "")
+	e.vars["FLOE_DIR"] = filepath.Join(file, "floe")
+	want(t, "serve under a file", e.run(t, "", "serve"), 1, "",
+		"floe: cannot write "+e.vars["FLOE_DIR"]+" (not a directory); check that its directory can be written to")
+	e.vars["FLOE_DIR"] = saved
 	delete(e.vars, "FLOE_DIR")
 	delete(e.vars, "HOME")
 	want(t, "no HOME", e.run(t, "", "list"), 1, "", "floe: HOME is not set; set HOME or FLOE_DIR")

@@ -4,10 +4,13 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/server"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // A publish of a data file larger than the server takes is told so with the limit, whether the server
@@ -41,5 +44,22 @@ func TestTooLarge(t *testing.T) {
 	unsent := client{base: "http://127.0.0.1:1"}.do(t.Context(), http.MethodPut, "/api/artifacts/p", large, nil)
 	if err := tooLarge(unsent); err == nil || !strings.Contains(err.Error(), "32 MiB") {
 		t.Errorf("a publish over the limit = %v, want the limit told before it is sent", err)
+	}
+}
+
+// Every image the server asks for that cannot be sent is told at once: the images are apart.
+func TestReadImagesEach(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	for _, name := range []string{"a.png", "b.png"} {
+		if err := os.Symlink(filepath.Join(dir, "elsewhere.png"), filepath.Join(dir, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, err := readImages(dir, []string{"a.png", "b.png"})
+	var all usererr.List
+	if !errors.As(err, &all) || len(all) != 2 {
+		t.Errorf("readImages of two symlinks = %v, want both told", err)
 	}
 }

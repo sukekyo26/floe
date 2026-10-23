@@ -12,6 +12,24 @@ import (
 
 const spec = "template: report\nlang: ja\ntitle: Spec\nsections:\n  - parts:\n      - text: Do **it**.\n"
 
+// A page floe render cannot write is told, and so is every other: one does not stop the rest.
+func TestRenderEachWrite(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.write(t, "work/a.yaml", spec)
+	e.write(t, "work/b.yaml", spec)
+	for _, page := range []string{"a.html", "b.html"} {
+		if err := os.MkdirAll(filepath.Join(e.tmp, "work", page, "in"), 0o750); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r := e.run(t, "work", "render", "a.yaml", "b.yaml")
+	if r.code != 1 || !strings.Contains(r.stderr, "cannot write a.html") || !strings.Contains(r.stderr, "cannot write b.html") {
+		t.Errorf("render onto two directories = %d %q, want both told", r.code, r.stderr)
+	}
+}
+
 // floe render writes each page beside its data file, or in --out-dir, only when it changes; --check
 // tells a page missing or not what its data file draws.
 func TestRender(t *testing.T) {

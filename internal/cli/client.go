@@ -110,6 +110,7 @@ func readImages(dir string, names []string) (map[string][]byte, error) {
 	}
 	defer root.Close()
 	images := make(map[string][]byte, len(names))
+	var problems usererr.List
 	for _, name := range names {
 		b, err := tmpl.ReadImage(root.FS(), name, dir)
 		var ue *usererr.Error
@@ -117,9 +118,15 @@ func readImages(dir string, names []string) (map[string][]byte, error) {
 			continue
 		}
 		if err != nil {
-			return nil, err //nolint:wrapcheck // a usererr for the user as is
+			if failed := problems.Add(err); failed != nil {
+				return nil, failed //nolint:wrapcheck // already says what failed
+			}
+			continue
 		}
 		images[name] = b
+	}
+	if err := problems.Err(); err != nil {
+		return nil, err
 	}
 	return images, nil
 }

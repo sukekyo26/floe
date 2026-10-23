@@ -134,17 +134,19 @@ func (a *app) writePages(pages []rendered, outDir string) error {
 			return usererr.CannotWrite(outDir, err)
 		}
 	}
+	var problems usererr.List
 	for _, p := range pages {
 		if old, err := os.ReadFile(p.real); err == nil && bytes.Equal(old, p.page) {
 			continue
 		}
 		// Not private like the store: the page goes into a repository, for others to read.
 		if err := store.WriteAtomic(p.real, p.page, 0o644); err != nil {
-			return usererr.CannotWrite(p.to, err)
+			problems = append(problems, usererr.CannotWrite(p.to, err))
+			continue
 		}
 		a.out("%s", p.to)
 	}
-	return nil
+	return problems.Err()
 }
 
 // checkPages returns a mistake for each page that is missing or is not what its data file draws.

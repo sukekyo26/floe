@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // packageFiles stand in for the Icon package: what is kept, a service in two categories, sizes and
@@ -71,6 +72,22 @@ func fetch(t *testing.T, set *icons.Store, source string, force bool) icons.Fetc
 		t.Fatal(err)
 	}
 	return got
+}
+
+// A FLOE_ICONS_DIR floe cannot make, under a file, is the user's to fix: it is refused with the reason.
+func TestFetchWhereItCannotWrite(t *testing.T) {
+	t.Parallel()
+
+	file := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(file, "icons")
+	_, err := icons.New(root).Fetch(context.Background(), "aws", writeZip(t, "Icon-package.zip", packageFiles), false)
+	var one *usererr.Error
+	if !errors.As(err, &one) || err.Error() != "cannot write "+root+" (not a directory); check that its directory can be written to" {
+		t.Errorf("Fetch into a file = %v, want it refused", err)
+	}
 }
 
 func TestFetchAndSearch(t *testing.T) {

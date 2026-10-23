@@ -83,15 +83,16 @@ func (o Options) normalized() (Options, error) {
 			*field = &v
 		}
 	}
+	var problems usererr.List
 	for _, f := range []struct {
 		value *string
 		empty string
 	}{{o.Title, "cli_title_empty"}, {o.Theme, "cli_theme_empty"}} {
 		if f.value != nil && *f.value == "" {
-			return o, usererr.New(f.empty)
+			problems = append(problems, usererr.New(f.empty))
 		}
 	}
-	return o, nil
+	return o, problems.Err()
 }
 
 // theme is the theme o gives over the data's, "" for none.

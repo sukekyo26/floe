@@ -56,6 +56,7 @@ func loadConfig(getenv func(string) string, dir string) (*config, error) {
 func (c *config) readDirs(getenv func(string) string, dir string) error {
 	data := xdgDir(getenv, "XDG_DATA_HOME", c.home, ".local", "share")
 	conf := xdgDir(getenv, "XDG_CONFIG_HOME", c.home, ".config")
+	var problems usererr.List
 	for _, d := range []struct {
 		key, base, name string
 		to              *string
@@ -70,17 +71,20 @@ func (c *config) readDirs(getenv func(string) string, dir string) error {
 	} {
 		v, err := floeDir(getenv, d.key, c.home, dir)
 		if err != nil {
-			return err
+			if failed := problems.Add(err); failed != nil {
+				return failed //nolint:wrapcheck // already says what failed
+			}
+			continue
 		}
 		if v == "" && d.base != "" {
 			v = filepath.Join(d.base, d.name)
 		}
 		if v == "" && d.to == &c.root {
-			return usererr.New("cli_no_home")
+			problems = append(problems, usererr.New("cli_no_home"))
 		}
 		*d.to = v
 	}
-	return nil
+	return problems.Err()
 }
 
 // floeDir reads floe's directory setting key: a ~ or ~/ at its start stands for home, so that one written
