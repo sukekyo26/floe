@@ -543,8 +543,8 @@ func TestHeldThroughFloesPart(t *testing.T) {
 	}
 }
 
-// A part's schema is compiled after those of the parts it refers to, one that stops standing as true: its
-// own mistake is told whatever order jsonschema walks it in, and not one that another's $ref into it meets.
+// A part's schema is compiled with the other parts of one's own standing as true: its own mistake is told
+// whatever order jsonschema walks it in, and one that another's $ref into it meets is not taken for its own.
 func TestPartCompileOrder(t *testing.T) {
 	t.Parallel()
 
@@ -558,15 +558,29 @@ func TestPartCompileOrder(t *testing.T) {
 		"qb/schema.json": `{"type": "object", "properties": {"t": {"type": "string", "pattern": "[["}}}`,
 		"qb/part.html":   `<div data-floe-part="qb"></div>`,
 		"qb/part.css":    "",
-		"ma/schema.json": `{"type": "object", "properties": {"b": {"$ref": "mb.json"}}}`,
-		"ma/part.html":   `<div data-floe-part="ma"></div>`,
-		"ma/part.css":    "",
-		"mb/schema.json": `{"type": "object", "properties": {"t": {"$ref": "ma.json#/nope"}}}`,
-		"mb/part.html":   `<div data-floe-part="mb"></div>`,
-		"mb/part.css":    "",
+		// xid's own $ref through its $id, which no check of a $ref resolves, finds nothing; yref, which xid
+		// does not hold, points at the same place: xid's is still xid's. aref and zid are the two of them, the
+		// other way round by name.
+		"xid/schema.json":  `{"$id": "https://example.com/x.json", "type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"xid/part.html":    `<div data-floe-part="xid"></div>`,
+		"xid/part.css":     "",
+		"yref/schema.json": `{"type": "object", "properties": {"u": {"$ref": "xid.json#/$defs/nope"}}}`,
+		"yref/part.html":   `<div data-floe-part="yref"></div>`,
+		"yref/part.css":    "",
+		"zid/schema.json":  `{"$id": "https://example.com/z.json", "type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"zid/part.html":    `<div data-floe-part="zid"></div>`,
+		"zid/part.css":     "",
+		"aref/schema.json": `{"type": "object", "properties": {"u": {"$ref": "zid.json#/$defs/nope"}}}`,
+		"aref/part.html":   `<div data-floe-part="aref"></div>`,
+		"aref/part.css":    "",
 	})
-	pa := filepath.Join(parts, "pa", "schema.json") + ": #/properties/z/patternProperties: "
-	ma := filepath.Join(parts, "ma", "schema.json") + ": #: "
+	want := []string{
+		filepath.Join(parts, "pa", "schema.json") + ": #/properties/z/patternProperties: ",
+		filepath.Join(parts, "xid", "schema.json") + ": #: a $ref to #/$defs/nope finds nothing",
+		filepath.Join(parts, "zid", "schema.json") + ": #: a $ref to #/$defs/nope finds nothing",
+		filepath.Join(parts, "yref", "schema.json") + ": #/properties/u: ",
+		filepath.Join(parts, "aref", "schema.json") + ": #/properties/u: ",
+	}
 	first := ""
 	for range 20 {
 		warnings, err := tmpl.CheckOwnParts(parts, themesOf(parts))
@@ -574,8 +588,8 @@ func TestPartCompileOrder(t *testing.T) {
 		if first == "" {
 			first = got
 		}
-		if got != first || !strings.Contains(got, pa) || strings.Contains(got, ma) {
-			t.Fatalf("Check of a template of pa and ma = %s, want pa's own %s every time, and nothing at ma's top", got, pa)
+		if got != first || slices.ContainsFunc(want, func(w string) bool { return !strings.Contains(got, w) }) {
+			t.Fatalf("CheckOwnParts = %s, want the same every time, with %q", got, want)
 		}
 	}
 }

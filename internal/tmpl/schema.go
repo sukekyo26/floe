@@ -122,7 +122,7 @@ func ownMistakes(url, file string, err error) error {
 // strayRefMistake returns err, what stopped the compiling of the schema at url, file, as the mistake of a
 // $ref that finds nothing in it, at the top of file, and nil for another. Where a $ref leads is all
 // jsonschema says: compileMistakes calls it where none but the schema's own $refs lead into it, a
-// template's, or a part's, where another part's $ref that leads into it is left out (ledByOther).
+// template's, or a part's, the other parts of one's own standing as true (compileOwn).
 // LIMIT: told at the top of the file, of a $ref refMistake did not check (its LIMITs). Check it there if
 // one comes.
 func strayRefMistake(url, file string, err error) *usererr.Error {

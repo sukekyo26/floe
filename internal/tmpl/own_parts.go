@@ -12,8 +12,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/santhosh-tekuri/jsonschema/v6"
-
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -197,35 +195,38 @@ func (set *partSet) settle(mistakes map[string]error) {
 	}
 }
 
-// compileOwn compiles the schema of each part of one's own in set, after the parts it refers to
-// (referredFirst), and returns, by name, what stopped each: the mistakes of its schema.json, or what floe
-// cannot place there (compileMistakes). One that stopped stands as true, a schema anything fits, for the
-// parts compiled after it, so that each stops at its own file alone, whatever the order of jsonschema's
-// walk: checkHeld refuses one that refers to it. A part that stops elsewhere, at what its $ref into a part
-// points at, is left to checkHeld, which refuses that $ref. Once settle leaves out those that stopped and
-// those that refer to them, every part left compiles with the schemas of the others: a template that uses
-// a part floe part check passes never stops at the part.
-// LIMIT: jsonschema stops at the first mistake of a file: those the metaschema refuses are told always,
-// but an $anchor or $id written twice waits for those met before it.
+// compileOwn compiles the schema of each part of one's own in set, and returns, by name, what stopped each:
+// the mistakes of its schema.json, or what floe cannot place there (compileMistakes). Each is compiled with
+// the other parts of one's own standing as true, a schema anything fits: a $ref to a part whole finds it
+// either way, and one into a part is refused (partMistake). So each stops at its own file alone, whatever
+// the order of jsonschema's walk, and no other part's $ref is walked there. Once settle leaves out those
+// that stopped and those that refer to them (checkHeld), every part left compiles with the schemas of the
+// others: a template that uses a part floe part check passes never stops at the part.
+// LIMIT: jsonschema stops at the first mistake of a file, in the order it walks the file: those the
+// metaschema refuses are told always, but another, a regular expression under draft-04, whose metaschema
+// checks none, or an $anchor or $id written twice, waits for those met before it.
+// LIMIT: what floe cannot place is told in jsonschema's English, as floe's failure (tmpl_own_failed).
 func (set *partSet) compileOwn() map[string]error {
 	mistakes := map[string]error{}
 	stands := map[string]bool{}
-	var c *jsonschema.Compiler
-	for _, name := range set.referredFirst() {
-		url, file := partsURL+name+".json", set.parts[name].schemaFile()
-		var err error
-		if c == nil {
-			c, err = set.compiler(stands)
+	for name, p := range set.parts {
+		if p.ownSchema() {
+			stands[partsURL+name+".json"] = true
 		}
+	}
+	for name, p := range set.parts {
+		if !p.ownSchema() {
+			continue
+		}
+		url, file := partsURL+name+".json", p.schemaFile()
+		stands[url] = false
+		c, err := set.compiler(stands)
+		stands[url] = true
 		if err == nil {
 			_, err = c.Compile(url)
 		}
-		if err == nil {
-			continue
-		}
 		switch {
-		case set.ledByOther(name, err):
-			// Another part's $ref, which checkHeld refuses there, and the parts that hold it with it.
+		case err == nil:
 		case set.checkHeld(name) == nil:
 			mistakes[name] = compileMistakes(url, file, err)
 		default:
@@ -234,72 +235,8 @@ func (set *partSet) compileOwn() map[string]error {
 				mistakes[name] = m
 			}
 		}
-		stands[url], c = true, nil // made again, with it standing as true
 	}
 	return mistakes
-}
-
-// ledByOther reports whether err, what stopped the compiling of the part name of set, is a $ref of another
-// part that finds nothing in name's file, where jsonschema says it leads (missingTarget): refMistake
-// refuses that $ref.
-func (set *partSet) ledByOther(name string, err error) bool {
-	key, _, leads := missingTarget(err)
-	if key == "" {
-		return false
-	}
-	for url, n := range set.notes {
-		if url == partsURL+name+".json" {
-			continue
-		}
-		for _, x := range n.met {
-			if x.ref != nil && samePlace(x.ref.ref, leads) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// referredFirst returns the parts of one's own in set, each after those it refers to, through floe's too, as
-// a part of floe's may refer to one of one's own of the name of one of floe's, and by name otherwise.
-func (set *partSet) referredFirst() []string {
-	var order []string
-	seen := map[string]bool{}
-	var visit func(name string)
-	visit = func(name string) {
-		if seen[name] {
-			return
-		}
-		seen[name] = true
-		for _, to := range set.partsReferredBy(name) {
-			visit(to)
-		}
-		if p := set.parts[name]; p != nil && p.ownSchema() {
-			order = append(order, name)
-		}
-	}
-	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-		visit(name)
-	}
-	return order
-}
-
-// partsReferredBy returns the parts the $refs of the schema of the part name of set refer to, wherever in
-// it, into them too, in the order of the schema.
-func (set *partSet) partsReferredBy(name string) []string {
-	var names []string
-	if n := set.notes[partsURL+name+".json"]; n != nil {
-		for _, x := range n.met {
-			if x.ref == nil {
-				continue
-			}
-			base, _, _ := strings.Cut(x.ref.ref, "#")
-			if to, ok := partName(base); ok {
-				names = append(names, to)
-			}
-		}
-	}
-	return names
 }
 
 // ownSchema reports whether p is a part of one's own that draws, whose schema.json floe compiles.
