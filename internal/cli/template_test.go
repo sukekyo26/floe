@@ -42,7 +42,7 @@ func TestTemplateCommands(t *testing.T) {
 	if err = os.Remove(filepath.Join(spec, "template.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	if r := e.run(t, "", "template", "check", spec); r.code != 0 || !strings.HasPrefix(r.stderr, spec+" has no template.yaml") {
+	if r := e.run(t, "", "template", "check", spec); r.code != 0 || !strings.HasPrefix(r.stderr, "floe: "+spec+" has no template.yaml") {
 		t.Errorf("template check without template.yaml = %+v", r)
 	}
 	computed := filepath.Join(spec, "computed.yaml")

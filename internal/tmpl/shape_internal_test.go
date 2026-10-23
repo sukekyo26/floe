@@ -1,7 +1,6 @@
 package tmpl
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -133,7 +132,10 @@ func TestShapeMistakes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := fmt.Sprint(mistakes)
+		got := ""
+		if err = mistakes.Err(); err != nil {
+			got = err.Error()
+		}
 		if c.want == "" && got != "" || c.want != "" && !strings.Contains(got, c.want) {
 			t.Errorf("mistakes of %s = %s, want %q", c.src, got, c.want)
 		}

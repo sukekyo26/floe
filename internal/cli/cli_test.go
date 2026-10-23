@@ -801,8 +801,8 @@ func TestCheck(t *testing.T) {
 	}
 	// A file that cannot be checked is reported with the others, not instead of them.
 	want(t, "check files that cannot be checked", e.run(t, "", "check", "page.html", "bad.yaml", "nope.yaml"), 1, "",
-		"page.html is not a data file (.yaml or .yml)\nbad.yaml:2:1: leed is not an item")
-	if r := e.run(t, "", "check", "bad.yaml", "nope.yaml"); !strings.Contains(r.stderr, "\ncannot read nope.yaml") {
+		"floe: page.html is not a data file (.yaml or .yml)\nbad.yaml:2:1: leed is not an item")
+	if r := e.run(t, "", "check", "bad.yaml", "nope.yaml"); !strings.Contains(r.stderr, "\nfloe: cannot read nope.yaml") {
 		t.Errorf("check of a missing file after one with mistakes = %q", r.stderr)
 	}
 	want(t, "check without a file", e.run(t, "", "check"), 2, "", "floe: requires at least 1 arg(s)")
@@ -819,5 +819,39 @@ func TestFreePortBelowEphemeral(t *testing.T) {
 	ln := listenFree(t)
 	if port, given := freePort(t), portOf(t, ln); port >= closedTo || given < closedTo {
 		t.Errorf("freePort = %d, a port given for :0 = %d, want them on either side of %d", port, given, closedTo)
+	}
+}
+
+// A mistake is told the same to the letter whether floe check finds it here or floe publish has the server
+// find it: each at a place as it is, one that stands for placed ones too, floe's name before the others.
+func TestSameMistakesThroughServer(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	e.write(t, "parts/both/schema.json", `{"type": "object", "properties": {"t": {"type": "string", "pattern": "(["}}}`)
+	e.write(t, "parts/both/part.html", `<p>{{.t}}</p>`)
+	e.write(t, "parts/both/part.css", "")
+	e.write(t, "templates/memo/schema.json",
+		`{"type": "object", "properties": {"a": {"$ref": "floe:///parts/both.json"}, "b": {"$ref": "floe:///parts/both.json"}}}`)
+	e.write(t, "templates/memo/page.html", `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body></body></html>`)
+	e.write(t, "work/memo.yaml", "template: memo\nlang: en\ntitle: t\n")
+	diagram := func(id, part string) string {
+		return "      - diagram:\n          id: " + id + "\n          title: t\n          width: 100\n          height: 50\n" +
+			"          parts:\n            - " + part + "\n"
+	}
+	e.write(t, "work/icons.yaml", "template: report\nlang: en\ntitle: t\nsections:\n  - parts:\n"+
+		diagram("a", "dot: { cx: 10 }")+diagram("b", "icon: { x: 10, y: 10, name: aws/aws-lambda }"))
+	for file, want := range map[string]string{
+		"memo.yaml":  "the part both cannot be used, as told above\n",
+		"icons.yaml": "icons.yaml:12:15: dot: give cy\nfloe: AWS icons are not in ",
+	} {
+		here, there := e.run(t, "work", "check", file), e.run(t, "work", "publish", file)
+		if here.code != 1 || there.code != 1 || here.stderr != there.stderr || !strings.Contains(here.stderr, want) ||
+			strings.Contains(here.stderr, "floe: "+filepath.Join(e.tmp, "templates")) {
+			t.Errorf("%s: floe check = %d %q,\nfloe publish = %d %q, want both alike, holding %q", file, here.code, here.stderr,
+				there.code, there.stderr, want)
+		}
 	}
 }

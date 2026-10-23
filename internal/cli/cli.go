@@ -56,16 +56,10 @@ func Run(ctx context.Context, args []string, env Env) int {
 	if err == nil {
 		return exitOK
 	}
-	// SilenceErrors leaves printing to this single boundary, which words a usererr in English.
-	shown := usererr.Show(english, err)
-	// Placed mistakes go out as they are, one per line, for editors and CI to read, and so do those the
-	// server placed.
-	prefix := "floe: "
-	var remote *remoteError
-	if shown.Placed || errors.As(err, &remote) && remote.mistakes {
-		prefix = ""
-	}
-	_, _ = fmt.Fprintf(env.Stderr, "%s%s\n", prefix, shown.Text) //nolint:errcheck // nowhere left to report
+	// SilenceErrors leaves printing to this single boundary, which tells err in English (the server's
+	// report as it sent it) and lays it out as every mistake is: those at a place as they are, one per
+	// line, for editors and CI to read, floe's name before the others.
+	_, _ = fmt.Fprintln(env.Stderr, usererr.Tell(english, err).Render(named)) //nolint:errcheck // nowhere left to report
 	if errors.As(err, new(usageError)) {
 		return exitUsage
 	}
@@ -92,6 +86,9 @@ func usage(validate cobra.PositionalArgs) cobra.PositionalArgs {
 
 // english is the language of the command line, whatever the environment's: an agent reads it.
 var english = i18n.EnglishCatalog()
+
+// named is floe's name before each mistake the command line tells that is not at a place, and its failure.
+const named = "floe: "
 
 func newRoot(env Env) *cobra.Command {
 	root := &cobra.Command{

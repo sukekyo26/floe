@@ -809,8 +809,8 @@ func TestSave(t *testing.T) {
 		t.Errorf("a publish without its images = %d %s", r.status, r.body)
 	}
 	r := put("sizes", upload(map[string][]byte{}, "proj"), "Accept-Language", "ja")
-	if r.status != http.StatusBadRequest || !strings.Contains(r.body, `"mistakes":true`) ||
-		!strings.Contains(r.body, `plans/sizes.yaml:5:8: chart: /plans の下に画像「img/chart.png」がありません`) {
+	if r.status != http.StatusBadRequest ||
+		r.body != `{"mistakes":[{"file":"plans/sizes.yaml","line":5,"column":8,"text":"chart: /plans の下に画像「img/chart.png」がありません"}]}` {
 		t.Errorf("a publish missing its image = %d %s", r.status, r.body)
 	}
 	images := map[string][]byte{"img/chart.png": png}
@@ -827,7 +827,7 @@ func TestSave(t *testing.T) {
 		t.Error("the stored page does not show its image")
 	}
 	// A refusal that is not a data file's mistake, and one to a reader that does not take JSON.
-	if r = put("sizes", upload(nil, "other")); r.status != http.StatusConflict || !strings.Contains(r.body, `"mistakes":false`) {
+	if r = put("sizes", upload(nil, "other")); r.status != http.StatusConflict || !strings.Contains(r.body, `"conflict":true`) {
 		t.Errorf("a publish over another project's page = %d %s", r.status, r.body)
 	}
 	b, err := json.Marshal(upload(nil, "other"))
@@ -852,7 +852,7 @@ func TestSave(t *testing.T) {
 	e.write(t, "templates/memo/page.html",
 		`<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body>{{.Data.aside}}</body></html>`)
 	memo := map[string]any{"file": "plans/d.yaml", "dir": "/plans", "source": []byte("template: memo\nlang: en\naside: { text: hello }\n")}
-	if r = put("memo", memo); r.status != http.StatusBadRequest || !strings.Contains(r.body, `"mistakes":true`) ||
+	if r = put("memo", memo); r.status != http.StatusBadRequest || !strings.Contains(r.body, `{"mistakes":[{"file":`) ||
 		!strings.Contains(r.body, `it cannot draw aside of plans/d.yaml`) {
 		t.Errorf("a publish its own part fails to draw = %d %s", r.status, r.body)
 	}

@@ -152,7 +152,8 @@ uses.`,
 		RunE: func(*cobra.Command, []string) error {
 			warnings, err := tmpl.CheckOwnParts(a.cfg.parts, a.cfg.themes)
 			if warnings != nil {
-				_, _ = fmt.Fprintln(a.env.Stderr, warnings.Localize(english)) //nolint:errcheck // nowhere left to report
+				//nolint:errcheck // nowhere left to report
+				_, _ = fmt.Fprintln(a.env.Stderr, usererr.Tell(english, warnings).Render(named))
 			}
 			return err //nolint:wrapcheck // already says what failed
 		},

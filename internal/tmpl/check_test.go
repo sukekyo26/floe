@@ -483,7 +483,7 @@ func TestPageStyleRefused(t *testing.T) {
 	}
 	// Placed in the mistake, not in its words: told as it is, without floe's name before it.
 	var e *usererr.Error
-	if !errors.As(mistakes[0], &e) || e.File != filepath.Join(dir, "page.html") || e.Line != 6 || !usererr.Show(i18n.EnglishCatalog(), e).Placed {
+	if !errors.As(mistakes[0], &e) || e.File != filepath.Join(dir, "page.html") || e.Line != 6 || strings.HasPrefix(usererr.Tell(i18n.EnglishCatalog(), e).Render("floe: "), "floe: ") {
 		t.Errorf("the mistake = %+v, want it placed at page.html:6", e)
 	}
 }
