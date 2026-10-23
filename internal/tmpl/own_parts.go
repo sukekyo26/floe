@@ -173,22 +173,23 @@ func (set *partSet) leaveOutUnusable() {
 			set.leaveOut(name, usererr.NewAt(dir, 0, 0, "tmpl_look_cycle", name, strings.Join(chain, " → ")))
 		}
 	}
-	set.settle()
+	compiled := set.compiledMistakes()
+	set.settle(compiled)
 	if set.leaveOutRooted() {
-		set.settle()
+		set.settle(compiled)
 	}
 	if set.leaveOutUncompiled() {
-		set.settle()
+		set.settle(compiled)
 	}
 }
 
 // settle leaves out of set the parts checkNames refuses, and those of one's own whose schema.json does not
-// compile (compiledMistakes), the mistakes of both told together, again while one is left out.
-func (set *partSet) settle() {
+// compile, by name in compiled, the mistakes of both told together, again while one is left out.
+func (set *partSet) settle(compiled map[string]error) {
 	for left := true; left; {
 		left = false
 		for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-			if err := usererr.Collect(set.checkNames(name, set.parts[name].dir), set.compiledMistakes(name)); err != nil {
+			if err := usererr.Collect(set.checkNames(name, set.parts[name].dir), compiled[name]); err != nil {
 				set.leaveOut(name, err)
 				left = true
 			}
@@ -196,23 +197,27 @@ func (set *partSet) settle() {
 	}
 }
 
-// compiledMistakes returns the mistakes of the schema.json of the part name of set, one of one's own, that
+// compiledMistakes returns, by name, the mistakes of the schema.json of each part of one's own in set that
 // stopped its compiling with the schemas of the other parts (ownMistakes), such as a pattern that is no
-// regular expression, and nil for none, for floe's, or for a stop elsewhere, which leaveOutUncompiled tells
-// if nothing else does.
+// regular expression. A stop elsewhere is left to leaveOutUncompiled, if nothing else tells it. They are
+// compiled once: a part left out later changes no mistake of another's own file, only where its compiling
+// stops, and checkHeld refuses a part that refers to it.
 // LIMIT: jsonschema stops at the first mistake: those the metaschema refuses are told always, but a $ref
 // that finds nothing and an $anchor or $id written twice wait for those met before them. Resolve the $refs
 // where they are checked (refMistake) to tell them all.
-func (set *partSet) compiledMistakes(name string) error {
-	p := set.parts[name]
-	if !p.ownSchema() {
-		return nil
+func (set *partSet) compiledMistakes() map[string]error {
+	mistakes := map[string]error{}
+	for name, p := range set.parts {
+		if !p.ownSchema() {
+			continue
+		}
+		if err := set.compilePart(name); err != nil {
+			if why := ownMistakes(partsURL+name+".json", path.Join(p.dir, "schema.json"), err); why != nil {
+				mistakes[name] = why
+			}
+		}
 	}
-	err := set.compilePart(name)
-	if err == nil {
-		return nil
-	}
-	return ownMistakes(partsURL+name+".json", path.Join(p.dir, "schema.json"), err)
+	return mistakes
 }
 
 // leaveOutUncompiled leaves out of set each part of one's own whose schema still does not compile, now that
