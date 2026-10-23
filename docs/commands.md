@@ -150,7 +150,7 @@ Check each data file as `floe publish` does before it stores the page: its YAML,
 - Nothing is printed when every file is right (exit code 0).
 - Nothing is published, and the server is not started, so a repository's CI can run it over its data files.
 - A file that is not a data file (`.yaml`, `.yml`) is refused.
-- A data file named twice (by two globs, through a symlinked directory, or in another case on macOS) is checked once, and told by the path it was first given as; a symlink of another name is a file of its own.
+- A data file named twice (by two globs, through a symlinked directory, or in another case on macOS) is checked once, and told by the path it was first given as. A link of another name or in another directory, symbolic or hard, is a file of its own.
 
 ---
 
@@ -173,7 +173,7 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 - A page there is written over: keep the pages in version control to get one back. A page that is a symlink is written where it leads, and stays a symlink.
 - Every mistake of every file is printed at once as `file:line:column: message`, as `floe check` prints them, and nothing is written until all are fixed (exit code 1). Nothing is written either when two data files would write the same page (`a/spec.yaml` and `b/spec.yaml` with one `--out-dir`, `spec.yaml` and `spec.yml`, or the same through a symlinked directory).
 - The page's language, theme and title are the data file's `lang:`, `theme:` and `title:` (else the slug `floe publish` would give it, else, for a name of no letter a slug takes, the name), so that writing a page and checking it take the same arguments.
-- A data file named twice (by two globs, through a symlinked directory, or in another case on macOS) is written once; a symlink of another name is a page of its own.
+- A data file named twice (by two globs, through a symlinked directory, or in another case on macOS) is written once. A link of another name or in another directory, symbolic or hard, is a file of its own: it writes a page of its own, and is refused with `--out-dir` when its name is the other's.
 - Nothing is published, and the server is not started.
 - A page depends on the floe, the templates and the icons that draw it: in CI, use the floe version and the templates the pages were written with, and write the pages again when you upgrade.
 - A `script` of the page runs without the sandbox of the server's pages when the file is opened; its CSP still cuts off `fetch`, XHR, images from elsewhere and forms. A link between pages (`/a/<slug>/`) does not work in a file: link the files relatively.
@@ -263,7 +263,7 @@ Check each diagram spec and print the diagrams, in order, as one HTML fragment o
 - A mistake in the shape of a spec (an unknown key, a wrong type, a value that is not allowed) stops that spec at the first one.
 - Layout mistakes are all reported: text too wide or too tall for its box (or a heading for its frame), parts sticking out of the canvas (edges, lines and axes too), overlapping (each other or a frame's heading), or straddling the edge of a frame, edges running through boxes, labels or frame headings, and edges crossing like an X.
 - Every mistake of every spec is printed as `file:line:column: message`, in the order the specs were given, and nothing is drawn until all are fixed (exit code 1).
-- A spec named twice (by two globs, through a symlinked directory, or in another case on macOS) is drawn once; a symlink of another name is a spec of its own, whose id must differ too.
+- A spec named twice (by two globs, through a symlinked directory, or in another case on macOS) is drawn once. A link of another name or in another directory, symbolic or hard, is a spec of its own, whose id must differ too.
 - The ids of the diagrams drawn together must differ, because they name the diagrams' markers and icons. Draw all the diagrams of a page with one `render`.
 - The fragment starts with the assets: the diagrams' style, which takes its colours from the CSS variables of the palette (so dark mode follows; a page without them gets `default`'s light colours), and the script that zooms them. Each diagram sits in a frame that first shows it whole; readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. The toolbar is worded in the page's language (`<html lang>`). A page needs the assets once; holding them more than once does no harm.
 
