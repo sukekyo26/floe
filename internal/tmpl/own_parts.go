@@ -173,25 +173,24 @@ func (set *partSet) leaveOutUnusable() {
 			set.leaveOut(name, usererr.NewAt(dir, 0, 0, "tmpl_look_cycle", name, strings.Join(chain, " → ")))
 		}
 	}
-	stopped := set.compileOwn()
-	set.settle(stopped)
+	stopped, mistakes := set.compileOwn()
+	set.settle(mistakes)
 	if set.leaveOutRooted() {
-		set.settle(stopped)
+		set.settle(mistakes)
 	}
 	if set.leaveOutUncompiled(stopped) {
-		set.settle(stopped)
+		set.settle(mistakes)
 	}
 }
 
-// settle leaves out of set the parts checkNames refuses, and those of one's own whose compiling stopped,
-// in stopped, at a mistake of their own schema.json (schemaMistakes), the mistakes of both told together,
-// again while one is left out.
-func (set *partSet) settle(stopped map[string]error) {
+// settle leaves out of set the parts checkNames refuses, and those of one's own whose schema.json holds
+// mistakes, by name in mistakes (compileOwn), the mistakes of both told together, again while one is left
+// out.
+func (set *partSet) settle(mistakes map[string]error) {
 	for left := true; left; {
 		left = false
 		for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-			names, schema := set.checkNames(name, set.parts[name].dir), set.schemaMistakes(name, stopped[name])
-			if err := usererr.Collect(names, schema); err != nil {
+			if err := usererr.Collect(set.checkNames(name, set.parts[name].dir), mistakes[name]); err != nil {
 				set.leaveOut(name, err)
 				left = true
 			}
@@ -200,19 +199,26 @@ func (set *partSet) settle(stopped map[string]error) {
 }
 
 // compileOwn compiles the schema of each part of one's own in set, and returns what stopped each, by name,
-// for settle to tell those of their own files. These hold while settle leaves parts out: a part left out
-// changes no mistake of another's own file, only where its compiling stops, and checkHeld refuses a part
-// that refers to it. leaveOutUncompiled compiles again those that stopped elsewhere.
+// and the mistakes of its own schema.json that stopped it (ownMistakes), such as a pattern that is no
+// regular expression, by name. These hold while settle leaves parts out: a part left out changes no
+// mistake of another's own file, only where its compiling stops, and checkHeld refuses a part that refers
+// to it. A stop elsewhere is told by checkHeld, or by leaveOutUncompiled, which compiles it again.
 // LIMIT: jsonschema stops at the first mistake: those the metaschema refuses are told always, but an
 // $anchor or $id written twice waits for those met before it.
-func (set *partSet) compileOwn() map[string]error {
+func (set *partSet) compileOwn() (stopped, mistakes map[string]error) {
 	var own []string
 	for name, p := range set.parts {
 		if p.ownSchema() {
 			own = append(own, name)
 		}
 	}
-	return set.compileEach(own)
+	stopped, mistakes = set.compileEach(own), map[string]error{}
+	for name, err := range stopped {
+		if m := ownMistakes(partsURL+name+".json", set.parts[name].schemaFile(), err); m != nil {
+			mistakes[name] = m
+		}
+	}
+	return stopped, mistakes
 }
 
 // compileEach compiles the schema of each part of set named with the schemas of the parts, one compiler
@@ -233,16 +239,6 @@ func (set *partSet) compileEach(names []string) map[string]error {
 	return stopped
 }
 
-// schemaMistakes returns the mistakes of the schema.json of the part name of set that err, what stopped its
-// compiling, holds (ownMistakes), such as a pattern that is no regular expression, and nil for none: a stop
-// elsewhere is told by the checks of the $refs (checkHeld), or by leaveOutUncompiled.
-func (set *partSet) schemaMistakes(name string, err error) error {
-	if err == nil {
-		return nil
-	}
-	return ownMistakes(partsURL+name+".json", set.parts[name].schemaFile(), err)
-}
-
 // leaveOutUncompiled leaves out of set each part of one's own whose compiling, in stopped, stopped
 // elsewhere than at a mistake of its own schema.json, and still does once the rest are settled, but one
 // that holds a part that stops, which checkHeld refuses as one that holds a part that cannot be used. None
@@ -257,24 +253,27 @@ func (set *partSet) leaveOutUncompiled(stopped map[string]error) bool {
 			again = append(again, name)
 		}
 	}
+	if len(again) == 0 {
+		return false
+	}
 	still := set.compileEach(again)
-	holdsStopped := func(name string) bool {
-		return slices.ContainsFunc(set.shapes[partsURL+name+".json"].refsUnder(nil), func(to string) bool {
-			return to != name && still[to] != nil
-		})
+	why := map[string]error{}
+	for name, err := range still {
+		why[name] = compileMistakes(partsURL+name+".json", set.parts[name].schemaFile(), err)
 	}
 	refused := map[string]error{}
-	for name, err := range still {
-		if !holdsStopped(name) {
-			refused[name] = compileMistakes(partsURL+name+".json", set.parts[name].schemaFile(), err)
+	for name := range still {
+		holdsStopped := slices.ContainsFunc(set.shapes[partsURL+name+".json"].refsUnder(nil), func(to string) bool {
+			return to != name && still[to] != nil
+		})
+		if !holdsStopped {
+			refused[name] = why[name]
 		}
 	}
 	if len(refused) == 0 {
 		// A guard of the promise, which no part reaches today: parts that hold one another are left out as a
 		// cycle first, and a $ref into a part by settle.
-		for name, err := range still {
-			refused[name] = compileMistakes(partsURL+name+".json", set.parts[name].schemaFile(), err)
-		}
+		refused = why
 	}
 	// Left out once all are compiled: leaveOut drops the part's schema, which the compiling of others reads.
 	for name, why := range refused {
