@@ -2,6 +2,7 @@ package tmpl_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -539,6 +540,43 @@ func TestHeldThroughFloesPart(t *testing.T) {
 	want := filepath.Join(parts, "mine", "schema.json") + ": #/properties/t: the part table cannot be used"
 	if len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) || strings.Contains(mistakes[0].Error(), "could not read") {
 		t.Errorf("Check of a template of mine = %v, want %s", mistakes, want)
+	}
+}
+
+// A part's schema is compiled after those of the parts it refers to, one that stops standing as true: its
+// own mistake is told whatever order jsonschema walks it in, and not one that another's $ref into it meets.
+func TestPartCompileOrder(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		// pa's under draft-04, whose metaschema checks no regular expression, met as it compiles, and qb's,
+		// which its metaschema refuses as it is read, which compiling pa reads too.
+		"pa/schema.json": `{"$schema": "http://json-schema.org/draft-04/schema#", "type": "object",` +
+			` "properties": {"a": {"$ref": "qb.json"}, "z": {"patternProperties": {"([": {}}}}}`,
+		"pa/part.html":   `<div data-floe-part="pa"></div>`,
+		"pa/part.css":    "",
+		"qb/schema.json": `{"type": "object", "properties": {"t": {"type": "string", "pattern": "[["}}}`,
+		"qb/part.html":   `<div data-floe-part="qb"></div>`,
+		"qb/part.css":    "",
+		"ma/schema.json": `{"type": "object", "properties": {"b": {"$ref": "mb.json"}}}`,
+		"ma/part.html":   `<div data-floe-part="ma"></div>`,
+		"ma/part.css":    "",
+		"mb/schema.json": `{"type": "object", "properties": {"t": {"$ref": "ma.json#/nope"}}}`,
+		"mb/part.html":   `<div data-floe-part="mb"></div>`,
+		"mb/part.css":    "",
+	})
+	pa := filepath.Join(parts, "pa", "schema.json") + ": #/properties/z/patternProperties: "
+	ma := filepath.Join(parts, "ma", "schema.json") + ": #: "
+	first := ""
+	for range 20 {
+		warnings, err := tmpl.CheckOwnParts(parts, themesOf(parts))
+		got := fmt.Sprint(warnings, err)
+		if first == "" {
+			first = got
+		}
+		if got != first || !strings.Contains(got, pa) || strings.Contains(got, ma) {
+			t.Fatalf("Check of a template of pa and ma = %s, want pa's own %s every time, and nothing at ma's top", got, pa)
+		}
 	}
 }
 

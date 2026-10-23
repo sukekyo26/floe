@@ -296,7 +296,7 @@ func (set *partSet) mistakes(n *schemaNotes) (usererr.List, error) {
 	if err != nil {
 		return nil, err
 	}
-	c, err := set.compiler()
+	c, err := set.compiler(nil)
 	if err == nil && set.docs[n.url] == nil {
 		err = c.AddResource(n.url, n.doc)
 	}
