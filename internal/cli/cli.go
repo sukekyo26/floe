@@ -58,14 +58,14 @@ func Run(ctx context.Context, args []string, env Env) int {
 	}
 	// SilenceErrors leaves printing to this single boundary, which words a usererr in English.
 	shown := usererr.Show(english, err)
-	// Placed mistakes go out as they are, one per line, for editors and CI to read, and so do those the
-	// server placed.
-	prefix := "floe: "
+	// Mistakes at a place go out as they are, one per line, for editors and CI to read, and so do those the
+	// server told, which it worded as they go.
+	text := shown.Named
 	var remote *remoteError
-	if shown.Placed || errors.As(err, &remote) && remote.mistakes {
-		prefix = ""
+	if errors.As(err, &remote) && remote.mistakes {
+		text = shown.Text
 	}
-	_, _ = fmt.Fprintf(env.Stderr, "%s%s\n", prefix, shown.Text) //nolint:errcheck // nowhere left to report
+	_, _ = fmt.Fprintf(env.Stderr, "%s\n", text) //nolint:errcheck // nowhere left to report
 	if errors.As(err, new(usageError)) {
 		return exitUsage
 	}

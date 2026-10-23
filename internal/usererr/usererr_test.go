@@ -81,24 +81,31 @@ func TestListSorted(t *testing.T) {
 	}
 }
 
-// Show tells a placed mistake, a list of them, one of a placed one among others, and a name in use from a
-// refusal and from floe's failure.
+// Show tells a placed mistake, a list of them, one of a placed one among others, one that stands for a placed
+// one, and a name in use from a refusal and from floe's failure; the command line names floe before each
+// mistake that is not at a place.
 func TestShow(t *testing.T) {
 	t.Parallel()
 
+	const lang = "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)"
 	conflict := usererr.New("tmpl_no_lang")
 	conflict.Conflict = true
+	over := usererr.Over("p", usererr.List{usererr.NewAt("a.yaml", 1, 2, "tmpl_no_lang")}, "tmpl_no_lang")
 	for _, tt := range []struct {
 		err  error
 		want usererr.Shown
 	}{
-		{usererr.New("tmpl_no_lang"), usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: false}},
-		{usererr.NewAt("a.yaml", 1, 2, "tmpl_no_lang"), usererr.Shown{Text: "a.yaml:1:2: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: true, Conflict: false}},
-		{usererr.List{usererr.New("tmpl_no_lang")}, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: false}},
-		{usererr.List{usererr.New("tmpl_no_lang"), usererr.NewAt("a.yaml", 1, 2, "tmpl_no_lang")}, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\na.yaml:1:2: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: true, Conflict: false}},
-		{usererr.List{conflict}, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: true}},
-		{conflict, usererr.Shown{Text: "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", Fixable: true, Placed: false, Conflict: true}},
-		{errors.New("disk on fire"), usererr.Shown{Text: "disk on fire", Fixable: false, Placed: false, Conflict: false}},
+		{usererr.New("tmpl_no_lang"), usererr.Shown{Text: lang, Named: "floe: " + lang, Fixable: true, Placed: false, Conflict: false}},
+		{usererr.NewAt("a.yaml", 1, 2, "tmpl_no_lang"), usererr.Shown{Text: "a.yaml:1:2: " + lang, Named: "a.yaml:1:2: " + lang, Fixable: true, Placed: true, Conflict: false}},
+		{usererr.List{usererr.New("tmpl_no_lang")}, usererr.Shown{Text: lang, Named: "floe: " + lang, Fixable: true, Placed: false, Conflict: false}},
+		{usererr.List{usererr.New("tmpl_no_lang"), usererr.NewAt("a.yaml", 1, 2, "tmpl_no_lang")}, usererr.Shown{
+			Text: lang + "\na.yaml:1:2: " + lang, Named: "floe: " + lang + "\na.yaml:1:2: " + lang, Fixable: true, Placed: true, Conflict: false,
+		}},
+		{usererr.List{over}, usererr.Shown{Text: lang + "\n  a.yaml:1:2: " + lang, Named: lang + "\n  a.yaml:1:2: " + lang, Fixable: true, Placed: true, Conflict: false}},
+		{usererr.List{conflict}, usererr.Shown{Text: lang, Named: "floe: " + lang, Fixable: true, Placed: false, Conflict: true}},
+		{usererr.List{}, usererr.Shown{Text: "", Named: "", Fixable: true, Placed: false, Conflict: false}},
+		{conflict, usererr.Shown{Text: lang, Named: "floe: " + lang, Fixable: true, Placed: false, Conflict: true}},
+		{errors.New("disk on fire"), usererr.Shown{Text: "disk on fire", Named: "floe: disk on fire", Fixable: false, Placed: false, Conflict: false}},
 	} {
 		if got := usererr.Show(i18n.EnglishCatalog(), tt.err); got != tt.want {
 			t.Errorf("Show(%v) = %+v, want %+v", tt.err, got, tt.want)

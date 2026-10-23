@@ -210,34 +210,54 @@ func (l List) Localize(c *i18n.Catalog) string {
 	return strings.Join(lines, "\n")
 }
 
-// Shown is how an error is told: its text in the reader's language; whether the user can fix it (a
-// refusal, 400, not floe's failure, 500); whether it is placed mistakes, told as they are, one per line,
-// those one stands for indented on the lines after it, for editors and CI to read, without floe's name
-// before them; and whether it is a name in use (409).
+// Shown is how an error is told: its text in the reader's language, and as the command line tells it,
+// Named, floe's name before each mistake that is not at a place, those at one told as they are, one per
+// line, those one stands for indented on the lines after it, for editors and CI to read; whether the user
+// can fix it (a refusal, 400, not floe's failure, 500); whether a mistake is at a place; and whether it is
+// a name in use (409).
 type Shown struct {
 	Text     string
+	Named    string
 	Fixable  bool
 	Placed   bool
 	Conflict bool
 }
 
-// Show tells how err is shown in the language of c: a List is placed, and so is an Error with a file.
+// Show tells how err is shown in the language of c: placed when one of its mistakes is at a place, or
+// stands for one that is, and a name in use when all of them are.
 func Show(c *i18n.Catalog, err error) Shown {
-	s := Shown{Text: err.Error(), Fixable: false, Placed: false, Conflict: false}
+	s := Shown{Text: err.Error(), Named: "", Fixable: false, Placed: false, Conflict: false}
 	var l i18n.Localizer
 	if errors.As(err, &l) {
 		s.Text, s.Fixable = l.Localize(c), true
 	}
+	s.Named = name + s.Text
 	var all List
 	var one *Error
 	switch {
 	case errors.As(err, &all):
-		// Placed when one of them is: a list of none, such as settings that are not right, goes out with
-		// floe's name before it, as one of them alone does.
-		s.Placed = slices.ContainsFunc(all, func(e *Error) bool { return e.File != "" })
-		s.Conflict = !slices.ContainsFunc(all, func(e *Error) bool { return !e.Conflict })
 	case errors.As(err, &one):
-		s.Placed, s.Conflict = one.File != "", one.Conflict
+		all = List{one}
+	default:
+		return s
 	}
+	s.Placed = slices.ContainsFunc(all, (*Error).atPlace)
+	s.Conflict = len(all) > 0 && !slices.ContainsFunc(all, func(e *Error) bool { return !e.Conflict })
+	told := map[string]bool{}
+	lines := make([]string, len(all))
+	for i, e := range all {
+		if lines[i] = e.told(c, told); !e.atPlace() {
+			lines[i] = name + lines[i]
+		}
+	}
+	s.Named = strings.Join(lines, "\n")
 	return s
+}
+
+// name is floe's name, before a line the command line tells that is not at a place.
+const name = "floe: "
+
+// atPlace reports whether e is at a place, or stands for a mistake that is.
+func (e *Error) atPlace() bool {
+	return e.File != "" || slices.ContainsFunc(e.Under, (*Error).atPlace)
 }
