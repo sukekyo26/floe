@@ -296,13 +296,14 @@ func TestReadRefusals(t *testing.T) {
 	if _, err := builtins.Read("data.yaml", []byte("%YAML 1.2\n---\ntemplate: report\nlang: en\n"), "", ""); err != nil {
 		t.Errorf("Read of a document after a %%YAML directive = %v", err)
 	}
-	// Data that passed its schema draws; a template that does not fit it is refused while drawing.
+	// Data that passed its schema draws: floe's template failing on it is floe's failure, not a mistake.
 	d, err := builtins.Read("data.yaml", []byte("template: report\nlang: en\n"), "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	d.Values = map[string]any{"sections": "no"}
-	if _, err := d.Render("t"); err == nil || !strings.HasPrefix(err.Error(), "data.yaml does not fit the template report: ") {
+	var one *usererr.Error
+	if _, err := d.Render("t"); err == nil || errors.As(err, &one) || !strings.HasPrefix(err.Error(), "draw with report/page.html: ") {
 		t.Errorf("Render of data of the wrong shape = %v", err)
 	}
 }

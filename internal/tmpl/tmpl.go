@@ -470,17 +470,31 @@ func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
 		"Data":  d.shape.prepare(d.Values, nil, d),
 		"Calc":  d.Calc,
 	})
-	// Read checked the data against the schema, so this is the template's own mistake: one a function of
-	// page.html places itself (an image of its assets/ that is not right, a word its words.yaml has not),
-	// or page.html naming an item its schema does not declare, or using one as another type.
-	var bad *usererr.Error
-	switch {
-	case errors.As(err, &bad):
-		return nil, bad
-	case err != nil:
-		return nil, usererr.New("tmpl_render", d.File, d.Template, err.Error())
+	if err != nil {
+		return nil, drawMistake(err, d.tmpl.file("page.html"), d.tmpl.Dir != "", "tmpl_render", d.File)
 	}
 	return b.Bytes(), nil
+}
+
+// drawMistake is the mistake err of drawing data with file, a page.html or a part's part.html, which the
+// data's schema took, with args, what was drawn, before err's words. A function of file placed its own
+// mistake (an image of its assets/ that is not right, a word its words.yaml has not); any other is file's:
+// one html/template cannot escape, or file naming an item its schema does not declare or using one as
+// another type. It is its maker's mistake when file is one's own, else floe's failure.
+func drawMistake(err error, file string, own bool, key string, args ...any) error {
+	var bad *usererr.Error
+	var escape *template.Error
+	switch {
+	case errors.As(err, &bad):
+		return bad
+	case !own:
+		return fmt.Errorf("draw with %s: %w", file, err)
+	case errors.As(err, &escape):
+		// html/template escapes file at its first drawing, whatever the data, and says the line apart.
+		return usererr.NewAt(file, escape.Line, 0, "tmpl_go_template", err.Error())
+	}
+	// LIMIT: text/template's words, which alone say where in file it failed.
+	return usererr.NewAt(file, 0, 0, key, append(args, err.Error())...)
 }
 
 // withDiagrams returns out, a page of d, with the script of its diagrams after it, once at the end, as the

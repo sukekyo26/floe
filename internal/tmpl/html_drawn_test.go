@@ -405,7 +405,7 @@ func TestDrawnHTMLHidesHeadMarked(t *testing.T) {
 	page := filepath.Join(dir, "memo", "page.html")
 	for action, want := range map[string]string{
 		`{{if not .Data.risks}}{{index .Lang 9}}{{end}}`:         "data.yaml:3:8: risks: HTML changes the page around it",
-		`{{if gt (len .Data.risks) 20}}{{index .Lang 9}}{{end}}`: "does not fit the template",
+		`{{if gt (len .Data.risks) 20}}{{index .Lang 9}}{{end}}`: filepath.Join(dir, "memo", "page.html") + ": it cannot draw data.yaml: ",
 	} {
 		src := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{.Data.risks}}` + action + `</head><body><p>x</p></body></html>`
 		if err := os.WriteFile(page, []byte(src), 0o600); err != nil {

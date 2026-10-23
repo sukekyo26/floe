@@ -774,6 +774,44 @@ func TestPartWordAtItem(t *testing.T) {
 	}
 }
 
+// A part of one's own whose part.html fails to draw an item is told at its part.html, naming the item, for
+// every item it fails on: the part's mistake, which its maker fixes, not floe's.
+func TestPartDrawMistake(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"pp/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
+		"pp/part.html":   `<p data-floe-part="pp">{{if ne .text "ok"}}{{num .text}}{{end}}</p>`,
+		"pp/part.css":    "",
+	})
+	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pp.json"}, "aside": {"$ref": "floe:///parts/pp.json"}`), parts, "", "")
+	if page, err := draw(l, "template: memo\nlang: en\nrisks: { text: ok }\n"); err != nil || !strings.Contains(page, `data-floe-part="pp"></p>`) {
+		t.Errorf("drawing what the part takes = %v", err)
+	}
+	_, err := draw(l, "template: memo\nlang: en\nrisks: { text: hello }\naside: { text: there }\n")
+	var all usererr.List
+	failed := func(item, value string) string {
+		return filepath.Join(parts, "pp", "part.html") + ": it cannot draw " + item + " of data.yaml: " +
+			`template: part.html:1:45: executing "part.html" at <num .text>: error calling num: num: ` + value +
+			" (string) is not a number; name only the items its schema.json declares, and use each as its type"
+	}
+	if !errors.As(err, &all) || len(all) != 2 || all[0].Error() != failed("risks", "hello") || all[1].Error() != failed("aside", "there") {
+		t.Errorf("drawing what is not a number = %v, want\n%s\n%s", err, failed("risks", "hello"), failed("aside", "there"))
+	}
+	// What html/template cannot escape, whatever the data, is told once, at its line.
+	parts = ownParts(t, map[string]string{
+		"pp/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
+		"pp/part.html":   "<p data-floe-part=\"pp\">\n<a href=\"{{if eq .text `a`}}/x/{{else}}/s?q={{end}}{{.text}}\">x</a></p>",
+		"pp/part.css":    "",
+	})
+	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pp.json"}, "aside": {"$ref": "floe:///parts/pp.json"}`), parts, "", "")
+	want := filepath.Join(parts, "pp", "part.html") + ":2: this is not a valid Go template: " +
+		"html/template:part.html:2:53: {{.text}} appears in an ambiguous context within a URL"
+	if _, err = draw(l, "template: memo\nlang: en\nrisks: { text: hello }\naside: { text: there }\n"); err == nil || err.Error() != want {
+		t.Errorf("drawing what cannot be escaped = %v, want %s", err, want)
+	}
+}
+
 // A page that names a part that cannot be used, by a table of Markdown of the data, is refused, rather
 // than published without its style; themes of one's own that cannot be read are warned of.
 func TestBrokenPartInPage(t *testing.T) {

@@ -496,7 +496,7 @@ func readPartPages(files fs.FS, name, dir string) (string, words, map[string]*te
 	}
 	file := path.Join(dir, "words.yaml")
 	w, wordsErr := readPartWords(files, file)
-	page, err := template.New(name).Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
+	page, err := template.New("part.html").Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
 		Funcs(template.FuncMap{"word": w.word(file, fallbackLang)}).Parse(string(html))
 	var pageErr error
 	switch {
@@ -746,6 +746,7 @@ func joinDescriptions(beside, named string) string {
 // line and column under root.
 func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
+	escaped := map[*template.Error]bool{}
 	for _, f := range whole {
 		p := f.part
 		if p == nil || p.pages == nil {
@@ -761,15 +762,25 @@ func checkParts(whole drawnItems, d *Data, root ast.Node) error {
 		}
 		html, err := p.draw(f.itemAt, d)
 		var bad *usererr.Error
+		var escape *template.Error
 		switch {
 		case errors.As(err, &bad) && bad.Key == "tmpl_words_unknown":
 			// A word the data names (word .level) that the part has not: told at the item, with the rest.
 			problems = append(problems, itemMistake(d.File, root, f.at, false, bad))
-			continue
+		case errors.As(err, &escape) && escaped[escape]:
+			// html/template fails to escape the page of p whatever the item, with the same error: told once.
 		case err != nil:
-			return err
+			if escape != nil {
+				escaped[escape] = true
+			}
+			_, at := itemPos(root, f.at, false)
+			err = drawMistake(err, path.Join(p.dir, "part.html"), p.dir != "", "tmpl_render_item", at, d.File)
+			if err = problems.Add(err); err != nil {
+				return err //nolint:wrapcheck // already says what failed
+			}
+		default:
+			d.drew(f.at, html)
 		}
-		d.drew(f.at, html)
 	}
 	return problems.Err()
 }
@@ -818,7 +829,7 @@ func (p *part) check(file string, f itemAt, root ast.Node) (usererr.List, error)
 func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 	var b bytes.Buffer
 	if err := p.pages[p.words.lang(d.Lang)].Execute(&b, p.shape.prepare(f.value, f.at, d)); err != nil {
-		return "", fmt.Errorf("draw the part %s: %w", p.name, err)
+		return "", err //nolint:wrapcheck // sorted by checkParts, at the item
 	}
 	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
 }
