@@ -72,7 +72,9 @@ func (e *Error) Localize(c *i18n.Catalog) string {
 
 // tell words e in the language of c, and the mistakes it stands for under it, told once of all those that
 // told notes: another that stands for them says they are told above. It still tells the Under of one told
-// above, into told, on the ground that the same Of stands for the same Under, which notes nothing new.
+// above, into told, which notes nothing new as long as the same Of stands for the same Under.
+// LIMIT: holds within one set of parts, where an Of names one reason. Should the mistakes of two sets come
+// in one Report (the same name of part, broken for other reasons), leave the Under of one told above untold.
 func (e *Error) tell(c *i18n.Catalog, told map[string]bool) Told {
 	args := make([]any, len(e.Args))
 	for i, a := range e.Args {

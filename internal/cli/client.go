@@ -87,7 +87,7 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 		e := &remoteError{status: res.StatusCode, report: usererr.Report{Mistakes: nil, Failure: message}, body: b}
 		var told usererr.Report
 		if strings.HasPrefix(res.Header.Get("Content-Type"), "application/json") && json.Unmarshal(b, &told) == nil &&
-			(told.Mistakes != nil || told.Failure != "") {
+			(len(told.Mistakes) > 0 || told.Failure != "") {
 			e.report = told
 		}
 		return e
