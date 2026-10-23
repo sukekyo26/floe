@@ -471,7 +471,7 @@ func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
 		"Calc":  d.Calc,
 	})
 	if err != nil {
-		return nil, drawMistake(err, d.tmpl.file("page.html"), d.tmpl.Dir != "", "tmpl_render", d.File)
+		return nil, drawMistake(err, d.tmpl.file("page.html"), d.tmpl.isOwn(), "tmpl_render", d.File)
 	}
 	return b.Bytes(), nil
 }

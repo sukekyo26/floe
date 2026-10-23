@@ -45,22 +45,25 @@ func checkComputed(t *Template, d *Data, s *shape) error {
 	if !found || err != nil {
 		return err
 	}
-	return compute(t.file("computed.yaml"), src, d, s.keyNames())
+	return compute(t.file("computed.yaml"), src, d, s.keyNames(), t.isOwn())
 }
 
-// compute computes the values of the computed.yaml src, file in its mistakes, from the values of d,
-// whose items the schema declares, in declared. An expression sees the items and the other computed
-// values by name, and a value is computed after those it uses, in whatever order src writes them.
-func compute(file string, src []byte, d *Data, declared []string) error {
+// compute computes the values of the computed.yaml src, file in its mistakes, of a template of one's own
+// when own, from the values of d, whose items the schema declares, in declared. An expression sees the
+// items and the other computed values by name, and a value is computed after those it uses, in whatever
+// order src writes them. floe's own src stopping on data its schema took is floe's failure.
+func compute(file string, src []byte, d *Data, declared []string, own bool) error {
 	c, err := readComputed(file, src, declared)
 	if err != nil {
 		return err
 	}
 	// An item the data leaves out stays nil.
+	vars := map[string]dataVar{}
 	for _, n := range c.items {
 		if v := d.Values[n]; v != nil {
 			c.env.Field(c.field[n]).Set(reflect.ValueOf(v))
 		}
+		vars[n] = dataVar{value: d.Values[n], at: n}
 	}
 	d.Calc = map[string]any{}
 	var problems usererr.List
@@ -74,8 +77,11 @@ func compute(file string, src []byte, d *Data, declared []string) error {
 		if err == nil {
 			err = finiteValue(out)
 		}
+		if err != nil && !own {
+			return fmt.Errorf("compute %s of %s: %w", n, file, err)
+		}
 		if err != nil {
-			problems = append(problems, c.failure(file, n, d.File, err))
+			problems = append(problems, c.failure(file, n, d.File, err, vars))
 			failed[n] = true
 			continue
 		}
@@ -88,15 +94,11 @@ func compute(file string, src []byte, d *Data, declared []string) error {
 }
 
 // failure is the mistake of the expression n of c, in file, stopping with err on the data of the file data,
-// whose items c set: the items it uses that the data gives no value for, which computed.yaml is to do
-// without as the schema let the data leave them out, else err.
-func (c *computed) failure(file, n, data string, err error) *usererr.Error {
-	vars := map[string]dataVar{}
-	for _, item := range c.items {
-		vars[item] = dataVar{value: c.env.Field(c.field[item]).Interface(), at: item}
-	}
+// whose items vars are: the items it stopped on that the data gives no value for, which computed.yaml is to
+// do without as the schema let the data leave them out, else err.
+func (c *computed) failure(file, n, data string, err error, vars map[string]dataVar) *usererr.Error {
 	if missing := unvalued(c.programs[n], err, vars); missing != nil {
-		return yamlpos.New(file, c.at[n], "tmpl_computed_missing", n, data, strings.Join(missing, ", "))
+		return yamlpos.New(file, c.at[n], "tmpl_computed_missing", n, data, strings.Join(missing, ", "), without(data))
 	}
 	// LIMIT: expr's English. Word the failures floe can tell apart, as it does the values left out.
 	return yamlpos.New(file, c.at[n], "tmpl_computed_error", n, data, brief(err))

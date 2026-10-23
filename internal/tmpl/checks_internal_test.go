@@ -130,26 +130,26 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 		{"- for: b\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b does not lead to a list in d.yaml"},
 	} {
 		d, root := data(t, "a: [1]\nb: x\n")
-		err := relate("checks.yaml", []byte(tt.checks), d, root)
+		err := relate("checks.yaml", []byte(tt.checks), d, root, true)
 		if err == nil || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("relate(%q) = %v, want %s", tt.checks, err, tt.want)
 		}
 	}
 	d, root := data(t, "a: [1]\n")
 	both := "- for: a\n  expr: 'true'\n- for: a\n  message: m\n"
-	if err := relate("checks.yaml", []byte(both), d, root); err == nil || err.Error() != "checks.yaml:1:3: write message in the check\nchecks.yaml:3:3: write expr in the check" {
+	if err := relate("checks.yaml", []byte(both), d, root, true); err == nil || err.Error() != "checks.yaml:1:3: write message in the check\nchecks.yaml:3:3: write expr in the check" {
 		t.Errorf("relate of two broken checks = %v", err)
 	}
-	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 && -item / 2 == -0.5\n  message: m\n"), d, root); err != nil {
+	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 && -item / 2 == -0.5\n  message: m\n"), d, root, true); err != nil {
 		t.Errorf("relate of data that holds = %v", err)
 	}
 	// The author's comment after an expression is refused too, as floe cannot tell it from a # of the
 	// expression; on a line of its own, it is the author's.
-	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 # one\n  message: m\n"), d, root); err == nil ||
+	if err := relate("checks.yaml", []byte("- for: a\n  expr: item == 1 # one\n  message: m\n"), d, root, true); err == nil ||
 		!strings.HasPrefix(err.Error(), "checks.yaml:2:19: a # after a space began a YAML comment, which may have cut the value short, to item == 1:") {
 		t.Errorf("relate of an expression and a comment = %v", err)
 	}
-	if err := relate("checks.yaml", []byte("- for: a\n  # one\n  expr: item == 1\n  message: m\n"), d, root); err != nil {
+	if err := relate("checks.yaml", []byte("- for: a\n  # one\n  expr: item == 1\n  message: m\n"), d, root, true); err != nil {
 		t.Errorf("relate of an expression under a comment = %v", err)
 	}
 }
@@ -159,7 +159,7 @@ func failures(t *testing.T, checks, src string) usererr.List {
 
 	d, root := data(t, src)
 	var p usererr.List
-	if err := relate("checks.yaml", []byte(checks), d, root); !errors.As(err, &p) {
+	if err := relate("checks.yaml", []byte(checks), d, root, true); !errors.As(err, &p) {
 		t.Fatalf("relate = %v, want problems", err)
 	}
 	return p

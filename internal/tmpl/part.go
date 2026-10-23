@@ -807,7 +807,7 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node, esca
 		escaped[p] = true
 	}
 	_, item := itemPos(root, at, false)
-	return drawMistake(err, p.file("part.html"), p.dir != "", "tmpl_render_item", item, d.File)
+	return drawMistake(err, p.file("part.html"), p.isOwn(), "tmpl_render_item", item, d.File)
 }
 
 // holdUndrawn notes in holding the items that hold the one at the path at, not drawn: walkWhole puts them
@@ -848,6 +848,7 @@ func (p *part) check(file string, f itemAt, root ast.Node) (usererr.List, error)
 				return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
 			}
 		}
+		c.own = p.isOwn()
 		more, err := c.run(file, doc, f.at, items, root)
 		if err != nil {
 			return nil, err

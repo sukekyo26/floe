@@ -68,6 +68,11 @@ func brief(err error) string {
 	return err.Error()
 }
 
+// without is how to write an expression that stops for want of a value the data file data gives none for.
+func without(data string) *usererr.Error {
+	return usererr.New("tmpl_expr_without", data)
+}
+
 // dataVar is a variable of an expression that holds a value of the data, written at the path at in it, as
 // a mistake words it ("" for the whole).
 type dataVar struct {
