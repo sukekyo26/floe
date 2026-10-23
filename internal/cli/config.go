@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -56,45 +57,72 @@ func loadConfig(getenv func(string) string, dir string) (*config, error) {
 // readDirs reads floe's directories: each its setting, else a default under the XDG base directory, else
 // under the home. With none of them, the icons and the templates, parts and themes of one's own are none
 // (the icons commands refuse that, and floe's templates, parts and themes are the only ones), and the pages
-// are refused. Each that cannot be a directory is a mistake of its setting, added to found.
+// are refused. Each set that cannot be a directory is a mistake of its setting, added to found; the defaults
+// that cannot be are told by what is in their way, once for all it holds up.
 func (c *config) readDirs(getenv func(string) string, dir string, found *usererr.List) {
 	data := xdgDir(getenv, "XDG_DATA_HOME", c.home, ".local", "share")
 	conf := xdgDir(getenv, "XDG_CONFIG_HOME", c.home, ".config")
+	var defaults []*heldUp
 	for _, d := range []struct {
-		key, base, name string
-		to              *string
+		key, xdg, base, name string
+		to                   *string
 	}{
 		// First, so that one without a place for the pages is told that before the rest.
-		{"FLOE_DIR", data, "floe", &c.root},
+		{"FLOE_DIR", "XDG_DATA_HOME", data, "floe", &c.root},
 		// Not under FLOE_DIR: icons is a valid slug, so a page could take its place.
-		{"FLOE_ICONS_DIR", data, "floe-icons", &c.icons},
-		{"FLOE_TEMPLATES_DIR", conf, filepath.Join("floe", "templates"), &c.templates},
-		{"FLOE_PARTS_DIR", conf, filepath.Join("floe", "parts"), &c.parts},
-		{"FLOE_THEMES_DIR", conf, filepath.Join("floe", "themes"), &c.themes},
+		{"FLOE_ICONS_DIR", "XDG_DATA_HOME", data, "floe-icons", &c.icons},
+		{"FLOE_TEMPLATES_DIR", "XDG_CONFIG_HOME", conf, filepath.Join("floe", "templates"), &c.templates},
+		{"FLOE_PARTS_DIR", "XDG_CONFIG_HOME", conf, filepath.Join("floe", "parts"), &c.parts},
+		{"FLOE_THEMES_DIR", "XDG_CONFIG_HOME", conf, filepath.Join("floe", "themes"), &c.themes},
 	} {
 		v, mistake := floeDir(getenv, d.key, c.home, dir)
-		if mistake != nil {
+		switch {
+		case mistake != nil:
 			*found = append(*found, mistake)
 			continue
-		}
-		if v == "" && d.base != "" {
+		case v != "":
+			if at := notDir(v); at == v {
+				*found = append(*found, usererr.New("cli_dir_is_file", d.key, v, d.key))
+			} else if at != "" {
+				*found = append(*found, usererr.New("cli_dir_under_file", d.key, v, at, d.key))
+			}
+		case d.base != "":
 			v = filepath.Join(d.base, d.name)
-		}
-		if v == "" && d.to == &c.root {
+			defaults = holdUp(defaults, notDir(v), d.key, d.xdg)
+		case d.to == &c.root:
 			*found = append(*found, usererr.New("cli_no_home"))
 			continue
 		}
-		if v != "" {
-			switch at := notDir(v); at {
-			case "":
-			case v:
-				*found = append(*found, usererr.New("cli_dir_is_file", d.key, v, d.key))
-			default:
-				*found = append(*found, usererr.New("cli_dir_under_file", d.key, v, at, d.key))
-			}
-		}
 		*d.to = v
 	}
+	for _, h := range defaults {
+		keys, xdgs := strings.Join(h.keys, ", "), strings.Join(h.xdgs, ", ")
+		*found = append(*found, usererr.New("cli_dirs_default_not_dir", h.at, keys, xdgs))
+	}
+}
+
+// heldUp is what at, not a directory, holds up: the settings whose defaults would be under it, and the XDG
+// base directories that put them there.
+type heldUp struct {
+	at         string
+	keys, xdgs []string
+}
+
+// holdUp adds the default of the setting key, which xdg puts under at, to what at holds up ("" for nothing).
+func holdUp(all []*heldUp, at, key, xdg string) []*heldUp {
+	if at == "" {
+		return all
+	}
+	i := slices.IndexFunc(all, func(h *heldUp) bool { return h.at == at })
+	if i < 0 {
+		all, i = append(all, &heldUp{at: at, keys: nil, xdgs: nil}), len(all)
+	}
+	h := all[i]
+	h.keys = append(h.keys, key)
+	if !slices.Contains(h.xdgs, xdg) {
+		h.xdgs = append(h.xdgs, xdg)
+	}
+	return all
 }
 
 // notDir is where dir cannot be a directory: dir, or the nearest of its parents that is there, when that is

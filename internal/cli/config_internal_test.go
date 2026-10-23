@@ -134,6 +134,51 @@ func TestLoadConfigDirs(t *testing.T) {
 		"FLOE_THEMES_DIR, "+dangling+"/x, is under "+dangling+", which is not a directory; set FLOE_THEMES_DIR to a directory" {
 		t.Errorf("a symlink that leads nowhere = %v", err)
 	}
+	// A default in the way of a file is told once by that file, with the settings it holds up and what puts
+	// them there; after the mistakes of those set.
+	home := filepath.Join(tmp, "h")
+	if err := os.MkdirAll(home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, ".config"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	conf := home + "/.config is not a directory, and FLOE_TEMPLATES_DIR, FLOE_PARTS_DIR, FLOE_THEMES_DIR would be under it by default; " +
+		"make it a directory, or set XDG_CONFIG_HOME or each of them elsewhere"
+	for _, c := range []struct {
+		what string
+		vars map[string]string
+		want string
+	}{
+		{"a file in the way of the defaults", map[string]string{"HOME": home}, conf},
+		{
+			"XDG_CONFIG_HOME a file",
+			map[string]string{"HOME": home, "XDG_CONFIG_HOME": file},
+			file + " is not a directory, and FLOE_TEMPLATES_DIR, FLOE_PARTS_DIR, FLOE_THEMES_DIR would be under it by default; " +
+				"make it a directory, or set XDG_CONFIG_HOME or each of them elsewhere",
+		},
+		{
+			"HOME a file",
+			map[string]string{"HOME": file},
+			file + " is not a directory, and FLOE_DIR, FLOE_ICONS_DIR, FLOE_TEMPLATES_DIR, FLOE_PARTS_DIR, FLOE_THEMES_DIR would be under it " +
+				"by default; make it a directory, or set XDG_DATA_HOME, XDG_CONFIG_HOME or each of them elsewhere",
+		},
+		{
+			"one of the defaults set",
+			map[string]string{"HOME": home, "FLOE_TEMPLATES_DIR": tmp},
+			home + "/.config is not a directory, and FLOE_PARTS_DIR, FLOE_THEMES_DIR would be under it by default; " +
+				"make it a directory, or set XDG_CONFIG_HOME or each of them elsewhere",
+		},
+		{
+			"a setting before the defaults",
+			map[string]string{"HOME": home, "FLOE_DIR": file},
+			"FLOE_DIR, " + file + ", is not a directory; set FLOE_DIR to a directory\n" + conf,
+		},
+	} {
+		if _, err := loadConfig(func(k string) string { return c.vars[k] }, tmp); err == nil || err.Error() != c.want {
+			t.Errorf("%s = %v, want %q", c.what, err, c.want)
+		}
+	}
 	vars = map[string]string{"HOME": tmp, "FLOE_DIR": filepath.Join(tmp, "new", "pages"), "FLOE_PARTS_DIR": filepath.Join(tmp, "link")}
 	if c, err := loadConfig(func(k string) string { return vars[k] }, tmp); err != nil || c.root != filepath.Join(tmp, "new", "pages") {
 		t.Errorf("a directory not there yet and a symlink to a directory = %+v, %v", c, err)

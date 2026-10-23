@@ -272,7 +272,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   working directory, and a `~` or `~/` at its start stands for `HOME`
   (`~name` is refused). The defaults are under `XDG_DATA_HOME` and
   `XDG_CONFIG_HOME`, whose `~` stands for `HOME` too; a relative one of
-  those is ignored, as the XDG spec says.
+  those is ignored, as the XDG spec says. floe's directories, set or by
+  default, must be directories, or not there yet under one; else every
+  command refuses, telling every mistake of the settings at once.
   The management page may be framed by itself and by VS Code's Simple
   Browser alone (`frame-ancestors 'self' vscode-webview: vscode-file:`), so
   that another site, or a page, cannot have its buttons clicked unseen.
