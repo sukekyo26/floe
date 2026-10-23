@@ -83,8 +83,8 @@ func TestListSorted(t *testing.T) {
 }
 
 // Tell words a mistake, a list of them, one standing for placed ones, its second time, one in the words of
-// another, a name in use and floe's failure; Render lays them out as develop's Show worded them, floe's name
-// before each that is not at a place; Status answers as refuse did. A report read back from JSON, as the
+// another, a name in use and floe's failure; Render lays them out to the letter as the command line and the
+// browser show them, floe's name before each that is not at a place; Status answers 400, 409 or 500. A report read back from JSON, as the
 // command line reads the server's, lays out the same to the letter.
 func TestTell(t *testing.T) {
 	t.Parallel()

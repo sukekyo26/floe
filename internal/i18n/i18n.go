@@ -132,8 +132,9 @@ func FromAcceptLanguage(header string) Lang {
 	return English
 }
 
-// Localizer is implemented by errors that can render themselves in a language. A boundary renders
-// the first one in an error's chain and falls back to Error() for the rest.
+// Localizer is an argument of a message worded in the language of the message, such as a mistake in the
+// words of another. An error shown to the user is made with usererr, which words it; any other is floe's
+// failure, however it words itself.
 type Localizer interface {
 	Localize(c *Catalog) string
 }
