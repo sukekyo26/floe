@@ -195,11 +195,11 @@ func (set *partSet) leaveOutUnusable() error {
 // leads, which finds nothing, and the URL noLoader refused for it. A failure is left out when its $refs or
 // notes are refused (checkHeld), which tells why it cannot be used; nil when nothing is left. The failure
 // it returns is floe's: checking its $refs.
-func (set *partSet) compiledMistakes(name string, stop error) (error, error) {
+func (set *partSet) compiledMistakes(name string, stop error) (mistakes, failed error) {
 	n := set.notes[partsURL+name+".json"]
-	refused, err := set.refusedRefs(n)
-	if err != nil {
-		return nil, err
+	refused, failed := set.refusedRefs(n)
+	if failed != nil {
+		return nil, failed
 	}
 	url, file := partsURL+name+".json", set.parts[name].schemaFile()
 	told := func() bool {
@@ -213,10 +213,11 @@ func (set *partSet) compiledMistakes(name string, stop error) (error, error) {
 	}
 	why := compileMistakes(url, file, stop)
 	var own usererr.List
+	unplaced, clean := own.Add(why) != nil, set.checkHeld(name) == nil
 	switch {
 	case told():
 		return ownMistakes(url, file, stop), nil
-	case own.Add(why) != nil && set.checkHeld(name) != nil:
+	case unplaced && !clean:
 		return nil, nil // a failure that its refused $refs or notes stop it at, which checkHeld tells
 	}
 	return why, nil
