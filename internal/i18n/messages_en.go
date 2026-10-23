@@ -233,7 +233,7 @@ var messagesEN = map[string]string{
 	"diagram_zoom_one_label":   "Show at actual size",
 
 	// icons: fetching and searching the AWS icons
-	"icons_no_dir":      "there is no directory for icons; set FLOE_ICONS_DIR, then run \"floe icons fetch\"",
+	"icons_no_dir":      "there is no directory for icons; set FLOE_ICONS_DIR, then fetch a set with \"floe icons fetch <set>\"",
 	"icons_not_fetched": `%[1]s icons are not in %[2]s; run "floe icons fetch %[3]s" (downloads about %[4]s from %[5]s) and try again`,
 	"icons_bad_index":   `cannot read %s (%s); run "floe icons fetch %s --force" to fetch the icons again`,
 

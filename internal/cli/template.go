@@ -175,7 +175,7 @@ func (a *app) templateNewCmd() *cobra.Command {
 	var from string
 	cmd := &cobra.Command{
 		Use:         "new <name> --from <template>",
-		Annotations: uses(map[setting]use{templatesSetting: writes}),
+		Annotations: uses(map[setting]use{templatesSetting: needs}),
 		Short:       "Make a template of your own as a copy of another, to edit",
 		Long: `Make a template of your own in $FLOE_TEMPLATES_DIR/<name> as a copy of another template,
 built-in or your own, to edit. Its template.yaml names the floe it needs (this floe, for a copy of

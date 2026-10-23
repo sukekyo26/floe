@@ -19,11 +19,9 @@ func (a *app) renderCmd() *cobra.Command {
 	var outDir string
 	var check bool
 	cmd := &cobra.Command{
-		Use: "render <data.yaml>...",
-		Annotations: uses(map[setting]use{
-			iconsSetting: reads, templatesSetting: reads, partsSetting: reads, themesSetting: reads,
-		}),
-		Short: "Write the page of each data file to an HTML file beside it, or in --out-dir",
+		Use:         "render <data.yaml>...",
+		Annotations: uses(drawUses),
+		Short:       "Write the page of each data file to an HTML file beside it, or in --out-dir",
 		Long: `Draw each data file as floe publish does and write its page to <name>.html: beside the
 data file, or in --out-dir (made when missing). The page opens without floe, as a download
 does: what it shows is in it, and its CSP is in a <meta>. A file is written only when it

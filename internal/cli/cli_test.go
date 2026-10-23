@@ -841,7 +841,7 @@ func TestSettingsByUse(t *testing.T) {
 	want(t, "template new without a home", e.run(t, "", "template", "new", "x", "--from", "report"), 1, "",
 		"floe: HOME is not set, so FLOE_TEMPLATES_DIR has no default; set HOME or FLOE_TEMPLATES_DIR\n")
 	want(t, "diagram render of icons without a home", e.run(t, "", "diagram", "render", "aws.yaml"), 1, "",
-		`floe: there is no directory for icons; set FLOE_ICONS_DIR, then run "floe icons fetch"`)
+		`floe: there is no directory for icons; set FLOE_ICONS_DIR, then fetch a set with "floe icons fetch <set>"`)
 	// The server a command starts reads the same: no home, no default, for it too.
 	want(t, "list without a home", e.run(t, "", "list"), 0, "", "")
 	// Themes of one's own are read by part check, and wanted by part new only for a part with files of themes.
@@ -856,11 +856,18 @@ func TestSettingsByUse(t *testing.T) {
 	if r := e.run(t, "", "list"); r.code != 1 || r.stderr != "floe: invalid FLOE_PORT \"0\": use a port number from 1 to 65535\n" {
 		t.Errorf("list with a wrong port = %d %q", r.code, r.stderr)
 	}
-	e.vars["FLOE_PORT"] = e.port
 	tilde := func(key string) string {
 		return "floe: " + key + " is ~x: floe takes only ~ and ~/ at the start for your home, not ~name; write the path " +
 			"absolute, or ./~x for a directory of that name under the working directory\n"
 	}
+	// Every reason is told at once, not the first alone.
+	e.vars["FLOE_PARTS_DIR"] = "~x"
+	if r := e.run(t, "", "publish", "ok.yaml"); r.code != 1 ||
+		r.stderr != "floe: invalid FLOE_PORT \"0\": use a port number from 1 to 65535\n"+tilde("FLOE_PARTS_DIR") {
+		t.Errorf("publish with a wrong port and parts = %d %q", r.code, r.stderr)
+	}
+	delete(e.vars, "FLOE_PARTS_DIR")
+	e.vars["FLOE_PORT"] = e.port
 	for _, c := range []struct {
 		key  string
 		args []string

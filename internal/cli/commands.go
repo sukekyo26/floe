@@ -69,12 +69,9 @@ func (a *app) publishCmd() *cobra.Command {
 	var link bool
 	var slug, title, description, theme string
 	cmd := &cobra.Command{
-		Use: "publish <data.yaml> | --link <file.html>",
-		Annotations: uses(map[setting]use{
-			portSetting: writes, storeSetting: writes, iconsSetting: reads, templatesSetting: reads,
-			partsSetting: reads, themesSetting: reads,
-		}),
-		Short: "Store a page drawn from a data file (or --link an HTML file in place) and print its URL",
+		Use:         "publish <data.yaml> | --link <file.html>",
+		Annotations: uses(serverUses),
+		Short:       "Store a page drawn from a data file (or --link an HTML file in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
 store it and print its URL. The same slug from the same project overwrites it, and a slug
 published from another project is refused unless --force. A page is in the language its
@@ -266,13 +263,10 @@ func localTime(iso string) string {
 
 func (a *app) listCmd() *cobra.Command {
 	return &cobra.Command{
-		Use: "list",
-		Annotations: uses(map[setting]use{
-			portSetting: writes, storeSetting: writes, iconsSetting: reads, templatesSetting: reads,
-			partsSetting: reads, themesSetting: reads,
-		}),
-		Short: "List pages, newest first (updated, slug, title, linked path; tab-separated)",
-		Args:  usage(cobra.NoArgs),
+		Use:         "list",
+		Annotations: uses(serverUses),
+		Short:       "List pages, newest first (updated, slug, title, linked path; tab-separated)",
+		Args:        usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := a.client(cmd.Context(), true)
 			if err != nil {
@@ -292,13 +286,10 @@ func (a *app) listCmd() *cobra.Command {
 
 func (a *app) rmCmd() *cobra.Command {
 	return &cobra.Command{
-		Use: "rm <slug>...",
-		Annotations: uses(map[setting]use{
-			portSetting: writes, storeSetting: writes, iconsSetting: reads, templatesSetting: reads,
-			partsSetting: reads, themesSetting: reads,
-		}),
-		Short: "Delete pages in order, stopping at the first failure (a linked file itself is left alone)",
-		Args:  usage(cobra.MinimumNArgs(1)),
+		Use:         "rm <slug>...",
+		Annotations: uses(serverUses),
+		Short:       "Delete pages in order, stopping at the first failure (a linked file itself is left alone)",
+		Args:        usage(cobra.MinimumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := a.client(cmd.Context(), true)
 			if err != nil {
@@ -320,13 +311,10 @@ func (a *app) rmCmd() *cobra.Command {
 
 func (a *app) serveCmd() *cobra.Command {
 	return &cobra.Command{
-		Use: "serve",
-		Annotations: uses(map[setting]use{
-			portSetting: writes, storeSetting: writes, iconsSetting: reads, templatesSetting: reads,
-			partsSetting: reads, themesSetting: reads,
-		}),
-		Short: "Run the server in the foreground",
-		Args:  usage(cobra.NoArgs),
+		Use:         "serve",
+		Annotations: uses(serverUses),
+		Short:       "Run the server in the foreground",
+		Args:        usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return a.serve(cmd.Context())
 		},
@@ -373,7 +361,7 @@ func (a *app) listen() (net.Listener, error) {
 func (a *app) stopCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:         "stop",
-		Annotations: uses(map[setting]use{portSetting: writes}),
+		Annotations: uses(map[setting]use{portSetting: needs}),
 		Short:       "Stop the background server",
 		Args:        usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {

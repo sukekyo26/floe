@@ -231,7 +231,7 @@ var messagesJA = map[string]string{
 	"diagram_zoom_one_label":   "原寸で表示",
 
 	// icons
-	"icons_no_dir":      "アイコンのディレクトリがありません。FLOE_ICONS_DIR を設定してから「floe icons fetch」を実行してください",
+	"icons_no_dir":      "アイコンのディレクトリがありません。FLOE_ICONS_DIR を設定してから、floe icons fetch <set> でアイコン集を取得してください",
 	"icons_not_fetched": "%[2]s に %[1]s アイコンがありません。floe icons fetch %[3]s を実行してから（%[5]s から約 %[4]s を取得します）やり直してください",
 	"icons_bad_index":   "%s を読めません（%s）。floe icons fetch %s --force でアイコンを取り直してください",
 

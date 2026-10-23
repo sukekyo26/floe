@@ -24,7 +24,7 @@ func (a *app) iconsFetchCmd() *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
 		Use:         "fetch <set> [zip-or-url]",
-		Annotations: uses(map[setting]use{iconsSetting: writes}),
+		Annotations: uses(map[setting]use{iconsSetting: needs}),
 		Short:       "Keep an icon set from its official package for icon parts",
 		Long: `Keep an icon set in $FLOE_ICONS_DIR/<set> for the icon parts of diagrams. The sets:
 
@@ -67,7 +67,7 @@ already there is kept unless --force.`,
 func (a *app) iconsSearchCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:         "search <word>...",
-		Annotations: uses(map[setting]use{iconsSetting: writes}),
+		Annotations: uses(map[setting]use{iconsSetting: needs}),
 		Short:       "List the fetched icons whose name contains every word",
 		Long: `List the fetched icons whose name contains every word, one per line as the name to give
 an icon part (aws/…) and its category, tab-separated.`,
