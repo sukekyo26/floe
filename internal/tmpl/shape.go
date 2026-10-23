@@ -329,6 +329,8 @@ func (set *partSet) mistakes(n *schemaNotes) (usererr.List, error) {
 func (set *partSet) refMistake(n *schemaNotes, r refAt, resolve func(ref string) error) *usererr.Error {
 	base, _, _ := strings.Cut(r.ref, "#")
 	switch {
+	case base == "":
+		return nil // read from an $id that is no URL, which the compiling tells (tmpl_schema_id)
 	case n.own[base]:
 		return n.targetMistake(r, base, resolve)
 	case strings.HasPrefix(base, partsURL):

@@ -123,8 +123,8 @@ func ownMistakes(url, file string, err error) error {
 // $ref that finds nothing in it, at the top of file, and nil for another. Where a $ref leads is all
 // jsonschema says: compileMistakes calls it where none but the schema's own $refs lead into it, a
 // template's, or a part's none of whose parts stop.
-// LIMIT: told at the top of the file, of a $ref refMistake did not check (its LIMITs). Check it there if
-// one comes.
+// LIMIT: told at the top of the file, of a $ref refMistake did not check (its LIMITs), by where it leads
+// as jsonschema resolves it: under a nested $id, a pointer not as written. Check it there if one comes.
 func strayRefMistake(url, file string, err error) *usererr.Error {
 	key, schema, leads := missingTarget(err)
 	if _, ok := pointerIn(url, schema); key == "" || !ok {
@@ -365,12 +365,8 @@ var uriReference = sync.OnceValues(func() (*jsonschema.Schema, error) {
 })
 
 // heldByJSONSchema reports whether jsonschema holds the schema at url itself, as it holds the drafts and
-// their vocabularies, so that a $ref to it reads no other file. "" is no schema's URL: that of a $ref read
-// from an $id that is no URL.
+// their vocabularies, so that a $ref to it reads no other file.
 func heldByJSONSchema(url string) bool {
-	if url == "" {
-		return false
-	}
 	_, err := compileAlone(map[string]any{"$ref": url})
 	return err == nil
 }

@@ -318,6 +318,13 @@ func TestCheckMistakes(t *testing.T) {
 			want:  []string{`sizes/schema.json: #: this $id cannot be read as a URL`},
 		},
 		{
+			// The $id is told, not a $ref read from it, which has no URL.
+			name: "an $id that is no URL and a $ref under it",
+			files: map[string]string{"schema.json": `"properties": {|"$id": "http://[::1", "$defs": { "x": { "type": "string" } },` +
+				` "properties": { "code": { "$ref": "#/$defs/x" },`},
+			want: []string{`sizes/schema.json: #: this $id cannot be read as a URL`},
+		},
+		{
 			name:  "a $dynamicRef",
 			files: map[string]string{"schema.json": `"chart":|"code": { "$dynamicRef": "#/$defs/x" },` + "\n    " + `"chart":`},
 			want:  []string{`sizes/schema.json: #/properties/code: floe does not follow $dynamicRef`},
