@@ -170,16 +170,21 @@ func (c relation) run(
 ) (usererr.List, error) {
 	p := c.prog
 	var problems usererr.List
+	vars := map[string]dataVar{}
+	// A part's value that is not keys and values gives doc no value to read into.
+	if doc != nil {
+		_, docPath := itemPos(root, docAt, false)
+		vars["doc"] = dataVar{value: doc, at: docPath}
+	}
 	for _, item := range items {
 		out, err := expr.Run(p, scope{Item: item.value, Doc: doc})
 		if held, ok := out.(bool); ok && held && err == nil {
 			continue
 		}
-		_, itemPath := itemPos(root, item.at, false)
 		if err != nil {
-			_, docPath := itemPos(root, docAt, false)
-			vars := map[string]dataVar{"item": {value: item.value, at: itemPath}, "doc": {value: doc, at: docPath}}
-			if missing := unvalued(p, vars); missing != nil {
+			_, itemPath := itemPos(root, item.at, false)
+			vars["item"] = dataVar{value: item.value, at: itemPath}
+			if missing := unvalued(p, err, vars); missing != nil {
 				e := yamlpos.New(c.file, c.at["expr"], "tmpl_check_missing", itemPath, file, strings.Join(missing, ", "))
 				problems = append(problems, e)
 				continue

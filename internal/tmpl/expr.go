@@ -75,59 +75,61 @@ type dataVar struct {
 	at    string
 }
 
-// unvalued returns the paths, as a mistake words them, of the values of the data the program p reads
-// through vars that the data gives none for, left out or null: of each read, a.b.c, the first step that
-// is nil, but for the last one when p does without it, by ?? (a.b ?? 0) or ?. (a?.b). Reads through
-// anything else, a function's result, a variable of let or # in a predicate, are not looked at: expr
-// refuses a let named as one of vars.
-func unvalued(p *vm.Program, vars map[string]dataVar) []string {
-	r := reads{inner: map[exprast.Node]bool{}, spared: map[exprast.Node]bool{}, vars: vars, found: nil}
-	node := p.Node()
-	exprast.Walk(&node, &r)
-	exprast.Walk(&node, &nilReads{&r})
-	return r.found
-}
-
-// reads notes, walking an expression, the reads that are part of a longer one (a and a.b in a.b.c), and
-// those whose value it does without (the left of ??).
-type reads struct {
-	inner, spared map[exprast.Node]bool
-	vars          map[string]dataVar
-	found         []string
-}
-
-func (r *reads) Visit(n *exprast.Node) {
-	switch n := (*n).(type) {
-	case *exprast.MemberNode:
-		r.inner[n.Node] = true
-	case *exprast.BinaryNode:
-		if n.Operator == "??" {
-			r.spared[n.Left] = true
-			if c, ok := n.Left.(*exprast.ChainNode); ok {
-				r.spared[c.Node] = true
-			}
-		}
+// unvalued returns the paths, as a mistake words them, of the values of the data, given by vars, that the
+// program p stopped on with err for want of: left out or null, the first step that is nil of the read p
+// stopped at (a.b.c, or a?.b when a is nil), or of a read p handed to the function or operator it stopped at
+// (count(prs, …), w + 1). A read through anything else, a function's result, a variable of let or # in a
+// predicate, is not looked at: expr refuses a let named as one of vars.
+func unvalued(p *vm.Program, err error, vars map[string]dataVar) []string {
+	var stop *file.Error
+	if !errors.As(err, &stop) {
+		return nil
 	}
+	f := stopAt{at: stop.Location, vars: vars, found: nil}
+	node := p.Node()
+	exprast.Walk(&node, &f)
+	return f.found
 }
 
-// nilReads adds to found the path to the first nil of each whole read of the data.
-type nilReads struct{ *reads }
+// stopAt adds to found the paths to the nil the nodes at at read, or hand to what they call.
+type stopAt struct {
+	at    file.Location
+	vars  map[string]dataVar
+	found []string
+}
 
-func (r *nilReads) Visit(n *exprast.Node) {
-	switch (*n).(type) {
+func (s *stopAt) Visit(n *exprast.Node) {
+	if (*n).Location() != s.at {
+		return
+	}
+	var handed []exprast.Node
+	switch n := (*n).(type) {
 	case *exprast.IdentifierNode, *exprast.MemberNode:
-		if r.inner[*n] {
-			return
+		handed = []exprast.Node{n}
+	case *exprast.BuiltinNode:
+		handed = n.Arguments
+	case *exprast.CallNode:
+		handed = n.Arguments
+	case *exprast.BinaryNode:
+		handed = []exprast.Node{n.Left, n.Right}
+	case *exprast.UnaryNode:
+		handed = []exprast.Node{n.Node}
+	case *exprast.SliceNode:
+		handed = []exprast.Node{n.Node}
+	}
+	for _, h := range handed {
+		if c, ok := h.(*exprast.ChainNode); ok {
+			h = c.Node
 		}
-		if at, ok := r.nilAt(*n); ok && !slices.Contains(r.found, at) {
-			r.found = append(r.found, at)
+		if at, ok := s.nilAt(h); ok && !slices.Contains(s.found, at) {
+			s.found = append(s.found, at)
 		}
 	}
 }
 
 // nilAt returns the path to the first nil the read n, a.b.c from a variable of vars, comes to, and false
-// when it comes to none, does without it, or is not such a read.
-func (r *reads) nilAt(n exprast.Node) (string, bool) {
+// when it comes to none or is not such a read.
+func (s *stopAt) nilAt(n exprast.Node) (string, bool) {
 	var steps []*exprast.MemberNode
 	base := n
 	for m, ok := base.(*exprast.MemberNode); ok; m, ok = base.(*exprast.MemberNode) {
@@ -138,24 +140,25 @@ func (r *reads) nilAt(n exprast.Node) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	v, ok := r.vars[id.Value]
+	v, ok := s.vars[id.Value]
 	if !ok {
 		return "", false
 	}
 	value, at := v.value, v.at
 	for _, m := range slices.Backward(steps) {
 		if value == nil {
-			return at, !m.Optional // a?.b is nil when a is
+			return at, true
 		}
 		if value, at, ok = step(value, at, m.Property); !ok {
 			return "", false
 		}
 	}
-	return at, value == nil && !r.spared[n]
+	return at, value == nil
 }
 
 // step returns what the property of a read, a key or an index written as such, leads to in value, at the
-// path at, and its path; false when it is neither, or value is not keys or a list.
+// path at, and its path, written as yamlpos.Find writes one; false when it is neither, or value is not keys
+// or a list, or has no such index.
 func step(value any, at string, property exprast.Node) (any, string, bool) {
 	switch p := property.(type) {
 	case *exprast.StringNode:
@@ -173,7 +176,7 @@ func step(value any, at string, property exprast.Node) (any, string, bool) {
 		if !ok || i < 0 || i >= len(l) {
 			return nil, "", false
 		}
-		return l[i], at + "[" + strconv.Itoa(p.Value) + "]", true
+		return l[i], at + "[" + strconv.Itoa(i) + "]", true
 	}
 	return nil, "", false
 }

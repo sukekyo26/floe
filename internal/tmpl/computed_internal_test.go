@@ -153,27 +153,41 @@ func TestComputeExplicitKey(t *testing.T) {
 	}
 }
 
-// The items an expression that stops uses and the data gives no value for, left out or null, are named, but
-// those it does without: the last step before ??, and what ?. reads into.
+// The items an expression that stops uses and the data gives no value for, left out or null, are named: of
+// the read it stopped at, or of those it handed the function or operator it stopped at. A value it does
+// without (by ??, ?. or a test of nil) is not, nor is one when it stopped for another reason.
 func TestComputeLeftOut(t *testing.T) {
 	t.Parallel()
 
-	d, _ := data(t, "records: { x: 1 }\nattributes: ~\n")
+	d, _ := data(t, "records: { x: 1 }\nattributes: ~\nparts: []\ntotal: 1\nr: 0\nlists: [{ a: ~ }]\n")
+	items := []string{"prs", "records", "attributes", "writes_per_sec", "parts", "total", "r", "lists"}
 	for src, want := range map[string]string{
 		"merged: count(prs, .state == 'merged')\n":         "prs",
 		"n: records.in_1_year * 2\n":                       "records.in_1_year",
 		"n: attributes.x ?? 0\n":                           "attributes",
 		"n: len(attributes ?? []) + writes_per_sec\n":      "writes_per_sec",
 		"n: (records?.in_1_year ?? 0) + attributes[0].x\n": "attributes",
-		"n: let r = records; r.in_1_year * prs\n":          "prs",
+		"n: let s = records; s.in_1_year * prs\n":          "prs",
+		"n: lists[-1].a.b * 2\n":                           "lists[0].a",
+		"n: attributes?.x + 1\n":                           "attributes",
 	} {
-		err := compute("computed.yaml", []byte(src), d, []string{"prs", "records", "attributes", "writes_per_sec"})
+		err := compute("computed.yaml", []byte(src), d, items)
 		if err == nil || !strings.Contains(err.Error(), "from d.yaml, which gives no value for "+want+" that it uses; ") {
 			t.Errorf("%s = %v, want %s left out", src, err, want)
 		}
 	}
+	for src, want := range map[string]string{
+		"n: \"prs == nil ? total / len(parts) : len(prs)\"\n": "1 / 0 is not a finite number",
+		"n: \"prs == nil ? parts[5] : 0\"\n":                  "index out of range: 5",
+		"n: (writes_per_sec ?? records.y ?? 0) + 1 / r\n":     "1 / 0 is not a finite number",
+	} {
+		err := compute("computed.yaml", []byte(src), d, items)
+		if err == nil || !strings.Contains(err.Error(), "n cannot be computed from d.yaml: "+want) {
+			t.Errorf("%s = %v, want %s", src, err, want)
+		}
+	}
 	for _, src := range []string{"merged: count(prs ?? [], .state == 'merged')\n", "n: attributes?.x ?? records.x\n"} {
-		if err := compute("computed.yaml", []byte(src), d, []string{"prs", "records", "attributes"}); err != nil {
+		if err := compute("computed.yaml", []byte(src), d, items); err != nil {
 			t.Errorf("%s = %v", src, err)
 		}
 	}

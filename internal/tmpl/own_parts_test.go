@@ -790,6 +790,17 @@ func TestPartCheckLeftOut(t *testing.T) {
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: {}\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
 		t.Errorf("checking what the data leaves out = %v, want %s", err, want)
 	}
+	// A part that is a list gives doc no keys: what the check reads from it is not the data's to give.
+	parts = ownParts(t, map[string]string{
+		"pl/schema.json": `{"type": "array", "items": {"type": "object"}}`,
+		"pl/part.html":   `<p data-floe-part="pl"></p>`,
+		"pl/part.css":    "",
+		"pl/checks.yaml": "- expr: doc.max > 0\n  message: m\n",
+	})
+	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pl.json"}`), parts, "", "")
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: [{ a: 1 }]\n"); err == nil || strings.Contains(err.Error(), "gives no value") {
+		t.Errorf("checking a list's doc = %v", err)
+	}
 }
 
 // A part of one's own whose part.html fails to draw an item is told at its part.html, naming the item, for

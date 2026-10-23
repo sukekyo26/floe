@@ -95,7 +95,7 @@ func (c *computed) failure(file, n, data string, err error) *usererr.Error {
 	for _, item := range c.items {
 		vars[item] = dataVar{value: c.env.Field(c.field[item]).Interface(), at: item}
 	}
-	if missing := unvalued(c.programs[n], vars); missing != nil {
+	if missing := unvalued(c.programs[n], err, vars); missing != nil {
 		return yamlpos.New(file, c.at[n], "tmpl_computed_missing", n, data, strings.Join(missing, ", "))
 	}
 	// LIMIT: expr's English. Word the failures floe can tell apart, as it does the values left out.
