@@ -2,8 +2,11 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -52,5 +55,23 @@ func TestTooLarge(t *testing.T) {
 	unsent := client{base: "http://127.0.0.1:1"}.do(t.Context(), http.MethodPut, "/api/artifacts/p", large, nil)
 	if err := tooLarge(unsent); err == nil || !strings.Contains(err.Error(), "32 MiB") {
 		t.Errorf("a publish over the limit = %v, want the limit told before it is sent", err)
+	}
+}
+
+// Every image the server asks for that cannot be sent is told at once; one not there is left to the server.
+func TestReadImages(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	for _, name := range []string{"a.png", "b.png"} {
+		if err := os.Symlink(filepath.Join(dir, "nowhere"), filepath.Join(dir, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, err := readImages(dir, []string{"a.png", "none.png", "b.png"})
+	lines := strings.Split(fmt.Sprint(err), "\n")
+	if err == nil || len(lines) != 2 || !strings.HasPrefix(lines[0], `"a.png" is reached through a symlink`) ||
+		!strings.HasPrefix(lines[1], `"b.png" is reached through a symlink`) {
+		t.Errorf("readImages of two symlinks = %v, want both", err)
 	}
 }

@@ -74,24 +74,29 @@ type Options struct {
 	Force       bool
 }
 
-// normalized is o with each string given trimmed, whoever gave it. A title given empty is refused, as it
-// would leave the list blank, and so is a theme, which would take the data's.
-func (o Options) normalized() (Options, error) {
+// Normalized is o with each string given trimmed, whoever gave it, and every mistake of them: a slug given
+// that cannot be one, a title given empty, as it would leave the list blank, and a theme, which would take
+// the data's. The command line checks with it before it sends, and the server again.
+func (o Options) Normalized() (Options, error) {
 	for _, field := range []**string{&o.Slug, &o.Title, &o.Description, &o.Theme} {
 		if *field != nil {
 			v := strings.TrimSpace(**field)
 			*field = &v
 		}
 	}
+	var found usererr.List
+	if o.Slug != nil && !ValidSlug(*o.Slug) {
+		found = append(found, usererr.New("store_invalid_slug", *o.Slug))
+	}
 	for _, f := range []struct {
 		value *string
 		empty string
 	}{{o.Title, "cli_title_empty"}, {o.Theme, "cli_theme_empty"}} {
 		if f.value != nil && *f.value == "" {
-			return o, usererr.New(f.empty)
+			found = append(found, usererr.New(f.empty))
 		}
 	}
-	return o, nil
+	return o, found.Err()
 }
 
 // theme is the theme o gives over the data's, "" for none.
@@ -169,11 +174,8 @@ func ReadUpload(ctx context.Context, file, cwd string) (Upload, error) {
 // images is answered NeedImages, once nothing that needs no image refuses the publish (the slug, the
 // page's owner).
 func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
-	if err := checkData(up.File); err != nil {
-		return nil, err
-	}
-	opts, err := opts.normalized()
-	if err != nil {
+	opts, err := opts.Normalized()
+	if err = usererr.Collect(checkData(up.File), err); err != nil {
 		return nil, err
 	}
 	images := up.Images
@@ -222,7 +224,8 @@ func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, opts Option
 // a relative file; the project of a link is that of its directory. A data file linked is checked as a
 // stored page is, its images under its real directory.
 func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
-	opts, err := opts.normalized()
+	// Not with readLink's checks, which look at the theme too: a theme given empty is told alone.
+	opts, err := opts.Normalized()
 	if err != nil {
 		return nil, err
 	}

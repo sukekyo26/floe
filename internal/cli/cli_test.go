@@ -448,12 +448,24 @@ func TestPublish(t *testing.T) {
 	}
 
 	before := e.run(t, "", "list").stdout
-	want(t, "a blank --title", e.run(t, "repo", "publish", demo, "--title", " "), 2, "",
-		"floe: --title is empty: give the page a name, or omit --title to take the data file's title:, or a link's <title> or <h1>")
+	const blankTitle = "floe: --title is empty: give the page a name, or omit --title to take the data file's title:, or a link's <title> or <h1>"
+	want(t, "a blank --title", e.run(t, "repo", "publish", demo, "--title", " "), 2, "", blankTitle)
+	if r := e.run(t, "repo", "publish", demo, "--title", " ", "--theme", ""); r.code != 2 ||
+		r.stderr != blankTitle+"\nfloe: --theme is empty: name a theme, or omit --theme to take the data file's theme:\n" {
+		t.Errorf("a blank --title and --theme = %d %q, want both", r.code, r.stderr)
+	}
+	e.write(t, "repo/page.html", "<!doctype html><title>x</title>")
+	want(t, "a blank --title of a link", e.run(t, "repo", "publish", "--link", "page.html", "--title", " "), 2, "", blankTitle)
 	if after := e.run(t, "", "list").stdout; after != before {
 		t.Errorf("a blank --title changed the list from %q to %q", before, after)
 	}
-	want(t, "an invalid slug", e.run(t, "repo", "publish", demo, "--slug", "../x"), 1, "", `invalid slug "../x"`)
+	want(t, "an invalid slug", e.run(t, "repo", "publish", demo, "--slug", "../x"), 2, "", `floe: invalid slug "../x"`)
+	// Every option given wrong is told at once, before the server is asked.
+	if r := e.run(t, "repo", "publish", demo, "--slug", "Bad Slug", "--title", " ", "--theme", ""); r.code != 2 ||
+		strings.Count(r.stderr, "\n") != 3 || !strings.HasPrefix(r.stderr, `floe: invalid slug "Bad Slug"`) ||
+		!strings.Contains(r.stderr, "\nfloe: --title is empty") || !strings.Contains(r.stderr, "\nfloe: --theme is empty") {
+		t.Errorf("publish with a bad slug, title and theme = %d %q, want all three", r.code, r.stderr)
+	}
 	// The language is the data's lang:.
 	bad := e.write(t, "bad.yaml", "template: report\nlang: ja_JP\n")
 	want(t, "an invalid language", e.run(t, "repo", "publish", bad), 1, "",

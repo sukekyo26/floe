@@ -12,7 +12,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -93,23 +92,20 @@ refused unless --force.`,
 				opts.Slug = &slug
 			}
 			if flags.Changed("title") {
-				// An empty title cannot be told from none, and would leave the list blank.
-				if strings.TrimSpace(title) == "" {
-					return usageError{err: usererr.New("cli_title_empty")}
-				}
 				opts.Title = &title
 			}
 			if flags.Changed("description") {
 				opts.Description = &description
 			}
 			if flags.Changed("theme") {
-				// An empty theme would take the data's.
-				if strings.TrimSpace(theme) == "" {
-					return usageError{err: usererr.New("cli_theme_empty")}
-				}
 				opts.Theme = &theme
 			}
-			return a.publish(cmd.Context(), args[0], link, opts)
+			// Checked as the server checks, to be refused before it starts, and sent so, as the slug names the URL.
+			normalized, err := opts.Normalized()
+			if err != nil {
+				return usageError{err: err}
+			}
+			return a.publish(cmd.Context(), args[0], link, normalized)
 		},
 	}
 	f := cmd.Flags()
@@ -171,11 +167,6 @@ func (a *app) publishData(ctx context.Context, file string, opts store.Options) 
 	read, err := store.ReadUpload(ctx, file, a.env.Dir)
 	if err != nil {
 		return saved, err //nolint:wrapcheck // a usererr for the user as is
-	}
-	// Trimmed as the store trims the options, so that the URL names the slug the page is saved under.
-	if opts.Slug != nil {
-		trimmed := strings.TrimSpace(*opts.Slug)
-		opts.Slug = &trimmed
 	}
 	slug, err := store.DataSlug(file, opts.Slug)
 	if err != nil {
