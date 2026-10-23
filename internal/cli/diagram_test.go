@@ -42,6 +42,19 @@ func TestDiagramRender(t *testing.T) {
 	want(t, "render a missing file", e.run(t, "specs", "diagram", "render", "a.yaml", "nope.yaml"), 1, "",
 		"floe: cannot read nope.yaml (no such file or directory)")
 	want(t, "render nothing", e.run(t, "", "diagram", "render"), 2, "", "floe: requires at least 1 arg(s)")
+
+	// A file named twice is read once: its id is not used twice, and its mistakes are told once. A file that
+	// cannot be read is told with the others, in the order given.
+	if r := e.run(t, "specs", "diagram", "render", "a.yaml", "./a.yaml"); r.code != 0 || r.stderr != "" ||
+		strings.Count(r.stdout, `<div class="dg-wrap"`) != 1 {
+		t.Errorf("render of a file named twice = %+v, want one diagram", r)
+	}
+	for _, args := range [][]string{{"nope.yaml", "shape.yaml", "./nope.yaml", "shape.yaml"}, {"nope.yaml", "nope.yaml", "shape.yaml"}} {
+		const told = "floe: cannot read nope.yaml (no such file or directory); check the path and that the file exists\nshape.yaml:6:5: dot: give cy\n"
+		if r := e.run(t, "specs", append([]string{"diagram", "render"}, args...)...); r.code != 1 || r.stderr != told {
+			t.Errorf("render %v = %d %q, want %q", args, r.code, r.stderr, told)
+		}
+	}
 }
 
 func TestDiagramExample(t *testing.T) {

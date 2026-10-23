@@ -38,10 +38,14 @@ func (a *app) templates() *tmpl.Library {
 	return tmpl.NewLibrary(a.cfg.templates, a.cfg.parts, a.cfg.themes, a.cfg.icons)
 }
 
-// abs puts a relative dir under the working directory; "" stays "".
+// abs puts a relative dir under the working directory, and folds the .. of any by its letters, as Join and
+// Abs do, so that every place reads a path alike; "" stays "".
 func (a *app) abs(dir string) string {
-	if dir == "" || filepath.IsAbs(dir) {
+	switch {
+	case dir == "":
 		return dir
+	case filepath.IsAbs(dir):
+		return filepath.Clean(dir)
 	}
 	return filepath.Join(a.env.Dir, dir)
 }

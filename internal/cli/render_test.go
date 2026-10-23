@@ -37,6 +37,16 @@ func TestRender(t *testing.T) {
 		t.Fatal(err)
 	}
 	want(t, "render a file named through a symlink too", e.run(t, "", "render", "work/spec.yaml", "link/spec.yaml"), 0, "", "")
+	// A missing file named through a symlinked directory too is told once.
+	if r := e.run(t, "", "render", "work/nope.yaml", "link/nope.yaml"); r.code != 1 || strings.Count(r.stderr, "\n") != 1 ||
+		!strings.Contains(r.stderr, "cannot read work/nope.yaml") {
+		t.Errorf("render of a missing file named through a symlink too = %d %q", r.code, r.stderr)
+	}
+	// A hard link of another name is another page, as a symlink is.
+	if err := os.Link(filepath.Join(e.tmp, "work", "spec.yaml"), filepath.Join(e.tmp, "work", "hard.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	want(t, "render a hard link of another name", e.run(t, "work", "render", "spec.yaml", "hard.yaml"), 0, "hard.html\n", "")
 	// A symlink of another name is another page.
 	if err := os.Symlink("spec.yaml", filepath.Join(e.tmp, "work", "latest.yaml")); err != nil {
 		t.Fatal(err)
