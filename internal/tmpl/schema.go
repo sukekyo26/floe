@@ -66,31 +66,42 @@ func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema
 		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
 	sch, err := c.Compile(url)
-	// jsonschema wraps noLoader's mistake in an error of its own, which does not unwrap: floe's own is told,
-	// so that it is worded in the reader's language.
-	// partSet.mistakes told a $ref's at its pointer before; those it does not see (its LIMIT) name the template.
-	var load *jsonschema.LoadURLError
-	switch {
-	case errors.As(err, &load):
-		return nil, usererr.New("tmpl_schema_load", name, load.Err)
-	case err != nil:
+	if err != nil {
 		return nil, compileMistakes(url, file, err)
 	}
 	return sch, nil
 }
 
-// compileMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of
-// file (ownMistakes). One of another schema, a part's, or of a kind floe does not know is a failure.
+// compileMistakes returns err, what stopped the compiling of the template's schema at url, file, as the
+// mistakes of file (ownMistakes), a $ref of it that finds nothing (strayRefMistake), or what noLoader
+// refused (loadedOrFailed). One of a part's schema, or of a kind floe does not know, is a failure.
 func compileMistakes(url, file string, err error) error {
 	if own := ownMistakes(url, file, err); own != nil {
 		return own
+	}
+	if e := strayRefMistake(url, file, err); e != nil {
+		return e
+	}
+	return loadedOrFailed(file, err)
+}
+
+// loadedOrFailed returns err, what stopped the compiling of the schema file, as the mistake noLoader made
+// of a URL it refused, placed in file, or else as floe's failure. jsonschema wraps noLoader's mistake in an
+// error of its own, which does not unwrap: floe's own is told, in the reader's language.
+func loadedOrFailed(file string, err error) error {
+	var (
+		load *jsonschema.LoadURLError
+		e    *usererr.Error
+	)
+	if errors.As(err, &load) && errors.As(load.Err, &e) {
+		return e.Placed(file, 0, 0, "")
 	}
 	return fmt.Errorf("compile the schema %s: %w", file, err)
 }
 
 // ownMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of file:
-// those the metaschema refuses, and those of a kind floe knows, each at its JSON pointer. It returns nil
-// for one of another schema or of a kind floe does not know.
+// those the metaschema refuses, and those of a kind floe knows (compileMistake), each at its JSON pointer.
+// It returns nil for one of another schema or of a kind floe does not know.
 func ownMistakes(url, file string, err error) error {
 	var invalid *jsonschema.SchemaValidationError
 	if errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url {
@@ -104,20 +115,17 @@ func ownMistakes(url, file string, err error) error {
 	return nil
 }
 
-// compileMistake returns err, what stopped the compiling of the schema at url, file, as a mistake at its
-// JSON pointer in file, and nil for one of another schema or of a kind floe does not know.
-// LIMIT: a $ref that finds nothing, which refMistake did not check, is told at the top of the file, as
-// jsonschema says where it leads, not where it is written. Note the $ref in schemaNotes.walk if one comes.
-func compileMistake(url, file string, err error) *usererr.Error {
+// strayRefMistake returns err, what stopped the compiling of the template's schema at url, file, as the
+// mistake of a $ref that finds nothing in it, at the top of file, and nil for another. Where a $ref leads
+// is all jsonschema says, which names the template: none but its own $refs lead into a template's schema.
+// LIMIT: told at the top of the file, of a $ref refMistake did not check. Note the $ref in
+// schemaNotes.walk if one comes.
+func strayRefMistake(url, file string, err error) *usererr.Error {
 	in := func(u string) (string, bool) { return pointerIn(url, u) }
 	var (
 		nothing  *jsonschema.JSONPointerNotFoundError
 		badPtr   *jsonschema.InvalidJsonPointerError
 		noAnchor *jsonschema.AnchorNotFoundError
-		anchor   *jsonschema.ParseAnchorError
-		anchors  *jsonschema.DuplicateAnchorError
-		ids      *jsonschema.DuplicateIDError
-		regex    *jsonschema.InvalidRegexError
 	)
 	switch {
 	case errors.As(err, &nothing):
@@ -133,6 +141,22 @@ func compileMistake(url, file string, err error) *usererr.Error {
 			to, _ := in(noAnchor.Reference)
 			return usererr.NewIn(file, "#", "tmpl_schema_ref_anchor", to, "schema.json")
 		}
+	}
+	return nil
+}
+
+// compileMistake returns err, what stopped the compiling of the schema at url, file, as a mistake of what
+// file holds at its JSON pointer, and nil for one of another schema or of a kind floe does not know. A $ref
+// that finds nothing is not one: jsonschema says where it leads, which may be the file of another's $ref.
+func compileMistake(url, file string, err error) *usererr.Error {
+	in := func(u string) (string, bool) { return pointerIn(url, u) }
+	var (
+		anchor  *jsonschema.ParseAnchorError
+		anchors *jsonschema.DuplicateAnchorError
+		ids     *jsonschema.DuplicateIDError
+		regex   *jsonschema.InvalidRegexError
+	)
+	switch {
 	case errors.As(err, &anchor):
 		if at, ok := in(anchor.URL); ok {
 			return usererr.NewIn(file, at, "tmpl_schema_anchor")

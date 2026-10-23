@@ -386,7 +386,6 @@ var messagesJA = map[string]string{
 	"tmpl_schema_shared":           "schema.json が %s を宣言するか必須に挙げています。%s は floe がどのデータファイルからも自分で読むので、スキーマの項目は別の名前にしてください",
 	"tmpl_item":                    "%s: %s",
 	"tmpl_schema_url":              "%s: schema はほかのファイルや URL を参照できません。$ref が指すものは schema.json の中に書いてください",
-	"tmpl_schema_load":             "テンプレート %s の schema を読めません: %s",
 	"tmpl_schema_invalid":          "JSON Schema はこれを受け付けません: %s",
 	"tmpl_schema_ref_nothing":      "%s への $ref は %s の中に何も見つけられません。参照するものをそこに書くか、あるものを参照してください",
 	"tmpl_schema_ref_pointer":      "%s への $ref は JSON ポインタではありません。#/$defs/item のように書いてください",

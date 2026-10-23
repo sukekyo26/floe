@@ -270,6 +270,22 @@ func TestBrokenOwnParts(t *testing.T) {
 		"unboxed/schema.json": `{"type": "object", "properties": {"text": {"type": "string", "pattern": "(["}}}`,
 		"unboxed/part.html":   `<div class="x"></div>`,
 		"unboxed/part.css":    "",
+		// yb's $ref into ya, which finds nothing, is yb's: ya's compiling stops there too, which jsonschema tells
+		// as ya's file.
+		"ya/schema.json": `{"type": "object", "properties": {"b": {"$ref": "yb.json"}}}`,
+		"ya/part.html":   `<div data-floe-part="ya"></div>`,
+		"ya/part.css":    "",
+		"yb/schema.json": `{"type": "object", "properties": {"t": {"$ref": "ya.json#/$defs/nope"}}}`,
+		"yb/part.html":   `<div data-floe-part="yb"></div>`,
+		"yb/part.css":    "",
+		// What noLoader refuses, which no check of a $ref sees, at the part's schema.json, and a part that holds
+		// it, whose compiling stops there too, told as one that holds a part that cannot be used.
+		"dyn/schema.json":  `{"type": "object", "properties": {"t": {"$dynamicRef": "https://example.com/x.json"}}}`,
+		"dyn/part.html":    `<div data-floe-part="dyn"></div>`,
+		"dyn/part.css":     "",
+		"adyn/schema.json": `{"type": "object", "properties": {"d": {"$ref": "dyn.json"}}}`,
+		"adyn/part.html":   `<div data-floe-part="adyn"></div>`,
+		"adyn/part.css":    "",
 		// The mistakes of several files are told together, under the part.
 		"wrongs/schema.json": `{"type": "object"}`,
 		"wrongs/part.html":   `<div data-floe-part="wrongs"></div>`,
@@ -360,6 +376,14 @@ func TestBrokenOwnParts(t *testing.T) {
 		"unboxed": "the part unboxed cannot be used\n  " + filepath.Join(parts, "unboxed", "part.html") +
 			`: no element of the part unboxed is its box, data-floe-part="unboxed"; write it on the part's element` + "\n  " +
 			filepath.Join(parts, "unboxed", "schema.json") + ": #/properties/text/pattern: JSON Schema does not take this: '([' is not valid regex",
+		"ya": "the part ya cannot be used\n  " + filepath.Join(parts, "ya", "schema.json") + ": #/properties/b: the part yb cannot be used\n    " +
+			filepath.Join(parts, "yb", "schema.json") + ": #/properties/t: floe:///parts/ya.json#/$defs/nope points into a part",
+		"yb": "the part yb cannot be used\n  " + filepath.Join(parts, "yb", "schema.json") +
+			": #/properties/t: floe:///parts/ya.json#/$defs/nope points into a part",
+		"dyn": "the part dyn cannot be used\n  " + filepath.Join(parts, "dyn", "schema.json") +
+			": https://example.com/x.json: a schema refers to no other file or URL",
+		"adyn": "the part adyn cannot be used\n  " + filepath.Join(parts, "adyn", "schema.json") + ": #/properties/d: the part dyn cannot be used\n    " +
+			filepath.Join(parts, "dyn", "schema.json") + ": https://example.com/x.json: a schema refers to no other file or URL",
 		"pointed": "the part pointed cannot be used\n  " + filepath.Join(parts, "pointed", "schema.json") +
 			": #/properties/t: a $ref to #/$defs/nope finds nothing in schema.json",
 		"deadptr": "the part deadptr cannot be used\n  " + filepath.Join(parts, "deadptr", "schema.json") +
@@ -382,7 +406,9 @@ func TestBrokenOwnParts(t *testing.T) {
 		}
 		// Told as floe part check tells it, at the $ref, not in the words of jsonschema's loading.
 		at := filepath.Join(dir, "memo", "schema.json") + ": #/properties/risks: "
-		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), at+why) {
+		// A $ref that finds nothing is told once, at the $ref, not again by the compiling, at the top.
+		if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), at+why) ||
+			strings.Count(mistakes[0].Error(), "finds nothing") > 1 {
 			t.Errorf("Check of a template of %s = %v, want %s", name, mistakes, why)
 		}
 	}

@@ -388,7 +388,6 @@ var messagesEN = map[string]string{
 	"tmpl_schema_shared":           "schema.json declares or requires %s, which floe reads from every data file itself (%s): give the items of the schema other names",
 	"tmpl_item":                    "%s: %s",
 	"tmpl_schema_url":              "%s: a schema refers to no other file or URL; write what a $ref refers to in schema.json",
-	"tmpl_schema_load":             "the schema of the template %s cannot be read: %s",
 	"tmpl_schema_invalid":          "JSON Schema does not take this: %s",
 	"tmpl_schema_ref_nothing":      "a $ref to %s finds nothing in %s: write what it refers to there, or refer to what is",
 	"tmpl_schema_ref_pointer":      "a $ref to %s is not a JSON pointer: write one like #/$defs/item",
