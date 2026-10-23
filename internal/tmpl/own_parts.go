@@ -12,6 +12,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/santhosh-tekuri/jsonschema/v6"
+
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -118,8 +120,8 @@ func partsWith(own ownDirs, name, from string) (*partSet, error) {
 
 // readOwn reads the parts of one's own in dir into set, over floe's of their names, a directory each, a
 // symlink followed, and the part stage names from its directory. Those that cannot be used are left out of
-// set, and kept in set.broken.
-func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) {
+// set, and kept in set.broken. The failure is floe's (leaveOutUnusable).
+func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) error {
 	var names []string
 	for _, e := range entries {
 		if name := e.Name(); !strings.HasPrefix(name, ".") {
@@ -140,13 +142,16 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) {
 			replaced = append(replaced, name)
 		}
 	}
-	set.leaveOutUnusable()
+	if err := set.leaveOutUnusable(); err != nil {
+		return err
+	}
 	// floe's themes style floe's parts alone: their rules would fit a part of one's own of the name ill.
 	for _, t := range set.themes {
 		for _, name := range replaced {
 			delete(t.parts, name)
 		}
 	}
+	return nil
 }
 
 // leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own
@@ -154,7 +159,8 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) {
 // floe would follow forever, a part, floe's too, that settle refuses, again while one is left out, as a
 // part may take the look of the one left out, or hold it, and then one whose schema names a usable part
 // at its root. One of one's own whose schema does not compile is among those settle refuses (compileOwn).
-func (set *partSet) leaveOutUnusable() {
+// The failure is floe's (compileOwn).
+func (set *partSet) leaveOutUnusable() error {
 	held := func(at string) []string { return set.shapes[partsURL+at+".json"].refsUnder(nil) }
 	looks := func(at string) []string {
 		if p := set.parts[at]; p != nil {
@@ -173,11 +179,47 @@ func (set *partSet) leaveOutUnusable() {
 			set.leaveOut(name, usererr.NewAt(dir, 0, 0, "tmpl_look_cycle", name, strings.Join(chain, " → ")))
 		}
 	}
-	mistakes := set.compileOwn()
+	mistakes, err := set.compileOwn()
+	if err != nil {
+		return err
+	}
 	set.settle(mistakes)
 	if set.leaveOutRooted() {
 		set.settle(mistakes)
 	}
+	return nil
+}
+
+// compiledMistakes returns what stopped, stop, the compiling of the part name of set, one of one's own, as
+// its mistakes (compileMistakes), but what a $ref of it that set refuses says already: where that $ref
+// leads, which finds nothing, and the URL noLoader refused for it. A failure is left out when its $refs or
+// notes are refused (checkHeld), which tells why it cannot be used; nil when nothing is left. The failure
+// it returns is floe's: checking its $refs.
+func (set *partSet) compiledMistakes(name string, stop error) (error, error) {
+	n := set.notes[partsURL+name+".json"]
+	refused, err := set.refusedRefs(n)
+	if err != nil {
+		return nil, err
+	}
+	url, file := partsURL+name+".json", set.parts[name].schemaFile()
+	told := func() bool {
+		_, _, leads := missingTarget(stop)
+		var load *jsonschema.LoadURLError
+		isLoad := errors.As(stop, &load)
+		return slices.ContainsFunc(refused, func(r refAt) bool {
+			base, _, _ := strings.Cut(r.ref, "#")
+			return leads != "" && samePlace(r.ref, leads) || isLoad && base == load.URL
+		})
+	}
+	why := compileMistakes(url, file, stop)
+	var own usererr.List
+	switch {
+	case told():
+		return ownMistakes(url, file, stop), nil
+	case own.Add(why) != nil && set.checkHeld(name) != nil:
+		return nil, nil // a failure that its refused $refs or notes stop it at, which checkHeld tells
+	}
+	return why, nil
 }
 
 // settle leaves out of set the parts checkNames refuses, and those of one's own whose schema.json holds
@@ -197,46 +239,46 @@ func (set *partSet) settle(mistakes map[string]error) {
 
 // compileOwn compiles the schema of each part of one's own in set, and returns, by name, what stopped each:
 // the mistakes of its schema.json, or what floe cannot place there (compileMistakes). Each is compiled with
-// the other parts of one's own standing as true, a schema anything fits: a $ref to a part whole finds it
-// either way, and one into a part is refused (partMistake). So each stops at its own file alone, whatever
-// the order of jsonschema's walk, and no other part's $ref is walked there. Once settle leaves out those
-// that stopped and those that refer to them (checkHeld), every part left compiles with the schemas of the
-// others: a template that uses a part floe part check passes never stops at the part.
+// every other part, floe's too, standing as true, a schema anything fits, and the schemas the parts share
+// as they are: a $ref to a part whole finds it either way, and one into a part is refused (partMistake).
+// So each stops at its own file, or at a schema the parts share, alone, whatever the order of jsonschema's
+// walk, and no other part's $ref is walked there. Once settle leaves out those that stopped and those that
+// refer to them (checkHeld), every part left compiles with the schemas of the others: a template that uses
+// a part floe part check passes never stops at the part. The failure is floe's: making a compiler, or
+// checking a part's $refs.
 // LIMIT: jsonschema stops at the first mistake of a file, in the order it walks the file: those the
 // metaschema refuses are told always, but another, a regular expression under draft-04, whose metaschema
 // checks none, or an $anchor or $id written twice, waits for those met before it.
 // LIMIT: what floe cannot place is told in jsonschema's English, as floe's failure (tmpl_own_failed).
-func (set *partSet) compileOwn() map[string]error {
+func (set *partSet) compileOwn() (map[string]error, error) {
 	mistakes := map[string]error{}
 	stands := map[string]bool{}
-	for name, p := range set.parts {
-		if p.ownSchema() {
-			stands[partsURL+name+".json"] = true
-		}
+	for url := range set.docs {
+		stands[url] = !set.shares[url]
 	}
 	for name, p := range set.parts {
 		if !p.ownSchema() {
 			continue
 		}
-		url, file := partsURL+name+".json", p.schemaFile()
+		url := partsURL + name + ".json"
 		stands[url] = false
 		c, err := set.compiler(stands)
 		stands[url] = true
-		if err == nil {
-			_, err = c.Compile(url)
+		if err != nil {
+			return nil, err
 		}
-		switch {
-		case err == nil:
-		case set.checkHeld(name) == nil:
-			mistakes[name] = compileMistakes(url, file, err)
-		default:
-			// What its $refs' mistakes, told at them, stop it at is left out: the rest of its file is told.
-			if m := ownMistakes(url, file, err); m != nil {
-				mistakes[name] = m
-			}
+		if _, err = c.Compile(url); err == nil {
+			continue
+		}
+		why, err := set.compiledMistakes(name, err)
+		if err != nil {
+			return nil, err
+		}
+		if why != nil {
+			mistakes[name] = why
 		}
 	}
-	return mistakes
+	return mistakes, nil
 }
 
 // ownSchema reports whether p is a part of one's own that draws, whose schema.json floe compiles.

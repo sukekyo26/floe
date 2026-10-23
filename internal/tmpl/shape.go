@@ -292,6 +292,41 @@ func (n *schemaNotes) format(f string, typ any, ptr string, reached bool) bool {
 // file, a part, a schema the parts share or one jsonschema holds that finds nothing there.
 // The failure is floe's: making the schemas that check the $refs.
 func (set *partSet) mistakes(n *schemaNotes) (usererr.List, error) {
+	check, err := set.refCheck(n)
+	if err != nil {
+		return nil, err
+	}
+	var mistakes usererr.List
+	for _, x := range n.met {
+		m := x.mistake
+		if x.ref != nil {
+			m = check(*x.ref)
+		}
+		if m != nil {
+			mistakes = append(mistakes, m)
+		}
+	}
+	return mistakes, nil
+}
+
+// refusedRefs returns the $refs of the schema of n that set refuses (refCheck).
+func (set *partSet) refusedRefs(n *schemaNotes) ([]refAt, error) {
+	check, err := set.refCheck(n)
+	if err != nil {
+		return nil, err
+	}
+	var refused []refAt
+	for _, x := range n.met {
+		if x.ref != nil && check(*x.ref) != nil {
+			refused = append(refused, *x.ref)
+		}
+	}
+	return refused, nil
+}
+
+// refCheck returns what set refuses of a $ref of the schema of n: one that is no URL, or what refMistake
+// refuses, the schemas that check them made once. The failure is floe's: making them.
+func (set *partSet) refCheck(n *schemaNotes) (func(r refAt) *usererr.Error, error) {
 	uri, err := uriReference()
 	if err != nil {
 		return nil, err
@@ -307,21 +342,12 @@ func (set *partSet) mistakes(n *schemaNotes) (usererr.List, error) {
 		_, err := c.Compile(ref)
 		return err //nolint:wrapcheck // jsonschema's, which refTargetMistake reads by its type
 	}
-	var mistakes usererr.List
-	for _, x := range n.met {
-		m := x.mistake
-		if r := x.ref; r != nil {
-			if why := notURIReference(uri, r.written); why != "" {
-				m = n.at(*r, usererr.New("tmpl_schema_ref_url", r.written, why))
-			} else {
-				m = set.refMistake(n, *r, resolve)
-			}
+	return func(r refAt) *usererr.Error {
+		if why := notURIReference(uri, r.written); why != "" {
+			return n.at(r, usererr.New("tmpl_schema_ref_url", r.written, why))
 		}
-		if m != nil {
-			mistakes = append(mistakes, m)
-		}
-	}
-	return mistakes, nil
+		return set.refMistake(n, r, resolve)
+	}, nil
 }
 
 // refMistake returns what set refuses of r, a $ref of the schema of n, or nil; resolve compiles what a $ref

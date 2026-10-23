@@ -573,6 +573,26 @@ func TestPartCompileOrder(t *testing.T) {
 		"aref/schema.json": `{"type": "object", "properties": {"u": {"$ref": "zid.json#/$defs/nope"}}}`,
 		"aref/part.html":   `<div data-floe-part="aref"></div>`,
 		"aref/part.css":    "",
+		// A mistake of a $ref of it, where floe does not follow to a part, does not hide one of its own file
+		// the compiling finds.
+		"xa/schema.json": `{"$id": "https://example.com/a.json", "type": "object",` +
+			` "properties": {"t": {"$ref": "#/$defs/nope"}}, "$defs": {"q": {"$ref": "floe:///parts/note.json"}}}`,
+		"xa/part.html": `<div data-floe-part="xa"></div>`,
+		"xa/part.css":  "",
+		// cell, in place of floe's, holds itself through yy and is left out first: aa and zz, which hold floe's
+		// table, which holds cell, are told as holding table, which cannot be used, whatever their names.
+		"cell/schema.json": `{"type": "object", "properties": {"y": {"$ref": "yy.json"}}}`,
+		"cell/part.html":   `<div data-floe-part="cell"></div>`,
+		"cell/part.css":    "",
+		"yy/schema.json":   `{"type": "object", "properties": {"c": {"$ref": "cell.json"}}}`,
+		"yy/part.html":     `<div data-floe-part="yy"></div>`,
+		"yy/part.css":      "",
+		"aa/schema.json":   `{"type": "object", "properties": {"t": {"$ref": "table.json"}}}`,
+		"aa/part.html":     `<div data-floe-part="aa"></div>`,
+		"aa/part.css":      "",
+		"zz/schema.json":   `{"type": "object", "properties": {"t": {"$ref": "table.json"}}}`,
+		"zz/part.html":     `<div data-floe-part="zz"></div>`,
+		"zz/part.css":      "",
 	})
 	want := []string{
 		filepath.Join(parts, "pa", "schema.json") + ": #/properties/z/patternProperties: ",
@@ -580,6 +600,10 @@ func TestPartCompileOrder(t *testing.T) {
 		filepath.Join(parts, "zid", "schema.json") + ": #: a $ref to #/$defs/nope finds nothing",
 		filepath.Join(parts, "yref", "schema.json") + ": #/properties/u: ",
 		filepath.Join(parts, "aref", "schema.json") + ": #/properties/u: ",
+		filepath.Join(parts, "xa", "schema.json") + ": #: a $ref to #/$defs/nope finds nothing",
+		filepath.Join(parts, "xa", "schema.json") + ": #/$defs/q: ",
+		filepath.Join(parts, "aa", "schema.json") + ": #/properties/t: the part table cannot be used",
+		filepath.Join(parts, "zz", "schema.json") + ": #/properties/t: the part table cannot be used",
 	}
 	first := ""
 	for range 20 {
