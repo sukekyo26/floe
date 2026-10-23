@@ -8,9 +8,10 @@ import (
 
 func (a *app) iconsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "icons",
-		Short: "Keep icon sets for the icon parts of diagrams, and search them",
-		Args:  usage(cobra.NoArgs),
+		Use:         "icons",
+		Annotations: uses(nil, nil),
+		Short:       "Keep icon sets for the icon parts of diagrams, and search them",
+		Args:        usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
 		},
@@ -22,8 +23,9 @@ func (a *app) iconsCmd() *cobra.Command {
 func (a *app) iconsFetchCmd() *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
-		Use:   "fetch <set> [zip-or-url]",
-		Short: "Keep an icon set from its official package for icon parts",
+		Use:         "fetch <set> [zip-or-url]",
+		Annotations: uses([]setting{iconsSetting}, nil),
+		Short:       "Keep an icon set from its official package for icon parts",
 		Long: `Keep an icon set in $FLOE_ICONS_DIR/<set> for the icon parts of diagrams. The sets:
 
   aws  the AWS Architecture Icons (48px services and resources, 32px groups, with their
@@ -64,8 +66,9 @@ already there is kept unless --force.`,
 
 func (a *app) iconsSearchCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "search <word>...",
-		Short: "List the fetched icons whose name contains every word",
+		Use:         "search <word>...",
+		Annotations: uses([]setting{iconsSetting}, nil),
+		Short:       "List the fetched icons whose name contains every word",
 		Long: `List the fetched icons whose name contains every word, one per line as the name to give
 an icon part (aws/…) and its category, tab-separated.`,
 		Args: usage(cobra.MinimumNArgs(1)),

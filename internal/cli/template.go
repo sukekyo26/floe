@@ -2,7 +2,6 @@ package cli
 
 import (
 	"cmp"
-	"fmt"
 	"slices"
 	"strings"
 
@@ -14,9 +13,10 @@ import (
 
 func (a *app) templateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "template",
-		Short: "List the templates, show what a data file of one may hold, make one of your own, and check it",
-		Args:  usage(cobra.NoArgs),
+		Use:         "template",
+		Annotations: uses(nil, nil),
+		Short:       "List the templates, show what a data file of one may hold, make one of your own, and check it",
+		Args:        usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
 		},
@@ -27,8 +27,9 @@ func (a *app) templateCmd() *cobra.Command {
 
 func (a *app) templateListCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "list",
-		Short: "List the templates (name, where, the floe it needs, description; tab-separated)",
+		Use:         "list",
+		Annotations: uses(nil, []setting{templatesSetting, partsSetting, themesSetting}),
+		Short:       "List the templates (name, where, the floe it needs, description; tab-separated)",
 		Long: `List the templates, one per line: its name, where it is (a directory of your own, or
 built-in), the floe it needs, and its description, tab-separated. A template of
 your own takes the place of the built-in one of its name.`,
@@ -70,8 +71,9 @@ func where(d *tmpl.Description) string {
 
 func (a *app) templateShowCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "show <name>",
-		Short: "Show the items a data file of a template may hold, and its example",
+		Use:         "show <name>",
+		Annotations: uses(nil, []setting{templatesSetting, partsSetting, themesSetting}),
+		Short:       "Show the items a data file of a template may hold, and its example",
 		Long: `Show a template: where it is, the themes a data file of it may pick, the floe it needs, the items a
 data file of it may hold (from its schema.json), and its example.yaml to start a data file from.`,
 		Args: usage(cobra.ExactArgs(1)),
@@ -172,8 +174,9 @@ func takes(it tmpl.Item) string {
 func (a *app) templateNewCmd() *cobra.Command {
 	var from string
 	cmd := &cobra.Command{
-		Use:   "new <name> --from <template>",
-		Short: "Make a template of your own as a copy of another, to edit",
+		Use:         "new <name> --from <template>",
+		Annotations: uses([]setting{templatesSetting}, nil),
+		Short:       "Make a template of your own as a copy of another, to edit",
 		Long: `Make a template of your own in $FLOE_TEMPLATES_DIR/<name> as a copy of another template,
 built-in or your own, to edit. Its template.yaml names the floe it needs (this floe, for a copy of
 a built-in one), and its example.yaml names the new template. A template of your own of that name
@@ -197,8 +200,9 @@ is left as it is. A copy named like a built-in template takes its place.`,
 
 func (a *app) templateCheckCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "check <dir>...",
-		Short: "Check templates before you use or share them",
+		Use:         "check <dir>...",
+		Annotations: uses(nil, []setting{iconsSetting, partsSetting, themesSetting}),
+		Short:       "Check templates before you use or share them",
 		Long: `Check each directory as a template of its name: its template.yaml, schema.json, checks.yaml,
 computed.yaml, page.html, words.yaml, default theme and assets/, and then its example.yaml through every stage of
 floe publish, drawing the page included. Every mistake is printed, at its line and column where
@@ -220,10 +224,7 @@ code 0. Nothing is printed when the templates are right.`,
 				}
 				tell(&found, err)
 			}
-			if warned != nil {
-				//nolint:errcheck // nowhere left to report
-				_, _ = fmt.Fprintln(a.env.Stderr, usererr.Tell(english, warned).Render(named))
-			}
+			a.tellWarnings(warned)
 			return found.Err()
 		},
 	}

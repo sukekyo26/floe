@@ -826,6 +826,35 @@ func TestCheck(t *testing.T) {
 	}
 }
 
+// A command is told the mistakes of the settings it uses alone: those it needs stop it, all at once; those
+// it reads it is warned of and goes on without; those it does not use it is not told.
+func TestSettingsByUse(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.write(t, "ok.yaml", "template: report\ntitle: OK\nlang: en\n")
+	store := e.vars["FLOE_DIR"]
+	delete(e.vars, "HOME")
+	delete(e.vars, "FLOE_DIR")
+	want(t, "check without a home or a store", e.run(t, "", "check", "ok.yaml"), 0, "", "")
+	e.vars["FLOE_PORT"] = "0"
+	want(t, "check with a wrong port", e.run(t, "", "check", "ok.yaml"), 0, "", "")
+	e.vars["FLOE_DIR"] = store
+	want(t, "list with a wrong port", e.run(t, "", "list"), 1, "", `floe: invalid FLOE_PORT "0": use a port number from 1 to 65535`)
+	e.vars["FLOE_PARTS_DIR"] = "~x"
+	const parts = "floe: FLOE_PARTS_DIR is ~x: floe takes only ~ and ~/ at the start for your home, not ~name; write the path " +
+		"absolute, or ./~x for a directory of that name under the working directory"
+	if r := e.run(t, "", "publish", "ok.yaml"); r.code != 1 ||
+		r.stderr != "floe: invalid FLOE_PORT \"0\": use a port number from 1 to 65535\n"+parts+"\n" {
+		t.Errorf("publish with a wrong port and parts = %d %q", r.code, r.stderr)
+	}
+	e.vars["FLOE_PORT"] = e.port
+	if r := e.run(t, "", "check", "ok.yaml"); r.code != 0 || r.stderr != parts+"; floe check goes on without it\n" {
+		t.Errorf("check with parts it reads wrong = %d %q", r.code, r.stderr)
+	}
+	want(t, "part check with parts it needs wrong", e.run(t, "", "part", "check"), 1, "", parts)
+}
+
 // freePort picks below the ports the system gives out for :0, which a test of another package may be
 // given meanwhile.
 func TestFreePortBelowEphemeral(t *testing.T) {

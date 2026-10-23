@@ -272,7 +272,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   working directory, and a `~` or `~/` at its start stands for `HOME`
   (`~name` is refused). The defaults are under `XDG_DATA_HOME` and
   `XDG_CONFIG_HOME`, whose `~` stands for `HOME` too; a relative one of
-  those is ignored, as the XDG spec says.
+  those is ignored, as the XDG spec says. A command is told the mistakes of
+  the settings it uses alone: one it needs stops it, with the others at
+  once; one it only reads is warned of, and it goes on without it; one it
+  does not use is not told (`floe check` runs without `HOME`).
   The management page may be framed by itself and by VS Code's Simple
   Browser alone (`frame-ancestors 'self' vscode-webview: vscode-file:`), so
   that another site, or a page, cannot have its buttons clicked unseen.

@@ -366,6 +366,8 @@ List the fetched icons whose name contains every word (case does not matter), on
 
 In `FLOE_DIR`, `FLOE_ICONS_DIR`, `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR`, `XDG_DATA_HOME` and `XDG_CONFIG_HOME`, a `~` or `~/` at the start stands for `HOME`, so that one written in quotes (a `.env` file, a service unit) is not a directory named `~`; a `FLOE_` one starting with `~name`, or with `~` without `HOME`, is refused. A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says, and so is one starting with `~name`, or with `~` without `HOME`.
 
+A command is told the mistakes of the settings it uses alone. One it needs stops it, with every other such mistake at once (exit code 1): `FLOE_PORT` and `FLOE_DIR` for the commands that use the server, every directory for those that start it (`publish`, `list`, `rm`, `serve`), the directory a command writes in, and `FLOE_PARTS_DIR` and `FLOE_THEMES_DIR` for `floe part check`. One it only reads (the templates, parts, themes and icons `floe check` draws with, say) is warned of on stderr, and the command goes on without it. One it does not use is not told: `floe check` runs without `HOME`, `FLOE_DIR` or a right `FLOE_PORT`.
+
 The command line speaks English, whatever the environment's language; the management page and the page of a data file's mistakes follow the browser's language.
 
 ## Exit codes
