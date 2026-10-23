@@ -241,13 +241,12 @@ var ErrHandedAddr = errors.New("the listener handed down is not on the server's 
 // CannotListen is the mistake of FLOE_PORT, port, that err keeps from being bound, when another port mends
 // it: in use by another program, or refused (a privileged port); any other is floe's failure. start takes
 // a port in use as another server's, and tells only the others so.
-// LIMIT: the reason is the system's English; word the errnos floe meets if one comes to need a fix of its own
 func CannotListen(port int, err error) error {
 	switch {
 	case errors.Is(err, syscall.EADDRINUSE):
 		return usererr.New("daemon_port_in_use", port)
 	case errors.Is(err, syscall.EACCES):
-		return usererr.New("daemon_cannot_listen", port, syscall.EACCES.Error())
+		return usererr.New("daemon_cannot_listen", port)
 	}
 	return fmt.Errorf("listen on %s: %w", Addr(port), err)
 }

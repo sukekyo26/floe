@@ -80,7 +80,7 @@ func TestCannotListen(t *testing.T) {
 	}
 	err := daemon.Ensure(t.Context(), daemon.Server{Port: 1, Root: t.TempDir(), Build: "b", Env: nil})
 	var ue *usererr.Error
-	if !errors.As(err, &ue) || ue.Key != "daemon_cannot_listen" || len(ue.Args) != 2 || ue.Args[1] != "permission denied" {
+	if !errors.As(err, &ue) || ue.Key != "daemon_cannot_listen" || len(ue.Args) != 1 {
 		t.Errorf("Ensure on a privileged port = %#v", err)
 	}
 }

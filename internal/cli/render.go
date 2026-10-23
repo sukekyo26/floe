@@ -119,7 +119,7 @@ func (a *app) writePages(pages []rendered, outDir string) error {
 	if outDir != "" {
 		// As the pages in it, for others to read.
 		if err := os.MkdirAll(a.abs(outDir), 0o755); err != nil { //nolint:gosec // G301: pages to share
-			return usererr.CannotWrite(outDir, err)
+			return usererr.CannotWrite(a.abs(outDir), err)
 		}
 	}
 	for _, p := range pages {

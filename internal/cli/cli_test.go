@@ -993,8 +993,11 @@ func TestCannotWrite(t *testing.T) {
 		}
 		e.vars[c.key] = saved
 	}
-	// A server a publish starts tells it alike, where nothing is shown: the publish says to run floe serve.
+	// A relative --out-dir is told by the step that could not be made too.
 	e.write(t, "ok.yaml", "template: report\ntitle: OK\nlang: en\n")
+	want(t, "render into a directory floe cannot write to", e.run(t, "", "render", "ok.yaml", "--out-dir", "locked/sub/out"), 1, "",
+		"floe: cannot write "+filepath.Join(locked, "sub")+cannot)
+	// A server a publish starts tells it alike, where nothing is shown: the publish says to run floe serve.
 	saved := e.vars["FLOE_DIR"]
 	e.vars["FLOE_DIR"] = locked
 	want(t, "publish into a store floe cannot write in", e.run(t, "", "publish", "ok.yaml"), 1, "",
