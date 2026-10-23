@@ -114,3 +114,14 @@ func TestPartCheck(t *testing.T) {
 		t.Errorf("part check with an argument = %+v", r)
 	}
 }
+
+// floe part check with FLOE_PARTS_DIR under a file says so, rather than check no part and pass.
+func TestPartCheckUnderAFile(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	file := e.write(t, "afile", "")
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(file, "parts")
+	want(t, "part check with its directory under a file", e.run(t, "", "part", "check"), 1, "",
+		"floe: FLOE_PARTS_DIR, "+file+"/parts, is under "+file+", which is not a directory; set FLOE_PARTS_DIR to a directory")
+}

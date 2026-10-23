@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -14,8 +15,8 @@ const defaultPort = 7325
 
 var decimalIntRe = regexp.MustCompile(`^[0-9]+$`)
 
-// config is what floe reads from the environment. Every command checks it first. A directory is nowhere
-// without its setting, an XDG base directory and a home.
+// config is what floe reads from the environment. Every command checks it first, and is told every mistake
+// of it at once. A directory is nowhere without its setting, an XDG base directory and a home.
 type config struct {
 	root      string
 	icons     string // empty when there is nowhere to put it, which the icons commands refuse
@@ -35,15 +36,18 @@ func (c *config) base() string {
 // command does.
 func loadConfig(getenv func(string) string, dir string) (*config, error) {
 	c := &config{root: "", icons: "", templates: "", parts: "", themes: "", home: getenv("HOME"), port: defaultPort}
+	var found usererr.List
 	if raw := getenv("FLOE_PORT"); raw != "" {
 		// Decimal only: hex (0x10) and exponents (1e3) are typos, not ports.
 		port, err := strconv.Atoi(raw)
 		if !decimalIntRe.MatchString(raw) || err != nil || port < 1 || port > 65535 {
-			return nil, usererr.New("cli_invalid_port", raw)
+			found = append(found, usererr.New("cli_invalid_port", raw))
+		} else {
+			c.port = port
 		}
-		c.port = port
 	}
-	if err := c.readDirs(getenv, dir); err != nil {
+	c.readDirs(getenv, dir, &found)
+	if err := found.Err(); err != nil {
 		return nil, err
 	}
 	return c, nil
@@ -52,8 +56,8 @@ func loadConfig(getenv func(string) string, dir string) (*config, error) {
 // readDirs reads floe's directories: each its setting, else a default under the XDG base directory, else
 // under the home. With none of them, the icons and the templates, parts and themes of one's own are none
 // (the icons commands refuse that, and floe's templates, parts and themes are the only ones), and the pages
-// are refused.
-func (c *config) readDirs(getenv func(string) string, dir string) error {
+// are refused. Each that cannot be a directory is a mistake of its setting, added to found.
+func (c *config) readDirs(getenv func(string) string, dir string, found *usererr.List) {
 	data := xdgDir(getenv, "XDG_DATA_HOME", c.home, ".local", "share")
 	conf := xdgDir(getenv, "XDG_CONFIG_HOME", c.home, ".config")
 	for _, d := range []struct {
@@ -68,19 +72,46 @@ func (c *config) readDirs(getenv func(string) string, dir string) error {
 		{"FLOE_PARTS_DIR", conf, filepath.Join("floe", "parts"), &c.parts},
 		{"FLOE_THEMES_DIR", conf, filepath.Join("floe", "themes"), &c.themes},
 	} {
-		v, err := floeDir(getenv, d.key, c.home, dir)
-		if err != nil {
-			return err
+		v, mistake := floeDir(getenv, d.key, c.home, dir)
+		if mistake != nil {
+			*found = append(*found, mistake)
+			continue
 		}
 		if v == "" && d.base != "" {
 			v = filepath.Join(d.base, d.name)
 		}
 		if v == "" && d.to == &c.root {
-			return usererr.New("cli_no_home")
+			*found = append(*found, usererr.New("cli_no_home"))
+			continue
+		}
+		if v != "" {
+			switch at := notDir(v); at {
+			case "":
+			case v:
+				*found = append(*found, usererr.New("cli_dir_is_file", d.key, v, d.key))
+			default:
+				*found = append(*found, usererr.New("cli_dir_under_file", d.key, v, at, d.key))
+			}
 		}
 		*d.to = v
 	}
-	return nil
+}
+
+// notDir is where dir cannot be a directory: dir, or the nearest of its parents that is there, when that is
+// not a directory; "" when it is one. Whether floe may write there is left to the commands that write, so
+// that one that only reads is not stopped, and nothing is made.
+func notDir(dir string) string {
+	for at := dir; ; at = filepath.Dir(at) {
+		if info, err := os.Stat(at); err == nil {
+			if info.IsDir() {
+				return ""
+			}
+			return at
+		}
+		if filepath.Dir(at) == at {
+			return ""
+		}
+	}
 }
 
 // floeDir reads floe's directory setting key: a ~ or ~/ at its start stands for home, so that one written
@@ -88,7 +119,7 @@ func (c *config) readDirs(getenv func(string) string, dir string) error {
 // ~name (the home of name, to a shell), a ~ without a home and a relative one without dir are refused.
 // LIMIT: ~name is refused, not looked up: os/user without cgo reads /etc/passwd alone on linux, which misses
 // the users of NSS (LDAP, SSSD); look it up if one comes to need ~name, and refuse a name it cannot find.
-func floeDir(getenv func(string) string, key, home, dir string) (string, error) {
+func floeDir(getenv func(string) string, key, home, dir string) (string, *usererr.Error) {
 	v := getenv(key)
 	switch {
 	case v == "":

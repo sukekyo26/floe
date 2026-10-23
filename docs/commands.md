@@ -363,6 +363,8 @@ List the fetched icons whose name contains every word (case does not matter), on
 
 In `FLOE_DIR`, `FLOE_ICONS_DIR`, `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR`, `XDG_DATA_HOME` and `XDG_CONFIG_HOME`, a `~` or `~/` at the start stands for `HOME`, so that one written in quotes (a `.env` file, a service unit) is not a directory named `~`; a `FLOE_` one starting with `~name`, or with `~` without `HOME`, is refused. A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says, and so is one starting with `~name`, or with `~` without `HOME`.
 
+Every command checks the settings first and reports all their mistakes at once. Each of the five directories, set or not, must be a directory, or not there yet under one: one that is a file, or under a file, is refused by its variable's name. Nothing is made then, and whether floe may write there is told by the command that writes.
+
 The command line speaks English, whatever the environment's language; the management page and the page of a data file's mistakes follow the browser's language.
 
 ## Exit codes

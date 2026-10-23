@@ -146,17 +146,15 @@ func TestTemplateCommands(t *testing.T) {
 	}
 }
 
-// floe template new under a file where the directory of templates would be says what failed, not that
-// the template is there.
+// floe template new where the directory of templates is a file is told so by its setting, not that the
+// template is there.
 func TestTemplateNewUnderAFile(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
 	e.vars["FLOE_TEMPLATES_DIR"] = e.write(t, "templates", "")
-	if r := e.run(t, "", "template", "new", "spec", "--from", "report"); r.code != 1 || strings.Contains(r.stderr, "is there already") ||
-		!strings.Contains(r.stderr, "make the template spec") {
-		t.Errorf("template new under a file = %+v", r)
-	}
+	want(t, "template new where the templates are a file", e.run(t, "", "template", "new", "spec", "--from", "report"), 1, "",
+		"floe: FLOE_TEMPLATES_DIR, "+e.vars["FLOE_TEMPLATES_DIR"]+", is not a directory; set FLOE_TEMPLATES_DIR to a directory")
 }
 
 // floe template show tells where a template is, its items with what they take, and its example.
