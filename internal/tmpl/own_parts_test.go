@@ -251,6 +251,18 @@ func TestBrokenOwnParts(t *testing.T) {
 		"toned/schema.json": `{"$ref": "tone.json"}`,
 		"toned/part.html":   `<b data-floe-part="toned">{{.}}</b>`,
 		"toned/part.css":    "",
+		// What compiling the schema alone finds, at its pointer: a pattern that is no regular expression, and a
+		// $ref into its own file that finds nothing.
+		"regexed/schema.json": `{"type": "object", "properties": {"text": {"type": "string", "pattern": "(["}}}`,
+		"regexed/part.html":   `<div data-floe-part="regexed">{{.text}}</div>`,
+		"regexed/part.css":    "",
+		"pointed/schema.json": `{"type": "object", "properties": {"t": {"$ref": "#/$defs/nope"}}}`,
+		"pointed/part.html":   `<div data-floe-part="pointed"></div>`,
+		"pointed/part.css":    "",
+		// Named before regexed, whose compiling stops at regexed's: told as a part that cannot be used.
+		"aregexed/schema.json": `{"type": "object", "properties": {"r": {"$ref": "regexed.json"}}}`,
+		"aregexed/part.html":   `<div data-floe-part="aregexed"></div>`,
+		"aregexed/part.css":    "",
 		// The mistakes of several files are told together, under the part.
 		"wrongs/schema.json": `{"type": "object"}`,
 		"wrongs/part.html":   `<div data-floe-part="wrongs"></div>`,
@@ -334,6 +346,12 @@ func TestBrokenOwnParts(t *testing.T) {
 			": #: the part unnamed cannot be used",
 		"paneled": "the part paneled cannot be used\n  " + filepath.Join(parts, "paneled", "schema.json") +
 			": #: floe:///parts/panel.json is the look panel, which draws nothing",
+		"regexed": "the part regexed cannot be used\n  " + filepath.Join(parts, "regexed", "schema.json") +
+			": #/properties/text/pattern: JSON Schema does not take this: '([' is not valid regex",
+		"pointed": "the part pointed cannot be used\n  " + filepath.Join(parts, "pointed", "schema.json") +
+			": #: a $ref to #/$defs/nope finds nothing in schema.json",
+		"aregexed": "the part aregexed cannot be used\n  " + filepath.Join(parts, "aregexed", "schema.json") +
+			": #/properties/r: the part regexed cannot be used",
 		"wrongs": "the part wrongs cannot be used\n  " + filepath.Join(parts, "wrongs", "part.yaml") + ":1:1: lookz is not a key of part.yaml" +
 			"; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:\n  " +
 			filepath.Join(parts, "wrongs", "words.yaml") + ":2:1: ja leaves out a, which en has\n  " +

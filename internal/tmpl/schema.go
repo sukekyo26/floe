@@ -58,14 +58,12 @@ func schemaJSON(file string, src []byte) (any, error) {
 // parts of set; file is where it is, in its mistakes.
 func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema, error) {
 	url := schemaURL(name)
-	c := newCompiler(set)
-	if err := c.AddResource(url, doc); err != nil {
-		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
+	c, err := set.compiler()
+	if err != nil {
+		return nil, err
 	}
-	for partURL, partDoc := range set.docs {
-		if err := c.AddResource(partURL, partDoc); err != nil {
-			return nil, fmt.Errorf("read the schema %s: %w", partURL, err)
-		}
+	if err = c.AddResource(url, doc); err != nil {
+		return nil, fmt.Errorf("read the schema of %s: %w", name, err)
 	}
 	sch, err := c.Compile(url)
 	// jsonschema wraps noLoader's mistake in an error of its own, which does not unwrap: floe's own is told,
@@ -82,9 +80,18 @@ func compileSchema(set *partSet, name, file string, doc any) (*jsonschema.Schema
 }
 
 // compileMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of
-// file: those the metaschema refuses, and those of a kind floe knows, each at its JSON pointer. One of
-// another schema, a part's, or of a kind floe does not know is a failure.
+// file (ownMistakes). One of another schema, a part's, or of a kind floe does not know is a failure.
 func compileMistakes(url, file string, err error) error {
+	if own := ownMistakes(url, file, err); own != nil {
+		return own
+	}
+	return fmt.Errorf("compile the schema %s: %w", file, err)
+}
+
+// ownMistakes returns err, what stopped the compiling of the schema at url, file, as the mistakes of file:
+// those the metaschema refuses, and those of a kind floe knows, each at its JSON pointer. It returns nil
+// for one of another schema or of a kind floe does not know.
+func ownMistakes(url, file string, err error) error {
 	var invalid *jsonschema.SchemaValidationError
 	if errors.As(err, &invalid) && strings.TrimSuffix(invalid.URL, "#") == url {
 		if refused := metaschemaMistakes(file, invalid.Err); refused != nil {
@@ -94,7 +101,7 @@ func compileMistakes(url, file string, err error) error {
 	if e := compileMistake(url, file, err); e != nil {
 		return e
 	}
-	return fmt.Errorf("compile the schema %s: %w", file, err)
+	return nil
 }
 
 // compileMistake returns err, what stopped the compiling of the schema at url, file, as a mistake at its
@@ -200,6 +207,17 @@ func newCompiler(set *partSet) *jsonschema.Compiler {
 		c.RegisterFormat(&jsonschema.Format{Name: f, Validate: func(any) error { return nil }})
 	}
 	return c
+}
+
+// compiler returns a compiler that holds the schemas of the parts of set.
+func (set *partSet) compiler() (*jsonschema.Compiler, error) {
+	c := newCompiler(set)
+	for url, doc := range set.docs {
+		if err := c.AddResource(url, doc); err != nil {
+			return nil, fmt.Errorf("read the schema %s: %w", url, err)
+		}
+	}
+	return c, nil
 }
 
 // knownFormat reports whether floe knows the format f: one of JSON Schema's that it checks, or one of

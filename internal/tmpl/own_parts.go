@@ -151,9 +151,9 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) {
 
 // leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own
 // that holds itself, through the parts it holds, or takes its own look, through the looks it takes, which
-// floe would follow forever, a part, floe's too, that checkNames refuses, again while one is left out, as a
-// part may take the look of the one left out, or hold it, and then one whose schema names a usable part at
-// its root.
+// floe would follow forever, one of one's own whose schema does not compile, a part, floe's too, that
+// checkNames refuses, again while one is left out, as a part may take the look of the one left out, or
+// hold it, and then one whose schema names a usable part at its root.
 func (set *partSet) leaveOutUnusable() {
 	held := func(at string) []string { return set.shapes[partsURL+at+".json"].refsUnder(nil) }
 	looks := func(at string) []string {
@@ -173,9 +173,38 @@ func (set *partSet) leaveOutUnusable() {
 			set.leaveOut(name, usererr.NewAt(dir, 0, 0, "tmpl_look_cycle", name, strings.Join(chain, " → ")))
 		}
 	}
+	set.leaveOutUncompiled()
 	set.settle()
 	if set.leaveOutRooted() {
 		set.settle()
+	}
+}
+
+// leaveOutUncompiled leaves out of set each part of one's own whose schema.json does not compile as JSON
+// Schema, with its mistakes there (ownMistakes), such as a pattern that is no regular expression: a
+// template that uses the part would stop at it. What stops at another schema it refers to is told of
+// that one, or by the checks of its $refs (checkHeld).
+// LIMIT: jsonschema stops at the first mistake, so one of the part's own met after one of a part it refers
+// to is told once that part is fixed. Compile each part alone if a part comes to refer to many.
+func (set *partSet) leaveOutUncompiled() {
+	refused := map[string]error{}
+	for name, p := range set.parts {
+		if p.dir == "" || p.isLook() {
+			continue
+		}
+		url := partsURL + name + ".json"
+		c, err := set.compiler()
+		if err == nil {
+			_, err = c.Compile(url)
+		}
+		if err != nil {
+			refused[name] = ownMistakes(url, path.Join(p.dir, "schema.json"), err)
+		}
+	}
+	for name, why := range refused {
+		if why != nil {
+			set.leaveOut(name, why)
+		}
 	}
 }
 
