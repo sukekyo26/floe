@@ -206,12 +206,9 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// A slug not to be is the publisher's mistake, told as one: the page is not there to be not found.
+	// The only slug of the publish, which PrepareData checks with the rest: one not to be is the publisher's
+	// mistake, not a page not found.
 	slug := r.PathValue("slug")
-	if !store.ValidSlug(slug) {
-		refuse(w, r, usererr.New("store_invalid_slug", slug))
-		return
-	}
 	up := store.Upload{File: in.File, Dir: in.Dir, Source: in.Source, Images: imagesFS(in.Images), Project: in.Project}
 	opts := store.Options{
 		Slug: &slug, Title: in.Title, Description: in.Description, Theme: in.Theme,

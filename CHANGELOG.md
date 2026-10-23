@@ -203,7 +203,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `--theme` picks another theme, and `--slug`, `--title`,
   `--description` and `--force` are also available.
   Republishing a slug says so on stderr, with a warning when the title
-  changed.
+  changed. Every mistake of what is given, the options and the file, is told
+  at once, by the command line before it sends and by the server again.
 - Use templates of your own: a directory in `FLOE_TEMPLATES_DIR` (default
   `~/.config/floe/templates`), a symlink included, takes the place of a
   built-in template of its name. A published page is drawn with the server's

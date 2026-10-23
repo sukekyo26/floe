@@ -35,7 +35,8 @@ type Env struct {
 	Environ []string
 }
 
-// usageError is a mistake in the command line (exit 2).
+// usageError is a command line floe cannot read, or that lacks what it needs (exit 2). A value floe refuses
+// is not one (exit 1), whether the command line or the server tells it.
 type usageError struct {
 	err error
 }
@@ -68,10 +69,10 @@ func Run(ctx context.Context, args []string, env Env) int {
 	return exitFail
 }
 
-// checkLang refuses a --lang that is not a BCP 47 tag, as a usage error.
+// checkLang refuses a --lang that is not a BCP 47 tag.
 func checkLang(lang string) error {
 	if !i18n.IsTag(lang) {
-		return usageError{err: usererr.New("lang_invalid", lang)}
+		return usererr.New("lang_invalid", lang)
 	}
 	return nil
 }

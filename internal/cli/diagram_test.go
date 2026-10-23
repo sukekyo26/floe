@@ -88,8 +88,8 @@ func TestDiagramExample(t *testing.T) {
 	if r := e.run(t, "", "diagram", "example", "venn", "--lang", "pt-BR"); r.code != 0 || !strings.HasPrefix(r.stdout, "# Venn diagram: ") {
 		t.Errorf("example venn --lang pt-BR = %+v, want the English spec", r)
 	}
-	want(t, "an invalid language", e.run(t, "", "diagram", "example", "--lang", "ja_JP"), 2, "",
+	want(t, "an invalid language", e.run(t, "", "diagram", "example", "--lang", "ja_JP"), 1, "",
 		`floe: invalid language "ja_JP": give --lang a BCP 47 tag such as en, ja or pt-BR`)
-	want(t, "an unknown example", e.run(t, "", "diagram", "example", "pie"), 2, "",
+	want(t, "an unknown example", e.run(t, "", "diagram", "example", "pie"), 1, "",
 		`floe: unknown example "pie"; use architecture, aws, class, er, flow, git, sequence, state, timeline, venn`)
 }

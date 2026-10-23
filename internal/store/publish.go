@@ -74,10 +74,12 @@ type Options struct {
 	Force       bool
 }
 
-// Normalized is o with each string given trimmed, whoever gave it, and every mistake of them: a slug given
-// that cannot be one, a title given empty, as it would leave the list blank, and a theme, which would take
-// the data's. The command line checks with it before it sends, and the server again.
-func (o Options) Normalized() (Options, error) {
+// Accept checks a publish of file, a link or a data file, for what needs neither the store nor the disk,
+// and returns o with each string given trimmed, whoever gave it, and a data file's slug made of its name
+// when none is given. Its mistakes: a data file that is not one, a slug that cannot be one, a title given
+// empty, as it would leave the list blank, and a theme, which would take the data's. The command line
+// checks with it before it sends, and the server again.
+func Accept(file string, link bool, o Options) (Options, error) {
 	for _, field := range []**string{&o.Slug, &o.Title, &o.Description, &o.Theme} {
 		if *field != nil {
 			v := strings.TrimSpace(**field)
@@ -85,6 +87,15 @@ func (o Options) Normalized() (Options, error) {
 		}
 	}
 	var found usererr.List
+	if !link && !IsDataFile(file) {
+		found = append(found, usererr.New("store_not_data", file))
+	}
+	// Made of the name of a data file only: a stored page is drawn from one.
+	if o.Slug == nil && !link && len(found) == 0 {
+		// No cwd: it names only an index.html after its directory, and this is a data file.
+		slug := SlugFromFile(file, "")
+		o.Slug = &slug
+	}
 	if o.Slug != nil && !ValidSlug(*o.Slug) {
 		found = append(found, usererr.New("store_invalid_slug", *o.Slug))
 	}
@@ -152,10 +163,6 @@ func (e *NeedImages) Error() string {
 // ReadUpload reads the data file file on disk for a publish from cwd, which resolves a relative file and
 // names the project the page belongs to. Its images are left out, to be read when asked for.
 func ReadUpload(ctx context.Context, file, cwd string) (Upload, error) {
-	// Before reading: a page is drawn from a data file, whatever is or is not there.
-	if err := checkData(file); err != nil {
-		return Upload{}, err
-	}
 	abs := file
 	if !filepath.IsAbs(abs) {
 		abs = filepath.Join(cwd, abs)
@@ -174,8 +181,8 @@ func ReadUpload(ctx context.Context, file, cwd string) (Upload, error) {
 // images is answered NeedImages, once nothing that needs no image refuses the publish (the slug, the
 // page's owner).
 func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
-	opts, err := opts.Normalized()
-	if err = usererr.Collect(checkData(up.File), err); err != nil {
+	opts, err := Accept(up.File, false, opts)
+	if err != nil {
 		return nil, err
 	}
 	images := up.Images
@@ -186,7 +193,7 @@ func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
 	data, named, err := s.templates.ReadFS(up.File, up.Source, images, up.Dir, theme)
 	// Asked before the mistakes, which may be of the images not sent.
 	if up.Images == nil && len(named) > 0 {
-		if _, refused := s.storedPage(up.File, nil, nil, opts, up.Project); refused != nil {
+		if _, refused := s.storedPage(nil, nil, opts, up.Project); refused != nil {
 			return nil, refused
 		}
 		return nil, &NeedImages{Names: named}
@@ -194,28 +201,14 @@ func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 	}
-	return s.storedPage(up.File, data, up.Source, opts, up.Project)
-}
-
-// checkData refuses file unless it is a data file, which a stored page is drawn from.
-func checkData(file string) error {
-	if !IsDataFile(file) {
-		return usererr.New("store_not_data", file)
-	}
-	return nil
+	return s.storedPage(data, up.Source, opts, up.Project)
 }
 
 // storedPage builds the entry of the data file file as a stored page, drawn from data, of content src,
-// and published from the project from; data nil checks its slug and owner only.
-func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, opts Options, from string) (
-	*Entry, error,
-) {
-	slug, err := DataSlug(file, opts.Slug)
-	if err != nil {
-		return nil, err
-	}
+// and published from the project from; data nil checks its owner only. opts are those Accept returned.
+func (s *Store) storedPage(data *tmpl.Data, src []byte, opts Options, from string) (*Entry, error) {
 	return s.checked(&Entry{
-		Slug: slug, Meta: seedMeta("", data, opts.theme()), Source: nil, Images: nil, Prev: nil, opts: opts, from: from,
+		Slug: *opts.Slug, Meta: seedMeta("", data, opts.theme()), Source: nil, Images: nil, Prev: nil, opts: opts, from: from,
 		named: "",
 	}, data, string(src))
 }
@@ -224,13 +217,9 @@ func (s *Store) storedPage(file string, data *tmpl.Data, src []byte, opts Option
 // a relative file; the project of a link is that of its directory. A data file linked is checked as a
 // stored page is, its images under its real directory.
 func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
-	// Not with readLink's checks, which look at the theme too: a theme given empty is told alone.
-	opts, err := opts.Normalized()
-	if err != nil {
-		return nil, err
-	}
-	path, src, err := s.readLink(file, opts, cwd)
-	if err != nil {
+	opts, err := Accept(file, true, opts)
+	path, src, linkErr := s.readLink(file, opts, cwd)
+	if err = usererr.Collect(err, linkErr); err != nil {
 		return nil, err
 	}
 	theme := opts.theme()
@@ -315,7 +304,7 @@ func (e *Entry) draw(data *tmpl.Data, src string) error {
 // readLink returns the real path of the linked file and its content. A link is checked and stored by
 // its real path: a symlink would otherwise reach into a hidden directory. It is of the kind of its real
 // file, whatever the name of a symlink to it says: HTML is shown as it is, in its own look, so it takes
-// no theme.
+// no theme. A theme given empty is Accept's mistake alone, not this one too.
 func (s *Store) readLink(file string, opts Options, cwd string) (string, []byte, error) {
 	abs := file
 	if !filepath.IsAbs(abs) {
@@ -328,7 +317,7 @@ func (s *Store) readLink(file string, opts Options, cwd string) (string, []byte,
 	if err = link.Check(path, s.home); err != nil {
 		return "", nil, err //nolint:wrapcheck // a usererr for the caller to show
 	}
-	if !IsDataFile(path) && opts.Theme != nil {
+	if !IsDataFile(path) && opts.theme() != "" {
 		return "", nil, usererr.New("store_theme_link")
 	}
 	b, err := os.ReadFile(path) //nolint:gosec // G304: publishing the user's file is the point
@@ -371,22 +360,11 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 	return m
 }
 
-// DataSlug is the slug of a stored page of the data file file: slug when given, else one made of its
-// name. One that cannot be a slug is refused.
-func DataSlug(file string, slug *string) (string, error) {
-	// No cwd: it names only an index.html after its directory, and this is a data file.
-	name := SlugFromFile(file, "")
-	if slug != nil {
-		name = *slug
-	}
-	return checkSlug(name)
-}
-
-// linkSlug is the slug of a link to path, given as file from cwd: the one given, else the slug of the
-// link to path, else one free made of file's name.
+// linkSlug is the slug of a link to path, given as file from cwd: the one given, which Accept checked,
+// else the slug of the link to path, else one free made of file's name.
 func (s *Store) linkSlug(file, path string, opts Options, cwd string) (string, error) {
 	if opts.Slug != nil {
-		return checkSlug(*opts.Slug)
+		return *opts.Slug, nil
 	}
 	// Named after the given file, not the symlink's target.
 	return checkSlug(s.freeSlug(SlugFromFile(file, cwd), path))

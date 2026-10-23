@@ -805,6 +805,19 @@ func TestSave(t *testing.T) {
 		t.Errorf("refused publishes = %s", got)
 	}
 
+	// What the command line checks before it sends is checked again, all at once, for whoever calls the API.
+	badOpts := upload(nil, "proj")
+	badOpts["title"] = " "
+	if r := put("Bad%20Slug", badOpts); r.status != http.StatusBadRequest ||
+		!strings.HasPrefix(r.body, `{"mistakes":[{"text":"invalid slug \"Bad Slug\": use only lowercase letters, digits and hyphens"},`+
+			`{"text":"--title is empty: give the page a name`) {
+		t.Errorf("a publish of a bad slug and a blank title = %d %s", r.status, r.body)
+	}
+	notData := upload(nil, "proj")
+	notData["file"] = "plans/page.html"
+	if r := put("page", notData); r.status != http.StatusBadRequest || !strings.Contains(r.body, `plans/page.html is not a data file`) {
+		t.Errorf("a publish of no data file = %d %s", r.status, r.body)
+	}
 	if r := put("sizes", upload(nil, "proj")); r.status != http.StatusUnprocessableEntity || r.body != `{"images":["img/chart.png"]}` {
 		t.Errorf("a publish without its images = %d %s", r.status, r.body)
 	}

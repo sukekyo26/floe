@@ -449,22 +449,31 @@ func TestPublish(t *testing.T) {
 
 	before := e.run(t, "", "list").stdout
 	const blankTitle = "floe: --title is empty: give the page a name, or omit --title to take the data file's title:, or a link's <title> or <h1>"
-	want(t, "a blank --title", e.run(t, "repo", "publish", demo, "--title", " "), 2, "", blankTitle)
-	if r := e.run(t, "repo", "publish", demo, "--title", " ", "--theme", ""); r.code != 2 ||
+	want(t, "a blank --title", e.run(t, "repo", "publish", demo, "--title", " "), 1, "", blankTitle)
+	if r := e.run(t, "repo", "publish", demo, "--title", " ", "--theme", ""); r.code != 1 ||
 		r.stderr != blankTitle+"\nfloe: --theme is empty: name a theme, or omit --theme to take the data file's theme:\n" {
 		t.Errorf("a blank --title and --theme = %d %q, want both", r.code, r.stderr)
 	}
 	e.write(t, "repo/page.html", "<!doctype html><title>x</title>")
-	want(t, "a blank --title of a link", e.run(t, "repo", "publish", "--link", "page.html", "--title", " "), 2, "", blankTitle)
+	want(t, "a blank --title of a link", e.run(t, "repo", "publish", "--link", "page.html", "--title", " "), 1, "", blankTitle)
 	if after := e.run(t, "", "list").stdout; after != before {
 		t.Errorf("a blank --title changed the list from %q to %q", before, after)
 	}
-	want(t, "an invalid slug", e.run(t, "repo", "publish", demo, "--slug", "../x"), 2, "", `floe: invalid slug "../x"`)
-	// Every option given wrong is told at once, before the server is asked.
-	if r := e.run(t, "repo", "publish", demo, "--slug", "Bad Slug", "--title", " ", "--theme", ""); r.code != 2 ||
+	want(t, "an invalid slug", e.run(t, "repo", "publish", demo, "--slug", "../x"), 1, "", `floe: invalid slug "../x"`)
+	// Every option given wrong is told at once, before the server is asked, as a value floe refuses (exit 1).
+	if r := e.run(t, "repo", "publish", demo, "--slug", "Bad Slug", "--title", " ", "--theme", ""); r.code != 1 ||
 		strings.Count(r.stderr, "\n") != 3 || !strings.HasPrefix(r.stderr, `floe: invalid slug "Bad Slug"`) ||
 		!strings.Contains(r.stderr, "\nfloe: --title is empty") || !strings.Contains(r.stderr, "\nfloe: --theme is empty") {
 		t.Errorf("publish with a bad slug, title and theme = %d %q, want all three", r.code, r.stderr)
+	}
+	// So is what is checked of the file.
+	if r := e.run(t, "repo", "publish", "page.html", "--title", " "); r.code != 1 ||
+		r.stderr != "floe: page.html is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link\n"+blankTitle+"\n" {
+		t.Errorf("publish of HTML with a blank --title = %d %q, want both", r.code, r.stderr)
+	}
+	if r := e.run(t, "repo", "publish", "nope.yaml", "--slug", "Bad Slug"); r.code != 1 || strings.Count(r.stderr, "\n") != 2 ||
+		!strings.Contains(r.stderr, "floe: cannot read nope.yaml") || !strings.Contains(r.stderr, `floe: invalid slug "Bad Slug"`) {
+		t.Errorf("publish of no file with a bad --slug = %d %q, want both", r.code, r.stderr)
 	}
 	// The language is the data's lang:.
 	bad := e.write(t, "bad.yaml", "template: report\nlang: ja_JP\n")
@@ -752,7 +761,7 @@ func TestPublishDataFile(t *testing.T) {
 		bad+":1:1: name the template at the top level, like template: report (templates: report)")
 	want(t, "publish --theme of no theme", e.run(t, "", "publish", plan, "--theme", "print"), 1, "",
 		`floe: there is no theme "print"; use blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi`)
-	want(t, "publish --theme empty", e.run(t, "", "publish", plan, "--theme", " "), 2, "", "floe: --theme is empty")
+	want(t, "publish --theme empty", e.run(t, "", "publish", plan, "--theme", " "), 1, "", "floe: --theme is empty")
 }
 
 // A data file's images go to the server when it asks for them, read under the data file's directory:
