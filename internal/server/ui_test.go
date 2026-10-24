@@ -341,6 +341,16 @@ func uiManage(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		document.getElementById('add-cancel').click();
 		return [shown, document.getElementById('add-dialog').open].join(' ');
 	})()`))
+	// The server's mistakes show a line each: those of a data file with two.
+	two := e.write(t, "two.yaml", "template: report\nlang: en\nleed: x\neybrow: y\n")
+	b.eval(`(() => {
+		document.getElementById('add-open').click();
+		document.getElementById('add-path').value = ` + js(two) + `;
+		document.getElementById('add').requestSubmit();
+	})()`)
+	out = append(out, b.until("the add to be refused", "!document.getElementById('add-error').hidden && "+
+		"document.getElementById('add-error').innerText.split('\\n').length"))
+	b.eval("document.getElementById('add-cancel').click()")
 	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
 	out = append(out, b.eval("document.getElementById('add-open').hidden"))
 	// Paging over 25 rows (a stubbed list, so that polling keeps returning it): 10 a page by default,
@@ -359,7 +369,7 @@ func uiManage(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 
 	check(t, "manage", out, "Demo Page,untitled|/api/artifacts/my-demo/download my-demo.html /a/my-demo/?raw _blank|"+
 		"2 true true|true|1|untitled|1|"+msg("ui_delete_confirm")+"|2|Demo Page|my-demo|true|1|true|true|false|true|true|"+
-		"add-path false|true|10 1 / 3 false|10 2 / 3 false|2|20 1 / 2 false 20 true")
+		"add-path false|2|true|10 1 / 3 false|10 2 / 3 false|2|20 1 / 2 false 20 true")
 }
 
 // extrasStub answers the list and records the writes in window.calls.

@@ -44,7 +44,8 @@ func (e *remoteError) Report() usererr.Report {
 
 // do sends body as JSON (nil for none) and reads a 2xx answer into out (nil to leave it). It sends
 // Origin: base, which the server takes as its own, and Accept: JSON for its refusals; one comes back as
-// a *remoteError, in JSON or, before the server reads the request, as text.
+// a *remoteError, in JSON for the user's mistakes and floe's failures, or as text for the protocol's (a
+// forbidden origin, a body it cannot read), which the client sent wrong.
 func (c client) do(ctx context.Context, method, path string, body, out any) error {
 	var r io.Reader
 	if body != nil {

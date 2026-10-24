@@ -219,7 +219,8 @@ func (s *Store) storedPage(data *tmpl.Data, src []byte, opts Options, from strin
 }
 
 // PrepareLink checks a link to file and builds what Save writes, without writing anything. cwd resolves
-// a relative file; the project of a link is that of its directory. A data file linked is checked as a
+// a relative file, "" for none to resolve it in: a relative file is then refused, with the other mistakes
+// of the options. The project of a link is that of its directory. A data file linked is checked as a
 // stored page is, its images under its real directory.
 func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd string) (*Entry, error) {
 	opts, err := Accept(file, true, opts)
@@ -313,6 +314,9 @@ func (e *Entry) draw(data *tmpl.Data, src string) error {
 func (s *Store) readLink(file string, opts Options, cwd string) (string, []byte, error) {
 	abs := file
 	if !filepath.IsAbs(abs) {
+		if cwd == "" {
+			return "", nil, usererr.New("store_link_relative")
+		}
 		abs = filepath.Join(cwd, abs)
 	}
 	path, err := filepath.EvalSymlinks(abs)

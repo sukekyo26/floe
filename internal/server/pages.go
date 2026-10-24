@@ -21,7 +21,6 @@ import (
 
 const (
 	htmlType = "text/html; charset=utf-8"
-	textType = "text/plain; charset=utf-8"
 	// Pages run in an opaque origin, so their scripts cannot call the management API.
 	// allow-popups-to-escape-sandbox: a site opened in a new tab does not inherit the sandbox (it has no
 	// opener, so it cannot reach the API either).

@@ -29,9 +29,9 @@ var messagesJA = map[string]string{
 	"store_not_data":      "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
 	"store_theme_link":    "--theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
 	"store_no_page":       "ページ「%s」はありません（floe list で確かめられます）",
+	"store_link_relative": "HTML かデータファイルの絶対パス（/ で始まるパス）を入力してください",
 
 	// server
-	"api_link_path": "HTML かデータファイルの絶対パス（/ で始まるパス）を入力してください",
 
 	// ui
 	"ui_back_to_list":         "一覧へ戻る",

@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing/fstest"
@@ -74,7 +73,7 @@ func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]jso
 func refuse(w http.ResponseWriter, r *http.Request, err error) {
 	report := usererr.Tell(catalog(r), err)
 	if !strings.Contains(r.Header.Get("Accept"), "application/json") {
-		sendBytes(w, report.Status(), textType, []byte(report.Render("")))
+		sendText(w, report.Status(), report.Render(""))
 		return
 	}
 	sendJSON(w, report.Status(), report)
@@ -111,14 +110,9 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 		Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme,
 		Force: in.Force,
 	}
-	// The path as sent: a file name may start or end with a space. A relative one has no directory to read
-	// it in, so the file is not read, and the options are told with it.
-	if !filepath.IsAbs(in.Path) {
-		_, err := store.Accept(in.Path, true, opts)
-		refuse(w, r, usererr.Collect(usererr.New("api_link_path"), err))
-		return
-	}
-	entry, err := s.cfg.Store.PrepareLink(r.Context(), in.Path, opts, filepath.Dir(in.Path))
+	// The path as sent: a file name may start or end with a space. There is no directory to read a relative
+	// one in, which PrepareLink refuses with the other mistakes.
+	entry, err := s.cfg.Store.PrepareLink(r.Context(), in.Path, opts, "")
 	if err != nil {
 		refuse(w, r, err)
 		return
@@ -137,6 +131,7 @@ func decodeStrict(w http.ResponseWriter, body []byte, v any) bool {
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
 		// What encoding/json could not read: neither the management page nor the CLI sends such JSON.
+		// LIMIT: in encoding/json's English, as the protocol's refusals are. Word it if a reader comes to see it.
 		send(w, http.StatusBadRequest, protocolText("cannot read the request: "+err.Error()))
 		return false
 	}
