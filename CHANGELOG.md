@@ -295,6 +295,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   The management page may be framed by itself and by VS Code's Simple
   Browser alone (`frame-ancestors 'self' vscode-webview: vscode-file:`), so
   that another site, or a page, cannot have its buttons clicked unseen.
+  A page opens at the part its URL names (`/a/<slug>/#part`), and a move to
+  a part inside it is kept in the URL.
 - Show what a browser shows, the management page and the page of a data
   file's mistakes, in English or Japanese by the browser's language. The
   command line speaks English alone, whatever the environment's language.

@@ -572,10 +572,23 @@
   // At /a/<slug>/ this is the frame around a page (the server returns the same HTML)
   const framed = location.pathname.match(/^\/a\/([^/]+)\/$/)?.[1];
   // A link in the page to a frame URL moves the whole tab, on a message from the script added to the page. The sender is the sandboxed page,
-  // so only messages from this iframe naming a frame URL of this origin are followed (never javascript: and the like)
+  // so only messages from this iframe naming a frame URL of this origin are followed (never javascript: and the like).
+  // A move to a part of the page (#…) is written into this URL too, while the iframe still shows this page, so that a copy of the URL
+  // and a reload open that part; replaceState changes only the fragment and adds no history, which the iframe's move added already
   if (framed) addEventListener('message', (e) => {
-    const to = e.source === $('frame').contentWindow && typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
+    if (e.source !== $('frame').contentWindow) return;
+    const to = typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
     if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) location.href = to.href;
+    const hash = e.data?.artifactHash;
+    if (typeof hash === 'string' && (hash === '' || hash.startsWith('#')) && e.data.artifactPath === location.pathname) {
+      history.replaceState(history.state, '', location.pathname + location.search + hash);
+    }
+  });
+  // The frame's own fragment changed (the address bar, Back): the page moves to that part, in
+  // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo.
+  // No fragment is the empty one, which moves to the top of the page: ?raw alone would load the page again
+  if (framed) addEventListener('hashchange', () => {
+    if ($('frame').hasAttribute('src')) $('frame').contentWindow.location.replace('?raw' + (location.hash || '#'));
   });
   // Stored pages (pages) and links registered by absolute path (links) are on separate tabs
   const inTab = (a, t = tab) => Boolean(a.path) === (t === 'links');
@@ -1054,8 +1067,9 @@
     $('frame').title = a?.title ?? framed;
     document.querySelector('.frame-nav').hidden = !found;
     if (found) renderNeighbors(a);
-    // Load only once found (so a missing page's 404 never flashes). Once loaded, src stays, keeping navigation inside the iframe
-    if (found && !$('frame').hasAttribute('src')) $('frame').src = '?raw';
+    // Load only once found (so a missing page's 404 never flashes). Once loaded, src stays, keeping navigation inside the iframe.
+    // The fragment goes with it, so that /a/<slug>/#part opens at that part of the page
+    if (found && !$('frame').hasAttribute('src')) $('frame').src = '?raw' + location.hash;
   }
 
   function disarm(a, btn) {

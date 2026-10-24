@@ -188,10 +188,17 @@ func stream(w http.ResponseWriter, contentType string, f io.Reader, tail string)
 
 // leaveFrame runs in a page inside the frame. Links to other sites open in a new tab: most sites
 // refuse to be framed, and the sandbox forbids _top and _parent. Links to a frame URL of this server
-// (/ and /a/<slug>/) tell the frame to move the whole tab, instead of nesting a frame in the iframe.
+// (/ and /a/<slug>/) tell the frame to move the whole tab, instead of nesting a frame in the iframe;
+// but one to a part (#…, # alone too) of this page's own frame URL is a link to a part of the page, which the
+// browser follows in the page as it does #… alone: a move to another part adds to the history, one to
+// the same part scrolls there again. It is written whole, as a <base> of the page would take #… elsewhere.
 // In the sandbox location.origin is "null", so hosts are compared. A page can shadow open, URL, self
 // and the like with top-level declarations, so everything but window, top and location comes through
-// window.
+// window; top cannot be replaced, as parent can (var parent = …).
+// The part of the page it is at (#…) is told to the frame, which writes it into its own URL: when it
+// loads, as Back may load it again at another, and on a move to another part.
+// LIMIT: a part set by history.pushState or replaceState fires no hashchange and is not told; watch them if needed.
+// LIMIT: a frame framed itself (VS Code's Simple Browser) is not the top and is told nothing; mend it if needed.
 const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => {" +
 	"const a = e.target.closest?.('a[href]');" +
 	"if (!a || e.defaultPrevented || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;" +
@@ -200,8 +207,14 @@ const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => 
 	"if (!/^https?:$/.test(u.protocol)) return;" +
 	"if (u.host !== location.host) { e.preventDefault(); window.open(u.href, '_blank', 'noopener'); return; }" +
 	"if (!/^\\/(a\\/[^/]+\\/?)?$/.test(u.pathname) || u.searchParams.has('raw')) return;" +
-	"e.preventDefault(); top.postMessage({ artifactOpen: u.pathname + u.search + u.hash }, " +
-	"location.protocol + '//' + location.host);});"
+	"e.preventDefault();" +
+	"if (u.href.includes('#') && !u.search && u.pathname.replace(/\\/?$/, '/') === location.pathname) {" +
+	"location.href = location.pathname + location.search + (u.hash || '#'); return; }" +
+	"top.postMessage({ artifactOpen: u.pathname + u.search + u.hash }, " +
+	"location.protocol + '//' + location.host);});" +
+	"if (top !== window) { const tell = () => top.postMessage(" +
+	"{ artifactHash: location.hash, artifactPath: location.pathname }, location.protocol + '//' + location.host);" +
+	"tell(); window.addEventListener('hashchange', tell); }"
 
 // servedScript is appended to a served page only: it reloads the open tab when the page is
 // republished (a link: when its file is saved), and handles links inside the frame. The version the
