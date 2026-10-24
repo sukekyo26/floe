@@ -84,27 +84,33 @@ func runSample(t *testing.T, dir string) map[string][]byte {
 	if len(data) > 0 {
 		s.run(t, false, append([]string{"check"}, data...)...)
 	}
-	// One at a time: floe render writes nothing while one of its files has a mistake, and the page of a data
-	// file that passes is drawn beside one that does not.
-	out := filepath.Join(s.tmp, "out")
+	// One at a time, each into a directory of its own: floe render writes nothing while one of its files has a
+	// mistake, and the page of a data file that passes is drawn beside one that does not.
+	drawnBy := map[string]string{}
 	for _, file := range data {
+		out := filepath.Join(s.tmp, "pages", file)
 		s.run(t, false, "render", "--out-dir", out, file)
+		pages, err := filepath.Glob(filepath.Join(out, "*.html"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, page := range pages {
+			name := filepath.Base(page)
+			if other, ok := drawnBy[name]; ok {
+				t.Errorf("%s and %s both write %s, which golden/ holds one of; rename one of them", other, file, name)
+			}
+			drawnBy[name] = file
+			b, err := os.ReadFile(page)
+			if err != nil {
+				t.Fatal(err)
+			}
+			s.files[name] = s.drawn(t, "the page "+name+" of "+file, b)
+		}
 	}
 	// And together, for what render does of several, as writing none while one has a mistake; its pages are
 	// those above.
 	if len(data) > 1 {
 		s.run(t, false, append([]string{"render", "--out-dir", filepath.Join(s.tmp, "together")}, data...)...)
-	}
-	pages, err := filepath.Glob(filepath.Join(out, "*.html"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, page := range pages {
-		b, err := os.ReadFile(page)
-		if err != nil {
-			t.Fatal(err)
-		}
-		s.files[filepath.Base(page)] = b
 	}
 	if templates := s.glob(t, "templates/*", true); len(templates) > 0 {
 		// LIMIT: absolute, as floe template check reads a relative dir from the process's working directory,
@@ -138,7 +144,7 @@ func (s *sample) run(t *testing.T, drawn bool, args ...string) {
 	stand := strings.NewReplacer(s.tmp, "$TMP", s.dir, "$SAMPLE")
 	out := stand.Replace(stdout.String())
 	if drawn {
-		out = stdout.String()
+		out = string(s.drawn(t, "the stdout of floe "+args[0], stdout.Bytes()))
 	}
 	fmt.Fprintf(&s.commands, "$ floe %s\nexit %d\n", stand.Replace(strings.Join(args, " ")), code)
 	for _, printed := range []struct{ name, text string }{{"stdout", out}, {"stderr", stand.Replace(stderr.String())}} {
@@ -146,6 +152,19 @@ func (s *sample) run(t *testing.T, drawn bool, args ...string) {
 			fmt.Fprintf(&s.commands, "--- %s\n%s", printed.name, printed.text)
 		}
 	}
+}
+
+// drawn returns b, what floe drew (a page or the diagrams it printed), as it is, and fails the test when it
+// holds a directory of the machine: here, on the machine that writes the golden files too, not on the next.
+func (s *sample) drawn(t *testing.T, what string, b []byte) []byte {
+	t.Helper()
+
+	for _, dir := range []string{s.dir, s.tmp} {
+		if bytes.Contains(b, []byte(dir)) {
+			t.Errorf("%s holds the path %s of this machine", what, dir)
+		}
+	}
+	return b
 }
 
 // has reports whether the sample has the directory sub.

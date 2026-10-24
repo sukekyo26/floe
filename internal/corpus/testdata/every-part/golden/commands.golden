@@ -1,6 +1,6 @@
 $ floe check every-part.yaml
 exit 0
-$ floe render --out-dir $TMP/out every-part.yaml
+$ floe render --out-dir $TMP/pages/every-part.yaml every-part.yaml
 exit 0
 --- stdout
-$TMP/out/every-part.html
+$TMP/pages/every-part.yaml/every-part.html

@@ -1,6 +1,6 @@
 $ floe check markdown-html.yaml
 exit 0
-$ floe render --out-dir $TMP/out markdown-html.yaml
+$ floe render --out-dir $TMP/pages/markdown-html.yaml markdown-html.yaml
 exit 0
 --- stdout
-$TMP/out/markdown-html.html
+$TMP/pages/markdown-html.yaml/markdown-html.html

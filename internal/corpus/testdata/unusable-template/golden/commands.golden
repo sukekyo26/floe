@@ -10,36 +10,36 @@ sch-b.yaml:1:11: your own template sch cannot be used, as told above
 wor-a.yaml:1:11: your own template wor cannot be used
   $SAMPLE/templates/wor/words.yaml:2:1: ja leaves out a, which en has
 wor-b.yaml:1:11: your own template wor cannot be used, as told above
-$ floe render --out-dir $TMP/out pag-a.yaml
+$ floe render --out-dir $TMP/pages/pag-a.yaml pag-a.yaml
 exit 1
 --- stderr
 pag-a.yaml:1:11: your own template pag cannot be used
   $SAMPLE/templates/pag/page.html: this is not a valid Go template: template: page.html:1: bad character U+003C '<'
-$ floe render --out-dir $TMP/out pag-b.yaml
+$ floe render --out-dir $TMP/pages/pag-b.yaml pag-b.yaml
 exit 1
 --- stderr
 pag-b.yaml:1:11: your own template pag cannot be used
   $SAMPLE/templates/pag/page.html: this is not a valid Go template: template: page.html:1: bad character U+003C '<'
-$ floe render --out-dir $TMP/out report.yaml
+$ floe render --out-dir $TMP/pages/report.yaml report.yaml
 exit 0
 --- stdout
-$TMP/out/report.html
-$ floe render --out-dir $TMP/out sch-a.yaml
+$TMP/pages/report.yaml/report.html
+$ floe render --out-dir $TMP/pages/sch-a.yaml sch-a.yaml
 exit 1
 --- stderr
 sch-a.yaml:1:11: your own template sch cannot be used
   $SAMPLE/templates/sch/schema.json: #/properties/lead: a diagram is a part of floe's, not a format; write "$ref": "floe:///parts/diagram.json"
-$ floe render --out-dir $TMP/out sch-b.yaml
+$ floe render --out-dir $TMP/pages/sch-b.yaml sch-b.yaml
 exit 1
 --- stderr
 sch-b.yaml:1:11: your own template sch cannot be used
   $SAMPLE/templates/sch/schema.json: #/properties/lead: a diagram is a part of floe's, not a format; write "$ref": "floe:///parts/diagram.json"
-$ floe render --out-dir $TMP/out wor-a.yaml
+$ floe render --out-dir $TMP/pages/wor-a.yaml wor-a.yaml
 exit 1
 --- stderr
 wor-a.yaml:1:11: your own template wor cannot be used
   $SAMPLE/templates/wor/words.yaml:2:1: ja leaves out a, which en has
-$ floe render --out-dir $TMP/out wor-b.yaml
+$ floe render --out-dir $TMP/pages/wor-b.yaml wor-b.yaml
 exit 1
 --- stderr
 wor-b.yaml:1:11: your own template wor cannot be used

@@ -1,21 +1,21 @@
 $ floe check en.yaml fr.yaml ja-JP.yaml ja.yaml
 exit 0
-$ floe render --out-dir $TMP/out en.yaml
+$ floe render --out-dir $TMP/pages/en.yaml en.yaml
 exit 0
 --- stdout
-$TMP/out/en.html
-$ floe render --out-dir $TMP/out fr.yaml
+$TMP/pages/en.yaml/en.html
+$ floe render --out-dir $TMP/pages/fr.yaml fr.yaml
 exit 0
 --- stdout
-$TMP/out/fr.html
-$ floe render --out-dir $TMP/out ja-JP.yaml
+$TMP/pages/fr.yaml/fr.html
+$ floe render --out-dir $TMP/pages/ja-JP.yaml ja-JP.yaml
 exit 0
 --- stdout
-$TMP/out/ja-JP.html
-$ floe render --out-dir $TMP/out ja.yaml
+$TMP/pages/ja-JP.yaml/ja-JP.html
+$ floe render --out-dir $TMP/pages/ja.yaml ja.yaml
 exit 0
 --- stdout
-$TMP/out/ja.html
+$TMP/pages/ja.yaml/ja.html
 $ floe render --out-dir $TMP/together en.yaml fr.yaml ja-JP.yaml ja.yaml
 exit 0
 --- stdout
