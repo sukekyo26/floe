@@ -313,6 +313,9 @@ func (e *Entry) draw(data *tmpl.Data, src string) error {
 // no theme. A theme given empty is Accept's mistake alone, not this one too.
 func (s *Store) readLink(file string, opts Options, cwd string) (string, []byte, error) {
 	abs := file
+	if file == "" {
+		return "", nil, usererr.New("store_link_empty")
+	}
 	if !filepath.IsAbs(abs) {
 		if cwd == "" {
 			return "", nil, usererr.New("store_link_relative", file)

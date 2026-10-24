@@ -489,7 +489,7 @@ func TestRefusals(t *testing.T) {
 
 	link := `{"path":"rel.html"}`
 	if r := e.do(t, http.MethodPost, "/api/artifacts", link, asCLI...); r.status != http.StatusBadRequest ||
-		reportOf(t, r).Render("") != "rel.html is not an absolute path: give one starting with /" || reportOf(t, r).Failure != "" {
+		reportOf(t, r).Render("") != "rel.html is not an absolute path: give the path of an HTML or data file starting with /" || reportOf(t, r).Failure != "" {
 		t.Errorf("a relative path to the CLI = %d %s", r.status, r.body)
 	}
 	// Told with the mistakes of the options, which are checked whatever the path.
@@ -499,8 +499,16 @@ func TestRefusals(t *testing.T) {
 		t.Errorf("a relative path and a bad slug = %d %s, want both", r.status, r.body)
 	}
 	if r := e.do(t, http.MethodPost, "/api/artifacts", link, asPage...); r.status != http.StatusBadRequest ||
-		r.body != "rel.html は絶対パスではありません。/ で始まるパスにしてください" {
+		r.body != "rel.html は絶対パスではありません。HTML かデータファイルの、/ で始まるパスにしてください" {
 		t.Errorf("a relative path to the management page = %d %s", r.status, r.body)
+	}
+	// An empty path, or none, is refused as such, with the other mistakes.
+	for _, body := range []string{`{}`, `{"path":"","slug":"Bad Slug"}`} {
+		r := e.do(t, http.MethodPost, "/api/artifacts", body, asCLI...)
+		if got := reportOf(t, r).Render(""); r.status != http.StatusBadRequest ||
+			!strings.Contains(got, "give the absolute path of the HTML or data file to link") || strings.Contains(got, "not an absolute path") {
+			t.Errorf("POST %s = %d %s", body, r.status, r.body)
+		}
 	}
 
 	for body, want := range map[string]string{

@@ -31,7 +31,8 @@ var messagesEN = map[string]string{
 	"store_not_data":      "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
 	"store_theme_link":    "--theme picks the theme of a page drawn from a data file: a linked file is shown as it is",
 	"store_no_page":       `no page "%s" (see floe list)`,
-	"store_link_relative": "%s is not an absolute path: give one starting with /",
+	"store_link_relative": "%s is not an absolute path: give the path of an HTML or data file starting with /",
+	"store_link_empty":    "give the absolute path of the HTML or data file to link",
 
 	// ui: the management page (ui.html), which renders them itself
 	"ui_back_to_list":         "Back to the list",
@@ -110,7 +111,7 @@ var messagesEN = map[string]string{
 	"ui_save":                 "Save",
 	"ui_saved":                "Saved",
 	"ui_save_failed":          "Could not save: %s",
-	"ui_http_error":           "%s (HTTP %d)",
+	"ui_http_error":           "HTTP %[2]d: %[1]s",
 	"ui_just_now":             "just now",
 	"ui_created_at":           "Created %s",
 	"ui_registered_at":        "Registered %s",

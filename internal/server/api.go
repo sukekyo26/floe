@@ -110,8 +110,9 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 		Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme,
 		Force: in.Force,
 	}
-	// The path as sent: a file name may start or end with a space. There is no directory to read a relative
-	// one in, which PrepareLink refuses with the other mistakes.
+	// The path as sent: the CLI sends it as given, where a file name may start or end with a space (the
+	// management page trims it). There is no directory to read a relative one in, which PrepareLink refuses
+	// with the other mistakes.
 	entry, err := s.cfg.Store.PrepareLink(r.Context(), in.Path, opts, "")
 	if err != nil {
 		refuse(w, r, err)
