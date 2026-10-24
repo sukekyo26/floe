@@ -191,7 +191,7 @@ func stream(w http.ResponseWriter, contentType string, f io.Reader, tail string)
 // (/ and /a/<slug>/) tell the frame to move the whole tab, instead of nesting a frame in the iframe;
 // but one to a part (#…) of this page's own frame URL is a link to a part of the page, which the
 // browser follows in the page as it does #… alone: a move to another part adds to the history, one to
-// the same part scrolls there again.
+// the same part scrolls there again. It is written whole, as a <base> of the page would take #… elsewhere.
 // In the sandbox location.origin is "null", so hosts are compared. A page can shadow open, URL, self
 // and the like with top-level declarations, so everything but window, top and location comes through
 // window; top cannot be replaced, as parent can (var parent = …).
@@ -209,7 +209,7 @@ const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => 
 	"if (!/^\\/(a\\/[^/]+\\/?)?$/.test(u.pathname) || u.searchParams.has('raw')) return;" +
 	"e.preventDefault();" +
 	"if (u.hash && !u.search && u.pathname.replace(/\\/?$/, '/') === location.pathname) {" +
-	"location.href = u.hash; return; }" +
+	"location.href = location.pathname + location.search + u.hash; return; }" +
 	"top.postMessage({ artifactOpen: u.pathname + u.search + u.hash }, " +
 	"location.protocol + '//' + location.host);});" +
 	"if (top !== window) { const tell = () => top.postMessage(" +

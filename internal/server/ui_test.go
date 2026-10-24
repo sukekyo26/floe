@@ -647,9 +647,18 @@ func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share
 	out = append(out, click(260, "the tab, by a link with a search",
 		atIs("#s3")+" && location.search === '?x=1' && location.search"))
 
+	// A page with a <base> elsewhere stays itself on such a link: the base takes no part in it.
+	e.link(t, e.write(t, filepath.Join("based", "index.html"), `<!doctype html><base href="/a/based/assets/">`+link("/a/based/#s3", "0")+
+		`<div style="height: 3000px"></div><h2 id="s3">s3</h2><div style="height: 3000px"></div>`+
+		"<script>const load = Math.random(); setInterval(() => top.postMessage('at ' + location.hash + ' ' + load + ' ' + (scrollY > 1000), '*'), 50)</script>"),
+		store.Options{Slug: ptr("based")})
+	b.navigate("/a/based/")
+	at("the top of the page with a base", "")
+	out = append(out, click(20, "the part of the page with a base", atIs("#s3")))
+
 	check(t, "frame hash", out,
 		"/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/|/a/hash/#s2|/a/hash/|true|"+
-			"/a/hash/#s3|true|/a/hash/|true|/a/hash/#s3|true|/a/hash/#s3|true|?x=1")
+			"/a/hash/#s3|true|/a/hash/|true|/a/hash/#s3|true|/a/hash/#s3|true|?x=1|/a/based/#s3")
 }
 
 // leave clicks links out of a page in the frame: a target=_blank tab runs in the other site's origin
