@@ -18,7 +18,7 @@ var builtins = tmpl.NewLibrary("", "", "", "")
 
 func render(t *testing.T, src string) string {
 	t.Helper()
-	d, err := builtins.Read("data.yaml", []byte(src), "", "")
+	d, err := builtins.Read("data.yaml", []byte(src), "", cwd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestItemsTellMistakeWithoutPlace(t *testing.T) {
 	dir := t.TempDir()
 	src := "template: report\nlang: en\nsections:\n  - parts:\n      - html: <style>p {}</style>\n" +
 		"      - diagram: { id: d, title: t, width: 100, height: 100, parts: [{ icon: { x: 10, y: 10, name: aws/aws-lambda } }] }\n"
-	_, err := tmpl.NewLibrary("", "", "", dir).Read("r.yaml", []byte(src), "", "")
+	_, err := tmpl.NewLibrary("", "", "", dir).Read("r.yaml", []byte(src), "", cwd)
 	want := "r.yaml:5:15: sections[0].parts[0].html: HTML holds a <style> or a <link>"
 	fetch := "\nAWS icons are not in " + filepath.Join(dir, "aws") + `; run "floe icons fetch aws"`
 	var all usererr.List
@@ -54,14 +54,14 @@ func TestReportExample(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := builtins.Read("example.yaml", src, "", "")
+	d, err := builtins.Read("example.yaml", src, "", cwd)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if d.Template != "report" || d.Theme != "default" || d.Title != "Moving the team wiki" {
 		t.Errorf("Read = %+v", d)
 	}
-	if d, err := builtins.Read("data.yaml", []byte("template: report\ntitle: ' T '\nlang: en\n"), "", ""); err != nil || d.Title != "T" {
+	if d, err := builtins.Read("data.yaml", []byte("template: report\ntitle: ' T '\nlang: en\n"), "", cwd); err != nil || d.Title != "T" {
 		t.Errorf("Read of a title with spaces = %+v, %v", d, err)
 	}
 	got := render(t, string(src))
@@ -165,7 +165,7 @@ func TestReportTableCardsNote(t *testing.T) {
 		"table: { columns: [{title: a}, {title: b}], rows: [[x, y], [x]] }": "data.yaml:4:59: sections[0].parts[0].table.rows: write as many cells in each row as there are columns",
 		"note: { text: '' }": "data.yaml:4:23: sections[0].parts[0].note.text: the length in characters must be at least 1",
 	} {
-		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\nlang: en\n"), "", "")
+		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\nlang: en\n"), "", cwd)
 		if err == nil || err.Error() != want {
 			t.Errorf("Read of %s = %v, want %s", src, err, want)
 		}
@@ -201,7 +201,7 @@ func TestReportScript(t *testing.T) {
 		"script: { js: \"f('</SCRIPT>')\" }":         "data.yaml:4:23: sections[0].parts[0].script.js: js holds </SCRIPT, where the page would end its script; split it in a string, as '<' + '/SCRIPT'",
 		"script: { js: \"f('<!--', '</script>')\" }": "data.yaml:4:23: sections[0].parts[0].script.js: js holds <!--, where the page would end its script; split it in a string, as '<' + '!--'",
 	} {
-		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\nlang: en\n"), "", "")
+		_, err := builtins.Read("data.yaml", []byte("template: report\nsections:\n  - parts:\n      - "+src+"\nlang: en\n"), "", cwd)
 		if err == nil || err.Error() != want {
 			t.Errorf("Read of %s = %v, want %s", src, err, want)
 		}
@@ -224,7 +224,7 @@ func TestReadColonTextHint(t *testing.T) {
 			"data.yaml:8:17: sections[0].parts[0].options[0].pros[0]: write text, not keys and values",
 		},
 	} {
-		_, err := builtins.Read("data.yaml", []byte(c.src), "", "")
+		_, err := builtins.Read("data.yaml", []byte(c.src), "", cwd)
 		if err == nil || err.Error() != c.want {
 			t.Errorf("Read(%q) = %v, want %s", c.src, err, c.want)
 		}
@@ -278,7 +278,7 @@ func TestReadRefusals(t *testing.T) {
 		// Nor a </head>, which would stand in for page.html's, before which floe puts the page's styles.
 		{"template: report\nlang: en\nsections:\n  - parts:\n      - html: <svg><!-- </HEAD> -->\n", "data.yaml:5:15: sections[0].parts[0].html: HTML holds a </head>"},
 	} {
-		_, err := builtins.Read("data.yaml", []byte(c.src), "", "")
+		_, err := builtins.Read("data.yaml", []byte(c.src), "", cwd)
 		var one *usererr.Error
 		var all usererr.List
 		if !errors.As(err, &one) && !errors.As(err, &all) || !strings.HasPrefix(err.Error(), c.want) {
@@ -314,23 +314,23 @@ func TestReadRefusals(t *testing.T) {
 		"&a\n- x\n": "data.yaml:1:1: " + anchor + "\ndata.yaml:2:1: write the top level as keys and values, like template: report",
 		"!!map\n":   "data.yaml:1:1: " + anchor,
 	} {
-		if _, err := builtins.Read("data.yaml", []byte(src), "", ""); err == nil || err.Error() != want {
+		if _, err := builtins.Read("data.yaml", []byte(src), "", cwd); err == nil || err.Error() != want {
 			t.Errorf("Read %q = %v\nwant %s", src, err, want)
 		}
 	}
 	// An empty file misses both keys every data file needs.
-	if _, err := builtins.Read("data.yaml", nil, "", ""); err == nil || !strings.Contains(err.Error(), "\ndata.yaml:1:1: name the template at the top level") {
+	if _, err := builtins.Read("data.yaml", nil, "", cwd); err == nil || !strings.Contains(err.Error(), "\ndata.yaml:1:1: name the template at the top level") {
 		t.Errorf("Read of an empty file = %v", err)
 	}
 	// An explicit key is found by its text after ?.
-	if _, err := builtins.Read("data.yaml", []byte("template: report\n? lead\n: 3\nlang: en\n"), "", ""); err == nil || err.Error() != "data.yaml:3:3: lead: write text, not a number" {
+	if _, err := builtins.Read("data.yaml", []byte("template: report\n? lead\n: 3\nlang: en\n"), "", cwd); err == nil || err.Error() != "data.yaml:3:3: lead: write text, not a number" {
 		t.Errorf("Read of an explicit key = %v", err)
 	}
-	if _, err := builtins.Read("data.yaml", []byte("%YAML 1.2\n---\ntemplate: report\nlang: en\n"), "", ""); err != nil {
+	if _, err := builtins.Read("data.yaml", []byte("%YAML 1.2\n---\ntemplate: report\nlang: en\n"), "", cwd); err != nil {
 		t.Errorf("Read of a document after a %%YAML directive = %v", err)
 	}
 	// Data that passed its schema draws: floe's template failing on it is floe's failure, not a mistake.
-	d, err := builtins.Read("data.yaml", []byte("template: report\nlang: en\n"), "", "")
+	d, err := builtins.Read("data.yaml", []byte("template: report\nlang: en\n"), "", cwd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -359,7 +359,7 @@ sections:
   - parts: nope
 lang: en
 `
-	_, err := builtins.Read("bad.yaml", []byte(src), "", "")
+	_, err := builtins.Read("bad.yaml", []byte(src), "", cwd)
 	var p usererr.List
 	if !errors.As(err, &p) {
 		t.Fatalf("Read = %v, want problems", err)
@@ -413,14 +413,14 @@ func TestBuiltins(t *testing.T) {
 func TestUnnamedBesideOtherMistakes(t *testing.T) {
 	t.Parallel()
 
-	_, err := tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte("title: 3\ntheme: [x]\nlang: ja_JP\n"), "", "")
+	_, err := tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte("title: 3\ntheme: [x]\nlang: ja_JP\n"), "", cwd)
 	want := "d.yaml:1:1: name the template at the top level, like template: report (templates: report)\n" +
 		"d.yaml:1:8: title must be text\nd.yaml:2:8: theme must be text\n" +
 		`d.yaml:3:7: invalid language "ja_JP": write lang: as a BCP 47 tag such as en, ja or pt-BR`
 	if err == nil || err.Error() != want {
 		t.Errorf("Read = %v\nwant %s", err, want)
 	}
-	_, err = tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte("template: report\ntheme: [x]\nlang: en\n"), "", "")
+	_, err = tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte("template: report\ntheme: [x]\nlang: en\n"), "", cwd)
 	if want = "d.yaml:2:8: theme must be text"; err == nil || err.Error() != want {
 		t.Errorf("Read of a theme not text = %v\nwant %s", err, want)
 	}
@@ -429,7 +429,7 @@ func TestUnnamedBesideOtherMistakes(t *testing.T) {
 		"template: report\n":             "d.yaml:1:1: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)",
 		"template: report\nlang: [ja]\n": "d.yaml:2:7: lang must be text",
 	} {
-		if _, err := tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte(src), "", ""); err == nil || err.Error() != want {
+		if _, err := tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte(src), "", cwd); err == nil || err.Error() != want {
 			t.Errorf("Read %q = %v\nwant %s", src, err, want)
 		}
 	}
@@ -437,8 +437,19 @@ func TestUnnamedBesideOtherMistakes(t *testing.T) {
 	for _, bad := range []string{"", "x", "ja_JP", "en-", `ja"><script>`} {
 		src := "template: report\nlang: '" + bad + "'\n"
 		want := `d.yaml:2:7: invalid language "` + bad + `": write lang: as a BCP 47 tag such as en, ja or pt-BR`
-		if _, err := tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte(src), "", ""); err == nil || err.Error() != want {
+		if _, err := tmpl.NewLibrary("", "", "", "").Read("d.yaml", []byte(src), "", cwd); err == nil || err.Error() != want {
 			t.Errorf("Read %q = %v\nwant %s", src, err, want)
 		}
+	}
+}
+
+// A relative data file without the cwd to read its images under is floe's own mistake.
+func TestReadRelativeWithoutCwd(t *testing.T) {
+	t.Parallel()
+
+	_, err := tmpl.NewLibrary("", "", "", "").Read("page.yaml", []byte("template: report\nlang: en\n"), "", "")
+	var mistake *usererr.Error
+	if err == nil || errors.As(err, &mistake) || !strings.Contains(err.Error(), `"page.yaml" is relative`) {
+		t.Errorf("Read of a relative file without a cwd = %v, want floe's own failure", err)
 	}
 }

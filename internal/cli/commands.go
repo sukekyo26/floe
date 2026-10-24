@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -47,18 +46,6 @@ func (a *app) templates() *tmpl.Library {
 		a.lib = a.library().Run()
 	}
 	return a.lib
-}
-
-// abs puts a relative dir under the working directory, and folds the .. of any by its letters, as Join and
-// Abs do, so that every place reads a path alike; "" stays "".
-func (a *app) abs(dir string) string {
-	switch {
-	case dir == "":
-		return dir
-	case filepath.IsAbs(dir):
-		return filepath.Clean(dir)
-	}
-	return filepath.Join(a.env.Dir, dir)
 }
 
 func (a *app) out(format string, args ...any) {
@@ -133,17 +120,23 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	var saved server.Saved
 	switch {
 	case link:
-		path := a.abs(file)
+		p := a.arg(file)
 		// The server reads a link, as it draws it.
-		if _, statErr := os.Stat(path); statErr != nil {
+		if p.err != nil {
+			err = usererr.Collect(err, p.err)
+		} else if _, statErr := os.Stat(p.abs); statErr != nil {
 			err = usererr.Collect(err, usererr.CannotRead(file, statErr))
 		}
 		if err == nil {
-			saved, err = a.publishLink(ctx, path, opts)
+			saved, err = a.publishLink(ctx, p.abs, opts)
 		}
 	// Read as data only when it is a data file: Accept has told that it is not.
 	case store.IsDataFile(file):
-		up, readErr := store.ReadUpload(ctx, file, a.env.Dir)
+		var up store.Upload
+		readErr := a.arg(file).err
+		if readErr == nil {
+			up, readErr = store.ReadUpload(ctx, file, a.env.Dir)
+		}
 		if err = usererr.Collect(err, readErr); err == nil {
 			saved, err = a.publishData(ctx, up, opts)
 		}

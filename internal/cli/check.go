@@ -29,8 +29,8 @@ the server is not started, and nothing is printed when the files are right.`,
 
 func (a *app) check(files []string) error {
 	var found usererr.List
-	for _, file := range a.namedFiles(files) {
-		_, err := drawFile(a, file)
+	for _, p := range a.args(files) {
+		_, err := drawFile(a, p)
 		tell(&found, err)
 	}
 	return found.Err()
@@ -48,11 +48,12 @@ func tell(l *usererr.List, err error) {
 // drawFile draws the page of the data file file, titled as floe publish titles it (its title:, else the
 // slug of its name, else, for a name without a letter a slug takes, the name itself), or returns its
 // mistakes: each at its line and column, or one about the whole file.
-func drawFile(a *app, file string) ([]byte, error) {
+func drawFile(a *app, p arg) ([]byte, error) {
+	file := p.name
 	if !store.IsDataFile(file) {
 		return nil, usererr.New("cli_check_not_data", file)
 	}
-	src, err := a.readArg(file)
+	src, err := p.read()
 	if err != nil {
 		return nil, err
 	}

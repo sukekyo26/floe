@@ -300,6 +300,11 @@ func (e *env) runIn(ctx context.Context, t *testing.T, dir string, args ...strin
 	if err := os.MkdirAll(cwd, 0o750); err != nil {
 		t.Fatal(err)
 	}
+	return e.runAt(ctx, cwd, args...)
+}
+
+// runAt runs floe in process with cli.Env.Dir cwd as it is: "" for a working directory that cannot be read.
+func (e *env) runAt(ctx context.Context, cwd string, args ...string) result {
 	var stdout, stderr bytes.Buffer
 	code := cli.Run(ctx, args, cli.Env{
 		Getenv: func(k string) string { return e.vars[k] }, Dir: cwd, Stdout: &stdout, Stderr: &stderr,
@@ -1222,5 +1227,103 @@ func inOrder(t *testing.T, what string, got result, code int, parts ...string) {
 			return
 		}
 		at += i + len(p)
+	}
+}
+
+// From a working directory that cannot be read (Dir ""), every relative path a command is given is refused as
+// such, and an absolute one is taken.
+func TestRelativeWithoutDir(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	page := e.page(t, "p.yaml", "P")
+	e.write(t, "spec.yaml", "id: d\nwidth: 100\nheight: 50\nparts:\n  - box: { x: 10, y: 10, w: 80, h: 30, rows: [A] }\n")
+	refused := func(path string) string {
+		return "floe: the working directory cannot be read, so the relative path " + path +
+			" means nothing; run floe from a directory that exists, or give an absolute path\n"
+	}
+	for _, c := range []struct {
+		args []string
+		path string
+	}{
+		{[]string{"check", "p.yaml"}, "p.yaml"},
+		{[]string{"render", "p.yaml"}, "p.yaml"},
+		{[]string{"render", "--check", "--out-dir", "out", page}, "out"},
+		{[]string{"diagram", "render", "spec.yaml"}, "spec.yaml"},
+		{[]string{"publish", "p.yaml"}, "p.yaml"},
+		{[]string{"publish", "--link", "p.html"}, "p.html"},
+		{[]string{"icons", "fetch", "aws", "aws.zip"}, "aws.zip"},
+		{[]string{"template", "check", "t"}, "t"},
+	} {
+		if r := e.runAt(t.Context(), "", c.args...); r.code != 1 || r.stdout != "" || r.stderr != refused(c.path) {
+			t.Errorf("%v from no working directory = %+v, want %q", c.args, r, refused(c.path))
+		}
+	}
+	want(t, "check of an absolute path from no working directory", e.runAt(t.Context(), "", "check", page), 0, "", "")
+	// "" is told as it was, with and without a working directory.
+	for _, args := range [][]string{{"check", ""}, {"render", ""}} {
+		const told = "floe:  is not a data file (.yaml or .yml)\n"
+		want(t, args[0]+" ''", e.run(t, "", args...), 1, "", told)
+		want(t, args[0]+" '' from no working directory", e.runAt(t.Context(), "", args...), 1, "", told)
+	}
+
+	// The out-dir and the data files are told of in one list, in the order given.
+	bad := e.write(t, "bad.yaml", "template: report\nlang: en\nnope: 1\n")
+	r := e.runAt(t.Context(), "", "render", "--out-dir", "out", "p.yaml", bad)
+	if wantErr := refused("out") + refused("p.yaml") + bad + ":3:1: nope is not an item of the template report"; r.code != 1 ||
+		!strings.HasPrefix(r.stderr, wantErr) {
+		t.Errorf("render of an out-dir and data files from no working directory = %+v, want %q…", r, wantErr)
+	}
+	// "" is the working directory to floe template check, as filepath.Abs took it.
+	if r := e.runAt(t.Context(), "", "template", "check", ""); r.code != 1 || r.stderr != refused(".") {
+		t.Errorf("template check '' from no working directory = %+v, want %q", r, refused("."))
+	}
+	if r := e.run(t, "", "template", "check", ""); r.code != 1 || !strings.HasPrefix(r.stderr, "floe:  has no template.yaml") {
+		t.Errorf("template check '' = %+v, want the working directory checked", r)
+	}
+}
+
+// A relative HOME is under the working directory, as a shell reads it, for the directories made of it: not
+// under the process's (here internal/cli); under no working directory, it is refused where it is needed.
+func TestRelativeHome(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["HOME"] = "relhome"
+	r := e.run(t, "", "template", "new", "memo", "--from", "report")
+	made := filepath.Join(e.tmp, "relhome", ".config", "floe", "templates", "memo")
+	if r.code != 0 || !strings.HasPrefix(r.stdout, "made the template memo in "+made+",") {
+		t.Errorf("template new under a relative HOME = %+v, want it in %s", r, made)
+	}
+	if _, err := os.Stat("relhome"); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("template new under a relative HOME wrote in the process's working directory: %v", err)
+	}
+	const refused = "floe: the working directory cannot be read, so HOME, the relative directory relhome, means nothing; " +
+		"run floe from a directory that exists, or set it as an absolute path\n"
+	want(t, "template new under a relative HOME from no working directory",
+		e.runAt(t.Context(), "", "template", "new", "memo2", "--from", "report"), 1, "", refused)
+	e.vars["FLOE_TEMPLATES_DIR"] = "~/t"
+	want(t, "a ~ setting under a relative HOME from no working directory",
+		e.runAt(t.Context(), "", "template", "new", "memo2", "--from", "report"), 1, "", refused)
+	// A directory made of HOME stops a command that only reads it too, by HOME, not as one that is not there.
+	delete(e.vars, "FLOE_TEMPLATES_DIR")
+	mine := e.write(t, "mine.yaml", "template: mine\nlang: en\n")
+	for _, args := range [][]string{{"check", mine}, {"render", "--check", mine}} {
+		want(t, strings.Join(args[:1], " ")+" under a relative HOME from no working directory",
+			e.runAt(t.Context(), "", args...), 1, "", refused)
+	}
+	// The server reads HOME, for links, though no directory is made of it: a command that may start it
+	// stops before it does.
+	for key, dir := range map[string]string{
+		"FLOE_TEMPLATES_DIR": "t", "FLOE_PARTS_DIR": "parts", "FLOE_THEMES_DIR": "themes", "FLOE_ICONS_DIR": "icons",
+	} {
+		e.vars[key] = filepath.Join(e.tmp, dir)
+	}
+	page := e.write(t, "p.html", "<!doctype html><title>p</title>")
+	for _, args := range [][]string{{"publish", "--link", page}, {"list"}} {
+		want(t, strings.Join(args, " ")+" under a relative HOME from no working directory", e.runAt(t.Context(), "", args...), 1, "", refused)
+	}
+	if _, up := e.health(t); up {
+		t.Error("a server was started under a relative HOME from no working directory")
 	}
 }

@@ -51,16 +51,16 @@ is enough; more does no harm). --no-assets leaves them out.`,
 }
 
 func (a *app) render(files []string, assets bool) error {
-	files = a.namedFiles(files)
+	named := a.args(files)
 	// The mistakes of each file, in the order the files were given; those about all of the diagrams (icons
 	// not fetched) after them.
-	told := make([]usererr.List, len(files)+1)
-	specs := make([]*diagram.Spec, 0, len(files))
-	for i, file := range files {
-		src, err := a.readArg(file)
+	told := make([]usererr.List, len(named)+1)
+	specs := make([]*diagram.Spec, 0, len(named))
+	for i, p := range named {
+		src, err := p.read()
 		var s *diagram.Spec
 		if err == nil {
-			s, err = diagram.Parse(file, src)
+			s, err = diagram.Parse(p.name, src)
 		}
 		if err != nil {
 			if failed := told[i].Add(err); failed != nil {
@@ -76,9 +76,9 @@ func (a *app) render(files []string, assets bool) error {
 		return failed //nolint:wrapcheck // already says what failed
 	}
 	for _, e := range drawn {
-		i := slices.Index(files, e.File)
+		i := slices.IndexFunc(named, func(p arg) bool { return p.name == e.File })
 		if i < 0 {
-			i = len(files)
+			i = len(named)
 		}
 		told[i] = append(told[i], e)
 	}

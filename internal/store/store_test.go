@@ -1390,3 +1390,15 @@ func TestAccept(t *testing.T) {
 		t.Errorf("Accept of a link = %+v, %v, want no slug made", opts, err)
 	}
 }
+
+// A relative file without the cwd to read it under is floe's own mistake: not read under the process's working
+// directory, here internal/store, where store.go is.
+func TestReadUploadRelativeWithoutCwd(t *testing.T) {
+	t.Parallel()
+
+	_, err := store.ReadUpload(t.Context(), "store.go", "")
+	var mistake *usererr.Error
+	if err == nil || errors.As(err, &mistake) || !strings.Contains(err.Error(), `"store.go" is relative`) {
+		t.Errorf("ReadUpload of a relative file without a cwd = %v, want floe's own failure", err)
+	}
+}

@@ -1,9 +1,19 @@
 package tmpl
 
 import (
+	"os"
 	"testing"
 	"testing/fstest"
 )
+
+// cwd is the package's directory, the tests' working directory: what a relative file of theirs is under.
+var cwd = func() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	return dir
+}()
 
 // Each YAML file a template or part gives tells what reading it refuses and a top of the wrong shape in
 // the same run.

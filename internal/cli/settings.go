@@ -14,6 +14,7 @@ type setting string
 
 const (
 	portSetting      setting = "port"
+	homeSetting      setting = "home"
 	storeSetting     setting = "store"
 	iconsSetting     setting = "icons"
 	templatesSetting setting = "templates"
@@ -22,7 +23,9 @@ const (
 )
 
 // settings are floe's settings, in the order their mistakes are told.
-var settings = []setting{portSetting, storeSetting, iconsSetting, templatesSetting, partsSetting, themesSetting}
+var settings = []setting{
+	portSetting, homeSetting, storeSetting, iconsSetting, templatesSetting, partsSetting, themesSetting,
+}
 
 // use is how a command uses a setting: it reads what is there, or it needs it, to write there or as it
 // cannot do without it.
@@ -34,10 +37,11 @@ const (
 )
 
 // serverUses is how the server uses the settings, and the commands that may start it: alike, so that a server
-// they start is not handed none where they read a setting written wrong.
+// they start is not handed none where they read a setting written wrong. The server reads HOME, for the
+// links it is given, as the commands hand it.
 var serverUses = map[setting]use{
-	portSetting: needs, storeSetting: needs, iconsSetting: reads, templatesSetting: reads, partsSetting: reads,
-	themesSetting: reads,
+	portSetting: needs, homeSetting: reads, storeSetting: needs, iconsSetting: reads, templatesSetting: reads,
+	partsSetting: reads, themesSetting: reads,
 }
 
 // drawUses is how the commands that draw a page as floe publish does use the settings.

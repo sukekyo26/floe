@@ -31,3 +31,29 @@ func TestCheckWritable(t *testing.T) {
 		t.Errorf("CheckWritable of a directory floe cannot write in = %v", err)
 	}
 }
+
+// A relative path is put under cwd and cleaned, an absolute one is cleaned, and a relative one without a cwd
+// is none; "" stays "".
+func TestUnder(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		cwd, path, abs string
+		ok             bool
+	}{
+		{"/w", "a.yaml", "/w/a.yaml", true},
+		{"/w", "./t/memo/", "/w/t/memo", true},
+		{"/w", "../x/a.yaml", "/x/a.yaml", true},
+		{"/w", "link/../a.yaml", "/w/a.yaml", true},
+		{"/w", "/abs//b/../c", "/abs/c", true},
+		{"", "/abs/c", "/abs/c", true},
+		{"", "a.yaml", "", false},
+		{"", ".", "", false},
+		{"/w", "", "", true},
+		{"", "", "", true},
+	} {
+		if abs, ok := dirs.Under(c.cwd, c.path); abs != c.abs || ok != c.ok {
+			t.Errorf("Under(%q, %q) = %q, %v, want %q, %v", c.cwd, c.path, abs, ok, c.abs, c.ok)
+		}
+	}
+}

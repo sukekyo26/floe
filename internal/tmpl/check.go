@@ -15,6 +15,7 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -26,13 +27,12 @@ import (
 // is under cwd, as Read takes a file, and its mistakes name dir as it is written; a relative dir with cwd ""
 // is the caller's bug, which floe's own failure tells.
 func (l *Library) Check(dir, cwd string) (warnings usererr.List, err error) {
-	abs := filepath.Clean(dir)
-	if !filepath.IsAbs(abs) {
-		if cwd == "" {
-			//nolint:err113 // floe's own mistake: its callers give a cwd, or an absolute dir
-			return nil, fmt.Errorf("tmpl: the template %q is relative, with no cwd to read it under", dir)
-		}
-		abs = filepath.Join(cwd, dir)
+	// "" is the working directory, as filepath.Abs took it, for a caller that does not go through the CLI,
+	// which names it so. LIMIT: what "" names is for floe-usage-issues 62 to decide.
+	abs, ok := dirs.Under(cwd, cmp.Or(dir, "."))
+	if !ok {
+		//nolint:err113 // floe's own mistake: its callers give a cwd, or an absolute dir
+		return nil, fmt.Errorf("tmpl: the template %q is relative, with no cwd to read it under", dir)
 	}
 	name := filepath.Base(abs)
 	if !validName(name) {

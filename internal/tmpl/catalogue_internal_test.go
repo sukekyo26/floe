@@ -28,7 +28,7 @@ func TestCatalogueDrawsEveryPart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := NewLibrary("", "", "", "").Read(catalogue, src, "", "")
+	d, err := NewLibrary("", "", "", "").Read(catalogue, src, "", cwd)
 	if err != nil {
 		t.Fatal(err)
 	}
