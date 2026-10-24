@@ -212,7 +212,7 @@ func TestPublishStoredPage(t *testing.T) {
 		m.Project != "proj" || m.PublishedFrom != "proj" || m.Path != "" || m.CreatedAt != m.UpdatedAt {
 		t.Fatalf("first publish: %+v, %+v", first, m)
 	}
-	if got := e.drawn(t, "my-demo"); !strings.Contains(got, "<h1>Demo Page</h1>") || !m.IsDrawn() ||
+	if got := e.drawn(t, "my-demo"); !strings.Contains(got, `<h1 id="demo-page">Demo Page</h1>`) || !m.IsDrawn() ||
 		e.kept(t, "my-demo") != e.read(t, "My Demo.yaml") {
 		t.Errorf("the page is drawn as %q from %q, want the data file kept and drawn by report", got, e.kept(t, "my-demo"))
 	}
@@ -244,7 +244,7 @@ func TestPublishNeedsDataFile(t *testing.T) {
 	_, err = e.publish(t, missing, store.Options{}, "proj")
 	wantUserErr(t, err, "store_not_data", missing)
 	e.mustPublish(t, e.page(t, "untitled.yaml", ""), store.Options{}, "proj")
-	if m := e.meta(t, "untitled"); m.Title != "untitled" || !strings.Contains(e.drawn(t, "untitled"), "<h1>untitled</h1>") {
+	if m := e.meta(t, "untitled"); m.Title != "untitled" || !strings.Contains(e.drawn(t, "untitled"), `<h1 id="untitled">untitled</h1>`) {
 		t.Errorf("a data file without a title: is titled %q", m.Title)
 	}
 	// Removing title: from the data file gives the slug back, as clearing the title does.
@@ -622,7 +622,7 @@ func TestSaveAtOnce(t *testing.T) {
 	if err := errors.Join(errs...); err != nil {
 		t.Fatalf("saves at once: %v", err)
 	}
-	if page := e.drawn(t, "race"); !strings.Contains(page, "<h1>Race</h1>") {
+	if page := e.drawn(t, "race"); !strings.Contains(page, `<h1 id="race">Race</h1>`) {
 		t.Errorf("the page after saves at once:\n%s", page)
 	}
 }
@@ -653,7 +653,7 @@ func TestSaveFailureKeepsPage(t *testing.T) {
 	if err := e.s.Save(entry); err == nil {
 		t.Fatal("a save into a directory it cannot write succeeded")
 	}
-	if page := e.drawn(t, "kept"); !strings.Contains(page, "<h1>Kept</h1>") {
+	if page := e.drawn(t, "kept"); !strings.Contains(page, `<h1 id="kept">Kept</h1>`) {
 		t.Errorf("the page after a failed save:\n%s", page)
 	}
 }
@@ -740,7 +740,7 @@ func TestSaveChecksAgain(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantUserErr(t, e.s.Save(onto), "store_slug_owned", "b", "one")
-	if page := e.drawn(t, "b"); !strings.Contains(page, "<h1>A</h1>") {
+	if page := e.drawn(t, "b"); !strings.Contains(page, `<h1 id="a">A</h1>`) {
 		t.Errorf("the renamed page after a refused save:\n%s", page)
 	}
 }
@@ -980,13 +980,13 @@ func TestPublishDataFile(t *testing.T) {
 		t.Errorf("meta = %+v (slug %s)", m, entry.Slug)
 	}
 	page := e.drawn(t, "plan")
-	for _, want := range []string{`<html lang="ja">`, "<h1>The plan</h1>", "<p>Do <strong>it</strong>.</p>"} {
+	for _, want := range []string{`<html lang="ja">`, `<h1 id="the-plan">The plan</h1>`, "<p>Do <strong>it</strong>.</p>"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page lacks %s:\n%s", want, page)
 		}
 	}
 	e.mustPublish(t, file, store.Options{Title: ptr("Pinned")}, "")
-	if page := e.drawn(t, "plan"); !strings.Contains(page, "<h1>Pinned</h1>") {
+	if page := e.drawn(t, "plan"); !strings.Contains(page, `<h1 id="pinned">Pinned</h1>`) {
 		t.Errorf("--title does not title the drawn page: %s", page)
 	}
 	bad := e.write(t, "bad.yml", "template: deck\nlang: en\n")
@@ -1014,7 +1014,7 @@ func TestLinkDataFile(t *testing.T) {
 		t.Errorf("a copy was stored for a link: %q, %v %v", m.Source, kept, globErr)
 	}
 	page, _, err := e.s.Draw("spec", &m, data)
-	if err != nil || !strings.Contains(string(page), `<html lang="ja">`) || !strings.Contains(string(page), "<h1>Spec</h1>") {
+	if err != nil || !strings.Contains(string(page), `<html lang="ja">`) || !strings.Contains(string(page), `<h1 id="spec">Spec</h1>`) {
 		t.Errorf("Draw = %v:\n%s", err, page)
 	}
 
