@@ -12,15 +12,16 @@ import (
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/cli"
+	"github.com/sukekyo26/floe/internal/store"
 )
 
 var update = flag.Bool("update", false, "write the golden files of each sample anew")
 
 // TestCorpus runs floe on each sample in testdata as an agent would, and compares the exit codes, what it
 // printed and the pages it wrote with the sample's golden/. What a sample holds says what runs: its data
-// files (*.yaml) are checked, and rendered when they pass; templates/, parts/, themes/ and icons/ are its
-// own, and templates/ is checked by floe template check, parts/ and themes/ by floe part check; the specs
-// in diagrams/ are drawn by floe diagram render.
+// files (those floe takes, .yaml and .yml) are checked together and rendered one at a time and together;
+// templates/, parts/, themes/ and icons/ are its own, and templates/ is checked by floe template check,
+// parts/ and themes/ by floe part check; the specs in diagrams/ are drawn by floe diagram render.
 func TestCorpus(t *testing.T) {
 	t.Parallel()
 
@@ -42,7 +43,10 @@ func TestCorpus(t *testing.T) {
 			got := runSample(t, dir)
 			golden := filepath.Join(dir, "golden")
 			if *update {
-				writeGolden(t, golden, got)
+				// A mistake of the run stays told here, not as bytes that differ on the next machine.
+				if !t.Failed() {
+					writeGolden(t, golden, got)
+				}
 				return
 			}
 			compareGolden(t, golden, got)
@@ -80,7 +84,12 @@ func runSample(t *testing.T, dir string) map[string][]byte {
 		}
 	}
 
-	data := s.glob(t, "*.yaml", false)
+	var data []string
+	for _, file := range s.glob(t, "*", false) {
+		if store.IsDataFile(file) {
+			data = append(data, file)
+		}
+	}
 	if len(data) > 0 {
 		s.run(t, false, append([]string{"check"}, data...)...)
 	}
