@@ -33,11 +33,7 @@ var messagesEN = map[string]string{
 	"store_no_page":       `no page "%s" (see floe list)`,
 
 	// server: refusals of the management page's API
-	"api_not_json":      "cannot read the request: it is not JSON",
-	"api_not_object":    "cannot read the request: send a JSON object",
-	"api_link_path":     "enter the absolute path of an HTML or data file (one starting with /)",
-	"api_edit_strings":  "send the title, description, project and slug as strings",
-	"api_favorite_bool": "send favorite as true or false",
+	"api_link_path": "enter the absolute path of an HTML or data file (one starting with /)",
 
 	// ui: the management page (ui.html), which renders them itself
 	"ui_back_to_list":         "Back to the list",

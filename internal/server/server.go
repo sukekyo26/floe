@@ -101,6 +101,8 @@ func cleanPath(p string) string {
 	return clean
 }
 
+// send answers body as text. A 4xx or 5xx it answers is a protocol's refusal alone, in plain English (forbidden
+// origin, not found); the user's mistakes and floe's failures go through refuse.
 func send(w http.ResponseWriter, status int, body string) {
 	sendBytes(w, status, "text/plain; charset=utf-8", []byte(body))
 }
@@ -116,6 +118,7 @@ func sendBytes(w http.ResponseWriter, status int, contentType string, body []byt
 func sendJSON(w http.ResponseWriter, status int, v any) {
 	b, err := json.Marshal(v)
 	if err != nil {
+		// Not through refuse, which answers with sendJSON.
 		send(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -134,7 +137,7 @@ func (*Server) serveUI(w http.ResponseWriter, r *http.Request) {
 func sendUI(w http.ResponseWriter, r *http.Request, status int) {
 	page, err := ui.Page(catalog(r))
 	if err != nil {
-		send(w, http.StatusInternalServerError, err.Error())
+		refuse(w, r, err)
 		return
 	}
 	w.Header().Set("Content-Security-Policy", uiCSP)
@@ -168,10 +171,10 @@ type Health struct {
 	Icons     string `json:"icons"`
 }
 
-func (s *Server) list(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 	list, err := s.cfg.Store.List()
 	if err != nil {
-		send(w, http.StatusInternalServerError, err.Error())
+		refuse(w, r, err)
 		return
 	}
 	sendJSON(w, http.StatusOK, list)

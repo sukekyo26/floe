@@ -31,11 +31,7 @@ var messagesJA = map[string]string{
 	"store_no_page":       "ページ「%s」はありません（floe list で確かめられます）",
 
 	// server
-	"api_not_json":      "送られた内容を読めませんでした（JSON ではありません）",
-	"api_not_object":    "送られた内容を読めませんでした（JSON のオブジェクトで送ってください）",
-	"api_link_path":     "HTML かデータファイルの絶対パス（/ で始まるパス）を入力してください",
-	"api_edit_strings":  "タイトル・説明・プロジェクト・URL 名は文字列で送ってください",
-	"api_favorite_bool": "お気に入りは true か false で送ってください",
+	"api_link_path": "HTML かデータファイルの絶対パス（/ で始まるパス）を入力してください",
 
 	// ui
 	"ui_back_to_list":         "一覧へ戻る",

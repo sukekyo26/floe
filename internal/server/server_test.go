@@ -20,6 +20,7 @@ import (
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/tmpl"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // env is a server on a free port over a store in a temporary directory.
@@ -469,8 +470,66 @@ func TestEdit(t *testing.T) {
 	}
 	ja := e.do(t, http.MethodPatch, "/api/artifacts/my-demo", `"x"`,
 		"Origin", e.origin, "Content-Type", "application/json", "Accept-Language", "ja-JP,ja;q=0.9,en;q=0.8")
-	if ja.body != "送られた内容を読めませんでした（JSON のオブジェクトで送ってください）" {
+	// A refusal of the protocol, which the management page never sends, stays in English.
+	if ja.body != "cannot read the request: send a JSON object" {
 		t.Errorf("a JSON string to a Japanese reader = %q", ja.body)
+	}
+}
+
+// TestRefusals checks that the user's mistakes and floe's failures go through refuse: a reader that takes
+// JSON gets the report, and the management page its text in its language. Refusals of the protocol, which
+// neither the management page nor the CLI sends when right, are plain English text.
+func TestRefusals(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, e.page(t, "My Demo.yaml", "Demo Page", ""), store.Options{})
+	asCLI := []string{"Origin", e.origin, "Content-Type", "application/json", "Accept", "application/json"}
+	asPage := []string{"Origin", e.origin, "Content-Type", "application/json", "Accept-Language", "ja"}
+	report := func(r resp) usererr.Report {
+		t.Helper()
+		var got usererr.Report
+		if !strings.HasPrefix(r.header.Get("Content-Type"), "application/json") || json.Unmarshal([]byte(r.body), &got) != nil {
+			t.Errorf("%d %s %q is not a report", r.status, r.header.Get("Content-Type"), r.body)
+		}
+		return got
+	}
+
+	link := `{"path":"rel.html"}`
+	if r := e.do(t, http.MethodPost, "/api/artifacts", link, asCLI...); r.status != http.StatusBadRequest ||
+		report(r).Render("") != "enter the absolute path of an HTML or data file (one starting with /)" || report(r).Failure != "" {
+		t.Errorf("a relative path to the CLI = %d %s", r.status, r.body)
+	}
+	if r := e.do(t, http.MethodPost, "/api/artifacts", link, asPage...); r.status != http.StatusBadRequest ||
+		r.body != "HTML かデータファイルの絶対パス（/ で始まるパス）を入力してください" {
+		t.Errorf("a relative path to the management page = %d %s", r.status, r.body)
+	}
+
+	for body, want := range map[string]string{
+		`{"title":1}`:       "send the title, description, project and slug as strings",
+		`{"favorite":"y"}`:  "send favorite as true or false",
+		`{bad`:              "cannot read the request: it is not JSON",
+		`{"title":"x"} [1]`: "cannot read the request: it is not JSON",
+	} {
+		r := e.do(t, http.MethodPatch, "/api/artifacts/my-demo", body, asPage...)
+		if r.status != http.StatusBadRequest || r.header.Get("Content-Type") != "text/plain; charset=utf-8" || r.body != want {
+			t.Errorf("PATCH %s = %d %s %q, want %q", body, r.status, r.header.Get("Content-Type"), r.body, want)
+		}
+	}
+
+	// floe's failure, the store unreadable.
+	root := filepath.Join(e.tmp, "store")
+	if err := os.Chmod(root, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(root, 0o700) }) //nolint:errcheck // TempDir reports what it cannot remove
+	if r := e.get(t, "/api/artifacts", "Accept", "application/json"); r.status != http.StatusInternalServerError ||
+		!strings.Contains(report(r).Failure, "permission denied") {
+		t.Errorf("a list that fails = %d %s", r.status, r.body)
+	}
+	if r := e.do(t, http.MethodDelete, "/api/artifacts/my-demo", "", "Origin", e.origin, "Accept", "application/json"); r.status != http.StatusInternalServerError ||
+		!strings.Contains(report(r).Failure, "permission denied") {
+		t.Errorf("a delete that fails = %d %s", r.status, r.body)
 	}
 }
 

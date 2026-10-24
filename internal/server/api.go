@@ -47,7 +47,7 @@ func (s *Server) readBody(w http.ResponseWriter, r *http.Request, limit int64) (
 		return nil, false
 	}
 	if err != nil || !json.Valid(body) {
-		send(w, http.StatusBadRequest, catalog(r).Msg("api_not_json"))
+		send(w, http.StatusBadRequest, "cannot read the request: it is not JSON")
 		return nil, false
 	}
 	return body, true
@@ -62,7 +62,7 @@ func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]jso
 	// Anything but an object (a number, a string, an array, null) is a mistake, not an empty change.
 	var input map[string]json.RawMessage
 	if json.Unmarshal(body, &input) != nil || input == nil {
-		send(w, http.StatusBadRequest, catalog(r).Msg("api_not_object"))
+		send(w, http.StatusBadRequest, "cannot read the request: send a JSON object")
 		return nil
 	}
 	return input
@@ -109,7 +109,7 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	}
 	// The path as sent: a file name may start or end with a space.
 	if !filepath.IsAbs(in.Path) {
-		send(w, http.StatusBadRequest, catalog(r).Msg("api_link_path"))
+		refuse(w, r, usererr.New("api_link_path"))
 		return
 	}
 	opts := store.Options{
@@ -286,13 +286,13 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 	if !stringFields(input, map[string]**string{
 		"title": &ed.Title, "description": &ed.Description, "project": &ed.Project, "slug": &ed.Slug,
 	}) {
-		send(w, http.StatusBadRequest, catalog(r).Msg("api_edit_strings"))
+		send(w, http.StatusBadRequest, "send the title, description, project and slug as strings")
 		return
 	}
 	if raw, ok := input["favorite"]; ok {
 		v, isBool := decode[bool](raw)
 		if !isBool {
-			send(w, http.StatusBadRequest, catalog(r).Msg("api_favorite_bool"))
+			send(w, http.StatusBadRequest, "send favorite as true or false")
 			return
 		}
 		ed.Favorite = &v
@@ -324,7 +324,7 @@ func (s *Server) remove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		send(w, http.StatusInternalServerError, err.Error())
+		refuse(w, r, err)
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")

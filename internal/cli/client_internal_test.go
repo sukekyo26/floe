@@ -1,16 +1,21 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/server"
+	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/tmpl"
 )
 
 // A publish of a data file larger than the server takes is told so with the limit, whether the server
@@ -55,6 +60,39 @@ func TestTooLarge(t *testing.T) {
 	unsent := client{base: "http://127.0.0.1:1"}.do(t.Context(), http.MethodPut, "/api/artifacts/p", large, nil)
 	if err := tooLarge(unsent); err == nil || !strings.Contains(err.Error(), "32 MiB") {
 		t.Errorf("a publish over the limit = %v, want the limit told before it is sent", err)
+	}
+}
+
+// The server's refusal of the user's mistake comes as its report, the mistake, not floe's failure.
+func TestRefusedAsMistake(t *testing.T) {
+	t.Parallel()
+
+	var lc net.ListenConfig
+	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr, ok := ln.Addr().(*net.TCPAddr)
+	if !ok {
+		t.Fatalf("listener address %v", ln.Addr())
+	}
+	tmp := t.TempDir()
+	st := store.New(filepath.Join(tmp, "store"), tmp, tmpl.NewLibrary(filepath.Join(tmp, "templates"), filepath.Join(tmp, "parts"), "", ""))
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- server.New(server.Config{Store: st, Port: addr.Port, Build: "b"}).Serve(ctx, ln) }()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Serve: %v", err)
+		}
+	})
+	c := client{base: "http://127.0.0.1:" + strconv.Itoa(addr.Port)}
+	refused := c.do(t.Context(), http.MethodPost, "/api/artifacts", server.Link{Path: "rel.html"}, nil)
+	re, ok := errors.AsType[*remoteError](refused)
+	if !ok || re.status != http.StatusBadRequest || re.report.Failure != "" || len(re.report.Mistakes) != 1 ||
+		re.Error() != "enter the absolute path of an HTML or data file (one starting with /)" {
+		t.Errorf("a relative path to link = %#v, want the user's mistake", refused)
 	}
 }
 
