@@ -48,6 +48,7 @@ risks: |
   <a href="#無い">x</a> <a href="#%E7%84%A1%E3%81%84">x</a> <a href="#a&amp;b">x</a> <a href="#まとめ一覧">x</a>
   <p id="later"></p> <a href="#later:~:text=x">x</a> <a href="#:~:text=x">x</a> <a href="#nope:~:text=x">x</a>
   <p id="a&amp;c"></p> <a href="#a&amp;amp;c">x</a>
+  <a href="#!" onclick="go()">js</a> <a href="#/route">route</a> <a href="#!/x">route</a> <a href="#js" onclick="go()">js</a>
 aside: <a href="#a&b"></a>
 `)
 	want := `data.yaml:3:8: risks: links to #無い, which is no id of the page: a heading's id is its text in lower case, ` +
@@ -60,16 +61,16 @@ data.yaml:3:8: risks: links to #nope, which is no id of the page: a heading's id
 		`without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has
 data.yaml:3:8: risks: links to #a&amp;c, which is no id of the page: a heading's id is its text in lower case, ` +
 		`without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has
-data.yaml:8:8: aside: links to #a&b, which is no id of the page: a heading's id is its text in lower case, ` +
+data.yaml:9:8: aside: links to #a&b, which is no id of the page: a heading's id is its text in lower case, ` +
 		`without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has`
 	if err == nil || err.Error() != want {
 		t.Errorf("draw = %v, want\n%s", err, want)
 	}
 }
 
-// A link page.html writes, which no item does, is told at the template's page.html, and one it draws of
-// the data at the data file; none is told while the data's HTML changes the page, whose ids and links are
-// not as drawn.
+// A link page.html writes is told at the template's page.html, beside the item that writes it too, and one
+// it draws of the data at the data file; none is told while the data's HTML changes the page, whose ids and
+// links are not as drawn.
 func TestLinkOfPage(t *testing.T) {
 	t.Parallel()
 
@@ -78,6 +79,11 @@ func TestLinkOfPage(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), filepath.Join("memo", "page.html")+": links to #nowhere,") ||
 		!strings.Contains(err.Error(), "\ndata.yaml: links to #drawn,") {
 		t.Errorf("draw = %v, want #nowhere at page.html and #drawn at data.yaml", err)
+	}
+	_, err = draw(l, "template: memo\nlang: en\nrisks: <a href=\"#nowhere\">x</a>\naside: drawn\n")
+	if err == nil || !strings.Contains(err.Error(), filepath.Join("memo", "page.html")+": links to #nowhere,") ||
+		!strings.Contains(err.Error(), "\ndata.yaml:3:8: risks: links to #nowhere,") {
+		t.Errorf("draw = %v, want #nowhere at page.html and at risks", err)
 	}
 	_, err = draw(l, "template: memo\nlang: en\nrisks: <b>x\naside: nowhere\n")
 	if err == nil || strings.Contains(err.Error(), "links to") {

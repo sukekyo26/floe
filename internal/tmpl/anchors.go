@@ -87,7 +87,7 @@ func withHeadingIDs(page []byte) ([]byte, pageAnchors) {
 }
 
 // add adds what n, an element, gives a's: its id, its name as an <a>, the fragment of its href as an <a>
-// or an <area> that links to a part of the page.
+// or an <area> that links to a part of the page (toPart).
 func (a *pageAnchors) add(n *xhtml.Node) {
 	inHTML := n.Namespace == ""
 	for _, at := range n.Attr {
@@ -98,11 +98,17 @@ func (a *pageAnchors) add(n *xhtml.Node) {
 			a.targets[at.Val] = true
 		case inHTML && n.DataAtom == atom.A && at.Key == "name":
 			a.targets[at.Val] = true
-		case inHTML && (n.DataAtom == atom.A || n.DataAtom == atom.Area) && at.Key == "href" &&
-			strings.HasPrefix(at.Val, "#"):
+		case inHTML && (n.DataAtom == atom.A || n.DataAtom == atom.Area) && at.Key == "href" && toPart(n, at.Val):
 			a.links = append(a.links, at.Val[1:])
 		}
 	}
+}
+
+// toPart reports whether href, of n, links to a part of the page: # and a fragment, but one a script
+// takes, of an element with an onclick or a route (#!, #/route).
+func toPart(n *xhtml.Node, href string) bool {
+	_, onclick := attrOf(n, "onclick")
+	return strings.HasPrefix(href, "#") && !onclick && !strings.HasPrefix(href, "#!") && !strings.HasPrefix(href, "#/")
 }
 
 // atHeadingTags returns page with attr(k) put in the k-th start tag of a heading, <h2/> too, which the
@@ -198,8 +204,8 @@ func (d *Data) checkAnchors(a pageAnchors, src []byte) error {
 }
 
 // linkMistakes returns the mistakes of a link to #written, which goes to decoded and reaches no part of the
-// page: one at each item of d that writes it, else one at the page.html of d's own template if src, its
-// text, writes it, else one at d's file, which a link the search misses is the data's all the same.
+// page: one at each item of d that writes it and one at the page.html of d's own template if src, its text,
+// writes it, else one at d's file, which a link the search misses is the data's all the same.
 func (d *Data) linkMistakes(written, decoded string, src []byte) []*usererr.Error {
 	key, args := "tmpl_anchor_none", []any{"#" + decoded}
 	if decoded == "ZgotmplZ" {
@@ -212,13 +218,13 @@ func (d *Data) linkMistakes(written, decoded string, src []byte) []*usererr.Erro
 			mistakes = append(mistakes, itemMistake(d.File, d.root, it.at, false, usererr.New(key, args...)))
 		}
 	}
-	switch {
-	case mistakes != nil:
-		return mistakes
-	case d.tmpl.isOwn() && writes(string(src), written):
-		return []*usererr.Error{usererr.NewAt(d.tmpl.file("page.html"), 0, 0, key, args...)}
+	if d.tmpl.isOwn() && writes(string(src), written) {
+		mistakes = append(mistakes, usererr.NewAt(d.tmpl.file("page.html"), 0, 0, key, args...))
 	}
-	return []*usererr.Error{usererr.NewAt(d.File, 0, 0, key, args...)}
+	if mistakes == nil {
+		return []*usererr.Error{usererr.NewAt(d.File, 0, 0, key, args...)}
+	}
+	return mistakes
 }
 
 // writes reports whether text writes a link to the fragment frag: # and frag, as written or percent-decoded,

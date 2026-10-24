@@ -17,9 +17,9 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// placedText is a text item of a data file: its path of keys, its text, and where it is written, which Read
-// keeps for Render to tell a mistake of it at, as Render has no YAML.
-type placedText struct {
+// htmlItem is an item of format html of a data file: its path of keys, its text, and where it is written,
+// which Read keeps for Render to tell a mistake of it at, as Render has no YAML.
+type htmlItem struct {
 	at   []string
 	text string
 	pos  yamlpos.Pos
@@ -28,23 +28,20 @@ type placedText struct {
 
 // htmlItemsOf returns the items of whole of format html, text but empty, which draws nothing, in the order
 // of the file under root; nil for none.
-func htmlItemsOf(whole drawnItems, root ast.Node) []placedText {
-	var items []placedText
+func htmlItemsOf(whole drawnItems, root ast.Node) []htmlItem {
+	var items []htmlItem
 	for _, f := range whole.ofFormat("html") {
 		text, isText := f.value.(string)
 		if !isText || text == "" {
 			continue
 		}
 		pos, path := itemPos(root, f.at, false)
-		items = append(items, placedText{at: f.at, text: text, pos: pos, path: path})
+		items = append(items, htmlItem{at: f.at, text: text, pos: pos, path: path})
 	}
-	slices.SortFunc(items, byPlace)
+	slices.SortFunc(items, func(a, b htmlItem) int {
+		return cmp.Or(cmp.Compare(a.pos.Line, b.pos.Line), cmp.Compare(a.pos.Column, b.pos.Column))
+	})
 	return items
-}
-
-// byPlace orders texts in the order of their file.
-func byPlace(a, b placedText) int {
-	return cmp.Or(cmp.Compare(a.pos.Line, b.pos.Line), cmp.Compare(a.pos.Column, b.pos.Column))
 }
 
 // htmlMarks marks the items of format html of a drawing that checks them: one shown is drawn as written,

@@ -13,7 +13,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   text in lower case, keeping letters, numbers, `-` and `_`, the spaces
   between words made one `-`, and `-1`, `-2` for an id the page already has, so that
   `[…](#1-what-happens)` goes to its section. A link in the page that reaches
-  no id is refused at the item that writes it.
+  no id is refused at the item that writes it, and one html/template wrote
+  `#ZgotmplZ` for, its URL not safe, as such.
 - Add a template's `words.yaml`, written as a part's: its `page.html` draws
   the words with `{{word "status_doing"}}` in the page's `lang:`, else in
   `en`, so that a template draws its own words in every language.

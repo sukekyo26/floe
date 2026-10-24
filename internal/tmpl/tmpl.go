@@ -69,13 +69,13 @@ type Data struct {
 	images map[string]template.URL // its images as data URIs, by the path written
 	// its items drawn by floe's parts, by the path of keys to each (pathKey); nil without one
 	parts     map[string]template.HTML
-	diagrams  bool         // whether it has a diagram, for the page to get their style and zoom
-	tried     []string     // the images it names that a file can make right, read or not, as it writes them
-	icons     []string     // the index files of the icon sets its diagrams may show, when it has one
-	htmlItems []placedText // its items of format html, which Render checks the page drawn for
-	linkItems []itemAt     // its texts holding a #, at which Render tells a link to no part of the page
-	root      ast.Node     // the YAML Read read it from, where Render places the mistake of a link
-	marks     *htmlMarks   // its items of format html marked, while checkDrawnHTML draws it; nil else
+	diagrams  bool       // whether it has a diagram, for the page to get their style and zoom
+	tried     []string   // the images it names that a file can make right, read or not, as it writes them
+	icons     []string   // the index files of the icon sets its diagrams may show, when it has one
+	htmlItems []htmlItem // its items of format html, which Render checks the page drawn for
+	linkItems []itemAt   // its texts holding a #, at which Render tells a link to no part of the page
+	root      ast.Node   // the YAML Read read it from, where Render places the mistake of a link
+	marks     *htmlMarks // its items of format html marked, while checkDrawnHTML draws it; nil else
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
