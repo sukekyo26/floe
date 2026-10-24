@@ -186,8 +186,9 @@ type partSet struct {
 	notes  map[string]*schemaNotes // what floe checks of them once all are read
 	shares map[string]bool         // the URLs of the schemas the parts share, floe's alone
 	themes map[string]*theme       // by name
-	// the parts and themes of one's own that cannot be used, by kind and name, and why
-	broken map[ownKind]map[string]error
+	// the parts and themes that cannot be used, by kind and name, and why: those of one's own, and floe's
+	// that take the look of one of them (leaveOutUnusable)
+	broken map[partKind]map[string]error
 	// floe's own default palette, under every page's, whatever one's own themes change
 	palette string
 	// the directories of one's own it read, those of parts and themes among them, by their real paths
@@ -209,7 +210,7 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, shapes: map[string]*shape{}, notes: map[string]*schemaNotes{},
 		shares: map[string]bool{}, themes: map[string]*theme{},
-		broken: map[ownKind]map[string]error{ownPart: {}, ownTheme: {}}, palette: "", dirs: nil, strays: nil,
+		broken: map[partKind]map[string]error{kindPart: {}, kindTheme: {}}, palette: "", dirs: nil, strays: nil,
 	}
 	if err := set.readBuiltin(); err != nil {
 		return nil, err
@@ -273,8 +274,8 @@ func (set *partSet) readBuiltin() error {
 		url := partsURL + name + ".json"
 		set.docs[url] = map[string]any{"type": "object", "description": p.about}
 		set.shapes[url] = &shape{
-			keys: nil, each: nil, ref: "", format: "", named: nil, part: nil, about: p.about, typ: "object", enum: nil,
-			required: nil,
+			keys: nil, each: nil, ref: "", format: "", named: nil, part: nil, unusable: "", about: p.about, typ: "object",
+			enum: nil, required: nil,
 		}
 		set.parts[name] = &part{
 			name: name, shape: set.shapes[url], pages: nil, words: nil, html: "", css: p.css, checks: nil,
@@ -923,7 +924,7 @@ func (set *partSet) misnamedIn(named []namedPart) *usererr.Error {
 	for _, n := range named {
 		switch set.misnamed(n) {
 		case nameBroken:
-			return set.brokenErr(ownPart, n.name)
+			return set.brokenErr(kindPart, n.name)
 		case nameNotOne:
 			return usererr.New("tmpl_page_several", n.value)
 		case nameLookBox:

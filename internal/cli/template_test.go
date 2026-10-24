@@ -339,3 +339,37 @@ func TestUnusablePartWhereTakenOnly(t *testing.T) {
 		t.Errorf("publish of the one that takes it = %+v, want %s", r, at)
 	}
 }
+
+// A directory of parts whose name no $ref can name, as %zz, which is no URL, stops no page.
+func TestPartNameNoURL(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	if err := os.MkdirAll(filepath.Join(e.tmp, "parts", "%zz"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	page := e.write(t, "page.yaml", "template: report\nlang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n      - text: hi\n")
+	want(t, "check", e.run(t, "", "check", page), 0, "", "")
+}
+
+// floe template show and floe part show tell an item a part that cannot be used draws as such.
+func TestShowUnusablePart(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	for _, name := range []string{"links", "note"} {
+		e.write(t, "parts/"+name+"/schema.json", `{"type": 1}`)
+		e.write(t, "parts/"+name+"/part.html", `<div data-floe-part="`+name+`"></div>`)
+		e.write(t, "parts/"+name+"/part.css", "")
+	}
+	for _, c := range []struct{ args, line string }{
+		{"template show report", "\n      links: the part links cannot be used\n"},
+		{"part show stack", "\n  note: the part note cannot be used\n"},
+	} {
+		if r := e.run(t, "", strings.Fields(c.args)...); r.code != 0 || !strings.Contains(r.stdout, c.line) {
+			t.Errorf("%s = %+v, want %q", c.args, r, c.line)
+		}
+	}
+}

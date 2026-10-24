@@ -317,9 +317,9 @@ func newCompiler(set *partSet) *jsonschema.Compiler {
 func (set *partSet) compiler(stands map[string]bool) (*jsonschema.Compiler, error) {
 	c := newCompiler(set)
 	docs := maps.Clone(set.docs)
-	for name := range set.broken[ownPart] {
-		if url := partsURL + name + ".json"; docs[url] == nil {
-			docs[url] = false
+	for name := range set.broken[kindPart] {
+		if set.standsFalse(name) {
+			docs[partsURL+name+".json"] = false
 		}
 	}
 	for url, doc := range docs {
@@ -407,8 +407,8 @@ func unknownPart(set *partSet, ref string) *usererr.Error {
 	}
 	name, ok := partName(ref)
 	switch {
-	case ok && set.broken[ownPart][name] != nil:
-		return set.brokenErr(ownPart, name)
+	case ok && set.broken[kindPart][name] != nil:
+		return set.brokenErr(kindPart, name)
 	case ok && set.parts[name] != nil && set.parts[name].isLook():
 		return usererr.New("tmpl_part_look_ref", ref, name)
 	}
@@ -540,7 +540,7 @@ func (s *schemaCheck) leaf(e *jsonschema.ValidationError) {
 	where := yamlpos.OfValue(key, value)
 	if name, ok := s.unusablePart(e); ok {
 		// As a theme the data picks that cannot be used: at the item, why under it, once.
-		s.problems = append(s.problems, s.set.brokenErr(ownPart, name).Placed(s.file, where.Line, where.Column, ""))
+		s.problems = append(s.problems, s.set.brokenErr(kindPart, name).Placed(s.file, where.Line, where.Column, ""))
 		return
 	}
 	switch k := e.ErrorKind.(type) {
@@ -586,7 +586,14 @@ func (s *schemaCheck) unusablePart(e *jsonschema.ValidationError) (string, bool)
 	}
 	base, _, _ := strings.Cut(e.SchemaURL, "#")
 	name, whole := partName(base)
-	return name, whole && s.set.broken[ownPart][name] != nil
+	return name, whole && s.set.standsFalse(name)
+}
+
+// standsFalse reports whether the part name, left out, stands as false in compiler: one a $ref can name,
+// whose schema set holds no longer.
+func (set *partSet) standsFalse(name string) bool {
+	return set.broken[kindPart][name] != nil && validName(name) && !set.reserved(name) &&
+		set.docs[partsURL+name+".json"] == nil
 }
 
 // wording words a mistake the catalog has a message for, after the path: a bound (how many items or

@@ -27,6 +27,8 @@ type shape struct {
 	// parts share, and the part, which draws the item whole. nil for none.
 	named *shape
 	part  *part
+	// the part its $ref names, which cannot be used: it stands as false (partSet.standsFalse); "" for none
+	unusable string
 
 	// What floe template show and floe part show tell of it, as written beside a $ref.
 	about    string
@@ -43,7 +45,8 @@ type shape struct {
 // kept as written.
 func readShape(doc any, url, file, part string) (*shape, *schemaNotes, error) {
 	n := &schemaNotes{
-		file: file, part: part, url: url, doc: doc, own: map[string]bool{url: true}, met: nil, warnings: nil,
+		file: file, part: part, floeTemplate: false, url: url, doc: doc, own: map[string]bool{url: true}, met: nil,
+		warnings: nil,
 	}
 	s, err := n.read(doc, url, "#")
 	if err != nil {
@@ -56,8 +59,10 @@ func readShape(doc any, url, file, part string) (*shape, *schemaNotes, error) {
 type schemaNotes struct {
 	file string // the schema, as its mistakes name it
 	part string // the part whose schema it is; "" for a template's or one the parts share
-	url  string // the schema's URL, which a relative $ref is read from
-	doc  any    // the schema, as jsonschema reads it, where its $refs into itself are resolved
+	// the schema is a template's of floe's, which floe holds as it holds its parts' (partSet.floeHolds)
+	floeTemplate bool
+	url          string // the schema's URL, which a relative $ref is read from
+	doc          any    // the schema, as jsonschema reads it, where its $refs into itself are resolved
 	// the URLs of the schema's own file, its own and those its $ids give, which its $refs may point into
 	own      map[string]bool
 	met      []noted          // in the order of the schema
@@ -111,8 +116,8 @@ func (n *schemaNotes) read(v any, base, ptr string) (*shape, error) {
 		return nil, err //nolint:wrapcheck // the first of keyword's mistakes, made here
 	}
 	s := &shape{
-		keys: nil, each: nil, ref: "", format: format, named: nil, part: nil, about: about, typ: m["type"], enum: enum,
-		required: nil,
+		keys: nil, each: nil, ref: "", format: format, named: nil, part: nil, unusable: "", about: about, typ: m["type"],
+		enum: enum, required: nil,
 	}
 	if ref != "" {
 		s.ref = absolute(base, ref)
@@ -398,17 +403,17 @@ func (n *schemaNotes) at(r refAt, e *usererr.Error) *usererr.Error {
 	return e.Placed(n.file, 0, 0, r.ptr)
 }
 
-// floeHolds reports whether the schema of n is floe's, a part's of floe's or one the parts share, and holds
-// the part name, of one's own, that cannot be used.
+// floeHolds reports whether the schema of n is floe's, a template's or a part's of floe's or one the parts
+// share, and holds the part name, which cannot be used.
 func (set *partSet) floeHolds(n *schemaNotes, name string) bool {
-	if set.broken[ownPart][name] == nil {
+	switch {
+	case set.broken[kindPart][name] == nil:
 		return false
+	case n.part != "":
+		p := set.parts[n.part]
+		return p != nil && !p.isOwn()
 	}
-	if n.part == "" {
-		return set.shares[n.url]
-	}
-	p := set.parts[n.part]
-	return p != nil && !p.isOwn()
+	return n.floeTemplate || set.shares[n.url]
 }
 
 // partMistake returns what set refuses of r, a $ref of the schema of n to base under floe:///parts/, or nil.
@@ -475,11 +480,14 @@ func (s *shape) bind(set *partSet) {
 		k.bind(set)
 	}
 	s.each.bind(set)
+	name, whole := partName(s.ref)
 	named, ok := set.shapes[s.ref]
 	if !ok {
+		if whole && set.standsFalse(name) {
+			s.unusable = name
+		}
 		return
 	}
-	name, _ := partName(s.ref)
 	s.named, s.part = named, set.parts[name]
 }
 

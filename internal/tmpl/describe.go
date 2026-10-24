@@ -30,7 +30,8 @@ type Item struct {
 	Types       []string // JSON types: string, number, integer, boolean, object, array, null
 	Of          []string // the types of the items of a list
 	Format      string
-	Part        string // the part of floe's that draws it; "" for none
+	Part        string // the part that draws it; "" for none
+	Unusable    bool   // Part cannot be used
 	Enum        []string
 	Required    bool
 	Description string
@@ -97,7 +98,7 @@ func (l *Library) Parts() (parts []*PartDescription, broken usererr.List, err er
 	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
 		parts = append(parts, set.describe(name))
 	}
-	return parts, usererr.OfWhole(set.unusable(ownPart, nil)), nil
+	return parts, usererr.OfWhole(set.unusable(kindPart, nil)), nil
 }
 
 // DescribePart tells of the part name.
@@ -149,8 +150,8 @@ func SharedItems(name string) []Item {
 	items := make([]Item, 0, len(shared))
 	for _, key := range shared {
 		it := Item{
-			Name: key, Types: []string{"string"}, Of: nil, Format: "", Part: "", Enum: nil, Required: false, Description: "",
-			Items: nil,
+			Name: key, Types: []string{"string"}, Of: nil, Format: "", Part: "", Unusable: false, Enum: nil, Required: false,
+			Description: "", Items: nil,
 		}
 		switch key {
 		case "lang":
@@ -183,7 +184,7 @@ func (s *shape) item(name string, required bool) Item {
 		s = new(shape) // null in schema.json: nothing to tell of it
 	}
 	it := Item{
-		Name: name, Types: s.types(), Of: nil, Format: s.format, Part: "", Enum: nil, Required: required,
+		Name: name, Types: s.types(), Of: nil, Format: s.format, Part: "", Unusable: false, Enum: nil, Required: required,
 		Description: s.description(), Items: nil,
 	}
 	enum := s.values()
@@ -191,7 +192,7 @@ func (s *shape) item(name string, required bool) Item {
 		// A list described by its items: "a list of …", each one what it holds.
 		it.Of, it.Items = each.types(), each.items()
 		it.Format = cmp.Or(it.Format, each.format)
-		it.Part = each.drawnBy()
+		it.Part, it.Unusable = each.drawnBy()
 		it.Description = cmp.Or(it.Description, each.description())
 		if len(enum) == 0 {
 			enum = each.values()
@@ -199,19 +200,21 @@ func (s *shape) item(name string, required bool) Item {
 	} else {
 		it.Items = s.items()
 	}
-	it.Part = cmp.Or(s.drawnBy(), it.Part)
+	if part, unusable := s.drawnBy(); part != "" {
+		it.Part, it.Unusable = part, unusable
+	}
 	for _, e := range enum {
 		it.Enum = append(it.Enum, jsonText(e))
 	}
 	return it
 }
 
-// drawnBy is the name of the part of floe's that draws s, or "".
-func (s *shape) drawnBy() string {
+// drawnBy is the name of the part that draws s, or "", and whether it cannot be used.
+func (s *shape) drawnBy() (string, bool) {
 	if s.part == nil {
-		return ""
+		return s.unusable, s.unusable != ""
 	}
-	return s.part.name
+	return s.part.name, false
 }
 
 // types are the JSON types s takes: those it names, else those its keywords imply.

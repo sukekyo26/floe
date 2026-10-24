@@ -76,7 +76,7 @@ func (l *Library) CheckOwnParts() (warnings usererr.List, err error) {
 	if err != nil {
 		return nil, err
 	}
-	unusable := slices.Concat(set.unusable(ownPart, nil), set.unusable(ownTheme, nil))
+	unusable := slices.Concat(set.unusable(kindPart, nil), set.unusable(kindTheme, nil))
 	return slices.Clone(set.strays), usererr.OfWhole(unusable).Err()
 }
 
@@ -163,9 +163,10 @@ func (t *Template) checkComputed() error {
 	return err
 }
 
-// brokenParts warns of each part of one's own in set that cannot be used, but those page.html names by an
-// attribute, of named, which checkNamedParts refuses: the schema refers to none of them, as it compiled. A
-// theme that cannot be used is warned of too: a data file picks it.
+// brokenParts warns of each part in set that cannot be used, but those page.html names by an attribute, of
+// named, which checkNamedParts refuses: the schema compiled with each standing as false, so it reaches
+// them through floe's schemas alone, as any.json, which refuse the data that takes them where it does
+// (schemaCheck.unusablePart). A theme that cannot be used is warned of too: a data file picks it.
 func brokenParts(set *partSet, named []namedPart) usererr.List {
 	refused := map[string]bool{}
 	for _, n := range named {
@@ -175,8 +176,8 @@ func brokenParts(set *partSet, named []namedPart) usererr.List {
 	}
 	// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
 	warnings := usererr.OfWhole(slices.Concat(
-		set.unusable(ownPart, func(name string) bool { return refused[name] && set.parts[name] == nil }),
-		set.unusable(ownTheme, nil),
+		set.unusable(kindPart, func(name string) bool { return refused[name] && set.parts[name] == nil }),
+		set.unusable(kindTheme, nil),
 	))
 	return append(warnings, set.strays...)
 }
@@ -219,7 +220,7 @@ func (t *Template) checkNamedParts(set *partSet, src []byte, named []namedPart) 
 		case nameLookBox:
 			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_look_box", n.name))
 		case nameBroken:
-			mistakes = append(mistakes, set.brokenErr(ownPart, n.name).Placed(page, line, 0, ""))
+			mistakes = append(mistakes, set.brokenErr(kindPart, n.name).Placed(page, line, 0, ""))
 		case nameUnknown:
 			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_page_part", n.name, set.candidates(n.look)))
 		case nameRight:

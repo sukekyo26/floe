@@ -1,6 +1,8 @@
 package tmpl
 
 import (
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -212,6 +214,51 @@ func TestDrawnWholeStops(t *testing.T) {
 		got := listed(found)
 		if !slices.Equal(got, c.want) {
 			t.Errorf("drawnWhole = %v, want %v", got, c.want)
+		}
+	}
+}
+
+// floeHolds takes a template's schema for floe's by where the template is, as it takes a part's: floe's
+// stays usable without a part that cannot be used, and one's own does not.
+func TestFloeHolds(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	for name, body := range map[string]string{
+		"links/schema.json": `{"type": 1}`, "links/part.html": `<ul data-floe-part="links"></ul>`, "links/part.css": "",
+	} {
+		if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(name)), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	set, err := partsIn(ownDirs{parts: dir, themes: ""})
+	if err != nil {
+		t.Fatal(err)
+	}
+	notes := func(url, part string, floeTemplate bool) *schemaNotes {
+		_, n, err := readShape(jsonDoc(t, `{}`), url, "schema.json", part)
+		if err != nil {
+			t.Fatal(err)
+		}
+		n.floeTemplate = floeTemplate
+		return n
+	}
+	for _, c := range []struct {
+		what, name string
+		n          *schemaNotes
+		want       bool
+	}{
+		{"floe's template", "links", notes(schemaURL("report"), "", true), true},
+		{"a template of one's own", "links", notes(schemaURL("memo"), "", false), false},
+		{"floe's part", "links", notes(partsURL+"stack.json", "stack", false), true},
+		{"a schema the parts share", "links", notes(partsURL+"tone.json", "", false), true},
+		{"a part that can be used", "table", notes(schemaURL("report"), "", true), false},
+	} {
+		if got := set.floeHolds(c.n, c.name); got != c.want {
+			t.Errorf("floeHolds of %s = %v, want %v", c.what, got, c.want)
 		}
 	}
 }

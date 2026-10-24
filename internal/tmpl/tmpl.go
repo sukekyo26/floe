@@ -268,8 +268,8 @@ func pickTheme(set *partSet, d *Data, given string, pos yamlpos.Pos) (usererr.Li
 	switch {
 	case !slices.Contains(names, name):
 		why = usererr.New("tmpl_unknown_theme", name, strings.Join(names, ", "))
-	case set.broken[ownTheme][name] != nil:
-		why = set.brokenErr(ownTheme, name)
+	case set.broken[kindTheme][name] != nil:
+		why = set.brokenErr(kindTheme, name)
 	}
 	switch {
 	case why != nil && given != "":
@@ -745,6 +745,7 @@ func (t *Template) readShape(doc any) (*shape, *schemaNotes, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	notes.floeTemplate = !t.isOwn()
 	set, err := t.parts()
 	if err != nil {
 		return nil, nil, err
