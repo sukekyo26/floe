@@ -8,7 +8,6 @@ func init() {
 // The command line's own, in English alone, are messagesCLI.
 var messagesEN = map[string]string{
 	// shared: mistakes more than one command makes
-	"file_path_empty":      "a path is empty; give the file or directory, and check that a variable written for it is set",
 	"file_cannot_read":     "cannot read %s (%s); check the path and that the file exists",
 	"file_cannot_write":    "cannot write %s (%s); check that its directory can be written to",
 	"file_cannot_write_in": "cannot write in %s (%s); check that it can be written to",
@@ -33,6 +32,8 @@ var messagesEN = map[string]string{
 	"store_theme_link":    "--theme picks the theme of a page drawn from a data file: a linked file is shown as it is",
 	"store_no_page":       `no page "%s" (see floe list)`,
 	"store_link_relative": "%s is not an absolute path: give the path of an HTML or data file starting with /",
+	"store_link_empty":    "give the absolute path of the HTML or data file to link",
+	"store_file_empty":    "give the path of the data file (.yaml or .yml) to publish",
 
 	// ui: the management page (ui.html), which renders them itself
 	"ui_back_to_list":         "Back to the list",

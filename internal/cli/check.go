@@ -50,12 +50,16 @@ func tell(l *usererr.List, err error) {
 // mistakes: each at its line and column, or one about the whole file.
 func drawFile(a *app, p arg) ([]byte, error) {
 	file := p.name
-	// Nowhere is told alone: what its name says is beside the point until it names a file.
-	if p.err != nil {
+	// An empty path has no name to check; one that is nowhere has, and is told with it.
+	if file == "" {
 		return nil, p.err
 	}
+	var notData error
 	if !store.IsDataFile(file) {
-		return nil, usererr.New("cli_check_not_data", file)
+		notData = usererr.New("cli_check_not_data", file)
+	}
+	if notData != nil || p.err != nil {
+		return nil, usererr.Collect(notData, p.err) //nolint:wrapcheck // usererrs for the user as they are
 	}
 	src, err := p.read()
 	if err != nil {

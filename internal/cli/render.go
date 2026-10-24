@@ -38,7 +38,7 @@ was not written again.`,
 			// Left out, it is none (beside each data file); given, even empty, it is a path.
 			var out arg
 			if cmd.Flags().Changed("out-dir") {
-				out = a.arg(outDir)
+				out = a.arg(outDir, "--out-dir")
 			}
 			return a.renderPages(args, out, check)
 		},
@@ -88,8 +88,8 @@ func (a *app) drawPages(files []string, out arg) ([]rendered, error) {
 		p := rendered{from: file, to: filepath.Join(dir, name), real: "", page: nil}
 		page, err := drawFile(a, f)
 		tell(&found, err)
-		if out.err != nil || f.err != nil || f.abs == "" {
-			// Nowhere to write to, or "", which is no data file: told above.
+		if out.err != nil || f.err != nil {
+			// Nowhere to write to, or to read from: told above.
 			continue
 		}
 		p.real = realPath(filepath.Join(at, name))

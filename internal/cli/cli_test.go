@@ -1260,6 +1260,9 @@ func TestRelativeWithoutDir(t *testing.T) {
 		}
 	}
 	want(t, "check of an absolute path from no working directory", e.runAt(t.Context(), "", "check", page), 0, "", "")
+	// What its name says is told with where it is not.
+	want(t, "check of a relative file of no data from no working directory", e.runAt(t.Context(), "", "check", "p.txt"), 1, "",
+		"floe: p.txt is not a data file (.yaml or .yml)\n"+refused("p.txt"))
 
 	// The out-dir and the data files are told of in one list, in the order given.
 	bad := e.write(t, "bad.yaml", "template: report\nlang: en\nnope: 1\n")
@@ -1278,35 +1281,42 @@ func TestEmptyPath(t *testing.T) {
 
 	e := newEnv(t)
 	page := e.page(t, "p.yaml", "P")
-	const empty = "floe: a path is empty; give the file or directory, and check that a variable written for it is set\n"
-	for _, args := range [][]string{
-		{"check", ""},
-		{"render", ""},
-		{"diagram", "render", ""},
-		{"publish", ""},
-		{"publish", "--link", ""},
-		{"template", "check", ""},
-		{"icons", "fetch", "aws", ""},
-		{"render", "--out-dir", "", page},
-		{"check", "", ""},
+	empty := func(what string) string {
+		return "floe: " + what + " is an empty path; give a file or directory, and check that a variable written for it is set\n"
+	}
+	const noData = "floe: give the path of the data file (.yaml or .yml) to publish\n"
+	for _, c := range []struct {
+		args []string
+		told string
+	}{
+		{[]string{"check", ""}, empty("argument 1")},
+		{[]string{"render", ""}, empty("argument 1")},
+		{[]string{"diagram", "render", ""}, empty("argument 1")},
+		{[]string{"template", "check", ""}, empty("argument 1")},
+		{[]string{"publish", "--link", ""}, empty("argument 1")},
+		{[]string{"icons", "fetch", "aws", ""}, empty("argument 2")},
+		{[]string{"render", "--out-dir", "", page}, empty("--out-dir")},
+		// Each by its place, though they are alike.
+		{[]string{"check", "", ""}, empty("argument 1") + empty("argument 2")},
+		{[]string{"render", "--out-dir", "", "", page}, empty("--out-dir") + empty("argument 1")},
+		// Accept, the store's gate, refuses an empty data file, in its words alone.
+		{[]string{"publish", ""}, noData},
+		{[]string{"publish", "", "--title", ""}, noData + "floe: --title is empty: give the page a name, or omit --title " +
+			"to take the data file's title:, or a link's <title> or <h1>\n"},
 	} {
-		what := strings.Join(args, " ")
-		want(t, what, e.run(t, "", args...), 1, "", empty)
-		want(t, what+" from no working directory", e.runAt(t.Context(), "", args...), 1, "", empty)
+		what := strings.Join(c.args, " ")
+		want(t, what, e.run(t, "", c.args...), 1, "", c.told)
+		want(t, what+" from no working directory", e.runAt(t.Context(), "", c.args...), 1, "", c.told)
 	}
 	if _, err := os.Stat(filepath.Join(e.tmp, "p.html")); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("render --out-dir '' wrote a page: %v", err)
 	}
-	bad := e.write(t, "bad.yaml", "template: report\nlang: en\nnope: 1\n")
-	inOrder(t, "check of a bad file, '' and a good one", e.run(t, "", "check", bad, "", page), 1,
-		bad+":3:1: nope is not an item of the template report", empty)
-	r := e.run(t, "", "publish", "", "--title", "")
-	if r.code != 1 || !strings.Contains(r.stderr, empty) || !strings.Contains(r.stderr, "floe: --title is empty") {
-		t.Errorf("publish '' --title '' = %+v, want both mistakes", r)
-	}
 	if _, up := e.health(t); up {
 		t.Error("publish '' started the server")
 	}
+	bad := e.write(t, "bad.yaml", "template: report\nlang: en\nnope: 1\n")
+	inOrder(t, "check of a bad file, '' and a good one", e.run(t, "", "check", bad, "", page), 1,
+		bad+":3:1: nope is not an item of the template report", empty("argument 2"))
 
 	want(t, "render without --out-dir", e.run(t, "", "render", page), 0, filepath.Join(e.tmp, "p.html")+"\n", "")
 	// Cancelled, the fetch of the set's page fails before it reaches the network, and tells that it was the one.

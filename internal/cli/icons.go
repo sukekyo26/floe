@@ -45,7 +45,7 @@ already there is kept unless --force.`,
 			if len(args) == 2 {
 				source = args[1]
 				if !icons.IsURL(source) {
-					p := a.arg(source)
+					p := a.arg(source, argument(2))
 					if p.err != nil {
 						return p.err
 					}

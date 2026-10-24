@@ -79,7 +79,7 @@ type Options struct {
 // Accept checks a publish of file, a link or a data file, for what needs neither the store nor the disk,
 // and returns o with each text given trimmed, whoever gave it, and a data file's slug made of its name
 // when none is given. A slug is a name, checked as given: trimmed, it would not be the one a URL names.
-// Its mistakes: a data file that is not one, a slug that cannot be one, a title given empty, as it would
+// Its mistakes: a data file empty or that is not one, a slug that cannot be one, a title given empty, as it would
 // leave the list blank, and a theme, which would take the data's. The command line checks with it before
 // it sends, and the server again.
 func Accept(file string, link bool, o Options) (Options, error) {
@@ -90,13 +90,15 @@ func Accept(file string, link bool, o Options) (Options, error) {
 		}
 	}
 	var found usererr.List
-	// An empty file has no name to check: its caller refuses it as empty (the CLI's arg, the API's request).
-	data := !link && file != ""
-	if data && !IsDataFile(file) {
+	switch {
+	case link: // an empty link is readLink's, as it reads it
+	case file == "":
+		found = append(found, usererr.New("store_file_empty"))
+	case !IsDataFile(file):
 		found = append(found, usererr.New("store_not_data", file))
 	}
 	// Made of the name of a data file only: a stored page is drawn from one.
-	if o.Slug == nil && data && len(found) == 0 {
+	if o.Slug == nil && !link && len(found) == 0 {
 		// No cwd: it names only an index.html after its directory, and this is a data file.
 		slug := SlugFromFile(file, "")
 		o.Slug = &slug
@@ -318,7 +320,7 @@ func (e *Entry) draw(data *tmpl.Data, src string) error {
 // no theme. A theme given empty is Accept's mistake alone, not this one too.
 func (s *Store) readLink(file string, opts Options, cwd string) (string, []byte, error) {
 	if file == "" {
-		return "", nil, usererr.New("file_path_empty")
+		return "", nil, usererr.New("store_link_empty")
 	}
 	// The API gives no cwd: a relative link from it is the sender's mistake.
 	abs, ok := dirs.Under(cwd, file)
