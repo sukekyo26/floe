@@ -294,6 +294,29 @@ func (set *partSet) compileOwn() (map[string]error, error) {
 	return mistakes, nil
 }
 
+// compileShared compiles each schema the parts share, the parts standing as compileOwn has them, and returns
+// the mistakes of those that do not compile, or a failure.
+func (set *partSet) compileShared() error {
+	stands := map[string]bool{}
+	for url := range set.docs {
+		stands[url] = !set.shares[url]
+	}
+	c, err := set.compiler(stands)
+	if err != nil {
+		return err
+	}
+	var mistakes usererr.List
+	for _, url := range slices.Sorted(maps.Keys(set.shares)) {
+		if _, err := c.Compile(url); err != nil {
+			file := path.Join("parts", strings.TrimPrefix(url, partsURL))
+			if failed := mistakes.Add(compileMistakes(url, file, err)); failed != nil {
+				return failed //nolint:wrapcheck // what failed, as it is
+			}
+		}
+	}
+	return mistakes.Err()
+}
+
 // isOwn reports whether p is a part of one's own, not floe's: a file of it that fails on data its schema took
 // is its maker's mistake, else floe's failure.
 func (p *part) isOwn() bool {
@@ -439,7 +462,7 @@ func (set *partSet) reserved(name string) bool {
 // checkNames refuses the part name when its part.html names it in no
 // data-floe-part, names more than one part in one, or names a part there is none of, when part.yaml has
 // it take the look of a part there is none of, and when its schema holds a part there is none of, or a
-// look alone. floe's parts name themselves, one each, as a test checks.
+// look alone. floe's parts are checked so too, as one's own are (checkFloeParts).
 func (set *partSet) checkNames(name string) error {
 	p := set.parts[name]
 	own := set.checked(p)

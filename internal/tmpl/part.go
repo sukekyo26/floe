@@ -213,7 +213,8 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 	if err := floePartsChecked(); err != nil {
 		return nil, err
 	}
-	if err := floeFailure("read floe's parts", set.readBuiltin(partFiles, themeFiles)); err != nil {
+	// What it would refuse, checkFloeParts refused: what is left is a failure.
+	if err := set.readBuiltin(partFiles, themeFiles); err != nil {
 		return nil, err
 	}
 	for _, dir := range []string{own.parts, own.themes} {
@@ -259,8 +260,9 @@ func newPartSet() *partSet {
 var floePartsChecked = sync.OnceValue(func() error { return checkFloeParts(partFiles, themeFiles) })
 
 // checkFloeParts checks floe's parts, of the parts directory of parts, and its themes, of the themes
-// directory of themes, as floe part check checks those of one's own, there being none: what leaves one out,
-// and a warning, which no one can heed either, are floe's failure.
+// directory of themes, as floe part check checks those of one's own, there being none, and compiles the
+// schemas the parts share, which a part of one's own may refer to whether or not floe's do: what leaves one
+// out, a mistake of those, and a warning, which no one can heed either, are floe's failure.
 func checkFloeParts(parts, themes fs.FS) error {
 	set := newPartSet()
 	set.checksFloe = true
@@ -269,7 +271,10 @@ func checkFloeParts(parts, themes fs.FS) error {
 		err = set.leaveOutUnusable()
 	}
 	if err == nil {
-		err = slices.Concat(set.unusable(kindPart, nil), set.unusable(kindTheme, nil), set.strays).Err()
+		err = set.compileShared()
+	}
+	if err == nil {
+		err = slices.Concat(set.unusable(kindPart, nil), set.strays).Err()
 	}
 	return floeFailure("check floe's parts", err)
 }

@@ -106,23 +106,6 @@ func TestPalette(t *testing.T) {
 			t.Errorf("a diagram takes %s with %s; default's palette has %s", m[1], m[2], want)
 		}
 	}
-	for name, p := range set.parts {
-		// A part's element is its box, data-floe-part="<its name>", so that a page that draws it gets its
-		// style; an element is the box of one part, and every name, and every look a part takes, is a part's.
-		if p.pages != nil && !namesItself(namedParts(p.html), name) {
-			t.Errorf("the HTML of the part %s is not its box, data-floe-part=%q", name, name)
-		}
-		for _, other := range namedParts(p.html) {
-			if set.misnamed(other) != nameRight {
-				t.Errorf("the HTML of the part %s names %s, which is no part, or data-floe-part=%q", name, other.name, other.value)
-			}
-		}
-		for _, look := range p.looks {
-			if set.parts[look.name] == nil {
-				t.Errorf("the part %s takes the look of %s, which is no part", name, look.name)
-			}
-		}
-	}
 	// The boxes of floe's parts take their looks from part.yaml: the panel, through the table for risks.
 	if looks := set.looksOf("risks"); !slices.Equal(looks, []string{"table", "panel"}) {
 		t.Errorf("the looks of risks = %v", looks)

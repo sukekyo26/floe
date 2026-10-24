@@ -244,6 +244,7 @@ func TestCheckFloeParts(t *testing.T) {
 		"css":     {"part.css": "[data-floe-part=\"x\"] { } }"},
 		"warning": {"part.css": "[data-floe-part=\"x\"] { color: red; }"},
 		"theme":   {"theme": "}"},
+		"shared":  {"any.json": `"zz": {"type": "string", "pattern": "["}, `},
 	} {
 		root, themes := mapOf(t, partFiles), mapOf(t, themeFiles)
 		for file, text := range map[string]string{"schema.json": schema, "part.html": html, "part.css": ""} {
@@ -253,6 +254,11 @@ func TestCheckFloeParts(t *testing.T) {
 			root[path.Join("parts", "x", file)] = &fstest.MapFile{Data: []byte(text)}
 		}
 		want := "parts/x"
+		if prop, ok := files["any.json"]; ok {
+			want = "parts/any.json"
+			doc := string(root[want].Data)
+			root[want] = &fstest.MapFile{Data: []byte(strings.Replace(doc, `"properties": {`, `"properties": {`+prop, 1))}
+		}
 		if css, ok := files["theme"]; ok {
 			want = "themes/default/base.css"
 			base := themes[want]
