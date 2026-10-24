@@ -1299,4 +1299,13 @@ func TestRelativeHome(t *testing.T) {
 	e.vars["FLOE_TEMPLATES_DIR"] = "~/t"
 	want(t, "a ~ setting under a relative HOME from no working directory",
 		e.runAt(t.Context(), "", "template", "new", "memo2", "--from", "report"), 1, "", refused)
+	// The server reads HOME, for links: a command that may start it stops before it does.
+	delete(e.vars, "FLOE_TEMPLATES_DIR")
+	page := e.write(t, "p.html", "<!doctype html><title>p</title>")
+	for _, args := range [][]string{{"publish", "--link", page}, {"list"}} {
+		want(t, strings.Join(args, " ")+" under a relative HOME from no working directory", e.runAt(t.Context(), "", args...), 1, "", refused)
+	}
+	if _, up := e.health(t); up {
+		t.Error("a server was started under a relative HOME from no working directory")
+	}
 }

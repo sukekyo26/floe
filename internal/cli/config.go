@@ -28,7 +28,7 @@ type config struct {
 	parts     string // the parts of one's own; empty when there is nowhere to put them
 	themes    string // the themes of one's own; empty when there is nowhere to put them
 	home      string
-	homeWrong *usererr.Error // why HOME, set, gives no home: relative under no working directory
+	homeWrong *usererr.Error // why HOME, set, gives no home: relative under no working directory; wrong[home] too
 	port      int
 	wrong     map[setting]*usererr.Error
 	absent    map[setting]*usererr.Error
@@ -57,6 +57,7 @@ func loadConfig(getenv func(string) string, dir string) *config {
 	home, ok := dirs.Under(dir, getenv("HOME"))
 	if !ok {
 		c.homeWrong = usererr.New("cli_relative_no_dir", "HOME", getenv("HOME"))
+		c.wrong[homeSetting] = c.homeWrong
 	}
 	c.home = home
 	if raw := getenv("FLOE_PORT"); raw != "" {
