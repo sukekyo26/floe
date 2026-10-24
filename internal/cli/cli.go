@@ -139,13 +139,18 @@ func newRoot(env Env) *cobra.Command {
 // where it is, or why it is nowhere.
 type arg struct {
 	name, abs string
-	err       error // a relative path under no working directory; abs is then ""
+	err       error // an empty path, or a relative path under no working directory; abs is then ""
 }
 
 // arg resolves path for the command, once: under the working directory (dirs.Under), folding its .. by its
 // letters, so that every place reads a path alike; a relative one is refused when the working directory
-// cannot be read (main's Getwd failed: Dir ""). "" stays "", for the command to tell of.
-func (a *app) arg(path string) arg {
+// cannot be read (main's Getwd failed: Dir ""). "" is refused as empty, by every command alike, at the
+// place that takes it, as a shell variable left unset gives it and it names no file. A name of spaces alone
+// is a file of that name.
+func (a *app) arg(path string, at place) arg {
+	if path == "" {
+		return arg{name: path, abs: "", err: usererr.New("cli_path_empty", at.name, english.Msg(at.wants))}
+	}
 	abs, ok := dirs.Under(a.env.Dir, path)
 	if !ok {
 		return arg{name: path, abs: "", err: usererr.New("cli_relative_no_cwd", path)}
@@ -153,13 +158,25 @@ func (a *app) arg(path string) arg {
 	return arg{name: path, abs: abs, err: nil}
 }
 
-// args is the arg of each of the files or directories given, in order, each once (once).
-func (a *app) args(paths []string) []arg {
+// args is the arg of each of the files or directories given, in order, each once (once), each wants (the
+// key of what to give) at its place.
+func (a *app) args(paths []string, wants string) []arg {
 	given := make([]arg, len(paths))
 	for i, path := range paths {
-		given[i] = a.arg(path)
+		given[i] = a.arg(path, place{name: argument(i + 1), wants: wants})
 	}
 	return once(given)
+}
+
+// place is where a command takes a path: its name, as a mistake names it (--out-dir, argument 2), and the
+// key of what to give there.
+type place struct {
+	name, wants string
+}
+
+// argument names the nth argument a command was given, for a mistake that has no other name for it.
+func argument(n int) string {
+	return fmt.Sprintf("argument %d", n)
 }
 
 // once is the args given, in order, each once, by the path it was first given as: two paths that name one
@@ -174,7 +191,8 @@ next:
 	for _, p := range given {
 		e := entryOf(p)
 		for _, k := range kept {
-			if e.same(k) {
+			// Empty, it names nothing for another to be the same as: each is told by its place.
+			if p.name != "" && e.same(k) {
 				continue next
 			}
 		}
@@ -203,8 +221,8 @@ type entry struct {
 }
 
 func entryOf(p arg) entry {
-	if p.err != nil || p.abs == "" {
-		// Nowhere, or "", by its name: the command refuses it, and nothing is looked up for it.
+	if p.err != nil {
+		// Nowhere, by its name: the command refuses it, and nothing is looked up for it.
 		return entry{abs: p.name, dir: nil, info: nil}
 	}
 	e := entry{abs: p.abs, dir: nil, info: nil}

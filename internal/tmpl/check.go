@@ -25,11 +25,13 @@ import (
 // parts, themes and icons of l. The mistakes stop it from being drawn, and the warnings do not. In a run,
 // what every template it checks shares is read once, and its mistakes are the same for each. A relative dir
 // is under cwd, as Read takes a file, and its mistakes name dir as it is written; a relative dir with cwd ""
-// is the caller's bug, which floe's own failure tells.
+// is the caller's bug, which floe's own failure tells; so is an empty dir, which the CLI refuses first.
 func (l *Library) Check(dir, cwd string) (warnings usererr.List, err error) {
-	// "" is the working directory, as filepath.Abs took it, for a caller that does not go through the CLI,
-	// which names it so. LIMIT: what "" names is for floe-usage-issues 62 to decide.
-	abs, ok := dirs.Under(cwd, cmp.Or(dir, "."))
+	if dir == "" {
+		//nolint:err113 // floe's own mistake: its callers give a dir
+		return nil, errors.New("tmpl: the template dir is empty")
+	}
+	abs, ok := dirs.Under(cwd, dir)
 	if !ok {
 		//nolint:err113 // floe's own mistake: its callers give a cwd, or an absolute dir
 		return nil, fmt.Errorf("tmpl: the template %q is relative, with no cwd to read it under", dir)

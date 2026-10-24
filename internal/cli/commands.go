@@ -117,14 +117,17 @@ refused unless --force.`,
 func (a *app) publish(ctx context.Context, file string, link bool, opts store.Options) error {
 	// Checked as the server checks, to be refused before it starts, and sent so, as the slug names the URL.
 	opts, err := store.Accept(file, link, opts)
+	p := a.arg(file, place{name: argument(1), wants: "cli_wants_publish"})
 	var saved server.Saved
 	switch {
+	// An empty data file is Accept's to refuse, as the gate of the store the server checks with too; told
+	// again here, it would be told twice, in other words.
+	case !link && file == "":
+	case p.err != nil:
+		err = usererr.Collect(err, p.err)
 	case link:
-		p := a.arg(file)
 		// The server reads a link, as it draws it.
-		if p.err != nil {
-			err = usererr.Collect(err, p.err)
-		} else if _, statErr := os.Stat(p.abs); statErr != nil {
+		if _, statErr := os.Stat(p.abs); statErr != nil {
 			err = usererr.Collect(err, usererr.CannotRead(file, statErr))
 		}
 		if err == nil {
@@ -132,11 +135,7 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 		}
 	// Read as data only when it is a data file: Accept has told that it is not.
 	case store.IsDataFile(file):
-		var up store.Upload
-		readErr := a.arg(file).err
-		if readErr == nil {
-			up, readErr = store.ReadUpload(ctx, file, a.env.Dir)
-		}
+		up, readErr := store.ReadUpload(ctx, file, a.env.Dir)
 		if err = usererr.Collect(err, readErr); err == nil {
 			saved, err = a.publishData(ctx, up, opts)
 		}

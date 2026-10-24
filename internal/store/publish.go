@@ -79,7 +79,7 @@ type Options struct {
 // Accept checks a publish of file, a link or a data file, for what needs neither the store nor the disk,
 // and returns o with each text given trimmed, whoever gave it, and a data file's slug made of its name
 // when none is given. A slug is a name, checked as given: trimmed, it would not be the one a URL names.
-// Its mistakes: a data file that is not one, a slug that cannot be one, a title given empty, as it would
+// Its mistakes: a data file empty or that is not one, a slug that cannot be one, a title given empty, as it would
 // leave the list blank, and a theme, which would take the data's. The command line checks with it before
 // it sends, and the server again.
 func Accept(file string, link bool, o Options) (Options, error) {
@@ -90,7 +90,11 @@ func Accept(file string, link bool, o Options) (Options, error) {
 		}
 	}
 	var found usererr.List
-	if !link && !IsDataFile(file) {
+	switch {
+	case link: // an empty link is readLink's, as it reads it
+	case file == "":
+		found = append(found, usererr.New("store_file_empty"))
+	case !IsDataFile(file):
 		found = append(found, usererr.New("store_not_data", file))
 	}
 	// Made of the name of a data file only: a stored page is drawn from one.

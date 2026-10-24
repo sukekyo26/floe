@@ -1260,12 +1260,9 @@ func TestRelativeWithoutDir(t *testing.T) {
 		}
 	}
 	want(t, "check of an absolute path from no working directory", e.runAt(t.Context(), "", "check", page), 0, "", "")
-	// "" is told as it was, with and without a working directory.
-	for _, args := range [][]string{{"check", ""}, {"render", ""}} {
-		const told = "floe:  is not a data file (.yaml or .yml)\n"
-		want(t, args[0]+" ''", e.run(t, "", args...), 1, "", told)
-		want(t, args[0]+" '' from no working directory", e.runAt(t.Context(), "", args...), 1, "", told)
-	}
+	// What its name says is told with where it is not.
+	want(t, "check of a relative file of no data from no working directory", e.runAt(t.Context(), "", "check", "p.txt"), 1, "",
+		"floe: p.txt is not a data file (.yaml or .yml)\n"+refused("p.txt"))
 
 	// The out-dir and the data files are told of in one list, in the order given.
 	bad := e.write(t, "bad.yaml", "template: report\nlang: en\nnope: 1\n")
@@ -1274,12 +1271,64 @@ func TestRelativeWithoutDir(t *testing.T) {
 		!strings.HasPrefix(r.stderr, wantErr) {
 		t.Errorf("render of an out-dir and data files from no working directory = %+v, want %q…", r, wantErr)
 	}
-	// "" is the working directory to floe template check, as filepath.Abs took it.
-	if r := e.runAt(t.Context(), "", "template", "check", ""); r.code != 1 || r.stderr != refused(".") {
-		t.Errorf("template check '' from no working directory = %+v, want %q", r, refused("."))
+}
+
+// An empty path, given to a command or to --out-dir, is refused as empty, with or without a working directory,
+// and the other files given are still checked. A path not given is none: --out-dir left out writes beside the
+// data file, and icons fetch without a source goes to the set's page.
+func TestEmptyPath(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	page := e.page(t, "p.yaml", "P")
+	empty := func(what, wants string) string {
+		return "floe: " + what + " is an empty path; give " + wants + ", and check that a variable written for it is set\n"
 	}
-	if r := e.run(t, "", "template", "check", ""); r.code != 1 || !strings.HasPrefix(r.stderr, "floe:  has no template.yaml") {
-		t.Errorf("template check '' = %+v, want the working directory checked", r)
+	const data = "a data file (.yaml or .yml)"
+	const noData = "floe: the path of the data file to publish is empty; give the path of a .yaml or .yml file\n"
+	for _, c := range []struct {
+		args []string
+		told string
+	}{
+		{[]string{"check", ""}, empty("argument 1", data)},
+		{[]string{"render", ""}, empty("argument 1", data)},
+		{[]string{"diagram", "render", ""}, empty("argument 1", "a diagram spec (.yaml or .yml)")},
+		{[]string{"template", "check", ""}, empty("argument 1", "a template directory")},
+		{[]string{"publish", "--link", ""}, empty("argument 1", "an HTML or data file")},
+		{[]string{"icons", "fetch", "aws", ""}, empty("argument 2", "a zip file or directory of the icons, or a URL")},
+		{[]string{"render", "--out-dir", "", page}, empty("--out-dir", "the directory to write the pages in")},
+		// Each by its place, though they are alike.
+		{[]string{"check", "", ""}, empty("argument 1", data) + empty("argument 2", data)},
+		{[]string{"render", "--out-dir", "", "", page}, empty("--out-dir", "the directory to write the pages in") + empty("argument 1", data)},
+		// A set it does not know is told with the empty source.
+		{[]string{"icons", "fetch", "bogus", ""}, `floe: unknown icon set "bogus"; use aws` + "\n" +
+			empty("argument 2", "a zip file or directory of the icons, or a URL")},
+		// Accept, the store's gate, refuses an empty data file, in its words alone.
+		{[]string{"publish", ""}, noData},
+		{[]string{"publish", "", "--title", ""}, noData + "floe: --title is empty: give the page a name, or omit --title " +
+			"to take the data file's title:, or a link's <title> or <h1>\n"},
+	} {
+		what := strings.Join(c.args, " ")
+		want(t, what, e.run(t, "", c.args...), 1, "", c.told)
+		want(t, what+" from no working directory", e.runAt(t.Context(), "", c.args...), 1, "", c.told)
+	}
+	if _, err := os.Stat(filepath.Join(e.tmp, "p.html")); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("render --out-dir '' wrote a page: %v", err)
+	}
+	if _, up := e.health(t); up {
+		t.Error("publish '' started the server")
+	}
+	bad := e.write(t, "bad.yaml", "template: report\nlang: en\nnope: 1\n")
+	inOrder(t, "check of a bad file, '' and a good one", e.run(t, "", "check", bad, "", page), 1,
+		bad+":3:1: nope is not an item of the template report", empty("argument 2", data))
+
+	want(t, "render without --out-dir", e.run(t, "", "render", page), 0, filepath.Join(e.tmp, "p.html")+"\n", "")
+	// Cancelled, the fetch of the set's page fails before it reaches the network, and tells that it was the one.
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if r := e.runAt(ctx, e.tmp, "icons", "fetch", "aws"); r.code != 1 ||
+		!strings.Contains(r.stderr, "https://aws.amazon.com/architecture/icons/") {
+		t.Errorf("icons fetch aws without a source = %+v, want the set's page fetched", r)
 	}
 }
 

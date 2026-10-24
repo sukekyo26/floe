@@ -216,14 +216,7 @@ code 0. Nothing is printed when the templates are right.`,
 			// One list, each template's warnings and mistakes in the order given, told once.
 			var all usererr.List
 			failed := false
-			// "" is the working directory, as filepath.Abs took it, and under none it is refused; its name
-			// stays "". LIMIT: what "" names is for floe-usage-issues 62 to decide.
-			given := make([]arg, len(args))
-			for i, dir := range args {
-				given[i] = a.arg(cmp.Or(dir, "."))
-				given[i].name = dir
-			}
-			for _, p := range once(given) {
+			for _, p := range a.args(args, "cli_wants_template") {
 				var warnings usererr.List
 				err := p.err
 				if err == nil {
