@@ -18,20 +18,17 @@ import (
 )
 
 // headingID is the id of a heading whose text is text, near the one GitHub gives: lower case, without what
-// is not a letter, a mark, a number, - or _, the spaces between words made one -, as a browser shows them
-// as one.
+// is not a letter, a mark, a number, - or _, the spaces between the words left made one -, as a browser
+// shows them as one (an ideographic space and a no-break space too).
 // LIMIT: Go's Unicode classes and ToLower, not github-slugger's pattern and toLowerCase; they part on rare runes.
 func headingID(text string) string {
-	var b strings.Builder
-	for _, r := range strings.Join(strings.Fields(text), " ") {
-		switch {
-		case r == ' ':
-			b.WriteByte('-')
-		case unicode.IsLetter(r) || unicode.IsMark(r) || unicode.IsNumber(r) || r == '-' || r == '_':
-			b.WriteRune(unicode.ToLower(r))
+	kept := strings.Map(func(r rune) rune {
+		if unicode.IsLetter(r) || unicode.IsMark(r) || unicode.IsNumber(r) || r == '-' || r == '_' || unicode.IsSpace(r) {
+			return unicode.ToLower(r)
 		}
-	}
-	return b.String()
+		return -1
+	}, text)
+	return strings.Join(strings.Fields(kept), "-")
 }
 
 var headings = []atom.Atom{atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6}
@@ -103,6 +100,7 @@ func (a *pageAnchors) add(n *xhtml.Node) {
 
 // atHeadingTags returns page with attr(k) put in the k-th start tag of a heading, <h2/> too, which the
 // parser reads as a start, after its name. What a tag left open at the end holds is kept.
+// LIMIT: in <svg>, the tokenizer reads after <title/> or <style/> as text, unlike the parser; headings after get no id.
 func atHeadingTags(page []byte, attr func(k int) string) []byte {
 	var out bytes.Buffer
 	k := 0

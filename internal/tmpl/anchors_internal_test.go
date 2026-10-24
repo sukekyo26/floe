@@ -11,6 +11,8 @@ func TestHeadingID(t *testing.T) {
 		"floe check を回す":       "floe-check-を回す",
 		" Go  Notes_v2 ":       "go-notes_v2",
 		"\n  Foo\n\tBar\n":     "foo-bar",
+		"A & B":                "a-b",
+		"概要　詳細":                "概要-詳細",
 		"!!!":                  "",
 	} {
 		if got := headingID(text); got != want {
@@ -31,7 +33,7 @@ func TestWithHeadingIDs(t *testing.T) {
 		`<h2>a</h2><h3>a</h3><h4>a-1</h4>`:                      `<h2 id="a">a</h2><h3 id="a-1">a</h3><h4 id="a-1-1">a-1</h4>`,
 		`<h2 id=own>a</h2><h2>own</h2><h2>!</h2>`:               `<h2 id=own>a</h2><h2 id="own-1">own</h2><h2>!</h2>`,
 		`<script>"<h2>x</h2>"</script><p>no heading`:            `<script>"<h2>x</h2>"</script><p>no heading`,
-		`<h2>a & "b"</h2><h2>open`:                              `<h2 id="a--b">a & "b"</h2><h2 id="open">open`,
+		`<h2>a & "b"</h2><h2>open`:                              `<h2 id="a-b">a & "b"</h2><h2 id="open">open`,
 		`<h2>a</h3><p>body</p><h2>b</h2>`:                       `<h2 id="a">a</h3><p>body</p><h2 id="b">b</h2>`,
 		`<h2>c<h3>d</h3></h2>`:                                  `<h2 id="c">c<h3 id="d">d</h3></h2>`,
 		`<h2/>e</h2>`:                                           `<h2 id="e"/>e</h2>`,

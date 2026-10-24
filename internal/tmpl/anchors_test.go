@@ -24,7 +24,7 @@ sections:
       - text: "### 何が起きるか\n\n[戻る](#1-何が起きるか)"
 `)
 	for _, want := range []string{
-		`<h1 id="a-title--more">`, `<h2 id="1-何が起きるか">`, `<h3 id="何が起きるか">`, `<h3 id="何が起きるか-1">`,
+		`<h1 id="a-title-more">`, `<h2 id="1-何が起きるか">`, `<h3 id="何が起きるか">`, `<h3 id="何が起きるか-1">`,
 		`<h2 id="次">`, `<h3 id="何が起きるか-2">`,
 	} {
 		if !strings.Contains(page, want) {

@@ -68,7 +68,7 @@ func TestReportExample(t *testing.T) {
 	for _, want := range []string{
 		`<html lang="en">`,
 		`<title>A title &amp; more</title>`,
-		`<h1 id="a-title--more">A title &amp; more</h1>`,
+		`<h1 id="a-title-more">A title &amp; more</h1>`,
 		`<p class="eyebrow">Plan · 2030-04</p>`,
 		`<h2 id="steps">Steps</h2>`,
 		`<p>The pages move over <strong>one weekend</strong>; the old wiki stays readable until the new one opens.</p>`,
@@ -145,7 +145,7 @@ func TestReportTableCardsNote(t *testing.T) {
 		want = append(want, "<tr><td>"+c.html+`</td><td class="num">9</td></tr>`)
 	}
 	src += "      - cards:\n          - title: A & B\n      - note:\n          text: n\n      - note: { text: m, tone: good }\nlang: en\n"
-	want = append(want, `<div class="card" data-floe-look="panel"><h3 id="a--b">A &amp; B</h3></div>`, `<div data-floe-part="note"><p>n</p>`,
+	want = append(want, `<div class="card" data-floe-look="panel"><h3 id="a-b">A &amp; B</h3></div>`, `<div data-floe-part="note"><p>n</p>`,
 		`<div class="good" data-floe-part="note"><p>m</p>`)
 	got := render(t, src)
 	for _, w := range want {
