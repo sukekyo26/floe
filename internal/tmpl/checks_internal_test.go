@@ -47,12 +47,6 @@ func relateSrc(src []byte, d *Data, root ast.Node, own bool) error {
 	if err != nil {
 		return err
 	}
-	for i, c := range list {
-		var e *usererr.Error
-		if list[i].prog, e = c.program(); e != nil {
-			return e
-		}
-	}
 	return relate(list, d, root, own)
 }
 
@@ -180,6 +174,32 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 	}
 	if err := relateSrc([]byte("- for: a\n  # one\n  expr: item == 1\n  message: m\n"), d, root, true); err != nil {
 		t.Errorf("relate of an expression under a comment = %v", err)
+	}
+}
+
+// A check whose for leads to no list is told with the mistakes of the others, a template's and a part's:
+// the mistakes of a stage are told together.
+func TestRelationsBesideANotList(t *testing.T) {
+	t.Parallel()
+
+	checks := "- for: a\n  expr: item > 1\n  message: one\n- for: b\n  expr: 'true'\n  message: two\n" +
+		"- for: a\n  expr: item > 5\n  message: three\n"
+	want := "d.yaml:2:5: a[0]: one (\"1\")\nd.yaml:2:5: a[0]: three (\"1\")\nchecks.yaml:4:8: for: b does not lead to a list in d.yaml"
+	d, root := data(t, "b: x\na: [1]\n")
+	if err := relateSrc([]byte(checks), d, root, true); err == nil || err.Error() != want {
+		t.Errorf("a template's = %v, want\n%s", err, want)
+	}
+
+	list, err := readChecks("checks.yaml", []byte(checks), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pd, proot := data(t, "p:\n  b: x\n  a: [1]\n")
+	p := &part{name: "p", checks: list, dir: "own"} //nolint:exhaustruct // what check reads
+	more, err := p.check("d.yaml", itemAt{value: pd.Values["p"], at: []string{"p"}}, proot)
+	wantPart := "d.yaml:3:7: p.a[0]: one (\"1\")\nd.yaml:3:7: p.a[0]: three (\"1\")\nchecks.yaml:4:8: for: b does not lead to a list in d.yaml"
+	if err != nil || more.Sorted().Err() == nil || more.Sorted().Err().Error() != wantPart {
+		t.Errorf("a part's = %v %v, want\n%s", more, err, wantPart)
 	}
 }
 
