@@ -5,6 +5,7 @@ import (
 	"errors"
 	"html/template"
 	"io/fs"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -101,8 +102,13 @@ func (t *Template) checkFiles() (usererr.List, error) {
 		pageErr = usererr.Collect(pageErr, t.checkPage(set, s, checked, p, named))
 	}
 	scope, cssErr := t.checkCSS()
+	read, _ := t.compileShape() //nolint:errcheck // told by checkSchema
+	inSchema, err := set.unusableRefs(read.notes)
+	if err != nil {
+		return nil, err
+	}
 	// A copy: the schema's warnings are those its run keeps.
-	warnings = slices.Concat(warnings, scope, brokenParts(set, named))
+	warnings = slices.Concat(warnings, scope, brokenParts(set, named, inSchema))
 	return warnings, usererr.Collect(schemaErr, wordsErr, pageErr, assetsErr, cssErr)
 }
 
@@ -164,11 +170,12 @@ func (t *Template) checkComputed() error {
 }
 
 // brokenParts warns of each part in set that cannot be used, but those page.html names by an attribute, of
-// named, which checkNamedParts refuses: the schema compiled with each standing as false, so it reaches
-// them through floe's schemas alone, as any.json, which refuse the data that takes them where it does
-// (schemaCheck.unusablePart). A theme that cannot be used is warned of too: a data file picks it.
-func brokenParts(set *partSet, named []namedPart) usererr.List {
-	refused := map[string]bool{}
+// named, which checkNamedParts refuses, and those the schema names, inSchema, which its $refs are refused
+// for: the schema compiled with each standing as false, so it reaches the others through floe's schemas
+// alone, as any.json, which refuse the data that takes them where it does (schemaCheck.unusablePart). A
+// theme that cannot be used is warned of too: a data file picks it.
+func brokenParts(set *partSet, named []namedPart, inSchema map[string]bool) usererr.List {
+	refused := maps.Clone(inSchema)
 	for _, n := range named {
 		if !n.text {
 			refused[n.name] = true

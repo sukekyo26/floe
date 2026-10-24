@@ -234,6 +234,9 @@ func TestFloeHolds(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	if err := os.Mkdir(filepath.Join(dir, "%zz"), 0o750); err != nil {
+		t.Fatal(err)
+	}
 	set, err := partsIn(ownDirs{parts: dir, themes: ""})
 	if err != nil {
 		t.Fatal(err)
@@ -255,6 +258,8 @@ func TestFloeHolds(t *testing.T) {
 		{"a template of one's own", "links", notes(schemaURL("memo"), "", false), false},
 		{"floe's part", "links", notes(partsURL+"stack.json", "stack", false), true},
 		{"a part that can be used", "table", notes(schemaURL("report"), "", true), false},
+		// No $ref can name it: compiling floe's schema would fail at its $ref, which partMistake refuses.
+		{"a part refused for its name", "%zz", notes(schemaURL("report"), "", true), false},
 	} {
 		if got := set.floeHolds(c.n, c.name); got != c.want {
 			t.Errorf("floeHolds of %s = %v, want %v", c.what, got, c.want)

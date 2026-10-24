@@ -330,6 +330,25 @@ func (set *partSet) refusedRefs(n *schemaNotes) ([]refAt, error) {
 	return refused, nil
 }
 
+// unusableRefs returns the parts that cannot be used the schema of n names whole by the $refs set refuses
+// (refusedRefs); none for nil, a schema not read.
+func (set *partSet) unusableRefs(n *schemaNotes) (map[string]bool, error) {
+	names := map[string]bool{}
+	if n == nil {
+		return names, nil
+	}
+	refused, err := set.refusedRefs(n)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range refused {
+		if name, whole := partName(r.ref); whole && set.broken[kindPart][name] != nil {
+			names[name] = true
+		}
+	}
+	return names, nil
+}
+
 // refCheck returns what set refuses of a $ref of the schema of n: one that is no URL, or what refMistake
 // refuses, the schemas that check them made once. The failure is floe's: making them.
 func (set *partSet) refCheck(n *schemaNotes) (func(r refAt) *usererr.Error, error) {
@@ -405,10 +424,11 @@ func (n *schemaNotes) at(r refAt, e *usererr.Error) *usererr.Error {
 }
 
 // floeHolds reports whether the schema of n is floe's, a template's or a part's of floe's, and holds the part
-// name, which cannot be used. A schema the parts share has no notes here: its $refs are floe's own.
+// name, which cannot be used and stands as false in compiler (brokenNamed), which the compiling finds. A
+// schema the parts share has no notes here: its $refs are floe's own.
 func (set *partSet) floeHolds(n *schemaNotes, name string) bool {
 	switch {
-	case set.broken[kindPart][name] == nil:
+	case !set.brokenNamed(name):
 		return false
 	case n.part != "":
 		p := set.parts[n.part]

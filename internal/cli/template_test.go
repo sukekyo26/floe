@@ -427,3 +427,31 @@ func TestUnusableTableInMarkdown(t *testing.T) {
 		t.Errorf("check of HTML naming two = %+v, want both", r)
 	}
 }
+
+// A part that cannot be used that a template's schema names is told by the schema's mistake alone, not
+// warned of again as one it does not name.
+func TestNamedUnusablePartNotWarned(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	e.write(t, "parts/links/schema.json", `{"type": 1}`)
+	e.write(t, "parts/links/part.html", `<ul data-floe-part="links"></ul>`)
+	e.write(t, "parts/links/part.css", "")
+	if r := e.run(t, "", "template", "new", "named", "--from", "report"); r.code != 0 {
+		t.Fatalf("template new = %+v", r)
+	}
+	schema := filepath.Join(e.tmp, "templates", "named", "schema.json")
+	b, err := os.ReadFile(schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.write(t, "templates/named/schema.json", strings.Replace(string(b), `"properties": {`,
+		`"properties": { "refs": { "$ref": "floe:///parts/links.json" },`, 1))
+	r := e.run(t, "", "template", "check", filepath.Join(e.tmp, "templates", "named"))
+	if r.code != 1 || !strings.HasPrefix(r.stderr, schema+": #/properties/refs: the part links cannot be used\n") ||
+		strings.Count(r.stderr, "the part links cannot be used") != 1 {
+		t.Errorf("template check = %+v, want the schema's mistake alone", r)
+	}
+}
