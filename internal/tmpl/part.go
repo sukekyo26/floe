@@ -212,7 +212,7 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 		shares: map[string]bool{}, themes: map[string]*theme{},
 		broken: map[partKind]map[string]error{kindPart: {}, kindTheme: {}}, palette: "", dirs: nil, strays: nil,
 	}
-	if err := set.readBuiltin(partFiles); err != nil {
+	if err := set.readBuiltin(partFiles, themeFiles); err != nil {
 		return nil, err
 	}
 	for _, dir := range []string{own.parts, own.themes} {
@@ -243,11 +243,12 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 	return set, nil
 }
 
-// readBuiltin reads floe's parts, of the parts directory of root, those it draws in Go too, the schemas they share
-// and the themes into set. Their mistakes, and their warnings, which no one can heed either, are floe's
-// failure: read before those of one's own, they are of floe's files alone.
-func (set *partSet) readBuiltin(root fs.FS) error {
-	err := set.readFloe(root)
+// readBuiltin reads floe's parts, of the parts directory of parts, those it draws in Go too, the schemas they
+// share and the themes, of the themes directory of themes, into set. Their mistakes, and their warnings,
+// which no one can heed either, are floe's failure: read before those of one's own, they are of floe's
+// files alone.
+func (set *partSet) readBuiltin(parts, themes fs.FS) error {
+	err := set.readFloe(parts, themes)
 	if err == nil {
 		err = usererr.List(set.strays).Err()
 	}
@@ -255,8 +256,8 @@ func (set *partSet) readBuiltin(root fs.FS) error {
 }
 
 // readFloe is readBuiltin, its mistakes as made.
-func (set *partSet) readFloe(root fs.FS) error {
-	builtin, err := fs.Sub(root, "parts")
+func (set *partSet) readFloe(parts, themes fs.FS) error {
+	builtin, err := fs.Sub(parts, "parts")
 	if err != nil {
 		return fmt.Errorf("read the parts: %w", err)
 	}
@@ -293,14 +294,14 @@ func (set *partSet) readFloe(root fs.FS) error {
 		}
 	}
 	// Once the parts are read, whose names the themes' files take.
-	entries, err = fs.ReadDir(themeFiles, floeThemesDir)
+	entries, err = fs.ReadDir(themes, floeThemesDir)
 	if err != nil {
 		return fmt.Errorf("read the themes: %w", err)
 	}
 	for _, e := range entries {
 		t := newTheme()
 		at := path.Join(floeThemesDir, e.Name())
-		files, err := fs.Sub(themeFiles, at)
+		files, err := fs.Sub(themes, at)
 		if err == nil {
 			err = set.readTheme(files, at, t)
 		}

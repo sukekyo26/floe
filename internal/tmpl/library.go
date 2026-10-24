@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/goccy/go-yaml/ast"
 
@@ -29,6 +30,15 @@ type Library struct {
 	icons string  // the directory of icons the diagrams of data files show; "" for none
 	run   *run    // what one output read once (Run); nil reads it again every time
 	floe  fs.FS   // the built-in templates, a directory each under templates
+	// what floeFiles gave of each built-in template, by name, for l and the libraries of its runs: floe's
+	// files do not change while it runs
+	checked *floeChecks
+}
+
+// floeChecks is what floeFiles gave of each built-in template, by name.
+type floeChecks struct {
+	mu sync.Mutex
+	of map[string]error
 }
 
 // run is what the reads of one output read once: the parts and themes of one's own, the directory of
@@ -53,7 +63,7 @@ func (l *Library) Run() *Library {
 		entries: map[string]*readOnce[[]fs.DirEntry]{}, templates: map[templateAt]*readOnce[*Template]{},
 		icons: icons.New(l.icons),
 	}
-	return &Library{dir: l.dir, mine: l.mine, icons: l.icons, run: r, floe: l.floe}
+	return &Library{dir: l.dir, mine: l.mine, icons: l.icons, run: r, floe: l.floe, checked: l.checked}
 }
 
 // runOf is the run of l, or a run for this read alone: out of a run, nothing is kept.
@@ -90,6 +100,7 @@ func (l *Library) partsRead() (*partSet, error) {
 func NewLibrary(dir, partsDir, themesDir, iconsDir string) *Library {
 	return &Library{
 		dir: dir, mine: ownDirs{parts: partsDir, themes: themesDir}, icons: iconsDir, run: nil, floe: templateFiles,
+		checked: &floeChecks{mu: sync.Mutex{}, of: map[string]error{}},
 	}
 }
 
@@ -132,8 +143,8 @@ type reads struct {
 	version  readOnce[struct{}]
 	words    readOnce[words]
 	page     readOnce[parsedPage]
-	sheet    readOnce[*cssSheet]  // page.css
-	file     readOnce[schemaFile] // schema.json, apart from the parts
+	sheet    readOnce[*cssSheet] // page.css
+	doc      readOnce[any]       // schema.json as jsonschema reads it
 	shape    readOnce[schemaRead]
 	computed readOnce[*computed] // nil without computed.yaml
 	checks   readOnce[[]relation]
@@ -251,10 +262,23 @@ func (l *Library) lookUp(name string) (*Template, error) {
 		return nil, fmt.Errorf("find the template %s: %w", name, err)
 	}
 	t := l.template(name, "", "")
-	if err := t.floeFiles(); err != nil {
+	if err := l.floeChecked(t); err != nil {
 		return nil, err
 	}
 	return t, nil
+}
+
+// floeChecked returns what floeFiles gives of t, a built-in template, run once in l and the libraries of
+// its runs.
+func (l *Library) floeChecked(t *Template) error {
+	l.checked.mu.Lock()
+	defer l.checked.mu.Unlock()
+	err, done := l.checked.of[t.Name]
+	if !done {
+		err = t.floeFiles()
+		l.checked.of[t.Name] = err
+	}
+	return err
 }
 
 // own returns the template name of one's own, or nil without one. A file there is not a template, but
@@ -572,16 +596,18 @@ func versionOf(s string) (semver, bool) {
 }
 
 // floeFiles refuses t, a built-in template, whose files have mistakes of their own, as floe's failure: what
-// floe's files alone give, apart from the parts and themes of one's own its schema is bound to, which may
-// take the place of floe's (compileShape). Its schema is refused as unbound: the root of a built-in
-// template's schema names nothing (TestBuiltinTemplateRoot), so that what refuseShared and computed.yaml
-// read of it, its keys, are of floe's file alone.
+// floe's files alone give, its schema bound to floe's parts alone and compiled, apart from those of one's own
+// that may take the place of floe's (compileShape). computed.yaml reads the keys of the schema compileShape
+// binds, which are of floe's file alone while its root names nothing (TestBuiltinTemplateRoot).
+// LIMIT: computed.yaml goes unchecked here while parts of one's own keep compileShape from binding. Read its
+// keys of the schema bound to floe's parts if a built-in template comes to have one.
 func (t *Template) floeFiles() error {
-	f, err := t.schemaFile()
-	if err == nil {
-		err = usererr.Collect(f.notes.refused(), t.refuseShared(f.shape))
+	floe, err := builtinParts()
+	if err != nil {
+		return err
 	}
-	return floeFailure("read floe's template "+t.Name, t.fileMistakes(err))
+	_, schemaErr := t.readAndCompile(floe)
+	return floeFailure("read floe's template "+t.Name, t.fileMistakes(schemaErr))
 }
 
 // floeFailure is err, the mistakes of reading floe's own files as what, as floe's failure, worded: wrapped,

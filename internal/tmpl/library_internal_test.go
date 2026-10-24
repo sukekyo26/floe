@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -236,53 +237,74 @@ func TestReadBuiltinFailure(t *testing.T) {
 		"schema":  {"schema.json": `{"type":`},
 		"css":     {"part.css": "[data-floe-part=\"x\"] { } }"},
 		"warning": {"part.css": "[data-floe-part=\"x\"] { color: red; }"},
+		"theme":   {"theme": "}"},
 	} {
-		root := mapOf(t, partFiles)
+		root, themes := mapOf(t, partFiles), mapOf(t, themeFiles)
 		for file, text := range map[string]string{"schema.json": schema, "part.html": html, "part.css": ""} {
 			if broken, ok := files[file]; ok {
 				text = broken
 			}
 			root[path.Join("parts", "x", file)] = &fstest.MapFile{Data: []byte(text)}
 		}
+		want := "parts/x/"
+		if css, ok := files["theme"]; ok {
+			want = "themes/default/base.css"
+			base := themes[want]
+			themes[want] = &fstest.MapFile{Data: append(slices.Clone(base.Data), css...)}
+		}
 		set := &partSet{
 			parts: map[string]*part{}, docs: map[string]any{}, shapes: map[string]*shape{},
 			notes: map[string]*schemaNotes{}, shares: map[string]bool{}, themes: map[string]*theme{},
 			broken: map[partKind]map[string]error{kindPart: {}, kindTheme: {}}, palette: "", dirs: nil, strays: nil,
 		}
-		err := set.readBuiltin(root)
+		err := set.readBuiltin(root, themes)
 		switch {
 		case name == "none" && err != nil:
 			t.Errorf("readBuiltin of floe's parts and a part with no mistake = %v", err)
-		case name != "none" && (err == nil || isMistake(err) || !strings.Contains(err.Error(), "parts/x/")):
-			t.Errorf("%s: readBuiltin = %v, want floe's failure at parts/x/", name, err)
+		case name != "none" && (err == nil || isMistake(err) || !strings.Contains(err.Error(), want)):
+			t.Errorf("%s: readBuiltin = %v, want floe's failure at %s", name, err, want)
 		}
 	}
 }
 
-// A built-in template whose files have a mistake of their own is not found but floe's failure, whatever
-// parts of one's own there are: those of its schema that floe notes beside too.
+// A built-in template whose files have a mistake of their own is not found but floe's failure: those of its
+// schema that floe notes beside and of its compiling with floe's parts too.
 func TestFindBrokenBuiltin(t *testing.T) {
 	t.Parallel()
 
-	schema, err := fs.ReadFile(templateFiles, "templates/report/schema.json")
-	if err != nil {
-		t.Fatal(err)
+	read := func(file string) string {
+		b, err := fs.ReadFile(templateFiles, path.Join("templates", "report", file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
 	}
-	for name, broken := range map[string]map[string]string{
-		"checks.yaml": {"checks.yaml": "- for: sections\n  expr: item ==\n  message: x\n"},
-		"schema.json": {"schema.json": strings.Replace(string(schema), `"properties": {`,
-			`"properties": {"zz": {"type": "string", "format": "nope"}, `, 1)},
+	schema, page := read("schema.json"), read("page.html")
+	for _, tt := range []struct{ name, file, text string }{
+		{"checks", "checks.yaml", "- for: sections\n  expr: item ==\n  message: x\n"},
+		{"format", "schema.json", strings.Replace(schema, `"properties": {`, `"properties": {"zz": {"type": "string", "format": "nope"}, `, 1)},
+		{"pattern", "schema.json", strings.Replace(schema, `"properties": {`, `"properties": {"zz": {"type": "string", "pattern": "["}, `, 1)},
+		{"ref", "schema.json", strings.Replace(schema, "floe:///parts/any.json", "floe:///parts/nosuch.json", 1)},
+		{"parse", "page.html", page + "{{if .title}}"},
+		{"escape", "page.html", page + `<a href="{{if .title}}/x/{{else}}/s?q={{end}}{{.title}}">x</a>`},
+		{"words", "words.yaml", "en: [\n"},
 	} {
 		floe := mapOf(t, templateFiles)
-		for file, text := range broken {
-			floe[path.Join("templates", "report", file)] = &fstest.MapFile{Data: []byte(text)}
-		}
+		floe[path.Join("templates", "report", tt.file)] = &fstest.MapFile{Data: []byte(tt.text)}
 		l := NewLibrary("", "", "", "")
 		l.floe = floe
 		tpl, err := l.Find("report")
-		if tpl != nil || err == nil || isMistake(err) || !strings.Contains(err.Error(), "report/"+name) {
-			t.Errorf("%s: Find = %v, %v; want floe's failure at report/%s", name, tpl, err, name)
+		if tpl != nil || err == nil || isMistake(err) || !strings.Contains(err.Error(), "report/"+tt.file) {
+			t.Errorf("%s: Find = %v, %v; want floe's failure at report/%s", tt.name, tpl, err, tt.file)
 		}
+	}
+	// Checked once for a library and its runs: floe's files do not change while it runs.
+	l := NewLibrary("", "", "", "")
+	l.floe = fstest.MapFS{"templates/report/schema.json": &fstest.MapFile{Data: []byte(`{"type":`)}}
+	_, first := l.Run().Find("report")
+	l.floe = templateFiles
+	if _, err := l.Run().Find("report"); first == nil || err == nil || err.Error() != first.Error() {
+		t.Errorf("Find in another run = %v, want %v as checked first", err, first)
 	}
 }
 
@@ -297,12 +319,16 @@ func TestBuiltinTemplateRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, e := range entries {
-		f, err := NewLibrary("", "", "", "").template(e.Name(), "", "").schemaFile()
+		doc, err := NewLibrary("", "", "", "").template(e.Name(), "", "").schemaDoc()
+		var s *shape
+		if err == nil {
+			s, _, err = readShape(doc, schemaURL(e.Name()), e.Name(), "")
+		}
 		switch {
 		case err != nil:
 			t.Errorf("the schema of %s: %v", e.Name(), err)
-		case f.shape.ref != "":
-			t.Errorf("the root of the schema of %s names %q; want none", e.Name(), f.shape.ref)
+		case s.ref != "":
+			t.Errorf("the root of the schema of %s names %q; want none", e.Name(), s.ref)
 		}
 	}
 }
