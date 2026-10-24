@@ -327,12 +327,9 @@ func needsFloe(file string, src []byte) (semver, error) {
 	if err != nil {
 		return semver{}, err //nolint:wrapcheck // a mistake at its line and column
 	}
-	if err = plain(file, body); err != nil {
+	m, err := readTop[*ast.MappingNode](file, body, false, "tmpl_template_yaml")
+	if err != nil {
 		return semver{}, err
-	}
-	m, ok := body.(*ast.MappingNode)
-	if !ok {
-		return semver{}, yamlpos.New(file, yamlpos.Of(body), "tmpl_template_yaml")
 	}
 	var needs *semver
 	for _, kv := range m.Values {

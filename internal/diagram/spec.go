@@ -205,13 +205,11 @@ func Parse(file string, src []byte) (*Spec, error) {
 // FromNode reads a spec from a node of YAML already parsed, such as a diagram inside a data file,
 // so that its errors point at the lines and columns of that file.
 func FromNode(file string, n ast.Node) (*Spec, error) {
-	// Nothing else is read: a value is not written where an alias's position points.
-	if err := yamlpos.Anchors(file, n); err != nil {
+	// Its shape is told with them, of what anchors and tags hold; nothing else is read: a value is not
+	// written where an alias's position points.
+	f, shape := newFields(file, "diagram", yamlpos.Of(n), yamlpos.Unwrap(n))
+	if err := usererr.Collect(yamlpos.Anchors(file, n), shape); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns
-	}
-	f, err := newFields(file, "diagram", yamlpos.Of(n), n)
-	if err != nil {
-		return nil, err
 	}
 	spec := &Spec{
 		Pos: f.at, File: file, ID: f.str("id"), Width: f.size("width"), Height: f.size("height"),

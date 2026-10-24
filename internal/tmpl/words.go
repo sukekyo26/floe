@@ -31,12 +31,9 @@ func readWords(file string, src []byte) (words, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a mistake at its line and column
 	}
-	if err = plain(file, body); err != nil {
+	top, err := readTop[*ast.MappingNode](file, body, false, "tmpl_words_yaml")
+	if err != nil {
 		return nil, err
-	}
-	top, ok := body.(*ast.MappingNode)
-	if !ok {
-		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_words_yaml")
 	}
 	w := words{}
 	seen := map[string]writtenTag{}
