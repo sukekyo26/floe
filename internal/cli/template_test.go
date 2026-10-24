@@ -292,8 +292,8 @@ func TestLinkDataFileOfRelativeIcons(t *testing.T) {
 	}
 }
 
-// floe template check tells the mistakes of a part of one's own once, though the parts that hold it, or
-// take its look, are each warned of.
+// floe template check tells the mistakes of a part of one's own once, though the parts that take its look
+// are each warned of; floe's that hold it stay usable.
 func TestTemplateCheckBrokenPartOnce(t *testing.T) {
 	t.Parallel()
 
@@ -311,7 +311,147 @@ func TestTemplateCheckBrokenPartOnce(t *testing.T) {
 	spec := filepath.Join(e.tmp, "templates", "spec")
 	r := e.run(t, "", "template", "check", spec)
 	css := filepath.Join(e.tmp, "parts", "code", "part.css") + ":1: this } closes no block"
-	if r.code != 0 || strings.Count(r.stderr, css) != 1 || !strings.Contains(r.stderr, "the part stack cannot be used") {
+	if r.code != 0 || strings.Count(r.stderr, css) != 1 || !strings.Contains(r.stderr, "the part diff cannot be used") ||
+		strings.Contains(r.stderr, "the part stack cannot be used") {
 		t.Errorf("template check = %+v, want %s once", r, css)
+	}
+}
+
+// A part of one's own that cannot be used stops only the data files that take it, in a check of several and
+// in a publish, which the server checks as the command line does.
+func TestUnusablePartWhereTakenOnly(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.write(t, "parts/links/schema.json", `{"type": "array", "items": {"type": "object", "properties": {"u": {"pattern": "(["}}}}`)
+	e.write(t, "parts/links/part.html", `<ul data-floe-part="links"></ul>`)
+	e.write(t, "parts/links/part.css", "")
+	page := "template: report\nlang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n"
+	none := e.write(t, "none.yaml", page+"      - text: hi\n")
+	takes := e.write(t, "takes.yaml", page+"      - links: [{ title: a, url: /a }]\n")
+	at := takes + ":7:16: the part links cannot be used\n  " + filepath.Join(e.tmp, "parts", "links", "schema.json")
+	if r := e.run(t, "", "check", none, takes); r.code != 1 || !strings.HasPrefix(r.stderr, at) || strings.Contains(r.stderr, "none.yaml") {
+		t.Errorf("check of both = %+v, want %s alone", r, at)
+	}
+	want(t, "publish of the one that does not take it", e.run(t, "", "publish", none), 0, e.base()+"/a/none/\n", "")
+	if r := e.run(t, "", "publish", takes); r.code != 1 || !strings.HasPrefix(r.stderr, at) {
+		t.Errorf("publish of the one that takes it = %+v, want %s", r, at)
+	}
+}
+
+// A directory of parts whose name no $ref can name, as %zz, which is no URL, stops no page.
+func TestPartNameNoURL(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	if err := os.MkdirAll(filepath.Join(e.tmp, "parts", "%zz"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	page := e.write(t, "page.yaml", "template: report\nlang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n      - text: hi\n")
+	want(t, "check", e.run(t, "", "check", page), 0, "", "")
+}
+
+// floe template show and floe part show tell an item a part that cannot be used draws as such, and the
+// parts a part holds count it.
+func TestShowUnusablePart(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	for _, name := range []string{"links", "note"} {
+		e.write(t, "parts/"+name+"/schema.json", `{"type": 1}`)
+		e.write(t, "parts/"+name+"/part.html", `<div data-floe-part="`+name+`"></div>`)
+		e.write(t, "parts/"+name+"/part.css", "")
+	}
+	for _, c := range []struct{ args, line string }{
+		{"template show report", "\n      links: the part links cannot be used\n"},
+		{"part show stack", "\n  note: the part note cannot be used\n"},
+		{"part show stack", "\nholds: code, diff, note, table, terminal\n"},
+	} {
+		if r := e.run(t, "", strings.Fields(c.args)...); r.code != 0 || !strings.Contains(r.stdout, c.line) {
+			t.Errorf("%s = %+v, want %q", c.args, r, c.line)
+		}
+	}
+	// A misspelt item is not told to be one of them: written so, it would be refused too.
+	page := e.write(t, "page.yaml", "template: report\nlang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n      - nots: { text: x }\n")
+	r := e.run(t, "", "check", page)
+	if !strings.Contains(r.stderr, "nots is not an item") || strings.Contains(r.stderr, "links") || strings.Contains(r.stderr, "note") {
+		t.Errorf("check of a misspelt item = %+v, want no links or note among those to use", r)
+	}
+	// Nor one that takes it as each item of a list of lists: the rows of a table hold cells.
+	e.write(t, "parts/cell/schema.json", `{"type": 1}`)
+	e.write(t, "parts/cell/part.html", `<div data-floe-part="cell"></div>`)
+	e.write(t, "parts/cell/part.css", "")
+	rows := e.write(t, "rows.yaml", "template: report\nlang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n"+
+		"      - table: { columns: [{title: A}], row: [[x]] }\n")
+	r = e.run(t, "", "check", rows)
+	if !strings.Contains(r.stderr, "row is not an item") || strings.Contains(r.stderr, "use columns, rows") {
+		t.Errorf("check of a misspelt row = %+v, want no rows among those to use", r)
+	}
+}
+
+// A table of Markdown takes the look of the table part: with a table of one's own that cannot be used,
+// the item of Markdown is refused where it is written, the first time with why, in each file.
+func TestUnusableTableInMarkdown(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.write(t, "parts/table/schema.json", `{"type": 1}`)
+	e.write(t, "parts/table/part.html", `<div data-floe-part="table"></div>`)
+	e.write(t, "parts/table/part.css", "")
+	page := "template: report\nlang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n"
+	table := func(indent string) string {
+		return indent + "| a | b |\n" + indent + "|---|---|\n" + indent + "| 1 | 2 |\n"
+	}
+	a := e.write(t, "a.yaml", page+"      - text: |\n"+table("          ")+"      - note:\n          text: |\n"+table("            "))
+	b := e.write(t, "b.yaml", page+"      - text: hi\n      - text: |\n"+table("          "))
+	// HTML of the data that names it is told the same way, so that the one after it is told as above.
+	c := e.write(t, "c.yaml", page+"      - html: '<div data-floe-part=\"table\"></div>'\n      - text: |\n"+table("          "))
+	stderr := a + ":7:15: the part table cannot be used\n" +
+		"  " + filepath.Join(e.tmp, "parts", "table", "schema.json") + ": #/type: JSON Schema does not take this: 'anyOf' failed\n" +
+		a + ":12:11: the part table cannot be used, as told above\n" +
+		b + ":8:15: the part table cannot be used, as told above\n"
+	want(t, "check", e.run(t, "", "check", a, b), 1, "", stderr)
+	stderr = c + ":7:15: the part table cannot be used\n" +
+		"  " + filepath.Join(e.tmp, "parts", "table", "schema.json") + ": #/type: JSON Schema does not take this: 'anyOf' failed\n" +
+		c + ":8:15: the part table cannot be used, as told above\n"
+	want(t, "check of HTML and Markdown", e.run(t, "", "check", c), 1, "", stderr)
+	// Every name of the HTML is told at once: one not of one part's name, with the one that cannot be used.
+	d := e.write(t, "d.yaml", page+"      - html: '<div data-floe-part=\"a b\"></div><div data-floe-part=\"table\"></div>'\n")
+	r := e.run(t, "", "check", d)
+	if several := d + `:7:15: sections[0].parts[0].html: the page has data-floe-part="a b"`; r.code != 1 ||
+		!strings.HasPrefix(r.stderr, several) || !strings.Contains(r.stderr, "\n"+d+":7:15: the part table cannot be used\n") {
+		t.Errorf("check of HTML naming two = %+v, want both", r)
+	}
+}
+
+// A part that cannot be used that a template's schema names is told by the schema's mistake alone, not
+// warned of again as one it does not name.
+func TestNamedUnusablePartNotWarned(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	e.write(t, "parts/links/schema.json", `{"type": 1}`)
+	e.write(t, "parts/links/part.html", `<ul data-floe-part="links"></ul>`)
+	e.write(t, "parts/links/part.css", "")
+	if r := e.run(t, "", "template", "new", "named", "--from", "report"); r.code != 0 {
+		t.Fatalf("template new = %+v", r)
+	}
+	schema := filepath.Join(e.tmp, "templates", "named", "schema.json")
+	b, err := os.ReadFile(schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.write(t, "templates/named/schema.json", strings.Replace(string(b), `"properties": {`,
+		`"properties": { "refs": { "$ref": "floe:///parts/links.json" },`, 1))
+	r := e.run(t, "", "template", "check", filepath.Join(e.tmp, "templates", "named"))
+	if r.code != 1 || !strings.HasPrefix(r.stderr, schema+": #/properties/refs: the part links cannot be used\n") ||
+		strings.Count(r.stderr, "the part links cannot be used") != 1 {
+		t.Errorf("template check = %+v, want the schema's mistake alone", r)
 	}
 }

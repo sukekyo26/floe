@@ -367,13 +367,12 @@ func uiManage(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(pager), b.eval("new URLSearchParams(location.search).get('page')"))
 	b.eval("[...document.querySelectorAll('#sizes button')].find((b) => b.textContent === '20').click()")
 	out = append(out, b.eval(pager)+" "+b.eval("localStorage.getItem('artifacts.pageSize')")+" "+b.eval("location.search === ''"))
-	// A reason under a mistake keeps its indent: a part of one's own that cannot be used, which report uses.
-	// The parts its reasons run through (note, or tabs, stack and note) vary, so each line is checked to sit
-	// 2 deeper than the one above.
+	// A reason under a mistake keeps its indent: a part of one's own that cannot be used, which the data uses.
+	// Each line is checked to sit 2 deeper than the one above.
 	e.write(t, "parts/note/schema.json", `{"type": 1}`)
 	e.write(t, "parts/note/part.html", `<div data-floe-part="note"></div>`)
 	e.write(t, "parts/note/part.css", "")
-	usesNote := e.write(t, "note.yaml", "template: report\nlang: en\n")
+	usesNote := e.write(t, "note.yaml", "template: report\nlang: en\nsections:\n  - parts:\n      - note: { text: hi }\n")
 	b.eval("window.fetch = window.realFetch; document.querySelector('.tabs [data-tab=links]').click()")
 	b.eval(`(() => {
 		document.getElementById('add-open').click();

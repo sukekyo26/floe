@@ -5,6 +5,7 @@ import (
 	"errors"
 	"html/template"
 	"io/fs"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -76,7 +77,8 @@ func (l *Library) CheckOwnParts() (warnings usererr.List, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return slices.Clone(set.strays), usererr.OfWhole(slices.Concat(set.unusable(nil), set.unusableThemes(nil))).Err()
+	unusable := slices.Concat(set.unusable(kindPart, nil), set.unusable(kindTheme, nil))
+	return slices.Clone(set.strays), usererr.OfWhole(unusable).Err()
 }
 
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values, its
@@ -100,8 +102,13 @@ func (t *Template) checkFiles() (usererr.List, error) {
 		pageErr = usererr.Collect(pageErr, t.checkPage(set, s, checked, p, named))
 	}
 	scope, cssErr := t.checkCSS()
+	read, _ := t.compileShape() //nolint:errcheck // told by checkSchema
+	inSchema, err := set.unusableRefs(read.notes)
+	if err != nil {
+		return nil, err
+	}
 	// A copy: the schema's warnings are those its run keeps.
-	warnings = slices.Concat(warnings, scope, brokenParts(set, named))
+	warnings = slices.Concat(warnings, scope, brokenParts(set, named, inSchema))
 	return warnings, usererr.Collect(schemaErr, wordsErr, pageErr, assetsErr, cssErr)
 }
 
@@ -162,11 +169,13 @@ func (t *Template) checkComputed() error {
 	return err
 }
 
-// brokenParts warns of each part of one's own in set that cannot be used, but those page.html names by an
-// attribute, of named, which checkNamedParts refuses: the schema refers to none of them, as it compiled. A
+// brokenParts warns of each part in set that cannot be used, but those page.html names by an attribute, of
+// named, which checkNamedParts refuses, and those the schema names, inSchema, which its $refs are refused
+// for: the schema compiled with each standing as false, so it reaches the others through floe's schemas
+// alone, as any.json, which refuse the data that takes them where it does (schemaCheck.unusablePart). A
 // theme that cannot be used is warned of too: a data file picks it.
-func brokenParts(set *partSet, named []namedPart) usererr.List {
-	refused := map[string]bool{}
+func brokenParts(set *partSet, named []namedPart, inSchema map[string]bool) usererr.List {
+	refused := maps.Clone(inSchema)
 	for _, n := range named {
 		if !n.text {
 			refused[n.name] = true
@@ -174,7 +183,8 @@ func brokenParts(set *partSet, named []namedPart) usererr.List {
 	}
 	// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
 	warnings := usererr.OfWhole(slices.Concat(
-		set.unusable(func(name string) bool { return refused[name] && set.parts[name] == nil }), set.unusableThemes(nil),
+		set.unusable(kindPart, func(name string) bool { return refused[name] && set.parts[name] == nil }),
+		set.unusable(kindTheme, nil),
 	))
 	return append(warnings, set.strays...)
 }
@@ -217,7 +227,7 @@ func (t *Template) checkNamedParts(set *partSet, src []byte, named []namedPart) 
 		case nameLookBox:
 			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_look_box", n.name))
 		case nameBroken:
-			mistakes = append(mistakes, set.brokenPart(n.name).Placed(page, line, 0, ""))
+			mistakes = append(mistakes, set.brokenErr(kindPart, n.name).Placed(page, line, 0, ""))
 		case nameUnknown:
 			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_page_part", n.name, set.candidates(n.look)))
 		case nameRight:

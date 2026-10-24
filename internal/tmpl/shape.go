@@ -27,6 +27,9 @@ type shape struct {
 	// parts share, and the part, which draws the item whole. nil for none.
 	named *shape
 	part  *part
+	// the part its $ref names, which cannot be used, one's own or floe's that takes the look of one: it
+	// stands as false (partSet.brokenNamed); "" for none
+	unusablePart string
 
 	// What floe template show and floe part show tell of it, as written beside a $ref.
 	about    string
@@ -43,7 +46,8 @@ type shape struct {
 // kept as written.
 func readShape(doc any, url, file, part string) (*shape, *schemaNotes, error) {
 	n := &schemaNotes{
-		file: file, part: part, url: url, doc: doc, own: map[string]bool{url: true}, met: nil, warnings: nil,
+		file: file, part: part, floeTemplate: false, url: url, doc: doc, own: map[string]bool{url: true}, met: nil,
+		warnings: nil,
 	}
 	s, err := n.read(doc, url, "#")
 	if err != nil {
@@ -56,8 +60,10 @@ func readShape(doc any, url, file, part string) (*shape, *schemaNotes, error) {
 type schemaNotes struct {
 	file string // the schema, as its mistakes name it
 	part string // the part whose schema it is; "" for a template's or one the parts share
-	url  string // the schema's URL, which a relative $ref is read from
-	doc  any    // the schema, as jsonschema reads it, where its $refs into itself are resolved
+	// the schema is a template's of floe's, which floe holds as it holds its parts' (partSet.floeHolds)
+	floeTemplate bool
+	url          string // the schema's URL, which a relative $ref is read from
+	doc          any    // the schema, as jsonschema reads it, where its $refs into itself are resolved
 	// the URLs of the schema's own file, its own and those its $ids give, which its $refs may point into
 	own      map[string]bool
 	met      []noted          // in the order of the schema
@@ -111,8 +117,8 @@ func (n *schemaNotes) read(v any, base, ptr string) (*shape, error) {
 		return nil, err //nolint:wrapcheck // the first of keyword's mistakes, made here
 	}
 	s := &shape{
-		keys: nil, each: nil, ref: "", format: format, named: nil, part: nil, about: about, typ: m["type"], enum: enum,
-		required: nil,
+		keys: nil, each: nil, ref: "", format: format, named: nil, part: nil, unusablePart: "", about: about, typ: m["type"],
+		enum: enum, required: nil,
 	}
 	if ref != "" {
 		s.ref = absolute(base, ref)
@@ -324,6 +330,25 @@ func (set *partSet) refusedRefs(n *schemaNotes) ([]refAt, error) {
 	return refused, nil
 }
 
+// unusableRefs returns the parts that cannot be used the schema of n names whole by the $refs set refuses
+// (refusedRefs); none for nil, a schema not read.
+func (set *partSet) unusableRefs(n *schemaNotes) (map[string]bool, error) {
+	names := map[string]bool{}
+	if n == nil {
+		return names, nil
+	}
+	refused, err := set.refusedRefs(n)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range refused {
+		if name, whole := partName(r.ref); whole && set.broken[kindPart][name] != nil {
+			names[name] = true
+		}
+	}
+	return names, nil
+}
+
 // refCheck returns what set refuses of a $ref of the schema of n: one that is no URL, or what refMistake
 // refuses, the schemas that check them made once. The failure is floe's: making them.
 func (set *partSet) refCheck(n *schemaNotes) (func(r refAt) *usererr.Error, error) {
@@ -398,6 +423,20 @@ func (n *schemaNotes) at(r refAt, e *usererr.Error) *usererr.Error {
 	return e.Placed(n.file, 0, 0, r.ptr)
 }
 
+// floeHolds reports whether the schema of n is floe's, a template's or a part's of floe's, and holds the part
+// name, which cannot be used and stands as false in compiler (brokenNamed), which the compiling finds. A
+// schema the parts share has no notes here: its $refs are floe's own.
+func (set *partSet) floeHolds(n *schemaNotes, name string) bool {
+	switch {
+	case !set.brokenNamed(name):
+		return false
+	case n.part != "":
+		p := set.parts[n.part]
+		return p != nil && !p.isOwn()
+	}
+	return n.floeTemplate
+}
+
 // partMistake returns what set refuses of r, a $ref of the schema of n to base under floe:///parts/, or nil.
 func (set *partSet) partMistake(n *schemaNotes, r refAt, base string, resolve func(ref string) error) *usererr.Error {
 	name, whole := partName(r.ref)
@@ -408,6 +447,9 @@ func (set *partSet) partMistake(n *schemaNotes, r refAt, base string, resolve fu
 		return nil
 	case whole && set.shares[r.ref]:
 		return set.sharedMistake(n, r)
+	case whole && set.floeHolds(n, name):
+		// floe's schema stays usable without it: the data that takes it is refused there (partSet.compiler).
+		return nil
 	case !whole && set.docs[base] != nil:
 		if _, into := set.pointsInto(r.ref); !into {
 			// into what holds nothing floe draws, as tone.json's enum: drawn as written, once it is there
@@ -459,11 +501,14 @@ func (s *shape) bind(set *partSet) {
 		k.bind(set)
 	}
 	s.each.bind(set)
+	name, whole := partName(s.ref)
 	named, ok := set.shapes[s.ref]
 	if !ok {
+		if whole && set.brokenNamed(name) {
+			s.unusablePart = name
+		}
 		return
 	}
-	name, _ := partName(s.ref)
 	s.named, s.part = named, set.parts[name]
 }
 

@@ -186,9 +186,9 @@ type partSet struct {
 	notes  map[string]*schemaNotes // what floe checks of them once all are read
 	shares map[string]bool         // the URLs of the schemas the parts share, floe's alone
 	themes map[string]*theme       // by name
-	broken map[string]error        // the parts of one's own that cannot be used, by name, and why
-	// the themes of one's own that cannot be used, by name, and why
-	brokenThemes map[string]error
+	// the parts and themes that cannot be used, by kind and name, and why: those of one's own, and floe's
+	// that take the look of one of them (leaveOutUnusable)
+	broken map[partKind]map[string]error
 	// floe's own default palette, under every page's, whatever one's own themes change
 	palette string
 	// the directories of one's own it read, those of parts and themes among them, by their real paths
@@ -210,7 +210,7 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, shapes: map[string]*shape{}, notes: map[string]*schemaNotes{},
 		shares: map[string]bool{}, themes: map[string]*theme{},
-		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", dirs: nil, strays: nil,
+		broken: map[partKind]map[string]error{kindPart: {}, kindTheme: {}}, palette: "", dirs: nil, strays: nil,
 	}
 	if err := set.readBuiltin(); err != nil {
 		return nil, err
@@ -274,8 +274,8 @@ func (set *partSet) readBuiltin() error {
 		url := partsURL + name + ".json"
 		set.docs[url] = map[string]any{"type": "object", "description": p.about}
 		set.shapes[url] = &shape{
-			keys: nil, each: nil, ref: "", format: "", named: nil, part: nil, about: p.about, typ: "object", enum: nil,
-			required: nil,
+			keys: nil, each: nil, ref: "", format: "", named: nil, part: nil, unusablePart: "", about: p.about, typ: "object",
+			enum: nil, required: nil,
 		}
 		set.parts[name] = &part{
 			name: name, shape: set.shapes[url], pages: nil, words: nil, html: "", css: p.css, checks: nil,
@@ -728,50 +728,77 @@ func joinDescriptions(beside, named string) string {
 	return beside + " " + named
 }
 
-// checkParts checks the items of d of whole floe draws by parts against the checks of their parts, and
-// draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every failure at its
-// line and column under root. It runs after checkDiagrams and checkScripts, which draw theirs into d.parts.
-func checkParts(whole drawnItems, d *Data, root ast.Node) error {
+// checkParts checks the items of d of whole floe draws by parts of set against the checks of their parts,
+// and draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every
+// failure at its line and column under root. It refuses an item of format markdown, or one a part draws,
+// whose drawing names a part that cannot be used, there (drawnMisnamings). It runs after checkDiagrams and
+// checkScripts, which draw theirs into d.parts.
+func checkParts(set *partSet, whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
 	escaped := map[*part]bool{}
 	holding := map[string]bool{} // by pathKey, the items holding one not drawn
 	for _, f := range whole {
-		p := f.part
-		if p == nil {
-			continue // a format of floe's, which page.html draws
-		}
-		if p.pages == nil {
-			// A part drawn in Go, by its own check before this one, which may have refused it.
-			if _, drawn := d.parts[pathKey(f.at)]; !drawn {
-				holdUndrawn(holding, f.at)
+		drawn, mistake := true, error(nil)
+		switch text, isText := f.value.(string); {
+		case f.part != nil:
+			drawn, mistake = set.drawPart(f, d, root, holding, escaped)
+		case isText && f.format == "markdown" && set.broken[kindPart][markdownPart] != nil:
+			// page.html draws it; Markdown names no part but its tables'.
+			// LIMIT: a Markdown item page.html does not draw is checked all the same; check the drawn page's
+			// items if a template comes to leave one out.
+			pos, _ := itemPos(root, f.at, false)
+			if bad := set.drawnMisnamings(string(d.markdownHTML(text)), d.File, pos, nil); bad != nil {
+				drawn, mistake = false, bad
 			}
-			continue
 		}
-		more, err := p.check(d.File, f.itemAt, root)
-		if err != nil {
-			return err
-		}
-		if more != nil {
-			problems = append(problems, more...)
+		if !drawn {
 			holdUndrawn(holding, f.at)
-			continue
 		}
-		if holding[pathKey(f.at)] {
-			// It holds an item not drawn: drawn without it, it would fail, or be told to, for that one's mistake.
-			// Those holding it are noted already, as they hold that item too.
-			continue
-		}
-		html, err := p.draw(f.itemAt, d)
-		if err == nil {
-			d.drew(f.at, html)
-			continue
-		}
-		holdUndrawn(holding, f.at)
-		if err = problems.Add(p.drawnMistake(err, f.at, d, root, escaped)); err != nil {
+		if err := problems.Add(mistake); err != nil {
 			return err //nolint:wrapcheck // already says what failed
 		}
 	}
 	return problems.Err()
+}
+
+// drawPart checks f, an item of d a part draws, against the checks of the part, and draws it into d.parts,
+// returning whether it is drawn and its mistakes, under root, or floe's failure. One holding an item not
+// drawn, noted in holding, is not drawn: drawn without it, it would fail, or be told to, for that one's
+// mistake. escaped notes the parts html/template cannot escape (drawnMistake).
+func (set *partSet) drawPart(
+	f drawnItem, d *Data, root ast.Node, holding map[string]bool, escaped map[*part]bool,
+) (bool, error) {
+	p := f.part
+	if p.pages == nil {
+		// A part drawn in Go, by its own check before this one, which may have refused it.
+		_, drawn := d.parts[pathKey(f.at)]
+		return drawn, nil
+	}
+	more, err := p.check(d.File, f.itemAt, root)
+	switch {
+	case err != nil:
+		return false, err
+	case more != nil:
+		return false, more
+	case holding[pathKey(f.at)]:
+		return false, nil
+	}
+	html, err := p.draw(f.itemAt, d)
+	if err != nil {
+		return false, p.drawnMistake(err, f.at, d, root, escaped)
+	}
+	if set.anyBrokenNamed() {
+		// The parts it holds are drawn before it: the innermost item a part draws is told. Its own part's
+		// names are checked as the part is read (checkNames), so a part that cannot be used is the one left.
+		// LIMIT: a part named by HTML or Markdown under a part is told at the part's item, not at the item
+		// under it. Draw what a part holds of format html and markdown apart if pages come to need it.
+		pos, _ := itemPos(root, f.at, false)
+		if bad := set.drawnMisnamings(string(html), d.File, pos, nil); bad != nil {
+			return false, bad
+		}
+	}
+	d.drew(f.at, html)
+	return true, nil
 }
 
 // drawnMistake is the mistake err of p drawing the item at the path at of d, under root, or nil when it was
@@ -793,6 +820,24 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node, esca
 	}
 	_, item := itemPos(root, at, false)
 	return drawMistake(err, p.file("part.html"), p.isOwn(), "tmpl_render_item", item, d.File)
+}
+
+// drawnMisnamings returns the mistakes of the names html names, which an item of the data file file written at
+// pos draws, that the page would be refused for: each part that cannot be used there, the first time with
+// why, as a theme it picks that cannot be used, and each other one as other words it, left out for nil.
+func (set *partSet) drawnMisnamings(
+	html, file string, pos yamlpos.Pos, other func(*usererr.Error) *usererr.Error,
+) usererr.List {
+	var found usererr.List
+	for _, m := range set.misnamings(namedIn(html, tagsIn(html, false))) {
+		switch {
+		case m.kind == nameBroken:
+			found = append(found, yamlpos.Place(file, pos, m.err))
+		case other != nil:
+			found = append(found, other(m.err))
+		}
+	}
+	return found
 }
 
 // holdUndrawn notes in holding the items that hold the one at the path at, not drawn: walkWhole puts them
@@ -916,22 +961,39 @@ func withStyles(page []byte, found []tag, style string) ([]byte, bool) {
 	return slices.Concat(page[:at], []byte(style), page[at:]), true
 }
 
-// misnamedIn returns the mistake of the first name of named, the names of a page or of HTML of the data,
-// that the page is refused for, or nil: a part that cannot be used, by a table of Markdown or HTML of the
-// data among others, a data-floe-part not of one part's name, or one that names a look alone, which has
-// no box. The elements would be left without their style.
-func (set *partSet) misnamedIn(named []namedPart) *usererr.Error {
+// misnaming is a name of a page, or of what an item of the data draws, that the page is refused for: what
+// it is to set (misnamed), and the mistake.
+type misnaming struct {
+	kind nameKind
+	err  *usererr.Error
+}
+
+// misnamings returns the names of named, in order, that the page is refused for: a part that cannot be
+// used, a data-floe-part not of one part's name, or one that names a look alone, which has no box. The
+// elements would be left without their style.
+func (set *partSet) misnamings(named []namedPart) []misnaming {
+	var found []misnaming
 	for _, n := range named {
-		switch set.misnamed(n) {
+		switch kind := set.misnamed(n); kind {
 		case nameBroken:
-			return set.brokenPart(n.name)
+			found = append(found, misnaming{kind: kind, err: set.brokenErr(kindPart, n.name)})
 		case nameNotOne:
-			return usererr.New("tmpl_page_several", n.value)
+			found = append(found, misnaming{kind: kind, err: usererr.New("tmpl_page_several", n.value)})
 		case nameLookBox:
-			return usererr.New("tmpl_page_look_box", n.name)
+			found = append(found, misnaming{kind: kind, err: usererr.New("tmpl_page_look_box", n.name)})
 		case nameRight, nameUnknown:
 			// A name of no part draws nothing; the check of a template's page.html tells it.
 		}
+	}
+	return found
+}
+
+// misnamedIn returns the mistake of the first name of named, the names of a page, that the page is refused
+// for (misnamings), or nil. An item of the data that draws one is refused first, at the item
+// (drawnMisnamings).
+func (set *partSet) misnamedIn(named []namedPart) *usererr.Error {
+	if found := set.misnamings(named); found != nil {
+		return found[0].err
 	}
 	return nil
 }

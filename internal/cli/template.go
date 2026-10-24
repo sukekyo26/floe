@@ -137,7 +137,10 @@ func (a *app) showItems(items []tmpl.Item, indent string) {
 		if it.Format != "" {
 			parts = append(parts, english.Msg("cli_template_format", it.Format))
 		}
-		if it.Part != "" {
+		switch {
+		case it.Unusable:
+			parts = append(parts, english.Msg("tmpl_part_broken", it.Part))
+		case it.Part != "":
 			parts = append(parts, english.Msg("cli_template_part", it.Part))
 		}
 		if len(it.Enum) > 0 {
