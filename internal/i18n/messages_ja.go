@@ -368,6 +368,7 @@ var messagesJA = map[string]string{
 	"tmpl_part_lender_broken":       "名乗るか見た目を借りる部品 %s が使えません。その部品を直すか、消してください",
 	"tmpl_part_bad_name":            "名前は英小文字・数字・-・_ で、英小文字か数字で始めます。名前を変えてください",
 	"tmpl_theme_broken":             "自分のテーマ %s は使えません",
+	"tmpl_template_broken":          "自分のテンプレート %s は使えません",
 	"tmpl_theme_file":               "このファイルはどのページにも入りません。テーマのファイルは base.css か palette.css か、部品や見た目のスタイルの <名前>.css です。名前は %s のどれかです",
 	"tmpl_palette_rule":             "palette.css にはパレットの変数 :root { --名前: 値; } と、ダークモードの分の @media (prefers-color-scheme: dark) { :root { … } } だけを書きます。ほかの規則は base.css か部品のファイルに書いてください",
 	"tmpl_palette_order":            "この :root は @media (prefers-color-scheme: dark) より前に書いてください。後に書くと、その色がダークモードでも勝ちます",

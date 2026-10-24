@@ -370,6 +370,7 @@ var messagesEN = map[string]string{
 	"tmpl_part_lender_broken":       "it names the part %s, or takes its look, which cannot be used; fix that part, or remove it",
 	"tmpl_part_bad_name":            "a name is lower case letters, digits, - and _, starting with a letter or a digit; rename it",
 	"tmpl_theme_broken":             "your own theme %s cannot be used",
+	"tmpl_template_broken":          "your own template %s cannot be used",
 	"tmpl_theme_file":               "this file goes into no page: a file of a theme is base.css, palette.css or the style of a part or a look, <name>.css, the name one of %s",
 	"tmpl_palette_rule":             "palette.css holds only the palette's variables, :root { --name: value; }, and those of dark mode in @media (prefers-color-scheme: dark) { :root { … } }; write other rules in base.css or a part's file",
 	"tmpl_palette_order":            "write this :root before @media (prefers-color-scheme: dark): after it, its colours would win in dark mode too",

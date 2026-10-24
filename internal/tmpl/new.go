@@ -29,11 +29,14 @@ func (l *Library) New(name, from string) (string, error) {
 	if !validName(name) {
 		return "", usererr.New("tmpl_new_name", name)
 	}
-	src, err := l.Find(from)
-	if err != nil {
+	src, why, err := l.usable(from)
+	switch {
+	case err != nil:
 		return "", err
-	}
-	if src == nil {
+	case why != nil:
+		// As part new refuses a part that cannot be used: a copy would not be usable either.
+		return "", brokenOf(kindTemplate, from, why)
+	case src == nil:
 		return "", l.unknown(from)
 	}
 	return install(l.dir, name, "template", func(dir string) error { return src.copyTo(dir, name) })

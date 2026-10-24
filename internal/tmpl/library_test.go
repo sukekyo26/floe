@@ -118,10 +118,12 @@ func TestBrokenOwnTemplates(t *testing.T) {
 		t.Errorf("a page.css that leads out of the template = %v", err)
 	}
 
-	// A template of one's own named in another case is refused, not passed over for the built-in one.
+	// A template of one's own named in another case is refused, not passed over for the built-in one: a
+	// mistake of the name, not one of a template that cannot be used.
 	cased := t.TempDir()
 	own(t, cased, "Report")
-	if _, err := draw(tmpl.NewLibrary(cased, "", "", ""), "template: report\nlang: en\n"); err == nil || !strings.Contains(err.Error(), "is not template report: template names are lower case") {
+	if _, err := draw(tmpl.NewLibrary(cased, "", "", ""), "template: report\nlang: en\n"); err == nil ||
+		!strings.Contains(err.Error(), "is not template report: template names are lower case") || strings.Contains(err.Error(), "cannot be used") {
 		t.Errorf("a template of one's own named Report = %v", err)
 	}
 
@@ -140,7 +142,8 @@ func TestBrokenOwnTemplates(t *testing.T) {
 		}
 	}
 
-	// A directory of templates that cannot be read says so, rather than a template it may not hold.
+	// A directory of templates that cannot be read says so, rather than a template it may not hold, nor one
+	// of one's own that cannot be used: report is floe's.
 	if os.Getuid() != 0 {
 		locked := t.TempDir()
 		if err := os.Chmod(locked, 0); err != nil {
@@ -152,7 +155,7 @@ func TestBrokenOwnTemplates(t *testing.T) {
 			}
 		})
 		for _, src := range []string{"template: report\nlang: en\n", "title: no template\n"} {
-			if _, err := draw(tmpl.NewLibrary(locked, "", "", ""), src); err == nil || !strings.Contains(err.Error(), "the directory of your own templates") {
+			if _, err := draw(tmpl.NewLibrary(locked, "", "", ""), src); err == nil || !strings.HasPrefix(err.Error(), "the directory of your own templates") {
 				t.Errorf("%q under a directory of templates that cannot be read = %v", src, err)
 			}
 		}
@@ -185,16 +188,15 @@ func TestTemplateVersion(t *testing.T) {
 			t.Fatal(err)
 		}
 		_, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: report\nleed: a typo\nlang: en\n")
-		var ue *usererr.Error
 		switch {
 		case tt.want == "" && (err == nil || !strings.Contains(err.Error(), "leed is not an item")):
 			t.Errorf("template.yaml %q = %v, want the data's mistake", tt.yaml, err)
 		case tt.want != "" && (err == nil || !strings.Contains(err.Error(), tt.want)):
 			t.Errorf("template.yaml %q = %v, want %s", tt.yaml, err, tt.want)
-		case strings.HasPrefix(tt.want, "/") && !strings.HasPrefix(err.Error(), dir):
+		case strings.HasPrefix(tt.want, "/") && !strings.Contains(err.Error(), "\n  "+dir):
 			t.Errorf("template.yaml %q = %v, named where the symlink leads, not under %s", tt.yaml, err, dir)
-		case tt.want != "" && !strings.Contains(tt.want, "template.yaml:") && !errors.As(err, &ue):
-			t.Errorf("template.yaml %q = %T, want a usererr", tt.yaml, err)
+		case tt.want != "" && !strings.HasPrefix(err.Error(), "data.yaml:1:11: your own template report cannot be used\n"):
+			t.Errorf("template.yaml %q = %v, want the template cannot be used, at template:", tt.yaml, err)
 		}
 	}
 }
@@ -211,9 +213,10 @@ func TestTemplateMistakesOnce(t *testing.T) {
 		items, data string
 		files       map[string]string // of the template memo
 		parts       map[string]string
+		unusable    bool // the template cannot be used: the second data file is told so, as above
 	}{
 		"an expression of checks.yaml": {
-			items: `"n": {"type": "array", "items": {"type": "number"}}`, data: "n: [1]\n",
+			items: `"n": {"type": "array", "items": {"type": "number"}}`, data: "n: [1]\n", unusable: true,
 			files: map[string]string{"checks.yaml": "- for: n\n  expr: item +++ (\n  message: m\n"},
 		},
 		"page.html html/template cannot escape": {
@@ -280,8 +283,32 @@ func TestTemplateMistakesOnce(t *testing.T) {
 				t.Fatalf("%s: drawing %s = %v, want mistakes", name, file, err)
 			}
 		}
-		if got := usererr.Tell(i18n.EnglishCatalog(), all).Render(""); got != first {
-			t.Errorf("%s: the mistakes of two data files =\n%s\nwant those of one\n%s", name, got, first)
+		want := first
+		if tt.unusable {
+			want += "\nb.yaml:1:11: your own template memo cannot be used, as told above"
 		}
+		if got := usererr.Tell(i18n.EnglishCatalog(), all).Render(""); got != want {
+			t.Errorf("%s: the mistakes of two data files =\n%s\nwant\n%s", name, got, want)
+		}
+	}
+}
+
+// A data file of a template of one's own that cannot be used watches the template all the same, and the
+// parts of one's own its run read: the page of its mistakes is drawn again once the template is fixed.
+func TestUnusableTemplateWatched(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	at := own(t, dir, "report")
+	if err := os.WriteFile(filepath.Join(at, "template.yaml"), []byte("floe: 9.0\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	parts := ownParts(t, map[string]string{"pp/part.css": ""})
+	_, sources, err := tmpl.NewLibrary(dir, parts, themesOf(parts), "").ReadSources("data.yaml", []byte("template: report\nlang: en\n"), "", dir)
+	if err == nil || !strings.HasPrefix(err.Error(), "data.yaml:1:11: your own template report cannot be used") {
+		t.Fatalf("Read = %v, want the template cannot be used", err)
+	}
+	if sources.Template != at || !slices.Contains(sources.Own, parts) {
+		t.Errorf("Sources = %+v, want the template %s and the parts %s", sources, at, parts)
 	}
 }

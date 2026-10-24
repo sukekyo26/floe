@@ -76,6 +76,17 @@ func mistakesOf(err error) []error {
 	return mistakes
 }
 
+// reasonsOf is why the template err is the one mistake of cannot be used, nil when it is not one.
+func reasonsOf(err error) []error {
+	var bad *usererr.Error
+	if !errors.As(err, &bad) || bad.Key != "tmpl_template_broken" {
+		if l := mistakesOf(err); len(l) != 1 || !errors.As(l[0], &bad) || bad.Key != "tmpl_template_broken" {
+			return nil
+		}
+	}
+	return mistakesOf(bad.Under)
+}
+
 // A right template passes, warned that it does not name the floe it needs.
 func TestCheck(t *testing.T) {
 	t.Parallel()
@@ -549,12 +560,13 @@ func TestTemplateCSSAndParts(t *testing.T) {
 	for _, m := range mistakes {
 		got = append(got, strings.TrimPrefix(m.Error(), dir+string(filepath.Separator)))
 	}
+	// page.css's, which makes the template unusable, before those template check alone tells.
 	want := []string{
+		"page.css:4: write the root as :scope, not :root",
 		"page.html:5: page.html names the part nope, which there is none of; use bars, ",
 		`page.html:5: data-floe-part="cell note" is not the name of one part`,
 		`page.html:5: data-floe-part=" cell" is not the name of one part`,
 		"page.html:5: data-floe-part names the look panel, which has no box",
-		"page.css:4: write the root as :scope, not :root",
 	}
 	if len(got) != len(want) {
 		t.Fatalf("Check = %q, want %q", got, want)
@@ -580,8 +592,9 @@ func TestCSSImportRefused(t *testing.T) {
 	if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Errorf("Check = %v, want %q", mistakes, want)
 	}
-	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), "", "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
-		t.Errorf("drawing = %v, want %s", err, want)
+	at := "data.yaml:1:11: your own template sizes cannot be used\n  " + want
+	if _, err := draw(tmpl.NewLibrary(filepath.Dir(dir), "", "", ""), "template: sizes\nlang: en\nfiles: [{ name: a.txt, bytes: 1 }]\n"); err == nil || !strings.HasPrefix(err.Error(), at) {
+		t.Errorf("drawing = %v, want %s", err, at)
 	}
 }
 
@@ -917,9 +930,9 @@ func TestReadTellsEverySchemaMistake(t *testing.T) {
 	})
 	file := filepath.Join(dir, "example.yaml")
 	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(mustRead(t, file)), "", "")
-	got := mistakesOf(err)
+	got := reasonsOf(err)
 	if len(got) != 2 || !strings.Contains(fmt.Sprint(got), "/properties/x: ") || !strings.Contains(fmt.Sprint(got), "requires title") {
-		t.Errorf("Read = %v, want the $ref and title told", got)
+		t.Errorf("Read = %v, want the $ref and title told why the template cannot be used", err)
 	}
 }
 
@@ -933,23 +946,25 @@ func TestReadTellsSharedKeyAndCompileMistake(t *testing.T) {
 	})
 	file := filepath.Join(dir, "example.yaml")
 	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(mustRead(t, file)), "", "")
-	got := fmt.Sprint(mistakesOf(err))
-	if len(mistakesOf(err)) != 2 || !strings.Contains(got, "requires title") || !strings.Contains(got, "#/properties/code/pattern: ") {
-		t.Errorf("Read = %v, want title and the pattern told", got)
+	got := fmt.Sprint(reasonsOf(err))
+	if len(reasonsOf(err)) != 2 || !strings.Contains(got, "requires title") || !strings.Contains(got, "#/properties/code/pattern: ") {
+		t.Errorf("Read = %v, want title and the pattern told why the template cannot be used", err)
 	}
 }
 
-// A data file of a template whose schema does not compile is told the template's mistakes alone, not
-// beside those of its keys every template shares.
-func TestReadTellsCompileMistakeAlone(t *testing.T) {
+// A data file of a template whose schema does not compile is told the template cannot be used, at
+// template:, beside the mistakes of its keys every template shares, as for a template there is none of.
+func TestReadTellsCompileMistakeAtTemplate(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{"schema.json": `"properties": {|"properties": { "code": { "pattern": "([" },`})
 	file := filepath.Join(dir, "example.yaml")
 	src := strings.Replace(mustRead(t, file), "lang: en", "lang: 1", 1)
 	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(src), "", "")
-	if got := mistakesOf(err); len(got) != 1 || !strings.Contains(got[0].Error(), "#/properties/code/pattern: ") {
-		t.Errorf("Read = %v, want the pattern alone", got)
+	got := mistakesOf(err)
+	if len(got) != 2 || !strings.HasPrefix(got[0].Error(), file+":1:11: your own template sizes cannot be used\n") ||
+		!strings.Contains(got[0].Error(), "#/properties/code/pattern: ") || !strings.Contains(got[1].Error(), "lang must be text") {
+		t.Errorf("Read = %v, want the template at template:, why under it, and lang", got)
 	}
 }
 
