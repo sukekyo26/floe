@@ -108,13 +108,9 @@ type protocolText string
 
 const textType = "text/plain; charset=utf-8"
 
-// send answers body as text: a refusal of the protocol, or an empty body.
+// send answers body as text: a refusal of the protocol, or an empty body. It is the one way in for a refusal
+// as text; refuse and sendJSON's failure write theirs with sendBytes.
 func send(w http.ResponseWriter, status int, body protocolText) {
-	sendText(w, status, string(body))
-}
-
-// sendText answers body as text, for send, refuse and sendJSON alone.
-func sendText(w http.ResponseWriter, status int, body string) {
 	sendBytes(w, status, textType, []byte(body))
 }
 
@@ -130,7 +126,7 @@ func sendJSON(w http.ResponseWriter, status int, v any) {
 	b, err := json.Marshal(v)
 	if err != nil {
 		// Not through refuse, which answers with sendJSON.
-		sendText(w, http.StatusInternalServerError, err.Error())
+		sendBytes(w, http.StatusInternalServerError, textType, []byte(err.Error()))
 		return
 	}
 	sendBytes(w, status, "application/json", b)

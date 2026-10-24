@@ -73,7 +73,7 @@ func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]jso
 func refuse(w http.ResponseWriter, r *http.Request, err error) {
 	report := usererr.Tell(catalog(r), err)
 	if !strings.Contains(r.Header.Get("Accept"), "application/json") {
-		sendText(w, report.Status(), report.Render(""))
+		sendBytes(w, report.Status(), textType, []byte(report.Render("")))
 		return
 	}
 	sendJSON(w, report.Status(), report)

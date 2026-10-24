@@ -78,7 +78,7 @@ func TestRefusedAsMistake(t *testing.T) {
 	refused := client{base: srv.URL}.do(t.Context(), http.MethodPost, "/api/artifacts", server.Link{Path: "rel.html"}, nil)
 	re, ok := errors.AsType[*remoteError](refused)
 	if !ok || re.status != http.StatusBadRequest || re.report.Failure != "" || len(re.report.Mistakes) != 1 ||
-		re.Error() != "enter the absolute path of an HTML or data file (one starting with /)" {
+		re.Error() != "rel.html is not an absolute path: give one starting with /" {
 		t.Errorf("a relative path to link = %#v, want the user's mistake", refused)
 	}
 }

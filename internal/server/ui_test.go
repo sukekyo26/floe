@@ -366,10 +366,25 @@ func uiManage(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(pager), b.eval("new URLSearchParams(location.search).get('page')"))
 	b.eval("[...document.querySelectorAll('#sizes button')].find((b) => b.textContent === '20').click()")
 	out = append(out, b.eval(pager)+" "+b.eval("localStorage.getItem('artifacts.pageSize')")+" "+b.eval("location.search === ''"))
+	// A reason under a mistake keeps its indent: a part of one's own that cannot be used, which report uses.
+	// The parts its reasons run through (note, or tabs, stack and note) vary, so each line is checked to sit
+	// 2 deeper than the one above.
+	e.write(t, "parts/note/schema.json", `{"type": 1}`)
+	e.write(t, "parts/note/part.html", `<div data-floe-part="note"></div>`)
+	e.write(t, "parts/note/part.css", "")
+	usesNote := e.write(t, "note.yaml", "template: report\nlang: en\n")
+	b.eval("window.fetch = window.realFetch; document.querySelector('.tabs [data-tab=links]').click()")
+	b.eval(`(() => {
+		document.getElementById('add-open').click();
+		document.getElementById('add-path').value = ` + js(usesNote) + `;
+		document.getElementById('add').requestSubmit();
+	})()`)
+	out = append(out, b.until("the unusable part to be refused", "!document.getElementById('add-error').hidden && "+
+		"document.getElementById('add-error').innerText.split('\\n').every((l, i, all) => all.length > 1 && l.length - l.trimStart().length === 2 * i)"))
 
 	check(t, "manage", out, "Demo Page,untitled|/api/artifacts/my-demo/download my-demo.html /a/my-demo/?raw _blank|"+
 		"2 true true|true|1|untitled|1|"+msg("ui_delete_confirm")+"|2|Demo Page|my-demo|true|1|true|true|false|true|true|"+
-		"add-path false|2|true|10 1 / 3 false|10 2 / 3 false|2|20 1 / 2 false 20 true")
+		"add-path false|2|true|10 1 / 3 false|10 2 / 3 false|2|20 1 / 2 false 20 true|true")
 }
 
 // extrasStub answers the list and records the writes in window.calls.

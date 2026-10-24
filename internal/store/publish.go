@@ -315,7 +315,7 @@ func (s *Store) readLink(file string, opts Options, cwd string) (string, []byte,
 	abs := file
 	if !filepath.IsAbs(abs) {
 		if cwd == "" {
-			return "", nil, usererr.New("store_link_relative")
+			return "", nil, usererr.New("store_link_relative", file)
 		}
 		abs = filepath.Join(cwd, abs)
 	}
