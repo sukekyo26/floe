@@ -152,7 +152,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 			notFound(w)
 			return
 		case err != nil:
-			send(w, http.StatusConflict, usererr.Tell(catalog(r), err).Render(""))
+			refuse(w, r, err)
 			return
 		}
 		body = tmpl.WithCutOff(page)
