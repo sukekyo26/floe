@@ -738,7 +738,8 @@ func (t *Template) readAndCompile(set *partSet) (schemaRead, error) {
 	return read, err
 }
 
-// schemaFile is the schema.json of a template read into its shape, not yet bound to the parts.
+// schemaFile is the schema.json of a template read into its shape, never bound to the parts: binding reads
+// it anew (Template.readShape).
 type schemaFile struct {
 	doc   any
 	shape *shape
@@ -773,14 +774,17 @@ func (t *Template) schemaDoc() (any, error) {
 	return doc, nil
 }
 
-// readShape reads doc, the schema of t, into its shape, bound to floe's parts, and returns with it what
+// readShape reads the schema of t into a shape of its own, bound to the parts, and returns with it what
 // floe refuses of the schema, for the caller to refuse (partSet.mistakes).
 func (t *Template) readShape() (*shape, *schemaNotes, error) {
 	f, err := t.schemaFile()
 	if err != nil {
 		return nil, nil, err
 	}
-	s, notes := f.shape, f.notes
+	s, notes, err := readShape(f.doc, schemaURL(t.Name), t.file("schema.json"), "")
+	if err != nil {
+		return nil, nil, err
+	}
 	notes.floeTemplate = !t.isOwn()
 	set, err := t.parts()
 	if err != nil {

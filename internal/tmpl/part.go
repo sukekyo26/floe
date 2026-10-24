@@ -244,10 +244,14 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 }
 
 // readBuiltin reads floe's parts, of the parts directory of root, those it draws in Go too, the schemas they share
-// and the themes into set. Their mistakes are floe's failure: read before those of one's own, they are of
-// floe's files alone.
+// and the themes into set. Their mistakes, and their warnings, which no one can heed either, are floe's
+// failure: read before those of one's own, they are of floe's files alone.
 func (set *partSet) readBuiltin(root fs.FS) error {
-	return floeFailure("read floe's parts", set.readFloe(root))
+	err := set.readFloe(root)
+	if err == nil {
+		err = usererr.List(set.strays).Err()
+	}
+	return floeFailure("read floe's parts", err)
 }
 
 // readFloe is readBuiltin, its mistakes as made.

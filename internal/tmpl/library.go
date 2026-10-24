@@ -28,6 +28,7 @@ type Library struct {
 	mine  ownDirs // the directories of parts and themes of one's own
 	icons string  // the directory of icons the diagrams of data files show; "" for none
 	run   *run    // what one output read once (Run); nil reads it again every time
+	floe  fs.FS   // the built-in templates, a directory each under templates
 }
 
 // run is what the reads of one output read once: the parts and themes of one's own, the directory of
@@ -52,7 +53,7 @@ func (l *Library) Run() *Library {
 		entries: map[string]*readOnce[[]fs.DirEntry]{}, templates: map[templateAt]*readOnce[*Template]{},
 		icons: icons.New(l.icons),
 	}
-	return &Library{dir: l.dir, mine: l.mine, icons: l.icons, run: r}
+	return &Library{dir: l.dir, mine: l.mine, icons: l.icons, run: r, floe: l.floe}
 }
 
 // runOf is the run of l, or a run for this read alone: out of a run, nothing is kept.
@@ -87,7 +88,9 @@ func (l *Library) partsRead() (*partSet, error) {
 // the built-in ones, which draw with floe's parts and themes and those of partsDir (FLOE_PARTS_DIR) and
 // themesDir (FLOE_THEMES_DIR), "" for none, and the icons kept in iconsDir (FLOE_ICONS_DIR) in diagrams.
 func NewLibrary(dir, partsDir, themesDir, iconsDir string) *Library {
-	return &Library{dir: dir, mine: ownDirs{parts: partsDir, themes: themesDir}, icons: iconsDir, run: nil}
+	return &Library{
+		dir: dir, mine: ownDirs{parts: partsDir, themes: themesDir}, icons: iconsDir, run: nil, floe: templateFiles,
+	}
 }
 
 // PartsDir is the directory of parts of one's own, "" for none.
@@ -120,6 +123,7 @@ type Template struct {
 
 	run   *run // what the run it was found in reads once
 	reads *reads
+	floe  fs.FS // the built-in templates, a built-in one's files under templates/<Name>
 }
 
 // reads is what each file of a template gives, read once for every data file drawn with it. What a data
@@ -158,7 +162,7 @@ func (r *readOnce[T]) of(read func() (T, error)) (T, error) {
 // cannot be read, rather than leave them out.
 func (l *Library) Names() ([]string, error) {
 	var names []string
-	if entries, err := fs.ReadDir(templateFiles, "templates"); err == nil {
+	if entries, err := fs.ReadDir(l.floe, "templates"); err == nil {
 		for _, e := range entries {
 			names = append(names, e.Name())
 		}
@@ -239,7 +243,7 @@ func (l *Library) lookUp(name string) (*Template, error) {
 	if t, err := l.own(name); t != nil || err != nil {
 		return t, err
 	}
-	_, err := fs.Stat(templateFiles, path.Join("templates", name))
+	_, err := fs.Stat(l.floe, path.Join("templates", name))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		return nil, nil //nolint:nilnil // no such template
@@ -293,7 +297,7 @@ func (l *Library) template(name, dir, at string) *Template {
 	r := new(reads)
 	r.assets = map[string]*readOnce[template.URL]{}
 	return &Template{
-		Name: name, Dir: dir, Path: at, run: l.runOf(), reads: r,
+		Name: name, Dir: dir, Path: at, run: l.runOf(), reads: r, floe: l.floe,
 	}
 }
 
@@ -372,7 +376,7 @@ func (t *Template) readOptional(name string) (b []byte, found bool, err error) {
 // files calls read with the files of t, as a file system rooted at t.
 func (t *Template) files(read func(fs.FS) error) error {
 	if t.Dir == "" {
-		sub, err := fs.Sub(templateFiles, path.Join("templates", t.Name))
+		sub, err := fs.Sub(t.floe, path.Join("templates", t.Name))
 		if err != nil {
 			return fmt.Errorf("open the template %s: %w", t.Name, err)
 		}
@@ -419,6 +423,13 @@ func (t *Template) unusable() error {
 		return err
 	}
 	_, schemaErr := t.compileShape()
+	return t.fileMistakes(schemaErr)
+}
+
+// fileMistakes returns schemaErr, the mistakes of t's schema, with those of its other files, each read once,
+// or a failure: what both unusable and floeFiles tell, but for the schema, which floeFiles reads apart from
+// the parts.
+func (t *Template) fileMistakes(schemaErr error) error {
 	_, checksErr := t.readChecks()
 	_, computedErr := t.readComputed()
 	_, wordsErr := t.words()
@@ -562,17 +573,15 @@ func versionOf(s string) (semver, bool) {
 
 // floeFiles refuses t, a built-in template, whose files have mistakes of their own, as floe's failure: what
 // floe's files alone give, apart from the parts and themes of one's own its schema is bound to, which may
-// take the place of floe's (compileShape). computed.yaml reads the keys of the bound schema, which are of
-// floe's file alone while the root of a built-in template's schema names nothing (TestBuiltinTemplateRoot).
+// take the place of floe's (compileShape). Its schema is refused as unbound: the root of a built-in
+// template's schema names nothing (TestBuiltinTemplateRoot), so that what refuseShared and computed.yaml
+// read of it, its keys, are of floe's file alone.
 func (t *Template) floeFiles() error {
-	_, fileErr := t.schemaFile()
-	_, checksErr := t.readChecks()
-	_, computedErr := t.readComputed()
-	_, wordsErr := t.words()
-	_, pageErr := t.page()
-	_, sheetErr := t.pageSheet()
-	err := usererr.Collect(fileErr, checksErr, computedErr, wordsErr, pageErr, sheetErr)
-	return floeFailure("read floe's template "+t.Name, err)
+	f, err := t.schemaFile()
+	if err == nil {
+		err = usererr.Collect(f.notes.refused(), t.refuseShared(f.shape))
+	}
+	return floeFailure("read floe's template "+t.Name, t.fileMistakes(err))
 }
 
 // floeFailure is err, the mistakes of reading floe's own files as what, as floe's failure, worded: wrapped,

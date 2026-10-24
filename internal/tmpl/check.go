@@ -42,7 +42,7 @@ func (l *Library) Check(dir, cwd string) (warnings usererr.List, err error) {
 		return nil, usererr.CannotRead(dir, err)
 	}
 	// Found as a library of the directory above would find it, symlink and all.
-	in := &Library{dir: filepath.Dir(abs), mine: l.mine, icons: l.icons, run: l.runOf()}
+	in := &Library{dir: filepath.Dir(abs), mine: l.mine, icons: l.icons, run: l.runOf(), floe: l.floe}
 	t, err := in.resolve(name)
 	if err != nil {
 		return nil, err
