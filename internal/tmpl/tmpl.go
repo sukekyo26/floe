@@ -17,6 +17,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	tparse "text/template/parse"
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
@@ -481,8 +482,9 @@ func (d *Data) Render(title string) ([]byte, error) {
 			it := d.htmlItems[k]
 			return nil, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
 		}
-		// One of one's own drawn unchecked; floe's never gets here, as checkFloe refuses it first (checkHead).
-		return nil, read.head
+		// floe's page.html writes its </head> in its own text, as checkFloe keeps it: a page of floe's gets here
+		// when what is drawn in its head leaves an element open, which is of the data or of a part.
+		return nil, read.headMistake(t.file("page.html"))
 	}
 	// The data's HTML after the template's mistakes, which would be told as the data's.
 	if d.htmlItems != nil {
@@ -545,21 +547,40 @@ func (d *Data) withDiagrams(out []byte) ([]byte, error) {
 	return append(out, "\n"+script+"\n"...), nil
 }
 
-// headMistake is the mistake of page.html, src, shown as file, whose drawing holds no </head>: it holds
-// none, or an action of it leaves its own out. The data's HTML holds none, which checkHTML refuses.
-func headMistake(file string, src []byte) *usererr.Error {
-	if tagsOf(tagsIn(string(src), true)).head >= 0 {
-		return usererr.NewAt(file, 0, 0, "tmpl_page_head_action")
+// headMistake is the mistake of p, page.html shown as file, whose drawing holds no </head>: it holds none, or
+// an action of it leaves its own out, at its line. The data's HTML holds none, which checkHTML refuses.
+func (p parsedPage) headMistake(file string) *usererr.Error {
+	if p.tags.head >= 0 {
+		return usererr.NewAt(file, lineAt(p.src, p.tags.head), 0, "tmpl_page_head_action")
 	}
 	return usererr.NewAt(file, 0, 0, "tmpl_page_head")
 }
 
-// parsedPage is the page.html of a template, parsed and never drawn, and the mistake of it to tell when
-// its drawing holds no </head>.
+// parsedPage is the page.html of a template, parsed and never drawn, and where its tags are, read once.
 type parsedPage struct {
 	page *template.Template // nil when it cannot be parsed
 	src  []byte
-	head *usererr.Error
+	tags tags // the first of the tags floe looks for (tagsOf)
+	// whether its </head> is in its own text, outside every action, drawn whatever the data (headDrawn)
+	headDrawn bool
+}
+
+// headDrawn reports whether page, parsed from the text whose tags are found, draws a </head> whatever the
+// data: one in the text of the page itself, outside every action, which is drawn as it is.
+func headDrawn(page *template.Template, found []tag) bool {
+	for _, n := range page.Tree.Root.Nodes {
+		text, ok := n.(*tparse.TextNode)
+		if !ok {
+			continue
+		}
+		from, to := int(text.Pos), int(text.Pos)+len(text.Text)
+		for _, tg := range found {
+			if tg.end && tg.name == "head" && tg.start >= from && tg.start < to {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // in returns p's page to draw in a language, whose words word gives.
@@ -580,27 +601,29 @@ func (t *Template) page() (parsedPage, error) {
 		w, _ := t.words() //nolint:errcheck // told by those who read the words
 		src, err := t.readFile("page.html")
 		if err != nil {
-			return parsedPage{page: nil, src: nil, head: nil}, err
+			return parsedPage{page: nil, src: nil, tags: tags{head: -1, style: -1, link: -1}, headDrawn: false}, err
 		}
-		p := parsedPage{page: nil, src: src, head: headMistake(t.file("page.html"), src)}
+		found := tagsIn(string(src), true)
+		p := parsedPage{page: nil, src: src, tags: tagsOf(found), headDrawn: false}
 		var parseErr, wordsErr, escapeErr error
 		if p.page, parseErr = t.parsePage(src, w); parseErr == nil {
+			p.headDrawn = headDrawn(p.page, found)
 			wordsErr = t.pageWords(p.page, w)
 			escapeErr = escapeMistake(p.page, src, t.file("page.html"))
 		}
-		return p, usererr.Collect(t.refuseInPage(src), parseErr, wordsErr, escapeErr)
+		return p, usererr.Collect(t.refuseInPage(p), parseErr, wordsErr, escapeErr)
 	})
 }
 
-// refuseInPage refuses src, the page.html of t, holding a <style>, as floe puts a page's CSS together, or
-// a <base>.
-func (t *Template) refuseInPage(src []byte) error {
+// refuseInPage refuses p, the page.html of t as read, holding a <style>, as floe puts a page's CSS together,
+// or a <base>.
+func (t *Template) refuseInPage(p parsedPage) error {
 	var style, b error
-	if at := tagsOf(tagsIn(string(src), true)).style; at >= 0 {
-		style = usererr.NewAt(t.file("page.html"), lineAt(src, at), 0, "tmpl_page_style")
+	if at := p.tags.style; at >= 0 {
+		style = usererr.NewAt(t.file("page.html"), lineAt(p.src, at), 0, "tmpl_page_style")
 	}
-	if at := base.FindIndex(src); at != nil {
-		b = usererr.NewAt(t.file("page.html"), lineAt(src, at[0]), 0, "tmpl_page_base")
+	if at := base.FindIndex(p.src); at != nil {
+		b = usererr.NewAt(t.file("page.html"), lineAt(p.src, at[0]), 0, "tmpl_page_base")
 	}
 	return usererr.Collect(style, b)
 }

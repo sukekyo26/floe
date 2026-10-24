@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	tparse "text/template/parse"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
@@ -141,40 +140,21 @@ func (t *Template) checkPage(set *partSet, s *shape, checked map[string]bool, p 
 	return usererr.Collect(t.checkHead(s, p), t.checkNamedParts(set, p.src, named), assets)
 }
 
-// checkHead refuses src, page.html, without a <head>, and one without a standard doctype where s, the
-// schema of t, nil when it cannot be read, has an item of format html.
+// checkHead refuses p, the page.html of t as read, without a </head>, or, parsed, with one inside an action
+// alone, which floe cannot tell is drawn though the data may draw it, and one without a standard doctype
+// where s, the schema of t, nil when it cannot be read, has an item of format html.
 func (t *Template) checkHead(s *shape, p parsedPage) error {
 	var doctype, head error
 	if s != nil {
 		doctype = doctypeMistake(t.file("page.html"), s, p.src)
 	}
-	found := tagsIn(string(p.src), true)
-	switch {
-	case tagsOf(found).head < 0:
-		head = usererr.NewAt(t.file("page.html"), 0, 0, "tmpl_page_head")
-	case p.page != nil && !headDrawn(p.page, found):
-		head = usererr.NewAt(t.file("page.html"), lineAt(p.src, tagsOf(found).head), 0, "tmpl_page_head_action")
+	switch file := t.file("page.html"); {
+	case p.tags.head < 0:
+		head = usererr.NewAt(file, 0, 0, "tmpl_page_head")
+	case p.page != nil && !p.headDrawn:
+		head = usererr.NewAt(file, lineAt(p.src, p.tags.head), 0, "tmpl_page_head_inside")
 	}
 	return usererr.Collect(doctype, head)
-}
-
-// headDrawn reports whether page, parsed from the text whose tags are found, draws a </head> whatever the
-// data: one in the text of the page itself, outside every action ({{if}}, {{with}}, {{range}}, {{define}}),
-// which is drawn as it is.
-func headDrawn(page *template.Template, found []tag) bool {
-	for _, n := range page.Tree.Root.Nodes {
-		text, ok := n.(*tparse.TextNode)
-		if !ok {
-			continue
-		}
-		from, to := int(text.Pos), int(text.Pos)+len(text.Text)
-		for _, tg := range found {
-			if tg.end && tg.name == "head" && tg.start >= from && tg.start < to {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // missingFiles returns the mistake of each file t needs that it does not have, or that cannot be read.

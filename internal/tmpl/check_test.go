@@ -545,7 +545,7 @@ func TestPageHeadRequired(t *testing.T) {
 	}
 	l := tmpl.NewLibrary(data, "", "", "")
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: <b>x</b>\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), page+": an action of page.html leaves out its </head>") {
+		!strings.HasPrefix(err.Error(), page+":1: an action of page.html leaves out its </head>") {
 		t.Errorf("drawing without </head> = %v", err)
 	}
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: <svg></head>\n"); err == nil ||
@@ -564,24 +564,15 @@ func TestPageHeadDrawn(t *testing.T) {
 		{"</head>", ""},
 		{`{{- "" -}}</head>`, ""},
 		{"</HEAD>", ""},
-		{"{{if false}}</head>{{end}}", ":3: an action of page.html leaves out its </head>"},
-		{"{{if true}}</head>{{end}}", ":3: an action of page.html leaves out its </head>"},
-		{`{{template "h"}}`, ":14: an action of page.html leaves out its </head>"},
+		{"{{if false}}</head>{{end}}", ":3: page.html writes its </head> inside an action alone"},
+		{"{{if true}}</head>{{end}}", ":3: page.html writes its </head> inside an action alone"},
+		{`{{block "h" .}}</head>{{end}}`, ":3: page.html writes its </head> inside an action alone"},
+		{`{{define "h"}}</head>{{end}}{{template "h"}}`, ":3: page.html writes its </head> inside an action alone"},
 		{"{{/* </head> */}}", ": page.html holds no </head>"},
 		{`<script>var s = "</head>";</script>`, ": page.html holds no </head>"},
 	} {
 		page := "page.html"
 		dir := sizes(t, map[string]string{page: "</head>|" + tt.head})
-		if tt.head == `{{template "h"}}` {
-			f, err := os.OpenFile(filepath.Join(dir, page), os.O_APPEND|os.O_WRONLY, 0)
-			if err == nil {
-				_, err = f.WriteString(`{{define "h"}}</head>{{end}}` + "\n")
-				err = errors.Join(err, f.Close())
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
 		_, mistakes := check(dir, "", "")
 		head := slices.IndexFunc(mistakes, func(e error) bool { return strings.Contains(e.Error(), "</head>") })
 		switch want := filepath.Join(dir, page) + tt.want; {

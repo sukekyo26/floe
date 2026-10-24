@@ -240,7 +240,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   restyle whatever their selectors. The template's CSS is scoped to the page,
   `:scope` its root: it reaches a part's element but not what the part holds.
   `page.html` holds a `</head>`, before which floe puts the page's styles, or
-  is refused, as is a drawing an action of it leaves it out of. It holds
+  is refused, as is a drawing an action of it leaves it out of; `floe template check`
+  refuses one written inside an action alone (`{{if}}`, `{{with}}`, `{{range}}`, `{{block}}`
+  or a `{{define}}` it calls), as floe cannot tell it is drawn. It holds
   no `<style>` or `<base>`, nor an item of `"format": "html"` a `<style>`, `<link>`,
   `</head>`, `<base>` or `<meta>`, or what changes the page around it as a browser reads it
   (an `<svg>`, a comment or a `<form>` it leaves open, an end tag of the page's; a `page.html` that puts one outside its `<head>` and `<body>` or leaves out `<!doctype html>`), nor the template's CSS an `@import`, `:root`, `html` or a `}` that closes no block, each refused

@@ -507,7 +507,7 @@ func TestDrawnHTMLAfterTheTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: <div>x</div>\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), page+": an action of page.html leaves out its </head>") {
+		!strings.HasPrefix(err.Error(), page+":1: an action of page.html leaves out its </head>") {
 		t.Errorf("a page.html whose action leaves out </head> = %v", err)
 	}
 }
