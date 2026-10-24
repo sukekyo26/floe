@@ -25,11 +25,36 @@ type Error struct {
 	At       string // a JSON pointer in a schema, "" for none
 	Under    List   // the mistakes it stands for: those of a part that cannot be used
 	Of       string // what Under is the mistakes of, such as "part:quote", told once in a list
+	Whole    bool   // of the whole output, which fixing no input takes away: told after the others
 }
 
 // New returns an *Error for the catalog message key with args, without a place.
 func New(key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: nil, Of: ""}
+	return &Error{
+		Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: nil, Of: "", Whole: false,
+	}
+}
+
+// NewWhole returns an *Error as New does, of the whole output: told after the mistakes of its inputs.
+func NewWhole(key string, args ...any) *Error {
+	e := New(key, args...)
+	e.Whole = true
+	return e
+}
+
+// OfWhole returns copies of l, of the whole output, as NewWhole makes them: what no input it is told with
+// takes away, such as a part of one's own that cannot be used, warned of whatever uses it.
+func OfWhole(l List) List {
+	if len(l) == 0 {
+		return nil
+	}
+	whole := make(List, 0, len(l))
+	for _, e := range l {
+		c := *e
+		c.Whole = true
+		whole = append(whole, &c)
+	}
+	return whole
 }
 
 // NewAt returns an *Error for the catalog message key with args, at the line and column of file, 0 for
@@ -37,19 +62,24 @@ func New(key string, args ...any) *Error {
 func NewAt(file string, line, column int, key string, args ...any) *Error {
 	return &Error{
 		Key: key, Args: args, Conflict: false, File: file, Line: line, Column: column, At: "", Under: nil, Of: "",
+		Whole: false,
 	}
 }
 
 // NewIn returns an *Error for the catalog message key with args, at at, a JSON pointer, in file.
 func NewIn(file, at, key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, Conflict: false, File: file, Line: 0, Column: 0, At: at, Under: nil, Of: ""}
+	return &Error{
+		Key: key, Args: args, Conflict: false, File: file, Line: 0, Column: 0, At: at, Under: nil, Of: "", Whole: false,
+	}
 }
 
 // Over returns an *Error for the catalog message key with args that stands for the mistakes under, those
 // of of, such as "part:quote": told under it, once in a list, where another that stands for them says
 // they are told above.
 func Over(of string, under List, key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: under, Of: of}
+	return &Error{
+		Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: under, Of: of, Whole: false,
+	}
 }
 
 // Placed returns e at the line and column of file, 0 for none, and at, "" for none, in place of any

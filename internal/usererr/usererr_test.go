@@ -85,7 +85,7 @@ func TestListSorted(t *testing.T) {
 }
 
 // Tell words a mistake, a list of them, one standing for placed ones, its second time, one in the words of
-// another, a name in use and floe's failure; Render lays them out to the letter as the command line and the
+// another, one of the whole output, after the others but where it is placed, a name in use and floe's failure; Render lays them out to the letter as the command line and the
 // browser show them, floe's name before each that is not at a place; Status answers 400, 409 or 500. A report read back from JSON, as the
 // command line reads the server's, lays out the same to the letter.
 func TestTell(t *testing.T) {
@@ -93,6 +93,7 @@ func TestTell(t *testing.T) {
 
 	const lang = "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)"
 	const part = "the part p cannot be used\n  a.yaml:1:2: " + lang
+	const noDir = `there is no directory for icons; set FLOE_ICONS_DIR, then fetch a set with "floe icons fetch <set>"`
 	placed := usererr.NewAt("a.yaml", 1, 2, "tmpl_no_lang")
 	conflict := usererr.New("tmpl_no_lang")
 	conflict.Conflict = true
@@ -119,6 +120,23 @@ func TestTell(t *testing.T) {
 		{"one made twice", usererr.List{over(), over()}, part, part, 400},
 		{"one in the words of another", usererr.New("tmpl_item", "x", over()), "x: " + part, "floe: x: " + part, 400},
 		{"one in the words of another, told before", usererr.List{over(), usererr.New("tmpl_item", "x", over())}, part + "\nx: " + part, part + "\nfloe: x: " + part, 400},
+		{
+			"one of the whole output, last, the others as given",
+			usererr.List{usererr.NewWhole("icons_no_dir"), usererr.NewAt("b.yaml", 2, 1, "tmpl_no_lang"), placed},
+			"b.yaml:2:1: " + lang + "\na.yaml:1:2: " + lang + "\n" + noDir,
+			"b.yaml:2:1: " + lang + "\na.yaml:1:2: " + lang + "\nfloe: " + noDir, 400,
+		},
+		{
+			"one standing for others, of the whole output, after one placed where it is used",
+			append(usererr.OfWhole(usererr.List{over()}), over().Placed("b.yaml", 3, 0, ""), placed),
+			"b.yaml:3: " + part + "\na.yaml:1:2: " + lang + "\nthe part p cannot be used, as told above",
+			"b.yaml:3: " + part + "\na.yaml:1:2: " + lang + "\nthe part p cannot be used, as told above", 400,
+		},
+		{
+			"one of the whole output, placed, where it is",
+			usererr.List{usererr.OfWhole(usererr.List{over()})[0].Placed("b.yaml", 3, 0, ""), placed},
+			"b.yaml:3: " + part + "\na.yaml:1:2: " + lang, "b.yaml:3: " + part + "\na.yaml:1:2: " + lang, 400,
+		},
 		{"one mistake given twice", usererr.List{once, placed, once}, lang + "\na.yaml:1:2: " + lang, "floe: " + lang + "\na.yaml:1:2: " + lang, 400},
 		{"two alike", usererr.List{usererr.New("tmpl_no_lang"), usererr.New("tmpl_no_lang")}, lang, "floe: " + lang, 400},
 		{"a name in use", conflict, lang, "floe: " + lang, 409},

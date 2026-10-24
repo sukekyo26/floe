@@ -1146,3 +1146,80 @@ func TestSharedToldOnce(t *testing.T) {
 		t.Errorf("check of two files of a template whose page.html holds no </head> = %+v, want it told once", r)
 	}
 }
+
+// Those of the whole output, which fixing no input takes away (icons not fetched, none to keep them in,
+// a part of one's own that cannot be used), come after the mistakes of the inputs, which keep the order
+// they come in; template check tells each template's warnings and mistakes together, in the order given,
+// the reason a part cannot be used once.
+func TestWholeLast(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.vars["FLOE_THEMES_DIR"] = filepath.Join(e.tmp, "themes")
+	icon := "template: report\nlang: en\ntitle: t\nsections:\n  - parts:\n      - diagram:\n          id: i\n          title: t\n" +
+		"          width: 100\n          height: 100\n          parts:\n            - icon: { x: 10, y: 10, name: aws/aws-lambda }\n"
+	e.write(t, "work/a.yaml", icon)
+	e.write(t, "work/c.yaml", icon+"      - script: { js: 'x = 1 </script>' }\n")
+	e.write(t, "work/b.yaml", "template: report\nleed: x\nlang: en\n")
+	const notFetched = "AWS icons are not in"
+	r := e.run(t, "work", "check", "c.yaml")
+	inOrder(t, "check of a file with icons not fetched and a script", r, 1, "c.yaml:13:23: ", notFetched)
+	r = e.run(t, "work", "check", "a.yaml", "b.yaml")
+	inOrder(t, "check of a file with icons not fetched and another", r, 1, "b.yaml:2:1: ", notFetched)
+
+	e.write(t, "parts/bad/schema.json", `{"type": "object", "properties": {"t": {"type": "string", "pattern": "(["}}}`)
+	e.write(t, "parts/bad/part.html", `<p data-floe-part="bad">{{.t}}</p>`)
+	e.write(t, "parts/bad/part.css", "")
+	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body></body></html>`
+	for name, props := range map[string]string{"uses": `"b": {"$ref": "floe:///parts/bad.json"}`, "plain": ""} {
+		e.write(t, "templates/"+name+"/schema.json", `{"type": "object", "additionalProperties": false, "properties": {`+props+`}}`)
+		e.write(t, "templates/"+name+"/page.html", page)
+		e.write(t, "templates/"+name+"/example.yaml", "template: "+name+"\nlang: en\ntitle: t\n")
+	}
+	e.write(t, "templates/uses/template.yaml", "floe: 0.0\n")
+	uses, plain := filepath.Join(e.tmp, "templates", "uses"), filepath.Join(e.tmp, "templates", "plain")
+	const broken = "the part bad cannot be used"
+	reason := filepath.Join(e.tmp, "parts", "bad", "schema.json") + ": #/properties/t/pattern"
+	r = e.run(t, "", "template", "check", uses)
+	inOrder(t, "template check of a template that uses a part that cannot be used", r, 1,
+		uses+"/schema.json: #/properties/b: "+broken+"\n", reason, broken+", as told above")
+	if strings.Count(r.stderr, reason) != 1 {
+		t.Errorf("template check of a template that uses a part that cannot be used = %q, want its reason told once", r.stderr)
+	}
+	r = e.run(t, "", "template", "check", uses, plain)
+	inOrder(t, "template check of a template with a mistake, then one with warnings alone", r, 1,
+		uses+"/schema.json: #/properties/b: ", "floe: "+plain+" has no template.yaml", broken+", as told above")
+	// One of an input that has no place (page.html naming a part that cannot be used) stays with the input.
+	e.write(t, "templates/names/schema.json", `{"type": "object", "additionalProperties": false, "properties": {}}`)
+	e.write(t, "templates/names/page.html", strings.Replace(page, "<body>", `<body><div data-floe-part="bad"></div>`, 1))
+	e.write(t, "work/n.yaml", "template: names\nlang: en\ntitle: t\n")
+	r = e.run(t, "work", "check", "n.yaml", "b.yaml")
+	inOrder(t, "check of a file whose page.html names a part that cannot be used, and another", r, 1,
+		broken+"\n", reason, "b.yaml:2:1: ")
+	e.write(t, "themes/mine/palette.css", "")
+	e.write(t, "themes/mine/stray.css", "p {}\n")
+	r = e.run(t, "", "template", "check", plain)
+	inOrder(t, "template check of a template with warnings alone", r, 0,
+		"floe: "+plain+" has no template.yaml", filepath.Join(e.tmp, "themes", "mine", "stray.css")+": ", "\n"+broken+"\n")
+
+	e.vars["HOME"] = ""
+	r = e.run(t, "work", "check", "c.yaml", "b.yaml")
+	inOrder(t, "check with no directory for icons", r, 1, "c.yaml:13:23: ", "b.yaml:2:1: ", "there is no directory for icons")
+}
+
+// inOrder fails unless got ended with code and its stderr holds each of parts, in that order.
+func inOrder(t *testing.T, what string, got result, code int, parts ...string) {
+	t.Helper()
+
+	at := 0
+	for _, p := range parts {
+		i := strings.Index(got.stderr[at:], p)
+		if got.code != code || i < 0 {
+			t.Errorf("%s = %d %q, want %d and stderr holding %q in order", what, got.code, got.stderr, code, parts)
+			return
+		}
+		at += i + len(p)
+	}
+}

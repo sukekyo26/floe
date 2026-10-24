@@ -204,7 +204,7 @@ func (l *Library) entries() ([]fs.DirEntry, error) {
 	return onceIn(l.runOf().entries, l.dir).of(func() ([]fs.DirEntry, error) {
 		entries, err := entriesOf(l.dir)
 		if err != nil {
-			return nil, usererr.New("tmpl_dir_unreadable", l.dir, err.Error())
+			return nil, usererr.NewWhole("tmpl_dir_unreadable", l.dir, err.Error())
 		}
 		return entries, nil
 	})

@@ -154,9 +154,14 @@ is not drawn, as it has no data: floe template check draws a template's example 
 uses.`,
 		Args: usage(cobra.NoArgs),
 		RunE: func(*cobra.Command, []string) error {
-			warnings, err := a.templates().CheckOwnParts()
-			a.tellWarnings(warnings)
-			return err //nolint:wrapcheck // already says what failed
+			// One list, the warnings and the mistakes, told once.
+			all, err := a.templates().CheckOwnParts()
+			told := len(all)
+			if tell(&all, err); len(all) == told {
+				a.tellWarnings(all)
+				return nil
+			}
+			return all.Err()
 		},
 	}
 }

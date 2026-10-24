@@ -97,7 +97,7 @@ func (l *Library) Parts() (parts []*PartDescription, broken usererr.List, err er
 	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
 		parts = append(parts, set.describe(name))
 	}
-	return parts, set.unusable(nil), nil
+	return parts, usererr.OfWhole(set.unusable(nil)), nil
 }
 
 // DescribePart tells of the part name.
