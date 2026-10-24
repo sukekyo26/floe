@@ -63,7 +63,7 @@ func (a *app) render(files []string, assets bool) error {
 			s, err = diagram.Parse(file, src)
 		}
 		if err != nil {
-			if failed := told[i].Add(err); failed != nil {
+			if failed := told[i].AddFor(file, err); failed != nil {
 				return failed //nolint:wrapcheck // already says what failed
 			}
 			continue

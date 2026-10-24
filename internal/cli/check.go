@@ -31,17 +31,17 @@ func (a *app) check(files []string) error {
 	var found usererr.List
 	for _, file := range a.namedFiles(files) {
 		_, err := drawFile(a, file)
-		tell(&found, err)
+		tellFor(&found, file, err)
 	}
 	return found.Err()
 }
 
-// tell adds err to l as usererr.List.Add does, and any other error too, as a mistake of its own: for the
-// list of the outcomes of things apart a command tells at its exit, such as the files floe check checks,
-// where the failure of one does not hide the others.
-func tell(l *usererr.List, err error) {
-	if failed := l.Add(err); failed != nil {
-		*l = append(*l, usererr.New("cli_failure", failed))
+// tellFor adds err to l as usererr.List.AddFor does for input, and any other error too, as a mistake of
+// input's: for the list of the outcomes of the inputs a command tells at its exit, such as the files floe
+// check checks, where the failure of one does not hide the others.
+func tellFor(l *usererr.List, input string, err error) {
+	if failed := l.AddFor(input, err); failed != nil {
+		_ = l.AddFor(input, usererr.New("cli_failure", failed)) //nolint:errcheck // a mistake, never a failure
 	}
 }
 
@@ -50,7 +50,7 @@ func tell(l *usererr.List, err error) {
 // mistakes: each at its line and column, or one about the whole file.
 func drawFile(a *app, file string) ([]byte, error) {
 	if !store.IsDataFile(file) {
-		return nil, usererr.About(file, "cli_check_not_data", file)
+		return nil, usererr.New("cli_check_not_data", file)
 	}
 	src, err := a.readArg(file)
 	if err != nil {

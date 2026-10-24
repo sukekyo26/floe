@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -1171,5 +1172,54 @@ func TestMistakesToldOnce(t *testing.T) {
 	if r := e.run(t, "", "template", "check", m1, m2); !strings.HasPrefix(r.stderr, filepath.Join(m1, "computed.yaml")+":1:4: ") ||
 		!strings.Contains(r.stderr, "\nfloe: "+m2+" has no template.yaml") {
 		t.Errorf("template check of two templates = %q, want the first one's mistake before the second one's warning", r.stderr)
+	}
+}
+
+// A mistake at no place is told with the input it is of, in the order of the inputs given; one of the whole
+// output (icons not fetched) after them all.
+func TestMistakesOfEachInput(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body></body></html>`
+	for _, name := range []string{"m1", "m2"} {
+		e.write(t, "templates/"+name+"/schema.json", `{"type": "object", "additionalProperties": false, "properties": {}}`)
+		e.write(t, "templates/"+name+"/page.html", page)
+		e.write(t, "templates/"+name+"/example.yaml", "template: "+name+"\nlang: en\ntitle: t\n")
+	}
+	e.write(t, "templates/m1/template.yaml", "floe: 9.0\n")
+	e.write(t, "templates/m2/template.yaml", "floe: 0.0\n")
+	e.write(t, "templates/m2/computed.yaml", "x: nope\n")
+	e.write(t, "work/a.yaml", "template: m1\nlang: en\ntitle: t\n")
+	e.write(t, "work/b.yaml", "template: report\nleed: x\nlang: en\n")
+	e.write(t, "work/c.yaml", "template: report\nlang: en\ntitle: t\nsections:\n  - parts:\n      - diagram:\n          id: i\n"+
+		"          title: t\n          width: 100\n          height: 100\n          parts:\n"+
+		"            - icon: { x: 10, y: 10, name: aws/aws-lambda }\n      - script: { js: 'x = 1 </script>' }\n")
+	newer := "floe: template m1 needs floe 9.0.0 or later, and this is floe X; update floe\n"
+	leed := "b.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n"
+	floe := regexp.MustCompile(`this is floe [^;]*;`)
+	m1, m2 := filepath.Join(e.tmp, "templates", "m1"), filepath.Join(e.tmp, "templates", "m2")
+	for _, tt := range []struct {
+		what string
+		args []string
+		want string
+	}{
+		{"check of a file whose template needs a later floe, then another", []string{"check", "a.yaml", "b.yaml"}, newer + leed},
+		{
+			"template check of a template that needs a later floe, then another",
+			[]string{"template", "check", m1, m2},
+			newer + m2 + "/computed.yaml:1:4: nope cannot be read as an expression: unknown name nope\n",
+		},
+		{"check of a mistake of each kind", []string{"check", "a.yaml", "c.yaml", "nope.yaml", "b.yaml"}, newer +
+			"c.yaml:13:23: sections[0].parts[1].script.js: js holds </script, where the page would end its script; split it in a string, as '<' + '/script'\n" +
+			"floe: cannot read nope.yaml (no such file or directory); check the path and that the file exists\n" + leed +
+			"floe: AWS icons are not in " + filepath.Join(e.tmp, "home", ".local", "share", "floe-icons", "aws") +
+			`; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again` + "\n"},
+	} {
+		r := e.run(t, "work", tt.args...)
+		if got := floe.ReplaceAllString(r.stderr, "this is floe X;"); r.code != 1 || got != tt.want {
+			t.Errorf("%s = %d %q\nwant %q", tt.what, r.code, got, tt.want)
+		}
 	}
 }

@@ -117,7 +117,7 @@ func (l *Library) ownNames() ([]string, error) {
 func (l *Library) entries() ([]fs.DirEntry, error) {
 	entries, err := entriesOf(l.dir)
 	if err != nil {
-		return nil, usererr.New("tmpl_dir_unreadable", l.dir, err.Error())
+		return nil, usererr.NewWhole("tmpl_dir_unreadable", l.dir, err.Error())
 	}
 	return entries, nil
 }
@@ -166,7 +166,7 @@ func (l *Library) own(name string) (*Template, error) {
 	}
 	for _, e := range entries {
 		if strings.EqualFold(e.Name(), name) {
-			return nil, usererr.About(filepath.Join(l.dir, e.Name()), "tmpl_own_case", filepath.Join(l.dir, e.Name()), name)
+			return nil, usererr.New("tmpl_own_case", filepath.Join(l.dir, e.Name()), name)
 		}
 	}
 	return nil, nil //nolint:nilnil // none

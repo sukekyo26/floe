@@ -45,7 +45,7 @@ your own takes the place of the built-in one of its name.`,
 			for _, name := range names {
 				d, err := l.Describe(name)
 				if err != nil {
-					tell(&broken, err)
+					tellFor(&broken, name, err)
 					continue
 				}
 				// The columns are for scripts to read, in every language: built-in is not translated.
@@ -215,8 +215,8 @@ code 0. Nothing is printed when the templates are right.`,
 			wrong := false
 			for _, dir := range a.namedFiles(args) {
 				warnings, err := tmpl.Check(dir, a.cfg.parts, a.cfg.themes, a.cfg.icons)
-				all = append(all, warnings...)
-				tell(&all, err)
+				_ = all.AddFor(dir, warnings.Err()) //nolint:errcheck // warnings are mistakes, never a failure
+				tellFor(&all, dir, err)
 				wrong = wrong || err != nil
 			}
 			if !wrong {
