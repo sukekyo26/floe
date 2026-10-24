@@ -51,17 +51,17 @@ risks: |
 aside: <a href="#a&b"></a>
 `)
 	want := `data.yaml:3:8: risks: links to #無い, which is no id of the page: a heading's id is its text in lower case, ` +
-		`without punctuation and symbols, a space made -, and -1, -2 and on for the second of the same text, or for an id the page already has
+		`without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has
 data.yaml:3:8: risks: links to #a&b, which is no id of the page: a heading's id is its text in lower case, ` +
-		`without punctuation and symbols, a space made -, and -1, -2 and on for the second of the same text, or for an id the page already has
+		`without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has
 data.yaml:3:8: risks: links to #まとめ一覧, which is no id of the page: a heading's id is its text in lower case, ` +
-		`without punctuation and symbols, a space made -, and -1, -2 and on for the second of the same text, or for an id the page already has
+		`without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has
 data.yaml:3:8: risks: links to #nope, which is no id of the page: a heading's id is its text in lower case, ` +
-		`without punctuation and symbols, a space made -, and -1, -2 and on for the second of the same text, or for an id the page already has
+		`without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has
 data.yaml:3:8: risks: links to #a&amp;c, which is no id of the page: a heading's id is its text in lower case, ` +
-		`without punctuation and symbols, a space made -, and -1, -2 and on for the second of the same text, or for an id the page already has
+		`without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has
 data.yaml:8:8: aside: links to #a&b, which is no id of the page: a heading's id is its text in lower case, ` +
-		`without punctuation and symbols, a space made -, and -1, -2 and on for the second of the same text, or for an id the page already has`
+		`without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has`
 	if err == nil || err.Error() != want {
 		t.Errorf("draw = %v, want\n%s", err, want)
 	}
@@ -91,7 +91,20 @@ func TestLinkNotFound(t *testing.T) {
 
 	_, err := draw(builtins, "template: report\nlang: en\nsections:\n  - parts:\n      - text: '[x](#a\\)b)'\n")
 	want := `data.yaml: links to #a)b, which is no id of the page: a heading's id is its text in lower case, ` +
-		`without punctuation and symbols, a space made -, and -1, -2 and on for the second of the same text, or for an id the page already has`
+		`without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has`
+	if err == nil || err.Error() != want {
+		t.Errorf("draw = %v, want\n%s", err, want)
+	}
+}
+
+// A link html/template wrote #ZgotmplZ for, its URL not safe, is told so, not as a link to no heading.
+func TestUnsafeLink(t *testing.T) {
+	t.Parallel()
+
+	l := htmlIn(t, `<main><a href="{{.Data.aside}}">to</a>{{.Data.risks}}</main>`)
+	_, err := draw(l, "template: memo\nlang: en\nrisks: <p>x</p>\naside: javascript:alert(1)\n")
+	want := "data.yaml: a link's URL was not safe, so html/template wrote #ZgotmplZ in its place: " +
+		"write a URL of http, https or mailto, or a path"
 	if err == nil || err.Error() != want {
 		t.Errorf("draw = %v, want\n%s", err, want)
 	}

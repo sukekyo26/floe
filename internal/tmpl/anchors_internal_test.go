@@ -9,7 +9,8 @@ func TestHeadingID(t *testing.T) {
 		"1. テンプレートの固定の言葉を訳せない": "1-テンプレートの固定の言葉を訳せない",
 		"「まとめ」・一覧（2026 年）":     "まとめ一覧2026-年",
 		"floe check を回す":       "floe-check-を回す",
-		" Go  Notes_v2 ":       "go--notes_v2",
+		" Go  Notes_v2 ":       "go-notes_v2",
+		"\n  Foo\n\tBar\n":     "foo-bar",
 		"!!!":                  "",
 	} {
 		if got := headingID(text); got != want {

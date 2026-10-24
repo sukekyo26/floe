@@ -18,13 +18,14 @@ import (
 )
 
 // headingID is the id of a heading whose text is text, near the one GitHub gives: lower case, without what
-// is not a letter, a mark, a number, - or _, each space made -.
+// is not a letter, a mark, a number, - or _, the spaces between words made one -, as a browser shows them
+// as one.
 // LIMIT: Go's Unicode classes and ToLower, not github-slugger's pattern and toLowerCase; they part on rare runes.
 func headingID(text string) string {
 	var b strings.Builder
-	for _, r := range strings.TrimSpace(text) {
+	for _, r := range strings.Join(strings.Fields(text), " ") {
 		switch {
-		case unicode.IsSpace(r):
+		case r == ' ':
 			b.WriteByte('-')
 		case unicode.IsLetter(r) || unicode.IsMark(r) || unicode.IsNumber(r) || r == '-' || r == '_':
 			b.WriteRune(unicode.ToLower(r))
@@ -108,20 +109,28 @@ func atHeadingTags(page []byte, attr func(k int) string) []byte {
 	z := xhtml.NewTokenizer(bytes.NewReader(page))
 	for {
 		tt := z.Next()
-		// Token lowers the tag's name in the tokenizer's buffer, which Raw returns.
-		raw := slices.Clone(z.Raw())
-		if tt == xhtml.ErrorToken {
+		// Read before the next token, which reuses it; Token and TagName would lower the tag's name in it.
+		raw := z.Raw()
+		switch {
+		case tt == xhtml.ErrorToken:
 			out.Write(raw)
 			return out.Bytes()
-		}
-		tok := z.Token()
-		if (tt == xhtml.StartTagToken || tt == xhtml.SelfClosingTagToken) && slices.Contains(headings, tok.DataAtom) {
-			// After "<h2", whatever the case of its letters.
-			raw = slices.Concat(raw[:3], []byte(attr(k)), raw[3:])
+		case (tt == xhtml.StartTagToken || tt == xhtml.SelfClosingTagToken) && headingTag(raw):
+			out.Write(raw[:3])
+			out.WriteString(attr(k))
+			out.Write(raw[3:])
 			k++
+		default:
+			out.Write(raw)
 		}
-		out.Write(raw)
 	}
+}
+
+// headingTag reports whether raw, a start tag as written, is a heading's: its name, which ends at a space,
+// a / or a >, is h1 to h6 in either case.
+func headingTag(raw []byte) bool {
+	return len(raw) > 3 && (raw[1] == 'h' || raw[1] == 'H') && raw[2] >= '1' && raw[2] <= '6' &&
+		bytes.IndexByte([]byte(" \t\n\f\r/>"), raw[3]) >= 0
 }
 
 // textOf returns the text in n, but that of a part (data-floe-part) and that of an element whose content
@@ -187,19 +196,24 @@ func (d *Data) checkAnchors(a pageAnchors, src []byte) error {
 // page: one at each item of d that writes it, else one at the template's page.html if src, its text,
 // writes it, else one at d's file, which a link the search misses is the data's all the same.
 func (d *Data) linkMistakes(written, decoded string, src []byte) []*usererr.Error {
+	key, args := "tmpl_anchor_none", []any{"#" + decoded}
+	if decoded == "ZgotmplZ" {
+		// html/template's word for a URL it found unsafe (javascript: and the like), drawn in its place.
+		key, args = "tmpl_anchor_unsafe", nil
+	}
 	var mistakes []*usererr.Error
 	for _, it := range d.linkItems {
 		if writes(it.text, written) {
-			mistakes = append(mistakes, itemError(d.File, it.pos, it.path, usererr.New("tmpl_anchor_none", "#"+decoded)))
+			mistakes = append(mistakes, itemError(d.File, it.pos, it.path, usererr.New(key, args...)))
 		}
 	}
 	switch {
 	case mistakes != nil:
 		return mistakes
 	case writes(string(src), written):
-		return []*usererr.Error{usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_anchor_none", "#"+decoded)}
+		return []*usererr.Error{usererr.NewAt(d.tmpl.file("page.html"), 0, 0, key, args...)}
 	}
-	return []*usererr.Error{usererr.NewAt(d.File, 0, 0, "tmpl_anchor_none", "#"+decoded)}
+	return []*usererr.Error{usererr.NewAt(d.File, 0, 0, key, args...)}
 }
 
 // writes reports whether text writes a link to the fragment frag: # and frag, as written or percent-decoded,

@@ -10,8 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Add ids to the headings of a page drawn from a data file, wherever they are
   written (a template's `page.html`, a part, Markdown, HTML of the data): the
-  text in lower case, keeping letters, numbers, `-` and `_`, each space made
-  `-`, and `-1`, `-2` for an id the page already has, so that
+  text in lower case, keeping letters, numbers, `-` and `_`, the spaces
+  between words made one `-`, and `-1`, `-2` for an id the page already has, so that
   `[…](#1-what-happens)` goes to its section. A link in the page that reaches
   no id is refused at the item that writes it.
 - Add a template's `words.yaml`, written as a part's: its `page.html` draws
