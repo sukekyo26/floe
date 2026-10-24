@@ -67,6 +67,7 @@ var messagesCLI = map[string]string{
 	"cli_dir_is_file":              "%s, %s, is not a directory; set %s to a directory",
 	"cli_dir_under_file":           "%s, %s, is under %s, which is not a directory; set %s to a directory",
 	"cli_relative_no_dir":          "the working directory cannot be read, so %s, the relative directory %s, means nothing; run floe from a directory that exists, or set it as an absolute path",
+	"cli_relative_no_cwd":          "the working directory cannot be read, so the relative path %s means nothing; run floe from a directory that exists, or give an absolute path",
 	"cli_tilde_no_home":            "%s is %s, whose ~ stands for a home, but HOME is not set; set HOME, or %s as an absolute path",
 	"cli_tilde_name":               "%s is %s: floe takes only ~ and ~/ at the start for your home, not ~name; write the path absolute, or ./%s for a directory of that name under the working directory",
 	"icons_unknown_set":            `unknown icon set "%s"; use %s`,

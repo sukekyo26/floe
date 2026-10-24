@@ -49,10 +49,14 @@ func TestDrawEveryStage(t *testing.T) {
 	}
 }
 
-// check checks the template at dir as Library.Check does in a run, without icons, and returns its warnings
-// and its mistakes one each, a failure as one.
+// check checks the template at dir as Library.Check does in a run, without icons, a relative dir under the
+// package's directory, and returns its warnings and its mistakes one each, a failure as one.
 func check(dir, parts, themes string) ([]*usererr.Error, []error) {
-	warnings, err := tmpl.NewLibrary("", parts, themes, "").Run().Check(dir)
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, []error{err}
+	}
+	warnings, err := tmpl.NewLibrary("", parts, themes, "").Run().Check(dir, cwd)
 	return warnings, mistakesOf(err)
 }
 
@@ -978,5 +982,16 @@ func TestCheckPageNames(t *testing.T) {
 			strings.Contains(got, "options, panel, progress") != want {
 			t.Errorf("Check of %s = %v, want panel among the names %v", page, mistakes, want)
 		}
+	}
+}
+
+// A relative dir without the cwd to read it under is floe's own mistake, not the process's working directory.
+func TestCheckRelativeWithoutCwd(t *testing.T) {
+	t.Parallel()
+
+	warnings, err := tmpl.NewLibrary("", "", "", "").Run().Check("memo", "")
+	var mistake *usererr.Error
+	if len(warnings) > 0 || err == nil || errors.As(err, &mistake) || !strings.Contains(err.Error(), `"memo" is relative`) {
+		t.Errorf("Check of a relative dir without a cwd = %v, %v, want floe's own failure alone", warnings, err)
 	}
 }

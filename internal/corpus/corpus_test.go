@@ -99,11 +99,6 @@ func runSample(t *testing.T, dir string) map[string][]byte {
 		s.renderTogether(t, data, each)
 	}
 	if templates := s.glob(t, "templates/*", isDir); len(templates) > 0 {
-		// LIMIT: absolute, as floe template check reads a relative dir from the process's working directory,
-		// not cli.Env.Dir (floe-usage-issues 58). Name them relative once it reads them from Env.Dir.
-		for i, dir := range templates {
-			templates[i] = filepath.Join(s.dir, dir)
-		}
 		s.run(t, false, append([]string{"template", "check"}, templates...)...)
 	}
 	if s.has(t, "parts") || s.has(t, "themes") {

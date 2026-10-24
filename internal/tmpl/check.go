@@ -3,6 +3,7 @@ package tmpl
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"maps"
@@ -21,11 +22,17 @@ import (
 // Check checks the template at dir as a template of the directory's name, whatever its example.yaml
 // names: its files, then its example.yaml through every stage of a publish, drawing included, with the
 // parts, themes and icons of l. The mistakes stop it from being drawn, and the warnings do not. In a run,
-// what every template it checks shares is read once, and its mistakes are the same for each.
-func (l *Library) Check(dir string) (warnings usererr.List, err error) {
-	abs, err := filepath.Abs(dir)
-	if err != nil {
-		return nil, usererr.CannotRead(dir, err)
+// what every template it checks shares is read once, and its mistakes are the same for each. A relative dir
+// is under cwd, as Read takes a file, and its mistakes name dir as it is written; a relative dir with cwd ""
+// is the caller's bug, which floe's own failure tells.
+func (l *Library) Check(dir, cwd string) (warnings usererr.List, err error) {
+	abs := filepath.Clean(dir)
+	if !filepath.IsAbs(abs) {
+		if cwd == "" {
+			//nolint:err113 // floe's own mistake: its callers give a cwd, or an absolute dir
+			return nil, fmt.Errorf("tmpl: the template %q is relative, with no cwd to read it under", dir)
+		}
+		abs = filepath.Join(cwd, dir)
 	}
 	name := filepath.Base(abs)
 	if !validName(name) {
