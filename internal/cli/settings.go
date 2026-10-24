@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -92,6 +93,17 @@ func (a *app) settle(cmd *cobra.Command) error {
 	}
 	a.tellWarnings(warned)
 	return nil
+}
+
+// withWarnings returns the mistakes of err with warned, for the command's exit to tell them in one list, or
+// tells warned alone when err holds none, returning it.
+func (a *app) withWarnings(warned usererr.List, err error) error {
+	all := slices.Clone(warned)
+	if failed := all.Add(err); failed != nil || err == nil {
+		a.tellWarnings(warned)
+		return err
+	}
+	return all.Err()
 }
 
 // tellWarnings prints warned to stderr, as every mistake is laid out, for the command to go on.

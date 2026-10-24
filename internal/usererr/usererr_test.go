@@ -49,7 +49,7 @@ func TestListAdd(t *testing.T) {
 	if err := (usererr.List{}).Err(); err != nil {
 		t.Errorf("Err of none = %v", err)
 	}
-	if got := l.Error(); got != "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\na.yaml:2:3: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)" {
+	if got := l.Error(); got != "a.yaml:2:3: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\nname the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)" {
 		t.Errorf("the list told = %q", got)
 	}
 	// Collect takes them as Add does, sorted, and returns a failure among them alone.
@@ -97,6 +97,10 @@ func TestTell(t *testing.T) {
 	conflict := usererr.New("tmpl_no_lang")
 	conflict.Conflict = true
 	over := func() *usererr.Error { return usererr.Over("p", usererr.List{placed}, "tmpl_part_broken", "p") }
+	// Standing for placed, as one with an Of does, but told whole each time it is not the same.
+	broken := func(name string) *usererr.Error {
+		return usererr.Over("", usererr.List{placed}, "tmpl_part_broken", name)
+	}
 	for _, tt := range []struct {
 		name        string
 		err         error
@@ -106,7 +110,20 @@ func TestTell(t *testing.T) {
 		{"one not at a place", usererr.New("tmpl_no_lang"), lang, "floe: " + lang, 400},
 		{"one at a place", placed, "a.yaml:1:2: " + lang, "a.yaml:1:2: " + lang, 400},
 		{"one at a pointer", usererr.NewIn("s.json", "#/a", "tmpl_no_lang"), "s.json: #/a: " + lang, "s.json: #/a: " + lang, 400},
-		{"a list of both", usererr.List{usererr.New("tmpl_no_lang"), placed}, lang + "\na.yaml:1:2: " + lang, "floe: " + lang + "\na.yaml:1:2: " + lang, 400},
+		{"a list of both", usererr.List{usererr.New("tmpl_no_lang"), placed}, "a.yaml:1:2: " + lang + "\n" + lang, "a.yaml:1:2: " + lang + "\nfloe: " + lang, 400},
+		{"the same twice", usererr.List{usererr.New("tmpl_no_lang"), placed, usererr.New("tmpl_no_lang")}, "a.yaml:1:2: " + lang + "\n" + lang, "a.yaml:1:2: " + lang + "\nfloe: " + lang, 400},
+		{"the same with what it stands for twice", usererr.List{broken("p"), broken("p")}, part, part, 400},
+		{"others standing for the same", usererr.List{broken("p"), broken("q")}, part + "\n" + strings.Replace(part, "part p", "part q", 1), part + "\n" + strings.Replace(part, "part p", "part q", 1), 400},
+		{
+			"one about a file, with its file's",
+			usererr.List{placed, usererr.About("b.json", "tmpl_no_lang"), usererr.NewIn("b.json", "#/a", "tmpl_no_lang")},
+			"a.yaml:1:2: " + lang + "\n" + lang + "\nb.json: #/a: " + lang, "a.yaml:1:2: " + lang + "\nfloe: " + lang + "\nb.json: #/a: " + lang, 400,
+		},
+		{
+			"one standing for them after one placed",
+			usererr.List{over(), over().Placed("s.json", 0, 0, "#/b")},
+			"s.json: #/b: " + part + "\nthe part p cannot be used, as told above", "s.json: #/b: " + part + "\nthe part p cannot be used, as told above", 400,
+		},
 		{"one standing for a placed one", usererr.List{over()}, part, part, 400},
 		{"its second time", usererr.List{over(), over()}, part + "\nthe part p cannot be used, as told above", part + "\nthe part p cannot be used, as told above", 400},
 		{"one in the words of another", usererr.New("tmpl_item", "x", over()), "x: " + part, "floe: x: " + part, 400},

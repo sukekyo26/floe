@@ -89,7 +89,7 @@ func Accept(file string, link bool, o Options) (Options, error) {
 	}
 	var found usererr.List
 	if !link && !IsDataFile(file) {
-		found = append(found, usererr.New("store_not_data", file))
+		found = append(found, usererr.About(file, "store_not_data", file))
 	}
 	// Made of the name of a data file only: a stored page is drawn from one.
 	if o.Slug == nil && !link && len(found) == 0 {

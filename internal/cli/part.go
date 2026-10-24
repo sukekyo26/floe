@@ -155,8 +155,7 @@ uses.`,
 		Args: usage(cobra.NoArgs),
 		RunE: func(*cobra.Command, []string) error {
 			warnings, err := tmpl.CheckOwnParts(a.cfg.parts, a.cfg.themes)
-			a.tellWarnings(warnings)
-			return err //nolint:wrapcheck // already says what failed
+			return a.withWarnings(warnings, err)
 		},
 	}
 }

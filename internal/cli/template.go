@@ -211,21 +211,12 @@ code 0. Nothing is printed when the templates are right.`,
 		Args: usage(cobra.MinimumNArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
 			var found, warned usererr.List
-			// A warning of the parts of one's own is told for every template: once is enough, and the
-			// mistakes of a part that several stand for are told under the first, as a List tells them.
-			told := map[string]bool{}
 			for _, dir := range a.namedFiles(args) {
 				warnings, err := tmpl.Check(dir, a.cfg.parts, a.cfg.themes, a.cfg.icons)
-				for _, w := range warnings {
-					if text := w.Error(); !told[text] {
-						told[text] = true
-						warned = append(warned, w)
-					}
-				}
+				warned = append(warned, warnings...)
 				tell(&found, err)
 			}
-			a.tellWarnings(warned)
-			return found.Err()
+			return a.withWarnings(warned, found.Err())
 		},
 	}
 }

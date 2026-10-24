@@ -25,11 +25,16 @@ type Error struct {
 	At       string // a JSON pointer in a schema, "" for none
 	Under    List   // the mistakes it stands for: those of a part that cannot be used
 	Of       string // what Under is the mistakes of, such as "part:quote", told once in a list
+	// Subject is the file a mistake at no place is about, its path in the text: it is sorted with the mistakes
+	// of that file, and is neither worded nor in Told.
+	Subject string
 }
 
 // New returns an *Error for the catalog message key with args, without a place.
 func New(key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: nil, Of: ""}
+	return &Error{
+		Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: nil, Of: "", Subject: "",
+	}
 }
 
 // NewAt returns an *Error for the catalog message key with args, at the line and column of file, 0 for
@@ -37,19 +42,32 @@ func New(key string, args ...any) *Error {
 func NewAt(file string, line, column int, key string, args ...any) *Error {
 	return &Error{
 		Key: key, Args: args, Conflict: false, File: file, Line: line, Column: column, At: "", Under: nil, Of: "",
+		Subject: "",
 	}
 }
 
 // NewIn returns an *Error for the catalog message key with args, at at, a JSON pointer, in file.
 func NewIn(file, at, key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, Conflict: false, File: file, Line: 0, Column: 0, At: at, Under: nil, Of: ""}
+	return &Error{
+		Key: key, Args: args, Conflict: false, File: file, Line: 0, Column: 0, At: at, Under: nil, Of: "", Subject: "",
+	}
+}
+
+// About returns an *Error for the catalog message key with args, about file, which args name, at no
+// place in it: told in the order of the files, without the path twice.
+func About(file, key string, args ...any) *Error {
+	e := New(key, args...)
+	e.Subject = file
+	return e
 }
 
 // Over returns an *Error for the catalog message key with args that stands for the mistakes under, those
 // of of, such as "part:quote": told under it, once in a list, where another that stands for them says
 // they are told above.
 func Over(of string, under List, key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: under, Of: of}
+	return &Error{
+		Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: under, Of: of, Subject: "",
+	}
 }
 
 // Placed returns e at the line and column of file, 0 for none, and at, "" for none, in place of any
@@ -102,7 +120,7 @@ func (e *Error) tell(c *i18n.Catalog, told map[string]bool) Told {
 // CannotRead is the refusal for a file the user named that cannot be read, with the reason (no such
 // file, permission denied) but not the path twice.
 func CannotRead(file string, err error) *Error {
-	return New("file_cannot_read", file, reason(err))
+	return About(file, "file_cannot_read", file, reason(err))
 }
 
 // CannotWrite is the refusal for a file floe cannot write where the user asked, with the reason: told by
@@ -180,17 +198,17 @@ func (l List) Err() error {
 	return l
 }
 
-// Sorted returns l with the mistakes of each file in the order of their lines and columns, the files in
-// the order they first come in l; those without a file come together where the first of them is.
+// Sorted returns l with the mistakes of each file, its File or else its Subject, in the order of their
+// lines and columns, the files in the order they first come in l, and those of no file after them all.
 func (l List) Sorted() List {
-	first := map[string]int{}
+	first := map[string]int{"": len(l)}
 	for _, e := range l {
-		if _, ok := first[e.File]; !ok {
-			first[e.File] = len(first)
+		if _, ok := first[e.file()]; !ok {
+			first[e.file()] = len(first)
 		}
 	}
 	slices.SortStableFunc(l, func(x, y *Error) int {
-		if d := first[x.File] - first[y.File]; d != 0 {
+		if d := first[x.file()] - first[y.file()]; d != 0 {
 			return d
 		}
 		if d := x.Line - y.Line; d != 0 {
@@ -199,6 +217,13 @@ func (l List) Sorted() List {
 		return x.Column - y.Column
 	})
 	return l
+}
+
+func (e *Error) file() string {
+	if e.File != "" {
+		return e.File
+	}
+	return e.Subject
 }
 
 // Error words the mistakes in English, one per line.

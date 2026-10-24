@@ -39,7 +39,7 @@ func Check(dir, partsDir, themesDir, iconsDir string) (warnings usererr.List, er
 		return nil, err
 	}
 	if t == nil {
-		return nil, usererr.New("tmpl_check_not_dir", dir)
+		return nil, usererr.About(dir, "tmpl_check_not_dir", dir)
 	}
 	t.Path = dir
 	// The floe a template needs comes before its mistakes, which another floe may not make.

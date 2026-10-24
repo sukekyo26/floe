@@ -31,10 +31,12 @@ type Report struct {
 	Failure  string `json:"failure,omitempty"`
 }
 
-// Tell words err in the language of c: its mistakes, as List.Add takes them, those of a part or a theme
-// that several stand for told under the first, or, for an error that is not the user's or holds no
-// mistake, floe's failure. An error that carries a report already told (the server's, to the command line)
-// is told as it is. It is the only place a mistake is worded.
+// Tell words err in the language of c: its mistakes, as List.Add takes them, or, for an error that is not
+// the user's or holds no mistake, floe's failure. An error that carries a report already told (the
+// server's, to the command line) is told as it is. It is the only place a mistake is worded, and the
+// mistakes of one output are told by one call: it sorts a copy of them first, then words each in that
+// order, so that those of a part or a theme that several stand for are told under the first sorted, and
+// leaves out a mistake worded as one before it, the mistakes under it too.
 func Tell(c *i18n.Catalog, err error) Report {
 	var reported interface{ Report() Report }
 	if errors.As(err, &reported) {
@@ -47,10 +49,15 @@ func Tell(c *i18n.Catalog, err error) Report {
 	if len(all) == 0 {
 		return Report{Mistakes: nil, Failure: fmt.Sprintf("%T with no mistake", err)}
 	}
-	told := map[string]bool{}
-	r := Report{Mistakes: make([]Told, len(all)), Failure: ""}
-	for i, e := range all {
-		r.Mistakes[i] = e.tell(c, told)
+	told, seen := map[string]bool{}, map[string]bool{}
+	r := Report{Mistakes: nil, Failure: ""}
+	for _, e := range slices.Clone(all).Sorted() {
+		t := e.tell(c, told)
+		// Laid out, with what it stands for, it is the same mistake.
+		if text := t.line(); !seen[text] {
+			seen[text] = true
+			r.Mistakes = append(r.Mistakes, t)
+		}
 	}
 	return r
 }

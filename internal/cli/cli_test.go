@@ -1094,3 +1094,45 @@ func TestSameMistakesThroughServer(t *testing.T) {
 		}
 	}
 }
+
+// The mistakes of one run are told as one list: the same mistake once, those at no place after the others,
+// and what a part that cannot be used stands for told whole once, warning or mistake.
+func TestMistakesToldOnce(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	icon := "template: report\nlang: en\ntitle: t\nsections:\n  - parts:\n      - diagram:\n          id: i\n          title: t\n" +
+		"          width: 100\n          height: 100\n          parts:\n            - icon: { x: 10, y: 10, name: aws/aws-lambda }\n"
+	e.write(t, "work/a.yaml", icon)
+	e.write(t, "work/b.yaml", icon)
+	e.write(t, "work/c.yaml", icon+"      - script: { js: 'x = 1 </script>' }\n")
+	const fetch = `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
+	notFetched := "floe: AWS icons are not in " + filepath.Join(e.tmp, "home", ".local", "share", "floe-icons", "aws") + fetch
+	if r := e.run(t, "work", "check", "a.yaml", "b.yaml"); r.stderr != notFetched+"\n" {
+		t.Errorf("check of two files that show icons not fetched = %q, want it once", r.stderr)
+	}
+	if r := e.run(t, "work", "check", "c.yaml"); r.stderr != "c.yaml:13:23: sections[0].parts[1].script.js: js holds </script, "+
+		"where the page would end its script; split it in a string, as '<' + '/script'\n"+notFetched+"\n" {
+		t.Errorf("check of a file with a mistake after its diagrams = %q, want icons not fetched last", r.stderr)
+	}
+
+	e.write(t, "parts/bad/schema.json", `{"type": "object", "properties": {"t": {"type": "string", "pattern": "(["}}}`)
+	e.write(t, "parts/bad/part.html", `<p data-floe-part="bad">{{.t}}</p>`)
+	e.write(t, "parts/bad/part.css", "")
+	e.write(t, "templates/memo/schema.json",
+		`{"type": "object", "additionalProperties": false, "properties": {"b": {"$ref": "floe:///parts/bad.json"}}}`)
+	e.write(t, "templates/memo/page.html", `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body></body></html>`)
+	e.write(t, "templates/memo/template.yaml", "floe: 0.0\n")
+	e.write(t, "templates/memo/example.yaml", "template: memo\nlang: en\ntitle: t\n")
+	memo := filepath.Join(e.tmp, "templates", "memo")
+	want(t, "template check of a template using a part that cannot be used", e.run(t, "", "template", "check", memo), 1, "",
+		memo+"/schema.json: #/properties/b: the part bad cannot be used\n"+
+			"  "+filepath.Join(e.tmp, "parts", "bad", "schema.json")+": #/properties/t/pattern: JSON Schema does not take this: "+
+			"'([' is not valid regex: error parsing regexp: missing closing ]: `[`\n"+
+			"the part bad cannot be used, as told above\n")
+	if r := e.run(t, "", "template", "check", memo); strings.Count(r.stderr, "is not valid regex") != 1 {
+		t.Errorf("template check = %q, want what the part stands for told once", r.stderr)
+	}
+}
