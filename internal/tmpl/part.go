@@ -744,6 +744,8 @@ func checkParts(set *partSet, whole drawnItems, d *Data, root ast.Node) error {
 			drawn, mistake = set.drawPart(f, d, root, holding, escaped)
 		case isText && f.format == "markdown" && set.broken[kindPart][markdownPart] != nil:
 			// page.html draws it; Markdown names no part but its tables'.
+			// LIMIT: a Markdown item page.html does not draw is checked all the same; check the drawn page's
+			// items if a template comes to leave one out.
 			pos, _ := itemPos(root, f.at, false)
 			if bad := set.drawnMisnamings(string(d.markdownHTML(text)), d.File, pos, nil); bad != nil {
 				drawn, mistake = false, bad
