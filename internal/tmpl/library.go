@@ -128,7 +128,8 @@ type reads struct {
 	version  readOnce[struct{}]
 	words    readOnce[words]
 	page     readOnce[parsedPage]
-	sheet    readOnce[*cssSheet] // page.css
+	sheet    readOnce[*cssSheet]  // page.css
+	file     readOnce[schemaFile] // schema.json, apart from the parts
 	shape    readOnce[schemaRead]
 	computed readOnce[*computed] // nil without computed.yaml
 	checks   readOnce[[]relation]
@@ -245,7 +246,11 @@ func (l *Library) lookUp(name string) (*Template, error) {
 	case err != nil:
 		return nil, fmt.Errorf("find the template %s: %w", name, err)
 	}
-	return l.template(name, "", ""), nil
+	t := l.template(name, "", "")
+	if err := t.floeFiles(); err != nil {
+		return nil, err
+	}
+	return t, nil
 }
 
 // own returns the template name of one's own, or nil without one. A file there is not a template, but
@@ -403,7 +408,7 @@ func (l *Library) usable(name string) (t *Template, why, failed error) {
 // unusable returns why t, one of one's own, cannot be used, whatever the data: the mistakes of its files as
 // a data file's check and drawing read them, apart from the data (its version, schema, checks, computed
 // values, words, page.html and page.css), each read once, or a failure; nil for a built-in one, whose
-// mistakes are floe's failures where they are met. floe template check tells them, and what it alone
+// mistakes are floe's failure when it is found (floeFiles). floe template check tells them, and what it alone
 // checks besides (checkFiles).
 func (t *Template) unusable() error {
 	if !t.isOwn() {
@@ -553,4 +558,33 @@ func versionOf(s string) (semver, bool) {
 		v[i] = n
 	}
 	return v, true
+}
+
+// floeFiles refuses t, a built-in template, whose files have mistakes of their own, as floe's failure: what
+// floe's files alone give, apart from the parts and themes of one's own its schema is bound to, which may
+// take the place of floe's (compileShape). computed.yaml reads the keys of the bound schema, which are of
+// floe's file alone while the root of a built-in template's schema names nothing (TestBuiltinTemplateRoot).
+func (t *Template) floeFiles() error {
+	_, fileErr := t.schemaFile()
+	_, checksErr := t.readChecks()
+	_, computedErr := t.readComputed()
+	_, wordsErr := t.words()
+	_, pageErr := t.page()
+	_, sheetErr := t.pageSheet()
+	err := usererr.Collect(fileErr, checksErr, computedErr, wordsErr, pageErr, sheetErr)
+	return floeFailure("read floe's template "+t.Name, err)
+}
+
+// floeFailure is err, the mistakes of reading floe's own files as what, as floe's failure, worded: wrapped,
+// they would still be found as mistakes (List.Add).
+// LIMIT: the mistakes after the first are on lines of their own, without floe's name, as the failure is told.
+func floeFailure(what string, err error) error {
+	var mistakes usererr.List
+	if failed := mistakes.Add(err); failed != nil {
+		return fmt.Errorf("%s: %w", what, failed)
+	}
+	if mistakes == nil {
+		return nil
+	}
+	return fmt.Errorf("%s: %s", what, mistakes.Error()) //nolint:err113,errorlint // worded, no longer mistakes
 }

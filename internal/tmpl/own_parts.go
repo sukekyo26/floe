@@ -344,7 +344,7 @@ func (set *partSet) readOwnPart(name, from, at string) bool {
 	replaces := floe != nil
 	set.drop(name)
 	if err == nil {
-		err = readIn(dir, func(files fs.FS) error { return set.readPart(files, name, at, true) })
+		err = readIn(dir, func(files fs.FS) error { return set.readPart(files, name, at) })
 	}
 	if err == nil && replaces && !floe.isLook() && set.parts[name].isLook() {
 		err = usererr.NewAt(at, 0, 0, "tmpl_look_replaces", name)

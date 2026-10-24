@@ -581,7 +581,7 @@ func (t *Template) page() (parsedPage, error) {
 		var parseErr, wordsErr, escapeErr error
 		if p.page, parseErr = t.parsePage(src, w); parseErr == nil {
 			wordsErr = t.pageWords(p.page, w)
-			escapeErr = escapeMistake(p.page, src, t.file("page.html"), t.isOwn())
+			escapeErr = escapeMistake(p.page, src, t.file("page.html"))
 		}
 		return p, usererr.Collect(t.refuseInPage(src), parseErr, wordsErr, escapeErr)
 	})
@@ -697,11 +697,12 @@ type schemaRead struct {
 // (refuseShared).
 func (t *Template) readSchema(set *partSet) (schemaRead, error) {
 	var read schemaRead
-	var err error
-	if read.doc, err = t.schemaDoc(); err != nil {
+	f, err := t.schemaFile()
+	if err != nil {
 		return read, err
 	}
-	if read.shape, read.notes, err = t.readShape(read.doc); err != nil {
+	read.doc = f.doc
+	if read.shape, read.notes, err = t.readShape(); err != nil {
 		return read, err
 	}
 	if read.refused, err = set.mistakes(read.notes); err != nil {
@@ -737,6 +738,25 @@ func (t *Template) readAndCompile(set *partSet) (schemaRead, error) {
 	return read, err
 }
 
+// schemaFile is the schema.json of a template read into its shape, not yet bound to the parts.
+type schemaFile struct {
+	doc   any
+	shape *shape
+	notes *schemaNotes
+}
+
+// schemaFile reads t's schema.json once into its shape, apart from the parts.
+func (t *Template) schemaFile() (schemaFile, error) {
+	return t.reads.file.of(func() (schemaFile, error) {
+		doc, err := t.schemaDoc()
+		if err != nil {
+			return schemaFile{doc: nil, shape: nil, notes: nil}, err
+		}
+		s, notes, err := readShape(doc, schemaURL(t.Name), t.file("schema.json"), "")
+		return schemaFile{doc: doc, shape: s, notes: notes}, err
+	})
+}
+
 // schemaDoc reads the schema.json of t as jsonschema reads it.
 func (t *Template) schemaDoc() (any, error) {
 	src, err := t.readFile("schema.json")
@@ -755,11 +775,12 @@ func (t *Template) schemaDoc() (any, error) {
 
 // readShape reads doc, the schema of t, into its shape, bound to floe's parts, and returns with it what
 // floe refuses of the schema, for the caller to refuse (partSet.mistakes).
-func (t *Template) readShape(doc any) (*shape, *schemaNotes, error) {
-	s, notes, err := readShape(doc, schemaURL(t.Name), t.file("schema.json"), "")
+func (t *Template) readShape() (*shape, *schemaNotes, error) {
+	f, err := t.schemaFile()
 	if err != nil {
 		return nil, nil, err
 	}
+	s, notes := f.shape, f.notes
 	notes.floeTemplate = !t.isOwn()
 	set, err := t.parts()
 	if err != nil {
