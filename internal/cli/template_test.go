@@ -380,6 +380,16 @@ func TestShowUnusablePart(t *testing.T) {
 	if !strings.Contains(r.stderr, "nots is not an item") || strings.Contains(r.stderr, "links") || strings.Contains(r.stderr, "note") {
 		t.Errorf("check of a misspelt item = %+v, want no links or note among those to use", r)
 	}
+	// Nor one that takes it as each item of a list of lists: the rows of a table hold cells.
+	e.write(t, "parts/cell/schema.json", `{"type": 1}`)
+	e.write(t, "parts/cell/part.html", `<div data-floe-part="cell"></div>`)
+	e.write(t, "parts/cell/part.css", "")
+	rows := e.write(t, "rows.yaml", "template: report\nlang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n"+
+		"      - table: { columns: [{title: A}], row: [[x]] }\n")
+	r = e.run(t, "", "check", rows)
+	if !strings.Contains(r.stderr, "row is not an item") || strings.Contains(r.stderr, "use columns, rows") {
+		t.Errorf("check of a misspelt row = %+v, want no rows among those to use", r)
+	}
 }
 
 // A table of Markdown takes the look of the table part: with a table of one's own that cannot be used,

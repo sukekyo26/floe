@@ -643,15 +643,17 @@ func wording(k jsonschema.ErrorKind) (key string, args []any, ok bool) {
 var english = message.NewPrinter(language.English)
 
 // takesUnusable reports whether item, an item of the schema at base, takes a part that cannot be used, by
-// a $ref that stands as false (brokenNamed).
+// a $ref that stands as false (brokenNamed), itself or as each item of its list, of a list of lists too.
 func (s *schemaCheck) takesUnusable(base string, item any) bool {
 	m, isMap := item.(map[string]any)
-	ref, isRef := m["$ref"].(string)
-	if !isMap || !isRef {
+	if !isMap {
 		return false
 	}
-	name, whole := partName(absolute(base, ref))
-	return whole && s.set.brokenNamed(name)
+	if ref, isRef := m["$ref"].(string); isRef {
+		name, whole := partName(absolute(base, ref))
+		return whole && s.set.brokenNamed(name)
+	}
+	return s.takesUnusable(base, m["items"])
 }
 
 // unknown reports the items of the mapping at e that the template does not have, each at its key
