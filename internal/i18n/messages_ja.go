@@ -29,13 +29,8 @@ var messagesJA = map[string]string{
 	"store_not_data":      "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
 	"store_theme_link":    "--theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
 	"store_no_page":       "ページ「%s」はありません（floe list で確かめられます）",
-
-	// server
-	"api_not_json":      "送られた内容を読めませんでした（JSON ではありません）",
-	"api_not_object":    "送られた内容を読めませんでした（JSON のオブジェクトで送ってください）",
-	"api_link_path":     "HTML かデータファイルの絶対パス（/ で始まるパス）を入力してください",
-	"api_edit_strings":  "タイトル・説明・プロジェクト・URL 名は文字列で送ってください",
-	"api_favorite_bool": "お気に入りは true か false で送ってください",
+	"store_link_relative": "%s は絶対パスではありません。HTML かデータファイルの、/ で始まるパスにしてください",
+	"store_link_empty":    "リンクする HTML かデータファイルの絶対パスを書いてください",
 
 	// ui
 	"ui_back_to_list":         "一覧へ戻る",
@@ -114,7 +109,7 @@ var messagesJA = map[string]string{
 	"ui_save":                 "保存",
 	"ui_saved":                "保存しました",
 	"ui_save_failed":          "保存できませんでした: %s",
-	"ui_http_error":           "%s（HTTP %d）",
+	"ui_http_error":           "HTTP %[2]d: %[1]s",
 	"ui_just_now":             "たった今",
 	"ui_created_at":           "作成 %s",
 	"ui_registered_at":        "登録 %s",

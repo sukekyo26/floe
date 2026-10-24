@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing/fstest"
@@ -47,7 +46,7 @@ func (s *Server) readBody(w http.ResponseWriter, r *http.Request, limit int64) (
 		return nil, false
 	}
 	if err != nil || !json.Valid(body) {
-		send(w, http.StatusBadRequest, catalog(r).Msg("api_not_json"))
+		send(w, http.StatusBadRequest, "cannot read the request: it is not JSON")
 		return nil, false
 	}
 	return body, true
@@ -62,7 +61,7 @@ func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]jso
 	// Anything but an object (a number, a string, an array, null) is a mistake, not an empty change.
 	var input map[string]json.RawMessage
 	if json.Unmarshal(body, &input) != nil || input == nil {
-		send(w, http.StatusBadRequest, catalog(r).Msg("api_not_object"))
+		send(w, http.StatusBadRequest, "cannot read the request: send a JSON object")
 		return nil
 	}
 	return input
@@ -74,7 +73,7 @@ func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]jso
 func refuse(w http.ResponseWriter, r *http.Request, err error) {
 	report := usererr.Tell(catalog(r), err)
 	if !strings.Contains(r.Header.Get("Accept"), "application/json") {
-		send(w, report.Status(), report.Render(""))
+		sendBytes(w, report.Status(), textType, []byte(report.Render("")))
 		return
 	}
 	sendJSON(w, report.Status(), report)
@@ -107,16 +106,14 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	if !decodeStrict(w, body, &in) {
 		return
 	}
-	// The path as sent: a file name may start or end with a space.
-	if !filepath.IsAbs(in.Path) {
-		send(w, http.StatusBadRequest, catalog(r).Msg("api_link_path"))
-		return
-	}
 	opts := store.Options{
 		Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme,
 		Force: in.Force,
 	}
-	entry, err := s.cfg.Store.PrepareLink(r.Context(), in.Path, opts, filepath.Dir(in.Path))
+	// The path as sent: the CLI sends it as given, where a file name may start or end with a space (the
+	// management page trims it). There is no directory to read a relative one in, which PrepareLink refuses
+	// with the other mistakes.
+	entry, err := s.cfg.Store.PrepareLink(r.Context(), in.Path, opts, "")
 	if err != nil {
 		refuse(w, r, err)
 		return
@@ -134,7 +131,9 @@ func decodeStrict(w http.ResponseWriter, body []byte, v any) bool {
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
-		send(w, http.StatusBadRequest, "cannot read the request: "+err.Error())
+		// What encoding/json could not read: neither the management page nor the CLI sends such JSON.
+		// LIMIT: in encoding/json's English, as the protocol's refusals are. Word it if a reader comes to see it.
+		send(w, http.StatusBadRequest, protocolText("cannot read the request: "+err.Error()))
 		return false
 	}
 	return true
@@ -286,13 +285,13 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 	if !stringFields(input, map[string]**string{
 		"title": &ed.Title, "description": &ed.Description, "project": &ed.Project, "slug": &ed.Slug,
 	}) {
-		send(w, http.StatusBadRequest, catalog(r).Msg("api_edit_strings"))
+		send(w, http.StatusBadRequest, "send the title, description, project and slug as strings")
 		return
 	}
 	if raw, ok := input["favorite"]; ok {
 		v, isBool := decode[bool](raw)
 		if !isBool {
-			send(w, http.StatusBadRequest, catalog(r).Msg("api_favorite_bool"))
+			send(w, http.StatusBadRequest, "send favorite as true or false")
 			return
 		}
 		ed.Favorite = &v
@@ -324,7 +323,7 @@ func (s *Server) remove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		send(w, http.StatusInternalServerError, err.Error())
+		refuse(w, r, err)
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")

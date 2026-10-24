@@ -101,8 +101,17 @@ func cleanPath(p string) string {
 	return clean
 }
 
-func send(w http.ResponseWriter, status int, body string) {
-	sendBytes(w, status, "text/plain; charset=utf-8", []byte(body))
+// protocolText is the text of a refusal of the protocol, fixed and in plain English (forbidden origin, not
+// found), which neither the management page nor the CLI sends when right. The user's mistakes and floe's
+// failures go through refuse instead: a text made at run time takes a conversion to be sent with send.
+type protocolText string
+
+const textType = "text/plain; charset=utf-8"
+
+// send answers body as text: a refusal of the protocol, or an empty body. It is the one way in for a refusal
+// as text; refuse and sendJSON's failure write theirs with sendBytes.
+func send(w http.ResponseWriter, status int, body protocolText) {
+	sendBytes(w, status, textType, []byte(body))
 }
 
 func sendBytes(w http.ResponseWriter, status int, contentType string, body []byte) {
@@ -116,7 +125,8 @@ func sendBytes(w http.ResponseWriter, status int, contentType string, body []byt
 func sendJSON(w http.ResponseWriter, status int, v any) {
 	b, err := json.Marshal(v)
 	if err != nil {
-		send(w, http.StatusInternalServerError, err.Error())
+		// Not through refuse, which answers with sendJSON.
+		sendBytes(w, http.StatusInternalServerError, textType, []byte(err.Error()))
 		return
 	}
 	sendBytes(w, status, "application/json", b)
@@ -134,7 +144,7 @@ func (*Server) serveUI(w http.ResponseWriter, r *http.Request) {
 func sendUI(w http.ResponseWriter, r *http.Request, status int) {
 	page, err := ui.Page(catalog(r))
 	if err != nil {
-		send(w, http.StatusInternalServerError, err.Error())
+		refuse(w, r, err)
 		return
 	}
 	w.Header().Set("Content-Security-Policy", uiCSP)
@@ -168,10 +178,10 @@ type Health struct {
 	Icons     string `json:"icons"`
 }
 
-func (s *Server) list(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 	list, err := s.cfg.Store.List()
 	if err != nil {
-		send(w, http.StatusInternalServerError, err.Error())
+		refuse(w, r, err)
 		return
 	}
 	sendJSON(w, http.StatusOK, list)

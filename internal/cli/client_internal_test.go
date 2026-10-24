@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/server"
+	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/tmpl"
 )
 
 // A publish of a data file larger than the server takes is told so with the limit, whether the server
@@ -55,6 +58,28 @@ func TestTooLarge(t *testing.T) {
 	unsent := client{base: "http://127.0.0.1:1"}.do(t.Context(), http.MethodPut, "/api/artifacts/p", large, nil)
 	if err := tooLarge(unsent); err == nil || !strings.Contains(err.Error(), "32 MiB") {
 		t.Errorf("a publish over the limit = %v, want the limit told before it is sent", err)
+	}
+}
+
+// The server's refusal of the user's mistake comes as its report, the mistake, not floe's failure.
+func TestRefusedAsMistake(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewUnstartedServer(nil)
+	addr, ok := srv.Listener.Addr().(*net.TCPAddr)
+	if !ok {
+		t.Fatalf("listener address %v", srv.Listener.Addr())
+	}
+	tmp := t.TempDir()
+	st := store.New(filepath.Join(tmp, "store"), tmp, tmpl.NewLibrary(filepath.Join(tmp, "templates"), filepath.Join(tmp, "parts"), "", ""))
+	srv.Config.Handler = server.New(server.Config{Store: st, Port: addr.Port, Build: "b"}).Handler()
+	srv.Start()
+	t.Cleanup(srv.Close)
+	refused := client{base: srv.URL}.do(t.Context(), http.MethodPost, "/api/artifacts", server.Link{Path: "rel.html"}, nil)
+	re, ok := errors.AsType[*remoteError](refused)
+	if !ok || re.status != http.StatusBadRequest || re.report.Failure != "" || len(re.report.Mistakes) != 1 ||
+		re.Error() != "rel.html is not an absolute path: give the path of an HTML or data file starting with /" {
+		t.Errorf("a relative path to link = %#v, want the user's mistake", refused)
 	}
 }
 

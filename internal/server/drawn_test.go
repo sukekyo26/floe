@@ -84,7 +84,7 @@ func TestDrawnLink(t *testing.T) {
 	if l := e.get(t, "/api/artifacts"); strings.Contains(l.body, `"missing":true`) {
 		t.Errorf("a data file with mistakes is listed as missing: %s", l.body)
 	}
-	if d := e.get(t, "/api/artifacts/sizes/download", "Accept-Language", "ja"); d.status != http.StatusConflict ||
+	if d := e.get(t, "/api/artifacts/sizes/download", "Accept-Language", "ja"); d.status != http.StatusBadRequest ||
 		!strings.Contains(d.body, "sizes.yaml:3:26: files[0].bytes: 文字列ではなく整数で書いてください") {
 		t.Errorf("the download of a data file with mistakes = %d %s", d.status, d.body)
 	}
