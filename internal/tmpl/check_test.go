@@ -27,7 +27,7 @@ func TestDrawEveryStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	l := tmpl.NewLibrary("testdata", "", "", "")
-	d, err := l.Read(file, src, "", "")
+	d, err := l.Read(file, src, "", cwd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,18 +44,24 @@ func TestDrawEveryStage(t *testing.T) {
 		}
 	}
 	twice := strings.Replace(string(src), "b.png", "a.txt", 1)
-	if _, err := l.Read(file, []byte(twice), "", ""); err == nil || !strings.Contains(err.Error(), file+":8:11: files[1].name: give each file its own name") {
+	if _, err := l.Read(file, []byte(twice), "", cwd); err == nil || !strings.Contains(err.Error(), file+":8:11: files[1].name: give each file its own name") {
 		t.Errorf("a check that fails = %v", err)
 	}
 }
 
-// check checks the template at dir as Library.Check does in a run, without icons, a relative dir under the
-// package's directory, and returns its warnings and its mistakes one each, a failure as one.
-func check(dir, parts, themes string) ([]*usererr.Error, []error) {
-	cwd, err := os.Getwd()
+// cwd is the package's directory, the tests' working directory: what a relative file or template of theirs is
+// under, as a command's is under the working directory it is given.
+var cwd = func() string {
+	dir, err := os.Getwd()
 	if err != nil {
-		return nil, []error{err}
+		panic(err)
 	}
+	return dir
+}()
+
+// check checks the template at dir as Library.Check does in a run, without icons, a relative dir under cwd,
+// and returns its warnings and its mistakes one each, a failure as one.
+func check(dir, parts, themes string) ([]*usererr.Error, []error) {
 	warnings, err := tmpl.NewLibrary("", parts, themes, "").Run().Check(dir, cwd)
 	return warnings, mistakesOf(err)
 }
@@ -731,7 +737,7 @@ func TestRenderBadAsset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, src, "", "")
+	d, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, src, "", cwd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -760,7 +766,7 @@ func TestTemplateWords(t *testing.T) {
 	l := tmpl.NewLibrary(filepath.Dir(dir), "", "", "")
 	for lang, want := range map[string]string{"en": "2,049,536 total, 1 of them", "ja": "2,049,536 合計, 1 of them", "fr": "2,049,536 total, 1 of them"} {
 		src := strings.Replace(mustRead(t, file), "lang: en", "lang: "+lang, 1)
-		d, err := l.Read(file, []byte(src), "", "")
+		d, err := l.Read(file, []byte(src), "", cwd)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -788,7 +794,7 @@ func TestTemplateWords(t *testing.T) {
 
 	dir = sizes(t, map[string]string{"words.yaml": words, "page.html": "</body>|{{word (index .Data.files 0).name}}</body>"})
 	file = filepath.Join(dir, "example.yaml")
-	d, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(mustRead(t, file)), "", "")
+	d, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(mustRead(t, file)), "", cwd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -864,7 +870,7 @@ func TestSchemaOfSharedKeys(t *testing.T) {
 		`"required": ["files"]`, `"required": ["files", "lang"]`, 1)), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), "", "")
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read("d.yaml", []byte("template: sizes\nlang: en\nfiles: []\n"), "", cwd)
 	if err == nil || !strings.Contains(err.Error(), "sizes/schema.json: schema.json declares or requires lang, title, which floe reads") {
 		t.Errorf("Read with a template whose schema declares lang and title = %v", err)
 	}
@@ -933,7 +939,7 @@ func TestReadTellsEverySchemaMistake(t *testing.T) {
 		"schema.json": `"chart":|"title": { "type": "string" }, "x": { "$ref": "floe:///parts/nope.json" },` + "\n    " + `"chart":`,
 	})
 	file := filepath.Join(dir, "example.yaml")
-	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(mustRead(t, file)), "", "")
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(mustRead(t, file)), "", cwd)
 	got := reasonsOf(err)
 	if len(got) != 2 || !strings.Contains(fmt.Sprint(got), "/properties/x: ") || !strings.Contains(fmt.Sprint(got), "requires title") {
 		t.Errorf("Read = %v, want the $ref and title told why the template cannot be used", err)
@@ -949,7 +955,7 @@ func TestReadTellsSharedKeyAndCompileMistake(t *testing.T) {
 		"schema.json": `"properties": {|"properties": { "title": { "type": "string" }, "code": { "pattern": "([" },`,
 	})
 	file := filepath.Join(dir, "example.yaml")
-	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(mustRead(t, file)), "", "")
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(mustRead(t, file)), "", cwd)
 	got := fmt.Sprint(reasonsOf(err))
 	if len(reasonsOf(err)) != 2 || !strings.Contains(got, "requires title") || !strings.Contains(got, "#/properties/code/pattern: ") {
 		t.Errorf("Read = %v, want title and the pattern told why the template cannot be used", err)
@@ -964,7 +970,7 @@ func TestReadTellsCompileMistakeAtTemplate(t *testing.T) {
 	dir := sizes(t, map[string]string{"schema.json": `"properties": {|"properties": { "code": { "pattern": "([" },`})
 	file := filepath.Join(dir, "example.yaml")
 	src := strings.Replace(mustRead(t, file), "lang: en", "lang: 1", 1)
-	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(src), "", "")
+	_, err := tmpl.NewLibrary(filepath.Dir(dir), "", "", "").Read(file, []byte(src), "", cwd)
 	got := mistakesOf(err)
 	if len(got) != 2 || !strings.HasPrefix(got[0].Error(), file+":1:11: your own template sizes cannot be used\n") ||
 		!strings.Contains(got[0].Error(), "#/properties/code/pattern: ") || !strings.Contains(got[1].Error(), "lang must be text") {

@@ -35,7 +35,7 @@ func own(t *testing.T, dir, name string) string {
 }
 
 func draw(l *tmpl.Library, src string) (string, error) {
-	d, err := l.Read("data.yaml", []byte(src), "", "")
+	d, err := l.Read("data.yaml", []byte(src), "", cwd)
 	if err != nil {
 		return "", err
 	}
@@ -269,7 +269,7 @@ func TestTemplateMistakesOnce(t *testing.T) {
 		var all usererr.List
 		var first string
 		for _, file := range []string{"a.yaml", "b.yaml"} {
-			d, err := l.Read(file, []byte("template: memo\nlang: en\ntitle: t\n"+tt.data), "", "")
+			d, err := l.Read(file, []byte("template: memo\nlang: en\ntitle: t\n"+tt.data), "", cwd)
 			if err == nil {
 				_, err = d.Render("t")
 			}

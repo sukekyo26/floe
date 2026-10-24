@@ -690,7 +690,7 @@ func TestOwnPartsThemes(t *testing.T) {
 	}
 	// A theme given over the data's gives both too, the data's left unread.
 	read := func(src, given string) string {
-		d, rerr := l.Read("data.yaml", []byte(src), given, "")
+		d, rerr := l.Read("data.yaml", []byte(src), given, cwd)
 		if rerr != nil {
 			t.Fatal(rerr)
 		}

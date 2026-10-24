@@ -27,6 +27,7 @@ import (
 	"github.com/yuin/goldmark/util"
 
 	"github.com/sukekyo26/floe/internal/diagram"
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -88,7 +89,8 @@ var shared = []string{"lang", "template", "theme", "title"}
 //
 // theme, when not "", is drawn with instead of the one the data names: the data's theme: is then not
 // used, and a theme that does not exist is refused as a *usererr.Error, as is a template that needs
-// another floe. A relative file is under cwd.
+// another floe. A relative file is under cwd; a relative file with cwd "" is the caller's bug, which floe's
+// own failure tells.
 func (l *Library) Read(file string, src []byte, theme, cwd string) (*Data, error) {
 	d, _, err := l.ReadSources(file, src, theme, cwd)
 	return d, err
@@ -117,11 +119,13 @@ func (s *Sources) watch(t *Template) {
 	}
 }
 
-// ReadSources reads the data file src as Read does, and returns its Sources too.
+// ReadSources reads the data file src as Read does, a relative file with cwd "" the caller's bug as there,
+// and returns its Sources too.
 func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data, Sources, error) {
-	dir := filepath.Dir(file)
-	if !filepath.IsAbs(dir) {
-		dir = filepath.Join(cwd, dir)
+	dir, ok := dirs.Under(cwd, filepath.Dir(file))
+	if !ok {
+		//nolint:err113 // floe's own mistake: the CLI refuses a relative file under no working directory first
+		return nil, Sources{}, fmt.Errorf("tmpl: the data file %q is relative, with no cwd to read it under", file)
 	}
 	d, sources, err := l.readWith(file, src, diskImages(dir), theme)
 	sources.ImagesDir = dir

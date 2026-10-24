@@ -14,8 +14,11 @@ var separatorRe = regexp.MustCompile(`[/:]`)
 // Name returns the project of dir: the repository name in origin's URL (https, scp-like or a path), so
 // that a clone under another name agrees; else the directory of the repository, reached through the
 // common .git so that a worktree joins its main checkout; else the name of dir itself. The root
-// directory has no name and gives "".
+// directory has no name and gives "", as does none: "", which git would read as the process's working directory.
 func Name(ctx context.Context, dir string) string {
+	if dir == "" {
+		return ""
+	}
 	if url, err := git(ctx, dir, "remote", "get-url", "origin"); err == nil {
 		parts := separatorRe.Split(strings.TrimRight(url, "/"), -1)
 		if name := strings.TrimSuffix(parts[len(parts)-1], ".git"); name != "" {

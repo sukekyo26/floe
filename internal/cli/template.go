@@ -2,7 +2,6 @@ package cli
 
 import (
 	"cmp"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -217,14 +216,18 @@ code 0. Nothing is printed when the templates are right.`,
 			// One list, each template's warnings and mistakes in the order given, told once.
 			var all usererr.List
 			failed := false
-			for _, dir := range a.namedFiles(args) {
-				// A working directory that cannot be read (main's Getwd failed) is "": tmpl takes it for none.
+			// "" is the working directory, as filepath.Abs took it, and under none it is refused; its name
+			// stays "". LIMIT: what "" names is for floe-usage-issues 62 to decide.
+			given := make([]arg, len(args))
+			for i, dir := range args {
+				given[i] = a.arg(cmp.Or(dir, "."))
+				given[i].name = dir
+			}
+			for _, p := range once(given) {
 				var warnings usererr.List
-				var err error
-				if a.env.Dir == "" && !filepath.IsAbs(dir) {
-					err = usererr.New("cli_relative_no_cwd", dir)
-				} else {
-					warnings, err = a.templates().Check(dir, a.env.Dir)
+				err := p.err
+				if err == nil {
+					warnings, err = a.templates().Check(p.name, a.env.Dir)
 				}
 				all = append(all, warnings...)
 				told := len(all)

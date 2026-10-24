@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/daemon"
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -27,6 +28,9 @@ type config struct {
 	parts     string // the parts of one's own; empty when there is nowhere to put them
 	themes    string // the themes of one's own; empty when there is nowhere to put them
 	home      string
+	// homeWrong is why HOME, set, gives no home (relative under no working directory): the wrong of HOME and of
+	// each setting made of it.
+	homeWrong *usererr.Error
 	port      int
 	wrong     map[setting]*usererr.Error
 	absent    map[setting]*usererr.Error
@@ -48,9 +52,16 @@ func (c *config) base() string {
 // command does.
 func loadConfig(getenv func(string) string, dir string) *config {
 	c := &config{
-		root: "", icons: "", templates: "", parts: "", themes: "", home: getenv("HOME"), port: defaultPort,
+		root: "", icons: "", templates: "", parts: "", themes: "", home: "", homeWrong: nil, port: defaultPort,
 		wrong: map[setting]*usererr.Error{}, absent: map[setting]*usererr.Error{}, heldBy: map[setting]string{},
 	}
+	// A relative HOME is under the working directory, as a shell reads it, for every directory made of it.
+	home, ok := dirs.Under(dir, getenv("HOME"))
+	if !ok {
+		c.homeWrong = usererr.New("cli_relative_no_dir", "HOME", getenv("HOME"))
+		c.wrong[homeSetting] = c.homeWrong
+	}
+	c.home = home
 	if raw := getenv("FLOE_PORT"); raw != "" {
 		// Decimal only: hex (0x10) and exponents (1e3) are typos, not ports.
 		port, err := strconv.Atoi(raw)
@@ -83,7 +94,7 @@ func (c *config) readDirs(getenv func(string) string, dir string) {
 		{themesSetting, "XDG_CONFIG_HOME", conf, filepath.Join("floe", "themes"), &c.themes},
 	} {
 		key := dirKeys[d.s]
-		v, mistake := floeDir(getenv, key, c.home, dir)
+		v, mistake := floeDir(getenv, key, c.home, c.homeWrong, dir)
 		switch {
 		case mistake != nil:
 			c.wrong[d.s] = mistake
@@ -101,6 +112,9 @@ func (c *config) readDirs(getenv func(string) string, dir string) {
 			} else {
 				*d.to = v
 			}
+		case c.homeWrong != nil:
+			// Made of a HOME that gives none: wrong to every command that uses it, read or needed, as a ~ in it is.
+			c.wrong[d.s] = c.homeWrong
 		default:
 			c.absent[d.s] = usererr.New("cli_no_default", key, key)
 		}
@@ -146,23 +160,27 @@ func notDir(dir string) string {
 // ~name (the home of name, to a shell), a ~ without a home and a relative one without dir are refused.
 // LIMIT: ~name is refused, not looked up: os/user without cgo reads /etc/passwd alone on linux, which misses
 // the users of NSS (LDAP, SSSD); look it up if one comes to need ~name, and refuse a name it cannot find.
-func floeDir(getenv func(string) string, key, home, dir string) (string, *usererr.Error) {
+func floeDir(
+	getenv func(string) string, key, home string, homeWrong *usererr.Error, dir string,
+) (string, *usererr.Error) {
 	v := getenv(key)
 	switch {
 	case v == "":
 		return "", nil
+	case ofHome(v) && homeWrong != nil:
+		return "", homeWrong
 	case ofHome(v) && home == "":
 		return "", usererr.New("cli_tilde_no_home", key, v, key)
 	case ofHome(v):
 		return filepath.Join(home, v[1:]), nil
 	case strings.HasPrefix(v, "~"):
 		return "", usererr.New("cli_tilde_name", key, v, v)
-	case filepath.IsAbs(v):
-		return filepath.Clean(v), nil
-	case dir == "":
+	}
+	abs, ok := dirs.Under(dir, v)
+	if !ok {
 		return "", usererr.New("cli_relative_no_dir", key, v)
 	}
-	return filepath.Join(dir, v), nil
+	return abs, nil
 }
 
 // xdgDir reads the XDG base directory key, a ~ or ~/ at its start standing for home, else the default

@@ -283,8 +283,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   starting it when needed, as `floe publish` does. The server keeps running
   until `floe stop`.
   They are configured with `FLOE_DIR` and `FLOE_PORT` (default 7325). A
-  relative `FLOE_DIR`, `FLOE_ICONS_DIR` or `FLOE_TEMPLATES_DIR` is under the
-  working directory, and a `~` or `~/` at its start stands for `HOME`
+  relative path a command is given, and a relative `FLOE_DIR`,
+  `FLOE_ICONS_DIR`, `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`,
+  `FLOE_THEMES_DIR` or `HOME`, is under the working directory, and is
+  refused, saying so, when the working directory cannot be read (it was
+  removed); a `~` or `~/` at the start of a setting stands for `HOME`
   (`~name` is refused). The defaults are under `XDG_DATA_HOME` and
   `XDG_CONFIG_HOME`, whose `~` stands for `HOME` too; a relative one of
   those is ignored, as the XDG spec says. A command is told of the settings

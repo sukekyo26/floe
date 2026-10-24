@@ -15,6 +15,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/link"
 	"github.com/sukekyo26/floe/internal/project"
 	"github.com/sukekyo26/floe/internal/tmpl"
@@ -28,12 +29,13 @@ var (
 )
 
 // SlugFromFile derives a slug from a file name. index.html does not name anything, so it takes the
-// name of its directory instead; a relative file is resolved against cwd.
+// name of its directory instead; a relative file is resolved against cwd, and with no cwd ("") named by its
+// path as it is written: a data file, which Accept names so, is no index.html.
 func SlugFromFile(file, cwd string) string {
 	name := filepath.Base(file)
 	if indexRe.MatchString(name) {
-		if !filepath.IsAbs(file) {
-			file = filepath.Join(cwd, file)
+		if abs, ok := dirs.Under(cwd, file); ok {
+			file = abs
 		}
 		name = filepath.Base(filepath.Dir(filepath.Clean(file)))
 	} else {
@@ -167,9 +169,10 @@ func (e *NeedImages) Error() string {
 // names the project the page belongs to. Its images are left out, to be read when asked for. The caller
 // checks first that file is a data file (IsDataFile).
 func ReadUpload(ctx context.Context, file, cwd string) (Upload, error) {
-	abs := file
-	if !filepath.IsAbs(abs) {
-		abs = filepath.Join(cwd, abs)
+	abs, ok := dirs.Under(cwd, file)
+	if !ok {
+		//nolint:err113 // floe's own mistake: the CLI refuses a relative file under no working directory first
+		return Upload{}, fmt.Errorf("store.ReadUpload: the file %q is relative, with no cwd to read it under", file)
 	}
 	src, err := os.ReadFile(abs) //nolint:gosec // G304: publishing the user's file is the point
 	if err != nil {
@@ -312,15 +315,13 @@ func (e *Entry) draw(data *tmpl.Data, src string) error {
 // file, whatever the name of a symlink to it says: HTML is shown as it is, in its own look, so it takes
 // no theme. A theme given empty is Accept's mistake alone, not this one too.
 func (s *Store) readLink(file string, opts Options, cwd string) (string, []byte, error) {
-	abs := file
 	if file == "" {
 		return "", nil, usererr.New("store_link_empty")
 	}
-	if !filepath.IsAbs(abs) {
-		if cwd == "" {
-			return "", nil, usererr.New("store_link_relative", file)
-		}
-		abs = filepath.Join(cwd, abs)
+	// The API gives no cwd: a relative link from it is the sender's mistake.
+	abs, ok := dirs.Under(cwd, file)
+	if !ok {
+		return "", nil, usererr.New("store_link_relative", file)
 	}
 	path, err := filepath.EvalSymlinks(abs)
 	if err != nil {
