@@ -29,6 +29,9 @@ type relation struct {
 	floes bool                   // of floe's template or part: its failing to run is floe's failure, not a mistake
 }
 
+// errNoList is floe's own check whose for leads to no list in data its schema took.
+var errNoList = errors.New("does not lead to a list")
+
 // scope is what the expression of a check sees.
 type scope struct {
 	Item any            `expr:"item"`
@@ -36,13 +39,10 @@ type scope struct {
 }
 
 // checkRelations checks the values of d against its template's checks.yaml, if it has one, and reports
-// every failure at its line and column under root.
+// every failure at its line and column under root, with the mistakes of checks.yaml itself.
 func checkRelations(t *Template, d *Data, root ast.Node) error {
 	list, err := t.readChecks()
-	if err != nil {
-		return err
-	}
-	return relate(list, d, root, t.isOwn())
+	return usererr.Collect(err, relate(list, d, root, t.isOwn()))
 }
 
 // readChecks reads t's checks.yaml once, none without one, as readChecks reads it.
@@ -58,22 +58,33 @@ func (t *Template) readChecks() ([]relation, error) {
 
 // relate checks the values of d against the checks list, of a template of one's own when own.
 func relate(list []relation, d *Data, root ast.Node, own bool) error {
-	var problems usererr.List
-	for _, c := range list {
-		c.floes = !own
-		more, err := c.check(d.File, itemAt{value: d.Values, at: nil}, d.shape, root)
-		if err != nil {
-			return err
-		}
-		problems = append(problems, more...)
+	problems, err := checkAll(list, d.File, itemAt{value: d.Values, at: nil}, d.shape, root, own)
+	if err != nil {
+		return err
 	}
 	return problems.Sorted().Err()
 }
 
+// checkAll runs each of list, of one's own when own, on whole, of the shape sh, in the values of file:
+// their mistakes, and floe's failure.
+func checkAll(list []relation, file string, whole itemAt, sh *shape, root ast.Node, own bool) (usererr.List, error) {
+	var problems usererr.List
+	for _, c := range list {
+		c.floes = !own
+		more, err := c.check(file, whole, sh, root)
+		if err != nil {
+			return nil, err
+		}
+		problems = append(problems, more...)
+	}
+	return problems, nil
+}
+
 // readChecks reads the checks src of file, each expression compiled, a mistake in them at its line and
-// column: the mistakes of some are usererr.List, returned with the others. An expression's mistake is the
-// template's or the part's whatever the data. A part's checks may leave for out, to check the part
-// itself, or each of its items when it is a list.
+// column, returned with the checks: those whose expression does not compile among them, without a
+// program, for floe template check to tell their paths' mistakes too, which check passes over. An
+// expression's mistake is the template's or the part's whatever the data. A part's checks may leave for
+// out, to check the part itself, or each of its items when it is a list.
 func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 	body, err := yamlpos.Parse(file, src, "tmpl_checks_yaml")
 	if errors.Is(err, yamlpos.ErrEmpty) {
@@ -92,18 +103,13 @@ func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 		c, e := readCheck(file, n, ofPart)
 		if e == nil {
 			c.prog, e = c.program()
-			// Kept without its program, for floe template check to tell its paths' mistakes too.
 			list = append(list, c)
 		}
 		if e != nil {
 			problems = append(problems, e)
 		}
 	}
-	if problems != nil {
-		// The checks written right, for floe template check to tell their mistakes too.
-		return list, problems
-	}
-	return list, nil
+	return list, problems.Err()
 }
 
 func readCheck(file string, n ast.Node, ofPart bool) (relation, *usererr.Error) {
@@ -157,10 +163,17 @@ func (c relation) program() (*vm.Program, *usererr.Error) {
 }
 
 // check runs c on what it checks under whole, of the shape sh, in the values of file: its mistakes, its
-// own (a for that leads to no list) and the data's, and floe's failure.
+// own (a for that leads to no list) and the data's, and floe's failure. A check whose expression does not
+// compile, told when read, is passed over.
 func (c relation) check(file string, whole itemAt, sh *shape, root ast.Node) (usererr.List, error) {
+	if c.prog == nil {
+		return nil, nil
+	}
 	items, e := c.items(file, whole)
-	if e != nil {
+	switch {
+	case e != nil && c.floes:
+		return nil, fmt.Errorf("check %s: for %s %w in %s", c.file, c.For, errNoList, file)
+	case e != nil:
 		return usererr.List{e}, nil
 	}
 	return c.run(file, whole, sh, items, root)

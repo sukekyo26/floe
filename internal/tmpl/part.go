@@ -814,16 +814,7 @@ func (d *Data) drew(at []string, html template.HTML) {
 // check runs the checks of p on the item f of the data file file, under root: their mistakes, p's own
 // (a for that leads to no list) and the data's, and floe's failure.
 func (p *part) check(file string, f itemAt, root ast.Node) (usererr.List, error) {
-	var problems usererr.List
-	for _, c := range p.checks {
-		c.floes = !p.isOwn()
-		more, err := c.check(file, f, p.shape, root)
-		if err != nil {
-			return nil, err
-		}
-		problems = append(problems, more...)
-	}
-	return problems, nil
+	return checkAll(p.checks, file, f, p.shape, root, p.isOwn())
 }
 
 // draw draws f, an item of d p checked, as HTML, its words in d's language, and the parts it holds as d
