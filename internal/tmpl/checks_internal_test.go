@@ -239,15 +239,20 @@ func TestDeclaredOfAPart(t *testing.T) {
 	t.Parallel()
 
 	const closed = `"additionalProperties": false, `
-	for _, tt := range []struct{ schema, field, want string }{
-		{`{"type": "object", ` + closed + `"properties": {"url": {}}}`, "url", ""},
-		{`{"type": "object", ` + closed + `"properties": {"url": {}}}`, "uri", "tmpl_checks_field_part"},
-		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "url", ""},
-		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "uri", "tmpl_checks_field_part"},
-		{`{"type": ["array", "object"], ` + closed + `"items": {` + closed + `"properties": {"url": {}}}}`, "url", ""},
-		{`{"type": ["array", "object"], ` + closed + `"properties": {"url": {}}, "items": {"additionalProperties": false}}`, "url", ""},
-		{`{"type": ["array", "object"], ` + closed + `"items": {` + closed + `"properties": {"url": {}}}}`, "uri", "tmpl_checks_field_part"},
-		{`{"type": "array"}`, "uri", ""},
+	both := `{"type": ["array", "object"], ` + closed + `"properties": {"url": {}}, "items": {"type": "object", "properties": {"rows": {"type": "array"}}}}`
+	for _, tt := range []struct{ schema, for_, field, want string }{
+		{`{"type": "object", ` + closed + `"properties": {"url": {}}}`, "", "url", ""},
+		{`{"type": "object", ` + closed + `"properties": {"url": {}}}`, "", "uri", "tmpl_checks_field_part"},
+		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "", "url", ""},
+		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "", "uri", "tmpl_checks_field_part"},
+		{`{"type": ["array", "object"], ` + closed + `"items": {` + closed + `"properties": {"url": {}}}}`, "", "url", ""},
+		{`{"type": ["array", "object"], ` + closed + `"properties": {"url": {}}, "items": {"additionalProperties": false}}`, "", "url", ""},
+		{`{"type": ["array", "object"], ` + closed + `"items": {` + closed + `"properties": {"url": {}}}}`, "", "uri", "tmpl_checks_field_part"},
+		{`{"type": "array"}`, "", "uri", ""},
+		{`{"type": "string"}`, "", "x", "tmpl_checks_field_part"},
+		// for goes into the items of a part that may be a list, as itemsAt does on such a value.
+		{both, "rows", "", ""},
+		{strings.Replace(both, `"items": {`, `"items": {`+closed, 1), "rowz", "", "tmpl_checks_undeclared"},
 	} {
 		set, err := builtinParts()
 		if err != nil {
@@ -257,13 +262,13 @@ func TestDeclaredOfAPart(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", tt.schema, err)
 		}
-		c := relation{Field: tt.field, Expr: "true", Message: "m", file: "checks.yaml", at: map[string]yamlpos.Pos{}}
+		c := relation{For: tt.for_, Field: tt.field, Expr: "true", Message: "m", file: "checks.yaml", at: map[string]yamlpos.Pos{}}
 		e := c.declared(s, true)
 		switch {
 		case tt.want == "" && e != nil:
-			t.Errorf("%s, field %s = %v", tt.schema, tt.field, e)
+			t.Errorf("%s, for %s, field %s = %v", tt.schema, tt.for_, tt.field, e)
 		case tt.want != "" && (e == nil || e.Key != tt.want):
-			t.Errorf("%s, field %s = %v, want %s", tt.schema, tt.field, e, tt.want)
+			t.Errorf("%s, for %s, field %s = %v, want %s", tt.schema, tt.for_, tt.field, e, tt.want)
 		}
 	}
 }
