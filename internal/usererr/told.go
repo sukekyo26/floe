@@ -50,7 +50,16 @@ func Tell(c *i18n.Catalog, err error) Report {
 	}
 	told, seen := map[string]bool{}, map[string]bool{}
 	r := Report{Mistakes: make([]Told, 0, len(all)), Failure: ""}
-	for _, e := range all {
+	// Those of the whole output after those of its inputs, each kept in the order given.
+	ordered := make(List, 0, len(all))
+	for _, whole := range []bool{false, true} {
+		for _, e := range all {
+			if e.Whole == whole {
+				ordered = append(ordered, e)
+			}
+		}
+	}
+	for _, e := range ordered {
 		if key := e.tell(c, map[string]bool{}).line(); !seen[key] {
 			seen[key] = true
 			r.Mistakes = append(r.Mistakes, e.tell(c, told))

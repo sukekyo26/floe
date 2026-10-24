@@ -125,7 +125,7 @@ type entry struct {
 // readIndex returns nil when the set has not been fetched.
 func (s *Store) readIndex(k *kit) (*index, error) {
 	if s.root == "" {
-		return nil, usererr.New("icons_no_dir")
+		return nil, usererr.NewWhole("icons_no_dir")
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -142,7 +142,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		err = json.Unmarshal(b, &idx)
 	}
 	if err != nil {
-		return nil, usererr.New("icons_bad_index", file, err.Error(), k.name)
+		return nil, usererr.NewWhole("icons_bad_index", file, err.Error(), k.name)
 	}
 	s.indexes[k.name] = &idx
 	return &idx, nil
@@ -154,7 +154,7 @@ func (s *Store) loadIndex(k *kit) (*index, error) {
 		return nil, err
 	}
 	if idx == nil {
-		return nil, usererr.New("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
+		return nil, usererr.NewWhole("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
 	}
 	return idx, nil
 }
@@ -178,7 +178,7 @@ func (s *Store) Fetch(ctx context.Context, set, source string, force bool) (Fetc
 	k := kitOf(set)
 	got := Fetched{Title: k.title, Dir: s.dir(k), Version: "", Count: 0, Already: false}
 	if s.root == "" {
-		return got, usererr.New("icons_no_dir")
+		return got, usererr.NewWhole("icons_no_dir")
 	}
 	from, err := k.packageURL(ctx, source)
 	if err != nil {
@@ -446,7 +446,7 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 	uri := func(file string) (string, error) {
 		b, rerr := os.ReadFile(filepath.Join(dir, file)) //nolint:gosec // G304: a name in the set's index
 		if rerr != nil {
-			return "", usererr.New("icons_bad_index", filepath.Join(dir, "index.json"), rerr.Error(), k.name)
+			return "", usererr.NewWhole("icons_bad_index", filepath.Join(dir, "index.json"), rerr.Error(), k.name)
 		}
 		return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(b), nil
 	}

@@ -140,6 +140,7 @@ linters:
         - errors.Join(
         # floe's own mistakes, worded and placed for the reader: wrapping them would change what they say.
         - usererr.New(
+        - usererr.NewWhole(
         - usererr.CannotRead(
         - usererr.CannotWrite(
         - usererr.NewAt(
