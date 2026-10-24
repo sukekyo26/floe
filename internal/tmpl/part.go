@@ -284,6 +284,8 @@ func (set *partSet) checked(p *part) bool {
 
 // readBuiltin reads floe's parts, of the parts directory of parts, those it draws in Go too, the schemas they
 // share and the themes, of the themes directory of themes, into set.
+// LIMIT: it stops at the first of them it cannot read, so floe's check tells one a build. Keep why each cannot
+// be used, as readOwn does, if floe's parts come to be fixed many at once.
 func (set *partSet) readBuiltin(parts, themes fs.FS) error {
 	builtin, err := fs.Sub(parts, "parts")
 	if err != nil {
