@@ -115,3 +115,19 @@ func TestUnsafeLink(t *testing.T) {
 		t.Errorf("draw = %v, want\n%s", err, want)
 	}
 }
+
+// A link is told at every item that writes it, with a text fragment or without.
+func TestLinkWithTextFragment(t *testing.T) {
+	t.Parallel()
+
+	l := htmlIn(t, `<main>{{.Data.risks}}{{.Data.aside}}</main>`)
+	_, err := draw(l, "template: memo\nlang: en\nrisks: <a href=\"#nope:~:text=x\">a</a>\naside: <a href=\"#nope\">b</a>\n")
+	want := `data.yaml:3:8: risks: links to #nope, which is no id of the page: ` + headingRule + `
+data.yaml:4:8: aside: links to #nope, which is no id of the page: ` + headingRule
+	if err == nil || err.Error() != want {
+		t.Errorf("draw = %v, want\n%s", err, want)
+	}
+}
+
+const headingRule = "a heading's id is its text in lower case, without punctuation and symbols, the spaces between " +
+	"words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has"

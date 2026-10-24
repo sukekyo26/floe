@@ -198,15 +198,15 @@ func (d *Data) checkAnchors(a pageAnchors, src []byte) error {
 			continue
 		}
 		told[decoded] = true
-		problems = append(problems, d.linkMistakes(written, decoded, src)...)
+		problems = append(problems, d.linkMistakes(frag, decoded, src)...)
 	}
 	return problems.Sorted().Err()
 }
 
-// linkMistakes returns the mistakes of a link to #written, which goes to decoded and reaches no part of the
+// linkMistakes returns the mistakes of a link to #frag, which goes to decoded and reaches no part of the
 // page: one at each item of d that writes it and one at the page.html of d's own template if src, its text,
 // writes it, else one at d's file, which a link the search misses is the data's all the same.
-func (d *Data) linkMistakes(written, decoded string, src []byte) []*usererr.Error {
+func (d *Data) linkMistakes(frag, decoded string, src []byte) []*usererr.Error {
 	key, args := "tmpl_anchor_none", []any{"#" + decoded}
 	if decoded == "ZgotmplZ" {
 		// html/template's word for a URL it found unsafe (javascript: and the like), drawn in its place.
@@ -214,11 +214,11 @@ func (d *Data) linkMistakes(written, decoded string, src []byte) []*usererr.Erro
 	}
 	var mistakes []*usererr.Error
 	for _, it := range d.linkItems {
-		if text, isText := it.value.(string); isText && writes(text, written) {
+		if text, isText := it.value.(string); isText && writes(text, frag) {
 			mistakes = append(mistakes, itemMistake(d.File, d.root, it.at, false, usererr.New(key, args...)))
 		}
 	}
-	if d.tmpl.isOwn() && writes(string(src), written) {
+	if d.tmpl.isOwn() && writes(string(src), frag) {
 		mistakes = append(mistakes, usererr.NewAt(d.tmpl.file("page.html"), 0, 0, key, args...))
 	}
 	if mistakes == nil {
@@ -229,7 +229,7 @@ func (d *Data) linkMistakes(written, decoded string, src []byte) []*usererr.Erro
 
 // writes reports whether text writes a link to the fragment frag: # and frag, as written or percent-decoded,
 // in text as written or with its character references read and percent-decoded, ended by text, a space or
-// one of ) " ' > ] <.
+// one of ) " ' > ] < and :, which starts a text fragment (:~:).
 // LIMIT: a search of the text, not of the link as drawn; a link it misses is told at the file without a line.
 func writes(text, frag string) bool {
 	for _, t := range []string{text, unescapeAll(text)} {
@@ -240,7 +240,7 @@ func writes(text, frag string) bool {
 					break
 				}
 				rest = rest[i+1+len(f):]
-				if rest == "" || strings.ContainsAny(rest[:1], " \t\n)\"'>]<") {
+				if rest == "" || strings.ContainsAny(rest[:1], " \t\n)\"'>]<:") {
 					return true
 				}
 			}
