@@ -230,7 +230,7 @@ func TestAddDataLink(t *testing.T) {
 	good := e.page(t, "work/good.yaml", "Good", "")
 	r = e.do(t, http.MethodPost, "/api/artifacts", `{"path": "`+good+`"}`, "Origin", e.origin, "Content-Type",
 		"application/json")
-	if r.status != http.StatusCreated || !strings.Contains(e.get(t, "/a/good/?raw").body, "<h1>Good</h1>") {
+	if r.status != http.StatusCreated || !strings.Contains(e.get(t, "/a/good/?raw").body, `<h1 id="good">Good</h1>`) {
 		t.Errorf("linking a data file = %d %s", r.status, r.body)
 	}
 }

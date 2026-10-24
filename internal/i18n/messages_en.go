@@ -387,6 +387,7 @@ var messagesEN = map[string]string{
 	"tmpl_check_not_dir":            "%s is not a directory: a template is a directory of its files",
 	"tmpl_file_missing":             "%s is missing: a template has %s",
 	"tmpl_schema_shared":            "schema.json declares or requires %s, which floe reads from every data file itself (%s): give the items of the schema other names",
+	"tmpl_anchor_none":              "links to %s, which is no id of the page: a heading's id is its text in lower case, without punctuation and symbols, a space made - (the second of the same text gets -1)",
 	"tmpl_item":                     "%s: %s",
 	"tmpl_schema_url":               "%s: a schema refers to no other file or URL; write what a $ref refers to in schema.json",
 	"tmpl_schema_invalid":           "JSON Schema does not take this: %s",
