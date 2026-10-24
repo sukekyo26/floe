@@ -577,35 +577,47 @@ func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share
 	// load, which floe cannot mend. Both pages take the name parent, which floe's script must not use.
 	publish("hash", link("#s2", "0")+link("/a/hash/#s3", "60px")+
 		`<button id="up" style="position: fixed; left: 0; top: 120px; width: 200px; height: 40px">top</button>`+
+		link("/a/hash#s3", "180px")+link("/a/hash/?x=1#s3", "240px")+
 		`<div style="height: 3000px"></div><h2 id="s2">s2</h2><div style="height: 3000px"></div><h2 id="s3">s3</h2><div style="height: 3000px"></div>`+
 		"<script>var parent = 1; const load = Math.random(); document.getElementById('up').addEventListener('click', () => scrollTo(0, 0)); document.addEventListener('pointerover', () => top.postMessage('over', '*'));"+
 		"setInterval(() => top.postMessage('at ' + location.hash + ' ' + load + ' ' + (scrollY > 1000), '*'), 50)</script>")
 	publish("from", link("/a/hash/#s2", "0")+
 		"<script>var parent = 1; document.addEventListener('pointerover', () => top.postMessage('over', '*'))</script>")
 	// The page may report a part before floe's script tells the frame of it: the frame's URL is waited for too.
-	at := func(what, want string) string {
-		return b.until(what, "(window.watching ||= (addEventListener('message', (e) => { if (String(e.data).startsWith('at ')) window.at = e.data; }), true)) && "+
-			"window.at?.startsWith("+js("at "+want+" ")+") && location.hash === "+js(want)+" && location.pathname + location.hash")
+	atIs := func(want string) string {
+		return "(window.watching ||= (addEventListener('message', (e) => { if (String(e.data).startsWith('at ')) window.at = e.data; }), true)) && " +
+			"window.at?.startsWith(" + js("at "+want+" ") + ") && location.hash === " + js(want) + " && location.pathname + location.hash"
 	}
-	click := func(y float64) {
-		box := b.rect("document.getElementById('frame')")
-		b.hover(box.X+20, box.Y+y)
-		b.click(box.X+20, box.Y+y)
+	at := func(what, want string) string { return b.until(what, atIs(want)) }
+	// click clicks y in the frame till done holds, as a click sent before the frame draws is lost. It does not
+	// wait for the page to see the pointer come in (hover): after Back, Chrome stops telling the page of it.
+	click := func(y float64, what, done string) string {
+		for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); {
+			box := b.rect("document.getElementById('frame')")
+			b.click(box.X+20, box.Y+y)
+			for wait := time.Now().Add(500 * time.Millisecond); time.Now().Before(wait); time.Sleep(50 * time.Millisecond) {
+				if s, err := b.try(done); err == nil && truthy(s) {
+					return s
+				}
+			}
+		}
+		t.Fatalf("timed out waiting for %s", what)
+		return ""
 	}
+	loaded := func(load string) string { return b.eval("String(window.at.split(' ')[2] === " + js(load) + ")") }
+	length := func() string { return b.eval("String(history.length)") }
 
-	out := make([]string, 0, 6)
+	out := make([]string, 0, 17)
 	b.navigate("/a/hash/#s2")
 	out = append(out, at("the part, opened straight", "#s2"))
 	b.navigate("/a/hash#s2")
 	out = append(out, at("the part, through the redirect", "#s2"))
 	b.navigate("/a/from/")
 	b.until("the page in the frame", "document.getElementById('frame').hasAttribute('src')")
-	click(20)
-	out = append(out, at("the part, from another page", "#s2"))
+	out = append(out, click(20, "the part, from another page", atIs("#s2")))
 	b.navigate("/a/hash/")
 	at("the top of the page", "")
-	click(20)
-	out = append(out, at("the part, moved to in the frame", "#s2"))
+	out = append(out, click(20, "the part, moved to in the frame", atIs("#s2")))
 	b.eval("window.leaving = true; location.reload()")
 	b.until("the reload", "!window.leaving && document.readyState === 'complete'")
 	out = append(out, at("the part, after a reload", "#s2"))
@@ -617,18 +629,27 @@ func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share
 	b.eval("location.hash = '#s2'")
 	out = append(out, at("the part, by the address bar", "#s2"))
 	b.eval("history.back()")
-	out = append(out, at("the top of the page, back again", ""))
-	out = append(out, b.eval("window.at.split(' ')[2] === "+js(load)))
-	// A link in the page to its frame URL moves it to that part, the frame's part already too.
-	click(80)
-	out = append(out, at("the part, by a link to the frame URL", "#s3"))
-	click(140)
-	b.until("the page at its top", "window.at.endsWith(' false')")
-	click(80)
-	out = append(out, b.until("the part again, by the same link", "window.at.startsWith('at #s3 ') && window.at.endsWith(' true') && location.pathname + location.hash"))
+	out = append(out, at("the top of the page, back again", ""), loaded(load))
+	// A link in the page to a part of its own frame URL is a link to a part of the page: another part adds
+	// to the history, the same part scrolls there again and adds none. Without its /, too; with a search,
+	// it is another URL, which the whole tab opens.
+	out = append(out, click(80, "the part, by a link to the frame URL", atIs("#s3")), loaded(load))
+	b.eval("history.back()")
+	out = append(out, at("the top of the page, back from the link", ""), loaded(load))
+	click(80, "the part, by the link again", atIs("#s3"))
+	click(140, "the page at its top", "window.at.endsWith(' false')")
+	// No entry is ahead now, so one added would show in the length.
+	before := length()
+	out = append(out, click(80, "the part again, by the same link", "window.at.startsWith('at #s3 ') && window.at.endsWith(' true') && location.pathname + location.hash"),
+		fmt.Sprint(length() == before))
+	click(20, "the part, by a link to #s2", atIs("#s2"))
+	out = append(out, click(200, "the part, by a link without the /", atIs("#s3")), loaded(load))
+	out = append(out, click(260, "the tab, by a link with a search",
+		atIs("#s3")+" && location.search === '?x=1' && location.search"))
 
 	check(t, "frame hash", out,
-		"/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/|/a/hash/#s2|/a/hash/|true|/a/hash/#s3|/a/hash/#s3")
+		"/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/|/a/hash/#s2|/a/hash/|true|"+
+			"/a/hash/#s3|true|/a/hash/|true|/a/hash/#s3|true|/a/hash/#s3|true|?x=1")
 }
 
 // leave clicks links out of a page in the frame: a target=_blank tab runs in the other site's origin

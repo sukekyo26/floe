@@ -578,21 +578,13 @@
   if (framed) addEventListener('message', (e) => {
     if (e.source !== $('frame').contentWindow) return;
     const to = typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
-    if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) {
-      // A link to this frame's own URL moves the page to its part even when the fragment is the frame's already, which fires no hashchange
-      if (to.pathname === location.pathname && to.search === location.search) {
-        $('frame').contentWindow.location.replace('?raw' + (to.hash || '#'));
-        history.replaceState(history.state, '', to.pathname + to.search + to.hash);
-      } else {
-        location.href = to.href;
-      }
-    }
+    if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) location.href = to.href;
     const hash = e.data?.artifactHash;
     if (typeof hash === 'string' && (hash === '' || hash.startsWith('#')) && e.data.artifactPath === location.pathname) {
       history.replaceState(history.state, '', location.pathname + location.search + hash);
     }
   });
-  // The frame's own fragment changed (a link in the page to /a/<slug>/#part, the address bar): the page moves to that part, in
+  // The frame's own fragment changed (the address bar, Back): the page moves to that part, in
   // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo.
   // No fragment is the empty one, which moves to the top of the page: ?raw alone would load the page again
   if (framed) addEventListener('hashchange', () => {
