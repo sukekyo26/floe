@@ -27,7 +27,7 @@ type shape struct {
 	// parts share, and the part, which draws the item whole. nil for none.
 	named *shape
 	part  *part
-	// the part its $ref names, which cannot be used: it stands as false (partSet.standsFalse); "" for none
+	// the part its $ref names, which cannot be used: it stands as false (partSet.brokenNamed); "" for none
 	unusablePart string
 
 	// What floe template show and floe part show tell of it, as written beside a $ref.
@@ -483,7 +483,7 @@ func (s *shape) bind(set *partSet) {
 	name, whole := partName(s.ref)
 	named, ok := set.shapes[s.ref]
 	if !ok {
-		if whole && set.standsFalse(name) {
+		if whole && set.brokenNamed(name) {
 			s.unusablePart = name
 		}
 		return

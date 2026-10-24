@@ -731,7 +731,7 @@ func joinDescriptions(beside, named string) string {
 // checkParts checks the items of d of whole floe draws by parts of set against the checks of their parts,
 // and draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every
 // failure at its line and column under root. It refuses an item of format markdown, or one a part draws,
-// whose drawing names a part the page would be refused for (misnamedItem). It runs after checkDiagrams and
+// whose drawing names a part that cannot be used, there (unusableIn). It runs after checkDiagrams and
 // checkScripts, which draw theirs into d.parts.
 func checkParts(set *partSet, whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
@@ -742,10 +742,11 @@ func checkParts(set *partSet, whole drawnItems, d *Data, root ast.Node) error {
 		switch text, isText := f.value.(string); {
 		case f.part != nil:
 			drawn, mistake = set.drawPart(f, d, root, holding, escaped)
-		case isText && f.format == "markdown":
-			// page.html draws it, as Markdown draws a table: in the table part's look.
-			if bad := set.misnamedItem(f.at, string(d.markdownHTML(text)), d, root); bad != nil {
-				drawn, mistake = false, bad
+		case isText && f.format == "markdown" && set.broken[kindPart][markdownPart] != nil:
+			// page.html draws it; Markdown names no part but its tables'.
+			if name := set.unusableIn(string(d.markdownHTML(text))); name != "" {
+				pos, _ := itemPos(root, f.at, false)
+				drawn, mistake = false, set.unusableAt(name, d.File, pos)
 			}
 		}
 		if !drawn {
@@ -784,8 +785,10 @@ func (set *partSet) drawPart(
 	if err != nil {
 		return false, p.drawnMistake(err, f.at, d, root, escaped)
 	}
-	if bad := set.misnamedItem(f.at, string(html), d, root); bad != nil {
-		return false, bad
+	if name := set.unusableIn(string(html)); name != "" {
+		// The parts it holds are drawn before it: the innermost item a part draws is told.
+		pos, _ := itemPos(root, f.at, false)
+		return false, set.unusableAt(name, d.File, pos)
 	}
 	d.drew(f.at, html)
 	return true, nil
@@ -812,20 +815,24 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node, esca
 	return drawMistake(err, p.file("part.html"), p.isOwn(), "tmpl_render_item", item, d.File)
 }
 
-// misnamedItem is the mistake of the item at the path at of d, under root, whose drawing html names a part
-// the page would be refused for (misnamedIn), placed at it, the first time with why the part cannot be
-// used; nil for none, or for one an item of format html under it names, which checkHTML tells there. The
-// parts it holds are drawn before it, so that the innermost item drawn by a part is told.
-func (set *partSet) misnamedItem(at []string, html string, d *Data, root ast.Node) *usererr.Error {
-	named := func(html string) *usererr.Error { return set.misnamedIn(namedIn(html, tagsIn(html, false))) }
-	told := slices.ContainsFunc(d.htmlItems, func(it htmlItem) bool {
-		return len(it.at) > len(at) && slices.Equal(it.at[:len(at)], at) && named(it.text) != nil
-	})
-	if bad := named(html); bad != nil && !told {
-		pos, _ := itemPos(root, at, false)
-		return bad.Placed(d.File, pos.Line, pos.Column, "")
+// unusableIn returns the first part that cannot be used html names, which an item of the data draws, or
+// "": html is not read when every part can be used.
+func (set *partSet) unusableIn(html string) string {
+	if len(set.broken[kindPart]) == 0 {
+		return ""
 	}
-	return nil
+	for _, n := range namedIn(html, tagsIn(html, false)) {
+		if set.misnamed(n) == nameBroken {
+			return n.name
+		}
+	}
+	return ""
+}
+
+// unusableAt is the mistake of the item of the data file file written at pos, which takes the part name,
+// or draws it, that cannot be used: there, the first time with why, as a theme it picks that cannot be used.
+func (set *partSet) unusableAt(name, file string, pos yamlpos.Pos) *usererr.Error {
+	return set.brokenErr(kindPart, name).Placed(file, pos.Line, pos.Column, "")
 }
 
 // holdUndrawn notes in holding the items that hold the one at the path at, not drawn: walkWhole puts them
@@ -950,9 +957,9 @@ func withStyles(page []byte, found []tag, style string) ([]byte, bool) {
 }
 
 // misnamedIn returns the mistake of the first name of named, the names of a page or of HTML of the data,
-// that the page is refused for, or nil: a part that cannot be used, by a table of Markdown or HTML of the
-// data among others, a data-floe-part not of one part's name, or one that names a look alone, which has
-// no box. The elements would be left without their style.
+// that the page is refused for, or nil: a part that cannot be used, which an item of the data that draws
+// it is refused for first, at the item (unusableIn), a data-floe-part not of one part's name, or one that
+// names a look alone, which has no box. The elements would be left without their style.
 func (set *partSet) misnamedIn(named []namedPart) *usererr.Error {
 	for _, n := range named {
 		switch set.misnamed(n) {

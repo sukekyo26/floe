@@ -318,7 +318,7 @@ func (set *partSet) compiler(stands map[string]bool) (*jsonschema.Compiler, erro
 	c := newCompiler(set)
 	docs := maps.Clone(set.docs)
 	for name := range set.broken[kindPart] {
-		if set.standsFalse(name) {
+		if set.brokenNamed(name) {
 			docs[partsURL+name+".json"] = false
 		}
 	}
@@ -540,7 +540,7 @@ func (s *schemaCheck) leaf(e *jsonschema.ValidationError) {
 	where := yamlpos.OfValue(key, value)
 	if name, ok := s.unusablePart(e); ok {
 		// As a theme the data picks that cannot be used: at the item, why under it, once.
-		s.problems = append(s.problems, s.set.brokenErr(kindPart, name).Placed(s.file, where.Line, where.Column, ""))
+		s.problems = append(s.problems, s.set.unusableAt(name, s.file, where))
 		return
 	}
 	switch k := e.ErrorKind.(type) {
@@ -586,17 +586,12 @@ func (s *schemaCheck) unusablePart(e *jsonschema.ValidationError) (string, bool)
 	}
 	base, _, _ := strings.Cut(e.SchemaURL, "#")
 	name, whole := partName(base)
-	return name, whole && s.set.standsFalse(name)
-}
-
-// standsFalse reports whether the part name, left out, stands as false in compiler: one that cannot be used
-// of a name a part can take, whose schema set holds no longer.
-func (set *partSet) standsFalse(name string) bool {
-	return set.brokenNamed(name) && set.docs[partsURL+name+".json"] == nil
+	return name, whole && s.set.brokenNamed(name)
 }
 
 // brokenNamed reports whether name is a part that cannot be used, of a name a part can take, which a $ref
-// can name: not one refused for its name (tmpl_part_name), nor floe's that only floe may take.
+// can name: not one refused for its name (tmpl_part_name), nor floe's that only floe may take. Left out of
+// set.docs, it stands as false in compiler.
 func (set *partSet) brokenNamed(name string) bool {
 	return set.broken[kindPart][name] != nil && validName(name) && !set.reserved(name)
 }

@@ -390,9 +390,15 @@ func TestUnusableTableInMarkdown(t *testing.T) {
 	}
 	a := e.write(t, "a.yaml", page+"      - text: |\n"+table("          ")+"      - note:\n          text: |\n"+table("            "))
 	b := e.write(t, "b.yaml", page+"      - text: hi\n      - text: |\n"+table("          "))
+	// HTML of the data that names it is told the same way, so that the one after it is told as above.
+	c := e.write(t, "c.yaml", page+"      - html: '<div data-floe-part=\"table\"></div>'\n      - text: |\n"+table("          "))
 	stderr := a + ":7:15: the part table cannot be used\n" +
 		"  " + filepath.Join(e.tmp, "parts", "table", "schema.json") + ": #/type: JSON Schema does not take this: 'anyOf' failed\n" +
 		a + ":12:11: the part table cannot be used, as told above\n" +
 		b + ":8:15: the part table cannot be used, as told above\n"
 	want(t, "check", e.run(t, "", "check", a, b), 1, "", stderr)
+	stderr = c + ":7:15: the part table cannot be used\n" +
+		"  " + filepath.Join(e.tmp, "parts", "table", "schema.json") + ": #/type: JSON Schema does not take this: 'anyOf' failed\n" +
+		c + ":8:15: the part table cannot be used, as told above\n"
+	want(t, "check of HTML and Markdown", e.run(t, "", "check", c), 1, "", stderr)
 }

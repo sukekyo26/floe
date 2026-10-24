@@ -341,7 +341,9 @@ func checkHTML(set *partSet, d *Data) error {
 		if baseOrMeta.MatchString(it.text) {
 			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_base")))
 		}
-		if bad := set.misnamedIn(namedIn(it.text, tagsIn(it.text, false))); bad != nil {
+		if name := set.unusableIn(it.text); name != "" {
+			problems = append(problems, set.unusableAt(name, d.File, it.pos))
+		} else if bad := set.misnamedIn(namedIn(it.text, tagsIn(it.text, false))); bad != nil {
 			problems = append(problems, itemError(d.File, it.pos, it.path, bad))
 		}
 	}
@@ -646,6 +648,9 @@ var funcs = template.FuncMap{
 	},
 }
 
+// markdownPart is the part whose look Markdown's tables take, the one part Markdown names.
+const markdownPart = "table"
+
 // markdownHTML writes Markdown text as HTML, a table in the table part's look. Raw HTML in it is left
 // out: a data item takes HTML only when its schema says format: html.
 func markdownHTML(text string) (template.HTML, error) {
@@ -654,7 +659,7 @@ func markdownHTML(text string) (template.HTML, error) {
 		return "", err
 	}
 	// With raw HTML left out, every <table> in the output is one goldmark drew.
-	html = strings.ReplaceAll(html, "<table>", `<div data-floe-part="table"><table>`)
+	html = strings.ReplaceAll(html, "<table>", `<div data-floe-part="`+markdownPart+`"><table>`)
 	html = strings.ReplaceAll(html, "</table>", "</table></div>")
 	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 }
