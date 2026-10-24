@@ -554,6 +554,45 @@ func TestPageHeadRequired(t *testing.T) {
 	}
 }
 
+// page.html draws its </head> whatever the data: in its own text, outside every action. One that a branch,
+// a {{define}} or a template it calls draws alone is refused at its line, though the data may draw it; the
+// tags are read as the page's are, a comment's and a script's text holding none.
+func TestPageHeadDrawn(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ head, want string }{
+		{"</head>", ""},
+		{`{{- "" -}}</head>`, ""},
+		{"</HEAD>", ""},
+		{"{{if false}}</head>{{end}}", ":3: an action of page.html leaves out its </head>"},
+		{"{{if true}}</head>{{end}}", ":3: an action of page.html leaves out its </head>"},
+		{`{{template "h"}}`, ":14: an action of page.html leaves out its </head>"},
+		{"{{/* </head> */}}", ": page.html holds no </head>"},
+		{`<script>var s = "</head>";</script>`, ": page.html holds no </head>"},
+	} {
+		page := "page.html"
+		dir := sizes(t, map[string]string{page: "</head>|" + tt.head})
+		if tt.head == `{{template "h"}}` {
+			f, err := os.OpenFile(filepath.Join(dir, page), os.O_APPEND|os.O_WRONLY, 0)
+			if err == nil {
+				_, err = f.WriteString(`{{define "h"}}</head>{{end}}` + "\n")
+				err = errors.Join(err, f.Close())
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		_, mistakes := check(dir, "", "")
+		head := slices.IndexFunc(mistakes, func(e error) bool { return strings.Contains(e.Error(), "</head>") })
+		switch want := filepath.Join(dir, page) + tt.want; {
+		case tt.want == "" && head >= 0:
+			t.Errorf("%s: Check = %v, want no mistake of </head>", tt.head, mistakes)
+		case tt.want != "" && (head < 0 || !strings.HasPrefix(mistakes[head].Error(), want)):
+			t.Errorf("%s: Check = %v, want %s", tt.head, mistakes, want)
+		}
+	}
+}
+
 // The template's CSS names the page's root as :scope, past a comment and values that name it otherwise, and
 // page.html names parts floe has, past a name it puts together, an element the box of one, a mistake told
 // at the line of the name.

@@ -317,6 +317,7 @@ func TestFindBrokenBuiltin(t *testing.T) {
 		{"parse", "page.html", page + "{{if .title}}", ownDirs{}},
 		{"escape", "page.html", page + `<a href="{{if .title}}/x/{{else}}/s?q={{end}}{{.title}}">x</a>`, ownDirs{}},
 		{"words", "words.yaml", "en: [\n", ownDirs{}},
+		{"head", "page.html", strings.Replace(page, "</head>", "{{if false}}</head>{{end}}", 1), ownDirs{}},
 		{"names", "page.html", strings.Replace(page, "<body", `<body><div data-floe-part="nosuch"></div`, 1), ownDirs{}},
 		{"declared", "checks.yaml", "- for: nosuch\n  expr: \"true\"\n  message: x\n", ownDirs{}},
 		{"warning", "page.css", read("page.css") + "\n:scope { --accent: #f00; }\n", ownDirs{}},

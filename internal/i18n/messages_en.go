@@ -296,7 +296,7 @@ var messagesEN = map[string]string{
 	"tmpl_render":                   "it cannot draw %s: %s; write it to draw every value its schema.json takes, such as an item left out (draw it in {{with}}) or a list or text shorter than it reads",
 	"tmpl_render_item":              "it cannot draw %s of %s: %s; write it to draw every value its schema.json takes, such as an item left out (draw it in {{with}}) or a list or text shorter than it reads",
 	"tmpl_page_head":                "page.html holds no </head>: floe puts the page's styles before it, in the head, where no element the page leaves open, such as an <svg>, takes them in",
-	"tmpl_page_head_action":         "an action of page.html leaves out its </head>, before which floe puts the page's styles: write </head> outside {{if}}, {{with}} and {{range}}",
+	"tmpl_page_head_action":         "an action of page.html leaves out its </head>, before which floe puts the page's styles: write </head> in page.html itself, outside {{if}}, {{with}}, {{range}} and {{define}}",
 	"tmpl_page_base":                "page.html holds a <base>, which the page's CSP ignores (base-uri 'none'): write its links whole",
 	"tmpl_page_style":               "page.html holds a <style>: write the template's CSS in page.css, which floe puts into the page in a layer under the parts' and the theme's",
 	"tmpl_page_part":                "page.html names the part %s, which there is none of; use %s",

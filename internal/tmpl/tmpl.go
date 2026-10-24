@@ -481,6 +481,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 			it := d.htmlItems[k]
 			return nil, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
 		}
+		// One of one's own drawn unchecked; floe's never gets here, as checkFloe refuses it first (checkHead).
 		return nil, read.head
 	}
 	// The data's HTML after the template's mistakes, which would be told as the data's.

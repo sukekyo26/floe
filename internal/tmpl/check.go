@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	tparse "text/template/parse"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
@@ -137,20 +138,43 @@ func (t *Template) checkPage(set *partSet, s *shape, checked map[string]bool, p 
 	if p.page != nil {
 		assets = t.checkPageAssets(p.page, checked)
 	}
-	return usererr.Collect(t.checkHead(s, p.src), t.checkNamedParts(set, p.src, named), assets)
+	return usererr.Collect(t.checkHead(s, p), t.checkNamedParts(set, p.src, named), assets)
 }
 
 // checkHead refuses src, page.html, without a <head>, and one without a standard doctype where s, the
 // schema of t, nil when it cannot be read, has an item of format html.
-func (t *Template) checkHead(s *shape, src []byte) error {
+func (t *Template) checkHead(s *shape, p parsedPage) error {
 	var doctype, head error
 	if s != nil {
-		doctype = doctypeMistake(t.file("page.html"), s, src)
+		doctype = doctypeMistake(t.file("page.html"), s, p.src)
 	}
-	if tagsOf(tagsIn(string(src), true)).head < 0 {
+	found := tagsIn(string(p.src), true)
+	switch {
+	case tagsOf(found).head < 0:
 		head = usererr.NewAt(t.file("page.html"), 0, 0, "tmpl_page_head")
+	case p.page != nil && !headDrawn(p.page, found):
+		head = usererr.NewAt(t.file("page.html"), lineAt(p.src, tagsOf(found).head), 0, "tmpl_page_head_action")
 	}
 	return usererr.Collect(doctype, head)
+}
+
+// headDrawn reports whether page, parsed from the text whose tags are found, draws a </head> whatever the
+// data: one in the text of the page itself, outside every action ({{if}}, {{with}}, {{range}}, {{define}}),
+// which is drawn as it is.
+func headDrawn(page *template.Template, found []tag) bool {
+	for _, n := range page.Tree.Root.Nodes {
+		text, ok := n.(*tparse.TextNode)
+		if !ok {
+			continue
+		}
+		from, to := int(text.Pos), int(text.Pos)+len(text.Text)
+		for _, tg := range found {
+			if tg.end && tg.name == "head" && tg.start >= from && tg.start < to {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // missingFiles returns the mistake of each file t needs that it does not have, or that cannot be read.
