@@ -41,19 +41,10 @@ const relations = `
   message: never runs
 `
 
-// relateSrc reads the checks.yaml src and checks d against them, as a template does.
+// relateSrc reads the checks.yaml src and checks d against them, as checkRelations does.
 func relateSrc(src []byte, d *Data, root ast.Node, own bool) error {
 	list, err := readChecks("checks.yaml", src, false)
-	if err != nil {
-		return err
-	}
-	for i, c := range list {
-		var e *usererr.Error
-		if list[i].prog, e = c.program(); e != nil {
-			return e
-		}
-	}
-	return relate(list, d, root, own)
+	return usererr.Collect(err, relate(list, d, root, own))
 }
 
 // Each item a check fails for is reported at its field, with the field's value when it has one; an
@@ -180,6 +171,44 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 	}
 	if err := relateSrc([]byte("- for: a\n  # one\n  expr: item == 1\n  message: m\n"), d, root, true); err != nil {
 		t.Errorf("relate of an expression under a comment = %v", err)
+	}
+}
+
+// A check whose for leads to no list is told with the mistakes of the others, a template's and a part's:
+// the mistakes of a stage are told together.
+func TestRelationsBesideANotList(t *testing.T) {
+	t.Parallel()
+
+	checks := "- for: a\n  expr: item > 1\n  message: one\n- for: b\n  expr: 'true'\n  message: two\n" +
+		"- for: a\n  expr: item > 5\n  message: three\n"
+	want := "d.yaml:2:5: a[0]: one (\"1\")\nd.yaml:2:5: a[0]: three (\"1\")\nchecks.yaml:4:8: for: b does not lead to a list in d.yaml"
+	d, root := data(t, "b: x\na: [1]\n")
+	if err := relateSrc([]byte(checks), d, root, true); err == nil || err.Error() != want {
+		t.Errorf("a template's = %v, want\n%s", err, want)
+	}
+	// So is an expression that cannot be read, the others run.
+	broken := strings.Replace(checks, "expr: 'true'", "expr: 'item +'", 1)
+	wantBroken := "checks.yaml:5:9: item + cannot be read as an expression: unexpected token EOF\nd.yaml:2:5: a[0]: one (\"1\")\nd.yaml:2:5: a[0]: three (\"1\")"
+	if err := relateSrc([]byte(broken), d, root, true); err == nil || err.Error() != wantBroken {
+		t.Errorf("a template's with an expression that cannot be read = %v, want\n%s", err, wantBroken)
+	}
+	// floe's own checks.yaml whose for leads to no list is floe's failure, not a mistake to fix.
+	var told usererr.List
+	if err := relateSrc([]byte(checks), d, root, false); told.Add(err) == nil ||
+		!strings.Contains(err.Error(), "for b does not lead to a list") {
+		t.Errorf("floe's own = %v, want floe's failure", err)
+	}
+
+	list, err := readChecks("checks.yaml", []byte(checks), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pd, proot := data(t, "p:\n  b: x\n  a: [1]\n")
+	p := &part{name: "p", checks: list, dir: "own"} //nolint:exhaustruct // what check reads
+	more, err := p.check("d.yaml", itemAt{value: pd.Values["p"], at: []string{"p"}}, proot)
+	wantPart := "d.yaml:3:7: p.a[0]: one (\"1\")\nd.yaml:3:7: p.a[0]: three (\"1\")\nchecks.yaml:4:8: for: b does not lead to a list in d.yaml"
+	if err != nil || more.Sorted().Err() == nil || more.Sorted().Err().Error() != wantPart {
+		t.Errorf("a part's = %v %v, want\n%s", more, err, wantPart)
 	}
 }
 
