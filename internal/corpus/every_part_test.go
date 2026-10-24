@@ -7,52 +7,89 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"golang.org/x/net/html"
 
-	"github.com/sukekyo26/floe/internal/cli"
+	"github.com/sukekyo26/floe/internal/tmpl"
 )
 
-// TestEveryPart fails when a part of floe part list is not in the page of the every-part sample: an element
-// it draws (data-floe-part) or one that takes it as a look (data-floe-look). A part added to floe is added to
-// the sample too, so that its HTML and CSS are held in golden/.
-func TestEveryPart(t *testing.T) {
-	t.Parallel()
+// everyPart is the sample whose page takes every part floe part list lists.
+const everyPart = "every-part"
 
-	tmp := t.TempDir()
-	vars := map[string]string{
-		"HOME": filepath.Join(tmp, "home"), "FLOE_DIR": filepath.Join(tmp, "store"),
-		"FLOE_PARTS_DIR": filepath.Join(tmp, "none", "parts"), "FLOE_THEMES_DIR": filepath.Join(tmp, "none", "themes"),
+// takesEveryPart fails when a part of floe part list is not in the page of the every-part sample, so that a
+// part added to floe is added to the sample too and its HTML and CSS are held in golden/. A part is in the
+// page when an element of it (data-floe-part) is drawn, or a part drawn takes it as a look; script, which
+// draws no element of its own, when every-part.yaml has an item of it.
+func (s *sample) takesEveryPart(t *testing.T) {
+	t.Helper()
+
+	// The parts as floe part list reads them, of the sample's directories.
+	parts, broken, err := tmpl.NewLibrary(s.vars["FLOE_TEMPLATES_DIR"], s.vars["FLOE_PARTS_DIR"],
+		s.vars["FLOE_THEMES_DIR"], s.vars["FLOE_ICONS_DIR"]).Run().Parts()
+	if err != nil || len(broken) > 0 {
+		t.Fatalf("read the parts: %v %v", err, broken)
 	}
-	var stdout, stderr bytes.Buffer
-	if code := cli.Run(t.Context(), []string{"part", "list"}, cli.Env{
-		Getenv: func(k string) string { return vars[k] }, Dir: tmp, Stdout: &stdout, Stderr: &stderr, Environ: nil,
-	}); code != 0 {
-		t.Fatalf("floe part list: exit %d\n%s", code, stderr.String())
+	looks := map[string][]string{}
+	for _, p := range parts {
+		looks[p.Name] = p.Looks
 	}
 
-	page, err := os.ReadFile(filepath.Join("testdata", "every-part", "golden", "every-part.html"))
+	doc, err := html.Parse(bytes.NewReader(s.files[everyPart+".html"]))
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc, err := html.Parse(bytes.NewReader(page))
-	if err != nil {
-		t.Fatal(err)
-	}
-	// script draws an empty element and its <script>, neither marked: every-part.yaml takes it once.
-	drawn := map[string]bool{"script": true}
+	taken := map[string]bool{}
 	for n := range doc.Descendants() {
 		for _, a := range n.Attr {
-			if n.Type == html.ElementNode && (a.Key == "data-floe-part" || a.Key == "data-floe-look") {
-				for _, name := range strings.Fields(a.Val) {
-					drawn[name] = true
+			if n.Type == html.ElementNode && a.Key == "data-floe-part" {
+				taken[a.Val] = true
+				for _, look := range looks[a.Val] {
+					taken[look] = true
 				}
 			}
 		}
 	}
-	// The columns of floe part list are for scripts to read: the name, where it is and its description.
-	for line := range strings.Lines(stdout.String()) {
-		if name, _, _ := strings.Cut(line, "\t"); !drawn[name] {
-			t.Errorf("the every-part sample does not take the part %s: write it in every-part.yaml and run `just golden`", name)
+	taken["script"] = s.itemsOf(t, everyPart+".yaml")["script"]
+	for _, p := range parts {
+		if !taken[p.Name] {
+			t.Errorf("the every-part sample does not take the part %s: write it in every-part.yaml and run `just golden`", p.Name)
 		}
 	}
+}
+
+// itemsOf returns the names of the items of the data file, those of a list each one key of a mapping. It
+// fails the test when an html item writes data-floe-, which takesEveryPart could not tell from a part's.
+func (s *sample) itemsOf(t *testing.T, file string) map[string]bool {
+	t.Helper()
+
+	b, err := os.ReadFile(filepath.Join(s.dir, file))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var data any
+	if err := yaml.Unmarshal(b, &data); err != nil {
+		t.Fatal(err)
+	}
+	items := map[string]bool{}
+	var walk func(v any, inList bool)
+	walk = func(v any, inList bool) {
+		switch v := v.(type) {
+		case []any:
+			for _, e := range v {
+				walk(e, true)
+			}
+		case map[string]any:
+			for k, e := range v {
+				if inList && len(v) == 1 {
+					items[k] = true
+					if text, ok := e.(string); ok && k == "html" && strings.Contains(text, "data-floe-") {
+						t.Errorf("%s: an html item writes data-floe-, which the page cannot tell from a part's: %s", file, text)
+					}
+				}
+				walk(e, false)
+			}
+		}
+	}
+	walk(data, false)
+	return items
 }
