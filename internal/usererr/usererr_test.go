@@ -108,7 +108,7 @@ func TestAddFor(t *testing.T) {
 		got = append(got, e.Subject+" "+e.File+" "+e.Key)
 	}
 	want := []string{
-		"a.yaml  tmpl_no_lang", " a.yaml tmpl_no_lang", "b.yaml  tmpl_no_lang", " b.yaml tmpl_no_lang",
+		"a.yaml  tmpl_no_lang", "a.yaml a.yaml tmpl_no_lang", "b.yaml  tmpl_no_lang", "b.yaml b.yaml tmpl_no_lang",
 		"  icons_no_dir", "  tmpl_part_broken", "  icons_no_dir", "  tmpl_part_broken",
 	}
 	if !slices.Equal(got, want) {

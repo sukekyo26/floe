@@ -25,8 +25,8 @@ type Error struct {
 	At       string // a JSON pointer in a schema, "" for none
 	Under    List   // the mistakes it stands for: those of a part that cannot be used
 	Of       string // what Under is the mistakes of, such as "part:quote", told once in a list
-	// Subject is the input (a file or a template given to the command) a mistake at no place is of, set by
-	// List.AddFor: it is sorted with the mistakes of that input, and is neither worded nor in Told.
+	// Subject is the input (a file or a template given to the command) a mistake is of, set by List.AddFor:
+	// it is sorted with the mistakes of that input, and is neither worded nor in Told.
 	Subject string
 	// Whole marks a mistake of the whole output, not of one of its inputs, that fixing an input leaves (the
 	// icons, a FLOE_*_DIR directory, a part or theme of one's own that cannot be used): told after all others.
@@ -183,15 +183,15 @@ func (l *List) Add(err error) error {
 	return nil
 }
 
-// AddFor adds err to l as Add does, a mistake at no place, of no input and not of the whole output as one
-// of input, sorted with its mistakes: as a copy, for a mistake may be added for several inputs.
+// AddFor adds err to l as Add does, each mistake of no input as one of input, sorted with its mistakes, but
+// one of the whole output at no place: as a copy, for a mistake may be added for several inputs.
 func (l *List) AddFor(input string, err error) error {
 	var more List
 	if failed := more.Add(err); failed != nil {
 		return failed
 	}
 	for _, e := range more {
-		if e.File == "" && e.Subject == "" && !e.Whole {
+		if e.Subject == "" && (e.File != "" || !e.Whole) {
 			of := *e
 			of.Subject = input
 			e = &of
@@ -221,19 +221,26 @@ func (l List) Err() error {
 	return l
 }
 
-// Sorted returns l with the mistakes of each file, its File or else its Subject, in the order of their
-// lines and columns, the files in the order they first come in l; those of the whole output after them
-// all, and the others at no place together where the first of them is.
+// Sorted returns l with the mistakes of each input (its Subject, else its File, where an output has one
+// input) together, the inputs in the order they first come in l; in an input, those of each file in the
+// order of their lines and columns, the files in the order they first come; and those of the whole output
+// after them all.
 func (l List) Sorted() List {
-	first := map[string]int{}
+	group, file := map[string]int{}, map[string]int{}
 	for _, e := range l {
-		if _, ok := first[e.file()]; !ok {
-			first[e.file()] = len(first)
+		if _, ok := group[e.group()]; !ok {
+			group[e.group()] = len(group)
+		}
+		if _, ok := file[e.File]; !ok {
+			file[e.File] = len(file)
 		}
 	}
-	first[whole] = len(l)
+	group[whole] = len(l)
 	slices.SortStableFunc(l, func(x, y *Error) int {
-		if d := first[x.file()] - first[y.file()]; d != 0 {
+		if d := group[x.group()] - group[y.group()]; d != 0 {
+			return d
+		}
+		if d := file[x.File] - file[y.File]; d != 0 {
 			return d
 		}
 		if d := x.Line - y.Line; d != 0 {
@@ -244,15 +251,15 @@ func (l List) Sorted() List {
 	return l
 }
 
-// whole groups the mistakes of the whole output, as no file is named.
+// whole groups the mistakes of the whole output, as no input is named.
 const whole = "\x00"
 
-func (e *Error) file() string {
+func (e *Error) group() string {
 	switch {
-	case e.File != "":
-		return e.File
 	case e.Subject != "":
 		return e.Subject
+	case e.File != "":
+		return e.File
 	case e.Whole:
 		return whole
 	}

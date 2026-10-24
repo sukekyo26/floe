@@ -1194,6 +1194,13 @@ func TestMistakesOfEachInput(t *testing.T) {
 	e.write(t, "work/a.yaml", "template: m1\nlang: en\ntitle: t\n")
 	e.write(t, "work/b.yaml", "template: report\nleed: x\nlang: en\n")
 	e.write(t, "work/d.yaml", "template: m1\nlang: en\ntitle: t\n")
+	// m3's page.html draws no page: its mistake, in m3's file, is told with the input that drew it.
+	e.write(t, "templates/m3/schema.json", `{"type": "object", "additionalProperties": false, "properties": {}}`)
+	e.write(t, "templates/m3/page.html", `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body>{{.Nope}}</body></html>`)
+	e.write(t, "templates/m3/example.yaml", "template: m3\nlang: en\ntitle: t\n")
+	e.write(t, "templates/m3/template.yaml", "floe: 0.0\n")
+	e.write(t, "work/f.yaml", "template: m3\nlang: en\ntitle: t\n")
+	e.write(t, "work/g.yaml", "template: m3\nlang: en\ntitle: t\n")
 	e.write(t, "work/c.yaml", "template: report\nlang: en\ntitle: t\nsections:\n  - parts:\n      - diagram:\n          id: i\n"+
 		"          title: t\n          width: 100\n          height: 100\n          parts:\n"+
 		"            - icon: { x: 10, y: 10, name: aws/aws-lambda }\n      - script: { js: 'x = 1 </script>' }\n")
@@ -1201,6 +1208,11 @@ func TestMistakesOfEachInput(t *testing.T) {
 	leed := "b.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n"
 	floe := regexp.MustCompile(`this is floe [^;]*;`)
 	m1, m2 := filepath.Join(e.tmp, "templates", "m1"), filepath.Join(e.tmp, "templates", "m2")
+	cannotDraw := func(name string) string {
+		return filepath.Join(e.tmp, "templates", "m3", "page.html") + ": it cannot draw " + name + `.yaml: template: page.html:1:84: ` +
+			`executing "page.html" at <.Nope>: map has no entry for key "Nope"; write it to draw every value its schema.json takes, ` +
+			"such as an item left out (draw it in {{with}}) or a list or text shorter than it reads\n"
+	}
 	for _, tt := range []struct {
 		what string
 		args []string
@@ -1208,6 +1220,7 @@ func TestMistakesOfEachInput(t *testing.T) {
 	}{
 		{"check of a file whose template needs a later floe, then another", []string{"check", "a.yaml", "b.yaml"}, newer + leed},
 		{"check of two files whose template needs a later floe", []string{"check", "a.yaml", "b.yaml", "d.yaml"}, newer + leed + newer},
+		{"check of two files whose template draws no page, and one between", []string{"check", "f.yaml", "b.yaml", "g.yaml"}, cannotDraw("f") + leed + cannotDraw("g")},
 		{
 			"template check of a template that needs a later floe, then another",
 			[]string{"template", "check", m1, m2},
