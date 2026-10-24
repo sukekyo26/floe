@@ -1,0 +1,373 @@
+<!doctype html>
+<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; media-src data: blob:; style-src 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action 'none'; base-uri 'none'; connect-src 'none'">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="floe report">
+<title>The ink theme</title>
+<style>
+@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.base {
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways instead, as a table does, keeps its words whole.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line, still overflows. Give such a part a layout for narrow screens, as
+   keys has */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+p, ul, ol { margin: 0; max-width: var(--text-width); }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
+pre {
+  margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+pre code { font-size: inherit; background: none; padding: 0; }
+blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+}
+</style>
+<style>
+@layer floe.palette {
+/* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
+:root {
+  --bg: #f3f5f4; --surface: #fff; --fg: #18201e; --muted: #57635f; --line: #d4dbd8;
+  --accent: #1d6670; --accent-soft: #dcebec;
+  --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
+  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #63b5be; --code-add: #6fcf97; --code-del: #f2b8b5;
+  /* The page's ground, a pattern too, and the rule between its sections */
+  --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(24 32 30 / 0.12);
+  /* Its panels' quiet ground, which holds faces of the surface */
+  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111716; --surface: #182120; --fg: #e2e9e7; --muted: #97a5a2; --line: #2b3634;
+    --accent: #63b5be; --accent-soft: #1b3336;
+    --good: #6fcf97; --good-soft: #173126; --warn: #e2a85e; --warn-soft: #392b18; --bad: #f2b8b5; --bad-soft: #3b1f1d;
+    --code-bg: #0a0e0d;
+    color-scheme: dark;
+  }
+}
+}
+</style>
+<style>
+@layer floe.palette {
+/* Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink */
+:root {
+  --bg: #fafaf7; --surface: #fff; --fg: #141414; --muted: #5a5a5a; --line: #d9d9d4;
+  --accent: #2b3a67; --accent-soft: #e3e7f1;
+  --good: #1e6b43; --good-soft: #dcebe2; --warn: #8a5a10; --warn-soft: #f3e7d1; --bad: #a8261e; --bad-soft: #f6e0de;
+  --code-bg: #141414; --code-fg: #ececec; --code-prompt: #9fb4e6;
+  --rule: 2px solid var(--fg);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121212; --surface: #1b1b1b; --fg: #ececec; --muted: #a3a3a3; --line: #333;
+    --accent: #9fb4e6; --accent-soft: #1f2638;
+    --good: #7fcf9f; --good-soft: #173126; --warn: #e2b46e; --warn-soft: #392b18; --bad: #f2a09b; --bad-soft: #3b1f1d;
+    --code-bg: #0a0a0a;
+  }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="cards"]) to (:scope [data-floe-part] > *) {
+/* Each card is numbered by its place, as the steps of a plan are */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
+.card {
+  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+}
+:scope.numbered > .card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
+}
+.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone */
+:scope {
+  display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
+  background: var(--accent-soft); color: var(--accent);
+}
+:scope.good { background: var(--good-soft); color: var(--good); }
+:scope.warn { background: var(--warn-soft); color: var(--warn); }
+:scope.bad { background: var(--bad-soft); color: var(--bad); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="code"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+/* Dark in light mode too, as code in an editor is; the language stands at the right of the heading */
+:scope {
+  margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
+  background: var(--code-bg); color: var(--code-fg);
+  font-family: var(--mono);
+}
+:scope figcaption {
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1.1rem; font-size: 0.78rem;
+  background: color-mix(in srgb, var(--code-fg) 5%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
+}
+:scope pre {
+  margin: 0; padding: 0.95rem 1.1rem; overflow-x: auto; background: none; border: 0; border-radius: 0; color: inherit;
+  font-family: inherit; font-size: 0.875rem; line-height: 1.65; tab-size: 4;
+}
+:scope .file { opacity: 0.85; }
+:scope .lang {
+  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: 5px;
+  background: var(--code-prompt); color: var(--code-bg);
+}
+/* A block, so that the code's last line break draws no empty line */
+:scope code { display: block; font: inherit; color: inherit; background: none; padding: 0; border-radius: 0; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="note"]) to (:scope [data-floe-part] > *) {
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
+:scope {
+  position: relative; background: var(--accent-soft); padding: 1rem 1.25rem 1rem 3.7rem;
+  border-radius: 14px; max-width: var(--text-width);
+}
+:scope.good { background: var(--good-soft); }
+:scope.warn { background: var(--warn-soft); }
+:scope.bad { background: var(--bad-soft); }
+:scope::before {
+  content: "i"; content: "i" / ""; position: absolute; left: 1.25rem; top: 1.1rem;
+  display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+  background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+}
+:scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
+:scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }
+:scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad); }
+:scope > * { margin: 0; }
+:scope > * + * { margin-top: 0.5rem; }
+.title { display: block; font-size: 0.9rem; color: var(--accent); }
+:scope.good .title { color: var(--good); }
+:scope.warn .title { color: var(--warn); }
+:scope.bad .title { color: var(--bad); }
+:scope > .title + * { margin-top: 0.1rem; }
+:scope code { background: var(--surface); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns */
+:scope {
+  overflow-x: auto;
+}
+:scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.8rem 1.1rem; }
+:scope :is(th, td):not(.num) { min-width: 7em; }
+/* A num column's heading wraps as long as it needs, but not a character a line */
+:scope th.num { min-width: 6em; }
+:scope thead th {
+  font-size: 0.8rem; font-weight: 600; color: var(--muted);
+  background: color-mix(in srgb, var(--line) 40%, var(--surface));
+}
+:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line) 18%, var(--surface)); }
+:scope .num { text-align: right; }
+:scope td.num {
+  min-width: auto; font-family: var(--mono);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
+:scope figcaption { opacity: 0.85; }
+:scope :is(.run, .out) { display: block; }
+:scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
+:scope .run::before { content: "$ "; color: var(--code-prompt); }
+:scope.zsh .run::before { content: "% "; }
+:scope.powershell .run::before { content: "PS> "; }
+:scope.cmd .run::before { content: "> "; }
+:scope .out { opacity: 0.7; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+blockquote :is(code, a) { color: inherit; }
+blockquote code { background: color-mix(in srgb, currentColor 15%, transparent); }
+blockquote { border: 0; padding: 1.1rem 1.5rem; border-radius: 14px; background: var(--fg); color: var(--bg); font-size: 1.05rem; }
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+:scope { box-shadow: none; border: 1.5px solid var(--fg); }
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+:scope { box-shadow: none; border: 1.5px solid var(--fg); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="cards"]) to (:scope [data-floe-part] > *) {
+.card { border: 1.5px solid var(--fg); box-shadow: 4px 4px 0 var(--fg); }
+:scope.numbered > .card::before { content: none; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
+:scope { border-radius: 6px; font-weight: 700; background: var(--accent); color: var(--on-fill); }
+:scope.good { background: var(--good); color: var(--on-fill); }
+:scope.warn { background: var(--warn); color: var(--on-fill); }
+:scope.bad { background: var(--bad); color: var(--on-fill); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="code"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+:scope { box-shadow: none; }
+:scope figcaption { background: color-mix(in srgb, var(--code-fg) 7%, transparent); font-weight: 600; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="note"]) to (:scope [data-floe-part] > *) {
+:scope { padding-left: 1.25rem; background: var(--surface); border: 1.5px solid var(--accent); }
+:scope.good { background: var(--surface); border-color: var(--good); }
+:scope.warn { background: var(--surface); border-color: var(--warn); }
+:scope.bad { background: var(--surface); border-color: var(--bad); }
+:scope::before, :scope:is(.good, .warn, .bad)::before { content: none; }
+.title { display: inline-block; font-size: 0.75rem; padding: 0 0.6rem; border-radius: 6px; background: var(--accent); color: var(--on-fill); }
+:scope.good .title { background: var(--good); color: var(--on-fill); }
+:scope.warn .title { background: var(--warn); color: var(--on-fill); }
+:scope.bad .title { background: var(--bad); color: var(--on-fill); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+/* Ink and paper: a table's heading in ink, states filled with their colour, frames drawn sharp */
+/* The panel's thin frame, not the ink's */
+:scope { border: 1px solid var(--line); }
+:scope thead th { background: var(--fg); color: var(--bg); }
+:scope tbody tr:nth-child(even) td { background: none; }
+:scope tbody tr + tr td { border-top: 1px solid var(--line); }
+:scope thead :is(code, a) { color: inherit; }
+:scope thead code { background: color-mix(in srgb, currentColor 15%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.page {
+@scope (:root) to ([data-floe-part] > *) {
+/* The colours and faces are the theme's palette; the page lays them out */
+:scope {
+  /* The width of the whole body; that of prose is the palette's */
+  --page-width: 96rem;
+}
+body {
+  margin: 0; font-size: 16px; line-height: 1.85; padding-inline: 16px; padding-block: 2.5rem 4rem;
+}
+main { max-width: var(--page-width); margin-inline: auto; display: grid; gap: 2.5rem; }
+main > *, section > * { min-width: 0; }
+h1 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: 0.01em; }
+h2 { font-size: 1.4rem; }
+header { display: grid; gap: 0.7rem; }
+section { display: grid; gap: 1rem; }
+section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
+.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lead { color: var(--muted); font-size: 1.05rem; }
+.muted { color: var(--muted); }
+}
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1 id="the-ink-theme">The ink theme</h1>
+</header>
+<section>
+<h2 id="parts">Parts</h2>
+<p>Text with <strong>bold</strong>, <code>code</code> and a <a href="https://example.com/">link</a>.</p>
+<blockquote>
+<p>A quote.</p>
+</blockquote>
+
+<div data-floe-part="note"><strong class="title">Note</strong><p>A note in the accent.</p>
+</div>
+<div class="warn" data-floe-part="note"><p>A warning.</p>
+</div>
+<div data-floe-part="table"><table>
+<thead><tr><th scope="col">Name</th><th scope="col" class="num">Count</th><th scope="col">State</th></tr></thead>
+<tbody>
+<tr><td>Pages</td><td class="num">1,840</td><td><span class="good" data-floe-part="cell">done</span></td></tr>
+<tr><td>Links</td><td class="num">120</td><td><span class="bad" data-floe-part="cell">open</span></td></tr>
+</tbody>
+</table></div>
+<figure data-floe-part="code"><figcaption><span class="file">a.conf</span><span class="lang">ini</span></figcaption><pre><code>read_only = true
+</code></pre></figure>
+<figure class="zsh" data-floe-part="terminal"><figcaption>zsh</figcaption><pre><span class="run">wiki export</span><span class="out">done</span></pre></figure>
+<div class="numbered" data-floe-part="cards">
+<div class="card" data-floe-look="panel"><h3 id="one">One</h3><p>First.</p>
+</div>
+<div class="card" data-floe-look="panel"><h3 id="two">Two</h3><p>Second.</p>
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

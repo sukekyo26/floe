@@ -1,0 +1,3 @@
+- field: rows
+  expr: all(item.rows, len(#) == len(item.columns))
+  message: write as many cells in each row as there are columns

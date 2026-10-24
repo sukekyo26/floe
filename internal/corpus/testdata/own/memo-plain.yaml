@@ -1,0 +1,13 @@
+template: memo
+lang: en
+theme: plain
+title: Memo in plain
+by: The platform team
+head: <script>document.documentElement.dataset.memo = "yes";</script>
+quote: { title: Said, text: The wiki moves in **April**., tone: good }
+points: [First, Second with `code`]
+parts:
+  - table:
+      columns: [{ title: What }, { title: When, num: true }]
+      rows: [[Copy, '6'], [Check, '7']]
+  - note: { text: A note of floe's. }

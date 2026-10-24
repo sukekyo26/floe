@@ -1,0 +1,24 @@
+template: report
+lang: en
+title: Anchors
+sections:
+  - heading: Setup & run
+    parts:
+      - text: |
+          Links that reach: [setup](#setup-run), [again](#setup-run-1), [third](#setup-run-2),
+          [in the text](#a-heading-in-text), [日本語](#日本語の見出し), [the HTML id](#mine),
+          [a name](#named) and [the top](#).
+
+          ## A heading in text
+  - heading: Setup & run
+    parts:
+      - html: <p id="mine">An id of the page's own.</p><a name="named">A name.</a>
+  - heading: Setup  &  RUN!
+    parts:
+      - text: The same text a third time.
+  - heading: 日本語の見出し
+    parts:
+      - text: 日本語。
+  - heading: '!!!'
+    parts:
+      - text: A heading of symbols alone gets no id.

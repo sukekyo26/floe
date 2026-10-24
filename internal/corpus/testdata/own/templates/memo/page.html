@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+{{- with .Data.head}}
+{{.}}
+{{- end}}
+</head>
+<body>
+<main>
+<h1>{{.Title}}</h1>
+<p class="by">{{word "by"}} {{.Data.by}}</p>
+{{- with .Data.quote}}
+{{.}}
+{{- end}}
+<ul data-floe-look="rows">
+{{- range .Data.points}}
+<li>{{.}}</li>
+{{- end}}
+</ul>
+{{- range .Data.parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</main>
+</body>
+</html>

@@ -52,12 +52,23 @@ test:
 test-race:
     CGO_ENABLED=1 go test -race -shuffle=on {{pkgs}}
 
+# Write the golden files of internal/corpus anew from what floe prints and draws now; read the change in git diff
+golden:
+    go test ./internal/corpus -run TestCorpus -update
+
 # Fail when total coverage of internal/ is below MIN_COVERAGE (default 90)
 cover-check:
     #!/usr/bin/env bash
     set -euo pipefail
     min_coverage="${MIN_COVERAGE:-90}"
-    go test -shuffle=on -covermode=atomic -coverpkg=./internal/... -coverprofile={{cover_file}} {{pkgs}}
+    # Without internal/corpus: what its samples run through cli.Run would count for the unit tests of every package.
+    # A plain substitution, which fails the recipe as pipefail tells (bash 3.2, on macOS, has no mapfile).
+    packages=$(go list {{pkgs}} | grep -v '/internal/corpus$') || {
+        echo "cover-check: go list failed, or found no package but internal/corpus; run go list {{pkgs}} to see which" >&2
+        exit 1
+    }
+    # shellcheck disable=SC2086 # one package to a word; an import path has no space
+    go test -shuffle=on -covermode=atomic -coverpkg=./internal/... -coverprofile={{cover_file}} $packages
     total=$(go tool cover -func={{cover_file}} | awk '/^total:/ {gsub("%","",$3); print $3}')
     echo "Total coverage: ${total}% (threshold: ${min_coverage}%)"
     awk -v t="$total" -v m="$min_coverage" 'BEGIN { exit (t+0 >= m+0) ? 0 : 1 }' || {

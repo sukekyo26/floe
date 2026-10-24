@@ -1,0 +1,14 @@
+template: report
+lang: ja-JP
+title: Words in ja-JP
+sections:
+  - heading: Words of the parts
+    parts:
+      - risks:
+          - { what: Broken links, likely: high, impact: mid, fix: A link check }
+      - matrix:
+          columns: [Old, New]
+          rows: [{ what: Search, cells: [yes, part] }]
+      - fields:
+          - { name: port, type: number, required: true, default: '8080' }
+      - decision: { title: Move, status: decided, date: 2030-03-28, rejected: [Stay] }

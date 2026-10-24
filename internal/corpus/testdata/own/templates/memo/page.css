@@ -1,0 +1,7 @@
+:scope {
+  max-width: 40rem;
+  margin: 0 auto;
+}
+.by {
+  color: var(--muted);
+}
