@@ -1,0 +1,3 @@
+- for: points
+  expr: len(item) <= 80
+  message: keep a point to 80 letters; put more in a part

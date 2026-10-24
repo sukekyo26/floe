@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "memo",
+  "description": "A memo: who wrote it, a quote, points in rows, and parts",
+  "type": "object",
+  "properties": {
+    "by": { "type": "string" },
+    "head": { "type": "string", "format": "html", "description": "HTML for the head, such as a script of the page's own" },
+    "quote": { "$ref": "floe:///parts/quote.json" },
+    "points": { "type": "array", "items": { "type": "string", "format": "markdown" } },
+    "parts": { "type": "array", "items": { "$ref": "floe:///parts/any.json" } }
+  },
+  "required": ["by"],
+  "additionalProperties": false
+}

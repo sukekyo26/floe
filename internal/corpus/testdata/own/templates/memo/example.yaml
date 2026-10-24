@@ -1,0 +1,10 @@
+template: memo
+lang: en
+title: A memo
+by: The platform team
+quote: { title: Said, text: The wiki moves in **April**. }
+points: [First, Second with `code`]
+parts:
+  - table:
+      columns: [{ title: What }, { title: When }]
+      rows: [[Copy, Saturday]]

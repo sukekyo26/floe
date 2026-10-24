@@ -1,0 +1,50 @@
+$ floe check blueprint.yaml brutal.yaml default.yaml editorial.yaml ink.yaml notebook.yaml soft.yaml swiss.yaml washi.yaml
+exit 0
+$ floe render --out-dir $TMP/pages/blueprint.yaml blueprint.yaml
+exit 0
+--- stdout
+$TMP/pages/blueprint.yaml/blueprint.html
+$ floe render --out-dir $TMP/pages/brutal.yaml brutal.yaml
+exit 0
+--- stdout
+$TMP/pages/brutal.yaml/brutal.html
+$ floe render --out-dir $TMP/pages/default.yaml default.yaml
+exit 0
+--- stdout
+$TMP/pages/default.yaml/default.html
+$ floe render --out-dir $TMP/pages/editorial.yaml editorial.yaml
+exit 0
+--- stdout
+$TMP/pages/editorial.yaml/editorial.html
+$ floe render --out-dir $TMP/pages/ink.yaml ink.yaml
+exit 0
+--- stdout
+$TMP/pages/ink.yaml/ink.html
+$ floe render --out-dir $TMP/pages/notebook.yaml notebook.yaml
+exit 0
+--- stdout
+$TMP/pages/notebook.yaml/notebook.html
+$ floe render --out-dir $TMP/pages/soft.yaml soft.yaml
+exit 0
+--- stdout
+$TMP/pages/soft.yaml/soft.html
+$ floe render --out-dir $TMP/pages/swiss.yaml swiss.yaml
+exit 0
+--- stdout
+$TMP/pages/swiss.yaml/swiss.html
+$ floe render --out-dir $TMP/pages/washi.yaml washi.yaml
+exit 0
+--- stdout
+$TMP/pages/washi.yaml/washi.html
+$ floe render --out-dir $TMP/together blueprint.yaml brutal.yaml default.yaml editorial.yaml ink.yaml notebook.yaml soft.yaml swiss.yaml washi.yaml
+exit 0
+--- stdout
+$TMP/together/blueprint.html
+$TMP/together/brutal.html
+$TMP/together/default.html
+$TMP/together/editorial.html
+$TMP/together/ink.html
+$TMP/together/notebook.html
+$TMP/together/soft.html
+$TMP/together/swiss.html
+$TMP/together/washi.html

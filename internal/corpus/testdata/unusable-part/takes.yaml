@@ -1,0 +1,7 @@
+template: report
+lang: en
+title: t
+sections:
+  - heading: h
+    parts:
+      - links: [{ title: a, url: /a }]

@@ -1,0 +1,6 @@
+$ floe check anchors.yaml
+exit 0
+$ floe render --out-dir $TMP/pages/anchors.yaml anchors.yaml
+exit 0
+--- stdout
+$TMP/pages/anchors.yaml/anchors.html

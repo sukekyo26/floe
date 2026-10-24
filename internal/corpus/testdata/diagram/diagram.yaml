@@ -1,0 +1,49 @@
+template: report
+lang: en
+title: Diagrams
+sections:
+  - heading: Every kind
+    parts:
+      - diagram:
+          id: all
+          width: 700.5
+          height: 400
+          title: Every "part" & <more>
+          parts:
+            - frame: { x: 10, y: 10, w: 680, h: 380, label: Outer <frame>, accent: true }
+            - frame: { x: 20.25, y: 40, w: 300, h: 200, label: Square, square: true }
+            - box: { x: 40, y: 72, w: 200, h: 56, tone: accent, rows: [[ALB, main code], 公開の入口] }
+            - box: { x: 40, y: 140, w: 200, h: 40, shape: hex, rows: [Decide?] }
+            - box: { x: 40, y: 190, w: 120, h: 40, shape: pill, tone: bad, rows: [[Pill & co, sub]] }
+            - box: { x: 170, y: 190, w: 120, h: 40, shape: state, rows: [State] }
+            - table: { x: 360, y: 40, w: 200, title: users, tone: good, rows: [[id, PK], ---, [name], email] }
+            - table: { x: 580, y: 40, w: 100, title: empty }
+            - edge: { d: "M240,100 H360", label: 'a"b', at: [300, 90], start: one, end: zero-many, dashed: true, bold: true, tone: warn }
+            - edge: { d: "M240,160 H300 V300 H400", end: triangle, crossing: true }
+            - edge: { d: "M630,70 V200", start: arrow, end: arrow }
+            - dot: { cx: 450, cy: 300, tone: accent, hollow: true }
+            - dot: { cx: 480, cy: 300, r: 5 }
+            - bar: { x1: 500, x2: 520, y: 250, tone: good, label: short }
+            - bar: { x1: 500, x2: 501, y: 280 }
+            - axis: { x1: 30, x2: 300, y: 340, ticks: [[40, 10/06], [140, 10/07]], grid: 250 }
+            - axis: { x1: 400, x2: 600, y: 370, ticks: [[420, a], [520, b]] }
+            - circle: { cx: 600, cy: 300, r: 30, tone: warn }
+            - circle: { cx: 640, cy: 300, r: 30 }
+            - label: { text: strong end, x: 680, y: 220, anchor: end, strong: true }
+            - label: { text: plain, x: 400, y: 220, anchor: start, plain: true }
+            - line: { x1: 330, y1: 20, x2: 330, y2: 30, kind: divider }
+            - raw: { svg: '<rect x="1" y="1" width="2" height="2" class="band"/>' }
+  - heading: Icons
+    parts:
+      - diagram:
+          id: ic
+          width: 400
+          height: 200
+          title: Icons
+          parts:
+            - frame: { x: 10, y: 10, w: 380, h: 180, label: Cloud <x>, icon: aws/group/aws-cloud-logo }
+            - frame: { x: 30, y: 50, w: 160, h: 130, label: Region, icon: aws/group/region }
+            - icon: { x: 80, y: 80, name: aws/res/client, label: Client & co }
+            - icon: { x: 130, y: 80, name: aws/res/client }
+            - icon: { x: 250, y: 70, name: aws/amazon-bedrock, size: 64 }
+            - icon: { x: 330, y: 70, name: aws/amazon-bedrock }

@@ -1,0 +1,10 @@
+template: report
+lang: en
+title: Dangling
+sections:
+  - heading: Setup & run
+    parts:
+      - text: See [run](#setup-run) and [gone](#nowhere).
+      - table:
+          columns: [{ title: Link }]
+          rows: [['[case](#Setup-Run)']]

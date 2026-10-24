@@ -1,0 +1,18 @@
+/* The colours and faces are the theme's palette; the page lays them out */
+:scope {
+  /* The width of the whole body; that of prose is the palette's */
+  --page-width: 96rem;
+}
+body {
+  margin: 0; font-size: 16px; line-height: 1.85; padding-inline: 16px; padding-block: 2.5rem 4rem;
+}
+main { max-width: var(--page-width); margin-inline: auto; display: grid; gap: 2.5rem; }
+main > *, section > * { min-width: 0; }
+h1 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: 0.01em; }
+h2 { font-size: 1.4rem; }
+header { display: grid; gap: 0.7rem; }
+section { display: grid; gap: 1rem; }
+section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
+.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lead { color: var(--muted); font-size: 1.05rem; }
+.muted { color: var(--muted); }

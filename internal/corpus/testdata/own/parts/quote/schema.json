@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "note",
+  "description": "A note set apart from the text, in the colour of its tone: accent when left out, good, warn for a warning, bad for a danger",
+  "type": "object",
+  "properties": {
+    "tone": { "$ref": "floe:///parts/tone.json" },
+    "title": { "type": "string", "minLength": 1, "description": "A short heading above the text, such as Note or Warning" },
+    "text": { "type": "string", "minLength": 1, "description": "Markdown" }
+  },
+  "required": ["text"],
+  "additionalProperties": false
+}
