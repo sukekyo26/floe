@@ -56,7 +56,8 @@ var markerKinds = func() []string {
 // specs drawn together. It returns the mistakes of every spec, and draws each spec without one: that of a
 // spec with a mistake is "". A caller that uses the drawing only when every spec is drawn stops on the
 // error; one that uses each drawn spec skips the "". The mistakes are in the order of the specs' lines,
-// those of no place (icons not fetched) last and once. On a failure that is no mistake it draws none.
+// those of no place (icons not fetched or not read, no directory for them) last and once. On a failure
+// that is no mistake it draws none.
 func Render(specs []*Spec, store *icons.Store) ([]string, error) {
 	var problems, unplaced usererr.List
 	told := map[string]bool{}

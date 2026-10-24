@@ -51,7 +51,7 @@ type layout struct {
 	spec     *Spec
 	icons    *icons.Store
 	err      error        // the first failure of the icons, which no user can fix
-	unplaced usererr.List // the icons' mistakes, of no place: not fetched, no directory for them
+	unplaced usererr.List // the icons' mistakes, of no place: not fetched, no directory, an index or icon unread
 	boxes    []rect       // edges may not run through these
 	marks    []rect       // may not overlap, but edges may reach their centre (dots)
 	frames   []rect
@@ -193,7 +193,8 @@ func (l *layout) addIcon(i Icon) {
 
 // image places the icon of name (aws/…), two with a variant for dark backgrounds. An icon is an
 // <image>, not inline <svg>: the official icons' ids collide between icons. An icon not there is a mistake
-// of the spec; icons not fetched are a mistake of no place, and a failure to read them stops the drawing.
+// of the spec; icons not fetched or not read are a mistake of no place, and a failure that is no mistake
+// stops the drawing.
 func (l *layout) image(at yamlpos.Pos, name string, x, y, size float64, what *usererr.Error) markup {
 	icon, names, err := l.icons.Lookup(name)
 	if errors.Is(err, icons.ErrNoSet) {
