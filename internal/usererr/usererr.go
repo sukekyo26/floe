@@ -42,6 +42,21 @@ func NewWhole(key string, args ...any) *Error {
 	return e
 }
 
+// OfWhole returns copies of l, of the whole output, as NewWhole makes them: what no input it is told with
+// takes away, such as a part of one's own that cannot be used, warned of whatever uses it.
+func OfWhole(l List) List {
+	if len(l) == 0 {
+		return nil
+	}
+	whole := make(List, 0, len(l))
+	for _, e := range l {
+		c := *e
+		c.Whole = true
+		whole = append(whole, &c)
+	}
+	return whole
+}
+
 // NewAt returns an *Error for the catalog message key with args, at the line and column of file, 0 for
 // none.
 func NewAt(file string, line, column int, key string, args ...any) *Error {
@@ -63,7 +78,7 @@ func NewIn(file, at, key string, args ...any) *Error {
 // they are told above.
 func Over(of string, under List, key string, args ...any) *Error {
 	return &Error{
-		Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: under, Of: of, Whole: true,
+		Key: key, Args: args, Conflict: false, File: "", Line: 0, Column: 0, At: "", Under: under, Of: of, Whole: false,
 	}
 }
 
@@ -72,7 +87,6 @@ func Over(of string, under List, key string, args ...any) *Error {
 func (e *Error) Placed(file string, line, column int, at string) *Error {
 	placed := *e
 	placed.File, placed.Line, placed.Column, placed.At = file, line, column, at
-	placed.Whole = false
 	return &placed
 }
 

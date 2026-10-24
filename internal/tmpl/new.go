@@ -230,7 +230,7 @@ func (set *partSet) checkThemeFiles(floe *partSet, src *part, made *MadePart, na
 			if derr != nil {
 				why = derr.Error()
 			}
-			return usererr.New("tmpl_themes_dir_unreadable", made.ThemesAt, why)
+			return usererr.NewWhole("tmpl_themes_dir_unreadable", made.ThemesAt, why)
 		}
 	}
 	var there []string

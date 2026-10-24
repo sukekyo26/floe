@@ -35,7 +35,8 @@ type Report struct {
 // that several stand for told under the first, or, for an error that is not the user's or holds no
 // mistake, floe's failure. An error that carries a report already told (the server's, to the command line)
 // is told as it is. It is the only place a mistake is worded. The same mistake, as told the first time (where
-// it is, its words and those under it), is told once, where it first comes, wherever it was made.
+// it is, its words and those under it), is told once, where it first comes, wherever it was made. Those
+// of the whole output (NewWhole) that have no place are told last; the others keep the order they are given in.
 func Tell(c *i18n.Catalog, err error) Report {
 	var reported interface{ Report() Report }
 	if errors.As(err, &reported) {
@@ -54,7 +55,7 @@ func Tell(c *i18n.Catalog, err error) Report {
 	ordered := make(List, 0, len(all))
 	for _, whole := range []bool{false, true} {
 		for _, e := range all {
-			if e.Whole == whole {
+			if (e.Whole && e.File == "") == whole {
 				ordered = append(ordered, e)
 			}
 		}

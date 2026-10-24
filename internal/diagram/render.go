@@ -55,12 +55,11 @@ var markerKinds = func() []string {
 // of store. The ids of the diagrams name their markers and icons, so they must differ between the
 // specs drawn together. It returns the mistakes of every spec, and draws each spec without one: that of a
 // spec with a mistake is "". A caller that uses the drawing only when every spec is drawn stops on the
-// error; one that uses each drawn spec skips the "". The mistakes are in the order of the specs' lines,
-// those of no place (icons not fetched or not read, no directory for them) last and once. On a failure
-// that is no mistake it draws none.
+// error; one that uses each drawn spec skips the "". The mistakes are in the order of the specs' lines;
+// those of the icons (not fetched or not read, no directory for them), of the whole output, are told last
+// and once by usererr.Tell. On a failure that is no mistake it draws none.
 func Render(specs []*Spec, store *icons.Store) ([]string, error) {
-	var problems, unplaced usererr.List
-	told := map[string]bool{}
+	var problems usererr.List
 	layouts := make([]*layout, len(specs))
 	first := map[string]*Spec{}
 	for i, s := range specs {
@@ -77,13 +76,7 @@ func Render(specs []*Spec, store *icons.Store) ([]string, error) {
 		if own = append(own, l.check()...); len(own) == 0 && len(l.unplaced) == 0 {
 			layouts[i] = l
 		}
-		problems = append(problems, own...)
-		for _, e := range l.unplaced {
-			if !told[e.Error()] {
-				told[e.Error()] = true
-				unplaced = append(unplaced, e)
-			}
-		}
+		problems = append(append(problems, own...), l.unplaced...)
 	}
 	out := make([]string, len(layouts))
 	for i, l := range layouts {
@@ -91,8 +84,7 @@ func Render(specs []*Spec, store *icons.Store) ([]string, error) {
 			out[i] = string(l.svg())
 		}
 	}
-	// After those of a place, so that Sorted, which keeps the files in the order they first come, puts them last.
-	return out, append(problems, unplaced...).Sorted().Err()
+	return out, problems.Sorted().Err()
 }
 
 func (l *layout) svg() markup {

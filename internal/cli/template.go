@@ -216,11 +216,12 @@ code 0. Nothing is printed when the templates are right.`,
 			for _, dir := range a.namedFiles(args) {
 				warnings, err := a.templates().Check(dir)
 				all = append(all, warnings...)
-				failed = failed || err != nil
+				told := len(all)
 				tell(&all, err)
+				failed = failed || len(all) > told
 			}
 			if failed {
-				return all
+				return all.Err()
 			}
 			a.tellWarnings(all)
 			return nil

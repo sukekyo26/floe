@@ -1191,6 +1191,13 @@ func TestWholeLast(t *testing.T) {
 	r = e.run(t, "", "template", "check", uses, plain)
 	inOrder(t, "template check of a template with a mistake, then one with warnings alone", r, 1,
 		uses+"/schema.json: #/properties/b: ", "floe: "+plain+" has no template.yaml", broken+", as told above")
+	// One of an input that has no place (page.html naming a part that cannot be used) stays with the input.
+	e.write(t, "templates/names/schema.json", `{"type": "object", "additionalProperties": false, "properties": {}}`)
+	e.write(t, "templates/names/page.html", strings.Replace(page, "<body>", `<body><div data-floe-part="bad"></div>`, 1))
+	e.write(t, "work/n.yaml", "template: names\nlang: en\ntitle: t\n")
+	r = e.run(t, "work", "check", "n.yaml", "b.yaml")
+	inOrder(t, "check of a file whose page.html names a part that cannot be used, and another", r, 1,
+		broken+"\n", reason, "b.yaml:2:1: ")
 	e.write(t, "themes/mine/palette.css", "")
 	e.write(t, "themes/mine/stray.css", "p {}\n")
 	r = e.run(t, "", "template", "check", plain)

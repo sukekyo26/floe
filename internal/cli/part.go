@@ -155,13 +155,13 @@ uses.`,
 		Args: usage(cobra.NoArgs),
 		RunE: func(*cobra.Command, []string) error {
 			// One list, the warnings and the mistakes, told once.
-			warnings, err := a.templates().CheckOwnParts()
-			if err == nil {
-				a.tellWarnings(warnings)
+			all, err := a.templates().CheckOwnParts()
+			told := len(all)
+			if tell(&all, err); len(all) == told {
+				a.tellWarnings(all)
 				return nil
 			}
-			tell(&warnings, err)
-			return warnings.Err()
+			return all.Err()
 		},
 	}
 }
