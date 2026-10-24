@@ -29,7 +29,7 @@ the server is not started, and nothing is printed when the files are right.`,
 
 func (a *app) check(files []string) error {
 	var found usererr.List
-	for _, p := range a.args(files) {
+	for _, p := range a.args(files, "cli_wants_data") {
 		_, err := drawFile(a, p)
 		tell(&found, err)
 	}

@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 func (a *app) iconsCmd() *cobra.Command {
@@ -38,19 +39,17 @@ already there is kept unless --force.`,
 		Args: usage(cobra.RangeArgs(1, 2)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			set := args[0]
-			if err := icons.CheckSet(set); err != nil {
-				return err //nolint:wrapcheck // a usererr for the user as is
-			}
 			source := ""
+			var sourceErr error
 			if len(args) == 2 {
 				source = args[1]
 				if !icons.IsURL(source) {
-					p := a.arg(source, argument(2))
-					if p.err != nil {
-						return p.err
-					}
-					source = p.abs
+					p := a.arg(source, place{name: argument(2), wants: "cli_wants_icons"})
+					source, sourceErr = p.abs, p.err
 				}
+			}
+			if err := usererr.Collect(icons.CheckSet(set), sourceErr); err != nil {
+				return err //nolint:wrapcheck // usererrs for the user as they are
 			}
 			got, err := icons.New(a.cfg.icons).Fetch(cmd.Context(), set, source, force)
 			if err != nil {

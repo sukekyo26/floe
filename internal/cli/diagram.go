@@ -51,7 +51,7 @@ is enough; more does no harm). --no-assets leaves them out.`,
 }
 
 func (a *app) render(files []string, assets bool) error {
-	named := a.args(files)
+	named := a.args(files, "cli_wants_spec")
 	// The mistakes of each file, in the order the files were given; those about all of the diagrams (icons
 	// not fetched) after them.
 	told := make([]usererr.List, len(named)+1)

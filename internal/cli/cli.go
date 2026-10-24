@@ -144,12 +144,12 @@ type arg struct {
 
 // arg resolves path for the command, once: under the working directory (dirs.Under), folding its .. by its
 // letters, so that every place reads a path alike; a relative one is refused when the working directory
-// cannot be read (main's Getwd failed: Dir ""). "" is refused as empty, by every command alike, by what
-// names it (what: --out-dir, argument 2), as a shell variable left unset gives it and it names no file. A
-// name of spaces alone is a file of that name.
-func (a *app) arg(path, what string) arg {
+// cannot be read (main's Getwd failed: Dir ""). "" is refused as empty, by every command alike, at the
+// place that takes it, as a shell variable left unset gives it and it names no file. A name of spaces alone
+// is a file of that name.
+func (a *app) arg(path string, at place) arg {
 	if path == "" {
-		return arg{name: path, abs: "", err: usererr.New("cli_path_empty", what)}
+		return arg{name: path, abs: "", err: usererr.New("cli_path_empty", at.name, english.Msg(at.wants))}
 	}
 	abs, ok := dirs.Under(a.env.Dir, path)
 	if !ok {
@@ -158,13 +158,20 @@ func (a *app) arg(path, what string) arg {
 	return arg{name: path, abs: abs, err: nil}
 }
 
-// args is the arg of each of the files or directories given, in order, each once (once).
-func (a *app) args(paths []string) []arg {
+// args is the arg of each of the files or directories given, in order, each once (once), each wants (the
+// key of what to give) at its place.
+func (a *app) args(paths []string, wants string) []arg {
 	given := make([]arg, len(paths))
 	for i, path := range paths {
-		given[i] = a.arg(path, argument(i+1))
+		given[i] = a.arg(path, place{name: argument(i + 1), wants: wants})
 	}
 	return once(given)
+}
+
+// place is where a command takes a path: its name, as a mistake names it (--out-dir, argument 2), and the
+// key of what to give there.
+type place struct {
+	name, wants string
 }
 
 // argument names the nth argument a command was given, for a mistake that has no other name for it.

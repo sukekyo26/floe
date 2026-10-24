@@ -38,7 +38,7 @@ was not written again.`,
 			// Left out, it is none (beside each data file); given, even empty, it is a path.
 			var out arg
 			if cmd.Flags().Changed("out-dir") {
-				out = a.arg(outDir, "--out-dir")
+				out = a.arg(outDir, place{name: "--out-dir", wants: "cli_wants_out_dir"})
 			}
 			return a.renderPages(args, out, check)
 		},
@@ -78,7 +78,7 @@ func (a *app) drawPages(files []string, out arg) ([]rendered, error) {
 	// ignores case (macOS), two paths may be one file.
 	// LIMIT: case only. APFS also takes the NFC and NFD of a name as one; fold Unicode if pages collide so.
 	first := map[string]rendered{}
-	for _, f := range a.args(files) {
+	for _, f := range a.args(files, "cli_wants_data") {
 		file := f.name
 		dir, at := out.name, out.abs
 		if dir == "" {

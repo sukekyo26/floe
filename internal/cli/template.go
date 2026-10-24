@@ -216,7 +216,7 @@ code 0. Nothing is printed when the templates are right.`,
 			// One list, each template's warnings and mistakes in the order given, told once.
 			var all usererr.List
 			failed := false
-			for _, p := range a.args(args) {
+			for _, p := range a.args(args, "cli_wants_template") {
 				var warnings usererr.List
 				err := p.err
 				if err == nil {

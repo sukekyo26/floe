@@ -117,7 +117,7 @@ refused unless --force.`,
 func (a *app) publish(ctx context.Context, file string, link bool, opts store.Options) error {
 	// Checked as the server checks, to be refused before it starts, and sent so, as the slug names the URL.
 	opts, err := store.Accept(file, link, opts)
-	p := a.arg(file, argument(1))
+	p := a.arg(file, place{name: argument(1), wants: "cli_wants_publish"})
 	var saved server.Saved
 	switch {
 	// An empty data file is Accept's to refuse, as the gate of the store the server checks with too; told

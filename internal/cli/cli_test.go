@@ -1281,24 +1281,28 @@ func TestEmptyPath(t *testing.T) {
 
 	e := newEnv(t)
 	page := e.page(t, "p.yaml", "P")
-	empty := func(what string) string {
-		return "floe: " + what + " is an empty path; give a file or directory, and check that a variable written for it is set\n"
+	empty := func(what, wants string) string {
+		return "floe: " + what + " is an empty path; give " + wants + ", and check that a variable written for it is set\n"
 	}
+	const data = "a data file (.yaml or .yml)"
 	const noData = "floe: the path of the data file to publish is empty; give the path of a .yaml or .yml file\n"
 	for _, c := range []struct {
 		args []string
 		told string
 	}{
-		{[]string{"check", ""}, empty("argument 1")},
-		{[]string{"render", ""}, empty("argument 1")},
-		{[]string{"diagram", "render", ""}, empty("argument 1")},
-		{[]string{"template", "check", ""}, empty("argument 1")},
-		{[]string{"publish", "--link", ""}, empty("argument 1")},
-		{[]string{"icons", "fetch", "aws", ""}, empty("argument 2")},
-		{[]string{"render", "--out-dir", "", page}, empty("--out-dir")},
+		{[]string{"check", ""}, empty("argument 1", data)},
+		{[]string{"render", ""}, empty("argument 1", data)},
+		{[]string{"diagram", "render", ""}, empty("argument 1", "a diagram spec (.yaml or .yml)")},
+		{[]string{"template", "check", ""}, empty("argument 1", "a template directory")},
+		{[]string{"publish", "--link", ""}, empty("argument 1", "an HTML or data file")},
+		{[]string{"icons", "fetch", "aws", ""}, empty("argument 2", "a zip file or directory of the icons, or a URL")},
+		{[]string{"render", "--out-dir", "", page}, empty("--out-dir", "the directory to write the pages in")},
 		// Each by its place, though they are alike.
-		{[]string{"check", "", ""}, empty("argument 1") + empty("argument 2")},
-		{[]string{"render", "--out-dir", "", "", page}, empty("--out-dir") + empty("argument 1")},
+		{[]string{"check", "", ""}, empty("argument 1", data) + empty("argument 2", data)},
+		{[]string{"render", "--out-dir", "", "", page}, empty("--out-dir", "the directory to write the pages in") + empty("argument 1", data)},
+		// A set it does not know is told with the empty source.
+		{[]string{"icons", "fetch", "bogus", ""}, `floe: unknown icon set "bogus"; use aws` + "\n" +
+			empty("argument 2", "a zip file or directory of the icons, or a URL")},
 		// Accept, the store's gate, refuses an empty data file, in its words alone.
 		{[]string{"publish", ""}, noData},
 		{[]string{"publish", "", "--title", ""}, noData + "floe: --title is empty: give the page a name, or omit --title " +
@@ -1316,7 +1320,7 @@ func TestEmptyPath(t *testing.T) {
 	}
 	bad := e.write(t, "bad.yaml", "template: report\nlang: en\nnope: 1\n")
 	inOrder(t, "check of a bad file, '' and a good one", e.run(t, "", "check", bad, "", page), 1,
-		bad+":3:1: nope is not an item of the template report", empty("argument 2"))
+		bad+":3:1: nope is not an item of the template report", empty("argument 2", data))
 
 	want(t, "render without --out-dir", e.run(t, "", "render", page), 0, filepath.Join(e.tmp, "p.html")+"\n", "")
 	// Cancelled, the fetch of the set's page fails before it reaches the network, and tells that it was the one.
