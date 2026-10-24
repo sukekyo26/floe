@@ -1082,8 +1082,9 @@ func TestSameMistakesThroughServer(t *testing.T) {
 	e.write(t, "work/icons.yaml", "template: report\nlang: en\ntitle: t\nsections:\n  - parts:\n"+
 		diagram("a", "dot: { cx: 10 }")+diagram("b", "icon: { x: 10, y: 10, name: aws/aws-lambda }"))
 	for file, want := range map[string]string{
-		"memo.yaml":  "the part both cannot be used, as told above\n",
-		"icons.yaml": "icons.yaml:12:15: dot: give cy\nfloe: AWS icons are not in ",
+		"memo.yaml": "the part both cannot be used, as told above\n",
+		"icons.yaml": "icons.yaml:12:15: dot: give cy\nicons.yaml:19:15: icon \"aws/aws-lambda\" sticks out of the 100x50 canvas\n" +
+			"floe: AWS icons are not in ",
 	} {
 		here, there := e.run(t, "work", "check", file), e.run(t, "work", "publish", file)
 		if here.code != 1 || there.code != 1 || here.stderr != there.stderr || !strings.Contains(here.stderr, want) ||

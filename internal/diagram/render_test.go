@@ -2,6 +2,7 @@ package diagram_test
 
 import (
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"slices"
@@ -148,6 +149,43 @@ func TestRenderProblems(t *testing.T) {
 b.yaml:2:1: diagram id "same" is already used in a.yaml:1; give each diagram its own id`
 	if got := errString(err); got != want {
 		t.Errorf("Render\n got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// The mistakes of a spec are in the order of its lines, whatever check found them.
+func TestRenderProblemsInLineOrder(t *testing.T) {
+	t.Parallel()
+
+	o := parse(t, "o.yaml", "id: o\nwidth: 100\nheight: 50\ntitle: O\nparts:\n"+
+		"  - dot: { cx: 0, cy: 25 }\n  - box: { x: 80, y: 10, w: 40, h: 30, rows: [A] }\n")
+	_, err := render([]*diagram.Spec{o}, standIn)
+	want := `o.yaml:6:5: dot at 0,25 sticks out of the 100x50 canvas
+o.yaml:7:5: box "A" sticks out of the 100x50 canvas`
+	if got := errString(err); got != want {
+		t.Errorf("Render\n got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// Icons not fetched leave the diagrams that show them undrawn, told once after the mistakes of the
+// others, and every other diagram is checked and drawn.
+func TestRenderIconsNotFetched(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	const head = "width: 100\nheight: 100\ntitle: t\nparts:\n"
+	icon := "  - icon: { x: 10, y: 10, name: aws/aws-lambda }\n"
+	i1 := parse(t, "i1.yaml", "id: i1\n"+head+icon)
+	o := parse(t, "o.yaml", "id: o\n"+head+"  - dot: { cx: 0, cy: 25 }\n")
+	i2 := parse(t, "i2.yaml", "id: i2\n"+head+icon)
+	ok := parse(t, "ok.yaml", "id: ok\n"+head+"  - dot: { cx: 50, cy: 25 }\n")
+	out, err := diagram.Render([]*diagram.Spec{i1, o, i2, ok}, icons.New(dir))
+	want := "o.yaml:6:5: dot at 0,25 sticks out of the 100x100 canvas\n" +
+		"AWS icons are not in " + filepath.Join(dir, "aws") + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
+	if got := errString(err); got != want {
+		t.Errorf("Render\n got:\n%s\nwant:\n%s", got, want)
+	}
+	if len(out) != 4 || out[0] != "" || out[1] != "" || out[2] != "" || out[3] == "" {
+		t.Errorf("Render drew %q, want the last diagram alone", out)
 	}
 }
 
