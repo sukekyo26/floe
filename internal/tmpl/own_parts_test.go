@@ -458,7 +458,8 @@ func TestBrokenOwnParts(t *testing.T) {
 	braced := memo(t, `"risks": {"$ref": "floe:///parts/brace.json"}, "aside": {"type": "string"}`)
 	_, err := draw(tmpl.NewLibrary(braced, parts, themesOf(parts), ""), "template: memo\nlang: en\n")
 	var mistake i18n.Localizer
-	if !errors.As(err, &mistake) || !strings.HasPrefix(mistake.Localize(i18n.New("ja")), filepath.Join(braced, "memo", "schema.json")+": #/properties/risks: 部品 brace は使えません\n  "+filepath.Join(parts, "brace", "part.css")+":2: ") {
+	if !errors.As(err, &mistake) || !strings.HasPrefix(mistake.Localize(i18n.New("ja")), "data.yaml:1:11: 自分のテンプレート memo は使えません\n  "+
+		filepath.Join(braced, "memo", "schema.json")+": #/properties/risks: 部品 brace は使えません\n    "+filepath.Join(parts, "brace", "part.css")+":2: ") {
 		t.Errorf("Read of a template of brace = %v", err)
 	}
 	// By page.html.
@@ -957,7 +958,8 @@ func TestLookReplacesDrawing(t *testing.T) {
 	parts := ownParts(t, map[string]string{"table/part.css": ":scope { color: red; }\n"})
 	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/table.json"}, "aside": {"type": "string"}`), parts, themesOf(parts), "")
 	_, err := draw(l, "template: memo\nlang: en\nrisks: { columns: [{title: A}], rows: [[x]] }\n")
-	want := "the part table cannot be used\n  " + filepath.Join(parts, "table") + ": a look alone cannot take the place of floe's part table"
+	// Under the template, which names it.
+	want := "the part table cannot be used\n    " + filepath.Join(parts, "table") + ": a look alone cannot take the place of floe's part table"
 	if err == nil || !strings.Contains(err.Error(), want) {
 		t.Errorf("drawing a table with a look alone named table = %v, want %s", err, want)
 	}

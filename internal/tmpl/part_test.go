@@ -186,7 +186,9 @@ func TestCheckParts(t *testing.T) {
 		if _, mistakes = check(filepath.Join(dir, "memo"), "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 			t.Errorf("Check of %s = %v", ref, mistakes)
 		}
-		if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
+		// A data file is told the template cannot be used, at template:, why under it.
+		at := "data.yaml:1:11: your own template memo cannot be used\n  " + want
+		if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\n"); err == nil || !strings.HasPrefix(err.Error(), at) {
 			t.Errorf("Read of a template with %s = %v", ref, err)
 		}
 	}
