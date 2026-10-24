@@ -402,10 +402,11 @@ func parse(file string, src []byte) (*ast.MappingNode, error) {
 // and, when the top is not T, the mistake key shape.
 func readTop[T *ast.MappingNode | *ast.SequenceNode](file string, body ast.Node, finite bool, shape string) (T, error) {
 	// Of what anchors and tags hold, which tell themselves.
-	top, ok := yamlpos.Unwrap(body).(T)
+	u := yamlpos.Unwrap(body)
+	top, ok := u.(T)
 	var wrong error
-	if !ok {
-		wrong = yamlpos.New(file, yamlpos.Of(yamlpos.Unwrap(body)), shape)
+	if !ok && yamlpos.Written(u, u != body) {
+		wrong = yamlpos.New(file, yamlpos.Of(u), shape)
 	}
 	if err := usererr.Collect(refuse(file, body, finite), wrong); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns
@@ -896,7 +897,7 @@ func (r *refusals) Visit(n ast.Node) ast.Visitor {
 		if err := yamlpos.Anchors(r.file, key); err != nil {
 			_ = r.found.Add(err) //nolint:errcheck // Anchors tells only mistakes
 		}
-		if k := yamlpos.Unwrap(key); written(k, k != key) && !isText(k) {
+		if k := yamlpos.Unwrap(key); yamlpos.Written(k, k != key) && !isText(k) {
 			r.found = append(r.found, yamlpos.New(r.file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value))
 		}
 		ast.Walk(r, n.Value)
@@ -907,19 +908,6 @@ func (r *refusals) Visit(n ast.Node) ast.Visitor {
 		}
 	}
 	return r
-}
-
-// written reports whether n, held by an anchor or a tag when wrapped, is written in place: an alias is
-// written elsewhere. The null a wrapper holds is not told from one it holds of nothing, which
-// go-yaml writes as null, so it is left to the wrapper's mistake.
-func written(n ast.Node, wrapped bool) bool {
-	switch n.(type) {
-	case *ast.AliasNode:
-		return false
-	case *ast.NullNode:
-		return !wrapped
-	}
-	return true
 }
 
 func isText(n ast.Node) bool {
