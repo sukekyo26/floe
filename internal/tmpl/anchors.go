@@ -64,14 +64,21 @@ func withHeadingIDs(page []byte) ([]byte, pageAnchors) {
 	ids := map[string]string{}
 	for _, n := range found {
 		k, hasMark := attrOf(n, mark)
-		if _, hasID := attrOf(n, "id"); !hasMark || hasID {
+		// An empty id is none: a link cannot go to it. The parser keeps the id put before it.
+		if id, _ := attrOf(n, "id"); !hasMark || id != "" {
 			continue
 		}
-		if id := headingID(textOf(n)); id != "" {
-			id = free(anchors.targets, id)
-			anchors.targets[id] = true
-			ids[k] = id
+		// A mark in its text was put where the tokenizer read a tag that the parser reads as text.
+		if text := textOf(n); !strings.Contains(text, mark) {
+			if id := headingID(text); id != "" {
+				id = free(anchors.targets, id)
+				anchors.targets[id] = true
+				ids[k] = id
+			}
 		}
+	}
+	if len(ids) == 0 {
+		return page, anchors
 	}
 	return atHeadingTags(page, func(k int) string {
 		if id, ok := ids[strconv.Itoa(k)]; ok {
@@ -87,6 +94,8 @@ func (a *pageAnchors) add(n *xhtml.Node) {
 	inHTML := n.Namespace == ""
 	for _, at := range n.Attr {
 		switch {
+		case at.Val == "" && at.Key != "href":
+			// An empty id or name is none.
 		case at.Key == "id" && at.Namespace == "":
 			a.targets[at.Val] = true
 		case inHTML && n.DataAtom == atom.A && at.Key == "name":
@@ -100,7 +109,7 @@ func (a *pageAnchors) add(n *xhtml.Node) {
 
 // atHeadingTags returns page with attr(k) put in the k-th start tag of a heading, <h2/> too, which the
 // parser reads as a start, after its name. What a tag left open at the end holds is kept.
-// LIMIT: in <svg>, the tokenizer reads after <title/> or <style/> as text, unlike the parser; headings after get no id.
+// LIMIT: in <svg> the tokenizer reads as text what the parser does not (<title/>, <style/>, <textarea/>, CDATA): no id.
 func atHeadingTags(page []byte, attr func(k int) string) []byte {
 	var out bytes.Buffer
 	k := 0
@@ -191,8 +200,8 @@ func (d *Data) checkAnchors(a pageAnchors, src []byte) error {
 }
 
 // linkMistakes returns the mistakes of a link to #written, which goes to decoded and reaches no part of the
-// page: one at each item of d that writes it, else one at the template's page.html if src, its text,
-// writes it, else one at d's file, which a link the search misses is the data's all the same.
+// page: one at each item of d that writes it, else one at the page.html of d's own template if src, its
+// text, writes it, else one at d's file, which a link the search misses is the data's all the same.
 func (d *Data) linkMistakes(written, decoded string, src []byte) []*usererr.Error {
 	key, args := "tmpl_anchor_none", []any{"#" + decoded}
 	if decoded == "ZgotmplZ" {
@@ -208,7 +217,7 @@ func (d *Data) linkMistakes(written, decoded string, src []byte) []*usererr.Erro
 	switch {
 	case mistakes != nil:
 		return mistakes
-	case writes(string(src), written):
+	case d.tmpl.isOwn() && writes(string(src), written):
 		return []*usererr.Error{usererr.NewAt(d.tmpl.file("page.html"), 0, 0, key, args...)}
 	}
 	return []*usererr.Error{usererr.NewAt(d.File, 0, 0, key, args...)}
