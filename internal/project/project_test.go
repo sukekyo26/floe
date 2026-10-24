@@ -67,3 +67,12 @@ func TestName(t *testing.T) {
 		}
 	}
 }
+
+// No directory names no project: git is not run in the process's working directory, here this repository.
+func TestNameOfNoDir(t *testing.T) {
+	t.Parallel()
+
+	if got := project.Name(t.Context(), ""); got != "" {
+		t.Errorf(`Name(ctx, "") = %q, want ""`, got)
+	}
+}

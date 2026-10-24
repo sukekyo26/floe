@@ -1,7 +1,6 @@
 package cli_test
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"io/fs"
@@ -11,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/cli"
 	"github.com/sukekyo26/floe/internal/version"
 )
 
@@ -557,13 +555,7 @@ func TestTemplateCheckWithoutDir(t *testing.T) {
 	if r := e.run(t, "", "template", "new", "memo", "--from", "report"); r.code != 0 {
 		t.Fatalf("template new = %+v", r)
 	}
-	run := func(dir string) result {
-		var stdout, stderr bytes.Buffer
-		code := cli.Run(t.Context(), []string{"template", "check", dir}, cli.Env{
-			Getenv: func(k string) string { return e.vars[k] }, Dir: "", Stdout: &stdout, Stderr: &stderr, Environ: nil,
-		})
-		return result{code: code, stdout: stdout.String(), stderr: stderr.String()}
-	}
+	run := func(dir string) result { return e.runAt(t.Context(), "", "template", "check", dir) }
 	want(t, "template check of a relative dir", run("t/memo"), 1, "",
 		"floe: the working directory cannot be read, so the relative path t/memo means nothing; "+
 			"run floe from a directory that exists, or give an absolute path\n")

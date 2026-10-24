@@ -45,7 +45,10 @@ already there is kept unless --force.`,
 			if len(args) == 2 {
 				source = args[1]
 				if !icons.IsURL(source) {
-					source = a.abs(source)
+					var err error
+					if source, err = a.abs(source); err != nil {
+						return err
+					}
 				}
 			}
 			got, err := icons.New(a.cfg.icons).Fetch(cmd.Context(), set, source, force)

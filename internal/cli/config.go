@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/daemon"
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -157,12 +158,12 @@ func floeDir(getenv func(string) string, key, home, dir string) (string, *userer
 		return filepath.Join(home, v[1:]), nil
 	case strings.HasPrefix(v, "~"):
 		return "", usererr.New("cli_tilde_name", key, v, v)
-	case filepath.IsAbs(v):
-		return filepath.Clean(v), nil
-	case dir == "":
+	}
+	abs, ok := dirs.Under(dir, v)
+	if !ok {
 		return "", usererr.New("cli_relative_no_dir", key, v)
 	}
-	return filepath.Join(dir, v), nil
+	return abs, nil
 }
 
 // xdgDir reads the XDG base directory key, a ~ or ~/ at its start standing for home, else the default

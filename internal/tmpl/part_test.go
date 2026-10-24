@@ -386,7 +386,7 @@ func TestCodeAndTerminal(t *testing.T) {
 
 	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
 		"      - code: { lang: go }\n"+
-		"      - terminal: { shell: fish, steps: [] }\n"), "", "")
+		"      - terminal: { shell: fish, steps: [] }\n"), "", cwd)
 	for _, want := range []string{
 		"bad.yaml:5:17: sections[0].parts[0].code.text is required but missing",
 		`bad.yaml:6:28: sections[0].parts[1].terminal.shell: "fish" is not allowed; use bash, zsh, sh, powershell, cmd`,
@@ -409,7 +409,7 @@ func TestCodeAndTerminal(t *testing.T) {
 		steps = append(steps, fmt.Sprintf("{ run: %q }", r))
 	}
 	_, err = builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
-		"      - terminal: { steps: ["+strings.Join(steps, ", ")+"] }\n"), "", "")
+		"      - terminal: { steps: ["+strings.Join(steps, ", ")+"] }\n"), "", cwd)
 	for i, r := range runs {
 		want := fmt.Sprintf("terminal.steps[%d].run: write the command without its prompt", i)
 		if refused := err != nil && strings.Contains(err.Error(), want); refused != (i < 10) {
@@ -426,7 +426,7 @@ func TestReportRefusesCodeInText(t *testing.T) {
 	for _, text := range []string{
 		"```go\\nx\\n```", "~~~\\nx\\n~~~", "```sh\\n$ ls\\n```", "> ```sh\\n> x\\n> ```", "- ```sh\\n  x",
 	} {
-		_, err := builtins.Read("t.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n      - text: \"a\\n"+text+"\"\n"), "", "")
+		_, err := builtins.Read("t.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n      - text: \"a\\n"+text+"\"\n"), "", cwd)
 		if err == nil || strings.Count(err.Error(), "t.yaml:5:15: sections[0].parts[0].text: write ") != 1 {
 			t.Errorf("text %q = %v", text, err)
 		}
@@ -480,7 +480,7 @@ func TestPartsOfNumbersAndChanges(t *testing.T) {
 
 	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
 		"      - progress: [{ label: a, done: 1, of: 2 }, { label: b, done: 3, of: 2 }]\n"+
-		"      - tree: [{ path: a }, { path: // }]\n"), "", "")
+		"      - tree: [{ path: a }, { path: // }]\n"), "", cwd)
 	for _, want := range []string{
 		"bad.yaml:5:68: sections[0].parts[0].progress[1].done: write done no greater than of, the whole",
 		"bad.yaml:6:37: sections[0].parts[1].tree[1].path: write a path naming a file or a folder",
@@ -552,7 +552,7 @@ func TestPartsOfReviewsAndReferences(t *testing.T) {
 	_, err := builtins.Read("bad.yaml", []byte("template: report\nlang: en\nsections:\n  - parts:\n"+
 		"      - matrix: { columns: [a, b], rows: [{ what: x, cells: [yes] }, { what: y, cells: [yes, maybe] }] }\n"+
 		"      - tabs: [{ title: a, parts: [{ terminal: { steps: [{ run: '$ ls' }] } }] }, { title: b, parts: [{ text: x }] }]\n"+
-		"      - links: [{ title: a, url: '/a/x/' }, { title: b, url: 'mailto:a@example.com' }, { title: c, url: 'javascript:alert(1)' }]\n"), "", "")
+		"      - links: [{ title: a, url: '/a/x/' }, { title: b, url: 'mailto:a@example.com' }, { title: c, url: 'javascript:alert(1)' }]\n"), "", cwd)
 	for _, want := range []string{
 		"sections[0].parts[2].links[2].url: write a URL of http, https or mailto, or a path",
 		"sections[0].parts[1].tabs[0].parts[0].terminal.steps[0].run: write the command without its prompt",

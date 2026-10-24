@@ -27,6 +27,7 @@ import (
 	"github.com/yuin/goldmark/util"
 
 	"github.com/sukekyo26/floe/internal/diagram"
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -119,9 +120,10 @@ func (s *Sources) watch(t *Template) {
 
 // ReadSources reads the data file src as Read does, and returns its Sources too.
 func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data, Sources, error) {
-	dir := filepath.Dir(file)
-	if !filepath.IsAbs(dir) {
-		dir = filepath.Join(cwd, dir)
+	dir, ok := dirs.Under(cwd, filepath.Dir(file))
+	if !ok {
+		//nolint:err113 // floe's own mistake: the CLI refuses a relative file under no working directory first
+		return nil, Sources{}, fmt.Errorf("tmpl: the data file %q is relative, with no cwd to read it under", file)
 	}
 	d, sources, err := l.readWith(file, src, diskImages(dir), theme)
 	sources.ImagesDir = dir

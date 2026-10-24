@@ -136,7 +136,11 @@ func newRoot(env Env) *cobra.Command {
 
 // readArg reads a file named on the command line, relative to the working directory.
 func (a *app) readArg(file string) ([]byte, error) {
-	src, err := os.ReadFile(a.abs(file)) //nolint:gosec // G304: reading the file the user names is the point
+	abs, err := a.abs(file)
+	if err != nil {
+		return nil, err
+	}
+	src, err := os.ReadFile(abs) //nolint:gosec // G304: reading the file the user names is the point
 	if err != nil {
 		return nil, usererr.CannotRead(file, err)
 	}
@@ -172,7 +176,12 @@ type entry struct {
 }
 
 func (a *app) entryOf(file string) entry {
-	e := entry{abs: a.abs(file), dir: nil, info: nil}
+	abs, err := a.abs(file)
+	if err != nil {
+		// Under no working directory, as it is written: the command refuses it.
+		return entry{abs: file, dir: nil, info: nil}
+	}
+	e := entry{abs: abs, dir: nil, info: nil}
 	if dir, err := os.Stat(filepath.Dir(e.abs)); err == nil {
 		e.dir = dir
 	}

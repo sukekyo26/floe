@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -49,16 +48,15 @@ func (a *app) templates() *tmpl.Library {
 	return a.lib
 }
 
-// abs puts a relative dir under the working directory, and folds the .. of any by its letters, as Join and
-// Abs do, so that every place reads a path alike; "" stays "".
-func (a *app) abs(dir string) string {
-	switch {
-	case dir == "":
-		return dir
-	case filepath.IsAbs(dir):
-		return filepath.Clean(dir)
+// abs puts a relative path the command was given under the working directory, folding its .. by its letters
+// (dirs.Under), so that every place reads a path alike, and refuses one when the working directory cannot be
+// read (main's Getwd failed: Dir ""); "" stays "".
+func (a *app) abs(path string) (string, error) {
+	abs, ok := dirs.Under(a.env.Dir, path)
+	if !ok {
+		return "", usererr.New("cli_relative_no_cwd", path)
 	}
-	return filepath.Join(a.env.Dir, dir)
+	return abs, nil
 }
 
 func (a *app) out(format string, args ...any) {
@@ -133,9 +131,11 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	var saved server.Saved
 	switch {
 	case link:
-		path := a.abs(file)
+		path, absErr := a.abs(file)
 		// The server reads a link, as it draws it.
-		if _, statErr := os.Stat(path); statErr != nil {
+		if absErr != nil {
+			err = usererr.Collect(err, absErr)
+		} else if _, statErr := os.Stat(path); statErr != nil {
 			err = usererr.Collect(err, usererr.CannotRead(file, statErr))
 		}
 		if err == nil {
@@ -143,7 +143,11 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 		}
 	// Read as data only when it is a data file: Accept has told that it is not.
 	case store.IsDataFile(file):
-		up, readErr := store.ReadUpload(ctx, file, a.env.Dir)
+		var up store.Upload
+		_, readErr := a.abs(file)
+		if readErr == nil {
+			up, readErr = store.ReadUpload(ctx, file, a.env.Dir)
+		}
 		if err = usererr.Collect(err, readErr); err == nil {
 			saved, err = a.publishData(ctx, up, opts)
 		}

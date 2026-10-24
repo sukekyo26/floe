@@ -300,6 +300,11 @@ func (e *env) runIn(ctx context.Context, t *testing.T, dir string, args ...strin
 	if err := os.MkdirAll(cwd, 0o750); err != nil {
 		t.Fatal(err)
 	}
+	return e.runAt(ctx, cwd, args...)
+}
+
+// runAt runs floe in process with cli.Env.Dir cwd as it is: "" for a working directory that cannot be read.
+func (e *env) runAt(ctx context.Context, cwd string, args ...string) result {
 	var stdout, stderr bytes.Buffer
 	code := cli.Run(ctx, args, cli.Env{
 		Getenv: func(k string) string { return e.vars[k] }, Dir: cwd, Stdout: &stdout, Stderr: &stderr,
@@ -1223,4 +1228,37 @@ func inOrder(t *testing.T, what string, got result, code int, parts ...string) {
 		}
 		at += i + len(p)
 	}
+}
+
+// From a working directory that cannot be read (Dir ""), every relative path a command is given is refused as
+// such, and an absolute one is taken.
+func TestRelativeWithoutDir(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	page := e.page(t, "p.yaml", "P")
+	e.write(t, "spec.yaml", "id: d\nwidth: 100\nheight: 50\nparts:\n  - box: { x: 10, y: 10, w: 80, h: 30, rows: [A] }\n")
+	refused := func(path string) string {
+		return "floe: the working directory cannot be read, so the relative path " + path +
+			" means nothing; run floe from a directory that exists, or give an absolute path\n"
+	}
+	for _, c := range []struct {
+		args []string
+		path string
+	}{
+		{[]string{"check", "p.yaml"}, "p.yaml"},
+		{[]string{"render", "p.yaml"}, "p.yaml"},
+		{[]string{"render", "--out-dir", "out", page}, "out"},
+		{[]string{"render", "--check", "--out-dir", "out", page}, "out"},
+		{[]string{"diagram", "render", "spec.yaml"}, "spec.yaml"},
+		{[]string{"publish", "p.yaml"}, "p.yaml"},
+		{[]string{"publish", "--link", "p.html"}, "p.html"},
+		{[]string{"icons", "fetch", "aws", "aws.zip"}, "aws.zip"},
+		{[]string{"template", "check", "t"}, "t"},
+	} {
+		if r := e.runAt(t.Context(), "", c.args...); r.code != 1 || r.stdout != "" || r.stderr != refused(c.path) {
+			t.Errorf("%v from no working directory = %+v, want %q", c.args, r, refused(c.path))
+		}
+	}
+	want(t, "check of an absolute path from no working directory", e.runAt(t.Context(), "", "check", page), 0, "", "")
 }
