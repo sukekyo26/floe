@@ -1159,4 +1159,17 @@ func TestMistakesToldOnce(t *testing.T) {
 		strings.Index(r.stderr, " is missing") > strings.Index(r.stderr, filepath.Join(m2, "computed.yaml")+":1:8: ") {
 		t.Errorf("template check of two templates = %q, want the first one's missing file first", r.stderr)
 	}
+	// A template's warning is told with its mistakes, in the order of the templates given.
+	e.write(t, "templates/m1/page.html", `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body></body></html>`)
+	e.write(t, "templates/m1/computed.yaml", "x: nope\n")
+	if err := os.Remove(filepath.Join(m2, "computed.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(m2, "template.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if r := e.run(t, "", "template", "check", m1, m2); !strings.HasPrefix(r.stderr, filepath.Join(m1, "computed.yaml")+":1:4: ") ||
+		!strings.Contains(r.stderr, "\nfloe: "+m2+" has no template.yaml") {
+		t.Errorf("template check of two templates = %q, want the first one's mistake before the second one's warning", r.stderr)
+	}
 }

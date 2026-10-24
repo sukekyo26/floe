@@ -96,7 +96,7 @@ func (c *config) readDirs(getenv func(string) string, dir string) {
 		case d.base != "":
 			v = filepath.Join(d.base, d.name)
 			if at := notDir(v); at != "" {
-				c.absent[d.s] = usererr.About(at, "cli_default_held_up", at, key, d.xdg)
+				c.absent[d.s] = usererr.New("cli_default_held_up", at, key, d.xdg)
 				c.heldBy[d.s] = at
 			} else {
 				*d.to = v

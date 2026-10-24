@@ -210,13 +210,20 @@ it has one, and the exit code is 1 when there is one. Warnings go to stderr and 
 code 0. Nothing is printed when the templates are right.`,
 		Args: usage(cobra.MinimumNArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
-			var found, warned usererr.List
+			// Each template's warnings and mistakes together, in the order the templates are given.
+			var all usererr.List
+			wrong := false
 			for _, dir := range a.namedFiles(args) {
 				warnings, err := tmpl.Check(dir, a.cfg.parts, a.cfg.themes, a.cfg.icons)
-				warned = append(warned, warnings...)
-				tell(&found, err)
+				all = append(all, warnings...)
+				tell(&all, err)
+				wrong = wrong || err != nil
 			}
-			return a.withWarnings(warned, found.Err())
+			if !wrong {
+				a.tellWarnings(all)
+				return nil
+			}
+			return all
 		},
 	}
 }
