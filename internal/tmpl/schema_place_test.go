@@ -39,6 +39,10 @@ func TestPropertyNamesPlaceInSchema(t *testing.T) {
 			"#/properties/t/$vocabulary: JSON Schema does not take this: invalid propertyName 'not a uri'",
 		},
 		{
+			"$vocabulary of 2019-09", "https://json-schema.org/draft/2019-09/schema", `"t": {"$vocabulary": {"not a uri": true}}`,
+			"#/properties/t/$vocabulary: JSON Schema does not take this: invalid propertyName 'not a uri'",
+		},
+		{
 			"an item of / and ~", "https://json-schema.org/draft/2020-12/schema", `"a/b~c": {"patternProperties": {"([": {}}}`,
 			"#/properties/a~1b~0c/patternProperties: JSON Schema does not take this: invalid propertyName '(['",
 		},
@@ -84,14 +88,15 @@ func TestPropertyNamesPlaceInPart(t *testing.T) {
 	}
 }
 
-// One in what a $ref points at is told in the $ref's words.
+// One in what a $ref points at is told in the $ref's words, two in the order of their words.
 func TestPropertyNamesPlaceInRef(t *testing.T) {
 	t.Parallel()
 
 	dir := filepath.Join(memo(t, memoItems+`, "x": {"enum": [{"properties": {"a": {"type": "string"}, `+
-		`"t": {"patternProperties": {"([": {}}}, "z": {"type": "string"}}}]}, "r": {"$ref": "#/properties/x/enum/0"}`), "memo")
+		`"t": {"patternProperties": {"a(": {}, "([": {}}}, "z": {"type": "string"}}}]}, "r": {"$ref": "#/properties/x/enum/0"}`), "memo")
 	want := filepath.Join(dir, "schema.json") + ": #/properties/r: a $ref to #/properties/x/enum/0 points at what is no schema " +
-		"(/properties/t/patternProperties: invalid propertyName '(['): refer to a schema"
+		"(/properties/t/patternProperties: invalid propertyName '(['; " +
+		"/properties/t/patternProperties: invalid propertyName 'a('): refer to a schema"
 	for range tries {
 		if _, mistakes := check(dir, "", ""); joined(mistakes) != want {
 			t.Fatalf("Check = %s, want %s", joined(mistakes), want)
@@ -99,19 +104,35 @@ func TestPropertyNamesPlaceInRef(t *testing.T) {
 	}
 }
 
-// One in a data file is told at the item whose key it is, and under items, whose place jsonschema loses,
-// at the top: never at another item.
+// One in a data file is told at what holds it, whose place jsonschema keeps: a $ref's item, one of another
+// mistake, or the top level. Never at another item, nor by an item named as a keyword; two in the order of
+// their words.
 func TestPropertyNamesPlaceInData(t *testing.T) {
 	t.Parallel()
 
-	dir := memo(t, memoItems+`, "m": {"type": "object", "propertyNames": {"pattern": "^x"}}, `+
-		`"l": {"type": "array", "items": {"type": "object", "propertyNames": {"pattern": "^x"}}}, `+
-		`"n": {"type": "object", "properties": {"k": {"type": "string"}}}, "o": {"$ref": "#/properties/m"}`)
+	const names = `{"type": "object", "propertyNames": {"pattern": "^x"}}`
+	dir := memo(t, memoItems+`, "m": `+names+`, "l": {"type": "array", "items": `+names+`}, `+
+		`"n": {"type": "object", "properties": {"k": {"type": "string"}}}, "o": {"$ref": "#/properties/m"}, `+
+		`"properties": {"type": "object", "minProperties": 3, "additionalProperties": `+names+`}`)
 	lib := tmpl.NewLibrary(dir, "", "", "")
 	tests := []struct{ src, want string }{
-		{"m:\n  bad: 1\nn:\n  k: s\n", "data.yaml:4:3: m: invalid propertyName 'bad'"},
+		{"m:\n  bad: 1\nn:\n  k: s\n", "data.yaml:1:1: the top level: invalid propertyName 'bad'"},
 		{"o:\n  bad: 1\nn:\n  k: s\n", "data.yaml:4:3: o: invalid propertyName 'bad'"},
 		{"l:\n  - x: 1\n  - bad: 1\nn:\n  k: s\n", "data.yaml:1:1: the top level: invalid propertyName 'bad'"},
+		{
+			"properties:\n  additionalProperties:\n    x: 1\n  foo:\n    bad: 1\n",
+			"data.yaml:1:1: the top level: invalid propertyName 'bad'\ndata.yaml:4:3: properties: the number of keys must be at least 3",
+		},
+		{
+			// Beside a mistake of another item, jsonschema keeps the place of properties too.
+			"properties:\n  additionalProperties:\n    x: 1\n  foo:\n    bad: 1\nn:\n  k: 1\n",
+			"data.yaml:4:3: properties: the number of keys must be at least 3\ndata.yaml:4:3: properties: invalid propertyName 'bad'\n" +
+				"data.yaml:9:6: n.k: write text, not a number",
+		},
+		{
+			"m:\n  bad2: 1\n  bad: 2\n",
+			"data.yaml:1:1: the top level: invalid propertyName 'bad'\ndata.yaml:1:1: the top level: invalid propertyName 'bad2'",
+		},
 	}
 	for _, tt := range tests {
 		for range tries {

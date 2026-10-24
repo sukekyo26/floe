@@ -436,10 +436,7 @@ func metaschemaMistakes(file string, err error) error {
 		why := e.ErrorKind.LocalizedString(english)
 		mistakes = append(mistakes, usererr.NewIn(file, pointerTo(loc), "tmpl_schema_invalid", why))
 	})
-	// The leaves come in the order of jsonschema's maps: two at a pointer, by their words.
-	slices.SortFunc(mistakes, func(a, b *usererr.Error) int {
-		return cmp.Or(strings.Compare(a.At, b.At), strings.Compare(a.Error(), b.Error()))
-	})
+	slices.SortStableFunc(mistakes, func(a, b *usererr.Error) int { return strings.Compare(a.At, b.At) })
 	return mistakes.Err()
 }
 
@@ -452,9 +449,9 @@ func pointerTo(steps []string) string {
 	return at
 }
 
-// leaves calls leaf with each mistake of e that is not only the mistakes under it. A branch of anyOf or
-// oneOf would say why each choice failed; it is one leaf instead. A mistake of propertyNames is given its
-// place (namesPlace) before.
+// leaves calls leaf with each mistake of e that is not only the mistakes under it, in an order of their
+// own: jsonschema gives them in the order of its maps. A branch of anyOf or oneOf would say why each
+// choice failed; it is one leaf instead. A mistake of propertyNames is given its place (namesPlace) before.
 func leaves(e *jsonschema.ValidationError, leaf func(*jsonschema.ValidationError)) {
 	leavesUnder(e, nil, leaf)
 }
@@ -463,7 +460,12 @@ func leaves(e *jsonschema.ValidationError, leaf func(*jsonschema.ValidationError
 func leavesUnder(e *jsonschema.ValidationError, above []string, leaf func(*jsonschema.ValidationError)) {
 	switch e.ErrorKind.(type) {
 	case *kind.Schema, *kind.Group, *kind.AllOf, *kind.Reference:
-		for _, c := range e.Causes {
+		causes := slices.SortedStableFunc(slices.Values(e.Causes), func(a, b *jsonschema.ValidationError) int {
+			return cmp.Or(strings.Compare(a.SchemaURL, b.SchemaURL),
+				strings.Compare(a.ErrorKind.LocalizedString(english), b.ErrorKind.LocalizedString(english)),
+				slices.Compare(a.InstanceLocation, b.InstanceLocation))
+		})
+		for _, c := range causes {
 			leavesUnder(c, e.InstanceLocation, leaf)
 		}
 		return
@@ -474,24 +476,35 @@ func leavesUnder(e *jsonschema.ValidationError, above []string, leaf func(*jsons
 }
 
 // namesPlace is the place of e, a mistake of propertyNames, under above, the place of the nearest mistake
-// it is under, which holds it: jsonschema gives e a place the later checks write over, right in its length
-// alone. A schema at properties/<k> checks the value k alone; led to by a $ref, it is under the $ref's
-// mistake, at its own place.
+// it is under: jsonschema gives e a place the later checks write over, right in its length alone. One a
+// metaschema finds is at the keyword of metaNames under the schema above; another is told at above.
 // LIMIT: jsonschema v6.0.3 does not copy the place of propertyNames (issue #276, PR #269 of
 // santhosh-tekuri/jsonschema); drop this once floe takes a version that does. On an upgrade, grep
 // 'InstanceLocation = vd.vloc' for more: contentSchema's is the same, which floe does not assert.
-// LIMIT: above, what holds it, for one under items, patternProperties or additionalProperties of a data
-// file's schema, whose own place is lost.
+// LIMIT: one of a data file's schema is told at what holds it until then, the top level, say, for a key
+// of an item under it.
 func namesPlace(e *jsonschema.ValidationError, above []string) []string {
 	at := slices.Clone(above)
-	base, _, _ := strings.Cut(e.SchemaURL, "#")
-	ptr, _ := pointerIn(base, e.SchemaURL)
-	steps := strings.Split(ptr, "/")
-	if n := len(steps); len(e.InstanceLocation) == len(above)+1 && n >= 3 &&
-		steps[n-3] == "properties" && steps[n-1] == "propertyNames" {
-		return append(at, pointerStep.Replace(steps[n-2]))
+	if len(e.InstanceLocation) != len(above)+1 {
+		return at
+	}
+	for _, m := range metaNames {
+		if e.SchemaURL == m.metaschema+"#/properties/"+m.keyword+"/propertyNames" {
+			return append(at, m.keyword)
+		}
 	}
 	return at
+}
+
+// metaNames are the keywords of a schema whose keys the metaschemas of JSON Schema check by propertyNames,
+// each with the metaschema that does: those of patternProperties, regular expressions, and of $vocabulary,
+// URLs. Draft-06 and draft-04 check none.
+var metaNames = []struct{ metaschema, keyword string }{
+	{"https://json-schema.org/draft/2020-12/meta/applicator", "patternProperties"},
+	{"https://json-schema.org/draft/2020-12/meta/core", "$vocabulary"},
+	{"https://json-schema.org/draft/2019-09/meta/applicator", "patternProperties"},
+	{"https://json-schema.org/draft/2019-09/meta/core", "$vocabulary"},
+	{"http://json-schema.org/draft-07/schema", "patternProperties"},
 }
 
 // noLoader loads no schema: those of the parts of set are added to the compiler before.
