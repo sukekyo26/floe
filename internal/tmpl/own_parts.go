@@ -159,7 +159,8 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) err
 // that holds itself, through the parts it holds, or takes its own look, through the looks it takes, which
 // floe would follow forever, a part, floe's too, that settle refuses, again while one is left out, as a
 // part may take the look of the one left out, or hold it, and then one whose schema names a usable part
-// at its root. One of one's own whose schema does not compile is among those settle refuses (compileOwn).
+// at its root. One of one's own whose schema does not compile, or does not declare a path of its checks.yaml,
+// is among those settle refuses (compileOwn).
 // The failure is floe's (compileOwn).
 func (set *partSet) leaveOutUnusable() error {
 	held := func(at string) []string { return set.shapes[partsURL+at+".json"].refsUnder(nil) }
@@ -225,8 +226,8 @@ func (set *partSet) compiledMistakes(name string, stop error) (mistakes, failed 
 }
 
 // settle leaves out of set the parts checkNames refuses, and those of one's own whose schema.json holds
-// mistakes, by name in mistakes (compileOwn), the mistakes of both told together, again while one is left
-// out.
+// mistakes or does not declare a path of their checks.yaml, by name in mistakes (compileOwn), the mistakes of
+// both told together, again while one is left out.
 func (set *partSet) settle(mistakes map[string]error) {
 	for left := true; left; {
 		left = false
@@ -240,7 +241,8 @@ func (set *partSet) settle(mistakes map[string]error) {
 }
 
 // compileOwn compiles the schema of each part of one's own in set, and returns, by name, what stopped each:
-// the mistakes of its schema.json, or what floe cannot place there (compileMistakes). Each is compiled with
+// the mistakes of its schema.json, or what floe cannot place there (compileMistakes), or, compiled, the
+// paths of its checks.yaml it does not declare (checksDeclared). Each is compiled with
 // every other part, floe's too, standing as true, a schema anything fits, and the schemas the parts share
 // as they are: a $ref to a part whole finds it either way, and one into a part is refused (partMistake).
 // So each stops at its own file, or at a schema the parts share, alone, whatever the order of jsonschema's
@@ -269,7 +271,13 @@ func (set *partSet) compileOwn() (map[string]error, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, err = c.Compile(url); err == nil {
+		compiled, err := c.Compile(url)
+		if err == nil {
+			// LIMIT: the other parts stand as true, so a path into one is taken unchecked. Check the paths
+			// again once every part compiles with the others (settle) if a part comes to need it.
+			if why := checksDeclared(p.checks, compiled, true); why != nil {
+				mistakes[name] = why
+			}
 			continue
 		}
 		why, err := set.compiledMistakes(name, err)

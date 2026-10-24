@@ -312,24 +312,64 @@ func assetsNamed(page *template.Template) []string {
 // and, against its schema s as compiled, nil while the schema has mistakes of its own, of the lists it names.
 func (t *Template) checkChecks(s *jsonschema.Schema) error {
 	list, err := t.readChecks()
-	var problems usererr.List
-	if failed := problems.Add(err); failed != nil {
-		return failed //nolint:wrapcheck // already says what failed
+	return usererr.Collect(err, checksDeclared(list, s, false))
+}
+
+// checksDeclared returns the mistakes of the paths of list that the compiled schema s, of a part when part
+// is true, does not declare (declared): none without s.
+func checksDeclared(list []relation, s *jsonschema.Schema, part bool) error {
+	if s == nil {
+		return nil
 	}
+	var problems usererr.List
 	for _, c := range list {
-		if s != nil {
-			if e := c.declared(s); e != nil {
-				problems = append(problems, e)
-			}
+		if e := c.declared(s, part); e != nil {
+			problems = append(problems, e)
 		}
 	}
 	return problems.Err()
 }
 
-// declared checks that the compiled schema s declares the list at c.For and c.Field under its items:
-// a path misspelt would find nothing in the data to check, and fail no data. A path is refused only
-// where the schema surely refuses it, a list only where its types leave array out.
-func (c relation) declared(s *jsonschema.Schema) *usererr.Error {
+// declared checks that the compiled schema s, of a part when part is true, else of a template, declares
+// the list at c.For and c.Field under its items, or c.Field without for: a path misspelt would find
+// nothing in the data to check, and fail no data. A path is refused only where the schema surely refuses
+// it, a list only where its types leave array out. A part's value may be one or a list of them, so its
+// path is refused only where every kind of value s takes surely refuses it.
+func (c relation) declared(s *jsonschema.Schema, part bool) *usererr.Error {
+	sides := []*jsonschema.Schema{s}
+	if part && takes(s, "array") {
+		sides = []*jsonschema.Schema{itemsOf(s)}
+		if takes(s, "object") {
+			sides = append(sides, s)
+		}
+	}
+	var first *usererr.Error
+	for _, side := range sides {
+		e := c.declaredIn(side, part)
+		if e == nil {
+			return nil
+		}
+		if first == nil {
+			first = e
+		}
+	}
+	return first
+}
+
+// declaredIn checks the paths of c where the value is of the compiled schema s, or anything without s.
+func (c relation) declaredIn(s *jsonschema.Schema, part bool) *usererr.Error {
+	if c.For == "" {
+		if c.Field == "" {
+			return nil
+		}
+		if field, sure := declaredAt(s, strings.Split(c.Field, "."), false); field != nil || !sure {
+			return nil
+		}
+		if part {
+			return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field_part", c.Field)
+		}
+		return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field_whole", c.Field)
+	}
 	list, sure := declaredAt(s, strings.Split(c.For, "."), true)
 	switch {
 	case list == nil && sure:
