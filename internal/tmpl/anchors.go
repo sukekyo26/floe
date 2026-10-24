@@ -35,37 +35,43 @@ func headingID(text string) string {
 var headings = []atom.Atom{atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6}
 
 // withHeadingIDs gives each heading of page without an id the id headingID makes of its text, in the order
-// of the page, with -1, -2 and on till one is free of the ids of the page, wherever they are, and of those
-// given before it. One whose text makes none gets none. The rest of page is left byte for byte.
+// of the page, with -1, -2 and on till one is free of the ids and names of the page, wherever they are, and
+// of those given before it. One whose text makes none gets none. The rest of page is left byte for byte.
 func withHeadingIDs(page []byte) []byte {
 	taken := idsIn(page)
 	var out, heading bytes.Buffer
 	var text strings.Builder
-	var in atom.Atom // the heading being read, 0 out of one
+	in := false // reading a heading without an id
+	end := func() {
+		start := heading.Bytes()
+		if id := headingID(text.String()); id != "" {
+			id = free(taken, id)
+			taken[id] = true
+			// After "<h2", whatever the case of its letters.
+			start = slices.Concat(start[:3], []byte(` id="`+xhtml.EscapeString(id)+`"`), start[3:])
+		}
+		out.Write(start)
+		in = false
+	}
 	z := xhtml.NewTokenizer(bytes.NewReader(page))
 	for tt := z.Next(); tt != xhtml.ErrorToken; tt = z.Next() {
 		// Token lowers the tag's name in the tokenizer's buffer, which Raw returns.
 		raw := slices.Clone(z.Raw())
 		tok := z.Token()
+		isHeading := slices.Contains(headings, tok.DataAtom)
+		// As the HTML parser reads them: a heading ends at the end tag of any heading, or where another starts.
+		if in && isHeading && tt != xhtml.TextToken {
+			end()
+		}
 		_, hasID := idOf(tok)
 		switch {
-		case in == 0 && tt == xhtml.StartTagToken && slices.Contains(headings, tok.DataAtom) && !hasID:
-			in = tok.DataAtom
+		// <h2/> starts a heading too: the parser leaves the / of an element that is not void.
+		case isHeading && (tt == xhtml.StartTagToken || tt == xhtml.SelfClosingTagToken) && !hasID:
+			in = true
 			text.Reset()
 			heading.Reset()
 			heading.Write(raw)
-		case in != 0 && tt == xhtml.EndTagToken && tok.DataAtom == in:
-			start := heading.Bytes()
-			if id := headingID(text.String()); id != "" {
-				id = free(taken, id)
-				taken[id] = true
-				// After "<h2", whatever the case of its letters.
-				start = slices.Concat(start[:3], []byte(` id="`+xhtml.EscapeString(id)+`"`), start[3:])
-			}
-			out.Write(start)
-			out.Write(raw)
-			in = 0
-		case in != 0:
+		case in:
 			if tt == xhtml.TextToken {
 				text.WriteString(tok.Data)
 			}
@@ -74,19 +80,28 @@ func withHeadingIDs(page []byte) []byte {
 			out.Write(raw)
 		}
 	}
-	if in != 0 {
+	if in {
 		out.Write(heading.Bytes())
 	}
 	return out.Bytes()
 }
 
-// idsIn returns the ids of the tags of page.
+// idsIn returns the ids of the tags of page and the names of its <a>s, which a link goes to as it does to
+// an id (anchorsIn).
 func idsIn(page []byte) map[string]bool {
 	ids := map[string]bool{}
 	z := xhtml.NewTokenizer(bytes.NewReader(page))
 	for tt := z.Next(); tt != xhtml.ErrorToken; tt = z.Next() {
-		if id, ok := idOf(z.Token()); ok {
+		tok := z.Token()
+		if id, ok := idOf(tok); ok {
 			ids[id] = true
+		}
+		if tok.DataAtom == atom.A && tt != xhtml.EndTagToken {
+			for _, a := range tok.Attr {
+				if a.Key == "name" {
+					ids[a.Val] = true
+				}
+			}
 		}
 	}
 	return ids
@@ -113,21 +128,24 @@ func idOf(t xhtml.Token) (string, bool) {
 	return "", false
 }
 
-// checkAnchors refuses each link of page, the page drawn, to a part of it that no element is: an <a> or
-// <area> whose href is # and a fragment that is no id nor name of an <a>, as written or percent-decoded,
-// as a browser looks for it. # alone and #top go to the top of the page.
+// checkAnchors refuses each link of page, the page drawn with src, its template's page.html, to a part of
+// it that no element is: an <a> or <area> whose href is # and a fragment that is no id nor name of an <a>,
+// as written or percent-decoded, as a browser looks for it, without a text fragment (:~: and after it). #
+// alone and #top go to the top of the page.
 // LIMIT: ids a script makes after drawing (a script part's, the data HTML's) are not seen; their links are refused.
-func (d *Data) checkAnchors(page []byte) error {
+func (d *Data) checkAnchors(page, src []byte) error {
 	targets, links := anchorsIn(page)
 	var problems usererr.List
 	told := map[string]bool{}
-	for _, frag := range links {
-		decoded := unescapeAll(frag)
+	for _, written := range links {
+		frag, _, _ := strings.Cut(written, ":~:")
+		// The parser read the href's character references already.
+		decoded := percentDecoded(frag)
 		if frag == "" || targets[frag] || targets[decoded] || strings.EqualFold(decoded, "top") || told[decoded] {
 			continue
 		}
 		told[decoded] = true
-		problems = append(problems, d.linkMistakes(frag, decoded)...)
+		problems = append(problems, d.linkMistakes(written, decoded, src)...)
 	}
 	return problems.Sorted().Err()
 }
@@ -156,33 +174,32 @@ func anchorsIn(page []byte) (targets map[string]bool, links []string) {
 	return targets, links
 }
 
-// linkMistakes returns the mistakes of a link to frag, decoded when percent-decoded, which reaches no part
-// of the page: one at each item of d that writes it, else one at the page.html of d's own template, else
-// one at d's file.
-func (d *Data) linkMistakes(frag, decoded string) []*usererr.Error {
+// linkMistakes returns the mistakes of a link to #written, which goes to decoded and reaches no part of the
+// page: one at each item of d that writes it, else one at the template's page.html if src, its text,
+// writes it, else one at d's file, which a link the search misses is the data's all the same.
+func (d *Data) linkMistakes(written, decoded string, src []byte) []*usererr.Error {
 	var mistakes []*usererr.Error
 	for _, it := range d.linkItems {
-		if writes(it.text, frag, decoded) {
+		if writes(it.text, written) {
 			mistakes = append(mistakes, itemError(d.File, it.pos, it.path, usererr.New("tmpl_anchor_none", "#"+decoded)))
 		}
 	}
 	switch {
 	case mistakes != nil:
 		return mistakes
-	case d.tmpl.isOwn():
+	case writes(string(src), written):
 		return []*usererr.Error{usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_anchor_none", "#"+decoded)}
 	}
-	// floe's page.html and parts write no link of their own: one the search misses is the data's all the same.
 	return []*usererr.Error{usererr.NewAt(d.File, 0, 0, "tmpl_anchor_none", "#"+decoded)}
 }
 
-// writes reports whether text writes a link to the fragment frag, or decoded, frag percent-decoded: # and
-// it, in text as written or with its character references read and percent-decoded, ended by text, a
-// space or one of ) " ' > ] <.
+// writes reports whether text writes a link to the fragment frag: # and frag, as written or percent-decoded,
+// in text as written or with its character references read and percent-decoded, ended by text, a space or
+// one of ) " ' > ] <.
 // LIMIT: a search of the text, not of the link as drawn; a link it misses is told at the file without a line.
-func writes(text, frag, decoded string) bool {
+func writes(text, frag string) bool {
 	for _, t := range []string{text, unescapeAll(text)} {
-		for _, f := range []string{frag, decoded} {
+		for _, f := range []string{frag, percentDecoded(frag)} {
 			for rest := t; ; {
 				i := strings.Index(rest, "#"+f)
 				if i < 0 {
@@ -198,10 +215,13 @@ func writes(text, frag, decoded string) bool {
 	return false
 }
 
-// unescapeAll reads the character references of s and percent-decodes it, as it is where a % starts no
-// escape.
+// unescapeAll reads the character references of s and percent-decodes it.
 func unescapeAll(s string) string {
-	s = html.UnescapeString(s)
+	return percentDecoded(html.UnescapeString(s))
+}
+
+// percentDecoded percent-decodes s, as it is where a % starts no escape.
+func percentDecoded(s string) string {
 	if u, err := url.PathUnescape(s); err == nil {
 		return u
 	}

@@ -476,7 +476,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 	}
 	// After the data's HTML is checked: an item that changes the page changes its ids and links too.
 	styled = withHeadingIDs(styled)
-	if err = d.checkAnchors(styled); err != nil {
+	if err = d.checkAnchors(styled, read.src); err != nil {
 		return nil, err
 	}
 	return d.withDiagrams(styled)
