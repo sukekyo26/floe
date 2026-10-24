@@ -652,12 +652,9 @@ func readPartYAML(files fs.FS, file string, look bool) (partYAML, error) {
 	if err != nil {
 		return yaml, err //nolint:wrapcheck // a mistake at its line and column
 	}
-	if err = plain(file, body); err != nil {
+	m, err := readTop[*ast.MappingNode](file, body, false, "tmpl_part_yaml")
+	if err != nil {
 		return yaml, err
-	}
-	m, ok := body.(*ast.MappingNode)
-	if !ok {
-		return yaml, yamlpos.New(file, yamlpos.Of(body), "tmpl_part_yaml")
 	}
 	for _, kv := range m.Values {
 		k := yamlpos.KeyOf(kv)

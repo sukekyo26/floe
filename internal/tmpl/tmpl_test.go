@@ -312,6 +312,7 @@ func TestReadRefusals(t *testing.T) {
 		"template: report\nlead: &a x\n*a : b\nlang: en\n": "data.yaml:2:7: " + anchor + "\ndata.yaml:3:1: " + anchor,
 		"template: report\n? !!str\n: b\nlang: en\n":       "data.yaml:2:3: " + anchor,
 		"&a\n- x\n": "data.yaml:1:1: " + anchor + "\ndata.yaml:2:1: write the top level as keys and values, like template: report",
+		"!!map\n":   "data.yaml:1:1: " + anchor,
 	} {
 		if _, err := builtins.Read("data.yaml", []byte(src), "", ""); err == nil || err.Error() != want {
 			t.Errorf("Read %q = %v\nwant %s", src, err, want)

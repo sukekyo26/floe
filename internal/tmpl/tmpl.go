@@ -390,20 +390,28 @@ func (h *head) readShared(given string) {
 // parse reads src as one YAML document of keys and values, without anchors, aliases or tags, so
 // that every value is written where its position points, and without .inf or .nan, which JSON has no
 // number for and which would make a comparison of the checks silently hold or fail.
-func parse(file string, src []byte) (ast.Node, error) {
+func parse(file string, src []byte) (*ast.MappingNode, error) {
 	body, err := yamlpos.Parse(file, src, "tmpl_documents")
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a mistake at its line and column, or ErrEmpty
 	}
+	return readTop[*ast.MappingNode](file, body, true, "tmpl_not_mapping")
+}
+
+// readTop returns the top of body, the file's, as T, telling in the same run every mistake refuse finds
+// and, when the top is not T, the mistake key shape.
+func readTop[T *ast.MappingNode | *ast.SequenceNode](file string, body ast.Node, finite bool, shape string) (T, error) {
 	// Of what anchors and tags hold, which tell themselves.
-	var shape error
-	if top := yamlpos.Unwrap(body); !isMapping(top) {
-		shape = yamlpos.New(file, yamlpos.Of(top), "tmpl_not_mapping")
+	u := yamlpos.Unwrap(body)
+	top, ok := u.(T)
+	var wrong error
+	if !ok && yamlpos.Written(u, u != body) {
+		wrong = yamlpos.New(file, yamlpos.Of(u), shape)
 	}
-	if err = usererr.Collect(refuse(file, body, true), shape); err != nil {
+	if err := usererr.Collect(refuse(file, body, finite), wrong); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns
 	}
-	return body, nil
+	return top, nil
 }
 
 // Render draws d, as read by Library.Read, as a page titled title in its lang:, with the template the
@@ -855,15 +863,11 @@ func ints(v any) any {
 	return v
 }
 
-// plain refuses in body, the file's, every place that would hide where a value is written (an anchor,
-// alias, merge key or tag) or read a key as another name than the one written.
-func plain(file string, body ast.Node) error {
-	return refuse(file, body, false)
-}
-
-// refuse is plain, refusing every value .inf or .nan too when finite: JSON has no number for them, and they
-// would make a comparison of the checks silently hold or fail. It goes through body once, telling one
-// mistake of a node: an anchor or a tag tells itself, and what it holds is judged on its own.
+// refuse refuses in body, the file's, every place that would hide where a value is written (an anchor,
+// alias, merge key or tag) or read a key as another name than the one written, and every value .inf or
+// .nan too when finite: JSON has no number for them, and they would make a comparison of the checks
+// silently hold or fail. It goes through body once, telling one mistake of a node: an anchor or a tag
+// tells itself, and what it holds is judged on its own.
 func refuse(file string, body ast.Node, finite bool) error {
 	r := &refusals{file: file, finite: finite, found: nil}
 	ast.Walk(r, body)
@@ -893,7 +897,7 @@ func (r *refusals) Visit(n ast.Node) ast.Visitor {
 		if err := yamlpos.Anchors(r.file, key); err != nil {
 			_ = r.found.Add(err) //nolint:errcheck // Anchors tells only mistakes
 		}
-		if k := yamlpos.Unwrap(key); written(k, k != key) && !isText(k) {
+		if k := yamlpos.Unwrap(key); yamlpos.Written(k, k != key) && !isText(k) {
 			r.found = append(r.found, yamlpos.New(r.file, yamlpos.Of(k), "tmpl_key_not_text", k.GetToken().Value))
 		}
 		ast.Walk(r, n.Value)
@@ -904,24 +908,6 @@ func (r *refusals) Visit(n ast.Node) ast.Visitor {
 		}
 	}
 	return r
-}
-
-// written reports whether n, held by an anchor or a tag when wrapped, is written in place: an alias is
-// written elsewhere. The null a wrapper holds is not told from one it holds of nothing, which
-// go-yaml writes as null, so it is left to the wrapper's mistake.
-func written(n ast.Node, wrapped bool) bool {
-	switch n.(type) {
-	case *ast.AliasNode:
-		return false
-	case *ast.NullNode:
-		return !wrapped
-	}
-	return true
-}
-
-func isMapping(n ast.Node) bool {
-	_, ok := n.(*ast.MappingNode)
-	return ok
 }
 
 func isText(n ast.Node) bool {

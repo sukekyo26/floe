@@ -188,6 +188,11 @@ func TestParseErrors(t *testing.T) {
 			"no id, so no name", "width: 1\nheight: 1\nparts: []\n",
 			"s.yaml:1:1: diagram: give id\ns.yaml:1:1: diagram: give a title (read aloud by screen readers)",
 		},
+		{
+			"an anchor and a top that is not a mapping, told together", "- &a x\n",
+			"s.yaml:1:1: diagram: write a mapping of keys and values\ns.yaml:1:3: anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
+		},
+		{"a tag that holds nothing, told alone", "!!map\n", "s.yaml:1:1: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"},
 		{"an at given wrong, not missing", head + "  - edge: { d: 'M0,0 H1', label: a, at: [1] }\n", "s.yaml:6:41: edge: at must be a pair of numbers, like [320, 100]"},
 	}
 	for _, tt := range tests {

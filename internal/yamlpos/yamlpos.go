@@ -483,6 +483,19 @@ func Anchor(file string, n ast.Node) (e *usererr.Error, merge bool) {
 	return nil, false
 }
 
+// Written reports whether n, held by an anchor or a tag when wrapped, is written in place: an alias is
+// written elsewhere. The null a wrapper holds is not told from one it holds of nothing, which
+// go-yaml writes as null, so it is left to the wrapper's mistake.
+func Written(n ast.Node, wrapped bool) bool {
+	switch n.(type) {
+	case *ast.AliasNode:
+		return false
+	case *ast.NullNode:
+		return !wrapped
+	}
+	return true
+}
+
 // Unwrap returns what the anchors and tags around n hold, n itself without one.
 func Unwrap(n ast.Node) ast.Node {
 	for {

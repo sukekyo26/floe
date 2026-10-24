@@ -75,12 +75,9 @@ func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a mistake at its line and column
 	}
-	if err = plain(file, body); err != nil {
+	seq, err := readTop[*ast.SequenceNode](file, body, false, "tmpl_checks_yaml")
+	if err != nil {
 		return nil, err
-	}
-	seq, ok := body.(*ast.SequenceNode)
-	if !ok {
-		return nil, yamlpos.New(file, yamlpos.Of(body), "tmpl_checks_yaml")
 	}
 	var list []relation
 	var problems usererr.List
