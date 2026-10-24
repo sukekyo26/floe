@@ -16,6 +16,13 @@ $ floe render --out-dir $TMP/out report.yaml
 exit 0
 --- stdout
 $TMP/out/report.html
+$ floe render --out-dir $TMP/together memo-brutal.yaml memo-default.yaml memo-plain.yaml report.yaml
+exit 0
+--- stdout
+$TMP/together/memo-brutal.html
+$TMP/together/memo-default.html
+$TMP/together/memo-plain.html
+$TMP/together/report.html
 $ floe template check $SAMPLE/templates/memo
 exit 0
 $ floe part check

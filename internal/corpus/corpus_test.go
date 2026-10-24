@@ -90,6 +90,11 @@ func runSample(t *testing.T, dir string) map[string][]byte {
 	for _, file := range data {
 		s.run(t, false, "render", "--out-dir", out, file)
 	}
+	// And together, for what render does of several, as writing none while one has a mistake; its pages are
+	// those above.
+	if len(data) > 1 {
+		s.run(t, false, append([]string{"render", "--out-dir", filepath.Join(s.tmp, "together")}, data...)...)
+	}
 	pages, err := filepath.Glob(filepath.Join(out, "*.html"))
 	if err != nil {
 		t.Fatal(err)

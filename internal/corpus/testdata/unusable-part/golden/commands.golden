@@ -12,6 +12,11 @@ exit 1
 --- stderr
 takes.yaml:7:16: the part links cannot be used
   $SAMPLE/parts/links/schema.json: #/items/properties/u: a part's schema takes no "format": "html": its part.html draws its items, which the checks of a format do not reach; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}
+$ floe render --out-dir $TMP/together none.yaml takes.yaml
+exit 1
+--- stderr
+takes.yaml:7:16: the part links cannot be used
+  $SAMPLE/parts/links/schema.json: #/items/properties/u: a part's schema takes no "format": "html": its part.html draws its items, which the checks of a format do not reach; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}
 $ floe part check
 exit 1
 --- stderr

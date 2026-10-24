@@ -16,3 +16,10 @@ $ floe render --out-dir $TMP/out ja.yaml
 exit 0
 --- stdout
 $TMP/out/ja.html
+$ floe render --out-dir $TMP/together en.yaml fr.yaml ja-JP.yaml ja.yaml
+exit 0
+--- stdout
+$TMP/together/en.html
+$TMP/together/fr.html
+$TMP/together/ja-JP.html
+$TMP/together/ja.html
