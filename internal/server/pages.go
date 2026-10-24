@@ -192,6 +192,8 @@ func stream(w http.ResponseWriter, contentType string, f io.Reader, tail string)
 // In the sandbox location.origin is "null", so hosts are compared. A page can shadow open, URL, self
 // and the like with top-level declarations, so everything but window, top and location comes through
 // window.
+// The part of the page it is at (#…) is told to the frame, which writes it into its own URL: when it
+// loads, as Back may load it again at another, and on a move to another part.
 const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => {" +
 	"const a = e.target.closest?.('a[href]');" +
 	"if (!a || e.defaultPrevented || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;" +
@@ -201,7 +203,10 @@ const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => 
 	"if (u.host !== location.host) { e.preventDefault(); window.open(u.href, '_blank', 'noopener'); return; }" +
 	"if (!/^\\/(a\\/[^/]+\\/?)?$/.test(u.pathname) || u.searchParams.has('raw')) return;" +
 	"e.preventDefault(); top.postMessage({ artifactOpen: u.pathname + u.search + u.hash }, " +
-	"location.protocol + '//' + location.host);});"
+	"location.protocol + '//' + location.host);});" +
+	"if (top !== window) { const tell = () => top.postMessage(" +
+	"{ artifactHash: location.hash, artifactPath: location.pathname }, location.protocol + '//' + location.host);" +
+	"tell(); window.addEventListener('hashchange', tell); }"
 
 // servedScript is appended to a served page only: it reloads the open tab when the page is
 // republished (a link: when its file is saved), and handles links inside the frame. The version the

@@ -350,6 +350,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 - A server serves one store (`FLOE_DIR`) on its port: while it runs, a command for another store is refused. Give that store another `FLOE_PORT`.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
 - Pages run in a sandbox, so their scripts cannot reach the management page's API.
+- A page opens at the part its URL names (`/a/<slug>/#part`), and a move to a part inside it is kept in the URL, so that a copy of the URL or a reload opens that part.
 - The scripts of a page drawn from a data file cannot send what it holds out with `fetch`, XHR, images from elsewhere or forms, its download included; see [templates](templates.md#pagehtml). Linked HTML loads what it loads.
 
 ## Environment variables

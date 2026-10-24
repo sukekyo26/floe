@@ -276,7 +276,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, as well as the
   management page with live reload. `floe list` and `floe rm` ask the server,
   starting it when needed, as `floe publish` does. The server keeps running
-  until `floe stop`.
+  until `floe stop`. A page opens at the part its URL names
+  (`/a/<slug>/#part`), and a move to a part inside it is kept in the URL.
   They are configured with `FLOE_DIR` and `FLOE_PORT` (default 7325). A
   relative `FLOE_DIR`, `FLOE_ICONS_DIR` or `FLOE_TEMPLATES_DIR` is under the
   working directory, and a `~` or `~/` at its start stands for `HOME`

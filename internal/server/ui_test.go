@@ -516,7 +516,8 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 }
 
 // listening attaches one message listener per document and returns the last message the page sent.
-const listening = "(window.listening ||= (addEventListener('message', (e) => { window.reported = e.data; }), true)) && window.reported"
+// It keeps the page's own words, not what floe's script in the page tells the frame (artifactHash).
+const listening = "(window.listening ||= (addEventListener('message', (e) => { if (typeof e.data === 'string') window.reported = e.data; }), true)) && window.reported"
 
 // TestUIReload checks that an open page reloads itself when republished, from inside the sandbox, and
 // that the page URL is a frame which allows clipboard writes and fullscreen, sends links to other sites
@@ -557,6 +558,57 @@ func TestUIReload(t *testing.T) { //nolint:paralleltest // the UI tests share on
 		"!document.getElementById('notfound').hidden && document.getElementById('frame').hidden && !document.getElementById('frame').hasAttribute('src')"))
 
 	check(t, "reload", out, "1|2|Live · floe|true|true,true|own own none /a/no-such/|true")
+}
+
+// TestUIFrameHash checks that the frame opens its page at the part its URL names, coming straight, through
+// the redirect or from a link in another page, and that a move to a part inside the frame is kept in the
+// frame's URL, so that a reload opens it, and Back undoes it at once.
+func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
+	e := newEnv(t)
+	b := newBrowser(t, e.base, i18n.English)
+	publish := func(slug, body string) {
+		e.publish(t, e.page(t, filepath.Join("hash", slug+".yaml"), slug, body), store.Options{Slug: &slug})
+	}
+	link := func(href string) string {
+		return `<a id="go" href="` + href + `" style="position: fixed; left: 0; top: 0; width: 200px; height: 40px">go</a>`
+	}
+	// The page reports the part it is at, as the frame cannot read the sandboxed page. Whether Chrome scrolls
+	// there is Chrome's: in the tests' Chrome it now and then does not on a load, which floe cannot mend.
+	publish("hash", link("#s2")+`<div style="height: 3000px"></div><h2 id="s2">s2</h2><div style="height: 3000px"></div>`+
+		"<script>document.addEventListener('pointerover', () => parent.postMessage('over', '*'));"+
+		"setInterval(() => parent.postMessage('at ' + location.hash, '*'), 50)</script>")
+	publish("from", link("/a/hash/#s2")+
+		"<script>document.addEventListener('pointerover', () => parent.postMessage('over', '*'))</script>")
+	at := func(what, want string) string {
+		return b.until(what, "(window.watching ||= (addEventListener('message', (e) => { if (String(e.data).startsWith('at ')) window.at = e.data; }), true)) && "+
+			"window.at === "+js("at "+want)+" && location.pathname + location.hash")
+	}
+	click := func() {
+		box := b.rect("document.getElementById('frame')")
+		b.hover(box.X+20, box.Y+20)
+		b.click(box.X+20, box.Y+20)
+	}
+
+	out := make([]string, 0, 6)
+	b.navigate("/a/hash/#s2")
+	out = append(out, at("the part, opened straight", "#s2"))
+	b.navigate("/a/hash#s2")
+	out = append(out, at("the part, through the redirect", "#s2"))
+	b.navigate("/a/from/")
+	b.until("the page in the frame", "document.getElementById('frame').hasAttribute('src')")
+	click()
+	out = append(out, at("the part, from another page", "#s2"))
+	b.navigate("/a/hash/")
+	at("the top of the page", "")
+	click()
+	out = append(out, at("the part, moved to in the frame", "#s2"))
+	b.eval("window.leaving = true; location.reload()")
+	b.until("the reload", "!window.leaving && document.readyState === 'complete'")
+	out = append(out, at("the part, after a reload", "#s2"))
+	b.eval("history.back()")
+	out = append(out, at("the top of the page, back", ""))
+
+	check(t, "frame hash", out, "/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/")
 }
 
 // leave clicks links out of a page in the frame: a target=_blank tab runs in the other site's origin
