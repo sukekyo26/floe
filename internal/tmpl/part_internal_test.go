@@ -455,7 +455,7 @@ func TestFloePartChecksDeclared(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
-		if err := checksDeclared(p.checks, s); err != nil {
+		if err := checksDeclared(p.checks, s, true); err != nil {
 			t.Errorf("%s: %v", name, err)
 		}
 		checked++

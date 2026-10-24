@@ -315,57 +315,90 @@ func (t *Template) checkChecks(s *jsonschema.Schema) error {
 	if failed := problems.Add(err); failed != nil {
 		return failed //nolint:wrapcheck // already says what failed
 	}
-	if s != nil {
-		if failed := problems.Add(checksDeclared(list, s)); failed != nil {
-			return failed //nolint:wrapcheck // already says what failed
-		}
+	if failed := problems.Add(checksDeclared(list, s, false)); failed != nil {
+		return failed //nolint:wrapcheck // already says what failed
 	}
 	return problems.Err()
 }
 
-// checksDeclared returns the mistakes of the paths of list that the compiled schema s does not declare
-// (declared), nil without one.
-func checksDeclared(list []relation, s *jsonschema.Schema) error {
+// checksDeclared returns the mistakes of the paths of list that the compiled schema s, of a part when part
+// is true, does not declare (declared): none without s.
+func checksDeclared(list []relation, s *jsonschema.Schema, part bool) error {
+	if s == nil {
+		return nil
+	}
 	var problems usererr.List
 	for _, c := range list {
-		if e := c.declared(s); e != nil {
+		if e := c.declared(s, part); e != nil {
 			problems = append(problems, e)
 		}
 	}
 	return problems.Err()
 }
 
-// declared checks that the compiled schema s declares the list at c.For and c.Field under what c checks,
-// its items, or without for, as items picks, the whole s declares, its items when it takes a list alone:
-// a path misspelt would find nothing in the data to check, and fail no data. A path is refused only
-// where the schema surely refuses it, a list only where its types leave array out.
-func (c relation) declared(s *jsonschema.Schema) *usererr.Error {
-	checked := s
-	switch {
-	case c.For != "":
-		list, sure := declaredAt(s, strings.Split(c.For, "."), true)
-		switch {
-		case list == nil && sure:
-			return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
-		case list == nil:
-			return nil
-		case !takes(list, "array"):
-			return yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_array", c.For)
-		}
-		checked = itemsOf(list)
-	case takes(s, "array") && !takes(s, "object"):
-		checked = itemsOf(s)
+// declared checks that the compiled schema s, of a part when part is true, else of a template, declares
+// the list at c.For and c.Field under its items: a path misspelt would find nothing in the data to check,
+// and fail no data. A path is refused only where the schema surely refuses it, a list only where its
+// types leave array out. Without for, it checks c.Field as declaredWhole does.
+func (c relation) declared(s *jsonschema.Schema, part bool) *usererr.Error {
+	if c.For == "" {
+		return c.declaredWhole(s, part)
 	}
-	if c.Field == "" || checked == nil {
+	list, sure := declaredAt(s, strings.Split(c.For, "."), true)
+	switch {
+	case list == nil && sure:
+		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
+	case list == nil:
+		return nil
+	case !takes(list, "array"):
+		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_array", c.For)
+	case c.Field == "":
 		return nil
 	}
-	if field, sure := declaredAt(checked, strings.Split(c.Field, "."), false); field == nil && sure {
-		if c.For == "" {
-			return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field_whole", c.Field)
-		}
+	items := itemsOf(list)
+	if items == nil {
+		return nil
+	}
+	if field, sure := declaredAt(items, strings.Split(c.Field, "."), false); field == nil && sure {
 		return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field", c.Field, c.For)
 	}
 	return nil
+}
+
+// declaredWhole checks that s declares c.Field where a check without for runs, as items picks it from the
+// value: a template's data file, which is keys and values; a part's value, or each of its items when it
+// is a list. A part's schema that takes both keys and values and a list may get either, so the field is
+// refused only where every kind of value s takes surely refuses it.
+func (c relation) declaredWhole(s *jsonschema.Schema, part bool) *usererr.Error {
+	if c.Field == "" {
+		return nil
+	}
+	steps := strings.Split(c.Field, ".")
+	sides := []*jsonschema.Schema{s}
+	if part {
+		sides = nil
+		if takes(s, "object") {
+			sides = append(sides, s)
+		}
+		if takes(s, "array") {
+			sides = append(sides, itemsOf(s))
+		}
+	}
+	for _, side := range sides {
+		if side == nil {
+			return nil // a list whose items may be anything
+		}
+		if field, sure := declaredAt(side, steps, false); field != nil || !sure {
+			return nil
+		}
+	}
+	if len(sides) == 0 {
+		return nil
+	}
+	if part {
+		return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field_part", c.Field)
+	}
+	return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field_whole", c.Field)
 }
 
 // declaredAt follows the path of keys steps from the compiled schema s, through properties and $ref,

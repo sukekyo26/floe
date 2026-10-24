@@ -271,8 +271,9 @@ func (set *partSet) compileOwn() (map[string]error, error) {
 		}
 		compiled, err := c.Compile(url)
 		if err == nil {
-			// The other parts stand as true: a path into one is taken, its schema checked when it is read.
-			if why := checksDeclared(p.checks, compiled); why != nil {
+			// LIMIT: the other parts stand as true, so a path into one is taken unchecked. Check the paths
+			// again once every part compiles with the others (settle) if a part comes to need it.
+			if why := checksDeclared(p.checks, compiled, true); why != nil {
 				mistakes[name] = why
 			}
 			continue

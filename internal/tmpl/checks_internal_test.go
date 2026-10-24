@@ -233,6 +233,41 @@ func TestRelationsOfTheWhole(t *testing.T) {
 	}
 }
 
+// A part's field without for is a path under the part, or under its items when it is a list, refused only
+// where every kind of value its schema takes surely refuses it: a part that may be either takes it on either.
+func TestDeclaredOfAPart(t *testing.T) {
+	t.Parallel()
+
+	const closed = `"additionalProperties": false, `
+	for _, tt := range []struct{ schema, field, want string }{
+		{`{"type": "object", ` + closed + `"properties": {"url": {}}}`, "url", ""},
+		{`{"type": "object", ` + closed + `"properties": {"url": {}}}`, "uri", "tmpl_checks_field_part"},
+		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "url", ""},
+		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "uri", "tmpl_checks_field_part"},
+		{`{"type": ["array", "object"], ` + closed + `"items": {` + closed + `"properties": {"url": {}}}}`, "url", ""},
+		{`{"type": ["array", "object"], ` + closed + `"properties": {"url": {}}, "items": {"additionalProperties": false}}`, "url", ""},
+		{`{"type": ["array", "object"], ` + closed + `"items": {` + closed + `"properties": {"url": {}}}}`, "uri", "tmpl_checks_field_part"},
+		{`{"type": "array"}`, "uri", ""},
+	} {
+		set, err := builtinParts()
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, err := compileSchema(set, "t", "t/schema.json", jsonDoc(t, tt.schema))
+		if err != nil {
+			t.Fatalf("%s: %v", tt.schema, err)
+		}
+		c := relation{Field: tt.field, Expr: "true", Message: "m", file: "checks.yaml", at: map[string]yamlpos.Pos{}}
+		e := c.declared(s, true)
+		switch {
+		case tt.want == "" && e != nil:
+			t.Errorf("%s, field %s = %v", tt.schema, tt.field, e)
+		case tt.want != "" && (e == nil || e.Key != tt.want):
+			t.Errorf("%s, field %s = %v, want %s", tt.schema, tt.field, e, tt.want)
+		}
+	}
+}
+
 func failures(t *testing.T, checks, src, schema string) usererr.List {
 	t.Helper()
 
@@ -288,12 +323,10 @@ func TestDeclared(t *testing.T) {
 		{`{"properties": {"a": {"type": "array", "prefixItems": [{}], "items": {` + closed + `"properties": {}}}}}`, "a", "name", ""},
 		{`{"properties": {"a": {"type": "object", ` + closed + `"properties": {}}}}`, "a.x", "", "tmpl_checks_undeclared"},
 		{`{"properties": {"a": {"type": "array", "items": {"type": "string"}}}}`, "a.0", "", "tmpl_checks_undeclared"},
-		// Without for, field is a path under the whole, under its items when it takes a list alone.
+		// Without for, field is a path under the top level of the data file.
 		{`{` + closed + `"properties": {"options": {"type": "array"}}}`, "", "options", ""},
 		{`{` + closed + `"properties": {"options": {"type": "array"}}}`, "", "optionz", "tmpl_checks_field_whole"},
 		{`{"properties": {"options": {"type": "array"}}}`, "", "optionz", ""},
-		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "", "url", ""},
-		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "", "uri", "tmpl_checks_field_whole"},
 		{`{` + closed + `"properties": {"a": {}}}`, "", "", ""},
 		// for goes through a list on the way, its items; field takes keys alone.
 		{`{"properties": {"s": {"type": "array", "items": {` + closed + `"properties": {"p": {"type": "array"}}}}}}`, "s.p", "", ""},
@@ -318,7 +351,7 @@ func TestDeclared(t *testing.T) {
 			t.Fatalf("%s: %v", tt.schema, err)
 		}
 		c := relation{For: tt.for_, Field: tt.field, Expr: "true", Message: "m", file: "checks.yaml", at: map[string]yamlpos.Pos{}}
-		e := c.declared(s)
+		e := c.declared(s, false)
 		switch {
 		case tt.want == "" && e != nil:
 			t.Errorf("%s, for %s, field %s = %v", tt.schema, tt.for_, tt.field, e)
