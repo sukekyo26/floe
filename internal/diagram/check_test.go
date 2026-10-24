@@ -51,10 +51,10 @@ func TestCheck(t *testing.T) {
 `,
 			want: []string{
 				`s.yaml:7:5: box "とても長い名前の箱": "とても長い名前の箱" needs about 89px more width`,
-				`s.yaml:12:5: box "e" sticks out of the 300x120 canvas`,
 				`s.yaml:7:5: box "とても長い名前の箱" overlaps box "b" (line 8)`,
 				`s.yaml:9:5: box "c" straddles the edge of frame "f" (line 6)`,
 				`s.yaml:11:5: edge "M240,0 V120" runs through box "d" (line 10)`,
+				`s.yaml:12:5: box "e" sticks out of the 300x120 canvas`,
 			},
 		},
 		{
@@ -76,10 +76,10 @@ func TestCheck(t *testing.T) {
 				`s.yaml:6:5: box "a": its text needs a height of 46px or more; the box has 20px`,
 				`s.yaml:7:5: table "users": "identifier  string" needs about 78px more width`,
 				`s.yaml:8:5: dot at 295,50 sticks out of the 300x200 canvas`,
+				`s.yaml:9:5: circle at 150,150 sticks out of the 300x200 canvas`,
 				`s.yaml:12:5: label "10/06" sticks out of the 300x200 canvas`,
 				`s.yaml:12:5: label "10/07" sticks out of the 300x200 canvas`,
 				`s.yaml:14:5: label "strong" sticks out of the 300x200 canvas`,
-				`s.yaml:9:5: circle at 150,150 sticks out of the 300x200 canvas`,
 				`s.yaml:15:5: edge "M10,50.5 H295" runs through table "users" (line 7)`,
 				`s.yaml:15:5: edge "M10,50.5 H295" runs through icon "aws/aws-lambda" (line 13)`,
 			},
@@ -254,7 +254,7 @@ func TestCheckLocalize(t *testing.T) {
 	}
 }
 
-// Icons not fetched stop the check with how to fetch them, rather than as a mistake of the spec.
+// Icons not fetched are a mistake of no place, telling how to fetch them.
 func TestCheckIconsNotFetched(t *testing.T) {
 	t.Parallel()
 
@@ -263,7 +263,7 @@ func TestCheckIconsNotFetched(t *testing.T) {
 	err := diagram.Check(s, icons.New(dir))
 	var p usererr.List
 	want := "AWS icons are not in " + filepath.Join(dir, "aws") + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
-	if errors.As(err, &p) || errString(err) != want {
+	if !errors.As(err, &p) || p[0].File != "" || errString(err) != want {
 		t.Errorf("Check = %v, want %s", err, want)
 	}
 }

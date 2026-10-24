@@ -12,16 +12,11 @@ import (
 // Check reports the layout mistakes of s: text too wide or tall for its box or frame, parts (edges,
 // lines and axes too) sticking out of the canvas, overlapping (frame headings too), straddling the edge
 // of a frame, edges running through boxes, labels or frame headings, and edges crossing. It checks more
-// than diagram.mjs does, whose drawing alone floe keeps. Icons are looked up in store.
+// than diagram.mjs does, whose drawing alone floe keeps. Icons are looked up in store. It tells what
+// Render does of s alone.
 func Check(s *Spec, store *icons.Store) error {
-	l, err := newLayout(s, store)
-	if err != nil {
-		return err
-	}
-	if p := l.check(); len(p) > 0 {
-		return p
-	}
-	return nil
+	_, err := Render([]*Spec{s}, store)
+	return err
 }
 
 func (l *layout) check() usererr.List {

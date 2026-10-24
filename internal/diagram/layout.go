@@ -50,9 +50,10 @@ type path struct {
 type layout struct {
 	spec     *Spec
 	icons    *icons.Store
-	err      error  // the first error that is no mistake of the spec (the icons are not there)
-	boxes    []rect // edges may not run through these
-	marks    []rect // may not overlap, but edges may reach their centre (dots)
+	err      error        // the first failure of the icons, which no user can fix
+	unplaced usererr.List // the icons' mistakes, of no place: not fetched, no directory for them
+	boxes    []rect       // edges may not run through these
+	marks    []rect       // may not overlap, but edges may reach their centre (dots)
 	frames   []rect
 	areas    []rect // may overlap (Venn circles)
 	labels   []rect
@@ -71,11 +72,11 @@ type layout struct {
 	iconIDs  map[string]string // by name and size
 }
 
-// newLayout lays out s. Icons not fetched stop it with an error, as no mistake of s does.
+// newLayout lays out s. A failure of the icons stops it with an error, as no mistake of s does.
 func newLayout(s *Spec, store *icons.Store) (*layout, error) {
 	l := &layout{
 		spec: s, icons: store, err: nil, boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil,
-		strokes: nil, paths: nil, problems: nil, seen: map[string]bool{},
+		strokes: nil, paths: nil, problems: nil, unplaced: nil, seen: map[string]bool{},
 		areaSVG: nil, edgeSVG: nil, boxSVG: nil, labelSVG: nil, grids: nil, markers: nil,
 		iconDefs: nil, iconIDs: map[string]string{},
 	}
@@ -192,7 +193,7 @@ func (l *layout) addIcon(i Icon) {
 
 // image places the icon of name (aws/…), two with a variant for dark backgrounds. An icon is an
 // <image>, not inline <svg>: the official icons' ids collide between icons. An icon not there is a mistake
-// of the spec, and icons not fetched stop the drawing.
+// of the spec; icons not fetched are a mistake of no place, and a failure to read them stops the drawing.
 func (l *layout) image(at yamlpos.Pos, name string, x, y, size float64, what *usererr.Error) markup {
 	icon, names, err := l.icons.Lookup(name)
 	if errors.Is(err, icons.ErrNoSet) {
@@ -200,8 +201,8 @@ func (l *layout) image(at yamlpos.Pos, name string, x, y, size float64, what *us
 		return ""
 	}
 	if err != nil {
-		if l.err == nil {
-			l.err = err
+		if failed := l.unplaced.Add(err); failed != nil && l.err == nil {
+			l.err = failed
 		}
 		return ""
 	}
