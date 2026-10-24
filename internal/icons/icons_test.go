@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -289,23 +290,19 @@ func TestFetchRefusals(t *testing.T) {
 	}
 }
 
-// The mistake of a set not fetched is made once in a store, for goroutines looking up at once too.
+// A set not fetched is told once, for goroutines looking up in one store at once too.
 func TestNotFetchedOnce(t *testing.T) {
 	t.Parallel()
 
 	s := icons.New(t.TempDir())
-	got := make([]*usererr.Error, 8)
+	errs := make([]error, 8)
 	var wg sync.WaitGroup
-	for i := range got {
-		wg.Go(func() {
-			_, _, err := s.Lookup("aws/aws-lambda")
-			errors.As(err, &got[i])
-		})
+	for i := range errs {
+		wg.Go(func() { _, _, errs[i] = s.Lookup("aws/aws-lambda") })
 	}
 	wg.Wait()
-	for _, e := range got {
-		if e == nil || e != got[0] {
-			t.Fatalf("the mistakes of a set not fetched looked up at once = %v, want one", got)
-		}
+	r := usererr.Tell(i18n.EnglishCatalog(), usererr.Collect(errs...))
+	if len(r.Mistakes) != 1 || !strings.Contains(r.Mistakes[0].Text, "not in") {
+		t.Fatalf("a set not fetched looked up at once = %q, want it told once", r.Render(""))
 	}
 }

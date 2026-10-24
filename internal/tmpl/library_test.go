@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -198,8 +199,8 @@ func TestTemplateVersion(t *testing.T) {
 	}
 }
 
-// What a template's files, or a part's, hold whatever the data is one mistake in a run, though drawing
-// finds it: each data file drawn with them gets the same one, to be told once.
+// What a template's files, or a part's, hold whatever the data is told once for two data files drawn with
+// them, though drawing finds it.
 func TestTemplateMistakesOnce(t *testing.T) {
 	t.Parallel()
 
@@ -240,6 +241,16 @@ func TestTemplateMistakesOnce(t *testing.T) {
 			items: html, data: "",
 			files: map[string]string{"page.html": head + `<body><img src="{{asset "nope.png"}}" alt=""></body></html>`},
 		},
+		"page.html naming two parts as one": {
+			items: html, data: "",
+			files: map[string]string{"page.html": head + `<body><div data-floe-part="note table"></div></body></html>`},
+		},
+		"a word the data names that words.yaml has not": {
+			items: `"level": {"type": "string"}`, data: "level: high\n",
+			files: map[string]string{
+				"page.html": head + `<body>{{word .Data.level}}</body></html>`, "words.yaml": "en:\n  low: Low\n",
+			},
+		},
 	} {
 		dir := memo(t, tt.items)
 		for file, text := range tt.files {
@@ -252,20 +263,25 @@ func TestTemplateMistakesOnce(t *testing.T) {
 			parts = ownParts(t, tt.parts)
 		}
 		l := tmpl.NewLibrary(dir, parts, "", "").Run()
-		told := make([][]*usererr.Error, 0, 2)
+		var all usererr.List
+		var first string
 		for _, file := range []string{"a.yaml", "b.yaml"} {
 			d, err := l.Read(file, []byte("template: memo\nlang: en\ntitle: t\n"+tt.data), "", "")
 			if err == nil {
 				_, err = d.Render("t")
 			}
-			var all usererr.List
-			if failed := all.Add(err); failed != nil || all == nil {
+			if err == nil {
+				t.Fatalf("%s: drawing %s = nil, want mistakes", name, file)
+			}
+			if first == "" {
+				first = usererr.Tell(i18n.EnglishCatalog(), err).Render("")
+			}
+			if failed := all.Add(err); failed != nil {
 				t.Fatalf("%s: drawing %s = %v, want mistakes", name, file, err)
 			}
-			told = append(told, all)
 		}
-		if !slices.Equal(told[0], told[1]) {
-			t.Errorf("%s: the mistakes of two data files = %v, %v, want the same ones", name, told[0], told[1])
+		if got := usererr.Tell(i18n.EnglishCatalog(), all).Render(""); got != first {
+			t.Errorf("%s: the mistakes of two data files =\n%s\nwant those of one\n%s", name, got, first)
 		}
 	}
 }

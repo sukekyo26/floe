@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"io/fs"
 	"math"
 	"path/filepath"
@@ -174,8 +173,9 @@ func (l *Library) readWith(file string, src []byte, images imageDir, theme strin
 	}
 	err = t.check(h, images, theme, problems)
 	sources.Images, sources.Icons = d.tried, d.icons
-	if t.set != nil && t.set.dirs != nil {
-		sources.Own = t.set.dirs
+	// The parts check read first, kept by the run.
+	if set, setErr := t.parts(); setErr == nil && set.dirs != nil {
+		sources.Own = set.dirs
 	}
 	if err != nil {
 		return nil, sources, err
@@ -503,33 +503,18 @@ func drawMistake(err error, file string, own bool, key string, args ...any) erro
 	case !own:
 		return fmt.Errorf("draw with %s: %w", file, err)
 	case errors.As(err, &escape):
-		return escapeMistake(file, escape)
+		// html/template escapes file at its first drawing, whatever the data, and says the line apart, but for
+		// a mistake it places at a node alone.
+		// LIMIT: html/template's English, with that line in it. Word each ErrorCode if a reader comes to need it
+		// in its language, and take the line from the node if the source comes to be at hand here.
+		if escape.Line == 0 {
+			return usererr.NewAt(file, 0, 0, "tmpl_go_template", err.Error())
+		}
+		return usererr.NewAt(file, escape.Line, 0, "tmpl_go_template", escape.Description)
 	}
 	// LIMIT: text/template's English, which alone says where in file it failed. Move the line to Line if
 	// text/template comes to give an ExecError's apart.
 	return usererr.NewAt(file, 0, 0, key, append(args, err.Error())...)
-}
-
-// escapeOf is the mistake of page, shown as file, that html/template cannot escape, nil for none, or the
-// failure to find it.
-func escapeOf(page *template.Template, file string) error {
-	var escape *template.Error
-	err := escapeFailure(page)
-	if errors.As(err, &escape) {
-		return escapeMistake(file, escape)
-	}
-	return err
-}
-
-// escapeMistake is the mistake of file that html/template cannot escape, escape. It says the line apart,
-// but for a mistake it places at a node alone.
-// LIMIT: html/template's English, with that line in it. Word each ErrorCode if a reader comes to need it
-// in its language, and take the line from the node if the source comes to be at hand here.
-func escapeMistake(file string, escape *template.Error) *usererr.Error {
-	if escape.Line == 0 {
-		return usererr.NewAt(file, 0, 0, "tmpl_go_template", escape.Error())
-	}
-	return usererr.NewAt(file, escape.Line, 0, "tmpl_go_template", escape.Description)
 }
 
 // withDiagrams returns out, a page of d, with the script of its diagrams after it, once at the end, as the
@@ -588,25 +573,8 @@ func (t *Template) page(w words) (parsedPage, error) {
 		if err = t.pageWords(page, w); err != nil {
 			return parsedPage{}, err
 		}
-		if escape := escapeFailure(page); escape != nil {
-			return parsedPage{}, drawMistake(escape, t.file("page.html"), t.isOwn(), "tmpl_render")
-		}
 		return parsedPage{page: page, head: headMistake(t.file("page.html"), src)}, nil
 	})
-}
-
-// escapeFailure is what html/template finds escaping page, which no data changes: page is escaped on a
-// copy of it drawn with no data, as escaping runs before the drawing.
-func escapeFailure(page *template.Template) error {
-	probe, err := page.Clone()
-	if err != nil {
-		return fmt.Errorf("copy %s: %w", page.Name(), err)
-	}
-	var escape *template.Error
-	if err = probe.Execute(io.Discard, nil); errors.As(err, &escape) {
-		return escape
-	}
-	return nil
 }
 
 // refuseInPage refuses src, the page.html of t, holding a <style>, as floe puts a page's CSS together, or

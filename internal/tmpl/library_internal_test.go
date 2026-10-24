@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -119,14 +118,16 @@ func TestRunReadsOnce(t *testing.T) {
 	if reportSet, err2 := report.parts(); err != nil || err2 != nil || ownSet != reportSet {
 		t.Errorf("the parts of two templates in a run = %p, %p, %v, %v, want one read", ownSet, reportSet, err, err2)
 	}
-	first := mistakesOf(t, l, "a.yaml", src, dir)
-	if second := mistakesOf(t, l, "b.yaml", src, dir); len(first) != 1 || len(second) != 1 || first[0] != second[0] {
-		t.Errorf("the mistakes of a template read twice in a run = %v, %v, want the same one", first, second)
-	}
-
+	// Out of a run, every read reads anew: a file fixed in between is seen.
 	fresh := NewLibrary(templates, "", themes, "")
-	if a, b := mistakesOf(t, fresh, "a.yaml", src, dir), mistakesOf(t, fresh, "b.yaml", src, dir); len(a) != 1 || len(b) != 1 || a[0] == b[0] {
-		t.Errorf("the mistakes of a template read twice without a run = %v, %v, want each its own", a, b)
+	if got := mistakesOf(t, fresh, "a.yaml", src, dir); len(got) != 1 {
+		t.Fatalf("reading with computed.yaml broken, out of a run = %v, want its mistake", got)
+	}
+	if err = os.Remove(filepath.Join(templates, "m", "computed.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = fresh.Read("b.yaml", src, "", dir); err != nil {
+		t.Errorf("reading after computed.yaml is fixed, out of a run = %v, want it read anew", err)
 	}
 
 	// The files of a template are read once in a run: broken after the first data file, the second still
@@ -161,36 +162,6 @@ func TestRunReadsOnce(t *testing.T) {
 		write("templates/k/"+name, broken[name])
 		if err = draw("b.yaml"); err != nil {
 			t.Errorf("a data file drawn after %s is broken, in the run that read it = %v, want it read once", name, err)
-		}
-	}
-}
-
-// The mistake of a part that cannot be used is made once, for goroutines asking for it at once too.
-func TestBrokenPartOnce(t *testing.T) {
-	t.Parallel()
-
-	parts := t.TempDir()
-	if err := os.Mkdir(filepath.Join(parts, "bad"), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	for name, text := range map[string]string{"part.html": `<div data-floe-part="bad"></div>`, "schema.json": "{"} {
-		if err := os.WriteFile(filepath.Join(parts, "bad", name), []byte(text), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	set, err := partsIn(ownDirs{parts: parts, themes: ""})
-	if err != nil || set.broken["bad"] == nil {
-		t.Fatalf("partsIn = %v, want the part bad broken", err)
-	}
-	got := make([]*usererr.Error, 8)
-	var wg sync.WaitGroup
-	for i := range got {
-		wg.Go(func() { got[i] = set.brokenPart("bad") })
-	}
-	wg.Wait()
-	for _, e := range got {
-		if e != got[0] {
-			t.Fatalf("the mistakes of a broken part asked for at once = %v, want one", got)
 		}
 	}
 }

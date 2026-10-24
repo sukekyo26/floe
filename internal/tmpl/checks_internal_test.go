@@ -47,6 +47,12 @@ func relateSrc(src []byte, d *Data, root ast.Node, own bool) error {
 	if err != nil {
 		return err
 	}
+	for i, c := range list {
+		var e *usererr.Error
+		if list[i].prog, e = c.program(); e != nil {
+			return e
+		}
+	}
 	return relate(list, d, root, own)
 }
 

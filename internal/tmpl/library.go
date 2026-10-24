@@ -119,8 +119,7 @@ type Template struct {
 	// Path is where a template of one's own was found, as its mistakes name it; "" for a built-in one.
 	Path string
 
-	run   *run     // what the run it was found in reads once
-	set   *partSet // the parts it is drawn with, once read
+	run   *run // what the run it was found in reads once
 	reads *reads
 }
 
@@ -135,9 +134,6 @@ type reads struct {
 	computed readOnce[*computed] // nil without computed.yaml
 	checks   readOnce[[]relation]
 	assets   map[string]*readOnce[template.URL] // by the name page.html gives asset
-	// the mistakes of page.html that drawing it finds, by key: found by drawing data, but the same whatever
-	// the data
-	drawn map[string]*readOnce[struct{}]
 }
 
 // readOnce is what reading a file gave, read the first time alone.
@@ -290,9 +286,9 @@ func (l *Library) resolve(name string) (*Template, error) {
 
 func (l *Library) template(name, dir, at string) *Template {
 	r := new(reads)
-	r.assets, r.drawn = map[string]*readOnce[template.URL]{}, map[string]*readOnce[struct{}]{}
+	r.assets = map[string]*readOnce[template.URL]{}
 	return &Template{
-		Name: name, Dir: dir, Path: at, run: l.runOf(), set: nil, reads: r,
+		Name: name, Dir: dir, Path: at, run: l.runOf(), reads: r,
 	}
 }
 
@@ -317,16 +313,9 @@ func (t *Template) isOwn() bool {
 	return t.Dir != ""
 }
 
-// parts returns the parts t is drawn with and their themes: those its run read once, else read for t.
+// parts returns the parts t is drawn with and their themes, those its run reads once.
 func (t *Template) parts() (*partSet, error) {
-	if t.set == nil {
-		set, err := t.run.parts()
-		if err != nil {
-			return nil, err
-		}
-		t.set = set
-	}
-	return t.set, nil
+	return t.run.parts()
 }
 
 // iconStore is the icons t's diagrams show, those its run reads once.

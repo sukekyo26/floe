@@ -145,9 +145,6 @@ type part struct {
 	html   string // the template of pages, as written
 	css    string
 	checks []relation
-	// the mistake of pages that html/template cannot escape, which no data changes, made once when read: each
-	// item drawn with it tells the same one
-	escape error
 	looks  []takenLook // the looks it takes, as part.yaml names them, each before it
 	taken  []string    // those and the looks they take in turn, each once, once all are read
 	uses   []string    // the parts its HTML names and its schema holds, itself among them
@@ -199,10 +196,6 @@ type partSet struct {
 	// what to warn of: what of one's own goes into no page, and the colours of the parts and themes
 	// written where the palette is to give them
 	strays []*usererr.Error
-	// the mistake of each part and theme that cannot be used, by "part:" or "theme:" and its name, made once:
-	// every page and template that uses it gives the same one, for it to be told once
-	overs   map[string]*usererr.Error
-	oversMu sync.Mutex // floe's set alone is shared by the requests a server answers at once
 }
 
 // builtinParts reads floe's parts once.
@@ -218,7 +211,6 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 		parts: map[string]*part{}, docs: map[string]any{}, shapes: map[string]*shape{}, notes: map[string]*schemaNotes{},
 		shares: map[string]bool{}, themes: map[string]*theme{},
 		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", dirs: nil, strays: nil,
-		overs: map[string]*usererr.Error{}, oversMu: sync.Mutex{},
 	}
 	if err := set.readBuiltin(); err != nil {
 		return nil, err
@@ -286,7 +278,7 @@ func (set *partSet) readBuiltin() error {
 			required: nil,
 		}
 		set.parts[name] = &part{
-			name: name, shape: set.shapes[url], pages: nil, words: nil, html: "", css: p.css, checks: nil, escape: nil,
+			name: name, shape: set.shapes[url], pages: nil, words: nil, html: "", css: p.css, checks: nil,
 			looks: nil, taken: nil, uses: nil, about: "", dir: "", replaces: false,
 		}
 	}
@@ -472,8 +464,8 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		}
 		set.strays = append(set.strays, warnings...)
 		set.parts[name] = &part{
-			name: name, shape: nil, pages: nil, words: nil, html: "", css: css, checks: nil, escape: nil,
-			looks: yaml.looks, taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
+			name: name, shape: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: yaml.looks,
+			taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
 		}
 		return nil
 	}
@@ -487,8 +479,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	}
 	set.parts[name] = &part{
 		name: name, shape: set.shapes[url], pages: pages, words: w, html: html, css: css, checks: checks,
-		escape: escapeOf(pages[fallbackLang], path.Join(dir, "part.html")), looks: yaml.looks, taken: nil, uses: nil,
-		about: "", dir: "", replaces: false,
+		looks: yaml.looks, taken: nil, uses: nil, about: "", dir: "", replaces: false,
 	}
 	set.strays = append(set.strays, warnings...)
 	return nil
@@ -809,9 +800,6 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node, esca
 			return nil
 		}
 		escaped[p] = true
-		if p.isOwn() && p.escape != nil {
-			return p.escape
-		}
 	}
 	_, item := itemPos(root, at, false)
 	return drawMistake(err, p.file("part.html"), p.isOwn(), "tmpl_render_item", item, d.File)
