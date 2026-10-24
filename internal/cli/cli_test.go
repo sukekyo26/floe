@@ -1137,4 +1137,12 @@ func TestSharedToldOnce(t *testing.T) {
 	if r = e.run(t, "work", "check", "i1.yaml", "i2.yaml"); r.code != 1 || strings.Count(r.stderr, "AWS icons are not in") != 1 {
 		t.Errorf("check of two files that show icons not fetched = %+v, want it told once", r)
 	}
+
+	e.write(t, "templates/nh/schema.json", `{"type": "object", "additionalProperties": false, "properties": {}}`)
+	e.write(t, "templates/nh/page.html", `<!doctype html><html lang="{{.Lang}}"><body></body></html>`)
+	e.write(t, "work/h1.yaml", "template: nh\nlang: en\ntitle: t\n")
+	e.write(t, "work/h2.yaml", "template: nh\nlang: en\ntitle: t\n")
+	if r = e.run(t, "work", "check", "h1.yaml", "h2.yaml"); r.code != 1 || strings.Count(r.stderr, "page.html holds no </head>") != 1 {
+		t.Errorf("check of two files of a template whose page.html holds no </head> = %+v, want it told once", r)
+	}
 }

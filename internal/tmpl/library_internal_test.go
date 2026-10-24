@@ -127,6 +127,41 @@ func TestRunReadsOnce(t *testing.T) {
 	if a, b := mistakesOf(t, fresh, "a.yaml", src, dir), mistakesOf(t, fresh, "b.yaml", src, dir); len(a) != 1 || len(b) != 1 || a[0] == b[0] {
 		t.Errorf("the mistakes of a template read twice without a run = %v, %v, want each its own", a, b)
 	}
+
+	// The files of a template are read once in a run: broken after the first data file, the second still
+	// draws with them as they were.
+	files := map[string]string{
+		"page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
+			`<body>{{.Calc.twice}}</body></html>`,
+		"computed.yaml": "twice: sum(n) * 2\n",
+		"checks.yaml":   "- for: n\n  expr: item > 0\n  message: positive\n",
+	}
+	broken := map[string]string{
+		"page.html": "<html><body></body></html>", "computed.yaml": "twice: nope\n",
+		"checks.yaml": "- for: n\n  expr: item < 0\n  message: negative\n",
+	}
+	write("templates/k/schema.json", `{"type": "object", "properties": {"n": {"type": "array", "items": {"type": "number"}}}}`)
+	src = []byte("template: k\nlang: en\ntitle: t\nn: [2]\n")
+	for name := range broken {
+		for n, text := range files {
+			write("templates/k/"+n, text)
+		}
+		run := NewLibrary(templates, "", themes, "").Run()
+		draw := func(file string) error {
+			d, e := run.Read(file, src, "", dir)
+			if e == nil {
+				_, e = d.Render("t")
+			}
+			return e
+		}
+		if err = draw("a.yaml"); err != nil {
+			t.Fatal(err)
+		}
+		write("templates/k/"+name, broken[name])
+		if err = draw("b.yaml"); err != nil {
+			t.Errorf("a data file drawn after %s is broken, in the run that read it = %v, want it read once", name, err)
+		}
+	}
 }
 
 func mistakesOf(t *testing.T, l *Library, file string, src []byte, cwd string) usererr.List {

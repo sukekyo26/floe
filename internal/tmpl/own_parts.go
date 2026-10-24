@@ -22,8 +22,9 @@ type ownDirs struct{ parts, themes string }
 
 // partsIn returns floe's parts and themes with those of one's own in own over them: floe's alone, read
 // once, when neither directory holds anything.
-// LIMIT: with parts or themes of one's own, floe's are read again with them for each data file read, as the
-// $refs they resolve change. Keep a set by the mtimes of their files if drawing a page comes to be slow.
+// LIMIT: with parts or themes of one's own, floe's are read again with them for each run, and for
+// each template out of one, as the $refs they resolve change. Keep a set by the mtimes of their files if
+// drawing a page comes to be slow.
 func partsIn(own ownDirs) (*partSet, error) {
 	if err := own.apart(); err != nil {
 		return nil, err

@@ -41,34 +41,36 @@ var identifier = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 // checkComputed computes the values of d's template's computed.yaml, if it has one, into d.Calc, from
 // the items its schema declares, and reports at their expressions those its data cannot give.
 func checkComputed(t *Template, d *Data) error {
-	src, found, err := t.readOptional("computed.yaml")
-	if !found || err != nil {
-		return t.same("computed.yaml", err)
-	}
-	// What the template's file holds alone, apart from the data, found once.
-	if err = t.once("computed.yaml", func() error {
-		_, read := readComputed(t.file("computed.yaml"), src, d.shape.keyNames())
-		return read
-	}); err != nil {
+	c, err := t.readComputed(d.shape)
+	if c == nil || err != nil {
 		return err
 	}
-	return compute(t.file("computed.yaml"), src, d, t.isOwn())
+	return c.compute(t.file("computed.yaml"), d, t.isOwn())
 }
 
-// compute computes the values of the computed.yaml src, file in its mistakes, of a template of one's own
-// when own, from the values of d, whose items its schema declares, d.shape. An expression sees the items
-// and the other computed values by name, and a value is computed after those it uses, in whatever order src
-// writes them. floe's own src stopping on data its schema took is floe's failure.
-func compute(file string, src []byte, d *Data, own bool) error {
-	c, err := readComputed(file, src, d.shape.keyNames())
-	if err != nil {
-		return err
-	}
+// readComputed reads t's computed.yaml once, of the items of its schema s, nil without one.
+func (t *Template) readComputed(s *shape) (*computed, error) {
+	return t.reads.computed.of(func() (*computed, error) {
+		src, found, err := t.readOptional("computed.yaml")
+		if !found || err != nil {
+			return nil, err
+		}
+		return readComputed(t.file("computed.yaml"), src, s.keyNames())
+	})
+}
+
+// compute computes the values of c, read from file, of a template of one's own when own, from the values
+// of d, whose items its schema declares, d.shape. An expression sees the items and the other computed
+// values by name, and a value is computed after those it uses, in whatever order file writes them. floe's
+// own file stopping on data its schema took is floe's failure.
+func (c *computed) compute(file string, d *Data, own bool) error {
+	// The variables of d alone: c is the same for every data file.
+	env := reflect.New(c.env.Type()).Elem()
 	// An item the data leaves out stays nil.
 	vars := map[string]dataVar{}
 	for _, n := range c.items {
 		if v := d.Values[n]; v != nil {
-			c.env.Field(c.field[n]).Set(reflect.ValueOf(v))
+			env.Field(c.field[n]).Set(reflect.ValueOf(v))
 		}
 		vars[n] = dataVar{value: d.Values[n], at: n, shape: d.shape.inside().keys[n]}
 	}
@@ -80,7 +82,7 @@ func compute(file string, src []byte, d *Data, own bool) error {
 			failed[n] = true // its own failure is reported
 			continue
 		}
-		out, err := expr.Run(c.programs[n], c.env.Interface())
+		out, err := expr.Run(c.programs[n], env.Interface())
 		if err == nil {
 			err = finiteValue(out)
 		}
@@ -94,7 +96,7 @@ func compute(file string, src []byte, d *Data, own bool) error {
 		}
 		d.Calc[n] = out
 		if out != nil {
-			c.env.Field(c.field[n]).Set(reflect.ValueOf(out))
+			env.Field(c.field[n]).Set(reflect.ValueOf(out))
 		}
 	}
 	return problems.Sorted().Err()

@@ -38,27 +38,26 @@ type scope struct {
 // checkRelations checks the values of d against its template's checks.yaml, if it has one, and reports
 // every failure at its line and column under root.
 func checkRelations(t *Template, d *Data, root ast.Node) error {
-	src, found, err := t.readOptional("checks.yaml")
-	if !found || err != nil {
-		return t.same("checks.yaml", err)
-	}
-	// What the template's file holds alone, apart from the data, found once.
-	if err = t.once("checks.yaml", func() error {
-		_, read := readChecks(t.file("checks.yaml"), src, false)
-		return read
-	}); err != nil {
-		return err
-	}
-	return relate(t.file("checks.yaml"), src, d, root, t.isOwn())
-}
-
-// relate checks the values of d against the checks src of the file checks, of a template of one's own when
-// own.
-func relate(checks string, src []byte, d *Data, root ast.Node, own bool) error {
-	list, err := readChecks(checks, src, false)
+	list, err := t.readChecks()
 	if err != nil {
 		return err
 	}
+	return relate(list, d, root, t.isOwn())
+}
+
+// readChecks reads t's checks.yaml once, none without one, as readChecks reads it.
+func (t *Template) readChecks() ([]relation, error) {
+	return t.reads.checks.of(func() ([]relation, error) {
+		src, found, err := t.readOptional("checks.yaml")
+		if !found || err != nil {
+			return nil, err
+		}
+		return readChecks(t.file("checks.yaml"), src, false)
+	})
+}
+
+// relate checks the values of d against the checks list, of a template of one's own when own.
+func relate(list []relation, d *Data, root ast.Node, own bool) error {
 	var problems usererr.List
 	for _, c := range list {
 		c.floes = !own

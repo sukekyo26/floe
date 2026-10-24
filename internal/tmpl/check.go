@@ -19,14 +19,8 @@ import (
 
 // Check checks the template at dir as a template of the directory's name, whatever its example.yaml
 // names: its files, then its example.yaml through every stage of a publish, drawing included, with the
-// parts of partsDir, the themes of themesDir and the icons kept in iconsDir in its diagrams. The mistakes
-// stop it from being drawn, and the warnings do not.
-func Check(dir, partsDir, themesDir, iconsDir string) (usererr.List, error) {
-	return NewLibrary("", partsDir, themesDir, iconsDir).Run().Check(dir)
-}
-
-// Check checks the template at dir as the function Check does, with the parts, themes and icons of l: in a
-// run, those of every template it checks are read once, and their mistakes are the same for each.
+// parts, themes and icons of l. The mistakes stop it from being drawn, and the warnings do not. In a run,
+// what every template it checks shares is read once, and its mistakes are the same for each.
 func (l *Library) Check(dir string) (warnings usererr.List, err error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
@@ -73,17 +67,12 @@ func (l *Library) Check(dir string) (warnings usererr.List, err error) {
 	return warnings, t.checkExample()
 }
 
-// CheckOwnParts checks the parts of one's own in partsDir and the themes in themesDir, "" for none, as a
-// page would read them: the mistakes are of those that cannot be used, and the warnings of what goes into
-// no page and of the colours written where the palette is to give them. It draws none of them, which have
-// no data; a template that uses one draws its example with it.
-func CheckOwnParts(partsDir, themesDir string) (usererr.List, error) {
-	return NewLibrary("", partsDir, themesDir, "").Run().CheckOwnParts()
-}
-
-// CheckOwnParts checks the parts and themes of one's own of l as the function CheckOwnParts does.
+// CheckOwnParts checks the parts and themes of one's own of l as a page would read them: the mistakes
+// are of those that cannot be used, and the warnings of what goes into no page and of the colours written
+// where the palette is to give them. It draws none of them, which have no data; a template that uses one
+// draws its example with it.
 func (l *Library) CheckOwnParts() (warnings usererr.List, err error) {
-	set, err := l.run.parts(l.mine)
+	set, err := l.partsRead()
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +111,7 @@ func (t *Template) checkPage(
 	set *partSet, s *shape, w words, checked map[string]bool, src []byte, named []namedPart,
 ) error {
 	text := usererr.Collect(t.refuseInPage(src), t.checkHead(s, src), t.checkNamedParts(set, src, named))
-	page, err := t.parsePage(src, w, fallbackLang)
+	page, err := t.parsePage(src, w)
 	if err != nil {
 		return usererr.Collect(text, err)
 	}
@@ -171,11 +160,7 @@ func (t *Template) missingFiles() error {
 
 // checkComputed returns the mistake of t's computed.yaml, of the items of its schema s, if it has one.
 func (t *Template) checkComputed(s *shape) error {
-	computed, found, err := t.readOptional("computed.yaml")
-	if err != nil || !found {
-		return err
-	}
-	_, err = readComputed(t.file("computed.yaml"), computed, s.keyNames())
+	_, err := t.readComputed(s)
 	return err
 }
 
@@ -203,7 +188,7 @@ func (t *Template) checkCSS() (usererr.List, error) {
 	if err != nil {
 		return nil, err
 	}
-	page, err := t.ownSheet("page.css")
+	page, err := t.pageSheet()
 	if err != nil {
 		return nil, err
 	}
@@ -327,11 +312,7 @@ func assetsNamed(page *template.Template) []string {
 // checkChecks returns the mistakes of the checks.yaml of t, if it has one: of its YAML and its expressions,
 // and, against its schema s as compiled, nil while the schema has mistakes of its own, of the lists it names.
 func (t *Template) checkChecks(s *jsonschema.Schema) error {
-	src, found, err := t.readOptional("checks.yaml")
-	if err != nil || !found {
-		return err
-	}
-	list, err := readChecks(t.file("checks.yaml"), src, false)
+	list, err := t.readChecks()
 	var problems usererr.List
 	if failed := problems.Add(err); failed != nil {
 		return failed //nolint:wrapcheck // already says what failed

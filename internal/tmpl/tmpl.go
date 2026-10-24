@@ -423,17 +423,21 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	page, src, err := t.page(w, d.Lang)
+	read, err := t.page(w)
 	if err != nil {
-		return nil, t.same("page.html", err)
+		return nil, err
+	}
+	page, err := read.in(w.word(t.file("words.yaml"), w.lang(d.Lang)))
+	if err != nil {
+		return nil, err
 	}
 	out, err := d.execute(page, title)
 	if err != nil {
 		return nil, err
 	}
-	own, err := t.ownCSS("page.css")
+	own, err := t.ownCSS()
 	if err != nil {
-		return nil, t.same("page.css", err)
+		return nil, err
 	}
 	set, err := t.parts()
 	if err != nil {
@@ -458,7 +462,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 			it := d.htmlItems[k]
 			return nil, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
 		}
-		return nil, headMistake(t.file("page.html"), src)
+		return nil, read.head
 	}
 	// The data's HTML after the template's mistakes, which would be told as the data's.
 	if d.htmlItems != nil {
@@ -534,24 +538,42 @@ func headMistake(file string, src []byte) *usererr.Error {
 	return usererr.NewAt(file, 0, 0, "tmpl_page_head")
 }
 
-// page reads and parses the page.html of t, which holds no <style>: floe puts a page's CSS together, its
-// words w, t's words.yaml, in the language tag lang, else en. It returns the source too.
-func (t *Template) page(w words, lang string) (*template.Template, []byte, error) {
-	src, err := t.readFile("page.html")
+// parsedPage is the page.html of a template, parsed and never drawn, and the mistake of it to tell when
+// its drawing holds no </head>.
+type parsedPage struct {
+	page *template.Template
+	head *usererr.Error
+}
+
+// in returns p's page to draw in a language, whose words word gives.
+func (p parsedPage) in(word func(string) (string, error)) (*template.Template, error) {
+	page, err := p.page.Clone()
 	if err != nil {
-		return nil, nil, err
+		return nil, fmt.Errorf("copy page.html: %w", err)
 	}
-	if err = t.refuseInPage(src); err != nil {
-		return nil, nil, err
-	}
-	page, err := t.parsePage(src, w, lang)
-	if err != nil {
-		return nil, nil, err
-	}
-	if err = t.pageWords(page, w); err != nil {
-		return nil, nil, err
-	}
-	return page, src, nil
+	return page.Funcs(template.FuncMap{"word": word}), nil
+}
+
+// page reads and parses the page.html of t once, which holds no <style>: floe puts a page's CSS together,
+// with its words w, t's words.yaml, the same each time.
+func (t *Template) page(w words) (parsedPage, error) {
+	return t.reads.page.of(func() (parsedPage, error) {
+		src, err := t.readFile("page.html")
+		if err != nil {
+			return parsedPage{}, err
+		}
+		if err = t.refuseInPage(src); err != nil {
+			return parsedPage{}, err
+		}
+		page, err := t.parsePage(src, w)
+		if err != nil {
+			return parsedPage{}, err
+		}
+		if err = t.pageWords(page, w); err != nil {
+			return parsedPage{}, err
+		}
+		return parsedPage{page: page, head: headMistake(t.file("page.html"), src)}, nil
+	})
 }
 
 // refuseInPage refuses src, the page.html of t, holding a <style>, as floe puts a page's CSS together, or
@@ -567,11 +589,11 @@ func (t *Template) refuseInPage(src []byte) error {
 	return usererr.Collect(style, b)
 }
 
-// parsePage parses src, the page.html of t, with its words w in the language tag lang, else en.
-func (t *Template) parsePage(src []byte, w words, lang string) (*template.Template, error) {
+// parsePage parses src, the page.html of t, with its words w in en.
+func (t *Template) parsePage(src []byte, w words) (*template.Template, error) {
 	// missingkey=error stops a misspelt name in page.html instead of leaving a blank.
 	page, err := template.New("page.html").Option("missingkey=error").Funcs(funcs).
-		Funcs(template.FuncMap{"asset": t.assets(), "word": w.word(t.file("words.yaml"), w.lang(lang))}).
+		Funcs(template.FuncMap{"asset": t.assets(), "word": w.word(t.file("words.yaml"), fallbackLang)}).
 		Parse(string(src))
 	if err != nil {
 		// LIMIT: text/template says the line of a mistake in its text alone, which is left there: reading it
@@ -590,14 +612,15 @@ func (t *Template) pageWords(page *template.Template, w words) error {
 	return w.checkWords(page, t.file("page.html"))
 }
 
-// words reads the words.yaml of t, as readWords does.
+// words reads the words.yaml of t once, as readWords does.
 func (t *Template) words() (words, error) {
-	src, _, err := t.readOptional("words.yaml")
-	if err != nil {
-		return nil, t.same("words.yaml", err)
-	}
-	w, err := readWords(t.file("words.yaml"), src)
-	return w, t.same("words.yaml", err)
+	return t.reads.words.of(func() (words, error) {
+		src, _, err := t.readOptional("words.yaml")
+		if err != nil {
+			return nil, err
+		}
+		return readWords(t.file("words.yaml"), src)
+	})
 }
 
 var funcs = template.FuncMap{
@@ -676,13 +699,9 @@ func (t *Template) readSchema(set *partSet) (schemaRead, error) {
 // compileShape reads the schema of t as readSchema does and compiles it, and returns every mistake floe
 // template check and a data file tell of it, those of its compiling too.
 func (t *Template) compileShape(set *partSet) (schemaRead, error) {
-	if t.shape == nil {
-		read, err := t.readAndCompile(set)
-		t.shape = &shapeRead{read: read, err: err}
-	}
-	read := t.shape.read
+	read, err := t.reads.shape.of(func() (schemaRead, error) { return t.readAndCompile(set) })
 	read.refused = slices.Clone(read.refused)
-	return read, copied(t.shape.err)
+	return read, err
 }
 
 // readAndCompile is compileShape, read anew.

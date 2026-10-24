@@ -34,13 +34,17 @@ type Library struct {
 // for every input that uses what it is of, and told once. It is for one output, in one goroutine: kept for
 // longer, it would not see the files fixed after.
 type run struct {
+	own       ownDirs
 	set       *partSet
 	setErr    error
 	setRead   bool
 	entries   map[string]entriesRead // by the directory of templates
-	templates map[string]found       // by name
+	templates map[templateAt]found
 	icons     *icons.Store
 }
+
+// templateAt is a template by the directory of templates it was looked up in and its name.
+type templateAt struct{ dir, name string }
 
 type entriesRead struct {
 	entries []fs.DirEntry
@@ -56,22 +60,27 @@ type found struct {
 // server's answer to a request), never for longer, as the files may be fixed in between.
 func (l *Library) Run() *Library {
 	r := &run{
-		set: nil, setErr: nil, setRead: false, entries: map[string]entriesRead{}, templates: map[string]found{},
-		icons: icons.New(l.icons),
+		own: l.mine, set: nil, setErr: nil, setRead: false, entries: map[string]entriesRead{},
+		templates: map[templateAt]found{}, icons: icons.New(l.icons),
 	}
 	return &Library{dir: l.dir, mine: l.mine, icons: l.icons, run: r}
 }
 
-// parts reads the parts and themes of own, once in a run.
-func (r *run) parts(own ownDirs) (*partSet, error) {
-	if r == nil {
-		return partsIn(own)
-	}
+// parts reads the parts and themes of one's own of r, once.
+func (r *run) parts() (*partSet, error) {
 	if !r.setRead {
-		r.set, r.setErr = partsIn(own)
+		r.set, r.setErr = partsIn(r.own)
 		r.setRead = true
 	}
 	return r.set, r.setErr
+}
+
+// partsRead returns the parts and themes of one's own of l: once in a run, else read anew.
+func (l *Library) partsRead() (*partSet, error) {
+	if l.run != nil {
+		return l.run.parts()
+	}
+	return partsIn(l.mine)
 }
 
 // NewLibrary returns the templates of dir, a directory of templates of one's own ("" for none), and
@@ -113,16 +122,35 @@ type Template struct {
 	own   ownDirs  // the directories of parts and themes of one's own of that library
 	run   *run     // what the run it was found in read once; nil without one
 	set   *partSet // the parts it is drawn with, once read
-	shape *shapeRead
-	// the mistake of each of its files, found once: every data file drawn with it gives the same one, to be
-	// told once
-	kept map[string]error
+	reads *reads
 }
 
-// shapeRead is the schema of a template as compileShape read it, once.
-type shapeRead struct {
-	read schemaRead
+// reads is what each file of a template gives, read once: every data file drawn with it gets the same,
+// and the same mistake, to be told once. What a data file gives is computed from them for each.
+type reads struct {
+	version  readOnce[struct{}]
+	words    readOnce[words]
+	page     readOnce[parsedPage]
+	sheet    readOnce[*cssSheet] // page.css
+	shape    readOnce[schemaRead]
+	computed readOnce[*computed] // nil without computed.yaml
+	checks   readOnce[[]relation]
+}
+
+// readOnce is what reading a file gave, read the first time alone.
+type readOnce[T any] struct {
+	done bool
+	v    T
 	err  error
+}
+
+// of returns what read gave the first time it was called.
+func (r *readOnce[T]) of(read func() (T, error)) (T, error) {
+	if !r.done {
+		r.v, r.err = read()
+		r.done = true
+	}
+	return r.v, copied(r.err)
 }
 
 // Names are the templates there are, by name. It fails when the directory of templates of one's own
@@ -170,8 +198,8 @@ func (l *Library) ownNames() ([]string, error) {
 }
 
 // entries are what the directory of templates of one's own holds: none without one, or with a file in
-// its way.
-// LIMIT: read on every lookup. Keep the entries if a directory comes to hold thousands of them.
+// its way. A run reads them once.
+// LIMIT: out of a run, read on every lookup. Keep them if a directory comes to hold thousands of them.
 func (l *Library) entries() ([]fs.DirEntry, error) {
 	if l.run != nil {
 		if e, ok := l.run.entries[l.dir]; ok {
@@ -205,10 +233,11 @@ func (l *Library) Find(name string) (*Template, error) {
 	if l.run == nil {
 		return l.lookUp(name)
 	}
-	f, ok := l.run.templates[name]
+	at := templateAt{dir: l.dir, name: name}
+	f, ok := l.run.templates[at]
 	if !ok {
 		f.t, f.err = l.lookUp(name)
-		l.run.templates[name] = f
+		l.run.templates[at] = f
 	}
 	return f.t, f.err
 }
@@ -268,7 +297,7 @@ func (l *Library) resolve(name string) (*Template, error) {
 
 func (l *Library) template(name, dir, at string) *Template {
 	return &Template{
-		Name: name, Dir: dir, Path: at, icons: l.icons, own: l.mine, run: l.run, set: nil, shape: nil, kept: nil,
+		Name: name, Dir: dir, Path: at, icons: l.icons, own: l.mine, run: l.run, set: nil, reads: new(reads),
 	}
 }
 
@@ -293,12 +322,16 @@ func (t *Template) isOwn() bool {
 	return t.Dir != ""
 }
 
-// parts returns the parts t is drawn with and their themes, read once for t.
-// LIMIT: read for each template, so floe template list reads parts of one's own once per template. Keep
-// them for a command, not in the Library a server keeps, if listing comes to be slow.
+// parts returns the parts t is drawn with and their themes: those its run read once, else read for t.
 func (t *Template) parts() (*partSet, error) {
 	if t.set == nil {
-		set, err := t.run.parts(t.own)
+		var set *partSet
+		var err error
+		if t.run != nil {
+			set, err = t.run.parts()
+		} else {
+			set, err = partsIn(t.own)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -313,35 +346,6 @@ func (t *Template) iconStore() *icons.Store {
 		return t.run.icons
 	}
 	return icons.New(t.icons)
-}
-
-// same returns the mistake t first found of its file key, err when it has none kept, keeping err: what t
-// finds of one of its files is found again for each data file it draws.
-func (t *Template) same(key string, err error) error {
-	if err == nil {
-		return nil
-	}
-	if kept, ok := t.kept[key]; ok && kept != nil {
-		return copied(kept)
-	}
-	if t.kept == nil {
-		t.kept = map[string]error{}
-	}
-	t.kept[key] = err
-	return err
-}
-
-// once returns what check finds of t's file key, checking it the first time alone.
-func (t *Template) once(key string, check func() error) error {
-	if kept, ok := t.kept[key]; ok {
-		return copied(kept)
-	}
-	err := check()
-	if t.kept == nil {
-		t.kept = map[string]error{}
-	}
-	t.kept[key] = err
-	return err
 }
 
 // copied is err, a List of it copied: those it is given to may add to it.
@@ -401,17 +405,18 @@ func (t *Template) files(read func(fs.FS) error) error {
 // floe 1.2.0 or later of major 1, and floe: 0.2 one of 0.2, as a minor version of 0 may break what the
 // one before it took. A built-in template, or one without template.yaml, needs none.
 func (t *Template) checkVersion() error {
-	return t.once("template.yaml", func() error {
+	_, err := t.reads.version.of(func() (struct{}, error) {
 		needs, err := t.needs()
 		if needs == nil || err != nil {
-			return err
+			return struct{}{}, err
 		}
 		have, err := thisFloe()
 		if err != nil {
-			return err
+			return struct{}{}, err
 		}
-		return fits(t.Name, *needs, have)
+		return struct{}{}, fits(t.Name, *needs, have)
 	})
+	return err
 }
 
 // thisFloe is the version of this floe, a pre-release or build after it (1.2.3-rc.1) left out: a

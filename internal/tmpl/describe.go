@@ -90,7 +90,7 @@ type PartDescription struct {
 // Parts tells of every part, floe's and one's own, by name, and returns the mistakes of the parts that
 // cannot be used, which it leaves out.
 func (l *Library) Parts() (parts []*PartDescription, broken usererr.List, err error) {
-	set, err := l.run.parts(l.mine)
+	set, err := l.partsRead()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -102,7 +102,7 @@ func (l *Library) Parts() (parts []*PartDescription, broken usererr.List, err er
 
 // DescribePart tells of the part name.
 func (l *Library) DescribePart(name string) (*PartDescription, error) {
-	set, err := l.run.parts(l.mine)
+	set, err := l.partsRead()
 	if err != nil {
 		return nil, err
 	}
