@@ -169,11 +169,11 @@ func (s *sample) glob(t *testing.T, pattern string) []string {
 func realPath(t *testing.T, dir string) string {
 	t.Helper()
 
-	real, err := filepath.EvalSymlinks(dir)
+	resolved, err := filepath.EvalSymlinks(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return real
+	return resolved
 }
 
 // writeGolden writes golden anew with got alone, so that a page no longer drawn leaves no file behind.
