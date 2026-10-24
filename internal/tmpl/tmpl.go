@@ -268,8 +268,8 @@ func pickTheme(set *partSet, d *Data, given string, pos yamlpos.Pos) (usererr.Li
 	switch {
 	case !slices.Contains(names, name):
 		why = usererr.New("tmpl_unknown_theme", name, strings.Join(names, ", "))
-	case set.brokenThemes[name] != nil:
-		why = set.brokenTheme(name)
+	case set.broken[ownTheme][name] != nil:
+		why = set.brokenErr(ownTheme, name)
 	}
 	switch {
 	case why != nil && given != "":

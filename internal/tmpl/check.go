@@ -76,7 +76,7 @@ func (l *Library) CheckOwnParts() (warnings usererr.List, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return slices.Clone(set.strays), usererr.OfWhole(slices.Concat(set.unusable(nil), set.unusableThemes(nil))).Err()
+	return slices.Clone(set.strays), usererr.OfWhole(slices.Concat(set.unusable(ownPart, nil), set.unusable(ownTheme, nil))).Err()
 }
 
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values, its
@@ -174,7 +174,7 @@ func brokenParts(set *partSet, named []namedPart) usererr.List {
 	}
 	// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
 	warnings := usererr.OfWhole(slices.Concat(
-		set.unusable(func(name string) bool { return refused[name] && set.parts[name] == nil }), set.unusableThemes(nil),
+		set.unusable(ownPart, func(name string) bool { return refused[name] && set.parts[name] == nil }), set.unusable(ownTheme, nil),
 	))
 	return append(warnings, set.strays...)
 }
@@ -217,7 +217,7 @@ func (t *Template) checkNamedParts(set *partSet, src []byte, named []namedPart) 
 		case nameLookBox:
 			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_look_box", n.name))
 		case nameBroken:
-			mistakes = append(mistakes, set.brokenPart(n.name).Placed(page, line, 0, ""))
+			mistakes = append(mistakes, set.brokenErr(ownPart, n.name).Placed(page, line, 0, ""))
 		case nameUnknown:
 			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_page_part", n.name, set.candidates(n.look)))
 		case nameRight:

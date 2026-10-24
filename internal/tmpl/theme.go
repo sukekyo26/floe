@@ -35,7 +35,7 @@ const (
 // themeNames returns the themes of set, by name, those that cannot be used among them.
 func (set *partSet) themeNames() []string {
 	return slices.Sorted(slices.Values(slices.Concat(slices.Collect(maps.Keys(set.themes)),
-		slices.Collect(maps.Keys(set.brokenThemes)))))
+		slices.Collect(maps.Keys(set.broken[ownTheme])))))
 }
 
 // themesWith returns the themes of set that can be used with a file of the part name, by name.
@@ -133,7 +133,7 @@ func readThemeFile(files fs.FS, name, file string, t *theme) ([]*usererr.Error, 
 // one of one's own that cannot be used among them, but not one of a name no part can take.
 func (set *partSet) themeFile(name string) bool {
 	_, isPart := set.parts[name]
-	isOwn := set.broken[name] != nil && validName(name) && !set.reserved(name)
+	isOwn := set.broken[ownPart][name] != nil && validName(name) && !set.reserved(name)
 	return name == themeBase || name == themePalette || isPart || isOwn
 }
 

@@ -186,9 +186,8 @@ type partSet struct {
 	notes  map[string]*schemaNotes // what floe checks of them once all are read
 	shares map[string]bool         // the URLs of the schemas the parts share, floe's alone
 	themes map[string]*theme       // by name
-	broken map[string]error        // the parts of one's own that cannot be used, by name, and why
-	// the themes of one's own that cannot be used, by name, and why
-	brokenThemes map[string]error
+	// the parts and themes of one's own that cannot be used, by kind and name, and why
+	broken map[ownKind]map[string]error
 	// floe's own default palette, under every page's, whatever one's own themes change
 	palette string
 	// the directories of one's own it read, those of parts and themes among them, by their real paths
@@ -210,7 +209,7 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 	set := &partSet{
 		parts: map[string]*part{}, docs: map[string]any{}, shapes: map[string]*shape{}, notes: map[string]*schemaNotes{},
 		shares: map[string]bool{}, themes: map[string]*theme{},
-		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", dirs: nil, strays: nil,
+		broken: map[ownKind]map[string]error{ownPart: {}, ownTheme: {}}, palette: "", dirs: nil, strays: nil,
 	}
 	if err := set.readBuiltin(); err != nil {
 		return nil, err
@@ -924,7 +923,7 @@ func (set *partSet) misnamedIn(named []namedPart) *usererr.Error {
 	for _, n := range named {
 		switch set.misnamed(n) {
 		case nameBroken:
-			return set.brokenPart(n.name)
+			return set.brokenErr(ownPart, n.name)
 		case nameNotOne:
 			return usererr.New("tmpl_page_several", n.value)
 		case nameLookBox:

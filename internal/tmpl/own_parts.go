@@ -335,7 +335,7 @@ func (set *partSet) readOwnPart(name, from, at string) bool {
 		return false
 	case set.reserved(name):
 		// Told whatever is there, which never takes the place of floe's.
-		set.broken[name] = usererr.NewAt(at, 0, 0, "tmpl_part_name", name)
+		set.broken[ownPart][name] = usererr.NewAt(at, 0, 0, "tmpl_part_name", name)
 		return false
 	}
 	floe := set.parts[name]
@@ -357,7 +357,7 @@ func (set *partSet) readOwnPart(name, from, at string) bool {
 
 // readOwnThemes reads the themes of one's own in dir into set, a directory each, a symlink followed: one
 // of the name of one of floe's takes the place of its files of their names. Those that cannot be used are
-// left out of set, and kept in set.brokenThemes.
+// left out of set, and kept in set.broken.
 func (set *partSet) readOwnThemes(dir string) error {
 	themes, err := dirAt(dir)
 	if _, there := os.Lstat(dir); themes == "" && there == nil {
@@ -391,7 +391,7 @@ func (set *partSet) readOwnThemes(dir string) error {
 		}
 		if err != nil {
 			delete(set.themes, name)
-			set.brokenThemes[name] = err
+			set.broken[ownTheme][name] = err
 			continue
 		}
 		set.themes[name] = t
@@ -508,7 +508,7 @@ func (set *partSet) known(name string) nameKind {
 	switch {
 	case set.parts[name] != nil:
 		return nameRight
-	case set.broken[name] != nil:
+	case set.broken[ownPart][name] != nil:
 		return nameBroken
 	}
 	return nameUnknown
@@ -583,44 +583,41 @@ func (set *partSet) find(name string) (*part, error) {
 	switch {
 	case set.parts[name] != nil:
 		return set.parts[name], nil
-	case set.broken[name] != nil:
-		return nil, set.brokenPart(name)
+	case set.broken[ownPart][name] != nil:
+		return nil, set.brokenErr(ownPart, name)
 	}
 	return nil, usererr.New("tmpl_unknown_part", name, set.names(nil))
 }
 
-// unusable returns the mistake of each part of set that cannot be used, by name, but those skip skips (none
-// for nil).
-func (set *partSet) unusable(skip func(name string) bool) usererr.List {
+// ownKind is a kind of what of one's own may not be usable: a part or a theme.
+type ownKind int
+
+const (
+	ownPart ownKind = iota
+	ownTheme
+)
+
+// ownKinds tells each kind: the key its mistake stands for others under (usererr.Over), and its words.
+var ownKinds = [...]struct{ over, words string }{
+	ownPart:  {over: "part:", words: "tmpl_part_broken"},
+	ownTheme: {over: "theme:", words: "tmpl_theme_broken"},
+}
+
+// unusable returns the mistake of each of the kind k of set that cannot be used, by name, but those skip
+// skips (none for nil).
+func (set *partSet) unusable(k ownKind, skip func(name string) bool) usererr.List {
 	var found usererr.List
-	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
+	for _, name := range slices.Sorted(maps.Keys(set.broken[k])) {
 		if skip == nil || !skip(name) {
-			found = append(found, set.brokenPart(name))
+			found = append(found, set.brokenErr(k, name))
 		}
 	}
 	return found
 }
 
-// unusableThemes returns the mistake of each theme of set that cannot be used, by name, but those
-// skip skips (none for nil).
-func (set *partSet) unusableThemes(skip func(name string) bool) usererr.List {
-	var found usererr.List
-	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
-		if skip == nil || !skip(name) {
-			found = append(found, set.brokenTheme(name))
-		}
-	}
-	return found
-}
-
-// brokenPart is the mistake of the part name of set, which cannot be used, standing for why it cannot.
-func (set *partSet) brokenPart(name string) *usererr.Error {
-	return usererr.Over("part:"+name, reasons(set.broken[name]), "tmpl_part_broken", name)
-}
-
-// brokenTheme is the mistake of the theme name of set, which cannot be used, standing for why it cannot.
-func (set *partSet) brokenTheme(name string) *usererr.Error {
-	return usererr.Over("theme:"+name, reasons(set.brokenThemes[name]), "tmpl_theme_broken", name)
+// brokenErr is the mistake of name, of the kind k of set, which cannot be used, standing for why it cannot.
+func (set *partSet) brokenErr(k ownKind, name string) *usererr.Error {
+	return usererr.Over(ownKinds[k].over+name, reasons(set.broken[k][name]), ownKinds[k].words, name)
 }
 
 // reasons are why, why a part or a theme cannot be used, as mistakes: a failure among them, which is not
@@ -636,7 +633,7 @@ func reasons(why error) usererr.List {
 
 // leaveOut leaves the part name out of set, kept in set.broken with why.
 func (set *partSet) leaveOut(name string, why error) {
-	set.broken[name] = why
+	set.broken[ownPart][name] = why
 	set.drop(name)
 }
 

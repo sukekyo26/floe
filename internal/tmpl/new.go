@@ -237,7 +237,7 @@ func (set *partSet) checkThemeFiles(floe *partSet, src *part, made *MadePart, na
 	for _, theme := range set.themeNames() {
 		dir := filepath.Join(made.ThemesAt, theme)
 		if set.lacks(floe, src, theme, dir) {
-			return set.brokenTheme(theme)
+			return set.brokenErr(ownTheme, theme)
 		}
 		at := filepath.Join(dir, name+".css")
 		switch _, err := os.Lstat(at); {
@@ -258,7 +258,7 @@ func (set *partSet) checkThemeFiles(floe *partSet, src *part, made *MadePart, na
 // lacks reports whether the theme of one's own theme, in dir, cannot be used and may have a file of
 // the part src, of its own, read or not, or of floe's theme of its name for a part of floe's.
 func (set *partSet) lacks(floe *partSet, src *part, theme, dir string) bool {
-	if set.brokenThemes[theme] == nil {
+	if set.broken[ownTheme][theme] == nil {
 		return false
 	}
 	_, unread := dirAt(dir)
@@ -280,12 +280,12 @@ func (set *partSet) unusableWith(own ownDirs, name, dir string) error {
 	}
 	// The copy first, then those it leaves out with it.
 	var found usererr.List
-	if after.broken[name] != nil {
-		found = append(found, after.brokenPart(name))
+	if after.broken[ownPart][name] != nil {
+		found = append(found, after.brokenErr(ownPart, name))
 	}
 	found = slices.Concat(found,
-		after.unusable(func(n string) bool { return n == name || set.broken[n] != nil }),
-		after.unusableThemes(func(n string) bool { return set.brokenThemes[n] != nil }))
+		after.unusable(ownPart, func(n string) bool { return n == name || set.broken[ownPart][n] != nil }),
+		after.unusable(ownTheme, func(n string) bool { return set.broken[ownTheme][n] != nil }))
 	if found != nil {
 		return usererr.Over("", found, "tmpl_new_part_unusable", name)
 	}
