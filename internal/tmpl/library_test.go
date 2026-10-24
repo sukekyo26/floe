@@ -185,16 +185,15 @@ func TestTemplateVersion(t *testing.T) {
 			t.Fatal(err)
 		}
 		_, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: report\nleed: a typo\nlang: en\n")
-		var ue *usererr.Error
 		switch {
 		case tt.want == "" && (err == nil || !strings.Contains(err.Error(), "leed is not an item")):
 			t.Errorf("template.yaml %q = %v, want the data's mistake", tt.yaml, err)
 		case tt.want != "" && (err == nil || !strings.Contains(err.Error(), tt.want)):
 			t.Errorf("template.yaml %q = %v, want %s", tt.yaml, err, tt.want)
-		case strings.HasPrefix(tt.want, "/") && !strings.HasPrefix(err.Error(), dir):
+		case strings.HasPrefix(tt.want, "/") && !strings.Contains(err.Error(), "\n  "+dir):
 			t.Errorf("template.yaml %q = %v, named where the symlink leads, not under %s", tt.yaml, err, dir)
-		case tt.want != "" && !strings.Contains(tt.want, "template.yaml:") && !errors.As(err, &ue):
-			t.Errorf("template.yaml %q = %T, want a usererr", tt.yaml, err)
+		case tt.want != "" && !strings.HasPrefix(err.Error(), "data.yaml:1:11: your own template report cannot be used\n"):
+			t.Errorf("template.yaml %q = %v, want the template cannot be used, at template:", tt.yaml, err)
 		}
 	}
 }
@@ -211,9 +210,10 @@ func TestTemplateMistakesOnce(t *testing.T) {
 		items, data string
 		files       map[string]string // of the template memo
 		parts       map[string]string
+		unusable    bool // the template cannot be used: the second data file is told so, as above
 	}{
 		"an expression of checks.yaml": {
-			items: `"n": {"type": "array", "items": {"type": "number"}}`, data: "n: [1]\n",
+			items: `"n": {"type": "array", "items": {"type": "number"}}`, data: "n: [1]\n", unusable: true,
 			files: map[string]string{"checks.yaml": "- for: n\n  expr: item +++ (\n  message: m\n"},
 		},
 		"page.html html/template cannot escape": {
@@ -280,8 +280,12 @@ func TestTemplateMistakesOnce(t *testing.T) {
 				t.Fatalf("%s: drawing %s = %v, want mistakes", name, file, err)
 			}
 		}
-		if got := usererr.Tell(i18n.EnglishCatalog(), all).Render(""); got != first {
-			t.Errorf("%s: the mistakes of two data files =\n%s\nwant those of one\n%s", name, got, first)
+		want := first
+		if tt.unusable {
+			want += "\nb.yaml:1:11: your own template memo cannot be used, as told above"
+		}
+		if got := usererr.Tell(i18n.EnglishCatalog(), all).Render(""); got != want {
+			t.Errorf("%s: the mistakes of two data files =\n%s\nwant\n%s", name, got, want)
 		}
 	}
 }

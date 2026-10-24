@@ -376,6 +376,43 @@ func (t *Template) files(read func(fs.FS) error) error {
 	return readIn(t.Dir, read)
 }
 
+// usable returns the template name names, nil for none, and why it cannot be used, when it is one of one's
+// own that cannot be read (tmpl_own_broken) or that has a mistake (unusable), or floe's failure.
+func (l *Library) usable(name string) (t *Template, why, failed error) {
+	t, err := l.Find(name)
+	var bad *usererr.Error
+	switch {
+	case errors.As(err, &bad):
+		return nil, err, nil
+	case err != nil:
+		return nil, nil, err
+	case t == nil:
+		return nil, nil, nil
+	}
+	return t, t.unusable(), nil
+}
+
+// unusable returns why t, one of one's own, cannot be used, whatever the data: the mistakes of its files as
+// a data file's check and drawing read them, apart from the data (its version, schema, checks, computed
+// values, words, page.html and page.css), each read once; nil for a built-in one, whose mistakes are floe's
+// failures where they are met. What floe template check alone checks is not among them.
+func (t *Template) unusable() error {
+	if !t.isOwn() {
+		return nil
+	}
+	// The floe it needs comes before its mistakes, which another floe may not make.
+	if err := t.checkVersion(); err != nil {
+		return err
+	}
+	_, schemaErr := t.compileShape()
+	_, checksErr := t.readChecks()
+	_, computedErr := t.readComputed()
+	_, wordsErr := t.words()
+	_, pageErr := t.page()
+	_, sheetErr := t.pageSheet()
+	return usererr.Collect(schemaErr, checksErr, computedErr, wordsErr, pageErr, sheetErr)
+}
+
 // checkVersion refuses t when the floe it needs is not this one: template.yaml's floe: 1.2 takes a
 // floe 1.2.0 or later of major 1, and floe: 0.2 one of 0.2, as a minor version of 0 may break what the
 // one before it took. A built-in template, or one without template.yaml, needs none.

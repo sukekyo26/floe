@@ -592,18 +592,22 @@ func (set *partSet) find(name string) (*part, error) {
 	return nil, usererr.New("tmpl_unknown_part", name, set.names(nil))
 }
 
-// partKind is a kind of what may not be usable: a part or a theme.
+// partKind is a kind of what of one's own may not be usable: a part, a theme or a template. One table tells
+// each kind's key and words; why one cannot be used is kept where it is read: those of parts and themes,
+// all read at once, in partSet.broken, and a template's, read once the data names it, by its reads.
 type partKind int
 
 const (
 	kindPart partKind = iota
 	kindTheme
+	kindTemplate
 )
 
 // partKinds tells each kind: the key its mistake stands for others under (usererr.Over), and its words.
 var partKinds = [...]struct{ over, words string }{
-	kindPart:  {over: "part:", words: "tmpl_part_broken"},
-	kindTheme: {over: "theme:", words: "tmpl_theme_broken"},
+	kindPart:     {over: "part:", words: "tmpl_part_broken"},
+	kindTheme:    {over: "theme:", words: "tmpl_theme_broken"},
+	kindTemplate: {over: "template:", words: "tmpl_template_broken"},
 }
 
 // unusable returns the mistake of each of the kind k of set that cannot be used, by name, but those skip
@@ -620,12 +624,17 @@ func (set *partSet) unusable(k partKind, skip func(name string) bool) usererr.Li
 
 // brokenErr is the mistake of name, of the kind k of set, which cannot be used, standing for why it cannot.
 func (set *partSet) brokenErr(k partKind, name string) *usererr.Error {
-	return usererr.Over(partKinds[k].over+name, reasons(set.broken[k][name]), partKinds[k].words, name)
+	return brokenOf(k, name, set.broken[k][name])
 }
 
-// reasons are why, why a part or a theme cannot be used, as mistakes: a failure among them, which is not
-// the user's, is told as floe's. An exception to "a failure stops at once": the failure of one part or
-// theme of one's own does not stop the pages that do not use it.
+// brokenOf is the mistake of name, of the kind k, which cannot be used for why, standing for why.
+func brokenOf(k partKind, name string, why error) *usererr.Error {
+	return usererr.Over(partKinds[k].over+name, reasons(why), partKinds[k].words, name)
+}
+
+// reasons are why, why a part, a theme or a template cannot be used, as mistakes: a failure among them,
+// which is not the user's, is told as floe's. An exception to "a failure stops at once": the failure of one
+// of one's own does not stop the pages that do not use it.
 func reasons(why error) usererr.List {
 	var l usererr.List
 	if failed := l.Add(why); failed != nil {

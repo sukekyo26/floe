@@ -455,3 +455,60 @@ func TestNamedUnusablePartNotWarned(t *testing.T) {
 		t.Errorf("template check = %+v, want the schema's mistake alone", r)
 	}
 }
+
+// A template of one's own that cannot be used is told at the template: of each data file that names it,
+// the first time with why, and stops no data file of another; publish keeps that one, and template new
+// does not copy it.
+func TestUnusableTemplateWhereTaken(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	if err := os.MkdirAll(filepath.Join(e.tmp, "templates"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(e.tmp, "nowhere"), filepath.Join(e.tmp, "templates", "gone")); err != nil {
+		t.Fatal(err)
+	}
+	page := "lang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n      - text: hi\n"
+	c := e.write(t, "c.yaml", "template: report\n"+page)
+	g := e.write(t, "g.yaml", "template: gone\n"+page)
+	for name, broken := range map[string]map[string]string{
+		"sch": {"schema.json": `{"type": "object", "properties": {"x": {"type": "string", "pattern": "(["}}}`},
+		"pag": {"page.html": "<!doctype html><html><head></head><body>{{.nope</body></html>"},
+		"wor": {"words.yaml": "en: ["},
+	} {
+		if r := e.run(t, "", "template", "new", name, "--from", "report"); r.code != 0 {
+			t.Fatalf("template new = %+v", r)
+		}
+		var at string
+		for file, text := range broken {
+			at = e.write(t, "templates/"+name+"/"+file, text)
+		}
+		a := e.write(t, name+"-a.yaml", "template: "+name+"\n"+page)
+		b := e.write(t, name+"-b.yaml", "template: "+name+"\n"+page)
+		r := e.run(t, "", "check", a, b, c)
+		told := ":1:11: your own template " + name + " cannot be used"
+		if r.code != 1 || !strings.HasPrefix(r.stderr, a+told+"\n  "+at) ||
+			!strings.HasSuffix(r.stderr, "\n"+b+told+", as told above\n") || strings.Contains(r.stderr, c) {
+			t.Errorf("check with a broken %v = %+v, want a and b at template:, c passed", broken, r)
+		}
+	}
+	r := e.run(t, "", "check", g)
+	if r.code != 1 || !strings.HasPrefix(r.stderr, g+":1:11: your own template gone cannot be used\n  your own template gone") {
+		t.Errorf("check of a template that cannot be read = %+v, want it at template:", r)
+	}
+
+	if r := e.run(t, "", "template", "new", "copy", "--from", "pag"); r.code != 1 ||
+		!strings.HasPrefix(r.stderr, "your own template pag cannot be used\n  ") {
+		t.Errorf("template new from a template that cannot be used = %+v, want it refused", r)
+	}
+	if _, err := os.Stat(filepath.Join(e.tmp, "templates", "copy")); !os.IsNotExist(err) {
+		t.Errorf("template new from a template that cannot be used made copy: %v", err)
+	}
+	want(t, "publish of the one that does not take it", e.run(t, "", "publish", c), 0, e.base()+"/a/c/\n", "")
+	a := e.write(t, "a.yaml", "template: sch\n"+page)
+	if r := e.run(t, "", "publish", a); r.code != 1 || !strings.HasPrefix(r.stderr, a+":1:11: your own template sch cannot be used\n") {
+		t.Errorf("publish of the one that takes it = %+v", r)
+	}
+}

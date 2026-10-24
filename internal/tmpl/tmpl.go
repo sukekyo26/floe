@@ -151,8 +151,14 @@ func (l *Library) readWith(file string, src []byte, images imageDir, theme strin
 	// Without its template, the data has no schema to be checked against.
 	var t *Template
 	if d.Template != "" {
-		if t, err = l.Find(d.Template); err != nil {
+		var why error
+		if t, why, err = l.usable(d.Template); err != nil {
 			return nil, sources, err
+		}
+		if why != nil {
+			// As a theme it picks that cannot be used: at template:, why under it, once.
+			problems = append(problems, yamlpos.Place(file, h.where["template"], brokenOf(kindTemplate, d.Template, why)))
+			return nil, sources, problems.Sorted()
 		}
 	}
 	if t == nil {
@@ -169,10 +175,6 @@ func (l *Library) readWith(file string, src []byte, images imageDir, theme strin
 		return nil, sources, problems.Sorted()
 	}
 	sources.Template = t.Dir
-	// The floe a template needs comes before its mistakes, which another floe may not make.
-	if err = t.checkVersion(); err != nil {
-		return nil, sources, err
-	}
 	err = t.check(h, images, theme, problems)
 	sources.Images, sources.Icons = d.tried, d.icons
 	// The parts check read first, kept by the run.
