@@ -1183,9 +1183,10 @@ func TestWholeLast(t *testing.T) {
 	const broken = "the part bad cannot be used"
 	reason := filepath.Join(e.tmp, "parts", "bad", "schema.json") + ": #/properties/t/pattern"
 	r = e.run(t, "", "template", "check", uses)
+	// The schema names it: told by the schema's mistake alone, not warned of as one it does not name.
 	inOrder(t, "template check of a template that uses a part that cannot be used", r, 1,
-		uses+"/schema.json: #/properties/b: "+broken+"\n", reason, broken+", as told above")
-	if strings.Count(r.stderr, reason) != 1 {
+		uses+"/schema.json: #/properties/b: "+broken+"\n", reason)
+	if strings.Count(r.stderr, reason) != 1 || strings.Contains(r.stderr, broken+", as told above") {
 		t.Errorf("template check of a template that uses a part that cannot be used = %q, want its reason told once", r.stderr)
 	}
 	r = e.run(t, "", "template", "check", uses, plain)

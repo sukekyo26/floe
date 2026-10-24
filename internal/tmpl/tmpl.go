@@ -271,8 +271,8 @@ func pickTheme(set *partSet, d *Data, given string, pos yamlpos.Pos) (usererr.Li
 	switch {
 	case !slices.Contains(names, name):
 		why = usererr.New("tmpl_unknown_theme", name, strings.Join(names, ", "))
-	case set.brokenThemes[name] != nil:
-		why = set.brokenTheme(name)
+	case set.broken[kindTheme][name] != nil:
+		why = set.brokenErr(kindTheme, name)
 	}
 	switch {
 	case why != nil && given != "":
@@ -315,7 +315,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	d.linkItems, d.root = linkItemsOf(d.Values), root
 	err = usererr.Collect(checkImages(whole, d, root, images), checkHTML(set, d),
 		checkDiagrams(whole, d, root, t.iconStore()),
-		checkScripts(whole, d, root), checkParts(whole, d, root))
+		checkScripts(whole, d, root), checkParts(set, whole, d, root))
 	if err != nil {
 		return err
 	}
@@ -345,9 +345,9 @@ func checkHTML(set *partSet, d *Data) error {
 		if baseOrMeta.MatchString(it.text) {
 			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_base")))
 		}
-		if bad := set.misnamedIn(namedIn(it.text, tagsIn(it.text, false))); bad != nil {
-			problems = append(problems, itemError(d.File, it.pos, it.path, bad))
-		}
+		problems = append(problems, set.drawnMisnamings(it.text, d.File, it.pos, func(bad *usererr.Error) *usererr.Error {
+			return itemError(d.File, it.pos, it.path, bad)
+		})...)
 	}
 	return problems.Err()
 }
@@ -655,6 +655,9 @@ var funcs = template.FuncMap{
 	},
 }
 
+// markdownPart is the part whose look Markdown's tables take, the one part Markdown names.
+const markdownPart = "table"
+
 // markdownHTML writes Markdown text as HTML, a table in the table part's look. Raw HTML in it is left
 // out: a data item takes HTML only when its schema says format: html.
 func markdownHTML(text string) (template.HTML, error) {
@@ -663,7 +666,7 @@ func markdownHTML(text string) (template.HTML, error) {
 		return "", err
 	}
 	// With raw HTML left out, every <table> in the output is one goldmark drew.
-	html = strings.ReplaceAll(html, "<table>", `<div data-floe-part="table"><table>`)
+	html = strings.ReplaceAll(html, "<table>", `<div data-floe-part="`+markdownPart+`"><table>`)
 	html = strings.ReplaceAll(html, "</table>", "</table></div>")
 	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 }
@@ -754,6 +757,7 @@ func (t *Template) readShape(doc any) (*shape, *schemaNotes, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	notes.floeTemplate = !t.isOwn()
 	set, err := t.parts()
 	if err != nil {
 		return nil, nil, err

@@ -159,8 +159,9 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) err
 // that holds itself, through the parts it holds, or takes its own look, through the looks it takes, which
 // floe would follow forever, a part, floe's too, that settle refuses, again while one is left out, as a
 // part may take the look of the one left out, or hold it, and then one whose schema names a usable part
-// at its root. One of one's own whose schema does not compile, or does not declare a path of its checks.yaml,
-// is among those settle refuses (compileOwn).
+// at its root. A part of floe's is not left out for holding one of one's own that cannot be used: the data
+// that takes that one is refused at its item (partMistake). One of one's own whose schema does not
+// compile, or does not declare a path of its checks.yaml, is among those settle refuses (compileOwn).
 // The failure is floe's (compileOwn).
 func (set *partSet) leaveOutUnusable() error {
 	held := func(at string) []string { return set.shapes[partsURL+at+".json"].refsUnder(nil) }
@@ -242,9 +243,10 @@ func (set *partSet) settle(mistakes map[string]error) {
 
 // compileOwn compiles the schema of each part of one's own in set, and returns, by name, what stopped each:
 // the mistakes of its schema.json, or what floe cannot place there (compileMistakes), or, compiled, the
-// paths of its checks.yaml it does not declare (checksDeclared). Each is compiled with
-// every other part, floe's too, standing as true, a schema anything fits, and the schemas the parts share
-// as they are: a $ref to a part whole finds it either way, and one into a part is refused (partMistake).
+// paths of its checks.yaml it does not declare (checksDeclared). Each is compiled with every other part,
+// floe's too, standing as true, a schema anything fits, but one that cannot be used, standing as false
+// (partSet.compiler), and the schemas the parts share as they are: a $ref to a part whole finds it either
+// way, and one into a part is refused (partMistake).
 // So each stops at its own file, or at a schema the parts share, alone, whatever the order of jsonschema's
 // walk, and no other part's $ref is walked there. Once settle leaves out those that stopped and those that
 // refer to them (checkHeld), every part left compiles with the schemas of the others: a template that uses
@@ -335,7 +337,7 @@ func (set *partSet) readOwnPart(name, from, at string) bool {
 		return false
 	case set.reserved(name):
 		// Told whatever is there, which never takes the place of floe's.
-		set.broken[name] = usererr.NewAt(at, 0, 0, "tmpl_part_name", name)
+		set.broken[kindPart][name] = usererr.NewAt(at, 0, 0, "tmpl_part_name", name)
 		return false
 	}
 	floe := set.parts[name]
@@ -357,7 +359,7 @@ func (set *partSet) readOwnPart(name, from, at string) bool {
 
 // readOwnThemes reads the themes of one's own in dir into set, a directory each, a symlink followed: one
 // of the name of one of floe's takes the place of its files of their names. Those that cannot be used are
-// left out of set, and kept in set.brokenThemes.
+// left out of set, and kept in set.broken.
 func (set *partSet) readOwnThemes(dir string) error {
 	themes, err := dirAt(dir)
 	if _, there := os.Lstat(dir); themes == "" && there == nil {
@@ -391,7 +393,7 @@ func (set *partSet) readOwnThemes(dir string) error {
 		}
 		if err != nil {
 			delete(set.themes, name)
-			set.brokenThemes[name] = err
+			set.broken[kindTheme][name] = err
 			continue
 		}
 		set.themes[name] = t
@@ -508,7 +510,7 @@ func (set *partSet) known(name string) nameKind {
 	switch {
 	case set.parts[name] != nil:
 		return nameRight
-	case set.broken[name] != nil:
+	case set.broken[kindPart][name] != nil:
 		return nameBroken
 	}
 	return nameUnknown
@@ -538,7 +540,8 @@ func (set *partSet) candidates(look bool) string {
 }
 
 // checkHeld refuses the part name when what its schema refers to is refused (partSet.mistakes), now that
-// every part is read: a part there is none of, that cannot be used or draws nothing, among them.
+// every part is read: a part there is none of, that cannot be used or draws nothing, among them; floe's
+// part holding one of one's own that cannot be used is not refused (partMistake).
 func (set *partSet) checkHeld(name string) error {
 	n := set.notes[partsURL+name+".json"]
 	if n == nil {
@@ -583,44 +586,41 @@ func (set *partSet) find(name string) (*part, error) {
 	switch {
 	case set.parts[name] != nil:
 		return set.parts[name], nil
-	case set.broken[name] != nil:
-		return nil, set.brokenPart(name)
+	case set.broken[kindPart][name] != nil:
+		return nil, set.brokenErr(kindPart, name)
 	}
 	return nil, usererr.New("tmpl_unknown_part", name, set.names(nil))
 }
 
-// unusable returns the mistake of each part of set that cannot be used, by name, but those skip skips (none
-// for nil).
-func (set *partSet) unusable(skip func(name string) bool) usererr.List {
+// partKind is a kind of what may not be usable: a part or a theme.
+type partKind int
+
+const (
+	kindPart partKind = iota
+	kindTheme
+)
+
+// partKinds tells each kind: the key its mistake stands for others under (usererr.Over), and its words.
+var partKinds = [...]struct{ over, words string }{
+	kindPart:  {over: "part:", words: "tmpl_part_broken"},
+	kindTheme: {over: "theme:", words: "tmpl_theme_broken"},
+}
+
+// unusable returns the mistake of each of the kind k of set that cannot be used, by name, but those skip
+// skips (none for nil).
+func (set *partSet) unusable(k partKind, skip func(name string) bool) usererr.List {
 	var found usererr.List
-	for _, name := range slices.Sorted(maps.Keys(set.broken)) {
+	for _, name := range slices.Sorted(maps.Keys(set.broken[k])) {
 		if skip == nil || !skip(name) {
-			found = append(found, set.brokenPart(name))
+			found = append(found, set.brokenErr(k, name))
 		}
 	}
 	return found
 }
 
-// unusableThemes returns the mistake of each theme of set that cannot be used, by name, but those
-// skip skips (none for nil).
-func (set *partSet) unusableThemes(skip func(name string) bool) usererr.List {
-	var found usererr.List
-	for _, name := range slices.Sorted(maps.Keys(set.brokenThemes)) {
-		if skip == nil || !skip(name) {
-			found = append(found, set.brokenTheme(name))
-		}
-	}
-	return found
-}
-
-// brokenPart is the mistake of the part name of set, which cannot be used, standing for why it cannot.
-func (set *partSet) brokenPart(name string) *usererr.Error {
-	return usererr.Over("part:"+name, reasons(set.broken[name]), "tmpl_part_broken", name)
-}
-
-// brokenTheme is the mistake of the theme name of set, which cannot be used, standing for why it cannot.
-func (set *partSet) brokenTheme(name string) *usererr.Error {
-	return usererr.Over("theme:"+name, reasons(set.brokenThemes[name]), "tmpl_theme_broken", name)
+// brokenErr is the mistake of name, of the kind k of set, which cannot be used, standing for why it cannot.
+func (set *partSet) brokenErr(k partKind, name string) *usererr.Error {
+	return usererr.Over(partKinds[k].over+name, reasons(set.broken[k][name]), partKinds[k].words, name)
 }
 
 // reasons are why, why a part or a theme cannot be used, as mistakes: a failure among them, which is not
@@ -636,7 +636,7 @@ func reasons(why error) usererr.List {
 
 // leaveOut leaves the part name out of set, kept in set.broken with why.
 func (set *partSet) leaveOut(name string, why error) {
-	set.broken[name] = why
+	set.broken[kindPart][name] = why
 	set.drop(name)
 }
 

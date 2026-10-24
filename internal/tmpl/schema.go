@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	neturl "net/url"
 	"path"
@@ -310,10 +311,19 @@ func newCompiler(set *partSet) *jsonschema.Compiler {
 }
 
 // compiler returns a compiler that holds the schemas of the parts of set, true, a schema anything fits, for
-// those at the URLs stands has.
+// those at the URLs stands has, and false, which nothing fits, for each part that cannot be used
+// (brokenNamed), one's own or floe's that takes the look of one: a schema of floe's that refers to one
+// compiles, and the data that takes it is refused there (schemaCheck.leaf), while one's own schema that
+// names it is refused by its $ref (partMistake).
 func (set *partSet) compiler(stands map[string]bool) (*jsonschema.Compiler, error) {
 	c := newCompiler(set)
-	for url, doc := range set.docs {
+	docs := maps.Clone(set.docs)
+	for name := range set.broken[kindPart] {
+		if set.brokenNamed(name) {
+			docs[partsURL+name+".json"] = false
+		}
+	}
+	for url, doc := range docs {
 		if stands[url] {
 			doc = true
 		}
@@ -398,8 +408,8 @@ func unknownPart(set *partSet, ref string) *usererr.Error {
 	}
 	name, ok := partName(ref)
 	switch {
-	case ok && set.broken[name] != nil:
-		return set.brokenPart(name)
+	case ok && set.broken[kindPart][name] != nil:
+		return set.brokenErr(kindPart, name)
 	case ok && set.parts[name] != nil && set.parts[name].isLook():
 		return usererr.New("tmpl_part_look_ref", ref, name)
 	}
@@ -529,6 +539,11 @@ type schemaCheck struct {
 func (s *schemaCheck) leaf(e *jsonschema.ValidationError) {
 	key, value, at := yamlpos.Find(s.root, e.InstanceLocation)
 	where := yamlpos.OfValue(key, value)
+	if name, ok := s.unusablePart(e); ok {
+		// As a theme the data picks that cannot be used: at the item, why under it, once.
+		s.problems = append(s.problems, yamlpos.Place(s.file, where, s.set.brokenErr(kindPart, name)))
+		return
+	}
 	switch k := e.ErrorKind.(type) {
 	case *kind.Required:
 		for _, name := range k.Missing {
@@ -562,6 +577,34 @@ func (s *schemaCheck) leaf(e *jsonschema.ValidationError) {
 		// in the catalogs when a template's schema comes to use it.
 		s.add(where, "tmpl_item", label(at), e.ErrorKind.LocalizedString(english))
 	}
+}
+
+// unusablePart returns the part of one's own that cannot be used that e stopped at, the false that stands for
+// it (partSet.compiler), and false for another e.
+func (s *schemaCheck) unusablePart(e *jsonschema.ValidationError) (string, bool) {
+	if _, isFalse := e.ErrorKind.(*kind.FalseSchema); !isFalse {
+		return "", false
+	}
+	base, _, _ := strings.Cut(e.SchemaURL, "#")
+	name, whole := partName(base)
+	return name, whole && s.set.brokenNamed(name)
+}
+
+// brokenNamed reports whether name is a part that cannot be used, one's own or floe's that takes the look of
+// one, of a name a part can take, which a $ref can name: not one refused for its name (tmpl_part_name), nor
+// floe's that only floe may take. Left out of set.docs, it stands as false in compiler.
+func (set *partSet) brokenNamed(name string) bool {
+	return set.broken[kindPart][name] != nil && validName(name) && !set.reserved(name)
+}
+
+// anyBrokenNamed reports whether a part stands as false (brokenNamed), which a page may name.
+func (set *partSet) anyBrokenNamed() bool {
+	for name := range set.broken[kindPart] {
+		if set.brokenNamed(name) {
+			return true
+		}
+	}
+	return false
 }
 
 // wording words a mistake the catalog has a message for, after the path: a bound (how many items or
@@ -599,6 +642,20 @@ func wording(k jsonschema.ErrorKind) (key string, args []any, ok bool) {
 
 var english = message.NewPrinter(language.English)
 
+// takesUnusable reports whether item, an item of the schema at base, takes a part that cannot be used, by
+// a $ref that stands as false (brokenNamed), itself or as each item of its list, of a list of lists too.
+func (s *schemaCheck) takesUnusable(base string, item any) bool {
+	m, isMap := item.(map[string]any)
+	if !isMap {
+		return false
+	}
+	if ref, isRef := m["$ref"].(string); isRef {
+		name, whole := partName(absolute(base, ref))
+		return whole && s.set.brokenNamed(name)
+	}
+	return s.takesUnusable(base, m["items"])
+}
+
 // unknown reports the items of the mapping at e that the template does not have, each at its key
 // (or at the mapping, where), with the items it has.
 func (s *schemaCheck) unknown(e *jsonschema.ValidationError, extras []string, where yamlpos.Pos) {
@@ -627,7 +684,8 @@ func (s *schemaCheck) add(at yamlpos.Pos, key string, args ...any) {
 }
 
 // properties lists the items the mapping at the schema location url declares, for a misspelt one: in
-// the template's schema, or in a part's of floe's.
+// the template's schema, or in a part's of floe's. Those that take a part that cannot be used are left
+// out: written right, they are refused too.
 func (s *schemaCheck) properties(url string) []string {
 	base, frag, _ := strings.Cut(url, "#")
 	v := s.schema
@@ -650,8 +708,10 @@ func (s *schemaCheck) properties(url string) []string {
 	}
 	if parent, ok := m["properties"].(map[string]any); ok {
 		names := make([]string, 0, len(parent))
-		for n := range parent {
-			names = append(names, n)
+		for n, item := range parent {
+			if !s.takesUnusable(base, item) {
+				names = append(names, n)
+			}
 		}
 		slices.Sort(names)
 		return names
