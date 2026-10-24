@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"bytes"
+	"crypto/rand"
 	"html"
 	"net/url"
 	"slices"
@@ -34,77 +35,123 @@ func headingID(text string) string {
 
 var headings = []atom.Atom{atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6}
 
-// withHeadingIDs gives each heading of page without an id the id headingID makes of its text, in the order
-// of the page, with -1, -2 and on till one is free of the ids and names of the page, wherever they are, and
-// of those given before it. One whose text makes none gets none. The rest of page is left byte for byte.
-func withHeadingIDs(page []byte) []byte {
-	taken := idsIn(page)
-	var out, heading bytes.Buffer
-	var text strings.Builder
-	in := false // reading a heading without an id
-	end := func() {
-		start := heading.Bytes()
-		if id := headingID(text.String()); id != "" {
-			id = free(taken, id)
-			taken[id] = true
-			// After "<h2", whatever the case of its letters.
-			start = slices.Concat(start[:3], []byte(` id="`+xhtml.EscapeString(id)+`"`), start[3:])
-		}
-		out.Write(start)
-		in = false
-	}
-	z := xhtml.NewTokenizer(bytes.NewReader(page))
-	for tt := z.Next(); tt != xhtml.ErrorToken; tt = z.Next() {
-		// Token lowers the tag's name in the tokenizer's buffer, which Raw returns.
-		raw := slices.Clone(z.Raw())
-		tok := z.Token()
-		isHeading := slices.Contains(headings, tok.DataAtom)
-		// As the HTML parser reads them: a heading ends at the end tag of any heading, or where another starts.
-		if in && isHeading && tt != xhtml.TextToken {
-			end()
-		}
-		_, hasID := idOf(tok)
-		switch {
-		// <h2/> starts a heading too: the parser leaves the / of an element that is not void.
-		case isHeading && (tt == xhtml.StartTagToken || tt == xhtml.SelfClosingTagToken) && !hasID:
-			in = true
-			text.Reset()
-			heading.Reset()
-			heading.Write(raw)
-		case in:
-			if tt == xhtml.TextToken {
-				text.WriteString(tok.Data)
-			}
-			heading.Write(raw)
-		default:
-			out.Write(raw)
-		}
-	}
-	if in {
-		out.Write(heading.Bytes())
-	}
-	return out.Bytes()
+// pageAnchors is what the links of a page drawn may go to, its ids and the names of its <a>s, and the
+// fragments its links to a part of it go to, # left out, as written.
+type pageAnchors struct {
+	targets map[string]bool
+	links   []string
 }
 
-// idsIn returns the ids of the tags of page and the names of its <a>s, which a link goes to as it does to
-// an id (anchorsIn).
-func idsIn(page []byte) map[string]bool {
-	ids := map[string]bool{}
-	z := xhtml.NewTokenizer(bytes.NewReader(page))
-	for tt := z.Next(); tt != xhtml.ErrorToken; tt = z.Next() {
-		tok := z.Token()
-		if id, ok := idOf(tok); ok {
-			ids[id] = true
+// withHeadingIDs gives each heading of page without an id the id headingID makes of its text, but what a
+// part draws in it (data-floe-part), in the order of the page as the parser reads it, with -1, -2 and on
+// till one is free of the ids and the names of the page, wherever they are, and of those given before it.
+// One whose text makes none gets none. The rest of page is left byte for byte. It returns the anchors of
+// the page given its ids. Which start tag each heading the parser makes is of is told by a mark on each,
+// which the page returned has not: the parser ends a heading where the tags around it say, and moves one
+// out of a table.
+func withHeadingIDs(page []byte) ([]byte, pageAnchors) {
+	mark := "data-floe-heading-" + strings.ToLower(rand.Text())
+	marked := atHeadingTags(page, func(k int) string { return " " + mark + `="` + strconv.Itoa(k) + `"` })
+	anchors := pageAnchors{targets: map[string]bool{}, links: nil}
+	var found []*xhtml.Node
+	for n := range parseDrawn(marked).Descendants() {
+		if n.Type != xhtml.ElementNode {
+			continue
 		}
-		if tok.DataAtom == atom.A && tt != xhtml.EndTagToken {
-			for _, a := range tok.Attr {
-				if a.Key == "name" {
-					ids[a.Val] = true
-				}
+		if n.Namespace == "" && slices.Contains(headings, n.DataAtom) {
+			found = append(found, n)
+		}
+		anchors.add(n)
+	}
+	ids := map[string]string{}
+	for _, n := range found {
+		k, hasMark := attrOf(n, mark)
+		if _, hasID := attrOf(n, "id"); !hasMark || hasID {
+			continue
+		}
+		if id := headingID(textOf(n)); id != "" {
+			id = free(anchors.targets, id)
+			anchors.targets[id] = true
+			ids[k] = id
+		}
+	}
+	return atHeadingTags(page, func(k int) string {
+		if id, ok := ids[strconv.Itoa(k)]; ok {
+			return ` id="` + xhtml.EscapeString(id) + `"`
+		}
+		return ""
+	}), anchors
+}
+
+// add adds what n, an element, gives a's: its id, its name as an <a>, the fragment of its href as an <a>
+// or an <area> that links to a part of the page.
+func (a *pageAnchors) add(n *xhtml.Node) {
+	inHTML := n.Namespace == ""
+	for _, at := range n.Attr {
+		switch {
+		case at.Key == "id" && at.Namespace == "":
+			a.targets[at.Val] = true
+		case inHTML && n.DataAtom == atom.A && at.Key == "name":
+			a.targets[at.Val] = true
+		case inHTML && (n.DataAtom == atom.A || n.DataAtom == atom.Area) && at.Key == "href" &&
+			strings.HasPrefix(at.Val, "#"):
+			a.links = append(a.links, at.Val[1:])
+		}
+	}
+}
+
+// atHeadingTags returns page with attr(k) put in the k-th start tag of a heading, <h2/> too, which the
+// parser reads as a start, after its name. What a tag left open at the end holds is kept.
+func atHeadingTags(page []byte, attr func(k int) string) []byte {
+	var out bytes.Buffer
+	k := 0
+	z := xhtml.NewTokenizer(bytes.NewReader(page))
+	for {
+		tt := z.Next()
+		// Token lowers the tag's name in the tokenizer's buffer, which Raw returns.
+		raw := slices.Clone(z.Raw())
+		if tt == xhtml.ErrorToken {
+			out.Write(raw)
+			return out.Bytes()
+		}
+		tok := z.Token()
+		if (tt == xhtml.StartTagToken || tt == xhtml.SelfClosingTagToken) && slices.Contains(headings, tok.DataAtom) {
+			// After "<h2", whatever the case of its letters.
+			raw = slices.Concat(raw[:3], []byte(attr(k)), raw[3:])
+			k++
+		}
+		out.Write(raw)
+	}
+}
+
+// textOf returns the text in n, but that of a part (data-floe-part) and that of an element whose content
+// the parser reads as text (a <script>, a <style>).
+func textOf(n *xhtml.Node) string {
+	var b strings.Builder
+	var walk func(n *xhtml.Node)
+	walk = func(n *xhtml.Node) {
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			_, isPart := attrOf(c, "data-floe-part")
+			switch {
+			case c.Type == xhtml.TextNode:
+				b.WriteString(c.Data)
+			case c.Type == xhtml.ElementNode && !isPart && !readAsText(c):
+				walk(c)
 			}
 		}
 	}
-	return ids
+	walk(n)
+	return b.String()
+}
+
+// attrOf returns the value of n's attribute key, of no namespace.
+func attrOf(n *xhtml.Node, key string) (string, bool) {
+	for _, a := range n.Attr {
+		if a.Namespace == "" && a.Key == key {
+			return a.Val, true
+		}
+	}
+	return "", false
 }
 
 // free returns id, or the first of id-1, id-2 and on, that taken has not.
@@ -115,63 +162,25 @@ func free(taken map[string]bool, id string) string {
 	return id
 }
 
-// idOf returns the id of t, a start tag.
-func idOf(t xhtml.Token) (string, bool) {
-	if t.Type != xhtml.StartTagToken && t.Type != xhtml.SelfClosingTagToken {
-		return "", false
-	}
-	for _, a := range t.Attr {
-		if a.Key == "id" {
-			return a.Val, true
-		}
-	}
-	return "", false
-}
-
-// checkAnchors refuses each link of page, the page drawn with src, its template's page.html, to a part of
-// it that no element is: an <a> or <area> whose href is # and a fragment that is no id nor name of an <a>,
-// as written or percent-decoded, as a browser looks for it, without a text fragment (:~: and after it). #
-// alone and #top go to the top of the page.
+// checkAnchors refuses each link of a page, whose anchors are a, drawn with src, its template's page.html,
+// to a part of it that no element is: a fragment that is no id nor name of an <a>, as written or
+// percent-decoded, as a browser looks for it, without a text fragment (:~: and after it). # alone and #top
+// go to the top of the page.
 // LIMIT: ids a script makes after drawing (a script part's, the data HTML's) are not seen; their links are refused.
-func (d *Data) checkAnchors(page, src []byte) error {
-	targets, links := anchorsIn(page)
+func (d *Data) checkAnchors(a pageAnchors, src []byte) error {
 	var problems usererr.List
 	told := map[string]bool{}
-	for _, written := range links {
+	for _, written := range a.links {
 		frag, _, _ := strings.Cut(written, ":~:")
 		// The parser read the href's character references already.
 		decoded := percentDecoded(frag)
-		if frag == "" || targets[frag] || targets[decoded] || strings.EqualFold(decoded, "top") || told[decoded] {
+		if frag == "" || a.targets[frag] || a.targets[decoded] || strings.EqualFold(decoded, "top") || told[decoded] {
 			continue
 		}
 		told[decoded] = true
 		problems = append(problems, d.linkMistakes(written, decoded, src)...)
 	}
 	return problems.Sorted().Err()
-}
-
-// anchorsIn returns what a link in page may go to, its ids and the names of its <a>s, and the fragments
-// its links to a part of it go to, # left out, as written.
-func anchorsIn(page []byte) (targets map[string]bool, links []string) {
-	targets = map[string]bool{}
-	for n := range parseDrawn(page).Descendants() {
-		if n.Type != xhtml.ElementNode {
-			continue
-		}
-		inHTML := n.Namespace == ""
-		for _, a := range n.Attr {
-			switch {
-			case a.Key == "id" && a.Namespace == "":
-				targets[a.Val] = true
-			case inHTML && n.DataAtom == atom.A && a.Key == "name":
-				targets[a.Val] = true
-			case inHTML && (n.DataAtom == atom.A || n.DataAtom == atom.Area) && a.Key == "href" &&
-				strings.HasPrefix(a.Val, "#"):
-				links = append(links, a.Val[1:])
-			}
-		}
-	}
-	return targets, links
 }
 
 // linkMistakes returns the mistakes of a link to #written, which goes to decoded and reaches no part of the

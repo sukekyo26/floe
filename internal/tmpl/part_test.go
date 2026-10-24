@@ -458,7 +458,7 @@ func TestPartsOfNumbersAndChanges(t *testing.T) {
 		`<li class="done"><code>ci</code></li>`,
 		`<tr><td class="what">a</td><td>x</td><td class="after">y</td></tr>`,
 		`<tr class="same"><td class="what">b</td>`,
-		`<div class="card option pick" data-floe-look="panel"><h3 id="a-take">A <span data-floe-part="cell">Take</span></h3><ul><li class="pro">p</li><li class="con">c</li></ul></div>`,
+		`<div class="card option pick" data-floe-look="panel"><h3 id="a">A <span data-floe-part="cell">Take</span></h3><ul><li class="pro">p</li><li class="con">c</li></ul></div>`,
 		`<dt>State</dt><dd><span class="bad" data-floe-part="cell">open</span></dd>`,
 		`<dt>Due</dt><dd><code>soon</code></dd>`,
 		`<span class="file">a.go</span><span class="added">+1</span><span class="removed">−1</span></figcaption><pre><code><span class="hunk">@@ -1 &#43;1 @@` + "\n" + `</span><span class="del">-a` + "\n",
