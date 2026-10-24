@@ -311,7 +311,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	d.htmlItems = htmlItemsOf(whole, root)
 	err = usererr.Collect(checkImages(whole, d, root, images), checkHTML(set, d),
 		checkDiagrams(whole, d, root, t.iconStore()),
-		checkScripts(whole, d, root), checkParts(whole, d, root))
+		checkScripts(whole, d, root), checkParts(set, whole, d, root))
 	if err != nil {
 		return err
 	}

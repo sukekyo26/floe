@@ -919,7 +919,7 @@ func TestPartHoldingRightDiagram(t *testing.T) {
 	}
 }
 
-// A page that names a part that cannot be used, by a table of Markdown of the data, is refused, rather
+// An item whose drawing names a part that cannot be used, a table of Markdown of the data, is refused there, rather
 // than published without its style; themes of one's own that cannot be read are warned of.
 func TestBrokenPartInPage(t *testing.T) {
 	t.Parallel()
@@ -935,7 +935,7 @@ func TestBrokenPartInPage(t *testing.T) {
 	dir := memo(t, `"risks": {"type": "string"}, "aside": {"type": "string", "format": "markdown"}`)
 	l := tmpl.NewLibrary(dir, parts, themesOf(parts), "")
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: x\naside: |\n  | a |\n  | --- |\n  | b |\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), "the part table cannot be used\n  "+filepath.Join(parts, "table", "part.css")) {
+		!strings.HasPrefix(err.Error(), "data.yaml:4:8: the part table cannot be used\n  "+filepath.Join(parts, "table", "part.css")) {
 		t.Errorf("drawing a table of Markdown = %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "memo", "example.yaml"), []byte("template: memo\nlang: en\nrisks: x\n"), 0o600); err != nil {

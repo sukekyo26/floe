@@ -212,7 +212,7 @@ func (s *shape) item(name string, required bool) Item {
 // drawnBy is the name of the part that draws s, or "", and whether it cannot be used.
 func (s *shape) drawnBy() (string, bool) {
 	if s.part == nil {
-		return s.unusable, s.unusable != ""
+		return s.unusablePart, s.unusablePart != ""
 	}
 	return s.part.name, false
 }

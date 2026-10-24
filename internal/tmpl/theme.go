@@ -133,7 +133,7 @@ func readThemeFile(files fs.FS, name, file string, t *theme) ([]*usererr.Error, 
 // one of one's own that cannot be used among them, but not one of a name no part can take.
 func (set *partSet) themeFile(name string) bool {
 	_, isPart := set.parts[name]
-	isOwn := set.broken[kindPart][name] != nil && validName(name) && !set.reserved(name)
+	isOwn := set.brokenNamed(name)
 	return name == themeBase || name == themePalette || isPart || isOwn
 }
 

@@ -274,7 +274,7 @@ func (set *partSet) readBuiltin() error {
 		url := partsURL + name + ".json"
 		set.docs[url] = map[string]any{"type": "object", "description": p.about}
 		set.shapes[url] = &shape{
-			keys: nil, each: nil, ref: "", format: "", named: nil, part: nil, unusable: "", about: p.about, typ: "object",
+			keys: nil, each: nil, ref: "", format: "", named: nil, part: nil, unusablePart: "", about: p.about, typ: "object",
 			enum: nil, required: nil,
 		}
 		set.parts[name] = &part{
@@ -728,50 +728,67 @@ func joinDescriptions(beside, named string) string {
 	return beside + " " + named
 }
 
-// checkParts checks the items of d of whole floe draws by parts against the checks of their parts, and
-// draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every failure at its
-// line and column under root. It runs after checkDiagrams and checkScripts, which draw theirs into d.parts.
-func checkParts(whole drawnItems, d *Data, root ast.Node) error {
+// checkParts checks the items of d of whole floe draws by parts of set against the checks of their parts,
+// and draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every
+// failure at its line and column under root. It refuses an item of format markdown, or one a part draws,
+// whose drawing names a part the page would be refused for (misnamedItem). It runs after checkDiagrams and
+// checkScripts, which draw theirs into d.parts.
+func checkParts(set *partSet, whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
 	escaped := map[*part]bool{}
 	holding := map[string]bool{} // by pathKey, the items holding one not drawn
 	for _, f := range whole {
-		p := f.part
-		if p == nil {
-			continue // a format of floe's, which page.html draws
-		}
-		if p.pages == nil {
-			// A part drawn in Go, by its own check before this one, which may have refused it.
-			if _, drawn := d.parts[pathKey(f.at)]; !drawn {
-				holdUndrawn(holding, f.at)
+		drawn, mistake := true, error(nil)
+		switch text, isText := f.value.(string); {
+		case f.part != nil:
+			drawn, mistake = set.drawPart(f, d, root, holding, escaped)
+		case isText && f.format == "markdown":
+			// page.html draws it, as Markdown draws a table: in the table part's look.
+			if bad := set.misnamedItem(f.at, string(d.markdownHTML(text)), d, root); bad != nil {
+				drawn, mistake = false, bad
 			}
-			continue
 		}
-		more, err := p.check(d.File, f.itemAt, root)
-		if err != nil {
-			return err
-		}
-		if more != nil {
-			problems = append(problems, more...)
+		if !drawn {
 			holdUndrawn(holding, f.at)
-			continue
 		}
-		if holding[pathKey(f.at)] {
-			// It holds an item not drawn: drawn without it, it would fail, or be told to, for that one's mistake.
-			// Those holding it are noted already, as they hold that item too.
-			continue
-		}
-		html, err := p.draw(f.itemAt, d)
-		if err == nil {
-			d.drew(f.at, html)
-			continue
-		}
-		holdUndrawn(holding, f.at)
-		if err = problems.Add(p.drawnMistake(err, f.at, d, root, escaped)); err != nil {
+		if err := problems.Add(mistake); err != nil {
 			return err //nolint:wrapcheck // already says what failed
 		}
 	}
 	return problems.Err()
+}
+
+// drawPart checks f, an item of d a part draws, against the checks of the part, and draws it into d.parts,
+// returning whether it is drawn and its mistakes, under root, or floe's failure. One holding an item not
+// drawn, noted in holding, is not drawn: drawn without it, it would fail, or be told to, for that one's
+// mistake. escaped notes the parts html/template cannot escape (drawnMistake).
+func (set *partSet) drawPart(
+	f drawnItem, d *Data, root ast.Node, holding map[string]bool, escaped map[*part]bool,
+) (bool, error) {
+	p := f.part
+	if p.pages == nil {
+		// A part drawn in Go, by its own check before this one, which may have refused it.
+		_, drawn := d.parts[pathKey(f.at)]
+		return drawn, nil
+	}
+	more, err := p.check(d.File, f.itemAt, root)
+	switch {
+	case err != nil:
+		return false, err
+	case more != nil:
+		return false, more
+	case holding[pathKey(f.at)]:
+		return false, nil
+	}
+	html, err := p.draw(f.itemAt, d)
+	if err != nil {
+		return false, p.drawnMistake(err, f.at, d, root, escaped)
+	}
+	if bad := set.misnamedItem(f.at, string(html), d, root); bad != nil {
+		return false, bad
+	}
+	d.drew(f.at, html)
+	return true, nil
 }
 
 // drawnMistake is the mistake err of p drawing the item at the path at of d, under root, or nil when it was
@@ -793,6 +810,22 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node, esca
 	}
 	_, item := itemPos(root, at, false)
 	return drawMistake(err, p.file("part.html"), p.isOwn(), "tmpl_render_item", item, d.File)
+}
+
+// misnamedItem is the mistake of the item at the path at of d, under root, whose drawing html names a part
+// the page would be refused for (misnamedIn), placed at it, the first time with why the part cannot be
+// used; nil for none, or for one an item of format html under it names, which checkHTML tells there. The
+// parts it holds are drawn before it, so that the innermost item drawn by a part is told.
+func (set *partSet) misnamedItem(at []string, html string, d *Data, root ast.Node) *usererr.Error {
+	named := func(html string) *usererr.Error { return set.misnamedIn(namedIn(html, tagsIn(html, false))) }
+	told := slices.ContainsFunc(d.htmlItems, func(it htmlItem) bool {
+		return len(it.at) > len(at) && slices.Equal(it.at[:len(at)], at) && named(it.text) != nil
+	})
+	if bad := named(html); bad != nil && !told {
+		pos, _ := itemPos(root, at, false)
+		return bad.Placed(d.File, pos.Line, pos.Column, "")
+	}
+	return nil
 }
 
 // holdUndrawn notes in holding the items that hold the one at the path at, not drawn: walkWhole puts them

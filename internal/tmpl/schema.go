@@ -589,11 +589,16 @@ func (s *schemaCheck) unusablePart(e *jsonschema.ValidationError) (string, bool)
 	return name, whole && s.set.standsFalse(name)
 }
 
-// standsFalse reports whether the part name, left out, stands as false in compiler: one a $ref can name,
-// whose schema set holds no longer.
+// standsFalse reports whether the part name, left out, stands as false in compiler: one that cannot be used
+// of a name a part can take, whose schema set holds no longer.
 func (set *partSet) standsFalse(name string) bool {
-	return set.broken[kindPart][name] != nil && validName(name) && !set.reserved(name) &&
-		set.docs[partsURL+name+".json"] == nil
+	return set.brokenNamed(name) && set.docs[partsURL+name+".json"] == nil
+}
+
+// brokenNamed reports whether name is a part that cannot be used, of a name a part can take, which a $ref
+// can name: not one refused for its name (tmpl_part_name), nor floe's that only floe may take.
+func (set *partSet) brokenNamed(name string) bool {
+	return set.broken[kindPart][name] != nil && validName(name) && !set.reserved(name)
 }
 
 // wording words a mistake the catalog has a message for, after the path: a bound (how many items or

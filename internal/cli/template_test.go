@@ -373,3 +373,26 @@ func TestShowUnusablePart(t *testing.T) {
 		}
 	}
 }
+
+// A table of Markdown takes the look of the table part: with a table of one's own that cannot be used,
+// the item of Markdown is refused where it is written, the first time with why, in each file.
+func TestUnusableTableInMarkdown(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.write(t, "parts/table/schema.json", `{"type": 1}`)
+	e.write(t, "parts/table/part.html", `<div data-floe-part="table"></div>`)
+	e.write(t, "parts/table/part.css", "")
+	page := "template: report\nlang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n"
+	table := func(indent string) string {
+		return indent + "| a | b |\n" + indent + "|---|---|\n" + indent + "| 1 | 2 |\n"
+	}
+	a := e.write(t, "a.yaml", page+"      - text: |\n"+table("          ")+"      - note:\n          text: |\n"+table("            "))
+	b := e.write(t, "b.yaml", page+"      - text: hi\n      - text: |\n"+table("          "))
+	stderr := a + ":7:15: the part table cannot be used\n" +
+		"  " + filepath.Join(e.tmp, "parts", "table", "schema.json") + ": #/type: JSON Schema does not take this: 'anyOf' failed\n" +
+		a + ":12:11: the part table cannot be used, as told above\n" +
+		b + ":8:15: the part table cannot be used, as told above\n"
+	want(t, "check", e.run(t, "", "check", a, b), 1, "", stderr)
+}

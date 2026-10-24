@@ -28,7 +28,7 @@ type shape struct {
 	named *shape
 	part  *part
 	// the part its $ref names, which cannot be used: it stands as false (partSet.standsFalse); "" for none
-	unusable string
+	unusablePart string
 
 	// What floe template show and floe part show tell of it, as written beside a $ref.
 	about    string
@@ -116,7 +116,7 @@ func (n *schemaNotes) read(v any, base, ptr string) (*shape, error) {
 		return nil, err //nolint:wrapcheck // the first of keyword's mistakes, made here
 	}
 	s := &shape{
-		keys: nil, each: nil, ref: "", format: format, named: nil, part: nil, unusable: "", about: about, typ: m["type"],
+		keys: nil, each: nil, ref: "", format: format, named: nil, part: nil, unusablePart: "", about: about, typ: m["type"],
 		enum: enum, required: nil,
 	}
 	if ref != "" {
@@ -484,7 +484,7 @@ func (s *shape) bind(set *partSet) {
 	named, ok := set.shapes[s.ref]
 	if !ok {
 		if whole && set.standsFalse(name) {
-			s.unusable = name
+			s.unusablePart = name
 		}
 		return
 	}
