@@ -377,25 +377,34 @@ func (t *Template) files(read func(fs.FS) error) error {
 }
 
 // usable returns the template name names, nil for none, and why it cannot be used, when it is one of one's
-// own that cannot be read (tmpl_own_broken) or that has a mistake (unusable), or floe's failure.
+// own whose directory cannot be read (tmpl_own_broken) or that has a mistake of its own (unusable). Any
+// other mistake of finding it, as of the directory of templates, and a failure, are returned as failed.
 func (l *Library) usable(name string) (t *Template, why, failed error) {
 	t, err := l.Find(name)
 	var bad *usererr.Error
 	switch {
-	case errors.As(err, &bad):
+	case errors.As(err, &bad) && bad.Key == "tmpl_own_broken":
 		return nil, err, nil
 	case err != nil:
 		return nil, nil, err
 	case t == nil:
 		return nil, nil, nil
 	}
-	return t, t.unusable(), nil
+	why = t.unusable()
+	// A failure is no mistake of t's: the parts every template shares, floe's own. Reading t's files
+	// fails as a mistake (usererr.CannotRead).
+	var mistakes usererr.List
+	if failed = mistakes.Add(why); failed != nil {
+		return nil, nil, failed //nolint:wrapcheck // already says what failed
+	}
+	return t, why, nil //nolint:wrapcheck // t's mistakes, as made
 }
 
 // unusable returns why t, one of one's own, cannot be used, whatever the data: the mistakes of its files as
 // a data file's check and drawing read them, apart from the data (its version, schema, checks, computed
-// values, words, page.html and page.css), each read once; nil for a built-in one, whose mistakes are floe's
-// failures where they are met. What floe template check alone checks is not among them.
+// values, words, page.html and page.css), each read once, or a failure; nil for a built-in one, whose
+// mistakes are floe's failures where they are met. floe template check tells them, and what it alone
+// checks besides (checkFiles).
 func (t *Template) unusable() error {
 	if !t.isOwn() {
 		return nil

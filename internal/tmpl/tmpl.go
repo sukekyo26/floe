@@ -105,6 +105,18 @@ type Sources struct {
 	Icons     []string // the index files of the icon sets, when it has a diagram, fetched or not
 }
 
+// watch notes in s the directories of t, nil for none, and of the parts of one's own its run read first:
+// those of one that cannot be used too, so that the page of its mistakes is drawn again once it is fixed.
+func (s *Sources) watch(t *Template) {
+	if t == nil {
+		return
+	}
+	s.Template = t.Dir
+	if set, err := t.parts(); err == nil && set.dirs != nil {
+		s.Own = set.dirs
+	}
+}
+
 // ReadSources reads the data file src as Read does, and returns its Sources too.
 func (l *Library) ReadSources(file string, src []byte, theme, cwd string) (*Data, Sources, error) {
 	dir := filepath.Dir(file)
@@ -155,6 +167,7 @@ func (l *Library) readWith(file string, src []byte, images imageDir, theme strin
 		if t, why, err = l.usable(d.Template); err != nil {
 			return nil, sources, err
 		}
+		sources.watch(t)
 		if why != nil {
 			// As a theme it picks that cannot be used: at template:, why under it, once.
 			problems = append(problems, yamlpos.Place(file, h.where["template"], brokenOf(kindTemplate, d.Template, why)))
@@ -174,13 +187,8 @@ func (l *Library) readWith(file string, src []byte, images imageDir, theme strin
 		}
 		return nil, sources, problems.Sorted()
 	}
-	sources.Template = t.Dir
 	err = t.check(h, images, theme, problems)
 	sources.Images, sources.Icons = d.tried, d.icons
-	// The parts check read first, kept by the run.
-	if set, setErr := t.parts(); setErr == nil && set.dirs != nil {
-		sources.Own = set.dirs
-	}
 	if err != nil {
 		return nil, sources, err
 	}
@@ -294,7 +302,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	if err != nil {
 		return err
 	}
-	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
+	// One of one's own whose schema floe refuses was told by usable: this one is floe's, a failure.
 	read, err := t.compileShape()
 	if err != nil {
 		return err

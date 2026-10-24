@@ -560,12 +560,13 @@ func TestTemplateCSSAndParts(t *testing.T) {
 	for _, m := range mistakes {
 		got = append(got, strings.TrimPrefix(m.Error(), dir+string(filepath.Separator)))
 	}
+	// page.css's, which makes the template unusable, before those template check alone tells.
 	want := []string{
+		"page.css:4: write the root as :scope, not :root",
 		"page.html:5: page.html names the part nope, which there is none of; use bars, ",
 		`page.html:5: data-floe-part="cell note" is not the name of one part`,
 		`page.html:5: data-floe-part=" cell" is not the name of one part`,
 		"page.html:5: data-floe-part names the look panel, which has no box",
-		"page.css:4: write the root as :scope, not :root",
 	}
 	if len(got) != len(want) {
 		t.Fatalf("Check = %q, want %q", got, want)
