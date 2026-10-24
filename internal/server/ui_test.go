@@ -569,24 +569,25 @@ func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share
 	publish := func(slug, body string) {
 		e.publish(t, e.page(t, filepath.Join("hash", slug+".yaml"), slug, body), store.Options{Slug: &slug})
 	}
-	link := func(href string) string {
-		return `<a id="go" href="` + href + `" style="position: fixed; left: 0; top: 0; width: 200px; height: 40px">go</a>`
+	link := func(href, top string) string {
+		return `<a href="` + href + `" style="position: fixed; left: 0; top: ` + top + `; width: 200px; height: 40px">go</a>`
 	}
 	// The page reports the part it is at, as the frame cannot read the sandboxed page. Whether Chrome scrolls
 	// there is Chrome's: in the tests' Chrome it now and then does not on a load, which floe cannot mend.
-	publish("hash", link("#s2")+`<div style="height: 3000px"></div><h2 id="s2">s2</h2><div style="height: 3000px"></div>`+
+	publish("hash", link("#s2", "0")+link("/a/hash/#s3", "60px")+
+		`<div style="height: 3000px"></div><h2 id="s2">s2</h2><div style="height: 3000px"></div><h2 id="s3">s3</h2><div style="height: 3000px"></div>`+
 		"<script>document.addEventListener('pointerover', () => parent.postMessage('over', '*'));"+
 		"setInterval(() => parent.postMessage('at ' + location.hash, '*'), 50)</script>")
-	publish("from", link("/a/hash/#s2")+
+	publish("from", link("/a/hash/#s2", "0")+
 		"<script>document.addEventListener('pointerover', () => parent.postMessage('over', '*'))</script>")
 	at := func(what, want string) string {
 		return b.until(what, "(window.watching ||= (addEventListener('message', (e) => { if (String(e.data).startsWith('at ')) window.at = e.data; }), true)) && "+
 			"window.at === "+js("at "+want)+" && location.pathname + location.hash")
 	}
-	click := func() {
+	click := func(y float64) {
 		box := b.rect("document.getElementById('frame')")
-		b.hover(box.X+20, box.Y+20)
-		b.click(box.X+20, box.Y+20)
+		b.hover(box.X+20, box.Y+y)
+		b.click(box.X+20, box.Y+y)
 	}
 
 	out := make([]string, 0, 6)
@@ -596,19 +597,26 @@ func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share
 	out = append(out, at("the part, through the redirect", "#s2"))
 	b.navigate("/a/from/")
 	b.until("the page in the frame", "document.getElementById('frame').hasAttribute('src')")
-	click()
+	click(20)
 	out = append(out, at("the part, from another page", "#s2"))
 	b.navigate("/a/hash/")
 	at("the top of the page", "")
-	click()
+	click(20)
 	out = append(out, at("the part, moved to in the frame", "#s2"))
 	b.eval("window.leaving = true; location.reload()")
 	b.until("the reload", "!window.leaving && document.readyState === 'complete'")
 	out = append(out, at("the part, after a reload", "#s2"))
 	b.eval("history.back()")
 	out = append(out, at("the top of the page, back", ""))
+	// The page follows the frame's own fragment: a link in it to its frame URL, and the address bar.
+	click(80)
+	out = append(out, at("the part, by a link to the frame URL", "#s3"))
+	b.eval("location.hash = '#s2'")
+	out = append(out, at("the part, by the address bar", "#s2"))
+	b.eval("history.back()")
+	out = append(out, at("the part before it, back", "#s3"))
 
-	check(t, "frame hash", out, "/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/")
+	check(t, "frame hash", out, "/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/|/a/hash/#s3|/a/hash/#s2|/a/hash/#s3")
 }
 
 // leave clicks links out of a page in the frame: a target=_blank tab runs in the other site's origin

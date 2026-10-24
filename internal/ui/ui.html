@@ -584,6 +584,11 @@
       history.replaceState(history.state, '', location.pathname + location.search + hash);
     }
   });
+  // The frame's own fragment changed (a link in the page to /a/<slug>/#part, the address bar): the page moves to that part, in
+  // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo
+  if (framed) addEventListener('hashchange', () => {
+    if ($('frame').hasAttribute('src')) $('frame').contentWindow.location.replace('?raw' + location.hash);
+  });
   // Stored pages (pages) and links registered by absolute path (links) are on separate tabs
   const inTab = (a, t = tab) => Boolean(a.path) === (t === 'links');
   // Pages from before the project was recorded. A project is a directory name without /, so this cannot clash
