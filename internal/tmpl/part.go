@@ -696,7 +696,7 @@ func readPartChecks(files fs.FS, dir string) ([]relation, error) {
 	case err != nil:
 		return nil, usererr.CannotRead(path.Join(dir, "checks.yaml"), err)
 	}
-	return readChecks(path.Join(dir, "checks.yaml"), src, true)
+	return readChecks(path.Join(dir, "checks.yaml"), src)
 }
 
 // readPartWords reads file, the words.yaml of a part in files, its directory, as readWords does.

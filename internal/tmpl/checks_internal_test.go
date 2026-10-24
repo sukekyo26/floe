@@ -43,7 +43,7 @@ const relations = `
 
 // relateSrc reads the checks.yaml src and checks d against them, as checkRelations does.
 func relateSrc(src []byte, d *Data, root ast.Node, own bool) error {
-	list, err := readChecks("checks.yaml", src, false)
+	list, err := readChecks("checks.yaml", src)
 	return usererr.Collect(err, relate(list, d, root, own))
 }
 
@@ -148,6 +148,10 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 		{"- for: a\n  expr: len(filter(doc.a, # > 0)) > 0\n  message: m\n", "checks.yaml:2:27: a # after a space began a YAML comment, which may have cut the value short, to len(filter(doc.a,"},
 		{"- for: b.c\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b.c does not lead to a list in d.yaml"},
 		{"- for: b\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b does not lead to a list in d.yaml"},
+		// for and field written empty, unlike left out, are refused at their values.
+		{"- for:\n  field: key\n  expr: 'true'\n  message: m\n", "checks.yaml:1:3: for is empty: write the path of the list to check"},
+		{"- for: ''\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for is empty: write the path of the list to check"},
+		{"- for: a\n  field:\n  expr: 'true'\n  message: m\n", "checks.yaml:2:3: field is empty: write the path of the field a failure points at"},
 	} {
 		d, root := data(t, "a: [1]\nb: x\n")
 		err := relateSrc([]byte(tt.checks), d, root, true)
@@ -199,7 +203,7 @@ func TestRelationsBesideANotList(t *testing.T) {
 		t.Errorf("floe's own = %v, want floe's failure", err)
 	}
 
-	list, err := readChecks("checks.yaml", []byte(checks), true)
+	list, err := readChecks("checks.yaml", []byte(checks))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,6 +213,67 @@ func TestRelationsBesideANotList(t *testing.T) {
 	wantPart := "d.yaml:3:7: p.a[0]: one (\"1\")\nd.yaml:3:7: p.a[0]: three (\"1\")\nchecks.yaml:4:8: for: b does not lead to a list in d.yaml"
 	if err != nil || more.Sorted().Err() == nil || more.Sorted().Err().Error() != wantPart {
 		t.Errorf("a part's = %v %v, want\n%s", more, err, wantPart)
+	}
+}
+
+// A check without for checks the whole data file once, and points at its field, or at the top level
+// without one.
+func TestRelationsOfTheWhole(t *testing.T) {
+	t.Parallel()
+
+	src := "status: accepted\noptions:\n  - title: a\n    pick: x\n  - title: b\n    pick: y\n  - title: c\n"
+	schema := `{"properties": {"status": {}, "note": {}, "options": {"type": "array", "items": {"properties": {"title": {}, "pick": {}}}}}}`
+	for _, tt := range []struct{ checks, want string }{
+		{
+			"- field: options\n  expr: doc.status == 'proposed' || count(doc.options, .pick != nil) == 1\n  message: pick one\n",
+			"d.yaml:3:3: options: pick one",
+		},
+		{"- expr: count(item.options, .pick != nil) == 1\n  message: pick one\n", "d.yaml:1:1: the top level: pick one"},
+		{"- expr: len(doc.note) > 0\n  message: m\n", "checks.yaml:1:9: the top level of d.yaml cannot be checked, as d.yaml gives no value for note"},
+	} {
+		if got := failures(t, tt.checks, src, schema).Error(); !strings.HasPrefix(got, tt.want) || strings.Contains(got, "\n") {
+			t.Errorf("%s= %s\nwant one, %s", tt.checks, got, tt.want)
+		}
+	}
+}
+
+// A part's field without for is a path under the part, or under its items when it is a list, refused only
+// where every kind of value its schema takes surely refuses it: a part that may be either takes it on either.
+func TestDeclaredOfAPart(t *testing.T) {
+	t.Parallel()
+
+	const closed = `"additionalProperties": false, `
+	both := `{"type": ["array", "object"], ` + closed + `"properties": {"url": {}}, "items": {"type": "object", "properties": {"rows": {"type": "array"}}}}`
+	for _, tt := range []struct{ schema, for_, field, want string }{
+		{`{"type": "object", ` + closed + `"properties": {"url": {}}}`, "", "url", ""},
+		{`{"type": "object", ` + closed + `"properties": {"url": {}}}`, "", "uri", "tmpl_checks_field_part"},
+		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "", "url", ""},
+		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "", "uri", "tmpl_checks_field_part"},
+		{`{"type": ["array", "object"], ` + closed + `"items": {` + closed + `"properties": {"url": {}}}}`, "", "url", ""},
+		{`{"type": ["array", "object"], ` + closed + `"properties": {"url": {}}, "items": {"additionalProperties": false}}`, "", "url", ""},
+		{`{"type": ["array", "object"], ` + closed + `"items": {` + closed + `"properties": {"url": {}}}}`, "", "uri", "tmpl_checks_field_part"},
+		{`{"type": "array"}`, "", "uri", ""},
+		{`{"type": "string"}`, "", "x", "tmpl_checks_field_part"},
+		// for goes into the items of a part that may be a list, as itemsAt does on such a value.
+		{both, "rows", "", ""},
+		{strings.Replace(both, `"items": {`, `"items": {`+closed, 1), "rowz", "", "tmpl_checks_undeclared"},
+	} {
+		set, err := builtinParts()
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, err := compileSchema(set, "t", "t/schema.json", jsonDoc(t, tt.schema))
+		if err != nil {
+			t.Fatalf("%s: %v", tt.schema, err)
+		}
+		c := relation{For: tt.for_, Field: tt.field, Expr: "true", Message: "m", file: "checks.yaml", at: map[string]yamlpos.Pos{}}
+		e := c.declared(s, true)
+		switch {
+		case tt.want == "" && e != nil:
+			t.Errorf("%s, for %s, field %s = %v", tt.schema, tt.for_, tt.field, e)
+		case tt.want != "" && (e == nil || e.Key != tt.want):
+			t.Errorf("%s, for %s, field %s = %v, want %s", tt.schema, tt.for_, tt.field, e, tt.want)
+		}
 	}
 }
 
@@ -267,6 +332,11 @@ func TestDeclared(t *testing.T) {
 		{`{"properties": {"a": {"type": "array", "prefixItems": [{}], "items": {` + closed + `"properties": {}}}}}`, "a", "name", ""},
 		{`{"properties": {"a": {"type": "object", ` + closed + `"properties": {}}}}`, "a.x", "", "tmpl_checks_undeclared"},
 		{`{"properties": {"a": {"type": "array", "items": {"type": "string"}}}}`, "a.0", "", "tmpl_checks_undeclared"},
+		// Without for, field is a path under the top level of the data file.
+		{`{` + closed + `"properties": {"options": {"type": "array"}}}`, "", "options", ""},
+		{`{` + closed + `"properties": {"options": {"type": "array"}}}`, "", "optionz", "tmpl_checks_field_whole"},
+		{`{"properties": {"options": {"type": "array"}}}`, "", "optionz", ""},
+		{`{` + closed + `"properties": {"a": {}}}`, "", "", ""},
 		// for goes through a list on the way, its items; field takes keys alone.
 		{`{"properties": {"s": {"type": "array", "items": {` + closed + `"properties": {"p": {"type": "array"}}}}}}`, "s.p", "", ""},
 		{`{"properties": {"s": {"type": "array", "items": {` + closed + `"properties": {"p": {"type": "array"}}}}}}`, "s.q", "", "tmpl_checks_undeclared"},
@@ -290,7 +360,7 @@ func TestDeclared(t *testing.T) {
 			t.Fatalf("%s: %v", tt.schema, err)
 		}
 		c := relation{For: tt.for_, Field: tt.field, Expr: "true", Message: "m", file: "checks.yaml", at: map[string]yamlpos.Pos{}}
-		e := c.declared(s)
+		e := c.declared(s, false)
 		switch {
 		case tt.want == "" && e != nil:
 			t.Errorf("%s, for %s, field %s = %v", tt.schema, tt.for_, tt.field, e)

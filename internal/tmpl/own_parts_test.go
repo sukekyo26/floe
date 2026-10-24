@@ -982,3 +982,23 @@ func TestPartMistakesTogether(t *testing.T) {
 		}
 	}
 }
+
+// The paths of a part's checks.yaml are checked against its schema as a template's are: one misspelt finds
+// nothing to check and is refused at its line, a field without for under the items of a part that is a list.
+func TestOwnPartChecksDeclared(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"lines/schema.json": `{"type": "array", "items": {"type": "object", "additionalProperties": false, ` +
+			`"properties": {"title": {"type": "string"}}}}`,
+		"lines/part.html":   `<ul data-floe-part="lines"></ul>`,
+		"lines/part.css":    "",
+		"lines/checks.yaml": "- field: titel\n  expr: 'true'\n  message: m\n- field: title\n  expr: 'true'\n  message: m\n",
+	})
+	_, mistakes := checkOwn(parts, themesOf(parts))
+	got := fmt.Sprint(mistakes)
+	if len(mistakes) != 1 || !strings.Contains(got, "lines/checks.yaml:1:10: field: schema.json does not declare titel") ||
+		strings.Contains(got, "declare title") {
+		t.Errorf("CheckOwnParts = %s, want the misspelt field alone", got)
+	}
+}

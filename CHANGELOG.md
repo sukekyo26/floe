@@ -28,8 +28,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   looks it takes, the parts it holds and the themes with a file of it;
   `new <name> --from <part>` a part of your own as a copy of another, its box
   renamed and the file of the original of each theme copied, writing
-  nothing over; and `check` every part and theme of your own, a mistake
-  exiting 1. A look alone gives its description in `part.yaml`'s
+  nothing over; and `check` every part and theme of your own (the paths of
+  a part's `checks.yaml` against its schema among them), a mistake exiting
+  1. A look alone gives its description in `part.yaml`'s
   `description:`.
 - Add parts of your own: a directory each in `FLOE_PARTS_DIR` (default
   `$XDG_CONFIG_HOME/floe/parts`) of the files floe's parts have, referred to
@@ -217,7 +218,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   templates; a publish whose `FLOE_TEMPLATES_DIR` or `FLOE_ICONS_DIR` is not
   the running server's is refused, pointing at `floe stop`. Besides
   `page.html`, `page.css` and `schema.json`, a template may check relations between items with `checks.yaml`
-  (on the items of a list, lists on the way gone through: `sections.parts`)
+  (on the items of a list, lists on the way gone through: `sections.parts`, or
+  once on the whole data file without `for`; a part's on the part itself)
   and compute values for the page with `computed.yaml`, in
   [expr](https://expr-lang.org/), a check's failure reported at the data
   file's line and column, a value that cannot be computed at its expression,
