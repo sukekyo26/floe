@@ -62,8 +62,13 @@ cover-check:
     set -euo pipefail
     min_coverage="${MIN_COVERAGE:-90}"
     # Without internal/corpus: what its samples run through cli.Run would count for the unit tests of every package.
-    mapfile -t packages < <(go list {{pkgs}} | grep -v '/internal/corpus$')
-    go test -shuffle=on -covermode=atomic -coverpkg=./internal/... -coverprofile={{cover_file}} "${packages[@]}"
+    # A plain substitution, which fails the recipe as pipefail tells (bash 3.2, on macOS, has no mapfile).
+    packages=$(go list {{pkgs}} | grep -v '/internal/corpus$') || {
+        echo "cover-check: go list found no package to test but internal/corpus; run go list {{pkgs}}" >&2
+        exit 1
+    }
+    # shellcheck disable=SC2086 # one package to a word; an import path has no space
+    go test -shuffle=on -covermode=atomic -coverpkg=./internal/... -coverprofile={{cover_file}} $packages
     total=$(go tool cover -func={{cover_file}} | awk '/^total:/ {gsub("%","",$3); print $3}')
     echo "Total coverage: ${total}% (threshold: ${min_coverage}%)"
     awk -v t="$total" -v m="$min_coverage" 'BEGIN { exit (t+0 >= m+0) ? 0 : 1 }' || {
