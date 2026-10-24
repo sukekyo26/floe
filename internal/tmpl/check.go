@@ -76,7 +76,7 @@ func (l *Library) CheckOwnParts() (warnings usererr.List, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return slices.Clone(set.strays), slices.Concat(set.unusable(nil), set.unusableThemes(nil)).Err()
+	return slices.Clone(set.strays), usererr.OfWhole(slices.Concat(set.unusable(nil), set.unusableThemes(nil))).Err()
 }
 
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values, its
@@ -173,8 +173,9 @@ func brokenParts(set *partSet, named []namedPart) usererr.List {
 		}
 	}
 	// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
-	warnings := set.unusable(func(name string) bool { return refused[name] && set.parts[name] == nil })
-	warnings = append(warnings, set.unusableThemes(nil)...)
+	warnings := usererr.OfWhole(slices.Concat(
+		set.unusable(func(name string) bool { return refused[name] && set.parts[name] == nil }), set.unusableThemes(nil),
+	))
 	return append(warnings, set.strays...)
 }
 

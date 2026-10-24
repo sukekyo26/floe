@@ -31,7 +31,7 @@ func partsIn(own ownDirs) (*partSet, error) {
 	}
 	entries, err := entriesOf(own.parts)
 	if err != nil {
-		return nil, usererr.New("tmpl_parts_dir_unreadable", own.parts, err.Error())
+		return nil, usererr.NewWhole("tmpl_parts_dir_unreadable", own.parts, err.Error())
 	}
 	if !holdsOwn(entries) && !themesThere(own.themes) {
 		return builtinParts()
@@ -43,7 +43,7 @@ func partsIn(own ownDirs) (*partSet, error) {
 // there, or a theme as a part.
 func (own ownDirs) apart() error {
 	if own.parts != "" && own.themes != "" && (inside(own.parts, own.themes) || inside(own.themes, own.parts)) {
-		return usererr.New("tmpl_own_dirs_overlap", own.parts, own.themes)
+		return usererr.NewWhole("tmpl_own_dirs_overlap", own.parts, own.themes)
 	}
 	return nil
 }
@@ -114,7 +114,7 @@ func partsWith(own ownDirs, name, from string) (*partSet, error) {
 	}
 	entries, err := entriesOf(own.parts)
 	if err != nil {
-		return nil, usererr.New("tmpl_parts_dir_unreadable", own.parts, err.Error())
+		return nil, usererr.NewWhole("tmpl_parts_dir_unreadable", own.parts, err.Error())
 	}
 	return readParts(own, entries, staged{name: name, dir: from})
 }
@@ -366,12 +366,12 @@ func (set *partSet) readOwnThemes(dir string) error {
 		if err != nil {
 			why = err.Error()
 		}
-		set.strays = append(set.strays, usererr.New("tmpl_themes_dir_unreadable", dir, why))
+		set.strays = append(set.strays, usererr.NewWhole("tmpl_themes_dir_unreadable", dir, why))
 		return nil
 	}
 	entries, err := entriesOf(dir)
 	if err != nil {
-		return usererr.New("tmpl_themes_dir_unreadable", dir, err.Error())
+		return usererr.NewWhole("tmpl_themes_dir_unreadable", dir, err.Error())
 	}
 	for _, e := range entries {
 		name, at := e.Name(), filepath.Join(dir, e.Name())
