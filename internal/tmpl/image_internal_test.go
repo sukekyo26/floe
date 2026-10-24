@@ -131,7 +131,7 @@ func TestAssetsReadOnce(t *testing.T) {
 	if err := os.CopyFS(dir, os.DirFS("testdata/sizes")); err != nil {
 		t.Fatal(err)
 	}
-	asset := (&Template{Name: "sizes", Dir: dir, Path: dir}).assets()
+	asset := NewLibrary("", "", "", "").template("sizes", dir, dir).assets()
 	first, err := asset("logo.svg")
 	if err != nil {
 		t.Fatal(err)

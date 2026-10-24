@@ -145,6 +145,9 @@ type part struct {
 	html   string // the template of pages, as written
 	css    string
 	checks []relation
+	// the mistake of pages that html/template cannot escape, which no data changes, made once when read: each
+	// item drawn with it tells the same one
+	escape error
 	looks  []takenLook // the looks it takes, as part.yaml names them, each before it
 	taken  []string    // those and the looks they take in turn, each once, once all are read
 	uses   []string    // the parts its HTML names and its schema holds, itself among them
@@ -283,7 +286,7 @@ func (set *partSet) readBuiltin() error {
 			required: nil,
 		}
 		set.parts[name] = &part{
-			name: name, shape: set.shapes[url], pages: nil, words: nil, html: "", css: p.css, checks: nil,
+			name: name, shape: set.shapes[url], pages: nil, words: nil, html: "", css: p.css, checks: nil, escape: nil,
 			looks: nil, taken: nil, uses: nil, about: "", dir: "", replaces: false,
 		}
 	}
@@ -469,8 +472,8 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		}
 		set.strays = append(set.strays, warnings...)
 		set.parts[name] = &part{
-			name: name, shape: nil, pages: nil, words: nil, html: "", css: css, checks: nil, looks: yaml.looks,
-			taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
+			name: name, shape: nil, pages: nil, words: nil, html: "", css: css, checks: nil, escape: nil,
+			looks: yaml.looks, taken: nil, uses: nil, about: yaml.about, dir: "", replaces: false,
 		}
 		return nil
 	}
@@ -484,7 +487,8 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	}
 	set.parts[name] = &part{
 		name: name, shape: set.shapes[url], pages: pages, words: w, html: html, css: css, checks: checks,
-		looks: yaml.looks, taken: nil, uses: nil, about: "", dir: "", replaces: false,
+		escape: escapeOf(pages[fallbackLang], path.Join(dir, "part.html")), looks: yaml.looks, taken: nil, uses: nil,
+		about: "", dir: "", replaces: false,
 	}
 	set.strays = append(set.strays, warnings...)
 	return nil
@@ -805,6 +809,9 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node, esca
 			return nil
 		}
 		escaped[p] = true
+		if p.isOwn() && p.escape != nil {
+			return p.escape
+		}
 	}
 	_, item := itemPos(root, at, false)
 	return drawMistake(err, p.file("part.html"), p.isOwn(), "tmpl_render_item", item, d.File)

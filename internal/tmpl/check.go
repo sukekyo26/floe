@@ -34,7 +34,7 @@ func (l *Library) Check(dir string) (warnings usererr.List, err error) {
 		return nil, usererr.CannotRead(dir, err)
 	}
 	// Found as a library of the directory above would find it, symlink and all.
-	in := &Library{dir: filepath.Dir(abs), mine: l.mine, icons: l.icons, run: l.run}
+	in := &Library{dir: filepath.Dir(abs), mine: l.mine, icons: l.icons, run: l.runOf()}
 	t, err := in.resolve(name)
 	if err != nil {
 		return nil, err
@@ -322,9 +322,6 @@ func (t *Template) checkChecks(s *jsonschema.Schema) error {
 			if e := c.declared(s); e != nil {
 				problems = append(problems, e)
 			}
-		}
-		if _, e := c.program(); e != nil {
-			problems = append(problems, e)
 		}
 	}
 	return problems.Err()

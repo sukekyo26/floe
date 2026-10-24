@@ -102,7 +102,7 @@ func (m *htmlMarks) drawnOrder(page []byte) []int {
 func (d *Data) checkDrawnHTML(page *template.Template, title string, drawn []byte) error {
 	doc := parseDrawn(drawn)
 	if !standard(doc) {
-		return usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_doctype")
+		return d.tmpl.pageMistake("tmpl_html_doctype")
 	}
 	want := treeShape(doc)
 	c := d.marked(rand.Text())
@@ -122,12 +122,20 @@ func (d *Data) checkDrawnHTML(page *template.Template, title string, drawn []byt
 		formIn, outside := inPlace(doc, c.marks.mark, k, it.text)
 		switch {
 		case outside:
-			return usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_outside")
+			return d.tmpl.pageMistake("tmpl_html_outside")
 		case formIn && leavesForm(it.text) || !slices.Equal(treeShape(doc), want):
 			return itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
 		}
 	}
 	return nil
+}
+
+// pageMistake is the mistake key of t's page.html, which drawing it finds but no data changes, made once.
+func (t *Template) pageMistake(key string) error {
+	_, err := onceIn(t.reads.drawn, key).of(func() (struct{}, error) {
+		return struct{}{}, usererr.NewAt(t.file("page.html"), 0, 0, key)
+	})
+	return err
 }
 
 // standard reports whether a browser reads doc in standards mode, as html.ParseFragment reads an item: its

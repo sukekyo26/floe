@@ -45,14 +45,25 @@ func checkRelations(t *Template, d *Data, root ast.Node) error {
 	return relate(list, d, root, t.isOwn())
 }
 
-// readChecks reads t's checks.yaml once, none without one, as readChecks reads it.
+// readChecks reads t's checks.yaml once, none without one, as readChecks reads it, each expression compiled:
+// its mistake is the template's whatever the data.
 func (t *Template) readChecks() ([]relation, error) {
 	return t.reads.checks.of(func() ([]relation, error) {
 		src, found, err := t.readOptional("checks.yaml")
 		if !found || err != nil {
 			return nil, err
 		}
-		return readChecks(t.file("checks.yaml"), src, false)
+		list, err := readChecks(t.file("checks.yaml"), src, false)
+		mistakes := []error{err}
+		for i, c := range list {
+			p, e := c.program()
+			if e != nil {
+				mistakes = append(mistakes, e)
+				continue
+			}
+			list[i].prog = p
+		}
+		return list, usererr.Collect(mistakes...)
 	})
 }
 

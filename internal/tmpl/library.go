@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"html/template"
 	"io/fs"
 	"path"
 	"path/filepath"
@@ -55,6 +56,14 @@ func (l *Library) Run() *Library {
 	return &Library{dir: l.dir, mine: l.mine, icons: l.icons, run: r}
 }
 
+// runOf is the run of l, or a run for this read alone: out of a run, nothing is kept.
+func (l *Library) runOf() *run {
+	if l.run != nil {
+		return l.run
+	}
+	return l.Run().run
+}
+
 // parts reads the parts and themes of one's own of r, once.
 func (r *run) parts() (*partSet, error) {
 	return r.set.of(func() (*partSet, error) { return partsIn(r.own) })
@@ -72,10 +81,7 @@ func onceIn[K comparable, T any](m map[K]*readOnce[T], key K) *readOnce[T] {
 
 // partsRead returns the parts and themes of one's own of l: once in a run, else read anew.
 func (l *Library) partsRead() (*partSet, error) {
-	if l.run != nil {
-		return l.run.parts()
-	}
-	return partsIn(l.mine)
+	return l.runOf().parts()
 }
 
 // NewLibrary returns the templates of dir, a directory of templates of one's own ("" for none), and
@@ -113,9 +119,7 @@ type Template struct {
 	// Path is where a template of one's own was found, as its mistakes name it; "" for a built-in one.
 	Path string
 
-	icons string   // the directory of icons of the library it was found in
-	own   ownDirs  // the directories of parts and themes of one's own of that library
-	run   *run     // what the run it was found in read once; nil without one
+	run   *run     // what the run it was found in reads once
 	set   *partSet // the parts it is drawn with, once read
 	reads *reads
 }
@@ -130,9 +134,14 @@ type reads struct {
 	shape    readOnce[schemaRead]
 	computed readOnce[*computed] // nil without computed.yaml
 	checks   readOnce[[]relation]
+	assets   map[string]*readOnce[template.URL] // by the name page.html gives asset
+	// the mistakes of page.html that drawing it finds, by key: found by drawing data, but the same whatever
+	// the data
+	drawn map[string]*readOnce[struct{}]
 }
 
 // readOnce is what reading a file gave, read the first time alone.
+// LIMIT: no lock, for one goroutine, as a run is. Add one if a run comes to be shared between goroutines.
 type readOnce[T any] struct {
 	done bool
 	v    T
@@ -196,17 +205,13 @@ func (l *Library) ownNames() ([]string, error) {
 // its way. A run reads them once.
 // LIMIT: out of a run, read on every lookup. Keep them if a directory comes to hold thousands of them.
 func (l *Library) entries() ([]fs.DirEntry, error) {
-	read := func() ([]fs.DirEntry, error) {
+	return onceIn(l.runOf().entries, l.dir).of(func() ([]fs.DirEntry, error) {
 		entries, err := entriesOf(l.dir)
 		if err != nil {
 			return nil, usererr.New("tmpl_dir_unreadable", l.dir, err.Error())
 		}
 		return entries, nil
-	}
-	if l.run == nil {
-		return read()
-	}
-	return onceIn(l.run.entries, l.dir).of(read)
+	})
 }
 
 // unknown refuses the template name, which there is none of, naming those there are.
@@ -220,11 +225,13 @@ func (l *Library) unknown(name string) error {
 
 // Find returns the template name, or nil when there is none: in a run, the same one each time.
 func (l *Library) Find(name string) (*Template, error) {
-	if l.run == nil {
-		return l.lookUp(name)
+	// Out of a run, the template is of a run of its own, which reads what it uses for it alone.
+	in := l
+	if in.run == nil {
+		in = l.Run()
 	}
-	return onceIn(l.run.templates, templateAt{dir: l.dir, name: name}).of(func() (*Template, error) {
-		return l.lookUp(name)
+	return onceIn(in.run.templates, templateAt{dir: in.dir, name: name}).of(func() (*Template, error) {
+		return in.lookUp(name)
 	})
 }
 
@@ -282,8 +289,10 @@ func (l *Library) resolve(name string) (*Template, error) {
 }
 
 func (l *Library) template(name, dir, at string) *Template {
+	r := new(reads)
+	r.assets, r.drawn = map[string]*readOnce[template.URL]{}, map[string]*readOnce[struct{}]{}
 	return &Template{
-		Name: name, Dir: dir, Path: at, icons: l.icons, own: l.mine, run: l.run, set: nil, reads: new(reads),
+		Name: name, Dir: dir, Path: at, run: l.runOf(), set: nil, reads: r,
 	}
 }
 
@@ -311,13 +320,7 @@ func (t *Template) isOwn() bool {
 // parts returns the parts t is drawn with and their themes: those its run read once, else read for t.
 func (t *Template) parts() (*partSet, error) {
 	if t.set == nil {
-		var set *partSet
-		var err error
-		if t.run != nil {
-			set, err = t.run.parts()
-		} else {
-			set, err = partsIn(t.own)
-		}
+		set, err := t.run.parts()
 		if err != nil {
 			return nil, err
 		}
@@ -326,12 +329,9 @@ func (t *Template) parts() (*partSet, error) {
 	return t.set, nil
 }
 
-// iconStore is the icons t's diagrams show: those its run reads once, else read anew.
+// iconStore is the icons t's diagrams show, those its run reads once.
 func (t *Template) iconStore() *icons.Store {
-	if t.run != nil {
-		return t.run.icons
-	}
-	return icons.New(t.icons)
+	return t.run.icons
 }
 
 // copied is err, a List of it copied: those it is given to may add to it.

@@ -197,3 +197,75 @@ func TestTemplateVersion(t *testing.T) {
 		}
 	}
 }
+
+// What a template's files, or a part's, hold whatever the data is one mistake in a run, though drawing
+// finds it: each data file drawn with them gets the same one, to be told once.
+func TestTemplateMistakesOnce(t *testing.T) {
+	t.Parallel()
+
+	head := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>`
+	part := `"risks": {"$ref": "floe:///parts/pp.json"}`
+	html := `"risks": {"type": "string", "format": "html"}`
+	for name, tt := range map[string]struct {
+		items, data string
+		files       map[string]string // of the template memo
+		parts       map[string]string
+	}{
+		"an expression of checks.yaml": {
+			items: `"n": {"type": "array", "items": {"type": "number"}}`, data: "n: [1]\n",
+			files: map[string]string{"checks.yaml": "- for: n\n  expr: item +++ (\n  message: m\n"},
+		},
+		"page.html html/template cannot escape": {
+			items: html, data: "",
+			files: map[string]string{"page.html": head + `<body>{{if .Title}}<a href="{{end}}</body></html>`},
+		},
+		"part.html html/template cannot escape": {
+			items: part, data: "risks: { text: hello }\n",
+			parts: map[string]string{
+				"pp/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
+				"pp/part.html":   "<p data-floe-part=\"pp\">\n<script>{{if eq .text `a`}}var a = '{{end}}</script></p>",
+				"pp/part.css":    "",
+			},
+		},
+		"page.html without <!doctype html>": {
+			items: html, data: "risks: <p>a</p>\n",
+			files: map[string]string{"page.html": `<html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
+				`<body><div>{{.Data.risks}}</div></body></html>`},
+		},
+		"page.html drawing an item outside the head and the body": {
+			items: html, data: "risks: <p>hello there, a paragraph longer than a mark</p>\n",
+			files: map[string]string{"page.html": head + `{{.Data.risks}}<body class="r"><p>x</p></body></html>`},
+		},
+		"an image page.html asks for": {
+			items: html, data: "",
+			files: map[string]string{"page.html": head + `<body><img src="{{asset "nope.png"}}" alt=""></body></html>`},
+		},
+	} {
+		dir := memo(t, tt.items)
+		for file, text := range tt.files {
+			if err := os.WriteFile(filepath.Join(dir, "memo", file), []byte(text), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		parts := ""
+		if tt.parts != nil {
+			parts = ownParts(t, tt.parts)
+		}
+		l := tmpl.NewLibrary(dir, parts, "", "").Run()
+		told := make([][]*usererr.Error, 0, 2)
+		for _, file := range []string{"a.yaml", "b.yaml"} {
+			d, err := l.Read(file, []byte("template: memo\nlang: en\ntitle: t\n"+tt.data), "", "")
+			if err == nil {
+				_, err = d.Render("t")
+			}
+			var all usererr.List
+			if failed := all.Add(err); failed != nil || all == nil {
+				t.Fatalf("%s: drawing %s = %v, want mistakes", name, file, err)
+			}
+			told = append(told, all)
+		}
+		if !slices.Equal(told[0], told[1]) {
+			t.Errorf("%s: the mistakes of two data files = %v, %v, want the same ones", name, told[0], told[1])
+		}
+	}
+}
