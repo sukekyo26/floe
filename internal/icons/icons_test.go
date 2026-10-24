@@ -11,10 +11,13 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // packageFiles stand in for the Icon package: what is kept, a service in two categories, sizes and
@@ -284,5 +287,22 @@ func TestFetchRefusals(t *testing.T) {
 		if want := `there is no directory for icons; set FLOE_ICONS_DIR, then fetch a set with "floe icons fetch <set>"`; err == nil || err.Error() != want {
 			t.Errorf("icons without a root = %v, want %s", err, want)
 		}
+	}
+}
+
+// A set not fetched is told once, for goroutines looking up in one store at once too.
+func TestNotFetchedOnce(t *testing.T) {
+	t.Parallel()
+
+	s := icons.New(t.TempDir())
+	errs := make([]error, 8)
+	var wg sync.WaitGroup
+	for i := range errs {
+		wg.Go(func() { _, _, errs[i] = s.Lookup("aws/aws-lambda") })
+	}
+	wg.Wait()
+	r := usererr.Tell(i18n.EnglishCatalog(), usererr.Collect(errs...))
+	if len(r.Mistakes) != 1 || !strings.Contains(r.Mistakes[0].Text, "not in") {
+		t.Fatalf("a set not fetched looked up at once = %q, want it told once", r.Render(""))
 	}
 }

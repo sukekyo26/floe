@@ -607,7 +607,7 @@ func TestPartCompileOrder(t *testing.T) {
 	}
 	first := ""
 	for range 20 {
-		warnings, err := tmpl.CheckOwnParts(parts, themesOf(parts))
+		warnings, err := tmpl.NewLibrary("", parts, themesOf(parts), "").Run().CheckOwnParts()
 		got := fmt.Sprint(warnings, err)
 		if first == "" {
 			first = got

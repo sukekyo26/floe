@@ -11,27 +11,29 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// ownCSS returns name, a file of t's CSS, empty when t has none, refused as cssSheet.refuse refuses one of
+// ownCSS returns t's page.css, empty when t has none, refused as cssSheet.refuse refuses one of
 // @scope: floe scopes the template's CSS to the page, @scope (:root).
-func (t *Template) ownCSS(name string) ([]byte, error) {
-	s, err := t.ownSheet(name)
+func (t *Template) ownCSS() ([]byte, error) {
+	s, err := t.pageSheet()
 	if err != nil {
 		return nil, err
 	}
 	return s.src, nil
 }
 
-// ownSheet returns name, a file of t's CSS, read, refused as ownCSS refuses it.
-func (t *Template) ownSheet(name string) (*cssSheet, error) {
-	src, _, err := t.readOptional(name)
-	if err != nil {
-		return nil, err
-	}
-	s := readCSS(src)
-	if err = s.refuse(t.file(name), true); err != nil {
-		return nil, err
-	}
-	return s, nil
+// pageSheet returns t's page.css, read once, refused as ownCSS refuses it.
+func (t *Template) pageSheet() (*cssSheet, error) {
+	return t.reads.sheet.of(func() (*cssSheet, error) {
+		src, _, err := t.readOptional("page.css")
+		if err != nil {
+			return nil, err
+		}
+		s := readCSS(src)
+		if err = s.refuse(t.file("page.css"), true); err != nil {
+			return nil, err
+		}
+		return s, nil
+	})
 }
 
 // refuse refuses s, the file shown as file, that floe puts in a layer, where a } closes no block,

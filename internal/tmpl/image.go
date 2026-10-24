@@ -255,18 +255,10 @@ func (t *Template) assetMistake(e *usererr.Error) *usererr.Error {
 	return e.Placed(t.file(where), 0, 0, "")
 }
 
-// assets returns asset for one drawing: an image shown many times is read once.
+// assets returns asset, each image read once for t: every data file drawn with t shows the same ones.
 func (t *Template) assets() func(name string) (template.URL, error) {
-	read := map[string]template.URL{}
 	return func(name string) (template.URL, error) {
-		if uri, ok := read[name]; ok {
-			return uri, nil
-		}
-		uri, err := t.asset(name)
-		if err == nil {
-			read[name] = uri
-		}
-		return uri, err
+		return onceIn(t.reads.assets, name).of(func() (template.URL, error) { return t.asset(name) })
 	}
 }
 

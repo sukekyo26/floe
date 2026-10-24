@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"html/template"
 	"io/fs"
 	"path"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
+	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -25,13 +27,67 @@ type Library struct {
 	dir   string  // "" without one
 	mine  ownDirs // the directories of parts and themes of one's own
 	icons string  // the directory of icons the diagrams of data files show; "" for none
+	run   *run    // what one output read once (Run); nil reads it again every time
+}
+
+// run is what the reads of one output read once: the parts and themes of one's own, the directory of
+// templates of one's own, the templates found by name and the icons. It is for one output, in one
+// goroutine: kept for longer, it would not see the files fixed after.
+type run struct {
+	own       ownDirs
+	set       readOnce[*partSet]
+	entries   map[string]*readOnce[[]fs.DirEntry] // by the directory of templates
+	templates map[templateAt]*readOnce[*Template]
+	icons     *icons.Store
+}
+
+// templateAt is a template by the directory of templates it was looked up in and its name.
+type templateAt struct{ dir, name string }
+
+// Run returns l, reading what its reads share once from now on: for one output (a command's run, a
+// server's answer to a request), never for longer, as the files may be fixed in between.
+func (l *Library) Run() *Library {
+	r := &run{
+		own: l.mine, set: readOnce[*partSet]{done: false, v: nil, err: nil},
+		entries: map[string]*readOnce[[]fs.DirEntry]{}, templates: map[templateAt]*readOnce[*Template]{},
+		icons: icons.New(l.icons),
+	}
+	return &Library{dir: l.dir, mine: l.mine, icons: l.icons, run: r}
+}
+
+// runOf is the run of l, or a run for this read alone: out of a run, nothing is kept.
+func (l *Library) runOf() *run {
+	if l.run != nil {
+		return l.run
+	}
+	return l.Run().run
+}
+
+// parts reads the parts and themes of one's own of r, once.
+func (r *run) parts() (*partSet, error) {
+	return r.set.of(func() (*partSet, error) { return partsIn(r.own) })
+}
+
+// onceIn returns the readOnce of key in m, a new one the first time.
+func onceIn[K comparable, T any](m map[K]*readOnce[T], key K) *readOnce[T] {
+	r := m[key]
+	if r == nil {
+		r = new(readOnce[T])
+		m[key] = r
+	}
+	return r
+}
+
+// partsRead returns the parts and themes of one's own of l: once in a run, else read anew.
+func (l *Library) partsRead() (*partSet, error) {
+	return l.runOf().parts()
 }
 
 // NewLibrary returns the templates of dir, a directory of templates of one's own ("" for none), and
 // the built-in ones, which draw with floe's parts and themes and those of partsDir (FLOE_PARTS_DIR) and
 // themesDir (FLOE_THEMES_DIR), "" for none, and the icons kept in iconsDir (FLOE_ICONS_DIR) in diagrams.
 func NewLibrary(dir, partsDir, themesDir, iconsDir string) *Library {
-	return &Library{dir: dir, mine: ownDirs{parts: partsDir, themes: themesDir}, icons: iconsDir}
+	return &Library{dir: dir, mine: ownDirs{parts: partsDir, themes: themesDir}, icons: iconsDir, run: nil}
 }
 
 // PartsDir is the directory of parts of one's own, "" for none.
@@ -62,9 +118,39 @@ type Template struct {
 	// Path is where a template of one's own was found, as its mistakes name it; "" for a built-in one.
 	Path string
 
-	icons string   // the directory of icons of the library it was found in
-	own   ownDirs  // the directories of parts and themes of one's own of that library
-	set   *partSet // the parts it is drawn with, once read
+	run   *run // what the run it was found in reads once
+	reads *reads
+}
+
+// reads is what each file of a template gives, read once for every data file drawn with it. What a data
+// file gives is computed from them for each.
+type reads struct {
+	version  readOnce[struct{}]
+	words    readOnce[words]
+	page     readOnce[parsedPage]
+	sheet    readOnce[*cssSheet] // page.css
+	shape    readOnce[schemaRead]
+	computed readOnce[*computed] // nil without computed.yaml
+	checks   readOnce[[]relation]
+	assets   map[string]*readOnce[template.URL] // by the name page.html gives asset
+}
+
+// readOnce is what reading a file gave, read the first time alone. The value it gives is shared, not to be
+// changed; a List of mistakes alone is given as a copy, as it is added to.
+// LIMIT: no lock, for one goroutine, as a run is. Add one if a run comes to be shared between goroutines.
+type readOnce[T any] struct {
+	done bool
+	v    T
+	err  error
+}
+
+// of returns what read gave the first time it was called.
+func (r *readOnce[T]) of(read func() (T, error)) (T, error) {
+	if !r.done {
+		r.v, r.err = read()
+		r.done = true
+	}
+	return r.v, copied(r.err)
 }
 
 // Names are the templates there are, by name. It fails when the directory of templates of one's own
@@ -112,14 +198,16 @@ func (l *Library) ownNames() ([]string, error) {
 }
 
 // entries are what the directory of templates of one's own holds: none without one, or with a file in
-// its way.
-// LIMIT: read on every lookup. Keep the entries if a directory comes to hold thousands of them.
+// its way. A run reads them once.
+// LIMIT: out of a run, read on every lookup. Keep them if a directory comes to hold thousands of them.
 func (l *Library) entries() ([]fs.DirEntry, error) {
-	entries, err := entriesOf(l.dir)
-	if err != nil {
-		return nil, usererr.New("tmpl_dir_unreadable", l.dir, err.Error())
-	}
-	return entries, nil
+	return onceIn(l.runOf().entries, l.dir).of(func() ([]fs.DirEntry, error) {
+		entries, err := entriesOf(l.dir)
+		if err != nil {
+			return nil, usererr.New("tmpl_dir_unreadable", l.dir, err.Error())
+		}
+		return entries, nil
+	})
 }
 
 // unknown refuses the template name, which there is none of, naming those there are.
@@ -131,8 +219,19 @@ func (l *Library) unknown(name string) error {
 	return usererr.New("tmpl_unknown", name, strings.Join(names, ", "))
 }
 
-// Find returns the template name, or nil when there is none.
+// Find returns the template name, or nil when there is none: in a run, the same one each time.
 func (l *Library) Find(name string) (*Template, error) {
+	// Out of a run, the template is of a run of its own, which reads what it uses for it alone.
+	in := l
+	if in.run == nil {
+		in = l.Run()
+	}
+	return onceIn(in.run.templates, templateAt{dir: in.dir, name: name}).of(func() (*Template, error) {
+		return in.lookUp(name)
+	})
+}
+
+func (l *Library) lookUp(name string) (*Template, error) {
 	if !validName(name) {
 		return nil, nil //nolint:nilnil // not a name a template can have, so none has it
 	}
@@ -146,7 +245,7 @@ func (l *Library) Find(name string) (*Template, error) {
 	case err != nil:
 		return nil, fmt.Errorf("find the template %s: %w", name, err)
 	}
-	return &Template{Name: name, Dir: "", Path: "", icons: l.icons, own: l.mine, set: nil}, nil
+	return l.template(name, "", ""), nil
 }
 
 // own returns the template name of one's own, or nil without one. A file there is not a template, but
@@ -182,7 +281,15 @@ func (l *Library) resolve(name string) (*Template, error) {
 	if dir == "" {
 		return nil, nil //nolint:nilnil // a file, not a template
 	}
-	return &Template{Name: name, Dir: dir, Path: at, icons: l.icons, own: l.mine, set: nil}, nil
+	return l.template(name, dir, at), nil
+}
+
+func (l *Library) template(name, dir, at string) *Template {
+	r := new(reads)
+	r.assets = map[string]*readOnce[template.URL]{}
+	return &Template{
+		Name: name, Dir: dir, Path: at, run: l.runOf(), reads: r,
+	}
 }
 
 // validName reports whether name can name a template: lower case letters, digits, - and _, so that it
@@ -206,18 +313,22 @@ func (t *Template) isOwn() bool {
 	return t.Dir != ""
 }
 
-// parts returns the parts t is drawn with and their themes, read once for t.
-// LIMIT: read for each template, so floe template list reads parts of one's own once per template. Keep
-// them for a command, not in the Library a server keeps, if listing comes to be slow.
+// parts returns the parts t is drawn with and their themes, those its run reads once.
 func (t *Template) parts() (*partSet, error) {
-	if t.set == nil {
-		set, err := partsIn(t.own)
-		if err != nil {
-			return nil, err
-		}
-		t.set = set
+	return t.run.parts()
+}
+
+// iconStore is the icons t's diagrams show, those its run reads once.
+func (t *Template) iconStore() *icons.Store {
+	return t.run.icons
+}
+
+// copied is err, a List of it copied: those it is given to may add to it.
+func copied(err error) error {
+	if l, ok := err.(usererr.List); ok { //nolint:errorlint // the List itself, not one it wraps
+		return slices.Clone(l) //nolint:wrapcheck // the same mistakes
 	}
-	return t.set, nil
+	return err
 }
 
 // readFile reads the file name, a slash-separated path under the template. Under a template of one's
@@ -269,15 +380,18 @@ func (t *Template) files(read func(fs.FS) error) error {
 // floe 1.2.0 or later of major 1, and floe: 0.2 one of 0.2, as a minor version of 0 may break what the
 // one before it took. A built-in template, or one without template.yaml, needs none.
 func (t *Template) checkVersion() error {
-	needs, err := t.needs()
-	if needs == nil || err != nil {
-		return err
-	}
-	have, err := thisFloe()
-	if err != nil {
-		return err
-	}
-	return fits(t.Name, *needs, have)
+	_, err := t.reads.version.of(func() (struct{}, error) {
+		needs, err := t.needs()
+		if needs == nil || err != nil {
+			return struct{}{}, err
+		}
+		have, err := thisFloe()
+		if err != nil {
+			return struct{}{}, err
+		}
+		return struct{}{}, fits(t.Name, *needs, have)
+	})
+	return err
 }
 
 // thisFloe is the version of this floe, a pre-release or build after it (1.2.3-rc.1) left out: a

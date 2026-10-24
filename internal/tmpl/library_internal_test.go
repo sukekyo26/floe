@@ -1,9 +1,12 @@
 package tmpl
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // A floe fits a template from the version it needs up to the next major, or the next minor under
@@ -76,4 +79,99 @@ func TestNeedsFloe(t *testing.T) {
 			t.Errorf("needsFloe(%q) took it", src)
 		}
 	}
+}
+
+// A run reads what its reads share once: a template found by name, the parts and themes of one's own and the
+// mistakes of a template's files are the same each time, for the mistakes to be told once. Without a run,
+// each read reads them again.
+func TestRunReadsOnce(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	templates, themes := filepath.Join(dir, "templates"), filepath.Join(dir, "themes")
+	write := func(name, text string) {
+		t.Helper()
+		file := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte(text), 0o600); err != nil { //nolint:gosec // G703: under the test's own directory
+			t.Fatal(err)
+		}
+	}
+	write("themes/mine/palette.css", "")
+	write("templates/m/schema.json", `{"type": "object", "additionalProperties": false, "properties": {}}`)
+	write("templates/m/page.html", `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body></body></html>`)
+	write("templates/m/computed.yaml", "x: nope\n")
+	src := []byte("template: m\nlang: en\ntitle: t\n")
+
+	l := NewLibrary(templates, "", themes, "").Run()
+	m, err := l.Find("m")
+	if again, err2 := l.Find("m"); err != nil || err2 != nil || again != m {
+		t.Errorf("Find in a run = %p, %p, %v, %v, want the same template", m, again, err, err2)
+	}
+	report, err := l.Find("report")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownSet, err := m.parts()
+	if reportSet, err2 := report.parts(); err != nil || err2 != nil || ownSet != reportSet {
+		t.Errorf("the parts of two templates in a run = %p, %p, %v, %v, want one read", ownSet, reportSet, err, err2)
+	}
+	// Out of a run, every read reads anew: a file fixed in between is seen.
+	fresh := NewLibrary(templates, "", themes, "")
+	if got := mistakesOf(t, fresh, "a.yaml", src, dir); len(got) != 1 {
+		t.Fatalf("reading with computed.yaml broken, out of a run = %v, want its mistake", got)
+	}
+	if err = os.Remove(filepath.Join(templates, "m", "computed.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = fresh.Read("b.yaml", src, "", dir); err != nil {
+		t.Errorf("reading after computed.yaml is fixed, out of a run = %v, want it read anew", err)
+	}
+
+	// The files of a template are read once in a run: broken after the first data file, the second still
+	// draws with them as they were.
+	files := map[string]string{
+		"page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
+			`<body>{{.Calc.twice}}</body></html>`,
+		"computed.yaml": "twice: sum(n) * 2\n",
+		"checks.yaml":   "- for: n\n  expr: item > 0\n  message: positive\n",
+	}
+	broken := map[string]string{
+		"page.html": "<html><body></body></html>", "computed.yaml": "twice: nope\n",
+		"checks.yaml": "- for: n\n  expr: item < 0\n  message: negative\n",
+	}
+	write("templates/k/schema.json", `{"type": "object", "properties": {"n": {"type": "array", "items": {"type": "number"}}}}`)
+	src = []byte("template: k\nlang: en\ntitle: t\nn: [2]\n")
+	for name := range broken {
+		for n, text := range files {
+			write("templates/k/"+n, text)
+		}
+		run := NewLibrary(templates, "", themes, "").Run()
+		draw := func(file string) error {
+			d, e := run.Read(file, src, "", dir)
+			if e == nil {
+				_, e = d.Render("t")
+			}
+			return e
+		}
+		if err = draw("a.yaml"); err != nil {
+			t.Fatal(err)
+		}
+		write("templates/k/"+name, broken[name])
+		if err = draw("b.yaml"); err != nil {
+			t.Errorf("a data file drawn after %s is broken, in the run that read it = %v, want it read once", name, err)
+		}
+	}
+}
+
+func mistakesOf(t *testing.T, l *Library, file string, src []byte, cwd string) usererr.List {
+	t.Helper()
+	_, err := l.Read(file, src, "", cwd)
+	var found usererr.List
+	if failed := found.Add(err); failed != nil || found == nil {
+		t.Fatalf("Read %s = %v, want mistakes", file, err)
+	}
+	return found
 }

@@ -1094,3 +1094,55 @@ func TestSameMistakesThroughServer(t *testing.T) {
 		}
 	}
 }
+
+// What the inputs of a run share is read once, and its mistake told once, where it first comes: that of a
+// template two data files use, icons not fetched that two show, and a theme's file that goes into no page
+// beside two templates.
+func TestSharedToldOnce(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	e.vars["FLOE_THEMES_DIR"] = filepath.Join(e.tmp, "themes")
+	page := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body></body></html>`
+	for _, name := range []string{"m1", "m2"} {
+		e.write(t, "templates/"+name+"/schema.json", `{"type": "object", "additionalProperties": false, "properties": {}}`)
+		e.write(t, "templates/"+name+"/page.html", page)
+		e.write(t, "templates/"+name+"/template.yaml", "floe: 0.0\n")
+		e.write(t, "templates/"+name+"/example.yaml", "template: "+name+"\nlang: en\ntitle: t\n")
+	}
+	e.write(t, "themes/mine/palette.css", "")
+	e.write(t, "themes/mine/stray.css", "p {}\n")
+	stray := filepath.Join(e.tmp, "themes", "mine", "stray.css") + ": this file goes into no page"
+	r := e.run(t, "", "template", "check", filepath.Join(e.tmp, "templates", "m1"), filepath.Join(e.tmp, "templates", "m2"))
+	if r.code != 0 || strings.Count(r.stderr, stray) != 1 {
+		t.Errorf("template check of two templates beside a stray file = %+v, want it warned of once", r)
+	}
+
+	e.write(t, "templates/m1/computed.yaml", "x: nope\n")
+	e.write(t, "work/a.yaml", "template: m1\nlang: en\ntitle: t\n")
+	e.write(t, "work/b.yaml", "template: report\nleed: x\nlang: en\n")
+	e.write(t, "work/c.yaml", "template: m1\nlang: en\ntitle: t\n")
+	want(t, "check of two files of a template with a mistake", e.run(t, "work", "check", "a.yaml", "b.yaml", "c.yaml"), 1, "",
+		filepath.Join(e.tmp, "templates", "m1", "computed.yaml")+":1:4: nope cannot be read as an expression: unknown name nope\n"+
+			"b.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n")
+	if r = e.run(t, "work", "check", "a.yaml", "b.yaml", "c.yaml"); strings.Count(r.stderr, "computed.yaml") != 1 {
+		t.Errorf("check of two files of a template with a mistake = %q, want it told once", r.stderr)
+	}
+
+	icon := "template: report\nlang: en\ntitle: t\nsections:\n  - parts:\n      - diagram:\n          id: i\n          title: t\n" +
+		"          width: 100\n          height: 100\n          parts:\n            - icon: { x: 10, y: 10, name: aws/aws-lambda }\n"
+	e.write(t, "work/i1.yaml", icon)
+	e.write(t, "work/i2.yaml", icon)
+	if r = e.run(t, "work", "check", "i1.yaml", "i2.yaml"); r.code != 1 || strings.Count(r.stderr, "AWS icons are not in") != 1 {
+		t.Errorf("check of two files that show icons not fetched = %+v, want it told once", r)
+	}
+
+	e.write(t, "templates/nh/schema.json", `{"type": "object", "additionalProperties": false, "properties": {}}`)
+	e.write(t, "templates/nh/page.html", `<!doctype html><html lang="{{.Lang}}"><body></body></html>`)
+	e.write(t, "work/h1.yaml", "template: nh\nlang: en\ntitle: t\n")
+	e.write(t, "work/h2.yaml", "template: nh\nlang: en\ntitle: t\n")
+	if r = e.run(t, "work", "check", "h1.yaml", "h2.yaml"); r.code != 1 || strings.Count(r.stderr, "page.html holds no </head>") != 1 {
+		t.Errorf("check of two files of a template whose page.html holds no </head> = %+v, want it told once", r)
+	}
+}

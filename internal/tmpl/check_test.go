@@ -49,17 +49,17 @@ func TestDrawEveryStage(t *testing.T) {
 	}
 }
 
-// check checks the template at dir as tmpl.Check does, without icons, and returns its warnings and its
-// mistakes one each, a failure as one.
+// check checks the template at dir as Library.Check does in a run, without icons, and returns its warnings
+// and its mistakes one each, a failure as one.
 func check(dir, parts, themes string) ([]*usererr.Error, []error) {
-	warnings, err := tmpl.Check(dir, parts, themes, "")
+	warnings, err := tmpl.NewLibrary("", parts, themes, "").Run().Check(dir)
 	return warnings, mistakesOf(err)
 }
 
-// checkOwn checks the parts and themes of one's own as tmpl.CheckOwnParts does, and returns its warnings
-// and its mistakes one each, a failure as one.
+// checkOwn checks the parts and themes of one's own as Library.CheckOwnParts does in a run, and returns its
+// warnings and its mistakes one each, a failure as one.
 func checkOwn(parts, themes string) ([]*usererr.Error, []error) {
-	warnings, err := tmpl.CheckOwnParts(parts, themes)
+	warnings, err := tmpl.NewLibrary("", parts, themes, "").Run().CheckOwnParts()
 	return warnings, mistakesOf(err)
 }
 

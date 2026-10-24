@@ -25,7 +25,7 @@ type relation struct {
 
 	file  string                 // checks.yaml, as its mistakes name it
 	at    map[string]yamlpos.Pos // where each key is written, and "" where the check is
-	prog  *vm.Program            // expr compiled ahead, for a part's; nil to compile it when run
+	prog  *vm.Program            // expr, compiled when read
 	floes bool                   // of floe's template or part: its failing to run is floe's failure, not a mistake
 }
 
@@ -38,20 +38,37 @@ type scope struct {
 // checkRelations checks the values of d against its template's checks.yaml, if it has one, and reports
 // every failure at its line and column under root.
 func checkRelations(t *Template, d *Data, root ast.Node) error {
-	src, found, err := t.readOptional("checks.yaml")
-	if !found || err != nil {
-		return err
-	}
-	return relate(t.file("checks.yaml"), src, d, root, t.isOwn())
-}
-
-// relate checks the values of d against the checks src of the file checks, of a template of one's own when
-// own.
-func relate(checks string, src []byte, d *Data, root ast.Node, own bool) error {
-	list, err := readChecks(checks, src, false)
+	list, err := t.readChecks()
 	if err != nil {
 		return err
 	}
+	return relate(list, d, root, t.isOwn())
+}
+
+// readChecks reads t's checks.yaml once, none without one, as readChecks reads it, each expression compiled:
+// its mistake is the template's whatever the data.
+func (t *Template) readChecks() ([]relation, error) {
+	return t.reads.checks.of(func() ([]relation, error) {
+		src, found, err := t.readOptional("checks.yaml")
+		if !found || err != nil {
+			return nil, err
+		}
+		list, err := readChecks(t.file("checks.yaml"), src, false)
+		mistakes := []error{err}
+		for i, c := range list {
+			p, e := c.program()
+			if e != nil {
+				mistakes = append(mistakes, e)
+				continue
+			}
+			list[i].prog = p
+		}
+		return list, usererr.Collect(mistakes...)
+	})
+}
+
+// relate checks the values of d against the checks list, of a template of one's own when own.
+func relate(list []relation, d *Data, root ast.Node, own bool) error {
 	var problems usererr.List
 	for _, c := range list {
 		c.floes = !own
@@ -149,13 +166,6 @@ func (c relation) program() (*vm.Program, *usererr.Error) {
 // check runs c on each item of its list in doc, the values of file, of the shape sh. An error is the
 // template's mistake, and the problems are the data's.
 func (c relation) check(file string, doc map[string]any, sh *shape, root ast.Node) (usererr.List, error) {
-	// A mistake in the expression first: it is the template's whatever the data.
-	if c.prog == nil {
-		var err *usererr.Error
-		if c.prog, err = c.program(); err != nil {
-			return nil, err
-		}
-	}
 	var items []itemAt
 	if !itemsAt(doc, strings.Split(c.For, "."), nil, &items) {
 		return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)

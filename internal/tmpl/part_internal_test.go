@@ -4,6 +4,8 @@ import (
 	"html/template"
 	"io/fs"
 	"maps"
+	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -417,17 +419,17 @@ func TestJoinDescriptions(t *testing.T) {
 	}
 }
 
-// A mistake in a check's expression is told before one in its list, which the data may not reach.
+// A mistake in a check's expression is told when the template's checks.yaml is read, before any data,
+// which may not reach its list.
 func TestCheckExprFirst(t *testing.T) {
 	t.Parallel()
 
-	list, err := readChecks("checks.yaml", []byte("- for: title\n  expr: 'item +'\n  message: m\n"), false)
-	if err != nil {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "checks.yaml"), []byte("- for: title\n  expr: 'item +'\n  message: m\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	problems, err := list[0].check("data.yaml", map[string]any{"title": "t"}, nil, nil)
-	if problems != nil || err == nil || !strings.Contains(err.Error(), "item +") {
-		t.Errorf("check = %v, %v, want the mistake in the expression", problems, err)
+	if _, err := NewLibrary("", "", "", "").template("k", dir, dir).readChecks(); err == nil || !strings.Contains(err.Error(), "item +") {
+		t.Errorf("readChecks = %v, want the mistake in the expression", err)
 	}
 }
 
