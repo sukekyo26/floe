@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"strconv"
@@ -19,14 +20,14 @@ const stopFunc = "floeEscapeStop"
 var errStop = errors.New("stop")
 
 // escapeMistake runs html/template's escaping of page, a page.html or part.html parsed from src and never
-// drawn, shown as file, and returns what html/template refuses there, at the line and column of the node it
-// names when it names one. Escaping takes no data: html/template does it on the first drawing, whatever the
+// drawn, shown as file, and returns what html/template refuses there: the maker's mistake when page is one's
+// own (own), at the line and column of the node it names when it names one, else floe's failure. Escaping takes no data: html/template does it on the first drawing, whatever the
 // data, so a mistake of it is the file's, and every *template.Error is one, made by the escaping alone. It
 // is run on a copy, as a page drawn once cannot be cloned for each language, from a template of the copy's
 // own that calls the page after a function that stops it: html/template escapes the page as it is called,
 // in the text context a page is drawn in, and then nothing of it runs, neither its functions nor its loops.
 // LIMIT: html/template's English (ends in a non-text context: {stateCSS …}); word each ErrorCode if needed.
-func escapeMistake(page *template.Template, src []byte, file string) error {
+func escapeMistake(page *template.Template, src []byte, file string, own bool) error {
 	c, err := page.Clone()
 	if err != nil {
 		return err //nolint:wrapcheck // a parsed page that was never drawn clones
@@ -40,8 +41,11 @@ func escapeMistake(page *template.Template, src []byte, file string) error {
 	}
 	err = run.Execute(io.Discard, nil)
 	var escape *template.Error
-	if !errors.As(err, &escape) {
+	switch {
+	case !errors.As(err, &escape):
 		return nil
+	case !own:
+		return fmt.Errorf("escape %s: %w", file, escape)
 	}
 	line, column := escape.Line, 0
 	if escape.Node != nil {

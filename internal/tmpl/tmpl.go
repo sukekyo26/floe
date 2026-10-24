@@ -581,7 +581,7 @@ func (t *Template) page() (parsedPage, error) {
 		var parseErr, wordsErr, escapeErr error
 		if p.page, parseErr = t.parsePage(src, w); parseErr == nil {
 			wordsErr = t.pageWords(p.page, w)
-			escapeErr = escapeMistake(p.page, src, t.file("page.html"))
+			escapeErr = escapeMistake(p.page, src, t.file("page.html"), t.isOwn())
 		}
 		return p, usererr.Collect(t.refuseInPage(src), parseErr, wordsErr, escapeErr)
 	})

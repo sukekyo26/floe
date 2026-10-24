@@ -259,7 +259,7 @@ func (set *partSet) readBuiltin() error {
 		case e.IsDir():
 			var files fs.FS
 			if files, err = fs.Sub(builtin, e.Name()); err == nil {
-				err = set.readPart(files, e.Name(), path.Join("parts", e.Name()))
+				err = set.readPart(files, e.Name(), path.Join("parts", e.Name()), false)
 			}
 		default:
 			// A schema the parts share.
@@ -448,10 +448,10 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown, part string) error
 	return nil
 }
 
-// readPart reads the part name from files, its directory, shown in its mistakes as dir, into set: a
-// directory without schema.json and part.html is a look alone. The mistakes of its files are told
+// readPart reads the part name from files, its directory, shown in its mistakes as dir, into set, one's own
+// with own, else floe's: a directory without schema.json and part.html is a look alone. The mistakes of its files are told
 // together, so that floe part check tells them all at once.
-func (set *partSet) readPart(files fs.FS, name, dir string) error {
+func (set *partSet) readPart(files fs.FS, name, dir string, own bool) error {
 	look, err := isLookDir(files, dir)
 	if err != nil {
 		return err
@@ -470,7 +470,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		return nil
 	}
 	url := partsURL + name + ".json"
-	html, w, pages, pagesErr := readPartPages(files, name, dir)
+	html, w, pages, pagesErr := readPartPages(files, name, dir, own)
 	css, warnings, cssErr := readPartCSS(files, dir)
 	checks, checksErr := readPartChecks(files, dir)
 	schemaErr := set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json"), name)
@@ -485,10 +485,10 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	return nil
 }
 
-// readPartPages reads the part.html of the part name in files, its directory, shown as dir, and its
-// words, and returns its HTML, its words and its page in each language of them. A mistake of words.yaml is
+// readPartPages reads the part.html of the part name in files, its directory, shown as dir, one's own with
+// own, and its words, and returns its HTML, its words and its page in each language of them. A mistake of words.yaml is
 // told with the page's: the words the page names are then not checked against it.
-func readPartPages(files fs.FS, name, dir string) (string, words, map[string]*template.Template, error) {
+func readPartPages(files fs.FS, name, dir string, own bool) (string, words, map[string]*template.Template, error) {
 	shown := path.Join(dir, "part.html")
 	html, err := fs.ReadFile(files, "part.html")
 	if err != nil {
@@ -507,7 +507,7 @@ func readPartPages(files fs.FS, name, dir string) (string, words, map[string]*te
 		pageErr = w.checkWords(page, shown)
 	}
 	if err == nil {
-		escapeErr = escapeMistake(page, html, shown)
+		escapeErr = escapeMistake(page, html, shown, own)
 	}
 	if err = usererr.Collect(wordsErr, pageErr, escapeErr); err != nil {
 		return "", nil, nil, err //nolint:wrapcheck // its mistakes, or what failed
