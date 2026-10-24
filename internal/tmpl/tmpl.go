@@ -568,7 +568,8 @@ func (p parsedPage) in(word func(string) (string, error)) (*template.Template, e
 
 // page reads and parses the page.html of t once, which holds no <style>: floe puts a page's CSS together,
 // with its words.yaml, nil while it has mistakes, told beside, when no word is checked. Its mistakes are told
-// together: those of its tags, as text, and, parsed, of the words it names.
+// together: those of its tags, as text, and, parsed, of the words it names and of what html/template cannot
+// escape (escapeMistake). Parsed, its page is kept with those mistakes too, which some callers drop.
 func (t *Template) page() (parsedPage, error) {
 	return t.reads.page.of(func() (parsedPage, error) {
 		w, _ := t.words() //nolint:errcheck // told by those who read the words
@@ -580,7 +581,7 @@ func (t *Template) page() (parsedPage, error) {
 		var parseErr, wordsErr, escapeErr error
 		if p.page, parseErr = t.parsePage(src, w); parseErr == nil {
 			wordsErr = t.pageWords(p.page, w)
-			escapeErr = escapeMistake(p.page, src, t.file("page.html"), funcs, template.FuncMap{"asset": nil, "word": nil})
+			escapeErr = escapeMistake(p.page, src, t.file("page.html"))
 		}
 		return p, usererr.Collect(t.refuseInPage(src), parseErr, wordsErr, escapeErr)
 	})

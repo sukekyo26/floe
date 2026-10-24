@@ -507,7 +507,7 @@ func readPartPages(files fs.FS, name, dir string) (string, words, map[string]*te
 		pageErr = w.checkWords(page, shown)
 	}
 	if err == nil {
-		escapeErr = escapeMistake(page, html, shown, funcs, partFuncs, template.FuncMap{"word": nil})
+		escapeErr = escapeMistake(page, html, shown)
 	}
 	if err = usererr.Collect(wordsErr, pageErr, escapeErr); err != nil {
 		return "", nil, nil, err //nolint:wrapcheck // its mistakes, or what failed

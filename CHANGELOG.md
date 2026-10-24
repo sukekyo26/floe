@@ -49,7 +49,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   its `palette.css`, which goes over floe's and changes what it writes. A part
   or theme that cannot be used is refused to the pages that use it and warned
   of by `floe template check`, a part whose `part.html` html/template cannot
-  escape, whatever the data, among them, at the line and column it names; a linked page is drawn again when a file of a
+  escape, whatever the data, among them, at the line and column it names
+  when it names one; a linked page is drawn again when a file of a
   part or a theme is saved, and a publish to a server of other parts or
   themes is refused.
 - Add twenty-two parts, which the built-in `report` takes and a template
