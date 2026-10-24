@@ -269,7 +269,12 @@ func (set *partSet) compileOwn() (map[string]error, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, err = c.Compile(url); err == nil {
+		compiled, err := c.Compile(url)
+		if err == nil {
+			// The other parts stand as true: a path into one is taken, its schema checked when it is read.
+			if why := checksDeclared(p.checks, compiled); why != nil {
+				mistakes[name] = why
+			}
 			continue
 		}
 		why, err := set.compiledMistakes(name, err)

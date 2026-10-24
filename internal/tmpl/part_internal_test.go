@@ -434,6 +434,37 @@ func TestCheckExprFirst(t *testing.T) {
 	}
 }
 
+// floe's parts' checks.yaml name paths their schemas declare, as those of one's own are checked.
+func TestFloePartChecksDeclared(t *testing.T) {
+	t.Parallel()
+
+	set, err := builtinParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := set.compiler(map[string]bool{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked := 0
+	for name, p := range set.parts {
+		if len(p.checks) == 0 {
+			continue
+		}
+		s, err := c.Compile(partsURL + name + ".json")
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if err := checksDeclared(p.checks, s); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+		checked++
+	}
+	if checked < 6 {
+		t.Errorf("checked the checks.yaml of %d parts, want every one of floe's, 6 or more", checked)
+	}
+}
+
 // Every expression of a part's checks.yaml that cannot be read is told, not the first alone.
 func TestPartChecksAllMistakes(t *testing.T) {
 	t.Parallel()

@@ -156,7 +156,7 @@ floe には、テンプレートの項目を描く部品があります。`table
 
 ## checks.yaml
 
-スキーマでは書けない、項目どうしの関係です。リストの要素 1 つずつに検査を当てます。
+スキーマでは書けない、項目どうしの関係です。リストの要素 1 つずつか、データファイル全体に 1 回、検査を当てます。
 
 ```yaml
 # リストまでのキーのパス（sections.parts ならすべての節の部品）
@@ -169,13 +169,23 @@ floe には、テンプレートの項目を描く部品があります。`table
 
 `for` の途中にあるリストは、要素ごとに辿ります。`sections.parts` はすべての節の部品を検査し、落ちた部品は `sections[1].parts[0]` のように出します。`field` は要素の下のキーのパスだけです。
 
+`for` を省くと、データファイル全体を `item` として 1 回だけ検査します。「全部の中から 1 つだけ選ぶ」のような、リスト全体についての決まりは、落ちると 1 回だけ、`field` の位置（この例では `options` の行）に、`field` が無ければトップレベルに出ます。
+
+```yaml
+- field: options
+  expr: doc.status == "proposed" || count(doc.options, .pick != nil) == 1
+  message: 承認した記録は、案をちょうど 1 つ選ぶ
+```
+
+部品の `checks.yaml` も同じ書き方です。`for` を省くと、部品そのものを、部品がリストならその要素 1 つずつを検査します。
+
 `expr` は、成り立つべき [expr](https://expr-lang.org/) の式です。リストの要素を `item`、データファイルの項目を `doc` で参照します。落ちた要素と、式を実行できなかった要素（0 で割ったなど）は、`field` の位置にその値を添えて出します。データに値が無いために止まった要素は検査の誤りで、`expr` の位置に、要素と値の無い項目を添えて出します。`computed.yaml` の式と同じく、値が無くても実行できる式に直します。
 
 ```text
 orders.yaml:13:12: access_patterns[0].key: キーには属性一覧にある属性を使う（「user_id」）
 ```
 
-`for`・`field` のパスは、`schema.json` の `properties` と `items` で宣言されている必要があります。打ち間違えたパスはデータの中に検査するものが見つからず、何も検査しません。`floe template check` は `properties` と `$ref` を（`for` は `items` も）辿り、キーを持たないスキーマがほかのキーを断る（`"additionalProperties": false`、`"unevaluatedProperties": false`、または `object` 以外の `type`）位置のパスと、型に `array` を含まない `for` を誤りにします。`patternProperties`・`allOf`・`anyOf`、許したほかのキーなどで宣言されうるパスは通します。`checks.yaml` そのものの誤りは、`checks.yaml` の行と列で出します。データファイルと同じく、アンカー・エイリアス・タグは使えません。`filter(xs, # > 1)` の要素を指す `#` のように、空白の後の `#` を含む式は引用符で囲みます。囲まないと、YAML がそこからをコメントとして読みます。
+`for`・`field` のパスは、`schema.json` の `properties` と `items` で宣言されている必要があります（`for` の無い `field` は、検査するもののトップレベルに）。打ち間違えたパスはデータの中に検査するものが見つからず、何も検査しません。`floe template check`（部品のものは `floe part check` が部品の schema で。ほかの部品の中へ進むパスは、その部品に任せます）は `properties` と `$ref` を（`for` は `items` も）辿り、キーを持たないスキーマがほかのキーを断る（`"additionalProperties": false`、`"unevaluatedProperties": false`、または `object` 以外の `type`）位置のパスと、型に `array` を含まない `for` を誤りにします。`patternProperties`・`allOf`・`anyOf`、許したほかのキーなどで宣言されうるパスは通します。`checks.yaml` そのものの誤りは、`checks.yaml` の行と列で出します。データファイルと同じく、アンカー・エイリアス・タグは使えません。`filter(xs, # > 1)` の要素を指す `#` のように、空白の後の `#` を含む式は引用符で囲みます。囲まないと、YAML がそこからをコメントとして読みます。
 
 ## computed.yaml
 

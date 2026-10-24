@@ -18,8 +18,9 @@ import (
 
 // relation is a check of checks.yaml that the schema cannot say: expr holds for each item of the list
 // at for, a path of keys like sections or model.tables, a list on the way gone through item by item
-// (sections.parts is the parts of every section). A failure points at the item's field, a path of
-// keys under the item, or at the item without one.
+// (sections.parts is the parts of every section), or without for once for the whole, the data file or
+// the part (each of its items when it is a list). A failure points at the item's field, a path of keys
+// under the item, or at the item without one.
 type relation struct {
 	For, Field, Expr, Message string
 
@@ -52,7 +53,7 @@ func (t *Template) readChecks() ([]relation, error) {
 		if !found || err != nil {
 			return nil, err
 		}
-		return readChecks(t.file("checks.yaml"), src, false)
+		return readChecks(t.file("checks.yaml"), src)
 	})
 }
 
@@ -83,9 +84,8 @@ func checkAll(list []relation, file string, whole itemAt, sh *shape, root ast.No
 // readChecks reads the checks src of file, each expression compiled, a mistake in them at its line and
 // column, returned with the checks: those whose expression does not compile among them, without a
 // program, for floe template check to tell their paths' mistakes too, which check passes over. An
-// expression's mistake is the template's or the part's whatever the data. A part's checks may leave for
-// out, to check the part itself, or each of its items when it is a list.
-func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
+// expression's mistake is the template's or the part's whatever the data.
+func readChecks(file string, src []byte) ([]relation, error) {
 	body, err := yamlpos.Parse(file, src, "tmpl_checks_yaml")
 	if errors.Is(err, yamlpos.ErrEmpty) {
 		return nil, nil
@@ -100,7 +100,7 @@ func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 	var list []relation
 	var problems usererr.List
 	for _, n := range seq.Values {
-		c, e := readCheck(file, n, ofPart)
+		c, e := readCheck(file, n)
 		if e == nil {
 			c.prog, e = c.program()
 			list = append(list, c)
@@ -112,7 +112,7 @@ func readChecks(file string, src []byte, ofPart bool) ([]relation, error) {
 	return list, problems.Err()
 }
 
-func readCheck(file string, n ast.Node, ofPart bool) (relation, *usererr.Error) {
+func readCheck(file string, n ast.Node) (relation, *usererr.Error) {
 	c := relation{
 		For: "", Field: "", Expr: "", Message: "",
 		file: file, at: map[string]yamlpos.Pos{"": yamlpos.Of(n)}, prog: nil, floes: false,
@@ -134,8 +134,8 @@ func readCheck(file string, n ast.Node, ofPart bool) (relation, *usererr.Error) 
 			return c, yamlpos.New(file, c.at[key], "tmpl_not_text", key)
 		}
 	}
-	for _, key := range []string{"for", "expr", "message"} {
-		if *to[key] == "" && (key != "for" || !ofPart) {
+	for _, key := range []string{"expr", "message"} {
+		if *to[key] == "" {
 			at, written := c.at[key]
 			if !written {
 				at = c.at[""]
@@ -224,7 +224,7 @@ func (c relation) run(file string, whole itemAt, sh *shape, items []itemAt, root
 			vars["item"] = dataVar{value: item.value, at: itemPath, shape: shapeAt(sh, whole.value, item.at[len(whole.at):])}
 			if missing := unvalued(p, err, vars); missing != nil {
 				left := strings.Join(missing, ", ")
-				e := yamlpos.New(c.file, c.at["expr"], "tmpl_check_missing", itemPath, file, left, without(file))
+				e := yamlpos.New(c.file, c.at["expr"], "tmpl_check_missing", label(itemPath), file, left, without(file))
 				problems = append(problems, e)
 				continue
 			}
@@ -251,11 +251,11 @@ func (c relation) failure(file string, root ast.Node, at []string, err error) *u
 	}
 	switch {
 	case err != nil:
-		return yamlpos.New(file, pos, "tmpl_check_error", path, c.Message, brief(err))
+		return yamlpos.New(file, pos, "tmpl_check_error", label(path), c.Message, brief(err))
 	case shown != "" && !strings.Contains(shown, "\n"):
-		return yamlpos.New(file, pos, "tmpl_check", path, c.Message, shown)
+		return yamlpos.New(file, pos, "tmpl_check", label(path), c.Message, shown)
 	default:
-		return yamlpos.New(file, pos, "tmpl_item", path, c.Message)
+		return yamlpos.New(file, pos, "tmpl_item", label(path), c.Message)
 	}
 }
 

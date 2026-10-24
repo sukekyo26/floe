@@ -156,7 +156,7 @@ An image, of the data or of `assets/`, is a png, jpeg, gif, webp or svg file, by
 
 ## checks.yaml
 
-Relations between items that a schema cannot say, each checked on every item of a list:
+Relations between items that a schema cannot say, each checked on every item of a list, or once on the whole data file:
 
 ```yaml
 # a path of keys to a list (sections.parts: the parts of every section)
@@ -169,13 +169,23 @@ Relations between items that a schema cannot say, each checked on every item of 
 
 A list on the way of `for` is gone through item by item: `sections.parts` checks the parts of every section, and a failure is reported at `sections[1].parts[0]`. `field` is a path of keys under the item alone.
 
+Without `for`, a check runs once, on the whole data file as `item`: a rule of a list as a whole, such as one item picked of all, fails once, at its `field` (here the line of `options`), or at the top level without one:
+
+```yaml
+- field: options
+  expr: doc.status == "proposed" || count(doc.options, .pick != nil) == 1
+  message: an accepted record picks exactly one option
+```
+
+A part's `checks.yaml` is written the same way: without `for`, a check runs on the part itself, or on each of its items when the part is a list.
+
 `expr` is an [expr](https://expr-lang.org/) expression that must hold. It sees the list's item as `item` and the data file's items as `doc`. Each item it fails for is reported at its field, with the field's value, and so is one it cannot run on (a division by zero); one it stops on for want of a value the data gives none for is the check's, reported at `expr` with the item and the value, to be written to do without it as `computed.yaml`'s expressions are:
 
 ```text
 orders.yaml:13:12: access_patterns[0].key: use an attribute as the key ("user_id")
 ```
 
-The paths of `for` and `field` must be declared in `schema.json`, through `properties` and `items`: a misspelt one would find nothing in the data to check. `floe template check` follows them through `properties` and `$ref`, and `for` through `items` too, and refuses a path where a schema without its key refuses other keys (`"additionalProperties": false`, `"unevaluatedProperties": false`, or a `type` other than `object`), and a `for` whose types leave `array` out. A path a schema may take otherwise (by `patternProperties`, `allOf`, `anyOf`, or other keys it allows) passes. A mistake in `checks.yaml` itself is reported at its line and column there; like a data file, it takes no anchors, aliases or tags. An expression with a ` #` in it, as expr's `#` for the item in `filter(xs, # > 1)`, goes in quotes: YAML would read a comment from there.
+The paths of `for` and `field` must be declared in `schema.json`, through `properties` and `items`, a `field` without `for` at the top of what the check checks: a misspelt one would find nothing in the data to check. `floe template check` (and `floe part check`, for a part's against its schema, where a path into another part is left to that part) follows them through `properties` and `$ref`, and `for` through `items` too, and refuses a path where a schema without its key refuses other keys (`"additionalProperties": false`, `"unevaluatedProperties": false`, or a `type` other than `object`), and a `for` whose types leave `array` out. A path a schema may take otherwise (by `patternProperties`, `allOf`, `anyOf`, or other keys it allows) passes. A mistake in `checks.yaml` itself is reported at its line and column there; like a data file, it takes no anchors, aliases or tags. An expression with a ` #` in it, as expr's `#` for the item in `filter(xs, # > 1)`, goes in quotes: YAML would read a comment from there.
 
 ## computed.yaml
 

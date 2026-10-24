@@ -43,7 +43,7 @@ const relations = `
 
 // relateSrc reads the checks.yaml src and checks d against them, as checkRelations does.
 func relateSrc(src []byte, d *Data, root ast.Node, own bool) error {
-	list, err := readChecks("checks.yaml", src, false)
+	list, err := readChecks("checks.yaml", src)
 	return usererr.Collect(err, relate(list, d, root, own))
 }
 
@@ -199,7 +199,7 @@ func TestRelationsBesideANotList(t *testing.T) {
 		t.Errorf("floe's own = %v, want floe's failure", err)
 	}
 
-	list, err := readChecks("checks.yaml", []byte(checks), true)
+	list, err := readChecks("checks.yaml", []byte(checks))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,6 +209,27 @@ func TestRelationsBesideANotList(t *testing.T) {
 	wantPart := "d.yaml:3:7: p.a[0]: one (\"1\")\nd.yaml:3:7: p.a[0]: three (\"1\")\nchecks.yaml:4:8: for: b does not lead to a list in d.yaml"
 	if err != nil || more.Sorted().Err() == nil || more.Sorted().Err().Error() != wantPart {
 		t.Errorf("a part's = %v %v, want\n%s", more, err, wantPart)
+	}
+}
+
+// A check without for checks the whole data file once, and points at its field, or at the top level
+// without one.
+func TestRelationsOfTheWhole(t *testing.T) {
+	t.Parallel()
+
+	src := "status: accepted\noptions:\n  - title: a\n    pick: x\n  - title: b\n    pick: y\n  - title: c\n"
+	schema := `{"properties": {"status": {}, "note": {}, "options": {"type": "array", "items": {"properties": {"title": {}, "pick": {}}}}}}`
+	for _, tt := range []struct{ checks, want string }{
+		{
+			"- field: options\n  expr: doc.status == 'proposed' || count(doc.options, .pick != nil) == 1\n  message: pick one\n",
+			"d.yaml:3:3: options: pick one",
+		},
+		{"- expr: count(item.options, .pick != nil) == 1\n  message: pick one\n", "d.yaml:1:1: the top level: pick one"},
+		{"- expr: len(doc.note) > 0\n  message: m\n", "checks.yaml:1:9: the top level of d.yaml cannot be checked, as d.yaml gives no value for note"},
+	} {
+		if got := failures(t, tt.checks, src, schema).Error(); !strings.HasPrefix(got, tt.want) || strings.Contains(got, "\n") {
+			t.Errorf("%s= %s\nwant one, %s", tt.checks, got, tt.want)
+		}
 	}
 }
 
@@ -267,6 +288,13 @@ func TestDeclared(t *testing.T) {
 		{`{"properties": {"a": {"type": "array", "prefixItems": [{}], "items": {` + closed + `"properties": {}}}}}`, "a", "name", ""},
 		{`{"properties": {"a": {"type": "object", ` + closed + `"properties": {}}}}`, "a.x", "", "tmpl_checks_undeclared"},
 		{`{"properties": {"a": {"type": "array", "items": {"type": "string"}}}}`, "a.0", "", "tmpl_checks_undeclared"},
+		// Without for, field is a path under the whole, under its items when it takes a list alone.
+		{`{` + closed + `"properties": {"options": {"type": "array"}}}`, "", "options", ""},
+		{`{` + closed + `"properties": {"options": {"type": "array"}}}`, "", "optionz", "tmpl_checks_field_whole"},
+		{`{"properties": {"options": {"type": "array"}}}`, "", "optionz", ""},
+		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "", "url", ""},
+		{`{"type": "array", "items": {` + closed + `"properties": {"url": {}}}}`, "", "uri", "tmpl_checks_field_whole"},
+		{`{` + closed + `"properties": {"a": {}}}`, "", "", ""},
 		// for goes through a list on the way, its items; field takes keys alone.
 		{`{"properties": {"s": {"type": "array", "items": {` + closed + `"properties": {"p": {"type": "array"}}}}}}`, "s.p", "", ""},
 		{`{"properties": {"s": {"type": "array", "items": {` + closed + `"properties": {"p": {"type": "array"}}}}}}`, "s.q", "", "tmpl_checks_undeclared"},

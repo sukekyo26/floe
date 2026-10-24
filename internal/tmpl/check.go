@@ -315,36 +315,54 @@ func (t *Template) checkChecks(s *jsonschema.Schema) error {
 	if failed := problems.Add(err); failed != nil {
 		return failed //nolint:wrapcheck // already says what failed
 	}
-	for _, c := range list {
-		if s != nil {
-			if e := c.declared(s); e != nil {
-				problems = append(problems, e)
-			}
+	if s != nil {
+		if failed := problems.Add(checksDeclared(list, s)); failed != nil {
+			return failed //nolint:wrapcheck // already says what failed
 		}
 	}
 	return problems.Err()
 }
 
-// declared checks that the compiled schema s declares the list at c.For and c.Field under its items:
+// checksDeclared returns the mistakes of the paths of list that the compiled schema s does not declare
+// (declared), nil without one.
+func checksDeclared(list []relation, s *jsonschema.Schema) error {
+	var problems usererr.List
+	for _, c := range list {
+		if e := c.declared(s); e != nil {
+			problems = append(problems, e)
+		}
+	}
+	return problems.Err()
+}
+
+// declared checks that the compiled schema s declares the list at c.For and c.Field under what c checks,
+// its items, or without for, as items picks, the whole s declares, its items when it takes a list alone:
 // a path misspelt would find nothing in the data to check, and fail no data. A path is refused only
 // where the schema surely refuses it, a list only where its types leave array out.
 func (c relation) declared(s *jsonschema.Schema) *usererr.Error {
-	list, sure := declaredAt(s, strings.Split(c.For, "."), true)
+	checked := s
 	switch {
-	case list == nil && sure:
-		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
-	case list == nil:
-		return nil
-	case !takes(list, "array"):
-		return yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_array", c.For)
-	case c.Field == "":
+	case c.For != "":
+		list, sure := declaredAt(s, strings.Split(c.For, "."), true)
+		switch {
+		case list == nil && sure:
+			return yamlpos.New(c.file, c.at["for"], "tmpl_checks_undeclared", c.For)
+		case list == nil:
+			return nil
+		case !takes(list, "array"):
+			return yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_array", c.For)
+		}
+		checked = itemsOf(list)
+	case takes(s, "array") && !takes(s, "object"):
+		checked = itemsOf(s)
+	}
+	if c.Field == "" || checked == nil {
 		return nil
 	}
-	items := itemsOf(list)
-	if items == nil {
-		return nil
-	}
-	if field, sure := declaredAt(items, strings.Split(c.Field, "."), false); field == nil && sure {
+	if field, sure := declaredAt(checked, strings.Split(c.Field, "."), false); field == nil && sure {
+		if c.For == "" {
+			return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field_whole", c.Field)
+		}
 		return yamlpos.New(c.file, c.at["field"], "tmpl_checks_field", c.Field, c.For)
 	}
 	return nil
