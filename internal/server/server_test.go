@@ -506,7 +506,7 @@ func TestRefusals(t *testing.T) {
 	for _, body := range []string{`{}`, `{"path":"","slug":"Bad Slug"}`} {
 		r := e.do(t, http.MethodPost, "/api/artifacts", body, asCLI...)
 		if got := reportOf(t, r).Render(""); r.status != http.StatusBadRequest ||
-			!strings.Contains(got, "give the absolute path of the HTML or data file to link") || strings.Contains(got, "not an absolute path") {
+			!strings.Contains(got, "a path is empty; give the file or directory") || strings.Contains(got, "not an absolute path") {
 			t.Errorf("POST %s = %d %s", body, r.status, r.body)
 		}
 	}
@@ -895,6 +895,12 @@ func TestSave(t *testing.T) {
 	})
 	if got != "403 415 400 400 400 400" {
 		t.Errorf("refused publishes = %s", got)
+	}
+	// An empty file is refused by the request itself, before Accept, which names no file "".
+	emptyFile := upload(nil, "proj")
+	emptyFile["file"] = ""
+	if r := put("sizes", emptyFile); r.status != http.StatusBadRequest || r.body != "send file, dir and source" {
+		t.Errorf("a publish of an empty file = %d %s", r.status, r.body)
 	}
 
 	// What the command line checks before it sends is checked again, all at once, for whoever calls the API.

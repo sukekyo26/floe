@@ -90,11 +90,13 @@ func Accept(file string, link bool, o Options) (Options, error) {
 		}
 	}
 	var found usererr.List
-	if !link && !IsDataFile(file) {
+	// An empty file has no name to check: its caller refuses it as empty (the CLI's arg, the API's request).
+	data := !link && file != ""
+	if data && !IsDataFile(file) {
 		found = append(found, usererr.New("store_not_data", file))
 	}
 	// Made of the name of a data file only: a stored page is drawn from one.
-	if o.Slug == nil && !link && len(found) == 0 {
+	if o.Slug == nil && data && len(found) == 0 {
 		// No cwd: it names only an index.html after its directory, and this is a data file.
 		slug := SlugFromFile(file, "")
 		o.Slug = &slug
@@ -316,7 +318,7 @@ func (e *Entry) draw(data *tmpl.Data, src string) error {
 // no theme. A theme given empty is Accept's mistake alone, not this one too.
 func (s *Store) readLink(file string, opts Options, cwd string) (string, []byte, error) {
 	if file == "" {
-		return "", nil, usererr.New("store_link_empty")
+		return "", nil, usererr.New("file_path_empty")
 	}
 	// The API gives no cwd: a relative link from it is the sender's mistake.
 	abs, ok := dirs.Under(cwd, file)

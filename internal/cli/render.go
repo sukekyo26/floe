@@ -34,8 +34,13 @@ until all are fixed; nor when two data files would write the same file.
 draws, and the exit code is 1 when there is one, so that CI tells a data file whose page
 was not written again.`,
 		Args: usage(cobra.MinimumNArgs(1)),
-		RunE: func(_ *cobra.Command, args []string) error {
-			return a.renderPages(args, outDir, check)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Left out, it is none (beside each data file); given, even empty, it is a path.
+			var out arg
+			if cmd.Flags().Changed("out-dir") {
+				out = a.arg(outDir)
+			}
+			return a.renderPages(args, out, check)
 		},
 	}
 	f := cmd.Flags()
@@ -51,8 +56,7 @@ type rendered struct {
 	page           []byte
 }
 
-func (a *app) renderPages(files []string, outDir string, check bool) error {
-	out := a.arg(outDir)
+func (a *app) renderPages(files []string, out arg, check bool) error {
 	pages, err := a.drawPages(files, out)
 	switch {
 	case err != nil:

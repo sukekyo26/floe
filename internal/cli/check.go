@@ -50,6 +50,10 @@ func tell(l *usererr.List, err error) {
 // mistakes: each at its line and column, or one about the whole file.
 func drawFile(a *app, p arg) ([]byte, error) {
 	file := p.name
+	// Nowhere is told alone: what its name says is beside the point until it names a file.
+	if p.err != nil {
+		return nil, p.err
+	}
 	if !store.IsDataFile(file) {
 		return nil, usererr.New("cli_check_not_data", file)
 	}

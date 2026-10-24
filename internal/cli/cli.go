@@ -144,8 +144,12 @@ type arg struct {
 
 // arg resolves path for the command, once: under the working directory (dirs.Under), folding its .. by its
 // letters, so that every place reads a path alike; a relative one is refused when the working directory
-// cannot be read (main's Getwd failed: Dir ""). "" stays "", for the command to tell of.
+// cannot be read (main's Getwd failed: Dir ""). "" is refused as empty, by every command alike: a shell
+// variable left unset gives it, and it names no file. A name of spaces alone is a file of that name.
 func (a *app) arg(path string) arg {
+	if path == "" {
+		return arg{name: path, abs: "", err: usererr.New("file_path_empty")}
+	}
 	abs, ok := dirs.Under(a.env.Dir, path)
 	if !ok {
 		return arg{name: path, abs: "", err: usererr.New("cli_relative_no_cwd", path)}
