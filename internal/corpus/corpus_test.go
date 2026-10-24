@@ -53,17 +53,20 @@ func TestCorpus(t *testing.T) {
 // sample is a run of floe on the sample in dir: the settings of floe it runs under, and the files of its
 // golden/ so far, commands.golden among them.
 type sample struct {
-	dir, out string
+	dir, tmp string
 	vars     map[string]string
 	commands strings.Builder
 	files    map[string][]byte
 }
 
+// LIMIT: the golden files hold the English of Go's and other libraries' mistakes as floe passes them on
+// (text/template's in pag of unusable-template). A PR that upgrades Go or a library checks that the change
+// `just golden` makes is to those lines alone.
 func runSample(t *testing.T, dir string) map[string][]byte {
 	t.Helper()
 
 	tmp := realPath(t, t.TempDir())
-	s := &sample{dir: realPath(t, dir), out: filepath.Join(tmp, "out"), files: map[string][]byte{}, vars: map[string]string{
+	s := &sample{dir: realPath(t, dir), tmp: tmp, files: map[string][]byte{}, vars: map[string]string{
 		"HOME":     filepath.Join(tmp, "home"),
 		"FLOE_DIR": filepath.Join(tmp, "store"),
 	}}
@@ -77,58 +80,67 @@ func runSample(t *testing.T, dir string) map[string][]byte {
 		}
 	}
 
-	data := s.glob(t, "*.yaml")
-	if len(data) > 0 && s.run(t, append([]string{"check"}, data...)...) == 0 {
-		s.run(t, append([]string{"render", "--out-dir", s.out}, data...)...)
-		pages, err := filepath.Glob(filepath.Join(s.out, "*.html"))
+	data := s.glob(t, "*.yaml", false)
+	if len(data) > 0 {
+		s.run(t, false, append([]string{"check"}, data...)...)
+	}
+	// One at a time: floe render writes nothing while one of its files has a mistake, and the page of a data
+	// file that passes is drawn beside one that does not.
+	out := filepath.Join(s.tmp, "out")
+	for _, file := range data {
+		s.run(t, false, "render", "--out-dir", out, file)
+	}
+	pages, err := filepath.Glob(filepath.Join(out, "*.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, page := range pages {
+		b, err := os.ReadFile(page)
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, page := range pages {
-			b, err := os.ReadFile(page)
-			if err != nil {
-				t.Fatal(err)
-			}
-			s.files[filepath.Base(page)] = b
-		}
+		s.files[filepath.Base(page)] = b
 	}
-	if templates := s.glob(t, "templates/*"); len(templates) > 0 {
+	if templates := s.glob(t, "templates/*", true); len(templates) > 0 {
 		// LIMIT: absolute, as floe template check reads a relative dir from the process's working directory,
 		// not cli.Env.Dir (floe-usage-issues 58). Name them relative once it reads them from Env.Dir.
 		for i, dir := range templates {
 			templates[i] = filepath.Join(s.dir, dir)
 		}
-		s.run(t, append([]string{"template", "check"}, templates...)...)
+		s.run(t, false, append([]string{"template", "check"}, templates...)...)
 	}
 	if s.has(t, "parts") || s.has(t, "themes") {
-		s.run(t, "part", "check")
+		s.run(t, false, "part", "check")
 	}
-	if specs := s.glob(t, "diagrams/*.yaml"); len(specs) > 0 {
-		s.run(t, append([]string{"diagram", "render"}, specs...)...)
+	if specs := s.glob(t, "diagrams/*.yaml", false); len(specs) > 0 {
+		s.run(t, true, append([]string{"diagram", "render"}, specs...)...)
 	}
 	s.files["commands.golden"] = []byte(s.commands.String())
 	return s.files
 }
 
-// run runs floe in process from the sample's directory, writes what it printed to commands.golden, and
-// returns its exit code. The directories the test made stand as $SAMPLE and $OUT, so that the golden
-// files are the same wherever the repository and the temporary directory are; the pages are written as
-// they are, where a path of the machine would be a mistake.
-func (s *sample) run(t *testing.T, args ...string) int {
+// run runs floe in process from the sample's directory and writes what it printed to commands.golden. The
+// directories the test made stand as $SAMPLE and $TMP, so that the golden files are the same wherever the
+// repository and the temporary directory are; but in what floe drew (drawn: the diagrams it printed), as in
+// the pages, where a path of the machine would be a mistake.
+func (s *sample) run(t *testing.T, drawn bool, args ...string) {
 	t.Helper()
 
 	var stdout, stderr bytes.Buffer
 	code := cli.Run(t.Context(), args, cli.Env{
 		Getenv: func(k string) string { return s.vars[k] }, Dir: s.dir, Stdout: &stdout, Stderr: &stderr, Environ: nil,
 	})
-	stand := strings.NewReplacer(s.out, "$OUT", s.dir, "$SAMPLE")
+	stand := strings.NewReplacer(s.tmp, "$TMP", s.dir, "$SAMPLE")
+	out := stand.Replace(stdout.String())
+	if drawn {
+		out = stdout.String()
+	}
 	fmt.Fprintf(&s.commands, "$ floe %s\nexit %d\n", stand.Replace(strings.Join(args, " ")), code)
-	for _, printed := range []struct{ name, text string }{{"stdout", stdout.String()}, {"stderr", stderr.String()}} {
+	for _, printed := range []struct{ name, text string }{{"stdout", out}, {"stderr", stand.Replace(stderr.String())}} {
 		if printed.text != "" {
-			fmt.Fprintf(&s.commands, "--- %s\n%s", printed.name, stand.Replace(printed.text))
+			fmt.Fprintf(&s.commands, "--- %s\n%s", printed.name, printed.text)
 		}
 	}
-	return code
 }
 
 // has reports whether the sample has the directory sub.
@@ -145,8 +157,9 @@ func (s *sample) has(t *testing.T, sub string) bool {
 	return info.IsDir()
 }
 
-// glob returns the paths of the sample matching pattern, relative to it, in the order of their names.
-func (s *sample) glob(t *testing.T, pattern string) []string {
+// glob returns the paths of the sample matching pattern, relative to it, in the order of their names: the
+// directories alone when dirs, and none whose name starts with a dot (.DS_Store), which Glob's * matches.
+func (s *sample) glob(t *testing.T, pattern string, dirs bool) []string {
 	t.Helper()
 
 	found, err := filepath.Glob(filepath.Join(s.dir, pattern))
@@ -155,6 +168,18 @@ func (s *sample) glob(t *testing.T, pattern string) []string {
 	}
 	rel := make([]string, 0, len(found))
 	for _, f := range found {
+		if hidden(filepath.Base(f)) {
+			continue
+		}
+		if dirs {
+			info, err := os.Stat(f)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !info.IsDir() {
+				continue
+			}
+		}
 		r, err := filepath.Rel(s.dir, f)
 		if err != nil {
 			t.Fatal(err)
@@ -163,6 +188,11 @@ func (s *sample) glob(t *testing.T, pattern string) []string {
 	}
 	slices.Sort(rel)
 	return rel
+}
+
+// hidden reports whether name is one a system or an editor leaves, as macOS's .DS_Store.
+func hidden(name string) bool {
+	return strings.HasPrefix(name, ".")
 }
 
 // realPath resolves the symlinks of dir, as floe does when it prints a path (/var is /private/var on macOS).
@@ -203,6 +233,9 @@ func compareGolden(t *testing.T, golden string, got map[string][]byte) {
 	}
 	want := map[string]bool{}
 	for _, e := range entries {
+		if hidden(e.Name()) {
+			continue
+		}
 		want[e.Name()] = true
 		if _, ok := got[e.Name()]; !ok {
 			t.Errorf("%s: no longer written; %s", filepath.Join(golden, e.Name()), fix)

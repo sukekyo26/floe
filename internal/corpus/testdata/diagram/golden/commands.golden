@@ -1,9 +1,9 @@
 $ floe check diagram.yaml
 exit 0
-$ floe render --out-dir $OUT diagram.yaml
+$ floe render --out-dir $TMP/out diagram.yaml
 exit 0
 --- stdout
-$OUT/diagram.html
+$TMP/out/diagram.html
 $ floe diagram render diagrams/every-part.yaml diagrams/icons.yaml
 exit 0
 --- stdout

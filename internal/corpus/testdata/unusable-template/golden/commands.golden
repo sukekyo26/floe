@@ -5,15 +5,48 @@ pag-a.yaml:1:11: your own template pag cannot be used
   $SAMPLE/templates/pag/page.html: this is not a valid Go template: template: page.html:1: bad character U+003C '<'
 pag-b.yaml:1:11: your own template pag cannot be used, as told above
 sch-a.yaml:1:11: your own template sch cannot be used
-  $SAMPLE/templates/sch/schema.json: #/properties/x/pattern: JSON Schema does not take this: '([' is not valid regex: error parsing regexp: missing closing ]: `[`
+  $SAMPLE/templates/sch/schema.json: #/properties/lead: a diagram is a part of floe's, not a format; write "$ref": "floe:///parts/diagram.json"
 sch-b.yaml:1:11: your own template sch cannot be used, as told above
 wor-a.yaml:1:11: your own template wor cannot be used
-  $SAMPLE/templates/wor/words.yaml:1:5: this is not valid YAML: sequence end token ']' not found
+  $SAMPLE/templates/wor/words.yaml:2:1: ja leaves out a, which en has
 wor-b.yaml:1:11: your own template wor cannot be used, as told above
+$ floe render --out-dir $TMP/out pag-a.yaml
+exit 1
+--- stderr
+pag-a.yaml:1:11: your own template pag cannot be used
+  $SAMPLE/templates/pag/page.html: this is not a valid Go template: template: page.html:1: bad character U+003C '<'
+$ floe render --out-dir $TMP/out pag-b.yaml
+exit 1
+--- stderr
+pag-b.yaml:1:11: your own template pag cannot be used
+  $SAMPLE/templates/pag/page.html: this is not a valid Go template: template: page.html:1: bad character U+003C '<'
+$ floe render --out-dir $TMP/out report.yaml
+exit 0
+--- stdout
+$TMP/out/report.html
+$ floe render --out-dir $TMP/out sch-a.yaml
+exit 1
+--- stderr
+sch-a.yaml:1:11: your own template sch cannot be used
+  $SAMPLE/templates/sch/schema.json: #/properties/lead: a diagram is a part of floe's, not a format; write "$ref": "floe:///parts/diagram.json"
+$ floe render --out-dir $TMP/out sch-b.yaml
+exit 1
+--- stderr
+sch-b.yaml:1:11: your own template sch cannot be used
+  $SAMPLE/templates/sch/schema.json: #/properties/lead: a diagram is a part of floe's, not a format; write "$ref": "floe:///parts/diagram.json"
+$ floe render --out-dir $TMP/out wor-a.yaml
+exit 1
+--- stderr
+wor-a.yaml:1:11: your own template wor cannot be used
+  $SAMPLE/templates/wor/words.yaml:2:1: ja leaves out a, which en has
+$ floe render --out-dir $TMP/out wor-b.yaml
+exit 1
+--- stderr
+wor-b.yaml:1:11: your own template wor cannot be used
+  $SAMPLE/templates/wor/words.yaml:2:1: ja leaves out a, which en has
 $ floe template check $SAMPLE/templates/pag $SAMPLE/templates/sch $SAMPLE/templates/wor
 exit 1
 --- stderr
 $SAMPLE/templates/pag/page.html: this is not a valid Go template: template: page.html:1: bad character U+003C '<'
-$SAMPLE/templates/sch/schema.json: #: it declares properties without "additionalProperties": false, so a misspelt key is not refused
-$SAMPLE/templates/sch/schema.json: #/properties/x/pattern: JSON Schema does not take this: '([' is not valid regex: error parsing regexp: missing closing ]: `[`
-$SAMPLE/templates/wor/words.yaml:1:5: this is not valid YAML: sequence end token ']' not found
+$SAMPLE/templates/sch/schema.json: #/properties/lead: a diagram is a part of floe's, not a format; write "$ref": "floe:///parts/diagram.json"
+$SAMPLE/templates/wor/words.yaml:2:1: ja leaves out a, which en has

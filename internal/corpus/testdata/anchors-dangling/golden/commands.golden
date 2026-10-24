@@ -3,3 +3,8 @@ exit 1
 --- stderr
 anchors-dangling.yaml:7:15: sections[0].parts[0].text: links to #nowhere, which is no id of the page: a heading's id is its text in lower case, without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has
 anchors-dangling.yaml:10:19: sections[0].parts[1].table.rows[0][0]: links to #Setup-Run, which is no id of the page: a heading's id is its text in lower case, without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has
+$ floe render --out-dir $TMP/out anchors-dangling.yaml
+exit 1
+--- stderr
+anchors-dangling.yaml:7:15: sections[0].parts[0].text: links to #nowhere, which is no id of the page: a heading's id is its text in lower case, without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has
+anchors-dangling.yaml:10:19: sections[0].parts[1].table.rows[0][0]: links to #Setup-Run, which is no id of the page: a heading's id is its text in lower case, without punctuation and symbols, the spaces between words made one -, and -1, -2 and on for the second of the same text, or for an id the page already has

@@ -1,1 +1,1 @@
-{"type": "array", "items": {"type": "object", "properties": {"u": {"pattern": "(["}}}}
+{"type": "array", "items": {"type": "object", "properties": {"u": {"type": "string", "format": "html"}}}}
