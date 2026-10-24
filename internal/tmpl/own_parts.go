@@ -155,14 +155,13 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) err
 	return nil
 }
 
-// leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own
-// that holds itself, through the parts it holds, or takes its own look, through the looks it takes, which
-// floe would follow forever, a part, floe's too, that settle refuses, again while one is left out, as a
-// part may take the look of the one left out, or hold it, and then one whose schema names a usable part
-// at its root. A part of floe's is not left out for holding one of one's own that cannot be used: the data
-// that takes that one is refused at its item (partMistake). One of one's own whose schema does not
-// compile, or does not declare a path of its checks.yaml, is among those settle refuses (compileOwn).
-// The failure is floe's (compileOwn).
+// leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own, or one it
+// checks as such (checked), that holds itself, through the parts it holds, or takes its own look, through the looks it
+// takes, which floe would follow forever, a part, floe's too, that settle refuses, again while one is left out, as a
+// part may take the look of the one left out, or hold it, and then one whose schema names a usable part at its root. A
+// part of floe's is not left out for holding one of one's own that cannot be used: the data that takes that one is
+// refused at its item (partMistake). One of one's own whose schema does not compile, or does not declare a path of its
+// checks.yaml, is among those settle refuses (compileOwn). The failure is floe's (compileOwn).
 func (set *partSet) leaveOutUnusable() error {
 	held := func(at string) []string { return set.shapes[partsURL+at+".json"].refsUnder(nil) }
 	looks := func(at string) []string {
@@ -172,10 +171,11 @@ func (set *partSet) leaveOutUnusable() error {
 		return nil
 	}
 	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-		dir := set.parts[name].dir
-		if dir == "" {
+		p := set.parts[name]
+		if !set.checked(p) {
 			continue
 		}
+		dir := cmp.Or(p.dir, p.file(""))
 		if chain := cycle(name, held); chain != nil {
 			set.leaveOut(name, usererr.NewAt(dir, 0, 0, "tmpl_part_cycle", name, strings.Join(chain, " → ")))
 		} else if chain := cycle(name, looks); chain != nil {
@@ -241,7 +241,8 @@ func (set *partSet) settle(mistakes map[string]error) {
 	}
 }
 
-// compileOwn compiles the schema of each part of one's own in set, and returns, by name, what stopped each:
+// compileOwn compiles the schema of each part of one's own in set, or that it checks as such (checked), and
+// returns, by name, what stopped each:
 // the mistakes of its schema.json, or what floe cannot place there (compileMistakes), or, compiled, the
 // paths of its checks.yaml it does not declare (checksDeclared). Each is compiled with every other part,
 // floe's too, standing as true, a schema anything fits, but one that cannot be used, standing as false
@@ -258,18 +259,12 @@ func (set *partSet) settle(mistakes map[string]error) {
 // LIMIT: what floe cannot place is told in jsonschema's English, as floe's failure (tmpl_own_failed).
 func (set *partSet) compileOwn() (map[string]error, error) {
 	mistakes := map[string]error{}
-	stands := map[string]bool{}
-	for url := range set.docs {
-		stands[url] = !set.shares[url]
-	}
 	for name, p := range set.parts {
-		if !p.ownSchema() {
+		if !set.checked(p) || p.isLook() {
 			continue
 		}
 		url := partsURL + name + ".json"
-		stands[url] = false
-		c, err := set.compiler(stands)
-		stands[url] = true
+		c, err := set.standingCompiler(url)
 		if err != nil {
 			return nil, err
 		}
@@ -293,15 +288,39 @@ func (set *partSet) compileOwn() (map[string]error, error) {
 	return mistakes, nil
 }
 
+// standingCompiler returns a compiler of the schemas of set, every part's standing as true, a schema
+// anything fits, but that at url, "" for none, and the schemas the parts share as they are (compileOwn).
+func (set *partSet) standingCompiler(url string) (*jsonschema.Compiler, error) {
+	stands := map[string]bool{}
+	for at := range set.docs {
+		stands[at] = !set.shares[at] && at != url
+	}
+	return set.compiler(stands)
+}
+
+// compileShared compiles each schema the parts share, the parts standing as compileOwn has them, and returns
+// the mistakes of those that do not compile, or a failure.
+func (set *partSet) compileShared() error {
+	c, err := set.standingCompiler("")
+	if err != nil {
+		return err
+	}
+	var mistakes usererr.List
+	for _, url := range slices.Sorted(maps.Keys(set.shares)) {
+		if _, err := c.Compile(url); err != nil {
+			file := path.Join("parts", strings.TrimPrefix(url, partsURL))
+			if failed := mistakes.Add(compileMistakes(url, file, err)); failed != nil {
+				return failed //nolint:wrapcheck // what failed, as it is
+			}
+		}
+	}
+	return mistakes.Err()
+}
+
 // isOwn reports whether p is a part of one's own, not floe's: a file of it that fails on data its schema took
 // is its maker's mistake, else floe's failure.
 func (p *part) isOwn() bool {
 	return p.dir != ""
-}
-
-// ownSchema reports whether p is a part of one's own that draws, whose schema.json floe compiles.
-func (p *part) ownSchema() bool {
-	return p.isOwn() && !p.isLook()
 }
 
 // file is the file name of p, as its mistakes name it: in its directory, or under parts/ for floe's.
@@ -344,7 +363,7 @@ func (set *partSet) readOwnPart(name, from, at string) bool {
 	replaces := floe != nil
 	set.drop(name)
 	if err == nil {
-		err = readIn(dir, func(files fs.FS) error { return set.readPart(files, name, at, true) })
+		err = readIn(dir, func(files fs.FS) error { return set.readPart(files, name, at) })
 	}
 	if err == nil && replaces && !floe.isLook() && set.parts[name].isLook() {
 		err = usererr.NewAt(at, 0, 0, "tmpl_look_replaces", name)
@@ -443,10 +462,10 @@ func (set *partSet) reserved(name string) bool {
 // checkNames refuses the part name when its part.html names it in no
 // data-floe-part, names more than one part in one, or names a part there is none of, when part.yaml has
 // it take the look of a part there is none of, and when its schema holds a part there is none of, or a
-// look alone. floe's parts name themselves, one each, as a test checks.
+// look alone. floe's parts are checked so too, as one's own are (checkFloeParts).
 func (set *partSet) checkNames(name string) error {
 	p := set.parts[name]
-	own := p.isOwn()
+	own := set.checked(p)
 	html, yaml := p.file("part.html"), p.file("part.yaml")
 	named := namedParts(p.html)
 	var errs []error

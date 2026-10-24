@@ -585,7 +585,7 @@ func (t *Template) page() (parsedPage, error) {
 		var parseErr, wordsErr, escapeErr error
 		if p.page, parseErr = t.parsePage(src, w); parseErr == nil {
 			wordsErr = t.pageWords(p.page, w)
-			escapeErr = escapeMistake(p.page, src, t.file("page.html"), t.isOwn())
+			escapeErr = escapeMistake(p.page, src, t.file("page.html"))
 		}
 		return p, usererr.Collect(t.refuseInPage(src), parseErr, wordsErr, escapeErr)
 	})
@@ -705,7 +705,7 @@ func (t *Template) readSchema(set *partSet) (schemaRead, error) {
 	if read.doc, err = t.schemaDoc(); err != nil {
 		return read, err
 	}
-	if read.shape, read.notes, err = t.readShape(read.doc); err != nil {
+	if read.shape, read.notes, err = t.readShape(read.doc, set); err != nil {
 		return read, err
 	}
 	if read.refused, err = set.mistakes(read.notes); err != nil {
@@ -741,8 +741,13 @@ func (t *Template) readAndCompile(set *partSet) (schemaRead, error) {
 	return read, err
 }
 
-// schemaDoc reads the schema.json of t as jsonschema reads it.
+// schemaDoc reads the schema.json of t once as jsonschema reads it.
 func (t *Template) schemaDoc() (any, error) {
+	return t.reads.doc.of(t.readSchemaDoc)
+}
+
+// readSchemaDoc is schemaDoc, read anew.
+func (t *Template) readSchemaDoc() (any, error) {
 	src, err := t.readFile("schema.json")
 	if err != nil {
 		return nil, err
@@ -757,18 +762,14 @@ func (t *Template) schemaDoc() (any, error) {
 	return doc, nil
 }
 
-// readShape reads doc, the schema of t, into its shape, bound to floe's parts, and returns with it what
-// floe refuses of the schema, for the caller to refuse (partSet.mistakes).
-func (t *Template) readShape(doc any) (*shape, *schemaNotes, error) {
+// readShape reads doc, the schema of t, into a shape of its own, bound to the parts of set, and returns with
+// it what floe refuses of the schema, for the caller to refuse (partSet.mistakes).
+func (t *Template) readShape(doc any, set *partSet) (*shape, *schemaNotes, error) {
 	s, notes, err := readShape(doc, schemaURL(t.Name), t.file("schema.json"), "")
 	if err != nil {
 		return nil, nil, err
 	}
 	notes.floeTemplate = !t.isOwn()
-	set, err := t.parts()
-	if err != nil {
-		return nil, nil, err
-	}
 	if name, ok := set.rootPart(s); ok {
 		return nil, nil, usererr.NewAt(t.file("schema.json"), 0, 0, "tmpl_schema_root_part", name)
 	}

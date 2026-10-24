@@ -42,7 +42,9 @@ func (l *Library) Check(dir, cwd string) (warnings usererr.List, err error) {
 		return nil, usererr.CannotRead(dir, err)
 	}
 	// Found as a library of the directory above would find it, symlink and all.
-	in := &Library{dir: filepath.Dir(abs), mine: l.mine, icons: l.icons, run: l.runOf()}
+	in := &Library{
+		dir: filepath.Dir(abs), mine: l.mine, icons: l.icons, run: l.runOf(), floe: l.floe, checked: l.checked,
+	}
 	t, err := in.resolve(name)
 	if err != nil {
 		return nil, err
@@ -88,11 +90,11 @@ func (l *Library) CheckOwnParts() (warnings usererr.List, err error) {
 	return slices.Clone(set.strays), usererr.OfWhole(unusable).Err()
 }
 
-// checkFiles checks the files of t apart from any data: what makes it unusable, as a data file's check
-// finds it (Template.unusable), and what template check alone checks besides: page.html's <head> and
-// doctype, the parts and images it names, the paths of checks.yaml against the schema and the colours of
-// page.css. A check of what another made (page.html as parsed, the schema as compiled) is left out while
-// that has mistakes.
+// checkFiles checks the files of t apart from any data: what makes it unusable, as a data file's check finds it
+// (fileMistakes, what Template.unusable tells), and what template check alone checks besides: page.html's <head>
+// and doctype, the parts and images it names, the paths of checks.yaml against the schema and the colours of
+// page.css. A check of what another made (page.html as parsed, the schema as compiled) is left out while that
+// has mistakes.
 func (t *Template) checkFiles() (usererr.List, error) {
 	if err := t.missingFiles(); err != nil {
 		return nil, err
@@ -101,7 +103,7 @@ func (t *Template) checkFiles() (usererr.List, error) {
 	if err != nil {
 		return nil, err
 	}
-	unusable := t.unusable()
+	unusable := t.fileMistakes()
 	read, _ := t.compileShape() //nolint:errcheck // told by unusable
 	var warnings usererr.List
 	if read.shape != nil {
