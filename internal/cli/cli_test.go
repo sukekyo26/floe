@@ -1193,6 +1193,7 @@ func TestMistakesOfEachInput(t *testing.T) {
 	e.write(t, "templates/m2/computed.yaml", "x: nope\n")
 	e.write(t, "work/a.yaml", "template: m1\nlang: en\ntitle: t\n")
 	e.write(t, "work/b.yaml", "template: report\nleed: x\nlang: en\n")
+	e.write(t, "work/d.yaml", "template: m1\nlang: en\ntitle: t\n")
 	e.write(t, "work/c.yaml", "template: report\nlang: en\ntitle: t\nsections:\n  - parts:\n      - diagram:\n          id: i\n"+
 		"          title: t\n          width: 100\n          height: 100\n          parts:\n"+
 		"            - icon: { x: 10, y: 10, name: aws/aws-lambda }\n      - script: { js: 'x = 1 </script>' }\n")
@@ -1206,6 +1207,7 @@ func TestMistakesOfEachInput(t *testing.T) {
 		want string
 	}{
 		{"check of a file whose template needs a later floe, then another", []string{"check", "a.yaml", "b.yaml"}, newer + leed},
+		{"check of two files whose template needs a later floe", []string{"check", "a.yaml", "b.yaml", "d.yaml"}, newer + leed + newer},
 		{
 			"template check of a template that needs a later floe, then another",
 			[]string{"template", "check", m1, m2},

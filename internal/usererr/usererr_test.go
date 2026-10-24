@@ -114,7 +114,7 @@ func TestAddFor(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Errorf("sorted = %q\nwant %q", got, want)
 	}
-	if text := l.Error(); text != lang+"\na.yaml:2:1: "+lang+"\nb.yaml:2:1: "+lang+"\n"+
+	if text := l.Error(); text != lang+"\na.yaml:2:1: "+lang+"\n"+lang+"\nb.yaml:2:1: "+lang+"\n"+
 		`there is no directory for icons; set FLOE_ICONS_DIR, then fetch a set with "floe icons fetch <set>"`+"\n"+
 		"the part p cannot be used\n  p.json:1:1: "+lang {
 		t.Errorf("told = %q", text)
