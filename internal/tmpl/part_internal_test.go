@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -430,6 +431,17 @@ func TestCheckExprFirst(t *testing.T) {
 	}
 	if _, err := NewLibrary("", "", "", "").template("k", dir, dir).readChecks(); err == nil || !strings.Contains(err.Error(), "item +") {
 		t.Errorf("readChecks = %v, want the mistake in the expression", err)
+	}
+}
+
+// Every expression of a part's checks.yaml that cannot be read is told, not the first alone.
+func TestPartChecksAllMistakes(t *testing.T) {
+	t.Parallel()
+
+	files := fstest.MapFS{"checks.yaml": {Data: []byte("- expr: 'item +'\n  message: m\n- expr: 'itme.x'\n  message: m\n")}} //nolint:exhaustruct // the file's text
+	_, err := readPartChecks(files, "parts/p")
+	if err == nil || !strings.Contains(err.Error(), "parts/p/checks.yaml:1:9: item +") || !strings.Contains(err.Error(), "parts/p/checks.yaml:3:9: itme.x") {
+		t.Errorf("readPartChecks of two broken expressions = %v, want both", err)
 	}
 }
 

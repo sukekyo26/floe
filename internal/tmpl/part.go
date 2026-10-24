@@ -696,17 +696,7 @@ func readPartChecks(files fs.FS, dir string) ([]relation, error) {
 	case err != nil:
 		return nil, usererr.CannotRead(path.Join(dir, "checks.yaml"), err)
 	}
-	checks, err := readChecks(path.Join(dir, "checks.yaml"), src, true)
-	if err != nil {
-		return nil, err
-	}
-	for i, c := range checks {
-		var e *usererr.Error
-		if checks[i].prog, e = c.program(); e != nil {
-			return nil, e
-		}
-	}
-	return checks, nil
+	return readChecks(path.Join(dir, "checks.yaml"), src, true)
 }
 
 // readPartWords reads file, the words.yaml of a part in files, its directory, as readWords does.
@@ -821,32 +811,10 @@ func (d *Data) drew(at []string, html template.HTML) {
 	d.parts[pathKey(at)] = html
 }
 
-// check runs the checks of p on the item f of the data file file, under root. An error is p's own
-// mistake, and the problems are the data's.
+// check runs the checks of p on the item f of the data file file, under root: their mistakes, p's own
+// (a for that leads to no list) and the data's, and floe's failure.
 func (p *part) check(file string, f itemAt, root ast.Node) (usererr.List, error) {
-	var problems usererr.List
-	_, isList := f.value.([]any)
-	for _, c := range p.checks {
-		items := []itemAt{f}
-		// A check without for checks the part itself, or each of its items when it is a list.
-		if c.For != "" || isList {
-			var steps []string
-			if c.For != "" {
-				steps = strings.Split(c.For, ".")
-			}
-			items = nil
-			if !itemsAt(f.value, steps, f.at, &items) {
-				return nil, yamlpos.New(c.file, c.at["for"], "tmpl_checks_not_list", c.For, file)
-			}
-		}
-		c.floes = !p.isOwn()
-		more, err := c.run(file, f, p.shape, items, root)
-		if err != nil {
-			return nil, err
-		}
-		problems = append(problems, more...)
-	}
-	return problems, nil
+	return checkAll(p.checks, file, f, p.shape, root, p.isOwn())
 }
 
 // draw draws f, an item of d p checked, as HTML, its words in d's language, and the parts it holds as d
