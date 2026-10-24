@@ -39,6 +39,9 @@ func TestDiagramRender(t *testing.T) {
 	e.write(t, "specs/icon.yaml", "id: i\n"+head+"  - icon: { x: 10, y: 10, name: aws/aws-lambda }\n")
 	want(t, "render with icons not fetched", e.run(t, "specs", "diagram", "render", "icon.yaml", "shape.yaml"), 1, "",
 		"shape.yaml:6:5: dot: give cy\nfloe: AWS icons are not in ")
+	// Last after an empty path too, which names no file for them to be told at.
+	inOrder(t, "render of '' with icons not fetched", e.run(t, "specs", "diagram", "render", "", "icon.yaml", "shape.yaml"), 1,
+		"floe: argument 1 is an empty path", "shape.yaml:6:5: dot: give cy\n", "floe: AWS icons are not in ")
 	// Icons not fetched are told after the mistakes of the specs, whichever file shows them, and each
 	// spec's mistakes in the order of its lines.
 	e.write(t, "specs/outside.yaml", "id: o\n"+head+"  - dot: { cx: 0, cy: 25 }\n  - box: { x: 80, y: 10, w: 40, h: 30, rows: [A] }\n")

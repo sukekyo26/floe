@@ -76,10 +76,7 @@ func (a *app) render(files []string, assets bool) error {
 		return failed //nolint:wrapcheck // already says what failed
 	}
 	for _, e := range drawn {
-		i := slices.IndexFunc(named, func(p arg) bool { return p.name == e.File })
-		if i < 0 {
-			i = len(named)
-		}
+		i := fileAt(named, e.File)
 		told[i] = append(told[i], e)
 	}
 	if err := slices.Concat(told...).Err(); err != nil {
@@ -95,6 +92,15 @@ func (a *app) render(files []string, assets bool) error {
 	}
 	a.out("%s", out)
 	return nil
+}
+
+// fileAt is the place in named of the file a mistake is at, or len(named) for one at none, of all of the
+// diagrams: an empty path given names no file, so a mistake at none is not its.
+func fileAt(named []arg, file string) int {
+	if i := slices.IndexFunc(named, func(p arg) bool { return p.name == file }); file != "" && i >= 0 {
+		return i
+	}
+	return len(named)
 }
 
 func (a *app) diagramExampleCmd() *cobra.Command {
