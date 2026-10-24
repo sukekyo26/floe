@@ -341,11 +341,9 @@ func checkHTML(set *partSet, d *Data) error {
 		if baseOrMeta.MatchString(it.text) {
 			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_base")))
 		}
-		if name := set.unusableIn(it.text); name != "" {
-			problems = append(problems, set.unusableAt(name, d.File, it.pos))
-		} else if bad := set.misnamedIn(namedIn(it.text, tagsIn(it.text, false))); bad != nil {
-			problems = append(problems, itemError(d.File, it.pos, it.path, bad))
-		}
+		problems = append(problems, set.drawnMisnamings(it.text, d.File, it.pos, func(bad *usererr.Error) *usererr.Error {
+			return itemError(d.File, it.pos, it.path, bad)
+		})...)
 	}
 	return problems.Err()
 }

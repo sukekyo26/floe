@@ -731,7 +731,7 @@ func joinDescriptions(beside, named string) string {
 // checkParts checks the items of d of whole floe draws by parts of set against the checks of their parts,
 // and draws them into d.parts, by the path of keys to each, those a part holds before it, reporting every
 // failure at its line and column under root. It refuses an item of format markdown, or one a part draws,
-// whose drawing names a part that cannot be used, there (unusableIn). It runs after checkDiagrams and
+// whose drawing names a part that cannot be used, there (drawnMisnamings). It runs after checkDiagrams and
 // checkScripts, which draw theirs into d.parts.
 func checkParts(set *partSet, whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
@@ -744,9 +744,9 @@ func checkParts(set *partSet, whole drawnItems, d *Data, root ast.Node) error {
 			drawn, mistake = set.drawPart(f, d, root, holding, escaped)
 		case isText && f.format == "markdown" && set.broken[kindPart][markdownPart] != nil:
 			// page.html draws it; Markdown names no part but its tables'.
-			if name := set.unusableIn(string(d.markdownHTML(text))); name != "" {
-				pos, _ := itemPos(root, f.at, false)
-				drawn, mistake = false, set.unusableAt(name, d.File, pos)
+			pos, _ := itemPos(root, f.at, false)
+			if bad := set.drawnMisnamings(string(d.markdownHTML(text)), d.File, pos, nil); bad != nil {
+				drawn, mistake = false, bad
 			}
 		}
 		if !drawn {
@@ -785,10 +785,15 @@ func (set *partSet) drawPart(
 	if err != nil {
 		return false, p.drawnMistake(err, f.at, d, root, escaped)
 	}
-	if name := set.unusableIn(string(html)); name != "" {
-		// The parts it holds are drawn before it: the innermost item a part draws is told.
+	if len(set.broken[kindPart]) != 0 {
+		// The parts it holds are drawn before it: the innermost item a part draws is told. Its own part's
+		// names are checked as the part is read (checkNames), so a part that cannot be used is the one left.
+		// LIMIT: a part named by HTML or Markdown under a part is told at the part's item, not at the item
+		// under it. Draw what a part holds of format html and markdown apart if pages come to need it.
 		pos, _ := itemPos(root, f.at, false)
-		return false, set.unusableAt(name, d.File, pos)
+		if bad := set.drawnMisnamings(string(html), d.File, pos, nil); bad != nil {
+			return false, bad
+		}
 	}
 	d.drew(f.at, html)
 	return true, nil
@@ -815,24 +820,22 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node, esca
 	return drawMistake(err, p.file("part.html"), p.isOwn(), "tmpl_render_item", item, d.File)
 }
 
-// unusableIn returns the first part that cannot be used html names, which an item of the data draws, or
-// "": html is not read when every part can be used.
-func (set *partSet) unusableIn(html string) string {
-	if len(set.broken[kindPart]) == 0 {
-		return ""
-	}
-	for _, n := range namedIn(html, tagsIn(html, false)) {
-		if set.misnamed(n) == nameBroken {
-			return n.name
+// drawnMisnamings returns the mistakes of the names html names, which an item of the data file file written at
+// pos draws, that the page would be refused for: each part that cannot be used there, the first time with
+// why, as a theme it picks that cannot be used, and each other one as other words it, left out for nil.
+func (set *partSet) drawnMisnamings(
+	html, file string, pos yamlpos.Pos, other func(*usererr.Error) *usererr.Error,
+) usererr.List {
+	var found usererr.List
+	for _, m := range set.misnamings(namedIn(html, tagsIn(html, false))) {
+		switch bad := set.misnamingErr(m); {
+		case m.kind == nameBroken:
+			found = append(found, yamlpos.Place(file, pos, bad))
+		case other != nil:
+			found = append(found, other(bad))
 		}
 	}
-	return ""
-}
-
-// unusableAt is the mistake of the item of the data file file written at pos, which takes the part name,
-// or draws it, that cannot be used: there, the first time with why, as a theme it picks that cannot be used.
-func (set *partSet) unusableAt(name, file string, pos yamlpos.Pos) *usererr.Error {
-	return set.brokenErr(kindPart, name).Placed(file, pos.Line, pos.Column, "")
+	return found
 }
 
 // holdUndrawn notes in holding the items that hold the one at the path at, not drawn: walkWhole puts them
@@ -956,22 +959,48 @@ func withStyles(page []byte, found []tag, style string) ([]byte, bool) {
 	return slices.Concat(page[:at], []byte(style), page[at:]), true
 }
 
-// misnamedIn returns the mistake of the first name of named, the names of a page or of HTML of the data,
-// that the page is refused for, or nil: a part that cannot be used, which an item of the data that draws
-// it is refused for first, at the item (unusableIn), a data-floe-part not of one part's name, or one that
-// names a look alone, which has no box. The elements would be left without their style.
-func (set *partSet) misnamedIn(named []namedPart) *usererr.Error {
+// misnaming is a name of a page, or of what an item of the data draws, that the page is refused for, and
+// what it is to set (misnamed).
+type misnaming struct {
+	namedPart
+
+	kind nameKind
+}
+
+// misnamings returns the names of named, in order, that the page is refused for: a part that cannot be
+// used, a data-floe-part not of one part's name, or one that names a look alone, which has no box. The
+// elements would be left without their style.
+func (set *partSet) misnamings(named []namedPart) []misnaming {
+	var found []misnaming
 	for _, n := range named {
-		switch set.misnamed(n) {
-		case nameBroken:
-			return set.brokenErr(kindPart, n.name)
-		case nameNotOne:
-			return usererr.New("tmpl_page_several", n.value)
-		case nameLookBox:
-			return usererr.New("tmpl_page_look_box", n.name)
+		switch kind := set.misnamed(n); kind {
+		case nameBroken, nameNotOne, nameLookBox:
+			found = append(found, misnaming{namedPart: n, kind: kind})
 		case nameRight, nameUnknown:
 			// A name of no part draws nothing; the check of a template's page.html tells it.
 		}
+	}
+	return found
+}
+
+// misnamingErr is the mistake of m, of the page.
+func (set *partSet) misnamingErr(m misnaming) *usererr.Error {
+	switch m.kind {
+	case nameNotOne:
+		return usererr.New("tmpl_page_several", m.value)
+	case nameLookBox:
+		return usererr.New("tmpl_page_look_box", m.name)
+	case nameRight, nameBroken, nameUnknown:
+	}
+	return set.brokenErr(kindPart, m.name)
+}
+
+// misnamedIn returns the mistake of the first name of named, the names of a page, that the page is refused
+// for (misnamings), or nil. An item of the data that draws one is refused first, at the item
+// (drawnMisnamings).
+func (set *partSet) misnamedIn(named []namedPart) *usererr.Error {
+	if found := set.misnamings(named); found != nil {
+		return set.misnamingErr(found[0])
 	}
 	return nil
 }

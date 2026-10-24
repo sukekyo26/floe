@@ -540,7 +540,7 @@ func (s *schemaCheck) leaf(e *jsonschema.ValidationError) {
 	where := yamlpos.OfValue(key, value)
 	if name, ok := s.unusablePart(e); ok {
 		// As a theme the data picks that cannot be used: at the item, why under it, once.
-		s.problems = append(s.problems, s.set.unusableAt(name, s.file, where))
+		s.problems = append(s.problems, yamlpos.Place(s.file, where, s.set.brokenErr(kindPart, name)))
 		return
 	}
 	switch k := e.ErrorKind.(type) {

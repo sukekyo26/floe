@@ -401,4 +401,11 @@ func TestUnusableTableInMarkdown(t *testing.T) {
 		"  " + filepath.Join(e.tmp, "parts", "table", "schema.json") + ": #/type: JSON Schema does not take this: 'anyOf' failed\n" +
 		c + ":8:15: the part table cannot be used, as told above\n"
 	want(t, "check of HTML and Markdown", e.run(t, "", "check", c), 1, "", stderr)
+	// Every name of the HTML is told at once: one not of one part's name, with the one that cannot be used.
+	d := e.write(t, "d.yaml", page+"      - html: '<div data-floe-part=\"a b\"></div><div data-floe-part=\"table\"></div>'\n")
+	r := e.run(t, "", "check", d)
+	if several := d + `:7:15: sections[0].parts[0].html: the page has data-floe-part="a b"`; r.code != 1 ||
+		!strings.HasPrefix(r.stderr, several) || !strings.Contains(r.stderr, "\n"+d+":7:15: the part table cannot be used\n") {
+		t.Errorf("check of HTML naming two = %+v, want both", r)
+	}
 }
