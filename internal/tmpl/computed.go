@@ -52,11 +52,7 @@ func checkComputed(t *Template, d *Data) error {
 // the schema cannot be read, whose mistakes are told apart.
 func (t *Template) readComputed() (*computed, error) {
 	return t.reads.computed.of(func() (*computed, error) {
-		set, err := t.parts()
-		if err != nil {
-			return nil, err
-		}
-		read, _ := t.compileShape(set) //nolint:errcheck // told by those who read the schema
+		read, _ := t.compileShape() //nolint:errcheck // told by those who read the schema
 		if read.shape == nil {
 			return nil, nil
 		}

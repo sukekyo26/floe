@@ -90,10 +90,10 @@ func (t *Template) checkFiles() (usererr.List, error) {
 	if err != nil {
 		return nil, err
 	}
-	warnings, s, schemaErr := t.checkSchema(set)
-	w, wordsErr := t.words()
+	warnings, s, schemaErr := t.checkSchema()
+	_, wordsErr := t.words()
 	checked, assetsErr := t.checkAssets()
-	p, pageErr := t.page(w)
+	p, pageErr := t.page()
 	var named []namedPart
 	if p.src != nil {
 		named = namedParts(string(p.src))
@@ -116,11 +116,11 @@ func (t *Template) checkPage(set *partSet, s *shape, checked map[string]bool, p 
 	return usererr.Collect(t.checkHead(s, p.src), t.checkNamedParts(set, p.src, named), assets)
 }
 
-// checkSchema checks the schema of t, which refers to the parts of set, and its checks.yaml and
+// checkSchema checks the schema of t, which refers to its parts, and its checks.yaml and
 // computed.yaml, which name its items. It returns the schema's warnings, and its shape, nil when it
 // cannot be read.
-func (t *Template) checkSchema(set *partSet) (usererr.List, *shape, error) {
-	read, err := t.compileShape(set)
+func (t *Template) checkSchema() (usererr.List, *shape, error) {
+	read, err := t.compileShape()
 	var warnings usererr.List
 	var computed error
 	if read.shape != nil {

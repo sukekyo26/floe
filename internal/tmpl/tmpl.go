@@ -290,7 +290,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 		return err
 	}
 	// The template's own mistakes first: data checked against a schema floe refuses means nothing.
-	read, err := t.compileShape(set)
+	read, err := t.compileShape()
 	if err != nil {
 		return err
 	}
@@ -424,7 +424,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	read, err := t.page(w)
+	read, err := t.page()
 	if err != nil {
 		return nil, err
 	}
@@ -557,10 +557,11 @@ func (p parsedPage) in(word func(string) (string, error)) (*template.Template, e
 }
 
 // page reads and parses the page.html of t once, which holds no <style>: floe puts a page's CSS together,
-// with its words w, t's words.yaml, the same each time, nil while it has mistakes. Its mistakes are told
+// with its words.yaml, nil while it has mistakes, told beside, when no word is checked. Its mistakes are told
 // together: those of its tags, as text, and, parsed, of the words it names.
-func (t *Template) page(w words) (parsedPage, error) {
+func (t *Template) page() (parsedPage, error) {
 	return t.reads.page.of(func() (parsedPage, error) {
+		w, _ := t.words() //nolint:errcheck // told by those who read the words
 		src, err := t.readFile("page.html")
 		if err != nil {
 			return parsedPage{page: nil, src: nil, head: nil}, err
@@ -694,11 +695,16 @@ func (t *Template) readSchema(set *partSet) (schemaRead, error) {
 	return read, usererr.Collect(read.refused.Err(), t.refuseShared(read.shape))
 }
 
-// compileShape reads the schema of t as readSchema does and compiles it, and returns every mistake floe
-// template check and a data file tell of it, those of its compiling too.
-func (t *Template) compileShape(set *partSet) (schemaRead, error) {
-	read, err := t.reads.shape.of(func() (schemaRead, error) { return t.readAndCompile(set) })
-	return read, err
+// compileShape reads the schema of t once as readSchema does, bound to the parts of t, and compiles it,
+// and returns every mistake floe template check and a data file tell of it, those of its compiling too.
+func (t *Template) compileShape() (schemaRead, error) {
+	return t.reads.shape.of(func() (schemaRead, error) {
+		set, err := t.parts()
+		if err != nil {
+			return schemaRead{doc: nil, shape: nil, notes: nil, refused: nil, compiled: nil}, err
+		}
+		return t.readAndCompile(set)
+	})
 }
 
 // readAndCompile is compileShape, read anew.

@@ -48,8 +48,6 @@ func Tell(c *i18n.Catalog, err error) Report {
 	if len(all) == 0 {
 		return Report{Mistakes: nil, Failure: fmt.Sprintf("%T with no mistake", err)}
 	}
-	// The same mistake, as told the first time (where, its words and those under it), is told once, wherever
-	// it was made.
 	told, seen := map[string]bool{}, map[string]bool{}
 	r := Report{Mistakes: make([]Told, 0, len(all)), Failure: ""}
 	for _, e := range all {
