@@ -510,26 +510,17 @@ func (d *Data) execute(page *template.Template, title string) ([]byte, error) {
 
 // drawMistake is the mistake err of drawing data with file, a page.html or a part's part.html, which the
 // data's schema took, with args, what was drawn, before err's words. A function of file placed its own
-// mistake (an image of its assets/ that is not right, a word its words.yaml has not); any other is file's:
-// one html/template cannot escape, or file not drawing a value its schema takes (an item left out, a list
-// shorter than it reads). It is its maker's mistake when file is one's own, else floe's failure.
+// mistake (an image of its assets/ that is not right, a word its words.yaml has not); any other is file's,
+// not drawing a value its schema takes (an item left out, a list shorter than it reads), as what html/template
+// cannot escape is told as file is read (escapeMistake). It is its maker's mistake when file is one's own,
+// else floe's failure.
 func drawMistake(err error, file string, own bool, key string, args ...any) error {
 	var bad *usererr.Error
-	var escape *template.Error
 	switch {
 	case errors.As(err, &bad):
 		return bad
 	case !own:
 		return fmt.Errorf("draw with %s: %w", file, err)
-	case errors.As(err, &escape):
-		// html/template escapes file at its first drawing, whatever the data, and says the line apart, but for
-		// a mistake it places at a node alone.
-		// LIMIT: html/template's English, with that line in it. Word each ErrorCode if a reader comes to need it
-		// in its language, and take the line from the node if the source comes to be at hand here.
-		if escape.Line == 0 {
-			return usererr.NewAt(file, 0, 0, "tmpl_go_template", err.Error())
-		}
-		return usererr.NewAt(file, escape.Line, 0, "tmpl_go_template", escape.Description)
 	}
 	// LIMIT: text/template's English, which alone says where in file it failed. Move the line to Line if
 	// text/template comes to give an ExecError's apart.
@@ -577,7 +568,8 @@ func (p parsedPage) in(word func(string) (string, error)) (*template.Template, e
 
 // page reads and parses the page.html of t once, which holds no <style>: floe puts a page's CSS together,
 // with its words.yaml, nil while it has mistakes, told beside, when no word is checked. Its mistakes are told
-// together: those of its tags, as text, and, parsed, of the words it names.
+// together: those of its tags, as text, and, parsed, of the words it names and of what html/template cannot
+// escape (escapeMistake). Parsed, its page is kept with those mistakes too, which some callers drop.
 func (t *Template) page() (parsedPage, error) {
 	return t.reads.page.of(func() (parsedPage, error) {
 		w, _ := t.words() //nolint:errcheck // told by those who read the words
@@ -586,11 +578,12 @@ func (t *Template) page() (parsedPage, error) {
 			return parsedPage{page: nil, src: nil, head: nil}, err
 		}
 		p := parsedPage{page: nil, src: src, head: headMistake(t.file("page.html"), src)}
-		var parseErr, wordsErr error
+		var parseErr, wordsErr, escapeErr error
 		if p.page, parseErr = t.parsePage(src, w); parseErr == nil {
 			wordsErr = t.pageWords(p.page, w)
+			escapeErr = escapeMistake(p.page, src, t.file("page.html"), t.isOwn())
 		}
-		return p, usererr.Collect(t.refuseInPage(src), parseErr, wordsErr)
+		return p, usererr.Collect(t.refuseInPage(src), parseErr, wordsErr, escapeErr)
 	})
 }
 

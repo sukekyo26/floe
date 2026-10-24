@@ -259,7 +259,7 @@ func (set *partSet) readBuiltin() error {
 		case e.IsDir():
 			var files fs.FS
 			if files, err = fs.Sub(builtin, e.Name()); err == nil {
-				err = set.readPart(files, e.Name(), path.Join("parts", e.Name()))
+				err = set.readPart(files, e.Name(), path.Join("parts", e.Name()), false)
 			}
 		default:
 			// A schema the parts share.
@@ -448,10 +448,10 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown, part string) error
 	return nil
 }
 
-// readPart reads the part name from files, its directory, shown in its mistakes as dir, into set: a
-// directory without schema.json and part.html is a look alone. The mistakes of its files are told
-// together, so that floe part check tells them all at once.
-func (set *partSet) readPart(files fs.FS, name, dir string) error {
+// readPart reads the part name from files, its directory, shown in its mistakes as dir, into set, one's own
+// with own, else floe's: a directory without schema.json and part.html is a look alone. The mistakes of its
+// files are told together, so that floe part check tells them all at once.
+func (set *partSet) readPart(files fs.FS, name, dir string, own bool) error {
 	look, err := isLookDir(files, dir)
 	if err != nil {
 		return err
@@ -470,7 +470,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 		return nil
 	}
 	url := partsURL + name + ".json"
-	html, w, pages, pagesErr := readPartPages(files, name, dir)
+	html, w, pages, pagesErr := readPartPages(files, name, dir, own)
 	css, warnings, cssErr := readPartCSS(files, dir)
 	checks, checksErr := readPartChecks(files, dir)
 	schemaErr := set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json"), name)
@@ -485,10 +485,10 @@ func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	return nil
 }
 
-// readPartPages reads the part.html of the part name in files, its directory, shown as dir, and its
-// words, and returns its HTML, its words and its page in each language of them. A mistake of words.yaml is
+// readPartPages reads the part.html of the part name in files, its directory, shown as dir, one's own with
+// own, and its words, and returns its HTML, its words and its page in each language of them. A mistake of words.yaml is
 // told with the page's: the words the page names are then not checked against it.
-func readPartPages(files fs.FS, name, dir string) (string, words, map[string]*template.Template, error) {
+func readPartPages(files fs.FS, name, dir string, own bool) (string, words, map[string]*template.Template, error) {
 	shown := path.Join(dir, "part.html")
 	html, err := fs.ReadFile(files, "part.html")
 	if err != nil {
@@ -498,7 +498,7 @@ func readPartPages(files fs.FS, name, dir string) (string, words, map[string]*te
 	w, wordsErr := readPartWords(files, file)
 	page, err := template.New("part.html").Option("missingkey=error").Funcs(funcs).Funcs(partFuncs).
 		Funcs(template.FuncMap{"word": w.word(file, fallbackLang)}).Parse(string(html))
-	var pageErr error
+	var pageErr, escapeErr error
 	switch {
 	case err != nil:
 		// LIMIT: the line left in text/template's words, as parsePage leaves it.
@@ -506,7 +506,10 @@ func readPartPages(files fs.FS, name, dir string) (string, words, map[string]*te
 	case wordsErr == nil:
 		pageErr = w.checkWords(page, shown)
 	}
-	if err = usererr.Collect(wordsErr, pageErr); err != nil {
+	if err == nil {
+		escapeErr = escapeMistake(page, html, shown, own)
+	}
+	if err = usererr.Collect(wordsErr, pageErr, escapeErr); err != nil {
 		return "", nil, nil, err //nolint:wrapcheck // its mistakes, or what failed
 	}
 	// One page per language of its words, word writing each of them: word "likely" is likely in words.yaml.
@@ -735,13 +738,12 @@ func joinDescriptions(beside, named string) string {
 // checkScripts, which draw theirs into d.parts.
 func checkParts(set *partSet, whole drawnItems, d *Data, root ast.Node) error {
 	var problems usererr.List
-	escaped := map[*part]bool{}
 	holding := map[string]bool{} // by pathKey, the items holding one not drawn
 	for _, f := range whole {
 		drawn, mistake := true, error(nil)
 		switch text, isText := f.value.(string); {
 		case f.part != nil:
-			drawn, mistake = set.drawPart(f, d, root, holding, escaped)
+			drawn, mistake = set.drawPart(f, d, root, holding)
 		case isText && f.format == "markdown" && set.broken[kindPart][markdownPart] != nil:
 			// page.html draws it; Markdown names no part but its tables'.
 			// LIMIT: a Markdown item page.html does not draw is checked all the same; check the drawn page's
@@ -764,9 +766,9 @@ func checkParts(set *partSet, whole drawnItems, d *Data, root ast.Node) error {
 // drawPart checks f, an item of d a part draws, against the checks of the part, and draws it into d.parts,
 // returning whether it is drawn and its mistakes, under root, or floe's failure. One holding an item not
 // drawn, noted in holding, is not drawn: drawn without it, it would fail, or be told to, for that one's
-// mistake. escaped notes the parts html/template cannot escape (drawnMistake).
+// mistake.
 func (set *partSet) drawPart(
-	f drawnItem, d *Data, root ast.Node, holding map[string]bool, escaped map[*part]bool,
+	f drawnItem, d *Data, root ast.Node, holding map[string]bool,
 ) (bool, error) {
 	p := f.part
 	if p.pages == nil {
@@ -785,7 +787,7 @@ func (set *partSet) drawPart(
 	}
 	html, err := p.draw(f.itemAt, d)
 	if err != nil {
-		return false, p.drawnMistake(err, f.at, d, root, escaped)
+		return false, p.drawnMistake(err, f.at, d, root)
 	}
 	if set.anyBrokenNamed() {
 		// The parts it holds are drawn before it: the innermost item a part draws is told. Its own part's
@@ -801,22 +803,13 @@ func (set *partSet) drawPart(
 	return true, nil
 }
 
-// drawnMistake is the mistake err of p drawing the item at the path at of d, under root, or nil when it was
-// told already: what html/template cannot escape in p, the same whatever the item, is told once, noted in
-// escaped.
-func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node, escaped map[*part]bool) error {
+// drawnMistake is the mistake err of p drawing the item at the path at of d, under root. What html/template
+// cannot escape in p made it unusable as it was read (escapeMistake).
+func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node) error {
 	var bad *usererr.Error
-	var escape *template.Error
-	isEscape := errors.As(err, &escape)
 	if errors.As(err, &bad) && bad.Key == "tmpl_words_unknown" {
 		// A word the data names (word .level) that the part has not: told at the item, with the rest.
 		return itemMistake(d.File, root, at, false, bad)
-	}
-	if isEscape {
-		if escaped[p] {
-			return nil
-		}
-		escaped[p] = true
 	}
 	_, item := itemPos(root, at, false)
 	return drawMistake(err, p.file("part.html"), p.isOwn(), "tmpl_render_item", item, d.File)

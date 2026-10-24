@@ -48,7 +48,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   name of one of floe's taking the place of its files of their names, but for
   its `palette.css`, which goes over floe's and changes what it writes. A part
   or theme that cannot be used is refused to the pages that use it and warned
-  of by `floe template check`; a linked page is drawn again when a file of a
+  of by `floe template check`, a part whose `part.html` html/template cannot
+  escape, whatever the data, among them, at the line and column it names
+  when it names one; a linked page is drawn again when a file of a
   part or a theme is saved, and a publish to a server of other parts or
   themes is refused.
 - Add twenty-two parts, which the built-in `report` takes and a template
@@ -219,7 +221,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   templates; a publish whose `FLOE_TEMPLATES_DIR` or `FLOE_ICONS_DIR` is not
   the running server's is refused, pointing at `floe stop`. One that cannot
   be used is refused, with why, at the `template:` of each data file that
-  names it, and stops no page of another template. Besides
+  names it, and stops no page of another template; so is one whose
+  `page.html` html/template cannot escape, whatever the data. Besides
   `page.html`, `page.css` and `schema.json`, a template may check relations between items with `checks.yaml`
   (on the items of a list, lists on the way gone through: `sections.parts`, or
   once on the whole data file without `for`; a part's on the part itself)

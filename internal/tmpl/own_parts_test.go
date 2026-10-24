@@ -839,26 +839,32 @@ func TestPartDrawMistake(t *testing.T) {
 	if !errors.As(err, &all) || len(all) != 2 || all[0].Error() != failed("aside", "there") || all[1].Error() != failed("risks", "hello") {
 		t.Errorf("drawing what is not a number = %v, want\n%s\n%s", err, failed("aside", "there"), failed("risks", "hello"))
 	}
-	// What html/template cannot escape, whatever the data, is told once, at its line.
+	// What html/template cannot escape, whatever the data, makes the part unusable as it is read: told once, at
+	// the line and column of the node html/template names, its words alone, and the second use as told above.
 	parts = ownParts(t, map[string]string{
 		"pp/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
 		"pp/part.html":   "<p data-floe-part=\"pp\">\n<a href=\"{{if eq .text `a`}}/x/{{else}}/s?q={{end}}{{.text}}\">x</a></p>",
 		"pp/part.css":    "",
 	})
-	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pp.json"}, "aside": {"$ref": "floe:///parts/pp.json"}`), parts, "", "")
-	want := filepath.Join(parts, "pp", "part.html") + ":2: this is not a valid Go template: {{.text}} appears in an ambiguous context within a URL"
+	memoDir := memo(t, `"risks": {"$ref": "floe:///parts/pp.json"}, "aside": {"$ref": "floe:///parts/pp.json"}`)
+	l = tmpl.NewLibrary(memoDir, parts, "", "")
+	schema := filepath.Join(memoDir, "memo", "schema.json")
+	want := "data.yaml:1:11: your own template memo cannot be used\n" +
+		"  " + schema + ": #/properties/aside: the part pp cannot be used\n" +
+		"    " + filepath.Join(parts, "pp", "part.html") + ":2:54: this is not a valid Go template: {{.text}} appears in an ambiguous context within a URL\n" +
+		"  " + schema + ": #/properties/risks: the part pp cannot be used, as told above"
 	if _, err = draw(l, "template: memo\nlang: en\nrisks: { text: hello }\naside: { text: there }\n"); err == nil || err.Error() != want {
 		t.Errorf("drawing what cannot be escaped = %v, want %s", err, want)
 	}
-	// One html/template places at a node alone keeps the line in its words.
+	// One html/template places at a node alone is placed at that node too, without its file twice.
 	parts = ownParts(t, map[string]string{
 		"pp/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
 		"pp/part.html":   "<p data-floe-part=\"pp\">\n<script>{{if eq .text `a`}}var a = '{{end}}</script></p>",
 		"pp/part.css":    "",
 	})
 	l = tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/pp.json"}`), parts, "", "")
-	want = filepath.Join(parts, "pp", "part.html") + ": this is not a valid Go template: html/template:part.html:2:13: {{if}} branches end in different contexts: "
-	if _, err = draw(l, "template: memo\nlang: en\nrisks: { text: hello }\n"); err == nil || !strings.HasPrefix(err.Error(), want) {
+	want = filepath.Join(parts, "pp", "part.html") + ":2:14: this is not a valid Go template: {{if}} branches end in different contexts: "
+	if _, err = draw(l, "template: memo\nlang: en\nrisks: { text: hello }\n"); err == nil || !strings.Contains(err.Error(), "\n    "+want) {
 		t.Errorf("drawing branches that end apart = %v, want %s", err, want)
 	}
 }
@@ -1058,5 +1064,56 @@ func TestUnusablePartWhereTaken(t *testing.T) {
 	if got := fmt.Sprint(mistakes); len(mistakes) != 2 || !strings.HasPrefix(got, "[the part links cannot be used") ||
 		!strings.Contains(got, "the part note cannot be used") {
 		t.Errorf("CheckOwnParts = %s, want links and note alone", got)
+	}
+}
+
+// What html/template cannot escape in a part.html, whatever the data, is told by part check, at the line and
+// column of the node html/template names, in its words alone; what drawing alone fails on is not.
+func TestOwnPartsEscape(t *testing.T) {
+	t.Parallel()
+
+	files := map[string]string{}
+	for name, html := range map[string]string{
+		"href":   "<p data-floe-part=\"href\">\n<a href=\"{{if eq .text `a`}}/x/{{else}}/s?q={{end}}{{.text}}\">x</a></p>",
+		"self":   `<div data-floe-part="self">{{with .items}}{{template "outline" .}}{{end}}</div>`,
+		"jsstr":  `<div data-floe-part="jsstr"><script>var s = "{{.text}}</script></div>`,
+		"branch": `<div data-floe-part="branch">{{if .pick}}<a href="{{else}}<b>{{end}}x</div>`,
+		"define": `{{define "row"}}<a href="{{.}}{{end}}<div data-floe-part="define">{{template "row" .text}}</div>`,
+		"attr":   `<p data-floe-part="attr" a"b="c">`,
+		// Right, though no data draws them whole: they are drawing's to tell.
+		"nil":   `<div data-floe-part="nil">{{.pick.name}}</div>`,
+		"if":    `<div data-floe-part="if">{{if .pick}}{{.pick.name}}{{end}}{{.text}}</div>`,
+		"range": `<ul data-floe-part="range">{{range .items}}<li>{{.}}</li>{{end}}</ul>`,
+		"funcs": `<div data-floe-part="funcs">{{markdown .text}}{{with .n}}{{num .}}{{end}}{{with .items}}{{index . 0}}{{end}}</div>`,
+		"html":  `<div data-floe-part="html">{{.text | html}}</div>`,
+	} {
+		files[name+"/schema.json"] = `{"type": "object", "properties": {"text": {"type": "string"}, "n": {"type": "number"}, ` +
+			`"items": {"type": "array", "items": {"type": "string"}}, "pick": {"type": "object", "properties": {"name": {"type": "string"}}}}}`
+		files[name+"/part.html"] = html
+		files[name+"/part.css"] = ""
+	}
+	parts := ownParts(t, files)
+	warnings, err := tmpl.NewLibrary("", parts, themesOf(parts), "").Run().CheckOwnParts()
+	at := func(name, place, words string) string {
+		return "the part " + name + " cannot be used\n  " + filepath.Join(parts, name, "part.html") + place +
+			": this is not a valid Go template: " + words
+	}
+	got := fmt.Sprint(warnings, err)
+	for _, want := range []string{
+		at("attr", "", `"\"" in attribute name: " a\"b=\"c\">"`),
+		at("branch", ":1:35", "{{if}} branches end in different contexts: {stateURL delimDoubleQuote"),
+		at("define", "", "ends in a non-text context: {stateURL delimDoubleQuote urlPartPreQuery"),
+		at("href", ":2:54", "{{.text}} appears in an ambiguous context within a URL"),
+		at("jsstr", "", "ends in a non-text context: {stateJSDqStr"),
+		at("self", ":1:54", `no such template "outline"`),
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("CheckOwnParts = %s, want %s", got, want)
+		}
+	}
+	for _, right := range []string{"nil", "if", "range", "funcs", "html"} {
+		if strings.Contains(got, "the part "+right+" ") {
+			t.Errorf("CheckOwnParts = %s, want %s used", got, right)
+		}
 	}
 }
