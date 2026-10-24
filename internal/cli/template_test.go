@@ -353,7 +353,8 @@ func TestPartNameNoURL(t *testing.T) {
 	want(t, "check", e.run(t, "", "check", page), 0, "", "")
 }
 
-// floe template show and floe part show tell an item a part that cannot be used draws as such.
+// floe template show and floe part show tell an item a part that cannot be used draws as such, and the
+// parts a part holds count it.
 func TestShowUnusablePart(t *testing.T) {
 	t.Parallel()
 
@@ -367,10 +368,17 @@ func TestShowUnusablePart(t *testing.T) {
 	for _, c := range []struct{ args, line string }{
 		{"template show report", "\n      links: the part links cannot be used\n"},
 		{"part show stack", "\n  note: the part note cannot be used\n"},
+		{"part show stack", "\nholds: code, diff, note, table, terminal\n"},
 	} {
 		if r := e.run(t, "", strings.Fields(c.args)...); r.code != 0 || !strings.Contains(r.stdout, c.line) {
 			t.Errorf("%s = %+v, want %q", c.args, r, c.line)
 		}
+	}
+	// A misspelt item is not told to be one of them: written so, it would be refused too.
+	page := e.write(t, "page.yaml", "template: report\nlang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n      - nots: { text: x }\n")
+	r := e.run(t, "", "check", page)
+	if !strings.Contains(r.stderr, "nots is not an item") || strings.Contains(r.stderr, "links") || strings.Contains(r.stderr, "note") {
+		t.Errorf("check of a misspelt item = %+v, want no links or note among those to use", r)
 	}
 }
 

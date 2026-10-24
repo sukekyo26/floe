@@ -254,7 +254,6 @@ func TestFloeHolds(t *testing.T) {
 		{"floe's template", "links", notes(schemaURL("report"), "", true), true},
 		{"a template of one's own", "links", notes(schemaURL("memo"), "", false), false},
 		{"floe's part", "links", notes(partsURL+"stack.json", "stack", false), true},
-		{"a schema the parts share", "links", notes(partsURL+"tone.json", "", false), true},
 		{"a part that can be used", "table", notes(schemaURL("report"), "", true), false},
 	} {
 		if got := set.floeHolds(c.n, c.name); got != c.want {

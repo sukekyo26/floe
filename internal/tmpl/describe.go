@@ -136,6 +136,8 @@ func (s *shape) held(names []string) []string {
 		return names
 	case s.part != nil:
 		return append(names, s.part.name)
+	case s.unusablePart != "":
+		return append(names, s.unusablePart) // the items tell it cannot be used
 	}
 	in := s.inside()
 	for _, k := range in.keys {

@@ -27,7 +27,8 @@ type shape struct {
 	// parts share, and the part, which draws the item whole. nil for none.
 	named *shape
 	part  *part
-	// the part its $ref names, which cannot be used: it stands as false (partSet.brokenNamed); "" for none
+	// the part its $ref names, which cannot be used, one's own or floe's that takes the look of one: it
+	// stands as false (partSet.brokenNamed); "" for none
 	unusablePart string
 
 	// What floe template show and floe part show tell of it, as written beside a $ref.
@@ -403,8 +404,8 @@ func (n *schemaNotes) at(r refAt, e *usererr.Error) *usererr.Error {
 	return e.Placed(n.file, 0, 0, r.ptr)
 }
 
-// floeHolds reports whether the schema of n is floe's, a template's or a part's of floe's or one the parts
-// share, and holds the part name, which cannot be used.
+// floeHolds reports whether the schema of n is floe's, a template's or a part's of floe's, and holds the part
+// name, which cannot be used. A schema the parts share has no notes here: its $refs are floe's own.
 func (set *partSet) floeHolds(n *schemaNotes, name string) bool {
 	switch {
 	case set.broken[kindPart][name] == nil:
@@ -413,7 +414,7 @@ func (set *partSet) floeHolds(n *schemaNotes, name string) bool {
 		p := set.parts[n.part]
 		return p != nil && !p.isOwn()
 	}
-	return n.floeTemplate || set.shares[n.url]
+	return n.floeTemplate
 }
 
 // partMistake returns what set refuses of r, a $ref of the schema of n to base under floe:///parts/, or nil.
