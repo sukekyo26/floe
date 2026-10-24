@@ -94,9 +94,9 @@ func runSample(t *testing.T, dir string) map[string][]byte {
 	if len(data) > 0 {
 		s.run(t, false, append([]string{"check"}, data...)...)
 	}
-	drawnBy := s.renderEach(t, data)
+	each := s.renderEach(t, data)
 	if len(data) > 1 {
-		s.renderTogether(t, data, drawnBy)
+		s.renderTogether(t, data, each)
 	}
 	if templates := s.glob(t, "templates/*", isDir); len(templates) > 0 {
 		// LIMIT: absolute, as floe template check reads a relative dir from the process's working directory,
@@ -117,69 +117,81 @@ func runSample(t *testing.T, dir string) map[string][]byte {
 	return s.files
 }
 
+// alone is what renderEach found of the data files, each rendered on its own.
+type alone struct {
+	drawnBy map[string]string // the data file each page was drawn from
+	failed  []string          // the data files whose render failed
+	clash   bool              // two data files wrote one page, but for case
+}
+
 // renderEach renders each data file on its own, into a directory of its own, as floe render writes nothing
 // while one of its files has a mistake: the page of one that passes is drawn beside one that does not. It
-// puts the pages in s.files, and returns the data file each was drawn from.
-func (s *sample) renderEach(t *testing.T, data []string) map[string]string {
+// puts the pages in s.files.
+func (s *sample) renderEach(t *testing.T, data []string) alone {
 	t.Helper()
 
-	drawnBy := map[string]string{}
+	each := alone{drawnBy: map[string]string{}, failed: nil, clash: false}
 	// By the name in lower case, as floe render refuses two pages of one name but for case: one file to a
 	// filesystem that ignores case (macOS), where golden/ is checked out too.
 	named := map[string]string{}
 	for _, file := range data {
 		out := filepath.Join(s.tmp, "pages", file)
-		s.run(t, false, "render", "--out-dir", out, file)
+		if s.run(t, false, "render", "--out-dir", out, file) != 0 {
+			each.failed = append(each.failed, file)
+		}
 		for name, b := range s.pages(t, out, "the page %s of "+file) {
 			if other, ok := named[strings.ToLower(name)]; ok {
-				t.Errorf("%s and %s both write %s but for case, which golden/ holds one of; rename one of them",
-					drawnBy[other], file, name)
+				each.clash = true
+				but := ""
+				if other != name {
+					but = " but for case"
+				}
+				t.Errorf("%s and %s both write %s%s, which golden/ holds one of; rename one of them",
+					each.drawnBy[other], file, name, but)
 			}
 			named[strings.ToLower(name)] = name
-			drawnBy[name] = file
+			each.drawnBy[name] = file
 			s.files[name] = b
 		}
 	}
-	return drawnBy
+	return each
 }
 
-// renderTogether renders the data files together, for what floe render does of several: none written while
-// one has a mistake, and else each page as renderEach drew it, so that what one file read is not drawn into
-// another's page.
-func (s *sample) renderTogether(t *testing.T, data []string, drawnBy map[string]string) {
+// renderTogether renders the data files together, for what floe render does of several: it passes when, and
+// only when, each passes alone and no two write one page, and then draws each page as renderEach drew it, so
+// that what one file read is not drawn into another's page; else it writes none.
+func (s *sample) renderTogether(t *testing.T, data []string, each alone) {
 	t.Helper()
 
 	out := filepath.Join(s.tmp, "together")
 	code := s.run(t, false, append([]string{"render", "--out-dir", out}, data...)...)
 	pages := s.pages(t, out, "the page %s that render together drew")
+	passes := len(each.failed) == 0 && !each.clash
+	switch {
+	case code != 0 && passes:
+		t.Errorf("render together failed, though each data file passed alone and no two write one page")
+	case code == 0 && len(each.failed) > 0:
+		t.Errorf("render together passed, though %s failed alone", strings.Join(each.failed, ", "))
+	case code == 0 && each.clash:
+		t.Errorf("render together passed, though two data files write one page")
+	}
 	if code != 0 {
 		for _, name := range slices.Sorted(maps.Keys(pages)) {
 			t.Errorf("render together failed but wrote %s", name)
 		}
-		// A file that fails alone is why, or two pages of one name but for case, which renderEach told of;
-		// else what one read made a mistake of the next's.
-		passed := slices.Collect(maps.Values(drawnBy))
-		folded := map[string]bool{}
-		for name := range drawnBy {
-			folded[strings.ToLower(name)] = true
-		}
-		if len(folded) == len(drawnBy) &&
-			!slices.ContainsFunc(data, func(file string) bool { return !slices.Contains(passed, file) }) {
-			t.Errorf("render together failed, though each data file alone passed")
-		}
 		return
 	}
-	for _, name := range slices.Sorted(maps.Keys(drawnBy)) {
+	for _, name := range slices.Sorted(maps.Keys(each.drawnBy)) {
 		if _, ok := pages[name]; !ok {
-			t.Errorf("render together did not write %s, which %s alone writes", name, drawnBy[name])
+			t.Errorf("render together did not write %s, which %s alone writes", name, each.drawnBy[name])
 		}
 	}
 	for _, name := range slices.Sorted(maps.Keys(pages)) {
-		switch alone, ok := s.files[name]; {
+		switch drawn, ok := s.files[name]; {
 		case !ok:
 			t.Errorf("render together wrote %s, which no data file alone writes", name)
-		case !bytes.Equal(pages[name], alone):
-			t.Errorf("render together drew %s otherwise than %s alone", name, drawnBy[name])
+		case !bytes.Equal(pages[name], drawn):
+			t.Errorf("render together drew %s otherwise than %s alone", name, each.drawnBy[name])
 		}
 	}
 }
