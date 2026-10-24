@@ -476,7 +476,7 @@ func TestEdit(t *testing.T) {
 	}
 }
 
-// TestRefusals checks that the user's mistakes and floe's failures go through refuse: a reader that takes
+// TestRefusals checks that the user's mistakes go through refuse: a reader that takes
 // JSON gets the report, and the management page its text in its language. Refusals of the protocol, which
 // neither the management page nor the CLI sends when right, are plain English text.
 func TestRefusals(t *testing.T) {
@@ -486,19 +486,17 @@ func TestRefusals(t *testing.T) {
 	e.publish(t, e.page(t, "My Demo.yaml", "Demo Page", ""), store.Options{})
 	asCLI := []string{"Origin", e.origin, "Content-Type", "application/json", "Accept", "application/json"}
 	asPage := []string{"Origin", e.origin, "Content-Type", "application/json", "Accept-Language", "ja"}
-	report := func(r resp) usererr.Report {
-		t.Helper()
-		var got usererr.Report
-		if !strings.HasPrefix(r.header.Get("Content-Type"), "application/json") || json.Unmarshal([]byte(r.body), &got) != nil {
-			t.Errorf("%d %s %q is not a report", r.status, r.header.Get("Content-Type"), r.body)
-		}
-		return got
-	}
 
 	link := `{"path":"rel.html"}`
 	if r := e.do(t, http.MethodPost, "/api/artifacts", link, asCLI...); r.status != http.StatusBadRequest ||
-		report(r).Render("") != "enter the absolute path of an HTML or data file (one starting with /)" || report(r).Failure != "" {
+		reportOf(t, r).Render("") != "enter the absolute path of an HTML or data file (one starting with /)" || reportOf(t, r).Failure != "" {
 		t.Errorf("a relative path to the CLI = %d %s", r.status, r.body)
+	}
+	// Told with the mistakes of the options, which are checked whatever the path.
+	both := `{"path":"rel.html","slug":"Bad Slug"}`
+	if r := e.do(t, http.MethodPost, "/api/artifacts", both, asCLI...); r.status != http.StatusBadRequest ||
+		len(reportOf(t, r).Mistakes) != 2 || !strings.Contains(r.body, "enter the absolute path") || !strings.Contains(r.body, `invalid slug \"Bad Slug\"`) {
+		t.Errorf("a relative path and a bad slug = %d %s, want both", r.status, r.body)
 	}
 	if r := e.do(t, http.MethodPost, "/api/artifacts", link, asPage...); r.status != http.StatusBadRequest ||
 		r.body != "HTML かデータファイルの絶対パス（/ で始まるパス）を入力してください" {
@@ -516,19 +514,39 @@ func TestRefusals(t *testing.T) {
 			t.Errorf("PATCH %s = %d %s %q, want %q", body, r.status, r.header.Get("Content-Type"), r.body, want)
 		}
 	}
+}
 
-	// floe's failure, the store unreadable.
+// reportOf reads r as the report refuse answers a reader that takes JSON with.
+func reportOf(t *testing.T, r resp) usererr.Report {
+	t.Helper()
+
+	var got usererr.Report
+	if !strings.HasPrefix(r.header.Get("Content-Type"), "application/json") || json.Unmarshal([]byte(r.body), &got) != nil {
+		t.Errorf("%d %s %q is not a report", r.status, r.header.Get("Content-Type"), r.body)
+	}
+	return got
+}
+
+// TestFailuresAsReports checks that floe's failures, the store unreadable, go through refuse too.
+func TestFailuresAsReports(t *testing.T) {
+	t.Parallel()
+
+	if os.Getuid() == 0 {
+		t.Skip("root reads a directory it cannot read")
+	}
+	e := newEnv(t)
+	e.publish(t, e.page(t, "My Demo.yaml", "Demo Page", ""), store.Options{})
 	root := filepath.Join(e.tmp, "store")
 	if err := os.Chmod(root, 0); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(root, 0o700) }) //nolint:errcheck // TempDir reports what it cannot remove
 	if r := e.get(t, "/api/artifacts", "Accept", "application/json"); r.status != http.StatusInternalServerError ||
-		!strings.Contains(report(r).Failure, "permission denied") {
+		!strings.Contains(reportOf(t, r).Failure, "permission denied") {
 		t.Errorf("a list that fails = %d %s", r.status, r.body)
 	}
 	if r := e.do(t, http.MethodDelete, "/api/artifacts/my-demo", "", "Origin", e.origin, "Accept", "application/json"); r.status != http.StatusInternalServerError ||
-		!strings.Contains(report(r).Failure, "permission denied") {
+		!strings.Contains(reportOf(t, r).Failure, "permission denied") {
 		t.Errorf("a delete that fails = %d %s", r.status, r.body)
 	}
 }

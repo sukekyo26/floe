@@ -74,7 +74,7 @@ func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]jso
 func refuse(w http.ResponseWriter, r *http.Request, err error) {
 	report := usererr.Tell(catalog(r), err)
 	if !strings.Contains(r.Header.Get("Accept"), "application/json") {
-		send(w, report.Status(), report.Render(""))
+		sendBytes(w, report.Status(), textType, []byte(report.Render("")))
 		return
 	}
 	sendJSON(w, report.Status(), report)
@@ -107,14 +107,16 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	if !decodeStrict(w, body, &in) {
 		return
 	}
-	// The path as sent: a file name may start or end with a space.
-	if !filepath.IsAbs(in.Path) {
-		refuse(w, r, usererr.New("api_link_path"))
-		return
-	}
 	opts := store.Options{
 		Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme,
 		Force: in.Force,
+	}
+	// The path as sent: a file name may start or end with a space. A relative one has no directory to read
+	// it in, so the file is not read, and the options are told with it.
+	if !filepath.IsAbs(in.Path) {
+		_, err := store.Accept(in.Path, true, opts)
+		refuse(w, r, usererr.Collect(usererr.New("api_link_path"), err))
+		return
 	}
 	entry, err := s.cfg.Store.PrepareLink(r.Context(), in.Path, opts, filepath.Dir(in.Path))
 	if err != nil {
@@ -134,7 +136,8 @@ func decodeStrict(w http.ResponseWriter, body []byte, v any) bool {
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
-		send(w, http.StatusBadRequest, "cannot read the request: "+err.Error())
+		// What encoding/json could not read: neither the management page nor the CLI sends such JSON.
+		send(w, http.StatusBadRequest, protocolText("cannot read the request: "+err.Error()))
 		return false
 	}
 	return true

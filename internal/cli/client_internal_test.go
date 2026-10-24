@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -9,7 +8,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -67,28 +65,17 @@ func TestTooLarge(t *testing.T) {
 func TestRefusedAsMistake(t *testing.T) {
 	t.Parallel()
 
-	var lc net.ListenConfig
-	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addr, ok := ln.Addr().(*net.TCPAddr)
+	srv := httptest.NewUnstartedServer(nil)
+	addr, ok := srv.Listener.Addr().(*net.TCPAddr)
 	if !ok {
-		t.Fatalf("listener address %v", ln.Addr())
+		t.Fatalf("listener address %v", srv.Listener.Addr())
 	}
 	tmp := t.TempDir()
 	st := store.New(filepath.Join(tmp, "store"), tmp, tmpl.NewLibrary(filepath.Join(tmp, "templates"), filepath.Join(tmp, "parts"), "", ""))
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan error, 1)
-	go func() { done <- server.New(server.Config{Store: st, Port: addr.Port, Build: "b"}).Serve(ctx, ln) }()
-	t.Cleanup(func() {
-		cancel()
-		if err := <-done; err != nil {
-			t.Errorf("Serve: %v", err)
-		}
-	})
-	c := client{base: "http://127.0.0.1:" + strconv.Itoa(addr.Port)}
-	refused := c.do(t.Context(), http.MethodPost, "/api/artifacts", server.Link{Path: "rel.html"}, nil)
+	srv.Config.Handler = server.New(server.Config{Store: st, Port: addr.Port, Build: "b"}).Handler()
+	srv.Start()
+	t.Cleanup(srv.Close)
+	refused := client{base: srv.URL}.do(t.Context(), http.MethodPost, "/api/artifacts", server.Link{Path: "rel.html"}, nil)
 	re, ok := errors.AsType[*remoteError](refused)
 	if !ok || re.status != http.StatusBadRequest || re.report.Failure != "" || len(re.report.Mistakes) != 1 ||
 		re.Error() != "enter the absolute path of an HTML or data file (one starting with /)" {

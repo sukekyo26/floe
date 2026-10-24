@@ -101,10 +101,14 @@ func cleanPath(p string) string {
 	return clean
 }
 
-// send answers body as text. A 4xx or 5xx it answers is a protocol's refusal alone, in plain English (forbidden
-// origin, not found); the user's mistakes and floe's failures go through refuse.
-func send(w http.ResponseWriter, status int, body string) {
-	sendBytes(w, status, "text/plain; charset=utf-8", []byte(body))
+// protocolText is the text of a refusal of the protocol, fixed and in plain English (forbidden origin, not
+// found), which neither the management page nor the CLI sends when right. The user's mistakes and floe's
+// failures go through refuse instead: a text made at run time takes a conversion to be sent with send.
+type protocolText string
+
+// send answers body as text: a refusal of the protocol, or an empty body.
+func send(w http.ResponseWriter, status int, body protocolText) {
+	sendBytes(w, status, textType, []byte(body))
 }
 
 func sendBytes(w http.ResponseWriter, status int, contentType string, body []byte) {
@@ -119,7 +123,7 @@ func sendJSON(w http.ResponseWriter, status int, v any) {
 	b, err := json.Marshal(v)
 	if err != nil {
 		// Not through refuse, which answers with sendJSON.
-		send(w, http.StatusInternalServerError, err.Error())
+		sendBytes(w, http.StatusInternalServerError, textType, []byte(err.Error()))
 		return
 	}
 	sendBytes(w, status, "application/json", b)
