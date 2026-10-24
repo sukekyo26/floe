@@ -1030,4 +1030,9 @@ func TestCheckRelativeWithoutCwd(t *testing.T) {
 	if len(warnings) > 0 || err == nil || errors.As(err, &mistake) || !strings.Contains(err.Error(), `"memo" is relative`) {
 		t.Errorf("Check of a relative dir without a cwd = %v, %v, want floe's own failure alone", warnings, err)
 	}
+	// An empty dir too, with a cwd: the CLI refuses it before, and it is not the cwd.
+	warnings, err = tmpl.NewLibrary("", "", "", "").Run().Check("", t.TempDir())
+	if len(warnings) > 0 || err == nil || errors.As(err, &mistake) || !strings.Contains(err.Error(), "the template dir is empty") {
+		t.Errorf("Check of an empty dir = %v, %v, want floe's own failure alone", warnings, err)
+	}
 }

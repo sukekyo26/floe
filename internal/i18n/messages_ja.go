@@ -30,7 +30,8 @@ var messagesJA = map[string]string{
 	"store_theme_link":    "--theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
 	"store_no_page":       "ページ「%s」はありません（floe list で確かめられます）",
 	"store_link_relative": "%s は絶対パスではありません。HTML かデータファイルの、/ で始まるパスにしてください",
-	"store_link_empty":    "リンクする HTML かデータファイルの絶対パスを書いてください",
+	"store_link_empty":    "リンクするパスが空です。HTML かデータファイルの絶対パスを書いてください",
+	"store_file_empty":    "公開するデータファイルのパスが空です。.yaml か .yml のファイルのパスを書いてください",
 
 	// ui
 	"ui_back_to_list":         "一覧へ戻る",

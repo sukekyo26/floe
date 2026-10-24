@@ -34,8 +34,13 @@ until all are fixed; nor when two data files would write the same file.
 draws, and the exit code is 1 when there is one, so that CI tells a data file whose page
 was not written again.`,
 		Args: usage(cobra.MinimumNArgs(1)),
-		RunE: func(_ *cobra.Command, args []string) error {
-			return a.renderPages(args, outDir, check)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Left out, it is none (beside each data file); given, even empty, it is a path.
+			var out arg
+			if cmd.Flags().Changed("out-dir") {
+				out = a.arg(outDir, place{name: "--out-dir", wants: "cli_wants_out_dir"})
+			}
+			return a.renderPages(args, out, check)
 		},
 	}
 	f := cmd.Flags()
@@ -51,8 +56,7 @@ type rendered struct {
 	page           []byte
 }
 
-func (a *app) renderPages(files []string, outDir string, check bool) error {
-	out := a.arg(outDir)
+func (a *app) renderPages(files []string, out arg, check bool) error {
 	pages, err := a.drawPages(files, out)
 	switch {
 	case err != nil:
@@ -74,7 +78,7 @@ func (a *app) drawPages(files []string, out arg) ([]rendered, error) {
 	// ignores case (macOS), two paths may be one file.
 	// LIMIT: case only. APFS also takes the NFC and NFD of a name as one; fold Unicode if pages collide so.
 	first := map[string]rendered{}
-	for _, f := range a.args(files) {
+	for _, f := range a.args(files, "cli_wants_data") {
 		file := f.name
 		dir, at := out.name, out.abs
 		if dir == "" {
@@ -84,8 +88,8 @@ func (a *app) drawPages(files []string, out arg) ([]rendered, error) {
 		p := rendered{from: file, to: filepath.Join(dir, name), real: "", page: nil}
 		page, err := drawFile(a, f)
 		tell(&found, err)
-		if out.err != nil || f.err != nil || f.abs == "" {
-			// Nowhere to write to, or "", which is no data file: told above.
+		if out.err != nil || f.err != nil {
+			// Nowhere to write to, or to read from: told above.
 			continue
 		}
 		p.real = realPath(filepath.Join(at, name))
