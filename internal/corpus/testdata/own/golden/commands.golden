@@ -23,7 +23,7 @@ $TMP/together/memo-brutal.html
 $TMP/together/memo-default.html
 $TMP/together/memo-plain.html
 $TMP/together/report.html
-$ floe template check $SAMPLE/templates/memo
+$ floe template check templates/memo
 exit 0
 $ floe part check
 exit 0
