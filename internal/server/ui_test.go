@@ -577,7 +577,7 @@ func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share
 	// load, which floe cannot mend. Both pages take the name parent, which floe's script must not use.
 	publish("hash", link("#s2", "0")+link("/a/hash/#s3", "60px")+
 		`<button id="up" style="position: fixed; left: 0; top: 120px; width: 200px; height: 40px">top</button>`+
-		link("/a/hash#s3", "180px")+link("/a/hash/?x=1#s3", "240px")+
+		link("/a/hash#s3", "180px")+link("/a/hash/?x=1#s3", "240px")+link("/a/hash/#", "300px")+
 		`<div style="height: 3000px"></div><h2 id="s2">s2</h2><div style="height: 3000px"></div><h2 id="s3">s3</h2><div style="height: 3000px"></div>`+
 		"<script>var parent = 1; const load = Math.random(); document.getElementById('up').addEventListener('click', () => scrollTo(0, 0)); document.addEventListener('pointerover', () => top.postMessage('over', '*'));"+
 		"setInterval(() => top.postMessage('at ' + location.hash + ' ' + load + ' ' + (scrollY > 1000), '*'), 50)</script>")
@@ -644,6 +644,7 @@ func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share
 		fmt.Sprint(length() == before))
 	click(20, "the part, by a link to #s2", atIs("#s2"))
 	out = append(out, click(200, "the part, by a link without the /", atIs("#s3")), loaded(load))
+	out = append(out, click(320, "the top of the page, by a link to # alone", atIs("")), loaded(load))
 	out = append(out, click(260, "the tab, by a link with a search",
 		atIs("#s3")+" && location.search === '?x=1' && location.search"))
 
@@ -658,7 +659,7 @@ func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share
 
 	check(t, "frame hash", out,
 		"/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/|/a/hash/#s2|/a/hash/|true|"+
-			"/a/hash/#s3|true|/a/hash/|true|/a/hash/#s3|true|/a/hash/#s3|true|?x=1|/a/based/#s3")
+			"/a/hash/#s3|true|/a/hash/|true|/a/hash/#s3|true|/a/hash/#s3|true|/a/hash/|true|?x=1|/a/based/#s3")
 }
 
 // leave clicks links out of a page in the frame: a target=_blank tab runs in the other site's origin
