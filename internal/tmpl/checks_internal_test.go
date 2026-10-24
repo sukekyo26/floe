@@ -148,6 +148,10 @@ func TestRelationsOfABrokenTemplate(t *testing.T) {
 		{"- for: a\n  expr: len(filter(doc.a, # > 0)) > 0\n  message: m\n", "checks.yaml:2:27: a # after a space began a YAML comment, which may have cut the value short, to len(filter(doc.a,"},
 		{"- for: b.c\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b.c does not lead to a list in d.yaml"},
 		{"- for: b\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for: b does not lead to a list in d.yaml"},
+		// for and field written empty, unlike left out, are refused at their values.
+		{"- for:\n  field: key\n  expr: 'true'\n  message: m\n", "checks.yaml:1:3: for is empty: write the path of the list to check"},
+		{"- for: ''\n  expr: 'true'\n  message: m\n", "checks.yaml:1:8: for is empty: write the path of the list to check"},
+		{"- for: a\n  field:\n  expr: 'true'\n  message: m\n", "checks.yaml:2:3: field is empty: write the path of the field a failure points at"},
 	} {
 		d, root := data(t, "a: [1]\nb: x\n")
 		err := relateSrc([]byte(tt.checks), d, root, true)

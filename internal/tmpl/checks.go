@@ -143,6 +143,12 @@ func readCheck(file string, n ast.Node) (relation, *usererr.Error) {
 			return c, yamlpos.New(file, at, "tmpl_checks_missing", key)
 		}
 	}
+	// Left out, for and field have their meanings; written empty, they would take them unseen.
+	for _, key := range []string{"for", "field"} {
+		if at, written := c.at[key]; written && *to[key] == "" {
+			return c, yamlpos.New(file, at, "tmpl_checks_"+key+"_empty")
+		}
+	}
 	return c, nil
 }
 

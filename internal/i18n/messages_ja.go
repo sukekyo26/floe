@@ -313,6 +313,8 @@ var messagesJA = map[string]string{
 	"tmpl_checks_undeclared":        "for: %s は schema.json で宣言されていません",
 	"tmpl_checks_not_array":         "for: %s は schema.json でリストとして宣言されていません",
 	"tmpl_checks_field":             "field: %s は schema.json で %s の要素の下に宣言されていません",
+	"tmpl_checks_for_empty":         "for が空です。検査するリストのパスを書くか、全体を検査するなら for を省いてください",
+	"tmpl_checks_field_empty":       "field が空です。落ちたときに指す項目のパスを書くか、要素そのものを指すなら field を省いてください",
 	"tmpl_checks_field_whole":       "field: %s は、for を省いた検査が見るデータファイルのトップレベルに、schema.json で宣言されていません。そこに宣言されたキーにするか、リストの要素を検査するなら for を書いてください",
 	"tmpl_checks_field_part":        "field: %s は、for を省いた検査が見る部品（部品がリストならその要素）に、schema.json で宣言されていません。そこに宣言されたキーにしてください",
 	"tmpl_expr":                     "%s は式として読めません: %s",

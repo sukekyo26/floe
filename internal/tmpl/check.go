@@ -311,14 +311,7 @@ func assetsNamed(page *template.Template) []string {
 // and, against its schema s as compiled, nil while the schema has mistakes of its own, of the lists it names.
 func (t *Template) checkChecks(s *jsonschema.Schema) error {
 	list, err := t.readChecks()
-	var problems usererr.List
-	if failed := problems.Add(err); failed != nil {
-		return failed //nolint:wrapcheck // already says what failed
-	}
-	if failed := problems.Add(checksDeclared(list, s, false)); failed != nil {
-		return failed //nolint:wrapcheck // already says what failed
-	}
-	return problems.Err()
+	return usererr.Collect(err, checksDeclared(list, s, false))
 }
 
 // checksDeclared returns the mistakes of the paths of list that the compiled schema s, of a part when part

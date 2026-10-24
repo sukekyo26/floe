@@ -315,6 +315,8 @@ var messagesEN = map[string]string{
 	"tmpl_checks_undeclared":        "for: schema.json does not declare %s",
 	"tmpl_checks_not_array":         "for: schema.json does not declare %s a list",
 	"tmpl_checks_field":             "field: schema.json does not declare %s under the items of %s",
+	"tmpl_checks_for_empty":         "for is empty: write the path of the list to check, or leave for out to check the whole",
+	"tmpl_checks_field_empty":       "field is empty: write the path of the field a failure points at, or leave field out to point at the item",
 	"tmpl_checks_field_whole":       "field: schema.json does not declare %s at the top level of the data file, which a check without for checks; name a key declared there, or write for to check the items of a list",
 	"tmpl_checks_field_part":        "field: schema.json does not declare %s on the part, nor on its items when it is a list, which a check without for checks; name a key declared there",
 	"tmpl_expr":                     "%s cannot be read as an expression: %s",
