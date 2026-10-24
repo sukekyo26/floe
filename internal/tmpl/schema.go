@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -435,7 +436,10 @@ func metaschemaMistakes(file string, err error) error {
 		why := e.ErrorKind.LocalizedString(english)
 		mistakes = append(mistakes, usererr.NewIn(file, pointerTo(loc), "tmpl_schema_invalid", why))
 	})
-	slices.SortStableFunc(mistakes, func(a, b *usererr.Error) int { return strings.Compare(a.At, b.At) })
+	// The leaves come in the order of jsonschema's maps: two at a pointer, by their words.
+	slices.SortFunc(mistakes, func(a, b *usererr.Error) int {
+		return cmp.Or(strings.Compare(a.At, b.At), strings.Compare(a.Error(), b.Error()))
+	})
 	return mistakes.Err()
 }
 
@@ -449,16 +453,45 @@ func pointerTo(steps []string) string {
 }
 
 // leaves calls leaf with each mistake of e that is not only the mistakes under it. A branch of anyOf or
-// oneOf would say why each choice failed; it is one leaf instead.
+// oneOf would say why each choice failed; it is one leaf instead. A mistake of propertyNames is given its
+// place (namesPlace) before.
 func leaves(e *jsonschema.ValidationError, leaf func(*jsonschema.ValidationError)) {
+	leavesUnder(e, nil, leaf)
+}
+
+// leavesUnder is leaves of e, under the place above of the nearest mistake it is under.
+func leavesUnder(e *jsonschema.ValidationError, above []string, leaf func(*jsonschema.ValidationError)) {
 	switch e.ErrorKind.(type) {
 	case *kind.Schema, *kind.Group, *kind.AllOf, *kind.Reference:
 		for _, c := range e.Causes {
-			leaves(c, leaf)
+			leavesUnder(c, e.InstanceLocation, leaf)
 		}
 		return
+	case *kind.PropertyNames:
+		e.InstanceLocation = namesPlace(e, above)
 	}
 	leaf(e)
+}
+
+// namesPlace is the place of e, a mistake of propertyNames, under above, the place of the nearest mistake
+// it is under, which holds it: jsonschema gives e a place the later checks write over, right in its length
+// alone. A schema at properties/<k> checks the value k alone; led to by a $ref, it is under the $ref's
+// mistake, at its own place.
+// LIMIT: jsonschema v6.0.3 does not copy the place of propertyNames (issue #276, PR #269 of
+// santhosh-tekuri/jsonschema); drop this once floe takes a version that does. On an upgrade, grep
+// 'InstanceLocation = vd.vloc' for more: contentSchema's is the same, which floe does not assert.
+// LIMIT: above, what holds it, for one under items, patternProperties or additionalProperties of a data
+// file's schema, whose own place is lost.
+func namesPlace(e *jsonschema.ValidationError, above []string) []string {
+	at := slices.Clone(above)
+	base, _, _ := strings.Cut(e.SchemaURL, "#")
+	ptr, _ := pointerIn(base, e.SchemaURL)
+	steps := strings.Split(ptr, "/")
+	if n := len(steps); len(e.InstanceLocation) == len(above)+1 && n >= 3 &&
+		steps[n-3] == "properties" && steps[n-1] == "propertyNames" {
+		return append(at, pointerStep.Replace(steps[n-2]))
+	}
+	return at
 }
 
 // noLoader loads no schema: those of the parts of set are added to the compiler before.
