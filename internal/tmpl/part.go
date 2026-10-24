@@ -196,6 +196,8 @@ type partSet struct {
 	// what to warn of: what of one's own goes into no page, and the colours of the parts and themes
 	// written where the palette is to give them
 	strays []*usererr.Error
+	// whether it checks floe's parts as it checks one's own: floe's check of its own (checkFloeParts)
+	checksFloe bool
 }
 
 // builtinParts reads floe's parts once.
@@ -207,12 +209,12 @@ var builtinParts = sync.OnceValues(func() (*partSet, error) {
 // entries, and stage: a part of the name of one of floe's takes its place whole. One of one's own that
 // cannot be used is left out, its mistake kept for a template that uses it.
 func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, error) {
-	set := &partSet{
-		parts: map[string]*part{}, docs: map[string]any{}, shapes: map[string]*shape{}, notes: map[string]*schemaNotes{},
-		shares: map[string]bool{}, themes: map[string]*theme{},
-		broken: map[partKind]map[string]error{kindPart: {}, kindTheme: {}}, palette: "", dirs: nil, strays: nil,
+	set := newPartSet()
+	if err := floePartsChecked(); err != nil {
+		return nil, err
 	}
-	if err := set.readBuiltin(); err != nil {
+	// What it would refuse, checkFloeParts refused: what is left is a failure.
+	if err := set.readBuiltin(partFiles, themeFiles); err != nil {
 		return nil, err
 	}
 	for _, dir := range []string{own.parts, own.themes} {
@@ -243,10 +245,49 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 	return set, nil
 }
 
-// readBuiltin reads floe's parts, those it draws in Go too, the schemas they share and the themes into
-// set.
-func (set *partSet) readBuiltin() error {
-	builtin, err := fs.Sub(partFiles, "parts")
+// newPartSet returns a set of no parts.
+func newPartSet() *partSet {
+	return &partSet{
+		parts: map[string]*part{}, docs: map[string]any{}, shapes: map[string]*shape{}, notes: map[string]*schemaNotes{},
+		shares: map[string]bool{}, themes: map[string]*theme{},
+		broken: map[partKind]map[string]error{kindPart: {}, kindTheme: {}}, palette: "", dirs: nil, strays: nil,
+		checksFloe: false,
+	}
+}
+
+// floePartsChecked checks floe's parts and themes once (checkFloeParts): its files do not change while it
+// runs.
+var floePartsChecked = sync.OnceValue(func() error { return checkFloeParts(partFiles, themeFiles) })
+
+// checkFloeParts checks floe's parts, of the parts directory of parts, and its themes, of the themes
+// directory of themes, as floe part check checks those of one's own, there being none, and compiles the
+// schemas the parts share, which a part of one's own may refer to whether or not floe's do: what leaves one
+// out, a mistake of those, and a warning, which no one can heed either, are floe's failure.
+func checkFloeParts(parts, themes fs.FS) error {
+	set := newPartSet()
+	set.checksFloe = true
+	err := set.readBuiltin(parts, themes)
+	if err == nil {
+		err = set.leaveOutUnusable()
+	}
+	if err == nil {
+		err = usererr.Collect(set.compileShared(), slices.Concat(set.unusable(kindPart, nil), set.strays).Err())
+	}
+	return floeFailure("check floe's parts", err)
+}
+
+// checked reports whether set checks p as it checks one's own: one of one's own, or, in floe's check of its
+// own, one of floe's but those it draws in Go, which have no files.
+func (set *partSet) checked(p *part) bool {
+	return p.isOwn() || set.checksFloe && !isGoPart(p.name)
+}
+
+// readBuiltin reads floe's parts, of the parts directory of parts, those it draws in Go too, the schemas they
+// share and the themes, of the themes directory of themes, into set.
+// LIMIT: it stops at the first of them it cannot read, so floe's check tells one a build. Keep why each cannot
+// be used, as readOwn does, if floe's parts come to be fixed many at once.
+func (set *partSet) readBuiltin(parts, themes fs.FS) error {
+	builtin, err := fs.Sub(parts, "parts")
 	if err != nil {
 		return fmt.Errorf("read the parts: %w", err)
 	}
@@ -259,7 +300,7 @@ func (set *partSet) readBuiltin() error {
 		case e.IsDir():
 			var files fs.FS
 			if files, err = fs.Sub(builtin, e.Name()); err == nil {
-				err = set.readPart(files, e.Name(), path.Join("parts", e.Name()), false)
+				err = set.readPart(files, e.Name(), path.Join("parts", e.Name()))
 			}
 		default:
 			// A schema the parts share.
@@ -283,14 +324,14 @@ func (set *partSet) readBuiltin() error {
 		}
 	}
 	// Once the parts are read, whose names the themes' files take.
-	entries, err = fs.ReadDir(themeFiles, floeThemesDir)
+	entries, err = fs.ReadDir(themes, floeThemesDir)
 	if err != nil {
 		return fmt.Errorf("read the themes: %w", err)
 	}
 	for _, e := range entries {
 		t := newTheme()
 		at := path.Join(floeThemesDir, e.Name())
-		files, err := fs.Sub(themeFiles, at)
+		files, err := fs.Sub(themes, at)
 		if err == nil {
 			err = set.readTheme(files, at, t)
 		}
@@ -299,7 +340,12 @@ func (set *partSet) readBuiltin() error {
 		}
 		set.themes[e.Name()] = t
 	}
-	set.palette = set.themes[DefaultTheme].palettes[0]
+	t := set.themes[DefaultTheme]
+	if t == nil || len(t.palettes) == 0 {
+		//nolint:err113 // floe's own files
+		return fmt.Errorf("read the themes: floe's theme %s has no %s.css", DefaultTheme, themePalette)
+	}
+	set.palette = t.palettes[0]
 	return nil
 }
 
@@ -448,10 +494,10 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown, part string) error
 	return nil
 }
 
-// readPart reads the part name from files, its directory, shown in its mistakes as dir, into set, one's own
-// with own, else floe's: a directory without schema.json and part.html is a look alone. The mistakes of its
-// files are told together, so that floe part check tells them all at once.
-func (set *partSet) readPart(files fs.FS, name, dir string, own bool) error {
+// readPart reads the part name from files, its directory, shown in its mistakes as dir, into set: a directory
+// without schema.json and part.html is a look alone. The mistakes of its files are told together, so that
+// floe part check tells them all at once.
+func (set *partSet) readPart(files fs.FS, name, dir string) error {
 	look, err := isLookDir(files, dir)
 	if err != nil {
 		return err
@@ -470,7 +516,7 @@ func (set *partSet) readPart(files fs.FS, name, dir string, own bool) error {
 		return nil
 	}
 	url := partsURL + name + ".json"
-	html, w, pages, pagesErr := readPartPages(files, name, dir, own)
+	html, w, pages, pagesErr := readPartPages(files, name, dir)
 	css, warnings, cssErr := readPartCSS(files, dir)
 	checks, checksErr := readPartChecks(files, dir)
 	schemaErr := set.readSchema(files, url, "schema.json", path.Join(dir, "schema.json"), name)
@@ -485,10 +531,10 @@ func (set *partSet) readPart(files fs.FS, name, dir string, own bool) error {
 	return nil
 }
 
-// readPartPages reads the part.html of the part name in files, its directory, shown as dir, one's own with
-// own, and its words, and returns its HTML, its words and its page in each language of them. A mistake of words.yaml is
-// told with the page's: the words the page names are then not checked against it.
-func readPartPages(files fs.FS, name, dir string, own bool) (string, words, map[string]*template.Template, error) {
+// readPartPages reads the part.html of the part name in files, its directory, shown as dir, and its words,
+// and returns its HTML, its words and its page in each language of them. A mistake of words.yaml is told with
+// the page's: the words the page names are then not checked against it.
+func readPartPages(files fs.FS, name, dir string) (string, words, map[string]*template.Template, error) {
 	shown := path.Join(dir, "part.html")
 	html, err := fs.ReadFile(files, "part.html")
 	if err != nil {
@@ -507,7 +553,7 @@ func readPartPages(files fs.FS, name, dir string, own bool) (string, words, map[
 		pageErr = w.checkWords(page, shown)
 	}
 	if err == nil {
-		escapeErr = escapeMistake(page, html, shown, own)
+		escapeErr = escapeMistake(page, html, shown)
 	}
 	if err = usererr.Collect(wordsErr, pageErr, escapeErr); err != nil {
 		return "", nil, nil, err //nolint:wrapcheck // its mistakes, or what failed

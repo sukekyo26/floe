@@ -1,10 +1,17 @@
 package tmpl
 
 import (
+	"errors"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
+	"testing/fstest"
+	"time"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -174,4 +181,223 @@ func mistakesOf(t *testing.T, l *Library, file string, src []byte, cwd string) u
 		t.Fatalf("Read %s = %v, want mistakes", file, err)
 	}
 	return found
+}
+
+// isMistake reports whether err holds a mistake of the user's, as List.Add finds one.
+func isMistake(err error) bool {
+	var one *usererr.Error
+	var more usererr.List
+	return errors.As(err, &one) || errors.As(err, &more)
+}
+
+// floeFailure words mistakes as floe's failure, where they are kept, and leaves a failure as it is.
+func TestFloeFailure(t *testing.T) {
+	t.Parallel()
+
+	mistakes := usererr.List{usererr.NewAt("parts/x/part.html", 2, 5, "tmpl_go_template", "bad")}
+	err := floeFailure("read floe's parts", mistakes)
+	if err == nil || isMistake(err) || !strings.HasPrefix(err.Error(), "read floe's parts: parts/x/part.html:2:5: ") {
+		t.Errorf("floeFailure of mistakes = %v, want floe's failure at parts/x/part.html:2:5", err)
+	}
+	failed := errors.New("disk")
+	if err := floeFailure("read floe's parts", failed); !errors.Is(err, failed) {
+		t.Errorf("floeFailure of a failure = %v, want it wrapped", err)
+	}
+	if err := floeFailure("read floe's parts", nil); err != nil {
+		t.Errorf("floeFailure of nothing = %v, want nil", err)
+	}
+}
+
+// mapOf copies the files of fsys into a file system of its own, for a test to change.
+func mapOf(t *testing.T, fsys fs.FS) fstest.MapFS {
+	t.Helper()
+	m := fstest.MapFS{}
+	err := fs.WalkDir(fsys, ".", func(at string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := fs.ReadFile(fsys, at)
+		m[at] = &fstest.MapFile{Data: b}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return m
+}
+
+// floe's parts and themes are checked as floe part check checks one's own: what it refuses, and a warning,
+// are floe's failure, at the file: the user cannot fix it.
+func TestCheckFloeParts(t *testing.T) {
+	t.Parallel()
+
+	schema := `{"type": "object", "properties": {"text": {"type": "string"}}}`
+	html := `<p data-floe-part="x">{{.text}}</p>`
+	for name, files := range map[string]map[string]string{
+		"none":    {},
+		"parse":   {"part.html": `<p data-floe-part="x">{{if .text}}</p>`},
+		"escape":  {"part.html": `<p data-floe-part="x"><a href="{{if .text}}/x/{{else}}/s?q={{end}}{{.text}}">x</a></p>`},
+		"schema":  {"schema.json": `{"type":`},
+		"pattern": {"schema.json": `{"type": "object", "properties": {"text": {"type": "string", "pattern": "["}}}`},
+		"ref":     {"schema.json": `{"type": "object", "properties": {"text": {"$ref": "floe:///parts/nosuch.json"}}}`},
+		"unnamed": {"part.html": `<p>{{.text}}</p>`},
+		"css":     {"part.css": "[data-floe-part=\"x\"] { } }"},
+		"warning": {"part.css": "[data-floe-part=\"x\"] { color: red; }"},
+		"theme":   {"theme": "}"},
+		"shared":  {"any.json": `"zz": {"type": "string", "pattern": "["}, `},
+		"palette": {"palette": ""},
+		"both":    {"any.json": `"zz": {"type": "string", "pattern": "["}, `, "part.html": `<p>{{.text}}</p>`},
+	} {
+		root, themes := mapOf(t, partFiles), mapOf(t, themeFiles)
+		for file, text := range map[string]string{"schema.json": schema, "part.html": html, "part.css": ""} {
+			if broken, ok := files[file]; ok {
+				text = broken
+			}
+			root[path.Join("parts", "x", file)] = &fstest.MapFile{Data: []byte(text)}
+		}
+		want := "parts/x"
+		if prop, ok := files["any.json"]; ok {
+			want = "parts/any.json"
+			doc := string(root[want].Data)
+			root[want] = &fstest.MapFile{Data: []byte(strings.Replace(doc, `"properties": {`, `"properties": {`+prop, 1))}
+		}
+		if _, ok := files["palette"]; ok {
+			want = "palette.css"
+			delete(themes, "themes/default/palette.css")
+		}
+		if css, ok := files["theme"]; ok {
+			want = "themes/default/base.css"
+			base := themes[want]
+			themes[want] = &fstest.MapFile{Data: append(slices.Clone(base.Data), css...)}
+		}
+		err := checkFloeParts(root, themes)
+		switch {
+		case name == "none" && err != nil:
+			t.Errorf("checkFloeParts of floe's parts and a part with no mistake = %v", err)
+		case name != "none" && (err == nil || isMistake(err) || !strings.Contains(err.Error(), want)):
+			t.Errorf("%s: checkFloeParts = %v, want floe's failure at %s", name, err, want)
+		case name == "both" && !strings.Contains(err.Error(), "parts/x"):
+			t.Errorf("checkFloeParts of a broken part beside a broken any.json = %v, want both", err)
+		}
+	}
+}
+
+// libraryOf returns a library of the templates of one's own in dir and the parts and themes of one's own in
+// own, whose built-in templates are those of floe.
+func libraryOf(dir string, own ownDirs, floe fs.FS) *Library {
+	l := NewLibrary(dir, own.parts, own.themes, "")
+	l.floe = floe
+	return l
+}
+
+// A built-in template whose files have a mistake of their own is not found but floe's failure: those of its
+// schema that floe notes beside and of its compiling with floe's parts too, and of its computed.yaml read
+// against its schema bound to floe's parts alone, whatever the parts of one's own.
+func TestFindBrokenBuiltin(t *testing.T) {
+	t.Parallel()
+
+	read := func(file string) string {
+		b, err := fs.ReadFile(templateFiles, path.Join("templates", "report", file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	schema, page := read("schema.json"), read("page.html")
+	// One directory for both: parts of one's own that cannot be read, as they overlap the themes.
+	overlap := t.TempDir()
+	for _, tt := range []struct {
+		name, file, text string
+		own              ownDirs
+	}{
+		{"checks", "checks.yaml", "- for: sections\n  expr: item ==\n  message: x\n", ownDirs{}},
+		{"format", "schema.json", strings.Replace(schema, `"properties": {`, `"properties": {"zz": {"type": "string", "format": "nope"}, `, 1), ownDirs{}},
+		{"pattern", "schema.json", strings.Replace(schema, `"properties": {`, `"properties": {"zz": {"type": "string", "pattern": "["}, `, 1), ownDirs{}},
+		{"ref", "schema.json", strings.Replace(schema, "floe:///parts/any.json", "floe:///parts/nosuch.json", 1), ownDirs{}},
+		{"parse", "page.html", page + "{{if .title}}", ownDirs{}},
+		{"escape", "page.html", page + `<a href="{{if .title}}/x/{{else}}/s?q={{end}}{{.title}}">x</a>`, ownDirs{}},
+		{"words", "words.yaml", "en: [\n", ownDirs{}},
+		{"names", "page.html", strings.Replace(page, "<body", `<body><div data-floe-part="nosuch"></div`, 1), ownDirs{}},
+		{"declared", "checks.yaml", "- for: nosuch\n  expr: \"true\"\n  message: x\n", ownDirs{}},
+		{"warning", "page.css", read("page.css") + "\n:scope { --accent: #f00; }\n", ownDirs{}},
+		{"computed", "computed.yaml", "total: title +\n", ownDirs{parts: overlap, themes: overlap}},
+	} {
+		floe := mapOf(t, templateFiles)
+		floe[path.Join("templates", "report", tt.file)] = &fstest.MapFile{Data: []byte(tt.text)}
+		tpl, err := libraryOf("", tt.own, floe).Find("report")
+		if tpl != nil || err == nil || isMistake(err) || !strings.Contains(err.Error(), "report/"+tt.file) {
+			t.Errorf("%s: Find = %v, %v; want floe's failure at report/%s", tt.name, tpl, err, tt.file)
+		}
+	}
+	// Checked once for a library and its runs: floe's files do not change while it runs.
+	l := libraryOf("", ownDirs{}, fstest.MapFS{"templates/report/schema.json": &fstest.MapFile{Data: []byte(`{"type":`)}})
+	_, first := l.Run().Find("report")
+	l.floe = templateFiles
+	if _, err := l.Run().Find("report"); first == nil || err == nil || err.Error() != first.Error() {
+		t.Errorf("Find in another run = %v, want %v as checked first", err, first)
+	}
+}
+
+// floe's check of a built-in template reads no template of one's own of its name, which would take its place.
+func TestCheckFloeReadsNoOwn(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "report"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "report", "schema.json"), []byte(`{"type":`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := libraryOf(dir, ownDirs{}, templateFiles).floeChecked("report"); err != nil {
+		t.Errorf("floe's check of report beside a broken one of one's own = %v, want nil", err)
+	}
+}
+
+// heldFS holds the opening of a file under at until open is closed, telling started when one waits.
+type heldFS struct {
+	fs.FS
+	at      string
+	started chan struct{}
+	open    chan struct{}
+	once    sync.Once
+}
+
+func (h *heldFS) Open(name string) (fs.File, error) {
+	if strings.HasPrefix(name, h.at+"/") {
+		h.once.Do(func() { close(h.started) })
+		<-h.open
+	}
+	return h.FS.Open(name) //nolint:wrapcheck // the file system's own
+}
+
+// floe's check of a built-in template does not wait for that of another name.
+func TestCheckFloeOfAnotherName(t *testing.T) {
+	t.Parallel()
+
+	floe := mapOf(t, templateFiles)
+	for name, f := range floe {
+		if rest, ok := strings.CutPrefix(name, "templates/report/"); ok {
+			floe["templates/slow/"+rest] = f
+		}
+	}
+	held := &heldFS{FS: floe, at: "templates/slow", started: make(chan struct{}), open: make(chan struct{}), once: sync.Once{}}
+	l := libraryOf("", ownDirs{}, held)
+	slow := make(chan error)
+	go func() { slow <- l.floeChecked("slow") }()
+	<-held.started
+	report := make(chan error)
+	go func() { report <- l.floeChecked("report") }()
+	select {
+	case err := <-report:
+		if err != nil {
+			t.Errorf("floe's check of report = %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Error("floe's check of report waits for that of slow")
+	}
+	close(held.open)
+	if err := <-slow; err != nil {
+		t.Errorf("floe's check of slow = %v", err)
+	}
 }
