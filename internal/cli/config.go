@@ -28,7 +28,9 @@ type config struct {
 	parts     string // the parts of one's own; empty when there is nowhere to put them
 	themes    string // the themes of one's own; empty when there is nowhere to put them
 	home      string
-	homeWrong *usererr.Error // why HOME, set, gives no home: relative under no working directory; wrong[home] too
+	// homeWrong is why HOME, set, gives no home (relative under no working directory): the wrong of HOME and of
+	// each setting made of it.
+	homeWrong *usererr.Error
 	port      int
 	wrong     map[setting]*usererr.Error
 	absent    map[setting]*usererr.Error
@@ -111,7 +113,8 @@ func (c *config) readDirs(getenv func(string) string, dir string) {
 				*d.to = v
 			}
 		case c.homeWrong != nil:
-			c.absent[d.s] = c.homeWrong
+			// Made of a HOME that gives none: wrong to every command that uses it, read or needed, as a ~ in it is.
+			c.wrong[d.s] = c.homeWrong
 		default:
 			c.absent[d.s] = usererr.New("cli_no_default", key, key)
 		}

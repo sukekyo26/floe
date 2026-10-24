@@ -84,8 +84,8 @@ func (a *app) drawPages(files []string, out arg) ([]rendered, error) {
 		p := rendered{from: file, to: filepath.Join(dir, name), real: "", page: nil}
 		page, err := drawFile(a, f)
 		tell(&found, err)
-		if out.err != nil || f.err != nil {
-			// Nowhere to write to: told above.
+		if out.err != nil || f.err != nil || f.abs == "" {
+			// Nowhere to write to, or "", which is no data file: told above.
 			continue
 		}
 		p.real = realPath(filepath.Join(at, name))

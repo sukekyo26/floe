@@ -203,8 +203,8 @@ type entry struct {
 }
 
 func entryOf(p arg) entry {
-	if p.err != nil {
-		// Nowhere, by its name: the command refuses it.
+	if p.err != nil || p.abs == "" {
+		// Nowhere, or "", by its name: the command refuses it, and nothing is looked up for it.
 		return entry{abs: p.name, dir: nil, info: nil}
 	}
 	e := entry{abs: p.abs, dir: nil, info: nil}

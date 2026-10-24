@@ -1260,6 +1260,12 @@ func TestRelativeWithoutDir(t *testing.T) {
 		}
 	}
 	want(t, "check of an absolute path from no working directory", e.runAt(t.Context(), "", "check", page), 0, "", "")
+	// "" is told as it was, with and without a working directory.
+	for _, args := range [][]string{{"check", ""}, {"render", ""}} {
+		const told = "floe:  is not a data file (.yaml or .yml)\n"
+		want(t, args[0]+" ''", e.run(t, "", args...), 1, "", told)
+		want(t, args[0]+" '' from no working directory", e.runAt(t.Context(), "", args...), 1, "", told)
+	}
 
 	// The out-dir and the data files are told of in one list, in the order given.
 	bad := e.write(t, "bad.yaml", "template: report\nlang: en\nnope: 1\n")
@@ -1299,8 +1305,20 @@ func TestRelativeHome(t *testing.T) {
 	e.vars["FLOE_TEMPLATES_DIR"] = "~/t"
 	want(t, "a ~ setting under a relative HOME from no working directory",
 		e.runAt(t.Context(), "", "template", "new", "memo2", "--from", "report"), 1, "", refused)
-	// The server reads HOME, for links: a command that may start it stops before it does.
+	// A directory made of HOME stops a command that only reads it too, by HOME, not as one that is not there.
 	delete(e.vars, "FLOE_TEMPLATES_DIR")
+	mine := e.write(t, "mine.yaml", "template: mine\nlang: en\n")
+	for _, args := range [][]string{{"check", mine}, {"render", "--check", mine}} {
+		want(t, strings.Join(args[:1], " ")+" under a relative HOME from no working directory",
+			e.runAt(t.Context(), "", args...), 1, "", refused)
+	}
+	// The server reads HOME, for links, though no directory is made of it: a command that may start it
+	// stops before it does.
+	for key, dir := range map[string]string{
+		"FLOE_TEMPLATES_DIR": "t", "FLOE_PARTS_DIR": "parts", "FLOE_THEMES_DIR": "themes", "FLOE_ICONS_DIR": "icons",
+	} {
+		e.vars[key] = filepath.Join(e.tmp, dir)
+	}
 	page := e.write(t, "p.html", "<!doctype html><title>p</title>")
 	for _, args := range [][]string{{"publish", "--link", page}, {"list"}} {
 		want(t, strings.Join(args, " ")+" under a relative HOME from no working directory", e.runAt(t.Context(), "", args...), 1, "", refused)
