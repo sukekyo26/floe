@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -85,7 +86,7 @@ func runSample(t *testing.T, dir string) map[string][]byte {
 	}
 
 	var data []string
-	for _, file := range s.glob(t, "*", false) {
+	for _, file := range s.glob(t, "*", isFile) {
 		if store.IsDataFile(file) {
 			data = append(data, file)
 		}
@@ -93,35 +94,11 @@ func runSample(t *testing.T, dir string) map[string][]byte {
 	if len(data) > 0 {
 		s.run(t, false, append([]string{"check"}, data...)...)
 	}
-	// One at a time, each into a directory of its own: floe render writes nothing while one of its files has a
-	// mistake, and the page of a data file that passes is drawn beside one that does not.
-	drawnBy := map[string]string{}
-	for _, file := range data {
-		out := filepath.Join(s.tmp, "pages", file)
-		s.run(t, false, "render", "--out-dir", out, file)
-		pages, err := filepath.Glob(filepath.Join(out, "*.html"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, page := range pages {
-			name := filepath.Base(page)
-			if other, ok := drawnBy[name]; ok {
-				t.Errorf("%s and %s both write %s, which golden/ holds one of; rename one of them", other, file, name)
-			}
-			drawnBy[name] = file
-			b, err := os.ReadFile(page)
-			if err != nil {
-				t.Fatal(err)
-			}
-			s.files[name] = s.drawn(t, "the page "+name+" of "+file, b)
-		}
-	}
-	// And together, for what render does of several, as writing none while one has a mistake; its pages are
-	// those above.
+	drawnBy := s.renderEach(t, data)
 	if len(data) > 1 {
-		s.run(t, false, append([]string{"render", "--out-dir", filepath.Join(s.tmp, "together")}, data...)...)
+		s.renderTogether(t, data, drawnBy)
 	}
-	if templates := s.glob(t, "templates/*", true); len(templates) > 0 {
+	if templates := s.glob(t, "templates/*", isDir); len(templates) > 0 {
 		// LIMIT: absolute, as floe template check reads a relative dir from the process's working directory,
 		// not cli.Env.Dir (floe-usage-issues 58). Name them relative once it reads them from Env.Dir.
 		for i, dir := range templates {
@@ -132,18 +109,92 @@ func runSample(t *testing.T, dir string) map[string][]byte {
 	if s.has(t, "parts") || s.has(t, "themes") {
 		s.run(t, false, "part", "check")
 	}
-	if specs := s.glob(t, "diagrams/*.yaml", false); len(specs) > 0 {
+	// Every file: floe diagram render takes a spec of any name, and tells of one that is not a spec.
+	if specs := s.glob(t, "diagrams/*", isFile); len(specs) > 0 {
 		s.run(t, true, append([]string{"diagram", "render"}, specs...)...)
 	}
 	s.files["commands.golden"] = []byte(s.commands.String())
 	return s.files
 }
 
-// run runs floe in process from the sample's directory and writes what it printed to commands.golden. The
+// renderEach renders each data file on its own, into a directory of its own, as floe render writes nothing
+// while one of its files has a mistake: the page of one that passes is drawn beside one that does not. It
+// puts the pages in s.files, and returns the data file each was drawn from.
+func (s *sample) renderEach(t *testing.T, data []string) map[string]string {
+	t.Helper()
+
+	drawnBy := map[string]string{}
+	for _, file := range data {
+		out := filepath.Join(s.tmp, "pages", file)
+		s.run(t, false, "render", "--out-dir", out, file)
+		for name, b := range s.pages(t, out, "the page %s of "+file) {
+			if other, ok := drawnBy[name]; ok {
+				t.Errorf("%s and %s both write %s, which golden/ holds one of; rename one of them", other, file, name)
+			}
+			drawnBy[name] = file
+			s.files[name] = b
+		}
+	}
+	return drawnBy
+}
+
+// renderTogether renders the data files together, for what floe render does of several: none written while
+// one has a mistake, and else each page as renderEach drew it, so that what one file read is not drawn into
+// another's page.
+func (s *sample) renderTogether(t *testing.T, data []string, drawnBy map[string]string) {
+	t.Helper()
+
+	out := filepath.Join(s.tmp, "together")
+	code := s.run(t, false, append([]string{"render", "--out-dir", out}, data...)...)
+	pages := s.pages(t, out, "the page %s that render together drew")
+	if code != 0 {
+		for _, name := range slices.Sorted(maps.Keys(pages)) {
+			t.Errorf("render together failed but wrote %s", name)
+		}
+		return
+	}
+	for _, name := range slices.Sorted(maps.Keys(drawnBy)) {
+		if _, ok := pages[name]; !ok {
+			t.Errorf("render together did not write %s, which %s alone writes", name, drawnBy[name])
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(pages)) {
+		switch alone, ok := s.files[name]; {
+		case !ok:
+			t.Errorf("render together wrote %s, which no data file alone writes", name)
+		case !bytes.Equal(pages[name], alone):
+			t.Errorf("render together drew %s otherwise than %s alone", name, drawnBy[name])
+		}
+	}
+}
+
+// pages reads the pages floe render wrote in out, by name, each checked by drawn as what (with its name for
+// the %s).
+func (s *sample) pages(t *testing.T, out, what string) map[string][]byte {
+	t.Helper()
+
+	found, err := filepath.Glob(filepath.Join(out, "*.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pages := map[string][]byte{}
+	for _, page := range found {
+		b, err := os.ReadFile(page)
+		if err != nil {
+			t.Fatal(err)
+		}
+		name := filepath.Base(page)
+		pages[name] = s.drawn(t, fmt.Sprintf(what, name), b)
+	}
+	return pages
+}
+
+// run runs floe in process from the sample's directory, writes what it printed to commands.golden and
+// returns its exit code. The
 // directories the test made stand as $SAMPLE and $TMP, so that the golden files are the same wherever the
 // repository and the temporary directory are; but in what floe drew (drawn: the diagrams it printed), as in
 // the pages, where a path of the machine would be a mistake.
-func (s *sample) run(t *testing.T, drawn bool, args ...string) {
+func (s *sample) run(t *testing.T, drawn bool, args ...string) int {
 	t.Helper()
 
 	var stdout, stderr bytes.Buffer
@@ -161,6 +212,7 @@ func (s *sample) run(t *testing.T, drawn bool, args ...string) {
 			fmt.Fprintf(&s.commands, "--- %s\n%s", printed.name, printed.text)
 		}
 	}
+	return code
 }
 
 // drawn returns b, what floe drew (a page or the diagrams it printed), as it is, and fails the test when it
@@ -190,9 +242,15 @@ func (s *sample) has(t *testing.T, sub string) bool {
 	return info.IsDir()
 }
 
-// glob returns the paths of the sample matching pattern, relative to it, in the order of their names: the
-// directories alone when dirs, and none whose name starts with a dot (.DS_Store), which Glob's * matches.
-func (s *sample) glob(t *testing.T, pattern string, dirs bool) []string {
+// isDir and isFile pick what glob returns.
+var (
+	isDir  = fs.FileInfo.IsDir
+	isFile = func(info fs.FileInfo) bool { return !info.IsDir() }
+)
+
+// glob returns the paths of the sample matching pattern whose kind is one keep takes, relative to the sample,
+// in the order of their names, but none whose name starts with a dot (.DS_Store), which Glob's * matches.
+func (s *sample) glob(t *testing.T, pattern string, keep func(fs.FileInfo) bool) []string {
 	t.Helper()
 
 	found, err := filepath.Glob(filepath.Join(s.dir, pattern))
@@ -204,14 +262,12 @@ func (s *sample) glob(t *testing.T, pattern string, dirs bool) []string {
 		if hidden(filepath.Base(f)) {
 			continue
 		}
-		if dirs {
-			info, err := os.Stat(f)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !info.IsDir() {
-				continue
-			}
+		info, err := os.Stat(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !keep(info) {
+			continue
 		}
 		r, err := filepath.Rel(s.dir, f)
 		if err != nil {
