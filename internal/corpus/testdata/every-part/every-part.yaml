@@ -86,6 +86,7 @@ sections:
           title: Heads up
           text: Anyone editing during the freeze loses their changes.
       - html: <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>
+      - html: '<ul data-floe-look="rows"><li>Wiki: read-only</li><li>Host: open</li></ul>'
   - heading: Progress
     parts:
       - bars:

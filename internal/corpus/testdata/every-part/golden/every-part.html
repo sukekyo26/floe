@@ -78,7 +78,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.looks {
-@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-look~="panel"], [data-floe-look~="rows"]) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
 :scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
 }
@@ -139,6 +139,14 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="checklist"], [data-floe-part="faq"], [data-floe-part="glossary"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
+/* Rows in a panel, a rule between each and the next */
+:scope > * + * { border-top: 1px solid var(--line); }
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="rows"]) to (:scope [data-floe-part] > *) {
 /* Rows in a panel, a rule between each and the next */
 :scope > * + * { border-top: 1px solid var(--line); }
 }
@@ -790,7 +798,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.looks {
-@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-look~="panel"], [data-floe-look~="rows"]) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
 }
 }
@@ -826,6 +834,17 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="checklist"], [data-floe-part="faq"], [data-floe-part="glossary"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
+:scope { padding: 6px; }
+:scope > * { background: var(--surface); }
+:scope > :first-child { border-radius: 14px 14px 0 0; }
+:scope > :last-child { border-radius: 0 0 14px 14px; }
+:scope > :only-child { border-radius: 14px; }
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="rows"]) to (:scope [data-floe-part] > *) {
 :scope { padding: 6px; }
 :scope > * { background: var(--surface); }
 :scope > :first-child { border-radius: 14px 14px 0 0; }
@@ -991,6 +1010,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div class="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>
 </div>
 <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>
+<ul data-floe-look="rows"><li>Wiki: read-only</li><li>Host: open</li></ul>
 </section>
 <section>
 <h2 id="progress">Progress</h2>

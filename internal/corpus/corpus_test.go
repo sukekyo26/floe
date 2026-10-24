@@ -22,22 +22,16 @@ var update = flag.Bool("update", false, "write the golden files of each sample a
 // printed and the pages it wrote with the sample's golden/. What a sample holds says what runs: its data
 // files (those floe takes, .yaml and .yml) are checked together and rendered one at a time and together;
 // templates/, parts/, themes/ and icons/ are its own, and templates/ is checked by floe template check,
-// parts/ and themes/ by floe part check; the specs in diagrams/ are drawn by floe diagram render.
+// parts/ and themes/ by floe part check; the specs in diagrams/ are drawn by floe diagram render. The
+// samples in testdata/mistakes are each the least input of a mistake floe once told wrongly, and run alike.
 func TestCorpus(t *testing.T) {
 	t.Parallel()
 
-	entries, err := os.ReadDir("testdata")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		t.Run(e.Name(), func(t *testing.T) {
+	for _, name := range samples(t) {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			dir, err := filepath.Abs(filepath.Join("testdata", e.Name()))
+			dir, err := filepath.Abs(filepath.Join("testdata", name))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -53,6 +47,28 @@ func TestCorpus(t *testing.T) {
 			compareGolden(t, golden, got)
 		})
 	}
+}
+
+// mistakes is the directory in testdata that holds samples, not one.
+const mistakes = "mistakes"
+
+// samples returns the samples in testdata, relative to it, in the order of their names.
+func samples(t *testing.T) []string {
+	t.Helper()
+
+	var found []string
+	for _, parent := range []string{".", mistakes} {
+		entries, err := os.ReadDir(filepath.Join("testdata", parent))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range entries {
+			if e.IsDir() && !hidden(e.Name()) && (parent != "." || e.Name() != mistakes) {
+				found = append(found, filepath.Join(parent, e.Name()))
+			}
+		}
+	}
+	return found
 }
 
 // sample is a run of floe on the sample in dir: the settings of floe it runs under, and the files of its
@@ -121,30 +137,26 @@ type alone struct {
 
 // renderEach renders each data file on its own, into a directory of its own, as floe render writes nothing
 // while one of its files has a mistake: the page of one that passes is drawn beside one that does not. It
-// puts the pages in s.files.
+// puts the pages in s.files, but of two data files that write one page only the first's, which renderTogether
+// sees floe refuse.
 func (s *sample) renderEach(t *testing.T, data []string) alone {
 	t.Helper()
 
 	each := alone{drawnBy: map[string]string{}, failed: nil, clash: false}
 	// By the name in lower case, as floe render refuses two pages of one name but for case: one file to a
 	// filesystem that ignores case (macOS), where golden/ is checked out too.
-	named := map[string]string{}
+	named := map[string]bool{}
 	for _, file := range data {
 		out := filepath.Join(s.tmp, "pages", file)
 		if s.run(t, false, "render", "--out-dir", out, file) != 0 {
 			each.failed = append(each.failed, file)
 		}
 		for name, b := range s.pages(t, out, "the page %s of "+file) {
-			if other, ok := named[strings.ToLower(name)]; ok {
+			if named[strings.ToLower(name)] {
 				each.clash = true
-				but := ""
-				if other != name {
-					but = " but for case"
-				}
-				t.Errorf("%s and %s both write %s%s, which golden/ holds one of; rename one of them",
-					each.drawnBy[other], file, name, but)
+				continue
 			}
-			named[strings.ToLower(name)] = name
+			named[strings.ToLower(name)] = true
 			each.drawnBy[name] = file
 			s.files[name] = b
 		}

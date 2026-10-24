@@ -1,0 +1,14 @@
+$ floe check keys.yaml
+exit 1
+--- stderr
+keys.yaml:4:1: a key is a name: write 1 as text, in quotes
+keys.yaml:9:32: .inf is not a value a data file can hold; write a number in digits, or quote it as text
+keys.yaml:10:32: .nan is not a value a data file can hold; write a number in digits, or quote it as text
+keys.yaml:12:5: a key is a name: write true as text, in quotes
+$ floe render --out-dir $TMP/pages/keys.yaml keys.yaml
+exit 1
+--- stderr
+keys.yaml:4:1: a key is a name: write 1 as text, in quotes
+keys.yaml:9:32: .inf is not a value a data file can hold; write a number in digits, or quote it as text
+keys.yaml:10:32: .nan is not a value a data file can hold; write a number in digits, or quote it as text
+keys.yaml:12:5: a key is a name: write true as text, in quotes

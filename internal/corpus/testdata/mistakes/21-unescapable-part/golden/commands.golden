@@ -1,0 +1,24 @@
+$ floe check none.yaml takes.yaml
+exit 1
+--- stderr
+takes.yaml:7:17: the part note cannot be used
+  $SAMPLE/parts/note/part.html:2:54: this is not a valid Go template: {{.text}} appears in an ambiguous context within a URL
+$ floe render --out-dir $TMP/pages/none.yaml none.yaml
+exit 0
+--- stdout
+$TMP/pages/none.yaml/none.html
+$ floe render --out-dir $TMP/pages/takes.yaml takes.yaml
+exit 1
+--- stderr
+takes.yaml:7:17: the part note cannot be used
+  $SAMPLE/parts/note/part.html:2:54: this is not a valid Go template: {{.text}} appears in an ambiguous context within a URL
+$ floe render --out-dir $TMP/together none.yaml takes.yaml
+exit 1
+--- stderr
+takes.yaml:7:17: the part note cannot be used
+  $SAMPLE/parts/note/part.html:2:54: this is not a valid Go template: {{.text}} appears in an ambiguous context within a URL
+$ floe part check
+exit 1
+--- stderr
+the part note cannot be used
+  $SAMPLE/parts/note/part.html:2:54: this is not a valid Go template: {{.text}} appears in an ambiguous context within a URL
