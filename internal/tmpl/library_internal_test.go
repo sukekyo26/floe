@@ -245,6 +245,7 @@ func TestCheckFloeParts(t *testing.T) {
 		"warning": {"part.css": "[data-floe-part=\"x\"] { color: red; }"},
 		"theme":   {"theme": "}"},
 		"shared":  {"any.json": `"zz": {"type": "string", "pattern": "["}, `},
+		"palette": {"palette": ""},
 	} {
 		root, themes := mapOf(t, partFiles), mapOf(t, themeFiles)
 		for file, text := range map[string]string{"schema.json": schema, "part.html": html, "part.css": ""} {
@@ -258,6 +259,10 @@ func TestCheckFloeParts(t *testing.T) {
 			want = "parts/any.json"
 			doc := string(root[want].Data)
 			root[want] = &fstest.MapFile{Data: []byte(strings.Replace(doc, `"properties": {`, `"properties": {`+prop, 1))}
+		}
+		if _, ok := files["palette"]; ok {
+			want = "palette.css"
+			delete(themes, "themes/default/palette.css")
 		}
 		if css, ok := files["theme"]; ok {
 			want = "themes/default/base.css"
@@ -309,6 +314,9 @@ func TestFindBrokenBuiltin(t *testing.T) {
 		{"parse", "page.html", page + "{{if .title}}", ownDirs{}},
 		{"escape", "page.html", page + `<a href="{{if .title}}/x/{{else}}/s?q={{end}}{{.title}}">x</a>`, ownDirs{}},
 		{"words", "words.yaml", "en: [\n", ownDirs{}},
+		{"names", "page.html", strings.Replace(page, "<body", `<body><div data-floe-part="nosuch"></div`, 1), ownDirs{}},
+		{"declared", "checks.yaml", "- for: nosuch\n  expr: \"true\"\n  message: x\n", ownDirs{}},
+		{"warning", "page.css", read("page.css") + "\n:scope { --accent: #f00; }\n", ownDirs{}},
 		{"computed", "computed.yaml", "total: title +\n", ownDirs{parts: overlap, themes: overlap}},
 	} {
 		floe := mapOf(t, templateFiles)

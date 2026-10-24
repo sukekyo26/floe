@@ -281,14 +281,13 @@ func (l *Library) floeChecked(name string) error {
 	return check()
 }
 
-// checkFloe checks the built-in template name as unusable checks one of one's own, in a run that has no
-// templates, parts nor themes of one's own, which would take the place of floe's: what it refuses is floe's
-// failure.
+// checkFloe checks the built-in template name as floe template check checks one of one's own but its
+// example (checkFiles), in a run that has no templates, parts nor themes of one's own, which would take the
+// place of floe's: what it refuses, and a warning, which no one can heed either, are floe's failure.
 func (l *Library) checkFloe(name string) error {
 	floe := &Library{dir: "", mine: ownDirs{parts: "", themes: ""}, icons: "", run: nil, floe: l.floe, checked: l.checked}
-	t := floe.Run().template(name, "", "")
-	_, schemaErr := t.compileShape()
-	return floeFailure("read floe's template "+name, t.fileMistakes(schemaErr))
+	warnings, err := floe.Run().template(name, "", "").checkFiles()
+	return floeFailure("read floe's template "+name, usererr.Collect(err, warnings.Err()))
 }
 
 // own returns the template name of one's own, or nil without one. A file there is not a template, but
@@ -452,17 +451,17 @@ func (t *Template) unusable() error {
 	if !t.isOwn() {
 		return nil
 	}
+	return t.fileMistakes()
+}
+
+// fileMistakes returns the mistakes of t's files apart from the data, each read once, or a failure: what
+// unusable tells of one of one's own.
+func (t *Template) fileMistakes() error {
 	// The floe it needs comes before its mistakes, which another floe may not make.
 	if err := t.checkVersion(); err != nil {
 		return err
 	}
 	_, schemaErr := t.compileShape()
-	return t.fileMistakes(schemaErr)
-}
-
-// fileMistakes returns schemaErr, the mistakes of t's schema, with those of its other files, each read once,
-// or a failure: what unusable tells, floe's check of a built-in template too (checkFloe).
-func (t *Template) fileMistakes(schemaErr error) error {
 	_, checksErr := t.readChecks()
 	_, computedErr := t.readComputed()
 	_, wordsErr := t.words()

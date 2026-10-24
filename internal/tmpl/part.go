@@ -341,7 +341,12 @@ func (set *partSet) readBuiltin(parts, themes fs.FS) error {
 		}
 		set.themes[e.Name()] = t
 	}
-	set.palette = set.themes[DefaultTheme].palettes[0]
+	t := set.themes[DefaultTheme]
+	if t == nil || len(t.palettes) == 0 {
+		//nolint:err113 // floe's own files
+		return fmt.Errorf("read the themes: floe's theme %s has no %s.css", DefaultTheme, themePalette)
+	}
+	set.palette = t.palettes[0]
 	return nil
 }
 
