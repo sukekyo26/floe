@@ -581,9 +581,10 @@ func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share
 		"setInterval(() => top.postMessage('at ' + location.hash + ' ' + load, '*'), 50)</script>")
 	publish("from", link("/a/hash/#s2", "0")+
 		"<script>var parent = 1; document.addEventListener('pointerover', () => top.postMessage('over', '*'))</script>")
+	// The page may report a part before floe's script tells the frame of it: the frame's URL is waited for too.
 	at := func(what, want string) string {
 		return b.until(what, "(window.watching ||= (addEventListener('message', (e) => { if (String(e.data).startsWith('at ')) window.at = e.data; }), true)) && "+
-			"window.at?.startsWith("+js("at "+want+" ")+") && location.pathname + location.hash")
+			"window.at?.startsWith("+js("at "+want+" ")+") && location.hash === "+js(want)+" && location.pathname + location.hash")
 	}
 	click := func(y float64) {
 		box := b.rect("document.getElementById('frame')")
