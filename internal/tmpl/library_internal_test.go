@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -160,6 +161,36 @@ func TestRunReadsOnce(t *testing.T) {
 		write("templates/k/"+name, broken[name])
 		if err = draw("b.yaml"); err != nil {
 			t.Errorf("a data file drawn after %s is broken, in the run that read it = %v, want it read once", name, err)
+		}
+	}
+}
+
+// The mistake of a part that cannot be used is made once, for goroutines asking for it at once too.
+func TestBrokenPartOnce(t *testing.T) {
+	t.Parallel()
+
+	parts := t.TempDir()
+	if err := os.Mkdir(filepath.Join(parts, "bad"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, text := range map[string]string{"part.html": `<div data-floe-part="bad"></div>`, "schema.json": "{"} {
+		if err := os.WriteFile(filepath.Join(parts, "bad", name), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	set, err := partsIn(ownDirs{parts: parts, themes: ""})
+	if err != nil || set.broken["bad"] == nil {
+		t.Fatalf("partsIn = %v, want the part bad broken", err)
+	}
+	got := make([]*usererr.Error, 8)
+	var wg sync.WaitGroup
+	for i := range got {
+		wg.Go(func() { got[i] = set.brokenPart("bad") })
+	}
+	wg.Wait()
+	for _, e := range got {
+		if e != got[0] {
+			t.Fatalf("the mistakes of a broken part asked for at once = %v, want one", got)
 		}
 	}
 }

@@ -615,9 +615,10 @@ func (set *partSet) brokenTheme(name string) *usererr.Error {
 	return set.over("theme:"+name, set.brokenThemes[name], "tmpl_theme_broken", name)
 }
 
-// over is the mistake of, which cannot be used for why, made the first time it is asked for. Only a set of
-// one's own has one, read for one output: floe's alone, which a process keeps, has none to make.
+// over is the mistake of, which cannot be used for why, made the first time it is asked for.
 func (set *partSet) over(of string, why error, key, name string) *usererr.Error {
+	set.oversMu.Lock()
+	defer set.oversMu.Unlock()
 	if e := set.overs[of]; e != nil {
 		return e
 	}

@@ -31,15 +31,20 @@ type app struct {
 	lib *tmpl.Library // the run of the command, which reads what its inputs share once
 }
 
+// library is the library of the directories of the configuration.
+func (a *app) library() *tmpl.Library {
+	return tmpl.NewLibrary(a.cfg.templates, a.cfg.parts, a.cfg.themes, a.cfg.icons)
+}
+
 // store keeps the library, whose reads it runs once for each request.
 func (a *app) store() *store.Store {
-	return store.New(a.cfg.root, a.cfg.home, tmpl.NewLibrary(a.cfg.templates, a.cfg.parts, a.cfg.themes, a.cfg.icons))
+	return store.New(a.cfg.root, a.cfg.home, a.library())
 }
 
 // templates is the library of the command, one run of it: what its inputs share is read once.
 func (a *app) templates() *tmpl.Library {
 	if a.lib == nil {
-		a.lib = tmpl.NewLibrary(a.cfg.templates, a.cfg.parts, a.cfg.themes, a.cfg.icons).Run()
+		a.lib = a.library().Run()
 	}
 	return a.lib
 }

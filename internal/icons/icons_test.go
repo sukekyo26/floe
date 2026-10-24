@@ -11,10 +11,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // packageFiles stand in for the Icon package: what is kept, a service in two categories, sizes and
@@ -283,6 +285,27 @@ func TestFetchRefusals(t *testing.T) {
 	for _, err := range []error{serr, ferr} {
 		if want := `there is no directory for icons; set FLOE_ICONS_DIR, then fetch a set with "floe icons fetch <set>"`; err == nil || err.Error() != want {
 			t.Errorf("icons without a root = %v, want %s", err, want)
+		}
+	}
+}
+
+// The mistake of a set not fetched is made once in a store, for goroutines looking up at once too.
+func TestNotFetchedOnce(t *testing.T) {
+	t.Parallel()
+
+	s := icons.New(t.TempDir())
+	got := make([]*usererr.Error, 8)
+	var wg sync.WaitGroup
+	for i := range got {
+		wg.Go(func() {
+			_, _, err := s.Lookup("aws/aws-lambda")
+			errors.As(err, &got[i])
+		})
+	}
+	wg.Wait()
+	for _, e := range got {
+		if e == nil || e != got[0] {
+			t.Fatalf("the mistakes of a set not fetched looked up at once = %v, want one", got)
 		}
 	}
 }

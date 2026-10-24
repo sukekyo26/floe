@@ -35,44 +35,39 @@ type Library struct {
 // longer, it would not see the files fixed after.
 type run struct {
 	own       ownDirs
-	set       *partSet
-	setErr    error
-	setRead   bool
-	entries   map[string]entriesRead // by the directory of templates
-	templates map[templateAt]found
+	set       readOnce[*partSet]
+	entries   map[string]*readOnce[[]fs.DirEntry] // by the directory of templates
+	templates map[templateAt]*readOnce[*Template]
 	icons     *icons.Store
 }
 
 // templateAt is a template by the directory of templates it was looked up in and its name.
 type templateAt struct{ dir, name string }
 
-type entriesRead struct {
-	entries []fs.DirEntry
-	err     error
-}
-
-type found struct {
-	t   *Template
-	err error
-}
-
 // Run returns l, reading what its reads share once from now on: for one output (a command's run, a
 // server's answer to a request), never for longer, as the files may be fixed in between.
 func (l *Library) Run() *Library {
 	r := &run{
-		own: l.mine, set: nil, setErr: nil, setRead: false, entries: map[string]entriesRead{},
-		templates: map[templateAt]found{}, icons: icons.New(l.icons),
+		own: l.mine, set: readOnce[*partSet]{done: false, v: nil, err: nil},
+		entries: map[string]*readOnce[[]fs.DirEntry]{}, templates: map[templateAt]*readOnce[*Template]{},
+		icons: icons.New(l.icons),
 	}
 	return &Library{dir: l.dir, mine: l.mine, icons: l.icons, run: r}
 }
 
 // parts reads the parts and themes of one's own of r, once.
 func (r *run) parts() (*partSet, error) {
-	if !r.setRead {
-		r.set, r.setErr = partsIn(r.own)
-		r.setRead = true
+	return r.set.of(func() (*partSet, error) { return partsIn(r.own) })
+}
+
+// onceIn returns the readOnce of key in m, a new one the first time.
+func onceIn[K comparable, T any](m map[K]*readOnce[T], key K) *readOnce[T] {
+	r := m[key]
+	if r == nil {
+		r = new(readOnce[T])
+		m[key] = r
 	}
-	return r.set, r.setErr
+	return r
 }
 
 // partsRead returns the parts and themes of one's own of l: once in a run, else read anew.
@@ -201,22 +196,17 @@ func (l *Library) ownNames() ([]string, error) {
 // its way. A run reads them once.
 // LIMIT: out of a run, read on every lookup. Keep them if a directory comes to hold thousands of them.
 func (l *Library) entries() ([]fs.DirEntry, error) {
-	if l.run != nil {
-		if e, ok := l.run.entries[l.dir]; ok {
-			return e.entries, e.err
+	read := func() ([]fs.DirEntry, error) {
+		entries, err := entriesOf(l.dir)
+		if err != nil {
+			return nil, usererr.New("tmpl_dir_unreadable", l.dir, err.Error())
 		}
+		return entries, nil
 	}
-	entries, err := entriesOf(l.dir)
-	var e entriesRead
-	if err != nil {
-		e.err = usererr.New("tmpl_dir_unreadable", l.dir, err.Error())
-	} else {
-		e.entries = entries
+	if l.run == nil {
+		return read()
 	}
-	if l.run != nil {
-		l.run.entries[l.dir] = e
-	}
-	return e.entries, e.err
+	return onceIn(l.run.entries, l.dir).of(read)
 }
 
 // unknown refuses the template name, which there is none of, naming those there are.
@@ -233,13 +223,9 @@ func (l *Library) Find(name string) (*Template, error) {
 	if l.run == nil {
 		return l.lookUp(name)
 	}
-	at := templateAt{dir: l.dir, name: name}
-	f, ok := l.run.templates[at]
-	if !ok {
-		f.t, f.err = l.lookUp(name)
-		l.run.templates[at] = f
-	}
-	return f.t, f.err
+	return onceIn(l.run.templates, templateAt{dir: l.dir, name: name}).of(func() (*Template, error) {
+		return l.lookUp(name)
+	})
 }
 
 func (l *Library) lookUp(name string) (*Template, error) {
