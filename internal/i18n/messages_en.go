@@ -33,7 +33,7 @@ var messagesEN = map[string]string{
 	"store_no_page":       `no page "%s" (see floe list)`,
 	"store_link_relative": "%s is not an absolute path: give the path of an HTML or data file starting with /",
 	"store_link_empty":    "give the absolute path of the HTML or data file to link",
-	"store_file_empty":    "give the path of the data file (.yaml or .yml) to publish",
+	"store_file_empty":    "the path of the data file to publish is empty; give the path of a .yaml or .yml file",
 
 	// ui: the management page (ui.html), which renders them itself
 	"ui_back_to_list":         "Back to the list",

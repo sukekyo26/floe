@@ -1284,7 +1284,7 @@ func TestEmptyPath(t *testing.T) {
 	empty := func(what string) string {
 		return "floe: " + what + " is an empty path; give a file or directory, and check that a variable written for it is set\n"
 	}
-	const noData = "floe: give the path of the data file (.yaml or .yml) to publish\n"
+	const noData = "floe: the path of the data file to publish is empty; give the path of a .yaml or .yml file\n"
 	for _, c := range []struct {
 		args []string
 		told string

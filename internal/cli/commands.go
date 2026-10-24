@@ -122,7 +122,7 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	switch {
 	// An empty data file is Accept's to refuse, as the gate of the store the server checks with too; told
 	// again here, it would be told twice, in other words.
-	case p.err != nil && !link && file == "":
+	case !link && file == "":
 	case p.err != nil:
 		err = usererr.Collect(err, p.err)
 	case link:

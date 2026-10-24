@@ -1286,7 +1286,7 @@ func TestPrepareData(t *testing.T) {
 	// Accept refuses an empty file, so that no slug is made of no name.
 	empty := up
 	empty.File = ""
-	if _, err = s.PrepareData(empty, store.Options{}); err == nil || err.Error() != "give the path of the data file (.yaml or .yml) to publish" {
+	if _, err = s.PrepareData(empty, store.Options{}); err == nil || err.Error() != "the path of the data file to publish is empty; give the path of a .yaml or .yml file" {
 		t.Errorf("PrepareData of an empty file = %v", err)
 	}
 	// The mistakes of the schema come first: what names an image is not looked at until it passes.
