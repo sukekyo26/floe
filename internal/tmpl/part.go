@@ -449,8 +449,8 @@ func (set *partSet) readSchema(files fs.FS, url, file, shown, part string) error
 }
 
 // readPart reads the part name from files, its directory, shown in its mistakes as dir, into set, one's own
-// with own, else floe's: a directory without schema.json and part.html is a look alone. The mistakes of its files are told
-// together, so that floe part check tells them all at once.
+// with own, else floe's: a directory without schema.json and part.html is a look alone. The mistakes of its
+// files are told together, so that floe part check tells them all at once.
 func (set *partSet) readPart(files fs.FS, name, dir string, own bool) error {
 	look, err := isLookDir(files, dir)
 	if err != nil {

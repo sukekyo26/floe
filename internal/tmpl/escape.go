@@ -21,8 +21,9 @@ var errStop = errors.New("stop")
 
 // escapeMistake runs html/template's escaping of page, a page.html or part.html parsed from src and never
 // drawn, shown as file, and returns what html/template refuses there: the maker's mistake when page is one's
-// own (own), at the line and column of the node it names when it names one, else floe's failure. Escaping takes no data: html/template does it on the first drawing, whatever the
-// data, so a mistake of it is the file's, and every *template.Error is one, made by the escaping alone. It
+// own (own), at the line and column of the node it names when it names one, else floe's failure. Escaping
+// takes no data: html/template does it on the first drawing, whatever the data, so a mistake of it is the
+// file's, and every *template.Error is one, made by the escaping alone. It
 // is run on a copy, as a page drawn once cannot be cloned for each language, from a template of the copy's
 // own that calls the page after a function that stops it: html/template escapes the page as it is called,
 // in the text context a page is drawn in, and then nothing of it runs, neither its functions nor its loops.
