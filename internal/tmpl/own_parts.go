@@ -155,14 +155,13 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) err
 	return nil
 }
 
-// leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own
-// that holds itself, through the parts it holds, or takes its own look, through the looks it takes, which
-// floe would follow forever, a part, floe's too, that settle refuses, again while one is left out, as a
-// part may take the look of the one left out, or hold it, and then one whose schema names a usable part
-// at its root. A part of floe's is not left out for holding one of one's own that cannot be used: the data
-// that takes that one is refused at its item (partMistake). One of one's own whose schema does not
-// compile, or does not declare a path of its checks.yaml, is among those settle refuses (compileOwn).
-// The failure is floe's (compileOwn).
+// leaveOutUnusable leaves out of set the parts that cannot be used once all are read: one of one's own, or one it
+// checks as such (checked), that holds itself, through the parts it holds, or takes its own look, through the looks it
+// takes, which floe would follow forever, a part, floe's too, that settle refuses, again while one is left out, as a
+// part may take the look of the one left out, or hold it, and then one whose schema names a usable part at its root. A
+// part of floe's is not left out for holding one of one's own that cannot be used: the data that takes that one is
+// refused at its item (partMistake). One of one's own whose schema does not compile, or does not declare a path of its
+// checks.yaml, is among those settle refuses (compileOwn). The failure is floe's (compileOwn).
 func (set *partSet) leaveOutUnusable() error {
 	held := func(at string) []string { return set.shapes[partsURL+at+".json"].refsUnder(nil) }
 	looks := func(at string) []string {
@@ -172,10 +171,11 @@ func (set *partSet) leaveOutUnusable() error {
 		return nil
 	}
 	for _, name := range slices.Sorted(maps.Keys(set.parts)) {
-		dir := set.parts[name].dir
-		if dir == "" {
+		p := set.parts[name]
+		if !set.checked(p) {
 			continue
 		}
+		dir := cmp.Or(p.dir, p.file(""))
 		if chain := cycle(name, held); chain != nil {
 			set.leaveOut(name, usererr.NewAt(dir, 0, 0, "tmpl_part_cycle", name, strings.Join(chain, " → ")))
 		} else if chain := cycle(name, looks); chain != nil {
@@ -241,7 +241,8 @@ func (set *partSet) settle(mistakes map[string]error) {
 	}
 }
 
-// compileOwn compiles the schema of each part of one's own in set, and returns, by name, what stopped each:
+// compileOwn compiles the schema of each part of one's own in set, or that it checks as such (checked), and
+// returns, by name, what stopped each:
 // the mistakes of its schema.json, or what floe cannot place there (compileMistakes), or, compiled, the
 // paths of its checks.yaml it does not declare (checksDeclared). Each is compiled with every other part,
 // floe's too, standing as true, a schema anything fits, but one that cannot be used, standing as false
@@ -263,7 +264,7 @@ func (set *partSet) compileOwn() (map[string]error, error) {
 		stands[url] = !set.shares[url]
 	}
 	for name, p := range set.parts {
-		if !p.ownSchema() {
+		if !set.checked(p) || p.isLook() {
 			continue
 		}
 		url := partsURL + name + ".json"
@@ -297,11 +298,6 @@ func (set *partSet) compileOwn() (map[string]error, error) {
 // is its maker's mistake, else floe's failure.
 func (p *part) isOwn() bool {
 	return p.dir != ""
-}
-
-// ownSchema reports whether p is a part of one's own that draws, whose schema.json floe compiles.
-func (p *part) ownSchema() bool {
-	return p.isOwn() && !p.isLook()
 }
 
 // file is the file name of p, as its mistakes name it: in its directory, or under parts/ for floe's.
@@ -446,7 +442,7 @@ func (set *partSet) reserved(name string) bool {
 // look alone. floe's parts name themselves, one each, as a test checks.
 func (set *partSet) checkNames(name string) error {
 	p := set.parts[name]
-	own := p.isOwn()
+	own := set.checked(p)
 	html, yaml := p.file("part.html"), p.file("part.yaml")
 	named := namedParts(p.html)
 	var errs []error

@@ -30,15 +30,15 @@ type Library struct {
 	icons string  // the directory of icons the diagrams of data files show; "" for none
 	run   *run    // what one output read once (Run); nil reads it again every time
 	floe  fs.FS   // the built-in templates, a directory each under templates
-	// what floeFiles gave of each built-in template, by name, for l and the libraries of its runs: floe's
-	// files do not change while it runs
+	// floe's check of each built-in template (checkFloe), for l and the libraries of its runs: floe's files
+	// do not change while it runs
 	checked *floeChecks
 }
 
-// floeChecks is what floeFiles gave of each built-in template, by name.
+// floeChecks is floe's check of each built-in template, by name, each run once.
 type floeChecks struct {
 	mu sync.Mutex
-	of map[string]error
+	of map[string]func() error
 }
 
 // run is what the reads of one output read once: the parts and themes of one's own, the directory of
@@ -100,7 +100,7 @@ func (l *Library) partsRead() (*partSet, error) {
 func NewLibrary(dir, partsDir, themesDir, iconsDir string) *Library {
 	return &Library{
 		dir: dir, mine: ownDirs{parts: partsDir, themes: themesDir}, icons: iconsDir, run: nil, floe: templateFiles,
-		checked: &floeChecks{mu: sync.Mutex{}, of: map[string]error{}},
+		checked: &floeChecks{mu: sync.Mutex{}, of: map[string]func() error{}},
 	}
 }
 
@@ -262,23 +262,33 @@ func (l *Library) lookUp(name string) (*Template, error) {
 		return nil, fmt.Errorf("find the template %s: %w", name, err)
 	}
 	t := l.template(name, "", "")
-	if err := l.floeChecked(t); err != nil {
+	if err := l.floeChecked(name); err != nil {
 		return nil, err
 	}
 	return t, nil
 }
 
-// floeChecked returns what floeFiles gives of t, a built-in template, run once in l and the libraries of
-// its runs.
-func (l *Library) floeChecked(t *Template) error {
+// floeChecked returns what checkFloe gives of the built-in template name, run once in l and the libraries of
+// its runs: a check of another name does not wait for it.
+func (l *Library) floeChecked(name string) error {
 	l.checked.mu.Lock()
-	defer l.checked.mu.Unlock()
-	err, done := l.checked.of[t.Name]
-	if !done {
-		err = t.floeFiles()
-		l.checked.of[t.Name] = err
+	check := l.checked.of[name]
+	if check == nil {
+		check = sync.OnceValue(func() error { return l.checkFloe(name) })
+		l.checked.of[name] = check
 	}
-	return err
+	l.checked.mu.Unlock()
+	return check()
+}
+
+// checkFloe checks the built-in template name as unusable checks one of one's own, in a run that has no
+// templates, parts nor themes of one's own, which would take the place of floe's: what it refuses is floe's
+// failure.
+func (l *Library) checkFloe(name string) error {
+	floe := &Library{dir: "", mine: ownDirs{parts: "", themes: ""}, icons: "", run: nil, floe: l.floe, checked: l.checked}
+	t := floe.Run().template(name, "", "")
+	_, schemaErr := t.compileShape()
+	return floeFailure("read floe's template "+name, t.fileMistakes(schemaErr))
 }
 
 // own returns the template name of one's own, or nil without one. A file there is not a template, but
@@ -436,7 +446,7 @@ func (l *Library) usable(name string) (t *Template, why, failed error) {
 // unusable returns why t, one of one's own, cannot be used, whatever the data: the mistakes of its files as
 // a data file's check and drawing read them, apart from the data (its version, schema, checks, computed
 // values, words, page.html and page.css), each read once, or a failure; nil for a built-in one, whose
-// mistakes are floe's failure when it is found (floeFiles). floe template check tells them, and what it alone
+// mistakes are floe's failure when it is found (checkFloe). floe template check tells them, and what it alone
 // checks besides (checkFiles).
 func (t *Template) unusable() error {
 	if !t.isOwn() {
@@ -451,8 +461,7 @@ func (t *Template) unusable() error {
 }
 
 // fileMistakes returns schemaErr, the mistakes of t's schema, with those of its other files, each read once,
-// or a failure: what both unusable and floeFiles tell, but for the schema, which floeFiles reads apart from
-// the parts.
+// or a failure: what unusable tells, floe's check of a built-in template too (checkFloe).
 func (t *Template) fileMistakes(schemaErr error) error {
 	_, checksErr := t.readChecks()
 	_, computedErr := t.readComputed()
@@ -593,21 +602,6 @@ func versionOf(s string) (semver, bool) {
 		v[i] = n
 	}
 	return v, true
-}
-
-// floeFiles refuses t, a built-in template, whose files have mistakes of their own, as floe's failure: what
-// floe's files alone give, its schema bound to floe's parts alone and compiled, apart from those of one's own
-// that may take the place of floe's (compileShape). computed.yaml reads the keys of the schema compileShape
-// binds, which are of floe's file alone while its root names nothing (TestBuiltinTemplateRoot).
-// LIMIT: computed.yaml goes unchecked here while parts of one's own keep compileShape from binding. Read its
-// keys of the schema bound to floe's parts if a built-in template comes to have one.
-func (t *Template) floeFiles() error {
-	floe, err := builtinParts()
-	if err != nil {
-		return err
-	}
-	_, schemaErr := t.readAndCompile(floe)
-	return floeFailure("read floe's template "+t.Name, t.fileMistakes(schemaErr))
 }
 
 // floeFailure is err, the mistakes of reading floe's own files as what, as floe's failure, worded: wrapped,
