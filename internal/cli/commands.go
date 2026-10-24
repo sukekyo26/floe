@@ -28,14 +28,20 @@ import (
 type app struct {
 	env Env
 	cfg *config
+	lib *tmpl.Library // the run of the command, which reads what its inputs share once
 }
 
+// store keeps the library, whose reads it runs once for each request.
 func (a *app) store() *store.Store {
-	return store.New(a.cfg.root, a.cfg.home, a.templates())
+	return store.New(a.cfg.root, a.cfg.home, tmpl.NewLibrary(a.cfg.templates, a.cfg.parts, a.cfg.themes, a.cfg.icons))
 }
 
+// templates is the library of the command, one run of it: what its inputs share is read once.
 func (a *app) templates() *tmpl.Library {
-	return tmpl.NewLibrary(a.cfg.templates, a.cfg.parts, a.cfg.themes, a.cfg.icons)
+	if a.lib == nil {
+		a.lib = tmpl.NewLibrary(a.cfg.templates, a.cfg.parts, a.cfg.themes, a.cfg.icons).Run()
+	}
+	return a.lib
 }
 
 // abs puts a relative dir under the working directory, and folds the .. of any by its letters, as Join and

@@ -43,6 +43,13 @@ var identifier = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 func checkComputed(t *Template, d *Data) error {
 	src, found, err := t.readOptional("computed.yaml")
 	if !found || err != nil {
+		return t.same("computed.yaml", err)
+	}
+	// What the template's file holds alone, apart from the data, found once.
+	if err = t.once("computed.yaml", func() error {
+		_, err := readComputed(t.file("computed.yaml"), src, d.shape.keyNames())
+		return err
+	}); err != nil {
 		return err
 	}
 	return compute(t.file("computed.yaml"), src, d, t.isOwn())

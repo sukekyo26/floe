@@ -154,7 +154,7 @@ is not drawn, as it has no data: floe template check draws a template's example 
 uses.`,
 		Args: usage(cobra.NoArgs),
 		RunE: func(*cobra.Command, []string) error {
-			warnings, err := tmpl.CheckOwnParts(a.cfg.parts, a.cfg.themes)
+			warnings, err := a.templates().CheckOwnParts()
 			a.tellWarnings(warnings)
 			return err //nolint:wrapcheck // already says what failed
 		},

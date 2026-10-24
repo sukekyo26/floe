@@ -167,7 +167,7 @@ func (l *Library) NewPart(name, from string) (*MadePart, error) {
 	if !validName(name) {
 		return nil, usererr.New("tmpl_new_part_name", name)
 	}
-	set, err := partsIn(l.mine)
+	set, err := l.run.parts(l.mine)
 	if err != nil {
 		return nil, err
 	}

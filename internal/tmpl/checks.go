@@ -40,6 +40,13 @@ type scope struct {
 func checkRelations(t *Template, d *Data, root ast.Node) error {
 	src, found, err := t.readOptional("checks.yaml")
 	if !found || err != nil {
+		return t.same("checks.yaml", err)
+	}
+	// What the template's file holds alone, apart from the data, found once.
+	if err = t.once("checks.yaml", func() error {
+		_, err := readChecks(t.file("checks.yaml"), src, false)
+		return err
+	}); err != nil {
 		return err
 	}
 	return relate(t.file("checks.yaml"), src, d, root, t.isOwn())

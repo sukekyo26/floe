@@ -194,7 +194,7 @@ func (s *Store) PrepareData(up Upload, opts Options) (*Entry, error) {
 		images = fstest.MapFS{}
 	}
 	theme := opts.theme()
-	data, named, err := s.templates.ReadFS(up.File, up.Source, images, up.Dir, theme)
+	data, named, err := s.templates.Run().ReadFS(up.File, up.Source, images, up.Dir, theme)
 	// Asked before the mistakes, which may be of the images not sent.
 	if up.Images == nil && len(named) > 0 {
 		if _, refused := s.storedPage(nil, nil, opts, up.Project); refused != nil {
@@ -230,7 +230,7 @@ func (s *Store) PrepareLink(ctx context.Context, file string, opts Options, cwd 
 	theme := opts.theme()
 	var data *tmpl.Data
 	if IsDataFile(path) {
-		if data, err = s.templates.Read(path, src, theme, cwd); err != nil {
+		if data, err = s.templates.Run().Read(path, src, theme, cwd); err != nil {
 			return nil, err //nolint:wrapcheck // mistakes at their lines and columns, for the caller to show
 		}
 	}

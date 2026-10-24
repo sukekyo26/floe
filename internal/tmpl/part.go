@@ -196,6 +196,9 @@ type partSet struct {
 	// what to warn of: what of one's own goes into no page, and the colours of the parts and themes
 	// written where the palette is to give them
 	strays []*usererr.Error
+	// the mistake of each part and theme that cannot be used, by "part:" or "theme:" and its name, made once:
+	// every page and template that uses it gives the same one, for it to be told once
+	overs map[string]*usererr.Error
 }
 
 // builtinParts reads floe's parts once.
@@ -211,6 +214,7 @@ func readParts(own ownDirs, entries []os.DirEntry, stage staged) (*partSet, erro
 		parts: map[string]*part{}, docs: map[string]any{}, shapes: map[string]*shape{}, notes: map[string]*schemaNotes{},
 		shares: map[string]bool{}, themes: map[string]*theme{},
 		broken: map[string]error{}, brokenThemes: map[string]error{}, palette: "", dirs: nil, strays: nil,
+		overs: map[string]*usererr.Error{},
 	}
 	if err := set.readBuiltin(); err != nil {
 		return nil, err

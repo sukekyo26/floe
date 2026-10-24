@@ -21,7 +21,13 @@ import (
 // names: its files, then its example.yaml through every stage of a publish, drawing included, with the
 // parts of partsDir, the themes of themesDir and the icons kept in iconsDir in its diagrams. The mistakes
 // stop it from being drawn, and the warnings do not.
-func Check(dir, partsDir, themesDir, iconsDir string) (warnings usererr.List, err error) {
+func Check(dir, partsDir, themesDir, iconsDir string) (usererr.List, error) {
+	return NewLibrary("", partsDir, themesDir, iconsDir).Run().Check(dir)
+}
+
+// Check checks the template at dir as the function Check does, with the parts, themes and icons of l: in a
+// run, those of every template it checks are read once, and their mistakes are the same for each.
+func (l *Library) Check(dir string) (warnings usererr.List, err error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, usererr.CannotRead(dir, err)
@@ -34,7 +40,8 @@ func Check(dir, partsDir, themesDir, iconsDir string) (warnings usererr.List, er
 		return nil, usererr.CannotRead(dir, err)
 	}
 	// Found as a library of the directory above would find it, symlink and all.
-	t, err := NewLibrary(filepath.Dir(abs), partsDir, themesDir, iconsDir).resolve(name)
+	in := &Library{dir: filepath.Dir(abs), mine: l.mine, icons: l.icons, run: l.run}
+	t, err := in.resolve(name)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +77,13 @@ func Check(dir, partsDir, themesDir, iconsDir string) (warnings usererr.List, er
 // page would read them: the mistakes are of those that cannot be used, and the warnings of what goes into
 // no page and of the colours written where the palette is to give them. It draws none of them, which have
 // no data; a template that uses one draws its example with it.
-func CheckOwnParts(partsDir, themesDir string) (warnings usererr.List, err error) {
-	set, err := partsIn(ownDirs{parts: partsDir, themes: themesDir})
+func CheckOwnParts(partsDir, themesDir string) (usererr.List, error) {
+	return NewLibrary("", partsDir, themesDir, "").Run().CheckOwnParts()
+}
+
+// CheckOwnParts checks the parts and themes of one's own of l as the function CheckOwnParts does.
+func (l *Library) CheckOwnParts() (warnings usererr.List, err error) {
+	set, err := l.run.parts(l.mine)
 	if err != nil {
 		return nil, err
 	}

@@ -34,7 +34,8 @@ type Report struct {
 // Tell words err in the language of c: its mistakes, as List.Add takes them, those of a part or a theme
 // that several stand for told under the first, or, for an error that is not the user's or holds no
 // mistake, floe's failure. An error that carries a report already told (the server's, to the command line)
-// is told as it is. It is the only place a mistake is worded.
+// is told as it is. It is the only place a mistake is worded. A mistake given twice, the same *Error, as one
+// read once gives each input that uses what it was read of, is told once, where it first comes.
 func Tell(c *i18n.Catalog, err error) Report {
 	var reported interface{ Report() Report }
 	if errors.As(err, &reported) {
@@ -47,10 +48,13 @@ func Tell(c *i18n.Catalog, err error) Report {
 	if len(all) == 0 {
 		return Report{Mistakes: nil, Failure: fmt.Sprintf("%T with no mistake", err)}
 	}
-	told := map[string]bool{}
-	r := Report{Mistakes: make([]Told, len(all)), Failure: ""}
-	for i, e := range all {
-		r.Mistakes[i] = e.tell(c, told)
+	told, seen := map[string]bool{}, map[*Error]bool{}
+	r := Report{Mistakes: make([]Told, 0, len(all)), Failure: ""}
+	for _, e := range all {
+		if !seen[e] {
+			seen[e] = true
+			r.Mistakes = append(r.Mistakes, e.tell(c, told))
+		}
 	}
 	return r
 }

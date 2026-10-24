@@ -606,12 +606,23 @@ func (set *partSet) unusableThemes(skip func(name string) bool) usererr.List {
 
 // brokenPart is the mistake of the part name of set, which cannot be used, standing for why it cannot.
 func (set *partSet) brokenPart(name string) *usererr.Error {
-	return usererr.Over("part:"+name, reasons(set.broken[name]), "tmpl_part_broken", name)
+	return set.over("part:"+name, set.broken[name], "tmpl_part_broken", name)
 }
 
 // brokenTheme is the mistake of the theme name of set, which cannot be used, standing for why it cannot.
 func (set *partSet) brokenTheme(name string) *usererr.Error {
-	return usererr.Over("theme:"+name, reasons(set.brokenThemes[name]), "tmpl_theme_broken", name)
+	return set.over("theme:"+name, set.brokenThemes[name], "tmpl_theme_broken", name)
+}
+
+// over is the mistake of, which cannot be used for why, made the first time it is asked for. Only a set of
+// one's own has one, read for one output: floe's alone, which a process keeps, has none to make.
+func (set *partSet) over(of string, why error, key, name string) *usererr.Error {
+	if e := set.overs[of]; e != nil {
+		return e
+	}
+	e := usererr.Over(of, reasons(why), key, name)
+	set.overs[of] = e
+	return e
 }
 
 // reasons are why, why a part or a theme cannot be used, as mistakes: a failure among them, which is not

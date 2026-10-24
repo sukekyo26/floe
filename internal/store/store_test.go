@@ -1133,7 +1133,8 @@ func TestLinkDataFileIcons(t *testing.T) {
 
 	e := newEnv(t)
 	icons := filepath.Join(e.tmp, "icons")
-	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", "", icons))
+	// A run of the library, which reads the icons once, is not kept from one drawing to the next.
+	s := store.New(filepath.Join(e.tmp, "store"), filepath.Join(e.tmp, "home"), tmpl.NewLibrary("", "", "", icons).Run())
 	data := e.write(t, "proj/spec.yaml", "template: report\nsections:\n  - parts:\n      - diagram:\n          id: a\n"+
 		"          width: 100\n          height: 50\n          title: t\n          parts:\n"+
 		"            - icon: { x: 10, y: 5, name: aws/aws-lambda, size: 24 }\nlang: en\n")

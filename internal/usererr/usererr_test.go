@@ -97,6 +97,8 @@ func TestTell(t *testing.T) {
 	conflict := usererr.New("tmpl_no_lang")
 	conflict.Conflict = true
 	over := func() *usererr.Error { return usererr.Over("p", usererr.List{placed}, "tmpl_part_broken", "p") }
+	// One mistake given twice, as one read once is given to each input that uses what it is of.
+	once := usererr.New("tmpl_no_lang")
 	for _, tt := range []struct {
 		name        string
 		err         error
@@ -111,6 +113,8 @@ func TestTell(t *testing.T) {
 		{"its second time", usererr.List{over(), over()}, part + "\nthe part p cannot be used, as told above", part + "\nthe part p cannot be used, as told above", 400},
 		{"one in the words of another", usererr.New("tmpl_item", "x", over()), "x: " + part, "floe: x: " + part, 400},
 		{"one in the words of another, told before", usererr.List{over(), usererr.New("tmpl_item", "x", over())}, part + "\nx: " + part, part + "\nfloe: x: " + part, 400},
+		{"one mistake given twice", usererr.List{once, placed, once}, lang + "\na.yaml:1:2: " + lang, "floe: " + lang + "\na.yaml:1:2: " + lang, 400},
+		{"two alike", usererr.List{usererr.New("tmpl_no_lang"), usererr.New("tmpl_no_lang")}, lang + "\n" + lang, "floe: " + lang + "\nfloe: " + lang, 400},
 		{"a name in use", conflict, lang, "floe: " + lang, 409},
 		{"an empty list", usererr.List{}, "usererr.List with no mistake", "floe: usererr.List with no mistake", 500},
 		{"no mistake", (*usererr.Error)(nil), "*usererr.Error with no mistake", "floe: *usererr.Error with no mistake", 500},

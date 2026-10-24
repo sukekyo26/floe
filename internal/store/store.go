@@ -233,7 +233,7 @@ func (s *Store) Draw(slug string, m *Meta, file string) (page []byte, version st
 	} else {
 		var d *tmpl.Data
 		var sources tmpl.Sources
-		d, sources, err = s.templates.ReadSources(file, src, m.Theme, "")
+		d, sources, err = s.templates.Run().ReadSources(file, src, m.Theme, "")
 		s.mu.Lock()
 		s.drawn[key] = drawing{at: m.UpdatedAt, sources: sources}
 		s.mu.Unlock()

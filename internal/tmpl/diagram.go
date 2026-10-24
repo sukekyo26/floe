@@ -14,12 +14,12 @@ import (
 )
 
 // checkDiagrams reads the diagrams of d, its items of whole of the part diagram, from their nodes under root,
-// checks them and draws them into d.parts with the icons kept in iconsDir. The icons are read afresh for
-// each data file: a server that kept them would draw those a fetch replaced.
+// checks them and draws them into d.parts with the icons of store, read once for an output: a server that
+// kept them for longer would draw those a fetch replaced.
 // As floe diagram render does, every mistake of a spec's shape is reported, and those of its placement once
 // it has none. The ids are checked across the page: they name the markers and icons its diagrams define. Each
 // diagram without a mistake is drawn, for the parts holding it to be checked.
-func checkDiagrams(whole drawnItems, d *Data, root ast.Node, iconsDir string) error {
+func checkDiagrams(whole drawnItems, d *Data, root ast.Node, store *icons.Store) error {
 	found := whole.ofPart("diagram")
 	if found == nil {
 		return nil
@@ -41,7 +41,6 @@ func checkDiagrams(whole drawnItems, d *Data, root ast.Node, iconsDir string) er
 	slices.SortFunc(specs, func(a, b *diagram.Spec) int {
 		return cmp.Or(cmp.Compare(a.Line, b.Line), cmp.Compare(a.Column, b.Column))
 	})
-	store := icons.New(iconsDir)
 	// Watched for a link: the fetch a mistake asks for, or one that replaces them, draws it again.
 	d.icons = store.Indexes()
 	svgs, err := diagram.Render(specs, store)

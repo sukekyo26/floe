@@ -122,7 +122,7 @@ func newRoot(env Env) *cobra.Command {
 			return err //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	})
-	app := &app{env: env, cfg: nil}
+	app := &app{env: env, cfg: nil, lib: nil}
 	// The environment is read before any command runs; each command is told the mistakes of the settings it
 	// uses, as it declares them.
 	root.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {

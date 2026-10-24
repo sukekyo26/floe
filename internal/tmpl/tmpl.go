@@ -308,7 +308,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	d.shape = s
 	whole := s.drawnWhole(d.Values)
 	d.htmlItems = htmlItemsOf(whole, root)
-	err = usererr.Collect(checkImages(whole, d, root, images), checkHTML(set, d), checkDiagrams(whole, d, root, t.icons),
+	err = usererr.Collect(checkImages(whole, d, root, images), checkHTML(set, d), checkDiagrams(whole, d, root, t.iconStore()),
 		checkScripts(whole, d, root), checkParts(whole, d, root))
 	if err != nil {
 		return err
@@ -424,7 +424,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 	}
 	page, src, err := t.page(w, d.Lang)
 	if err != nil {
-		return nil, err
+		return nil, t.same("page.html", err)
 	}
 	out, err := d.execute(page, title)
 	if err != nil {
@@ -432,7 +432,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 	}
 	own, err := t.ownCSS("page.css")
 	if err != nil {
-		return nil, err
+		return nil, t.same("page.css", err)
 	}
 	set, err := t.parts()
 	if err != nil {
@@ -593,9 +593,10 @@ func (t *Template) pageWords(page *template.Template, w words) error {
 func (t *Template) words() (words, error) {
 	src, _, err := t.readOptional("words.yaml")
 	if err != nil {
-		return nil, err
+		return nil, t.same("words.yaml", err)
 	}
-	return readWords(t.file("words.yaml"), src)
+	w, err := readWords(t.file("words.yaml"), src)
+	return w, t.same("words.yaml", err)
 }
 
 var funcs = template.FuncMap{
@@ -674,6 +675,17 @@ func (t *Template) readSchema(set *partSet) (schemaRead, error) {
 // compileShape reads the schema of t as readSchema does and compiles it, and returns every mistake floe
 // template check and a data file tell of it, those of its compiling too.
 func (t *Template) compileShape(set *partSet) (schemaRead, error) {
+	if t.shape == nil {
+		read, err := t.readAndCompile(set)
+		t.shape = &shapeRead{read: read, err: err}
+	}
+	read := t.shape.read
+	read.refused = slices.Clone(read.refused)
+	return read, copied(t.shape.err)
+}
+
+// readAndCompile is compileShape, read anew.
+func (t *Template) readAndCompile(set *partSet) (schemaRead, error) {
 	read, err := t.readSchema(set)
 	// The parts' mistakes, of $refs among them, would fail the compiling, without their pointers.
 	if read.shape == nil || read.refused != nil {
