@@ -246,6 +246,7 @@ func TestCheckFloeParts(t *testing.T) {
 		"theme":   {"theme": "}"},
 		"shared":  {"any.json": `"zz": {"type": "string", "pattern": "["}, `},
 		"palette": {"palette": ""},
+		"both":    {"any.json": `"zz": {"type": "string", "pattern": "["}, `, "part.html": `<p>{{.text}}</p>`},
 	} {
 		root, themes := mapOf(t, partFiles), mapOf(t, themeFiles)
 		for file, text := range map[string]string{"schema.json": schema, "part.html": html, "part.css": ""} {
@@ -275,6 +276,8 @@ func TestCheckFloeParts(t *testing.T) {
 			t.Errorf("checkFloeParts of floe's parts and a part with no mistake = %v", err)
 		case name != "none" && (err == nil || isMistake(err) || !strings.Contains(err.Error(), want)):
 			t.Errorf("%s: checkFloeParts = %v, want floe's failure at %s", name, err, want)
+		case name == "both" && !strings.Contains(err.Error(), "parts/x"):
+			t.Errorf("checkFloeParts of a broken part beside a broken any.json = %v, want both", err)
 		}
 	}
 }

@@ -259,18 +259,12 @@ func (set *partSet) settle(mistakes map[string]error) {
 // LIMIT: what floe cannot place is told in jsonschema's English, as floe's failure (tmpl_own_failed).
 func (set *partSet) compileOwn() (map[string]error, error) {
 	mistakes := map[string]error{}
-	stands := map[string]bool{}
-	for url := range set.docs {
-		stands[url] = !set.shares[url]
-	}
 	for name, p := range set.parts {
 		if !set.checked(p) || p.isLook() {
 			continue
 		}
 		url := partsURL + name + ".json"
-		stands[url] = false
-		c, err := set.compiler(stands)
-		stands[url] = true
+		c, err := set.standingCompiler(url)
 		if err != nil {
 			return nil, err
 		}
@@ -294,14 +288,20 @@ func (set *partSet) compileOwn() (map[string]error, error) {
 	return mistakes, nil
 }
 
+// standingCompiler returns a compiler of the schemas of set, every part's standing as true, a schema
+// anything fits, but that at url, "" for none, and the schemas the parts share as they are (compileOwn).
+func (set *partSet) standingCompiler(url string) (*jsonschema.Compiler, error) {
+	stands := map[string]bool{}
+	for at := range set.docs {
+		stands[at] = !set.shares[at] && at != url
+	}
+	return set.compiler(stands)
+}
+
 // compileShared compiles each schema the parts share, the parts standing as compileOwn has them, and returns
 // the mistakes of those that do not compile, or a failure.
 func (set *partSet) compileShared() error {
-	stands := map[string]bool{}
-	for url := range set.docs {
-		stands[url] = !set.shares[url]
-	}
-	c, err := set.compiler(stands)
+	c, err := set.standingCompiler("")
 	if err != nil {
 		return err
 	}

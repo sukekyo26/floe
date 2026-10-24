@@ -271,10 +271,7 @@ func checkFloeParts(parts, themes fs.FS) error {
 		err = set.leaveOutUnusable()
 	}
 	if err == nil {
-		err = set.compileShared()
-	}
-	if err == nil {
-		err = slices.Concat(set.unusable(kindPart, nil), set.strays).Err()
+		err = usererr.Collect(set.compileShared(), slices.Concat(set.unusable(kindPart, nil), set.strays).Err())
 	}
 	return floeFailure("check floe's parts", err)
 }
