@@ -398,6 +398,19 @@ func (n *schemaNotes) at(r refAt, e *usererr.Error) *usererr.Error {
 	return e.Placed(n.file, 0, 0, r.ptr)
 }
 
+// floeHolds reports whether the schema of n is floe's, a part's of floe's or one the parts share, and holds
+// the part name, of one's own, that cannot be used.
+func (set *partSet) floeHolds(n *schemaNotes, name string) bool {
+	if set.broken[ownPart][name] == nil {
+		return false
+	}
+	if n.part == "" {
+		return set.shares[n.url]
+	}
+	p := set.parts[n.part]
+	return p != nil && !p.isOwn()
+}
+
 // partMistake returns what set refuses of r, a $ref of the schema of n to base under floe:///parts/, or nil.
 func (set *partSet) partMistake(n *schemaNotes, r refAt, base string, resolve func(ref string) error) *usererr.Error {
 	name, whole := partName(r.ref)
@@ -408,6 +421,9 @@ func (set *partSet) partMistake(n *schemaNotes, r refAt, base string, resolve fu
 		return nil
 	case whole && set.shares[r.ref]:
 		return set.sharedMistake(n, r)
+	case whole && set.floeHolds(n, name):
+		// floe's schema stays usable without it: the data that takes it is refused there (partSet.compiler).
+		return nil
 	case !whole && set.docs[base] != nil:
 		if _, into := set.pointsInto(r.ref); !into {
 			// into what holds nothing floe draws, as tone.json's enum: drawn as written, once it is there

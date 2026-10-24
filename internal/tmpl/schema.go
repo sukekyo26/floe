@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	neturl "net/url"
 	"path"
@@ -310,10 +311,18 @@ func newCompiler(set *partSet) *jsonschema.Compiler {
 }
 
 // compiler returns a compiler that holds the schemas of the parts of set, true, a schema anything fits, for
-// those at the URLs stands has.
+// those at the URLs stands has, and false, which nothing fits, for each part of one's own that cannot be
+// used: a schema of floe's that refers to one compiles, and the data that takes it is refused there
+// (schemaCheck.leaf), while one's own schema that names it is refused by its $ref (partMistake).
 func (set *partSet) compiler(stands map[string]bool) (*jsonschema.Compiler, error) {
 	c := newCompiler(set)
-	for url, doc := range set.docs {
+	docs := maps.Clone(set.docs)
+	for name := range set.broken[ownPart] {
+		if url := partsURL + name + ".json"; docs[url] == nil {
+			docs[url] = false
+		}
+	}
+	for url, doc := range docs {
 		if stands[url] {
 			doc = true
 		}
@@ -529,6 +538,11 @@ type schemaCheck struct {
 func (s *schemaCheck) leaf(e *jsonschema.ValidationError) {
 	key, value, at := yamlpos.Find(s.root, e.InstanceLocation)
 	where := yamlpos.OfValue(key, value)
+	if name, ok := s.unusablePart(e); ok {
+		// As a theme the data picks that cannot be used: at the item, why under it, once.
+		s.problems = append(s.problems, s.set.brokenErr(ownPart, name).Placed(s.file, where.Line, where.Column, ""))
+		return
+	}
 	switch k := e.ErrorKind.(type) {
 	case *kind.Required:
 		for _, name := range k.Missing {
@@ -562,6 +576,17 @@ func (s *schemaCheck) leaf(e *jsonschema.ValidationError) {
 		// in the catalogs when a template's schema comes to use it.
 		s.add(where, "tmpl_item", label(at), e.ErrorKind.LocalizedString(english))
 	}
+}
+
+// unusablePart returns the part of one's own that cannot be used that e stopped at, the false that stands for
+// it (partSet.compiler), and false for another e.
+func (s *schemaCheck) unusablePart(e *jsonschema.ValidationError) (string, bool) {
+	if _, isFalse := e.ErrorKind.(*kind.FalseSchema); !isFalse {
+		return "", false
+	}
+	base, _, _ := strings.Cut(e.SchemaURL, "#")
+	name, whole := partName(base)
+	return name, whole && s.set.broken[ownPart][name] != nil
 }
 
 // wording words a mistake the catalog has a message for, after the path: a bound (how many items or

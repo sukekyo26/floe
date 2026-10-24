@@ -159,8 +159,9 @@ func (set *partSet) readOwn(dir string, entries []os.DirEntry, stage staged) err
 // that holds itself, through the parts it holds, or takes its own look, through the looks it takes, which
 // floe would follow forever, a part, floe's too, that settle refuses, again while one is left out, as a
 // part may take the look of the one left out, or hold it, and then one whose schema names a usable part
-// at its root. One of one's own whose schema does not compile, or does not declare a path of its checks.yaml,
-// is among those settle refuses (compileOwn).
+// at its root. A part of floe's is not left out for holding one of one's own that cannot be used: the data
+// that takes that one is refused at its item (partMistake). One of one's own whose schema does not
+// compile, or does not declare a path of its checks.yaml, is among those settle refuses (compileOwn).
 // The failure is floe's (compileOwn).
 func (set *partSet) leaveOutUnusable() error {
 	held := func(at string) []string { return set.shapes[partsURL+at+".json"].refsUnder(nil) }
@@ -538,7 +539,8 @@ func (set *partSet) candidates(look bool) string {
 }
 
 // checkHeld refuses the part name when what its schema refers to is refused (partSet.mistakes), now that
-// every part is read: a part there is none of, that cannot be used or draws nothing, among them.
+// every part is read: a part there is none of, that cannot be used or draws nothing, among them; floe's
+// part holding one of one's own that cannot be used is not refused (partMistake).
 func (set *partSet) checkHeld(name string) error {
 	n := set.notes[partsURL+name+".json"]
 	if n == nil {

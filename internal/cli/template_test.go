@@ -292,8 +292,8 @@ func TestLinkDataFileOfRelativeIcons(t *testing.T) {
 	}
 }
 
-// floe template check tells the mistakes of a part of one's own once, though the parts that hold it, or
-// take its look, are each warned of.
+// floe template check tells the mistakes of a part of one's own once, though the parts that take its look
+// are each warned of; floe's that hold it stay usable.
 func TestTemplateCheckBrokenPartOnce(t *testing.T) {
 	t.Parallel()
 
@@ -311,7 +311,31 @@ func TestTemplateCheckBrokenPartOnce(t *testing.T) {
 	spec := filepath.Join(e.tmp, "templates", "spec")
 	r := e.run(t, "", "template", "check", spec)
 	css := filepath.Join(e.tmp, "parts", "code", "part.css") + ":1: this } closes no block"
-	if r.code != 0 || strings.Count(r.stderr, css) != 1 || !strings.Contains(r.stderr, "the part stack cannot be used") {
+	if r.code != 0 || strings.Count(r.stderr, css) != 1 || !strings.Contains(r.stderr, "the part diff cannot be used") ||
+		strings.Contains(r.stderr, "the part stack cannot be used") {
 		t.Errorf("template check = %+v, want %s once", r, css)
+	}
+}
+
+// A part of one's own that cannot be used stops only the data files that take it, in a check of several and
+// in a publish, which the server checks as the command line does.
+func TestUnusablePartWhereTakenOnly(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.write(t, "parts/links/schema.json", `{"type": "array", "items": {"type": "object", "properties": {"u": {"pattern": "(["}}}}`)
+	e.write(t, "parts/links/part.html", `<ul data-floe-part="links"></ul>`)
+	e.write(t, "parts/links/part.css", "")
+	page := "template: report\nlang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n"
+	none := e.write(t, "none.yaml", page+"      - text: hi\n")
+	takes := e.write(t, "takes.yaml", page+"      - links: [{ title: a, url: /a }]\n")
+	at := takes + ":7:16: the part links cannot be used\n  " + filepath.Join(e.tmp, "parts", "links", "schema.json")
+	if r := e.run(t, "", "check", none, takes); r.code != 1 || !strings.HasPrefix(r.stderr, at) || strings.Contains(r.stderr, "none.yaml") {
+		t.Errorf("check of both = %+v, want %s alone", r, at)
+	}
+	want(t, "publish of the one that does not take it", e.run(t, "", "publish", none), 0, e.base()+"/a/none/\n", "")
+	if r := e.run(t, "", "publish", takes); r.code != 1 || !strings.HasPrefix(r.stderr, at) {
+		t.Errorf("publish of the one that takes it = %+v, want %s", r, at)
 	}
 }

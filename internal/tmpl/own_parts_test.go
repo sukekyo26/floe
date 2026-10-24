@@ -366,9 +366,10 @@ func TestBrokenOwnParts(t *testing.T) {
 			": #/properties/text/anyOf/0: file:///etc/hosts: a schema refers to no other file or URL",
 		"typo": "the part typo cannot be used\n  " + filepath.Join(parts, "typo", "schema.json") +
 			": #/properties/c: floe:///parts/celll.json is not a part",
-		"stack":   "the part stack cannot be used\n  parts/stack/schema.json: #/items/properties/code: the part code cannot be used",
-		"tabs":    "the part tabs cannot be used\n  parts/tabs/schema.json: #/items/properties/parts: the part stack cannot be used",
-		"details": "the part details cannot be used\n  parts/details/schema.json: #/properties/parts: the part stack cannot be used",
+		// floe's that hold one of one's own that cannot be used (code) stay usable.
+		"stack":   "",
+		"tabs":    "",
+		"details": "",
 		"loop":    "the part loop cannot be used\n  " + filepath.Join(parts, "loop") + ": the part loop holds itself (loop → loop)",
 		"ping":    "the part ping cannot be used\n  " + filepath.Join(parts, "ping") + ": the part ping holds itself (ping → pong → ping)",
 		"Quote":   "the part Quote cannot be used\n  " + filepath.Join(parts, "Quote") + ": a name is lower case letters",
@@ -437,7 +438,7 @@ func TestBrokenOwnParts(t *testing.T) {
 	for name, why := range whys {
 		dir := memo(t, `"risks": {"$ref": "floe:///parts/`+name+`.json"}, "aside": {"type": "string"}`)
 		_, mistakes := check(filepath.Join(dir, "memo"), parts, themesOf(parts))
-		if name == "diagram" || name == "script" || name == "tone" {
+		if why == "" || name == "diagram" || name == "script" || name == "tone" {
 			// floe's stays: the schema is right, and only the example, which fits none of them, fails.
 			example := filepath.Join(dir, "memo", "example.yaml") + ":"
 			if mistakes == nil || slices.ContainsFunc(mistakes, func(e error) bool { return !strings.HasPrefix(e.Error(), example) }) {
@@ -517,13 +518,19 @@ func TestBrokenOwnParts(t *testing.T) {
 			told = append(told, w.Error())
 		}
 	}
-	if len(mistakes) != 0 || len(told) != len(whys) {
+	unusable := 0
+	for _, why := range whys {
+		if why != "" {
+			unusable++
+		}
+	}
+	if len(mistakes) != 0 || len(told) != unusable {
 		t.Errorf("Check of a template of the quote = %v, %v", told, mistakes)
 	}
 }
 
-// A part that holds, through a part of floe's, one of one's own whose schema stops is told as one that holds
-// a part that cannot be used, not as stopping at that one's schema.
+// A part of floe's that holds one of one's own that cannot be used stays usable, and so do a part and a
+// template that hold it: only the data that takes the one that cannot be used is refused, at its item.
 func TestHeldThroughFloesPart(t *testing.T) {
 	t.Parallel()
 
@@ -536,10 +543,14 @@ func TestHeldThroughFloesPart(t *testing.T) {
 		"mine/part.css":    "",
 	})
 	dir := memo(t, `"risks": {"$ref": "floe:///parts/mine.json"}, "aside": {"type": "string"}`)
-	_, mistakes := check(filepath.Join(dir, "memo"), parts, themesOf(parts))
-	want := filepath.Join(parts, "mine", "schema.json") + ": #/properties/t: the part table cannot be used"
-	if len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), want) || strings.Contains(mistakes[0].Error(), "could not read") {
-		t.Errorf("Check of a template of mine = %v, want %s", mistakes, want)
+	if _, mistakes := check(filepath.Join(dir, "memo"), parts, themesOf(parts)); len(mistakes) != 0 {
+		t.Errorf("Check of a template of mine = %v, want none", mistakes)
+	}
+	l := tmpl.NewLibrary(dir, parts, themesOf(parts), "")
+	_, err := draw(l, "template: memo\nlang: en\nrisks:\n  t: { columns: [{title: A}], rows: [[x]] }\n")
+	if want := "data.yaml:4:39: the part cell cannot be used\n  " + filepath.Join(parts, "cell", "schema.json"); err == nil ||
+		!strings.HasPrefix(err.Error(), want) {
+		t.Errorf("drawing a table of mine = %v, want %s", err, want)
 	}
 }
 
@@ -579,8 +590,8 @@ func TestPartCompileOrder(t *testing.T) {
 			` "properties": {"t": {"$ref": "#/$defs/nope"}}, "$defs": {"q": {"$ref": "floe:///parts/note.json"}}}`,
 		"xa/part.html": `<div data-floe-part="xa"></div>`,
 		"xa/part.css":  "",
-		// cell, in place of floe's, holds itself through yy and is left out first: aa and zz, which hold floe's
-		// table, which holds cell, are told as holding table, which cannot be used, whatever their names.
+		// cell, in place of floe's, holds itself through yy and is left out: floe's table, which holds cell,
+		// stays usable, and so do aa and zz, which hold table, whatever their names.
 		"cell/schema.json": `{"type": "object", "properties": {"y": {"$ref": "yy.json"}}}`,
 		"cell/part.html":   `<div data-floe-part="cell"></div>`,
 		"cell/part.css":    "",
@@ -602,8 +613,7 @@ func TestPartCompileOrder(t *testing.T) {
 		filepath.Join(parts, "aref", "schema.json") + ": #/properties/u: ",
 		filepath.Join(parts, "xa", "schema.json") + ": #: a $ref to #/$defs/nope finds nothing",
 		filepath.Join(parts, "xa", "schema.json") + ": #/$defs/q: ",
-		filepath.Join(parts, "aa", "schema.json") + ": #/properties/t: the part table cannot be used",
-		filepath.Join(parts, "zz", "schema.json") + ": #/properties/t: the part table cannot be used",
+		"the part cell cannot be used",
 	}
 	first := ""
 	for range 20 {
@@ -612,7 +622,8 @@ func TestPartCompileOrder(t *testing.T) {
 		if first == "" {
 			first = got
 		}
-		if got != first || slices.ContainsFunc(want, func(w string) bool { return !strings.Contains(got, w) }) {
+		if got != first || slices.ContainsFunc(want, func(w string) bool { return !strings.Contains(got, w) }) ||
+			strings.Contains(got, "the part table cannot be used") || strings.Contains(got, "the part aa cannot be used") {
 			t.Fatalf("CheckOwnParts = %s, want the same every time, with %q", got, want)
 		}
 	}
@@ -1000,5 +1011,50 @@ func TestOwnPartChecksDeclared(t *testing.T) {
 	if len(mistakes) != 1 || !strings.Contains(got, "lines/checks.yaml:1:10: field: schema.json does not declare titel") ||
 		strings.Contains(got, "declare title") {
 		t.Errorf("CheckOwnParts = %s, want the misspelt field alone", got)
+	}
+}
+
+// A part of one's own that cannot be used, in place of one of floe's that any.json or floe's parts hold,
+// stops only the data that takes it, at its item, as a theme it picks does: its why under the first, and
+// "as told above" under the next. The data that does not take it is drawn, and floe's parts that hold it
+// stay usable, so floe part check tells it alone.
+func TestUnusablePartWhereTaken(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"links/schema.json": `{"type": "array", "items": {"type": "object", "properties": {"u": {"pattern": "(["}}}}`,
+		"links/part.html":   `<ul data-floe-part="links"></ul>`,
+		"links/part.css":    "",
+		"note/schema.json":  `{"type": 1}`,
+		"note/part.html":    `<div data-floe-part="note"></div>`,
+		"note/part.css":     "",
+	})
+	l := tmpl.NewLibrary("", parts, themesOf(parts), "")
+	page := func(parts string) string {
+		return "template: report\nlang: en\ntitle: t\nsections:\n  - heading: h\n    parts:\n" + parts
+	}
+	for _, src := range []string{
+		page("      - text: hi\n"),
+		page("      - details: { title: d, parts: [{ text: hi }] }\n"),
+	} {
+		if _, err := draw(l, src); err != nil {
+			t.Errorf("drawing %q = %v, want it drawn", src, err)
+		}
+	}
+	why := "  " + filepath.Join(parts, "links", "schema.json") + ": #/items/properties/u/pattern: "
+	_, err := draw(l, page("      - links: [{ title: a, url: /a }]\n      - links: [{ title: b, url: /b }]\n"))
+	if lines := strings.Split(fmt.Sprint(err), "\n"); len(lines) != 3 || lines[0] != "data.yaml:7:16: the part links cannot be used" ||
+		!strings.HasPrefix(lines[1], why) || lines[2] != "data.yaml:8:16: the part links cannot be used, as told above" {
+		t.Errorf("drawing two links = %v", err)
+	}
+	_, err = draw(l, page("      - details: { title: d, parts: [{ note: { text: hi } }] }\n"))
+	if want := "data.yaml:7:48: the part note cannot be used\n  " + filepath.Join(parts, "note", "schema.json"); err == nil ||
+		!strings.HasPrefix(err.Error(), want) {
+		t.Errorf("drawing a note in details = %v, want %s", err, want)
+	}
+	_, mistakes := checkOwn(parts, themesOf(parts))
+	if got := fmt.Sprint(mistakes); len(mistakes) != 2 || !strings.HasPrefix(got, "[the part links cannot be used") ||
+		!strings.Contains(got, "the part note cannot be used") {
+		t.Errorf("CheckOwnParts = %s, want links and note alone", got)
 	}
 }
