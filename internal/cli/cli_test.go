@@ -1276,3 +1276,27 @@ func TestRelativeWithoutDir(t *testing.T) {
 		t.Errorf("template check '' = %+v, want the working directory checked", r)
 	}
 }
+
+// A relative HOME is under the working directory, as a shell reads it, for the directories made of it: not
+// under the process's (here internal/cli); under no working directory, it is refused where it is needed.
+func TestRelativeHome(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["HOME"] = "relhome"
+	r := e.run(t, "", "template", "new", "memo", "--from", "report")
+	made := filepath.Join(e.tmp, "relhome", ".config", "floe", "templates", "memo")
+	if r.code != 0 || !strings.HasPrefix(r.stdout, "made the template memo in "+made+",") {
+		t.Errorf("template new under a relative HOME = %+v, want it in %s", r, made)
+	}
+	if _, err := os.Stat("relhome"); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("template new under a relative HOME wrote in the process's working directory: %v", err)
+	}
+	const refused = "floe: the working directory cannot be read, so HOME, the relative directory relhome, means nothing; " +
+		"run floe from a directory that exists, or set it as an absolute path\n"
+	want(t, "template new under a relative HOME from no working directory",
+		e.runAt(t.Context(), "", "template", "new", "memo2", "--from", "report"), 1, "", refused)
+	e.vars["FLOE_TEMPLATES_DIR"] = "~/t"
+	want(t, "a ~ setting under a relative HOME from no working directory",
+		e.runAt(t.Context(), "", "template", "new", "memo2", "--from", "report"), 1, "", refused)
+}
