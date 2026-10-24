@@ -55,7 +55,7 @@ func Check(dir, partsDir, themesDir, iconsDir string) (warnings usererr.List, er
 		if have, err = thisFloe(); err != nil {
 			return nil, err
 		}
-		warnings = append(warnings, usererr.New("tmpl_no_template_yaml", dir, have.minor()))
+		warnings = append(warnings, usererr.About(dir, "tmpl_no_template_yaml", dir, have.minor()))
 	}
 	more, err := t.checkFiles()
 	warnings = append(warnings, more...)
@@ -150,7 +150,7 @@ func (t *Template) missingFiles() error {
 	for i, name := range needed {
 		_, found, err := t.readOptional(name)
 		if err == nil && !found {
-			err = usererr.New("tmpl_file_missing", t.file(name), andList(needed))
+			err = usererr.About(t.file(name), "tmpl_file_missing", t.file(name), andList(needed))
 		}
 		errs[i] = err
 	}
@@ -243,7 +243,7 @@ func (t *Template) checkAssets() (map[string]bool, error) {
 		case err != nil:
 			return usererr.CannotRead(t.file("assets"), err)
 		case !fi.IsDir():
-			return usererr.New("tmpl_assets_not_dir", t.file("assets"))
+			return usererr.About(t.file("assets"), "tmpl_assets_not_dir", t.file("assets"))
 		}
 		sub, err := fs.Sub(files, "assets")
 		if err != nil {

@@ -270,7 +270,7 @@ func replace(tmp, dir string) error {
 func (k *kit) extract(buf []byte, from, dir string) (*index, error) {
 	zr, err := zip.NewReader(bytes.NewReader(buf), int64(len(buf)))
 	if err != nil {
-		return nil, usererr.New("icons_not_zip", from, k.page)
+		return nil, usererr.About(from, "icons_not_zip", from, k.page)
 	}
 	idx := &index{Version: "", Source: from, Icons: map[string]entry{}}
 	light := map[string]bool{}
@@ -287,7 +287,7 @@ func (k *kit) extract(buf []byte, from, dir string) (*index, error) {
 			return nil, usererr.New("icons_bad_zip", f.Name, from, err.Error())
 		}
 		if written += int64(len(b)); written > maxPackage {
-			return nil, usererr.New("icons_too_large", from, maxPackage>>20)
+			return nil, usererr.About(from, "icons_too_large", from, maxPackage>>20)
 		}
 		if err = keep(dir, icon, b); err != nil {
 			return nil, err

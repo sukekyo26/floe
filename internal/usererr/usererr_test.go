@@ -112,7 +112,7 @@ func TestTell(t *testing.T) {
 		{"one at a pointer", usererr.NewIn("s.json", "#/a", "tmpl_no_lang"), "s.json: #/a: " + lang, "s.json: #/a: " + lang, 400},
 		{"a list of both", usererr.List{usererr.New("tmpl_no_lang"), placed}, "a.yaml:1:2: " + lang + "\n" + lang, "a.yaml:1:2: " + lang + "\nfloe: " + lang, 400},
 		{"the same twice", usererr.List{usererr.New("tmpl_no_lang"), placed, usererr.New("tmpl_no_lang")}, "a.yaml:1:2: " + lang + "\n" + lang, "a.yaml:1:2: " + lang + "\nfloe: " + lang, 400},
-		{"the same with what it stands for twice", usererr.List{broken("p"), broken("p")}, part, part, 400},
+		{"the same with what it stands for twice", usererr.List{usererr.Over("part:p", usererr.List{placed}, "tmpl_part_broken", "p"), usererr.Over("part:p", usererr.List{placed}, "tmpl_part_broken", "p")}, part, part, 400},
 		{"others standing for the same", usererr.List{broken("p"), broken("q")}, part + "\n" + strings.Replace(part, "part p", "part q", 1), part + "\n" + strings.Replace(part, "part p", "part q", 1), 400},
 		{
 			"one about a file, with its file's",
@@ -125,7 +125,7 @@ func TestTell(t *testing.T) {
 			"s.json: #/b: " + part + "\nthe part p cannot be used, as told above", "s.json: #/b: " + part + "\nthe part p cannot be used, as told above", 400,
 		},
 		{"one standing for a placed one", usererr.List{over()}, part, part, 400},
-		{"its second time", usererr.List{over(), over()}, part + "\nthe part p cannot be used, as told above", part + "\nthe part p cannot be used, as told above", 400},
+		{"its second time, the same", usererr.List{over(), over()}, part, part, 400},
 		{"one in the words of another", usererr.New("tmpl_item", "x", over()), "x: " + part, "floe: x: " + part, 400},
 		{"one in the words of another, told before", usererr.List{over(), usererr.New("tmpl_item", "x", over())}, part + "\nx: " + part, part + "\nfloe: x: " + part, 400},
 		{"a name in use", conflict, lang, "floe: " + lang, 409},

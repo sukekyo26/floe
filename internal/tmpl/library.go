@@ -166,7 +166,7 @@ func (l *Library) own(name string) (*Template, error) {
 	}
 	for _, e := range entries {
 		if strings.EqualFold(e.Name(), name) {
-			return nil, usererr.New("tmpl_own_case", filepath.Join(l.dir, e.Name()), name)
+			return nil, usererr.About(filepath.Join(l.dir, e.Name()), "tmpl_own_case", filepath.Join(l.dir, e.Name()), name)
 		}
 	}
 	return nil, nil //nolint:nilnil // none

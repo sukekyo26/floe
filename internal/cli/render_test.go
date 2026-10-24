@@ -115,8 +115,8 @@ func TestRenderRefusals(t *testing.T) {
 	// is told once.
 	e.write(t, "sub2/spec.yaml", "template: report\nleed: x\nlang: en\n")
 	want(t, "render a file with mistakes that clashes", e.run(t, "", "render", "spec.yaml", "sub2/spec.yaml", "--out-dir", "out"), 1, "",
-		"sub2/spec.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n"+
-			"floe: spec.yaml and sub2/spec.yaml would both write out/spec.html")
+		"floe: spec.yaml and sub2/spec.yaml would both write out/spec.html; rename one of them\n"+
+			"sub2/spec.yaml:2:1: leed is not an item of the template report (a typo?); use eyebrow, lang, lead, sections, template, theme, title\n")
 	if r := e.run(t, "", "render", "missing.yaml", "./missing.yaml"); r.code != 1 || strings.Count(r.stderr, "\n") != 1 ||
 		!strings.Contains(r.stderr, "cannot read missing.yaml") {
 		t.Errorf("render of a missing file named twice = %d %q", r.code, r.stderr)

@@ -49,9 +49,9 @@ func TestTemplateCommands(t *testing.T) {
 	if err = os.WriteFile(computed, []byte("total: nope\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	// The warning, at no place, after the mistake: one list, told once.
-	if r := e.run(t, "", "template", "check", spec); r.code != 1 ||
-		!strings.HasPrefix(r.stderr, computed+":1:8: nope cannot be read as an expression: unknown name nope\nfloe: "+spec+" has no template.yaml") {
+	// The warning, about the template's directory, before the mistake in its file: one list, told once.
+	if r := e.run(t, "", "template", "check", spec); r.code != 1 || !strings.HasPrefix(r.stderr, "floe: "+spec+" has no template.yaml") ||
+		!strings.HasSuffix(r.stderr, "\n"+computed+":1:8: nope cannot be read as an expression: unknown name nope\n") {
 		t.Errorf("template check of a broken template = %+v", r)
 	}
 	if r := e.run(t, "", "template", "check", spec, spec+"/."); r.code != 1 || strings.Count(r.stderr, "nope cannot be read") != 1 {

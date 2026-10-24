@@ -50,7 +50,7 @@ func read(ctx context.Context, source string) ([]byte, error) {
 	defer f.Close() //nolint:errcheck // read only
 	b, err := readAtMost(f, maxPackage)
 	if errors.Is(err, errTooLarge) {
-		return nil, usererr.New("icons_too_large", source, maxPackage>>20)
+		return nil, usererr.About(source, "icons_too_large", source, maxPackage>>20)
 	}
 	if err != nil {
 		return nil, usererr.CannotRead(source, err)

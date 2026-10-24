@@ -52,11 +52,10 @@ func Tell(c *i18n.Catalog, err error) Report {
 	told, seen := map[string]bool{}, map[string]bool{}
 	r := Report{Mistakes: nil, Failure: ""}
 	for _, e := range slices.Clone(all).Sorted() {
-		t := e.tell(c, told)
-		// Laid out, with what it stands for, it is the same mistake.
-		if text := t.line(); !seen[text] {
+		// Laid out as its first time, with what it stands for, it is the same mistake.
+		if text := e.tell(c, map[string]bool{}).line(); !seen[text] {
 			seen[text] = true
-			r.Mistakes = append(r.Mistakes, t)
+			r.Mistakes = append(r.Mistakes, e.tell(c, told))
 		}
 	}
 	return r

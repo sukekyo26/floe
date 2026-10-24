@@ -137,10 +137,10 @@ func CannotWrite(file string, err error) *Error {
 			file = at
 		case strings.HasPrefix(at, in+string(filepath.Separator)):
 			// What floe made in file, a directory there already: it is file that cannot be written in.
-			return New("file_cannot_write_in", file, reason(err))
+			return About(file, "file_cannot_write_in", file, reason(err))
 		}
 	}
-	return New("file_cannot_write", file, reason(err))
+	return About(file, "file_cannot_write", file, reason(err))
 }
 
 // reason is why a file could not be read or written, without its paths.

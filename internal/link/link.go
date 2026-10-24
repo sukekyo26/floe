@@ -23,11 +23,11 @@ func Check(path, home string) error {
 	// The checks compare strings, so a relative path, a path through a symlink (~/proj -> ~/.ssh) or one
 	// with .. would slip past them. EvalSymlinks keeps a relative path relative, hence IsAbs.
 	if resolved, err := filepath.EvalSymlinks(path); !filepath.IsAbs(path) || err == nil && resolved != path {
-		return usererr.New("link_not_real", path)
+		return usererr.About(path, "link_not_real", path)
 	}
 	// A FIFO named .html would block its reader, so only regular files pass.
 	if fi, err := os.Stat(path); !linkable.MatchString(path) || err != nil || !fi.Mode().IsRegular() {
-		return usererr.New("link_not_linkable", path)
+		return usererr.About(path, "link_not_linkable", path)
 	}
 	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories.
 	resolvedHome, ok := realDir(home)
@@ -38,10 +38,10 @@ func Check(path, home string) error {
 	// A hidden file right under home (~/.x.html) is not in a hidden directory; the next check refuses it.
 	rest, underHome := strings.CutPrefix(path, home+string(filepath.Separator))
 	if underHome && strings.HasPrefix(rest, ".") && strings.ContainsRune(rest, filepath.Separator) {
-		return usererr.New("link_hidden_home", path)
+		return usererr.About(path, "link_hidden_home", path)
 	}
 	if dir := filepath.Dir(path); dir == string(filepath.Separator) || dir == home {
-		return usererr.New("link_exposes_dir", path, dir)
+		return usererr.About(path, "link_exposes_dir", path, dir)
 	}
 	return nil
 }

@@ -1135,4 +1135,28 @@ func TestMistakesToldOnce(t *testing.T) {
 	if r := e.run(t, "", "template", "check", memo); strings.Count(r.stderr, "is not valid regex") != 1 {
 		t.Errorf("template check = %q, want what the part stands for told once", r.stderr)
 	}
+	// The part warned of for each template that does not use it is the same warning, told once.
+	for _, name := range []string{"m1", "m2"} {
+		e.write(t, "templates/"+name+"/schema.json", `{"type": "object", "additionalProperties": false, "properties": {}}`)
+		e.write(t, "templates/"+name+"/page.html", `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body></body></html>`)
+		e.write(t, "templates/"+name+"/template.yaml", "floe: 0.0\n")
+		e.write(t, "templates/"+name+"/example.yaml", "template: "+name+"\nlang: en\ntitle: t\n")
+	}
+	m1, m2 := filepath.Join(e.tmp, "templates", "m1"), filepath.Join(e.tmp, "templates", "m2")
+	want(t, "template check of two templates beside a part that cannot be used", e.run(t, "", "template", "check", m1, m2), 0, "",
+		"the part bad cannot be used\n"+
+			"  "+filepath.Join(e.tmp, "parts", "bad", "schema.json")+": #/properties/t/pattern: JSON Schema does not take this: "+
+			"'([' is not valid regex: error parsing regexp: missing closing ]: `[`\n")
+	if r := e.run(t, "", "template", "check", m1, m2); strings.Count(r.stderr, "cannot be used") != 1 {
+		t.Errorf("template check of two templates = %q, want the warning once", r.stderr)
+	}
+	// A file that is missing is told in the order of the templates given, as their mistakes at lines are.
+	if err := os.Remove(filepath.Join(m1, "page.html")); err != nil {
+		t.Fatal(err)
+	}
+	e.write(t, "templates/m2/computed.yaml", "total: nope\n")
+	if r := e.run(t, "", "template", "check", m1, m2); !strings.Contains(r.stderr, "floe: "+filepath.Join(m1, "page.html")+" is missing") ||
+		strings.Index(r.stderr, " is missing") > strings.Index(r.stderr, filepath.Join(m2, "computed.yaml")+":1:8: ") {
+		t.Errorf("template check of two templates = %q, want the first one's missing file first", r.stderr)
+	}
 }

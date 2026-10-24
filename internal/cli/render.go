@@ -84,9 +84,9 @@ func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
 		tell(&found, err)
 		switch {
 		case taken && other.real == p.real:
-			found = append(found, usererr.New("cli_render_same_file", other.from, file, p.to))
+			found = append(found, usererr.About(file, "cli_render_same_file", other.from, file, p.to))
 		case taken:
-			found = append(found, usererr.New("cli_render_same_file_case", other.from, file, other.to, p.to))
+			found = append(found, usererr.About(file, "cli_render_same_file_case", other.from, file, other.to, p.to))
 		case err == nil:
 			p.page = tmpl.CutOffPage(page)
 			pages = append(pages, p)
@@ -143,11 +143,11 @@ func (a *app) checkPages(pages []rendered) error {
 		old, err := os.ReadFile(a.abs(p.to))
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
-			found = append(found, usererr.New("cli_render_missing", p.to, p.from))
+			found = append(found, usererr.About(p.to, "cli_render_missing", p.to, p.from))
 		case err != nil:
 			found = append(found, usererr.CannotRead(p.to, err))
 		case !bytes.Equal(old, p.page):
-			found = append(found, usererr.New("cli_render_stale", p.to, p.from))
+			found = append(found, usererr.About(p.to, "cli_render_stale", p.to, p.from))
 		}
 	}
 	return found.Err()

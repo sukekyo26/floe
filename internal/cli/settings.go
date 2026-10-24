@@ -89,7 +89,8 @@ func (a *app) settle(cmd *cobra.Command) error {
 	}
 	var warned usererr.List
 	for _, at := range heldBy {
-		warned = append(warned, usererr.New("cli_defaults_held_up_read", at, strings.Join(held[at], ", "), cmd.CommandPath()))
+		e := usererr.About(at, "cli_defaults_held_up_read", at, strings.Join(held[at], ", "), cmd.CommandPath())
+		warned = append(warned, e)
 	}
 	a.tellWarnings(warned)
 	return nil
