@@ -308,7 +308,8 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	d.shape = s
 	whole := s.drawnWhole(d.Values)
 	d.htmlItems = htmlItemsOf(whole, root)
-	err = usererr.Collect(checkImages(whole, d, root, images), checkHTML(set, d), checkDiagrams(whole, d, root, t.iconStore()),
+	err = usererr.Collect(checkImages(whole, d, root, images), checkHTML(set, d),
+		checkDiagrams(whole, d, root, t.iconStore()),
 		checkScripts(whole, d, root), checkParts(whole, d, root))
 	if err != nil {
 		return err

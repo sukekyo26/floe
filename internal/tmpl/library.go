@@ -78,7 +78,7 @@ func (r *run) parts(own ownDirs) (*partSet, error) {
 // the built-in ones, which draw with floe's parts and themes and those of partsDir (FLOE_PARTS_DIR) and
 // themesDir (FLOE_THEMES_DIR), "" for none, and the icons kept in iconsDir (FLOE_ICONS_DIR) in diagrams.
 func NewLibrary(dir, partsDir, themesDir, iconsDir string) *Library {
-	return &Library{dir: dir, mine: ownDirs{parts: partsDir, themes: themesDir}, icons: iconsDir}
+	return &Library{dir: dir, mine: ownDirs{parts: partsDir, themes: themesDir}, icons: iconsDir, run: nil}
 }
 
 // PartsDir is the directory of parts of one's own, "" for none.
@@ -203,17 +203,17 @@ func (l *Library) unknown(name string) error {
 // Find returns the template name, or nil when there is none: in a run, the same one each time.
 func (l *Library) Find(name string) (*Template, error) {
 	if l.run == nil {
-		return l.find(name)
+		return l.lookUp(name)
 	}
 	f, ok := l.run.templates[name]
 	if !ok {
-		f.t, f.err = l.find(name)
+		f.t, f.err = l.lookUp(name)
 		l.run.templates[name] = f
 	}
 	return f.t, f.err
 }
 
-func (l *Library) find(name string) (*Template, error) {
+func (l *Library) lookUp(name string) (*Template, error) {
 	if !validName(name) {
 		return nil, nil //nolint:nilnil // not a name a template can have, so none has it
 	}
@@ -267,7 +267,9 @@ func (l *Library) resolve(name string) (*Template, error) {
 }
 
 func (l *Library) template(name, dir, at string) *Template {
-	return &Template{Name: name, Dir: dir, Path: at, icons: l.icons, own: l.mine, run: l.run, set: nil, shape: nil, kept: nil}
+	return &Template{
+		Name: name, Dir: dir, Path: at, icons: l.icons, own: l.mine, run: l.run, set: nil, shape: nil, kept: nil,
+	}
 }
 
 // validName reports whether name can name a template: lower case letters, digits, - and _, so that it
@@ -345,7 +347,7 @@ func (t *Template) once(key string, check func() error) error {
 // copied is err, a List of it copied: those it is given to may add to it.
 func copied(err error) error {
 	if l, ok := err.(usererr.List); ok { //nolint:errorlint // the List itself, not one it wraps
-		return slices.Clone(l)
+		return slices.Clone(l) //nolint:wrapcheck // the same mistakes
 	}
 	return err
 }

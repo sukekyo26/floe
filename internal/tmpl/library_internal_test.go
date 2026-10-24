@@ -95,7 +95,7 @@ func TestRunReadsOnce(t *testing.T) {
 		if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(file, []byte(text), 0o600); err != nil {
+		if err := os.WriteFile(file, []byte(text), 0o600); err != nil { //nolint:gosec // G703: under the test's own directory
 			t.Fatal(err)
 		}
 	}

@@ -44,8 +44,8 @@ func checkRelations(t *Template, d *Data, root ast.Node) error {
 	}
 	// What the template's file holds alone, apart from the data, found once.
 	if err = t.once("checks.yaml", func() error {
-		_, err := readChecks(t.file("checks.yaml"), src, false)
-		return err
+		_, read := readChecks(t.file("checks.yaml"), src, false)
+		return read
 	}); err != nil {
 		return err
 	}

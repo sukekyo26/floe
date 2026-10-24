@@ -47,8 +47,8 @@ func checkComputed(t *Template, d *Data) error {
 	}
 	// What the template's file holds alone, apart from the data, found once.
 	if err = t.once("computed.yaml", func() error {
-		_, err := readComputed(t.file("computed.yaml"), src, d.shape.keyNames())
-		return err
+		_, read := readComputed(t.file("computed.yaml"), src, d.shape.keyNames())
+		return read
 	}); err != nil {
 		return err
 	}

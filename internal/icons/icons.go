@@ -95,7 +95,9 @@ type Store struct {
 
 // New returns the store under root. An empty root (no HOME to put it under) is refused when used.
 func New(root string) *Store {
-	return &Store{root: root, mu: sync.Mutex{}, indexes: map[string]*index{}, icons: map[string]*Icon{}, failed: map[string]error{}}
+	return &Store{
+		root: root, mu: sync.Mutex{}, indexes: map[string]*index{}, icons: map[string]*Icon{}, failed: map[string]error{},
+	}
 }
 
 // Indexes are the index files of every set, fetched or not: a fetch replaces the one of its set.
@@ -464,8 +466,8 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 	if icon := s.icons[name]; icon != nil {
 		return icon, nil, nil
 	}
-	if err := s.failed["icon:"+name]; err != nil {
-		return nil, nil, err
+	if kept := s.failed["icon:"+name]; kept != nil {
+		return nil, nil, kept
 	}
 	dir := s.dir(k)
 	uri := func(file string) (string, error) {
