@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -448,17 +449,62 @@ func pointerTo(steps []string) string {
 	return at
 }
 
-// leaves calls leaf with each mistake of e that is not only the mistakes under it. A branch of anyOf or
-// oneOf would say why each choice failed; it is one leaf instead.
+// leaves calls leaf with each mistake of e that is not only the mistakes under it, in an order of their
+// own: jsonschema gives them in the order of its maps. A branch of anyOf or oneOf would say why each
+// choice failed; it is one leaf instead. A mistake of propertyNames is given its place (namesPlace) before.
 func leaves(e *jsonschema.ValidationError, leaf func(*jsonschema.ValidationError)) {
+	leavesUnder(e, nil, leaf)
+}
+
+// leavesUnder is leaves of e, under the place above of the nearest mistake it is under.
+func leavesUnder(e *jsonschema.ValidationError, above []string, leaf func(*jsonschema.ValidationError)) {
 	switch e.ErrorKind.(type) {
 	case *kind.Schema, *kind.Group, *kind.AllOf, *kind.Reference:
-		for _, c := range e.Causes {
-			leaves(c, leaf)
+		causes := slices.SortedStableFunc(slices.Values(e.Causes), func(a, b *jsonschema.ValidationError) int {
+			return cmp.Or(strings.Compare(a.SchemaURL, b.SchemaURL),
+				strings.Compare(a.ErrorKind.LocalizedString(english), b.ErrorKind.LocalizedString(english)),
+				slices.Compare(a.InstanceLocation, b.InstanceLocation))
+		})
+		for _, c := range causes {
+			leavesUnder(c, e.InstanceLocation, leaf)
 		}
 		return
+	case *kind.PropertyNames:
+		e.InstanceLocation = namesPlace(e, above)
 	}
 	leaf(e)
+}
+
+// namesPlace is the place of e, a mistake of propertyNames, under above, the place of the nearest mistake
+// it is under: jsonschema gives e a place the later checks write over, right in its length alone. One a
+// metaschema finds is at the keyword of metaNames under the schema above; another is told at above.
+// LIMIT: jsonschema v6.0.3 does not copy the place of propertyNames (issue #276, PR #269 of
+// santhosh-tekuri/jsonschema); drop this once floe takes a version that does. On an upgrade, grep
+// 'InstanceLocation = vd.vloc' for more: contentSchema's is the same, which floe does not assert.
+// LIMIT: one of a data file's schema is told at what holds it until then, the top level, say, for a key
+// of an item under it.
+func namesPlace(e *jsonschema.ValidationError, above []string) []string {
+	at := slices.Clone(above)
+	if len(e.InstanceLocation) != len(above)+1 {
+		return at
+	}
+	for _, m := range metaNames {
+		if e.SchemaURL == m.metaschema+"#/properties/"+m.keyword+"/propertyNames" {
+			return append(at, m.keyword)
+		}
+	}
+	return at
+}
+
+// metaNames are the keywords of a schema whose keys the metaschemas of JSON Schema check by propertyNames,
+// each with the metaschema that does: those of patternProperties, regular expressions, and of $vocabulary,
+// URLs. Draft-06 and draft-04 check none.
+var metaNames = []struct{ metaschema, keyword string }{
+	{"https://json-schema.org/draft/2020-12/meta/applicator", "patternProperties"},
+	{"https://json-schema.org/draft/2020-12/meta/core", "$vocabulary"},
+	{"https://json-schema.org/draft/2019-09/meta/applicator", "patternProperties"},
+	{"https://json-schema.org/draft/2019-09/meta/core", "$vocabulary"},
+	{"http://json-schema.org/draft-07/schema", "patternProperties"},
 }
 
 // noLoader loads no schema: those of the parts of set are added to the compiler before.
