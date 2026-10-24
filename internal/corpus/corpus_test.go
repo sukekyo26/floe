@@ -151,6 +151,11 @@ func (s *sample) renderTogether(t *testing.T, data []string, drawnBy map[string]
 		for _, name := range slices.Sorted(maps.Keys(pages)) {
 			t.Errorf("render together failed but wrote %s", name)
 		}
+		// A file that fails alone is why; else what one read made a mistake of the next's.
+		passed := slices.Collect(maps.Values(drawnBy))
+		if !slices.ContainsFunc(data, func(file string) bool { return !slices.Contains(passed, file) }) {
+			t.Errorf("render together failed, though each data file alone passed")
+		}
 		return
 	}
 	for _, name := range slices.Sorted(maps.Keys(drawnBy)) {
@@ -190,10 +195,9 @@ func (s *sample) pages(t *testing.T, out, what string) map[string][]byte {
 }
 
 // run runs floe in process from the sample's directory, writes what it printed to commands.golden and
-// returns its exit code. The
-// directories the test made stand as $SAMPLE and $TMP, so that the golden files are the same wherever the
-// repository and the temporary directory are; but in what floe drew (drawn: the diagrams it printed), as in
-// the pages, where a path of the machine would be a mistake.
+// returns its exit code. In stdout and stderr the directories the test made stand as $SAMPLE and $TMP, so
+// that the golden files are the same wherever the repository and the temporary directory are; but what floe
+// drew (drawn: the diagrams it printed) is written as it is, and fails the test when it holds one.
 func (s *sample) run(t *testing.T, drawn bool, args ...string) int {
 	t.Helper()
 
