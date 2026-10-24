@@ -578,7 +578,15 @@
   if (framed) addEventListener('message', (e) => {
     if (e.source !== $('frame').contentWindow) return;
     const to = typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
-    if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) location.href = to.href;
+    if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) {
+      // A link to this frame's own URL moves the page to its part even when the fragment is the frame's already, which fires no hashchange
+      if (to.pathname === location.pathname && to.search === location.search) {
+        $('frame').contentWindow.location.replace('?raw' + (to.hash || '#'));
+        history.replaceState(history.state, '', to.pathname + to.search + to.hash);
+      } else {
+        location.href = to.href;
+      }
+    }
     const hash = e.data?.artifactHash;
     if (typeof hash === 'string' && (hash === '' || hash.startsWith('#')) && e.data.artifactPath === location.pathname) {
       history.replaceState(history.state, '', location.pathname + location.search + hash);

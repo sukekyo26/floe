@@ -576,9 +576,10 @@ func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share
 	// page. Whether Chrome scrolls there is Chrome's: in the tests' Chrome it now and then does not on a
 	// load, which floe cannot mend. Both pages take the name parent, which floe's script must not use.
 	publish("hash", link("#s2", "0")+link("/a/hash/#s3", "60px")+
+		`<button id="up" style="position: fixed; left: 0; top: 120px; width: 200px; height: 40px">top</button>`+
 		`<div style="height: 3000px"></div><h2 id="s2">s2</h2><div style="height: 3000px"></div><h2 id="s3">s3</h2><div style="height: 3000px"></div>`+
-		"<script>var parent = 1; const load = Math.random(); document.addEventListener('pointerover', () => top.postMessage('over', '*'));"+
-		"setInterval(() => top.postMessage('at ' + location.hash + ' ' + load, '*'), 50)</script>")
+		"<script>var parent = 1; const load = Math.random(); document.getElementById('up').addEventListener('click', () => scrollTo(0, 0)); document.addEventListener('pointerover', () => top.postMessage('over', '*'));"+
+		"setInterval(() => top.postMessage('at ' + location.hash + ' ' + load + ' ' + (scrollY > 1000), '*'), 50)</script>")
 	publish("from", link("/a/hash/#s2", "0")+
 		"<script>var parent = 1; document.addEventListener('pointerover', () => top.postMessage('over', '*'))</script>")
 	// The page may report a part before floe's script tells the frame of it: the frame's URL is waited for too.
@@ -610,21 +611,24 @@ func TestUIFrameHash(t *testing.T) { //nolint:paralleltest // the UI tests share
 	out = append(out, at("the part, after a reload", "#s2"))
 	b.eval("history.back()")
 	out = append(out, at("the top of the page, back", ""))
-	// The page follows the frame's own fragment: a link in it to its frame URL, and the address bar.
-	click(80)
-	out = append(out, at("the part, by a link to the frame URL", "#s3"))
+	// The page follows the frame's own fragment, from the address bar, and back to no part moves it to its
+	// top without loading it again.
+	load := b.eval("window.at.split(' ')[2]")
 	b.eval("location.hash = '#s2'")
 	out = append(out, at("the part, by the address bar", "#s2"))
 	b.eval("history.back()")
-	out = append(out, at("the part before it, back", "#s3"))
-	// Back to no part moves the page to its top, without loading it again.
-	load := b.eval("window.at.split(' ').pop()")
-	b.eval("history.back()")
 	out = append(out, at("the top of the page, back again", ""))
-	out = append(out, b.eval("window.at.split(' ').pop() === "+js(load)))
+	out = append(out, b.eval("window.at.split(' ')[2] === "+js(load)))
+	// A link in the page to its frame URL moves it to that part, the frame's part already too.
+	click(80)
+	out = append(out, at("the part, by a link to the frame URL", "#s3"))
+	click(140)
+	b.until("the page at its top", "window.at.endsWith(' false')")
+	click(80)
+	out = append(out, b.until("the part again, by the same link", "window.at.startsWith('at #s3 ') && window.at.endsWith(' true') && location.pathname + location.hash"))
 
 	check(t, "frame hash", out,
-		"/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/|/a/hash/#s3|/a/hash/#s2|/a/hash/#s3|/a/hash/|true")
+		"/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/#s2|/a/hash/|/a/hash/#s2|/a/hash/|true|/a/hash/#s3|/a/hash/#s3")
 }
 
 // leave clicks links out of a page in the frame: a target=_blank tab runs in the other site's origin
