@@ -190,13 +190,13 @@ func stream(w http.ResponseWriter, contentType string, f io.Reader, tail string)
 // refuse to be framed, and the sandbox forbids _top and _parent. Links to a frame URL of this server
 // (/ and /a/<slug>/) tell the frame to move the whole tab, instead of nesting a frame in the iframe.
 // In the sandbox location.origin is "null", so hosts are compared. A page can shadow open, URL, self
-// and the like with top-level declarations, so everything but window and location comes through
-// window. The frame is the parent, not the top, which is another window while the frame is framed
-// itself (VS Code's Simple Browser).
+// and the like with top-level declarations, so everything but window, top and location comes through
+// window; top cannot be replaced, as parent can (var parent = …).
 // The part of the page it is at (#…) is told to the frame, which writes it into its own URL: when it
 // loads, as Back may load it again at another, and on a move to another part.
 // LIMIT: a part set by history.pushState or replaceState fires no hashchange and is not told; watch them if needed.
-const leaveFrame = "if (window.parent !== window) window.addEventListener('click', (e) => {" +
+// LIMIT: a frame framed itself (VS Code's Simple Browser) is not the top and is told nothing; mend it if needed.
+const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => {" +
 	"const a = e.target.closest?.('a[href]');" +
 	"if (!a || e.defaultPrevented || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;" +
 	"if (!['', '_self', '_parent', '_top'].includes(a.target)) return;" +
@@ -204,9 +204,9 @@ const leaveFrame = "if (window.parent !== window) window.addEventListener('click
 	"if (!/^https?:$/.test(u.protocol)) return;" +
 	"if (u.host !== location.host) { e.preventDefault(); window.open(u.href, '_blank', 'noopener'); return; }" +
 	"if (!/^\\/(a\\/[^/]+\\/?)?$/.test(u.pathname) || u.searchParams.has('raw')) return;" +
-	"e.preventDefault(); window.parent.postMessage({ artifactOpen: u.pathname + u.search + u.hash }, " +
+	"e.preventDefault(); top.postMessage({ artifactOpen: u.pathname + u.search + u.hash }, " +
 	"location.protocol + '//' + location.host);});" +
-	"if (window.parent !== window) { const tell = () => window.parent.postMessage(" +
+	"if (top !== window) { const tell = () => top.postMessage(" +
 	"{ artifactHash: location.hash, artifactPath: location.pathname }, location.protocol + '//' + location.host);" +
 	"tell(); window.addEventListener('hashchange', tell); }"
 

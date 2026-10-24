@@ -585,9 +585,10 @@
     }
   });
   // The frame's own fragment changed (a link in the page to /a/<slug>/#part, the address bar): the page moves to that part, in
-  // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo
+  // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo.
+  // No fragment is the empty one, which moves to the top of the page: ?raw alone would load the page again
   if (framed) addEventListener('hashchange', () => {
-    if ($('frame').hasAttribute('src')) $('frame').contentWindow.location.replace('?raw' + location.hash);
+    if ($('frame').hasAttribute('src')) $('frame').contentWindow.location.replace('?raw' + (location.hash || '#'));
   });
   // Stored pages (pages) and links registered by absolute path (links) are on separate tabs
   const inTab = (a, t = tab) => Boolean(a.path) === (t === 'links');
