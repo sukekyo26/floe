@@ -389,6 +389,8 @@ var messagesJA = map[string]string{
 	"tmpl_check_not_dir":            "%s はディレクトリではありません。テンプレートは、ファイルを収めたディレクトリです",
 	"tmpl_file_missing":             "%s がありません。テンプレートには %s が要ります",
 	"tmpl_schema_shared":            "schema.json が %s を宣言するか必須に挙げています。%s は floe がどのデータファイルからも自分で読むので、スキーマの項目は別の名前にしてください",
+	"tmpl_anchor_none":              "%s へのリンクが、ページのどの id にも当たりません。見出しの id は、見出しの文字を小文字にし、記号を除き、語の間の空白を 1 つの - にしたものです。同じ文字の 2 つ目や、id がもう使われている見出しには -1、-2… が付きます",
+	"tmpl_anchor_unsafe":            "リンクの URL が安全でないので、html/template が #ZgotmplZ に書き換えました。http・https・mailto の URL か、パスを書いてください",
 	"tmpl_item":                     "%s: %s",
 	"tmpl_schema_url":               "%s: schema はほかのファイルや URL を参照できません。$ref が指すものは schema.json の中に書いてください",
 	"tmpl_schema_invalid":           "JSON Schema はこれを受け付けません: %s",

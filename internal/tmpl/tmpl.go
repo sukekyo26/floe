@@ -73,6 +73,8 @@ type Data struct {
 	tried     []string   // the images it names that a file can make right, read or not, as it writes them
 	icons     []string   // the index files of the icon sets its diagrams may show, when it has one
 	htmlItems []htmlItem // its items of format html, which Render checks the page drawn for
+	linkItems []itemAt   // its texts holding a #, at which Render tells a link to no part of the page
+	root      ast.Node   // the YAML Read read it from, where Render places the mistake of a link
 	marks     *htmlMarks // its items of format html marked, while checkDrawnHTML draws it; nil else
 }
 
@@ -235,7 +237,8 @@ func start(file string, src []byte, given string) (*head, error) {
 	}
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
-		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil, htmlItems: nil, marks: nil,
+		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil,
+		htmlItems: nil, linkItems: nil, root: nil, marks: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(given)
@@ -309,6 +312,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	d.shape = s
 	whole := s.drawnWhole(d.Values)
 	d.htmlItems = htmlItemsOf(whole, root)
+	d.linkItems, d.root = linkItemsOf(d.Values), root
 	err = usererr.Collect(checkImages(whole, d, root, images), checkHTML(set, d),
 		checkDiagrams(whole, d, root, t.iconStore()),
 		checkScripts(whole, d, root), checkParts(set, whole, d, root))
@@ -417,7 +421,7 @@ func readTop[T *ast.MappingNode | *ast.SequenceNode](file string, body ast.Node,
 }
 
 // Render draws d, as read by Library.Read, as a page titled title in its lang:, with the template the
-// data was checked against.
+// data was checked against, its headings given ids (withHeadingIDs) and its links in the page checked.
 func (d *Data) Render(title string) ([]byte, error) {
 	t := d.tmpl
 	w, err := t.words()
@@ -470,6 +474,11 @@ func (d *Data) Render(title string) ([]byte, error) {
 		if err = d.checkDrawnHTML(page, title, out); err != nil {
 			return nil, err
 		}
+	}
+	// After the data's HTML is checked: an item that changes the page changes its ids and links too.
+	styled, anchors := withHeadingIDs(styled)
+	if err = d.checkAnchors(anchors, read.src); err != nil {
+		return nil, err
 	}
 	return d.withDiagrams(styled)
 }
