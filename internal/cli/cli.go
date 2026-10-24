@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
@@ -134,38 +135,64 @@ func newRoot(env Env) *cobra.Command {
 	return root
 }
 
-// readArg reads a file named on the command line, relative to the working directory.
-func (a *app) readArg(file string) ([]byte, error) {
-	abs, err := a.abs(file)
-	if err != nil {
-		return nil, err
-	}
-	src, err := os.ReadFile(abs) //nolint:gosec // G304: reading the file the user names is the point
-	if err != nil {
-		return nil, usererr.CannotRead(file, err)
-	}
-	return src, nil
+// arg is a path a command was given: its name as it was written, which its mistakes and its page go by, and
+// where it is, or why it is nowhere.
+type arg struct {
+	name, abs string
+	err       error // a relative path under no working directory; abs is then ""
 }
 
-// namedFiles is the files or directories given, in order, each once, by the path it was first given as: two
-// paths that name one entry of one directory (./a.yaml and a.yaml, through a symlinked directory, in another
-// case on macOS) are read and told once. A link of another name or in another directory, symbolic or hard,
-// is one of its own, as its name names its page or template.
+// arg resolves path for the command, once: under the working directory (dirs.Under), folding its .. by its
+// letters, so that every place reads a path alike; a relative one is refused when the working directory
+// cannot be read (main's Getwd failed: Dir ""). "" stays "", for the command to tell of.
+func (a *app) arg(path string) arg {
+	abs, ok := dirs.Under(a.env.Dir, path)
+	if !ok {
+		return arg{name: path, abs: "", err: usererr.New("cli_relative_no_cwd", path)}
+	}
+	return arg{name: path, abs: abs, err: nil}
+}
+
+// args is the arg of each of the files or directories given, in order, each once (once).
+func (a *app) args(paths []string) []arg {
+	given := make([]arg, len(paths))
+	for i, path := range paths {
+		given[i] = a.arg(path)
+	}
+	return once(given)
+}
+
+// once is the args given, in order, each once, by the path it was first given as: two paths that name one
+// entry of one directory (./a.yaml and a.yaml, through a symlinked directory, in another case on macOS) are
+// read and told once. A link of another name or in another directory, symbolic or hard, is one of its own,
+// as its name names its page or template.
 // LIMIT: each file is compared with each kept; enough for the files of a command line.
-func (a *app) namedFiles(files []string) []string {
-	var named []string
+func once(given []arg) []arg {
+	var named []arg
 	var kept []entry
 next:
-	for _, file := range files {
-		e := a.entryOf(file)
+	for _, p := range given {
+		e := entryOf(p)
 		for _, k := range kept {
 			if e.same(k) {
 				continue next
 			}
 		}
-		named, kept = append(named, file), append(kept, e)
+		named, kept = append(named, p), append(kept, e)
 	}
 	return named
+}
+
+// read reads the file p, or tells why it cannot.
+func (p arg) read() ([]byte, error) {
+	if p.err != nil {
+		return nil, p.err
+	}
+	src, err := os.ReadFile(p.abs) //nolint:gosec // G304: reading the file the user names is the point
+	if err != nil {
+		return nil, usererr.CannotRead(p.name, err)
+	}
+	return src, nil
 }
 
 // entry is a path as a name in a directory: its absolute path, its directory and itself, nil when they
@@ -175,13 +202,12 @@ type entry struct {
 	dir, info os.FileInfo
 }
 
-func (a *app) entryOf(file string) entry {
-	abs, err := a.abs(file)
-	if err != nil {
-		// Under no working directory, as it is written: the command refuses it.
-		return entry{abs: file, dir: nil, info: nil}
+func entryOf(p arg) entry {
+	if p.err != nil {
+		// Nowhere, by its name: the command refuses it.
+		return entry{abs: p.name, dir: nil, info: nil}
 	}
-	e := entry{abs: abs, dir: nil, info: nil}
+	e := entry{abs: p.abs, dir: nil, info: nil}
 	if dir, err := os.Stat(filepath.Dir(e.abs)); err == nil {
 		e.dir = dir
 	}

@@ -52,43 +52,43 @@ type rendered struct {
 }
 
 func (a *app) renderPages(files []string, outDir string, check bool) error {
-	if _, err := a.abs(outDir); err != nil {
-		return err
-	}
-	pages, err := a.drawPages(files, outDir)
+	out := a.arg(outDir)
+	pages, err := a.drawPages(files, out)
 	switch {
 	case err != nil:
 		return err
 	case check:
-		return a.checkPages(pages)
+		return checkPages(pages)
 	default:
-		return a.writePages(pages, outDir)
+		return a.writePages(pages, out)
 	}
 }
 
-// drawPages draws the page of each data file and names the HTML file it goes to, or returns the
-// mistakes of every file, and the pages two data files would write.
-func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
+// drawPages draws the page of each data file and names the HTML file it goes to, in out, else beside it,
+// or returns the mistakes of out and of every file, and the pages two data files would write.
+func (a *app) drawPages(files []string, out arg) ([]rendered, error) {
 	var found usererr.List
+	tell(&found, out.err)
 	pages := make([]rendered, 0, len(files))
 	// The first page to each real path in lower case: through a symlink, and on a filesystem that
 	// ignores case (macOS), two paths may be one file.
 	// LIMIT: case only. APFS also takes the NFC and NFD of a name as one; fold Unicode if pages collide so.
 	first := map[string]rendered{}
-	for _, file := range a.namedFiles(files) {
-		dir := outDir
+	for _, f := range a.args(files) {
+		file := f.name
+		dir, at := out.name, out.abs
 		if dir == "" {
-			dir = filepath.Dir(file)
+			dir, at = filepath.Dir(file), filepath.Dir(f.abs)
 		}
-		p := rendered{from: file, to: filepath.Join(dir, baseName(file)+".html"), real: "", page: nil}
-		resolved, realErr := a.realPath(p.to)
-		p.real = resolved
-		page, err := drawFile(a, file)
+		name := baseName(file) + ".html"
+		p := rendered{from: file, to: filepath.Join(dir, name), real: "", page: nil}
+		page, err := drawFile(a, f)
 		tell(&found, err)
-		if realErr != nil {
-			// A relative page under no working directory: its data file is relative too, and refused above.
+		if out.err != nil || f.err != nil {
+			// Nowhere to write to: told above.
 			continue
 		}
+		p.real = realPath(filepath.Join(at, name))
 		other, taken := first[strings.ToLower(p.real)]
 		switch {
 		case taken && other.real == p.real:
@@ -109,32 +109,24 @@ func (a *app) drawPages(files []string, outDir string) ([]rendered, error) {
 	return pages, nil
 }
 
-// realPath is the path of file with its symlinks resolved: those of its directory, and its own when it
-// is there, so that a page that is a symlink is written where it leads.
-func (a *app) realPath(file string) (string, error) {
-	abs, err := a.abs(file)
-	if err != nil {
-		return "", err
-	}
+// realPath is the absolute path abs with its symlinks resolved: those of its directory, and its own when
+// it is there, so that a page that is a symlink is written where it leads.
+func realPath(abs string) string {
 	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
-		return resolved, nil
+		return resolved
 	}
 	if dir, err := filepath.EvalSymlinks(filepath.Dir(abs)); err == nil {
-		return filepath.Join(dir, filepath.Base(abs)), nil
+		return filepath.Join(dir, filepath.Base(abs))
 	}
-	return abs, nil
+	return abs
 }
 
 // writePages writes each page that changes, and prints its path.
-func (a *app) writePages(pages []rendered, outDir string) error {
-	if outDir != "" {
+func (a *app) writePages(pages []rendered, out arg) error {
+	if out.abs != "" {
 		// As the pages in it, for others to read.
-		dir, err := a.abs(outDir)
-		if err != nil {
-			return err
-		}
-		if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: pages to share
-			return usererr.CannotWrite(dir, err)
+		if err := os.MkdirAll(out.abs, 0o755); err != nil { //nolint:gosec // G301: pages to share
+			return usererr.CannotWrite(out.abs, err)
 		}
 	}
 	for _, p := range pages {
@@ -151,15 +143,10 @@ func (a *app) writePages(pages []rendered, outDir string) error {
 }
 
 // checkPages returns a mistake for each page that is missing or is not what its data file draws.
-func (a *app) checkPages(pages []rendered) error {
+func checkPages(pages []rendered) error {
 	var found usererr.List
 	for _, p := range pages {
-		abs, err := a.abs(p.to)
-		if err != nil {
-			tell(&found, err)
-			continue
-		}
-		old, err := os.ReadFile(abs)
+		old, err := os.ReadFile(p.real)
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
 			found = append(found, usererr.New("cli_render_missing", p.to, p.from))

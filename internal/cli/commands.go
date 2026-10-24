@@ -48,17 +48,6 @@ func (a *app) templates() *tmpl.Library {
 	return a.lib
 }
 
-// abs puts a relative path the command was given under the working directory, folding its .. by its letters
-// (dirs.Under), so that every place reads a path alike, and refuses one when the working directory cannot be
-// read (main's Getwd failed: Dir ""); "" stays "".
-func (a *app) abs(path string) (string, error) {
-	abs, ok := dirs.Under(a.env.Dir, path)
-	if !ok {
-		return "", usererr.New("cli_relative_no_cwd", path)
-	}
-	return abs, nil
-}
-
 func (a *app) out(format string, args ...any) {
 	_, _ = fmt.Fprintf(a.env.Stdout, format+"\n", args...) //nolint:errcheck // nowhere left to report
 }
@@ -131,20 +120,20 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	var saved server.Saved
 	switch {
 	case link:
-		path, absErr := a.abs(file)
+		p := a.arg(file)
 		// The server reads a link, as it draws it.
-		if absErr != nil {
-			err = usererr.Collect(err, absErr)
-		} else if _, statErr := os.Stat(path); statErr != nil {
+		if p.err != nil {
+			err = usererr.Collect(err, p.err)
+		} else if _, statErr := os.Stat(p.abs); statErr != nil {
 			err = usererr.Collect(err, usererr.CannotRead(file, statErr))
 		}
 		if err == nil {
-			saved, err = a.publishLink(ctx, path, opts)
+			saved, err = a.publishLink(ctx, p.abs, opts)
 		}
 	// Read as data only when it is a data file: Accept has told that it is not.
 	case store.IsDataFile(file):
 		var up store.Upload
-		_, readErr := a.abs(file)
+		readErr := a.arg(file).err
 		if readErr == nil {
 			up, readErr = store.ReadUpload(ctx, file, a.env.Dir)
 		}

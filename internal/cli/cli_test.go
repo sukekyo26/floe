@@ -1248,7 +1248,6 @@ func TestRelativeWithoutDir(t *testing.T) {
 	}{
 		{[]string{"check", "p.yaml"}, "p.yaml"},
 		{[]string{"render", "p.yaml"}, "p.yaml"},
-		{[]string{"render", "--out-dir", "out", page}, "out"},
 		{[]string{"render", "--check", "--out-dir", "out", page}, "out"},
 		{[]string{"diagram", "render", "spec.yaml"}, "spec.yaml"},
 		{[]string{"publish", "p.yaml"}, "p.yaml"},
@@ -1261,4 +1260,19 @@ func TestRelativeWithoutDir(t *testing.T) {
 		}
 	}
 	want(t, "check of an absolute path from no working directory", e.runAt(t.Context(), "", "check", page), 0, "", "")
+
+	// The out-dir and the data files are told of in one list, in the order given.
+	bad := e.write(t, "bad.yaml", "template: report\nlang: en\nnope: 1\n")
+	r := e.runAt(t.Context(), "", "render", "--out-dir", "out", "p.yaml", bad)
+	if wantErr := refused("out") + refused("p.yaml") + bad + ":3:1: nope is not an item of the template report"; r.code != 1 ||
+		!strings.HasPrefix(r.stderr, wantErr) {
+		t.Errorf("render of an out-dir and data files from no working directory = %+v, want %q…", r, wantErr)
+	}
+	// "" is the working directory to floe template check, as filepath.Abs took it.
+	if r := e.runAt(t.Context(), "", "template", "check", ""); r.code != 1 || r.stderr != refused(".") {
+		t.Errorf("template check '' from no working directory = %+v, want %q", r, refused("."))
+	}
+	if r := e.run(t, "", "template", "check", ""); r.code != 1 || !strings.HasPrefix(r.stderr, "floe:  has no template.yaml") {
+		t.Errorf("template check '' = %+v, want the working directory checked", r)
+	}
 }
