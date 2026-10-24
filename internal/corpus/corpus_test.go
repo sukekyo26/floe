@@ -124,13 +124,18 @@ func (s *sample) renderEach(t *testing.T, data []string) map[string]string {
 	t.Helper()
 
 	drawnBy := map[string]string{}
+	// By the name in lower case, as floe render refuses two pages of one name but for case: one file to a
+	// filesystem that ignores case (macOS), where golden/ is checked out too.
+	named := map[string]string{}
 	for _, file := range data {
 		out := filepath.Join(s.tmp, "pages", file)
 		s.run(t, false, "render", "--out-dir", out, file)
 		for name, b := range s.pages(t, out, "the page %s of "+file) {
-			if other, ok := drawnBy[name]; ok {
-				t.Errorf("%s and %s both write %s, which golden/ holds one of; rename one of them", other, file, name)
+			if other, ok := named[strings.ToLower(name)]; ok {
+				t.Errorf("%s and %s both write %s but for case, which golden/ holds one of; rename one of them",
+					drawnBy[other], file, name)
 			}
+			named[strings.ToLower(name)] = name
 			drawnBy[name] = file
 			s.files[name] = b
 		}
@@ -151,9 +156,15 @@ func (s *sample) renderTogether(t *testing.T, data []string, drawnBy map[string]
 		for _, name := range slices.Sorted(maps.Keys(pages)) {
 			t.Errorf("render together failed but wrote %s", name)
 		}
-		// A file that fails alone is why; else what one read made a mistake of the next's.
+		// A file that fails alone is why, or two pages of one name but for case, which renderEach told of;
+		// else what one read made a mistake of the next's.
 		passed := slices.Collect(maps.Values(drawnBy))
-		if !slices.ContainsFunc(data, func(file string) bool { return !slices.Contains(passed, file) }) {
+		folded := map[string]bool{}
+		for name := range drawnBy {
+			folded[strings.ToLower(name)] = true
+		}
+		if len(folded) == len(drawnBy) &&
+			!slices.ContainsFunc(data, func(file string) bool { return !slices.Contains(passed, file) }) {
 			t.Errorf("render together failed, though each data file alone passed")
 		}
 		return
