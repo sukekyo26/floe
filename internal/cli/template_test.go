@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"io/fs"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/cli"
 	"github.com/sukekyo26/floe/internal/version"
 )
 
@@ -511,4 +513,59 @@ func TestUnusableTemplateWhereTaken(t *testing.T) {
 	if r := e.run(t, "", "publish", a); r.code != 1 || !strings.HasPrefix(r.stderr, a+":1:11: your own template sch cannot be used\n") {
 		t.Errorf("publish of the one that takes it = %+v", r)
 	}
+}
+
+// floe template check reads a relative dir under the working directory it is given, as the other commands
+// do, not under the process's: here internal/cli, where none of these is.
+func TestTemplateCheckRelative(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "t")
+	for _, name := range []string{"memo", "bad"} {
+		if r := e.run(t, "", "template", "new", name, "--from", "report"); r.code != 0 {
+			t.Fatalf("template new = %+v", r)
+		}
+	}
+	e.write(t, "t/bad/page.html", "<!doctype html><html><head></head><body>{{.nope</body></html>")
+	if err := os.Symlink(filepath.Join(e.tmp, "t"), filepath.Join(e.tmp, "link")); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct{ dir, arg string }{
+		{"", "t/memo"},
+		{"", "t/memo/"},
+		{"", "./t/memo"},
+		{"", "t/../t/memo"},
+		{"", "link/memo"},
+		{"", filepath.Join(e.tmp, "t", "memo")},
+		{"t/memo", "."},
+		{"t", "memo"},
+	} {
+		want(t, "template check "+c.arg+" from "+c.dir, e.run(t, c.dir, "template", "check", c.arg), 0, "", "")
+	}
+	want(t, "template check t/bad", e.run(t, "", "template", "check", "t/bad"), 1, "",
+		"t/bad/page.html: this is not a valid Go template")
+}
+
+// From a working directory that cannot be read (Dir ""), a relative template is refused as such, and an
+// absolute one is checked.
+func TestTemplateCheckWithoutDir(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "t")
+	if r := e.run(t, "", "template", "new", "memo", "--from", "report"); r.code != 0 {
+		t.Fatalf("template new = %+v", r)
+	}
+	run := func(dir string) result {
+		var stdout, stderr bytes.Buffer
+		code := cli.Run(t.Context(), []string{"template", "check", dir}, cli.Env{
+			Getenv: func(k string) string { return e.vars[k] }, Dir: "", Stdout: &stdout, Stderr: &stderr, Environ: nil,
+		})
+		return result{code: code, stdout: stdout.String(), stderr: stderr.String()}
+	}
+	want(t, "template check of a relative dir", run("t/memo"), 1, "",
+		"floe: the working directory cannot be read, so the relative path t/memo means nothing; "+
+			"run floe from a directory that exists, or give an absolute path\n")
+	want(t, "template check of an absolute dir", run(filepath.Join(e.tmp, "t", "memo")), 0, "", "")
 }

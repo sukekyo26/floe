@@ -2,6 +2,7 @@ package cli
 
 import (
 	"cmp"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -217,7 +218,14 @@ code 0. Nothing is printed when the templates are right.`,
 			var all usererr.List
 			failed := false
 			for _, dir := range a.namedFiles(args) {
-				warnings, err := a.templates().Check(dir)
+				// A working directory that cannot be read (main's Getwd failed) is "": tmpl takes it for none.
+				var warnings usererr.List
+				var err error
+				if a.env.Dir == "" && !filepath.IsAbs(dir) {
+					err = usererr.New("cli_relative_no_cwd", dir)
+				} else {
+					warnings, err = a.templates().Check(dir, a.env.Dir)
+				}
 				all = append(all, warnings...)
 				told := len(all)
 				tell(&all, err)
