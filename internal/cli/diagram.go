@@ -76,9 +76,9 @@ func (a *app) render(files []string, assets bool) error {
 		return failed //nolint:wrapcheck // already says what failed
 	}
 	for _, e := range drawn {
-		i := slices.Index(files, e.File)
+		i := slices.IndexFunc(named, func(p arg) bool { return p.name == e.File })
 		if i < 0 {
-			i = len(files)
+			i = len(named)
 		}
 		told[i] = append(told[i], e)
 	}

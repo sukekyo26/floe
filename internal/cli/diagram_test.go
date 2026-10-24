@@ -57,6 +57,11 @@ func TestDiagramRender(t *testing.T) {
 		strings.Count(r.stdout, `<div class="dg-wrap"`) != 1 {
 		t.Errorf("render of a file named twice = %+v, want one diagram", r)
 	}
+	// The mistakes of a drawing, the layout's, are told by the file they are of, each named once.
+	want(t, "render of the layout of a file after one named thrice",
+		e.run(t, "specs", "diagram", "render", "a.yaml", "./a.yaml", "a.yaml", "outside.yaml"), 1, "",
+		"outside.yaml:6:5: dot at 0,25 sticks out of the 100x50 canvas\n"+
+			"outside.yaml:7:5: box \"A\" sticks out of the 100x50 canvas\n")
 	for _, args := range [][]string{{"nope.yaml", "shape.yaml", "./nope.yaml", "shape.yaml"}, {"nope.yaml", "nope.yaml", "shape.yaml"}} {
 		const told = "floe: cannot read nope.yaml (no such file or directory); check the path and that the file exists\nshape.yaml:6:5: dot: give cy\n"
 		if r := e.run(t, "specs", append([]string{"diagram", "render"}, args...)...); r.code != 1 || r.stderr != told {
