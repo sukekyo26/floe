@@ -2,6 +2,7 @@ package tmpl
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"html/template"
 	"io"
@@ -32,7 +33,8 @@ func escapeMistake(page *template.Template, src []byte, file string) error {
 	}
 	stop := template.FuncMap{stopFunc: func() (string, error) { return "", errStop }}
 	call := "{{" + stopFunc + "}}{{template " + strconv.Quote(page.Name()) + " .}}"
-	run, err := c.New("floe-escape").Funcs(stop).Parse(call)
+	// A name of its own each time: a page may define, or call, any name, which this one would take the place of.
+	run, err := c.New("floe-escape-" + rand.Text()).Funcs(stop).Parse(call)
 	if err != nil {
 		return err //nolint:wrapcheck // floe's own text, which parses
 	}

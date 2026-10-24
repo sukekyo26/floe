@@ -21,6 +21,9 @@ func TestEscapeMistake(t *testing.T) {
 		"<p>\n<a href=\"{{if .a}}/x/{{else}}/s?q={{end}}{{probe}}{{.a}}\">x</a></p>":                                   {2, 44},
 		"{{probe}}\n\n<script>{{if .a}}var a = '{{end}}</script>":                                                      {3, 14},
 		"{{define \"row\"}}\n<a href=\"{{if .}}/x/{{else}}/s?q={{end}}{{.}}\">{{end}}{{probe}}{{template \"row\" .a}}": {2, 43},
+		// A page's own names, those of floe's copy among them, are its own.
+		"{{define \"floe-escape\"}}<a href=\"{{if .}}/x/{{else}}/s?q={{end}}{{.}}\">x</a>{{end}}{{probe}}<p>{{template \"floe-escape\" .a}}</p>": {1, 67},
+		"<p>{{probe}}{{template \"floe-escape\" .}}</p>": {1, 24},
 		// ErrOutputContext names the body of the template whose output it cannot compute, after its {{define}}.
 		"<script>[{{template \"t\" .}}]</script>\n{{define \"t\"}}{{if .Tail}}{{template \"t\" .Tail}}{{end}}{{.Head}}\",{{end}}": {2, 15},
 	} {
