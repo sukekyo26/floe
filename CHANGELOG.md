@@ -217,7 +217,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `~/.config/floe/templates`), a symlink included, takes the place of a
   built-in template of its name. A published page is drawn with the server's
   templates; a publish whose `FLOE_TEMPLATES_DIR` or `FLOE_ICONS_DIR` is not
-  the running server's is refused, pointing at `floe stop`. Besides
+  the running server's is refused, pointing at `floe stop`. One that cannot
+  be used is refused, with why, at the `template:` of each data file that
+  names it, and stops no page of another template. Besides
   `page.html`, `page.css` and `schema.json`, a template may check relations between items with `checks.yaml`
   (on the items of a list, lists on the way gone through: `sections.parts`, or
   once on the whole data file without `for`; a part's on the part itself)

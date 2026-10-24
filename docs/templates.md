@@ -9,7 +9,7 @@ A template draws a page from a data file (`floe publish <data.yaml>`). floe has 
 - A template of your own is a directory `$FLOE_TEMPLATES_DIR/<name>/`, named after the template. `FLOE_TEMPLATES_DIR` defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`.
 - The directory may be a symlink, to a clone of a repository for example. A file in it that leads out of it, through a symlink, is refused.
 - A template's name is lower case letters, digits, `-` and `_`, starting with a letter or a digit. A file, or a directory of another name, is not a template.
-- A broken template of your own stops the publish with an error: floe does not fall back to the built-in one of its name.
+- A template of your own that cannot be used (a mistake in its files, apart from the data: `template.yaml`, the schema, `checks.yaml`, `computed.yaml`, `words.yaml`, `page.html` read as a template, `page.css`, or a directory that cannot be read) is refused, with why, at the `template:` of each data file that names it, as a theme a data file picks that cannot be used is, so a page of another template is drawn. floe does not fall back to the built-in one of its name, and `floe template new --from` does not copy it.
 
 ## Files
 
