@@ -220,11 +220,11 @@ func TestTemplateMistakesOnce(t *testing.T) {
 			files: map[string]string{"checks.yaml": "- for: n\n  expr: item +++ (\n  message: m\n"},
 		},
 		"page.html html/template cannot escape": {
-			items: html, data: "",
+			items: html, data: "", unusable: true,
 			files: map[string]string{"page.html": head + `<body>{{if .Title}}<a href="{{end}}</body></html>`},
 		},
 		"part.html html/template cannot escape": {
-			items: part, data: "risks: { text: hello }\n",
+			items: part, data: "risks: { text: hello }\n", unusable: true,
 			parts: map[string]string{
 				"pp/schema.json": `{"type": "object", "properties": {"text": {"type": "string"}}}`,
 				"pp/part.html":   "<p data-floe-part=\"pp\">\n<script>{{if eq .text `a`}}var a = '{{end}}</script></p>",
