@@ -1,0 +1,14 @@
+$ floe check blueprint.yaml brutal.yaml default.yaml editorial.yaml ink.yaml notebook.yaml soft.yaml swiss.yaml washi.yaml
+exit 0
+$ floe render --out-dir $OUT blueprint.yaml brutal.yaml default.yaml editorial.yaml ink.yaml notebook.yaml soft.yaml swiss.yaml washi.yaml
+exit 0
+--- stdout
+$OUT/blueprint.html
+$OUT/brutal.html
+$OUT/default.html
+$OUT/editorial.html
+$OUT/ink.html
+$OUT/notebook.html
+$OUT/soft.html
+$OUT/swiss.html
+$OUT/washi.html

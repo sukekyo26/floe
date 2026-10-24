@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="floe report">
+<title>{{.Title}}</title>
+</head>
+<body>
+<main>
+<header>
+{{- with .Data.eyebrow}}
+<p class="eyebrow">{{.}}</p>
+{{- end}}
+<h1>{{.Title}}</h1>
+{{- with .Data.lead}}
+<p class="lead">{{.}}</p>
+{{- end}}
+</header>
+{{- range .Data.sections}}
+<section>
+{{- with .heading}}
+<h2>{{.}}</h2>
+{{- end}}
+{{- range .parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</section>
+{{- end}}
+</main>
+</body>
+</html>

@@ -1,0 +1,9 @@
+$ floe check en.yaml fr.yaml ja-JP.yaml ja.yaml
+exit 0
+$ floe render --out-dir $OUT en.yaml fr.yaml ja-JP.yaml ja.yaml
+exit 0
+--- stdout
+$OUT/en.html
+$OUT/fr.html
+$OUT/ja-JP.html
+$OUT/ja.html

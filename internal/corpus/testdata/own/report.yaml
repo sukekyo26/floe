@@ -1,0 +1,10 @@
+template: report
+lang: en
+title: Report with my table
+sections:
+  - heading: Tables
+    parts:
+      - table:
+          columns: [{ title: A }]
+          rows: [[one]]
+      - text: "| Markdown | table |\n| --- | --- |\n| takes | its look |"

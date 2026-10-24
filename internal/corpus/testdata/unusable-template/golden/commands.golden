@@ -1,0 +1,19 @@
+$ floe check pag-a.yaml pag-b.yaml report.yaml sch-a.yaml sch-b.yaml wor-a.yaml wor-b.yaml
+exit 1
+--- stderr
+pag-a.yaml:1:11: your own template pag cannot be used
+  $SAMPLE/templates/pag/page.html: this is not a valid Go template: template: page.html:1: bad character U+003C '<'
+pag-b.yaml:1:11: your own template pag cannot be used, as told above
+sch-a.yaml:1:11: your own template sch cannot be used
+  $SAMPLE/templates/sch/schema.json: #/properties/x/pattern: JSON Schema does not take this: '([' is not valid regex: error parsing regexp: missing closing ]: `[`
+sch-b.yaml:1:11: your own template sch cannot be used, as told above
+wor-a.yaml:1:11: your own template wor cannot be used
+  $SAMPLE/templates/wor/words.yaml:1:5: this is not valid YAML: sequence end token ']' not found
+wor-b.yaml:1:11: your own template wor cannot be used, as told above
+$ floe template check $SAMPLE/templates/pag $SAMPLE/templates/sch $SAMPLE/templates/wor
+exit 1
+--- stderr
+$SAMPLE/templates/pag/page.html: this is not a valid Go template: template: page.html:1: bad character U+003C '<'
+$SAMPLE/templates/sch/schema.json: #: it declares properties without "additionalProperties": false, so a misspelt key is not refused
+$SAMPLE/templates/sch/schema.json: #/properties/x/pattern: JSON Schema does not take this: '([' is not valid regex: error parsing regexp: missing closing ]: `[`
+$SAMPLE/templates/wor/words.yaml:1:5: this is not valid YAML: sequence end token ']' not found

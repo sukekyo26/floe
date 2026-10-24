@@ -1,0 +1,13 @@
+$ floe check memo-brutal.yaml memo-default.yaml memo-plain.yaml report.yaml
+exit 0
+$ floe render --out-dir $OUT memo-brutal.yaml memo-default.yaml memo-plain.yaml report.yaml
+exit 0
+--- stdout
+$OUT/memo-brutal.html
+$OUT/memo-default.html
+$OUT/memo-plain.html
+$OUT/report.html
+$ floe template check $SAMPLE/templates/memo
+exit 0
+$ floe part check
+exit 0

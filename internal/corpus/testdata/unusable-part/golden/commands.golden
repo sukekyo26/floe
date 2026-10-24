@@ -1,0 +1,10 @@
+$ floe check none.yaml takes.yaml
+exit 1
+--- stderr
+takes.yaml:7:16: the part links cannot be used
+  $SAMPLE/parts/links/schema.json: #/items/properties/u/pattern: JSON Schema does not take this: '([' is not valid regex: error parsing regexp: missing closing ]: `[`
+$ floe part check
+exit 1
+--- stderr
+the part links cannot be used
+  $SAMPLE/parts/links/schema.json: #/items/properties/u/pattern: JSON Schema does not take this: '([' is not valid regex: error parsing regexp: missing closing ]: `[`

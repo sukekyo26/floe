@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "table",
+  "description": "A table; each cell is a line of Markdown (code, bold, links), a number in quotes as it is drawn, or a pill",
+  "type": "object",
+  "properties": {
+    "columns": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "description": "A line of Markdown" },
+          "num": { "type": "boolean", "description": "Numbers: aligned right, in a fixed-width font" }
+        },
+        "required": ["title"],
+        "additionalProperties": false
+      }
+    },
+    "rows": {
+      "type": "array",
+      "description": "Rows of cells, as many as the columns",
+      "items": {
+        "type": "array",
+        "items": { "$ref": "floe:///parts/cell.json" },
+        "minItems": 1
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["columns", "rows"],
+  "additionalProperties": false
+}
