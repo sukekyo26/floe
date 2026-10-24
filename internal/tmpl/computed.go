@@ -41,21 +41,30 @@ var identifier = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 // checkComputed computes the values of d's template's computed.yaml, if it has one, into d.Calc, from
 // the items its schema declares, and reports at their expressions those its data cannot give.
 func checkComputed(t *Template, d *Data) error {
-	c, err := t.readComputed(d.shape)
+	c, err := t.readComputed()
 	if c == nil || err != nil {
 		return err
 	}
 	return c.compute(t.file("computed.yaml"), d, t.isOwn())
 }
 
-// readComputed reads t's computed.yaml once, of the items of its schema s, nil without one.
-func (t *Template) readComputed(s *shape) (*computed, error) {
+// readComputed reads t's computed.yaml once, of the items its schema declares, nil without one or while
+// the schema cannot be read, whose mistakes are told apart.
+func (t *Template) readComputed() (*computed, error) {
 	return t.reads.computed.of(func() (*computed, error) {
+		set, err := t.parts()
+		if err != nil {
+			return nil, err
+		}
+		read, _ := t.compileShape(set) //nolint:errcheck // told by those who read the schema
+		if read.shape == nil {
+			return nil, nil
+		}
 		src, found, err := t.readOptional("computed.yaml")
 		if !found || err != nil {
 			return nil, err
 		}
-		return readComputed(t.file("computed.yaml"), src, s.keyNames())
+		return readComputed(t.file("computed.yaml"), src, read.shape.keyNames())
 	})
 }
 

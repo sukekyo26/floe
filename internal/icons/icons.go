@@ -88,16 +88,11 @@ type Store struct {
 	mu      sync.Mutex
 	indexes map[string]*index
 	icons   map[string]*Icon // by name, as Lookup found them
-	// The mistake of each set, or icon, that could not be read, made once: every diagram that shows it gives
-	// the same one, for it to be told once. A store is for one output, so that a fetch is seen by the next.
-	failed map[string]error
 }
 
 // New returns the store under root. An empty root (no HOME to put it under) is refused when used.
 func New(root string) *Store {
-	return &Store{
-		root: root, mu: sync.Mutex{}, indexes: map[string]*index{}, icons: map[string]*Icon{}, failed: map[string]error{},
-	}
+	return &Store{root: root, mu: sync.Mutex{}, indexes: map[string]*index{}, icons: map[string]*Icon{}}
 }
 
 // Indexes are the index files of every set, fetched or not: a fetch replaces the one of its set.
@@ -129,16 +124,11 @@ type entry struct {
 
 // readIndex returns nil when the set has not been fetched.
 func (s *Store) readIndex(k *kit) (*index, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.indexOf(k)
-}
-
-// indexOf is readIndex, s.mu held.
-func (s *Store) indexOf(k *kit) (*index, error) {
 	if s.root == "" {
 		return nil, usererr.New("icons_no_dir")
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if idx := s.indexes[k.name]; idx != nil {
 		return idx, nil
 	}
@@ -158,21 +148,13 @@ func (s *Store) indexOf(k *kit) (*index, error) {
 	return &idx, nil
 }
 
-// loadIndex returns the index of k, or the mistake of it not read, made once: looked for and kept under one
-// lock, for every caller to get the same one.
 func (s *Store) loadIndex(k *kit) (*index, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.failed[k.name]; err != nil {
-		return nil, err
-	}
-	idx, err := s.indexOf(k)
-	if err == nil && idx == nil {
-		err = usererr.New("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
-	}
+	idx, err := s.readIndex(k)
 	if err != nil {
-		s.failed[k.name] = err
 		return nil, err
+	}
+	if idx == nil {
+		return nil, usererr.New("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
 	}
 	return idx, nil
 }
@@ -237,7 +219,6 @@ func (s *Store) Fetch(ctx context.Context, set, source string, force bool) (Fetc
 	s.mu.Lock()
 	s.indexes[k.name] = idx
 	clear(s.icons)
-	clear(s.failed)
 	s.mu.Unlock()
 	got.Version, got.Count = idx.Version, len(idx.Icons)
 	return got, nil
@@ -461,9 +442,6 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 	if icon := s.icons[name]; icon != nil {
 		return icon, nil, nil
 	}
-	if kept := s.failed["icon:"+name]; kept != nil {
-		return nil, nil, kept
-	}
 	dir := s.dir(k)
 	uri := func(file string) (string, error) {
 		b, rerr := os.ReadFile(filepath.Join(dir, file)) //nolint:gosec // G304: a name in the set's index
@@ -473,12 +451,13 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 		return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(b), nil
 	}
 	icon := &Icon{Light: "", Dark: ""}
-	if icon.Light, err = uri(rest + ".svg"); err == nil && e.Dark {
-		icon.Dark, err = uri(rest + ".dark.svg")
-	}
-	if err != nil {
-		s.failed["icon:"+name] = err
+	if icon.Light, err = uri(rest + ".svg"); err != nil {
 		return nil, nil, err
+	}
+	if e.Dark {
+		if icon.Dark, err = uri(rest + ".dark.svg"); err != nil {
+			return nil, nil, err
+		}
 	}
 	s.icons[name] = icon
 	return icon, nil, nil

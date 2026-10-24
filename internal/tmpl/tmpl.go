@@ -542,7 +542,8 @@ func headMistake(file string, src []byte) *usererr.Error {
 // parsedPage is the page.html of a template, parsed and never drawn, and the mistake of it to tell when
 // its drawing holds no </head>.
 type parsedPage struct {
-	page *template.Template
+	page *template.Template // nil when it cannot be parsed
+	src  []byte
 	head *usererr.Error
 }
 
@@ -556,24 +557,20 @@ func (p parsedPage) in(word func(string) (string, error)) (*template.Template, e
 }
 
 // page reads and parses the page.html of t once, which holds no <style>: floe puts a page's CSS together,
-// with its words w, t's words.yaml, the same each time.
+// with its words w, t's words.yaml, the same each time, nil while it has mistakes. Its mistakes are told
+// together: those of its tags, as text, and, parsed, of the words it names.
 func (t *Template) page(w words) (parsedPage, error) {
 	return t.reads.page.of(func() (parsedPage, error) {
 		src, err := t.readFile("page.html")
 		if err != nil {
-			return parsedPage{}, err
+			return parsedPage{page: nil, src: nil, head: nil}, err
 		}
-		if err = t.refuseInPage(src); err != nil {
-			return parsedPage{}, err
+		p := parsedPage{page: nil, src: src, head: headMistake(t.file("page.html"), src)}
+		var parseErr, wordsErr error
+		if p.page, parseErr = t.parsePage(src, w); parseErr == nil {
+			wordsErr = t.pageWords(p.page, w)
 		}
-		page, err := t.parsePage(src, w)
-		if err != nil {
-			return parsedPage{}, err
-		}
-		if err = t.pageWords(page, w); err != nil {
-			return parsedPage{}, err
-		}
-		return parsedPage{page: page, head: headMistake(t.file("page.html"), src)}, nil
+		return p, usererr.Collect(t.refuseInPage(src), parseErr, wordsErr)
 	})
 }
 
@@ -701,13 +698,6 @@ func (t *Template) readSchema(set *partSet) (schemaRead, error) {
 // template check and a data file tell of it, those of its compiling too.
 func (t *Template) compileShape(set *partSet) (schemaRead, error) {
 	read, err := t.reads.shape.of(func() (schemaRead, error) { return t.readAndCompile(set) })
-	// Copies of what those it is given to may add to.
-	read.refused = slices.Clone(read.refused)
-	if read.notes != nil {
-		notes := *read.notes
-		notes.warnings = slices.Clone(notes.warnings)
-		read.notes = &notes
-	}
 	return read, err
 }
 

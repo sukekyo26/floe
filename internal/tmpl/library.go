@@ -31,9 +31,8 @@ type Library struct {
 }
 
 // run is what the reads of one output read once: the parts and themes of one's own, the directory of
-// templates of one's own, the templates found by name and the icons. Each mistake of them is then the same
-// for every input that uses what it is of, and told once. It is for one output, in one goroutine: kept for
-// longer, it would not see the files fixed after.
+// templates of one's own, the templates found by name and the icons. It is for one output, in one
+// goroutine: kept for longer, it would not see the files fixed after.
 type run struct {
 	own       ownDirs
 	set       readOnce[*partSet]
@@ -123,8 +122,8 @@ type Template struct {
 	reads *reads
 }
 
-// reads is what each file of a template gives, read once: every data file drawn with it gets the same,
-// and the same mistake, to be told once. What a data file gives is computed from them for each.
+// reads is what each file of a template gives, read once for every data file drawn with it. What a data
+// file gives is computed from them for each.
 type reads struct {
 	version  readOnce[struct{}]
 	words    readOnce[words]
@@ -136,7 +135,8 @@ type reads struct {
 	assets   map[string]*readOnce[template.URL] // by the name page.html gives asset
 }
 
-// readOnce is what reading a file gave, read the first time alone.
+// readOnce is what reading a file gave, read the first time alone. The value it gives is shared, not to be
+// changed; a List of mistakes alone is given as a copy, as it is added to.
 // LIMIT: no lock, for one goroutine, as a run is. Add one if a run comes to be shared between goroutines.
 type readOnce[T any] struct {
 	done bool

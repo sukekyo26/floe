@@ -211,7 +211,7 @@ code 0. Nothing is printed when the templates are right.`,
 		Args: usage(cobra.MinimumNArgs(1)),
 		RunE: func(_ *cobra.Command, args []string) error {
 			var found, warned usererr.List
-			// A warning of the parts of one's own is the same for every template, read once: told once.
+			// A warning of the parts of one's own, the same for every template, is told once.
 			for _, dir := range a.namedFiles(args) {
 				warnings, err := a.templates().Check(dir)
 				warned = append(warned, warnings...)

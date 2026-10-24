@@ -76,7 +76,7 @@ func (l *Library) CheckOwnParts() (warnings usererr.List, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return set.strays, slices.Concat(set.unusable(nil), set.unusableThemes(nil)).Err()
+	return slices.Clone(set.strays), slices.Concat(set.unusable(nil), set.unusableThemes(nil)).Err()
 }
 
 // checkFiles checks the files of t apart from any data: its schema, its checks and computed values, its
@@ -93,29 +93,27 @@ func (t *Template) checkFiles() (usererr.List, error) {
 	warnings, s, schemaErr := t.checkSchema(set)
 	w, wordsErr := t.words()
 	checked, assetsErr := t.checkAssets()
-	src, pageErr := t.readFile("page.html")
+	p, pageErr := t.page(w)
 	var named []namedPart
-	if pageErr == nil {
-		named = namedParts(string(src))
-		pageErr = t.checkPage(set, s, w, checked, src, named)
+	if p.src != nil {
+		named = namedParts(string(p.src))
+		pageErr = usererr.Collect(pageErr, t.checkPage(set, s, checked, p, named))
 	}
 	scope, cssErr := t.checkCSS()
-	warnings = append(append(warnings, scope...), brokenParts(set, named)...)
+	// A copy: the schema's warnings are those its run keeps.
+	warnings = slices.Concat(warnings, scope, brokenParts(set, named))
 	return warnings, usererr.Collect(schemaErr, wordsErr, pageErr, assetsErr, cssErr)
 }
 
-// checkPage checks src, the page.html of t, which names the parts named of set: its tags, as text, and,
-// parsed, the words it names of w, its words.yaml, nil when it has mistakes, and the images it names to
-// asset but those checked (checkAssets). s is the schema of t, nil when it cannot be read.
-func (t *Template) checkPage(
-	set *partSet, s *shape, w words, checked map[string]bool, src []byte, named []namedPart,
-) error {
-	text := usererr.Collect(t.refuseInPage(src), t.checkHead(s, src), t.checkNamedParts(set, src, named))
-	page, err := t.parsePage(src, w)
-	if err != nil {
-		return usererr.Collect(text, err)
+// checkPage checks p, the page.html of t as read (Template.page), which names the parts named of set, for
+// what template check alone checks: its <head> and doctype, the parts it names, and, parsed, the images it
+// names to asset but those checked (checkAssets). s is the schema of t, nil when it cannot be read.
+func (t *Template) checkPage(set *partSet, s *shape, checked map[string]bool, p parsedPage, named []namedPart) error {
+	var assets error
+	if p.page != nil {
+		assets = t.checkPageAssets(p.page, checked)
 	}
-	return usererr.Collect(text, t.pageWords(page, w), t.checkPageAssets(page, checked))
+	return usererr.Collect(t.checkHead(s, p.src), t.checkNamedParts(set, p.src, named), assets)
 }
 
 // checkSchema checks the schema of t, which refers to the parts of set, and its checks.yaml and
@@ -126,7 +124,7 @@ func (t *Template) checkSchema(set *partSet) (usererr.List, *shape, error) {
 	var warnings usererr.List
 	var computed error
 	if read.shape != nil {
-		warnings, computed = read.notes.warnings, t.checkComputed(read.shape)
+		warnings, computed = read.notes.warnings, t.checkComputed()
 	}
 	return warnings, read.shape, usererr.Collect(err, t.checkChecks(read.compiled), computed)
 }
@@ -158,9 +156,9 @@ func (t *Template) missingFiles() error {
 	return usererr.Collect(errs...)
 }
 
-// checkComputed returns the mistake of t's computed.yaml, of the items of its schema s, if it has one.
-func (t *Template) checkComputed(s *shape) error {
-	_, err := t.readComputed(s)
+// checkComputed returns the mistake of t's computed.yaml, of the items of its schema, if it has one.
+func (t *Template) checkComputed() error {
+	_, err := t.readComputed()
 	return err
 }
 
@@ -270,7 +268,7 @@ func (t *Template) checkPageAssets(page *template.Template, checked map[string]b
 		if checked[name] {
 			continue
 		}
-		_, err := t.asset(name)
+		_, err := t.assets()(name)
 		if failed := mistakes.Add(err); failed != nil {
 			return failed //nolint:wrapcheck // already says what failed
 		}
