@@ -64,7 +64,7 @@ cover-check:
     # Without internal/corpus: what its samples run through cli.Run would count for the unit tests of every package.
     # A plain substitution, which fails the recipe as pipefail tells (bash 3.2, on macOS, has no mapfile).
     packages=$(go list {{pkgs}} | grep -v '/internal/corpus$') || {
-        echo "cover-check: go list found no package to test but internal/corpus; run go list {{pkgs}}" >&2
+        echo "cover-check: go list failed, or found no package but internal/corpus; run go list {{pkgs}} to see which" >&2
         exit 1
     }
     # shellcheck disable=SC2086 # one package to a word; an import path has no space
