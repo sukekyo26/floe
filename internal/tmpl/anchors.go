@@ -10,7 +10,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/goccy/go-yaml/ast"
 	xhtml "golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
@@ -64,8 +63,7 @@ func withHeadingIDs(page []byte) ([]byte, pageAnchors) {
 	ids := map[string]string{}
 	for _, n := range found {
 		k, hasMark := attrOf(n, mark)
-		// An empty id is none: a link cannot go to it. The parser keeps the id put before it.
-		if id, _ := attrOf(n, "id"); !hasMark || id != "" {
+		if _, hasID := attrOf(n, "id"); !hasMark || hasID {
 			continue
 		}
 		// A mark in its text was put where the tokenizer read a tag that the parser reads as text.
@@ -140,8 +138,8 @@ func headingTag(raw []byte) bool {
 		bytes.IndexByte([]byte(" \t\n\f\r/>"), raw[3]) >= 0
 }
 
-// textOf returns the text in n, but that of a part (data-floe-part) and that of an element whose content
-// the parser reads as text (a <script>, a <style>).
+// textOf returns the text in n, but that of a part (data-floe-part), of an element whose content the
+// parser reads as text (a <script>, a <style>) and of an element not of HTML (an icon's <svg>).
 func textOf(n *xhtml.Node) string {
 	var b strings.Builder
 	var walk func(n *xhtml.Node)
@@ -151,7 +149,7 @@ func textOf(n *xhtml.Node) string {
 			switch {
 			case c.Type == xhtml.TextNode:
 				b.WriteString(c.Data)
-			case c.Type == xhtml.ElementNode && !isPart && !readAsText(c):
+			case c.Type == xhtml.ElementNode && c.Namespace == "" && !isPart && !readAsText(c):
 				walk(c)
 			}
 		}
@@ -210,8 +208,8 @@ func (d *Data) linkMistakes(written, decoded string, src []byte) []*usererr.Erro
 	}
 	var mistakes []*usererr.Error
 	for _, it := range d.linkItems {
-		if writes(it.text, written) {
-			mistakes = append(mistakes, itemError(d.File, it.pos, it.path, usererr.New(key, args...)))
+		if text, isText := it.value.(string); isText && writes(text, written) {
+			mistakes = append(mistakes, itemMistake(d.File, d.root, it.at, false, usererr.New(key, args...)))
 		}
 	}
 	switch {
@@ -258,17 +256,15 @@ func percentDecoded(s string) string {
 	return s
 }
 
-// linkItemsOf returns the texts of values that hold a #, which may write a link in the page, where root
-// writes them, in the order of the file.
-func linkItemsOf(values map[string]any, root ast.Node) []placedText {
-	var items []placedText
+// linkItemsOf returns the texts of values that hold a #, which may write a link in the page.
+func linkItemsOf(values map[string]any) []itemAt {
+	var items []itemAt
 	var walk func(v any, at []string)
 	walk = func(v any, at []string) {
 		switch v := v.(type) {
 		case string:
 			if strings.Contains(v, "#") {
-				pos, path := itemPos(root, at, false)
-				items = append(items, placedText{at: at, text: v, pos: pos, path: path})
+				items = append(items, itemAt{value: v, at: at})
 			}
 		case map[string]any:
 			for k, x := range v {
@@ -281,6 +277,5 @@ func linkItemsOf(values map[string]any, root ast.Node) []placedText {
 		}
 	}
 	walk(values, nil)
-	slices.SortFunc(items, byPlace)
 	return items
 }

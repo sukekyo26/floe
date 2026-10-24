@@ -45,8 +45,9 @@ func TestWithHeadingIDs(t *testing.T) {
 		`<table><tr><td><h2>A</h2></td></tr><h2>B</h2></table>`: `<table><tr><td><h2 id="a">A</h2></td></tr><h2 id="b">B</h2></table>`,
 		`<h3>A <span data-floe-part="cell">Take</span></h3>`:    `<h3 id="a">A <span data-floe-part="cell">Take</span></h3>`,
 		`<h2>a<script>x</script></h2><p>x<div`:                  `<h2 id="a">a<script>x</script></h2><p>x<div`,
-		"<h2>x<svg><![CDATA[ a > <h3>b</h3> ]]></svg>y</h2>":    "<h2>x<svg><![CDATA[ a > <h3>b</h3> ]]></svg>y</h2>",
-		`<h2 id="">Empty</h2><p id="">`:                         `<h2 id="empty" id="">Empty</h2><p id="">`,
+		"<h2>x<svg><![CDATA[ a > <h3>b</h3> ]]></svg>y</h2>":    `<h2 id="xy">x<svg><![CDATA[ a > <h3>b</h3> ]]></svg>y</h2>`,
+		`<h2 id="">Empty</h2>`:                                  `<h2 id="">Empty</h2>`,
+		`<h2>Warn <svg><title>Icon</title></svg></h2>`:          `<h2 id="warn">Warn <svg><title>Icon</title></svg></h2>`,
 		`<p>no heading</p>`:                                     `<p>no heading</p>`,
 	} {
 		if got, _ := withHeadingIDs([]byte(page)); string(got) != want {

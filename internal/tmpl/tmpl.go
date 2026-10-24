@@ -73,7 +73,8 @@ type Data struct {
 	tried     []string     // the images it names that a file can make right, read or not, as it writes them
 	icons     []string     // the index files of the icon sets its diagrams may show, when it has one
 	htmlItems []placedText // its items of format html, which Render checks the page drawn for
-	linkItems []placedText // its texts holding a #, at which Render tells a link to no part of the page
+	linkItems []itemAt     // its texts holding a #, at which Render tells a link to no part of the page
+	root      ast.Node     // the YAML Read read it from, where Render places the mistake of a link
 	marks     *htmlMarks   // its items of format html marked, while checkDrawnHTML draws it; nil else
 }
 
@@ -237,7 +238,7 @@ func start(file string, src []byte, given string) (*head, error) {
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
 		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil,
-		htmlItems: nil, linkItems: nil, marks: nil,
+		htmlItems: nil, linkItems: nil, root: nil, marks: nil,
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(given)
@@ -311,7 +312,7 @@ func checkValues(t *Template, d *Data, root ast.Node, images imageDir, problems 
 	d.shape = s
 	whole := s.drawnWhole(d.Values)
 	d.htmlItems = htmlItemsOf(whole, root)
-	d.linkItems = linkItemsOf(d.Values, root)
+	d.linkItems, d.root = linkItemsOf(d.Values), root
 	err = usererr.Collect(checkImages(whole, d, root, images), checkHTML(set, d),
 		checkDiagrams(whole, d, root, t.iconStore()),
 		checkScripts(whole, d, root), checkParts(whole, d, root))
