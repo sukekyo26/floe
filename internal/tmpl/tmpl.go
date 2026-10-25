@@ -254,7 +254,7 @@ func start(file string, src []byte, given string) (*head, error) {
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
 		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil,
-		htmlItems: nil, linkItems: nil, root: nil, marks: nil,
+		htmlItems: nil, linkItems: nil, root: nil, marks: nil, templateAt: yamlpos.Pos{Line: 0, Column: 0},
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(given)
@@ -542,7 +542,8 @@ func (p parsedPage) in(word func(string) (string, error)) (*template.Template, e
 // page reads and parses the page.html of t once, with its words.yaml, nil while it has mistakes, told beside,
 // when no word is checked. Its mistakes are told together: a <base> in its text, and, parsed, of the words it
 // names and of what html/template cannot escape (escapeMistake). What it draws, a </head>, a <style> or a
-// name of a part, is asked of each page it draws (withStyles). Parsed, its page is kept with those mistakes too, which some callers drop.
+// name of a part, is asked of each page it draws (withStyles). Parsed, its page is kept with those mistakes
+// too, which some callers drop.
 func (t *Template) page() (parsedPage, error) {
 	return t.reads.page.of(func() (parsedPage, error) {
 		w, _ := t.words() //nolint:errcheck // told by those who read the words

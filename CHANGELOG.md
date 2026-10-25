@@ -238,18 +238,19 @@ adheres to [Semantic Versioning](https://semver.org/).
   box, and under the parts' style and the theme's, which they do not
   restyle whatever their selectors. The template's CSS is scoped to the page,
   `:scope` its root: it reaches a part's element but not what the part holds.
-  `page.html` holds a `</head>`, before which floe puts the page's styles, or
-  is refused, as is a drawing an action of it leaves it out of, or puts it where a `<style>` styles
-  nothing, as a browser reads the page drawn (in a `<template>`, an `<svg>` or a `<math>`). The page drawn
-  and the data's HTML are read as a browser reads them: a name of a part is read with its character
-  references (`data-floe-part="&#110;ote"` names `note`), and one an item gives, of `"format": "html"`
-  or drawn by a part, is refused at the item, read where `page.html` puts it; a mistake of the template
-  and one of an item are told together. It holds
-  no `<style>` or `<base>`, nor an item of `"format": "html"` a `<style>`, `<link>`,
-  `</head>`, `<base>` or `<meta>`, or what changes the page around it as a browser reads it
-  (an `<svg>`, a comment or a `<form>` it leaves open, an end tag of the page's; a `page.html` that puts one outside its `<head>` and `<body>` or leaves out `<!doctype html>`), nor the template's CSS an `@import` or a `}` that closes no block, each refused
-  at its line, and `floe template check` refuses a part `page.html` names that floe
-  does not have.
+  The page drawn is read as a browser reads it, whoever wrote what it holds (`page.html`, a part,
+  an item of `"format": "html"`, the raw SVG of a diagram): it holds a `</head>` where a `<style>`
+  styles the page (not in a `<template>`, an `<svg>` or a `<math>`), before which floe puts the page's
+  styles, no `<style>`, no name of a part floe does not have or of several, and, with an item of
+  `"format": "html"`, `<!doctype html>` first, or is refused at the `template:` of the data file
+  drawn; `floe template check` draws `example.yaml` so, once the template's files pass. What a branch
+  not drawn holds is not asked. A name of a part is read with its character references
+  (`data-floe-part="&#110;ote"` names `note`), and one an item gives, of `"format": "html"` or drawn
+  by a part, is refused at the item, read where `page.html` puts it. `page.html` holds no `<base>`,
+  nor an item of `"format": "html"` a `<style>`, `<link>`, `</head>`, `<base>` or `<meta>`, or what
+  changes the page around it as a browser reads it (an `<svg>`, a comment or a `<form>` it leaves
+  open, an end tag of the page's; a `page.html` that puts one outside its `<head>` and `<body>`), nor
+  the template's CSS an `@import` or a `}` that closes no block, each refused at its line.
   Images go into the page as data URIs: an item of `"format": "image"`
   names an image under the data file's directory, and `page.html` shows one
   of the template's `assets/` with `asset`. An image is a png, jpeg, gif,
