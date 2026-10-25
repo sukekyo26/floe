@@ -1,0 +1,13 @@
+$ floe template check templates/a templates/b
+exit 1
+--- stderr
+$SAMPLE/themes/plain/nope.css: this file goes into no page: a file of a theme is base.css, palette.css or the style of a part or a look, <name>.css, the name one of bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, matrix, note, options, panel, progress, risks, rows, script, stack, stats, steps, table, tabs, terminal, timeline, tree
+templates/a/schema.json: #/properties/links: the part links cannot be used
+  $SAMPLE/parts/links/schema.json: #/items/properties/u: a part's schema takes no "format": "html": its part.html draws its items, which the checks of a format do not reach; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}
+the part links cannot be used, as told above
+$ floe part check
+exit 1
+--- stderr
+$SAMPLE/themes/plain/nope.css: this file goes into no page: a file of a theme is base.css, palette.css or the style of a part or a look, <name>.css, the name one of bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, matrix, note, options, panel, progress, risks, rows, script, stack, stats, steps, table, tabs, terminal, timeline, tree
+the part links cannot be used
+  $SAMPLE/parts/links/schema.json: #/items/properties/u: a part's schema takes no "format": "html": its part.html draws its items, which the checks of a format do not reach; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}

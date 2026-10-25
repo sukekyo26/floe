@@ -1,0 +1,2 @@
+- expr: len(item.points) <= 1
+  message: keep one point

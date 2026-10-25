@@ -1,0 +1,22 @@
+$ floe check takes.yaml
+exit 1
+--- stderr
+takes.yaml:1:11: your own template t cannot be used
+  $SAMPLE/templates/t/schema.json: #/properties/links: the part links cannot be used
+    $SAMPLE/parts/links/schema.json: #/items/properties/u/pattern: JSON Schema does not take this: '([' is not valid regex: error parsing regexp: missing closing ]: `[`
+$ floe render --out-dir $TMP/pages/takes.yaml takes.yaml
+exit 1
+--- stderr
+takes.yaml:1:11: your own template t cannot be used
+  $SAMPLE/templates/t/schema.json: #/properties/links: the part links cannot be used
+    $SAMPLE/parts/links/schema.json: #/items/properties/u/pattern: JSON Schema does not take this: '([' is not valid regex: error parsing regexp: missing closing ]: `[`
+$ floe template check templates/t
+exit 1
+--- stderr
+templates/t/schema.json: #/properties/links: the part links cannot be used
+  $SAMPLE/parts/links/schema.json: #/items/properties/u/pattern: JSON Schema does not take this: '([' is not valid regex: error parsing regexp: missing closing ]: `[`
+$ floe part check
+exit 1
+--- stderr
+the part links cannot be used
+  $SAMPLE/parts/links/schema.json: #/items/properties/u/pattern: JSON Schema does not take this: '([' is not valid regex: error parsing regexp: missing closing ]: `[`

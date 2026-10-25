@@ -1,0 +1,5 @@
+$ floe diagram render diagrams/order.yaml
+exit 1
+--- stderr
+diagrams/order.yaml:6:5: dot at 0,25 sticks out of the 100x50 canvas
+diagrams/order.yaml:7:5: box "A" sticks out of the 100x50 canvas

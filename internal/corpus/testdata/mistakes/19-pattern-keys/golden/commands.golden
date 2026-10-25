@@ -1,0 +1,19 @@
+$ floe check names.yaml
+exit 1
+--- stderr
+names.yaml:1:1: the top level: invalid propertyName 'Bad'
+$ floe render --out-dir $TMP/pages/names.yaml names.yaml
+exit 1
+--- stderr
+names.yaml:1:1: the top level: invalid propertyName 'Bad'
+$ floe template check templates/n templates/t
+exit 1
+--- stderr
+templates/t/schema.json: #/properties/lead/patternProperties: JSON Schema does not take this: invalid propertyName '(['
+the part p cannot be used
+  $SAMPLE/parts/p/schema.json: #/properties/t/patternProperties: JSON Schema does not take this: invalid propertyName '(['
+$ floe part check
+exit 1
+--- stderr
+the part p cannot be used
+  $SAMPLE/parts/p/schema.json: #/properties/t/patternProperties: JSON Schema does not take this: invalid propertyName '(['

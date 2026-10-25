@@ -1,0 +1,1 @@
+{"type": "object", "properties": {"rows": {"type": "array", "items": {"type": "object", "properties": {"t": {"type": "string"}}, "additionalProperties": false}}}, "additionalProperties": false}

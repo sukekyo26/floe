@@ -1,0 +1,4 @@
+template: t
+lang: en
+title: t
+rows: [{ id: a, rate: { per_sec: 1 } }]

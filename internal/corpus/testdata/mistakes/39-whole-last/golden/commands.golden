@@ -1,0 +1,22 @@
+$ floe check a.yaml b.yaml
+exit 1
+--- stderr
+a.yaml:15:15: sections[0].parts[1].script.js: js holds </script, where the page would end its script; split it in a string, as '<' + '/script'
+b.yaml:15:15: sections[0].parts[1].script.js: js holds </script, where the page would end its script; split it in a string, as '<' + '/script'
+floe: AWS icons are not in $TMP/none/icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
+$ floe render --out-dir $TMP/pages/a.yaml a.yaml
+exit 1
+--- stderr
+a.yaml:15:15: sections[0].parts[1].script.js: js holds </script, where the page would end its script; split it in a string, as '<' + '/script'
+floe: AWS icons are not in $TMP/none/icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
+$ floe render --out-dir $TMP/pages/b.yaml b.yaml
+exit 1
+--- stderr
+b.yaml:15:15: sections[0].parts[1].script.js: js holds </script, where the page would end its script; split it in a string, as '<' + '/script'
+floe: AWS icons are not in $TMP/none/icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
+$ floe render --out-dir $TMP/together a.yaml b.yaml
+exit 1
+--- stderr
+a.yaml:15:15: sections[0].parts[1].script.js: js holds </script, where the page would end its script; split it in a string, as '<' + '/script'
+b.yaml:15:15: sections[0].parts[1].script.js: js holds </script, where the page would end its script; split it in a string, as '<' + '/script'
+floe: AWS icons are not in $TMP/none/icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again

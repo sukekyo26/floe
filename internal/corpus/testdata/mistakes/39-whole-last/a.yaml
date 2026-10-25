@@ -1,0 +1,15 @@
+template: report
+lang: en
+title: a
+sections:
+  - heading: h
+    parts:
+      - diagram:
+          id: da
+          width: 200
+          height: 100
+          title: d
+          parts:
+            - icon: { x: 80, y: 30, name: aws/res/client }
+      - script:
+          js: "function (el) { el.textContent = '</script>'; }"

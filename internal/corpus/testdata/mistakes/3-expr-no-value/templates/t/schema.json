@@ -1,0 +1,4 @@
+{"type": "object", "properties": {
+  "prs": {"type": "array", "items": {"type": "object", "properties": {"open": {"type": "boolean"}}, "additionalProperties": false}},
+  "rows": {"type": "array", "items": {"type": "object", "properties": {"id": {"type": "string"}, "rate": {"type": "object", "properties": {"per_sec": {"type": "number"}}, "additionalProperties": false}}, "additionalProperties": false}}
+}, "additionalProperties": false}

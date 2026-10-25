@@ -1,0 +1,1 @@
+{"type": "object", "properties": {"parts": {"type": "array", "items": {"$ref": "floe:///parts/any.json"}}}, "additionalProperties": false}

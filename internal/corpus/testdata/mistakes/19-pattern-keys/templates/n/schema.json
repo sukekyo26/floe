@@ -1,0 +1,1 @@
+{"type": "object", "properties": {"tags": {"type": "object", "propertyNames": {"pattern": "^[a-z]+$"}}}, "additionalProperties": false}

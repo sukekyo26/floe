@@ -1,0 +1,24 @@
+$ floe check colon.yaml list.yaml
+exit 1
+--- stderr
+colon.yaml:4:7: this is not valid YAML: text with ": " in it reads as keys and values: put the text in quotes (mapping value is not allowed in this context)
+list.yaml:5:5: points[0]: write text, not keys and values; text with ": " in it reads as keys and values: put the text in quotes
+$ floe render --out-dir $TMP/pages/colon.yaml colon.yaml
+exit 1
+--- stderr
+colon.yaml:4:7: this is not valid YAML: text with ": " in it reads as keys and values: put the text in quotes (mapping value is not allowed in this context)
+$ floe render --out-dir $TMP/pages/list.yaml list.yaml
+exit 1
+--- stderr
+list.yaml:5:5: points[0]: write text, not keys and values; text with ": " in it reads as keys and values: put the text in quotes
+$ floe render --out-dir $TMP/together colon.yaml list.yaml
+exit 1
+--- stderr
+colon.yaml:4:7: this is not valid YAML: text with ": " in it reads as keys and values: put the text in quotes (mapping value is not allowed in this context)
+list.yaml:5:5: points[0]: write text, not keys and values; text with ": " in it reads as keys and values: put the text in quotes
+$ floe template check templates/l
+exit 0
+$ floe diagram render diagrams/colon.yaml
+exit 1
+--- stderr
+diagrams/colon.yaml:12:11: box: rows must be text; text with ": " in it reads as keys and values: put the text in quotes

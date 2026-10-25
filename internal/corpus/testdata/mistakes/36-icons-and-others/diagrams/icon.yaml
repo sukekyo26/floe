@@ -1,0 +1,6 @@
+id: i
+width: 200
+height: 100
+title: t
+parts:
+  - icon: { x: 80, y: 30, name: aws/res/client }

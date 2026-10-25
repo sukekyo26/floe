@@ -1,0 +1,6 @@
+- for: rowz
+  expr: len(item.t) <= 9
+  message: keep a row short
+- field: rowss
+  expr: len(item.rows) <= 9
+  message: keep few rows

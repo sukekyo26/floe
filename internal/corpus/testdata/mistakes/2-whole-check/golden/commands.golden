@@ -1,0 +1,10 @@
+$ floe check two.yaml
+exit 1
+--- stderr
+two.yaml:1:1: the top level: keep one point
+$ floe render --out-dir $TMP/pages/two.yaml two.yaml
+exit 1
+--- stderr
+two.yaml:1:1: the top level: keep one point
+$ floe template check templates/t
+exit 0

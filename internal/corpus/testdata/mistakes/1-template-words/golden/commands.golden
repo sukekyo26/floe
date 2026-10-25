@@ -1,0 +1,14 @@
+$ floe check page.yaml
+exit 1
+--- stderr
+page.yaml:1:11: your own template t cannot be used
+  $SAMPLE/templates/t/page.html: it names the words totl, which words.yaml does not have
+$ floe render --out-dir $TMP/pages/page.yaml page.yaml
+exit 1
+--- stderr
+page.yaml:1:11: your own template t cannot be used
+  $SAMPLE/templates/t/page.html: it names the words totl, which words.yaml does not have
+$ floe template check templates/t
+exit 1
+--- stderr
+templates/t/page.html: it names the words totl, which words.yaml does not have

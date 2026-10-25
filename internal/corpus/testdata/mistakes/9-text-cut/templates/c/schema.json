@@ -1,0 +1,1 @@
+{"type": "object", "properties": {"scores": {"type": "array", "items": {"type": "number"}}}, "additionalProperties": false}

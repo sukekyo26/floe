@@ -1,0 +1,23 @@
+$ floe check Case.yaml case.yml page.yaml page.yml
+exit 0
+$ floe render --out-dir $TMP/pages/Case.yaml Case.yaml
+exit 0
+--- stdout
+$TMP/pages/Case.yaml/Case.html
+$ floe render --out-dir $TMP/pages/case.yml case.yml
+exit 0
+--- stdout
+$TMP/pages/case.yml/case.html
+$ floe render --out-dir $TMP/pages/page.yaml page.yaml
+exit 0
+--- stdout
+$TMP/pages/page.yaml/page.html
+$ floe render --out-dir $TMP/pages/page.yml page.yml
+exit 0
+--- stdout
+$TMP/pages/page.yml/page.html
+$ floe render --out-dir $TMP/together Case.yaml case.yml page.yaml page.yml
+exit 1
+--- stderr
+floe: Case.yaml and case.yml would write $TMP/together/Case.html and $TMP/together/case.html, which are one file where case is ignored (macOS); rename one of them
+floe: page.yaml and page.yml would both write $TMP/together/page.html; rename one of them

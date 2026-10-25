@@ -1,0 +1,15 @@
+$ floe check both.yaml
+exit 1
+--- stderr
+both.yaml:20:15: box "A" sticks out of the 100x50 canvas
+floe: AWS icons are not in $TMP/none/icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
+$ floe render --out-dir $TMP/pages/both.yaml both.yaml
+exit 1
+--- stderr
+both.yaml:20:15: box "A" sticks out of the 100x50 canvas
+floe: AWS icons are not in $TMP/none/icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
+$ floe diagram render diagrams/icon.yaml diagrams/out.yaml
+exit 1
+--- stderr
+diagrams/out.yaml:6:5: box "A" sticks out of the 100x50 canvas
+floe: AWS icons are not in $TMP/none/icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again

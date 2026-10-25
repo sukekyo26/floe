@@ -1,0 +1,3 @@
+- for: rows
+  expr: item.rate.per_sec < 10
+  message: keep the rate under 10

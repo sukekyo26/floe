@@ -1,0 +1,11 @@
+$ floe template check templates/t
+exit 1
+--- stderr
+templates/t/schema.json: #/properties/tone: a $ref to floe:///parts/tone.json#/nope finds nothing in floe:///parts/tone.json: refer to what is there
+the part p cannot be used
+  $SAMPLE/parts/p/schema.json: #/properties/tone: a $ref to floe:///parts/tone.json#/nope finds nothing in floe:///parts/tone.json: refer to what is there
+$ floe part check
+exit 1
+--- stderr
+the part p cannot be used
+  $SAMPLE/parts/p/schema.json: #/properties/tone: a $ref to floe:///parts/tone.json#/nope finds nothing in floe:///parts/tone.json: refer to what is there
