@@ -71,6 +71,32 @@ func TestListSorted(t *testing.T) {
 	if want := "b.yaml:2:1 b.yaml:2:5 b.yaml:9:1 a.yaml:3:1"; strings.Join(got, " ") != want {
 		t.Errorf("Sorted = %v, want %s", got, want)
 	}
+	// At one place: by the JSON pointer, then the key, then the arguments, whatever order they come in.
+	same := usererr.List{
+		usererr.LibraryAt("d.yaml", 1, 1, "Zed"), usererr.NewIn("s.json", "#/b", "library", "x"),
+		usererr.LibraryAt("d.yaml", 1, 1, "Bad"), usererr.NewIn("s.json", "#/a", "library", "x"),
+	}
+	// The steps of pointers that are numbers, as numbers; each argument apart.
+	steps := usererr.List{
+		usererr.NewIn("s.json", "#/allOf/10", "library", "x"), usererr.NewIn("s.json", "#/allOf/2", "library", "x"),
+		usererr.New("k", "ab", "c"), usererr.New("k", "a", "bc"),
+	}
+	if got := steps.Sorted(); got[0].At != "#/allOf/2" || got[2].Args[0] != "a" {
+		t.Errorf("Sorted by steps and arguments = %v", got.Error())
+	}
+	// One order of all steps, whatever order they come in: indexes first, by number, then text.
+	for _, order := range [][]string{{"10", "9", "1a"}, {"10", "1a", "9"}, {"9", "10", "1a"}, {"9", "1a", "10"}, {"1a", "10", "9"}, {"1a", "9", "10"}} {
+		var l usererr.List
+		for _, step := range order {
+			l = append(l, usererr.NewIn("s.json", "#/properties/"+step, "library", "x"))
+		}
+		if got := l.Sorted().Error(); got != "s.json: #/properties/9: x\ns.json: #/properties/10: x\ns.json: #/properties/1a: x" {
+			t.Errorf("Sorted of %v = %q", order, got)
+		}
+	}
+	if got := same.Sorted().Error(); got != "d.yaml:1:1: Bad\nd.yaml:1:1: Zed\ns.json: #/a: x\ns.json: #/b: x" {
+		t.Errorf("Sorted at one place = %q", got)
+	}
 }
 
 // Tell words a mistake, one at as much of a place as it has, a list of them in the order given, one wrapped in
@@ -89,6 +115,7 @@ func TestTell(t *testing.T) {
 		{"one in a file", usererr.LibraryAt("a.yaml", 0, 0, "no lang"), "a.yaml: no lang", "a.yaml: no lang"},
 		{"one at a line", usererr.LibraryAt("a.css", 3, 0, "no lang"), "a.css:3: no lang", "a.css:3: no lang"},
 		{"one at a column", usererr.LibraryAt("a.yaml", 3, 4, "no lang"), "a.yaml:3:4: no lang", "a.yaml:3:4: no lang"},
+		{"one at a pointer", usererr.LibraryIn("s.json", "#/properties/x", "no lang"), "s.json: #/properties/x: no lang", "s.json: #/properties/x: no lang"},
 		{
 			"a list, in the order given",
 			usererr.List{usererr.LibraryAt("b.yaml", 2, 1, "b"), lang, usererr.LibraryAt("a.yaml", 1, 1, "a")},

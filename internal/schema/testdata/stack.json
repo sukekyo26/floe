@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$defs": { "item": { "$ref": "floe:///parts/any.json" } },
+  "properties": { "items": { "type": "array", "items": { "$ref": "#/$defs/item" } } }
+}
