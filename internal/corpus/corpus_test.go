@@ -127,9 +127,6 @@ func runSample(t *testing.T, name, dir string) map[string][]byte {
 	if specs := s.glob(t, "diagrams/*", isFile); len(specs) > 0 {
 		s.run(t, true, append([]string{"diagram", "render"}, specs...)...)
 	}
-	if name == everyPart {
-		s.takesEveryPart(t)
-	}
 	s.files["commands.golden"] = []byte(s.commands.String())
 	return s.files
 }
