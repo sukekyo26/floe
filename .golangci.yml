@@ -1,0 +1,188 @@
+# golangci-lint v2 configuration, adapted from cocoon.
+#
+# Policy: "all-on, opt-out". Anything not enabled here must have a documented
+# reason. Test code gets a small set of relaxations, but no safety-critical
+# linter is disabled globally.
+
+version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+
+linters:
+  default: none
+  enable:
+    # bug catchers
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - bodyclose
+    - contextcheck
+    - errorlint
+    - exhaustive
+    - exhaustruct_v5
+    - makezero
+    - nakedret
+    - nilerr
+    - nilnil
+    - noctx
+    - prealloc
+    - predeclared
+    - unconvert
+    - unparam
+    # security
+    - gosec
+    # style + complexity
+    - revive
+    - gocritic
+    - gocognit
+    - gocyclo
+    - funlen
+    - lll
+    - misspell
+    - dupl
+    # error wrapping discipline
+    - wrapcheck
+    - err113
+    # API hygiene
+    - forbidigo
+    - depguard
+    - importas
+    - gomoddirectives
+    # tests
+    - paralleltest
+    - tparallel
+    - thelper
+    - testpackage
+    # logging
+    - sloglint
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    govet:
+      enable-all: true
+      disable:
+        # Reordering fields by size fights readability; the memory saved is
+        # negligible for this process's state.
+        - fieldalignment
+    revive:
+      rules:
+        - name: var-naming
+        - name: indent-error-flow
+        - name: error-return
+        - name: error-naming
+        - name: error-strings
+        - name: receiver-naming
+        - name: unused-parameter
+        - name: unused-receiver
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: confusing-naming
+        - name: confusing-results
+        - name: unreachable-code
+        - name: empty-block
+        - name: range-val-in-closure
+        - name: defer
+        - name: early-return
+    exhaustruct_v5:
+      # v5 checks every struct literal; third-party option bags with dozens of
+      # optional fields go here.
+      ignore-patterns:
+        - '.+/cobra\.Command$'
+    exhaustive:
+      default-signifies-exhaustive: true
+    gocognit:
+      min-complexity: 20
+    gocyclo:
+      min-complexity: 15
+    funlen:
+      lines: 100
+      statements: 60
+    lll:
+      line-length: 120
+    nakedret:
+      max-func-lines: 0
+    forbidigo:
+      forbid:
+        - pattern: ^print(ln)?$
+          msg: "write to an injected io.Writer instead of print/println"
+        - pattern: ^panic$
+          msg: "do not panic; return an error from internal/ packages"
+        - pattern: ^fmt\.Print(f|ln)?$
+          msg: "do not write to stdout via fmt.Print*; write to an injected io.Writer"
+      analyze-types: true
+      exclude-godoc-examples: true
+    depguard:
+      rules:
+        internal-from-cmd:
+          list-mode: lax
+          deny:
+            - pkg: "github.com/sukekyo26/floe/cmd"
+              desc: "internal packages must not import the cmd binary"
+        no-stdlog:
+          list-mode: lax
+          deny:
+            - pkg: "log"
+              desc: "use log/slog instead of the standard log package"
+    wrapcheck:
+      ignore-sigs:
+        - .Errorf(
+        - errors.New(
+        - errors.Unwrap(
+        - errors.Join(
+    sloglint:
+      no-mixed-args: true
+      kv-only: false
+      attr-only: true
+      static-msg: true
+      no-raw-keys: false
+      key-naming-case: snake
+    importas:
+      no-unaliased: true
+      alias: []
+
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # Tests get a relaxed profile but still benefit from bug catchers.
+      - path: _test\.go
+        linters:
+          - exhaustruct_v5
+          - funlen
+          - gocognit
+          - gocyclo
+          - dupl
+          - lll
+          - err113
+          - wrapcheck
+          - forbidigo
+          - revive
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+    - gci
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/sukekyo26/floe)
+    gofumpt:
+      extra:
+        group-params: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
