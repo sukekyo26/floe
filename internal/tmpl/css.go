@@ -38,8 +38,9 @@ func (t *Template) pageSheet() (*cssSheet, error) {
 // refuse refuses s, the file shown as file, that floe puts in a layer, where a } closes no block,
 // which would close the layer around it and leave the rules after it out of it, over the parts' styles,
 // or where it imports a stylesheet, which a browser does not read in a layer.
-// LIMIT: what a selector names is not checked (one of :root or html in @scope matches nothing); no Go
-// library reads the selectors floe's CSS writes (:scope, :is, nesting). A browser's check comes in PR 4.
+// LIMIT: what a selector names is not checked (a rule in @scope whose element is :root or html sets
+// nothing, as they are outside the scope); no Go library reads the selectors floe's CSS writes (:scope,
+// :is, nesting). A browser's check comes in the CI's PR 4.
 func (s *cssSheet) refuse(file string) error {
 	if s.stray >= 0 {
 		return usererr.NewAt(file, lineAt(s.src, s.stray), 0, "tmpl_css_brace")

@@ -205,7 +205,7 @@ Check each directory as the template of its name, before you use or share it. A 
 - Then its `example.yaml` through every stage of `floe publish`, drawing the page included. It must name the template of the directory's name: the template drawn is always the one in the directory, never another of its name.
 - Every mistake is printed at once, as `file:line:column: message` where it has a place (one that a part or a theme of your own cannot be used is followed by that part's or theme's mistakes, each on a line of its own, indented by two spaces) (exit code 1). Nothing is printed when every template is right (exit code 0).
 - A directory named twice (by two globs, through a symlinked directory, or in another case on macOS) is checked once, and told by the path it was first given as. A link of another name or in another directory is a template of its own.
-- Warnings go to stderr and leave the exit code 0: no `template.yaml`, an object of `schema.json` that does not refuse a misspelt key (no `"additionalProperties": false`), or a colour that changes with the mode set on `:scope` for light mode alone, which would stay in dark mode too.
+- Warnings go to stderr and leave the exit code 0: no `template.yaml`, or an object of `schema.json` that does not refuse a misspelt key (no `"additionalProperties": false`).
 
 [templates.md](templates.md) tells what each file holds.
 
