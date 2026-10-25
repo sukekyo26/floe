@@ -1,4 +1,4 @@
-/* Dark in light mode too, as code in an editor is; the language stands at the right of the heading */
+/* Always dark, as code in an editor is; the language stands at the right of the heading */
 :scope {
   margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
   background: var(--code-bg); color: var(--code-fg);

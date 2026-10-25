@@ -9,15 +9,13 @@
    "category": "Compute"
   },
   "group/aws-cloud-logo": {
-   "category": "Group",
-   "dark": true
+   "category": "Group"
   },
   "group/region": {
    "category": "Group"
   },
   "res/client": {
-   "category": "General-Icons",
-   "dark": true
+   "category": "General-Icons"
   }
  }
 }

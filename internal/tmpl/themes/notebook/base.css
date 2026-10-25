@@ -1,4 +1,4 @@
 /* Scraps of a handwritten notebook: ruled paper, marker strokes for states, sticky notes for cards and
-   frames drawn round by hand, in a rounded face; a blackboard in dark mode */
+   frames drawn round by hand, in a rounded face */
 blockquote { border: 0; padding: 0; color: var(--fg); font-size: 1.15rem; font-weight: 700; }
 blockquote > p { display: inline; background: linear-gradient(transparent 62%, var(--nb-yellow) 62%); }

@@ -57,20 +57,11 @@ blockquote > * + * { margin-top: 0.6rem; }
   --text-width: 56rem;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111716; --surface: #182120; --fg: #e2e9e7; --muted: #97a5a2; --line: #2b3634;
-    --accent: #63b5be; --accent-soft: #1b3336;
-    --good: #6fcf97; --good-soft: #173126; --warn: #e2a85e; --warn-soft: #392b18; --bad: #f2b8b5; --bad-soft: #3b1f1d;
-    --code-bg: #0a0e0d;
-    color-scheme: dark;
-  }
-}
 }
 </style>
 <style>
 @layer floe.palette {
-/* Pen on ruled paper in a rounded face; a blackboard in dark mode */
+/* Pen on ruled paper in a rounded face */
 :root {
   --bg: #f6f1e1; --surface: #fffcf2; --fg: #2e2c27; --muted: #6b665b; --line: #e2dccb;
   --accent: #2f5fa8; --accent-soft: #dfe8f6;
@@ -90,18 +81,6 @@ blockquote > * + * { margin-top: 0.6rem; }
   --nb-stick-1: #fff1a6; --nb-stick-2: #ffd2e1; --nb-stick-3: #cfe8ff;
   --nb-stick-ink: #2b2a26; --nb-stick-shadow: rgb(40 30 10 / 0.45);
   --nb-hand: 14px 6px 12px 8px / 8px 12px 6px 14px;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1d2924; --surface: #22302a; --fg: #efede4; --muted: #b3b8ad; --line: #3a4a42;
-    --accent: #9cc8ff; --accent-soft: #22374a;
-    --good: #9be39f; --good-soft: #1f3a26; --warn: #ffcf7a; --warn-soft: #3d3218; --bad: #ff9e9e; --bad-soft: #3d2222;
-    --code-bg: #141c18;
-    --nb-rule: color-mix(in srgb, var(--fg) 7%, transparent); --nb-tape: rgb(220 205 160 / 0.45);
-    --nb-yellow: rgb(246 226 122 / 0.32); --nb-green: rgb(150 230 150 / 0.35); --nb-pink: rgb(255 160 200 / 0.35);
-    --nb-blue: rgb(150 205 255 / 0.35); --nb-orange: rgb(255 185 110 / 0.38);
-    --nb-stick-1: #f3e38f; --nb-stick-2: #f6c2d4; --nb-stick-3: #bfdcf7;
-  }
 }
 }
 </style>
@@ -157,7 +136,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
-/* Dark in light mode too, as code in an editor is; the language stands at the right of the heading */
+/* Always dark, as code in an editor is; the language stands at the right of the heading */
 :scope {
   margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
   background: var(--code-bg); color: var(--code-fg);
@@ -316,7 +295,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 /* Scraps of a handwritten notebook: ruled paper, marker strokes for states, sticky notes for cards and
-   frames drawn round by hand, in a rounded face; a blackboard in dark mode */
+   frames drawn round by hand, in a rounded face */
 blockquote { border: 0; padding: 0; color: var(--fg); font-size: 1.15rem; font-weight: 700; }
 blockquote > p { display: inline; background: linear-gradient(transparent 62%, var(--nb-yellow) 62%); }
 }

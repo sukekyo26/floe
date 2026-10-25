@@ -643,11 +643,10 @@ func TestOwnPartsThemes(t *testing.T) {
 	files["themes/brutal/code.css"] = "/* brutal's code of one's own */\n"
 	files["themes/brutal/palette.css"] = "/* brutal's palette of one's own */\n:root { --brutal-yellow: #ff0; --brutal-head-bg: #c00; }\n"
 	files["themes/mine/base.css"] = "/* mine */\nblockquote { color: var(--fg); }\n"
-	files["themes/mine/palette.css"] = "/* mine's palette */\n:root { --bg: #123; }\n" +
-		"@media (prefers-color-scheme: dark) { :root { --bg: #321; } }\n"
+	files["themes/mine/palette.css"] = "/* mine's palette */\n:root { --bg: #123; }\n"
 	files["themes/pale/palette.css"] = ":root { --bg: #fdf6e3; --font: serif; --rule: 2px solid var(--fg); }\n"
 	files["themes/rules/palette.css"] = ":root { --bg: #fff; }\nbody { margin: 0; }\n"
-	files["themes/default/palette.css"] = ":root { --accent: #c00; }\n@media (prefers-color-scheme: dark) { :root { --accent: #f66; } }\n"
+	files["themes/default/palette.css"] = ":root { --accent: #c00; }\n"
 	files["themes/bad/nope.css"] = ""
 	files["themes/mine/.DS_Store"] = "x"
 	files["themes/mine/README.md"] = "x"
@@ -714,8 +713,7 @@ func TestOwnPartsThemes(t *testing.T) {
 		strings.Index(page, "/* Every page's colours") > strings.Index(page, ":root { --accent: #c00; }") {
 		t.Errorf("drawing with default of one's own = %v:\n%s", err, page)
 	}
-	// palette.css holds the palette's variables alone, and is warned of where it sets a colour for light
-	// mode alone: dark mode would keep it.
+	// palette.css holds the palette's variables alone.
 	rules := "your own theme rules cannot be used\n  " + filepath.Join(themesOf(parts), "rules", "palette.css") +
 		":2: palette.css holds only the palette's variables"
 	if _, err = draw(l, "template: memo\nlang: en\ntheme: rules\nrisks: { text: x }\n"); err == nil || !strings.Contains(err.Error(), rules) {
@@ -748,11 +746,11 @@ func TestOwnPartsThemes(t *testing.T) {
 	warned := func(prefix string) bool {
 		return slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), prefix) })
 	}
-	pale := filepath.Join(themesOf(parts), "pale", "palette.css") + ": palette.css sets --bg for light mode alone"
-	// Over floe's of its name, a palette of one's own is told of that palette's colours too.
-	head := filepath.Join(themesOf(parts), "brutal", "palette.css") + ": palette.css sets --brutal-head-bg for light mode alone"
-	if !warned(pale) || !warned(head) || warned(filepath.Join(themesOf(parts), "mine")) || warned(filepath.Join(themesOf(parts), "broke", "palette.css")) {
-		t.Errorf("Check = %v, want %s and %s alone of the palettes", warnings, pale, head)
+	// A palette that sets colours for one look alone is not warned of: the page has no dark mode.
+	for _, name := range []string{"pale", "brutal", "mine"} {
+		if palette := filepath.Join(themesOf(parts), name, "palette.css"); warned(palette) {
+			t.Errorf("Check = %v, want no warning of %s", warnings, palette)
+		}
 	}
 	for _, want := range append(strays, why) {
 		if len(mistakes) != 0 || !slices.ContainsFunc(warnings, func(w *usererr.Error) bool { return strings.HasPrefix(w.Error(), want) }) {

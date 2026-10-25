@@ -232,7 +232,7 @@ Make the part `<name>` of your own in `$FLOE_PARTS_DIR/<name>` as a copy of `<pa
 Check every part of your own in `$FLOE_PARTS_DIR` and every theme in `$FLOE_THEMES_DIR`, as a page would read them, before you use or share them. To check other directories, set `FLOE_PARTS_DIR` and `FLOE_THEMES_DIR` to them: a part holds others and takes their looks by name, so a part is checked with the rest of its directory.
 
 - Every mistake is printed at once, at its line where it has one (exit code 1): of its files, its names, the looks it takes, the parts it holds, a part that holds itself or takes its own look, a path of its `checks.yaml` (`for`, `field`) that its schema does not declare, and the CSS of a theme, a `palette.css` that holds more than the palette's variables among them. A part whose `checks.yaml` has an expression that cannot be read is told so, and its paths are checked once that is fixed. Nothing is printed when they are right, or when there are none (exit code 0).
-- Warnings go to stderr and leave the exit code 0: a file that goes into no page, such as a file of a theme named for no part, a `palette.css` that sets a colour for light mode alone, which dark mode would keep, and a colour a part's `part.css` or a theme's other files write as a value, or a variable those of a theme set, where the palette is to give them ([templates.md](templates.md#the-palette)).
+- Warnings go to stderr and leave the exit code 0: a file that goes into no page, such as a file of a theme named for no part, and a colour a part's `part.css` or a theme's other files write as a value, or a variable those of a theme set, where the palette is to give them ([templates.md](templates.md#the-palette)).
 - A part is not drawn, as it has no data: `floe template check` draws the example of a template that uses it.
 
 [templates.md](templates.md) tells what a part holds.
@@ -266,7 +266,7 @@ Check each diagram spec and print the diagrams, in order, as one HTML fragment o
 - Every mistake of every spec is printed as `file:line:column: message`, in the order the specs were given, and nothing is drawn until all are fixed (exit code 1).
 - A spec named twice (by two globs, through a symlinked directory, or in another case on macOS) is drawn once. A link of another name or in another directory, symbolic or hard, is a spec of its own, whose id must differ too.
 - The ids of the diagrams drawn together must differ, because they name the diagrams' markers and icons. Draw all the diagrams of a page with one `render`.
-- The fragment starts with the assets: the diagrams' style, which takes its colours from the CSS variables of the palette (so dark mode follows; a page without them gets `default`'s light colours), and the script that zooms them. Each diagram sits in a frame that first shows it whole; readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. The toolbar is worded in the page's language (`<html lang>`). A page needs the assets once; holding them more than once does no harm.
+- The fragment starts with the assets: the diagrams' style, which takes its colours from the CSS variables of the palette (so they follow the theme; a page without them gets `default`'s colours), and the script that zooms them. Each diagram sits in a frame that first shows it whole; readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. The toolbar is worded in the page's language (`<html lang>`). A page needs the assets once; holding them more than once does no harm.
 
 | Flag | Description |
 |---|---|
@@ -297,7 +297,7 @@ Each part is one key naming its kind. Defaults are in parentheses; `tone` is `ac
 | `frame` | `x` `y` `w` `h`, `label`, `accent`, `square` (no rounded corners), `icon` (an icon name such as `aws/group/region`: the frame is drawn in the AWS group style, with square corners and the 32px icon in its corner, which other parts and edges may not cover or run through). Its label sits inside the top left corner, so place its contents 32 or more below its top (40 with an icon); a part over the label is a mistake. |
 | `box` | `x` `y` `w` `h`, `rows`, `tone`, `shape` (`rect`; `pill`, `hex` for a decision, `state`). A row is text, or `[text, style]` with the style `main`, `sub`, `main code` or `sub code`; without a style the first row is `main` and the rest `sub`. |
 | `table` | `x` `y` `w`, `title`, `rows`, `tone`. A row is a name, `[name]`, `[name, type]`, or `---` for a separator. The height is 30, plus 22 a row and 9 a separator, plus 6 when it has rows; row i (from 0, without separators) is centred at `y + 41 + 22i`. |
-| `icon` | `x` `y` (the top left), `name`, `label` (below the icon), `size` (48). `name` is the icon's set and its name in the set, like `aws/amazon-ec2` (see `floe icons search`); an icon with a variant for dark backgrounds switches with the colour scheme. Edges stop at its sides. An unknown name is a mistake that suggests close names. |
+| `icon` | `x` `y` (the top left), `name`, `label` (below the icon), `size` (48). `name` is the icon's set and its name in the set, like `aws/amazon-ec2` (see `floe icons search`). Edges stop at its sides. An unknown name is a mistake that suggests close names. |
 | `edge` | `d`, `label` with `at: [x, y]`, `dashed`, `bold`, `tone`, `start` (`none`), `end` (`arrow`), `crossing`. `d` takes the absolute `M`, `H`, `V` and `L` only. The ends are `arrow`, `triangle`, `diamond`, `odiamond`, `one`, `many`, `zero-one`, `zero-many` or `none`. `crossing: true` lets this edge cross others. |
 | `dot` | `cx` `cy`, `r` (7), `tone`, `hollow`. Edges may reach its centre. |
 | `bar` | `x1` `x2` `y`, `tone`, `label` (right of the bar). |
@@ -323,7 +323,7 @@ Keep an icon set in `$FLOE_ICONS_DIR/<set>` for the `icon` parts of diagrams. fl
 
 | Set | Icons |
 |---|---|
-| `aws` | The [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/): the 48px service and resource icons and the 32px group icons, with their variants for dark backgrounds. The Icon package zip is about 14MB. |
+| `aws` | The [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/): the 48px service and resource icons and the 32px group icons. The Icon package zip is about 14MB. |
 
 - Without a zip, the set's package is found on its official page and downloaded. A zip downloaded in a browser, or its URL, can be given instead; a relative path is resolved against the working directory.
 - A version already there is kept. `--force` fetches it again.

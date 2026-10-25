@@ -57,21 +57,12 @@ blockquote > * + * { margin-top: 0.6rem; }
   --text-width: 56rem;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111716; --surface: #182120; --fg: #e2e9e7; --muted: #97a5a2; --line: #2b3634;
-    --accent: #63b5be; --accent-soft: #1b3336;
-    --good: #6fcf97; --good-soft: #173126; --warn: #e2a85e; --warn-soft: #392b18; --bad: #f2b8b5; --bad-soft: #3b1f1d;
-    --code-bg: #0a0e0d;
-    color-scheme: dark;
-  }
-}
 }
 </style>
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="diagram"]) to (:scope [data-floe-part] > *) {
-  /* Diagrams take the colours of the page's CSS variables, so they follow dark mode. text-anchor is
+  /* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
      set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
   /* The colours and fonts of the page's palette, with floe's default light colours for a page without
      them, which a test of internal/tmpl keeps to themes/default/palette.css */
@@ -133,8 +124,6 @@ blockquote > * + * { margin-top: 0.6rem; }
   .dg .frame.accent rect { stroke: var(--dg-accent); }
   .dg .frame text { fill: var(--dg-muted); font-size: 12px; font-weight: 700; }
   .dg .frame.grouped text { fill: var(--dg-fg); font-size: 13px; }
-  .dg .icon-dark { display: none; }
-  @media (prefers-color-scheme: dark) { .dg .icon-light { display: none; } .dg .icon-dark { display: inline; } }
   .dg .edge, .dg .line { fill: none; stroke: var(--dg-muted); stroke-width: 1.5; }
   .dg .edge.dashed { stroke-dasharray: 5 4; }
   .dg .edge.bold { stroke-width: 3; }
@@ -215,7 +204,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </section>
 <section>
 <h2 id="icons">Icons</h2>
-<div data-floe-part="diagram" style="display: contents"><div class="dg-wrap" style="aspect-ratio: 400 / 200; max-height: min(85vh, 246px)"><svg viewBox="0 0 400 200" class="dg" role="img" aria-label="Icons"><defs><image id="ic_icon-1670c8a99f63" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzIzMmYzZSIvPjwvc3ZnPgo=" width="32" height="32"/><image id="ic_icon-744b962c7b03" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iI2ZmZmZmZiIvPjwvc3ZnPgo=" width="32" height="32"/><image id="ic_icon-2b80ef76650f" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzAwYTRhNiIvPjwvc3ZnPgo=" width="32" height="32"/><image id="ic_icon-0dc7248e113a" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iNCIgZmlsbD0iIzIzMmYzZSIvPjwvc3ZnPgo=" width="48" height="48"/><image id="ic_icon-110fd6beb060" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iNCIgZmlsbD0iI2ZmZmZmZiIvPjwvc3ZnPgo=" width="48" height="48"/><image id="ic_icon-7e03e27a358e" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iNCIgZmlsbD0iIzAxYTg4ZCIvPjwvc3ZnPgo=" width="64" height="64"/><image id="ic_icon-c04571abb40e" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iNCIgZmlsbD0iIzAxYTg4ZCIvPjwvc3ZnPgo=" width="48" height="48"/></defs><g class="frame grouped"><rect x="10" y="10" width="380" height="180" rx="0"/><use href="#ic_icon-1670c8a99f63" x="9" y="9" class="icon-light"/><use href="#ic_icon-744b962c7b03" x="9" y="9" class="icon-dark"/><text x="50" y="25" text-anchor="start">Cloud &lt;x&gt;</text></g><g class="frame grouped"><rect x="30" y="50" width="160" height="130" rx="0"/><use href="#ic_icon-2b80ef76650f" x="29" y="49"/><text x="70" y="65" text-anchor="start">Region</text></g><use href="#ic_icon-0dc7248e113a" x="80" y="80" class="icon-light"/><use href="#ic_icon-110fd6beb060" x="80" y="80" class="icon-dark"/><use href="#ic_icon-0dc7248e113a" x="130" y="80" class="icon-light"/><use href="#ic_icon-110fd6beb060" x="130" y="80" class="icon-dark"/><use href="#ic_icon-7e03e27a358e" x="250" y="70"/><use href="#ic_icon-c04571abb40e" x="330" y="70"/><rect x="59.39999999999999" y="135" width="89.20000000000002" height="18" class="label-bg"/><text x="104" y="144" text-anchor="middle" class="label">Client &amp; co</text></svg></div></div>
+<div data-floe-part="diagram" style="display: contents"><div class="dg-wrap" style="aspect-ratio: 400 / 200; max-height: min(85vh, 246px)"><svg viewBox="0 0 400 200" class="dg" role="img" aria-label="Icons"><defs><image id="ic_icon-1670c8a99f63" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzIzMmYzZSIvPjwvc3ZnPgo=" width="32" height="32"/><image id="ic_icon-2b80ef76650f" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzAwYTRhNiIvPjwvc3ZnPgo=" width="32" height="32"/><image id="ic_icon-0dc7248e113a" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iNCIgZmlsbD0iIzIzMmYzZSIvPjwvc3ZnPgo=" width="48" height="48"/><image id="ic_icon-7e03e27a358e" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iNCIgZmlsbD0iIzAxYTg4ZCIvPjwvc3ZnPgo=" width="64" height="64"/><image id="ic_icon-c04571abb40e" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iNCIgZmlsbD0iIzAxYTg4ZCIvPjwvc3ZnPgo=" width="48" height="48"/></defs><g class="frame grouped"><rect x="10" y="10" width="380" height="180" rx="0"/><use href="#ic_icon-1670c8a99f63" x="9" y="9"/><text x="50" y="25" text-anchor="start">Cloud &lt;x&gt;</text></g><g class="frame grouped"><rect x="30" y="50" width="160" height="130" rx="0"/><use href="#ic_icon-2b80ef76650f" x="29" y="49"/><text x="70" y="65" text-anchor="start">Region</text></g><use href="#ic_icon-0dc7248e113a" x="80" y="80"/><use href="#ic_icon-0dc7248e113a" x="130" y="80"/><use href="#ic_icon-7e03e27a358e" x="250" y="70"/><use href="#ic_icon-c04571abb40e" x="330" y="70"/><rect x="59.39999999999999" y="135" width="89.20000000000002" height="18" class="label-bg"/><text x="104" y="144" text-anchor="middle" class="label">Client &amp; co</text></svg></div></div>
 </section>
 </main>
 </body>

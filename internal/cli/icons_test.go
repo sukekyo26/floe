@@ -78,7 +78,7 @@ func TestIcons(t *testing.T) {
 	e.vars["FLOE_ICONS_DIR"] = stand
 	r := e.run(t, "", "diagram", "example", "aws")
 	e.write(t, "aws.yaml", r.stdout)
-	if r := e.run(t, "", "diagram", "render", "aws.yaml"); r.code != 0 || strings.Count(r.stdout, "<image ") != 6 {
-		t.Errorf("render of the aws example = %+v, want 6 images", r)
+	if r := e.run(t, "", "diagram", "render", "aws.yaml"); r.code != 0 || strings.Count(r.stdout, "<image ") != 4 {
+		t.Errorf("render of the aws example = %+v, want 4 images", r)
 	}
 }

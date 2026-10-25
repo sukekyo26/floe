@@ -1,5 +1,4 @@
-# Icons alone and in the corner of frames, with and without a variant for dark backgrounds (the
-# stand-ins in icons/aws). An icon shown twice is defined once; at another size it is another one.
+# Icons alone and in the corner of frames (the stand-ins in icons/aws). An icon shown twice is defined once; at another size it is another one.
 id: ic
 width: 400
 height: 200
