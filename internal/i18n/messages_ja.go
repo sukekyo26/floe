@@ -366,7 +366,7 @@ var messagesJA = map[string]string{
 	"tmpl_theme_broken":             "自分のテーマ %s は使えません",
 	"tmpl_template_broken":          "自分のテンプレート %s は使えません",
 	"tmpl_theme_file":               "このファイルはどのページにも入りません。テーマのファイルは base.css か palette.css か、部品や見た目のスタイルの <名前>.css です。名前は %s のどれかです",
-	"tmpl_palette_rule":             "palette.css にはパレットの変数 :root { --名前: 値; } だけを書き、ほかの規則は @media も書けません。暗いページは、:root に暗い色を書いたテーマで作ってください",
+	"tmpl_palette_rule":             "palette.css にはパレットの変数 :root { --名前: 値; } とその color-scheme だけを書き、ほかの規則は @media も書けません。ほかの規則は base.css か部品のファイルに書いてください。暗いページは、:root に暗い色と color-scheme: dark を書いたテーマで作ってください",
 	"tmpl_palette_important":        "palette.css には !important を書けません。どの層にも勝ち、テンプレートが :scope に書いた色にも勝ってしまいます",
 	"tmpl_css_colour":               "色 %s を値で書いています。パレットの変数（var(--accent)）で描き、テーマ自身の色はそのテーマの palette.css に書いてください",
 	"tmpl_theme_variable":           "%s を palette.css の外で書いています。テーマの変数は、テンプレートが :scope に書いた色より下になる palette.css に書き、ここでは var() で取ってください",
