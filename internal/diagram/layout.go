@@ -191,10 +191,9 @@ func (l *layout) addIcon(i Icon) {
 	}
 }
 
-// image places the icon of name (aws/…). An icon is an
-// <image>, not inline <svg>: the official icons' ids collide between icons. An icon not there is a mistake
-// of the spec; icons not fetched or not read are a mistake of no place, and a failure that is no mistake
-// stops the drawing.
+// image places the icon of name (aws/…). An icon is an <image>, not inline <svg>: the official icons'
+// ids collide between icons. An icon not there is a mistake of the spec; icons not fetched or not read
+// are a mistake of no place, and a failure that is no mistake stops the drawing.
 func (l *layout) image(at yamlpos.Pos, name string, x, y, size float64, what *usererr.Error) markup {
 	icon, names, err := l.icons.Lookup(name)
 	if errors.Is(err, icons.ErrNoSet) {

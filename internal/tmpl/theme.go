@@ -136,7 +136,7 @@ func (set *partSet) themeFile(name string) bool {
 // layer, the template's too.
 func checkPalette(file string, s *cssSheet) error {
 	p := &paletteCheck{file: file, sheet: s}
-	if err := p.onlyBlocks(0, len(s.tokens), 0); err != nil {
+	if err := p.onlyBlocks(); err != nil {
 		return err
 	}
 	for i := range s.rules {
@@ -157,12 +157,12 @@ type paletteCheck struct {
 	sheet *cssSheet
 }
 
-// onlyBlocks refuses a token of the file from from to to outside the blocks at depth, from the start of
-// each prelude to its }, but spaces and comments: a declaration or a statement where only blocks go.
-func (p *paletteCheck) onlyBlocks(from, to, depth int) error {
-	i := from
+// onlyBlocks refuses a token of the file outside its blocks, from the start of each prelude to its }, but
+// spaces and comments: a declaration or a statement where only blocks go.
+func (p *paletteCheck) onlyBlocks() error {
+	i := 0
 	for _, r := range p.sheet.rules {
-		if !r.block || r.depth != depth || r.first < from || r.first >= to {
+		if !r.block || r.depth != 0 {
 			continue
 		}
 		if err := p.blankFrom(i, r.first); err != nil {
@@ -170,7 +170,7 @@ func (p *paletteCheck) onlyBlocks(from, to, depth int) error {
 		}
 		i = r.end + 1
 	}
-	return p.blankFrom(i, to)
+	return p.blankFrom(i, len(p.sheet.tokens))
 }
 
 // blankFrom refuses a token from from to to that is no space nor comment.

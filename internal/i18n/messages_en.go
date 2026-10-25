@@ -368,7 +368,7 @@ var messagesEN = map[string]string{
 	"tmpl_theme_broken":             "your own theme %s cannot be used",
 	"tmpl_template_broken":          "your own template %s cannot be used",
 	"tmpl_theme_file":               "this file goes into no page: a file of a theme is base.css, palette.css or the style of a part or a look, <name>.css, the name one of %s",
-	"tmpl_palette_rule":             "palette.css holds only the palette's variables, :root { --name: value; }; write other rules in base.css or a part's file",
+	"tmpl_palette_rule":             "palette.css holds only the palette's variables, :root { --name: value; }, and no other rule, @media neither; for a dark page, make a theme whose :root sets dark colours",
 	"tmpl_palette_important":        "palette.css takes no !important, which would win over every layer, the colours a template sets on :scope too",
 	"tmpl_css_colour":               "%s is a colour written as a value: draw with the palette's variables (var(--accent)), and write a theme's colours of its own in its palette.css",
 	"tmpl_theme_variable":           "%s is set outside palette.css: write a theme's variables in its palette.css, under the colours a template sets on :scope, and take them here with var()",

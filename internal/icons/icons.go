@@ -273,7 +273,7 @@ func (k *kit) extract(buf []byte, from, dir string) (*index, error) {
 		return nil, usererr.New("icons_not_zip", from, k.page)
 	}
 	idx := &index{Version: "", Source: from, Icons: map[string]entry{}}
-	// The package lists an icon's dark variant before its light one, so which has a light one is read first.
+	// The package's order of the variants is not fixed, so the icons with a light variant are found first.
 	light := map[string]bool{}
 	for _, f := range zr.File {
 		if icon, ok := k.iconOf(f.Name); ok && !icon.dark {
@@ -284,7 +284,8 @@ func (k *kit) extract(buf []byte, from, dir string) (*index, error) {
 	var written int64
 	for _, f := range zr.File {
 		icon, ok := k.iconOf(f.Name)
-		// A service in two categories (only the background differs) keeps the first.
+		// A service in two categories (only the background differs) keeps the first with a light variant, or
+		// the first if it has none.
 		if _, kept := idx.Icons[icon.name]; !ok || kept || icon.dark && light[icon.name] {
 			continue
 		}
