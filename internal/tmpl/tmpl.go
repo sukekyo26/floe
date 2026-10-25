@@ -462,32 +462,9 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	html := string(out)
-	found := tagsIn(html, false)
-	style, err := set.pageStyle(html, found, own, d.Theme)
+	styled, err := d.withStyles(set, page, title, out, own, read.head)
 	if err != nil {
 		return nil, err
-	}
-	styled, ok := withStyles(out, found, style)
-	if !ok {
-		// An item's open <script> may hide the </head>: its mistake, not the template's.
-		k := -1
-		if d.htmlItems != nil {
-			if k, err = d.headHider(page, title); err != nil {
-				return nil, err
-			}
-		}
-		if k >= 0 {
-			it := d.htmlItems[k]
-			return nil, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
-		}
-		return nil, read.head
-	}
-	// The data's HTML after the template's mistakes, which would be told as the data's.
-	if d.htmlItems != nil {
-		if err = d.checkDrawnHTML(page, title, out); err != nil {
-			return nil, err
-		}
 	}
 	// After the data's HTML is checked: an item that changes the page changes its ids and links too.
 	styled, anchors := withHeadingIDs(styled)
@@ -547,7 +524,7 @@ func (d *Data) withDiagrams(out []byte) ([]byte, error) {
 // headMistake is the mistake of page.html, src, shown as file, whose drawing holds no </head>: it holds
 // none, or an action of it leaves its own out. The data's HTML holds none, which checkHTML refuses.
 func headMistake(file string, src []byte) *usererr.Error {
-	if tagsOf(tagsIn(string(src), true)).head >= 0 {
+	if tagsOf(tagsIn(string(src))).head >= 0 {
 		return usererr.NewAt(file, 0, 0, "tmpl_page_head_action")
 	}
 	return usererr.NewAt(file, 0, 0, "tmpl_page_head")
@@ -595,7 +572,7 @@ func (t *Template) page() (parsedPage, error) {
 // a <base>.
 func (t *Template) refuseInPage(src []byte) error {
 	var style, b error
-	if at := tagsOf(tagsIn(string(src), true)).style; at >= 0 {
+	if at := tagsOf(tagsIn(string(src))).style; at >= 0 {
 		style = usererr.NewAt(t.file("page.html"), lineAt(src, at), 0, "tmpl_page_style")
 	}
 	if at := base.FindIndex(src); at != nil {

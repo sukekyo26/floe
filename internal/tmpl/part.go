@@ -393,7 +393,8 @@ func (set *partSet) namedBy(named []namedPart, keep func(namedPart) bool) []stri
 }
 
 // namedPart is a name a data-floe-part or data-floe-look attribute gives, the attribute's whole value, and
-// the offset where the value starts.
+// the offset in a template's text where the value starts, which namedIn orders them by; 0 for one read from
+// a tree.
 type namedPart struct {
 	name  string
 	value string
@@ -418,10 +419,11 @@ func namedParts(html string) []namedPart {
 	if !floeAttr.MatchString(html) {
 		return nil
 	}
-	return namedIn(html, tagsIn(html, true))
+	return namedIn(html, tagsIn(html))
 }
 
-// namedIn returns the names namedParts returns of html, whose tags are found, in order.
+// namedIn returns the names namedParts returns of html, whose tags are found, in order. A value's character
+// references are read, as a browser reads them (data-floe-part="&#110;ote" names note).
 func namedIn(html string, found []tag) []namedPart {
 	var names []namedPart
 	values := map[int]bool{} // where the values of the attributes start
@@ -432,16 +434,25 @@ func namedIn(html string, found []tag) []namedPart {
 				continue
 			}
 			values[a.valueAt] = true
-			names = append(names, namesOf(a.value, look, false, a.valueAt)...)
+			names = append(names, namesOf(attrValue(a.value), look, false, a.valueAt)...)
 		}
 	}
+	names = append(names, textNames(html, values)...)
+	slices.SortStableFunc(names, func(x, y namedPart) int { return x.at - y.at })
+	return names
+}
+
+// textNames returns the names html writes as a data-floe-part or a data-floe-look anywhere, in text, a
+// comment or a script's text too, which bring the part's style alone, but those whose values start where
+// values says an attribute's do.
+func textNames(html string, values map[int]bool) []namedPart {
+	var names []namedPart
 	for _, m := range partAttr.FindAllStringSubmatchIndex(html, -1) {
 		if !values[m[4]] {
 			look := strings.EqualFold(html[m[2]:m[3]], "look")
 			names = append(names, namesOf(strings.Trim(html[m[4]:m[5]], `"'`), look, true, m[4])...)
 		}
 	}
-	slices.SortStableFunc(names, func(x, y namedPart) int { return x.at - y.at })
 	return names
 }
 
@@ -835,15 +846,17 @@ func (set *partSet) drawPart(
 	if err != nil {
 		return false, p.drawnMistake(err, f.at, d, root)
 	}
-	if set.anyBrokenNamed() {
-		// The parts it holds are drawn before it: the innermost item a part draws is told. Its own part's
-		// names are checked as the part is read (checkNames), so a part that cannot be used is the one left.
-		// LIMIT: a part named by HTML or Markdown under a part is told at the part's item, not at the item
-		// under it. Draw what a part holds of format html and markdown apart if pages come to need it.
-		pos, _ := itemPos(root, f.at, false)
-		if bad := set.drawnMisnamings(string(html), d.File, pos, nil); bad != nil {
-			return false, bad
-		}
+	// The parts it holds are drawn before it: the innermost item a part draws is told. A name its part.html
+	// puts together (data-floe-part="{{.kind}}") is told here, at the item, as any it holds.
+	// LIMIT: a part named by HTML or Markdown under a part is told at the part's item, not at the item
+	// under it, an item of format html both there and at itself (checkHTML). Draw what a part holds of format
+	// html and markdown apart if pages come to need it.
+	// LIMIT: an outer part's HTML holds the inner ones', so the same bytes are read once a level; read what
+	// the part adds alone, the inner items drawn as marks, if checking pages comes to take long.
+	pos, _ := itemPos(root, f.at, false)
+	at := func(bad *usererr.Error) *usererr.Error { return itemMistake(d.File, root, f.at, false, bad) }
+	if bad := set.drawnMisnamings(string(html), d.File, pos, at); bad != nil {
+		return false, bad
 	}
 	d.drew(f.at, html)
 	return true, nil
@@ -862,13 +875,21 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node) erro
 }
 
 // drawnMisnamings returns the mistakes of the names html names, which an item of the data file file written at
-// pos draws, that the page would be refused for: each part that cannot be used there, the first time with
-// why, as a theme it picks that cannot be used, and each other one as other words it, left out for nil.
+// pos draws, that the page would be refused for (placedMisnamings), html read wherever it is put (itemNames).
 func (set *partSet) drawnMisnamings(
 	html, file string, pos yamlpos.Pos, other func(*usererr.Error) *usererr.Error,
 ) usererr.List {
+	return set.placedMisnamings(itemNames(html), file, pos, other)
+}
+
+// placedMisnamings returns the mistakes of named, the names an item of the data file file written at pos
+// gives, that the page would be refused for: each part that cannot be used there, the first time with why,
+// as a theme it picks that cannot be used, and each other one as other words it, left out for nil.
+func (set *partSet) placedMisnamings(
+	named []namedPart, file string, pos yamlpos.Pos, other func(*usererr.Error) *usererr.Error,
+) usererr.List {
 	var found usererr.List
-	for _, m := range set.misnamings(namedIn(html, tagsIn(html, false))) {
+	for _, m := range set.misnamings(named) {
 		switch {
 		case m.kind == nameBroken:
 			found = append(found, yamlpos.Place(file, pos, m.err))
@@ -929,7 +950,7 @@ func (p *part) draw(f itemAt, d *Data) (template.HTML, error) {
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
-func (set *partSet) pageStyle(page string, found []tag, own []byte, theme string) (string, error) {
+func (set *partSet) pageStyle(named []namedPart, own []byte, theme string) (string, error) {
 	themed := set.themes[theme]
 	if themed == nil {
 		return "", fmt.Errorf("draw with the theme %s: %w", theme, fs.ErrNotExist)
@@ -955,10 +976,6 @@ func (set *partSet) pageStyle(page string, found []tag, own []byte, theme string
 		if theme != DefaultTheme || i > 0 {
 			sheet("floe.palette", palette)
 		}
-	}
-	named := namedIn(page, found)
-	if bad := set.misnamedIn(named); bad != nil {
-		return "", bad
 	}
 	boxes := set.namedBy(named, func(n namedPart) bool { return !n.look })
 	looks := set.namedBy(named, func(n namedPart) bool { return n.look })
@@ -988,18 +1005,6 @@ func (set *partSet) pageStyle(page string, found []tag, own []byte, theme string
 // <style> anyway.
 var styleEnd = regexp.MustCompile(`(?i)</(style)`)
 
-// withStyles puts style into page before its </head>, false for a page without one: there, in the head,
-// no element the page leaves open, an <svg> of the data's HTML among them, takes the styles in. Where it
-// goes decides nothing else: the <link>s of page.html (fonts, libraries) are out of the layers, and win
-// over them all.
-func withStyles(page []byte, found []tag, style string) ([]byte, bool) {
-	at := tagsOf(found).head
-	if at < 0 {
-		return nil, false
-	}
-	return slices.Concat(page[:at], []byte(style), page[at:]), true
-}
-
 // misnaming is a name of a page, or of what an item of the data draws, that the page is refused for: what
 // it is to set (misnamed), and the mistake.
 type misnaming struct {
@@ -1027,14 +1032,16 @@ func (set *partSet) misnamings(named []namedPart) []misnaming {
 	return found
 }
 
-// misnamedIn returns the mistake of the first name of named, the names of a page, that the page is refused
-// for (misnamings), or nil. An item of the data that draws one is refused first, at the item
-// (drawnMisnamings).
-func (set *partSet) misnamedIn(named []namedPart) *usererr.Error {
-	if found := set.misnamings(named); found != nil {
-		return found[0].err
+// misnamingErrs returns the mistakes of the names of named, the names of a page, that the page is refused
+// for (misnamings), every one. An item of the data that draws one is refused first, at the item
+// (drawnMisnamings, checkDrawnHTML).
+func (set *partSet) misnamingErrs(named []namedPart) usererr.List {
+	misnamed := set.misnamings(named)
+	found := make(usererr.List, 0, len(misnamed))
+	for _, m := range misnamed {
+		found = append(found, m.err)
 	}
-	return nil
+	return found
 }
 
 // inOrder returns names, parts of set, with the looks they take, each after its looks and the parts it

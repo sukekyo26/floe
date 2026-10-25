@@ -496,7 +496,8 @@ func TestDrawnHTMLTableAndForm(t *testing.T) {
 	}
 }
 
-// An action of page.html that leaves out its </head> is told as the template's, before the data's items.
+// An action of page.html that leaves out its </head> is told as the template's, asked of the page drawn with
+// the items as marks, and an item that changes the page as the data's: both, neither hiding the other.
 func TestDrawnHTMLAfterTheTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -506,9 +507,10 @@ func TestDrawnHTMLAfterTheTemplate(t *testing.T) {
 	if err := os.WriteFile(page, []byte(src), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: <div>x</div>\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), page+": an action of page.html leaves out its </head>") {
-		t.Errorf("a page.html whose action leaves out </head> = %v", err)
+	_, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: <b>x\n")
+	if err == nil || !strings.Contains(err.Error(), page+": an action of page.html leaves out its </head>") ||
+		!strings.Contains(err.Error(), "data.yaml:3:8: risks: HTML changes the page around it") {
+		t.Errorf("a page.html whose action leaves out </head>, and an item that changes the page = %v", err)
 	}
 }
 

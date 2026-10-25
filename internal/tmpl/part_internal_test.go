@@ -237,11 +237,14 @@ func definedIn(css string) map[string]bool {
 	return defined
 }
 
-// A page's style goes before its </head>, and into no page without one. A tag in a comment, a script or a noscript is
-// not one.
-func TestWithStyles(t *testing.T) {
+// A page's style goes before the </head> where a <style> styles the page, as a browser reads it, and into
+// no page without one. One in a comment, a value, a script, a noscript, a <template> or an <svg> is not one;
+// one a <div> of the head moved into the body is. The <style> asked with is floe's alone: a <style> of the
+// page that it went into as a value is not it.
+func TestHeadAt(t *testing.T) {
 	t.Parallel()
 
+	const doctype = "<!doctype html><html>"
 	for page, want := range map[string]string{
 		"<head><meta charset=utf-8></head><p>x</p>":                           "<head><meta charset=utf-8>S</head><p>x</p>",
 		"<head><title>t</title></HEAD><p>x</p>":                               "<head><title>t</title>S</HEAD><p>x</p>",
@@ -250,10 +253,27 @@ func TestWithStyles(t *testing.T) {
 		"<head><!-- styles before </head> --></head>":                         "<head><!-- styles before </head> -->S</head>",
 		"<head><!--></head>":                                                  "<head><!-->S</head>",
 		"<head><noscript></head></noscript></head><body><script>y()</script>": "<head><noscript></head></noscript>S</head><body><script>y()</script>",
+		"<head><template><svg><style></template></head><body>x":               "<head><template><svg><style></template>S</head><body>x",
+		"<head><div>x</head><body>y":                                          "<head><div>xS</head><body>y",
+		"<head><table></head><body>y":                                         "<head><table>S</head><body>y",
+		"<head><template></head></template></head><body>x":                    "<head><template></head></template>S</head><body>x",
+		"<head><template></head></template><body>x":                           "",
+		"<head><svg></head><body>x":                                           "",
+		"<head><math></head><body>x":                                          "",
+		"<head><frameset></head><frame>":                                      "",
+		"<head><script><!--<script></head></script></head><body>x":            "",
+		`<head><link rel=a title="</head>"></head><body>`:                     `<head><link rel=a title="</head>">S</head><body>`,
+		"<head><style title=</head>>a{}</style></head><body>x":                "<head><style title=</head>>a{}</style>S</head><body>x",
 	} {
-		got, ok := withStyles([]byte(page), tagsIn(page, false), "S")
-		if string(got) != want || ok != (want != "") {
-			t.Errorf("withStyles(%q) = %q, %v, want %q", page, got, ok, want)
+		page = doctype + page
+		k, doc := headAt([]byte(page))
+		got := ""
+		if k >= 0 {
+			at := headEnd.FindAllStringIndex(page, -1)[k][0]
+			got = strings.TrimPrefix(page[:at]+"S"+page[at:], doctype)
+		}
+		if got != want || (k >= 0) != (doc != nil) {
+			t.Errorf("headAt(%q) = %d, %q, want %q", page, k, got, want)
 		}
 	}
 }
@@ -266,10 +286,10 @@ func TestTagsOf(t *testing.T) {
 	page := "<!-- <style> --><script>'<style><link>'</script><noscript><style></noscript><link-card></link-card><style-box>" +
 		"<script-x><link></script-x><LINK rel=x><Style>a{}</Style>"
 	want := tags{head: -1, style: strings.Index(page, "<Style>"), link: strings.Index(page, "<link></script-x>")}
-	if got := tagsOf(tagsIn(page, false)); got != want {
+	if got := tagsOf(tagsIn(page)); got != want {
 		t.Errorf("tagsOf(%q) = %+v, want %+v", page, got, want)
 	}
-	if got := tagsOf(tagsIn("<p>x</p>", false)); got != (tags{head: -1, style: -1, link: -1}) {
+	if got := tagsOf(tagsIn("<p>x</p>")); got != (tags{head: -1, style: -1, link: -1}) {
 		t.Errorf("tagsOf of a page without them = %+v", got)
 	}
 }
@@ -293,23 +313,21 @@ func TestNamedPartsInTags(t *testing.T) {
 			t.Errorf("namedParts(%q) = %+v, want table, text %v", html, named, want)
 		}
 	}
-	// HTML that is drawn, or the data's, holds no actions: {{ in a value is text, which hides no tag.
+	// HTML that is drawn, or the data's, is read as a browser reads it (itemNames): {{ in a value is text,
+	// which hides no tag.
 	html := `<a title="{{">x</a><div data-floe-part="a b"></div><style>p{}</style>`
-	if named := namedIn(html, tagsIn(html, false)); len(named) != 2 || named[0].text || !named[0].notOne() {
-		t.Errorf("namedIn(%q) = %+v, want an attribute of two names", html, named)
-	}
-	if at := tagsOf(tagsIn(html, false)); at.style != strings.Index(html, "<style>") {
-		t.Errorf("tagsOf(%q) = %+v", html, at)
+	if named := attrNames(itemNames(html)); len(named) != 2 || !named[0].notOne() {
+		t.Errorf("itemNames(%q) = %+v, want an attribute of two names", html, named)
 	}
 	// A textarea's text, as a title's, runs to its end tag, past a quote: tags in it are text, and those
 	// after it tags.
-	for html, want := range map[string]bool{
-		`<textarea><a title="</textarea><div data-floe-part="panel">x</div>"></a></textarea>`: false,
-		`<textarea><div data-floe-part="panel">x</div></textarea>`:                            true,
-		`<title>a</title><div data-floe-part="panel">`:                                        false,
+	for html, want := range map[string]int{
+		`<textarea><a title="</textarea><div data-floe-part="panel">x</div>"></a></textarea>`: 1,
+		`<textarea><div data-floe-part="panel">x</div></textarea>`:                            0,
+		`<title>a</title><div data-floe-part="panel">`:                                        1,
 	} {
-		if named := namedIn(html, tagsIn(html, false)); len(named) != 1 || named[0].text != want {
-			t.Errorf("namedIn(%q) = %+v, want text %v", html, named, want)
+		if named := attrNames(itemNames(html)); len(named) != want {
+			t.Errorf("itemNames(%q) = %+v, want %d of an attribute", html, named, want)
 		}
 	}
 	// A template's action is no markup of the page's, out of a tag too.
@@ -321,7 +339,7 @@ func TestNamedPartsInTags(t *testing.T) {
 			t.Errorf("namedParts(%q) = %+v, want text %v", html, named, want)
 		}
 	}
-	if at := tagsOf(tagsIn(`{{/* no <style> here */}}<p>x</p>`, true)); at.style != -1 {
+	if at := tagsOf(tagsIn(`{{/* no <style> here */}}<p>x</p>`)); at.style != -1 {
 		t.Errorf("tagsOf of a <style> in a template's comment = %+v", at)
 	}
 }
@@ -586,7 +604,7 @@ func TestPageStyleEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	css := "/* </Style><b>x</b> */ a { background: url(data:image/svg+xml,<svg><style>p{}</style></svg>); }"
-	style, err := set.pageStyle("<body></body>", nil, []byte(css), "default")
+	style, err := set.pageStyle(nil, []byte(css), "default")
 	if err != nil {
 		t.Fatal(err)
 	}

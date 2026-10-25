@@ -1,0 +1,12 @@
+$ floe check head.yaml
+exit 1
+--- stderr
+$SAMPLE/templates/t/page.html: an action of page.html leaves out its </head>, before which floe puts the page's styles: write </head> outside {{if}}, {{with}} and {{range}}
+$ floe render --out-dir $TMP/pages/head.yaml head.yaml
+exit 1
+--- stderr
+$SAMPLE/templates/t/page.html: an action of page.html leaves out its </head>, before which floe puts the page's styles: write </head> outside {{if}}, {{with}} and {{range}}
+$ floe template check templates/t
+exit 1
+--- stderr
+templates/t/page.html: an action of page.html leaves out its </head>, before which floe puts the page's styles: write </head> outside {{if}}, {{with}} and {{range}}

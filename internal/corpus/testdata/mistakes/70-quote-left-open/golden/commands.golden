@@ -1,0 +1,8 @@
+$ floe check open.yaml
+exit 1
+--- stderr
+open.yaml:7:15: sections[0].parts[0].html: HTML changes the page around it: it leaves an element open (an <svg>, a comment, a <b> that makes the text after it bold), ends where a tag starts, or closes an element of the page; write it whole, closing in it what it opens, and only that
+$ floe render --out-dir $TMP/pages/open.yaml open.yaml
+exit 1
+--- stderr
+open.yaml:7:15: sections[0].parts[0].html: HTML changes the page around it: it leaves an element open (an <svg>, a comment, a <b> that makes the text after it bold), ends where a tag starts, or closes an element of the page; write it whole, closing in it what it opens, and only that
