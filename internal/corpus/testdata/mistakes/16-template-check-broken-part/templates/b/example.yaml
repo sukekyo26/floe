@@ -1,0 +1,5 @@
+template: b
+lang: en
+title: t
+parts:
+  - note: { text: a }

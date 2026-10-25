@@ -1,0 +1,6 @@
+$ floe part check
+exit 1
+--- stderr
+the part memo cannot be used
+  $SAMPLE/parts/memo/checks.yaml:1:8: for: schema.json does not declare rowz
+  $SAMPLE/parts/memo/checks.yaml:4:10: field: schema.json does not declare rowss on the part, nor on its items when it is a list, which a check without for checks; name a key declared there

@@ -1,0 +1,1 @@
+{"type": "object", "properties": {"a": {"$ref": "floe:///parts/pa.json"}, "b": {"$ref": "floe:///parts/qb.json"}}, "additionalProperties": false}

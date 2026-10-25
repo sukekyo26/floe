@@ -1,0 +1,27 @@
+$ floe template check templates/c templates/m templates/w templates/y
+exit 1
+--- stderr
+templates/c/checks.yaml:1:1: a key is a name: write 1 as text, in quotes
+templates/c/checks.yaml:1:1: write checks.yaml as a list of checks, each with expr and message (and for and field if you like)
+templates/m/computed.yaml:1:1: write computed.yaml as names and expressions, like total: sum(items, .price)
+templates/m/computed.yaml:1:4: a key is a name: write 1 as text, in quotes
+templates/w/words.yaml:1:1: write words.yaml as language tags, each the names of the words and their text
+templates/w/words.yaml:1:4: a key is a name: write 1 as text, in quotes
+templates/y/template.yaml:1:1: write template.yaml as one key, floe:, and the version of floe the template needs, like floe: 1.2
+templates/y/template.yaml:1:4: a key is a name: write 1 as text, in quotes
+the part p cannot be used
+  $SAMPLE/parts/p/part.yaml:1:1: write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:
+  $SAMPLE/parts/p/part.yaml:1:4: a key is a name: write 1 as text, in quotes
+$ floe part check
+exit 1
+--- stderr
+the part p cannot be used
+  $SAMPLE/parts/p/part.yaml:1:1: write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:
+  $SAMPLE/parts/p/part.yaml:1:4: a key is a name: write 1 as text, in quotes
+$ floe diagram render diagrams/anchor.yaml diagrams/tag.yaml
+exit 1
+--- stderr
+diagrams/anchor.yaml:1:1: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+diagrams/anchor.yaml:1:4: diagram: write a mapping of keys and values
+diagrams/tag.yaml:1:1: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+diagrams/tag.yaml:1:6: diagram: write a mapping of keys and values

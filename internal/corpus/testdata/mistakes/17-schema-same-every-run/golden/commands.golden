@@ -1,0 +1,30 @@
+$ floe check takes.yaml
+exit 1
+--- stderr
+takes.yaml:1:11: your own template t cannot be used
+  $SAMPLE/templates/t/schema.json: #/properties/a: the part pa cannot be used
+    $SAMPLE/parts/pa/schema.json: #/properties/z/patternProperties: ([ is not a regular expression: error parsing regexp: missing closing ]: `[`
+  $SAMPLE/templates/t/schema.json: #/properties/b: the part qb cannot be used
+    $SAMPLE/parts/qb/schema.json: #/properties/t/pattern: JSON Schema does not take this: '[[' is not valid regex: error parsing regexp: missing closing ]: `[[`
+$ floe render --out-dir $TMP/pages/takes.yaml takes.yaml
+exit 1
+--- stderr
+takes.yaml:1:11: your own template t cannot be used
+  $SAMPLE/templates/t/schema.json: #/properties/a: the part pa cannot be used
+    $SAMPLE/parts/pa/schema.json: #/properties/z/patternProperties: ([ is not a regular expression: error parsing regexp: missing closing ]: `[`
+  $SAMPLE/templates/t/schema.json: #/properties/b: the part qb cannot be used
+    $SAMPLE/parts/qb/schema.json: #/properties/t/pattern: JSON Schema does not take this: '[[' is not valid regex: error parsing regexp: missing closing ]: `[[`
+$ floe template check templates/t
+exit 1
+--- stderr
+templates/t/schema.json: #/properties/a: the part pa cannot be used
+  $SAMPLE/parts/pa/schema.json: #/properties/z/patternProperties: ([ is not a regular expression: error parsing regexp: missing closing ]: `[`
+templates/t/schema.json: #/properties/b: the part qb cannot be used
+  $SAMPLE/parts/qb/schema.json: #/properties/t/pattern: JSON Schema does not take this: '[[' is not valid regex: error parsing regexp: missing closing ]: `[[`
+$ floe part check
+exit 1
+--- stderr
+the part pa cannot be used
+  $SAMPLE/parts/pa/schema.json: #/properties/z/patternProperties: ([ is not a regular expression: error parsing regexp: missing closing ]: `[`
+the part qb cannot be used
+  $SAMPLE/parts/qb/schema.json: #/properties/t/pattern: JSON Schema does not take this: '[[' is not valid regex: error parsing regexp: missing closing ]: `[[`

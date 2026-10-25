@@ -1,0 +1,5 @@
+template: t
+lang: en
+title: t
+a: {}
+b: { t: x }
