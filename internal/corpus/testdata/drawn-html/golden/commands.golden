@@ -1,0 +1,30 @@
+$ floe check entity.yaml noscript.yaml row.yaml twice.yaml two-names.yaml
+exit 1
+--- stderr
+row.yaml:7:15: sections[0].parts[0].html: the page has data-floe-part="note table", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"
+two-names.yaml:7:15: sections[0].parts[0].html: the page has data-floe-part="note table", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"
+$ floe render --out-dir $TMP/pages/entity.yaml entity.yaml
+exit 0
+--- stdout
+$TMP/pages/entity.yaml/entity.html
+$ floe render --out-dir $TMP/pages/noscript.yaml noscript.yaml
+exit 0
+--- stdout
+$TMP/pages/noscript.yaml/noscript.html
+$ floe render --out-dir $TMP/pages/row.yaml row.yaml
+exit 1
+--- stderr
+row.yaml:7:15: sections[0].parts[0].html: the page has data-floe-part="note table", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"
+$ floe render --out-dir $TMP/pages/twice.yaml twice.yaml
+exit 0
+--- stdout
+$TMP/pages/twice.yaml/twice.html
+$ floe render --out-dir $TMP/pages/two-names.yaml two-names.yaml
+exit 1
+--- stderr
+two-names.yaml:7:15: sections[0].parts[0].html: the page has data-floe-part="note table", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"
+$ floe render --out-dir $TMP/together entity.yaml noscript.yaml row.yaml twice.yaml two-names.yaml
+exit 1
+--- stderr
+row.yaml:7:15: sections[0].parts[0].html: the page has data-floe-part="note table", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"
+two-names.yaml:7:15: sections[0].parts[0].html: the page has data-floe-part="note table", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"

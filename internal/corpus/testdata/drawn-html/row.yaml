@@ -1,0 +1,7 @@
+template: report
+lang: en
+title: t
+sections:
+  - heading: h
+    parts:
+      - html: "<table><tr data-floe-part=\"note table\"><td>a</td></tr></table>"
