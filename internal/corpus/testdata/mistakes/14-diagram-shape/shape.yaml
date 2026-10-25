@@ -1,0 +1,14 @@
+template: report
+lang: en
+title: t
+sections:
+  - heading: h
+    parts:
+      - diagram:
+          id: s
+          width: 200
+          height: 100
+          title: t
+          parts:
+            - edge: { d: "M60,30 H90 ;" }
+            - edge: { d: "M60,30 H90 ?" }

@@ -1,0 +1,15 @@
+$ floe check shape.yaml
+exit 1
+--- stderr
+shape.yaml:13:26: edge "M60,30 H90 ;": unexpected ";"; write only M, H, V, L, numbers, spaces and commas
+shape.yaml:14:26: edge "M60,30 H90 ?": unexpected "?"; write only M, H, V, L, numbers, spaces and commas
+$ floe render --out-dir $TMP/pages/shape.yaml shape.yaml
+exit 1
+--- stderr
+shape.yaml:13:26: edge "M60,30 H90 ;": unexpected ";"; write only M, H, V, L, numbers, spaces and commas
+shape.yaml:14:26: edge "M60,30 H90 ?": unexpected "?"; write only M, H, V, L, numbers, spaces and commas
+$ floe diagram render diagrams/shape.yaml
+exit 1
+--- stderr
+diagrams/shape.yaml:6:16: edge "M60,30 H90 ;": unexpected ";"; write only M, H, V, L, numbers, spaces and commas
+diagrams/shape.yaml:7:16: edge "M60,30 H90 ?": unexpected "?"; write only M, H, V, L, numbers, spaces and commas

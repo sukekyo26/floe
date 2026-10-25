@@ -1,0 +1,6 @@
+id: o
+width: 100
+height: 50
+title: t
+parts:
+  - box: { x: 80, y: 10, w: 40, h: 30, rows: [A] }
