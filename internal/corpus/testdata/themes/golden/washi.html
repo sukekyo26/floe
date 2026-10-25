@@ -57,15 +57,6 @@ blockquote > * + * { margin-top: 0.6rem; }
   --text-width: 56rem;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111716; --surface: #182120; --fg: #e2e9e7; --muted: #97a5a2; --line: #2b3634;
-    --accent: #63b5be; --accent-soft: #1b3336;
-    --good: #6fcf97; --good-soft: #173126; --warn: #e2a85e; --warn-soft: #392b18; --bad: #f2b8b5; --bad-soft: #3b1f1d;
-    --code-bg: #0a0e0d;
-    color-scheme: dark;
-  }
-}
 }
 </style>
 <style>
@@ -81,15 +72,6 @@ blockquote > * + * { margin-top: 0.6rem; }
   /* The vermilion of its marks (seals, the tab picked, the rules of code and quotes), kept apart from --bad,
      which a template may set otherwise, and the hairlines of its tables, in the ink */
   --washi-shu: #c13b23; --washi-hair: color-mix(in srgb, var(--fg) 18%, transparent);
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1c1915; --surface: #26221d; --fg: #ece5d6; --muted: #b8ae9c; --line: #3d372f;
-    --accent: #8fb3dc; --accent-soft: #22303f;
-    --good: #a9c98a; --good-soft: #263020; --warn: #e1b25a; --warn-soft: #362a14; --bad: #e8775c; --bad-soft: #3a201a;
-    --code-bg: #14120f;
-    --washi-shu: #e8775c;
-  }
 }
 }
 </style>
@@ -145,7 +127,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
-/* Dark in light mode too, as code in an editor is; the language stands at the right of the heading */
+/* Always dark, as code in an editor is; the language stands at the right of the heading */
 :scope {
   margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
   background: var(--code-bg); color: var(--code-fg);

@@ -57,15 +57,6 @@ blockquote > * + * { margin-top: 0.6rem; }
   --text-width: 56rem;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111716; --surface: #182120; --fg: #e2e9e7; --muted: #97a5a2; --line: #2b3634;
-    --accent: #63b5be; --accent-soft: #1b3336;
-    --good: #6fcf97; --good-soft: #173126; --warn: #e2a85e; --warn-soft: #392b18; --bad: #f2b8b5; --bad-soft: #3b1f1d;
-    --code-bg: #0a0e0d;
-    color-scheme: dark;
-  }
-}
 }
 </style>
 <style>
@@ -76,21 +67,12 @@ blockquote > * + * { margin-top: 0.6rem; }
   --accent: #1f56b5; --accent-soft: #dde8fa;
   --good: #1c764d; --good-soft: #dcefe5; --warn: #925d00; --warn-soft: #f6ead3; --bad: #c0302b; --bad-soft: #fbe3e1;
   --code-bg: #0d3266; --code-fg: #eaf2ff; --code-prompt: #7fdcff;
-  /* The squares, in the ink so that they turn with it in dark mode: the page's ground, and that of its
-     panels, notes and quotes */
+  /* The squares, in the ink: the page's ground, and that of its panels, notes and quotes */
   --bp-squares:
     linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px,
     linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px;
   --page-bg: var(--bp-squares), var(--bg);
   --rule: 1.5px solid var(--accent);
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b1524; --surface: #0f1b2d; --fg: #dce8fb; --muted: #8ea3c4; --line: #24385a;
-    --accent: #7fb3ff; --accent-soft: #16294a;
-    --good: #6fcf97; --good-soft: #12302a; --warn: #e2a85e; --warn-soft: #33281a; --bad: #f2a09b; --bad-soft: #3a1f22;
-    --code-bg: #0a1f3f;
-  }
 }
 }
 </style>
@@ -146,7 +128,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
-/* Dark in light mode too, as code in an editor is; the language stands at the right of the heading */
+/* Always dark, as code in an editor is; the language stands at the right of the heading */
 :scope {
   margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
   background: var(--code-bg); color: var(--code-fg);

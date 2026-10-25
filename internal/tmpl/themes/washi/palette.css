@@ -10,12 +10,3 @@
      which a template may set otherwise, and the hairlines of its tables, in the ink */
   --washi-shu: #c13b23; --washi-hair: color-mix(in srgb, var(--fg) 18%, transparent);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1c1915; --surface: #26221d; --fg: #ece5d6; --muted: #b8ae9c; --line: #3d372f;
-    --accent: #8fb3dc; --accent-soft: #22303f;
-    --good: #a9c98a; --good-soft: #263020; --warn: #e1b25a; --warn-soft: #362a14; --bad: #e8775c; --bad-soft: #3a201a;
-    --code-bg: #14120f;
-    --washi-shu: #e8775c;
-  }
-}

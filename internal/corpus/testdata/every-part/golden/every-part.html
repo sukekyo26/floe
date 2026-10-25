@@ -57,15 +57,6 @@ blockquote > * + * { margin-top: 0.6rem; }
   --text-width: 56rem;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111716; --surface: #182120; --fg: #e2e9e7; --muted: #97a5a2; --line: #2b3634;
-    --accent: #63b5be; --accent-soft: #1b3336;
-    --good: #6fcf97; --good-soft: #173126; --warn: #e2a85e; --warn-soft: #392b18; --bad: #f2b8b5; --bad-soft: #3b1f1d;
-    --code-bg: #0a0e0d;
-    color-scheme: dark;
-  }
-}
 }
 </style>
 <style>
@@ -171,7 +162,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
-/* Dark in light mode too, as code in an editor is; the language stands at the right of the heading */
+/* Always dark, as code in an editor is; the language stands at the right of the heading */
 :scope {
   margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
   background: var(--code-bg); color: var(--code-fg);
@@ -340,7 +331,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="diagram"]) to (:scope [data-floe-part] > *) {
-  /* Diagrams take the colours of the page's CSS variables, so they follow dark mode. text-anchor is
+  /* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
      set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
   /* The colours and fonts of the page's palette, with floe's default light colours for a page without
      them, which a test of internal/tmpl keeps to themes/default/palette.css */
@@ -402,8 +393,6 @@ blockquote > * + * { margin-top: 0.6rem; }
   .dg .frame.accent rect { stroke: var(--dg-accent); }
   .dg .frame text { fill: var(--dg-muted); font-size: 12px; font-weight: 700; }
   .dg .frame.grouped text { fill: var(--dg-fg); font-size: 13px; }
-  .dg .icon-dark { display: none; }
-  @media (prefers-color-scheme: dark) { .dg .icon-light { display: none; } .dg .icon-dark { display: inline; } }
   .dg .edge, .dg .line { fill: none; stroke: var(--dg-muted); stroke-width: 1.5; }
   .dg .edge.dashed { stroke-dasharray: 5 4; }
   .dg .edge.bold { stroke-width: 3; }

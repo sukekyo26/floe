@@ -115,7 +115,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   `run`, with what it printed, `out`, under the name of its `shell` and at its
   prompt: `bash` or `sh` `$`, `zsh` `%`, `powershell` `PS>` or `cmd` `>`),
   which the built-in `report` takes. The prompt is drawn by the style, so a
-  copy of the commands leaves it out. Both are dark in light mode too, in the
+  copy of the commands leaves it out. Both are always dark, in the
   colours of `--code-bg`, `--code-fg` and `--code-prompt`. A `run` whose first
   word is a prompt (ending in `$`, `#`, `%`, `>` or `❯`, such as `~/app$` or
   `C:\work>`) is refused. `report` refuses a fenced block of code in `text`,
@@ -129,7 +129,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   squared paper, every cell ruled), `notebook` (ruled paper, marker strokes
   and sticky notes), `swiss` (heavy black rules, large numbers and red, states
   told by shape) or `washi` (sumi and vermilion on washi in a Mincho face,
-  seals and quotes ruled in vermilion), each in light and dark mode.
+  seals and quotes ruled in vermilion).
   `blueprint`, `brutal`, `ink`, `notebook`, `swiss` and `washi` give the
   whole page their colours too, its ground and its rules (blueprint's squared
   ground, notebook's ruled one in a rounded face, washi's double rules in a
@@ -151,12 +151,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   primaries, notebook's markers); `--on-fill` is the text on a face filled
   with the accent or a tone's colour, `--shadow` the colour of shadows.
   `palette.css` holds those variables, a theme's of its own names too, alone,
-  without `!important`, on `:root` and then in `@media (prefers-color-scheme:
-  dark)`, and is warned of where it sets a colour for light mode alone. `floe
-  part check` and `floe template check` warn of a colour a part's `part.css`,
-  or a theme's `base.css` or file of a part, writes as a value, and of a
-  variable those files of a theme set. A part of your own cannot be named
-  `palette`. `floe template show` lists the themes.
+  without `!important`, on `:root`. `floe part check` and `floe template
+  check` warn of a colour a part's `part.css`, or a theme's `base.css` or file
+  of a part, writes as a value, and of a variable those files of a theme set.
+  A part of your own cannot be named `palette`. `floe template show` lists
+  the themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as
@@ -176,8 +175,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   the AWS Architecture Icons from the official Icon package) in `FLOE_ICONS_DIR` (default
   `~/.local/share/floe-icons`), and `floe icons search <word>...`, which lists
   their names. The `icon` part of a diagram and the `icon` of a frame draw
-  them, switching to an icon's dark variant with the colour scheme, and an
-  unknown name suggests close ones.
+  them, and an unknown name suggests close ones.
 - Add `floe diagram example [kind]`, which lists the built-in example specs
   (architecture, AWS, class, ER, flow, Git, sequence, state, timeline, Venn) or
   prints one to copy. The examples come in English and Japanese: English, or

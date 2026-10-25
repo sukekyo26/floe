@@ -5,9 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chromedp/cdproto/emulation"
-	"github.com/chromedp/chromedp"
-
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 )
@@ -93,9 +90,9 @@ const measureContrast = `(() => {
   return [...low].join('\n');
 })()`
 
-// TestUIContrast draws the page of every part in every theme of floe's, in light and dark mode, and
-// measures the contrast of every text shown against the ground under it, as measureContrast does: the
-// parts, the themes and their palettes together draw nothing that cannot be read.
+// TestUIContrast draws the page of every part in every theme of floe's, and measures the contrast of
+// every text shown against the ground under it, as measureContrast does: the parts, the themes and their
+// palettes together draw nothing that cannot be read.
 func TestUIContrast(t *testing.T) { //nolint:paralleltest // the UI tests share one Chrome, one at a time
 	e := newEnv(t)
 	b := newBrowser(t, e.base, i18n.English)
@@ -112,16 +109,10 @@ func TestUIContrast(t *testing.T) { //nolint:paralleltest // the UI tests share 
 		name := theme.Name()
 		slug := "parts-" + name
 		e.publish(t, file, store.Options{Slug: &slug, Theme: &name})
-		for _, mode := range []string{"light", "dark"} {
-			media := emulation.SetEmulatedMediaParams{Features: []*emulation.MediaFeature{{Name: "prefers-color-scheme", Value: mode}}}
-			if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, media); err != nil {
-				t.Fatal(err)
-			}
-			b.navigate("/a/" + slug + "/?raw")
-			b.until("the parts", "!!document.querySelector('[data-floe-part=bars]')")
-			if low := b.eval(measureContrast); low != "" {
-				t.Errorf("%s in %s mode draws text that cannot be read:\n%s", name, mode, strings.ReplaceAll(low, "\n", "\n  "))
-			}
+		b.navigate("/a/" + slug + "/?raw")
+		b.until("the parts", "!!document.querySelector('[data-floe-part=bars]')")
+		if low := b.eval(measureContrast); low != "" {
+			t.Errorf("%s draws text that cannot be read:\n%s", name, strings.ReplaceAll(low, "\n", "\n  "))
 		}
 	}
 }

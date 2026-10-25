@@ -1,4 +1,4 @@
-  /* Diagrams take the colours of the page's CSS variables, so they follow dark mode. text-anchor is
+  /* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
      set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
   /* The colours and fonts of the page's palette, with floe's default light colours for a page without
      them, which a test of internal/tmpl keeps to themes/default/palette.css */
@@ -60,8 +60,6 @@
   .dg .frame.accent rect { stroke: var(--dg-accent); }
   .dg .frame text { fill: var(--dg-muted); font-size: 12px; font-weight: 700; }
   .dg .frame.grouped text { fill: var(--dg-fg); font-size: 13px; }
-  .dg .icon-dark { display: none; }
-  @media (prefers-color-scheme: dark) { .dg .icon-light { display: none; } .dg .icon-dark { display: inline; } }
   .dg .edge, .dg .line { fill: none; stroke: var(--dg-muted); stroke-width: 1.5; }
   .dg .edge.dashed { stroke-dasharray: 5 4; }
   .dg .edge.bold { stroke-width: 3; }

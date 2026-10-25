@@ -37,7 +37,8 @@ type kit struct {
 	iconOf     func(path string) (packed, bool)
 }
 
-// packed is an icon to keep from a package: dark marks its variant for dark backgrounds.
+// packed is an icon in a package: dark marks its variant for dark backgrounds, kept only for an icon
+// without a light one.
 type packed struct {
 	version, name, category string
 	dark                    bool
@@ -87,12 +88,12 @@ type Store struct {
 	// The indexes of the sets read so far, by set: a diagram looks up many icons.
 	mu      sync.Mutex
 	indexes map[string]*index
-	icons   map[string]*Icon // by name, as Lookup found them
+	icons   map[string]string // data URIs by name, as Lookup found them
 }
 
 // New returns the store under root. An empty root (no HOME to put it under) is refused when used.
 func New(root string) *Store {
-	return &Store{root: root, mu: sync.Mutex{}, indexes: map[string]*index{}, icons: map[string]*Icon{}}
+	return &Store{root: root, mu: sync.Mutex{}, indexes: map[string]*index{}, icons: map[string]string{}}
 }
 
 // Indexes are the index files of every set, fetched or not: a fetch replaces the one of its set.
@@ -119,7 +120,6 @@ type index struct {
 
 type entry struct {
 	Category string `json:"category"`
-	Dark     bool   `json:"dark,omitempty"` // whether name.dark.svg holds a variant for dark backgrounds
 }
 
 // readIndex returns nil when the set has not been fetched.
@@ -273,13 +273,20 @@ func (k *kit) extract(buf []byte, from, dir string) (*index, error) {
 		return nil, usererr.New("icons_not_zip", from, k.page)
 	}
 	idx := &index{Version: "", Source: from, Icons: map[string]entry{}}
+	// The package's order of the variants is not fixed, so the icons with a light variant are found first.
 	light := map[string]bool{}
+	for _, f := range zr.File {
+		if icon, ok := k.iconOf(f.Name); ok && !icon.dark {
+			light[icon.name] = true
+		}
+	}
 	// What is written is capped like the package: many entries each under maxIcon could fill the disk.
 	var written int64
 	for _, f := range zr.File {
 		icon, ok := k.iconOf(f.Name)
-		// A service in two categories (only the background differs) keeps the first.
-		if !ok || (icon.dark && idx.Icons[icon.name].Dark) || (!icon.dark && light[icon.name]) {
+		// A service in two categories (only the background differs) keeps the first with a light variant, or
+		// the first if it has none.
+		if _, kept := idx.Icons[icon.name]; !ok || kept || icon.dark && light[icon.name] {
 			continue
 		}
 		var b []byte
@@ -292,42 +299,13 @@ func (k *kit) extract(buf []byte, from, dir string) (*index, error) {
 		if err = keep(dir, icon, b); err != nil {
 			return nil, err
 		}
-		idx.add(icon)
-		light[icon.name] = light[icon.name] || !icon.dark
+		idx.Version = cmp.Or(idx.Version, icon.version)
+		idx.Icons[icon.name] = entry{Category: icon.category}
 	}
 	if idx.Version == "" {
 		return nil, usererr.New("icons_none_in_zip", k.title, from, k.page)
 	}
-	if err = darkAlone(idx, light, dir); err != nil {
-		return nil, err
-	}
 	return idx, writeIndex(idx, dir)
-}
-
-// add records icon, kept from the package, in the index.
-func (idx *index) add(icon packed) {
-	idx.Version = cmp.Or(idx.Version, icon.version)
-	e, seen := idx.Icons[icon.name]
-	if !seen {
-		e.Category = icon.category
-	}
-	e.Dark = e.Dark || icon.dark
-	idx.Icons[icon.name] = e
-}
-
-// darkAlone makes the dark variant of an icon without a light one its usual one.
-func darkAlone(idx *index, light map[string]bool, dir string) error {
-	for name, e := range idx.Icons {
-		if light[name] {
-			continue
-		}
-		if err := os.Rename(filepath.Join(dir, name+".dark.svg"), filepath.Join(dir, name+".svg")); err != nil {
-			return fmt.Errorf("keep the icon %s: %w", name, err)
-		}
-		e.Dark = false
-		idx.Icons[name] = e
-	}
-	return nil
 }
 
 func readEntry(f *zip.File) ([]byte, error) {
@@ -340,12 +318,9 @@ func readEntry(f *zip.File) ([]byte, error) {
 	return readAtMost(r, maxIcon)
 }
 
-// keep writes the icon b to dir as name.svg, or name.dark.svg for a dark variant.
+// keep writes the icon b to dir as name.svg.
 func keep(dir string, icon packed, b []byte) error {
 	path := filepath.Join(dir, icon.name+".svg")
-	if icon.dark {
-		path = filepath.Join(dir, icon.name+".dark.svg")
-	}
 	// G703: a name holds no slash but those its kit puts in (TestIconOfStaysInside).
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil { //nolint:gosec // see above
 		return fmt.Errorf("keep the icon %s: %w", icon.name, err)
@@ -415,31 +390,25 @@ func (s *Store) Search(words []string) ([]Hit, error) {
 	return hits, nil
 }
 
-// Icon is an icon as data URIs. Dark is empty when the icon has no variant for dark backgrounds.
-type Icon struct {
-	Light, Dark string
-}
-
-// Lookup returns the icon of name, its set in front (aws/amazon-ec2). For a name not in its set it
-// returns nil and up to five close names, the ones sharing the most words first. A name without a
+// Lookup returns the icon of name, its set in front (aws/amazon-ec2), as a data URI. For a name not in its set it
+// returns "" and up to five close names, the ones sharing the most words first. A name without a
 // known set in front is ErrNoSet.
-func (s *Store) Lookup(name string) (*Icon, []string, error) {
+func (s *Store) Lookup(name string) (string, []string, error) {
 	set, rest, _ := strings.Cut(name, "/")
 	k := kitOf(set)
 	if k == nil {
-		return nil, nil, ErrNoSet
+		return "", nil, ErrNoSet
 	}
 	idx, err := s.loadIndex(k)
 	if err != nil {
-		return nil, nil, err
+		return "", nil, err
 	}
-	e, ok := idx.Icons[rest]
-	if !ok {
-		return nil, k.closeNames(idx, rest), nil
+	if _, ok := idx.Icons[rest]; !ok {
+		return "", k.closeNames(idx, rest), nil
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if icon := s.icons[name]; icon != nil {
+	if icon := s.icons[name]; icon != "" {
 		return icon, nil, nil
 	}
 	dir := s.dir(k)
@@ -450,14 +419,9 @@ func (s *Store) Lookup(name string) (*Icon, []string, error) {
 		}
 		return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(b), nil
 	}
-	icon := &Icon{Light: "", Dark: ""}
-	if icon.Light, err = uri(rest + ".svg"); err != nil {
-		return nil, nil, err
-	}
-	if e.Dark {
-		if icon.Dark, err = uri(rest + ".dark.svg"); err != nil {
-			return nil, nil, err
-		}
+	icon, err := uri(rest + ".svg")
+	if err != nil {
+		return "", nil, err
 	}
 	s.icons[name] = icon
 	return icon, nil, nil
