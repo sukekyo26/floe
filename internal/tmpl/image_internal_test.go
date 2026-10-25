@@ -9,6 +9,9 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // An image is taken only under its directory, by a name of its type, holding what the name says and
@@ -26,8 +29,18 @@ func TestImageURI(t *testing.T) {
 		"sub/b.PNG":     png,
 		"dir.png/c.png": png,
 		"png.gif":       png,
-		"logo.svg":      []byte("\xef\xbb\xbf<!DOCTYPE svg>\n<svg viewBox=\"0 0 1 1\"/>"),
+		"logo.svg":      []byte("\xef\xbb\xbf<!DOCTYPE svg>\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1 1\"/>"),
 		"text.svg":      []byte("<html><svg/></html>"),
+		"xlink.svg": []byte(`<?xml version="1.0" encoding="ISO-8859-1"?><!DOCTYPE svg [<!ENTITY w "1">]>` +
+			`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">` +
+			`<rect id="a"/><use xlink:href="#a"/></svg>`),
+		"bare.svg":      []byte(`<svg viewBox="0 0 1 1"/>`),
+		"two.svg":       []byte(`<svg xmlns="http://www.w3.org/2000/svg"/><svg xmlns="http://www.w3.org/2000/svg"/>`),
+		"empty.svg":     []byte("<!-- c -->\n"),
+		"open.svg":      []byte("<svg xmlns=\"http://www.w3.org/2000/svg\">\n<rect>"),
+		"entity.svg":    []byte(`<!DOCTYPE svg [<!ENTITY w "1">]><svg xmlns="http://www.w3.org/2000/svg" width="&w;"/>`),
+		"png.svg":       png,
+		"unknown.svg":   []byte(`<?xml version="1.0" encoding="x-unknown"?><svg xmlns="http://www.w3.org/2000/svg"/>`),
 		"notes.txt":     []byte("text"),
 		"large.png":     append(bytes.Clone(png), bytes.Repeat([]byte{0}, maxImage)...),
 		".hidden/c.png": png,
@@ -64,7 +77,15 @@ func TestImageURI(t *testing.T) {
 		{"sub/b.PNG", "data:image/png;base64,"},
 		{"logo.svg", "data:image/svg+xml;base64,"},
 		{"png.gif", "tmpl_image_content"},
-		{"text.svg", "tmpl_image_content"},
+		{"text.svg", "tmpl_image_svg"},
+		{"xlink.svg", "data:image/svg+xml;base64,"},
+		{"bare.svg", "tmpl_image_svg"},
+		{"two.svg", "tmpl_image_svg"},
+		{"empty.svg", "tmpl_image_svg"},
+		{"open.svg", "tmpl_image_svg"},
+		{"entity.svg", "tmpl_image_svg"},
+		{"png.svg", "tmpl_image_svg"},
+		{"unknown.svg", "tmpl_image_svg"},
 		{"notes.txt", "tmpl_image_type"},
 		{"large.png", "tmpl_image_large"},
 		{"none.png", "tmpl_image_missing"},
@@ -89,6 +110,24 @@ func TestImageURI(t *testing.T) {
 		}
 		if !strings.HasPrefix(got, tt.want) {
 			t.Errorf("imageURI(%s) = %s, want %s", tt.name, got, tt.want)
+		}
+	}
+	// What makes an SVG none is told under it, whole, at the line of the SVG where encoding/xml has one.
+	const root = `: its root is not one <svg xmlns="http://www.w3.org/2000/svg">; write the drawing in one such element`
+	for name, want := range map[string]string{
+		"bare.svg":   filepath.Join(dir, "bare.svg") + root,
+		"two.svg":    filepath.Join(dir, "two.svg") + root,
+		"text.svg":   filepath.Join(dir, "text.svg") + root,
+		"empty.svg":  filepath.Join(dir, "empty.svg") + root,
+		"open.svg":   filepath.Join(dir, "open.svg") + ":2: unexpected EOF; write it as XML",
+		"entity.svg": filepath.Join(dir, "entity.svg") + ":1: invalid character entity &w;; write it as XML",
+		"png.svg":    filepath.Join(dir, "png.svg") + ":3: invalid UTF-8; write it as XML",
+		"unknown.svg": filepath.Join(dir, "unknown.svg") + `: xml: opening charset "x-unknown": unsupported charset: "x-unknown"; ` +
+			"write an encoding and a version of XML that a reader takes in its <?xml ?> declaration, or leave them out",
+	} {
+		_, e := imageURI(r.FS(), name, dir)
+		if e == nil || e.Key != "tmpl_image_svg" || len(e.Under) != 1 || e.Under[0].Error() != want {
+			t.Errorf("the mistake of %s = %v, want under it %s", name, e, want)
 		}
 	}
 	// Just over the limit, an image is told by the byte.
@@ -120,6 +159,18 @@ func TestCheckImages(t *testing.T) {
 	}
 	if len(d.images) != 1 || !strings.HasPrefix(string(d.images["a.png"]), "data:image/png;base64,") {
 		t.Errorf("the images = %v", d.images)
+	}
+	// An SVG that is none is told at each item, its reason under the first, as told above under the next.
+	if err = os.WriteFile(filepath.Join(dir, "b.svg"), []byte("<svg xmlns=\"http://www.w3.org/2000/svg\">\n<rect>"), 0o600); err != nil { //nolint:gosec // G703: the test's own directory
+		t.Fatal(err)
+	}
+	d, root = data(t, "pics:\n  - b.svg\n  - b.svg\n")
+	err = checkImages(s.drawnWhole(d.Values), d, root, diskImages(dir))
+	want = "d.yaml:2:5: \"b.svg\" is not an SVG document\n" +
+		"  " + filepath.Join(dir, "b.svg") + ":2: unexpected EOF; write it as XML\n" +
+		"d.yaml:3:5: \"b.svg\" is not an SVG document, as told above"
+	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render(""); got != want {
+		t.Errorf("checkImages of an SVG that is none = %s\nwant %s", got, want)
 	}
 }
 

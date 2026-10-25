@@ -319,7 +319,7 @@ func TestFindBrokenBuiltin(t *testing.T) {
 		{"words", "words.yaml", "en: [\n", ownDirs{}},
 		{"names", "page.html", strings.Replace(page, "<body", `<body><div data-floe-part="nosuch"></div`, 1), ownDirs{}},
 		{"declared", "checks.yaml", "- for: nosuch\n  expr: \"true\"\n  message: x\n", ownDirs{}},
-		{"warning", "page.css", read("page.css") + "\n:scope { --accent: #f00; }\n", ownDirs{}},
+		{"warning", "schema.json", strings.Replace(schema, `"properties": {`, `"properties": {"zz": {"type": "object", "properties": {"a": {"type": "string"}}}, `, 1), ownDirs{}},
 		{"computed", "computed.yaml", "total: title +\n", ownDirs{parts: overlap, themes: overlap}},
 	} {
 		floe := mapOf(t, templateFiles)

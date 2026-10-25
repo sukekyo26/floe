@@ -81,9 +81,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   to `<name>.html` beside it, or in `--out-dir`, for a repository to keep the
   data file for agents and its page for people. The page is the download of
   the page `floe publish` stores: it opens without floe, with its CSP in a
-  `<meta>`. A page is written only when it changes, and nothing is written
-  while a data file has mistakes. `--check` writes nothing and fails when a
-  page is missing or not what its data file draws, for CI.
+  `<meta>` after its doctype and the comments before it. A page is written
+  only when it changes, and nothing is written while a data file has mistakes.
+  `--check` writes nothing and fails when a page is missing or not what its
+  data file draws, for CI.
 - Run scripts in data files: the built-in `report` takes a `script` part, and
   a template refers to the part `floe:///parts/script.json`, each `js`, a function the
   page calls with an empty element in its place and `data`, any value. A `js`
@@ -151,12 +152,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   with the accent or a tone's colour, `--shadow` the colour of shadows.
   `palette.css` holds those variables, a theme's of its own names too, alone,
   without `!important`, on `:root` and then in `@media (prefers-color-scheme:
-  dark)`, and is warned of where it sets a colour for light mode alone, as is a
-  template that sets one so on `:scope`. `floe part check` and `floe template
-  check` warn of a colour a part's `part.css`, or a theme's `base.css` or file
-  of a part, writes as a value, and of a variable those files of a theme set.
-  A part of your own cannot be named `palette`. `floe
-  template show` lists the themes.
+  dark)`, and is warned of where it sets a colour for light mode alone. `floe
+  part check` and `floe template check` warn of a colour a part's `part.css`,
+  or a theme's `base.css` or file of a part, writes as a value, and of a
+  variable those files of a theme set. A part of your own cannot be named
+  `palette`. `floe template show` lists the themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as
@@ -205,7 +205,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   background when needed, which checks and saves the page (the server is the
   only one that writes the store), and opens a new page in the browser. An HTML file is
   not stored: `--link` registers it in place and shows it as it is, served
-  with the files under its directory. A data file linked with `--link` is
+  with the files under its directory, titled by its `<title>`, else its first
+  `<h1>`, as an HTML parser reads them. A data file linked with `--link` is
   drawn from its place instead of stored. Saving a data file, an image it
   shows or a file of its template, or fetching the icons its diagrams show,
   reloads the open tab, and while it has mistakes the tab shows them in place
@@ -248,13 +249,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   and one of an item are told together. It holds
   no `<style>` or `<base>`, nor an item of `"format": "html"` a `<style>`, `<link>`,
   `</head>`, `<base>` or `<meta>`, or what changes the page around it as a browser reads it
-  (an `<svg>`, a comment or a `<form>` it leaves open, an end tag of the page's; a `page.html` that puts one outside its `<head>` and `<body>` or leaves out `<!doctype html>`), nor the template's CSS an `@import`, `:root`, `html` or a `}` that closes no block, each refused
+  (an `<svg>`, a comment or a `<form>` it leaves open, an end tag of the page's; a `page.html` that puts one outside its `<head>` and `<body>` or leaves out `<!doctype html>`), nor the template's CSS an `@import` or a `}` that closes no block, each refused
   at its line, and `floe template check` refuses a part `page.html` names that floe
   does not have.
   Images go into the page as data URIs: an item of `"format": "image"`
   names an image under the data file's directory, and `page.html` shows one
   of the template's `assets/` with `asset`. An image is a png, jpeg, gif,
-  webp or svg file up to 1 MiB, checked by its name and by what it holds,
+  webp or svg file up to 1 MiB, checked by its name and by what it holds (an
+  svg file is XML that encoding/xml reads to its end, its root one
+  `<svg xmlns="http://www.w3.org/2000/svg">`),
   and a mistake in one of the data is reported at its line and column, but
   for one `floe publish` will not send the server (through a symlink, over
   1 MiB, not a file, unreadable or not holding its type).

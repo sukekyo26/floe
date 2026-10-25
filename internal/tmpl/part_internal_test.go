@@ -162,7 +162,7 @@ func TestCheckPalette(t *testing.T) {
 		"\n{ --x: 1; }\n\n":                                                                            "p.css:2: palette.css holds only",
 	} {
 		s := readCSS([]byte(css))
-		err := s.refuse("p.css", false)
+		err := s.refuse("p.css")
 		var warnings []*usererr.Error
 		if err == nil {
 			warnings, err = checkPalette("p.css", s, nil)

@@ -5,6 +5,8 @@ import (
 	"io"
 	"slices"
 	"strings"
+
+	"golang.org/x/net/html"
 )
 
 // cdns are where a page drawn from a data file may load libraries from, with their styles and fonts.
@@ -39,30 +41,46 @@ func CutOffPage(page []byte) []byte {
 	return slices.Concat(page[:at], []byte(meta), page[at:])
 }
 
-// cutOffAt returns where in page the <meta> of CutOff goes, and the <meta>.
+// cutOffAt returns where in page the <meta> of CutOff goes, and the <meta>: past a BOM, the ASCII whitespace,
+// the comments and the doctype an HTML tokenizer reads at its start, and before anything else. A comment or
+// a doctype that runs to the end of page is taken as one left open, and the <meta> goes before it, not in
+// it: whether one is closed is not read apart.
+// LIMIT: a page that ends with its doctype gets the <meta> before it, which a browser draws in quirks mode;
+// a page floe draws has a <head> after its doctype.
 func cutOffAt(page []byte) (int, string) {
-	at := len(page) - len(bytes.TrimPrefix(page, []byte("\uFEFF")))
-	text := string(page)
-	for {
-		at = len(page) - len(bytes.TrimLeft(page[at:], " \t\n\f\r"))
-		n := comment(text[at:])
-		if n == 0 {
-			break
-		}
-		at += n
-	}
-	doctype := []byte("<!doctype")
-	if rest := page[at:]; len(rest) >= len(doctype) && bytes.EqualFold(rest[:len(doctype)], doctype) {
-		if end := bytes.IndexByte(rest, '>'); end >= 0 {
-			at += end + 1
-		}
-	}
 	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + CutOff("'none'") + "\">"
-	return at, meta
+	at := len(page) - len(bytes.TrimPrefix(page, []byte("\uFEFF")))
+	z := html.NewTokenizer(bytes.NewReader(page[at:]))
+	for {
+		tt := z.Next()
+		raw := len(z.Raw())
+		toEnd := at+raw == len(page)
+		switch tt {
+		case html.TextToken:
+			text := z.Raw()
+			if rest := bytes.TrimLeft(text, " \t\n\f\r"); len(rest) > 0 {
+				return at + raw - len(rest), meta
+			}
+			at += raw
+		case html.CommentToken:
+			if toEnd {
+				return at, meta
+			}
+			at += raw
+		case html.DoctypeToken:
+			if toEnd {
+				return at, meta
+			}
+			return at + raw, meta
+		default:
+			return at, meta
+		}
+	}
 }
 
 // comment returns the length of the comment s starts with, ended where an HTML parser ends it, or 0 for
 // none or one never closed: <!-- … --> or --!>, the empty <!--> and <!--->, and <? … >.
+// tags.go's pastComment uses it; the CI's PR 3b reads those tags with an HTML tokenizer.
 func comment(s string) int {
 	switch {
 	case strings.HasPrefix(s, "<?"):
