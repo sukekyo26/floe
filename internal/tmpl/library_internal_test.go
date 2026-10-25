@@ -412,3 +412,23 @@ func TestCheckFloeOfAnotherName(t *testing.T) {
 		t.Errorf("floe's check of slow = %v", err)
 	}
 }
+
+// floe's check draws a built-in template's example: what that page holds is floe's failure. What only a data
+// file's page holds is the data file's mistake, at its template:, a built-in template or not.
+func TestBuiltinPageOfData(t *testing.T) {
+	t.Parallel()
+
+	floe := mapOf(t, templateFiles)
+	page := floe["templates/report/page.html"]
+	floe["templates/report/page.html"] = &fstest.MapFile{
+		Data: bytes.Replace(page.Data, []byte("</head>"), []byte(`{{if eq .Title "x"}}{{else}}</head>{{end}}`), 1),
+	}
+	dir := t.TempDir()
+	d, err := libraryOf("", ownDirs{}, floe).Read("x.yaml", []byte("template: report\nlang: en\ntitle: x\nsections: []\n"), "", dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = d.Render("x"); !isMistake(err) || !strings.HasPrefix(err.Error(), "x.yaml:1:11: the page drawn from this file has no </head>") {
+		t.Errorf("a page only a data file draws without </head> = %v, want its mistake", err)
+	}
+}

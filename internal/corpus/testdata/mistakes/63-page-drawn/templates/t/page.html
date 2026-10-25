@@ -1,0 +1,10 @@
+{{/* A comment before the doctype draws nothing: the page drawn starts with it. */}}<!doctype html>
+<html lang="{{.Lang}}">
+<head><meta charset="utf-8"><title>{{.Title}}</title>{{if .Data.cut}}{{else}}</head>{{end}}
+<body><main>
+{{if false}}<style>p { color: red }</style><div data-floe-part="nope"></div>{{end}}
+{{if .Data.style}}<style>{{.Data.style}}</style>{{end}}
+<div data-floe-part="{{.Data.kind}}"><p>x</p></div>
+{{with .Data.x}}<div>{{.}}</div>{{end}}
+</main></body>
+</html>

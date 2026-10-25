@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/tmpl"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // memoPage returns a library of the template memo, whose page.html is src, its items risks and aside of
@@ -210,5 +211,91 @@ func TestDrawnReaderPartBox(t *testing.T) {
 	})
 	if _, mistakes := checkOwn(parts, ""); len(mistakes) != 0 {
 		t.Errorf("a box named &#110;ote = %v", mistakes)
+	}
+}
+
+// The doctype is asked of the page drawn first, when the data has an item of format html: in quirks mode its
+// items are not checked, and the page they broke is not asked for its </head>, which would tell them again.
+// Without such an item, the doctype is not asked.
+func TestDrawnPageDoctypeFirst(t *testing.T) {
+	t.Parallel()
+
+	l, _ := memoPage(t, `<html lang="{{.Lang}}"><head><title>{{.Title}}</title>{{if false}}</head>{{end}}<body><p>{{.Data.risks}}</p></body></html>`)
+	_, err := draw(l, "template: memo\nlang: en\nrisks: <svg>\n")
+	if err == nil || !strings.HasPrefix(err.Error(), "data.yaml:1:11: page.html does not start with <!doctype html>") ||
+		strings.Contains(err.Error(), "</head>") {
+		t.Errorf("a page in quirks mode = %v", err)
+	}
+	_, err = draw(l, "template: memo\nlang: en\n")
+	if err == nil || !strings.HasPrefix(err.Error(), "data.yaml:1:11: the page drawn from this file has no </head>") ||
+		strings.Contains(err.Error(), "doctype") {
+		t.Errorf("a page in quirks mode without an item of format html = %v", err)
+	}
+}
+
+// What page.html draws is told at the template: of the data file that drew it, wherever that is written:
+// the example is drawn by template check alone, so a data file that draws it otherwise passes.
+func TestDrawnPageExampleAlone(t *testing.T) {
+	t.Parallel()
+
+	l, dir := memoPage(t, `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body>`+
+		`{{if .Data.aside}}<div data-floe-part="nope"></div>{{end}}<p>x</p></body></html>`)
+	if err := os.WriteFile(filepath.Join(dir, "example.yaml"), []byte("lang: en\ntemplate: memo\naside: <b>a</b>\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, mistakes := check(dir, "", "")
+	if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), filepath.Join(dir, "example.yaml")+":2:11: the page drawn from this file names the part nope") {
+		t.Errorf("floe template check = %v", mistakes)
+	}
+	if _, err := draw(l, "template: memo\nlang: en\n"); err != nil {
+		t.Errorf("a data file that does not draw the name = %v", err)
+	}
+	if _, err := draw(l, "lang: en\n\ntemplate: memo\naside: <b>a</b>\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:3:11: the page drawn from this file names the part nope") {
+		t.Errorf("a data file that draws the name = %v", err)
+	}
+}
+
+// A part that cannot be used, which the example's page names, is told once, as a mistake there, not again
+// as a warning of template check.
+func TestDrawnPageBrokenPartOnce(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{"bad/schema.json": `{"type":`, "bad/part.html": `<div data-floe-part="bad"></div>`, "bad/part.css": ""})
+	_, dir := memoPage(t, `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body><div data-floe-part="bad"></div></body></html>`)
+	if err := os.WriteFile(filepath.Join(dir, "example.yaml"), []byte("template: memo\nlang: en\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	warnings, mistakes := check(dir, parts, "")
+	if len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "bad") {
+		t.Errorf("the mistakes = %v, want the part bad", mistakes)
+	}
+	if slices.ContainsFunc(warnings, func(e *usererr.Error) bool { return strings.Contains(e.Error(), "bad") }) {
+		t.Errorf("the warnings = %v, want none of bad", warnings)
+	}
+}
+
+// What a part, or the raw SVG of a diagram, draws into the page is the page's too: a name of no part, a
+// <style>.
+func TestDrawnPageOfPartsAndDiagrams(t *testing.T) {
+	t.Parallel()
+
+	parts := ownParts(t, map[string]string{
+		"note/schema.json": `{"type": "object", "properties": {"kind": {"type": "string", "minLength": 1, "description": "x"}}, ` +
+			`"required": ["kind"], "additionalProperties": false}`,
+		"note/part.html": `<div data-floe-part="note"><span data-floe-part="{{.kind}}">x</span></div>`,
+		"note/part.css":  `[data-floe-part="note"] { margin: 0; }`,
+	})
+	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/note.json"}, "aside": {"type": "string"}`), parts, "", "")
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: { kind: nope }\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:1:11: the page drawn from this file names the part nope") {
+		t.Errorf("a name of no part a part draws = %v", err)
+	}
+	raw := "template: report\nlang: en\ntitle: r\nsections:\n  - heading: h\n    parts:\n      - diagram:\n" +
+		"          id: d\n          width: 100\n          height: 50\n          title: t\n          parts:\n" +
+		`            - raw: { svg: '<style>p {}</style>' }` + "\n"
+	if _, err := draw(tmpl.NewLibrary("", "", "", ""), raw); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:1:11: the page drawn from this file has a <style>") {
+		t.Errorf("a <style> of a diagram's raw SVG = %v", err)
 	}
 }
