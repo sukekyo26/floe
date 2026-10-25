@@ -26,8 +26,17 @@ func TestImageURI(t *testing.T) {
 		"sub/b.PNG":     png,
 		"dir.png/c.png": png,
 		"png.gif":       png,
-		"logo.svg":      []byte("\xef\xbb\xbf<!DOCTYPE svg>\n<svg viewBox=\"0 0 1 1\"/>"),
+		"logo.svg":      []byte("\xef\xbb\xbf<!DOCTYPE svg>\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1 1\"/>"),
 		"text.svg":      []byte("<html><svg/></html>"),
+		"xlink.svg": []byte(`<?xml version="1.0" encoding="ISO-8859-1"?><!DOCTYPE svg [<!ENTITY w "1">]>` +
+			`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">` +
+			`<rect id="a"/><use xlink:href="#a"/></svg>`),
+		"bare.svg":      []byte(`<svg viewBox="0 0 1 1"/>`),
+		"two.svg":       []byte(`<svg xmlns="http://www.w3.org/2000/svg"/><svg xmlns="http://www.w3.org/2000/svg"/>`),
+		"empty.svg":     []byte("<!-- c -->\n"),
+		"open.svg":      []byte("<svg xmlns=\"http://www.w3.org/2000/svg\">\n<rect>"),
+		"entity.svg":    []byte(`<!DOCTYPE svg [<!ENTITY w "1">]><svg xmlns="http://www.w3.org/2000/svg" width="&w;"/>`),
+		"png.svg":       png,
 		"notes.txt":     []byte("text"),
 		"large.png":     append(bytes.Clone(png), bytes.Repeat([]byte{0}, maxImage)...),
 		".hidden/c.png": png,
@@ -64,7 +73,14 @@ func TestImageURI(t *testing.T) {
 		{"sub/b.PNG", "data:image/png;base64,"},
 		{"logo.svg", "data:image/svg+xml;base64,"},
 		{"png.gif", "tmpl_image_content"},
-		{"text.svg", "tmpl_image_content"},
+		{"text.svg", "tmpl_image_svg"},
+		{"xlink.svg", "data:image/svg+xml;base64,"},
+		{"bare.svg", "tmpl_image_svg"},
+		{"two.svg", "tmpl_image_svg"},
+		{"empty.svg", "tmpl_image_svg"},
+		{"open.svg", "tmpl_image_svg"},
+		{"entity.svg", "tmpl_image_svg"},
+		{"png.svg", "tmpl_image_svg"},
 		{"notes.txt", "tmpl_image_type"},
 		{"large.png", "tmpl_image_large"},
 		{"none.png", "tmpl_image_missing"},
@@ -89,6 +105,17 @@ func TestImageURI(t *testing.T) {
 		}
 		if !strings.HasPrefix(got, tt.want) {
 			t.Errorf("imageURI(%s) = %s, want %s", tt.name, got, tt.want)
+		}
+	}
+	// What makes an SVG none is told under it, at the line of the SVG where encoding/xml has one.
+	for name, want := range map[string]string{
+		"bare.svg": filepath.Join(dir, "bare.svg") + ": its root is not one <svg",
+		"two.svg":  filepath.Join(dir, "two.svg") + ": its root is not one <svg",
+		"open.svg": filepath.Join(dir, "open.svg") + ":2: unexpected EOF; write it as XML",
+	} {
+		_, e := imageURI(r.FS(), name, dir)
+		if e == nil || len(e.Under) != 1 || !strings.HasPrefix(e.Under[0].Error(), want) {
+			t.Errorf("the mistake of %s = %v, want under it %s", name, e, want)
 		}
 	}
 	// Just over the limit, an image is told by the byte.

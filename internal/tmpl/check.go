@@ -121,14 +121,13 @@ func (t *Template) checkFiles() (usererr.List, error) {
 		named = namedParts(string(p.src))
 		pageErr = t.checkPage(set, read.shape, checked, p, named)
 	}
-	scope, cssErr := t.checkCSS()
 	inSchema, err := set.unusableRefs(read.notes)
 	if err != nil {
 		return nil, err
 	}
 	// A copy: the schema's warnings are those its run keeps.
-	warnings = slices.Concat(warnings, scope, brokenParts(set, named, inSchema))
-	return warnings, usererr.Collect(unusable, declared, pageErr, assetsErr, cssErr)
+	warnings = slices.Concat(warnings, brokenParts(set, named, inSchema))
+	return warnings, usererr.Collect(unusable, declared, pageErr, assetsErr)
 }
 
 // checkPage checks p, the page.html of t as read (Template.page), which names the parts named of set, for
@@ -187,26 +186,6 @@ func brokenParts(set *partSet, named []namedPart, inSchema map[string]bool) user
 		set.unusable(kindTheme, nil),
 	))
 	return append(warnings, set.strays...)
-}
-
-// checkCSS returns the mistake of t's CSS, page.css, that cssSheet.refuse refuses, and the warning of the
-// colours that change with the mode which it sets on :scope for light mode alone: over every palette, they
-// stay in dark mode too, where the others turn dark.
-func (t *Template) checkCSS() (usererr.List, error) {
-	modes, err := floeModes()
-	if err != nil {
-		return nil, err
-	}
-	page, err := t.pageSheet()
-	if err != nil {
-		return nil, nil //nolint:nilerr // told by unusable
-	}
-	c := newModeColours()
-	c.readScope(page)
-	if names := c.lightOnly(modes); names != nil {
-		return usererr.List{usererr.NewAt(t.file("page.css"), 0, 0, "tmpl_scope_dark", andList(names))}, nil
-	}
-	return nil, nil
 }
 
 // checkNamedParts returns a mistake for each part src, page.html, names, of named, by data-floe-part or

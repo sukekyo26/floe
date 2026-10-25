@@ -632,7 +632,7 @@ func readPartCSS(files fs.FS, dir string) (string, []*usererr.Error, error) {
 		return "", nil, usererr.CannotRead(path.Join(dir, "part.css"), err)
 	}
 	file, sheet := path.Join(dir, "part.css"), readCSS(css)
-	if err = sheet.refuse(file, true); err != nil {
+	if err = sheet.refuse(file); err != nil {
 		return "", nil, err
 	}
 	return string(css), colourWarnings(file, sheet, true), nil

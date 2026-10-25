@@ -2,7 +2,6 @@ package tmpl
 
 import (
 	"bytes"
-	"regexp"
 	"strings"
 
 	tparse "github.com/tdewolff/parse/v2"
@@ -11,8 +10,8 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// ownCSS returns t's page.css, empty when t has none, refused as cssSheet.refuse refuses one of
-// @scope: floe scopes the template's CSS to the page, @scope (:root).
+// ownCSS returns t's page.css, empty when t has none, refused as cssSheet.refuse refuses it: floe scopes
+// the template's CSS to the page, @scope (:root).
 func (t *Template) ownCSS() ([]byte, error) {
 	s, err := t.pageSheet()
 	if err != nil {
@@ -29,7 +28,7 @@ func (t *Template) pageSheet() (*cssSheet, error) {
 			return nil, err
 		}
 		s := readCSS(src)
-		if err = s.refuse(t.file("page.css"), true); err != nil {
+		if err = s.refuse(t.file("page.css")); err != nil {
 			return nil, err
 		}
 		return s, nil
@@ -38,21 +37,16 @@ func (t *Template) pageSheet() (*cssSheet, error) {
 
 // refuse refuses s, the file shown as file, that floe puts in a layer, where a } closes no block,
 // which would close the layer around it and leave the rules after it out of it, over the parts' styles,
-// or where it imports a stylesheet, which a browser does not read in a layer. CSS floe puts in @scope,
-// scoped, is refused too where a selector names the root as :root or html, where :scope is the root and
-// those name nothing.
-func (s *cssSheet) refuse(file string, scoped bool) error {
+// or where it imports a stylesheet, which a browser does not read in a layer.
+// LIMIT: what a selector names is not checked (one of :root or html in @scope matches nothing); no Go
+// library reads the selectors floe's CSS writes (:scope, :is, nesting). A browser's check comes in PR 4.
+func (s *cssSheet) refuse(file string) error {
 	if s.stray >= 0 {
 		return usererr.NewAt(file, lineAt(s.src, s.stray), 0, "tmpl_css_brace")
 	}
 	for _, r := range s.rules {
-		switch {
-		case !r.block && strings.HasPrefix(strings.ToLower(r.prelude), "@import"):
+		if !r.block && strings.HasPrefix(strings.ToLower(r.prelude), "@import") {
 			return usererr.NewAt(file, lineAt(s.src, r.at), 0, "tmpl_css_import")
-		case scoped && r.block && !strings.HasPrefix(r.prelude, "@"):
-			if m := rootSelector.FindStringSubmatchIndex(r.prelude); m != nil {
-				return usererr.NewAt(file, lineAt(s.src, r.at+m[2]), 0, "tmpl_css_root", r.prelude[m[2]:m[3]])
-			}
 		}
 	}
 	return nil
@@ -62,9 +56,6 @@ func (s *cssSheet) refuse(file string, scoped bool) error {
 func lineAt(src []byte, at int) int {
 	return bytes.Count(src[:at], []byte("\n")) + 1
 }
-
-// rootSelector finds :root or html in a selector.
-var rootSelector = regexp.MustCompile(`(?i)(?:^|[\s,>+~(])(:root|html)(?:[\s,.:\[#>+~)]|$)`)
 
 // cssSheet is CSS read as CSS Syntax reads it: its tokens, spaces and comments among them, its rules in
 // order, those in blocks too, the declarations written outside any block, which floe's @scope applies to
@@ -125,6 +116,9 @@ type opened struct {
 
 // readRules reads the rules of s from its tokens, and the declarations of their blocks. Within brackets, as
 // in a function, a brace or a ; is the value's: a browser reads to the ) that closes them, or to the end.
+// LIMIT: floe's own reading of CSS Syntax's blocks over tdewolff's tokens: tdewolff's css.Parser (v2.8.20
+// too) fails on a rule nested in a rule and does not read @scope's body. Compare it with a browser's
+// CSSOM in the CI's PR 4.
 func (s *cssSheet) readRules() {
 	r := &ruleReader{s: s, stack: nil, open: 0, start: 0}
 	for i, t := range s.tokens {

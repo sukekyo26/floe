@@ -3,17 +3,21 @@ package tmpl
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/xml"
+	"errors"
 	"html/template"
 	"io"
 	"io/fs"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/goccy/go-yaml/ast"
+	"golang.org/x/net/html/charset"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -119,7 +123,14 @@ func imageOf(files fs.FS, name, where, typ string) ([]byte, *usererr.Error) {
 	if e != nil {
 		return nil, e
 	}
-	if holds := http.DetectContentType(b); holds != typ && (typ != "image/svg+xml" || !isSVG(b)) {
+	if typ == "image/svg+xml" {
+		file := filepath.Join(where, filepath.FromSlash(name))
+		if why := svgMistake(b, file); why != nil {
+			return nil, usererr.Over(file, usererr.List{why}, "tmpl_image_svg", name)
+		}
+		return b, nil
+	}
+	if http.DetectContentType(b) != typ {
 		return nil, usererr.New("tmpl_image_content", name, typ)
 	}
 	return b, nil
@@ -196,32 +207,47 @@ func byteSize(n int64) string {
 	return s
 }
 
-// isSVG reports whether b is an SVG document: <svg after blanks, an XML declaration, comments and a
-// DOCTYPE. http.DetectContentType tells SVG only as text or XML.
-// LIMIT: a DOCTYPE with an internal subset holding > is not skipped whole. Parse it if one comes to.
-func isSVG(b []byte) bool {
-	b = bytes.TrimPrefix(b, []byte("\xef\xbb\xbf"))
+// svgMistake returns why b, the file shown as file, is not an SVG document, or nil: encoding/xml reads it to
+// its end, and its root, the one element at its top, is svg in the SVG namespace. http.DetectContentType
+// tells SVG only as text or XML.
+// LIMIT: XML is checked as far as encoding/xml checks it, and whether a browser draws it is not (two
+// attributes of one name, text before the root); a browser's check of the pages comes in the CI's PR 4. An
+// entity of a DTD is refused, as encoding/xml does not expand it.
+func svgMistake(b []byte, file string) *usererr.Error {
+	d := xml.NewDecoder(bytes.NewReader(b))
+	d.CharsetReader = charset.NewReaderLabel
+	depth, roots, svg := 0, 0, false
 	for {
-		b = bytes.TrimLeft(b, " \t\r\n")
-		end := ""
-		switch {
-		case bytes.HasPrefix(b, []byte("<?")):
-			end = "?>"
-		case bytes.HasPrefix(b, []byte("<!--")):
-			end = "-->"
-		case bytes.HasPrefix(b, []byte("<!")):
-			end = ">"
-		default:
-			rest, ok := bytes.CutPrefix(b, []byte("<svg"))
-			return ok && len(rest) > 0 && strings.ContainsRune(" \t\r\n/>", rune(rest[0]))
+		t, err := d.Token()
+		if errors.Is(err, io.EOF) {
+			break
 		}
-		i := bytes.Index(b, []byte(end))
-		if i < 0 {
-			return false
+		if err != nil {
+			// LIMIT: encoding/xml's English.
+			if se, ok := errors.AsType[*xml.SyntaxError](err); ok {
+				return usererr.NewAt(file, se.Line, 0, "tmpl_image_svg_xml", se.Msg)
+			}
+			return usererr.NewAt(file, 0, 0, "tmpl_image_svg_xml", err.Error())
 		}
-		b = b[i+len(end):]
+		switch t := t.(type) {
+		case xml.StartElement:
+			if depth == 0 {
+				roots++
+				svg = t.Name == xml.Name{Space: svgNamespace, Local: "svg"}
+			}
+			depth++
+		case xml.EndElement:
+			depth--
+		}
 	}
+	if roots != 1 || !svg {
+		return usererr.NewAt(file, 0, 0, "tmpl_image_svg_root")
+	}
+	return nil
 }
+
+// svgNamespace is the namespace of SVG's elements.
+const svgNamespace = "http://www.w3.org/2000/svg"
 
 // asset returns the file name under the assets/ of t as a data URI, for page.html to show.
 func (t *Template) asset(name string) (template.URL, error) {
