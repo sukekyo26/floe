@@ -303,6 +303,7 @@ var messagesEN = map[string]string{
 	"tmpl_html_doctype":             "page.html does not start with <!doctype html>, without which a browser reads the page in quirks mode, where floe does not check an item of format html: write it first",
 	"tmpl_html_base":                "HTML holds a <base> or a <meta>, which would point the page's links elsewhere, move the page away or change its policy: leave them out",
 	"tmpl_html_head":                "HTML holds a </head>: floe puts the page's styles before page.html's, which the data's would stand in for",
+	"tmpl_html_part":                "HTML names the part %s, which there is none of, wherever page.html puts it; use %s",
 	"tmpl_html_style":               "HTML holds a <style> or a <link>: floe puts a page's CSS together, so style the HTML with style attributes",
 	"tmpl_checks_yaml":              "write checks.yaml as a list of checks, each with expr and message (and for and field if you like)",
 	"tmpl_checks_key":               "%s is not a key of a check; use for, field, expr and message",

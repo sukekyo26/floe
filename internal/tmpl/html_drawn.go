@@ -134,7 +134,7 @@ func (d *Data) checkDrawnHTML(set *partSet, page *template.Template, title strin
 			continue
 		}
 		atItem := func(bad *usererr.Error) *usererr.Error { return itemError(d.File, it.pos, it.path, bad) }
-		found = append(found, set.placedMisnamings(drawnNames(nodes, it.text), d.File, it.pos, atItem)...)
+		found = append(found, set.placedMisnamings(drawnNames(nodes, it.text), d.File, it.pos, "tmpl_html_part", atItem)...)
 		if formIn && leavesForm(it.text) || shaped && !slices.Equal(treeShape(doc), want) {
 			// The items after it are compared with a page it changed: it is the one told.
 			found = append(found, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page")))
@@ -202,7 +202,7 @@ func (d *Data) withStyles(set *partSet, page *template.Template, title string, o
 	}
 	named := drawnNames([]*html.Node{doc}, string(out))
 	at := func(bad *usererr.Error) *usererr.Error { return yamlpos.Place(d.File, d.templateAt, bad) }
-	misnamed := set.placedMisnamings(named, d.File, d.templateAt, at)
+	misnamed := set.placedMisnamings(named, d.File, d.templateAt, "tmpl_drawn_part", at)
 	if err := usererr.Collect(head, style, misnamed.Err()); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes of the page drawn
 	}

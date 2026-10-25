@@ -36,12 +36,18 @@ func TestDrawnReaderItems(t *testing.T) {
 		`<p>x</p><div data-floe-part="note table"`:                     "data.yaml:3:8: risks: HTML changes the page around it",
 		`<div data-floe-part="note&#32;table"><p>x</p></div>`:          `data.yaml:3:8: risks: the page has data-floe-part="note table", which is not the name of one part`,
 		`<noscript><div data-floe-part="note table"></div></noscript>`: "",
-		`<div data-floe-part="nope"><p>x</p></div>`:                    "data.yaml:3:8: risks: the page drawn from this file names the part nope",
+		`<div data-floe-part="nope"><p>x</p></div>`:                    "data.yaml:3:8: risks: HTML names the part nope",
 	} {
 		_, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n")
 		if want == "" && err != nil || want != "" && (err == nil || !strings.HasPrefix(err.Error(), want)) {
 			t.Errorf("%q = %v, want %q", item, err, want)
 		}
+	}
+	// A name of no part an item gives is the data's mistake, read in its text, whether page.html draws the item
+	// or not.
+	if _, err := draw(l, "template: memo\nlang: en\nrisks: x\naside: "+yamlText(`<i data-floe-part="nope">x</i>`)+"\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:4:8: aside: HTML names the part nope") {
+		t.Errorf("a name of no part of an item not drawn = %v, want it told at the item", err)
 	}
 	page, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(`<div data-floe-part="&#110;ote"><p>x</p></div>`)+"\n")
 	if err != nil || !strings.Contains(page, `@scope ([data-floe-part="note"])`) {
@@ -301,7 +307,7 @@ func TestDrawnPageOfPartsAndDiagrams(t *testing.T) {
 	})
 	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/note.json"}, "aside": {"type": "string"}`), parts, "", "")
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: { kind: nope }\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), "data.yaml:3:10: risks: the page drawn from this file names the part nope") {
+		!strings.HasPrefix(err.Error(), "data.yaml:3:10: risks: HTML names the part nope") {
 		t.Errorf("a name of no part a part draws = %v, want it at the part's item", err)
 	}
 	raw := "template: report\nlang: en\ntitle: r\nsections:\n  - heading: h\n    parts:\n      - diagram:\n" +

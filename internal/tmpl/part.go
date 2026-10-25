@@ -879,18 +879,18 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node) erro
 func (set *partSet) drawnMisnamings(
 	html, file string, pos yamlpos.Pos, other func(*usererr.Error) *usererr.Error,
 ) usererr.List {
-	return set.placedMisnamings(itemNames(html), file, pos, other)
+	return set.placedMisnamings(itemNames(html), file, pos, "tmpl_html_part", other)
 }
 
 // placedMisnamings returns the mistakes of named, the names an item of the data file file written at pos
 // gives, or the page drawn of it, that the page would be refused for: each part that cannot be used there,
 // the first time with why, as a theme it picks that cannot be used, and each other one as other words it,
-// left out for nil.
+// left out for nil; a part there is none of with the message key unknown.
 func (set *partSet) placedMisnamings(
-	named []namedPart, file string, pos yamlpos.Pos, other func(*usererr.Error) *usererr.Error,
+	named []namedPart, file string, pos yamlpos.Pos, unknown string, other func(*usererr.Error) *usererr.Error,
 ) usererr.List {
 	var found usererr.List
-	for _, m := range set.misnamings(named) {
+	for _, m := range set.misnamings(named, unknown) {
 		switch {
 		case m.kind == nameBroken:
 			found = append(found, yamlpos.Place(file, pos, m.err))
@@ -1015,8 +1015,8 @@ type misnaming struct {
 
 // misnamings returns the names of named, in order, that the page is refused for: a part that cannot be
 // used, a data-floe-part not of one part's name, one that names a look alone, which has no box, or a part
-// there is none of. The elements would be left without their style.
-func (set *partSet) misnamings(named []namedPart) []misnaming {
+// there is none of, whose mistake is the message key unknown. The elements would be left without their style.
+func (set *partSet) misnamings(named []namedPart, unknown string) []misnaming {
 	var found []misnaming
 	for _, n := range named {
 		switch kind := set.misnamed(n); kind {
@@ -1027,7 +1027,7 @@ func (set *partSet) misnamings(named []namedPart) []misnaming {
 		case nameLookBox:
 			found = append(found, misnaming{kind: kind, err: usererr.New("tmpl_page_look_box", n.name)})
 		case nameUnknown:
-			found = append(found, misnaming{kind: kind, err: usererr.New("tmpl_drawn_part", n.name, set.candidates(n.look))})
+			found = append(found, misnaming{kind: kind, err: usererr.New(unknown, n.name, set.candidates(n.look))})
 		case nameRight:
 		}
 	}

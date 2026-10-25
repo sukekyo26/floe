@@ -301,6 +301,7 @@ var messagesJA = map[string]string{
 	"tmpl_html_doctype":             "page.html が <!doctype html> で始まっていません。無いとブラウザはページを互換モードで読み、floe は \"format\": \"html\" の項目を確かめられません。最初に書いてください",
 	"tmpl_html_base":                "HTML に <base> か <meta> があります。ページのリンク先を外へ向けたり、ページを移したり、ページの決まりを変えたりするので、書かないでください",
 	"tmpl_html_head":                "HTML に </head> があります。floe はページのスタイルを page.html の </head> の前に入れるので、データの </head> がその代わりになってしまいます",
+	"tmpl_html_part":                "HTML が無い部品 %s を名乗っています（page.html がどこに置いても）。%s のどれかを書いてください",
 	"tmpl_html_style":               "HTML に <style> か <link> があります。ページの CSS は floe が組み立てるので、HTML には style 属性で見た目を付けてください",
 	"tmpl_checks_yaml":              "checks.yaml は検査のリストとして書き、各検査に expr・message（任意で for・field）を書いてください",
 	"tmpl_checks_key":               "%s は検査のキーではありません。for・field・expr・message を使ってください",
