@@ -23,7 +23,8 @@ var update = flag.Bool("update", false, "write the golden files of each sample a
 // files (those floe takes, .yaml and .yml) are checked together and rendered one at a time and together;
 // templates/, parts/, themes/ and icons/ are its own, and templates/ is checked by floe template check,
 // parts/ and themes/ by floe part check; the specs in diagrams/ are drawn by floe diagram render. The
-// samples in testdata/mistakes are each the least input of a mistake floe once told wrongly, and run alike.
+// samples in testdata/mistakes are each the least input of a mistake floe once told wrongly, and run alike;
+// render-same-page there shows floe refusing two data files that write one page, kept there as it has no page.
 func TestCorpus(t *testing.T) {
 	t.Parallel()
 
