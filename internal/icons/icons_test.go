@@ -3,7 +3,6 @@ package icons_test
 import (
 	"archive/zip"
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +20,8 @@ import (
 )
 
 // packageFiles stand in for the Icon package: what is kept, a service in two categories, sizes and
-// folders that are not kept, a resource with only a dark variant, and macOS's resource forks.
+// folders that are not kept, a resource with only a dark variant, one whose dark variant comes first, and
+// macOS's resource forks.
 var packageFiles = []string{
 	"Architecture-Service-Icons_01022030/Arch_Artificial-Intelligence/48/Arch_Amazon-Bedrock_48.svg",
 	"Architecture-Service-Icons_01022030/Arch_Compute/48/Arch_AWS-Lambda_48.svg",
@@ -33,6 +33,8 @@ var packageFiles = []string{
 	"Resource-Icons_01022030/Res_General-Icons/Res_48_Light/Res_Client_48_Light.svg",
 	"Resource-Icons_01022030/Res_General-Icons/Res_48_Dark/Res_Client_48_Dark.svg",
 	"Resource-Icons_01022030/Res_General-Icons/Res_48_Dark/Res_Night_48_Dark.svg",
+	"Resource-Icons_01022030/Res_General-Icons/Res_48_Dark/Res_Server_48_Dark.svg",
+	"Resource-Icons_01022030/Res_General-Icons/Res_48_Light/Res_Server_48_Light.svg",
 	"Resource-Icons_01022030/Res_Compute/Res_AWS-Lambda_Lambda-Function_48.svg",
 	"Category-Icons_01022030/Arch-Category_Compute_48.svg",
 	"__MACOSX/Architecture-Service-Icons_01022030/Arch_Compute/48/._Arch_AWS-Lambda_48.svg",
@@ -95,15 +97,15 @@ func TestFetchAndSearch(t *testing.T) {
 
 	zipFile := writeZip(t, "Icon-package.zip", packageFiles)
 	got := fetch(t, set, zipFile, false)
-	if want := (icons.Fetched{Title: "AWS", Dir: dir, Version: "01022030", Count: 7, Already: false}); got != want {
+	if want := (icons.Fetched{Title: "AWS", Dir: dir, Version: "01022030", Count: 8, Already: false}); got != want {
 		t.Errorf("Fetch = %+v, want %+v", got, want)
 	}
 	// The same version again is kept, unless forced.
 	if got := fetch(t, set, zipFile, false); !got.Already || got.Version != "01022030" {
 		t.Errorf("Fetch of the same version = %+v, want it already there", got)
 	}
-	if got := fetch(t, set, zipFile, true); got.Already || got.Count != 7 {
-		t.Errorf("Fetch --force = %+v, want 7 fetched", got)
+	if got := fetch(t, set, zipFile, true); got.Already || got.Count != 8 {
+		t.Errorf("Fetch --force = %+v, want 8 fetched", got)
 	}
 
 	hits, err := set.Search([]string{"LAMBDA"})
@@ -126,31 +128,25 @@ func TestFetchAndSearch(t *testing.T) {
 		t.Errorf("Search without a hit = %v, want %s", err, want)
 	}
 
-	// A service in two categories keeps the first; dark variants are kept, and a dark variant alone
-	// is the icon's usual one.
-	b, err := os.ReadFile(filepath.Join(dir, "aws-lambda.svg"))
-	if err != nil || !strings.Contains(string(b), "Arch_Compute/48") {
-		t.Errorf("aws-lambda.svg = %s, %v, want the one of Compute", b, err)
+	// A service in two categories keeps the first; an icon keeps its light variant, wherever its dark one
+	// comes, and a dark variant alone is the icon.
+	for name, want := range map[string]string{
+		"aws-lambda": "Arch_Compute/48", "res/client": "Res_Client_48_Light", "res/server": "Res_Server_48_Light",
+		"group/aws-cloud-logo": "AWS-Cloud-logo_32.svg", "res/night": "Res_Night_48_Dark",
+	} {
+		b, rerr := os.ReadFile(filepath.Join(dir, name+".svg"))
+		if rerr != nil || !strings.Contains(string(b), want) {
+			t.Errorf("%s.svg = %s, %v, want the one of %s", name, b, rerr, want)
+		}
 	}
-	var idx struct {
-		Icons map[string]struct {
-			Dark bool `json:"dark"`
-		} `json:"icons"`
-	}
-	b, err = os.ReadFile(filepath.Join(dir, "index.json"))
-	if err != nil || json.Unmarshal(b, &idx) != nil {
-		t.Fatalf("index.json = %s, %v", b, err)
-	}
-	dark := map[string]bool{}
-	for _, name := range []string{"res/client", "group/aws-cloud-logo", "group/region", "res/night"} {
-		dark[name] = idx.Icons[name].Dark
-	}
-	if want := map[string]bool{"res/client": true, "group/aws-cloud-logo": true, "group/region": false, "res/night": false}; !reflect.DeepEqual(dark, want) {
-		t.Errorf("dark variants = %v, want %v", dark, want)
+	for _, pattern := range []string{"*.dark.svg", "*/*.dark.svg"} {
+		if darks, gerr := filepath.Glob(filepath.Join(dir, pattern)); gerr != nil || darks != nil {
+			t.Errorf("dark variants kept: %v, %v", darks, gerr)
+		}
 	}
 	icon, _, err := set.Lookup("aws/res/night")
-	if err != nil || icon == nil || icon.Dark != "" || !strings.HasPrefix(icon.Light, "data:image/svg+xml;base64,") {
-		t.Errorf("Lookup of a dark variant alone = %+v, %v", icon, err)
+	if err != nil || !strings.HasPrefix(icon, "data:image/svg+xml;base64,") {
+		t.Errorf("Lookup of a dark variant alone = %q, %v", icon, err)
 	}
 	// Nothing is left beside the icons.
 	if entries, err := os.ReadDir(root); err != nil || len(entries) != 1 {
@@ -165,13 +161,13 @@ func TestLookup(t *testing.T) {
 	set := icons.New(root)
 	fetch(t, set, writeZip(t, "Icon-package.zip", packageFiles), false)
 	icon, names, err := set.Lookup("aws/res/client")
-	if err != nil || icon == nil || names != nil || icon.Light == "" || icon.Dark == "" || icon.Light == icon.Dark {
-		t.Errorf("Lookup res/client = %+v, %v, %v; want both variants", icon, names, err)
+	if err != nil || names != nil || !strings.HasPrefix(icon, "data:image/svg+xml;base64,") {
+		t.Errorf("Lookup res/client = %q, %v, %v; want its icon", icon, names, err)
 	}
 	// An unknown name gets the names sharing the most words, shortest first.
 	icon, names, err = set.Lookup("aws/Lambda_Function")
-	if want := []string{"aws/res/aws-lambda-lambda-function", "aws/aws-lambda"}; err != nil || icon != nil || !reflect.DeepEqual(names, want) {
-		t.Errorf("Lookup lambda-function = %+v, %v, %v; want %v", icon, names, err, want)
+	if want := []string{"aws/res/aws-lambda-lambda-function", "aws/aws-lambda"}; err != nil || icon != "" || !reflect.DeepEqual(names, want) {
+		t.Errorf("Lookup lambda-function = %q, %v, %v; want %v", icon, names, err, want)
 	}
 	// A misspelt word still finds the name.
 	if _, names, err := set.Lookup("aws/lamda"); err != nil || len(names) == 0 || names[0] != "aws/aws-lambda" {
@@ -181,14 +177,14 @@ func TestLookup(t *testing.T) {
 	if _, names, err := set.Lookup("aws/amazn-lambda"); err != nil || len(names) != 2 || names[0] != "aws/aws-lambda" {
 		t.Errorf("Lookup aws/amazn-lambda = %v, %v; want the two lambdas, aws/aws-lambda first", names, err)
 	}
-	if icon, names, err := set.Lookup("aws/amazon-ec2"); err != nil || icon != nil || len(names) != 0 {
+	if icon, names, err := set.Lookup("aws/amazon-ec2"); err != nil || icon != "" || len(names) != 0 {
 		t.Errorf("Lookup amazon-ec2 = %+v, %v, %v; want no close names", icon, names, err)
 	}
 	// The index is read once: a lookup after it is gone still finds the icon.
 	if err := os.Remove(filepath.Join(root, "aws", "index.json")); err != nil {
 		t.Fatal(err)
 	}
-	if icon, _, err := set.Lookup("aws/aws-lambda"); err != nil || icon == nil {
+	if icon, _, err := set.Lookup("aws/aws-lambda"); err != nil || icon == "" {
 		t.Errorf("Lookup after the index is gone = %+v, %v; want the icon", icon, err)
 	}
 	// A name needs a known set in front.
@@ -220,7 +216,7 @@ func TestFetchFromURL(t *testing.T) {
 	root := t.TempDir()
 	set := icons.New(root)
 	url := srv.URL + "/x/Icon-package_01022030.abc.zip"
-	if got := fetch(t, set, url, false); got.Count != 7 {
+	if got := fetch(t, set, url, false); got.Count != 8 {
 		t.Errorf("Fetch from a URL = %+v", got)
 	}
 	// The version in the URL is already there, so it is not downloaded again.
@@ -269,7 +265,7 @@ func TestFetchRefusals(t *testing.T) {
 	if _, err := set.Search([]string{"lambda"}); err == nil || !strings.Contains(err.Error(), `run "floe icons fetch aws --force"`) {
 		t.Errorf("Search with a broken index = %v", err)
 	}
-	if got := fetch(t, set, writeZip(t, "Icon-package.zip", packageFiles), false); got.Count != 7 {
+	if got := fetch(t, set, writeZip(t, "Icon-package.zip", packageFiles), false); got.Count != 8 {
 		t.Errorf("Fetch over a broken index = %+v", got)
 	}
 

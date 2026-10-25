@@ -11,8 +11,6 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
-
-	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // palette are the CSS variables default's palette defines, which the parts, diagrams, floe's base and
@@ -50,6 +48,13 @@ func TestPalette(t *testing.T) {
 		}
 		taken["the theme "+name] = css
 	}
+	// The page's colours are its theme's alone: floe's own files take no part of the OS's dark mode.
+	for who, css := range taken {
+		if strings.Contains(css, "prefers-color-scheme") {
+			t.Errorf("%s holds prefers-color-scheme", who)
+		}
+	}
+	usedVariable := regexp.MustCompile(`var\(\s*(--[\w-]+)`)
 	for who, css := range taken {
 		own := definedIn(css)
 		for _, m := range usedVariable.FindAllStringSubmatch(css, -1) {
@@ -89,21 +94,21 @@ func TestPalette(t *testing.T) {
 		if w := colourWarnings(name, readCSS(src), true); w != nil {
 			t.Errorf("%s writes colours: %v", name, w)
 		}
+		if strings.Contains(string(src), "prefers-color-scheme") {
+			t.Errorf("%s holds prefers-color-scheme", name)
+		}
 	}
 	// A diagram drawn into a page without the palette, by floe diagram render, takes default's light colours
 	// (and faces of its own, for a page of any language).
-	c, err := readPalette("palette.css", readCSS([]byte(under)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	modes, err := floeModes()
-	if err != nil {
-		t.Fatal(err)
+	light := map[string]string{}
+	for _, r := range readCSS([]byte(under)).rules {
+		for _, d := range r.decls {
+			light[d.name] = d.value
+		}
 	}
 	for _, m := range regexp.MustCompile(`var\(\s*(--[\w-]+)\s*,\s*([^)]*)\)`).FindAllStringSubmatch(set.parts["diagram"].css, -1) {
-		if _, colour := modes[m[1]]; colour && c.light[m[1]] != strings.TrimSpace(m[2]) {
-			want := c.light[m[1]]
-			t.Errorf("a diagram takes %s with %s; default's palette has %s", m[1], m[2], want)
+		if value := strings.TrimSpace(m[2]); colourIn(value, true) != "" && light[m[1]] != value {
+			t.Errorf("a diagram takes %s with %s; default's palette has %s", m[1], value, light[m[1]])
 		}
 	}
 	// The boxes of floe's parts take their looks from part.yaml: the panel, through the table for risks.
@@ -115,64 +120,41 @@ func TestPalette(t *testing.T) {
 	}
 }
 
-// palette.css holds the palette's variables alone, set on :root and then for dark mode, without
-// !important; a colour set for light mode alone is warned of.
+// palette.css holds the palette's variables alone, set on :root, without !important.
 func TestCheckPalette(t *testing.T) {
 	t.Parallel()
 
-	modes, err := floeModes()
-	if err != nil {
-		t.Fatal(err)
-	}
-	dark := "\n@media (prefers-color-scheme: dark) { :root { --bg: #000; --page-bg: none; color-scheme: dark; } }"
-	// A palette always dark sets every colour default's turns dark, on :root alone; one that sets them
-	// all for dark mode too but --bg leaves that one light among dark ones.
-	var always, allButBg strings.Builder
-	for _, name := range slices.Sorted(maps.Keys(modes)) {
-		if modes[name] {
-			always.WriteString(name + ": black; ")
-			if name != "--bg" {
-				allButBg.WriteString(name + ": black; ")
-			}
-		}
-	}
 	for css, want := range map[string]string{
-		":root { " + always.String() + "}": "",
-		":root { " + always.String() + "}\n@media (prefers-color-scheme: dark) { :root { " + allButBg.String() + "} }": "p.css: palette.css sets --bg for light mode alone",
-		":root { --bg: light-dark(#fff, #000); --fg: light-dark(#000, #fff); }":                                        "",
-		":root { --bg: #fff; }" + dark: "",
-		":root { --bg: #fff; --page-bg: url(data:image/svg+xml;base64,PHN2Zz4=) repeat; }" + dark:                "",
-		":root { --bg: #fff; --page-bg: url(data:image/svg+xml,<svg><style>p{fill:red}</style></svg>); }" + dark: "",
-		":root { --radius: 4px; --text-width: 60rem; color-scheme: light dark; }":                                "",
-		":root { color-scheme: light; }": "p.css: palette.css sets color-scheme for light mode alone",
-		":root { --bg: #fff; --font: \"a;b\", serif; color-scheme: light; } /* body { } */" + dark: "",
-		"@media (prefers-color-scheme: dark) { :root { --bg: #000; } }\n:root { --bg: #fff; }":     "p.css:2: write this :root before",
-		":root {\n  --bg: #fff !important;\n}":                                                     "p.css:2: palette.css takes no !important",
-		":root { --bg: #fff; }\nbody { margin: 0; }":                                               "p.css:2: palette.css holds only",
+		":root { --bg: light-dark(#fff, #000); --fg: light-dark(#000, #fff); }":                           "",
+		":root { --bg: #fff; --page-bg: url(data:image/svg+xml;base64,PHN2Zz4=) repeat; }":                "",
+		":root { --bg: #fff; --page-bg: url(data:image/svg+xml,<svg><style>p{fill:red}</style></svg>); }": "",
+		":root { --radius: 4px; --text-width: 60rem; color-scheme: light dark; }":                         "",
+		":root { color-scheme: light; }": "",
+		":root { --bg: #fff; --font: \"a;b\", serif; color-scheme: light; } /* body { } */":    "",
+		":root { --bg: #fff; }\n@media (prefers-color-scheme: dark) { :root { --bg: #000; } }": "p.css:2: palette.css holds only",
+		"@media (prefers-color-scheme: dark) { :root { --bg: #000; } }\n:root { --bg: #fff; }": "p.css:1: palette.css holds only",
+		":root {\n  --bg: #fff !important;\n}":                                                 "p.css:2: palette.css takes no !important",
+		":root { --bg: #fff; }\nbody { margin: 0; }":                                           "p.css:2: palette.css holds only",
 		"--bg: #fff;": "p.css:1: palette.css holds only",
-		"@media (prefers-color-scheme: dark) {\n  --bg: #000;\n}": "p.css:2: palette.css holds only",
+		"@media (prefers-color-scheme: dark) {\n  --bg: #000;\n}": "p.css:1: palette.css holds only",
 		":root {\n  .x { color: red; }\n}":                        "p.css:2: palette.css holds only",
 		":root { color: red; }":                                   "p.css:1: palette.css holds only",
 		"@media print { :root { --bg: #fff; } }":                  "p.css:1: palette.css holds only",
-		":root { --bg: #fff; --code-bg: #222; --font: serif; --page-bg: var(--bg); --code-fg: #eee; }": "p.css: palette.css sets --bg, --code-bg for light mode alone",
+		":root { --bg: #fff; --code-bg: #222; --font: serif; --page-bg: var(--bg); --code-fg: #eee; }": "",
 		":root { --a: url(x(y); } } body { background: red }":                                          "p.css:1: this } closes no block",
 		":root { Color-Scheme: light dark; --l: \"!important\"; --x: {a:b}; }":                         "",
-		":root { --x: {a:b}; --bg: #fff; }":                                                            "p.css: palette.css sets --bg for light mode alone",
+		":root { --x: {a:b}; --bg: #fff; }":                                                            "",
 		":root { --a: f(]; color: red); }":                                                             "",
 		"\n{ --x: 1; }\n\n":                                                                            "p.css:2: palette.css holds only",
 	} {
 		s := readCSS([]byte(css))
 		err := s.refuse("p.css")
-		var warnings []*usererr.Error
 		if err == nil {
-			warnings, err = checkPalette("p.css", s, nil)
+			err = checkPalette("p.css", s)
 		}
 		got := ""
-		switch {
-		case err != nil:
+		if err != nil {
 			got = err.Error()
-		case warnings != nil:
-			got = warnings[0].Error()
 		}
 		if want == "" && got != "" || !strings.HasPrefix(got, want) {
 			t.Errorf("checkPalette(%q) = %q, want %q", css, got, want)

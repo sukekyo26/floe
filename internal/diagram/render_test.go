@@ -68,12 +68,12 @@ func TestRenderIconDefs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Two corner icons (one with a dark variant), the client twice (with one), and Bedrock at two sizes.
-	if defs, uses := strings.Count(got, "<image "), strings.Count(got, "<use "); defs != 7 || uses != 9 {
-		t.Errorf("Render defines %d icons and places %d, want 7 and 9", defs, uses)
+	// Two corner icons, the client twice, and Bedrock at two sizes.
+	if defs, uses := strings.Count(got, "<image "), strings.Count(got, "<use "); defs != 5 || uses != 6 {
+		t.Errorf("Render defines %d icons and places %d, want 5 and 6", defs, uses)
 	}
-	if uses := regexp.MustCompile(`<use href="#ic_icon-[0-9a-f]{12}"`).FindAllString(got, -1); len(slices.Compact(slices.Sorted(slices.Values(uses)))) != 7 {
-		t.Errorf("Render places %v, want 7 icons", uses)
+	if uses := regexp.MustCompile(`<use href="#ic_icon-[0-9a-f]{12}"`).FindAllString(got, -1); len(slices.Compact(slices.Sorted(slices.Values(uses)))) != 5 {
+		t.Errorf("Render places %v, want 5 icons", uses)
 	}
 
 	// The ids come from the images, so diagrams of one id rendered apart do not take each other's icons.

@@ -284,8 +284,7 @@ var mistakes = template.Must(template.New("mistakes").Parse(`<!doctype html>
 <html lang="{{.Lang}}">
 <head><meta charset="utf-8"><title>{{.Slug}}</title>
 <style>
-:root { color-scheme: light dark; --fg: #1f2328; --bg: #fff; --bad: #b42318; }
-@media (prefers-color-scheme: dark) { :root { --fg: #e6edf3; --bg: #0d1117; --bad: #ff7b72; } }
+:root { --fg: #1f2328; --bg: #fff; --bad: #b42318; }
 body { margin: 2rem; font: 15px/1.6 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
 h1 { font-size: 1.25rem; color: var(--bad); }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.6 ui-monospace, monospace; }

@@ -29,8 +29,8 @@ func (a *app) iconsFetchCmd() *cobra.Command {
 		Short:       "Keep an icon set from its official package for icon parts",
 		Long: `Keep an icon set in $FLOE_ICONS_DIR/<set> for the icon parts of diagrams. The sets:
 
-  aws  the AWS Architecture Icons (48px services and resources, 32px groups, with their
-       variants for dark backgrounds); the Icon package zip is about 14MB
+  aws  the AWS Architecture Icons (48px services and resources, 32px groups); the Icon
+       package zip is about 14MB
 
 Without a zip, the package is found on the set's official page; a downloaded zip or its
 URL can be given instead.

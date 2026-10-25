@@ -191,7 +191,7 @@ func (l *layout) addIcon(i Icon) {
 	}
 }
 
-// image places the icon of name (aws/…), two with a variant for dark backgrounds. An icon is an
+// image places the icon of name (aws/…). An icon is an
 // <image>, not inline <svg>: the official icons' ids collide between icons. An icon not there is a mistake
 // of the spec; icons not fetched or not read are a mistake of no place, and a failure that is no mistake
 // stops the drawing.
@@ -207,7 +207,7 @@ func (l *layout) image(at yamlpos.Pos, name string, x, y, size float64, what *us
 		}
 		return ""
 	}
-	if icon == nil {
+	if icon == "" {
 		if len(names) == 0 {
 			l.problem(at, "diagram_icon_unknown", what, name)
 		} else {
@@ -215,15 +215,11 @@ func (l *layout) image(at yamlpos.Pos, name string, x, y, size float64, what *us
 		}
 		return ""
 	}
-	if icon.Dark == "" {
-		return svgf(`<use href="#%v" x="%v" y="%v"/>`, l.iconDef(name, icon.Light, size), x, y)
-	}
-	return svgf(`<use href="#%v" x="%v" y="%v" class="icon-light"/>`, l.iconDef(name, icon.Light, size), x, y) +
-		svgf(`<use href="#%v" x="%v" y="%v" class="icon-dark"/>`, l.iconDef(name+" dark", icon.Dark, size), x, y)
+	return svgf(`<use href="#%v" x="%v" y="%v"/>`, l.iconDef(name, icon, size), x, y)
 }
 
 // iconDef returns the id of the <image> of href at size in <defs>, defining it on first use. It is
-// found again by name (with " dark" for the dark variant) and size, which are short; the id joins the
+// found again by name and size, which are short; the id joins the
 // diagram's id and a hash of the image, so that diagrams of one id rendered apart and pasted into
 // one page still find their own icons.
 func (l *layout) iconDef(name, href string, size float64) string {

@@ -2,8 +2,9 @@ package icons
 
 import "regexp"
 
-// aws is the AWS Architecture Icons: 48px services and resources and 32px groups, with their variants
-// for dark backgrounds. The package's URL holds its date and a hash and changes every quarter.
+// aws is the AWS Architecture Icons: 48px services and resources and 32px groups, and a variant for
+// dark backgrounds of an icon without a light one. The package's URL holds its date and a hash and
+// changes every quarter.
 var aws = kit{
 	name:    "aws",
 	title:   "AWS",

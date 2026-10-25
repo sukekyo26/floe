@@ -6,11 +6,3 @@
   --code-bg: #141414; --code-fg: #ececec; --code-prompt: #9fb4e6;
   --rule: 2px solid var(--fg);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #121212; --surface: #1b1b1b; --fg: #ececec; --muted: #a3a3a3; --line: #333;
-    --accent: #9fb4e6; --accent-soft: #1f2638;
-    --good: #7fcf9f; --good-soft: #173126; --warn: #e2b46e; --warn-soft: #392b18; --bad: #f2a09b; --bad-soft: #3b1f1d;
-    --code-bg: #0a0a0a;
-  }
-}
