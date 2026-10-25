@@ -1,0 +1,5 @@
+template: t
+lang: en
+title: t
+prs: [{ open: true }]
+rows: [{ id: a, rate: { per_sec: 1 } }]

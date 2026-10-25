@@ -1,0 +1,6 @@
+template: t
+lang: en
+title: t
+prs: [{ open: true }]
+rows:
+  - id: a

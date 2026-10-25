@@ -1,0 +1,12 @@
+id: c
+width: 200
+height: 100
+title: t
+parts:
+  - box:
+      x: 10
+      y: 10
+      w: 100
+      h: 40
+      rows:
+        - 例: ja と en

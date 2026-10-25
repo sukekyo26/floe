@@ -1,0 +1,20 @@
+$ floe check checks.yaml computed.yaml
+exit 1
+--- stderr
+$SAMPLE/templates/t/checks.yaml:2:9: rows[0] of checks.yaml cannot be checked, as checks.yaml gives no value for rows[0].rate that the expression uses; write the expression to do without one, giving the value for when it is left out with ?? (x ?? []) and reading into it with ?. (x?.y), or give it a value in checks.yaml
+$SAMPLE/templates/t/computed.yaml:1:7: open cannot be computed from computed.yaml, which gives no value for prs that it uses; write the expression to do without one, giving the value for when it is left out with ?? (x ?? []) and reading into it with ?. (x?.y), or give it a value in computed.yaml
+$ floe render --out-dir $TMP/pages/checks.yaml checks.yaml
+exit 1
+--- stderr
+$SAMPLE/templates/t/checks.yaml:2:9: rows[0] of checks.yaml cannot be checked, as checks.yaml gives no value for rows[0].rate that the expression uses; write the expression to do without one, giving the value for when it is left out with ?? (x ?? []) and reading into it with ?. (x?.y), or give it a value in checks.yaml
+$ floe render --out-dir $TMP/pages/computed.yaml computed.yaml
+exit 1
+--- stderr
+$SAMPLE/templates/t/computed.yaml:1:7: open cannot be computed from computed.yaml, which gives no value for prs that it uses; write the expression to do without one, giving the value for when it is left out with ?? (x ?? []) and reading into it with ?. (x?.y), or give it a value in computed.yaml
+$ floe render --out-dir $TMP/together checks.yaml computed.yaml
+exit 1
+--- stderr
+$SAMPLE/templates/t/checks.yaml:2:9: rows[0] of checks.yaml cannot be checked, as checks.yaml gives no value for rows[0].rate that the expression uses; write the expression to do without one, giving the value for when it is left out with ?? (x ?? []) and reading into it with ?. (x?.y), or give it a value in checks.yaml
+$SAMPLE/templates/t/computed.yaml:1:7: open cannot be computed from computed.yaml, which gives no value for prs that it uses; write the expression to do without one, giving the value for when it is left out with ?? (x ?? []) and reading into it with ?. (x?.y), or give it a value in computed.yaml
+$ floe template check templates/t
+exit 0
