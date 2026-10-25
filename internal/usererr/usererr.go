@@ -19,19 +19,25 @@ type Error struct {
 	Key    string
 	Args   []any
 	File   string
-	Line   int // 0: no line
-	Column int // 0: no column
+	Line   int    // 0: no line
+	Column int    // 0: no column
+	At     string // a JSON pointer in File, "#/…"; "" for none
 }
 
 // New returns an *Error for the catalog message key with args, without a place.
 func New(key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, File: "", Line: 0, Column: 0}
+	return &Error{Key: key, Args: args, File: "", Line: 0, Column: 0, At: ""}
 }
 
 // NewAt returns an *Error for the catalog message key with args, at the line and column of file, 0 for
 // none.
 func NewAt(file string, line, column int, key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, File: file, Line: line, Column: column}
+	return &Error{Key: key, Args: args, File: file, Line: line, Column: column, At: ""}
+}
+
+// NewIn returns an *Error for the catalog message key with args, at at, a JSON pointer, in file.
+func NewIn(file, at, key string, args ...any) *Error {
+	return &Error{Key: key, Args: args, File: file, Line: 0, Column: 0, At: at}
 }
 
 // Library returns the mistake a library told in err, in the library's own words.
@@ -43,6 +49,11 @@ func Library(err error) *Error {
 // it gave, 0 for none.
 func LibraryAt(file string, line, column int, text string) *Error {
 	return NewAt(file, line, column, "library", text)
+}
+
+// LibraryIn returns the mistake a library told in text, in its own words, at at, a JSON pointer, in file.
+func LibraryIn(file, at, text string) *Error {
+	return NewIn(file, at, "library", text)
 }
 
 // Error words the mistake in English, for logs and for callers that do not localize.
@@ -96,8 +107,10 @@ func (l List) Err() error {
 	return l
 }
 
-// Sorted returns l with the mistakes of each file in the order of their lines and columns, the files in
-// the order they first come in l; those without a file come together where the first of them is.
+// Sorted returns l with the mistakes of each file in the order of their lines, columns and JSON pointers,
+// the files in the order they first come in l; those without a file come together where the first of them
+// is. Mistakes at one place are in the order of their keys and arguments, so that the order does not follow
+// how they were found (a library's map order).
 func (l List) Sorted() List {
 	first := map[string]int{}
 	for _, e := range l {
@@ -109,10 +122,8 @@ func (l List) Sorted() List {
 		if d := first[x.File] - first[y.File]; d != 0 {
 			return d
 		}
-		if d := x.Line - y.Line; d != 0 {
-			return d
-		}
-		return x.Column - y.Column
+		return cmp.Or(x.Line-y.Line, x.Column-y.Column, strings.Compare(x.At, y.At), strings.Compare(x.Key, y.Key),
+			strings.Compare(fmt.Sprint(x.Args...), fmt.Sprint(y.Args...)))
 	})
 	return l
 }
@@ -126,6 +137,7 @@ func (l List) Error() string {
 type Told struct {
 	File         string
 	Line, Column int
+	At           string
 	Text         string
 }
 
@@ -149,7 +161,9 @@ func Tell(c *i18n.Catalog, err error) Report {
 	}
 	r := Report{Mistakes: make([]Told, 0, len(all)), Failure: ""}
 	for _, e := range all {
-		r.Mistakes = append(r.Mistakes, Told{File: e.File, Line: e.Line, Column: e.Column, Text: c.Msg(e.Key, e.Args...)})
+		r.Mistakes = append(r.Mistakes, Told{
+			File: e.File, Line: e.Line, Column: e.Column, At: e.At, Text: c.Msg(e.Key, e.Args...),
+		})
 	}
 	return r
 }
@@ -171,15 +185,20 @@ func (r Report) Render(name string) string {
 	return strings.Join(lines, "\n")
 }
 
-// line lays t out after where it is.
+// line lays t out after where it is: file:line:column, or as much of it as it has, then a JSON pointer.
 func (t Told) line() string {
+	var where []string
 	switch {
 	case t.File == "":
-		return t.Text
 	case t.Line == 0:
-		return t.File + ": " + t.Text
+		where = append(where, t.File)
 	case t.Column == 0:
-		return fmt.Sprintf("%s:%d: %s", t.File, t.Line, t.Text)
+		where = append(where, fmt.Sprintf("%s:%d", t.File, t.Line))
+	default:
+		where = append(where, fmt.Sprintf("%s:%d:%d", t.File, t.Line, t.Column))
 	}
-	return fmt.Sprintf("%s:%d:%d: %s", t.File, t.Line, t.Column, t.Text)
+	if t.At != "" {
+		where = append(where, t.At)
+	}
+	return strings.Join(append(where, t.Text), ": ")
 }

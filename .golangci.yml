@@ -138,6 +138,7 @@ linters:
         - errors.Join(
         # floe's own mistakes, worded and placed for the reader: wrapping them would change what they say.
         - usererr.LibraryAt(
+        - usererr.NewAt(
         # A sig matches as part of the one reported, func (github.com/…/usererr.List).Err(): no "(" before.
         - usererr.List).Err(
     sloglint:

@@ -123,3 +123,31 @@ func TestLibrary(t *testing.T) {
 		t.Errorf("Library of a failure = %v", got)
 	}
 }
+
+// Find follows keys and indexes to a value and its key, the - of an entry of a block sequence, and stops at the
+// last node it reaches.
+func TestFind(t *testing.T) {
+	t.Parallel()
+
+	body, err := yamlpos.Parse("a.yaml", []byte("a:\n  b: 1\n  c:\n    - x\n    -\nd: [y, z]\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		at   []string
+		want yamlpos.Pos
+	}{
+		{nil, yamlpos.Pos{Line: 1, Column: 1}},
+		{[]string{"a", "b"}, yamlpos.Pos{Line: 2, Column: 6}},
+		{[]string{"a", "c", "0"}, yamlpos.Pos{Line: 4, Column: 7}},
+		{[]string{"a", "c", "1"}, yamlpos.Pos{Line: 5, Column: 5}},
+		{[]string{"d", "1"}, yamlpos.Pos{Line: 6, Column: 8}},
+		{[]string{"a", "nope"}, yamlpos.Pos{Line: 2, Column: 3}},
+		{[]string{"d", "9"}, yamlpos.Pos{Line: 6, Column: 4}},
+		{[]string{"d", "x"}, yamlpos.Pos{Line: 6, Column: 4}},
+	} {
+		if got := yamlpos.OfValue(yamlpos.Find(body, tt.at)); got != tt.want {
+			t.Errorf("Find(%v) at %v, want %v", tt.at, got, tt.want)
+		}
+	}
+}

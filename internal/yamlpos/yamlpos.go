@@ -4,6 +4,8 @@ package yamlpos
 
 import (
 	"errors"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/goccy/go-yaml"
@@ -45,6 +47,36 @@ func OfValue(key, value ast.Node) Pos {
 		return Of(key)
 	}
 	return Of(value)
+}
+
+// Find follows at, keys of mappings and indexes of sequences, from root. It returns the key node of the last
+// step (the - of an entry of a block sequence; nil at root or in a flow sequence) and its value node. It
+// stops at the last node it can reach.
+func Find(root ast.Node, at []string) (key, value ast.Node) {
+	value = root
+	for _, step := range at {
+		switch n := value.(type) {
+		case *ast.MappingNode:
+			i := slices.IndexFunc(n.Values, func(v *ast.MappingValueNode) bool { return KeyOf(v).GetToken().Value == step })
+			if i < 0 {
+				return key, value
+			}
+			key, value = KeyOf(n.Values[i]), n.Values[i].Value
+		case *ast.SequenceNode:
+			i, err := strconv.Atoi(step)
+			if err != nil || i < 0 || i >= len(n.Values) {
+				return key, value
+			}
+			key, value = nil, n.Values[i]
+			// goccy/go-yaml gives a flow sequence entries too, without a - to point at.
+			if !n.IsFlowStyle && len(n.Entries) == len(n.Values) {
+				key = n.Entries[i] // its -, where an entry left empty is
+			}
+		default:
+			return key, value
+		}
+	}
+	return key, value
 }
 
 // New returns the mistake worded by the catalog message key with args, at at in file.

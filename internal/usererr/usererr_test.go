@@ -71,6 +71,14 @@ func TestListSorted(t *testing.T) {
 	if want := "b.yaml:2:1 b.yaml:2:5 b.yaml:9:1 a.yaml:3:1"; strings.Join(got, " ") != want {
 		t.Errorf("Sorted = %v, want %s", got, want)
 	}
+	// At one place: by the JSON pointer, then the key, then the arguments, whatever order they come in.
+	same := usererr.List{
+		usererr.LibraryAt("d.yaml", 1, 1, "Zed"), usererr.NewIn("s.json", "#/b", "library", "x"),
+		usererr.LibraryAt("d.yaml", 1, 1, "Bad"), usererr.NewIn("s.json", "#/a", "library", "x"),
+	}
+	if got := same.Sorted().Error(); got != "d.yaml:1:1: Bad\nd.yaml:1:1: Zed\ns.json: #/a: x\ns.json: #/b: x" {
+		t.Errorf("Sorted at one place = %q", got)
+	}
 }
 
 // Tell words a mistake, one at as much of a place as it has, a list of them in the order given, one wrapped in
@@ -89,6 +97,7 @@ func TestTell(t *testing.T) {
 		{"one in a file", usererr.LibraryAt("a.yaml", 0, 0, "no lang"), "a.yaml: no lang", "a.yaml: no lang"},
 		{"one at a line", usererr.LibraryAt("a.css", 3, 0, "no lang"), "a.css:3: no lang", "a.css:3: no lang"},
 		{"one at a column", usererr.LibraryAt("a.yaml", 3, 4, "no lang"), "a.yaml:3:4: no lang", "a.yaml:3:4: no lang"},
+		{"one at a pointer", usererr.LibraryIn("s.json", "#/properties/x", "no lang"), "s.json: #/properties/x: no lang", "s.json: #/properties/x: no lang"},
 		{
 			"a list, in the order given",
 			usererr.List{usererr.LibraryAt("b.yaml", 2, 1, "b"), lang, usererr.LibraryAt("a.yaml", 1, 1, "a")},
