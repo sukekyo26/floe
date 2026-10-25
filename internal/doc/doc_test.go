@@ -1,0 +1,69 @@
+package doc_test
+
+import (
+	"maps"
+	"testing"
+
+	"github.com/sukekyo26/floe/internal/doc"
+	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
+)
+
+const noLang = "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)"
+
+// Read moves the shared keys out of the values, each where it is written: its value, its key when the value is
+// left out, the top of the file when the key is.
+func TestRead(t *testing.T) {
+	t.Parallel()
+
+	d, err := doc.Read("a.yaml", []byte("# head\ntemplate: report\nlang: ja\ntheme:\ntitle: '  Plan  '\nx: 1\n"))
+	if err == nil {
+		t.Fatalf("Read of a theme left empty = %+v, want its mistake", d)
+	}
+	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "); got != "a.yaml:4:1: theme must be text" {
+		t.Errorf("told %q", got)
+	}
+	d, err = doc.Read("a.yaml", []byte("# head\ntemplate: report\nlang: ja\ntitle: '  Plan  '\nx: 1\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Template != "report" || d.Lang != "ja" || d.Theme != "" || d.Title != "Plan" || d.Root == nil {
+		t.Errorf("Read = %+v", d)
+	}
+	if !maps.Equal(d.Values, map[string]any{"x": uint64(1)}) {
+		t.Errorf("Values = %#v", d.Values)
+	}
+	want := map[string]yamlpos.Pos{"template": {Line: 2, Column: 11}, "lang": {Line: 3, Column: 7}, "theme": {Line: 2, Column: 1}, "title": {Line: 4, Column: 8}}
+	if !maps.Equal(d.Where, want) {
+		t.Errorf("Where = %v, want %v", d.Where, want)
+	}
+}
+
+// The mistakes of the shared keys are told together; a mistake of the walk or of reading the values stops
+// before them; an empty file reads as {}, its mistakes at 1:1.
+func TestReadMistakes(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ src, want string }{
+		{"template: report\ntitle: 3\n", "a.yaml:1:1: " + noLang + "\na.yaml:2:8: title must be text"},
+		{"lang: \"\"\n", "a.yaml:1:7: " + noLang},
+		{"lang: \"  \"\n", "a.yaml:1:7: " + noLang},
+		{"lang:\n", "a.yaml:1:1: lang must be text"},
+		{"title: 3\ntheme: 4\nlang: 5\n", "a.yaml:1:8: title must be text\na.yaml:2:8: theme must be text\na.yaml:3:7: lang must be text"},
+		{"", "a.yaml:1:1: " + noLang},
+		{"# just a note\n", "a.yaml:1:1: " + noLang},
+		{"&top\ntitle: 3\n", "a.yaml:1:1: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"},
+		{"- a\n- b\n", "a.yaml:1:1: sequence was used where mapping is expected"},
+		{"~\n", "a.yaml:1:1: null was used where mapping is expected"},
+	} {
+		_, err := doc.Read("a.yaml", []byte(tt.src))
+		got := ""
+		if err != nil {
+			got = usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: ")
+		}
+		if got != tt.want {
+			t.Errorf("Read(%q) told\n%s\nwant\n%s", tt.src, got, tt.want)
+		}
+	}
+}

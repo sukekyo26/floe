@@ -136,6 +136,10 @@ linters:
         - errors.New(
         - errors.Unwrap(
         - errors.Join(
+        # floe's own mistakes, worded and placed for the reader: wrapping them would change what they say.
+        - usererr.LibraryAt(
+        # A sig matches as part of the one reported, func (github.com/…/usererr.List).Err(): no "(" before.
+        - usererr.List).Err(
     sloglint:
       no-mixed-args: true
       kv-only: false
@@ -154,6 +158,12 @@ linters:
       - legacy
       - std-error-handling
     rules:
+      # Catalogs hold long literal messages, and the en/ja maps share one key set by design (parity
+      # is enforced by i18n's tests), which dupl would otherwise flag.
+      - path: internal/i18n/messages_.*\.go
+        linters:
+          - lll
+          - dupl
       # Tests get a relaxed profile but still benefit from bug catchers.
       - path: _test\.go
         linters:

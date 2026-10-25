@@ -3,6 +3,7 @@ package usererr_test
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -17,8 +18,64 @@ func TestError(t *testing.T) {
 	}
 }
 
-// Tell words a mistake, one wrapped in another error, and floe's failure; Render lays them out to the letter
-// as the command line and the browser show them, floe's name before each.
+// A List takes mistakes and Lists, leaves out a nil *Error, and returns a failure; of none it is no error.
+func TestListAdd(t *testing.T) {
+	t.Parallel()
+
+	var none *usererr.Error
+	var l usererr.List
+	failure := errors.New("disk on fire")
+	for _, err := range []error{nil, none, usererr.LibraryAt("", 0, 0, "no lang"), usererr.List{none, usererr.LibraryAt("a.yaml", 2, 3, "no lang")}} {
+		if got := l.Add(err); got != nil {
+			t.Errorf("Add(%v) = %v", err, got)
+		}
+	}
+	if got := l.Add(failure); !errors.Is(got, failure) {
+		t.Errorf("Add of a failure = %v", got)
+	}
+	if len(l) != 2 {
+		t.Fatalf("the list = %v", l)
+	}
+	if err := (usererr.List{}).Err(); err != nil {
+		t.Errorf("Err of none = %v", err)
+	}
+	if got := l.Error(); got != "no lang\na.yaml:2:3: no lang" {
+		t.Errorf("the list told = %q", got)
+	}
+	// Collect takes them as Add does, sorted, and returns a failure among them alone.
+	collected := usererr.Collect(usererr.LibraryAt("a.yaml", 5, 1, "x"), nil, usererr.List{usererr.LibraryAt("a.yaml", 2, 1, "x")})
+	var both usererr.List
+	if !errors.As(collected, &both) || len(both) != 2 || both[0].Line != 2 {
+		t.Errorf("Collect of mistakes = %v", collected)
+	}
+	if got := usererr.Collect(usererr.Library(errors.New("x")), failure); !errors.Is(got, failure) {
+		t.Errorf("Collect with a failure = %v", got)
+	}
+	if got := usererr.Collect(nil, nil); got != nil {
+		t.Errorf("Collect of none = %v", got)
+	}
+}
+
+// Sorted keeps the files in the order they first come, and sorts the mistakes of each by line and column.
+func TestListSorted(t *testing.T) {
+	t.Parallel()
+
+	l := usererr.List{
+		usererr.LibraryAt("b.yaml", 9, 1, "x"), usererr.LibraryAt("a.yaml", 3, 1, "x"),
+		usererr.LibraryAt("b.yaml", 2, 5, "x"), usererr.LibraryAt("b.yaml", 2, 1, "x"),
+	}
+	got := make([]string, 0, len(l))
+	for _, e := range l.Sorted() {
+		got = append(got, fmt.Sprintf("%s:%d:%d", e.File, e.Line, e.Column))
+	}
+	if want := "b.yaml:2:1 b.yaml:2:5 b.yaml:9:1 a.yaml:3:1"; strings.Join(got, " ") != want {
+		t.Errorf("Sorted = %v, want %s", got, want)
+	}
+}
+
+// Tell words a mistake, one at as much of a place as it has, a list of them in the order given, one wrapped in
+// another error, and floe's failure; Render lays them out to the letter as the command line and the browser
+// show them, floe's name before each that is not at a place.
 func TestTell(t *testing.T) {
 	t.Parallel()
 
@@ -29,8 +86,17 @@ func TestTell(t *testing.T) {
 		text, named string
 	}{
 		{"one", lang, "no lang", "floe: no lang"},
+		{"one in a file", usererr.LibraryAt("a.yaml", 0, 0, "no lang"), "a.yaml: no lang", "a.yaml: no lang"},
+		{"one at a line", usererr.LibraryAt("a.css", 3, 0, "no lang"), "a.css:3: no lang", "a.css:3: no lang"},
+		{"one at a column", usererr.LibraryAt("a.yaml", 3, 4, "no lang"), "a.yaml:3:4: no lang", "a.yaml:3:4: no lang"},
+		{
+			"a list, in the order given",
+			usererr.List{usererr.LibraryAt("b.yaml", 2, 1, "b"), lang, usererr.LibraryAt("a.yaml", 1, 1, "a")},
+			"b.yaml:2:1: b\nno lang\na.yaml:1:1: a", "b.yaml:2:1: b\nfloe: no lang\na.yaml:1:1: a",
+		},
 		{"one wrapped, without the words of what wraps it", fmt.Errorf("read: %w", lang), "no lang", "floe: no lang"},
 		{"no mistake", (*usererr.Error)(nil), "*usererr.Error with no mistake", "floe: *usererr.Error with no mistake"},
+		{"an empty list", usererr.List{}, "usererr.List with no mistake", "floe: usererr.List with no mistake"},
 		{"none", nil, "<nil> with no mistake", "floe: <nil> with no mistake"},
 		{"floe's failure", errors.New("disk on fire"), "disk on fire", "floe: disk on fire"},
 		{"floe's failure without words", errors.New(""), "*errors.errorString", "floe: *errors.errorString"},
