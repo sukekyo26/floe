@@ -419,6 +419,7 @@ var messagesJA = map[string]string{
 	"tmpl_image_large":              "画像「%s」は %s バイトで、画像の上限の %s バイト（%s）を超えています。小さくしてください",
 	"tmpl_image_content":            "「%s」の中身は、名前が示す %s ではありません",
 	"tmpl_image_svg":                "「%s」は SVG の文書ではありません",
+	"tmpl_image_svg_declaration":    "%s。<?xml ?> の宣言の encoding と version を、読めるものにするか、書かないでください",
 	"tmpl_image_svg_xml":            "%s。XML として書いてください",
 	"tmpl_image_svg_root":           `根が、xmlns="http://www.w3.org/2000/svg" を付けた 1 つの <svg> ではありません。図はその 1 つの要素の中に書いてください`,
 	"tmpl_assets_not_dir":           "%s はディレクトリではありません。assets/ には、page.html が asset で出す画像を置きます",

@@ -20,6 +20,7 @@ import (
 	"golang.org/x/net/html/charset"
 
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // KeptName is the name a published page keeps its data file by, beside the images it shows: an image
@@ -126,7 +127,7 @@ func imageOf(files fs.FS, name, where, typ string) ([]byte, *usererr.Error) {
 	if typ == "image/svg+xml" {
 		file := filepath.Join(where, filepath.FromSlash(name))
 		if why := svgMistake(b, file); why != nil {
-			return nil, usererr.Over(file, usererr.List{why}, "tmpl_image_svg", name)
+			return nil, usererr.Over("image:"+file, usererr.List{why}, "tmpl_image_svg", name)
 		}
 		return b, nil
 	}
@@ -223,11 +224,12 @@ func svgMistake(b []byte, file string) *usererr.Error {
 			break
 		}
 		if err != nil {
-			// LIMIT: encoding/xml's English.
+			// LIMIT: encoding/xml's English. Its mistakes but of the XML's syntax are of the encoding or the
+			// version its declaration names.
 			if se, ok := errors.AsType[*xml.SyntaxError](err); ok {
 				return usererr.NewAt(file, se.Line, 0, "tmpl_image_svg_xml", se.Msg)
 			}
-			return usererr.NewAt(file, 0, 0, "tmpl_image_svg_xml", err.Error())
+			return usererr.NewAt(file, 0, 0, "tmpl_image_svg_declaration", err.Error())
 		}
 		switch t := t.(type) {
 		case xml.StartElement:
@@ -325,6 +327,13 @@ func checkImages(whole drawnItems, d *Data, root ast.Node, images imageDir) erro
 			refused[name] = e
 		}
 		if e == nil {
+			continue
+		}
+		if e.Under != nil {
+			// One that stands for its reasons is placed at the item, as a part that cannot be used is, so that
+			// they are told under it, and once (as told above) where many items name it.
+			pos, _ := itemPos(root, f.at, false)
+			problems = append(problems, yamlpos.Place(d.File, pos, e))
 			continue
 		}
 		problems = append(problems, itemMistake(d.File, root, f.at, false, e))

@@ -81,9 +81,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   to `<name>.html` beside it, or in `--out-dir`, for a repository to keep the
   data file for agents and its page for people. The page is the download of
   the page `floe publish` stores: it opens without floe, with its CSP in a
-  `<meta>` after its doctype and the comments before it. A page is written only when it changes, and nothing is written
-  while a data file has mistakes. `--check` writes nothing and fails when a
-  page is missing or not what its data file draws, for CI.
+  `<meta>` after its doctype and the comments before it. A page is written
+  only when it changes, and nothing is written while a data file has mistakes.
+  `--check` writes nothing and fails when a page is missing or not what its
+  data file draws, for CI.
 - Run scripts in data files: the built-in `report` takes a `script` part, and
   a template refers to the part `floe:///parts/script.json`, each `js`, a function the
   page calls with an empty element in its place and `data`, any value. A `js`
@@ -151,12 +152,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   with the accent or a tone's colour, `--shadow` the colour of shadows.
   `palette.css` holds those variables, a theme's of its own names too, alone,
   without `!important`, on `:root` and then in `@media (prefers-color-scheme:
-  dark)`, and is warned of where it sets a colour for light mode alone.
-  `floe part check` and `floe template
-  check` warn of a colour a part's `part.css`, or a theme's `base.css` or file
-  of a part, writes as a value, and of a variable those files of a theme set.
-  A part of your own cannot be named `palette`. `floe
-  template show` lists the themes.
+  dark)`, and is warned of where it sets a colour for light mode alone. `floe
+  part check` and `floe template check` warn of a colour a part's `part.css`,
+  or a theme's `base.css` or file of a part, writes as a value, and of a
+  variable those files of a theme set. A part of your own cannot be named
+  `palette`. `floe template show` lists the themes.
 - Draw diagrams in data files: the built-in `report` takes a `diagram` part,
   and a template refers to the part `floe:///parts/diagram.json`, each a spec as
   `floe diagram render` takes it, written in place. A diagram is checked as

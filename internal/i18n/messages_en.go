@@ -421,6 +421,7 @@ var messagesEN = map[string]string{
 	"tmpl_image_large":              `the image "%s" is %s bytes, over the %s bytes (%s) an image may be; make it smaller`,
 	"tmpl_image_content":            `"%s" does not hold the %s its name says`,
 	"tmpl_image_svg":                `"%s" is not an SVG document`,
+	"tmpl_image_svg_declaration":    "%s; write an encoding and a version of XML that a reader takes in its <?xml ?> declaration, or leave them out",
 	"tmpl_image_svg_xml":            "%s; write it as XML",
 	"tmpl_image_svg_root":           `its root is not one <svg xmlns="http://www.w3.org/2000/svg">; write the drawing in one such element`,
 	"tmpl_assets_not_dir":           "%s is not a directory: assets/ holds the images page.html shows with asset",

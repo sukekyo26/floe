@@ -80,6 +80,7 @@ func cutOffAt(page []byte) (int, string) {
 
 // comment returns the length of the comment s starts with, ended where an HTML parser ends it, or 0 for
 // none or one never closed: <!-- … --> or --!>, the empty <!--> and <!--->, and <? … >.
+// tags.go's pastComment uses it; the CI's PR 3b reads those tags with an HTML tokenizer.
 func comment(s string) int {
 	switch {
 	case strings.HasPrefix(s, "<?"):
