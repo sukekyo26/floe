@@ -325,24 +325,25 @@ func (p *part) files(read func(fs.FS) error) error {
 }
 
 // renamedPart returns html, a part's, its box named name in place of from: the value of each
-// data-floe-part that is from as written, of a tag. What else names from, a look or text, is kept.
+// data-floe-part that is from, its character references read as namedParts reads them (&#110;ote is note),
+// of a tag. What else names from, a look or text, is kept.
 func renamedPart(html, from, name string) string {
 	var b strings.Builder
 	last := 0
-	for _, t := range tagsIn(html, true) {
+	for _, t := range tagsIn(html) {
 		for _, a := range t.attrs {
-			if t.end || a.name != "data-floe-part" || a.value != from {
+			if t.end || a.name != "data-floe-part" || attrValue(a.value) != from {
 				continue
 			}
 			at := a.valueAt
 			if html[at] == '"' || html[at] == '\'' {
 				at++
 			}
-			if !strings.HasPrefix(html[at:], from) {
+			if !strings.HasPrefix(html[at:], a.value) {
 				continue
 			}
 			b.WriteString(html[last:at] + name)
-			last = at + len(from)
+			last = at + len(a.value)
 		}
 	}
 	return b.String() + html[last:]

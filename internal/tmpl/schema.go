@@ -597,16 +597,6 @@ func (set *partSet) brokenNamed(name string) bool {
 	return set.broken[kindPart][name] != nil && validName(name) && !set.reserved(name)
 }
 
-// anyBrokenNamed reports whether a part stands as false (brokenNamed), which a page may name.
-func (set *partSet) anyBrokenNamed() bool {
-	for name := range set.broken[kindPart] {
-		if set.brokenNamed(name) {
-			return true
-		}
-	}
-	return false
-}
-
 // wording words a mistake the catalog has a message for, after the path: a bound (how many items or
 // keys, how long, how large), a pattern or a duplicate.
 func wording(k jsonschema.ErrorKind) (key string, args []any, ok bool) {

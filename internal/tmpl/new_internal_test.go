@@ -33,8 +33,8 @@ func TestRenamed(t *testing.T) {
 	}
 }
 
-// A copy of a part names itself as its box, where the box of the original named it as written, and
-// nowhere else.
+// A copy of a part names itself as its box, where the box of the original named it as a browser reads it
+// (a character reference read), and nowhere else.
 func TestRenamedPart(t *testing.T) {
 	t.Parallel()
 
@@ -42,6 +42,7 @@ func TestRenamedPart(t *testing.T) {
 		{`<div data-floe-part="table"><span data-floe-part="cell">x</span></div>`, `<div data-floe-part="grid"><span data-floe-part="cell">x</span></div>`},
 		{`<div DATA-FLOE-PART='table' class="t">`, `<div DATA-FLOE-PART='grid' class="t">`},
 		{`<div data-floe-part = table>`, `<div data-floe-part = grid>`},
+		{`<div data-floe-part="&#116;able">`, `<div data-floe-part="grid">`},
 		// A look of the original, a name among others, one put together, and text are kept.
 		{`<p data-floe-look="table">`, `<p data-floe-look="table">`},
 		{`<p data-floe-part="table compare">`, `<p data-floe-part="table compare">`},

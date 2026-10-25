@@ -149,7 +149,7 @@ func (t *Template) checkHead(s *shape, src []byte) error {
 	if s != nil {
 		doctype = doctypeMistake(t.file("page.html"), s, src)
 	}
-	if tagsOf(tagsIn(string(src), true)).head < 0 {
+	if tagsOf(tagsIn(string(src))).head < 0 {
 		head = usererr.NewAt(t.file("page.html"), 0, 0, "tmpl_page_head")
 	}
 	return usererr.Collect(doctype, head)

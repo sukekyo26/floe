@@ -99,35 +99,42 @@ func (m *htmlMarks) drawnOrder(page []byte) []int {
 // LIMIT: each item draws and reads the page again, every view (400 items, 0.25s); keep the result if slow.
 // LIMIT: an item left open for the next to close (<li>a, <li>b) is refused; read them together if pages need it.
 // LIMIT: a comment mark rebuilds no <b> page.html left open (<p><b>x</p>); mark with text if pages need it.
-func (d *Data) checkDrawnHTML(page *template.Template, title string, drawn []byte) error {
-	doc := parseDrawn(drawn)
-	if !standard(doc) {
-		return usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_doctype")
-	}
-	want := treeShape(doc)
+// It refuses too each name of a part an item gives that the page would be refused for, read where the item
+// is (a <title> in an <svg> holds elements), at the item. It returns the page drawn with every item a mark,
+// whatever its doctype, nil when that cannot be drawn, whose own mistake it then tells.
+func (d *Data) checkDrawnHTML(set *partSet, page *template.Template, title string, doc *html.Node) ([]byte, error) {
 	c := d.marked(rand.Text())
 	c.marks.shown = func(int) bool { return false }
 	all, err := c.execute(page, title)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	if !standard(doc) {
+		return all, usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_doctype")
+	}
+	want := treeShape(doc)
+	var found usererr.List
 	for _, k := range c.marks.drawnOrder(all) {
 		it := d.htmlItems[k]
 		c.marks.shown = func(n int) bool { return n != k }
 		bare, err := c.execute(page, title)
 		if err != nil {
-			return err
+			return all, err
 		}
-		doc = parseDrawn(bare)
-		formIn, outside := inPlace(doc, c.marks.mark, k, it.text)
-		switch {
-		case outside:
-			return usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_outside")
-		case formIn && leavesForm(it.text) || !slices.Equal(treeShape(doc), want):
-			return itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page"))
+		doc := parseDrawn(bare)
+		formIn, outside, nodes := inPlace(doc, c.marks.mark, k, it.text)
+		if outside {
+			return all, usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_outside")
+		}
+		atItem := func(bad *usererr.Error) *usererr.Error { return itemError(d.File, it.pos, it.path, bad) }
+		found = append(found, set.placedMisnamings(drawnNames(nodes, it.text), d.File, it.pos, atItem)...)
+		if formIn && leavesForm(it.text) || !slices.Equal(treeShape(doc), want) {
+			// The items after it are compared with a page it changed: it is the one told.
+			found = append(found, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page")))
+			break
 		}
 	}
-	return nil
+	return all, found.Err()
 }
 
 // standard reports whether a browser reads doc in standards mode, as html.ParseFragment reads an item: its
@@ -173,34 +180,139 @@ func (d *Data) marked(mark string) *Data {
 	return &c
 }
 
-// headHider returns the index of the first item of format html of d, in the order the page draws them,
-// with which those before it hide the </head> of the page page draws, titled title, which the page drawn
-// without them has: an open <script> or tag of one does. -1 for none: the page has no </head> without them
-// either. They are drawn as marks, so that page.html takes the branches it takes with them ({{with}}).
-func (d *Data) headHider(page *template.Template, title string) (int, error) {
-	c := d.marked(rand.Text())
-	on := make([]bool, len(d.htmlItems))
-	c.marks.shown = func(n int) bool { return on[n] }
-	all, err := c.execute(page, title)
-	if err != nil || headless(all) {
-		return -1, err
+// withStyles checks out, the page page drew of d, titled title, set's parts its parts, and returns it with
+// its styles (pageStyle, own its template's CSS) before its </head> (headAt). The template's mistakes, a
+// </head> missing (noHead) and a name of a part the page is refused for, are asked of the page drawn with
+// every item of format html a mark, which what those items hold does not change, and the items' of out
+// (checkDrawnHTML): both are told. Where the styles go is asked of out itself, as page.html may draw other
+// text by what an item holds (eq, len, slice).
+// LIMIT: with items of format html, out is read for its </head> apart from the page drawn with marks; take
+// the latter's if they come to cost.
+func (d *Data) withStyles(
+	set *partSet, page *template.Template, title string, out, own []byte, noHead error,
+) ([]byte, error) {
+	bare, items := out, error(nil)
+	if d.htmlItems != nil {
+		bare, items = d.checkDrawnHTML(set, page, title, parseDrawn(out))
 	}
-	for _, k := range c.marks.drawnOrder(all) {
-		on[k] = true
-		out, err := c.execute(page, title)
-		if err != nil {
-			return -1, err
+	k, doc := -1, (*html.Node)(nil)
+	var head, misnamed error
+	if bare != nil { // without it, what is asked of it is not
+		if k, doc = headAt(bare); k < 0 {
+			head, doc = noHead, parseDrawn(bare)
 		}
-		if headless(out) {
-			return k, nil
+		// The <style> headAt put in names no part.
+		misnamed = set.misnamingErrs(drawnNames([]*html.Node{doc}, string(bare))).Err()
+	}
+	if err := usererr.Collect(items, head, misnamed); err != nil {
+		return nil, err //nolint:wrapcheck // the template's mistakes and the items'
+	}
+	if d.htmlItems != nil {
+		if k, doc = headAt(out); k < 0 {
+			// page.html drew another branch by what an item holds, without a </head> (checkDrawnHTML's LIMIT).
+			return nil, noHead
+		}
+	}
+	style, err := set.pageStyle(drawnNames([]*html.Node{doc}, string(out)), own, d.Theme)
+	if err != nil {
+		return nil, err
+	}
+	at := headEnd.FindAllIndex(out, -1)[k][0]
+	return slices.Concat(out[:at], []byte(style), out[at:]), nil
+}
+
+// probeAttr marks the <style> headAt puts into a page to see where a browser puts the page's styles.
+const probeAttr = "data-floe-probe"
+
+// headAt returns which </head> written in page, the k-th, the page's styles go before, and the tree of page
+// read with a <style> of its own there; -1 and nil for none. A </head> is one where a <style> put before it
+// is a <style> of the page, in no <template>, whose content is not drawn, and in no <svg> or <math>, where
+// it styles nothing: in the head, or in the body or a table a <div> or a <table> of the head moved it to,
+// where it styles the page all the same. One in a comment, a value or a script's text is none: the <style>
+// put there is no element. Each </head> written is tried, so that one the tokenizer would not see (after a
+// <style> in an <svg>, which is no text) is one too.
+// LIMIT: the page is read once for each </head> tried; read fewer, from the tree, if pages come to write many.
+func headAt(page []byte) (int, *html.Node) {
+	for k, at := range headEnd.FindAllIndex(page, -1) {
+		probe := []byte("<style " + probeAttr + "></style>")
+		// A bytes.Reader fails no read, the one error Parse returns.
+		doc, _ := html.Parse(bytes.NewReader(slices.Concat(page[:at[0]], probe, page[at[0]:]))) //nolint:errcheck // see above
+		if styled(doc) {
+			return k, doc
 		}
 	}
 	return -1, nil
 }
 
-// headless reports whether page has no </head>.
-func headless(page []byte) bool {
-	return tagsOf(tagsIn(string(page), false)).head < 0
+// styled reports whether doc holds the <style> headAt puts, as it puts it, where it styles the page.
+func styled(doc *html.Node) bool {
+	for n := range doc.Descendants() {
+		// Its attribute alone and no content: one of the page's, which the probe went into as a value, is not it.
+		if n.Type != html.ElementNode || n.DataAtom != atom.Style || n.Namespace != "" || n.FirstChild != nil ||
+			len(n.Attr) != 1 || n.Attr[0].Key != probeAttr {
+			continue
+		}
+		for a := range n.Ancestors() {
+			if a.Type == html.ElementNode && (a.Namespace != "" || a.DataAtom == atom.Template) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+// drawnNames returns the names the data-floe-part and data-floe-look attributes of the elements of nodes, as
+// a browser reads them, give, in order, then those text writes anywhere (textNames), which bring the
+// part's style alone. The elements of a <template> are read too, as a script may copy them; the text of a
+// <noscript> is text, as a sandboxed page runs its scripts.
+func drawnNames(nodes []*html.Node, text string) []namedPart {
+	var names []namedPart
+	for _, top := range nodes {
+		names = append(names, elementNames(top, len(names))...)
+		for n := range top.Descendants() {
+			names = append(names, elementNames(n, len(names))...)
+		}
+	}
+	return append(names, textNames(text, nil)...)
+}
+
+// elementNames returns the names n gives by its attributes when it is an element, at at on.
+func elementNames(n *html.Node, at int) []namedPart {
+	if n.Type != html.ElementNode {
+		return nil
+	}
+	var names []namedPart
+	for _, a := range n.Attr {
+		if look := a.Key == "data-floe-look"; a.Namespace == "" && (look || a.Key == "data-floe-part") {
+			names = append(names, namesOf(a.Val, look, false, at+len(names))...)
+		}
+	}
+	return names
+}
+
+// itemNames returns the names item, HTML that goes into a page, gives, wherever it goes: those of its start
+// tags as the tokenizer reads them, which a fragment read in the <body> would leave out (a <tr>), then
+// those it writes anywhere (textNames). Where it goes, an item of format html is read again (checkDrawnHTML).
+func itemNames(item string) []namedPart {
+	var names []namedPart
+	z := html.NewTokenizer(strings.NewReader(item))
+	for tt := z.Next(); tt != html.ErrorToken; tt = z.Next() {
+		if tt != html.StartTagToken && tt != html.SelfClosingTagToken {
+			continue
+		}
+		for _, a := range z.Token().Attr {
+			if look := a.Key == "data-floe-look"; look || a.Key == "data-floe-part" {
+				names = append(names, namesOf(a.Val, look, false, len(names))...)
+			}
+		}
+	}
+	return append(names, textNames(item, nil)...)
+}
+
+// attrValue returns value, an attribute's as written, as a browser reads it, its character references read.
+func attrValue(value string) string {
+	return html.UnescapeString(value)
 }
 
 // markdownHTML returns the HTML of text, an item of format markdown, kept by the drawings that check the
@@ -232,8 +344,9 @@ func parseDrawn(page []byte) *html.Node {
 // may not make itself (implied), which the item may end as the page's would (a <tfoot> ends a <tbody>).
 // A mark of the <html> itself, before the <head>, between it and the <body> tag or after the </body>, is
 // outside: there the parser puts a space in the <html>, a <meta> in the head and a <p> in the body. A mark
-// in what the parser reads as text (a <title>, a <script>) is that text's, which shape leaves out.
-func inPlace(doc *html.Node, mark string, n int, item string) (formIn, outside bool) {
+// in what the parser reads as text (a <title>, a <script>) is that text's, which shape leaves out. It
+// returns the nodes of item it put in too.
+func inPlace(doc *html.Node, mark string, n int, item string) (formIn, outside bool, put []*html.Node) {
 	want := mark + ":" + strconv.Itoa(n)
 	var marks []*html.Node
 	for c := range doc.Descendants() {
@@ -243,7 +356,7 @@ func inPlace(doc *html.Node, mark string, n int, item string) (formIn, outside b
 	}
 	for _, m := range marks {
 		if m.Parent.Type != html.ElementNode || m.Parent.DataAtom == atom.Html {
-			return formIn, true
+			return formIn, true, put
 		}
 		context := m.Parent
 		for implied(context) && context.DataAtom != atom.Body {
@@ -256,9 +369,10 @@ func inPlace(doc *html.Node, mark string, n int, item string) (formIn, outside b
 			formIn = formIn || !inTemplate && holdsForm(c)
 			m.Parent.InsertBefore(c, m)
 		}
+		put = append(put, nodes...)
 		m.Parent.RemoveChild(m)
 	}
-	return formIn, false
+	return formIn, false, put
 }
 
 // isTemplate reports whether n is a <template> of HTML.

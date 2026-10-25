@@ -22,16 +22,16 @@ type attr struct {
 	valueAt int
 }
 
-// tagsIn reads the tags of page in order: a comment, a doctype, and the text of the elements an HTML parser
-// reads as text to their end tag hold none (script, style, textarea, title…; a sandboxed page runs its
-// scripts, so a noscript's text is never read as HTML). In a tag, a quoted value is read whole, a > in it
-// too. When page is a template (actions), an action ({{…}}) is read whole, in a tag or out of one: its
-// text is no markup of the page's. HTML that is drawn, or the data's, holds none, so {{ there is text.
+// tagsIn reads the tags of page, a template (a page.html or a part.html), in order: a comment, a doctype,
+// and the text of the elements an HTML parser reads as text to their end tag hold none (script, style,
+// textarea, title…; a sandboxed page runs its scripts, so a noscript's text is never read as HTML). In a
+// tag, a quoted value is read whole, a > in it too. An action ({{…}}) is read whole, in a tag or out of one:
+// its text is no markup of the page's. A drawn page and the data's HTML are read by golang.org/x/net/html.
 // LIMIT: the elements of SVG and MathML are read as HTML's (a noscript in an svg holds tags to a browser,
-// not here); follow the parser's foreign content if a page comes to write markup so.
-func tagsIn(page string, actions bool) []tag {
+// not here); follow the parser's foreign content if a template comes to write markup so.
+func tagsIn(page string) []tag {
 	var found []tag
-	action := nextAction(page, actions)
+	action := nextAction(page)
 	for i := 0; i < len(page); {
 		lt := strings.IndexByte(page[i:], '<')
 		if lt < 0 {
@@ -41,7 +41,7 @@ func tagsIn(page string, actions bool) []tag {
 			i = pastAction(page, at)
 			continue
 		}
-		t, next := readMarkup(page, i+lt, actions)
+		t, next := readMarkup(page, i+lt)
 		if t != nil {
 			found = append(found, *t)
 		}
@@ -54,13 +54,10 @@ func tagsIn(page string, actions bool) []tag {
 }
 
 // nextAction returns a function that tells where the next action of page is from an offset on, past the
-// end for none, and none at all unless actions. It looks ahead again only once past the one it found.
-func nextAction(page string, actions bool) func(from int) int {
+// end for none. It looks ahead again only once past the one it found.
+func nextAction(page string) func(from int) int {
 	at := -1
 	return func(from int) int {
-		if !actions {
-			return len(page)
-		}
 		if at < from {
 			at = len(page)
 			if i := strings.Index(page[from:], "{{"); i >= 0 {
@@ -74,7 +71,7 @@ func nextAction(page string, actions bool) func(from int) int {
 // readMarkup reads what the < at at in page starts: a comment or a doctype, which it passes, a tag, which
 // it returns, past the text of an element read as text, or a < of text. It returns where to read on, -1
 // past a comment never closed.
-func readMarkup(page string, at int, actions bool) (*tag, int) {
+func readMarkup(page string, at int) (*tag, int) {
 	rest := page[at:]
 	switch {
 	case strings.HasPrefix(rest, "<!"), strings.HasPrefix(rest, "<?"):
@@ -84,7 +81,7 @@ func readMarkup(page string, at int, actions bool) (*tag, int) {
 		}
 		return nil, at + n
 	case len(rest) > 1 && isLetter(rest[1]), len(rest) > 2 && rest[1] == '/' && isLetter(rest[2]):
-		t, next := readTag(page, at, actions)
+		t, next := readTag(page, at)
 		return &t, pastText(page, t, next)
 	}
 	return nil, at + 1
@@ -145,8 +142,8 @@ var base = regexp.MustCompile(`(?i)<base[\s/>]`)
 var headEnd = regexp.MustCompile(`(?i)</head[\s/>]`)
 
 // readTag reads the tag of page at at, a < before a letter or a /, and returns it and where it ends; an
-// action of a template is read whole when actions.
-func readTag(page string, at int, actions bool) (tag, int) {
+// action of a template is read whole.
+func readTag(page string, at int) (tag, int) {
 	t := tag{name: "", end: false, start: at, attrs: nil}
 	i := at + 1
 	if page[i] == '/' {
@@ -163,11 +160,11 @@ func readTag(page string, at int, actions bool) (tag, int) {
 			return t, i + 1
 		case isSpace(c), c == '/':
 			i++
-		case actions && strings.HasPrefix(page[i:], "{{"):
+		case strings.HasPrefix(page[i:], "{{"):
 			i = pastAction(page, i)
 		default:
 			var a attr
-			a, i = readAttr(page, i, actions)
+			a, i = readAttr(page, i)
 			t.attrs = append(t.attrs, a)
 		}
 	}
@@ -175,33 +172,33 @@ func readTag(page string, at int, actions bool) (tag, int) {
 }
 
 // readAttr reads the attribute of page at at, its name and its value after an =, and returns it and where
-// it ends, an action of a template read whole when actions. An = before any name is one of its own, as an
-// HTML parser reads it.
-func readAttr(page string, at int, actions bool) (attr, int) {
+// it ends, an action of a template read whole. An = before any name is one of its own, as an HTML parser
+// reads it.
+func readAttr(page string, at int) (attr, int) {
 	i := at + 1
 	for i < len(page) && !isSpace(page[i]) && !strings.ContainsRune("/>=", rune(page[i])) &&
-		(!actions || !strings.HasPrefix(page[i:], "{{")) {
+		!strings.HasPrefix(page[i:], "{{") {
 		i++
 	}
 	a := attr{name: strings.ToLower(page[at:i]), value: "", valueAt: -1}
 	if j := pastSpace(page, i); j < len(page) && page[j] == '=' {
 		a.valueAt = pastSpace(page, j+1)
-		i = pastValue(page, a.valueAt, actions)
+		i = pastValue(page, a.valueAt)
 		a.value = strings.Trim(page[a.valueAt:i], `"'`)
 	}
 	return a, i
 }
 
 // pastValue returns where the value of an attribute that starts at at in page ends: at its closing quote,
-// or before a space or a >, an action of a template read whole when actions.
-func pastValue(page string, at int, actions bool) int {
+// or before a space or a >, an action of a template read whole.
+func pastValue(page string, at int) int {
 	quote := byte(0)
 	if at < len(page) && (page[at] == '"' || page[at] == '\'') {
 		quote, at = page[at], at+1
 	}
 	for at < len(page) {
 		switch c := page[at]; {
-		case actions && strings.HasPrefix(page[at:], "{{"):
+		case strings.HasPrefix(page[at:], "{{"):
 			at = pastAction(page, at)
 		case quote != 0 && c == quote:
 			return at + 1
