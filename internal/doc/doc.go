@@ -86,5 +86,5 @@ func (d *Data) readShared() error {
 	}
 	// A title of spaces names none.
 	d.Title = strings.TrimSpace(d.Title)
-	return found.Err()
+	return found.Sorted().Err()
 }

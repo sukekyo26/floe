@@ -67,6 +67,7 @@ func TestParse(t *testing.T) {
 		{"title: Plan #1 draft\n", "a.yaml:1:13: " + fmt.Sprintf(cutAt, "Plan")},
 		{"sections:\n  - heading: Step #2\n", "a.yaml:2:19: " + fmt.Sprintf(cutAt, "Step")},
 		{"x: {a, b: 1}\n", `a.yaml:1:5: "a" is a key without a value in { }: write its value after a ":", or, if a , in text ended the text before it, put that text in quotes`},
+		{"x: {a #c\n , b: 1}\n", "a.yaml:1:7: " + fmt.Sprintf(cutAt, "a")},
 		// A long one shows its end, where the cut is, or its head.
 		{"lead: " + strings.Repeat("a", 50) + "bcd # c\n", "a.yaml:1:61: " + fmt.Sprintf(cutAt, "…"+strings.Repeat("a", 37)+"bcd")},
 		{"a: { " + strings.Repeat("b", 50) + " }\n", "a.yaml:1:6: \"" + strings.Repeat("b", 40) + "…\" is a key without a value in { }: write its value after a \":\", or, if a , in text ended the text before it, put that text in quotes"},
@@ -87,6 +88,9 @@ func TestParse(t *testing.T) {
 		{"%YAML 1.2\n---\nlang: en\n", ""},
 		// LIMIT: text a , or a comment line cut, as the LIMITs of cut tell.
 		{"x: [1,500 words]\n", ""},
+		// A comment after a number, true or ~ cuts no text; text cut to a number is the schema's, by its type.
+		{"enabled: true  # turn on\nx: 3 #c\ny: ~ #c\n", ""},
+		{"title: 2024 #1\n", ""},
 		{"title: Plan\n  #1 draft\n", ""},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))

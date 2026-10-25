@@ -50,6 +50,7 @@ func TestReadMistakes(t *testing.T) {
 		{"lang: \"\"\n", "a.yaml:1:7: " + noLang},
 		{"lang: \"  \"\n", "a.yaml:1:7: " + noLang},
 		{"lang:\n", "a.yaml:1:1: lang must be text"},
+		{"title: 3\ntheme: 4\nlang: 5\n", "a.yaml:1:8: title must be text\na.yaml:2:8: theme must be text\na.yaml:3:7: lang must be text"},
 		{"", "a.yaml:1:1: " + noLang},
 		{"# just a note\n", "a.yaml:1:1: " + noLang},
 		{"&top\ntitle: 3\n", "a.yaml:1:1: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"},

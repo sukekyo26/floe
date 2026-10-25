@@ -179,8 +179,7 @@ func (w *walk) node(n ast.Node) {
 		}
 	case *ast.InfinityNode, *ast.NanNode:
 		w.found = append(w.found, New(w.file, Of(n), "yaml_not_finite", n.GetToken().Value))
-	case *ast.LiteralNode:
-	case ast.ScalarNode:
+	case *ast.StringNode:
 		w.cut(n)
 	}
 }
@@ -188,19 +187,20 @@ func (w *walk) node(n ast.Node) {
 // pair walks a key and its value. A merge key is refused with its value, which is not walked. A key is a
 // name: one that is not text (0x10, ~, 1.0) would be read as another name than the one written. It is
 // judged as a key alone, and for a comment that cut it short; a key of a { } written without a ":" after
-// it, which YAML gives an empty value ({ a, b: 1 }), unless refused already.
+// it, which YAML gives an empty value ({ a, b: 1 }), unless refused already, cut short too.
 func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 	if _, merge := v.Key.(*ast.MergeKeyNode); merge {
 		w.found = append(w.found, New(w.file, Of(v.Key), "yaml_no_anchors"))
 		return
 	}
 	key := KeyOf(v)
+	text, isText := key.(*ast.StringNode)
 	switch {
 	case w.wrapper(key):
-	case !isText(key):
+	case !isText:
 		w.found = append(w.found, New(w.file, Of(key), "yaml_key_not_text", key.GetToken().Value))
+	case w.cut(text):
 	default:
-		w.cut(key)
 		if flow && v.Start.Type != token.MappingValueType {
 			w.found = append(w.found, New(w.file, Of(key), "yaml_flow_key_alone", headOf(key.GetToken().Value)))
 		}
@@ -208,28 +208,27 @@ func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 	w.node(v.Value)
 }
 
-func isText(n ast.Node) bool {
-	_, text := n.(*ast.StringNode)
-	return text
-}
-
-// cut refuses n, a scalar, when a comment on its last line may have cut it short. YAML reads " #" in a
-// plain value as the start of a comment, and the value as what is before it, which no later check sees is
-// short. The comment may be the author's, which floe cannot tell from text cut short, so either is refused.
-// A comment after a quoted value cuts nothing.
+// cut refuses n, a text, and reports it, when a comment on its last line may have cut it short. YAML reads
+// " #" in a plain value as the start of a comment, and the value as what is before it, which no later check
+// sees is short. The comment may be the author's, which floe cannot tell from text cut short, so either is
+// refused. A comment after a quoted value cuts nothing, nor one after a number, true or ~, which the text
+// cut short would not read as.
+// LIMIT: text cut short to what reads as a number (title: 2024 #1, read 2024) is not caught here: an item
+// that takes text refuses the number by its type, and one that takes a number gets one.
 // LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
 // is an item as right as any. Nor is a , in { } before a rest with ": " in it ({ label: 1,500 words: many }
 // reads a key 500 words of the value many). Catch them if a schema comes to take such text.
 // LIMIT: a line of a plain value over lines that begins with # is a comment, and the value ends before it
 // (title: Plan, then "  #1 draft"), which is not caught: the comment is not after the value's text.
-func (w *walk) cut(n ast.Node) {
+func (w *walk) cut(n *ast.StringNode) bool {
 	tk := n.GetToken()
-	if tk == nil || tk.Type == token.SingleQuoteType || tk.Type == token.DoubleQuoteType ||
+	if tk.Type == token.SingleQuoteType || tk.Type == token.DoubleQuoteType ||
 		tk.Next == nil || tk.Next.Type != token.CommentType || tk.Next.Position.Line != lastLine(tk) {
-		return
+		return false
 	}
 	c := tk.Next.Position
 	w.found = append(w.found, usererr.NewAt(w.file, c.Line, c.Column, "yaml_comment_cut", endOf(tk.Value)))
+	return true
 }
 
 // lastLine returns the line the text of tk ends on, which a plain value written over lines does after

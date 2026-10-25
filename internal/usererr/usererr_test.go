@@ -25,7 +25,7 @@ func TestListAdd(t *testing.T) {
 	var none *usererr.Error
 	var l usererr.List
 	failure := errors.New("disk on fire")
-	for _, err := range []error{nil, none, usererr.LibraryAt("", 0, 0, "no lang"), usererr.List{usererr.LibraryAt("a.yaml", 2, 3, "no lang")}} {
+	for _, err := range []error{nil, none, usererr.LibraryAt("", 0, 0, "no lang"), usererr.List{none, usererr.LibraryAt("a.yaml", 2, 3, "no lang")}} {
 		if got := l.Add(err); got != nil {
 			t.Errorf("Add(%v) = %v", err, got)
 		}

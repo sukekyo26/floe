@@ -54,14 +54,18 @@ func (e *Error) Error() string {
 type List []*Error
 
 // Add adds err to l: an Error or a List; a nil *Error, which a function returning *Error gives for none,
-// is left out. Any other error is a failure, not a mistake, and is returned for the caller to stop at.
+// is left out, in a List too. Any other error is a failure, not a mistake, and is returned for the caller to stop at.
 func (l *List) Add(err error) error {
 	var more List
 	var one *Error
 	switch {
 	case err == nil:
 	case errors.As(err, &more):
-		*l = append(*l, more...)
+		for _, e := range more {
+			if e != nil {
+				*l = append(*l, e)
+			}
+		}
 	case errors.As(err, &one):
 		if one != nil {
 			*l = append(*l, one)
