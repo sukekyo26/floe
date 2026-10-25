@@ -1,0 +1,22 @@
+$ floe check page.yaml part.yaml
+exit 1
+--- stderr
+$SAMPLE/templates/t/page.html: it cannot draw page.yaml: template: page.html:4:14: executing "page.html" at <num .Data.x>: error calling num: num: abc (string) is not a number; write it to draw every value its schema.json takes, such as an item left out (draw it in {{with}}) or a list or text shorter than it reads
+$SAMPLE/parts/note/part.html: it cannot draw sections[0].parts[0].note of part.yaml: template: part.html:1:27: executing "part.html" at <num .text>: error calling num: num: abc (string) is not a number; write it to draw every value its schema.json takes, such as an item left out (draw it in {{with}}) or a list or text shorter than it reads
+$ floe render --out-dir $TMP/pages/page.yaml page.yaml
+exit 1
+--- stderr
+$SAMPLE/templates/t/page.html: it cannot draw page.yaml: template: page.html:4:14: executing "page.html" at <num .Data.x>: error calling num: num: abc (string) is not a number; write it to draw every value its schema.json takes, such as an item left out (draw it in {{with}}) or a list or text shorter than it reads
+$ floe render --out-dir $TMP/pages/part.yaml part.yaml
+exit 1
+--- stderr
+$SAMPLE/parts/note/part.html: it cannot draw sections[0].parts[0].note of part.yaml: template: part.html:1:27: executing "part.html" at <num .text>: error calling num: num: abc (string) is not a number; write it to draw every value its schema.json takes, such as an item left out (draw it in {{with}}) or a list or text shorter than it reads
+$ floe render --out-dir $TMP/together page.yaml part.yaml
+exit 1
+--- stderr
+$SAMPLE/templates/t/page.html: it cannot draw page.yaml: template: page.html:4:14: executing "page.html" at <num .Data.x>: error calling num: num: abc (string) is not a number; write it to draw every value its schema.json takes, such as an item left out (draw it in {{with}}) or a list or text shorter than it reads
+$SAMPLE/parts/note/part.html: it cannot draw sections[0].parts[0].note of part.yaml: template: part.html:1:27: executing "part.html" at <num .text>: error calling num: num: abc (string) is not a number; write it to draw every value its schema.json takes, such as an item left out (draw it in {{with}}) or a list or text shorter than it reads
+$ floe template check templates/t
+exit 0
+$ floe part check
+exit 0

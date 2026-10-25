@@ -1,0 +1,1 @@
+{"type": "object", "properties": {"tone": {"$ref": "floe:///parts/tone.json#/nope"}}, "additionalProperties": false}
