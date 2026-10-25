@@ -70,7 +70,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
 :scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
 }
@@ -119,7 +119,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="code"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
 /* Dark in light mode too, as code in an editor is; the language stands at the right of the heading */
 :scope {
   margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
@@ -141,6 +141,62 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 /* A block, so that the code's last line break draws no empty line */
 :scope code { display: block; font: inherit; color: inherit; background: none; padding: 0; border-radius: 0; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="diff"]) to (:scope [data-floe-part] > *) {
+/* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls */
+:scope pre { padding-inline: 0; }
+:scope code { display: grid; grid-template-columns: minmax(100%, max-content); }
+:scope code > span { padding-inline: 1.1rem; }
+:scope .add { background: color-mix(in srgb, var(--code-add) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add); }
+:scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
+:scope .hunk { color: var(--code-prompt); }
+:scope .meta { opacity: 0.65; }
+:scope figcaption :is(.added, .removed) { flex: none; }
+:scope figcaption .added { color: var(--code-add); }
+:scope figcaption .removed { color: var(--code-del); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns */
+:scope {
+  overflow-x: auto;
+}
+:scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.8rem 1.1rem; }
+:scope :is(th, td):not(.num) { min-width: 7em; }
+/* A num column's heading wraps as long as it needs, but not a character a line */
+:scope th.num { min-width: 6em; }
+:scope thead th {
+  font-size: 0.8rem; font-weight: 600; color: var(--muted);
+  background: color-mix(in srgb, var(--line) 40%, var(--surface));
+}
+:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line) 18%, var(--surface)); }
+:scope .num { text-align: right; }
+:scope td.num {
+  min-width: auto; font-family: var(--mono);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="findings"]) to (:scope [data-floe-part] > *) {
+/* In the table's look, without a heading: a level's pill, then where it is and what became of it over what it is */
+:scope td.level { width: 1%; min-width: auto; white-space: nowrap; }
+:scope .level .nit { background: color-mix(in srgb, var(--fg) 8%, var(--surface)); color: var(--muted); }
+:scope .head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem; }
+/* Where it is breaks, though in a table: a path would widen the column too far */
+:scope .at { padding: 0; background: none; font-size: 0.8rem; color: var(--accent); overflow-wrap: anywhere; }
+:scope .status { margin-left: auto; }
+:scope .why { margin-top: 0.15rem; font-size: 0.88rem; color: var(--muted); }
 }
 }
 </style>
@@ -176,31 +232,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="table"]) to (:scope [data-floe-part] > *) {
-/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns */
-:scope {
-  overflow-x: auto;
-}
-:scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
-:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.8rem 1.1rem; }
-:scope :is(th, td):not(.num) { min-width: 7em; }
-/* A num column's heading wraps as long as it needs, but not a character a line */
-:scope th.num { min-width: 6em; }
-:scope thead th {
-  font-size: 0.8rem; font-weight: 600; color: var(--muted);
-  background: color-mix(in srgb, var(--line) 40%, var(--surface));
-}
-:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line) 18%, var(--surface)); }
-:scope .num { text-align: right; }
-:scope td.num {
-  min-width: auto; font-family: var(--mono);
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-}
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
 /* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
 :scope figcaption { opacity: 0.85; }
@@ -216,6 +247,37 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
+@scope ([data-floe-part="stack"]) to (:scope [data-floe-part] > *) {
+/* What details and tabs hold */
+:scope { display: grid; gap: 1rem; min-width: 0; }
+:scope > * { min-width: 0; margin: 0; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="tabs"]) to (:scope [data-floe-part] > *) {
+/* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows */
+:scope { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0; }
+:scope > label {
+  position: relative; padding: 0.3rem 0.95rem; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600;
+  color: var(--muted);
+}
+:scope > label:has(:checked) { background: var(--accent-soft); color: var(--accent); }
+:scope > label:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+:scope > div { order: 1; flex-basis: 100%; display: none; margin-top: 0.3rem; }
+:scope > label:has(:checked) + div { display: grid; }
+/* On paper every tab shows, each under its title */
+@media print {
+  :scope > label, :scope > label:has(:checked) { flex-basis: 100%; padding-inline: 0; background: none; color: var(--fg); }
+  :scope > div { display: grid; order: 0; }
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
 blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
 blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
@@ -223,7 +285,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
 }
 }
@@ -258,11 +320,26 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="code"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
 :scope { border-radius: 18px; box-shadow: none; padding: 6px; }
 :scope figcaption { background: none; border: 0; padding: 0.3rem 0.6rem 0.5rem; }
 :scope pre { background: color-mix(in srgb, var(--code-fg) 4%, transparent); border-radius: 12px; }
 :scope .lang { border-radius: 6px; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+:scope { padding: 6px; }
+:scope table { border-collapse: separate; border-spacing: 0; }
+:scope thead th { background: none; padding-block: 0.6rem 0.5rem; }
+:scope tbody td, :scope tbody tr:nth-child(even) td { background: var(--surface); }
+:scope tbody tr + tr td { border-top: 1px solid var(--line); }
+:scope tbody tr:first-child td:first-child { border-top-left-radius: 14px; }
+:scope tbody tr:first-child td:last-child { border-top-right-radius: 14px; }
+:scope tbody tr:last-child td:first-child { border-bottom-left-radius: 14px; }
+:scope tbody tr:last-child td:last-child { border-bottom-right-radius: 14px; }
 }
 }
 </style>
@@ -279,21 +356,6 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope.good::before { background: var(--surface); color: var(--good); }
 :scope.warn::before { background: var(--surface); color: var(--warn); }
 :scope.bad::before { background: var(--surface); color: var(--bad); }
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="table"]) to (:scope [data-floe-part] > *) {
-:scope { padding: 6px; }
-:scope table { border-collapse: separate; border-spacing: 0; }
-:scope thead th { background: none; padding-block: 0.6rem 0.5rem; }
-:scope tbody td, :scope tbody tr:nth-child(even) td { background: var(--surface); }
-:scope tbody tr + tr td { border-top: 1px solid var(--line); }
-:scope tbody tr:first-child td:first-child { border-top-left-radius: 14px; }
-:scope tbody tr:first-child td:last-child { border-top-right-radius: 14px; }
-:scope tbody tr:last-child td:first-child { border-bottom-left-radius: 14px; }
-:scope tbody tr:last-child td:last-child { border-bottom-right-radius: 14px; }
 }
 }
 </style>
@@ -354,6 +416,22 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <div class="card" data-floe-look="panel"><h3 id="two">Two</h3><p>Second.</p>
 </div>
 </div>
+<form data-floe-part="tabs">
+<label><input type="radio" name="tab" checked>One</label><div data-floe-part="stack"><p>First.</p>
+</div>
+<label><input type="radio" name="tab">Two</label><div data-floe-part="stack"><p>Second.</p>
+</div>
+</form>
+<figure data-floe-part="diff"><figcaption><span class="file">a.conf</span><span class="added">+1</span><span class="removed">−1</span><span class="lang">ini</span></figcaption><pre><code><span class="hunk">@@ -1 &#43;1 @@
+</span><span class="del">-read_only = false
+</span><span class="add">&#43;read_only = true
+</span></code></pre></figure>
+<div data-floe-part="findings"><table>
+<tbody>
+<tr><td class="level"><span class="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">a.conf:1</code><span class="status"><span class="good" data-floe-part="cell">fixed</span></span></div><div>The wiki is still open</div></td></tr>
+<tr><td class="level"><span class="nit" data-floe-part="cell">nit</span></td><td><div>Two pages share a title</div></td></tr>
+</tbody>
+</table></div>
 </section>
 </main>
 </body>
