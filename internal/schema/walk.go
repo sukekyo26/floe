@@ -103,8 +103,7 @@ func (c *Compiled) followed(s, to *jsonschema.Schema) bool {
 	if from, _ := split(s.Location); base == from {
 		return true
 	}
-	r, ok := c.res[base]
-	return ok && base != c.url && r.Kind == Shared
+	return c.isShared(base)
 }
 
 // split returns the URL of loc, a Location, and its fragment without "#".
