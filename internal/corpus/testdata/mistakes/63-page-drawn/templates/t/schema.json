@@ -1,0 +1,6 @@
+{"type": "object", "properties": {
+  "kind": {"type": "string"},
+  "cut": {"type": "string"},
+  "style": {"type": "string"},
+  "x": {"type": "string", "format": "html"}
+}, "additionalProperties": false}

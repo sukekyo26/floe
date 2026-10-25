@@ -22,7 +22,7 @@ type attr struct {
 	valueAt int
 }
 
-// tagsIn reads the tags of page, a template (a page.html or a part.html), in order: a comment, a doctype,
+// tagsIn reads the tags of page, a part.html, in order: a comment, a doctype,
 // and the text of the elements an HTML parser reads as text to their end tag hold none (script, style,
 // textarea, title…; a sandboxed page runs its scripts, so a noscript's text is never read as HTML). In a
 // tag, a quoted value is read whole, a > in it too. An action ({{…}}) is read whole, in a tag or out of one:
@@ -233,29 +233,4 @@ func isSpace(c byte) bool {
 
 func isLetter(c byte) bool {
 	return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z'
-}
-
-// tags are the offsets of the first </head>, <style> and <link> of a page, -1 for one it lacks.
-type tags struct{ head, style, link int }
-
-// tagsOf finds the tags of page, of found, the tags tagsIn reads.
-func tagsOf(found []tag) tags {
-	at := tags{head: -1, style: -1, link: -1}
-	for _, t := range found {
-		var first *int
-		switch {
-		case t.end && t.name == "head":
-			first = &at.head
-		case !t.end && t.name == "style":
-			first = &at.style
-		case !t.end && t.name == "link":
-			first = &at.link
-		default:
-			continue
-		}
-		if *first < 0 {
-			*first = t.start
-		}
-	}
-	return at
 }

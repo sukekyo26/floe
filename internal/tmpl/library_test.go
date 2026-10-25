@@ -214,6 +214,7 @@ func TestTemplateMistakesOnce(t *testing.T) {
 		files       map[string]string // of the template memo
 		parts       map[string]string
 		unusable    bool // the template cannot be used: the second data file is told so, as above
+		each        bool // of the page drawn: told at the template: of each data file
 	}{
 		"an expression of checks.yaml": {
 			items: `"n": {"type": "array", "items": {"type": "number"}}`, data: "n: [1]\n", unusable: true,
@@ -232,7 +233,7 @@ func TestTemplateMistakesOnce(t *testing.T) {
 			},
 		},
 		"page.html without <!doctype html>": {
-			items: html, data: "risks: <p>a</p>\n",
+			items: html, data: "risks: <p>a</p>\n", each: true,
 			files: map[string]string{"page.html": `<html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
 				`<body><div>{{.Data.risks}}</div></body></html>`},
 		},
@@ -245,7 +246,7 @@ func TestTemplateMistakesOnce(t *testing.T) {
 			files: map[string]string{"page.html": head + `<body><img src="{{asset "nope.png"}}" alt=""></body></html>`},
 		},
 		"page.html naming two parts as one": {
-			items: html, data: "",
+			items: html, data: "", each: true,
 			files: map[string]string{"page.html": head + `<body><div data-floe-part="note table"></div></body></html>`},
 		},
 		"a word the data names that words.yaml has not": {
@@ -284,6 +285,9 @@ func TestTemplateMistakesOnce(t *testing.T) {
 			}
 		}
 		want := first
+		if tt.each {
+			want += "\n" + strings.ReplaceAll(first, "a.yaml", "b.yaml")
+		}
 		if tt.unusable {
 			want += "\nb.yaml:1:11: your own template memo cannot be used, as told above"
 		}

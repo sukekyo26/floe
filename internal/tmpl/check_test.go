@@ -494,21 +494,25 @@ func TestCheckMistakes(t *testing.T) {
 	}
 }
 
-// A <style> of page.html is refused at its line, as floe check and the drawing refuse it: floe puts a
-// page's CSS together.
+// A <style> the page drawn holds is refused, as floe check and the drawing refuse it: floe puts a page's CSS
+// together. template check draws the example, at whose template: it is told; one in a comment, which
+// html/template takes out, or in a branch not drawn, is none.
 func TestPageStyleRefused(t *testing.T) {
 	t.Parallel()
 
-	dir := sizes(t, map[string]string{"page.html": "<body>|<body>\n<!-- <style> -->\n<style>p {}</style>"})
-	want := filepath.Join(dir, "page.html") + ":6: page.html holds a <style>: write the template's CSS in page.css"
+	dir := sizes(t, map[string]string{
+		"page.html": "<body>|<body>\n<!-- <style> -->{{if false}}<style>p {}</style>{{end}}\n<svg><STYLE>p {}</STYLE></svg>",
+	})
+	example := filepath.Join(dir, "example.yaml")
+	want := example + ":1:11: the page drawn from this file has a <style>"
 	_, mistakes := check(dir, "", "")
 	if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
 		t.Fatalf("Check = %v, want %s", mistakes, want)
 	}
 	// Placed in the mistake, not in its words: told as it is, without floe's name before it.
 	var e *usererr.Error
-	if !errors.As(mistakes[0], &e) || e.File != filepath.Join(dir, "page.html") || e.Line != 6 || strings.HasPrefix(usererr.Tell(i18n.EnglishCatalog(), e).Render("floe: "), "floe: ") {
-		t.Errorf("the mistake = %+v, want it placed at page.html:6", e)
+	if !errors.As(mistakes[0], &e) || e.File != example || e.Line != 1 || e.Column != 11 || strings.HasPrefix(usererr.Tell(i18n.EnglishCatalog(), e).Render("floe: "), "floe: ") {
+		t.Errorf("the mistake = %+v, want it placed at example.yaml:1:11", e)
 	}
 }
 
@@ -523,20 +527,23 @@ func TestPageBase(t *testing.T) {
 	}
 }
 
-// page.html holds a </head>, before which floe puts the page's styles: in the head, where no element the
-// page leaves open, such as an <svg>, takes them in. One in a comment is none, and its lack is told beside
-// the other mistakes of the files.
+// The page drawn holds a </head>, before which floe puts the page's styles: in the head, where no element
+// the page leaves open, such as an <svg>, takes them in. One in a comment is none. template check draws the
+// example once the files pass: with a mistake of theirs, the page's waits (a regression taken).
 func TestPageHeadRequired(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{"page.html": "</head>|<!-- </head> -->", "page.css": "@import url(a.css);\n"})
-	want := filepath.Join(dir, "page.html") + ": page.html holds no </head>: floe puts the page's styles before it"
-	_, mistakes := check(dir, "", "")
-	if len(mistakes) != 2 || !slices.ContainsFunc(mistakes, func(e error) bool { return strings.HasPrefix(e.Error(), want) }) {
-		t.Errorf("Check = %v, want %s beside the @import", mistakes, want)
+	if _, mistakes := check(dir, "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "@import") {
+		t.Errorf("Check = %v, want the @import alone", mistakes)
 	}
-	// One an action leaves out is told as such, as the page is drawn; the data's HTML, which may leave an
-	// <svg> open before it, holds none to stand in for it.
+	dir = sizes(t, map[string]string{"page.html": "</head>|<!-- </head> -->"})
+	want := filepath.Join(dir, "example.yaml") + ":1:11: the page drawn from this file has no </head>"
+	if _, mistakes := check(dir, "", ""); len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) {
+		t.Errorf("Check = %v, want %s", mistakes, want)
+	}
+	// One an action leaves out is told as the page is drawn, at the data's template:; the data's HTML, which
+	// may leave an <svg> open before it, holds none to stand in for it.
 	data := memo(t, `"risks": {"type": "string", "format": "html"}`)
 	page := filepath.Join(data, "memo", "page.html")
 	if err := os.WriteFile(page, []byte(`<!doctype html><html lang="{{.Lang}}"><title>{{.Title}}</title>{{if false}}</head>{{end}}`+
@@ -545,7 +552,7 @@ func TestPageHeadRequired(t *testing.T) {
 	}
 	l := tmpl.NewLibrary(data, "", "", "")
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: <b>x</b>\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), page+": an action of page.html leaves out its </head>") {
+		!strings.HasPrefix(err.Error(), "data.yaml:1:11: the page drawn from this file has no </head>") {
 		t.Errorf("drawing without </head> = %v", err)
 	}
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: <svg></head>\n"); err == nil ||
@@ -554,8 +561,8 @@ func TestPageHeadRequired(t *testing.T) {
 	}
 }
 
-// page.html names parts floe has, past a name it puts together, an element the box of one, a mistake told
-// at the line of the name.
+// The page drawn names parts floe has, an element the box of one, a mistake told at the template: of the
+// example template check draws.
 func TestTemplateCSSAndParts(t *testing.T) {
 	t.Parallel()
 
@@ -568,11 +575,13 @@ func TestTemplateCSSAndParts(t *testing.T) {
 	for _, m := range mistakes {
 		got = append(got, strings.TrimPrefix(m.Error(), dir+string(filepath.Separator)))
 	}
+	// Each name of an attribute not of one is told so, the same mistake, which Tell tells once.
+	got = slices.Compact(got)
 	want := []string{
-		"page.html:5: page.html names the part nope, which there is none of; use bars, ",
-		`page.html:5: data-floe-part="cell note" is not the name of one part`,
-		`page.html:5: data-floe-part=" cell" is not the name of one part`,
-		"page.html:5: data-floe-part names the look panel, which has no box",
+		"example.yaml:1:11: the page drawn from this file names the part nope, which there is none of, ",
+		`example.yaml:1:11: the page has data-floe-part="cell note", which is not the name of one part`,
+		`example.yaml:1:11: the page has data-floe-part=" cell", which is not the name of one part`,
+		"example.yaml:1:11: the page has data-floe-part=\"panel\", but panel is a look",
 	}
 	if len(got) != len(want) {
 		t.Fatalf("Check = %q, want %q", got, want)
@@ -771,26 +780,28 @@ func TestTemplateWords(t *testing.T) {
 	}
 }
 
-// A mistake of page.html leaves out only the checks of what it would have made: the names of the parts in
-// its text are checked whatever else it holds, and its assets once it parses, whatever words it names.
+// A mistake of page.html leaves out only the checks of what it would have made: its assets are checked once
+// it parses, whatever words it names, and the page drawn of the example tells its mistakes together. The
+// example is drawn once the files pass: what its page holds waits for a mistake of theirs (a regression
+// taken).
 func TestCheckPageMistakesTogether(t *testing.T) {
 	t.Parallel()
 
 	nope := `<b data-floe-part="nope"></b></body>`
-	for name, page := range map[string]string{
-		"style":    "</body>|<style>b {}</style>" + nope,
-		"parse":    "</body>|{{if}}" + nope,
-		"a word":   "</body>|{{word \"totl\"}}" + nope,
-		"an asset": "</body>|{{word \"totl\"}}{{asset \"nope.png\"}}</body>",
+	for name, tt := range map[string]struct {
+		page string
+		want []string
+	}{
+		"style":    {"</body>|<style>b {}</style>" + nope, []string{"has a <style>", "names the part nope"}},
+		"parse":    {"</body>|{{if}}" + nope, []string{"missing value for if"}},
+		"a word":   {"</body>|{{word \"totl\"}}" + nope, []string{"totl"}},
+		"an asset": {"</body>|{{word \"totl\"}}{{asset \"nope.png\"}}</body>", []string{"totl", "nope.png"}},
 	} {
-		dir := sizes(t, map[string]string{"words.yaml": "en: { total: total }\n", "page.html": page})
+		dir := sizes(t, map[string]string{"words.yaml": "en: { total: total }\n", "page.html": tt.page})
 		_, mistakes := check(dir, "", "")
-		want := "names the part nope"
-		if name == "an asset" {
-			want = "nope.png"
-		}
-		if len(mistakes) != 2 || !strings.Contains(fmt.Sprint(mistakes), want) {
-			t.Errorf("Check of page.html with %s = %v, want it and %s", name, mistakes, want)
+		told := fmt.Sprint(mistakes)
+		if len(mistakes) != len(tt.want) || slices.ContainsFunc(tt.want, func(w string) bool { return !strings.Contains(told, w) }) {
+			t.Errorf("Check of page.html with %s = %v, want %q", name, mistakes, tt.want)
 		}
 	}
 }

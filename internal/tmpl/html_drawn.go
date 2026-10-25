@@ -93,24 +93,22 @@ func (m *htmlMarks) drawnOrder(page []byte) []int {
 // items before it in the page change none, so that one that does is told, not the one after it. One that
 // leaves a <form> open, which the tree does not show, is refused too: the page's inputs after it would be
 // sent where the item says. d is drawn as a copy, marked, so that d draws its page as it is. An item is
-// checked in the <head> or after the <body> tag of a page read in standards mode (doctypeMistake): page.html
-// putting one elsewhere is refused. page.html draws it whole: what it makes of an item's text is its own.
+// checked in the <head> or after the <body> tag of doc, read in standards mode (withStyles asks it first):
+// page.html putting one elsewhere is refused. page.html draws it whole: what it makes of an item's text is
+// its own.
 // LIMIT: page.html computing on an item's text (slice, len, eq) is checked as the mark makes it; theirs.
 // LIMIT: each item draws and reads the page again, every view (400 items, 0.25s); keep the result if slow.
 // LIMIT: an item left open for the next to close (<li>a, <li>b) is refused; read them together if pages need it.
 // LIMIT: a comment mark rebuilds no <b> page.html left open (<p><b>x</p>); mark with text if pages need it.
-// It refuses too each name of a part an item gives that the page would be refused for, read where the item
-// is (a <title> in an <svg> holds elements), at the item. It returns the page drawn with every item a mark,
-// whatever its doctype, nil when that cannot be drawn, whose own mistake it then tells.
-func (d *Data) checkDrawnHTML(set *partSet, page *template.Template, title string, doc *html.Node) ([]byte, error) {
+// It refuses too each name an item gives that the page would be refused for (misnamings: a part that cannot
+// be used or there is none of, a data-floe-part not of one part's name, a look as a box), read where the item
+// is (a <title> in an <svg> holds elements), at the item.
+func (d *Data) checkDrawnHTML(set *partSet, page *template.Template, title string, doc *html.Node) error {
 	c := d.marked(rand.Text())
 	c.marks.shown = func(int) bool { return false }
 	all, err := c.execute(page, title)
 	if err != nil {
-		return nil, err
-	}
-	if !standard(doc) {
-		return all, usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_doctype")
+		return err
 	}
 	want := treeShape(doc)
 	var found usererr.List
@@ -121,7 +119,7 @@ func (d *Data) checkDrawnHTML(set *partSet, page *template.Template, title strin
 		bare, err := c.execute(page, title)
 		if err != nil {
 			if failed := found.Add(err); failed != nil {
-				return all, failed //nolint:wrapcheck // what failed, as it is
+				return failed //nolint:wrapcheck // what failed, as it is
 			}
 			// It is not compared with the page, so that what it does to it, which the items after it are
 			// compared with, is not known: theirs is not asked.
@@ -136,14 +134,14 @@ func (d *Data) checkDrawnHTML(set *partSet, page *template.Template, title strin
 			continue
 		}
 		atItem := func(bad *usererr.Error) *usererr.Error { return itemError(d.File, it.pos, it.path, bad) }
-		found = append(found, set.placedMisnamings(drawnNames(nodes, it.text), d.File, it.pos, atItem)...)
+		found = append(found, set.placedMisnamings(drawnNames(nodes, it.text), d.File, it.pos, "tmpl_html_part", atItem)...)
 		if formIn && leavesForm(it.text) || shaped && !slices.Equal(treeShape(doc), want) {
 			// The items after it are compared with a page it changed: it is the one told.
 			found = append(found, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page")))
 			break
 		}
 	}
-	return all, found.Err()
+	return found.Err()
 }
 
 // standard reports whether a browser reads doc in standards mode, as html.ParseFragment reads an item: its
@@ -162,19 +160,6 @@ func standard(doc *html.Node) bool {
 	return false
 }
 
-// doctypeMistake refuses src, the page.html file of a template whose schema s declares an item of format
-// html, that does not start with <!doctype html>: such an item is checked in standards mode only.
-func doctypeMistake(file string, s *shape, src []byte) error {
-	if _, item := s.first("", func(s *shape) bool { return s.format == "html" }); item == nil {
-		return nil
-	}
-	// A bytes.Reader fails no read, the one error Parse returns.
-	if doc, _ := html.Parse(bytes.NewReader(src)); standard(doc) { //nolint:errcheck // see above
-		return nil
-	}
-	return usererr.NewAt(file, 0, 0, "tmpl_html_doctype")
-}
-
 // marked returns a copy of d whose items of format html are drawn with mark, all shown till its marks'
 // shown says otherwise, so that d draws its page as it is.
 func (d *Data) marked(mark string) *Data {
@@ -189,50 +174,60 @@ func (d *Data) marked(mark string) *Data {
 	return &c
 }
 
-// withStyles checks out, the page page drew of d, titled title, set's parts its parts, and returns it with
-// its styles (pageStyle, own its template's CSS) before its </head> (headAt). The template's mistakes, a
-// </head> missing (noHead) and a name of a part the page is refused for, are asked of the page drawn with
-// every item of format html a mark, which what those items hold does not change, and the items' of out
-// (checkDrawnHTML): both are told. Then, as page.html may draw other text by what an item holds (eq, len,
-// slice), the template's mistakes are asked of out itself too, where the styles go.
-// LIMIT: with items of format html, out is read apart from the page drawn with marks; take the latter's if
-// they come to cost.
-func (d *Data) withStyles(
-	set *partSet, page *template.Template, title string, out, own []byte, noHead error,
-) ([]byte, error) {
-	bare, items := out, error(nil)
+// withStyles checks out, the page page drew of d, titled title, set's parts its parts, as a browser reads it,
+// and returns it with its styles (pageStyle, own its template's CSS) before its </head> (headAt). What it
+// checks is of the page drawn, whoever wrote it (page.html, a part, an item of format html): a mistake of
+// d's, at its template: (pageMistake). An item of format html is checked (checkDrawnHTML) in a page read in
+// standards mode: the page an item broke, or whose items are not checked, would tell it again as a </head>
+// or a name, which are then not asked. A <style> is asked all the same: an item holds none (checkHTML).
+// LIMIT: what out holds is not told by who wrote it, nor at its line: a page drawn leads back to neither.
+func (d *Data) withStyles(set *partSet, page *template.Template, title string, out, own []byte) ([]byte, error) {
+	doc := parseDrawn(out)
+	style := d.styleMistake(doc)
 	if d.htmlItems != nil {
-		bare, items = d.checkDrawnHTML(set, page, title, parseDrawn(out))
-	}
-	k, doc := -1, (*html.Node)(nil)
-	var head, misnamed error
-	if bare != nil { // without it, what is asked of it is not
-		if k, doc = headAt(bare); k < 0 {
-			head, doc = noHead, parseDrawn(bare)
+		var items error
+		if !standard(doc) {
+			items = d.pageMistake("tmpl_html_doctype")
+		} else {
+			items = d.checkDrawnHTML(set, page, title, doc)
 		}
-		// The <style> headAt put in names no part.
-		misnamed = set.misnamingErrs(drawnNames([]*html.Node{doc}, string(bare))).Err()
-	}
-	if err := usererr.Collect(items, head, misnamed); err != nil {
-		return nil, err //nolint:wrapcheck // the template's mistakes and the items'
-	}
-	if d.htmlItems != nil {
-		// page.html may draw another branch by what an item holds (checkDrawnHTML's LIMIT): out is asked the
-		// template's mistakes too, once the items' names, which out holds, are told none.
-		if k, doc = headAt(out); k < 0 {
-			head, doc = noHead, parseDrawn(out)
-		}
-		misnamed = set.misnamingErrs(drawnNames([]*html.Node{doc}, string(out))).Err()
-		if err := usererr.Collect(head, misnamed); err != nil {
-			return nil, err //nolint:wrapcheck // the template's mistakes
+		if items != nil {
+			return nil, usererr.Collect(items, style) //nolint:wrapcheck // mistakes of the page drawn and of its items
 		}
 	}
-	style, err := set.pageStyle(drawnNames([]*html.Node{doc}, string(out)), own, d.Theme)
+	k, _ := headAt(out)
+	var head error
+	if k < 0 {
+		head = d.pageMistake("tmpl_drawn_head")
+	}
+	named := drawnNames([]*html.Node{doc}, string(out))
+	at := func(bad *usererr.Error) *usererr.Error { return yamlpos.Place(d.File, d.templateAt, bad) }
+	misnamed := set.placedMisnamings(named, d.File, d.templateAt, "tmpl_drawn_part", at)
+	if err := usererr.Collect(head, style, misnamed.Err()); err != nil {
+		return nil, err //nolint:wrapcheck // mistakes of the page drawn
+	}
+	sheets, err := set.pageStyle(named, own, d.Theme)
 	if err != nil {
 		return nil, err
 	}
-	at := headEnd.FindAllIndex(out, -1)[k][0]
-	return slices.Concat(out[:at], []byte(style), out[at:]), nil
+	end := headEnd.FindAllIndex(out, -1)[k][0]
+	return slices.Concat(out[:end], []byte(sheets), out[end:]), nil
+}
+
+// pageMistake is the mistake key of the page drawn of d, at its template:, which draws it.
+func (d *Data) pageMistake(key string) *usererr.Error {
+	return yamlpos.New(d.File, d.templateAt, key)
+}
+
+// styleMistake refuses doc, the page drawn of d, holding a <style>, of HTML, SVG or MathML: floe puts a page's
+// CSS together.
+func (d *Data) styleMistake(doc *html.Node) error {
+	for n := range doc.Descendants() {
+		if n.Type == html.ElementNode && n.Data == "style" {
+			return d.pageMistake("tmpl_drawn_style")
+		}
+	}
+	return nil
 }
 
 // probeAttr marks the <style> headAt puts into a page to see where a browser puts the page's styles.

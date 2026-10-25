@@ -76,7 +76,9 @@ type Data struct {
 	htmlItems []htmlItem // its items of format html, which Render checks the page drawn for
 	linkItems []itemAt   // its texts holding a #, at which Render tells a link to no part of the page
 	root      ast.Node   // the YAML Read read it from, where Render places the mistake of a link
-	marks     *htmlMarks // its items of format html marked, while checkDrawnHTML draws it; nil else
+	// where its template: is written, at which Render tells the mistakes of the page drawn
+	templateAt yamlpos.Pos
+	marks      *htmlMarks // its items of format html marked, while checkDrawnHTML draws it; nil else
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
@@ -252,7 +254,7 @@ func start(file string, src []byte, given string) (*head, error) {
 	d := &Data{
 		File: file, Template: "", Theme: DefaultTheme, Title: "", Lang: "", Values: top, Calc: nil,
 		tmpl: nil, shape: nil, images: nil, parts: nil, diagrams: false, tried: nil, icons: nil,
-		htmlItems: nil, linkItems: nil, root: nil, marks: nil,
+		htmlItems: nil, linkItems: nil, root: nil, marks: nil, templateAt: yamlpos.Pos{Line: 0, Column: 0},
 	}
 	h := &head{d: d, root: root, where: map[string]yamlpos.Pos{}, problems: nil, unnamed: false}
 	h.readShared(given)
@@ -264,6 +266,7 @@ func start(file string, src []byte, given string) (*head, error) {
 func (t *Template) check(h *head, images imageDir, given string, problems usererr.List) error {
 	d := h.d
 	d.tmpl = t
+	d.templateAt = h.where["template"]
 	set, err := t.parts()
 	if err != nil {
 		return err
@@ -359,9 +362,8 @@ func checkHTML(set *partSet, d *Data) error {
 		if baseOrMeta.MatchString(it.text) {
 			problems = append(problems, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_base")))
 		}
-		problems = append(problems, set.drawnMisnamings(it.text, d.File, it.pos, func(bad *usererr.Error) *usererr.Error {
-			return itemError(d.File, it.pos, it.path, bad)
-		})...)
+		atItem := func(bad *usererr.Error) *usererr.Error { return itemError(d.File, it.pos, it.path, bad) }
+		problems = append(problems, set.drawnMisnamings(it.text, d.File, it.pos, "tmpl_html_part", atItem)...)
 	}
 	return problems.Err()
 }
@@ -462,7 +464,7 @@ func (d *Data) Render(title string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	styled, err := d.withStyles(set, page, title, out, own, read.head)
+	styled, err := d.withStyles(set, page, title, out, own)
 	if err != nil {
 		return nil, err
 	}
@@ -521,21 +523,10 @@ func (d *Data) withDiagrams(out []byte) ([]byte, error) {
 	return append(out, "\n"+script+"\n"...), nil
 }
 
-// headMistake is the mistake of page.html, src, shown as file, whose drawing holds no </head>: it holds
-// none, or an action of it leaves its own out. The data's HTML holds none, which checkHTML refuses.
-func headMistake(file string, src []byte) *usererr.Error {
-	if tagsOf(tagsIn(string(src))).head >= 0 {
-		return usererr.NewAt(file, 0, 0, "tmpl_page_head_action")
-	}
-	return usererr.NewAt(file, 0, 0, "tmpl_page_head")
-}
-
-// parsedPage is the page.html of a template, parsed and never drawn, and the mistake of it to tell when
-// its drawing holds no </head>.
+// parsedPage is the page.html of a template, parsed and never drawn.
 type parsedPage struct {
 	page *template.Template // nil when it cannot be parsed
 	src  []byte
-	head *usererr.Error
 }
 
 // in returns p's page to draw in a language, whose words word gives.
@@ -547,18 +538,19 @@ func (p parsedPage) in(word func(string) (string, error)) (*template.Template, e
 	return page.Funcs(template.FuncMap{"word": word}), nil
 }
 
-// page reads and parses the page.html of t once, which holds no <style>: floe puts a page's CSS together,
-// with its words.yaml, nil while it has mistakes, told beside, when no word is checked. Its mistakes are told
-// together: those of its tags, as text, and, parsed, of the words it names and of what html/template cannot
-// escape (escapeMistake). Parsed, its page is kept with those mistakes too, which some callers drop.
+// page reads and parses the page.html of t once, with its words.yaml, nil while it has mistakes, told beside,
+// when no word is checked. Its mistakes are told together: a <base> in its text, and, parsed, of the words it
+// names and of what html/template cannot escape (escapeMistake). What it draws, a </head>, a <style> or a
+// name of a part, is asked of each page it draws (withStyles). Parsed, its page is kept with those mistakes
+// too, which some callers drop.
 func (t *Template) page() (parsedPage, error) {
 	return t.reads.page.of(func() (parsedPage, error) {
 		w, _ := t.words() //nolint:errcheck // told by those who read the words
 		src, err := t.readFile("page.html")
 		if err != nil {
-			return parsedPage{page: nil, src: nil, head: nil}, err
+			return parsedPage{page: nil, src: nil}, err
 		}
-		p := parsedPage{page: nil, src: src, head: headMistake(t.file("page.html"), src)}
+		p := parsedPage{page: nil, src: src}
 		var parseErr, wordsErr, escapeErr error
 		if p.page, parseErr = t.parsePage(src, w); parseErr == nil {
 			wordsErr = t.pageWords(p.page, w)
@@ -568,17 +560,12 @@ func (t *Template) page() (parsedPage, error) {
 	})
 }
 
-// refuseInPage refuses src, the page.html of t, holding a <style>, as floe puts a page's CSS together, or
-// a <base>.
+// refuseInPage refuses src, the page.html of t, holding a <base>, wherever it is: the page's CSP ignores it.
 func (t *Template) refuseInPage(src []byte) error {
-	var style, b error
-	if at := tagsOf(tagsIn(string(src))).style; at >= 0 {
-		style = usererr.NewAt(t.file("page.html"), lineAt(src, at), 0, "tmpl_page_style")
-	}
 	if at := base.FindIndex(src); at != nil {
-		b = usererr.NewAt(t.file("page.html"), lineAt(src, at[0]), 0, "tmpl_page_base")
+		return usererr.NewAt(t.file("page.html"), lineAt(src, at[0]), 0, "tmpl_page_base")
 	}
-	return usererr.Collect(style, b)
+	return nil
 }
 
 // parsePage parses src, the page.html of t, with its words w in en.

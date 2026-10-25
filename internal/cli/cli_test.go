@@ -1147,8 +1147,10 @@ func TestSharedToldOnce(t *testing.T) {
 	e.write(t, "templates/nh/page.html", `<!doctype html><html lang="{{.Lang}}"><body></body></html>`)
 	e.write(t, "work/h1.yaml", "template: nh\nlang: en\ntitle: t\n")
 	e.write(t, "work/h2.yaml", "template: nh\nlang: en\ntitle: t\n")
-	if r = e.run(t, "work", "check", "h1.yaml", "h2.yaml"); r.code != 1 || strings.Count(r.stderr, "page.html holds no </head>") != 1 {
-		t.Errorf("check of two files of a template whose page.html holds no </head> = %+v, want it told once", r)
+	// Of the page each draws: told at the template: of each.
+	if r = e.run(t, "work", "check", "h1.yaml", "h2.yaml"); r.code != 1 || strings.Count(r.stderr, "has no </head>") != 2 ||
+		!strings.Contains(r.stderr, "h1.yaml:1:11: ") || !strings.Contains(r.stderr, "h2.yaml:1:11: ") {
+		t.Errorf("check of two files of a template whose page.html holds no </head> = %+v, want it told at each", r)
 	}
 }
 

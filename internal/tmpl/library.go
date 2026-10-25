@@ -281,9 +281,11 @@ func (l *Library) floeChecked(name string) error {
 	return check()
 }
 
-// checkFloe checks the built-in template name as floe template check checks one of one's own but its
-// example (checkFiles), in a run that has no templates, parts nor themes of one's own, which would take the
+// checkFloe checks the built-in template name as floe template check checks one of one's own, its example
+// drawn (checkFiles), in a run that has no templates, parts nor themes of one's own, which would take the
 // place of floe's: what it refuses, and a warning, which no one can heed either, are floe's failure.
+// LIMIT: it draws the whole example (diagrams, Markdown, parts) once a Library; once a process if that comes
+// to cost, as floe's files do not change.
 func (l *Library) checkFloe(name string) error {
 	floe := &Library{dir: "", mine: ownDirs{parts: "", themes: ""}, icons: "", run: nil, floe: l.floe, checked: l.checked}
 	warnings, err := floe.Run().template(name, "", "").checkFiles()

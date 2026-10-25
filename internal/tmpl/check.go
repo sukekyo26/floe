@@ -71,12 +71,7 @@ func (l *Library) Check(dir, cwd string) (warnings usererr.List, err error) {
 		warnings = append(warnings, usererr.New("tmpl_no_template_yaml", dir, have.minor()))
 	}
 	more, err := t.checkFiles()
-	warnings = append(warnings, more...)
-	if err != nil {
-		return warnings, err
-	}
-	// Each stage runs on what passed the one before: a broken file would only fail the example.
-	return warnings, t.checkExample()
+	return append(warnings, more...), err
 }
 
 // CheckOwnParts checks the parts and themes of one's own of l as a page would read them: the mistakes
@@ -93,10 +88,10 @@ func (l *Library) CheckOwnParts() (warnings usererr.List, err error) {
 }
 
 // checkFiles checks the files of t apart from any data: what makes it unusable, as a data file's check finds it
-// (fileMistakes, what Template.unusable tells), and what template check alone checks besides: page.html's <head>
-// and doctype, the parts and images it names, the paths of checks.yaml against the schema and the colours of
-// page.css. A check of what another made (page.html as parsed, the schema as compiled) is left out while that
-// has mistakes.
+// (fileMistakes, what Template.unusable tells), and what template check alone checks besides: the images
+// page.html names, the paths of checks.yaml against the schema, the colours of page.css and, those passed,
+// its example drawn (checkExample), whose page tells page.html's mistakes as any data's does. A check of what
+// another made (page.html as parsed, the schema as compiled) is left out while that has mistakes.
 func (t *Template) checkFiles() (usererr.List, error) {
 	if err := t.missingFiles(); err != nil {
 		return nil, err
@@ -115,43 +110,23 @@ func (t *Template) checkFiles() (usererr.List, error) {
 	declared := checksDeclared(list, read.compiled, false)
 	checked, assetsErr := t.checkAssets()
 	p, _ := t.page() //nolint:errcheck // told by unusable
-	var named []namedPart
-	var pageErr error
-	if p.src != nil {
-		named = namedParts(string(p.src))
-		pageErr = t.checkPage(set, read.shape, checked, p, named)
+	var assets error
+	if p.page != nil {
+		assets = t.checkPageAssets(p.page, checked)
 	}
 	inSchema, err := set.unusableRefs(read.notes)
 	if err != nil {
 		return nil, err
 	}
+	refused := maps.Clone(inSchema)
+	err = usererr.Collect(unusable, declared, assets, assetsErr)
+	if err == nil {
+		// The example is drawn with what passed: page.html as parsed, the schema as compiled.
+		err = t.checkExample()
+		maps.Copy(refused, brokenTold(err))
+	}
 	// A copy: the schema's warnings are those its run keeps.
-	warnings = slices.Concat(warnings, brokenParts(set, named, inSchema))
-	return warnings, usererr.Collect(unusable, declared, pageErr, assetsErr)
-}
-
-// checkPage checks p, the page.html of t as read (Template.page), which names the parts named of set, for
-// what template check alone checks: its <head> and doctype, the parts it names, and, parsed, the images it
-// names to asset but those checked (checkAssets). s is the schema of t, nil when it cannot be read.
-func (t *Template) checkPage(set *partSet, s *shape, checked map[string]bool, p parsedPage, named []namedPart) error {
-	var assets error
-	if p.page != nil {
-		assets = t.checkPageAssets(p.page, checked)
-	}
-	return usererr.Collect(t.checkHead(s, p.src), t.checkNamedParts(set, p.src, named), assets)
-}
-
-// checkHead refuses src, page.html, without a <head>, and one without a standard doctype where s, the
-// schema of t, nil when it cannot be read, has an item of format html.
-func (t *Template) checkHead(s *shape, src []byte) error {
-	var doctype, head error
-	if s != nil {
-		doctype = doctypeMistake(t.file("page.html"), s, src)
-	}
-	if tagsOf(tagsIn(string(src))).head < 0 {
-		head = usererr.NewAt(t.file("page.html"), 0, 0, "tmpl_page_head")
-	}
-	return usererr.Collect(doctype, head)
+	return slices.Concat(warnings, brokenParts(set, refused)), err
 }
 
 // missingFiles returns the mistake of each file t needs that it does not have, or that cannot be read.
@@ -168,18 +143,12 @@ func (t *Template) missingFiles() error {
 	return usererr.Collect(errs...)
 }
 
-// brokenParts warns of each part in set that cannot be used, but those page.html names by an attribute, of
-// named, which checkNamedParts refuses, and those the schema names, inSchema, which its $refs are refused
-// for: the schema compiled with each standing as false, so it reaches the others through floe's schemas
-// alone, as any.json, which refuse the data that takes them where it does (schemaCheck.unusablePart). A
-// theme that cannot be used is warned of too: a data file picks it.
-func brokenParts(set *partSet, named []namedPart, inSchema map[string]bool) usererr.List {
-	refused := maps.Clone(inSchema)
-	for _, n := range named {
-		if !n.text {
-			refused[n.name] = true
-		}
-	}
+// brokenParts warns of each part in set that cannot be used, but those refused, which a mistake tells
+// already: those the schema names, which its $refs are refused for, compiled with each standing as false, so it
+// reaches the others through floe's schemas alone, as any.json, which refuse the data that takes them where it
+// does (schemaCheck.unusablePart), and those the example's page names (brokenTold). A theme that cannot be
+// used is warned of too: a data file picks it.
+func brokenParts(set *partSet, refused map[string]bool) usererr.List {
 	// floe's stays in place of one of a name set keeps (diagram), which page.html may name.
 	warnings := usererr.OfWhole(slices.Concat(
 		set.unusable(kindPart, func(name string) bool { return refused[name] && set.parts[name] == nil }),
@@ -188,31 +157,20 @@ func brokenParts(set *partSet, named []namedPart, inSchema map[string]bool) user
 	return append(warnings, set.strays...)
 }
 
-// checkNamedParts returns a mistake for each part src, page.html, names, of named, by data-floe-part or
-// data-floe-look, that set does not have, as the page would get no style for it, and for each
-// data-floe-part that is not one part's name or names a look.
-func (t *Template) checkNamedParts(set *partSet, src []byte, named []namedPart) error {
+// brokenTold returns the names of the parts that cannot be used that err, the mistakes of drawing an example,
+// tells why of (brokenOf), as its page names them.
+func brokenTold(err error) map[string]bool {
+	told := map[string]bool{}
 	var mistakes usererr.List
-	told := map[int]bool{} // the attributes not of one name told, by where each is
-	page := t.file("page.html")
-	for _, n := range named {
-		line := lineAt(src, n.at)
-		switch set.misnamed(n) {
-		case nameNotOne:
-			if !told[n.at] {
-				told[n.at] = true
-				mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_part_several", n.value))
-			}
-		case nameLookBox:
-			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_look_box", n.name))
-		case nameBroken:
-			mistakes = append(mistakes, set.brokenErr(kindPart, n.name).Placed(page, line, 0, ""))
-		case nameUnknown:
-			mistakes = append(mistakes, usererr.NewAt(page, line, 0, "tmpl_page_part", n.name, set.candidates(n.look)))
-		case nameRight:
+	if mistakes.Add(err) != nil {
+		return told
+	}
+	for _, m := range mistakes {
+		if name, ok := strings.CutPrefix(m.Of, partKinds[kindPart].over); ok {
+			told[name] = true
 		}
 	}
-	return mistakes.Err()
+	return told
 }
 
 // checkAssets returns the mistakes of the images under the assets/ of t, if it has one, and the names of
