@@ -1,12 +1,12 @@
 $ floe check head.yaml
 exit 1
 --- stderr
-$SAMPLE/templates/t/page.html: an action of page.html leaves out its </head>, before which floe puts the page's styles: write </head> outside {{if}}, {{with}} and {{range}}
+head.yaml:1:11: the page drawn from this file has no </head> where a <style> styles the page, before which floe puts the page's styles: page.html writes it in the head, outside {{if}}, {{with}}, {{range}}, <template>, <svg> and <math>, and nothing drawn before it, a part or an item of format html, leaves an element open
 $ floe render --out-dir $TMP/pages/head.yaml head.yaml
 exit 1
 --- stderr
-$SAMPLE/templates/t/page.html: an action of page.html leaves out its </head>, before which floe puts the page's styles: write </head> outside {{if}}, {{with}} and {{range}}
+head.yaml:1:11: the page drawn from this file has no </head> where a <style> styles the page, before which floe puts the page's styles: page.html writes it in the head, outside {{if}}, {{with}}, {{range}}, <template>, <svg> and <math>, and nothing drawn before it, a part or an item of format html, leaves an element open
 $ floe template check templates/t
 exit 1
 --- stderr
-templates/t/page.html: an action of page.html leaves out its </head>, before which floe puts the page's styles: write </head> outside {{if}}, {{with}} and {{range}}
+templates/t/example.yaml:1:11: the page drawn from this file has no </head> where a <style> styles the page, before which floe puts the page's styles: page.html writes it in the head, outside {{if}}, {{with}}, {{range}}, <template>, <svg> and <math>, and nothing drawn before it, a part or an item of format html, leaves an element open

@@ -456,6 +456,10 @@ func TestDrawnHTMLWherePageHasIt(t *testing.T) {
 		!strings.Contains(err.Error(), "does not start with <!doctype html>") {
 		t.Errorf("a page in quirks mode = %v", err)
 	}
+	// template check asks it of the example drawn, which writes an item of format html.
+	if err := os.WriteFile(filepath.Join(dir, "memo", "example.yaml"), []byte("template: memo\nlang: en\nrisks: <p>a</p>\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	for doctype, refused := range map[string]bool{"": true, `<!DOCTYPE html SYSTEM "about:legacy-compat">`: false} {
 		src := doctype + `<html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body>{{.Data.risks}}</body></html>`
 		if err := os.WriteFile(page, []byte(src), 0o600); err != nil {
@@ -496,8 +500,8 @@ func TestDrawnHTMLTableAndForm(t *testing.T) {
 	}
 }
 
-// An action of page.html that leaves out its </head> is told as the template's, asked of the page drawn with
-// the items as marks, and an item that changes the page as the data's: both, neither hiding the other.
+// An item that changes the page is told at the item, and the page it broke is not asked for its </head>,
+// which would tell the item again as the page's.
 func TestDrawnHTMLAfterTheTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -508,9 +512,14 @@ func TestDrawnHTMLAfterTheTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: <b>x\n")
-	if err == nil || !strings.Contains(err.Error(), page+": an action of page.html leaves out its </head>") ||
-		!strings.Contains(err.Error(), "data.yaml:3:8: risks: HTML changes the page around it") {
+	if err == nil || strings.Contains(err.Error(), "</head>") ||
+		!strings.HasPrefix(err.Error(), "data.yaml:3:8: risks: HTML changes the page around it") {
 		t.Errorf("a page.html whose action leaves out </head>, and an item that changes the page = %v", err)
+	}
+	// Without it, the </head> is told, at the data's template:.
+	if _, err = draw(tmpl.NewLibrary(dir, "", "", ""), "template: memo\nlang: en\nrisks: ''\n"); err == nil ||
+		!strings.HasPrefix(err.Error(), "data.yaml:1:11: the page drawn from this file has no </head>") {
+		t.Errorf("a page.html whose action leaves out </head> = %v", err)
 	}
 }
 

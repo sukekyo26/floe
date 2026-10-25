@@ -1,6 +1,8 @@
 package tmpl
 
 import (
+	"bytes"
+	"cmp"
 	"errors"
 	"io/fs"
 	"os"
@@ -309,24 +311,28 @@ func TestFindBrokenBuiltin(t *testing.T) {
 	for _, tt := range []struct {
 		name, file, text string
 		own              ownDirs
+		told             string // the file the failure names, file for ""
 	}{
-		{"checks", "checks.yaml", "- for: sections\n  expr: item ==\n  message: x\n", ownDirs{}},
-		{"format", "schema.json", strings.Replace(schema, `"properties": {`, `"properties": {"zz": {"type": "string", "format": "nope"}, `, 1), ownDirs{}},
-		{"pattern", "schema.json", strings.Replace(schema, `"properties": {`, `"properties": {"zz": {"type": "string", "pattern": "["}, `, 1), ownDirs{}},
-		{"ref", "schema.json", strings.Replace(schema, "floe:///parts/any.json", "floe:///parts/nosuch.json", 1), ownDirs{}},
-		{"parse", "page.html", page + "{{if .title}}", ownDirs{}},
-		{"escape", "page.html", page + `<a href="{{if .title}}/x/{{else}}/s?q={{end}}{{.title}}">x</a>`, ownDirs{}},
-		{"words", "words.yaml", "en: [\n", ownDirs{}},
-		{"names", "page.html", strings.Replace(page, "<body", `<body><div data-floe-part="nosuch"></div`, 1), ownDirs{}},
-		{"declared", "checks.yaml", "- for: nosuch\n  expr: \"true\"\n  message: x\n", ownDirs{}},
-		{"warning", "schema.json", strings.Replace(schema, `"properties": {`, `"properties": {"zz": {"type": "object", "properties": {"a": {"type": "string"}}}, `, 1), ownDirs{}},
-		{"computed", "computed.yaml", "total: title +\n", ownDirs{parts: overlap, themes: overlap}},
+		{"checks", "checks.yaml", "- for: sections\n  expr: item ==\n  message: x\n", ownDirs{}, ""},
+		{"format", "schema.json", strings.Replace(schema, `"properties": {`, `"properties": {"zz": {"type": "string", "format": "nope"}, `, 1), ownDirs{}, ""},
+		{"pattern", "schema.json", strings.Replace(schema, `"properties": {`, `"properties": {"zz": {"type": "string", "pattern": "["}, `, 1), ownDirs{}, ""},
+		{"ref", "schema.json", strings.Replace(schema, "floe:///parts/any.json", "floe:///parts/nosuch.json", 1), ownDirs{}, ""},
+		{"parse", "page.html", page + "{{if .title}}", ownDirs{}, ""},
+		{"escape", "page.html", page + `<a href="{{if .title}}/x/{{else}}/s?q={{end}}{{.title}}">x</a>`, ownDirs{}, ""},
+		{"words", "words.yaml", "en: [\n", ownDirs{}, ""},
+		// Its example drawn: what page.html draws is told at the example's template:.
+		{"names", "page.html", strings.Replace(page, "<body", `<body><div data-floe-part="nosuch"></div`, 1), ownDirs{}, "example.yaml"},
+		{"head", "page.html", strings.Replace(page, "</head>", "{{if false}}</head>{{end}}", 1), ownDirs{}, "example.yaml"},
+		{"declared", "checks.yaml", "- for: nosuch\n  expr: \"true\"\n  message: x\n", ownDirs{}, ""},
+		{"warning", "schema.json", strings.Replace(schema, `"properties": {`, `"properties": {"zz": {"type": "object", "properties": {"a": {"type": "string"}}}, `, 1), ownDirs{}, ""},
+		{"computed", "computed.yaml", "total: title +\n", ownDirs{parts: overlap, themes: overlap}, ""},
 	} {
 		floe := mapOf(t, templateFiles)
 		floe[path.Join("templates", "report", tt.file)] = &fstest.MapFile{Data: []byte(tt.text)}
 		tpl, err := libraryOf("", tt.own, floe).Find("report")
-		if tpl != nil || err == nil || isMistake(err) || !strings.Contains(err.Error(), "report/"+tt.file) {
-			t.Errorf("%s: Find = %v, %v; want floe's failure at report/%s", tt.name, tpl, err, tt.file)
+		told := cmp.Or(tt.told, tt.file)
+		if tpl != nil || err == nil || isMistake(err) || !strings.Contains(err.Error(), "report/"+told) {
+			t.Errorf("%s: Find = %v, %v; want floe's failure at report/%s", tt.name, tpl, err, told)
 		}
 	}
 	// Checked once for a library and its runs: floe's files do not change while it runs.
@@ -380,6 +386,11 @@ func TestCheckFloeOfAnotherName(t *testing.T) {
 		if rest, ok := strings.CutPrefix(name, "templates/report/"); ok {
 			floe["templates/slow/"+rest] = f
 		}
+	}
+	// Its example names it, as floe template check draws it.
+	example := floe["templates/slow/example.yaml"]
+	floe["templates/slow/example.yaml"] = &fstest.MapFile{
+		Data: bytes.Replace(example.Data, []byte("template: report"), []byte("template: slow"), 1),
 	}
 	held := &heldFS{FS: floe, at: "templates/slow", started: make(chan struct{}), open: make(chan struct{}), once: sync.Once{}}
 	l := libraryOf("", ownDirs{}, held)

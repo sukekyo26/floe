@@ -89,7 +89,7 @@ func TestDrawnReaderDrawnNames(t *testing.T) {
 	l, _ := memoPage(t, `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body>`+
 		`<div data-floe-part="{{if eq (printf "%s" .Data.risks) "<b>x</b>"}}note table{{else}}note{{end}}">{{.Data.risks}}</div></body></html>`)
 	_, err := draw(l, "template: memo\nlang: en\nrisks: <b>x</b>\n")
-	if err == nil || !strings.HasPrefix(err.Error(), `the page has data-floe-part="note table", which is not the name of one part`) {
+	if err == nil || !strings.HasPrefix(err.Error(), `data.yaml:1:11: the page has data-floe-part="note table", which is not the name of one part`) {
 		t.Errorf("a name drawn by what an item holds = %v", err)
 	}
 }
@@ -166,8 +166,8 @@ func TestDrawnReaderTemplateCheck(t *testing.T) {
 
 	head := `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title>`
 	for body, want := range map[string]string{
-		`<template></head></template><body></body></html>`:                               "leaves out its </head>",
-		`</head><body><div data-floe-part="note&#32;table"><p>x</p></div></body></html>`: `data-floe-part="note table" is not the name of one part`,
+		`<template></head></template><body></body></html>`:                               "example.yaml:1:11: the page drawn from this file has no </head>",
+		`</head><body><div data-floe-part="note&#32;table"><p>x</p></div></body></html>`: `example.yaml:1:11: the page has data-floe-part="note table", which is not the name of one part`,
 	} {
 		_, dir := memoPage(t, head+body)
 		if err := os.WriteFile(filepath.Join(dir, "example.yaml"), []byte("template: memo\nlang: en\n"), 0o600); err != nil {

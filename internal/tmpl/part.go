@@ -879,18 +879,20 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node) erro
 func (set *partSet) drawnMisnamings(
 	html, file string, pos yamlpos.Pos, other func(*usererr.Error) *usererr.Error,
 ) usererr.List {
-	return set.placedMisnamings(itemNames(html), file, pos, other)
+	return set.placedMisnamings(itemNames(html), file, pos, false, other)
 }
 
 // placedMisnamings returns the mistakes of named, the names an item of the data file file written at pos
-// gives, that the page would be refused for: each part that cannot be used there, the first time with why,
-// as a theme it picks that cannot be used, and each other one as other words it, left out for nil.
+// gives, or the page drawn of it, that the page would be refused for: each part that cannot be used there,
+// the first time with why, as a theme it picks that cannot be used, and each other one as other words it,
+// left out for nil; a name of no part only with unknown.
 func (set *partSet) placedMisnamings(
-	named []namedPart, file string, pos yamlpos.Pos, other func(*usererr.Error) *usererr.Error,
+	named []namedPart, file string, pos yamlpos.Pos, unknown bool, other func(*usererr.Error) *usererr.Error,
 ) usererr.List {
 	var found usererr.List
 	for _, m := range set.misnamings(named) {
 		switch {
+		case m.kind == nameUnknown && !unknown:
 		case m.kind == nameBroken:
 			found = append(found, yamlpos.Place(file, pos, m.err))
 		case other != nil:
@@ -1013,8 +1015,8 @@ type misnaming struct {
 }
 
 // misnamings returns the names of named, in order, that the page is refused for: a part that cannot be
-// used, a data-floe-part not of one part's name, or one that names a look alone, which has no box. The
-// elements would be left without their style.
+// used, a data-floe-part not of one part's name, one that names a look alone, which has no box, or a part
+// there is none of. The elements would be left without their style.
 func (set *partSet) misnamings(named []namedPart) []misnaming {
 	var found []misnaming
 	for _, n := range named {
@@ -1025,21 +1027,10 @@ func (set *partSet) misnamings(named []namedPart) []misnaming {
 			found = append(found, misnaming{kind: kind, err: usererr.New("tmpl_page_several", n.value)})
 		case nameLookBox:
 			found = append(found, misnaming{kind: kind, err: usererr.New("tmpl_page_look_box", n.name)})
-		case nameRight, nameUnknown:
-			// A name of no part draws nothing; the check of a template's page.html tells it.
+		case nameUnknown:
+			found = append(found, misnaming{kind: kind, err: usererr.New("tmpl_drawn_part", n.name, set.candidates(n.look))})
+		case nameRight:
 		}
-	}
-	return found
-}
-
-// misnamingErrs returns the mistakes of the names of named, the names of a page, that the page is refused
-// for (misnamings), every one. An item of the data that draws one is refused first, at the item
-// (drawnMisnamings, checkDrawnHTML).
-func (set *partSet) misnamingErrs(named []namedPart) usererr.List {
-	misnamed := set.misnamings(named)
-	found := make(usererr.List, 0, len(misnamed))
-	for _, m := range misnamed {
-		found = append(found, m.err)
 	}
 	return found
 }

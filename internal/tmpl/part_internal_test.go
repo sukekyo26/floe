@@ -278,22 +278,6 @@ func TestHeadAt(t *testing.T) {
 	}
 }
 
-// tagsOf finds the first <style> and <link> as an HTML parser would, case and all, past those in
-// comments, scripts and noscripts, and past elements of other names that start so.
-func TestTagsOf(t *testing.T) {
-	t.Parallel()
-
-	page := "<!-- <style> --><script>'<style><link>'</script><noscript><style></noscript><link-card></link-card><style-box>" +
-		"<script-x><link></script-x><LINK rel=x><Style>a{}</Style>"
-	want := tags{head: -1, style: strings.Index(page, "<Style>"), link: strings.Index(page, "<link></script-x>")}
-	if got := tagsOf(tagsIn(page)); got != want {
-		t.Errorf("tagsOf(%q) = %+v, want %+v", page, got, want)
-	}
-	if got := tagsOf(tagsIn("<p>x</p>")); got != (tags{head: -1, style: -1, link: -1}) {
-		t.Errorf("tagsOf of a page without them = %+v", got)
-	}
-}
-
 // A data-floe-part is an attribute when a tag holds it, past a > in a quoted value or in a template's
 // action before it, and not in a value or in text.
 func TestNamedPartsInTags(t *testing.T) {
@@ -338,9 +322,6 @@ func TestNamedPartsInTags(t *testing.T) {
 		if named := namedParts(html); len(named) != 1 || named[0].text != want {
 			t.Errorf("namedParts(%q) = %+v, want text %v", html, named, want)
 		}
-	}
-	if at := tagsOf(tagsIn(`{{/* no <style> here */}}<p>x</p>`)); at.style != -1 {
-		t.Errorf("tagsOf of a <style> in a template's comment = %+v", at)
 	}
 }
 
