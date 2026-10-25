@@ -1,0 +1,14 @@
+$ floe check cut.yaml
+exit 1
+--- stderr
+cut.yaml:4:10: a # after a space began a YAML comment, which may have cut the value short, to PR: put the value in quotes if the # is part of it, or write the comment on a line of its own
+cut.yaml:9:24: "500 字" is a key without a value in { }: write its value after a ":", or, if a , in text ended the text before it, put that text in quotes
+$ floe render --out-dir $TMP/pages/cut.yaml cut.yaml
+exit 1
+--- stderr
+cut.yaml:4:10: a # after a space began a YAML comment, which may have cut the value short, to PR: put the value in quotes if the # is part of it, or write the comment on a line of its own
+cut.yaml:9:24: "500 字" is a key without a value in { }: write its value after a ":", or, if a , in text ended the text before it, put that text in quotes
+$ floe template check templates/c
+exit 1
+--- stderr
+templates/c/computed.yaml:1:21: a # after a space began a YAML comment, which may have cut the value short, to map(.scores,: put the value in quotes if the # is part of it, or write the comment on a line of its own

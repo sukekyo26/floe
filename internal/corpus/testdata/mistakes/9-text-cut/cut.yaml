@@ -1,0 +1,9 @@
+template: report
+lang: en
+title: t
+lead: PR #100 で層を作った。
+sections:
+  - heading: h
+    parts:
+      - stats:
+          - { label: 1,500 字, value: '4' }

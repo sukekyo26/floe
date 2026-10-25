@@ -1,0 +1,1 @@
+total: map(.scores, # * 2)
