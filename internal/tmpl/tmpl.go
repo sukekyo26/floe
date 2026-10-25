@@ -78,7 +78,7 @@ type Data struct {
 	root      ast.Node   // the YAML Read read it from, where Render places the mistake of a link
 	// where its template: is written, at which Render tells the mistakes of the page drawn
 	templateAt yamlpos.Pos
-	marks     *htmlMarks // its items of format html marked, while checkDrawnHTML draws it; nil else
+	marks      *htmlMarks // its items of format html marked, while checkDrawnHTML draws it; nil else
 }
 
 // shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
