@@ -2,33 +2,55 @@
 package page
 
 import (
-	"html"
-	"regexp"
 	"strings"
+
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
-var (
-	// An SVG <title> describes the figure, so it does not title the page.
-	// LIMIT: a nested <svg> ends at the inner </svg>. Switch to an HTML parser if nested figures misjudge.
-	svgRe   = regexp.MustCompile(`(?is)<svg[\s>].*?</svg>`)
-	titleRe = regexp.MustCompile(`(?is)<title(?:[\s/][^>]*)?>(.*?)</title>`)
-	h1Re    = regexp.MustCompile(`(?is)<h1(?:[\s/][^>]*)?>(.*?)</h1>`)
-	tagRe   = regexp.MustCompile(`<[^>]*>`)
-	// JavaScript's \s: Go's \s is ASCII only, but a decoded &nbsp; or a full-width space must collapse too.
-	spaceRe = regexp.MustCompile(`[\s\v\p{Z}\x{FEFF}]+`)
-)
-
-// Title returns the <title>, else the first <h1>, as plain text, or "" when the page has neither.
+// Title returns the text of the page's first <title>, else of its first <h1>, as an HTML parser reads
+// them (scripting on, as a browser opens a page), with ASCII whitespace collapsed and trimmed as
+// document.title does; "" when the page has neither.
+// LIMIT: the tree is walked whole, the content of a <template> and an <svg>'s <title> or <text> in an
+// <h1> among it, where a browser's document.title does not look; no special case is made for them.
 func Title(doc string) string {
-	s := svgRe.ReplaceAllString(doc, "")
-	m := titleRe.FindStringSubmatch(s)
-	if m == nil {
-		m = h1Re.FindStringSubmatch(s)
-	}
-	if m == nil {
+	root, err := html.Parse(strings.NewReader(doc))
+	if err != nil {
 		return ""
 	}
-	// html/template writes " and + as &#34; and &#43;, so every entity is decoded, not only the named five.
-	text := html.UnescapeString(tagRe.ReplaceAllString(m[1], ""))
-	return strings.TrimSpace(spaceRe.ReplaceAllString(text, " "))
+	n := first(root, atom.Title)
+	if n == nil {
+		n = first(root, atom.H1)
+	}
+	if n == nil {
+		return ""
+	}
+	return strings.Join(strings.FieldsFunc(text(n), isASCIISpace), " ")
+}
+
+// first returns the first element of n, in tree order, of the HTML namespace and the tag a, or nil.
+func first(n *html.Node, a atom.Atom) *html.Node {
+	for d := range n.Descendants() {
+		if d.Type == html.ElementNode && d.Namespace == "" && d.DataAtom == a {
+			return d
+		}
+	}
+	return nil
+}
+
+// text returns the text n holds, its descendants' in tree order.
+func text(n *html.Node) string {
+	var b strings.Builder
+	for d := range n.Descendants() {
+		if d.Type == html.TextNode {
+			b.WriteString(d.Data)
+		}
+	}
+	return b.String()
+}
+
+// isASCIISpace reports whether r is ASCII whitespace, as HTML has it: tab, newline, form feed, carriage
+// return and space.
+func isASCIISpace(r rune) bool {
+	return r == '\t' || r == '\n' || r == '\f' || r == '\r' || r == ' '
 }

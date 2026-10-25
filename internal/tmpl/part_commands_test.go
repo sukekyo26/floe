@@ -329,12 +329,12 @@ func TestNewPartRefused(t *testing.T) {
 func TestCheckOwnThemeFiles(t *testing.T) {
 	t.Parallel()
 
-	parts := ownParts(t, map[string]string{"themes/twice/note.css": "}\n", "themes/twice/table.css": ":root {}\n"})
+	parts := ownParts(t, map[string]string{"themes/twice/note.css": "}\n", "themes/twice/table.css": "@import url(a.css);\n"})
 	_, mistakes := checkOwn(parts, themesOf(parts))
 	at := filepath.Join(themesOf(parts), "twice")
 	want := "your own theme twice cannot be used\n  " + filepath.Join(at, "note.css") + ":1: this } closes no block"
 	if len(mistakes) != 1 || !strings.HasPrefix(mistakes[0].Error(), want) ||
-		!strings.Contains(mistakes[0].Error(), "\n  "+filepath.Join(at, "table.css")+":1: write the root as :scope") {
+		!strings.Contains(mistakes[0].Error(), "\n  "+filepath.Join(at, "table.css")+":1: floe puts this CSS in a layer, where a browser reads no @import") {
 		t.Errorf("CheckOwnParts = %v, want %s and the mistake of table.css", mistakes, want)
 	}
 }

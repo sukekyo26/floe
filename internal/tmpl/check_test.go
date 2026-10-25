@@ -245,8 +245,8 @@ func TestCheckMistakes(t *testing.T) {
 		{
 			// Each file is checked whatever the others hold: none of them reads what another made.
 			name:  "page beside the schema and the CSS",
-			files: map[string]string{"schema.json": "{", "page.html": "</body>|{{if}}</body>", "page.css": ":root { color: red; }\n"},
-			want:  []string{"sizes/schema.json:", "sizes/page.html: this is not a valid Go template", "sizes/page.css:1: write the root as :scope"},
+			files: map[string]string{"schema.json": "{", "page.html": "</body>|{{if}}</body>", "page.css": "@import url(a.css);\n"},
+			want:  []string{"sizes/schema.json:", "sizes/page.html: this is not a valid Go template", "sizes/page.css:1: floe puts this CSS in a layer, where a browser reads no @import"},
 		},
 		{
 			name: "a schema JSON Schema does not take",
@@ -275,10 +275,10 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			name:  "a $ref in the schema that finds nothing",
-			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "#/$defs/nope" },` + "\n    " + `"chart":`, "page.css": ":root { color: red; }\n"},
+			files: map[string]string{"schema.json": `"chart":|"code": { "$ref": "#/$defs/nope" },` + "\n    " + `"chart":`, "page.css": "@import url(a.css);\n"},
 			want: []string{
 				`sizes/schema.json: #/properties/code: a $ref to #/$defs/nope finds nothing in schema.json`,
-				"sizes/page.css:1: write the root as :scope",
+				"sizes/page.css:1: floe puts this CSS in a layer, where a browser reads no @import",
 			},
 		},
 		{
@@ -407,7 +407,7 @@ func TestCheckMistakes(t *testing.T) {
 		{
 			name:  "an asset page.html names",
 			files: map[string]string{"assets/logo.svg": "not svg"},
-			want:  []string{`sizes/assets: "logo.svg" does not hold the image/svg+xml its name says`},
+			want:  []string{`sizes/assets: "logo.svg" is not an SVG document`, `sizes/assets/logo.svg: its root is not one <svg`},
 		},
 		{
 			name:  "an asset in a branch the example does not reach",
@@ -529,11 +529,11 @@ func TestPageBase(t *testing.T) {
 func TestPageHeadRequired(t *testing.T) {
 	t.Parallel()
 
-	dir := sizes(t, map[string]string{"page.html": "</head>|<!-- </head> -->", "page.css": ":root { color: red; }\n"})
+	dir := sizes(t, map[string]string{"page.html": "</head>|<!-- </head> -->", "page.css": "@import url(a.css);\n"})
 	want := filepath.Join(dir, "page.html") + ": page.html holds no </head>: floe puts the page's styles before it"
 	_, mistakes := check(dir, "", "")
 	if len(mistakes) != 2 || !slices.ContainsFunc(mistakes, func(e error) bool { return strings.HasPrefix(e.Error(), want) }) {
-		t.Errorf("Check = %v, want %s beside the :root", mistakes, want)
+		t.Errorf("Check = %v, want %s beside the @import", mistakes, want)
 	}
 	// One an action leaves out is told as such, as the page is drawn; the data's HTML, which may leave an
 	// <svg> open before it, holds none to stand in for it.
@@ -554,14 +554,12 @@ func TestPageHeadRequired(t *testing.T) {
 	}
 }
 
-// The template's CSS names the page's root as :scope, past a comment and values that name it otherwise, and
 // page.html names parts floe has, past a name it puts together, an element the box of one, a mistake told
 // at the line of the name.
 func TestTemplateCSSAndParts(t *testing.T) {
 	t.Parallel()
 
 	dir := sizes(t, map[string]string{
-		"page.css": "/* not :root */\n:scope { --fg: #000; }\nb { background: url(html.svg); animation: html 1s; }\n:root .lead, a { color: red; }\n",
 		"page.html": "<body>|<body><span\n" + `data-floe-look="cell nope"></span><b data-floe-part="cell note"></b>` +
 			`<u data-floe-part=" cell"></u><s data-floe-part="panel"></s><i data-floe-part="{{"cell"}}"></i>`,
 	})
@@ -570,9 +568,7 @@ func TestTemplateCSSAndParts(t *testing.T) {
 	for _, m := range mistakes {
 		got = append(got, strings.TrimPrefix(m.Error(), dir+string(filepath.Separator)))
 	}
-	// page.css's, which makes the template unusable, before those template check alone tells.
 	want := []string{
-		"page.css:4: write the root as :scope, not :root",
 		"page.html:5: page.html names the part nope, which there is none of; use bars, ",
 		`page.html:5: data-floe-part="cell note" is not the name of one part`,
 		`page.html:5: data-floe-part=" cell" is not the name of one part`,
@@ -626,10 +622,10 @@ func TestCSSBraceRefused(t *testing.T) {
 		!strings.HasPrefix(mistakes[0].Error(), filepath.Join(url, "page.css")+":1: this } closes no block") {
 		t.Errorf("Check of a } after url( = %v", mistakes)
 	}
-	// :root is told at its line, past the comments before it.
-	root := sizes(t, map[string]string{"page.css": ".a, /* one\ntwo\nthree */ :root { color: red; }\n"})
-	if _, mistakes := check(root, "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "page.css:3:") {
-		t.Errorf("Check of :root after a comment = %v", mistakes)
+	// An @import is told at its line, past the comments before it.
+	imported := sizes(t, map[string]string{"page.css": "/* one\ntwo\nthree */ @import url(a.css);\n"})
+	if _, mistakes := check(imported, "", ""); len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "page.css:3:") {
+		t.Errorf("Check of an @import after a comment = %v", mistakes)
 	}
 	// An escaped bracket is a name's, and leaves the } after it to be told.
 	escaped := sizes(t, map[string]string{"page.css": ".a\\( { color: red; }\n}\n"})
@@ -661,35 +657,6 @@ func TestCSSStyleEndEscaped(t *testing.T) {
 	}
 	if !strings.Contains(page, `/* <\/STYLE><b id="x">x</b><style> */`) || !strings.Contains(page, `content: "<\/style>"`) {
 		t.Errorf("drawn page = %s", page)
-	}
-}
-
-// A colour that changes with the mode, set on :scope for light mode alone, is warned of at the file that
-// sets it: over every palette, it would stay in dark mode too.
-func TestCheckScopeColours(t *testing.T) {
-	t.Parallel()
-
-	release := strings.SplitN(version.Version, ".", 3)
-	floe := "floe: " + release[0] + "." + release[1] + "\n"
-	for page, want := range map[string]string{
-		":scope { --surface: #fff; --accent: #c00; --page-width: 90rem; --rule: 2px solid var(--fg); }":    "sizes/page.css: page.css sets --accent, --surface on :scope for light mode alone",
-		":scope { --surface: #fff; }\n@media (prefers-color-scheme: dark) { :scope { --surface: #222; } }": "",
-		"body { --surface: #fff; }": "",
-		"--accent: #fff;":           "sizes/page.css: page.css sets --accent on :scope for light mode alone",
-		"--accent: #fff;\n@media (prefers-color-scheme: dark) { --accent: #000; }":                                                       "",
-		"@media (prefers-color-scheme: dark) { :scope { --bg: #000; } }\n:scope { --bg: #fff; }":                                         "sizes/page.css: page.css sets --bg on :scope for light mode alone",
-		":scope { --line: #fff; &.x { --q: 1; } --fg: #000; }\n@media (prefers-color-scheme: dark) { :scope { --line: #222; } }":         "sizes/page.css: page.css sets --fg on :scope",
-		":scope { --bg: #fff; }\n@media screen and (prefers-color-scheme: dark) { :scope { --bg: #000; } }":                              "",
-		":scope { --bg: #fff; }\n@media not (prefers-color-scheme: dark) { :scope { --bg: #eee; } }":                                     "sizes/page.css: page.css sets --bg on :scope",
-		":scope { --bg: #fff; @media (prefers-color-scheme: dark) { --bg: #000; } }":                                                     "",
-		"@layer a { :scope { --bg: #fff; } }\n@supports (color: red) { @media (prefers-color-scheme: dark) { :scope { --bg: #000; } } }": "",
-		":scope { @media (prefers-color-scheme: dark) { --bg: #000; } --bg: #fff; }":                                                     "sizes/page.css: page.css sets --bg on :scope",
-	} {
-		warnings, mistakes := check(sizes(t, map[string]string{"template.yaml": floe, "page.css": page}), "", "")
-		if len(mistakes) != 0 || want == "" && len(warnings) != 0 ||
-			want != "" && (len(warnings) != 1 || !strings.Contains(warnings[0].Error(), want)) {
-			t.Errorf("Check with %s = %v, %v, want %q", page, warnings, mistakes, want)
-		}
 	}
 }
 
@@ -746,7 +713,8 @@ func TestRenderBadAsset(t *testing.T) {
 	if !errors.As(err, &e) || e.File != filepath.Join(dir, "assets") {
 		t.Fatalf("Render = %v", err)
 	}
-	if ja := e.Localize(i18n.New("ja")); ja != filepath.Join(dir, "assets")+": 「logo.svg」の中身は、名前が示す image/svg+xml ではありません" {
+	if ja := e.Localize(i18n.New("ja")); ja != filepath.Join(dir, "assets")+": 「logo.svg」は SVG の文書ではありません\n  "+
+		filepath.Join(dir, "assets", "logo.svg")+`: 根が、xmlns="http://www.w3.org/2000/svg" を付けた 1 つの <svg> ではありません。図はその 1 つの要素の中に書いてください` {
 		t.Errorf("the mistake in Japanese = %s", ja)
 	}
 }
