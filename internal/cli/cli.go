@@ -8,6 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
 )
 
@@ -26,11 +28,15 @@ type Env struct {
 
 // usageError is a command line floe cannot read, or that lacks what it needs (exit 2).
 type usageError struct {
-	err error
+	err *usererr.Error
 }
 
 func (e usageError) Error() string {
 	return e.err.Error()
+}
+
+func (e usageError) Unwrap() error {
+	return e.err
 }
 
 // Run executes floe with args and returns the process exit code. The exit code is decided here only.
@@ -43,8 +49,8 @@ func Run(args []string, env Env) int {
 	if err == nil {
 		return exitOK
 	}
-	// SilenceErrors leaves printing to this single boundary.
-	_, _ = fmt.Fprintln(env.Stderr, named+err.Error()) //nolint:errcheck // nowhere left to report
+	// SilenceErrors leaves printing to this single boundary, which tells err in English.
+	_, _ = fmt.Fprintln(env.Stderr, usererr.Tell(english, err).Render(named)) //nolint:errcheck // nowhere left to report
 	if errors.As(err, new(usageError)) {
 		return exitUsage
 	}
@@ -55,11 +61,14 @@ func Run(args []string, env Env) int {
 func usage(validate cobra.PositionalArgs) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
 		if err := validate(cmd, args); err != nil {
-			return usageError{err: err}
+			return usageError{err: usererr.Library(err)}
 		}
 		return nil
 	}
 }
+
+// english is the language of the command line, whatever the environment's: an agent reads it.
+var english = i18n.EnglishCatalog()
 
 // named is floe's name before each mistake the command line tells.
 const named = "floe: "
@@ -80,7 +89,7 @@ func newRoot() *cobra.Command {
 	}
 	root.SetVersionTemplate("floe {{.Version}}\n")
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
-		return usageError{err: err}
+		return usageError{err: usererr.Library(err)}
 	})
 	root.AddCommand(&cobra.Command{
 		Use:   "version",
