@@ -36,6 +36,7 @@ func TestDrawnReaderItems(t *testing.T) {
 		`<p>x</p><div data-floe-part="note table"`:                     "data.yaml:3:8: risks: HTML changes the page around it",
 		`<div data-floe-part="note&#32;table"><p>x</p></div>`:          `data.yaml:3:8: risks: the page has data-floe-part="note table", which is not the name of one part`,
 		`<noscript><div data-floe-part="note table"></div></noscript>`: "",
+		`<div data-floe-part="nope"><p>x</p></div>`:                    "data.yaml:3:8: risks: the page drawn from this file names the part nope",
 	} {
 		_, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(item)+"\n")
 		if want == "" && err != nil || want != "" && (err == nil || !strings.HasPrefix(err.Error(), want)) {
@@ -231,6 +232,12 @@ func TestDrawnPageDoctypeFirst(t *testing.T) {
 		strings.Contains(err.Error(), "doctype") {
 		t.Errorf("a page in quirks mode without an item of format html = %v", err)
 	}
+	// A <style> is asked all the same: it uses neither.
+	l, _ = memoPage(t, `<html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body><style>p {}</style><p>{{.Data.risks}}</p></body></html>`)
+	_, err = draw(l, "template: memo\nlang: en\nrisks: <b>x</b>\n")
+	if err == nil || !strings.Contains(err.Error(), "does not start with <!doctype html>") || !strings.Contains(err.Error(), "has a <style>") {
+		t.Errorf("a page in quirks mode drawing a <style> = %v, want both", err)
+	}
 }
 
 // What page.html draws is told at the template: of the data file that drew it, wherever that is written:
@@ -256,15 +263,21 @@ func TestDrawnPageExampleAlone(t *testing.T) {
 	}
 }
 
-// A part that cannot be used, which the example's page names, is told once, as a mistake there, not again
-// as a warning of template check.
+// A part that cannot be used, which the example's page names, as only its data puts the name together, is
+// told once, as a mistake there, not again as a warning of template check.
 func TestDrawnPageBrokenPartOnce(t *testing.T) {
 	t.Parallel()
 
 	parts := ownParts(t, map[string]string{"bad/schema.json": `{"type":`, "bad/part.html": `<div data-floe-part="bad"></div>`, "bad/part.css": ""})
-	_, dir := memoPage(t, `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body><div data-floe-part="bad"></div></body></html>`)
-	if err := os.WriteFile(filepath.Join(dir, "example.yaml"), []byte("template: memo\nlang: en\n"), 0o600); err != nil {
-		t.Fatal(err)
+	dir := filepath.Join(memo(t, `"kind": {"type": "string"}`), "memo")
+	files := map[string]string{
+		"page.html":    `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body><div data-floe-part="{{.Data.kind}}"></div></body></html>`,
+		"example.yaml": "template: memo\nlang: en\nkind: bad\n",
+	}
+	for name, text := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
 	warnings, mistakes := check(dir, parts, "")
 	if len(mistakes) != 1 || !strings.Contains(mistakes[0].Error(), "bad") {
@@ -275,8 +288,8 @@ func TestDrawnPageBrokenPartOnce(t *testing.T) {
 	}
 }
 
-// What a part, or the raw SVG of a diagram, draws into the page is the page's too: a name of no part, a
-// <style>.
+// A name of no part a part draws is told at its item, as an item of format html's is; the raw SVG of a
+// diagram, which has no item to tell it at, is the page's: a <style> it draws is told at the template:.
 func TestDrawnPageOfPartsAndDiagrams(t *testing.T) {
 	t.Parallel()
 
@@ -288,8 +301,8 @@ func TestDrawnPageOfPartsAndDiagrams(t *testing.T) {
 	})
 	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/note.json"}, "aside": {"type": "string"}`), parts, "", "")
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: { kind: nope }\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), "data.yaml:1:11: the page drawn from this file names the part nope") {
-		t.Errorf("a name of no part a part draws = %v", err)
+		!strings.HasPrefix(err.Error(), "data.yaml:3:10: risks: the page drawn from this file names the part nope") {
+		t.Errorf("a name of no part a part draws = %v, want it at the part's item", err)
 	}
 	raw := "template: report\nlang: en\ntitle: r\nsections:\n  - heading: h\n    parts:\n      - diagram:\n" +
 		"          id: d\n          width: 100\n          height: 50\n          title: t\n          parts:\n" +

@@ -879,20 +879,19 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node) erro
 func (set *partSet) drawnMisnamings(
 	html, file string, pos yamlpos.Pos, other func(*usererr.Error) *usererr.Error,
 ) usererr.List {
-	return set.placedMisnamings(itemNames(html), file, pos, false, other)
+	return set.placedMisnamings(itemNames(html), file, pos, other)
 }
 
 // placedMisnamings returns the mistakes of named, the names an item of the data file file written at pos
 // gives, or the page drawn of it, that the page would be refused for: each part that cannot be used there,
 // the first time with why, as a theme it picks that cannot be used, and each other one as other words it,
-// left out for nil; a name of no part only with unknown.
+// left out for nil.
 func (set *partSet) placedMisnamings(
-	named []namedPart, file string, pos yamlpos.Pos, unknown bool, other func(*usererr.Error) *usererr.Error,
+	named []namedPart, file string, pos yamlpos.Pos, other func(*usererr.Error) *usererr.Error,
 ) usererr.List {
 	var found usererr.List
 	for _, m := range set.misnamings(named) {
 		switch {
-		case m.kind == nameUnknown && !unknown:
 		case m.kind == nameBroken:
 			found = append(found, yamlpos.Place(file, pos, m.err))
 		case other != nil:

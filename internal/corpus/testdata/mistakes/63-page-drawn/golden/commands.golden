@@ -2,7 +2,7 @@ $ floe check cut.yaml item.yaml nope.yaml ok.yaml style.yaml two.yaml
 exit 1
 --- stderr
 cut.yaml:1:11: the page drawn from this file has no </head> where a <style> styles the page, before which floe puts the page's styles: page.html writes it in the head, outside {{if}}, {{with}}, {{range}}, <template>, <svg> and <math>, and nothing drawn before it, a part or an item of format html, leaves an element open
-item.yaml:1:11: the page drawn from this file names the part nope, which there is none of, by page.html, a part, an item of format html or the raw SVG of a diagram; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
+item.yaml:5:4: x: the page drawn from this file names the part nope, which there is none of, by page.html, a part, an item of format html or the raw SVG of a diagram; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
 nope.yaml:3:11: the page drawn from this file names the part nope, which there is none of, by page.html, a part, an item of format html or the raw SVG of a diagram; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
 style.yaml:1:11: the page drawn from this file has a <style>, which page.html, a part, an item of format html or the raw SVG of a diagram writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css
 two.yaml:1:11: the page has data-floe-part="note table", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"
@@ -13,7 +13,7 @@ cut.yaml:1:11: the page drawn from this file has no </head> where a <style> styl
 $ floe render --out-dir $TMP/pages/item.yaml item.yaml
 exit 1
 --- stderr
-item.yaml:1:11: the page drawn from this file names the part nope, which there is none of, by page.html, a part, an item of format html or the raw SVG of a diagram; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
+item.yaml:5:4: x: the page drawn from this file names the part nope, which there is none of, by page.html, a part, an item of format html or the raw SVG of a diagram; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
 $ floe render --out-dir $TMP/pages/nope.yaml nope.yaml
 exit 1
 --- stderr
@@ -34,7 +34,7 @@ $ floe render --out-dir $TMP/together cut.yaml item.yaml nope.yaml ok.yaml style
 exit 1
 --- stderr
 cut.yaml:1:11: the page drawn from this file has no </head> where a <style> styles the page, before which floe puts the page's styles: page.html writes it in the head, outside {{if}}, {{with}}, {{range}}, <template>, <svg> and <math>, and nothing drawn before it, a part or an item of format html, leaves an element open
-item.yaml:1:11: the page drawn from this file names the part nope, which there is none of, by page.html, a part, an item of format html or the raw SVG of a diagram; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
+item.yaml:5:4: x: the page drawn from this file names the part nope, which there is none of, by page.html, a part, an item of format html or the raw SVG of a diagram; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
 nope.yaml:3:11: the page drawn from this file names the part nope, which there is none of, by page.html, a part, an item of format html or the raw SVG of a diagram; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
 style.yaml:1:11: the page drawn from this file has a <style>, which page.html, a part, an item of format html or the raw SVG of a diagram writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css
 two.yaml:1:11: the page has data-floe-part="note table", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"

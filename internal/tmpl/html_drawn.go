@@ -100,7 +100,8 @@ func (m *htmlMarks) drawnOrder(page []byte) []int {
 // LIMIT: each item draws and reads the page again, every view (400 items, 0.25s); keep the result if slow.
 // LIMIT: an item left open for the next to close (<li>a, <li>b) is refused; read them together if pages need it.
 // LIMIT: a comment mark rebuilds no <b> page.html left open (<p><b>x</p>); mark with text if pages need it.
-// It refuses too each name of a part an item gives that the page would be refused for, read where the item
+// It refuses too each name an item gives that the page would be refused for (misnamings: a part that cannot
+// be used or there is none of, a data-floe-part not of one part's name, a look as a box), read where the item
 // is (a <title> in an <svg> holds elements), at the item.
 func (d *Data) checkDrawnHTML(set *partSet, page *template.Template, title string, doc *html.Node) error {
 	c := d.marked(rand.Text())
@@ -133,7 +134,7 @@ func (d *Data) checkDrawnHTML(set *partSet, page *template.Template, title strin
 			continue
 		}
 		atItem := func(bad *usererr.Error) *usererr.Error { return itemError(d.File, it.pos, it.path, bad) }
-		found = append(found, set.placedMisnamings(drawnNames(nodes, it.text), d.File, it.pos, false, atItem)...)
+		found = append(found, set.placedMisnamings(drawnNames(nodes, it.text), d.File, it.pos, atItem)...)
 		if formIn && leavesForm(it.text) || shaped && !slices.Equal(treeShape(doc), want) {
 			// The items after it are compared with a page it changed: it is the one told.
 			found = append(found, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page")))
@@ -176,18 +177,22 @@ func (d *Data) marked(mark string) *Data {
 // withStyles checks out, the page page drew of d, titled title, set's parts its parts, as a browser reads it,
 // and returns it with its styles (pageStyle, own its template's CSS) before its </head> (headAt). What it
 // checks is of the page drawn, whoever wrote it (page.html, a part, an item of format html): a mistake of
-// d's, at its template: (pageMistake). An item of format html is checked first (checkDrawnHTML), in a page
-// read in standards mode: the page an item broke, or whose items are not checked, would tell it again as a
-// </head>, a <style> or a name.
+// d's, at its template: (pageMistake). An item of format html is checked (checkDrawnHTML) in a page read in
+// standards mode: the page an item broke, or whose items are not checked, would tell it again as a </head>
+// or a name, which are then not asked. A <style> is asked all the same: an item holds none (checkHTML).
 // LIMIT: what out holds is not told by who wrote it, nor at its line: a page drawn leads back to neither.
 func (d *Data) withStyles(set *partSet, page *template.Template, title string, out, own []byte) ([]byte, error) {
 	doc := parseDrawn(out)
+	style := d.styleMistake(doc)
 	if d.htmlItems != nil {
+		var items error
 		if !standard(doc) {
-			return nil, d.pageMistake("tmpl_html_doctype")
+			items = d.pageMistake("tmpl_html_doctype")
+		} else {
+			items = d.checkDrawnHTML(set, page, title, doc)
 		}
-		if err := d.checkDrawnHTML(set, page, title, doc); err != nil {
-			return nil, err
+		if items != nil {
+			return nil, usererr.Collect(items, style) //nolint:wrapcheck // mistakes of the page drawn and of its items
 		}
 	}
 	k, _ := headAt(out)
@@ -197,16 +202,16 @@ func (d *Data) withStyles(set *partSet, page *template.Template, title string, o
 	}
 	named := drawnNames([]*html.Node{doc}, string(out))
 	at := func(bad *usererr.Error) *usererr.Error { return yamlpos.Place(d.File, d.templateAt, bad) }
-	misnamed := set.placedMisnamings(named, d.File, d.templateAt, true, at)
-	if err := usererr.Collect(head, d.styleMistake(doc), misnamed.Err()); err != nil {
+	misnamed := set.placedMisnamings(named, d.File, d.templateAt, at)
+	if err := usererr.Collect(head, style, misnamed.Err()); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes of the page drawn
 	}
-	style, err := set.pageStyle(named, own, d.Theme)
+	sheets, err := set.pageStyle(named, own, d.Theme)
 	if err != nil {
 		return nil, err
 	}
 	end := headEnd.FindAllIndex(out, -1)[k][0]
-	return slices.Concat(out[:end], []byte(style), out[end:]), nil
+	return slices.Concat(out[:end], []byte(sheets), out[end:]), nil
 }
 
 // pageMistake is the mistake key of the page drawn of d, at its template:, which draws it.
