@@ -243,10 +243,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   styles the page (not in a `<template>`, an `<svg>` or a `<math>`), before which floe puts the page's
   styles, no `<style>`, no name of a part floe does not have or of several, and, with an item of
   `"format": "html"`, `<!doctype html>` first, or is refused at the `template:` of the data file
-  drawn; `floe template check` draws `example.yaml` so, once the template's files pass. What a branch
-  not drawn holds is not asked. A name of a part is read with its character references
-  (`data-floe-part="&#110;ote"` names `note`), and one an item gives, of `"format": "html"` or drawn
-  by a part, is refused at the item, read where `page.html` puts it. `page.html` holds no `<base>`,
+  drawn; `floe template check` draws `example.yaml` so, once the template's files pass. What
+  `page.html` and the parts draw is asked of the page drawn, so what a branch not drawn holds is not.
+  A name of a part is read with its character references (`data-floe-part="&#110;ote"` names `note`).
+  One an item of `"format": "html"` gives is the data's: refused at the item, read in its text whether
+  `page.html` draws the item or not, and where `page.html` puts it; one a part draws, at the part's item. `page.html` holds no `<base>`,
   nor an item of `"format": "html"` a `<style>`, `<link>`, `</head>`, `<base>` or `<meta>`, or what
   changes the page around it as a browser reads it (an `<svg>`, a comment or a `<form>` it leaves
   open, an end tag of the page's; a `page.html` that puts one outside its `<head>` and `<body>`), nor
