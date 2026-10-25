@@ -76,6 +76,14 @@ func TestListSorted(t *testing.T) {
 		usererr.LibraryAt("d.yaml", 1, 1, "Zed"), usererr.NewIn("s.json", "#/b", "library", "x"),
 		usererr.LibraryAt("d.yaml", 1, 1, "Bad"), usererr.NewIn("s.json", "#/a", "library", "x"),
 	}
+	// The steps of pointers that are numbers, as numbers; each argument apart.
+	steps := usererr.List{
+		usererr.NewIn("s.json", "#/allOf/10", "library", "x"), usererr.NewIn("s.json", "#/allOf/2", "library", "x"),
+		usererr.New("k", "ab", "c"), usererr.New("k", "a", "bc"),
+	}
+	if got := steps.Sorted(); got[0].At != "#/allOf/2" || got[2].Args[0] != "a" {
+		t.Errorf("Sorted by steps and arguments = %v", got.Error())
+	}
 	if got := same.Sorted().Error(); got != "d.yaml:1:1: Bad\nd.yaml:1:1: Zed\ns.json: #/a: x\ns.json: #/b: x" {
 		t.Errorf("Sorted at one place = %q", got)
 	}

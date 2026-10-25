@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -122,10 +123,23 @@ func (l List) Sorted() List {
 		if d := first[x.File] - first[y.File]; d != 0 {
 			return d
 		}
-		return cmp.Or(x.Line-y.Line, x.Column-y.Column, strings.Compare(x.At, y.At), strings.Compare(x.Key, y.Key),
-			strings.Compare(fmt.Sprint(x.Args...), fmt.Sprint(y.Args...)))
+		return cmp.Or(x.Line-y.Line, x.Column-y.Column, comparePointers(x.At, y.At), strings.Compare(x.Key, y.Key),
+			slices.CompareFunc(x.Args, y.Args, func(a, b any) int { return strings.Compare(fmt.Sprint(a), fmt.Sprint(b)) }))
 	})
 	return l
+}
+
+// comparePointers compares two JSON pointers step by step: two steps of digits as numbers (#/allOf/2
+// before #/allOf/10), others as text.
+func comparePointers(x, y string) int {
+	return slices.CompareFunc(strings.Split(x, "/"), strings.Split(y, "/"), func(a, b string) int {
+		i, errA := strconv.Atoi(a)
+		j, errB := strconv.Atoi(b)
+		if errA == nil && errB == nil {
+			return cmp.Compare(i, j)
+		}
+		return strings.Compare(a, b)
+	})
 }
 
 // Error words the mistakes in English, one per line.

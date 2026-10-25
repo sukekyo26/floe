@@ -50,8 +50,8 @@ func placeOf(d *doc.Data, e *jsonschema.ValidationError) yamlpos.Pos {
 	return yamlpos.OfValue(yamlpos.Find(d.Root, e.InstanceLocation))
 }
 
-// placeOfName returns where a property name the schema refuses is: the one object at depth in root that has
-// the key name, or the top of the file when there are none or more. The keys every data file shares are not
+// placeOfName returns where a property name the schema refuses is: the key name of the one object at depth
+// in root that has it, or the top of the file when there are none or more. The keys every data file shares are not
 // values the schema checks.
 // LIMIT: jsonschema v6.0.3 shares the slice of InstanceLocation with later checks, which change what it holds
 // (upstream #276, #269): only its length is right. Go back to the library's place once it is fixed; the
@@ -59,7 +59,7 @@ func placeOf(d *doc.Data, e *jsonschema.ValidationError) yamlpos.Pos {
 // LIMIT: an object the same propertyNames applies to twice (allOf of one $defs twice) is told twice, as
 // usererr does not yet tell a mistake once.
 func placeOfName(root *ast.MappingNode, depth int, name string) yamlpos.Pos {
-	var found []ast.Node
+	var found []*ast.MappingValueNode
 	var walk func(n ast.Node, depth int, top bool)
 	walk = func(n ast.Node, depth int, top bool) {
 		switch n := n.(type) {
@@ -69,7 +69,7 @@ func placeOfName(root *ast.MappingNode, depth int, name string) yamlpos.Pos {
 				switch {
 				case top && slices.Contains(shared, key):
 				case depth == 0 && key == name:
-					found = append(found, n)
+					found = append(found, v)
 				case depth > 0:
 					walk(v.Value, depth-1, false)
 				}
@@ -84,7 +84,7 @@ func placeOfName(root *ast.MappingNode, depth int, name string) yamlpos.Pos {
 	}
 	walk(root, depth, true)
 	if len(found) == 1 {
-		return yamlpos.Of(found[0])
+		return yamlpos.Of(yamlpos.KeyOf(found[0]))
 	}
 	return yamlpos.Pos{Line: 1, Column: 1}
 }

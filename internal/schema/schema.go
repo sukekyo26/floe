@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"reflect"
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -55,6 +54,9 @@ var english = message.NewPrinter(language.English)
 // Compile reads src (schema.json of file) as JSON and compiles it under url with res: the library's mistakes
 // in its words at the file and JSON pointer they are in; a loader refusing every URL res does not hold; then
 // floe's checks, all together.
+// LIMIT: the library stops at the first $ref it cannot resolve, the first in the order of a map: with two
+// or more, which one is told changes from run to run, and fixing it tells the next. The library's make; a
+// golden file holds no input with two.
 func Compile(url, file string, src []byte, res map[string]Resource) (*Compiled, error) {
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
 	if err != nil {
@@ -113,6 +115,8 @@ func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) 
 }
 
 // loader reads no URL: a schema refers to no file or URL outside what floe holds (a trust boundary).
+// LIMIT: the mistake is told in the file compiled, not in the file whose $ref it is: a part of one's own
+// refers to what floe does not hold in its own file, which CheckPart, run before Compile, tells there.
 type loader struct{ file string }
 
 func (l loader) Load(u string) (any, error) {
@@ -154,17 +158,41 @@ func (c *Compiled) compileMistake(err error) error {
 	return usererr.LibraryAt(c.fileOf(urlOf(err)), 0, 0, err.Error())
 }
 
-// urlOf returns the URL field of err or of an error it wraps, as the library's mistakes of a URL have it
-// (JSONPointerNotFoundError, AnchorNotFoundError, ParseIDError, ...), or "" for none.
+// urlOf returns the URL of the schema the library's mistake err is of, "" for one of no URL.
 func urlOf(err error) string {
-	for ; err != nil; err = errors.Unwrap(err) {
-		v := reflect.ValueOf(err)
-		if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
-			continue
-		}
-		if f := v.Elem().FieldByName("URL"); f.IsValid() && f.Kind() == reflect.String {
-			return f.String()
-		}
+	var (
+		pointer  *jsonschema.JSONPointerNotFoundError
+		invalid  *jsonschema.InvalidJsonPointerError
+		anchor   *jsonschema.AnchorNotFoundError
+		id       *jsonschema.ParseIDError
+		anchorOf *jsonschema.ParseAnchorError
+		twiceID  *jsonschema.DuplicateIDError
+		twiceA   *jsonschema.DuplicateAnchorError
+		regex    *jsonschema.InvalidRegexError
+		parse    *jsonschema.ParseURLError
+		vocab    *jsonschema.UnsupportedVocabularyError
+	)
+	switch {
+	case errors.As(err, &pointer):
+		return pointer.URL
+	case errors.As(err, &invalid):
+		return invalid.URL
+	case errors.As(err, &anchor):
+		return anchor.URL
+	case errors.As(err, &id):
+		return id.URL
+	case errors.As(err, &anchorOf):
+		return anchorOf.URL
+	case errors.As(err, &twiceID):
+		return twiceID.URL
+	case errors.As(err, &twiceA):
+		return twiceA.URL
+	case errors.As(err, &regex):
+		return regex.URL
+	case errors.As(err, &parse):
+		return parse.URL
+	case errors.As(err, &vocab):
+		return vocab.URL
 	}
 	return ""
 }

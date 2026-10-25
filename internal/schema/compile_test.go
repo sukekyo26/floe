@@ -62,6 +62,7 @@ func TestCompile(t *testing.T) {
 		{"partnote", `{` + head + `, "properties": {"n": ` + N + `, "h": {"$ref": "floe:///parts/html.json"}}}`, ""},
 		{"recursiveRef", `{"$schema": "https://json-schema.org/draft/2019-09/schema", "type": "object", "$recursiveAnchor": true, "properties": {"t": {"$recursiveRef": "#"}}}`, "schema.json: #/properties/t: floe does not follow $recursiveRef: write a $ref"},
 		{"required through a $ref and allOf", `{` + head + `, "$ref": "#/$defs/b", "allOf": [{"required": ["lang"]}], "$defs": {"b": {"required": ["theme"]}}}`, lines("schema.json: #/$defs/b: the schema requires theme, which floe reads from every data file itself (lang, template, theme, title) and leaves out of what the schema checks: require other items", "schema.json: #/allOf/0: the schema requires lang, which floe reads from every data file itself (lang, template, theme, title) and leaves out of what the schema checks: require other items")},
+		{"dependencies in 2020-12", `{` + head + `, "dependencies": {"x": ["title"]}}`, "schema.json: #: the schema requires title, which floe reads from every data file itself (lang, template, theme, title) and leaves out of what the schema checks: require other items"},
 		{"one $defs from two places", `{` + head + `, "$defs": {"item": {"type":"object","properties": {"n": ` + N + `}}}, "properties": {"xs": {"type":"array","items": {"$ref": "#/$defs/item"}}, "ys": {"type":"array","items": {"$ref": "#/$defs/item"}}}}`, ""},
 	} {
 		_, err := schema.Compile(template, "schema.json", []byte(tt.src), resources(t))
@@ -79,7 +80,7 @@ func TestCheckPart(t *testing.T) {
 	for _, tt := range []struct{ name, want string }{
 		{"note", ""},
 		{"html", "parts/html.json: #/properties/body: a part's schema takes no \"format\": \"html\": its part.html draws its items, which the checks of a format do not reach; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
-		{"stack", "parts/any.json: #/properties/text: a part's schema takes no \"format\": \"markdown\": its part.html draws its items, which the checks of a format do not reach; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
+		{"stack", "parts/stack.json: #/$defs/item: the part refers to floe:///parts/any.json, a schema of floe's that holds items of the format markdown, which a part's part.html cannot draw: refer to it from the template's schema instead, and give the part items of its own"},
 	} {
 		if got := told(schema.CheckPart("floe:///parts/"+tt.name+".json", resources(t))); got != tt.want {
 			t.Errorf("CheckPart(%s) told\n%s\nwant\n%s", tt.name, got, tt.want)
@@ -94,6 +95,8 @@ func TestCheckPartMistakes(t *testing.T) {
 
 	res := resources(t)
 	for name, src := range map[string]string{
+		"a":       `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"h": {"$ref": "floe:///parts/b.json#/$defs/h"}}}`,
+		"b":       `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"n": {"type": "string"}}, "$defs": {"h": {"type": "string", "format": "html"}}}`,
 		"missing": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"text": {"$ref": "#/$defs/missing"}}}`,
 		"meta":    `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"m": {"$ref": "https://json-schema.org/draft/2020-12/schema"}}}`,
 	} {
@@ -104,6 +107,7 @@ func TestCheckPartMistakes(t *testing.T) {
 		res["floe:///parts/"+name+".json"] = schema.Resource{Doc: d, Kind: schema.Part, File: "parts/" + name + ".json"}
 	}
 	for name, want := range map[string]string{
+		"a":       "parts/a.json: #/properties/h: floe:///parts/b.json#/$defs/h points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, floe:///parts/b.json",
 		"missing": `parts/missing.json: json-pointer in "floe:///parts/missing.json#/$defs/missing" not found`,
 		"meta":    "parts/meta.json: #/properties/m: https://json-schema.org/draft/2020-12/schema: a schema refers to no other file or URL; write what a $ref refers to in its own file",
 	} {

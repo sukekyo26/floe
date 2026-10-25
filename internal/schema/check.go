@@ -139,6 +139,12 @@ func (c *Compiled) sharedKeys() usererr.List {
 		for _, more := range s.DependentRequired {
 			required = append(required, more...)
 		}
+		for _, dep := range s.Dependencies {
+			// The library reads dependencies in every draft.
+			if more, ok := dep.([]string); ok {
+				required = append(required, more...)
+			}
+		}
 		for _, key := range shared {
 			if slices.Contains(required, key) {
 				found = append(found, c.mistake(s, "schema_shared_key", key))
@@ -159,16 +165,46 @@ func (c *Compiled) sharedKeys() usererr.List {
 // written.
 func (c *Compiled) checkPart() error {
 	var found usererr.List
-	enter := func(base string) bool { return base == c.url || c.isShared(base) }
-	c.every(c.Root, enter, func(n *jsonschema.Schema) {
+	own := func(base string) bool { return base == c.url }
+	c.every(c.Root, own, func(n *jsonschema.Schema) {
 		if f := floeFormat(n); f != "" {
 			found = append(found, c.mistake(n, "schema_part_format", f))
+		}
+		if n.Ref == nil {
+			return
+		}
+		base, frag := split(n.Ref.Location)
+		_, held := c.res[base]
+		switch {
+		case held && base != c.url && frag != "":
+			// Into another part or a Shared schema, which the walk from their roots does not reach.
+			found = append(found, c.mistake(n, "schema_part_into", c.written(n.Ref.Location), base))
+		case c.isShared(base):
+			if f := c.formatIn(n.Ref); f != "" {
+				found = append(found, c.mistake(n, "schema_part_shared_format", base, f))
+			}
 		}
 	}, func(from, to *jsonschema.Schema) {
 		base, _ := split(to.Location)
 		found = append(found, c.mistake(from, "schema_no_url", base))
 	})
 	return found.Sorted().Err()
+}
+
+// formatIn returns the first of Formats in the Shared schema s, through the Shared schemas it refers to, ""
+// for none.
+func (c *Compiled) formatIn(s *jsonschema.Schema) string {
+	var formats []string
+	c.every(s, c.isShared, func(n *jsonschema.Schema) {
+		if f := floeFormat(n); f != "" {
+			formats = append(formats, f)
+		}
+	}, func(_, _ *jsonschema.Schema) {})
+	slices.Sort(formats)
+	if len(formats) == 0 {
+		return ""
+	}
+	return formats[0]
 }
 
 // partName returns the name of the part at u, floe:///parts/<name>.json.

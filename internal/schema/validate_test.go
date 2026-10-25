@@ -48,8 +48,8 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-// A property name the schema refuses is told at the one object at its depth that has the key, else at the
-// top of the file, the same each time (run with -count=20).
+// A property name the schema refuses is told at the key of the one object at its depth that has it, else at
+// the top of the file, the same each time (run with -count=20).
 func TestPropertyNames(t *testing.T) {
 	t.Parallel()
 
@@ -58,7 +58,7 @@ func TestPropertyNames(t *testing.T) {
 	for _, tt := range []struct{ name, body, data, want string }{
 		{
 			"one object", `"properties": {"title2": {"type":"string"}, "tags": {"type":"object","propertyNames":` + lower + `}}`,
-			"title2: t\ntags:\n  ok: 1\n  Bad: b\n", "d.yaml:5:3: " + bad,
+			"title2: t\ntags:\n  ok: 1\n  Bad: b\n", "d.yaml:6:3: " + bad,
 		},
 		{
 			"two items", `"properties": {"items": {"type":"array","items":{"type":"object","propertyNames":` + lower + `}}}`,
@@ -66,7 +66,7 @@ func TestPropertyNames(t *testing.T) {
 		},
 		{
 			"one $defs twice", `"$defs": {"pn": {"propertyNames": ` + lower + `}}, "properties": {"tags": {"allOf": [{"$ref": "#/$defs/pn"}, {"$ref": "#/$defs/pn"}]}}`,
-			"tags:\n  ok: 1\n  Bad: b\n", lines("d.yaml:4:3: "+bad, "d.yaml:4:3: "+bad),
+			"tags:\n  ok: 1\n  Bad: b\n", lines("d.yaml:5:3: "+bad, "d.yaml:5:3: "+bad),
 		},
 		{
 			"the key elsewhere", `"$defs": {"pn": {"propertyNames": ` + lower + `}}, "properties": {"tags": {"allOf": [{"$ref": "#/$defs/pn"}, {"$ref": "#/$defs/pn"}]}, "more": {}}`,
@@ -78,7 +78,7 @@ func TestPropertyNames(t *testing.T) {
 		},
 		{
 			"the top", `"propertyNames": ` + lower + `, "additionalProperties": false`,
-			"Bad: 1\n", lines("d.yaml:1:1: additional properties 'Bad' not allowed", "d.yaml:1:1: "+bad),
+			"Bad: 1\n", lines("d.yaml:1:1: additional properties 'Bad' not allowed", "d.yaml:3:1: "+bad),
 		},
 		{
 			"names in two objects", `"properties": {"tags": {"propertyNames":` + lower + `}, "more": {}, "x": {"propertyNames": {"pattern": "^[a-y]+$"}}, "y": {}}`,
