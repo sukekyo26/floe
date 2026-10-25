@@ -84,6 +84,16 @@ func TestListSorted(t *testing.T) {
 	if got := steps.Sorted(); got[0].At != "#/allOf/2" || got[2].Args[0] != "a" {
 		t.Errorf("Sorted by steps and arguments = %v", got.Error())
 	}
+	// One order of all steps, whatever order they come in: indexes first, by number, then text.
+	for _, order := range [][]string{{"10", "9", "1a"}, {"10", "1a", "9"}, {"9", "10", "1a"}, {"9", "1a", "10"}, {"1a", "10", "9"}, {"1a", "9", "10"}} {
+		var l usererr.List
+		for _, step := range order {
+			l = append(l, usererr.NewIn("s.json", "#/properties/"+step, "library", "x"))
+		}
+		if got := l.Sorted().Error(); got != "s.json: #/properties/9: x\ns.json: #/properties/10: x\ns.json: #/properties/1a: x" {
+			t.Errorf("Sorted of %v = %q", order, got)
+		}
+	}
 	if got := same.Sorted().Error(); got != "d.yaml:1:1: Bad\nd.yaml:1:1: Zed\ns.json: #/a: x\ns.json: #/b: x" {
 		t.Errorf("Sorted at one place = %q", got)
 	}

@@ -79,10 +79,7 @@ func (c *Compiled) checkTemplate() error {
 		if own(n) {
 			found = append(found, c.checkNode(n, r)...)
 		}
-	}, func(from, to *jsonschema.Schema) {
-		base, _ := split(to.Location)
-		found = append(found, c.mistake(from, "schema_no_url", base))
-	})
+	}, func(from, to *jsonschema.Schema) { found = append(found, c.strayMistake(from, to)) })
 	if st := c.Follow(c.Root); st.Part != "" || st.Format != "" {
 		by := st.Part
 		if by == "" {
@@ -110,13 +107,12 @@ func (c *Compiled) checkNode(n *jsonschema.Schema, r reached) usererr.List {
 	if n.Ref == nil {
 		return found
 	}
-	base, frag := split(n.Ref.Location)
-	_, held := c.res[base]
+	into := c.intoMistake(n)
 	switch part, isRoot := c.partRoot(n.Ref); {
 	case isRoot && !r.atPart[n]:
 		found = append(found, c.mistake(n, "schema_part_unreached", partName(part)))
-	case held && base != c.url && frag != "":
-		found = append(found, c.mistake(n, "schema_part_into", c.written(n.Ref.Location), base))
+	case into != nil:
+		found = append(found, into)
 	case c.followed(n, n.Ref) && !r.passed[n] && c.followFrom(n.Ref).stops():
 		found = append(found, c.mistake(n, "schema_ref_unreached", c.written(n.Ref.Location)))
 	}
@@ -173,21 +169,17 @@ func (c *Compiled) checkPart() error {
 		if n.Ref == nil {
 			return
 		}
-		base, frag := split(n.Ref.Location)
-		_, held := c.res[base]
-		switch {
-		case held && base != c.url && frag != "":
-			// Into another part or a Shared schema, which the walk from their roots does not reach.
-			found = append(found, c.mistake(n, "schema_part_into", c.written(n.Ref.Location), base))
-		case c.isShared(base):
+		// Into another part or a Shared schema, which the walk from their roots does not reach.
+		if into := c.intoMistake(n); into != nil {
+			found = append(found, into)
+			return
+		}
+		if base, _ := split(n.Ref.Location); c.isShared(base) {
 			if f := c.formatIn(n.Ref); f != "" {
 				found = append(found, c.mistake(n, "schema_part_shared_format", base, f))
 			}
 		}
-	}, func(from, to *jsonschema.Schema) {
-		base, _ := split(to.Location)
-		found = append(found, c.mistake(from, "schema_no_url", base))
-	})
+	}, func(from, to *jsonschema.Schema) { found = append(found, c.strayMistake(from, to)) })
 	return found.Sorted().Err()
 }
 
@@ -223,6 +215,23 @@ func (c *Compiled) written(loc string) string {
 		return base
 	}
 	return base + "#" + unescape(frag)
+}
+
+// intoMistake returns the mistake of the $ref of n into a part or a Shared schema floe holds, not at its
+// root, which a walk from that root does not reach; nil for none.
+func (c *Compiled) intoMistake(n *jsonschema.Schema) *usererr.Error {
+	base, frag := split(n.Ref.Location)
+	if _, held := c.res[base]; !held || base == c.url || frag == "" {
+		return nil
+	}
+	return c.mistake(n, "schema_part_into", c.written(n.Ref.Location), base)
+}
+
+// strayMistake is the mistake of from, which names to, a schema in no file floe holds (a metaschema the
+// library holds): a schema refers to no file or URL outside what floe holds.
+func (c *Compiled) strayMistake(from, to *jsonschema.Schema) *usererr.Error {
+	base, _ := split(to.Location)
+	return c.mistake(from, "schema_no_url", base)
 }
 
 // isShared reports whether base is the URL of a Shared schema.

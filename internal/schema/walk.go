@@ -131,12 +131,16 @@ func (c *Compiled) followFrom(starts ...*jsonschema.Schema) reached {
 		atFormat: map[*jsonschema.Schema]bool{},
 	}
 	queue := slices.Clone(starts)
+	// What was a start of a step; passed also holds what a step went through by its $ref, whose properties
+	// of a name beside the $ref were not taken, so that it is a start of its own all the same.
+	started := map[*jsonschema.Schema]bool{}
 	for len(queue) > 0 {
 		s := queue[0]
 		queue = queue[1:]
-		if r.passed[s] {
+		if started[s] {
 			continue
 		}
+		started[s] = true
 		st, through := c.step(s, map[*jsonschema.Schema]bool{})
 		for _, t := range through {
 			r.passed[t] = true

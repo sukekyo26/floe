@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -129,17 +128,31 @@ func (l List) Sorted() List {
 	return l
 }
 
-// comparePointers compares two JSON pointers step by step: two steps of digits as numbers (#/allOf/2
-// before #/allOf/10), others as text.
+// comparePointers compares two JSON pointers step by step, in one order of all steps: an index (0, or digits
+// not beginning with 0) before any other step, indexes by their number (#/allOf/2 before #/allOf/10), the
+// others as text.
 func comparePointers(x, y string) int {
 	return slices.CompareFunc(strings.Split(x, "/"), strings.Split(y, "/"), func(a, b string) int {
-		i, errA := strconv.Atoi(a)
-		j, errB := strconv.Atoi(b)
-		if errA == nil && errB == nil {
-			return cmp.Compare(i, j)
+		ia, ib := isIndex(a), isIndex(b)
+		switch {
+		case ia && ib:
+			return cmp.Or(cmp.Compare(len(a), len(b)), strings.Compare(a, b))
+		case ia:
+			return -1
+		case ib:
+			return 1
 		}
 		return strings.Compare(a, b)
 	})
+}
+
+// isIndex reports whether step is an index of an array as a JSON pointer writes it: 0, or digits not
+// beginning with 0.
+func isIndex(step string) bool {
+	if step == "" || step != "0" && step[0] == '0' {
+		return false
+	}
+	return strings.Trim(step, "0123456789") == ""
 }
 
 // Error words the mistakes in English, one per line.
