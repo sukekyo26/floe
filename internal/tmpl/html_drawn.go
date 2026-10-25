@@ -121,7 +121,7 @@ func (d *Data) checkDrawnHTML(set *partSet, page *template.Template, title strin
 		bare, err := c.execute(page, title)
 		if err != nil {
 			if failed := found.Add(err); failed != nil {
-				return all, failed
+				return all, failed //nolint:wrapcheck // what failed, as it is
 			}
 			continue
 		}
