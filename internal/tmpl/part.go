@@ -393,7 +393,8 @@ func (set *partSet) namedBy(named []namedPart, keep func(namedPart) bool) []stri
 }
 
 // namedPart is a name a data-floe-part or data-floe-look attribute gives, the attribute's whole value, and
-// the offset where the value starts.
+// the offset in a template's text where the value starts, which namedIn orders them by; 0 for one read from
+// a tree.
 type namedPart struct {
 	name  string
 	value string

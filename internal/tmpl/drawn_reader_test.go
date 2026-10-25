@@ -82,6 +82,32 @@ func TestDrawnReaderStylesPlace(t *testing.T) {
 	}
 }
 
+// A name page.html draws by what an item holds is asked of the page drawn itself.
+func TestDrawnReaderDrawnNames(t *testing.T) {
+	t.Parallel()
+
+	l, _ := memoPage(t, `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body>`+
+		`<div data-floe-part="{{if eq (printf "%s" .Data.risks) "<b>x</b>"}}note table{{else}}note{{end}}">{{.Data.risks}}</div></body></html>`)
+	_, err := draw(l, "template: memo\nlang: en\nrisks: <b>x</b>\n")
+	if err == nil || !strings.HasPrefix(err.Error(), `the page has data-floe-part="note table", which is not the name of one part`) {
+		t.Errorf("a name drawn by what an item holds = %v", err)
+	}
+}
+
+// An item's mistakes are told together with another's that page.html puts outside, whichever comes first.
+func TestDrawnReaderTogether(t *testing.T) {
+	t.Parallel()
+
+	l, _ := memoPage(t, `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>{{.Data.aside}}`+
+		`<body><svg>{{.Data.risks}}</svg></body></html>`)
+	_, err := draw(l, "template: memo\nlang: en\nrisks: "+yamlText(`<title><g data-floe-part="note table"></g></title>`)+
+		"\naside: <p>x</p>\n")
+	if err == nil || !strings.Contains(err.Error(), `risks: the page has data-floe-part="note table"`) ||
+		!strings.Contains(err.Error(), "outside its <head> and <body>") {
+		t.Errorf("an item's name and another outside = %v", err)
+	}
+}
+
 // When the page cannot be drawn with the items as marks, nothing of the template's is asked of it: no
 // </head> is told missing that page.html has.
 func TestDrawnReaderNoMarked(t *testing.T) {
@@ -125,7 +151,7 @@ func TestDrawnReaderPartNames(t *testing.T) {
 		"note/part.html": `<div data-floe-part="note"><span data-floe-part="{{.kind}}">{{.text}}</span></div>`,
 		"note/part.css":  `[data-floe-part="note"] { margin: 0; }`,
 	})
-	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/note.json"}`), parts, "", "")
+	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/note.json"}, "aside": {"type": "string"}`), parts, "", "")
 	_, err := draw(l, "template: memo\nlang: en\nrisks: { text: x, kind: note table }\n")
 	if err == nil || !strings.HasPrefix(err.Error(), "data.yaml:3:") || !strings.Contains(err.Error(), "risks: the page has") ||
 		!strings.Contains(err.Error(), `data-floe-part="note table", which is not the name of one part`) {

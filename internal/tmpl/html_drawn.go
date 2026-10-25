@@ -114,21 +114,29 @@ func (d *Data) checkDrawnHTML(set *partSet, page *template.Template, title strin
 	}
 	want := treeShape(doc)
 	var found usererr.List
+	shaped := true
 	for _, k := range c.marks.drawnOrder(all) {
 		it := d.htmlItems[k]
 		c.marks.shown = func(n int) bool { return n != k }
 		bare, err := c.execute(page, title)
 		if err != nil {
-			return all, err
+			if failed := found.Add(err); failed != nil {
+				return all, failed
+			}
+			continue
 		}
 		doc := parseDrawn(bare)
 		formIn, outside, nodes := inPlace(doc, c.marks.mark, k, it.text)
 		if outside {
-			return all, usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_outside")
+			// It is not read in place, so that what it does to the page, which the items after it are
+			// compared with, is not known: their names alone are asked.
+			found = append(found, usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_outside"))
+			shaped = false
+			continue
 		}
 		atItem := func(bad *usererr.Error) *usererr.Error { return itemError(d.File, it.pos, it.path, bad) }
 		found = append(found, set.placedMisnamings(drawnNames(nodes, it.text), d.File, it.pos, atItem)...)
-		if formIn && leavesForm(it.text) || !slices.Equal(treeShape(doc), want) {
+		if shaped && (formIn && leavesForm(it.text) || !slices.Equal(treeShape(doc), want)) {
 			// The items after it are compared with a page it changed: it is the one told.
 			found = append(found, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page")))
 			break
@@ -208,9 +216,14 @@ func (d *Data) withStyles(
 		return nil, err //nolint:wrapcheck // the template's mistakes and the items'
 	}
 	if d.htmlItems != nil {
+		// page.html may draw another branch by what an item holds (checkDrawnHTML's LIMIT): out is asked the
+		// template's mistakes too, once the items' names, which out holds, are told none.
 		if k, doc = headAt(out); k < 0 {
-			// page.html drew another branch by what an item holds, without a </head> (checkDrawnHTML's LIMIT).
-			return nil, noHead
+			head, doc = noHead, parseDrawn(out)
+		}
+		misnamed = set.misnamingErrs(drawnNames([]*html.Node{doc}, string(out))).Err()
+		if err := usererr.Collect(head, misnamed); err != nil {
+			return nil, err //nolint:wrapcheck // the template's mistakes
 		}
 	}
 	style, err := set.pageStyle(drawnNames([]*html.Node{doc}, string(out)), own, d.Theme)
@@ -269,23 +282,23 @@ func styled(doc *html.Node) bool {
 func drawnNames(nodes []*html.Node, text string) []namedPart {
 	var names []namedPart
 	for _, top := range nodes {
-		names = append(names, elementNames(top, len(names))...)
+		names = append(names, elementNames(top)...)
 		for n := range top.Descendants() {
-			names = append(names, elementNames(n, len(names))...)
+			names = append(names, elementNames(n)...)
 		}
 	}
 	return append(names, textNames(text, nil)...)
 }
 
-// elementNames returns the names n gives by its attributes when it is an element, at at on.
-func elementNames(n *html.Node, at int) []namedPart {
+// elementNames returns the names n gives by its attributes when it is an element.
+func elementNames(n *html.Node) []namedPart {
 	if n.Type != html.ElementNode {
 		return nil
 	}
 	var names []namedPart
 	for _, a := range n.Attr {
 		if look := a.Key == "data-floe-look"; a.Namespace == "" && (look || a.Key == "data-floe-part") {
-			names = append(names, namesOf(a.Val, look, false, at+len(names))...)
+			names = append(names, namesOf(a.Val, look, false, 0)...)
 		}
 	}
 	return names
@@ -303,7 +316,7 @@ func itemNames(item string) []namedPart {
 		}
 		for _, a := range z.Token().Attr {
 			if look := a.Key == "data-floe-look"; look || a.Key == "data-floe-part" {
-				names = append(names, namesOf(a.Val, look, false, len(names))...)
+				names = append(names, namesOf(a.Val, look, false, 0)...)
 			}
 		}
 	}
