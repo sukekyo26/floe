@@ -123,20 +123,21 @@ func (d *Data) checkDrawnHTML(set *partSet, page *template.Template, title strin
 			if failed := found.Add(err); failed != nil {
 				return all, failed //nolint:wrapcheck // what failed, as it is
 			}
+			// It is not compared with the page, so that what it does to it, which the items after it are
+			// compared with, is not known: theirs is not asked.
+			shaped = false
 			continue
 		}
 		doc := parseDrawn(bare)
 		formIn, outside, nodes := inPlace(doc, c.marks.mark, k, it.text)
 		if outside {
-			// It is not read in place, so that what it does to the page, which the items after it are
-			// compared with, is not known: their names alone are asked.
 			found = append(found, usererr.NewAt(d.tmpl.file("page.html"), 0, 0, "tmpl_html_outside"))
-			shaped = false
+			shaped = false // as for one not drawn
 			continue
 		}
 		atItem := func(bad *usererr.Error) *usererr.Error { return itemError(d.File, it.pos, it.path, bad) }
 		found = append(found, set.placedMisnamings(drawnNames(nodes, it.text), d.File, it.pos, atItem)...)
-		if shaped && (formIn && leavesForm(it.text) || !slices.Equal(treeShape(doc), want)) {
+		if formIn && leavesForm(it.text) || shaped && !slices.Equal(treeShape(doc), want) {
 			// The items after it are compared with a page it changed: it is the one told.
 			found = append(found, itemError(d.File, it.pos, it.path, usererr.New("tmpl_html_page")))
 			break
@@ -192,10 +193,10 @@ func (d *Data) marked(mark string) *Data {
 // its styles (pageStyle, own its template's CSS) before its </head> (headAt). The template's mistakes, a
 // </head> missing (noHead) and a name of a part the page is refused for, are asked of the page drawn with
 // every item of format html a mark, which what those items hold does not change, and the items' of out
-// (checkDrawnHTML): both are told. Where the styles go is asked of out itself, as page.html may draw other
-// text by what an item holds (eq, len, slice).
-// LIMIT: with items of format html, out is read for its </head> apart from the page drawn with marks; take
-// the latter's if they come to cost.
+// (checkDrawnHTML): both are told. Then, as page.html may draw other text by what an item holds (eq, len,
+// slice), the template's mistakes are asked of out itself too, where the styles go.
+// LIMIT: with items of format html, out is read apart from the page drawn with marks; take the latter's if
+// they come to cost.
 func (d *Data) withStyles(
 	set *partSet, page *template.Template, title string, out, own []byte, noHead error,
 ) ([]byte, error) {

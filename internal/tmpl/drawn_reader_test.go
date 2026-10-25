@@ -108,6 +108,45 @@ func TestDrawnReaderTogether(t *testing.T) {
 	}
 }
 
+// An item not compared with the page, as the page cannot be drawn with the others as marks, leaves the
+// items after it uncompared: what it does to the page, which theirs is compared with, is not known.
+func TestDrawnReaderNotDrawn(t *testing.T) {
+	t.Parallel()
+
+	// Drawn with risks a mark, the others as written, alone.
+	cond := `{{if and (gt (len (printf "%s" .Data.risks)) 30) (lt (len (printf "%s" .Data.aside)) 30)}}{{.Missing.x}}{{end}}`
+	l, _ := memoPage(t, `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body><div>`+
+		cond+`{{.Data.risks}}{{.Data.aside}}</div></body></html>`)
+	_, err := draw(l, "template: memo\nlang: en\nrisks: <p>x\naside: <p>y</p>\n")
+	if err == nil || !strings.Contains(err.Error(), `"Missing"`) || strings.Contains(err.Error(), "aside: HTML changes the page") {
+		t.Errorf("an item after one not drawn = %v", err)
+	}
+}
+
+// A <form> an item leaves open is told after an item page.html puts outside, as it is the item's own.
+func TestDrawnReaderFormAfterOutside(t *testing.T) {
+	t.Parallel()
+
+	l, _ := memoPage(t, `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>{{.Data.aside}}`+
+		`<body><div>{{.Data.risks}}</div></body></html>`)
+	_, err := draw(l, "template: memo\nlang: en\nrisks: <form>x\naside: <p>x</p>\n")
+	if err == nil || !strings.Contains(err.Error(), "risks: HTML changes the page") {
+		t.Errorf("a <form> left open after an item outside = %v", err)
+	}
+}
+
+// An item's names are asked as it is read too, wherever page.html puts it: one outside is told them.
+func TestDrawnReaderOutsideNames(t *testing.T) {
+	t.Parallel()
+
+	l, _ := memoPage(t, `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>{{.Data.aside}}`+
+		`<body><p>{{.Data.risks}}</p></body></html>`)
+	_, err := draw(l, "template: memo\nlang: en\nrisks: x\naside: "+yamlText(`<p data-floe-part="note table">x</p>`)+"\n")
+	if err == nil || !strings.Contains(err.Error(), `aside: the page has data-floe-part="note table"`) {
+		t.Errorf("a name of an item outside = %v", err)
+	}
+}
+
 // When the page cannot be drawn with the items as marks, nothing of the template's is asked of it: no
 // </head> is told missing that page.html has.
 func TestDrawnReaderNoMarked(t *testing.T) {
