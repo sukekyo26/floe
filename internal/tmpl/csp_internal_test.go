@@ -5,8 +5,9 @@ import (
 	"testing"
 )
 
-// The CSP goes into a download before anything it could load: after a doctype in any case, past a BOM
-// and comments before it, which end where a browser ends them, or before the rest when there is none.
+// The CSP goes into a download before anything it could load: past a BOM, whitespace and the comments an
+// HTML tokenizer reads, after a doctype, or before the rest when there is none. A comment or a doctype that
+// runs to the end of the page is taken as open, and the CSP goes before it, not into it.
 func TestWithCutOff(t *testing.T) {
 	t.Parallel()
 
@@ -14,12 +15,16 @@ func TestWithCutOff(t *testing.T) {
 	for page, want := range map[string]string{
 		"<!doctype html><html>":                       "<!doctype html>" + meta + "<html>",
 		"\n <!DOCTYPE HTML>\n<head>":                  "\n <!DOCTYPE HTML>" + meta + "\n<head>",
-		"\uFEFF<!-- a -->\n<!-- b --><!doctype html>": "\uFEFF<!-- a -->\n<!-- b --><!doctype html>" + meta,
+		"\uFEFF<!-- a -->\n<!-- b --><!doctype html>": "\uFEFF<!-- a -->\n<!-- b -->" + meta + "<!doctype html>",
 		"<!-- a --><html>":                            "<!-- a -->" + meta + "<html>",
 		"<!-- open <!doctype html>":                   meta + "<!-- open <!doctype html>",
 		"<!-- a --!><!doctype html><p><!-- b -->":     "<!-- a --!><!doctype html>" + meta + "<p><!-- b -->",
-		"<!--><!---><!doctype html>":                  "<!--><!---><!doctype html>" + meta,
-		"<?xml version=\"1.0\"?>\f<!doctype html>":    "<?xml version=\"1.0\"?>\f<!doctype html>" + meta,
+		"<!--><!---><!doctype html>":                  "<!--><!--->" + meta + "<!doctype html>",
+		"<?xml version=\"1.0\"?>\f<!doctype html>":    "<?xml version=\"1.0\"?>\f" + meta + "<!doctype html>",
+		"<?xml version=\"1.0\"?>\f<!doctype html><p>": "<?xml version=\"1.0\"?>\f<!doctype html>" + meta + "<p>",
+		"<!x><!doctype html><p>":                      "<!x><!doctype html>" + meta + "<p>",
+		"  hello<!doctype html>":                      "  " + meta + "hello<!doctype html>",
+		"<!doctype html PUBLIC \"a>b\"><p>":           "<!doctype html PUBLIC \"a>" + meta + "b\"><p>",
 		"<html><head><title>x</title>":                meta + "<html><head><title>x</title>",
 		"<!doctype":                                   meta + "<!doctype",
 		"":                                            meta,
