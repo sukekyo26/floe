@@ -45,7 +45,8 @@ type Report struct {
 }
 
 // Tell words err in the language of c: the *Error it is or wraps, or, for an error that is not the user's
-// or holds no mistake, floe's failure. It is the only place a mistake is worded.
+// or holds no mistake, floe's failure. It is the only place a mistake is worded. The words of what wraps
+// a mistake are not told: a place or a name goes into the mistake's arguments, not into fmt.Errorf.
 func Tell(c *i18n.Catalog, err error) Report {
 	var one *Error
 	isMistake := errors.As(err, &one)

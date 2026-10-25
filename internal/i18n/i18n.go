@@ -3,7 +3,8 @@
 // Errors carry a key and arguments and are rendered at the boundary: the CLI's exit, in English.
 //
 // A key missing from a language falls back to the language without its last subtag, one at a time
-// (zh-Hant-TW to zh-Hant to zh, pt-BR to pt), then to English, then to the key itself.
+// (zh-hant-tw to zh-hant to zh, pt-br to pt), then to English, then to the key itself. The tags are
+// lower case: New is given one so.
 package i18n
 
 import (
@@ -46,7 +47,7 @@ type Catalog struct {
 	chain []Lang
 }
 
-// New returns the catalog of lang. A language without a catalog renders in English.
+// New returns the catalog of lang, a tag in lower case. A language without a catalog renders in English.
 func New(lang Lang) *Catalog {
 	return &Catalog{chain: fallbacks(lang)}
 }

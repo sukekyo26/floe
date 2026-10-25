@@ -29,7 +29,7 @@ func TestTell(t *testing.T) {
 		text, named string
 	}{
 		{"one", lang, "no lang", "floe: no lang"},
-		{"one wrapped", fmt.Errorf("read: %w", lang), "no lang", "floe: no lang"},
+		{"one wrapped, without the words of what wraps it", fmt.Errorf("read: %w", lang), "no lang", "floe: no lang"},
 		{"no mistake", (*usererr.Error)(nil), "*usererr.Error with no mistake", "floe: *usererr.Error with no mistake"},
 		{"none", nil, "<nil> with no mistake", "floe: <nil> with no mistake"},
 		{"floe's failure", errors.New("disk on fire"), "disk on fire", "floe: disk on fire"},
