@@ -806,7 +806,7 @@ func checkParts(set *partSet, whole drawnItems, d *Data, root ast.Node) error {
 			// LIMIT: a Markdown item page.html does not draw is checked all the same; check the drawn page's
 			// items if a template comes to leave one out.
 			pos, _ := itemPos(root, f.at, false)
-			if bad := set.drawnMisnamings(string(d.markdownHTML(text)), d.File, pos, nil); bad != nil {
+			if bad := set.drawnMisnamings(string(d.markdownHTML(text)), d.File, pos, "tmpl_html_part", nil); bad != nil {
 				drawn, mistake = false, bad
 			}
 		}
@@ -855,7 +855,7 @@ func (set *partSet) drawPart(
 	// the part adds alone, the inner items drawn as marks, if checking pages comes to take long.
 	pos, _ := itemPos(root, f.at, false)
 	at := func(bad *usererr.Error) *usererr.Error { return itemMistake(d.File, root, f.at, false, bad) }
-	if bad := set.drawnMisnamings(string(html), d.File, pos, at); bad != nil {
+	if bad := set.drawnMisnamings(string(html), d.File, pos, "tmpl_part_draws_part", at); bad != nil {
 		return false, bad
 	}
 	d.drew(f.at, html)
@@ -875,11 +875,12 @@ func (p *part) drawnMistake(err error, at []string, d *Data, root ast.Node) erro
 }
 
 // drawnMisnamings returns the mistakes of the names html names, which an item of the data file file written at
-// pos draws, that the page would be refused for (placedMisnamings), html read wherever it is put (itemNames).
+// pos draws, that the page would be refused for (placedMisnamings), html read wherever it is put (itemNames); a
+// name of no part with the message key unknown.
 func (set *partSet) drawnMisnamings(
-	html, file string, pos yamlpos.Pos, other func(*usererr.Error) *usererr.Error,
+	html, file string, pos yamlpos.Pos, unknown string, other func(*usererr.Error) *usererr.Error,
 ) usererr.List {
-	return set.placedMisnamings(itemNames(html), file, pos, "tmpl_html_part", other)
+	return set.placedMisnamings(itemNames(html), file, pos, unknown, other)
 }
 
 // placedMisnamings returns the mistakes of named, the names an item of the data file file written at pos

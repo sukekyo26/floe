@@ -307,7 +307,7 @@ func TestDrawnPageOfPartsAndDiagrams(t *testing.T) {
 	})
 	l := tmpl.NewLibrary(memo(t, `"risks": {"$ref": "floe:///parts/note.json"}, "aside": {"type": "string"}`), parts, "", "")
 	if _, err := draw(l, "template: memo\nlang: en\nrisks: { kind: nope }\n"); err == nil ||
-		!strings.HasPrefix(err.Error(), "data.yaml:3:10: risks: HTML names the part nope") {
+		!strings.HasPrefix(err.Error(), "data.yaml:3:10: risks: the part draws the name nope from this item, which is no part's") {
 		t.Errorf("a name of no part a part draws = %v, want it at the part's item", err)
 	}
 	raw := "template: report\nlang: en\ntitle: r\nsections:\n  - heading: h\n    parts:\n      - diagram:\n" +
