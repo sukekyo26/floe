@@ -178,7 +178,7 @@ func (k *Kit) readShared(d Dir, name string) error {
 	if err != nil {
 		return err //nolint:wrapcheck // its mistakes, or floe's failure
 	}
-	k.resources[partsURL+name+".json"] = r
+	k.resources[r.URL] = r
 	return nil
 }
 
@@ -227,7 +227,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 	if found != nil {
 		return found.Sorted().Err()
 	}
-	k.resources[partsURL+name+".json"] = r
+	k.resources[r.URL] = r
 	unread, err := unreadIn(d, name, "schema.json", "part.html", "part.css", "part.yaml", "checks.yaml", "words.yaml")
 	if err != nil {
 		return err

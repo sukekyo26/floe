@@ -325,7 +325,7 @@ func TestReadSharedID(t *testing.T) {
 			"t/schema.json": {Data: []byte(`{"properties": {"x": {"$ref": "floe:///parts/myshared.json"}}}`)},
 		}, Name: "own/templates"},
 	})
-	want := "own/parts/myshared.json: #/$defs/n: this $id, note.json, has no scheme, so in a part or a schema the parts share it lands under floe:///parts/, where it would take the place of another: write an $id of your own with its scheme, like https://example.com/item.json, or leave $id out"
+	want := "own/parts/myshared.json: #/$defs/n: this $id, note.json, has no scheme, which a part or a schema the parts share may not have, as it may land under floe:///parts/ and take the place of another: write an absolute URL of your own, like https://example.com/item.json, or leave $id out"
 	if got := told(err); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}

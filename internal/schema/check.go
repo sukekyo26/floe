@@ -17,13 +17,12 @@ import (
 var drafts = []string{"https://json-schema.org/draft/2020-12/schema", "https://json-schema.org/draft/2019-09/schema"}
 
 // raw refuses in doc, the JSON of file held at u, each "$schema" that names no draft floe takes, in dialects,
-// and each "$id" that would take a URL floe gives its parts and the schemas they share, in ids: one of the
-// floe: scheme, and in a part or a shared schema (part), one without a scheme, which lands under
-// floe:///parts/. The root may name u as it is. One "$schema" floe does not take leaves properties and the
-// like out of the compiled tree, and the library would read it through the loader while it compiles; one
-// "$id" names the schema a $ref in its file to that URL means, over floe's.
-// LIMIT: a "$schema" or "$id" in a value (enum, const, default, examples, x-…) is refused too, as a JSON
-// value is all it reads.
+// and each "$id" that could take a URL of floe's, in ids: one of the floe: scheme, and in a part or a shared
+// schema (part), one without a scheme, which may land under floe:///parts/. The root may name u as it is. One
+// "$schema" floe does not take leaves properties and the like out of the compiled tree, and the library
+// would read it through the loader while it compiles; one "$id" names the schema a $ref in its file to that
+// URL means, over floe's.
+// LIMIT: a "$schema" or "$id" in a value (enum, x-…) is refused too; read the compiled tree if that misleads.
 func raw(u, file string, doc any, part bool) (dialects, ids usererr.List) {
 	var walk func(v any, at string)
 	walk = func(v any, at string) {
@@ -56,7 +55,8 @@ func idMistake(u, file, at, id string, part bool) usererr.List {
 	p, err := url.Parse(id)
 	var key string
 	switch {
-	case at == "" && id == u:
+	// The library reads "" and "#" as no $id, and tells another fragment alone itself.
+	case at == "" && id == u, id == "", strings.HasPrefix(id, "#"):
 		return nil
 	case err != nil:
 		return nil //nolint:nilerr // the library tells an $id that is no URL as it compiles

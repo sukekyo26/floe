@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	idFloe     = "this $id names %s, a floe: URL, which only floe gives its parts and the schemas they share: give the schema an $id of your own, like https://example.com/item.json, or leave $id out"
-	idRelative = "this $id, %s, has no scheme, so in a part or a schema the parts share it lands under floe:///parts/, where it would take the place of another: write an $id of your own with its scheme, like https://example.com/item.json, or leave $id out"
+	idFloe     = "this $id names %s, a floe: URL, which are floe's own: give the schema an $id of your own, like https://example.com/item.json, or leave $id out"
+	idRelative = "this $id, %s, has no scheme, which a part or a schema the parts share may not have, as it may land under floe:///parts/ and take the place of another: write an absolute URL of your own, like https://example.com/item.json, or leave $id out"
 	idRoot     = "this $id, %s, is not this file's URL as it is: write %s as it is, or leave $id out"
 )
 
@@ -83,11 +83,38 @@ func TestNewResourceIDs(t *testing.T) {
 		{`{"$id": "FLOE:///parts/mine.json"}`, schema.Part, file + ": #: " + fmt.Sprintf(idRoot, "FLOE:///parts/mine.json", u)},
 		{`{"$id": "mine.json"}`, schema.Part, file + ": #: " + fmt.Sprintf(idRoot, "mine.json", u)},
 		{`{"$schema": "https://example.com/s"}`, schema.Shared, file + ": #: $schema https://example.com/s names no draft floe takes; name https://json-schema.org/draft/2020-12/schema or https://json-schema.org/draft/2019-09/schema, or leave it out"},
+		// Under an absolute $id too, as the rule reads the text alone.
+		{`{"$defs": {"o": {"$id": "https://example.com/x.json", "$defs": {"f": {"$id": "../floe.json"}}}}}`, schema.Part, file + ": #/$defs/o/$defs/f: " + fmt.Sprintf(idRelative, "../floe.json")},
 		{`{"$id": "floe:///parts/mine.json", "$defs": {"f": {"$id": "https://example.com/f.json"}}, "properties": {"x": {"$ref": "note.json"}}}`, schema.Part, ""},
+		// The library reads "" and "#" as no $id.
+		{`{"$id": "", "$defs": {"f": {"$id": "#"}, "g": {"$id": ""}}}`, schema.Shared, ""},
 	} {
 		_, err := schema.NewResource(u, file, []byte(tt.src), tt.kind)
 		if got := told(err); got != tt.want {
 			t.Errorf("NewResource(%s) told\n%s\nwant\n%s", tt.src, got, tt.want)
 		}
+	}
+}
+
+// A part's relative $ref, under the part's URL, still reaches a part of floe's.
+func TestCheckPartRelativeRef(t *testing.T) {
+	t.Parallel()
+
+	const u = "floe:///parts/mine.json"
+	res := resources(t)
+	r, err := schema.NewResource(u, "own/parts/mine/schema.json", []byte(`{`+head+`, "properties": {"x": {"$ref": "note.json"}}}`), schema.Part)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	res[r.URL] = r
+	if failed := schema.CheckPart(u, res); failed != nil {
+		t.Fatal(told(failed))
+	}
+	c, err := schema.Compile(template, "schema.json", []byte(`{`+head+`, "properties": {"m": {"$ref": "`+u+`"}}}`), res)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if got := c.Follow(c.Root.Properties["m"].Ref.Properties["x"]).Part; got != "floe:///parts/note.json" {
+		t.Errorf("the part's x is drawn by %q, want floe:///parts/note.json", got)
 	}
 }
