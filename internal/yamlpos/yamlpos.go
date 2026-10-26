@@ -308,7 +308,7 @@ func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 	case w.cut(text):
 	default:
 		if flow && v.Start.Type != token.MappingValueType {
-			w.found = append(w.found, New(w.file, Of(key), "yaml_flow_key_alone", headOf(key.GetToken().Value)))
+			w.found = append(w.found, New(w.file, Of(key), "yaml_flow_key_alone", Head(key.GetToken().Value)))
 		}
 	}
 	w.node(v.Value)
@@ -346,12 +346,12 @@ func lastLine(tk *token.Token) int {
 // shownEnd is how many characters of a value cut short its mistake shows: its end, where the cut is.
 const shownEnd = 40
 
-// headOf returns the head of key, the rest of text a , may have ended, to show in its mistake on one line:
-// only the first shownEnd characters before "…" of a longer one.
-func headOf(key string) string {
-	r := []rune(key)
+// Head returns the head of text, such as the rest of text a , may have ended, to show in a mistake on one line:
+// a line break as a space, and only the first shownEnd characters before "…" of a longer one.
+func Head(text string) string {
+	r := []rune(strings.ReplaceAll(text, "\n", " "))
 	if len(r) <= shownEnd {
-		return key
+		return string(r)
 	}
 	return string(r[:shownEnd]) + "…"
 }

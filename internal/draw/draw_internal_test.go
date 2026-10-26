@@ -113,7 +113,7 @@ func TestUnfinished(t *testing.T) {
 	t.Parallel()
 
 	for text, want := range map[string]string{
-		"a</b": "</b", "a</p x=": "</p x=", "<b class='x>y</b>": "<b class='x>y</b>", "<!DOCTYPE x": "<!DOCTYPE x",
+		"a</b": "</b", "a</p x=": "</p x=", "<b class='x>y</b>": "<b class='x>y</b>", "<!DOCTYPE x": "<!DOCTYPE x", "<b\nclass='x\ny": "<b class='x y",
 		"x" + strings.Repeat("y", 50) + "</b " + strings.Repeat("z", 50): "</b " + strings.Repeat("z", 36) + "…",
 	} {
 		if got := unfinished(text); got != want {

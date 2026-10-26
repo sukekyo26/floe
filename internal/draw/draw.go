@@ -68,6 +68,7 @@ func Page(
 			return nil, failed
 		}
 		e.File, e.Line, e.Column = t.File("page.html"), 0, 0
+		e.Args = s.plainArgs(e.Args)
 		if at >= 0 {
 			e.Line, e.Column = textpos.Of(t.PageSource(), at)
 		}

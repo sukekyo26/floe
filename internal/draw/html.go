@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	"golang.org/x/net/html"
 
@@ -19,17 +18,20 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// probe is the white space drawn around an item of format html. A parser rebuilds the formatting elements left
+// probe is the white space drawn around the item n of format html, its spaces counting it, so that it tells the
+// item where HTML's tags are stripped (an attribute's value). A parser rebuilds the formatting elements left
 // open (<b>, <a>) before it puts in text, which comments do not make it do: the probe after an item is rebuilt
 // into one the item left open, and the one before, into one the page left open, so that the item's marks share
 // it. White space goes in as it is in a table and in a head.
-const probe = "\t\n \t"
+func probe(n int) string {
+	return "\t\n" + strings.Repeat(" ", n+1) + "\t"
+}
 
 // items are the items of one drawing that floe draws, and what they need: those of format html, each marked so
 // that the page drawn tells whether it changes the page around it, and the images of the data's directory, each
 // read once.
 type items struct {
-	mark      string     // the marks' secret, in lower case as a parser makes tag and attribute names
+	secret    string     // of the marks, in lower case as a parser makes tag and attribute names
 	html      [][]string // the path of each item of format html, by its number
 	texts     []string   // its text
 	imagesDir string
@@ -47,7 +49,7 @@ type image struct {
 // newItems returns the items of a drawing whose data's images are under imagesDir ("" for none).
 func newItems(imagesDir string) *items {
 	return &items{
-		mark: strings.ToLower(rand.Text()), html: nil, texts: nil, imagesDir: imagesDir, root: nil, rootErr: nil,
+		secret: strings.ToLower(rand.Text()), html: nil, texts: nil, imagesDir: imagesDir, root: nil, rootErr: nil,
 		images: map[string]image{},
 	}
 }
@@ -61,11 +63,41 @@ func (s *items) close() {
 
 // marked returns text, the item of format html at the path at, between its marks and the probes.
 func (s *items) marked(at []string, text string) template.HTML {
-	n := strconv.Itoa(len(s.html))
+	n := len(s.html)
 	s.html = append(s.html, at)
 	s.texts = append(s.texts, text)
-	//nolint:gosec // G203: the data's HTML, checked in the page drawn (check)
-	return template.HTML(probe + "<!--" + s.mark + " " + n + " s-->" + text + "<!--" + s.mark + " " + n + " e-->" + probe)
+	start, end := s.around(n)
+	return template.HTML(start + text + end) //nolint:gosec // G203: the data's HTML, checked in the page drawn (check)
+}
+
+// around returns what is drawn before and after the item n: the probes and the marks.
+func (s *items) around(n int) (before, after string) {
+	return probe(n) + "<!--" + s.mark(n, "s") + "-->", "<!--" + s.mark(n, "e") + "-->" + probe(n)
+}
+
+// plain returns text without the probes and the marks of the items, as they are drawn around them: the text of a
+// mistake page.html made with an item.
+func (s *items) plain(text string) string {
+	if len(s.html) == 0 {
+		return text
+	}
+	pairs := make([]string, 0, 4*len(s.html))
+	for n := range s.html {
+		start, end := s.around(n)
+		pairs = append(pairs, start, "", end, "")
+	}
+	return strings.NewReplacer(pairs...).Replace(text)
+}
+
+// plainArgs returns args, of a mistake, each text plain (without the probes and the marks).
+func (s *items) plainArgs(args []any) []any {
+	plain := slices.Clone(args)
+	for i, a := range plain {
+		if text, ok := a.(string); ok {
+			plain[i] = s.plain(text)
+		}
+	}
+	return plain
 }
 
 // image reads the image name of d, once a drawing.
@@ -84,24 +116,117 @@ func (s *items) image(d *doc.Data, name string) (template.URL, error) {
 	if s.rootErr != nil {
 		got.err = usererr.CannotRead(dir, s.rootErr)
 	} else {
-		got.uri, got.err = kit.ReadImage(s.root.FS(), name, dir)
+		got.uri, got.err = kit.ReadImage(s.root.FS(), name, dir, d.File)
 	}
 	s.images[name] = got
 	return got.uri, got.err
 }
 
-// occurrence is where the page drawn has a mark of an item: n's start (or end), a comment as drawn when at is
-// nil, else in a text or an attribute of the element at.
+// mark is the text of the comment that starts (end "s") or ends (end "e") the item n: the secret, then n, of
+// letters and digits alone, which escaping in a URL or a script leaves as they are.
+func (s *items) mark(n int, end string) string {
+	return s.secret + "n" + strconv.Itoa(n) + end
+}
+
+// occurrence is a mark the page drawn holds, in the order of the page: of the item n, its start or its end; the
+// comment drawn when exact, else in what holder says (<!-- for a comment, an element's start tag for its text
+// or an attribute).
 type occurrence struct {
-	n    int
-	node *html.Node
-	at   *html.Node
+	n      int
+	end    bool
+	node   *html.Node
+	exact  bool
+	holder string
+}
+
+// marksIn returns the marks tree holds, in its order, walking it once: each comment that is one, and each in a
+// text, a comment or an attribute, however escaped there.
+func (s *items) marksIn(tree *html.Node) []occurrence {
+	var found []occurrence
+	for n := range tree.Descendants() {
+		switch n.Type {
+		case html.CommentNode:
+			if i, end, ok := s.exact(n.Data); ok {
+				found = append(found, occurrence{n: i, end: end, node: n, exact: true, holder: ""})
+				continue
+			}
+			found = append(found, s.within(n, n.Data, "<!--")...)
+		case html.TextNode:
+			if n.Parent != nil {
+				found = append(found, s.within(n, n.Data, "<"+n.Parent.Data+">")...)
+			}
+		case html.ElementNode:
+			for _, a := range n.Attr {
+				found = append(found, s.within(n, a.Key+" "+a.Val, "<"+n.Data+">")...)
+				found = append(found, s.probed(n, a.Val)...)
+			}
+		default:
+		}
+	}
+	return found
+}
+
+// probed returns the items whose probe value, an attribute of n, holds: html/template strips an item's tags, its
+// marks among them, from an attribute's value, and leaves the probes.
+// LIMIT: an attribute of the page that holds the white space of a probe of its own is told as an item put there.
+func (s *items) probed(n *html.Node, value string) []occurrence {
+	var found []occurrence
+	for i := range s.html {
+		if !strings.Contains(value, probe(i)) {
+			continue
+		}
+		found = append(found, occurrence{n: i, end: false, node: n, exact: false, holder: "<" + n.Data + ">"})
+	}
+	return found
+}
+
+// exact reads a comment's text that is a mark as drawn: its item, and whether it is the end.
+func (s *items) exact(text string) (n int, end, ok bool) {
+	n, end, rest, ok := s.next(text)
+	return n, end, ok && rest == "" && strings.HasPrefix(text, s.secret)
+}
+
+// within returns the marks text, of the node n, holds, whatever its case, holder said of each.
+func (s *items) within(n *html.Node, text, holder string) []occurrence {
+	var found []occurrence
+	text = strings.ToLower(text)
+	for {
+		at := strings.Index(text, s.secret)
+		if at < 0 {
+			return found
+		}
+		i, end, rest, ok := s.next(text[at:])
+		if ok {
+			found = append(found, occurrence{n: i, end: end, node: n, exact: false, holder: holder})
+		}
+		text = rest
+	}
+}
+
+// next reads the mark text starts with, the secret first: its item and whether it is the end, and the text after
+// it; ok is false for no mark of an item drawn, and rest is then past the secret.
+func (s *items) next(text string) (n int, end bool, rest string, ok bool) {
+	rest, _ = strings.CutPrefix(text, s.secret)
+	digits, ok := strings.CutPrefix(rest, "n")
+	if !ok {
+		return 0, false, rest, false
+	}
+	k := strings.IndexFunc(digits, func(r rune) bool { return r < '0' || r > '9' })
+	if k <= 0 || k >= len(digits) || digits[k] != 's' && digits[k] != 'e' {
+		return 0, false, rest, false
+	}
+	n, err := strconv.Atoi(digits[:k])
+	if err != nil || n >= len(s.html) || strconv.Itoa(n) != digits[:k] {
+		return 0, false, rest, false
+	}
+	return n, digits[k] == 'e', digits[k+1:], true
 }
 
 // check refuses each item of format html of d that changes the page tree, drawn, around it, at the item, and an
-// item page.html puts where HTML does not work, at d's template:. They are looked at in the order of the page;
-// past the first that changed the page, which the others are read in, none is. It refuses at the item a name of
-// a part its elements give that the page would be refused for (checkNames).
+// item page.html puts where HTML does not work (a mark of it is not a comment of its own), at d's template:.
+// They are looked at in the order of the page; past the first that changed the page, which the others are read
+// in, none is. It refuses at the item a name of a part its elements give that the page would be refused for
+// (checkNames).
 // LIMIT: the marks and the probe show the tree and the formatting rebuilt in body text alone: the form an item
 // left open, the attributes it adds to body or html, and formatting left open in a table, where the probe of
 // white space rebuilds none, are not checked; check them in the browser (B12).
@@ -112,134 +237,40 @@ func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error 
 	if len(s.html) == 0 {
 		return nil
 	}
+	marks := s.marksIn(tree)
 	var found usererr.List
-	for _, o := range s.starts(tree) {
-		if o.at != nil {
-			found = append(found, yamlpos.New(d.File, d.Where["template"], "draw_html_placed",
-				strings.Join(s.html[o.n], "."), "<"+o.at.Data+">"))
-			break
+	for i, o := range marks {
+		if o.end && o.exact {
+			continue
 		}
 		pos := d.PosOf(s.html[o.n])
 		refuse := func(key string, args ...any) { found = append(found, yamlpos.New(d.File, pos, key, args...)) }
-		end := s.end(tree, o)
-		if end == nil {
-			refuse("draw_html_whole", s.lost(tree, o))
+		if !o.exact {
+			// The end of an item started as a comment is read with its start, below.
+			found = append(found, yamlpos.New(d.File, d.Where["template"], "draw_html_placed",
+				strings.Join(s.html[o.n], "."), o.holder))
 			break
 		}
-		if where := changed(o.node, end); where != "" {
+		end := slices.IndexFunc(marks[i+1:], func(p occurrence) bool { return p.n == o.n && p.end })
+		if end < 0 {
+			refuse("draw_html_whole", unfinished(s.texts[o.n]))
+			break
+		}
+		if e := marks[i+1+end]; !e.exact {
+			refuse("draw_html_whole", e.holder)
+			break
+		} else if where := changed(o.n, o.node, e.node); where != "" {
 			refuse("draw_html_whole", where)
 			break
 		}
-		for n := o.node.NextSibling; n != end; n = n.NextSibling {
+		for n := o.node.NextSibling; n != marks[i+1+end].node; n = n.NextSibling {
+			checkNames(k, ns, n, map[string]bool{}, map[string]bool{}, refuse)
 			for e := range n.Descendants() {
 				checkNames(k, ns, e, map[string]bool{}, map[string]bool{}, refuse)
 			}
-			checkNames(k, ns, n, map[string]bool{}, map[string]bool{}, refuse)
 		}
 	}
 	return found.Err()
-}
-
-// starts returns the starts of the items in the order of tree: each comment that is one, and each text or
-// attribute that holds one.
-func (s *items) starts(tree *html.Node) []occurrence {
-	var found []occurrence
-	for n := range tree.Descendants() {
-		switch n.Type {
-		case html.CommentNode:
-			if i, ok := s.number(n.Data, "s"); ok {
-				found = append(found, occurrence{n: i, node: n, at: nil})
-			}
-		case html.TextNode:
-			for _, i := range s.within(n.Data, "s") {
-				found = append(found, occurrence{n: i, node: n, at: n.Parent})
-			}
-		case html.ElementNode:
-			for _, a := range n.Attr {
-				for _, i := range s.within(a.Key+" "+a.Val, "s") {
-					found = append(found, occurrence{n: i, node: n, at: n})
-				}
-			}
-		default:
-		}
-	}
-	return found
-}
-
-// number returns n of a comment's text that is the mark "mark n end" as drawn.
-func (s *items) number(text, end string) (int, bool) {
-	rest, ok := strings.CutPrefix(text, s.mark+" ")
-	if !ok {
-		return 0, false
-	}
-	digits, ok := strings.CutSuffix(rest, " "+end)
-	n, err := strconv.Atoi(digits)
-	return n, ok && err == nil && n >= 0 && n < len(s.html) && strconv.Itoa(n) == digits
-}
-
-// within returns the numbers of the marks of end ("s" or "e") text holds, whatever its case.
-func (s *items) within(text, end string) []int {
-	var found []int
-	text = strings.ToLower(text)
-	for i := range s.html {
-		if strings.Contains(text, s.mark+" "+strconv.Itoa(i)+" "+end) {
-			found = append(found, i)
-		}
-	}
-	return found
-}
-
-// end returns the comment that ends the item of o, the first after o in tree; nil for none.
-func (s *items) end(tree *html.Node, o occurrence) *html.Node {
-	past := false
-	for n := range tree.Descendants() {
-		if n == o.node {
-			past = true
-			continue
-		}
-		if i, ok := s.number(n.Data, "e"); past && ok && n.Type == html.CommentNode && i == o.n {
-			return n
-		}
-	}
-	return nil
-}
-
-// lost says what took in the end mark of the item of o: the comment, the element whose text or attribute holds
-// it; else, the parser having dropped it in an end tag or a doctype, the tag the item's text ends in.
-func (s *items) lost(tree *html.Node, o occurrence) string {
-	past := false
-	for n := range tree.Descendants() {
-		if past {
-			if holder := s.holding(n, o.n); holder != "" {
-				return holder
-			}
-		}
-		past = past || n == o.node
-	}
-	return unfinished(s.texts[o.n])
-}
-
-// holding says what n is that holds the end mark of the item i: a comment, as <!--, or the element whose text
-// or attribute it is in; "" for none.
-func (s *items) holding(n *html.Node, i int) string {
-	switch n.Type {
-	case html.CommentNode:
-		if slices.Contains(s.within(n.Data, "e"), i) {
-			return "<!--"
-		}
-	case html.TextNode:
-		if slices.Contains(s.within(n.Data, "e"), i) && n.Parent != nil {
-			return "<" + n.Parent.Data + ">"
-		}
-	case html.ElementNode:
-		for _, a := range n.Attr {
-			if slices.Contains(s.within(a.Key+" "+a.Val, "e"), i) {
-				return "<" + n.Data + ">"
-			}
-		}
-	default:
-	}
-	return ""
 }
 
 // unfinished returns where text, read alone, ends in a tag it does not finish: what is past the last token a
@@ -255,16 +286,13 @@ func unfinished(text string) string {
 	if rest == "" {
 		rest = last
 	}
-	if utf8.RuneCountInString(rest) > 40 {
-		rest = string([]rune(rest)[:40]) + "…"
-	}
-	return rest
+	return yamlpos.Head(rest)
 }
 
 // changed says how an item between the marks start and end changed the page around it: the elements it left
 // open, outside in, and those of the page it closed, inside out; or the formatting elements the probe after it
 // was rebuilt in; "" for none.
-func changed(start, end *html.Node) string {
+func changed(n int, start, end *html.Node) string {
 	if start.Parent != end.Parent {
 		var open, closed []string
 		for p := end.Parent; p != nil && !holds(p, start); p = p.Parent {
@@ -276,7 +304,7 @@ func changed(start, end *html.Node) string {
 		return strings.Join(append(open, closed...), " ")
 	}
 	next := end.NextSibling
-	if next != nil && next.Type == html.TextNode && strings.HasPrefix(next.Data, probe) {
+	if next != nil && next.Type == html.TextNode && strings.HasPrefix(next.Data, probe(n)) {
 		return ""
 	}
 	var rebuilt []string
@@ -307,22 +335,24 @@ func (s *items) unmark(tree *html.Node) {
 		if n.Type != html.CommentNode {
 			continue
 		}
-		if _, ok := s.number(n.Data, "s"); ok {
-			trim(n.PrevSibling, strings.TrimSuffix)
-			marks = append(marks, n)
+		i, end, ok := s.exact(n.Data)
+		switch {
+		case !ok:
+			continue
+		case end:
+			trim(n.NextSibling, probe(i), strings.TrimPrefix)
+		default:
+			trim(n.PrevSibling, probe(i), strings.TrimSuffix)
 		}
-		if _, ok := s.number(n.Data, "e"); ok {
-			trim(n.NextSibling, strings.TrimPrefix)
-			marks = append(marks, n)
-		}
+		marks = append(marks, n)
 	}
 	for _, n := range marks {
 		n.Parent.RemoveChild(n)
 	}
 }
 
-// trim takes the probe off the text n by cut, and n out of its parent once it is empty.
-func trim(n *html.Node, cut func(s, probe string) string) {
+// trim takes probe off the text n by cut, and n out of its parent once it is empty.
+func trim(n *html.Node, probe string, cut func(s, probe string) string) {
 	if n == nil || n.Type != html.TextNode {
 		return
 	}

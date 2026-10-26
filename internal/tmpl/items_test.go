@@ -62,20 +62,26 @@ func TestHTMLItems(t *testing.T) {
 		{section, "<svg><title><b>x</title></svg>", "d.yaml:3:4: HTML changes the page around it at <svg> <title> <b>: close in it each element and comment it opens, and close no element it did not open"},
 		{section, "a</b", "d.yaml:3:4: HTML changes the page around it at </b: close in it each element and comment it opens, and close no element it did not open"},
 		{section, "<!DOCTYPE x", "d.yaml:3:4: HTML changes the page around it at <!DOCTYPE x: close in it each element and comment it opens, and close no element it did not open"},
-		{section, `<META http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has a <meta http-equiv="refresh">, which page.html or an item of format html writes and which would move the page, set a cookie or change its policy: leave it out`},
-		{section, `<svg><title><meta http-equiv="refresh" content="0"></title></svg>`, `d.yaml:2:11: the page drawn from this file has a <meta http-equiv="refresh">, which page.html or an item of format html writes and which would move the page, set a cookie or change its policy: leave it out`},
-		{section, "<style>p{}</style>", "d.yaml:2:11: the page drawn from this file has a <style>, which page.html or a part writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css"},
-		{section, "<noscript><p>x</p></noscript>", "d.yaml:2:11: the page drawn from this file has a <noscript>, which page.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out"},
+		{section, `<META http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
+		{section, `<svg><title><meta http-equiv="refresh" content="0"></title></svg>`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
+		{section, "<style>p{}</style>", "d.yaml:2:11: the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css"},
+		{section, "<noscript><p>x</p></noscript>", "d.yaml:2:11: the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out"},
 		{section, `<span data-floe-part="nope">x</span>`, "d.yaml:3:4: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree"},
 		{htmlPage("<p>{{.Data.h}}</p>"), "<table><tr><td>x</td></tr></table>", "d.yaml:3:4: HTML changes the page around it at </p>: close in it each element and comment it opens, and close no element it did not open"},
 		{htmlPage("<p><b>{{.Data.t}}</p><div>{{.Data.h}}</div>"), "plain", ""},
 		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), "<tr><td>x</td></tr>", ""},
-		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), `<tr><td>x</td></tr><meta http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has a <meta http-equiv="refresh">, which page.html or an item of format html writes and which would move the page, set a cookie or change its policy: leave it out`},
-		{htmlPage("<svg><foreignObject>{{.Data.h}}</foreignObject></svg><p>after</p>"), `<meta http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has a <meta http-equiv="refresh">, which page.html or an item of format html writes and which would move the page, set a cookie or change its policy: leave it out`},
+		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), `<tr><td>x</td></tr><meta http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
+		{htmlPage("<svg><foreignObject>{{.Data.h}}</foreignObject></svg><p>after</p>"), `<meta http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{htmlPage("<textarea>{{.Data.h}}</textarea>"), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <textarea>, where HTML does not work: put it where elements go, or give the item another format"},
 		{htmlPage("<xmp>{{.Data.h}}</xmp>"), "</xmp>x", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <xmp>, where HTML does not work: put it where elements go, or give the item another format"},
 		{htmlPage(`<div>{{.Data.h | printf "%s"}}</div>`), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <div>, where HTML does not work: put it where elements go, or give the item another format"},
 		{htmlPage("<div>{{.Data.h}}</div><div>{{.Data.h}}</div>"), "<b>x</b>", ""},
+		{htmlPage(`<a href="{{.Data.h}}">a</a>`), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <a>, where HTML does not work: put it where elements go, or give the item another format"},
+		{htmlPage(`<div title="{{.Data.h}}">a</div>`), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <div>, where HTML does not work: put it where elements go, or give the item another format"},
+		{htmlPage("<script>var h = {{.Data.h}};</script>"), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <script>, where HTML does not work: put it where elements go, or give the item another format"},
+		{section, "a\n</p x=", "d.yaml:3:4: HTML changes the page around it at </p x=: close in it each element and comment it opens, and close no element it did not open"},
+		{section, `<meta name="referrer" content="no-referrer">`, `d.yaml:2:11: the page drawn from this file has <meta name="referrer" content="no-referrer"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
+		{section, `<meta name="VIEWPORT" content="width=device-width">`, ""},
 	} {
 		k := ownKit(t, nil, mine(tt.page, htmlSchema, nil))
 		data := "lang: en\ntemplate: mine\nh: " + quoted(tt.h) + "\nt: t\n"
@@ -112,6 +118,18 @@ func TestHTMLItemsInOrder(t *testing.T) {
 	k = ownKit(t, nil, mine(htmlPage("<div>{{.Data.h}}</div><div>{{.Data.g}}</div>"), htmlSchema, nil))
 	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nh: <b>x</b>\ng: a</b\n", none),
 		"d.yaml:4:4: HTML changes the page around it at </b: close in it each element and comment it opens, and close no element it did not open"; got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A mistake page.html makes with an item of format html, as a function's, tells the item without the marks and
+// the probes floe draws around it.
+func TestHTMLItemInFunction(t *testing.T) {
+	t.Parallel()
+
+	k := ownKit(t, nil, mine(htmlPage("<div>{{num .Data.h}}</div>"), htmlSchema, nil))
+	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nh: <b>x</b>\n", none),
+		"templates/mine/page.html:4:8: num takes a number, not <b>x</b> (template.HTML)"; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 }
@@ -172,16 +190,20 @@ func TestImageItems(t *testing.T) {
 	if !bytes.Contains(page, []byte(`src="data:image/png;base64,iVBORw0KGgowMDAw`)) || !bytes.Contains(page, []byte(`src="data:image/svg+xml;base64,`)) {
 		t.Errorf("no data URI in\n%s", page)
 	}
+	_, err = tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\ni: [./ok.png]\n"), o)
+	if got, want := told(err), "d.yaml:3:5: \"./ok.png\" is not a path floe reads under the directory of d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end"; got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
 	data := "lang: en\ntemplate: mine\ni:\n  - missing.png\n  - missing.png\n  - esc.png\n  - dir.png\n  - fifo.png\n  - x.bmp\n  - ./ok.png\n  - ../ok.png\n  - large.png\n"
 	_, err = tmpl.Draw(k, "x/d.yaml", []byte(data), o)
 	if got, want := told(err), lines(
 		"x/missing.png: no such file or directory",
 		"x/esc.png: path escapes from parent",
-		"x/d.yaml:7:5: \"dir.png\" is not a file of an image, but a directory or the like",
-		"x/d.yaml:8:5: \"fifo.png\" is not a file of an image, but a directory or the like",
+		"x/d.yaml:7:5: \"dir.png\" is not a file of an image, but a directory or the like: name a regular file of the image",
+		"x/d.yaml:8:5: \"fifo.png\" is not a file of an image, but a directory or the like: name a regular file of the image",
 		"x/d.yaml:9:5: \"x.bmp\" is not an image floe takes: use png, jpeg, gif, webp or svg",
-		"x/d.yaml:10:5: \"./ok.png\" is not a path floe reads under x: write it relative to x, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
-		"x/d.yaml:11:5: \"../ok.png\" is not a path floe reads under x: write it relative to x, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
+		"x/d.yaml:10:5: \"./ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
+		"x/d.yaml:11:5: \"../ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
 		"x/d.yaml:12:5: the image \"large.png\" is 1,048,577 bytes, over the 1,048,576 bytes (1 MiB) an image may be; make it smaller",
 	); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)

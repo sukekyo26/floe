@@ -24,16 +24,17 @@ var imageTypes = map[string]string{
 	".svg": "image/svg+xml",
 }
 
-// ReadImage reads the image name of files, the directory dir as its mistakes name it, as a data URI. A name
-// floe does not read, an extension of no image floe takes, a file that is not a regular one, and one over
-// maxImage are mistakes of the name, without a place; one that cannot be read is told at its path under dir,
-// in the system's words (usererr.CannotRead), which says what is wrong of the file.
+// ReadImage reads the image name of files, the directory dir as its mistakes name it, that of the file of, as a
+// data URI. A name floe does not read (told relative to the directory of of), an extension of no image floe
+// takes, a file that is not a regular one, and one over maxImage are mistakes of the name, without a place; one
+// that cannot be read is told at its path under dir, in the system's words (usererr.CannotRead), which says what
+// is wrong of the file.
 // LIMIT: a file is taken by its name's type, what it holds unchecked: one that holds another shows broken.
 // LIMIT: a file made a FIFO between the Stat and the Open blocks the read; open it without blocking if it comes to.
-func ReadImage(files fs.FS, name, dir string) (template.URL, error) {
+func ReadImage(files fs.FS, name, dir, of string) (template.URL, error) {
 	// os.Root's FS says only "invalid argument" of such a name.
 	if !fs.ValidPath(name) || name == "." {
-		return "", usererr.New("kit_image_path", name, dir)
+		return "", usererr.New("kit_image_path", name, of)
 	}
 	typ, ok := imageTypes[strings.ToLower(path.Ext(name))]
 	if !ok {
