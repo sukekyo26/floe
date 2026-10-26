@@ -225,11 +225,15 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 			w = max(w, labelWidth(m.Text, m.Strong))
 		}
 		h := labelH * float64(len(st.labels))
-		c := g.in[0]
-		// The points of a grid from the circle's edge, those within the canvas alone: outside it, a label
-		// sticks out anyway.
-		xs := grid(c.CX-c.R, c.CX+c.R, l.s.Width)
-		ys := grid(c.CY-c.R, c.CY+c.R, l.s.Height)
+		// The points of a grid over where the circles of in all are (their boxes' overlap, in no order of in),
+		// those within the canvas alone: outside it, a label sticks out anyway. Circles that do not meet hold
+		// no room, wherever they are.
+		x0, y0, x1, y1 := math.Inf(-1), math.Inf(-1), math.Inf(1), math.Inf(1)
+		for _, c := range g.in {
+			x0, y0, x1, y1 = max(x0, c.CX-c.R), max(y0, c.CY-c.R), min(x1, c.CX+c.R), min(y1, c.CY+c.R)
+		}
+		st.tried = x0 > x1 || y0 > y1
+		xs, ys := grid(x0, x1, l.s.Width), grid(y0, y1, l.s.Height)
 		best := 0.0
 		for _, px := range xs {
 			for _, py := range ys {

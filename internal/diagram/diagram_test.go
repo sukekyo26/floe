@@ -212,7 +212,7 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - raw: { svg: '<rect/></svg><p>x</p>' }", "s.yaml:5:5: raw SVG holds <p>, which it may not: write SVG's elements alone, without style, script or foreignObject"},
 		{"  - raw: { svg: '<foreignObject><div/></foreignObject>' }", "s.yaml:5:5: raw SVG holds <foreignObject>, which it may not: write SVG's elements alone, without style, script or foreignObject"},
 		{"  - raw: { svg: '<style>rect{}</style>' }", "s.yaml:5:5: raw SVG holds <style>, which it may not: write SVG's elements alone, without style, script or foreignObject"},
-		{"  - edge: { from: [10, 10], to: [10, 10] }", "s.yaml:5:5: edge [10,10]→[10,10] starts where it ends: end it at another part or point, or give it a fromSide and a toSide that differ"},
+		{"  - edge: { from: [10, 10], to: [10, 10] }", "s.yaml:5:5: edge [10,10]→[10,10] starts where it ends: end it at another part or point, or, between two parts, give a fromSide and a toSide that differ"},
 		{
 			"  - circle: { name: c, cx: 100, cy: 100, r: 60 }\n  - circle: { name: c, cx: 300, cy: 100, r: 5 }\n  - label: { text: x, in: [c] }",
 			`s.yaml:6:5: the name "c" is given before: give each part and row its own name`,
@@ -291,6 +291,18 @@ func TestVennBounded(t *testing.T) {
 	src = head + "  - circle: { name: c, cx: 900, cy: 100, r: 50 }\n  - label: { text: x, in: [c] }\n"
 	if _, got := draw(t, src, render("en")); !strings.Contains(got, `s.yaml:6:5: label "x" sticks out of the 400x200 canvas`) {
 		t.Errorf("a region out of the canvas = %q, want the label to stick out", got)
+	}
+	// The region is where the circles of in all are, in no order of in.
+	two := head + "  - circle: { name: a, cx: 300, cy: 100, r: 120 }\n  - circle: { name: b, cx: 500, cy: 100, r: 120 }\n"
+	_, ab := draw(t, two+"  - label: { text: x, in: [a, b] }\n", render("en"))
+	_, ba := draw(t, two+"  - label: { text: x, in: [b, a] }\n", render("en"))
+	if ab != ba || !strings.Contains(ab, `label "x" sticks out`) {
+		t.Errorf("in: [a, b] = %q and in: [b, a] = %q, want one, the label sticking out", ab, ba)
+	}
+	apart := head + "  - circle: { name: a, cx: 60, cy: 100, r: 40 }\n  - circle: { name: b, cx: 300, cy: 100, r: 40 }\n" +
+		"  - label: { text: x, in: [a, b] }\n"
+	if _, got := draw(t, apart, render("en")); !strings.Contains(got, `label "x" finds no room`) {
+		t.Errorf("circles apart = %q, want no room", got)
 	}
 }
 
