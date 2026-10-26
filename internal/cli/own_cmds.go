@@ -56,18 +56,20 @@ printed; the exit code is 1 when there is one, and nothing is printed when they 
 	return cmd
 }
 
-// checkTemplates draws the example.yaml of each template of one's own, with its images under its directory,
-// every mistake told together.
+// checkTemplates draws the example.yaml of each template of one's own, with its images under its directory and
+// the icons floe check draws with, every mistake told together.
 func (a *app) checkTemplates() error {
 	k, err := a.kit(true)
 	if err != nil {
 		return err
 	}
+	store := a.iconStore()
 	var found usererr.List
 	for _, name := range k.OwnTemplates() {
 		t, _ := k.Template(name)
 		file := t.File("example.yaml")
-		_, err := tmpl.Draw(k, file, t.Example(), tmpl.Options{Theme: "", Untitled: name, ImagesDir: t.File(".")})
+		o := tmpl.Options{Theme: "", Untitled: name, ImagesDir: t.File("."), Icons: store}
+		_, err := tmpl.Draw(k, file, t.Example(), o)
 		if failed := found.Add(err); failed != nil {
 			return failed
 		}

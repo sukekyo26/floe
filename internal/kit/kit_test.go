@@ -301,6 +301,10 @@ func TestNames(t *testing.T) {
 			"own/parts/table: table is the name of floe's parts/table, which floe's templates and parts would go on drawing and checking with: give yours another name",
 		},
 		{
+			fstest.MapFS{"diagram/schema.json": {Data: []byte(`{"type": "object"}`)}, "diagram/part.html": {Data: []byte("x")}},
+			"own/parts/diagram: diagram is the name of floe's parts/diagram, which floe's templates and parts would go on drawing and checking with: give yours another name",
+		},
+		{
 			fstest.MapFS{"panel/part.css": {Data: []byte("")}},
 			"own/parts/panel: panel is the name of floe's parts/panel, which floe's templates and parts would go on drawing and checking with: give yours another name",
 		},
