@@ -133,3 +133,17 @@ func TestReadThemeGiven(t *testing.T) {
 		t.Errorf("Theme = %q, Values[theme] = %#v, want ink", d.Theme, d.Values["theme"])
 	}
 }
+
+// An empty template: or theme: is refused, as one of spaces would be named so: written, it names one.
+func TestReadEmptyNames(t *testing.T) {
+	t.Parallel()
+
+	_, err := doc.Read("a.yaml", []byte("lang: ja\ntemplate: \"\"\ntheme: ''\ntitle: ''\n"), "")
+	want := "a.yaml:2:11: template is empty: name one, or leave template out\na.yaml:3:8: theme is empty: name one, or leave theme out"
+	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+	if _, err := doc.Read("a.yaml", []byte("lang: ja\ntemplate: report\ntheme: ''\n"), "ink"); err != nil {
+		t.Errorf("an empty theme: under a theme given is not read: %v", err)
+	}
+}

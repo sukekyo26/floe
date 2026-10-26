@@ -73,7 +73,7 @@ func pick(k *kit.Kit, d *doc.Data, given string, found *usererr.List) (*kit.Temp
 	case d.Template == "" && !written:
 		*found = append(*found, yamlpos.New(d.File, d.Where["template"], "tmpl_no_template", strings.Join(templates, ", ")))
 	case d.Template == "":
-		// Not text, which doc.Read told.
+		// Not text, or empty, which doc.Read told.
 	default:
 		if t, ok := k.Template(d.Template); ok {
 			return t, theme

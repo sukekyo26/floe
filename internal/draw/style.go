@@ -139,7 +139,7 @@ func looksOf(k *kit.Kit, name string) []string {
 }
 
 // takenBy returns the looks name takes, and those they take in turn, each once. No look takes itself:
-// kit.Check refuses one that would.
+// kit's check refuses one that would.
 func takenBy(k *kit.Kit, name string) []string {
 	var found []string
 	var follow func(at string)

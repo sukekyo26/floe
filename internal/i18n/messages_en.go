@@ -45,6 +45,7 @@ var messagesEN = map[string]string{
 	// doc: the keys every data file shares
 	"doc_no_lang":  "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)",
 	"doc_not_text": "%s must be text",
+	"doc_empty":    "%s is empty: name one, or leave %[1]s out",
 
 	// rules: checks.yaml and computed.yaml
 	// LIMIT: the last %s of rules_check_error and rules_computed_error is expr's English

@@ -13,7 +13,7 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// check checks what k read itself, not its base: the rules over the values Read made. A part holds
+// check checks what k read itself, not its base: the rules over the values read made. A part holds
 // schema.json, part.html and part.css, and a look part.css alone; their CSS and a theme's are what floe can
 // put in a layer (css); a part's schema is what a part may hold (schema.CheckPart); page.html and part.html
 // escape (escapeMistake); the looks they take are parts or looks, and none takes its own; a template holds

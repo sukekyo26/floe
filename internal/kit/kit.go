@@ -127,7 +127,7 @@ func read(base *Kit, src Sources) (*Kit, error) {
 	return k, nil
 }
 
-// Part returns the part of k named so, its own or its base's. Parts and looks share their names, and Read
+// Part returns the part of k named so, its own or its base's. Parts and looks share their names, and read
 // refuses one's own of another kind than the base's of its name.
 func (k *Kit) Part(name string) (*Part, bool) {
 	return lookUp(k, name, func(k *Kit) map[string]*Part { return k.parts })

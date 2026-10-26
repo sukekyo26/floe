@@ -134,7 +134,7 @@ func TestChecksRun(t *testing.T) {
 		{"a rule for the title", "- field: title\n  expr: len(doc.title) > 10\n  message: long title\n", "title: Plan\n", `d.yaml:3:8: long title ("Plan")`},
 		{"the theme written", "- expr: doc.theme == nil\n  message: m\n", "theme: soft\n", "d.yaml: m"},
 		{"the theme left out", "- expr: doc.theme == nil\n  message: m\n", "a: 1\n", ""},
-		{"the theme empty", "- expr: doc.theme == \"\"\n  message: m\n", "theme: \"\"\n", ""},
+		{"the theme as written", "- expr: doc.theme == \" soft\"\n  message: m\n", "theme: \" soft\"\n", ""},
 		{"for to the title", "- for: title\n  expr: true\n  message: m\n", "title: Plan\n", "t1/checks.yaml:1:8: for: title does not lead to a list in d.yaml"},
 		{"for to the lang", "- for: lang\n  expr: true\n  message: m\n", "title: Plan\n", "t1/checks.yaml:1:8: for: lang does not lead to a list in d.yaml"},
 	} {
