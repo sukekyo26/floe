@@ -18,21 +18,38 @@ import (
 
 // Part is a part read: what draws an item of its schema.
 type Part struct {
-	name   string
-	dir    string // as its mistakes name it
-	looks  []string
-	css    []byte
-	checks *rules.Checks // nil for none
-	words  words
-	pages  pages
-	unread []string // the files of its directory it does not read, for the check of what it holds
+	name    string
+	dir     string // as its mistakes name it
+	looks   []taken
+	css     []byte
+	hasCSS  bool
+	checks  *rules.Checks // nil for none
+	words   words
+	pages   pages // nil without a part.html
+	pageSrc []byte
+	unread  []string // the files of its directory it does not read, for the check of what it holds
+}
+
+// taken is a look a part or a look takes, and where its part.yaml names it.
+type taken struct {
+	name string
+	file string
+	at   yamlpos.Pos
+}
+
+func names(looks []taken) []string {
+	out := make([]string, len(looks))
+	for i, l := range looks {
+		out[i] = l.name
+	}
+	return out
 }
 
 // Name returns the name of p.
 func (p *Part) Name() string { return p.name }
 
 // Looks returns the names of the looks p takes, in order.
-func (p *Part) Looks() []string { return slices.Clone(p.looks) }
+func (p *Part) Looks() []string { return names(p.looks) }
 
 // CSS returns the part.css of p, none for one left out.
 func (p *Part) CSS() []byte { return bytes.Clone(p.css) }
@@ -51,8 +68,9 @@ type Look struct {
 	name   string
 	dir    string
 	about  string
-	looks  []string
+	looks  []taken
 	css    []byte
+	hasCSS bool
 	unread []string // the files of its directory it does not read, part.html, checks.yaml and words.yaml too
 }
 
@@ -63,7 +81,7 @@ func (l *Look) Name() string { return l.name }
 func (l *Look) About() string { return l.about }
 
 // Looks returns the names of the looks l takes, in order.
-func (l *Look) Looks() []string { return slices.Clone(l.looks) }
+func (l *Look) Looks() []string { return names(l.looks) }
 
 // CSS returns the part.css of l.
 func (l *Look) CSS() []byte { return bytes.Clone(l.css) }
@@ -171,7 +189,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 	if err != nil {
 		return err
 	}
-	css, _, err := readFile(d, name, "part.css")
+	css, hasCSS, err := readCSS(d, name, "part.css")
 	if err != nil {
 		return err
 	}
@@ -182,7 +200,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 			if failed != nil {
 				return failed
 			}
-			k.looks[name] = &Look{name: name, dir: dir, about: about, looks: looks, css: css, unread: unread}
+			k.looks[name] = &Look{name: name, dir: dir, about: about, looks: looks, css: css, hasCSS: hasCSS, unread: unread}
 		}
 		return yamlErr
 	}
@@ -202,7 +220,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
-	ps, err := readPages(d, name, "part.html", partFuncsAll(), w)
+	ps, pageSrc, err := readPages(d, name, "part.html", partFuncsAll(), w)
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
@@ -215,7 +233,8 @@ func (k *Kit) readPart(d Dir, name string) error {
 		return err
 	}
 	k.parts[name] = &Part{
-		name: name, dir: dir, looks: looks, css: css, checks: checks, words: w, pages: ps, unread: unread,
+		name: name, dir: dir, looks: looks, css: css, hasCSS: hasCSS, checks: checks, words: w, pages: ps,
+		pageSrc: pageSrc, unread: unread,
 	}
 	return nil
 }
@@ -252,19 +271,21 @@ func (k *Kit) baseDir(name string) (string, bool) {
 	return "", false
 }
 
-// readPages parses the HTML file of the directory dir of d with fns and the words w; nil without one.
-func readPages(d Dir, dir, file string, fns template.FuncMap, w words) (pages, error) {
+// readPages parses the HTML file of the directory dir of d with fns and the words w, and returns it with its
+// text; nil without one.
+func readPages(d Dir, dir, file string, fns template.FuncMap, w words) (pages, []byte, error) {
 	src, ok, err := readFile(d, dir, file)
 	if !ok || err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return parsePages(path.Join(d.Name, dir, file), src, fns, w)
+	ps, err := parsePages(path.Join(d.Name, dir, file), src, fns, w)
+	return ps, src, err
 }
 
 // readPartYAML reads the part.yaml of the directory dir of d, of a look alone when look: the looks it takes,
 // and a look's description; none without one. A part's description is its schema's. Its mistakes are told
 // all together.
-func readPartYAML(d Dir, dir string, look bool) ([]string, string, error) {
+func readPartYAML(d Dir, dir string, look bool) ([]taken, string, error) {
 	file := path.Join(d.Name, dir, "part.yaml")
 	src, ok, err := readFile(d, dir, "part.yaml")
 	if !ok || err != nil {
@@ -281,7 +302,7 @@ func readPartYAML(d Dir, dir string, look bool) ([]string, string, error) {
 	if !ok {
 		return nil, "", yamlpos.New(file, yamlpos.Of(body), "kit_part_yaml")
 	}
-	var looks []string
+	var looks []taken
 	var about string
 	var found usererr.List
 	for _, kv := range m.Values {
@@ -306,12 +327,12 @@ func readPartYAML(d Dir, dir string, look bool) ([]string, string, error) {
 
 // readLooks reads the looks part.yaml, file, gives the key k: a list of names, each text as written (YAML
 // reads a name of digits, 404, as a number).
-func readLooks(file string, k, value ast.Node) ([]string, usererr.List) {
+func readLooks(file string, k, value ast.Node) ([]taken, usererr.List) {
 	seq, ok := value.(*ast.SequenceNode)
 	if !ok {
 		return nil, usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), "kit_part_yaml_looks")}
 	}
-	looks := make([]string, 0, len(seq.Values))
+	looks := make([]taken, 0, len(seq.Values))
 	var found usererr.List
 	for _, v := range seq.Values {
 		_, scalar := v.(ast.ScalarNode)
@@ -320,7 +341,7 @@ func readLooks(file string, k, value ast.Node) ([]string, usererr.List) {
 			found = append(found, yamlpos.New(file, yamlpos.Of(v), "kit_part_yaml_looks"))
 			continue
 		}
-		looks = append(looks, v.GetToken().Value)
+		looks = append(looks, taken{name: v.GetToken().Value, file: file, at: yamlpos.Of(v)})
 	}
 	return looks, found
 }

@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"github.com/sukekyo26/floe/internal/bom"
+	"github.com/sukekyo26/floe/internal/css"
 	"github.com/sukekyo26/floe/internal/rules"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -63,11 +64,11 @@ var floe = sync.OnceValues(func() (*Kit, error) {
 	if err != nil {
 		return nil, err
 	}
-	css, err := floeFiles.ReadFile("floe/base.css")
+	base, err := floeFiles.ReadFile("floe/base.css")
 	if err != nil {
 		return nil, fmt.Errorf("kit: floe's base.css: %w", err)
 	}
-	k.baseCSS = bom.Trim(css)
+	k.baseCSS = css.Preprocess(bom.Trim(base))
 	return k, nil
 })
 
@@ -199,6 +200,16 @@ func readFile(d Dir, dir, name string) ([]byte, bool, error) {
 		return nil, false, fmt.Errorf("kit: read %s: %w", path.Join(d.Name, dir, name), err)
 	}
 	return bom.Trim(src), true, nil
+}
+
+// readCSS returns the CSS file name of the directory dir of d as readFile does, its line breaks made LF
+// (css.Preprocess): what is checked is what goes in the page.
+func readCSS(d Dir, dir, name string) ([]byte, bool, error) {
+	src, ok, err := readFile(d, dir, name)
+	if !ok || err != nil {
+		return nil, ok, err
+	}
+	return css.Preprocess(src), true, nil
 }
 
 // has reports whether the directory dir of d holds the file name.

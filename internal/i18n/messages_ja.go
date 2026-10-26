@@ -74,4 +74,22 @@ var messagesJA = map[string]string{
 	"kit_words_none":              "「%s」を描く words.yaml がありません。隣に words.yaml を置き、en: の下にその言葉を書いてください",
 	"kit_words_empty":             "words.yaml に言葉が無く、「%s」を描けません。en: の下にその言葉を書いてください",
 	"kit_words_no_lang":           "words.yaml に、ページの言語にも en にも「%s」を描く言葉がありません（あるのは %s）。en かページの言語を足してください",
+	"kit_part_files":              "部品は schema.json・part.html・part.css の 3 つを、見た目だけの部品はほかの 2 つを置かずに part.css を（見た目を借りるなら part.yaml も）置きます。足りないものを足すか、見た目に要らないものを消してください",
+	"kit_part_unread":             "floe は部品の中のこの名前のファイルを読みません。部品は schema.json・part.html・part.css と、要るなら part.yaml・checks.yaml・words.yaml を持ちます。消してください",
+	"kit_look_unread":             "schema.json の無いディレクトリ（見た目）の中で、floe が読むのは part.css と part.yaml だけです。消すか、schema.json を足して部品にしてください",
+	"kit_theme_unread":            "floe はテーマの中のこの名前のファイルを読みません。テーマは base.css・palette.css と、見た目を変える部品か見た目ごとの <部品>.css を持ちます。どれかの名前にするか、消してください",
+	"kit_look_unknown":            "looks の %s は部品でも見た目でもありません。floe か自分の部品にある名前を書いてください",
+	"kit_look_cycle_part":         "部品 %s が自分の見た目を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",
+	"kit_look_cycle_look":         "見た目 %s が自分を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",
+	"kit_template_file":           "%s がありません。テンプレートには page.html と schema.json が要ります",
+	"kit_template_unread":         "floe はテンプレートの中のこの名前のファイルを読みません。テンプレートは page.html と schema.json を持ち、要るなら page.css・computed.yaml・checks.yaml・words.yaml・example.yaml も持ちます。どれかの名前にするか、消してください",
+
+	// css: floe がページに入れる CSS
+	"css_brace":             "この } はどのブロックも閉じていません。floe はこの CSS を層に入れるので、この } が層を閉じ、後の規則が層の外に出て部品のスタイルに勝ちます",
+	"css_import":            "floe はこの CSS を層に入れるので、ブラウザは @import を読みません。スタイルシートは page.html の <link> で読んでください",
+	"css_escape":            "文字列・url()・コメントの外のエスケープ（\\）は、floe が読みません。文字そのものを書いてください",
+	"css_misread":           "ブラウザはここを floe と違うものとして読みます。文字列はその行の中で閉じ、url() にはアドレスだけか、引用符で囲んだ文字列を 1 つだけ書いてください",
+	"css_unclosed":          "ファイルの終わりで、これが閉じていません。floe はこの CSS を layer に入れるので、layer を閉じる } と後の規則まで中に取り込みます。閉じてください",
+	"css_palette_rule":      "palette.css にはパレットの変数 :root { --名前: 値; } とその color-scheme だけを書き、ほかの規則は @media も書けません。ほかの規則は base.css か部品のファイルに書いてください。暗いページは、:root に暗い色と color-scheme: dark を書いたテーマで作ってください",
+	"css_palette_important": "palette.css には !important を書けません。どの層にも勝ち、テンプレートが :scope に書いた色にも勝ってしまいます",
 }
