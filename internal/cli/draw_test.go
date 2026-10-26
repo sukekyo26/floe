@@ -196,3 +196,20 @@ func TestRenderCaseIsTheSystems(t *testing.T) {
 		t.Errorf("floe render = %d, %q, %q", code, stdout, stderr)
 	}
 }
+
+// A data file of no name but its extension is refused: its page would be a hidden .html titled by nothing.
+func TestDataFileWithoutName(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{".yaml": good})
+	for _, cmd := range []string{"check", "render"} {
+		code, stdout, stderr := run(dir, cmd, ".yaml")
+		if code != 1 || stdout != "" ||
+			stderr != "floe: .yaml has no name before its extension, which names its page: name it, like plan.yaml\n" {
+			t.Errorf("floe %s .yaml = %d, %q, %q", cmd, code, stdout, stderr)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".html")); err == nil {
+		t.Error(".html was written")
+	}
+}

@@ -84,7 +84,8 @@ func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error)
 	// says are one file (os.SameFile), as on a filesystem that ignores case (macOS) a.html and A.html are.
 	// LIMIT: two pages not yet written are one file only by their paths: on macOS a.html and A.html written
 	// anew overwrite one another, as pages written on Linux and checked out on macOS do.
-	var first []rendered
+	// LIMIT: each page is compared with each before it, by what was read of it once; enough for a command line.
+	var first []target
 	for _, f := range a.args(paths, "cli_wants_data") {
 		p, at := pageOf(f, out)
 		page, err := drawFile(k, f)
@@ -102,11 +103,12 @@ func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error)
 			}
 			continue
 		}
-		if i := slices.IndexFunc(first, func(o rendered) bool { return sameFile(o.real, p.real) }); i >= 0 {
-			found = append(found, usererr.New("cli_render_same_file", first[i].from, f.name, p.to))
+		t := targetOf(p)
+		if i := slices.IndexFunc(first, t.same); i >= 0 {
+			found = append(found, usererr.New("cli_render_same_file", first[i].page.from, f.name, p.to))
 			continue
 		}
-		first = append(first, p)
+		first = append(first, t)
 		if err == nil {
 			if p.page, err = draw.CutOffPage(page); err != nil {
 				return nil, err //nolint:wrapcheck // floe's failure, which says what failed
@@ -131,15 +133,23 @@ func pageOf(f, out arg) (rendered, string) {
 	return rendered{from: f.name, to: dirs.Join(dir, name), real: "", page: nil}, dirs.Join(at, name)
 }
 
-// sameFile reports whether the paths x and y are one file: as written, or, when both are there, as the
-// system says.
-func sameFile(x, y string) bool {
-	if x == y {
-		return true
+// target is a page and what the system says of the file it goes to, nil when it is not there yet.
+type target struct {
+	page rendered
+	info os.FileInfo
+}
+
+func targetOf(p rendered) target {
+	info, err := os.Stat(p.real)
+	if err != nil {
+		info = nil
 	}
-	a, errA := os.Stat(x)
-	b, errB := os.Stat(y)
-	return errA == nil && errB == nil && os.SameFile(a, b)
+	return target{page: p, info: info}
+}
+
+// same reports whether t and o go to one file: one real path, or, when both are there, one the system says.
+func (t target) same(o target) bool {
+	return t.page.real == o.page.real || t.info != nil && o.info != nil && os.SameFile(t.info, o.info)
 }
 
 // realPath is the absolute path abs with its symlinks resolved: those of its directory, and its own when it

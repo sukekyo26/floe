@@ -51,8 +51,12 @@ func drawFile(k *kit.Kit, p arg) ([]byte, error) {
 		return nil, p.err
 	}
 	var notData error
-	if !files.IsDataFile(p.name) {
+	switch {
+	case !files.IsDataFile(p.name):
 		notData = usererr.New("cli_check_not_data", p.name)
+	case baseName(p.name) == "":
+		// Its page would be .html, a hidden file, titled by nothing.
+		notData = usererr.New("cli_data_no_name", p.name)
 	}
 	if notData != nil || p.err != nil {
 		return nil, usererr.Collect(notData, p.err) //nolint:wrapcheck // mistakes for the user as they are

@@ -121,6 +121,7 @@ var messagesJA = map[string]string{
 	"cli_wants_data":       "データファイル（.yaml か .yml）",
 	"cli_wants_out_dir":    "ページを書くディレクトリ",
 	"cli_check_not_data":   "%s はデータファイル（.yaml か .yml）ではありません",
+	"cli_data_no_name":     "%s は拡張子の前に名前がありません。名前でページの名前が決まるので、plan.yaml のように名前を付けてください",
 	"cli_render_same_file": "%s と %s が、どちらも %s を書きます。どちらかの名前を変えてください",
 	"cli_render_missing":   "%s がありません。%s から floe render で書いてください",
 	"cli_render_stale":     "%s は %s を描いたものと違います。floe render で書き直してください",

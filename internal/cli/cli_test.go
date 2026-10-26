@@ -25,6 +25,7 @@ func TestRun(t *testing.T) {
 		{[]string{"version", "x"}, 2, "", "floe: unknown command \"x\" for \"floe version\": run floe --help\n"},
 		{[]string{"nope"}, 2, "", "floe: unknown command \"nope\" for \"floe\": run floe --help\n"},
 		{[]string{"--nope"}, 2, "", "floe: unknown flag: --nope: run floe --help\n"},
+		{[]string{"--\xff"}, 2, "", "floe: unknown flag: --\ufffd: run floe --help\n"},
 	} {
 		var stdout, stderr bytes.Buffer
 		code := cli.Run(c.args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: ""})
