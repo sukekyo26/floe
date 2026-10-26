@@ -15,9 +15,7 @@ import (
 	"github.com/expr-lang/expr/file"
 	"github.com/expr-lang/expr/vm"
 	"github.com/expr-lang/expr/vm/runtime"
-	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
-	"github.com/goccy/go-yaml/token"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -98,15 +96,15 @@ func (e expression) place(err error) yamlpos.Pos {
 		}
 		return yamlpos.Pos{Line: at.Line + fe.Line, Column: indent + 1 + fe.Column}
 	case ast.ScalarNode:
-		tk := v.GetToken()
-		written := strings.TrimSpace(tk.Origin)
+		// A plain scalar does not start with a quote: one that does is quoted.
+		written := strings.TrimSpace(v.GetToken().Origin)
 		switch {
 		case fe.Line != 1 || strings.Contains(written, "\n"):
 			return at
-		case tk.Type == token.DoubleQuoteType && strings.Contains(written, `\`),
-			tk.Type == token.SingleQuoteType && strings.Contains(written[1:len(written)-1], "''"):
+		case strings.HasPrefix(written, `"`) && strings.Contains(written, `\`),
+			strings.HasPrefix(written, "'") && strings.Contains(written[1:len(written)-1], "''"):
 			return at
-		case tk.Type == token.DoubleQuoteType, tk.Type == token.SingleQuoteType:
+		case strings.HasPrefix(written, `"`), strings.HasPrefix(written, "'"):
 			at.Column++
 		}
 		at.Column += fe.Column
@@ -144,6 +142,6 @@ func text(n ast.Node) (string, bool) {
 		return "", false
 	}
 	var s string
-	err := yaml.NodeToValue(n, &s)
+	err := yamlpos.Decode("", n, &s)
 	return s, err == nil
 }
