@@ -138,13 +138,17 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any) (any, error) {
 		}
 		var b bytes.Buffer
 		if err := page.Execute(&b, ready); err != nil {
-			e, _, failed := executed(err, "part.html", nil)
+			e, at, failed := executed(err, "part.html", p.PageSource())
 			if failed != nil {
 				return nil, failed
 			}
-			// A mistake of a file of the part's own (its words.yaml) stays there, told once whatever uses it;
-			// any other is at the value drawn: a part of floe's is no file one can fix, and the value tells why.
-			if e.File == "" {
+			switch {
+			case e.File == p.File("part.html") && at >= 0:
+				// One part.html tells of itself (a word its words.yaml has not): at its line and column, told
+				// once whatever uses the part.
+				e.Line, e.Column = textpos.Of(p.PageSource(), at)
+			case e.File == "":
+				// At the value drawn: a part of floe's is no file one can fix, and the value tells why.
 				pos := d.PosOf(it.At)
 				e.File, e.Line, e.Column = d.File, pos.Line, pos.Column
 			}

@@ -23,7 +23,8 @@ type named struct {
 }
 
 // checkPage reads page, drawn from d, as a browser does, and refuses, at d's template:, which draws it: a
-// <style> (floe puts the page's CSS together, in layers), a <base> (the page's CSP ignores it), a name of an
+// <style>, of HTML, SVG or MathML (floe puts the page's CSS together, in layers, and an SVG's styles the whole
+// page as an HTML one does), a <base> (the page's CSP ignores it), a name of an
 // element's data-floe-part or data-floe-look that is no part or look of k, and a data-floe-part not of one
 // part's name as written (the scope of its style, [data-floe-part="name"], would not reach it) or of a look,
 // which has no box. It returns the page read, and what it names.
