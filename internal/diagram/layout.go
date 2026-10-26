@@ -127,15 +127,16 @@ func newLayout(s *spec, opts Options) *layout {
 // name keeps the name of the part at i, refusing one used before.
 func (l *layout) name(i int, p part) {
 	at := pointer(i)
-	keep := func(name string, t target) {
+	keep := func(name string, t target) bool {
 		if name == "" {
-			return
+			return false
 		}
 		if _, ok := l.names[name]; ok {
 			l.problem(at, "diagram_name_used", name)
-			return
+			return false
 		}
 		l.names[name] = t
+		return true
 	}
 	switch {
 	case p.Box != nil:
@@ -158,8 +159,7 @@ func (l *layout) name(i int, p part) {
 		keep(p.Dot.Name, target{r: rect{p.Dot.CX - r, p.Dot.CY - r, r * 2, r * 2, "", at}, kind: "dot"})
 	case p.Circle != nil:
 		// No area: no edge ends at it.
-		keep(p.Circle.Name, target{r: rect{x: 0, y: 0, w: 0, h: 0, what: "", at: at}, kind: "circle"})
-		if p.Circle.Name != "" {
+		if keep(p.Circle.Name, target{r: rect{x: 0, y: 0, w: 0, h: 0, what: "", at: at}, kind: "circle"}) {
 			l.circles[p.Circle.Name] = *p.Circle
 		}
 	}
@@ -297,11 +297,15 @@ func rowSize(style string, first bool) (float64, bool) {
 	return sizeSub, strings.HasSuffix(style, "code")
 }
 
-func boxRect(b *box, at string) rect {
-	inset := float64(pad * 2)
+// inset is how much narrower than a box its text must be: its margins, and a hexagon's points.
+func inset(b *box) float64 {
 	if b.Shape == "hex" {
-		inset += hexInset * 2
+		return pad*2 + hexInset*2
 	}
+	return pad * 2
+}
+
+func boxRect(b *box, at string) rect {
 	w := b.W
 	if w == 0 {
 		widest := 0.0
@@ -309,7 +313,7 @@ func boxRect(b *box, at string) rect {
 			size, code := rowSize(r.Style, i == 0)
 			widest = max(widest, textWidth(r.Text, size, code))
 		}
-		w = ceil8(widest + inset)
+		w = ceil8(widest + inset(b))
 	}
 	h := b.H
 	if h == 0 {
@@ -324,15 +328,11 @@ func boxRect(b *box, at string) rect {
 
 func (l *layout) addBox(b *box, at string) {
 	r := boxRect(b, at)
-	inset := float64(pad * 2)
-	if b.Shape == "hex" {
-		inset += hexInset * 2
-	}
 	kids := make([]elem, 0, len(b.Rows))
 	for i, row := range b.Rows {
 		size, code := rowSize(row.Style, i == 0)
 		if b.W != 0 {
-			l.fit(at, r.what, row.Text, size, code, b.W-inset, b.W)
+			l.fit(at, r.what, row.Text, size, code, b.W-inset(b), b.W)
 		}
 		style := row.Style
 		if style == "" {
@@ -570,11 +570,11 @@ func (l *layout) image(at, name string, x, y, size float64, who string) (elem, b
 
 // label places text at x, y: 18px tall, with 5px around it. It returns the label's index in labels.
 func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, strong bool) int {
-	size, cls := float64(sizeSub), "label"
+	cls := "label"
 	if strong {
-		size, cls = sizeMain, "label strong"
+		cls = "label strong"
 	}
-	w := textWidth(t, size, false) + 10
+	w := labelWidth(t, strong)
 	x0 := x - w/2
 	switch anchor {
 	case "start":
@@ -588,6 +588,14 @@ func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, st
 	}
 	l.labelEls = append(l.labelEls, elem{Kind: "text", X: x, Y: y, Anchor: anchor, Class: cls, Text: t})
 	return len(l.labels) - 1
+}
+
+// labelWidth is how wide a label of t is, with 5px around its text.
+func labelWidth(t Text, strong bool) float64 {
+	if strong {
+		return textWidth(t, sizeMain, false) + 10
+	}
+	return textWidth(t, sizeSub, false) + 10
 }
 
 func (l *layout) addBar(b *bar, at string) {

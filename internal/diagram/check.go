@@ -210,24 +210,25 @@ func (l *layout) addLabel(lb *label, at string) {
 
 // place finds where a label placed by its region goes: the labels of one region are stacked, the first above,
 // and placed as one block where its corners keep the most room; the block is placed once, for its first label.
-// LIMIT: points 4 apart are tried; try them closer if a region narrow enough to slip between comes to matter.
+// LIMIT: points 4 apart are tried, and at most 500 a side of a large circle; try them closer if a region narrow
+// enough to slip between comes to matter.
 func (l *layout) place(lb *label, g region) (x, y float64, ok bool) {
 	key := regionKey(lb.In)
 	st := l.stacks[key]
 	if st.next == 0 {
 		w := 0.0
 		for _, m := range st.labels {
-			size := float64(sizeSub)
-			if m.Strong {
-				size = sizeMain
-			}
-			w = max(w, textWidth(m.Text, size, false)+10)
+			w = max(w, labelWidth(m.Text, m.Strong))
 		}
 		h := labelH * float64(len(st.labels))
 		c := g.in[0]
+		// Within the canvas: outside it, a label sticks out anyway.
+		x0, x1 := max(c.CX-c.R, 0), min(c.CX+c.R, l.s.Width)
+		y0, y1 := max(c.CY-c.R, 0), min(c.CY+c.R, l.s.Height)
+		dx, dy := step(x1-x0), step(y1-y0)
 		best := 0.0
-		for px := c.CX - c.R; px <= c.CX+c.R; px += 4 {
-			for py := c.CY - c.R; py <= c.CY+c.R; py += 4 {
+		for px := x0; px <= x1; px += dx {
+			for py := y0; py <= y1; py += dy {
 				if room := g.roomOf(rect{px - w/2, py - h/2, w, h, "", ""}); room > best {
 					best, st.x, st.top = room, px, py-h/2
 				}
@@ -239,6 +240,11 @@ func (l *layout) place(lb *label, g region) (x, y float64, ok bool) {
 	st.next++
 	l.stacks[key] = st
 	return st.x, st.top + labelH*float64(n) + labelH/2, st.found
+}
+
+// step is how far apart the points tried across span are: 4, or more for at most 500 of them.
+func step(span float64) float64 {
+	return max(4, span/500)
 }
 
 // stack is the labels of one region of a Venn diagram placed by it, and where their block went.

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"slices"
 	"strings"
 
@@ -69,8 +70,7 @@ enough; more does no harm). --no-assets leaves them out.`,
 }
 
 func (a *app) diagramInspectCmd() *cobra.Command {
-	var lang string
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "inspect <spec.yaml>...",
 		Short: "Check diagram specs and print where each part went, without drawing them",
 		Long: `Check each spec as floe diagram render does, and print, a line each, where each part went:
@@ -79,7 +79,8 @@ lets one check that edges meet the rows they mean and labels sit in their areas,
 the drawing.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			found, err := a.diagrams(args, lang, func(d *diagram.Drawer, v any, o diagram.Options) (string, error) {
+			// The layout is one for every language: inspected in English.
+			found, err := a.diagrams(args, "en", func(d *diagram.Drawer, v any, o diagram.Options) (string, error) {
 				return d.Inspect(v, o)
 			})
 			if err != nil {
@@ -89,8 +90,6 @@ the drawing.`,
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&lang, "lang", "en", "the language to lay the diagrams' text out in, as a tag (en, ja)")
-	return cmd
 }
 
 // diagrams reads each spec file and does with it, in the language lang, each numbered by its place among them;
@@ -129,13 +128,17 @@ func diagramOf(
 	if err != nil {
 		return "", err
 	}
+	// A file of nothing is a spec of nothing, as a data file of nothing is: the schema tells what it lacks.
+	var v any = map[string]any{}
 	root, err := yamlpos.Parse(p.name, src)
-	if err != nil {
+	switch {
+	case errors.Is(err, yamlpos.ErrEmpty):
+	case err != nil:
 		return "", err //nolint:wrapcheck // a mistake at its line and column
-	}
-	var v any
-	if err = yamlpos.Decode(p.name, root, &v); err != nil {
-		return "", err //nolint:wrapcheck // as above
+	default:
+		if err = yamlpos.Decode(p.name, root, &v); err != nil {
+			return "", err //nolint:wrapcheck // as above
+		}
 	}
 	got, err := with(d, doc.Ints(v), o)
 	return got, yamlpos.Place(err, p.name, root, nil) //nolint:wrapcheck // mistakes placed

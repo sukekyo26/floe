@@ -174,4 +174,5 @@ var messagesJA = map[string]string{
 	"diagram_zoom_one_label":   "原寸で表示",
 	"diagram_unknown_example":  "例 %s はありません。%s を使ってください",
 	"cli_wants_spec":           "図の spec（.yaml）",
+	"diagram_edge_nowhere":     "%sは始まりと終わりが同じ所です。離れた 2 つの端を書いてください",
 }

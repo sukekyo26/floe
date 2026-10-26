@@ -17,6 +17,7 @@ func TestDiagram(t *testing.T) {
 		"a.yaml": "width: 200\nheight: 100\ntitle: { en: A, ja: あ }\nparts:\n  - box: { name: k, x: 10, y: 10, rows: [{ en: Yes, ja: はい }] }\n",
 		"b.yaml": "width: 200\nheight: 100\ntitle: B\nparts:\n  - boxx: {}\n",
 		"c.yaml": "width: 200\nheight: 100\ntitle: C\nparts:\n  - icon: { icon: aws/aws-lambda, x: 10, y: 10 }\n",
+		"e.yaml": "# nothing yet\n",
 	} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(src), 0o600); err != nil {
 			t.Fatal(err)
@@ -36,6 +37,11 @@ func TestDiagram(t *testing.T) {
 		"gone.yaml: no such file or directory\n"
 	if code != 1 || errs != want {
 		t.Errorf("render of mistakes = %d, %q, want %q", code, errs, want)
+	}
+	code, _, errs = runIn(dir, env, "diagram", "render", "b.yaml", "e.yaml")
+	if want := "b.yaml:5:5: additional properties 'boxx' not allowed\n" +
+		"e.yaml:1:1: missing properties 'width', 'height', 'title', 'parts'\n"; code != 1 || errs != want {
+		t.Errorf("render of a spec of nothing = %d, %q, want %q", code, errs, want)
 	}
 	if _, found, _ := runIn(dir, env, "diagram", "inspect", "a.yaml"); found != "box \"k\" 10,10 64x29\n" {
 		t.Errorf("inspect = %q", found)

@@ -123,6 +123,9 @@ func turns(a, b anchor) [][2]float64 {
 	case !horizontal(a.side) && !horizontal(b.side) && a.side != "" && b.side != "":
 		mid := (a.y + b.y) / 2
 		return [][2]float64{{a.x, mid}, {b.x, mid}}
+	case a.side == "" && horizontal(b.side):
+		// From a dot, up or down first, to reach a side across.
+		return [][2]float64{{a.x, b.y}}
 	case horizontal(a.side) || a.side == "":
 		return [][2]float64{{b.x, a.y}}
 	default:
@@ -184,6 +187,10 @@ func (l *layout) addEdge(e *edge, at string) {
 		}
 	}
 	who := "edge " + fromWho + "→" + toWho
+	if len(segs) == 0 {
+		l.problem(at, "diagram_edge_nowhere", who)
+		return
+	}
 	cls := "edge"
 	if e.Dashed {
 		cls += " dashed"

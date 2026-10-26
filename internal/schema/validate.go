@@ -34,12 +34,8 @@ func (c *Compiled) Validate(d *doc.Data) error {
 	}
 	var found usererr.List
 	leaves(ve, func(e *jsonschema.ValidationError) {
-		if names, ok := e.ErrorKind.(*kind.AdditionalProperties); ok {
-			// The library lists them in the order of a map.
-			slices.Sort(names.Properties)
-		}
 		at := placeOf(d, e)
-		found = append(found, usererr.LibraryAt(d.File, at.Line, at.Column, e.ErrorKind.LocalizedString(english)))
+		found = append(found, usererr.LibraryAt(d.File, at.Line, at.Column, words(e)))
 	})
 	return found.Sorted().Err()
 }
@@ -65,9 +61,17 @@ func (c *Compiled) ValidateAt(v any) error {
 			steps[i] = escape(step)
 		}
 		at := strings.Join(append([]string{"#"}, steps...), "/")
-		found = append(found, usererr.LibraryIn("", at, e.ErrorKind.LocalizedString(english)))
+		found = append(found, usererr.LibraryIn("", at, words(e)))
 	})
 	return found.Sorted().Err()
+}
+
+// words is the leaf e in the library's words, the names it lists in order: it lists them in the order of a map.
+func words(e *jsonschema.ValidationError) string {
+	if names, ok := e.ErrorKind.(*kind.AdditionalProperties); ok {
+		slices.Sort(names.Properties)
+	}
+	return e.ErrorKind.LocalizedString(english)
 }
 
 // placeOf returns where the mistake e is written in d: the value at its InstanceLocation, or for a property

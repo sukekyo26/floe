@@ -147,9 +147,17 @@ func TestShapeMistakes(t *testing.T) {
 		{"  - edge: { from: a, to: b, d: M1 }", "s.yaml:5:13: additional properties 'd' not allowed"},
 		{"  - edge: { from: a, to: b, fromSide: up }", "s.yaml:5:39: value must be one of 'top', 'right', 'bottom', 'left'"},
 		{"  - label: { text: a }", "s.yaml:5:14: missing properties 'x', 'y'"},
+		{"  - label: { text: a, x: 1 }", "s.yaml:5:14: missing property 'y'"},
+		{"  - circle: { name: c, cx: 1, cy: 1, r: 1 }\n  - label: { text: a, x: 1, in: [c] }", "s.yaml:6:14: properties 'y' required, if 'x' exists"},
+		{"  - edge: { from: [1, 2, 3], to: b }", "s.yaml:5:19: maxItems: got 3, want 2"},
+		{"  - box: { x: 1, y: 1, rows: [a], zz: 1, aa: 1, mm: 1 }", "s.yaml:5:12: additional properties 'aa', 'mm', 'zz' not allowed"},
 	} {
-		if _, got := draw(t, head+c.parts+"\n", render("en")); got != c.want {
-			t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
+		// The library's map order does not change the words, however often they are told.
+		for range 5 {
+			if _, got := draw(t, head+c.parts+"\n", render("en")); got != c.want {
+				t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
+				break
+			}
 		}
 	}
 	// A value no spec, given to Draw unchecked (by a part.html of one's own), is a mistake, not floe's failure.
@@ -204,6 +212,11 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - raw: { svg: '<rect/></svg><p>x</p>' }", "s.yaml:5:5: raw SVG holds <p>, which it may not: write SVG's elements alone, without style, script or foreignObject"},
 		{"  - raw: { svg: '<foreignObject><div/></foreignObject>' }", "s.yaml:5:5: raw SVG holds <foreignObject>, which it may not: write SVG's elements alone, without style, script or foreignObject"},
 		{"  - raw: { svg: '<style>rect{}</style>' }", "s.yaml:5:5: raw SVG holds <style>, which it may not: write SVG's elements alone, without style, script or foreignObject"},
+		{"  - edge: { from: [10, 10], to: [10, 10] }", "s.yaml:5:5: edge [10,10]→[10,10] starts where it ends: give it two ends apart"},
+		{
+			"  - circle: { name: c, cx: 100, cy: 100, r: 60 }\n  - circle: { name: c, cx: 300, cy: 100, r: 5 }\n  - label: { text: x, in: [c] }",
+			`s.yaml:6:5: the name "c" is given before: give each part and row its own name`,
+		},
 		{"  - icon: { icon: aws/amazon-ec2, x: 10, y: 10 }", `s.yaml:5:5: icon "aws/amazon-ec2": no icon "aws/amazon-ec2" (search with: floe icons search <word>)`},
 	} {
 		if _, got := draw(t, head+c.parts+"\n", render("en")); got != c.want {
@@ -247,12 +260,26 @@ func TestEdges(t *testing.T) {
 			"  - box: { name: a, x: 10, y: 10, w: 60, h: 40, rows: [a] }\n  - box: { name: b, x: 200, y: 100, w: 60, h: 40, rows: [b] }\n  - edge: { from: a, fromSide: bottom, to: b, toSide: left }",
 			`d="M40,50 V120 H200"`,
 		},
+		{
+			"  - dot: { name: d, cx: 40, cy: 40 }\n  - box: { name: b, x: 200, y: 150, w: 60, h: 40, rows: [b] }\n  - edge: { from: d, to: b, toSide: left }",
+			`d="M40,40 V170 H200"`,
+		},
 		{"  - box: { x: 100, y: 10, origin: centre, rows: [abc] }", `<rect x="72" y="10" width="56" height="29" rx="8"/>`},
 	} {
 		got, mistakes := draw(t, head+c.parts+"\n", render("en"))
 		if mistakes != "" || !strings.Contains(got, c.want) {
 			t.Errorf("%s\n  drew %s %s\n  want %s", c.parts, got, mistakes, c.want)
 		}
+	}
+}
+
+// Placing the labels of a region tries a bounded number of points, within the canvas, however large the circle.
+func TestVennBounded(t *testing.T) {
+	t.Parallel()
+
+	src := head + "  - circle: { name: c, cx: 200, cy: 100, r: 40000 }\n  - label: { text: x, in: [c] }\n"
+	if _, got := draw(t, src, render("en")); !strings.Contains(got, "sticks out") {
+		t.Errorf("a huge circle = %q, want it to stick out, told at once", got)
 	}
 }
 

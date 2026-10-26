@@ -31,6 +31,18 @@ func TestPlace(t *testing.T) {
 	if got := usererr.Tell(i18n.EnglishCatalog(), usererr.Collect(placed)).Render("floe: "); got != want {
 		t.Errorf("Place = %q, want %q", got, want)
 	}
+	// Placed, the mistakes are in the order of their lines, whatever the order of their pointers.
+	list := usererr.List{
+		usererr.NewIn("", "#/a~1b", "library", "second"),
+		usererr.NewIn("", "#/parts/0/box/x", "library", "first"),
+	}
+	got := usererr.Tell(i18n.EnglishCatalog(), yamlpos.Place(list, "d.yaml", root, []string{"diagram"})).Render("")
+	if want := "d.yaml:4:17: first\nd.yaml:5:8: second"; got != want {
+		t.Errorf("Place of pointers out of the lines' order = %q, want %q", got, want)
+	}
+	if got := usererr.Tell(i18n.EnglishCatalog(), yamlpos.Place(list[:1], "e.yaml", nil, nil)).Render(""); got != "e.yaml:1:1: second" {
+		t.Errorf("Place under no root = %q", got)
+	}
 	failure := errors.New("floe's own")
 	if got := yamlpos.Place(failure, "d.yaml", root, nil); !errors.Is(got, failure) {
 		t.Errorf("Place of a failure = %v", got)

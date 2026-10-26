@@ -31,7 +31,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **読んだ Kit は変えない**：`Kit` は欄を外へ出さず、`[]byte` も写しを返す。自分のものを重ねるときは、土台を書き換えずに新しい `Kit` を作る（`Floe()` の値をプロセス全体で共有するため）。描くときは、`Template.Page`・`Part.Page` が返す写しを Execute する（Execute は html/template にエスケープの結果を書き込み、その後は写しを作れない）
 - **Markdown は kit だけが読む**：goldmark を import できるのは `internal/kit` だけ（depguard の規則 `goldmark-in-kit`）。生の HTML を出さない `markdown` を、どこも通る
 - **CSS は字句と括弧の入れ子だけで読む**：CSS は tdewolff の字句と、CSS Syntax の括弧の入れ子（`{`・`(`・関数・`[`）だけで読み、セレクタや値の意味を自前で読まない（`css.Parser` も使わない）。文字列・url・コメントの外のエスケープ（`\`）は断り、解かない。tdewolff を import できるのは `internal/css` だけ（depguard の規則 `tdewolff-in-css`）
-- **図の形は schema、配置は Go**：図の spec の形（鍵・型・値の一覧・要るもの）は `internal/diagram/schema.json` だけが決め、jsonschema が確かめる。Go は確かめた値を読むだけで、Go が見るのは、名前の解決、配置の検査（図という機能そのもの：重なり・はみ出し・線が通る・交わる・ベン図の領域）、raw の要素（x/net/html で読む）だけ。図を描く入口は `diagram.Drawer` の 1 つで、渡された値をいつも schema で確かめてから読む（どこから来た値でも、確かめていない値で floe の失敗にならない）。配置と形の誤りは spec の中の JSON ポインタで返し、行と列は呼ぶ側が `yamlpos.Place` で付ける
+- **図の形は schema、配置は Go**：図の spec の形（鍵・型・値の一覧・要るもの）は `internal/diagram/schema.json` だけが決め、jsonschema が確かめる。Go は確かめた値を読むだけで、Go が見るのは、名前の解決（部品と行の名前、アイコン集にそのアイコンがあるか）、配置の検査（図という機能そのもの：重なり・はみ出し・線が通る・交わる・ベン図の領域）、raw の要素（x/net/html で読む）だけ。図を描く入口は `diagram.Drawer` の 1 つで、渡された値をいつも schema で確かめてから読む（どこから来た値でも、確かめていない値で floe の失敗にならない）。配置と形の誤りは spec の中の JSON ポインタで返し、行と列は呼ぶ側が `yamlpos.Place` で付ける
 
 決まりは、それを入れた PR がこのファイルに足す。
 
