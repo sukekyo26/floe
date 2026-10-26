@@ -29,4 +29,25 @@ var messagesJA = map[string]string{
 
 	"doc_no_lang":  "最上位に lang: ja のようにページの言語を指定してください（en・ja・pt-BR のような BCP 47 の言語タグ）",
 	"doc_not_text": "%s は文字列で指定してください",
+
+	// rules: checks.yaml と computed.yaml
+	"rules_checks_yaml":               "checks.yaml は検査のリストとして書き、各検査に expr・message（任意で for・field）を書いてください",
+	"rules_checks_key":                "%s は検査のキーではありません。for・field・expr・message を使ってください",
+	"rules_checks_value":              "%s には文字として 1 つの値を書いてください。リストやキーと値は書けません",
+	"rules_checks_missing":            "検査に %s を書いてください",
+	"rules_checks_for_empty":          "for が空です。検査するリストのパスを書くか、全体を検査するなら for を省いてください",
+	"rules_checks_field_empty":        "field が空です。落ちたときに指す項目のパスを書くか、要素そのものを指すなら field を省いてください",
+	"rules_checks_not_list":           "for: %s は %s の中でリストに着きません",
+	"rules_check":                     "%s（「%s」）",
+	"rules_item":                      "%s",
+	"rules_check_error":               "%s（検査を実行できませんでした: %s）",
+	"rules_check_not_finite":          "%s（検査を実行できませんでした: %s は有限の数になりません）",
+	"rules_computed_yaml":             "computed.yaml は total: sum(items, .price) のように、名前と式で書いてください",
+	"rules_computed_name":             "%s は式や page.html で使える名前ではありません。文字で始めて文字・数字・_ を続け、expr の語や関数と重ねないでください",
+	"rules_computed_clash":            "%s はデータの項目にもあり、式から区別できません。名前を変えてください",
+	"rules_computed_env":              "computed.yaml では $env を使えません。名前で参照してください",
+	"rules_computed_cycle":            "値が互いを使って計算されています: %s",
+	"rules_computed_error":            "%s を %s から計算できません: %s",
+	"rules_computed_not_finite":       "%s を %s から計算できません: %s は有限の数になりません",
+	"rules_computed_value_not_finite": "%s を %s から計算できません: 値 %s は有限の数ではありません",
 }

@@ -34,4 +34,26 @@ var messagesEN = map[string]string{
 	// doc: the keys every data file shares
 	"doc_no_lang":  "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)",
 	"doc_not_text": "%s must be text",
+
+	// rules: checks.yaml and computed.yaml
+	// LIMIT: the last %s of rules_check_error and rules_computed_error is expr's English
+	"rules_checks_yaml":               "write checks.yaml as a list of checks, each with expr and message (and for and field if you like)",
+	"rules_checks_key":                "%s is not a key of a check; use for, field, expr and message",
+	"rules_checks_value":              "%s takes one value, written as text: not a list or keys and values",
+	"rules_checks_missing":            "write %s in the check",
+	"rules_checks_for_empty":          "for is empty: write the path of the list to check, or leave for out to check the whole",
+	"rules_checks_field_empty":        "field is empty: write the path of the field a failure points at, or leave field out to point at the item",
+	"rules_checks_not_list":           "for: %s does not lead to a list in %s",
+	"rules_check":                     `%s ("%s")`,
+	"rules_item":                      "%s",
+	"rules_check_error":               "%s (the check could not run: %s)",
+	"rules_check_not_finite":          "%s (the check could not run: %s is not a finite number)",
+	"rules_computed_yaml":             "write computed.yaml as names and expressions, like total: sum(items, .price)",
+	"rules_computed_name":             "%s is not a name an expression or page.html can use: write a letter, then letters, digits and _, and not a word or function of expr",
+	"rules_computed_clash":            "%s is an item of the data too, so an expression could not tell them apart; rename it",
+	"rules_computed_env":              "$env is not for computed.yaml; use the names",
+	"rules_computed_cycle":            "the values are computed from each other: %s",
+	"rules_computed_error":            "%s cannot be computed from %s: %s",
+	"rules_computed_not_finite":       "%s cannot be computed from %s: %s is not a finite number",
+	"rules_computed_value_not_finite": "%s cannot be computed from %s: the value %s is not a finite number",
 }
