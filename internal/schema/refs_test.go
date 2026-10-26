@@ -122,7 +122,8 @@ func TestCompileRefsStop(t *testing.T) {
 	}
 }
 
-// compile tells at most 100 mistakes, and leaves the resources it was given as they were.
+// compile tells at most 100 mistakes, stops filling a URL refused at its most compiles, and leaves the
+// resources it was given as they were.
 func TestCompileRefsBounds(t *testing.T) {
 	t.Parallel()
 
@@ -135,11 +136,33 @@ func TestCompileRefsBounds(t *testing.T) {
 	if r.Failure != "" || len(r.Mistakes) != 100 {
 		t.Errorf("101 missing $defs told %d mistakes, failure %q", len(r.Mistakes), r.Failure)
 	}
+	refs = make([]string, 0, 1000)
+	for i := range 1000 {
+		refs = append(refs, fmt.Sprintf(`"p%d": {"$ref": "https://example.com/b.json#/$defs/h%d"}`, i, i))
+	}
+	_, err = schema.Compile(tmplID, "schema.json", []byte(`{"properties": {`+strings.Join(refs, ", ")+`}}`), nil)
+	if got := told(err); got != "schema.json: https://example.com/b.json"+noURL {
+		t.Errorf("1000 $defs in a URL refused told %q", got)
+	}
 	res := refParts(t)
 	src := []byte(`{"properties": {"a": {"$ref": "floe:///parts/q.json"}}}`)
 	for range 2 {
 		if _, err := schema.Compile(tmplID, "schema.json", src, res); told(err) != notFound("parts/q.json", "floe:///parts/q.json#/$defs/m") {
 			t.Fatalf("a part filled once told %q the next time", told(err))
+		}
+	}
+}
+
+// A resource the library will not take is floe's failure, not the user's mistake.
+func TestCompileResourceRefused(t *testing.T) {
+	t.Parallel()
+
+	for _, u := range []string{"https://json-schema.org/draft/2020-12/schema", "floe:///parts/a%zz.json"} {
+		res := refParts(t)
+		res[u] = res["floe:///parts/p.json"]
+		_, err := schema.Compile(tmplID, "schema.json", []byte(`{"type": "object"}`), res)
+		if r := usererr.Tell(i18n.EnglishCatalog(), err); r.Failure == "" {
+			t.Errorf("a resource at %s told %q, want floe's failure", u, r.Render("floe: "))
 		}
 	}
 }
