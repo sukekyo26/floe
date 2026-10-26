@@ -1,0 +1,9 @@
+/* A pill: a short status in the colour of its tone */
+:scope {
+  display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
+  background: var(--accent-soft); color: var(--accent);
+}
+:scope.good { background: var(--good-soft); color: var(--good); }
+:scope.warn { background: var(--warn-soft); color: var(--warn); }
+:scope.bad { background: var(--bad-soft); color: var(--bad); }

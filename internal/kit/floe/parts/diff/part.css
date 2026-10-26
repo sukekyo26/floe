@@ -1,0 +1,11 @@
+/* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls */
+:scope pre { padding-inline: 0; }
+:scope code { display: grid; grid-template-columns: minmax(100%, max-content); }
+:scope code > span { padding-inline: 1.1rem; }
+:scope .add { background: color-mix(in srgb, var(--code-add) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add); }
+:scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
+:scope .hunk { color: var(--code-prompt); }
+:scope .meta { opacity: 0.65; }
+:scope figcaption :is(.added, .removed) { flex: none; }
+:scope figcaption .added { color: var(--code-add); }
+:scope figcaption .removed { color: var(--code-del); }

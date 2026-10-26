@@ -1,0 +1,7 @@
+/* In the table's look; an arrow leads into what a thing becomes */
+:scope .what { font-weight: 600; }
+:scope td.after { font-weight: 600; }
+:scope td.after::before { content: "→ "; content: "→ " / ""; font-weight: 400; color: var(--muted); }
+/* Underlined, in the head's own colour, which a theme may fill */
+:scope thead th.after { text-decoration: underline 2px; text-underline-offset: 0.3em; }
+:scope tr.same td { color: var(--muted); font-weight: 400; }

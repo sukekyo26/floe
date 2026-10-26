@@ -1,0 +1,14 @@
+/* A note of a tone too, whose own background of its tone this takes the place of */
+:scope, :scope:is(.good, .warn, .bad) {
+  background: var(--bp-squares), var(--surface); border-radius: 0;
+  box-shadow: none;
+}
+:scope { border: 1.5px dashed var(--accent); }
+:scope.good { border-color: var(--good); }
+:scope.warn { border-color: var(--warn); }
+:scope.bad { border-color: var(--bad); }
+:scope::before { background: none; border: 1.5px solid currentColor; color: var(--accent); font-family: var(--mono); }
+:scope.good::before { background: none; color: var(--good); }
+:scope.warn::before { background: none; color: var(--warn); }
+:scope.bad::before { background: none; color: var(--bad); }
+.title { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }

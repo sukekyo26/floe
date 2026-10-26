@@ -1,0 +1,5 @@
+<ul data-floe-part="checklist">
+{{- range .}}
+<li{{if .done}} class="done"{{end}}>{{markdownLine .text}}</li>
+{{- end}}
+</ul>

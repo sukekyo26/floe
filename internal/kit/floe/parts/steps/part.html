@@ -1,0 +1,5 @@
+<ol data-floe-part="steps">
+{{- range .}}{{$state := or .state "todo"}}
+<li class="{{$state}}"{{if eq $state "doing"}} aria-current="step"{{end}}><strong>{{.title}}</strong>{{with .text}}{{markdown .}}{{end}}</li>
+{{- end}}
+</ol>

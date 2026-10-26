@@ -1,0 +1,2 @@
+:scope thead th { background: none; color: var(--fg); font-size: 0.9rem; font-weight: 700; border-bottom: 3px double var(--fg); }
+:scope tbody tr:nth-child(even) td { background: none; }

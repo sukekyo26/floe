@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tree",
+  "description": "Files and folders, nested: each a path, a folder's ending in /, with a note; the folders a path names are drawn though not listed, and a/b.go and a/c/ make a/ holding b.go and c/",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "path": { "type": "string", "minLength": 1, "description": "From the tree's top, such as internal/tmpl/part.go" },
+      "note": { "type": "string", "minLength": 1, "description": "A few words on it, drawn after its name" },
+      "change": { "enum": ["added", "removed", "changed"], "description": "Marks it +, − or ± in green, red or amber" }
+    },
+    "required": ["path"],
+    "additionalProperties": false
+  }
+}

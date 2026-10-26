@@ -1,0 +1,11 @@
+<div data-floe-part="risks"><table>
+<thead><tr><th scope="col">{{word "risk"}}</th><th scope="col">{{word "likely"}}</th><th scope="col">{{word "impact"}}</th><th scope="col">{{word "fix"}}</th></tr></thead>
+<tbody>
+{{- range .}}{{$l := .likely}}{{$i := .impact}}{{$tone := "good"}}
+{{- /* bad when both are high, or one is high and the other mid; warn when one is high or both are mid */}}
+{{- if or (and (eq $l "high") (ne $i "low")) (and (eq $i "high") (ne $l "low"))}}{{$tone = "bad"}}
+{{- else if or (eq $l "high") (eq $i "high") (and (eq $l "mid") (eq $i "mid"))}}{{$tone = "warn"}}{{end}}
+<tr class="{{$tone}}"><td class="what">{{markdownLine .what}}</td><td class="{{$l}}"><span class="level">{{word $l}}</span></td><td class="{{$i}}"><span class="level">{{word $i}}</span></td><td>{{with .fix}}{{markdownLine .}}{{end}}</td></tr>
+{{- end}}
+</tbody>
+</table></div>

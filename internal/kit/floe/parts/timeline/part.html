@@ -1,0 +1,5 @@
+<ol data-floe-part="timeline">
+{{- range .}}
+<li{{with .tone}} class="{{.}}"{{end}}><span class="date">{{.date}}</span><div><strong>{{.title}}</strong>{{with .text}}{{markdown .}}{{end}}</div></li>
+{{- end}}
+</ol>

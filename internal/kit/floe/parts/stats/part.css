@@ -1,0 +1,15 @@
+/* In the faces of cards, unnumbered */
+:scope { margin: 0; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+:scope > div { gap: 0.15rem; }
+.stat dt { font-size: 0.85rem; color: var(--muted); }
+.stat dd { margin: 0; }
+.stat .value {
+  font-family: var(--mono);
+  font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
+}
+.stat .unit { margin-left: 0.3em; font-size: 0.5em; font-weight: 400; color: var(--muted); }
+.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+.stat.accent .note { color: var(--accent); }
+.stat.good .note { color: var(--good); }
+.stat.warn .note { color: var(--warn); }
+.stat.bad .note { color: var(--bad); }

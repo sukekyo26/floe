@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "report",
+  "description": "A page of sections, each a heading over parts: Markdown text, code, commands at a terminal, tables, cards, notes, numbers, progress, steps, checklists, what changes, options, facts, diffs, file trees, links, review findings, folded parts, matrices, decisions, risks, fields, timelines, bars, questions, glossaries, keys or tabs.",
+  "type": "object",
+  "properties": {
+    "eyebrow": { "type": "string", "description": "A short line above the title, such as the kind of page and its date" },
+    "lead": { "type": "string", "description": "A sentence or two under the title that sums the page up" },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": { "type": "string" },
+          "parts": {
+            "type": "array",
+            "items": { "$ref": "floe:///parts/any.json" }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

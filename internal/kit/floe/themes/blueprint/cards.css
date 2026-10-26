@@ -1,0 +1,6 @@
+:scope.numbered > .card::before {
+  content: "FIG. " counter(floe-card, decimal-leading-zero); content: "FIG. " counter(floe-card, decimal-leading-zero) / "";
+  display: block; width: auto; height: auto; background: none; color: var(--accent);
+  font-family: var(--mono); font-size: 0.7rem; font-weight: 400; letter-spacing: 0.12em;
+}
+.card h3 { color: var(--accent); }

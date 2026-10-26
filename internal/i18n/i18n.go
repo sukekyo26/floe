@@ -49,12 +49,12 @@ type Catalog struct {
 
 // New returns the catalog of lang, a tag in lower case. A language without a catalog renders in English.
 func New(lang Lang) *Catalog {
-	return &Catalog{chain: fallbacks(lang)}
+	return &Catalog{chain: Fallbacks(lang)}
 }
 
-// fallbacks lists where to look for a text in lang, in order: lang, lang without its last subtag, one at a
+// Fallbacks lists where to look for a text in lang, in order: lang, lang without its last subtag, one at a
 // time, then English.
-func fallbacks(lang Lang) []Lang {
+func Fallbacks(lang Lang) []Lang {
 	var chain []Lang
 	for tag := string(lang); tag != ""; tag = parent(tag) {
 		chain = append(chain, Lang(tag))

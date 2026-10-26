@@ -25,6 +25,9 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **木を歩くのは 2 つだけ**：schema の木を歩くのは、全部の欄を辿る `every` と、描く歩きの `followFrom`（`schema.Follow` の繰り返し）だけ。描く歩きも確かめる歩きも `schema.Follow` を使い、検査ごとに歩きを書き分けない。例外は 2 つだけ：`$schema` を見る生の JSON の歩き（schema の意味を読まない）と、根の値にいつも当たる schema の required を見る `sharedKeys`
 - **YAML は yamlpos だけが読む**：YAML のバイト列を goccy に渡すのは `yamlpos` だけ。`yamlpos` の外（テストを除く）から import できる goccy のパッケージは `ast` だけ（depguard の規則 `goccy-in-yamlpos`）。値にするのも `yamlpos.Decode`
 - **schema の JSON は schema だけが読む**：schema.json などの JSON のバイト列を読むのは `schema` の `read` だけ。`schema` の外からは、バイト列を `Compile`・`NewResource` に渡す。jsonschema を import できるのは `internal/schema` だけ（depguard の規則 `jsonschema-in-schema`）
+- **段 1 は読むと確かめるに分ける**：`kit.Read` は値を作るのに要ることだけ（ファイルを読む、YAML・JSON・HTML を値にする、schema をコンパイルする）をし、値の後の決まり（CSS の形、部品の schema、エスケープ、見た目の名前など）は確かめる関数が持つ。実行のときは floe のものを読むだけで確かめず、同じ確かめをテストで floe のものに走らせる
+- **読んだ Kit は変えない**：`Kit` は欄を外へ出さず、`[]byte` も写しを返す。自分のものを重ねるときは、土台を書き換えずに新しい `Kit` を作る（`Floe()` の値をプロセス全体で共有するため）
+- **Markdown は kit だけが読む**：goldmark を import できるのは `internal/kit` だけ（depguard の規則 `goldmark-in-kit`）。生の HTML を出さない `markdown` を、どこも通る
 
 決まりは、それを入れた PR がこのファイルに足す。
 

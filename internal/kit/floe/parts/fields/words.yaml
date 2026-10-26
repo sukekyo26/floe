@@ -1,0 +1,2 @@
+en: { required: required, default: 'Default:' }
+ja: { required: 必須, default: '既定:' }

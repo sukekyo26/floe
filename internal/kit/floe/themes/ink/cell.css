@@ -1,0 +1,4 @@
+:scope { border-radius: 6px; font-weight: 700; background: var(--accent); color: var(--on-fill); }
+:scope.good { background: var(--good); color: var(--on-fill); }
+:scope.warn { background: var(--warn); color: var(--on-fill); }
+:scope.bad { background: var(--bad); color: var(--on-fill); }

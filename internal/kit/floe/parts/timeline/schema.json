@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "timeline",
+  "description": "What happened when, in order down a line: each a date, a title and Markdown text, its dot in its tone",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "date": { "type": "string", "minLength": 1, "description": "As it is drawn, such as 2026-10-02 or 10:42" },
+      "title": { "type": "string", "minLength": 1 },
+      "text": { "type": "string", "minLength": 1, "description": "Markdown" },
+      "tone": { "$ref": "floe:///parts/tone.json", "description": "The dot's colour, accent when left out" }
+    },
+    "required": ["date", "title"],
+    "additionalProperties": false
+  }
+}

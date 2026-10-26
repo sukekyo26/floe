@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "steps",
+  "description": "Steps in order, each numbered under a line to the next, ticked once done and ringed while being done",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "title": { "type": "string", "minLength": 1 },
+      "text": { "type": "string", "minLength": 1, "description": "Markdown" },
+      "state": { "enum": ["done", "doing", "todo"], "description": "todo when left out" }
+    },
+    "required": ["title"],
+    "additionalProperties": false
+  }
+}

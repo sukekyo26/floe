@@ -1,0 +1,2 @@
+:scope > label { border-radius: 0; border: 2px solid transparent; }
+:scope > label:has(:checked) { background: var(--brutal-yellow); color: var(--brutal-ink); border-color: var(--fg); }

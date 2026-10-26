@@ -1,0 +1,8 @@
+/* Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink */
+:root {
+  --bg: #fafaf7; --surface: #fff; --fg: #141414; --muted: #5a5a5a; --line: #d9d9d4;
+  --accent: #2b3a67; --accent-soft: #e3e7f1;
+  --good: #1e6b43; --good-soft: #dcebe2; --warn: #8a5a10; --warn-soft: #f3e7d1; --bad: #a8261e; --bad-soft: #f6e0de;
+  --code-bg: #141414; --code-fg: #ececec; --code-prompt: #9fb4e6;
+  --rule: 2px solid var(--fg);
+}

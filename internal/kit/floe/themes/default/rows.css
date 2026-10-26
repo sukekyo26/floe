@@ -1,0 +1,5 @@
+:scope { padding: 6px; }
+:scope > * { background: var(--surface); }
+:scope > :first-child { border-radius: 14px 14px 0 0; }
+:scope > :last-child { border-radius: 0 0 14px 14px; }
+:scope > :only-child { border-radius: 14px; }

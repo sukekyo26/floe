@@ -1,0 +1,4 @@
+<figure class="{{or .shell "sh"}}" data-floe-part="terminal">
+{{- with .shell}}<figcaption>{{if eq . "powershell"}}PowerShell{{else}}{{.}}{{end}}</figcaption>{{end}}<pre>
+{{- range .steps}}<span class="run">{{.run}}</span>{{with .out}}<span class="out">{{.}}</span>{{end}}{{end -}}
+</pre></figure>

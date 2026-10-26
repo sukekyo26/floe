@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "code",
+  "description": "Code, under its file and language; its lines go in as they are, and a long one scrolls sideways",
+  "type": "object",
+  "properties": {
+    "lang": { "type": "string", "minLength": 1, "description": "The language, shown at the right above the code" },
+    "file": { "type": "string", "minLength": 1, "description": "The file the code is of, shown above it" },
+    "text": { "type": "string", "minLength": 1, "description": "The code, as it is" }
+  },
+  "required": ["text"],
+  "additionalProperties": false
+}
