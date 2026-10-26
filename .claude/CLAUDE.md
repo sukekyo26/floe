@@ -21,8 +21,8 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **外の振る舞いを真似ない**：HTML・CSS・URL・JSON Schema などは、本物のパーサやライブラリを使う。自分で読む作りにしない
 - **受け入れた退行**：上に当たらない漏れは、`LIMIT:` のコメントと PR の本文に書く。検査は足さない
 
-- **schema の形はコンパイルした木から**：floe が要る形（どの項目がどの部品・format か）は、コンパイルした `*jsonschema.Schema` から取る。schema の JSON を自前で辿らない（生の JSON を見るのは `$schema` の確かめだけで、schema の鍵の意味は読まない）。`$schema` は 2020-12・2019-09 だけを受ける。例外：上の「埋めて呼び直す」ときは、写しに名前を足すために、生の JSON の根と `$defs` の直下を読んで書いてよい（書くのは写しだけ。今は `holes.fill`）。floe が要る形は、この例外の後もコンパイルした木から取る
-- **木を歩くのは 2 つだけ**：schema の木を歩くのは、全部の欄を辿る `every` と、描く歩きの `followFrom`（`schema.Follow` の繰り返し）だけ。描く歩きも確かめる歩きも `schema.Follow` を使い、検査ごとに歩きを書き分けない。例外は 2 つだけ：`$schema` を見る生の JSON の歩き（schema の意味を読まない）と、根の値にいつも当たる schema の required を見る `sharedKeys`
+- **schema の形はコンパイルした木から**：floe が要る形（どの項目がどの部品・format か）は、コンパイルした `*jsonschema.Schema` から取る。schema の JSON を自前で辿らない（生の JSON を見るのは `$schema` の確かめと、`$id` の scheme（`floe:` を名乗らないか。部品と共有の schema では scheme の無い相対も）の確かめだけで、schema の鍵の意味は読まない。`$id` を土台の URL に重ねることはしない）。`$schema` は 2020-12・2019-09 だけを受ける。例外：上の「埋めて呼び直す」ときは、写しに名前を足すために、生の JSON の根と `$defs` の直下を読んで書いてよい（書くのは写しだけ。今は `holes.fill`）。floe が要る形は、この例外の後もコンパイルした木から取る
+- **木を歩くのは 2 つだけ**：schema の木を歩くのは、全部の欄を辿る `every` と、描く歩きの `followFrom`（`schema.Follow` の繰り返し）だけ。描く歩きも確かめる歩きも `schema.Follow` を使い、検査ごとに歩きを書き分けない。例外は 2 つだけ：`$schema` と `$id` を見る生の JSON の歩き（schema の意味を読まない）と、根の値にいつも当たる schema の required を見る `sharedKeys`
 - **YAML は yamlpos だけが読む**：YAML のバイト列を goccy に渡すのは `yamlpos` だけ。`yamlpos` の外（テストを除く）から import できる goccy のパッケージは `ast` だけ（depguard の規則 `goccy-in-yamlpos`）。値にするのも `yamlpos.Decode`
 - **schema の JSON は schema だけが読む**：schema.json などの JSON のバイト列を読むのは `schema` の `read` だけ。`schema` の外からは、バイト列を `Compile`・`NewResource` に渡す。jsonschema を import できるのは `internal/schema` だけ（depguard の規則 `jsonschema-in-schema`）
 - **段 1 は読むと確かめるに分ける**：`kit.Read` は値を作るのに要ることだけ（ファイルを読む、YAML・JSON・HTML を値にする、schema をコンパイルする）をし、値の後の決まり（CSS の形、部品の schema、エスケープ、見た目の名前など）は確かめる関数が持つ。実行のときは floe のものを読むだけで確かめず、同じ確かめをテストで floe のものに走らせる
