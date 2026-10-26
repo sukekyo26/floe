@@ -85,6 +85,8 @@ func TestParse(t *testing.T) {
 		{"x: [.NaN, -.Inf]\n", "a.yaml:1:5: .NaN is not a value a YAML file can hold; write a number in digits, or quote it as text\na.yaml:1:11: -.Inf is not a value a YAML file can hold; write a number in digits, or quote it as text"},
 		{"title: Plan #1 draft\n", "a.yaml:1:13: " + fmt.Sprintf(cutAt, "Plan")},
 		{"sections:\n  - heading: Step #2\n", "a.yaml:2:19: " + fmt.Sprintf(cutAt, "Step")},
+		// A plain value over lines is cut where its last line holds the comment.
+		{"title: Plan\n  draft #1\n", "a.yaml:2:9: " + fmt.Sprintf(cutAt, "Plan draft")},
 		{"x: {a, b: 1}\n", `a.yaml:1:5: "a" is a key without a value in { }: write its value after a ":", or, if a , in text ended the text before it, put that text in quotes`},
 		{"x: {a #c\n , b: 1}\n", "a.yaml:1:7: " + fmt.Sprintf(cutAt, "a")},
 		// A long one shows its end, where the cut is, or its head.
@@ -166,7 +168,7 @@ func TestParse(t *testing.T) {
 func TestFind(t *testing.T) {
 	t.Parallel()
 
-	body, err := yamlpos.Parse("a.yaml", []byte("a:\n  b: 1\n  c:\n    - x\n    -\nd: [y, z]\n"))
+	body, err := yamlpos.Parse("a.yaml", []byte("a:\n  b: 1\n  c:\n    - x\n    -\nd: [y, z]\ne: [~, y, null]\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,6 +184,10 @@ func TestFind(t *testing.T) {
 		{[]string{"a", "nope"}, yamlpos.Pos{Line: 2, Column: 3}},
 		{[]string{"d", "9"}, yamlpos.Pos{Line: 6, Column: 4}},
 		{[]string{"d", "x"}, yamlpos.Pos{Line: 6, Column: 4}},
+		// An empty entry of a flow sequence is where it is written: goccy/go-yaml gives a flow sequence entries
+		// too, at the , before each (none before the first), not at the entry.
+		{[]string{"e", "0"}, yamlpos.Pos{Line: 7, Column: 5}},
+		{[]string{"e", "2"}, yamlpos.Pos{Line: 7, Column: 11}},
 	} {
 		if got := yamlpos.OfValue(yamlpos.Find(body, tt.at)); got != tt.want {
 			t.Errorf("Find(%v) at %v, want %v", tt.at, got, tt.want)
