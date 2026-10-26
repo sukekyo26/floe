@@ -16,6 +16,7 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 var (
@@ -135,7 +136,7 @@ func (d *Drawer) example(s *spec, opts *Options) (*spec, error) {
 		return nil, fmt.Errorf("diagram: the example %s: %s", e.Name, err.Error()) //nolint:err113,errorlint // see above
 	}
 	ex.Source = s.Source
-	opts.Source = strings.TrimSpace(string(e.Spec))
+	opts.Source = yamlpos.File(e.Spec)
 	return ex, nil
 }
 

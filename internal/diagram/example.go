@@ -44,7 +44,9 @@ var Examples = sync.OnceValues(func() ([]Example, error) {
 			err = yamlpos.Decode(file, root, &v)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("diagram: read the example %s: %w", e.Name(), err)
+			// In words, not wrapped: a mistake of floe's own example is no mistake of the user's.
+			//nolint:err113,errorlint // see above
+			return nil, fmt.Errorf("diagram: read the example %s: %s", e.Name(), err.Error())
 		}
 		first, _, _ := strings.Cut(string(src), "\n")
 		name, summary := strings.TrimSuffix(e.Name(), ".yaml"), strings.TrimPrefix(first, "# ")

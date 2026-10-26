@@ -14,10 +14,11 @@ import (
 // Source returns the value n as written: the text of its tokens, each as the parser kept it (Origin), from its
 // first to its last, its line breaks \n, trimmed, and its lines after the first without the indentation they
 // share with the line it starts on, counted in characters. Lines and columns are not used: the parser's are off
-// after a tab, inside a folded block with a blank line and with lone CR line breaks.
-// LIMIT: comments before its first token and after its last (on the last line too) are not its tokens', and are
-// left out; so are the blank lines a |+ or >+ keeps at its end.
-// LIMIT: a quoted value whose next line is indented less than the value's keys sets the indentation taken off.
+// after a tab, inside a folded block with a blank line and with lone CR line breaks. Comments before its first
+// token and after its last (on its last line too) are no tokens of it, and the blank lines that end a |+ or >+
+// are trimmed; a quoted value over a line indented less than its keys sets the indentation taken off.
+// LIMIT: the comments around it and a |+ value's last blank lines are left out; add them if a spec needs them.
+// LIMIT: a quoted value over a shallower line sets the indentation taken off; measure it apart if one shows so.
 func Source(n ast.Node) string {
 	in := tokensOf{}
 	ast.Walk(in, n)
