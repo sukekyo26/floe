@@ -90,17 +90,18 @@ func runSample(t *testing.T, name, dir string) map[string][]byte {
 	tmp := realPath(t, t.TempDir())
 	// A sample of mistakes is for what floe tells: its golden/ holds commands.golden alone.
 	s := &sample{
-		dir: realPath(t, dir), tmp: tmp, keepsPages: filepath.Dir(name) != mistakes,
-		env:   map[string]string{"FLOE_ICONS_DIR": filepath.Join(realPath(t, dir), ".icons")},
-		files: map[string][]byte{},
+		dir: realPath(t, dir), tmp: tmp, keepsPages: filepath.Dir(name) != mistakes, env: nil, files: map[string][]byte{},
 	}
+	s.env = map[string]string{"FLOE_ICONS_DIR": filepath.Join(s.dir, ".icons")}
 	// One's own parts, themes and templates, in own/: checked first, as an agent checks what it wrote.
+	own := false
 	for _, kind := range []string{"parts", "themes", "templates"} {
 		if fi, err := os.Stat(filepath.Join(s.dir, "own", kind)); err == nil && fi.IsDir() {
 			s.env["FLOE_"+strings.ToUpper(kind)+"_DIR"] = filepath.Join(s.dir, "own", kind)
+			own = true
 		}
 	}
-	if len(s.env) > 1 {
+	if own {
 		s.run(t, "part", "check")
 	}
 	if _, ok := s.env["FLOE_TEMPLATES_DIR"]; ok {

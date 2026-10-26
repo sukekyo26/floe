@@ -5,6 +5,7 @@
   "required": ["items"],
   "properties": {
     "logo": { "type": "string" },
+    "flow": { "$ref": "floe:///parts/diagram.json" },
     "badges": { "type": "array", "items": { "$ref": "floe:///parts/badge.json" } },
     "items": {
       "type": "array",

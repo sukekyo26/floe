@@ -69,6 +69,110 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
+@scope ([data-floe-part="diagram"]) to (:scope [data-floe-part] > *) {
+/* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
+   set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
+/* The colours and fonts of the page's palette, with floe's default ones for a fragment of floe diagram
+   render pasted into a page without them */
+.dg-wrap, .dg-tools {
+  --dg-bg: var(--bg, #f3f5f4);
+  --dg-surface: var(--surface, #fff);
+  --dg-fg: var(--fg, #18201e);
+  --dg-muted: var(--muted, #57635f);
+  --dg-line: var(--line, #d4dbd8);
+  --dg-accent: var(--accent, #1d6670);
+  --dg-accent-soft: var(--accent-soft, #dcebec);
+  --dg-good: var(--good, #1d7542);
+  --dg-good-soft: var(--good-soft, #dcefe3);
+  --dg-warn: var(--warn, #8a5a10);
+  --dg-warn-soft: var(--warn-soft, #f6e8d2);
+  --dg-bad: var(--bad, #b3261e);
+  --dg-bad-soft: var(--bad-soft, #fbe5e2);
+  --dg-font: var(--font, sans-serif);
+  --dg-mono: var(--mono, monospace);
+}
+/* The frame spans the body's width. Its height follows the diagram's aspect ratio, capped by the
+   screen's height and by max-height (how far it may grow), with the diagram centred in it */
+.dg-wrap { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--dg-line); border-radius: 8px; touch-action: pan-y; }
+.dg-wrap:focus-visible { outline: 2px solid var(--dg-accent); outline-offset: 2px; }
+.dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
+.dg-wrap.zoomed:active { cursor: grabbing; }
+.dg-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: -0.6rem; font-size: 12px; line-height: 1.4; }
+.dg-tools span { color: var(--dg-muted); margin-right: auto; }
+@media (max-width: 640px) { .dg-tools span { display: none; } }
+/* Buttons do nothing on paper */
+@media print { .dg-tools { display: none; } }
+.dg-tools button { min-width: 2.2rem; padding: 2px 8px; font: inherit; color: var(--dg-fg); background: var(--dg-surface); border: 1px solid var(--dg-line); border-radius: 6px; cursor: pointer; }
+.dg-tools button:hover:not(:disabled) { border-color: var(--dg-accent); color: var(--dg-accent); }
+.dg-tools button:disabled { opacity: 0.4; cursor: default; }
+.dg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--dg-font); }
+.dg text { dominant-baseline: central; }
+.dg .main { fill: var(--dg-fg); font-size: 13px; font-weight: 700; }
+.dg .sub { fill: var(--dg-muted); font-size: 12px; }
+.dg .code { font-family: var(--dg-mono); font-size: 12px; }
+.dg .box rect, .dg .box path { fill: var(--dg-surface); stroke: var(--dg-line); stroke-width: 1.2; }
+.dg .box.accent rect, .dg .box.accent path { fill: var(--dg-accent-soft); stroke: var(--dg-accent); }
+.dg .box.good rect, .dg .box.good path { fill: var(--dg-good-soft); stroke: var(--dg-good); }
+.dg .box.warn rect, .dg .box.warn path { fill: var(--dg-warn-soft); stroke: var(--dg-warn); }
+.dg .box.bad rect, .dg .box.bad path { fill: var(--dg-bad-soft); stroke: var(--dg-bad); }
+.dg .box.bad text { fill: var(--dg-bad); }
+.dg .table .bg, .dg .table .head { fill: var(--dg-surface); }
+.dg .table.accent .head { fill: var(--dg-accent-soft); }
+.dg .table.good .head { fill: var(--dg-good-soft); }
+.dg .table.warn .head { fill: var(--dg-warn-soft); }
+.dg .table.bad .head { fill: var(--dg-bad-soft); }
+.dg .table .outline { fill: none; stroke: var(--dg-line); stroke-width: 1.2; }
+.dg .table.accent .outline { stroke: var(--dg-accent); }
+.dg .table.good .outline { stroke: var(--dg-good); }
+.dg .table.warn .outline { stroke: var(--dg-warn); }
+.dg .table.bad .outline { stroke: var(--dg-bad); }
+.dg .table .sep { stroke: var(--dg-line); }
+.dg .cell { fill: var(--dg-fg); }
+.dg .type { fill: var(--dg-muted); font-size: 12px; }
+/* A frame's dashes are a little darker than the secondary text. Without color-mix, --muted stays */
+.dg .frame rect { fill: none; stroke: var(--dg-muted); stroke: color-mix(in srgb, var(--dg-muted) 75%, var(--dg-fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.dg .frame.accent rect { stroke: var(--dg-accent); }
+.dg .frame text { fill: var(--dg-muted); font-size: 12px; font-weight: 700; }
+.dg .frame.grouped text { fill: var(--dg-fg); font-size: 13px; }
+.dg .edge, .dg .line { fill: none; stroke: var(--dg-muted); stroke-width: 1.5; }
+.dg .edge.dashed { stroke-dasharray: 5 4; }
+.dg .edge.bold { stroke-width: 3; }
+.dg .edge.accent { stroke: var(--dg-accent); }
+.dg .edge.good { stroke: var(--dg-good); }
+.dg .edge.warn { stroke: var(--dg-warn); }
+.dg .edge.bad { stroke: var(--dg-bad); }
+/* An edge's ends take its colour (context-stroke). Without it, --muted stays */
+.dg .mk-fill { fill: var(--dg-muted); fill: context-stroke; }
+.dg .mk-hollow { fill: var(--dg-bg); stroke: var(--dg-muted); stroke: context-stroke; stroke-width: 1.2; }
+.dg .mk-line { fill: none; stroke: var(--dg-muted); stroke: context-stroke; stroke-width: 1.5; }
+.dg .dot { fill: var(--dg-muted); stroke: var(--dg-muted); }
+.dg .dot.accent { fill: var(--dg-accent); stroke: var(--dg-accent); }
+.dg .dot.good { fill: var(--dg-good); stroke: var(--dg-good); }
+.dg .dot.warn { fill: var(--dg-warn); stroke: var(--dg-warn); }
+.dg .dot.bad { fill: var(--dg-bad); stroke: var(--dg-bad); }
+.dg .dot.hollow { fill: var(--dg-bg); stroke-width: 2; }
+.dg .bar { fill: var(--dg-muted); }
+.dg .bar.accent { fill: var(--dg-accent); }
+.dg .bar.good { fill: var(--dg-good); }
+.dg .bar.warn { fill: var(--dg-warn); }
+.dg .bar.bad { fill: var(--dg-bad); }
+.dg .axis { stroke: var(--dg-muted); stroke-width: 1.2; }
+.dg .grid { stroke: var(--dg-line); }
+.dg .venn { fill: var(--dg-accent-soft); fill-opacity: 0.6; stroke: var(--dg-accent); stroke-width: 1.5; }
+.dg .venn.good { fill: var(--dg-good-soft); stroke: var(--dg-good); }
+.dg .venn.warn { fill: var(--dg-warn-soft); stroke: var(--dg-warn); }
+.dg .venn.bad { fill: var(--dg-bad-soft); stroke: var(--dg-bad); }
+.dg .label-bg { fill: var(--dg-bg); }
+.dg .label { fill: var(--dg-fg); font-size: 12px; }
+.dg .label.strong { font-size: 13px; font-weight: 700; }
+.dg .lifeline { stroke: var(--dg-muted); stroke-width: 1.2; stroke-dasharray: 6 4; }
+.dg .divider { stroke: var(--dg-muted); stroke-width: 1.2; stroke-dasharray: 12 6; }
+.dg .band { fill: var(--dg-accent-soft); stroke: var(--dg-accent); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
 @scope ([data-floe-part="badge"]) to (:scope [data-floe-part] > *) {
 :scope { background: var(--accent-soft); }
 }
@@ -86,6 +190,171 @@ blockquote > * + * { margin-top: 0.6rem; }
 <li>✓ Read the plan</li>
 <li>Write the design of B7</li>
 </ul>
+<div data-floe-part="diagram"><script>(// Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
+// from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
+// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
+function zoomable(messages) {
+  const MAX = 4;
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const setup = (wrap) => {
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
+    const svg = wrap.querySelector('svg');
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
+    // diagram stays shown when the frame resizes
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
+    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    // Zooming out stops at the whole diagram or the actual size, whichever is smaller
+    const min = () => Math.min(fit(), 1);
+    const tools = document.createElement('div');
+    tools.className = 'dg-tools';
+    const hint = document.createElement('span');
+    hint.textContent = msg.diagram_zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
+      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      // Centre a direction the view is wider than the diagram in; otherwise keep the view inside it
+      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    // Screen coordinates as px from the top left inside the frame's border
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    // Scales by k about (ax, ay), in local coordinates, keeping the diagram point under it in place
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    // A plain wheel scrolls the page. A trackpad pinch arrives as a wheel with ctrlKey too
+    wrap.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    // One finger or a mouse moves the diagram; two fingers zoom about their midpoint while moving it
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      // While the whole diagram shows, a mouse is left to select text
+      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    // The first resize notice comes just before painting, so settle the state once now for code
+    // (tests) that reads it without waiting for a paint
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}});</script><div class="dg-wrap" style="aspect-ratio: 200 / 120; max-height: min(85vh, 148px)"><svg viewBox="0 0 200 120" class="dg" role="img" aria-label="Lambda"><defs><image id="dg1-ec31a3_icon-0" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjZWQ3MTAwIi8+PC9zdmc+Cg==" width="48" height="48"></image></defs><use href="#dg1-ec31a3_icon-0" x="76" y="20"></use><rect x="59" y="75" width="82" height="18" class="label-bg"></rect><text x="100" y="84" text-anchor="middle" class="label">AWS Lambda</text></svg></div></div>
 </main>
 
 

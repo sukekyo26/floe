@@ -21,6 +21,9 @@
 <li>{{if .done}}✓ {{end}}{{.what}}</li>
 {{- end}}
 </ul>
+{{- with .Data.flow}}
+{{.}}
+{{- end}}
 </main>
 </body>
 </html>
