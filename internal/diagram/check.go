@@ -200,8 +200,12 @@ func (l *layout) addLabel(lb *label, at string) {
 		}
 		return
 	}
-	x, y, found := l.place(lb, g)
-	if !found {
+	x, y, st := l.place(lb, g)
+	switch {
+	case !st.tried:
+		l.problem(at, "diagram_outside", what("label", "", lb.Text), num(l.s.Width), num(l.s.Height))
+		return
+	case !st.found:
 		l.problem(at, "diagram_label_no_room", what("label", "", lb.Text), names)
 		return
 	}
@@ -212,9 +216,9 @@ func (l *layout) addLabel(lb *label, at string) {
 // and placed as one block where its corners keep the most room; the block is placed once, for its first label.
 // LIMIT: points 4 apart are tried, and at most 500 a side of a large circle; try them closer if a region narrow
 // enough to slip between comes to matter.
-func (l *layout) place(lb *label, g region) (x, y float64, ok bool) {
+func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 	key := regionKey(lb.In)
-	st := l.stacks[key]
+	st = l.stacks[key]
 	if st.next == 0 {
 		w := 0.0
 		for _, m := range st.labels {
@@ -222,13 +226,14 @@ func (l *layout) place(lb *label, g region) (x, y float64, ok bool) {
 		}
 		h := labelH * float64(len(st.labels))
 		c := g.in[0]
-		// Within the canvas: outside it, a label sticks out anyway.
-		x0, x1 := max(c.CX-c.R, 0), min(c.CX+c.R, l.s.Width)
-		y0, y1 := max(c.CY-c.R, 0), min(c.CY+c.R, l.s.Height)
-		dx, dy := step(x1-x0), step(y1-y0)
+		// The points of a grid from the circle's edge, those within the canvas alone: outside it, a label
+		// sticks out anyway.
+		xs := grid(c.CX-c.R, c.CX+c.R, l.s.Width)
+		ys := grid(c.CY-c.R, c.CY+c.R, l.s.Height)
 		best := 0.0
-		for px := x0; px <= x1; px += dx {
-			for py := y0; py <= y1; py += dy {
+		for _, px := range xs {
+			for _, py := range ys {
+				st.tried = true
 				if room := g.roomOf(rect{px - w/2, py - h/2, w, h, "", ""}); room > best {
 					best, st.x, st.top = room, px, py-h/2
 				}
@@ -239,12 +244,22 @@ func (l *layout) place(lb *label, g region) (x, y float64, ok bool) {
 	n := st.next
 	st.next++
 	l.stacks[key] = st
-	return st.x, st.top + labelH*float64(n) + labelH/2, st.found
+	return st.x, st.top + labelH*float64(n) + labelH/2, st
 }
 
-// step is how far apart the points tried across span are: 4, or more for at most 500 of them.
-func step(span float64) float64 {
-	return max(4, span/500)
+// grid is the points from lo to hi, 4 apart or more for at most 500 of them across what is within 0 and size,
+// counted from lo: the canvas cuts the grid, and does not move it.
+func grid(lo, hi, size float64) []float64 {
+	from, to := max(lo, 0), min(hi, size)
+	if from > to {
+		return nil
+	}
+	step := max(4, (to-from)/500)
+	var out []float64
+	for p := lo + math.Ceil((from-lo)/step)*step; p <= to; p += step {
+		out = append(out, p)
+	}
+	return out
 }
 
 // stack is the labels of one region of a Venn diagram placed by it, and where their block went.
@@ -252,6 +267,7 @@ type stack struct {
 	labels []*label
 	next   int
 	x, top float64
+	tried  bool // whether any point of the canvas was tried
 	found  bool
 }
 
