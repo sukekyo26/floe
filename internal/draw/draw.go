@@ -85,6 +85,9 @@ func Page(k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[strin
 	withStyles(tree, sheets)
 	withHeadingIDs(tree)
 	var out bytes.Buffer
+	// LIMIT: Render writes no form's pointer: a <form> ended in a <div> or a <table> it opened, read again, owns
+	// other inputs, or drops a nested one. Write the forms apart if a template comes to rely on them (the CSP's
+	// form-action 'none' sends none anyway).
 	if err := html.Render(&out, tree); err != nil {
 		return nil, fmt.Errorf("draw: write the page: %w", err)
 	}
@@ -139,9 +142,12 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any) (any, error) {
 			if failed != nil {
 				return nil, failed
 			}
-			// At the value drawn: a part of floe's is no file one can fix, and which value it is tells why.
-			pos := itemPos(d, it.At)
-			e.File, e.Line, e.Column = d.File, pos.Line, pos.Column
+			// A mistake of a file of the part's own (its words.yaml) stays there, told once whatever uses it;
+			// any other is at the value drawn: a part of floe's is no file one can fix, and the value tells why.
+			if e.File == "" {
+				pos := d.PosOf(it.At)
+				e.File, e.Line, e.Column = d.File, pos.Line, pos.Column
+			}
 			return nil, e
 		}
 		return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
@@ -152,17 +158,9 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any) (any, error) {
 		}
 		return kit.Markdown(text) //nolint:wrapcheck // goldmark fails only to write, and a buffer does not
 	}
-	// No schema of floe's has another format of floe's: one of one's own comes with the stage that draws it.
-	//nolint:err113 // floe's own mistake
-	return nil, fmt.Errorf("draw: floe does not draw an item of format %s yet", it.Format)
-}
-
-// itemPos returns where the value at the path at is written in d; the top of the file without a node.
-func itemPos(d *doc.Data, at []string) yamlpos.Pos {
-	if d.Root == nil {
-		return yamlpos.Pos{Line: 1, Column: 1}
-	}
-	return yamlpos.OfValue(yamlpos.Find(d.Root, at))
+	// A format floe draws in a later stage of its rebuild: a template of one's own may name it, and is told so
+	// at the item.
+	return nil, yamlpos.New(d.File, d.PosOf(it.At), "draw_format", it.Format)
 }
 
 // executed returns the mistake err of executing the template name, whose text is src (nil when where it is

@@ -26,19 +26,20 @@ func headingID(text string) string {
 
 var headings = []atom.Atom{atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6}
 
-// withHeadingIDs gives each heading of HTML in tree without an id the id headingID makes of its text, but what
-// a part draws in it (data-floe-part), in the order of the page, with -1, -2 and on till one is free of the ids
-// and the names of the page, wherever they are, and of those given before it. One whose text makes none gets
-// none.
+// withHeadingIDs gives each heading of HTML in tree without an id, or with an empty one, which names nothing,
+// the id headingID makes of its text, but what a part draws in it (data-floe-part), in the order of the page,
+// with -1, -2 and on till one is free of the ids and the names of the page, wherever they are, and of those
+// given before it. One whose text makes none gets none.
 func withHeadingIDs(tree *html.Node) {
 	found, taken := headingsOf(tree)
 	for _, n := range found {
-		if _, hasID := attrOf(n, "id"); hasID {
+		if id, _ := attrOf(n, "id"); id != "" {
 			continue
 		}
 		if id := headingID(textOf(n)); id != "" {
 			id = free(taken, id)
 			taken[id] = true
+			n.Attr = slices.DeleteFunc(n.Attr, func(a html.Attribute) bool { return a.Namespace == "" && a.Key == "id" })
 			n.Attr = append(n.Attr, html.Attribute{Namespace: "", Key: "id", Val: id})
 		}
 	}
