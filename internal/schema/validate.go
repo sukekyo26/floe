@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/goccy/go-yaml/ast"
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -39,6 +40,32 @@ func (c *Compiled) Validate(d *doc.Data) error {
 		}
 		at := placeOf(d, e)
 		found = append(found, usererr.LibraryAt(d.File, at.Line, at.Column, e.ErrorKind.LocalizedString(english)))
+	})
+	return found.Sorted().Err()
+}
+
+// ValidateAt checks v against c: each leaf of the library's ValidationError in its words, at the JSON pointer of
+// its InstanceLocation in v, with no file, for the caller to place (yamlpos.Place). Sorted, as Validate.
+// LIMIT: jsonschema v6.0.3 shares the slice of InstanceLocation with later checks (upstream #276, #269), which
+// can make the pointer of a propertyNames mistake wrong; no schema checked by it uses propertyNames. Place it
+// as placeOfName does if one comes to.
+func (c *Compiled) ValidateAt(v any) error {
+	err := c.Root.Validate(v)
+	if err == nil {
+		return nil
+	}
+	var ve *jsonschema.ValidationError
+	if !errors.As(err, &ve) {
+		return fmt.Errorf("schema: validate a value: %w", err)
+	}
+	var found usererr.List
+	leaves(ve, func(e *jsonschema.ValidationError) {
+		steps := make([]string, len(e.InstanceLocation))
+		for i, step := range e.InstanceLocation {
+			steps[i] = escape(step)
+		}
+		at := strings.Join(append([]string{"#"}, steps...), "/")
+		found = append(found, usererr.LibraryIn("", at, e.ErrorKind.LocalizedString(english)))
 	})
 	return found.Sorted().Err()
 }
