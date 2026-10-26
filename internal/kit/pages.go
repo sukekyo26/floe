@@ -1,6 +1,7 @@
 package kit
 
 import (
+	"fmt"
 	"html/template"
 	"maps"
 	"path"
@@ -32,7 +33,12 @@ func parsePages(file string, src []byte, fns template.FuncMap, w words) (pages, 
 	return ps, nil
 }
 
-// page returns the page of ps for the language tag, as w picks it.
-func (ps pages) page(w words, tag string) *template.Template {
-	return ps[w.lang(tag)]
+// copyOf returns a copy of the page of ps for the language tag, as w picks it.
+func (ps pages) copyOf(w words, tag string) (*template.Template, error) {
+	of := ps[w.lang(tag)]
+	page, err := of.Clone()
+	if err != nil {
+		return nil, fmt.Errorf("kit: copy %s: %w", of.Name(), err)
+	}
+	return page, nil
 }

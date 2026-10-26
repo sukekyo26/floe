@@ -9,9 +9,6 @@ import (
 	"github.com/sukekyo26/floe/internal/kit"
 )
 
-// defaultTheme is the theme whose palette defines every variable, under any other theme's.
-const defaultTheme = "default"
-
 // pageStyle returns the <style>s of a page drawn in the theme named so, whose elements name what n holds, with
 // own, its template's page.css. Each is a layer: floe's base.css, under the palettes (the default theme's,
 // then the theme's), the looks, the template's own and the parts'. The parts' are the style of each part the
@@ -30,10 +27,10 @@ const defaultTheme = "default"
 // they hold.
 func pageStyle(k *kit.Kit, theme string, n named, own []byte) (string, error) {
 	themed, ok := k.Theme(theme)
-	base, okBase := k.Theme(defaultTheme)
+	base, okBase := k.Theme(kit.DefaultTheme)
 	if !ok || !okBase {
 		//nolint:err113 // floe's own mistake
-		return "", fmt.Errorf("draw: no theme %s or %s, which the data was checked with", theme, defaultTheme)
+		return "", fmt.Errorf("draw: no theme %s or %s, which the data was checked with", theme, kit.DefaultTheme)
 	}
 	// The first sheet names the layers, which puts them in that order. Each file after it is a sheet of its
 	// own, so that a mistake in it, a comment or a block left open, ends with it.
@@ -51,7 +48,7 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) (string, error) {
 		}
 	}
 	sheet("floe.palette", base.Palette())
-	if theme != defaultTheme {
+	if theme != kit.DefaultTheme {
 		sheet("floe.palette", themed.Palette())
 	}
 	names := inOrder(k, slices.Concat(n.boxes, n.looks), n.uses)

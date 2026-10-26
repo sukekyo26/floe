@@ -13,6 +13,10 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
+// DefaultTheme is the theme of a page whose data names none, whose palette defines every variable, under any
+// other theme's.
+const DefaultTheme = "default"
+
 // Theme is a theme read: its CSS by file, without the .css.
 type Theme struct {
 	name     string
@@ -103,8 +107,11 @@ func (t *Template) Name() string { return t.name }
 // Schema returns the schema of t compiled, nil without one.
 func (t *Template) Schema() *schema.Compiled { return t.schema }
 
-// Page returns the page.html of t, parsed, in the language tag of a page; nil without one.
-func (t *Template) Page(lang string) *template.Template { return t.pages.page(t.words, lang) }
+// Page returns a copy of the page.html of t, parsed, in the language tag of a page, to draw: t's is never
+// drawn, as drawing changes a template (its escaping), which then cannot be copied.
+func (t *Template) Page(lang string) (*template.Template, error) {
+	return t.pages.copyOf(t.words, lang)
+}
 
 // CSS returns the page.css of t, nil for none.
 func (t *Template) CSS() []byte { return bytes.Clone(t.css) }

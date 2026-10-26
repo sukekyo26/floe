@@ -16,9 +16,6 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// defaultTheme is the theme of a page whose data names none.
-const defaultTheme = "default"
-
 // Options are what a caller gives a drawing besides the data.
 type Options struct {
 	Theme    string // drawn with instead of the data's theme:, "" for none
@@ -63,7 +60,7 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, error) {
 // theme:, or, given, at no place, as no line of d names it. The template is nil when it is none.
 func pick(k *kit.Kit, d *doc.Data, given string, found *usererr.List) (*kit.Template, string) {
 	_, _, themes, templates := k.Names()
-	theme := cmp.Or(given, d.Theme, defaultTheme)
+	theme := cmp.Or(given, d.Theme, kit.DefaultTheme)
 	if _, ok := k.Theme(theme); !ok {
 		bad := usererr.New("tmpl_unknown_theme", theme, strings.Join(themes, ", "))
 		if given == "" {

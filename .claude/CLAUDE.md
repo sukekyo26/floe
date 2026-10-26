@@ -27,8 +27,8 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **描いたページは x/net/html で読む**：描いたページの確かめ（`<style>`・`<base>`・部品の名前・`</head>` の所）と見出しの id は、x/net/html で読む。正規表現は、パーサに確かめさせる候補（`</head>` の所）を探すことと、CSS の `</style` の書き換えだけに使う
 - **YAML は yamlpos だけが読む**：YAML のバイト列を goccy に渡すのは `yamlpos` だけ。`yamlpos` の外（テストを除く）から import できる goccy のパッケージは `ast` だけ（depguard の規則 `goccy-in-yamlpos`）。値にするのも `yamlpos.Decode`
 - **schema の JSON は schema だけが読む**：schema.json などの JSON のバイト列を読むのは `schema` の `read` だけ。`schema` の外からは、バイト列を `Compile`・`NewResource` に渡す。jsonschema を import できるのは `internal/schema` だけ（depguard の規則 `jsonschema-in-schema`）
-- **段 1 は読むと確かめるに分ける**：`kit.Read` は値を作るのに要ることだけ（ファイルを読む、YAML・JSON・HTML を値にする、schema をコンパイルする）をし、値の後の決まり（CSS の形、部品の schema、エスケープ、見た目の名前など）は確かめる関数が持つ。実行のときは floe のものを読むだけで確かめず、同じ確かめをテストで floe のものに走らせる。例外：後で一緒にコンパイルするものの読み方を変える入力は、値を作るのに要る確かめとして読む所で断る（確かめる関数に置くと、その前のコンパイルが別の誤りで失敗し、原因が言われない）。floe のものも、実行のときに同じ確かめを通る。今これに当たるのは、部品と共有の schema の `$schema` と `$id`（`schema.NewResource`）だけ
-- **読んだ Kit は変えない**：`Kit` は欄を外へ出さず、`[]byte` も写しを返す。自分のものを重ねるときは、土台を書き換えずに新しい `Kit` を作る（`Floe()` の値をプロセス全体で共有するため）
+- **段 1 は読むと確かめるに分ける**：kit の `read` は値を作るのに要ることだけ（ファイルを読む、YAML・JSON・HTML を値にする、schema をコンパイルする）をし、値の後の決まり（CSS の形、部品の schema、エスケープ、見た目の名前など）は確かめる関数 `check` が持つ。kit の外で Kit を作れるのは、read と check を通す `Load` と、floe のものを読む `Floe()` だけで、確かめていない自分のもので描くことは、型で起きない。実行のときは floe のものを読むだけで確かめず、同じ確かめをテストで floe のものに走らせる。例外：後で一緒にコンパイルするものの読み方を変える入力は、値を作るのに要る確かめとして読む所で断る（確かめる関数に置くと、その前のコンパイルが別の誤りで失敗し、原因が言われない）。floe のものも、実行のときに同じ確かめを通る。今これに当たるのは、部品と共有の schema の `$schema` と `$id`（`schema.NewResource`）だけ
+- **読んだ Kit は変えない**：`Kit` は欄を外へ出さず、`[]byte` も写しを返す。自分のものを重ねるときは、土台を書き換えずに新しい `Kit` を作る（`Floe()` の値をプロセス全体で共有するため）。描くときは、`Template.Page`・`Part.Page` が返す写しを Execute する（Execute は html/template にエスケープの結果を書き込み、その後は写しを作れない）
 - **Markdown は kit だけが読む**：goldmark を import できるのは `internal/kit` だけ（depguard の規則 `goldmark-in-kit`）。生の HTML を出さない `markdown` を、どこも通る
 - **CSS は字句と括弧の入れ子だけで読む**：CSS は tdewolff の字句と、CSS Syntax の括弧の入れ子（`{`・`(`・関数・`[`）だけで読み、セレクタや値の意味を自前で読まない（`css.Parser` も使わない）。文字列・url・コメントの外のエスケープ（`\`）は断り、解かない。tdewolff を import できるのは `internal/css` だけ（depguard の規則 `tdewolff-in-css`）
 

@@ -49,9 +49,12 @@ func Page(k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[strin
 	if found != nil {
 		return nil, found.Sorted().Err()
 	}
-	var b bytes.Buffer
-	err = t.Page(d.Lang).Execute(&b, map[string]any{"Title": title, "Lang": d.Lang, "Data": data, "Calc": calc})
+	page, err := t.Page(d.Lang)
 	if err != nil {
+		return nil, err //nolint:wrapcheck // floe's failure, which says what failed
+	}
+	var b bytes.Buffer
+	if err = page.Execute(&b, map[string]any{"Title": title, "Lang": d.Lang, "Data": data, "Calc": calc}); err != nil {
 		e, at, failed := executed(err, "page.html", t.PageSource())
 		if failed != nil {
 			return nil, failed
@@ -95,18 +98,19 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any) (any, error) {
 			//nolint:err113 // floe's own mistake
 			return nil, fmt.Errorf("draw: no part %s, which the schema was compiled with", it.Part)
 		}
+		page, err := p.Page(d.Lang)
+		if err != nil {
+			return nil, err //nolint:wrapcheck // floe's failure, which says what failed
+		}
 		var b bytes.Buffer
-		if err := p.Page(d.Lang).Execute(&b, ready); err != nil {
+		if err := page.Execute(&b, ready); err != nil {
 			e, _, failed := executed(err, "part.html", nil)
 			if failed != nil {
 				return nil, failed
 			}
 			// At the value drawn: a part of floe's is no file one can fix, and which value it is tells why.
-			e.File, e.Line, e.Column = d.File, 0, 0
-			if d.Root != nil {
-				pos := yamlpos.OfValue(yamlpos.Find(d.Root, it.At))
-				e.Line, e.Column = pos.Line, pos.Column
-			}
+			pos := itemPos(d, it.At)
+			e.File, e.Line, e.Column = d.File, pos.Line, pos.Column
 			return nil, e
 		}
 		return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
@@ -117,8 +121,16 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any) (any, error) {
 		}
 		return kit.Markdown(text) //nolint:wrapcheck // goldmark fails only to write, and a buffer does not
 	}
-	//nolint:err113 // floe's own mistake
-	return nil, fmt.Errorf("draw: floe does not draw an item of format %s yet", it.Format)
+	// A format floe draws in a later stage of its rebuild: told at the item, as one the template cannot use yet.
+	return nil, yamlpos.New(d.File, itemPos(d, it.At), "draw_format", it.Format)
+}
+
+// itemPos returns where the value at the path at is written in d; the top of the file without a node.
+func itemPos(d *doc.Data, at []string) yamlpos.Pos {
+	if d.Root == nil {
+		return yamlpos.Pos{Line: 1, Column: 1}
+	}
+	return yamlpos.OfValue(yamlpos.Find(d.Root, at))
 }
 
 // executed returns the mistake err of executing the template name, whose text is src (nil when where it is

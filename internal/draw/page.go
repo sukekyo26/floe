@@ -37,6 +37,8 @@ func checkPage(k *kit.Kit, d *doc.Data, page []byte) (int, named, error) {
 		found = append(found, yamlpos.New(d.File, d.Where["template"], key, args...))
 	}
 	boxes, taken := map[string]bool{}, map[string]bool{}
+	parts, looks, _, _ := k.Names()
+	ns := names{parts: parts, all: slices.Sorted(slices.Values(slices.Concat(parts, looks)))}
 	for n := range tree.Descendants() {
 		if n.Type != html.ElementNode {
 			continue
@@ -47,7 +49,7 @@ func checkPage(k *kit.Kit, d *doc.Data, page []byte) (int, named, error) {
 		case "base":
 			refuse("draw_base")
 		}
-		checkNames(k, n, boxes, taken, refuse)
+		checkNames(k, ns, n, boxes, taken, refuse)
 	}
 	head := headAt(page)
 	if head < 0 {
@@ -61,12 +63,22 @@ func checkPage(k *kit.Kit, d *doc.Data, page []byte) (int, named, error) {
 	}, nil
 }
 
-// checkNames refuses, by refuse, each name of the element n's data-floe-part that is not one part's as
-// written, or a look's, or none, and of its data-floe-look that is no part or look of k, noting the others in
-// boxes and taken.
-func checkNames(k *kit.Kit, n *html.Node, boxes, taken map[string]bool, refuse func(key string, args ...any)) {
-	parts, looks, _, _ := k.Names()
+// names are the names of the parts of a Kit, and of its parts and looks, each sorted.
+type names struct {
+	parts, all []string
+}
+
+// checkNames refuses, by refuse, the element n's data-floe-part that names no part, or names that are not one
+// part's as written, or a look's, or none, and its data-floe-look that names none, or a name that is no part
+// or look of k (in ns), noting the others in boxes and taken. An empty one is refused too: the boundary of the
+// parts' styles, [data-floe-part], would keep them from what it holds.
+func checkNames(
+	k *kit.Kit, ns names, n *html.Node, boxes, taken map[string]bool, refuse func(key string, args ...any),
+) {
 	if value, ok := attrOf(n, "data-floe-part"); ok {
+		if strings.TrimFunc(value, isSpace) == "" {
+			refuse("draw_part_several", value)
+		}
 		for _, name := range strings.Fields(value) {
 			_, isPart := k.Part(name)
 			_, isLook := k.Look(name)
@@ -76,17 +88,19 @@ func checkNames(k *kit.Kit, n *html.Node, boxes, taken map[string]bool, refuse f
 			case isLook:
 				refuse("draw_look_box", name)
 			case !isPart:
-				refuse("draw_part_unknown", name, strings.Join(parts, ", "))
+				refuse("draw_part_unknown", name, strings.Join(ns.parts, ", "))
 			default:
 				boxes[name] = true
 			}
 		}
 	}
 	if value, ok := attrOf(n, "data-floe-look"); ok {
-		all := slices.Sorted(slices.Values(slices.Concat(parts, looks)))
+		if strings.TrimFunc(value, isSpace) == "" {
+			refuse("draw_look_empty", value)
+		}
 		for _, name := range strings.Fields(value) {
-			if !slices.Contains(all, name) {
-				refuse("draw_part_unknown", name, strings.Join(all, ", "))
+			if !slices.Contains(ns.all, name) {
+				refuse("draw_part_unknown", name, strings.Join(ns.all, ", "))
 				continue
 			}
 			taken[name] = true
