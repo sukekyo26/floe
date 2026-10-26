@@ -30,9 +30,11 @@ func told(err error) string {
 	return usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: ")
 }
 
-// Each data file of testdata/develop is drawn byte for byte as develop 24c377c's floe render wrote it (the
-// .html beside it), with the CSP floe render puts in: the parts, the themes, the languages and Markdown of
-// report, without diagrams, scripts and items of format html.
+// Each data file of testdata/develop is drawn byte for byte as the .html beside it, with the CSP floe render
+// puts in: the parts, the themes, the languages and Markdown of report, without diagrams, scripts and items of
+// format html. The .html were written from what floe draws, after it was checked once that develop 24c377c's
+// floe render drew the same pages, both read with x/net/html and written anew (but for the spaces between the
+// elements of the head, which the CSP's place changes).
 func TestDrawAsDevelop(t *testing.T) {
 	t.Parallel()
 

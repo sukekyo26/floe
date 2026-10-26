@@ -9,7 +9,8 @@ import (
 	"github.com/sukekyo26/floe/internal/kit"
 )
 
-// pageStyle returns the <style>s of a page drawn in the theme named so, whose elements name what n holds, with
+// pageStyle returns the CSS of each <style> of a page drawn in the theme named so, whose elements name what n
+// holds, with
 // own, its template's page.css. Each is a layer: floe's base.css, under the palettes (the default theme's,
 // then the theme's), the looks, the template's own and the parts'. The parts' are the style of each part the
 // page names a box of, and of each look the page or those parts take, before the parts that take it and the
@@ -25,20 +26,20 @@ import (
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
-func pageStyle(k *kit.Kit, theme string, n named, own []byte) (string, error) {
+func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) {
 	themed, ok := k.Theme(theme)
 	base, okBase := k.Theme(kit.DefaultTheme)
 	if !ok || !okBase {
 		//nolint:err113 // floe's own mistake
-		return "", fmt.Errorf("draw: no theme %s or %s, which the data was checked with", theme, kit.DefaultTheme)
+		return nil, fmt.Errorf("draw: no theme %s or %s, which the data was checked with", theme, kit.DefaultTheme)
 	}
 	// The first sheet names the layers, which puts them in that order. Each file after it is a sheet of its
 	// own, so that a mistake in it, a comment or a block left open, ends with it.
-	var style strings.Builder
+	var sheets []string
 	// No </style in a CSS, in a comment or a string too, closes its <style> and leaves what follows to be read
 	// as the page's HTML.
 	write := func(body string) {
-		style.WriteString("<style>\n" + styleEnd.ReplaceAllString(body, `<\/$1`) + "</style>\n")
+		sheets = append(sheets, "\n"+styleEnd.ReplaceAllString(body, `<\/$1`))
 	}
 	write("@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n" +
 		string(k.BaseCSS()) + "}\n")
@@ -67,7 +68,7 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) (string, error) {
 	if len(own) != 0 {
 		sheet("floe.page", []byte("@scope (:root) to ([data-floe-part] > *) {\n"+string(own)+"}\n"))
 	}
-	return style.String(), nil
+	return sheets, nil
 }
 
 // styleEnd finds </style, of either case, which HTML reads as the end of a <style>. Written <\/style it is

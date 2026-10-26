@@ -108,8 +108,8 @@ func TestNames(t *testing.T) {
 		{"unknown template", "lang: ja\ntemplate: reprot\n", none, `d.yaml:2:11: unknown template "reprot"; use report`},
 		{"no template", "lang: ja\n", none, "d.yaml:1:1: name the template at the top level, like template: report (templates: report)"},
 		{"template not text", "lang: ja\ntemplate: 5\n", none, "d.yaml:2:11: template must be text"},
-		{"template empty", "lang: ja\ntemplate: ''\n", none, "d.yaml:2:11: template is empty: name one, or leave template out"},
-		{"theme empty", "lang: ja\ntemplate: report\ntheme: \"\"\n", none, "d.yaml:3:8: theme is empty: name one, or leave theme out"},
+		{"template empty", "lang: ja\ntemplate: ''\n", none, `d.yaml:2:11: unknown template ""; use report`},
+		{"theme empty", "lang: ja\ntemplate: report\ntheme: \"\"\n", none, `d.yaml:3:8: there is no theme ""; use ` + themes},
 		{"unknown theme", "lang: ja\ntemplate: report\ntheme: nope\n", none, `d.yaml:3:8: there is no theme "nope"; use ` + themes},
 		{
 			"no lang and an unknown template", "template: reprot\ntitle: t\n", none,
@@ -185,8 +185,8 @@ func TestDrawMistakes(t *testing.T) {
 }
 
 // The page drawn is read as a browser reads it, and refused, at the data's template:, for what floe puts into
-// it: a <style>, a <base>, a name that is no part or one look's box or not one part's, and no </head> where a
-// <style> styles the page. What is not drawn is not refused.
+// it: a <style>, a <base>, a name that is no part or one look's box or not one part's. What is not drawn is
+// not refused; a page without </head> gets its styles in the head the parser makes.
 func TestDrawnPage(t *testing.T) {
 	t.Parallel()
 
@@ -206,8 +206,7 @@ func TestDrawnPage(t *testing.T) {
 		{"style in svg", page("", `<svg><style>a{}</style></svg>`), "d.yaml:2:11: the page drawn from this file has a <style>, which page.html or a part writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css"},
 		{"names as a browser reads them", page("", `<DIV DATA-FLOE-PART="note">a</DIV><div data-floe-part=note>b</div><div data-floe-part="&#110;ote">c</div>`), ""},
 		{"a name in a script's text", page("", `<script>let x = 'data-floe-look="nope"'</script>`), ""},
-		{"no </head> drawn", "<!doctype html>\n<html><head><title>t</title>{{if .Data.n}}</head>{{end}}<body></body></html>", "d.yaml:2:11: the page drawn from this file has no </head> where a <style> styles the page, before which floe puts the page's styles: page.html writes it in the head, outside {{if}}, {{with}}, {{range}}, <template>, <svg> and <math>, and nothing drawn before it, a part among them, leaves an element open"},
-		{"</head> in a comment", "<!doctype html>\n<html><head><title>t</title><!-- </head> --></head><body></body></html>", ""},
+		{"no </head> written", "<!doctype html>\n<html><title>t</title><body></body></html>", ""},
 	} {
 		k := ownKit(t, nil, mine(tt.page, mineSchema, nil))
 		got := drawn(t, k, "lang: en\ntemplate: mine\n", none)
@@ -260,21 +259,21 @@ func TestLoadStops(t *testing.T) {
 	}
 }
 
-// What floe does not draw yet, an item of format html, is told at the item; an empty data-floe-part or
-// data-floe-look, whose boundary would keep the parts' styles from what it holds, is refused.
+// What floe does not draw yet, an item of format html, which no schema of floe's has, is floe's failure; an
+// empty data-floe-part, whose boundary would keep the parts' styles from what it holds, is refused, and an
+// empty data-floe-look, which is no boundary, is not.
 func TestNotDrawn(t *testing.T) {
 	t.Parallel()
 
 	k := ownKit(t, nil, mine(minePage, `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"h": {"type": "string", "format": "html"}}}`, nil))
 	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nh: <b>x</b>\n", none),
-		"d.yaml:3:4: floe does not draw an item of format html yet: give it another format, or none"; got != want {
+		"floe: draw: floe does not draw an item of format html yet"; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 	page := "<!doctype html>\n<html><head><title>t</title></head><body>\n<div data-floe-part=\"\">a</div><p data-floe-look=\" \">b</p>\n</body></html>\n"
 	k = ownKit(t, nil, mine(page, mineSchema, nil))
-	want := lines(`d.yaml:2:11: the page has data-floe-part="", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
-		`d.yaml:2:11: the page has data-floe-look=" ", which names no look: name the looks it takes, or leave it out`)
+	want := `d.yaml:2:11: the page has data-floe-part="", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`
 	if got := drawn(t, k, "lang: en\ntemplate: mine\n", none); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}

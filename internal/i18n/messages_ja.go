@@ -39,7 +39,6 @@ var messagesJA = map[string]string{
 	"schema_part_format":        "部品の schema には \"format\": \"%s\" を書けません。部品の項目は part.html が描き、format の検査は届きません。その項目はテンプレートの schema に書くか、Markdown なら \"type\": \"string\" だけにして {{markdown .<名前>}} で描いてください",
 
 	"doc_no_lang":  "最上位に lang: ja のようにページの言語を指定してください（en・ja・pt-BR のような BCP 47 の言語タグ）",
-	"doc_empty":    "%s が空です。名前を書くか、%[1]s を外してください",
 	"doc_not_text": "%s は文字列で指定してください",
 
 	// rules: checks.yaml と computed.yaml
@@ -109,12 +108,9 @@ var messagesJA = map[string]string{
 	"tmpl_unknown_theme": "テーマ「%s」はありません。使えるのは %s です",
 
 	// draw: 描いたページ
-	"draw_head":         "このファイルを描いたページに、<style> がページを飾る </head> がありません。floe はページのスタイルをその前に入れます。page.html は </head> を head の中、{{if}}・{{with}}・{{range}}・<template>・<svg>・<math> の外に書き、その前に描く部品などが要素を開いたままにしないでください",
 	"draw_style":        "このファイルを描いたページに <style> があります。page.html か部品が書いています。CSS はテンプレートの page.css（floe がページに入れ、部品とテーマの下の層に置きます）か、部品の part.css に書いてください",
 	"draw_base":         "このファイルを描いたページに <base> があります。page.html か部品が書いていて、ページの CSP（base-uri 'none'）が無視します。リンクは完全な形で書いてください",
 	"draw_part_unknown": "このファイルを描いたページが、無い部品 %s を名乗っています。%s のどれかを書いてください",
 	"draw_part_several": `ページの data-floe-part="%s" は 1 つの部品の名前ではありません。data-floe-part="<名前>" と名前をそのまま書き、ほかの部品の見た目は data-floe-look="<名前> …" で借りてください`,
 	"draw_look_box":     `ページに data-floe-part="%[1]s" がありますが、%[1]s は見た目で箱がありません。data-floe-look="%[1]s" で借りてください`,
-	"draw_format":       "floe はまだ format %s の項目を描きません。別の format にするか、format を外してください",
-	"draw_look_empty":   `ページの data-floe-look="%s" は見た目を 1 つも名指していません。借りる見た目の名前を書くか、属性を外してください`,
 }

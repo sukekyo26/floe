@@ -1,8 +1,6 @@
 package draw
 
 import (
-	"bytes"
-	"crypto/rand"
 	"slices"
 	"strconv"
 	"strings"
@@ -28,41 +26,22 @@ func headingID(text string) string {
 
 var headings = []atom.Atom{atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6}
 
-// withHeadingIDs gives each heading of page without an id the id headingID makes of its text, but what a
-// part draws in it (data-floe-part), in the order of the page as the parser reads it, with -1, -2 and on
-// till one is free of the ids and the names of the page, wherever they are, and of those given before it.
-// One whose text makes none gets none. The rest of page is left byte for byte. Which start tag each heading
-// the parser makes is of is told by a mark on each, which the page returned has not: the parser ends a
-// heading where the tags around it say, and moves one out of a table.
-func withHeadingIDs(page []byte) []byte {
-	mark := "data-floe-heading-" + strings.ToLower(rand.Text())
-	marked := atHeadingTags(page, func(k int) string { return " " + mark + `="` + strconv.Itoa(k) + `"` })
-	tree, _ := html.Parse(bytes.NewReader(marked)) //nolint:errcheck // a bytes.Reader fails no read, Parse's one error
+// withHeadingIDs gives each heading of HTML in tree without an id the id headingID makes of its text, but what
+// a part draws in it (data-floe-part), in the order of the page, with -1, -2 and on till one is free of the ids
+// and the names of the page, wherever they are, and of those given before it. One whose text makes none gets
+// none.
+func withHeadingIDs(tree *html.Node) {
 	found, taken := headingsOf(tree)
-	ids := map[string]string{}
 	for _, n := range found {
-		k, hasMark := attrOf(n, mark)
-		if _, hasID := attrOf(n, "id"); !hasMark || hasID {
+		if _, hasID := attrOf(n, "id"); hasID {
 			continue
 		}
-		// A mark in its text was put where the tokenizer read a tag that the parser reads as text.
-		if text := textOf(n); !strings.Contains(text, mark) {
-			if id := headingID(text); id != "" {
-				id = free(taken, id)
-				taken[id] = true
-				ids[k] = id
-			}
+		if id := headingID(textOf(n)); id != "" {
+			id = free(taken, id)
+			taken[id] = true
+			n.Attr = append(n.Attr, html.Attribute{Namespace: "", Key: "id", Val: id})
 		}
 	}
-	if len(ids) == 0 {
-		return page
-	}
-	return atHeadingTags(page, func(k int) string {
-		if id, ok := ids[strconv.Itoa(k)]; ok {
-			return ` id="` + html.EscapeString(id) + `"`
-		}
-		return ""
-	})
 }
 
 // headingsOf returns the headings of HTML in tree, in order, and what a link may go to: the ids and the names
@@ -85,39 +64,6 @@ func headingsOf(tree *html.Node) ([]*html.Node, map[string]bool) {
 		}
 	}
 	return found, taken
-}
-
-// atHeadingTags returns page with attr(k) put in the k-th start tag of a heading, <h2/> too, which the
-// parser reads as a start, after its name. What a tag left open at the end holds is kept.
-// LIMIT: in <svg> the tokenizer reads as text what the parser does not (<title/>, <style/>, <textarea/>, CDATA): no id.
-func atHeadingTags(page []byte, attr func(k int) string) []byte {
-	var out bytes.Buffer
-	k := 0
-	z := html.NewTokenizer(bytes.NewReader(page))
-	for {
-		tt := z.Next()
-		// Read before the next token, which reuses it; Token and TagName would lower the tag's name in it.
-		raw := z.Raw()
-		switch {
-		case tt == html.ErrorToken:
-			out.Write(raw)
-			return out.Bytes()
-		case (tt == html.StartTagToken || tt == html.SelfClosingTagToken) && headingTag(raw):
-			out.Write(raw[:3])
-			out.WriteString(attr(k))
-			out.Write(raw[3:])
-			k++
-		default:
-			out.Write(raw)
-		}
-	}
-}
-
-// headingTag reports whether raw, a start tag as written, is a heading's: its name, which ends at a space,
-// a / or a >, is h1 to h6 in either case.
-func headingTag(raw []byte) bool {
-	return len(raw) > 3 && (raw[1] == 'h' || raw[1] == 'H') && raw[2] >= '1' && raw[2] <= '6' &&
-		bytes.IndexByte([]byte(" \t\n\f\r/>"), raw[3]) >= 0
 }
 
 // textOf returns the text in n, but that of a part (data-floe-part), of an element whose content the

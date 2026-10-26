@@ -84,8 +84,7 @@ func ints(v any) any {
 }
 
 // sharedMistake returns the message key of what is wrong with v, the value of the shared key, written or not
-// (ok), "" for none: one written that is not text, a lang that is none or spaces, and an empty template or
-// theme, which as written names one, but would read as left out.
+// (ok), "" for none: one written that is not text, and a lang that is none or spaces.
 func sharedMistake(key string, v any, ok bool) string {
 	s, text := v.(string)
 	switch {
@@ -94,8 +93,6 @@ func sharedMistake(key string, v any, ok bool) string {
 	case key == "lang" && strings.TrimSpace(s) == "":
 		// The page's <html lang> is the data's own, so that every way of drawing it gives the same page.
 		return "doc_no_lang"
-	case ok && (key == "template" || key == "theme") && s == "":
-		return "doc_empty"
 	}
 	return ""
 }

@@ -13,6 +13,9 @@ import (
 	"strings"
 	ttemplate "text/template"
 
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
+
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/schema"
@@ -24,7 +27,7 @@ import (
 // Page draws d, checked, with t of k in the theme named so, as a page titled title, calc the values of t's
 // computed.yaml (nil for none): each part from the inner ones out, then page.html. The mistakes of the parts
 // are told together, a part holding one that failed left undrawn. It checks the page drawn (checkPage) and
-// returns it with its styles before its </head> and its headings given ids.
+// returns it as the parser read it, with its styles in its head and its headings given ids, written anew.
 func Page(k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[string]any, title string) ([]byte, error) {
 	holds := map[string][]string{}
 	var found usererr.List
@@ -65,8 +68,7 @@ func Page(k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[strin
 		}
 		return nil, e
 	}
-	out := b.Bytes()
-	head, named, err := checkPage(k, d, out)
+	tree, named, err := checkPage(k, d, b.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -76,11 +78,40 @@ func Page(k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[strin
 	for name, used := range named.uses {
 		named.uses[name] = slices.Compact(slices.Sorted(slices.Values(used)))
 	}
-	styles, err := pageStyle(k, theme, named, t.CSS())
+	sheets, err := pageStyle(k, theme, named, t.CSS())
 	if err != nil {
 		return nil, err
 	}
-	return withHeadingIDs(bytes.Join([][]byte{out[:head], []byte(styles), out[head:]}, nil)), nil
+	withStyles(tree, sheets)
+	withHeadingIDs(tree)
+	var out bytes.Buffer
+	if err := html.Render(&out, tree); err != nil {
+		return nil, fmt.Errorf("draw: write the page: %w", err)
+	}
+	return out.Bytes(), nil
+}
+
+// withStyles puts a <style> of each of sheets at the end of the head of tree, which the parser always makes.
+func withStyles(tree *html.Node, sheets []string) {
+	for n := range tree.Descendants() {
+		if n.Type == html.ElementNode && n.DataAtom == atom.Head && n.Namespace == "" {
+			for _, sheet := range sheets {
+				style := node(html.ElementNode, atom.Style, "style")
+				style.AppendChild(node(html.TextNode, 0, sheet))
+				n.AppendChild(style)
+				n.AppendChild(node(html.TextNode, 0, "\n"))
+			}
+			return
+		}
+	}
+}
+
+// node returns a node of the type typ, of no namespace and with no attributes, to put in a tree.
+func node(typ html.NodeType, a atom.Atom, data string) *html.Node {
+	return &html.Node{
+		Parent: nil, FirstChild: nil, LastChild: nil, PrevSibling: nil, NextSibling: nil,
+		Type: typ, DataAtom: a, Data: data, Namespace: "", Attr: nil,
+	}
 }
 
 // under reports whether the path at is under the path of, longer.
@@ -121,8 +152,9 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any) (any, error) {
 		}
 		return kit.Markdown(text) //nolint:wrapcheck // goldmark fails only to write, and a buffer does not
 	}
-	// A format floe draws in a later stage of its rebuild: told at the item, as one the template cannot use yet.
-	return nil, yamlpos.New(d.File, itemPos(d, it.At), "draw_format", it.Format)
+	// No schema of floe's has another format of floe's: one of one's own comes with the stage that draws it.
+	//nolint:err113 // floe's own mistake
+	return nil, fmt.Errorf("draw: floe does not draw an item of format %s yet", it.Format)
 }
 
 // itemPos returns where the value at the path at is written in d; the top of the file without a node.
