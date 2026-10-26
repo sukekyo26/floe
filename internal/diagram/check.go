@@ -214,8 +214,8 @@ func (l *layout) addLabel(lb *label, at string) {
 
 // place finds where a label placed by its region goes: the labels of one region are stacked, the first above,
 // and placed as one block where its corners keep the most room; the block is placed once, for its first label.
-// LIMIT: points 4 apart are tried, and at most 500 a side of a large circle; try them closer if a region narrow
-// enough to slip between comes to matter.
+// LIMIT: points 4 apart are tried, and at most 500 a side of where the circles all are within the canvas; try
+// them closer if a region narrow enough to slip between comes to matter.
 func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 	key := regionKey(lb.In)
 	st = l.stacks[key]
@@ -271,7 +271,7 @@ type stack struct {
 	labels []*label
 	next   int
 	x, top float64
-	tried  bool // whether any point of the canvas was tried
+	tried  bool // false when where the circles all are is outside the canvas: the label sticks out
 	found  bool
 }
 
