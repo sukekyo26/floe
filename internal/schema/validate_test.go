@@ -48,6 +48,7 @@ func TestValidate(t *testing.T) {
 				"d.yaml:5:6: maximum: got 1.8446744073709552×10¹⁹, want 10"),
 		},
 		{"none", `"properties": {"n": {"type":"integer"}}`, "n: 1\n", ""},
+		{"the shared keys left out", `"properties": {"a": {"type":"number"}}, "additionalProperties": false`, "title: Plan\ntheme: soft\na: 1\n", ""},
 	} {
 		if got := validate(t, tt.body, tt.data); got != tt.want {
 			t.Errorf("%s: Validate told\n%s\nwant\n%s", tt.name, got, tt.want)
@@ -110,5 +111,25 @@ func TestValidateNoNode(t *testing.T) {
 	d := &doc.Data{File: "d.yaml", Lang: "", Template: "", Theme: "", Title: "", Values: map[string]any{}, Root: nil, Where: nil}
 	if got := told(c.Validate(d)); got != "d.yaml:1:1: missing property 'n'" {
 		t.Errorf("Validate told %q", got)
+	}
+}
+
+// Validate checks a copy of the values without the keys floe reads itself, leaving the data's values as written.
+func TestValidateLeavesShared(t *testing.T) {
+	t.Parallel()
+
+	c, err := compile(t, `"properties": {"a": {"type":"number"}}, "additionalProperties": false`)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	d, err := doc.Read("d.yaml", []byte("template: t\nlang: en\ntitle: Plan\na: 1\n"))
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if err := c.Validate(d); err != nil {
+		t.Fatal(told(err))
+	}
+	if d.Values["title"] != "Plan" || d.Values["lang"] != "en" {
+		t.Errorf("Validate changed the values: %#v", d.Values)
 	}
 }

@@ -68,6 +68,11 @@ func TestReadChecks(t *testing.T) {
 			"t1/checks.yaml:2:10: field is empty: write the path of the field a failure points at, or leave field out to point at the item",
 		)},
 		{"syntax", "- expr: doc.a <\n  message: m\n", "t1/checks.yaml:1:15: unexpected token EOF"},
+		{"an empty step at the end", "- for: items.\n  expr: true\n  message: m\n", "t1/checks.yaml:1:8: for: items. has an empty step: write a key between each two dots, and no dot at its start or end, like sections.parts"},
+		{"an empty step at the start", "- for: .items\n  expr: true\n  message: m\n", "t1/checks.yaml:1:8: for: .items has an empty step: write a key between each two dots, and no dot at its start or end, like sections.parts"},
+		{"a dot alone", "- for: .\n  expr: true\n  message: m\n", "t1/checks.yaml:1:8: for: . has an empty step: write a key between each two dots, and no dot at its start or end, like sections.parts"},
+		{"an empty step inside", "- field: a..b\n  expr: false\n  message: m\n", "t1/checks.yaml:1:10: field: a..b has an empty step: write a key between each two dots, and no dot at its start or end, like sections.parts"},
+		{"for empty, told once", "- for: \"\"\n  expr: true\n  message: m\n", "t1/checks.yaml:1:8: for is empty: write the path of the list to check, or leave for out to check the whole"},
 		{"not true or false", "- expr: 1 + 1\n  message: m\n", "t1/checks.yaml:1:9: expected bool, but got int"},
 		{"in single quotes", "- expr: 'doc.a <'\n  message: m\n", "t1/checks.yaml:1:16: unexpected token EOF"},
 		{"an escape in quotes", "- expr: \"\\\"x\\\" ==\"\n  message: m\n", "t1/checks.yaml:1:9: unexpected token EOF"},
@@ -124,6 +129,14 @@ func TestChecksRun(t *testing.T) {
 		{"a power", "- expr: doc.b ** -1 > 1\n  message: m\n", "b: 0\n", "d.yaml: m (the check could not run: 0 ** -1 is not a finite number)"},
 		{"divided", "- expr: doc.a / 2 < 1\n  message: m\n", "a: 1\n", ""},
 		{"$env", "- expr: $env.doc.a > 1\n  message: m\n", "a: 1\n", "d.yaml: m"},
+		{"the shared keys", "- expr: doc.title == \"Plan\" && doc.lang == \"en\" && doc.template == \"t1\"\n  message: m\n", "title: Plan\n", ""},
+		{"the title as written", "- field: title\n  expr: doc.title == \"Plan\"\n  message: m\n", "title: \"  Plan  \"\n", `d.yaml:3:8: m ("  Plan  ")`},
+		{"a rule for the title", "- field: title\n  expr: len(doc.title) > 10\n  message: long title\n", "title: Plan\n", `d.yaml:3:8: long title ("Plan")`},
+		{"the theme written", "- expr: doc.theme == nil\n  message: m\n", "theme: soft\n", "d.yaml: m"},
+		{"the theme left out", "- expr: doc.theme == nil\n  message: m\n", "a: 1\n", ""},
+		{"the theme empty", "- expr: doc.theme == \"\"\n  message: m\n", "theme: \"\"\n", ""},
+		{"for to the title", "- for: title\n  expr: true\n  message: m\n", "title: Plan\n", "t1/checks.yaml:1:8: for: title does not lead to a list in d.yaml"},
+		{"for to the lang", "- for: lang\n  expr: true\n  message: m\n", "title: Plan\n", "t1/checks.yaml:1:8: for: lang does not lead to a list in d.yaml"},
 	} {
 		if got := runChecks(t, tt.src, tt.body); got != tt.want {
 			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
