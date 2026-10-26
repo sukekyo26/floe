@@ -19,6 +19,10 @@ func horizontal(side string) bool {
 	return side == "left" || side == "right"
 }
 
+func vertical(side string) bool {
+	return side == "top" || side == "bottom"
+}
+
 // noEnd is what endOf returns for an end that cannot be one.
 var noEnd = anchor{x: 0, y: 0, side: "", point: false}
 
@@ -109,10 +113,13 @@ func route(a, b anchor, via [][2]float64, straight bool) [][2]float64 {
 	}
 }
 
-// turns are the corners from a to b without via: none for ends in line, one for two points (across first) and
-// for sides across, two in the middle for facing sides (H V H, V H V).
+// turns are the corners from a to b without via: two out past both for sides of one way (both left, …), so that
+// the edge does not run along the parts' edges; none for ends in line; one for two points (across first) and for
+// sides across; two in the middle for facing sides (H V H, V H V).
 func turns(a, b anchor) [][2]float64 {
 	switch {
+	case oneWay(a, b):
+		return around(a, b)
 	case a.x == b.x || a.y == b.y:
 		return nil
 	case a.point && b.point:
@@ -120,7 +127,7 @@ func turns(a, b anchor) [][2]float64 {
 	case horizontal(a.side) && horizontal(b.side):
 		mid := (a.x + b.x) / 2
 		return [][2]float64{{mid, a.y}, {mid, b.y}}
-	case !horizontal(a.side) && !horizontal(b.side) && a.side != "" && b.side != "":
+	case vertical(a.side) && vertical(b.side):
 		mid := (a.y + b.y) / 2
 		return [][2]float64{{a.x, mid}, {b.x, mid}}
 	case a.side == "" && horizontal(b.side):
@@ -130,6 +137,31 @@ func turns(a, b anchor) [][2]float64 {
 		return [][2]float64{{b.x, a.y}}
 	default:
 		return [][2]float64{{a.x, b.y}}
+	}
+}
+
+// oneWay reports whether a and b are sides of parts that face one way.
+func oneWay(a, b anchor) bool {
+	return a.side == b.side && a.side != "" && !a.point && !b.point
+}
+
+// around are the corners of an edge between sides of one way: out past both ends, so that it does not run
+// along the parts' edges.
+func around(a, b anchor) [][2]float64 {
+	const out = 20 // how far past the parts it runs
+	switch a.side {
+	case "left":
+		x := min(a.x, b.x) - out
+		return [][2]float64{{x, a.y}, {x, b.y}}
+	case "right":
+		x := max(a.x, b.x) + out
+		return [][2]float64{{x, a.y}, {x, b.y}}
+	case "top":
+		y := min(a.y, b.y) - out
+		return [][2]float64{{a.x, y}, {b.x, y}}
+	default:
+		y := max(a.y, b.y) + out
+		return [][2]float64{{a.x, y}, {b.x, y}}
 	}
 }
 

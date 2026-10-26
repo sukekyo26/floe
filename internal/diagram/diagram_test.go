@@ -264,6 +264,10 @@ func TestEdges(t *testing.T) {
 			"  - dot: { name: d, cx: 40, cy: 40 }\n  - box: { name: b, x: 200, y: 150, w: 60, h: 40, rows: [b] }\n  - edge: { from: d, to: b, toSide: left }",
 			`d="M40,40 V170 H200"`,
 		},
+		{
+			"  - box: { name: a, x: 100, y: 20, w: 80, h: 29, rows: [a] }\n  - box: { name: b, x: 100, y: 120, w: 80, h: 29, rows: [b] }\n  - edge: { from: a, fromSide: left, to: b, toSide: left }",
+			`d="M100,34.5 H80 V134.5 H100"`,
+		},
 		{"  - box: { x: 100, y: 10, origin: centre, rows: [abc] }", `<rect x="72" y="10" width="56" height="29" rx="8"/>`},
 	} {
 		got, mistakes := draw(t, head+c.parts+"\n", render("en"))
@@ -303,6 +307,18 @@ func TestVennBounded(t *testing.T) {
 		"  - label: { text: x, in: [a, b] }\n"
 	if _, got := draw(t, apart, render("en")); !strings.Contains(got, `label "x" finds no room`) {
 		t.Errorf("circles apart = %q, want no room", got)
+	}
+}
+
+// A label placed by its region keeps out of every other circle, one of no name too.
+func TestVennUnnamed(t *testing.T) {
+	t.Parallel()
+
+	src := "width: 400\nheight: 300\ntitle: T\nparts:\n  - circle: { name: a, cx: 150, cy: 150, r: 100 }\n" +
+		"  - circle: { cx: 150, cy: 150, r: 60 }\n  - label: { text: x, in: [a] }\n"
+	got, mistakes := draw(t, src, inspect)
+	if mistakes != "" || strings.Contains(got, `label "x" 141.4,141`) {
+		t.Errorf("a label beside a circle of no name = %s %s, want it outside that circle", got, mistakes)
 	}
 }
 

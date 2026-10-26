@@ -172,9 +172,10 @@ func (l *layout) regionOf(at string, in []string) (region, bool) {
 		}
 		g.in = append(g.in, c)
 	}
-	for name, c := range l.circles {
-		if !slices.Contains(in, name) {
-			g.out = append(g.out, c)
+	// Every other circle is outside the region, one of no name too.
+	for _, p := range l.s.Parts {
+		if c := p.Circle; c != nil && (c.Name == "" || !slices.Contains(in, c.Name)) {
+			g.out = append(g.out, *c)
 		}
 	}
 	return g, ok
