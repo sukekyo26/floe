@@ -43,7 +43,7 @@ func lex(src []byte) []token {
 		if tt == css.ErrorToken {
 			return toks
 		}
-		toks = append(toks, token{tt: tt, data: bytes.Clone(data), at: at})
+		toks = append(toks, token{tt: tt, data: data, at: at})
 		at += len(data)
 	}
 }
