@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+</head>
+<body>
+<main>
+<header>
+{{- with .Data.logo}}
+<img src="{{asset .}}" alt="" width="48" height="48">
+{{- end}}
+<h1>{{.Title}}</h1>
+{{- range .Data.badges}}
+{{.}}
+{{- end}}
+</header>
+<ul>
+{{- range .Data.items}}
+<li>{{if .done}}✓ {{end}}{{.what}}</li>
+{{- end}}
+</ul>
+</main>
+</body>
+</html>

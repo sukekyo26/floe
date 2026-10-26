@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"slices"
 	"strconv"
 	"strings"
@@ -63,16 +64,7 @@ func Page(
 	}
 	var b bytes.Buffer
 	if err = page.Execute(&b, map[string]any{"Title": title, "Lang": d.Lang, "Data": data, "Calc": calc}); err != nil {
-		e, at, failed := executed(err, "page.html", t.PageSource())
-		if failed != nil {
-			return nil, failed
-		}
-		e.File, e.Line, e.Column = t.File("page.html"), 0, 0
-		e.Args = s.plainArgs(e.Args)
-		if at >= 0 {
-			e.Line, e.Column = textpos.Of(t.PageSource(), at)
-		}
-		return nil, e
+		return nil, pageMistake(t, s, err)
 	}
 	tree, named, err := readPage(k, d, s, b.Bytes())
 	if err != nil {
@@ -100,18 +92,62 @@ func Page(
 	return out.Bytes(), nil
 }
 
+// pageMistake is the mistake err of drawing page.html of t, with the items s: one of a file of its own (an
+// asset that cannot be read) told there; one of page.html, or of no file, at page.html's line and column.
+func pageMistake(t *kit.Template, s *items, err error) error {
+	e, at, failed := executed(err, "page.html", t.PageSource())
+	if failed != nil {
+		return failed
+	}
+	e.Args = s.plainArgs(e.Args)
+	if e.File == "" || e.File == t.File("page.html") {
+		e.File, e.Line, e.Column = t.File("page.html"), 0, 0
+		if at >= 0 {
+			e.Line, e.Column = textpos.Of(t.PageSource(), at)
+		}
+	}
+	return e
+}
+
 // readPage reads page, drawn from d with the items s, as a browser does, checks its items of format html, then,
 // their marks taken out, the page, and returns the page read and what it names. The page an item changed is not
 // checked: what it holds would be told by what the item did.
 func readPage(k *kit.Kit, d *doc.Data, s *items, page []byte) (*html.Node, named, error) {
-	tree, _ := html.Parse(bytes.NewReader(page)) //nolint:errcheck // a bytes.Reader fails no read, Parse's one error
+	end := s.secret + "end"
+	//nolint:errcheck // a bytes.Reader fails no read, Parse's one error
+	tree, _ := html.Parse(io.MultiReader(bytes.NewReader(page), strings.NewReader("<!--"+end+"-->")))
 	ns := namesIn(k)
 	if err := s.check(k, ns, d, tree); err != nil {
 		return nil, named{}, err
 	}
+	if !cutEnd(tree, end) {
+		return nil, named{}, yamlpos.New(d.File, d.Where["template"], "draw_page_cut")
+	}
 	s.unmark(tree)
 	n, err := checkPage(k, ns, d, tree)
 	return tree, n, err
+}
+
+// cutEnd takes end, the text of the comment put after the page drawn, out of tree, and reports whether it was
+// there: as the comment, or in a text the page ended in (one of an element html/template does not follow, as
+// xmp or plaintext, or svg's CDATA).
+// LIMIT: x/net/html v0.61.0 leaves out the rest of a page past a <template> in an <svg> or a <math>
+// (parse.go:672, which it calls a divergence from the spec, to keep from looping); floe tells that the page was
+// cut there, not where, nor whether page.html or a part.html wrote it. Drop this when the parser reads it whole.
+func cutEnd(tree *html.Node, end string) bool {
+	for n := range tree.Descendants() {
+		if n.Type != html.CommentNode && n.Type != html.TextNode || !strings.Contains(n.Data, end) {
+			continue
+		}
+		if n.Type == html.CommentNode && n.Data == end {
+			n.Parent.RemoveChild(n)
+		} else {
+			n.Data = strings.Replace(n.Data, "<!--"+end+"-->", "", 1)
+			n.Data = strings.Replace(n.Data, end, "", 1)
+		}
+		return true
+	}
+	return false
 }
 
 // withStyles puts a <style> of each of sheets at the end of the head of tree, which the parser always makes.

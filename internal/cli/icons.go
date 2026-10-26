@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"path/filepath"
-
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/icons"
@@ -95,21 +93,14 @@ an icon part (aws/…) and its category, tab-separated.`,
 }
 
 // iconsDir is the directory of the icon sets: FLOE_ICONS_DIR, else floe-icons under the XDG data directory,
-// else under ~/.local/share. Each is an absolute path, so that the icons are kept in one place wherever floe
-// runs: FLOE_ICONS_DIR written relative (~/icons in quotes too, which no shell read) is refused, and a relative
-// XDG_DATA_HOME is none, as its spec says.
+// else under ~/.local/share (dataDir). The icon sets need a place, and there is none without one.
 func (a *app) iconsDir() (string, error) {
-	if dir := a.getenv("FLOE_ICONS_DIR"); dir != "" {
-		if !filepath.IsAbs(dir) {
-			return "", usererr.New("icons_dir_relative", dir)
-		}
-		return dir, nil
+	dir, _, err := a.dataDir("FLOE_ICONS_DIR", "XDG_DATA_HOME", ".local/share", "floe-icons")
+	switch {
+	case err != nil:
+		return "", err
+	case dir == "":
+		return "", usererr.New("icons_no_dir")
 	}
-	if data := a.getenv("XDG_DATA_HOME"); filepath.IsAbs(data) {
-		return filepath.Join(data, "floe-icons"), nil
-	}
-	if home := a.getenv("HOME"); filepath.IsAbs(home) {
-		return filepath.Join(home, ".local", "share", "floe-icons"), nil
-	}
-	return "", usererr.New("icons_no_dir")
+	return dir, nil
 }

@@ -71,8 +71,13 @@ var messagesEN = map[string]string{
 
 	// kit: the parts, looks, themes and templates read at stage 1
 	"kit_name_twice":             "%s names both %s and %s: give one of them another name",
-	"kit_look_over_part":         "%s is the name of the part %s, which its parts and schemas name as a part: give this look another name",
-	"kit_part_over_look":         "%s is the name of the look %s, which its parts take with looks:: give this part another name",
+	"kit_name_floe":              "%s is the name of floe's %s, which floe's templates and parts would go on drawing and checking with: give yours another name",
+	"kit_dir_link":               "this is a link to a directory, and floe reads only real directories here: make it a directory (links to files are read)",
+	"kit_bad_name":               "floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it",
+	"kit_name_theme_file":        "%s names a file of every theme (%[1]s.css), which a theme's CSS for this part would be read as: give it another name",
+	"kit_asset_unknown":          `assets/ has no "%s": name a file under it, as a path from assets/ like img/logo.svg`,
+	"kit_example_name":           "example.yaml names the template %s; name it %s, after the template's directory",
+	"kit_for_undeclared":         "for %s: the schema allows no %s there; write a path of keys its schema declares",
 	"kit_not_number":             "%s takes a number, not %s",
 	"kit_num_digits":             "write num, or num and a count of significant digits from 1 before the number, like num 3",
 	"kit_part_yaml":              "write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
@@ -97,8 +102,8 @@ var messagesEN = map[string]string{
 	"kit_look_unknown":           "looks names %q, which is no part or look: name one floe or your own parts hold",
 	"kit_look_cycle_part":        "the part %s takes its own look (%s), which floe would follow forever; fix its part.yaml",
 	"kit_look_cycle_look":        "the look %s takes itself (%s), which floe would follow forever; fix its part.yaml",
-	"kit_template_file":          "%s is missing: a template has page.html and schema.json",
-	"kit_template_unread":        "floe reads no file of this name in a template: a template holds page.html and schema.json, and page.css, computed.yaml, checks.yaml, words.yaml and example.yaml if it likes; rename it after one, or remove it",
+	"kit_template_file":          "%s is missing: a template has page.html, schema.json and example.yaml",
+	"kit_template_unread":        "floe reads no file of this name in a template: a template holds page.html, schema.json and example.yaml, and page.css, computed.yaml, checks.yaml, words.yaml and assets/ if it likes; rename it after one, or remove it",
 
 	// css: the CSS floe puts in a page
 	"css_brace":    "this } closes no block: floe puts this CSS in a layer, which it would close, leaving the rules after it out of the layer and over the parts' styles",
@@ -122,6 +127,7 @@ var messagesEN = map[string]string{
 	"draw_noscript":     "the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out",
 	"draw_not_text":     "an item of format %s takes text: write it as text, in quotes where YAML would read a number, true, false or null",
 	"draw_html_whole":   "HTML changes the page around it at %s: close in it each element and comment it opens, and close no element it did not open",
+	"draw_page_cut":     "the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html or a part.html)",
 	"draw_html_placed":  "page.html puts the item %[1]s of format html in a text or an attribute of %[2]s, where HTML does not work: put it where elements go, or give the item another format",
 
 	// cli: the command line (English alone is told; the other languages hold the keys as every catalog does)
@@ -146,7 +152,7 @@ var messagesEN = map[string]string{
 	// LIMIT: the first %s of icons_broken, icons_download, icons_page_download, icons_bad_zip and
 	// icons_previous_left is encoding/json's, net/http's, archive/zip's or the system's English
 	"icons_unknown_set":        "unknown icon set \"%s\"; use %s",
-	"icons_dir_relative":       "FLOE_ICONS_DIR is %s, a relative path; set it to an absolute path",
+	"dir_relative":             "%s is %s, a relative path; set it to an absolute path",
 	"icons_no_dir":             "there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path",
 	"icons_not_fetched":        "%[1]s icons are not in %[2]s; run \"floe icons fetch %[3]s\" (downloads about %[4]s from %[5]s) and try again",
 	"icons_broken":             "cannot be read (%s); run \"floe icons fetch %s --force\" to fetch the icons again",

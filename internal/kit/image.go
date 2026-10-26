@@ -32,21 +32,11 @@ var imageTypes = map[string]string{
 // LIMIT: a file is taken by its name's type, what it holds unchecked: one that holds another shows broken.
 // LIMIT: a file made a FIFO between the Stat and the Open blocks the read; open it without blocking if it comes to.
 func ReadImage(files fs.FS, name, dir, of string) (template.URL, error) {
-	// os.Root's FS says only "invalid argument" of such a name.
-	if !fs.ValidPath(name) || name == "." {
-		return "", usererr.New("kit_image_path", name, of)
-	}
-	typ, ok := imageTypes[strings.ToLower(path.Ext(name))]
-	if !ok {
-		return "", usererr.New("kit_image_type", name)
+	typ, err := imageStat(files, name, dir, of)
+	if err != nil {
+		return "", err
 	}
 	at := dirs.Join(dir, name)
-	if fi, err := fs.Stat(files, name); err != nil {
-		return "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
-	} else if !fi.Mode().IsRegular() {
-		// A FIFO would block the read.
-		return "", usererr.New("kit_image_not_file", name)
-	}
 	f, err := files.Open(name)
 	if err != nil {
 		return "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
@@ -70,6 +60,31 @@ func ReadImage(files fs.FS, name, dir, of string) (template.URL, error) {
 	}
 	//nolint:gosec // G203: an image of a type floe takes, as a data URI
 	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b)), nil
+}
+
+// imageStat checks the image name of files, the directory dir, as ReadImage does without reading it: a name floe
+// reads, an extension of an image floe takes, a regular file, of maxImage at most. It returns the type of its
+// data URI.
+func imageStat(files fs.FS, name, dir, of string) (string, error) {
+	// os.Root's FS says only "invalid argument" of such a name.
+	if !fs.ValidPath(name) || name == "." {
+		return "", usererr.New("kit_image_path", name, of)
+	}
+	typ, ok := imageTypes[strings.ToLower(path.Ext(name))]
+	if !ok {
+		return "", usererr.New("kit_image_type", name)
+	}
+	fi, err := fs.Stat(files, name)
+	switch {
+	case err != nil:
+		return "", usererr.CannotRead(dirs.Join(dir, name), err) //nolint:wrapcheck // the system's words, at the file
+	case !fi.Mode().IsRegular():
+		// A FIFO would block the read.
+		return "", usererr.New("kit_image_not_file", name)
+	case fi.Size() > maxImage:
+		return "", tooLarge(name, fi.Size())
+	}
+	return typ, nil
 }
 
 // tooLarge refuses the image name of size bytes, saying by how much: one just over the limit would be 1 MiB as

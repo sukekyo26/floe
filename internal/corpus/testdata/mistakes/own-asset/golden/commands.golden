@@ -1,0 +1,12 @@
+$ floe part check
+exit 0
+$ floe template check
+exit 0
+$ floe check memo.yaml
+exit 1
+--- stderr
+$SAMPLE/own/templates/memo/page.html:3:19: assets/ has no "Logo.svg": name a file under it, as a path from assets/ like img/logo.svg
+$ floe render --out-dir $TMP/pages/memo.yaml memo.yaml
+exit 1
+--- stderr
+$SAMPLE/own/templates/memo/page.html:3:19: assets/ has no "Logo.svg": name a file under it, as a path from assets/ like img/logo.svg

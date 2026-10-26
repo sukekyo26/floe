@@ -1,0 +1,12 @@
+lang: en
+template: memo
+theme: dusk
+title: The week's memo
+logo: img/logo.svg
+badges:
+  - label: weekly
+    tone: accent
+items:
+  - what: Read the plan
+    done: true
+  - what: Write the design of B7

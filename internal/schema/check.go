@@ -202,9 +202,9 @@ func requiredOf(s *jsonschema.Schema) []string {
 	return required
 }
 
-// checkPart refuses one of Formats in the part compiled, or in a Shared schema it refers to, where it is
-// written.
-func (c *Compiled) checkPart() error {
+// CheckPart refuses one of Formats in the part compiled (CompilePart), or in a Shared schema it refers to,
+// where it is written: a trust boundary, as the checks of the data's HTML reach the template's items alone.
+func (c *Compiled) CheckPart() error {
 	var found usererr.List
 	own := func(base string) bool { return base == c.url }
 	c.every(c.Root, own, func(n *jsonschema.Schema) {

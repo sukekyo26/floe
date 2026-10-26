@@ -45,9 +45,9 @@ func drawn(t *testing.T, k *kit.Kit, src string, o tmpl.Options) string {
 	return ""
 }
 
-// mine is a template of one's own: page.html and schema.json, with the files more gives.
+// mine is a template of one's own: page.html, schema.json and an example.yaml, with the files more gives.
 func mine(page, schema string, more map[string]string) map[string]string {
-	files := map[string]string{"mine/page.html": page, "mine/schema.json": schema}
+	files := map[string]string{"mine/page.html": page, "mine/schema.json": schema, "mine/example.yaml": "lang: en\ntemplate: mine\n"}
 	for name, text := range more {
 		files["mine/"+name] = text
 	}
@@ -233,13 +233,15 @@ func TestLoadStops(t *testing.T) {
 		{"templates", kit.Sources{
 			Parts: kit.Dir{FS: nil, Name: ""}, Themes: kit.Dir{FS: nil, Name: ""},
 			Templates: kit.Dir{FS: mapFS(map[string]string{
-				"nopage/schema.json": mineSchema,
-				"escape/schema.json": mineSchema,
-				"escape/page.html":   "<!doctype html><html><head></head><body><a {{if .Data.n}}href{{end}}>x</a></body></html>",
+				"nopage/schema.json":  mineSchema,
+				"escape/schema.json":  mineSchema,
+				"escape/page.html":    "<!doctype html><html><head></head><body><a {{if .Data.n}}href{{end}}>x</a></body></html>",
+				"escape/example.yaml": "lang: en\ntemplate: escape\n",
+				"nopage/example.yaml": "lang: en\ntemplate: nopage\n",
 			}), Name: "templates"},
 		}, []string{
 			"templates/escape/page.html:1:49: {{if}} branches end in different contexts",
-			"templates/nopage: page.html is missing: a template has page.html and schema.json",
+			"templates/nopage: page.html is missing: a template has page.html, schema.json and example.yaml",
 		}},
 		{"a part", kit.Sources{
 			Parts: kit.Dir{FS: mapFS(map[string]string{
@@ -333,5 +335,56 @@ func TestComputedNamedInJapanese(t *testing.T) {
 	got, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\n"), none)
 	if err != nil || !strings.Contains(string(got), "<p>3</p>") {
 		t.Errorf("drew %s, %v; want <p>3</p>", got, told(err))
+	}
+}
+
+// A word page.html names that its language has not is told at page.html's line and column, as a mistake of
+// page.html made with no file is.
+func TestPageWordsAtTheirLine(t *testing.T) {
+	t.Parallel()
+
+	page := strings.Replace(minePage, "{{with .Data.note}}{{.}}{{end}}", `<p>{{word "zz"}}</p>`, 1)
+	k := ownKit(t, nil, mine(page, mineSchema, map[string]string{"words.yaml": "en: {a: A}\n"}))
+	if got, want := drawn(t, k, "lang: en\ntemplate: mine\n", none), `templates/mine/page.html:4:6: words.yaml has no word "zz" in en`; got != want {
+		t.Errorf("told %q, want %q", got, want)
+	}
+}
+
+// A page x/net/html leaves the rest of out, past a <template> in an <svg> or a <math>, is refused at the data's
+// template:, whether page.html or a part writes it; a <template> elsewhere, and a page ending in text the
+// template does not follow, are drawn.
+func TestPageCutShort(t *testing.T) {
+	t.Parallel()
+
+	const cut = "d.yaml:2:11: the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html or a part.html)"
+	part := map[string]string{
+		"t/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+		"t/part.html":   `<div data-floe-part="t"><math><mi><template>x</template></mi></math></div>`,
+		"t/part.css":    "",
+	}
+	for _, tt := range []struct {
+		name, body, want string
+	}{
+		{"foreignObject", "<svg><foreignObject><template>x</template></foreignObject></svg><p>after</p>", cut},
+		// html/template and the parser read a <title> as text, the <template> too.
+		{"svg's title", "<svg><title><template>x</template></title></svg><p>after</p>", ""},
+		{"a part's math", "{{with .Data.t}}{{.}}{{end}}<p>after</p>", cut},
+		{"a template outside", "<template>x</template><svg><text>t</text></svg><template>y</template><p>after</p>", ""},
+		{"ending in xmp", "<xmp>x", ""},
+	} {
+		schema := `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"t": {"$ref": "floe:///parts/t.json"}}}`
+		page := "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head>\n<body>\n" + tt.body + "\n</body></html>\n"
+		k := ownKit(t, part, mine(page, schema, nil))
+		out, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nt: {}\n"), none)
+		got := ""
+		if err != nil {
+			got = told(err)
+		}
+		if got != tt.want {
+			t.Errorf("%s: told %q, want %q", tt.name, got, tt.want)
+		}
+		if err == nil && strings.Contains(tt.body, "after") && !strings.Contains(string(out), "<p>after</p>") {
+			t.Errorf("%s: the page drawn has no <p>after</p>", tt.name)
+		}
 	}
 }

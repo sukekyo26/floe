@@ -213,6 +213,8 @@ func (c check) items(whole item) ([]item, bool) {
 // itemsAt adds to found the items of the lists at steps under v, v being at the path at: a list on the way is
 // gone through item by item. A list or value the data leaves out holds none, and so does an item of a list on
 // the way that is not keys and values or a list. It returns false when what is at steps is not a list.
+// LIMIT: a for through a key the data may hold but leaves out finds none, and passes; kit refuses only a key
+// the schema forbids (additionalProperties: false), so for: itemz under an open object passes unseen.
 func itemsAt(v any, steps, at []string, found *[]item) bool {
 	switch v := v.(type) {
 	case nil:
@@ -266,4 +268,25 @@ func (c check) failure(d *doc.Data, at []string, err error) *usererr.Error {
 	default:
 		return place("rules_item", c.Message)
 	}
+}
+
+// For is the for of a check: its path of keys, and where it is written.
+type For struct {
+	Path string
+	At   yamlpos.Pos
+}
+
+// File returns the file of c, as its mistakes name it.
+func (c *Checks) File() string { return c.file }
+
+// Fors returns the for of each check of c that has one, in order: what the schema the checks are of can
+// refuse, as the checks do not read it.
+func (c *Checks) Fors() []For {
+	var fors []For
+	for _, one := range c.list {
+		if one.For != "" {
+			fors = append(fors, For{Path: one.For, At: one.forAt})
+		}
+	}
+	return fors
 }

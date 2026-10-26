@@ -17,6 +17,24 @@ type Step struct {
 	PartRoot     *jsonschema.Schema
 	Props        map[string]*jsonschema.Schema
 	Items        *jsonschema.Schema
+	closed       []*jsonschema.Schema // those gone through with additionalProperties: false
+}
+
+// Forbids reports whether a schema the step went through forbids the key in an object: its
+// additionalProperties is false, and neither its own properties nor its patternProperties take the key, as
+// jsonschema reads them. A schema of additionalProperties that refuses all ({"not": {}}) is not taken.
+func (st Step) Forbids(key string) bool {
+	for _, s := range st.closed {
+		if _, ok := s.Properties[key]; ok {
+			continue
+		}
+		if !slices.ContainsFunc(slices.Collect(maps.Keys(s.PatternProperties)), func(re jsonschema.Regexp) bool {
+			return re.MatchString(key)
+		}) {
+			return true
+		}
+	}
+	return false
 }
 
 // Follow returns the step of s, looking in this order: one of Formats on s stops there (drawn by floe,
@@ -30,7 +48,14 @@ type Step struct {
 // LIMIT: what floe draws under allOf and the like, and under the array form of items and additionalItems
 // (2019-09), is refused as unreached, not drawn.
 func (c *Compiled) Follow(s *jsonschema.Schema) Step {
-	st, _ := c.step(s, map[*jsonschema.Schema]bool{})
+	st, through := c.step(s, map[*jsonschema.Schema]bool{})
+	if st.Part == "" && st.Format == "" {
+		for _, s := range through {
+			if closed, ok := s.AdditionalProperties.(bool); ok && !closed {
+				st.closed = append(st.closed, s)
+			}
+		}
+	}
 	return st
 }
 
@@ -38,19 +63,19 @@ func (c *Compiled) Follow(s *jsonschema.Schema) Step {
 func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) (Step, []*jsonschema.Schema) {
 	through := make([]*jsonschema.Schema, 1, 2)
 	through[0] = s
-	own := Step{Part: "", Format: "", PartRoot: nil, Props: s.Properties, Items: itemsOf(s)}
+	own := Step{Part: "", Format: "", PartRoot: nil, Props: s.Properties, Items: itemsOf(s), closed: nil}
 	if seen[s] {
-		return Step{Part: "", Format: "", PartRoot: nil, Props: nil, Items: nil}, through
+		return Step{Part: "", Format: "", PartRoot: nil, Props: nil, Items: nil, closed: nil}, through
 	}
 	seen[s] = true
 	if f := floeFormat(s); f != "" {
-		return Step{Part: "", Format: f, PartRoot: nil, Props: nil, Items: nil}, through
+		return Step{Part: "", Format: f, PartRoot: nil, Props: nil, Items: nil, closed: nil}, through
 	}
 	if s.Ref == nil {
 		return own, through
 	}
 	if part, ok := c.partRoot(s.Ref); ok {
-		return Step{Part: part, Format: "", PartRoot: s.Ref, Props: nil, Items: nil}, through
+		return Step{Part: part, Format: "", PartRoot: s.Ref, Props: nil, Items: nil, closed: nil}, through
 	}
 	if !c.followed(s, s.Ref) {
 		return own, through
@@ -327,4 +352,42 @@ func (w *walker) value(from *jsonschema.Schema, v reflect.Value) {
 		}
 	default:
 	}
+}
+
+// Forbidding returns the first of steps, a path of keys from the root of c, that a schema on the way forbids
+// (Step.Forbids), and false for none. A list on the way is gone through by its items, the step kept, as a
+// check's for is; a part's value from its schema's root. Where the steps lead to what Follow does not know
+// (a format, a schema of neither the key nor items, one met again in going through items), the rest is not
+// known to be forbidden.
+func (c *Compiled) Forbidding(steps []string) (string, bool) {
+	s := c.Root
+	for _, key := range steps {
+		seen := map[*jsonschema.Schema]bool{}
+	step:
+		for {
+			if seen[s] {
+				return "", false
+			}
+			seen[s] = true
+			st := c.Follow(s)
+			next, declared := st.Props[key]
+			switch {
+			case st.Part != "":
+				s = st.PartRoot
+			case declared && st.Forbids(key):
+				// Declared beside a $ref to a schema of additionalProperties: false, which takes it not.
+				return key, true
+			case declared:
+				s = next
+				break step
+			case st.Items != nil:
+				s = st.Items
+			case st.Forbids(key):
+				return key, true
+			default:
+				return "", false
+			}
+		}
+	}
+	return "", false
 }

@@ -1,0 +1,10 @@
+lang: en
+template: memo
+title: A memo
+logo: img/logo.svg
+badges:
+  - label: draft
+items:
+  - what: Write the memo
+    done: true
+  - what: Send it

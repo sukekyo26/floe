@@ -1,0 +1,10 @@
+$ floe part check
+exit 0
+$ floe template check
+exit 0
+$ floe check memo.yaml
+exit 0
+$ floe render --out-dir $TMP/pages/memo.yaml memo.yaml
+exit 0
+--- stdout
+$TMP/pages/memo.yaml/memo.html

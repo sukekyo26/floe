@@ -77,6 +77,7 @@ func samples(t *testing.T) []string {
 type sample struct {
 	dir, tmp   string
 	keepsPages bool
+	env        map[string]string // FLOE_PARTS_DIR and the like, for the directories of one's own it holds
 	commands   strings.Builder
 	files      map[string][]byte
 }
@@ -88,7 +89,22 @@ func runSample(t *testing.T, name, dir string) map[string][]byte {
 
 	tmp := realPath(t, t.TempDir())
 	// A sample of mistakes is for what floe tells: its golden/ holds commands.golden alone.
-	s := &sample{dir: realPath(t, dir), tmp: tmp, keepsPages: filepath.Dir(name) != mistakes, files: map[string][]byte{}}
+	s := &sample{
+		dir: realPath(t, dir), tmp: tmp, keepsPages: filepath.Dir(name) != mistakes, env: map[string]string{},
+		files: map[string][]byte{},
+	}
+	// One's own parts, themes and templates, in own/: checked first, as an agent checks what it wrote.
+	for _, kind := range []string{"parts", "themes", "templates"} {
+		if fi, err := os.Stat(filepath.Join(s.dir, "own", kind)); err == nil && fi.IsDir() {
+			s.env["FLOE_"+strings.ToUpper(kind)+"_DIR"] = filepath.Join(s.dir, "own", kind)
+		}
+	}
+	if len(s.env) > 0 {
+		s.run(t, "part", "check")
+	}
+	if _, ok := s.env["FLOE_TEMPLATES_DIR"]; ok {
+		s.run(t, "template", "check")
+	}
 
 	var data []string
 	for _, file := range s.glob(t, "*", isFile) {
@@ -222,7 +238,8 @@ func (s *sample) run(t *testing.T, args ...string) int {
 	t.Helper()
 
 	var stdout, stderr bytes.Buffer
-	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: s.dir, Getenv: nil})
+	getenv := func(key string) string { return s.env[key] }
+	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: s.dir, Getenv: getenv})
 	stand := strings.NewReplacer(s.tmp, "$TMP", s.dir, "$SAMPLE")
 	out := stand.Replace(stdout.String())
 	fmt.Fprintf(&s.commands, "$ floe %s\nexit %d\n", stand.Replace(strings.Join(args, " ")), code)

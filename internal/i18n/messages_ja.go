@@ -65,8 +65,13 @@ var messagesJA = map[string]string{
 
 	// kit: 段 1 で読む部品・見た目・テーマ・テンプレート
 	"kit_name_twice":             "%s が %s と %s の両方の名前です。どちらかの名前を変えてください",
-	"kit_look_over_part":         "%s は部品 %s の名前です。そこの部品と schema が部品として名指すので、この見た目の名前を変えてください",
-	"kit_part_over_look":         "%s は見た目 %s の名前です。そこの部品が looks: で借りるので、この部品の名前を変えてください",
+	"kit_name_floe":              "%s は floe の %s の名前です。floe のテンプレートと部品は floe のものを使って描き、確かめ続けるので、別の名前にしてください",
+	"kit_dir_link":               "これはディレクトリへのリンクで、floe はここでは本物のディレクトリだけを読みます。ディレクトリにしてください（ファイルへのリンクは読みます）",
+	"kit_bad_name":               "floe はこの名前を扱いません。小文字・数字・-・_ で、小文字か数字で始まる名前に変えてください",
+	"kit_name_theme_file":        "%s はどのテーマにもあるファイル（%[1]s.css）の名前で、テーマのこの部品の CSS がそれとして読まれます。別の名前にしてください",
+	"kit_asset_unknown":          "assets/ に「%s」がありません。assets/ からのパス（img/logo.svg など）でその下のファイルを名指してください",
+	"kit_example_name":           "example.yaml がテンプレート %s を名指しています。テンプレートのディレクトリの名前 %s にしてください",
+	"kit_for_undeclared":         "for %s：schema はそこに %s を許しません。schema が宣言する鍵の道を書いてください",
 	"kit_not_number":             "%s は数を取ります。%s は数ではありません",
 	"kit_num_digits":             "num だけか、num と 1 以上の有効数字の桁数を数の前に書いてください（num 3 のように）",
 	"kit_part_yaml":              "part.yaml はキーと値で書いてください。looks: に部品が借りる見た目のリスト（looks: [panel]）、見た目だけの部品なら description: にその説明です",
@@ -91,8 +96,8 @@ var messagesJA = map[string]string{
 	"kit_look_unknown":           "looks の %q は部品でも見た目でもありません。floe か自分の部品にある名前を書いてください",
 	"kit_look_cycle_part":        "部品 %s が自分の見た目を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",
 	"kit_look_cycle_look":        "見た目 %s が自分を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",
-	"kit_template_file":          "%s がありません。テンプレートには page.html と schema.json が要ります",
-	"kit_template_unread":        "floe はテンプレートの中のこの名前のファイルを読みません。テンプレートは page.html と schema.json を持ち、要るなら page.css・computed.yaml・checks.yaml・words.yaml・example.yaml も持ちます。どれかの名前にするか、消してください",
+	"kit_template_file":          "%s がありません。テンプレートには page.html・schema.json・example.yaml が要ります",
+	"kit_template_unread":        "floe はテンプレートの中のこの名前のファイルを読みません。テンプレートは page.html・schema.json・example.yaml を持ち、要るなら page.css・computed.yaml・checks.yaml・words.yaml・assets/ も持ちます。どれかの名前にするか、消してください",
 
 	// css: floe がページに入れる CSS
 	"css_brace":    "この } はどのブロックも閉じていません。floe はこの CSS を層に入れるので、この } が層を閉じ、後の規則が層の外に出て部品のスタイルに勝ちます",
@@ -116,6 +121,7 @@ var messagesJA = map[string]string{
 	"draw_noscript":     "このファイルを描いたページに <noscript> があります。page.html、部品の part.html、format html の項目のどれかが書いています。floe はその中を確かめられず、スクリプトを切ると中が働くので、書かないでください",
 	"draw_not_text":     "format %s の項目は文字です。文字で書いてください。YAML が数・true・false・null と読むものは引用符で囲んでください",
 	"draw_html_whole":   "HTML が %s で周りのページを変えています。開いた要素とコメントは項目の中で閉じ、開いていない要素は閉じないでください",
+	"draw_page_cut":     "描いたページが途中で切れました。HTML の読み手は <svg> か <math> の中の <template> から後ろを読みません。その <template> を外に出してください（page.html か部品の part.html）",
 	"draw_html_placed":  "page.html が format html の項目 %[1]s を %[2]s の文字か属性の中に置いていて、そこでは HTML が働きません。要素を置ける所に置くか、項目の format を変えてください",
 
 	// cli: コマンド行（言うのは英語だけ。ほかの言語も、どの目録とも同じく鍵を持つ）
@@ -136,7 +142,7 @@ var messagesJA = map[string]string{
 
 	// icons
 	"icons_unknown_set":        "アイコン集 \"%s\" はありません。%s を使ってください",
-	"icons_dir_relative":       "FLOE_ICONS_DIR が相対パス %s です。絶対パスにしてください",
+	"dir_relative":             "%s が相対パス %s です。絶対パスにしてください",
 	"icons_no_dir":             "HOME が絶対パスでないので、アイコンのディレクトリがありません。FLOE_ICONS_DIR に絶対パスを設定してください",
 	"icons_not_fetched":        "%[1]s のアイコンが %[2]s にありません。floe icons fetch %[3]s を実行してから（%[5]s から約 %[4]s を取得します）、やり直してください",
 	"icons_broken":             "読めません（%s）。floe icons fetch %s --force でアイコンを取り直してください",
