@@ -32,25 +32,24 @@ func readWords(file string, src []byte) (words, error) {
 		return nil, yamlpos.New(file, yamlpos.Of(body), "kit_words_yaml")
 	}
 	w := words{}
-	written := map[string]string{} // the tag of each language as written first
+	var tags []string
 	var found usererr.List
 	for _, v := range top.Values {
 		key := yamlpos.KeyOf(v)
 		tag := key.GetToken().Value
-		lang := string(i18n.Tag(tag))
+		tags = append(tags, tag)
 		// Its words are read whatever else is wrong, so that their mistakes are told in the same run.
 		ws, more, err := readLang(file, tag, key, v.Value)
 		if err != nil {
 			return nil, err
 		}
 		found = append(found, more...)
-		if first, twice := written[lang]; twice {
+		if first := i18n.Again(tags, len(tags)-1); first != "" {
 			// A tag's case and _ mean nothing to the lookup: EN after en would take its place unseen.
-			found = append(found, yamlpos.New(file, yamlpos.Of(key), "kit_words_lang_twice", tag, first))
+			found = append(found, yamlpos.New(file, yamlpos.Of(key), "lang_twice", tag, first))
 			continue
 		}
-		written[lang] = tag
-		w[lang] = ws
+		w[string(i18n.Tag(tag))] = ws
 	}
 	if found != nil {
 		return nil, found.Sorted().Err()

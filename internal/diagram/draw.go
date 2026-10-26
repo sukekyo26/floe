@@ -1,6 +1,7 @@
 package diagram
 
 import (
+	"cmp"
 	_ "embed" // the template and the zoom script
 	"encoding/json"
 	"fmt"
@@ -49,9 +50,9 @@ type Icons interface {
 // is told.
 type NoIcons struct{ Err error }
 
-// Lookup returns Err.
+// Lookup returns Err, or icons_no_dir for none.
 func (n NoIcons) Lookup(string) ([]byte, error) {
-	return nil, n.Err
+	return nil, cmp.Or(n.Err, error(usererr.New("icons_no_dir"))) //nolint:wrapcheck // Err as given, or the mistake
 }
 
 // Drawer draws specs that its schema checks: the one entry of a spec, wherever it comes from.
@@ -77,7 +78,7 @@ func (d *Drawer) Draw(spec any, opts Options) (template.HTML, error) {
 
 func (d *Drawer) layout(v any, opts Options) (*layout, error) {
 	if opts.Icons == nil {
-		opts.Icons = NoIcons{Err: usererr.New("icons_no_dir")}
+		opts.Icons = NoIcons{Err: nil}
 	}
 	if err := d.schema.ValidateAt(v); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes in the library's words, at their pointers

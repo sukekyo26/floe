@@ -85,6 +85,7 @@ func TestDiagramLanguage(t *testing.T) {
 		{"ja_JP", "{en: Flow, ja: 流れ}", `<html lang="ja-jp">`, `aria-label="流れ"`},
 		{"JA", "{en: Flow, JA: Nagare}", `<html lang="ja">`, `aria-label="Nagare"`},
 		{"ja_JP", "{en: Flow, ja_JP: Nagare}", `<html lang="ja-jp">`, `aria-label="Nagare"`},
+		{`" ja "`, "{en: Flow, ja: 流れ}", `<html lang="ja">`, `aria-label="流れ"`},
 	} {
 		spec := `{width: 300, height: 100, title: ` + tt.title + `, parts: [{box: {x: 20, y: 20, w: 80, h: 40, rows: [A]}}]}`
 		page := drawPage(t, k, diagramPage(tt.lang, spec), none)
@@ -92,9 +93,14 @@ func TestDiagramLanguage(t *testing.T) {
 			t.Errorf("lang %s, title %s: want %s and %s", tt.lang, tt.title, tt.html, tt.want)
 		}
 	}
-	twice := `{width: 300, height: 100, title: {en: Flow, JA: a, ja: b}, parts: []}`
-	want := `d.yaml:7:19: a text of the diagram is written in JA and in ja, one language, as a tag's case, ` +
-		`or _ for -, does not tell languages apart; keep one`
+	// Each text of two tags of one language at its part, the other mistakes of the layout with them.
+	twice := `{width: 300, height: 100, title: {en: Flow, JA: a, ja: b}, parts: [` +
+		`{box: {x: 20, y: 20, w: 80, h: 40, rows: [{en: A, JA: x, ja: y}]}}, {box: {x: 900, y: 20, w: 80, h: 40, rows: [B]}}]}`
+	want := lines(
+		`d.yaml:7:52: ja is the language JA again: a tag's case, or _ for -, does not tell languages apart`,
+		`d.yaml:7:86: ja is the language JA again: a tag's case, or _ for -, does not tell languages apart`,
+		`d.yaml:7:154: box "B" sticks out of the 300x100 canvas`,
+	)
 	if got := drawn(t, k, diagramPage("en", twice), none); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}

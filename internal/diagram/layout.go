@@ -108,7 +108,15 @@ func newLayout(s *spec, opts Options) *layout {
 	b, _ := json.Marshal(s) //nolint:errcheck,errchkjson // read from JSON, it writes as JSON
 	sum := sha256.Sum256(b)
 	l.id = "dg" + strconv.Itoa(opts.Seq) + "-" + hex.EncodeToString(sum[:3])
+	if args := s.Title.twice(); args != nil {
+		l.problem("#/title", "lang_twice", args...)
+	}
 	for i, p := range s.Parts {
+		for _, t := range p.texts() {
+			if args := t.twice(); args != nil {
+				l.problem(pointer(i), "lang_twice", args...)
+			}
+		}
 		l.name(i, p)
 	}
 	for _, p := range s.Parts {

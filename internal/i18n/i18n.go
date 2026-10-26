@@ -53,10 +53,21 @@ func New(lang Lang) *Catalog {
 	return &Catalog{chain: Fallbacks(lang)}
 }
 
-// Tag is the language tag written as tag, as it is matched and written into a page: in lower case, with _ read
-// as -, as BCP 47 reads it.
+// Tag is the language tag written as tag, as it is matched and written into a page: trimmed of spaces, in lower
+// case, with _ read as -, as BCP 47 reads it.
 func Tag(tag string) Lang {
-	return Lang(strings.ReplaceAll(strings.ToLower(tag), "_", "-"))
+	return Lang(strings.ReplaceAll(strings.ToLower(strings.TrimSpace(tag)), "_", "-"))
+}
+
+// Again returns the first of tags before tags[i] that is the language tags[i] is, as Tag reads them; "" for
+// none. Two tags of one language are a mistake wherever languages are written by tag (lang_twice).
+func Again(tags []string, i int) string {
+	for _, t := range tags[:i] {
+		if Tag(t) == Tag(tags[i]) {
+			return t
+		}
+	}
+	return ""
 }
 
 // Fallbacks lists where to look for a text in lang, in order: lang, lang without its last subtag, one at a
