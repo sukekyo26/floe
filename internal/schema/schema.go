@@ -22,8 +22,8 @@ import (
 	"golang.org/x/text/message"
 
 	"github.com/sukekyo26/floe/internal/bom"
+	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // Kind is what a schema floe holds by URL is to the template: a part, drawn by its part.html, or a schema
@@ -72,8 +72,8 @@ func read(file string, src []byte) (any, error) {
 	case errors.Is(err, io.EOF):
 		return nil, usererr.NewAt(file, 0, 0, "schema_empty")
 	case errors.Is(err, io.ErrUnexpectedEOF):
-		at := jsonPlace(src, len(bytes.TrimRight(src, " \t\n\r")))
-		return nil, usererr.LibraryAt(file, at.Line, at.Column, err.Error())
+		line, column := textpos.Of(src, len(bytes.TrimRight(src, " \t\n\r")))
+		return nil, usererr.LibraryAt(file, line, column, err.Error())
 	case errors.As(err, &syntax):
 	case errors.As(json.Unmarshal(src, new(json.RawMessage)), &syntax):
 		// jsonschema tells what follows the value without its place or character, which encoding/json tells.
@@ -81,23 +81,11 @@ func read(file string, src []byte) (any, error) {
 	default:
 		return nil, usererr.LibraryAt(file, 0, 0, err.Error())
 	}
+	// encoding/json can name a place inside a character ("\日" at the end of its first byte), which reads as
+	// the character's start as that byte is one column.
 	_, size := utf8.DecodeLastRune(src[:syntax.Offset])
-	at := jsonPlace(src, int(syntax.Offset)-size)
-	return nil, usererr.LibraryAt(file, at.Line, at.Column, err.Error())
-}
-
-// jsonPlace returns the line and column of the character starting at byte at of src: lines end at \n, \r or
-// \r\n, and columns count characters, a byte that is no UTF-8 as one. encoding/json can name a place inside a
-// character ("\日" at the end of its first byte), which reads as the character's start as that byte is one.
-func jsonPlace(src []byte, at int) yamlpos.Pos {
-	line, start := 1, 0
-	for i := 0; i < at; i++ {
-		switch {
-		case src[i] == '\n', src[i] == '\r' && (i+1 >= len(src) || src[i+1] != '\n'):
-			line, start = line+1, i+1
-		}
-	}
-	return yamlpos.Pos{Line: line, Column: utf8.RuneCount(src[start:at]) + 1}
+	line, column := textpos.Of(src, int(syntax.Offset)-size)
+	return nil, usererr.LibraryAt(file, line, column, err.Error())
 }
 
 // Formats are floe's formats: an item of one is drawn by floe, not by a part.

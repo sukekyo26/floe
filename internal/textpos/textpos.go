@@ -4,7 +4,7 @@ package textpos
 import "unicode/utf8"
 
 // Of returns the line and the column of the byte at of src, both from 1: a LF, a CRLF and a CR each end a
-// line, and the column counts the runes before it in its line.
+// line, and the column counts the runes before it in its line, a byte that is no UTF-8 as one.
 // LIMIT: a tab is one column, and U+2028, U+2029 and FF end no line.
 func Of(src []byte, at int) (line, column int) {
 	line, start := 1, 0
