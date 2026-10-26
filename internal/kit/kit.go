@@ -112,31 +112,15 @@ func Read(base *Kit, src Sources) (*Kit, error) {
 	return k, nil
 }
 
-// Part returns the part of k named so, its own or its base's. Parts and looks share their names: one's own
-// look hides its base's part of the name, and its own part the base's look.
+// Part returns the part of k named so, its own or its base's. Parts and looks share their names, and Read
+// refuses one's own of another kind than the base's of its name.
 func (k *Kit) Part(name string) (*Part, bool) {
-	for at := k; at != nil; at = at.base {
-		if p, ok := at.parts[name]; ok {
-			return p, true
-		}
-		if _, ok := at.looks[name]; ok {
-			return nil, false
-		}
-	}
-	return nil, false
+	return lookUp(k, name, func(k *Kit) map[string]*Part { return k.parts })
 }
 
-// Look returns the look of k named so, its own or its base's, as Part does.
+// Look returns the look of k named so, its own or its base's.
 func (k *Kit) Look(name string) (*Look, bool) {
-	for at := k; at != nil; at = at.base {
-		if l, ok := at.looks[name]; ok {
-			return l, true
-		}
-		if _, ok := at.parts[name]; ok {
-			return nil, false
-		}
-	}
-	return nil, false
+	return lookUp(k, name, func(k *Kit) map[string]*Look { return k.looks })
 }
 
 // Theme returns the theme of k named so, its own or its base's.
@@ -154,8 +138,7 @@ func (k *Kit) Resources() map[string]schema.Resource {
 	return maps.Clone(k.resources)
 }
 
-// Names returns the names of the parts, looks, themes and templates of k and its base, each sorted, a name
-// one's own hides as it does (Part).
+// Names returns the names of the parts, looks, themes and templates of k and its base, each sorted.
 func (k *Kit) Names() (parts, looks, themes, templates []string) {
 	for at := k; at != nil; at = at.base {
 		parts = append(parts, slices.Collect(maps.Keys(at.parts))...)
@@ -164,9 +147,7 @@ func (k *Kit) Names() (parts, looks, themes, templates []string) {
 		templates = append(templates, slices.Collect(maps.Keys(at.templates))...)
 	}
 	sorted := func(s []string) []string { return slices.Compact(slices.Sorted(slices.Values(s))) }
-	parts = slices.DeleteFunc(sorted(parts), func(n string) bool { _, ok := k.Part(n); return !ok })
-	looks = slices.DeleteFunc(sorted(looks), func(n string) bool { _, ok := k.Look(n); return !ok })
-	return parts, looks, sorted(themes), sorted(templates)
+	return sorted(parts), sorted(looks), sorted(themes), sorted(templates)
 }
 
 // lookUp returns the one named so of the things of k that of gives, k's own before its base's.

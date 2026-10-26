@@ -76,7 +76,7 @@ const partsURL = "floe:///parts/"
 
 // readParts reads into k the parts and looks of d, each a directory, a part one with a schema.json, and the
 // schemas the parts share, <name>.json beside them. A part, a look and a shared schema of one name, here or in
-// the base but of the same kind, are refused: they are the one URL, floe:///parts/<name>.json.
+// the base but of the same kind, are refused (clashes).
 func (k *Kit) readParts(d Dir) error {
 	dirs, err := entries(d, ".", true)
 	if err != nil {
@@ -92,7 +92,10 @@ func (k *Kit) readParts(d Dir) error {
 			shared = append(shared, name)
 		}
 	}
-	found := k.clashes(d, dirs, shared)
+	found, err := k.clashes(d, dirs, shared)
+	if err != nil {
+		return err
+	}
 	for _, name := range dirs {
 		if !refused(found, d, name) {
 			if failed := found.Add(k.readPart(d, name)); failed != nil {
@@ -111,18 +114,27 @@ func (k *Kit) readParts(d Dir) error {
 }
 
 // clashes refuses each of the parts and looks (dirs) and the shared schemas of d that is of a name another of
-// d is, or that one of the base of another kind is, told at it.
-func (k *Kit) clashes(d Dir, dirs, shared []string) usererr.List {
+// d is, or that one of the base of another kind is, told at it. A look over the base's part, or a part over
+// its look, is of another kind too: the base's parts and schemas name the base's by its name.
+func (k *Kit) clashes(d Dir, dirs, shared []string) (usererr.List, error) {
 	var found usererr.List
 	twice := func(at, name, other string) {
 		found = append(found, usererr.NewAt(at, 0, 0, "kit_name_twice", name, other, at))
 	}
 	for _, name := range dirs {
 		dir := path.Join(d.Name, name)
+		_, isPart, err := readFile(d, name, "schema.json")
+		if err != nil {
+			return nil, err
+		}
 		if slices.Contains(shared, name) {
 			twice(path.Join(d.Name, name+".json"), name, dir)
 		} else if r, ok := k.resources[partsURL+name+".json"]; ok && r.Kind == schema.Shared {
 			twice(dir, name, r.File)
+		} else if p, ok := k.base.Part(name); ok && !isPart {
+			found = append(found, usererr.NewAt(dir, 0, 0, "kit_look_over_part", name, p.dir))
+		} else if l, ok := k.base.Look(name); ok && isPart {
+			found = append(found, usererr.NewAt(dir, 0, 0, "kit_part_over_look", name, l.dir))
 		}
 	}
 	for _, name := range shared {
@@ -130,7 +142,7 @@ func (k *Kit) clashes(d Dir, dirs, shared []string) usererr.List {
 			twice(path.Join(d.Name, name+".json"), name, other)
 		}
 	}
-	return found
+	return found, nil
 }
 
 // refused reports whether found refuses the entry name of d.
@@ -171,8 +183,6 @@ func (k *Kit) readPart(d Dir, name string) error {
 				return failed
 			}
 			k.looks[name] = &Look{name: name, dir: dir, about: about, looks: looks, css: css, unread: unread}
-			// A look of one's own hides its base's part of the name: there is no part's schema of it.
-			delete(k.resources, partsURL+name+".json")
 		}
 		return yamlErr
 	}

@@ -61,6 +61,8 @@ var messagesEN = map[string]string{
 
 	// kit: the parts, looks, themes and templates read at stage 1
 	"kit_name_twice":              "%s names both %s and %s: give one of them another name",
+	"kit_look_over_part":          "%s is the name of the part %s, which its parts and schemas name as a part: give this look another name",
+	"kit_part_over_look":          "%s is the name of the look %s, which its parts take with looks:: give this part another name",
 	"kit_not_number":              "%s takes a number, not %s",
 	"kit_num_digits":              "write num, or num and a count of significant digits from 1 before the number, like num 3",
 	"kit_part_yaml":               "write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
@@ -74,5 +76,6 @@ var messagesEN = map[string]string{
 	"kit_words_lang_twice":        "%s is the language %s again: a tag's case does not tell languages apart",
 	"kit_words_unknown":           `the words of %s in words.yaml have no "%s"`,
 	"kit_words_unknown_elsewhere": `the words of %s in words.yaml have no "%s", which those of %s have: add it to %[1]s`,
+	"kit_words_none":              `there is no words.yaml to draw "%s" from: put one beside it, and write the word under en:`,
 	"kit_words_no_lang":           `words.yaml has no words in the page's language nor in en to draw "%s" in, but in %s: add en, or the page's language`,
 }

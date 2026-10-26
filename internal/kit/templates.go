@@ -89,6 +89,7 @@ type Template struct {
 	words    words
 	pages    pages // nil without a page.html
 	example  []byte
+	unread   []string
 }
 
 // Name returns the name of t.
@@ -111,6 +112,9 @@ func (t *Template) Computed() *rules.Computed { return t.computed }
 
 // Example returns the example.yaml of t, nil for none.
 func (t *Template) Example() []byte { return bytes.Clone(t.example) }
+
+// Unread returns the files of the directory of t it does not read.
+func (t *Template) Unread() []string { return slices.Clone(t.unread) }
 
 // templatesURL is where floe holds the schemas of the templates: floe:///templates/<name>/schema.json.
 const templatesURL = "floe:///templates/"
@@ -135,7 +139,7 @@ func (k *Kit) readTemplates(d Dir, partsRead bool) error {
 func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	t := &Template{
 		name: name, dir: path.Join(d.Name, name), schema: nil, css: nil, checks: nil, computed: nil, words: nil, pages: nil,
-		example: nil,
+		example: nil, unread: nil,
 	}
 	var found usererr.List
 	var err error
@@ -164,6 +168,11 @@ func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	}
 	if found != nil {
 		return found.Sorted().Err()
+	}
+	t.unread, err = unreadIn(d, name, "page.html", "page.css", "schema.json", "computed.yaml", "checks.yaml", "words.yaml",
+		"example.yaml")
+	if err != nil {
+		return err
 	}
 	k.templates[name] = t
 	return nil

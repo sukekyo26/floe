@@ -55,6 +55,8 @@ var messagesJA = map[string]string{
 
 	// kit: 段 1 で読む部品・見た目・テーマ・テンプレート
 	"kit_name_twice":              "%s が %s と %s の両方の名前です。どちらかの名前を変えてください",
+	"kit_look_over_part":          "%s は部品 %s の名前です。そこの部品と schema が部品として名指すので、この見た目の名前を変えてください",
+	"kit_part_over_look":          "%s は見た目 %s の名前です。そこの部品が looks: で借りるので、この部品の名前を変えてください",
 	"kit_not_number":              "%s は数を取ります。%s は数ではありません",
 	"kit_num_digits":              "num だけか、num と 1 以上の有効数字の桁数を数の前に書いてください（num 3 のように）",
 	"kit_part_yaml":               "part.yaml はキーと値で書いてください。looks: に部品が借りる見た目のリスト（looks: [panel]）、見た目だけの部品なら description: にその説明です",
@@ -68,5 +70,6 @@ var messagesJA = map[string]string{
 	"kit_words_lang_twice":        "%s は言語 %s の重なりです。言語タグは大文字と小文字で区別しません",
 	"kit_words_unknown":           "words.yaml の %s の言葉に「%s」がありません",
 	"kit_words_unknown_elsewhere": "words.yaml の %s の言葉に「%s」がありません。%s にはあります。%[1]s にも足してください",
+	"kit_words_none":              "「%s」を描く words.yaml がありません。隣に words.yaml を置き、en: の下にその言葉を書いてください",
 	"kit_words_no_lang":           "words.yaml に、ページの言語にも en にも「%s」を描く言葉がありません（あるのは %s）。en かページの言語を足してください",
 }
