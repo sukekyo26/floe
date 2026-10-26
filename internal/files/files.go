@@ -11,12 +11,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/sukekyo26/floe/internal/dirs"
 )
 
 var (
-	indexRe    = regexp.MustCompile(`(?i)^index\.html?$`)
 	nonSlugRe  = regexp.MustCompile(`[^a-z0-9]+`)
 	maxSlugLen = 64
 )
@@ -27,19 +24,10 @@ func IsDataFile(file string) bool {
 	return ext == ".yaml" || ext == ".yml"
 }
 
-// SlugFromFile derives a slug from a file name. index.html does not name anything, so it takes the name of
-// its directory instead; a relative file is resolved against cwd, and with no cwd ("") named by its path as
-// it is written.
-func SlugFromFile(file, cwd string) string {
+// SlugFromFile derives a slug from the name of file, without its extension.
+func SlugFromFile(file string) string {
 	name := filepath.Base(file)
-	if indexRe.MatchString(name) {
-		if abs, ok := dirs.Under(cwd, file); ok {
-			file = abs
-		}
-		name = filepath.Base(filepath.Dir(filepath.Clean(file)))
-	} else {
-		name = strings.TrimSuffix(name, filepath.Ext(name))
-	}
+	name = strings.TrimSuffix(name, filepath.Ext(name))
 	slug := nonSlugRe.ReplaceAllString(strings.ToLower(name), "-")
 	return strings.Trim(slug[:min(len(slug), maxSlugLen)], "-")
 }
@@ -49,7 +37,7 @@ func SlugFromFile(file, cwd string) string {
 // under a random name), so that one left there, or placed there, cannot keep its mode or lead the write
 // elsewhere. Its name is short, whatever the length of path's: a name the directory takes is written.
 func WriteAtomic(path string, data []byte, perm os.FileMode) error {
-	f, err := createNew(filepath.Join(filepath.Dir(path), ".floe-"), perm)
+	f, err := createNew(filepath.Join(filepath.Dir(path), ".floe-"), perm) // beside it: path is real, resolved
 	if err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}

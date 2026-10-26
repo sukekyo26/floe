@@ -37,8 +37,8 @@ type place struct {
 	name, wants string
 }
 
-// arg resolves path for the command, once: under the working directory (dirs.Under), folding its .. by its
-// letters, so that every place reads a path alike; a relative one is refused when the working directory
+// arg resolves path for the command, once: under the working directory (dirs.Under), as written, so that its ..
+// leads where the system says, and every place reads a path alike; a relative one is refused when the working directory
 // cannot be read (Env.Dir ""). "" is refused as empty, as a shell variable left unset gives it and it names
 // no file. A name of spaces alone is a file of that name.
 func (a *app) arg(path string, at place) arg {
@@ -143,7 +143,7 @@ func entryOf(p arg) entry {
 		return entry{abs: p.name, dir: nil, info: nil}
 	}
 	e := entry{abs: p.abs, dir: nil, info: nil}
-	if dir, err := os.Stat(filepath.Dir(e.abs)); err == nil {
+	if dir, err := os.Stat(dirs.Dir(e.abs)); err == nil {
 		e.dir = dir
 	}
 	if info, err := os.Lstat(e.abs); err == nil {

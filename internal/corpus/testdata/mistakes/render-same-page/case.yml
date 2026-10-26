@@ -1,7 +1,0 @@
-template: report
-lang: en
-title: t
-sections:
-  - heading: h
-    parts:
-      - text: hi

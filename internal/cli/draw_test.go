@@ -3,6 +3,7 @@ package cli_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -159,6 +160,39 @@ func TestRenderWritesTheOthers(t *testing.T) {
 	code, stdout, stderr := run(dir, "render", "a.yaml", "b.yaml", "c.yaml")
 	if code != 1 || stdout != "a.html\n" || strings.Count(stderr, "cannot be written") != 2 ||
 		!strings.HasPrefix(stderr, "b.html: ") || !strings.Contains(stderr, "\nc.html: ") {
+		t.Errorf("floe render = %d, %q, %q", code, stdout, stderr)
+	}
+}
+
+// A .. after a symlink leads where the system says: from where the link leads, not back from the link's name.
+func TestDotDotAfterLink(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"x.yaml": "lang: en\ntemplate: reprot\n", "real/x.yaml": good, "real/sub/y": ""})
+	if err := os.Symlink(filepath.Join("real", "sub"), filepath.Join(dir, "link")); err != nil {
+		t.Fatal(err)
+	}
+	file := "link/../x.yaml" // as written: filepath.Join would fold it
+	if code, _, stderr := run(dir, "check", file); code != 0 || stderr != "" {
+		t.Errorf("floe check %s = %d, %q: it read the x.yaml beside link, not real/x.yaml", file, code, stderr)
+	}
+	if code, stdout, stderr := run(dir, "render", file); code != 0 || stdout != "link/../x.html\n" || stderr != "" {
+		t.Errorf("floe render %s = %d, %q, %q", file, code, stdout, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "real", "x.html")); err != nil {
+		t.Errorf("real/x.html: %v", err)
+	}
+}
+
+// Two pages are one only when the system says so: on Linux a.html and A.html are two files, both written.
+func TestRenderCaseIsTheSystems(t *testing.T) {
+	t.Parallel()
+
+	if runtime.GOOS != "linux" {
+		t.Skip("a.html and A.html are two files on Linux, one on macOS")
+	}
+	dir := write(t, map[string]string{"a.yaml": good, "A.yaml": good})
+	if code, stdout, stderr := run(dir, "render", "a.yaml", "A.yaml"); code != 0 || stdout != "a.html\nA.html\n" || stderr != "" {
 		t.Errorf("floe render = %d, %q, %q", code, stdout, stderr)
 	}
 }

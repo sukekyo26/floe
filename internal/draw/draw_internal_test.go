@@ -7,6 +7,8 @@ import (
 	"io"
 	"testing"
 
+	"golang.org/x/net/html"
+
 	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -61,16 +63,32 @@ func TestExecuted(t *testing.T) {
 	}
 }
 
-// The CSP goes after the doctype, past a BOM and comments.
+// The CSP goes first in the head, after the charset, before what the page's head holds; a page without a
+// head gets it in the head the parser makes.
 func TestCutOffPage(t *testing.T) {
 	t.Parallel()
 
-	meta := []byte(`<meta http-equiv="Content-Security-Policy"`)
-	for _, page := range []string{"<!doctype html><html>", "\xef\xbb\xbf<!-- c --> <!DOCTYPE html>\n<p>", "<p>x"} {
-		got := CutOffPage([]byte(page))
-		at := bytes.Index(got, meta)
-		if at < 0 || bytes.Contains(got[at:], []byte("<!doctype")) || bytes.Contains(got[at:], []byte("<!DOCTYPE")) {
-			t.Errorf("%q: %q", page, got)
+	for _, page := range []string{
+		"<!doctype html><html><head><title>t</title></head><body></body></html>", "<!-- c --> <!DOCTYPE html>\n<p>x",
+	} {
+		got, err := CutOffPage([]byte(page))
+		if err != nil {
+			t.Fatal(err)
+		}
+		tree, _ := html.Parse(bytes.NewReader(got)) //nolint:errcheck // a bytes.Reader fails no read
+		var head *html.Node
+		for n := range tree.Descendants() {
+			if n.Type == html.ElementNode && n.Data == "head" {
+				head = n
+				break
+			}
+		}
+		charset, csp := head.FirstChild, head.FirstChild.NextSibling
+		if v, _ := attrOf(charset, "charset"); v != "utf-8" {
+			t.Errorf("%q: the head starts %q", page, got)
+		}
+		if v, _ := attrOf(csp, "content"); v != CutOff("'none'") {
+			t.Errorf("%q: no CSP second in the head: %q", page, got)
 		}
 	}
 }

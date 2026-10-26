@@ -35,7 +35,7 @@ func (a *app) check(paths []string) error {
 	}
 	var found usererr.List
 	for _, p := range a.args(paths, "cli_wants_data") {
-		_, err := a.drawFile(k, p)
+		_, err := drawFile(k, p)
 		if failed := found.Add(err); failed != nil {
 			return failed
 		}
@@ -45,7 +45,7 @@ func (a *app) check(paths []string) error {
 
 // drawFile draws the page of the data file p with k, titled, without a title:, by the slug of its name, else,
 // for a name without a letter a slug takes, by the name itself; or returns its mistakes.
-func (a *app) drawFile(k *kit.Kit, p arg) ([]byte, error) {
+func drawFile(k *kit.Kit, p arg) ([]byte, error) {
 	// An empty path has no name to check; one that is nowhere has, and is told with it.
 	if p.name == "" {
 		return nil, p.err
@@ -61,7 +61,7 @@ func (a *app) drawFile(k *kit.Kit, p arg) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	untitled := cmp.Or(files.SlugFromFile(p.name, a.env.Dir), baseName(p.name))
+	untitled := cmp.Or(files.SlugFromFile(p.name), baseName(p.name))
 	//nolint:wrapcheck // its mistakes, or what failed
 	return tmpl.Draw(k, p.name, src, tmpl.Options{Theme: "", Untitled: untitled})
 }

@@ -21,14 +21,9 @@ func TestIsDataFile(t *testing.T) {
 func TestSlugFromFile(t *testing.T) {
 	t.Parallel()
 
-	for _, tt := range []struct{ file, cwd, want string }{
-		{"Plan Notes.yaml", "/w", "plan-notes"},
-		{"docs/index.html", "/w", "docs"},
-		{"index.htm", "/w/site", "site"},
-		{"--x--.yaml", "", "x"},
-	} {
-		if got := files.SlugFromFile(tt.file, tt.cwd); got != tt.want {
-			t.Errorf("SlugFromFile(%q, %q) = %q, want %q", tt.file, tt.cwd, got, tt.want)
+	for file, want := range map[string]string{"Plan Notes.yaml": "plan-notes", "docs/a.b.yaml": "a-b", "--x--.yaml": "x"} {
+		if got := files.SlugFromFile(file); got != want {
+			t.Errorf("SlugFromFile(%q) = %q, want %q", file, got, want)
 		}
 	}
 }

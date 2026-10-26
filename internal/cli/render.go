@@ -6,10 +6,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
+	"slices"
 
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/draw"
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/kit"
@@ -79,18 +80,14 @@ func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error)
 		return nil, failed
 	}
 	pages := make([]rendered, 0, len(paths))
-	// The first page to each real path in lower case: through a symlink, and on a filesystem that ignores
-	// case (macOS), two paths may be one file.
-	// LIMIT: case only. APFS also takes the NFC and NFD of a name as one; fold Unicode if pages collide so.
-	first := map[string]rendered{}
+	// The pages so far, to tell two that are one file: one real path (through a symlink), or two the system
+	// says are one file (os.SameFile), as on a filesystem that ignores case (macOS) a.html and A.html are.
+	// LIMIT: two pages not yet written are one file only by their paths: on macOS a.html and A.html written
+	// anew overwrite one another, as pages written on Linux and checked out on macOS do.
+	var first []rendered
 	for _, f := range a.args(paths, "cli_wants_data") {
-		dir, at := out.name, out.abs
-		if dir == "" {
-			dir, at = filepath.Dir(f.name), filepath.Dir(f.abs)
-		}
-		name := baseName(f.name) + ".html"
-		p := rendered{from: f.name, to: filepath.Join(dir, name), real: "", page: nil}
-		page, err := a.drawFile(k, f)
+		p, at := pageOf(f, out)
+		page, err := drawFile(k, f)
 		if failed := found.Add(err); failed != nil {
 			return nil, failed
 		}
@@ -99,30 +96,50 @@ func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error)
 			continue
 		}
 		var bad error
-		if p.real, bad = realPath(filepath.Join(at, name), p.to); bad != nil {
+		if p.real, bad = realPath(at, p.to); bad != nil {
 			if failed := found.Add(bad); failed != nil {
 				return nil, failed
 			}
 			continue
 		}
-		other, taken := first[strings.ToLower(p.real)]
-		switch {
-		case taken && other.real == p.real:
-			found = append(found, usererr.New("cli_render_same_file", other.from, f.name, p.to))
-		case taken:
-			found = append(found, usererr.New("cli_render_same_file_case", other.from, f.name, other.to, p.to))
-		case err == nil:
-			p.page = draw.CutOffPage(page)
+		if i := slices.IndexFunc(first, func(o rendered) bool { return sameFile(o.real, p.real) }); i >= 0 {
+			found = append(found, usererr.New("cli_render_same_file", first[i].from, f.name, p.to))
+			continue
+		}
+		first = append(first, p)
+		if err == nil {
+			if p.page, err = draw.CutOffPage(page); err != nil {
+				return nil, err //nolint:wrapcheck // floe's failure, which says what failed
+			}
 			pages = append(pages, p)
-			fallthrough
-		default:
-			first[strings.ToLower(p.real)] = p
 		}
 	}
 	if len(found) > 0 {
 		return nil, found
 	}
 	return pages, nil
+}
+
+// pageOf returns the page of the data file f, its name, in out, else beside f, as the user names it, and where
+// it is.
+func pageOf(f, out arg) (rendered, string) {
+	dir, at := out.name, out.abs
+	if dir == "" {
+		dir, at = dirs.Dir(f.name), dirs.Dir(f.abs)
+	}
+	name := baseName(f.name) + ".html"
+	return rendered{from: f.name, to: dirs.Join(dir, name), real: "", page: nil}, dirs.Join(at, name)
+}
+
+// sameFile reports whether the paths x and y are one file: as written, or, when both are there, as the
+// system says.
+func sameFile(x, y string) bool {
+	if x == y {
+		return true
+	}
+	a, errA := os.Stat(x)
+	b, errB := os.Stat(y)
+	return errA == nil && errB == nil && os.SameFile(a, b)
 }
 
 // realPath is the absolute path abs with its symlinks resolved: those of its directory, and its own when it
@@ -136,7 +153,7 @@ func realPath(abs, to string) (string, error) {
 	if info, lerr := os.Lstat(abs); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
 		return "", writeMistake(to, err)
 	}
-	if dir, err := filepath.EvalSymlinks(filepath.Dir(abs)); err == nil {
+	if dir, err := filepath.EvalSymlinks(dirs.Dir(abs)); err == nil {
 		return filepath.Join(dir, filepath.Base(abs)), nil
 	}
 	return abs, nil
