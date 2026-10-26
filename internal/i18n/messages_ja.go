@@ -55,7 +55,7 @@ var messagesJA = map[string]string{
 	"rules_check_error":               "%s（検査を実行できませんでした: %s）",
 	"rules_check_not_finite":          "%s（検査を実行できませんでした: %s は有限の数になりません）",
 	"rules_computed_yaml":             "computed.yaml は total: sum(items, .price) のように、名前と式で書いてください",
-	"rules_computed_name":             "%s は式と page.html で使える名前ではありません。どちらも 1 つの名前と読む名前を、_ で始めず、expr の関数と重ねずに書いてください",
+	"rules_computed_name":             "%s は式と page.html で使える名前ではありません。expr と text/template がどちらも 1 つの名前と読み、expr の語や関数でなく、_ で始まらない名前にしてください",
 	"rules_computed_clash":            "%s はデータの項目にもあり、式から区別できません。名前を変えてください",
 	"rules_computed_env":              "computed.yaml では $env を使えません。名前で参照してください",
 	"rules_computed_cycle":            "値が互いを使って計算されています: %s",

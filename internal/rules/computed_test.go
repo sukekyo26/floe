@@ -32,7 +32,7 @@ func compute(t *testing.T, src, body string) (string, string) {
 }
 
 const (
-	notName = " is not a name an expression and page.html can use: write one name both read as a name, not starting with _, and not a function of expr"
+	notName = " is not a name an expression and page.html can use: write a name that expr and text/template each read as one name, not a word or function of expr, and not starting with _"
 	cycle   = "the values are computed from each other: "
 )
 
@@ -60,6 +60,11 @@ func TestReadComputed(t *testing.T) {
 		{"names text/template cannot read", "$x: 1\nx$: 2\n", lines(
 			"t1/computed.yaml:1:1: bad character U+0024 '$'",
 			"t1/computed.yaml:2:1: bad character U+0024 '$'",
+		)},
+		{"words of expr", "not: 1\nlet: 2\nif: 3\n", lines(
+			"t1/computed.yaml:1:1: unexpected token EOF",
+			"t1/computed.yaml:2:1: unexpected token EOF",
+			"t1/computed.yaml:3:1: unexpected token EOF",
 		)},
 		{"names read as other than one name", "_x: 1\na.b: 2\na-b: 3\nnil: 4\n", lines(
 			"t1/computed.yaml:1:1: _x"+notName,

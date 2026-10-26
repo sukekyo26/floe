@@ -61,7 +61,7 @@ var messagesEN = map[string]string{
 	"rules_check_error":               "%s (the check could not run: %s)",
 	"rules_check_not_finite":          "%s (the check could not run: %s is not a finite number)",
 	"rules_computed_yaml":             "write computed.yaml as names and expressions, like total: sum(items, .price)",
-	"rules_computed_name":             "%s is not a name an expression and page.html can use: write one name both read as a name, not starting with _, and not a function of expr",
+	"rules_computed_name":             "%s is not a name an expression and page.html can use: write a name that expr and text/template each read as one name, not a word or function of expr, and not starting with _",
 	"rules_computed_clash":            "%s is an item of the data too, so an expression could not tell them apart; rename it",
 	"rules_computed_env":              "$env is not for computed.yaml; use the names",
 	"rules_computed_cycle":            "the values are computed from each other: %s",
