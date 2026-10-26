@@ -45,7 +45,6 @@ var messagesEN = map[string]string{
 	// doc: the keys every data file shares
 	"doc_no_lang":  "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)",
 	"doc_not_text": "%s must be text",
-	"doc_empty":    "%s is empty: name one, or leave %[1]s out",
 
 	// rules: checks.yaml and computed.yaml
 	// LIMIT: the last %s of rules_check_error and rules_computed_error is expr's English
@@ -115,14 +114,11 @@ var messagesEN = map[string]string{
 	"tmpl_unknown_theme": `there is no theme "%s"; use %s`,
 
 	// draw: the page drawn
-	"draw_head":         "the page drawn from this file has no </head> where a <style> styles the page, before which floe puts the page's styles: page.html writes it in the head, outside {{if}}, {{with}}, {{range}}, <template>, <svg> and <math>, and nothing drawn before it, a part among them, leaves an element open",
 	"draw_style":        "the page drawn from this file has a <style>, which page.html or a part writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css",
 	"draw_base":         "the page drawn from this file has a <base>, which page.html or a part writes and the page's CSP ignores (base-uri 'none'): write its links whole",
 	"draw_part_unknown": "the page drawn from this file names the part %s, which there is none of; use %s",
 	"draw_part_several": `the page has data-floe-part="%s", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
 	"draw_look_box":     `the page has data-floe-part="%[1]s", but %[1]s is a look, which has no box: take it with data-floe-look="%[1]s"`,
-	"draw_format":       "floe does not draw an item of format %s yet: give it another format, or none",
-	"draw_look_empty":   `the page has data-floe-look="%s", which names no look: name the looks it takes, or leave it out`,
 
 	// cli: the command line (English alone is told; the other languages hold the keys as every catalog does)
 	"cli_usage":                 "%s: run floe --help",
