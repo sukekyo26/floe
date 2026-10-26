@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"strings"
 	"testing"
 
 	"golang.org/x/net/html"
@@ -102,6 +103,21 @@ func TestCutOffPage(t *testing.T) {
 		}
 		if v, _ := attrOf(csp, "content"); v != CutOff("'none'") {
 			t.Errorf("%q: no CSP second in the head: %q", page, got)
+		}
+	}
+}
+
+// Where an item's text ends in a tag it does not finish is past the last token read whole, else the last token,
+// which the tokenizer ended at the end.
+func TestUnfinished(t *testing.T) {
+	t.Parallel()
+
+	for text, want := range map[string]string{
+		"a</b": "</b", "a</p x=": "</p x=", "<b class='x>y</b>": "<b class='x>y</b>", "<!DOCTYPE x": "<!DOCTYPE x",
+		"x" + strings.Repeat("y", 50) + "</b " + strings.Repeat("z", 50): "</b " + strings.Repeat("z", 36) + "…",
+	} {
+		if got := unfinished(text); got != want {
+			t.Errorf("unfinished(%q) = %q, want %q", text, got, want)
 		}
 	}
 }

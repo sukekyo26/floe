@@ -1,0 +1,7 @@
+template: report
+lang: en
+title: t
+sections:
+  - heading: h
+    parts:
+      - html: <span data-floe-part="nope">x</span>

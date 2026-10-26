@@ -1,0 +1,66 @@
+$ floe check closes.yaml comment.yaml cut.yaml meta.yaml name.yaml noscript.yaml number.yaml open.yaml script.yaml shape.yaml
+exit 1
+--- stderr
+closes.yaml:7:15: HTML changes the page around it at </section>: close in it each element and comment it opens, and close no element it did not open
+comment.yaml:7:15: HTML changes the page around it at <!--: close in it each element and comment it opens, and close no element it did not open
+cut.yaml:7:15: HTML changes the page around it at </b: close in it each element and comment it opens, and close no element it did not open
+meta.yaml:1:11: the page drawn from this file has a <meta http-equiv="refresh">, which page.html or an item of format html writes and which would move the page, set a cookie or change its policy: leave it out
+name.yaml:7:15: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
+noscript.yaml:1:11: the page drawn from this file has a <noscript>, which page.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out
+number.yaml:7:15: got number, want string
+open.yaml:7:15: HTML changes the page around it at <b>: close in it each element and comment it opens, and close no element it did not open
+script.yaml:7:19: js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'
+shape.yaml:7:19: additional properties 'css' not allowed
+$ floe render --out-dir $TMP/pages/closes.yaml closes.yaml
+exit 1
+--- stderr
+closes.yaml:7:15: HTML changes the page around it at </section>: close in it each element and comment it opens, and close no element it did not open
+$ floe render --out-dir $TMP/pages/comment.yaml comment.yaml
+exit 1
+--- stderr
+comment.yaml:7:15: HTML changes the page around it at <!--: close in it each element and comment it opens, and close no element it did not open
+$ floe render --out-dir $TMP/pages/cut.yaml cut.yaml
+exit 1
+--- stderr
+cut.yaml:7:15: HTML changes the page around it at </b: close in it each element and comment it opens, and close no element it did not open
+$ floe render --out-dir $TMP/pages/meta.yaml meta.yaml
+exit 1
+--- stderr
+meta.yaml:1:11: the page drawn from this file has a <meta http-equiv="refresh">, which page.html or an item of format html writes and which would move the page, set a cookie or change its policy: leave it out
+$ floe render --out-dir $TMP/pages/name.yaml name.yaml
+exit 1
+--- stderr
+name.yaml:7:15: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
+$ floe render --out-dir $TMP/pages/noscript.yaml noscript.yaml
+exit 1
+--- stderr
+noscript.yaml:1:11: the page drawn from this file has a <noscript>, which page.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out
+$ floe render --out-dir $TMP/pages/number.yaml number.yaml
+exit 1
+--- stderr
+number.yaml:7:15: got number, want string
+$ floe render --out-dir $TMP/pages/open.yaml open.yaml
+exit 1
+--- stderr
+open.yaml:7:15: HTML changes the page around it at <b>: close in it each element and comment it opens, and close no element it did not open
+$ floe render --out-dir $TMP/pages/script.yaml script.yaml
+exit 1
+--- stderr
+script.yaml:7:19: js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'
+$ floe render --out-dir $TMP/pages/shape.yaml shape.yaml
+exit 1
+--- stderr
+shape.yaml:7:19: additional properties 'css' not allowed
+$ floe render --out-dir $TMP/together closes.yaml comment.yaml cut.yaml meta.yaml name.yaml noscript.yaml number.yaml open.yaml script.yaml shape.yaml
+exit 1
+--- stderr
+closes.yaml:7:15: HTML changes the page around it at </section>: close in it each element and comment it opens, and close no element it did not open
+comment.yaml:7:15: HTML changes the page around it at <!--: close in it each element and comment it opens, and close no element it did not open
+cut.yaml:7:15: HTML changes the page around it at </b: close in it each element and comment it opens, and close no element it did not open
+meta.yaml:1:11: the page drawn from this file has a <meta http-equiv="refresh">, which page.html or an item of format html writes and which would move the page, set a cookie or change its policy: leave it out
+name.yaml:7:15: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diff, facts, faq, fields, findings, glossary, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
+noscript.yaml:1:11: the page drawn from this file has a <noscript>, which page.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out
+number.yaml:7:15: got number, want string
+open.yaml:7:15: HTML changes the page around it at <b>: close in it each element and comment it opens, and close no element it did not open
+script.yaml:7:19: js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'
+shape.yaml:7:19: additional properties 'css' not allowed

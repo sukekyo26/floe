@@ -1,12 +1,20 @@
 package kit
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"html/template"
+	"io"
 	"strings"
+
+	"golang.org/x/net/html"
+
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // partFuncs are the functions floe's parts draw with, besides those of page.html.
-var partFuncs = template.FuncMap{"bars": barsOf, "diff": diffOf, "tree": treeOf}
+var partFuncs = template.FuncMap{"bars": barsOf, "diff": diffOf, "script": scriptOf, "tree": treeOf}
 
 // bar is an item of a bars part, and the width of its bar, a percentage of the longest's.
 type bar struct {
@@ -133,4 +141,44 @@ func stringOf(v any) string {
 		return s
 	}
 	return ""
+}
+
+// scriptOf draws a script part: an element to draw in, and a script that calls js, a function, with it and data.
+// js is assigned, so that a ; or a comment after the function still parses, and the line break ends a //
+// comment before the call. data goes in as the text of its JSON, whose < and > are escaped, so that no text of
+// it ends the script, and is parsed, so that a key __proto__ is a key. The script is refused when an HTML
+// tokenizer does not read it as one text ended by </script> (a </script or a <!-- before a <script in js).
+func scriptOf(js string, data any) (template.HTML, error) {
+	// Values read from YAML, without .inf or .nan or keys other than text, always encode.
+	b, err := json.Marshal(data)
+	if err != nil {
+		return "", fmt.Errorf("%w: script: %w", ErrFunc, err)
+	}
+	text, err := json.Marshal(string(b))
+	if err != nil {
+		return "", fmt.Errorf("%w: script: %w", ErrFunc, err)
+	}
+	body := "{const floeScript = " + js + "\n" +
+		";floeScript(document.currentScript.previousElementSibling, JSON.parse(" + string(text) + "));}"
+	if !wholeScript(body) {
+		return "", usererr.New("kit_script_end")
+	}
+	//nolint:gosec // G203: read whole as a script's text
+	return template.HTML("<div></div><script>" + body + "</script>"), nil
+}
+
+// wholeScript reports whether an HTML tokenizer reads <script>body</script> as the tag, body as one text, and
+// </script> as written. Raw, not Text, which makes CRLF LF.
+func wholeScript(body string) bool {
+	z := html.NewTokenizer(strings.NewReader("<script>" + body + "</script>"))
+	want := []struct {
+		typ html.TokenType
+		raw string
+	}{{html.StartTagToken, "<script>"}, {html.TextToken, body}, {html.EndTagToken, "</script>"}}
+	for _, w := range want {
+		if z.Next() != w.typ || string(z.Raw()) != w.raw {
+			return false
+		}
+	}
+	return z.Next() == html.ErrorToken && errors.Is(z.Err(), io.EOF)
 }

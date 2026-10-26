@@ -61,7 +61,7 @@ const mineSchema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", 
 
 func lines(l ...string) string { return strings.Join(l, "\n") }
 
-var none = tmpl.Options{Theme: "", Untitled: ""}
+var none = tmpl.Options{Theme: "", Untitled: "", ImagesDir: ""}
 
 // The template's checks, the parts' checks and the computed values run together: none uses what another gives.
 func TestStageFour(t *testing.T) {
@@ -115,8 +115,8 @@ func TestNames(t *testing.T) {
 			"no lang and an unknown template", "template: reprot\ntitle: t\n", none,
 			lines("d.yaml:1:1: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", `d.yaml:1:11: unknown template "reprot"; use report`),
 		},
-		{"a theme given", "lang: ja\ntemplate: report\ntheme: 5\n", tmpl.Options{Theme: "ink", Untitled: ""}, ""},
-		{"a theme given that is none", "lang: ja\ntemplate: report\ntheme: ink\n", tmpl.Options{Theme: "nope", Untitled: ""}, `floe: there is no theme "nope"; use ` + themes},
+		{"a theme given", "lang: ja\ntemplate: report\ntheme: 5\n", tmpl.Options{Theme: "ink", Untitled: "", ImagesDir: ""}, ""},
+		{"a theme given that is none", "lang: ja\ntemplate: report\ntheme: ink\n", tmpl.Options{Theme: "nope", Untitled: "", ImagesDir: ""}, `floe: there is no theme "nope"; use ` + themes},
 	} {
 		if got := drawn(t, k, tt.data, tt.o); got != tt.want {
 			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
@@ -128,7 +128,7 @@ func TestNames(t *testing.T) {
 		"checks.yaml": "- expr: doc.theme == \"ink\"\n  message: draw it in ink\n",
 	}))
 	data := "lang: en\ntemplate: mine\ntheme: washi\n"
-	if got := drawn(t, k, data, tmpl.Options{Theme: "ink", Untitled: ""}); got != "" {
+	if got := drawn(t, k, data, tmpl.Options{Theme: "ink", Untitled: "", ImagesDir: ""}); got != "" {
 		t.Errorf("drawn in ink, told %s", got)
 	}
 	if got := drawn(t, k, data, none); got != "d.yaml: draw it in ink" {
@@ -259,20 +259,13 @@ func TestLoadStops(t *testing.T) {
 	}
 }
 
-// What floe does not draw yet, an item of format html, which a template of one's own may have, is told at it; an
-// empty data-floe-part, whose boundary would keep the parts' styles from what it holds, is refused, and an
+// An empty data-floe-part, whose boundary would keep the parts' styles from what it holds, is refused, and an
 // empty data-floe-look, which is no boundary, is not.
 func TestNotDrawn(t *testing.T) {
 	t.Parallel()
 
-	k := ownKit(t, nil, mine(minePage, `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
-"properties": {"h": {"type": "string", "format": "html"}}}`, nil))
-	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nh: <b>x</b>\n", none),
-		"d.yaml:3:4: floe does not draw an item of format html yet: give it another format, or none"; got != want {
-		t.Errorf("told\n%s\nwant\n%s", got, want)
-	}
 	page := "<!doctype html>\n<html><head><title>t</title></head><body>\n<div data-floe-part=\"\">a</div><p data-floe-look=\" \">b</p>\n</body></html>\n"
-	k = ownKit(t, nil, mine(page, mineSchema, nil))
+	k := ownKit(t, nil, mine(page, mineSchema, nil))
 	want := `d.yaml:2:11: the page has data-floe-part="", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`
 	if got := drawn(t, k, "lang: en\ntemplate: mine\n", none); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)

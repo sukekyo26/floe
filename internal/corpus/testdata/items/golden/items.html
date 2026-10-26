@@ -1,0 +1,115 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; img-src data: blob:; media-src data: blob:; style-src &#39;unsafe-inline&#39; https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src &#39;unsafe-inline&#39; https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action &#39;none&#39;; base-uri &#39;none&#39;; connect-src &#39;none&#39;"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="generator" content="floe report"/>
+<title>Data items</title>
+<style>
+@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.base {
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways instead, as a table does, keeps its words whole.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line, still overflows. Give such a part a layout for narrow screens, as
+   keys has */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+p, ul, ol { margin: 0; max-width: var(--text-width); }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
+pre {
+  margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+pre code { font-size: inherit; background: none; padding: 0; }
+blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+}
+</style>
+<style>
+@layer floe.palette {
+/* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
+:root {
+  --bg: #f3f5f4; --surface: #fff; --fg: #18201e; --muted: #57635f; --line: #d4dbd8;
+  --accent: #1d6670; --accent-soft: #dcebec;
+  --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
+  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #63b5be; --code-add: #6fcf97; --code-del: #f2b8b5;
+  /* The page's ground, a pattern too, and the rule between its sections */
+  --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(24 32 30 / 0.12);
+  /* Its panels' quiet ground, which holds faces of the surface */
+  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
+  color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.parts {
+/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
+blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+}
+</style>
+<style>
+@layer floe.page {
+@scope (:root) to ([data-floe-part] > *) {
+/* The colours and faces are the theme's palette; the page lays them out */
+:scope {
+  /* The width of the whole body; that of prose is the palette's */
+  --page-width: 96rem;
+}
+body {
+  margin: 0; font-size: 16px; line-height: 1.85; padding-inline: 16px; padding-block: 2.5rem 4rem;
+}
+main { max-width: var(--page-width); margin-inline: auto; display: grid; gap: 2.5rem; }
+main > *, section > * { min-width: 0; }
+h1 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: 0.01em; }
+h2 { font-size: 1.4rem; }
+header { display: grid; gap: 0.7rem; }
+section { display: grid; gap: 1rem; }
+section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
+.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lead { color: var(--muted); font-size: 1.05rem; }
+.muted { color: var(--muted); }
+}
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1 id="data-items">Data items</h1>
+</header>
+<section>
+<h2 id="html-as-it-is">HTML as it is</h2>
+<p>a <b>b</b></p><svg viewBox="0 0 1 1" width="8" height="8"><path d="M0 0H1V1"></path></svg><br/>
+<ul><li>one</li><li>two</li></ul>
+<table><tbody><tr><td>x</td></tr></tbody></table>
+<!-- a comment with <meta charset="utf-8"> in it -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter"/>
+</section>
+<section>
+<h2 id="something-that-moves">Something that moves</h2>
+<div></div><script>{const floeScript = function (el, data) {
+  el.textContent = 'x'.repeat(data.n); // <!-- alone is fine
+}
+
+;floeScript(document.currentScript.previousElementSibling, JSON.parse("{\"n\":3}"));}</script>
+</section>
+</main>
+
+
+</body></html>

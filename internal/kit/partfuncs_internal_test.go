@@ -1,9 +1,12 @@
 package kit
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // A diff's lines take their kind from their first characters: --- and +++ name the files only outside
@@ -57,5 +60,32 @@ func TestTreeOf(t *testing.T) {
 	want := "a/ A changed true\n.b.go B  false\n.d/   true\n..e.go  removed false\n.f/   true\nc.md  added false\n"
 	if b.String() != want {
 		t.Errorf("treeOf =\n%s\nwant\n%s", b.String(), want)
+	}
+}
+
+// A script whose js an HTML tokenizer would not read whole as its script's text is refused: a </script, however
+// written, ends the script there, and a <!-- before a <script moves where it ends; a <!-- alone, CRLF, a key
+// __proto__ and a </script> in data are drawn.
+func TestScriptOf(t *testing.T) {
+	t.Parallel()
+
+	for _, js := range []string{
+		`function (el) { el.innerHTML = "</script>" }`, "x = '</SCRIPT '", "x = '</script/'", `f("<!--<script>")`,
+	} {
+		var e *usererr.Error
+		if _, err := scriptOf(js, nil); !errors.As(err, &e) || e.Key != "kit_script_end" {
+			t.Errorf("%q: scriptOf = %v, want kit_script_end", js, err)
+		}
+	}
+	for _, js := range []string{"function (el, data) {}", "f(1) <!-- legacy", "function (el) {\r\n  el.x = 1\r\n}"} {
+		if _, err := scriptOf(js, map[string]any{"__proto__": 1, "t": "</script><!--<script>"}); err != nil {
+			t.Errorf("%q: scriptOf = %v", js, err)
+		}
+	}
+	got, err := scriptOf("function (el, data) {}", map[string]any{"__proto__": "<b>"})
+	want := `<div></div><script>{const floeScript = function (el, data) {}` + "\n" +
+		`;floeScript(document.currentScript.previousElementSibling, JSON.parse("{\"__proto__\":\"\\u003cb\\u003e\"}"));}</script>`
+	if err != nil || string(got) != want {
+		t.Errorf("scriptOf = %s, %v\nwant %s", got, err, want)
 	}
 }

@@ -1,0 +1,7 @@
+template: report
+lang: en
+title: t
+sections:
+  - heading: h
+    parts:
+      - script: { js: 'function () {}', css: 1 }
