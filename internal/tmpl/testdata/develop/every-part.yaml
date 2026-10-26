@@ -1,0 +1,163 @@
+template: report
+lang: en
+title: Every part
+eyebrow: Plan · 2030-04
+lead: The wiki moves to the new host in two weekends, with the old one read-only in between.
+sections:
+  - heading: At a glance
+    parts:
+      - stats:
+          - { label: Pages, value: '1,840' }
+          - { label: Broken links, value: '120', note: '-35 since the last check', tone: good }
+          - { label: Downtime, value: '0', unit: hours }
+      - compare:
+          before: Now
+          after: After the move
+          rows:
+            - { what: Host, before: The old server, after: The new host }
+            - { what: Search, before: Built in, after: Rebuilt on `Sunday` }
+            - { what: Address, before: wiki.example.com, after: wiki.example.com }
+  - heading: Steps
+    parts:
+      - text: The pages move over **one weekend**; the old wiki stays readable until the new one opens.
+      - steps:
+          - { title: Freeze edits on the old wiki, text: On **Friday evening**., state: done }
+          - { title: Copy the pages and check the links, state: doing }
+          - title: Point the team's bookmarks at the new host
+      - terminal:
+          shell: bash
+          steps:
+            - run: wiki export --all --out pages/
+              out: 1840 pages written to pages/
+            - run: linkcheck pages/
+      - code:
+          file: old-wiki.conf
+          text: |
+            # Read-only from Friday evening
+            read_only = true
+            banner = "This wiki has moved to the new host."
+  - heading: Who does what
+    parts:
+      - cards:
+          - title: Copy
+            text: Copies the pages on **Saturday** and keeps a list of what failed.
+          - title: Links
+            text: Runs the link check and fixes what it finds.
+          - title: Bookmarks
+            text: Sends the new address to the team on Monday morning.
+  - heading: Risks
+    parts:
+      - table:
+          columns:
+            - title: Risk
+            - title: Likelihood
+            - { title: Pages, num: true }
+            - title: What we do
+            - title: State
+          rows:
+            - [Broken links, High, '120', A link check after the copy, { pill: watching, tone: warn }]
+            - [Lost attachments, Low, '8', Keep the old host for **a month**, { pill: covered, tone: good }]
+            - [Slow search, Unknown, "-", Rebuild the index on `Sunday`, { pill: open }]
+      - note:
+          tone: warn
+          title: Heads up
+          text: Anyone editing during the freeze loses their changes.
+  - heading: Progress
+    parts:
+      - bars:
+          - { label: Copied, value: 1840, tone: good }
+          - { label: Checked, value: 1200 }
+          - { label: Broken, value: 120, tone: bad }
+      - progress:
+          - { label: Pages, done: 1200, of: 1840 }
+          - { label: Images, done: 30, of: 30, tone: good }
+      - checklist:
+          - { text: Freeze edits, done: true }
+          - text: Copy the **attachments**
+      - timeline:
+          - { date: 2030-04-05, title: Freeze, text: Edits stop., tone: warn }
+          - { date: 2030-04-07, title: Open }
+  - heading: Choices
+    parts:
+      - options:
+          - title: Copy in one go
+            text: Two days of read-only.
+            pros: [Simple]
+            cons: [Longer freeze]
+            pick: Recommended
+          - title: Copy by space
+            pros: [Short freezes]
+            cons: [Links break between spaces, Twice the work]
+      - decision:
+          title: The wiki moves to the new host
+          status: { pill: decided, tone: good }
+          date: 2030-03-28
+          text: The old server is out of support in **May**.
+          rejected: [Stay on the old server, Move to a hosted wiki]
+      - risks:
+          - { what: Broken links, likely: high, impact: mid, fix: A link check after the copy }
+          - { what: Lost attachments, likely: low, impact: high }
+      - matrix:
+          columns: [Old wiki, New host]
+          rows:
+            - { what: Search, cells: [yes, { mark: part, note: rebuilt Sunday }] }
+            - { what: Single sign-on, cells: [no, yes] }
+  - heading: Reference
+    parts:
+      - facts:
+          - { name: Owner, value: The platform team }
+          - { name: State, value: { pill: on track, tone: good } }
+      - fields:
+          - { name: read_only, type: bool, required: true, text: Refuses edits, default: false }
+          - { name: banner, type: string, text: Shown on every page }
+          - { name: port, type: number, default: '8080' }
+      - glossary:
+          - { term: Freeze, text: The days when the old wiki is **read-only**. }
+          - { term: Host, text: Where the wiki runs. }
+      - keys:
+          - { keys: [Ctrl, K], text: Search the wiki }
+          - { keys: [g, h], text: Go home }
+      - faq:
+          - { q: Can I edit during the freeze?, a: 'No: edits are lost.', open: true }
+          - { q: Where do old links go?, a: To the same page on the new host. }
+      - links:
+          - { title: Migration guide, url: 'https://example.com/guide', text: How the copy works }
+          - { title: Old wiki, url: 'https://wiki.example.com/' }
+      - findings:
+          - { level: must, at: wiki.conf:3, text: The banner names the old host, status: { pill: fixed, tone: good } }
+          - { level: nit, text: Two pages have the same title, why: Left as the owners asked }
+      - tree:
+          - { path: pages/, note: what export writes }
+          - { path: pages/home.md, change: changed }
+          - { path: pages/old.md, change: removed }
+          - { path: pages/new/index.md, change: added }
+      - diff:
+          file: wiki.conf
+          lang: ini
+          text: |
+            @@ -1,2 +1,2 @@
+            -read_only = false
+            +read_only = true
+             banner = "Moved"
+  - heading: Folded
+    parts:
+      - details:
+          title: The whole log
+          open: true
+          parts:
+            - text: What the copy printed.
+            - terminal:
+                steps:
+                  - { run: wiki export, out: done }
+            - diff: { text: "+a\n-b\n" }
+      - tabs:
+          - title: bash
+            parts:
+              - code: { lang: bash, text: "export WIKI=new" }
+          - title: PowerShell
+            parts:
+              - code: { lang: powershell, text: "$env:WIKI = 'new'" }
+              - note: { text: Run it in a new window., tone: good }
+              - table:
+                  columns: [{ title: Shell }, { title: Lines, num: true }]
+                  rows: [[PowerShell, '1']]
