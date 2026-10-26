@@ -39,6 +39,7 @@ var messagesJA = map[string]string{
 	"schema_part_format":        "部品の schema には \"format\": \"%s\" を書けません。部品の項目は part.html が描き、format の検査は届きません。その項目はテンプレートの schema に書くか、Markdown なら \"type\": \"string\" だけにして {{markdown .<名前>}} で描いてください",
 
 	"doc_no_lang":  "最上位に lang: ja のようにページの言語を指定してください（en・ja・pt-BR のような BCP 47 の言語タグ）",
+	"doc_empty":    "%s が空です。名前を書くか、%[1]s を外してください",
 	"doc_not_text": "%s は文字列で指定してください",
 
 	// rules: checks.yaml と computed.yaml

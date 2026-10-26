@@ -108,6 +108,8 @@ func TestNames(t *testing.T) {
 		{"unknown template", "lang: ja\ntemplate: reprot\n", none, `d.yaml:2:11: unknown template "reprot"; use report`},
 		{"no template", "lang: ja\n", none, "d.yaml:1:1: name the template at the top level, like template: report (templates: report)"},
 		{"template not text", "lang: ja\ntemplate: 5\n", none, "d.yaml:2:11: template must be text"},
+		{"template empty", "lang: ja\ntemplate: ''\n", none, "d.yaml:2:11: template is empty: name one, or leave template out"},
+		{"theme empty", "lang: ja\ntemplate: report\ntheme: \"\"\n", none, "d.yaml:3:8: theme is empty: name one, or leave theme out"},
 		{"unknown theme", "lang: ja\ntemplate: report\ntheme: nope\n", none, `d.yaml:3:8: there is no theme "nope"; use ` + themes},
 		{
 			"no lang and an unknown template", "template: reprot\ntitle: t\n", none,

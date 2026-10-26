@@ -83,6 +83,23 @@ func ints(v any) any {
 	return v
 }
 
+// sharedMistake returns the message key of what is wrong with v, the value of the shared key, written or not
+// (ok), "" for none: one written that is not text, a lang that is none or spaces, and an empty template or
+// theme, which as written names one, but would read as left out.
+func sharedMistake(key string, v any, ok bool) string {
+	s, text := v.(string)
+	switch {
+	case ok && !text:
+		return "doc_not_text"
+	case key == "lang" && strings.TrimSpace(s) == "":
+		// The page's <html lang> is the data's own, so that every way of drawing it gives the same page.
+		return "doc_no_lang"
+	case ok && (key == "template" || key == "theme") && s == "":
+		return "doc_empty"
+	}
+	return ""
+}
+
 // readShared reads the keys every template shares from d.Values into d, leaving them in d.Values as written,
 // and notes where each is written; theme: is not read with a theme given, which d takes.
 func (d *Data) readShared(theme string) error {
@@ -102,17 +119,16 @@ func (d *Data) readShared(theme string) error {
 			d.Where[key] = yamlpos.OfValue(yamlpos.KeyOf(p), p.Value)
 		}
 		v, ok := d.Values[key]
-		s, text := v.(string)
+		mistake := sharedMistake(key, v, ok)
 		switch {
 		case key == "theme" && theme != "":
 			d.Theme = theme
-		case ok && !text:
-			found = append(found, yamlpos.New(d.File, d.Where[key], "doc_not_text", key))
-		case key == "lang" && strings.TrimSpace(s) == "":
-			// The page's <html lang> is the data's own, so that every way of drawing it gives the same page.
-			found = append(found, yamlpos.New(d.File, d.Where[key], "doc_no_lang"))
+		case mistake == "doc_no_lang":
+			found = append(found, yamlpos.New(d.File, d.Where[key], mistake))
+		case mistake != "":
+			found = append(found, yamlpos.New(d.File, d.Where[key], mistake, key))
 		case ok:
-			*to[key] = s
+			*to[key], _ = v.(string) //nolint:errcheck // sharedMistake refuses one that is not text
 		}
 	}
 	// A title of spaces names none.
