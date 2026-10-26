@@ -374,9 +374,11 @@ func (c *Compiled) Forbidding(steps []string) (string, bool) {
 			switch {
 			case st.Part != "":
 				s = st.PartRoot
-			case declared && st.Items == nil && st.Forbids(key):
-				// Declared beside a $ref to a schema of additionalProperties: false, which takes it not; with
-				// items too, the value may be a list, which no object's keys forbid.
+			case declared && st.Items != nil:
+				// Keys and items: the value may be a list or an object, which lead on apart.
+				return "", false
+			case declared && st.Forbids(key):
+				// Declared beside a $ref to a schema of additionalProperties: false, which takes it not.
 				return key, true
 			case declared:
 				s = next

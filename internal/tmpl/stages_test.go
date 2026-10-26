@@ -1,6 +1,8 @@
 package tmpl_test
 
 import (
+	"cmp"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -362,21 +364,28 @@ func TestPageCutShort(t *testing.T) {
 		"t/part.html":   `<div data-floe-part="t"><math><mi><template>x</template></mi></math></div>`,
 		"t/part.css":    "",
 	}
+	const cutPage = "<svg><foreignObject><template>x</template></foreignObject></svg>"
 	for _, tt := range []struct {
-		name, body, want string
+		name, body, h, want string
 	}{
-		{"foreignObject", "<svg><foreignObject><template>x</template></foreignObject></svg><p>after</p>", cut},
+		{"foreignObject", "<svg><foreignObject><template>x</template></foreignObject></svg><p>after</p>", "", cut},
 		// html/template and the parser read a <title> as text, the <template> too.
-		{"svg's title", "<svg><title><template>x</template></title></svg><p>after</p>", ""},
-		{"a part's math", "{{with .Data.t}}{{.}}{{end}}<p>after</p>", cut},
-		{"a template outside", "<template>x</template><svg><text>t</text></svg><template>y</template><p>after</p>", ""},
-		{"ending in xmp", "<xmp>x", ""},
-		{"an item's HTML", "{{.Data.h}}<p>after</p>", cut},
+		{"svg's title", "<svg><title><template>x</template></title></svg><p>after</p>", "", ""},
+		{"a part's math", "{{with .Data.t}}{{.}}{{end}}<p>after</p>", "", cut},
+		{"a template outside", "<template>x</template><svg><text>t</text></svg><template>y</template><p>after</p>", "", ""},
+		{"ending in xmp", "<xmp>x", "", ""},
+		{"an item's HTML", "{{.Data.h}}<p>after</p>", "", cut},
+		{"page.html ending in xmp past the cut", "<svg><foreignObject><template>x</template></foreignObject></svg><xmp>x", "", cut},
+		{"page.html cut, then an item's open attribute", cutPage + "{{.Data.h}}<p>after</p>", `<b class="x>`, cut},
+		{"page.html cut, then an item's xmp", cutPage + "{{.Data.h}}<p>after</p>", "<xmp>", cut},
+		{"page.html cut, then an item's svg style", cutPage + "{{.Data.h}}<p>after</p>", "<svg><style>", cut},
+		{"page.html ending in plaintext past the cut", "<svg><foreignObject><template>x</template></foreignObject></svg><plaintext>x", "", cut},
 	} {
 		schema := `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"t": {"$ref": "floe:///parts/t.json"}, "h": {"type": "string", "format": "html"}}}`
 		page := "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head>\n<body>\n" + tt.body + "\n</body></html>\n"
 		k := ownKit(t, part, mine(page, schema, nil))
-		data := "lang: en\ntemplate: mine\nt: {}\nh: <svg><foreignObject><template>x</template></foreignObject></svg>\n"
+		h := cmp.Or(tt.h, "<svg><foreignObject><template>x</template></foreignObject></svg>")
+		data := "lang: en\ntemplate: mine\nt: {}\nh: " + strconv.Quote(h) + "\n"
 		out, err := tmpl.Draw(k, "d.yaml", []byte(data), none)
 		got := ""
 		if err != nil {

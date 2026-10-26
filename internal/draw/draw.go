@@ -115,13 +115,19 @@ func readPage(k *kit.Kit, d *doc.Data, s *items, page []byte) (*html.Node, named
 	end := s.secret + "end"
 	marked := slices.Concat(page, []byte("<!--"+end+"-->"))
 	tree, _ := html.Parse(bytes.NewReader(marked)) //nolint:errcheck // a bytes.Reader fails no read, Parse's one error
-	// A page cut short is checked no further: an item's marks past the cut are gone, and would tell it changed.
-	if !cutEnd(tree, end) && tokenized(marked, end) {
+	// A page cut short, its end mark read as a comment, is checked no further: an item's marks past the cut are
+	// gone, and would tell it changed. Else an item that ate the mark (a tag it left open) is told at it, and a
+	// page cut with no item to blame is told cut.
+	cut := !cutEnd(tree, end)
+	if cut && tokenized(marked, end) {
 		return nil, named{}, yamlpos.New(d.File, d.Where["template"], "draw_page_cut")
 	}
 	ns := namesIn(k)
 	if err := s.check(k, ns, d, tree); err != nil {
 		return nil, named{}, err
+	}
+	if cut {
+		return nil, named{}, yamlpos.New(d.File, d.Where["template"], "draw_page_cut")
 	}
 	s.unmark(tree)
 	n, err := checkPage(k, ns, d, tree)
@@ -147,9 +153,8 @@ func cutEnd(tree *html.Node, end string) bool {
 	return false
 }
 
-// tokenized reports whether the tokenizer reads end, at the end of page, as a comment of its own: then, when the
-// tree has it not, the parser left it out with the rest; else the page ended in a tag left open, which an item's
-// check tells.
+// tokenized reports whether the tokenizer, read alone, takes end, at the end of page, as a comment of its own:
+// only to choose whom to tell of a page without the mark, the page or an item that ate it.
 func tokenized(page []byte, end string) bool {
 	z := html.NewTokenizer(bytes.NewReader(page))
 	for {

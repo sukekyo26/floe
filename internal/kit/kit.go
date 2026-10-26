@@ -227,6 +227,7 @@ func entries(d Dir, dir string, dirs bool) ([]string, error) {
 // file nor a directory (a FIFO, a link to a device) is refused unread, as reading it may block or never end.
 func readFile(d Dir, dir, name string) ([]byte, bool, error) {
 	at := path.Join(d.Name, dir, name)
+	// LIMIT: a file made a FIFO between the Stat and the read blocks it; open it without blocking if it comes to.
 	if fi, err := fs.Stat(d.FS, path.Join(dir, name)); err == nil && !fi.Mode().IsRegular() && !fi.IsDir() {
 		return nil, false, usererr.NewAt(at, 0, 0, "kit_not_file")
 	}
