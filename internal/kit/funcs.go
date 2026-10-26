@@ -2,6 +2,7 @@ package kit
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html/template"
 	"strings"
@@ -71,11 +72,15 @@ func Markdown(text string) (template.HTML, error) {
 	return markdownHTML(text)
 }
 
+// ErrFunc marks floe's own failure in a function of page.html or part.html: text/template wraps what a function
+// returns as it wraps a template's mistake (index out of range), and drawing tells this one as floe's.
+var ErrFunc = errors.New("a function of floe failed")
+
 // convert writes text as HTML with md, the function of page.html called name.
 func convert(md goldmark.Markdown, name, text string) (string, error) {
 	var b bytes.Buffer
 	if err := md.Convert([]byte(text), &b); err != nil {
-		return "", fmt.Errorf("%s: %w", name, err)
+		return "", fmt.Errorf("%w: %s: %w", ErrFunc, name, err)
 	}
 	return b.String(), nil
 }

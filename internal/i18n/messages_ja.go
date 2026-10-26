@@ -114,4 +114,17 @@ var messagesJA = map[string]string{
 	"draw_part_several": `ページの data-floe-part="%s" は 1 つの部品の名前ではありません。data-floe-part="<名前>" と名前をそのまま書き、ほかの部品の見た目は data-floe-look="<名前> …" で借りてください`,
 	"draw_look_box":     `ページに data-floe-part="%[1]s" がありますが、%[1]s は見た目で箱がありません。data-floe-look="%[1]s" で借りてください`,
 	"draw_format":       "floe はまだ format %s の項目を描きません。別の format にするか、format を外してください",
+
+	// cli: コマンド行（言うのは英語だけ。ほかの言語も、どの目録とも同じく鍵を持つ）
+	"cli_usage":            "%s: floe --help を見てください",
+	"cli_path_empty":       "%s が空のパスです。%s を渡し、そのために書いた変数が設定されているか確かめてください",
+	"cli_relative_no_cwd":  "作業ディレクトリを読めないので、相対パス %s は何も指しません。あるディレクトリから floe を走らせるか、絶対パスを渡してください",
+	"cli_wants_data":       "データファイル（.yaml か .yml）",
+	"cli_wants_out_dir":    "ページを書くディレクトリ",
+	"cli_check_not_data":   "%s はデータファイル（.yaml か .yml）ではありません",
+	"cli_data_no_name":     "%s は拡張子の前に名前がありません。名前でページの名前が決まるので、plan.yaml のように名前を付けてください",
+	"cli_render_same_file": "%s と %s が、どちらも %s を書きます。どちらかの名前を変えてください",
+	"cli_render_missing":   "%s がありません。%s から floe render で書いてください",
+	"cli_render_stale":     "%s は %s を描いたものと違います。floe render で書き直してください",
+	"cli_cannot_write":     "書けません（%s）。ディレクトリがあって書けるか、名前が空いていて長すぎないかを確かめてください",
 }

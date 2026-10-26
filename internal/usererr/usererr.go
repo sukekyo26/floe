@@ -43,7 +43,13 @@ func NewIn(file, at, key string, args ...any) *Error {
 
 // Library returns the mistake a library told in err, in the library's own words.
 func Library(err error) *Error {
-	return New("library", valid(err.Error()))
+	return LibraryWith("library", err)
+}
+
+// LibraryWith returns the mistake a library told in err, its words the argument of the catalog message key, which
+// tells what to do besides: the one way a library's words go into a message of floe's.
+func LibraryWith(key string, err error) *Error {
+	return New(key, valid(err.Error()))
 }
 
 // LibraryAt returns the mistake a library told in text, in its own words, at the line and column of file

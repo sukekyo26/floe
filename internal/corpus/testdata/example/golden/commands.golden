@@ -1,0 +1,6 @@
+$ floe check example.yaml
+exit 0
+$ floe render --out-dir $TMP/pages/example.yaml example.yaml
+exit 0
+--- stdout
+$TMP/pages/example.yaml/example.html

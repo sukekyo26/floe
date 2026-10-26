@@ -120,4 +120,19 @@ var messagesEN = map[string]string{
 	"draw_part_several": `the page has data-floe-part="%s", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
 	"draw_look_box":     `the page has data-floe-part="%[1]s", but %[1]s is a look, which has no box: take it with data-floe-look="%[1]s"`,
 	"draw_format":       "floe does not draw an item of format %s yet: give it another format, or none",
+
+	// cli: the command line (English alone is told; the other languages hold the keys as every catalog does)
+	// LIMIT: the %s of cli_usage is cobra's English, as cobra words what it cannot read
+	"cli_usage":            "%s: run floe --help",
+	"cli_path_empty":       "%s is an empty path; give %s, and check that a variable written for it is set",
+	"cli_relative_no_cwd":  "the working directory cannot be read, so the relative path %s means nothing; run floe from a directory that exists, or give an absolute path",
+	"cli_wants_data":       "a data file (.yaml or .yml)",
+	"cli_wants_out_dir":    "the directory to write the pages in",
+	"cli_check_not_data":   "%s is not a data file (.yaml or .yml)",
+	"cli_data_no_name":     "%s has no name before its extension, which names its page: name it, like plan.yaml",
+	"cli_render_same_file": "%s and %s would both write %s; rename one of them",
+	"cli_render_missing":   "%s is missing: write it from %s with floe render",
+	"cli_render_stale":     "%s is not what %s draws: write it again with floe render",
+	// LIMIT: the %s of cli_cannot_write is the system's English, as the system words why it cannot write
+	"cli_cannot_write": "cannot be written (%s): check that its directory exists and can be written to, and that its name is free and not too long",
 }
