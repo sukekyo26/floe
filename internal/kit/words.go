@@ -2,6 +2,8 @@ package kit
 
 import (
 	"errors"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/goccy/go-yaml/ast"
@@ -89,14 +91,26 @@ func (w words) lang(tag string) string {
 	return ""
 }
 
-// word returns the function word of a part's HTML or a template's page.html in the language lang of w: the
-// text of a word by its name. A name the language does not have stops the drawing, file naming where the
-// words are.
+// word returns the function word of a part's HTML or a template's page.html in the language lang of w ("" for
+// a page of a language w has none of, nor en): the text of a word by its name. A name the language does not
+// have stops the drawing, file naming where the words are, and the languages that have it.
 func (w words) word(file, lang string) func(string) (string, error) {
 	return func(name string) (string, error) {
 		if text, ok := w[lang][name]; ok {
 			return text, nil
 		}
-		return "", usererr.NewAt(file, 0, 0, "kit_words_unknown", name)
+		var has []string
+		for _, l := range slices.Sorted(maps.Keys(w)) {
+			if _, ok := w[l][name]; ok {
+				has = append(has, l)
+			}
+		}
+		switch {
+		case lang == "":
+			return "", usererr.NewAt(file, 0, 0, "kit_words_no_lang", name, strings.Join(slices.Sorted(maps.Keys(w)), ", "))
+		case has != nil:
+			return "", usererr.NewAt(file, 0, 0, "kit_words_unknown_elsewhere", lang, name, strings.Join(has, ", "))
+		}
+		return "", usererr.NewAt(file, 0, 0, "kit_words_unknown", lang, name)
 	}
 }

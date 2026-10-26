@@ -24,7 +24,7 @@ func barsOf(items []any) ([]bar, error) {
 		if !ok {
 			continue
 		}
-		n, err := float(m["value"])
+		n, err := float("bars", m["value"])
 		if err != nil {
 			return nil, err
 		}

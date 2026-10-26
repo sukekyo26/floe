@@ -1,6 +1,7 @@
 package kit_test
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"sync"
@@ -135,7 +136,7 @@ func TestReadOver(t *testing.T) {
 			p, ok := mine.Part("mine")
 			th, _ := mine.Theme("dark")
 			if _, floes := mine.Part("table"); !ok || !floes || !slices.Equal(p.Looks(), []string{"panel"}) ||
-				string(p.CSS()) != "div { margin: 0 }\n" || th.CSS("mine") == nil || th.CSS("stray") != nil {
+				string(p.CSS()) != "div { margin: 0 }\n" || th.CSS("mine") == nil || !slices.Equal(th.Unread(), []string{"stray.css"}) {
 				t.Errorf("read over floe's: %+v %+v", p, th)
 			}
 		})
@@ -215,20 +216,89 @@ func TestReadMistakes(t *testing.T) {
 	}
 }
 
-// A word a page names that its language does not have stops the drawing.
+// A word a page names that its language does not have stops the drawing, telling the language it looked in
+// and those that have it.
 func TestWordUnknown(t *testing.T) {
 	t.Parallel()
 
-	k, err := kit.Read(nil, kit.Sources{Templates: kit.Dir{FS: fstest.MapFS{
-		"t/page.html":  {Data: []byte(`{{word "zz"}}`)},
-		"t/words.yaml": {Data: []byte("en: {a: A}\n")},
-	}, Name: "templates"}})
+	for _, tt := range []struct{ words, lang, want string }{
+		{"en: {a: A}\n", "en", `templates/t/page.html: the words of en in words.yaml have no "zz"`},
+		{"en: {a: A}\nja: {zz: ず}\n", "en", `templates/t/page.html: the words of en in words.yaml have no "zz", which those of ja have: add it to en`},
+		{"ja: {zz: ず}\n", "en", `templates/t/page.html: words.yaml has no words in the page's language nor in en to draw "zz" in, but in ja: add en, or the page's language`},
+	} {
+		k, err := kit.Read(nil, kit.Sources{Templates: kit.Dir{FS: fstest.MapFS{
+			"t/page.html":  {Data: []byte(`{{word "zz"}}`)},
+			"t/words.yaml": {Data: []byte(tt.words)},
+		}, Name: "templates"}})
+		if err != nil {
+			t.Fatal(told(err))
+		}
+		tm, _ := k.Template("t")
+		err = tm.Page(tt.lang).Execute(&strings.Builder{}, nil)
+		if err == nil || !strings.Contains(err.Error(), tt.want) {
+			t.Errorf("%q: %v, want %s", tt.words, err, tt.want)
+		}
+	}
+}
+
+// Parts and looks share their names: one's own look hides floe's part of the name, which is then no part's
+// schema either, and a shared schema of a part's name is refused, of floe's too.
+func TestNames(t *testing.T) {
+	t.Parallel()
+
+	k := floe(t)
+	mine, err := kit.Read(k, kit.Sources{Parts: kit.Dir{FS: fstest.MapFS{
+		"table/part.css": {Data: []byte("a {}")},
+	}, Name: "own/parts"}})
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	tm, _ := k.Template("t")
-	err = tm.Page("en").Execute(&strings.Builder{}, nil)
-	if err == nil || !strings.Contains(err.Error(), `words.yaml has no word "zz"`) {
-		t.Errorf("word zz: %v", err)
+	if _, part := mine.Part("table"); part {
+		t.Error("floe's table part is still a part under one's own look")
+	}
+	if _, look := mine.Look("table"); !look {
+		t.Error("one's own look table is no look")
+	}
+	if _, ok := mine.Resources()["floe:///parts/table.json"]; ok {
+		t.Error("the schema of floe's table is still held under one's own look")
+	}
+	if parts, looks, _, _ := mine.Names(); slices.Contains(parts, "table") || !slices.Contains(looks, "table") {
+		t.Errorf("Names = %v, %v", parts, looks)
+	}
+	twice := "own/parts/p.json: p names both own/parts/p and own/parts/p.json: give one of them another name"
+	for _, tt := range []struct {
+		parts fstest.MapFS
+		want  string
+	}{
+		{fstest.MapFS{"p/part.css": {Data: []byte("")}, "p.json": {Data: []byte("{}")}}, twice},
+		{fstest.MapFS{"table.json": {Data: []byte("{}")}}, "own/parts/table.json: table names both parts/table and own/parts/table.json: give one of them another name"},
+		{fstest.MapFS{"any/part.css": {Data: []byte("")}}, "own/parts/any: any names both parts/any.json and own/parts/any: give one of them another name"},
+	} {
+		_, err := kit.Read(k, kit.Sources{Parts: kit.Dir{FS: tt.parts, Name: "own/parts"}})
+		if got := told(err); got != tt.want {
+			t.Errorf("told\n%s\nwant\n%s", got, tt.want)
+		}
+	}
+}
+
+// Read keeps the names of the files it does not read, for the check of what a directory holds.
+func TestUnread(t *testing.T) {
+	t.Parallel()
+
+	k, err := kit.Read(floe(t), kit.Sources{
+		Parts: kit.Dir{FS: fstest.MapFS{
+			"lk/part.css": {Data: []byte("")}, "lk/part.html": {Data: []byte("x")}, "lk/checks.yaml": {Data: []byte("")},
+			"p/schema.json": {Data: []byte(`{"type": "object"}`)}, "p/part.html": {Data: []byte("x")}, "p/notes.txt": {Data: []byte("")},
+		}, Name: "own/parts"},
+		Themes: kit.Dir{FS: fstest.MapFS{"t/tabel.css": {Data: []byte("")}, "t/base.css": {Data: []byte("")}}, Name: "own/themes"},
+	})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	l, _ := k.Look("lk")
+	p, _ := k.Part("p")
+	th, _ := k.Theme("t")
+	if fmt.Sprint(l.Unread(), p.Unread(), th.Unread()) != "[checks.yaml part.html] [notes.txt] [tabel.css]" {
+		t.Errorf("Unread = %v, %v, %v", l.Unread(), p.Unread(), th.Unread())
 	}
 }

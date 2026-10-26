@@ -1,6 +1,7 @@
 package kit
 
 import (
+	"bytes"
 	"html/template"
 	"maps"
 	"path"
@@ -18,19 +19,23 @@ type Theme struct {
 	base     []byte            // base.css, nil for none
 	palette  []byte            // palette.css, nil for none
 	partsCSS map[string][]byte // <part or look>.css by its name
+	unread   []string          // the files of its directory it does not read: of no part or look of the Kit
 }
 
 // Name returns the name of t.
 func (t *Theme) Name() string { return t.name }
 
 // Base returns the base.css of t, nil for none.
-func (t *Theme) Base() []byte { return t.base }
+func (t *Theme) Base() []byte { return bytes.Clone(t.base) }
 
 // Palette returns the palette.css of t, nil for none.
-func (t *Theme) Palette() []byte { return t.palette }
+func (t *Theme) Palette() []byte { return bytes.Clone(t.palette) }
 
 // CSS returns the CSS t gives the part or look named so, nil for none.
-func (t *Theme) CSS(name string) []byte { return t.partsCSS[name] }
+func (t *Theme) CSS(name string) []byte { return bytes.Clone(t.partsCSS[name]) }
+
+// Unread returns the files of the directory of t it does not read.
+func (t *Theme) Unread() []string { return slices.Clone(t.unread) }
 
 // readThemes reads into k the themes of d, each a directory: base.css, palette.css, and a file of CSS for a
 // part or a look of k, named so. A file of another name is not read.
@@ -40,19 +45,21 @@ func (k *Kit) readThemes(d Dir) error {
 		return err
 	}
 	for _, name := range dirs {
-		t := &Theme{name: name, base: nil, palette: nil, partsCSS: map[string][]byte{}}
+		t := &Theme{name: name, base: nil, palette: nil, partsCSS: map[string][]byte{}, unread: nil}
 		all, err := entries(d, name, false)
 		if err != nil {
 			return err
 		}
+		var read []string
 		for _, file := range all {
 			stem, ok := strings.CutSuffix(file, ".css")
 			if !ok || stem != "base" && stem != "palette" && !k.isPartOrLook(stem) {
 				continue
 			}
-			src, _, err := readFile(d, name, file)
-			if err != nil {
-				return err
+			read = append(read, file)
+			src, _, failed := readFile(d, name, file)
+			if failed != nil {
+				return failed
 			}
 			switch stem {
 			case "base":
@@ -62,6 +69,9 @@ func (k *Kit) readThemes(d Dir) error {
 			default:
 				t.partsCSS[stem] = src
 			}
+		}
+		if t.unread, err = unreadIn(d, name, read...); err != nil {
+			return err
 		}
 		k.themes[name] = t
 	}
@@ -91,7 +101,7 @@ func (t *Template) Schema() *schema.Compiled { return t.schema }
 func (t *Template) Page(lang string) *template.Template { return t.pages.page(t.words, lang) }
 
 // CSS returns the page.css of t, nil for none.
-func (t *Template) CSS() []byte { return t.css }
+func (t *Template) CSS() []byte { return bytes.Clone(t.css) }
 
 // Checks returns the checks of t, nil for none.
 func (t *Template) Checks() *rules.Checks { return t.checks }
@@ -100,7 +110,7 @@ func (t *Template) Checks() *rules.Checks { return t.checks }
 func (t *Template) Computed() *rules.Computed { return t.computed }
 
 // Example returns the example.yaml of t, nil for none.
-func (t *Template) Example() []byte { return t.example }
+func (t *Template) Example() []byte { return bytes.Clone(t.example) }
 
 // templatesURL is where floe holds the schemas of the templates: floe:///templates/<name>/schema.json.
 const templatesURL = "floe:///templates/"
