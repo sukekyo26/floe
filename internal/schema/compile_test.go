@@ -162,10 +162,10 @@ func TestCompileMistakeInPart(t *testing.T) {
 		{`"properties": {"t": {"$ref": "#zz"}}`, `parts/p.json: anchor in "floe:///parts/p.json#zz" not found in schema "floe:///parts/p.json"`, false},
 		{`"properties": {"t": {"$ref": "#/a~2"}}`, `parts/p.json: invalid json-pointer "floe:///parts/p.json#/a~2"`, false},
 		{`"$defs": {"a": {"$id": "http://[::1"}}`, `parts/p.json: error in parsing id at "floe:///parts/p.json#/$defs/a"`, false},
-		{`"$defs": {"a": {"$id": "x.json"}, "b": {"$id": "x.json"}}`, `parts/p.json: duplicate id "floe:///parts/x.json" in "floe:///parts/p.json" at`, true},
+		{`"$defs": {"a": {"$id": "https://example.com/x.json"}, "b": {"$id": "https://example.com/x.json"}}`, `parts/p.json: duplicate id "https://example.com/x.json" in "floe:///parts/p.json" at`, true},
 		{`"$defs": {"a": {"$anchor": "k"}, "b": {"$anchor": "k"}}`, `parts/p.json: duplicate anchor "k" in "floe:///parts/p.json" at`, true},
 	} {
-		r, err := schema.NewResource("parts/p.json", []byte(`{`+head+`, `+tt.body+`}`), schema.Part)
+		r, err := schema.NewResource("floe:///parts/p.json", "parts/p.json", []byte(`{`+head+`, `+tt.body+`}`), schema.Part)
 		if err != nil {
 			t.Fatal(err)
 		}
