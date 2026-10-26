@@ -23,6 +23,8 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 
 - **schema の形はコンパイルした木から**：floe が要る形（どの項目がどの部品・format か）は、コンパイルした `*jsonschema.Schema` から取る。schema の JSON を自前で辿らない（生の JSON を見るのは `$schema` の確かめだけで、schema の鍵の意味は読まない）。`$schema` は 2020-12・2019-09 だけを受ける
 - **木を歩くのは 2 つだけ**：schema の木を歩くのは、全部の欄を辿る `every` と、描く歩きの `followFrom`（`schema.Follow` の繰り返し）だけ。描く歩きも確かめる歩きも `schema.Follow` を使い、検査ごとに歩きを書き分けない。例外は 2 つだけ：`$schema` を見る生の JSON の歩き（schema の意味を読まない）と、根の値にいつも当たる schema の required を見る `sharedKeys`
+- **YAML は yamlpos だけが読む**：YAML のバイト列を goccy に渡すのは `yamlpos` だけ。`yamlpos` の外（テストを除く）から import できる goccy のパッケージは `ast` だけ（depguard の規則 `goccy-in-yamlpos`）。値にするのも `yamlpos.Decode`
+- **schema の JSON は schema だけが読む**：schema.json などの JSON のバイト列を読むのは `schema` の `read` だけ。`schema` の外からは、バイト列を `Compile`・`NewResource` に渡す。jsonschema を import できるのは `internal/schema` だけ（depguard の規則 `jsonschema-in-schema`）
 
 決まりは、それを入れた PR がこのファイルに足す。
 
