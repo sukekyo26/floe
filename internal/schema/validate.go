@@ -61,8 +61,6 @@ func placeOf(d *doc.Data, e *jsonschema.ValidationError) yamlpos.Pos {
 // LIMIT: jsonschema v6.0.3 shares the slice of InstanceLocation with later checks, which change what it holds
 // (upstream #276, #269): only its length is right. Go back to the library's place once it is fixed; the
 // mistakes told at the top of the file then move, and the golden files change.
-// LIMIT: an object the same propertyNames applies to twice (allOf of one $defs twice) is told twice, as
-// usererr does not yet tell a mistake once.
 func placeOfName(root *ast.MappingNode, depth int, name string) yamlpos.Pos {
 	var found []*ast.MappingValueNode
 	var walk func(n ast.Node, depth int, top bool)
