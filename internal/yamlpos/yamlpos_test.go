@@ -16,6 +16,7 @@ import (
 const (
 	anchors = "anchors, aliases, merge keys (<<) and tags are not supported; write the value out"
 	cutAt   = "a # after a space began a YAML comment, which may have cut the value short, to %s: put the value in quotes if the # is part of it, or write the comment on a line of its own"
+	bom     = "\xef\xbb\xbf"
 )
 
 func told(err error) string {
@@ -86,6 +87,10 @@ func TestParse(t *testing.T) {
 		{"a: 1\r\n---\r\n\r\n", ""},
 		{"a: 1\n---\n... # end\n", ""},
 		{"%YAML 1.2\n---\nlang: en\n", ""},
+		// A byte order mark at the start is left out: the first line's columns are an editor's.
+		{bom + "title: Plan #1 draft\n", "a.yaml:1:13: " + fmt.Sprintf(cutAt, "Plan")},
+		{bom + "%YAML 1.2\n---\nlang: en\n", ""},
+		{bom + "---\n---\n", "a.yaml:2:1: a YAML file holds one document: write it as one, without --- between parts"},
 		// LIMIT: text a , or a comment line cut, as the LIMITs of cut tell.
 		{"x: [1,500 words]\n", ""},
 		// A comment after a number, true or ~ cuts no text; text cut to a number is the schema's, by its type.
@@ -98,7 +103,7 @@ func TestParse(t *testing.T) {
 			t.Errorf("Parse(%q) told\n%s\nwant\n%s", tt.src, got, tt.want)
 		}
 	}
-	for _, src := range []string{"", "# just a note\n"} {
+	for _, src := range []string{"", "# just a note\n", bom, bom + "# just a note\n"} {
 		if _, err := yamlpos.Parse("a.yaml", []byte(src)); !errors.Is(err, yamlpos.ErrEmpty) {
 			t.Errorf("Parse(%q) = %v, want ErrEmpty", src, err)
 		}

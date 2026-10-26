@@ -3,6 +3,7 @@
 package yamlpos
 
 import (
+	"bytes"
 	"errors"
 	"slices"
 	"strconv"
@@ -97,6 +98,9 @@ func Library(file string, err error) error {
 	return usererr.LibraryAt(file, 0, 0, ye.GetMessage())
 }
 
+// ErrEmpty is returned by Parse for a file without a document, for the caller to word.
+var ErrEmpty = errors.New("no YAML document")
+
 // Decode reads the values of n, a node Parse returned, into v. Its mistake is goccy/go-yaml's (Library).
 func Decode(file string, n ast.Node, v any) error {
 	if err := yaml.NodeToValue(n, v); err != nil {
@@ -105,15 +109,13 @@ func Decode(file string, n ast.Node, v any) error {
 	return nil
 }
 
-// ErrEmpty is returned by Parse for a file without a document, for the caller to word.
-var ErrEmpty = errors.New("no YAML document")
-
-// Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A syntax
-// error is goccy/go-yaml's (Library). A second document, or text a second --- drops, is refused at its
-// start, and nothing in it is walked. Else one walk of the body refuses, all together, sorted: anchors,
-// aliases, merge keys and tags, not walking what they hold; a key that is not text; a value or a text
-// key a comment may have cut short; a key in { } without a value, but one refused already; and .inf and
-// .nan in values: JSON has no number for them.
+// Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A byte order
+// mark at its start is left out, as YAML 1.2 reads it. A syntax error is goccy/go-yaml's (Library). A
+// second document, or text a second --- drops, is refused at its start, and nothing in it is walked.
+// Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not
+// walking what they hold; a key that is not text; a value or a text key a comment may have cut short; a
+// key in { } without a value, but one refused already; and .inf and .nan in values: JSON has no number
+// for them.
 func Parse(file string, src []byte) (ast.Node, error) {
 	body, err := document(file, src)
 	if err != nil {
@@ -127,6 +129,11 @@ func Parse(file string, src []byte) (ast.Node, error) {
 // document returns the body of the one document of src. A document of a directive (%YAML) alone is no
 // document: it heads the one after it.
 func document(file string, src []byte) (ast.Node, error) {
+	// YAML 1.2 allows a byte order mark at the start, which goccy/go-yaml reads as part of the first key.
+	// src is left without it for both the parser and dropped, so that their places agree.
+	// LIMIT: only one UTF-8 mark at the start; a second, one within, and UTF-16 or UTF-32 are read as they
+	// are (S6). Rework here if S6 decides how to read them.
+	src = bytes.TrimPrefix(src, utf8BOM)
 	doc, err := parser.ParseBytes(src, 0)
 	if err != nil {
 		return nil, Library(file, err)
@@ -163,6 +170,8 @@ func document(file string, src []byte) (ast.Node, error) {
 	}
 	return body, nil
 }
+
+var utf8BOM = []byte("\xef\xbb\xbf")
 
 // startOf returns where d starts: at its ---, or at at without one.
 func startOf(d *ast.DocumentNode, at Pos) Pos {
