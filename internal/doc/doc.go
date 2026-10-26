@@ -24,6 +24,15 @@ type Data struct {
 	Where map[string]yamlpos.Pos
 }
 
+// PosOf returns where the value at the path at (keys and indexes) is written in d: the value, or its key when
+// it is left out; the top of the file without a node.
+func (d *Data) PosOf(at []string) yamlpos.Pos {
+	if d.Root == nil {
+		return yamlpos.Pos{Line: 1, Column: 1}
+	}
+	return yamlpos.OfValue(yamlpos.Find(d.Root, at))
+}
+
 // Shared are the keys of a data file floe reads itself, in every template, which the template's schema neither
 // declares nor checks.
 var Shared = []string{"lang", "template", "theme", "title"}

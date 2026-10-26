@@ -119,6 +119,7 @@ var messagesEN = map[string]string{
 	"draw_part_unknown": "the page drawn from this file names the part %s, which there is none of; use %s",
 	"draw_part_several": `the page has data-floe-part="%s", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
 	"draw_look_box":     `the page has data-floe-part="%[1]s", but %[1]s is a look, which has no box: take it with data-floe-look="%[1]s"`,
+	"draw_format":       "floe does not draw an item of format %s yet: give it another format, or none",
 
 	// cli: the command line (English alone is told; the other languages hold the keys as every catalog does)
 	// LIMIT: the %s of cli_usage is cobra's English, as cobra words what it cannot read

@@ -259,7 +259,7 @@ func TestLoadStops(t *testing.T) {
 	}
 }
 
-// What floe does not draw yet, an item of format html, which no schema of floe's has, is floe's failure; an
+// What floe does not draw yet, an item of format html, which a template of one's own may have, is told at it; an
 // empty data-floe-part, whose boundary would keep the parts' styles from what it holds, is refused, and an
 // empty data-floe-look, which is no boundary, is not.
 func TestNotDrawn(t *testing.T) {
@@ -268,7 +268,7 @@ func TestNotDrawn(t *testing.T) {
 	k := ownKit(t, nil, mine(minePage, `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"h": {"type": "string", "format": "html"}}}`, nil))
 	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nh: <b>x</b>\n", none),
-		"floe: draw: floe does not draw an item of format html yet"; got != want {
+		"d.yaml:3:4: floe does not draw an item of format html yet: give it another format, or none"; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 	page := "<!doctype html>\n<html><head><title>t</title></head><body>\n<div data-floe-part=\"\">a</div><p data-floe-look=\" \">b</p>\n</body></html>\n"
@@ -276,5 +276,34 @@ func TestNotDrawn(t *testing.T) {
 	want := `d.yaml:2:11: the page has data-floe-part="", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`
 	if got := drawn(t, k, "lang: en\ntemplate: mine\n", none); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A mistake a part's file names itself, a word its words.yaml has not in the page's language, is told where it
+// says (the part's part.html, which draws the word), once whatever uses the part.
+func TestPartWordsAtTheirFile(t *testing.T) {
+	t.Parallel()
+
+	k := ownKit(t, map[string]string{
+		"w/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+		"w/part.html":   `<div data-floe-part="w">{{word "x"}}</div>`,
+		"w/part.css":    "",
+		"w/words.yaml":  "en: {x: X}\nja: {y: Y}\n",
+	}, mine(minePage, `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"ws": {"type": "array", "items": {"$ref": "floe:///parts/w.json"}}}}`, nil))
+	got := drawn(t, k, "lang: ja\ntemplate: mine\nws: [{}, {}]\n", none)
+	if want := `parts/w/part.html: the words of ja in words.yaml have no "x", which those of en have: add it to ja`; got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A heading with an empty id, which names nothing, is given one as one without.
+func TestEmptyHeadingID(t *testing.T) {
+	t.Parallel()
+
+	page := "<!doctype html>\n<html><head><title>t</title></head><body><h2 id=\"\">Plan</h2></body></html>\n"
+	out, err := tmpl.Draw(ownKit(t, nil, mine(page, mineSchema, nil)), "d.yaml", []byte("lang: en\ntemplate: mine\n"), none)
+	if err != nil || !strings.Contains(string(out), `<h2 id="plan">Plan</h2>`) {
+		t.Errorf("drawn %q, %v", out, err)
 	}
 }

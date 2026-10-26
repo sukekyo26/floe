@@ -46,13 +46,10 @@ func (c *Compiled) Validate(d *doc.Data) error {
 // placeOf returns where the mistake e is written in d: the value at its InstanceLocation, or for a property
 // name, as placeOfName finds it; the top of the file without a node.
 func placeOf(d *doc.Data, e *jsonschema.ValidationError) yamlpos.Pos {
-	if d.Root == nil {
-		return yamlpos.Pos{Line: 1, Column: 1}
-	}
-	if pn, ok := e.ErrorKind.(*kind.PropertyNames); ok {
+	if pn, ok := e.ErrorKind.(*kind.PropertyNames); ok && d.Root != nil {
 		return placeOfName(d.Root, len(e.InstanceLocation), pn.Property)
 	}
-	return yamlpos.OfValue(yamlpos.Find(d.Root, e.InstanceLocation))
+	return d.PosOf(e.InstanceLocation)
 }
 
 // placeOfName returns where a property name the schema refuses is: the key name of the one object at depth

@@ -10,8 +10,7 @@ import (
 )
 
 // pageStyle returns the CSS of each <style> of a page drawn in the theme named so, whose elements name what n
-// holds, with
-// own, its template's page.css. Each is a layer: floe's base.css, under the palettes (the default theme's,
+// holds, with own, its template's page.css. Each is a layer: floe's base.css, under the palettes (the default theme's,
 // then the theme's), the looks, the template's own and the parts'. The parts' are the style of each part the
 // page names a box of, and of each look the page or those parts take, before the parts that take it and the
 // parts that place it (those whose boxes hold its box), which adjust it; then the theme's: its base.css, and
