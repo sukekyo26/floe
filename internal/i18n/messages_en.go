@@ -20,6 +20,7 @@ var messagesEN = map[string]string{
 	// schema: compiling a schema and the shape floe draws by
 	"schema_dialect":            "$schema %s names no draft floe takes; name https://json-schema.org/draft/2020-12/schema or https://json-schema.org/draft/2019-09/schema, or leave it out",
 	"schema_no_url":             "%s: a schema refers to no other file or URL; write what a $ref refers to in its own file",
+	"schema_empty":              `the schema is empty: write a JSON Schema object, such as {"type": "object"}`,
 	"schema_no_part":            "%s is not a part; refer to one as floe:///parts/<name>.json",
 	"schema_part_unreached":     "the part %s draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn",
 	"schema_ref_unreached":      "%s holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows",
