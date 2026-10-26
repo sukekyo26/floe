@@ -185,7 +185,7 @@ func TestFind(t *testing.T) {
 		{[]string{"d", "9"}, yamlpos.Pos{Line: 6, Column: 4}},
 		{[]string{"d", "x"}, yamlpos.Pos{Line: 6, Column: 4}},
 		// An empty entry of a flow sequence is where it is written: goccy/go-yaml gives a flow sequence entries
-		// too, at the , before each (none before the first), not at the entry.
+		// too, whose token is the , before each, nil for the first, not the entry.
 		{[]string{"e", "0"}, yamlpos.Pos{Line: 7, Column: 5}},
 		{[]string{"e", "2"}, yamlpos.Pos{Line: 7, Column: 11}},
 	} {

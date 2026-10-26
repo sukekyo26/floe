@@ -147,30 +147,35 @@ func TestCheckPartMistakes(t *testing.T) {
 }
 
 // A mistake of compiling a part the template refers to is told in the part's file, not the template's: by the
-// URL the library's mistake holds, for each kind of mistake that holds one.
+// URL the library's mistake holds, for the 6 of its kinds of mistake that floe reaches.
+// ParseURLError, ParseAnchorError, InvalidRegexError and UnsupportedVocabularyError are not reached: the
+// metaschema refuses such a $ref, $id, $anchor and pattern first, and the loader a metaschema of one's own.
 func TestCompileMistakeInPart(t *testing.T) {
 	t.Parallel()
 
-	const h = `"$schema": "https://json-schema.org/draft/2020-12/schema"`
-	for _, tt := range []struct{ body, want string }{
-		{`"properties": {"t": {"pattern": "["}}`, "parts/p.json: #/properties/t/pattern: '[' is not valid regex: error parsing regexp: missing closing ]: `[`"},
-		{`"properties": {"t": {"$ref": "#/nope"}}`, `parts/p.json: json-pointer in "floe:///parts/p.json#/nope" not found`},
-		{`"properties": {"t": {"$ref": "#zz"}}`, `parts/p.json: anchor in "floe:///parts/p.json#zz" not found in schema "floe:///parts/p.json"`},
-		{`"properties": {"t": {"$ref": "#/a~2"}}`, `parts/p.json: invalid json-pointer "floe:///parts/p.json#/a~2"`},
-		{`"$defs": {"a": {"$id": "http://[::1"}}`, `parts/p.json: error in parsing id at "floe:///parts/p.json#/$defs/a"`},
-		// The library names the two places in a map's order; the file is what is checked here.
-		{`"$defs": {"a": {"$id": "x.json"}, "b": {"$id": "x.json"}}`, `parts/p.json: duplicate id "floe:///parts/x.json" in "floe:///parts/p.json" at`},
-		{`"$defs": {"a": {"$anchor": "k"}, "b": {"$anchor": "k"}}`, `parts/p.json: duplicate anchor "k" in "floe:///parts/p.json" at`},
+	for _, tt := range []struct {
+		body, want string
+		head       bool // the library names two places in a map's order: only the head of what it tells is compared
+	}{
+		{`"properties": {"t": {"pattern": "["}}`, "parts/p.json: #/properties/t/pattern: '[' is not valid regex: error parsing regexp: missing closing ]: `[`", false},
+		{`"properties": {"t": {"$ref": "#/nope"}}`, `parts/p.json: json-pointer in "floe:///parts/p.json#/nope" not found`, false},
+		{`"properties": {"t": {"$ref": "#zz"}}`, `parts/p.json: anchor in "floe:///parts/p.json#zz" not found in schema "floe:///parts/p.json"`, false},
+		{`"properties": {"t": {"$ref": "#/a~2"}}`, `parts/p.json: invalid json-pointer "floe:///parts/p.json#/a~2"`, false},
+		{`"$defs": {"a": {"$id": "http://[::1"}}`, `parts/p.json: error in parsing id at "floe:///parts/p.json#/$defs/a"`, false},
+		{`"$defs": {"a": {"$id": "x.json"}, "b": {"$id": "x.json"}}`, `parts/p.json: duplicate id "floe:///parts/x.json" in "floe:///parts/p.json" at`, true},
+		{`"$defs": {"a": {"$anchor": "k"}, "b": {"$anchor": "k"}}`, `parts/p.json: duplicate anchor "k" in "floe:///parts/p.json" at`, true},
 	} {
-		r, err := schema.NewResource("parts/p.json", []byte(`{`+h+`, `+tt.body+`}`), schema.Part)
+		r, err := schema.NewResource("parts/p.json", []byte(`{`+head+`, `+tt.body+`}`), schema.Part)
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = schema.Compile("floe:///templates/t/schema.json", "t/schema.json",
-			[]byte(`{`+h+`, "properties": {"x": {"$ref": "floe:///parts/p.json"}}}`), map[string]schema.Resource{"floe:///parts/p.json": r})
-		if got := told(err); !strings.HasPrefix(got, tt.want) || strings.Contains(got, "\n") {
-			t.Errorf("a part of %s told\n%s\nwant\n%s", tt.body, got, tt.want)
+		_, err = schema.Compile(template, "schema.json",
+			[]byte(`{`+head+`, "properties": {"x": {"$ref": "floe:///parts/p.json"}}}`), map[string]schema.Resource{"floe:///parts/p.json": r})
+		got := told(err)
+		if tt.head && strings.HasPrefix(got, tt.want) && !strings.Contains(got, "\n") || got == tt.want {
+			continue
 		}
+		t.Errorf("a part of %s told\n%s\nwant\n%s", tt.body, got, tt.want)
 	}
 }
 
