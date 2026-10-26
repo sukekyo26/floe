@@ -13,7 +13,9 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -131,6 +133,10 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 	if err = json.Unmarshal(b, &idx); err != nil {
 		return nil, broken(file, b, err, k)
 	}
+	// JSON of another shape (null, {}) is no index a fetch wrote: each holds its version.
+	if idx.Version == "" {
+		return nil, usererr.NewAt(file, 0, 0, "icons_index_no_version", k.name)
+	}
 	s.indexes[k.name] = &idx
 	return &idx, nil
 }
@@ -149,8 +155,14 @@ func broken(file string, b []byte, err error, k *kit) error {
 		return fmt.Errorf("read %s: %w", file, err)
 	}
 	line, column := textpos.Ending(b, int(at))
-	e := usererr.LibraryWith("icons_broken", err)
-	e.Args = append(e.Args, k.name)
+	return libraryAt(file, line, column, "icons_broken", err, k.name)
+}
+
+// libraryAt is the mistake a library told in err, its words the first argument of the catalog message key and
+// args after them, at the line and column of file, 0 for none.
+func libraryAt(file string, line, column int, key string, err error, args ...any) error {
+	e := usererr.LibraryWith(key, err)
+	e.Args = append(e.Args, args...)
 	e.File, e.Line, e.Column = file, line, column
 	return e
 }
@@ -161,9 +173,13 @@ func (s *Store) loadIndex(k *kit) (*index, error) {
 		return nil, err
 	}
 	if idx == nil {
-		return nil, usererr.New("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
+		return nil, s.notFetched(k)
 	}
 	return idx, nil
+}
+
+func (s *Store) notFetched(k *kit) *usererr.Error {
+	return usererr.New("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
 }
 
 // Source is a package to fetch: At, a URL or an absolute path, and Name, as it was written, which its mistakes
@@ -213,6 +229,7 @@ func (s *Store) Fetch(ctx context.Context, set string, from Source, force bool) 
 	if err := os.MkdirAll(s.root, 0o700); err != nil {
 		return got, usererr.CannotWrite(s.root, err)
 	}
+	s.clearLeftovers(k)
 	tmp, err := os.MkdirTemp(s.root, k.name+".tmp-")
 	if err != nil {
 		return got, usererr.CannotWrite(s.root, err)
@@ -236,17 +253,31 @@ func (s *Store) Fetch(ctx context.Context, set string, from Source, force bool) 
 	return got, nil
 }
 
+// clearLeftovers removes what a fetch of k stopped on its way left: its directories beside the set's.
+// LIMIT: a fetch stopped between the two renames of replace leaves the set gone and its previous icons in a
+// leftover, which this removes; make replace one rename (a symlink to swap) if that comes to matter.
+func (s *Store) clearLeftovers(k *kit) {
+	left, _ := filepath.Glob(filepath.Join(s.root, k.name+".tmp-*")) //nolint:errcheck // the pattern is well formed
+	for _, dir := range left {
+		_ = os.RemoveAll(dir) //nolint:errcheck // a leftover is harmless
+	}
+}
+
 // tells reports whether at, the package's URL, tells it is of version: a URL may tell its version, which saves
 // the download; a path or another URL is opened to tell it.
 func (k *kit) tells(at, version string) bool {
-	m := k.version.FindStringSubmatch(at)
-	return IsURL(at) && m != nil && version != "" && m[1] == version
+	u, err := url.Parse(at)
+	if err != nil || !IsURL(at) {
+		return false
+	}
+	m := k.version.FindStringSubmatch(path.Base(u.Path))
+	return m != nil && version != "" && m[1] == version
 }
 
 // fetch writes the icons of the package at from to dir.
 func (k *kit) fetch(ctx context.Context, from Source, dir string) (*index, error) {
 	if IsURL(from.At) {
-		b, err := download(ctx, from.At)
+		b, err := download(ctx, from.At, "icons_download")
 		if err != nil {
 			return nil, err
 		}
@@ -266,7 +297,8 @@ func (k *kit) fetch(ctx context.Context, from Source, dir string) (*index, error
 
 // IsURL tells a source that Fetch downloads from one it reads as a path.
 func IsURL(source string) bool {
-	return strings.HasPrefix(source, "https://") || strings.HasPrefix(source, "http://")
+	u, err := url.Parse(source)
+	return err == nil && (u.Scheme == "https" || u.Scheme == "http")
 }
 
 // replace puts the icons in tmp in place of dir as a whole. When that fails, the previous icons stay.
@@ -281,7 +313,7 @@ func replace(tmp, dir string) error {
 	if err := rename(tmp, dir); err != nil {
 		if hadOld {
 			if back := os.Rename(old, dir); back != nil {
-				return fmt.Errorf("move the new icons into place: %w (and the previous ones back: %w)", err, back)
+				return previousLeft(dir, old, err)
 			}
 		}
 		return usererr.CannotWrite(dir, err)
@@ -291,11 +323,25 @@ func replace(tmp, dir string) error {
 	return nil
 }
 
+// previousLeft is err, of moving the new icons to dir, when the previous ones could not be moved back from old
+// either: in the system's words, with where they are.
+func previousLeft(dir, old string, err error) error {
+	words := err.Error()
+	var le *os.LinkError
+	if errors.As(err, &le) {
+		words = le.Err.Error()
+	}
+	return usererr.NewAt(dir, 0, 0, "icons_previous_left", words, old)
+}
+
 // extract writes the set's icons in the zip r of size bytes, from from, to dir, with their index.json.
 func (k *kit) extract(r io.ReaderAt, size int64, from Source, dir string) (*index, error) {
 	zr, err := zip.NewReader(r, size)
+	if errors.Is(err, zip.ErrFormat) {
+		return nil, usererr.NewAt(from.Name, 0, 0, "icons_not_zip", k.page)
+	}
 	if err != nil {
-		return nil, zipMistake(from, err, k)
+		return nil, zipMistake(from, err)
 	}
 	idx := &index{Version: "", Source: from.At, Icons: map[string]entry{}}
 	light := k.lightOnes(zr)
@@ -315,7 +361,7 @@ func (k *kit) extract(r io.ReaderAt, size int64, from Source, dir string) (*inde
 			return nil, usererr.NewAt(from.Name, 0, 0, "icons_icon_too_large", f.Name, maxIcon>>20)
 		}
 		if err != nil {
-			return nil, zipMistake(from, err, k)
+			return nil, zipMistake(from, err)
 		}
 		if written += int64(len(b)); written > maxPackage {
 			return nil, usererr.NewAt(from.Name, 0, 0, "icons_written_too_large", maxPackage>>20)
@@ -344,18 +390,13 @@ func (k *kit) lightOnes(zr *zip.Reader) map[string]bool {
 	return light
 }
 
-// zipMistake is err, of reading the zip from: a file that is no zip, one that cannot be read in the system's
-// words, or one archive/zip cannot read in its words.
-func zipMistake(from Source, err error, k *kit) error {
-	switch {
-	case errors.Is(err, zip.ErrFormat):
-		return usererr.NewAt(from.Name, 0, 0, "icons_not_zip", k.page)
-	case errors.As(err, new(*fs.PathError)):
+// zipMistake is err, of reading the zip from past its start: one that cannot be read in the system's words, or
+// one archive/zip cannot read (an entry's header, its size or its checksum) in its words.
+func zipMistake(from Source, err error) error {
+	if errors.As(err, new(*fs.PathError)) {
 		return usererr.CannotRead(from.Name, err)
 	}
-	e := usererr.LibraryWith("icons_bad_zip", err)
-	e.File = from.Name
-	return e
+	return libraryAt(from.Name, 0, 0, "icons_bad_zip", err)
 }
 
 func readEntry(f *zip.File) ([]byte, error) {
@@ -425,7 +466,7 @@ func (s *Store) Search(words []string) ([]Hit, error) {
 			return nil, err
 		}
 		if idx == nil {
-			missing = append(missing, usererr.New("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host))
+			missing = append(missing, s.notFetched(k))
 			continue
 		}
 		for name, e := range idx.Icons {

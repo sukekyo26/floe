@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"hash/crc32"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -322,6 +323,7 @@ func TestFetchRefusals(t *testing.T) {
 		{icons.Source{Name: "dir", At: folder}, "dir: is a directory"},
 		{local(checksum), "crc.zip: cannot be read as a zip (zip: checksum error); download it again"},
 		{local(truncated), "cut.zip: cannot be read as a zip (unexpected EOF); download it again"},
+		{local(lying(t)), "lie.zip: cannot be read as a zip (zip: not a valid zip file); download it again"},
 	} {
 		if _, err := set.Fetch(context.Background(), "aws", c.from, false); told(err) != c.want {
 			t.Errorf("Fetch %s = %s, want %s", c.from.Name, told(err), c.want)
@@ -361,6 +363,53 @@ func TestFetchRefusals(t *testing.T) {
 	}
 }
 
+// lying is a zip whose entry holds more than it says.
+func lying(t *testing.T) string {
+	t.Helper()
+	data := []byte("<svg/>")
+	var zb bytes.Buffer
+	zw := zip.NewWriter(&zb)
+	w, err := zw.CreateRaw(&zip.FileHeader{ //nolint:exhaustruct // a test's entry
+		Name: packageFiles[0], Method: zip.Store, CRC32: crc32.ChecksumIEEE(data),
+		CompressedSize64: 6, UncompressedSize64: 5, // len(data), and one less
+	})
+	if err == nil {
+		_, err = w.Write(data)
+	}
+	if err == nil {
+		err = zw.Close()
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "lie.zip")
+	if err := os.WriteFile(path, zb.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// What a stopped fetch left beside the set is removed by the next one that writes.
+func TestFetchClearsLeftovers(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	left := filepath.Join(root, "aws.tmp-123-old")
+	other := filepath.Join(root, "awsx.tmp-1")
+	for _, dir := range []string{left, other} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fetch(t, icons.New(root), local(writeZip(t, "Icon-package.zip", packageFiles)), false)
+	if _, err := os.Stat(left); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a leftover of the set = %v, want it gone", err)
+	}
+	if _, err := os.Stat(other); err != nil {
+		t.Errorf("another's directory = %v, want it kept", err)
+	}
+}
+
 // An index that is no JSON is told at the place encoding/json names, and one that cannot be read in the
 // system's words, as fetching again would not mend it.
 func TestBrokenIndex(t *testing.T) {
@@ -372,6 +421,8 @@ func TestBrokenIndex(t *testing.T) {
 		{"{", `:1:1: cannot be read (unexpected end of JSON input); run "floe icons fetch aws --force" to fetch the icons again`},
 		{`{"icons": "日"}`, `:1:13: cannot be read (json: cannot unmarshal string into Go struct field index.icons of type map[string]icons.entry); ` +
 			`run "floe icons fetch aws --force" to fetch the icons again`},
+		{`{}`, `: holds no version of the icons; run "floe icons fetch aws --force" to fetch them again`},
+		{`null`, `: holds no version of the icons; run "floe icons fetch aws --force" to fetch them again`},
 	} {
 		dir := filepath.Join(t.TempDir(), "aws")
 		if err := os.MkdirAll(dir, 0o700); err != nil {

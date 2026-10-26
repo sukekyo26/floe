@@ -45,7 +45,7 @@ func readAtMost(r io.Reader, limit int64) ([]byte, error) {
 
 // packageURL is the package that the set's page links: the first link whose URL is one of the set's packages.
 func (k *kit) packageURL(ctx context.Context) (string, error) {
-	page, err := download(ctx, k.page)
+	page, err := download(ctx, k.page, "icons_page_download")
 	if err != nil {
 		return "", err
 	}
@@ -91,12 +91,14 @@ func (k *kit) linkOf(z *html.Tokenizer, base *url.URL) string {
 	return ""
 }
 
-func download(ctx context.Context, at string) ([]byte, error) {
+// download reads what at, a URL, holds; failing tells it with the catalog message key failing, which says what
+// to do instead.
+func download(ctx context.Context, at, failing string) ([]byte, error) {
 	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, at, nil)
 	if err != nil {
-		return nil, failed(at, err)
+		return nil, libraryAt(at, 0, 0, "icons_bad_url", unwrapped(err))
 	}
 	// Timers give up on the download: after headerTimeout without a response (connecting included), then
 	// after stallTimeout without data. No timeout covers the whole of it, so a slow one is let finish.
@@ -104,11 +106,11 @@ func download(ctx context.Context, at string) ([]byte, error) {
 	res, err := http.DefaultClient.Do(req)
 	waiting.Stop()
 	if err != nil {
-		return nil, failed(at, cmp.Or(context.Cause(ctx), err))
+		return nil, libraryAt(at, 0, 0, failing, unwrapped(cmp.Or(context.Cause(ctx), err)))
 	}
 	defer res.Body.Close() //nolint:errcheck // read only
 	if res.StatusCode != http.StatusOK {
-		return nil, usererr.NewAt(at, 0, 0, "icons_download", "HTTP "+strconv.Itoa(res.StatusCode))
+		return nil, usererr.NewAt(at, 0, 0, failing, "HTTP "+strconv.Itoa(res.StatusCode))
 	}
 	if res.ContentLength > maxPackage {
 		return nil, usererr.NewAt(at, 0, 0, "icons_download_too_large", maxPackage>>20)
@@ -120,16 +122,18 @@ func download(ctx context.Context, at string) ([]byte, error) {
 		return nil, usererr.NewAt(at, 0, 0, "icons_download_too_large", maxPackage>>20)
 	}
 	if err != nil {
-		return nil, failed(at, cmp.Or(context.Cause(ctx), err))
+		return nil, libraryAt(at, 0, 0, failing, unwrapped(cmp.Or(context.Cause(ctx), err)))
 	}
 	return b, nil
 }
 
-// failed is err, of downloading at, in net/http's words.
-func failed(at string, err error) error {
-	e := usererr.LibraryWith("icons_download", err)
-	e.File = at
-	return e
+// unwrapped is err without the URL net/http puts before its words (*url.Error), as the mistake is at the URL.
+func unwrapped(err error) error {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		return ue.Err
+	}
+	return err
 }
 
 // progress calls on whenever data comes.
