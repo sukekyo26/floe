@@ -1,13 +1,10 @@
 package schema_test
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/schema"
@@ -28,11 +25,11 @@ func resources(t *testing.T) map[string]schema.Resource {
 		if err != nil {
 			t.Fatal(err)
 		}
-		d, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
+		r, err := schema.NewResource("parts/"+name+".json", src, k)
 		if err != nil {
 			t.Fatal(err)
 		}
-		res["floe:///parts/"+name+".json"] = schema.Resource{Doc: d, Kind: k, File: "parts/" + name + ".json"}
+		res["floe:///parts/"+name+".json"] = r
 	}
 	return res
 }

@@ -1,16 +1,18 @@
 package schema_test
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/santhosh-tekuri/jsonschema/v6"
-
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/schema"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // N is a $ref to the part note.
 const N = `{"$ref": "floe:///parts/note.json"}`
+
+// mark is a UTF-8 byte order mark.
+const mark = "\xef\xbb\xbf"
 
 // Compile tells the library's mistakes in its words where they are, and floe's checks of what it draws by
 // at the schema they are of; it passes what floe draws as the schema checks it. The output is compared as it
@@ -65,6 +67,11 @@ func TestCompile(t *testing.T) {
 		{"a $ref with a name beside it, and its target a start of its own", `{` + head + `, "properties": {"a": {"$ref": "#/properties/z", "properties": {"k": {"type":"string"}}}, "z": {"properties": {"k": {"type":"string","format":"html"}}}}}`, ""},
 		{"dependencies in 2020-12", `{` + head + `, "dependencies": {"x": ["title"]}}`, "schema.json: #: the schema requires title, which floe reads from every data file itself (lang, template, theme, title) and leaves out of what the schema checks: require other items"},
 		{"one $defs from two places", `{` + head + `, "$defs": {"item": {"type":"object","properties": {"n": ` + N + `}}}, "properties": {"xs": {"type":"array","items": {"$ref": "#/$defs/item"}}, "ys": {"type":"array","items": {"$ref": "#/$defs/item"}}}}`, ""},
+		// A byte order mark at the start is left out, once; the JSON pointers are those without it.
+		{"bom", mark + `{"type":"object"}`, ""},
+		{"bom strng", mark + `{` + head + `, "properties": {"t": {"type":"strng"}}}`, "schema.json: #/properties/t/type: 'anyOf' failed"},
+		{"two boms", mark + mark + `{"type":"object"}`, `schema.json: invalid character '\ufeff' looking for beginning of value`},
+		{"null", `null`, "schema.json: #: got null, want boolean or object"},
 	} {
 		_, err := schema.Compile(template, "schema.json", []byte(tt.src), resources(t))
 		if got := told(err); got != tt.want {
@@ -101,11 +108,11 @@ func TestCheckPartMistakes(t *testing.T) {
 		"missing": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"text": {"$ref": "#/$defs/missing"}}}`,
 		"meta":    `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"m": {"$ref": "https://json-schema.org/draft/2020-12/schema"}}}`,
 	} {
-		d, err := jsonschema.UnmarshalJSON(strings.NewReader(src))
+		r, err := schema.NewResource("parts/"+name+".json", []byte(src), schema.Part)
 		if err != nil {
 			t.Fatal(err)
 		}
-		res["floe:///parts/"+name+".json"] = schema.Resource{Doc: d, Kind: schema.Part, File: "parts/" + name + ".json"}
+		res["floe:///parts/"+name+".json"] = r
 	}
 	for name, want := range map[string]string{
 		"a":       "parts/a.json: #/properties/h: floe:///parts/b.json#/$defs/h points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, floe:///parts/b.json",
@@ -118,5 +125,41 @@ func TestCheckPartMistakes(t *testing.T) {
 	}
 	if got := told(schema.CheckPart("floe:///parts/nope.json", res)); got != "floe: schema: no resource floe:///parts/nope.json" {
 		t.Errorf("CheckPart of no resource told %q", got)
+	}
+}
+
+// NewResource reads a part past a byte order mark at its start, its mistakes in its file; a part of null is
+// the user's mistake, and a Resource NewResource did not make is floe's failure.
+func TestNewResource(t *testing.T) {
+	t.Parallel()
+
+	const p = "floe:///parts/p.json"
+	tmpl := []byte(`{` + head + `, "properties": {"p": {"$ref": "` + p + `"}}}`)
+	run := func(r schema.Resource) (compiled, checked error) {
+		res := map[string]schema.Resource{p: r}
+		_, compiled = schema.Compile(template, "schema.json", tmpl, res)
+		return compiled, schema.CheckPart(p, res)
+	}
+	if _, err := schema.NewResource("parts/p.json", []byte(mark+`{`), schema.Part); told(err) != "parts/p.json: unexpected EOF" {
+		t.Errorf("NewResource of a part cut short told %q", told(err))
+	}
+	for src, want := range map[string]string{
+		mark + `{"type":"string"}`: "",
+		`null`:                     "parts/p.json: #: got null, want boolean or object",
+	} {
+		r, err := schema.NewResource("parts/p.json", []byte(src), schema.Part)
+		if err != nil {
+			t.Fatal(err)
+		}
+		compiled, checked := run(r)
+		if told(compiled) != want || told(checked) != want {
+			t.Errorf("part %q: Compile told %q, CheckPart %q; want %q", src, told(compiled), told(checked), want)
+		}
+	}
+	compiled, checked := run(schema.Resource{Kind: schema.Part, File: "parts/p.json"})
+	for _, err := range []error{compiled, checked} {
+		if usererr.Tell(i18n.EnglishCatalog(), err).Failure == "" {
+			t.Errorf("a Resource NewResource did not make told %q, want floe's failure", told(err))
+		}
 	}
 }
