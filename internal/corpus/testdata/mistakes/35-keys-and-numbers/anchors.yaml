@@ -1,0 +1,8 @@
+template: report
+lang: en
+title: &t t
+sections:
+  - heading: *t
+    parts:
+      - text: &x hi
+      - text: *x

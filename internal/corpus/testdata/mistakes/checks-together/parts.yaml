@@ -1,0 +1,11 @@
+# The checks of the template and of each part a value is drawn by run together: none is left out for another.
+lang: en
+template: report
+title: Checks
+sections:
+  - heading: a
+    parts:
+      - table: {columns: [{title: x}], rows: [[a, b]]}
+      - table: {columns: [{title: x}], rows: [[a, b]]}
+      - progress: [{label: p, done: 5, of: 3}]
+      - text: "```\ncode\n```"

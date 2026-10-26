@@ -8,5 +8,7 @@ import (
 )
 
 func main() {
-	os.Exit(cli.Run(os.Args[1:], cli.Env{Stdout: os.Stdout, Stderr: os.Stderr}))
+	// A working directory that cannot be read is "": a relative path is then refused, not read elsewhere.
+	dir, _ := os.Getwd() //nolint:errcheck // see above
+	os.Exit(cli.Run(os.Args[1:], cli.Env{Stdout: os.Stdout, Stderr: os.Stderr, Dir: dir}))
 }

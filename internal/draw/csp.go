@@ -2,9 +2,10 @@ package draw
 
 import (
 	"bytes"
-	"slices"
+	"fmt"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 // cdns are where a page drawn from a data file may load libraries from, with their styles and fonts.
@@ -22,47 +23,32 @@ func CutOff(connect string) string {
 		"script-src 'unsafe-inline' " + cdns + "; form-action 'none'; base-uri 'none'; connect-src " + connect
 }
 
-// CutOffPage puts CutOff into a page opened without the headers (a file floe render writes): right after the
-// doctype (past a BOM and comments before it), since a <meta> binds only what comes after it; the parser moves
-// it into <head> all the same. Nothing connects. A page floe draws is UTF-8: the charset goes first, so that
-// the CSP does not push the page's own out of the bytes a browser reads for it.
-func CutOffPage(page []byte) []byte {
-	at, meta := cutOffAt(page)
-	return slices.Concat(page[:at], []byte(meta), page[at:])
-}
-
-// cutOffAt returns where in page the <meta> of CutOff goes, and the <meta>: past a BOM, the ASCII whitespace,
-// the comments and the doctype an HTML tokenizer reads at its start, and before anything else. A comment or
-// a doctype that runs to the end of page is taken as one left open, and the <meta> goes before it, not in
-// it: whether one is closed is not read apart.
-// LIMIT: a page that ends with its doctype gets the <meta> before it, which a browser draws in quirks mode;
-// a page floe draws has a <head> after its doctype.
-func cutOffAt(page []byte) (int, string) {
-	meta := "\n<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"" + CutOff("'none'") + "\">"
-	at := len(page) - len(bytes.TrimPrefix(page, []byte("\xef\xbb\xbf")))
-	z := html.NewTokenizer(bytes.NewReader(page[at:]))
-	for {
-		tt := z.Next()
-		raw := len(z.Raw())
-		toEnd := at+raw == len(page)
-		switch tt {
-		case html.TextToken:
-			if rest := bytes.TrimLeft(z.Raw(), " \t\n\f\r"); len(rest) > 0 {
-				return at + raw - len(rest), meta
+// CutOffPage puts CutOff into a page opened without the headers (a file floe render writes): first in its
+// head, read as a browser reads it, since a <meta> binds only what comes after it. Nothing connects. A page
+// floe draws is UTF-8: the charset goes first, so that the CSP does not push the page's own out of the bytes
+// a browser reads for it.
+func CutOffPage(page []byte) ([]byte, error) {
+	tree, _ := html.Parse(bytes.NewReader(page)) //nolint:errcheck // a bytes.Reader fails no read, Parse's one error
+	for n := range tree.Descendants() {
+		if n.Type == html.ElementNode && n.DataAtom == atom.Head && n.Namespace == "" {
+			first := n.FirstChild
+			for _, attrs := range [][]html.Attribute{
+				{{Namespace: "", Key: "charset", Val: "utf-8"}},
+				{
+					{Namespace: "", Key: "http-equiv", Val: "Content-Security-Policy"},
+					{Namespace: "", Key: "content", Val: CutOff("'none'")},
+				},
+			} {
+				meta := node(html.ElementNode, atom.Meta, "meta")
+				meta.Attr = attrs
+				n.InsertBefore(meta, first)
 			}
-			at += raw
-		case html.CommentToken:
-			if toEnd {
-				return at, meta
-			}
-			at += raw
-		case html.DoctypeToken:
-			if toEnd {
-				return at, meta
-			}
-			return at + raw, meta
-		default:
-			return at, meta
+			break
 		}
 	}
+	var out bytes.Buffer
+	if err := html.Render(&out, tree); err != nil {
+		return nil, fmt.Errorf("draw: write the page: %w", err)
+	}
+	return out.Bytes(), nil
 }
