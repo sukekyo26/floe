@@ -1,7 +1,8 @@
 package diagram
 
 import (
-	_ "embed" // the template, the zoom script and the diagrams' style
+	"cmp"
+	_ "embed" // the template and the zoom script
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/schema"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 var (
@@ -20,8 +22,6 @@ var (
 	svgTemplate string
 	//go:embed assets/zoom.js
 	zoomJS string
-	//go:embed assets/diagram.css
-	diagramCSS string
 )
 
 // page is the template of a diagram, its text written in a language as each draw binds t.
@@ -46,31 +46,28 @@ type Icons interface {
 	Lookup(name string) ([]byte, error)
 }
 
+// NoIcons are no icons to look up: there is no directory for them, Err says why, which a diagram with an icon
+// is told.
+type NoIcons struct{ Err error }
+
+// Lookup returns Err, or icons_no_dir for none.
+func (n NoIcons) Lookup(string) ([]byte, error) {
+	return nil, cmp.Or(n.Err, error(usererr.New("icons_no_dir"))) //nolint:wrapcheck // Err as given, or the mistake
+}
+
 // Drawer draws specs that its schema checks: the one entry of a spec, wherever it comes from.
 type Drawer struct {
 	schema *schema.Compiled
 }
 
-// New returns a drawer of the specs c, the compiled Schema, takes.
+// New returns a drawer of the specs c, the schema at URL compiled, takes.
 func New(c *schema.Compiled) *Drawer {
 	return &Drawer{schema: c}
 }
 
-// Own returns a drawer of Schema compiled alone, for the specs of floe diagram.
-func Own() (*Drawer, error) {
-	r, err := schema.NewResource(URL, "diagram.json", Schema, schema.Part)
-	if err != nil {
-		return nil, err //nolint:wrapcheck // floe's own schema, which its tests check
-	}
-	c, err := schema.CompilePart(URL, map[string]schema.Resource{URL: r})
-	if err != nil {
-		return nil, err //nolint:wrapcheck // as above
-	}
-	return New(c), nil
-}
-
 // Draw checks spec, a spec's value, against the schema, lays it out and checks the layout, and draws it in
-// opts.Lang as an HTML fragment of inline SVG. Every mistake is at a JSON pointer in spec, with no file.
+// opts.Lang as an HTML fragment of inline SVG. Every mistake is at a JSON pointer in spec, with no file, but
+// that of icons not kept (of no place). Icons of nil are none kept.
 func (d *Drawer) Draw(spec any, opts Options) (template.HTML, error) {
 	l, err := d.layout(spec, opts)
 	if err != nil {
@@ -80,6 +77,9 @@ func (d *Drawer) Draw(spec any, opts Options) (template.HTML, error) {
 }
 
 func (d *Drawer) layout(v any, opts Options) (*layout, error) {
+	if opts.Icons == nil {
+		opts.Icons = NoIcons{Err: nil}
+	}
 	if err := d.schema.ValidateAt(v); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes in the library's words, at their pointers
 	}
@@ -213,18 +213,9 @@ func segsData(segs []seg) string {
 	return pathData(pts)
 }
 
-// Assets are what a page holds once, before or after its diagrams: the style that colours them from the page's
-// CSS variables, and the script that zooms them, its toolbar worded in every language for the page's <html lang>
-// to pick from. Holding them twice does no harm.
-func Assets() (string, error) {
-	s, err := script()
-	if err != nil {
-		return "", err
-	}
-	return s + "\n<style>\n" + diagramCSS + "</style>", nil
-}
-
-var script = sync.OnceValues(func() (string, error) {
+// Script is the script that zooms the diagrams of a page, its toolbar worded in every language for the page's
+// <html lang> to pick from. A page may hold it more than once: a second run does nothing.
+var Script = sync.OnceValues(func() (string, error) {
 	words := map[i18n.Lang]map[string]string{}
 	for _, lang := range i18n.Langs() {
 		c := i18n.New(lang)

@@ -33,7 +33,7 @@ func TestExecuted(t *testing.T) {
 	} {
 		page := template.Must(template.New("page.html").Funcs(bad).Parse(tt.src))
 		e, at, failed := executed(page.Execute(io.Discard, nil), "page.html", []byte(tt.src))
-		if failed != nil || e.Key != "kit_num_digits" || at < 0 {
+		if failed != nil || len(e) != 1 || e[0].Key != "kit_num_digits" || at < 0 {
 			t.Errorf("%q: executed = %v, %d, %v", tt.src, e, at, failed)
 			continue
 		}
@@ -48,8 +48,8 @@ func TestExecuted(t *testing.T) {
 	if failed != nil {
 		t.Fatal(failed)
 	}
-	if want := `executing "page.html" at <.a.b>: map has no entry for key "a"`; e.Args[0] != want {
-		t.Errorf("told %q, want %q", e.Args[0], want)
+	if want := `executing "page.html" at <.a.b>: map has no entry for key "a"`; len(e) != 1 || e[0].Args[0] != want {
+		t.Errorf("told %v, want %q", e, want)
 	}
 
 	for _, tt := range []struct{ msg, name string }{

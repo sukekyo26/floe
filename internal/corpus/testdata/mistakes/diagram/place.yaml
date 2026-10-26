@@ -1,0 +1,25 @@
+template: report
+lang: en
+title: Diagrams that overlap and want icons
+sections:
+  - heading: Diagram
+    parts:
+      - diagram:
+          width: 300
+          height: 120
+          title: Boxes
+          parts:
+            - box: { x: 20, y: 20, w: 60, h: 40, rows: [A] }
+            - box: { x: 50, y: 30, w: 60, h: 40, rows: [B] }
+      - diagram:
+          width: 300
+          height: 120
+          title: An icon
+          parts:
+            - icon: { icon: aws/res/aws-lambda, x: 10, y: 10 }
+      - diagram:
+          width: 300
+          height: 120
+          title: Raw SVG
+          parts:
+            - raw: { svg: "<script>alert(1)</script>" }

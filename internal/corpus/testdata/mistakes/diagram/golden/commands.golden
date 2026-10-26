@@ -1,0 +1,24 @@
+$ floe check place.yaml shape.yaml
+exit 1
+--- stderr
+place.yaml:12:15: box "A" overlaps box "B"
+place.yaml:15:11: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
+place.yaml:25:15: raw SVG holds <script>, which it may not: write SVG's elements alone, without style, script or foreignObject
+shape.yaml:12:67: value must be one of 'accent', 'good', 'warn', 'bad'
+$ floe render --out-dir $TMP/pages/place.yaml place.yaml
+exit 1
+--- stderr
+place.yaml:12:15: box "A" overlaps box "B"
+place.yaml:15:11: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
+place.yaml:25:15: raw SVG holds <script>, which it may not: write SVG's elements alone, without style, script or foreignObject
+$ floe render --out-dir $TMP/pages/shape.yaml shape.yaml
+exit 1
+--- stderr
+shape.yaml:12:67: value must be one of 'accent', 'good', 'warn', 'bad'
+$ floe render --out-dir $TMP/together place.yaml shape.yaml
+exit 1
+--- stderr
+place.yaml:12:15: box "A" overlaps box "B"
+place.yaml:15:11: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
+place.yaml:25:15: raw SVG holds <script>, which it may not: write SVG's elements alone, without style, script or foreignObject
+shape.yaml:12:67: value must be one of 'accent', 'good', 'warn', 'bad'

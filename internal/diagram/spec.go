@@ -1,32 +1,31 @@
 // Package diagram draws a diagram spec, a canvas and the parts placed on it, as inline SVG. A spec is checked
-// against its schema (schema.json) first, wherever it comes from; floe then resolves its names, lays it out
+// against its schema (the schema.json of floe's part diagram, which its caller compiles) first, wherever it
+// comes from; floe then resolves its names, lays it out
 // once for every language its text is written in, and checks the layout. Every mistake is at a JSON pointer in
 // the spec, for the caller to place.
 package diagram
 
 import (
 	"bytes"
-	_ "embed" // the schema
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// Schema is the schema of a spec, held at URL.
-//
-//go:embed schema.json
-var Schema []byte
-
-// URL is where Schema is held.
+// URL is where the schema of a spec is held: that of floe's part diagram.
 const URL = "floe:///parts/diagram.json"
 
-// Text is text in each language by tag; text written plain is English.
+// Text is text in each language by tag, as i18n.Tag reads it; text written plain is English.
 type Text map[string]string
 
-// UnmarshalJSON reads text plain, or by language.
+// UnmarshalJSON reads text plain, or by language, its tags as i18n.Tag reads them. Two tags of one language
+// (JA and ja) are the spec's mistake, at its root, as the text's place is not known here.
+// LIMIT: the mistake stops the diagram's other checks and names no text by place; rework it if it comes up often.
 func (t *Text) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err == nil {
@@ -37,7 +36,14 @@ func (t *Text) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &m); err != nil {
 		return err //nolint:wrapcheck // floe's failure: the schema checked the shape
 	}
-	*t = m
+	tags := slices.Sorted(maps.Keys(m))
+	*t = Text{}
+	for i, tag := range tags {
+		if first := i18n.Again(tags, i); first != "" {
+			return usererr.NewIn("", "#", "lang_twice", first, tag) //nolint:wrapcheck // the spec's mistake
+		}
+		(*t)[string(i18n.Tag(tag))] = m[tag]
+	}
 	return nil
 }
 
@@ -299,7 +305,10 @@ func read(v any) (*spec, error) {
 func strictly(b []byte, v any) error {
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(v); err != nil {
+	var e *usererr.Error
+	if err := dec.Decode(v); errors.As(err, &e) {
+		return e
+	} else if err != nil {
 		return fmt.Errorf("diagram: read a spec its schema took: %w", err)
 	}
 	return nil

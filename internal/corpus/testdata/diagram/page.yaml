@@ -1,0 +1,22 @@
+template: report
+lang: ja
+title: 図のページ
+sections:
+  - heading: 流れ
+    parts:
+      - diagram:
+          width: 420
+          height: 100
+          title: { en: The copy, ja: 写し }
+          parts:
+            - box: { x: 20, y: 24, w: 160, h: 52, rows: [{ en: Old server, ja: 古いサーバー }] }
+            - box: { x: 240, y: 24, w: 160, h: 52, tone: good, rows: [{ en: New host, ja: 新しいホスト }] }
+            - edge: { from: [180, 50], to: [240, 50] }
+  - heading: アイコン
+    parts:
+      - diagram:
+          width: 200
+          height: 120
+          title: Lambda
+          parts:
+            - icon: { icon: aws/res/aws-lambda, x: 76, y: 20, label: AWS Lambda }

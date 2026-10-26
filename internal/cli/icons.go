@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -103,4 +104,14 @@ func (a *app) iconsDir() (string, error) {
 		return "", usererr.New("icons_no_dir")
 	}
 	return dir, nil
+}
+
+// iconStore returns the icons the diagrams of one command show: those of iconsDir, or, without a directory for
+// them, none, which a diagram with an icon is told. Made once for the command: a Store keeps the indexes it read.
+func (a *app) iconStore() diagram.Icons {
+	dir, err := a.iconsDir()
+	if err != nil {
+		return diagram.NoIcons{Err: err}
+	}
+	return icons.New(dir)
 }

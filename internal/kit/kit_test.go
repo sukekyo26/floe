@@ -43,7 +43,7 @@ func TestFloe(t *testing.T) {
 		t.Error("Floe read floe's own twice")
 	}
 	parts, looks, themes, templates := k.Names()
-	if len(parts) != 30 || !slices.Equal(looks, []string{"panel", "rows"}) || len(themes) != 9 ||
+	if len(parts) != 31 || !slices.Equal(looks, []string{"panel", "rows"}) || len(themes) != 9 ||
 		!slices.Equal(templates, []string{"report"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}
@@ -86,12 +86,12 @@ func TestFloeReport(t *testing.T) {
 	}
 }
 
-// A part's words follow the page's language down its subtags to English.
+// A part's words follow the page's language, as i18n.Tag reads it, down its subtags to English.
 func TestPartWords(t *testing.T) {
 	t.Parallel()
 
 	p, _ := floe(t).Part("matrix")
-	for lang, want := range map[string]string{"ja-JP": "できる", "en": "Yes", "fr": "Yes", "JA": "できる"} {
+	for lang, want := range map[string]string{"ja-jp": "できる", "en": "Yes", "fr": "Yes", "ja": "できる"} {
 		var b strings.Builder
 		data := map[string]any{"columns": []any{"a"}, "rows": []any{map[string]any{"what": "x", "cells": []any{"yes"}}}}
 		if err := page(t, p, lang).Execute(&b, data); err != nil || !strings.Contains(b.String(), want) {
@@ -202,7 +202,7 @@ func TestReadMistakes(t *testing.T) {
 		},
 		{"words.yaml, together", part(map[string]string{"words.yaml": "en:\n  a: A\n  n: 3\nEN:\n  a: B\nja: x\nnot-a-tag_: {}\n"}), lines(
 			"parts/p/words.yaml:3:6: en.n: write text, in quotes where YAML would read a number, true, false or null",
-			"parts/p/words.yaml:4:1: EN is the language en again: a tag's case does not tell languages apart",
+			"parts/p/words.yaml:4:1: EN and en are one language, as a tag's case, or _ for -, does not tell languages apart: keep one",
 			"parts/p/words.yaml:6:5: ja: write the names of the words and their text",
 		)},
 		{

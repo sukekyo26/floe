@@ -125,8 +125,8 @@ func (t *Template) Name() string { return t.name }
 // Schema returns the schema of t compiled, nil without one.
 func (t *Template) Schema() *schema.Compiled { return t.schema }
 
-// Page returns a copy of the page.html of t, parsed, in the language tag of a page, to draw: t's is never
-// drawn, as drawing changes a template (its escaping), which then cannot be copied.
+// Page returns a copy of the page.html of t, parsed, in the language tag of a page (as i18n.Tag reads it), to
+// draw: t's is never drawn, as drawing changes a template (its escaping), which then cannot be copied.
 func (t *Template) Page(lang string) (*template.Template, error) {
 	return t.pages.copyOf(t.words, lang)
 }

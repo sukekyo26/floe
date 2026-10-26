@@ -77,7 +77,7 @@ func samples(t *testing.T) []string {
 type sample struct {
 	dir, tmp   string
 	keepsPages bool
-	env        map[string]string // FLOE_PARTS_DIR and the like, for the directories of one's own it holds
+	env        map[string]string // FLOE_ICONS_DIR, and FLOE_PARTS_DIR and the like for the directories of one's own
 	commands   strings.Builder
 	files      map[string][]byte
 }
@@ -90,7 +90,8 @@ func runSample(t *testing.T, name, dir string) map[string][]byte {
 	tmp := realPath(t, t.TempDir())
 	// A sample of mistakes is for what floe tells: its golden/ holds commands.golden alone.
 	s := &sample{
-		dir: realPath(t, dir), tmp: tmp, keepsPages: filepath.Dir(name) != mistakes, env: map[string]string{},
+		dir: realPath(t, dir), tmp: tmp, keepsPages: filepath.Dir(name) != mistakes,
+		env:   map[string]string{"FLOE_ICONS_DIR": filepath.Join(realPath(t, dir), ".icons")},
 		files: map[string][]byte{},
 	}
 	// One's own parts, themes and templates, in own/: checked first, as an agent checks what it wrote.
@@ -99,7 +100,7 @@ func runSample(t *testing.T, name, dir string) map[string][]byte {
 			s.env["FLOE_"+strings.ToUpper(kind)+"_DIR"] = filepath.Join(s.dir, "own", kind)
 		}
 	}
-	if len(s.env) > 0 {
+	if len(s.env) > 1 {
 		s.run(t, "part", "check")
 	}
 	if _, ok := s.env["FLOE_TEMPLATES_DIR"]; ok {
@@ -233,7 +234,8 @@ func (s *sample) pages(t *testing.T, out, what string) map[string][]byte {
 
 // run runs floe in process from the sample's directory, writes what it printed to commands.golden and
 // returns its exit code. In stdout and stderr the directories the test made stand as $SAMPLE and $TMP, so
-// that the golden files are the same wherever the repository and the temporary directory are.
+// that the golden files are the same wherever the repository and the temporary directory are. Its icons are
+// those of the sample's .icons, none kept for a sample without one.
 func (s *sample) run(t *testing.T, args ...string) int {
 	t.Helper()
 
