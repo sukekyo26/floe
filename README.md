@@ -6,7 +6,8 @@ A local page server for agents, shipped as a single Go binary. Agents write a
 page as data (YAML) and floe draws it with a template, or link an HTML file to
 show it as it is; floe serves them at `http://127.0.0.1:7325`.
 
-> **Status:** being rebuilt. Only `floe version` works so far.
+> **Status:** being rebuilt. So far `floe check` and `floe render` draw report
+> data files with floe's own parts and themes, and `floe version` prints the version.
 
 ## Install
 

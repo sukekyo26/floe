@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"io"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -11,7 +12,7 @@ func TestUsageIsAMistake(t *testing.T) {
 	t.Parallel()
 
 	for _, args := range [][]string{{"version", "x"}, {"--nope"}} {
-		root := newRoot()
+		root, _ := newRoot(Env{Stdout: io.Discard, Stderr: io.Discard, Dir: ""}, io.Discard)
 		root.SetArgs(args)
 		err := root.Execute()
 		r := usererr.Tell(english, err)

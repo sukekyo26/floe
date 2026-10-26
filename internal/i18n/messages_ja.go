@@ -114,4 +114,16 @@ var messagesJA = map[string]string{
 	"draw_part_unknown": "このファイルを描いたページが、無い部品 %s を名乗っています。%s のどれかを書いてください",
 	"draw_part_several": `ページの data-floe-part="%s" は 1 つの部品の名前ではありません。data-floe-part="<名前>" と名前をそのまま書き、ほかの部品の見た目は data-floe-look="<名前> …" で借りてください`,
 	"draw_look_box":     `ページに data-floe-part="%[1]s" がありますが、%[1]s は見た目で箱がありません。data-floe-look="%[1]s" で借りてください`,
+
+	// cli: コマンド行（言うのは英語だけ。ほかの言語も、どの目録とも同じく鍵を持つ）
+	"cli_usage":                 "%s: floe --help を見てください",
+	"cli_path_empty":            "%s が空のパスです。%s を渡し、そのために書いた変数が設定されているか確かめてください",
+	"cli_relative_no_cwd":       "作業ディレクトリを読めないので、相対パス %s は何も指しません。あるディレクトリから floe を走らせるか、絶対パスを渡してください",
+	"cli_wants_data":            "データファイル（.yaml か .yml）",
+	"cli_wants_out_dir":         "ページを書くディレクトリ",
+	"cli_check_not_data":        "%s はデータファイル（.yaml か .yml）ではありません",
+	"cli_render_same_file":      "%s と %s が、どちらも %s を書きます。どちらかの名前を変えてください",
+	"cli_render_same_file_case": "%s と %s が書く %s と %s は、大文字と小文字を区別しない所（macOS）では同じファイルです。どちらかの名前を変えてください",
+	"cli_render_missing":        "%s がありません。%s から floe render で書いてください",
+	"cli_render_stale":          "%s は %s を描いたものと違います。floe render で書き直してください",
 }
