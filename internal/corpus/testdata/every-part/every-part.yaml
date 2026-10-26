@@ -161,3 +161,10 @@ sections:
               - table:
                   columns: [{ title: Shell }, { title: Lines, num: true }]
                   rows: [[PowerShell, '1']]
+      - html: <details><summary>What the freeze covers</summary><p>Edits, <span class="good" data-floe-part="cell">comments</span> and uploads.</p></details>
+      - script:
+          data: { pages: 1840, "__proto__": "<b>" }
+          js: |
+            function (el, data) {
+              el.textContent = `${data.pages} pages`;
+            }

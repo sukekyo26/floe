@@ -34,7 +34,7 @@ func TestDrawExamples(t *testing.T) {
 	for _, name := range templates {
 		tpl, _ := k.Template(name)
 		for _, theme := range themes {
-			if _, err := tmpl.Draw(k, name+".yaml", tpl.Example(), tmpl.Options{Theme: theme, Untitled: ""}); err != nil {
+			if _, err := tmpl.Draw(k, name+".yaml", tpl.Example(), tmpl.Options{Theme: theme, Untitled: "", ImagesDir: ""}); err != nil {
 				t.Errorf("%s in %s: %s", name, theme, told(err))
 			}
 		}

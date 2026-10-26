@@ -1,6 +1,7 @@
 # A report: a heading and parts per section. Text is Markdown; code and commands go in code and
 # terminal, which draws the prompt; numbers, steps and what changes go in stats, steps and compare;
-# a table's cells are lines of Markdown, numbers in quotes, or pills.
+# a table's cells are lines of Markdown, numbers in quotes, or pills; html goes in as it is; a script is a
+# function the page calls with an element to draw in and its data.
 template: report
 lang: en
 title: Moving the team wiki
@@ -48,6 +49,18 @@ sections:
             text: Runs the link check and fixes what it finds.
           - title: Bookmarks
             text: Sends the new address to the team on Monday morning.
+  - heading: How long the copy takes
+    parts:
+      - script:
+          data: { pages: 1840 }
+          js: |
+            function (el, data) {
+              el.innerHTML = '<label>Pages an hour <input type="range" min="100" max="1000" step="50" value="300"></label> <output></output>';
+              const input = el.querySelector('input'), out = el.querySelector('output');
+              const update = () => { out.textContent = `${Math.ceil(data.pages / input.value)} hours`; };
+              input.addEventListener('input', update);
+              update();
+            }
   - heading: Risks
     parts:
       - table:
@@ -65,3 +78,4 @@ sections:
           tone: warn
           title: Heads up
           text: Anyone editing during the freeze loses their changes.
+      - html: <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>

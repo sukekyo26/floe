@@ -1,0 +1,19 @@
+template: report
+lang: en
+title: Data items
+sections:
+  - heading: HTML as it is
+    parts:
+      - html: <p>a <b>b</b></p><svg viewBox="0 0 1 1" width="8" height="8"><path d="M0 0H1V1"/></svg><br>
+      - html: <ul><li>one<li>two</ul>
+      - html: <table><tr><td>x</table>
+      - html: <!-- a comment with <meta charset="utf-8"> in it -->
+      - html: <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">
+  - heading: Something that moves
+    parts:
+      - script:
+          data: { n: 3 }
+          js: |
+            function (el, data) {
+              el.textContent = 'x'.repeat(data.n); // <!-- alone is fine
+            }

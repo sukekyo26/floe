@@ -18,8 +18,9 @@ import (
 
 // Options are what a caller gives a drawing besides the data.
 type Options struct {
-	Theme    string // drawn with instead of the data's theme:, "" for none
-	Untitled string // the title of a page whose data names none
+	Theme     string // drawn with instead of the data's theme:, "" for none
+	Untitled  string // the title of a page whose data names none
+	ImagesDir string // the directory the data's images are under, "" for none
 }
 
 // Draw draws the data file src, file in its mistakes, with the templates, parts and themes of k, as a page:
@@ -52,7 +53,7 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, error) {
 		return nil, err
 	}
 	//nolint:wrapcheck // mistakes of the page, or floe's failure
-	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled))
+	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.ImagesDir)
 }
 
 // pick returns the template of k that d names and the name of the theme it is drawn with: given, else d's as

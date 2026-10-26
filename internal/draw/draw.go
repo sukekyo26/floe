@@ -25,10 +25,15 @@ import (
 )
 
 // Page draws d, checked, with t of k in the theme named so, as a page titled title, calc the values of t's
-// computed.yaml (nil for none): each part from the inner ones out, then page.html. The mistakes of the parts
-// are told together, a part holding one that failed left undrawn. It checks the page drawn (checkPage) and
-// returns it as the parser read it, with its styles in its head and its headings given ids, written anew.
-func Page(k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[string]any, title string) ([]byte, error) {
+// computed.yaml (nil for none), the images it names read under imagesDir ("" for none): each part and item of
+// a format from the inner ones out, then page.html. The mistakes of the items are told together, a part
+// holding one that failed left undrawn. It checks the page drawn, its items of format html first (items.check),
+// and returns it as the parser read it, with its styles in its head and its headings given ids, written anew.
+func Page(
+	k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[string]any, title, imagesDir string,
+) ([]byte, error) {
+	s := newItems(imagesDir)
+	defer s.close()
 	holds := map[string][]string{}
 	var found usererr.List
 	var failed [][]string
@@ -39,7 +44,7 @@ func Page(k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[strin
 		if slices.ContainsFunc(failed, func(at []string) bool { return under(at, it.At) }) {
 			return nil, nil //nolint:nilnil // not drawn: the mistake of what it holds is told
 		}
-		drawn, err := drawItem(k, d, it, ready)
+		drawn, err := drawItem(k, d, it, ready, s)
 		if err != nil {
 			failed = append(failed, it.At)
 			return nil, found.Add(err)
@@ -63,12 +68,13 @@ func Page(k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[strin
 			return nil, failed
 		}
 		e.File, e.Line, e.Column = t.File("page.html"), 0, 0
+		e.Args = s.plainArgs(e.Args)
 		if at >= 0 {
 			e.Line, e.Column = textpos.Of(t.PageSource(), at)
 		}
 		return nil, e
 	}
-	tree, named, err := checkPage(k, d, b.Bytes())
+	tree, named, err := readPage(k, d, s, b.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +98,20 @@ func Page(k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[strin
 		return nil, fmt.Errorf("draw: write the page: %w", err)
 	}
 	return out.Bytes(), nil
+}
+
+// readPage reads page, drawn from d with the items s, as a browser does, checks its items of format html, then,
+// their marks taken out, the page, and returns the page read and what it names. The page an item changed is not
+// checked: what it holds would be told by what the item did.
+func readPage(k *kit.Kit, d *doc.Data, s *items, page []byte) (*html.Node, named, error) {
+	tree, _ := html.Parse(bytes.NewReader(page)) //nolint:errcheck // a bytes.Reader fails no read, Parse's one error
+	ns := namesIn(k)
+	if err := s.check(k, ns, d, tree); err != nil {
+		return nil, named{}, err
+	}
+	s.unmark(tree)
+	n, err := checkPage(k, ns, d, tree)
+	return tree, n, err
 }
 
 // withStyles puts a <style> of each of sheets at the end of the head of tree, which the parser always makes.
@@ -122,11 +142,11 @@ func under(at, of []string) bool {
 	return len(at) > len(of) && slices.Equal(at[:len(of)], of)
 }
 
-// drawItem draws it, an item of d, ready as Walk made it: a part's by its part.html in d's language, one of
-// format markdown as markdown draws it.
-func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any) (any, error) {
-	switch {
-	case it.Part != "":
+// drawItem draws it, an item of d, ready as Walk made it: a part's by its part.html in d's language; one of a
+// format of floe's from its text, refused at the item for another value: markdown as markdown draws it, html
+// marked for s to check in the page drawn, an image as the data URI of the file it names, read by s.
+func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any, error) {
+	if it.Part != "" {
 		p, ok := k.Part(it.Part)
 		if !ok {
 			//nolint:err113 // floe's own mistake
@@ -155,16 +175,27 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any) (any, error) {
 			return nil, e
 		}
 		return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
-	case it.Format == "markdown":
-		text, ok := it.Value.(string)
-		if !ok {
-			return it.Value, nil
-		}
-		return kit.Markdown(text) //nolint:wrapcheck // goldmark fails only to write, and a buffer does not
 	}
-	// A format floe draws in a later stage of its rebuild: a template of one's own may name it, and is told so
-	// at the item.
-	return nil, yamlpos.New(d.File, d.PosOf(it.At), "draw_format", it.Format)
+	text, ok := it.Value.(string)
+	if !ok {
+		// A schema of one's own may not say "type": "string".
+		return nil, yamlpos.New(d.File, d.PosOf(it.At), "draw_not_text", it.Format)
+	}
+	switch it.Format {
+	case "markdown":
+		return kit.Markdown(text) //nolint:wrapcheck // goldmark fails only to write, and a buffer does not
+	case "html":
+		return s.marked(it.At, text), nil
+	case "image":
+		uri, err := s.image(d, text)
+		var e *usererr.Error
+		if errors.As(err, &e) && e.File == "" {
+			// What names no file is the item's: one of the file is told at it, once.
+			return nil, yamlpos.New(d.File, d.PosOf(it.At), e.Key, e.Args...)
+		}
+		return uri, err
+	}
+	return nil, fmt.Errorf("draw: no format %s of floe's", it.Format) //nolint:err113 // floe's own mistake
 }
 
 // executed returns the mistake err of executing the template name, whose text is src (nil when where it is

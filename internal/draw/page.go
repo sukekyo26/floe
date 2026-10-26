@@ -1,7 +1,6 @@
 package draw
 
 import (
-	"bytes"
 	"maps"
 	"slices"
 	"strings"
@@ -22,21 +21,20 @@ type named struct {
 	uses         map[string][]string
 }
 
-// checkPage reads page, drawn from d, as a browser does, and refuses, at d's template:, which draws it: a
+// checkPage refuses in tree, the page drawn from d as a browser reads it, at d's template:, which draws it: a
 // <style>, of HTML, SVG or MathML (floe puts the page's CSS together, in layers, and an SVG's styles the whole
-// page as an HTML one does), a <base> (the page's CSP ignores it), a name of an
+// page as an HTML one does), a <base> (the page's CSP ignores it), a <meta> but a charset and a viewport (shown),
+// a <noscript> (read as text with scripts on, its elements work with them
+// off, unchecked), a name of an
 // element's data-floe-part or data-floe-look that is no part or look of k, and a data-floe-part not of one
 // part's name as written (the scope of its style, [data-floe-part="name"], would not reach it) or of a look,
-// which has no box. It returns the page read, and what it names.
-func checkPage(k *kit.Kit, d *doc.Data, page []byte) (*html.Node, named, error) {
-	tree, _ := html.Parse(bytes.NewReader(page)) //nolint:errcheck // a bytes.Reader fails no read, Parse's one error
+// which has no box. It returns what the page names.
+func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error) {
 	var found usererr.List
 	refuse := func(key string, args ...any) {
 		found = append(found, yamlpos.New(d.File, d.Where["template"], key, args...))
 	}
 	boxes, taken := map[string]bool{}, map[string]bool{}
-	parts, looks, _, _ := k.Names()
-	ns := names{parts: parts, all: slices.Sorted(slices.Values(slices.Concat(parts, looks)))}
 	for n := range tree.Descendants() {
 		if n.Type != html.ElementNode {
 			continue
@@ -46,20 +44,47 @@ func checkPage(k *kit.Kit, d *doc.Data, page []byte) (*html.Node, named, error) 
 			refuse("draw_style")
 		case "base":
 			refuse("draw_base")
+		case "noscript":
+			refuse("draw_noscript")
+		case "meta":
+			if !shown(n) {
+				var b strings.Builder
+				_ = html.Render(&b, n) //nolint:errcheck // a strings.Builder fails no write
+				refuse("draw_meta", yamlpos.Head(b.String()))
+			}
 		}
 		checkNames(k, ns, n, boxes, taken, refuse)
 	}
 	if found != nil {
-		return nil, named{}, found
+		return named{}, found
 	}
-	return tree, named{
+	return named{
 		boxes: slices.Sorted(maps.Keys(boxes)), looks: slices.Sorted(maps.Keys(taken)), uses: uses(tree),
 	}, nil
+}
+
+// shown reports whether n, a <meta>, is one the page drawn may have: its charset alone, or a viewport's name and
+// content. A page floe draws is static: what does not show it (a refresh, a referrer policy, a generator) is
+// none of its.
+func shown(n *html.Node) bool {
+	if len(n.Attr) == 1 && n.Attr[0].Key == "charset" {
+		return true
+	}
+	name, ok := attrOf(n, "name")
+	return ok && strings.EqualFold(name, "viewport") && !slices.ContainsFunc(n.Attr, func(a html.Attribute) bool {
+		return a.Namespace != "" || a.Key != "name" && a.Key != "content"
+	})
 }
 
 // names are the names of the parts of a Kit, and of its parts and looks, each sorted.
 type names struct {
 	parts, all []string
+}
+
+// namesIn returns the names of k.
+func namesIn(k *kit.Kit) names {
+	parts, looks, _, _ := k.Names()
+	return names{parts: parts, all: slices.Sorted(slices.Values(slices.Concat(parts, looks)))}
 }
 
 // checkNames refuses, by refuse, the element n's data-floe-part that names no part (empty: the boundary of the

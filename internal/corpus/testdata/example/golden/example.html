@@ -1,7 +1,6 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; img-src data: blob:; media-src data: blob:; style-src &#39;unsafe-inline&#39; https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src &#39;unsafe-inline&#39; https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action &#39;none&#39;; base-uri &#39;none&#39;; connect-src &#39;none&#39;"/>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="generator" content="floe report"/>
 <title>Moving the team wiki</title>
 <style>
 @layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
@@ -422,6 +421,18 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </div>
 </section>
 <section>
+<h2 id="how-long-the-copy-takes">How long the copy takes</h2>
+<div></div><script>{const floeScript = function (el, data) {
+  el.innerHTML = '<label>Pages an hour <input type="range" min="100" max="1000" step="50" value="300"></label> <output></output>';
+  const input = el.querySelector('input'), out = el.querySelector('output');
+  const update = () => { out.textContent = `${Math.ceil(data.pages / input.value)} hours`; };
+  input.addEventListener('input', update);
+  update();
+}
+
+;floeScript(document.currentScript.previousElementSibling, JSON.parse("{\"pages\":1840}"));}</script>
+</section>
+<section>
 <h2 id="risks">Risks</h2>
 <div data-floe-part="table"><table>
 <thead><tr><th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col" class="num">Pages</th><th scope="col">What we do</th><th scope="col">State</th></tr></thead>
@@ -433,6 +444,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </table></div>
 <div class="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>
 </div>
+<details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>
 </section>
 </main>
 
