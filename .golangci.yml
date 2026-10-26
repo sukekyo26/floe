@@ -95,6 +95,8 @@ linters:
       # optional fields go here.
       ignore-patterns:
         - '.+/cobra\.Command$'
+        # An element drawn: each kind sets the fields its template reads, and no more.
+        - '.+/internal/diagram\.elem$'
     exhaustive:
       default-signifies-exhaustive: true
     gocognit:

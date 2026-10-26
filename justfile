@@ -52,9 +52,10 @@ test:
 test-race:
     CGO_ENABLED=1 go test -race -shuffle=on {{pkgs}}
 
-# Write the golden files of internal/corpus anew from what floe prints and draws now; read the change in git diff
+# Write the golden files of internal/corpus and internal/diagram anew from what floe prints and draws now; read the change in git diff
 golden:
     go test ./internal/corpus -run TestCorpus -update
+    go test ./internal/diagram -run TestExamples -update
 
 # Fail when total coverage of internal/ is below MIN_COVERAGE (default 90)
 cover-check:

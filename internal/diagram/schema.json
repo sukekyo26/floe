@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "diagram",
+  "description": "A diagram: a canvas of width by height and the parts placed on it, drawn as inline SVG. floe diagram example prints one of each kind",
+  "type": "object",
+  "required": ["width", "height", "title", "parts"],
+  "additionalProperties": false,
+  "properties": {
+    "width": { "$ref": "#/$defs/size" },
+    "height": { "$ref": "#/$defs/size" },
+    "title": { "$ref": "#/$defs/text", "description": "What the diagram shows, for a reader who cannot see it" },
+    "parts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "One key naming the kind of the part",
+        "minProperties": 1,
+        "maxProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "frame": { "$ref": "#/$defs/frame" },
+          "box": { "$ref": "#/$defs/box" },
+          "table": { "$ref": "#/$defs/table" },
+          "icon": { "$ref": "#/$defs/icon" },
+          "edge": { "$ref": "#/$defs/edge" },
+          "dot": { "$ref": "#/$defs/dot" },
+          "bar": { "$ref": "#/$defs/bar" },
+          "axis": { "$ref": "#/$defs/axis" },
+          "circle": { "$ref": "#/$defs/circle" },
+          "label": { "$ref": "#/$defs/label" },
+          "line": { "$ref": "#/$defs/line" },
+          "raw": { "$ref": "#/$defs/raw" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "size": { "type": "number", "minimum": 1 },
+    "text": {
+      "description": "Text, or its words in each language by tag, English among them: {en: …, ja: …}",
+      "type": ["string", "object"],
+      "required": ["en"],
+      "additionalProperties": { "type": "string" }
+    },
+    "name": { "type": "string", "minLength": 1, "description": "The name an edge's from or to gives, unique in the diagram" },
+    "tone": { "enum": ["accent", "good", "warn", "bad"] },
+    "point": { "type": "array", "prefixItems": [{ "type": "number" }, { "type": "number" }], "minItems": 2, "maxItems": 2, "items": false },
+    "side": { "enum": ["top", "right", "bottom", "left"] },
+    "origin": { "enum": ["left", "centre"], "description": "What x is: the left edge (the default) or the centre" },
+    "end": {
+      "description": "The name of a part or a named row, or a point [x, y]",
+      "type": ["string", "array"],
+      "minLength": 1,
+      "prefixItems": [{ "type": "number" }, { "type": "number" }],
+      "minItems": 2,
+      "maxItems": 2,
+      "items": false
+    },
+    "marker": { "enum": ["none", "arrow", "triangle", "diamond", "odiamond", "one", "many", "zero-one", "zero-many"] },
+    "frame": {
+      "type": "object",
+      "description": "A box around other parts, its label inside the top left corner, or right of its icon",
+      "required": ["x", "y", "w", "h"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "x": { "type": "number" }, "y": { "type": "number" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" },
+        "label": { "$ref": "#/$defs/text" },
+        "accent": { "type": "boolean" },
+        "icon": { "type": "string", "description": "An icon in the corner, the AWS group frame style" },
+        "square": { "type": "boolean" }
+      }
+    },
+    "box": {
+      "type": "object",
+      "description": "A box of centred rows of text, as wide and tall as they need when w and h are left out",
+      "required": ["x", "y", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "x": { "type": "number" }, "y": { "type": "number" }, "origin": { "$ref": "#/$defs/origin" },
+        "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Each a text, or [text, style]; without a style the first is main and the rest sub",
+          "items": {
+            "type": ["string", "object", "array"],
+            "required": ["en"],
+            "additionalProperties": { "type": "string" },
+            "prefixItems": [{ "$ref": "#/$defs/text" }, { "enum": ["main", "sub", "main code", "sub code"] }],
+            "minItems": 2,
+            "maxItems": 2,
+            "items": false
+          }
+        },
+        "tone": { "$ref": "#/$defs/tone" },
+        "shape": { "enum": ["rect", "pill", "hex", "state"] }
+      }
+    },
+    "table": {
+      "type": "object",
+      "description": "A heading over rows of a name and a type (an ER entity, a class)",
+      "required": ["x", "y", "title", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "x": { "type": "number" }, "y": { "type": "number" }, "origin": { "$ref": "#/$defs/origin" },
+        "w": { "$ref": "#/$defs/size" },
+        "title": { "$ref": "#/$defs/text" },
+        "rows": {
+          "type": "array",
+          "description": "Each [name, type] or [name], --- for a separator, or {name, cells: [name, type]} for a row an edge can end at",
+          "items": {
+            "type": ["string", "array", "object"],
+            "minItems": 1,
+            "maxItems": 2,
+            "items": { "$ref": "#/$defs/text" },
+            "required": ["name", "cells"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "$ref": "#/$defs/name" },
+              "cells": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "$ref": "#/$defs/text" } }
+            }
+          }
+        },
+        "tone": { "$ref": "#/$defs/tone" }
+      }
+    },
+    "icon": {
+      "type": "object",
+      "description": "An icon of an icon set (aws/…, found with floe icons search) with its top left at x, y",
+      "required": ["icon", "x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "icon": { "type": "string" },
+        "x": { "type": "number" }, "y": { "type": "number" },
+        "label": { "$ref": "#/$defs/text" },
+        "size": { "$ref": "#/$defs/size" }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "description": "A line from one end to another: right-angled through via, or straight from point to point with straight",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "$ref": "#/$defs/end" }, "to": { "$ref": "#/$defs/end" },
+        "fromSide": { "$ref": "#/$defs/side" }, "toSide": { "$ref": "#/$defs/side" },
+        "via": { "type": "array", "items": { "$ref": "#/$defs/point" } },
+        "straight": { "type": "boolean" },
+        "label": { "$ref": "#/$defs/text" },
+        "at": { "$ref": "#/$defs/point" },
+        "dashed": { "type": "boolean" }, "bold": { "type": "boolean" },
+        "tone": { "$ref": "#/$defs/tone" },
+        "start": { "$ref": "#/$defs/marker" }, "end": { "$ref": "#/$defs/marker" },
+        "crossing": { "type": "boolean", "description": "Lets this edge cross another" }
+      }
+    },
+    "dot": {
+      "type": "object",
+      "description": "A circle edges may reach the centre of (a commit, a milestone, a start state)",
+      "required": ["cx", "cy"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "cx": { "type": "number" }, "cy": { "type": "number" }, "r": { "$ref": "#/$defs/size" },
+        "tone": { "$ref": "#/$defs/tone" }, "hollow": { "type": "boolean" }
+      }
+    },
+    "bar": {
+      "type": "object",
+      "description": "A horizontal span (a timeline period), its label to the right",
+      "required": ["x1", "x2", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "x1": { "type": "number" }, "x2": { "type": "number" }, "y": { "type": "number" },
+        "tone": { "$ref": "#/$defs/tone" }, "label": { "$ref": "#/$defs/text" }
+      }
+    },
+    "axis": {
+      "type": "object",
+      "description": "A time axis with labelled ticks, and grid lines up to grid",
+      "required": ["x1", "x2", "y", "ticks"],
+      "additionalProperties": false,
+      "properties": {
+        "x1": { "type": "number" }, "x2": { "type": "number" }, "y": { "type": "number" },
+        "ticks": {
+          "type": "array",
+          "items": { "type": "array", "prefixItems": [{ "type": "number" }, { "$ref": "#/$defs/text" }], "minItems": 2, "maxItems": 2, "items": false }
+        },
+        "grid": { "type": "number" }
+      }
+    },
+    "circle": {
+      "type": "object",
+      "description": "A translucent circle that may overlap others (a Venn diagram)",
+      "required": ["cx", "cy", "r"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "cx": { "type": "number" }, "cy": { "type": "number" }, "r": { "$ref": "#/$defs/size" },
+        "tone": { "$ref": "#/$defs/tone" }
+      }
+    },
+    "label": {
+      "type": "object",
+      "description": "Text at x, y, or in the area of a Venn diagram inside the circles of in and outside the others",
+      "required": ["text"],
+      "additionalProperties": false,
+      "if": { "not": { "required": ["in"] } },
+      "then": { "required": ["x", "y"] },
+      "dependentRequired": { "x": ["y"], "y": ["x"] },
+      "properties": {
+        "text": { "$ref": "#/$defs/text" },
+        "x": { "type": "number" }, "y": { "type": "number" },
+        "anchor": { "enum": ["middle", "start", "end"] },
+        "plain": { "type": "boolean", "description": "No background, for text on a coloured area" },
+        "strong": { "type": "boolean" },
+        "in": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/name" } }
+      }
+    },
+    "line": {
+      "type": "object",
+      "description": "A line without arrows: a line, a lifeline or a divider",
+      "required": ["x1", "y1", "x2", "y2"],
+      "additionalProperties": false,
+      "properties": {
+        "x1": { "type": "number" }, "y1": { "type": "number" }, "x2": { "type": "number" }, "y2": { "type": "number" },
+        "kind": { "enum": ["line", "lifeline", "divider"] }
+      }
+    },
+    "raw": {
+      "type": "object",
+      "description": "SVG no part draws, of SVG elements alone (no style, script or foreignObject), left out of the checks",
+      "required": ["svg"],
+      "additionalProperties": false,
+      "properties": { "svg": { "type": "string" } }
+    }
+  }
+}

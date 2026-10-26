@@ -1,0 +1,18 @@
+# ER diagram: what floe stores for each page (meta.json). The main entity is in the middle, and each
+# relation is one horizontal line at the height of the row it joins.
+#
+# A row an edge joins has a name ({name, cells}), and the edge ends at it by that name, at the height of
+# the row: moving a table or a row moves the edge with it. An edge from no row starts at a point.
+# The ends read as how many of this side the other side has: zero-one, zero-many, one.
+width: 1060
+height: 300
+title: { en: What floe stores, ja: "floe が保存するデータ" }
+parts:
+  - table: { x: 380, y: 40, w: 260, title: { en: Page (meta.json), ja: "ページ（meta.json）" }, tone: accent, rows: [{ name: pageSlug, cells: [slug, PK] }, [title, { en: text, ja: "文字列" }], [description, { en: text, ja: "文字列" }], { name: project, cells: [project, { en: "FK, shown", ja: "FK・表示用" }] }, { name: publishedFrom, cells: [publishedFrom, { en: "FK, owner", ja: "FK・持ち主" }] }, [favorite, { en: bool, ja: "真偽値" }], [createdAt, { en: time, ja: "日時" }], [updatedAt, { en: time, ja: "日時" }]] }
+  - table: { x: 40, y: 128, w: 200, title: { en: Project, ja: "プロジェクト" }, rows: [[name, { en: repository, ja: "リポジトリ名" }]] }
+  - table: { x: 780, y: 40, w: 240, title: { en: Stored page, ja: "保存したページ" }, rows: [{ name: storedSlug, cells: [slug, { en: "PK, FK", ja: "PK・FK" }] }, [source, { en: the copy, ja: "写しのディレクトリ" }]] }
+  - table: { x: 780, y: 172, w: 240, title: { en: Link, ja: "リンク" }, rows: [{ name: linkSlug, cells: [slug, { en: "PK, FK", ja: "PK・FK" }] }, [path, { en: real path, ja: "実体のパス" }]] }
+  - edge: { from: [240, 147], to: project, start: zero-one, end: zero-many, label: { en: shown, ja: "表示用" } }
+  - edge: { from: [240, 169], to: publishedFrom, start: zero-one, end: zero-many, label: { en: owner, ja: "持ち主" } }
+  - edge: { from: pageSlug, to: storedSlug, start: one, end: zero-one, label: { en: stored, ja: "保存時" } }
+  - edge: { from: [640, 213], to: linkSlug, start: one, end: zero-one, label: "--link" }

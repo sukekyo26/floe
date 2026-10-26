@@ -1,0 +1,35 @@
+# Sequence diagram: from floe publish to the open tab reloading. Participants stand in evenly spaced
+# columns and time runs down. Answers are dashed, labels sit above their line, and a divider with a
+# label marks a change of scene.
+#
+# Grid: columns 260 apart, a message every 40. Labels are 14 above their line. The band (raw) marks
+# where the server keeps comparing versions; a message to the server stops at the band's edge.
+width: 1040
+height: 700
+title: { en: From floe publish to a reload, ja: "floe publish から再読み込みまで" }
+parts:
+  - box: { x: 15, y: 12, w: 230, h: 52, tone: accent, rows: [{ en: Agent, ja: "エージェント" }, [floe publish, sub code]] }
+  - line: { x1: 130, y1: 64, x2: 130, y2: 688, kind: lifeline }
+  - box: { x: 275, y: 12, w: 230, h: 52, tone: accent, rows: [{ en: Store, ja: "保存先" }, ["~/.local/share/floe", sub code]] }
+  - line: { x1: 390, y1: 64, x2: 390, y2: 688, kind: lifeline }
+  - box: { x: 535, y: 12, w: 230, h: 52, tone: accent, rows: [{ en: Server, ja: "サーバー" }, [floe serve, sub code]] }
+  - line: { x1: 650, y1: 64, x2: 650, y2: 688, kind: lifeline }
+  - box: { x: 795, y: 12, w: 230, h: 52, tone: accent, rows: [{ en: Browser, ja: "ブラウザ" }, [{ en: "the page's tab", ja: "ページのタブ" }, sub]] }
+  - line: { x1: 910, y1: 64, x2: 910, y2: 688, kind: lifeline }
+  - raw: { svg: "<rect x=\"644\" y=\"420\" width=\"12\" height=\"190\" class=\"band\"/>" }
+  - edge: { from: [130, 104], to: [650, 104], label: GET /api/health, at: [390, 90] }
+  - edge: { from: [130, 144], to: [650, 144], label: { en: start floe serve if it is stopped, ja: "止まっていれば floe serve を起動" }, at: [390, 130] }
+  - edge: { from: [650, 184], to: [130, 184], dashed: true, label: { en: wait until health answers, ja: "health が応答するまで待つ" }, at: [390, 170] }
+  - edge: { from: [130, 224], to: [390, 224], label: { en: write the copy and meta.json, ja: "写しと meta.json を書く" }, at: [260, 210] }
+  - edge: { from: [130, 264], to: [910, 264], label: { en: open a new slug in the browser, ja: "新しい slug ならブラウザで開く" }, at: [520, 250] }
+  - edge: { from: [910, 304], to: [650, 304], label: "GET /a/<slug>/?raw", at: [780, 290] }
+  - edge: { from: [650, 344], to: [390, 344], label: { en: read, ja: "読む" }, at: [520, 330] }
+  - edge: { from: [650, 384], to: [910, 384], dashed: true, label: { en: "HTML + reload script", ja: "HTML + 再読み込みスクリプト" }, at: [780, 370] }
+  - edge: { from: [910, 424], to: [656, 424], label: { en: "EventSource ?since=version", ja: "EventSource ?since=版" }, at: [780, 410] }
+  - label: { text: { en: compare versions every second, ja: "1 秒ごとに版を比べる" }, x: 664, y: 470, anchor: start }
+  - line: { x1: 16, y1: 500, x2: 1024, y2: 500, kind: divider }
+  - label: { text: { en: publish the same slug again, ja: "同じ slug で公開し直す" }, x: 520, y: 500 }
+  - edge: { from: [130, 544], to: [390, 544], label: { en: rewrite (updatedAt moves on), ja: "書き直す（updatedAt が進む）" }, at: [260, 530] }
+  - edge: { from: [644, 584], to: [390, 584], label: { en: stat finds a new version, ja: "stat で新しい版を見つける" }, at: [520, 570] }
+  - edge: { from: [650, 624], to: [910, 624], dashed: true, label: "event: reload", at: [780, 610] }
+  - edge: { from: [910, 648], via: [[950, 648], [950, 676]], to: [910, 676], label: location.reload(), at: [892, 662] }

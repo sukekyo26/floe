@@ -1,0 +1,35 @@
+# Architecture: where each piece runs. Nested frames separate the places, and the main flow's edges
+# are numbered (1 to 4) for a list under the diagram that explains each step.
+#
+# Grid: rows centred at y = 92 + 88n (boxes 56 tall, 32 apart). Columns: the agent, the store, the
+# server, the browser. Edges between boxes of one row are one horizontal line; an edge between rows
+# bends once.
+width: 1248
+height: 512
+title: { en: How floe serves a page, ja: "floe がページを配信する仕組み" }
+parts:
+  - frame: { x: 272, y: 108, w: 256, h: 300, label: { en: "Store ~/.local/share/floe", ja: "保存先 ~/.local/share/floe" } }
+  - frame: { x: 624, y: 20, w: 280, h: 476, label: { en: "Local server 127.0.0.1:7325", ja: "ローカルサーバー 127.0.0.1:7325" }, accent: true }
+  - frame: { x: 968, y: 20, w: 264, h: 476, label: { en: Browser, ja: "ブラウザ" } }
+  - frame: { x: 984, y: 112, w: 232, h: 188, label: { en: "Frame /a/<slug>/", ja: "外枠 /a/<slug>/" } }
+  - box: { x: 24, y: 64, w: 200, h: 56, tone: accent, rows: [[floe publish, main code], { en: run by the agent, ja: "エージェントが実行" }] }
+  - box: { x: 288, y: 152, w: 224, h: 56, rows: [["<slug>/source-<id>/", main code], { en: "data file, images", ja: "データファイル・画像" }] }
+  - box: { x: 288, y: 240, w: 224, h: 56, rows: [["<slug>/meta.json", main code], { en: "title, description, link", ja: "タイトル・説明・リンク先" }] }
+  - box: { x: 288, y: 328, w: 224, h: 56, rows: [{ en: Linked HTML file, ja: "手元の HTML" }, { en: read on every request, ja: "--link で登録・毎回読む" }] }
+  - box: { x: 644, y: 64, w: 240, h: 56, rows: [["/api/health", main code], { en: "is it up, which build", ja: "起動と版を確認" }] }
+  - box: { x: 644, y: 152, w: 240, h: 56, rows: [["/a/<slug>/?raw", main code], { en: "the page, sandboxed", ja: "ページを返す（sandbox）" }] }
+  - box: { x: 644, y: 240, w: 240, h: 56, rows: [["/api/events/<slug>", main code], { en: change notices (SSE), ja: "変更を通知（SSE）" }] }
+  - box: { x: 644, y: 328, w: 240, h: 56, rows: [[{ en: "/ and /a/<slug>/", ja: "/ と /a/<slug>/" }, main code], { en: manager and frame (ui.html), ja: "管理画面と外枠（ui.html）" }] }
+  - box: { x: 644, y: 416, w: 240, h: 56, rows: [["/api/artifacts", main code], { en: "list, edit, register links", ja: "一覧・編集・リンク登録" }] }
+  - box: { x: 1000, y: 152, w: 200, h: 132, tone: accent, rows: [{ en: The page, ja: "ページ本体" }, { en: "an iframe of ?raw", ja: "?raw を読む iframe" }, { en: "sandboxed, origin null", ja: "sandbox・origin null" }] }
+  - box: { x: 988, y: 416, w: 224, h: 56, rows: [{ en: Management page, ja: "管理画面" }, { en: origin 127.0.0.1, ja: "127.0.0.1 の origin" }] }
+  - edge: { from: [224, 92], to: [644, 92], label: { en: "1 health", ja: "① 起動確認" }, at: [434, 92] }
+  - edge: { from: [124, 120], via: [[124, 180]], to: [288, 180], label: { en: "2 save", ja: "② 保存" }, at: [200, 180] }
+  - edge: { from: [512, 180], to: [644, 180], label: { en: "3 read", ja: "③ 読む" }, at: [578, 180] }
+  - edge: { from: [512, 268], to: [644, 268], label: { en: "4 version", ja: "④ 版を確認" }, at: [578, 268] }
+  - edge: { from: [400, 296], to: [400, 328], dashed: true, label: path, at: [410, 312] }
+  - edge: { from: [884, 180], to: [1000, 180], label: { en: "3 serve", ja: "③ 返す" }, at: [942, 180] }
+  - edge: { from: [1000, 268], to: [884, 268], label: { en: "4 listen", ja: "④ 購読" }, at: [942, 268] }
+  - edge: { from: [884, 348], via: [[1100, 348]], to: [1100, 300] }
+  - edge: { from: [884, 364], via: [[1070, 364]], to: [1070, 416] }
+  - edge: { from: [988, 444], to: [884, 444], start: arrow, label: API, at: [936, 444] }

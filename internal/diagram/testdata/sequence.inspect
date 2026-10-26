@@ -1,0 +1,32 @@
+box "Agent" 15,12 230x52
+box "Store" 275,12 230x52
+box "Server" 535,12 230x52
+box "Browser" 795,12 230x52
+edge [130,104]→[650,104] M130,104 H650
+edge [130,144]→[650,144] M130,144 H650
+edge [650,184]→[130,184] M650,184 H130
+edge [130,224]→[390,224] M130,224 H390
+edge [130,264]→[910,264] M130,264 H910
+edge [910,304]→[650,304] M910,304 H650
+edge [650,344]→[390,344] M650,344 H390
+edge [650,384]→[910,384] M650,384 H910
+edge [910,424]→[656,424] M910,424 H656
+edge [130,544]→[390,544] M130,544 H390
+edge [644,584]→[390,584] M644,584 H390
+edge [650,624]→[910,624] M650,624 H910
+edge [910,648]→[910,676] M910,648 H950 V676 H910
+label "GET /api/health" 331,81 118x18
+label "start floe serve if it is stopped" 266.2,121 247.6x18
+label "wait until health answers" 295,161 190x18
+label "write the copy and meta.json" 154.2,201 211.6x18
+label "open a new slug in the browser" 407,241 226x18
+label "GET /a/<slug>/?raw" 710.2,281 139.6x18
+label "read" 500.6,321 38.8x18
+label "HTML + reload script" 689.8,361 180.4x18
+label "EventSource ?since=version" 681.4,401 197.2x18
+label "compare versions every second" 659,461 218.8x18
+label "publish the same slug again" 417.8,491 204.4x18
+label "rewrite (updatedAt moves on)" 154.2,521 211.6x18
+label "stat finds a new version" 428.6,561 182.8x18
+label "event: reload" 728.2,601 103.6x18
+label "location.reload()" 825.8,653 132.4x18
