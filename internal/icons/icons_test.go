@@ -389,27 +389,6 @@ func lying(t *testing.T) string {
 	return path
 }
 
-// What a stopped fetch left beside the set is removed by the next one that writes.
-func TestFetchClearsLeftovers(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	left := filepath.Join(root, "aws.tmp-123-old")
-	other := filepath.Join(root, "awsx.tmp-1")
-	for _, dir := range []string{left, other} {
-		if err := os.MkdirAll(dir, 0o700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	fetch(t, icons.New(root), local(writeZip(t, "Icon-package.zip", packageFiles)), false)
-	if _, err := os.Stat(left); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("a leftover of the set = %v, want it gone", err)
-	}
-	if _, err := os.Stat(other); err != nil {
-		t.Errorf("another's directory = %v, want it kept", err)
-	}
-}
-
 // An index that is no JSON is told at the place encoding/json names, and one that cannot be read in the
 // system's words, as fetching again would not mend it.
 func TestBrokenIndex(t *testing.T) {

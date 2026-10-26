@@ -134,8 +134,8 @@ var messagesEN = map[string]string{
 	"cannot_write": "cannot be written (%s): check that its directory exists and can be written to, and that its name is free and not too long",
 
 	// icons: the icon sets
-	// LIMIT: the first %s of icons_broken, icons_download, icons_page_download, icons_bad_url, icons_bad_zip and
-	// icons_previous_left is encoding/json's, net/http's, net/url's, archive/zip's or the system's English
+	// LIMIT: the first %s of icons_broken, icons_download, icons_page_download, icons_bad_zip and
+	// icons_previous_left is encoding/json's, net/http's, archive/zip's or the system's English
 	"icons_unknown_set":        "unknown icon set \"%s\"; use %s",
 	"icons_dir_relative":       "FLOE_ICONS_DIR is %s, a relative path; set it to an absolute path",
 	"icons_no_dir":             "there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path",
@@ -143,7 +143,6 @@ var messagesEN = map[string]string{
 	"icons_broken":             "cannot be read (%s); run \"floe icons fetch %s --force\" to fetch the icons again",
 	"icons_download":           "cannot be downloaded (%s); check the network, or download it in a browser and pass its path",
 	"icons_page_download":      "cannot be downloaded (%s); check the network, or download the package's zip from this page and pass its path",
-	"icons_bad_url":            "is not a URL floe can download (%s); check how it is written",
 	"icons_index_no_version":   "holds no version of the icons; run \"floe icons fetch %s --force\" to fetch them again",
 	"icons_previous_left":      "cannot be written (%s), and the previous icons are left in %s: move them back here, or fetch the icons again",
 	"icons_download_too_large": "the download is over %dMB, far larger than an icon package; check that it is the right URL",

@@ -133,7 +133,6 @@ var messagesJA = map[string]string{
 	"icons_broken":             "読めません（%s）。floe icons fetch %s --force でアイコンを取り直してください",
 	"icons_download":           "取得できません（%s）。ネットワークを確かめるか、ブラウザで取得してそのパスを渡してください",
 	"icons_page_download":      "取得できません（%s）。ネットワークを確かめるか、このページからアイコン集の zip を取得して、そのパスを渡してください",
-	"icons_bad_url":            "floe が取得できる URL ではありません（%s）。書き方を確かめてください",
 	"icons_index_no_version":   "アイコンの版がありません。floe icons fetch %s --force で取り直してください",
 	"icons_previous_left":      "書けません（%s）。前のアイコンは %s に残っています。ここへ戻すか、アイコンを取り直してください",
 	"icons_download_too_large": "取得するものが %dMB を超え、アイコン集よりはるかに大きいです。URL が正しいか確かめてください",

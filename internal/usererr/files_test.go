@@ -26,12 +26,17 @@ func TestCannotReadWrite(t *testing.T) {
 		{usererr.CannotRead("gone.yaml", rerr), "gone.yaml: no such file or directory"},
 		{usererr.CannotWrite("out", werr), "out: cannot be written (no such file or directory): check that its " +
 			"directory exists and can be written to, and that its name is free and not too long"},
+		{usererr.CannotWriteWith("icons_previous_left", "out", werr, "out.old"), "out: cannot be written (no such file or " +
+			"directory), and the previous icons are left in out.old: move them back here, or fetch the icons again"},
 	} {
 		if got := usererr.Tell(english, c.err).Render("floe: "); got != c.want {
 			t.Errorf("told %q, want %q", got, c.want)
 		}
 	}
-	for _, err := range []error{usererr.CannotRead("a", errors.New("odd")), usererr.CannotWrite("a", errors.New("odd"))} {
+	for _, err := range []error{
+		usererr.CannotRead("a", errors.New("odd")), usererr.CannotWrite("a", errors.New("odd")),
+		usererr.CannotWriteWith("icons_previous_left", "a", errors.New("odd"), "b"),
+	} {
 		if r := usererr.Tell(english, err); r.Failure != "a: odd" {
 			t.Errorf("%v is told %+v, want floe's failure", err, r)
 		}

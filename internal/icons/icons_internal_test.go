@@ -255,8 +255,8 @@ func TestExtractLimits(t *testing.T) { //nolint:paralleltest // changes the limi
 	}
 }
 
-// The set's page that cannot be downloaded asks for the package's zip, not the page; a URL net/http cannot
-// read says so, without the URL twice.
+// The set's page that cannot be downloaded asks for the package's zip, not the page; a download that fails is
+// told without the URL twice.
 func TestDownloadMistakes(t *testing.T) {
 	t.Parallel()
 
@@ -268,10 +268,6 @@ func TestDownloadMistakes(t *testing.T) {
 	if want := k.page + ": cannot be downloaded (HTTP 404); check the network, or download the package's zip from this page " +
 		"and pass its path"; told(err) != want {
 		t.Errorf("a page not there = %s, want %s", told(err), want)
-	}
-	_, err = download(context.Background(), "http://%zz", "icons_download")
-	if want := `http://%zz: is not a URL floe can download (invalid URL escape "%zz"); check how it is written`; told(err) != want {
-		t.Errorf("a URL of no form = %s, want %s", told(err), want)
 	}
 	_, err = download(context.Background(), "http://127.0.0.1:1/x.zip", "icons_download")
 	if got := told(err); strings.Count(got, "http://127.0.0.1:1/x.zip") != 1 || strings.Contains(got, "Get ") {
@@ -286,6 +282,7 @@ func TestURLs(t *testing.T) {
 	for source, want := range map[string]bool{
 		"https://x/a.zip": true, "HTTPS://x/a.zip": true, "http://x/a.zip": true,
 		"/tmp/a.zip": false, "a.zip": false, "ftp://x/a.zip": false, "c:a.zip": false,
+		"http:icons.zip": false, "https:pkg.zip": false, "http://%zz": false,
 	} {
 		if IsURL(source) != want {
 			t.Errorf("IsURL(%s) = %v", source, !want)
@@ -297,6 +294,7 @@ func TestURLs(t *testing.T) {
 		"https://x/Icon-package_01022030/other.zip":          false,
 		"https://x/Icon-package_01022030.zip#Icon-package_1": true,
 		"/tmp/Icon-package_01022030.zip":                     false,
+		"https:Icon-package_01022030.zip":                    false,
 	} {
 		if aws.tells(at, "01022030") != want {
 			t.Errorf("tells(%s) = %v", at, !want)

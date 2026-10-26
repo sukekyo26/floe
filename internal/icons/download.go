@@ -98,7 +98,7 @@ func download(ctx context.Context, at, failing string) ([]byte, error) {
 	defer cancel(nil)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, at, nil)
 	if err != nil {
-		return nil, libraryAt(at, 0, 0, "icons_bad_url", unwrapped(err))
+		return nil, fmt.Errorf("download %s: %w", at, err)
 	}
 	// Timers give up on the download: after headerTimeout without a response (connecting included), then
 	// after stallTimeout without data. No timeout covers the whole of it, so a slow one is let finish.
