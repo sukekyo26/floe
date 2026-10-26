@@ -63,6 +63,9 @@ func (p *Part) Checks() *rules.Checks { return p.checks }
 // Page returns the part.html of p, parsed, in the language tag of a page.
 func (p *Part) Page(lang string) *template.Template { return p.pages.page(p.words, lang) }
 
+// File returns the file name of p as its mistakes name it.
+func (p *Part) File(name string) string { return path.Join(p.dir, name) }
+
 // Look is a look read: CSS that parts and HTML take without being its box.
 type Look struct {
 	name   string

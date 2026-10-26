@@ -107,4 +107,17 @@ var messagesEN = map[string]string{
 	"css_unclosed":          "this is still open at the end of the file: floe puts this CSS in a layer, whose } it would take with the rules after it; close it",
 	"css_palette_rule":      "palette.css holds only the palette's variables, :root { --name: value; }, and its color-scheme, and no other rule, @media neither: write other rules in base.css or a part's file; for a dark page, make a theme whose :root sets dark colours and color-scheme: dark",
 	"css_palette_important": "palette.css takes no !important, which would win over every layer, the colours a template sets on :scope too",
+
+	// tmpl: the template and the theme a data file names
+	"tmpl_no_template":   "name the template at the top level, like template: report (templates: %s)",
+	"tmpl_unknown":       `unknown template "%s"; use %s`,
+	"tmpl_unknown_theme": `there is no theme "%s"; use %s`,
+
+	// draw: the page drawn
+	"draw_head":         "the page drawn from this file has no </head> where a <style> styles the page, before which floe puts the page's styles: page.html writes it in the head, outside {{if}}, {{with}}, {{range}}, <template>, <svg> and <math>, and nothing drawn before it, a part among them, leaves an element open",
+	"draw_style":        "the page drawn from this file has a <style>, which page.html or a part writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css",
+	"draw_base":         "the page drawn from this file has a <base>, which page.html or a part writes and the page's CSP ignores (base-uri 'none'): write its links whole",
+	"draw_part_unknown": "the page drawn from this file names the part %s, which there is none of; use %s",
+	"draw_part_several": `the page has data-floe-part="%s", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
+	"draw_look_box":     `the page has data-floe-part="%[1]s", but %[1]s is a look, which has no box: take it with data-floe-look="%[1]s"`,
 }

@@ -1,0 +1,27 @@
+template: report
+lang: en
+theme: swiss
+title: The swiss theme
+sections:
+  - heading: Parts
+    parts:
+      - text: "Text with **bold**, `code` and a [link](https://example.com/).\n\n> A quote."
+      - note: { title: Note, text: A note in the accent. }
+      - note: { text: A warning., tone: warn }
+      - table:
+          columns: [{ title: Name }, { title: Count, num: true }, { title: State }]
+          rows: [[Pages, '1,840', { pill: done, tone: good }], [Links, '120', { pill: open, tone: bad }]]
+      - code: { file: a.conf, lang: ini, text: "read_only = true\n" }
+      - terminal: { shell: zsh, steps: [{ run: wiki export, out: done }] }
+      - cards: [{ title: One, text: First. }, { title: Two, text: Second. }]
+      - tabs:
+          - title: One
+            parts:
+              - text: First.
+          - title: Two
+            parts:
+              - text: Second.
+      - diff: { file: a.conf, lang: ini, text: "@@ -1 +1 @@\n-read_only = false\n+read_only = true\n" }
+      - findings:
+          - { level: must, at: a.conf:1, text: The wiki is still open, status: { pill: fixed, tone: good } }
+          - { level: nit, text: Two pages share a title }

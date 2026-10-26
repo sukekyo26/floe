@@ -121,6 +121,12 @@ func (t *Template) Example() []byte { return bytes.Clone(t.example) }
 // Unread returns the files of the directory of t it does not read.
 func (t *Template) Unread() []string { return slices.Clone(t.unread) }
 
+// File returns the file name of t as its mistakes name it.
+func (t *Template) File(name string) string { return path.Join(t.dir, name) }
+
+// PageSource returns the page.html of t as read, nil without one: where a mistake of drawing it is.
+func (t *Template) PageSource() []byte { return bytes.Clone(t.pageSrc) }
+
 // templatesURL is where floe holds the schemas of the templates: floe://templates/<name>/schema.json. Its
 // host keeps a template's relative $id and $ref under it, off floe:///parts/.
 const templatesURL = "floe://templates/"

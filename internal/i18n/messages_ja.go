@@ -101,4 +101,17 @@ var messagesJA = map[string]string{
 	"css_unclosed":          "ファイルの終わりで、これが閉じていません。floe はこの CSS を layer に入れるので、layer を閉じる } と後の規則まで中に取り込みます。閉じてください",
 	"css_palette_rule":      "palette.css にはパレットの変数 :root { --名前: 値; } とその color-scheme だけを書き、ほかの規則は @media も書けません。ほかの規則は base.css か部品のファイルに書いてください。暗いページは、:root に暗い色と color-scheme: dark を書いたテーマで作ってください",
 	"css_palette_important": "palette.css には !important を書けません。どの層にも勝ち、テンプレートが :scope に書いた色にも勝ってしまいます",
+
+	// tmpl: データファイルが指すテンプレートとテーマ
+	"tmpl_no_template":   "最上位に template: report のようにテンプレートを指定してください（テンプレート: %s）",
+	"tmpl_unknown":       "知らないテンプレート「%s」です。使えるのは %s です",
+	"tmpl_unknown_theme": "テーマ「%s」はありません。使えるのは %s です",
+
+	// draw: 描いたページ
+	"draw_head":         "このファイルを描いたページに、<style> がページを飾る </head> がありません。floe はページのスタイルをその前に入れます。page.html は </head> を head の中、{{if}}・{{with}}・{{range}}・<template>・<svg>・<math> の外に書き、その前に描く部品などが要素を開いたままにしないでください",
+	"draw_style":        "このファイルを描いたページに <style> があります。page.html か部品が書いています。CSS はテンプレートの page.css（floe がページに入れ、部品とテーマの下の層に置きます）か、部品の part.css に書いてください",
+	"draw_base":         "このファイルを描いたページに <base> があります。page.html か部品が書いていて、ページの CSP（base-uri 'none'）が無視します。リンクは完全な形で書いてください",
+	"draw_part_unknown": "このファイルを描いたページが、無い部品 %s を名乗っています。%s のどれかを書いてください",
+	"draw_part_several": `ページの data-floe-part="%s" は 1 つの部品の名前ではありません。data-floe-part="<名前>" と名前をそのまま書き、ほかの部品の見た目は data-floe-look="<名前> …" で借りてください`,
+	"draw_look_box":     `ページに data-floe-part="%[1]s" がありますが、%[1]s は見た目で箱がありません。data-floe-look="%[1]s" で借りてください`,
 }

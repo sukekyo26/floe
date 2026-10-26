@@ -1,0 +1,180 @@
+// Package draw draws a page of a data file with its template and the parts its schema names, checks the page
+// drawn for what floe puts into it, and puts in the page's styles and its headings' ids. It returns HTML alone:
+// where a page is kept, and its CSP, are its caller's.
+package draw
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"html/template"
+	"slices"
+	"strconv"
+	"strings"
+	ttemplate "text/template"
+
+	"github.com/sukekyo26/floe/internal/doc"
+	"github.com/sukekyo26/floe/internal/kit"
+	"github.com/sukekyo26/floe/internal/schema"
+	"github.com/sukekyo26/floe/internal/textpos"
+	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
+)
+
+// Page draws d, checked, with t of k in the theme named so, as a page titled title, calc the values of t's
+// computed.yaml (nil for none): each part from the inner ones out, then page.html. The mistakes of the parts
+// are told together, a part holding one that failed left undrawn. It checks the page drawn (checkPage) and
+// returns it with its styles before its </head> and its headings given ids.
+func Page(k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[string]any, title string) ([]byte, error) {
+	holds := map[string][]string{}
+	var found usererr.List
+	var failed [][]string
+	data, err := t.Schema().Walk(d.Values, func(it schema.Item, ready any) (any, error) {
+		if it.Part != "" {
+			holds[it.Part] = it.Holds
+		}
+		if slices.ContainsFunc(failed, func(at []string) bool { return under(at, it.At) }) {
+			return nil, nil //nolint:nilnil // not drawn: the mistake of what it holds is told
+		}
+		drawn, err := drawItem(k, d, it, ready)
+		if err != nil {
+			failed = append(failed, it.At)
+			return nil, found.Add(err)
+		}
+		return drawn, nil
+	})
+	if err != nil {
+		return nil, err //nolint:wrapcheck // floe's failure
+	}
+	if found != nil {
+		return nil, found.Sorted().Err()
+	}
+	var b bytes.Buffer
+	err = t.Page(d.Lang).Execute(&b, map[string]any{"Title": title, "Lang": d.Lang, "Data": data, "Calc": calc})
+	if err != nil {
+		e, at, failed := executed(err, "page.html", t.PageSource())
+		if failed != nil {
+			return nil, failed
+		}
+		e.File, e.Line, e.Column = t.File("page.html"), 0, 0
+		if at >= 0 {
+			e.Line, e.Column = textpos.Of(t.PageSource(), at)
+		}
+		return nil, e
+	}
+	out := b.Bytes()
+	head, named, err := checkPage(k, d, out)
+	if err != nil {
+		return nil, err
+	}
+	for name, parts := range holds {
+		named.uses[name] = append(named.uses[name], parts...)
+	}
+	for name, used := range named.uses {
+		named.uses[name] = slices.Compact(slices.Sorted(slices.Values(used)))
+	}
+	styles, err := pageStyle(k, theme, named, t.CSS())
+	if err != nil {
+		return nil, err
+	}
+	return withHeadingIDs(bytes.Join([][]byte{out[:head], []byte(styles), out[head:]}, nil)), nil
+}
+
+// under reports whether the path at is under the path of, longer.
+func under(at, of []string) bool {
+	return len(at) > len(of) && slices.Equal(at[:len(of)], of)
+}
+
+// drawItem draws it, an item of d, ready as Walk made it: a part's by its part.html in d's language, one of
+// format markdown as markdown draws it.
+func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any) (any, error) {
+	switch {
+	case it.Part != "":
+		p, ok := k.Part(it.Part)
+		if !ok {
+			//nolint:err113 // floe's own mistake
+			return nil, fmt.Errorf("draw: no part %s, which the schema was compiled with", it.Part)
+		}
+		var b bytes.Buffer
+		if err := p.Page(d.Lang).Execute(&b, ready); err != nil {
+			e, _, failed := executed(err, "part.html", nil)
+			if failed != nil {
+				return nil, failed
+			}
+			// At the value drawn: a part of floe's is no file one can fix, and which value it is tells why.
+			e.File, e.Line, e.Column = d.File, 0, 0
+			if d.Root != nil {
+				pos := yamlpos.OfValue(yamlpos.Find(d.Root, it.At))
+				e.Line, e.Column = pos.Line, pos.Column
+			}
+			return nil, e
+		}
+		return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
+	case it.Format == "markdown":
+		text, ok := it.Value.(string)
+		if !ok {
+			return it.Value, nil
+		}
+		return kit.Markdown(text) //nolint:wrapcheck // goldmark fails only to write, and a buffer does not
+	}
+	//nolint:err113 // floe's own mistake
+	return nil, fmt.Errorf("draw: floe does not draw an item of format %s yet", it.Format)
+}
+
+// executed returns the mistake err of executing the template name, whose text is src (nil when where it is
+// in the text is not asked): the usererr.Error it wraps, a copy, or text/template's words without their head
+// (template: name:line:column: ), and where the head says it is in src, -1 for none; or floe's failure, an
+// error of no execution. The head's line counts \n alone and its column bytes from 0: they are made a place
+// in src, which textpos counts.
+// LIMIT: text/template gives where it failed in its words alone; take it from the error once it gives it apart.
+func executed(err error, name string, src []byte) (*usererr.Error, int, error) {
+	var ee ttemplate.ExecError
+	if !errors.As(err, &ee) {
+		return nil, -1, fmt.Errorf("draw with %s: %w", name, err)
+	}
+	line, column, rest, ok := cutHead(ee.Error(), name)
+	at := -1
+	if ok {
+		at = offset(src, line, column)
+	}
+	var inner *usererr.Error
+	if errors.As(err, &inner) && inner != nil {
+		e := *inner
+		return &e, at, nil
+	}
+	return usererr.LibraryAt("", 0, 0, rest), at, nil
+}
+
+// cutHead returns the line and the column the head of msg, template: name:line:column: , gives, and msg
+// without it; false when msg has no such head.
+func cutHead(msg, name string) (line, column int, rest string, ok bool) {
+	after, ok := strings.CutPrefix(msg, "template: "+name+":")
+	if !ok {
+		return 0, 0, msg, false
+	}
+	lineText, after, ok1 := strings.Cut(after, ":")
+	columnText, after, ok2 := strings.Cut(after, ": ")
+	line, err1 := strconv.Atoi(lineText)
+	column, err2 := strconv.Atoi(columnText)
+	if !ok1 || !ok2 || err1 != nil || err2 != nil || line < 1 || column < 0 {
+		return 0, 0, msg, false
+	}
+	return line, column, after, true
+}
+
+// offset returns the byte of src at line, counting \n alone, and column, bytes from 0, as text/template
+// counts them; -1 when src holds no such byte.
+func offset(src []byte, line, column int) int {
+	start := 0
+	for range line - 1 {
+		i := bytes.IndexByte(src[start:], '\n')
+		if i < 0 {
+			return -1
+		}
+		start += i + 1
+	}
+	if at := start + column; at < len(src) {
+		return at
+	}
+	return -1
+}

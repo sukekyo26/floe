@@ -66,6 +66,11 @@ func markdownHTML(text string) (template.HTML, error) {
 	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 }
 
+// Markdown writes text, an item of format markdown, as HTML, as markdown in page.html does.
+func Markdown(text string) (template.HTML, error) {
+	return markdownHTML(text)
+}
+
 // convert writes text as HTML with md, the function of page.html called name.
 func convert(md goldmark.Markdown, name, text string) (string, error) {
 	var b bytes.Buffer
