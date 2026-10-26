@@ -175,10 +175,7 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any) (any, error) {
 // LIMIT: text/template gives where it failed in its words alone; take it from the error once it gives it apart.
 func executed(err error, name string, src []byte) (*usererr.Error, int, error) {
 	var ee ttemplate.ExecError
-	if !errors.As(err, &ee) {
-		return nil, -1, fmt.Errorf("draw with %s: %w", name, err)
-	}
-	if errors.Is(err, kit.ErrFunc) {
+	if !errors.As(err, &ee) || errors.Is(err, kit.ErrFunc) {
 		return nil, -1, fmt.Errorf("draw with %s: %w", name, err)
 	}
 	line, column, rest, ok := cutHead(ee.Error(), name)

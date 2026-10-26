@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"syscall"
 
 	"github.com/spf13/cobra"
 
@@ -63,12 +62,6 @@ func (a *app) renderPages(paths []string, out arg, check bool) error {
 	if err != nil {
 		return err //nolint:wrapcheck // floe's own, which its tests check
 	}
-	if out.abs != "" {
-		// Written or checked, one that cannot be written to is told so, with the mistakes of the files.
-		if _, bad := realPath(out.abs, out.name, true); bad != nil {
-			out.err = bad
-		}
-	}
 	pages, err := a.drawPages(k, paths, out)
 	switch {
 	case err != nil:
@@ -105,7 +98,7 @@ func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error)
 			continue
 		}
 		var bad error
-		if p.real, bad = realPath(at, p.to, false); bad != nil {
+		if p.real, bad = realPath(at, p.to); bad != nil {
 			if failed := found.Add(bad); failed != nil {
 				return nil, failed
 			}
@@ -161,32 +154,23 @@ func (t target) same(o target) bool {
 }
 
 // realPath is the absolute path abs with its symlinks resolved: those of its directory, and its own when it
-// is there, so that a page that is a symlink is written where it leads; to, the path as the user names it, a
-// directory when dir. What cannot be written there is told at to, as a page that cannot be written, in the
-// system's words, whether it is written or checked: a symlink that leads nowhere (no file, a loop of links),
-// which is not written over, and a directory where a file goes, or a file where a directory goes.
-func realPath(abs, to string, dir bool) (string, error) {
+// is there, so that a page that is a symlink is written where it leads. A symlink that leads nowhere (no file,
+// a loop of links) is not written over: it is told at to, the page as the user names it, as a page that cannot
+// be written, in the system's words. Whether the rest can be written is the system's to tell, as it writes.
+func realPath(abs, to string) (string, error) {
 	resolved, err := filepath.EvalSymlinks(abs)
-	if err != nil {
-		if info, lerr := os.Lstat(abs); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
-			// The system's words of why it leads nowhere, whatever EvalSymlinks says.
-			_, serr := os.Stat(abs)
-			return "", writeMistake(to, cmp.Or(serr, err))
-		}
-		// Not there yet.
-		if parent, err := filepath.EvalSymlinks(dirs.Dir(abs)); err == nil {
-			return filepath.Join(parent, filepath.Base(abs)), nil
-		}
-		return abs, nil
+	if err == nil {
+		return resolved, nil
 	}
-	if info, err := os.Stat(resolved); err == nil && info.IsDir() != dir {
-		wrong := syscall.EISDIR
-		if dir {
-			wrong = syscall.ENOTDIR
-		}
-		return "", writeMistake(to, &fs.PathError{Op: "write", Path: resolved, Err: wrong})
+	if info, lerr := os.Lstat(abs); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
+		// The system's words of why it leads nowhere, whatever EvalSymlinks says.
+		_, serr := os.Stat(abs)
+		return "", writeMistake(to, cmp.Or(serr, err))
 	}
-	return resolved, nil
+	if parent, err := filepath.EvalSymlinks(dirs.Dir(abs)); err == nil {
+		return filepath.Join(parent, filepath.Base(abs)), nil
+	}
+	return abs, nil
 }
 
 // writePages writes each page that changes, and prints its path; one that cannot be written is told, and the

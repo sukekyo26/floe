@@ -237,53 +237,32 @@ func TestRefusedNamesDoNotClash(t *testing.T) {
 	}
 }
 
-// --check tells what render would: a page, or --out-dir, that is a link to no file or a loop of links, or a
-// directory where a file goes, or a file where a directory goes, cannot be written, in the system's words.
+// A page that is a link to no file, or a loop of links, is not written over, written or checked: it cannot be
+// written, in the system's words.
 func TestCannotWriteThroughLinks(t *testing.T) {
 	t.Parallel()
 
-	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": good, "c.yaml": good, "c.html/x": "", "e.yaml": good, "file": ""})
-	for link, to := range map[string]string{"a.html": filepath.Join("out", "a.html"), "b.html": "b.html", "nowhere": "missing", "loop": "loop"} {
+	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": good})
+	for link, to := range map[string]string{"a.html": filepath.Join("out", "a.html"), "b.html": "b.html"} {
 		if err := os.Symlink(to, filepath.Join(dir, link)); err != nil {
 			t.Fatal(err)
 		}
 	}
 	tail := "): check that its directory exists and can be written to, and that its name is free and not too long\n"
-	for _, tt := range []struct {
-		args []string
-		want string
-	}{
-		{[]string{"a.yaml"}, "a.html: cannot be written (" + syscall.ENOENT.Error() + tail},
-		{[]string{"b.yaml"}, "b.html: cannot be written (" + syscall.ELOOP.Error() + tail},
-		{[]string{"c.yaml"}, "c.html: cannot be written (" + syscall.EISDIR.Error() + tail},
-		{[]string{"--out-dir", "nowhere", "e.yaml"}, "nowhere: cannot be written (" + syscall.ENOENT.Error() + tail},
-		{[]string{"--out-dir", "loop", "e.yaml"}, "loop: cannot be written (" + syscall.ELOOP.Error() + tail},
-		{[]string{"--out-dir", "file", "e.yaml"}, "file: cannot be written (" + syscall.ENOTDIR.Error() + tail},
+	for file, want := range map[string]string{
+		"a.yaml": "a.html: cannot be written (" + syscall.ENOENT.Error() + tail,
+		"b.yaml": "b.html: cannot be written (" + syscall.ELOOP.Error() + tail,
 	} {
 		for _, mode := range [][]string{{"render"}, {"render", "--check"}} {
-			args := slices.Concat(mode, tt.args)
-			if code, _, stderr := run(dir, args...); code != 1 || stderr != tt.want {
-				t.Errorf("floe %v = %d, %q, want %q", args, code, stderr, tt.want)
+			args := append(slices.Clone(mode), file)
+			if code, _, stderr := run(dir, args...); code != 1 || stderr != want {
+				t.Errorf("floe %v = %d, %q, want %q", args, code, stderr, want)
 			}
 		}
 	}
-	for _, link := range []string{"a.html", "b.html", "nowhere", "loop"} {
+	for _, link := range []string{"a.html", "b.html"} {
 		if info, err := os.Lstat(filepath.Join(dir, link)); err != nil || info.Mode()&os.ModeSymlink == 0 {
 			t.Errorf("%s is no longer the link: %v, %v", link, info, err)
 		}
-	}
-}
-
-// An --out-dir that cannot be written to is told with the mistakes of the data files.
-func TestOutDirToldWithTheFiles(t *testing.T) {
-	t.Parallel()
-
-	dir := write(t, map[string]string{"e.yaml": "lang: en\ntemplate: reprot\n"})
-	if err := os.Symlink("missing", filepath.Join(dir, "nowhere")); err != nil {
-		t.Fatal(err)
-	}
-	code, _, stderr := run(dir, "render", "--out-dir", "nowhere", "e.yaml")
-	if code != 1 || !strings.HasPrefix(stderr, "nowhere: cannot be written (") || !strings.Contains(stderr, `e.yaml:2:11: unknown template "reprot"`) {
-		t.Errorf("floe render = %d, %q", code, stderr)
 	}
 }
