@@ -121,8 +121,9 @@ func (t *Template) Example() []byte { return bytes.Clone(t.example) }
 // Unread returns the files of the directory of t it does not read.
 func (t *Template) Unread() []string { return slices.Clone(t.unread) }
 
-// templatesURL is where floe holds the schemas of the templates: floe:///templates/<name>/schema.json.
-const templatesURL = "floe:///templates/"
+// templatesURL is where floe holds the schemas of the templates: floe://templates/<name>/schema.json. Its
+// host keeps a template's relative $id and $ref under it, off floe:///parts/.
+const templatesURL = "floe://templates/"
 
 // readTemplates reads into k the templates of d, each a directory, their schemas compiled with the resources
 // of k when partsRead: one would be told missing when a part could not be read.

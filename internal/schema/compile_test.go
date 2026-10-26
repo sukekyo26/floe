@@ -27,7 +27,7 @@ func TestCompile(t *testing.T) {
 		{"fmtunreached", `{` + head + `, "patternProperties": {"^x": {"type":"string","format":"html"}}}`, "schema.json: #/patternProperties/^x: the format html marks an item to draw; declare it under properties or items, which floe follows"},
 		{"into", `{` + head + `, "properties": {"t": {"$ref": "floe:///parts/note.json#/properties/title"}}}`, "schema.json: #/properties/t: floe:///parts/note.json#/properties/title points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, floe:///parts/note.json"},
 		{"dyn", `{` + head + `, "properties": {"t": {"$dynamicRef": "#x"}}, "$defs": {"x": {"$dynamicAnchor": "x"}}}`, "schema.json: #/properties/t: floe does not follow $dynamicRef: write a $ref"},
-		{"dynnoanchor", `{` + head + `, "properties": {"t": {"$dynamicRef": "#x"}}}`, "schema.json: anchor in \"floe:///templates/t/schema.json#x\" not found in schema \"floe:///templates/t/schema.json\""},
+		{"dynnoanchor", `{` + head + `, "properties": {"t": {"$dynamicRef": "#x"}}}`, "schema.json: anchor in \"floe://templates/t/schema.json#x\" not found in schema \"floe://templates/t/schema.json\""},
 		{"rootpart", `{` + head + `, "$ref": "floe:///parts/note.json"}`, "schema.json: #: the root of the schema is drawn whole by floe:///parts/note.json; declare the items of the page under properties, and name a part under one of them"},
 		{"rootdefs", `{` + head + `, "$ref": "#/$defs/a", "$defs": {"a": ` + N + `}}`, "schema.json: #: the root of the schema is drawn whole by floe:///parts/note.json; declare the items of the page under properties, and name a part under one of them"},
 		{"rootfmt", `{` + head + `, "format": "markdown"}`, "schema.json: #: the root of the schema is drawn whole by \"format\": \"markdown\"; declare the items of the page under properties, and name a part under one of them"},
@@ -126,7 +126,7 @@ func TestCheckPartMistakes(t *testing.T) {
 		"missing": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"text": {"$ref": "#/$defs/missing"}}}`,
 		"meta":    `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"m": {"$ref": "https://json-schema.org/draft/2020-12/schema"}}}`,
 	} {
-		r, err := schema.NewResource("parts/"+name+".json", []byte(src), schema.Part)
+		r, err := schema.NewResource("floe:///parts/"+name+".json", "parts/"+name+".json", []byte(src), schema.Part)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -162,10 +162,10 @@ func TestCompileMistakeInPart(t *testing.T) {
 		{`"properties": {"t": {"$ref": "#zz"}}`, `parts/p.json: anchor in "floe:///parts/p.json#zz" not found in schema "floe:///parts/p.json"`, false},
 		{`"properties": {"t": {"$ref": "#/a~2"}}`, `parts/p.json: invalid json-pointer "floe:///parts/p.json#/a~2"`, false},
 		{`"$defs": {"a": {"$id": "http://[::1"}}`, `parts/p.json: error in parsing id at "floe:///parts/p.json#/$defs/a"`, false},
-		{`"$defs": {"a": {"$id": "x.json"}, "b": {"$id": "x.json"}}`, `parts/p.json: duplicate id "floe:///parts/x.json" in "floe:///parts/p.json" at`, true},
+		{`"$defs": {"a": {"$id": "https://example.com/x.json"}, "b": {"$id": "https://example.com/x.json"}}`, `parts/p.json: duplicate id "https://example.com/x.json" in "floe:///parts/p.json" at`, true},
 		{`"$defs": {"a": {"$anchor": "k"}, "b": {"$anchor": "k"}}`, `parts/p.json: duplicate anchor "k" in "floe:///parts/p.json" at`, true},
 	} {
-		r, err := schema.NewResource("parts/p.json", []byte(`{`+head+`, `+tt.body+`}`), schema.Part)
+		r, err := schema.NewResource("floe:///parts/p.json", "parts/p.json", []byte(`{`+head+`, `+tt.body+`}`), schema.Part)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -191,14 +191,14 @@ func TestNewResource(t *testing.T) {
 		_, compiled = schema.Compile(template, "schema.json", tmpl, res)
 		return compiled, schema.CheckPart(p, res)
 	}
-	if _, err := schema.NewResource("parts/p.json", []byte(mark+`{`), schema.Part); told(err) != "parts/p.json:1:2: unexpected EOF" {
+	if _, err := schema.NewResource("floe:///parts/p.json", "parts/p.json", []byte(mark+`{`), schema.Part); told(err) != "parts/p.json:1:2: unexpected EOF" {
 		t.Errorf("NewResource of a part cut short told %q", told(err))
 	}
 	for src, want := range map[string]string{
 		mark + `{"type":"string"}`: "",
 		`null`:                     "parts/p.json: #: got null, want boolean or object",
 	} {
-		r, err := schema.NewResource("parts/p.json", []byte(src), schema.Part)
+		r, err := schema.NewResource("floe:///parts/p.json", "parts/p.json", []byte(src), schema.Part)
 		if err != nil {
 			t.Fatal(err)
 		}

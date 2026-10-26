@@ -310,3 +310,23 @@ func TestUnread(t *testing.T) {
 		t.Errorf("Unread = %s", got)
 	}
 }
+
+// A shared schema's $id, which changes how the templates compiled with it read, is told as it is read, and no
+// template is compiled past it: compiling would tell a JSON pointer not found, into the schema it names.
+func TestReadSharedID(t *testing.T) {
+	t.Parallel()
+
+	_, err := kit.Read(floe(t), kit.Sources{
+		Parts: kit.Dir{FS: fstest.MapFS{"myshared.json": {Data: []byte(
+			`{"properties": {"y": {"$ref": "note.json#/properties/title"}}, "$defs": {"n": {"$id": "note.json", "type": "string"}}}`,
+		)}}, Name: "own/parts"},
+		Templates: kit.Dir{FS: fstest.MapFS{
+			"t/page.html":   {Data: []byte("x")},
+			"t/schema.json": {Data: []byte(`{"properties": {"x": {"$ref": "floe:///parts/myshared.json"}}}`)},
+		}, Name: "own/templates"},
+	})
+	want := "own/parts/myshared.json: #/$defs/n: this $id, note.json, has no scheme, which a part or a schema the parts share may not have, as it may land under floe:///parts/ and take the place of another: write an absolute URL of your own, like https://example.com/item.json, or leave $id out"
+	if got := told(err); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}

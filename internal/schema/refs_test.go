@@ -27,7 +27,7 @@ func refParts(t *testing.T) map[string]schema.Resource {
 
 	res := map[string]schema.Resource{}
 	for name, src := range map[string]string{"p": `{"type":"string"}`, "q": `{"$ref":"#/$defs/m"}`, "r": `{"$ref":"#/$defs/n"}`, "t": `true`} {
-		r, err := schema.NewResource("parts/"+name+".json", []byte(src), schema.Part)
+		r, err := schema.NewResource("floe:///parts/"+name+".json", "parts/"+name+".json", []byte(src), schema.Part)
 		if err != nil {
 			t.Fatal(err)
 		}

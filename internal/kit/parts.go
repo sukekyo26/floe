@@ -89,8 +89,8 @@ func (l *Look) CSS() []byte { return bytes.Clone(l.css) }
 // Unread returns the files of the directory of l it does not read.
 func (l *Look) Unread() []string { return slices.Clone(l.unread) }
 
-// partsURL is where floe holds the schemas of the parts, and those they share: floe:///parts/<name>.json.
-const partsURL = "floe:///parts/"
+// partURL is where floe holds the schema of the part, or the shared schema, named so.
+func partURL(name string) string { return "floe:///parts/" + name + ".json" }
 
 // readParts reads into k the parts and looks of d, each a directory, a part one with a schema.json, and the
 // schemas the parts share, <name>.json beside them. A part, a look and a shared schema of one name, here or in
@@ -147,7 +147,7 @@ func (k *Kit) clashes(d Dir, dirs, shared []string) (usererr.List, error) {
 		}
 		if slices.Contains(shared, name) {
 			twice(path.Join(d.Name, name+".json"), name, dir)
-		} else if r, ok := k.resources[partsURL+name+".json"]; ok && r.Kind == schema.Shared {
+		} else if r, ok := k.resources[partURL(name)]; ok && r.Kind == schema.Shared {
 			twice(dir, name, r.File)
 		} else if p, ok := k.base.Part(name); ok && !isPart {
 			found = append(found, usererr.NewAt(dir, 0, 0, "kit_look_over_part", name, p.dir))
@@ -174,11 +174,11 @@ func (k *Kit) readShared(d Dir, name string) error {
 	if err != nil {
 		return err
 	}
-	r, err := schema.NewResource(path.Join(d.Name, name+".json"), src, schema.Shared)
+	r, err := schema.NewResource(partURL(name), path.Join(d.Name, name+".json"), src, schema.Shared)
 	if err != nil {
 		return err //nolint:wrapcheck // its mistakes, or floe's failure
 	}
-	k.resources[partsURL+name+".json"] = r
+	k.resources[r.URL] = r
 	return nil
 }
 
@@ -208,7 +208,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 	if failed := found.Add(yamlErr); failed != nil {
 		return failed
 	}
-	r, err := schema.NewResource(path.Join(dir, "schema.json"), schemaSrc, schema.Part)
+	r, err := schema.NewResource(partURL(name), path.Join(dir, "schema.json"), schemaSrc, schema.Part)
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
@@ -227,7 +227,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 	if found != nil {
 		return found.Sorted().Err()
 	}
-	k.resources[partsURL+name+".json"] = r
+	k.resources[r.URL] = r
 	unread, err := unreadIn(d, name, "schema.json", "part.html", "part.css", "part.yaml", "checks.yaml", "words.yaml")
 	if err != nil {
 		return err

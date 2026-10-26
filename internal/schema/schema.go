@@ -43,15 +43,20 @@ type Resource struct {
 	made bool // by NewResource: a doc of nil is the JSON null, not a Resource left zero
 	Kind Kind
 	File string
+	URL  string // where it is held, the URL its root $id may name
 }
 
-// NewResource reads src (the schema of file) as read does, a Resource of k.
-func NewResource(file string, src []byte, k Kind) (Resource, error) {
+// NewResource reads src (the schema of file, held at u) as read does, a Resource of k. Its "$schema" and
+// "$id" are refused as raw refuses them: they change how the templates and parts compiled with it read.
+func NewResource(u, file string, src []byte, k Kind) (Resource, error) {
 	doc, err := read(file, src)
 	if err != nil {
 		return Resource{}, err
 	}
-	return Resource{doc: doc, made: true, Kind: k, File: file}, nil
+	if dialects, ids := raw(u, file, doc, true); dialects != nil || ids != nil {
+		return Resource{}, append(dialects, ids...).Sorted().Err()
+	}
+	return Resource{doc: doc, made: true, Kind: k, File: file, URL: u}, nil
 }
 
 // read reads src, the JSON of file, as RFC 8259 does, past a byte order mark at its start, and as jsonschema
@@ -131,19 +136,26 @@ func CheckPart(url string, res map[string]Resource) error {
 	return c.checkPart()
 }
 
-// build compiles doc under url, after checking the drafts it names (check 0), with res and floe's formats.
+// build compiles doc under url, after checking the drafts it names (check 0), with res and floe's formats;
+// a template's "$id"s are told with the mistakes of compiling it, as both are of what was written, and no
+// check that reads the tree compiled runs past them. A part's NewResource has refused already.
 func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) {
 	for _, ru := range slices.Sorted(maps.Keys(res)) {
 		if !res[ru].made {
 			return nil, fmt.Errorf("schema: %s was not made by NewResource", ru) //nolint:err113 // floe's own mistake
 		}
+		// Its root $id was checked against its URL, which must be where it is held.
+		if res[ru].URL != ru {
+			return nil, fmt.Errorf("schema: %s is held at %s", res[ru].URL, ru) //nolint:err113 // floe's own mistake
+		}
 	}
 	c := &Compiled{Root: nil, url: u, file: file, res: res}
-	if err := c.dialects(doc); err != nil {
-		return nil, err
+	dialects, ids := raw(u, file, doc, false)
+	if dialects != nil {
+		return nil, append(dialects, ids...).Sorted().Err()
 	}
 	root, err := c.compile(doc)
-	if err != nil {
+	if err = usererr.Collect(ids.Err(), err); err != nil {
 		return nil, err
 	}
 	c.Root = root
@@ -297,8 +309,12 @@ func (h *holes) fill(base, frag string) bool {
 type loader struct{ file string }
 
 func (l loader) Load(u string) (any, error) {
-	if strings.HasPrefix(u, "floe:///parts/") {
+	switch {
+	case strings.HasPrefix(u, "floe:///parts/"):
 		return nil, usererr.NewAt(l.file, 0, 0, "schema_no_part", u)
+	case strings.HasPrefix(u, "floe://templates/"):
+		// A template's relative $ref, which its host keeps under the templates.
+		return nil, usererr.NewAt(l.file, 0, 0, "schema_ref_templates", u)
 	}
 	return nil, usererr.NewAt(l.file, 0, 0, "schema_no_url", u)
 }
