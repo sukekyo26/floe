@@ -44,10 +44,10 @@ func TestFormat(t *testing.T) {
 		}
 	}
 	for _, tt := range []struct{ src, want string }{
-		{`{{"12" | num}}`, "num: 12 (string) is not a number"},
-		{`{{1 | num 0}}`, "num: write num or num with a count"},
-		{`{{1 | num 1 2}}`, "num: write num or num with a count"},
-		{`{{true | bytes}}`, "bytes: true (bool) is not a number"},
+		{`{{"12" | num}}`, "num takes a number, not 12 (string)"},
+		{`{{1 | num 0}}`, "write num, or num and a count of significant digits from 1 before the number"},
+		{`{{1 | num 1 2}}`, "write num, or num and a count of significant digits from 1 before the number"},
+		{`{{true | bytes}}`, "bytes takes a number, not true (bool)"},
 	} {
 		page := template.Must(template.New("t").Funcs(funcs).Parse(tt.src))
 		if err := page.Execute(&strings.Builder{}, nil); err == nil || !strings.Contains(err.Error(), tt.want) {

@@ -1,9 +1,10 @@
 // Package kit reads, at stage 1, the parts, looks, themes and templates pages are drawn with: floe's own,
 // and over them one's own. Reading only makes their values (the files parsed, the schemas compiled); the
-// rules over the values are checked apart. floe's own are read at every run but checked by the tests alone.
+// rules over the values are checked apart. floe's own are read once a process, and never checked there.
 package kit
 
 import (
+	"bytes"
 	"embed"
 	"errors"
 	"fmt"
@@ -71,7 +72,7 @@ var floe = sync.OnceValues(func() (*Kit, error) {
 	return k, nil
 })
 
-// Floe returns floe's own, read once a process and not checked: the tests check them (Check(Floe())).
+// Floe returns floe's own, read once a process and not checked.
 func Floe() (*Kit, error) {
 	return floe()
 }
@@ -81,7 +82,7 @@ func (k *Kit) BaseCSS() []byte {
 	for k.base != nil {
 		k = k.base
 	}
-	return k.baseCSS
+	return bytes.Clone(k.baseCSS)
 }
 
 // Read reads src over base (nil for none): parts and looks, then themes and templates, a name or a $ref found
@@ -112,14 +113,31 @@ func Read(base *Kit, src Sources) (*Kit, error) {
 	return k, nil
 }
 
-// Part returns the part of k named so, its own or its base's.
+// Part returns the part of k named so, its own or its base's. Parts and looks share their names: one's own
+// look hides its base's part of the name, and its own part the base's look.
 func (k *Kit) Part(name string) (*Part, bool) {
-	return lookUp(k, name, func(k *Kit) map[string]*Part { return k.parts })
+	for at := k; at != nil; at = at.base {
+		if p, ok := at.parts[name]; ok {
+			return p, true
+		}
+		if _, ok := at.looks[name]; ok {
+			return nil, false
+		}
+	}
+	return nil, false
 }
 
-// Look returns the look of k named so, its own or its base's.
+// Look returns the look of k named so, its own or its base's, as Part does.
 func (k *Kit) Look(name string) (*Look, bool) {
-	return lookUp(k, name, func(k *Kit) map[string]*Look { return k.looks })
+	for at := k; at != nil; at = at.base {
+		if l, ok := at.looks[name]; ok {
+			return l, true
+		}
+		if _, ok := at.parts[name]; ok {
+			return nil, false
+		}
+	}
+	return nil, false
 }
 
 // Theme returns the theme of k named so, its own or its base's.
@@ -137,7 +155,8 @@ func (k *Kit) Resources() map[string]schema.Resource {
 	return maps.Clone(k.resources)
 }
 
-// Names returns the names of the parts, looks, themes and templates of k and its base, each sorted.
+// Names returns the names of the parts, looks, themes and templates of k and its base, each sorted, a name
+// one's own hides as it does (Part).
 func (k *Kit) Names() (parts, looks, themes, templates []string) {
 	for at := k; at != nil; at = at.base {
 		parts = append(parts, slices.Collect(maps.Keys(at.parts))...)
@@ -146,7 +165,9 @@ func (k *Kit) Names() (parts, looks, themes, templates []string) {
 		templates = append(templates, slices.Collect(maps.Keys(at.templates))...)
 	}
 	sorted := func(s []string) []string { return slices.Compact(slices.Sorted(slices.Values(s))) }
-	return sorted(parts), sorted(looks), sorted(themes), sorted(templates)
+	parts = slices.DeleteFunc(sorted(parts), func(n string) bool { _, ok := k.Part(n); return !ok })
+	looks = slices.DeleteFunc(sorted(looks), func(n string) bool { _, ok := k.Look(n); return !ok })
+	return parts, looks, sorted(themes), sorted(templates)
 }
 
 // lookUp returns the one named so of the things of k that of gives, k's own before its base's.
@@ -187,7 +208,8 @@ func entries(d Dir, dir string, dirs bool) ([]string, error) {
 
 // readFile returns the file name of the directory dir of d, without a byte order mark at its start, and
 // false when there is none.
-// LIMIT: a file floe cannot read is floe's failure; one's own (B7) is to be told as the reader's.
+// LIMIT: a file floe cannot read is floe's failure; the reading of one's own directories is to tell it as
+// the reader's.
 func readFile(d Dir, dir, name string) ([]byte, bool, error) {
 	src, err := fs.ReadFile(d.FS, path.Join(dir, name))
 	switch {

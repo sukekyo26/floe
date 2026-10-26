@@ -1,17 +1,13 @@
 package kit
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
 	"strconv"
 	"strings"
-)
 
-var (
-	errNotNumber = errors.New("is not a number")
-	errDigits    = errors.New("write num or num with a count of significant digits from 1, like num 3")
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // formatNum, num in page.html, writes a number with its digits grouped by three, as it is or rounded
@@ -26,26 +22,22 @@ func formatNum(args ...any) (string, error) {
 	case 2:
 		d, ok := args[0].(int)
 		if !ok || d < 1 {
-			return "", fmt.Errorf("num: %w", errDigits)
+			return "", usererr.New("kit_num_digits")
 		}
 		digits = d
 	default:
-		return "", fmt.Errorf("num: %w", errDigits)
+		return "", usererr.New("kit_num_digits")
 	}
-	text, err := decimal(args[len(args)-1], digits)
-	if err != nil {
-		return "", fmt.Errorf("num: %w", err)
-	}
-	return text, nil
+	return decimal("num", args[len(args)-1], digits)
 }
 
 // formatBytes, bytes in page.html, writes a count of bytes in the binary unit that keeps it under
 // 1024, to 3 significant digits but every digit before the point: 1536 is 1.5 KiB, 1023 is 1,023 B,
 // and 1047552 is 1,023 KiB.
 func formatBytes(v any) (string, error) {
-	f, err := float(v)
+	f, err := float("bytes", v)
 	if err != nil {
-		return "", fmt.Errorf("bytes: %w", err)
+		return "", err
 	}
 	unit := 0
 	units := []string{"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"}
@@ -63,16 +55,16 @@ func formatBytes(v any) (string, error) {
 		}
 		v = f
 	}
-	text, err := decimal(v, 0)
+	text, err := decimal("bytes", v, 0)
 	if err != nil {
-		return "", fmt.Errorf("bytes: %w", err)
+		return "", err
 	}
 	return text + " " + units[unit], nil
 }
 
 // decimal writes v grouped, rounded to digits significant digits unless digits is 0. A whole number
 // is written exactly, beyond the 2^53 a float holds, and rounded as one.
-func decimal(v any, digits int) (string, error) {
+func decimal(fn string, v any, digits int) (string, error) {
 	var text string
 	if i, ok := whole(v); ok {
 		if digits > 0 {
@@ -80,7 +72,7 @@ func decimal(v any, digits int) (string, error) {
 		}
 		text = i.String()
 	} else {
-		f, err := float(v)
+		f, err := float(fn, v)
 		if err != nil {
 			return "", err
 		}
@@ -124,7 +116,8 @@ func whole(v any) (*big.Int, bool) {
 	return nil, false
 }
 
-func float(v any) (float64, error) {
+// float returns v as a float, or the mistake of the function fn taking it.
+func float(fn string, v any) (float64, error) {
 	if i, ok := whole(v); ok {
 		f, _ := new(big.Float).SetInt(i).Float64()
 		return f, nil
@@ -132,7 +125,7 @@ func float(v any) (float64, error) {
 	if f, ok := v.(float64); ok {
 		return f, nil
 	}
-	return 0, fmt.Errorf("%v (%T) %w", v, v, errNotNumber)
+	return 0, usererr.New("kit_not_number", fn, fmt.Sprintf("%v (%T)", v, v))
 }
 
 // roundWhole rounds i to digits significant digits, half away from zero.

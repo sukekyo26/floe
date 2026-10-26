@@ -17,8 +17,9 @@ func TestCheckFloe(t *testing.T) {
 }
 
 const (
-	partFiles = "a part holds schema.json, part.html and part.css, and a look alone part.css without the other two (and part.yaml if it takes looks); add what it lacks, or remove what a look has no use for"
-	braceTold = "this } closes no block: floe puts this CSS in a layer, which it would close, leaving the rules after it out of the layer and over the parts' styles"
+	partFiles  = "a part holds schema.json, part.html and part.css, and a look alone part.css without the other two (and part.yaml if it takes looks); add what it lacks, or remove what a look has no use for"
+	lookUnread = "floe reads no file but part.css and part.yaml in a look, a directory without a schema.json: remove it, or add the schema.json to make it a part"
+	braceTold  = "this } closes no block: floe puts this CSS in a layer, which it would close, leaving the rules after it out of the layer and over the parts' styles"
 )
 
 // mapFS makes the files of a directory, name to text.
@@ -58,7 +59,18 @@ func TestCheckMistakes(t *testing.T) {
 	}{
 		{"right", part, nil, nil, ""},
 		{"no part.css", with(nil, "p/part.css"), nil, nil, "own/parts/p: " + partFiles},
-		{"a look with a part.html", with(map[string]string{"lk/part.css": "a{}", "lk/part.html": "x"}), nil, nil, "own/parts/lk: " + partFiles},
+		{"a look with a part.html", with(map[string]string{"lk/part.css": "a{}", "lk/part.html": "x", "lk/checks.yaml": ""}), nil, nil, lines(
+			"own/parts/lk/checks.yaml: "+lookUnread, "own/parts/lk/part.html: "+lookUnread)},
+		{
+			"a file a part does not read", with(map[string]string{"p/notes.txt": ""}), nil, nil,
+			"own/parts/p/notes.txt: floe reads no file of this name in a part: a part holds schema.json, part.html and part.css, and part.yaml, checks.yaml and words.yaml if it likes; remove it",
+		},
+		{
+			"a file a theme does not read", part,
+			map[string]string{"t/tabel.css": "a{}"},
+			nil,
+			"own/themes/t/tabel.css: floe reads no file of this name in a theme: a theme holds base.css, palette.css and a <part>.css for each part or look it styles; rename it after one, or remove it",
+		},
 		{"part.css", with(map[string]string{"p/part.css": "}\n@import \"x\";\n"}), nil, nil, lines(
 			"own/parts/p/part.css:1:1: "+braceTold,
 			"own/parts/p/part.css:2:1: floe puts this CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",

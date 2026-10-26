@@ -28,9 +28,10 @@ func Check(k *Kit) error {
 	}
 	for _, name := range slices.Sorted(maps.Keys(k.looks)) {
 		l := k.looks[name]
-		if !l.hasCSS || l.hasHTML {
+		if !l.hasCSS {
 			found = append(found, usererr.NewAt(l.dir, 0, 0, "kit_part_files"))
 		}
+		found = append(found, unread(l.dir, l.unread, "kit_look_unread")...)
 		if err := add(css.Check(path.Join(l.dir, "part.css"), l.css)); err != nil {
 			return err
 		}
@@ -60,6 +61,7 @@ func (k *Kit) checkPart(p *Part) error {
 	if p.pages == nil || !p.hasCSS {
 		found = append(found, usererr.NewAt(p.dir, 0, 0, "kit_part_files"))
 	}
+	found = append(found, unread(p.dir, p.unread, "kit_part_unread")...)
 	errs := []error{css.Check(path.Join(p.dir, "part.css"), p.css), schema.CheckPart(partsURL+p.name+".json", k.resources)}
 	if p.pages != nil {
 		errs = append(errs, escapeMistake(p.pages[""], p.pageSrc, path.Join(p.dir, "part.html")))
@@ -125,9 +127,19 @@ func (k *Kit) lookCycles(own map[string][]taken) usererr.List {
 	return found
 }
 
-// checkTheme checks the CSS of t: palette.css as a palette, the others as CSS.
+// unread refuses each file of the directory dir that it holds and floe does not read, with key.
+func unread(dir string, files []string, key string) usererr.List {
+	found := make(usererr.List, 0, len(files))
+	for _, f := range files {
+		found = append(found, usererr.NewAt(path.Join(dir, f), 0, 0, key))
+	}
+	return found
+}
+
+// checkTheme checks the CSS of t: palette.css as a palette, the others as CSS; and refuses a file it does not
+// read, of no part or look.
 func checkTheme(t *Theme) error {
-	errs := []error{}
+	errs := []error{unread(t.dir, t.unread, "kit_theme_unread").Err()}
 	if t.palette != nil {
 		errs = append(errs, css.CheckPalette(path.Join(t.dir, "palette.css"), t.palette))
 	}
