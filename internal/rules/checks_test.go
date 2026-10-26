@@ -72,6 +72,9 @@ func TestReadChecks(t *testing.T) {
 		{"in single quotes", "- expr: 'doc.a <'\n  message: m\n", "t1/checks.yaml:1:16: unexpected token EOF"},
 		{"an escape in quotes", "- expr: \"\\\"x\\\" ==\"\n  message: m\n", "t1/checks.yaml:1:9: unexpected token EOF"},
 		{"| block, its second line", "- expr: |\n    doc.a < 1 &&\n      doc.b <\n  message: m\n", "t1/checks.yaml:3:14: unexpected token EOF"},
+		{"an escape at the end of single quotes", "- expr: 'doc.a + '''\n  message: m\n", "t1/checks.yaml:1:9: literal not terminated"},
+		{"a no-break space before a quote", "- expr: \u00a0'\n  message: m\n", "t1/checks.yaml:1:11: literal not terminated"},
+		{"an ideographic space before a quote", "- expr: \u3000'x\n  message: m\n", "t1/checks.yaml:1:12: literal not terminated"},
 		{"> block", "- expr: >\n    doc.a < 1 &&\n    doc.b <\n  message: m\n", "t1/checks.yaml:1:9: unexpected token EOF"},
 	} {
 		if got := runChecks(t, tt.src, ""); got != tt.want {

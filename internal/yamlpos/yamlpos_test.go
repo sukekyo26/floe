@@ -135,3 +135,22 @@ func TestFind(t *testing.T) {
 		}
 	}
 }
+
+// QuoteOf tells a quoted scalar as the parser read it: a no-break space or an ideographic space before a quote
+// is part of a plain scalar.
+func TestQuoteOf(t *testing.T) {
+	t.Parallel()
+
+	for src, want := range map[string]yamlpos.Quote{
+		"\"x\"": yamlpos.Double, "'x'": yamlpos.Single, "x": yamlpos.Plain, "\u00a0'": yamlpos.Plain,
+		"\u3000'x": yamlpos.Plain, "1": yamlpos.Plain, "|\n  x\n": yamlpos.Plain,
+	} {
+		n, err := yamlpos.Parse("a.yaml", []byte("v: "+src+"\n"))
+		if err != nil {
+			t.Fatalf("Parse(%q): %s", src, told(err))
+		}
+		if _, v := yamlpos.Find(n, []string{"v"}); yamlpos.QuoteOf(v) != want {
+			t.Errorf("QuoteOf(%q) = %d, want %d", src, yamlpos.QuoteOf(v), want)
+		}
+	}
+}

@@ -96,15 +96,15 @@ func (e expression) place(err error) yamlpos.Pos {
 		}
 		return yamlpos.Pos{Line: at.Line + fe.Line, Column: indent + 1 + fe.Column}
 	case ast.ScalarNode:
-		// A plain scalar does not start with a quote: one that does is quoted.
 		written := strings.TrimSpace(v.GetToken().Origin)
+		quote := yamlpos.QuoteOf(v)
 		switch {
 		case fe.Line != 1 || strings.Contains(written, "\n"):
 			return at
-		case strings.HasPrefix(written, `"`) && strings.Contains(written, `\`),
-			strings.HasPrefix(written, "'") && strings.Contains(written[1:len(written)-1], "''"):
+		case quote == yamlpos.Double && strings.Contains(written, `\`),
+			quote == yamlpos.Single && strings.Contains(written[1:len(written)-1], "''"):
 			return at
-		case strings.HasPrefix(written, `"`), strings.HasPrefix(written, "'"):
+		case quote != yamlpos.Plain:
 			at.Column++
 		}
 		at.Column += fe.Column
