@@ -155,6 +155,7 @@ func cutEnd(tree *html.Node, end string) bool {
 
 // tokenized reports whether the tokenizer, read alone, takes end, at the end of page, as a comment of its own:
 // only to choose whom to tell of a page without the mark, the page or an item that ate it.
+// LIMIT: past a cut, a page ending in an open raw text (xmp) blames an item, or the wrong fix; rework if real.
 func tokenized(page []byte, end string) bool {
 	z := html.NewTokenizer(bytes.NewReader(page))
 	for {
