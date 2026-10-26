@@ -50,14 +50,7 @@ func drawFile(k *kit.Kit, p arg) ([]byte, error) {
 	if p.name == "" {
 		return nil, p.err
 	}
-	var notData error
-	switch {
-	case !files.IsDataFile(p.name):
-		notData = usererr.New("cli_check_not_data", p.name)
-	case baseName(p.name) == "":
-		// Its page would be .html, a hidden file, titled by nothing.
-		notData = usererr.New("cli_data_no_name", p.name)
-	}
+	notData := nameMistake(p.name)
 	if notData != nil || p.err != nil {
 		return nil, usererr.Collect(notData, p.err) //nolint:wrapcheck // mistakes for the user as they are
 	}
@@ -68,6 +61,18 @@ func drawFile(k *kit.Kit, p arg) ([]byte, error) {
 	untitled := cmp.Or(files.SlugFromFile(p.name), baseName(p.name))
 	//nolint:wrapcheck // its mistakes, or what failed
 	return tmpl.Draw(k, p.name, src, tmpl.Options{Theme: "", Untitled: untitled})
+}
+
+// nameMistake refuses file by its name: one that is no data file, or of no name before its extension, which
+// names its page; nil for none.
+func nameMistake(file string) error {
+	switch {
+	case !files.IsDataFile(file):
+		return usererr.New("cli_check_not_data", file)
+	case baseName(file) == "":
+		return usererr.New("cli_data_no_name", file)
+	}
+	return nil
 }
 
 // baseName is the name of file without its extension: what floe render names its page by, and the title of

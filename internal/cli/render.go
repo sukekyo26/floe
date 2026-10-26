@@ -92,8 +92,8 @@ func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error)
 		if failed := found.Add(err); failed != nil {
 			return nil, failed
 		}
-		if out.err != nil || f.err != nil {
-			// Nowhere to write to, or to read from: told above.
+		if out.err != nil || f.err != nil || nameMistake(f.name) != nil {
+			// Nowhere to write to, or to read from, or no data file to write the page of: told above.
 			continue
 		}
 		var bad error

@@ -213,3 +213,16 @@ func TestDataFileWithoutName(t *testing.T) {
 		t.Error(".html was written")
 	}
 }
+
+// A file refused by its name writes no page, which another would be told to clash with.
+func TestRefusedNamesDoNotClash(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{".yaml": good, ".yml": good, "a.txt": "", "a.md": ""})
+	for _, args := range [][]string{{".yaml", ".yml"}, {"a.txt", "a.md"}} {
+		code, _, stderr := run(dir, append([]string{"render"}, args...)...)
+		if code != 1 || strings.Contains(stderr, "would both write") || strings.Count(stderr, "\n") != 2 {
+			t.Errorf("floe render %v = %d, %q", args, code, stderr)
+		}
+	}
+}
