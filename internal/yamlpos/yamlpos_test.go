@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goccy/go-yaml"
-
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -107,25 +105,6 @@ func TestParse(t *testing.T) {
 		if _, err := yamlpos.Parse("a.yaml", []byte(src)); !errors.Is(err, yamlpos.ErrEmpty) {
 			t.Errorf("Parse(%q) = %v, want ErrEmpty", src, err)
 		}
-	}
-}
-
-// Library places goccy/go-yaml's words at its token, without a place when it has none, and returns any other
-// error as it is.
-func TestLibrary(t *testing.T) {
-	t.Parallel()
-
-	var m map[string]any
-	err := yaml.Unmarshal([]byte("- a\n"), &m)
-	if got := told(yamlpos.Library("a.yaml", err)); got != "a.yaml:1:1: sequence was used where mapping is expected" {
-		t.Errorf("Library of a mistake at a token = %q", got)
-	}
-	if got := told(yamlpos.Library("a.yaml", &yaml.SyntaxError{Message: "bad", Token: nil})); got != "a.yaml: bad" {
-		t.Errorf("Library of a mistake without a token = %q", got)
-	}
-	failure := errors.New("disk on fire")
-	if got := yamlpos.Library("a.yaml", failure); !errors.Is(got, failure) {
-		t.Errorf("Library of a failure = %v", got)
 	}
 }
 

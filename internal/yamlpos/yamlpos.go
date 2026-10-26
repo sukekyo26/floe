@@ -85,9 +85,9 @@ func New(file string, at Pos, key string, args ...any) *usererr.Error {
 	return usererr.NewAt(file, at.Line, at.Column, key, args...)
 }
 
-// Library returns the mistake goccy/go-yaml told in err, in its words, at its token in file (without a
+// library returns the mistake goccy/go-yaml told in err, in its words, at its token in file (without a
 // place when it has none). Any other error is returned as it is: floe's failure.
-func Library(file string, err error) error {
+func library(file string, err error) error {
 	var ye yaml.Error
 	if !errors.As(err, &ye) {
 		return err
@@ -101,16 +101,16 @@ func Library(file string, err error) error {
 // ErrEmpty is returned by Parse for a file without a document, for the caller to word.
 var ErrEmpty = errors.New("no YAML document")
 
-// Decode reads the values of n, a node Parse returned, into v. Its mistake is goccy/go-yaml's (Library).
+// Decode reads the values of n, a node Parse returned, into v. Its mistake is goccy/go-yaml's (library).
 func Decode(file string, n ast.Node, v any) error {
 	if err := yaml.NodeToValue(n, v); err != nil {
-		return Library(file, err)
+		return library(file, err)
 	}
 	return nil
 }
 
 // Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A byte order
-// mark at its start is left out, as YAML 1.2 reads it. A syntax error is goccy/go-yaml's (Library). A
+// mark at its start is left out, as YAML 1.2 reads it. A syntax error is goccy/go-yaml's (library). A
 // second document, or text a second --- drops, is refused at its start, and nothing in it is walked.
 // Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not
 // walking what they hold; a key that is not text; a value or a text key a comment may have cut short; a
@@ -136,7 +136,7 @@ func document(file string, src []byte) (ast.Node, error) {
 	src = bytes.TrimPrefix(src, utf8BOM)
 	doc, err := parser.ParseBytes(src, 0)
 	if err != nil {
-		return nil, Library(file, err)
+		return nil, library(file, err)
 	}
 	var body ast.Node
 	var head *Pos // a directive heads the document after it
