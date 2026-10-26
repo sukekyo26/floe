@@ -120,14 +120,21 @@ func (c *Compiled) checkNode(n *jsonschema.Schema, r reached) usererr.List {
 // sharedKeys refuses each key floe reads itself (doc.Shared) that a schema always applied to the root's value
 // declares or requires: the root, and what its allOf and its $refs to the same file or to a Shared schema hold.
 // floe leaves the keys out of the values it checks, so that a rule declared for one would never be checked and a
-// key required would always be missing. A key declared is told there alone, not again as required by the same
-// schema.
-// LIMIT: what if/then, anyOf, oneOf and not hold is not looked at: a rule declared there for one of the keys is
-// silently left unchecked.
+// key required would always be missing. A key declared is told where it is declared alone, not again where it
+// is required.
+// LIMIT: only properties are looked at: what if/then, anyOf, oneOf and not hold, dependentSchemas, the keys of
+// dependentRequired and patternProperties are not, and a rule they give one of the keys is silently left
+// unchecked.
 // LIMIT: a $defs the root refers to is refused for declaring one of the keys even where an item under the root
 // refers to it too, for which the declaration is right; give the root a $defs of its own if a template needs it.
 func (c *Compiled) sharedKeys() usererr.List {
 	var found usererr.List
+	declared := map[string]bool{}
+	type need struct {
+		s   *jsonschema.Schema
+		key string
+	}
+	var needs []need
 	seen := map[*jsonschema.Schema]bool{}
 	var root func(s *jsonschema.Schema)
 	root = func(s *jsonschema.Schema) {
@@ -135,22 +142,14 @@ func (c *Compiled) sharedKeys() usererr.List {
 			return
 		}
 		seen[s] = true
-		required := slices.Clone(s.Required)
-		for _, more := range s.DependentRequired {
-			required = append(required, more...)
-		}
-		for _, dep := range s.Dependencies {
-			// The library reads dependencies in every draft.
-			if more, ok := dep.([]string); ok {
-				required = append(required, more...)
-			}
-		}
+		required := requiredOf(s)
 		for _, key := range doc.Shared {
-			switch {
-			case s.Properties[key] != nil:
+			if s.Properties[key] != nil {
+				declared[key] = true
 				found = append(found, c.mistake(s.Properties[key], "schema_shared_declared", key))
-			case slices.Contains(required, key):
-				found = append(found, c.mistake(s, "schema_shared_key", key))
+			}
+			if slices.Contains(required, key) {
+				needs = append(needs, need{s: s, key: key})
 			}
 		}
 		for _, all := range s.AllOf {
@@ -161,7 +160,27 @@ func (c *Compiled) sharedKeys() usererr.List {
 		}
 	}
 	root(c.Root)
+	for _, n := range needs {
+		if !declared[n.key] {
+			found = append(found, c.mistake(n.s, "schema_shared_key", n.key))
+		}
+	}
 	return found
+}
+
+// requiredOf returns the keys s requires: required, and those dependentRequired and dependencies require.
+func requiredOf(s *jsonschema.Schema) []string {
+	required := slices.Clone(s.Required)
+	for _, more := range s.DependentRequired {
+		required = append(required, more...)
+	}
+	for _, dep := range s.Dependencies {
+		// The library reads dependencies in every draft.
+		if more, ok := dep.([]string); ok {
+			required = append(required, more...)
+		}
+	}
+	return required
 }
 
 // checkPart refuses one of Formats in the part compiled, or in a Shared schema it refers to, where it is

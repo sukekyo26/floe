@@ -13,11 +13,11 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// Data is a data file read: the keys every template shares, and the rest for the template's schema.
+// Data is a data file read: its values as written, and the keys every template shares read from them.
 type Data struct {
 	File                         string
-	Lang, Template, Theme, Title string // "" for one left out
-	Values                       map[string]any
+	Lang, Template, Theme, Title string           // "" for one left out or refused; Title trimmed of spaces
+	Values                       map[string]any   // as written, the shared keys too
 	Root                         *ast.MappingNode // nil for an empty file
 	// where each shared key is written: its value, its key when the value is left out, the top of the file
 	// for one left out

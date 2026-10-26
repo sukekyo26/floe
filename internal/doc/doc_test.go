@@ -108,7 +108,7 @@ func TestReadInts(t *testing.T) {
 }
 
 // A shared key Read refuses is left in the values as written, and Read returns the data with its mistakes, for
-// the schema to be checked in the same run.
+// the schema to be validated in the same run; the checks of the stage after it do not run on them.
 func TestReadKeepsRefused(t *testing.T) {
 	t.Parallel()
 
