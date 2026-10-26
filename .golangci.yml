@@ -150,6 +150,14 @@ linters:
           deny:
             - pkg: "github.com/santhosh-tekuri/jsonschema/v6"
               desc: "read a schema through internal/schema, which reads it as RFC 8259 does, past a byte order mark"
+        tdewolff-in-css:
+          list-mode: lax
+          files:
+            - "$all"
+            - "!**/internal/css/**"
+          deny:
+            - pkg: "github.com/tdewolff/parse/v2"
+              desc: "check CSS through internal/css, which reads tdewolff's tokens after CSS Syntax's preprocessing"
         goldmark-in-kit:
           list-mode: lax
           files:
@@ -171,6 +179,7 @@ linters:
         - usererr.List).Err(
         # Add returns a failure as it is, for the caller to stop at (CLAUDE.md); a mistake placed in YAML.
         - usererr.List).Add(
+        - usererr.Collect(
         - yamlpos.New(
     sloglint:
       no-mixed-args: true

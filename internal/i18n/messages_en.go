@@ -65,9 +65,21 @@ var messagesEN = map[string]string{
 	"kit_part_yaml_looks":        "write looks: as a list of the names of parts or looks, like looks: [panel]",
 	"kit_part_yaml_description":  "a part's description is its schema.json's description; part.yaml's description: is a look alone's, which has no schema",
 	"kit_part_yaml_about":        "write description: as text, what the look is",
+	"kit_part_files":             "a part holds schema.json, part.html and part.css, and a look alone part.css without the other two (and part.yaml if it takes looks); add what it lacks, or remove what a look has no use for",
+	"kit_look_unknown":           "looks names %s, which is no part or look: name one floe or your own parts hold",
+	"kit_look_cycle":             "the part %s takes its own look (%s), which floe would follow forever; fix its part.yaml",
+	"kit_template_file":          "%s is missing: a template has %s",
 	"kit_words_yaml":             "write words.yaml as language tags, each the names of the words and their text",
 	"kit_words_lang_not_mapping": "%s: write the names of the words and their text",
 	"kit_words_not_text":         "%s.%s: write text, in quotes where YAML would read a number, true, false or null",
 	"kit_words_lang_twice":       "%s is the language %s again: a tag's case does not tell languages apart",
 	"kit_words_unknown":          `words.yaml has no word "%s"`,
+
+	// css: the CSS floe puts in a page
+	"css_brace":             "this } closes no block: floe puts this CSS in a layer, which it would close, leaving the rules after it out of the layer and over the parts' styles",
+	"css_import":            "floe puts this CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",
+	"css_escape":            "an escape (\\) outside a string, a url() or a comment, which floe does not read: write the characters themselves",
+	"css_misread":           "a browser reads this otherwise than floe: end each string on its own line, and in url() write the address alone or one quoted string",
+	"css_palette_rule":      "palette.css holds only the palette's variables, :root { --name: value; }, and its color-scheme, and no other rule, @media neither: write other rules in base.css or a part's file; for a dark page, make a theme whose :root sets dark colours and color-scheme: dark",
+	"css_palette_important": "palette.css takes no !important, which would win over every layer, the colours a template sets on :scope too",
 }

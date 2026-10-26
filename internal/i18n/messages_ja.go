@@ -59,9 +59,21 @@ var messagesJA = map[string]string{
 	"kit_part_yaml_looks":        "looks: は部品か見た目の名前のリストで書いてください（looks: [panel]）",
 	"kit_part_yaml_description":  "部品の説明は schema.json の description に書いてください。part.yaml の description: は、schema の無い見た目だけの部品のものです",
 	"kit_part_yaml_about":        "description: は、その見た目が何かを文字列で書いてください",
+	"kit_part_files":             "部品は schema.json・part.html・part.css の 3 つを、見た目だけの部品はほかの 2 つを置かずに part.css を（見た目を借りるなら part.yaml も）置きます。足りないものを足すか、見た目に要らないものを消してください",
+	"kit_look_unknown":           "looks の %s は部品でも見た目でもありません。floe か自分の部品にある名前を書いてください",
+	"kit_look_cycle":             "部品 %s が自分の見た目を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",
+	"kit_template_file":          "%s がありません。テンプレートには %s が要ります",
 	"kit_words_yaml":             "words.yaml は言語タグごとに、言葉の名前とその文字列を書いてください",
 	"kit_words_lang_not_mapping": "%s: 言葉の名前とその文字列を書いてください",
 	"kit_words_not_text":         "%s.%s: 文字列で書いてください。YAML が数・true・false・null と読むものは引用符で囲みます",
 	"kit_words_lang_twice":       "%s は言語 %s の重なりです。言語タグは大文字と小文字で区別しません",
 	"kit_words_unknown":          "words.yaml に言葉「%s」がありません",
+
+	// css: floe がページに入れる CSS
+	"css_brace":             "この } はどのブロックも閉じていません。floe はこの CSS を層に入れるので、この } が層を閉じ、後の規則が層の外に出て部品のスタイルに勝ちます",
+	"css_import":            "floe はこの CSS を層に入れるので、ブラウザは @import を読みません。スタイルシートは page.html の <link> で読んでください",
+	"css_escape":            "文字列・url()・コメントの外のエスケープ（\\）は、floe が読みません。文字そのものを書いてください",
+	"css_misread":           "ブラウザはここを floe と違うものとして読みます。文字列はその行の中で閉じ、url() にはアドレスだけか、引用符で囲んだ文字列を 1 つだけ書いてください",
+	"css_palette_rule":      "palette.css にはパレットの変数 :root { --名前: 値; } とその color-scheme だけを書き、ほかの規則は @media も書けません。ほかの規則は base.css か部品のファイルに書いてください。暗いページは、:root に暗い色と color-scheme: dark を書いたテーマで作ってください",
+	"css_palette_important": "palette.css には !important を書けません。どの層にも勝ち、テンプレートが :scope に書いた色にも勝ってしまいます",
 }

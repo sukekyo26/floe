@@ -15,6 +15,7 @@ import (
 // Theme is a theme read: its CSS by file, without the .css.
 type Theme struct {
 	name     string
+	dir      string
 	base     []byte            // base.css, nil for none
 	palette  []byte            // palette.css, nil for none
 	partsCSS map[string][]byte // <part or look>.css by its name
@@ -40,7 +41,7 @@ func (k *Kit) readThemes(d Dir) error {
 		return err
 	}
 	for _, name := range dirs {
-		t := &Theme{name: name, base: nil, palette: nil, partsCSS: map[string][]byte{}}
+		t := &Theme{name: name, dir: path.Join(d.Name, name), base: nil, palette: nil, partsCSS: map[string][]byte{}}
 		all, err := entries(d, name, false)
 		if err != nil {
 			return err
@@ -50,7 +51,7 @@ func (k *Kit) readThemes(d Dir) error {
 			if !ok || stem != "base" && stem != "palette" && !k.isPartOrLook(stem) {
 				continue
 			}
-			src, _, err := readFile(d, name, file)
+			src, _, err := readCSS(d, name, file)
 			if err != nil {
 				return err
 			}
@@ -70,15 +71,17 @@ func (k *Kit) readThemes(d Dir) error {
 
 // Template is a template read: page.html and the schema of its data, and what goes with them.
 type Template struct {
-	name     string
-	dir      string
-	schema   *schema.Compiled // nil without a schema.json
-	css      []byte
-	checks   *rules.Checks   // nil for none
-	computed *rules.Computed // nil for none
-	words    words
-	pages    pages // nil without a page.html
-	example  []byte
+	name      string
+	dir       string
+	schema    *schema.Compiled // nil without a schema.json
+	css       []byte
+	checks    *rules.Checks   // nil for none
+	computed  *rules.Computed // nil for none
+	words     words
+	pages     pages // nil without a page.html
+	pageSrc   []byte
+	example   []byte
+	hasSchema bool
 }
 
 // Name returns the name of t.
@@ -125,7 +128,7 @@ func (k *Kit) readTemplates(d Dir, partsRead bool) error {
 func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	t := &Template{
 		name: name, dir: path.Join(d.Name, name), schema: nil, css: nil, checks: nil, computed: nil, words: nil, pages: nil,
-		example: nil,
+		pageSrc: nil, example: nil, hasSchema: false,
 	}
 	var found usererr.List
 	var err error
@@ -133,11 +136,11 @@ func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
-	t.pages, err = readPages(d, name, "page.html", pageFuncs(), t.words)
+	t.pages, t.pageSrc, err = readPages(d, name, "page.html", pageFuncs(), t.words)
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
-	if t.css, _, err = readFile(d, name, "page.css"); err != nil {
+	if t.css, _, err = readCSS(d, name, "page.css"); err != nil {
 		return err
 	}
 	if t.example, _, err = readFile(d, name, "example.yaml"); err != nil {
@@ -166,6 +169,7 @@ func (k *Kit) compileTemplate(d Dir, t *Template) error {
 	if !ok || err != nil {
 		return err
 	}
+	t.hasSchema = true
 	c, err := schema.Compile(templatesURL+t.name+"/schema.json", path.Join(t.dir, "schema.json"), src, k.Resources())
 	if err != nil {
 		return err //nolint:wrapcheck // its mistakes, or floe's failure
