@@ -162,4 +162,11 @@ func TestNewResource(t *testing.T) {
 			t.Errorf("a Resource NewResource did not make told %q, want floe's failure", told(err))
 		}
 	}
+	// floe's failure comes before the user's mistakes, naming the first in the order of the URLs.
+	zero := schema.Resource{Kind: schema.Part, File: "parts/z.json"}
+	res := map[string]schema.Resource{"floe:///parts/b.json": zero, "floe:///parts/a.json": zero}
+	_, err := schema.Compile(template, "schema.json", []byte(`{"$schema": "https://example.com/s"}`), res)
+	if got := told(err); got != "floe: schema: floe:///parts/a.json was not made by NewResource" {
+		t.Errorf("a $schema mistake and two Resources NewResource did not make told %q", got)
+	}
 }

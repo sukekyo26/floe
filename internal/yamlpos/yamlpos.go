@@ -152,8 +152,7 @@ func Parse(file string, src []byte) (ast.Node, error) {
 func document(file string, src []byte) (ast.Node, error) {
 	// YAML 1.2 allows a byte order mark at the start, which goccy/go-yaml reads as part of the first key.
 	// src is left without it for both the parser and dropped, so that their places agree.
-	// LIMIT: only one UTF-8 mark at the start; a second, one within, and UTF-16 or UTF-32 are read as they
-	// are (S6). Rework here if S6 decides how to read them.
+	// LIMIT: other marks and UTF-16/32 are read silently into keys (S6); rework here when S6 decides them.
 	src = bom.Trim(src)
 	doc, err := parser.ParseBytes(src, 0)
 	if err != nil {

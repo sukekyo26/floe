@@ -8,7 +8,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -50,8 +52,7 @@ func NewResource(file string, src []byte, k Kind) (Resource, error) {
 
 // read reads src, the JSON of file, as RFC 8259 does, past a byte order mark at its start, and as jsonschema
 // reads it (numbers as json.Number): the only place a schema's bytes are read.
-// LIMIT: a second mark, one within, and UTF-16 or UTF-32 are refused in encoding/json's words, which do not
-// say it is a mark. Word them here if that comes to matter.
+// LIMIT: other marks and UTF-16/32 are refused without saying so (S6); rework here when S6 decides them.
 func read(file string, src []byte) (any, error) {
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(bom.Trim(src)))
 	if err != nil {
@@ -108,6 +109,11 @@ func CheckPart(url string, res map[string]Resource) error {
 
 // build compiles doc under url, after checking the drafts it names (check 0), with res and floe's formats.
 func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) {
+	for _, ru := range slices.Sorted(maps.Keys(res)) {
+		if !res[ru].made {
+			return nil, fmt.Errorf("schema: %s was not made by NewResource", ru) //nolint:err113 // floe's own mistake
+		}
+	}
 	c := &Compiled{Root: nil, url: u, file: file, res: res}
 	if err := c.dialects(doc); err != nil {
 		return nil, err
@@ -118,9 +124,6 @@ func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) 
 		comp.RegisterFormat(&jsonschema.Format{Name: f, Validate: func(any) error { return nil }})
 	}
 	for ru, r := range res {
-		if !r.made {
-			return nil, fmt.Errorf("schema: %s was not made by NewResource", ru) //nolint:err113 // floe's own mistake
-		}
 		if ru == u {
 			continue
 		}
