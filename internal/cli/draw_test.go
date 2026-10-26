@@ -227,16 +227,23 @@ func TestRefusedNamesDoNotClash(t *testing.T) {
 	}
 }
 
-// --check writes nothing: a page that is a link to no file is a page missing.
+// --check tells what render would: a page that is a link to no file, or a loop of links, cannot be written.
 func TestCheckThroughLinkToNothing(t *testing.T) {
 	t.Parallel()
 
-	dir := write(t, map[string]string{"a.yaml": good})
+	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": good})
 	if err := os.Symlink(filepath.Join("out", "a.html"), filepath.Join(dir, "a.html")); err != nil {
 		t.Fatal(err)
 	}
-	if code, _, stderr := run(dir, "render", "--check", "a.yaml"); code != 1 ||
-		stderr != "floe: a.html is missing: write it from a.yaml with floe render\n" {
-		t.Errorf("floe render --check = %d, %q", code, stderr)
+	if err := os.Symlink("b.html", filepath.Join(dir, "b.html")); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"render", "--check"}, {"render"}} {
+		for _, page := range []string{"a", "b"} {
+			code, _, stderr := run(dir, append(args, page+".yaml")...)
+			if code != 1 || !strings.HasPrefix(stderr, page+".html: cannot be written (") || strings.Contains(stderr, "EvalSymlinks") {
+				t.Errorf("floe %v %s.yaml = %d, %q", args, page, code, stderr)
+			}
+		}
 	}
 }

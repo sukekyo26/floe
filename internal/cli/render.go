@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
 	"io/fs"
 	"os"
@@ -61,7 +62,7 @@ func (a *app) renderPages(paths []string, out arg, check bool) error {
 	if err != nil {
 		return err //nolint:wrapcheck // floe's own, which its tests check
 	}
-	pages, err := a.drawPages(k, paths, out, check)
+	pages, err := a.drawPages(k, paths, out)
 	switch {
 	case err != nil:
 		return err
@@ -73,9 +74,8 @@ func (a *app) renderPages(paths []string, out arg, check bool) error {
 }
 
 // drawPages draws the page of each data file with k and names the HTML file it goes to, in out, else beside
-// it, or returns the mistakes of out and of every file, and the pages two data files would write. A page that is
-// a link to no file cannot be written, but is only missing to check.
-func (a *app) drawPages(k *kit.Kit, paths []string, out arg, check bool) ([]rendered, error) {
+// it, or returns the mistakes of out and of every file, and the pages two data files would write.
+func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error) {
 	var found usererr.List
 	if failed := found.Add(out.err); failed != nil {
 		return nil, failed
@@ -98,7 +98,7 @@ func (a *app) drawPages(k *kit.Kit, paths []string, out arg, check bool) ([]rend
 			continue
 		}
 		var bad error
-		if p.real, bad = realOf(at, p.to, check); bad != nil {
+		if p.real, bad = realPath(at, p.to); bad != nil {
 			if failed := found.Add(bad); failed != nil {
 				return nil, failed
 			}
@@ -153,16 +153,6 @@ func (t target) same(o target) bool {
 	return t.page.real == o.page.real || t.info != nil && o.info != nil && os.SameFile(t.info, o.info)
 }
 
-// realOf returns realPath of at, the page to as the user names it; to check, which writes nothing, a link to no
-// file is the page missing, read where the link is.
-func realOf(at, to string, check bool) (string, error) {
-	resolved, err := realPath(at, to)
-	if err != nil && check {
-		return at, nil
-	}
-	return resolved, err
-}
-
 // realPath is the absolute path abs with its symlinks resolved: those of its directory, and its own when it
 // is there, so that a page that is a symlink is written where it leads. A symlink that leads nowhere is not
 // written over: it is told, as a page that cannot be written, at to, the page as the user named it.
@@ -172,7 +162,9 @@ func realPath(abs, to string) (string, error) {
 		return resolved, nil
 	}
 	if info, lerr := os.Lstat(abs); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
-		return "", writeMistake(to, err)
+		// The system's words of why it leads nowhere (no file, a loop of links), whatever EvalSymlinks says.
+		_, serr := os.Stat(abs)
+		return "", writeMistake(to, cmp.Or(serr, err))
 	}
 	if dir, err := filepath.EvalSymlinks(dirs.Dir(abs)); err == nil {
 		return filepath.Join(dir, filepath.Base(abs)), nil
