@@ -52,7 +52,7 @@ func NewResource(file string, src []byte, k Kind) (Resource, error) {
 
 // read reads src, the JSON of file, as RFC 8259 does, past a byte order mark at its start, and as jsonschema
 // reads it (numbers as json.Number): the only place a schema's bytes are read.
-// LIMIT: other marks and UTF-16/32 are refused without saying so (S6); rework here when S6 decides them.
+// LIMIT: other marks and UTF-16/32 are refused without saying so; rework here when they are to be read or named.
 func read(file string, src []byte) (any, error) {
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(bom.Trim(src)))
 	if err != nil {
@@ -77,10 +77,7 @@ var english = message.NewPrinter(language.English)
 
 // Compile reads src (schema.json of file) as JSON and compiles it under url with res: the library's mistakes
 // in its words at the file and JSON pointer they are in; a loader refusing every URL res does not hold; then
-// floe's checks, all together.
-// LIMIT: the library stops at the first $ref it cannot resolve, the first in the order of a map: with two
-// or more, which one is told changes from run to run, and fixing it tells the next. The library's make; a
-// golden file holds no input with two.
+// floe's checks, all together. The $refs it cannot resolve are told as compile tells them.
 func Compile(url, file string, src []byte, res map[string]Resource) (*Compiled, error) {
 	doc, err := read(file, src)
 	if err != nil {
@@ -118,29 +115,153 @@ func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) 
 	if err := c.dialects(doc); err != nil {
 		return nil, err
 	}
+	root, err := c.compile(doc)
+	if err != nil {
+		return nil, err
+	}
+	c.Root = root
+	return c, nil
+}
+
+// The most mistakes compile tells, and the most times it compiles.
+const (
+	mostMistakes = 100
+	mostCompiles = 201
+)
+
+// compile compiles doc under c.url with c.res. The library stops at the first $ref it cannot resolve, the
+// first in the order of a map, so compile fills the holes the library names in two shapes alone, where
+// filling decides no meaning of the schema, and compiles again: a #/$defs/<name> missing from an object the
+// template or res holds, filled with true; and a URL the loader refused, held as {}, its #/$defs/<name>
+// filled unsaid. Any other mistake is told and stops it; one inside a URL it refused, which {} made, stops
+// it unsaid. The files of the mistakes come in the order of their URLs, and Sorted orders each file's.
+// LIMIT: with a stopping mistake, or at mostMistakes or mostCompiles, what is told changes from run to run.
+// LIMIT: each hole compiles the whole again, at most mostCompiles times; rework if that comes to be slow.
+func (c *Compiled) compile(doc any) (*jsonschema.Schema, error) {
+	return c.compileIn(c.holesOf(doc))
+}
+
+// holesOf returns the holes compile starts from: doc under c.url and the docs of c.res, none filled.
+func (c *Compiled) holesOf(doc any) *holes {
+	docs := map[string]any{c.url: doc}
+	for ru, r := range c.res {
+		if ru != c.url {
+			docs[ru] = r.doc
+		}
+	}
+	return &holes{docs: docs, copied: map[string]bool{}, refused: map[string]bool{}, compiles: 0}
+}
+
+// compileIn is compile, from h.
+func (c *Compiled) compileIn(h *holes) (*jsonschema.Schema, error) {
+	type told struct {
+		url string
+		err error
+	}
+	var found []told
+	for {
+		h.compiles++
+		comp, failed := h.compiler(c.file)
+		if failed != nil {
+			return nil, failed
+		}
+		root, err := comp.Compile(c.url)
+		if err == nil {
+			if len(found) == 0 {
+				return root, nil
+			}
+			break
+		}
+		at, tell, again := h.hole(err)
+		if tell {
+			found = append(found, told{url: at, err: c.compileMistake(err)})
+		}
+		if !again || len(found) >= mostMistakes || h.compiles >= mostCompiles {
+			break
+		}
+	}
+	slices.SortStableFunc(found, func(x, y told) int { return strings.Compare(x.url, y.url) })
+	var all usererr.List
+	for _, f := range found {
+		if failed := all.Add(f.err); failed != nil {
+			return nil, failed //nolint:wrapcheck // floe's failure, as it is
+		}
+	}
+	return nil, all.Sorted().Err()
+}
+
+// holes are the docs compile compiles, each copied before it is filled, the URLs the loader refused, and the
+// times it compiled.
+type holes struct {
+	docs     map[string]any
+	copied   map[string]bool
+	refused  map[string]bool
+	compiles int
+}
+
+// compiler returns a compiler of its own holding every doc of h; its error is floe's failure.
+func (h *holes) compiler(file string) (*jsonschema.Compiler, error) {
 	comp := jsonschema.NewCompiler()
 	comp.AssertFormat()
 	for _, f := range Formats {
 		comp.RegisterFormat(&jsonschema.Format{Name: f, Validate: func(any) error { return nil }})
 	}
-	for ru, r := range res {
-		if ru == u {
-			continue
+	for du, d := range h.docs {
+		if err := comp.AddResource(du, d); err != nil {
+			return nil, fmt.Errorf("schema: add %s: %w", du, err)
 		}
-		if err := comp.AddResource(ru, r.doc); err != nil {
-			return nil, fmt.Errorf("schema: add %s: %w", ru, err)
-		}
-	}
-	if err := comp.AddResource(u, doc); err != nil {
-		return nil, fmt.Errorf("schema: add %s: %w", u, err)
 	}
 	comp.UseLoader(loader{file: file})
-	root, err := comp.Compile(u)
-	if err != nil {
-		return nil, c.compileMistake(err)
+	return comp, nil
+}
+
+// hole reads err, a mistake of compiling: the URL it is at, whether it is told, and whether h filled the
+// hole so that compiling again goes on.
+func (h *holes) hole(err error) (at string, tell, again bool) {
+	var load *jsonschema.LoadURLError
+	var refused *usererr.Error
+	if errors.As(err, &load) && errors.As(load.Err, &refused) {
+		h.docs[load.URL] = map[string]any{}
+		h.copied[load.URL] = true
+		h.refused[load.URL] = true
+		return load.URL, true, true
 	}
-	c.Root = root
-	return c, nil
+	at = urlOf(err)
+	base, frag, _ := strings.Cut(at, "#")
+	var pointer *jsonschema.JSONPointerNotFoundError
+	if !errors.As(err, &pointer) {
+		return at, !h.refused[base], false
+	}
+	return at, !h.refused[base], h.fill(base, unescape(frag))
+}
+
+// fill puts true at frag of the doc at base, a #/$defs/<name> alone, in a copy of the doc; false for any
+// other place, or a doc whose root or $defs is not an object. To add the name, it reads the doc's root and
+// $defs alone, and writes only a copy (CLAUDE.md: the exception to taking the schema's shape from the
+// compiled tree).
+func (h *holes) fill(base, frag string) bool {
+	name, ok := strings.CutPrefix(frag, "/$defs/")
+	if !ok || name == "" || strings.ContainsAny(name, "/~") {
+		return false
+	}
+	root, ok := h.docs[base].(map[string]any)
+	if !ok {
+		return false
+	}
+	defs := map[string]any{}
+	if v, has := root["$defs"]; has {
+		if defs, ok = v.(map[string]any); !ok {
+			return false
+		}
+	}
+	if !h.copied[base] {
+		root, defs = maps.Clone(root), maps.Clone(defs)
+		h.copied[base] = true
+	}
+	defs[name] = true
+	root["$defs"] = defs
+	h.docs[base] = root
+	return true
 }
 
 // loader reads no URL: a schema refers to no file or URL outside what floe holds (a trust boundary).
