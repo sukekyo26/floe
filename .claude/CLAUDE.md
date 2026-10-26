@@ -36,7 +36,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 
 ## 誤りの出し方
 
-- **作る・包む**：ユーザーが直せる誤りは `usererr.Error` にする。ライブラリの誤りは `usererr.Library` で包み、文を言い直さない。例外：ライブラリの文が、直し方も場所も言わないときだけ、別のライブラリの文か floe の文に替えるか、floe の文で直し方を添えてよい。今これに当たるのは、schema の `read` の、空のファイル（floe の文 `schema_empty`）と、値の後ろの余り（encoding/json の文と場所）と、cobra のコマンド行の誤り（cobra の文に `cli_usage` で「run floe --help」を添える）だけ。`fmt.Errorf` は、ユーザーが直せない失敗（floe の不具合、floe が自分で選んだファイルの読み書きの失敗）だけに使う。ユーザーがコマンド行で渡したパスの読み書きの失敗は、システムの文のまま、そのパスに置く（`gone.yaml: no such file or directory`。目録の分けで「ライブラリの文のまま」と決まった file_cannot_read・file_cannot_write の分）
+- **作る・包む**：ユーザーが直せる誤りは `usererr.Error` にする。ライブラリの誤りは `usererr.Library` で包み、文を言い直さない。例外：ライブラリの文が、直し方も場所も言わないときだけ、別のライブラリの文か floe の文に替えるか、floe の文で直し方を添えてよい。今これに当たるのは、schema の `read` の、空のファイル（floe の文 `schema_empty`）と、値の後ろの余り（encoding/json の文と場所）と、cobra のコマンド行の誤り（cobra の文に `cli_usage` で「run floe --help」を添える）と、ユーザーが渡したパスに書けないとき（`cli_cannot_write` で書けないことと確かめる所を言い、後ろにシステムの文を残す）だけ。`fmt.Errorf` は、ユーザーが直せない失敗（floe の不具合、floe が自分で選んだファイルの読み書きの失敗）だけに使う。ユーザーがコマンド行で渡したパスを読めないときは、システムの文のまま、そのパスに置く（`gone.yaml: no such file or directory`）。書けないときは、上の例外のとおり `cli_cannot_write` で言い、そのパスに置く
 - **文を足さない**：usererr の誤りを `fmt.Errorf` で包んで文を足さない（`Tell` は包んだ側の文を言わない）。場所や名前は usererr の引数か場所に入れる
 - **1 回だけ言う**：言葉にした後の場所と文が同じ誤りは、`Tell` が 1 回だけ言う。どこで作ったかによらない
 - **描くときの誤りの場所**：html/template の Execute の誤りの場所は `draw` が置く。page.html の誤りは、ライブラリの文の頭（`template: page.html:行:列: `）の行と列を page.html のバイトに戻し、`textpos` で数えた所に置く。部品の誤りは、その部品が描く値のデータの位置に置く。文の頭は切り、後ろのライブラリの言葉は変えない

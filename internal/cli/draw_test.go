@@ -91,21 +91,53 @@ func TestRender(t *testing.T) {
 	}
 }
 
-// A page floe cannot write is told at it, in the system's words: a directory of its name, which the file written
-// whole beside it cannot be renamed over, and a name too long.
+// A page floe cannot write is told at it, that it cannot be written and what to look at, then in the system's
+// words: a directory of its name, a directory it cannot write in, and a name too long. A name as long as the
+// directory takes is written: the file written whole beside it has a short name of its own.
 func TestRenderCannotWrite(t *testing.T) {
 	t.Parallel()
 
-	long := strings.Repeat("x", 250)
-	dir := write(t, map[string]string{"b.yaml": good, long + ".yaml": good, "b.html/x": ""})
+	long := strings.Repeat("x", 251) // .yml is a name the directory takes, .html one too long
+	fits := strings.Repeat("y", 250)
+	dir := write(t, map[string]string{"b.yaml": good, long + ".yml": good, fits + ".yaml": good, "b.html/x": "", "ro/c.yaml": good})
+	if err := os.Chmod(filepath.Join(dir, "ro"), 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(filepath.Join(dir, "ro"), 0o700) }) //nolint:errcheck // for TempDir to remove it
+	if code, stdout, stderr := run(dir, "render", fits+".yaml"); code != 0 || stdout != fits+".html\n" {
+		t.Errorf("floe render of a name that fits = %d, %q, %q", code, stdout, stderr)
+	}
 	// The system's words differ from one system to another: what is told before them is floe's.
-	for _, tt := range []struct{ file, want string }{
-		{"b.yaml", "b.html: "},
-		{long + ".yaml", long + ".html: "},
-	} {
+	cases := []struct{ file, page string }{{"b.yaml", "b.html"}, {long + ".yml", long + ".html"}}
+	// root writes in a directory it may not.
+	if os.Geteuid() != 0 {
+		cases = append(cases, struct{ file, page string }{"ro/c.yaml", filepath.Join("ro", "c.html")})
+	}
+	for _, tt := range cases {
 		code, _, stderr := run(dir, "render", tt.file)
-		if code != 1 || !strings.HasPrefix(stderr, tt.want) || strings.Contains(stderr, dir) || strings.Count(stderr, "\n") != 1 {
-			t.Errorf("floe render %.20s = %d, stderr %q, want %q", tt.file, code, stderr, tt.want)
+		if code != 1 || !strings.HasPrefix(stderr, tt.page+": cannot be written (") ||
+			!strings.HasSuffix(stderr, "): check that its directory exists and can be written to, and that its name is free and not too long\n") ||
+			strings.Contains(stderr, dir) || strings.Count(stderr, "\n") != 1 {
+			t.Errorf("floe render %.20s = %d, stderr %q", tt.file, code, stderr)
 		}
+	}
+}
+
+// A page that is a symlink is written where it leads, one that leads to no file yet too: the link stays.
+func TestRenderThroughLink(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"a.yaml": good, "out/x": ""})
+	if err := os.Symlink(filepath.Join("out", "a.html"), filepath.Join(dir, "a.html")); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, stderr := run(dir, "render", "a.yaml"); code != 0 || stderr != "" {
+		t.Fatalf("floe render = %d, %q", code, stderr)
+	}
+	if info, err := os.Lstat(filepath.Join(dir, "a.html")); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("a.html is no longer the link: %v, %v", info, err)
+	}
+	if page, err := os.ReadFile(filepath.Join(dir, "out", "a.html")); err != nil || !strings.Contains(string(page), "<title>A plan</title>") {
+		t.Errorf("out/a.html = %.40q, %v", page, err)
 	}
 }

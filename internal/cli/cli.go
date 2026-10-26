@@ -167,6 +167,7 @@ func readable(root *cobra.Command, args []string) error {
 	}
 	cmd.InitDefaultHelpFlag()
 	cmd.InitDefaultVersionFlag()
+	// LIMIT: cobra reads the flags again as it runs; a flag that counts or gathers (a slice) would count twice.
 	if err := cmd.ParseFlags(rest); err != nil {
 		return usageOf(err)
 	}

@@ -47,9 +47,9 @@ func SlugFromFile(file, cwd string) string {
 // WriteAtomic writes data to path with the mode perm, less the umask, through a file beside it, so that a
 // reader sees the old content or the new, never a part. The file beside it is a new one of its own (O_EXCL,
 // under a random name), so that one left there, or placed there, cannot keep its mode or lead the write
-// elsewhere.
+// elsewhere. Its name is short, whatever the length of path's: a name the directory takes is written.
 func WriteAtomic(path string, data []byte, perm os.FileMode) error {
-	f, err := createNew(path+".tmp-", perm)
+	f, err := createNew(filepath.Join(filepath.Dir(path), ".floe-"), perm)
 	if err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
