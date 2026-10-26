@@ -3,6 +3,7 @@ package schema
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/goccy/go-yaml/ast"
@@ -14,11 +15,15 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// Validate checks the values of d against c: each leaf of the library's ValidationError in its words, at the
-// line and column of its InstanceLocation in d.Root. The mistakes are returned Sorted, so that their order
-// does not follow the library's map order.
+// Validate checks the values of d against c, the keys floe reads itself (doc.Shared) left out: each leaf of the
+// library's ValidationError in its words, at the line and column of its InstanceLocation in d.Root. The
+// mistakes are returned Sorted, so that their order does not follow the library's map order.
 func (c *Compiled) Validate(d *doc.Data) error {
-	err := c.Root.Validate(d.Values)
+	values := maps.Clone(d.Values)
+	for _, key := range doc.Shared {
+		delete(values, key)
+	}
+	err := c.Root.Validate(values)
 	if err == nil {
 		return nil
 	}
@@ -67,7 +72,7 @@ func placeOfName(root *ast.MappingNode, depth int, name string) yamlpos.Pos {
 			for _, v := range n.Values {
 				key := yamlpos.KeyOf(v).GetToken().Value
 				switch {
-				case top && slices.Contains(shared, key):
+				case top && slices.Contains(doc.Shared, key):
 				case depth == 0 && key == name:
 					found = append(found, v)
 				case depth > 0:

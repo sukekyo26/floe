@@ -32,7 +32,7 @@ func TestRead(t *testing.T) {
 	if d.Template != "report" || d.Lang != "ja" || d.Theme != "" || d.Title != "Plan" || d.Root == nil {
 		t.Errorf("Read = %+v", d)
 	}
-	if !maps.Equal(d.Values, map[string]any{"x": 1}) {
+	if !maps.Equal(d.Values, map[string]any{"template": "report", "lang": "ja", "title": "  Plan  ", "x": 1}) {
 		t.Errorf("Values = %#v", d.Values)
 	}
 	want := map[string]yamlpos.Pos{"template": {Line: 2, Column: 11}, "lang": {Line: 3, Column: 7}, "theme": {Line: 2, Column: 1}, "title": {Line: 4, Column: 8}}
@@ -99,9 +99,24 @@ func TestReadInts(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]any{
-		"a": 3, "b": []any{1, map[string]any{"c": 2}}, "big": uint64(18446744073709551615), "neg": int64(-3), "f": 1.5,
+		"lang": "en", "a": 3, "b": []any{1, map[string]any{"c": 2}}, "big": uint64(18446744073709551615), "neg": int64(-3),
+		"f": 1.5,
 	}
 	if !reflect.DeepEqual(d.Values, want) {
 		t.Errorf("Values = %#v, want %#v", d.Values, want)
+	}
+}
+
+// A shared key Read refuses is left in the values as written, and Read returns the data with its mistakes, for
+// the schema to be checked in the same run.
+func TestReadKeepsRefused(t *testing.T) {
+	t.Parallel()
+
+	d, err := doc.Read("a.yaml", []byte("lang: en\ntitle: 3\na: x\n"))
+	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "); got != "a.yaml:2:8: title must be text" {
+		t.Errorf("told %q", got)
+	}
+	if d == nil || d.Values["title"] != 3 || d.Values["a"] != "x" {
+		t.Errorf("Read = %+v", d)
 	}
 }
