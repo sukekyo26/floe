@@ -3,12 +3,14 @@ package draw
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"testing"
 
 	"golang.org/x/net/html"
 
+	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -57,6 +59,17 @@ func TestExecuted(t *testing.T) {
 		if line, column, _, ok := cutHead(tt.msg, tt.name); ok && offset([]byte("{{bad .}}"), line, column) >= 0 {
 			t.Errorf("%q: a place in the text", tt.msg)
 		}
+	}
+	// floe's own failure in one of its functions, which text/template wraps as it wraps a template's mistake.
+	floeFails := template.FuncMap{"fails": func() (string, error) { return "", fmt.Errorf("%w: x", kit.ErrFunc) }}
+	page = template.Must(template.New("page.html").Funcs(floeFails).Parse("{{fails}}"))
+	if e, _, failed = executed(page.Execute(io.Discard, nil), "page.html", nil); failed == nil || e != nil {
+		t.Errorf("floe's failure in a function: %v, %v, want floe's failure", e, failed)
+	}
+	// A function of text/template, which fails by the template's mistake, is the template's.
+	page = template.Must(template.New("page.html").Parse("{{index . 5}}"))
+	if e, _, failed = executed(page.Execute(io.Discard, []int{1}), "page.html", nil); failed != nil || e == nil {
+		t.Errorf("index out of range: %v, %v, want the template's mistake", e, failed)
 	}
 	if e, _, failed = executed(errors.New("disk"), "page.html", nil); failed == nil || e != nil {
 		t.Errorf("an error of no execution: %v, %v, want floe's failure", e, failed)

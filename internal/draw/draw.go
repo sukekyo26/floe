@@ -178,6 +178,9 @@ func executed(err error, name string, src []byte) (*usererr.Error, int, error) {
 	if !errors.As(err, &ee) {
 		return nil, -1, fmt.Errorf("draw with %s: %w", name, err)
 	}
+	if errors.Is(err, kit.ErrFunc) {
+		return nil, -1, fmt.Errorf("draw with %s: %w", name, err)
+	}
 	line, column, rest, ok := cutHead(ee.Error(), name)
 	at := -1
 	if ok {
