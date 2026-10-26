@@ -223,6 +223,7 @@ func TestWordUnknown(t *testing.T) {
 
 	for _, tt := range []struct{ words, lang, want string }{
 		{"", "en", `templates/t/page.html: there is no words.yaml to draw "zz" from: put one beside it, and write the word under en:`},
+		{"# none yet\n", "en", `templates/t/page.html: words.yaml holds no words to draw "zz" in: write the word under en:`},
 		{"en: {a: A}\n", "en", `templates/t/page.html: the words of en in words.yaml have no "zz"`},
 		{"en: {a: A}\nja: {zz: ず}\n", "en", `templates/t/page.html: the words of en in words.yaml have no "zz", which those of ja have: add it to en`},
 		{"ja: {zz: ず}\n", "en", `templates/t/page.html: words.yaml has no words in the page's language nor in en to draw "zz" in, but in ja: add en, or the page's language`},
@@ -292,8 +293,10 @@ func TestUnread(t *testing.T) {
 			"lk/part.css": {Data: []byte("")}, "lk/part.html": {Data: []byte("x")}, "lk/checks.yaml": {Data: []byte("")},
 			"p/schema.json": {Data: []byte(`{"type": "object"}`)}, "p/part.html": {Data: []byte("x")}, "p/notes.txt": {Data: []byte("")},
 		}, Name: "own/parts"},
-		Themes:    kit.Dir{FS: fstest.MapFS{"t/tabel.css": {Data: []byte("")}, "t/base.css": {Data: []byte("")}}, Name: "own/themes"},
-		Templates: kit.Dir{FS: fstest.MapFS{"t/pgae.html": {Data: []byte("")}, "t/computed.yml": {Data: []byte("")}}, Name: "own/templates"},
+		Themes: kit.Dir{FS: fstest.MapFS{"t/tabel.css": {Data: []byte("")}, "t/base.css": {Data: []byte("")}}, Name: "own/themes"},
+		Templates: kit.Dir{FS: fstest.MapFS{
+			"t/pgae.html": {Data: []byte("")}, "t/computed.yml": {Data: []byte("")}, "t/computed.yaml": {Data: []byte("")},
+		}, Name: "own/templates"},
 	})
 	if err != nil {
 		t.Fatal(told(err))
@@ -303,7 +306,7 @@ func TestUnread(t *testing.T) {
 	th, _ := k.Theme("t")
 	tm, _ := k.Template("t")
 	got := fmt.Sprint(l.Unread(), p.Unread(), th.Unread(), tm.Unread())
-	if got != "[checks.yaml part.html] [notes.txt] [tabel.css] [computed.yml pgae.html]" {
+	if got != "[checks.yaml part.html] [notes.txt] [tabel.css] [computed.yaml computed.yml pgae.html]" {
 		t.Errorf("Unread = %s", got)
 	}
 }

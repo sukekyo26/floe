@@ -77,5 +77,6 @@ var messagesEN = map[string]string{
 	"kit_words_unknown":           `the words of %s in words.yaml have no "%s"`,
 	"kit_words_unknown_elsewhere": `the words of %s in words.yaml have no "%s", which those of %s have: add it to %[1]s`,
 	"kit_words_none":              `there is no words.yaml to draw "%s" from: put one beside it, and write the word under en:`,
+	"kit_words_empty":             `words.yaml holds no words to draw "%s" in: write the word under en:`,
 	"kit_words_no_lang":           `words.yaml has no words in the page's language nor in en to draw "%s" in, but in %s: add en, or the page's language`,
 }

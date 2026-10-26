@@ -201,6 +201,18 @@ func readFile(d Dir, dir, name string) ([]byte, bool, error) {
 	return bom.Trim(src), true, nil
 }
 
+// has reports whether the directory dir of d holds the file name.
+func has(d Dir, dir, name string) (bool, error) {
+	_, err := fs.Stat(d.FS, path.Join(dir, name))
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("kit: read %s: %w", path.Join(d.Name, dir, name), err)
+	}
+	return true, nil
+}
+
 // pageFuncs are the functions of a template's page.html.
 func pageFuncs() template.FuncMap {
 	return maps.Clone(funcs)
@@ -226,7 +238,7 @@ func readChecks(d Dir, dir string) (*rules.Checks, error) {
 func readWordsIn(d Dir, dir string) (words, error) {
 	src, ok, err := readFile(d, dir, "words.yaml")
 	if !ok || err != nil {
-		return words{}, err
+		return nil, err
 	}
 	return readWords(path.Join(d.Name, dir, "words.yaml"), src)
 }

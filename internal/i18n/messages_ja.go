@@ -71,5 +71,6 @@ var messagesJA = map[string]string{
 	"kit_words_unknown":           "words.yaml の %s の言葉に「%s」がありません",
 	"kit_words_unknown_elsewhere": "words.yaml の %s の言葉に「%s」がありません。%s にはあります。%[1]s にも足してください",
 	"kit_words_none":              "「%s」を描く words.yaml がありません。隣に words.yaml を置き、en: の下にその言葉を書いてください",
+	"kit_words_empty":             "words.yaml に言葉が無く、「%s」を描けません。en: の下にその言葉を書いてください",
 	"kit_words_no_lang":           "words.yaml に、ページの言語にも en にも「%s」を描く言葉がありません（あるのは %s）。en かページの言語を足してください",
 }

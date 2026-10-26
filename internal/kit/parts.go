@@ -123,7 +123,7 @@ func (k *Kit) clashes(d Dir, dirs, shared []string) (usererr.List, error) {
 	}
 	for _, name := range dirs {
 		dir := path.Join(d.Name, name)
-		_, isPart, err := readFile(d, name, "schema.json")
+		isPart, err := has(d, name, "schema.json")
 		if err != nil {
 			return nil, err
 		}
