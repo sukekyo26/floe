@@ -32,9 +32,9 @@ func TestReadPlaces(t *testing.T) {
 		{"CRLF", "{\r\n  \"x\": ,\r\n}", "schema.json:2:8: invalid character ',' looking for beginning of value"},
 		{"CR", "{\r  \"x\": ,\r}", "schema.json:2:8: invalid character ',' looking for beginning of value"},
 		{"tab", "{\n\t\"x\": ,\n}", "schema.json:2:7: invalid character ',' looking for beginning of value"},
-		{"after the value", `{} x`, "schema.json:1:4: invalid character after top-level value"},
-		{"after the value, line 2", "{}\n  x", "schema.json:2:3: invalid character after top-level value"},
-		{"after the value, wide", `{} 日`, "schema.json:1:4: invalid character after top-level value"},
+		{"after the value", `{} x`, "schema.json:1:4: invalid character 'x' after top-level value"},
+		{"after the value, line 2", "{}\n  x", "schema.json:2:3: invalid character 'x' after top-level value"},
+		{"after the value, wide", `{} 日`, "schema.json:1:4: invalid character '日' after top-level value"},
 		{"inside a character", "{\"a\": \"\\日\"}", "schema.json:1:9: invalid escape sequence \"\\\\\\xe6\" in string"},
 		// LIMIT: a bad \u escape is placed at its end.
 		{"a bad \\u", `{"a": "\u12g4"}`, "schema.json:1:13: invalid escape sequence `\\u12g4` in string"},

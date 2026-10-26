@@ -56,8 +56,9 @@ func NewResource(file string, src []byte, k Kind) (Resource, error) {
 
 // read reads src, the JSON of file, as RFC 8259 does, past a byte order mark at its start, and as jsonschema
 // reads it (numbers as json.Number): the only place a schema's bytes are read. A syntax mistake is told in
-// the library's words at its line and column; a file cut short, after its last character but spaces (in a
-// string left open that ends in spaces, before them); a file of nothing, in floe's words.
+// the library's words at its line and column; a file cut short, after its last character but spaces; a file
+// of nothing, in floe's words.
+// LIMIT: a string left open that ends in spaces is placed before them; rework if that comes to mislead.
 // LIMIT: other marks and UTF-16/32 are refused without saying so; rework here when they are to be read or named.
 // LIMIT: a bad \u escape is placed at its end, not at the bad character; rework if encoding/json comes to tell it.
 func read(file string, src []byte) (any, error) {
@@ -73,13 +74,16 @@ func read(file string, src []byte) (any, error) {
 	case errors.Is(err, io.ErrUnexpectedEOF):
 		at := jsonPlace(src, len(bytes.TrimRight(src, " \t\n\r")))
 		return nil, usererr.LibraryAt(file, at.Line, at.Column, err.Error())
-	case errors.As(err, &syntax), errors.As(json.Unmarshal(src, new(any)), &syntax):
-		// The second: jsonschema tells what follows the value without its place, which encoding/json has.
-		_, size := utf8.DecodeLastRune(src[:syntax.Offset])
-		at := jsonPlace(src, int(syntax.Offset)-size)
-		return nil, usererr.LibraryAt(file, at.Line, at.Column, err.Error())
+	case errors.As(err, &syntax):
+	case errors.As(json.Unmarshal(src, new(json.RawMessage)), &syntax):
+		// jsonschema tells what follows the value without its place or character, which encoding/json tells.
+		err = syntax
+	default:
+		return nil, usererr.LibraryAt(file, 0, 0, err.Error())
 	}
-	return nil, usererr.LibraryAt(file, 0, 0, err.Error())
+	_, size := utf8.DecodeLastRune(src[:syntax.Offset])
+	at := jsonPlace(src, int(syntax.Offset)-size)
+	return nil, usererr.LibraryAt(file, at.Line, at.Column, err.Error())
 }
 
 // jsonPlace returns the line and column of the character starting at byte at of src: lines end at \n, \r or
