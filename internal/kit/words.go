@@ -14,7 +14,7 @@ import (
 )
 
 // words are the words a part or a template writes in the page's language (the headings of risks), by the
-// language tag, lowercased, and their names: its words.yaml.
+// language tag, lowercased, and their names: its words.yaml; nil without one.
 type words map[string]map[string]string
 
 // readWords reads src, the words.yaml of a part or a template, file in its mistakes: language tags, each the
@@ -106,8 +106,10 @@ func (w words) word(file, lang string) func(string) (string, error) {
 			}
 		}
 		switch {
-		case len(w) == 0:
+		case w == nil:
 			return "", usererr.NewAt(file, 0, 0, "kit_words_none", name)
+		case len(w) == 0:
+			return "", usererr.NewAt(file, 0, 0, "kit_words_empty", name)
 		case lang == "":
 			return "", usererr.NewAt(file, 0, 0, "kit_words_no_lang", name, strings.Join(slices.Sorted(maps.Keys(w)), ", "))
 		case has != nil:
