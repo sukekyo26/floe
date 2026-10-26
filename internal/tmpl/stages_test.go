@@ -292,7 +292,7 @@ func TestPartWordsAtTheirFile(t *testing.T) {
 	}, mine(minePage, `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"ws": {"type": "array", "items": {"$ref": "floe:///parts/w.json"}}}}`, nil))
 	got := drawn(t, k, "lang: ja\ntemplate: mine\nws: [{}, {}]\n", none)
-	if want := `parts/w/part.html:1:27: the words of ja in words.yaml have no "x", which those of en have: add it to ja`; got != want {
+	if want := `parts/w/part.html:1:27: words.yaml has no word "x" in ja`; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 }
@@ -305,5 +305,40 @@ func TestEmptyHeadingID(t *testing.T) {
 	out, err := tmpl.Draw(ownKit(t, nil, mine(page, mineSchema, nil)), "d.yaml", []byte("lang: en\ntemplate: mine\n"), none)
 	if err != nil || !strings.Contains(string(out), `<h2 id="plan">Plan</h2>`) {
 		t.Errorf("drawn %q, %v", out, err)
+	}
+}
+
+// A theme's palette.css goes into the page as written, rules and !important too, in the layer floe.palette alone,
+// which the other layers are over.
+func TestPaletteInItsLayer(t *testing.T) {
+	t.Parallel()
+
+	const palette = ":root { --x: red !important }\nbody { color: blue }\n"
+	k, err := kit.Load(floeKit(t), kit.Sources{
+		Parts:     kit.Dir{FS: nil, Name: ""},
+		Themes:    kit.Dir{FS: mapFS(map[string]string{"t/palette.css": palette}), Name: "themes"},
+		Templates: kit.Dir{FS: mapFS(mine(minePage, mineSchema, nil)), Name: "templates"},
+	})
+	if err != nil {
+		t.Fatalf("kit.Load: %s", told(err))
+	}
+	page, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\ntheme: t\n"), none)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if html := string(page); !strings.Contains(html, "@layer floe.palette {\n"+palette+"}\n") || strings.Count(html, "body { color: blue }") != 1 {
+		t.Errorf("the palette is not in floe.palette alone:\n%s", html)
+	}
+}
+
+// A computed value named in any letters both expr and page.html read is drawn by its name.
+func TestComputedNamedInJapanese(t *testing.T) {
+	t.Parallel()
+
+	page := strings.Replace(minePage, "{{with .Data.note}}{{.}}{{end}}", "<p>{{.Calc.合計}}</p>", 1)
+	k := ownKit(t, nil, mine(page, mineSchema, map[string]string{"computed.yaml": "合計: 1 + 2\n"}))
+	got, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\n"), none)
+	if err != nil || !strings.Contains(string(got), "<p>3</p>") {
+		t.Errorf("drew %s, %v; want <p>3</p>", got, told(err))
 	}
 }

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml/ast"
+
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -210,6 +212,44 @@ func TestQuoteOf(t *testing.T) {
 		}
 		if _, v := yamlpos.Find(n, []string{"v"}); yamlpos.QuoteOf(v) != want {
 			t.Errorf("QuoteOf(%q) = %d, want %d", src, yamlpos.QuoteOf(v), want)
+		}
+	}
+}
+
+// Text reads a text scalar as YAML does, a block keeping the line breaks its end keeps; a number, true, false
+// and null are not text.
+func TestText(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		src, want string
+		ok        bool
+	}{
+		{"plain", "plain", true},
+		{`"a\tb"`, "a\tb", true},
+		{"'it''s'", "it's", true},
+		{"|\n  x\n", "x\n", true},
+		{"|+\n  x\n", "x\n\n", true}, // the line break Parse is given after it is kept too
+		{"|-\n  x\n", "x", true},
+		{">\n  x\n  y\n", "x y\n", true},
+		{"404", "", false},
+		{"1.10", "", false},
+		{"true", "", false},
+		{"false", "", false},
+		{"~", "", false},
+		{"[x]", "", false},
+	} {
+		body, err := yamlpos.Parse("f.yaml", []byte("k: "+tt.src+"\n"))
+		if err != nil {
+			t.Fatal(told(err))
+		}
+		m, isMap := body.(*ast.MappingNode)
+		if !isMap {
+			t.Fatalf("%q: the body is %T", tt.src, body)
+		}
+		got, ok, err := yamlpos.Text(m.Values[0].Value)
+		if err != nil || got != tt.want || ok != tt.ok {
+			t.Errorf("Text(%q) = %q, %v, %v; want %q, %v", tt.src, got, ok, err, tt.want, tt.ok)
 		}
 	}
 }

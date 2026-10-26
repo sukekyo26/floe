@@ -5,6 +5,7 @@ package yamlpos
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -129,6 +130,21 @@ func Decode(file string, n ast.Node, v any) error {
 		return library(file, err)
 	}
 	return nil
+}
+
+// Text returns n as text when it is a text scalar: a string, quoted or not, or a | or > block, read as YAML reads
+// it, a block keeping the line breaks its end keeps (| one, |+ all, |- none). A number, true, false or null is not
+// text: YAML would read 1.10 as 1.1. err is floe's failure: a text scalar of a node Parse returned decodes.
+func Text(n ast.Node) (text string, ok bool, err error) {
+	switch n.(type) {
+	case *ast.StringNode, *ast.LiteralNode:
+	default:
+		return "", false, nil
+	}
+	if err := yaml.NodeToValue(n, &text); err != nil {
+		return "", false, fmt.Errorf("yamlpos: decode a text: %w", err)
+	}
+	return text, true, nil
 }
 
 // Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A byte order

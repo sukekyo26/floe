@@ -1,9 +1,8 @@
 package kit
 
 import (
+	"cmp"
 	"errors"
-	"maps"
-	"slices"
 	"strings"
 
 	"github.com/goccy/go-yaml/ast"
@@ -41,7 +40,10 @@ func readWords(file string, src []byte) (words, error) {
 		tag := key.GetToken().Value
 		lang := strings.ToLower(tag)
 		// Its words are read whatever else is wrong, so that their mistakes are told in the same run.
-		ws, more := readLang(file, tag, key, v.Value)
+		ws, more, err := readLang(file, tag, key, v.Value)
+		if err != nil {
+			return nil, err
+		}
 		found = append(found, more...)
 		if first, twice := written[lang]; twice {
 			// A tag's case means nothing to the lookup: EN after en would take its place unseen.
@@ -57,27 +59,28 @@ func readWords(file string, src []byte) (words, error) {
 	return w, nil
 }
 
-// readLang reads n, the words of the language tag written as key: names and their text.
-func readLang(file, tag string, key, n ast.Node) (map[string]string, usererr.List) {
+// readLang reads n, the words of the language tag written as key: names and their text, or floe's failure.
+func readLang(file, tag string, key, n ast.Node) (map[string]string, usererr.List, error) {
 	m, ok := n.(*ast.MappingNode)
 	if !ok {
-		return nil, usererr.List{yamlpos.New(file, yamlpos.OfValue(key, n), "kit_words_lang_not_mapping", tag)}
+		return nil, usererr.List{yamlpos.New(file, yamlpos.OfValue(key, n), "kit_words_lang_not_mapping", tag)}, nil
 	}
 	ws := map[string]string{}
 	var found usererr.List
 	for _, v := range m.Values {
 		name := yamlpos.KeyOf(v).GetToken().Value
-		switch text := v.Value.(type) {
-		case *ast.StringNode:
-			ws[name] = text.Value
-		case *ast.LiteralNode: // | or >, its line break at the end dropped: a word is drawn inline
-			ws[name] = strings.TrimRight(text.Value.Value, "\n")
+		text, ok, err := yamlpos.Text(v.Value)
+		switch {
+		case err != nil:
+			return nil, nil, err //nolint:wrapcheck // floe's failure, which says what failed
+		case ok:
+			ws[name] = text
 		default:
 			at := yamlpos.OfValue(yamlpos.KeyOf(v), v.Value)
 			found = append(found, yamlpos.New(file, at, "kit_words_not_text", tag, name))
 		}
 	}
-	return ws, found
+	return ws, found, nil
 }
 
 // lang returns the language of w a page of the language tag is drawn in: the first of i18n.Fallbacks of the
@@ -93,28 +96,13 @@ func (w words) lang(tag string) string {
 
 // word returns the function word of a part's HTML or a template's page.html in the language lang of w ("" for
 // a page of a language w has none of, nor en): the text of a word by its name. A name the language does not
-// have stops the drawing, file naming where the words are, and the languages that have it.
+// have stops the drawing, file naming the HTML that names it, and the language: en for "", the last of the
+// languages a page falls back to.
 func (w words) word(file, lang string) func(string) (string, error) {
 	return func(name string) (string, error) {
 		if text, ok := w[lang][name]; ok {
 			return text, nil
 		}
-		var has []string
-		for _, l := range slices.Sorted(maps.Keys(w)) {
-			if _, ok := w[l][name]; ok {
-				has = append(has, l)
-			}
-		}
-		switch {
-		case w == nil:
-			return "", usererr.NewAt(file, 0, 0, "kit_words_none", name)
-		case len(w) == 0:
-			return "", usererr.NewAt(file, 0, 0, "kit_words_empty", name)
-		case lang == "":
-			return "", usererr.NewAt(file, 0, 0, "kit_words_no_lang", name, strings.Join(slices.Sorted(maps.Keys(w)), ", "))
-		case has != nil:
-			return "", usererr.NewAt(file, 0, 0, "kit_words_unknown_elsewhere", lang, name, strings.Join(has, ", "))
-		}
-		return "", usererr.NewAt(file, 0, 0, "kit_words_unknown", lang, name)
+		return "", usererr.NewAt(file, 0, 0, "kit_words_unknown", name, cmp.Or(lang, string(i18n.English)))
 	}
 }

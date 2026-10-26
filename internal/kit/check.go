@@ -142,12 +142,12 @@ func unread(dir string, files []string, key string) usererr.List {
 	return found
 }
 
-// checkTheme checks the CSS of t: palette.css as a palette, the others as CSS; and refuses a file it does not
-// read, of no part or look.
+// checkTheme checks the CSS of t, palette.css as the others; and refuses a file it does not read, of no part or
+// look.
 func checkTheme(t *Theme) error {
 	errs := []error{unread(t.dir, t.unread, "kit_theme_unread").Err()}
 	if t.palette != nil {
-		errs = append(errs, css.CheckPalette(path.Join(t.dir, "palette.css"), t.palette))
+		errs = append(errs, css.Check(path.Join(t.dir, "palette.css"), t.palette))
 	}
 	if t.base != nil {
 		errs = append(errs, css.Check(path.Join(t.dir, "base.css"), t.base))

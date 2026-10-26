@@ -40,9 +40,8 @@ var Shared = []string{"lang", "template", "theme", "title"}
 // Read reads the data file src, file in its mistakes: yamlpos.Parse, and only when it refused nothing,
 // goccy/go-yaml's reading of the values (its mistake for a top that is not keys and values), then the
 // shared keys, each text, and lang: written and not empty or spaces. An empty file, or one of comments
-// alone, reads as {}, its mistakes at 1:1, as it has no node to place them at. goccy/go-yaml reads a whole
-// number above 0 as uint64, which expr negates by wrapping around (-3 / 2 is 9.2e18), so one that fits
-// becomes an int: every layer sees the same values. A theme given ("" for none) is drawn with instead of the
+// alone, reads as {}, its mistakes at 1:1, as it has no node to place them at. Its whole numbers are made
+// int (Ints). A theme given ("" for none) is drawn with instead of the
 // data's: theme: is then neither read nor refused, and Values holds the theme given, so that every layer sees
 // the theme the page is drawn with.
 func Read(file string, src []byte, theme string) (*Data, error) {
@@ -58,7 +57,7 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 		if err = yamlpos.Decode(file, body, &values); err != nil {
 			return nil, err //nolint:wrapcheck // goccy's mistake at its place
 		}
-		ints(values)
+		Ints(values)
 	}
 	// goccy/go-yaml read the values into a map: the top is keys and values, or there is none.
 	root, _ := body.(*ast.MappingNode) //nolint:errcheck // see above
@@ -72,21 +71,26 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 	return d, d.readShared(theme)
 }
 
-// ints turns the uint64 in v that fit into int, in place, and returns v.
+// Ints turns the whole numbers in v that fit into int, in place, and returns v, so that every layer sees one type of
+// them: goccy/go-yaml reads one above 0 as uint64, which expr negates by wrapping around (-3 / 2 is 9.2e18), and
+// one below 0 as int64, as expr gives some of its values (date(…).Unix()). A type of its own (time.Duration)
+// stays as it is.
 // LIMIT: a whole number above 9.2e18 stays uint64, which expr's - still wraps around (-a < 0 does not hold).
-func ints(v any) any {
+func Ints(v any) any {
 	switch v := v.(type) {
+	case int64:
+		return int(v)
 	case uint64:
 		if v <= math.MaxInt64 {
 			return int(v)
 		}
 	case map[string]any:
 		for k, item := range v {
-			v[k] = ints(item)
+			v[k] = Ints(item)
 		}
 	case []any:
 		for i, item := range v {
-			v[i] = ints(item)
+			v[i] = Ints(item)
 		}
 	}
 	return v

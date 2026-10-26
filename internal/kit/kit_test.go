@@ -172,12 +172,20 @@ func TestReadMistakes(t *testing.T) {
 	}{
 		{
 			"looks not a list", part(map[string]string{"part.yaml": "looks: panel\n"}),
-			"parts/p/part.yaml:1:8: write looks: as a list of the names of parts or looks, like looks: [panel]",
+			"parts/p/part.yaml:1:8: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
 		},
 		{"part.yaml, together", part(map[string]string{"part.yaml": "looks: [panel, [x]]\nbogus: 1\ndescription: x\n"}), lines(
-			"parts/p/part.yaml:1:16: write looks: as a list of the names of parts or looks, like looks: [panel]",
+			"parts/p/part.yaml:1:16: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
 			"parts/p/part.yaml:2:1: bogus is not a key of part.yaml; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
 			"parts/p/part.yaml:3:1: a part's description is its schema.json's description; part.yaml's description: is a look alone's, which has no schema",
+		)},
+		{"looks not text", part(map[string]string{"part.yaml": "looks: [404, 1.10, true, false, ~, '']\n"}), lines(
+			"parts/p/part.yaml:1:9: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
+			"parts/p/part.yaml:1:14: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
+			"parts/p/part.yaml:1:20: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
+			"parts/p/part.yaml:1:26: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
+			"parts/p/part.yaml:1:33: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
+			"parts/p/part.yaml:1:36: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
 		)},
 		{
 			"part.yaml not keys and values", part(map[string]string{"part.yaml": "- a\n"}),
@@ -223,11 +231,12 @@ func TestWordUnknown(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ words, lang, want string }{
-		{"", "en", `templates/t/page.html: there is no words.yaml to draw "zz" from: put one beside it, and write the word under en:`},
-		{"# none yet\n", "en", `templates/t/page.html: words.yaml holds no words to draw "zz" in: write the word under en:`},
-		{"en: {a: A}\n", "en", `templates/t/page.html: the words of en in words.yaml have no "zz"`},
-		{"en: {a: A}\nja: {zz: ず}\n", "en", `templates/t/page.html: the words of en in words.yaml have no "zz", which those of ja have: add it to en`},
-		{"ja: {zz: ず}\n", "en", `templates/t/page.html: words.yaml has no words in the page's language nor in en to draw "zz" in, but in ja: add en, or the page's language`},
+		{"", "en", `templates/t/page.html: words.yaml has no word "zz" in en`},
+		{"# none yet\n", "en", `templates/t/page.html: words.yaml has no word "zz" in en`},
+		{"en: {a: A}\n", "en", `templates/t/page.html: words.yaml has no word "zz" in en`},
+		{"en: {a: A}\nja: {zz: ず}\n", "en", `templates/t/page.html: words.yaml has no word "zz" in en`},
+		{"ja: {zz: ず}\n", "en", `templates/t/page.html: words.yaml has no word "zz" in en`},
+		{"en: {a: A}\nja: {a: あ}\n", "ja-JP", `templates/t/page.html: words.yaml has no word "zz" in ja`},
 	} {
 		fsys := fstest.MapFS{"t/page.html": {Data: []byte(`{{word "zz"}}`)}}
 		if tt.words != "" {
@@ -242,6 +251,25 @@ func TestWordUnknown(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), tt.want) {
 			t.Errorf("%q: %v, want %s", tt.words, err, tt.want)
 		}
+	}
+}
+
+// A word is its text as YAML reads it: a | block keeps its line break at the end, a >- block leaves it out.
+func TestWordsAsWritten(t *testing.T) {
+	t.Parallel()
+
+	fsys := fstest.MapFS{
+		"t/page.html":  {Data: []byte(`[{{word "a"}}][{{word "b"}}]`)},
+		"t/words.yaml": {Data: []byte("en:\n  a: |\n    x\n  b: >-\n    y\n    z\n")},
+	}
+	k, err := kit.Read(nil, kit.Sources{Templates: kit.Dir{FS: fsys, Name: "templates"}})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	tm, _ := k.Template("t")
+	var b strings.Builder
+	if err := page(t, tm, "en").Execute(&b, nil); err != nil || b.String() != "[x\n][y z]" {
+		t.Errorf("drew %q, %v; want %q", b.String(), err, "[x\n][y z]")
 	}
 }
 

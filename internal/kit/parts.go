@@ -317,12 +317,16 @@ func readPartYAML(d Dir, dir string, look bool) ([]taken, string, error) {
 		switch key := k.GetToken().Value; {
 		case key == "looks":
 			var more usererr.List
-			looks, more = readLooks(file, k, kv.Value)
+			if looks, more, err = readLooks(file, k, kv.Value); err != nil {
+				return nil, "", err
+			}
 			found = append(found, more...)
 		case key == "description" && !look:
 			found = append(found, yamlpos.New(file, yamlpos.Of(k), "kit_part_yaml_description"))
 		case key == "description":
-			if about, ok = textOf(kv.Value); !ok {
+			if about, ok, err = yamlpos.Text(kv.Value); err != nil {
+				return nil, "", err //nolint:wrapcheck // floe's failure, which says what failed
+			} else if !ok {
 				found = append(found, yamlpos.New(file, yamlpos.OfValue(k, kv.Value), "kit_part_yaml_about"))
 			}
 		default:
@@ -332,34 +336,25 @@ func readPartYAML(d Dir, dir string, look bool) ([]taken, string, error) {
 	return looks, about, found.Sorted().Err()
 }
 
-// readLooks reads the looks part.yaml, file, gives the key k: a list of names, each text as written (YAML
-// reads a name of digits, 404, as a number).
-func readLooks(file string, k, value ast.Node) ([]taken, usererr.List) {
+// readLooks reads the looks part.yaml, file, gives the key k: a list of names, each text, as a key is (YAML
+// would read a name of digits, 1.10, as the number 1.1); or floe's failure.
+func readLooks(file string, k, value ast.Node) ([]taken, usererr.List, error) {
 	seq, ok := value.(*ast.SequenceNode)
 	if !ok {
-		return nil, usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), "kit_part_yaml_looks")}
+		return nil, usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), "kit_part_yaml_looks")}, nil
 	}
 	looks := make([]taken, 0, len(seq.Values))
 	var found usererr.List
 	for _, v := range seq.Values {
-		_, scalar := v.(ast.ScalarNode)
-		_, null := v.(*ast.NullNode)
-		if !scalar || null || v.GetToken().Value == "" {
+		name, ok, err := yamlpos.Text(v)
+		switch {
+		case err != nil:
+			return nil, nil, err //nolint:wrapcheck // floe's failure, which says what failed
+		case !ok || name == "":
 			found = append(found, yamlpos.New(file, yamlpos.Of(v), "kit_part_yaml_looks"))
-			continue
+		default:
+			looks = append(looks, taken{name: name, file: file, at: yamlpos.Of(v)})
 		}
-		looks = append(looks, taken{name: v.GetToken().Value, file: file, at: yamlpos.Of(v)})
 	}
-	return looks, found
-}
-
-// textOf returns the text of n, a string or a | or > block, and false for anything else.
-func textOf(n ast.Node) (string, bool) {
-	switch text := n.(type) {
-	case *ast.StringNode:
-		return text.Value, true
-	case *ast.LiteralNode:
-		return text.Value.Value, true
-	}
-	return "", false
+	return looks, found, nil
 }

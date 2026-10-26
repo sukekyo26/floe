@@ -135,13 +135,18 @@ func brief(err error) string {
 	return err.Error()
 }
 
-// text returns the value n as written, a number or true as text, and false for a list or keys and values.
-// One left empty is "".
-func text(n ast.Node) (string, bool) {
-	if _, ok := n.(ast.ScalarNode); !ok {
-		return "", false
+// text returns the value n as written: text as yamlpos.Text reads it, a number or true as its characters (1.10,
+// not 1.1), and "" for one left empty or null; false for a list or keys and values. err is floe's failure.
+func text(n ast.Node) (string, bool, error) {
+	s, ok, err := yamlpos.Text(n)
+	switch _, null := n.(*ast.NullNode); {
+	case err != nil || ok:
+		return s, ok, err //nolint:wrapcheck // floe's failure, which says what failed
+	case null:
+		return "", true, nil
 	}
-	var s string
-	err := yamlpos.Decode("", n, &s)
-	return s, err == nil
+	if _, scalar := n.(ast.ScalarNode); scalar {
+		return n.GetToken().Value, true, nil
+	}
+	return "", false, nil
 }
