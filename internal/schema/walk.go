@@ -4,15 +4,17 @@ import (
 	"maps"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-// Step is how floe goes one step from a schema to the values under it: the part (its URL) or the format that
-// draws the value, else the schema of each property by name, and of the items.
+// Step is how floe goes one step from a schema to the values under it: the part (its URL and the root of its
+// schema) or the format that draws the value, else the schema of each property by name, and of the items.
 type Step struct {
 	Part, Format string
+	PartRoot     *jsonschema.Schema
 	Props        map[string]*jsonschema.Schema
 	Items        *jsonschema.Schema
 }
@@ -36,19 +38,19 @@ func (c *Compiled) Follow(s *jsonschema.Schema) Step {
 func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) (Step, []*jsonschema.Schema) {
 	through := make([]*jsonschema.Schema, 1, 2)
 	through[0] = s
-	own := Step{Part: "", Format: "", Props: s.Properties, Items: itemsOf(s)}
+	own := Step{Part: "", Format: "", PartRoot: nil, Props: s.Properties, Items: itemsOf(s)}
 	if seen[s] {
-		return Step{Part: "", Format: "", Props: nil, Items: nil}, through
+		return Step{Part: "", Format: "", PartRoot: nil, Props: nil, Items: nil}, through
 	}
 	seen[s] = true
 	if f := floeFormat(s); f != "" {
-		return Step{Part: "", Format: f, Props: nil, Items: nil}, through
+		return Step{Part: "", Format: f, PartRoot: nil, Props: nil, Items: nil}, through
 	}
 	if s.Ref == nil {
 		return own, through
 	}
 	if part, ok := c.partRoot(s.Ref); ok {
-		return Step{Part: part, Format: "", Props: nil, Items: nil}, through
+		return Step{Part: part, Format: "", PartRoot: s.Ref, Props: nil, Items: nil}, through
 	}
 	if !c.followed(s, s.Ref) {
 		return own, through
@@ -68,6 +70,90 @@ func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) 
 	}
 	own.Props = props
 	return own, through
+}
+
+// Item is a value a part or a format of floe draws whole: where it is (the keys and indexes to it), the name of
+// the part or the format, and the value as written.
+type Item struct {
+	At     []string
+	Part   string   // "" for a format
+	Holds  []string // the parts the part's schema may hold, sorted
+	Format string   // "" for a part
+	Value  any
+}
+
+// Walk goes through values as c takes them, a step of Follow at each value, into a part's value from the root
+// of its schema, and calls fn with each Item, those a part's value holds before it, and with its value made
+// ready: the Items in it replaced by what fn returned for them. It returns values made ready so, each item
+// the schema declares but values leave out made nil, so that a template can test it under missingkey=error.
+// It is the one walk of values: what floe checks of the items and what it draws both come from it.
+func (c *Compiled) Walk(values any, fn func(it Item, ready any) (any, error)) (any, error) {
+	return c.walkStep(c.Follow(c.Root), values, nil, fn)
+}
+
+// walkStep walks v, at the path at, under the step st.
+func (c *Compiled) walkStep(st Step, v any, at []string, fn func(Item, any) (any, error)) (any, error) {
+	switch {
+	case st.Part != "":
+		// A part's schema holds no format of floe's (CheckPart): what is in it is parts, or drawn as written.
+		ready, err := c.walkStep(c.Follow(st.PartRoot), v, at, fn)
+		if err != nil {
+			return nil, err
+		}
+		return fn(Item{At: at, Part: partName(st.Part), Holds: c.partsFrom(st.PartRoot), Format: "", Value: v}, ready)
+	case st.Format != "":
+		return fn(Item{At: at, Part: "", Holds: nil, Format: st.Format, Value: v}, v)
+	}
+	return c.under(st, v, at, fn)
+}
+
+// under walks what v, at the path at, holds under the step st: its properties, its items.
+func (c *Compiled) under(st Step, v any, at []string, fn func(Item, any) (any, error)) (any, error) {
+	var err error
+	switch v := v.(type) {
+	case map[string]any:
+		ready := make(map[string]any, len(v)+len(st.Props))
+		for k := range st.Props {
+			ready[k] = nil
+		}
+		for _, k := range slices.Sorted(maps.Keys(v)) {
+			if ready[k], err = c.walkIn(st.Props[k], v[k], at, k, fn); err != nil {
+				return nil, err
+			}
+		}
+		return ready, nil
+	case []any:
+		ready := make([]any, len(v))
+		for i, item := range v {
+			if ready[i], err = c.walkIn(st.Items, item, at, strconv.Itoa(i), fn); err != nil {
+				return nil, err
+			}
+		}
+		return ready, nil
+	}
+	return v, nil
+}
+
+// walkIn walks v, at the step named step under the path at, with the schema s; v as it is for none.
+func (c *Compiled) walkIn(
+	s *jsonschema.Schema, v any, at []string, step string, fn func(Item, any) (any, error),
+) (any, error) {
+	if s == nil {
+		return v, nil
+	}
+	return c.walkStep(c.Follow(s), v, slices.Concat(at, []string{step}), fn)
+}
+
+// partsFrom returns the names of the parts Follow, repeated from root, stops at, sorted.
+func (c *Compiled) partsFrom(root *jsonschema.Schema) []string {
+	var names []string
+	for s := range c.followFrom(root).atPart {
+		if name := partName(c.Follow(s).Part); !slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+	slices.Sort(names)
+	return names
 }
 
 // itemsOf returns the schema of each item of s: Items2020, or before 2020-12 Items of one schema.
