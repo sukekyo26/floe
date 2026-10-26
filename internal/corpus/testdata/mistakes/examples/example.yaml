@@ -1,0 +1,7 @@
+template: report
+lang: en
+title: Examples written wrong
+sections:
+  - heading: Examples
+    parts:
+      - diagram: { example: flow, width: 3 }

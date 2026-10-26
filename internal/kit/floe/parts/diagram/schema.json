@@ -1,40 +1,52 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "diagram",
-  "description": "A diagram: a canvas of width by height and the parts placed on it, drawn as inline SVG. floe diagram example prints one of each kind",
+  "description": "A diagram: a canvas of width by height and the parts placed on it, drawn as inline SVG; or example, the name of a built-in one, which floe diagram example lists. source: true shows the spec as written under it",
   "type": "object",
-  "required": ["width", "height", "title", "parts"],
-  "additionalProperties": false,
-  "properties": {
-    "width": { "$ref": "#/$defs/size" },
-    "height": { "$ref": "#/$defs/size" },
-    "title": { "$ref": "#/$defs/text", "description": "What the diagram shows, for a reader who cannot see it" },
-    "parts": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "description": "One key naming the kind of the part",
-        "minProperties": 1,
-        "maxProperties": 1,
-        "additionalProperties": false,
-        "properties": {
-          "frame": { "$ref": "#/$defs/frame" },
-          "box": { "$ref": "#/$defs/box" },
-          "table": { "$ref": "#/$defs/table" },
-          "icon": { "$ref": "#/$defs/icon" },
-          "edge": { "$ref": "#/$defs/edge" },
-          "dot": { "$ref": "#/$defs/dot" },
-          "bar": { "$ref": "#/$defs/bar" },
-          "axis": { "$ref": "#/$defs/axis" },
-          "circle": { "$ref": "#/$defs/circle" },
-          "label": { "$ref": "#/$defs/label" },
-          "line": { "$ref": "#/$defs/line" },
-          "raw": { "$ref": "#/$defs/raw" }
+  "if": { "required": ["example"] },
+  "then": {
+    "additionalProperties": false,
+    "properties": {
+      "example": { "type": "string", "minLength": 1, "description": "A kind of diagram floe diagram example lists, drawn in the page's language" },
+      "source": { "$ref": "#/$defs/source" }
+    }
+  },
+  "else": {
+    "required": ["width", "height", "title", "parts"],
+    "additionalProperties": false,
+    "properties": {
+      "source": { "$ref": "#/$defs/source" },
+      "width": { "$ref": "#/$defs/size" },
+      "height": { "$ref": "#/$defs/size" },
+      "title": { "$ref": "#/$defs/text", "description": "What the diagram shows, for a reader who cannot see it" },
+      "parts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "description": "One key naming the kind of the part",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "frame": { "$ref": "#/$defs/frame" },
+            "box": { "$ref": "#/$defs/box" },
+            "table": { "$ref": "#/$defs/table" },
+            "icon": { "$ref": "#/$defs/icon" },
+            "edge": { "$ref": "#/$defs/edge" },
+            "dot": { "$ref": "#/$defs/dot" },
+            "bar": { "$ref": "#/$defs/bar" },
+            "axis": { "$ref": "#/$defs/axis" },
+            "circle": { "$ref": "#/$defs/circle" },
+            "label": { "$ref": "#/$defs/label" },
+            "line": { "$ref": "#/$defs/line" },
+            "raw": { "$ref": "#/$defs/raw" }
+          }
         }
       }
     }
   },
   "$defs": {
+    "source": { "type": "boolean", "description": "Show the spec as written, folded under the diagram (an example's file, with its comments)" },
     "size": { "type": "number", "minimum": 1 },
     "text": {
       "description": "Text, or its words in each language by tag, English among them: {en: …, ja: …}",

@@ -3,6 +3,7 @@
 {{- range .Markers}}<marker id="{{.ID}}" viewBox="{{.ViewBox}}" refX="{{n .RX}}" refY="{{n .RY}}" markerWidth="{{n .W}}" markerHeight="{{n .H}}" markerUnits="userSpaceOnUse" orient="auto-start-reverse">{{.Body}}</marker>{{end}}
 {{- range .Icons}}<image id="{{.ID}}" href="{{.Href}}" width="{{n .Size}}" height="{{n .Size}}"/>{{end -}}
 </defs>{{range .Elems}}{{template "el" .}}{{end}}</svg></div>
+{{- with .Source}}<details class="dg-source"><summary>{{.Label}}</summary><pre><code>{{.Text}}</code></pre></details>{{end}}
 {{- end}}
 
 {{define "el" -}}

@@ -6,10 +6,12 @@ import (
 	"sync"
 
 	"github.com/sukekyo26/floe/internal/diagram"
+	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // Diagrams is the drawer of the diagrams of pages and of floe diagram: floe's part diagram's schema, compiled
@@ -26,18 +28,23 @@ var Diagrams = sync.OnceValues(func() (*diagram.Drawer, error) {
 	return diagram.New(c), nil
 })
 
-// diagramOf returns the function diagram of a part.html that draws v, the value of the part as written, in the
-// language tag lang: in the box of floe's part diagram, so that its CSS is the page's whoever draws it, after
-// the script that zooms it. Its mistakes are at JSON pointers from the root of v, or of no place (icons not
-// kept); what fails otherwise is floe's failure.
-func (s *items) diagramOf(lang string, v any) func() (template.HTML, error) {
+// diagramOf returns the function diagram of a part.html that draws the value of it, an item of d, as written, in
+// d's language: in the box of floe's part diagram, so that its CSS is the page's whoever draws it, after the
+// script that zooms it, with its value's text when it says source: true. Its mistakes are at JSON pointers from
+// the root of the value, or of no place (icons); what fails otherwise is floe's failure.
+func (s *items) diagramOf(d *doc.Data, it schema.Item) func() (template.HTML, error) {
 	return func() (template.HTML, error) {
-		d, err := Diagrams()
+		dr, err := Diagrams()
 		if err != nil {
 			return "", fmt.Errorf("%w: diagram: %w", kit.ErrFunc, err)
 		}
 		s.diagrams++
-		svg, err := d.Draw(v, diagram.Options{Lang: i18n.Lang(lang), Icons: s.icons, Seq: s.diagrams})
+		o := diagram.Options{Lang: i18n.Lang(d.Lang), Icons: s.icons, Seq: s.diagrams, Source: ""}
+		if m, ok := it.Value.(map[string]any); ok && m["source"] == true && d.Root != nil {
+			_, n := yamlpos.Find(d.Root, it.At)
+			o.Source = yamlpos.Source(n)
+		}
+		svg, err := dr.Draw(it.Value, o)
 		var found usererr.List
 		if failed := found.Add(err); failed != nil {
 			return "", fmt.Errorf("%w: diagram: %w", kit.ErrFunc, failed)

@@ -1,0 +1,8 @@
+template: report
+lang: en
+title: Examples drawn wrong
+sections:
+  - heading: Examples
+    parts:
+      - diagram: { example: nope }
+      - diagram: { example: aws, source: true }
