@@ -236,8 +236,9 @@ func (h *holes) hole(err error) (at string, tell, again bool) {
 }
 
 // fill puts true at frag of the doc at base, a #/$defs/<name> alone, in a copy of the doc; false for any
-// other place, or a doc whose root or $defs is not an object. It reads the doc's root and $defs alone, and
-// writes only a copy (CLAUDE.md: the exception to taking the schema's shape from the compiled tree).
+// other place, or a doc whose root or $defs is not an object. To add the name, it reads the doc's root and
+// $defs alone, and writes only a copy (CLAUDE.md: the exception to taking the schema's shape from the
+// compiled tree).
 func (h *holes) fill(base, frag string) bool {
 	name, ok := strings.CutPrefix(frag, "/$defs/")
 	if !ok || name == "" || strings.ContainsAny(name, "/~") {
