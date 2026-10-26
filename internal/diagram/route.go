@@ -140,9 +140,10 @@ func turns(a, b anchor) [][2]float64 {
 	}
 }
 
-// oneWay reports whether a and b are sides of parts that face one way.
+// oneWay reports whether a and b are sides of parts that face one way, apart: one side back to itself goes
+// nowhere.
 func oneWay(a, b anchor) bool {
-	return a.side == b.side && a.side != "" && !a.point && !b.point
+	return a.side == b.side && a.side != "" && !a.point && !b.point && (a.x != b.x || a.y != b.y)
 }
 
 // around are the corners of an edge between sides of one way: out past both ends, so that it does not run

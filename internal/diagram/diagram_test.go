@@ -214,6 +214,10 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - raw: { svg: '<style>rect{}</style>' }", "s.yaml:5:5: raw SVG holds <style>, which it may not: write SVG's elements alone, without style, script or foreignObject"},
 		{"  - edge: { from: [10, 10], to: [10, 10] }", "s.yaml:5:5: edge [10,10]→[10,10] starts where it ends: end it at another part or point"},
 		{
+			"  - box: { name: a, x: 100, y: 20, w: 80, h: 29, rows: [a] }\n  - edge: { from: a, fromSide: left, to: a, toSide: left }",
+			"s.yaml:6:5: edge a→a starts where it ends: end it at another part or point",
+		},
+		{
 			"  - circle: { name: c, cx: 100, cy: 100, r: 60 }\n  - circle: { name: c, cx: 300, cy: 100, r: 5 }\n  - label: { text: x, in: [c] }",
 			`s.yaml:6:5: the name "c" is given before: give each part and row its own name`,
 		},
