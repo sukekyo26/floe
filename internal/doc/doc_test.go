@@ -2,6 +2,7 @@ package doc_test
 
 import (
 	"maps"
+	"reflect"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/doc"
@@ -31,7 +32,7 @@ func TestRead(t *testing.T) {
 	if d.Template != "report" || d.Lang != "ja" || d.Theme != "" || d.Title != "Plan" || d.Root == nil {
 		t.Errorf("Read = %+v", d)
 	}
-	if !maps.Equal(d.Values, map[string]any{"x": uint64(1)}) {
+	if !maps.Equal(d.Values, map[string]any{"x": 1}) {
 		t.Errorf("Values = %#v", d.Values)
 	}
 	want := map[string]yamlpos.Pos{"template": {Line: 2, Column: 11}, "lang": {Line: 3, Column: 7}, "theme": {Line: 2, Column: 1}, "title": {Line: 4, Column: 8}}
@@ -65,5 +66,22 @@ func TestReadMistakes(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("Read(%q) told\n%s\nwant\n%s", tt.src, got, tt.want)
 		}
+	}
+}
+
+// A whole number above 0 that fits an int is read as one, in lists and keys and values too, so that expr
+// does not wrap it around when it negates it; one past it stays uint64, and one below 0 int64, as goccy reads it.
+func TestReadInts(t *testing.T) {
+	t.Parallel()
+
+	d, err := doc.Read("a.yaml", []byte("lang: en\na: 3\nb: [1, {c: 2}]\nbig: 18446744073709551615\nneg: -3\nf: 1.5\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]any{
+		"a": 3, "b": []any{1, map[string]any{"c": 2}}, "big": uint64(18446744073709551615), "neg": int64(-3), "f": 1.5,
+	}
+	if !reflect.DeepEqual(d.Values, want) {
+		t.Errorf("Values = %#v, want %#v", d.Values, want)
 	}
 }
