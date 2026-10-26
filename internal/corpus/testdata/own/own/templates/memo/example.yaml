@@ -1,0 +1,16 @@
+lang: en
+template: memo
+title: A memo
+logo: img/logo.svg
+badges:
+  - label: draft
+items:
+  - what: Write the memo
+    done: true
+  - what: Send it
+flow:
+  width: 200
+  height: 120
+  title: Lambda
+  parts:
+    - icon: { icon: aws/res/aws-lambda, x: 76, y: 20, label: AWS Lambda }

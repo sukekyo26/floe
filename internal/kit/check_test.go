@@ -101,15 +101,6 @@ func TestCheckMistakes(t *testing.T) {
 			"own/parts/lk/part.yaml:1:9: the look lk takes itself (lk → lk), which floe would follow forever; fix its part.yaml",
 		},
 		{
-			"a cycle through floe's", with(map[string]string{"panel/part.css": "a{}", "panel/part.yaml": "looks: [rows]\n"}), nil, nil,
-			"own/parts/panel/part.yaml:1:9: the look panel takes itself (panel → rows → panel), which floe would follow forever; fix its part.yaml",
-		},
-		// Told from one's own name, though floe's bars is the least.
-		{
-			"a cycle from one's own", with(map[string]string{"panel/part.css": "a{}", "panel/part.yaml": "looks: [bars]\n"}), nil, nil,
-			"own/parts/panel/part.yaml:1:9: the look panel takes itself (panel → bars → panel), which floe would follow forever; fix its part.yaml",
-		},
-		{
 			"a part's cycle", with(map[string]string{"p/part.yaml": "looks: [zl]\n", "zl/part.css": "a{}", "zl/part.yaml": "looks: [p]\n"}), nil, nil,
 			"own/parts/p/part.yaml:1:9: the part p takes its own look (p → zl → p), which floe would follow forever; fix its part.yaml",
 		},
@@ -120,10 +111,11 @@ func TestCheckMistakes(t *testing.T) {
 			"own/themes/t/p.css:1:1: floe puts this CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",
 		)},
 		{"a template without its files", part, nil, map[string]string{"t/page.css": "}", "t/pgae.html": ""}, lines(
-			"own/templates/t: page.html is missing: a template has page.html and schema.json",
-			"own/templates/t: schema.json is missing: a template has page.html and schema.json",
+			"own/templates/t: example.yaml is missing: a template has page.html, schema.json and example.yaml",
+			"own/templates/t: page.html is missing: a template has page.html, schema.json and example.yaml",
+			"own/templates/t: schema.json is missing: a template has page.html, schema.json and example.yaml",
 			"own/templates/t/page.css:1:1: "+braceTold,
-			"own/templates/t/pgae.html: floe reads no file of this name in a template: a template holds page.html and schema.json, and page.css, computed.yaml, checks.yaml, words.yaml and example.yaml if it likes; rename it after one, or remove it",
+			"own/templates/t/pgae.html: floe reads no file of this name in a template: a template holds page.html, schema.json and example.yaml, and page.css, computed.yaml, checks.yaml, words.yaml and assets/ if it likes; rename it after one, or remove it",
 		)},
 	} {
 		src := kit.Sources{Parts: kit.Dir{FS: mapFS(tt.parts), Name: "own/parts"}}

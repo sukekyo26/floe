@@ -31,9 +31,9 @@ written, and nothing is printed when the files are right.`,
 }
 
 func (a *app) check(paths []string) error {
-	k, err := kit.Floe()
+	k, err := a.kit(true)
 	if err != nil {
-		return err //nolint:wrapcheck // floe's own, which its tests check
+		return err
 	}
 	store := a.iconStore()
 	var found usererr.List

@@ -1,0 +1,16 @@
+$ floe part check
+exit 1
+--- stderr
+$SAMPLE/own/parts/mine/schema.json: floe:///parts/gone.json is not a part; refer to one as floe:///parts/<name>.json
+$ floe template check
+exit 1
+--- stderr
+$SAMPLE/own/parts/mine/schema.json: floe:///parts/gone.json is not a part; refer to one as floe:///parts/<name>.json
+$ floe check page.yaml
+exit 1
+--- stderr
+$SAMPLE/own/parts/mine/schema.json: floe:///parts/gone.json is not a part; refer to one as floe:///parts/<name>.json
+$ floe render --out-dir $TMP/pages/page.yaml page.yaml
+exit 1
+--- stderr
+$SAMPLE/own/parts/mine/schema.json: floe:///parts/gone.json is not a part; refer to one as floe:///parts/<name>.json

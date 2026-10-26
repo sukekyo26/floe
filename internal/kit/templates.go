@@ -2,11 +2,14 @@ package kit
 
 import (
 	"bytes"
+	"errors"
 	"html/template"
+	"io/fs"
 	"maps"
 	"path"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/sukekyo26/floe/internal/rules"
 	"github.com/sukekyo26/floe/internal/schema"
@@ -49,40 +52,54 @@ func (k *Kit) readThemes(d Dir) error {
 	if err != nil {
 		return err
 	}
+	var found usererr.List
 	for _, name := range dirs {
-		t := &Theme{
-			name: name, dir: path.Join(d.Name, name), base: nil, palette: nil, partsCSS: map[string][]byte{}, unread: nil,
+		if !validName(name) {
+			found = append(found, usererr.NewAt(path.Join(d.Name, name), 0, 0, "kit_bad_name"))
+			continue
 		}
-		all, err := entries(d, name, false)
+		t, err := k.readTheme(d, name)
 		if err != nil {
-			return err
-		}
-		var read []string
-		for _, file := range all {
-			stem, ok := strings.CutSuffix(file, ".css")
-			if !ok || stem != "base" && stem != "palette" && !k.isPartOrLook(stem) {
-				continue
-			}
-			read = append(read, file)
-			src, _, failed := readCSS(d, name, file)
-			if failed != nil {
-				return failed
-			}
-			switch stem {
-			case "base":
-				t.base = src
-			case "palette":
-				t.palette = src
-			default:
-				t.partsCSS[stem] = src
-			}
-		}
-		if t.unread, err = unreadIn(d, name, read...); err != nil {
 			return err
 		}
 		k.themes[name] = t
 	}
-	return nil
+	return found.Err()
+}
+
+// readTheme reads the theme of d named name, its directory.
+func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
+	t := &Theme{
+		name: name, dir: path.Join(d.Name, name), base: nil, palette: nil, partsCSS: map[string][]byte{}, unread: nil,
+	}
+	all, err := entries(d, name, false)
+	if err != nil {
+		return nil, err
+	}
+	var read []string
+	for _, file := range all {
+		stem, ok := strings.CutSuffix(file, ".css")
+		if !ok || stem != "base" && stem != "palette" && !k.isPartOrLook(stem) {
+			continue
+		}
+		read = append(read, file)
+		src, _, failed := readCSS(d, name, file)
+		if failed != nil {
+			return nil, failed
+		}
+		switch stem {
+		case "base":
+			t.base = src
+		case "palette":
+			t.palette = src
+		default:
+			t.partsCSS[stem] = src
+		}
+	}
+	if t.unread, err = unreadIn(d, name, read...); err != nil {
+		return nil, err
+	}
+	return t, nil
 }
 
 // Template is a template read: page.html and the schema of its data, and what goes with them.
@@ -99,6 +116,7 @@ type Template struct {
 	example   []byte
 	hasSchema bool
 	unread    []string
+	assets    map[string]func() (template.URL, error) // by the path under assets/, read once when named
 }
 
 // Name returns the name of t.
@@ -147,6 +165,10 @@ func (k *Kit) readTemplates(d Dir, partsRead bool) error {
 	}
 	var found usererr.List
 	for _, name := range dirs {
+		if !validName(name) {
+			found = append(found, usererr.NewAt(path.Join(d.Name, name), 0, 0, "kit_bad_name"))
+			continue
+		}
 		if failed := found.Add(k.readTemplate(d, name, partsRead)); failed != nil {
 			return failed
 		}
@@ -158,7 +180,7 @@ func (k *Kit) readTemplates(d Dir, partsRead bool) error {
 func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	t := &Template{
 		name: name, dir: path.Join(d.Name, name), schema: nil, css: nil, checks: nil, computed: nil, words: nil, pages: nil,
-		pageSrc: nil, example: nil, hasSchema: false, unread: nil,
+		pageSrc: nil, example: nil, hasSchema: false, unread: nil, assets: nil,
 	}
 	var found usererr.List
 	var err error
@@ -166,7 +188,13 @@ func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
-	t.pages, t.pageSrc, err = readPages(d, name, "page.html", pageFuncs(), t.words)
+	t.assets, err = readAssets(d, name)
+	if failed := found.Add(err); failed != nil {
+		return failed
+	}
+	fns := pageFuncs()
+	fns["asset"] = t.asset
+	t.pages, t.pageSrc, err = readPages(d, name, "page.html", fns, t.words)
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
@@ -188,7 +216,7 @@ func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	if found != nil {
 		return found.Sorted().Err()
 	}
-	read := []string{"page.html", "page.css", "schema.json", "checks.yaml", "words.yaml", "example.yaml"}
+	read := []string{"page.html", "page.css", "schema.json", "checks.yaml", "words.yaml", "example.yaml", "assets/"}
 	// computed.yaml is read with the schema alone, whose items its expressions see.
 	if t.schema != nil {
 		read = append(read, "computed.yaml")
@@ -220,4 +248,107 @@ func (k *Kit) compileTemplate(d Dir, t *Template) error {
 	names := slices.Sorted(maps.Keys(c.Follow(c.Root).Props))
 	t.computed, err = rules.ReadComputed(path.Join(t.dir, "computed.yaml"), src, names)
 	return err //nolint:wrapcheck // its mistakes, or floe's failure
+}
+
+// asset returns the image of the assets of t at the path name under assets/, as a data URI, read the first
+// time it is named.
+// LIMIT: a name from the data is told at page.html (asset gets text alone); place it at the data if such get common.
+func (t *Template) asset(name string) (template.URL, error) {
+	read, ok := t.assets[name]
+	if !ok {
+		return "", usererr.New("kit_asset_unknown", name)
+	}
+	return read()
+}
+
+// readAssets checks the files under the assets/ of the template of d named name, every directory down, as
+// images floe takes (imageStat), without reading them; and returns a read of each, once, by its path under
+// assets/. None without assets/.
+func readAssets(d Dir, name string) (map[string]func() (template.URL, error), error) {
+	there, err := has(d, name, "assets")
+	if !there || err != nil {
+		return nil, err
+	}
+	a := assetsOf{
+		files: sub{FS: d.FS, dir: path.Join(name, "assets")}, dir: path.Join(d.Name, name, "assets"),
+		reads: map[string]func() (template.URL, error){}, found: nil,
+	}
+	if err := a.walk("."); err != nil {
+		return nil, err
+	}
+	return a.reads, a.found.Sorted().Err()
+}
+
+// assetsOf is the assets of a template being read: their files, the directory their mistakes name, a read of
+// each file checked, and the mistakes found.
+type assetsOf struct {
+	files fs.FS
+	dir   string
+	reads map[string]func() (template.URL, error)
+	found usererr.List
+}
+
+// walk checks the files of the directory at under the assets, then those of its directories.
+func (a *assetsOf) walk(at string) error {
+	d := Dir{FS: a.files, Name: a.dir}
+	names, err := entries(d, at, false)
+	if failed := a.found.Add(err); failed != nil {
+		return failed
+	}
+	for _, file := range names {
+		if failed := a.found.Add(a.check(path.Join(at, file))); failed != nil {
+			return failed
+		}
+	}
+	subs, err := entries(d, at, true)
+	if failed := a.found.Add(err); failed != nil {
+		return failed
+	}
+	for _, s := range subs {
+		if err := a.walk(path.Join(at, s)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// check checks the file p of the assets as an image floe takes, its mistake at it, and keeps a read of it.
+func (a *assetsOf) check(p string) error {
+	if _, err := imageStat(a.files, p, a.dir, "assets/"); err != nil {
+		var e *usererr.Error
+		if errors.As(err, &e) && e.File == "" {
+			e.File = path.Join(a.dir, p)
+		}
+		return err
+	}
+	a.reads[p] = sync.OnceValues(func() (template.URL, error) { return ReadImage(a.files, p, a.dir, "assets/") })
+	return nil
+}
+
+// sub is the directory dir of an FS as an FS of its own, its Stat the FS's: fs.Sub's opens a file to stat it,
+// which blocks on a FIFO and fails on a file that cannot be read.
+type sub struct {
+	fs.FS
+	dir string
+}
+
+func (s sub) Open(name string) (fs.File, error) {
+	if !fs.ValidPath(name) {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
+	}
+	return s.FS.Open(path.Join(s.dir, name)) //nolint:wrapcheck // the FS's error, of the file named
+}
+
+func (s sub) Stat(name string) (fs.FileInfo, error) {
+	if !fs.ValidPath(name) {
+		return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrInvalid}
+	}
+	return fs.Stat(s.FS, path.Join(s.dir, name)) //nolint:wrapcheck // as Open
+}
+
+func (s sub) ReadDir(name string) ([]fs.DirEntry, error) {
+	if !fs.ValidPath(name) {
+		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrInvalid}
+	}
+	return fs.ReadDir(s.FS, path.Join(s.dir, name)) //nolint:wrapcheck // as Open
 }

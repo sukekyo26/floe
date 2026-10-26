@@ -183,35 +183,60 @@ func (k *Kit) isPartOrLook(name string) bool {
 }
 
 // entries returns the names of the directories (dirs) or files of the directory dir of d ("." for d
-// itself), those starting with a dot left out, sorted; none without an FS.
+// itself), those starting with a dot left out, sorted; none without an FS. A symlink to a file is that file,
+// as the system follows it (dotfiles link files into a directory of their own); one to a directory is
+// refused, as floe reads the directories it holds as they are; one that leads nowhere cannot be read.
 func entries(d Dir, dir string, dirs bool) ([]string, error) {
 	if d.FS == nil {
 		return nil, nil
 	}
 	all, err := fs.ReadDir(d.FS, dir)
 	if err != nil {
-		return nil, fmt.Errorf("kit: read %s: %w", path.Join(d.Name, dir), err)
+		return nil, usererr.CannotRead(path.Join(d.Name, dir), err)
 	}
 	var names []string
+	var found usererr.List
 	for _, e := range all {
-		if e.IsDir() == dirs && !strings.HasPrefix(e.Name(), ".") {
+		if strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		at := path.Join(d.Name, dir, e.Name())
+		isDir := e.IsDir()
+		if e.Type()&fs.ModeSymlink != 0 {
+			fi, err := fs.Stat(d.FS, path.Join(dir, e.Name()))
+			switch {
+			case err != nil:
+				if failed := found.Add(usererr.CannotRead(at, err)); failed != nil {
+					return nil, failed
+				}
+				continue
+			case fi.IsDir():
+				found = append(found, usererr.NewAt(at, 0, 0, "kit_dir_link"))
+				continue
+			}
+		}
+		if isDir == dirs {
 			names = append(names, e.Name())
 		}
 	}
-	return names, nil
+	return names, found.Err()
 }
 
 // readFile returns the file name of the directory dir of d, without a byte order mark at its start, and
-// false when there is none.
-// LIMIT: a file floe cannot read is floe's failure; the reading of one's own directories is to tell it as
-// the reader's.
+// false when there is none; one that cannot be read in the system's words, at it. What is neither a regular
+// file nor a directory (a FIFO, a link to a device) is refused unread, as reading it may block or never end.
 func readFile(d Dir, dir, name string) ([]byte, bool, error) {
+	at := path.Join(d.Name, dir, name)
+	// LIMIT: a file made a FIFO between the Stat and the read blocks it; open it without blocking if it comes to.
+	if fi, err := fs.Stat(d.FS, path.Join(dir, name)); err == nil && !fi.Mode().IsRegular() && !fi.IsDir() {
+		return nil, false, usererr.NewAt(at, 0, 0, "kit_not_file")
+	}
 	src, err := fs.ReadFile(d.FS, path.Join(dir, name))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		return nil, false, nil
 	case err != nil:
-		return nil, false, fmt.Errorf("kit: read %s: %w", path.Join(d.Name, dir, name), err)
+		return nil, false, usererr.CannotRead(at, err)
 	}
 	return bom.Trim(src), true, nil
 }
@@ -233,7 +258,7 @@ func has(d Dir, dir, name string) (bool, error) {
 	case errors.Is(err, fs.ErrNotExist):
 		return false, nil
 	case err != nil:
-		return false, fmt.Errorf("kit: read %s: %w", path.Join(d.Name, dir, name), err)
+		return false, usererr.CannotRead(path.Join(d.Name, dir, name), err)
 	}
 	return true, nil
 }
@@ -266,4 +291,9 @@ func readWordsIn(d Dir, dir string) (words, error) {
 		return nil, err
 	}
 	return readWords(path.Join(d.Name, dir, "words.yaml"), src)
+}
+
+// OwnTemplates returns the names of the templates k read itself, not its base's, sorted.
+func (k *Kit) OwnTemplates() []string {
+	return slices.Sorted(maps.Keys(k.templates))
 }

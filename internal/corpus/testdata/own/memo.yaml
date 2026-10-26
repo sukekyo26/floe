@@ -1,0 +1,18 @@
+lang: en
+template: memo
+theme: dusk
+title: The week's memo
+logo: img/logo.svg
+badges:
+  - label: weekly
+    tone: accent
+items:
+  - what: Read the plan
+    done: true
+  - what: Write the design of B7
+flow:
+  width: 200
+  height: 120
+  title: Lambda
+  parts:
+    - icon: { icon: aws/res/aws-lambda, x: 76, y: 20, label: AWS Lambda }

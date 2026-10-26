@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "A short label in a rounded box",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["label"],
+  "properties": {
+    "label": { "type": "string" },
+    "tone": { "$ref": "floe:///parts/tone.json" }
+  }
+}

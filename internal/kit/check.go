@@ -8,6 +8,8 @@ import (
 
 	"github.com/sukekyo26/floe/internal/css"
 	"github.com/sukekyo26/floe/internal/cycle"
+	"github.com/sukekyo26/floe/internal/doc"
+	"github.com/sukekyo26/floe/internal/rules"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -22,7 +24,7 @@ func check(k *Kit) error {
 	var found usererr.List
 	add := func(err error) error { return found.Add(err) }
 	for _, name := range slices.Sorted(maps.Keys(k.parts)) {
-		if err := add(k.checkPart(k.parts[name])); err != nil {
+		if err := add(checkPart(k.parts[name])); err != nil {
 			return err
 		}
 	}
@@ -55,14 +57,15 @@ func check(k *Kit) error {
 	return found.Sorted().Err()
 }
 
-// checkPart checks the files, the CSS, the schema and the escaping of p, of k.
-func (k *Kit) checkPart(p *Part) error {
+// checkPart checks the files, the CSS, the schema, the checks' for and the escaping of p.
+func checkPart(p *Part) error {
 	var found usererr.List
 	if p.pages == nil || !p.hasCSS {
 		found = append(found, usererr.NewAt(p.dir, 0, 0, "kit_part_files"))
 	}
 	found = append(found, unread(p.dir, p.unread, "kit_part_unread")...)
-	errs := []error{css.Check(path.Join(p.dir, "part.css"), p.css), schema.CheckPart(partURL(p.name), k.resources)}
+	found = append(found, forMistakes(p.checks, p.schema)...)
+	errs := []error{css.Check(path.Join(p.dir, "part.css"), p.css), p.schema.CheckPart()}
 	if p.pages != nil {
 		errs = append(errs, escapeMistake(p.pages[""], p.pageSrc, path.Join(p.dir, "part.html")))
 	}
@@ -158,19 +161,50 @@ func checkTheme(t *Theme) error {
 	return usererr.Collect(errs...)
 }
 
-// checkTemplate checks that t holds page.html and schema.json and no file it does not read, its page.css, and
-// its page's escaping.
+// checkTemplate checks that t holds page.html, schema.json and example.yaml, whose template: names t, and no
+// file it does not read, its page.css, and its page's escaping.
 func checkTemplate(t *Template) error {
 	var found usererr.List
-	for _, file := range []string{"page.html", "schema.json"} {
-		if file == "page.html" && t.pages == nil || file == "schema.json" && !t.hasSchema {
+	files := map[string]bool{"page.html": t.pages != nil, "schema.json": t.hasSchema, "example.yaml": t.example != nil}
+	for file, has := range files {
+		if !has {
 			found = append(found, usererr.NewAt(t.dir, 0, 0, "kit_template_file", file))
 		}
 	}
-	errs := []error{found.Err(), css.Check(path.Join(t.dir, "page.css"), t.css)}
+	errs := []error{
+		found.Err(), exampleNames(t), forMistakes(t.checks, t.schema).Err(), css.Check(path.Join(t.dir, "page.css"), t.css),
+	}
 	if t.pages != nil {
 		errs = append(errs, escapeMistake(t.pages[""], t.pageSrc, path.Join(t.dir, "page.html")))
 	}
 	errs = append(errs, unread(t.dir, t.unread, "kit_template_unread").Err())
 	return usererr.Collect(errs...)
+}
+
+// exampleNames refuses an example.yaml of t whose template: names another: floe template check would check
+// that one. An example that cannot be read is told when it is drawn.
+func exampleNames(t *Template) error {
+	if t.example == nil {
+		return nil
+	}
+	d, _ := doc.Read(t.File("example.yaml"), t.example, "") //nolint:errcheck // told when it is drawn
+	if d == nil || d.Template == "" || d.Template == t.name {
+		return nil
+	}
+	return yamlpos.New(d.File, d.Where["template"], "kit_example_name", d.Template, t.name)
+}
+
+// forMistakes refuses each for of checks, of the schema c, through a key the schema forbids (S10): such a
+// check would find no items, and pass unseen.
+func forMistakes(checks *rules.Checks, c *schema.Compiled) usererr.List {
+	if checks == nil || c == nil {
+		return nil
+	}
+	var found usererr.List
+	for _, f := range checks.Fors() {
+		if key, ok := c.Forbidding(strings.Split(f.Path, ".")); ok {
+			found = append(found, yamlpos.New(checks.File(), f.At, "kit_for_undeclared", f.Path, key))
+		}
+	}
+	return found
 }

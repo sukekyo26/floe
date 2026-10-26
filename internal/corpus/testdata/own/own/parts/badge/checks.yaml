@@ -1,0 +1,3 @@
+- field: label
+  expr: len(item.label) <= 20
+  message: keep a badge's label to 20 characters

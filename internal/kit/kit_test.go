@@ -273,43 +273,74 @@ func TestWordsAsWritten(t *testing.T) {
 	}
 }
 
-// Parts and looks share their names: a shared schema of a part's name is refused, of floe's too, and so is
-// one's own of another kind than floe's of its name, which floe's parts and schemas name.
+// Parts, looks and shared schemas share their names: one's own of a name floe's take is refused, of any kind,
+// as floe's templates and parts would go on with floe's; so are two of one's own of a name, a name floe does
+// not take, and a name of a theme's file.
 func TestNames(t *testing.T) {
 	t.Parallel()
 
 	k := floe(t)
-	mine, err := kit.Read(k, kit.Sources{Parts: kit.Dir{FS: fstest.MapFS{
-		"table/schema.json": {Data: []byte(`{"type": "object"}`)}, "table/part.html": {Data: []byte("x")},
-		"panel/part.css": {Data: []byte("a {}")},
-	}, Name: "own/parts"}})
-	if err != nil {
-		t.Fatal(told(err))
-	}
-	if mine.Resources()["floe:///parts/table.json"].File != "own/parts/table/schema.json" {
-		t.Error("one's own part table does not take the place of floe's")
-	}
-	if parts, looks, _, _ := mine.Names(); !slices.Contains(parts, "table") || !slices.Contains(looks, "panel") {
-		t.Errorf("Names = %v, %v", parts, looks)
-	}
-	twice := "own/parts/p.json: p names both own/parts/p and own/parts/p.json: give one of them another name"
 	for _, tt := range []struct {
 		parts fstest.MapFS
 		want  string
 	}{
-		{fstest.MapFS{"p/part.css": {Data: []byte("")}, "p.json": {Data: []byte("{}")}}, twice},
-		{fstest.MapFS{"table.json": {Data: []byte("{}")}}, "own/parts/table.json: table names both parts/table and own/parts/table.json: give one of them another name"},
-		{fstest.MapFS{"any/part.css": {Data: []byte("")}}, "own/parts/any: any names both parts/any.json and own/parts/any: give one of them another name"},
-		{fstest.MapFS{"table/part.css": {Data: []byte("")}}, "own/parts/table: table is the name of the part parts/table, which its parts and schemas name as a part: give this look another name"},
 		{
-			fstest.MapFS{"panel/schema.json": {Data: []byte(`{"type": "object"}`)}, "panel/part.html": {Data: []byte("x")}},
-			"own/parts/panel: panel is the name of the look parts/panel, which its parts take with looks:: give this part another name",
+			fstest.MapFS{"p/part.css": {Data: []byte("")}, "p.json": {Data: []byte("{}")}},
+			"own/parts/p.json: p names both own/parts/p and own/parts/p.json: give one of them another name",
+		},
+		{
+			fstest.MapFS{"table.json": {Data: []byte("{}")}},
+			"own/parts/table.json: table is the name of floe's parts/table, which floe's templates and parts would go on drawing and checking with: give yours another name",
+		},
+		{
+			fstest.MapFS{"any/part.css": {Data: []byte("")}},
+			"own/parts/any: any is the name of floe's parts/any.json, which floe's templates and parts would go on drawing and checking with: give yours another name",
+		},
+		{
+			fstest.MapFS{"table/schema.json": {Data: []byte(`{"type": "object"}`)}, "table/part.html": {Data: []byte("x")}},
+			"own/parts/table: table is the name of floe's parts/table, which floe's templates and parts would go on drawing and checking with: give yours another name",
+		},
+		{
+			fstest.MapFS{"diagram/schema.json": {Data: []byte(`{"type": "object"}`)}, "diagram/part.html": {Data: []byte("x")}},
+			"own/parts/diagram: diagram is the name of floe's parts/diagram, which floe's templates and parts would go on drawing and checking with: give yours another name",
+		},
+		{
+			fstest.MapFS{"panel/part.css": {Data: []byte("")}},
+			"own/parts/panel: panel is the name of floe's parts/panel, which floe's templates and parts would go on drawing and checking with: give yours another name",
+		},
+		{
+			fstest.MapFS{"base/part.css": {Data: []byte("")}, "palette/part.css": {Data: []byte("")}},
+			lines(
+				"own/parts/base: base names a file of every theme (base.css), which a theme's CSS for this part would be read as: give it another name",
+				"own/parts/palette: palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name",
+			),
+		},
+		// A shared schema has no CSS a theme gives.
+		{fstest.MapFS{"base.json": {Data: []byte(`{"$schema": "https://json-schema.org/draft/2020-12/schema"}`)}}, ""},
+		{
+			fstest.MapFS{"Note/part.css": {Data: []byte("")}, "-x/part.css": {Data: []byte("")}, "a b.json": {Data: []byte("{}")}, "my-note_2/part.css": {Data: []byte("")}},
+			lines(
+				"own/parts/-x: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it",
+				"own/parts/Note: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it",
+				"own/parts/a b.json: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it",
+			),
 		},
 	} {
 		_, err := kit.Read(k, kit.Sources{Parts: kit.Dir{FS: tt.parts, Name: "own/parts"}})
 		if got := told(err); got != tt.want {
 			t.Errorf("told\n%s\nwant\n%s", got, tt.want)
 		}
+	}
+	_, err := kit.Read(k, kit.Sources{
+		Themes:    kit.Dir{FS: fstest.MapFS{"Dark/base.css": {Data: []byte("")}, "ink/base.css": {Data: []byte("")}}, Name: "own/themes"},
+		Templates: kit.Dir{FS: fstest.MapFS{"Report/page.html": {Data: []byte("")}}, Name: "own/templates"},
+	})
+	want := lines(
+		"own/themes/Dark: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it",
+		"own/templates/Report: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it",
+	)
+	if got := told(err); got != want {
+		t.Errorf("themes and templates told\n%s\nwant\n%s", got, want)
 	}
 }
 
@@ -371,4 +402,49 @@ func page(t *testing.T, p interface {
 		t.Fatal(err)
 	}
 	return c
+}
+
+// A $ref of one's own to no part is told at the file that holds it, a part's schema.json or a shared schema,
+// not at a template compiled with it (S5); and when a part could not be read, none is compiled, as a $ref to it
+// would be told as to no part.
+func TestCompileParts(t *testing.T) {
+	t.Parallel()
+
+	const gone = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": "floe:///parts/gone.json"}`
+	template := fstest.MapFS{
+		"memo/page.html": {Data: []byte("x")},
+		"memo/schema.json": {Data: []byte(`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", ` +
+			`"properties": {"m": {"$ref": "floe:///parts/mine.json"}, "s": {"$ref": "floe:///parts/sh.json"}}}`)},
+	}
+	mine := func(schema string) fstest.MapFS {
+		return fstest.MapFS{
+			"mine/schema.json": {Data: []byte(schema)}, "mine/part.html": {Data: []byte("x")}, "mine/part.css": {Data: []byte("")},
+			"sh.json": {Data: []byte(`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string"}`)},
+		}
+	}
+	for _, tt := range []struct {
+		name  string
+		parts fstest.MapFS
+		want  string
+	}{
+		{"a part", mine(gone), "own/parts/mine/schema.json: floe:///parts/gone.json is not a part; refer to one as floe:///parts/<name>.json"},
+		{"a shared schema", func() fstest.MapFS {
+			p := mine(`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string"}`)
+			p["sh.json"] = &fstest.MapFile{Data: []byte(gone)}
+			return p
+		}(), "own/parts/sh.json: floe:///parts/gone.json is not a part; refer to one as floe:///parts/<name>.json"},
+		{"a part that could not be read", func() fstest.MapFS {
+			p := mine(`{"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": "floe:///parts/bad.json"}`)
+			p["bad/schema.json"] = &fstest.MapFile{Data: []byte("{")}
+			p["bad/part.html"] = &fstest.MapFile{Data: []byte("x")}
+			return p
+		}(), "own/parts/bad/schema.json:1:2: unexpected EOF"},
+	} {
+		_, err := kit.Read(floe(t), kit.Sources{
+			Parts: kit.Dir{FS: tt.parts, Name: "own/parts"}, Templates: kit.Dir{FS: template, Name: "own/templates"},
+		})
+		if got := told(err); got != tt.want {
+			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+	}
 }

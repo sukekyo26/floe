@@ -59,9 +59,9 @@ type rendered struct {
 }
 
 func (a *app) renderPages(paths []string, out arg, check bool) error {
-	k, err := kit.Floe()
+	k, err := a.kit(true)
 	if err != nil {
-		return err //nolint:wrapcheck // floe's own, which its tests check
+		return err
 	}
 	pages, err := a.drawPages(k, a.iconStore(), paths, out)
 	switch {
