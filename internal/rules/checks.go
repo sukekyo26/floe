@@ -110,10 +110,9 @@ func readCheck(file string, n ast.Node) (check, usererr.List) {
 			found = append(found, yamlpos.New(file, yamlpos.Of(m), "rules_checks_missing", key))
 		}
 	}
-	// Left out, for and field have their meanings; written empty, they would take them unseen.
 	for _, key := range []string{"for", "field"} {
-		if written, ok := at[key]; ok && *to[key] == "" {
-			found = append(found, yamlpos.New(file, written, "rules_checks_"+key+"_empty"))
+		if written, ok := at[key]; ok {
+			found = append(found, pathMistakes(file, written, key, *to[key])...)
 		}
 	}
 	if src.src != "" {
@@ -123,6 +122,18 @@ func readCheck(file string, n ast.Node) (check, usererr.List) {
 		}
 	}
 	return c, found
+}
+
+// pathMistakes refuses path, the for or field (key) of a check written at at in file, written empty or with an
+// empty step (items., .items, a..b): left out, they have their meanings, which such a path would take unseen.
+func pathMistakes(file string, at yamlpos.Pos, key, path string) usererr.List {
+	switch {
+	case path == "":
+		return usererr.List{yamlpos.New(file, at, "rules_checks_"+key+"_empty")}
+	case slices.Contains(strings.Split(path, "."), ""):
+		return usererr.List{yamlpos.New(file, at, "rules_checks_step", key, path)}
+	}
+	return nil
 }
 
 // item is a value of the data and the path to it, keys and indexes.

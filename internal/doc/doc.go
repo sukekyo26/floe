@@ -13,19 +13,20 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// Data is a data file read: the keys every template shares, and the rest for the template's schema.
+// Data is a data file read: its values as written, and the keys every template shares read from them.
 type Data struct {
 	File                         string
-	Lang, Template, Theme, Title string // "" for one left out
-	Values                       map[string]any
+	Lang, Template, Theme, Title string           // "" for one left out or refused; Title trimmed of spaces
+	Values                       map[string]any   // as written, the shared keys too
 	Root                         *ast.MappingNode // nil for an empty file
 	// where each shared key is written: its value, its key when the value is left out, the top of the file
 	// for one left out
 	Where map[string]yamlpos.Pos
 }
 
-// shared are the keys of a data file floe reads itself, in every template; the rest are the schema's.
-var shared = []string{"lang", "template", "theme", "title"}
+// Shared are the keys of a data file floe reads itself, in every template, which the template's schema neither
+// declares nor checks.
+var Shared = []string{"lang", "template", "theme", "title"}
 
 // Read reads the data file src, file in its mistakes: yamlpos.Parse, and only when it refused nothing,
 // goccy/go-yaml's reading of the values (its mistake for a top that is not keys and values), then the
@@ -77,7 +78,8 @@ func ints(v any) any {
 	return v
 }
 
-// readShared moves the keys every template shares from d.Values to d, and notes where each is written.
+// readShared reads the keys every template shares from d.Values into d, leaving them in d.Values as written,
+// and notes where each is written.
 func (d *Data) readShared() error {
 	top := yamlpos.Pos{Line: 1, Column: 1}
 	pairs := map[string]*ast.MappingValueNode{}
@@ -89,13 +91,12 @@ func (d *Data) readShared() error {
 	}
 	to := map[string]*string{"lang": &d.Lang, "template": &d.Template, "theme": &d.Theme, "title": &d.Title}
 	var found usererr.List
-	for _, key := range shared {
+	for _, key := range Shared {
 		d.Where[key] = top
 		if p := pairs[key]; p != nil {
 			d.Where[key] = yamlpos.OfValue(yamlpos.KeyOf(p), p.Value)
 		}
 		v, ok := d.Values[key]
-		delete(d.Values, key)
 		s, text := v.(string)
 		switch {
 		case ok && !text:

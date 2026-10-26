@@ -55,6 +55,7 @@ func TestReadComputed(t *testing.T) {
 			"t1/computed.yaml:6:1: 1a"+notName,
 		)},
 		{"a function's name, an item's too", "count: 3\n", "t1/computed.yaml:1:1: count" + notName},
+		{"a shared key's name", "title: 3\n", "t1/computed.yaml:1:1: title is an item of the data too, so an expression could not tell them apart; rename it"},
 		{"a function's name, then used", "sum: 3\nlen: 3\nx: len + 1\n", lines(
 			"t1/computed.yaml:1:1: sum"+notName,
 			"t1/computed.yaml:2:1: len"+notName,
@@ -110,6 +111,7 @@ func TestComputedRun(t *testing.T) {
 
 	for _, tt := range []struct{ name, src, body, values, want string }{
 		{"in order", "x: y * 2\ny: a + 1\n", "a: 1\n", "x=4 y=2", ""},
+		{"the shared keys", "x: title + \"!\"\ny: lang\n", "title: Plan\n", "x=Plan! y=en", ""},
 		{"a function, an item named so", "c: count(items, .price > 1)\n", "count: 5\nitems: [{price: 3}]\n", "c=1", ""},
 		{"left out", "x: opt ?? 0\ny: opt\nz: records?.in_1_year\n", "a: 1\n", "x=0 y=<nil> z=<nil>", ""},
 		{"a string", "x: '\"$env\"'\n", "a: 1\n", "x=$env", ""},

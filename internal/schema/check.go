@@ -8,14 +8,12 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
+	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // drafts are the drafts floe takes. Before 2019-09 the library leaves out every key beside a $ref.
 var drafts = []string{"https://json-schema.org/draft/2020-12/schema", "https://json-schema.org/draft/2019-09/schema"}
-
-// shared are the keys of a data file floe reads itself and leaves out of what the schema checks.
-var shared = []string{"lang", "template", "theme", "title"}
 
 // dialects refuses each "$schema" of doc, the JSON compiled, that names no draft floe takes: one that leaves
 // out vocabularies leaves properties and the like out of the compiled tree, and the library would read an
@@ -119,9 +117,15 @@ func (c *Compiled) checkNode(n *jsonschema.Schema, r reached) usererr.List {
 	return found
 }
 
-// sharedKeys refuses each key floe reads itself that a schema always applied to the root's value requires:
-// the root, and what its allOf and its $refs to the same file or to a Shared schema hold. floe leaves the key
-// out of the values it checks, so that the schema would always say it is missing. Declaring one is harmless.
+// sharedKeys refuses each key floe reads itself (doc.Shared) that a schema always applied to the root's value
+// declares or requires: the root, and what its allOf and its $refs to the same file or to a Shared schema hold.
+// floe leaves the keys out of the values it checks, so that a rule declared for one would never be checked and a
+// key required would always be missing. A key declared and required is told at both, which are fixed apart.
+// LIMIT: only properties are looked at: what if/then, anyOf, oneOf and not hold, dependentSchemas, dependencies
+// of a schema, the keys of dependentRequired and of dependencies, and patternProperties are not, and a rule they
+// give one of the keys is silently left unchecked.
+// LIMIT: a $defs the root refers to is refused for declaring one of the keys even where an item under the root
+// refers to it too, for which the declaration is right; give the root a $defs of its own if a template needs it.
 func (c *Compiled) sharedKeys() usererr.List {
 	var found usererr.List
 	seen := map[*jsonschema.Schema]bool{}
@@ -131,17 +135,11 @@ func (c *Compiled) sharedKeys() usererr.List {
 			return
 		}
 		seen[s] = true
-		required := slices.Clone(s.Required)
-		for _, more := range s.DependentRequired {
-			required = append(required, more...)
-		}
-		for _, dep := range s.Dependencies {
-			// The library reads dependencies in every draft.
-			if more, ok := dep.([]string); ok {
-				required = append(required, more...)
+		required := requiredOf(s)
+		for _, key := range doc.Shared {
+			if s.Properties[key] != nil {
+				found = append(found, c.mistake(s.Properties[key], "schema_shared_declared", key))
 			}
-		}
-		for _, key := range shared {
 			if slices.Contains(required, key) {
 				found = append(found, c.mistake(s, "schema_shared_key", key))
 			}
@@ -155,6 +153,21 @@ func (c *Compiled) sharedKeys() usererr.List {
 	}
 	root(c.Root)
 	return found
+}
+
+// requiredOf returns the keys s requires: required, and those dependentRequired and dependencies require.
+func requiredOf(s *jsonschema.Schema) []string {
+	required := slices.Clone(s.Required)
+	for _, more := range s.DependentRequired {
+		required = append(required, more...)
+	}
+	for _, dep := range s.Dependencies {
+		// The library reads dependencies in every draft.
+		if more, ok := dep.([]string); ok {
+			required = append(required, more...)
+		}
+	}
+	return required
 }
 
 // checkPart refuses one of Formats in the part compiled, or in a Shared schema it refers to, where it is

@@ -51,11 +51,13 @@ func usable(n string) bool {
 
 var identifier = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 
-// ReadComputed reads the computed.yaml src of file, whose expressions see the items names of the data (those
-// a schema declares at its top) by name, and the other computed values. It tells, all together and Sorted,
-// the mistakes of its shape and names, and of the expressions whose names are right, and the values computed
-// from each other among the expressions that compile. An empty file computes nothing.
+// ReadComputed reads the computed.yaml src of file, whose expressions see by name the items names of the data
+// (those a schema declares at its top), the keys every data file shares (doc.Shared), and the other computed
+// values. It tells, all together and Sorted, the mistakes of its shape and names, and of the expressions whose
+// names are right, and the values computed from each other among the expressions that compile. An empty file
+// computes nothing.
 func ReadComputed(file string, src []byte, names []string) (*Computed, error) {
+	names = withShared(names)
 	c := &Computed{
 		exprs: map[string]expression{}, programs: map[string]*vm.Program{}, uses: map[string][]string{},
 		order: nil, items: nil, field: map[string]int{}, env: nil,
@@ -119,6 +121,17 @@ func ReadComputed(file string, src []byte, names []string) (*Computed, error) {
 	}
 	c.order = order(all, c.uses)
 	return c, nil
+}
+
+// withShared returns names and the keys every data file shares that names leaves out.
+func withShared(names []string) []string {
+	names = slices.Clone(names)
+	for _, key := range doc.Shared {
+		if !slices.Contains(names, key) {
+			names = append(names, key)
+		}
+	}
+	return names
 }
 
 // readExprs reads into c the expressions of body, the top of the computed.yaml file, adding to found those
