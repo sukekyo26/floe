@@ -135,6 +135,10 @@ func TestComputedRun(t *testing.T) {
 			"divided by zero", "ratio: a / b\nr2: ratio * 2\n", "a: 1\nb: 0\n", "",
 			"t1/computed.yaml:1:10: ratio cannot be computed from d.yaml: 1 / 0 is not a finite number",
 		},
+		{
+			"a chain of three", "p: 1/0\nq: p + 1\nr: q + 1\n", "x: 1\n", "",
+			"t1/computed.yaml:1:5: p cannot be computed from d.yaml: 1 / 0 is not a finite number",
+		},
 		{"a power", "p: b ^ -1\n", "b: 0\n", "", "t1/computed.yaml:1:6: p cannot be computed from d.yaml: 0 ** -1 is not a finite number"},
 		{
 			"too big", "big: a * a\nnext: big + 1\n", "a: 1.0e300\n", "",

@@ -56,6 +56,26 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+// The names of additional properties are told in sorted order, which the library gives in a map's.
+func TestValidateAdditionalInOrder(t *testing.T) {
+	t.Parallel()
+
+	c, err := compile(t, `"properties": {"o": {"properties": {"a": {}}, "additionalProperties": false}}`)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	d, err := doc.Read("d.yaml", []byte("template: t\nlang: en\no: {a: 1, z: 1, b: 2, y: 3, c: 4}\n"))
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	const want = "d.yaml:3:5: additional properties 'b', 'c', 'y', 'z' not allowed"
+	for range 20 {
+		if got := told(c.Validate(d)); got != want {
+			t.Fatalf("Validate told\n%s\nwant\n%s", got, want)
+		}
+	}
+}
+
 // A property name the schema refuses is told at the key of the one object at its depth that has it, else at
 // the top of the file, the same each time (run with -count=20).
 func TestPropertyNames(t *testing.T) {
