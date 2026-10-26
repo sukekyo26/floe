@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/cli"
@@ -148,7 +149,7 @@ func TestTemplateCheck(t *testing.T) {
 			return at(dir, "example.yaml") + ":2:11: example.yaml names the template report; name it memo, after the template's directory"
 		}},
 		{"a page cut short", files("<svg><foreignObject><template>x</template></foreignObject></svg><p>after</p>", example, ""), func(dir string) string {
-			return at(dir, "example.yaml") + ":2:11: the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html or a part.html)"
+			return at(dir, "example.yaml") + ":2:11: the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html, a part.html or an item of format html)"
 		}},
 	} {
 		dir := write(t, tt.files)
@@ -210,5 +211,33 @@ func TestAssetLinks(t *testing.T) {
 	want := filepath.Join(img, "more") + ": " + dirLink + "\n"
 	if code, _, stderr := runEnv(dir, env, "template", "check"); code != 1 || stderr != want {
 		t.Errorf("a directory linked in = %d, %q; want %q", code, stderr, want)
+	}
+}
+
+// What is neither a regular file nor a directory, a FIFO or a link to a device, is refused, not read for ever;
+// and a default directory that is a file is told, not taken for none.
+func TestOwnNotFiles(t *testing.T) {
+	t.Parallel()
+
+	fifo := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
+	if err := syscall.Mkfifo(filepath.Join(fifo, "mine", "part.css"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	zero := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
+	link(t, "/dev/zero", filepath.Join(zero, "mine", "part.css"))
+	const notFile = ": this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here\n"
+	config := write(t, map[string]string{"floe/parts": "a file"})
+	for _, tt := range []struct {
+		name string
+		env  map[string]string
+		errs string
+	}{
+		{"a FIFO", map[string]string{"FLOE_PARTS_DIR": fifo}, filepath.Join(fifo, "mine", "part.css") + notFile},
+		{"a link to a device", map[string]string{"FLOE_PARTS_DIR": zero}, filepath.Join(zero, "mine", "part.css") + notFile},
+		{"the default a file", map[string]string{"XDG_CONFIG_HOME": config}, filepath.Join(config, "floe", "parts") + ": not a directory\n"},
+	} {
+		if code, _, stderr := runEnv(t.TempDir(), tt.env, "part", "check"); code != 1 || stderr != tt.errs {
+			t.Errorf("%s: floe part check = %d, %q; want 1, %q", tt.name, code, stderr, tt.errs)
+		}
 	}
 }

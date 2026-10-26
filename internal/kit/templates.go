@@ -252,6 +252,7 @@ func (k *Kit) compileTemplate(d Dir, t *Template) error {
 
 // asset returns the image of the assets of t at the path name under assets/, as a data URI, read the first
 // time it is named.
+// LIMIT: a name from the data is told at page.html (asset gets text alone); place it at the data if such get common.
 func (t *Template) asset(name string) (template.URL, error) {
 	read, ok := t.assets[name]
 	if !ok {

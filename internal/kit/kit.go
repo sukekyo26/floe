@@ -200,9 +200,9 @@ func entries(d Dir, dir string, dirs bool) ([]string, error) {
 		if strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
+		at := path.Join(d.Name, dir, e.Name())
 		isDir := e.IsDir()
 		if e.Type()&fs.ModeSymlink != 0 {
-			at := path.Join(d.Name, dir, e.Name())
 			fi, err := fs.Stat(d.FS, path.Join(dir, e.Name()))
 			switch {
 			case err != nil:
@@ -223,14 +223,19 @@ func entries(d Dir, dir string, dirs bool) ([]string, error) {
 }
 
 // readFile returns the file name of the directory dir of d, without a byte order mark at its start, and
-// false when there is none; one that cannot be read in the system's words, at it.
+// false when there is none; one that cannot be read in the system's words, at it. What is neither a regular
+// file nor a directory (a FIFO, a link to a device) is refused unread, as reading it may block or never end.
 func readFile(d Dir, dir, name string) ([]byte, bool, error) {
+	at := path.Join(d.Name, dir, name)
+	if fi, err := fs.Stat(d.FS, path.Join(dir, name)); err == nil && !fi.Mode().IsRegular() && !fi.IsDir() {
+		return nil, false, usererr.NewAt(at, 0, 0, "kit_not_file")
+	}
 	src, err := fs.ReadFile(d.FS, path.Join(dir, name))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		return nil, false, nil
 	case err != nil:
-		return nil, false, usererr.CannotRead(path.Join(d.Name, dir, name), err)
+		return nil, false, usererr.CannotRead(at, err)
 	}
 	return bom.Trim(src), true, nil
 }

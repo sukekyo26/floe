@@ -118,15 +118,6 @@ func Compile(url, file string, src []byte, res map[string]Resource) (*Compiled, 
 	return c, c.checkTemplate()
 }
 
-// CheckPart compiles the part at url of res as a root, and checks it ((*Compiled).CheckPart).
-func CheckPart(url string, res map[string]Resource) error {
-	c, err := CompilePart(url, res)
-	if err != nil {
-		return err
-	}
-	return c.CheckPart()
-}
-
 // CompilePart compiles the part at url of res as a root, for a value to be checked against it alone.
 func CompilePart(url string, res map[string]Resource) (*Compiled, error) {
 	r, ok := res[url]
@@ -304,9 +295,8 @@ func (h *holes) fill(base, frag string) bool {
 }
 
 // loader reads no URL: a schema refers to no file or URL outside what floe holds (a trust boundary).
-// LIMIT: the mistake is told in the file compiled, not in the file whose $ref it is. kit compiles each part
-// and shared schema on its own before the templates, so that one is told at its own file; along a chain of
-// $refs (a part to a shared schema to another), it is told at each file compiled that reaches it too.
+// kit compiles each part and shared schema on its own first, so that a $ref of one is told at its own file.
+// LIMIT: along a chain of $refs it is told at each file that reaches it too; tell its own file alone if that misleads.
 type loader struct{ file string }
 
 func (l loader) Load(u string) (any, error) {

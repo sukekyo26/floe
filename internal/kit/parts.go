@@ -161,16 +161,17 @@ func (k *Kit) compileParts(dirs, shared []string) error {
 	return found.Sorted().Err()
 }
 
-// clashes refuses each of the parts and looks (dirs) and the shared schemas of d whose name is not one floe
-// takes (names), is a theme's file (base, palette), is another of d's, or is one of the base's: floe's
-// templates and parts would go on reading the base's, compiled with it. Each is told at it.
+// clashes refuses each of the parts and looks (dirs) and the shared schemas of d whose name floe does not take
+// (validName); a part's or a look's that is a theme's file (base, palette); one that another of d's has; and one
+// that the base's has: floe's templates and parts would go on reading the base's, compiled with it. Each is
+// told at it.
 func (k *Kit) clashes(d Dir, dirs, shared []string) usererr.List {
 	var found usererr.List
-	check := func(name, at string, others bool) {
+	check := func(name, at string, others, styled bool) {
 		switch {
 		case !validName(name):
 			found = append(found, usererr.NewAt(at, 0, 0, "kit_bad_name"))
-		case name == "base" || name == "palette":
+		case styled && (name == "base" || name == "palette"):
 			found = append(found, usererr.NewAt(at, 0, 0, "kit_name_theme_file", name))
 		case others:
 			found = append(found, usererr.NewAt(at, 0, 0, "kit_name_twice", name, path.Join(d.Name, name), at))
@@ -181,10 +182,10 @@ func (k *Kit) clashes(d Dir, dirs, shared []string) usererr.List {
 		}
 	}
 	for _, name := range dirs {
-		check(name, path.Join(d.Name, name), false)
+		check(name, path.Join(d.Name, name), false, true)
 	}
 	for _, name := range shared {
-		check(name, path.Join(d.Name, name+".json"), slices.Contains(dirs, name))
+		check(name, path.Join(d.Name, name+".json"), slices.Contains(dirs, name), false)
 	}
 	return found
 }

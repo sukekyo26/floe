@@ -56,3 +56,12 @@ func schemaCompile(t *testing.T, src string) (*schema.Compiled, error) {
 }
 
 func lines(s ...string) string { return strings.Join(s, "\n") }
+
+// checkPart compiles the part at url of res as a root and checks it, as kit does.
+func checkPart(url string, res map[string]schema.Resource) error {
+	c, err := schema.CompilePart(url, res)
+	if err != nil {
+		return err //nolint:wrapcheck // its mistakes, as the tests compare them
+	}
+	return c.CheckPart() //nolint:wrapcheck // as above
+}

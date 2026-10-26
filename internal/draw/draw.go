@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"slices"
 	"strconv"
 	"strings"
@@ -114,14 +113,15 @@ func pageMistake(t *kit.Template, s *items, err error) error {
 // checked: what it holds would be told by what the item did.
 func readPage(k *kit.Kit, d *doc.Data, s *items, page []byte) (*html.Node, named, error) {
 	end := s.secret + "end"
-	//nolint:errcheck // a bytes.Reader fails no read, Parse's one error
-	tree, _ := html.Parse(io.MultiReader(bytes.NewReader(page), strings.NewReader("<!--"+end+"-->")))
+	marked := slices.Concat(page, []byte("<!--"+end+"-->"))
+	tree, _ := html.Parse(bytes.NewReader(marked)) //nolint:errcheck // a bytes.Reader fails no read, Parse's one error
+	// A page cut short is checked no further: an item's marks past the cut are gone, and would tell it changed.
+	if !cutEnd(tree, end) && tokenized(marked, end) {
+		return nil, named{}, yamlpos.New(d.File, d.Where["template"], "draw_page_cut")
+	}
 	ns := namesIn(k)
 	if err := s.check(k, ns, d, tree); err != nil {
 		return nil, named{}, err
-	}
-	if !cutEnd(tree, end) {
-		return nil, named{}, yamlpos.New(d.File, d.Where["template"], "draw_page_cut")
 	}
 	s.unmark(tree)
 	n, err := checkPage(k, ns, d, tree)
@@ -131,23 +131,38 @@ func readPage(k *kit.Kit, d *doc.Data, s *items, page []byte) (*html.Node, named
 // cutEnd takes end, the text of the comment put after the page drawn, out of tree, and reports whether it was
 // there: as the comment, or in a text the page ended in (one of an element html/template does not follow, as
 // xmp or plaintext, or svg's CDATA).
-// LIMIT: x/net/html v0.61.0 leaves out the rest of a page past a <template> in an <svg> or a <math>
-// (parse.go:672, which it calls a divergence from the spec, to keep from looping); floe tells that the page was
-// cut there, not where, nor whether page.html or a part.html wrote it. Drop this when the parser reads it whole.
+// x/net/html v0.61.0 leaves out the rest of a page past a <template> in an <svg> or a <math> (parse.go:672).
+// LIMIT: tells neither where the page was cut nor what wrote it; drop when x/net/html reads such a page whole.
 func cutEnd(tree *html.Node, end string) bool {
 	for n := range tree.Descendants() {
-		if n.Type != html.CommentNode && n.Type != html.TextNode || !strings.Contains(n.Data, end) {
-			continue
-		}
-		if n.Type == html.CommentNode && n.Data == end {
+		switch {
+		case n.Type == html.CommentNode && n.Data == end:
 			n.Parent.RemoveChild(n)
-		} else {
-			n.Data = strings.Replace(n.Data, "<!--"+end+"-->", "", 1)
-			n.Data = strings.Replace(n.Data, end, "", 1)
+			return true
+		case (n.Type == html.CommentNode || n.Type == html.TextNode) && strings.Contains(n.Data, end):
+			n.Data = strings.Replace(strings.Replace(n.Data, "<!--"+end+"-->", "", 1), end, "", 1)
+			return true
 		}
-		return true
 	}
 	return false
+}
+
+// tokenized reports whether the tokenizer reads end, at the end of page, as a comment of its own: then, when the
+// tree has it not, the parser left it out with the rest; else the page ended in a tag left open, which an item's
+// check tells.
+func tokenized(page []byte, end string) bool {
+	z := html.NewTokenizer(bytes.NewReader(page))
+	for {
+		switch z.Next() {
+		case html.ErrorToken:
+			return false
+		case html.CommentToken:
+			if string(z.Text()) == end {
+				return true
+			}
+		default:
+		}
+	}
 }
 
 // withStyles puts a <style> of each of sheets at the end of the head of tree, which the parser always makes.

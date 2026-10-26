@@ -356,7 +356,7 @@ func TestPageWordsAtTheirLine(t *testing.T) {
 func TestPageCutShort(t *testing.T) {
 	t.Parallel()
 
-	const cut = "d.yaml:2:11: the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html or a part.html)"
+	const cut = "d.yaml:2:11: the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html, a part.html or an item of format html)"
 	part := map[string]string{
 		"t/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
 		"t/part.html":   `<div data-floe-part="t"><math><mi><template>x</template></mi></math></div>`,
@@ -371,11 +371,13 @@ func TestPageCutShort(t *testing.T) {
 		{"a part's math", "{{with .Data.t}}{{.}}{{end}}<p>after</p>", cut},
 		{"a template outside", "<template>x</template><svg><text>t</text></svg><template>y</template><p>after</p>", ""},
 		{"ending in xmp", "<xmp>x", ""},
+		{"an item's HTML", "{{.Data.h}}<p>after</p>", cut},
 	} {
-		schema := `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"t": {"$ref": "floe:///parts/t.json"}}}`
+		schema := `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"t": {"$ref": "floe:///parts/t.json"}, "h": {"type": "string", "format": "html"}}}`
 		page := "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head>\n<body>\n" + tt.body + "\n</body></html>\n"
 		k := ownKit(t, part, mine(page, schema, nil))
-		out, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nt: {}\n"), none)
+		data := "lang: en\ntemplate: mine\nt: {}\nh: <svg><foreignObject><template>x</template></foreignObject></svg>\n"
+		out, err := tmpl.Draw(k, "d.yaml", []byte(data), none)
 		got := ""
 		if err != nil {
 			got = told(err)

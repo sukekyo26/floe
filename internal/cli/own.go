@@ -34,7 +34,7 @@ func (a *app) dataDir(key, xdg, home, sub string) (dir string, set bool, err err
 // ownDir is the directory of one's own of the kind (parts, themes, templates), FLOE_<KIND>_DIR else floe/<kind>
 // under the XDG config directory, to read with the system following its links, its Name as it was set; a
 // zero Dir for none. One set that cannot be read is refused in the system's words; a default that is not there,
-// or is under a file, is none.
+// or is under a file, is none; one that is there but no directory is refused.
 func (a *app) ownDir(key, kind string) (kit.Dir, error) {
 	none := kit.Dir{FS: nil, Name: ""}
 	dir, set, err := a.dataDir(key, "XDG_CONFIG_HOME", ".config", filepath.Join("floe", kind))
@@ -42,7 +42,8 @@ func (a *app) ownDir(key, kind string) (kit.Dir, error) {
 		return none, err
 	}
 	if _, err := os.ReadDir(dir); err != nil {
-		if !set && (errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR)) {
+		// A default not there, or under a file (HOME=/dev/null), is none; one there that is no directory is told.
+		if !set && (errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) && !exists(dir)) {
 			return none, nil
 		}
 		return none, usererr.CannotRead(dir, err) //nolint:wrapcheck // the system's words, at the directory
@@ -80,4 +81,10 @@ func (a *app) kit(templates bool) (*kit.Kit, error) {
 		return nil, found.Err()
 	}
 	return kit.Load(floe, src) //nolint:wrapcheck // its mistakes, or floe's failure
+}
+
+// exists reports whether there is a file at path, a link followed.
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

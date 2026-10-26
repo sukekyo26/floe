@@ -305,12 +305,14 @@ func TestNames(t *testing.T) {
 			"own/parts/panel: panel is the name of floe's parts/panel, which floe's templates and parts would go on drawing and checking with: give yours another name",
 		},
 		{
-			fstest.MapFS{"base/part.css": {Data: []byte("")}, "palette.json": {Data: []byte("{}")}},
+			fstest.MapFS{"base/part.css": {Data: []byte("")}, "palette/part.css": {Data: []byte("")}},
 			lines(
 				"own/parts/base: base names a file of every theme (base.css), which a theme's CSS for this part would be read as: give it another name",
-				"own/parts/palette.json: palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name",
+				"own/parts/palette: palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name",
 			),
 		},
+		// A shared schema has no CSS a theme gives.
+		{fstest.MapFS{"base.json": {Data: []byte(`{"$schema": "https://json-schema.org/draft/2020-12/schema"}`)}}, ""},
 		{
 			fstest.MapFS{"Note/part.css": {Data: []byte("")}, "-x/part.css": {Data: []byte("")}, "a b.json": {Data: []byte("{}")}, "my-note_2/part.css": {Data: []byte("")}},
 			lines(

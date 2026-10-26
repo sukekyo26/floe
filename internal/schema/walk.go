@@ -358,7 +358,7 @@ func (w *walker) value(from *jsonschema.Schema, v reflect.Value) {
 // (Step.Forbids), and false for none. A list on the way is gone through by its items, the step kept, as a
 // check's for is; a part's value from its schema's root. Where the steps lead to what Follow does not know
 // (a format, a schema of neither the key nor items, one met again in going through items), the rest is not
-// known to be forbidden.
+// known to be forbidden, nor is a key declared where items are too, as the value may be a list.
 func (c *Compiled) Forbidding(steps []string) (string, bool) {
 	s := c.Root
 	for _, key := range steps {
@@ -374,8 +374,9 @@ func (c *Compiled) Forbidding(steps []string) (string, bool) {
 			switch {
 			case st.Part != "":
 				s = st.PartRoot
-			case declared && st.Forbids(key):
-				// Declared beside a $ref to a schema of additionalProperties: false, which takes it not.
+			case declared && st.Items == nil && st.Forbids(key):
+				// Declared beside a $ref to a schema of additionalProperties: false, which takes it not; with
+				// items too, the value may be a list, which no object's keys forbid.
 				return key, true
 			case declared:
 				s = next

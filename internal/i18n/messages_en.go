@@ -73,6 +73,7 @@ var messagesEN = map[string]string{
 	"kit_name_twice":             "%s names both %s and %s: give one of them another name",
 	"kit_name_floe":              "%s is the name of floe's %s, which floe's templates and parts would go on drawing and checking with: give yours another name",
 	"kit_dir_link":               "this is a link to a directory, and floe reads only real directories here: make it a directory (links to files are read)",
+	"kit_not_file":               "this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here",
 	"kit_bad_name":               "floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it",
 	"kit_name_theme_file":        "%s names a file of every theme (%[1]s.css), which a theme's CSS for this part would be read as: give it another name",
 	"kit_asset_unknown":          `assets/ has no "%s": name a file under it, as a path from assets/ like img/logo.svg`,
@@ -127,7 +128,7 @@ var messagesEN = map[string]string{
 	"draw_noscript":     "the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out",
 	"draw_not_text":     "an item of format %s takes text: write it as text, in quotes where YAML would read a number, true, false or null",
 	"draw_html_whole":   "HTML changes the page around it at %s: close in it each element and comment it opens, and close no element it did not open",
-	"draw_page_cut":     "the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html or a part.html)",
+	"draw_page_cut":     "the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html, a part.html or an item of format html)",
 	"draw_html_placed":  "page.html puts the item %[1]s of format html in a text or an attribute of %[2]s, where HTML does not work: put it where elements go, or give the item another format",
 
 	// cli: the command line (English alone is told; the other languages hold the keys as every catalog does)

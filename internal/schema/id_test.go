@@ -109,7 +109,7 @@ func TestCheckPartRelativeRef(t *testing.T) {
 		t.Fatal(told(err))
 	}
 	res[r.URL] = r
-	if failed := schema.CheckPart(u, res); failed != nil {
+	if failed := checkPart(u, res); failed != nil {
 		t.Fatal(told(failed))
 	}
 	c, err := schema.Compile(template, "schema.json", []byte(`{`+head+`, "properties": {"m": {"$ref": "`+u+`"}}}`), res)

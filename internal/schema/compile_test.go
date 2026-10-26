@@ -108,7 +108,7 @@ func TestCheckPart(t *testing.T) {
 		{"html", "parts/html.json: #/properties/body: a part's schema takes no \"format\": \"html\": its part.html draws its items, which the checks of a format do not reach; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
 		{"stack", "parts/stack.json: #/$defs/item: the part refers to floe:///parts/any.json, a schema of floe's that holds items of the format markdown, which a part's part.html cannot draw: refer to it from the template's schema instead, and give the part items of its own"},
 	} {
-		if got := told(schema.CheckPart("floe:///parts/"+tt.name+".json", resources(t))); got != tt.want {
+		if got := told(checkPart("floe:///parts/"+tt.name+".json", resources(t))); got != tt.want {
 			t.Errorf("CheckPart(%s) told\n%s\nwant\n%s", tt.name, got, tt.want)
 		}
 	}
@@ -137,11 +137,11 @@ func TestCheckPartMistakes(t *testing.T) {
 		"missing": `parts/missing.json: json-pointer in "floe:///parts/missing.json#/$defs/missing" not found`,
 		"meta":    "parts/meta.json: #/properties/m: https://json-schema.org/draft/2020-12/schema: a schema refers to no other file or URL; write what a $ref refers to in its own file",
 	} {
-		if got := told(schema.CheckPart("floe:///parts/"+name+".json", res)); got != want {
+		if got := told(checkPart("floe:///parts/"+name+".json", res)); got != want {
 			t.Errorf("CheckPart(%s) told\n%s\nwant\n%s", name, got, want)
 		}
 	}
-	if got := told(schema.CheckPart("floe:///parts/nope.json", res)); got != "floe: schema: no resource floe:///parts/nope.json" {
+	if got := told(checkPart("floe:///parts/nope.json", res)); got != "floe: schema: no resource floe:///parts/nope.json" {
 		t.Errorf("CheckPart of no resource told %q", got)
 	}
 }
@@ -189,7 +189,7 @@ func TestNewResource(t *testing.T) {
 	run := func(r schema.Resource) (compiled, checked error) {
 		res := map[string]schema.Resource{p: r}
 		_, compiled = schema.Compile(template, "schema.json", tmpl, res)
-		return compiled, schema.CheckPart(p, res)
+		return compiled, checkPart(p, res)
 	}
 	if _, err := schema.NewResource("floe:///parts/p.json", "parts/p.json", []byte(mark+`{`), schema.Part); told(err) != "parts/p.json:1:2: unexpected EOF" {
 		t.Errorf("NewResource of a part cut short told %q", told(err))

@@ -74,6 +74,8 @@ func TestForbidding(t *testing.T) {
 		{"a list its own items", `"properties": {"rows": {"$ref": "#/$defs/l"}}, "$defs": {"l": {"type": "array", "items": {"$ref": "#/$defs/l"}}}`, "rows.x", ""},
 		{"closed beside a $ref", `"properties": {"s": {"$ref": "#/$defs/b", ` + closed + `"properties": {"p": {}}}}, "$defs": {"b": {"properties": {"q": {}}}}`, "s.q", "q"},
 		{"into a part", `"properties": {"n": ` + N + `}`, "n.zz", "zz"},
+		// Of no type, keys and items, beside a closed $ref: rows may be a list of objects with k.
+		{"keys and items", `"properties": {"rows": {"$ref": "#/$defs/c", "properties": {"k": {}}, "items": {"properties": {"k": {}}}}}, "$defs": {"c": {` + closed + `"properties": {}}}`, "rows.k", ""},
 	} {
 		c, err := compile(t, tt.body)
 		if c == nil {
