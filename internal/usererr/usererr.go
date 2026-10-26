@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 )
@@ -42,18 +43,24 @@ func NewIn(file, at, key string, args ...any) *Error {
 
 // Library returns the mistake a library told in err, in the library's own words.
 func Library(err error) *Error {
-	return New("library", err.Error())
+	return New("library", valid(err.Error()))
 }
 
 // LibraryAt returns the mistake a library told in text, in its own words, at the line and column of file
 // it gave, 0 for none.
 func LibraryAt(file string, line, column int, text string) *Error {
-	return NewAt(file, line, column, "library", text)
+	return NewAt(file, line, column, "library", valid(text))
 }
 
 // LibraryIn returns the mistake a library told in text, in its own words, at at, a JSON pointer, in file.
 func LibraryIn(file, at, text string) *Error {
-	return NewIn(file, at, "library", text)
+	return NewIn(file, at, "library", valid(text))
+}
+
+// valid is a library's text with each run of bytes that are no UTF-8 written as U+FFFD, so that it shows as
+// written wherever it is told.
+func valid(text string) string {
+	return strings.ToValidUTF8(text, string(utf8.RuneError))
 }
 
 // Error words the mistake in English, for logs and for callers that do not localize.
