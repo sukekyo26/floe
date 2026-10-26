@@ -16,6 +16,7 @@ var messagesJA = map[string]string{
 
 	"schema_dialect":            "$schema の %s は floe が受ける版ではありません。https://json-schema.org/draft/2020-12/schema か https://json-schema.org/draft/2019-09/schema を書くか、$schema を消してください",
 	"schema_no_url":             "%s: schema はほかのファイルや URL を参照できません。$ref が指すものは、その schema のファイルの中に書いてください",
+	"schema_empty":              `schema が空です。{"type": "object"} のような JSON Schema のオブジェクトを書いてください`,
 	"schema_no_part":            "%s は部品ではありません。部品は floe:///parts/<名前>.json の形で参照してください",
 	"schema_part_unreached":     "部品 %s はここでは項目を描きません。floe は根から properties と items で届く所と、横に描くものの無い $ref の先を描きます。ここの項目は検査されても描かれません",
 	"schema_ref_unreached":      "%s は floe が描く部品か format の項目を持ちます。floe が辿る properties か items の下で参照してください",

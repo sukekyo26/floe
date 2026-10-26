@@ -18,6 +18,22 @@ func TestError(t *testing.T) {
 	}
 }
 
+// A library's words are told as UTF-8: a run of bytes that are no UTF-8 is written as U+FFFD, the rest as it is.
+func TestLibraryUTF8(t *testing.T) {
+	t.Parallel()
+
+	const want = "a\uFFFDb 日"
+	for _, e := range []*usererr.Error{
+		usererr.Library(errors.New("a\xff\xfeb 日")),
+		usererr.LibraryAt("f", 1, 2, "a\xff\xfeb 日"),
+		usererr.LibraryIn("f", "#/x", "a\xff\xfeb 日"),
+	} {
+		if got := e.Args[0]; got != want {
+			t.Errorf("%+v holds %q, want %q", e, got, want)
+		}
+	}
+}
+
 // A List takes mistakes and Lists, leaves out a nil *Error, and returns a failure; of none it is no error.
 func TestListAdd(t *testing.T) {
 	t.Parallel()
