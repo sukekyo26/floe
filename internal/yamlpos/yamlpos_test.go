@@ -29,6 +29,10 @@ func octal(written, read, want, octal string) string {
 	return fmt.Sprintf("%s reads as the octal number %s here, but as %s in YAML 1.2: write %s, or %s for %s", written, read, want, want, octal, read)
 }
 
+func outsideFloat(written string) string {
+	return written + " is a number in YAML 1.2 that a float64 cannot hold: put it in quotes to keep it as text"
+}
+
 func tooBig(written string) string {
 	return written + " is a number in YAML 1.2, too large for floe to read: put it in quotes to keep it as text"
 }
@@ -123,7 +127,11 @@ func TestParse(t *testing.T) {
 		{"x: -9223372036854775809\n", "a.yaml:1:4: " + tooBig("-9223372036854775809")},
 		{"x: 030000000000000000000\n", "a.yaml:1:4: " + tooBig("030000000000000000000")},
 		{"x: +.inf\n", "a.yaml:1:4: +.inf is not a value a YAML file can hold; write a number in digits, or quote it as text"},
-		{"x: 1e400\n", "a.yaml:1:4: 1e400 is not a value a YAML file can hold; write a number in digits, or quote it as text"},
+		{"x: 1e400\n", "a.yaml:1:4: " + outsideFloat("1e400")},
+		{"a: 1e-400\nb: 1.0e-400\nc: -1e-400\n", "a.yaml:1:4: " + outsideFloat("1e-400") + "\na.yaml:2:4: " + outsideFloat("1.0e-400") + "\na.yaml:3:4: " + outsideFloat("-1e-400")},
+		// A true 0 is no float64 left behind: goccy/go-yaml reads 0e-400 as text, as it does 1e3.
+		{"a: 0e-400\n", "a.yaml:1:4: " + notText("0e-400", "0", "0.0")},
+		{"a: 0.0e-400\nb: -0.0e-400\n", ""},
 		{"x: [017, 0x1F, 1e3]\n", "a.yaml:1:5: " + octal("017", "15", "17", "0o17") + "\na.yaml:1:16: " + notText("1e3", "1000", "1000.0")},
 		{"x: {a: 0b101, b: 12}\n", "a.yaml:1:8: " + notNumber("0b101", "5")},
 		{"1e3: a\n08: b\n", "a.yaml:1:1: a key is a name: write 1e3 as text, in quotes\na.yaml:2:1: a key is a name: write 08 as text, in quotes"},

@@ -3,6 +3,7 @@
 package yamlpos
 
 import (
+	"cmp"
 	"errors"
 	"slices"
 	"strconv"
@@ -143,8 +144,11 @@ func Parse(file string, src []byte) (ast.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	w := &walk{file: file, found: nil}
+	w := &walk{file: file, found: nil, failed: nil}
 	w.node(body)
+	if w.failed != nil {
+		return nil, w.failed
+	}
 	return body, w.found.Sorted().Err()
 }
 
@@ -217,8 +221,9 @@ func dropped(src []byte, start *token.Position) (Pos, bool) {
 
 // walk goes through a body once and notes what floe refuses in it.
 type walk struct {
-	file  string
-	found usererr.List
+	file   string
+	found  usererr.List
+	failed error // floe's failure, which stops the walk's mistakes from being told
 }
 
 // wrapper refuses n when it is an anchor, alias or tag, and reports it: what it holds is not walked, to be
@@ -261,19 +266,18 @@ func (w *walk) number(n ast.Node) bool {
 	if !ok {
 		return false
 	}
-	mistake := numberMistake(w.file, n, want, goccy(n))
-	if mistake == nil {
-		return false
+	err := numberMistake(w.file, n, want, goccy(n))
+	if failed := w.found.Add(err); failed != nil {
+		w.failed = cmp.Or(w.failed, failed)
 	}
-	w.found = append(w.found, mistake)
-	return true
+	return err != nil
 }
 
 // pair walks a key and its value. A merge key is refused with its value, which is not walked. A key is a
 // name: one that is not text (0x10, ~, 1.0), or that YAML 1.2 reads as a number (1e3, 08), would be read as
-// another name than the one written. It is
-// judged as a key alone, and for a comment that cut it short; a key of a { } written without a ":" after
-// it, which YAML gives an empty value ({ a, b: 1 }), unless refused already, cut short too.
+// another name than the one written. It is judged as a key alone, and for a comment that cut it short; a key
+// of a { } written without a ":" after it, which YAML gives an empty value ({ a, b: 1 }), unless refused
+// already, cut short too.
 func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 	if _, merge := v.Key.(*ast.MergeKeyNode); merge {
 		w.found = append(w.found, New(w.file, Of(v.Key), "yaml_no_anchors"))
@@ -298,9 +302,9 @@ func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 // " #" in a plain value as the start of a comment, and the value as what is before it, which no later check
 // sees is short. The comment may be the author's, which floe cannot tell from text cut short, so either is
 // refused. A comment after a quoted value cuts nothing. The caller gives it text, and a number it refused,
-// not a number, true or ~ it takes, which the text cut short would not read as.
-// LIMIT: text cut short to a number goccy/go-yaml and YAML 1.2 read alike (title: 2024 #1, read 2024) is not
-// caught here: an item that takes text refuses the number by its type, and one that takes a number gets one.
+// not a number, true or ~ it takes, which the text cut short would not read as: an item that takes text
+// refuses such a number by its type, and one that takes a number gets one.
+// LIMIT: text cut to a number both read alike (title: 2024 #1) passes; catch it if a schema takes such text.
 // LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
 // is an item as right as any. Nor is a , in { } before a rest with ": " in it ({ label: 1,500 words: many }
 // reads a key 500 words of the value many). Catch them if a schema comes to take such text.
@@ -308,8 +312,8 @@ func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 // (title: Plan, then "  #1 draft"), which is not caught: the comment is not after the value's text.
 func (w *walk) cut(n ast.Node) bool {
 	tk := n.GetToken()
-	if tk.Type == token.SingleQuoteType || tk.Type == token.DoubleQuoteType ||
-		tk.Next == nil || tk.Next.Type != token.CommentType || tk.Next.Position.Line != lastLine(tk) {
+	if QuoteOf(n) != Plain || tk.Next == nil || tk.Next.Type != token.CommentType ||
+		tk.Next.Position.Line != lastLine(tk) {
 		return false
 	}
 	c := tk.Next.Position

@@ -1,6 +1,7 @@
 package yamlpos
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"regexp"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
+
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // read12 reads a plain scalar by the rows of the Core Schema, each matching a whole value.
@@ -34,6 +37,7 @@ func TestRead12(t *testing.T) {
 		{"-.Inf", kindFloat, "-Inf"},
 		{".NAN", kindFloat, "NaN"},
 		{"1e400", kindFloat, "+Inf"},
+		{"1e-400", kindFloat, "0"},
 		// No row: text. A row matches the whole value, not a part of it.
 		{"0b101", kindText, ""},
 		{"1_000", kindText, ""},
@@ -109,9 +113,13 @@ func TestNumberMistakeTellsWhatReadsAlike(t *testing.T) {
 			t.Fatalf("%q: not a plain number-like value", text)
 		}
 		got := goccy(n)
-		mistake := numberMistake("a.yaml", n, want, got)
-		if mistake == nil {
+		err := numberMistake("a.yaml", n, want, got)
+		if err == nil {
 			continue
+		}
+		var mistake *usererr.Error
+		if !errors.As(err, &mistake) {
+			t.Fatalf("%q: %v", text, err)
 		}
 		switch mistake.Key {
 		case "yaml_number_not_number":
@@ -124,20 +132,27 @@ func TestNumberMistakeTellsWhatReadsAlike(t *testing.T) {
 			}
 			alike(fmt.Sprint(mistake.Args[2]), want)
 			alike(fmt.Sprint(mistake.Args[3]), got)
-		case "yaml_number_too_big", "yaml_not_finite":
+		case "yaml_number_too_big", "yaml_number_outside_float", "yaml_not_finite":
 		default:
 			t.Errorf("%q: %s", text, mistake.Key)
 		}
 	}
 	// What YAML 1.2 cannot hold is told so, not as another reading.
 	for text, key := range map[string]string{
-		"030000000000000000000": "yaml_number_too_big", "1e400": "yaml_not_finite", ".nan": "yaml_not_finite",
+		"030000000000000000000": "yaml_number_too_big", "1e400": "yaml_number_outside_float",
+		"1e-400": "yaml_number_outside_float", ".nan": "yaml_not_finite",
 	} {
 		n := valueOf(t, text)
 		want, _ := plainNumber(n)
-		if m := numberMistake("a.yaml", n, want, goccy(n)); m == nil || m.Key != key {
-			t.Errorf("%q told %v, want %s", text, m, key)
+		var m *usererr.Error
+		if err := numberMistake("a.yaml", n, want, goccy(n)); !errors.As(err, &m) || m.Key != key {
+			t.Errorf("%q told %v, want %s", text, err, key)
 		}
+	}
+	// Two numbers read otherwise but as octal is floe's failure, not a mistake worded for octal.
+	err := numberMistake("a.yaml", valueOf(t, "17"), read12("17"), reading{kind: kindFloat, i: nil, f: 1.5, outside: false})
+	if err == nil || errors.As(err, new(*usererr.Error)) {
+		t.Error("an integer read as another float is told as a mistake")
 	}
 	if !math.IsNaN(read12(".nan").f) {
 		t.Error(".nan is not NaN")
