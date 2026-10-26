@@ -45,11 +45,13 @@ type Icons interface {
 	Lookup(name string) ([]byte, error)
 }
 
-// noIcons are the icons of Options that give none: there is no directory for them.
-type noIcons struct{}
+// NoIcons are no icons to look up: there is no directory for them, Err says why, which a diagram with an icon
+// is told.
+type NoIcons struct{ Err error }
 
-func (noIcons) Lookup(string) ([]byte, error) {
-	return nil, usererr.New("icons_no_dir")
+// Lookup returns Err.
+func (n NoIcons) Lookup(string) ([]byte, error) {
+	return nil, n.Err
 }
 
 // Drawer draws specs that its schema checks: the one entry of a spec, wherever it comes from.
@@ -75,7 +77,7 @@ func (d *Drawer) Draw(spec any, opts Options) (template.HTML, error) {
 
 func (d *Drawer) layout(v any, opts Options) (*layout, error) {
 	if opts.Icons == nil {
-		opts.Icons = noIcons{}
+		opts.Icons = NoIcons{Err: usererr.New("icons_no_dir")}
 	}
 	if err := d.schema.ValidateAt(v); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes in the library's words, at their pointers

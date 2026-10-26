@@ -120,14 +120,7 @@ func (a *app) iconsDir() (string, error) {
 func (a *app) iconStore() diagram.Icons {
 	dir, err := a.iconsDir()
 	if err != nil {
-		return noIcons{err: err}
+		return diagram.NoIcons{Err: err}
 	}
 	return icons.New(dir)
-}
-
-// noIcons are no icons to look up: there is no directory for them, which a diagram with an icon is told.
-type noIcons struct{ err error }
-
-func (n noIcons) Lookup(string) ([]byte, error) {
-	return nil, n.err
 }

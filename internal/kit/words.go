@@ -82,8 +82,8 @@ func readLang(file, tag string, key, n ast.Node) (map[string]string, usererr.Lis
 	return ws, found, nil
 }
 
-// lang returns the language of w a page of the language tag is drawn in: the first of i18n.Fallbacks of the
-// tag that w has; "" when it has none of them.
+// lang returns the language of w a page of the language tag, as i18n.Tag reads it, is drawn in: the first of
+// i18n.Fallbacks of the tag that w has; "" when it has none of them.
 func (w words) lang(tag string) string {
 	for _, l := range i18n.Fallbacks(i18n.Lang(tag)) {
 		if _, ok := w[string(l)]; ok {

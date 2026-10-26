@@ -9,6 +9,7 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -143,5 +144,7 @@ func (d *Data) readShared(theme string) error {
 	}
 	// A title of spaces names none.
 	d.Title = strings.TrimSpace(d.Title)
+	// Read once as every lookup of it and the page's <html lang> take it: BCP 47 in lower case, JA and ja_JP ja's.
+	d.Lang = string(i18n.Tag(d.Lang))
 	return found.Sorted().Err()
 }

@@ -86,12 +86,12 @@ func TestFloeReport(t *testing.T) {
 	}
 }
 
-// A part's words follow the page's language down its subtags to English.
+// A part's words follow the page's language, as i18n.Tag reads it, down its subtags to English.
 func TestPartWords(t *testing.T) {
 	t.Parallel()
 
 	p, _ := floe(t).Part("matrix")
-	for lang, want := range map[string]string{"ja-JP": "できる", "en": "Yes", "fr": "Yes", "JA": "できる"} {
+	for lang, want := range map[string]string{"ja-jp": "できる", "en": "Yes", "fr": "Yes", "ja": "できる"} {
 		var b strings.Builder
 		data := map[string]any{"columns": []any{"a"}, "rows": []any{map[string]any{"what": "x", "cells": []any{"yes"}}}}
 		if err := page(t, p, lang).Execute(&b, data); err != nil || !strings.Contains(b.String(), want) {

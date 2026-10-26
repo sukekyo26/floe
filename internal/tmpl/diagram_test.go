@@ -73,15 +73,30 @@ func TestDiagramsInPage(t *testing.T) {
 	}
 }
 
-// A diagram's text is in the page's language, whatever the case of its tag or _ for -.
+// A language tag is read once where it comes in, in lower case with _ read as -: the page's <html lang>, the
+// lookup of a diagram's text and the tags it is written in. Two tags of one language are refused.
 func TestDiagramLanguage(t *testing.T) {
 	t.Parallel()
 
-	for _, lang := range []string{"ja", "JA", "ja_JP"} {
-		page := drawPage(t, floeKit(t), diagramPage(lang, boxSpec), none)
-		if !strings.Contains(page, `aria-label="流れ"`) {
-			t.Errorf("lang %s: the diagram is not drawn in Japanese", lang)
+	k := floeKit(t)
+	for _, tt := range []struct{ lang, title, html, want string }{
+		{"ja", "{en: Flow, ja: 流れ}", `<html lang="ja">`, `aria-label="流れ"`},
+		{"JA", "{en: Flow, ja: 流れ}", `<html lang="ja">`, `aria-label="流れ"`},
+		{"ja_JP", "{en: Flow, ja: 流れ}", `<html lang="ja-jp">`, `aria-label="流れ"`},
+		{"JA", "{en: Flow, JA: Nagare}", `<html lang="ja">`, `aria-label="Nagare"`},
+		{"ja_JP", "{en: Flow, ja_JP: Nagare}", `<html lang="ja-jp">`, `aria-label="Nagare"`},
+	} {
+		spec := `{width: 300, height: 100, title: ` + tt.title + `, parts: [{box: {x: 20, y: 20, w: 80, h: 40, rows: [A]}}]}`
+		page := drawPage(t, k, diagramPage(tt.lang, spec), none)
+		if !strings.Contains(page, tt.html) || !strings.Contains(page, tt.want) {
+			t.Errorf("lang %s, title %s: want %s and %s", tt.lang, tt.title, tt.html, tt.want)
 		}
+	}
+	twice := `{width: 300, height: 100, title: {en: Flow, JA: a, ja: b}, parts: []}`
+	want := `d.yaml:7:19: a text of the diagram is written in JA and in ja, one language, as a tag's case, ` +
+		`or _ for -, does not tell languages apart; keep one`
+	if got := drawn(t, k, diagramPage("en", twice), none); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 }
 

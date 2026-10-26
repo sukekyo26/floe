@@ -8,20 +8,23 @@ package diagram
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // URL is where the schema of a spec is held: that of floe's part diagram.
 const URL = "floe:///parts/diagram.json"
 
-// Text is text in each language by tag; text written plain is English.
+// Text is text in each language by tag, as i18n.Tag reads it; text written plain is English.
 type Text map[string]string
 
-// UnmarshalJSON reads text plain, or by language.
+// UnmarshalJSON reads text plain, or by language: two tags that are one language (JA and ja) are the spec's
+// mistake, at its root, as the text's place is not known here.
 func (t *Text) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err == nil {
@@ -32,7 +35,16 @@ func (t *Text) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &m); err != nil {
 		return err //nolint:wrapcheck // floe's failure: the schema checked the shape
 	}
-	*t = m
+	*t = Text{}
+	written := map[string]string{}
+	for _, tag := range slices.Sorted(maps.Keys(m)) {
+		lang := string(i18n.Tag(tag))
+		if first, twice := written[lang]; twice {
+			return usererr.NewIn("", "#", "diagram_text_lang_twice", first, tag) //nolint:wrapcheck // the spec's mistake
+		}
+		written[lang] = tag
+		(*t)[lang] = m[tag]
+	}
 	return nil
 }
 
@@ -294,7 +306,10 @@ func read(v any) (*spec, error) {
 func strictly(b []byte, v any) error {
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(v); err != nil {
+	var e *usererr.Error
+	if err := dec.Decode(v); errors.As(err, &e) {
+		return e
+	} else if err != nil {
 		return fmt.Errorf("diagram: read a spec its schema took: %w", err)
 	}
 	return nil
