@@ -26,7 +26,7 @@ import (
 // arithmetic makes / and ** (^) fail where expr would give NaN or ±Inf, a division by zero above all, so that
 // a comparison with it does not silently hold or fail.
 // LIMIT: +, - and * past ±1.8e308 still give ±Inf, and whole numbers past ±9.2e18 wrap around, as does - on
-// one above 9.2e18, which doc.Read leaves uint64. computed.yaml catches them in its values (finiteValue), the
+// one above 9.2e18, which doc.Read leaves uint64. computed.yaml catches them in its values (notFiniteIn), the
 // expressions of checks.yaml do not. Check their results too if a template needs such numbers.
 var arithmetic = []expr.Option{
 	finite("_divide", "/", runtime.Divide), expr.Operator("/", "_divide"),
@@ -80,8 +80,9 @@ func (e expression) start() yamlpos.Pos {
 // place returns where in the file the mistake err of expr is: its line and column in the expression added to
 // where the expression is written, in a scalar on one line (after its quote) and in a | block; else, and for
 // a mistake without a place, where the expression is written.
-// LIMIT: a quoted scalar with an escape (\ in "", ” in ”) is told where it is written, as the text expr
-// read is not the text written; so is a > block, and a | block with an indentation indicator.
+// LIMIT: a quoted scalar with an escape (a backslash in double quotes, two single quotes in single quotes) is
+// told where it is written, as the text expr read is not the text written; so is a > block, and a | block with
+// an indentation indicator.
 func (e expression) place(err error) yamlpos.Pos {
 	at := e.start()
 	var fe *file.Error
