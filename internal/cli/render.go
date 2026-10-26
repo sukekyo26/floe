@@ -165,7 +165,7 @@ func realPath(abs, to string) (string, error) {
 	if info, lerr := os.Lstat(abs); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
 		// The system's words of why it leads nowhere, whatever EvalSymlinks says.
 		_, serr := os.Stat(abs)
-		return "", writeMistake(to, cmp.Or(serr, err))
+		return "", usererr.CannotWrite(to, cmp.Or(serr, err))
 	}
 	if parent, err := filepath.EvalSymlinks(dirs.Dir(abs)); err == nil {
 		return filepath.Join(parent, filepath.Base(abs)), nil
@@ -179,7 +179,7 @@ func (a *app) writePages(pages []rendered, out arg) error {
 	if out.abs != "" {
 		// As the pages in it, for others to read.
 		if err := os.MkdirAll(out.abs, 0o755); err != nil { //nolint:gosec // G301: pages to share
-			return writeMistake(out.name, err)
+			return usererr.CannotWrite(out.name, err)
 		}
 	}
 	var found usererr.List
@@ -189,7 +189,7 @@ func (a *app) writePages(pages []rendered, out arg) error {
 		}
 		// Not private: the page goes into a repository, for others to read.
 		if err := files.WriteAtomic(p.real, p.page, 0o644); err != nil {
-			if failed := found.Add(writeMistake(p.to, err)); failed != nil {
+			if failed := found.Add(usererr.CannotWrite(p.to, err)); failed != nil {
 				return failed
 			}
 			continue
@@ -208,7 +208,7 @@ func checkPages(pages []rendered) error {
 		case errors.Is(err, fs.ErrNotExist):
 			found = append(found, usererr.New("cli_render_missing", p.to, p.from))
 		case err != nil:
-			if failed := found.Add(fileMistake(p.to, err)); failed != nil {
+			if failed := found.Add(usererr.CannotRead(p.to, err)); failed != nil {
 				return failed
 			}
 		case !bytes.Equal(old, p.page):

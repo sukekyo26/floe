@@ -35,3 +35,24 @@ func TestOf(t *testing.T) {
 		}
 	}
 }
+
+// Ending places the character that ends at an offset, one inside a character at its start.
+func TestEnding(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		src          string
+		at           int
+		line, column int
+	}{
+		{"{", 1, 1, 1},
+		{"ab", 0, 1, 1},
+		{"a\n日x", 3, 2, 1}, // inside 日
+		{"a\n日x", 5, 2, 1},
+		{"a\n日x", 6, 2, 2},
+	} {
+		if line, column := textpos.Ending([]byte(tt.src), tt.at); line != tt.line || column != tt.column {
+			t.Errorf("Ending(%q, %d) = %d:%d, want %d:%d", tt.src, tt.at, line, column, tt.line, tt.column)
+		}
+	}
+}

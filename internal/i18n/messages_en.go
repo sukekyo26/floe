@@ -127,6 +127,33 @@ var messagesEN = map[string]string{
 	"cli_render_same_file": "%s and %s would both write %s; rename one of them",
 	"cli_render_missing":   "%s is missing: write it from %s with floe render",
 	"cli_render_stale":     "%s is not what %s draws: write it again with floe render",
-	// LIMIT: the %s of cli_cannot_write is the system's English, as the system words why it cannot write
-	"cli_cannot_write": "cannot be written (%s): check that its directory exists and can be written to, and that its name is free and not too long",
+	"cli_wants_icons":      "a zip file of the icons, or a URL",
+
+	// files: a path floe reads or writes for the user
+	// LIMIT: the %s of cannot_write is the system's English, as the system words why it cannot write
+	"cannot_write": "cannot be written (%s): check that its directory exists and can be written to, and that its name is free and not too long",
+
+	// icons: the icon sets
+	// LIMIT: the first %s of icons_broken, icons_download, icons_page_download, icons_bad_zip and
+	// icons_previous_left is encoding/json's, net/http's, archive/zip's or the system's English
+	"icons_unknown_set":        "unknown icon set \"%s\"; use %s",
+	"icons_dir_relative":       "FLOE_ICONS_DIR is %s, a relative path; set it to an absolute path",
+	"icons_no_dir":             "there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path",
+	"icons_not_fetched":        "%[1]s icons are not in %[2]s; run \"floe icons fetch %[3]s\" (downloads about %[4]s from %[5]s) and try again",
+	"icons_broken":             "cannot be read (%s); run \"floe icons fetch %s --force\" to fetch the icons again",
+	"icons_download":           "cannot be downloaded (%s); check the network, or download it in a browser and pass its path",
+	"icons_page_download":      "cannot be downloaded (%s); check the network, or download the package's zip from this page and pass its path",
+	"icons_index_no_version":   "holds no version of the icons; run \"floe icons fetch %s --force\" to fetch them again",
+	"icons_previous_left":      "cannot be written (%s), and the previous icons are left in %s: move them back here, or fetch the icons again",
+	"icons_download_too_large": "the download is over %dMB, far larger than an icon package; check that it is the right URL",
+	"icons_no_package_link":    "no link to the icon package is on this page; download the zip there and run: floe icons fetch %s <path-or-url>",
+	"icons_not_zip":            "is not a zip file; pass the zip of the package on %s",
+	"icons_bad_zip":            "cannot be read as a zip (%s); download it again",
+	"icons_icon_too_large":     "%s in it is over %dMB, far larger than an icon; check that it is the right file",
+	"icons_too_many":           "holds over %d icons, far more than an icon package; check that it is the right file",
+	"icons_written_too_large":  "the icons in it come to over %dMB, far more than an icon package; check that it is the right file",
+	"icons_none_in_zip":        "holds no %s icons; pass the zip of the package on %s",
+	"icons_no_match":           "no icon name contains all of %s; try a shorter word",
+	"icons_fetched":            "fetched %d %s icons (%s) into %s",
+	"icons_already":            "%s icons %s are already in %s (add --force to fetch them again)",
 }

@@ -222,7 +222,7 @@ func (s *sample) run(t *testing.T, args ...string) int {
 	t.Helper()
 
 	var stdout, stderr bytes.Buffer
-	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: s.dir})
+	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: s.dir, Getenv: nil})
 	stand := strings.NewReplacer(s.tmp, "$TMP", s.dir, "$SAMPLE")
 	out := stand.Replace(stdout.String())
 	fmt.Fprintf(&s.commands, "$ floe %s\nexit %d\n", stand.Replace(strings.Join(args, " ")), code)

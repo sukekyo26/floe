@@ -120,5 +120,30 @@ var messagesJA = map[string]string{
 	"cli_render_same_file": "%s と %s が、どちらも %s を書きます。どちらかの名前を変えてください",
 	"cli_render_missing":   "%s がありません。%s から floe render で書いてください",
 	"cli_render_stale":     "%s は %s を描いたものと違います。floe render で書き直してください",
-	"cli_cannot_write":     "書けません（%s）。ディレクトリがあって書けるか、名前が空いていて長すぎないかを確かめてください",
+	"cli_wants_icons":      "アイコンの zip ファイルか URL",
+
+	// files
+	"cannot_write": "書けません（%s）。ディレクトリがあって書けるか、名前が空いていて長すぎないかを確かめてください",
+
+	// icons
+	"icons_unknown_set":        "アイコン集 \"%s\" はありません。%s を使ってください",
+	"icons_dir_relative":       "FLOE_ICONS_DIR が相対パス %s です。絶対パスにしてください",
+	"icons_no_dir":             "HOME が絶対パスでないので、アイコンのディレクトリがありません。FLOE_ICONS_DIR に絶対パスを設定してください",
+	"icons_not_fetched":        "%[1]s のアイコンが %[2]s にありません。floe icons fetch %[3]s を実行してから（%[5]s から約 %[4]s を取得します）、やり直してください",
+	"icons_broken":             "読めません（%s）。floe icons fetch %s --force でアイコンを取り直してください",
+	"icons_download":           "取得できません（%s）。ネットワークを確かめるか、ブラウザで取得してそのパスを渡してください",
+	"icons_page_download":      "取得できません（%s）。ネットワークを確かめるか、このページからアイコン集の zip を取得して、そのパスを渡してください",
+	"icons_index_no_version":   "アイコンの版がありません。floe icons fetch %s --force で取り直してください",
+	"icons_previous_left":      "書けません（%s）。前のアイコンは %s に残っています。ここへ戻すか、アイコンを取り直してください",
+	"icons_download_too_large": "取得するものが %dMB を超え、アイコン集よりはるかに大きいです。URL が正しいか確かめてください",
+	"icons_no_package_link":    "このページにアイコン集へのリンクがありません。zip をそこから取得して、floe icons fetch %s <パスか URL> を実行してください",
+	"icons_not_zip":            "zip ファイルではありません。%s のアイコン集の zip を渡してください",
+	"icons_bad_zip":            "zip として読めません（%s）。取得し直してください",
+	"icons_icon_too_large":     "中の %s が %dMB を超え、アイコンよりはるかに大きいです。ファイルが正しいか確かめてください",
+	"icons_too_many":           "アイコンが %d 個を超え、アイコン集よりはるかに多いです。ファイルが正しいか確かめてください",
+	"icons_written_too_large":  "中のアイコンの合計が %dMB を超え、アイコン集よりはるかに大きいです。ファイルが正しいか確かめてください",
+	"icons_none_in_zip":        "%s のアイコンがありません。%s のアイコン集の zip を渡してください",
+	"icons_no_match":           "%s をすべて含むアイコンの名前はありません。短い語で試してください",
+	"icons_fetched":            "%[2]s のアイコン %[1]d 個（%[3]s）を %[4]s に取得しました",
+	"icons_already":            "%s のアイコン %s はすでに %s にあります（取り直すなら --force を付けてください）",
 }
