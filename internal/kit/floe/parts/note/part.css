@@ -1,0 +1,24 @@
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
+:scope {
+  position: relative; background: var(--accent-soft); padding: 1rem 1.25rem 1rem 3.7rem;
+  border-radius: 14px; max-width: var(--text-width);
+}
+:scope.good { background: var(--good-soft); }
+:scope.warn { background: var(--warn-soft); }
+:scope.bad { background: var(--bad-soft); }
+:scope::before {
+  content: "i"; content: "i" / ""; position: absolute; left: 1.25rem; top: 1.1rem;
+  display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+  background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+}
+:scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
+:scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }
+:scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad); }
+:scope > * { margin: 0; }
+:scope > * + * { margin-top: 0.5rem; }
+.title { display: block; font-size: 0.9rem; color: var(--accent); }
+:scope.good .title { color: var(--good); }
+:scope.warn .title { color: var(--warn); }
+:scope.bad .title { color: var(--bad); }
+:scope > .title + * { margin-top: 0.1rem; }
+:scope code { background: var(--surface); }

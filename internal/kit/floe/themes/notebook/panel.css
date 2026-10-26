@@ -1,0 +1,4 @@
+:scope {
+  background-color: var(--surface); background-image: repeating-linear-gradient(transparent 0 35px, var(--nb-rule) 35px 36px);
+  border: 2px solid var(--fg); border-radius: var(--nb-hand); box-shadow: none; color: var(--fg);
+}

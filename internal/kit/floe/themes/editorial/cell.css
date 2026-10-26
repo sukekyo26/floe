@@ -1,0 +1,2 @@
+:scope { background: none; border: 1px solid currentColor; border-radius: 3px; padding: 0 0.5em; }
+:scope:is(.good, .warn, .bad) { background: none; }

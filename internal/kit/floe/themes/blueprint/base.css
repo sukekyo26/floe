@@ -1,0 +1,11 @@
+/* A drawing on squared paper in blue ink: every cell ruled, labels in capitals of a fixed width, notes as
+   dashed callouts and cards with their figure numbers */
+blockquote {
+  background: var(--bp-squares), var(--surface); border-radius: 0;
+  box-shadow: none;
+}
+blockquote { border: 1.5px solid var(--accent); padding: 0.9rem 1.2rem; color: var(--fg); }
+blockquote::before {
+  content: "QUOTE"; display: block; margin-bottom: 0.3rem; color: var(--accent);
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em;
+}

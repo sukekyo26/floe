@@ -1,0 +1,18 @@
+:scope { gap: 1.75rem; padding: 0.75rem 0.25rem 0.25rem; }
+/* The panel of a card, on plain paper */
+.card { position: relative; background: var(--surface); }
+:scope.numbered > .card::before { content: none; }
+/* Plain cards and options are sticky notes, each held by a strip of tape and set a little askew */
+:scope.numbered > .card {
+  border: 0; border-radius: 0; background: var(--nb-stick-1); color: var(--nb-stick-ink); padding-top: 1.6rem;
+  box-shadow: 0 10px 18px -12px var(--nb-stick-shadow); transform: rotate(-1.2deg);
+}
+:scope.numbered > .card:nth-child(3n + 2) { background: var(--nb-stick-2); transform: rotate(1deg); }
+:scope.numbered > .card:nth-child(3n) { background: var(--nb-stick-3); transform: rotate(-0.6deg); }
+:scope.numbered > .card::before {
+  content: ""; position: absolute; top: -10px; left: 50%; width: 84px; height: 22px; margin-left: -42px;
+  background: var(--nb-tape); transform: rotate(-3deg);
+}
+/* Every text on a sticky note is in its ink, marks and pills among them, whose colours are for the paper */
+:scope.numbered > .card *, :scope.numbered > .card ::before { color: var(--nb-stick-ink); }
+:scope.numbered > .card :not(pre) > code { background: color-mix(in srgb, currentColor 10%, transparent); }

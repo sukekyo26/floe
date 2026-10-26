@@ -1,0 +1,1 @@
+:scope > label:has(:checked) { background: var(--nb-yellow); color: var(--fg); border-radius: 3px 10px 4px 12px; }

@@ -1,0 +1,26 @@
+/* The date at the left of a dot on a line that runs down to the next */
+:scope { list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; max-width: none; }
+:scope > li { position: relative; display: grid; grid-template-columns: 7rem minmax(0, 1fr); column-gap: 2rem; padding-bottom: 1.1rem; }
+:scope > li:last-child { padding-bottom: 0; }
+:scope > li::before {
+  content: ""; position: absolute; left: calc(7rem + 0.65rem); top: 0.55rem; width: 0.7rem; height: 0.7rem; border-radius: 50%;
+  background: var(--accent);
+}
+:scope > li:not(:last-child)::after {
+  content: ""; position: absolute; left: calc(7rem + 1rem - 1px); top: 1.5rem; bottom: 0.2rem; width: 2px; background: var(--line);
+}
+:scope > li.good::before { background: var(--good); }
+:scope > li.warn::before { background: var(--warn); }
+:scope > li.bad::before { background: var(--bad); }
+:scope .date {
+  text-align: right; font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+}
+:scope li > div { display: grid; gap: 0.15rem; }
+:scope li > div > :not(strong) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+@media (max-width: 36rem) {
+  :scope > li { grid-template-columns: minmax(0, 1fr); padding-left: 1.6rem; }
+  :scope > li::before { left: 0; }
+  :scope > li:not(:last-child)::after { left: calc(0.35rem - 1px); }
+  :scope .date { text-align: left; }
+}

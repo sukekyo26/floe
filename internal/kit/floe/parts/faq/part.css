@@ -1,0 +1,13 @@
+/* Each question a row; Q leads it, and its answer opens under it */
+:scope { display: grid; }
+:scope summary {
+  display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.5rem; padding: 0.75rem 1.2rem;
+  cursor: pointer; font-weight: 700; list-style: none;
+}
+:scope summary::-webkit-details-marker { display: none; }
+:scope summary::before { content: "Q"; content: "Q" / ""; color: var(--accent); }
+:scope summary::after { content: "+"; content: "+" / ""; color: var(--muted); font-weight: 400; }
+:scope details[open] summary::after { content: "−"; content: "−" / ""; }
+:scope summary:focus-visible { outline-offset: -2px; }
+:scope details > div { display: grid; gap: 0.5rem; padding: 0 1.2rem 0.9rem 3.1rem; color: var(--muted); }
+:scope details > div > * { margin: 0; }

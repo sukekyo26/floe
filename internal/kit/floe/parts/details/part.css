@@ -1,0 +1,12 @@
+/* The mark before the title turns down when open */
+:scope > summary {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 1.2rem; cursor: pointer; font-weight: 700; list-style: none;
+}
+:scope > summary::-webkit-details-marker { display: none; }
+:scope > summary::before {
+  content: ""; flex: none; width: 0.5rem; height: 0.5rem; margin-left: 0.15rem; border: solid var(--muted);
+  border-width: 0 2px 2px 0; transform: rotate(-45deg); transition: transform 0.15s;
+}
+:scope[open] > summary::before { transform: rotate(45deg); margin-top: -0.25rem; }
+:scope > summary:focus-visible { outline-offset: -2px; border-radius: 14px; }
+:scope > div { padding: 0 1.2rem 1.1rem; }

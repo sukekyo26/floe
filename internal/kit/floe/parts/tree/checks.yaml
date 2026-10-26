@@ -1,0 +1,3 @@
+- field: path
+  expr: item.path matches "[^/]"
+  message: write a path naming a file or a folder, such as internal/tmpl/part.go

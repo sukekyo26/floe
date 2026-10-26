@@ -1,0 +1,6 @@
+:scope {
+  display: inline-flex; align-items: center; gap: 0.45em; border-radius: 0; background: none; border: 1.5px solid currentColor;
+  font-family: var(--mono); letter-spacing: 0.04em; color: var(--accent);
+}
+:scope::before { content: ""; width: 7px; height: 7px; background: currentColor; }
+:scope:is(.good, .warn, .bad) { background: none; }

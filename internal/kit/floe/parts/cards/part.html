@@ -1,0 +1,5 @@
+<div class="numbered" data-floe-part="cards">
+{{- range .}}
+<div class="card" data-floe-look="panel"><h3>{{.title}}</h3>{{with .text}}{{markdown .}}{{end}}</div>
+{{- end}}
+</div>

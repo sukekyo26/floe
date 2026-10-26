@@ -1,0 +1,2 @@
+.card { border: 1.5px solid var(--fg); box-shadow: 4px 4px 0 var(--fg); }
+:scope.numbered > .card::before { content: none; }

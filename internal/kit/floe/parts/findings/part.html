@@ -1,0 +1,9 @@
+<div data-floe-part="findings"><table>
+<tbody>
+{{- range .}}
+<tr><td class="level"><span class="{{if eq .level "must"}}bad{{else if eq .level "should"}}warn{{else}}nit{{end}}" data-floe-part="cell">{{.level}}</span></td><td>
+{{- if or .at .status}}<div class="head">{{with .at}}<code class="at">{{.}}</code>{{end}}{{with .status}}<span class="status">{{.}}</span>{{end}}</div>{{end -}}
+<div>{{markdownLine .text}}</div>{{with .why}}<div class="why">{{markdownLine .}}</div>{{end}}</td></tr>
+{{- end}}
+</tbody>
+</table></div>

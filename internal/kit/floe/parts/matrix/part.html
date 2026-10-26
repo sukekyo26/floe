@@ -1,0 +1,11 @@
+<div data-floe-part="matrix"><table>
+<thead><tr><th></th>{{range .columns}}<th scope="col">{{markdownLine .}}</th>{{end}}</tr></thead>
+<tbody>
+{{- range .rows}}
+<tr><td class="what">{{markdownLine .what}}</td>
+{{- range .cells}}{{$mark := .}}{{$note := ""}}{{if ne (printf "%T" .) "string"}}{{$mark = .mark}}{{$note = .note}}{{end -}}
+<td class="{{$mark}}"><span class="mark"><span>{{word $mark}}</span></span>{{with $note}}<small>{{.}}</small>{{end}}</td>
+{{- end}}</tr>
+{{- end}}
+</tbody>
+</table></div>
