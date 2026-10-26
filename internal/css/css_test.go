@@ -79,6 +79,8 @@ func TestCheck(t *testing.T) {
 		{"a{b:url(\"x\\\")}c{d:e}", at("c.css", "1:5", unclosed)},
 		{"a { b: url(a\\ }", at("c.css", "1:8", unclosed)},
 		{"a{b:'x'} /**/", ""},
+		{"a { background: url(\"x.png\")", at("c.css", "1:3", unclosed)},
+		{"a url(\"x\")", ""},
 	} {
 		if got := told(css.Check("c.css", css.Preprocess([]byte(tt.src)))); got != tt.want {
 			t.Errorf("Check(%q) told\n%s\nwant\n%s", tt.src, got, tt.want)

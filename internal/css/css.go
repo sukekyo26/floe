@@ -32,8 +32,10 @@ type token struct {
 	at   int
 }
 
+// lex reads the tokens of src. tdewolff writes a 0 past the end of the bytes it reads, so it is given a copy:
+// src may be a part of a token's, or the bytes a Kit holds.
 func lex(src []byte) []token {
-	l := css.NewLexer(parse.NewInputBytes(src))
+	l := css.NewLexer(parse.NewInputBytes(bytes.Clone(src)))
 	var toks []token
 	at := 0
 	for {
