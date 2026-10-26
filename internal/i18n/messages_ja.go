@@ -7,12 +7,17 @@ func init() {
 var messagesJA = map[string]string{
 	"library": "%s",
 
-	"yaml_documents":      "YAML のファイルには文書を 1 つだけ書きます。--- で区切らず、1 つの文書で書いてください",
-	"yaml_no_anchors":     "アンカー・エイリアス・マージキー（<<）・タグは使えません。値をそのまま書いてください",
-	"yaml_comment_cut":    "空白の後の # が YAML のコメントを始め、値が %s で切れたかもしれません。# が値の一部なら値を引用符で囲み、コメントなら次の行に書いてください",
-	"yaml_flow_key_alone": "%q は { } の中の値の無いキーです。値を「:」の後ろに書くか、前の文が文の中の , で切れたのなら、その文を引用符で囲んでください",
-	"yaml_key_not_text":   "キーは名前です。%s は引用符で囲んで文字列にしてください",
-	"yaml_not_finite":     "%s は使えません。数は数字で書き、文字列なら引用符で囲んでください",
+	"yaml_documents":            "YAML のファイルには文書を 1 つだけ書きます。--- で区切らず、1 つの文書で書いてください",
+	"yaml_no_anchors":           "アンカー・エイリアス・マージキー（<<）・タグは使えません。値をそのまま書いてください",
+	"yaml_comment_cut":          "空白の後の # が YAML のコメントを始め、値が %s で切れたかもしれません。# が値の一部なら値を引用符で囲み、コメントなら次の行に書いてください",
+	"yaml_flow_key_alone":       "%q は { } の中の値の無いキーです。値を「:」の後ろに書くか、前の文が文の中の , で切れたのなら、その文を引用符で囲んでください",
+	"yaml_key_not_text":         "キーは名前です。%s は引用符で囲んで文字列にしてください",
+	"yaml_not_finite":           "%s は使えません。数は数字で書き、文字列なら引用符で囲んでください",
+	"yaml_number_not_number":    "%[1]s はここでは数 %[2]s と読まれますが、YAML 1.2 では文字列です。数なら %[2]s と書き、文字列なら %[1]s を引用符で囲んでください",
+	"yaml_number_not_text":      "%[1]s はここでは文字列と読まれますが、YAML 1.2 では数 %[2]s です。数なら %[3]s と書き、文字列なら %[1]s を引用符で囲んでください",
+	"yaml_number_octal":         "%[1]s はここでは 8 進の数 %[2]s と読まれますが、YAML 1.2 では %[3]s です。%[3]s と書くか、%[2]s なら %[4]s と書いてください",
+	"yaml_number_too_big":       "%s は YAML 1.2 では数ですが、floe が読むには大きすぎます。文字列のままにするなら引用符で囲んでください",
+	"yaml_number_outside_float": "%s は YAML 1.2 では数ですが、float64 に収まりません。文字列のままにするなら引用符で囲んでください",
 
 	"schema_dialect":            "$schema の %s は floe が受ける版ではありません。https://json-schema.org/draft/2020-12/schema か https://json-schema.org/draft/2019-09/schema を書くか、$schema を消してください",
 	"schema_no_url":             "%s: schema はほかのファイルや URL を参照できません。$ref が指すものは、その schema のファイルの中に書いてください",
