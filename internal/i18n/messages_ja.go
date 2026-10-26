@@ -52,4 +52,16 @@ var messagesJA = map[string]string{
 	"rules_computed_error":            "%s を %s から計算できません: %s",
 	"rules_computed_not_finite":       "%s を %s から計算できません: %s は有限の数になりません",
 	"rules_computed_value_not_finite": "%s を %s から計算できません: 値 %s は有限の数ではありません",
+
+	// kit: 段 1 で読む部品・見た目・テーマ・テンプレート
+	"kit_part_yaml":              "part.yaml はキーと値で書いてください。looks: に部品が借りる見た目のリスト（looks: [panel]）、見た目だけの部品なら description: にその説明です",
+	"kit_part_yaml_key":          "%s は part.yaml のキーではありません。looks: に部品が借りる見た目のリスト（looks: [panel]）、見た目だけの部品なら description: にその説明を書いてください",
+	"kit_part_yaml_looks":        "looks: は部品か見た目の名前のリストで書いてください（looks: [panel]）",
+	"kit_part_yaml_description":  "部品の説明は schema.json の description に書いてください。part.yaml の description: は、schema の無い見た目だけの部品のものです",
+	"kit_part_yaml_about":        "description: は、その見た目が何かを文字列で書いてください",
+	"kit_words_yaml":             "words.yaml は言語タグごとに、言葉の名前とその文字列を書いてください",
+	"kit_words_lang_not_mapping": "%s: 言葉の名前とその文字列を書いてください",
+	"kit_words_not_text":         "%s.%s: 文字列で書いてください。YAML が数・true・false・null と読むものは引用符で囲みます",
+	"kit_words_lang_twice":       "%s は言語 %s の重なりです。言語タグは大文字と小文字で区別しません",
+	"kit_words_unknown":          "words.yaml に言葉「%s」がありません",
 }

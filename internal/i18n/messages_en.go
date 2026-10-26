@@ -58,4 +58,16 @@ var messagesEN = map[string]string{
 	"rules_computed_error":            "%s cannot be computed from %s: %s",
 	"rules_computed_not_finite":       "%s cannot be computed from %s: %s is not a finite number",
 	"rules_computed_value_not_finite": "%s cannot be computed from %s: the value %s is not a finite number",
+
+	// kit: the parts, looks, themes and templates read at stage 1
+	"kit_part_yaml":              "write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
+	"kit_part_yaml_key":          "%s is not a key of part.yaml; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
+	"kit_part_yaml_looks":        "write looks: as a list of the names of parts or looks, like looks: [panel]",
+	"kit_part_yaml_description":  "a part's description is its schema.json's description; part.yaml's description: is a look alone's, which has no schema",
+	"kit_part_yaml_about":        "write description: as text, what the look is",
+	"kit_words_yaml":             "write words.yaml as language tags, each the names of the words and their text",
+	"kit_words_lang_not_mapping": "%s: write the names of the words and their text",
+	"kit_words_not_text":         "%s.%s: write text, in quotes where YAML would read a number, true, false or null",
+	"kit_words_lang_twice":       "%s is the language %s again: a tag's case does not tell languages apart",
+	"kit_words_unknown":          `words.yaml has no word "%s"`,
 }
