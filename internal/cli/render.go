@@ -98,7 +98,13 @@ func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error)
 			// Nowhere to write to, or to read from: told above.
 			continue
 		}
-		p.real = realPath(filepath.Join(at, name))
+		var bad error
+		if p.real, bad = realPath(filepath.Join(at, name), p.to); bad != nil {
+			if failed := found.Add(bad); failed != nil {
+				return nil, failed
+			}
+			continue
+		}
 		other, taken := first[strings.ToLower(p.real)]
 		switch {
 		case taken && other.real == p.real:
@@ -119,30 +125,25 @@ func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error)
 	return pages, nil
 }
 
-// realPath is the absolute path abs with its symlinks resolved: those of its directory, and its own, so that a
-// page that is a symlink is written where it leads, one that leads to no file yet too, not over the link.
-// LIMIT: links are followed 40 times, as Linux follows them; a loop of links is then written over, as one.
-func realPath(abs string) string {
-	for range 40 {
-		if resolved, err := filepath.EvalSymlinks(abs); err == nil {
-			return resolved
-		}
-		to, err := os.Readlink(abs)
-		if err != nil {
-			break
-		}
-		if !filepath.IsAbs(to) {
-			to = filepath.Join(filepath.Dir(abs), to)
-		}
-		abs = to
+// realPath is the absolute path abs with its symlinks resolved: those of its directory, and its own when it
+// is there, so that a page that is a symlink is written where it leads. A symlink that leads nowhere is not
+// written over: it is told, as a page that cannot be written, at to, the page as the user named it.
+func realPath(abs, to string) (string, error) {
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err == nil {
+		return resolved, nil
+	}
+	if info, lerr := os.Lstat(abs); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
+		return "", writeMistake(to, err)
 	}
 	if dir, err := filepath.EvalSymlinks(filepath.Dir(abs)); err == nil {
-		return filepath.Join(dir, filepath.Base(abs))
+		return filepath.Join(dir, filepath.Base(abs)), nil
 	}
-	return abs
+	return abs, nil
 }
 
-// writePages writes each page that changes, and prints its path.
+// writePages writes each page that changes, and prints its path; one that cannot be written is told, and the
+// others are written all the same.
 func (a *app) writePages(pages []rendered, out arg) error {
 	if out.abs != "" {
 		// As the pages in it, for others to read.
@@ -150,17 +151,21 @@ func (a *app) writePages(pages []rendered, out arg) error {
 			return writeMistake(out.name, err)
 		}
 	}
+	var found usererr.List
 	for _, p := range pages {
 		if old, err := os.ReadFile(p.real); err == nil && bytes.Equal(old, p.page) {
 			continue
 		}
 		// Not private: the page goes into a repository, for others to read.
 		if err := files.WriteAtomic(p.real, p.page, 0o644); err != nil {
-			return writeMistake(p.to, err)
+			if failed := found.Add(writeMistake(p.to, err)); failed != nil {
+				return failed
+			}
+			continue
 		}
 		a.print("%s", p.to)
 	}
-	return nil
+	return found.Err()
 }
 
 // checkPages returns a mistake for each page that is missing or is not what its data file draws.

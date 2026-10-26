@@ -123,21 +123,42 @@ func TestRenderCannotWrite(t *testing.T) {
 	}
 }
 
-// A page that is a symlink is written where it leads, one that leads to no file yet too: the link stays.
+// A page that is a symlink is written where it leads; one that leads nowhere is refused as a page that cannot
+// be written, and the link stays.
 func TestRenderThroughLink(t *testing.T) {
 	t.Parallel()
 
-	dir := write(t, map[string]string{"a.yaml": good, "out/x": ""})
-	if err := os.Symlink(filepath.Join("out", "a.html"), filepath.Join(dir, "a.html")); err != nil {
-		t.Fatal(err)
+	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": good, "out/a.html": "old"})
+	for name, to := range map[string]string{"a.html": filepath.Join("out", "a.html"), "b.html": filepath.Join("out", "b.html")} {
+		if err := os.Symlink(to, filepath.Join(dir, name)); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if code, _, stderr := run(dir, "render", "a.yaml"); code != 0 || stderr != "" {
-		t.Fatalf("floe render = %d, %q", code, stderr)
+	code, stdout, stderr := run(dir, "render", "a.yaml", "b.yaml")
+	if code != 1 || stdout != "" || !strings.HasPrefix(stderr, "b.html: cannot be written (") {
+		t.Errorf("floe render = %d, %q, %q", code, stdout, stderr)
 	}
-	if info, err := os.Lstat(filepath.Join(dir, "a.html")); err != nil || info.Mode()&os.ModeSymlink == 0 {
-		t.Errorf("a.html is no longer the link: %v, %v", info, err)
+	if code, stdout, stderr := run(dir, "render", "a.yaml"); code != 0 || stdout != "a.html\n" || stderr != "" {
+		t.Errorf("floe render a.yaml = %d, %q, %q", code, stdout, stderr)
+	}
+	for _, name := range []string{"a.html", "b.html"} {
+		if info, err := os.Lstat(filepath.Join(dir, name)); err != nil || info.Mode()&os.ModeSymlink == 0 {
+			t.Errorf("%s is no longer the link: %v, %v", name, info, err)
+		}
 	}
 	if page, err := os.ReadFile(filepath.Join(dir, "out", "a.html")); err != nil || !strings.Contains(string(page), "<title>A plan</title>") {
 		t.Errorf("out/a.html = %.40q, %v", page, err)
+	}
+}
+
+// Every page that can be written is written, and every one that cannot is told.
+func TestRenderWritesTheOthers(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": good, "c.yaml": good, "b.html/x": "", "c.html/x": ""})
+	code, stdout, stderr := run(dir, "render", "a.yaml", "b.yaml", "c.yaml")
+	if code != 1 || stdout != "a.html\n" || strings.Count(stderr, "cannot be written") != 2 ||
+		!strings.HasPrefix(stderr, "b.html: ") || !strings.Contains(stderr, "\nc.html: ") {
+		t.Errorf("floe render = %d, %q, %q", code, stdout, stderr)
 	}
 }
