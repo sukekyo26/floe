@@ -1,7 +1,8 @@
 # A report: a heading and parts per section. Text is Markdown; code and commands go in code and
 # terminal, which draws the prompt; numbers, steps and what changes go in stats, steps and compare;
 # a table's cells are lines of Markdown, numbers in quotes, or pills; html goes in as it is; a script is a
-# function the page calls with an element to draw in and its data.
+# function the page calls with an element to draw in and its data; a diagram is checked for overlaps
+# and overflowing text, and floe diagram example prints one of each kind.
 template: report
 lang: en
 title: Moving the team wiki
@@ -61,6 +62,18 @@ sections:
               input.addEventListener('input', update);
               update();
             }
+  - heading: Where the pages go
+    parts:
+      - diagram:
+          width: 640
+          height: 112
+          title: The pages from the old server to the new host
+          parts:
+            - box: { x: 20, y: 30, w: 180, h: 52, rows: [Old server, [read-only, sub]] }
+            - box: { x: 230, y: 30, w: 180, h: 52, tone: accent, rows: [Copy the pages, [and check the links, sub]] }
+            - box: { x: 440, y: 30, w: 180, h: 52, tone: good, rows: [New host] }
+            - edge: { from: [200, 56], to: [230, 56] }
+            - edge: { from: [410, 56], to: [440, 56] }
   - heading: Risks
     parts:
       - table:

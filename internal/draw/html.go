@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/net/html"
 
+	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/kit"
@@ -28,8 +29,8 @@ func probe(n int) string {
 }
 
 // items are the items of one drawing that floe draws, and what they need: those of format html, each marked so
-// that the page drawn tells whether it changes the page around it, and the images of the data's directory, each
-// read once.
+// that the page drawn tells whether it changes the page around it, the images of the data's directory, each
+// read once, and the icons of the diagrams, counted so that the ids of each differ.
 type items struct {
 	secret    string     // of the marks, in lower case as a parser makes tag and attribute names
 	html      [][]string // the path of each item of format html, by its number
@@ -38,6 +39,8 @@ type items struct {
 	root      *os.Root
 	rootErr   error
 	images    map[string]image
+	icons     diagram.Icons
+	diagrams  int
 }
 
 // image is an image read, or its mistake.
@@ -46,11 +49,12 @@ type image struct {
 	err error
 }
 
-// newItems returns the items of a drawing whose data's images are under imagesDir ("" for none).
-func newItems(imagesDir string) *items {
+// newItems returns the items of a drawing whose data's images are under imagesDir ("" for none) and whose
+// diagrams show the icons of icons (nil for none kept).
+func newItems(imagesDir string, icons diagram.Icons) *items {
 	return &items{
 		secret: strings.ToLower(rand.Text()), html: nil, texts: nil, imagesDir: imagesDir, root: nil, rootErr: nil,
-		images: map[string]image{},
+		images: map[string]image{}, icons: icons, diagrams: 0,
 	}
 }
 

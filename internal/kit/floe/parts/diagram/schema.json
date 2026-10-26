@@ -43,7 +43,7 @@
       "additionalProperties": { "type": "string" }
     },
     "name": { "type": "string", "minLength": 1, "description": "The name an edge's from or to gives, unique in the diagram" },
-    "tone": { "enum": ["accent", "good", "warn", "bad"] },
+    "tone": { "$ref": "floe:///parts/tone.json" },
     "point": { "type": "array", "prefixItems": [{ "type": "number" }, { "type": "number" }], "minItems": 2, "maxItems": 2 },
     "side": { "enum": ["top", "right", "bottom", "left"] },
     "origin": { "enum": ["left", "centre"], "description": "What x is: the left edge (the default) or the centre" },

@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/draw"
 	"github.com/sukekyo26/floe/internal/files"
@@ -62,7 +63,7 @@ func (a *app) renderPages(paths []string, out arg, check bool) error {
 	if err != nil {
 		return err //nolint:wrapcheck // floe's own, which its tests check
 	}
-	pages, err := a.drawPages(k, paths, out)
+	pages, err := a.drawPages(k, a.iconStore(), paths, out)
 	switch {
 	case err != nil:
 		return err
@@ -73,9 +74,9 @@ func (a *app) renderPages(paths []string, out arg, check bool) error {
 	}
 }
 
-// drawPages draws the page of each data file with k and names the HTML file it goes to, in out, else beside
-// it, or returns the mistakes of out and of every file, and the pages two data files would write.
-func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error) {
+// drawPages draws the page of each data file with k and the icons of store and names the HTML file it goes to,
+// in out, else beside it, or returns the mistakes of out and of every file, and the pages two data files would write.
+func (a *app) drawPages(k *kit.Kit, store diagram.Icons, paths []string, out arg) ([]rendered, error) {
 	var found usererr.List
 	if failed := found.Add(out.err); failed != nil {
 		return nil, failed
@@ -89,7 +90,7 @@ func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error)
 	var first []target
 	for _, f := range a.args(paths, "cli_wants_data") {
 		p, at := pageOf(f, out)
-		page, err := drawFile(k, f)
+		page, err := drawFile(k, store, f)
 		if failed := found.Add(err); failed != nil {
 			return nil, failed
 		}

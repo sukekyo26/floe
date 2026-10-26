@@ -16,6 +16,8 @@ function zoomable(messages) {
     // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
     // diagram stays shown when the frame resizes
     let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
     const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
     // Zooming out stops at the whole diagram or the actual size, whichever is smaller
     const min = () => Math.min(fit(), 1);
@@ -40,6 +42,12 @@ function zoomable(messages) {
     const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
 
     const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
       const w = wrap.clientWidth, h = wrap.clientHeight;
       if (!w || !h) return;
       if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
@@ -117,11 +125,20 @@ function zoomable(messages) {
     });
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
 
-    // The keyboard reaches the frame too: the arrow keys move a zoomed diagram by 40 screen px
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
     wrap.tabIndex = 0;
     wrap.setAttribute('role', 'group');
     wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
     wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
       const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
       if (!step || !wrap.classList.contains('zoomed')) return;
       e.preventDefault();
@@ -133,6 +150,14 @@ function zoomable(messages) {
     // (tests) that reads it without waiting for a paint
     render();
     new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
   };
   const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

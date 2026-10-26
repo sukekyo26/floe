@@ -3,8 +3,8 @@
 // Errors carry a key and arguments and are rendered at the boundary: the CLI's exit, in English.
 //
 // A key missing from a language falls back to the language without its last subtag, one at a time
-// (zh-hant-tw to zh-hant to zh, pt-br to pt), then to English, then to the key itself. The tags are
-// lower case: New is given one so.
+// (zh-hant-tw to zh-hant to zh, pt-br to pt), then to English, then to the key itself. A tag is read with Tag
+// where it comes in (the data's lang, a flag, the languages of words.yaml), so that JA and ja_JP are ja's.
 package i18n
 
 import (
@@ -48,13 +48,31 @@ type Catalog struct {
 	chain []Lang
 }
 
-// New returns the catalog of lang, a tag in lower case. A language without a catalog renders in English.
+// New returns the catalog of lang, a tag as Tag reads it. A language without a catalog renders in English.
 func New(lang Lang) *Catalog {
 	return &Catalog{chain: Fallbacks(lang)}
 }
 
+// Tag is the language tag written as tag, as it is matched and written into a page: trimmed of spaces, in lower
+// case, with _ read as -, as BCP 47 reads it.
+func Tag(tag string) Lang {
+	return Lang(strings.ReplaceAll(strings.ToLower(strings.TrimSpace(tag)), "_", "-"))
+}
+
+// Again returns the first of tags before tags[i] that is the language tags[i] is, as Tag reads them; "" for
+// none. Two tags of one language are a mistake wherever languages are written by tag (lang_twice, the two in the
+// order of their names).
+func Again(tags []string, i int) string {
+	for _, t := range tags[:i] {
+		if Tag(t) == Tag(tags[i]) {
+			return t
+		}
+	}
+	return ""
+}
+
 // Fallbacks lists where to look for a text in lang, in order: lang, lang without its last subtag, one at a
-// time, then English.
+// time, then English: lang is a tag as Tag reads it.
 func Fallbacks(lang Lang) []Lang {
 	var chain []Lang
 	for tag := string(lang); tag != ""; tag = parent(tag) {

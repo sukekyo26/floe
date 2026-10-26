@@ -16,6 +16,7 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
+	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/schema"
@@ -25,14 +26,16 @@ import (
 )
 
 // Page draws d, checked, with t of k in the theme named so, as a page titled title, calc the values of t's
-// computed.yaml (nil for none), the images it names read under imagesDir ("" for none): each part and item of
-// a format from the inner ones out, then page.html. The mistakes of the items are told together, a part
+// computed.yaml (nil for none), the images it names read under imagesDir ("" for none), its diagrams' icons
+// looked up in icons (nil for none kept): each part and item of a format from the inner ones out, then
+// page.html. The mistakes of the items are told together, a part
 // holding one that failed left undrawn. It checks the page drawn, its items of format html first (items.check),
 // and returns it as the parser read it, with its styles in its head and its headings given ids, written anew.
 func Page(
 	k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[string]any, title, imagesDir string,
+	icons diagram.Icons,
 ) ([]byte, error) {
-	s := newItems(imagesDir)
+	s := newItems(imagesDir, icons)
 	defer s.close()
 	holds := map[string][]string{}
 	var found usererr.List
@@ -63,16 +66,7 @@ func Page(
 	}
 	var b bytes.Buffer
 	if err = page.Execute(&b, map[string]any{"Title": title, "Lang": d.Lang, "Data": data, "Calc": calc}); err != nil {
-		e, at, failed := executed(err, "page.html", t.PageSource())
-		if failed != nil {
-			return nil, failed
-		}
-		e.File, e.Line, e.Column = t.File("page.html"), 0, 0
-		e.Args = s.plainArgs(e.Args)
-		if at >= 0 {
-			e.Line, e.Column = textpos.Of(t.PageSource(), at)
-		}
-		return nil, e
+		return nil, s.pageMistakes(t, err)
 	}
 	tree, named, err := readPage(k, d, s, b.Bytes())
 	if err != nil {
@@ -142,39 +136,29 @@ func under(at, of []string) bool {
 	return len(at) > len(of) && slices.Equal(at[:len(of)], of)
 }
 
-// drawItem draws it, an item of d, ready as Walk made it: a part's by its part.html in d's language; one of a
-// format of floe's from its text, refused at the item for another value: markdown as markdown draws it, html
-// marked for s to check in the page drawn, an image as the data URI of the file it names, read by s.
+// pageMistakes returns the mistakes err of executing the page.html of t, at their line and column in it, or
+// floe's failure.
+func (s *items) pageMistakes(t *kit.Template, err error) error {
+	mistakes, at, failed := executed(err, "page.html", t.PageSource())
+	if failed != nil {
+		return failed
+	}
+	for _, e := range mistakes {
+		e.File, e.Line, e.Column = t.File("page.html"), 0, 0
+		e.Args = s.plainArgs(e.Args)
+		if at >= 0 {
+			e.Line, e.Column = textpos.Of(t.PageSource(), at)
+		}
+	}
+	return mistakes.Err()
+}
+
+// drawItem draws it, an item of d, ready as Walk made it: a part's by its part.html (drawPart); one of a format
+// of floe's from its text, refused at the item for another value: markdown as markdown draws it, html marked for
+// s to check in the page drawn, an image as the data URI of the file it names, read by s.
 func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any, error) {
 	if it.Part != "" {
-		p, ok := k.Part(it.Part)
-		if !ok {
-			//nolint:err113 // floe's own mistake
-			return nil, fmt.Errorf("draw: no part %s, which the schema was compiled with", it.Part)
-		}
-		page, err := p.Page(d.Lang)
-		if err != nil {
-			return nil, err //nolint:wrapcheck // floe's failure, which says what failed
-		}
-		var b bytes.Buffer
-		if err := page.Execute(&b, ready); err != nil {
-			e, at, failed := executed(err, "part.html", p.PageSource())
-			if failed != nil {
-				return nil, failed
-			}
-			switch {
-			case e.File == p.File("part.html") && at >= 0:
-				// One part.html tells of itself (a word its words.yaml has not): at its line and column, told
-				// once whatever uses the part.
-				e.Line, e.Column = textpos.Of(p.PageSource(), at)
-			case e.File == "":
-				// At the value drawn: a part of floe's is no file one can fix, and the value tells why.
-				pos := d.PosOf(it.At)
-				e.File, e.Line, e.Column = d.File, pos.Line, pos.Column
-			}
-			return nil, e
-		}
-		return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
+		return drawPart(k, d, it, ready, s)
 	}
 	text, ok := it.Value.(string)
 	if !ok {
@@ -198,13 +182,50 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 	return nil, fmt.Errorf("draw: no format %s of floe's", it.Format) //nolint:err113 // floe's own mistake
 }
 
-// executed returns the mistake err of executing the template name, whose text is src (nil when where it is
-// in the text is not asked): the usererr.Error it wraps, a copy, or text/template's words without their head
-// (template: name:line:column: ), and where the head says it is in src, -1 for none; or floe's failure, an
-// error of no execution. The head's line counts \n alone and its column bytes from 0: they are made a place
-// in src, which textpos counts.
+// drawPart draws it, an item of d of a part, ready as Walk made it, by the part's part.html in d's language, its
+// function diagram drawing the part's value as written.
+func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any, error) {
+	p, ok := k.Part(it.Part)
+	if !ok {
+		return nil, fmt.Errorf("draw: no part %s, which the schema was compiled with", it.Part) //nolint:err113 // floe's
+	}
+	page, err := p.Page(d.Lang)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // floe's failure, which says what failed
+	}
+	// Walk's ready holds the keys a schema declares and the value leaves out, as nil: not the spec written.
+	page.Funcs(template.FuncMap{"diagram": s.diagramOf(d.Lang, it.Value)})
+	var b bytes.Buffer
+	if err := page.Execute(&b, ready); err != nil {
+		mistakes, at, failed := executed(err, "part.html", p.PageSource())
+		if failed != nil {
+			return nil, failed
+		}
+		for _, e := range mistakes {
+			switch {
+			case e.File == p.File("part.html") && at >= 0:
+				// One part.html tells of itself (a word its words.yaml has not): at its line and column, told
+				// once whatever uses the part.
+				e.Line, e.Column = textpos.Of(p.PageSource(), at)
+			case e.File == "" && e.At == "":
+				// At the value drawn: a part of floe's is no file one can fix, and the value tells why.
+				pos := d.PosOf(it.At)
+				e.File, e.Line, e.Column = d.File, pos.Line, pos.Column
+			}
+		}
+		// A function's mistakes at a JSON pointer are at one from the root of the part's value.
+		return nil, yamlpos.Place(mistakes.Err(), d.File, d.Root, it.At) //nolint:wrapcheck // mistakes placed
+	}
+	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
+}
+
+// executed returns the mistakes err of executing the template name, whose text is src (nil when where it is
+// in the text is not asked): the usererr.Error or the usererr.List it wraps, copies, or text/template's words
+// without their head (template: name:line:column: ), and where the head says it is in src, -1 for none; or
+// floe's failure, an error of no execution. The head's line counts \n alone and its column bytes from 0: they
+// are made a place in src, which textpos counts.
 // LIMIT: text/template gives where it failed in its words alone; take it from the error once it gives it apart.
-func executed(err error, name string, src []byte) (*usererr.Error, int, error) {
+func executed(err error, name string, src []byte) (usererr.List, int, error) {
 	var ee ttemplate.ExecError
 	if !errors.As(err, &ee) || errors.Is(err, kit.ErrFunc) {
 		return nil, -1, fmt.Errorf("draw with %s: %w", name, err)
@@ -214,12 +235,16 @@ func executed(err error, name string, src []byte) (*usererr.Error, int, error) {
 	if ok {
 		at = offset(src, line, column)
 	}
-	var inner *usererr.Error
-	if errors.As(err, &inner) && inner != nil {
-		e := *inner
-		return &e, at, nil
+	var inner usererr.List
+	if failed := inner.Add(ee.Err); failed != nil || inner == nil {
+		return usererr.List{usererr.LibraryAt("", 0, 0, rest)}, at, nil
 	}
-	return usererr.LibraryAt("", 0, 0, rest), at, nil
+	mistakes := make(usererr.List, len(inner))
+	for i, e := range inner {
+		c := *e
+		mistakes[i] = &c
+	}
+	return mistakes, at, nil
 }
 
 // cutHead returns the line and the column the head of msg, template: name:line:column: , gives, and msg

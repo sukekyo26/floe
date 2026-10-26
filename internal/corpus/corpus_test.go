@@ -217,12 +217,19 @@ func (s *sample) pages(t *testing.T, out, what string) map[string][]byte {
 
 // run runs floe in process from the sample's directory, writes what it printed to commands.golden and
 // returns its exit code. In stdout and stderr the directories the test made stand as $SAMPLE and $TMP, so
-// that the golden files are the same wherever the repository and the temporary directory are.
+// that the golden files are the same wherever the repository and the temporary directory are. Its icons are
+// those of the sample's .icons, none kept for a sample without one.
 func (s *sample) run(t *testing.T, args ...string) int {
 	t.Helper()
 
 	var stdout, stderr bytes.Buffer
-	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: s.dir, Getenv: nil})
+	getenv := func(key string) string {
+		if key == "FLOE_ICONS_DIR" {
+			return filepath.Join(s.dir, ".icons")
+		}
+		return ""
+	}
+	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: s.dir, Getenv: getenv})
 	stand := strings.NewReplacer(s.tmp, "$TMP", s.dir, "$SAMPLE")
 	out := stand.Replace(stdout.String())
 	fmt.Fprintf(&s.commands, "$ floe %s\nexit %d\n", stand.Replace(strings.Join(args, " ")), code)

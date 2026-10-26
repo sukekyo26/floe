@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/kit"
@@ -34,9 +35,10 @@ func (a *app) check(paths []string) error {
 	if err != nil {
 		return err //nolint:wrapcheck // floe's own, which its tests check
 	}
+	store := a.iconStore()
 	var found usererr.List
 	for _, p := range a.args(paths, "cli_wants_data") {
-		_, err := drawFile(k, p)
+		_, err := drawFile(k, store, p)
 		if failed := found.Add(err); failed != nil {
 			return failed
 		}
@@ -44,9 +46,9 @@ func (a *app) check(paths []string) error {
 	return found.Err()
 }
 
-// drawFile draws the page of the data file p with k, titled, without a title:, by the slug of its name, else,
-// for a name without a letter a slug takes, by the name itself; or returns its mistakes.
-func drawFile(k *kit.Kit, p arg) ([]byte, error) {
+// drawFile draws the page of the data file p with k and the icons of store, titled, without a title:, by the
+// slug of its name, else, for a name without a letter a slug takes, by the name itself; or returns its mistakes.
+func drawFile(k *kit.Kit, store diagram.Icons, p arg) ([]byte, error) {
 	// An empty path has no name to check; one that is nowhere has, and is told with it.
 	if p.name == "" {
 		return nil, p.err
@@ -60,8 +62,8 @@ func drawFile(k *kit.Kit, p arg) ([]byte, error) {
 		return nil, err
 	}
 	untitled := cmp.Or(files.SlugFromFile(p.name), baseName(p.name))
-	//nolint:wrapcheck // its mistakes, or what failed
-	return tmpl.Draw(k, p.name, src, tmpl.Options{Theme: "", Untitled: untitled, ImagesDir: dirs.Dir(p.abs)})
+	o := tmpl.Options{Theme: "", Untitled: untitled, ImagesDir: dirs.Dir(p.abs), Icons: store}
+	return tmpl.Draw(k, p.name, src, o) //nolint:wrapcheck // its mistakes, or what failed
 }
 
 // nameMistake refuses file by its name: one that is no data file, or of no name before its extension, which

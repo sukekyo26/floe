@@ -9,8 +9,9 @@ import (
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/doc"
+	"github.com/sukekyo26/floe/internal/draw"
 	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -54,9 +55,9 @@ enough; more does no harm). --no-assets leaves them out.`,
 			}
 			out := strings.Join(svgs, "\n")
 			if !noAssets {
-				head, err := diagram.Assets()
+				head, err := diagramAssets()
 				if err != nil {
-					return err //nolint:wrapcheck // floe's own, which its tests check
+					return err
 				}
 				out = head + "\n" + out
 			}
@@ -96,20 +97,15 @@ the drawing.`,
 // every mistake of every file, at its line and column.
 func (a *app) diagrams(paths []string, lang string, with func(*diagram.Drawer, any, diagram.Options) (string, error),
 ) ([]string, error) {
-	d, err := diagram.Own()
+	d, err := draw.Diagrams()
 	if err != nil {
 		return nil, err //nolint:wrapcheck // floe's own schema, which its tests check
 	}
-	var store diagram.Icons
-	if dir, dirErr := a.iconsDir(); dirErr != nil {
-		store = noIcons{err: dirErr}
-	} else {
-		store = icons.New(dir)
-	}
+	store := a.iconStore()
 	var found usererr.List
 	var out []string
 	for i, p := range a.args(paths, "cli_wants_spec") {
-		got, err := diagramOf(d, p, diagram.Options{Lang: i18n.Lang(lang), Icons: store, Seq: i + 1}, with)
+		got, err := diagramOf(d, p, diagram.Options{Lang: i18n.Tag(lang), Icons: store, Seq: i + 1}, with)
 		if failed := found.Add(err); failed != nil {
 			return nil, failed
 		}
@@ -119,6 +115,24 @@ func (a *app) diagrams(paths []string, lang string, with func(*diagram.Drawer, a
 		return nil, err
 	}
 	return out, nil
+}
+
+// diagramAssets are what a page holds once for the diagrams of floe diagram render: the script that zooms them
+// and the CSS of floe's part diagram, unscoped, as a page without floe's parts takes it.
+func diagramAssets() (string, error) {
+	script, err := diagram.Script()
+	if err != nil {
+		return "", err //nolint:wrapcheck // floe's own, which its tests check
+	}
+	k, err := kit.Floe()
+	if err != nil {
+		return "", err //nolint:wrapcheck // as above
+	}
+	p, ok := k.Part("diagram")
+	if !ok {
+		return "", errors.New("diagram: floe has no part diagram") //nolint:err113 // floe's own mistake
+	}
+	return script + "\n<style>\n" + string(p.CSS()) + "</style>", nil
 }
 
 func diagramOf(
@@ -142,13 +156,6 @@ func diagramOf(
 	}
 	got, err := with(d, doc.Ints(v), o)
 	return got, yamlpos.Place(err, p.name, root, nil) //nolint:wrapcheck // mistakes placed
-}
-
-// noIcons are no icons to look up: there is no directory for them, which a diagram with an icon is told.
-type noIcons struct{ err error }
-
-func (n noIcons) Lookup(string) ([]byte, error) {
-	return nil, n.err
 }
 
 func (a *app) diagramExampleCmd() *cobra.Command {

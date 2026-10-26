@@ -33,7 +33,8 @@
     "keys": { "$ref": "floe:///parts/keys.json" },
     "tabs": { "$ref": "floe:///parts/tabs.json" },
     "html": { "type": "string", "format": "html", "description": "HTML that goes in as it is" },
-    "script": { "$ref": "floe:///parts/script.json" }
+    "script": { "$ref": "floe:///parts/script.json" },
+    "diagram": { "$ref": "floe:///parts/diagram.json", "description": "A diagram drawn as inline SVG, checked for overlaps and overflowing text; floe diagram example prints one of each kind" }
   },
   "minProperties": 1,
   "maxProperties": 1,
