@@ -177,6 +177,7 @@ linters:
         - usererr.NewAt(
         - usererr.New(
         - usererr.CannotRead(
+        - usererr.LibraryWith(
         - usererr.CannotWrite(
         # A sig matches as part of the one reported, func (github.com/…/usererr.List).Err(): no "(" before.
         - usererr.List).Err(

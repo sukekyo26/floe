@@ -22,6 +22,14 @@ func (a *app) print(format string, args ...any) {
 	_, _ = fmt.Fprintf(a.out, format+"\n", args...) //nolint:errcheck // Run tells what a write failed at
 }
 
+// getenv is the value of the environment variable key, "" when it is not set.
+func (a *app) getenv(key string) string {
+	if a.env.Getenv == nil {
+		return ""
+	}
+	return a.env.Getenv(key)
+}
+
 // arg is a path a command was given: its name as it was written, which its mistakes and its page go by, and
 // where it is, or why it is nowhere.
 type arg struct {

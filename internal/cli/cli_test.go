@@ -28,7 +28,7 @@ func TestRun(t *testing.T) {
 		{[]string{"--\xff"}, 2, "", "floe: unknown flag: --\ufffd: run floe --help\n"},
 	} {
 		var stdout, stderr bytes.Buffer
-		code := cli.Run(c.args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: ""})
+		code := cli.Run(c.args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: "", Getenv: nil})
 		if code != c.code || stdout.String() != c.stdout || stderr.String() != c.errs {
 			t.Errorf("floe %v = %d, stdout %q, stderr %q; want %d, %q, %q",
 				c.args, code, stdout.String(), stderr.String(), c.code, c.stdout, c.errs)
@@ -41,7 +41,7 @@ func TestRunHelp(t *testing.T) {
 	t.Parallel()
 
 	var stdout, stderr bytes.Buffer
-	if code := cli.Run(nil, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: ""}); code != 0 || stderr.Len() != 0 {
+	if code := cli.Run(nil, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: "", Getenv: nil}); code != 0 || stderr.Len() != 0 {
 		t.Fatalf("floe = %d, stderr %q", code, stderr.String())
 	}
 	if out := stdout.String(); !strings.HasPrefix(out, "Serve agent-written HTML pages on a local server\n") ||
@@ -60,7 +60,7 @@ func TestRunWriteFails(t *testing.T) {
 	t.Parallel()
 
 	var stderr bytes.Buffer
-	if code := cli.Run([]string{"version"}, cli.Env{Stdout: failing{}, Stderr: &stderr, Dir: ""}); code != 1 ||
+	if code := cli.Run([]string{"version"}, cli.Env{Stdout: failing{}, Stderr: &stderr, Dir: "", Getenv: nil}); code != 1 ||
 		stderr.String() != "floe: disk full\n" {
 		t.Errorf("floe version to a failing stdout = %d, stderr %q", code, stderr.String())
 	}
@@ -69,7 +69,7 @@ func TestRunWriteFails(t *testing.T) {
 // run runs floe with args in dir, and returns its exit code, stdout and stderr.
 func run(dir string, args ...string) (int, string, string) {
 	var stdout, stderr bytes.Buffer
-	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: dir})
+	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: dir, Getenv: nil})
 	return code, stdout.String(), stderr.String()
 }
 
@@ -99,7 +99,7 @@ func TestHelp(t *testing.T) {
 	}
 
 	var stderr bytes.Buffer
-	if code := cli.Run([]string{"--help"}, cli.Env{Stdout: failing{}, Stderr: &stderr, Dir: ""}); code != 1 ||
+	if code := cli.Run([]string{"--help"}, cli.Env{Stdout: failing{}, Stderr: &stderr, Dir: "", Getenv: nil}); code != 1 ||
 		stderr.String() != "floe: disk full\n" {
 		t.Errorf("floe --help to a failing stdout = %d, stderr %q", code, stderr.String())
 	}
@@ -125,6 +125,7 @@ func TestHelp(t *testing.T) {
 	want := "check\tCheck data files as their pages are drawn, without writing them\n" +
 		"completion\tGenerate the autocompletion script for the specified shell\n" +
 		"help\tHelp about any command\n" +
+		"icons\tKeep icon sets for the icon parts of diagrams, and search them\n" +
 		"render\tWrite the page of each data file to an HTML file beside it, or in --out-dir\n" +
 		"version\tPrint the floe version\n:4\n"
 	if code, got, _ := run("", "__complete", "help", ""); code != 0 || !strings.HasPrefix(got, want) {

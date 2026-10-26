@@ -25,7 +25,8 @@ const (
 type Env struct {
 	Stdout io.Writer
 	Stderr io.Writer
-	Dir    string // the working directory a relative path is under; "" when it cannot be read
+	Dir    string                  // the working directory a relative path is under; "" when it cannot be read
+	Getenv func(key string) string // the environment; nil for none
 }
 
 // usageError is a command line floe cannot read, or that lacks what it needs (exit 2).
@@ -131,7 +132,7 @@ func newRoot(env Env, out io.Writer) *cobra.Command {
 		},
 	})
 	a := &app{env: env, out: out}
-	root.AddCommand(a.checkCmd(), a.renderCmd())
+	root.AddCommand(a.checkCmd(), a.iconsCmd(), a.renderCmd())
 	// cobra adds these as it runs: here, so that readable finds them, and their arguments are wrapped below.
 	root.InitDefaultHelpCmd()
 	// cobra's help takes any words, and answers one that names no command with root's help: its words are a
