@@ -41,6 +41,27 @@ func KeyOf(v *ast.MappingValueNode) ast.Node {
 	return v.Key
 }
 
+// Quote is how a scalar is quoted, as the parser read it.
+type Quote int
+
+const (
+	Plain Quote = iota // not quoted, or not a scalar
+	Double
+	Single
+)
+
+// QuoteOf returns how n is quoted.
+func QuoteOf(n ast.Node) Quote {
+	switch n.GetToken().Type {
+	case token.DoubleQuoteType:
+		return Double
+	case token.SingleQuoteType:
+		return Single
+	default:
+		return Plain
+	}
+}
+
 // OfValue returns where the value of key is written, or where key is when the value is left out:
 // an empty value has no text to point at.
 func OfValue(key, value ast.Node) Pos {

@@ -40,6 +40,13 @@ func TestValidate(t *testing.T) {
 			"k: c\nm: ab\no: [1]\n",
 			lines("d.yaml:3:4: value must be one of 'a', 'b'", "d.yaml:4:4: minLength: got 2, want 3", "d.yaml:5:4: 'oneOf' failed, none matched"),
 		},
+		{
+			"numbers doc.Read made ints",
+			`"properties": {"n": {"type":"integer","minimum":5}, "f": {"type":"integer"}, "big": {"maximum":10}}`,
+			"n: 3\nf: 3.5\nbig: 18446744073709551615\n",
+			lines("d.yaml:3:4: minimum: got 3, want 5", "d.yaml:4:4: got number, want integer",
+				"d.yaml:5:6: maximum: got 1.8446744073709552×10¹⁹, want 10"),
+		},
 		{"none", `"properties": {"n": {"type":"integer"}}`, "n: 1\n", ""},
 	} {
 		if got := validate(t, tt.body, tt.data); got != tt.want {
