@@ -2,6 +2,7 @@ package schema
 
 import (
 	"maps"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -15,18 +16,24 @@ import (
 // drafts are the drafts floe takes. Before 2019-09 the library leaves out every key beside a $ref.
 var drafts = []string{"https://json-schema.org/draft/2020-12/schema", "https://json-schema.org/draft/2019-09/schema"}
 
-// dialects refuses each "$schema" of doc, the JSON compiled, that names no draft floe takes: one that leaves
-// out vocabularies leaves properties and the like out of the compiled tree, and the library would read an
-// unknown one through the loader while it compiles.
-// LIMIT: a "$schema" in a value (enum, const, default, examples) is refused too, as a JSON value is all it reads.
-func (c *Compiled) dialects(doc any) error {
-	var found usererr.List
+// raw refuses in doc, the JSON of file held at u, each "$schema" that names no draft floe takes, in dialects,
+// and each "$id" that would take a URL floe gives its parts and the schemas they share, in ids: one of the
+// floe: scheme, and in a part or a shared schema (part), one without a scheme, which lands under
+// floe:///parts/. The root may name u as it is. One "$schema" floe does not take leaves properties and the
+// like out of the compiled tree, and the library would read it through the loader while it compiles; one
+// "$id" names the schema a $ref in its file to that URL means, over floe's.
+// LIMIT: a "$schema" or "$id" in a value (enum, const, default, examples, x-…) is refused too, as a JSON
+// value is all it reads.
+func raw(u, file string, doc any, part bool) (dialects, ids usererr.List) {
 	var walk func(v any, at string)
 	walk = func(v any, at string) {
 		switch v := v.(type) {
 		case map[string]any:
 			if s, ok := v["$schema"].(string); ok && !slices.Contains(drafts, draft(s)) {
-				found = append(found, usererr.NewIn(c.file, "#"+at, "schema_dialect", s))
+				dialects = append(dialects, usererr.NewIn(file, "#"+at, "schema_dialect", s))
+			}
+			if id, ok := v["$id"].(string); ok {
+				ids = append(ids, idMistake(u, file, at, id, part)...)
 			}
 			for _, k := range slices.Sorted(maps.Keys(v)) {
 				walk(v[k], at+"/"+escape(k))
@@ -38,7 +45,32 @@ func (c *Compiled) dialects(doc any) error {
 		}
 	}
 	walk(doc, "")
-	return found.Err()
+	return dialects, ids
+}
+
+// idMistake returns the mistake of the "$id" id at the JSON pointer at of file, held at u, of a part or a
+// shared schema when part. A floe: one, in any case (url.Parse lowercases it), is floe's; one without a
+// scheme is under the URL of the file, which is floe:///parts/ for a part. A template's is under
+// floe://templates/, which it cannot leave. One that is no URL the library tells as it compiles.
+func idMistake(u, file, at, id string, part bool) usererr.List {
+	p, err := url.Parse(id)
+	var key string
+	switch {
+	case at == "" && id == u:
+		return nil
+	case err != nil:
+		return nil //nolint:nilerr // the library tells an $id that is no URL as it compiles
+	case p.Scheme == "floe":
+		key = "schema_id_floe"
+	case p.Scheme == "" && part:
+		key = "schema_id_relative"
+	default:
+		return nil
+	}
+	if at == "" {
+		return usererr.List{usererr.NewIn(file, "#", "schema_id_root", id, u)}
+	}
+	return usererr.List{usererr.NewIn(file, "#"+at, key, id)}
 }
 
 // draft returns u as drafts write it: without a trailing # and with https for http.

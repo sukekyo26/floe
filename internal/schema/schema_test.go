@@ -11,7 +11,7 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-const template = "floe:///templates/t/schema.json"
+const template = "floe://templates/t/schema.json"
 
 // resources are small parts and shared schemas, as floe's are given: note (title, text, a tone), tone (shared,
 // an enum), any (shared: a markdown text, a note, a stack), stack (a part holding any), html (a part with a
@@ -25,7 +25,7 @@ func resources(t *testing.T) map[string]schema.Resource {
 		if err != nil {
 			t.Fatal(err)
 		}
-		r, err := schema.NewResource("parts/"+name+".json", src, k)
+		r, err := schema.NewResource("floe:///parts/"+name+".json", "parts/"+name+".json", src, k)
 		if err != nil {
 			t.Fatal(err)
 		}

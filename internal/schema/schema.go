@@ -45,11 +45,15 @@ type Resource struct {
 	File string
 }
 
-// NewResource reads src (the schema of file) as read does, a Resource of k.
-func NewResource(file string, src []byte, k Kind) (Resource, error) {
+// NewResource reads src (the schema of file, held at u) as read does, a Resource of k. Its "$schema" and
+// "$id" are refused as raw refuses them: they change how the templates and parts compiled with it read.
+func NewResource(u, file string, src []byte, k Kind) (Resource, error) {
 	doc, err := read(file, src)
 	if err != nil {
 		return Resource{}, err
+	}
+	if dialects, ids := raw(u, file, doc, true); dialects != nil || ids != nil {
+		return Resource{}, append(dialects, ids...).Sorted().Err()
 	}
 	return Resource{doc: doc, made: true, Kind: k, File: file}, nil
 }
@@ -110,7 +114,7 @@ func Compile(url, file string, src []byte, res map[string]Resource) (*Compiled, 
 	if err != nil {
 		return nil, err
 	}
-	c, err := build(url, file, doc, res)
+	c, err := build(url, file, doc, res, false)
 	if err != nil {
 		return nil, err
 	}
@@ -124,26 +128,29 @@ func CheckPart(url string, res map[string]Resource) error {
 	if !ok {
 		return fmt.Errorf("schema: no resource %s", url) //nolint:err113 // floe's own mistake
 	}
-	c, err := build(url, r.File, r.doc, res)
+	c, err := build(url, r.File, r.doc, res, true)
 	if err != nil {
 		return err
 	}
 	return c.checkPart()
 }
 
-// build compiles doc under url, after checking the drafts it names (check 0), with res and floe's formats.
-func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) {
+// build compiles doc under url, after checking the drafts it names (check 0), with res and floe's formats;
+// its "$id"s, of a part when part, are told with the mistakes of compiling it, as both are of what was
+// written, and no check that reads the tree compiled runs past them.
+func build(u, file string, doc any, res map[string]Resource, part bool) (*Compiled, error) {
 	for _, ru := range slices.Sorted(maps.Keys(res)) {
 		if !res[ru].made {
 			return nil, fmt.Errorf("schema: %s was not made by NewResource", ru) //nolint:err113 // floe's own mistake
 		}
 	}
 	c := &Compiled{Root: nil, url: u, file: file, res: res}
-	if err := c.dialects(doc); err != nil {
-		return nil, err
+	dialects, ids := raw(u, file, doc, part)
+	if dialects != nil {
+		return nil, append(dialects, ids...).Sorted().Err()
 	}
 	root, err := c.compile(doc)
-	if err != nil {
+	if err = usererr.Collect(ids.Err(), err); err != nil {
 		return nil, err
 	}
 	c.Root = root
@@ -297,8 +304,12 @@ func (h *holes) fill(base, frag string) bool {
 type loader struct{ file string }
 
 func (l loader) Load(u string) (any, error) {
-	if strings.HasPrefix(u, "floe:///parts/") {
+	switch {
+	case strings.HasPrefix(u, "floe:///parts/"):
 		return nil, usererr.NewAt(l.file, 0, 0, "schema_no_part", u)
+	case strings.HasPrefix(u, "floe://templates/"):
+		// A template's relative $ref, which its host keeps under the templates.
+		return nil, usererr.NewAt(l.file, 0, 0, "schema_ref_templates", u)
 	}
 	return nil, usererr.NewAt(l.file, 0, 0, "schema_no_url", u)
 }

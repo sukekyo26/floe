@@ -174,7 +174,7 @@ func (k *Kit) readShared(d Dir, name string) error {
 	if err != nil {
 		return err
 	}
-	r, err := schema.NewResource(path.Join(d.Name, name+".json"), src, schema.Shared)
+	r, err := schema.NewResource(partsURL+name+".json", path.Join(d.Name, name+".json"), src, schema.Shared)
 	if err != nil {
 		return err //nolint:wrapcheck // its mistakes, or floe's failure
 	}
@@ -208,7 +208,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 	if failed := found.Add(yamlErr); failed != nil {
 		return failed
 	}
-	r, err := schema.NewResource(path.Join(dir, "schema.json"), schemaSrc, schema.Part)
+	r, err := schema.NewResource(partsURL+name+".json", path.Join(dir, "schema.json"), schemaSrc, schema.Part)
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
