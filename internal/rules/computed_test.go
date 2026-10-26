@@ -6,12 +6,13 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sukekyo26/floe/internal/rules"
 )
 
 // names are the items the schema of the tests declares at its top.
-var names = []string{"a", "b", "count", "items", "name", "opt", "records", "my-key"}
+var names = []string{"a", "b", "count", "items", "name", "opt", "records", "my-key", "件名", "合計"}
 
 // compute reads the computed.yaml src and computes it from the data body: its values, name=value sorted, and
 // what it tells.
@@ -31,7 +32,7 @@ func compute(t *testing.T, src, body string) (string, string) {
 }
 
 const (
-	notName = " is not a name an expression or page.html can use: write a letter, then letters, digits and _, and not a word or function of expr"
+	notName = " is not a name an expression and page.html can use: write a name that expr and text/template each read as one name, not a word or function of expr, and not starting with _"
 	cycle   = "the values are computed from each other: "
 )
 
@@ -51,8 +52,25 @@ func TestReadComputed(t *testing.T) {
 			"t1/computed.yaml:2:1: true"+notName,
 			"t1/computed.yaml:3:1: a is an item of the data too, so an expression could not tell them apart; rename it",
 			"t1/computed.yaml:4:1: sum"+notName,
-			"t1/computed.yaml:5:1: in"+notName,
-			"t1/computed.yaml:6:1: 1a"+notName,
+			`t1/computed.yaml:5:1: unexpected token Operator("in")`,
+			`t1/computed.yaml:6:1: bad number syntax: "1a"`,
+		)},
+		{"names in any letters", "総額: 1\ncafé: 2\nπ: 3\n٣x: 4\n", ""},
+		{"an item's name in Japanese", "合計: 1\n", "t1/computed.yaml:1:1: 合計 is an item of the data too, so an expression could not tell them apart; rename it"},
+		{"names text/template cannot read", "$x: 1\nx$: 2\n", lines(
+			"t1/computed.yaml:1:1: bad character U+0024 '$'",
+			"t1/computed.yaml:2:1: bad character U+0024 '$'",
+		)},
+		{"words of expr", "not: 1\nlet: 2\nif: 3\n", lines(
+			"t1/computed.yaml:1:1: unexpected token EOF",
+			"t1/computed.yaml:2:1: unexpected token EOF",
+			"t1/computed.yaml:3:1: unexpected token EOF",
+		)},
+		{"names read as other than one name", "_x: 1\na.b: 2\na-b: 3\nnil: 4\n", lines(
+			"t1/computed.yaml:1:1: _x"+notName,
+			"t1/computed.yaml:2:1: a.b"+notName,
+			"t1/computed.yaml:3:1: a-b"+notName,
+			"t1/computed.yaml:4:1: nil"+notName,
 		)},
 		{"a function's name, an item's too", "count: 3\n", "t1/computed.yaml:1:1: count" + notName},
 		{"a shared key's name", "title: 3\n", "t1/computed.yaml:1:1: title is an item of the data too, so an expression could not tell them apart; rename it"},
@@ -115,6 +133,8 @@ func TestComputedRun(t *testing.T) {
 		{"a function, an item named so", "c: count(items, .price > 1)\n", "count: 5\nitems: [{price: 3}]\n", "c=1", ""},
 		{"left out", "x: opt ?? 0\ny: opt\nz: records?.in_1_year\n", "a: 1\n", "x=0 y=<nil> z=<nil>", ""},
 		{"a string", "x: '\"$env\"'\n", "a: 1\n", "x=$env", ""},
+		{"an item named in Japanese", "x: 件名 + 1\n", "件名: 3\n", "x=4", ""},
+		{"numbers as written", "n: 0x1F\no: 0o17\nr: 1.10\n", "a: 1\n", "n=31 o=15 r=1.1", ""},
 		{
 			"nil", "x: opt + 1\ny: x + 1\n", "opt: null\n", "",
 			"t1/computed.yaml:1:8: x cannot be computed from d.yaml: invalid operation: <nil> + int",
@@ -161,5 +181,26 @@ func TestComputedRun(t *testing.T) {
 		if got != tt.want || values != tt.values {
 			t.Errorf("%s: computed %q, told\n%s\nwant %q,\n%s", tt.name, values, got, tt.values, tt.want)
 		}
+	}
+}
+
+// Run gives a whole number expr computes as int64 as an int, as doc.Read gives the data's; a type of its own
+// stays as it is.
+func TestComputedInts(t *testing.T) {
+	t.Parallel()
+
+	c, err := rules.ReadComputed("t1/computed.yaml", []byte("t: date(\"2024-01-01\").Unix()\nd: duration(\"1h\")\n"), names)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	values, err := c.Run(data(t, ""))
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if got, ok := values["t"].(int); !ok || got != 1704067200 {
+		t.Errorf("t = %#v, want the int 1704067200", values["t"])
+	}
+	if got, ok := values["d"].(time.Duration); !ok || got != time.Hour {
+		t.Errorf("d = %#v, want the time.Duration 1h", values["d"])
 	}
 }

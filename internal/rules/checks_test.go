@@ -136,6 +136,8 @@ func TestChecksRun(t *testing.T) {
 		{"the theme left out", "- expr: doc.theme == nil\n  message: m\n", "a: 1\n", ""},
 		{"the theme empty", "- expr: doc.theme == \"\"\n  message: m\n", "theme: \"\"\n", ""},
 		{"for to the title", "- for: title\n  expr: true\n  message: m\n", "title: Plan\n", "t1/checks.yaml:1:8: for: title does not lead to a list in d.yaml"},
+		{"a number as written", "- expr: false\n  message: 1.10\n- expr: false\n  message: 0o17\n", "a: 1\n", "d.yaml: 0o17\nd.yaml: 1.10"},
+		{"a block keeping its line breaks", "- expr: false\n  message: |+\n    m\n\n", "a: 1\n", "d.yaml: m\n\n"},
 		{"for to the lang", "- for: lang\n  expr: true\n  message: m\n", "title: Plan\n", "t1/checks.yaml:1:8: for: lang does not lead to a list in d.yaml"},
 	} {
 		if got := runChecks(t, tt.src, tt.body); got != tt.want {

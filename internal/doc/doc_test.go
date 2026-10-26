@@ -89,8 +89,8 @@ func TestReadMistakes(t *testing.T) {
 	}
 }
 
-// A whole number above 0 that fits an int is read as one, in lists and keys and values too, so that expr
-// does not wrap it around when it negates it; one past it stays uint64, and one below 0 int64, as goccy reads it.
+// A whole number that fits an int is read as one, in lists and keys and values too, above 0 (which goccy reads as
+// uint64, which expr wraps around when it negates it) and below 0 (int64); one past it stays uint64.
 func TestReadInts(t *testing.T) {
 	t.Parallel()
 
@@ -99,7 +99,7 @@ func TestReadInts(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]any{
-		"lang": "en", "a": 3, "b": []any{1, map[string]any{"c": 2}}, "big": uint64(18446744073709551615), "neg": int64(-3),
+		"lang": "en", "a": 3, "b": []any{1, map[string]any{"c": 2}}, "big": uint64(18446744073709551615), "neg": -3,
 		"f": 1.5,
 	}
 	if !reflect.DeepEqual(d.Values, want) {

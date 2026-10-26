@@ -87,7 +87,14 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			"an unknown look", with(map[string]string{"p/part.yaml": "looks: [panel, nope]\n"}), nil, nil,
-			"own/parts/p/part.yaml:1:16: looks names nope, which is no part or look: name one floe or your own parts hold",
+			"own/parts/p/part.yaml:1:16: looks names \"nope\", which is no part or look: name one floe or your own parts hold",
+		},
+		{
+			"looks named as text", with(map[string]string{"p/part.yaml": "looks:\n  - \"404\"\n  - |\n    panel\n"}), nil, nil,
+			lines(
+				"own/parts/p/part.yaml:2:5: looks names \"404\", which is no part or look: name one floe or your own parts hold",
+				"own/parts/p/part.yaml:3:5: looks names \"panel\\n\", which is no part or look: name one floe or your own parts hold",
+			),
 		},
 		{
 			"a look taking itself", with(map[string]string{"lk/part.css": "a{}", "lk/part.yaml": "looks: [lk]\n"}), nil, nil,
@@ -107,8 +114,8 @@ func TestCheckMistakes(t *testing.T) {
 			"own/parts/p/part.yaml:1:9: the part p takes its own look (p → zl → p), which floe would follow forever; fix its part.yaml",
 		},
 		// The files in the order they come: palette.css, base.css, then the parts' files.
-		{"a theme", part, map[string]string{"t/palette.css": ":root { --a: 1 }\nbody {}\n", "t/base.css": "}", "t/p.css": "@import \"x\";"}, nil, lines(
-			"own/themes/t/palette.css:2:1: palette.css holds only the palette's variables, :root { --name: value; }, and its color-scheme, and no other rule, @media neither: write other rules in base.css or a part's file; for a dark page, make a theme whose :root sets dark colours and color-scheme: dark",
+		{"a theme", part, map[string]string{"t/palette.css": ":root { --a: 1 }\n}\n", "t/base.css": "}", "t/p.css": "@import \"x\";"}, nil, lines(
+			"own/themes/t/palette.css:2:1: "+braceTold,
 			"own/themes/t/base.css:1:1: "+braceTold,
 			"own/themes/t/p.css:1:1: floe puts this CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",
 		)},

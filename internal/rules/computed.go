@@ -6,9 +6,9 @@ import (
 	"maps"
 	"math"
 	"reflect"
-	"regexp"
 	"slices"
 	"strings"
+	"text/template/parse"
 
 	"github.com/expr-lang/expr"
 	exprast "github.com/expr-lang/expr/ast"
@@ -35,22 +35,48 @@ type Computed struct {
 	env      reflect.Type
 }
 
-// usable reports whether n is a name an expression and page.html (.Calc.n) can use: not a word of expr
-// (true, in, let…), and not one of its functions (sum, date…), which a variable named so would hide. It
-// starts with a letter, as floe's own functions of arithmetic start with _.
-func usable(n string) bool {
-	if _, function := builtin.Index[n]; function || !identifier.MatchString(n) {
-		return false
+// nameMistake is why n, written at at in file, is no name an expression and page.html (.Calc.n) can use, nil
+// for none: what expr's parser or text/template's says of it, in their words, or that they read it as other
+// than one name; a function of expr (sum, date…), which a variable named so would hide; or one starting with _,
+// as floe's own functions of arithmetic do.
+func nameMistake(file string, at yamlpos.Pos, n string) *usererr.Error {
+	if _, function := builtin.Index[n]; function || strings.HasPrefix(n, "_") {
+		return yamlpos.New(file, at, "rules_computed_name", n)
 	}
 	tree, err := parser.Parse(n)
 	if err != nil {
-		return false
+		return usererr.LibraryAt(file, at.Line, at.Column, brief(err))
 	}
-	id, ok := tree.Node.(*exprast.IdentifierNode)
-	return ok && id.Value == n
+	if id, ok := tree.Node.(*exprast.IdentifierNode); !ok || id.Value != n {
+		return yamlpos.New(file, at, "rules_computed_name", n)
+	}
+	trees, err := parse.Parse(pageName, "{{.Calc."+n+"}}", "", "")
+	if err != nil {
+		// Its head names the text above, not a file one can fix.
+		text, _ := strings.CutPrefix(err.Error(), "template: "+pageName+":1: ")
+		return usererr.LibraryAt(file, at.Line, at.Column, text)
+	}
+	if !oneField(trees[pageName], n) {
+		return yamlpos.New(file, at, "rules_computed_name", n)
+	}
+	return nil
 }
 
-var identifier = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
+// pageName names the text nameMistake has text/template read a name in.
+const pageName = "page.html"
+
+// oneField reports whether t is {{.Calc.n}} alone, the field n of Calc.
+func oneField(t *parse.Tree, n string) bool {
+	if t == nil || len(t.Root.Nodes) != 1 {
+		return false
+	}
+	action, ok := t.Root.Nodes[0].(*parse.ActionNode)
+	if !ok || len(action.Pipe.Cmds) != 1 || len(action.Pipe.Cmds[0].Args) != 1 {
+		return false
+	}
+	field, ok := action.Pipe.Cmds[0].Args[0].(*parse.FieldNode)
+	return ok && slices.Equal(field.Ident, []string{"Calc", n})
+}
 
 // ReadComputed reads the computed.yaml src of file, whose expressions see by name the items names of the data
 // (those a schema declares at its top), the keys every data file shares (doc.Shared), and the other computed
@@ -73,18 +99,18 @@ func ReadComputed(file string, src []byte, names []string) (*Computed, error) {
 	var found usererr.List
 	var keys map[string]ast.Node
 	if body != nil {
-		var e *usererr.Error
-		if keys, e = c.readExprs(file, body, &found); e != nil {
-			return nil, e
+		if keys, err = c.readExprs(file, body, &found); err != nil {
+			return nil, err
 		}
 	}
 	all := slices.Sorted(maps.Keys(keys))
 	// A name told here is not compiled, nor seen by the others: neither could tell it apart.
 	named := map[string]bool{}
 	for _, n := range all {
+		mistake := nameMistake(file, yamlpos.Of(keys[n]), n)
 		switch {
-		case !usable(n):
-			found = append(found, yamlpos.New(file, yamlpos.Of(keys[n]), "rules_computed_name", n))
+		case mistake != nil:
+			found = append(found, mistake)
 		case slices.Contains(names, n):
 			found = append(found, yamlpos.New(file, yamlpos.Of(keys[n]), "rules_computed_clash", n))
 		default:
@@ -93,7 +119,9 @@ func ReadComputed(file string, src []byte, names []string) (*Computed, error) {
 	}
 	// LIMIT: an item whose name an expression cannot use (my-size, or a function of expr such as date) is not
 	// seen by name. Give the expressions the data as doc too if a template needs one.
-	c.items = slices.DeleteFunc(slices.Clone(names), func(n string) bool { return !usable(n) })
+	c.items = slices.DeleteFunc(slices.Clone(names), func(n string) bool {
+		return nameMistake(file, yamlpos.Pos{Line: 0, Column: 0}, n) != nil
+	})
 	c.env = c.envOf(slices.Concat(c.items, slices.DeleteFunc(slices.Clone(all), func(n string) bool { return !named[n] })))
 	env := reflect.New(c.env).Elem().Interface()
 	for _, n := range all {
@@ -137,8 +165,8 @@ func withShared(names []string) []string {
 
 // readExprs reads into c the expressions of body, the top of the computed.yaml file, adding to found those
 // that are not text or are left empty, and returns the key of each name, those among them; the mistake of a
-// top that is not names and expressions.
-func (c *Computed) readExprs(file string, body ast.Node, found *usererr.List) (map[string]ast.Node, *usererr.Error) {
+// top that is not names and expressions, or floe's failure.
+func (c *Computed) readExprs(file string, body ast.Node, found *usererr.List) (map[string]ast.Node, error) {
 	m, ok := body.(*ast.MappingNode)
 	if !ok {
 		return nil, yamlpos.New(file, yamlpos.Of(body), "rules_computed_yaml")
@@ -148,7 +176,10 @@ func (c *Computed) readExprs(file string, body ast.Node, found *usererr.List) (m
 		k := yamlpos.KeyOf(kv)
 		n := k.GetToken().Value
 		keys[n] = k
-		s, ok := text(kv.Value)
+		s, ok, err := text(kv.Value)
+		if err != nil {
+			return nil, err
+		}
 		if !ok || s == "" {
 			*found = append(*found, yamlpos.New(file, yamlpos.OfValue(k, kv.Value), "rules_computed_yaml"))
 			continue
@@ -246,6 +277,7 @@ func (c *Computed) Run(d *doc.Data) (map[string]any, error) {
 			failed[n] = true
 			continue
 		}
+		out = doc.Ints(out)
 		values[n] = out
 		if out != nil {
 			env.Field(c.field[n]).Set(reflect.ValueOf(out))
