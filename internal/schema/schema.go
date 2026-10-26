@@ -121,15 +121,20 @@ func Compile(url, file string, src []byte, res map[string]Resource) (*Compiled, 
 // CheckPart compiles the part at url of res as a root, and refuses one of Formats in it or in a Shared
 // schema it refers to: a trust boundary, as the checks of the data's HTML reach the template's items alone.
 func CheckPart(url string, res map[string]Resource) error {
-	r, ok := res[url]
-	if !ok {
-		return fmt.Errorf("schema: no resource %s", url) //nolint:err113 // floe's own mistake
-	}
-	c, err := build(url, r.File, r.doc, res)
+	c, err := CompilePart(url, res)
 	if err != nil {
 		return err
 	}
 	return c.checkPart()
+}
+
+// CompilePart compiles the part at url of res as a root, for a value to be checked against it alone.
+func CompilePart(url string, res map[string]Resource) (*Compiled, error) {
+	r, ok := res[url]
+	if !ok {
+		return nil, fmt.Errorf("schema: no resource %s", url) //nolint:err113 // floe's own mistake
+	}
+	return build(url, r.File, r.doc, res)
 }
 
 // build compiles doc under url, after checking the drafts it names (check 0), with res and floe's formats;

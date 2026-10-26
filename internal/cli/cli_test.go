@@ -124,6 +124,7 @@ func TestHelp(t *testing.T) {
 	}
 	want := "check\tCheck data files as their pages are drawn, without writing them\n" +
 		"completion\tGenerate the autocompletion script for the specified shell\n" +
+		"diagram\tDraw diagrams from specs of parts on a canvas\n" +
 		"help\tHelp about any command\n" +
 		"icons\tKeep icon sets for the icon parts of diagrams, and search them\n" +
 		"render\tWrite the page of each data file to an HTML file beside it, or in --out-dir\n" +

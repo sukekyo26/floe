@@ -1,0 +1,55 @@
+box "floe publish <file>" 200,20 200x40
+box "Resolve a link to its real path" 130,90 340x52
+box "A data file, or linked HTML?" 130,166 340x52
+box "Linked with --link?" 130,242 340x52
+box "In a hidden directory of home?" 130,318 340x52
+box "Right under / or your home?" 130,394 340x52
+box "Check the data file and its images" 130,470 340x52
+box "Slug of a-z, 0-9 and hyphens?" 130,546 340x52
+box "Slug taken by the other kind?" 130,622 340x52
+box "Another owner, without --force?" 130,698 340x52
+box "Check the server, start it if needed" 130,774 340x52
+box "Save the data file and its images" 130,850 340x52
+box "Print the URL" 200,926 200x40
+box "Publish a data file, or link HTML" 540,174 300x36
+box "Settings and keys live there" 540,326 300x36
+box "The whole directory would be served" 540,402 300x36
+box "Each mistake at its line and column" 540,478 300x36
+box "Not usable in a URL" 540,554 300x36
+box "Remove it first, or use another slug" 540,630 300x36
+box "Use another slug, or add --force" 540,706 300x36
+edge [300,60]→[300,90] M300,60 V90
+edge [300,142]→[300,166] M300,142 V166
+edge [300,218]→[300,242] M300,218 V242
+edge [300,294]→[300,318] M300,294 V318
+edge [300,370]→[300,394] M300,370 V394
+edge [300,446]→[300,470] M300,446 V470
+edge [300,522]→[300,546] M300,522 V546
+edge [300,598]→[300,622] M300,598 V622
+edge [300,674]→[300,698] M300,674 V698
+edge [300,750]→[300,774] M300,750 V774
+edge [300,826]→[300,850] M300,826 V850
+edge [300,902]→[300,926] M300,902 V926
+edge [130,268]→[130,496] M130,268 H90 V496 H130
+edge [470,192]→[540,192] M470,192 H540
+edge [470,344]→[540,344] M470,344 H540
+edge [470,420]→[540,420] M470,420 H540
+edge [470,496]→[540,496] M470,496 H540
+edge [470,572]→[540,572] M470,572 H540
+edge [470,648]→[540,648] M470,648 H540
+edge [470,724]→[540,724] M470,724 H540
+label "yes" 307,221 34x18
+label "yes" 307,297 34x18
+label "no" 307,373 46x18
+label "no" 307,449 46x18
+label "yes" 307,601 34x18
+label "no" 307,677 46x18
+label "no" 307,753 46x18
+label "no" 83,245 46x18
+label "no" 482,169 46x18
+label "yes" 488,321 34x18
+label "yes" 488,397 34x18
+label "mistakes" 471.2,473 67.6x18
+label "no" 482,549 46x18
+label "yes" 488,625 34x18
+label "yes" 488,701 34x18

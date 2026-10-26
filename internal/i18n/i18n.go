@@ -9,6 +9,7 @@ package i18n
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -85,4 +86,9 @@ func (c *Catalog) lookup(key string) string {
 		}
 	}
 	return key
+}
+
+// Langs are the languages with a catalog, by tag.
+func Langs() []Lang {
+	return slices.Sorted(maps.Keys(catalogs))
 }

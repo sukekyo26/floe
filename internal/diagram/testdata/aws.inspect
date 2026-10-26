@@ -1,0 +1,19 @@
+frame "Developer machine" 16,60 260x200
+frame "AWS Cloud" 316,16 668x300
+frame "Region (AWS_REGION)" 340,72 240x220
+frame "Global inference profile" 620,72 344x220
+the icon of frame "AWS Cloud" 316,16 31x31
+the icon of frame "Region (AWS_REGION)" 340,72 31x31
+icon "aws/res/client" 76,116 48x48
+icon "aws/amazon-bedrock" 436,116 48x48
+box "Opus 5.5" 632,114 320x52
+box "Sonnet 5.5" 632,176 320x52
+box "Haiku 5.5" 632,238 320x52
+edge [124,140]→[436,140] M124,140 H436
+edge [484,140]→[632,140] M484,140 H632
+edge [484,140]→[632,202] M484,140 H600 V202 H632
+edge [484,140]→[632,264] M484,140 H600 V264 H632
+label "Claude Code" 55.4,171 89.2x18
+label "writes floe pages" 33.8,193 132.4x18
+label "Amazon Bedrock" 404.6,171 110.8x18
+label "Inference request" 133.8,131 132.4x18

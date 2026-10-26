@@ -1,0 +1,25 @@
+# AWS architecture: an agent that writes floe pages calls Claude through Amazon Bedrock. Group frames
+# (AWS Cloud, a Region) take their icon in the corner; a service is an icon with its name below.
+# Every frame of an AWS diagram has square corners. Find icon names with floe icons search <word>.
+#
+# Grid: icons are 48px and the flow runs along y = 140, through the icons' middles. Contents of a
+# frame with an icon start 40 or more below its top. Edges go from the side of one icon to the side
+# of the next; edges that part from one point split on a vertical line between the frames.
+width: 1000
+height: 330
+title: { en: How an agent calls Claude through Amazon Bedrock, ja: "エージェントが Amazon Bedrock を通して Claude を呼ぶ構成" }
+parts:
+  - frame: { x: 16, y: 60, w: 260, h: 200, label: { en: Developer machine, ja: "開発マシン" }, square: true }
+  - frame: { x: 316, y: 16, w: 668, h: 300, label: AWS Cloud, icon: aws/group/aws-cloud-logo }
+  - frame: { x: 340, y: 72, w: 240, h: 220, label: { en: Region (AWS_REGION), ja: "リージョン（AWS_REGION）" }, icon: aws/group/region }
+  - frame: { x: 620, y: 72, w: 344, h: 220, label: { en: Global inference profile, ja: "global 推論プロファイル" }, square: true }
+  - icon: { x: 76, y: 116, icon: aws/res/client, label: Claude Code }
+  - label: { text: { en: writes floe pages, ja: "floe のページを書く" }, x: 100, y: 202 }
+  - icon: { x: 436, y: 116, icon: aws/amazon-bedrock, label: Amazon Bedrock }
+  - box: { x: 632, y: 114, w: 320, h: 52, rows: [Opus 5.5, [global.anthropic.claude-opus-5-5, sub code]] }
+  - box: { x: 632, y: 176, w: 320, h: 52, rows: [Sonnet 5.5, [global.anthropic.claude-sonnet-5-5, sub code]] }
+  - box: { x: 632, y: 238, w: 320, h: 52, rows: [Haiku 5.5, [global.anthropic.claude-haiku-5-5, sub code]] }
+  - edge: { from: [124, 140], to: [436, 140], label: { en: Inference request, ja: "推論リクエスト" }, at: [200, 140] }
+  - edge: { from: [484, 140], to: [632, 140] }
+  - edge: { from: [484, 140], via: [[600, 140], [600, 202]], to: [632, 202] }
+  - edge: { from: [484, 140], via: [[600, 140], [600, 264]], to: [632, 264] }

@@ -1,0 +1,16 @@
+box "Stopped" 60,88 200x64
+box "Running" 460,88 200x64
+box "Outdated" 860,88 200x64
+dot 22,120 15,113 14x14
+edge [29,120]→[60,120] M29,120 H60
+edge [110,88]→[210,88] M110,88 V58 H210 V88
+edge [260,120]→[460,120] M260,120 H460
+edge [660,108]→[860,108] M660,108 H860
+edge [860,132]→[660,132] M860,132 H660
+edge [960,152]→[160,152] M960,152 V216 H160 V152
+edge [560,152]→[560,216] M560,152 V216
+label "start fails (port in use)" 65,31 190x18
+label "publish or serve" 297.4,93 125.2x18
+label "floe reinstalled" 697.4,81 125.2x18
+label "next publish replaces it" 668.6,141 182.8x18
+label "floe stop, logout or reboot" 257.8,207 204.4x18

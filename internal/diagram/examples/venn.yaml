@@ -1,0 +1,25 @@
+# Venn diagram: the packages of floe each command runs through. The circles overlap translucently,
+# and the text in a region has no background (plain).
+#
+# Three circles of radius 170 in a triangle, each named. The text of a region says which circles it is in
+# (in), and floe places it there, stacking the texts of one region; check with floe diagram inspect.
+# The names of the circles stand outside them, at coordinates.
+width: 760
+height: 520
+title: { en: The packages each floe command runs through, ja: "コマンドごとに通るパッケージ" }
+parts:
+  - circle: { name: publish, cx: 300, cy: 200, r: 170, tone: accent }
+  - circle: { name: serve, cx: 460, cy: 200, r: 170, tone: good }
+  - circle: { name: render, cx: 380, cy: 335, r: 170, tone: warn }
+  - label: { text: floe publish, x: 170, y: 30, plain: true, strong: true }
+  - label: { text: floe serve, x: 590, y: 30, plain: true, strong: true }
+  - label: { text: floe diagram render, x: 600, y: 490, plain: true, strong: true }
+  - label: { text: { en: "cli, i18n", ja: "cli・i18n" }, in: [publish, serve, render], plain: true }
+  - label: { text: { en: "usererr, yamlpos", ja: "usererr・yamlpos" }, in: [publish, serve, render], plain: true }
+  - label: { text: { en: "diagram, icons", ja: "diagram・icons" }, in: [publish, serve, render], plain: true }
+  - label: { text: go-yaml, in: [publish, serve, render], plain: true }
+  - label: { text: { en: "store, link", ja: "store・link" }, in: [publish, serve], plain: true }
+  - label: { text: { en: "tmpl, daemon", ja: "tmpl・daemon" }, in: [publish, serve], plain: true }
+  - label: { text: project, in: [publish], plain: true }
+  - label: { text: server, in: [serve], plain: true }
+  - label: { text: { en: "page, ui", ja: "page・ui" }, in: [serve], plain: true }

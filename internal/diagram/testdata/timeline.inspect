@@ -1,0 +1,20 @@
+bar "#1, #2: repository and CI" 193.1,77 4x14
+bar "#3 to #12 (10 PRs)" 459.7,117 61.9x14
+bar "#13, #14 in review" 531.7,157 346.2x14
+dot 193.1,44 186.1,37 14x14
+dot 521.6,44 514.6,37 14x14
+dot 877.9,44 870.9,37 14x14
+label "10/11" 137,208 46x18
+label "12:00" 329,208 46x18
+label "10/12" 521,208 46x18
+label "12:00" 713,208 46x18
+label "10/13" 905,208 46x18
+label "Phase 0: setup" 11,75 110.8x18
+label "Phase 1: port" 11,115 110.8x18
+label "Phase 2: diagrams" 11,155 132.4x18
+label "#1, #2: repository and CI" 202.1,75 190x18
+label "#3 to #12 (10 PRs)" 526.6,115 139.6x18
+label "#13, #14 in review" 882.9,155 139.6x18
+label "repository" 146.1,15 94x18
+label "phase 1 done" 469.8,15 103.6x18
+label "#14 opened" 836.9,15 82x18

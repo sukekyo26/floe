@@ -1,0 +1,20 @@
+# State diagram: floe's server. States stand in one row; a pair of opposite transitions is two
+# parallel lines, and transitions from two states to the same one join into one line.
+#
+# Grid: states centred at y = 120, boxes 200 x 64 and 200 apart (wider than a label). Parallel
+# lines are 12 above and below the middle. The start is a dot.
+width: 1080
+height: 252
+title: { en: "The states of floe's server", ja: "floe のサーバーの状態" }
+parts:
+  - box: { x: 60, y: 88, w: 200, h: 64, shape: state, rows: [{ en: Stopped, ja: "停止中" }, { en: no process, ja: "プロセスなし" }] }
+  - box: { x: 460, y: 88, w: 200, h: 64, tone: accent, shape: state, rows: [{ en: Running, ja: "稼働中" }, { en: "on 127.0.0.1:7325", ja: "127.0.0.1:7325 で配信" }] }
+  - box: { x: 860, y: 88, w: 200, h: 64, tone: warn, shape: state, rows: [{ en: Outdated, ja: "古い版" }, { en: floe was reinstalled, ja: "floe を入れ直した" }] }
+  - dot: { cx: 22, cy: 120 }
+  - edge: { from: [29, 120], to: [60, 120] }
+  - edge: { from: [110, 88], via: [[110, 58], [210, 58]], to: [210, 88], label: { en: start fails (port in use), ja: "起動失敗（ポート使用中）" }, at: [160, 40] }
+  - edge: { from: [260, 120], to: [460, 120], label: { en: publish or serve, ja: "publish・serve" }, at: [360, 102] }
+  - edge: { from: [660, 108], to: [860, 108], label: { en: floe reinstalled, ja: "floe を入れ直す" }, at: [760, 90] }
+  - edge: { from: [860, 132], to: [660, 132], label: { en: next publish replaces it, ja: "次の publish が入れ替え" }, at: [760, 150] }
+  - edge: { from: [960, 152], via: [[960, 216], [160, 216]], to: [160, 152], label: { en: "floe stop, logout or reboot", ja: "floe stop・ログアウト・再起動" }, at: [360, 216] }
+  - edge: { from: [560, 152], to: [560, 216], end: none }

@@ -1,0 +1,33 @@
+frame "Store ~/.local/share/floe" 272,108 256x300
+frame "Local server 127.0.0.1:7325" 624,20 280x476
+frame "Browser" 968,20 264x476
+frame "Frame /a/<slug>/" 984,112 232x188
+box "floe publish" 24,64 200x56
+box "<slug>/source-<id>/" 288,152 224x56
+box "<slug>/meta.json" 288,240 224x56
+box "Linked HTML file" 288,328 224x56
+box "/api/health" 644,64 240x56
+box "/a/<slug>/?raw" 644,152 240x56
+box "/api/events/<slug>" 644,240 240x56
+box "/ and /a/<slug>/" 644,328 240x56
+box "/api/artifacts" 644,416 240x56
+box "The page" 1000,152 200x132
+box "Management page" 988,416 224x56
+edge [224,92]→[644,92] M224,92 H644
+edge [124,120]→[288,180] M124,120 V180 H288
+edge [512,180]→[644,180] M512,180 H644
+edge [512,268]→[644,268] M512,268 H644
+edge [400,296]→[400,328] M400,296 V328
+edge [884,180]→[1000,180] M884,180 H1000
+edge [1000,268]→[884,268] M1000,268 H884
+edge [884,348]→[1100,300] M884,348 H1100 V300
+edge [884,364]→[1070,416] M884,364 H1070 V416
+edge [988,444]→[884,444] M988,444 H884
+label "1 health" 397.8,83 72.4x18
+label "2 save" 173.4,171 53.2x18
+label "3 read" 551.4,171 53.2x18
+label "4 version" 540.6,259 74.8x18
+label "path" 390.6,303 38.8x18
+label "3 serve" 911.8,171 60.4x18
+label "4 listen" 908.2,259 67.6x18
+label "API" 920.2,435 31.6x18
