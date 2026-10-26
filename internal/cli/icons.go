@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/icons"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -112,4 +113,21 @@ func (a *app) iconsDir() (string, error) {
 		return filepath.Join(home, ".local", "share", "floe-icons"), nil
 	}
 	return "", usererr.New("icons_no_dir")
+}
+
+// iconStore returns the icons the diagrams of one command show: those of iconsDir, or, without a directory for
+// them, none, which a diagram with an icon is told. Made once for the command: a Store keeps the indexes it read.
+func (a *app) iconStore() diagram.Icons {
+	dir, err := a.iconsDir()
+	if err != nil {
+		return noIcons{err: err}
+	}
+	return icons.New(dir)
+}
+
+// noIcons are no icons to look up: there is no directory for them, which a diagram with an icon is told.
+type noIcons struct{ err error }
+
+func (n noIcons) Lookup(string) ([]byte, error) {
+	return nil, n.err
 }

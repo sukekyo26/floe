@@ -1,0 +1,12 @@
+template: report
+lang: en
+title: A diagram of a wrong shape
+sections:
+  - heading: Diagram
+    parts:
+      - diagram:
+          width: 300
+          height: 120
+          title: Boxes
+          parts:
+            - box: { x: 20, y: 20, w: 60, h: 40, rows: [A], tone: blue }

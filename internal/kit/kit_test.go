@@ -43,7 +43,7 @@ func TestFloe(t *testing.T) {
 		t.Error("Floe read floe's own twice")
 	}
 	parts, looks, themes, templates := k.Names()
-	if len(parts) != 30 || !slices.Equal(looks, []string{"panel", "rows"}) || len(themes) != 9 ||
+	if len(parts) != 31 || !slices.Equal(looks, []string{"panel", "rows"}) || len(themes) != 9 ||
 		!slices.Equal(templates, []string{"report"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}
@@ -202,7 +202,7 @@ func TestReadMistakes(t *testing.T) {
 		},
 		{"words.yaml, together", part(map[string]string{"words.yaml": "en:\n  a: A\n  n: 3\nEN:\n  a: B\nja: x\nnot-a-tag_: {}\n"}), lines(
 			"parts/p/words.yaml:3:6: en.n: write text, in quotes where YAML would read a number, true, false or null",
-			"parts/p/words.yaml:4:1: EN is the language en again: a tag's case does not tell languages apart",
+			"parts/p/words.yaml:4:1: EN is the language en again: a tag's case, or _ for -, does not tell languages apart",
 			"parts/p/words.yaml:6:5: ja: write the names of the words and their text",
 		)},
 		{

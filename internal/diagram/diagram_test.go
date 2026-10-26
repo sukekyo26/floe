@@ -12,19 +12,26 @@ import (
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/icons"
+	"github.com/sukekyo26/floe/internal/kit"
+	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 var update = flag.Bool("update", false, "write the golden files of the examples anew")
 
+// drawer is a drawer of the schema of floe's part diagram, as draw compiles it.
 func drawer(t *testing.T) *diagram.Drawer {
 	t.Helper()
-	d, err := diagram.Own()
+	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
 	}
-	return d
+	c, err := schema.CompilePart(diagram.URL, k.Resources())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return diagram.New(c)
 }
 
 // iconsOf are the icons of a set kept in the test: aws/aws-lambda alone.

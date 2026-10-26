@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/draw"
 	"github.com/sukekyo26/floe/internal/kit"
@@ -18,9 +19,10 @@ import (
 
 // Options are what a caller gives a drawing besides the data.
 type Options struct {
-	Theme     string // drawn with instead of the data's theme:, "" for none
-	Untitled  string // the title of a page whose data names none
-	ImagesDir string // the directory the data's images are under, "" for none
+	Theme     string        // drawn with instead of the data's theme:, "" for none
+	Untitled  string        // the title of a page whose data names none
+	ImagesDir string        // the directory the data's images are under, "" for none
+	Icons     diagram.Icons // the icons the diagrams show, nil for none kept
 }
 
 // Draw draws the data file src, file in its mistakes, with the templates, parts and themes of k, as a page:
@@ -53,7 +55,7 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, error) {
 		return nil, err
 	}
 	//nolint:wrapcheck // mistakes of the page, or floe's failure
-	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.ImagesDir)
+	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.ImagesDir, o.Icons)
 }
 
 // pick returns the template of k that d names and the name of the theme it is drawn with: given, else d's as

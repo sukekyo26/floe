@@ -3,7 +3,6 @@ package kit
 import (
 	"cmp"
 	"errors"
-	"strings"
 
 	"github.com/goccy/go-yaml/ast"
 
@@ -38,7 +37,7 @@ func readWords(file string, src []byte) (words, error) {
 	for _, v := range top.Values {
 		key := yamlpos.KeyOf(v)
 		tag := key.GetToken().Value
-		lang := strings.ToLower(tag)
+		lang := string(i18n.Tag(tag))
 		// Its words are read whatever else is wrong, so that their mistakes are told in the same run.
 		ws, more, err := readLang(file, tag, key, v.Value)
 		if err != nil {
@@ -46,7 +45,7 @@ func readWords(file string, src []byte) (words, error) {
 		}
 		found = append(found, more...)
 		if first, twice := written[lang]; twice {
-			// A tag's case means nothing to the lookup: EN after en would take its place unseen.
+			// A tag's case and _ mean nothing to the lookup: EN after en would take its place unseen.
 			found = append(found, yamlpos.New(file, yamlpos.Of(key), "kit_words_lang_twice", tag, first))
 			continue
 		}
@@ -84,9 +83,9 @@ func readLang(file, tag string, key, n ast.Node) (map[string]string, usererr.Lis
 }
 
 // lang returns the language of w a page of the language tag is drawn in: the first of i18n.Fallbacks of the
-// tag, lowercased, that w has; "" when it has none of them.
+// tag that w has; "" when it has none of them.
 func (w words) lang(tag string) string {
-	for _, l := range i18n.Fallbacks(i18n.Lang(strings.ToLower(tag))) {
+	for _, l := range i18n.Fallbacks(i18n.Lang(tag)) {
 		if _, ok := w[string(l)]; ok {
 			return string(l)
 		}

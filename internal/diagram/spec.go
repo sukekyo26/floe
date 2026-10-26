@@ -1,12 +1,12 @@
 // Package diagram draws a diagram spec, a canvas and the parts placed on it, as inline SVG. A spec is checked
-// against its schema (schema.json) first, wherever it comes from; floe then resolves its names, lays it out
+// against its schema (the schema.json of floe's part diagram, which its caller compiles) first, wherever it
+// comes from; floe then resolves its names, lays it out
 // once for every language its text is written in, and checks the layout. Every mistake is at a JSON pointer in
 // the spec, for the caller to place.
 package diagram
 
 import (
 	"bytes"
-	_ "embed" // the schema
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -15,12 +15,7 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 )
 
-// Schema is the schema of a spec, held at URL.
-//
-//go:embed schema.json
-var Schema []byte
-
-// URL is where Schema is held.
+// URL is where the schema of a spec is held: that of floe's part diagram.
 const URL = "floe:///parts/diagram.json"
 
 // Text is text in each language by tag; text written plain is English.

@@ -14,7 +14,16 @@ import (
 )
 
 // partFuncs are the functions floe's parts draw with, besides those of page.html.
-var partFuncs = template.FuncMap{"bars": barsOf, "diff": diffOf, "script": scriptOf, "tree": treeOf}
+var partFuncs = template.FuncMap{
+	"bars": barsOf, "diagram": diagramOf, "diff": diffOf, "script": scriptOf, "tree": treeOf,
+}
+
+// diagramOf holds the name of the function that draws the value of the part as a diagram, which draw binds
+// anew for each part it draws: what it draws with (the page's language, the icons, the diagram's number in
+// the page) is the page's.
+func diagramOf() (template.HTML, error) {
+	return "", fmt.Errorf("%w: diagram: not bound to a page", ErrFunc)
+}
 
 // bar is an item of a bars part, and the width of its bar, a percentage of the longest's.
 type bar struct {
