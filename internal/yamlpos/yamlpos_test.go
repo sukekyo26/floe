@@ -17,6 +17,22 @@ const (
 	bom     = "\xef\xbb\xbf"
 )
 
+func notNumber(written, number string) string {
+	return fmt.Sprintf("%[1]s reads as the number %[2]s here, but as text in YAML 1.2: write %[2]s for the number, or put %[1]s in quotes for text", written, number)
+}
+
+func notText(written, shown, number string) string {
+	return fmt.Sprintf("%s reads as text here, but as the number %s in YAML 1.2: write %s for the number, or put %s in quotes for text", written, shown, number, written)
+}
+
+func octal(written, read, want, octal string) string {
+	return fmt.Sprintf("%s reads as the octal number %s here, but as %s in YAML 1.2: write %s, or %s for %s", written, read, want, want, octal, read)
+}
+
+func tooBig(written string) string {
+	return written + " is a number in YAML 1.2, too large for floe to read: put it in quotes to keep it as text"
+}
+
 func told(err error) string {
 	if err == nil {
 		return ""
@@ -91,6 +107,35 @@ func TestParse(t *testing.T) {
 		{bom + "---\n---\n", "a.yaml:2:1: a YAML file holds one document: write it as one, without --- between parts"},
 		// LIMIT: text a , or a comment line cut, as the LIMITs of cut tell.
 		{"x: [1,500 words]\n", ""},
+		// A plain value YAML 1.2 reads otherwise than goccy/go-yaml, told with a way both read alike.
+		{"x: 017\n", "a.yaml:1:4: " + octal("017", "15", "17", "0o17")},
+		{"x: -017\n", "a.yaml:1:4: " + octal("-017", "-15", "-17", "-15")},
+		{"x: 0b101\n", "a.yaml:1:4: " + notNumber("0b101", "5")},
+		{"x: 1_000\n", "a.yaml:1:4: " + notNumber("1_000", "1000")},
+		{"x: -0x1F\n", "a.yaml:1:4: " + notNumber("-0x1F", "-31")},
+		{"x: +-1\n", "a.yaml:1:4: " + notNumber("+-1", "1")},
+		{"x: 1_0.0\n", "a.yaml:1:4: " + notNumber("1_0.0", "10.0")},
+		{"x: 1_000_000_000_000_000_000_000.0\n", "a.yaml:1:4: " + notNumber("1_000_000_000_000_000_000_000.0", "1.0e+21")},
+		{"x: 1e3\n", "a.yaml:1:4: " + notText("1e3", "1000", "1000.0")},
+		{"x: 012e3\n", "a.yaml:1:4: " + notText("012e3", "12000", "12000.0")},
+		{"x: 08\n", "a.yaml:1:4: " + notText("08", "8", "8")},
+		{"x: 99999999999999999999\n", "a.yaml:1:4: " + tooBig("99999999999999999999")},
+		{"x: -9223372036854775809\n", "a.yaml:1:4: " + tooBig("-9223372036854775809")},
+		{"x: 030000000000000000000\n", "a.yaml:1:4: " + tooBig("030000000000000000000")},
+		{"x: +.inf\n", "a.yaml:1:4: +.inf is not a value a YAML file can hold; write a number in digits, or quote it as text"},
+		{"x: 1e400\n", "a.yaml:1:4: 1e400 is not a value a YAML file can hold; write a number in digits, or quote it as text"},
+		{"x: [017, 0x1F, 1e3]\n", "a.yaml:1:5: " + octal("017", "15", "17", "0o17") + "\na.yaml:1:16: " + notText("1e3", "1000", "1000.0")},
+		{"x: {a: 0b101, b: 12}\n", "a.yaml:1:8: " + notNumber("0b101", "5")},
+		{"1e3: a\n08: b\n", "a.yaml:1:1: a key is a name: write 1e3 as text, in quotes\na.yaml:2:1: a key is a name: write 08 as text, in quotes"},
+		// A number refused is judged for a comment that cut it short too: quoting it as told would drop the rest.
+		{"title: 1e3 #1 draft\n", "a.yaml:1:8: " + notText("1e3", "1000", "1000.0") + "\na.yaml:1:12: " + fmt.Sprintf(cutAt, "1e3")},
+		{"x: 017 #1 draft\n", "a.yaml:1:4: " + octal("017", "15", "17", "0o17") + "\na.yaml:1:8: " + fmt.Sprintf(cutAt, "017")},
+		// Read alike, or not plain, or not a number at its start, it passes.
+		{"a: 0o17\nb: 0x1F\nc: +1\nd: 0\ne: 00\nf: .5\ng: 1.0\nh: 1.\ni: 012.5\nj: 18446744073709551615\n", ""},
+		{"a: 1000.0\nb: 12000.0\nc: 1.0e+20\nd: -0.0\ne: 1.5e3\n", ""},
+		{"a: \"017\"\nb: '1e3'\nc: Plan 2026\nd: v1.0\ne: 2026-10-26\nf: 1.2.3\ng: 1,000\nh: +.nan\n", ""},
+		{"\"1e3\": a\n", ""},
+		{"x: 0x1F #1 draft\n", ""},
 		// A comment after a number, true or ~ cuts no text; text cut to a number is the schema's, by its type.
 		{"enabled: true  # turn on\nx: 3 #c\ny: ~ #c\n", ""},
 		{"title: 2024 #1\n", ""},

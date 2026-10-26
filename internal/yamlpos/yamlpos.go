@@ -134,9 +134,10 @@ func Decode(file string, n ast.Node, v any) error {
 // mark at its start is left out, as YAML 1.2 reads it. A syntax error is goccy/go-yaml's (library). A
 // second document, or text a second --- drops, is refused at its start, and nothing in it is walked.
 // Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not
-// walking what they hold; a key that is not text; a value or a text key a comment may have cut short; a
-// key in { } without a value, but one refused already; and .inf and .nan in values: JSON has no number
-// for them.
+// walking what they hold; a key that is not text, as goccy/go-yaml or YAML 1.2 reads it; a value or a text
+// key a comment may have cut short; a key in { } without a value, but one refused already; and a plain value
+// that YAML 1.2 reads otherwise than goccy/go-yaml (017, 1e3), or as a number JSON has none for (.inf, .nan)
+// or floe cannot hold.
 func Parse(file string, src []byte) (ast.Node, error) {
 	body, err := document(file, src)
 	if err != nil {
@@ -244,15 +245,33 @@ func (w *walk) node(n ast.Node) {
 		for _, v := range n.Values {
 			w.node(v)
 		}
-	case *ast.InfinityNode, *ast.NanNode:
-		w.found = append(w.found, New(w.file, Of(n), "yaml_not_finite", n.GetToken().Value))
-	case *ast.StringNode:
-		w.cut(n)
+	case *ast.IntegerNode, *ast.FloatNode, *ast.InfinityNode, *ast.NanNode, *ast.StringNode:
+		// A number refused may have been cut short too: quoting it as told would drop the comment unseen.
+		refused := w.number(n)
+		if _, isText := n.(*ast.StringNode); isText || refused {
+			w.cut(n)
+		}
 	}
 }
 
+// number refuses n, a plain scalar a number can start, and reports it, when YAML 1.2 reads it otherwise than
+// goccy/go-yaml, or as a number floe does not take.
+func (w *walk) number(n ast.Node) bool {
+	want, ok := plainNumber(n)
+	if !ok {
+		return false
+	}
+	mistake := numberMistake(w.file, n, want, goccy(n))
+	if mistake == nil {
+		return false
+	}
+	w.found = append(w.found, mistake)
+	return true
+}
+
 // pair walks a key and its value. A merge key is refused with its value, which is not walked. A key is a
-// name: one that is not text (0x10, ~, 1.0) would be read as another name than the one written. It is
+// name: one that is not text (0x10, ~, 1.0), or that YAML 1.2 reads as a number (1e3, 08), would be read as
+// another name than the one written. It is
 // judged as a key alone, and for a comment that cut it short; a key of a { } written without a ":" after
 // it, which YAML gives an empty value ({ a, b: 1 }), unless refused already, cut short too.
 func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
@@ -264,7 +283,7 @@ func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 	text, isText := key.(*ast.StringNode)
 	switch {
 	case w.wrapper(key):
-	case !isText:
+	case !isText || number12(text):
 		w.found = append(w.found, New(w.file, Of(key), "yaml_key_not_text", key.GetToken().Value))
 	case w.cut(text):
 	default:
@@ -278,16 +297,16 @@ func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 // cut refuses n, a text, and reports it, when a comment on its last line may have cut it short. YAML reads
 // " #" in a plain value as the start of a comment, and the value as what is before it, which no later check
 // sees is short. The comment may be the author's, which floe cannot tell from text cut short, so either is
-// refused. A comment after a quoted value cuts nothing, nor one after a number, true or ~, which the text
-// cut short would not read as.
-// LIMIT: text cut short to what reads as a number (title: 2024 #1, read 2024) is not caught here: an item
-// that takes text refuses the number by its type, and one that takes a number gets one.
+// refused. A comment after a quoted value cuts nothing. The caller gives it text, and a number it refused,
+// not a number, true or ~ it takes, which the text cut short would not read as.
+// LIMIT: text cut short to a number goccy/go-yaml and YAML 1.2 read alike (title: 2024 #1, read 2024) is not
+// caught here: an item that takes text refuses the number by its type, and one that takes a number gets one.
 // LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
 // is an item as right as any. Nor is a , in { } before a rest with ": " in it ({ label: 1,500 words: many }
 // reads a key 500 words of the value many). Catch them if a schema comes to take such text.
 // LIMIT: a line of a plain value over lines that begins with # is a comment, and the value ends before it
 // (title: Plan, then "  #1 draft"), which is not caught: the comment is not after the value's text.
-func (w *walk) cut(n *ast.StringNode) bool {
+func (w *walk) cut(n ast.Node) bool {
 	tk := n.GetToken()
 	if tk.Type == token.SingleQuoteType || tk.Type == token.DoubleQuoteType ||
 		tk.Next == nil || tk.Next.Type != token.CommentType || tk.Next.Position.Line != lastLine(tk) {
