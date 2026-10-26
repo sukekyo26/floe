@@ -292,7 +292,7 @@ func TestPartWordsAtTheirFile(t *testing.T) {
 	}, mine(minePage, `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"ws": {"type": "array", "items": {"$ref": "floe:///parts/w.json"}}}}`, nil))
 	got := drawn(t, k, "lang: ja\ntemplate: mine\nws: [{}, {}]\n", none)
-	if want := `parts/w/part.html: the words of ja in words.yaml have no "x", which those of en have: add it to ja`; got != want {
+	if want := `parts/w/part.html:1:27: the words of ja in words.yaml have no "x", which those of en have: add it to ja`; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 }
