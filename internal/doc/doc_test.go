@@ -40,6 +40,23 @@ func TestRead(t *testing.T) {
 	}
 }
 
+// Only the first byte order mark is left out: a second stays in the first key (LIMIT: in yamlpos).
+func TestReadSecondBOM(t *testing.T) {
+	t.Parallel()
+
+	const bom = "\xef\xbb\xbf"
+	d, err := doc.Read("a.yaml", []byte(bom+bom+"lang: ja\n"))
+	if err == nil {
+		t.Fatalf("Read = %+v, want its mistake", d)
+	}
+	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "); got != "a.yaml:1:1: "+noLang {
+		t.Errorf("told %q", got)
+	}
+	if want := map[string]any{bom + "lang": "ja"}; !maps.Equal(d.Values, want) {
+		t.Errorf("Values = %q, want %q", d.Values, want)
+	}
+}
+
 // The mistakes of the shared keys are told together; a mistake of the walk or of reading the values stops
 // before them; an empty file reads as {}, its mistakes at 1:1.
 func TestReadMistakes(t *testing.T) {
@@ -56,6 +73,9 @@ func TestReadMistakes(t *testing.T) {
 		{"&top\ntitle: 3\n", "a.yaml:1:1: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"},
 		{"- a\n- b\n", "a.yaml:1:1: sequence was used where mapping is expected"},
 		{"~\n", "a.yaml:1:1: null was used where mapping is expected"},
+		// The byte order mark at the start is no part of the first key.
+		{"\xef\xbb\xbflang: en\ntitle: 1\n", "a.yaml:2:8: title must be text"},
+		{"\xef\xbb\xbftitle: 1\nlang: en\n", "a.yaml:1:8: title must be text"},
 	} {
 		_, err := doc.Read("a.yaml", []byte(tt.src))
 		got := ""

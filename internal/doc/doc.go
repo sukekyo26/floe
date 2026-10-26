@@ -6,7 +6,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -41,8 +40,8 @@ func Read(file string, src []byte) (*Data, error) {
 	}
 	values := map[string]any{}
 	if body != nil {
-		if err = yaml.NodeToValue(body, &values); err != nil {
-			return nil, yamlpos.Library(file, err) //nolint:wrapcheck // goccy's mistake at its place
+		if err = yamlpos.Decode(file, body, &values); err != nil {
+			return nil, err //nolint:wrapcheck // goccy's mistake at its place
 		}
 	}
 	// goccy/go-yaml read the values into a map: the top is keys and values, or there is none.
