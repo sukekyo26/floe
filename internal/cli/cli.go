@@ -142,12 +142,16 @@ func newRoot(env Env, out io.Writer) *cobra.Command {
 		}
 	}
 	root.InitDefaultCompletionCmd()
-	// Every command's arguments are the user's to fix: cobra's completion command's too.
+	// Every command's arguments are the user's to fix: cobra's completion command's too. Its --help (and root's
+	// --version) are there before readable finds a command: cobra adds them as it runs the one it found, and
+	// finds the command past a flag it has not, as one taking the next word (floe --help render).
 	var wrap func(c *cobra.Command)
 	wrap = func(c *cobra.Command) {
 		if c.Args != nil {
 			c.Args = usage(c.Args)
 		}
+		c.InitDefaultHelpFlag()
+		c.InitDefaultVersionFlag()
 		for _, sub := range c.Commands() {
 			wrap(sub)
 		}
@@ -170,8 +174,6 @@ func readable(root *cobra.Command, args []string) error {
 	if err != nil {
 		return usageOf(err)
 	}
-	cmd.InitDefaultHelpFlag()
-	cmd.InitDefaultVersionFlag()
 	// LIMIT: cobra reads the flags again as it runs; a flag that counts or gathers (a slice) would count twice.
 	if err := cmd.ParseFlags(rest); err != nil {
 		return usageOf(err)

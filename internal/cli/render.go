@@ -61,7 +61,7 @@ func (a *app) renderPages(paths []string, out arg, check bool) error {
 	if err != nil {
 		return err //nolint:wrapcheck // floe's own, which its tests check
 	}
-	pages, err := a.drawPages(k, paths, out)
+	pages, err := a.drawPages(k, paths, out, check)
 	switch {
 	case err != nil:
 		return err
@@ -73,8 +73,9 @@ func (a *app) renderPages(paths []string, out arg, check bool) error {
 }
 
 // drawPages draws the page of each data file with k and names the HTML file it goes to, in out, else beside
-// it, or returns the mistakes of out and of every file, and the pages two data files would write.
-func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error) {
+// it, or returns the mistakes of out and of every file, and the pages two data files would write. A page that is
+// a link to no file cannot be written, but is only missing to check.
+func (a *app) drawPages(k *kit.Kit, paths []string, out arg, check bool) ([]rendered, error) {
 	var found usererr.List
 	if failed := found.Add(out.err); failed != nil {
 		return nil, failed
@@ -97,7 +98,7 @@ func (a *app) drawPages(k *kit.Kit, paths []string, out arg) ([]rendered, error)
 			continue
 		}
 		var bad error
-		if p.real, bad = realPath(at, p.to); bad != nil {
+		if p.real, bad = realOf(at, p.to, check); bad != nil {
 			if failed := found.Add(bad); failed != nil {
 				return nil, failed
 			}
@@ -150,6 +151,16 @@ func targetOf(p rendered) target {
 // same reports whether t and o go to one file: one real path, or, when both are there, one the system says.
 func (t target) same(o target) bool {
 	return t.page.real == o.page.real || t.info != nil && o.info != nil && os.SameFile(t.info, o.info)
+}
+
+// realOf returns realPath of at, the page to as the user names it; to check, which writes nothing, a link to no
+// file is the page missing, read where the link is.
+func realOf(at, to string, check bool) (string, error) {
+	resolved, err := realPath(at, to)
+	if err != nil && check {
+		return at, nil
+	}
+	return resolved, err
 }
 
 // realPath is the absolute path abs with its symlinks resolved: those of its directory, and its own when it

@@ -226,3 +226,17 @@ func TestRefusedNamesDoNotClash(t *testing.T) {
 		}
 	}
 }
+
+// --check writes nothing: a page that is a link to no file is a page missing.
+func TestCheckThroughLinkToNothing(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"a.yaml": good})
+	if err := os.Symlink(filepath.Join("out", "a.html"), filepath.Join(dir, "a.html")); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, stderr := run(dir, "render", "--check", "a.yaml"); code != 1 ||
+		stderr != "floe: a.html is missing: write it from a.yaml with floe render\n" {
+		t.Errorf("floe render --check = %d, %q", code, stderr)
+	}
+}

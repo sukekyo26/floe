@@ -109,6 +109,8 @@ func TestHelp(t *testing.T) {
 		{{"help"}, {"--help"}},
 		{{"help", "version"}, {"version", "--help"}},
 		{{"help", "render"}, {"render", "--help"}},
+		{{"--help", "render"}, {"render", "--help"}},
+		{{"-h", "render"}, {"render", "--help"}},
 	} {
 		code, got, errs := run("", same[0]...)
 		_, want, _ := run("", same[1]...)
@@ -128,7 +130,7 @@ func TestHelp(t *testing.T) {
 	if code, got, _ := run("", "__complete", "help", ""); code != 0 || !strings.HasPrefix(got, want) {
 		t.Errorf("floe __complete help \"\" = %d, %q, want %q", code, got, want)
 	}
-	for _, args := range [][]string{{"version"}, {"-v"}, {"completion", "bash"}} {
+	for _, args := range [][]string{{"version"}, {"-v"}, {"completion", "bash"}, {"--help", "render"}, {"-h", "render"}} {
 		if code, _, errs := run("", args...); code != 0 || errs != "" {
 			t.Errorf("floe %v = %d, stderr %q", args, code, errs)
 		}
