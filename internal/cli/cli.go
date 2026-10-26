@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -49,14 +50,13 @@ func usageOf(err error) usageError {
 // Run executes floe with args and returns the process exit code. The exit code is decided here only.
 func Run(args []string, env Env) int {
 	out := &written{w: env.Stdout, err: nil}
-	root, helped := newRoot(env, out)
+	root := newRoot(env, out)
 	root.SetArgs(args)
 	root.SetOut(out)
 	root.SetErr(env.Stderr)
-	err := root.Execute()
+	err := readable(root, args)
 	if err == nil {
-		// cobra's way of help returns no error: a command line it could not read is told so.
-		err = *helped
+		err = root.Execute()
 	}
 	if err == nil && out.err != nil {
 		err = out.err
@@ -86,13 +86,14 @@ func (o *written) Write(p []byte) (int, error) {
 	return n, err //nolint:wrapcheck // kept as it is, for Run to tell
 }
 
-// usage marks the errors of an argument validator as usage errors.
+// usage marks the errors of an argument validator as usage errors, once.
 func usage(validate cobra.PositionalArgs) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
-		if err := validate(cmd, args); err != nil {
-			return usageOf(err)
+		err := validate(cmd, args)
+		if err == nil || errors.As(err, new(usageError)) {
+			return err
 		}
-		return nil
+		return usageOf(err)
 	}
 }
 
@@ -102,10 +103,8 @@ var english = i18n.EnglishCatalog()
 // named is floe's name before each mistake the command line tells.
 const named = "floe: "
 
-// newRoot returns the command tree, writing to out, and where its help keeps the usage error of a command line
-// it was asked for: cobra answers --help, and a command that runs nothing, with help and no error.
-func newRoot(env Env, out io.Writer) (*cobra.Command, *error) {
-	var helped error
+// newRoot returns the command tree, writing to out.
+func newRoot(env Env, out io.Writer) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "floe",
 		Short:         "Serve agent-written HTML pages on a local server",
@@ -134,8 +133,9 @@ func newRoot(env Env, out io.Writer) (*cobra.Command, *error) {
 	})
 	a := &app{env: env, out: out}
 	root.AddCommand(a.checkCmd(), a.renderCmd())
-	help := helpCmd(root, &helped)
-	root.SetHelpCommand(help)
+	// cobra adds these as it runs: here, so that readable finds them, and their arguments are wrapped below.
+	root.SetHelpCommand(helpCmd(root))
+	root.InitDefaultHelpCmd()
 	root.InitDefaultCompletionCmd()
 	// Every command's arguments are the user's to fix: cobra's completion command's too.
 	var wrap func(c *cobra.Command)
@@ -148,21 +148,39 @@ func newRoot(env Env, out io.Writer) (*cobra.Command, *error) {
 		}
 	}
 	wrap(root)
-	shown := root.HelpFunc()
-	root.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		var err error
-		if cmd == help {
-			_, err = topic(root, cmd.Flags().Args())
-		} else {
-			err = given(cmd, cmd.Flags().Args())
+	return root
+}
+
+// readable refuses args, a command line, that floe cannot read, before cobra runs it: cobra answers --help
+// and --version, and a command that runs nothing with its help, before it checks the arguments and with no
+// error, so that a misspelt command would end well. Its flags are read, and such a command is refused the
+// arguments it does not take (help takes the topics it has). One that runs is checked by cobra as it runs
+// it. cobra's own request for completions, which it adds as it runs, is its own command line, not one to
+// refuse.
+func readable(root *cobra.Command, args []string) error {
+	if len(args) > 0 && slices.Contains([]string{cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd}, args[0]) {
+		return nil
+	}
+	cmd, rest, err := root.Find(args)
+	if err != nil {
+		return usageOf(err)
+	}
+	cmd.InitDefaultHelpFlag()
+	cmd.InitDefaultVersionFlag()
+	if err := cmd.ParseFlags(rest); err != nil {
+		return usageOf(err)
+	}
+	// A command that runs nothing is answered with its help too.
+	asked := !cmd.Runnable()
+	for _, flag := range []string{"help", "version"} {
+		if f := cmd.Flags().Lookup(flag); f != nil && f.Changed {
+			asked = true
 		}
-		if err != nil {
-			helped = err
-			return
-		}
-		shown(cmd, args)
-	})
-	return root, &helped
+	}
+	if !asked {
+		return nil
+	}
+	return given(cmd, cmd.Flags().Args())
 }
 
 // topic returns the command of root the help command was asked of by args, or why there is none.
@@ -186,15 +204,18 @@ func given(cmd *cobra.Command, args []string) error {
 	return cmd.ValidateArgs(args) //nolint:wrapcheck // a usage error already
 }
 
-// helpCmd returns the help command of root, as cobra's, which tells a topic it has not as a usage error kept
-// in helped.
-func helpCmd(root *cobra.Command, helped *error) *cobra.Command {
+// helpCmd returns the help command of root, as cobra's, whose arguments are a topic root has.
+func helpCmd(root *cobra.Command) *cobra.Command {
 	var help *cobra.Command
 	help = &cobra.Command{
 		Use:   "help [command]",
 		Short: "Help about any command",
 		Long: `Help provides help for any command in the application.
 Simply type ` + root.DisplayName() + ` help [path to command] for full details.`,
+		Args: func(_ *cobra.Command, args []string) error {
+			_, err := topic(root, args)
+			return err
+		},
 		ValidArgsFunction: func(
 			c *cobra.Command, args []string, toComplete string,
 		) ([]cobra.Completion, cobra.ShellCompDirective) {
@@ -217,8 +238,7 @@ Simply type ` + root.DisplayName() + ` help [path to command] for full details.`
 			}
 			cmd.InitDefaultHelpFlag()
 			cmd.InitDefaultVersionFlag()
-			cmd.HelpFunc()(cmd, nil)
-			return *helped
+			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	}
 	return help

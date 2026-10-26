@@ -87,6 +87,10 @@ func TestHelp(t *testing.T) {
 		{[]string{"help", "nope", "--help"}, `floe: unknown command "nope" for "floe": run floe --help`},
 		{[]string{"completion", "nope"}, `floe: unknown command "nope" for "floe completion": run floe --help`},
 		{[]string{"completion", "bash", "x"}, `floe: unknown command "x" for "floe completion bash": run floe --help`},
+		{[]string{"nope", "-v"}, `floe: unknown command "nope" for "floe": run floe --help`},
+		{[]string{"-v", "nope"}, `floe: unknown command "nope" for "floe": run floe --help`},
+		{[]string{"--version", "x"}, `floe: unknown command "x" for "floe": run floe --help`},
+		{[]string{"help", "help", "x"}, `floe: unknown command "x" for "floe": run floe --help`},
 	} {
 		if code, stdout, stderr := run("", c.args...); code != 2 || stdout != "" || stderr != c.errs+"\n" {
 			t.Errorf("floe %v = %d, stdout %q, stderr %q; want 2, %q", c.args, code, stdout, stderr, c.errs)

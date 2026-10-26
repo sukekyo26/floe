@@ -90,3 +90,22 @@ func TestRender(t *testing.T) {
 		t.Errorf("floe render --out-dir \"\" = %d, %q", code, stderr)
 	}
 }
+
+// A page floe cannot write is told at it, in the system's words: a directory of its name, which the file written
+// whole beside it cannot be renamed over, and a name too long.
+func TestRenderCannotWrite(t *testing.T) {
+	t.Parallel()
+
+	long := strings.Repeat("x", 250)
+	dir := write(t, map[string]string{"b.yaml": good, long + ".yaml": good, "b.html/x": ""})
+	// The system's words differ from one system to another: what is told before them is floe's.
+	for _, tt := range []struct{ file, want string }{
+		{"b.yaml", "b.html: "},
+		{long + ".yaml", long + ".html: "},
+	} {
+		code, _, stderr := run(dir, "render", tt.file)
+		if code != 1 || !strings.HasPrefix(stderr, tt.want) || strings.Contains(stderr, dir) || strings.Count(stderr, "\n") != 1 {
+			t.Errorf("floe render %.20s = %d, stderr %q, want %q", tt.file, code, stderr, tt.want)
+		}
+	}
+}

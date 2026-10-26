@@ -14,6 +14,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/cli"
 	"github.com/sukekyo26/floe/internal/files"
+	"github.com/sukekyo26/floe/internal/kit"
 )
 
 var update = flag.Bool("update", false, "write the golden files of each sample anew")
@@ -366,4 +367,19 @@ func firstDiff(got, want []byte) (int, string, string, bool) {
 		}
 	}
 	return 0, "", "", false
+}
+
+// The sample example is the example.yaml of floe's report, as it is: its page is the one develop drew of it.
+func TestExampleIsReport(t *testing.T) {
+	t.Parallel()
+
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, _ := k.Template("report")
+	b, err := os.ReadFile(filepath.Join("testdata", "example", "example.yaml"))
+	if err != nil || !bytes.Equal(b, report.Example()) {
+		t.Errorf("testdata/example/example.yaml is not report's example.yaml (%v): copy it again", err)
+	}
 }
