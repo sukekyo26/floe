@@ -14,7 +14,6 @@ import (
 	"net/url"
 	"slices"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/santhosh-tekuri/jsonschema/v6/kind"
@@ -86,10 +85,7 @@ func read(file string, src []byte) (any, error) {
 	default:
 		return nil, usererr.LibraryAt(file, 0, 0, err.Error())
 	}
-	// encoding/json can name a place inside a character ("\日" at the end of its first byte), which reads as
-	// the character's start as that byte is one column.
-	_, size := utf8.DecodeLastRune(src[:syntax.Offset])
-	line, column := textpos.Of(src, int(syntax.Offset)-size)
+	line, column := textpos.Ending(src, int(syntax.Offset))
 	return nil, usererr.LibraryAt(file, line, column, err.Error())
 }
 

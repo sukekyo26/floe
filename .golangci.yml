@@ -176,6 +176,8 @@ linters:
         - usererr.LibraryAt(
         - usererr.NewAt(
         - usererr.New(
+        - usererr.CannotRead(
+        - usererr.CannotWrite(
         # A sig matches as part of the one reported, func (github.com/…/usererr.List).Err(): no "(" before.
         - usererr.List).Err(
         # Add returns a failure as it is, for the caller to stop at (CLAUDE.md); a mistake placed in YAML.

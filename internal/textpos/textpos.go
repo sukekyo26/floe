@@ -15,3 +15,11 @@ func Of(src []byte, at int) (line, column int) {
 	}
 	return line, utf8.RuneCount(src[start:at]) + 1
 }
+
+// Ending returns the line and the column of the character that ends at the byte offset of src: the place
+// encoding/json names (a SyntaxError's or an UnmarshalTypeError's Offset), which may fall inside a character,
+// read as that character's start. An offset of 0 is the start of src.
+func Ending(src []byte, offset int) (line, column int) {
+	_, size := utf8.DecodeLastRune(src[:offset])
+	return Of(src, offset-size)
+}

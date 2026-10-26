@@ -120,5 +120,7 @@ var messagesJA = map[string]string{
 	"cli_render_same_file": "%s と %s が、どちらも %s を書きます。どちらかの名前を変えてください",
 	"cli_render_missing":   "%s がありません。%s から floe render で書いてください",
 	"cli_render_stale":     "%s は %s を描いたものと違います。floe render で書き直してください",
-	"cli_cannot_write":     "書けません（%s）。ディレクトリがあって書けるか、名前が空いていて長すぎないかを確かめてください",
+
+	// files
+	"cannot_write": "書けません（%s）。ディレクトリがあって書けるか、名前が空いていて長すぎないかを確かめてください",
 }
