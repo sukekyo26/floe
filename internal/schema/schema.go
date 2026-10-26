@@ -138,19 +138,29 @@ const (
 // LIMIT: with a stopping mistake, or at mostMistakes or mostCompiles, what is told changes from run to run.
 // LIMIT: each hole compiles the whole again, at most mostCompiles times; rework if that comes to be slow.
 func (c *Compiled) compile(doc any) (*jsonschema.Schema, error) {
+	return c.compileIn(c.holesOf(doc))
+}
+
+// holesOf returns the holes compile starts from: doc under c.url and the docs of c.res, none filled.
+func (c *Compiled) holesOf(doc any) *holes {
 	docs := map[string]any{c.url: doc}
 	for ru, r := range c.res {
 		if ru != c.url {
 			docs[ru] = r.doc
 		}
 	}
-	h := &holes{docs: docs, copied: map[string]bool{}, refused: map[string]bool{}}
+	return &holes{docs: docs, copied: map[string]bool{}, refused: map[string]bool{}, compiles: 0}
+}
+
+// compileIn is compile, from h.
+func (c *Compiled) compileIn(h *holes) (*jsonschema.Schema, error) {
 	type told struct {
 		url string
 		err error
 	}
 	var found []told
-	for compiles := 1; ; compiles++ {
+	for {
+		h.compiles++
 		comp, failed := h.compiler(c.file)
 		if failed != nil {
 			return nil, failed
@@ -166,7 +176,7 @@ func (c *Compiled) compile(doc any) (*jsonschema.Schema, error) {
 		if tell {
 			found = append(found, told{url: at, err: c.compileMistake(err)})
 		}
-		if !again || len(found) >= mostMistakes || compiles >= mostCompiles {
+		if !again || len(found) >= mostMistakes || h.compiles >= mostCompiles {
 			break
 		}
 	}
@@ -180,11 +190,13 @@ func (c *Compiled) compile(doc any) (*jsonschema.Schema, error) {
 	return nil, all.Sorted().Err()
 }
 
-// holes are the docs compile compiles, each copied before it is filled, and the URLs the loader refused.
+// holes are the docs compile compiles, each copied before it is filled, the URLs the loader refused, and the
+// times it compiled.
 type holes struct {
-	docs    map[string]any
-	copied  map[string]bool
-	refused map[string]bool
+	docs     map[string]any
+	copied   map[string]bool
+	refused  map[string]bool
+	compiles int
 }
 
 // compiler returns a compiler of its own holding every doc of h; its error is floe's failure.
@@ -224,8 +236,8 @@ func (h *holes) hole(err error) (at string, tell, again bool) {
 }
 
 // fill puts true at frag of the doc at base, a #/$defs/<name> alone, in a copy of the doc; false for any
-// other place, or a doc whose root or $defs is not an object. It reads and writes the copy's root and $defs
-// alone (CLAUDE.md: the exception to taking the schema's shape from the compiled tree).
+// other place, or a doc whose root or $defs is not an object. It reads the doc's root and $defs alone, and
+// writes only a copy (CLAUDE.md: the exception to taking the schema's shape from the compiled tree).
 func (h *holes) fill(base, frag string) bool {
 	name, ok := strings.CutPrefix(frag, "/$defs/")
 	if !ok || name == "" || strings.ContainsAny(name, "/~") {

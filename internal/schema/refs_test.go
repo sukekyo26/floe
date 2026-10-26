@@ -122,8 +122,8 @@ func TestCompileRefsStop(t *testing.T) {
 	}
 }
 
-// compile tells at most 100 mistakes, stops filling a URL refused at its most compiles, and leaves the
-// resources it was given as they were.
+// compile tells at most 100 mistakes, tells a URL refused once however much inside it is filled, and leaves
+// the resources it was given as they were.
 func TestCompileRefsBounds(t *testing.T) {
 	t.Parallel()
 
