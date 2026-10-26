@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; media-src data: blob:; style-src 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action 'none'; base-uri 'none'; connect-src 'none'"><html lang="en"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="generator" content="floe report"/>
+<title>Every part</title>
+<style>
+@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.base {
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways instead, as a table does, keeps its words whole.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line, still overflows. Give such a part a layout for narrow screens, as
+   keys has */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+p, ul, ol { margin: 0; max-width: var(--text-width); }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
+pre {
+  margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+pre code { font-size: inherit; background: none; padding: 0; }
+blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+}
+</style>
+<style>
+@layer floe.palette {
+/* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
+:root {
+  --bg: #f3f5f4; --surface: #fff; --fg: #18201e; --muted: #57635f; --line: #d4dbd8;
+  --accent: #1d6670; --accent-soft: #dcebec;
+  --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
+  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #63b5be; --code-add: #6fcf97; --code-del: #f2b8b5;
+  /* The page's ground, a pattern too, and the rule between its sections */
+  --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(24 32 30 / 0.12);
+  /* Its panels' quiet ground, which holds faces of the surface */
+  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
+  color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="bars"], [data-floe-part="checklist"], [data-floe-part="compare"], [data-floe-part="details"], [data-floe-part="faq"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="glossary"], [data-floe-part="keys"], [data-floe-part="matrix"], [data-floe-part="progress"], [data-floe-part="risks"], [data-floe-part="steps"], [data-floe-part="table"], [data-floe-part="timeline"], [data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="bars"]) to (:scope [data-floe-part] > *) {
+/* A bar's length is set on it, as a share of the longest */
+:scope { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.6rem 1rem; align-items: center; padding: 1rem 1.3rem; }
+:scope > div { display: contents; color: var(--accent); }
+:scope > div.good { color: var(--good); }
+:scope > div.warn { color: var(--warn); }
+:scope > div.bad { color: var(--bad); }
+:scope .label { color: var(--fg); font-size: 0.92rem; }
+:scope .track { height: 0.85rem; border-radius: 4px; background: color-mix(in srgb, var(--line) 45%, var(--surface)); }
+:scope .track > span { display: block; height: 100%; min-width: 2px; border-radius: 4px; background: currentColor; }
+:scope .value {
+  text-align: right; font-size: 0.85rem; color: var(--fg); font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="cards"], [data-floe-part="decision"], [data-floe-part="facts"], [data-floe-part="links"], [data-floe-part="options"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+/* Each card is numbered by its place, as the steps of a plan are */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
+.card {
+  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+}
+:scope.numbered > .card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
+}
+.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone */
+:scope {
+  display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
+  background: var(--accent-soft); color: var(--accent);
+}
+:scope.good { background: var(--good-soft); color: var(--good); }
+:scope.warn { background: var(--warn-soft); color: var(--warn); }
+:scope.bad { background: var(--bad-soft); color: var(--bad); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="checklist"], [data-floe-part="faq"], [data-floe-part="glossary"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
+/* Rows in a panel, a rule between each and the next */
+:scope > * + * { border-top: 1px solid var(--line); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="checklist"]) to (:scope [data-floe-part] > *) {
+/* The count of the items done comes from counters, under the last */
+:scope {
+  list-style: none; margin: 0; padding: 0.35rem 0; display: grid; gap: 0; max-width: none;
+  counter-reset: floe-check floe-checked;
+}
+:scope > li { position: relative; padding: 0.6rem 1.2rem 0.6rem 3rem; counter-increment: floe-check; }
+:scope > li.done { counter-increment: floe-check floe-checked; color: var(--muted); }
+/* A mark, not a box: the items are not to be ticked on the page */
+:scope > li::before {
+  content: "–"; position: absolute; left: 1.2rem; top: 0.6rem; width: 1.15rem; text-align: center;
+  font-weight: 800; color: var(--muted);
+}
+:scope > li.done::before { content: "✓"; color: var(--good); }
+:scope::after {
+  content: counter(floe-checked) " / " counter(floe-check); padding: 0.4rem 1.2rem 0.1rem; text-align: right;
+  font-family: var(--mono);
+  font-size: 0.8rem; color: var(--muted);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+/* Always dark, as code in an editor is; the language stands at the right of the heading */
+:scope {
+  margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
+  background: var(--code-bg); color: var(--code-fg);
+  font-family: var(--mono);
+}
+:scope figcaption {
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1.1rem; font-size: 0.78rem;
+  background: color-mix(in srgb, var(--code-fg) 5%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
+}
+:scope pre {
+  margin: 0; padding: 0.95rem 1.1rem; overflow-x: auto; background: none; border: 0; border-radius: 0; color: inherit;
+  font-family: inherit; font-size: 0.875rem; line-height: 1.65; tab-size: 4;
+}
+:scope .file { opacity: 0.85; }
+:scope .lang {
+  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: 5px;
+  background: var(--code-prompt); color: var(--code-bg);
+}
+/* A block, so that the code's last line break draws no empty line */
+:scope code { display: block; font: inherit; color: inherit; background: none; padding: 0; border-radius: 0; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="compare"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="matrix"], [data-floe-part="risks"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns */
+:scope {
+  overflow-x: auto;
+}
+:scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.8rem 1.1rem; }
+:scope :is(th, td):not(.num) { min-width: 7em; }
+/* A num column's heading wraps as long as it needs, but not a character a line */
+:scope th.num { min-width: 6em; }
+:scope thead th {
+  font-size: 0.8rem; font-weight: 600; color: var(--muted);
+  background: color-mix(in srgb, var(--line) 40%, var(--surface));
+}
+:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line) 18%, var(--surface)); }
+:scope .num { text-align: right; }
+:scope td.num {
+  min-width: auto; font-family: var(--mono);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="compare"]) to (:scope [data-floe-part] > *) {
+/* In the table's look; an arrow leads into what a thing becomes */
+:scope .what { font-weight: 600; }
+:scope td.after { font-weight: 600; }
+:scope td.after::before { content: "→ "; content: "→ " / ""; font-weight: 400; color: var(--muted); }
+/* Underlined, in the head's own colour, which a theme may fill */
+:scope thead th.after { text-decoration: underline 2px; text-underline-offset: 0.3em; }
+:scope tr.same td { color: var(--muted); font-weight: 400; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="decision"]) to (:scope [data-floe-part] > *) {
+/* A card of its own, unnumbered, its title large */
+:scope { grid-template-columns: minmax(0, 1fr); }
+:scope > div { gap: 0.5rem; }
+:scope h3 { font-size: 1.25rem; line-height: 1.45; }
+:scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: 0.82rem; }
+:scope .set-aside { margin-top: 0.3rem; font-size: 0.8rem; font-weight: 600; }
+:scope ul { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
+:scope li { position: relative; padding-left: 1.45rem; }
+:scope li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="diff"]) to (:scope [data-floe-part] > *) {
+/* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls */
+:scope pre { padding-inline: 0; }
+:scope code { display: grid; grid-template-columns: minmax(100%, max-content); }
+:scope code > span { padding-inline: 1.1rem; }
+:scope .add { background: color-mix(in srgb, var(--code-add) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add); }
+:scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
+:scope .hunk { color: var(--code-prompt); }
+:scope .meta { opacity: 0.65; }
+:scope figcaption :is(.added, .removed) { flex: none; }
+:scope figcaption .added { color: var(--code-add); }
+:scope figcaption .removed { color: var(--code-del); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="note"]) to (:scope [data-floe-part] > *) {
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
+:scope {
+  position: relative; background: var(--accent-soft); padding: 1rem 1.25rem 1rem 3.7rem;
+  border-radius: 14px; max-width: var(--text-width);
+}
+:scope.good { background: var(--good-soft); }
+:scope.warn { background: var(--warn-soft); }
+:scope.bad { background: var(--bad-soft); }
+:scope::before {
+  content: "i"; content: "i" / ""; position: absolute; left: 1.25rem; top: 1.1rem;
+  display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+  background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+}
+:scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
+:scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }
+:scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad); }
+:scope > * { margin: 0; }
+:scope > * + * { margin-top: 0.5rem; }
+.title { display: block; font-size: 0.9rem; color: var(--accent); }
+:scope.good .title { color: var(--good); }
+:scope.warn .title { color: var(--warn); }
+:scope.bad .title { color: var(--bad); }
+:scope > .title + * { margin-top: 0.1rem; }
+:scope code { background: var(--surface); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
+:scope figcaption { opacity: 0.85; }
+:scope :is(.run, .out) { display: block; }
+:scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
+:scope .run::before { content: "$ "; color: var(--code-prompt); }
+:scope.zsh .run::before { content: "% "; }
+:scope.powershell .run::before { content: "PS> "; }
+:scope.cmd .run::before { content: "> "; }
+:scope .out { opacity: 0.7; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="stack"]) to (:scope [data-floe-part] > *) {
+/* What details and tabs hold */
+:scope { display: grid; gap: 1rem; min-width: 0; }
+:scope > * { min-width: 0; margin: 0; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="details"]) to (:scope [data-floe-part] > *) {
+/* The mark before the title turns down when open */
+:scope > summary {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 1.2rem; cursor: pointer; font-weight: 700; list-style: none;
+}
+:scope > summary::-webkit-details-marker { display: none; }
+:scope > summary::before {
+  content: ""; flex: none; width: 0.5rem; height: 0.5rem; margin-left: 0.15rem; border: solid var(--muted);
+  border-width: 0 2px 2px 0; transform: rotate(-45deg); transition: transform 0.15s;
+}
+:scope[open] > summary::before { transform: rotate(45deg); margin-top: -0.25rem; }
+:scope > summary:focus-visible { outline-offset: -2px; border-radius: 14px; }
+:scope > div { padding: 0 1.2rem 1.1rem; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="facts"]) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, unnumbered */
+:scope { margin: 0; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem; }
+:scope > div { gap: 0.1rem; padding-block: 0.8rem; }
+:scope dt { font-size: 0.8rem; color: var(--muted); }
+:scope dd { margin: 0; font-weight: 600; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="faq"]) to (:scope [data-floe-part] > *) {
+/* Each question a row; Q leads it, and its answer opens under it */
+:scope { display: grid; }
+:scope summary {
+  display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.5rem; padding: 0.75rem 1.2rem;
+  cursor: pointer; font-weight: 700; list-style: none;
+}
+:scope summary::-webkit-details-marker { display: none; }
+:scope summary::before { content: "Q"; content: "Q" / ""; color: var(--accent); }
+:scope summary::after { content: "+"; content: "+" / ""; color: var(--muted); font-weight: 400; }
+:scope details[open] summary::after { content: "−"; content: "−" / ""; }
+:scope summary:focus-visible { outline-offset: -2px; }
+:scope details > div { display: grid; gap: 0.5rem; padding: 0 1.2rem 0.9rem 3.1rem; color: var(--muted); }
+:scope details > div > * { margin: 0; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="fields"]) to (:scope [data-floe-part] > *) {
+/* In the table's look, without a heading: the name over its type, what it is over its default */
+:scope td.name { width: 30%; }
+:scope .name code { font-weight: 700; background: none; padding: 0; white-space: nowrap; }
+:scope .required { margin-left: 0.5rem; font-size: 0.72rem; font-weight: 700; color: var(--bad); }
+:scope .type {
+  display: block; width: fit-content; margin-top: 0.2rem; padding: 0 0.45rem; border-radius: 5px; font-size: 0.75rem;
+  font-family: var(--mono);
+  background: color-mix(in srgb, var(--fg) 8%, var(--surface)); color: var(--muted);
+}
+:scope .default { display: block; margin-top: 0.15rem; font-size: 0.85rem; color: var(--muted); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="findings"]) to (:scope [data-floe-part] > *) {
+/* In the table's look, without a heading: a level's pill, then where it is and what became of it over what it is */
+:scope td.level { width: 1%; min-width: auto; white-space: nowrap; }
+:scope .level .nit { background: color-mix(in srgb, var(--fg) 8%, var(--surface)); color: var(--muted); }
+:scope .head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem; }
+/* Where it is breaks, though in a table: a path would widen the column too far */
+:scope .at { padding: 0; background: none; font-size: 0.8rem; color: var(--accent); overflow-wrap: anywhere; }
+:scope .status { margin-left: auto; }
+:scope .why { margin-top: 0.15rem; font-size: 0.88rem; color: var(--muted); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="glossary"]) to (:scope [data-floe-part] > *) {
+/* A word at the left of what it means, the meaning under it on a narrow screen */
+:scope { margin: 0; display: grid; }
+:scope > div { display: grid; grid-template-columns: minmax(8rem, 14rem) minmax(0, 1fr); gap: 0.2rem 1.5rem; padding: 0.75rem 1.2rem; }
+:scope dt { font-weight: 700; }
+:scope dd { margin: 0; display: grid; gap: 0.4rem; color: var(--muted); }
+:scope dd > * { margin: 0; }
+@media (max-width: 36rem) {
+  :scope > div { grid-template-columns: minmax(0, 1fr); }
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
+/* Keycaps at the left of what they do, over it on a narrow screen */
+:scope { margin: 0; display: grid; }
+:scope > div { display: grid; grid-template-columns: minmax(7rem, auto) minmax(0, 1fr); gap: 0.2rem 1.5rem; align-items: center; padding: 0.65rem 1.2rem; }
+:scope dt { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; color: var(--muted); font-size: 0.8rem; }
+:scope dd { margin: 0; }
+:scope kbd {
+  min-width: 1.8rem; padding: 0.05rem 0.5rem; border-radius: 6px; text-align: center; color: var(--fg);
+  font-family: var(--mono); font-size: 0.8rem;
+  background: var(--bg); box-shadow: inset 0 -2px 0 var(--line), 0 0 0 1px var(--line);
+}
+@media (max-width: 36rem) {
+  :scope > div { grid-template-columns: minmax(0, 1fr); }
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="links"]) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
+:scope { list-style: none; margin: 0; padding: 0; max-width: none; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
+:scope > li { position: relative; gap: 0.1rem; padding-block: 0.9rem; padding-left: 3.7rem; }
+:scope > li::before {
+  content: ""; position: absolute; left: 1.1rem; top: 0.95rem; display: block; width: 1.9rem; height: 1.9rem;
+  border-radius: 9px; background: var(--accent-soft);
+}
+:scope a { font-weight: 700; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+:scope a::before {
+  content: ""; position: absolute; left: calc(1.1rem + 0.45rem); top: calc(0.95rem + 0.45rem); width: 1rem; height: 1rem;
+  background: var(--accent); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+:scope a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+:scope > li:hover a { text-decoration-thickness: 2px; }
+:scope a:focus-visible { outline: none; }
+:scope > li:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope .url {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted);
+  font-family: var(--mono);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="matrix"]) to (:scope [data-floe-part] > *) {
+/* In the table's look; a cell's mark is drawn by the style, its word kept for a screen reader */
+:scope :is(th, td):not(:first-child) { min-width: 5em; text-align: center; }
+:scope td.what { font-weight: 600; }
+:scope .mark { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; font-weight: 800; line-height: 1; vertical-align: middle; }
+:scope .mark > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+:scope .yes .mark { background: var(--good-soft); color: var(--good); }
+:scope .part .mark { background: var(--warn-soft); color: var(--warn); }
+:scope .no .mark { background: var(--bad-soft); color: var(--bad); }
+:scope .yes .mark::before { content: "✓"; content: "✓" / ""; }
+:scope .part .mark::before { content: "△"; content: "△" / ""; font-size: 0.8em; }
+:scope .no .mark::before { content: "×"; content: "×" / ""; }
+:scope small { display: block; font-size: 0.75rem; color: var(--muted); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
+/* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
+.option.pick { outline: 2px solid var(--accent); outline-offset: -1px; }
+.option h3 > span { margin-left: 0.4rem; vertical-align: 0.1em; }
+.option ul { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
+/* The mark hangs at the left, so that a line of text and code flows as one */
+.option li { position: relative; padding-left: 1.45rem; }
+.option li::before { position: absolute; left: 0.1rem; font-weight: 800; }
+.option li.pro { color: var(--fg); }
+.option li.pro::before { content: "+"; color: var(--good); }
+.option li.con::before { content: "−"; color: var(--bad); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="progress"]) to (:scope [data-floe-part] > *) {
+:scope {
+  display: grid; gap: 1rem; padding: 1.1rem 1.3rem;
+}
+.bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 1rem; align-items: baseline; color: var(--accent); }
+.bar.good { color: var(--good); }
+.bar.warn { color: var(--warn); }
+.bar.bad { color: var(--bad); }
+.bar .label { color: var(--fg); }
+.bar .count {
+  font-family: var(--mono);
+  font-size: 0.85rem; font-variant-numeric: tabular-nums; color: var(--muted);
+}
+.bar progress {
+  grid-column: 1 / -1; appearance: none; width: 100%; height: 0.6rem; border: 0; border-radius: 999px; overflow: hidden;
+  background: color-mix(in srgb, var(--line) 60%, var(--surface)); color: inherit;
+}
+/* Each engine's own pseudo-element, in a rule of its own: one it does not know would drop the whole rule */
+.bar progress::-webkit-progress-bar { background: none; }
+.bar progress::-webkit-progress-value { background: currentColor; border-radius: 999px; }
+.bar progress::-moz-progress-bar { background: currentColor; border-radius: 999px; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="risks"]) to (:scope [data-floe-part] > *) {
+/* In the table's look; a level is three bars filled one, two or all, in the colour of the risk */
+:scope td.what { font-weight: 600; }
+:scope td:is(.low, .mid, .high) { min-width: 6.5em; white-space: nowrap; }
+:scope .level { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+:scope .level::before {
+  content: ""; width: 2.4rem; height: 0.5rem; border-radius: 2px; color: var(--good);
+  background: linear-gradient(currentColor, currentColor) left / 30% 100% no-repeat,
+    color-mix(in srgb, var(--line) 70%, var(--surface));
+  mask: repeating-linear-gradient(to right, #000 0 30%, transparent 30% 35%);
+}
+:scope .mid .level::before { background-size: 65% 100%, auto; }
+:scope .high .level::before { background-size: 100% 100%, auto; }
+:scope tr.warn .level::before { color: var(--warn); }
+:scope tr.bad .level::before { color: var(--bad); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, unnumbered */
+:scope { margin: 0; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+:scope > div { gap: 0.15rem; }
+.stat dt { font-size: 0.85rem; color: var(--muted); }
+.stat dd { margin: 0; }
+.stat .value {
+  font-family: var(--mono);
+  font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
+}
+.stat .unit { margin-left: 0.3em; font-size: 0.5em; font-weight: 400; color: var(--muted); }
+.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+.stat.accent .note { color: var(--accent); }
+.stat.good .note { color: var(--good); }
+.stat.warn .note { color: var(--warn); }
+.stat.bad .note { color: var(--bad); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="steps"]) to (:scope [data-floe-part] > *) {
+/* A step's mark is its number, a tick once done; a line joins it to the next, coloured once it is done */
+:scope {
+  list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; counter-reset: floe-step;
+  max-width: none;
+}
+:scope > li { position: relative; counter-increment: floe-step; display: grid; gap: 0.15rem; padding: 0.2rem 0 1.3rem 3rem; min-height: 2rem; }
+:scope > li:last-child { padding-bottom: 0.2rem; }
+:scope > li::before {
+  content: counter(floe-step); position: absolute; left: 0; top: 0; display: grid; place-items: center;
+  width: 2rem; height: 2rem; border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
+}
+:scope > li:not(:last-child)::after {
+  content: ""; position: absolute; left: calc(1rem - 1px); top: 2.35rem; bottom: 0.35rem; width: 2px; border-radius: 1px;
+  background: var(--line);
+}
+:scope > li.done::before { content: "✓"; background: var(--good); color: var(--on-fill); box-shadow: none; }
+:scope > li.done::after { background: var(--good); }
+:scope > li.doing::before { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+:scope > li > strong { line-height: 1.6; }
+:scope > li > :not(strong) { margin: 0; max-width: var(--text-width); color: var(--muted); font-size: 0.92rem; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="tabs"]) to (:scope [data-floe-part] > *) {
+/* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows */
+:scope { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0; }
+:scope > label {
+  position: relative; padding: 0.3rem 0.95rem; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600;
+  color: var(--muted);
+}
+:scope > label:has(:checked) { background: var(--accent-soft); color: var(--accent); }
+:scope > label:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+:scope > div { order: 1; flex-basis: 100%; display: none; margin-top: 0.3rem; }
+:scope > label:has(:checked) + div { display: grid; }
+/* On paper every tab shows, each under its title */
+@media print {
+  :scope > label, :scope > label:has(:checked) { flex-basis: 100%; padding-inline: 0; background: none; color: var(--fg); }
+  :scope > div { display: grid; order: 0; }
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="timeline"]) to (:scope [data-floe-part] > *) {
+/* The date at the left of a dot on a line that runs down to the next */
+:scope { list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; max-width: none; }
+:scope > li { position: relative; display: grid; grid-template-columns: 7rem minmax(0, 1fr); column-gap: 2rem; padding-bottom: 1.1rem; }
+:scope > li:last-child { padding-bottom: 0; }
+:scope > li::before {
+  content: ""; position: absolute; left: calc(7rem + 0.65rem); top: 0.55rem; width: 0.7rem; height: 0.7rem; border-radius: 50%;
+  background: var(--accent);
+}
+:scope > li:not(:last-child)::after {
+  content: ""; position: absolute; left: calc(7rem + 1rem - 1px); top: 1.5rem; bottom: 0.2rem; width: 2px; background: var(--line);
+}
+:scope > li.good::before { background: var(--good); }
+:scope > li.warn::before { background: var(--warn); }
+:scope > li.bad::before { background: var(--bad); }
+:scope .date {
+  text-align: right; font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+}
+:scope li > div { display: grid; gap: 0.15rem; }
+:scope li > div > :not(strong) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+@media (max-width: 36rem) {
+  :scope > li { grid-template-columns: minmax(0, 1fr); padding-left: 1.6rem; }
+  :scope > li::before { left: 0; }
+  :scope > li:not(:last-child)::after { left: calc(0.35rem - 1px); }
+  :scope .date { text-align: left; }
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
+/* A folder's contents hang from a rule under it; the marks of files and folders are masks in the text's colour */
+:scope {
+  padding: 0.8rem 1.2rem; overflow-x: auto; overflow-wrap: normal;
+}
+:scope ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; max-width: none; }
+:scope ul ul { margin-left: 0.5rem; padding-left: 1.15rem; border-left: 1px solid var(--line); }
+:scope li { padding-block: 0.12rem; }
+:scope .name {
+  display: inline-flex; align-items: center; gap: 0.45rem; white-space: nowrap;
+  font-family: var(--mono); font-size: 0.86rem;
+}
+:scope .name::before {
+  content: ""; flex: none; width: 1rem; height: 1rem; background: var(--muted);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M5 2.5h6.5l3.5 3.5v11.5h-10zM11.5 2.5v3.5h3.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+:scope .name.dir { font-weight: 600; }
+:scope .name.dir::before { background: var(--accent); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M2.5 5h5l1.5 2h8.5v9h-15z'/%3E%3C/svg%3E"); }
+:scope .note { margin-left: 0.75rem; font-size: 0.85rem; color: var(--muted); }
+:scope li > .name::after { font-weight: 800; }
+:scope li.added > .name { color: var(--good); }
+:scope li.added > .name::after { content: "+"; }
+:scope li.removed > .name { color: var(--bad); text-decoration: line-through; }
+:scope li.removed > .name::after { content: "−"; }
+:scope li.changed > .name { color: var(--warn); }
+:scope li.changed > .name::after { content: "±"; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
+blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="bars"], [data-floe-part="checklist"], [data-floe-part="compare"], [data-floe-part="details"], [data-floe-part="faq"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="glossary"], [data-floe-part="keys"], [data-floe-part="matrix"], [data-floe-part="progress"], [data-floe-part="risks"], [data-floe-part="steps"], [data-floe-part="table"], [data-floe-part="timeline"], [data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="bars"]) to (:scope [data-floe-part] > *) {
+:scope .track { background: var(--surface); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="cards"], [data-floe-part="decision"], [data-floe-part="facts"], [data-floe-part="links"], [data-floe-part="options"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border-radius: 20px; padding: 0.75rem; gap: 0.75rem; }
+/* A tile of the surface on the panel of the cards */
+.card { background: var(--surface); border-radius: 14px; }
+:scope.numbered > .card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="checklist"], [data-floe-part="faq"], [data-floe-part="glossary"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
+:scope { padding: 6px; }
+:scope > * { background: var(--surface); }
+:scope > :first-child { border-radius: 14px 14px 0 0; }
+:scope > :last-child { border-radius: 0 0 14px 14px; }
+:scope > :only-child { border-radius: 14px; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+:scope { border-radius: 18px; box-shadow: none; padding: 6px; }
+:scope figcaption { background: none; border: 0; padding: 0.3rem 0.6rem 0.5rem; }
+:scope pre { background: color-mix(in srgb, var(--code-fg) 4%, transparent); border-radius: 12px; }
+:scope .lang { border-radius: 6px; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="compare"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="matrix"], [data-floe-part="risks"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+:scope { padding: 6px; }
+:scope table { border-collapse: separate; border-spacing: 0; }
+:scope thead th { background: none; padding-block: 0.6rem 0.5rem; }
+:scope tbody td, :scope tbody tr:nth-child(even) td { background: var(--surface); }
+:scope tbody tr + tr td { border-top: 1px solid var(--line); }
+:scope tbody tr:first-child td:first-child { border-top-left-radius: 14px; }
+:scope tbody tr:first-child td:last-child { border-top-right-radius: 14px; }
+:scope tbody tr:last-child td:first-child { border-bottom-left-radius: 14px; }
+:scope tbody tr:last-child td:last-child { border-bottom-right-radius: 14px; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="note"]) to (:scope [data-floe-part] > *) {
+:scope {
+  padding-left: 4.35rem; border-radius: 18px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+:scope.good { border-color: color-mix(in srgb, var(--good) 20%, transparent); }
+:scope.warn { border-color: color-mix(in srgb, var(--warn) 20%, transparent); }
+:scope.bad { border-color: color-mix(in srgb, var(--bad) 20%, transparent); }
+:scope::before { top: 0.85rem; width: 2.25rem; height: 2.25rem; border-radius: 10px; background: var(--surface); color: var(--accent); }
+:scope.good::before { background: var(--surface); color: var(--good); }
+:scope.warn::before { background: var(--surface); color: var(--warn); }
+:scope.bad::before { background: var(--surface); color: var(--bad); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="progress"]) to (:scope [data-floe-part] > *) {
+.bar progress { background: var(--surface); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
+:scope { padding: 6px; }
+:scope > ul { background: var(--surface); border-radius: 14px; padding: 0.7rem 1.1rem; }
+}
+}
+</style>
+<style>
+@layer floe.page {
+@scope (:root) to ([data-floe-part] > *) {
+/* The colours and faces are the theme's palette; the page lays them out */
+:scope {
+  /* The width of the whole body; that of prose is the palette's */
+  --page-width: 96rem;
+}
+body {
+  margin: 0; font-size: 16px; line-height: 1.85; padding-inline: 16px; padding-block: 2.5rem 4rem;
+}
+main { max-width: var(--page-width); margin-inline: auto; display: grid; gap: 2.5rem; }
+main > *, section > * { min-width: 0; }
+h1 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: 0.01em; }
+h2 { font-size: 1.4rem; }
+header { display: grid; gap: 0.7rem; }
+section { display: grid; gap: 1rem; }
+section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
+.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lead { color: var(--muted); font-size: 1.05rem; }
+.muted { color: var(--muted); }
+}
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+<p class="eyebrow">Plan · 2030-04</p>
+<h1 id="every-part">Every part</h1>
+<p class="lead">The wiki moves to the new host in two weekends, with the old one read-only in between.</p>
+</header>
+<section>
+<h2 id="at-a-glance">At a glance</h2>
+<dl data-floe-part="stats">
+<div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value">1,840</dd></div>
+<div class="card stat good" data-floe-look="panel"><dt>Broken links</dt><dd class="value">120</dd><dd class="note">-35 since the last check</dd></div>
+<div class="card stat" data-floe-look="panel"><dt>Downtime</dt><dd class="value">0<span class="unit">hours</span></dd></div>
+</dl>
+<div data-floe-part="compare"><table>
+<thead><tr><th></th><th scope="col">Now</th><th scope="col" class="after">After the move</th></tr></thead>
+<tbody>
+<tr><td class="what">Host</td><td>The old server</td><td class="after">The new host</td></tr>
+<tr><td class="what">Search</td><td>Built in</td><td class="after">Rebuilt on <code>Sunday</code></td></tr>
+<tr class="same"><td class="what">Address</td><td>wiki.example.com</td><td class="after">wiki.example.com</td></tr>
+</tbody>
+</table></div>
+</section>
+<section>
+<h2 id="steps">Steps</h2>
+<p>The pages move over <strong>one weekend</strong>; the old wiki stays readable until the new one opens.</p>
+
+<ol data-floe-part="steps">
+<li class="done"><strong>Freeze edits on the old wiki</strong><p>On <strong>Friday evening</strong>.</p>
+</li>
+<li class="doing" aria-current="step"><strong>Copy the pages and check the links</strong></li>
+<li class="todo"><strong>Point the team&#39;s bookmarks at the new host</strong></li>
+</ol>
+<figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run">wiki export --all --out pages/</span><span class="out">1840 pages written to pages/</span><span class="run">linkcheck pages/</span></pre></figure>
+<figure data-floe-part="code"><figcaption><span class="file">old-wiki.conf</span></figcaption><pre><code># Read-only from Friday evening
+read_only = true
+banner = &#34;This wiki has moved to the new host.&#34;
+</code></pre></figure>
+</section>
+<section>
+<h2 id="who-does-what">Who does what</h2>
+<div class="numbered" data-floe-part="cards">
+<div class="card" data-floe-look="panel"><h3 id="copy">Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>
+</div>
+<div class="card" data-floe-look="panel"><h3 id="links">Links</h3><p>Runs the link check and fixes what it finds.</p>
+</div>
+<div class="card" data-floe-look="panel"><h3 id="bookmarks">Bookmarks</h3><p>Sends the new address to the team on Monday morning.</p>
+</div>
+</div>
+</section>
+<section>
+<h2 id="risks">Risks</h2>
+<div data-floe-part="table"><table>
+<thead><tr><th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col" class="num">Pages</th><th scope="col">What we do</th><th scope="col">State</th></tr></thead>
+<tbody>
+<tr><td>Broken links</td><td>High</td><td class="num">120</td><td>A link check after the copy</td><td><span class="warn" data-floe-part="cell">watching</span></td></tr>
+<tr><td>Lost attachments</td><td>Low</td><td class="num">8</td><td>Keep the old host for <strong>a month</strong></td><td><span class="good" data-floe-part="cell">covered</span></td></tr>
+<tr><td>Slow search</td><td>Unknown</td><td class="num">-</td><td>Rebuild the index on <code>Sunday</code></td><td><span data-floe-part="cell">open</span></td></tr>
+</tbody>
+</table></div>
+<div class="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>
+</div>
+</section>
+<section>
+<h2 id="progress">Progress</h2>
+<div data-floe-part="bars">
+<div class="good"><span class="label">Copied</span><span class="track"><span style="width: 100%"></span></span><span class="value">1,840</span></div>
+<div><span class="label">Checked</span><span class="track"><span style="width: 65.21739130434783%"></span></span><span class="value">1,200</span></div>
+<div class="bad"><span class="label">Broken</span><span class="track"><span style="width: 6.521739130434782%"></span></span><span class="value">120</span></div>
+</div>
+<div data-floe-part="progress">
+<label class="bar"><span class="label">Pages</span><span class="count">1200 / 1840</span><progress value="1200" max="1840">1200 / 1840</progress></label>
+<label class="bar good"><span class="label">Images</span><span class="count">30 / 30</span><progress value="30" max="30">30 / 30</progress></label>
+</div>
+<ul data-floe-part="checklist">
+<li class="done">Freeze edits</li>
+<li>Copy the <strong>attachments</strong></li>
+</ul>
+<ol data-floe-part="timeline">
+<li class="warn"><span class="date">2030-04-05</span><div><strong>Freeze</strong><p>Edits stop.</p>
+</div></li>
+<li><span class="date">2030-04-07</span><div><strong>Open</strong></div></li>
+</ol>
+</section>
+<section>
+<h2 id="choices">Choices</h2>
+<div class="numbered" data-floe-part="options">
+<div class="card option pick" data-floe-look="panel"><h3 id="copy-in-one-go">Copy in one go <span data-floe-part="cell">Recommended</span></h3><p>Two days of read-only.</p>
+<ul><li class="pro">Simple</li><li class="con">Longer freeze</li></ul></div>
+<div class="card option" data-floe-look="panel"><h3 id="copy-by-space">Copy by space</h3><ul><li class="pro">Short freezes</li><li class="con">Links break between spaces</li><li class="con">Twice the work</li></ul></div>
+</div>
+<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span class="good" data-floe-part="cell">decided</span><span>2030-03-28</span></p><h3 id="the-wiki-moves-to-the-new-host">The wiki moves to the new host</h3><p>The old server is out of support in <strong>May</strong>.</p>
+<p class="set-aside">Set aside</p><ul><li>Stay on the old server</li><li>Move to a hosted wiki</li></ul></div></div>
+<div data-floe-part="risks"><table>
+<thead><tr><th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col">Impact</th><th scope="col">What we do</th></tr></thead>
+<tbody>
+<tr class="bad"><td class="what">Broken links</td><td class="high"><span class="level">High</span></td><td class="mid"><span class="level">Medium</span></td><td>A link check after the copy</td></tr>
+<tr class="warn"><td class="what">Lost attachments</td><td class="low"><span class="level">Low</span></td><td class="high"><span class="level">High</span></td><td></td></tr>
+</tbody>
+</table></div>
+<div data-floe-part="matrix"><table>
+<thead><tr><th></th><th scope="col">Old wiki</th><th scope="col">New host</th></tr></thead>
+<tbody>
+<tr><td class="what">Search</td><td class="yes"><span class="mark"><span>Yes</span></span></td><td class="part"><span class="mark"><span>Partly</span></span><small>rebuilt Sunday</small></td></tr>
+<tr><td class="what">Single sign-on</td><td class="no"><span class="mark"><span>No</span></span></td><td class="yes"><span class="mark"><span>Yes</span></span></td></tr>
+</tbody>
+</table></div>
+</section>
+<section>
+<h2 id="reference">Reference</h2>
+<dl data-floe-part="facts">
+<div class="card" data-floe-look="panel"><dt>Owner</dt><dd>The platform team</dd></div>
+<div class="card" data-floe-look="panel"><dt>State</dt><dd><span class="good" data-floe-part="cell">on track</span></dd></div>
+</dl>
+<div data-floe-part="fields"><table>
+<tbody>
+<tr><td class="name"><code>read_only</code><span class="required">required</span><span class="type">bool</span></td><td>Refuses edits<span class="default">Default: <code>false</code></span></td></tr>
+<tr><td class="name"><code>banner</code><span class="type">string</span></td><td>Shown on every page</td></tr>
+<tr><td class="name"><code>port</code><span class="type">number</span></td><td><span class="default">Default: <code>8080</code></span></td></tr>
+</tbody>
+</table></div>
+<dl data-floe-part="glossary">
+<div><dt>Freeze</dt><dd><p>The days when the old wiki is <strong>read-only</strong>.</p>
+</dd></div>
+<div><dt>Host</dt><dd><p>Where the wiki runs.</p>
+</dd></div>
+</dl>
+<dl data-floe-part="keys">
+<div><dt><kbd>Ctrl</kbd><span>+</span><kbd>K</kbd></dt><dd>Search the wiki</dd></div>
+<div><dt><kbd>g</kbd><span>+</span><kbd>h</kbd></dt><dd>Go home</dd></div>
+</dl>
+<div data-floe-part="faq">
+<details open=""><summary>Can I edit during the freeze?</summary><div><p>No: edits are lost.</p>
+</div></details>
+<details><summary>Where do old links go?</summary><div><p>To the same page on the new host.</p>
+</div></details>
+</div>
+<ul data-floe-part="links">
+<li class="card" data-floe-look="panel"><a href="https://example.com/guide">Migration guide</a><p>How the copy works</p><span class="url">https://example.com/guide</span></li>
+<li class="card" data-floe-look="panel"><a href="https://wiki.example.com/">Old wiki</a><span class="url">https://wiki.example.com/</span></li>
+</ul>
+<div data-floe-part="findings"><table>
+<tbody>
+<tr><td class="level"><span class="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">wiki.conf:3</code><span class="status"><span class="good" data-floe-part="cell">fixed</span></span></div><div>The banner names the old host</div></td></tr>
+<tr><td class="level"><span class="nit" data-floe-part="cell">nit</span></td><td><div>Two pages have the same title</div><div class="why">Left as the owners asked</div></td></tr>
+</tbody>
+</table></div>
+<div data-floe-part="tree"><ul>
+<li><span class="name dir">pages/</span><span class="note">what export writes</span><ul>
+<li class="changed"><span class="name">home.md</span></li>
+<li class="removed"><span class="name">old.md</span></li>
+<li><span class="name dir">new/</span><ul>
+<li class="added"><span class="name">index.md</span></li>
+</ul></li>
+</ul></li>
+</ul></div>
+<figure data-floe-part="diff"><figcaption><span class="file">wiki.conf</span><span class="added">+1</span><span class="removed">−1</span><span class="lang">ini</span></figcaption><pre><code><span class="hunk">@@ -1,2 +1,2 @@
+</span><span class="del">-read_only = false
+</span><span class="add">+read_only = true
+</span><span> banner = &#34;Moved&#34;
+</span></code></pre></figure>
+</section>
+<section>
+<h2 id="folded">Folded</h2>
+<details data-floe-part="details" open=""><summary>The whole log</summary><div data-floe-part="stack"><p>What the copy printed.</p>
+<figure class="sh" data-floe-part="terminal"><pre><span class="run">wiki export</span><span class="out">done</span></pre></figure><figure data-floe-part="diff"><figcaption><span class="added">+1</span><span class="removed">−1</span></figcaption><pre><code><span class="add">+a
+</span><span class="del">-b
+</span></code></pre></figure></div></details>
+<form data-floe-part="tabs">
+<label><input type="radio" name="tab" checked=""/>bash</label><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code>export WIKI=new</code></pre></figure></div>
+<label><input type="radio" name="tab"/>PowerShell</label><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">powershell</span></figcaption><pre><code>$env:WIKI = &#39;new&#39;</code></pre></figure><div class="good" data-floe-part="note"><p>Run it in a new window.</p>
+</div><div data-floe-part="table"><table>
+<thead><tr><th scope="col">Shell</th><th scope="col" class="num">Lines</th></tr></thead>
+<tbody>
+<tr><td>PowerShell</td><td class="num">1</td></tr>
+</tbody>
+</table></div></div>
+</form>
+</section>
+</main>
+
+
+</body></html>

@@ -18,14 +18,14 @@ const noLang = "name the language of the page at the top level, like lang: en (a
 func TestRead(t *testing.T) {
 	t.Parallel()
 
-	d, err := doc.Read("a.yaml", []byte("# head\ntemplate: report\nlang: ja\ntheme:\ntitle: '  Plan  '\nx: 1\n"))
+	d, err := doc.Read("a.yaml", []byte("# head\ntemplate: report\nlang: ja\ntheme:\ntitle: '  Plan  '\nx: 1\n"), "")
 	if err == nil {
 		t.Fatalf("Read of a theme left empty = %+v, want its mistake", d)
 	}
 	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "); got != "a.yaml:4:1: theme must be text" {
 		t.Errorf("told %q", got)
 	}
-	d, err = doc.Read("a.yaml", []byte("# head\ntemplate: report\nlang: ja\ntitle: '  Plan  '\nx: 1\n"))
+	d, err = doc.Read("a.yaml", []byte("# head\ntemplate: report\nlang: ja\ntitle: '  Plan  '\nx: 1\n"), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestReadSecondBOM(t *testing.T) {
 	t.Parallel()
 
 	const bom = "\xef\xbb\xbf"
-	d, err := doc.Read("a.yaml", []byte(bom+bom+"lang: ja\n"))
+	d, err := doc.Read("a.yaml", []byte(bom+bom+"lang: ja\n"), "")
 	if err == nil {
 		t.Fatalf("Read = %+v, want its mistake", d)
 	}
@@ -78,7 +78,7 @@ func TestReadMistakes(t *testing.T) {
 		{"\xef\xbb\xbflang: en\ntitle: 1\n", "a.yaml:2:8: title must be text"},
 		{"\xef\xbb\xbftitle: 1\nlang: en\n", "a.yaml:1:8: title must be text"},
 	} {
-		_, err := doc.Read("a.yaml", []byte(tt.src))
+		_, err := doc.Read("a.yaml", []byte(tt.src), "")
 		got := ""
 		if err != nil {
 			got = usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: ")
@@ -94,7 +94,7 @@ func TestReadMistakes(t *testing.T) {
 func TestReadInts(t *testing.T) {
 	t.Parallel()
 
-	d, err := doc.Read("a.yaml", []byte("lang: en\na: 3\nb: [1, {c: 2}]\nbig: 18446744073709551615\nneg: -3\nf: 1.5\n"))
+	d, err := doc.Read("a.yaml", []byte("lang: en\na: 3\nb: [1, {c: 2}]\nbig: 18446744073709551615\nneg: -3\nf: 1.5\n"), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,11 +112,24 @@ func TestReadInts(t *testing.T) {
 func TestReadKeepsRefused(t *testing.T) {
 	t.Parallel()
 
-	d, err := doc.Read("a.yaml", []byte("lang: en\ntitle: 3\na: x\n"))
+	d, err := doc.Read("a.yaml", []byte("lang: en\ntitle: 3\na: x\n"), "")
 	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "); got != "a.yaml:2:8: title must be text" {
 		t.Errorf("told %q", got)
 	}
 	if d == nil || d.Values["title"] != 3 || d.Values["a"] != "x" {
 		t.Errorf("Read = %+v", d)
+	}
+}
+
+// A theme given is drawn with: theme: is neither read nor refused, and the values hold the theme given.
+func TestReadThemeGiven(t *testing.T) {
+	t.Parallel()
+
+	d, err := doc.Read("a.yaml", []byte("lang: ja\ntemplate: report\ntheme: 5\n"), "ink")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Theme != "ink" || d.Values["theme"] != "ink" {
+		t.Errorf("Theme = %q, Values[theme] = %#v, want ink", d.Theme, d.Values["theme"])
 	}
 }

@@ -137,6 +137,11 @@ func TestTell(t *testing.T) {
 			usererr.List{usererr.LibraryAt("b.yaml", 2, 1, "b"), lang, usererr.LibraryAt("a.yaml", 1, 1, "a")},
 			"b.yaml:2:1: b\nno lang\na.yaml:1:1: a", "b.yaml:2:1: b\nfloe: no lang\na.yaml:1:1: a",
 		},
+		{
+			"the same mistake once, wherever it was made",
+			usererr.List{usererr.LibraryAt("a.yaml", 1, 1, "a"), usererr.LibraryAt("a.yaml", 1, 2, "a"), usererr.LibraryAt("a.yaml", 1, 1, "a")},
+			"a.yaml:1:1: a\na.yaml:1:2: a", "a.yaml:1:1: a\na.yaml:1:2: a",
+		},
 		{"one wrapped, without the words of what wraps it", fmt.Errorf("read: %w", lang), "no lang", "floe: no lang"},
 		{"no mistake", (*usererr.Error)(nil), "*usererr.Error with no mistake", "floe: *usererr.Error with no mistake"},
 		{"an empty list", usererr.List{}, "usererr.List with no mistake", "floe: usererr.List with no mistake"},

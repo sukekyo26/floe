@@ -181,10 +181,11 @@ type Report struct {
 	Failure  string
 }
 
-// Tell words err in the language of c: its mistakes, as List.Add takes them, in the order given, or, for an
-// error that is not the user's or holds no mistake, floe's failure. It is the only place a mistake is
-// worded. The words of what wraps a mistake are not told: a place or a name goes into the mistake's
-// arguments or place, not into fmt.Errorf.
+// Tell words err in the language of c: its mistakes, as List.Add takes them, in the order given, each told
+// once (one worded at the same place as one before it is left out, wherever it was made), or, for an error
+// that is not the user's or holds no mistake, floe's failure. It is the only place a mistake is worded. The
+// words of what wraps a mistake are not told: a place or a name goes into the mistake's arguments or place,
+// not into fmt.Errorf.
 func Tell(c *i18n.Catalog, err error) Report {
 	var all List
 	if failed := all.Add(err); failed != nil {
@@ -194,10 +195,13 @@ func Tell(c *i18n.Catalog, err error) Report {
 		return Report{Mistakes: nil, Failure: fmt.Sprintf("%T with no mistake", err)}
 	}
 	r := Report{Mistakes: make([]Told, 0, len(all)), Failure: ""}
+	told := map[Told]bool{}
 	for _, e := range all {
-		r.Mistakes = append(r.Mistakes, Told{
-			File: e.File, Line: e.Line, Column: e.Column, At: e.At, Text: c.Msg(e.Key, e.Args...),
-		})
+		t := Told{File: e.File, Line: e.Line, Column: e.Column, At: e.At, Text: c.Msg(e.Key, e.Args...)}
+		if !told[t] {
+			told[t] = true
+			r.Mistakes = append(r.Mistakes, t)
+		}
 	}
 	return r
 }

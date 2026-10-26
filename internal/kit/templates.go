@@ -13,6 +13,10 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
+// DefaultTheme is the theme of a page whose data names none, whose palette defines every variable, under any
+// other theme's.
+const DefaultTheme = "default"
+
 // Theme is a theme read: its CSS by file, without the .css.
 type Theme struct {
 	name     string
@@ -103,8 +107,11 @@ func (t *Template) Name() string { return t.name }
 // Schema returns the schema of t compiled, nil without one.
 func (t *Template) Schema() *schema.Compiled { return t.schema }
 
-// Page returns the page.html of t, parsed, in the language tag of a page; nil without one.
-func (t *Template) Page(lang string) *template.Template { return t.pages.page(t.words, lang) }
+// Page returns a copy of the page.html of t, parsed, in the language tag of a page, to draw: t's is never
+// drawn, as drawing changes a template (its escaping), which then cannot be copied.
+func (t *Template) Page(lang string) (*template.Template, error) {
+	return t.pages.copyOf(t.words, lang)
+}
 
 // CSS returns the page.css of t, nil for none.
 func (t *Template) CSS() []byte { return bytes.Clone(t.css) }
@@ -120,6 +127,12 @@ func (t *Template) Example() []byte { return bytes.Clone(t.example) }
 
 // Unread returns the files of the directory of t it does not read.
 func (t *Template) Unread() []string { return slices.Clone(t.unread) }
+
+// File returns the file name of t as its mistakes name it.
+func (t *Template) File(name string) string { return path.Join(t.dir, name) }
+
+// PageSource returns the page.html of t as read, nil without one: where a mistake of drawing it is.
+func (t *Template) PageSource() []byte { return bytes.Clone(t.pageSrc) }
 
 // templatesURL is where floe holds the schemas of the templates: floe://templates/<name>/schema.json. Its
 // host keeps a template's relative $id and $ref under it, off floe:///parts/.

@@ -60,7 +60,7 @@ var floe = sync.OnceValues(func() (*Kit, error) {
 		}
 		*to = Dir{FS: files, Name: dir}
 	}
-	k, err := Read(nil, src)
+	k, err := read(nil, src)
 	if err != nil {
 		return nil, err
 	}
@@ -72,9 +72,23 @@ var floe = sync.OnceValues(func() (*Kit, error) {
 	return k, nil
 })
 
-// Floe returns floe's own, read once a process and not checked.
+// Floe returns floe's own, read once a process and not checked: the tests check them, as Load does.
 func Floe() (*Kit, error) {
 	return floe()
+}
+
+// Load reads src over base, floe's own or nil, and checks what it read: the Kit of one's own a page is drawn
+// with. A mistake of any of one's own stops it, every mistake told together, and no Kit is returned. Load and
+// Floe are the only ways a Kit is made outside this package, so that one not checked is never drawn with.
+func Load(base *Kit, src Sources) (*Kit, error) {
+	k, err := read(base, src)
+	if err != nil {
+		return nil, err
+	}
+	if err := check(k); err != nil {
+		return nil, err
+	}
+	return k, nil
 }
 
 // BaseCSS returns floe's base.css, under every page's own CSS: that of the floe Kit k reads over.
@@ -85,9 +99,9 @@ func (k *Kit) BaseCSS() []byte {
 	return bytes.Clone(k.baseCSS)
 }
 
-// Read reads src over base (nil for none): parts and looks, then themes and templates, a name or a $ref found
+// read reads src over base (nil for none): parts and looks, then themes and templates, a name or a $ref found
 // in either. It does what it takes to have the values, and returns every mistake of it Sorted, and no Kit.
-func Read(base *Kit, src Sources) (*Kit, error) {
+func read(base *Kit, src Sources) (*Kit, error) {
 	k := &Kit{
 		base: base, baseCSS: nil, parts: map[string]*Part{}, looks: map[string]*Look{}, themes: map[string]*Theme{},
 		templates: map[string]*Template{}, resources: map[string]schema.Resource{},
@@ -113,7 +127,7 @@ func Read(base *Kit, src Sources) (*Kit, error) {
 	return k, nil
 }
 
-// Part returns the part of k named so, its own or its base's. Parts and looks share their names, and Read
+// Part returns the part of k named so, its own or its base's. Parts and looks share their names, and read
 // refuses one's own of another kind than the base's of its name.
 func (k *Kit) Part(name string) (*Part, bool) {
 	return lookUp(k, name, func(k *Kit) map[string]*Part { return k.parts })

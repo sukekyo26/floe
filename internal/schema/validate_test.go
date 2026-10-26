@@ -14,7 +14,7 @@ func validate(t *testing.T, body, data string) string {
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	d, err := doc.Read("d.yaml", []byte("template: t\nlang: en\n"+data))
+	d, err := doc.Read("d.yaml", []byte("template: t\nlang: en\n"+data), "")
 	if err != nil {
 		t.Fatal(told(err))
 	}
@@ -64,7 +64,7 @@ func TestValidateAdditionalInOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	d, err := doc.Read("d.yaml", []byte("template: t\nlang: en\no: {a: 1, z: 1, b: 2, y: 3, c: 4}\n"))
+	d, err := doc.Read("d.yaml", []byte("template: t\nlang: en\no: {a: 1, z: 1, b: 2, y: 3, c: 4}\n"), "")
 	if err != nil {
 		t.Fatal(told(err))
 	}
@@ -90,15 +90,15 @@ func TestPropertyNames(t *testing.T) {
 		},
 		{
 			"two items", `"properties": {"items": {"type":"array","items":{"type":"object","propertyNames":` + lower + `}}}`,
-			"items:\n  - Bad: 1\n    a: 1\n  - Bad: 2\n    b: 2\n", lines("d.yaml:1:1: "+bad, "d.yaml:1:1: "+bad),
+			"items:\n  - Bad: 1\n    a: 1\n  - Bad: 2\n    b: 2\n", "d.yaml:1:1: " + bad,
 		},
 		{
 			"one $defs twice", `"$defs": {"pn": {"propertyNames": ` + lower + `}}, "properties": {"tags": {"allOf": [{"$ref": "#/$defs/pn"}, {"$ref": "#/$defs/pn"}]}}`,
-			"tags:\n  ok: 1\n  Bad: b\n", lines("d.yaml:5:3: "+bad, "d.yaml:5:3: "+bad),
+			"tags:\n  ok: 1\n  Bad: b\n", "d.yaml:5:3: " + bad,
 		},
 		{
 			"the key elsewhere", `"$defs": {"pn": {"propertyNames": ` + lower + `}}, "properties": {"tags": {"allOf": [{"$ref": "#/$defs/pn"}, {"$ref": "#/$defs/pn"}]}, "more": {}}`,
-			"tags:\n  ok: 1\n  Bad: b\nmore:\n  Bad: 1\n", lines("d.yaml:1:1: "+bad, "d.yaml:1:1: "+bad),
+			"tags:\n  ok: 1\n  Bad: b\nmore:\n  Bad: 1\n", "d.yaml:1:1: " + bad,
 		},
 		{
 			"two depths", `"properties": {"tags": {"propertyNames":` + lower + `}, "n2": {"type":"object","properties":{"m":{"propertyNames":` + lower + `}}}}`,
@@ -142,7 +142,7 @@ func TestValidateLeavesShared(t *testing.T) {
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	d, err := doc.Read("d.yaml", []byte("template: t\nlang: en\ntitle: Plan\na: 1\n"))
+	d, err := doc.Read("d.yaml", []byte("template: t\nlang: en\ntitle: Plan\na: 1\n"), "")
 	if err != nil {
 		t.Fatal(told(err))
 	}

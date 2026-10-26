@@ -24,6 +24,15 @@ type Data struct {
 	Where map[string]yamlpos.Pos
 }
 
+// PosOf returns where the value at the path at (keys and indexes) is written in d: the value, or its key when
+// it is left out; the top of the file without a node.
+func (d *Data) PosOf(at []string) yamlpos.Pos {
+	if d.Root == nil {
+		return yamlpos.Pos{Line: 1, Column: 1}
+	}
+	return yamlpos.OfValue(yamlpos.Find(d.Root, at))
+}
+
 // Shared are the keys of a data file floe reads itself, in every template, which the template's schema neither
 // declares nor checks.
 var Shared = []string{"lang", "template", "theme", "title"}
@@ -33,8 +42,10 @@ var Shared = []string{"lang", "template", "theme", "title"}
 // shared keys, each text, and lang: written and not empty or spaces. An empty file, or one of comments
 // alone, reads as {}, its mistakes at 1:1, as it has no node to place them at. goccy/go-yaml reads a whole
 // number above 0 as uint64, which expr negates by wrapping around (-3 / 2 is 9.2e18), so one that fits
-// becomes an int: every layer sees the same values.
-func Read(file string, src []byte) (*Data, error) {
+// becomes an int: every layer sees the same values. A theme given ("" for none) is drawn with instead of the
+// data's: theme: is then neither read nor refused, and Values holds the theme given, so that every layer sees
+// the theme the page is drawn with.
+func Read(file string, src []byte, theme string) (*Data, error) {
 	body, err := yamlpos.Parse(file, src)
 	switch {
 	case errors.Is(err, yamlpos.ErrEmpty):
@@ -55,7 +66,10 @@ func Read(file string, src []byte) (*Data, error) {
 		File: file, Lang: "", Template: "", Theme: "", Title: "", Values: values, Root: root,
 		Where: map[string]yamlpos.Pos{},
 	}
-	return d, d.readShared()
+	if theme != "" {
+		values["theme"] = theme
+	}
+	return d, d.readShared(theme)
 }
 
 // ints turns the uint64 in v that fit into int, in place, and returns v.
@@ -78,9 +92,23 @@ func ints(v any) any {
 	return v
 }
 
+// sharedMistake returns the message key of what is wrong with v, the value of the shared key, written or not
+// (ok), "" for none: one written that is not text, and a lang that is none or spaces.
+func sharedMistake(key string, v any, ok bool) string {
+	s, text := v.(string)
+	switch {
+	case ok && !text:
+		return "doc_not_text"
+	case key == "lang" && strings.TrimSpace(s) == "":
+		// The page's <html lang> is the data's own, so that every way of drawing it gives the same page.
+		return "doc_no_lang"
+	}
+	return ""
+}
+
 // readShared reads the keys every template shares from d.Values into d, leaving them in d.Values as written,
-// and notes where each is written.
-func (d *Data) readShared() error {
+// and notes where each is written; theme: is not read with a theme given, which d takes.
+func (d *Data) readShared(theme string) error {
 	top := yamlpos.Pos{Line: 1, Column: 1}
 	pairs := map[string]*ast.MappingValueNode{}
 	if d.Root != nil {
@@ -97,15 +125,16 @@ func (d *Data) readShared() error {
 			d.Where[key] = yamlpos.OfValue(yamlpos.KeyOf(p), p.Value)
 		}
 		v, ok := d.Values[key]
-		s, text := v.(string)
+		mistake := sharedMistake(key, v, ok)
 		switch {
-		case ok && !text:
-			found = append(found, yamlpos.New(d.File, d.Where[key], "doc_not_text", key))
-		case key == "lang" && strings.TrimSpace(s) == "":
-			// The page's <html lang> is the data's own, so that every way of drawing it gives the same page.
-			found = append(found, yamlpos.New(d.File, d.Where[key], "doc_no_lang"))
+		case key == "theme" && theme != "":
+			d.Theme = theme
+		case mistake == "doc_no_lang":
+			found = append(found, yamlpos.New(d.File, d.Where[key], mistake))
+		case mistake != "":
+			found = append(found, yamlpos.New(d.File, d.Where[key], mistake, key))
 		case ok:
-			*to[key] = s
+			*to[key], _ = v.(string) //nolint:errcheck // sharedMistake refuses one that is not text
 		}
 	}
 	// A title of spaces names none.

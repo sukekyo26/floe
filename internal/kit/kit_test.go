@@ -2,6 +2,7 @@ package kit_test
 
 import (
 	"fmt"
+	"html/template"
 	"slices"
 	"strings"
 	"sync"
@@ -48,7 +49,7 @@ func TestFloe(t *testing.T) {
 	}
 	for _, name := range parts {
 		p, _ := k.Part(name)
-		if p.Page("en") == nil || p.CSS() == nil {
+		if page(t, p, "en") == nil || p.CSS() == nil {
 			t.Errorf("the part %s has no page or no CSS", name)
 		}
 	}
@@ -73,10 +74,10 @@ func TestFloeReport(t *testing.T) {
 	t.Parallel()
 
 	r, ok := floe(t).Template("report")
-	if !ok || r.Schema() == nil || r.Checks() == nil || r.Page("en") == nil || r.Example() == nil {
+	if !ok || r.Schema() == nil || r.Checks() == nil || page(t, r, "en") == nil || r.Example() == nil {
 		t.Fatalf("report = %+v", r)
 	}
-	d, err := doc.Read("example.yaml", r.Example())
+	d, err := doc.Read("example.yaml", r.Example(), "")
 	if err != nil {
 		t.Fatal(told(err))
 	}
@@ -93,7 +94,7 @@ func TestPartWords(t *testing.T) {
 	for lang, want := range map[string]string{"ja-JP": "できる", "en": "Yes", "fr": "Yes", "JA": "できる"} {
 		var b strings.Builder
 		data := map[string]any{"columns": []any{"a"}, "rows": []any{map[string]any{"what": "x", "cells": []any{"yes"}}}}
-		if err := p.Page(lang).Execute(&b, data); err != nil || !strings.Contains(b.String(), want) {
+		if err := page(t, p, lang).Execute(&b, data); err != nil || !strings.Contains(b.String(), want) {
 			t.Errorf("%s: %v, %q holds no %s", lang, err, b.String(), want)
 		}
 	}
@@ -237,7 +238,7 @@ func TestWordUnknown(t *testing.T) {
 			t.Fatal(told(err))
 		}
 		tm, _ := k.Template("t")
-		err = tm.Page(tt.lang).Execute(&strings.Builder{}, nil)
+		err = page(t, tm, tt.lang).Execute(&strings.Builder{}, nil)
 		if err == nil || !strings.Contains(err.Error(), tt.want) {
 			t.Errorf("%q: %v, want %s", tt.words, err, tt.want)
 		}
@@ -329,4 +330,17 @@ func TestReadSharedID(t *testing.T) {
 	if got := told(err); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
+}
+
+// page returns the copy of the page of p, a part or a template, to draw in lang.
+func page(t *testing.T, p interface {
+	Page(lang string) (*template.Template, error)
+}, lang string,
+) *template.Template {
+	t.Helper()
+	c, err := p.Page(lang)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c
 }

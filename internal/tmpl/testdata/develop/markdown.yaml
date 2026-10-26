@@ -1,0 +1,36 @@
+template: report
+lang: en
+title: Markdown and HTML
+lead: A lead with **bold** and `code`.
+sections:
+  - heading: Markdown
+    parts:
+      - text: |
+          A paragraph with *emphasis*, **strong**, ~~struck~~, `code`, a [link](https://example.com/a?b=1&c=2)
+          and an autolink https://example.com/.
+
+          ### A heading in the text
+
+          - a list
+            - nested, with `code`
+          - [ ] a task
+          - [x] a done task
+
+          1. first
+          2. second
+
+          > A quote
+          > over two lines.
+
+          | Name | Count |
+          | ---- | ----: |
+          | a    | 1     |
+          | <b>  | 2 & 3 |
+
+          ---
+
+          Text with <kbd>Ctrl</kbd> and an escaped \*star\*, & < > " '.
+      - code: { lang: go, text: "func main() { fmt.Println(\"<hi>\") }\n" }
+      - table:
+          columns: [{ title: '`code` in a title' }, { title: Link }]
+          rows: [['**bold** cell', '[a](https://example.com/)'], ['a | pipe', { pill: 'a: pill' }]]

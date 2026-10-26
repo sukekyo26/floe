@@ -46,13 +46,10 @@ func (c *Compiled) Validate(d *doc.Data) error {
 // placeOf returns where the mistake e is written in d: the value at its InstanceLocation, or for a property
 // name, as placeOfName finds it; the top of the file without a node.
 func placeOf(d *doc.Data, e *jsonschema.ValidationError) yamlpos.Pos {
-	if d.Root == nil {
-		return yamlpos.Pos{Line: 1, Column: 1}
-	}
-	if pn, ok := e.ErrorKind.(*kind.PropertyNames); ok {
+	if pn, ok := e.ErrorKind.(*kind.PropertyNames); ok && d.Root != nil {
 		return placeOfName(d.Root, len(e.InstanceLocation), pn.Property)
 	}
-	return yamlpos.OfValue(yamlpos.Find(d.Root, e.InstanceLocation))
+	return d.PosOf(e.InstanceLocation)
 }
 
 // placeOfName returns where a property name the schema refuses is: the key name of the one object at depth
@@ -61,8 +58,6 @@ func placeOf(d *doc.Data, e *jsonschema.ValidationError) yamlpos.Pos {
 // LIMIT: jsonschema v6.0.3 shares the slice of InstanceLocation with later checks, which change what it holds
 // (upstream #276, #269): only its length is right. Go back to the library's place once it is fixed; the
 // mistakes told at the top of the file then move, and the golden files change.
-// LIMIT: an object the same propertyNames applies to twice (allOf of one $defs twice) is told twice, as
-// usererr does not yet tell a mistake once.
 func placeOfName(root *ast.MappingNode, depth int, name string) yamlpos.Pos {
 	var found []*ast.MappingValueNode
 	var walk func(n ast.Node, depth int, top bool)

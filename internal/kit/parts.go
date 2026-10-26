@@ -60,8 +60,15 @@ func (p *Part) Unread() []string { return slices.Clone(p.unread) }
 // Checks returns the checks of p, nil for none.
 func (p *Part) Checks() *rules.Checks { return p.checks }
 
-// Page returns the part.html of p, parsed, in the language tag of a page.
-func (p *Part) Page(lang string) *template.Template { return p.pages.page(p.words, lang) }
+// Page returns a copy of the part.html of p, parsed, in the language tag of a page, to draw, as Template.Page
+// does.
+func (p *Part) Page(lang string) (*template.Template, error) { return p.pages.copyOf(p.words, lang) }
+
+// File returns the file name of p as its mistakes name it.
+func (p *Part) File(name string) string { return path.Join(p.dir, name) }
+
+// PageSource returns the part.html of p as read: where a mistake of drawing it is.
+func (p *Part) PageSource() []byte { return bytes.Clone(p.pageSrc) }
 
 // Look is a look read: CSS that parts and HTML take without being its box.
 type Look struct {

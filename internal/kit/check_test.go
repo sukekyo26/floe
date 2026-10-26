@@ -1,6 +1,8 @@
 package kit_test
 
 import (
+	"html/template"
+	"io"
 	"testing"
 	"testing/fstest"
 
@@ -131,5 +133,39 @@ func TestCheckMistakes(t *testing.T) {
 		if got := told(kit.Check(k)); got != tt.want {
 			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
 		}
+	}
+}
+
+// Drawing with floe's own, from the copies of their pages, leaves them as read: they check after, the escaping
+// of each page too.
+func TestCheckAfterDrawing(t *testing.T) {
+	t.Parallel()
+
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts, _, _, templates := k.Names()
+	pages := make([]interface {
+		Page(lang string) (*template.Template, error)
+	}, 0, len(parts)+len(templates))
+	for _, name := range parts {
+		p, _ := k.Part(name)
+		pages = append(pages, p)
+	}
+	for _, name := range templates {
+		tm, _ := k.Template(name)
+		pages = append(pages, tm)
+	}
+	for _, p := range pages {
+		page, err := p.Page("en")
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Its drawing of nothing may fail: what is asked is that it ran, which escapes it.
+		_ = page.Execute(io.Discard, nil) //nolint:errcheck // see above
+	}
+	if err := kit.Check(k); err != nil {
+		t.Errorf("Check after drawing: %v", err)
 	}
 }
