@@ -52,7 +52,7 @@ func NewResource(file string, src []byte, k Kind) (Resource, error) {
 
 // read reads src, the JSON of file, as RFC 8259 does, past a byte order mark at its start, and as jsonschema
 // reads it (numbers as json.Number): the only place a schema's bytes are read.
-// LIMIT: other marks and UTF-16/32 are refused without saying so (S6); rework here when S6 decides them.
+// LIMIT: other marks and UTF-16/32 are refused without saying so; rework here when they are to be read or named.
 func read(file string, src []byte) (any, error) {
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(bom.Trim(src)))
 	if err != nil {
