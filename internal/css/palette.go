@@ -79,9 +79,13 @@ func (p *palette) declarations() {
 			return
 		case t.tt == css.SemicolonToken:
 		case t.tt == css.CustomPropertyNameToken:
-			p.value(true)
+			if p.value(true) {
+				return
+			}
 		case t.tt == css.IdentToken && parse.EqualFold(t.data, []byte("color-scheme")):
-			p.value(false)
+			if p.value(false) {
+				return
+			}
 		default:
 			p.mistake(t, "css_palette_rule")
 			if p.skip(t, true) {
@@ -92,17 +96,11 @@ func (p *palette) declarations() {
 }
 
 // value reads the : and the value of a declaration, up to the ; or the } of the block, which it leaves to
-// be read, refusing its important flag; a { in it is the value's in a custom property, else a rule.
-func (p *palette) value(custom bool) {
-	colon, ok := p.next()
-	if !ok {
-		return
-	}
-	if colon.tt != css.ColonToken {
-		p.mistake(colon, "css_palette_rule")
-		p.i--
-		p.skip(colon, true)
-		return
+// be read, refusing its important flag; a { in it is the value's in a custom property, else a rule. It reports
+// whether it read the } that closes the block, past what it refused.
+func (p *palette) value(custom bool) bool {
+	if refused, closed := p.colon(); refused {
+		return closed
 	}
 	var top []token // the tokens of the value at its own level, but spaces and comments
 	var open nest
@@ -111,11 +109,11 @@ func (p *palette) value(custom bool) {
 		switch {
 		case len(open) == 0 && (t.tt == css.SemicolonToken || t.tt == css.RightBraceToken):
 			p.important(top)
-			return
+			return false
 		case t.tt == css.LeftBraceToken && len(open) == 0 && !custom:
 			p.mistake(t, "css_palette_rule")
-			p.skip(t, true)
-			return
+			p.i++
+			return p.skip(t, true)
 		case len(open) == 0 && t.tt != css.WhitespaceToken && t.tt != css.CommentToken && !opens(t.tt):
 			top = append(top, t)
 		}
@@ -123,6 +121,25 @@ func (p *palette) value(custom bool) {
 		p.i++
 	}
 	p.important(top)
+	return false
+}
+
+// colon reads the : of a declaration. What is not one it refuses, reporting so, and whether it read the } that
+// closes the block past it; a ; or } it leaves to be read, as the end of the declaration.
+func (p *palette) colon() (refused, closed bool) {
+	t, ok := p.next()
+	switch {
+	case !ok:
+		return true, false
+	case t.tt == css.ColonToken:
+		return false, false
+	}
+	p.mistake(t, "css_palette_rule")
+	if t.tt == css.SemicolonToken || t.tt == css.RightBraceToken {
+		p.i--
+		return true, false
+	}
+	return true, p.skip(t, true)
 }
 
 // important refuses the important flag of a declaration whose value at its own level is top: its last two
@@ -135,8 +152,8 @@ func (p *palette) important(top []token) {
 	}
 }
 
-// skip reads past what t begins, refused: a rule up to the end of its block, or a statement up to its ;. In
-// a block (inBlock), it stops at the } that closes the block, reads it, and reports that it did.
+// skip reads past what t, read already, begins, refused: a rule up to the end of its block, or a statement up
+// to its ;. In a block (inBlock), it stops at the } that closes the block, reads it, and reports that it did.
 func (p *palette) skip(t token, inBlock bool) bool {
 	var open nest
 	open.step(t)

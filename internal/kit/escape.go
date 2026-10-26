@@ -1,14 +1,13 @@
 package kit
 
 import (
-	"bytes"
 	"crypto/rand"
 	"errors"
 	"html/template"
 	"io"
 	"strconv"
-	"unicode/utf8"
 
+	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -49,8 +48,7 @@ func escapeMistake(page *template.Template, src []byte, file string) error {
 		// too: the field of {{.x}}, the condition of {{if}}, the name of {{template}}, the start of a template's
 		// body (its root, as ErrOutputContext names).
 		if at := int(escape.Node.Position()); at >= 0 && at <= len(src) {
-			start := bytes.LastIndexByte(src[:at], '\n') + 1
-			line, column = 1+bytes.Count(src[:at], []byte("\n")), utf8.RuneCount(src[start:at])+1
+			line, column = textpos.Of(src, at)
 		}
 	}
 	return usererr.LibraryAt(file, line, column, escape.Description)

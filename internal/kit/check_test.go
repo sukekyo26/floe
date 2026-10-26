@@ -89,11 +89,20 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			"a look taking itself", with(map[string]string{"lk/part.css": "a{}", "lk/part.yaml": "looks: [lk]\n"}), nil, nil,
-			"own/parts/lk/part.yaml:1:9: the part lk takes its own look (lk → lk), which floe would follow forever; fix its part.yaml",
+			"own/parts/lk/part.yaml:1:9: the look lk takes itself (lk → lk), which floe would follow forever; fix its part.yaml",
 		},
 		{
 			"a cycle through floe's", with(map[string]string{"panel/part.css": "a{}", "panel/part.yaml": "looks: [rows]\n"}), nil, nil,
-			"own/parts/panel/part.yaml:1:9: the part panel takes its own look (panel → rows → panel), which floe would follow forever; fix its part.yaml",
+			"own/parts/panel/part.yaml:1:9: the look panel takes itself (panel → rows → panel), which floe would follow forever; fix its part.yaml",
+		},
+		// Told from one's own name, though floe's bars is the least.
+		{
+			"a cycle from one's own", with(map[string]string{"panel/part.css": "a{}", "panel/part.yaml": "looks: [bars]\n"}), nil, nil,
+			"own/parts/panel/part.yaml:1:9: the look panel takes itself (panel → bars → panel), which floe would follow forever; fix its part.yaml",
+		},
+		{
+			"a part's cycle", with(map[string]string{"p/part.yaml": "looks: [zl]\n", "zl/part.css": "a{}", "zl/part.yaml": "looks: [p]\n"}), nil, nil,
+			"own/parts/p/part.yaml:1:9: the part p takes its own look (p → zl → p), which floe would follow forever; fix its part.yaml",
 		},
 		// The files in the order they come: palette.css, base.css, then the parts' files.
 		{"a theme", part, map[string]string{"t/palette.css": ":root { --a: 1 }\nbody {}\n", "t/base.css": "}", "t/p.css": "@import \"x\";"}, nil, lines(

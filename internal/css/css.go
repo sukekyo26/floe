@@ -4,17 +4,22 @@ package css
 
 import (
 	"bytes"
-	"unicode/utf8"
 
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/css"
 
+	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // Preprocess makes each line break of src a LF, as CSS Syntax reads them before its tokens: CRLF, CR and FF.
-// tdewolff does not, and would split \69<CR><LF>mport into two tokens where a browser reads one.
+// tdewolff does not, and would split \69<CR><LF>mport into two tokens where a browser reads one. Check reads
+// the CSS made so, which is what goes in the page.
+// LIMIT: an editor breaks no line at a FF, so the lines told after one are one more than it shows.
 func Preprocess(src []byte) []byte {
+	if !bytes.ContainsAny(src, "\r\f") {
+		return src
+	}
 	src = bytes.ReplaceAll(src, []byte("\r\n"), []byte("\n"))
 	src = bytes.ReplaceAll(src, []byte("\r"), []byte("\n"))
 	return bytes.ReplaceAll(src, []byte("\f"), []byte("\n"))
@@ -49,46 +54,50 @@ type sheet struct {
 	found usererr.List
 }
 
+// read reads src, made by Preprocess.
 func read(file string, src []byte) *sheet {
-	src = Preprocess(src)
 	return &sheet{file: file, src: src, toks: lex(src), found: nil}
 }
 
 // mistake adds the mistake key at the token t.
-// LIMIT: the column counts the runes of the line; a tab is one.
 func (s *sheet) mistake(t token, key string) {
-	line := 1 + bytes.Count(s.src[:t.at], []byte("\n"))
-	column := 1 + utf8.RuneCount(s.src[bytes.LastIndexByte(s.src[:t.at], '\n')+1:t.at])
+	line, column := textpos.Of(s.src, t.at)
 	s.found = append(s.found, usererr.NewAt(s.file, line, column, key))
 }
 
-// Check refuses in src, the CSS file file: a } that closes no block, as it would close floe's @layer and
-// leave the rules after it out of it; an @import, which a browser does not read in a layer; an escape (\)
-// outside a string, a url and a comment, which floe does not read; and a token a browser reads otherwise
-// than tdewolff (a string or url cut short, a url( holding more than one string).
+// Check refuses in src, the CSS file file made by Preprocess: a } that closes no block, as it would close
+// floe's @layer and leave the rules after it out of it; a block, a string, a url or a comment still open at
+// the end, which would take the } that closes the layer; an @import, which a browser does not read in a
+// layer; an escape (\) outside a string, a url and a comment, which floe does not read; and a token a browser
+// reads otherwise than tdewolff (a string or url cut short, a url( holding more than one string).
 func Check(file string, src []byte) error {
 	return read(file, src).check().Sorted().Err()
 }
 
-// nest is the openers of the blocks a token is in, as CSS Syntax reads its simple blocks and functions: {, (
-// (a function's too) and [. Only the closer of the innermost closes it: in ( ) and [ ], a } is a token of the
-// value.
-type nest []css.TokenType
+// nest is the openers of the blocks a token is in, as CSS Syntax reads its simple blocks and functions: {, (,
+// a function and [. Only the closer of the innermost closes it: in ( ) and [ ], a } is a token of the value.
+type nest []token
 
 var closer = map[css.TokenType]css.TokenType{
 	css.RightBraceToken: css.LeftBraceToken, css.RightParenthesisToken: css.LeftParenthesisToken,
 	css.RightBracketToken: css.LeftBracketToken,
 }
 
+// opener is the token type of the block t opens: a function's is (.
+func opener(t token) css.TokenType {
+	if t.tt == css.FunctionToken {
+		return css.LeftParenthesisToken
+	}
+	return t.tt
+}
+
 // step takes the token t into n: true when t closes the innermost block.
 func (n *nest) step(t token) bool {
 	switch t.tt {
-	case css.LeftBraceToken, css.LeftParenthesisToken, css.LeftBracketToken:
-		*n = append(*n, t.tt)
-	case css.FunctionToken:
-		*n = append(*n, css.LeftParenthesisToken)
+	case css.LeftBraceToken, css.LeftParenthesisToken, css.LeftBracketToken, css.FunctionToken:
+		*n = append(*n, t)
 	case css.RightBraceToken, css.RightParenthesisToken, css.RightBracketToken:
-		if len(*n) > 0 && (*n)[len(*n)-1] == closer[t.tt] {
+		if len(*n) > 0 && opener((*n)[len(*n)-1]) == closer[t.tt] {
 			*n = (*n)[:len(*n)-1]
 			return true
 		}
@@ -99,6 +108,7 @@ func (n *nest) step(t token) bool {
 
 func (s *sheet) check() usererr.List {
 	var open nest
+	misread := false // a token a browser reads otherwise, after which the nesting is not the browser's
 	for _, t := range s.toks {
 		top := len(open) == 0
 		closed := open.step(t)
@@ -110,10 +120,12 @@ func (s *sheet) check() usererr.List {
 			}
 		case css.BadStringToken, css.BadURLToken:
 			s.mistake(t, "css_misread")
+			misread = true
 			continue
 		case css.URLToken:
 			if !oneString(t.data) {
 				s.mistake(t, "css_misread")
+				misread = true
 			}
 			continue
 		case css.StringToken, css.CommentToken:
@@ -126,9 +138,51 @@ func (s *sheet) check() usererr.List {
 		}
 		if bytes.IndexByte(t.data, '\\') >= 0 {
 			s.mistake(t, "css_escape")
+			misread = true
 		}
 	}
+	if !misread {
+		s.unclosed(open)
+	}
 	return s.found
+}
+
+// unclosed refuses what is still open at the end of the file, open the blocks: the last token, or else the
+// innermost block, whose closing is what lets the next be seen.
+func (s *sheet) unclosed(open nest) {
+	if n := len(s.toks); n > 0 && !closed(s.toks[n-1]) {
+		s.mistake(s.toks[n-1], "css_unclosed")
+	} else if len(open) > 0 {
+		s.mistake(open[len(open)-1], "css_unclosed")
+	}
+}
+
+// closed reports whether the token t, the last of a file, ends as it begins: a comment with */, a string
+// with its quote and a url with ), neither escaped. tdewolff ends each at the end of the file without them.
+func closed(t token) bool {
+	switch t.tt {
+	case css.CommentToken:
+		return len(t.data) >= len("/**/") && bytes.HasSuffix(t.data, []byte("*/"))
+	case css.StringToken:
+		return len(t.data) >= 2 && unescaped(t.data, t.data[0])
+	case css.URLToken:
+		return unescaped(t.data, ')')
+	default:
+		return true
+	}
+}
+
+// unescaped reports whether data ends in end, with no \ escaping it: an even count of \ before it.
+func unescaped(data []byte, end byte) bool {
+	n := len(data)
+	if n == 0 || data[n-1] != end {
+		return false
+	}
+	slashes := 0
+	for i := n - 2; i >= 0 && data[i] == '\\'; i-- {
+		slashes++
+	}
+	return slashes%2 == 0
 }
 
 // oneString reports whether the url token data holds what a browser reads as tdewolff does: an address, or

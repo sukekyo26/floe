@@ -78,8 +78,9 @@ var messagesJA = map[string]string{
 	"kit_look_unread":             "schema.json の無いディレクトリ（見た目）の中で、floe が読むのは part.css と part.yaml だけです。消すか、schema.json を足して部品にしてください",
 	"kit_theme_unread":            "floe はテーマの中のこの名前のファイルを読みません。テーマは base.css・palette.css と、見た目を変える部品か見た目ごとの <部品>.css を持ちます。どれかの名前にするか、消してください",
 	"kit_look_unknown":            "looks の %s は部品でも見た目でもありません。floe か自分の部品にある名前を書いてください",
-	"kit_look_cycle":              "部品 %s が自分の見た目を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",
-	"kit_template_file":           "%s がありません。テンプレートには %s が要ります",
+	"kit_look_cycle_part":         "部品 %s が自分の見た目を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",
+	"kit_look_cycle_look":         "見た目 %s が自分を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",
+	"kit_template_file":           "%s がありません。テンプレートには page.html と schema.json が要ります",
 	"kit_template_unread":         "floe はテンプレートの中のこの名前のファイルを読みません。テンプレートは page.html と schema.json を持ち、要るなら page.css・computed.yaml・checks.yaml・words.yaml・example.yaml も持ちます。どれかの名前にするか、消してください",
 
 	// css: floe がページに入れる CSS
@@ -87,6 +88,7 @@ var messagesJA = map[string]string{
 	"css_import":            "floe はこの CSS を層に入れるので、ブラウザは @import を読みません。スタイルシートは page.html の <link> で読んでください",
 	"css_escape":            "文字列・url()・コメントの外のエスケープ（\\）は、floe が読みません。文字そのものを書いてください",
 	"css_misread":           "ブラウザはここを floe と違うものとして読みます。文字列はその行の中で閉じ、url() にはアドレスだけか、引用符で囲んだ文字列を 1 つだけ書いてください",
+	"css_unclosed":          "ファイルの終わりで、これが閉じていません。floe はこの CSS を layer に入れるので、layer を閉じる } と後の規則まで中に取り込みます。閉じてください",
 	"css_palette_rule":      "palette.css にはパレットの変数 :root { --名前: 値; } とその color-scheme だけを書き、ほかの規則は @media も書けません。ほかの規則は base.css か部品のファイルに書いてください。暗いページは、:root に暗い色と color-scheme: dark を書いたテーマで作ってください",
 	"css_palette_important": "palette.css には !important を書けません。どの層にも勝ち、テンプレートが :scope に書いた色にも勝ってしまいます",
 }

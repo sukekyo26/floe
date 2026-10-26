@@ -122,7 +122,13 @@ func (k *Kit) lookCycles(own map[string][]taken) usererr.List {
 		}
 		at := slices.IndexFunc(takes[c[i]], func(t taken) bool { return t.name == c[i+1] })
 		t := takes[c[i]][at]
-		found = append(found, yamlpos.New(t.file, t.at, "kit_look_cycle", c[i], strings.Join(c, " → ")))
+		// The path from the name told, round to it.
+		path := slices.Concat(c[i:len(c)-1], c[:i+1])
+		key := "kit_look_cycle_part"
+		if _, ok := k.Look(c[i]); ok {
+			key = "kit_look_cycle_look"
+		}
+		found = append(found, yamlpos.New(t.file, t.at, key, c[i], strings.Join(path, " → ")))
 	}
 	return found
 }
@@ -158,7 +164,7 @@ func checkTemplate(t *Template) error {
 	var found usererr.List
 	for _, file := range []string{"page.html", "schema.json"} {
 		if file == "page.html" && t.pages == nil || file == "schema.json" && !t.hasSchema {
-			found = append(found, usererr.NewAt(t.dir, 0, 0, "kit_template_file", file, "page.html and schema.json"))
+			found = append(found, usererr.NewAt(t.dir, 0, 0, "kit_template_file", file))
 		}
 	}
 	errs := []error{found.Err(), css.Check(path.Join(t.dir, "page.css"), t.css)}
