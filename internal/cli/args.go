@@ -85,7 +85,7 @@ func fileMistake(name string, err error) error {
 }
 
 // writeMistake is err, of writing the file or the directory named so, at it: floe's words that it cannot be
-// written and what to look at, and the system's after them; any other error is floe's failure.
+// written, the system's words of why in them, and what to look at; any other error is floe's failure.
 func writeMistake(name string, err error) error {
 	words, ok := systemWords(err)
 	if !ok {

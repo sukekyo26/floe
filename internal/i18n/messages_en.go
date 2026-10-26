@@ -135,5 +135,6 @@ var messagesEN = map[string]string{
 	"cli_render_same_file_case": "%s and %s would write %s and %s, which are one file where case is ignored (macOS); rename one of them",
 	"cli_render_missing":        "%s is missing: write it from %s with floe render",
 	"cli_render_stale":          "%s is not what %s draws: write it again with floe render",
+	// LIMIT: the %s of cli_cannot_write is the system's English, as the system words why it cannot write
 	"cli_cannot_write":          "cannot be written (%s): check that its directory exists and can be written to, and that its name is free and not too long",
 }
