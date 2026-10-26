@@ -97,6 +97,14 @@ func Library(file string, err error) error {
 	return usererr.LibraryAt(file, 0, 0, ye.GetMessage())
 }
 
+// Decode reads the values of n, a node Parse returned, into v. Its mistake is goccy/go-yaml's (Library).
+func Decode(file string, n ast.Node, v any) error {
+	if err := yaml.NodeToValue(n, v); err != nil {
+		return Library(file, err)
+	}
+	return nil
+}
+
 // ErrEmpty is returned by Parse for a file without a document, for the caller to word.
 var ErrEmpty = errors.New("no YAML document")
 
