@@ -152,7 +152,8 @@ func checkTheme(t *Theme) error {
 	return usererr.Collect(errs...)
 }
 
-// checkTemplate checks that t holds page.html and schema.json, its page.css, and its page's escaping.
+// checkTemplate checks that t holds page.html and schema.json and no file it does not read, its page.css, and
+// its page's escaping.
 func checkTemplate(t *Template) error {
 	var found usererr.List
 	for _, file := range []string{"page.html", "schema.json"} {
@@ -164,5 +165,6 @@ func checkTemplate(t *Template) error {
 	if t.pages != nil {
 		errs = append(errs, escapeMistake(t.pages[""], t.pageSrc, path.Join(t.dir, "page.html")))
 	}
+	errs = append(errs, unread(t.dir, t.unread, "kit_template_unread").Err())
 	return usererr.Collect(errs...)
 }

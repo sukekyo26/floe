@@ -106,6 +106,8 @@ func (w words) word(file, lang string) func(string) (string, error) {
 			}
 		}
 		switch {
+		case len(w) == 0:
+			return "", usererr.NewAt(file, 0, 0, "kit_words_none", name)
 		case lang == "":
 			return "", usererr.NewAt(file, 0, 0, "kit_words_no_lang", name, strings.Join(slices.Sorted(maps.Keys(w)), ", "))
 		case has != nil:

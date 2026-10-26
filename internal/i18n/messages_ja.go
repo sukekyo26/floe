@@ -55,6 +55,8 @@ var messagesJA = map[string]string{
 
 	// kit: 段 1 で読む部品・見た目・テーマ・テンプレート
 	"kit_name_twice":              "%s が %s と %s の両方の名前です。どちらかの名前を変えてください",
+	"kit_look_over_part":          "%s は部品 %s の名前です。そこの部品と schema が部品として名指すので、この見た目の名前を変えてください",
+	"kit_part_over_look":          "%s は見た目 %s の名前です。そこの部品が looks: で借りるので、この部品の名前を変えてください",
 	"kit_not_number":              "%s は数を取ります。%s は数ではありません",
 	"kit_num_digits":              "num だけか、num と 1 以上の有効数字の桁数を数の前に書いてください（num 3 のように）",
 	"kit_part_yaml":               "part.yaml はキーと値で書いてください。looks: に部品が借りる見た目のリスト（looks: [panel]）、見た目だけの部品なら description: にその説明です",
@@ -68,6 +70,7 @@ var messagesJA = map[string]string{
 	"kit_words_lang_twice":        "%s は言語 %s の重なりです。言語タグは大文字と小文字で区別しません",
 	"kit_words_unknown":           "words.yaml の %s の言葉に「%s」がありません",
 	"kit_words_unknown_elsewhere": "words.yaml の %s の言葉に「%s」がありません。%s にはあります。%[1]s にも足してください",
+	"kit_words_none":              "「%s」を描く words.yaml がありません。隣に words.yaml を置き、en: の下にその言葉を書いてください",
 	"kit_words_no_lang":           "words.yaml に、ページの言語にも en にも「%s」を描く言葉がありません（あるのは %s）。en かページの言語を足してください",
 	"kit_part_files":              "部品は schema.json・part.html・part.css の 3 つを、見た目だけの部品はほかの 2 つを置かずに part.css を（見た目を借りるなら part.yaml も）置きます。足りないものを足すか、見た目に要らないものを消してください",
 	"kit_part_unread":             "floe は部品の中のこの名前のファイルを読みません。部品は schema.json・part.html・part.css と、要るなら part.yaml・checks.yaml・words.yaml を持ちます。消してください",
@@ -76,6 +79,7 @@ var messagesJA = map[string]string{
 	"kit_look_unknown":            "looks の %s は部品でも見た目でもありません。floe か自分の部品にある名前を書いてください",
 	"kit_look_cycle":              "部品 %s が自分の見た目を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",
 	"kit_template_file":           "%s がありません。テンプレートには %s が要ります",
+	"kit_template_unread":         "floe はテンプレートの中のこの名前のファイルを読みません。テンプレートは page.html と schema.json を持ち、要るなら page.css・computed.yaml・checks.yaml・words.yaml・example.yaml も持ちます。どれかの名前にするか、消してください",
 
 	// css: floe がページに入れる CSS
 	"css_brace":             "この } はどのブロックも閉じていません。floe はこの CSS を層に入れるので、この } が層を閉じ、後の規則が層の外に出て部品のスタイルに勝ちます",

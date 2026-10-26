@@ -101,10 +101,11 @@ func TestCheckMistakes(t *testing.T) {
 			"own/themes/t/base.css:1:1: "+braceTold,
 			"own/themes/t/p.css:1:1: floe puts this CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",
 		)},
-		{"a template without its files", part, nil, map[string]string{"t/page.css": "}"}, lines(
+		{"a template without its files", part, nil, map[string]string{"t/page.css": "}", "t/pgae.html": ""}, lines(
 			"own/templates/t: page.html is missing: a template has page.html and schema.json",
 			"own/templates/t: schema.json is missing: a template has page.html and schema.json",
 			"own/templates/t/page.css:1:1: "+braceTold,
+			"own/templates/t/pgae.html: floe reads no file of this name in a template: a template holds page.html and schema.json, and page.css, computed.yaml, checks.yaml, words.yaml and example.yaml if it likes; rename it after one, or remove it",
 		)},
 	} {
 		src := kit.Sources{Parts: kit.Dir{FS: mapFS(tt.parts), Name: "own/parts"}}

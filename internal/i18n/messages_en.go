@@ -61,6 +61,8 @@ var messagesEN = map[string]string{
 
 	// kit: the parts, looks, themes and templates read at stage 1
 	"kit_name_twice":              "%s names both %s and %s: give one of them another name",
+	"kit_look_over_part":          "%s is the name of the part %s, which its parts and schemas name as a part: give this look another name",
+	"kit_part_over_look":          "%s is the name of the look %s, which its parts take with looks:: give this part another name",
 	"kit_not_number":              "%s takes a number, not %s",
 	"kit_num_digits":              "write num, or num and a count of significant digits from 1 before the number, like num 3",
 	"kit_part_yaml":               "write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
@@ -74,6 +76,7 @@ var messagesEN = map[string]string{
 	"kit_words_lang_twice":        "%s is the language %s again: a tag's case does not tell languages apart",
 	"kit_words_unknown":           `the words of %s in words.yaml have no "%s"`,
 	"kit_words_unknown_elsewhere": `the words of %s in words.yaml have no "%s", which those of %s have: add it to %[1]s`,
+	"kit_words_none":              `there is no words.yaml to draw "%s" from: put one beside it, and write the word under en:`,
 	"kit_words_no_lang":           `words.yaml has no words in the page's language nor in en to draw "%s" in, but in %s: add en, or the page's language`,
 	"kit_part_files":              "a part holds schema.json, part.html and part.css, and a look alone part.css without the other two (and part.yaml if it takes looks); add what it lacks, or remove what a look has no use for",
 	"kit_part_unread":             "floe reads no file of this name in a part: a part holds schema.json, part.html and part.css, and part.yaml, checks.yaml and words.yaml if it likes; remove it",
@@ -82,6 +85,7 @@ var messagesEN = map[string]string{
 	"kit_look_unknown":            "looks names %s, which is no part or look: name one floe or your own parts hold",
 	"kit_look_cycle":              "the part %s takes its own look (%s), which floe would follow forever; fix its part.yaml",
 	"kit_template_file":           "%s is missing: a template has %s",
+	"kit_template_unread":         "floe reads no file of this name in a template: a template holds page.html and schema.json, and page.css, computed.yaml, checks.yaml, words.yaml and example.yaml if it likes; rename it after one, or remove it",
 
 	// css: the CSS floe puts in a page
 	"css_brace":             "this } closes no block: floe puts this CSS in a layer, which it would close, leaving the rules after it out of the layer and over the parts' styles",
