@@ -91,7 +91,7 @@ func Find(root ast.Node, at []string) (key, value ast.Node) {
 				return key, value
 			}
 			key, value = nil, n.Values[i]
-			// goccy/go-yaml gives a flow sequence entries too, without a - to point at.
+			// goccy/go-yaml gives a flow sequence entries too, whose token is the , before each: nil for the first.
 			if !n.IsFlowStyle && len(n.Entries) == len(n.Values) {
 				key = n.Entries[i] // its -, where an entry left empty is
 			}
