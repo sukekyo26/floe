@@ -23,7 +23,7 @@ func lines(s ...string) string { return strings.Join(s, "\n") }
 func data(t *testing.T, body string) *doc.Data {
 	t.Helper()
 
-	d, err := doc.Read("d.yaml", []byte("template: t1\nlang: en\n"+body))
+	d, err := doc.Read("d.yaml", []byte("template: t1\nlang: en\n"+body), "")
 	if err != nil {
 		t.Fatal(told(err))
 	}

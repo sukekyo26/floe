@@ -76,7 +76,7 @@ func TestFloeReport(t *testing.T) {
 	if !ok || r.Schema() == nil || r.Checks() == nil || r.Page("en") == nil || r.Example() == nil {
 		t.Fatalf("report = %+v", r)
 	}
-	d, err := doc.Read("example.yaml", r.Example())
+	d, err := doc.Read("example.yaml", r.Example(), "")
 	if err != nil {
 		t.Fatal(told(err))
 	}
