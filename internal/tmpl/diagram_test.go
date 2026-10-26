@@ -93,14 +93,10 @@ func TestDiagramLanguage(t *testing.T) {
 			t.Errorf("lang %s, title %s: want %s and %s", tt.lang, tt.title, tt.html, tt.want)
 		}
 	}
-	// Each text of two tags of one language at its part, the other mistakes of the layout with them.
-	twice := `{width: 300, height: 100, title: {en: Flow, JA: a, ja: b}, parts: [` +
-		`{box: {x: 20, y: 20, w: 80, h: 40, rows: [{en: A, JA: x, ja: y}]}}, {box: {x: 900, y: 20, w: 80, h: 40, rows: [B]}}]}`
-	want := lines(
-		`d.yaml:7:52: ja is the language JA again: a tag's case, or _ for -, does not tell languages apart`,
-		`d.yaml:7:86: ja is the language JA again: a tag's case, or _ for -, does not tell languages apart`,
-		`d.yaml:7:154: box "B" sticks out of the 300x100 canvas`,
-	)
+	// Two tags of one language stop the diagram, at its value (a LIMIT of Text).
+	twice := `{width: 300, height: 100, title: {en: Flow, ja: b, JA: a}, parts: [` +
+		`{box: {x: 900, y: 20, w: 80, h: 40, rows: [B]}}]}`
+	want := `d.yaml:7:19: JA and ja are one language, as a tag's case, or _ for -, does not tell languages apart: keep one`
 	if got := drawn(t, k, diagramPage("en", twice), none); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}

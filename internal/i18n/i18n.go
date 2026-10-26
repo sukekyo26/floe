@@ -60,7 +60,8 @@ func Tag(tag string) Lang {
 }
 
 // Again returns the first of tags before tags[i] that is the language tags[i] is, as Tag reads them; "" for
-// none. Two tags of one language are a mistake wherever languages are written by tag (lang_twice).
+// none. Two tags of one language are a mistake wherever languages are written by tag (lang_twice, the two in the
+// order of their names).
 func Again(tags []string, i int) string {
 	for _, t := range tags[:i] {
 		if Tag(t) == Tag(tags[i]) {

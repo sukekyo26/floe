@@ -8,11 +8,13 @@ package diagram
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // URL is where the schema of a spec is held: that of floe's part diagram.
@@ -21,8 +23,9 @@ const URL = "floe:///parts/diagram.json"
 // Text is text in each language by tag, as i18n.Tag reads it; text written plain is English.
 type Text map[string]string
 
-// UnmarshalJSON reads text plain, or by language, its tags as i18n.Tag reads them; as written when two are one
-// language (JA and ja), which the layout tells at the text's part (twice).
+// UnmarshalJSON reads text plain, or by language, its tags as i18n.Tag reads them. Two tags of one language
+// (JA and ja) are the spec's mistake, at its root, as the text's place is not known here.
+// LIMIT: the mistake stops the diagram's other checks and names no text by place; rework it if it comes up often.
 func (t *Text) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err == nil {
@@ -33,58 +36,15 @@ func (t *Text) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &m); err != nil {
 		return err //nolint:wrapcheck // floe's failure: the schema checked the shape
 	}
-	*t = m
-	if t.twice() != nil {
-		return nil
-	}
+	tags := slices.Sorted(maps.Keys(m))
 	*t = Text{}
-	for tag, s := range m {
-		(*t)[string(i18n.Tag(tag))] = s
-	}
-	return nil
-}
-
-// twice returns the arguments of lang_twice for the first of the tags of t, in their order, that is a language
-// a tag before it is; nil for none.
-func (t Text) twice() []any {
-	tags := slices.Sorted(maps.Keys(t))
 	for i, tag := range tags {
 		if first := i18n.Again(tags, i); first != "" {
-			return []any{tag, first}
+			return usererr.NewIn("", "#", "lang_twice", first, tag) //nolint:wrapcheck // the spec's mistake
 		}
+		(*t)[string(i18n.Tag(tag))] = m[tag]
 	}
 	return nil
-}
-
-// texts are the texts of p, each written by tag or plain.
-func (p part) texts() []Text {
-	var out []Text
-	switch {
-	case p.Frame != nil:
-		out = append(out, p.Frame.Label)
-	case p.Box != nil:
-		for _, r := range p.Box.Rows {
-			out = append(out, r.Text)
-		}
-	case p.Table != nil:
-		out = append(out, p.Table.Title)
-		for _, r := range p.Table.Rows {
-			out = append(out, r.Cells...)
-		}
-	case p.Icon != nil:
-		out = append(out, p.Icon.Label)
-	case p.Edge != nil:
-		out = append(out, p.Edge.Label)
-	case p.Bar != nil:
-		out = append(out, p.Bar.Label)
-	case p.Axis != nil:
-		for _, tk := range p.Axis.Ticks {
-			out = append(out, tk.Text)
-		}
-	case p.Label != nil:
-		out = append(out, p.Label.Text)
-	}
-	return out
 }
 
 // in is t in lang, as i18n falls back: lang, then its parents, then English.
@@ -345,7 +305,10 @@ func read(v any) (*spec, error) {
 func strictly(b []byte, v any) error {
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(v); err != nil {
+	var e *usererr.Error
+	if err := dec.Decode(v); errors.As(err, &e) {
+		return e
+	} else if err != nil {
 		return fmt.Errorf("diagram: read a spec its schema took: %w", err)
 	}
 	return nil

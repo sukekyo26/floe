@@ -46,7 +46,7 @@ func readWords(file string, src []byte) (words, error) {
 		found = append(found, more...)
 		if first := i18n.Again(tags, len(tags)-1); first != "" {
 			// A tag's case and _ mean nothing to the lookup: EN after en would take its place unseen.
-			found = append(found, yamlpos.New(file, yamlpos.Of(key), "lang_twice", tag, first))
+			found = append(found, yamlpos.New(file, yamlpos.Of(key), "lang_twice", min(first, tag), max(first, tag)))
 			continue
 		}
 		w[string(i18n.Tag(tag))] = ws
