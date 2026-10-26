@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/tmpl"
@@ -60,7 +61,7 @@ func drawFile(k *kit.Kit, p arg) ([]byte, error) {
 	}
 	untitled := cmp.Or(files.SlugFromFile(p.name), baseName(p.name))
 	//nolint:wrapcheck // its mistakes, or what failed
-	return tmpl.Draw(k, p.name, src, tmpl.Options{Theme: "", Untitled: untitled})
+	return tmpl.Draw(k, p.name, src, tmpl.Options{Theme: "", Untitled: untitled, ImagesDir: dirs.Dir(p.abs)})
 }
 
 // nameMistake refuses file by its name: one that is no data file, or of no name before its extension, which

@@ -84,6 +84,11 @@ var messagesEN = map[string]string{
 	"kit_words_lang_not_mapping": "%s: write the names of the words and their text",
 	"kit_words_not_text":         "%s.%s: write text, in quotes where YAML would read a number, true, false or null",
 	"kit_words_lang_twice":       "%s is the language %s again: a tag's case does not tell languages apart",
+	"kit_image_path":             `"%[1]s" is not a path floe reads under the directory of %[2]s: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end`,
+	"kit_image_type":             `"%s" is not an image floe takes: use png, jpeg, gif, webp or svg`,
+	"kit_image_not_file":         `"%s" is not a file of an image, but a directory or the like: name a regular file of the image`,
+	"kit_image_large":            `the image "%s" is %s bytes, over the %s bytes (%s) an image may be; make it smaller`,
+	"kit_script_end":             "js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'",
 	"kit_words_unknown":          `words.yaml has no word "%s" in %s`,
 	"kit_part_files":             "a part holds schema.json, part.html and part.css, and a look alone part.css without the other two (and part.yaml if it takes looks); add what it lacks, or remove what a look has no use for",
 	"kit_part_unread":            "floe reads no file of this name in a part: a part holds schema.json, part.html and part.css, and part.yaml, checks.yaml and words.yaml if it likes; remove it",
@@ -108,12 +113,16 @@ var messagesEN = map[string]string{
 	"tmpl_unknown_theme": `there is no theme "%s"; use %s`,
 
 	// draw: the page drawn
-	"draw_style":        "the page drawn from this file has a <style>, which page.html or a part writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css",
-	"draw_base":         "the page drawn from this file has a <base>, which page.html or a part writes and the page's CSP ignores (base-uri 'none'): write its links whole",
+	"draw_style":        "the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css",
+	"draw_base":         "the page drawn from this file has a <base>, which page.html, a part's part.html or an item of format html writes and the page's CSP ignores (base-uri 'none'): write its links whole",
 	"draw_part_unknown": "the page drawn from this file names the part %s, which there is none of; use %s",
 	"draw_part_several": `the page has data-floe-part="%s", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
 	"draw_look_box":     `the page has data-floe-part="%[1]s", but %[1]s is a look, which has no box: take it with data-floe-look="%[1]s"`,
-	"draw_format":       "floe does not draw an item of format %s yet: give it another format, or none",
+	"draw_meta":         "the page drawn from this file has %s, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out",
+	"draw_noscript":     "the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out",
+	"draw_not_text":     "an item of format %s takes text: write it as text, in quotes where YAML would read a number, true, false or null",
+	"draw_html_whole":   "HTML changes the page around it at %s: close in it each element and comment it opens, and close no element it did not open",
+	"draw_html_placed":  "page.html puts the item %[1]s of format html in a text or an attribute of %[2]s, where HTML does not work: put it where elements go, or give the item another format",
 
 	// cli: the command line (English alone is told; the other languages hold the keys as every catalog does)
 	// LIMIT: the %s of cli_usage is cobra's English, as cobra words what it cannot read

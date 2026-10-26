@@ -1,0 +1,6 @@
+$ floe check items.yaml
+exit 0
+$ floe render --out-dir $TMP/pages/items.yaml items.yaml
+exit 0
+--- stdout
+$TMP/pages/items.yaml/items.html

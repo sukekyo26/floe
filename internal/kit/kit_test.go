@@ -34,7 +34,7 @@ func floe(t *testing.T) *kit.Kit {
 	return k
 }
 
-// floe's own read without a mistake, once a process: 29 parts, 2 looks, 9 themes and report.
+// floe's own read without a mistake, once a process: 30 parts, 2 looks, 9 themes and report.
 func TestFloe(t *testing.T) {
 	t.Parallel()
 
@@ -43,7 +43,7 @@ func TestFloe(t *testing.T) {
 		t.Error("Floe read floe's own twice")
 	}
 	parts, looks, themes, templates := k.Names()
-	if len(parts) != 29 || !slices.Equal(looks, []string{"panel", "rows"}) || len(themes) != 9 ||
+	if len(parts) != 30 || !slices.Equal(looks, []string{"panel", "rows"}) || len(themes) != 9 ||
 		!slices.Equal(templates, []string{"report"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}

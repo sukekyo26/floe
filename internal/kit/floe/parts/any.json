@@ -31,7 +31,9 @@
     "faq": { "$ref": "floe:///parts/faq.json" },
     "glossary": { "$ref": "floe:///parts/glossary.json" },
     "keys": { "$ref": "floe:///parts/keys.json" },
-    "tabs": { "$ref": "floe:///parts/tabs.json" }
+    "tabs": { "$ref": "floe:///parts/tabs.json" },
+    "html": { "type": "string", "format": "html", "description": "HTML that goes in as it is" },
+    "script": { "$ref": "floe:///parts/script.json" }
   },
   "minProperties": 1,
   "maxProperties": 1,
