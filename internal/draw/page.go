@@ -50,7 +50,7 @@ func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error
 			if !shown(n) {
 				var b strings.Builder
 				_ = html.Render(&b, n) //nolint:errcheck // a strings.Builder fails no write
-				refuse("draw_meta", b.String())
+				refuse("draw_meta", yamlpos.Head(b.String()))
 			}
 		}
 		checkNames(k, ns, n, boxes, taken, refuse)

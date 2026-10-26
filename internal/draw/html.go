@@ -143,11 +143,18 @@ type occurrence struct {
 // text, a comment or an attribute, however escaped there.
 func (s *items) marksIn(tree *html.Node) []occurrence {
 	var found []occurrence
+	// The items open there: between the comments of an item, its own attributes are no page.html's.
+	open := map[int]bool{}
 	for n := range tree.Descendants() {
 		switch n.Type {
 		case html.CommentNode:
 			if i, end, ok := s.exact(n.Data); ok {
 				found = append(found, occurrence{n: i, end: end, node: n, exact: true, holder: ""})
+				if end {
+					delete(open, i)
+				} else {
+					open[i] = true
+				}
 				continue
 			}
 			found = append(found, s.within(n, n.Data, "<!--")...)
@@ -156,28 +163,43 @@ func (s *items) marksIn(tree *html.Node) []occurrence {
 				found = append(found, s.within(n, n.Data, "<"+n.Parent.Data+">")...)
 			}
 		case html.ElementNode:
-			for _, a := range n.Attr {
-				found = append(found, s.within(n, a.Key+" "+a.Val, "<"+n.Data+">")...)
-				found = append(found, s.probed(n, a.Val)...)
-			}
+			found = append(found, s.inAttrs(n, len(open) == 0)...)
 		default:
 		}
 	}
 	return found
 }
 
-// probed returns the items whose probe value, an attribute of n, holds: html/template strips an item's tags, its
-// marks among them, from an attribute's value, and leaves the probes.
-// LIMIT: an attribute of the page that holds the white space of a probe of its own is told as an item put there.
-func (s *items) probed(n *html.Node, value string) []occurrence {
+// inAttrs returns the marks the attributes of n, an element, hold; and, when it is page.html's (probed), the
+// probes.
+func (s *items) inAttrs(n *html.Node, probed bool) []occurrence {
 	var found []occurrence
-	for i := range s.html {
-		if !strings.Contains(value, probe(i)) {
-			continue
+	for _, a := range n.Attr {
+		found = append(found, s.within(n, a.Key+" "+a.Val, "<"+n.Data+">")...)
+		if probed {
+			found = append(found, s.probed(n, a.Val)...)
 		}
-		found = append(found, occurrence{n: i, end: false, node: n, exact: false, holder: "<" + n.Data + ">"})
 	}
 	return found
+}
+
+// probed returns the items whose probe value, an attribute of n, holds, read once through it: html/template
+// strips an item's tags, its marks among them, from an attribute's value, and leaves the probes.
+// LIMIT: an attribute page.html writes that holds the white space of a probe (\t\n, spaces, \t) is told as an
+// item put there; one an item writes is not looked at, as it is between the item's marks.
+func (s *items) probed(n *html.Node, value string) []occurrence {
+	var found []occurrence
+	for {
+		at := strings.Index(value, "\t\n")
+		if at < 0 {
+			return found
+		}
+		value = value[at+2:]
+		spaces := len(value) - len(strings.TrimLeft(value, " "))
+		if i := spaces - 1; i >= 0 && i < len(s.html) && strings.HasPrefix(value[spaces:], "\t") {
+			found = append(found, occurrence{n: i, end: false, node: n, exact: false, holder: "<" + n.Data + ">"})
+		}
+	}
 }
 
 // exact reads a comment's text that is a mark as drawn: its item, and whether it is the end.

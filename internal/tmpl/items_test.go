@@ -80,8 +80,10 @@ func TestHTMLItems(t *testing.T) {
 		{htmlPage(`<div title="{{.Data.h}}">a</div>`), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <div>, where HTML does not work: put it where elements go, or give the item another format"},
 		{htmlPage("<script>var h = {{.Data.h}};</script>"), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <script>, where HTML does not work: put it where elements go, or give the item another format"},
 		{section, "a\n</p x=", "d.yaml:3:4: HTML changes the page around it at </p x=: close in it each element and comment it opens, and close no element it did not open"},
-		{section, `<meta name="referrer" content="no-referrer">`, `d.yaml:2:11: the page drawn from this file has <meta name="referrer" content="no-referrer"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
+		{section, `<meta name="referrer" content="no-referrer">`, `d.yaml:2:11: the page drawn from this file has <meta name="referrer" content="no-referr…, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{section, `<meta name="VIEWPORT" content="width=device-width">`, ""},
+		{section, `<p title="&#9;&#10; &#9;">x</p><p title="&#9;&#10;  &#9;">y</p>`, ""},
+		{section, "<meta name=\"description\" content=\"a\nb\">", `d.yaml:2:11: the page drawn from this file has <meta name="description" content="a b"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 	} {
 		k := ownKit(t, nil, mine(tt.page, htmlSchema, nil))
 		data := "lang: en\ntemplate: mine\nh: " + quoted(tt.h) + "\nt: t\n"
@@ -94,7 +96,7 @@ func TestHTMLItems(t *testing.T) {
 			t.Errorf("%s in %q: told\n%s\nwant\n%s", tt.h, tt.page, got, tt.want)
 		}
 		// The probes and the marks, comments, are taken out.
-		if err == nil && (bytes.Contains(page, []byte("\t\n \t")) || !strings.Contains(tt.h, "<!--") && bytes.Contains(page, []byte("<!--"))) {
+		if err == nil && (!strings.Contains(tt.h, "&#9;") && bytes.Contains(page, []byte("\t\n \t")) || !strings.Contains(tt.h, "<!--") && bytes.Contains(page, []byte("<!--"))) {
 			t.Errorf("%s: a mark is left in the page\n%s", tt.h, page)
 		}
 	}
