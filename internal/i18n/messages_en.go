@@ -10,12 +10,17 @@ var messagesEN = map[string]string{
 	"library": "%s",
 
 	// yaml: reading a YAML file
-	"yaml_documents":      "a YAML file holds one document: write it as one, without --- between parts",
-	"yaml_no_anchors":     "anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
-	"yaml_comment_cut":    "a # after a space began a YAML comment, which may have cut the value short, to %s: put the value in quotes if the # is part of it, or write the comment on a line of its own",
-	"yaml_flow_key_alone": "%q is a key without a value in { }: write its value after a \":\", or, if a , in text ended the text before it, put that text in quotes",
-	"yaml_key_not_text":   "a key is a name: write %s as text, in quotes",
-	"yaml_not_finite":     "%s is not a value a YAML file can hold; write a number in digits, or quote it as text",
+	"yaml_documents":            "a YAML file holds one document: write it as one, without --- between parts",
+	"yaml_no_anchors":           "anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
+	"yaml_comment_cut":          "a # after a space began a YAML comment, which may have cut the value short, to %s: put the value in quotes if the # is part of it, or write the comment on a line of its own",
+	"yaml_flow_key_alone":       "%q is a key without a value in { }: write its value after a \":\", or, if a , in text ended the text before it, put that text in quotes",
+	"yaml_key_not_text":         "a key is a name: write %s as text, in quotes",
+	"yaml_not_finite":           "%s is not a value a YAML file can hold; write a number in digits, or quote it as text",
+	"yaml_number_not_number":    "%[1]s reads as the number %[2]s here, but as text in YAML 1.2: write %[2]s for the number, or put %[1]s in quotes for text",
+	"yaml_number_not_text":      "%[1]s reads as text here, but as the number %[2]s in YAML 1.2: write %[3]s for the number, or put %[1]s in quotes for text",
+	"yaml_number_octal":         "%[1]s reads as the octal number %[2]s here, but as %[3]s in YAML 1.2: write %[3]s, or %[4]s for %[2]s",
+	"yaml_number_too_big":       "%s is a number in YAML 1.2, too large for floe to read: put it in quotes to keep it as text",
+	"yaml_number_outside_float": "%s is a number in YAML 1.2 that a float64 cannot hold: put it in quotes to keep it as text",
 
 	// schema: compiling a schema and the shape floe draws by
 	"schema_dialect":            "$schema %s names no draft floe takes; name https://json-schema.org/draft/2020-12/schema or https://json-schema.org/draft/2019-09/schema, or leave it out",
