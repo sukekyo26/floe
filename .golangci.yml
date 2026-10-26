@@ -142,6 +142,14 @@ linters:
           deny:
             - pkg: "github.com/goccy/go-yaml"
               desc: "read YAML through internal/yamlpos, which reads it as YAML 1.2 does, past a byte order mark; outside it use only goccy's ast"
+        jsonschema-in-schema:
+          list-mode: lax
+          files:
+            - "$all"
+            - "!**/internal/schema/**"
+          deny:
+            - pkg: "github.com/santhosh-tekuri/jsonschema/v6"
+              desc: "read a schema through internal/schema, which reads it as RFC 8259 does, past a byte order mark"
     wrapcheck:
       ignore-sigs:
         - .Errorf(

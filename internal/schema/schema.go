@@ -8,7 +8,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -16,6 +18,7 @@ import (
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 
+	"github.com/sukekyo26/floe/internal/bom"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -30,11 +33,32 @@ const (
 )
 
 // Resource is a schema floe holds, by its URL (floe:///parts/<name>.json): its JSON, its kind, and the file
-// its mistakes are told in.
+// its mistakes are told in. It is made by NewResource only, so that its JSON is read as read reads it.
 type Resource struct {
-	Doc  any
+	doc  any
+	made bool // by NewResource: a doc of nil is the JSON null, not a Resource left zero
 	Kind Kind
 	File string
+}
+
+// NewResource reads src (the schema of file) as read does, a Resource of k.
+func NewResource(file string, src []byte, k Kind) (Resource, error) {
+	doc, err := read(file, src)
+	if err != nil {
+		return Resource{}, err
+	}
+	return Resource{doc: doc, made: true, Kind: k, File: file}, nil
+}
+
+// read reads src, the JSON of file, as RFC 8259 does, past a byte order mark at its start, and as jsonschema
+// reads it (numbers as json.Number): the only place a schema's bytes are read.
+// LIMIT: other marks and UTF-16/32 are refused without saying so (S6); rework here when S6 decides them.
+func read(file string, src []byte) (any, error) {
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(bom.Trim(src)))
+	if err != nil {
+		return nil, usererr.LibraryAt(file, 0, 0, err.Error())
+	}
+	return doc, nil
 }
 
 // Formats are floe's formats: an item of one is drawn by floe, not by a part.
@@ -58,9 +82,9 @@ var english = message.NewPrinter(language.English)
 // or more, which one is told changes from run to run, and fixing it tells the next. The library's make; a
 // golden file holds no input with two.
 func Compile(url, file string, src []byte, res map[string]Resource) (*Compiled, error) {
-	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
+	doc, err := read(file, src)
 	if err != nil {
-		return nil, usererr.LibraryAt(file, 0, 0, err.Error())
+		return nil, err
 	}
 	c, err := build(url, file, doc, res)
 	if err != nil {
@@ -76,7 +100,7 @@ func CheckPart(url string, res map[string]Resource) error {
 	if !ok {
 		return fmt.Errorf("schema: no resource %s", url) //nolint:err113 // floe's own mistake
 	}
-	c, err := build(url, r.File, r.Doc, res)
+	c, err := build(url, r.File, r.doc, res)
 	if err != nil {
 		return err
 	}
@@ -85,6 +109,11 @@ func CheckPart(url string, res map[string]Resource) error {
 
 // build compiles doc under url, after checking the drafts it names (check 0), with res and floe's formats.
 func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) {
+	for _, ru := range slices.Sorted(maps.Keys(res)) {
+		if !res[ru].made {
+			return nil, fmt.Errorf("schema: %s was not made by NewResource", ru) //nolint:err113 // floe's own mistake
+		}
+	}
 	c := &Compiled{Root: nil, url: u, file: file, res: res}
 	if err := c.dialects(doc); err != nil {
 		return nil, err
@@ -98,7 +127,7 @@ func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) 
 		if ru == u {
 			continue
 		}
-		if err := comp.AddResource(ru, r.Doc); err != nil {
+		if err := comp.AddResource(ru, r.doc); err != nil {
 			return nil, fmt.Errorf("schema: add %s: %w", ru, err)
 		}
 	}

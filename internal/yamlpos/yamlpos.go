@@ -3,7 +3,6 @@
 package yamlpos
 
 import (
-	"bytes"
 	"errors"
 	"slices"
 	"strconv"
@@ -15,6 +14,7 @@ import (
 	"github.com/goccy/go-yaml/parser"
 	"github.com/goccy/go-yaml/token"
 
+	"github.com/sukekyo26/floe/internal/bom"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -152,9 +152,8 @@ func Parse(file string, src []byte) (ast.Node, error) {
 func document(file string, src []byte) (ast.Node, error) {
 	// YAML 1.2 allows a byte order mark at the start, which goccy/go-yaml reads as part of the first key.
 	// src is left without it for both the parser and dropped, so that their places agree.
-	// LIMIT: only one UTF-8 mark at the start; a second, one within, and UTF-16 or UTF-32 are read as they
-	// are (S6). Rework here if S6 decides how to read them.
-	src = bytes.TrimPrefix(src, utf8BOM)
+	// LIMIT: other marks stay in what they are read into, and UTF-16/32 is misread (S6); rework here when S6 decides them.
+	src = bom.Trim(src)
 	doc, err := parser.ParseBytes(src, 0)
 	if err != nil {
 		return nil, library(file, err)
@@ -191,8 +190,6 @@ func document(file string, src []byte) (ast.Node, error) {
 	}
 	return body, nil
 }
-
-var utf8BOM = []byte("\xef\xbb\xbf")
 
 // startOf returns where d starts: at its ---, or at at without one.
 func startOf(d *ast.DocumentNode, at Pos) Pos {
