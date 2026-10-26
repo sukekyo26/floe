@@ -2,7 +2,6 @@ package cli
 
 import (
 	"errors"
-	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -105,7 +104,7 @@ func (a *app) diagrams(paths []string, lang string, with func(*diagram.Drawer, a
 	var found usererr.List
 	var out []string
 	for i, p := range a.args(paths, "cli_wants_spec") {
-		got, err := diagramOf(d, p, diagram.Options{Lang: i18n.Tag(lang), Icons: store, Seq: i + 1}, with)
+		got, err := diagramOf(d, p, diagram.Options{Lang: i18n.Tag(lang), Icons: store, Seq: i + 1, Source: ""}, with)
 		if failed := found.Add(err); failed != nil {
 			return nil, failed
 		}
@@ -154,6 +153,8 @@ func diagramOf(
 			return "", err //nolint:wrapcheck // as above
 		}
 	}
+	// The spec as written, shown under it when it says source: true.
+	o.Source = yamlpos.File(src)
 	got, err := with(d, doc.Ints(v), o)
 	return got, yamlpos.Place(err, p.name, root, nil) //nolint:wrapcheck // mistakes placed
 }
@@ -167,25 +168,21 @@ the checks. With a kind, print its spec, whose comments explain its grid. Its te
 each language it has ({en: …, ja: …}), as a spec may write it.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			examples, err := diagram.Examples()
-			if err != nil {
-				return err //nolint:wrapcheck // floe's own, which its tests check
-			}
 			if len(args) == 0 {
+				examples, err := diagram.Examples()
+				if err != nil {
+					return err //nolint:wrapcheck // floe's own, which its tests check
+				}
 				for _, e := range examples {
 					a.print("%s\t%s", e.Name, e.Summary)
 				}
 				return nil
 			}
-			i := slices.IndexFunc(examples, func(e diagram.Example) bool { return e.Name == args[0] })
-			if i < 0 {
-				names := make([]string, len(examples))
-				for i, e := range examples {
-					names[i] = e.Name
-				}
-				return usererr.New("diagram_unknown_example", args[0], strings.Join(names, ", "))
+			e, err := diagram.ExampleOf(args[0])
+			if err != nil {
+				return err //nolint:wrapcheck // the mistake of a kind there is none of, or floe's own
 			}
-			a.print("%s", strings.TrimSuffix(string(examples[i].Spec), "\n"))
+			a.print("%s", strings.TrimSuffix(string(e.Spec), "\n"))
 			return nil
 		},
 	}

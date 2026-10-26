@@ -4,6 +4,7 @@ import (
 	"cmp"
 	_ "embed" // the template and the zoom script
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"maps"
@@ -34,11 +35,13 @@ var page = template.Must(template.New("svg").Funcs(template.FuncMap{
 const maxScale = 16.0 / sizeMain
 
 // Options are what a diagram is drawn with: the language its text is written in, the icons its icon parts show,
-// and Seq, its number among the diagrams drawn into one page, which its ids hold so that they differ.
+// Seq, its number among the diagrams drawn into one page, which its ids hold so that they differ, and Source, the
+// spec as written, shown under it when it says source: true.
 type Options struct {
-	Lang  i18n.Lang
-	Icons Icons
-	Seq   int
+	Lang   i18n.Lang
+	Icons  Icons
+	Seq    int
+	Source string
 }
 
 // Icons finds an icon's SVG by name, as icons.Store.Lookup does.
@@ -87,15 +90,69 @@ func (d *Drawer) layout(v any, opts Options) (*layout, error) {
 	if err != nil {
 		return nil, err
 	}
+	name := s.Example
+	if name != "" {
+		if s, err = d.example(s, &opts); err != nil {
+			return nil, err
+		}
+	}
 	l := newLayout(s, opts)
 	if l.failure != nil {
 		return nil, l.failure
 	}
 	l.check()
-	if err := l.problems.Sorted().Err(); err != nil {
+	found := l.problems
+	if name != "" {
+		if found, err = exampleMistakes(name, found); err != nil {
+			return nil, err
+		}
+	}
+	if err := found.Sorted().Err(); err != nil {
 		return nil, err
 	}
 	return l, nil
+}
+
+// example returns the spec of the built-in example s names, shown as s says, and makes opts.Source the text of its
+// file; or the mistake, at #/example, that there is none. An example that its schema refuses is floe's failure.
+func (d *Drawer) example(s *spec, opts *Options) (*spec, error) {
+	e, err := ExampleOf(s.Example)
+	var none *usererr.Error
+	if errors.As(err, &none) {
+		at := *none
+		at.At = "#/example"
+		return nil, &at
+	}
+	if err != nil {
+		return nil, err
+	}
+	// In words, not wrapped: a mistake of floe's own example is no mistake of the user's.
+	if err = d.schema.ValidateAt(e.value); err != nil {
+		return nil, fmt.Errorf("diagram: the example %s: %s", e.Name, err.Error()) //nolint:err113,errorlint // see above
+	}
+	ex, err := read(e.value)
+	if err != nil {
+		return nil, fmt.Errorf("diagram: the example %s: %s", e.Name, err.Error()) //nolint:err113,errorlint // see above
+	}
+	ex.Source = s.Source
+	opts.Source = strings.TrimSpace(string(e.Spec))
+	return ex, nil
+}
+
+// exampleMistakes returns the mistakes of drawing the example name that are the user's: those of icons, which the
+// icons kept decide (a set fetched anew may not hold an icon the example names), at the root of the diagram rather
+// than in the example. Any other is floe's failure.
+func exampleMistakes(name string, found usererr.List) (usererr.List, error) {
+	mine := make(usererr.List, 0, len(found))
+	for _, e := range found {
+		if e.At != "" && !strings.HasPrefix(e.Key, "diagram_icon_") {
+			return nil, fmt.Errorf("diagram: the example %s: %s", name, e.Error()) //nolint:err113 // floe's own
+		}
+		at := *e
+		at.At = "#"
+		mine = append(mine, &at)
+	}
+	return mine, nil
 }
 
 // elem is an element drawn: Kind names which of the template's, and the fields it reads.
@@ -110,6 +167,11 @@ type elem struct {
 	Text         Text
 	Raw          template.HTML
 	Kids         []elem
+}
+
+// shown is the spec shown under a diagram, folded, and the words of its summary.
+type shown struct {
+	Label, Text string
 }
 
 type markerDef struct {
@@ -138,9 +200,13 @@ func (l *layout) draw(lang i18n.Lang) (template.HTML, error) {
 	}
 	t.Funcs(template.FuncMap{"t": func(x Text) string { return x.in(lang) }})
 	var b strings.Builder
+	var source *shown
+	if l.s.Source {
+		source = &shown{Label: i18n.New(lang).Msg("diagram_source"), Text: l.opts.Source}
+	}
 	err = t.ExecuteTemplate(&b, "diagram", map[string]any{
 		"W": l.s.Width, "H": l.s.Height, "MaxH": math.Floor(l.s.Height*maxScale + 0.5), "Title": l.s.Title,
-		"Markers": defs, "Icons": l.iconDefs, "Elems": elems,
+		"Markers": defs, "Icons": l.iconDefs, "Elems": elems, "Source": source,
 	})
 	if err != nil {
 		return "", fmt.Errorf("diagram: draw: %w", err)

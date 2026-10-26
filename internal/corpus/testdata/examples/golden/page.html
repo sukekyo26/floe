@@ -1,0 +1,2169 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; img-src data: blob:; media-src data: blob:; style-src &#39;unsafe-inline&#39; https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src &#39;unsafe-inline&#39; https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action &#39;none&#39;; base-uri &#39;none&#39;; connect-src &#39;none&#39;"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>図の例</title>
+<style>
+@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.base {
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways instead, as a table does, keeps its words whole.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line, still overflows. Give such a part a layout for narrow screens, as
+   keys has */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+p, ul, ol { margin: 0; max-width: var(--text-width); }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
+pre {
+  margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+pre code { font-size: inherit; background: none; padding: 0; }
+blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+}
+</style>
+<style>
+@layer floe.palette {
+/* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
+:root {
+  --bg: #f3f5f4; --surface: #fff; --fg: #18201e; --muted: #57635f; --line: #d4dbd8;
+  --accent: #1d6670; --accent-soft: #dcebec;
+  --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
+  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #63b5be; --code-add: #6fcf97; --code-del: #f2b8b5;
+  /* The page's ground, a pattern too, and the rule between its sections */
+  --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(24 32 30 / 0.12);
+  /* Its panels' quiet ground, which holds faces of the surface */
+  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
+  color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="diagram"]) to (:scope [data-floe-part] > *) {
+/* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
+   set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
+/* The colours and fonts of the page's palette, with floe's default ones for a fragment of floe diagram
+   render pasted into a page without them */
+.dg-wrap, .dg-tools {
+  --dg-bg: var(--bg, #f3f5f4);
+  --dg-surface: var(--surface, #fff);
+  --dg-fg: var(--fg, #18201e);
+  --dg-muted: var(--muted, #57635f);
+  --dg-line: var(--line, #d4dbd8);
+  --dg-accent: var(--accent, #1d6670);
+  --dg-accent-soft: var(--accent-soft, #dcebec);
+  --dg-good: var(--good, #1d7542);
+  --dg-good-soft: var(--good-soft, #dcefe3);
+  --dg-warn: var(--warn, #8a5a10);
+  --dg-warn-soft: var(--warn-soft, #f6e8d2);
+  --dg-bad: var(--bad, #b3261e);
+  --dg-bad-soft: var(--bad-soft, #fbe5e2);
+  --dg-font: var(--font, sans-serif);
+  --dg-mono: var(--mono, monospace);
+}
+/* The frame spans the body's width. Its height follows the diagram's aspect ratio, capped by the
+   screen's height and by max-height (how far it may grow), with the diagram centred in it */
+.dg-wrap { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--dg-line); border-radius: 8px; touch-action: pan-y; }
+.dg-wrap:focus-visible { outline: 2px solid var(--dg-accent); outline-offset: 2px; }
+.dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
+.dg-wrap.zoomed:active { cursor: grabbing; }
+.dg-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: -0.6rem; font-size: 12px; line-height: 1.4; }
+.dg-tools span { color: var(--dg-muted); margin-right: auto; }
+@media (max-width: 640px) { .dg-tools span { display: none; } }
+/* Buttons do nothing on paper */
+@media print { .dg-tools { display: none; } }
+/* The spec as written, folded under the diagram; closed, it prints its summary alone */
+.dg-source { margin-top: 0.5rem; }
+.dg-source summary { cursor: pointer; color: var(--dg-muted); }
+.dg-source pre { margin: 0.4rem 0 0; padding: 0.6rem 0.8rem; overflow-x: auto; border: 1px solid var(--dg-line); border-radius: 8px; background: var(--dg-bg); font: 12px/1.5 var(--dg-mono); }
+.dg-tools button { min-width: 2.2rem; padding: 2px 8px; font: inherit; color: var(--dg-fg); background: var(--dg-surface); border: 1px solid var(--dg-line); border-radius: 6px; cursor: pointer; }
+.dg-tools button:hover:not(:disabled) { border-color: var(--dg-accent); color: var(--dg-accent); }
+.dg-tools button:disabled { opacity: 0.4; cursor: default; }
+.dg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--dg-font); }
+.dg text { dominant-baseline: central; }
+.dg .main { fill: var(--dg-fg); font-size: 13px; font-weight: 700; }
+.dg .sub { fill: var(--dg-muted); font-size: 12px; }
+.dg .code { font-family: var(--dg-mono); font-size: 12px; }
+.dg .box rect, .dg .box path { fill: var(--dg-surface); stroke: var(--dg-line); stroke-width: 1.2; }
+.dg .box.accent rect, .dg .box.accent path { fill: var(--dg-accent-soft); stroke: var(--dg-accent); }
+.dg .box.good rect, .dg .box.good path { fill: var(--dg-good-soft); stroke: var(--dg-good); }
+.dg .box.warn rect, .dg .box.warn path { fill: var(--dg-warn-soft); stroke: var(--dg-warn); }
+.dg .box.bad rect, .dg .box.bad path { fill: var(--dg-bad-soft); stroke: var(--dg-bad); }
+.dg .box.bad text { fill: var(--dg-bad); }
+.dg .table .bg, .dg .table .head { fill: var(--dg-surface); }
+.dg .table.accent .head { fill: var(--dg-accent-soft); }
+.dg .table.good .head { fill: var(--dg-good-soft); }
+.dg .table.warn .head { fill: var(--dg-warn-soft); }
+.dg .table.bad .head { fill: var(--dg-bad-soft); }
+.dg .table .outline { fill: none; stroke: var(--dg-line); stroke-width: 1.2; }
+.dg .table.accent .outline { stroke: var(--dg-accent); }
+.dg .table.good .outline { stroke: var(--dg-good); }
+.dg .table.warn .outline { stroke: var(--dg-warn); }
+.dg .table.bad .outline { stroke: var(--dg-bad); }
+.dg .table .sep { stroke: var(--dg-line); }
+.dg .cell { fill: var(--dg-fg); }
+.dg .type { fill: var(--dg-muted); font-size: 12px; }
+/* A frame's dashes are a little darker than the secondary text. Without color-mix, --muted stays */
+.dg .frame rect { fill: none; stroke: var(--dg-muted); stroke: color-mix(in srgb, var(--dg-muted) 75%, var(--dg-fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.dg .frame.accent rect { stroke: var(--dg-accent); }
+.dg .frame text { fill: var(--dg-muted); font-size: 12px; font-weight: 700; }
+.dg .frame.grouped text { fill: var(--dg-fg); font-size: 13px; }
+.dg .edge, .dg .line { fill: none; stroke: var(--dg-muted); stroke-width: 1.5; }
+.dg .edge.dashed { stroke-dasharray: 5 4; }
+.dg .edge.bold { stroke-width: 3; }
+.dg .edge.accent { stroke: var(--dg-accent); }
+.dg .edge.good { stroke: var(--dg-good); }
+.dg .edge.warn { stroke: var(--dg-warn); }
+.dg .edge.bad { stroke: var(--dg-bad); }
+/* An edge's ends take its colour (context-stroke). Without it, --muted stays */
+.dg .mk-fill { fill: var(--dg-muted); fill: context-stroke; }
+.dg .mk-hollow { fill: var(--dg-bg); stroke: var(--dg-muted); stroke: context-stroke; stroke-width: 1.2; }
+.dg .mk-line { fill: none; stroke: var(--dg-muted); stroke: context-stroke; stroke-width: 1.5; }
+.dg .dot { fill: var(--dg-muted); stroke: var(--dg-muted); }
+.dg .dot.accent { fill: var(--dg-accent); stroke: var(--dg-accent); }
+.dg .dot.good { fill: var(--dg-good); stroke: var(--dg-good); }
+.dg .dot.warn { fill: var(--dg-warn); stroke: var(--dg-warn); }
+.dg .dot.bad { fill: var(--dg-bad); stroke: var(--dg-bad); }
+.dg .dot.hollow { fill: var(--dg-bg); stroke-width: 2; }
+.dg .bar { fill: var(--dg-muted); }
+.dg .bar.accent { fill: var(--dg-accent); }
+.dg .bar.good { fill: var(--dg-good); }
+.dg .bar.warn { fill: var(--dg-warn); }
+.dg .bar.bad { fill: var(--dg-bad); }
+.dg .axis { stroke: var(--dg-muted); stroke-width: 1.2; }
+.dg .grid { stroke: var(--dg-line); }
+.dg .venn { fill: var(--dg-accent-soft); fill-opacity: 0.6; stroke: var(--dg-accent); stroke-width: 1.5; }
+.dg .venn.good { fill: var(--dg-good-soft); stroke: var(--dg-good); }
+.dg .venn.warn { fill: var(--dg-warn-soft); stroke: var(--dg-warn); }
+.dg .venn.bad { fill: var(--dg-bad-soft); stroke: var(--dg-bad); }
+.dg .label-bg { fill: var(--dg-bg); }
+.dg .label { fill: var(--dg-fg); font-size: 12px; }
+.dg .label.strong { font-size: 13px; font-weight: 700; }
+.dg .lifeline { stroke: var(--dg-muted); stroke-width: 1.2; stroke-dasharray: 6 4; }
+.dg .divider { stroke: var(--dg-muted); stroke-width: 1.2; stroke-dasharray: 12 6; }
+.dg .band { fill: var(--dg-accent-soft); stroke: var(--dg-accent); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
+blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+}
+</style>
+<style>
+@layer floe.page {
+@scope (:root) to ([data-floe-part] > *) {
+/* The colours and faces are the theme's palette; the page lays them out */
+:scope {
+  /* The width of the whole body; that of prose is the palette's */
+  --page-width: 96rem;
+}
+body {
+  margin: 0; font-size: 16px; line-height: 1.85; padding-inline: 16px; padding-block: 2.5rem 4rem;
+}
+main { max-width: var(--page-width); margin-inline: auto; display: grid; gap: 2.5rem; }
+main > *, section > * { min-width: 0; }
+h1 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: 0.01em; }
+h2 { font-size: 1.4rem; }
+header { display: grid; gap: 0.7rem; }
+section { display: grid; gap: 1rem; }
+section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
+.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lead { color: var(--muted); font-size: 1.05rem; }
+.muted { color: var(--muted); }
+}
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1 id="図の例">図の例</h1>
+<p class="lead">floe diagram example の 10 種を、名前で描いて spec を見せる（floe-diagram-examples の参照の形）。</p>
+</header>
+<section>
+<h2 id="architecture">architecture</h2>
+<div data-floe-part="diagram"><script>(// Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
+// from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
+// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
+function zoomable(messages) {
+  const MAX = 4;
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const setup = (wrap) => {
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
+    const svg = wrap.querySelector('svg');
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
+    // diagram stays shown when the frame resizes
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
+    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    // Zooming out stops at the whole diagram or the actual size, whichever is smaller
+    const min = () => Math.min(fit(), 1);
+    const tools = document.createElement('div');
+    tools.className = 'dg-tools';
+    const hint = document.createElement('span');
+    hint.textContent = msg.diagram_zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
+      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      // Centre a direction the view is wider than the diagram in; otherwise keep the view inside it
+      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    // Screen coordinates as px from the top left inside the frame's border
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    // Scales by k about (ax, ay), in local coordinates, keeping the diagram point under it in place
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    // A plain wheel scrolls the page. A trackpad pinch arrives as a wheel with ctrlKey too
+    wrap.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    // One finger or a mouse moves the diagram; two fingers zoom about their midpoint while moving it
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      // While the whole diagram shows, a mouse is left to select text
+      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    // The first resize notice comes just before painting, so settle the state once now for code
+    // (tests) that reads it without waiting for a paint
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}});</script><div class="dg-wrap" style="aspect-ratio: 1248 / 512; max-height: min(85vh, 630px)"><svg viewBox="0 0 1248 512" class="dg" role="img" aria-label="floe がページを配信する仕組み"><defs><marker id="dg1-9bf825_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-fill"></path></marker></defs><g class="frame"><rect x="272" y="108" width="256" height="300" rx="10"></rect><text x="284" y="126" text-anchor="start">保存先 ~/.local/share/floe</text></g><g class="frame accent"><rect x="624" y="20" width="280" height="476" rx="10"></rect><text x="636" y="38" text-anchor="start">ローカルサーバー 127.0.0.1:7325</text></g><g class="frame"><rect x="968" y="20" width="264" height="476" rx="10"></rect><text x="980" y="38" text-anchor="start">ブラウザ</text></g><g class="frame"><rect x="984" y="112" width="232" height="188" rx="10"></rect><text x="996" y="130" text-anchor="start">外枠 /a/&lt;slug&gt;/</text></g><path d="M224,92 H644" class="edge" marker-end="url(#dg1-9bf825_arrow)"></path><path d="M124,120 V180 H288" class="edge" marker-end="url(#dg1-9bf825_arrow)"></path><path d="M512,180 H644" class="edge" marker-end="url(#dg1-9bf825_arrow)"></path><path d="M512,268 H644" class="edge" marker-end="url(#dg1-9bf825_arrow)"></path><path d="M400,296 V328" class="edge dashed" marker-end="url(#dg1-9bf825_arrow)"></path><path d="M884,180 H1000" class="edge" marker-end="url(#dg1-9bf825_arrow)"></path><path d="M1000,268 H884" class="edge" marker-end="url(#dg1-9bf825_arrow)"></path><path d="M884,348 H1100 V300" class="edge" marker-end="url(#dg1-9bf825_arrow)"></path><path d="M884,364 H1070 V416" class="edge" marker-end="url(#dg1-9bf825_arrow)"></path><path d="M988,444 H884" class="edge" marker-start="url(#dg1-9bf825_arrow)" marker-end="url(#dg1-9bf825_arrow)"></path><g class="box accent"><rect x="24" y="64" width="200" height="56" rx="8"></rect><text x="124" y="83.5" text-anchor="middle" class="main code">floe publish</text><text x="124" y="100.5" text-anchor="middle" class="sub">エージェントが実行</text></g><g class="box"><rect x="288" y="152" width="224" height="56" rx="8"></rect><text x="400" y="171.5" text-anchor="middle" class="main code">&lt;slug&gt;/source-&lt;id&gt;/</text><text x="400" y="188.5" text-anchor="middle" class="sub">データファイル・画像</text></g><g class="box"><rect x="288" y="240" width="224" height="56" rx="8"></rect><text x="400" y="259.5" text-anchor="middle" class="main code">&lt;slug&gt;/meta.json</text><text x="400" y="276.5" text-anchor="middle" class="sub">タイトル・説明・リンク先</text></g><g class="box"><rect x="288" y="328" width="224" height="56" rx="8"></rect><text x="400" y="347.5" text-anchor="middle" class="main">手元の HTML</text><text x="400" y="364.5" text-anchor="middle" class="sub">--link で登録・毎回読む</text></g><g class="box"><rect x="644" y="64" width="240" height="56" rx="8"></rect><text x="764" y="83.5" text-anchor="middle" class="main code">/api/health</text><text x="764" y="100.5" text-anchor="middle" class="sub">起動と版を確認</text></g><g class="box"><rect x="644" y="152" width="240" height="56" rx="8"></rect><text x="764" y="171.5" text-anchor="middle" class="main code">/a/&lt;slug&gt;/?raw</text><text x="764" y="188.5" text-anchor="middle" class="sub">ページを返す（sandbox）</text></g><g class="box"><rect x="644" y="240" width="240" height="56" rx="8"></rect><text x="764" y="259.5" text-anchor="middle" class="main code">/api/events/&lt;slug&gt;</text><text x="764" y="276.5" text-anchor="middle" class="sub">変更を通知（SSE）</text></g><g class="box"><rect x="644" y="328" width="240" height="56" rx="8"></rect><text x="764" y="347.5" text-anchor="middle" class="main code">/ と /a/&lt;slug&gt;/</text><text x="764" y="364.5" text-anchor="middle" class="sub">管理画面と外枠（ui.html）</text></g><g class="box"><rect x="644" y="416" width="240" height="56" rx="8"></rect><text x="764" y="435.5" text-anchor="middle" class="main code">/api/artifacts</text><text x="764" y="452.5" text-anchor="middle" class="sub">一覧・編集・リンク登録</text></g><g class="box accent"><rect x="1000" y="152" width="200" height="132" rx="8"></rect><text x="1100" y="201" text-anchor="middle" class="main">ページ本体</text><text x="1100" y="218" text-anchor="middle" class="sub">?raw を読む iframe</text><text x="1100" y="235" text-anchor="middle" class="sub">sandbox・origin null</text></g><g class="box"><rect x="988" y="416" width="224" height="56" rx="8"></rect><text x="1100" y="435.5" text-anchor="middle" class="main">管理画面</text><text x="1100" y="452.5" text-anchor="middle" class="sub">127.0.0.1 の origin</text></g><rect x="397.8" y="83" width="72.4" height="18" class="label-bg"></rect><text x="434" y="92" text-anchor="middle" class="label">① 起動確認</text><rect x="173.4" y="171" width="53.2" height="18" class="label-bg"></rect><text x="200" y="180" text-anchor="middle" class="label">② 保存</text><rect x="551.4" y="171" width="53.2" height="18" class="label-bg"></rect><text x="578" y="180" text-anchor="middle" class="label">③ 読む</text><rect x="540.6" y="259" width="74.8" height="18" class="label-bg"></rect><text x="578" y="268" text-anchor="middle" class="label">④ 版を確認</text><rect x="390.6" y="303" width="38.8" height="18" class="label-bg"></rect><text x="410" y="312" text-anchor="middle" class="label">path</text><rect x="911.8" y="171" width="60.4" height="18" class="label-bg"></rect><text x="942" y="180" text-anchor="middle" class="label">③ 返す</text><rect x="908.2" y="259" width="67.6" height="18" class="label-bg"></rect><text x="942" y="268" text-anchor="middle" class="label">④ 購読</text><rect x="920.2" y="435" width="31.6" height="18" class="label-bg"></rect><text x="936" y="444" text-anchor="middle" class="label">API</text></svg></div><details class="dg-source"><summary>この図の spec</summary><pre><code># Architecture: where each piece runs. Nested frames separate the places, and the main flow&#39;s edges
+# are numbered (1 to 4) for a list under the diagram that explains each step.
+#
+# Grid: rows centred at y = 92 + 88n (boxes 56 tall, 32 apart). Columns: the agent, the store, the
+# server, the browser. Edges between boxes of one row are one horizontal line; an edge between rows
+# bends once.
+width: 1248
+height: 512
+title: { en: How floe serves a page, ja: &#34;floe がページを配信する仕組み&#34; }
+parts:
+  - frame: { x: 272, y: 108, w: 256, h: 300, label: { en: &#34;Store ~/.local/share/floe&#34;, ja: &#34;保存先 ~/.local/share/floe&#34; } }
+  - frame: { x: 624, y: 20, w: 280, h: 476, label: { en: &#34;Local server 127.0.0.1:7325&#34;, ja: &#34;ローカルサーバー 127.0.0.1:7325&#34; }, accent: true }
+  - frame: { x: 968, y: 20, w: 264, h: 476, label: { en: Browser, ja: &#34;ブラウザ&#34; } }
+  - frame: { x: 984, y: 112, w: 232, h: 188, label: { en: &#34;Frame /a/&lt;slug&gt;/&#34;, ja: &#34;外枠 /a/&lt;slug&gt;/&#34; } }
+  - box: { x: 24, y: 64, w: 200, h: 56, tone: accent, rows: [[floe publish, main code], { en: run by the agent, ja: &#34;エージェントが実行&#34; }] }
+  - box: { x: 288, y: 152, w: 224, h: 56, rows: [[&#34;&lt;slug&gt;/source-&lt;id&gt;/&#34;, main code], { en: &#34;data file, images&#34;, ja: &#34;データファイル・画像&#34; }] }
+  - box: { x: 288, y: 240, w: 224, h: 56, rows: [[&#34;&lt;slug&gt;/meta.json&#34;, main code], { en: &#34;title, description, link&#34;, ja: &#34;タイトル・説明・リンク先&#34; }] }
+  - box: { x: 288, y: 328, w: 224, h: 56, rows: [{ en: Linked HTML file, ja: &#34;手元の HTML&#34; }, { en: read on every request, ja: &#34;--link で登録・毎回読む&#34; }] }
+  - box: { x: 644, y: 64, w: 240, h: 56, rows: [[&#34;/api/health&#34;, main code], { en: &#34;is it up, which build&#34;, ja: &#34;起動と版を確認&#34; }] }
+  - box: { x: 644, y: 152, w: 240, h: 56, rows: [[&#34;/a/&lt;slug&gt;/?raw&#34;, main code], { en: &#34;the page, sandboxed&#34;, ja: &#34;ページを返す（sandbox）&#34; }] }
+  - box: { x: 644, y: 240, w: 240, h: 56, rows: [[&#34;/api/events/&lt;slug&gt;&#34;, main code], { en: change notices (SSE), ja: &#34;変更を通知（SSE）&#34; }] }
+  - box: { x: 644, y: 328, w: 240, h: 56, rows: [[{ en: &#34;/ and /a/&lt;slug&gt;/&#34;, ja: &#34;/ と /a/&lt;slug&gt;/&#34; }, main code], { en: manager and frame (ui.html), ja: &#34;管理画面と外枠（ui.html）&#34; }] }
+  - box: { x: 644, y: 416, w: 240, h: 56, rows: [[&#34;/api/artifacts&#34;, main code], { en: &#34;list, edit, register links&#34;, ja: &#34;一覧・編集・リンク登録&#34; }] }
+  - box: { x: 1000, y: 152, w: 200, h: 132, tone: accent, rows: [{ en: The page, ja: &#34;ページ本体&#34; }, { en: &#34;an iframe of ?raw&#34;, ja: &#34;?raw を読む iframe&#34; }, { en: &#34;sandboxed, origin null&#34;, ja: &#34;sandbox・origin null&#34; }] }
+  - box: { x: 988, y: 416, w: 224, h: 56, rows: [{ en: Management page, ja: &#34;管理画面&#34; }, { en: origin 127.0.0.1, ja: &#34;127.0.0.1 の origin&#34; }] }
+  - edge: { from: [224, 92], to: [644, 92], label: { en: &#34;1 health&#34;, ja: &#34;① 起動確認&#34; }, at: [434, 92] }
+  - edge: { from: [124, 120], via: [[124, 180]], to: [288, 180], label: { en: &#34;2 save&#34;, ja: &#34;② 保存&#34; }, at: [200, 180] }
+  - edge: { from: [512, 180], to: [644, 180], label: { en: &#34;3 read&#34;, ja: &#34;③ 読む&#34; }, at: [578, 180] }
+  - edge: { from: [512, 268], to: [644, 268], label: { en: &#34;4 version&#34;, ja: &#34;④ 版を確認&#34; }, at: [578, 268] }
+  - edge: { from: [400, 296], to: [400, 328], dashed: true, label: path, at: [410, 312] }
+  - edge: { from: [884, 180], to: [1000, 180], label: { en: &#34;3 serve&#34;, ja: &#34;③ 返す&#34; }, at: [942, 180] }
+  - edge: { from: [1000, 268], to: [884, 268], label: { en: &#34;4 listen&#34;, ja: &#34;④ 購読&#34; }, at: [942, 268] }
+  - edge: { from: [884, 348], via: [[1100, 348]], to: [1100, 300] }
+  - edge: { from: [884, 364], via: [[1070, 364]], to: [1070, 416] }
+  - edge: { from: [988, 444], to: [884, 444], start: arrow, label: API, at: [936, 444] }</code></pre></details></div>
+</section>
+<section>
+<h2 id="aws">aws</h2>
+<div data-floe-part="diagram"><script>(// Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
+// from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
+// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
+function zoomable(messages) {
+  const MAX = 4;
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const setup = (wrap) => {
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
+    const svg = wrap.querySelector('svg');
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
+    // diagram stays shown when the frame resizes
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
+    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    // Zooming out stops at the whole diagram or the actual size, whichever is smaller
+    const min = () => Math.min(fit(), 1);
+    const tools = document.createElement('div');
+    tools.className = 'dg-tools';
+    const hint = document.createElement('span');
+    hint.textContent = msg.diagram_zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
+      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      // Centre a direction the view is wider than the diagram in; otherwise keep the view inside it
+      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    // Screen coordinates as px from the top left inside the frame's border
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    // Scales by k about (ax, ay), in local coordinates, keeping the diagram point under it in place
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    // A plain wheel scrolls the page. A trackpad pinch arrives as a wheel with ctrlKey too
+    wrap.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    // One finger or a mouse moves the diagram; two fingers zoom about their midpoint while moving it
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      // While the whole diagram shows, a mouse is left to select text
+      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    // The first resize notice comes just before painting, so settle the state once now for code
+    // (tests) that reads it without waiting for a paint
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}});</script><div class="dg-wrap" style="aspect-ratio: 1000 / 330; max-height: min(85vh, 406px)"><svg viewBox="0 0 1000 330" class="dg" role="img" aria-label="エージェントが Amazon Bedrock を通して Claude を呼ぶ構成"><defs><marker id="dg2-ec986a_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-fill"></path></marker><image id="dg2-ec986a_icon-0" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjMDFhODhkIi8+PC9zdmc+Cg==" width="32" height="32"></image><image id="dg2-ec986a_icon-1" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjMDFhODhkIi8+PC9zdmc+Cg==" width="32" height="32"></image><image id="dg2-ec986a_icon-2" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjMDFhODhkIi8+PC9zdmc+Cg==" width="48" height="48"></image><image id="dg2-ec986a_icon-3" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjMDFhODhkIi8+PC9zdmc+Cg==" width="48" height="48"></image></defs><g class="frame"><rect x="16" y="60" width="260" height="200"></rect><text x="28" y="78" text-anchor="start">開発マシン</text></g><g class="frame grouped"><rect x="316" y="16" width="668" height="300"></rect><use href="#dg2-ec986a_icon-0" x="315" y="15"></use><text x="356" y="31" text-anchor="start">AWS Cloud</text></g><g class="frame grouped"><rect x="340" y="72" width="240" height="220"></rect><use href="#dg2-ec986a_icon-1" x="339" y="71"></use><text x="380" y="87" text-anchor="start">リージョン（AWS_REGION）</text></g><g class="frame"><rect x="620" y="72" width="344" height="220"></rect><text x="632" y="90" text-anchor="start">global 推論プロファイル</text></g><path d="M124,140 H436" class="edge" marker-end="url(#dg2-ec986a_arrow)"></path><path d="M484,140 H632" class="edge" marker-end="url(#dg2-ec986a_arrow)"></path><path d="M484,140 H600 V202 H632" class="edge" marker-end="url(#dg2-ec986a_arrow)"></path><path d="M484,140 H600 V264 H632" class="edge" marker-end="url(#dg2-ec986a_arrow)"></path><use href="#dg2-ec986a_icon-2" x="76" y="116"></use><use href="#dg2-ec986a_icon-3" x="436" y="116"></use><g class="box"><rect x="632" y="114" width="320" height="52" rx="8"></rect><text x="792" y="131.5" text-anchor="middle" class="main">Opus 5.5</text><text x="792" y="148.5" text-anchor="middle" class="sub code">global.anthropic.claude-opus-5-5</text></g><g class="box"><rect x="632" y="176" width="320" height="52" rx="8"></rect><text x="792" y="193.5" text-anchor="middle" class="main">Sonnet 5.5</text><text x="792" y="210.5" text-anchor="middle" class="sub code">global.anthropic.claude-sonnet-5-5</text></g><g class="box"><rect x="632" y="238" width="320" height="52" rx="8"></rect><text x="792" y="255.5" text-anchor="middle" class="main">Haiku 5.5</text><text x="792" y="272.5" text-anchor="middle" class="sub code">global.anthropic.claude-haiku-5-5</text></g><rect x="55.4" y="171" width="89.2" height="18" class="label-bg"></rect><text x="100" y="180" text-anchor="middle" class="label">Claude Code</text><rect x="33.8" y="193" width="132.4" height="18" class="label-bg"></rect><text x="100" y="202" text-anchor="middle" class="label">floe のページを書く</text><rect x="404.6" y="171" width="110.8" height="18" class="label-bg"></rect><text x="460" y="180" text-anchor="middle" class="label">Amazon Bedrock</text><rect x="133.8" y="131" width="132.4" height="18" class="label-bg"></rect><text x="200" y="140" text-anchor="middle" class="label">推論リクエスト</text></svg></div><details class="dg-source"><summary>この図の spec</summary><pre><code># AWS architecture: an agent that writes floe pages calls Claude through Amazon Bedrock. Group frames
+# (AWS Cloud, a Region) take their icon in the corner; a service is an icon with its name below.
+# Every frame of an AWS diagram has square corners. Find icon names with floe icons search &lt;word&gt;.
+#
+# Grid: icons are 48px and the flow runs along y = 140, through the icons&#39; middles. Contents of a
+# frame with an icon start 40 or more below its top. Edges go from the side of one icon to the side
+# of the next; edges that part from one point split on a vertical line between the frames.
+width: 1000
+height: 330
+title: { en: How an agent calls Claude through Amazon Bedrock, ja: &#34;エージェントが Amazon Bedrock を通して Claude を呼ぶ構成&#34; }
+parts:
+  - frame: { x: 16, y: 60, w: 260, h: 200, label: { en: Developer machine, ja: &#34;開発マシン&#34; }, square: true }
+  - frame: { x: 316, y: 16, w: 668, h: 300, label: AWS Cloud, icon: aws/group/aws-cloud-logo }
+  - frame: { x: 340, y: 72, w: 240, h: 220, label: { en: Region (AWS_REGION), ja: &#34;リージョン（AWS_REGION）&#34; }, icon: aws/group/region }
+  - frame: { x: 620, y: 72, w: 344, h: 220, label: { en: Global inference profile, ja: &#34;global 推論プロファイル&#34; }, square: true }
+  - icon: { x: 76, y: 116, icon: aws/res/client, label: Claude Code }
+  - label: { text: { en: writes floe pages, ja: &#34;floe のページを書く&#34; }, x: 100, y: 202 }
+  - icon: { x: 436, y: 116, icon: aws/amazon-bedrock, label: Amazon Bedrock }
+  - box: { x: 632, y: 114, w: 320, h: 52, rows: [Opus 5.5, [global.anthropic.claude-opus-5-5, sub code]] }
+  - box: { x: 632, y: 176, w: 320, h: 52, rows: [Sonnet 5.5, [global.anthropic.claude-sonnet-5-5, sub code]] }
+  - box: { x: 632, y: 238, w: 320, h: 52, rows: [Haiku 5.5, [global.anthropic.claude-haiku-5-5, sub code]] }
+  - edge: { from: [124, 140], to: [436, 140], label: { en: Inference request, ja: &#34;推論リクエスト&#34; }, at: [200, 140] }
+  - edge: { from: [484, 140], to: [632, 140] }
+  - edge: { from: [484, 140], via: [[600, 140], [600, 202]], to: [632, 202] }
+  - edge: { from: [484, 140], via: [[600, 140], [600, 264]], to: [632, 264] }</code></pre></details></div>
+</section>
+<section>
+<h2 id="class">class</h2>
+<div data-floe-part="diagram"><script>(// Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
+// from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
+// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
+function zoomable(messages) {
+  const MAX = 4;
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const setup = (wrap) => {
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
+    const svg = wrap.querySelector('svg');
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
+    // diagram stays shown when the frame resizes
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
+    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    // Zooming out stops at the whole diagram or the actual size, whichever is smaller
+    const min = () => Math.min(fit(), 1);
+    const tools = document.createElement('div');
+    tools.className = 'dg-tools';
+    const hint = document.createElement('span');
+    hint.textContent = msg.diagram_zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
+      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      // Centre a direction the view is wider than the diagram in; otherwise keep the view inside it
+      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    // Screen coordinates as px from the top left inside the frame's border
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    // Scales by k about (ax, ay), in local coordinates, keeping the diagram point under it in place
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    // A plain wheel scrolls the page. A trackpad pinch arrives as a wheel with ctrlKey too
+    wrap.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    // One finger or a mouse moves the diagram; two fingers zoom about their midpoint while moving it
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      // While the whole diagram shows, a mouse is left to select text
+      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    // The first resize notice comes just before painting, so settle the state once now for code
+    // (tests) that reads it without waiting for a paint
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}});</script><div class="dg-wrap" style="aspect-ratio: 1000 / 350; max-height: min(85vh, 431px)"><svg viewBox="0 0 1000 350" class="dg" role="img" aria-label="yamlpos パッケージの誤りの型"><defs><marker id="dg3-93095b_triangle" viewBox="0 0 14 14" refX="13" refY="7" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1,1 L13,7 L1,13 z" class="mk-hollow"></path></marker><marker id="dg3-93095b_diamond" viewBox="0 0 18 10" refX="17" refY="5" markerWidth="18" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1,5 L9,1 L17,5 L9,9 z" class="mk-fill"></path></marker><marker id="dg3-93095b_odiamond" viewBox="0 0 18 10" refX="17" refY="5" markerWidth="18" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1,5 L9,1 L17,5 L9,9 z" class="mk-hollow"></path></marker></defs><path d="M150,168 V123 H330 V78" class="edge" marker-end="url(#dg3-93095b_triangle)"></path><path d="M150,168 V123 H670 V78" class="edge" marker-end="url(#dg3-93095b_triangle)"></path><path d="M500,168 V123 H330 V78" class="edge" marker-end="url(#dg3-93095b_triangle)"></path><path d="M500,168 V123 H670 V78" class="edge" marker-end="url(#dg3-93095b_triangle)"></path><path d="M850,168 V123 H330 V78" class="edge" marker-end="url(#dg3-93095b_triangle)"></path><path d="M850,168 V123 H670 V78" class="edge" marker-end="url(#dg3-93095b_triangle)"></path><path d="M380,253 H270" class="edge" marker-start="url(#dg3-93095b_diamond)"></path><path d="M730,209 H620" class="edge" marker-start="url(#dg3-93095b_odiamond)"></path><g class="table"><rect x="210" y="20" width="240" height="58" rx="8" class="bg"></rect><path d="M210,50 V28 Q210,20 218,20 H442 Q450,20 450,28 V50 Z" class="head"></path><line x1="210" y1="50" x2="450" y2="50" class="sep"></line><text x="330" y="35" text-anchor="middle" class="main">error</text><text x="222" y="61" text-anchor="start" class="cell code">Error()</text><text x="438" y="61" text-anchor="end" class="type">string</text><rect x="210" y="20" width="240" height="58" rx="8" class="outline"></rect></g><g class="table"><rect x="550" y="20" width="240" height="58" rx="8" class="bg"></rect><path d="M550,50 V28 Q550,20 558,20 H782 Q790,20 790,28 V50 Z" class="head"></path><line x1="550" y1="50" x2="790" y2="50" class="sep"></line><text x="670" y="35" text-anchor="middle" class="main">i18n.Localizer</text><text x="562" y="61" text-anchor="start" class="cell code">Localize(c)</text><text x="778" y="61" text-anchor="end" class="type">string</text><rect x="550" y="20" width="240" height="58" rx="8" class="outline"></rect></g><g class="table accent"><rect x="30" y="168" width="240" height="155" rx="8" class="bg"></rect><path d="M30,198 V176 Q30,168 38,168 H262 Q270,168 270,176 V198 Z" class="head"></path><line x1="30" y1="198" x2="270" y2="198" class="sep"></line><text x="150" y="183" text-anchor="middle" class="main">usererr.Error</text><text x="42" y="209" text-anchor="start" class="cell code">Key</text><text x="258" y="209" text-anchor="end" class="type">string</text><text x="42" y="231" text-anchor="start" class="cell code">Args</text><text x="258" y="231" text-anchor="end" class="type">[]any</text><text x="42" y="253" text-anchor="start" class="cell code">Conflict</text><text x="258" y="253" text-anchor="end" class="type">bool</text><line x1="30" y1="268.5" x2="270" y2="268.5" class="sep"></line><text x="42" y="284" text-anchor="start" class="cell code">Error()</text><text x="258" y="284" text-anchor="end" class="type">string</text><text x="42" y="306" text-anchor="start" class="cell code">Localize(c)</text><text x="258" y="306" text-anchor="end" class="type">string</text><rect x="30" y="168" width="240" height="155" rx="8" class="outline"></rect></g><g class="table accent"><rect x="380" y="168" width="240" height="155" rx="8" class="bg"></rect><path d="M380,198 V176 Q380,168 388,168 H612 Q620,168 620,176 V198 Z" class="head"></path><line x1="380" y1="198" x2="620" y2="198" class="sep"></line><text x="500" y="183" text-anchor="middle" class="main">yamlpos.Error</text><text x="392" y="209" text-anchor="start" class="cell code">File</text><text x="608" y="209" text-anchor="end" class="type">string</text><text x="392" y="231" text-anchor="start" class="cell code">Pos</text><text x="608" y="231" text-anchor="end" class="type">Pos</text><text x="392" y="253" text-anchor="start" class="cell code">Err</text><text x="608" y="253" text-anchor="end" class="type">*usererr.Error</text><line x1="380" y1="268.5" x2="620" y2="268.5" class="sep"></line><text x="392" y="284" text-anchor="start" class="cell code">Error()</text><text x="608" y="284" text-anchor="end" class="type">string</text><text x="392" y="306" text-anchor="start" class="cell code">Localize(c)</text><text x="608" y="306" text-anchor="end" class="type">string</text><rect x="380" y="168" width="240" height="155" rx="8" class="outline"></rect></g><g class="table accent"><rect x="730" y="168" width="240" height="111" rx="8" class="bg"></rect><path d="M730,198 V176 Q730,168 738,168 H962 Q970,168 970,176 V198 Z" class="head"></path><line x1="730" y1="198" x2="970" y2="198" class="sep"></line><text x="850" y="183" text-anchor="middle" class="main">yamlpos.Problems</text><text x="742" y="209" text-anchor="start" class="cell code">要素</text><text x="958" y="209" text-anchor="end" class="type">*Error</text><line x1="730" y1="224.5" x2="970" y2="224.5" class="sep"></line><text x="742" y="240" text-anchor="start" class="cell code">Error()</text><text x="958" y="240" text-anchor="end" class="type">string</text><text x="742" y="262" text-anchor="start" class="cell code">Localize(c)</text><text x="958" y="262" text-anchor="end" class="type">string</text><rect x="730" y="168" width="240" height="111" rx="8" class="outline"></rect></g><rect x="309.2" y="232" width="31.6" height="18" class="label-bg"></rect><text x="325" y="241" text-anchor="middle" class="label">Err</text><rect x="652" y="188" width="46" height="18" class="label-bg"></rect><text x="675" y="197" text-anchor="middle" class="label">保持</text></svg></div><details class="dg-source"><summary>この図の spec</summary><pre><code># Class diagram: the error types of a mistake at a line and column (floe&#39;s yamlpos package). Interfaces sit on the top tier; the
+# types that implement them share one bent line (the triangle reads as implements), and a diamond
+# marks what a type holds. Each table lists only the members the diagram is about.
+#
+# Grid: table centres at x = 150, 500, 850 (tables 240 wide) and x = 330, 670 for the interfaces;
+# tiers start at y = 20 and 168, and the implements lines bend at y = 123, between the tiers.
+width: 1000
+height: 350
+title: { en: &#34;The error types of floe&#39;s yamlpos package&#34;, ja: &#34;yamlpos パッケージの誤りの型&#34; }
+parts:
+  - table: { x: 210, y: 20, w: 240, title: error, rows: [[Error(), string]] }
+  - table: { x: 550, y: 20, w: 240, title: i18n.Localizer, rows: [[Localize(c), string]] }
+  - table: { x: 30, y: 168, w: 240, title: usererr.Error, tone: accent, rows: [[Key, string], [Args, &#34;[]any&#34;], [Conflict, bool], &#34;---&#34;, [Error(), string], [Localize(c), string]] }
+  - table: { x: 380, y: 168, w: 240, title: yamlpos.Error, tone: accent, rows: [[File, string], [Pos, Pos], [Err, &#34;*usererr.Error&#34;], &#34;---&#34;, [Error(), string], [Localize(c), string]] }
+  - table: { x: 730, y: 168, w: 240, title: yamlpos.Problems, tone: accent, rows: [[{ en: elements, ja: &#34;要素&#34; }, &#34;*Error&#34;], &#34;---&#34;, [Error(), string], [Localize(c), string]] }
+  - edge: { from: [150, 168], via: [[150, 123], [330, 123]], to: [330, 78], end: triangle }
+  - edge: { from: [150, 168], via: [[150, 123], [670, 123]], to: [670, 78], end: triangle }
+  - edge: { from: [500, 168], via: [[500, 123], [330, 123]], to: [330, 78], end: triangle }
+  - edge: { from: [500, 168], via: [[500, 123], [670, 123]], to: [670, 78], end: triangle }
+  - edge: { from: [850, 168], via: [[850, 123], [330, 123]], to: [330, 78], end: triangle }
+  - edge: { from: [850, 168], via: [[850, 123], [670, 123]], to: [670, 78], end: triangle }
+  - edge: { from: [380, 253], to: [270, 253], start: diamond, end: none, label: Err, at: [325, 241] }
+  - edge: { from: [730, 209], to: [620, 209], start: odiamond, end: none, label: { en: holds, ja: &#34;保持&#34; }, at: [675, 197] }</code></pre></details></div>
+</section>
+<section>
+<h2 id="er">er</h2>
+<div data-floe-part="diagram"><script>(// Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
+// from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
+// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
+function zoomable(messages) {
+  const MAX = 4;
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const setup = (wrap) => {
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
+    const svg = wrap.querySelector('svg');
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
+    // diagram stays shown when the frame resizes
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
+    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    // Zooming out stops at the whole diagram or the actual size, whichever is smaller
+    const min = () => Math.min(fit(), 1);
+    const tools = document.createElement('div');
+    tools.className = 'dg-tools';
+    const hint = document.createElement('span');
+    hint.textContent = msg.diagram_zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
+      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      // Centre a direction the view is wider than the diagram in; otherwise keep the view inside it
+      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    // Screen coordinates as px from the top left inside the frame's border
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    // Scales by k about (ax, ay), in local coordinates, keeping the diagram point under it in place
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    // A plain wheel scrolls the page. A trackpad pinch arrives as a wheel with ctrlKey too
+    wrap.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    // One finger or a mouse moves the diagram; two fingers zoom about their midpoint while moving it
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      // While the whole diagram shows, a mouse is left to select text
+      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    // The first resize notice comes just before painting, so settle the state once now for code
+    // (tests) that reads it without waiting for a paint
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}});</script><div class="dg-wrap" style="aspect-ratio: 1060 / 300; max-height: min(85vh, 369px)"><svg viewBox="0 0 1060 300" class="dg" role="img" aria-label="floe が保存するデータ"><defs><marker id="dg4-8d898b_zero-one" viewBox="0 0 22 14" refX="22" refY="7" markerWidth="22" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><circle cx="6" cy="7" r="4" class="mk-hollow"></circle><path d="M15,1 V13" class="mk-line"></path></marker><marker id="dg4-8d898b_zero-many" viewBox="0 0 24 14" refX="24" refY="7" markerWidth="24" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><circle cx="5" cy="7" r="4" class="mk-hollow"></circle><path d="M10,7 L24,1 M10,7 L24,7 M10,7 L24,13" class="mk-line"></path></marker><marker id="dg4-8d898b_one" viewBox="0 0 14 14" refX="14" refY="7" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M6,1 V13 M10,1 V13" class="mk-line"></path></marker></defs><path d="M240,147 H380" class="edge" marker-start="url(#dg4-8d898b_zero-one)" marker-end="url(#dg4-8d898b_zero-many)"></path><path d="M240,169 H380" class="edge" marker-start="url(#dg4-8d898b_zero-one)" marker-end="url(#dg4-8d898b_zero-many)"></path><path d="M640,81 H780" class="edge" marker-start="url(#dg4-8d898b_one)" marker-end="url(#dg4-8d898b_zero-one)"></path><path d="M640,213 H780" class="edge" marker-start="url(#dg4-8d898b_one)" marker-end="url(#dg4-8d898b_zero-one)"></path><g class="table accent"><rect x="380" y="40" width="260" height="212" rx="8" class="bg"></rect><path d="M380,70 V48 Q380,40 388,40 H632 Q640,40 640,48 V70 Z" class="head"></path><line x1="380" y1="70" x2="640" y2="70" class="sep"></line><text x="510" y="55" text-anchor="middle" class="main">ページ（meta.json）</text><text x="392" y="81" text-anchor="start" class="cell code">slug</text><text x="628" y="81" text-anchor="end" class="type">PK</text><text x="392" y="103" text-anchor="start" class="cell code">title</text><text x="628" y="103" text-anchor="end" class="type">文字列</text><text x="392" y="125" text-anchor="start" class="cell code">description</text><text x="628" y="125" text-anchor="end" class="type">文字列</text><text x="392" y="147" text-anchor="start" class="cell code">project</text><text x="628" y="147" text-anchor="end" class="type">FK・表示用</text><text x="392" y="169" text-anchor="start" class="cell code">publishedFrom</text><text x="628" y="169" text-anchor="end" class="type">FK・持ち主</text><text x="392" y="191" text-anchor="start" class="cell code">favorite</text><text x="628" y="191" text-anchor="end" class="type">真偽値</text><text x="392" y="213" text-anchor="start" class="cell code">createdAt</text><text x="628" y="213" text-anchor="end" class="type">日時</text><text x="392" y="235" text-anchor="start" class="cell code">updatedAt</text><text x="628" y="235" text-anchor="end" class="type">日時</text><rect x="380" y="40" width="260" height="212" rx="8" class="outline"></rect></g><g class="table"><rect x="40" y="128" width="200" height="58" rx="8" class="bg"></rect><path d="M40,158 V136 Q40,128 48,128 H232 Q240,128 240,136 V158 Z" class="head"></path><line x1="40" y1="158" x2="240" y2="158" class="sep"></line><text x="140" y="143" text-anchor="middle" class="main">プロジェクト</text><text x="52" y="169" text-anchor="start" class="cell code">name</text><text x="228" y="169" text-anchor="end" class="type">リポジトリ名</text><rect x="40" y="128" width="200" height="58" rx="8" class="outline"></rect></g><g class="table"><rect x="780" y="40" width="240" height="80" rx="8" class="bg"></rect><path d="M780,70 V48 Q780,40 788,40 H1012 Q1020,40 1020,48 V70 Z" class="head"></path><line x1="780" y1="70" x2="1020" y2="70" class="sep"></line><text x="900" y="55" text-anchor="middle" class="main">保存したページ</text><text x="792" y="81" text-anchor="start" class="cell code">slug</text><text x="1008" y="81" text-anchor="end" class="type">PK・FK</text><text x="792" y="103" text-anchor="start" class="cell code">source</text><text x="1008" y="103" text-anchor="end" class="type">写しのディレクトリ</text><rect x="780" y="40" width="240" height="80" rx="8" class="outline"></rect></g><g class="table"><rect x="780" y="172" width="240" height="80" rx="8" class="bg"></rect><path d="M780,202 V180 Q780,172 788,172 H1012 Q1020,172 1020,180 V202 Z" class="head"></path><line x1="780" y1="202" x2="1020" y2="202" class="sep"></line><text x="900" y="187" text-anchor="middle" class="main">リンク</text><text x="792" y="213" text-anchor="start" class="cell code">slug</text><text x="1008" y="213" text-anchor="end" class="type">PK・FK</text><text x="792" y="235" text-anchor="start" class="cell code">path</text><text x="1008" y="235" text-anchor="end" class="type">実体のパス</text><rect x="780" y="172" width="240" height="80" rx="8" class="outline"></rect></g><rect x="287" y="138" width="46" height="18" class="label-bg"></rect><text x="310" y="147" text-anchor="middle" class="label">表示用</text><rect x="287" y="160" width="46" height="18" class="label-bg"></rect><text x="310" y="169" text-anchor="middle" class="label">持ち主</text><rect x="683.4" y="72" width="53.2" height="18" class="label-bg"></rect><text x="710" y="81" text-anchor="middle" class="label">保存時</text><rect x="683.4" y="204" width="53.2" height="18" class="label-bg"></rect><text x="710" y="213" text-anchor="middle" class="label">--link</text></svg></div><details class="dg-source"><summary>この図の spec</summary><pre><code># ER diagram: what floe stores for each page (meta.json). The main entity is in the middle, and each
+# relation is one horizontal line at the height of the row it joins.
+#
+# A row an edge joins has a name ({name, cells}), and the edge ends at it by that name, at the height of
+# the row: moving a table or a row moves the edge with it. An edge from no row starts at a point.
+# The ends read as how many of this side the other side has: zero-one, zero-many, one.
+width: 1060
+height: 300
+title: { en: What floe stores, ja: &#34;floe が保存するデータ&#34; }
+parts:
+  - table: { x: 380, y: 40, w: 260, title: { en: Page (meta.json), ja: &#34;ページ（meta.json）&#34; }, tone: accent, rows: [{ name: pageSlug, cells: [slug, PK] }, [title, { en: text, ja: &#34;文字列&#34; }], [description, { en: text, ja: &#34;文字列&#34; }], { name: project, cells: [project, { en: &#34;FK, shown&#34;, ja: &#34;FK・表示用&#34; }] }, { name: publishedFrom, cells: [publishedFrom, { en: &#34;FK, owner&#34;, ja: &#34;FK・持ち主&#34; }] }, [favorite, { en: bool, ja: &#34;真偽値&#34; }], [createdAt, { en: time, ja: &#34;日時&#34; }], [updatedAt, { en: time, ja: &#34;日時&#34; }]] }
+  - table: { x: 40, y: 128, w: 200, title: { en: Project, ja: &#34;プロジェクト&#34; }, rows: [[name, { en: repository, ja: &#34;リポジトリ名&#34; }]] }
+  - table: { x: 780, y: 40, w: 240, title: { en: Stored page, ja: &#34;保存したページ&#34; }, rows: [{ name: storedSlug, cells: [slug, { en: &#34;PK, FK&#34;, ja: &#34;PK・FK&#34; }] }, [source, { en: the copy, ja: &#34;写しのディレクトリ&#34; }]] }
+  - table: { x: 780, y: 172, w: 240, title: { en: Link, ja: &#34;リンク&#34; }, rows: [{ name: linkSlug, cells: [slug, { en: &#34;PK, FK&#34;, ja: &#34;PK・FK&#34; }] }, [path, { en: real path, ja: &#34;実体のパス&#34; }]] }
+  - edge: { from: [240, 147], to: project, start: zero-one, end: zero-many, label: { en: shown, ja: &#34;表示用&#34; } }
+  - edge: { from: [240, 169], to: publishedFrom, start: zero-one, end: zero-many, label: { en: owner, ja: &#34;持ち主&#34; } }
+  - edge: { from: pageSlug, to: storedSlug, start: one, end: zero-one, label: { en: stored, ja: &#34;保存時&#34; } }
+  - edge: { from: [640, 213], to: linkSlug, start: one, end: zero-one, label: &#34;--link&#34; }</code></pre></details></div>
+</section>
+<section>
+<h2 id="flow">flow</h2>
+<div data-floe-part="diagram"><script>(// Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
+// from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
+// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
+function zoomable(messages) {
+  const MAX = 4;
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const setup = (wrap) => {
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
+    const svg = wrap.querySelector('svg');
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
+    // diagram stays shown when the frame resizes
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
+    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    // Zooming out stops at the whole diagram or the actual size, whichever is smaller
+    const min = () => Math.min(fit(), 1);
+    const tools = document.createElement('div');
+    tools.className = 'dg-tools';
+    const hint = document.createElement('span');
+    hint.textContent = msg.diagram_zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
+      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      // Centre a direction the view is wider than the diagram in; otherwise keep the view inside it
+      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    // Screen coordinates as px from the top left inside the frame's border
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    // Scales by k about (ax, ay), in local coordinates, keeping the diagram point under it in place
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    // A plain wheel scrolls the page. A trackpad pinch arrives as a wheel with ctrlKey too
+    wrap.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    // One finger or a mouse moves the diagram; two fingers zoom about their midpoint while moving it
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      // While the whole diagram shows, a mouse is left to select text
+      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    // The first resize notice comes just before painting, so settle the state once now for code
+    // (tests) that reads it without waiting for a paint
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}});</script><div class="dg-wrap" style="aspect-ratio: 860 / 986; max-height: min(85vh, 1214px)"><svg viewBox="0 0 860 986" class="dg" role="img" aria-label="floe publish の検査"><defs><marker id="dg5-f60057_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-fill"></path></marker></defs><path d="M300,60 V90" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M300,142 V166" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M300,218 V242" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M300,294 V318" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M300,370 V394" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M300,446 V470" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M300,522 V546" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M300,598 V622" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M300,674 V698" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M300,750 V774" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M300,826 V850" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M300,902 V926" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M130,268 H90 V496 H130" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M470,192 H540" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M470,344 H540" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M470,420 H540" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M470,496 H540" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M470,572 H540" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M470,648 H540" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><path d="M470,724 H540" class="edge" marker-end="url(#dg5-f60057_arrow)"></path><g class="box accent"><rect x="200" y="20" width="200" height="40" rx="20"></rect><text x="300" y="40" text-anchor="middle" class="main code">floe publish &lt;file&gt;</text></g><g class="box"><rect x="130" y="90" width="340" height="52" rx="8"></rect><text x="300" y="116" text-anchor="middle" class="main">リンクの symlink を実体のパスに解決</text></g><g class="box"><path d="M148,166 H452 L470,192 L452,218 H148 L130,192 Z"></path><text x="300" y="192" text-anchor="middle" class="main">データファイルか、リンクする HTML か</text></g><g class="box"><path d="M148,242 H452 L470,268 L452,294 H148 L130,268 Z"></path><text x="300" y="268" text-anchor="middle" class="main">--link で登録するか</text></g><g class="box"><path d="M148,318 H452 L470,344 L452,370 H148 L130,344 Z"></path><text x="300" y="344" text-anchor="middle" class="main">home 直下の隠しディレクトリの中か</text></g><g class="box"><path d="M148,394 H452 L470,420 L452,446 H148 L130,420 Z"></path><text x="300" y="420" text-anchor="middle" class="main">/ か home の直下にあるか</text></g><g class="box"><rect x="130" y="470" width="340" height="52" rx="8"></rect><text x="300" y="487.5" text-anchor="middle" class="main">データファイルと画像を検査</text><text x="300" y="504.5" text-anchor="middle" class="sub">リンクした HTML はそのまま表示</text></g><g class="box"><path d="M148,546 H452 L470,572 L452,598 H148 L130,572 Z"></path><text x="300" y="572" text-anchor="middle" class="main">slug は英小文字・数字・ハイフンか</text></g><g class="box"><path d="M148,622 H452 L470,648 L452,674 H148 L130,648 Z"></path><text x="300" y="648" text-anchor="middle" class="main">slug が別の種類で使われているか</text></g><g class="box"><path d="M148,698 H452 L470,724 L452,750 H148 L130,724 Z"></path><text x="300" y="724" text-anchor="middle" class="main">別の持ち主で --force なしか</text></g><g class="box"><rect x="130" y="774" width="340" height="52" rx="8"></rect><text x="300" y="800" text-anchor="middle" class="main">サーバーを確かめ、必要なら起動</text></g><g class="box"><rect x="130" y="850" width="340" height="52" rx="8"></rect><text x="300" y="867.5" text-anchor="middle" class="main">データファイルと画像の写しを保存</text><text x="300" y="884.5" text-anchor="middle" class="sub">リンクは meta.json だけ</text></g><g class="box good"><rect x="200" y="926" width="200" height="40" rx="20"></rect><text x="300" y="946" text-anchor="middle" class="main">URL を出力</text></g><g class="box bad"><rect x="540" y="174" width="300" height="36" rx="18"></rect><text x="690" y="192" text-anchor="middle" class="sub">データファイルにするか、HTML をリンク</text></g><g class="box bad"><rect x="540" y="326" width="300" height="36" rx="18"></rect><text x="690" y="344" text-anchor="middle" class="sub">設定や鍵の置き場は公開しない</text></g><g class="box bad"><rect x="540" y="402" width="300" height="36" rx="18"></rect><text x="690" y="420" text-anchor="middle" class="sub">ディレクトリ全体が公開されてしまう</text></g><g class="box bad"><rect x="540" y="478" width="300" height="36" rx="18"></rect><text x="690" y="496" text-anchor="middle" class="sub">誤りをすべて行と列で示す</text></g><g class="box bad"><rect x="540" y="554" width="300" height="36" rx="18"></rect><text x="690" y="572" text-anchor="middle" class="sub">URL に使えない</text></g><g class="box bad"><rect x="540" y="630" width="300" height="36" rx="18"></rect><text x="690" y="648" text-anchor="middle" class="sub">先に消すか、別の slug にする</text></g><g class="box bad"><rect x="540" y="706" width="300" height="36" rx="18"></rect><text x="690" y="724" text-anchor="middle" class="sub">別の slug にするか、--force を付ける</text></g><rect x="307" y="221" width="34" height="18" class="label-bg"></rect><text x="312" y="230" text-anchor="start" class="label">はい</text><rect x="307" y="297" width="34" height="18" class="label-bg"></rect><text x="312" y="306" text-anchor="start" class="label">はい</text><rect x="307" y="373" width="46" height="18" class="label-bg"></rect><text x="312" y="382" text-anchor="start" class="label">いいえ</text><rect x="307" y="449" width="46" height="18" class="label-bg"></rect><text x="312" y="458" text-anchor="start" class="label">いいえ</text><rect x="307" y="601" width="34" height="18" class="label-bg"></rect><text x="312" y="610" text-anchor="start" class="label">はい</text><rect x="307" y="677" width="46" height="18" class="label-bg"></rect><text x="312" y="686" text-anchor="start" class="label">いいえ</text><rect x="307" y="753" width="46" height="18" class="label-bg"></rect><text x="312" y="762" text-anchor="start" class="label">いいえ</text><rect x="83" y="245" width="46" height="18" class="label-bg"></rect><text x="106" y="254" text-anchor="middle" class="label">いいえ</text><rect x="482" y="169" width="46" height="18" class="label-bg"></rect><text x="505" y="178" text-anchor="middle" class="label">いいえ</text><rect x="488" y="321" width="34" height="18" class="label-bg"></rect><text x="505" y="330" text-anchor="middle" class="label">はい</text><rect x="488" y="397" width="34" height="18" class="label-bg"></rect><text x="505" y="406" text-anchor="middle" class="label">はい</text><rect x="471.2" y="473" width="67.6" height="18" class="label-bg"></rect><text x="505" y="482" text-anchor="middle" class="label">誤り</text><rect x="482" y="549" width="46" height="18" class="label-bg"></rect><text x="505" y="558" text-anchor="middle" class="label">いいえ</text><rect x="488" y="625" width="34" height="18" class="label-bg"></rect><text x="505" y="634" text-anchor="middle" class="label">はい</text><rect x="488" y="701" width="34" height="18" class="label-bg"></rect><text x="505" y="710" text-anchor="middle" class="label">はい</text></svg></div><details class="dg-source"><summary>この図の spec</summary><pre><code># Decision flow: what floe publish checks. The main path runs down one column, a refusal leaves to
+# the right with its reason, and a path that skips checks goes round on the left.
+#
+# Grid: the main path is centred at x = 300, steps at y = 40 + 76n (boxes 52 tall, 24 apart).
+# Reasons start at x = 540. The answer that stays on the main path is a label right of the line.
+width: 860
+height: 986
+title: { en: What floe publish checks, ja: &#34;floe publish の検査&#34; }
+parts:
+  - box: { x: 200, y: 20, w: 200, h: 40, tone: accent, shape: pill, rows: [[&#34;floe publish &lt;file&gt;&#34;, main code]] }
+  - box: { x: 130, y: 90, w: 340, h: 52, rows: [{ en: Resolve a link to its real path, ja: &#34;リンクの symlink を実体のパスに解決&#34; }] }
+  - box: { x: 130, y: 166, w: 340, h: 52, shape: hex, rows: [{ en: &#34;A data file, or linked HTML?&#34;, ja: &#34;データファイルか、リンクする HTML か&#34; }] }
+  - box: { x: 130, y: 242, w: 340, h: 52, shape: hex, rows: [{ en: &#34;Linked with --link?&#34;, ja: &#34;--link で登録するか&#34; }] }
+  - box: { x: 130, y: 318, w: 340, h: 52, shape: hex, rows: [{ en: &#34;In a hidden directory of home?&#34;, ja: &#34;home 直下の隠しディレクトリの中か&#34; }] }
+  - box: { x: 130, y: 394, w: 340, h: 52, shape: hex, rows: [{ en: &#34;Right under / or your home?&#34;, ja: &#34;/ か home の直下にあるか&#34; }] }
+  - box: { x: 130, y: 470, w: 340, h: 52, rows: [{ en: Check the data file and its images, ja: &#34;データファイルと画像を検査&#34; }, [{ en: a linked HTML file is shown as it is, ja: &#34;リンクした HTML はそのまま表示&#34; }, sub]] }
+  - box: { x: 130, y: 546, w: 340, h: 52, shape: hex, rows: [{ en: &#34;Slug of a-z, 0-9 and hyphens?&#34;, ja: &#34;slug は英小文字・数字・ハイフンか&#34; }] }
+  - box: { x: 130, y: 622, w: 340, h: 52, shape: hex, rows: [{ en: &#34;Slug taken by the other kind?&#34;, ja: &#34;slug が別の種類で使われているか&#34; }] }
+  - box: { x: 130, y: 698, w: 340, h: 52, shape: hex, rows: [{ en: &#34;Another owner, without --force?&#34;, ja: &#34;別の持ち主で --force なしか&#34; }] }
+  - box: { x: 130, y: 774, w: 340, h: 52, rows: [{ en: &#34;Check the server, start it if needed&#34;, ja: &#34;サーバーを確かめ、必要なら起動&#34; }] }
+  - box: { x: 130, y: 850, w: 340, h: 52, rows: [{ en: Save the data file and its images, ja: &#34;データファイルと画像の写しを保存&#34; }, [{ en: a link keeps only meta.json, ja: &#34;リンクは meta.json だけ&#34; }, sub]] }
+  - box: { x: 200, y: 926, w: 200, h: 40, tone: good, shape: pill, rows: [{ en: Print the URL, ja: &#34;URL を出力&#34; }] }
+  - edge: { from: [300, 60], to: [300, 90] }
+  - edge: { from: [300, 142], to: [300, 166] }
+  - edge: { from: [300, 218], to: [300, 242] }
+  - label: { text: { en: &#34;yes&#34;, ja: &#34;はい&#34; }, x: 312, y: 230, anchor: start }
+  - edge: { from: [300, 294], to: [300, 318] }
+  - label: { text: { en: &#34;yes&#34;, ja: &#34;はい&#34; }, x: 312, y: 306, anchor: start }
+  - edge: { from: [300, 370], to: [300, 394] }
+  - label: { text: { en: &#34;no&#34;, ja: &#34;いいえ&#34; }, x: 312, y: 382, anchor: start }
+  - edge: { from: [300, 446], to: [300, 470] }
+  - label: { text: { en: &#34;no&#34;, ja: &#34;いいえ&#34; }, x: 312, y: 458, anchor: start }
+  - edge: { from: [300, 522], to: [300, 546] }
+  - edge: { from: [300, 598], to: [300, 622] }
+  - label: { text: { en: &#34;yes&#34;, ja: &#34;はい&#34; }, x: 312, y: 610, anchor: start }
+  - edge: { from: [300, 674], to: [300, 698] }
+  - label: { text: { en: &#34;no&#34;, ja: &#34;いいえ&#34; }, x: 312, y: 686, anchor: start }
+  - edge: { from: [300, 750], to: [300, 774] }
+  - label: { text: { en: &#34;no&#34;, ja: &#34;いいえ&#34; }, x: 312, y: 762, anchor: start }
+  - edge: { from: [300, 826], to: [300, 850] }
+  - edge: { from: [300, 902], to: [300, 926] }
+  - edge: { from: [130, 268], via: [[90, 268], [90, 496]], to: [130, 496], label: { en: &#34;no&#34;, ja: &#34;いいえ&#34; }, at: [106, 254] }
+  - box: { x: 540, y: 174, w: 300, h: 36, tone: bad, shape: pill, rows: [[{ en: &#34;Publish a data file, or link HTML&#34;, ja: &#34;データファイルにするか、HTML をリンク&#34; }, sub]] }
+  - edge: { from: [470, 192], to: [540, 192], label: { en: &#34;no&#34;, ja: &#34;いいえ&#34; }, at: [505, 178] }
+  - box: { x: 540, y: 326, w: 300, h: 36, tone: bad, shape: pill, rows: [[{ en: Settings and keys live there, ja: &#34;設定や鍵の置き場は公開しない&#34; }, sub]] }
+  - edge: { from: [470, 344], to: [540, 344], label: { en: &#34;yes&#34;, ja: &#34;はい&#34; }, at: [505, 330] }
+  - box: { x: 540, y: 402, w: 300, h: 36, tone: bad, shape: pill, rows: [[{ en: The whole directory would be served, ja: &#34;ディレクトリ全体が公開されてしまう&#34; }, sub]] }
+  - edge: { from: [470, 420], to: [540, 420], label: { en: &#34;yes&#34;, ja: &#34;はい&#34; }, at: [505, 406] }
+  - box: { x: 540, y: 478, w: 300, h: 36, tone: bad, shape: pill, rows: [[{ en: Each mistake at its line and column, ja: &#34;誤りをすべて行と列で示す&#34; }, sub]] }
+  - edge: { from: [470, 496], to: [540, 496], label: { en: mistakes, ja: &#34;誤り&#34; }, at: [505, 482] }
+  - box: { x: 540, y: 554, w: 300, h: 36, tone: bad, shape: pill, rows: [[{ en: Not usable in a URL, ja: &#34;URL に使えない&#34; }, sub]] }
+  - edge: { from: [470, 572], to: [540, 572], label: { en: &#34;no&#34;, ja: &#34;いいえ&#34; }, at: [505, 558] }
+  - box: { x: 540, y: 630, w: 300, h: 36, tone: bad, shape: pill, rows: [[{ en: &#34;Remove it first, or use another slug&#34;, ja: &#34;先に消すか、別の slug にする&#34; }, sub]] }
+  - edge: { from: [470, 648], to: [540, 648], label: { en: &#34;yes&#34;, ja: &#34;はい&#34; }, at: [505, 634] }
+  - box: { x: 540, y: 706, w: 300, h: 36, tone: bad, shape: pill, rows: [[{ en: &#34;Use another slug, or add --force&#34;, ja: &#34;別の slug にするか、--force を付ける&#34; }, sub]] }
+  - edge: { from: [470, 724], to: [540, 724], label: { en: &#34;yes&#34;, ja: &#34;はい&#34; }, at: [505, 710] }</code></pre></details></div>
+</section>
+<section>
+<h2 id="git">git</h2>
+<div data-floe-part="diagram"><script>(// Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
+// from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
+// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
+function zoomable(messages) {
+  const MAX = 4;
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const setup = (wrap) => {
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
+    const svg = wrap.querySelector('svg');
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
+    // diagram stays shown when the frame resizes
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
+    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    // Zooming out stops at the whole diagram or the actual size, whichever is smaller
+    const min = () => Math.min(fit(), 1);
+    const tools = document.createElement('div');
+    tools.className = 'dg-tools';
+    const hint = document.createElement('span');
+    hint.textContent = msg.diagram_zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
+      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      // Centre a direction the view is wider than the diagram in; otherwise keep the view inside it
+      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    // Screen coordinates as px from the top left inside the frame's border
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    // Scales by k about (ax, ay), in local coordinates, keeping the diagram point under it in place
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    // A plain wheel scrolls the page. A trackpad pinch arrives as a wheel with ctrlKey too
+    wrap.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    // One finger or a mouse moves the diagram; two fingers zoom about their midpoint while moving it
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      // While the whole diagram shows, a mouse is left to select text
+      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    // The first resize notice comes just before painting, so settle the state once now for code
+    // (tests) that reads it without waiting for a paint
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}});</script><div class="dg-wrap" style="aspect-ratio: 860 / 260; max-height: min(85vh, 320px)"><svg viewBox="0 0 860 260" class="dg" role="img" aria-label="フェーズ 2 の積み重ねたブランチ"><defs></defs><path d="M112,50 H830" class="edge bold accent"></path><path d="M270,50 L340,110 L410,50" class="edge good"></path><path d="M410,50 L480,170" class="edge"></path><path d="M480,170 L620,50" class="edge dashed"></path><path d="M480,170 L550,230 H620" class="edge"></path><path d="M620,230 L760,50" class="edge dashed"></path><g class="box accent"><rect x="15.3" y="35" width="96.7" height="30" rx="15"></rect><text x="63.65" y="50" text-anchor="middle" class="main code">develop</text></g><g class="box good"><rect x="114" y="95" width="202" height="30" rx="15"></rect><text x="215" y="110" text-anchor="middle" class="main code">feature/diagram-spec</text></g><g class="box"><rect x="245.9" y="155" width="210.1" height="30" rx="15"></rect><text x="350.95" y="170" text-anchor="middle" class="main code">feature/diagram-check</text></g><g class="box"><rect x="297.8" y="215" width="218.2" height="30" rx="15"></rect><text x="406.9" y="230" text-anchor="middle" class="main code">feature/diagram-render</text></g><circle cx="200" cy="50" r="7" class="dot accent"></circle><circle cx="270" cy="50" r="7" class="dot accent"></circle><circle cx="410" cy="50" r="7" class="dot accent"></circle><circle cx="620" cy="50" r="7" class="dot accent hollow"></circle><circle cx="760" cy="50" r="7" class="dot accent hollow"></circle><circle cx="340" cy="110" r="7" class="dot good"></circle><circle cx="480" cy="170" r="7" class="dot"></circle><circle cx="550" cy="230" r="7" class="dot"></circle><circle cx="620" cy="230" r="7" class="dot"></circle><rect x="184.2" y="21" width="31.6" height="18" class="label-bg"></rect><text x="200" y="30" text-anchor="middle" class="label">#11</text><rect x="254.2" y="21" width="31.6" height="18" class="label-bg"></rect><text x="270" y="30" text-anchor="middle" class="label">#12</text><rect x="394.2" y="21" width="31.6" height="18" class="label-bg"></rect><text x="410" y="30" text-anchor="middle" class="label">#13</text><rect x="568.2" y="21" width="103.6" height="18" class="label-bg"></rect><text x="620" y="30" text-anchor="middle" class="label">#14 レビュー中</text><rect x="715.4" y="21" width="89.2" height="18" class="label-bg"></rect><text x="760" y="30" text-anchor="middle" class="label">#15 積み重ね</text></svg></div><details class="dg-source"><summary>この図の spec</summary><pre><code># Git branches: floe&#39;s diagram work, one PR stacked on another. Across is the order of commits; each
+# branch has a lane. A branch leaves and joins develop with one slanted line; a dashed one is not
+# merged yet, and a hollow dot is a PR in review.
+#
+# Grid: lanes at y = 50, 110, 170, 230 and commits every 70 from x = 200. A name tag (a pill) ends
+# left of where its branch leaves; its width is the name&#39;s (13px code, about 8.1px a letter) + 40.
+width: 860
+height: 260
+title: { en: &#34;Stacked branches of floe&#39;s diagram work&#34;, ja: &#34;フェーズ 2 の積み重ねたブランチ&#34; }
+parts:
+  - box: { x: 15.3, y: 35, w: 96.7, h: 30, tone: accent, shape: pill, rows: [[develop, main code]] }
+  - box: { x: 114, y: 95, w: 202, h: 30, tone: good, shape: pill, rows: [[feature/diagram-spec, main code]] }
+  - box: { x: 245.9, y: 155, w: 210.1, h: 30, shape: pill, rows: [[feature/diagram-check, main code]] }
+  - box: { x: 297.8, y: 215, w: 218.2, h: 30, shape: pill, rows: [[feature/diagram-render, main code]] }
+  - edge: { from: [112, 50], to: [830, 50], bold: true, tone: accent, end: none }
+  - edge: { from: [270, 50], via: [[340, 110]], to: [410, 50], straight: true, tone: good, end: none }
+  - edge: { from: [410, 50], to: [480, 170], straight: true, end: none }
+  - edge: { from: [480, 170], to: [620, 50], straight: true, dashed: true, end: none }
+  - edge: { from: [480, 170], via: [[550, 230]], to: [620, 230], straight: true, end: none }
+  - edge: { from: [620, 230], to: [760, 50], straight: true, dashed: true, end: none }
+  - dot: { cx: 200, cy: 50, tone: accent }
+  - dot: { cx: 270, cy: 50, tone: accent }
+  - dot: { cx: 410, cy: 50, tone: accent }
+  - dot: { cx: 620, cy: 50, tone: accent, hollow: true }
+  - dot: { cx: 760, cy: 50, tone: accent, hollow: true }
+  - dot: { cx: 340, cy: 110, tone: good }
+  - dot: { cx: 480, cy: 170 }
+  - dot: { cx: 550, cy: 230 }
+  - dot: { cx: 620, cy: 230 }
+  - label: { text: &#34;#11&#34;, x: 200, y: 30 }
+  - label: { text: &#34;#12&#34;, x: 270, y: 30 }
+  - label: { text: &#34;#13&#34;, x: 410, y: 30 }
+  - label: { text: { en: &#34;#14 in review&#34;, ja: &#34;#14 レビュー中&#34; }, x: 620, y: 30 }
+  - label: { text: { en: &#34;#15 stacked&#34;, ja: &#34;#15 積み重ね&#34; }, x: 760, y: 30 }</code></pre></details></div>
+</section>
+<section>
+<h2 id="sequence">sequence</h2>
+<div data-floe-part="diagram"><script>(// Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
+// from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
+// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
+function zoomable(messages) {
+  const MAX = 4;
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const setup = (wrap) => {
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
+    const svg = wrap.querySelector('svg');
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
+    // diagram stays shown when the frame resizes
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
+    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    // Zooming out stops at the whole diagram or the actual size, whichever is smaller
+    const min = () => Math.min(fit(), 1);
+    const tools = document.createElement('div');
+    tools.className = 'dg-tools';
+    const hint = document.createElement('span');
+    hint.textContent = msg.diagram_zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
+      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      // Centre a direction the view is wider than the diagram in; otherwise keep the view inside it
+      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    // Screen coordinates as px from the top left inside the frame's border
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    // Scales by k about (ax, ay), in local coordinates, keeping the diagram point under it in place
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    // A plain wheel scrolls the page. A trackpad pinch arrives as a wheel with ctrlKey too
+    wrap.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    // One finger or a mouse moves the diagram; two fingers zoom about their midpoint while moving it
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      // While the whole diagram shows, a mouse is left to select text
+      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    // The first resize notice comes just before painting, so settle the state once now for code
+    // (tests) that reads it without waiting for a paint
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}});</script><div class="dg-wrap" style="aspect-ratio: 1040 / 700; max-height: min(85vh, 862px)"><svg viewBox="0 0 1040 700" class="dg" role="img" aria-label="floe publish から再読み込みまで"><defs><marker id="dg7-cd2f92_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-fill"></path></marker></defs><line x1="130" y1="64" x2="130" y2="688" class="lifeline"></line><line x1="390" y1="64" x2="390" y2="688" class="lifeline"></line><line x1="650" y1="64" x2="650" y2="688" class="lifeline"></line><line x1="910" y1="64" x2="910" y2="688" class="lifeline"></line><rect x="644" y="420" width="12" height="190" class="band"></rect><path d="M130,104 H650" class="edge" marker-end="url(#dg7-cd2f92_arrow)"></path><path d="M130,144 H650" class="edge" marker-end="url(#dg7-cd2f92_arrow)"></path><path d="M650,184 H130" class="edge dashed" marker-end="url(#dg7-cd2f92_arrow)"></path><path d="M130,224 H390" class="edge" marker-end="url(#dg7-cd2f92_arrow)"></path><path d="M130,264 H910" class="edge" marker-end="url(#dg7-cd2f92_arrow)"></path><path d="M910,304 H650" class="edge" marker-end="url(#dg7-cd2f92_arrow)"></path><path d="M650,344 H390" class="edge" marker-end="url(#dg7-cd2f92_arrow)"></path><path d="M650,384 H910" class="edge dashed" marker-end="url(#dg7-cd2f92_arrow)"></path><path d="M910,424 H656" class="edge" marker-end="url(#dg7-cd2f92_arrow)"></path><line x1="16" y1="500" x2="1024" y2="500" class="divider"></line><path d="M130,544 H390" class="edge" marker-end="url(#dg7-cd2f92_arrow)"></path><path d="M644,584 H390" class="edge" marker-end="url(#dg7-cd2f92_arrow)"></path><path d="M650,624 H910" class="edge dashed" marker-end="url(#dg7-cd2f92_arrow)"></path><path d="M910,648 H950 V676 H910" class="edge" marker-end="url(#dg7-cd2f92_arrow)"></path><g class="box accent"><rect x="15" y="12" width="230" height="52" rx="8"></rect><text x="130" y="29.5" text-anchor="middle" class="main">エージェント</text><text x="130" y="46.5" text-anchor="middle" class="sub code">floe publish</text></g><g class="box accent"><rect x="275" y="12" width="230" height="52" rx="8"></rect><text x="390" y="29.5" text-anchor="middle" class="main">保存先</text><text x="390" y="46.5" text-anchor="middle" class="sub code">~/.local/share/floe</text></g><g class="box accent"><rect x="535" y="12" width="230" height="52" rx="8"></rect><text x="650" y="29.5" text-anchor="middle" class="main">サーバー</text><text x="650" y="46.5" text-anchor="middle" class="sub code">floe serve</text></g><g class="box accent"><rect x="795" y="12" width="230" height="52" rx="8"></rect><text x="910" y="29.5" text-anchor="middle" class="main">ブラウザ</text><text x="910" y="46.5" text-anchor="middle" class="sub">ページのタブ</text></g><rect x="331" y="81" width="118" height="18" class="label-bg"></rect><text x="390" y="90" text-anchor="middle" class="label">GET /api/health</text><rect x="266.2" y="121" width="247.6" height="18" class="label-bg"></rect><text x="390" y="130" text-anchor="middle" class="label">止まっていれば floe serve を起動</text><rect x="295" y="161" width="190" height="18" class="label-bg"></rect><text x="390" y="170" text-anchor="middle" class="label">health が応答するまで待つ</text><rect x="154.2" y="201" width="211.6" height="18" class="label-bg"></rect><text x="260" y="210" text-anchor="middle" class="label">写しと meta.json を書く</text><rect x="407" y="241" width="226" height="18" class="label-bg"></rect><text x="520" y="250" text-anchor="middle" class="label">新しい slug ならブラウザで開く</text><rect x="710.2" y="281" width="139.6" height="18" class="label-bg"></rect><text x="780" y="290" text-anchor="middle" class="label">GET /a/&lt;slug&gt;/?raw</text><rect x="500.6" y="321" width="38.8" height="18" class="label-bg"></rect><text x="520" y="330" text-anchor="middle" class="label">読む</text><rect x="689.8" y="361" width="180.4" height="18" class="label-bg"></rect><text x="780" y="370" text-anchor="middle" class="label">HTML + 再読み込みスクリプト</text><rect x="681.4" y="401" width="197.2" height="18" class="label-bg"></rect><text x="780" y="410" text-anchor="middle" class="label">EventSource ?since=版</text><rect x="659" y="461" width="218.8" height="18" class="label-bg"></rect><text x="664" y="470" text-anchor="start" class="label">1 秒ごとに版を比べる</text><rect x="417.8" y="491" width="204.4" height="18" class="label-bg"></rect><text x="520" y="500" text-anchor="middle" class="label">同じ slug で公開し直す</text><rect x="154.2" y="521" width="211.6" height="18" class="label-bg"></rect><text x="260" y="530" text-anchor="middle" class="label">書き直す（updatedAt が進む）</text><rect x="428.6" y="561" width="182.8" height="18" class="label-bg"></rect><text x="520" y="570" text-anchor="middle" class="label">stat で新しい版を見つける</text><rect x="728.2" y="601" width="103.6" height="18" class="label-bg"></rect><text x="780" y="610" text-anchor="middle" class="label">event: reload</text><rect x="825.8" y="653" width="132.4" height="18" class="label-bg"></rect><text x="892" y="662" text-anchor="middle" class="label">location.reload()</text></svg></div><details class="dg-source"><summary>この図の spec</summary><pre><code># Sequence diagram: from floe publish to the open tab reloading. Participants stand in evenly spaced
+# columns and time runs down. Answers are dashed, labels sit above their line, and a divider with a
+# label marks a change of scene.
+#
+# Grid: columns 260 apart, a message every 40. Labels are 14 above their line. The band (raw) marks
+# where the server keeps comparing versions; a message to the server stops at the band&#39;s edge.
+width: 1040
+height: 700
+title: { en: From floe publish to a reload, ja: &#34;floe publish から再読み込みまで&#34; }
+parts:
+  - box: { x: 15, y: 12, w: 230, h: 52, tone: accent, rows: [{ en: Agent, ja: &#34;エージェント&#34; }, [floe publish, sub code]] }
+  - line: { x1: 130, y1: 64, x2: 130, y2: 688, kind: lifeline }
+  - box: { x: 275, y: 12, w: 230, h: 52, tone: accent, rows: [{ en: Store, ja: &#34;保存先&#34; }, [&#34;~/.local/share/floe&#34;, sub code]] }
+  - line: { x1: 390, y1: 64, x2: 390, y2: 688, kind: lifeline }
+  - box: { x: 535, y: 12, w: 230, h: 52, tone: accent, rows: [{ en: Server, ja: &#34;サーバー&#34; }, [floe serve, sub code]] }
+  - line: { x1: 650, y1: 64, x2: 650, y2: 688, kind: lifeline }
+  - box: { x: 795, y: 12, w: 230, h: 52, tone: accent, rows: [{ en: Browser, ja: &#34;ブラウザ&#34; }, [{ en: &#34;the page&#39;s tab&#34;, ja: &#34;ページのタブ&#34; }, sub]] }
+  - line: { x1: 910, y1: 64, x2: 910, y2: 688, kind: lifeline }
+  - raw: { svg: &#34;&lt;rect x=\&#34;644\&#34; y=\&#34;420\&#34; width=\&#34;12\&#34; height=\&#34;190\&#34; class=\&#34;band\&#34;/&gt;&#34; }
+  - edge: { from: [130, 104], to: [650, 104], label: GET /api/health, at: [390, 90] }
+  - edge: { from: [130, 144], to: [650, 144], label: { en: start floe serve if it is stopped, ja: &#34;止まっていれば floe serve を起動&#34; }, at: [390, 130] }
+  - edge: { from: [650, 184], to: [130, 184], dashed: true, label: { en: wait until health answers, ja: &#34;health が応答するまで待つ&#34; }, at: [390, 170] }
+  - edge: { from: [130, 224], to: [390, 224], label: { en: write the copy and meta.json, ja: &#34;写しと meta.json を書く&#34; }, at: [260, 210] }
+  - edge: { from: [130, 264], to: [910, 264], label: { en: open a new slug in the browser, ja: &#34;新しい slug ならブラウザで開く&#34; }, at: [520, 250] }
+  - edge: { from: [910, 304], to: [650, 304], label: &#34;GET /a/&lt;slug&gt;/?raw&#34;, at: [780, 290] }
+  - edge: { from: [650, 344], to: [390, 344], label: { en: read, ja: &#34;読む&#34; }, at: [520, 330] }
+  - edge: { from: [650, 384], to: [910, 384], dashed: true, label: { en: &#34;HTML + reload script&#34;, ja: &#34;HTML + 再読み込みスクリプト&#34; }, at: [780, 370] }
+  - edge: { from: [910, 424], to: [656, 424], label: { en: &#34;EventSource ?since=version&#34;, ja: &#34;EventSource ?since=版&#34; }, at: [780, 410] }
+  - label: { text: { en: compare versions every second, ja: &#34;1 秒ごとに版を比べる&#34; }, x: 664, y: 470, anchor: start }
+  - line: { x1: 16, y1: 500, x2: 1024, y2: 500, kind: divider }
+  - label: { text: { en: publish the same slug again, ja: &#34;同じ slug で公開し直す&#34; }, x: 520, y: 500 }
+  - edge: { from: [130, 544], to: [390, 544], label: { en: rewrite (updatedAt moves on), ja: &#34;書き直す（updatedAt が進む）&#34; }, at: [260, 530] }
+  - edge: { from: [644, 584], to: [390, 584], label: { en: stat finds a new version, ja: &#34;stat で新しい版を見つける&#34; }, at: [520, 570] }
+  - edge: { from: [650, 624], to: [910, 624], dashed: true, label: &#34;event: reload&#34;, at: [780, 610] }
+  - edge: { from: [910, 648], via: [[950, 648], [950, 676]], to: [910, 676], label: location.reload(), at: [892, 662] }</code></pre></details></div>
+</section>
+<section>
+<h2 id="state">state</h2>
+<div data-floe-part="diagram"><script>(// Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
+// from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
+// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
+function zoomable(messages) {
+  const MAX = 4;
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const setup = (wrap) => {
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
+    const svg = wrap.querySelector('svg');
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
+    // diagram stays shown when the frame resizes
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
+    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    // Zooming out stops at the whole diagram or the actual size, whichever is smaller
+    const min = () => Math.min(fit(), 1);
+    const tools = document.createElement('div');
+    tools.className = 'dg-tools';
+    const hint = document.createElement('span');
+    hint.textContent = msg.diagram_zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
+      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      // Centre a direction the view is wider than the diagram in; otherwise keep the view inside it
+      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    // Screen coordinates as px from the top left inside the frame's border
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    // Scales by k about (ax, ay), in local coordinates, keeping the diagram point under it in place
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    // A plain wheel scrolls the page. A trackpad pinch arrives as a wheel with ctrlKey too
+    wrap.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    // One finger or a mouse moves the diagram; two fingers zoom about their midpoint while moving it
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      // While the whole diagram shows, a mouse is left to select text
+      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    // The first resize notice comes just before painting, so settle the state once now for code
+    // (tests) that reads it without waiting for a paint
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}});</script><div class="dg-wrap" style="aspect-ratio: 1080 / 252; max-height: min(85vh, 310px)"><svg viewBox="0 0 1080 252" class="dg" role="img" aria-label="floe のサーバーの状態"><defs><marker id="dg8-dc7751_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-fill"></path></marker></defs><path d="M29,120 H60" class="edge" marker-end="url(#dg8-dc7751_arrow)"></path><path d="M110,88 V58 H210 V88" class="edge" marker-end="url(#dg8-dc7751_arrow)"></path><path d="M260,120 H460" class="edge" marker-end="url(#dg8-dc7751_arrow)"></path><path d="M660,108 H860" class="edge" marker-end="url(#dg8-dc7751_arrow)"></path><path d="M860,132 H660" class="edge" marker-end="url(#dg8-dc7751_arrow)"></path><path d="M960,152 V216 H160 V152" class="edge" marker-end="url(#dg8-dc7751_arrow)"></path><path d="M560,152 V216" class="edge"></path><g class="box"><rect x="60" y="88" width="200" height="64" rx="26"></rect><text x="160" y="111.5" text-anchor="middle" class="main">停止中</text><text x="160" y="128.5" text-anchor="middle" class="sub">プロセスなし</text></g><g class="box accent"><rect x="460" y="88" width="200" height="64" rx="26"></rect><text x="560" y="111.5" text-anchor="middle" class="main">稼働中</text><text x="560" y="128.5" text-anchor="middle" class="sub">127.0.0.1:7325 で配信</text></g><g class="box warn"><rect x="860" y="88" width="200" height="64" rx="26"></rect><text x="960" y="111.5" text-anchor="middle" class="main">古い版</text><text x="960" y="128.5" text-anchor="middle" class="sub">floe を入れ直した</text></g><circle cx="22" cy="120" r="7" class="dot"></circle><rect x="65" y="31" width="190" height="18" class="label-bg"></rect><text x="160" y="40" text-anchor="middle" class="label">起動失敗（ポート使用中）</text><rect x="297.4" y="93" width="125.2" height="18" class="label-bg"></rect><text x="360" y="102" text-anchor="middle" class="label">publish・serve</text><rect x="697.4" y="81" width="125.2" height="18" class="label-bg"></rect><text x="760" y="90" text-anchor="middle" class="label">floe を入れ直す</text><rect x="668.6" y="141" width="182.8" height="18" class="label-bg"></rect><text x="760" y="150" text-anchor="middle" class="label">次の publish が入れ替え</text><rect x="257.8" y="207" width="204.4" height="18" class="label-bg"></rect><text x="360" y="216" text-anchor="middle" class="label">floe stop・ログアウト・再起動</text></svg></div><details class="dg-source"><summary>この図の spec</summary><pre><code># State diagram: floe&#39;s server. States stand in one row; a pair of opposite transitions is two
+# parallel lines, and transitions from two states to the same one join into one line.
+#
+# Grid: states centred at y = 120, boxes 200 x 64 and 200 apart (wider than a label). Parallel
+# lines are 12 above and below the middle. The start is a dot.
+width: 1080
+height: 252
+title: { en: &#34;The states of floe&#39;s server&#34;, ja: &#34;floe のサーバーの状態&#34; }
+parts:
+  - box: { x: 60, y: 88, w: 200, h: 64, shape: state, rows: [{ en: Stopped, ja: &#34;停止中&#34; }, { en: no process, ja: &#34;プロセスなし&#34; }] }
+  - box: { x: 460, y: 88, w: 200, h: 64, tone: accent, shape: state, rows: [{ en: Running, ja: &#34;稼働中&#34; }, { en: &#34;on 127.0.0.1:7325&#34;, ja: &#34;127.0.0.1:7325 で配信&#34; }] }
+  - box: { x: 860, y: 88, w: 200, h: 64, tone: warn, shape: state, rows: [{ en: Outdated, ja: &#34;古い版&#34; }, { en: floe was reinstalled, ja: &#34;floe を入れ直した&#34; }] }
+  - dot: { cx: 22, cy: 120 }
+  - edge: { from: [29, 120], to: [60, 120] }
+  - edge: { from: [110, 88], via: [[110, 58], [210, 58]], to: [210, 88], label: { en: start fails (port in use), ja: &#34;起動失敗（ポート使用中）&#34; }, at: [160, 40] }
+  - edge: { from: [260, 120], to: [460, 120], label: { en: publish or serve, ja: &#34;publish・serve&#34; }, at: [360, 102] }
+  - edge: { from: [660, 108], to: [860, 108], label: { en: floe reinstalled, ja: &#34;floe を入れ直す&#34; }, at: [760, 90] }
+  - edge: { from: [860, 132], to: [660, 132], label: { en: next publish replaces it, ja: &#34;次の publish が入れ替え&#34; }, at: [760, 150] }
+  - edge: { from: [960, 152], via: [[960, 216], [160, 216]], to: [160, 152], label: { en: &#34;floe stop, logout or reboot&#34;, ja: &#34;floe stop・ログアウト・再起動&#34; }, at: [360, 216] }
+  - edge: { from: [560, 152], to: [560, 216], end: none }</code></pre></details></div>
+</section>
+<section>
+<h2 id="timeline">timeline</h2>
+<div data-floe-part="diagram"><script>(// Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
+// from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
+// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
+function zoomable(messages) {
+  const MAX = 4;
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const setup = (wrap) => {
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
+    const svg = wrap.querySelector('svg');
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
+    // diagram stays shown when the frame resizes
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
+    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    // Zooming out stops at the whole diagram or the actual size, whichever is smaller
+    const min = () => Math.min(fit(), 1);
+    const tools = document.createElement('div');
+    tools.className = 'dg-tools';
+    const hint = document.createElement('span');
+    hint.textContent = msg.diagram_zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
+      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      // Centre a direction the view is wider than the diagram in; otherwise keep the view inside it
+      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    // Screen coordinates as px from the top left inside the frame's border
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    // Scales by k about (ax, ay), in local coordinates, keeping the diagram point under it in place
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    // A plain wheel scrolls the page. A trackpad pinch arrives as a wheel with ctrlKey too
+    wrap.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    // One finger or a mouse moves the diagram; two fingers zoom about their midpoint while moving it
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      // While the whole diagram shows, a mouse is left to select text
+      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    // The first resize notice comes just before painting, so settle the state once now for code
+    // (tests) that reads it without waiting for a paint
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}});</script><div class="dg-wrap" style="aspect-ratio: 1100 / 240; max-height: min(85vh, 295px)"><svg viewBox="0 0 1100 240" class="dg" role="img" aria-label="floe の PR がマージされた時期"><defs></defs><line x1="928" y1="30" x2="928" y2="200" class="grid"></line><line x1="736" y1="30" x2="736" y2="200" class="grid"></line><line x1="544" y1="30" x2="544" y2="200" class="grid"></line><line x1="352" y1="30" x2="352" y2="200" class="grid"></line><line x1="160" y1="30" x2="160" y2="200" class="grid"></line><line x1="160" y1="200" x2="928" y2="200" class="axis"></line><line x1="160" y1="200" x2="160" y2="205" class="axis"></line><line x1="352" y1="200" x2="352" y2="205" class="axis"></line><line x1="544" y1="200" x2="544" y2="205" class="axis"></line><line x1="736" y1="200" x2="736" y2="205" class="axis"></line><line x1="928" y1="200" x2="928" y2="205" class="axis"></line><rect x="193.1" y="77" width="4" height="14" rx="3" class="bar accent"></rect><rect x="459.7" y="117" width="61.9" height="14" rx="3" class="bar good"></rect><rect x="531.7" y="157" width="346.2" height="14" rx="3" class="bar good"></rect><circle cx="193.1" cy="44" r="7" class="dot accent"></circle><circle cx="521.6" cy="44" r="7" class="dot accent"></circle><circle cx="877.9" cy="44" r="7" class="dot accent"></circle><text x="160" y="217" text-anchor="middle" class="label">10/11</text><text x="352" y="217" text-anchor="middle" class="label">12:00</text><text x="544" y="217" text-anchor="middle" class="label">10/12</text><text x="736" y="217" text-anchor="middle" class="label">12:00</text><text x="928" y="217" text-anchor="middle" class="label">10/13</text><rect x="11" y="75" width="110.8" height="18" class="label-bg"></rect><text x="16" y="84" text-anchor="start" class="label">フェーズ 0: 準備</text><rect x="11" y="115" width="110.8" height="18" class="label-bg"></rect><text x="16" y="124" text-anchor="start" class="label">フェーズ 1: 移植</text><rect x="11" y="155" width="132.4" height="18" class="label-bg"></rect><text x="16" y="164" text-anchor="start" class="label">フェーズ 2: 図</text><rect x="202.1" y="75" width="190" height="18" class="label-bg"></rect><text x="207.1" y="84" text-anchor="start" class="label">#1・#2 リポジトリと CI</text><rect x="526.6" y="115" width="139.6" height="18" class="label-bg"></rect><text x="531.6" y="124" text-anchor="start" class="label">#3〜#12（10 本）</text><rect x="882.9" y="155" width="139.6" height="18" class="label-bg"></rect><text x="887.9" y="164" text-anchor="start" class="label">#13・#14 レビュー中</text><rect x="146.1" y="15" width="94" height="18" class="label-bg"></rect><text x="193.1" y="24" text-anchor="middle" class="label">リポジトリ作成</text><rect x="469.8" y="15" width="103.6" height="18" class="label-bg"></rect><text x="521.6" y="24" text-anchor="middle" class="label">フェーズ 1 完了</text><rect x="836.9" y="15" width="82" height="18" class="label-bg"></rect><text x="877.9" y="24" text-anchor="middle" class="label">#14 を作成</text></svg></div><details class="dg-source"><summary>この図の spec</summary><pre><code># Timeline: when floe&#39;s PRs were merged (JST). Across is time; a period is a bar, a milestone is a dot
+# on the top row, and the names of the rows stand at the left.
+#
+# Scale: x = 160 + 16h, h hours from 10/11 0:00 (one day is 384px). The left 160px hold the names.
+width: 1100
+height: 240
+title: { en: &#34;When floe&#39;s PRs were merged&#34;, ja: &#34;floe の PR がマージされた時期&#34; }
+parts:
+  - axis: { x1: 160, x2: 928, y: 200, ticks: [[160, &#34;10/11&#34;], [352, &#34;12:00&#34;], [544, &#34;10/12&#34;], [736, &#34;12:00&#34;], [928, &#34;10/13&#34;]], grid: 30 }
+  - label: { text: { en: &#34;Phase 0: setup&#34;, ja: &#34;フェーズ 0: 準備&#34; }, x: 16, y: 84, anchor: start }
+  - label: { text: { en: &#34;Phase 1: port&#34;, ja: &#34;フェーズ 1: 移植&#34; }, x: 16, y: 124, anchor: start }
+  - label: { text: { en: &#34;Phase 2: diagrams&#34;, ja: &#34;フェーズ 2: 図&#34; }, x: 16, y: 164, anchor: start }
+  - bar: { x1: 193.1, x2: 193.6, y: 84, tone: accent, label: { en: &#34;#1, #2: repository and CI&#34;, ja: &#34;#1・#2 リポジトリと CI&#34; } }
+  - bar: { x1: 459.7, x2: 521.6, y: 124, tone: good, label: { en: &#34;#3 to #12 (10 PRs)&#34;, ja: &#34;#3〜#12（10 本）&#34; } }
+  - bar: { x1: 531.7, x2: 877.9, y: 164, tone: good, label: { en: &#34;#13, #14 in review&#34;, ja: &#34;#13・#14 レビュー中&#34; } }
+  - dot: { cx: 193.1, cy: 44, tone: accent }
+  - label: { text: { en: repository, ja: &#34;リポジトリ作成&#34; }, x: 193.1, y: 24 }
+  - dot: { cx: 521.6, cy: 44, tone: accent }
+  - label: { text: { en: phase 1 done, ja: &#34;フェーズ 1 完了&#34; }, x: 521.6, y: 24 }
+  - dot: { cx: 877.9, cy: 44, tone: accent }
+  - label: { text: { en: &#34;#14 opened&#34;, ja: &#34;#14 を作成&#34; }, x: 877.9, y: 24 }</code></pre></details></div>
+</section>
+<section>
+<h2 id="venn">venn</h2>
+<div data-floe-part="diagram"><script>(// Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
+// from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
+// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
+function zoomable(messages) {
+  const MAX = 4;
+  // A tag is matched as floe matches it: in lower case, with _ read as -
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const setup = (wrap) => {
+    // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
+    // A frame without a diagram is left alone, so that the frames after it still get theirs
+    const svg = wrap.querySelector('svg');
+    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    // s is screen px per diagram unit and (cx, cy) the centre of the view. While fitted, the whole
+    // diagram stays shown when the frame resizes
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    // While printing, the whole diagram shows and the zoom is kept, to come back to after
+    let printing = false;
+    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    // Zooming out stops at the whole diagram or the actual size, whichever is smaller
+    const min = () => Math.min(fit(), 1);
+    const tools = document.createElement('div');
+    tools.className = 'dg-tools';
+    const hint = document.createElement('span');
+    hint.textContent = msg.diagram_zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
+      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const render = () => {
+      // Before the size: a diagram in a hidden tab has none at beforeprint, and prints all the same
+      if (printing) {
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      // Centre a direction the view is wider than the diagram in; otherwise keep the view inside it
+      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    // Screen coordinates as px from the top left inside the frame's border
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    // Scales by k about (ax, ay), in local coordinates, keeping the diagram point under it in place
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      // Zooming out as far as the whole diagram is fitting again: it follows the frame's size from then on
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    // A plain wheel scrolls the page. A trackpad pinch arrives as a wheel with ctrlKey too
+    wrap.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // deltaMode 1 counts lines and 2 pages; a page is the frame's height
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    // One finger or a mouse moves the diagram; two fingers zoom about their midpoint while moving it
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      // While the whole diagram shows, a mouse is left to select text
+      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    // The keyboard reaches the frame too: + (or =), - and 0 zoom in, out and to the whole diagram, as the
+    // buttons do, and the arrow keys move a zoomed diagram by 40 screen px. Keys with Ctrl, ⌘ or Alt are the
+    // browser's (its zoom, back); Shift is not looked at, as + is Shift and = on many keyboards
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
+    wrap.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    // The first resize notice comes just before painting, so settle the state once now for code
+    // (tests) that reads it without waiting for a paint
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}});</script><div class="dg-wrap" style="aspect-ratio: 760 / 520; max-height: min(85vh, 640px)"><svg viewBox="0 0 760 520" class="dg" role="img" aria-label="コマンドごとに通るパッケージ"><defs></defs><circle cx="300" cy="200" r="170" class="venn accent"></circle><circle cx="460" cy="200" r="170" class="venn good"></circle><circle cx="380" cy="335" r="170" class="venn warn"></circle><text x="170" y="30" text-anchor="middle" class="label strong">floe publish</text><text x="590" y="30" text-anchor="middle" class="label strong">floe serve</text><text x="600" y="490" text-anchor="middle" class="label strong">floe diagram render</text><text x="378" y="202" text-anchor="middle" class="label">cli・i18n</text><text x="378" y="220" text-anchor="middle" class="label">usererr・yamlpos</text><text x="378" y="238" text-anchor="middle" class="label">diagram・icons</text><text x="378" y="256" text-anchor="middle" class="label">go-yaml</text><text x="378" y="125" text-anchor="middle" class="label">store・link</text><text x="378" y="143" text-anchor="middle" class="label">tmpl・daemon</text><text x="218" y="154" text-anchor="middle" class="label">project</text><text x="542" y="145" text-anchor="middle" class="label">server</text><text x="542" y="163" text-anchor="middle" class="label">page・ui</text></svg></div><details class="dg-source"><summary>この図の spec</summary><pre><code># Venn diagram: the packages of floe each command runs through. The circles overlap translucently,
+# and the text in a region has no background (plain).
+#
+# Three circles of radius 170 in a triangle, each named. The text of a region says which circles it is in
+# (in), and floe places it there, stacking the texts of one region; check with floe diagram inspect.
+# The names of the circles stand outside them, at coordinates.
+width: 760
+height: 520
+title: { en: The packages each floe command runs through, ja: &#34;コマンドごとに通るパッケージ&#34; }
+parts:
+  - circle: { name: publish, cx: 300, cy: 200, r: 170, tone: accent }
+  - circle: { name: serve, cx: 460, cy: 200, r: 170, tone: good }
+  - circle: { name: render, cx: 380, cy: 335, r: 170, tone: warn }
+  - label: { text: floe publish, x: 170, y: 30, plain: true, strong: true }
+  - label: { text: floe serve, x: 590, y: 30, plain: true, strong: true }
+  - label: { text: floe diagram render, x: 600, y: 490, plain: true, strong: true }
+  - label: { text: { en: &#34;cli, i18n&#34;, ja: &#34;cli・i18n&#34; }, in: [publish, serve, render], plain: true }
+  - label: { text: { en: &#34;usererr, yamlpos&#34;, ja: &#34;usererr・yamlpos&#34; }, in: [publish, serve, render], plain: true }
+  - label: { text: { en: &#34;diagram, icons&#34;, ja: &#34;diagram・icons&#34; }, in: [publish, serve, render], plain: true }
+  - label: { text: go-yaml, in: [publish, serve, render], plain: true }
+  - label: { text: { en: &#34;store, link&#34;, ja: &#34;store・link&#34; }, in: [publish, serve], plain: true }
+  - label: { text: { en: &#34;tmpl, daemon&#34;, ja: &#34;tmpl・daemon&#34; }, in: [publish, serve], plain: true }
+  - label: { text: project, in: [publish], plain: true }
+  - label: { text: server, in: [serve], plain: true }
+  - label: { text: { en: &#34;page, ui&#34;, ja: &#34;page・ui&#34; }, in: [serve], plain: true }</code></pre></details></div>
+</section>
+</main>
+
+
+</body></html>

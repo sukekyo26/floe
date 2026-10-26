@@ -199,6 +199,7 @@ var messagesEN = map[string]string{
 	"diagram_zoom_one":         "1:1",
 	"diagram_zoom_one_label":   "Show at actual size",
 	"diagram_unknown_example":  "no example %s; use %s",
+	"diagram_source":           "The spec of this diagram",
 	"cli_wants_spec":           "a diagram spec (.yaml)",
 	"diagram_edge_nowhere":     "%s starts where it ends: end it at another part or point",
 }

@@ -1,0 +1,35 @@
+template: report
+lang: ja
+title: 図の例
+lead: floe diagram example の 10 種を、名前で描いて spec を見せる（floe-diagram-examples の参照の形）。
+sections:
+  - heading: architecture
+    parts:
+      - diagram: { example: architecture, source: true }
+  - heading: aws
+    parts:
+      - diagram: { example: aws, source: true }
+  - heading: class
+    parts:
+      - diagram: { example: class, source: true }
+  - heading: er
+    parts:
+      - diagram: { example: er, source: true }
+  - heading: flow
+    parts:
+      - diagram: { example: flow, source: true }
+  - heading: git
+    parts:
+      - diagram: { example: git, source: true }
+  - heading: sequence
+    parts:
+      - diagram: { example: sequence, source: true }
+  - heading: state
+    parts:
+      - diagram: { example: state, source: true }
+  - heading: timeline
+    parts:
+      - diagram: { example: timeline, source: true }
+  - heading: venn
+    parts:
+      - diagram: { example: venn, source: true }
