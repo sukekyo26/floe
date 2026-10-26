@@ -195,9 +195,11 @@ func Tell(c *i18n.Catalog, err error) Report {
 		return Report{Mistakes: nil, Failure: fmt.Sprintf("%T with no mistake", err)}
 	}
 	r := Report{Mistakes: make([]Told, 0, len(all)), Failure: ""}
+	told := map[Told]bool{}
 	for _, e := range all {
 		t := Told{File: e.File, Line: e.Line, Column: e.Column, At: e.At, Text: c.Msg(e.Key, e.Args...)}
-		if !slices.Contains(r.Mistakes, t) {
+		if !told[t] {
+			told[t] = true
 			r.Mistakes = append(r.Mistakes, t)
 		}
 	}

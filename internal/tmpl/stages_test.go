@@ -28,9 +28,9 @@ func ownKit(t *testing.T, parts, templates map[string]string) *kit.Kit {
 	if templates != nil {
 		src.Templates = kit.Dir{FS: mapFS(templates), Name: "templates"}
 	}
-	k, err := kit.Read(floeKit(t), src)
+	k, err := kit.Load(floeKit(t), src)
 	if err != nil {
-		t.Fatalf("kit.Read: %s", told(err))
+		t.Fatalf("kit.Load: %s", told(err))
 	}
 	return k
 }
@@ -216,5 +216,64 @@ func TestDrawnPage(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
 		}
+	}
+}
+
+// A template or a part of one's own that cannot be used stops the Kit it is read in, every reason told
+// together: nothing is drawn with it.
+func TestLoadStops(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name  string
+		src   kit.Sources
+		wants []string
+	}{
+		{"templates", kit.Sources{
+			Parts: kit.Dir{FS: nil, Name: ""}, Themes: kit.Dir{FS: nil, Name: ""},
+			Templates: kit.Dir{FS: mapFS(map[string]string{
+				"nopage/schema.json": mineSchema,
+				"escape/schema.json": mineSchema,
+				"escape/page.html":   "<!doctype html><html><head></head><body><a {{if .Data.n}}href{{end}}>x</a></body></html>",
+			}), Name: "templates"},
+		}, []string{
+			"templates/escape/page.html:1:49: {{if}} branches end in different contexts",
+			"templates/nopage: page.html is missing: a template has page.html and schema.json",
+		}},
+		{"a part", kit.Sources{
+			Parts: kit.Dir{FS: mapFS(map[string]string{
+				"bare/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+				"bare/part.css":    "",
+			}), Name: "parts"},
+			Themes: kit.Dir{FS: nil, Name: ""}, Templates: kit.Dir{FS: nil, Name: ""},
+		}, []string{"parts/bare: a part holds schema.json, part.html and part.css"}},
+	} {
+		k, err := kit.Load(floeKit(t), tt.src)
+		got := told(err)
+		for _, want := range tt.wants {
+			if k != nil || !strings.Contains(got, want) {
+				t.Errorf("%s: Load = %v, told\n%s\nwant a line with %q", tt.name, k, got, want)
+			}
+		}
+	}
+}
+
+// What floe does not draw yet, an item of format html, is told at the item; an empty data-floe-part or
+// data-floe-look, whose boundary would keep the parts' styles from what it holds, is refused.
+func TestNotDrawn(t *testing.T) {
+	t.Parallel()
+
+	k := ownKit(t, nil, mine(minePage, `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"h": {"type": "string", "format": "html"}}}`, nil))
+	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nh: <b>x</b>\n", none),
+		"d.yaml:3:4: floe does not draw an item of format html yet: give it another format, or none"; got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+	page := "<!doctype html>\n<html><head><title>t</title></head><body>\n<div data-floe-part=\"\">a</div><p data-floe-look=\" \">b</p>\n</body></html>\n"
+	k = ownKit(t, nil, mine(page, mineSchema, nil))
+	want := lines(`d.yaml:2:11: the page has data-floe-part="", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
+		`d.yaml:2:11: the page has data-floe-look=" ", which names no look: name the looks it takes, or leave it out`)
+	if got := drawn(t, k, "lang: en\ntemplate: mine\n", none); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 }

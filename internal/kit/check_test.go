@@ -5,6 +5,7 @@ import (
 	"testing/fstest"
 
 	"github.com/sukekyo26/floe/internal/kit"
+	"github.com/sukekyo26/floe/internal/tmpl"
 )
 
 // floe's own pass every check: the test that stands for checking them at every run (judgement 1).
@@ -131,5 +132,22 @@ func TestCheckMistakes(t *testing.T) {
 		if got := told(kit.Check(k)); got != tt.want {
 			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
 		}
+	}
+}
+
+// Drawing with floe's own leaves them as read: they check after, the escaping of each page too.
+func TestCheckAfterDrawing(t *testing.T) {
+	t.Parallel()
+
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, _ := k.Template("report")
+	if _, err := tmpl.Draw(k, "report.yaml", report.Example(), tmpl.Options{Theme: "", Untitled: ""}); err != nil {
+		t.Fatal(err)
+	}
+	if err := kit.Check(k); err != nil {
+		t.Errorf("Check after drawing: %v", err)
 	}
 }

@@ -120,6 +120,8 @@ var messagesEN = map[string]string{
 	"draw_part_unknown": "the page drawn from this file names the part %s, which there is none of; use %s",
 	"draw_part_several": `the page has data-floe-part="%s", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
 	"draw_look_box":     `the page has data-floe-part="%[1]s", but %[1]s is a look, which has no box: take it with data-floe-look="%[1]s"`,
+	"draw_format":       "floe does not draw an item of format %s yet: give it another format, or none",
+	"draw_look_empty":   `the page has data-floe-look="%s", which names no look: name the looks it takes, or leave it out`,
 
 	// cli: the command line (English alone is told; the other languages hold the keys as every catalog does)
 	"cli_usage":                 "%s: run floe --help",

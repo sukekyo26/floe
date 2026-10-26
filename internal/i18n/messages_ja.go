@@ -114,6 +114,8 @@ var messagesJA = map[string]string{
 	"draw_part_unknown": "このファイルを描いたページが、無い部品 %s を名乗っています。%s のどれかを書いてください",
 	"draw_part_several": `ページの data-floe-part="%s" は 1 つの部品の名前ではありません。data-floe-part="<名前>" と名前をそのまま書き、ほかの部品の見た目は data-floe-look="<名前> …" で借りてください`,
 	"draw_look_box":     `ページに data-floe-part="%[1]s" がありますが、%[1]s は見た目で箱がありません。data-floe-look="%[1]s" で借りてください`,
+	"draw_format":       "floe はまだ format %s の項目を描きません。別の format にするか、format を外してください",
+	"draw_look_empty":   `ページの data-floe-look="%s" は見た目を 1 つも名指していません。借りる見た目の名前を書くか、属性を外してください`,
 
 	// cli: コマンド行（言うのは英語だけ。ほかの言語も、どの目録とも同じく鍵を持つ）
 	"cli_usage":                 "%s: floe --help を見てください",
