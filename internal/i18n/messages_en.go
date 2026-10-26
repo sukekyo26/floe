@@ -27,7 +27,7 @@ var messagesEN = map[string]string{
 	"schema_no_url":             "%s: a schema refers to no other file or URL; write what a $ref refers to in its own file",
 	"schema_empty":              `the schema is empty: write a JSON Schema object, such as {"type": "object"}`,
 	"schema_no_part":            "%s is not a part; refer to one as floe:///parts/<name>.json",
-	"schema_id_floe":            "this $id names %s, a floe: URL, which are floe's own: give the schema an $id of your own, like https://example.com/item.json, or leave $id out",
+	"schema_id_floe":            "this $id names %s, a floe: URL, which is floe's own: give the schema an $id of your own, like https://example.com/item.json, or leave $id out",
 	"schema_id_relative":        "this $id, %s, has no scheme, which a part or a schema the parts share may not have, as it may land under floe:///parts/ and take the place of another: write an absolute URL of your own, like https://example.com/item.json, or leave $id out",
 	"schema_id_root":            "this $id, %s, is not this file's URL as it is: write %s as it is, or leave $id out",
 	"schema_ref_templates":      "%s is no file floe holds: a template refers to a part as floe:///parts/<name>.json, and inside its own schema.json as #/…",

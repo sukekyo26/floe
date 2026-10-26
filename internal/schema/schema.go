@@ -144,6 +144,10 @@ func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) 
 		if !res[ru].made {
 			return nil, fmt.Errorf("schema: %s was not made by NewResource", ru) //nolint:err113 // floe's own mistake
 		}
+		// Its root $id was checked against its URL, which must be where it is held.
+		if res[ru].URL != ru {
+			return nil, fmt.Errorf("schema: %s is held at %s", res[ru].URL, ru) //nolint:err113 // floe's own mistake
+		}
 	}
 	c := &Compiled{Root: nil, url: u, file: file, res: res}
 	dialects, ids := raw(u, file, doc, false)

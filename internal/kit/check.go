@@ -62,7 +62,7 @@ func (k *Kit) checkPart(p *Part) error {
 		found = append(found, usererr.NewAt(p.dir, 0, 0, "kit_part_files"))
 	}
 	found = append(found, unread(p.dir, p.unread, "kit_part_unread")...)
-	errs := []error{css.Check(path.Join(p.dir, "part.css"), p.css), schema.CheckPart(partsURL+p.name+".json", k.resources)}
+	errs := []error{css.Check(path.Join(p.dir, "part.css"), p.css), schema.CheckPart(partURL(p.name), k.resources)}
 	if p.pages != nil {
 		errs = append(errs, escapeMistake(p.pages[""], p.pageSrc, path.Join(p.dir, "part.html")))
 	}

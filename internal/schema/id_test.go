@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/schema"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 const (
-	idFloe     = "this $id names %s, a floe: URL, which are floe's own: give the schema an $id of your own, like https://example.com/item.json, or leave $id out"
+	idFloe     = "this $id names %s, a floe: URL, which is floe's own: give the schema an $id of your own, like https://example.com/item.json, or leave $id out"
 	idRelative = "this $id, %s, has no scheme, which a part or a schema the parts share may not have, as it may land under floe:///parts/ and take the place of another: write an absolute URL of your own, like https://example.com/item.json, or leave $id out"
 	idRoot     = "this $id, %s, is not this file's URL as it is: write %s as it is, or leave $id out"
 )
@@ -116,5 +118,21 @@ func TestCheckPartRelativeRef(t *testing.T) {
 	}
 	if got := c.Follow(c.Root.Properties["m"].Ref.Properties["x"]).Part; got != "floe:///parts/note.json" {
 		t.Errorf("the part's x is drawn by %q, want floe:///parts/note.json", got)
+	}
+}
+
+// A Resource held at a URL other than its own is floe's failure: its root $id was checked against its own.
+func TestResourceURL(t *testing.T) {
+	t.Parallel()
+
+	res := resources(t)
+	r, err := schema.NewResource("floe:///parts/a.json", "parts/a.json", []byte(`{"type": "object"}`), schema.Part)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	res["floe:///parts/b.json"] = r
+	_, err = schema.Compile(template, "schema.json", []byte(`{`+head+`}`), res)
+	if usererr.Tell(i18n.EnglishCatalog(), err).Failure == "" {
+		t.Errorf("a Resource held at another URL told %q, want floe's failure", told(err))
 	}
 }
