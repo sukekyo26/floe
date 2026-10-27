@@ -251,6 +251,12 @@ func TestRemove(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(filepath.Join(dir, m.Source), 0o700) }) //nolint:errcheck // told already
 	want(t, e.do(t, http.MethodDelete, "/api/artifacts/d", "", "Origin", origin), http.StatusBadRequest, "cannot be written (permission denied)")
+	want(t, e.do(t, http.MethodGet, "/api/artifacts", ""), http.StatusOK, `"slug":"d"`)
+	if err := os.Chmod(filepath.Join(dir, m.Source), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	want(t, e.do(t, http.MethodDelete, "/api/artifacts/d", "", "Origin", origin), http.StatusNoContent, "")
+	want(t, e.do(t, http.MethodGet, "/api/artifacts", ""), http.StatusOK, "[]")
 }
 
 // Requests in parallel, of every kind, share the drawing (go test -race).

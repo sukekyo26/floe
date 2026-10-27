@@ -644,8 +644,29 @@ func (s *Store) Remove(slug string) error {
 	if s.ReadMeta(slug) == nil {
 		return ErrNotFound
 	}
-	if err = os.RemoveAll(dir); err != nil {
+	return removePage(dir)
+}
+
+// removePage removes dir, a page's directory, its meta.json last: one that cannot all be removed keeps it, listed
+// still, for floe rm to remove the rest. What cannot be removed is told at it.
+func removePage(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
 		return usererr.CannotWrite(dir, err) //nolint:wrapcheck // the system's words, at the page
+	}
+	for _, e := range entries {
+		if e.Name() == "meta.json" {
+			continue
+		}
+		at := filepath.Join(dir, e.Name())
+		if err := os.RemoveAll(at); err != nil {
+			return usererr.CannotWrite(at, err) //nolint:wrapcheck // as above
+		}
+	}
+	for _, at := range []string{filepath.Join(dir, "meta.json"), dir} {
+		if err := os.Remove(at); err != nil {
+			return usererr.CannotWrite(at, err) //nolint:wrapcheck // as above
+		}
 	}
 	return nil
 }
