@@ -117,3 +117,30 @@ func TestScriptOf(t *testing.T) {
 		t.Errorf("scriptOf = %s, %v\nwant %s", got, err, want)
 	}
 }
+
+// A bar's width is its share of the longest value, and every bar is 0 wide when all the values are 0.
+func TestBarsOf(t *testing.T) {
+	t.Parallel()
+
+	item := func(v any) any { return map[string]any{"label": "x", "value": v} }
+	for _, c := range []struct {
+		values []any
+		want   string
+	}{
+		{[]any{1, 4, 2.5}, "25 100 62.5"},
+		{[]any{0, 0}, "0 0"},
+	} {
+		items := make([]any, 0, len(c.values))
+		for _, v := range c.values {
+			items = append(items, item(v))
+		}
+		bars, err := barsOf(items)
+		widths := make([]string, 0, len(bars))
+		for _, b := range bars {
+			widths = append(widths, fmt.Sprint(b.Width))
+		}
+		if got := strings.Join(widths, " "); err != nil || got != c.want {
+			t.Errorf("barsOf(%v) = %q, %v; want %q", c.values, got, err, c.want)
+		}
+	}
+}

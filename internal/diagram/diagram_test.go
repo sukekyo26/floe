@@ -241,6 +241,23 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - raw: { svg: '<g><title>t</title><desc>d</desc><circle r=\"3\"/></g>' }", ""},
 		{"  - raw: { svg: '<text>noscript base</text>' }", ""},
 		{"  - raw: { svg: '<g class=\"noscript\"><!-- <noscript> --></g>' }", ""},
+		// Each check of the placement on its own.
+		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - box: { x: 80, y: 40, w: 60, h: 40, rows: [A] }", `s.yaml:6:5: box "A" straddles the edge of frame "F"`},
+		{"  - box: { name: b, x: 150, y: 80, w: 60, h: 40, rows: [B] }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through box "b"`},
+		{"  - label: { text: L, x: 200, y: 100 }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through label "L"`},
+		{"  - box: { x: 20, y: 20, w: 80, h: 20, rows: [A, B] }", `s.yaml:5:5: box "A": its text needs a height of 46px or more; the box has 20px`},
+		{"  - box: { x: 20, y: -5, w: 60, h: 40, rows: [A] }", `s.yaml:5:5: box "A" sticks out of the 400x200 canvas`},
+		{"  - box: { x: 20, y: 180, w: 60, h: 40, rows: [A] }", `s.yaml:5:5: box "A" sticks out of the 400x200 canvas`},
+		{"  - edge: { from: [10, 10], to: [10, 10] }", "s.yaml:5:5: edge [10,10]→[10,10] starts where it ends: end it at another part or point"},
+		{
+			"  - box: { name: a, x: 100, y: 20, w: 80, h: 29, rows: [a] }\n  - edge: { from: a, fromSide: left, to: a, toSide: left }",
+			"s.yaml:6:5: edge a→a starts where it ends: end it at another part or point",
+		},
+		{
+			"  - circle: { name: c, cx: 100, cy: 100, r: 60 }\n  - circle: { name: c, cx: 300, cy: 100, r: 5 }\n  - label: { text: x, in: [c] }",
+			`s.yaml:6:5: the name "c" is given before: give each part and row its own name`,
+		},
+		{"  - icon: { icon: aws/amazon-ec2, x: 10, y: 10 }", `s.yaml:5:5: icon "aws/amazon-ec2": no icon "aws/amazon-ec2" (search with: floe icons search <word>)`},
 	} {
 		if _, got := draw(t, head+c.parts+"\n", render("en")); got != c.want {
 			t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
