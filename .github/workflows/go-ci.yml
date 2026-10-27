@@ -25,6 +25,11 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # The Chrome for Testing the browser tests run, in the test and coverage jobs.
+  # LIMIT: Chrome is pinned, raised by hand. Raise it when floe's CSS or scripts need a newer Chrome, when the pinned one can no longer be fetched, or when users' Chrome (the Stable of Chrome for Testing) is two major versions ahead.
+  CHROME_VERSION: 156.0.8078.47
+
 jobs:
   lint:
     name: Lint (golangci-lint v2)
@@ -57,10 +62,18 @@ jobs:
       - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: just
+      - uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
+        id: chrome
+        with:
+          chrome-version: ${{ env.CHROME_VERSION }}
+          install-dependencies: true
       - run: just vet
       - run: just mod-verify
       - run: just mod-tidy-check
       - run: just test-race
+        # The browser tests run the pinned Chrome; on CI they fail without it.
+        env:
+          FLOE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
 
   coverage:
     name: Coverage gate (>= 90%)
@@ -75,7 +88,15 @@ jobs:
       - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: just
+      - uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
+        id: chrome
+        with:
+          chrome-version: ${{ env.CHROME_VERSION }}
+          install-dependencies: true
       - run: just cover-check
+        # The browser tests run the pinned Chrome; on CI they fail without it.
+        env:
+          FLOE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
 
   vuln:
     name: govulncheck

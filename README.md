@@ -26,6 +26,10 @@ Set `FLOE_VERSION` to pin a release and `FLOE_INSTALL_DIR` to change the
 destination (default `~/.local/bin`). The binary is verified against the
 release's `SHA256SUMS`.
 
+## Development
+
+`just ci` runs what CI runs. The browser tests find Chrome at `FLOE_CHROME`, else on `PATH`, and are skipped without it.
+
 ## License
 
 [MIT](LICENSE)

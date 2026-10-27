@@ -303,7 +303,7 @@ func (s *site) write(t *testing.T, rel, text string) string {
 	if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(file, []byte(text), 0o600); err != nil {
+	if err := os.WriteFile(file, []byte(text), 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
 	return file

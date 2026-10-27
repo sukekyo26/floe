@@ -1,14 +1,14 @@
 package browsertest_test
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
-	"context"
-	"os"
 )
 
 // Chrome is FLOE_CHROME, else found on PATH, else none and the tests skipped; but on CI, FLOE_CHROME is required,
@@ -17,7 +17,7 @@ func TestFindChrome(t *testing.T) {
 	t.Parallel()
 
 	there := filepath.Join(t.TempDir(), "chrome")
-	if err := os.WriteFile(there, nil, 0o700); err != nil {
+	if err := os.WriteFile(there, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	onPath := func(name string) (string, error) {

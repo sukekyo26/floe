@@ -24,6 +24,10 @@ curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 `FLOE_VERSION` でリリースを固定し、`FLOE_INSTALL_DIR` でインストール先（既定は
 `~/.local/bin`）を変えられます。バイナリはリリースの `SHA256SUMS` で検証します。
 
+## 開発
+
+`just ci` で CI と同じものを走らせます。ブラウザのテストは Chrome を `FLOE_CHROME`、無ければ `PATH` で探し、見つからなければ飛ばします。
+
 ## ライセンス
 
 [MIT](../LICENSE)
