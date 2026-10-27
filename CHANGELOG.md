@@ -51,7 +51,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   in every language before they are drawn: a `diagram` part in a data file,
   or `floe diagram render`, `inspect` and `example`.
 - Add `floe icons fetch` and `floe icons search`, which keep the AWS
-  Architecture Icons for the `icon` parts of diagrams.
+  Architecture Icons for the `icon` parts of diagrams. Icons not fetched, or a
+  directory for them that cannot be used, are told once, at no place in a
+  data file, however many diagrams and files need them.
 - Add a page's CSP, which keeps the scripts of a page drawn from a data file
   from sending what it holds out, on the server and in a page `floe render`
   writes.
