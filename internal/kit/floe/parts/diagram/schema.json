@@ -221,12 +221,12 @@
       "required": ["text"],
       "additionalProperties": false,
       "if": { "required": ["in"] },
-      "then": { "dependentRequired": { "x": ["y"], "y": ["x"] } },
+      "then": { "dependentRequired": { "x": ["y"], "y": ["x"], "anchor": ["x"] } },
       "else": { "required": ["x", "y"] },
       "properties": {
         "text": { "$ref": "#/$defs/text" },
         "x": { "type": "number" }, "y": { "type": "number" },
-        "anchor": { "enum": ["middle", "start", "end"] },
+        "anchor": { "enum": ["middle", "start", "end"], "description": "Only where x and y place the label; with in alone, leave it out" },
         "plain": { "type": "boolean", "description": "No background, for text on a coloured area" },
         "strong": { "type": "boolean" },
         "in": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/name" } }
@@ -244,7 +244,7 @@
     },
     "raw": {
       "type": "object",
-      "description": "SVG no part draws, of SVG elements alone (no style, script or foreignObject), left out of the checks",
+      "description": "SVG no part draws, of SVG's elements alone, without script or foreignObject (which a page takes elsewhere) or an element a page refuses, left out of the checks",
       "required": ["svg"],
       "additionalProperties": false,
       "properties": { "svg": { "type": "string" } }

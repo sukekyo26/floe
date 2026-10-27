@@ -9,6 +9,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/kit"
+	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -21,15 +22,13 @@ type named struct {
 	uses         map[string][]string
 }
 
-// checkPage refuses in tree, the page drawn from d as a browser reads it, at d's template:, which draws it: a
-// <style>, of HTML, SVG or MathML (floe puts the page's CSS together, in layers, and an SVG's styles the whole
-// page as an HTML one does), a <base> (the page's CSP ignores it), a <meta> but a charset and a viewport (shown),
-// a <noscript> (read as text with scripts on, its elements work with them
-// off, unchecked), in an HTML <select> an element of textInSelect or svg or math (heldAsText), a name of an
-// element's data-floe-part or data-floe-look that is no part or look of k, and a data-floe-part not of one
-// part's name as written (the scope of its style, [data-floe-part="name"], would not reach it) or of a look,
-// which has no box, and an attribute where html/template wrote ZgotmplZ (replaced), in an element that the
-// switch's checks (a <meta> not shown, an element in a <select>) have not refused. It returns what the page names.
+// checkPage refuses in tree, the page drawn from d as a browser reads it, at d's template:, which draws it: an
+// element page.Refused refuses, of any namespace, in the words of refusal, in an HTML <select> an element of
+// textInSelect or svg or math (heldAsText), a name of an element's data-floe-part or data-floe-look that is no
+// part or look of k, and a data-floe-part not of one part's name as written (the scope of its style,
+// [data-floe-part="name"], would not reach it) or of a look, which has no box, and an attribute where
+// html/template wrote ZgotmplZ (replaced), in an element that the switch's checks (page.Refused, an element in a
+// <select>) have not refused. It returns what the page names.
 func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error) {
 	var found usererr.List
 	refuse := func(key string, args ...any) {
@@ -40,27 +39,21 @@ func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error
 		if n.Type != html.ElementNode {
 			continue
 		}
-		switch n.Data {
-		case "style":
-			refuse("draw_style")
-		case "base":
-			refuse("draw_base")
-		case "noscript":
-			refuse("draw_noscript")
-		case "meta":
-			if !shown(n) {
-				var b strings.Builder
-				_ = html.Render(&b, n) //nolint:errcheck // a strings.Builder fails no write
-				refuse("draw_meta", yamlpos.Head(b.String()))
-			} else if tag := replaced(n); tag != "" {
-				refuse("draw_zgotmplz", tag)
-			}
-		default:
+		switch bad := page.Refused(n); bad {
+		case "":
 			if heldAsText(n) && inSelect(n) {
 				refuse("draw_select_text", n.Data)
 			} else if tag := replaced(n); tag != "" {
 				refuse("draw_zgotmplz", tag)
 			}
+		default:
+			var args []any
+			if bad == "meta" {
+				var b strings.Builder
+				_ = html.Render(&b, n) //nolint:errcheck // a strings.Builder fails no write
+				args = append(args, yamlpos.Head(b.String()))
+			}
+			refuse(refusal[bad], args...)
 		}
 		checkNames(k, ns, n, boxes, taken, refuse)
 	}
@@ -70,6 +63,12 @@ func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error
 	return named{
 		boxes: slices.Sorted(maps.Keys(boxes)), looks: slices.Sorted(maps.Keys(taken)), uses: uses(tree),
 	}, nil
+}
+
+// refusal is the key that tells each element page.Refused refuses, with why a page does not take it; a <meta>'s
+// words take its tag.
+var refusal = map[string]string{
+	"base": "draw_base", "meta": "draw_meta", "noscript": "draw_noscript", "style": "draw_style",
 }
 
 // textInSelect are the HTML elements whose content is read as text, as the HTML fragment parsing algorithm sets
@@ -129,19 +128,6 @@ func replaced(n *html.Node) string {
 	tag := b.String()
 	// On one line, whole: Render leaves a line break in a value as it is, and a value cut short may lose ZgotmplZ.
 	return strings.ReplaceAll(tag[:strings.IndexByte(tag, '>')+1], "\n", " ")
-}
-
-// shown reports whether n, a <meta>, is one the page drawn may have: its charset alone, or a viewport's name and
-// content. A page floe draws is static: what does not show it (a refresh, a referrer policy, a generator) is
-// none of its.
-func shown(n *html.Node) bool {
-	if len(n.Attr) == 1 && n.Attr[0].Key == "charset" {
-		return true
-	}
-	name, ok := attrOf(n, "name")
-	return ok && strings.EqualFold(name, "viewport") && !slices.ContainsFunc(n.Attr, func(a html.Attribute) bool {
-		return a.Namespace != "" || a.Key != "name" && a.Key != "content"
-	})
 }
 
 // names are the names of the parts of a Kit, and of its parts and looks, each sorted.

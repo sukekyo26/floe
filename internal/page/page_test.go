@@ -1,7 +1,10 @@
 package page_test
 
 import (
+	"strings"
 	"testing"
+
+	"golang.org/x/net/html"
 
 	"github.com/sukekyo26/floe/internal/page"
 )
@@ -42,5 +45,46 @@ func TestTitle(t *testing.T) {
 				t.Errorf("Title(%q) = %q, want %q", tt.html, got, tt.want)
 			}
 		})
+	}
+}
+
+// An element no input may write is refused by its name in whatever namespace the parser puts it; a <meta> of a
+// charset alone or of a viewport's name and content is not.
+func TestRefused(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ html, tag, want string }{
+		{"<style>p{}</style>", "style", "style"},
+		{"<svg><style>rect{}</style></svg>", "style", "style"},
+		{"<math><style>x</style></math>", "style", "style"},
+		{"<svg><BASE/></svg>", "base", "base"},
+		{`<base href="https://x/">`, "base", "base"},
+		{"<noscript><p>x</p></noscript>", "noscript", "noscript"},
+		{"<svg><g><NoScript/></g></svg>", "noscript", "noscript"},
+		{`<meta charset="utf-8">`, "meta", ""},
+		{`<meta name="VIEWPORT" content="width=device-width">`, "meta", ""},
+		{`<meta charset="utf-8" http-equiv="refresh">`, "meta", "meta"},
+		{`<meta name="viewport" content="x" http-equiv="refresh">`, "meta", "meta"},
+		{`<meta name="generator" content="x">`, "meta", "meta"},
+		{"<svg><script>x</script></svg>", "script", ""},
+		{`<p class="noscript">style</p>`, "p", ""},
+	} {
+		doc, err := html.Parse(strings.NewReader(c.html))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var n *html.Node
+		for d := range doc.Descendants() {
+			if d.Type == html.ElementNode && d.Data == c.tag {
+				n = d
+				break
+			}
+		}
+		if n == nil {
+			t.Fatalf("%s: no <%s>", c.html, c.tag)
+		}
+		if got := page.Refused(n); got != c.want {
+			t.Errorf("%s: Refused = %q, want %q", c.html, got, c.want)
+		}
 	}
 }
