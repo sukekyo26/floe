@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -69,15 +70,27 @@ func (a *app) ownPlace(kind string) (dataPlace, error) {
 	return a.dataDir("FLOE_"+strings.ToUpper(kind)+"_DIR", "XDG_CONFIG_HOME", ".config", filepath.Join("floe", kind))
 }
 
-// ownDir is the directory of one's own of the kind (ownPlace), to read with the system following its links, its
-// Name as it was set; a zero Dir for none. One set that cannot be read is refused for its setting; a default
-// that is not there, or cannot be, is none; one there but no directory is refused.
-func (a *app) ownDir(kind string) (kit.Dir, error) {
+// ownKind is a kind of one's own: its name (ownPlace) and its directory in the sources of a kit.
+type ownKind struct {
+	name string
+	in   func(*kit.Sources) *kit.Dir
+}
+
+// ownKinds are the kinds of one's own, in the order a mistake names their settings.
+var ownKinds = []ownKind{
+	{"parts", func(s *kit.Sources) *kit.Dir { return &s.Parts }},
+	{"themes", func(s *kit.Sources) *kit.Dir { return &s.Themes }},
+	{"templates", func(s *kit.Sources) *kit.Dir { return &s.Templates }},
+}
+
+// ownDir is the directory of one's own at p (ownPlace), to read with the system following its links, its Name
+// as it was set; a zero Dir for none. One set that cannot be read is refused for its setting; a default that is
+// not there, or cannot be, is none; one there but no directory is refused.
+func ownDir(p dataPlace) (kit.Dir, error) {
 	none := kit.Dir{FS: nil, Name: ""}
-	p, err := a.ownPlace(kind)
 	dir := p.toRead()
-	if err != nil || dir == "" {
-		return none, err
+	if dir == "" {
+		return none, nil
 	}
 	if _, err := os.ReadDir(dir); err != nil {
 		// A default not there is none; one there that is no directory is told.
@@ -96,21 +109,31 @@ func (a *app) kit(templates bool) (*kit.Kit, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // floe's own, which its tests check
 	}
-	var src kit.Sources
 	var found usererr.List
-	for _, d := range []struct {
-		kind string
-		to   *kit.Dir
-	}{
-		{"parts", &src.Parts},
-		{"themes", &src.Themes},
-		{"templates", &src.Templates},
-	} {
-		if d.kind == "templates" && !templates {
+	places := map[string]dataPlace{}
+	var spots []spot
+	for _, kind := range ownKinds {
+		if kind.name == "templates" && !templates {
+			continue
+		}
+		p, err := a.ownPlace(kind.name)
+		if failed := found.Add(err); failed != nil {
+			return nil, failed
+		}
+		places[kind.name] = p
+		if compared(p) {
+			spots = append(spots, spot{p: p, at: p.dir, kind: kind.name})
+		}
+	}
+	in := overlapping(&found, spots, func(int, int) bool { return true })
+	var src kit.Sources
+	for _, kind := range ownKinds {
+		p, used := places[kind.name]
+		if !used || in[kind.name] {
 			continue
 		}
 		var err error
-		*d.to, err = a.ownDir(d.kind)
+		*kind.in(&src), err = ownDir(p)
 		if failed := found.Add(err); failed != nil {
 			return nil, failed
 		}
@@ -121,17 +144,99 @@ func (a *app) kit(templates bool) (*kit.Kit, error) {
 	return kit.Load(floe, src) //nolint:wrapcheck // its mistakes, or floe's failure
 }
 
+// compared reports whether a reader compares p with the other places: a directory there, or a setting not
+// there. A default not there is none to a reader, and one there but no directory, ownDir tells.
+func compared(p dataPlace) bool {
+	if p.dir == "" {
+		return false
+	}
+	fi, err := os.Stat(p.dir)
+	if err != nil {
+		return p.set
+	}
+	return fi.IsDir()
+}
+
+// spot is a directory to compare with others: at, in or of the place p of the kind, which a mistake names.
+type spot struct {
+	p    dataPlace
+	at   string
+	kind string
+}
+
+// overlapping adds to found dir_overlap for each two spots, in the order of ownKinds, that pair takes and that
+// are one directory or one in the other, and returns the kinds of the spots in such two. A spot that cannot be
+// resolved is in none.
+func overlapping(found *usererr.List, spots []spot, pair func(i, j int) bool) map[string]bool {
+	resolved := make([]string, len(spots))
+	ok := make([]bool, len(spots))
+	for i, s := range spots {
+		resolved[i], ok[i] = resolve(s.at)
+	}
+	in := map[string]bool{}
+	for i, s := range spots {
+		for j := i + 1; j < len(spots); j++ {
+			t := spots[j]
+			if !ok[i] || !ok[j] || !pair(i, j) || !within(resolved[i], resolved[j]) && !within(resolved[j], resolved[i]) {
+				continue
+			}
+			*found = append(*found, usererr.New("dir_overlap", s.p.key, s.p.dir, t.p.key, t.p.dir))
+			in[s.kind], in[t.kind] = true, true
+		}
+	}
+	return in
+}
+
+// resolve returns the path the system takes dir for, as written: its links and ..s followed as the system does;
+// of one not there, the nearest directory above it that is, resolved, with the names after it. False when a ..
+// is among those names: the system cannot take a .. after a name not there. A link that leads nowhere is a
+// name not there, and a name not there is matched by its letters, so either is refused once it is there.
+// LIMIT: links to nothing are not followed, nor names not there matched by case (macOS); follow them if needed.
+func resolve(dir string) (string, bool) {
+	rest := ""
+	for at := dir; ; {
+		if to, err := filepath.EvalSymlinks(at); err == nil {
+			return filepath.Join(to, rest), true
+		}
+		// dirs.Dir, as written: filepath.Dir would fold sym/.. by its letters, and filepath.Split stays on a/.
+		up := dirs.Dir(at)
+		name := strings.TrimPrefix(at[len(up):], string(filepath.Separator))
+		if up == at || name == ".." {
+			return "", false
+		}
+		rest = filepath.Join(name, rest)
+		at = up
+	}
+}
+
+// within reports whether a is b or is under it, both resolved: by their letters, as of names not there, or by
+// os.SameFile, as of a name of another case on macOS or a bind mount, for each directory up from a that is there.
+func within(a, b string) bool {
+	bi, berr := os.Stat(b)
+	for dir := a; ; dir = filepath.Dir(dir) {
+		if dir == b {
+			return true
+		}
+		if di, err := os.Stat(dir); berr == nil && err == nil && os.SameFile(di, bi) {
+			return true
+		}
+		if dir == filepath.Dir(dir) {
+			return false
+		}
+	}
+}
+
 // newOwn makes the part (kit.KindPart) or the template of one's own named name, kit.Skeleton's files, in the
 // directory of its kind: written whole in a directory of a dot name beside it, of no length of name's, then
 // renamed, so that nothing is left half made and nothing there is written over. Its modes are under the umask.
 // LIMIT: an empty directory made at its place between the Lstat and the Rename is replaced (rename(2)); use
 // renameat2 with RENAME_NOREPLACE if that comes to happen.
 func (a *app) newOwn(kind kit.Kind, name string) error {
-	sub := "parts"
+	made := "parts"
 	if kind == kit.KindTemplate {
-		sub = "templates"
+		made = "templates"
 	}
-	p, err := a.ownPlace(sub)
+	p, err := a.ownPlace(made)
 	switch {
 	case err != nil:
 		return err
@@ -147,6 +252,9 @@ func (a *app) newOwn(kind kit.Kind, name string) error {
 	}
 	if mistake := k.NameMistake(dir, kind, name); mistake != nil {
 		return mistake //nolint:wrapcheck // the mistake Load would tell
+	}
+	if overlaps := a.madeOverlaps(made, dirs.Join(dir, name)); overlaps != nil {
+		return overlaps.Err()
 	}
 	at := filepath.Join(dir, name)
 	if _, err = os.Lstat(at); err == nil {
@@ -172,4 +280,23 @@ func (a *app) newOwn(kind kit.Kind, name string) error {
 	}
 	a.print("%s", english.Msg("cli_made", at))
 	return nil
+}
+
+// madeOverlaps returns dir_overlap for each place of another kind, set or not, there or not, that the directory
+// at, to be made of the kind made, is or is in, or that is in it: a reader that reads both would stop once it
+// is made.
+func (a *app) madeOverlaps(made, at string) usererr.List {
+	var spots []spot
+	for _, kind := range ownKinds {
+		p, err := a.ownPlace(kind.name)
+		switch {
+		case kind.name == made:
+			spots = append(spots, spot{p: p, at: at, kind: made})
+		case err == nil && p.dir != "":
+			spots = append(spots, spot{p: p, at: p.dir, kind: kind.name})
+		}
+	}
+	var found usererr.List
+	overlapping(&found, spots, func(i, j int) bool { return spots[i].kind == made || spots[j].kind == made })
+	return found
 }

@@ -133,6 +133,138 @@ func TestDirSettingTold(t *testing.T) {
 	}
 }
 
+// overlap is the mistake of the places of two kinds of one's own that are one directory, or one in the other.
+func overlap(key1, dir1, key2, dir2 string) string {
+	return "floe: " + key1 + " (" + dir1 + ") and " + key2 + " (" + dir2 + ") are one directory, or one is in the " +
+		"other, where floe would read the files of one as those of the other; make " + key1 + " and " + key2 +
+		" two directories, neither in the other\n"
+}
+
+func mkdirs(t *testing.T, dirs ...string) {
+	t.Helper()
+	for _, d := range dirs {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// Places of one's own that are one directory, or one in the other, as the system takes them, are refused once,
+// for their settings, before they are read: a setting not there yet too, and a default only when it is there.
+func TestOwnDirsOverlap(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{
+		"d.yaml": good, "pp/mine/schema.json": ownSchema, "pp/mine/part.html": ownPage, "pp/mine/part.css": "",
+		"ok/mine/schema.json": ownSchema, "ok/mine/part.html": ownPage, "ok/mine/part.css": "",
+	})
+	pp, ok, home := filepath.Join(dir, "pp"), filepath.Join(dir, "ok"), filepath.Join(dir, "home")
+	defaultParts := filepath.Join(home, ".config/floe/parts")
+	mkdirs(t, filepath.Join(pp, "th"), filepath.Join(pp, ".th"), filepath.Join(dir, "pp2"), filepath.Join(dir, "pp22"), defaultParts)
+	link(t, pp, filepath.Join(dir, "same"))
+	link(t, filepath.Join(pp, "th"), filepath.Join(dir, "in"))
+	link(t, filepath.Join(pp, "gone"), filepath.Join(dir, "dangling"))
+	unusable := func(key, value string) string {
+		return "floe: " + key + " is " + value + ", which cannot be used as a directory (no such file or directory); " +
+			"make it a directory floe can use, or set " + key + " to another directory\n"
+	}
+	notDir := func(key, value string) string {
+		return "floe: " + key + " is " + value + ", which cannot be used as a directory (not a directory); " +
+			"make it a directory floe can use, or set " + key + " to another directory\n"
+	}
+	parts, themes, templates := "FLOE_PARTS_DIR", "FLOE_THEMES_DIR", "FLOE_TEMPLATES_DIR"
+	for _, tt := range []struct {
+		name string
+		env  map[string]string
+		args []string
+		errs string
+	}{
+		{"one", map[string]string{parts: pp, themes: pp}, nil, overlap(parts, pp, themes, pp)},
+		{"themes in parts", map[string]string{parts: pp, themes: pp + "/th"}, nil, overlap(parts, pp, themes, pp+"/th")},
+		{"parts in themes", map[string]string{parts: pp, themes: dir}, nil, overlap(parts, pp, themes, dir)},
+		{"a link to it", map[string]string{parts: pp, themes: dir + "/same"}, nil, overlap(parts, pp, themes, dir+"/same")},
+		{"a link into it", map[string]string{parts: pp, themes: dir + "/in"}, nil, overlap(parts, pp, themes, dir+"/in")},
+		{"..", map[string]string{parts: pp, themes: pp + "/th/.."}, nil, overlap(parts, pp, themes, pp+"/th/..")},
+		{"a default", map[string]string{themes: defaultParts}, nil, overlap(parts, defaultParts, themes, defaultParts)},
+		{"a dot directory", map[string]string{parts: pp, themes: pp + "/.th"}, nil, overlap(parts, pp, themes, pp+"/.th")},
+		{"not there, in", map[string]string{parts: pp, themes: pp + "/none"}, nil, overlap(parts, pp, themes, pp+"/none")},
+		{"not there, ending in /", map[string]string{parts: pp, themes: pp + "/none/"}, nil, overlap(parts, pp, themes, pp+"/none/")},
+		{"not there, with //", map[string]string{parts: pp, themes: pp + "//none"}, nil, overlap(parts, pp, themes, pp+"//none")},
+		{"templates", map[string]string{parts: pp, templates: pp}, []string{"check", "d.yaml"}, overlap(parts, pp, templates, pp)},
+		{
+			"all three",
+			map[string]string{parts: pp, themes: pp, templates: pp},
+			[]string{"check", "d.yaml"},
+			overlap(parts, pp, themes, pp) + overlap(parts, pp, templates, pp) + overlap(themes, pp, templates, pp),
+		},
+		{"templates, not read", map[string]string{parts: ok, templates: ok}, nil, ""},
+		{"a name alike", map[string]string{parts: dir + "/pp2", themes: dir + "/pp22"}, nil, ""},
+		{"not there, out", map[string]string{parts: pp, themes: dir + "/none"}, nil, unusable(themes, dir+"/none")},
+		{
+			"a file and under it",
+			map[string]string{parts: dir + "/d.yaml", themes: dir + "/d.yaml/th"},
+			nil,
+			notDir(parts, dir+"/d.yaml") + notDir(themes, dir+"/d.yaml/th"),
+		},
+		{"not there, then ..", map[string]string{parts: pp, themes: pp + "/none/.."}, nil, unusable(themes, pp+"/none/..")},
+		// A link to nothing is not followed (resolve), and is refused once what it leads to is there.
+		{"a link to nothing", map[string]string{parts: pp, themes: dir + "/dangling"}, nil, unusable(themes, dir+"/dangling")},
+	} {
+		env := map[string]string{"HOME": home}
+		maps.Copy(env, tt.env)
+		args := tt.args
+		if args == nil {
+			args = []string{"part", "check"}
+		}
+		code, stdout, stderr := runEnv(dir, env, args...)
+		if code != map[bool]int{true: 0, false: 1}[tt.errs == ""] || stdout != "" || stderr != tt.errs {
+			t.Errorf("%s: floe %v = %d, %q, %q; want %q", tt.name, args, code, stdout, stderr, tt.errs)
+		}
+	}
+}
+
+// What part new and template new make is compared with the places of the other kinds, set or not, there or not:
+// what would overlap one is refused before it is made, after its name is checked; what would not is made.
+func TestNewOwnOverlap(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"d.yaml": good})
+	home := filepath.Join(dir, "home")
+	floe := filepath.Join(home, ".config/floe")
+	defaultParts := filepath.Join(floe, "parts")
+	mkdirs(t, floe, filepath.Join(dir, "parts"), filepath.Join(dir, "themes"))
+	in := map[string]string{"HOME": home, "FLOE_TEMPLATES_DIR": floe}
+	byTemplates := overlap("FLOE_PARTS_DIR", defaultParts, "FLOE_TEMPLATES_DIR", floe)
+	for _, tt := range []struct {
+		env  map[string]string
+		args []string
+		code int
+		errs string
+	}{
+		{map[string]string{"HOME": home, "FLOE_THEMES_DIR": floe}, []string{"part", "new", "quote"}, 1, overlap("FLOE_PARTS_DIR", defaultParts, "FLOE_THEMES_DIR", floe)},
+		{in, []string{"check", "d.yaml"}, 0, ""},
+		{in, []string{"part", "new", "quote"}, 1, byTemplates},
+		{in, []string{"template", "new", "parts"}, 1, byTemplates},
+		{in, []string{"template", "new", "tp2"}, 0, ""},
+		{
+			map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_THEMES_DIR": filepath.Join(dir, "themes")},
+			[]string{"part", "new", "../themes"},
+			1,
+			filepath.Join(dir, "themes") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n",
+		},
+	} {
+		if code, _, stderr := runEnv(dir, tt.env, tt.args...); code != tt.code || stderr != tt.errs {
+			t.Errorf("%v floe %v = %d, %q; want %d, %q", tt.env, tt.args, code, stderr, tt.code, tt.errs)
+		}
+	}
+	if _, err := os.Stat(defaultParts); err == nil {
+		t.Errorf("%s made; want nothing made where it overlaps", defaultParts)
+	}
+	if _, err := os.Stat(filepath.Join(floe, "tp2", "page.html")); err != nil {
+		t.Errorf("template new tp2 made no %s", filepath.Join(floe, "tp2", "page.html"))
+	}
+}
+
 // A mistake of one's own stops floe check and render, though the page does not use it, and every command that
 // reads one's own, told at the file it is in: a part's $ref to no part at the part's schema.json, not at a
 // template's.

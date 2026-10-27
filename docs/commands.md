@@ -271,7 +271,11 @@ floe: FLOE_PARTS_DIR is /tmp/t/missing, which cannot be used as a directory (no 
 - `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` and `FLOE_THEMES_DIR` are used by every command that draws a page or reads your own (`floe check`, `floe render`, the `template` and `part` commands, and the server, which draws), so one set that is not there stops them. Their default that is not there is none: floe draws with its own alone. A default that is there but is no directory is refused.
 - `FLOE_DIR` is used by the server (`floe serve`, and `floe publish`, `floe rebuild`, `floe list` and `floe rm`, which start it), and made when it is not there. `FLOE_ICONS_DIR` is used by the icons commands, which make it, and by the diagrams that show an icon, at the diagram.
 - Without `HOME` (or with one that is not an absolute path), a directory that has no other default is none: `floe check` runs with floe's templates, parts and themes alone, while a command that writes there (`floe template new`, `floe list` for `FLOE_DIR` …) asks for the variable to be set.
-- Keep `FLOE_PARTS_DIR` and `FLOE_THEMES_DIR` apart: in one directory, the parts are read as themes and the themes as parts, each refused as such.
+- Keep `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_TEMPLATES_DIR` apart: two that are one directory, or one in the other (through a symlink too), are refused for their names before anything in them is read, a setting not there yet too. A command compares only the ones it reads, and a default only when it is there; `floe part new` and `floe template new` refuse to make what would be in, or hold, the directory of another kind.
+
+```text
+floe: FLOE_PARTS_DIR (/tmp/pp) and FLOE_THEMES_DIR (/tmp/pp) are one directory, or one is in the other, where floe would read the files of one as those of the other; make FLOE_PARTS_DIR and FLOE_THEMES_DIR two directories, neither in the other
+```
 
 The command line speaks English, whatever the environment's language; the management page and the page of a data file's mistakes follow the browser's language.
 

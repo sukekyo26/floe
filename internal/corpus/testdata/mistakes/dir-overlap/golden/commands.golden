@@ -1,0 +1,12 @@
+$ floe part check
+exit 1
+--- stderr
+floe: FLOE_PARTS_DIR ($SAMPLE/own/parts) and FLOE_THEMES_DIR ($SAMPLE/own/themes) are one directory, or one is in the other, where floe would read the files of one as those of the other; make FLOE_PARTS_DIR and FLOE_THEMES_DIR two directories, neither in the other
+$ floe check page.yaml
+exit 1
+--- stderr
+floe: FLOE_PARTS_DIR ($SAMPLE/own/parts) and FLOE_THEMES_DIR ($SAMPLE/own/themes) are one directory, or one is in the other, where floe would read the files of one as those of the other; make FLOE_PARTS_DIR and FLOE_THEMES_DIR two directories, neither in the other
+$ floe render --out-dir $TMP/pages/page.yaml page.yaml
+exit 1
+--- stderr
+floe: FLOE_PARTS_DIR ($SAMPLE/own/parts) and FLOE_THEMES_DIR ($SAMPLE/own/themes) are one directory, or one is in the other, where floe would read the files of one as those of the other; make FLOE_PARTS_DIR and FLOE_THEMES_DIR two directories, neither in the other
