@@ -5,15 +5,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
 // floe part new and template new write the smallest part and template that part check and template check take,
-// of any name floe takes, YAML's null, true and 017 too; once there, a name is refused and nothing changes.
+// of any name floe takes, YAML's null, true and 017 too, and one as long as a file's name may be; once there, a name is refused and nothing changes.
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	for _, name := range []string{"mine", "a-b_c", "null", "true", "017"} {
+	for _, name := range []string{"mine", "a-b_c", "null", "true", "017", strings.Repeat("a", 255)} {
 		home := t.TempDir()
 		env := map[string]string{"HOME": home}
 		for _, kind := range []string{"part", "template"} {
@@ -23,9 +24,6 @@ func TestNew(t *testing.T) {
 			}
 			if code, stdout, stderr := runEnv(home, env, kind, "check"); code != 0 || stdout != "" || stderr != "" {
 				t.Errorf("floe %s check after new %s = %d, %q, %q", kind, name, code, stdout, stderr)
-			}
-			if info, err := os.Stat(at); err != nil || info.Mode().Perm() != 0o755 {
-				t.Errorf("%s: %v, %v; want a directory of mode 0755", at, info, err)
 			}
 			before := texts(t, at)
 			want := at + ": there is something of this name here already: pick another name, or remove it\n"
@@ -38,6 +36,25 @@ func TestNew(t *testing.T) {
 		}
 		if leftover, err := filepath.Glob(filepath.Join(home, ".config/floe/*/.*")); err != nil || leftover != nil {
 			t.Errorf("new left %v, %v", leftover, err)
+		}
+	}
+}
+
+// floe part new makes the part as the umask says, its directory as its files.
+func TestNewUmask(t *testing.T) { //nolint:paralleltest // sets the umask of the process
+	for _, tt := range []struct{ umask, dir, file os.FileMode }{{0o022, 0o755, 0o644}, {0o077, 0o700, 0o600}} {
+		old := syscall.Umask(int(tt.umask))
+		home := t.TempDir()
+		code, _, stderr := runEnv(home, map[string]string{"HOME": home}, "part", "new", "mine")
+		syscall.Umask(old)
+		if code != 0 {
+			t.Fatalf("floe part new mine = %d, %q", code, stderr)
+		}
+		at := filepath.Join(home, ".config/floe/parts/mine")
+		for path, mode := range map[string]os.FileMode{at: tt.dir, filepath.Join(at, "part.html"): tt.file} {
+			if info, err := os.Stat(path); err != nil || info.Mode().Perm() != mode {
+				t.Errorf("umask %o: %s: %v, %v; want mode %o", tt.umask, path, info, err, mode)
+			}
 		}
 	}
 }
