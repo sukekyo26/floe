@@ -98,19 +98,14 @@ func (a *app) drawPages(k *kit.Kit, store diagram.Icons, paths []string, out arg
 			// Nowhere to write to, or to read from, or no data file to write the page of: told above.
 			continue
 		}
-		var bad error
-		if p.real, bad = realPath(at, p.to); bad != nil {
-			if failed := found.Add(bad); failed != nil {
-				return nil, failed
-			}
+		t, bad := targetAt(p, at, first)
+		if failed := found.Add(bad); failed != nil {
+			return nil, failed
+		}
+		if bad != nil {
 			continue
 		}
-		t := targetOf(p)
-		if i := slices.IndexFunc(first, t.same); i >= 0 {
-			found = append(found, usererr.New("cli_render_same_file", first[i].page.from, f.name, p.to))
-			continue
-		}
-		first = append(first, t)
+		first, p = append(first, t), t.page
 		if err == nil {
 			if p.page, err = draw.CutOffPage(page); err != nil {
 				return nil, err //nolint:wrapcheck // floe's failure, which says what failed
@@ -135,6 +130,23 @@ func pageOf(f, out arg) (rendered, string) {
 	return rendered{from: f.name, to: dirs.Join(dir, name), real: "", page: nil}, dirs.Join(at, name)
 }
 
+// targetAt is the page p, at where it is, and the file it goes to, or why it is not written: it leads nowhere, it
+// is no page (refused), or a page of first goes to it too.
+func targetAt(p rendered, at string, first []target) (target, error) {
+	var err error
+	if p.real, err = realPath(at, p.to); err != nil {
+		return target{}, err
+	}
+	t := targetOf(p)
+	if err := t.refused(); err != nil {
+		return target{}, err
+	}
+	if i := slices.IndexFunc(first, t.same); i >= 0 {
+		return target{}, usererr.New("cli_render_same_file", first[i].page.from, p.from, p.to)
+	}
+	return t, nil
+}
+
 // target is a page and what the system says of the file it goes to, nil when it is not there yet.
 type target struct {
 	page rendered
@@ -147,6 +159,20 @@ func targetOf(p rendered) target {
 		info = nil
 	}
 	return target{page: p, info: info}
+}
+
+// refused returns why the page of t is not written, nil for none: where a link leads that is no page (as a data
+// file is not), or what is neither a regular file nor a directory (a directory the system refuses as written).
+// LIMIT: a link to an .html file of one's own (a template's page.html) is written over; refuse links into one's
+// own directories if such links come to be made.
+func (t target) refused() error {
+	switch {
+	case !files.IsPage(t.page.real):
+		return usererr.NewAt(t.page.to, 0, 0, "cli_render_link_not_page", t.page.real)
+	case t.info != nil && !t.info.Mode().IsRegular() && !t.info.IsDir():
+		return usererr.CannotRead(t.page.to, usererr.ErrNotFile)
+	}
+	return nil
 }
 
 // same reports whether t and o go to one file: one real path, or, when both are there, one the system says.
@@ -185,11 +211,20 @@ func (a *app) writePages(pages []rendered, out arg) error {
 	}
 	var found usererr.List
 	for _, p := range pages {
-		if old, err := os.ReadFile(p.real); err == nil && bytes.Equal(old, p.page) {
+		old, info, err := files.Read(p.real)
+		switch {
+		case errors.Is(err, usererr.ErrNotFile):
+			// Made so since drawPages looked: not written over.
+			if failed := found.Add(usererr.CannotRead(p.to, err)); failed != nil {
+				return failed
+			}
+			continue
+		case err == nil && bytes.Equal(old, p.page):
 			continue
 		}
-		// Not private: the page goes into a repository, for others to read.
-		if err := files.WriteAtomic(p.real, p.page, 0o644); err != nil {
+		// Not private: the page goes into a repository, for others to read. One there, read or not, keeps its
+		// permissions.
+		if err := files.WriteAtomic(p.real, p.page, 0o644, info); err != nil {
 			if failed := found.Add(usererr.CannotWrite(p.to, err)); failed != nil {
 				return failed
 			}
@@ -204,7 +239,7 @@ func (a *app) writePages(pages []rendered, out arg) error {
 func checkPages(pages []rendered) error {
 	var found usererr.List
 	for _, p := range pages {
-		old, err := os.ReadFile(p.real)
+		old, _, err := files.Read(p.real)
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
 			found = append(found, usererr.New("cli_render_missing", p.to, p.from))

@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -272,15 +273,11 @@ func (k *kit) fetch(ctx context.Context, from Source, dir string) (*index, error
 		}
 		return k.extract(bytes.NewReader(b), int64(len(b)), from, dir)
 	}
-	f, err := os.Open(from.At)
+	f, info, err := files.Open(from.At)
 	if err != nil {
 		return nil, usererr.CannotRead(from.Name, err)
 	}
 	defer f.Close() //nolint:errcheck // read only
-	info, err := f.Stat()
-	if err != nil {
-		return nil, usererr.CannotRead(from.Name, err)
-	}
 	return k.extract(f, info.Size(), from, dir)
 }
 

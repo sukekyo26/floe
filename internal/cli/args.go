@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/dirs"
+	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -73,7 +74,7 @@ func (p arg) read() ([]byte, error) {
 	if p.err != nil {
 		return nil, p.err
 	}
-	src, err := os.ReadFile(p.abs) //nolint:gosec // G304: reading the file the user names is the point
+	src, _, err := files.Read(p.abs)
 	if err != nil {
 		return nil, usererr.CannotRead(p.name, err)
 	}

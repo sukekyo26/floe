@@ -7,9 +7,16 @@ import (
 	"os"
 )
 
+// ErrNotFile is what is neither a regular file nor a directory (a FIFO, a device, a socket): floe may never finish
+// reading it, and opening one may do more than open it.
+var ErrNotFile = errors.New("neither a regular file nor a directory")
+
 // CannotRead is err, of reading the file named so, at it: the system's words, without the paths it was given,
-// which may be absolute; any other error is floe's failure.
+// which may be absolute, and floe's for ErrNotFile; any other error is floe's failure.
 func CannotRead(name string, err error) error {
+	if errors.Is(err, ErrNotFile) {
+		return NewAt(name, 0, 0, "kit_not_file")
+	}
 	words, ok := systemWords(err)
 	if !ok {
 		return fmt.Errorf("%s: %w", name, err)
