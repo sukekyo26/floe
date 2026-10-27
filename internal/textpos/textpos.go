@@ -47,7 +47,7 @@ func OfTemplate(src []byte, msg, name string) (line, column int, rest string) {
 		return 0, 0, msg
 	}
 	// A parse's words follow ": " at once; an execution's, its column.
-	if words, ok := strings.CutPrefix(after, " "); ok {
+	if words, parse := strings.CutPrefix(after, " "); parse {
 		return templateLine(src, at), 0, words
 	}
 	columnText, words, ok := strings.Cut(after, ": ")
