@@ -110,14 +110,21 @@ func TestNames(t *testing.T) {
 		{"unknown template", "lang: ja\ntemplate: reprot\n", none, `d.yaml:2:11: unknown template "reprot"; use report`},
 		{"no template", "lang: ja\n", none, "d.yaml:1:1: name the template at the top level, like template: report (templates: report)"},
 		{"template not text", "lang: ja\ntemplate: 5\n", none, "d.yaml:2:11: template must be text"},
-		{"template empty", "lang: ja\ntemplate: ''\n", none, `d.yaml:2:11: unknown template ""; use report`},
-		{"theme empty", "lang: ja\ntemplate: report\ntheme: \"\"\n", none, `d.yaml:3:8: there is no theme ""; use ` + themes},
+		{"template null", "lang: ja\ntemplate: ~\n", none, "d.yaml:2:11: name the template at the top level, like template: report (templates: report)"},
+		// Empty, as null, names none: the template is told missing, and the theme is the default.
+		{"template empty", "lang: ja\ntemplate: ''\n", none, "d.yaml:2:11: name the template at the top level, like template: report (templates: report)"},
+		{"theme empty", "lang: ja\ntemplate: report\ntheme: \"\"\n", none, ""},
+		{"template of spaces", "lang: ja\ntemplate: ' '\n", none, "d.yaml:2:11: name the template at the top level, like template: report (templates: report)"},
+		{"theme of spaces", "lang: ja\ntemplate: report\ntheme: ' '\n", none, ""},
+		{"a theme with spaces", "lang: ja\ntemplate: report\ntheme: ' ink '\n", none, ""},
 		{"unknown theme", "lang: ja\ntemplate: report\ntheme: nope\n", none, `d.yaml:3:8: there is no theme "nope"; use ` + themes},
 		{
 			"no lang and an unknown template", "template: reprot\ntitle: t\n", none,
 			lines("d.yaml:1:1: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", `d.yaml:1:11: unknown template "reprot"; use report`),
 		},
 		{"a theme given", "lang: ja\ntemplate: report\ntheme: 5\n", tmpl.Options{Theme: "ink", Untitled: "", ImagesDir: ""}, ""},
+		{"a theme given with spaces", "lang: ja\ntemplate: report\n", tmpl.Options{Theme: " ink ", Untitled: "", ImagesDir: ""}, ""},
+		{"spaces given", "lang: ja\ntemplate: report\ntheme: nope\n", tmpl.Options{Theme: " ", Untitled: "", ImagesDir: ""}, `d.yaml:3:8: there is no theme "nope"; use ` + themes},
 		{"a theme given that is none", "lang: ja\ntemplate: report\ntheme: ink\n", tmpl.Options{Theme: "nope", Untitled: "", ImagesDir: ""}, `floe: there is no theme "nope"; use ` + themes},
 	} {
 		if got := drawn(t, k, tt.data, tt.o); got != tt.want {

@@ -27,6 +27,11 @@ func TestServerConfig(t *testing.T) {
 		cfg.Parts != "/h/.config/floe/parts" || cfg.Port != 8000 || cfg.Home != "/h" {
 		t.Errorf("serverConfig = %+v, %v", cfg, err)
 	}
+	// A default under a file is none to read, as a command reads it.
+	cfg, err = with(map[string]string{"FLOE_DIR": "/s", "HOME": "/dev/null"}).serverConfig()
+	if err != nil || cfg.Icons != "" || cfg.Parts != "" || cfg.Themes != "" || cfg.Templates != "" {
+		t.Errorf("serverConfig under a file = %+v, %v", cfg, err)
+	}
 	for _, tt := range []struct {
 		env  map[string]string
 		want string

@@ -28,7 +28,7 @@ func notText(written, shown, number string) string {
 }
 
 func octal(written, read, want, octal string) string {
-	return fmt.Sprintf("%s reads as the octal number %s here, but as %s in YAML 1.2: write %s, or %s for %s", written, read, want, want, octal, read)
+	return fmt.Sprintf("%s reads as the octal number %s here, but as %s in YAML 1.2: write %s for the decimal number, or %s for the octal one", written, read, want, want, octal)
 }
 
 func outsideFloat(written string) string {
@@ -193,6 +193,27 @@ func TestFind(t *testing.T) {
 	} {
 		if got := yamlpos.OfValue(yamlpos.Find(body, tt.at)); got != tt.want {
 			t.Errorf("Find(%v) at %v, want %v", tt.at, got, tt.want)
+		}
+	}
+}
+
+// OfValue places a null written, ~ or null, where it is written, and one left empty, a comment after it too, at
+// its key, as it has no text to point at.
+func TestOfValue(t *testing.T) {
+	t.Parallel()
+
+	for src, want := range map[string]yamlpos.Pos{
+		"x: 1\na: ~\n":      {Line: 2, Column: 4},
+		"x: 1\na: null\n":   {Line: 2, Column: 4},
+		"x: 1\na:\n":        {Line: 2, Column: 1},
+		"x: 1\na: # note\n": {Line: 2, Column: 1},
+	} {
+		body, err := yamlpos.Parse("a.yaml", []byte(src))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := yamlpos.OfValue(yamlpos.Find(body, []string{"a"})); got != want {
+			t.Errorf("OfValue of %q = %v, want %v", src, got, want)
 		}
 	}
 }

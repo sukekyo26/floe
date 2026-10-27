@@ -99,7 +99,7 @@ func TestChecksRun(t *testing.T) {
 		{"negated int", "- field: a\n  expr: -doc.a / 2 < 0\n  message: m\n", "a: 3\n", ""},
 		{"fails", "- field: a\n  expr: doc.a < doc.b\n  message: a below b\n", "a: 5\nb: 2\n", `d.yaml:3:4: a below b ("5")`},
 		{"keys and values", "- field: r\n  expr: false\n  message: m\n", "r:\n  x: 1\n", "d.yaml:4:3: m"},
-		{"null", "- field: opt\n  expr: doc.opt != nil\n  message: write opt\n", "opt: null\n", "d.yaml:3:1: write opt"},
+		{"null", "- field: opt\n  expr: doc.opt != nil\n  message: write opt\n", "opt: null\n", "d.yaml:3:6: write opt"},
 		{
 			"for", "- for: items\n  field: price\n  expr: item.price * item.qty < 4\n  message: line total under 4\n", items,
 			`d.yaml:5:13: line total under 4 ("4")`,
@@ -130,11 +130,14 @@ func TestChecksRun(t *testing.T) {
 		{"divided", "- expr: doc.a / 2 < 1\n  message: m\n", "a: 1\n", ""},
 		{"$env", "- expr: $env.doc.a > 1\n  message: m\n", "a: 1\n", "d.yaml: m"},
 		{"the shared keys", "- expr: doc.title == \"Plan\" && doc.lang == \"en\" && doc.template == \"t1\"\n  message: m\n", "title: Plan\n", ""},
-		{"the title as written", "- field: title\n  expr: doc.title == \"Plan\"\n  message: m\n", "title: \"  Plan  \"\n", `d.yaml:3:8: m ("  Plan  ")`},
+		// A shared key is seen as floe reads it, trimmed of spaces.
+		{"the theme trimmed", "- expr: doc.theme == \"ink\"\n  message: m\n", "theme: ' ink '\n", ""},
+		{"the title trimmed", "- field: title\n  expr: doc.title == \"Plan\"\n  message: m\n", "title: \"  Plan  \"\n", ""},
 		{"a rule for the title", "- field: title\n  expr: len(doc.title) > 10\n  message: long title\n", "title: Plan\n", `d.yaml:3:8: long title ("Plan")`},
 		{"the theme written", "- expr: doc.theme == nil\n  message: m\n", "theme: soft\n", "d.yaml: m"},
 		{"the theme left out", "- expr: doc.theme == nil\n  message: m\n", "a: 1\n", ""},
-		{"the theme empty", "- expr: doc.theme == \"\"\n  message: m\n", "theme: \"\"\n", ""},
+		// A shared key empty, as null, is none written.
+		{"the theme empty", "- expr: doc.theme == nil\n  message: m\n", "theme: \"\"\n", ""},
 		{"for to the title", "- for: title\n  expr: true\n  message: m\n", "title: Plan\n", "t1/checks.yaml:1:8: for: title does not lead to a list in d.yaml"},
 		{"a number as written", "- expr: false\n  message: 1.10\n- expr: false\n  message: 0o17\n", "a: 1\n", "d.yaml: 0o17\nd.yaml: 1.10"},
 		{"a block keeping its line breaks", "- expr: false\n  message: |+\n    m\n\n", "a: 1\n", "d.yaml: m\n\n"},

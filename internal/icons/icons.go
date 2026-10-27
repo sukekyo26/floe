@@ -21,6 +21,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/textpos"
@@ -89,15 +90,16 @@ func kitOf(set string) *kit {
 
 // Store is the icon sets kept under a root, a directory each.
 type Store struct {
-	root string
+	root   string
+	absent bool // root cannot be there (a default under a file), so that it holds no set
 	// The indexes of the sets read so far, by set: a diagram looks up many icons.
 	mu      sync.Mutex
 	indexes map[string]*index
 }
 
-// New returns the store under root, an absolute path.
-func New(root string) *Store {
-	return &Store{root: root, mu: sync.Mutex{}, indexes: map[string]*index{}}
+// New returns the store under root, an absolute path; absent when root cannot be there, holding no set.
+func New(root string, absent bool) *Store {
+	return &Store{root: root, absent: absent, mu: sync.Mutex{}, indexes: map[string]*index{}}
 }
 
 func (s *Store) dir(k *kit) string {
@@ -123,6 +125,9 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return idx, nil
 	}
 	file := filepath.Join(s.dir(k), "index.json")
+	if s.absent {
+		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
+	}
 	b, _, err := files.Read(file)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
@@ -183,6 +188,21 @@ func (s *Store) notFetched(k *kit) *usererr.Error {
 	return usererr.New("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
 }
 
+// checkWritable refuses root, the directory a fetch makes, when it cannot be one: a file, or under a file.
+// LIMIT: a directory above it that cannot be written is told only by the MkdirAll after the network; check its
+// permission too if that comes to be asked.
+func checkWritable(root string) error {
+	fi, err := os.Stat(root)
+	switch {
+	case err == nil && !fi.IsDir():
+		// What making it would say.
+		return usererr.CannotWrite(root, &fs.PathError{Op: "mkdir", Path: root, Err: syscall.ENOTDIR})
+	case err != nil && !errors.Is(err, fs.ErrNotExist):
+		return usererr.CannotWrite(root, err)
+	}
+	return nil
+}
+
 // Source is a package to fetch: At, a URL or an absolute path, and Name, as it was written, which its mistakes
 // are told at. Without one, the package is the one the set's page links.
 type Source struct {
@@ -207,6 +227,10 @@ func (s *Store) Fetch(ctx context.Context, set string, from Source, force bool) 
 	}
 	k := kitOf(set)
 	got := Fetched{Title: k.title, Dir: s.dir(k), Version: "", Count: 0, Already: false}
+	// Before the network, so that a store that cannot be written is told for it; made only with the icons.
+	if err := checkWritable(s.root); err != nil {
+		return got, err
+	}
 	if from.At == "" {
 		at, err := k.packageURL(ctx)
 		if err != nil {
