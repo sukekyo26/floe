@@ -32,7 +32,12 @@ func mark(path string) string {
 	return m
 }
 
+// stamp is st's part of a mark. A directory is its kind and inode alone: what is in it is marked by the walk,
+// and its times change with every file made in it, a hidden one (an editor's .swp) too.
 func stamp(st *unix.Stat_t) string {
+	if st.Mode&unix.S_IFMT == unix.S_IFDIR {
+		return fmt.Sprintf("%o:%d", st.Mode, st.Ino)
+	}
 	return fmt.Sprintf("%o:%d:%d:%d:%d", st.Mode, st.Ino, st.Size, st.Mtim.Nano(), st.Ctim.Nano())
 }
 
