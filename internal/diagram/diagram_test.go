@@ -196,7 +196,6 @@ func TestLayoutMistakes(t *testing.T) {
 			"  - box: { x: 20, y: 20, rows: [{ en: A, ja: あ }] }\n  - box: { name: b, x: 30, y: 30, rows: [{ en: B, ja: い }] }",
 			`s.yaml:5:5: box "A" overlaps box "b"`,
 		},
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: Short, ja: ずっと長い見出しの文字 }] }", `s.yaml:5:5: box "Short": "Short" needs w: 175 or more`},
 		{"  - box: { name: a, x: 20, y: 20, rows: [A] }\n  - box: { name: a, x: 200, y: 20, rows: [B] }", `s.yaml:6:5: the name "a" is given before: give each part and row its own name`},
 		{"  - edge: { from: chek, to: [10, 10] }", `s.yaml:5:5: edge: no part or row named "chek"`},
 		{
@@ -324,6 +323,43 @@ type failing struct{ err error }
 
 func (f failing) Lookup(string) ([]byte, error) {
 	return nil, f.err
+}
+
+// Text too wide is told in the language whose text is widest, English when another is only as wide: widths that
+// are equal compare equal, wherever the text is and whatever its size.
+func TestTooNarrow(t *testing.T) {
+	t.Parallel()
+
+	codeEn, codeJa := strings.Repeat("A", 50), "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほま"
+	for _, c := range []struct {
+		parts, want string
+	}{
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: Short, ja: ずっと長い見出しの文字 }] }", `s.yaml:5:5: box "Short": "ずっと長い見出しの文字" (ja) needs w: 175 or more`},
+		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: { en: F, ja: とても長い日本語の見出し } }", `s.yaml:5:5: frame "F": "とても長い日本語の見出し" (ja) needs w: 168 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: { en: T, ja: とても長い日本語の題 }, rows: [a] }", `s.yaml:5:5: table "T": "とても長い日本語の題" (ja) needs w: 162 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, int]] }", `s.yaml:5:5: table "T": "とても長い識別子  int" (ja) needs w: 158 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[id, { en: int, ja: とても長い型の名前 }]] }", `s.yaml:5:5: table "T": "id  とても長い型の名前" (ja) needs w: 162 or more`},
+		// The name and the type in other languages: each language's row as drawn, falling back to English.
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, { en: int, ko: 아주 긴 정수 형식 }]] }", `s.yaml:5:5: table "T": "id  아주 긴 정수 형식" (ko) needs w: 161 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A very long row, ja: 短い }] }", `s.yaml:5:5: box "A very long row": "A very long row" needs w: 149 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: あ, ko: 아주 긴 한국어 줄 }] }", `s.yaml:5:5: box "AB": "아주 긴 한국어 줄" (ko) needs w: 147 or more`},
+		// Two languages other than English as wide: the first by tag.
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A, ja: あいう, ko: 가나다 }] }", `s.yaml:5:5: box "A": "あいう" (ja) needs w: 71 or more`},
+		// As wide as English, which is told: in the main row, the sub row, mixed widths and code.
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: ABCDEFGHIJ, ja: あいうえおか }] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 110 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, h: 60, rows: [A, { en: ABCDEFGHIJKLMNO, ja: あいうえおかきくけ }] }", `s.yaml:5:5: box "A": "ABCDEFGHIJKLMNO" needs w: 141 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: ABCDEFGHIJ, ja: ABCDEあいう }] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 110 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: " + codeEn + ", ja: " + codeJa + " }]] }", `s.yaml:5:5: table "T": "` + codeEn + `" needs w: 396 or more`},
+		// Text exactly as wide as the room fits.
+		{"  - box: { x: 20, y: 20, w: 104, h: 60, rows: [A, ABCDEFGHIJ] }", ""},
+	} {
+		if _, got := draw(t, head+c.parts+"\n", render("en")); got != c.want {
+			t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
+		}
+	}
+	if got, want := i18n.New("ja").Msg("diagram_too_narrow", `frame "F"`, "見出し", " (ja)", "192"), `frame "F": 「見出し」 (ja)には w: 192 以上が要ります`; got != want {
+		t.Errorf("ja = %q, want %q", got, want)
+	}
 }
 
 // A straight edge joins its points as written, a diagonal too; others turn at right angles.
