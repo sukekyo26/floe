@@ -2,6 +2,7 @@ package cli_test
 
 import (
 	"bytes"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,8 +68,8 @@ func TestOwnDirs(t *testing.T) {
 		{"files linked out", map[string]string{"FLOE_PARTS_DIR": parts}, 0, ""},
 		{"the directory a link", map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "plink")}, 0, ""},
 		{"relative", map[string]string{"FLOE_PARTS_DIR": "parts"}, 1, "floe: FLOE_PARTS_DIR is parts, a relative path; set it to an absolute path\n"},
-		{"set, not there", map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "prats")}, 1, filepath.Join(dir, "prats") + ": no such file or directory\n"},
-		{"set, a file", map[string]string{"FLOE_THEMES_DIR": filepath.Join(dir, "d.yaml")}, 1, filepath.Join(dir, "d.yaml") + ": not a directory\n"},
+		{"set, not there", map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "prats")}, 1, "floe: FLOE_PARTS_DIR is " + filepath.Join(dir, "prats") + ", which cannot be used as a directory (no such file or directory); make it a directory floe can use, or set FLOE_PARTS_DIR to another directory\n"},
+		{"set, a file", map[string]string{"FLOE_THEMES_DIR": filepath.Join(dir, "d.yaml")}, 1, "floe: FLOE_THEMES_DIR is " + filepath.Join(dir, "d.yaml") + ", which cannot be used as a directory (not a directory); make it a directory floe can use, or set FLOE_THEMES_DIR to another directory\n"},
 		{"a link to a directory", map[string]string{"FLOE_PARTS_DIR": linked}, 1, filepath.Join(linked, "mine") + ": " + dirLink + "\n"},
 		{"a link to nothing", map[string]string{"FLOE_PARTS_DIR": dangling}, 1, filepath.Join(dangling, "mine", "part.css") + ": no such file or directory\n"},
 	} {
@@ -83,6 +84,52 @@ func TestOwnDirs(t *testing.T) {
 	}
 	if code, _, _ := runEnv(dir, nil, "part", "check", "x"); code != 2 {
 		t.Errorf("floe part check x = %d, want 2", code)
+	}
+}
+
+// A directory a setting names that cannot be read or written is told for the setting, where the command reads or
+// writes it; a command that does not use it is not stopped.
+func TestDirSettingTold(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"file": ""})
+	file := filepath.Join(dir, "file")
+	unread, unwritten := filepath.Join(dir, "unread"), filepath.Join(dir, "unwritten")
+	for d, mode := range map[string]os.FileMode{unread: 0, unwritten: 0o500} {
+		if err := os.Mkdir(d, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(d, mode); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(d, 0o700) }) //nolint:errcheck // for TempDir to remove it
+	}
+	told := func(key, value, why string) string {
+		return "floe: " + key + " is " + value + ", which cannot be used as a directory (" + why + "); make it a " +
+			"directory floe can use, or set " + key + " to another directory\n"
+	}
+	for _, tt := range []struct {
+		env    map[string]string
+		args   []string
+		code   int
+		errs   string
+		asRoot bool // root reads and writes any directory, so that the case is not one
+	}{
+		{map[string]string{"FLOE_PARTS_DIR": unread}, []string{"part", "check"}, 1, told("FLOE_PARTS_DIR", unread, "permission denied"), false},
+		{map[string]string{"FLOE_PARTS_DIR": unwritten}, []string{"part", "new", "x"}, 1, told("FLOE_PARTS_DIR", unwritten, "permission denied"), false},
+		{map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "none")}, []string{"part", "check"}, 0, "", true},
+		{map[string]string{"FLOE_ICONS_DIR": file}, []string{"icons", "search", "x"}, 1, told("FLOE_ICONS_DIR", file, "not a directory"), true},
+		{map[string]string{"FLOE_DIR": file}, []string{"serve"}, 1, told("FLOE_DIR", file, "not a directory"), true},
+		{map[string]string{"FLOE_DIR": unwritten}, []string{"serve"}, 1, told("FLOE_DIR", unwritten, "permission denied"), false},
+	} {
+		if !tt.asRoot && os.Geteuid() == 0 {
+			continue
+		}
+		env := map[string]string{"HOME": filepath.Join(dir, "home"), "FLOE_PORT": "1"}
+		maps.Copy(env, tt.env)
+		if code, _, stderr := runEnv(dir, env, tt.args...); code != tt.code || stderr != tt.errs {
+			t.Errorf("%v floe %v = %d, %q; want %d, %q", tt.env, tt.args, code, stderr, tt.code, tt.errs)
+		}
 	}
 }
 

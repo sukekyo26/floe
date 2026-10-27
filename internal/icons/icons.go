@@ -91,16 +91,18 @@ func kitOf(set string) *kit {
 
 // Store is the icon sets kept under a root, a directory each.
 type Store struct {
-	root   string
-	absent bool // root cannot be there (a default under a file), so that it holds no set
+	root    string
+	absent  bool   // root cannot be there (a default under a file), so that it holds no set
+	setting string // the setting that names root, "" for the default: root's own mistakes are told for it
 	// The indexes of the sets read so far, by set: a diagram looks up many icons.
 	mu      sync.Mutex
 	indexes map[string]*index
 }
 
-// New returns the store under root, an absolute path; absent when root cannot be there, holding no set.
-func New(root string, absent bool) *Store {
-	return &Store{root: root, absent: absent, mu: sync.Mutex{}, indexes: map[string]*index{}}
+// New returns the store under root, an absolute path; absent when root cannot be there, holding no set; setting,
+// the setting that names root, "" for the default.
+func New(root string, absent bool, setting string) *Store {
+	return &Store{root: root, absent: absent, setting: setting, mu: sync.Mutex{}, indexes: map[string]*index{}}
 }
 
 func (s *Store) dir(k *kit) string {
@@ -177,8 +179,13 @@ func libraryAt(file string, line, column int, key string, err error, args ...any
 // cannotRead is err, of reading the file or the directory of the set k at path, under the store: to fetch the set
 // again when that mends it, else as it is (CannotRead).
 func (s *Store) cannotRead(path string, err error, k *kit) error {
+	// A path that is no directory on the way is the store's (a file, or under one) or the set's.
+	storeIsDir := !errors.Is(err, syscall.ENOTDIR) || s.rootIsDir()
 	switch {
-	case !s.mendable(path, err):
+	case !mendable(path, err, storeIsDir):
+		if !storeIsDir {
+			return usererr.SettingDir(s.setting, s.root, err, usererr.CannotRead(path, err))
+		}
 		return usererr.CannotRead(path, err)
 	case errors.Is(err, usererr.ErrNotFile):
 		return usererr.NewAt(path, 0, 0, "icons_not_file", k.name)
@@ -188,17 +195,16 @@ func (s *Store) cannotRead(path string, err error, k *kit) error {
 
 // mendable reports whether a fetch of the set mends err, of reading path under the store, which writes the set's
 // directory whole: none there, what is no regular file (a FIFO, a directory), the set's directory a file, or what
-// leads out of it (os.Root refuses a path that the system finds outside). A store that is no directory, and what
-// the system does not let floe read, a fetch cannot mend: it fails there too.
-func (s *Store) mendable(path string, err error) bool {
+// leads out of it (os.Root refuses a path that the system finds outside). A store that is no directory
+// (storeIsDir false), and what the system does not let floe read, a fetch cannot mend: it fails there too.
+func mendable(path string, err error, storeIsDir bool) bool {
 	switch {
 	case errors.Is(err, fs.ErrPermission):
 		return false
 	case errors.Is(err, fs.ErrNotExist), errors.Is(err, usererr.ErrNotFile), errors.Is(err, syscall.EISDIR):
 		return true
 	case errors.Is(err, syscall.ENOTDIR):
-		fi, statErr := os.Stat(s.root)
-		return statErr == nil && fi.IsDir()
+		return storeIsDir
 	}
 	// The system finds it where os.Root does not let it be read: outside the set's directory.
 	_, statErr := os.Stat(path)
@@ -220,19 +226,30 @@ func (s *Store) notFetched(k *kit) *usererr.Error {
 	return usererr.New("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
 }
 
-// checkWritable refuses root, the directory a fetch makes, when it cannot be one: a file, or under a file.
+// rootIsDir reports whether the store's root is a directory now.
+func (s *Store) rootIsDir() bool {
+	fi, err := os.Stat(s.root)
+	return err == nil && fi.IsDir()
+}
+
+// checkWritable refuses the root, the directory a fetch makes, when it cannot be one: a file, or under a file.
 // LIMIT: a directory above it that cannot be written is told only by the MkdirAll after the network; check its
 // permission too if that comes to be asked.
-func checkWritable(root string) error {
-	fi, err := os.Stat(root)
+func (s *Store) checkWritable() error {
+	fi, err := os.Stat(s.root)
 	switch {
 	case err == nil && !fi.IsDir():
 		// What making it would say.
-		return usererr.CannotWrite(root, &fs.PathError{Op: "mkdir", Path: root, Err: syscall.ENOTDIR})
+		return s.cannotWrite(&fs.PathError{Op: "mkdir", Path: s.root, Err: syscall.ENOTDIR})
 	case err != nil && !errors.Is(err, fs.ErrNotExist):
-		return usererr.CannotWrite(root, err)
+		return s.cannotWrite(err)
 	}
 	return nil
+}
+
+// cannotWrite is err, of writing in the root: told for the setting that names it, if one does.
+func (s *Store) cannotWrite(err error) error {
+	return usererr.SettingDir(s.setting, s.root, err, usererr.CannotWrite(s.root, err))
 }
 
 // Source is a package to fetch: At, a URL or an absolute path, and Name, as it was written, which its mistakes
@@ -260,7 +277,7 @@ func (s *Store) Fetch(ctx context.Context, set string, from Source, force bool) 
 	k := kitOf(set)
 	got := Fetched{Title: k.title, Dir: s.dir(k), Version: "", Count: 0, Already: false}
 	// Before the network, so that a store that cannot be written is told for it; made only with the icons.
-	if err := checkWritable(s.root); err != nil {
+	if err := s.checkWritable(); err != nil {
 		return got, err
 	}
 	if from.At == "" {
@@ -284,11 +301,11 @@ func (s *Store) Fetch(ctx context.Context, set string, from Source, force bool) 
 		return got, nil
 	}
 	if err := os.MkdirAll(s.root, 0o700); err != nil {
-		return got, usererr.CannotWrite(s.root, err)
+		return got, s.cannotWrite(err)
 	}
 	tmp, err := os.MkdirTemp(s.root, k.name+".tmp-")
 	if err != nil {
-		return got, usererr.CannotWrite(s.root, err)
+		return got, s.cannotWrite(err)
 	}
 	defer os.RemoveAll(tmp) //nolint:errcheck // a leftover is harmless
 	idx, err := k.fetch(ctx, from, tmp)

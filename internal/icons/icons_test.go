@@ -95,7 +95,7 @@ func TestFetchAndSearch(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	set := icons.New(root, false)
+	set := icons.New(root, false, "")
 	dir := filepath.Join(root, "aws")
 	// Before a fetch, a search and a lookup say how to fetch.
 	notFetched := "floe: AWS icons are not in " + dir + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
@@ -162,7 +162,7 @@ func TestLookup(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	set := icons.New(root, false)
+	set := icons.New(root, false, "")
 	fetch(t, set, local(writeZip(t, "Icon-package.zip", packageFiles)), false)
 	// A name its set does not hold, and one outside the set's directory, are not read.
 	for _, name := range []string{"aws/amazon-ec2", "aws/../../etc/passwd", "aws/"} {
@@ -234,7 +234,7 @@ func TestFetchFromURL(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	root := t.TempDir()
-	set := icons.New(root, false)
+	set := icons.New(root, false, "")
 	url := srv.URL + "/x/Icon-package_01022030.abc.zip"
 	if got := fetch(t, set, icons.Source{Name: url, At: url}, false); got.Count != 8 {
 		t.Errorf("Fetch from a URL = %+v", got)
@@ -273,7 +273,7 @@ func TestFetchCannotWrite(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(parent, 0o700) }) //nolint:errcheck // for TempDir to remove it
 	root := filepath.Join(parent, "x")
 	url := srv.URL + "/x/Icon-package_01022030.abc.zip"
-	_, err := icons.New(root, false).Fetch(context.Background(), "aws", icons.Source{Name: url, At: url}, false)
+	_, err := icons.New(root, false, "").Fetch(context.Background(), "aws", icons.Source{Name: url, At: url}, false)
 	if os.Geteuid() == 0 {
 		t.Skip("root writes to any directory")
 	}
@@ -281,6 +281,44 @@ func TestFetchCannotWrite(t *testing.T) {
 		"and that its name is free and not too long"
 	if told(err) != want || gets.Load() != 0 {
 		t.Errorf("Fetch into a directory that cannot be written = %s after %d requests, want %s before any", told(err), gets.Load(), want)
+	}
+}
+
+// A root that a setting names, read or written, is told for the setting when it is no directory (a file, or under
+// one) or cannot be written in.
+func TestSettingTold(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	file := filepath.Join(dir, "file")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	locked := filepath.Join(dir, "locked")
+	if err := os.Mkdir(locked, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o700) }) //nolint:errcheck // for TempDir to remove it
+	zip := local(filepath.Join(dir, "icons.zip"))
+	want := func(root, why string) string {
+		return "floe: FLOE_ICONS_DIR is " + root + ", which cannot be used as a directory (" + why + "); make it a " +
+			"directory floe can use, or set FLOE_ICONS_DIR to another directory"
+	}
+	for _, root := range []string{file, filepath.Join(file, "sub")} {
+		set := icons.New(root, false, "FLOE_ICONS_DIR")
+		if _, err := set.Search([]string{"x"}); told(err) != want(root, "not a directory") {
+			t.Errorf("Search in %s = %s", root, told(err))
+		}
+		if _, err := set.Fetch(context.Background(), "aws", zip, false); told(err) != want(root, "not a directory") {
+			t.Errorf("Fetch into %s = %s", root, told(err))
+		}
+	}
+	_, err := icons.New(locked, false, "FLOE_ICONS_DIR").Fetch(context.Background(), "aws", zip, false)
+	if os.Geteuid() == 0 {
+		t.Skip("root writes to any directory")
+	}
+	if told(err) != want(locked, "permission denied") {
+		t.Errorf("Fetch into %s = %s", locked, told(err))
 	}
 }
 
@@ -326,7 +364,7 @@ func TestFetchRefusals(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	set := icons.New(root, false)
+	set := icons.New(root, false, "")
 	dir := filepath.Join(root, "aws")
 	notZip := filepath.Join(t.TempDir(), "page.html")
 	if err := os.WriteFile(notZip, []byte("<html>"), 0o600); err != nil {
@@ -434,7 +472,7 @@ func TestBrokenIndex(t *testing.T) {
 		if err := os.WriteFile(index, []byte(c.index), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := icons.New(filepath.Dir(dir), false).Search([]string{"x"}); told(err) != index+c.want {
+		if _, err := icons.New(filepath.Dir(dir), false, "").Search([]string{"x"}); told(err) != index+c.want {
 			t.Errorf("index %s = %s, want %s", c.index, told(err), index+c.want)
 		}
 	}
@@ -446,7 +484,7 @@ func TestBrokenIndex(t *testing.T) {
 	if err := syscall.Mkfifo(filepath.Join(fifoRoot, "aws", "index.json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := icons.New(fifoRoot, false).Search([]string{"x"}); told(err) != filepath.Join(fifoRoot, "aws", "index.json")+
+	if _, err := icons.New(fifoRoot, false, "").Search([]string{"x"}); told(err) != filepath.Join(fifoRoot, "aws", "index.json")+
 		`: is neither a regular file nor a directory (a FIFO, a device or the like), which floe does not open; run "floe icons fetch aws --force" to fetch the icons again` {
 		t.Errorf("an index that is a FIFO = %s", told(err))
 	}
@@ -455,7 +493,7 @@ func TestBrokenIndex(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(fileSet, "aws"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := icons.New(fileSet, false).Search([]string{"x"}); told(err) != filepath.Join(fileSet, "aws", "index.json")+
+	if _, err := icons.New(fileSet, false, "").Search([]string{"x"}); told(err) != filepath.Join(fileSet, "aws", "index.json")+
 		`: cannot be read (not a directory); run "floe icons fetch aws --force" to fetch the icons again` {
 		t.Errorf("a set's directory that is a file = %s", told(err))
 	}
@@ -464,28 +502,28 @@ func TestBrokenIndex(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := icons.New(file, false).Search([]string{"x"}); told(err) != file+"/aws/index.json: not a directory" {
+	if _, err := icons.New(file, false, "").Search([]string{"x"}); told(err) != file+"/aws/index.json: not a directory" {
 		t.Errorf("a root that is a file = %s", told(err))
 	}
 	// A store under a file is told as it is (the default one is none, which cli tells), and a fetch into one
 	// stops before the network (the context is done); one failing at the network makes nothing.
 	under := filepath.Join(file, "x")
-	if _, err := icons.New(under, false).Search([]string{"x"}); told(err) != under+"/aws/index.json: not a directory" {
+	if _, err := icons.New(under, false, "").Search([]string{"x"}); told(err) != under+"/aws/index.json: not a directory" {
 		t.Errorf("a root under a file = %s", told(err))
 	}
 	done, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := icons.New(under, false).Fetch(done, "aws", icons.Source{Name: "", At: ""}, false); !strings.HasPrefix(told(err), under+": cannot be written (not a directory): check") {
+	if _, err := icons.New(under, false, "").Fetch(done, "aws", icons.Source{Name: "", At: ""}, false); !strings.HasPrefix(told(err), under+": cannot be written (not a directory): check") {
 		t.Errorf("a fetch into a root under a file = %s", told(err))
 	}
 	typo := filepath.Join(t.TempDir(), "typo")
-	if _, err := icons.New(typo, false).Fetch(done, "aws", icons.Source{Name: "", At: ""}, false); err == nil {
+	if _, err := icons.New(typo, false, "").Fetch(done, "aws", icons.Source{Name: "", At: ""}, false); err == nil {
 		t.Error("a fetch with its context done went on")
 	}
 	if _, err := os.Stat(typo); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("a fetch failing at the network left %s: %v", typo, err)
 	}
-	_, err := icons.New(file, false).Fetch(context.Background(), "aws", local(writeZip(t, "Icon-package.zip", packageFiles)), true)
+	_, err := icons.New(file, false, "").Fetch(context.Background(), "aws", local(writeZip(t, "Icon-package.zip", packageFiles)), true)
 	if want := file + ": cannot be written (not a directory): check"; !strings.HasPrefix(told(err), want) {
 		t.Errorf("a fetch --force into a root that is a file = %s, want %s…", told(err), want)
 	}
@@ -509,7 +547,7 @@ func TestLookupStaysInside(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	set := icons.New(root, false)
+	set := icons.New(root, false, "")
 	want := dir + `/../out.svg: cannot be read (path escapes from parent); run "floe icons fetch aws --force" to fetch the icons again`
 	if b, err := set.Lookup("aws/../out"); told(err) != want {
 		t.Errorf("Lookup of ../out = %q, %s", b, told(err))
@@ -553,7 +591,7 @@ func TestLookupStaysInside(t *testing.T) {
 func TestNotFetchedOnce(t *testing.T) {
 	t.Parallel()
 
-	s := icons.New(t.TempDir(), false)
+	s := icons.New(t.TempDir(), false, "")
 	errs := make([]error, 8)
 	var wg sync.WaitGroup
 	for i := range errs {

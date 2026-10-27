@@ -102,7 +102,7 @@ func (a *app) iconsDir() (dataPlace, error) {
 
 // iconsIn is the store at p: one whose default cannot be holds no set, and a fetch into it tells why.
 func iconsIn(p dataPlace) *icons.Store {
-	return icons.New(p.dir, p.unusable != nil)
+	return icons.New(p.dir, p.unusable != nil, p.setting())
 }
 
 // iconStore returns the icons the diagrams of one command show: those of iconsDir, or, without a directory for
