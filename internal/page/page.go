@@ -1,7 +1,9 @@
-// Package page reads an HTML page as a parser does: its title, and its first element of a tag.
+// Package page reads an HTML page as a parser does: its title, its first element of a tag, and the elements an
+// input (a page.html, a part's part.html, an item of format html, a diagram's raw SVG) may not write.
 package page
 
 import (
+	"slices"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -53,4 +55,33 @@ func text(n *html.Node) string {
 // return and space.
 func isASCIISpace(r rune) bool {
 	return r == '\t' || r == '\n' || r == '\f' || r == '\r' || r == ' '
+}
+
+// Refusable are the names Refused returns: the elements no input may write, of HTML, SVG or MathML. floe puts a
+// page's CSS together, in layers, and an SVG's <style> styles the whole page as an HTML one does; the page's CSP
+// ignores a <base>; a <noscript> is read as text with scripts on, and its elements work, unchecked, with them off;
+// a page floe draws is static, and a <meta> but those shown does not show it.
+var Refusable = []string{"base", "meta", "noscript", "style"}
+
+// Refused returns the name of n when it is an element of Refusable that an input may not write, of any namespace,
+// "" when it may. The <style> and the CSP's <meta> floe puts in after the check are not the input's.
+func Refused(n *html.Node) string {
+	if n.Type != html.ElementNode || !slices.Contains(Refusable, n.Data) || n.Data == "meta" && shown(n) {
+		return ""
+	}
+	return n.Data
+}
+
+// shown reports whether n, a <meta>, is one the page drawn may have: its charset alone, or a viewport's name and
+// content. A page floe draws is static: what does not show it (a refresh, a referrer policy, a generator) is
+// none of its.
+func shown(n *html.Node) bool {
+	if len(n.Attr) == 1 && n.Attr[0].Key == "charset" {
+		return true
+	}
+	return slices.ContainsFunc(n.Attr, func(a html.Attribute) bool {
+		return a.Namespace == "" && a.Key == "name" && strings.EqualFold(a.Val, "viewport")
+	}) && !slices.ContainsFunc(n.Attr, func(a html.Attribute) bool {
+		return a.Namespace != "" || a.Key != "name" && a.Key != "content"
+	})
 }

@@ -26,8 +26,8 @@ var (
 	zoomJS string
 )
 
-// page is the template of a diagram, its text written in a language as each draw binds t.
-var page = template.Must(template.New("svg").Funcs(template.FuncMap{
+// svgPage is the template of a diagram, its text written in a language as each draw binds t.
+var svgPage = template.Must(template.New("svg").Funcs(template.FuncMap{
 	"n": num,
 	"t": func(Text) string { return "" },
 }).Parse(svgTemplate))
@@ -195,7 +195,7 @@ func (l *layout) draw(lang i18n.Lang) (template.HTML, error) {
 			}
 		}
 	}
-	t, err := page.Clone()
+	t, err := svgPage.Clone()
 	if err != nil {
 		return "", fmt.Errorf("diagram: copy the template: %w", err)
 	}

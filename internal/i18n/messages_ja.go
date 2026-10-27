@@ -227,7 +227,7 @@ var messagesJA = map[string]string{
 	"diagram_label_not_circle": "label: in の「%s」は円の名前ではありません",
 	"diagram_label_region":     "%sが%sの内側とほかの円の外側に収まっていません。動かすか、x と y を書かずに floe に置かせてください",
 	"diagram_label_no_room":    "%sを置く場所が%sの内側とほかの円の外側にありません。その領域を広げるか、文字を短くしてください",
-	"diagram_raw_element":      "raw の SVG に <%s> があります。SVG の要素だけを、style・script・foreignObject を使わずに書いてください",
+	"diagram_raw_element":      "raw の SVG に <%s> があります。図には書けない要素なので、消してください。見た目は SVG の図形と属性（fill= など）で書きます",
 	"diagram_icon_set":         "%s: 「%s」にはアイコン集の名前（%s）を前に付けてください（aws/amazon-ec2 のように。floe icons search <語> で探せます）",
 	"diagram_icon_unknown":     "%s: アイコン「%s」はありません（floe icons search <語> で探せます）",
 	"diagram_zoom_hint":        "Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動",
