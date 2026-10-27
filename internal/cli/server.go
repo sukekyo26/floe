@@ -34,17 +34,17 @@ var settingKeys = []string{
 
 // storeDir is the directory of the pages: FLOE_DIR, else floe under the XDG data directory, else under
 // ~/.local/share (dataDir).
-func (a *app) storeDir() (string, error) {
+func (a *app) storeDir() (dataPlace, error) {
 	p, err := a.dataDir("FLOE_DIR", "XDG_DATA_HOME", ".local/share", "floe")
 	switch {
 	case err != nil:
-		return "", err
+		return p, err
 	case p.unusable != nil:
-		return "", p.unusable // the server writes there
+		return p, p.unusable // the server writes there
 	case p.dir == "":
-		return "", usererr.New("store_no_dir")
+		return p, usererr.New("store_no_dir")
 	}
-	return p.dir, nil
+	return p, nil
 }
 
 // port is the server's port, FLOE_PORT else 7325.
@@ -78,7 +78,7 @@ func (a *app) serverConfig() (server.Config, error) {
 		kind string
 		to   *string
 	}{{"parts", &cfg.Parts}, {"themes", &cfg.Themes}, {"templates", &cfg.Templates}} {
-		p, _, placeErr := a.ownPlace(d.kind)
+		p, placeErr := a.ownPlace(d.kind)
 		if failed := found.Add(placeErr); failed != nil {
 			return cfg, failed
 		}
@@ -94,7 +94,7 @@ func (a *app) serverConfig() (server.Config, error) {
 	if err := found.Err(); err != nil {
 		return cfg, err //nolint:wrapcheck // mistakes for the user as they are
 	}
-	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root), port, icons.toRead(), a.getenv("HOME")
+	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root.dir), port, icons.toRead(), a.getenv("HOME")
 	cfg.Drawing = a.drawing
 	return cfg, nil
 }
@@ -170,7 +170,9 @@ func (a *app) serve(ctx context.Context) error {
 	}
 	root := cfg.Store.Root()
 	if err = writable(root); err != nil {
-		return usererr.CannotWrite(root, err) //nolint:wrapcheck // the system's words, at the store
+		// The place serverConfig read the store's directory from, to tell it for its setting.
+		p, _ := a.storeDir() //nolint:errcheck // serverConfig read it without a mistake
+		return p.cannotWrite(err)
 	}
 	if cfg.Build, err = daemon.Build(); err != nil {
 		return err //nolint:wrapcheck // already says what failed

@@ -30,6 +30,16 @@ func CannotWrite(name string, err error) error {
 	return InSystemWords("cannot_write", name, err)
 }
 
+// SettingDir is err, of reading or writing dir, which the setting key names: the system's words of why, with what
+// to do; any other error is floe's failure, at dir.
+func SettingDir(key, dir string, err error) error {
+	words, ok := systemWords(err)
+	if !ok {
+		return fmt.Errorf("%s: %w", dir, err)
+	}
+	return New("dir_setting", words, key, dir)
+}
+
 // InSystemWords is err, of reading or writing the file or the directory named so, at it, in the words of the
 // catalog message key: the system's words of err (ErrNotFile's too, unlike CannotRead) its first argument and
 // args after them, for what more there is to say; any other error is floe's failure.

@@ -153,7 +153,8 @@ var messagesEN = map[string]string{
 	"cli_wants_icons":          "a zip file of the icons, or a URL",
 
 	// files: a path floe reads or writes for the user
-	// LIMIT: the %s of cannot_write is the system's English, as the system words why it cannot write
+	// LIMIT: the %s of cannot_write and the first of dir_setting are the system's English, as the system words why
+	// it cannot read or write
 	// link: which files may be linked
 	"link_not_real":        "%s is not its absolute real path; pass it through filepath.Abs and filepath.EvalSymlinks (symlinks resolved, path cleaned) first",
 	"link_not_linkable":    "%s is not a regular HTML file (.html, .htm) or data file (.yaml, .yml); only those can be linked",
@@ -200,6 +201,7 @@ var messagesEN = map[string]string{
 	"store_no_dir":          "there is no directory for pages, as HOME is not an absolute path; set FLOE_DIR to an absolute path",
 
 	"cannot_write": "cannot be written (%s): check that its directory exists and can be written to, and that its name is free and not too long",
+	"dir_setting":  "%[2]s is %[3]s, which cannot be used as a directory (%[1]s); make it a directory floe can use, or set %[2]s to another directory",
 
 	// icons: the icon sets
 	// LIMIT: the first %s of icons_broken, icons_download, icons_page_download, icons_bad_zip and
