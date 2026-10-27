@@ -8,17 +8,19 @@ import (
 
 // check reports the layout's mistakes: text too wide or tall for its box or frame (as it was laid out), parts
 // (edges, lines and axes too) sticking out of the canvas, overlapping (frame headings too), straddling the edge
-// of a frame, edges running through boxes, labels or frame headings, and edges crossing. Frames are not compared
-// with one another, nor with the headings of others, and a heading is not held to its frame or the canvas: a frame
-// may cross another on purpose (a group over two columns, bands that cross), and the page shows one that should not.
+// of a frame, edges running through boxes, labels or frame headings, and edges crossing. A frame's own box is
+// compared with no other frame's, and a frame's heading is not kept within the frame's height or the canvas (its
+// width is, by addFrame): frames may cross on purpose (a group over two columns, bands that cross), and on the
+// page a heading out of its frame shows below it, one out of the canvas cut short or gone. A frame's icon is a
+// box and its heading a text, each checked as those are.
 func (l *layout) check() {
 	l.checkPlacement()
 	l.checkEdges()
 	l.checkCrossings()
 }
 
-// checkPlacement reports parts sticking out of the canvas, overlapping (a frame's heading too) and straddling
-// frames: boxes and marks, not frames, which may cross one another, nor a frame over another's heading (check).
+// checkPlacement reports parts sticking out of the canvas; boxes (a frame's icon among them), marks, labels and
+// frame headings overlapping; and boxes and marks straddling a frame. Frames are not compared with one another.
 func (l *layout) checkPlacement() {
 	canvas := rect{0, 0, l.s.Width, l.s.Height, "", ""}
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
