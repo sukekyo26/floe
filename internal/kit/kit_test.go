@@ -441,7 +441,7 @@ func TestUnread(t *testing.T) {
 	th, _ := k.Theme("t")
 	tm, _ := k.Template("t")
 	got := fmt.Sprint(l.Unread(), p.Unread(), th.Unread(), tm.Unread())
-	if got != "[checks.yaml part.html] [notes.txt] [tabel.css] [computed.yaml computed.yml pgae.html]" {
+	if got != "[checks.yaml part.html] [notes.txt] [tabel.css] [computed.yml pgae.html]" {
 		t.Errorf("Unread = %s", got)
 	}
 }

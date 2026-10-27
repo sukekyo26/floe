@@ -222,10 +222,8 @@ func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	if found != nil {
 		return found.Sorted().Err()
 	}
-	read := []string{"page.html", "page.css", "schema.json", "checks.yaml", "words.yaml", "example.yaml", "assets/"}
-	// computed.yaml is read with the schema alone, whose items its expressions see.
-	if t.schema != nil {
-		read = append(read, "computed.yaml")
+	read := []string{
+		"page.html", "page.css", "schema.json", "computed.yaml", "checks.yaml", "words.yaml", "example.yaml", "assets/",
 	}
 	if t.unread, err = unreadIn(d, name, read...); err != nil {
 		return err
