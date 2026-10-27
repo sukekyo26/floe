@@ -57,15 +57,6 @@ func (t Text) in(lang i18n.Lang) string {
 	return t["en"]
 }
 
-// all is t in each of its languages, in the order of their tags.
-func (t Text) all() []string {
-	out := make([]string, 0, len(t))
-	for _, k := range slices.Sorted(maps.Keys(t)) {
-		out = append(out, t[k])
-	}
-	return out
-}
-
 // spec is a diagram's value: its canvas and parts, or the name of a built-in example; and whether to show it.
 type spec struct {
 	Width   float64 `json:"width"`

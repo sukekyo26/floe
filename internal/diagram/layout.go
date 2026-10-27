@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -252,27 +253,38 @@ func cmpOr(s, def string) string {
 	return s
 }
 
-// textWidth estimates the widest of t's languages: a full-width character (above U+2E80) is size wide, any
-// other 0.6 of it, or 0.62 in code.
+// widest is the language of t whose text is widest, and its width: a full-width character (above U+2E80) is
+// size wide, any other 0.6 of it, or 0.62 in code. Widths are counted in fiftieths of size, so that text as wide
+// compares equal: English is kept against text only as wide, and of the others the first by tag.
 // LIMIT: an estimate of no font, as floe draws with the system's. Measure the text if one comes to miss.
-func textWidth(t Text, size float64, code bool) float64 {
-	narrow := size * 0.6
+func widest(t Text, size float64, code bool) (string, float64) {
+	narrow := 30
 	if code {
-		narrow = size * 0.62
+		narrow = 31
 	}
-	widest := 0.0
-	for _, s := range t.all() {
-		w := 0.0
+	units := func(s string) int {
+		n := 0
 		for _, c := range s {
 			if c > 0x2e80 {
-				w += size
+				n += 50
 			} else {
-				w += narrow
+				n += narrow
 			}
 		}
-		widest = max(widest, w)
+		return n
 	}
-	return widest
+	lang, most := "en", units(t["en"])
+	for _, k := range slices.Sorted(maps.Keys(t)) {
+		if n := units(t[k]); n > most {
+			lang, most = k, n
+		}
+	}
+	return lang, float64(most) * size / 50
+}
+
+func textWidth(t Text, size float64, code bool) float64 {
+	_, w := widest(t, size, code)
+	return w
 }
 
 // what names a part in a mistake: by its name, else by its English text.
@@ -285,8 +297,12 @@ func what(kind, name string, text Text) string {
 
 // fit refuses text that is wider than room, telling the width to write: the widest of its languages.
 func (l *layout) fit(at, who string, t Text, size float64, code bool, room, written float64) {
-	if tw := textWidth(t, size, code); tw > room {
-		l.problem(at, "diagram_too_narrow", who, t["en"], num(math.Ceil(written+tw-room)))
+	if lang, tw := widest(t, size, code); tw > room {
+		in := ""
+		if lang != "en" {
+			in = " (" + lang + ")"
+		}
+		l.problem(at, "diagram_too_narrow", who, t[lang], in, num(math.Ceil(written+tw-room)))
 	}
 }
 
@@ -376,14 +392,15 @@ func tableWidth(t *table) float64 {
 	}
 	widest := textWidth(t.Title, sizeMain, false) + pad*2
 	for _, row := range t.Rows {
-		widest = max(widest, rowWidth(row)+24)
+		widest = max(widest, textWidth(rowText(row), sizeSub, true)+24)
 	}
 	return ceil8(widest)
 }
 
-func rowWidth(row tableRow) float64 {
+// rowText is row as drawn in each language it is written in; none for a separator.
+func rowText(row tableRow) Text {
 	if row.Sep {
-		return 0
+		return Text{}
 	}
 	t := row.Cells[0]
 	if len(row.Cells) == 2 {
@@ -395,7 +412,7 @@ func rowWidth(row tableRow) float64 {
 			}
 		}
 	}
-	return textWidth(t, sizeSub, true)
+	return t
 }
 
 // tableRects are the area of t and of each of its rows.
@@ -446,9 +463,7 @@ func (l *layout) addTable(t *table, at string) {
 			continue
 		}
 		if t.W != 0 {
-			if tw := rowWidth(row); tw > w-24 {
-				l.problem(at, "diagram_too_narrow", r.what, row.Cells[0]["en"], num(math.Ceil(w+tw-(w-24))))
-			}
+			l.fit(at, r.what, rowText(row), sizeSub, true, w-24, w)
 		}
 		rowY := rows[i].y + rowHeight/2
 		kids = append(kids, elem{Kind: "text", X: x + 12, Y: rowY, Anchor: "start", Class: "cell code", Text: row.Cells[0]})
@@ -496,10 +511,7 @@ func (l *layout) addFrame(f *frame, at string) {
 	if f.Label != nil {
 		l.heads = append(l.heads, rect{hx, hy - 9, textWidth(f.Label, size, false), labelH, "the heading of " + who, at})
 		// The heading keeps the margin on its right that it has on its left.
-		room := f.W - (hx - f.X) - 12
-		if tw := textWidth(f.Label, size, false); tw > room {
-			l.problem(at, "diagram_too_narrow", who, f.Label["en"], num(math.Ceil(f.W+tw-room)))
-		}
+		l.fit(at, who, f.Label, size, false, f.W-(hx-f.X)-12, f.W)
 	}
 	rx, cls := 10.0, "frame"
 	if f.Icon != "" || f.Square {

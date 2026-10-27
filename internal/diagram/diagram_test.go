@@ -347,7 +347,7 @@ func TestTooNarrow(t *testing.T) {
 		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A, ja: あいう, ko: 가나다 }] }", `s.yaml:5:5: box "A": "あいう" (ja) needs w: 71 or more`},
 		// As wide as English, which is told: in the main row, the sub row, mixed widths and code.
 		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: ABCDEFGHIJ, ja: あいうえおか }] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 110 or more`},
-		{"  - box: { x: 20, y: 20, w: 40, h: 60, rows: [A, { en: ABCDEFGHIJKLMNO, ja: あいうえおかきくけ }] }", `s.yaml:5:5: box "A": "ABCDEFGHIJKLMNO" needs w: 141 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, h: 60, rows: [A, { en: ABCDEFGHIJKLMNO, ja: あいうえおかきくけ }] }", `s.yaml:5:5: box "A": "ABCDEFGHIJKLMNO" needs w: 140 or more`},
 		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: ABCDEFGHIJ, ja: ABCDEあいう }] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 110 or more`},
 		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: " + codeEn + ", ja: " + codeJa + " }]] }", `s.yaml:5:5: table "T": "` + codeEn + `" needs w: 396 or more`},
 		// Text exactly as wide as the room fits.
