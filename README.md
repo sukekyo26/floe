@@ -9,8 +9,10 @@ show it as it is; floe serves them at `http://127.0.0.1:7325`.
 > **Status:** being rebuilt. So far `floe check` and `floe render` draw data files
 > with floe's parts, themes and report, and with your own under `FLOE_PARTS_DIR`,
 > `FLOE_THEMES_DIR` and `FLOE_TEMPLATES_DIR` (else `~/.config/floe/parts`, `themes`
-> and `templates`), which `floe part check` and `floe template check` check; `floe
-> version` prints the version.
+> and `templates`). `floe part list|show|new|check` and `floe template
+> list|show|new|check` list them, show one's schema as written, make the smallest
+> one of your own and check yours; a schema of your own takes no root `$id`, and a
+> theme of your own no name of floe's. `floe version` prints the version.
 
 ## Install
 
