@@ -9,7 +9,7 @@ sections:
           height: 300
           title: A huge radius
           # Its label is told to stick out, which is not so: the region holds the canvas whole, but the room of every
-          # point rounds to one at this radius, and the first, a corner, is taken (a LIMIT: of place).
+          # point rounds to one at this radius, and a corner is taken (a LIMIT: of place).
           parts:
             - circle: { name: a, cx: 4676.5, cy: 150, r: 9.683899191965114e+299 }
             - label: { text: A, in: [a] }
