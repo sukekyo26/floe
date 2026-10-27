@@ -92,6 +92,18 @@ func TestRead(t *testing.T) {
 	if _, _, err := files.Read(dir); err == nil || errors.Is(err, usererr.ErrNotFile) {
 		t.Errorf("Read(a directory) = %v, want the system's error", err)
 	}
+	// ReadIn reads under an os.Root as Read does: a FIFO unopened.
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	if b, _, err := files.ReadIn(root, "a.yaml"); err != nil || string(b) != "x" {
+		t.Errorf("ReadIn(a regular file) = %q, %v", b, err)
+	}
+	if _, _, err := files.ReadIn(root, "f.yaml"); !errors.Is(err, usererr.ErrNotFile) {
+		t.Errorf("ReadIn(a FIFO) = %v, want ErrNotFile", err)
+	}
 }
 
 // A new file takes perm less the umask; one written in place of another keeps that one's permissions, not its

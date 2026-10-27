@@ -41,8 +41,21 @@ func IsNotFile(info fs.FileInfo) bool {
 	return !info.Mode().IsRegular() && !info.IsDir()
 }
 
-// openFile opens a file Open has looked at; a test puts another file in its place first.
-var openFile = os.OpenFile
+// Opener is where a file is looked at and opened: the system's paths (Open, Read), or an *os.Root, which keeps
+// them under it (ReadIn).
+type Opener interface {
+	Stat(name string) (fs.FileInfo, error)
+	OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error)
+}
+
+// paths opens the system's paths.
+type paths struct{}
+
+func (paths) Stat(name string) (fs.FileInfo, error) { return os.Stat(name) } //nolint:wrapcheck // the system's
+
+func (paths) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
+	return os.OpenFile(name, flag, perm) //nolint:wrapcheck,gosec // the system's; G304: the caller's path
+}
 
 // Open opens the file path, a link followed, when it is a regular file or a directory, and returns what the system
 // says of it; else an *fs.PathError of usererr.ErrNotFile, the file unopened: a FIFO would block the open, and a
@@ -51,14 +64,18 @@ var openFile = os.OpenFile
 // (a save by rename) is read. The system's errors are
 // *fs.PathError (fs.ErrNotExist for none); one of opening it comes with what the system said of it before.
 func Open(path string) (*os.File, fs.FileInfo, error) {
-	before, err := os.Stat(path)
+	return openWith(paths{}, path)
+}
+
+func openWith(o Opener, path string) (*os.File, fs.FileInfo, error) {
+	before, err := o.Stat(path)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // the system's *fs.PathError, for the caller to tell
 	}
 	if IsNotFile(before) {
 		return nil, before, &fs.PathError{Op: "open", Path: path, Err: usererr.ErrNotFile}
 	}
-	f, err := openFile(path, os.O_RDONLY|syscall.O_NONBLOCK|syscall.O_NOCTTY, 0)
+	f, err := o.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK|syscall.O_NOCTTY, 0)
 	if err != nil {
 		return nil, before, err //nolint:wrapcheck // as above
 	}
@@ -75,7 +92,13 @@ func Open(path string) (*os.File, fs.FileInfo, error) {
 
 // Read reads the file path as Open opens it, and returns what the system says of it too.
 func Read(path string) ([]byte, fs.FileInfo, error) {
-	f, info, err := Open(path)
+	return ReadIn(paths{}, path)
+}
+
+// ReadIn reads the file name of o as Read reads a path: under an *os.Root, the system refuses one that leads out
+// of it, by .. or by a link.
+func ReadIn(o Opener, name string) ([]byte, fs.FileInfo, error) {
+	f, info, err := openWith(o, name)
 	if err != nil {
 		return nil, info, err
 	}
