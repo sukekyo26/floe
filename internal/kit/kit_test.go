@@ -409,7 +409,7 @@ func TestKeysTwiceOwn(t *testing.T) {
 		"shr.json":      {Data: []byte("{\n  \"enum\": [1],\n  \"enum\": [2]\n}")},
 	}
 	_, err := kit.Load(floe(t), kit.Sources{Parts: kit.Dir{FS: fsys, Name: "own/parts"}})
-	tail := " is in this object already: floe reads the last of keys written more than once; keep one"
+	tail := " is in this object already: only the last would be read; keep one"
 	want := lines(
 		`own/parts/p/schema.json:1:20: the key "type"`+tail,
 		`own/parts/shr.json:3:3: the key "enum"`+tail,

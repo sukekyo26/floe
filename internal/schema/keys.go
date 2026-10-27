@@ -3,7 +3,6 @@ package schema
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/sukekyo26/floe/internal/textpos"
@@ -22,9 +21,6 @@ func keysTwice(file string, src []byte) (usererr.List, error) {
 	}
 	return w.found, nil
 }
-
-// errKeyType is a key encoding/json reads as no string, which it never does: floe's failure.
-var errKeyType = errors.New("a key read as no string")
 
 // keyWalk reads the tokens of src, the JSON of file, one value in another.
 type keyWalk struct {
@@ -73,7 +69,7 @@ func (w *keyWalk) key(names map[string]bool) error {
 	}
 	name, ok := tok.(string)
 	if !ok {
-		return fmt.Errorf("%w: %v", errKeyType, tok)
+		return fmt.Errorf("a key read as no string, %v", tok) //nolint:err113 // floe's own mistake
 	}
 	if names[name] {
 		line, column := textpos.Of(w.src, at)

@@ -61,7 +61,9 @@ func NewResource(u, file string, src []byte, k Kind) (Resource, error) {
 // read reads src, the JSON of file, as RFC 8259 does, past a byte order mark at its start, and as jsonschema
 // reads it (numbers as json.Number): the only place a schema's bytes are read. A syntax mistake is told in
 // the library's words at its line and column; a file cut short, after its last character but spaces; a file
-// of nothing, in floe's words.
+// of nothing, in floe's words. A key an object has already, which the library would read over the first, is
+// told at it, every one in a List (keysTwice); then the checks of $schema and $id after read do not run, as
+// what they would look at is the last of the keys.
 // LIMIT: a string left open that ends in spaces is placed before them; rework if that comes to mislead.
 // LIMIT: other marks and UTF-16/32 are refused without saying so; rework here when they are to be read or named.
 // LIMIT: a bad \u escape is placed at its end, not at the bad character; rework if encoding/json comes to tell it.

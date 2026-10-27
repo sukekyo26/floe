@@ -21,7 +21,7 @@ var messagesJA = map[string]string{
 
 	"schema_dialect":            "$schema の %s は floe が受ける版ではありません。https://json-schema.org/draft/2020-12/schema か https://json-schema.org/draft/2019-09/schema を書くか、$schema を消してください",
 	"schema_no_url":             "%s: schema はほかのファイルや URL を参照できません。$ref が指すものは、その schema のファイルの中に書いてください",
-	"schema_key_twice":          "鍵 %q はこのオブジェクトにもうあります。floe は 2 回以上書いた鍵の最後の値を読みます。1 つにしてください",
+	"schema_key_twice":          "鍵 %q はこのオブジェクトにもうあります。最後の値だけが読まれてしまうので、1 つにしてください",
 	"schema_empty":              `schema が空です。{"type": "object"} のような JSON Schema のオブジェクトを書いてください`,
 	"schema_no_part":            "%s は部品ではありません。部品は floe:///parts/<名前>.json の形で参照してください",
 	"schema_id_floe":            "この $id は floe: の URL、%s を名乗っています。floe: の URL は floe 自身のものです。https://example.com/item.json のような自分の $id にするか、$id を消してください",

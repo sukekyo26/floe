@@ -1,7 +1,6 @@
 package schema_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/schema"
@@ -58,12 +57,12 @@ func TestKeysTwice(t *testing.T) {
 	t.Parallel()
 
 	twice := func(at, name string) string {
-		return "schema.json:" + at + ": the key " + name + " is in this object already: floe reads the last of keys written more than once; keep one"
+		return "schema.json:" + at + ": the key " + name + " is in this object already: only the last would be read; keep one"
 	}
 	for _, tt := range []struct{ name, src, want string }{
 		{"required", `{"required": ["n"], "required": []}`, twice("1:21", `"required"`)},
 		{"nested", `{"$defs": {"x": {"minLength": 3, "minLength": 0}}}`, twice("1:34", `"minLength"`)},
-		{"escaped", `{"required": ["n"], "required": []}`, twice("1:21", `"required"`)},
+		{"escaped", `{"required": ["n"], "\u0072equired": []}`, twice("1:21", `"required"`)},
 		{"lone surrogates", `{"properties": {"\ud800": {}, "\udc00": {}}}`, twice("1:31", `"`+"�"+`"`)},
 		{"one in a name", `{"properties": {"x\ud800y": {}, "x\udc00y": {}}}`, twice("1:33", `"x`+"�"+`y"`)},
 		{"three", `{"type": "object", "type": "object", "type": "object"}`, lines(twice("1:20", `"type"`), twice("1:38", `"type"`))},
@@ -77,13 +76,12 @@ func TestKeysTwice(t *testing.T) {
 		{"siblings", `{"a": {"type": "string"}, "b": {"type": "string"}}`, ""},
 		{"cases", `{"a": 1, "A": 2}`, ""},
 		{"values alike", `{"enum": ["x", "x"]}`, ""},
+		{"names of the schema's words", `{"properties": {"properties": {"type": "string"}, "type": {"type": "string"}}}`, ""},
+		{"objects in an array alike", `{"properties": {"n": {"anyOf": [{"type": "string"}, {"type": "number"}]}}}`, ""},
 	} {
 		_, err := schema.Compile(tmplID, "schema.json", []byte(tt.src), nil)
 		if got := told(err); got != tt.want {
 			t.Errorf("%s: Compile told\n%s\nwant\n%s", tt.name, got, tt.want)
-		}
-		if tt.want == "" || strings.HasPrefix(tt.name, "a syntax") {
-			continue
 		}
 		_, err = schema.NewResource("floe:///parts/mine.json", "schema.json", []byte(tt.src), schema.Part)
 		if got := told(err); got != tt.want {
