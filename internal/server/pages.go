@@ -27,6 +27,12 @@ const (
 	// allow-popups-to-escape-sandbox: a site opened in a new tab does not inherit the sandbox (it has no
 	// opener, so it cannot reach the API either).
 	pageCSP = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"
+	// Only the management page itself and VS Code may frame it, so another site cannot lay it under its
+	// own buttons and have its delete clicked (clickjacking). A page's frame moved to the management page
+	// shows it nested. (A page that frames it frames it in the sandbox it hands down, whose API calls are
+	// refused.) VS Code's Simple Browser frames it in a webview of the workbench, and frame-ancestors
+	// checks every ancestor: those two. An extension that could frame it so runs on the machine anyway.
+	uiCSP = "frame-ancestors 'self' vscode-webview: vscode-file:"
 )
 
 // types are the files served from a link's directory. The registered file itself is HTML whatever its
@@ -139,11 +145,23 @@ func (s *Server) drawLink(slug string, m *store.Meta, file string) ([]byte, erro
 	return tmpl.Draw(drawing.Kit, file, src, o) //nolint:wrapcheck // its mistakes, or what failed
 }
 
-// servePage answers /a/{slug}/{rest...}: the page, or a file under a link. Its version is taken from the
-// meta.json its content is served by, before the content: a change in between costs one extra reload, not a miss.
-// A stored page whose copy a publish removed after its meta.json was read is read once more.
+// servePage answers /a/{slug}/{rest...}. The page URL itself is the frame (the management page with the page's
+// header), whose iframe loads the page from ?raw; a missing page gets the frame with 404, which shows the way back.
+// ?raw and the files under a link's directory are the page and its files. Its version is taken from the meta.json
+// its content is served by, before the content: a change in between costs one extra reload, not a miss. A stored
+// page whose copy a publish removed after its meta.json was read is read once more.
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	slug, rest := r.PathValue("slug"), r.PathValue("rest")
+	if rest == "" && !r.URL.Query().Has("raw") {
+		status := http.StatusNotFound
+		if m := s.cfg.Store.ReadMeta(slug); m != nil {
+			if _, ok := s.cfg.Store.File(slug, m, ""); ok {
+				status = http.StatusOK
+			}
+		}
+		sendUI(w, r, status)
+		return
+	}
 	var version string
 	var got served
 	err := errNoPage
@@ -227,9 +245,39 @@ func stream(w http.ResponseWriter, contentType string, f io.Reader, tail string)
 	_, _ = io.WriteString(w, tail)
 }
 
+// leaveFrame runs in a page inside the frame. Links to other sites open in a new tab: most sites
+// refuse to be framed, and the sandbox forbids _top and _parent. Links to a frame URL of this server
+// (/ and /a/<slug>/) tell the frame to move the whole tab, instead of nesting a frame in the iframe;
+// but one to a part (#…, # alone too) of this page's own frame URL is a link to a part of the page, which the
+// browser follows in the page as it does #… alone: a move to another part adds to the history, one to
+// the same part scrolls there again. It is written whole, as a <base> of the page would take #… elsewhere.
+// In the sandbox location.origin is "null", so hosts are compared. A page can shadow open, URL, self
+// and the like with top-level declarations, so everything but window, top and location comes through
+// window; top cannot be replaced, as parent can (var parent = …).
+// The part of the page it is at (#…) is told to the frame, which writes it into its own URL: when it
+// loads, as Back may load it again at another, and on a move to another part.
+// LIMIT: a part set by history.pushState or replaceState fires no hashchange and is not told; watch them if needed.
+// LIMIT: a frame framed itself (VS Code's Simple Browser) is not the top and is told nothing; mend it if needed.
+const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => {" +
+	"const a = e.target.closest?.('a[href]');" +
+	"if (!a || e.defaultPrevented || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;" +
+	"if (!['', '_self', '_parent', '_top'].includes(a.target)) return;" +
+	"const u = new window.URL(a.href, location.href);" +
+	"if (!/^https?:$/.test(u.protocol)) return;" +
+	"if (u.host !== location.host) { e.preventDefault(); window.open(u.href, '_blank', 'noopener'); return; }" +
+	"if (!/^\\/(a\\/[^/]+\\/?)?$/.test(u.pathname) || u.searchParams.has('raw')) return;" +
+	"e.preventDefault();" +
+	"if (u.href.includes('#') && !u.search && u.pathname.replace(/\\/?$/, '/') === location.pathname) {" +
+	"location.href = location.pathname + location.search + (u.hash || '#'); return; }" +
+	"top.postMessage({ artifactOpen: u.pathname + u.search + u.hash }, " +
+	"location.protocol + '//' + location.host);});" +
+	"if (top !== window) { const tell = () => top.postMessage(" +
+	"{ artifactHash: location.hash, artifactPath: location.pathname }, location.protocol + '//' + location.host);" +
+	"tell(); window.addEventListener('hashchange', tell); }"
+
 // servedScript is appended to a served page only: it reloads the open tab when the page changes (a publish, a
-// rebuild, a linked file saved). The version the page was served from goes into since, so a change before the
-// stream connects is not missed.
+// rebuild, a linked file saved), and handles links inside the frame. The version the page was served from goes
+// into since, so a change before the stream connects is not missed.
 func servedScript(slug, rest, version string) string {
 	u := "/api/events/" + slug
 	if rest != "" {
@@ -242,7 +290,7 @@ func servedScript(slug, rest, version string) string {
 	lit, _ := json.Marshal(u + "?since=" + url.QueryEscape(version)) //nolint:errcheck // a string always encodes
 	// The stream is closed before reloading; a slow reload would otherwise get the event again.
 	return "\n<script>{const es = new window.EventSource(" + string(lit) + ");" +
-		"es.addEventListener('reload', () => { es.close(); location.reload(); });}</script>\n"
+		"es.addEventListener('reload', () => { es.close(); location.reload(); });" + leaveFrame + "}</script>\n"
 }
 
 // watch is the event stream of a page. Pages subscribe from the sandbox (Origin: null), so CORS opens

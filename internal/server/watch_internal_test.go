@@ -337,7 +337,7 @@ func TestWatchParallel(t *testing.T) {
 		wg.Go(func() {
 			for j := range 5 {
 				write(t, filepath.Join(dir, "mine", "page.html"), "<p>{{.Data.n}} "+strconv.Itoa(i*10+j)+"</p>\n")
-				for _, path := range []string{"/a/d/", "/api/artifacts", "/api/artifacts/d/download"} {
+				for _, path := range []string{"/a/d/?raw", "/api/artifacts", "/api/artifacts/d/download"} {
 					req := httptest.NewRequestWithContext(ctx, http.MethodGet, path, nil)
 					req.Host = "127.0.0.1:7325"
 					h.ServeHTTP(httptest.NewRecorder(), req)
@@ -392,7 +392,7 @@ func TestVersionBeforeContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	icons.then = func() { write(t, data, "lang: en\ntemplate: mine\ntitle: saved meanwhile\n"+spec) }
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/a/d/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/a/d/?raw", nil)
 	req.Host = "127.0.0.1:7325"
 	w := httptest.NewRecorder()
 	s.Handler().ServeHTTP(w, req)

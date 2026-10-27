@@ -159,9 +159,9 @@ func (s *Store) WriteMeta(slug string, m *Meta) error {
 	return nil
 }
 
-// File returns the file to serve for rest under slug: a stored page has its page drawn only, a link its
-// registered file and the files under its directory (see link.Resolve). A linked data file has its own file
-// only: the images of its page are in the page.
+// File returns the file to serve for rest under slug, when it is there as a regular file: a stored page has its
+// page drawn only, a link its registered file and the files under its directory (see link.Resolve). A linked data
+// file has its own file only: the images of its page are in the page.
 func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 	if _, ok := s.dir(slug); !ok {
 		return "", false
@@ -176,7 +176,11 @@ func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 	if !ok || rest != "" {
 		return "", false
 	}
-	return filepath.Join(dir, pageName), true
+	page := filepath.Join(dir, pageName)
+	if info, err := os.Stat(page); err != nil || !info.Mode().IsRegular() {
+		return "", false
+	}
+	return page, true
 }
 
 // Listed is an entry of the list. A link takes its title and update time from the file; Missing is
