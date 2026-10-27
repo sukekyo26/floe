@@ -201,7 +201,9 @@ func TestOwnDirsOverlap(t *testing.T) {
 		{"a name alike", map[string]string{parts: dir + "/pp2", themes: dir + "/pp22"}, nil, ""},
 		{"not there, out", map[string]string{parts: pp, themes: dir + "/none"}, nil, unusable(themes, dir+"/none")},
 		{
-			"a file and under it", map[string]string{parts: dir + "/d.yaml", themes: dir + "/d.yaml/th"}, nil,
+			"a file and under it",
+			map[string]string{parts: dir + "/d.yaml", themes: dir + "/d.yaml/th"},
+			nil,
 			notDir(parts, dir+"/d.yaml") + notDir(themes, dir+"/d.yaml/th"),
 		},
 		{"not there, then ..", map[string]string{parts: pp, themes: pp + "/none/.."}, nil, unusable(themes, pp+"/none/..")},
