@@ -25,7 +25,7 @@ type named struct {
 // <style>, of HTML, SVG or MathML (floe puts the page's CSS together, in layers, and an SVG's styles the whole
 // page as an HTML one does), a <base> (the page's CSP ignores it), a <meta> but a charset and a viewport (shown),
 // a <noscript> (read as text with scripts on, its elements work with them
-// off, unchecked), a name of an
+// off, unchecked), in an HTML <select> an element of textInSelect or svg or math (heldAsText), a name of an
 // element's data-floe-part or data-floe-look that is no part or look of k, and a data-floe-part not of one
 // part's name as written (the scope of its style, [data-floe-part="name"], would not reach it) or of a look,
 // which has no box. It returns what the page names.
@@ -52,6 +52,10 @@ func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error
 				_ = html.Render(&b, n) //nolint:errcheck // a strings.Builder fails no write
 				refuse("draw_meta", yamlpos.Head(b.String()))
 			}
+		default:
+			if heldAsText(n) && inSelect(n) {
+				refuse("draw_select_text", n.Data)
+			}
 		}
 		checkNames(k, ns, n, boxes, taken, refuse)
 	}
@@ -61,6 +65,38 @@ func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error
 	return named{
 		boxes: slices.Sorted(maps.Keys(boxes)), looks: slices.Sorted(maps.Keys(taken)), uses: uses(tree),
 	}, nil
+}
+
+// textInSelect are the HTML elements whose content is read as text, as the HTML fragment parsing algorithm sets
+// the tokenizer's state by its context element (RCDATA, RAWTEXT, script data, PLAINTEXT), written as it is:
+// style and noscript are refused anywhere above, before they are looked up here.
+var textInSelect = map[string]bool{
+	"iframe": true, "noembed": true, "noframes": true, "noscript": true, "plaintext": true, "script": true,
+	"style": true, "textarea": true, "title": true, "xmp": true,
+}
+
+// heldAsText reports whether n is an HTML element of textInSelect, or where svg or math starts under an HTML
+// one: in a <select>, what a parser of the old "in select" mode reads apart from x/net/html, which takes the
+// select's content as the body's, so that what it holds as text the other may read as elements once a tag in
+// it closes the select.
+func heldAsText(n *html.Node) bool {
+	if n.Namespace == "" {
+		return textInSelect[n.Data]
+	}
+	return (n.Namespace == "svg" || n.Namespace == "math") && n.Parent != nil && n.Parent.Namespace == ""
+}
+
+// inSelect reports whether an HTML <select> holds n.
+// LIMIT: a browser of the new select copies the chosen option's content into a <selectedcontent>, which
+// x/net/html does not; which browsers still read a select the old way is unknown. Check in browsers if a page
+// comes to differ there.
+func inSelect(n *html.Node) bool {
+	for p := n.Parent; p != nil; p = p.Parent {
+		if p.Type == html.ElementNode && p.Namespace == "" && p.Data == "select" {
+			return true
+		}
+	}
+	return false
 }
 
 // shown reports whether n, a <meta>, is one the page drawn may have: its charset alone, or a viewport's name and
