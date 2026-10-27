@@ -186,7 +186,7 @@ func (s *Store) cannotRead(path string, err error, k *kit) error {
 			return usererr.SettingDir(s.setting, s.root, err) //nolint:wrapcheck // the system's words, for the setting
 		}
 		return usererr.CannotRead(path, err)
-	case !s.mendable(path, err):
+	case !mendable(path, err):
 		return usererr.CannotRead(path, err)
 	case errors.Is(err, usererr.ErrNotFile):
 		return usererr.NewAt(path, 0, 0, "icons_not_file", k.name)
@@ -198,7 +198,7 @@ func (s *Store) cannotRead(path string, err error, k *kit) error {
 // directory whole: none there, what is no regular file (a FIFO, a directory), the set's directory a file, or what
 // leads out of it (os.Root refuses a path that the system finds outside). What the system does not let floe read
 // a fetch cannot mend: it fails there too. A store that is no directory, which neither can, cannotRead tells first.
-func (s *Store) mendable(path string, err error) bool {
+func mendable(path string, err error) bool {
 	switch {
 	case errors.Is(err, fs.ErrPermission):
 		return false
