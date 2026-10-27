@@ -202,6 +202,7 @@ var messagesEN = map[string]string{
 
 	"cannot_write": "cannot be written (%s): check that its directory exists and can be written to, and that its name is free and not too long",
 	"dir_setting":  "%[2]s is %[3]s, which cannot be used as a directory (%[1]s); make it a directory floe can use, or set %[2]s to another directory",
+	"dir_overlap":  "%[1]s (%[2]s) and %[3]s (%[4]s) are one directory, or one is in the other, where floe would read the files of one as those of the other; make %[1]s and %[3]s two directories, neither in the other",
 
 	// icons: the icon sets
 	// LIMIT: the first %s of icons_broken, icons_download, icons_page_download, icons_bad_zip and
