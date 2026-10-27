@@ -423,6 +423,11 @@ func TestBrokenIndex(t *testing.T) {
 	if _, err := icons.New(file).Search([]string{"x"}); told(err) != file+"/aws/index.json: not a directory" {
 		t.Errorf("a root that is a file = %s", told(err))
 	}
+	// A store under a file (HOME=/dev/null) is not there: the set is not fetched.
+	under := filepath.Join(file, "x")
+	if _, err := icons.New(under).Search([]string{"x"}); !strings.HasPrefix(told(err), "floe: AWS icons are not in "+under+"/aws;") {
+		t.Errorf("a root under a file = %s", told(err))
+	}
 	_, err := icons.New(file).Fetch(context.Background(), "aws", local(writeZip(t, "Icon-package.zip", packageFiles)), true)
 	if want := file + ": cannot be written (not a directory): check"; !strings.HasPrefix(told(err), want) {
 		t.Errorf("a fetch --force into a root that is a file = %s, want %s…", told(err), want)

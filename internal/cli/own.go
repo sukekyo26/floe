@@ -2,13 +2,11 @@ package cli
 
 import (
 	"crypto/rand"
-	"errors"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
+	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -52,7 +50,7 @@ func (a *app) ownDir(kind string) (kit.Dir, error) {
 	}
 	if _, err := os.ReadDir(dir); err != nil {
 		// A default not there, or under a file (HOME=/dev/null), is none; one there that is no directory is told.
-		if !set && (errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) && !exists(dir)) {
+		if !set && files.NotThere(dir, err) {
 			return none, nil
 		}
 		return none, usererr.CannotRead(dir, err) //nolint:wrapcheck // the system's words, at the directory
@@ -90,12 +88,6 @@ func (a *app) kit(templates bool) (*kit.Kit, error) {
 		return nil, found.Err()
 	}
 	return kit.Load(floe, src) //nolint:wrapcheck // its mistakes, or floe's failure
-}
-
-// exists reports whether there is a file at path, a link followed.
-func exists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }
 
 // newOwn makes the part (kit.KindPart) or the template of one's own named name, kit.Skeleton's files, in the

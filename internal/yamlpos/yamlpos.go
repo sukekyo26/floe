@@ -69,10 +69,10 @@ func QuoteOf(n ast.Node) Quote {
 	}
 }
 
-// OfValue returns where the value of key is written, or where key is when the value is left out:
-// an empty value has no text to point at.
+// OfValue returns where the value of key is written, ~ and null too, or where key is when the value is left
+// out: an empty value has no text to point at.
 func OfValue(key, value ast.Node) Pos {
-	if _, null := value.(*ast.NullNode); null && key != nil {
+	if n, null := value.(*ast.NullNode); null && n.GetToken().Type == token.ImplicitNullType && key != nil {
 		return Of(key)
 	}
 	return Of(value)

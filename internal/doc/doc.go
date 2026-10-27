@@ -18,7 +18,7 @@ import (
 type Data struct {
 	File                         string
 	Lang, Template, Theme, Title string           // "" for one left out or refused; Title trimmed of spaces
-	Values                       map[string]any   // as written, the shared keys too
+	Values                       map[string]any   // as written, the shared keys too but those null
 	Root                         *ast.MappingNode // nil for an empty file
 	// where each shared key is written: its value, its key when the value is left out, the top of the file
 	// for one left out
@@ -111,8 +111,9 @@ func sharedMistake(key string, v any, ok bool) string {
 	return ""
 }
 
-// readShared reads the keys every template shares from d.Values into d, leaving them in d.Values as written,
-// and notes where each is written; theme: is not read with a theme given, which d takes.
+// readShared reads the keys every template shares from d.Values into d, leaving them in d.Values as written but
+// those null, which are none written, and notes where each is written; theme: is not read with a theme given,
+// which d takes.
 func (d *Data) readShared(theme string) error {
 	top := yamlpos.Pos{Line: 1, Column: 1}
 	pairs := map[string]*ast.MappingValueNode{}
@@ -130,6 +131,11 @@ func (d *Data) readShared(theme string) error {
 			d.Where[key] = yamlpos.OfValue(yamlpos.KeyOf(p), p.Value)
 		}
 		v, ok := d.Values[key]
+		if ok && v == nil {
+			// A null value (lang: or lang: ~) is none written, for every reader of d.Values.
+			delete(d.Values, key)
+			ok = false
+		}
 		mistake := sharedMistake(key, v, ok)
 		switch {
 		case key == "theme" && theme != "":

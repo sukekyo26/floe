@@ -124,7 +124,8 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 	}
 	file := filepath.Join(s.dir(k), "index.json")
 	b, _, err := files.Read(file)
-	if errors.Is(err, fs.ErrNotExist) {
+	// A store not there, or under a file (HOME=/dev/null), holds no set; one that is a file is told.
+	if files.NotThere(s.root, err) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	if err != nil {
