@@ -811,6 +811,9 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value">1,840</dd></div>
 <div class="card stat good" data-floe-look="panel"><dt>Broken links</dt><dd class="value">120</dd><dd class="note">-35 since the last check</dd></div>
 <div class="card stat" data-floe-look="panel"><dt>Downtime</dt><dd class="value">0<span class="unit">hours</span></dd></div>
+<div class="card stat accent" data-floe-look="panel"><dt>Spaces</dt><dd class="value">12</dd></div>
+<div class="card stat warn" data-floe-look="panel"><dt>Owners left</dt><dd class="value">3</dd></div>
+<div class="card stat bad" data-floe-look="panel"><dt>Lost pages</dt><dd class="value">1</dd></div>
 </dl>
 <div data-floe-part="compare"><table>
 <thead><tr><th></th><th scope="col">Now</th><th scope="col" class="after">After the move</th></tr></thead>
@@ -830,8 +833,13 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </li>
 <li class="doing" aria-current="step"><strong>Copy the pages and check the links</strong></li>
 <li class="todo"><strong>Point the team&#39;s bookmarks at the new host</strong></li>
+<li class="todo"><strong>Close the old server</strong></li>
 </ol>
 <figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run">wiki export --all --out pages/</span><span class="out">1840 pages written to pages/</span><span class="run">linkcheck pages/</span></pre></figure>
+<figure class="zsh" data-floe-part="terminal"><figcaption>zsh</figcaption><pre><span class="run">wiki status</span></pre></figure>
+<figure class="sh" data-floe-part="terminal"><figcaption>sh</figcaption><pre><span class="run">wiki status</span></pre></figure>
+<figure class="powershell" data-floe-part="terminal"><figcaption>PowerShell</figcaption><pre><span class="run">wiki status</span></pre></figure>
+<figure class="cmd" data-floe-part="terminal"><figcaption>cmd</figcaption><pre><span class="run">wiki status</span></pre></figure>
 <figure data-floe-part="code"><figcaption><span class="file">old-wiki.conf</span></figcaption><pre><code># Read-only from Friday evening
 read_only = true
 banner = &#34;This wiki has moved to the new host.&#34;
@@ -856,9 +864,16 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <tr><td>Broken links</td><td>High</td><td class="num">120</td><td>A link check after the copy</td><td><span class="warn" data-floe-part="cell">watching</span></td></tr>
 <tr><td>Lost attachments</td><td>Low</td><td class="num">8</td><td>Keep the old host for <strong>a month</strong></td><td><span class="good" data-floe-part="cell">covered</span></td></tr>
 <tr><td>Slow search</td><td>Unknown</td><td class="num">-</td><td>Rebuild the index on <code>Sunday</code></td><td><span data-floe-part="cell">open</span></td></tr>
+<tr><td>New host</td><td>Low</td><td class="num">0</td><td>Nothing</td><td><span class="accent" data-floe-part="cell">ready</span></td></tr>
 </tbody>
 </table></div>
 <div class="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>
+</div>
+<div class="accent" data-floe-part="note"><p>The new host is ready.</p>
+</div>
+<div class="bad" data-floe-part="note"><p>Attachments over 1 MB failed.</p>
+</div>
+<div data-floe-part="note"><p>The banner goes up on Friday.</p>
 </div>
 </section>
 <section>
@@ -866,11 +881,16 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div data-floe-part="bars">
 <div class="good"><span class="label">Copied</span><span class="track"><span style="width: 100%"></span></span><span class="value">1,840</span></div>
 <div><span class="label">Checked</span><span class="track"><span style="width: 65.21739130434783%"></span></span><span class="value">1,200</span></div>
+<div class="accent"><span class="label">Moved</span><span class="track"><span style="width: 48.91304347826087%"></span></span><span class="value">900</span></div>
+<div class="warn"><span class="label">Pending</span><span class="track"><span style="width: 21.73913043478261%"></span></span><span class="value">400</span></div>
 <div class="bad"><span class="label">Broken</span><span class="track"><span style="width: 6.521739130434782%"></span></span><span class="value">120</span></div>
 </div>
 <div data-floe-part="progress">
 <label class="bar"><span class="label">Pages</span><span class="count">1200 / 1840</span><progress value="1200" max="1840">1200 / 1840</progress></label>
 <label class="bar good"><span class="label">Images</span><span class="count">30 / 30</span><progress value="30" max="30">30 / 30</progress></label>
+<label class="bar accent"><span class="label">Spaces</span><span class="count">4 / 12</span><progress value="4" max="12">4 / 12</progress></label>
+<label class="bar warn"><span class="label">Owners</span><span class="count">1 / 4</span><progress value="1" max="4">1 / 4</progress></label>
+<label class="bar bad"><span class="label">Links</span><span class="count">10 / 120</span><progress value="10" max="120">10 / 120</progress></label>
 </div>
 <ul data-floe-part="checklist">
 <li class="done">Freeze edits</li>
@@ -879,7 +899,10 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <ol data-floe-part="timeline">
 <li class="warn"><span class="date">2030-04-05</span><div><strong>Freeze</strong><p>Edits stop.</p>
 </div></li>
-<li><span class="date">2030-04-07</span><div><strong>Open</strong></div></li>
+<li class="accent"><span class="date">2030-04-06</span><div><strong>Copy</strong></div></li>
+<li class="good"><span class="date">2030-04-07</span><div><strong>Open</strong></div></li>
+<li class="bad"><span class="date">2030-04-08</span><div><strong>Rollback window ends</strong></div></li>
+<li><span class="date">2030-04-30</span><div><strong>Old server off</strong></div></li>
 </ol>
 </section>
 <section>
@@ -896,6 +919,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <tbody>
 <tr class="bad"><td class="what">Broken links</td><td class="high"><span class="level">High</span></td><td class="mid"><span class="level">Medium</span></td><td>A link check after the copy</td></tr>
 <tr class="warn"><td class="what">Lost attachments</td><td class="low"><span class="level">Low</span></td><td class="high"><span class="level">High</span></td><td></td></tr>
+<tr class="good"><td class="what">Slow search</td><td class="mid"><span class="level">Medium</span></td><td class="low"><span class="level">Low</span></td><td></td></tr>
 </tbody>
 </table></div>
 <div data-floe-part="matrix"><table>
@@ -942,6 +966,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div data-floe-part="findings"><table>
 <tbody>
 <tr><td class="level"><span class="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">wiki.conf:3</code><span class="status"><span class="good" data-floe-part="cell">fixed</span></span></div><div>The banner names the old host</div></td></tr>
+<tr><td class="level"><span class="warn" data-floe-part="cell">should</span></td><td><div>The search index is rebuilt by hand</div></td></tr>
 <tr><td class="level"><span class="nit" data-floe-part="cell">nit</span></td><td><div>Two pages have the same title</div><div class="why">Left as the owners asked</div></td></tr>
 </tbody>
 </table></div>
