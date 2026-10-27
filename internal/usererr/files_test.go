@@ -2,6 +2,7 @@ package usererr_test
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,6 +25,10 @@ func TestCannotReadWrite(t *testing.T) {
 		want string
 	}{
 		{usererr.CannotRead("gone.yaml", rerr), "gone.yaml: no such file or directory"},
+		{
+			usererr.CannotRead("f.yaml", &fs.PathError{Op: "open", Path: "/abs/f.yaml", Err: usererr.ErrNotFile}),
+			"f.yaml: this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here",
+		},
 		{usererr.CannotWrite("out", werr), "out: cannot be written (no such file or directory): check that its " +
 			"directory exists and can be written to, and that its name is free and not too long"},
 		{usererr.CannotWriteWith("icons_previous_left", "out", werr, "out.old"), "out: cannot be written (no such file or " +

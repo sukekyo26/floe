@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -122,7 +123,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return idx, nil
 	}
 	file := filepath.Join(s.dir(k), "index.json")
-	b, err := os.ReadFile(file) //nolint:gosec // G304: the set's own index
+	b, _, err := files.Read(file)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
@@ -272,15 +273,11 @@ func (k *kit) fetch(ctx context.Context, from Source, dir string) (*index, error
 		}
 		return k.extract(bytes.NewReader(b), int64(len(b)), from, dir)
 	}
-	f, err := os.Open(from.At)
+	f, info, err := files.Open(from.At)
 	if err != nil {
 		return nil, usererr.CannotRead(from.Name, err)
 	}
 	defer f.Close() //nolint:errcheck // read only
-	info, err := f.Stat()
-	if err != nil {
-		return nil, usererr.CannotRead(from.Name, err)
-	}
 	return k.extract(f, info.Size(), from, dir)
 }
 
@@ -490,7 +487,7 @@ func (s *Store) Lookup(name string) ([]byte, error) {
 		return nil, ErrNoIcon
 	}
 	file := filepath.Join(s.dir(k), rest+".svg")
-	b, err := os.ReadFile(file) //nolint:gosec // G304: a name in the set's index
+	b, _, err := files.Read(file)
 	if err != nil {
 		return nil, usererr.CannotRead(file, err)
 	}

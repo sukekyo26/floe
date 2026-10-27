@@ -126,17 +126,18 @@ var messagesJA = map[string]string{
 	"draw_html_placed":  "page.html が format html の項目 %[1]s を %[2]s の文字か属性の中に置いていて、そこでは HTML が働きません。要素を置ける所に置くか、項目の format を変えてください",
 
 	// cli: コマンド行（言うのは英語だけ。ほかの言語も、どの目録とも同じく鍵を持つ）
-	"cli_usage":            "%s: floe --help を見てください",
-	"cli_path_empty":       "%s が空のパスです。%s を渡し、そのために書いた変数が設定されているか確かめてください",
-	"cli_relative_no_cwd":  "作業ディレクトリを読めないので、相対パス %s は何も指しません。あるディレクトリから floe を走らせるか、絶対パスを渡してください",
-	"cli_wants_data":       "データファイル（.yaml か .yml）",
-	"cli_wants_out_dir":    "ページを書くディレクトリ",
-	"cli_check_not_data":   "%s はデータファイル（.yaml か .yml）ではありません",
-	"cli_data_no_name":     "%s は拡張子の前に名前がありません。名前でページの名前が決まるので、plan.yaml のように名前を付けてください",
-	"cli_render_same_file": "%s と %s が、どちらも %s を書きます。どちらかの名前を変えてください",
-	"cli_render_missing":   "%s がありません。%s から floe render で書いてください",
-	"cli_render_stale":     "%s は %s を描いたものと違います。floe render で書き直してください",
-	"cli_wants_icons":      "アイコンの zip ファイルか URL",
+	"cli_usage":                "%s: floe --help を見てください",
+	"cli_path_empty":           "%s が空のパスです。%s を渡し、そのために書いた変数が設定されているか確かめてください",
+	"cli_relative_no_cwd":      "作業ディレクトリを読めないので、相対パス %s は何も指しません。あるディレクトリから floe を走らせるか、絶対パスを渡してください",
+	"cli_wants_data":           "データファイル（.yaml か .yml）",
+	"cli_wants_out_dir":        "ページを書くディレクトリ",
+	"cli_check_not_data":       "%s はデータファイル（.yaml か .yml）ではありません",
+	"cli_data_no_name":         "%s は拡張子の前に名前がありません。名前でページの名前が決まるので、plan.yaml のように名前を付けてください",
+	"cli_render_same_file":     "%s と %s が、どちらも %s を書きます。どちらかの名前を変えてください",
+	"cli_render_link_not_page": "このページは %s へのリンクで、それは .html のファイルではありません。floe がページを書くのは .html のファイルだけです。リンクを .html のファイルに向けるか、リンクを消してください",
+	"cli_render_missing":       "%s がありません。%s から floe render で書いてください",
+	"cli_render_stale":         "%s は %s を描いたものと違います。floe render で書き直してください",
+	"cli_wants_icons":          "アイコンの zip ファイルか URL",
 
 	// files
 	// link
