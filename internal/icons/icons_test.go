@@ -205,6 +205,13 @@ func TestLookup(t *testing.T) {
 	if b, err := set.Lookup("aws/res/client"); err != nil || len(b) == 0 {
 		t.Errorf("Lookup after the index is gone = %q, %v; want the icon", b, err)
 	}
+	// The set's directory gone, it is told at it, to fetch the set again.
+	if err := os.RemoveAll(filepath.Join(root, "aws")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := set.Lookup("aws/res/client"); told(err) != filepath.Join(root, "aws")+": cannot be read (no such file or directory)"+again {
+		t.Errorf("Lookup with the set's directory gone = %s", told(err))
+	}
 }
 
 func TestFetchFromURL(t *testing.T) {
@@ -473,15 +480,24 @@ func TestLookupStaysInside(t *testing.T) {
 	}
 	for file, text := range map[string]string{
 		filepath.Join(root, "out.svg"):   `<svg xmlns="http://www.w3.org/2000/svg"/>`,
-		filepath.Join(dir, "index.json"): `{"version": "1", "icons": {"../out": {"category": "c"}}}`,
+		filepath.Join(dir, "in.svg"):     `<svg xmlns="http://www.w3.org/2000/svg" id="in"/>`,
+		filepath.Join(dir, "index.json"): `{"version": "1", "icons": {"../out": {"category": "c"}, "link": {"category": "c"}}}`,
 	} {
 		if err := os.WriteFile(file, []byte(text), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
+	set := icons.New(root, false)
 	want := dir + `/../out.svg: cannot be read (path escapes from parent); run "floe icons fetch aws --force" to fetch the icons again`
-	if b, err := icons.New(root, false).Lookup("aws/../out"); told(err) != want {
+	if b, err := set.Lookup("aws/../out"); told(err) != want {
 		t.Errorf("Lookup of ../out = %q, %s", b, told(err))
+	}
+	// A link that stays in the set is read.
+	if err := os.Symlink("in.svg", filepath.Join(dir, "link.svg")); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := set.Lookup("aws/link"); err != nil || !strings.Contains(string(b), `id="in"`) {
+		t.Errorf("Lookup of a link inside = %q, %v", b, err)
 	}
 }
 

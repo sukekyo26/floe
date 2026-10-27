@@ -48,3 +48,40 @@ func TestOpenSwapped(t *testing.T) { //nolint:paralleltest // replaces openFile
 		}
 	}
 }
+
+// swapRoot is an *os.Root that puts swap's file in the place of the one opened, between the Stat and the open.
+type swapRoot struct {
+	*os.Root
+	swap func(name string) error
+}
+
+func (r swapRoot) OpenFile(name string, flag int, perm os.FileMode) (*os.File, error) {
+	if err := r.swap(name); err != nil {
+		return nil, err
+	}
+	return r.Root.OpenFile(name, flag, perm) //nolint:wrapcheck // the system's
+}
+
+// Under an os.Root too, a regular file made a FIFO between the Stat and the open is refused unread.
+func TestReadInSwapped(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	if err := os.WriteFile(filepath.Join(dir, "a.svg"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fifo := swapRoot{Root: root, swap: func(name string) error {
+		if err := root.Remove(name); err != nil {
+			return err //nolint:wrapcheck // the test's
+		}
+		return syscall.Mkfifo(filepath.Join(dir, name), 0o600) //nolint:wrapcheck // the test's
+	}}
+	if _, _, err := readWith(fifo, "a.svg"); !errors.Is(err, usererr.ErrNotFile) {
+		t.Errorf("ReadIn of a file made a FIFO = %v, want ErrNotFile", err)
+	}
+}

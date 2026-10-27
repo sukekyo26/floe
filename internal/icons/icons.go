@@ -23,6 +23,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -331,7 +332,7 @@ func replace(tmp, dir string) error {
 	if err := rename(tmp, dir); err != nil {
 		if hadOld {
 			if back := os.Rename(old, dir); back != nil {
-				return usererr.CannotWriteWith("icons_previous_left", dir, err, old)
+				return usererr.InSystemWords("icons_previous_left", dir, err, old)
 			}
 		}
 		return usererr.CannotWrite(dir, err)
@@ -507,20 +508,23 @@ func (s *Store) Lookup(name string) ([]byte, error) {
 		return nil, err
 	}
 	// Only a name in the index is read, and only inside the set's directory: an index or a link edited to lead
-	// out of it is refused by the system.
+	// out of it is refused by the system. Opened for each icon and closed: a Store a server keeps would else hold
+	// the directory open, and read on in the one a fetch --force replaced.
+	// LIMIT: a link to a file of the set by its absolute path is refused too (os.Root takes it as leading out); a
+	// fetch writes none, so make links relative, or resolve them in Lookup, if a set made by hand comes to need it.
 	if _, ok := idx.Icons[rest]; !ok {
 		return nil, ErrNoIcon
 	}
 	dir := s.dir(k)
 	root, err := os.OpenRoot(dir)
 	if err != nil {
-		return nil, usererr.CannotRead(dir, err)
+		return nil, usererr.InSystemWords("icons_broken", dir, err, k.name)
 	}
 	defer root.Close() //nolint:errcheck // read only
 	b, _, err := files.ReadIn(root, rest+".svg")
 	if err != nil {
 		// At the name as the index holds it, not cleaned to where it leads.
-		return nil, usererr.CannotReadWith("icons_broken", dir+string(filepath.Separator)+rest+".svg", err, k.name)
+		return nil, usererr.InSystemWords("icons_broken", dirs.Join(dir, rest+".svg"), err, k.name)
 	}
 	return b, nil
 }

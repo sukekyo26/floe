@@ -27,21 +27,13 @@ func CannotRead(name string, err error) error {
 // CannotWrite is err, of writing the file or the directory named so, at it: floe's words that it cannot be
 // written, the system's words of why in them, and what to look at; any other error is floe's failure.
 func CannotWrite(name string, err error) error {
-	return CannotWriteWith("cannot_write", name, err)
+	return InSystemWords("cannot_write", name, err)
 }
 
-// CannotWriteWith is CannotWrite in the words of the catalog message key, the system's words its first argument
-// and args after them, for what more there is to say.
-func CannotWriteWith(key, name string, err error, args ...any) error {
-	return withSystemWords(key, name, err, args...)
-}
-
-// CannotReadWith is CannotRead in the words of the catalog message key, as CannotWriteWith.
-func CannotReadWith(key, name string, err error, args ...any) error {
-	return withSystemWords(key, name, err, args...)
-}
-
-func withSystemWords(key, name string, err error, args ...any) error {
+// InSystemWords is err, of reading or writing the file or the directory named so, at it, in the words of the
+// catalog message key: the system's words of err (ErrNotFile's too, unlike CannotRead) its first argument and
+// args after them, for what more there is to say; any other error is floe's failure.
+func InSystemWords(key, name string, err error, args ...any) error {
 	words, ok := systemWords(err)
 	if !ok {
 		return fmt.Errorf("%s: %w", name, err)
