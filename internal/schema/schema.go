@@ -69,6 +69,13 @@ func read(file string, src []byte) (any, error) {
 	src = bom.Trim(src)
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
 	if err == nil {
+		twice, failed := keysTwice(file, src)
+		switch {
+		case failed != nil:
+			return nil, failed
+		case twice != nil:
+			return nil, twice.Err()
+		}
 		return doc, nil
 	}
 	var syntax *json.SyntaxError

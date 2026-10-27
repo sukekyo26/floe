@@ -25,6 +25,7 @@ var messagesEN = map[string]string{
 	// schema: compiling a schema and the shape floe draws by
 	"schema_dialect":            "$schema %s names no draft floe takes; name https://json-schema.org/draft/2020-12/schema or https://json-schema.org/draft/2019-09/schema, or leave it out",
 	"schema_no_url":             "%s: a schema refers to no other file or URL; write what a $ref refers to in its own file",
+	"schema_key_twice":          "the key %q is in this object already: floe reads the last of keys written more than once; keep one",
 	"schema_empty":              `the schema is empty: write a JSON Schema object, such as {"type": "object"}`,
 	"schema_no_part":            "%s is not a part; refer to one as floe:///parts/<name>.json",
 	"schema_id_floe":            "this $id names %s, a floe: URL, which is floe's own: give the schema an $id of your own, like https://example.com/item.json, or leave $id out",
