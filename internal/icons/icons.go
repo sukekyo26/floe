@@ -134,7 +134,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	if err != nil {
-		return nil, usererr.InSystemWords("icons_broken", file, err, k.name)
+		return nil, cannotRead(file, err, k)
 	}
 	var idx index
 	if err = json.Unmarshal(b, &idx); err != nil {
@@ -172,6 +172,15 @@ func libraryAt(file string, line, column int, key string, err error, args ...any
 	e.Args = append(e.Args, args...)
 	e.File, e.Line, e.Column = file, line, column
 	return e
+}
+
+// cannotRead is err, of reading the file of the set k named so: to fetch the set again, but where the place
+// itself is no directory (a store set to a file, or under one), which a fetch cannot mend and is told as it is.
+func cannotRead(name string, err error, k *kit) error {
+	if errors.Is(err, syscall.ENOTDIR) {
+		return usererr.CannotRead(name, err)
+	}
+	return usererr.InSystemWords("icons_broken", name, err, k.name)
 }
 
 func (s *Store) loadIndex(k *kit) (*index, error) {
@@ -518,7 +527,7 @@ func (s *Store) Lookup(name string) ([]byte, error) {
 	dir := s.dir(k)
 	root, err := os.OpenRoot(dir)
 	if err != nil {
-		return nil, usererr.InSystemWords("icons_broken", dir, err, k.name)
+		return nil, cannotRead(dir, err, k)
 	}
 	defer root.Close() //nolint:errcheck // read only
 	b, _, err := files.ReadIn(root, rest+".svg")

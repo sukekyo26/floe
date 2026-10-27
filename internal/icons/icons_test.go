@@ -438,19 +438,30 @@ func TestBrokenIndex(t *testing.T) {
 			t.Errorf("index %s = %s, want %s", c.index, told(err), index+c.want)
 		}
 	}
-	// A root that is a file: what is under it is no directory.
+	// An index that is a FIFO is told to fetch the set again, unopened.
+	fifoRoot := t.TempDir()
+	if err := os.Mkdir(filepath.Join(fifoRoot, "aws"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := syscall.Mkfifo(filepath.Join(fifoRoot, "aws", "index.json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := icons.New(fifoRoot, false).Search([]string{"x"}); told(err) != filepath.Join(fifoRoot, "aws", "index.json")+
+		`: cannot be read (neither a regular file nor a directory); run "floe icons fetch aws --force" to fetch the icons again` {
+		t.Errorf("an index that is a FIFO = %s", told(err))
+	}
+	// A root that is a file: what is under it is no directory, told as it is (a fetch cannot mend it).
 	file := filepath.Join(t.TempDir(), "f")
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	const again = `; run "floe icons fetch aws --force" to fetch the icons again`
-	if _, err := icons.New(file, false).Search([]string{"x"}); told(err) != file+"/aws/index.json: cannot be read (not a directory)"+again {
+	if _, err := icons.New(file, false).Search([]string{"x"}); told(err) != file+"/aws/index.json: not a directory" {
 		t.Errorf("a root that is a file = %s", told(err))
 	}
 	// A store under a file is told as it is (the default one is none, which cli tells), and a fetch into one
 	// stops before the network (the context is done); one failing at the network makes nothing.
 	under := filepath.Join(file, "x")
-	if _, err := icons.New(under, false).Search([]string{"x"}); told(err) != under+"/aws/index.json: cannot be read (not a directory)"+again {
+	if _, err := icons.New(under, false).Search([]string{"x"}); told(err) != under+"/aws/index.json: not a directory" {
 		t.Errorf("a root under a file = %s", told(err))
 	}
 	done, cancel := context.WithCancel(context.Background())
