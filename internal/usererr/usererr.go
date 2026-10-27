@@ -175,24 +175,29 @@ func (l List) Error() string {
 
 // Told is a mistake as told: worded in the reader's language, and where it is.
 type Told struct {
-	File         string
-	Line, Column int
-	At           string
-	Text         string
+	File   string `json:"file,omitempty"`
+	Line   int    `json:"line,omitempty"`
+	Column int    `json:"column,omitempty"`
+	At     string `json:"at,omitempty"`
+	Text   string `json:"text"`
 }
 
 // Report is an error as told: the user's mistakes, or what floe failed at, never both.
 type Report struct {
-	Mistakes []Told
-	Failure  string
+	Mistakes []Told `json:"mistakes,omitempty"`
+	Failure  string `json:"failure,omitempty"`
 }
 
 // Tell words err in the language of c: its mistakes, as List.Add takes them, in the order given, each told
 // once (one worded at the same place as one before it is left out, wherever it was made), or, for an error
 // that is not the user's or holds no mistake, floe's failure. It is the only place a mistake is worded. The
 // words of what wraps a mistake are not told: a place or a name goes into the mistake's arguments or place,
-// not into fmt.Errorf.
+// not into fmt.Errorf. An error that carries a report told already (the server's, to the command line) is told as
+// it is.
 func Tell(c *i18n.Catalog, err error) Report {
+	if reported, ok := errors.AsType[reporter](err); ok {
+		return reported.Report()
+	}
 	var all List
 	if failed := all.Add(err); failed != nil {
 		return Report{Mistakes: nil, Failure: cmp.Or(failed.Error(), fmt.Sprintf("%T", failed))}
@@ -210,6 +215,12 @@ func Tell(c *i18n.Catalog, err error) Report {
 		}
 	}
 	return r
+}
+
+// reporter is an error that carries a report told already.
+type reporter interface {
+	error
+	Report() Report
 }
 
 // Render lays r out, the only place that does: each mistake on a line, after where it is,

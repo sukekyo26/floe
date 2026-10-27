@@ -127,8 +127,14 @@ func TestHelp(t *testing.T) {
 		"diagram\tDraw diagrams from specs of parts on a canvas\n" +
 		"help\tHelp about any command\n" +
 		"icons\tKeep icon sets for the icon parts of diagrams, and search them\n" +
+		"list\tList pages, newest first (updated, slug, title, linked path; tab-separated)\n" +
 		"part\tList the parts, show one, make one of your own, and check yours\n" +
+		"publish\tStore a page drawn from a data file (or --link an HTML file in place) and print its URL\n" +
+		"rebuild\tDraw every stored page again with the templates, parts and themes of now\n" +
 		"render\tWrite the page of each data file to an HTML file beside it, or in --out-dir\n" +
+		"rm\tDelete pages in order, stopping at the first failure (a linked file itself is left alone)\n" +
+		"serve\tRun the server in the foreground\n" +
+		"stop\tStop the background server\n" +
 		"template\tList the templates, show one, make one of your own, and check yours\n" +
 		"version\tPrint the floe version\n:4\n"
 	if code, got, _ := run("", "__complete", "help", ""); code != 0 || !strings.HasPrefix(got, want) {

@@ -49,7 +49,7 @@ func picKit(t *testing.T, head, schema string) store.Drawing {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return store.Drawing{Kit: k, Icons: nil}
+	return store.Drawing{Kit: k, Icons: nil, Err: nil}
 }
 
 func cmpOr(a, b string) string {
@@ -265,8 +265,8 @@ func TestSlugIsNoPath(t *testing.T) {
 		if _, err := s.Edit(slug, store.Edit{}); !errors.Is(err, store.ErrNotFound) {
 			t.Errorf("Edit(%q) = %v", slug, err)
 		}
-		if got := told(s.Remove(slug), root); got != `floe: no page "`+slug+`" (see floe list)` {
-			t.Errorf("Remove(%q): %s", slug, got)
+		if err := s.Remove(slug); !errors.Is(err, store.ErrNotFound) {
+			t.Errorf("Remove(%q) = %v", slug, err)
 		}
 	}
 	if list, err := s.List(); err != nil || len(list) != 0 {
@@ -434,5 +434,28 @@ func TestPublishTitle(t *testing.T) {
 	publish(t, s, dw, "e.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 	if m := s.ReadMeta("e"); m.Title != "e" || m.DataTitle != "" {
 		t.Errorf("title %q, data's %q", m.Title, m.DataTitle)
+	}
+}
+
+// A name in use is a Conflict, alone, its mistake told as it is; no page to remove is ErrNotFound.
+func TestConflict(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "same.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: nil, Project: "q"}, store.Options{})
+	if _, ok := errors.AsType[*store.Conflict](err); !ok {
+		t.Errorf("PrepareData = %v, want a Conflict", err)
+	}
+	if got := told(err, root); got != `floe: slug "same" was published from project p; use another --slug, or add --force to replace that page` {
+		t.Errorf("told %s", got)
+	}
+	_, err = s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: nope\n"), Images: nil, Project: "p"}, store.Options{})
+	if _, ok := errors.AsType[*store.Conflict](err); ok {
+		t.Errorf("a mistake of the data is a Conflict: %v", err)
+	}
+	if err := s.Remove("none"); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("Remove of no page = %v", err)
 	}
 }

@@ -38,6 +38,11 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **保存したページは描いた HTML を返す**：publish（か `store.Rebuild`）の時に `tmpl.Draw` が描いた HTML を、写し（`source-<id>/` の `data.yaml`・`page.html`・`images/`）に保存し、開くときはそれを返す。開くときに描くのは link したデータファイルだけ。CSP とサンドボックスは HTML に焼き込まず、返すとき（ダウンロードも）に付ける
 - **slug と写しのパスは 1 か所で作る**：slug をパスにするのは `store` の `dir` だけ、meta.json の `source` を写しのパスにするのは `copyDir` だけで、そこで確かめる（`ValidSlug`、save が付ける名前か）。呼ぶ側で別に確かめない
 - **publish は読んだ画像だけを書く**：publish が保存する画像は、描くときに `kit.ReadImage` が読んだ名前のものだけ。送られても読まなかった名前は書かない（信頼境界）。rebuild は前の写しの `images/` を全部引き継ぐ
+- **保存先を書くのはサーバーだけ**：CLI は API で頼む。publish・link・rm・rebuild・管理ページの変更はどれも API
+- **ページの中身と版は 1 か所ずつ**：中身は `server` の `content`、版は `version`（印は `mark(path)` 1 つ）。版は中身の前に取る。live reload は描かない
+- **CSP とサンドボックスは返すときに付ける**：ページとその下のファイルはヘッダーで。ダウンロードは描いたページに CSP の meta を足す
+- **描くものはまとまり 1 つ**：サーバーは `Config.Drawing` で読んだ Kit とアイコン集を 1 つ持ち、自分の 3 つの根とアイコン集を 1 つのタイマーで毎秒見張り、変われば丸ごと読み直す。読めなければ `store.Drawing.Err` で描く出力を全部止める
+- **API の誤りは `refuse` 1 つ**：usererr の Report を返し、409 は `store.Conflict` で見分ける。プロトコルの断り（forbidden host・origin・not found など）は英語の固定の文
 
 決まりは、それを入れた PR がこのファイルに足す。
 

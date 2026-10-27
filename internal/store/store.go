@@ -17,8 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/files"
@@ -75,10 +73,12 @@ func (m *Meta) IsLink() bool {
 	return m.Path != ""
 }
 
-// Drawing is what pages are drawn with: the templates, parts and themes, and the icons of the diagrams.
+// Drawing is what pages are drawn with: the templates, parts and themes, and the icons of the diagrams; or, with
+// Err, why they cannot be read (one's own part that is broken), which every drawing refuses with.
 type Drawing struct {
 	Kit   *kit.Kit
 	Icons diagram.Icons
+	Err   error
 }
 
 // Store reads and writes the store directory.
@@ -262,11 +262,10 @@ func modTime(file string) string {
 // file, cached per version of the file: the management page and the open pages poll the list every few
 // seconds, and a report can be megabytes. A data file with mistakes may have none, but can be read.
 func (s *Store) linkTitle(file string, data bool) (string, bool) {
-	var st unix.Stat_t
-	if unix.Stat(file, &st) != nil {
+	key := files.Mark(file)
+	if key == "-" {
 		return "", false
 	}
-	key := fmt.Sprintf("%d:%d:%d:%d", st.Ino, st.Size, st.Mtim.Nano(), st.Ctim.Nano())
 	s.mu.Lock()
 	hit, ok := s.titles[file]
 	s.mu.Unlock()
@@ -294,4 +293,9 @@ func (s *Store) linkTitle(file string, data bool) (string, bool) {
 // Now is the time recorded in createdAt and updatedAt.
 func Now() string {
 	return time.Now().UTC().Format(isoMillis)
+}
+
+// Root returns the store directory.
+func (s *Store) Root() string {
+	return s.root
 }

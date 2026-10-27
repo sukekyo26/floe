@@ -195,6 +195,9 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	if err != nil {
 		return nil, err
 	}
+	if dw.Err != nil {
+		return nil, dw.Err
+	}
 	sent := fstest.MapFS{}
 	for name, b := range up.Images {
 		sent[name] = &fstest.MapFile{Data: b, Mode: 0, ModTime: time.Time{}, Sys: nil}
@@ -279,6 +282,9 @@ func (s *Store) PrepareLink(
 	}
 	var data []byte
 	if files.IsDataFile(path) {
+		if dw.Err != nil {
+			return nil, dw.Err
+		}
 		data = src
 		images := files.NewRoot(filepath.Dir(path))
 		o := tmpl.Options{Theme: opts.theme(), Untitled: slug, Images: images, ImagesDir: "", Icons: dw.Icons}
@@ -432,7 +438,7 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 		if prev.IsLink() {
 			key = "store_slug_is_link"
 		}
-		return false, usererr.New(key, slug)
+		return false, conflict(usererr.New(key, slug))
 	}
 	if path != "" {
 		if prev.Path == path {
@@ -441,7 +447,7 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 		if force {
 			return true, nil
 		}
-		return false, usererr.New("store_slug_linked", slug, prev.Path)
+		return false, conflict(usererr.New("store_slug_linked", slug, prev.Path))
 	}
 	owner := prev.PublishedFrom
 	if owner == "" || owner == from {
@@ -450,7 +456,7 @@ func checkOwner(slug string, prev *Meta, path, from string, force bool) (bool, e
 	if force {
 		return true, nil
 	}
-	return false, usererr.New("store_slug_owned", slug, owner)
+	return false, conflict(usererr.New("store_slug_owned", slug, owner))
 }
 
 // title is --title, else the title pinned on the management page, else (for a stored page) the data's
@@ -620,15 +626,15 @@ func removeSources(dir, keep string) {
 	}
 }
 
-// Remove deletes slug. A linked file itself is left alone.
+// Remove deletes slug, ErrNotFound for no page. A linked file itself is left alone.
 func (s *Store) Remove(slug string) error {
 	dir, ok := s.dir(slug)
 	if !ok {
-		return usererr.New("store_no_page", slug)
+		return ErrNotFound
 	}
 	unlock, err := s.lock(false)
 	if errors.Is(err, fs.ErrNotExist) {
-		return usererr.New("store_no_page", slug)
+		return ErrNotFound
 	}
 	if err != nil {
 		return err
@@ -636,10 +642,31 @@ func (s *Store) Remove(slug string) error {
 	defer unlock()
 	// A removal that waited for another of the same slug finds nothing, as one that came after.
 	if s.ReadMeta(slug) == nil {
-		return usererr.New("store_no_page", slug)
+		return ErrNotFound
 	}
-	if err = os.RemoveAll(dir); err != nil {
+	return removePage(dir)
+}
+
+// removePage removes dir, a page's directory, its meta.json last: one that cannot all be removed keeps it, listed
+// still, for floe rm to remove the rest. What cannot be removed is told at it.
+func removePage(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
 		return usererr.CannotWrite(dir, err) //nolint:wrapcheck // the system's words, at the page
+	}
+	for _, e := range entries {
+		if e.Name() == "meta.json" {
+			continue
+		}
+		at := filepath.Join(dir, e.Name())
+		if err := os.RemoveAll(at); err != nil {
+			return usererr.CannotWrite(at, err) //nolint:wrapcheck // as above
+		}
+	}
+	for _, at := range []string{filepath.Join(dir, "meta.json"), dir} {
+		if err := os.Remove(at); err != nil {
+			return usererr.CannotWrite(at, err) //nolint:wrapcheck // as above
+		}
 	}
 	return nil
 }
@@ -732,7 +759,21 @@ func (s *Store) renameTo(slug string, to *string) (string, error) {
 	}
 	dir, _ := s.dir(name)
 	if _, err := os.Lstat(dir); name != slug && !errors.Is(err, os.ErrNotExist) {
-		return "", usererr.New("store_slug_taken", name)
+		return "", conflict(usererr.New("store_slug_taken", name))
 	}
 	return name, nil
 }
+
+// Conflict is a mistake of a name in use (a slug of another page, project or file), which a server answers with
+// 409. It is returned alone, never collected with other mistakes: usererr.List.Add keeps the mistake it wraps, not
+// the mark.
+type Conflict struct {
+	Err *usererr.Error
+}
+
+func conflict(e *usererr.Error) *Conflict { return &Conflict{Err: e} }
+
+func (c *Conflict) Error() string { return c.Err.Error() }
+
+// Unwrap gives the mistake, which usererr.Tell tells.
+func (c *Conflict) Unwrap() error { return c.Err }

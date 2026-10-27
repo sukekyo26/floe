@@ -132,7 +132,10 @@ func newRoot(env Env, out io.Writer) *cobra.Command {
 		},
 	})
 	a := &app{env: env, out: out}
-	root.AddCommand(a.checkCmd(), a.diagramCmd(), a.iconsCmd(), a.partCmd(), a.renderCmd(), a.templateCmd())
+	root.AddCommand(
+		a.checkCmd(), a.diagramCmd(), a.iconsCmd(), a.listCmd(), a.partCmd(), a.publishCmd(), a.rebuildCmd(), a.renderCmd(),
+		a.rmCmd(), a.serveCmd(), a.stopCmd(), a.templateCmd(),
+	)
 	// cobra adds these as it runs: here, so that readable finds them, and their arguments are wrapped below.
 	root.InitDefaultHelpCmd()
 	// cobra's help takes any words, and answers one that names no command with root's help: its words are a
