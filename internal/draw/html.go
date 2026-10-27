@@ -240,11 +240,16 @@ func (s *items) next(text string) (n int, end bool, rest string, ok bool) {
 // in, none is. It refuses at the item a name of a part its elements give that the page would be refused for
 // (checkNames).
 // LIMIT: the marks and the probe show the tree and the formatting rebuilt in body text alone: the form an item
-// left open, the attributes it adds to body or html, and formatting left open in a table, where the probe of
-// white space rebuilds none, are not checked; check them in the browser (B12).
-// LIMIT: page.html puts an item of format html where elements go, and of table rows in a tbody; not straight in
-// a table followed by text, nor between html and head: there the probe is moved or dropped and a right item is
-// refused. A name of a part the parser moves out of a table is told at template:, by checkPage.
+// left open and the attributes it adds to body or html are not checked; check them in the browser (B12).
+// page.html puts an item where elements go; between html and head, the probe is dropped and a right item is
+// refused.
+// LIMIT: in a table, tbody, thead, tfoot, tr or colgroup, the parser's foster parenting decides. Refused: what is
+// not of that place (rows straight in a table, read into a tbody of their own; cells in a tbody; rows in a tr;
+// text in a colgroup), formatting left open at the item's end, and a right item page.html follows with text.
+// Drawn moved, unchecked by the marks and the probe but for what checkPage refuses in the whole page: the item's
+// text and elements that are no part of a table, put before the table, and formatting left open before its rows
+// or misnested (<b><i>x</b>), rebuilt in what page.html writes after the table. A name of a part moved out of a
+// table is told at template:, by checkPage. Probe with text the parser moves too if pages come to put items there.
 func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error {
 	if len(s.html) == 0 {
 		return nil
