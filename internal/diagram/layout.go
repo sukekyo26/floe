@@ -298,8 +298,7 @@ func what(kind, name string, text Text) string {
 // fit refuses text that is wider than room, telling the width to write: the widest of its languages.
 func (l *layout) fit(at, who string, t Text, size float64, code bool, room, written float64) {
 	if lang, tw := widest(t, size, code); tw > room {
-		// LIMIT: the mark of the language is made here, so no catalog chooses its brackets. Make it the
-		// catalogs' when one needs brackets of its own.
+		// LIMIT: the language's mark is made here, so no catalog picks its brackets; move it if one needs its own.
 		in := ""
 		if lang != "en" {
 			in = " (" + lang + ")"
