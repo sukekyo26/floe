@@ -52,6 +52,8 @@ type Server struct {
 	// id is this server's, new each start: in each version, so that a tab open across a restart reloads.
 	id string
 
+	// looking lets one look run at a time (look).
+	looking sync.Mutex
 	mu      sync.Mutex
 	drawing store.Drawing
 	gen     int    // how many times the drawing has been read
@@ -64,7 +66,7 @@ type Server struct {
 func New(cfg Config) *Server {
 	s := &Server{
 		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, id: rand.Text()[:8],
-		mu: sync.Mutex{}, drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "", fresh: false,
+		looking: sync.Mutex{}, mu: sync.Mutex{}, drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "", fresh: false,
 	}
 	// Requests under another name are refused against DNS rebinding.
 	for _, h := range []string{"localhost", "127.0.0.1"} {
@@ -77,9 +79,13 @@ func New(cfg Config) *Server {
 }
 
 // look reads the drawing again when the directories it is read from changed since it was read, or was never read.
-// Their mark is taken before the drawing is read: a change while it is read is told by the next look. It runs in
-// one goroutine at a time (New, then Serve's), so the drawing is written by one only.
+// Their mark is taken before the drawing is read: a change while it is read is told by the next look. One runs at a
+// time: a request's look waits for the one running, so that the drawing it takes after is of no older a mark than
+// its own. Without that, the watch's look of the mark before a save could write its drawing over the request's, and
+// the request draw with the old one (the lock is not for the writes, which are under mu).
 func (s *Server) look() {
+	s.looking.Lock()
+	defer s.looking.Unlock()
 	m := s.marks()
 	s.mu.Lock()
 	same := s.fresh && m == s.mark
@@ -100,11 +106,22 @@ func (s *Server) look() {
 	s.mu.Unlock()
 }
 
-// now returns the drawing and its generation, taken together.
+// now returns the drawing and its generation, taken together: the drawing of the last look. A request that draws
+// to store uses latest; now only draws that the watch mends after (a page drawn when opened).
 func (s *Server) now() (store.Drawing, int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.drawing, s.gen
+}
+
+// latest is the drawing of what the directories hold now: looked at first, for a request that draws to store,
+// which the watch would mend only after it is stored.
+// LIMIT: the wait for a running look does not see the request's context end, so that a request gone waits behind
+// the watch's read; watch the context too if cfg.Drawing comes to be slow.
+func (s *Server) latest() store.Drawing {
+	s.look()
+	d, _ := s.now()
+	return d
 }
 
 // Handler returns the routes behind the request checks.

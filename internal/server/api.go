@@ -113,7 +113,7 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	opts := store.Options{Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force}
-	drawing, _ := s.now()
+	drawing := s.latest()
 	// The path as sent: the CLI sends it as given, where a file name may start or end with a space (the
 	// management page trims it). There is no directory to read a relative one in, which PrepareLink refuses
 	// with the other mistakes.
@@ -211,7 +211,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	up := store.Upload{File: in.File, Source: in.Source, Images: in.Images, Project: in.Project}
 	opts := store.Options{Slug: &slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force}
-	drawing, _ := s.now()
+	drawing := s.latest()
 	entry, err := s.cfg.Store.PrepareData(drawing, up, opts)
 	if need, ok := errors.AsType[*store.NeedImages](err); ok {
 		sendJSON(w, http.StatusUnprocessableEntity, ImagesNeeded{Images: need.Names})
@@ -232,7 +232,7 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 	if s.readJSON(w, r) == nil {
 		return
 	}
-	drawing, _ := s.now()
+	drawing := s.latest()
 	if err := s.cfg.Store.Rebuild(drawing); err != nil {
 		refuse(w, r, err)
 		return
