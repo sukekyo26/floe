@@ -10,18 +10,15 @@ import (
 )
 
 // A diff's lines take their kind from their first characters: --- and +++ name the files only outside
-// a hunk, and a line of another kind ends the hunk, as the next file's diff --git does.
+// a hunk, which ends when the lines its head counts are used up, or at a line of another kind, as the
+// next file's diff --git.
 func TestDiffOf(t *testing.T) {
 	t.Parallel()
 
 	d := diffOf("diff --git a/x b/x\nindex 1..2\n--- a/x\n+++ b/x\n@@ -1,3 +1,3 @@\n keep\n--- gone\n+++ new\n\n" +
 		`\ No newline at end of file` + "\ndiff --git a/y b/y\n--- a/y\n+++ b/y\n@@ -1 +1 @@\n-a\n+b")
-	kinds := make([]string, 0, len(d.Lines))
-	for _, l := range d.Lines {
-		kinds = append(kinds, l.Kind)
-	}
 	want := "meta meta meta meta hunk  del add  meta meta meta meta hunk del add"
-	if got := strings.Join(kinds, " "); got != want || d.Added != 2 || d.Removed != 2 {
+	if got := kindsOf(d); got != want || d.Added != 2 || d.Removed != 2 {
 		t.Errorf("diffOf = %q, +%d -%d; want %q, +2 -2", got, d.Added, d.Removed, want)
 	}
 	if d.Lines[5].Text != " keep\n" || d.Lines[len(d.Lines)-1].Text != "+b" {
@@ -31,6 +28,37 @@ func TestDiffOf(t *testing.T) {
 	if d := diffOf("-old\n+new\n same\n"); d.Added != 1 || d.Removed != 1 || d.Lines[2].Kind != "" {
 		t.Errorf("diffOf of bare lines = %+v", d)
 	}
+	for _, c := range []struct{ text, kinds string }{
+		// Joined without diff --git: the head's counts end each hunk.
+		{
+			"--- a/x\n+++ b/x\n@@ -1 +1 @@\n-old x\n+new x\n--- a/y\n+++ b/y\n@@ -1 +1 @@\n-old y\n+new y\n",
+			"meta meta hunk del add meta meta hunk del add",
+		},
+		{"@@ -1,0 +1,0 @@\n--- x\n", "hunk meta"},
+		{"@@ -1,1 +1,2 @@\n-a\n-b\n+c\n+d\n--- e\n", "hunk del del add add meta"},
+		{"@@ -1 +1 @@\n--- x\n+y\n", "hunk del add"},
+		{"@@ -1 +1,2 @@\n-a\n+b\n+++ c\n", "hunk del add add"},
+		{"@@ -1,2 +1,2 @@\n a\n-b\n" + `\ No newline at end of file` + "\n+++ c\n+d\n", "hunk  del meta add add"},
+		{"@@ -1,2 +1,2 @@\n\n-a\n+b\n--- c\n", "hunk  del add meta"},
+		{"@@ -1,3 +1,3 @@\n-a\ndiff --git a/y b/y\n--- a/y\n+++ b/y\n", "hunk del meta meta meta"},
+		{"--- a/q.sql\n+++ b/q.sql\n@@ -1,2 +1,1 @@\n--- note\n select 1\n", "meta meta hunk del "},
+		// A head whose counts are not read lasts until a line of another kind, as without them.
+		{"@@ hand @@\n-a\n+b\n--- c\n", "hunk del add del"},
+		{"@@ -1,99999999999999999999 +1 @@\n-a\n+b\n--- c\n", "hunk del add del"},
+	} {
+		if got := kindsOf(diffOf(c.text)); got != c.kinds {
+			t.Errorf("diffOf(%q) = %q; want %q", c.text, got, c.kinds)
+		}
+	}
+}
+
+// kindsOf returns the kinds of d's lines, joined by spaces.
+func kindsOf(d diffText) string {
+	kinds := make([]string, 0, len(d.Lines))
+	for _, l := range d.Lines {
+		kinds = append(kinds, l.Kind)
+	}
+	return strings.Join(kinds, " ")
 }
 
 // A tree nests its paths under the folders they name, those not listed too, in the order they come; a
