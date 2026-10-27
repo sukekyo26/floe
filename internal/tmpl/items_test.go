@@ -313,3 +313,81 @@ func TestSelectText(t *testing.T) {
 		t.Errorf("part.html: told\n%s\nwant\n%s", got, in("xmp"))
 	}
 }
+
+// A value html/template does not take where page.html, a part's part.html or a diagram puts it, which it writes
+// as ZgotmplZ without an error, is told at template: with the start tag of that attribute alone: in a style, in
+// a name or a part of one, in a URL, in a value without quotes, in a <meta> the page may have. Not where
+// html/template writes no ZgotmplZ (text, script, on…), nor a name of a heading's link, lower case.
+func TestZgotmplZ(t *testing.T) {
+	t.Parallel()
+
+	in := func(tag string) string {
+		return "d.yaml:2:11: the page drawn from this file has ZgotmplZ in " + tag + ": html/template wrote it for a value it does not take there; change the value, or where the template puts it"
+	}
+	const schema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"c": {"type": "string", "format": "html"}, "s": {}}}`
+	page := func(head, body string) string {
+		return "<!doctype html>\n<html lang=\"{{.Lang}}\"><head>" + head + "<title>t</title></head>\n<body>" + body + "</body></html>\n"
+	}
+	href := in(`<a href="#ZgotmplZ">`)
+	for _, tt := range []struct{ head, body, s, want string }{
+		{"", `<p style="color: {{.Data.c}}">x</p>`, "", in(`<p style="color: ZgotmplZ">`)},
+		{"", `<p {{.Data.c}}>x</p>`, "", in(`<p zgotmplz="">`)},
+		{"", `<p style="color: {{.Data.s}}">x</p>`, "red; background: url(x)", in(`<p style="color: ZgotmplZ">`)},
+		{"", `<p style="font-family: {{.Data.s}}">x</p>`, `"Noto Sans"`, in(`<p style="font-family: ZgotmplZ">`)},
+		{"", `<a href="{{.Data.s}}">x</a>`, "javascript:alert(1)", href},
+		{"", `<a href="{{.Data.s}}">x</a>`, " https://x", href},
+		{"", `<a href="{{.Data.s}}">x</a>`, "#a:b", href},
+		{"", `<a href="{{.Data.s}}">x</a>`, "?q=a:b", href},
+		{"", `<a href="{{.Data.s}}">x</a>`, "a b:c", href},
+		{"", `<a href="{{.Data.s}}">x</a>`, "\thttp://x", href},
+		{"", `<img srcset="{{.Data.s}} 2x" alt="">`, "javascript:x", in(`<img srcset="#ZgotmplZ 2x"/>`)},
+		{"", `<p title={{.Data.s}}>x</p>`, "", in(`<p title="ZgotmplZ">`)},
+		{"", `<p {{.Data.s}}="x">x</p>`, "href", in(`<p zgotmplz="x">`)},
+		{"", `<p {{.Data.s}}="x">x</p>`, "data-x", in(`<p zgotmplz="x">`)},
+		{"", `<p data-{{.Data.s}}="x">x</p>`, "<b>", in(`<p data-zgotmplz="x">`)},
+		{"<meta name=viewport content={{.Data.s}}>", "", "", in(`<meta content="ZgotmplZ"/>`)},
+		{"", `<div class="callout" data-floe-x="note" style="color: {{.Data.s}}"><p>x</p></div>`, "a;b", in(`<div style="color: ZgotmplZ">`)},
+		{"", "<p style=\"margin: 0; padding: 0;\n color: {{.Data.s}}\">x</p>", "a;b", in(`<p style="margin: 0; padding: 0;  color: ZgotmplZ">`)},
+		{"", `<svg width="8" height="8"><circle r="4" style="fill: {{.Data.s}}"/></svg>`, "a;b", in(`<circle style="fill: ZgotmplZ">`)},
+		// One mistake for an element refused already.
+		{"<meta http-equiv=refresh content={{.Data.s}}>", "", "", `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="Zgot…, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
+		// Written as it is: refused all the same.
+		{"", `<p title="{{.Data.s}}">x</p>`, "ZgotmplZ", in(`<p title="ZgotmplZ">`)},
+		{"", `<p data-zgotmplz-x="1">x</p>`, "", in(`<p data-zgotmplz-x="1">`)},
+		// Where html/template writes no ZgotmplZ.
+		{"", `<p>{{.Data.s}}</p>`, "ZgotmplZ", ""},
+		{"", `<a href="#{{.Data.s}}">x</a>`, "zgotmplz", ""},
+		{"", `<p style="font-family: {{.Data.s}}">x</p>`, "Noto Sans, serif", ""},
+		{"", `<script>var a = {{.Data.s}};</script>`, "x", ""},
+		{"", `<p onclick="f({{.Data.s}})">x</p>`, "x", ""},
+		{"", `<xmp><p title="ZgotmplZ"></p></xmp>`, "", ""},
+	} {
+		k := ownKit(t, nil, mine(page(tt.head, tt.body), schema, nil))
+		data := "lang: en\ntemplate: mine\nc: \"<b>red</b>\"\ns: " + quoted(tt.s) + "\n"
+		if got := drawn(t, k, data, none); got != tt.want {
+			t.Errorf("%s%s with %q: told\n%s\nwant\n%s", tt.head, tt.body, tt.s, got, tt.want)
+		}
+	}
+	// What a part's part.html writes.
+	k := ownKit(t, map[string]string{
+		"st/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+		"st/part.html":   `<div data-floe-part="st" style="color: {{.s}}">x</div>`,
+		"st/part.css":    "",
+	}, mine(page("", "{{.Data.st}}"),
+		`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"st": {"$ref": "floe:///parts/st.json"}}}`, nil))
+	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nst: {s: \"a;b\"}\n", none), in(`<div style="color: ZgotmplZ">`); got != want {
+		t.Errorf("part.html: told\n%s\nwant\n%s", got, want)
+	}
+	// floe's links, which leaves URLs to this, two told once, and a diagram's title.
+	report := "lang: en\ntemplate: report\ntitle: t\nsections:\n  - heading: h\n    parts:\n"
+	for src, want := range map[string]string{
+		report + "      - links: [{title: x, url: ' https://x'}, {title: y, url: 'javascript:x'}]\n":                             href,
+		report + "      - links: [{title: x, url: 'https://x'}, {title: y, url: 'p/a.html#b'}]\n":                                "",
+		diagramPage("en", `{width: 300, height: 100, title: ZgotmplZ, parts: [{box: {x: 20, y: 20, w: 80, h: 40, rows: [A]}}]}`): in(`<svg aria-label="ZgotmplZ">`),
+	} {
+		if got := drawn(t, floeKit(t), src, none); got != want {
+			t.Errorf("%s: told\n%s\nwant\n%s", src, got, want)
+		}
+	}
+}

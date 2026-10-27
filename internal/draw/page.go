@@ -28,7 +28,8 @@ type named struct {
 // off, unchecked), in an HTML <select> an element of textInSelect or svg or math (heldAsText), a name of an
 // element's data-floe-part or data-floe-look that is no part or look of k, and a data-floe-part not of one
 // part's name as written (the scope of its style, [data-floe-part="name"], would not reach it) or of a look,
-// which has no box. It returns what the page names.
+// which has no box, and an attribute where html/template wrote ZgotmplZ (replaced), in an element that the
+// switch's checks (a <meta> not shown, an element in a <select>) have not refused. It returns what the page names.
 func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error) {
 	var found usererr.List
 	refuse := func(key string, args ...any) {
@@ -51,10 +52,14 @@ func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error
 				var b strings.Builder
 				_ = html.Render(&b, n) //nolint:errcheck // a strings.Builder fails no write
 				refuse("draw_meta", yamlpos.Head(b.String()))
+			} else if tag := replaced(n); tag != "" {
+				refuse("draw_zgotmplz", tag)
 			}
 		default:
 			if heldAsText(n) && inSelect(n) {
 				refuse("draw_select_text", n.Data)
+			} else if tag := replaced(n); tag != "" {
+				refuse("draw_zgotmplz", tag)
 			}
 		}
 		checkNames(k, ns, n, boxes, taken, refuse)
@@ -97,6 +102,33 @@ func inSelect(n *html.Node) bool {
 		}
 	}
 	return false
+}
+
+// replaced returns the start tag of n with only its first attribute where html/template wrote ZgotmplZ in place
+// of a value it does not take there (in a name, a style's value, a URL, an empty value without quotes), "" for
+// none: a name is lower case here, as the parser reads it, and a value is compared as html/template writes it,
+// so that a link to a heading's id (#zgotmplz-…) is not refused.
+// LIMIT: a ZgotmplZ written as it is (title="ZgotmplZ", a diagram's title, a name data-zgotmplz-x) is refused
+// too; if one asks to write it, wrap html/template's escapers so that a value replaced is an error.
+// LIMIT: in an xmp, iframe, noembed, noframes or plaintext, whose content x/net/html reads as text, html/template
+// writes elements, and a ZgotmplZ in their attributes is missed; no browser draws them as elements there, so they
+// do nothing. Read that content again if pages come to write elements in it.
+func replaced(n *html.Node) string {
+	i := slices.IndexFunc(n.Attr, func(a html.Attribute) bool {
+		return strings.Contains(a.Key, "zgotmplz") || strings.Contains(a.Val, "ZgotmplZ")
+	})
+	if i < 0 {
+		return ""
+	}
+	// The start tag alone, of the attribute alone: the others may be long, and the element holds the rest.
+	bare := &html.Node{ //nolint:exhaustruct_v5 // a tag of no tree
+		Type: html.ElementNode, DataAtom: n.DataAtom, Data: n.Data, Namespace: n.Namespace, Attr: n.Attr[i : i+1],
+	}
+	var b strings.Builder
+	_ = html.Render(&b, bare) //nolint:errcheck // a strings.Builder fails no write
+	tag := b.String()
+	// On one line, whole: Render leaves a line break in a value as it is, and a value cut short may lose ZgotmplZ.
+	return strings.ReplaceAll(tag[:strings.IndexByte(tag, '>')+1], "\n", " ")
 }
 
 // shown reports whether n, a <meta>, is one the page drawn may have: its charset alone, or a viewport's name and
