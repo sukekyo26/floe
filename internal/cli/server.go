@@ -34,17 +34,17 @@ var settingKeys = []string{
 
 // storeDir is the directory of the pages: FLOE_DIR, else floe under the XDG data directory, else under
 // ~/.local/share (dataDir).
-func (a *app) storeDir() (string, error) {
+func (a *app) storeDir() (dataPlace, error) {
 	p, err := a.dataDir("FLOE_DIR", "XDG_DATA_HOME", ".local/share", "floe")
 	switch {
 	case err != nil:
-		return "", err
+		return p, err
 	case p.unusable != nil:
-		return "", p.unusable // the server writes there
+		return p, p.unusable // the server writes there
 	case p.dir == "":
-		return "", usererr.New("store_no_dir")
+		return p, usererr.New("store_no_dir")
 	}
-	return p.dir, nil
+	return p, nil
 }
 
 // port is the server's port, FLOE_PORT else 7325.
@@ -60,27 +60,28 @@ func (a *app) port() (int, error) {
 	return port, nil
 }
 
-// serverConfig is where the server serves and what it draws with, as this command reads the settings: the server
-// a command finds must mean the same. The icons are none ("") when there is no place for them, as a command draws
-// then (iconStore); any other mistake of a setting stops it.
-func (a *app) serverConfig() (server.Config, error) {
+// serverConfig is where the server serves and what it draws with, as this command reads the settings, and the
+// place of the store, which serve writes in: the server a command finds must mean the same. The icons are none
+// ("") when there is no place for them, as a command draws then (iconStore); any other mistake of a setting stops
+// it.
+func (a *app) serverConfig() (server.Config, dataPlace, error) {
 	var cfg server.Config
 	var found usererr.List
 	root, err := a.storeDir()
 	if failed := found.Add(err); failed != nil {
-		return cfg, failed
+		return cfg, root, failed
 	}
 	port, err := a.port()
 	if failed := found.Add(err); failed != nil {
-		return cfg, failed
+		return cfg, root, failed
 	}
 	for _, d := range []struct {
 		kind string
 		to   *string
 	}{{"parts", &cfg.Parts}, {"themes", &cfg.Themes}, {"templates", &cfg.Templates}} {
-		p, _, placeErr := a.ownPlace(d.kind)
+		p, placeErr := a.ownPlace(d.kind)
 		if failed := found.Add(placeErr); failed != nil {
-			return cfg, failed
+			return cfg, root, failed
 		}
 		*d.to = p.toRead()
 	}
@@ -89,14 +90,14 @@ func (a *app) serverConfig() (server.Config, error) {
 		err = nil
 	}
 	if failed := found.Add(err); failed != nil {
-		return cfg, failed
+		return cfg, root, failed
 	}
 	if err := found.Err(); err != nil {
-		return cfg, err //nolint:wrapcheck // mistakes for the user as they are
+		return cfg, root, err //nolint:wrapcheck // mistakes for the user as they are
 	}
-	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root), port, icons.toRead(), a.getenv("HOME")
+	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root.dir), port, icons.toRead(), a.getenv("HOME")
 	cfg.Drawing = a.drawing
-	return cfg, nil
+	return cfg, root, nil
 }
 
 // drawing is what the server draws pages with: one's own over floe's (kit) and the icons (iconStore).
@@ -116,7 +117,7 @@ func base(cfg server.Config) string {
 // client makes sure the server of this store runs, of this build, and returns what calls it. anyDirs
 // takes a server that draws with other directories than this command's, for one that draws nothing.
 func (a *app) client(ctx context.Context, anyDirs bool) (client, error) {
-	cfg, err := a.serverConfig()
+	cfg, _, err := a.serverConfig()
 	if err != nil {
 		return client{}, err
 	}
@@ -164,13 +165,13 @@ func (a *app) serveCmd() *cobra.Command {
 func (a *app) serve(ctx context.Context) error {
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
-	cfg, err := a.serverConfig()
+	cfg, at, err := a.serverConfig()
 	if err != nil {
 		return err
 	}
 	root := cfg.Store.Root()
 	if err = writable(root); err != nil {
-		return usererr.CannotWrite(root, err) //nolint:wrapcheck // the system's words, at the store
+		return usererr.SettingDir(at.setting(), root, err, usererr.CannotWrite(root, err))
 	}
 	if cfg.Build, err = daemon.Build(); err != nil {
 		return err //nolint:wrapcheck // already says what failed

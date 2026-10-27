@@ -18,17 +18,17 @@ func with(env map[string]string) *app {
 func TestServerConfig(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := with(map[string]string{"FLOE_DIR": "/s", "HOME": "rel"}).serverConfig()
+	cfg, _, err := with(map[string]string{"FLOE_DIR": "/s", "HOME": "rel"}).serverConfig()
 	if err != nil || cfg.Icons != "" || cfg.Store.Root() != "/s" || cfg.Port != 7325 {
 		t.Errorf("serverConfig = %+v, %v", cfg, err)
 	}
-	cfg, err = with(map[string]string{"HOME": "/h", "FLOE_PORT": "8000"}).serverConfig()
+	cfg, _, err = with(map[string]string{"HOME": "/h", "FLOE_PORT": "8000"}).serverConfig()
 	if err != nil || cfg.Store.Root() != "/h/.local/share/floe" || cfg.Icons != "/h/.local/share/floe-icons" ||
 		cfg.Parts != "/h/.config/floe/parts" || cfg.Port != 8000 || cfg.Home != "/h" {
 		t.Errorf("serverConfig = %+v, %v", cfg, err)
 	}
 	// A default under a file is none to read, as a command reads it.
-	cfg, err = with(map[string]string{"FLOE_DIR": "/s", "HOME": "/dev/null"}).serverConfig()
+	cfg, _, err = with(map[string]string{"FLOE_DIR": "/s", "HOME": "/dev/null"}).serverConfig()
 	if err != nil || cfg.Icons != "" || cfg.Parts != "" || cfg.Themes != "" || cfg.Templates != "" {
 		t.Errorf("serverConfig under a file = %+v, %v", cfg, err)
 	}
@@ -42,7 +42,7 @@ func TestServerConfig(t *testing.T) {
 		{map[string]string{"HOME": "/h", "FLOE_PORT": "+80"}, `floe: invalid FLOE_PORT "+80": use a port number from 1 to 65535`},
 		{map[string]string{"HOME": "/h", "FLOE_ICONS_DIR": "rel"}, "floe: FLOE_ICONS_DIR is rel, a relative path; set it to an absolute path"},
 	} {
-		_, err := with(tt.env).serverConfig()
+		_, _, err := with(tt.env).serverConfig()
 		if got := usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "); got != tt.want {
 			t.Errorf("%v: told\n%s\nwant\n%s", tt.env, got, tt.want)
 		}
