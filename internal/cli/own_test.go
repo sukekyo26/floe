@@ -121,6 +121,23 @@ func TestOwnStops(t *testing.T) {
 	}
 }
 
+// A part.html that does not parse is told at the line text/template's head names, as an editor counts it, without
+// the head: a CR alone ends a line too, and the end of the file is a place after its last line break.
+func TestOwnSyntax(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ page, want string }{
+		{"<div data-floe-part=\"mine\">\n  {{if .}}\n</div>\n", ":4: unexpected EOF"},
+		{"a\rb\n{{ bad }}\n", `:3: function "bad" not defined`},
+	} {
+		dir := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": tt.page, "mine/part.css": ""})
+		want := filepath.Join(dir, "mine/part.html") + tt.want + "\n"
+		if code, stdout, stderr := runEnv(dir, map[string]string{"FLOE_PARTS_DIR": dir}, "part", "check"); code != 1 || stdout != "" || stderr != want {
+			t.Errorf("floe part check of %q = %d, %q, %q; want 1, %q", tt.page, code, stdout, stderr, want)
+		}
+	}
+}
+
 // floe template check draws the example.yaml of each template of one's own, its assets read when page.html
 // names them, every mistake told together.
 func TestTemplateCheck(t *testing.T) {

@@ -42,14 +42,18 @@ func escapeMistake(page *template.Template, src []byte, file string) error {
 	if !errors.As(err, &escape) {
 		return nil
 	}
-	line, column := escape.Line, 0
-	if escape.Node != nil {
+	line, column := 0, 0
+	switch {
+	case escape.Node != nil:
 		// Where the node html/template names is in src, the text of every template of the file, {{define}}d ones
 		// too: the field of {{.x}}, the condition of {{if}}, the name of {{template}}, the start of a template's
-		// body (its root, as ErrOutputContext names).
-		if at := int(escape.Node.Position()); at >= 0 && at <= len(src) {
+		// body (its root, as ErrOutputContext names). One outside src is of the call above, which says nothing.
+		if at := int(escape.Node.Position()); at >= 0 && at < len(src) {
 			line, column = textpos.Of(src, at)
 		}
+	case escape.Line > 0:
+		// Without a node (a range's re-entry, a break, a continue), its line of src, as text/template counts it.
+		line = textpos.TemplateLine(src, escape.Line)
 	}
 	return usererr.LibraryAt(file, line, column, escape.Description)
 }

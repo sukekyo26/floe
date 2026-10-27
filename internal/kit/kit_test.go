@@ -214,7 +214,7 @@ func TestReadMistakes(t *testing.T) {
 		},
 		{
 			"a Go template", part(map[string]string{"part.html": "<div>{{.t}\n"}),
-			"parts/p/part.html: template: part.html:1: bad character U+007D '}'",
+			"parts/p/part.html:1: bad character U+007D '}'",
 		},
 		{"words.yaml, together", part(map[string]string{"words.yaml": "en:\n  a: A\n  n: 3\nEN:\n  a: B\nja: x\nnot-a-tag_: {}\n"}), lines(
 			"parts/p/words.yaml:3:6: en.n: write text, in quotes where YAML would read a number, true, false or null",
