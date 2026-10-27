@@ -82,7 +82,7 @@ func (a *app) serverConfig() (server.Config, error) {
 		if failed := found.Add(placeErr); failed != nil {
 			return cfg, failed
 		}
-		*d.to = p.dir
+		*d.to = p.toRead()
 	}
 	icons, err := a.iconsDir()
 	if e, ok := errors.AsType[*usererr.Error](err); ok && e.Key == "icons_no_dir" {
@@ -94,7 +94,7 @@ func (a *app) serverConfig() (server.Config, error) {
 	if err := found.Err(); err != nil {
 		return cfg, err //nolint:wrapcheck // mistakes for the user as they are
 	}
-	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root), port, icons.dir, a.getenv("HOME")
+	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root), port, icons.toRead(), a.getenv("HOME")
 	cfg.Drawing = a.drawing
 	return cfg, nil
 }

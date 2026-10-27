@@ -21,6 +21,14 @@ type dataPlace struct {
 	unusable error
 }
 
+// toRead is the directory to read at p, "" for none: one whose default cannot be is none.
+func (p dataPlace) toRead() string {
+	if p.unusable != nil {
+		return ""
+	}
+	return p.dir
+}
+
 // dataDir is a directory of floe's: the setting key, else sub under the XDG base directory xdg, else under
 // home under HOME; "" when none is an absolute path. Each is an absolute path, so that floe reads one place
 // wherever it runs: a setting written relative (~/x in quotes too, which no shell read) is refused, and a
@@ -59,10 +67,10 @@ func (a *app) ownPlace(kind string) (p dataPlace, key string, err error) {
 func (a *app) ownDir(kind string) (kit.Dir, error) {
 	none := kit.Dir{FS: nil, Name: ""}
 	p, _, err := a.ownPlace(kind)
-	if err != nil || p.dir == "" || p.unusable != nil {
+	dir := p.toRead()
+	if err != nil || dir == "" {
 		return none, err
 	}
-	dir := p.dir
 	if _, err := os.ReadDir(dir); err != nil {
 		// A default not there is none; one there that is no directory is told.
 		if !p.set && errors.Is(err, fs.ErrNotExist) {
