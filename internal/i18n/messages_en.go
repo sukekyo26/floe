@@ -126,6 +126,7 @@ var messagesEN = map[string]string{
 	"draw_part_unknown": "the page drawn from this file names the part %s, which there is none of; use %s",
 	"draw_part_several": `the page has data-floe-part="%s", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
 	"draw_look_box":     `the page has data-floe-part="%[1]s", but %[1]s is a look, which has no box: take it with data-floe-look="%[1]s"`,
+	"draw_zgotmplz":     "the page drawn from this file has ZgotmplZ in %s: html/template wrote it for a value it does not take there; change the value, or where the template puts it",
 	"draw_meta":         "the page drawn from this file has %s, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out",
 	"draw_noscript":     "the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out",
 	"draw_not_text":     "an item of format %s takes text: write it as text, in quotes where YAML would read a number, true, false or null",

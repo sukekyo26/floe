@@ -54,7 +54,7 @@ func TestFloe(t *testing.T) {
 			t.Errorf("the part %s has no page or no CSS", name)
 		}
 	}
-	for _, name := range []string{"links", "matrix", "progress", "table", "terminal", "tree"} {
+	for _, name := range []string{"matrix", "progress", "table", "terminal", "tree"} {
 		if p, _ := k.Part(name); p.Checks() == nil {
 			t.Errorf("the part %s has no checks", name)
 		}

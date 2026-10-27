@@ -1,4 +1,0 @@
-# A URL with a scheme other than these would be drawn as #ZgotmplZ, which html/template writes for an unsafe one.
-- field: url
-  expr: not (item.url matches "^\\s*[A-Za-z][A-Za-z0-9+.-]*:") || item.url matches "^(?i)\\s*(https?|mailto):"
-  message: write a URL of http, https or mailto, or a path
