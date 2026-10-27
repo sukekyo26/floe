@@ -177,8 +177,10 @@ func framedDocument(t *testing.T, b *browser) string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Chrome is shared: the frames of other tests' tabs are among its targets, in browser contexts of their own.
+	own := chromedp.FromContext(b.ctx).BrowserContextID
 	for _, info := range targets {
-		if info.Type != "iframe" {
+		if info.Type != "iframe" || info.BrowserContextID != own {
 			continue
 		}
 		// Attached until the test ends: cancelling the context closes the target.
