@@ -506,14 +506,21 @@ func (s *Store) Lookup(name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Only a name in the index is read: it is a file the fetch wrote, inside the set's directory.
+	// Only a name in the index is read, and only inside the set's directory: an index or a link edited to lead
+	// out of it is refused by the system.
 	if _, ok := idx.Icons[rest]; !ok {
 		return nil, ErrNoIcon
 	}
-	file := filepath.Join(s.dir(k), rest+".svg")
-	b, _, err := files.Read(file)
+	dir := s.dir(k)
+	root, err := os.OpenRoot(dir)
 	if err != nil {
-		return nil, usererr.CannotRead(file, err)
+		return nil, usererr.CannotRead(dir, err)
+	}
+	defer root.Close() //nolint:errcheck // read only
+	b, _, err := files.ReadIn(root, rest+".svg")
+	if err != nil {
+		// At the name as the index holds it, not cleaned to where it leads.
+		return nil, usererr.CannotReadWith("icons_broken", dir+string(filepath.Separator)+rest+".svg", err, k.name)
 	}
 	return b, nil
 }

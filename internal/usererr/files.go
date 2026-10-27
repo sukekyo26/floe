@@ -33,6 +33,15 @@ func CannotWrite(name string, err error) error {
 // CannotWriteWith is CannotWrite in the words of the catalog message key, the system's words its first argument
 // and args after them, for what more there is to say.
 func CannotWriteWith(key, name string, err error, args ...any) error {
+	return withSystemWords(key, name, err, args...)
+}
+
+// CannotReadWith is CannotRead in the words of the catalog message key, as CannotWriteWith.
+func CannotReadWith(key, name string, err error, args ...any) error {
+	return withSystemWords(key, name, err, args...)
+}
+
+func withSystemWords(key, name string, err error, args ...any) error {
 	words, ok := systemWords(err)
 	if !ok {
 		return fmt.Errorf("%s: %w", name, err)

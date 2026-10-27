@@ -181,6 +181,7 @@ linters:
         - usererr.NewAt(
         - usererr.New(
         - usererr.CannotRead(
+        - usererr.CannotReadWith(
         - usererr.LibraryWith(
         - usererr.CannotWrite(
         - usererr.CannotWriteWith(

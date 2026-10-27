@@ -175,13 +175,28 @@ func TestLookup(t *testing.T) {
 			t.Errorf("Lookup %s = %v, want ErrNoSet", name, err)
 		}
 	}
-	// An icon of the index that is gone is told at its file in the system's words.
+	// An icon of the index that is gone is told at its file in the system's words, to fetch the set again.
+	const again = `; run "floe icons fetch aws --force" to fetch the icons again`
 	svg := filepath.Join(root, "aws", "aws-lambda.svg")
 	if err := os.Remove(svg); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := set.Lookup("aws/aws-lambda"); told(err) != svg+": no such file or directory" {
+	if _, err := set.Lookup("aws/aws-lambda"); told(err) != svg+": cannot be read (no such file or directory)"+again {
 		t.Errorf("Lookup of an icon gone = %s", told(err))
+	}
+	// One the index or a link leads out of the set's directory is not read, told at the name the index holds.
+	outside := filepath.Join(t.TempDir(), "out.svg")
+	if err := os.WriteFile(outside, []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, svg); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := set.Lookup("aws/aws-lambda"); told(err) != svg+": cannot be read (path escapes from parent)"+again {
+		t.Errorf("Lookup of a link out = %q, %s", b, told(err))
+	}
+	if err := os.Remove(svg); err != nil {
+		t.Fatal(err)
 	}
 	// The index is read once: a lookup after it is gone still finds the icon.
 	if err := os.Remove(filepath.Join(root, "aws", "index.json")); err != nil {
@@ -444,6 +459,29 @@ func TestBrokenIndex(t *testing.T) {
 	_, err := icons.New(file, false).Fetch(context.Background(), "aws", local(writeZip(t, "Icon-package.zip", packageFiles)), true)
 	if want := file + ": cannot be written (not a directory): check"; !strings.HasPrefix(told(err), want) {
 		t.Errorf("a fetch --force into a root that is a file = %s, want %s…", told(err), want)
+	}
+}
+
+// A name of the index that leads out of the set's directory by .. is not read, told at the name it holds.
+func TestLookupStaysInside(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	dir := filepath.Join(root, "aws")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for file, text := range map[string]string{
+		filepath.Join(root, "out.svg"):   `<svg xmlns="http://www.w3.org/2000/svg"/>`,
+		filepath.Join(dir, "index.json"): `{"version": "1", "icons": {"../out": {"category": "c"}}}`,
+	} {
+		if err := os.WriteFile(file, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := dir + `/../out.svg: cannot be read (path escapes from parent); run "floe icons fetch aws --force" to fetch the icons again`
+	if b, err := icons.New(root, false).Lookup("aws/../out"); told(err) != want {
+		t.Errorf("Lookup of ../out = %q, %s", b, told(err))
 	}
 }
 
