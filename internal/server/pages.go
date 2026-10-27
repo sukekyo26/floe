@@ -60,10 +60,13 @@ var errNoPage = errors.New("no such page")
 // version is what an open tab of slug, of the file rest under a link ("" for the page), compares to tell that it
 // changed, without drawing: this server's id with, for a stored page, its copy (a new one each publish and
 // rebuild); for a linked file, its mark; for a linked data file, the generation of the drawing, its mark and its
-// meta.json's updatedAt (a link made again, another theme). It reads meta.json itself each time: a publish or a
-// rebuild changes it. "" when there is no page.
-func (s *Server) version(slug, rest string) string {
-	m := s.cfg.Store.ReadMeta(slug)
+// meta.json's updatedAt (a link made again, another theme). m is slug's meta.json as it was read for the content
+// served with it, so that both are of one publish; "" when there is no page.
+// LIMIT: each open tab reads meta.json and stats a file every second (version is all it does). Fold the versions
+// into the server's watching if tabs come to be hundreds.
+// LIMIT: a linked data file's images, and the files under a linked HTML file, are not in its version: changing
+// only them reloads no tab (the user chose so). Save the data file again, or reload the tab.
+func (s *Server) version(slug string, m *store.Meta, rest string) string {
 	if m == nil {
 		return ""
 	}
@@ -76,9 +79,9 @@ func (s *Server) version(slug, rest string) string {
 	}
 	if rest == "" && files.IsDataFile(m.Path) {
 		_, gen := s.now()
-		return s.id + "." + strconv.Itoa(gen) + "." + mark(file) + "." + m.UpdatedAt
+		return s.id + "." + strconv.Itoa(gen) + "." + files.Mark(file) + "." + m.UpdatedAt
 	}
-	return s.id + "." + mark(file)
+	return s.id + "." + files.Mark(file)
 }
 
 // content is what slug, whose meta.json is m, serves for rest ("" for the page itself): a stored page as it was
@@ -137,17 +140,22 @@ func (s *Server) drawLink(slug string, m *store.Meta, file string) ([]byte, erro
 	return tmpl.Draw(drawing.Kit, file, src, o) //nolint:wrapcheck // its mistakes, or what failed
 }
 
-// servePage answers /a/{slug}/{rest...}: the page, or a file under a link. Its version is taken before its
-// content: a change in between costs one extra reload, not a miss.
+// servePage answers /a/{slug}/{rest...}: the page, or a file under a link. Its version is taken from the
+// meta.json its content is served by, before the content: a change in between costs one extra reload, not a miss.
+// A stored page whose copy a publish removed after its meta.json was read is read once more.
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	slug, rest := r.PathValue("slug"), r.PathValue("rest")
-	m := s.cfg.Store.ReadMeta(slug)
-	if m == nil {
-		notFound(w)
-		return
+	var version string
+	var got served
+	err := errNoPage
+	for try := 0; try < 2 && errors.Is(err, errNoPage); try++ {
+		m := s.cfg.Store.ReadMeta(slug)
+		if m == nil {
+			break
+		}
+		version = s.version(slug, m, rest)
+		got, err = s.content(catalog(r), slug, m, rest)
 	}
-	version := s.version(slug, rest)
-	got, err := s.content(catalog(r), slug, m, rest)
 	if errors.Is(err, errNoPage) {
 		notFound(w)
 		return
@@ -260,7 +268,7 @@ func (s *Server) watch(w http.ResponseWriter, r *http.Request) {
 	ticker := time.NewTicker(s.every)
 	defer ticker.Stop()
 	for {
-		if s.version(slug, rest) != since {
+		if s.version(slug, s.cfg.Store.ReadMeta(slug), rest) != since {
 			_, _ = io.WriteString(w, "event: reload\ndata: changed\n\n") //nolint:errcheck // closing anyway
 			return
 		}

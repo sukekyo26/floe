@@ -19,6 +19,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // App is the name /api/health answers with, so that a client can tell floe from another program.
@@ -53,14 +54,15 @@ type Server struct {
 	mu      sync.Mutex
 	drawing store.Drawing
 	gen     int    // how many times the drawing has been read
-	mark    string // what the directories it was read from were then
+	read    bool   // whether it has been read
+	mark    string // what the directories it was read from were then, "" to read it again (floe's failure)
 }
 
 // New returns a server for cfg, the drawing read.
 func New(cfg Config) *Server {
 	s := &Server{
 		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, id: rand.Text()[:8],
-		mu: sync.Mutex{}, drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "",
+		mu: sync.Mutex{}, drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, read: false, mark: "",
 	}
 	// Requests under another name are refused against DNS rebinding.
 	for _, h := range []string{"localhost", "127.0.0.1"} {
@@ -78,7 +80,7 @@ func New(cfg Config) *Server {
 func (s *Server) look() {
 	m := s.marks()
 	s.mu.Lock()
-	same := s.gen > 0 && m == s.mark
+	same := s.read && m == s.mark
 	s.mu.Unlock()
 	if same {
 		return
@@ -86,10 +88,16 @@ func (s *Server) look() {
 	d, err := s.cfg.Drawing()
 	if err != nil {
 		d = store.Drawing{Kit: nil, Icons: nil, Err: err}
+		// A failure of floe's (too many files open) is not of what it read: read it again next time.
+		var mistakes usererr.List
+		if mistakes.Add(err) != nil {
+			m = ""
+		}
 	}
 	s.mu.Lock()
 	s.drawing, s.mark = d, m
 	s.gen++
+	s.read = true
 	s.mu.Unlock()
 }
 
@@ -232,6 +240,9 @@ func (*Server) redirect(w http.ResponseWriter, r *http.Request) {
 
 // Serve serves on ln until ctx is done, watching the drawing every s.every until then.
 func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
+	// The watching ends however serving does.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	srv := &http.Server{
 		Handler:           s.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,

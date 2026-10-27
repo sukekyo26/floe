@@ -142,15 +142,18 @@ func TestProtocol(t *testing.T) {
 	e.h.ServeHTTP(w, req)
 	want(t, w, http.StatusForbidden, "forbidden host")
 	want(t, e.do(t, http.MethodDelete, "/api/artifacts/x", ""), http.StatusForbidden, "forbidden origin")
+	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
 	for typ, status := range map[string]int{
 		"text/plain": 415, "application/jsonx": 415, "application/json-seq": 415, "application/json; charset": 415,
-		"Application/JSON; charset=utf-8": 404, "application/json": 404,
+		"Application/JSON; charset=utf-8": 200, "application/json": 200,
 	} {
-		w := e.do(t, http.MethodPatch, "/api/artifacts/none", `{"favorite": true}`, "Origin", origin, "Content-Type", typ)
+		w := e.do(t, http.MethodPatch, "/api/artifacts/d", `{"favorite": true}`, "Origin", origin, "Content-Type", typ)
 		if w.Code != status {
 			t.Errorf("Content-Type %q: %d, want %d", typ, w.Code, status)
 		}
 	}
+	// No page is not found, whatever is sent, as develop has it.
+	want(t, e.do(t, http.MethodPatch, "/api/artifacts/none", "x", "Origin", origin, "Content-Type", "text/plain"), http.StatusNotFound, "not found")
 	want(t, e.do(t, http.MethodGet, "/a/x/%2e%2e/y", ""), http.StatusNotFound, "not found")
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
 		`cannot read the request: json: unknown field "bogus"`)

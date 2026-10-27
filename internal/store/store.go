@@ -17,8 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/files"
@@ -264,11 +262,10 @@ func modTime(file string) string {
 // file, cached per version of the file: the management page and the open pages poll the list every few
 // seconds, and a report can be megabytes. A data file with mistakes may have none, but can be read.
 func (s *Store) linkTitle(file string, data bool) (string, bool) {
-	var st unix.Stat_t
-	if unix.Stat(file, &st) != nil {
+	key := files.Mark(file)
+	if key == "-" {
 		return "", false
 	}
-	key := fmt.Sprintf("%d:%d:%d:%d", st.Ino, st.Size, st.Mtim.Nano(), st.Ctim.Nano())
 	s.mu.Lock()
 	hit, ok := s.titles[file]
 	s.mu.Unlock()
