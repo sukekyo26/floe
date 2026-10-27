@@ -1,0 +1,13 @@
+template: report
+lang: en
+title: Text too wide in another language than English
+sections:
+  - heading: Diagram
+    parts:
+      - diagram:
+          width: 400
+          height: 200
+          title: { en: Narrow parts, ja: 狭い部品 }
+          parts:
+            - frame: { x: 10, y: 10, w: 120, h: 150, label: { en: API, ja: とても長い日本語の見出しです } }
+            - table: { x: 200, y: 20, w: 100, title: T, rows: [[{ en: id, ja: 識別子 }, { en: int, ja: とても長い型の名前 }]] }
