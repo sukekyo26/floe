@@ -108,7 +108,8 @@ func (s *Server) look() {
 }
 
 // now returns the drawing and its generation, taken together: the drawing of the last look. A request that draws
-// to store uses latest; now only draws that the watch mends after (a page drawn when opened).
+// what the watch cannot mend after (to store, or a download kept as a file) uses latest; now only draws that the
+// watch mends after (a page drawn when opened, which its version reloads).
 func (s *Server) now() (store.Drawing, int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

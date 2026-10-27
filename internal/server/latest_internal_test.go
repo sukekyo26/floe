@@ -58,8 +58,8 @@ func told(t *testing.T, w *httptest.ResponseRecorder) string {
 	return r.Render("floe: ")
 }
 
-// mine writes the template mine's page.html with body in it, each of another length than the one before, so that
-// a filesystem of times in whole seconds marks it changed too.
+// mine writes the template mine's page.html with body in it. A test that needs the change marked gives a body of
+// another length than the one before, so that a filesystem of times in whole seconds marks it changed too.
 func mine(t *testing.T, dir, body string) {
 	t.Helper()
 
@@ -143,6 +143,28 @@ func TestLatestLink(t *testing.T) {
 	want := `<tmp>/dir/mine/page.html:2:75: executing "page.html" at <.Data.nope.x>: map has no entry for key "nope"`
 	if got != want {
 		t.Errorf("link told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A download right after the template is saved draws a linked data file with it: a file kept, which the watch
+// cannot mend after.
+func TestLatestDownload(t *testing.T) {
+	t.Parallel()
+
+	s, dir := watched(t, false)
+	h := s.Handler()
+	data := filepath.Join(filepath.Dir(dir), "proj", "l.yaml")
+	if err := os.MkdirAll(filepath.Dir(data), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	write(t, data, mineData)
+	if w := api(t.Context(), t, h, http.MethodPost, "/api/artifacts", `{"path": "`+data+`"}`); w.Code != http.StatusCreated {
+		t.Fatalf("link = %d %s", w.Code, w.Body)
+	}
+	mine(t, dir, "{{.Data.n}} saved just now")
+	w := api(t.Context(), t, h, http.MethodGet, "/api/artifacts/l/download", "")
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "1 saved just now") {
+		t.Errorf("download = %d %s; want the template saved just now", w.Code, w.Body)
 	}
 }
 
