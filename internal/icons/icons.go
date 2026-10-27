@@ -134,7 +134,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	if err != nil {
-		return nil, usererr.CannotRead(file, err)
+		return nil, usererr.InSystemWords("icons_broken", file, err, k.name)
 	}
 	var idx index
 	if err = json.Unmarshal(b, &idx); err != nil {

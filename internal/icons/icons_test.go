@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -442,13 +443,14 @@ func TestBrokenIndex(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := icons.New(file, false).Search([]string{"x"}); told(err) != file+"/aws/index.json: not a directory" {
+	const again = `; run "floe icons fetch aws --force" to fetch the icons again`
+	if _, err := icons.New(file, false).Search([]string{"x"}); told(err) != file+"/aws/index.json: cannot be read (not a directory)"+again {
 		t.Errorf("a root that is a file = %s", told(err))
 	}
 	// A store under a file is told as it is (the default one is none, which cli tells), and a fetch into one
 	// stops before the network (the context is done); one failing at the network makes nothing.
 	under := filepath.Join(file, "x")
-	if _, err := icons.New(under, false).Search([]string{"x"}); told(err) != under+"/aws/index.json: not a directory" {
+	if _, err := icons.New(under, false).Search([]string{"x"}); told(err) != under+"/aws/index.json: cannot be read (not a directory)"+again {
 		t.Errorf("a root under a file = %s", told(err))
 	}
 	done, cancel := context.WithCancel(context.Background())
@@ -481,7 +483,7 @@ func TestLookupStaysInside(t *testing.T) {
 	for file, text := range map[string]string{
 		filepath.Join(root, "out.svg"):   `<svg xmlns="http://www.w3.org/2000/svg"/>`,
 		filepath.Join(dir, "in.svg"):     `<svg xmlns="http://www.w3.org/2000/svg" id="in"/>`,
-		filepath.Join(dir, "index.json"): `{"version": "1", "icons": {"../out": {"category": "c"}, "link": {"category": "c"}}}`,
+		filepath.Join(dir, "index.json"): `{"version": "1", "icons": {"../out": {}, "link": {}, "abs": {}, "fifo": {}}}`,
 	} {
 		if err := os.WriteFile(file, []byte(text), 0o600); err != nil {
 			t.Fatal(err)
@@ -492,12 +494,24 @@ func TestLookupStaysInside(t *testing.T) {
 	if b, err := set.Lookup("aws/../out"); told(err) != want {
 		t.Errorf("Lookup of ../out = %q, %s", b, told(err))
 	}
-	// A link that stays in the set is read.
-	if err := os.Symlink("in.svg", filepath.Join(dir, "link.svg")); err != nil {
+	// A link that stays in the set is read; one to a file of the set by its absolute path is not (LIMIT: in
+	// Lookup), nor is a FIFO, unopened.
+	for link, to := range map[string]string{"link.svg": "in.svg", "abs.svg": filepath.Join(dir, "in.svg")} {
+		if err := os.Symlink(to, filepath.Join(dir, link)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := syscall.Mkfifo(filepath.Join(dir, "fifo.svg"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if b, err := set.Lookup("aws/link"); err != nil || !strings.Contains(string(b), `id="in"`) {
 		t.Errorf("Lookup of a link inside = %q, %v", b, err)
+	}
+	for name, words := range map[string]string{"abs": "path escapes from parent", "fifo": "neither a regular file nor a directory"} {
+		want := filepath.Join(dir, name) + ".svg: cannot be read (" + words + `); run "floe icons fetch aws --force" to fetch the icons again`
+		if b, err := set.Lookup("aws/" + name); told(err) != want {
+			t.Errorf("Lookup of %s = %q, %s; want %s", name, b, told(err), want)
+		}
 	}
 }
 

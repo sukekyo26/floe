@@ -51,7 +51,7 @@ func TestIconsDir(t *testing.T) {
 		{map[string]string{"HOME": "h"}, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
 		{nil, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
 		// One set under a file is told as it is.
-		{map[string]string{"FLOE_ICONS_DIR": "/dev/null/i", "HOME": "/h"}, "/dev/null/i/aws/index.json: not a directory\n"},
+		{map[string]string{"FLOE_ICONS_DIR": "/dev/null/i", "HOME": "/h"}, "/dev/null/i/aws/index.json: cannot be read (not a directory); run \"floe icons fetch aws --force\" to fetch the icons again\n"},
 	} {
 		for _, dir := range []string{"", t.TempDir()} {
 			if code, _, stderr := runIn(dir, c.env, "icons", "search", "x"); code != 1 || stderr != c.want {
