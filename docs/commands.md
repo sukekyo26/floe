@@ -260,7 +260,18 @@ List the fetched icons whose name contains every word (case does not matter), on
 | `FLOE_THEMES_DIR` | Where themes of your own are, a directory each ([parts.md](parts.md)). Defaults to `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`. |
 | `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |
 
-<!-- B13b: the rest of this section is written after S55 is merged. -->
+Each `FLOE_*` directory is an absolute path. floe reads one place wherever it runs, so a relative one is refused, and so is one starting with `~`, which no shell read (`FLOE_PARTS_DIR is ~/x, a relative path; set it to an absolute path`). A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says.
+
+A command is told of the settings it uses alone, when it uses them. A directory set that cannot be used, as it is not a directory or cannot be read or written (or, for your own templates, parts and themes, is not there), is refused by its variable's name:
+
+```text
+floe: FLOE_PARTS_DIR is /tmp/t/missing, which cannot be used as a directory (no such file or directory); make it a directory floe can use, or set FLOE_PARTS_DIR to another directory
+```
+
+- `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` and `FLOE_THEMES_DIR` are used by every command that draws a page or reads your own (`floe check`, `floe render`, the `template` and `part` commands, and the server, which draws), so one set that is not there stops them. Their default that is not there is none: floe draws with its own alone. A default that is there but is no directory is refused.
+- `FLOE_DIR` is used by the server (`floe serve`, and `floe publish`, `floe rebuild`, `floe list` and `floe rm`, which start it), and made when it is not there. `FLOE_ICONS_DIR` is used by the icons commands, which make it, and by the diagrams that show an icon, at the diagram.
+- Without `HOME` (or with one that is not an absolute path), a directory that has no other default is none: `floe check` runs with floe's templates, parts and themes alone, while a command that writes there (`floe template new`, `floe list` for `FLOE_DIR` …) asks for the variable to be set.
+- Keep `FLOE_PARTS_DIR` and `FLOE_THEMES_DIR` apart: in one directory, the parts are read as themes and the themes as parts, each refused as such.
 
 The command line speaks English, whatever the environment's language; the management page and the page of a data file's mistakes follow the browser's language.
 

@@ -260,7 +260,18 @@ floe と自分の部品・見た目・共有の schema を 1 行ずつ、タブ�
 | `FLOE_THEMES_DIR` | 自分のテーマを 1 つずつディレクトリで置く所（[parts.ja.md](parts.ja.md)）。既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes`。 |
 | `BROWSER` | 新しいページを開くコマンド。既定は macOS では `open`、ほかは `wslview` か `xdg-open`。 |
 
-<!-- B13b: the rest of this section is written after S55 is merged. -->
+`FLOE_*` のディレクトリは絶対パスにします。floe はどこで動かしても 1 つの所を読むので、相対パスは断り、どのシェルも読まなかった `~` で始まるものも断ります（`FLOE_PARTS_DIR is ~/x, a relative path; set it to an absolute path`）。相対の `XDG_DATA_HOME`・`XDG_CONFIG_HOME` は、XDG の決まりどおり無いものとします。
+
+コマンドは、自分が使う設定だけを、使うときに確かめます。設定したディレクトリが使えないとき（ディレクトリでない、読めない・書けない、自分のテンプレート・部品・テーマなら無い）は、変数の名前で断ります。
+
+```text
+floe: FLOE_PARTS_DIR is /tmp/t/missing, which cannot be used as a directory (no such file or directory); make it a directory floe can use, or set FLOE_PARTS_DIR to another directory
+```
+
+- `FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` は、ページを描くか自分のものを読むコマンド（`floe check`・`floe render`・`template` と `part` のコマンド、描くサーバー）が使うので、設定したものが無ければそれらを止めます。既定の場所が無ければ、自分のものは無いとし、floe のものだけで描きます。既定の場所があってもディレクトリでなければ断ります。
+- `FLOE_DIR` はサーバー（`floe serve` と、それを起こす `floe publish`・`floe rebuild`・`floe list`・`floe rm`）が使い、無ければ作ります。`FLOE_ICONS_DIR` は icons のコマンド（無ければ作る）と、アイコンを置いた図（その図の所で）が使います。
+- `HOME` が無い（または絶対パスでない）とき、ほかに既定の無いディレクトリは無いものとします。`floe check` は floe のテンプレート・部品・テーマだけで走り、そこに書くコマンド（`floe template new`、`FLOE_DIR` を使う `floe list` …）は変数を設定するよう求めます。
+- `FLOE_PARTS_DIR` と `FLOE_THEMES_DIR` は別のディレクトリにします。同じだと、部品をテーマとして、テーマを部品として読み、それぞれ誤りとして断ります。
 
 コマンドラインは、環境の言語によらず英語で話します。管理ページと、データファイルの誤りのページは、ブラウザの言語に従います。
 
