@@ -35,14 +35,16 @@ var settingKeys = []string{
 // storeDir is the directory of the pages: FLOE_DIR, else floe under the XDG data directory, else under
 // ~/.local/share (dataDir).
 func (a *app) storeDir() (string, error) {
-	dir, _, err := a.dataDir("FLOE_DIR", "XDG_DATA_HOME", ".local/share", "floe")
+	p, err := a.dataDir("FLOE_DIR", "XDG_DATA_HOME", ".local/share", "floe")
 	switch {
 	case err != nil:
 		return "", err
-	case dir == "":
+	case p.unusable != nil:
+		return "", p.unusable // the server writes there
+	case p.dir == "":
 		return "", usererr.New("store_no_dir")
 	}
-	return dir, nil
+	return p.dir, nil
 }
 
 // port is the server's port, FLOE_PORT else 7325.
@@ -76,11 +78,11 @@ func (a *app) serverConfig() (server.Config, error) {
 		kind string
 		to   *string
 	}{{"parts", &cfg.Parts}, {"themes", &cfg.Themes}, {"templates", &cfg.Templates}} {
-		dir, _, _, placeErr := a.ownPlace(d.kind)
+		p, _, placeErr := a.ownPlace(d.kind)
 		if failed := found.Add(placeErr); failed != nil {
 			return cfg, failed
 		}
-		*d.to = dir
+		*d.to = p.dir
 	}
 	icons, err := a.iconsDir()
 	if e, ok := errors.AsType[*usererr.Error](err); ok && e.Key == "icons_no_dir" {
@@ -92,7 +94,7 @@ func (a *app) serverConfig() (server.Config, error) {
 	if err := found.Err(); err != nil {
 		return cfg, err //nolint:wrapcheck // mistakes for the user as they are
 	}
-	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root), port, icons, a.getenv("HOME")
+	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root), port, icons.dir, a.getenv("HOME")
 	cfg.Drawing = a.drawing
 	return cfg, nil
 }

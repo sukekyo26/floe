@@ -194,7 +194,7 @@ var messagesEN = map[string]string{
 	"cli_wants_publish":     "an HTML or data file",
 	"server_mistakes_head":  "The data file has mistakes",
 	"server_mistakes_lead":  "Fix them and save the file: this tab shows the page again.",
-	"store_no_dir":          "there is no directory for pages: HOME is not an absolute path, or the default one is under a file; set FLOE_DIR to an absolute path",
+	"store_no_dir":          "there is no directory for pages, as HOME is not an absolute path; set FLOE_DIR to an absolute path",
 
 	"cannot_write": "cannot be written (%s): check that its directory exists and can be written to, and that its name is free and not too long",
 
@@ -203,7 +203,7 @@ var messagesEN = map[string]string{
 	// icons_previous_left is encoding/json's, net/http's, archive/zip's or the system's English
 	"icons_unknown_set":        "unknown icon set \"%s\"; use %s",
 	"dir_relative":             "%s is %s, a relative path; set it to an absolute path",
-	"icons_no_dir":             "there is no directory for icons: HOME is not an absolute path, or the default one is under a file; set FLOE_ICONS_DIR to an absolute path",
+	"icons_no_dir":             "there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path",
 	"icons_not_fetched":        "%[1]s icons are not in %[2]s; run \"floe icons fetch %[3]s\" (downloads about %[4]s from %[5]s) and try again",
 	"icons_broken":             "cannot be read (%s); run \"floe icons fetch %s --force\" to fetch the icons again",
 	"icons_download":           "cannot be downloaded (%s); check the network, or download it in a browser and pass its path",
@@ -252,7 +252,7 @@ var messagesEN = map[string]string{
 	"cli_wants_spec":           "a diagram spec (.yaml)",
 	"cli_unknown_part":         `unknown part "%s"; use %s`,
 	"cli_new_exists":           "there is something of this name here already: pick another name, or remove it",
-	"cli_new_no_dir":           "there is no default directory: HOME is not an absolute path, or the default one is under a file; set %s to an absolute path",
+	"cli_new_no_dir":           "there is no default directory, as HOME is not an absolute path; set %s to an absolute path",
 	"cli_made":                 "made %s",
 	"cli_where":                "where: %s",
 	"cli_looks":                "looks: %s",

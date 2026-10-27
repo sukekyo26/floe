@@ -186,14 +186,14 @@ var messagesJA = map[string]string{
 	"cli_wants_publish":     "HTML かデータファイル",
 	"server_mistakes_head":  "データファイルに誤りがあります",
 	"server_mistakes_lead":  "直してファイルを保存すると、このタブにページが戻ります。",
-	"store_no_dir":          "ページの保存先がありません。HOME が絶対パスでないか、既定の保存先がファイルの下にあります。FLOE_DIR に絶対パスを設定してください",
+	"store_no_dir":          "HOME が絶対パスでないので、ページの保存先がありません。FLOE_DIR に絶対パスを設定してください",
 
 	"cannot_write": "書けません（%s）。ディレクトリがあって書けるか、名前が空いていて長すぎないかを確かめてください",
 
 	// icons
 	"icons_unknown_set":        "アイコン集 \"%s\" はありません。%s を使ってください",
 	"dir_relative":             "%s が相対パス %s です。絶対パスにしてください",
-	"icons_no_dir":             "アイコンのディレクトリがありません。HOME が絶対パスでないか、既定のディレクトリがファイルの下にあります。FLOE_ICONS_DIR に絶対パスを設定してください",
+	"icons_no_dir":             "HOME が絶対パスでないので、アイコンのディレクトリがありません。FLOE_ICONS_DIR に絶対パスを設定してください",
 	"icons_not_fetched":        "%[1]s のアイコンが %[2]s にありません。floe icons fetch %[3]s を実行してから（%[5]s から約 %[4]s を取得します）、やり直してください",
 	"icons_broken":             "読めません（%s）。floe icons fetch %s --force でアイコンを取り直してください",
 	"icons_download":           "取得できません（%s）。ネットワークを確かめるか、ブラウザで取得してそのパスを渡してください",
@@ -242,7 +242,7 @@ var messagesJA = map[string]string{
 	"cli_wants_spec":           "図の spec（.yaml）",
 	"cli_unknown_part":         `部品 "%s" はありません。%s から選んでください`,
 	"cli_new_exists":           "ここにはこの名前のものがもうあります。別の名前にするか、それを消してください",
-	"cli_new_no_dir":           "既定のディレクトリがありません。HOME が絶対パスでないか、既定のディレクトリがファイルの下にあります。%s に絶対パスを設定してください",
+	"cli_new_no_dir":           "HOME が絶対パスでないので、既定のディレクトリがありません。%s に絶対パスを設定してください",
 	"cli_made":                 "%s を作りました",
 	"cli_where":                "場所: %s",
 	"cli_looks":                "見た目: %s",

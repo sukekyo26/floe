@@ -56,7 +56,7 @@ func TestExampleMistakes(t *testing.T) {
 		want  string
 	}{
 		{"source: true\nexample: nope\n", nil, "s.yaml:2:10: no example nope; use architecture, aws, class, er, flow, git, sequence, state, timeline, venn"},
-		{"example: aws\n", nil, "s.yaml:1:1: there is no directory for icons: HOME is not an absolute path, or the default one is under a file; set FLOE_ICONS_DIR to an absolute path"},
+		{"example: aws\n", nil, "s.yaml:1:1: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path"},
 		{"example: aws\n", lambda, `s.yaml:1:1: icon "aws/amazon-bedrock": no icon "aws/amazon-bedrock" (search with: floe icons search <word>)`},
 	} {
 		_, got := draw(t, tt.src, drawWith("en", tt.icons, ""))

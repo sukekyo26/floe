@@ -140,13 +140,6 @@ func createNew(prefix string, perm os.FileMode) (*os.File, error) {
 	}
 }
 
-// UnderFile reports whether a file above path (HOME=/dev/null) keeps anything from being there. A path that is
-// itself a file is not under one.
-func UnderFile(path string) bool {
-	_, err := os.Stat(path)
-	return errors.Is(err, syscall.ENOTDIR)
-}
-
 // Hidden reports whether name, of a file in a directory of floe's or one's own, is one floe leaves alone: one
 // starting with a dot (.git, an editor's .part.html.swp, .DS_Store).
 func Hidden(name string) bool {

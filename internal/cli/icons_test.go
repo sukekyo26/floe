@@ -32,6 +32,8 @@ func TestIconsDir(t *testing.T) {
 		{map[string]string{"XDG_DATA_HOME": "~/d", "HOME": "/h"}, "/h/.local/share/floe-icons/aws"},
 		{map[string]string{"XDG_DATA_HOME": "d", "HOME": "/h"}, "/h/.local/share/floe-icons/aws"},
 		{map[string]string{"HOME": "/h"}, "/h/.local/share/floe-icons/aws"},
+		// The default under a file holds none.
+		{map[string]string{"HOME": "/dev/null"}, "/dev/null/.local/share/floe-icons/aws"},
 	} {
 		_, _, stderr := runIn("", c.env, "icons", "search", "x")
 		want := "floe: AWS icons are not in " + c.want + `; run "floe icons fetch aws" (downloads about 14MB from ` +
@@ -46,10 +48,9 @@ func TestIconsDir(t *testing.T) {
 	}{
 		{map[string]string{"FLOE_ICONS_DIR": "~/i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is ~/i, a relative path; set it to an absolute path\n"},
 		{map[string]string{"FLOE_ICONS_DIR": "i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is i, a relative path; set it to an absolute path\n"},
-		{map[string]string{"HOME": "h"}, "floe: there is no directory for icons: HOME is not an absolute path, or the default one is under a file; set FLOE_ICONS_DIR to an absolute path\n"},
-		{nil, "floe: there is no directory for icons: HOME is not an absolute path, or the default one is under a file; set FLOE_ICONS_DIR to an absolute path\n"},
-		// The default under a file is none; one set there is told as it is.
-		{map[string]string{"HOME": "/dev/null"}, "floe: there is no directory for icons: HOME is not an absolute path, or the default one is under a file; set FLOE_ICONS_DIR to an absolute path\n"},
+		{map[string]string{"HOME": "h"}, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
+		{nil, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
+		// One set under a file is told as it is.
 		{map[string]string{"FLOE_ICONS_DIR": "/dev/null/i", "HOME": "/h"}, "/dev/null/i/aws/index.json: not a directory\n"},
 	} {
 		for _, dir := range []string{"", t.TempDir()} {
@@ -57,6 +58,16 @@ func TestIconsDir(t *testing.T) {
 				t.Errorf("%v in %q: %d, %q, want 1, %q", c.env, dir, code, stderr, c.want)
 			}
 		}
+	}
+}
+
+// floe icons fetch into the default under a file tells why before it reaches the network.
+func TestIconsFetchUnderFile(t *testing.T) {
+	t.Parallel()
+
+	const want = "/dev/null/.local/share/floe-icons: cannot be written (not a directory): check that its directory exists and can be written to, and that its name is free and not too long\n"
+	if code, _, stderr := runIn("", map[string]string{"HOME": "/dev/null", "HTTPS_PROXY": "http://127.0.0.1:1"}, "icons", "fetch", "aws"); code != 1 || stderr != want {
+		t.Errorf("floe icons fetch aws = %d, %q, want 1, %q", code, stderr, want)
 	}
 }
 

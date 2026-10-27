@@ -7,57 +7,65 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
-	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
+// dataPlace is a directory of floe's (dataDir): dir, "" for none; whether a setting names it; and why the default
+// cannot be (under a file, HOME=/dev/null), which a reader takes as none and a writer tells, nil else.
+type dataPlace struct {
+	dir      string
+	set      bool
+	unusable error
+}
+
 // dataDir is a directory of floe's: the setting key, else sub under the XDG base directory xdg, else under
-// home under HOME; "" when none is an absolute path, or the default is under a file (HOME=/dev/null), as there is
-// then no place to read or write. set reports whether it is the setting's, which is told as it is when it cannot
-// be used. Each is an
-// absolute path, so that floe reads one place wherever it runs: a setting written relative (~/x in quotes too,
-// which no shell read) is refused, and a relative XDG base directory is none, as its spec says.
-func (a *app) dataDir(key, xdg, home, sub string) (dir string, set bool, err error) {
+// home under HOME; "" when none is an absolute path. Each is an absolute path, so that floe reads one place
+// wherever it runs: a setting written relative (~/x in quotes too, which no shell read) is refused, and a
+// relative XDG base directory is none, as its spec says.
+func (a *app) dataDir(key, xdg, home, sub string) (dataPlace, error) {
 	if setting := a.getenv(key); setting != "" {
 		if !filepath.IsAbs(setting) {
-			return "", true, usererr.New("dir_relative", key, setting)
+			return dataPlace{dir: "", set: true, unusable: nil}, usererr.New("dir_relative", key, setting)
 		}
-		return setting, true, nil
+		return dataPlace{dir: setting, set: true, unusable: nil}, nil
 	}
+	p := dataPlace{dir: "", set: false, unusable: nil}
 	switch base, h := a.getenv(xdg), a.getenv("HOME"); {
 	case filepath.IsAbs(base):
-		dir = filepath.Join(base, sub)
+		p.dir = filepath.Join(base, sub)
 	case filepath.IsAbs(h):
-		dir = filepath.Join(h, home, sub)
+		p.dir = filepath.Join(h, home, sub)
 	}
-	if files.UnderFile(dir) {
-		return "", false, nil
+	if _, err := os.Stat(p.dir); p.dir != "" && errors.Is(err, syscall.ENOTDIR) {
+		p.unusable = usererr.CannotWrite(p.dir, err)
 	}
-	return dir, false, nil
+	return p, nil
 }
 
 // ownPlace is the directory of one's own of the kind (parts, themes, templates) as set: FLOE_<KIND>_DIR, the key
-// it returns, else floe/<kind> under the XDG config directory; "" when none is an absolute path.
-func (a *app) ownPlace(kind string) (dir, key string, set bool, err error) {
+// it returns, else floe/<kind> under the XDG config directory.
+func (a *app) ownPlace(kind string) (p dataPlace, key string, err error) {
 	key = "FLOE_" + strings.ToUpper(kind) + "_DIR"
-	dir, set, err = a.dataDir(key, "XDG_CONFIG_HOME", ".config", filepath.Join("floe", kind))
-	return dir, key, set, err
+	p, err = a.dataDir(key, "XDG_CONFIG_HOME", ".config", filepath.Join("floe", kind))
+	return p, key, err
 }
 
 // ownDir is the directory of one's own of the kind (ownPlace), to read with the system following its links, its
 // Name as it was set; a zero Dir for none. One set that cannot be read is refused in the system's words; a
-// default that is not there is none (one under a file dataDir gives none); one there but no directory is refused.
+// default that is not there, or cannot be, is none; one there but no directory is refused.
 func (a *app) ownDir(kind string) (kit.Dir, error) {
 	none := kit.Dir{FS: nil, Name: ""}
-	dir, _, set, err := a.ownPlace(kind)
-	if err != nil || dir == "" {
+	p, _, err := a.ownPlace(kind)
+	if err != nil || p.dir == "" || p.unusable != nil {
 		return none, err
 	}
+	dir := p.dir
 	if _, err := os.ReadDir(dir); err != nil {
 		// A default not there is none; one there that is no directory is told.
-		if !set && errors.Is(err, fs.ErrNotExist) {
+		if !p.set && errors.Is(err, fs.ErrNotExist) {
 			return none, nil
 		}
 		return none, usererr.CannotRead(dir, err) //nolint:wrapcheck // the system's words, at the directory
@@ -107,13 +115,16 @@ func (a *app) newOwn(kind kit.Kind, name string) error {
 	if kind == kit.KindTemplate {
 		sub = "templates"
 	}
-	dir, key, _, err := a.ownPlace(sub)
+	p, key, err := a.ownPlace(sub)
 	switch {
 	case err != nil:
 		return err
-	case dir == "":
+	case p.unusable != nil:
+		return p.unusable
+	case p.dir == "":
 		return usererr.New("cli_new_no_dir", key)
 	}
+	dir := p.dir
 	k, err := a.kit(kind == kit.KindTemplate)
 	if err != nil {
 		return err

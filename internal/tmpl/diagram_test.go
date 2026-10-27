@@ -114,8 +114,8 @@ func TestDiagramMistakes(t *testing.T) {
 	// At the box key of the item /parts/0, and at the first key of each diagram with an icon.
 	want := lines(
 		`d.yaml:7:63: box "A" overlaps box "B"`,
-		`d.yaml:9:19: there is no directory for icons: HOME is not an absolute path, or the default one is under a file; set FLOE_ICONS_DIR to an absolute path`,
-		`d.yaml:10:19: there is no directory for icons: HOME is not an absolute path, or the default one is under a file; set FLOE_ICONS_DIR to an absolute path`,
+		`d.yaml:9:19: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path`,
+		`d.yaml:10:19: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path`,
 	)
 	if got := drawn(t, k, src, none); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
