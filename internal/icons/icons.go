@@ -134,7 +134,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	if err != nil {
-		return nil, cannotRead(file, err, k)
+		return nil, s.cannotRead(file, err, k)
 	}
 	var idx index
 	if err = json.Unmarshal(b, &idx); err != nil {
@@ -174,13 +174,35 @@ func libraryAt(file string, line, column int, key string, err error, args ...any
 	return e
 }
 
-// cannotRead is err, of reading the file of the set k named so: to fetch the set again, but where the place
-// itself is no directory (a store set to a file, or under one), which a fetch cannot mend and is told as it is.
-func cannotRead(name string, err error, k *kit) error {
-	if errors.Is(err, syscall.ENOTDIR) {
-		return usererr.CannotRead(name, err)
+// cannotRead is err, of reading the file or the directory of the set k at path, under the store: to fetch the set
+// again when that mends it, else as it is (CannotRead).
+func (s *Store) cannotRead(path string, err error, k *kit) error {
+	switch {
+	case !s.mendable(path, err):
+		return usererr.CannotRead(path, err)
+	case errors.Is(err, usererr.ErrNotFile):
+		return usererr.NewAt(path, 0, 0, "icons_not_file", k.name)
 	}
-	return usererr.InSystemWords("icons_broken", name, err, k.name)
+	return usererr.InSystemWords("icons_broken", path, err, k.name)
+}
+
+// mendable reports whether a fetch of the set mends err, of reading path under the store, which writes the set's
+// directory whole: none there, what is no regular file (a FIFO, a directory), the set's directory a file, or what
+// leads out of it (os.Root refuses a path that the system finds outside). A store that is no directory, and what
+// the system does not let floe read, a fetch cannot mend: it fails there too.
+func (s *Store) mendable(path string, err error) bool {
+	switch {
+	case errors.Is(err, fs.ErrPermission):
+		return false
+	case errors.Is(err, fs.ErrNotExist), errors.Is(err, usererr.ErrNotFile), errors.Is(err, syscall.EISDIR):
+		return true
+	case errors.Is(err, syscall.ENOTDIR):
+		fi, statErr := os.Stat(s.root)
+		return statErr == nil && fi.IsDir()
+	}
+	// The system finds it where os.Root does not let it be read: outside the set's directory.
+	_, statErr := os.Stat(path)
+	return statErr == nil
 }
 
 func (s *Store) loadIndex(k *kit) (*index, error) {
@@ -527,13 +549,13 @@ func (s *Store) Lookup(name string) ([]byte, error) {
 	dir := s.dir(k)
 	root, err := os.OpenRoot(dir)
 	if err != nil {
-		return nil, cannotRead(dir, err, k)
+		return nil, s.cannotRead(dir, err, k)
 	}
 	defer root.Close() //nolint:errcheck // read only
 	b, _, err := files.ReadIn(root, rest+".svg")
 	if err != nil {
 		// At the name as the index holds it, not cleaned to where it leads.
-		return nil, usererr.InSystemWords("icons_broken", dirs.Join(dir, rest+".svg"), err, k.name)
+		return nil, s.cannotRead(dirs.Join(dir, rest+".svg"), err, k)
 	}
 	return b, nil
 }

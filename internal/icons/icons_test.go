@@ -447,8 +447,17 @@ func TestBrokenIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := icons.New(fifoRoot, false).Search([]string{"x"}); told(err) != filepath.Join(fifoRoot, "aws", "index.json")+
-		`: cannot be read (neither a regular file nor a directory); run "floe icons fetch aws --force" to fetch the icons again` {
+		`: is neither a regular file nor a directory (a FIFO, a device or the like), which floe does not open; run "floe icons fetch aws --force" to fetch the icons again` {
 		t.Errorf("an index that is a FIFO = %s", told(err))
+	}
+	// The set's directory a file, in a store that is one, a fetch mends.
+	fileSet := t.TempDir()
+	if err := os.WriteFile(filepath.Join(fileSet, "aws"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := icons.New(fileSet, false).Search([]string{"x"}); told(err) != filepath.Join(fileSet, "aws", "index.json")+
+		`: cannot be read (not a directory); run "floe icons fetch aws --force" to fetch the icons again` {
+		t.Errorf("a set's directory that is a file = %s", told(err))
 	}
 	// A root that is a file: what is under it is no directory, told as it is (a fetch cannot mend it).
 	file := filepath.Join(t.TempDir(), "f")
@@ -494,7 +503,7 @@ func TestLookupStaysInside(t *testing.T) {
 	for file, text := range map[string]string{
 		filepath.Join(root, "out.svg"):   `<svg xmlns="http://www.w3.org/2000/svg"/>`,
 		filepath.Join(dir, "in.svg"):     `<svg xmlns="http://www.w3.org/2000/svg" id="in"/>`,
-		filepath.Join(dir, "index.json"): `{"version": "1", "icons": {"../out": {}, "link": {}, "abs": {}, "fifo": {}}}`,
+		filepath.Join(dir, "index.json"): `{"version": "1", "icons": {"../out": {}, "link": {}, "abs": {}, "fifo": {}, "locked": {}}}`,
 	} {
 		if err := os.WriteFile(file, []byte(text), 0o600); err != nil {
 			t.Fatal(err)
@@ -518,10 +527,24 @@ func TestLookupStaysInside(t *testing.T) {
 	if b, err := set.Lookup("aws/link"); err != nil || !strings.Contains(string(b), `id="in"`) {
 		t.Errorf("Lookup of a link inside = %q, %v", b, err)
 	}
-	for name, words := range map[string]string{"abs": "path escapes from parent", "fifo": "neither a regular file nor a directory"} {
-		want := filepath.Join(dir, name) + ".svg: cannot be read (" + words + `); run "floe icons fetch aws --force" to fetch the icons again`
+	const again = `; run "floe icons fetch aws --force" to fetch the icons again`
+	for name, told2 := range map[string]string{
+		"abs":  "cannot be read (path escapes from parent)" + again,
+		"fifo": "is neither a regular file nor a directory (a FIFO, a device or the like), which floe does not open" + again,
+	} {
+		want := filepath.Join(dir, name) + ".svg: " + told2
 		if b, err := set.Lookup("aws/" + name); told(err) != want {
 			t.Errorf("Lookup of %s = %q, %s; want %s", name, b, told(err), want)
+		}
+	}
+	// What the system does not let floe read a fetch cannot mend: it is told as it is.
+	locked := filepath.Join(dir, "locked.svg")
+	if err := os.WriteFile(locked, nil, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	if os.Getuid() != 0 {
+		if _, err := set.Lookup("aws/locked"); told(err) != locked+": permission denied" {
+			t.Errorf("Lookup of a file not to be read = %s", told(err))
 		}
 	}
 }
