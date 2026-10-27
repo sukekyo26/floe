@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/tmpl"
 )
 
@@ -184,7 +185,9 @@ func TestImageItems(t *testing.T) {
 	}
 	k := ownKit(t, nil, mine(htmlPage(`{{range .Data.i}}<img src="{{.}}">{{end}}`), `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}}}`, nil))
-	o := tmpl.Options{Theme: "", Untitled: "", ImagesDir: dir}
+	images := files.NewRoot(dir)
+	t.Cleanup(func() { _ = images.Close() })
+	o := tmpl.Options{Theme: "", Untitled: "", Images: images, ImagesDir: ""}
 	page, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni: [ok.png, ok.svg, .hidden.png, in.png, sub/in.png]\n"), o)
 	if err != nil {
 		t.Fatalf("told\n%s", told(err))
@@ -209,5 +212,31 @@ func TestImageItems(t *testing.T) {
 		"x/d.yaml:12:5: the image \"large.png\" is 1,048,577 bytes, over the 1,048,576 bytes (1 MiB) an image may be; make it smaller",
 	); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A directory of images that cannot be opened is told once, at it, however many images the data names; a page
+// that names none draws.
+func TestImagesDirUnreadable(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root opens a directory it may not read")
+	}
+	dir := filepath.Join(t.TempDir(), "x")
+	if err := os.Mkdir(dir, 0o311); err != nil {
+		t.Fatal(err)
+	}
+	k := ownKit(t, nil, mine(htmlPage(`{{range .Data.i}}<img src="{{.}}">{{end}}`), `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}}}`, nil))
+	images := files.NewRoot(dir)
+	t.Cleanup(func() { _ = images.Close() })
+	o := tmpl.Options{Theme: "", Untitled: "", Images: images, ImagesDir: ""}
+	_, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni: [a.png, b.png]\n"), o)
+	if got, want := told(err), "x: permission denied"; got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+	if _, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni: []\n"), o); err != nil {
+		t.Errorf("a page of no image: told\n%s", told(err))
 	}
 }

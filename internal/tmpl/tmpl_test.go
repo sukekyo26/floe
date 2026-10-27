@@ -1,6 +1,7 @@
 package tmpl_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -38,5 +39,26 @@ func TestDrawExamples(t *testing.T) {
 				t.Errorf("%s in %s: %s", name, theme, told(err))
 			}
 		}
+	}
+}
+
+// A page drawn twice from one input is the same bytes, its items of format html, diagrams and scripts too: no
+// mark of a drawing is left in it, so that drawing a stored page again keeps it when nothing changed.
+func TestDrawTwiceSame(t *testing.T) {
+	t.Parallel()
+
+	k := floeKit(t)
+	tpl, _ := k.Template("report")
+	o := tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""}
+	first, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	second, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if !bytes.Equal(first, second) {
+		t.Error("two drawings of report's example differ")
 	}
 }

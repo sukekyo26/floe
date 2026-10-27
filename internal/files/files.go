@@ -13,10 +13,10 @@ import (
 	"strings"
 )
 
-var (
-	nonSlugRe  = regexp.MustCompile(`[^a-z0-9]+`)
-	maxSlugLen = 64
-)
+var nonSlugRe = regexp.MustCompile(`[^a-z0-9]+`)
+
+// MaxSlugLen is the length a slug may be.
+const MaxSlugLen = 64
 
 // IsDataFile reports whether file is a data file (.yaml or .yml) rather than a page.
 func IsDataFile(file string) bool {
@@ -27,9 +27,13 @@ func IsDataFile(file string) bool {
 // SlugFromFile derives a slug from the name of file, without its extension.
 func SlugFromFile(file string) string {
 	name := filepath.Base(file)
-	name = strings.TrimSuffix(name, filepath.Ext(name))
+	return Slug(strings.TrimSuffix(name, filepath.Ext(name)))
+}
+
+// Slug derives a slug from name as it is: in lower case, each run of what a slug does not take a hyphen.
+func Slug(name string) string {
 	slug := nonSlugRe.ReplaceAllString(strings.ToLower(name), "-")
-	return strings.Trim(slug[:min(len(slug), maxSlugLen)], "-")
+	return strings.Trim(slug[:min(len(slug), MaxSlugLen)], "-")
 }
 
 // WriteAtomic writes data to path with the mode perm, less the umask, through a file beside it, so that a

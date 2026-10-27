@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -149,8 +150,10 @@ func (a *app) checkTemplates() error {
 	for _, name := range k.OwnTemplates() {
 		t, _ := k.Template(name)
 		file := t.File("example.yaml")
-		o := tmpl.Options{Theme: "", Untitled: name, ImagesDir: t.File("."), Icons: store}
+		images := files.NewRoot(t.File("."))
+		o := tmpl.Options{Theme: "", Untitled: name, Images: images, ImagesDir: "", Icons: store}
 		_, err := tmpl.Draw(k, file, t.Example(), o)
+		_ = images.Close() //nolint:errcheck // only read from
 		if failed := found.Add(err); failed != nil {
 			return failed
 		}

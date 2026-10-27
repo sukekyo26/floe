@@ -1,10 +1,11 @@
 package draw
 
 import (
+	"cmp"
 	"crypto/rand"
 	"fmt"
 	"html/template"
-	"os"
+	"io/fs"
 	"slices"
 	"strconv"
 	"strings"
@@ -35,10 +36,9 @@ type items struct {
 	secret    string     // of the marks, in lower case as a parser makes tag and attribute names
 	html      [][]string // the path of each item of format html, by its number
 	texts     []string   // its text
-	imagesDir string
-	root      *os.Root
-	rootErr   error
-	images    map[string]image
+	images    fs.FS      // the data's images, nil for none
+	imagesDir string     // the directory mistakes name them under, "" for the data file's
+	read      map[string]image
 	icons     diagram.Icons
 	diagrams  int
 }
@@ -49,19 +49,13 @@ type image struct {
 	err error
 }
 
-// newItems returns the items of a drawing whose data's images are under imagesDir ("" for none) and whose
-// diagrams show the icons of icons (nil for none kept).
-func newItems(imagesDir string, icons diagram.Icons) *items {
+// newItems returns the items of a drawing whose data's images are images (nil for none), named in mistakes
+// under imagesDir ("" for the data file's directory), and whose diagrams show the icons of icons (nil for none
+// kept).
+func newItems(images fs.FS, imagesDir string, icons diagram.Icons) *items {
 	return &items{
-		secret: strings.ToLower(rand.Text()), html: nil, texts: nil, imagesDir: imagesDir, root: nil, rootErr: nil,
-		images: map[string]image{}, icons: icons, diagrams: 0,
-	}
-}
-
-// close lets go of the directory of the images.
-func (s *items) close() {
-	if s.root != nil {
-		_ = s.root.Close() //nolint:errcheck // only read from
+		secret: strings.ToLower(rand.Text()), html: nil, texts: nil, images: images, imagesDir: imagesDir,
+		read: map[string]image{}, icons: icons, diagrams: 0,
 	}
 }
 
@@ -106,23 +100,15 @@ func (s *items) plainArgs(args []any) []any {
 
 // image reads the image name of d, once a drawing.
 func (s *items) image(d *doc.Data, name string) (template.URL, error) {
-	if got, ok := s.images[name]; ok {
+	if got, ok := s.read[name]; ok {
 		return got.uri, got.err
 	}
-	dir := dirs.Dir(d.File)
-	if s.imagesDir == "" {
-		return "", fmt.Errorf("draw: no directory to read the image %s under", name) //nolint:err113 // the caller's mistake
-	}
-	if s.root == nil && s.rootErr == nil {
-		s.root, s.rootErr = os.OpenRoot(s.imagesDir)
+	if s.images == nil {
+		return "", fmt.Errorf("draw: no images to read the image %s from", name) //nolint:err113 // the caller's mistake
 	}
 	var got image
-	if s.rootErr != nil {
-		got.err = usererr.CannotRead(dir, s.rootErr)
-	} else {
-		got.uri, got.err = kit.ReadImage(s.root.FS(), name, dir, d.File)
-	}
-	s.images[name] = got
+	got.uri, got.err = kit.ReadImage(s.images, name, cmp.Or(s.imagesDir, dirs.Dir(d.File)), d.File)
+	s.read[name] = got
 	return got.uri, got.err
 }
 

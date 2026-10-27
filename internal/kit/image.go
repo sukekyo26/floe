@@ -2,6 +2,7 @@ package kit
 
 import (
 	"encoding/base64"
+	"errors"
 	"html/template"
 	"io"
 	"io/fs"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/dirs"
+	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -24,20 +26,20 @@ var imageTypes = map[string]string{
 	".svg": "image/svg+xml",
 }
 
-// ReadImage reads the image name of files, the directory dir as its mistakes name it, that of the file of, as a
+// ReadImage reads the image name of fsys, the directory dir as its mistakes name it, that of the file of, as a
 // data URI. A name floe does not read (told relative to the directory of of), an extension of no image floe
 // takes, a file that is not a regular one, and one over maxImage are mistakes of the name, without a place; one
 // that cannot be read is told at its path under dir, in the system's words (usererr.CannotRead), which says what
 // is wrong of the file.
 // LIMIT: a file is taken by its name's type, what it holds unchecked: one that holds another shows broken.
 // LIMIT: a file made a FIFO between the Stat and the Open blocks the read; open it without blocking if it comes to.
-func ReadImage(files fs.FS, name, dir, of string) (template.URL, error) {
-	typ, err := imageStat(files, name, dir, of)
+func ReadImage(fsys fs.FS, name, dir, of string) (template.URL, error) {
+	typ, err := imageStat(fsys, name, dir, of)
 	if err != nil {
 		return "", err
 	}
 	at := dirs.Join(dir, name)
-	f, err := files.Open(name)
+	f, err := fsys.Open(name)
 	if err != nil {
 		return "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
 	}
@@ -62,10 +64,10 @@ func ReadImage(files fs.FS, name, dir, of string) (template.URL, error) {
 	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b)), nil
 }
 
-// imageStat checks the image name of files, the directory dir, as ReadImage does without reading it: a name floe
+// imageStat checks the image name of fsys, the directory dir, as ReadImage does without reading it: a name floe
 // reads, an extension of an image floe takes, a regular file, of maxImage at most. It returns the type of its
 // data URI.
-func imageStat(files fs.FS, name, dir, of string) (string, error) {
+func imageStat(fsys fs.FS, name, dir, of string) (string, error) {
 	// os.Root's FS says only "invalid argument" of such a name.
 	if !fs.ValidPath(name) || name == "." {
 		return "", usererr.New("kit_image_path", name, of)
@@ -74,9 +76,13 @@ func imageStat(files fs.FS, name, dir, of string) (string, error) {
 	if !ok {
 		return "", usererr.New("kit_image_type", name)
 	}
-	fi, err := fs.Stat(files, name)
+	fi, err := fs.Stat(fsys, name)
 	switch {
 	case err != nil:
+		// A directory that cannot be opened is told once, at it, not at each image under it.
+		if de, ok := errors.AsType[*files.DirError](err); ok {
+			return "", usererr.CannotRead(dir, de.Err) //nolint:wrapcheck // the system's words, at the directory
+		}
 		return "", usererr.CannotRead(dirs.Join(dir, name), err) //nolint:wrapcheck // the system's words, at the file
 	case !fi.Mode().IsRegular():
 		// A FIFO would block the read.

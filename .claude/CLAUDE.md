@@ -33,6 +33,9 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **Markdown は kit だけが読む**：goldmark を import できるのは `internal/kit` だけ（depguard の規則 `goldmark-in-kit`）。生の HTML を出さない `markdown` を、どこも通る
 - **CSS は字句と括弧の入れ子だけで読む**：CSS は tdewolff の字句と、CSS Syntax の括弧の入れ子（`{`・`(`・関数・`[`）だけで読み、セレクタや値の意味を自前で読まない（`css.Parser` も使わない）。文字列・url・コメントの外のエスケープ（`\`）は断り、解かない。tdewolff を import できるのは `internal/css` だけ（depguard の規則 `tdewolff-in-css`）
 - **図の形は schema、配置は Go**：図の spec の形（鍵・型・値の一覧・要るもの）は floe の部品 diagram の schema（`internal/kit/floe/parts/diagram/schema.json`）だけが決め、jsonschema が確かめる。Go は確かめた値を読むだけで、Go が見るのは、名前の解決（部品と行の名前、アイコン集にそのアイコンがあるか）、配置の検査（図という機能そのもの：重なり・はみ出し・線が通る・交わる・ベン図の領域）、raw の要素（x/net/html で読む）だけ。図を描く入口は `diagram.Drawer` の 1 つで、渡された値をいつも schema で確かめてから読む（どこから来た値でも、確かめていない値で floe の失敗にならない）。配置と形の誤りは spec の中の JSON ポインタで返し、行と列は呼ぶ側が `yamlpos.Place` で付ける
+- **保存したページは描いた HTML を返す**：publish（か `store.Rebuild`）の時に `tmpl.Draw` が描いた HTML を、写し（`source-<id>/` の `data.yaml`・`page.html`・`images/`）に保存し、開くときはそれを返す。開くときに描くのは link したデータファイルだけ。CSP とサンドボックスは HTML に焼き込まず、返すとき（ダウンロードも）に付ける
+- **slug と写しのパスは 1 か所で作る**：slug をパスにするのは `store` の `dir` だけ、meta.json の `source` を写しのパスにするのは `copyDir` だけで、そこで確かめる（`ValidSlug`、save が付ける名前か）。呼ぶ側で別に確かめない
+- **publish は読んだ画像だけを書く**：publish が保存する画像は、描くときに `kit.ReadImage` が読んだ名前のものだけ。送られても読まなかった名前は書かない（信頼境界）。rebuild は前の写しの `images/` を全部引き継ぐ
 
 決まりは、それを入れた PR がこのファイルに足す。
 

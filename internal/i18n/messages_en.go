@@ -147,6 +147,30 @@ var messagesEN = map[string]string{
 
 	// files: a path floe reads or writes for the user
 	// LIMIT: the %s of cannot_write is the system's English, as the system words why it cannot write
+	// link: which files may be linked
+	"link_not_real":        "%s is not its absolute real path; pass it through filepath.Abs and filepath.EvalSymlinks (symlinks resolved, path cleaned) first",
+	"link_not_linkable":    "%s is not a regular HTML file (.html, .htm) or data file (.yaml, .yml); only those can be linked",
+	"link_home_unresolved": `cannot resolve the home directory "%s"; set HOME to an existing absolute directory`,
+	"link_hidden_home":     "%s is under a hidden directory of your home (settings and keys live there); move it out to link it",
+	"link_exposes_dir":     "%s would expose all of %s; move it into a directory of its own and link it there",
+
+	// store: publishing and editing pages
+	"store_invalid_slug":      `invalid slug "%s": use 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit`,
+	"store_slug_is_page":      `slug "%[1]s" is used by a stored page; choose another slug, or remove that page first (floe rm %[1]s)`,
+	"store_slug_is_link":      `slug "%[1]s" is used by a linked file; choose another slug, or remove that link first (floe rm %[1]s)`,
+	"store_slug_linked":       `slug "%[1]s" is linked to %[2]s; choose another slug, or replace that link with floe publish --link --force`,
+	"store_slug_owned":        `slug "%[1]s" was published from project %[2]s; use another --slug, or add --force to replace that page`,
+	"store_slug_taken":        `slug "%s" is already in use; choose another slug`,
+	"store_project_slash":     `a project name cannot be just "/"`,
+	"store_not_data":          "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
+	"store_theme_link":        "--theme picks the theme of a page drawn from a data file: a linked file is shown as it is",
+	"store_no_page":           `no page "%s" (see floe list)`,
+	"store_link_relative":     "%s is not an absolute path: give the path of an HTML or data file starting with /",
+	"store_link_empty":        "the path to link is empty; give the absolute path of an HTML or data file",
+	"store_file_empty":        "the path of the data file to publish is empty; give the path of a .yaml or .yml file",
+	"store_image_under_image": `the image "%[1]s" is under "%[2]s", which is an image too, and a stored page cannot keep both: rename one of them`,
+	"store_rebuild_kept":      `page "%s" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
+
 	"cannot_write": "cannot be written (%s): check that its directory exists and can be written to, and that its name is free and not too long",
 
 	// icons: the icon sets
