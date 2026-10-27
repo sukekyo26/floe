@@ -223,9 +223,10 @@ func entries(d Dir, dir string, dirs bool) ([]string, error) {
 	return names, found.Err()
 }
 
-// readFile returns the file name of the directory dir of d, without a byte order mark at its start, and
-// false when there is none; one that cannot be read in the system's words, at it. What is neither a regular
-// file nor a directory (a FIFO, a link to a device) is refused unread, as reading it may block or never end.
+// readFile returns the file name of the directory dir of d as it is, and false when there is none: the byte
+// order mark at its start is left to the reader of its kind. One that cannot be read is told in the system's
+// words, at it. What is neither a regular file nor a directory (a FIFO, a link to a device) is refused unread,
+// as reading it may block or never end.
 func readFile(d Dir, dir, name string) ([]byte, bool, error) {
 	at := path.Join(d.Name, dir, name)
 	// LIMIT: a file made a FIFO between the Stat and the read blocks it; open it without blocking if it comes to.
@@ -239,17 +240,17 @@ func readFile(d Dir, dir, name string) ([]byte, bool, error) {
 	case err != nil:
 		return nil, false, usererr.CannotRead(at, err)
 	}
-	return bom.Trim(src), true, nil
+	return src, true, nil
 }
 
-// readCSS returns the CSS file name of the directory dir of d as readFile does, its line breaks made LF
-// (css.Preprocess): what is checked is what goes in the page.
+// readCSS returns the CSS file name of the directory dir of d as readFile does, without a byte order mark at its
+// start and its line breaks made LF (css.Preprocess): what is checked is what goes in the page.
 func readCSS(d Dir, dir, name string) ([]byte, bool, error) {
 	src, ok, err := readFile(d, dir, name)
 	if !ok || err != nil {
 		return nil, ok, err
 	}
-	return css.Preprocess(src), true, nil
+	return css.Preprocess(bom.Trim(src)), true, nil
 }
 
 // has reports whether the directory dir of d holds the file name.

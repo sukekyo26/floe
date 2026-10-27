@@ -11,6 +11,8 @@ var messagesEN = map[string]string{
 
 	// yaml: reading a YAML file
 	"yaml_documents":            "a YAML file holds one document: write it as one, without --- between parts",
+	"yaml_not_utf8":             "this byte is not UTF-8: save the file as UTF-8",
+	"text_bom":                  "a byte order mark (U+FEFF) is here, which is read as a character: remove it, or write \\ufeff in a double-quoted string where the text needs one",
 	"yaml_no_anchors":           "anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
 	"yaml_comment_cut":          "a # after a space began a YAML comment, which may have cut the value short, to %s: put the value in quotes if the # is part of it, or write the comment on a line of its own",
 	"yaml_flow_key_alone":       "%q is a key without a value in { }: write its value after a \":\", or, if a , in text ended the text before it, put that text in quotes",
@@ -27,6 +29,7 @@ var messagesEN = map[string]string{
 	"schema_no_url":             "%s: a schema refers to no other file or URL; write what a $ref refers to in its own file",
 	"schema_key_twice":          "the key %q is in this object already: only the last would be read; keep one",
 	"schema_empty":              `the schema is empty: write a JSON Schema object, such as {"type": "object"}`,
+	"schema_after_value":        "another JSON value starts here: a schema is one value; remove what follows it",
 	"schema_no_part":            "%s is not a part; refer to one as floe:///parts/<name>.json",
 	"schema_id_floe":            "this $id names %s, a floe: URL, which is floe's own: give the schema an $id of your own, like https://example.com/item.json, or leave $id out",
 	"schema_id_relative":        "this $id, %s, has no scheme, which a part or a schema the parts share may not have, as it may land under floe:///parts/ and take the place of another: write an absolute URL of your own, like https://example.com/item.json, or leave $id out",

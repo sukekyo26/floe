@@ -59,7 +59,7 @@ func TestCompile(t *testing.T) {
 		{"draft07", `{"$schema": "http://json-schema.org/draft-07/schema#", "type": "object"}`, "schema.json: #: $schema http://json-schema.org/draft-07/schema# names no draft floe takes; name https://json-schema.org/draft/2020-12/schema or https://json-schema.org/draft/2019-09/schema, or leave it out"},
 		{"hash", `{"$schema": "https://json-schema.org/draft/2020-12/schema#", "type": "object"}`, ""},
 		{"nested", `{` + head + `, "properties": {"x": {"$id": "https://e.com/x.json", "$schema": "https://example.com/s"}}}`, "schema.json: #/properties/x: $schema https://example.com/s names no draft floe takes; name https://json-schema.org/draft/2020-12/schema or https://json-schema.org/draft/2019-09/schema, or leave it out"},
-		{"badjson", `{` + head + `, `, "schema.json:1:78: unexpected EOF"},
+		{"badjson", `{` + head + `, `, "schema.json:1:79: unexpected EOF"}, // at the end, past the space
 		{"strng", `{` + head + `, "properties": {"t": {"type":"strng"}}}`, "schema.json: #/properties/t/type: 'anyOf' failed"},
 		{"xtype", `{` + head + `, "x": {"type": 3}, "properties": {"s": {"$ref": "#/x"}}}`, "schema.json: #/x/type: 'anyOf' failed"},
 		{"pctmeta", `{` + head + `, "properties": {"項目": {"type": 3}, "a/b~c": {"minLength": "x"}}}`, "schema.json: #/properties/a~1b~0c/minLength: got string, want integer\nschema.json: #/properties/項目/type: 'anyOf' failed"},
@@ -88,7 +88,7 @@ func TestCompile(t *testing.T) {
 		// A byte order mark at the start is left out, once; the JSON pointers are those without it.
 		{"bom", mark + `{"type":"object"}`, ""},
 		{"bom strng", mark + `{` + head + `, "properties": {"t": {"type":"strng"}}}`, "schema.json: #/properties/t/type: 'anyOf' failed"},
-		{"two boms", mark + mark + `{"type":"object"}`, `schema.json:1:1: invalid character '\ufeff' looking for beginning of value`},
+		{"two boms", mark + mark + `{"type":"object"}`, "schema.json:1:1: " + i18n.EnglishCatalog().Msg("text_bom")},
 		{"null", `null`, "schema.json: #: got null, want boolean or object"},
 	} {
 		_, err := schema.Compile(template, "schema.json", []byte(tt.src), resources(t))

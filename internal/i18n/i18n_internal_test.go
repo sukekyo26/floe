@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -192,6 +193,19 @@ func TestFromAcceptLanguage(t *testing.T) {
 	} {
 		if got := FromAcceptLanguage(header); got != want {
 			t.Errorf("FromAcceptLanguage(%q) = %q, want %q", header, got, want)
+		}
+	}
+}
+
+// The words of a byte order mark tell its escape, a backslash and ufeff, and hold no mark themselves: a Go
+// string writes the one as \\ufeff and would hide the other.
+//
+//nolint:paralleltest // reads the global catalogs, which other tests swap
+func TestMarkWords(t *testing.T) {
+	for lang, messages := range catalogs {
+		words := messages["text_bom"]
+		if !strings.Contains(words, `\ufeff`) || strings.ContainsRune(words, 0xFEFF) {
+			t.Errorf("%s: text_bom = %q, want the escape \ufeff and no mark", lang, words)
 		}
 	}
 }

@@ -6,10 +6,8 @@ package schema
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"maps"
 	"net/url"
 	"slices"
@@ -21,7 +19,6 @@ import (
 	"golang.org/x/text/message"
 
 	"github.com/sukekyo26/floe/internal/bom"
-	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -59,43 +56,22 @@ func NewResource(u, file string, src []byte, k Kind) (Resource, error) {
 }
 
 // read reads src, the JSON of file, as RFC 8259 does, past a byte order mark at its start, and as jsonschema
-// reads it (numbers as json.Number): the only place a schema's bytes are read. A syntax mistake is told in
-// the library's words at its line and column; a file cut short, after its last character but spaces; a file
-// of nothing, in floe's words. A key an object has already, which the library would read over the first, is
-// told at it, every one in a List (keysTwice); then the checks of $schema and $id after read do not run, as
-// what they would look at is the last of the keys.
-// LIMIT: a string left open that ends in spaces is placed before them; rework if that comes to mislead.
-// LIMIT: other marks and UTF-16/32 are refused without saying so; rework here when they are to be read or named.
-// LIMIT: a bad \u escape is placed at its end, not at the bad character; rework if encoding/json comes to tell it.
+// reads it (numbers as json.Number): the only place a schema's bytes are read. Its syntax is read once, by
+// jsontext (misread), whose mistake is told in its words at its byte; a file of nothing is told in floe's words.
+// What the library would read without a word is refused there, every one together with the byte order marks
+// past the start (bom.Refuse): a key an object has already, which the library would read over the first; a lone
+// surrogate or a byte that is no UTF-8 in a string, which it reads as U+FFFD; a value after the value. Then the
+// checks of $schema and $id after read do not run, as what they would look at is not what was written.
 func read(file string, src []byte) (any, error) {
 	src = bom.Trim(src)
+	if err := usererr.Collect(bom.Refuse(file, src).Err(), misread(file, src)); err != nil {
+		return nil, err //nolint:wrapcheck // the mistakes of src, or floe's failure to read it
+	}
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(src))
-	if err == nil {
-		twice, failed := keysTwice(file, src)
-		switch {
-		case failed != nil:
-			return nil, failed
-		case twice != nil:
-			return nil, twice.Err()
-		}
-		return doc, nil
+	if err != nil {
+		return nil, fmt.Errorf("schema: read %s, which jsontext read: %w", file, err)
 	}
-	var syntax *json.SyntaxError
-	switch {
-	case errors.Is(err, io.EOF):
-		return nil, usererr.NewAt(file, 0, 0, "schema_empty")
-	case errors.Is(err, io.ErrUnexpectedEOF):
-		line, column := textpos.Of(src, len(bytes.TrimRight(src, " \t\n\r")))
-		return nil, usererr.LibraryAt(file, line, column, err.Error())
-	case errors.As(err, &syntax):
-	case errors.As(json.Unmarshal(src, new(json.RawMessage)), &syntax):
-		// jsonschema tells what follows the value without its place or character, which encoding/json tells.
-		err = syntax
-	default:
-		return nil, usererr.LibraryAt(file, 0, 0, err.Error())
-	}
-	line, column := textpos.Ending(src, int(syntax.Offset))
-	return nil, usererr.LibraryAt(file, line, column, err.Error())
+	return doc, nil
 }
 
 // Formats are floe's formats: an item of one is drawn by floe, not by a part.

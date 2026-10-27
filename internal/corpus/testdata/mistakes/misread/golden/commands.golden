@@ -1,0 +1,18 @@
+$ floe check marks.yaml utf8.yaml
+exit 1
+--- stderr
+marks.yaml:1:1: a byte order mark (U+FEFF) is here, which is read as a character: remove it, or write \ufeff in a double-quoted string where the text needs one
+utf8.yaml:7:17: this byte is not UTF-8: save the file as UTF-8
+$ floe render --out-dir $TMP/pages/marks.yaml marks.yaml
+exit 1
+--- stderr
+marks.yaml:1:1: a byte order mark (U+FEFF) is here, which is read as a character: remove it, or write \ufeff in a double-quoted string where the text needs one
+$ floe render --out-dir $TMP/pages/utf8.yaml utf8.yaml
+exit 1
+--- stderr
+utf8.yaml:7:17: this byte is not UTF-8: save the file as UTF-8
+$ floe render --out-dir $TMP/together marks.yaml utf8.yaml
+exit 1
+--- stderr
+marks.yaml:1:1: a byte order mark (U+FEFF) is here, which is read as a character: remove it, or write \ufeff in a double-quoted string where the text needs one
+utf8.yaml:7:17: this byte is not UTF-8: save the file as UTF-8

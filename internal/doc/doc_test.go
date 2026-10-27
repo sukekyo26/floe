@@ -91,11 +91,8 @@ func TestReadSecondBOM(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Read = %+v, want its mistake", d)
 	}
-	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "); got != "a.yaml:1:1: "+noLang {
-		t.Errorf("told %q", got)
-	}
-	if want := map[string]any{bom + "lang": "ja"}; !maps.Equal(d.Values, want) {
-		t.Errorf("Values = %q, want %q", d.Values, want)
+	if got, want := usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "), "a.yaml:1:1: "+i18n.EnglishCatalog().Msg("text_bom"); got != want {
+		t.Errorf("told %q, want %q", got, want)
 	}
 }
 
