@@ -123,6 +123,8 @@ func TestNames(t *testing.T) {
 			lines("d.yaml:1:1: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", `d.yaml:1:11: unknown template "reprot"; use report`),
 		},
 		{"a theme given", "lang: ja\ntemplate: report\ntheme: 5\n", tmpl.Options{Theme: "ink", Untitled: "", ImagesDir: ""}, ""},
+		{"a theme given with spaces", "lang: ja\ntemplate: report\n", tmpl.Options{Theme: " ink ", Untitled: "", ImagesDir: ""}, ""},
+		{"spaces given", "lang: ja\ntemplate: report\ntheme: nope\n", tmpl.Options{Theme: " ", Untitled: "", ImagesDir: ""}, `d.yaml:3:8: there is no theme "nope"; use ` + themes},
 		{"a theme given that is none", "lang: ja\ntemplate: report\ntheme: ink\n", tmpl.Options{Theme: "nope", Untitled: "", ImagesDir: ""}, `floe: there is no theme "nope"; use ` + themes},
 	} {
 		if got := drawn(t, k, tt.data, tt.o); got != tt.want {

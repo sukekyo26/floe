@@ -39,7 +39,7 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, error) {
 	if d == nil {
 		return nil, err //nolint:wrapcheck // mistakes of the YAML
 	}
-	t, theme := pick(k, d, o.Theme, &found)
+	t, theme := pick(k, d, &found)
 	if t == nil {
 		return nil, found.Sorted().Err()
 	}
@@ -64,18 +64,20 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, error) {
 // them: the theme given or written, else the default. It adds to found a template left out, empty or naming
 // none, but one doc.Read refused, which it told; and a theme that is none: at d's theme:, or, given, at no
 // place, as no line of d names it. The template is nil when it is none.
-func pick(k *kit.Kit, d *doc.Data, given string, found *usererr.List) (*kit.Template, string) {
+func pick(k *kit.Kit, d *doc.Data, found *usererr.List) (*kit.Template, string) {
 	_, _, themes, templates := k.Names()
 	theme := cmp.Or(d.Theme, kit.DefaultTheme)
 	if _, ok := k.Theme(theme); !ok {
 		bad := usererr.New("tmpl_unknown_theme", theme, strings.Join(themes, ", "))
-		if given == "" {
-			bad = yamlpos.New(d.File, d.Where["theme"], "tmpl_unknown_theme", theme, strings.Join(themes, ", "))
+		if at := d.Where["theme"]; at != (yamlpos.Pos{}) {
+			bad = yamlpos.New(d.File, at, "tmpl_unknown_theme", theme, strings.Join(themes, ", "))
 		}
 		*found = append(*found, bad)
 	}
+	_, written := d.Values["template"]
 	switch {
-	case d.TemplateRefused():
+	case written && d.Template == "":
+		// One not text, which doc.Read told.
 	case d.Template == "":
 		*found = append(*found, yamlpos.New(d.File, d.Where["template"], "tmpl_no_template", strings.Join(templates, ", ")))
 	default:

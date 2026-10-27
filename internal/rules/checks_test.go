@@ -130,7 +130,9 @@ func TestChecksRun(t *testing.T) {
 		{"divided", "- expr: doc.a / 2 < 1\n  message: m\n", "a: 1\n", ""},
 		{"$env", "- expr: $env.doc.a > 1\n  message: m\n", "a: 1\n", "d.yaml: m"},
 		{"the shared keys", "- expr: doc.title == \"Plan\" && doc.lang == \"en\" && doc.template == \"t1\"\n  message: m\n", "title: Plan\n", ""},
-		{"the title as written", "- field: title\n  expr: doc.title == \"Plan\"\n  message: m\n", "title: \"  Plan  \"\n", `d.yaml:3:8: m ("  Plan  ")`},
+		// A shared key is seen as floe reads it, trimmed of spaces.
+		{"the theme trimmed", "- expr: doc.theme == \"ink\"\n  message: m\n", "theme: ' ink '\n", ""},
+		{"the title trimmed", "- field: title\n  expr: doc.title == \"Plan\"\n  message: m\n", "title: \"  Plan  \"\n", ""},
 		{"a rule for the title", "- field: title\n  expr: len(doc.title) > 10\n  message: long title\n", "title: Plan\n", `d.yaml:3:8: long title ("Plan")`},
 		{"the theme written", "- expr: doc.theme == nil\n  message: m\n", "theme: soft\n", "d.yaml: m"},
 		{"the theme left out", "- expr: doc.theme == nil\n  message: m\n", "a: 1\n", ""},
