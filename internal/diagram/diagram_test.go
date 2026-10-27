@@ -319,6 +319,24 @@ func TestVennBounded(t *testing.T) {
 	if _, got := draw(t, apart, render("en")); !strings.Contains(got, `label "x" finds no room`) {
 		t.Errorf("circles apart = %q, want no room", got)
 	}
+	// Far from 0, a label is placed.
+	far := "width: 100000000000000000000.0\nheight: 300\ntitle: T\nparts:\n" +
+		"  - circle: { name: a, cx: 50000000000000000000.0, cy: 150, r: 100 }\n  - label: { text: x, in: [a] }\n"
+	if got, mistakes := draw(t, far, inspect); mistakes != "" || !strings.Contains(got, `label "x" 50000000000000000000,141`) {
+		t.Errorf("a region far from 0 = %s %s, want the label placed", got, mistakes)
+	}
+	// A huge radius ends, its circle sticking out. A region that only touches the canvas has no room in it and
+	// sticks out; one with some of the canvas looks for room there.
+	for _, tt := range []struct{ circle, want string }{
+		{"cx: 200, cy: 100, r: 9.683899191965114e+299", `s.yaml:5:5: circle "c" sticks out of the 400x200 canvas`},
+		{"cx: -100.5, cy: 100, r: 100.5", `s.yaml:6:5: label "x" sticks out of the 400x200 canvas`},
+		{"cx: 0.5, cy: 100, r: 1.5", `s.yaml:6:5: label "x" finds no room inside c`},
+	} {
+		src := head + "  - circle: { name: c, " + tt.circle + " }\n  - label: { text: x, in: [c] }\n"
+		if _, got := draw(t, src, render("en")); !strings.Contains(got, tt.want) {
+			t.Errorf("a circle of %s = %q, want %q", tt.circle, got, tt.want)
+		}
+	}
 }
 
 // A label placed by its region keeps out of every other circle, one of no name too.
