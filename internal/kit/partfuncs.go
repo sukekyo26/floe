@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -56,8 +58,9 @@ func barsOf(items []any) ([]bar, error) {
 	return bars, nil
 }
 
-// diffLine is a line of a diff and its kind, the class it is drawn in: add, del, hunk (@@), meta (the
-// lines naming the files, \ No newline at end of file), or "" for a line that stays.
+// diffLine is a line of a diff and its kind, the class it is drawn in: add, del, hunk (@@), meta (outside a
+// hunk, the lines naming the files and the others, such as diff --git and index; \ No newline at end of
+// file), or "" for a line that stays.
 type diffLine struct {
 	Kind, Text string
 }
@@ -69,16 +72,22 @@ type diffText struct {
 }
 
 // diffOf reads text, a unified diff as git diff writes it or lines of it, each line keeping its newline.
-// Outside a hunk, a line not starting with +, - or a space (diff --git, index) ends the hunk before it,
-// and --- and +++ name the files.
+// A hunk ends when the lines its head counts on both sides are used up, or at a line not starting with +,
+// -, a space or \ (diff --git, index); outside a hunk, --- and +++ name the files.
+// LIMIT: a + or - line outside a hunk is counted as added or removed, so that lines without their head
+// draw, and so are git format-patch's --- before the diffstat and its -- signature; and the next file's
+// --- and +++ right after a hunk shorter than its head are read as removed and added. Read the mail's lines
+// apart when a patch is drawn.
 func diffOf(text string) diffText {
 	var d diffText
-	inHunk := false
+	inHunk, counted := false, false
+	var old, added int
 	for line := range strings.Lines(text) {
 		kind := ""
 		switch {
 		case strings.HasPrefix(line, "@@"):
 			kind, inHunk = "hunk", true
+			old, added, counted = hunkLengths(line)
 		case strings.HasPrefix(line, `\`):
 			kind = "meta"
 		case !inHunk && (strings.HasPrefix(line, "--- ") || strings.HasPrefix(line, "+++ ")):
@@ -93,9 +102,47 @@ func diffOf(text string) diffText {
 		default:
 			kind, inHunk = "meta", false
 		}
+		if inHunk && counted {
+			switch kind {
+			case "add":
+				added--
+			case "del":
+				old--
+			case "":
+				old--
+				added--
+			}
+			if old <= 0 && added <= 0 {
+				inHunk = false
+			}
+		}
 		d.Lines = append(d.Lines, diffLine{Kind: kind, Text: line})
 	}
 	return d
+}
+
+// hunkHead is the start of a hunk's head, @@ -a,b +c,d @@, b and d its lengths, 1 when left out.
+var hunkHead = regexp.MustCompile(`^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@`)
+
+// hunkLengths returns the lengths of the hunk whose head is line, and false for a head that does not give
+// them (@@ alone, a combined diff's @@@, a length too large for an int).
+func hunkLengths(line string) (old, added int, ok bool) {
+	m := hunkHead.FindStringSubmatch(line)
+	if m == nil {
+		return 0, 0, false
+	}
+	n := [2]int{1, 1}
+	for i, s := range m[1:] {
+		if s == "" {
+			continue
+		}
+		v, err := strconv.Atoi(s)
+		if err != nil {
+			return 0, 0, false
+		}
+		n[i] = v
+	}
+	return n[0], n[1], true
 }
 
 // treeNode is a file or a folder of a tree, with what is in a folder in the order the paths name it.
