@@ -12,7 +12,7 @@ floe template check        # 自分のテンプレートを全部、example.yaml
 floe template show memo    # テーマ・schema・checks・見本を出す
 ```
 
-使えない自分のテンプレートは、それで描くページを、理由を添えて止めます。`floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（[commands.ja.md](commands.ja.md#サーバー)）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。
+自分のテンプレートに誤りがあると、そのテンプレートで描くかどうかによらず（`report` のページも）、直すまでどのページも止めます。`floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（[commands.ja.md](commands.ja.md#サーバー)）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。
 
 ## ファイル
 
@@ -107,7 +107,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ### 借りられる見た目
 
-テンプレートの要素は、`data-floe-look` で部品や見た目の形を借り、テーマがその部品と同じに描きます。`<section data-floe-look="panel">` は、どのテーマでもパネルになります。見た目だけのものは `panel`（ほとんどの部品を描く箱）と `rows`（パネルの中の行）で、`cards` や `table` のような部品の名前なら、その部品の形を借ります。
+`<section data-floe-look="panel">` は、テンプレートの要素を、どのテーマでもパネル（ほとんどの部品を描く箱）で描きます。`rows`・`cards`・`table` なら、その見た目を借ります。決まりは [parts.ja.md](parts.ja.md#見た目を借りる) にあります。
 
 ## パレット
 
@@ -133,7 +133,7 @@ floe の土台は、ページの根にこれらで地・色・書体を描きま
 
 ## schema.json
 
-データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。書き損じた鍵を断るように `"additionalProperties": false` を書きます。
+データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。書き損じた鍵を断るように `"additionalProperties": false` を書きます。`floe template new` が作る `schema.json` には無いので、自分で足します。
 
 - `lang`・`template`・`theme`・`title` は floe が読むので、宣言せず、必須にもしません。
 - floe に文の描き方を伝える `format` は `markdown`・`html`・`image` です。floe が辿る `properties` か `items` の下で宣言します。

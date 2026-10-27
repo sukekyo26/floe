@@ -16,17 +16,20 @@ adheres to [Semantic Versioning](https://semver.org/).
   when it is saved.
 - Add `floe check` and `floe render`: check data files without writing them,
   and write each page to an HTML file that opens without floe (`--check` for
-  CI), every mistake printed at once as `file:line:column: message`.
+  CI), the mistakes printed as `file:line:column: message`, every one of a
+  stage of the checks at once.
 - Add `floe rebuild`, which draws every stored page again with the templates,
   parts and themes of now, keeping the page it had where it no longer draws.
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, and a management
   page in English or Japanese, by the browser's language, that lists, edits,
   opens and downloads pages.
 - Add floe's template `report`: a header over sections, each a heading over
-  parts, and twenty-nine parts that report takes and a template refers to as
-  `floe:///parts/<name>.json`, from `text`, `code`, `terminal` and `table` to
-  `findings`, `decision`, `risks`, `timeline`, `tabs`, `diagram` and `script`
-  (`floe part list` lists them).
+  parts; and thirty-one parts a template refers to as
+  `floe:///parts/<name>.json` (`floe part list` lists them): twenty-nine that
+  a section of report takes beside Markdown `text` and `html`, from `code`,
+  `terminal` and `table` to `findings`, `decision`, `risks`, `timeline`,
+  `tabs`, `diagram` and `script`, and `cell` and `stack`, which other parts
+  hold.
 - Add nine themes a data file picks with `theme:` (`default`, `soft`,
   `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `swiss` and `washi`),
   each a palette of CSS variables and the shape of the parts.
@@ -38,7 +41,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add parts, looks, shared schemas and themes of your own in `FLOE_PARTS_DIR`
   and `FLOE_THEMES_DIR`, beside floe's and never named as one of them; and
   `floe part list`, `show`, `new` (the smallest part, to fill in) and `check`.
-  A mistake of one of your own stops every page drawn until it is fixed.
+  A mistake of a part, theme or template of your own stops every page drawn
+  until it is fixed.
 - Add diagrams drawn as inline SVG from a spec of parts on a canvas (frames,
   boxes, tables, icons, edges joining named parts, dots, bars, axes, circles,
   labels, lines), their text in one language or several (`{en: …, ja: …}`),

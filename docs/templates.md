@@ -12,7 +12,7 @@ floe template check        # checks every template of your own, drawing its exam
 floe template show memo    # prints its themes, schema, checks and example
 ```
 
-A template of your own that cannot be used stops the pages drawn with it, with why, and `floe template check` lists them all. A published page is drawn with the server's templates ([commands.md](commands.md#the-server)); after you change one, `floe rebuild` draws the stored pages again with it.
+A mistake of a template of your own stops every page, whether it is drawn with that template or not (a page of `report` too), until it is fixed; `floe template check` lists them all. A published page is drawn with the server's templates ([commands.md](commands.md#the-server)); after you change one, `floe rebuild` draws the stored pages again with it.
 
 ## Files
 
@@ -107,7 +107,7 @@ Each part comes to `page.html` drawn, its other keys nil, so one line draws a li
 
 ### Looks to borrow
 
-An element of the template takes the look of a part or a look alone by `data-floe-look`, so that the theme draws it as it draws that part: `<section data-floe-look="panel">` is a panel in every theme. The looks alone are `panel` (the box most parts are drawn in) and `rows` (rows in a panel); a part's name, such as `cards` or `table`, borrows that part's look.
+`<section data-floe-look="panel">` draws an element of the template as a panel, the box most parts are drawn in, in every theme; `rows`, `cards` or `table` borrow those looks. [parts.md](parts.md#borrowing-a-look) tells the rules.
 
 ## The palette
 
@@ -133,7 +133,7 @@ floe's base draws the page's ground, colour and face on its root with them (`:ro
 
 ## schema.json
 
-A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused.
+A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused: the `schema.json` that `floe template new` makes has none, so add it yourself.
 
 - `lang`, `template`, `theme` and `title` are read by floe and are not declared, nor required.
 - A `format` that tells floe how to draw a text: `markdown`, `html` or `image`. Declare it under `properties` or `items`, where floe follows.

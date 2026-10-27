@@ -137,16 +137,22 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 ## 誤りの読み方
 
-`floe check` は、全部のファイルの誤りを 1 行ずつまとめて出し、誤りがあれば終了コードは 1 です。
+`floe check` は誤りを 1 行ずつ出し、誤りがあれば終了コードは 1 です。データファイルは段ごとに確かめます（[templates.ja.md](templates.ja.md#確かめる順)）。1 つの段の誤りは全部まとめて言い、前の段に誤りがあれば、後の段は走りません。だから、まず形を確かめ：
 
 ```text
-plan.yaml:14:11: write the command without its prompt, which floe draws from the shell ("$ ls")
-plan.yaml:22:7: additional properties 'colour' not allowed
+plan.yaml:5:5: additional properties 'colour' not allowed
+plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad'
 ```
 
-- `file:line:column:` が誤りの場所です。変える値か、それを持つ鍵を指します。誤りは全部言うので、全部を直してから `floe check` をもう一度走らせます。
+それを直すと、その後の確かめに進みます。
+
+```text
+plan.yaml:8:36: write the command without its prompt, which floe draws from the shell ("$ ls")
+```
+
+- `file:line:column:` が誤りの場所です。変える値か、それを持つ鍵を指します。言われた誤りを全部直してから、`floe check` をもう一度走らせます。次の段の誤りが出ることがあります。
 - 形の誤り（`additional properties 'x' not allowed`・`missing property 'x'`・`got string, want array`）は、テンプレートか部品の schema がデータを断ったものです。`floe template show <テンプレート>` と `floe part show <部品>` が、取るものを出します。
-- 使えない自分の部品・テーマ・テンプレートを指す誤りの下には、理由を 2 つ字下げした行で添えます。自分の部品やテーマの誤りは、直すまでどのページも止めます。`floe part check` と `floe template check` が全部を並べます。
+- 自分の部品・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check` と `floe template check` が並べます。
 - 同じ誤りは、何か所から指されても 1 回だけ言います。
 
 ## 確かめと公開

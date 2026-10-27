@@ -86,7 +86,7 @@ A linked data file is drawn each time its page is opened, with `--theme` as give
 
 Check each data file as its page is drawn: its YAML, its template and theme, the template's schema, its checks and computed values, and the page drawn. A relative path is resolved against the working directory.
 
-- Every mistake of every file is printed at once as `file:line:column: message`, in the order the files were given (exit code 1). [pages.md](pages.md#reading-mistakes) tells how to read them.
+- The mistakes of every file are printed as `file:line:column: message`, in the order the files were given (exit code 1): every mistake of a stage of the checks at once, a stage running only when the one before it has none. [pages.md](pages.md#reading-mistakes) tells how to read them.
 - Nothing is printed when every file is right (exit code 0).
 - Nothing is written, and the server is not started, so a repository's CI can run it over its data files.
 - A file that is not a data file (`.yaml`, `.yml`) is refused.
@@ -109,7 +109,7 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 
 - A page is written only when it changes, and its path is printed; running it again does nothing.
 - A page there is written over: keep the pages in version control to get one back.
-- Every mistake of every file is printed at once, as `floe check` prints them, and nothing is written until all are fixed (exit code 1). Nothing is written either when two data files would write the same page (`a/spec.yaml` and `b/spec.yaml` with one `--out-dir`, or `spec.yaml` and `spec.yml`).
+- The mistakes are printed as `floe check` prints them, and nothing is written until all are fixed (exit code 1). Nothing is written either when two data files would write the same page (`a/spec.yaml` and `b/spec.yaml` with one `--out-dir`, or `spec.yaml` and `spec.yml`).
 - Nothing is published, and the server is not started.
 - A page depends on the floe, the templates and the icons that draw it: in CI, use the floe version and the templates the pages were written with, and write the pages again when you upgrade.
 - A `script` of the page runs without the sandbox of the server's pages when the file is opened; its CSP still cuts off `fetch`, XHR, images from elsewhere and forms. A link between pages (`/a/<slug>/`) does not work in a file: link the files relatively.
@@ -136,14 +136,14 @@ Print a template, to read before writing a data file of it: its description, whe
 
 Make the template `<name>` in `FLOE_TEMPLATES_DIR`: a `page.html`, a `schema.json` and an `example.yaml`, the smallest that `floe template check` takes, to fill in.
 
-- A name is lower case letters, digits, `-` and `_`.
+- A name is lower case letters, digits, `-` and `_`, starting with a letter or a digit.
 - Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).
 
 ## `floe template check`
 
 Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own, as `floe part check` does, then draw the `example.yaml` of each template of your own as `floe check` draws a data file.
 
-- Every mistake is printed at once (exit code 1); nothing is printed when they are right (exit code 0).
+- The mistakes are printed (exit code 1): those of the files, and the examples drawn once the files have none. Nothing is printed when they are right (exit code 0).
 - A file floe does not read in a template (a `template.yaml`, say) is refused: a template holds `page.html`, `schema.json` and `example.yaml`, and `page.css`, `computed.yaml`, `checks.yaml`, `words.yaml` and `assets/` if it likes.
 
 [templates.md](templates.md) tells what each file holds.
@@ -166,7 +166,7 @@ Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of it
 
 Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `FLOE_THEMES_DIR`, over floe's own, and print every mistake of them (exit code 1). Nothing is printed when they are right (exit code 0).
 
-A mistake of one of your own stops `floe check`, `floe render` and `floe publish` too, whether the page uses it or not: run `floe part check` to see it. [parts.md](parts.md) tells what a part and a theme hold.
+A mistake of a part, theme or template of your own stops `floe check`, `floe render` and `floe publish` too, whether the page uses it or not: run `floe part check` and `floe template check` to see it. [parts.md](parts.md) tells what a part and a theme hold.
 
 ---
 

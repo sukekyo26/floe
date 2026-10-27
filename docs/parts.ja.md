@@ -15,7 +15,7 @@ floe part check         # 自分の部品・見た目・共有の schema・テ�
 floe part show quote    # 見た目・schema・checks を出す
 ```
 
-自分のものに誤りが 1 つあると、使うかどうかによらず、どのページの描き（`floe check`・`floe render`・`floe publish`）も止めます。見落とさないためです。`floe part check` が全部を並べます。
+自分の部品・テーマ・テンプレートに誤りが 1 つあると、使うかどうかによらず、どのページの描き（`floe check`・`floe render`・`floe publish`）も止めます。見落とさないためです。`floe part check` と `floe template check` が全部を並べます。
 
 ## 部品のファイル
 
@@ -48,7 +48,7 @@ quote/
 
 ## CSS の層と @scope
 
-floe はページの CSS を `</head>` の前の `<style>` に、5 つのカスケードの層で入れます。上の層は、セレクタによらず下の層に勝ちます。
+floe はページの CSS を `</head>` の前の `<style>` に、5 つのカスケードの層で入れます。後の層ほど、セレクタによらず前の層に勝ちます（`floe.parts` がいちばん強い）。
 
 1. `floe.palette`：パレット。floe の `default` の上にテーマのもの。
 2. `floe.base`：floe の土台。ページの根の地・色・書体と、文・リスト・リンク・コード・引用。

@@ -15,7 +15,7 @@ floe part check         # checks every part, look, shared schema and theme of yo
 floe part show quote    # prints its looks, schema and checks
 ```
 
-A mistake of one of your own stops every page drawn (`floe check`, `floe render`, `floe publish`), whether it uses that one or not, so that none goes unseen: `floe part check` lists them all.
+A mistake of a part, theme or template of your own stops every page drawn (`floe check`, `floe render`, `floe publish`), whether it uses that one or not, so that none goes unseen: `floe part check` and `floe template check` list them all.
 
 ## A part's files
 
@@ -48,7 +48,7 @@ quote/
 
 ## The CSS layers and @scope
 
-floe puts a page's CSS into `<style>`s before its `</head>`, in five cascade layers, each winning over the one under it whatever the selectors:
+floe puts a page's CSS into `<style>`s before its `</head>`, in five cascade layers, each later one winning over those before it whatever the selectors (`floe.parts` the strongest):
 
 1. `floe.palette`: the palettes, floe's `default` and then the theme's.
 2. `floe.base`: floe's base, the page's ground, colour and face on its root, and text, lists, links, code and quotes.

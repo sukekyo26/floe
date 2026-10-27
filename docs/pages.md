@@ -137,16 +137,22 @@ The checks:
 
 ## Reading mistakes
 
-`floe check` prints every mistake of every file at once, one to a line, and the exit code is 1 when there is one:
+`floe check` prints the mistakes one to a line, and the exit code is 1 when there is one. A data file is checked in stages ([templates.md](templates.md#the-order-of-the-checks)): every mistake of a stage is told at once, and a stage runs only when the one before it has none. So the shape is checked first:
 
 ```text
-plan.yaml:14:11: write the command without its prompt, which floe draws from the shell ("$ ls")
-plan.yaml:22:7: additional properties 'colour' not allowed
+plan.yaml:5:5: additional properties 'colour' not allowed
+plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad'
 ```
 
-- `file:line:column:` is where the mistake is: the value to change, or the key that holds it. Every mistake is told, so fix them all before you run `floe check` again.
+and once that is fixed, the checks after it:
+
+```text
+plan.yaml:8:36: write the command without its prompt, which floe draws from the shell ("$ ls")
+```
+
+- `file:line:column:` is where the mistake is: the value to change, or the key that holds it. Fix every mistake told, then run `floe check` again: it may tell those of the next stage.
 - A mistake of the shape (`additional properties 'x' not allowed`, `missing property 'x'`, `got string, want array`) is the template's or the part's schema refusing the data: `floe template show <template>` and `floe part show <part>` print what they take.
-- A mistake that names a part, a theme or a template of your own that cannot be used is followed by why, each line indented by two spaces. A mistake of a part or theme of your own stops every page until it is fixed; `floe part check` and `floe template check` list them.
+- A mistake of a part, theme or template of your own stops every page, whether it uses that one or not: the mistake is told at its own file (`~/.config/floe/parts/quote/schema.json:2:1: …`). `floe part check` and `floe template check` list them.
 - A mistake told once is not told again, even if many places name it.
 
 ## Checking and publishing
