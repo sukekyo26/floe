@@ -271,7 +271,11 @@ floe: FLOE_PARTS_DIR is /tmp/t/missing, which cannot be used as a directory (no 
 - `FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` は、ページを描くか自分のものを読むコマンド（`floe check`・`floe render`・`template` と `part` のコマンド、描くサーバー）が使うので、設定したものが無ければそれらを止めます。既定の場所が無ければ、自分のものは無いとし、floe のものだけで描きます。既定の場所があってもディレクトリでなければ断ります。
 - `FLOE_DIR` はサーバー（`floe serve` と、それを起こす `floe publish`・`floe rebuild`・`floe list`・`floe rm`）が使い、無ければ作ります。`FLOE_ICONS_DIR` は icons のコマンド（無ければ作る）と、アイコンを置いた図（その図の所で）が使います。
 - `HOME` が無い（または絶対パスでない）とき、ほかに既定の無いディレクトリは無いものとします。`floe check` は floe のテンプレート・部品・テーマだけで走り、そこに書くコマンド（`floe template new`、`FLOE_DIR` を使う `floe list` …）は変数を設定するよう求めます。
-- `FLOE_PARTS_DIR` と `FLOE_THEMES_DIR` は別のディレクトリにします。同じだと、部品をテーマとして、テーマを部品として読み、それぞれ誤りとして断ります。
+- `FLOE_PARTS_DIR`・`FLOE_THEMES_DIR`・`FLOE_TEMPLATES_DIR` は重ねません。2 つが同じディレクトリか、一方がもう一方の中にあれば（symlink を通しても）、中を読む前に、2 つの変数の名前で断ります。設定したものは、まだ無くても比べます。コマンドは自分が読むものだけを比べ、既定の場所は有るときだけ比べます。`floe part new`・`floe template new` は、作るものがほかの種類の置き場所の中に入るか、それを含むなら、作らずに断ります。
+
+```text
+floe: FLOE_PARTS_DIR (/tmp/pp) and FLOE_THEMES_DIR (/tmp/pp) are one directory, or one is in the other, where floe would read the files of one as those of the other; make FLOE_PARTS_DIR and FLOE_THEMES_DIR two directories, neither in the other
+```
 
 コマンドラインは、環境の言語によらず英語で話します。管理ページと、データファイルの誤りのページは、ブラウザの言語に従います。
 
