@@ -306,8 +306,8 @@ func TestLayoutMistakes(t *testing.T) {
 			t.Errorf("%s\n  placed %s %s\n  want %s", parts, got, mistakes, want)
 		}
 	}
-	// The icons' own mistakes (none fetched) keep their places, told once however many icons need them.
-	missing := usererr.New("icons_not_fetched", "AWS", "/x/aws", "aws", "14MB", "aws.amazon.com")
+	// The icons' own mistakes (none fetched) are of the whole output, told once at no place however many icons need them.
+	missing := usererr.NewWhole("icons_not_fetched", "AWS", "/x/aws", "aws", "14MB", "aws.amazon.com")
 	none := failing{missing}
 	src := head + "  - icon: { icon: aws/a, x: 10, y: 10 }\n  - icon: { icon: aws/b, x: 100, y: 10 }\n"
 	root, _ := yamlpos.Parse("s.yaml", []byte(src)) //nolint:errcheck // read just above

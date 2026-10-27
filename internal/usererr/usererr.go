@@ -15,30 +15,72 @@ import (
 )
 
 // Error is a mistake the user can fix: what (a message key and its arguments) and where, each part of
-// the place left out when it has none.
+// the place left out when it has none. The place is given where the mistake is made, or by PlacedAt and
+// PlacedIn, and never to one of the whole output (NewWhole).
 type Error struct {
 	Key    string
 	Args   []any
-	File   string
-	Line   int    // 0: no line
-	Column int    // 0: no column
-	At     string // a JSON pointer in File, "#/…"; "" for none
+	file   string
+	line   int    // 0: no line
+	column int    // 0: no column
+	at     string // a JSON pointer in file, "#/…"; "" for none
+	whole  bool
 }
 
 // New returns an *Error for the catalog message key with args, without a place.
 func New(key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, File: "", Line: 0, Column: 0, At: ""}
+	return &Error{Key: key, Args: args, file: "", line: 0, column: 0, at: "", whole: false}
+}
+
+// NewWhole returns an *Error for the catalog message key with args of the whole output, which mending no
+// input puts right (no icons fetched, a setting): it never takes a place, so that Tell tells it once.
+func NewWhole(key string, args ...any) *Error {
+	return &Error{Key: key, Args: args, file: "", line: 0, column: 0, at: "", whole: true}
 }
 
 // NewAt returns an *Error for the catalog message key with args, at the line and column of file, 0 for
 // none.
 func NewAt(file string, line, column int, key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, File: file, Line: line, Column: column, At: ""}
+	return &Error{Key: key, Args: args, file: file, line: line, column: column, at: "", whole: false}
 }
 
 // NewIn returns an *Error for the catalog message key with args, at at, a JSON pointer, in file.
 func NewIn(file, at, key string, args ...any) *Error {
-	return &Error{Key: key, Args: args, File: file, Line: 0, Column: 0, At: at}
+	return &Error{Key: key, Args: args, file: file, line: 0, column: 0, at: at, whole: false}
+}
+
+// File is the file the mistake is in, "" for none.
+func (e *Error) File() string { return e.file }
+
+// Line is the mistake's line in File, 0 for none.
+func (e *Error) Line() int { return e.line }
+
+// Column is the mistake's column in Line, 0 for none.
+func (e *Error) Column() int { return e.column }
+
+// At is the mistake's JSON pointer in File, "" for none.
+func (e *Error) At() string { return e.at }
+
+// PlacedAt returns a copy of e at the line and column of file, 0 for none, and no JSON pointer, as NewAt
+// places one; e itself when it is of the whole output.
+func (e *Error) PlacedAt(file string, line, column int) *Error {
+	if e.whole {
+		return e
+	}
+	c := *e
+	c.file, c.line, c.column, c.at = file, line, column, ""
+	return &c
+}
+
+// PlacedIn returns a copy of e at at, a JSON pointer in the value whoever holds it places; e itself when it is
+// of the whole output, or has a file of its own, a place that goes before one in the value.
+func (e *Error) PlacedIn(at string) *Error {
+	if e.whole || e.file != "" {
+		return e
+	}
+	c := *e
+	c.at = at
+	return &c
 }
 
 // Library returns the mistake a library told in err, in the library's own words.
@@ -127,15 +169,15 @@ func (l List) Err() error {
 func (l List) Sorted() List {
 	first := map[string]int{}
 	for _, e := range l {
-		if _, ok := first[e.File]; !ok {
-			first[e.File] = len(first)
+		if _, ok := first[e.file]; !ok {
+			first[e.file] = len(first)
 		}
 	}
 	slices.SortStableFunc(l, func(x, y *Error) int {
-		if d := first[x.File] - first[y.File]; d != 0 {
+		if d := first[x.file] - first[y.file]; d != 0 {
 			return d
 		}
-		return cmp.Or(x.Line-y.Line, x.Column-y.Column, comparePointers(x.At, y.At), strings.Compare(x.Key, y.Key),
+		return cmp.Or(x.line-y.line, x.column-y.column, comparePointers(x.at, y.at), strings.Compare(x.Key, y.Key),
 			slices.CompareFunc(x.Args, y.Args, func(a, b any) int { return strings.Compare(fmt.Sprint(a), fmt.Sprint(b)) }))
 	})
 	return l
@@ -208,7 +250,7 @@ func Tell(c *i18n.Catalog, err error) Report {
 	r := Report{Mistakes: make([]Told, 0, len(all)), Failure: ""}
 	told := map[Told]bool{}
 	for _, e := range all {
-		t := Told{File: e.File, Line: e.Line, Column: e.Column, At: e.At, Text: c.Msg(e.Key, e.Args...)}
+		t := Told{File: e.file, Line: e.line, Column: e.column, At: e.at, Text: c.Msg(e.Key, e.Args...)}
 		if !told[t] {
 			told[t] = true
 			r.Mistakes = append(r.Mistakes, t)

@@ -34,7 +34,7 @@ func TestEscapeMistake(t *testing.T) {
 		}
 		var got *usererr.Error
 		if err := escapeMistake(page, []byte(src), "p.html"); !errors.As(err, &got) ||
-			got.Line != at[0] || got.Column != at[1] || want.Line != 0 && want.Line != got.Line || got.Args[0] != want.Description {
+			got.Line() != at[0] || got.Column() != at[1] || want.Line != 0 && want.Line != got.Line() || got.Args[0] != want.Description {
 			t.Errorf("%q: escapeMistake = %v, want %d:%d (html/template's line %d) and %q", src, err, at[0], at[1], want.Line, want.Description)
 		}
 	}

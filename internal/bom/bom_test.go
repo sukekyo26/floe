@@ -45,10 +45,10 @@ func TestRefuse(t *testing.T) {
 		found := bom.Refuse("f", []byte(tt.src))
 		got := make([]string, 0, len(found))
 		for _, e := range found {
-			if e.Key != "text_bom" || e.File != "f" {
+			if e.Key != "text_bom" || e.File() != "f" {
 				t.Errorf("Refuse(%q) = %+v, want text_bom at f", tt.src, e)
 			}
-			got = append(got, fmt.Sprintf("%d:%d", e.Line, e.Column))
+			got = append(got, fmt.Sprintf("%d:%d", e.Line(), e.Column()))
 		}
 		if strings.Join(got, " ") != tt.want {
 			t.Errorf("Refuse(%q) at %v, want %s", tt.src, got, tt.want)

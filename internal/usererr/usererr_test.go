@@ -61,7 +61,7 @@ func TestListAdd(t *testing.T) {
 	// Collect takes them as Add does, sorted, and returns a failure among them alone.
 	collected := usererr.Collect(usererr.LibraryAt("a.yaml", 5, 1, "x"), nil, usererr.List{usererr.LibraryAt("a.yaml", 2, 1, "x")})
 	var both usererr.List
-	if !errors.As(collected, &both) || len(both) != 2 || both[0].Line != 2 {
+	if !errors.As(collected, &both) || len(both) != 2 || both[0].Line() != 2 {
 		t.Errorf("Collect of mistakes = %v", collected)
 	}
 	if got := usererr.Collect(usererr.Library(errors.New("x")), failure); !errors.Is(got, failure) {
@@ -82,7 +82,7 @@ func TestListSorted(t *testing.T) {
 	}
 	got := make([]string, 0, len(l))
 	for _, e := range l.Sorted() {
-		got = append(got, fmt.Sprintf("%s:%d:%d", e.File, e.Line, e.Column))
+		got = append(got, fmt.Sprintf("%s:%d:%d", e.File(), e.Line(), e.Column()))
 	}
 	if want := "b.yaml:2:1 b.yaml:2:5 b.yaml:9:1 a.yaml:3:1"; strings.Join(got, " ") != want {
 		t.Errorf("Sorted = %v, want %s", got, want)
@@ -97,7 +97,7 @@ func TestListSorted(t *testing.T) {
 		usererr.NewIn("s.json", "#/allOf/10", "library", "x"), usererr.NewIn("s.json", "#/allOf/2", "library", "x"),
 		usererr.New("k", "ab", "c"), usererr.New("k", "a", "bc"),
 	}
-	if got := steps.Sorted(); got[0].At != "#/allOf/2" || got[2].Args[0] != "a" {
+	if got := steps.Sorted(); got[0].At() != "#/allOf/2" || got[2].Args[0] != "a" {
 		t.Errorf("Sorted by steps and arguments = %v", got.Error())
 	}
 	// One order of all steps, whatever order they come in: indexes first, by number, then text.
@@ -160,5 +160,33 @@ func TestTell(t *testing.T) {
 	// A library's words stay as it said them in every language.
 	if got := usererr.Tell(i18n.New("ja"), lang).Render(""); got != "no lang" {
 		t.Errorf("Tell(ja) = %q", got)
+	}
+}
+
+// PlacedAt and PlacedIn place a copy, never one of the whole output, and PlacedIn not one of a file of its own, so
+// that one of the whole output that each input meets is told once, at no place.
+func TestPlaced(t *testing.T) {
+	t.Parallel()
+
+	whole := usererr.NewWhole("library", "no icons")
+	inFile := usererr.LibraryAt("i/index.json", 1, 1, "broken")
+	plain := usererr.Library(errors.New("bad"))
+	if whole.PlacedAt("a.yaml", 8, 11) != whole || whole.PlacedIn("#") != whole || inFile.PlacedIn("#") != inFile {
+		t.Error("placed one of the whole output, or a pointer on one of a file")
+	}
+	at, in := plain.PlacedAt("a.yaml", 8, 11), plain.PlacedIn("#/x")
+	if plain.File() != "" || at.File() != "a.yaml" || at.Line() != 8 || at.Column() != 11 || in.At() != "#/x" {
+		t.Errorf("placed %v and %v from %v", at, in, plain)
+	}
+	if got := in.PlacedAt("a.yaml", 3, 0); got.At() != "" || got.Line() != 3 {
+		t.Errorf("PlacedAt kept the pointer: %v", got)
+	}
+	l := usererr.List{
+		usererr.LibraryAt("a.yaml", 2, 1, "a"), whole.PlacedAt("a.yaml", 8, 11), whole.PlacedAt("b.yaml", 8, 11),
+		usererr.LibraryAt("b.yaml", 2, 1, "b"),
+	}
+	const want = "a.yaml:2:1: a\nfloe: no icons\nb.yaml:2:1: b"
+	if got := usererr.Tell(i18n.EnglishCatalog(), l).Render("floe: "); got != want {
+		t.Errorf("Tell = %q, want %q", got, want)
 	}
 }

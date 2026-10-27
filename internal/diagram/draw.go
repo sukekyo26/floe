@@ -56,7 +56,7 @@ type NoIcons struct{ Err error }
 
 // Lookup returns Err, or icons_no_dir for none.
 func (n NoIcons) Lookup(string) ([]byte, error) {
-	return nil, cmp.Or(n.Err, error(usererr.New("icons_no_dir"))) //nolint:wrapcheck // Err as given, or the mistake
+	return nil, cmp.Or(n.Err, error(usererr.NewWhole("icons_no_dir"))) //nolint:wrapcheck // Err as given, or the mistake
 }
 
 // Drawer draws specs that its schema checks: the one entry of a spec, wherever it comes from.
@@ -71,7 +71,7 @@ func New(c *schema.Compiled) *Drawer {
 
 // Draw checks spec, a spec's value, against the schema, lays it out and checks the layout, and draws it in
 // opts.Lang as an HTML fragment of inline SVG. Every mistake is at a JSON pointer in spec, with no file, but
-// that of icons not kept (of no place). Icons of nil are none kept.
+// those of the icons kept: at their file, or of the whole output. Icons of nil are none kept.
 func (d *Drawer) Draw(spec any, opts Options) (template.HTML, error) {
 	l, err := d.layout(spec, opts)
 	if err != nil {
@@ -120,9 +120,7 @@ func (d *Drawer) example(s *spec, opts *Options) (*spec, error) {
 	e, err := ExampleOf(s.Example)
 	var none *usererr.Error
 	if errors.As(err, &none) {
-		at := *none
-		at.At = "#/example"
-		return nil, &at
+		return nil, none.PlacedIn("#/example")
 	}
 	if err != nil {
 		return nil, err
@@ -141,17 +139,16 @@ func (d *Drawer) example(s *spec, opts *Options) (*spec, error) {
 }
 
 // exampleMistakes returns the mistakes of drawing the example name that are the user's: those of icons, which the
-// icons kept decide (a set fetched anew may not hold an icon the example names), at the root of the diagram rather
-// than in the example. Any other is floe's failure.
+// icons kept decide (a set fetched anew may not hold an icon the example names), an icon's name at the root of the
+// diagram rather than in the example, those of the icons' files or of the whole output where they are. Any other is
+// floe's failure.
 func exampleMistakes(name string, found usererr.List) (usererr.List, error) {
 	mine := make(usererr.List, 0, len(found))
 	for _, e := range found {
-		if e.At != "" && !strings.HasPrefix(e.Key, "diagram_icon_") {
+		if e.At() != "" && !strings.HasPrefix(e.Key, "diagram_icon_") {
 			return nil, fmt.Errorf("diagram: the example %s: %s", name, e.Error()) //nolint:err113 // floe's own
 		}
-		at := *e
-		at.At = "#"
-		mine = append(mine, &at)
+		mine = append(mine, e.PlacedIn("#"))
 	}
 	return mine, nil
 }

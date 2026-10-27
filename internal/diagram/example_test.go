@@ -45,18 +45,20 @@ func TestExampleByName(t *testing.T) {
 	}
 }
 
-// A name there is none of is told at the example's value; the mistakes of icons, which the icons kept decide, at
-// the diagram, as the user's.
+// A name there is none of is told at the example's value; the mistakes of icons, which the icons kept decide, as the
+// user's: an icon's name at the diagram, one of the icons' files at it, one of the whole output at no place.
 func TestExampleMistakes(t *testing.T) {
 	t.Parallel()
 
+	broken := failing{usererr.NewAt("/i/aws/index.json", 1, 1, "icons_index_no_version", "aws")}
 	for _, tt := range []struct {
 		src   string
 		icons diagram.Icons
 		want  string
 	}{
 		{"source: true\nexample: nope\n", nil, "s.yaml:2:10: no example nope; use architecture, aws, class, er, flow, git, sequence, state, timeline, venn"},
-		{"example: aws\n", nil, "s.yaml:1:1: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path"},
+		{"example: aws\n", nil, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path"},
+		{"example: aws\n", broken, `/i/aws/index.json:1:1: holds no version of the icons; run "floe icons fetch aws --force" to fetch them again`},
 		{"example: aws\n", lambda, `s.yaml:1:1: icon "aws/amazon-bedrock": no icon "aws/amazon-bedrock" (search with: floe icons search <word>)`},
 	} {
 		_, got := draw(t, tt.src, drawWith("en", tt.icons, ""))
