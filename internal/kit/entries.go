@@ -1,6 +1,7 @@
 package kit
 
 import (
+	"bytes"
 	"slices"
 	"strings"
 
@@ -16,6 +17,15 @@ type Source struct {
 // sources returns files but those not read (a nil Text).
 func sources(files ...Source) []Source {
 	return slices.DeleteFunc(files, func(s Source) bool { return s.Text == nil })
+}
+
+// copied returns a copy of files, their texts too: the Kit stays as read, Floe's shared by the whole process.
+func copied(files []Source) []Source {
+	out := make([]Source, len(files))
+	for i, f := range files {
+		out[i] = Source{Name: f.Name, Text: bytes.Clone(f.Text)}
+	}
+	return out
 }
 
 // shared is a schema the parts share, read.
@@ -39,13 +49,15 @@ func (k *Kit) Parts() []Entry {
 	var all []Entry
 	for at := k; at != nil; at = at.base {
 		for _, p := range at.parts {
-			all = append(all, Entry{Name: p.name, About: about(p.schema), Dir: at.own(p.dir), Looks: p.Looks(), Files: p.files})
+			all = append(all, Entry{
+				Name: p.name, About: about(p.schema), Dir: at.own(p.dir), Looks: p.Looks(), Files: copied(p.files),
+			})
 		}
 		for _, l := range at.looks {
 			all = append(all, Entry{Name: l.name, About: l.about, Dir: at.own(l.dir), Looks: l.Looks(), Files: nil})
 		}
 		for _, s := range at.shared {
-			all = append(all, Entry{Name: s.name, About: s.about, Dir: at.own(s.file), Looks: nil, Files: s.files})
+			all = append(all, Entry{Name: s.name, About: s.about, Dir: at.own(s.file), Looks: nil, Files: copied(s.files)})
 		}
 	}
 	return listed(all)
@@ -58,7 +70,9 @@ func (k *Kit) Templates() []Entry {
 	for at := k; at != nil; at = at.base {
 		for _, t := range at.templates {
 			if !slices.ContainsFunc(all, func(e Entry) bool { return e.Name == t.name }) {
-				all = append(all, Entry{Name: t.name, About: about(t.schema), Dir: at.own(t.dir), Looks: nil, Files: t.files})
+				all = append(all, Entry{
+					Name: t.name, About: about(t.schema), Dir: at.own(t.dir), Looks: nil, Files: copied(t.files),
+				})
 			}
 		}
 	}

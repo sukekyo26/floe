@@ -70,6 +70,21 @@ func TestFloe(t *testing.T) {
 	}
 }
 
+// The files floe part show and template show print are copies: Floe's kit, shared by the process, stays.
+func TestEntriesCopied(t *testing.T) {
+	t.Parallel()
+
+	k := floe(t)
+	for _, entries := range []func() []kit.Entry{k.Parts, k.Templates} {
+		first := entries()
+		i := slices.IndexFunc(first, func(e kit.Entry) bool { return len(e.Files) > 0 })
+		first[i].Files[0].Text[0] = 'X'
+		if again := entries()[i].Files[0].Text[0]; again != '{' {
+			t.Errorf("%s: writing the text returned changed the kit: %q", first[i].Name, again)
+		}
+	}
+}
+
 // The example of report reads, validates and passes its checks: floe's own checks run on floe's own data.
 func TestFloeReport(t *testing.T) {
 	t.Parallel()
