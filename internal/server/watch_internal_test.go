@@ -12,7 +12,7 @@ import (
 	"github.com/sukekyo26/floe/internal/store"
 )
 
-// watched is a server whose own templates are under tpl (a symlink to the directory real when link), with one
+// watched is a server whose own templates are under tpl (a symlink to the directory dir when link), with one
 // template mine.
 func watched(t *testing.T, link bool) (*Server, string) {
 	t.Helper()
@@ -21,11 +21,11 @@ func watched(t *testing.T, link bool) (*Server, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	real := filepath.Join(tmp, "real")
-	tpl := real
+	dir := filepath.Join(tmp, "dir")
+	tpl := dir
 	if link {
 		tpl = filepath.Join(tmp, "tpl")
-		if err := os.Symlink(real, tpl); err != nil {
+		if err := os.Symlink(dir, tpl); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -34,7 +34,7 @@ func watched(t *testing.T, link bool) (*Server, string) {
 		"mine/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
 		"mine/example.yaml": "lang: en\ntemplate: mine\nn: 1\n",
 	} {
-		p := filepath.Join(real, name)
+		p := filepath.Join(dir, name)
 		if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
 			t.Fatal(err)
 		}
@@ -55,7 +55,7 @@ func watched(t *testing.T, link bool) (*Server, string) {
 		Store: store.New(filepath.Join(tmp, "store")), Port: 7325, Build: "test", Drawing: drawing, Templates: tpl,
 		Parts: "", Themes: "", Icons: "", Home: tmp,
 	})
-	return s, real
+	return s, dir
 }
 
 func write(t *testing.T, path, text string) {
@@ -72,16 +72,16 @@ func TestLook(t *testing.T) {
 	t.Parallel()
 
 	for _, link := range []bool{false, true} {
-		s, real := watched(t, link)
+		s, dir := watched(t, link)
 		gen := func() int { _, g := s.now(); return g }
-		page := filepath.Join(real, "mine", "page.html")
+		page := filepath.Join(dir, "mine", "page.html")
 		steps := []struct {
 			what    string
 			change  func()
 			changed bool
 		}{
 			{"nothing", func() {}, false},
-			{"a .swp written", func() { write(t, filepath.Join(real, "mine", ".page.html.swp"), "x") }, false},
+			{"a .swp written", func() { write(t, filepath.Join(dir, "mine", ".page.html.swp"), "x") }, false},
 			{"page.html written in place", func() { write(t, page, "<p>{{.Data.n}}</p>\n") }, true},
 			{"its mtime set back", func() {
 				old := time.Unix(1, 0)
@@ -95,7 +95,7 @@ func TestLook(t *testing.T) {
 					t.Fatal(err)
 				}
 			}, true},
-			{"a file added", func() { write(t, filepath.Join(real, "mine", "page.css"), "p {}") }, true},
+			{"a file added", func() { write(t, filepath.Join(dir, "mine", "page.css"), "p {}") }, true},
 		}
 		for _, step := range steps {
 			before := gen()
@@ -112,13 +112,13 @@ func TestLook(t *testing.T) {
 func TestLookBroken(t *testing.T) {
 	t.Parallel()
 
-	s, real := watched(t, false)
-	write(t, filepath.Join(real, "mine", "schema.json"), "{")
+	s, dir := watched(t, false)
+	write(t, filepath.Join(dir, "mine", "schema.json"), "{")
 	s.look()
 	if d, _ := s.now(); d.Err == nil {
 		t.Fatal("a broken template is read")
 	}
-	write(t, filepath.Join(real, "mine", "schema.json"), `{"type": "object"}`)
+	write(t, filepath.Join(dir, "mine", "schema.json"), `{"type": "object"}`)
 	s.look()
 	if d, _ := s.now(); d.Err != nil || d.Kit == nil {
 		t.Errorf("mended, still %v", d.Err)
@@ -130,8 +130,8 @@ func TestLookBroken(t *testing.T) {
 func TestVersion(t *testing.T) {
 	t.Parallel()
 
-	s, real := watched(t, false)
-	home := filepath.Dir(real)
+	s, dir := watched(t, false)
+	home := filepath.Dir(dir)
 	data := filepath.Join(home, "proj", "d.yaml")
 	if err := os.MkdirAll(filepath.Dir(data), 0o700); err != nil {
 		t.Fatal(err)
@@ -154,7 +154,7 @@ func TestVersion(t *testing.T) {
 		t.Error("the data file saved, the version is the same")
 	}
 	v = s.version("d", "")
-	write(t, filepath.Join(real, "mine", "page.html"), "<p>{{.Data.n}}</p>\n")
+	write(t, filepath.Join(dir, "mine", "page.html"), "<p>{{.Data.n}}</p>\n")
 	s.look()
 	if s.version("d", "") == v {
 		t.Error("the drawing read again, the version is the same")
@@ -171,7 +171,8 @@ func TestServeEnds(t *testing.T) {
 
 	s, _ := watched(t, false)
 	s.every = time.Millisecond
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	var lc net.ListenConfig
+	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}

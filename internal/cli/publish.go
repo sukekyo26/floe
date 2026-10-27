@@ -42,7 +42,9 @@ The same slug for another file is refused unless --force.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()
-			for name, to := range map[string]**string{"slug": &opts.Slug, "title": &opts.Title, "description": &opts.Description, "theme": &opts.Theme} {
+			for name, to := range map[string]**string{
+				"slug": &opts.Slug, "title": &opts.Title, "description": &opts.Description, "theme": &opts.Theme,
+			} {
 				if flags.Changed(name) {
 					v, _ := flags.GetString(name) //nolint:errcheck // a flag of the command, a string
 					*to = &v
@@ -54,7 +56,8 @@ The same slug for another file is refused unless --force.`,
 	f := cmd.Flags()
 	f.BoolVar(&link, "link", false, "register the file in place: HTML shown as it is, a data file drawn when opened")
 	f.StringVar(&slug, "slug", "", "the URL name (default: from the file name)")
-	f.StringVar(&title, "title", "", "the title in the list (default: the data file's title:, or a link's <title> or <h1>)")
+	f.StringVar(&title, "title", "",
+		"the title in the list (default: the data file's title:, or a link's <title> or <h1>)")
 	f.StringVar(&description, "description", "", "a description shown in the list")
 	f.StringVar(&theme, "theme", "",
 		"the theme to draw with: its palette and the parts' shape (default: the data file's theme:, else default)")

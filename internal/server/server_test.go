@@ -23,10 +23,10 @@ const (
 
 // env is a server on a store in a temporary directory, its own templates under tpl, and home, under which links go.
 type env struct {
-	srv          *server.Server
-	h            http.Handler
-	root, home   string
-	tpl, drawing string
+	srv        *server.Server
+	h          http.Handler
+	root, home string
+	tpl        string
 }
 
 // pic is a template of one's own: a page of its title, its note and its images.
@@ -154,8 +154,10 @@ func TestProtocol(t *testing.T) {
 	want(t, e.do(t, http.MethodGet, "/a/x/%2e%2e/y", ""), http.StatusNotFound, "not found")
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
 		`cannot read the request: json: unknown field "bogus"`)
-	want(t, e.write(t, http.MethodPut, "/api/artifacts/x", map[string]any{"file": "x.yaml", "source": []byte("a"),
-		"images": map[string][]byte{"../e.png": nil}}), http.StatusBadRequest, "send each image by a slash-separated path")
+	want(t, e.write(t, http.MethodPut, "/api/artifacts/x", map[string]any{
+		"file": "x.yaml", "source": []byte("a"),
+		"images": map[string][]byte{"../e.png": nil},
+	}), http.StatusBadRequest, "send each image by a slash-separated path")
 }
 
 // A publish is 201, again 200, of another project 409, its mistakes 400; a report as JSON only for an Accept of JSON

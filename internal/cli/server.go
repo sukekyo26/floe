@@ -76,8 +76,8 @@ func (a *app) serverConfig() (server.Config, error) {
 		kind string
 		to   *string
 	}{{"parts", &cfg.Parts}, {"themes", &cfg.Themes}, {"templates", &cfg.Templates}} {
-		dir, _, _, err := a.ownPlace(d.kind)
-		if failed := found.Add(err); failed != nil {
+		dir, _, _, placeErr := a.ownPlace(d.kind)
+		if failed := found.Add(placeErr); failed != nil {
 			return cfg, failed
 		}
 		*d.to = dir
@@ -167,7 +167,7 @@ func (a *app) serve(ctx context.Context) error {
 		return err
 	}
 	root := cfg.Store.Root()
-	if err := writable(root); err != nil {
+	if err = writable(root); err != nil {
 		return usererr.CannotWrite(root, err) //nolint:wrapcheck // the system's words, at the store
 	}
 	if cfg.Build, err = daemon.Build(); err != nil {
@@ -191,7 +191,7 @@ func writable(dir string) error {
 	if err != nil {
 		return err //nolint:wrapcheck // as above
 	}
-	_ = f.Close()           //nolint:errcheck // nothing written
+	_ = f.Close()              //nolint:errcheck // nothing written
 	return os.Remove(f.Name()) //nolint:wrapcheck // as above
 }
 
