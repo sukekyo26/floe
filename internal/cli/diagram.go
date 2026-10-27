@@ -34,8 +34,9 @@ func (a *app) diagramRenderCmd() *cobra.Command {
 		Long: `Check each spec and print the diagrams, in order, as one HTML fragment of inline SVG to paste
 into a page, their text in the language of --lang (en when left out). A spec is checked against
 the diagram's schema, then laid out once for every language its text is written in and checked:
-overflowing text, overlaps, edges through boxes, crossings … Every mistake of every spec is printed
-as file:line:column: message, and nothing is drawn until all are fixed.
+overflowing text, overlaps, edges through boxes, crossings … (frames may cross one another, and a
+frame's label is held to the frame's width, not its height or the canvas). Every mistake of every
+spec is printed as file:line:column: message, and nothing is drawn until all are fixed.
 An icon part takes the icons that floe icons fetch <set> keeps.
 
 The fragment starts with the diagrams' style and the script that zooms them (once per page is
