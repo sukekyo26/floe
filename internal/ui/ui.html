@@ -1,0 +1,1216 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>floe</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='floe-sky' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23D9F3ED'/%3E%3Cstop offset='1' stop-color='%23C2E7DF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='15' fill='url(%23floe-sky)'/%3E%3Cpath d='M17 47.5H47' fill='none' stroke='%235BB3A4' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M24 52.5H40' fill='none' stroke='%238ACBBE' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M12 32 22 38 41 37 53 29.5 53 34.5 41 42 22 43 12 37Z' fill='%236FAECB'/%3E%3Cpath d='M12 32 24 21.5 33 28 22 38Z' fill='%23F6FCFE'/%3E%3Cpath d='M24 21.5 42 21 53 29.5 33 28Z' fill='%23D3EAF4'/%3E%3Cpath d='M33 28 53 29.5 41 37 22 38Z' fill='%23E8F5FA'/%3E%3C/svg%3E">
+<style>
+  /* Both the management page (/) and the frame around a page (/a/<slug>/): under the shared header bar it shows either the list or an iframe */
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --subtle: #f0f2f5;
+    --hover: #f8f9fb; --fg: #0d1220; --muted: #5a6273;
+    --faint: #8b93a3; --line: #e5e8ee;
+    --accent: #5753e0; --accent-2: #a64df0; --accent-soft: #eeedff;
+    --on-accent: #fff; --good: #16a36a; --star: #e0a100;
+    --danger: #d23b3b; --danger-soft: #fdecec;
+    --scrim: rgb(13 18 32 / 0.4);
+    --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
+    --shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 10px 30px -14px rgb(16 24 40 / 0.16);
+    /* The report template's faces */
+    --body: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+    --bar: 3.5rem;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+  /* A faint glow at the top only; not in the frame, where it would get in the page's way */
+  body::before {
+    content: ""; position: fixed; inset: 0 0 auto; height: 30rem; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(56rem 20rem at 30% -8rem, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%),
+      radial-gradient(40rem 18rem at 80% -8rem, color-mix(in srgb, var(--accent-2) 11%, transparent), transparent 70%);
+  }
+  body.framed::before { display: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  .bar {
+    position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 72%, transparent); backdrop-filter: saturate(1.6) blur(14px);
+  }
+  /* Full width rather than the text's, so that the list and the frame put things in the same place */
+  .bar-inner { padding: 0 16px; height: var(--bar); display: flex; align-items: center; gap: 0.75rem; }
+  .brand { display: flex; align-items: center; gap: 0.6rem; flex: none; color: var(--fg); text-decoration: none; font: 800 1.2rem/1 var(--body); letter-spacing: -0.03em; }
+  .brand svg { width: 26px; height: 26px; flex: none; filter: drop-shadow(0 2px 6px rgb(91 179 164 / 35%)); }
+  .bar-end { margin-left: auto; display: flex; align-items: center; gap: 0.6rem; flex: none; }
+  .frame-actions { display: flex; gap: 0.15rem; }
+  .frame-nav { display: flex; align-items: center; gap: 0.15rem; padding-left: 0.6rem; margin-left: 0.15rem; border-left: 1px solid var(--line); }
+  .frame-nav a[aria-disabled="true"] { opacity: 0.35; pointer-events: none; }
+  .frame-pos { min-width: 3.5rem; text-align: center; font: 0.72rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+  .server {
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.7rem; font: 600 0.74rem/1 var(--body); color: var(--muted);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-variant-numeric: tabular-nums;
+  }
+  .server::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--good); animation: pulse 2.4s ease-in-out infinite; }
+  .server:not(.down) { padding: 0.5rem; border: 0; background: none; }
+  .server.down { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
+  .server.down::before { background: var(--danger); animation: none; }
+  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 45%, transparent); } 50% { box-shadow: 0 0 0 4px transparent; } }
+
+  /* The frame: the iframe fills the space under the header bar. A page without a background of its own shows on the browser's default white */
+  body.framed { height: 100dvh; display: flex; flex-direction: column; }
+  .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; }
+  .notfound { flex: 1; align-content: center; }
+
+  .shell { max-width: calc(96rem + 32px); margin-inline: auto; padding: 0.75rem 16px 4rem; display: grid; gap: 0.9rem; }
+  .toolbar {
+    position: sticky; top: var(--bar); z-index: 5; display: grid; gap: 0.7rem;
+    margin-inline: -16px; padding: 0.75rem 16px;
+    background: color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter: blur(12px);
+  }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+  .tabs { display: inline-flex; gap: 2px; padding: 3px; background: var(--subtle); border: 1px solid var(--line); border-radius: 10px; }
+  .tabs button {
+    display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.32rem 0.8rem; border: 0; border-radius: 7px;
+    background: none; color: var(--muted); font-size: 0.86rem; font-weight: 550; transition: background-color 0.15s, color 0.15s;
+  }
+  .tabs button:hover { color: var(--fg); }
+  .tabs button[aria-pressed="true"] { color: var(--fg); background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
+  .tabs .n {
+    min-width: 1.5rem; padding: 0.1rem 0.4rem; border-radius: 999px; text-align: center;
+    font: 500 0.68rem/1.3 var(--mono); color: var(--muted); background: var(--line); font-variant-numeric: tabular-nums;
+  }
+  .tabs button[aria-pressed="true"] .n { color: var(--accent); background: var(--accent-soft); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; height: 36px; padding: 0 0.95rem;
+    font-size: 0.86rem; font-weight: 600; background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+    box-shadow: var(--shadow-sm); transition: background-color 0.15s, border-color 0.15s, filter 0.15s;
+  }
+  .btn:hover { border-color: var(--faint); }
+  .btn.primary {
+    color: #fff; border-color: transparent;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.15), 0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.2);
+  }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: 0.6; cursor: progress; }
+  .btn svg { width: 15px; height: 15px; }
+
+  .search { position: relative; flex: 1 1 18rem; }
+  .search svg { position: absolute; left: 0.75rem; top: 50%; translate: 0 -50%; width: 15px; height: 15px; color: var(--faint); pointer-events: none; }
+  .text, .search input {
+    width: 100%; min-width: 0; height: 36px; padding: 0 0.75rem; font: inherit; font-weight: 400; color: var(--fg);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow-sm);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .search input { padding-inline: 2.2rem 2.5rem; }
+  input::placeholder { color: var(--faint); }
+  input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .search input::-webkit-search-cancel-button { display: none; }
+  .search kbd {
+    position: absolute; right: 0.6rem; top: 50%; translate: 0 -50%; font: 0.7rem/1 var(--mono); color: var(--faint);
+    background: var(--subtle); border: 1px solid var(--line); border-radius: 5px; padding: 0.2rem 0.4rem;
+  }
+  .search input:focus + kbd { display: none; }
+
+  .filters { display: flex; align-items: center; gap: 0.75rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; min-width: 0; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.65rem; font-size: 0.8rem; color: var(--muted);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .chip:hover { color: var(--fg); border-color: var(--faint); }
+  .chip.project::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--glyph-fg); }
+  .chip .n { font: 0.68rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+  .chip.none { border-style: dashed; }
+  /* Favourites are a separate condition combined with the project, so they are an on/off switch shaped unlike the chips, set apart by a line */
+  .fav-toggle {
+    display: inline-flex; align-items: center; gap: 0.4rem; flex: none; padding: 0.22rem 0.7rem 0.22rem 0.55rem; font-size: 0.8rem; color: var(--muted);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .fav-toggle:hover { color: var(--fg); border-color: var(--faint); }
+  .fav-toggle svg { width: 14px; height: 14px; color: var(--faint); }
+  .fav-toggle .n { font: 0.68rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+  .fav-toggle[aria-checked="true"] {
+    color: var(--fg); background: color-mix(in srgb, var(--star) 14%, var(--panel)); border-color: color-mix(in srgb, var(--star) 55%, transparent);
+  }
+  .fav-toggle[aria-checked="true"] svg { color: var(--star); fill: currentColor; }
+  .filters .divider { flex: none; width: 1px; height: 1.25rem; background: var(--line); }
+  .chip[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+  .chip[aria-pressed="true"] .n { color: inherit; opacity: 0.65; }
+  .count { margin-left: auto; flex: none; font: 0.74rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+
+  /* var(--h) resolves where it is declared, so colors are built on the element that has --h */
+  li, .chip.project {
+    --glyph-bg: hsl(var(--h) 85% 95%); --glyph-fg: hsl(var(--h) 55% 40%);
+  }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: var(--shadow); }
+  /* Rows share columns through subgrid, so tags, slugs, times and actions line up from row to row */
+  ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto auto minmax(0, 1fr) repeat(4, auto); }
+  li {
+    --h: 225; position: relative; grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; column-gap: 0.85rem;
+    min-height: 3.1rem; padding: 0.45rem 0.6rem 0.45rem 0.85rem; transition: background-color 0.15s;
+    animation: rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 16ms);
+  }
+  li + li { border-top: 1px solid var(--line); }
+  li:hover { background: var(--hover); }
+  li::before {
+    content: ""; position: absolute; left: 0; top: 0.55rem; bottom: 0.55rem; width: 2px; border-radius: 0 2px 2px 0;
+    background: linear-gradient(var(--accent), var(--accent-2)); opacity: 0; transition: opacity 0.15s;
+  }
+  li:hover::before { opacity: 1; }
+  @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
+  .glyph {
+    display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; flex: none;
+    font: 600 0.78rem/1 var(--mono); color: var(--glyph-fg); background: var(--glyph-bg);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--glyph-fg) 14%, transparent);
+  }
+  .glyph.none { color: var(--faint); background: var(--subtle); box-shadow: inset 0 0 0 1px var(--line); }
+  /* The checkbox sits above the row link's hit area; the label widens what can be clicked */
+  .pick { position: relative; z-index: 1; display: grid; place-items: center; width: 22px; height: 30px; margin-right: -0.35rem; cursor: pointer; }
+  .sel {
+    width: 16px; height: 16px; margin: 0; cursor: pointer; appearance: none; background: var(--panel);
+    border: 1.5px solid color-mix(in srgb, var(--faint) 80%, transparent); border-radius: 5px; transition: background-color 0.12s, border-color 0.12s;
+  }
+  .pick:hover .sel { border-color: var(--accent); }
+  .sel:checked {
+    border-color: transparent;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 12px no-repeat,
+      linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  li:has(.sel:checked) { background: color-mix(in srgb, var(--accent-soft) 70%, var(--panel)); }
+  /* A row reached by keyboard is outlined as a whole, without an outline on the title itself */
+  a.title:focus-visible { outline: none; }
+  li:has(a.title:focus-visible) { box-shadow: inset 0 0 0 2px var(--accent); }
+  li:has(a.title:focus-visible)::before { opacity: 1; }
+  /* Under the title: the description (and, for a link, its path after it), cut off where it does not fit */
+  .body { display: grid; gap: 0.05rem; min-width: 0; }
+  .body > a.title, .sub > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* The whole row is the link's hit area; only the controls sit above it */
+  a.title { justify-self: start; max-width: 100%; color: var(--fg); font-weight: 600; text-decoration: none; scroll-margin-block: 10rem 5rem; }
+  a.title::after { content: ""; position: absolute; inset: 0; }
+  li:hover a.title { color: var(--accent); }
+  .sub { display: flex; align-items: baseline; gap: 0.65rem; min-width: 0; }
+  .desc { flex: 0 1 auto; color: var(--muted); font-size: 0.76rem; }
+  .sub .path { flex: 0 1 auto; font: 0.72rem var(--mono); color: var(--faint); }
+  .missing { color: var(--danger); }
+  li:has(.missing) a.title { color: var(--muted); text-decoration: line-through; }
+  .proj, .slug, li time { font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; }
+  li time { text-align: right; font-variant-numeric: tabular-nums; }
+  .tag {
+    position: relative; z-index: 1; font: inherit; color: var(--glyph-fg); background: var(--glyph-bg);
+    border: 0; border-radius: 999px; padding: 0.22rem 0.55rem;
+  }
+  .tag:hover { box-shadow: inset 0 0 0 1px currentColor; }
+  .actions { position: relative; z-index: 1; display: flex; gap: 2px; }
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; height: 30px; min-width: 30px; padding-inline: 0.4rem;
+    color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 7px; text-decoration: none;
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .icon-btn svg { width: 16px; height: 16px; }
+  .icon-btn:hover { background: var(--subtle); color: var(--fg); }
+  .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
+  .delete:hover { color: var(--danger); }
+  .star:hover { color: var(--star); }
+  .star[aria-pressed="true"] { color: var(--star); }
+  .star[aria-pressed="true"] svg { fill: currentColor; }
+  .copy .done, .copy.copied > svg { display: none; }
+  .copy.copied .done { display: block; color: var(--good); }
+  .delete .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .delete.armed { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 50%, transparent); font-size: 0.78rem; font-weight: 650; }
+  .delete.armed .label { position: static; width: auto; height: auto; clip-path: none; }
+
+  .pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; font-size: 0.8rem; color: var(--muted); }
+  .sizes { display: inline-flex; align-items: center; gap: 0.55rem; }
+  .seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--subtle); border: 1px solid var(--line); border-radius: 9px; }
+  .seg button { padding: 0.18rem 0.6rem; font: 0.74rem/1.5 var(--mono); color: var(--muted); background: none; border: 0; border-radius: 6px; }
+  .seg button:hover { color: var(--fg); }
+  .seg button[aria-pressed="true"] { color: var(--fg); background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
+  .pages { display: inline-flex; align-items: center; gap: 0.45rem; font: 0.74rem/1 var(--mono); font-variant-numeric: tabular-nums; }
+  .pages .icon-btn { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow-sm); }
+  .pages .range { color: var(--faint); margin-right: 0.35rem; }
+
+  .sort select {
+    height: 30px; padding: 0 1.8rem 0 0.65rem; font: inherit; font-size: 0.8rem; color: var(--muted); cursor: pointer;
+    background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E") no-repeat right 0.5rem center / 14px;
+    border: 1px solid var(--line); border-radius: 8px; appearance: none;
+  }
+  .sort select:hover { color: var(--fg); border-color: var(--faint); }
+
+  .keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1rem; margin: 0; font-size: 0.74rem; color: var(--faint); }
+  .keys kbd {
+    display: inline-block; min-width: 1.4rem; margin-right: 0.2rem; padding: 0.1rem 0.35rem; text-align: center;
+    font: 0.68rem/1.4 var(--mono); color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px;
+  }
+  @media (hover: none) { .keys { display: none; } }
+
+  /* The action bar that floats at the bottom while items are selected */
+  .toasts { position: fixed; right: 16px; bottom: 1.25rem; z-index: 40; display: grid; gap: 0.5rem; justify-items: end; pointer-events: none; }
+  .toast {
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.95rem; font-size: 0.84rem; font-weight: 550;
+    color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 11px; box-shadow: var(--shadow);
+    animation: toast 3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  .toast svg { width: 16px; height: 16px; flex: none; color: var(--good); }
+  @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  /* While items are selected, leave room for the action bar so that it does not cover the last row */
+  .shell:has(.bulk:not([hidden])) { padding-bottom: 6rem; }
+  .bulk {
+    position: fixed; left: 50%; bottom: 1.25rem; z-index: 20; translate: -50% 0; display: flex; align-items: center; gap: 0.4rem;
+    max-width: calc(100% - 32px); padding: 0.4rem 0.4rem 0.4rem 1rem; color: var(--bg); background: var(--fg);
+    border-radius: 14px; box-shadow: 0 18px 40px -12px rgb(0 0 0 / 0.45); animation: pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .bulk-count { margin-right: 0.5rem; font-size: 0.84rem; font-weight: 600; white-space: nowrap; }
+  .bulk .btn { height: 32px; color: inherit; background: transparent; border-color: color-mix(in srgb, var(--bg) 25%, transparent); box-shadow: none; }
+  .bulk .btn:hover { background: color-mix(in srgb, var(--bg) 12%, transparent); }
+  .bulk .btn.danger { color: #fff; background: var(--danger); border-color: transparent; }
+  .bulk .btn.danger.armed { outline: 2px solid color-mix(in srgb, var(--danger) 50%, transparent); outline-offset: 2px; }
+
+  .state { display: grid; justify-items: center; gap: 0.5rem; padding: 3.5rem 1.5rem; text-align: center; color: var(--muted); }
+  .state svg {
+    width: 52px; height: 52px; padding: 12px; margin-bottom: 0.25rem; color: var(--accent);
+    background: var(--accent-soft); border-radius: 14px;
+  }
+  .state p { margin: 0; max-width: 34rem; }
+  .state strong { color: var(--fg); font-size: 0.98rem; }
+  .state a { color: var(--accent); }
+  .state code { font-family: var(--mono); font-size: 0.8em; background: var(--subtle); padding: 0.1rem 0.35rem; border-radius: 4px; overflow-wrap: anywhere; }
+  .link-btn { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .error { margin: 0; padding: 0.65rem 0.9rem; border-radius: 10px; color: var(--danger); background: var(--danger-soft); font-size: 0.86rem; white-space: pre-wrap; }
+
+  dialog {
+    width: min(32rem, calc(100% - 32px)); padding: 0; color: var(--fg); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.45);
+  }
+  dialog[open] { animation: pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  dialog::backdrop { background: var(--scrim); backdrop-filter: blur(3px); }
+  dialog[open]::backdrop { animation: fade 0.2s ease-out; }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+  @keyframes fade { from { opacity: 0; } }
+  .add { display: grid; gap: 1rem; padding: 1.4rem 1.5rem 1.25rem; }
+  .add-head { display: flex; align-items: center; gap: 0.8rem; }
+  .add-head svg {
+    width: 38px; height: 38px; padding: 9px; flex: none; color: #fff; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .add h2 { margin: 0; font-size: 1.05rem; line-height: 1.3; letter-spacing: -0.01em; }
+  .add .lead { margin: 0.1rem 0 0; color: var(--muted); font-size: 0.82rem; }
+  .field { display: grid; gap: 0.35rem; font-size: 0.82rem; font-weight: 600; }
+  .field small { font-weight: 400; color: var(--faint); }
+  .field .path { font-family: var(--mono); font-size: 0.82rem; }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
+
+  @media (max-width: 64rem) { li .slug { display: none; } }
+  /* On narrow screens, the description, the path and the details move to a second line */
+  @media (max-width: 40rem) {
+    .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
+    ul { display: block; }
+    li { grid-template-columns: auto auto minmax(0, 1fr) auto; row-gap: 0.3rem; column-gap: 0.6rem; }
+    .body { grid-column: 2 / 4; grid-row: 1; }
+    .proj { grid-column: 2; grid-row: 2; }
+    li time { grid-column: 3; grid-row: 2; text-align: left; }
+    .actions { grid-column: 4; grid-row: 1 / 3; }
+    .filters { flex-wrap: wrap; }
+    .count { margin-left: 0; }
+    .pick { grid-column: 1; grid-row: 1 / 3; }
+    .glyph { display: none; }
+    .bulk { left: 16px; right: 16px; translate: none; flex-wrap: wrap; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-inner">
+    <a class="brand" href="/" title="{{.Msg "ui_back_to_list"}}">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="floe-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D9F3ED"/><stop offset="1" stop-color="#C2E7DF"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#floe-sky)"/><path d="M17 47.5H47" fill="none" stroke="#5BB3A4" stroke-width="2" stroke-linecap="round"/><path d="M24 52.5H40" fill="none" stroke="#8ACBBE" stroke-width="2" stroke-linecap="round"/><path d="M12 32 22 38 41 37 53 29.5 53 34.5 41 42 22 43 12 37Z" fill="#6FAECB"/><path d="M12 32 24 21.5 33 28 22 38Z" fill="#F6FCFE"/><path d="M24 21.5 42 21 53 29.5 33 28Z" fill="#D3EAF4"/><path d="M33 28 53 29.5 41 37 22 38Z" fill="#E8F5FA"/></svg>
+      floe
+    </a>
+    <nav class="frame-nav" aria-label="{{.Msg "ui_page_nav"}}" hidden>
+      <a class="icon-btn" id="frame-prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
+      <span class="frame-pos" id="frame-pos"></span>
+      <a class="icon-btn" id="frame-next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+    </nav>
+    <div class="bar-end">
+      <span class="frame-actions" hidden>
+        <a class="icon-btn" id="frame-download" title="{{.Msg "ui_download"}}" aria-label="{{.Msg "ui_download"}}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
+        </a>
+        <a class="icon-btn" id="frame-open" href="?raw" target="_blank" rel="noopener" title="{{.Msg "ui_open_raw"}}" aria-label="{{.Msg "ui_open_raw"}}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+        </a>
+      </span>
+      <span class="server" id="server" role="status"></span>
+    </div>
+  </div>
+</header>
+<main class="shell" id="manage" hidden>
+  <h1 class="sr-only">floe</h1>
+  <div class="toolbar">
+    <div class="controls">
+      <!-- Buttons that switch the list. They do not implement WAI-ARIA tabs (arrow keys, tabpanel), so they use aria-pressed like the chips -->
+      <div class="tabs" role="group" aria-label="{{.Msg "ui_kind"}}">
+        <button type="button" data-tab="pages">{{.Msg "ui_tab_pages"}}<span class="n"></span></button>
+        <button type="button" data-tab="links">{{.Msg "ui_tab_links"}}<span class="n"></span></button>
+      </div>
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="q" placeholder="{{.Msg "ui_search_placeholder"}}" aria-label="{{.Msg "ui_search"}}" autocomplete="off">
+        <kbd aria-hidden="true">/</kbd>
+      </label>
+      <button type="button" class="btn primary" id="add-open" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        {{.Msg "ui_add_link"}}
+      </button>
+    </div>
+    <div class="filters">
+      <button type="button" class="fav-toggle" id="fav" role="switch" aria-checked="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>{{.Msg "ui_favorites_only"}}<span class="n"></span></button>
+      <span class="divider" aria-hidden="true"></span>
+      <div class="chips" id="chips" role="group" aria-label="{{.Msg "ui_project"}}"></div>
+      <span class="count" id="count"></span>
+      <label class="sort"><span class="sr-only">{{.Msg "ui_sort"}}</span>
+        <select id="sort">
+          <option value="updated">{{.Msg "ui_sort_updated"}}</option>
+          <option value="created">{{.Msg "ui_sort_created"}}</option>
+          <option value="title">{{.Msg "ui_sort_title"}}</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <p class="error" id="error" hidden></p>
+  <div class="panel">
+    <ul id="list"></ul>
+    <div class="state" id="empty" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>
+      <strong>{{.Msg "ui_empty_pages"}}</strong>
+      <p>{{.Msg "ui_empty_pages_hint"}}</p>
+      <p><code>floe publish &lt;file.html&gt;</code></p>
+    </div>
+    <div class="state" id="empty-links" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+      <strong>{{.Msg "ui_empty_links"}}</strong>
+      <p>{{.Msg "ui_empty_links_hint"}}</p>
+      <p><code>floe publish &lt;file.html&gt; --link</code></p>
+    </div>
+    <div class="state" id="nomatch" hidden>
+      <strong>{{.Msg "ui_nomatch"}}</strong>
+      <p><button type="button" class="link-btn" id="clear">{{.Msg "ui_clear_filters"}}</button></p>
+    </div>
+  </div>
+  <nav class="pager" id="pager" aria-label="{{.Msg "ui_pager"}}" hidden>
+    <div class="sizes">
+      <span id="sizes-label">{{.Msg "ui_page_size"}}</span>
+      <div class="seg" id="sizes" role="group" aria-labelledby="sizes-label"></div>
+    </div>
+    <div class="pages">
+      <span class="range" id="range"></span>
+      <button type="button" class="icon-btn" id="prev" aria-label="{{.Msg "ui_prev_page"}}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+      </button>
+      <span id="pageno"></span>
+      <button type="button" class="icon-btn" id="next" aria-label="{{.Msg "ui_next_page"}}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+    </div>
+  </nav>
+  <p class="keys" aria-hidden="true">
+    <span><kbd>↑</kbd><kbd>↓</kbd>{{.Msg "ui_key_move"}}</span><span><kbd>Enter</kbd>{{.Msg "ui_key_open"}}</span><span><kbd>x</kbd>{{.Msg "ui_key_select"}}</span><span><kbd>f</kbd>{{.Msg "ui_key_favorite"}}</span>
+    <span><kbd>←</kbd><kbd>→</kbd>{{.Msg "ui_key_page"}}</span><span><kbd>/</kbd>{{.Msg "ui_search"}}</span>
+  </p>
+  <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
+    <span class="bulk-count" id="bulk-count" aria-live="polite"></span>
+    <button type="button" class="btn" id="bulk-page">{{.Msg "ui_select_page"}}</button>
+    <button type="button" class="btn" id="bulk-clear">{{.Msg "ui_clear_selection"}}</button>
+    <button type="button" class="btn danger" id="bulk-delete"></button>
+  </div>
+</main>
+<!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
+<iframe class="frame" id="frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<div class="state notfound" id="notfound" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>
+  <strong>{{.Msg "ui_not_found"}}</strong>
+  <p id="notfound-detail"></p>
+  <p><a href="/">{{.Msg "ui_back_to_list"}}</a></p>
+</div>
+<dialog id="add-dialog" aria-labelledby="add-title">
+  <form class="add" id="add">
+    <div class="add-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+      <div>
+        <h2 id="add-title">{{.Msg "ui_add_link"}}</h2>
+        <p class="lead">{{.Msg "ui_add_lead"}}</p>
+      </div>
+    </div>
+    <label class="field">{{.Msg "ui_add_path"}}
+      <input class="text path" id="add-path" required autofocus autocomplete="off" spellcheck="false"
+        placeholder="/home/you/project/coverage/index.html">
+    </label>
+    <label class="field"><span>{{.Msg "ui_slug"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <input class="text" id="add-slug" autocomplete="off" spellcheck="false" pattern="[a-z0-9]([a-z0-9\-]{0,62}[a-z0-9])?"
+        title="{{.Msg "ui_slug_rule"}}" placeholder="{{.Msg "ui_add_slug_placeholder"}}">
+      <small>{{.Msg "ui_add_slug_hint"}}</small>
+    </label>
+    <label class="field"><span>{{.Msg "ui_description"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <input class="text" id="add-desc" autocomplete="off">
+    </label>
+    <p class="error" id="add-error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" id="add-cancel" data-close>{{.Msg "ui_cancel"}}</button>
+      <button type="submit" class="btn primary" id="add-submit">{{.Msg "ui_add"}}</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="edit-dialog" aria-labelledby="edit-title">
+  <form class="add" id="edit">
+    <div class="add-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>
+      <div>
+        <h2 id="edit-title">{{.Msg "ui_edit"}}</h2>
+        <p class="lead" id="edit-target"></p>
+      </div>
+    </div>
+    <label class="field">{{.Msg "ui_title"}}
+      <input class="text" id="edit-name" autocomplete="off">
+    </label>
+    <label class="field">{{.Msg "ui_slug"}}
+      <input class="text path" id="edit-slug" required autocomplete="off" spellcheck="false" pattern="[a-z0-9]([a-z0-9\-]{0,62}[a-z0-9])?"
+        title="{{.Msg "ui_slug_rule"}}">
+      <small>{{.Msg "ui_edit_slug_hint"}}</small>
+    </label>
+    <label class="field"><span>{{.Msg "ui_project"}} <small>{{.Msg "ui_project_blank"}}</small></span>
+      <input class="text" id="edit-project" autocomplete="off" spellcheck="false">
+    </label>
+    <label class="field"><span>{{.Msg "ui_description"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <input class="text" id="edit-desc" autocomplete="off">
+    </label>
+    <p class="error" id="edit-error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
+      <button type="submit" class="btn primary" id="edit-submit">{{.Msg "ui_save"}}</button>
+    </div>
+  </form>
+</dialog>
+<template id="row">
+  <li>
+    <label class="pick"><input type="checkbox" class="sel"></label>
+    <span class="glyph" aria-hidden="true"></span>
+    <div class="body">
+      <a class="title"></a>
+      <span class="sub"><span class="desc"></span></span>
+    </div>
+    <span class="proj"></span>
+    <span class="slug"></span>
+    <time></time>
+    <div class="actions">
+      <button type="button" class="icon-btn star">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
+      </button>
+      <button type="button" class="icon-btn copy" title="{{.Msg "ui_copy_path"}}" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg>
+        <span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+      </button>
+      <button type="button" class="icon-btn edit" title="{{.Msg "ui_edit"}}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>
+      </button>
+      <a class="icon-btn open" target="_blank" rel="noopener" title="{{.Msg "ui_open_raw"}}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+      </a>
+      <a class="icon-btn download" title="{{.Msg "ui_download"}}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
+      </a>
+      <button type="button" class="icon-btn delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg>
+        <span class="label"></span>
+      </button>
+    </div>
+  </li>
+</template>
+<script>
+  const $ = (id) => document.getElementById(id);
+  // Messages are the ui_ formats the server filled in for the reader's language. They use only %s, %d, %[n]s and %%, as Go's fmt does
+  const MSG = {{.Messages}};
+  const LANG = document.documentElement.lang;
+  function t(key, ...args) {
+    let next = 0;
+    return (MSG[key] ?? key).replace(/%(?:\[(\d+)\])?([sd%])/g, (_, n, verb) => {
+      if (verb === '%') return '%';
+      if (n) next = Number(n) - 1;
+      return String(args[next++]);
+    });
+  }
+  let items = [];
+  // At /a/<slug>/ this is the frame around a page (the server returns the same HTML)
+  const framed = location.pathname.match(/^\/a\/([^/]+)\/$/)?.[1];
+  // A link in the page to a frame URL moves the whole tab, on a message from the script added to the page. The sender is the sandboxed page,
+  // so only messages from this iframe naming a frame URL of this origin are followed (never javascript: and the like).
+  // A move to a part of the page (#…) is written into this URL too, while the iframe still shows this page, so that a copy of the URL
+  // and a reload open that part; replaceState changes only the fragment and adds no history, which the iframe's move added already
+  if (framed) addEventListener('message', (e) => {
+    if (e.source !== $('frame').contentWindow) return;
+    const to = typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
+    if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) location.href = to.href;
+    const hash = e.data?.artifactHash;
+    if (typeof hash === 'string' && (hash === '' || hash.startsWith('#')) && e.data.artifactPath === location.pathname) {
+      history.replaceState(history.state, '', location.pathname + location.search + hash);
+    }
+  });
+  // The frame's own fragment changed (the address bar, Back): the page moves to that part, in
+  // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo.
+  // No fragment is the empty one, which moves to the top of the page: ?raw alone would load the page again
+  if (framed) addEventListener('hashchange', () => {
+    if ($('frame').hasAttribute('src')) $('frame').contentWindow.location.replace('?raw' + (location.hash || '#'));
+  });
+  // Stored pages (pages) and links registered by absolute path (links) are on separate tabs
+  const inTab = (a, t = tab) => Boolean(a.path) === (t === 'links');
+  // Pages from before the project was recorded. A project is a directory name without /, so this cannot clash
+  const NONE = '/';
+  const SIZES = [10, 20, 50, 100];
+  const SIZE_KEY = 'artifacts.pageSize';
+  let size = SIZES[0];
+  // Sort orders. updated keeps the server's order (newest first)
+  const SORTS = {
+    updated: null,
+    created: (x, y) => (y.createdAt ?? '').localeCompare(x.createdAt ?? ''),
+    title: (x, y) => x.title.localeCompare(y.title, LANG),
+  };
+  // The list's state (tab, project, search, sort, page number) lives in the URL, so a reload opens the same list.
+  // It is also kept for the tab, for moving between pages in the frame and for going back to the list
+  const LIST_KEY = 'artifacts.list';
+  function readState(search) {
+    const p = new URLSearchParams(search);
+    return {
+      tab: p.get('tab') === 'links' ? 'links' : 'pages',
+      project: p.get('project') ?? '',
+      q: p.get('q') ?? '',
+      sort: Object.hasOwn(SORTS, p.get('sort')) ? p.get('sort') : 'updated',
+      page: Math.max(1, Number.parseInt(p.get('page'), 10) || 1),
+      fav: p.get('fav') === '1',
+    };
+  }
+  let { tab, project, sort, page, fav } = readState(location.search);
+  // The selected slugs. Changing a filter or the tab clears them (so that nothing unseen is deleted); a selection across pages stays
+  const selected = new Set();
+  // LIMIT: changes to the list and a recovered connection are picked up by refetching every 3 s. If hundreds of entries make that heavy, push only the changes over SSE
+  const POLL_MS = 3000;
+  // The page size is the viewer's preference, kept in the browser; without storage the default applies
+  try {
+    const saved = Number(localStorage.getItem(SIZE_KEY));
+    if (SIZES.includes(saved)) size = saved;
+  } catch {
+    // Storage is unavailable
+  }
+
+  const fmt = (iso) => new Date(iso).toLocaleString(LANG, { dateStyle: 'medium', timeStyle: 'short' });
+  const rtf = new Intl.RelativeTimeFormat(LANG, { numeric: 'auto' });
+  const UNITS = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['minute', 60]];
+
+  function ago(iso) {
+    const s = (new Date(iso) - Date.now()) / 1000;
+    const [unit, sec] = UNITS.find(([, n]) => Math.abs(s) >= n) ?? [];
+    return unit ? rtf.format(Math.round(s / sec), unit) : t('ui_just_now');
+  }
+
+  function showError(msg) {
+    $('error').textContent = msg;
+    $('error').hidden = !msg;
+  }
+
+  // Only a dot while connected, and words only when the connection is lost. The address is the one in the address bar, so it is not shown
+  function setServer(ok) {
+    const label = t(ok ? 'ui_server_up' : 'ui_server_down_host', location.host);
+    $('server').textContent = ok ? '' : t('ui_server_down');
+    $('server').title = label;
+    $('server').setAttribute('aria-label', label);
+    $('server').classList.toggle('down', !ok);
+  }
+
+  // The connection state only says whether the server was reached; an HTTP error is still an answer
+  async function api(url, init) {
+    try {
+      const res = await fetch(url, init);
+      setServer(true);
+      return res;
+    } catch (e) {
+      setServer(false);
+      throw e;
+    }
+  }
+
+  // Defaults (the pages tab, all projects, no search, the first page) are left out of the URL
+  function syncUrl() {
+    const url = new URL(location.href);
+    const state = {
+      tab: tab === 'links' ? tab : '', fav: fav ? '1' : '', project, q: $('q').value.trim(), sort: sort === 'updated' ? '' : sort,
+      page: page > 1 ? String(page) : '',
+    };
+    for (const [name, value] of Object.entries(state)) {
+      if (value) url.searchParams.set(name, value);
+      else url.searchParams.delete(name);
+    }
+    history.replaceState(null, '', url);
+    try {
+      sessionStorage.setItem(LIST_KEY, url.search);
+    } catch {
+      // Without storage, moving between pages in the frame follows all entries by update time
+    }
+  }
+
+  // Picks and orders the entries by tab, project, search and sort; shared by the list and by moving between pages in the frame
+  function arrange(state) {
+    const q = state.q.trim().toLowerCase();
+    const shown = items.filter((a) => inTab(a, state.tab) && (!state.fav || a.favorite)
+      && (!state.project || (a.project ?? NONE) === state.project)
+      && (!q || [a.title, a.description, a.slug, a.project, a.path].join(' ').toLowerCase().includes(q)));
+    return SORTS[state.sort] ? shown.sort(SORTS[state.sort]) : shown;
+  }
+
+  function toast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+    t.append(msg);
+    $('toasts').append(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  // A changed filter starts from the first page
+  function refilter() {
+    page = 1;
+    selected.clear();
+    render();
+  }
+
+  function setProject(value) {
+    project = value;
+    refilter();
+  }
+
+  function setTab(value) {
+    tab = value;
+    refilter();
+  }
+
+  function setSize(value) {
+    size = value;
+    try {
+      localStorage.setItem(SIZE_KEY, String(size));
+    } catch {
+      // Without storage it still applies to this view
+    }
+    refilter();
+  }
+
+  function goPage(n) {
+    page = n;
+    render();
+    scrollTo(0, 0);
+  }
+
+  // Removing a link leaves its file alone, so it says unregister (ui_unlink_*) rather than delete (ui_delete_*)
+  const kind = (a) => (a.path ? 'unlink' : 'delete');
+  const tabKind = () => (tab === 'links' ? 'unlink' : 'delete');
+
+  // A button that acts on the second click. The first click arms it and returns true; losing focus disarms it
+  function arm(btn, armedLabel) {
+    if (btn.classList.contains('armed')) return false;
+    btn.classList.add('armed');
+    (btn.querySelector('.label') ?? btn).textContent = armedLabel;
+    return true;
+  }
+
+  function disarmBulk() {
+    $('bulk-delete').classList.remove('armed');
+    $('bulk-delete').textContent = t(`ui_${tabKind()}`);
+  }
+
+  function renderBulk() {
+    $('bulk').hidden = selected.size === 0;
+    $('bulk-count').textContent = t('ui_selected', selected.size);
+    disarmBulk();
+  }
+
+  // Returns the reason of a failure. Already gone (404) counts as deleted
+  async function deleteOne(slug) {
+    try {
+      const res = await api(`/api/artifacts/${slug}`, { method: 'DELETE' });
+      return res.ok || res.status === 404 ? '' : `HTTP ${res.status}`;
+    } catch (e) {
+      return e.message;
+    }
+  }
+
+  async function removeSelected() {
+    const btn = $('bulk-delete');
+    if (arm(btn, t(`ui_${tabKind()}_bulk_confirm`, selected.size))) return;
+    const slugs = [...selected];
+    const reasons = await Promise.all(slugs.map(deleteOne));
+    slugs.forEach((slug, i) => { if (!reasons[i]) selected.delete(slug); });
+    const failed = reasons.filter(Boolean);
+    if (failed.length < slugs.length) toast(t(`ui_${tabKind()}_bulk_done`, slugs.length - failed.length));
+    showError(failed.length ? t(`ui_${tabKind()}_bulk_failed`, failed.length, failed[0]) : '');
+    await load();
+    renderBulk();
+  }
+
+  // Relative times ("3 minutes ago") advance without redrawing the list
+  function refreshTimes() {
+    for (const t of document.querySelectorAll('#list time')) t.textContent = ago(t.dateTime);
+  }
+
+  // The project's hue, shared by the row's icon, its tag and the chip
+  const hue = (name) => [...name].reduce((h, c) => (h * 31 + c.codePointAt(0)) % 360, 7);
+
+  function chip(label, value, n, extra = '') {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `chip ${extra}`;
+    if (extra === 'project') b.style.setProperty('--h', hue(value));
+    b.setAttribute('aria-pressed', String(value === project));
+    b.append(label);
+    const count = document.createElement('span');
+    count.className = 'n';
+    count.textContent = n;
+    b.append(count);
+    b.addEventListener('click', () => setProject(value));
+    return b;
+  }
+
+  function renderChips(list) {
+    const counts = new Map();
+    for (const a of list) counts.set(a.project ?? NONE, (counts.get(a.project ?? NONE) ?? 0) + 1);
+    // Kept as a choice even at 0, so that deleting the last entry does not jump the selection back to all
+    if (project && !counts.has(project)) counts.set(project, 0);
+    const names = [...counts.keys()].filter((k) => k !== NONE).sort((x, y) => x.localeCompare(y));
+    const chips = [chip(t('ui_all_projects'), '', list.length), ...names.map((name) => chip(name, name, counts.get(name), 'project'))];
+    if (counts.has(NONE)) chips.push(chip(t('ui_no_project'), NONE, counts.get(NONE), 'none'));
+    $('chips').replaceChildren(...chips);
+    $('fav').setAttribute('aria-checked', String(fav));
+    $('fav').querySelector('.n').textContent = list.filter((a) => a.favorite).length;
+  }
+
+  // If everything fits in the smallest page size, changing the size changes nothing, so the whole pager is hidden
+  function renderPager(total, pages, start) {
+    $('pager').hidden = total <= SIZES[0];
+    $('sizes').replaceChildren(...SIZES.map((n) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = n;
+      b.setAttribute('aria-pressed', String(n === size));
+      b.addEventListener('click', () => setSize(n));
+      return b;
+    }));
+    $('range').textContent = `${start + 1}–${Math.min(start + size, total)} / ${total}`;
+    $('pageno').textContent = `${page} / ${pages}`;
+    $('prev').disabled = page <= 1;
+    $('next').disabled = page >= pages;
+  }
+
+  function row(a, i) {
+    const li = $('row').content.firstElementChild.cloneNode(true);
+    li.style.setProperty('--i', i);
+    li.dataset.slug = a.slug;
+    const sel = li.querySelector('.sel');
+    sel.checked = selected.has(a.slug);
+    sel.setAttribute('aria-label', t('ui_select_named', a.title));
+    sel.addEventListener('change', () => {
+      if (sel.checked) selected.add(a.slug);
+      else selected.delete(a.slug);
+      renderBulk();
+    });
+    const glyph = li.querySelector('.glyph');
+    glyph.textContent = [...(a.project ?? a.title)][0]?.toUpperCase() ?? '';
+    if (a.project) li.style.setProperty('--h', hue(a.project));
+    else glyph.classList.add('none');
+    const link = li.querySelector('.title');
+    link.href = `/a/${a.slug}/`;
+    link.textContent = a.title;
+    link.title = a.title;
+    li.querySelector('.desc').textContent = a.description;
+    li.querySelector('.desc').title = a.description;
+    li.querySelector('.desc').hidden = !a.description;
+    li.querySelector('.sub').hidden = !a.description && !a.path;
+    if (a.project) {
+      const tag = document.createElement('button');
+      tag.type = 'button';
+      tag.className = 'tag';
+      tag.textContent = a.project;
+      tag.title = t('ui_filter_project', a.project);
+      tag.addEventListener('click', () => setProject(a.project));
+      li.querySelector('.proj').append(tag);
+    }
+    li.querySelector('.slug').textContent = `/a/${a.slug}/`;
+    li.querySelector('.slug').title = t('ui_slug_named', a.slug);
+    // Sorted by creation, the creation time is shown
+    const when = sort === 'created' && a.createdAt ? a.createdAt : a.updatedAt;
+    const time = li.querySelector('time');
+    time.dateTime = when;
+    time.textContent = ago(when);
+    time.title = [a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
+      .filter(Boolean).join('\n');
+    // A link shows the file where it was registered; if the file is gone, the row says it cannot be opened
+    if (a.path) {
+      const path = document.createElement('span');
+      path.className = a.missing ? 'path missing' : 'path';
+      path.textContent = a.missing ? t('ui_file_missing', a.path) : a.path;
+      path.title = a.path;
+      li.querySelector('.sub').append(path);
+      const copy = li.querySelector('.copy');
+      copy.hidden = false;
+      copy.setAttribute('aria-label', t('ui_copy_path_named', a.title));
+      copy.addEventListener('click', () => copyPath(a.path, copy));
+    }
+    const star = li.querySelector('.star');
+    star.setAttribute('aria-pressed', String(Boolean(a.favorite)));
+    star.title = t(a.favorite ? 'ui_unfavorite' : 'ui_favorite');
+    star.setAttribute('aria-label', t(a.favorite ? 'ui_unfavorite_named' : 'ui_favorite_named', a.title));
+    star.addEventListener('click', () => toggleFavorite(a));
+    const edit = li.querySelector('.edit');
+    edit.setAttribute('aria-label', t('ui_edit_named', a.title));
+    edit.addEventListener('click', () => openEdit(a));
+    const open = li.querySelector('.open');
+    open.href = `/a/${a.slug}/?raw`;
+    open.setAttribute('aria-label', t('ui_open_raw_named', a.title));
+    const dl = li.querySelector('.download');
+    dl.href = `/api/artifacts/${a.slug}/download`;
+    dl.download = `${a.slug}.html`;
+    dl.setAttribute('aria-label', t('ui_download_named', a.title));
+    if (a.missing) {
+      link.removeAttribute('href');
+      // Without href it cannot take focus and ↑↓ would stop before this row, so scripts can still move to it
+      link.tabIndex = -1;
+      open.hidden = true;
+      dl.hidden = true;
+    }
+    const del = li.querySelector('.delete');
+    disarm(a, del);
+    del.addEventListener('click', () => remove(a, del));
+    del.addEventListener('blur', () => disarm(a, del));
+    return li;
+  }
+
+  async function toggleFavorite(a) {
+    try {
+      const res = await api(`/api/artifacts/${a.slug}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ favorite: !a.favorite }),
+      });
+      if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
+    } catch (e) {
+      showError(t('ui_favorite_failed', e.message));
+      return;
+    }
+    toast(t(a.favorite ? 'ui_unfavorited' : 'ui_favorited', a.title));
+    await load();
+  }
+
+  async function copyPath(path, btn) {
+    try {
+      await navigator.clipboard.writeText(path);
+    } catch (e) {
+      showError(t('ui_copy_failed', e.message));
+      return;
+    }
+    btn.classList.add('copied');
+    btn.title = t('ui_copied');
+    toast(t('ui_path_copied'));
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.title = t('ui_copy_path');
+    }, 1500);
+  }
+
+  // The entry being edited and its values when opened. Only changed fields are sent (so a link's title keeps coming from its file unless edited)
+  let editing;
+  const EDIT_FIELDS = { title: 'edit-name', slug: 'edit-slug', project: 'edit-project', description: 'edit-desc' };
+
+  function openEdit(a) {
+    editing = a;
+    $('edit-target').textContent = a.path ?? `/a/${a.slug}/`;
+    for (const [key, id] of Object.entries(EDIT_FIELDS)) $(id).value = a[key] ?? '';
+    $('edit-name').placeholder = t(a.path ? 'ui_title_from_file' : 'ui_title_from_html');
+    $('edit-error').hidden = true;
+    $('edit-dialog').showModal();
+  }
+
+  async function saveEdit(e) {
+    e.preventDefault();
+    const btn = $('edit-submit');
+    btn.disabled = true;
+    try {
+      const changes = Object.fromEntries(Object.entries(EDIT_FIELDS)
+        .filter(([key, id]) => $(id).value.trim() !== (editing[key] ?? ''))
+        .map(([key, id]) => [key, $(id).value]));
+      const res = await api(`/api/artifacts/${editing.slug}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(changes),
+      });
+      if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
+      $('edit-dialog').close();
+      toast(t('ui_saved'));
+      await load();
+    } catch (err) {
+      $('edit-error').textContent = t('ui_save_failed', err.message);
+      $('edit-error').hidden = false;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function render() {
+    for (const b of document.querySelectorAll('.tabs button')) {
+      b.setAttribute('aria-pressed', String(b.dataset.tab === tab));
+      b.querySelector('.n').textContent = items.filter((a) => inTab(a, b.dataset.tab)).length;
+    }
+    $('add-open').hidden = tab !== 'links';
+    const list = items.filter((a) => inTab(a));
+    renderChips(list);
+    const shown = arrange({ tab, fav, project, q: $('q').value, sort });
+    $('sort').value = sort;
+    // Entries deleted elsewhere leave the selection
+    for (const slug of selected) if (!list.some((a) => a.slug === slug)) selected.delete(slug);
+    $('count').textContent = shown.length === list.length ? t('ui_count_all', list.length) : t('ui_count_shown', shown.length, list.length);
+    $('empty').hidden = tab !== 'pages' || list.length > 0;
+    $('empty-links').hidden = tab !== 'links' || list.length > 0;
+    $('nomatch').hidden = list.length === 0 || shown.length > 0;
+    // If deleting empties the last page, go back to the last one left
+    const pages = Math.max(1, Math.ceil(shown.length / size));
+    page = Math.min(page, pages);
+    const start = (page - 1) * size;
+    $('list').replaceChildren(...shown.slice(start, start + size).map(row));
+    renderPager(shown.length, pages, start);
+    renderBulk();
+    syncUrl();
+  }
+
+  // Previous and next follow the list the page was opened from (kept for the tab); if the page is not in it, all entries of the same kind by update time
+  function renderNeighbors(a) {
+    let saved = '';
+    try {
+      saved = sessionStorage.getItem(LIST_KEY) ?? '';
+    } catch {
+      // Storage is unavailable
+    }
+    const openable = (state) => arrange(state).filter((x) => !x.missing);
+    let order = openable(readState(saved));
+    if (!order.some((x) => x.slug === a.slug)) order = openable({ ...readState(''), tab: a.path ? 'links' : 'pages' });
+    const at = order.findIndex((x) => x.slug === a.slug);
+    for (const [id, x, named, none] of [
+      ['frame-prev', order[at - 1], 'ui_prev_named', 'ui_no_prev'], ['frame-next', order[at + 1], 'ui_next_named', 'ui_no_next'],
+    ]) {
+      const link = $(id);
+      if (x) link.href = `/a/${x.slug}/`;
+      else link.removeAttribute('href');
+      link.setAttribute('aria-disabled', String(!x));
+      link.title = x ? t(named, x.title) : t(none);
+      link.setAttribute('aria-label', link.title);
+    }
+    $('frame-pos').textContent = `${at + 1} / ${order.length}`;
+    document.querySelector('.brand').href = `/${saved}`;
+  }
+
+  function renderFrame() {
+    const a = items.find((x) => x.slug === framed);
+    const found = Boolean(a && !a.missing);
+    document.title = `${a?.title ?? framed} · floe`;
+    document.querySelector('.frame-actions').hidden = !found;
+    $('notfound').hidden = found;
+    $('notfound-detail').textContent = a?.missing
+      ? t('ui_link_missing', a.path)
+      : t('ui_not_found_detail');
+    $('frame').hidden = !found;
+    $('frame').title = a?.title ?? framed;
+    document.querySelector('.frame-nav').hidden = !found;
+    if (found) renderNeighbors(a);
+    // Load only once found (so a missing page's 404 never flashes). Once loaded, src stays, keeping navigation inside the iframe.
+    // The fragment goes with it, so that /a/<slug>/#part opens at that part of the page
+    if (found && !$('frame').hasAttribute('src')) $('frame').src = '?raw' + location.hash;
+  }
+
+  function disarm(a, btn) {
+    btn.classList.remove('armed');
+    btn.title = t(`ui_${kind(a)}`);
+    btn.querySelector('.label').textContent = btn.title;
+    btn.setAttribute('aria-label', t(`ui_${kind(a)}_named`, a.title));
+  }
+
+  // The first click arms the button and the second deletes
+  async function remove(a, btn) {
+    if (arm(btn, t(`ui_${kind(a)}_confirm`))) {
+      btn.setAttribute('aria-label', t(`ui_${kind(a)}_confirm_named`, a.title));
+      return;
+    }
+    const reason = await deleteOne(a.slug);
+    if (reason) {
+      showError(t(`ui_${kind(a)}_failed`, a.title, reason));
+      return;
+    }
+    selected.delete(a.slug);
+    showError('');
+    toast(t(`ui_${kind(a)}_done`, a.title));
+    // Refetch and record what was drawn. Removing the row locally would make the next refetch redraw the list and disarm another row
+    await load();
+  }
+
+  // The list response last drawn. An unchanged one is not redrawn, keeping armed delete buttons and focus
+  let drawn = '';
+  let loadFailed = false;
+
+  async function load() {
+    let text;
+    try {
+      const res = await api('/api/artifacts');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      text = await res.text();
+      if (text !== drawn) items = JSON.parse(text);
+    } catch (e) {
+      loadFailed = true;
+      showError(t('ui_load_failed', e.message));
+      return;
+    }
+    // Only a load failure is cleared here; a failed delete and the like stays until the next action
+    if (loadFailed) {
+      loadFailed = false;
+      showError('');
+    }
+    if (text === drawn) return;
+    drawn = text;
+    if (framed) renderFrame();
+    else render();
+  }
+
+  async function add(e) {
+    e.preventDefault();
+    const btn = $('add-submit');
+    const error = $('add-error');
+    btn.disabled = true;
+    try {
+      // A field sent is given, empty or not: one left blank is left out
+      const body = {};
+      for (const [key, id] of [['path', 'add-path'], ['slug', 'add-slug'], ['description', 'add-desc']]) {
+        const value = $(id).value.trim();
+        if (value) body[key] = value;
+      }
+      const res = await api('/api/artifacts', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      // The server answers with the reasons as text, a line each
+      if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
+      const { slug } = await res.json();
+      $('add').reset();
+      $('add-dialog').close();
+      toast(t('ui_link_added', slug));
+      page = 1;
+      await load();
+    } catch (err) {
+      error.textContent = t('ui_add_failed', err.message);
+      error.hidden = false;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  if (framed) {
+    document.body.classList.add('framed');
+    $('frame-download').href = `/api/artifacts/${framed}/download`;
+    $('frame-download').download = `${framed}.html`;
+    // Only while the frame has focus (keys inside the iframe belong to the page)
+    document.addEventListener('keydown', (e) => {
+      const link = { ArrowLeft: $('frame-prev'), ArrowRight: $('frame-next') }[e.key];
+      if (!link?.href || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      e.preventDefault();
+      location.href = link.href;
+    });
+  } else {
+    $('manage').hidden = false;
+    $('q').value = readState(location.search).q;
+    $('add').addEventListener('submit', add);
+    $('add-open').addEventListener('click', () => {
+      $('add-error').hidden = true;
+      $('add-dialog').showModal();
+    });
+    $('edit').addEventListener('submit', saveEdit);
+    for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
+    // A click on the backdrop (the dialog itself) closes it; the form fills the dialog, so clicks inside never land here
+    for (const d of document.querySelectorAll('dialog')) {
+      d.addEventListener('click', (e) => {
+        if (e.target === d) d.close();
+      });
+    }
+    $('fav').addEventListener('click', () => {
+      fav = !fav;
+      refilter();
+    });
+    $('sort').addEventListener('change', () => {
+      sort = $('sort').value;
+      refilter();
+    });
+    $('bulk-page').addEventListener('click', () => {
+      for (const sel of $('list').querySelectorAll('.sel')) sel.checked = true;
+      for (const li of $('list').children) selected.add(li.dataset.slug);
+      renderBulk();
+    });
+    $('bulk-clear').addEventListener('click', () => {
+      selected.clear();
+      for (const sel of $('list').querySelectorAll('.sel')) sel.checked = false;
+      renderBulk();
+    });
+    $('bulk-delete').addEventListener('click', removeSelected);
+    $('bulk-delete').addEventListener('blur', disarmBulk);
+    setInterval(refreshTimes, 60000);
+    $('prev').addEventListener('click', () => goPage(page - 1));
+    $('next').addEventListener('click', () => goPage(page + 1));
+    for (const b of document.querySelectorAll('.tabs button')) b.addEventListener('click', () => setTab(b.dataset.tab));
+    $('q').addEventListener('input', refilter);
+    $('q').addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      $('q').value = '';
+      $('q').blur();
+      refilter();
+    });
+    $('clear').addEventListener('click', () => {
+      $('q').value = '';
+      setProject('');
+    });
+    // Not while typing or with a dialog open. Moving between rows focuses the title link, so Enter opens it
+    const currentRow = () => [...$('list').children].find((li) => li.contains(document.activeElement));
+    const moveRow = (step) => {
+      const rows = [...$('list').children];
+      if (rows.length === 0) return;
+      const at = rows.indexOf(currentRow());
+      const next = at === -1 ? (step > 0 ? 0 : rows.length - 1) : Math.max(0, Math.min(rows.length - 1, at + step));
+      rows[next].querySelector('.title').focus();
+    };
+    const KEYS = {
+      '/': () => $('q').focus(),
+      ArrowDown: () => moveRow(1),
+      ArrowUp: () => moveRow(-1),
+      x: () => currentRow()?.querySelector('.sel').click(),
+      f: () => currentRow()?.querySelector('.star').click(),
+      ArrowLeft: () => !$('prev').disabled && goPage(page - 1),
+      ArrowRight: () => !$('next').disabled && goPage(page + 1),
+    };
+    document.addEventListener('keydown', (e) => {
+      const action = KEYS[e.key];
+      if (!action || e.ctrlKey || e.metaKey || e.altKey
+        || e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog')) return;
+      e.preventDefault();
+      action();
+    });
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+  setInterval(() => { if (!document.hidden) load(); }, POLL_MS);
+  load();
+</script>
+</body>
+</html>

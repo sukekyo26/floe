@@ -203,8 +203,9 @@ func TestStoredPage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w := e.do(t, http.MethodGet, "/a/d/", "")
-	if !strings.HasPrefix(w.Body.String(), string(kept)) || !strings.Contains(w.Body.String(), "new window.EventSource") {
+	w := e.do(t, http.MethodGet, "/a/d/?raw", "")
+	if !strings.HasPrefix(w.Body.String(), string(kept)) || !strings.Contains(w.Body.String(), "new window.EventSource") ||
+		!strings.Contains(w.Body.String(), "artifactOpen") {
 		t.Errorf("served\n%s", w.Body)
 	}
 	csp := w.Header().Get("Content-Security-Policy")
@@ -220,6 +221,32 @@ func TestStoredPage(t *testing.T) {
 	}
 }
 
+// The management page and a page's URL are the frame, in the reader's language, which only the management page and
+// VS Code may frame; a page not there is the frame with 404.
+func TestManagementPageAndFrame(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
+	frame := "frame-ancestors 'self' vscode-webview: vscode-file:"
+	for target, status := range map[string]int{"/": http.StatusOK, "/a/d/": http.StatusOK, "/a/none/": http.StatusNotFound} {
+		w := e.do(t, http.MethodGet, target, "")
+		want(t, w, status, `<html lang="en">`)
+		if got := w.Header().Get("Content-Security-Policy"); got != frame {
+			t.Errorf("GET %s: CSP %q", target, got)
+		}
+		want(t, e.do(t, http.MethodGet, target, "", "Accept-Language", "ja,en;q=0.5"), status, "一覧へ戻る")
+	}
+	// Not the frame, whose messages say "not found" too.
+	for _, w := range []*httptest.ResponseRecorder{
+		e.do(t, http.MethodGet, "/a/Bad_Slug/", ""), e.do(t, http.MethodPost, "/", ""), e.do(t, http.MethodGet, "/a/none/?raw", ""),
+	} {
+		if w.Code != http.StatusNotFound || w.Body.String() != "not found" {
+			t.Errorf("answered %d %.40q, want 404 not found", w.Code, w.Body)
+		}
+	}
+}
+
 // A linked data file is drawn each time it is opened; with mistakes it is the page of them in the reader's
 // language, which a download refuses.
 func TestLinkedData(t *testing.T) {
@@ -229,11 +256,11 @@ func TestLinkedData(t *testing.T) {
 	data := filepath.Join(e.home, "proj", "d.yaml")
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\nnote: one\n", "h.html": "<title>h</title><p>x</p>", "s.css": "p{}"})
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: data}), http.StatusCreated, `"slug":"d"`) //nolint:exhaustruct // the rest not given
-	want(t, e.do(t, http.MethodGet, "/a/d/", ""), http.StatusOK, "one")
+	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "one")
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\nnote: two\n"})
-	want(t, e.do(t, http.MethodGet, "/a/d/", ""), http.StatusOK, "two")
+	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "two")
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: nope\n"})
-	want(t, e.do(t, http.MethodGet, "/a/d/", "", "Accept-Language", "ja"), http.StatusOK, "データファイルに誤りがあります")
+	want(t, e.do(t, http.MethodGet, "/a/d/?raw", "", "Accept-Language", "ja"), http.StatusOK, "データファイルに誤りがあります")
 	want(t, e.do(t, http.MethodGet, "/api/artifacts/d/download", ""), http.StatusBadRequest, `unknown template "nope"`)
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`) //nolint:exhaustruct // the rest not given
 	want(t, e.do(t, http.MethodGet, "/a/h/s.css", ""), http.StatusOK, "p{}")
@@ -292,7 +319,7 @@ func TestParallel(t *testing.T) {
 	var wg sync.WaitGroup
 	for range 8 {
 		wg.Go(func() {
-			e.do(t, http.MethodGet, "/a/d/", "")
+			e.do(t, http.MethodGet, "/a/d/?raw", "")
 			e.publish(t, "s", "lang: en\ntemplate: pic\n", nil)
 			e.do(t, http.MethodGet, "/api/artifacts", "")
 		})

@@ -19,6 +19,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/ui"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -109,6 +110,7 @@ func (s *Server) now() (store.Drawing, int) {
 // Handler returns the routes behind the request checks.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /{$}", serveUI)
 	mux.HandleFunc("GET /api/health", s.health)
 	mux.HandleFunc("GET /api/artifacts", s.list)
 	mux.HandleFunc("POST /api/artifacts", s.addLink)
@@ -189,6 +191,21 @@ func sendJSON(w http.ResponseWriter, status int, v any) {
 
 func notFound(w http.ResponseWriter) {
 	send(w, http.StatusNotFound, "not found")
+}
+
+func serveUI(w http.ResponseWriter, r *http.Request) {
+	sendUI(w, r, http.StatusOK)
+}
+
+// sendUI answers with the management page in the reader's language.
+func sendUI(w http.ResponseWriter, r *http.Request, status int) {
+	page, err := ui.Page(catalog(r))
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Security-Policy", uiCSP)
+	sendBytes(w, status, htmlType, page)
 }
 
 // catalog is the language of the reader of a response, from Accept-Language.
