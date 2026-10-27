@@ -88,8 +88,8 @@ func heldAsText(n *html.Node) bool {
 
 // inSelect reports whether an HTML <select> holds n.
 // LIMIT: a browser of the new select copies the chosen option's content into a <selectedcontent>, which
-// x/net/html does not, and which browsers read a select the old way is not known; check in browsers if a
-// page comes to differ there.
+// x/net/html does not; which browsers still read a select the old way is unknown. Check in browsers if a page
+// comes to differ there.
 func inSelect(n *html.Node) bool {
 	for p := n.Parent; p != nil; p = p.Parent {
 		if p.Type == html.ElementNode && p.Namespace == "" && p.Data == "select" {
