@@ -152,8 +152,11 @@ func TestProtocol(t *testing.T) {
 			t.Errorf("Content-Type %q: %d, want %d", typ, w.Code, status)
 		}
 	}
-	// No page is not found, whatever is sent, as develop has it.
-	want(t, e.do(t, http.MethodPatch, "/api/artifacts/none", "x", "Origin", origin, "Content-Type", "text/plain"), http.StatusNotFound, "not found")
+	// Another site cannot tell whether a page is there.
+	want(t, e.do(t, http.MethodPatch, "/api/artifacts/none", "{}", "Origin", "http://evil.example", "Content-Type", "application/json"),
+		http.StatusForbidden, "forbidden origin")
+	want(t, e.do(t, http.MethodPatch, "/api/artifacts/none", "{}", "Origin", origin, "Content-Type", "application/json"), http.StatusNotFound, "not found")
+	want(t, e.do(t, http.MethodPatch, "/api/artifacts/Bad%20slug", "x", "Origin", origin, "Content-Type", "text/plain"), http.StatusNotFound, "not found")
 	want(t, e.do(t, http.MethodGet, "/a/x/%2e%2e/y", ""), http.StatusNotFound, "not found")
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
 		`cannot read the request: json: unknown field "bogus"`)

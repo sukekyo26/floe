@@ -267,13 +267,17 @@ func decode[T any](raw json.RawMessage) (T, bool) {
 // edit changes what the management page sends (title, description, project, URL name, favourite).
 func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
-	// No page is not found, whatever is sent.
-	if s.cfg.Store.ReadMeta(slug) == nil {
+	if !store.ValidSlug(slug) {
 		notFound(w)
 		return
 	}
+	// Origin is checked before the page is looked for, so that another site cannot tell which pages there are.
 	input := s.readJSON(w, r)
 	if input == nil {
+		return
+	}
+	if s.cfg.Store.ReadMeta(slug) == nil {
+		notFound(w)
 		return
 	}
 	var ed store.Edit

@@ -253,11 +253,13 @@ func TestLookRootMade(t *testing.T) {
 	}
 }
 
-// A drawing that failed for floe's reasons (no usererr) is read again at the next look, what it reads unchanged.
+// A drawing that failed for floe's reasons (no usererr) is read again at the next look, what it reads unchanged,
+// even with no directories to mark.
 func TestLookFailure(t *testing.T) {
 	t.Parallel()
 
 	s, _ := watched(t, false)
+	s.cfg.Parts, s.cfg.Themes, s.cfg.Templates, s.cfg.Icons = "", "", "", ""
 	calls := 0
 	read := s.cfg.Drawing
 	s.cfg.Drawing = func() (store.Drawing, error) {
@@ -268,7 +270,7 @@ func TestLookFailure(t *testing.T) {
 		return read()
 	}
 	s.mu.Lock()
-	s.mark = ""
+	s.fresh = false
 	s.mu.Unlock()
 	s.look()
 	if d, _ := s.now(); d.Err == nil {

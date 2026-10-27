@@ -54,15 +54,16 @@ type Server struct {
 	mu      sync.Mutex
 	drawing store.Drawing
 	gen     int    // how many times the drawing has been read
-	read    bool   // whether it has been read
-	mark    string // what the directories it was read from were then, "" to read it again (floe's failure)
+	mark    string // what the directories it was read from were then
+	// fresh is whether the drawing is of mark: false before it is read, and after floe's failure, to read it again.
+	fresh bool
 }
 
 // New returns a server for cfg, the drawing read.
 func New(cfg Config) *Server {
 	s := &Server{
 		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, id: rand.Text()[:8],
-		mu: sync.Mutex{}, drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, read: false, mark: "",
+		mu: sync.Mutex{}, drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "", fresh: false,
 	}
 	// Requests under another name are refused against DNS rebinding.
 	for _, h := range []string{"localhost", "127.0.0.1"} {
@@ -80,7 +81,7 @@ func New(cfg Config) *Server {
 func (s *Server) look() {
 	m := s.marks()
 	s.mu.Lock()
-	same := s.read && m == s.mark
+	same := s.fresh && m == s.mark
 	s.mu.Unlock()
 	if same {
 		return
@@ -88,16 +89,13 @@ func (s *Server) look() {
 	d, err := s.cfg.Drawing()
 	if err != nil {
 		d = store.Drawing{Kit: nil, Icons: nil, Err: err}
-		// A failure of floe's (too many files open) is not of what it read: read it again next time.
-		var mistakes usererr.List
-		if mistakes.Add(err) != nil {
-			m = ""
-		}
 	}
+	// A failure of floe's (too many files open) is not of what it read: read it again next time.
+	var mistakes usererr.List
+	fresh := err == nil || mistakes.Add(err) == nil
 	s.mu.Lock()
-	s.drawing, s.mark = d, m
+	s.drawing, s.mark, s.fresh = d, m, fresh
 	s.gen++
-	s.read = true
 	s.mu.Unlock()
 }
 
