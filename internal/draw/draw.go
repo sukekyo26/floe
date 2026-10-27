@@ -10,7 +10,6 @@ import (
 	"html/template"
 	"io/fs"
 	"slices"
-	"strconv"
 	"strings"
 	ttemplate "text/template"
 
@@ -187,7 +186,7 @@ func under(at, of []string) bool {
 // that cannot be read) told there; one of page.html, or of no file, at its line and column in it; or floe's
 // failure.
 func (s *items) pageMistakes(t *kit.Template, err error) error {
-	mistakes, at, failed := executed(err, "page.html", t.PageSource())
+	mistakes, line, column, failed := executed(err, "page.html", t.PageSource())
 	if failed != nil {
 		return failed
 	}
@@ -196,10 +195,7 @@ func (s *items) pageMistakes(t *kit.Template, err error) error {
 		if e.File != "" && e.File != t.File("page.html") {
 			continue
 		}
-		e.File, e.Line, e.Column = t.File("page.html"), 0, 0
-		if at >= 0 {
-			e.Line, e.Column = textpos.Of(t.PageSource(), at)
-		}
+		e.File, e.Line, e.Column = t.File("page.html"), line, column
 	}
 	return mistakes.Err()
 }
@@ -248,16 +244,16 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 	page.Funcs(template.FuncMap{"diagram": s.diagramOf(d, it)})
 	var b bytes.Buffer
 	if err := page.Execute(&b, ready); err != nil {
-		mistakes, at, failed := executed(err, "part.html", p.PageSource())
+		mistakes, line, column, failed := executed(err, "part.html", p.PageSource())
 		if failed != nil {
 			return nil, failed
 		}
 		for _, e := range mistakes {
 			switch {
-			case e.File == p.File("part.html") && at >= 0:
+			case e.File == p.File("part.html") && line > 0:
 				// One part.html tells of itself (a word its words.yaml has not): at its line and column, told
 				// once whatever uses the part.
-				e.Line, e.Column = textpos.Of(p.PageSource(), at)
+				e.Line, e.Column = line, column
 			case e.File == "" && e.At == "":
 				// At the value drawn: a part of floe's is no file one can fix, and the value tells why.
 				pos := d.PosOf(it.At)
@@ -272,62 +268,22 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 
 // executed returns the mistakes err of executing the template name, whose text is src (nil when where it is
 // in the text is not asked): the usererr.Error or the usererr.List it wraps, copies, or text/template's words
-// without their head (template: name:line:column: ), and where the head says it is in src, -1 for none; or
-// floe's failure, an error of no execution. The head's line counts \n alone and its column bytes from 0: they
-// are made a place in src, which textpos counts.
-// LIMIT: text/template gives where it failed in its words alone; take it from the error once it gives it apart.
-func executed(err error, name string, src []byte) (usererr.List, int, error) {
+// without their head, and where the head says it is in src (textpos.OfTemplate), a line of 0 for none; or
+// floe's failure, an error of no execution.
+func executed(err error, name string, src []byte) (mistakes usererr.List, line, column int, failed error) {
 	var ee ttemplate.ExecError
 	if !errors.As(err, &ee) || errors.Is(err, kit.ErrFunc) {
-		return nil, -1, fmt.Errorf("draw with %s: %w", name, err)
+		return nil, 0, 0, fmt.Errorf("draw with %s: %w", name, err)
 	}
-	line, column, rest, ok := cutHead(ee.Error(), name)
-	at := -1
-	if ok {
-		at = offset(src, line, column)
-	}
+	line, column, rest := textpos.OfTemplate(src, ee.Error(), name)
 	var inner usererr.List
-	if failed := inner.Add(ee.Err); failed != nil || inner == nil {
-		return usererr.List{usererr.LibraryAt("", 0, 0, rest)}, at, nil
+	if inner.Add(ee.Err) != nil || inner == nil {
+		return usererr.List{usererr.LibraryAt("", 0, 0, rest)}, line, column, nil
 	}
-	mistakes := make(usererr.List, len(inner))
+	mistakes = make(usererr.List, len(inner))
 	for i, e := range inner {
 		c := *e
 		mistakes[i] = &c
 	}
-	return mistakes, at, nil
-}
-
-// cutHead returns the line and the column the head of msg, template: name:line:column: , gives, and msg
-// without it; false when msg has no such head.
-func cutHead(msg, name string) (line, column int, rest string, ok bool) {
-	after, ok := strings.CutPrefix(msg, "template: "+name+":")
-	if !ok {
-		return 0, 0, msg, false
-	}
-	lineText, after, ok1 := strings.Cut(after, ":")
-	columnText, after, ok2 := strings.Cut(after, ": ")
-	line, err1 := strconv.Atoi(lineText)
-	column, err2 := strconv.Atoi(columnText)
-	if !ok1 || !ok2 || err1 != nil || err2 != nil || line < 1 || column < 0 {
-		return 0, 0, msg, false
-	}
-	return line, column, after, true
-}
-
-// offset returns the byte of src at line, counting \n alone, and column, bytes from 0, as text/template
-// counts them; -1 when src holds no such byte.
-func offset(src []byte, line, column int) int {
-	start := 0
-	for range line - 1 {
-		i := bytes.IndexByte(src[start:], '\n')
-		if i < 0 {
-			return -1
-		}
-		start += i + 1
-	}
-	if at := start + column; at < len(src) {
-		return at
-	}
-	return -1
+	return mistakes, line, column, nil
 }

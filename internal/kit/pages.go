@@ -6,6 +6,7 @@ import (
 	"maps"
 	"path"
 
+	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -14,13 +15,14 @@ import (
 type pages map[string]*template.Template
 
 // parsePages parses src, the HTML of file (part.html or page.html), with fns, and with word for each language
-// of w: html/template takes the functions before it parses. Its mistake is text/template's, in its words.
-// LIMIT: text/template writes the line in its words, as it gives no place apart.
+// of w: html/template takes the functions before it parses. Its mistake is text/template's, in its words, at
+// the line its head says (textpos.OfTemplate).
 func parsePages(file string, src []byte, fns template.FuncMap, w words) (pages, error) {
 	base, err := template.New(path.Base(file)).Option("missingkey=error").Funcs(fns).
 		Funcs(template.FuncMap{"word": w.word(file, "")}).Parse(string(src))
 	if err != nil {
-		return nil, usererr.LibraryAt(file, 0, 0, err.Error())
+		line, column, words := textpos.OfTemplate(src, err.Error(), path.Base(file))
+		return nil, usererr.LibraryAt(file, line, column, words)
 	}
 	ps := pages{"": base}
 	for lang := range maps.Keys(w) {

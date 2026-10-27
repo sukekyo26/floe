@@ -19,6 +19,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/cycle"
 	"github.com/sukekyo26/floe/internal/doc"
+	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -50,11 +51,12 @@ func nameMistake(file string, at yamlpos.Pos, n string) *usererr.Error {
 	if id, ok := tree.Node.(*exprast.IdentifierNode); !ok || id.Value != n {
 		return yamlpos.New(file, at, "rules_computed_name", n)
 	}
-	trees, err := parse.Parse(pageName, "{{.Calc."+n+"}}", "", "")
+	text := "{{.Calc." + n + "}}"
+	trees, err := parse.Parse(pageName, text, "", "")
 	if err != nil {
 		// Its head names the text above, not a file one can fix.
-		text, _ := strings.CutPrefix(err.Error(), "template: "+pageName+":1: ")
-		return usererr.LibraryAt(file, at.Line, at.Column, text)
+		_, _, words := textpos.OfTemplate([]byte(text), err.Error(), pageName)
+		return usererr.LibraryAt(file, at.Line, at.Column, words)
 	}
 	if !oneField(trees[pageName], n) {
 		return yamlpos.New(file, at, "rules_computed_name", n)
