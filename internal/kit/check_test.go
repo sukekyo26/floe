@@ -127,7 +127,9 @@ func TestCheckMistakes(t *testing.T) {
 			"own/themes/t/base.css:1:1: "+braceTold,
 			"own/themes/t/p.css:1:1: floe puts this CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",
 		)},
-		{"a template without its files", part, nil, map[string]string{"t/page.css": "}", "t/pgae.html": ""}, lines(
+		{"a template without its files", part, nil, map[string]string{
+			"t/page.css": "}", "t/pgae.html": "", "t/computed.yaml": "n: [",
+		}, lines(
 			"own/templates/t: example.yaml is missing: a template has page.html, schema.json and example.yaml",
 			"own/templates/t: page.html is missing: a template has page.html, schema.json and example.yaml",
 			"own/templates/t: schema.json is missing: a template has page.html, schema.json and example.yaml",
