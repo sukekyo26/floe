@@ -219,12 +219,14 @@ func (l *layout) addCircle(c *circle, at string) {
 
 func (l *layout) addRaw(r *raw, at string) {
 	svg, err := checkRaw(r.SVG)
-	var bad rawElement
+	var bad rawElements
 	switch {
 	case errors.As(err, &bad):
 		// LIMIT: told at the start of the value, as x/net/html keeps no place of an element; tell its line in a
 		// block if long raw SVG comes to need it.
-		l.problem(at+"/raw/svg", "diagram_raw_element", string(bad))
+		for _, name := range bad {
+			l.problem(at+"/raw/svg", "diagram_raw_element", name)
+		}
 	case err != nil:
 		l.failure = err
 	default:

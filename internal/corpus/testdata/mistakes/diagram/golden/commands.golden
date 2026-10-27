@@ -9,9 +9,9 @@ far.yaml:35:15: circle "a" sticks out of the 400x300 canvas
 far.yaml:36:15: label "A" finds no room inside a and outside the other circles: make that area larger, or the text shorter
 place.yaml:12:15: box "A" overlaps box "B"
 place.yaml:15:11: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
-place.yaml:25:27: raw SVG holds <script>, which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone
-raw.yaml:12:27: raw SVG holds <noscript>, which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone
-raw.yaml:13:27: raw SVG holds <base>, which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone
+place.yaml:25:27: raw SVG holds <script>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
+raw.yaml:12:27: raw SVG holds <noscript>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
+raw.yaml:13:27: raw SVG holds <base>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 room.yaml:14:15: label "only in a" is not all inside a and outside the other circles: move it, or leave out x and y for floe to place it
 shape.yaml:12:67: value must be one of 'accent', 'good', 'warn', 'bad'
 $ floe render --out-dir $TMP/pages/far.yaml far.yaml
@@ -28,12 +28,12 @@ exit 1
 --- stderr
 place.yaml:12:15: box "A" overlaps box "B"
 place.yaml:15:11: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
-place.yaml:25:27: raw SVG holds <script>, which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone
+place.yaml:25:27: raw SVG holds <script>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 $ floe render --out-dir $TMP/pages/raw.yaml raw.yaml
 exit 1
 --- stderr
-raw.yaml:12:27: raw SVG holds <noscript>, which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone
-raw.yaml:13:27: raw SVG holds <base>, which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone
+raw.yaml:12:27: raw SVG holds <noscript>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
+raw.yaml:13:27: raw SVG holds <base>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 $ floe render --out-dir $TMP/pages/room.yaml room.yaml
 exit 1
 --- stderr
@@ -53,8 +53,8 @@ far.yaml:35:15: circle "a" sticks out of the 400x300 canvas
 far.yaml:36:15: label "A" finds no room inside a and outside the other circles: make that area larger, or the text shorter
 place.yaml:12:15: box "A" overlaps box "B"
 place.yaml:15:11: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
-place.yaml:25:27: raw SVG holds <script>, which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone
-raw.yaml:12:27: raw SVG holds <noscript>, which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone
-raw.yaml:13:27: raw SVG holds <base>, which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone
+place.yaml:25:27: raw SVG holds <script>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
+raw.yaml:12:27: raw SVG holds <noscript>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
+raw.yaml:13:27: raw SVG holds <base>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 room.yaml:14:15: label "only in a" is not all inside a and outside the other circles: move it, or leave out x and y for floe to place it
 shape.yaml:12:67: value must be one of 'accent', 'good', 'warn', 'bad'

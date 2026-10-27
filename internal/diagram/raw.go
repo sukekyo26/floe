@@ -11,11 +11,11 @@ import (
 	"github.com/sukekyo26/floe/internal/page"
 )
 
-// rawElement is an element raw SVG may not hold, by its name.
-type rawElement string
+// rawElements are the elements raw SVG may not hold, by their names, in the order they are written.
+type rawElements []string
 
-func (e rawElement) Error() string {
-	return "raw SVG holds <" + string(e) + ">"
+func (e rawElements) Error() string {
+	return "raw SVG holds <" + strings.Join(e, ">, <") + ">"
 }
 
 // checkRaw reads svg as HTML reads it inside an <svg>, and returns the tree it read, written again: every element
@@ -32,11 +32,15 @@ func checkRaw(svg string) (template.HTML, error) {
 	if err != nil {
 		return "", fmt.Errorf("diagram: read raw SVG: %w", err)
 	}
+	var bad rawElements
+	for _, n := range nodes {
+		bad = append(bad, refused(n)...)
+	}
+	if bad != nil {
+		return "", bad
+	}
 	var b strings.Builder
 	for _, n := range nodes {
-		if bad := refused(n); bad != "" {
-			return "", rawElement(bad)
-		}
 		if err := html.Render(&b, n); err != nil {
 			return "", fmt.Errorf("diagram: write raw SVG: %w", err)
 		}
@@ -45,21 +49,21 @@ func checkRaw(svg string) (template.HTML, error) {
 	return template.HTML(b.String()), nil //nolint:gosec // see above
 }
 
-// refused is the name of the first element under n, n itself included, that raw SVG may not hold; "" for none.
-func refused(n *html.Node) string {
+// refused are the names of the elements under n, n itself included, that raw SVG may not hold, in tree order;
+// what one of them holds is not looked into, as it goes with it.
+func refused(n *html.Node) []string {
 	if n.Type == html.ElementNode {
 		if n.Namespace != "svg" || page.Refused(n) != "" {
-			return n.Data
+			return []string{n.Data}
 		}
 		switch strings.ToLower(n.Data) {
 		case "script", "foreignobject":
-			return n.Data
+			return []string{n.Data}
 		}
 	}
+	var bad []string
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if bad := refused(c); bad != "" {
-			return bad
-		}
+		bad = append(bad, refused(c)...)
 	}
-	return ""
+	return bad
 }

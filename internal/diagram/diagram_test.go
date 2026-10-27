@@ -139,7 +139,7 @@ func TestExamples(t *testing.T) {
 const head = "width: 400\nheight: 200\ntitle: T\nparts:\n"
 
 // rawWords are the words of a mistake of raw SVG, after the element it holds.
-const rawWords = "which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone"
+const rawWords = "which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)"
 
 // A spec of the wrong shape is told in jsonschema's words, at its line and column; nothing is laid out.
 func TestShapeMistakes(t *testing.T) {
@@ -235,6 +235,10 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - raw: { svg: '<BASE/>' }", "s.yaml:5:17: raw SVG holds <base>, " + rawWords},
 		{"  - raw: { svg: '<circle r=\"3\"/></svg><noscript>x</noscript>' }", "s.yaml:5:17: raw SVG holds <noscript>, " + rawWords},
 		{"  - raw: { svg: '<desc><noscript>x</noscript></desc>' }", "s.yaml:5:17: raw SVG holds <noscript>, " + rawWords},
+		// Every element raw SVG may not hold is told, at one place and so sorted by its words, but none inside one
+		// told.
+		{"  - raw: { svg: '<noscript/><base href=\"x\"/><style/>' }", "s.yaml:5:17: raw SVG holds <base>, " + rawWords + "\ns.yaml:5:17: raw SVG holds <noscript>, " + rawWords + "\ns.yaml:5:17: raw SVG holds <style>, " + rawWords},
+		{"  - raw: { svg: '<g><script>x</script></g><rect/></svg><p><b>x</b></p>' }", "s.yaml:5:17: raw SVG holds <p>, " + rawWords + "\ns.yaml:5:17: raw SVG holds <script>, " + rawWords},
 		// Attributes are kept as written, and a name in text, a comment or an attribute is no element.
 		{"  - raw: { svg: '<circle onload=\"f()\" r=\"3\"/>' }", ""},
 		{"  - raw: { svg: '<a href=\"javascript:f()\"><text>x</text></a>' }", ""},

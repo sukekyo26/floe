@@ -237,7 +237,7 @@ var messagesEN = map[string]string{
 	"diagram_label_not_circle": `label: in names "%s", which is no circle's name`,
 	"diagram_label_region":     "%s is not all inside %s and outside the other circles: move it, or leave out x and y for floe to place it",
 	"diagram_label_no_room":    "%s finds no room inside %s and outside the other circles: make that area larger, or the text shorter",
-	"diagram_raw_element":      "raw SVG holds <%s>, which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone",
+	"diagram_raw_element":      "raw SVG holds <%s>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)",
 	"diagram_icon_set":         `%s: "%s" needs its icon set in front (%s), like aws/amazon-ec2 (search with: floe icons search <word>)`,
 	"diagram_icon_unknown":     `%s: no icon "%s" (search with: floe icons search <word>)`,
 	"diagram_zoom_hint":        "Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed",
