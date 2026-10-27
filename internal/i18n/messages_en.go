@@ -29,7 +29,7 @@ var messagesEN = map[string]string{
 	"schema_no_part":            "%s is not a part; refer to one as floe:///parts/<name>.json",
 	"schema_id_floe":            "this $id names %s, a floe: URL, which is floe's own: give the schema an $id of your own, like https://example.com/item.json, or leave $id out",
 	"schema_id_relative":        "this $id, %s, has no scheme, which a part or a schema the parts share may not have, as it may land under floe:///parts/ and take the place of another: write an absolute URL of your own, like https://example.com/item.json, or leave $id out",
-	"schema_id_root":            "this $id, %s, is not this file's URL as it is: write %s as it is, or leave $id out",
+	"schema_id_root":            "the root of a schema takes no $id: floe gives it its URL; leave $id out",
 	"schema_ref_templates":      "%s is no file floe holds: a template refers to a part as floe:///parts/<name>.json, and inside its own schema.json as #/…",
 	"schema_part_unreached":     "the part %s draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn",
 	"schema_ref_unreached":      "%s holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows",
@@ -71,7 +71,7 @@ var messagesEN = map[string]string{
 
 	// kit: the parts, looks, themes and templates read at stage 1
 	"kit_name_twice":             "%s names both %s and %s: give one of them another name",
-	"kit_name_floe":              "%s is the name of floe's %s, which floe's templates and parts would go on drawing and checking with: give yours another name",
+	"kit_name_floe":              "%s is the name of floe's %s: give yours another name",
 	"kit_dir_link":               "this is a link to a directory, and floe reads only real directories here: make it a directory (links to files are read)",
 	"kit_not_file":               "this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here",
 	"kit_bad_name":               "floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it",
@@ -201,5 +201,12 @@ var messagesEN = map[string]string{
 	"diagram_unknown_example":  "no example %s; use %s",
 	"diagram_source":           "The spec of this diagram",
 	"cli_wants_spec":           "a diagram spec (.yaml)",
+	"cli_unknown_part":         `unknown part "%s"; use %s`,
+	"cli_new_exists":           "there is something of this name here already: pick another name, or remove it",
+	"cli_new_no_dir":           "there is no default directory, as HOME is not an absolute path; set %s to an absolute path",
+	"cli_made":                 "made %s",
+	"cli_where":                "where: %s",
+	"cli_looks":                "looks: %s",
+	"cli_themes":               "themes: %s",
 	"diagram_edge_nowhere":     "%s starts where it ends: end it at another part or point",
 }

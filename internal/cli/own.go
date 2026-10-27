@@ -88,3 +88,56 @@ func exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
+
+// newOwn makes the part (kit.KindPart) or the template of one's own named name, kit.Skeleton's files, in the
+// directory of its kind: written whole in a directory of a dot name beside it, then renamed, so that nothing
+// is left half made and nothing there is written over.
+// LIMIT: an empty directory made at its place between the Lstat and the Rename is replaced (rename(2)); use
+// renameat2 with RENAME_NOREPLACE if that comes to happen.
+func (a *app) newOwn(kind kit.Kind, name string) error {
+	key, sub := "FLOE_PARTS_DIR", "parts"
+	if kind == kit.KindTemplate {
+		key, sub = "FLOE_TEMPLATES_DIR", "templates"
+	}
+	dir, _, err := a.dataDir(key, "XDG_CONFIG_HOME", ".config", filepath.Join("floe", sub))
+	switch {
+	case err != nil:
+		return err
+	case dir == "":
+		return usererr.New("cli_new_no_dir", key)
+	}
+	k, err := a.kit(kind == kit.KindTemplate)
+	if err != nil {
+		return err
+	}
+	if mistake := k.NameMistake(dir, kind, name); mistake != nil {
+		return mistake //nolint:wrapcheck // the mistake Load would tell
+	}
+	at := filepath.Join(dir, name)
+	if _, err = os.Lstat(at); err == nil {
+		return usererr.NewAt(at, 0, 0, "cli_new_exists")
+	}
+	if err = os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: parts and templates are not secret
+		return usererr.CannotWrite(dir, err)
+	}
+	tmp, err := os.MkdirTemp(dir, ".new-"+name+"-")
+	if err != nil {
+		return usererr.CannotWrite(dir, err)
+	}
+	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory, which Load skips
+	for file, text := range kit.Skeleton(kind, name) {
+		//nolint:gosec // G306: parts and templates are not secret
+		if err := os.WriteFile(filepath.Join(tmp, file), text, 0o644); err != nil {
+			return usererr.CannotWrite(filepath.Join(at, file), err)
+		}
+	}
+	// MkdirTemp makes it 0700; a part or a template is no more secret than the directory it is in.
+	if err := os.Chmod(tmp, 0o755); err != nil { //nolint:gosec // G302: as above
+		return usererr.CannotWrite(at, err)
+	}
+	if err := os.Rename(tmp, at); err != nil {
+		return usererr.CannotWrite(at, err)
+	}
+	a.print("%s", english.Msg("cli_made", at))
+	return nil
+}

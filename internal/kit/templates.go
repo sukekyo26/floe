@@ -54,8 +54,8 @@ func (k *Kit) readThemes(d Dir) error {
 	}
 	var found usererr.List
 	for _, name := range dirs {
-		if !validName(name) {
-			found = append(found, usererr.NewAt(path.Join(d.Name, name), 0, 0, "kit_bad_name"))
+		if e := k.refusedName(d.Name, KindTheme, name, false); e != nil {
+			found = append(found, e)
 			continue
 		}
 		t, err := k.readTheme(d, name)
@@ -117,6 +117,7 @@ type Template struct {
 	hasSchema bool
 	unread    []string
 	assets    map[string]func() (template.URL, error) // by the path under assets/, read once when named
+	files     []Source                                // schema.json, checks.yaml and example.yaml as read
 }
 
 // Name returns the name of t.
@@ -165,8 +166,8 @@ func (k *Kit) readTemplates(d Dir, partsRead bool) error {
 	}
 	var found usererr.List
 	for _, name := range dirs {
-		if !validName(name) {
-			found = append(found, usererr.NewAt(path.Join(d.Name, name), 0, 0, "kit_bad_name"))
+		if e := k.refusedName(d.Name, KindTemplate, name, false); e != nil {
+			found = append(found, e)
 			continue
 		}
 		if failed := found.Add(k.readTemplate(d, name, partsRead)); failed != nil {
@@ -180,7 +181,7 @@ func (k *Kit) readTemplates(d Dir, partsRead bool) error {
 func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	t := &Template{
 		name: name, dir: path.Join(d.Name, name), schema: nil, css: nil, checks: nil, computed: nil, words: nil, pages: nil,
-		pageSrc: nil, example: nil, hasSchema: false, unread: nil, assets: nil,
+		pageSrc: nil, example: nil, hasSchema: false, unread: nil, assets: nil, files: nil,
 	}
 	var found usererr.List
 	var err error
@@ -204,15 +205,20 @@ func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	if t.example, _, err = readFile(d, name, "example.yaml"); err != nil {
 		return err
 	}
-	t.checks, err = readChecks(d, name)
+	var checksSrc, schemaSrc []byte
+	t.checks, checksSrc, err = readChecks(d, name)
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
 	if partsRead {
-		if failed := found.Add(k.compileTemplate(d, t)); failed != nil {
+		schemaSrc, err = k.compileTemplate(d, t)
+		if failed := found.Add(err); failed != nil {
 			return failed
 		}
 	}
+	t.files = sources(
+		Source{"schema.json", schemaSrc}, Source{"checks.yaml", checksSrc}, Source{"example.yaml", t.example},
+	)
 	if found != nil {
 		return found.Sorted().Err()
 	}
@@ -229,25 +235,26 @@ func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 }
 
 // compileTemplate compiles the schema.json of t, in d, with the resources of k, and reads its computed.yaml,
-// whose expressions see the items the schema declares at its top; none without a schema.json.
-func (k *Kit) compileTemplate(d Dir, t *Template) error {
+// whose expressions see the items the schema declares at its top; none without a schema.json. It returns the
+// text of schema.json.
+func (k *Kit) compileTemplate(d Dir, t *Template) ([]byte, error) {
 	src, ok, err := readFile(d, t.name, "schema.json")
 	if !ok || err != nil {
-		return err
+		return nil, err
 	}
 	t.hasSchema = true
 	c, err := schema.Compile(templatesURL+t.name+"/schema.json", path.Join(t.dir, "schema.json"), src, k.Resources())
 	if err != nil {
-		return err //nolint:wrapcheck // its mistakes, or floe's failure
+		return src, err //nolint:wrapcheck // its mistakes, or floe's failure
 	}
 	t.schema = c
-	src, ok, err = readFile(d, t.name, "computed.yaml")
+	computed, ok, err := readFile(d, t.name, "computed.yaml")
 	if !ok || err != nil {
-		return err
+		return src, err
 	}
 	names := slices.Sorted(maps.Keys(c.Follow(c.Root).Props))
-	t.computed, err = rules.ReadComputed(path.Join(t.dir, "computed.yaml"), src, names)
-	return err //nolint:wrapcheck // its mistakes, or floe's failure
+	t.computed, err = rules.ReadComputed(path.Join(t.dir, "computed.yaml"), computed, names)
+	return src, err //nolint:wrapcheck // its mistakes, or floe's failure
 }
 
 // asset returns the image of the assets of t at the path name under assets/, as a data URI, read the first

@@ -16,14 +16,19 @@ import (
 // drafts are the drafts floe takes. Before 2019-09 the library leaves out every key beside a $ref.
 var drafts = []string{"https://json-schema.org/draft/2020-12/schema", "https://json-schema.org/draft/2019-09/schema"}
 
-// raw refuses in doc, the JSON of file held at u, each "$schema" that names no draft floe takes, in dialects,
-// and each "$id" that could take a URL of floe's, in ids: one of the floe: scheme, and in a part or a shared
-// schema (part), one without a scheme, which may land under floe:///parts/. The root may name u as it is. One
-// "$schema" floe does not take leaves properties and the like out of the compiled tree, and the library
-// would read it through the loader while it compiles; one "$id" names the schema a $ref in its file to that
-// URL means, over floe's.
+// raw refuses in doc, the JSON of file, each "$schema" that names no draft floe takes, in dialects, and in ids
+// an "$id" at the root, whatever its value, as floe gives the root its URL; and each other "$id" that could
+// take a URL of floe's: one of the floe: scheme, and in a part or a shared schema (part), one without a
+// scheme, which may land under floe:///parts/. One "$schema" floe does not take leaves properties and the like
+// out of the compiled tree, and the library would read it through the loader while it compiles; one "$id"
+// names the schema a $ref in its file to that URL means, over floe's.
 // LIMIT: a "$schema" or "$id" in a value (enum, x-…) is refused too; read the compiled tree if that misleads.
-func raw(u, file string, doc any, part bool) (dialects, ids usererr.List) {
+func raw(file string, doc any, part bool) (dialects, ids usererr.List) {
+	if root, ok := doc.(map[string]any); ok {
+		if _, ok := root["$id"]; ok {
+			ids = append(ids, usererr.NewIn(file, "#", "schema_id_root"))
+		}
+	}
 	var walk func(v any, at string)
 	walk = func(v any, at string) {
 		switch v := v.(type) {
@@ -31,8 +36,8 @@ func raw(u, file string, doc any, part bool) (dialects, ids usererr.List) {
 			if s, ok := v["$schema"].(string); ok && !slices.Contains(drafts, draft(s)) {
 				dialects = append(dialects, usererr.NewIn(file, "#"+at, "schema_dialect", s))
 			}
-			if id, ok := v["$id"].(string); ok {
-				ids = append(ids, idMistake(u, file, at, id, part)...)
+			if id, ok := v["$id"].(string); ok && at != "" {
+				ids = append(ids, idMistake(file, at, id, part)...)
 			}
 			for _, k := range slices.Sorted(maps.Keys(v)) {
 				walk(v[k], at+"/"+escape(k))
@@ -47,16 +52,16 @@ func raw(u, file string, doc any, part bool) (dialects, ids usererr.List) {
 	return dialects, ids
 }
 
-// idMistake returns the mistake of the "$id" id at the JSON pointer at of file, held at u, of a part or a
-// shared schema when part. A floe: one, in any case (url.Parse lowercases it), is floe's; one without a
-// scheme is under the URL of the file, which is floe:///parts/ for a part. A template's is under
-// floe://templates/, which it cannot leave. One that is no URL the library tells as it compiles.
-func idMistake(u, file, at, id string, part bool) usererr.List {
+// idMistake returns the mistake of the "$id" id at the JSON pointer at of file, below its root, of a part or a
+// shared schema when part. A floe: one, in any case (url.Parse lowercases it), is floe's; one without a scheme
+// is under the URL of the file, which is floe:///parts/ for a part. A template's is under floe://templates/,
+// which it cannot leave. One that is no URL the library tells as it compiles.
+func idMistake(file, at, id string, part bool) usererr.List {
 	p, err := url.Parse(id)
 	var key string
 	switch {
 	// The library reads "" and "#" as no $id, and tells another fragment alone itself.
-	case at == "" && id == u, id == "", strings.HasPrefix(id, "#"):
+	case id == "", strings.HasPrefix(id, "#"):
 		return nil
 	case err != nil:
 		return nil //nolint:nilerr // the library tells an $id that is no URL as it compiles
@@ -66,9 +71,6 @@ func idMistake(u, file, at, id string, part bool) usererr.List {
 		key = "schema_id_relative"
 	default:
 		return nil
-	}
-	if at == "" {
-		return usererr.List{usererr.NewIn(file, "#", "schema_id_root", id, u)}
 	}
 	return usererr.List{usererr.NewIn(file, "#"+at, key, id)}
 }
