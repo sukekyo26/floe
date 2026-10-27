@@ -114,6 +114,7 @@ var messagesJA = map[string]string{
 	"tmpl_unknown_theme": "テーマ「%s」はありません。使えるのは %s です",
 
 	// draw: 描いたページ
+	"draw_select_text":  "このファイルから描いたページの <select> の中に <%s> があります。<select> の中には、中身を字として読む要素も svg・math も置けません。<select> の外へ出してください",
 	"draw_style":        "このファイルを描いたページに <style> があります。page.html、部品の part.html、format html の項目のどれかが書いています。CSS はテンプレートの page.css（floe がページに入れ、部品とテーマの下の層に置きます）か、部品の part.css に書いてください",
 	"draw_base":         "このファイルを描いたページに <base> があります。page.html、部品の part.html、format html の項目のどれかが書いていて、ページの CSP（base-uri 'none'）が無視します。リンクは完全な形で書いてください",
 	"draw_part_unknown": "このファイルを描いたページが、無い部品 %s を名乗っています。%s のどれかを書いてください",

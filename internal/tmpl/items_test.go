@@ -240,3 +240,76 @@ func TestImagesDirUnreadable(t *testing.T) {
 		t.Errorf("a page of no image: told\n%s", told(err))
 	}
 }
+
+// An HTML <select> may hold no element whose content is read as text, nor svg or math, written by an item or
+// by page.html: a parser of the old "in select" mode reads them apart, its select closed by a tag held as text
+// here (<input>, <keygen>), so that a <style> or a <meta> lives there unchecked. What closes the select in an
+// item is told by the item's marks first; a <style> or a <noscript> by its own words alone.
+func TestSelectText(t *testing.T) {
+	t.Parallel()
+
+	in := func(name string) string {
+		return "d.yaml:2:11: the page drawn from this file has <" + name + "> inside a <select>, which may hold no element whose content is read as text, nor svg or math: move it out of the <select>"
+	}
+	style := "d.yaml:2:11: the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css"
+	section := htmlPage("<section><div>{{.Data.h}}</div><p>after</p></section>")
+	for _, tt := range []struct{ h, want string }{
+		{"<select><xmp><input><style>main{display:none}</style></xmp></select>", in("xmp")},
+		{"<select><xmp><keygen><meta http-equiv=refresh content=0></xmp></select>", in("xmp")},
+		{"<select><svg><![CDATA[><input><style>main{display:none}</style>]]></svg></select>", in("svg")},
+		{"<select><title><style>x{}</style></title></select>", in("title")},
+		{"<select><textarea>x</textarea></select>", in("textarea")},
+		{"<select><script>1</script></select>", in("script")},
+		{"<select><option><xmp>x</xmp></option></select>", in("xmp")},
+		{"<SELECT><IFRAME>x</IFRAME></SELECT>", in("iframe")},
+		{"<select><math><mi>x</mi></math></select>", in("math")},
+		{`<select><option><svg width="8" height="8"><circle r="4"/></svg>a</option></select>`, in("svg")},
+		{"<svg><foreignObject><select><xmp>x</xmp></select></foreignObject></svg>", in("xmp")},
+		{"<select><template><xmp>x</xmp></template></select>", in("xmp")},
+		{"<select><noembed>x</noembed></select>", in("noembed")},
+		{"<select><noframes>x</noframes></select>", in("noframes")},
+		{"<SELECT><XMP><style>x{}</style></XMP></SELECT>", in("xmp")},
+		{"<select><div><xmp>x</xmp></div></select>", in("xmp")},
+		{"<table><tr><td><select><xmp>x</xmp></select></td></tr></table>", in("xmp")},
+		{"<select><svg><foreignObject><xmp>x</xmp></foreignObject></svg></select>", in("svg") + "\n" + in("xmp")},
+		{"<select><style>x{}</style></select>", style},
+		{"<select><noscript>x</noscript></select>", "d.yaml:2:11: the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out"},
+		{"<select><plaintext>x</select>", "d.yaml:3:4: HTML changes the page around it at <plaintext>: close in it each element and comment it opens, and close no element it did not open"},
+		{"<select><xmp></select><meta http-equiv=refresh content=0></xmp>", "d.yaml:3:4: HTML changes the page around it at <select>: close in it each element and comment it opens, and close no element it did not open"},
+		{`<select><option>a</option><optgroup label="g"><option>b</option></optgroup></select>`, ""},
+		{"<xmp><b>x</b></xmp>", ""},
+		{"<svg><select><xmp>x</xmp></select></svg>", ""},
+	} {
+		k := ownKit(t, nil, mine(section, htmlSchema, nil))
+		_, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nh: "+quoted(tt.h)+"\nt: t\n"), none)
+		got := ""
+		if err != nil {
+			got = told(err)
+		}
+		if got != tt.want {
+			t.Errorf("%s: told\n%s\nwant\n%s", tt.h, got, tt.want)
+		}
+	}
+	// What page.html writes, the closed select and the CDATA that html/template escapes, too.
+	for body, want := range map[string]string{
+		"<select><plaintext><style>x{}</style></select>":                             in("plaintext"),
+		"<select><xmp></select><meta http-equiv=refresh content=0></xmp>":            in("xmp"),
+		"<select><svg><![CDATA[><style>main{display:none}</style>]]></svg></select>": in("svg") + "\n" + style,
+	} {
+		page := "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>t</title></head>\n<body>" + body + "</body></html>\n"
+		k := ownKit(t, nil, mine(page, mineSchema, nil))
+		if got := drawn(t, k, "lang: en\ntemplate: mine\n", none); got != want {
+			t.Errorf("page.html %s: told\n%s\nwant\n%s", body, got, want)
+		}
+	}
+	// And what a part's part.html writes.
+	k := ownKit(t, map[string]string{
+		"sel/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+		"sel/part.html":   `<div data-floe-part="sel"><select><xmp>x</xmp></select></div>`,
+		"sel/part.css":    "",
+	}, mine("<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>t</title></head>\n<body>{{.Data.sel}}</body></html>\n",
+		`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"sel": {"$ref": "floe:///parts/sel.json"}}}`, nil))
+	if got := drawn(t, k, "lang: en\ntemplate: mine\nsel: {}\n", none); got != in("xmp") {
+		t.Errorf("part.html: told\n%s\nwant\n%s", got, in("xmp"))
+	}
+}
