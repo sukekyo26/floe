@@ -16,8 +16,14 @@ import (
 func TestFindChrome(t *testing.T) {
 	t.Parallel()
 
-	there := filepath.Join(t.TempDir(), "chrome")
-	if err := os.WriteFile(there, nil, 0o600); err != nil {
+	dir := t.TempDir()
+	there, unrun := filepath.Join(dir, "chrome"), filepath.Join(dir, "chrome.txt")
+	for _, file := range []string{there, unrun} {
+		if err := os.WriteFile(file, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Chmod(there, 0o700); err != nil { //nolint:gosec // G302: a program to run
 		t.Fatal(err)
 	}
 	onPath := func(name string) (string, error) {
@@ -37,6 +43,8 @@ func TestFindChrome(t *testing.T) {
 		{map[string]string{"FLOE_CHROME": there}, nowhere, there, false, false},
 		{map[string]string{"FLOE_CHROME": there, "CI": "true"}, onPath, there, false, false},
 		{map[string]string{"FLOE_CHROME": "/none/chrome"}, onPath, "", false, true},
+		{map[string]string{"FLOE_CHROME": dir}, onPath, "", false, true},
+		{map[string]string{"FLOE_CHROME": unrun}, onPath, "", false, true},
 		{map[string]string{}, onPath, "/usr/bin/chromium", false, false},
 		{map[string]string{}, nowhere, "", true, false},
 		{map[string]string{"CI": "true"}, onPath, "", false, true},

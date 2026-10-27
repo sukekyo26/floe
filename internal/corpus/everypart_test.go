@@ -1,6 +1,7 @@
 package corpus_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"maps"
 	"os"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"golang.org/x/net/html"
+
+	"github.com/sukekyo26/floe/internal/cli"
 )
 
 // everyPart is the sample of every part, which the browser's test of the colours draws in every theme: what it
@@ -34,7 +37,14 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	page, err := os.ReadFile(filepath.Join(everyPart, "golden", "every-part.html"))
+	// Drawn from the data now, not read from golden/: a value left out fails here before golden/ is written anew.
+	out := t.TempDir()
+	var stdout, stderr bytes.Buffer
+	env := cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: everyPart, Getenv: func(string) string { return "" }}
+	if code := cli.Run([]string{"render", "--out-dir", out, "every-part.yaml"}, env); code != 0 {
+		t.Fatalf("floe render = %d: %s", code, stderr.String())
+	}
+	page, err := os.ReadFile(filepath.Join(out, "every-part.html"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,10 +89,11 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 		enums := map[string][]string{}
 		p.enumsOf(p.schema, "", enums, true)
 		for _, path := range slices.Sorted(maps.Keys(enums)) {
-			// One may be written short, for the object it is a key of.
+			// One may be written short, for the object it is a key of (matrix's cells: [yes], for { mark: yes }); but
+			// not for the part's own data, which a list of words would meet.
 			parent := path[:max(0, strings.LastIndex(path, "."))]
 			for _, v := range enums[path] {
-				if !written[name][path+"="+v] && !written[name][parent+"="+v] {
+				if !written[name][path+"="+v] && (parent == "" || !written[name][parent+"="+v]) {
 					t.Errorf("every-part draws %s with no %s: %s", name, strings.TrimPrefix(path, "."), v)
 				}
 			}
@@ -127,7 +138,7 @@ func readParts(t *testing.T) map[string]*part {
 const toneRef = "floe:///parts/tone.json"
 
 // held is a schema another holds: key is the property it is the schema of, "" for one in the same place (an
-// item, one of $defs referred to, a branch).
+// item, one of $defs referred to, a branch of anyOf, oneOf, allOf or if).
 type held struct {
 	key    string
 	schema map[string]any
@@ -154,12 +165,14 @@ func (p *part) sub(s map[string]any) ([]held, bool) {
 			add(k, v)
 		}
 	}
-	for _, key := range []string{"items", "additionalProperties", "then", "else"} {
+	for _, key := range []string{"items", "additionalProperties", "if", "then", "else"} {
 		add("", s[key])
 	}
-	if items, ok := s["prefixItems"].([]any); ok {
-		for _, v := range items {
-			add("", v)
+	for _, key := range []string{"prefixItems", "anyOf", "oneOf", "allOf"} {
+		if list, ok := s[key].([]any); ok {
+			for _, v := range list {
+				add("", v)
+			}
 		}
 	}
 	return hs, false

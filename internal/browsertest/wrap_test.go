@@ -32,7 +32,8 @@ sections:
           - { path: internal/kit/floe/parts/, note: internal/kit/floe/parts/findings/part_internal_test.go }
 `
 
-// measureWrap returns one line for each box a text overflows, out of those that scroll sideways, and for each
+// measureWrap returns one line for a page wider than 390 px, one for each part's box, or a box in it, that is wider
+// than its place or reaches past 390 px, out of those that scroll sideways, and one for each
 // word that breaks across lines in keys' text, code's language, a diff's counts, a table and a tree's note.
 const measureWrap = `(() => {
   const out = [];
@@ -43,9 +44,12 @@ const measureWrap = `(() => {
     }
     return false;
   };
-  for (const e of document.querySelectorAll('[data-floe-part] *')) {
-    if (scrolled(e) || getComputedStyle(e).display === 'inline') continue;
-    if (e.scrollWidth > e.clientWidth + 1) out.push('overflows: ' + e.textContent.trim().slice(0, 40));
+  // A phone's emulated screen widens to the page, so the page is held to the width set, and each part's box too.
+  if (document.documentElement.scrollWidth > 390) out.push('the page is ' + document.documentElement.scrollWidth + ' px wide');
+  for (const e of document.querySelectorAll('[data-floe-part], [data-floe-part] *')) {
+    const s = getComputedStyle(e);
+    if (scrolled(e) || ['auto', 'scroll'].includes(s.overflowX) || s.display === 'inline') continue;
+    if (e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > 391) out.push('overflows: ' + e.textContent.trim().slice(0, 40));
   }
   const whole = '[data-floe-part=keys] dd, [data-floe-part=code] .lang, [data-floe-part=diff] figcaption > :not(.file), td, [data-floe-part=tree] .note';
   for (const e of document.querySelectorAll(whole)) {

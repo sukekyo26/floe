@@ -22,42 +22,30 @@ import (
 func TestUICutOff(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
-	var mu sync.Mutex
-	var reached []string
-	outside := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-		// The browser asks for the icon of the page the form moved to; the page did not.
-		if r.URL.Path == "/favicon.ico" {
-			return
-		}
-		mu.Lock()
-		defer mu.Unlock()
-		reached = append(reached, r.URL.Path)
-	}))
-	defer outside.Close()
-	got := func() string {
-		mu.Lock()
-		defer mu.Unlock()
-		slices.Sort(reached)
-		return strings.Join(reached, " ")
-	}
-	// The page tries each way out once loaded, and lists what CSP blocked. Once loaded: a form submitted
+	// The drawn page and its download try one server, the linked HTML another: what reached the first, however
+	// late, is told at the end.
+	outside, got := listen(t)
+	linkedOut, gotLinked := listen(t)
+	// The page tries each way out to out once loaded, and lists what CSP blocked. Once loaded: a form submitted
 	// while the page is parsed stops the parsing, before the reload script. The form goes once the others
 	// have ended: if it got out, it would move the page away and could cut them short.
-	tries := "<script>window.blocked = [];" +
-		"document.addEventListener('securitypolicyviolation', (e) => blocked.push(e.effectiveDirective));" +
-		"addEventListener('load', () => {const out = " + js(outside.URL) + ";" +
-		"const x = new XMLHttpRequest(); x.open('GET', out + '/xhr'); const img = new Image();" +
-		"Promise.allSettled([fetch(out + '/fetch'), fetch('/api/artifacts')," +
-		"new Promise((r) => { x.onloadend = r; x.send(); })," +
-		"new Promise((r) => { img.onload = img.onerror = r; img.src = out + '/img'; })]).then(() => {" +
-		"const f = document.createElement('form'); f.method = 'post'; f.action = out + '/form'; document.body.append(f); f.submit();});});" +
-		"</script>"
+	tries := func(out string) string {
+		return "<script>window.blocked = [];" +
+			"document.addEventListener('securitypolicyviolation', (e) => blocked.push(e.effectiveDirective));" +
+			"addEventListener('load', () => {const out = " + js(out) + ";" +
+			"const x = new XMLHttpRequest(); x.open('GET', out + '/xhr'); const img = new Image();" +
+			"Promise.allSettled([fetch(out + '/fetch'), fetch('/api/artifacts')," +
+			"new Promise((r) => { x.onloadend = r; x.send(); })," +
+			"new Promise((r) => { img.onload = img.onerror = r; img.src = out + '/img'; })]).then(() => {" +
+			"const f = document.createElement('form'); f.method = 'post'; f.action = out + '/form'; document.body.append(f); f.submit();});});" +
+			"</script>"
+	}
 	all := "window.blocked.length === 5 && window.blocked.sort().join()"
 	const want = "connect-src,connect-src,connect-src,form-action,img-src"
 	out := make([]string, 0, 6)
 
 	publish := func(version string) {
-		s.floe(t, "publish", s.page(t, "cut.yaml", "Cut", `<p id="v">`+version+"</p>"+tries), "--slug", "cut")
+		s.floe(t, "publish", s.page(t, "cut.yaml", "Cut", `<p id="v">`+version+"</p>"+tries(outside)), "--slug", "cut")
 	}
 	publish("1")
 	b.navigate("/a/cut/?raw")
@@ -82,15 +70,41 @@ func TestUICutOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	out = append(out, "out:"+got())
 
 	// Linked HTML gets out: the requests would be seen.
-	s.floe(t, "publish", "--link", s.write(t, "site/out.html", tries), "--slug", "out")
+	s.floe(t, "publish", "--link", s.write(t, "site/out.html", tries(linkedOut)), "--slug", "out")
 	b.navigate("/a/out/?raw")
 	const gotOut = "/fetch /form /img /xhr"
-	for deadline := time.Now().Add(waitLimit); got() != gotOut && time.Now().Before(deadline); {
+	for deadline := time.Now().Add(waitLimit); gotLinked() != gotOut && time.Now().Before(deadline); {
 		time.Sleep(50 * time.Millisecond)
 	}
-	out = append(out, "out:"+got())
+	out = append(out, "linked out:"+gotLinked())
+	// Nothing of the drawn page or its download reached its server, late or not.
+	out = append(out, "out in all:"+got())
 
-	check(t, "cut off", out, want+"|out:|reloaded|"+want+"|out:|out:"+gotOut)
+	check(t, "cut off", out, want+"|out:|reloaded|"+want+"|out:|linked out:"+gotOut+"|out in all:")
+}
+
+// listen starts a server outside floe for the test and returns its URL and the paths that reached it so far,
+// sorted. The browser's ask for the icon of a page a form moved to is not counted: the page did not ask.
+func listen(t *testing.T) (string, func() string) {
+	t.Helper()
+
+	var mu sync.Mutex
+	var reached []string
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/favicon.ico" {
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		reached = append(reached, r.URL.Path)
+	}))
+	t.Cleanup(srv.Close)
+	return srv.URL, func() string {
+		mu.Lock()
+		defer mu.Unlock()
+		slices.Sort(reached)
+		return strings.Join(reached, " ")
+	}
 }
 
 // Another site cannot frame the management page (Chrome shows its error page in the frame instead),

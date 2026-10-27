@@ -41,8 +41,12 @@ var errNoChrome = errors.New("no Chrome")
 func findChrome(getenv func(string) string, lookPath func(string) (string, error)) (path string, skip bool, err error) {
 	ci := getenv("CI") != ""
 	if path := getenv("FLOE_CHROME"); path != "" {
-		if _, err := os.Stat(path); err != nil {
+		info, err := os.Stat(path)
+		if err != nil {
 			return "", false, fmt.Errorf("%w at FLOE_CHROME: %w", errNoChrome, err)
+		}
+		if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 {
+			return "", false, fmt.Errorf("%w at FLOE_CHROME: %s is not a file to run", errNoChrome, path)
 		}
 		return path, false, nil
 	}
@@ -193,13 +197,15 @@ const waitLimit = 10 * time.Second
 func (b *browser) until(what, expr string) string {
 	b.t.Helper()
 
+	var last string
+	var err error
 	for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); {
-		if s, err := b.try(expr); err == nil && truthy(s) {
-			return s
+		if last, err = b.try(expr); err == nil && truthy(last) {
+			return last
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	b.t.Fatalf("timed out waiting for %s", what)
+	b.t.Fatalf("timed out waiting for %s: last %q, %v", what, last, err)
 	return ""
 }
 
@@ -254,15 +260,17 @@ func (b *browser) hover(x, y float64) {
 			b.t.Fatal(err)
 		}
 	}
+	var last string
+	var err error
 	for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); {
 		move(0, 0) // off the frame first: pointerover fires only on entering
 		move(x, y)
-		if s, err := b.try("window.over"); err == nil && truthy(s) {
+		if last, err = b.try("window.over"); err == nil && truthy(last) {
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	b.t.Fatal("timed out waiting for the page in the frame to get the pointer")
+	b.t.Fatalf("timed out waiting for the page in the frame to get the pointer: last %q, %v", last, err)
 }
 
 func js(s string) string {

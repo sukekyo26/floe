@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 )
@@ -105,10 +107,16 @@ func leave(t *testing.T, s *site, publish func(name, slug, title, body string)) 
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	// A link opened inside the frame adds no tab; if it did, it would come about when blank's did.
-	time.Sleep(500 * time.Millisecond)
+	// The inner link moves the page in the frame, and opens no tab.
+	inner := s.Base + "/a/leave/inner.html"
+	for deadline := time.Now().Add(waitLimit); frameURL(t, b) != inner; {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for the frame to move to %s: at %s", inner, frameURL(t, b))
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 	var origins []string
-	for _, url := range []string{other.URL + "/blank", other.URL + "/plain", s.Base + "/a/leave/inner.html"} {
+	for _, url := range []string{other.URL + "/blank", other.URL + "/plain", inner} {
 		info := tab(url)
 		if info == nil {
 			origins = append(origins, "none")
@@ -134,5 +142,23 @@ func leave(t *testing.T, s *site, publish func(name, slug, title, body string)) 
 	b.click(box.X+20, box.Y+200)
 	// The tab moves to the frame URL itself, and no frame is nested in the iframe.
 	origins = append(origins, b.until("the tab to move", "location.pathname === '/a/no-such/' && location.pathname"))
+	// A tab the inner link opened late would be there by now.
+	if tab(inner) != nil {
+		t.Error("the inner link opened a tab")
+	}
 	return strings.Join(origins, " ")
+}
+
+// frameURL is the URL of the page in the frame of the tab's page, "" for none.
+func frameURL(t *testing.T, b *browser) string {
+	t.Helper()
+
+	res, err := chromedp.Call(b.ctx, page.GetFrameTree, cdp.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kids := res.FrameTree.ChildFrames; len(kids) == 1 {
+		return kids[0].Frame.URL
+	}
+	return ""
 }

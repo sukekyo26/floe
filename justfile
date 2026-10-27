@@ -62,7 +62,8 @@ cover-check:
     #!/usr/bin/env bash
     set -euo pipefail
     min_coverage="${MIN_COVERAGE:-90}"
-    go test -shuffle=on -covermode=atomic -coverpkg=./internal/... -coverprofile={{cover_file}} {{pkgs}}
+    # The browser tests are left out: without Chrome (skipped) they would lower the total, so that it would not be CI's.
+    go test -shuffle=on -covermode=atomic -coverpkg=./internal/... -coverprofile={{cover_file}} $(go list {{pkgs}} | grep -v /internal/browsertest$)
     total=$(go tool cover -func={{cover_file}} | awk '/^total:/ {gsub("%","",$3); print $3}')
     echo "Total coverage: ${total}% (threshold: ${min_coverage}%)"
     awk -v t="$total" -v m="$min_coverage" 'BEGIN { exit (t+0 >= m+0) ? 0 : 1 }' || {
