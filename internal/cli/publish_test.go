@@ -1,85 +1,29 @@
 package cli_test
 
 import (
-	"net"
-	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/daemon"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/servetest"
 )
 
-// served is a server of floe on a free port, in this process, as floe serve would run it with env: a command
-// with env finds it there and asks it, starting none.
+// served is a server of floe with a template of its own that reads images, and data files in home/p for it:
+// the settings of a command that asks it, and that directory.
 func served(t *testing.T) (env map[string]string, dir string) {
 	t.Helper()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	var lc net.ListenConfig
-	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, p, err := net.SplitHostPort(ln.Addr().String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	port, err := strconv.Atoi(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	env = map[string]string{
-		"HOME": filepath.Join(tmp, "home"), "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": p,
-		"FLOE_TEMPLATES_DIR": filepath.Join(tmp, "tpl"), "FLOE_PARTS_DIR": filepath.Join(tmp, "parts"),
-		"FLOE_THEMES_DIR": filepath.Join(tmp, "themes"), "FLOE_ICONS_DIR": filepath.Join(tmp, "icons"), "BROWSER": "true",
-	}
-	for name, text := range map[string]string{
-		"tpl/pic/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body>" +
+	s := servetest.Start(t, map[string]string{
+		"templates/pic/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body>" +
 			"{{range .Data.i}}<img src=\"{{.}}\">{{end}}</body></html>\n",
-		"tpl/pic/schema.json":  `{"type": "object", "properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}}}`,
-		"tpl/pic/example.yaml": "lang: en\ntemplate: pic\n",
-		"home/p/d.yaml":        "lang: en\ntemplate: pic\ntitle: D\ni: [img/a.png]\n",
-		"home/p/img/a.png":     "\x89PNG\r\n\x1a\n0000",
-		"home/p/gone.yaml":     "lang: en\ntemplate: pic\ni: [img/none.png]\n",
-		"home/p/h.html":        "<title>H</title>",
-	} {
-		at := filepath.Join(tmp, name)
-		if err = os.MkdirAll(filepath.Dir(at), 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err = os.WriteFile(at, []byte(text), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	build, err := daemon.Build()
-	if err != nil {
-		t.Fatal(err)
-	}
-	none := kit.Dir{FS: nil, Name: ""}
-	srv := server.New(server.Config{
-		Store: store.New(env["FLOE_DIR"]), Port: port, Build: build,
-		Drawing: func() (store.Drawing, error) {
-			floe, err := kit.Floe()
-			if err != nil {
-				return store.Drawing{Kit: nil, Icons: nil, Err: nil}, err
-			}
-			tpl := env["FLOE_TEMPLATES_DIR"]
-			k, err := kit.Load(floe, kit.Sources{Parts: none, Themes: none, Templates: kit.Dir{FS: os.DirFS(tpl), Name: tpl}})
-			return store.Drawing{Kit: k, Icons: nil, Err: nil}, err
-		},
-		Templates: env["FLOE_TEMPLATES_DIR"], Parts: env["FLOE_PARTS_DIR"], Themes: env["FLOE_THEMES_DIR"],
-		Icons: env["FLOE_ICONS_DIR"], Home: env["HOME"],
+		"templates/pic/schema.json":  `{"type": "object", "properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}}}`,
+		"templates/pic/example.yaml": "lang: en\ntemplate: pic\n",
+		"home/p/d.yaml":              "lang: en\ntemplate: pic\ntitle: D\ni: [img/a.png]\n",
+		"home/p/img/a.png":           "\x89PNG\r\n\x1a\n0000",
+		"home/p/gone.yaml":           "lang: en\ntemplate: pic\ni: [img/none.png]\n",
+		"home/p/h.html":              "<title>H</title>",
 	})
-	go func() { _ = srv.Serve(t.Context(), ln) }() //nolint:errcheck // ends with the test
-	return env, filepath.Join(tmp, "home", "p")
+	return s.Env, filepath.Join(s.Dir, "home", "p")
 }
 
 // A data file is published through the server, its images sent when it asks for them; listed, drawn again,

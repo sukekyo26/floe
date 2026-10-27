@@ -3,6 +3,8 @@ module github.com/sukekyo26/floe
 go 1.27.3
 
 require (
+	github.com/chromedp/cdproto v0.158.5
+	github.com/chromedp/chromedp v0.21.0
 	github.com/expr-lang/expr v1.17.8
 	github.com/goccy/go-yaml v1.19.2
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
@@ -15,6 +17,7 @@ require (
 )
 
 require (
+	github.com/go-json-experiment/json v0.0.0-20260213210345-44df1a37e875 // indirect
 	github.com/google/renameio/v2 v2.0.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/rogpeppe/go-internal v1.16.0 // indirect

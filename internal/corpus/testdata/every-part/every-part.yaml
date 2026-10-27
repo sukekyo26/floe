@@ -10,6 +10,9 @@ sections:
           - { label: Pages, value: '1,840' }
           - { label: Broken links, value: '120', note: '-35 since the last check', tone: good }
           - { label: Downtime, value: '0', unit: hours }
+          - { label: Spaces, value: '12', tone: accent }
+          - { label: Owners left, value: '3', tone: warn }
+          - { label: Lost pages, value: '1', tone: bad }
       - compare:
           before: Now
           after: After the move
@@ -23,13 +26,18 @@ sections:
       - steps:
           - { title: Freeze edits on the old wiki, text: On **Friday evening**., state: done }
           - { title: Copy the pages and check the links, state: doing }
-          - title: Point the team's bookmarks at the new host
+          - { title: Point the team's bookmarks at the new host, state: todo }
+          - title: Close the old server
       - terminal:
           shell: bash
           steps:
             - run: wiki export --all --out pages/
               out: 1840 pages written to pages/
             - run: linkcheck pages/
+      - terminal: { shell: zsh, steps: [{ run: wiki status }] }
+      - terminal: { shell: sh, steps: [{ run: wiki status }] }
+      - terminal: { shell: powershell, steps: [{ run: wiki status }] }
+      - terminal: { shell: cmd, steps: [{ run: wiki status }] }
       - code:
           file: old-wiki.conf
           text: |
@@ -58,25 +66,37 @@ sections:
             - [Broken links, High, '120', A link check after the copy, { pill: watching, tone: warn }]
             - [Lost attachments, Low, '8', Keep the old host for **a month**, { pill: covered, tone: good }]
             - [Slow search, Unknown, "-", Rebuild the index on `Sunday`, { pill: open }]
+            - [New host, Low, '0', Nothing, { pill: ready, tone: accent }]
       - note:
           tone: warn
           title: Heads up
           text: Anyone editing during the freeze loses their changes.
+      - note: { text: The new host is ready., tone: accent }
+      - note: { text: Attachments over 1 MB failed., tone: bad }
+      - note: { text: The banner goes up on Friday. }
   - heading: Progress
     parts:
       - bars:
           - { label: Copied, value: 1840, tone: good }
           - { label: Checked, value: 1200 }
+          - { label: Moved, value: 900, tone: accent }
+          - { label: Pending, value: 400, tone: warn }
           - { label: Broken, value: 120, tone: bad }
       - progress:
           - { label: Pages, done: 1200, of: 1840 }
           - { label: Images, done: 30, of: 30, tone: good }
+          - { label: Spaces, done: 4, of: 12, tone: accent }
+          - { label: Owners, done: 1, of: 4, tone: warn }
+          - { label: Links, done: 10, of: 120, tone: bad }
       - checklist:
           - { text: Freeze edits, done: true }
           - text: Copy the **attachments**
       - timeline:
           - { date: 2030-04-05, title: Freeze, text: Edits stop., tone: warn }
-          - { date: 2030-04-07, title: Open }
+          - { date: 2030-04-06, title: Copy, tone: accent }
+          - { date: 2030-04-07, title: Open, tone: good }
+          - { date: 2030-04-08, title: Rollback window ends, tone: bad }
+          - { date: 2030-04-30, title: Old server off }
   - heading: Choices
     parts:
       - options:
@@ -97,6 +117,7 @@ sections:
       - risks:
           - { what: Broken links, likely: high, impact: mid, fix: A link check after the copy }
           - { what: Lost attachments, likely: low, impact: high }
+          - { what: Slow search, likely: mid, impact: low }
       - matrix:
           columns: [Old wiki, New host]
           rows:
@@ -125,6 +146,7 @@ sections:
           - { title: Old wiki, url: 'https://wiki.example.com/' }
       - findings:
           - { level: must, at: wiki.conf:3, text: The banner names the old host, status: { pill: fixed, tone: good } }
+          - { level: should, text: The search index is rebuilt by hand }
           - { level: nit, text: Two pages have the same title, why: Left as the owners asked }
       - tree:
           - { path: pages/, note: what export writes }
