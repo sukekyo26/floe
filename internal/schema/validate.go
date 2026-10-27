@@ -46,8 +46,8 @@ func (c *Compiled) ValidateAt(v any) error {
 	})
 }
 
-// leafMistakes checks v against c: each leaf of the library's ValidationError made a mistake by mistake, Sorted,
-// so that their order does not follow the library's map order. what names v in floe's failure.
+// leafMistakes checks v against c and makes each leaf of the library's ValidationError a usererr.Error with mistake,
+// Sorted, so that their order does not follow the library's map order. what names v in floe's failure.
 func (c *Compiled) leafMistakes(v any, what string, mistake func(*jsonschema.ValidationError) *usererr.Error) error {
 	err := c.Root.Validate(v)
 	if err == nil {

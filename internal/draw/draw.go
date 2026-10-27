@@ -96,12 +96,12 @@ func Page(
 	return out.Bytes(), nil
 }
 
-// readPage reads page, drawn from d with the items s, as a browser does, checks its items of format html, then,
-// their marks taken out, the page, and returns the page read and what it names. The page an item changed is not
-// checked: what it holds would be told by what the item did.
-func readPage(k *kit.Kit, d *doc.Data, s *items, page []byte) (*html.Node, named, error) {
+// readPage reads src, the page drawn from d with the items s, as a browser does, checks its items of format
+// html, then, their marks taken out, the page, and returns the page read and what it names. The page an item
+// changed is not checked: what it holds would be told by what the item did.
+func readPage(k *kit.Kit, d *doc.Data, s *items, src []byte) (*html.Node, named, error) {
 	end := s.secret + "end"
-	marked := slices.Concat(page, []byte("<!--"+end+"-->"))
+	marked := slices.Concat(src, []byte("<!--"+end+"-->"))
 	tree, _ := html.Parse(bytes.NewReader(marked)) //nolint:errcheck // a bytes.Reader fails no read, Parse's one error
 	// A page cut short, its end mark read as a comment, is checked no further: an item's marks past the cut are
 	// gone, and would tell it changed. Else an item that ate the mark (a tag it left open) is told at it, and a
@@ -141,11 +141,11 @@ func cutEnd(tree *html.Node, end string) bool {
 	return false
 }
 
-// tokenized reports whether the tokenizer, read alone, takes end, at the end of page, as a comment of its own:
+// tokenized reports whether the tokenizer, read alone, takes end, at the end of src, as a comment of its own:
 // only to choose whom to tell of a page without the mark, the page or an item that ate it.
 // LIMIT: past a cut, a page ending in an open raw text (xmp) blames an item, or the wrong fix; rework if real.
-func tokenized(page []byte, end string) bool {
-	z := html.NewTokenizer(bytes.NewReader(page))
+func tokenized(src []byte, end string) bool {
+	z := html.NewTokenizer(bytes.NewReader(src))
 	for {
 		switch z.Next() {
 		case html.ErrorToken:
