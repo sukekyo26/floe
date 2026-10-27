@@ -49,6 +49,14 @@ func TestRead(t *testing.T) {
 		d.Where["title"] != (yamlpos.Pos{Line: 5, Column: 8}) {
 		t.Errorf("Read of a theme left empty and a title ~ = %+v", d)
 	}
+	// So is one empty or of spaces.
+	d, err = doc.Read("a.yaml", []byte("template: ' '\nlang: ja\ntheme: ''\ntitle: '  '\n"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !maps.Equal(d.Values, map[string]any{"lang": "ja"}) || d.Template != "" || d.Theme != "" || d.Title != "" {
+		t.Errorf("Read of shared keys empty or of spaces = %+v", d)
+	}
 	d, err = doc.Read("a.yaml", []byte("# head\ntemplate: report\nlang: ja\ntitle: '  Plan  '\nx: 1\n"), "")
 	if err != nil {
 		t.Fatal(err)

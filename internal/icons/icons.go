@@ -21,6 +21,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/textpos"
@@ -127,7 +128,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 	b, _, err := files.Read(file)
 	// None at the set is a set not fetched, and so is the default store under a file (HOME=/dev/null); a store
 	// set under a file, or one that is a file, is told.
-	if errors.Is(err, fs.ErrNotExist) || !s.set && files.NotThere(s.root, err) {
+	if errors.Is(err, fs.ErrNotExist) || !s.set && files.UnderFile(s.root, err) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	if err != nil {
@@ -186,6 +187,21 @@ func (s *Store) notFetched(k *kit) *usererr.Error {
 	return usererr.New("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
 }
 
+// checkWritable refuses root, the directory a fetch makes, when it cannot be one: a file, or under a file.
+// LIMIT: a directory above it that cannot be written is told only by the MkdirAll after the network; check its
+// permission too if that comes to be asked.
+func checkWritable(root string) error {
+	fi, err := os.Stat(root)
+	switch {
+	case err == nil && !fi.IsDir():
+		// What making it would say.
+		return usererr.CannotWrite(root, &fs.PathError{Op: "mkdir", Path: root, Err: syscall.ENOTDIR})
+	case err != nil && !errors.Is(err, fs.ErrNotExist):
+		return usererr.CannotWrite(root, err)
+	}
+	return nil
+}
+
 // Source is a package to fetch: At, a URL or an absolute path, and Name, as it was written, which its mistakes
 // are told at. Without one, the package is the one the set's page links.
 type Source struct {
@@ -210,9 +226,9 @@ func (s *Store) Fetch(ctx context.Context, set string, from Source, force bool) 
 	}
 	k := kitOf(set)
 	got := Fetched{Title: k.title, Dir: s.dir(k), Version: "", Count: 0, Already: false}
-	// Before the network, so that a store that cannot be written is told for it.
-	if err := os.MkdirAll(s.root, 0o700); err != nil {
-		return got, usererr.CannotWrite(s.root, err)
+	// Before the network, so that a store that cannot be written is told for it; made only with the icons.
+	if err := checkWritable(s.root); err != nil {
+		return got, err
 	}
 	if from.At == "" {
 		at, err := k.packageURL(ctx)
@@ -233,6 +249,9 @@ func (s *Store) Fetch(ctx context.Context, set string, from Source, force bool) 
 	if k.tells(from.At, got.Version) {
 		got.Already = true
 		return got, nil
+	}
+	if err := os.MkdirAll(s.root, 0o700); err != nil {
+		return got, usererr.CannotWrite(s.root, err)
 	}
 	tmp, err := os.MkdirTemp(s.root, k.name+".tmp-")
 	if err != nil {

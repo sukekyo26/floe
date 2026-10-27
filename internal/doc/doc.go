@@ -17,17 +17,17 @@ import (
 // Data is a data file read: its values as written, and the keys every template shares read from them.
 type Data struct {
 	File                         string
-	Lang, Template, Theme, Title string           // "" for one left out or refused; Title trimmed of spaces
-	Values                       map[string]any   // as written, the shared keys too but those null
+	Lang, Template, Theme, Title string           // "" for one left out or refused; each trimmed of spaces
+	Values                       map[string]any   // as written, the shared keys too but those that name none
 	Root                         *ast.MappingNode // nil for an empty file
 	// where each shared key is written: its value, its key when the value is left out, the top of the file
 	// for one left out
-	Where   map[string]yamlpos.Pos
-	refused map[string]bool // the shared keys Read refused, nil for none
+	Where           map[string]yamlpos.Pos
+	templateRefused bool
 }
 
-// Refused reports whether Read refused the shared key, and told its mistake.
-func (d *Data) Refused(key string) bool { return d.refused[key] }
+// TemplateRefused reports whether Read refused template: (one not text), and told its mistake.
+func (d *Data) TemplateRefused() bool { return d.templateRefused }
 
 // PosOf returns where the value at the path at (keys and indexes) is written in d: the value, or its key when
 // it is left out; the top of the file without a node.
@@ -68,7 +68,7 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 	root, _ := body.(*ast.MappingNode) //nolint:errcheck // see above
 	d := &Data{
 		File: file, Lang: "", Template: "", Theme: "", Title: "", Values: values, Root: root,
-		Where: map[string]yamlpos.Pos{}, refused: nil,
+		Where: map[string]yamlpos.Pos{}, templateRefused: false,
 	}
 	if theme != "" {
 		values["theme"] = theme
@@ -102,13 +102,13 @@ func Ints(v any) any {
 }
 
 // sharedMistake returns the message key of what is wrong with v, the value of the shared key, written or not
-// (ok), "" for none: one written that is not text, and a lang that is none or spaces.
+// (ok), "" for none: one written that is not text, and a lang that is none.
 func sharedMistake(key string, v any, ok bool) string {
-	s, text := v.(string)
+	_, text := v.(string)
 	switch {
 	case ok && !text:
 		return "doc_not_text"
-	case key == "lang" && strings.TrimSpace(s) == "":
+	case key == "lang" && !ok:
 		// The page's <html lang> is the data's own, so that every way of drawing it gives the same page.
 		return "doc_no_lang"
 	}
@@ -116,8 +116,8 @@ func sharedMistake(key string, v any, ok bool) string {
 }
 
 // readShared reads the keys every template shares from d.Values into d, leaving them in d.Values as written but
-// those null, which are none written, and notes where each is written; theme: is not read with a theme given,
-// which d takes.
+// those null, empty or of spaces, which are none written, and notes where each is written; theme: is not read
+// with a theme given, which d takes.
 func (d *Data) readShared(theme string) error {
 	top := yamlpos.Pos{Line: 1, Column: 1}
 	pairs := map[string]*ast.MappingValueNode{}
@@ -135,11 +135,11 @@ func (d *Data) readShared(theme string) error {
 			d.Where[key] = yamlpos.OfValue(yamlpos.KeyOf(p), p.Value)
 		}
 		v, ok := d.Values[key]
-		if ok && v == nil {
-			// A null value (lang: or lang: ~) is none written, for every reader of d.Values: these are keys floe
-			// reads itself, while the other values are the schema's, which tells a null as it is.
+		if s, text := v.(string); ok && (v == nil || text && strings.TrimSpace(s) == "") {
+			// Null, empty or spaces (lang:, lang: ~, lang: "") is none written, for every reader of d.Values:
+			// these are keys floe reads itself, while the other values are the schema's, which tells a null as it is.
 			delete(d.Values, key)
-			ok = false
+			v, ok = nil, false
 		}
 		mistake := sharedMistake(key, v, ok)
 		switch {
@@ -149,16 +149,12 @@ func (d *Data) readShared(theme string) error {
 			found = append(found, yamlpos.New(d.File, d.Where[key], mistake))
 		case mistake != "":
 			found = append(found, yamlpos.New(d.File, d.Where[key], mistake, key))
-			if d.refused == nil {
-				d.refused = map[string]bool{}
-			}
-			d.refused[key] = true
+			d.templateRefused = d.templateRefused || key == "template"
 		case ok:
-			*to[key], _ = v.(string) //nolint:errcheck // sharedMistake refuses one that is not text
+			s, _ := v.(string) //nolint:errcheck // sharedMistake refuses one that is not text
+			*to[key] = strings.TrimSpace(s)
 		}
 	}
-	// A title of spaces names none.
-	d.Title = strings.TrimSpace(d.Title)
 	// Read once as every lookup of it and the page's <html lang> take it: BCP 47 in lower case, JA and ja_JP ja's.
 	d.Lang = string(i18n.Tag(d.Lang))
 	return found.Sorted().Err()

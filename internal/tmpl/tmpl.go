@@ -75,7 +75,7 @@ func pick(k *kit.Kit, d *doc.Data, given string, found *usererr.List) (*kit.Temp
 		*found = append(*found, bad)
 	}
 	switch {
-	case d.Refused("template"):
+	case d.TemplateRefused():
 	case d.Template == "":
 		*found = append(*found, yamlpos.New(d.File, d.Where["template"], "tmpl_no_template", strings.Join(templates, ", ")))
 	default:

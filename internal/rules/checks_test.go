@@ -134,7 +134,8 @@ func TestChecksRun(t *testing.T) {
 		{"a rule for the title", "- field: title\n  expr: len(doc.title) > 10\n  message: long title\n", "title: Plan\n", `d.yaml:3:8: long title ("Plan")`},
 		{"the theme written", "- expr: doc.theme == nil\n  message: m\n", "theme: soft\n", "d.yaml: m"},
 		{"the theme left out", "- expr: doc.theme == nil\n  message: m\n", "a: 1\n", ""},
-		{"the theme empty", "- expr: doc.theme == \"\"\n  message: m\n", "theme: \"\"\n", ""},
+		// A shared key empty, as null, is none written.
+		{"the theme empty", "- expr: doc.theme == nil\n  message: m\n", "theme: \"\"\n", ""},
 		{"for to the title", "- for: title\n  expr: true\n  message: m\n", "title: Plan\n", "t1/checks.yaml:1:8: for: title does not lead to a list in d.yaml"},
 		{"a number as written", "- expr: false\n  message: 1.10\n- expr: false\n  message: 0o17\n", "a: 1\n", "d.yaml: 0o17\nd.yaml: 1.10"},
 		{"a block keeping its line breaks", "- expr: false\n  message: |+\n    m\n\n", "a: 1\n", "d.yaml: m\n\n"},

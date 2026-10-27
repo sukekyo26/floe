@@ -140,17 +140,14 @@ func createNew(prefix string, perm os.FileMode) (*os.File, error) {
 	}
 }
 
-// NotThere reports whether err, of reading dir or a file under it, says dir is not there: nothing at what was
-// read, or a file above dir (HOME=/dev/null). A dir that is itself a file is there.
-func NotThere(dir string, err error) bool {
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		return true
-	case errors.Is(err, syscall.ENOTDIR):
-		_, statErr := os.Stat(dir)
-		return statErr != nil
+// UnderFile reports whether err, of reading dir or a file under it, is a file above dir (HOME=/dev/null), where
+// dir cannot be. A dir that is itself a file is not under one.
+func UnderFile(dir string, err error) bool {
+	if !errors.Is(err, syscall.ENOTDIR) {
+		return false
 	}
-	return false
+	_, statErr := os.Stat(dir)
+	return statErr != nil
 }
 
 // Hidden reports whether name, of a file in a directory of floe's or one's own, is one floe leaves alone: one

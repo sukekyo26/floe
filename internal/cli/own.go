@@ -2,6 +2,8 @@ package cli
 
 import (
 	"crypto/rand"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,7 +52,7 @@ func (a *app) ownDir(kind string) (kit.Dir, error) {
 	}
 	if _, err := os.ReadDir(dir); err != nil {
 		// A default not there, or under a file (HOME=/dev/null), is none; one there that is no directory is told.
-		if !set && files.NotThere(dir, err) {
+		if !set && (errors.Is(err, fs.ErrNotExist) || files.UnderFile(dir, err)) {
 			return none, nil
 		}
 		return none, usererr.CannotRead(dir, err) //nolint:wrapcheck // the system's words, at the directory

@@ -434,6 +434,14 @@ func TestBrokenIndex(t *testing.T) {
 	}
 	done, cancel := context.WithCancel(context.Background())
 	cancel()
+	// A fetch that fails at the network makes nothing.
+	typo := filepath.Join(t.TempDir(), "typo")
+	if _, err := icons.New(typo, true).Fetch(done, "aws", icons.Source{Name: "", At: ""}, false); err == nil {
+		t.Error("a fetch with its context done went on")
+	}
+	if _, err := os.Stat(typo); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a fetch failing at the network left %s: %v", typo, err)
+	}
 	for _, set := range []bool{false, true} {
 		_, err := icons.New(under, set).Fetch(done, "aws", icons.Source{Name: "", At: ""}, false)
 		if want := under + ": cannot be written (not a directory): check"; !strings.HasPrefix(told(err), want) {
