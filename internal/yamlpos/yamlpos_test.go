@@ -165,6 +165,52 @@ func TestParse(t *testing.T) {
 	}
 }
 
+// A byte order mark past the start and a byte that is no UTF-8 are refused where they are, the one and the
+// other together and before goccy/go-yaml reads the file: it would read them as characters of a key or a value,
+// or fail on them in its own words. The mark is refused in quotes and comments too; an escape of it is no mark.
+// The first byte that is no UTF-8 is told once, a U+FFFD written in UTF-8 being a character.
+func TestParseMarksAndUTF8(t *testing.T) {
+	t.Parallel()
+
+	mark := i18n.EnglishCatalog().Msg("text_bom")
+	utf8 := i18n.EnglishCatalog().Msg("yaml_not_utf8")
+	for _, tt := range []struct{ name, src, want string }{
+		{"a second mark", bom + bom + "title: t\n", "a.yaml:1:1: " + mark},
+		{"at a line's start", "title: t\n" + bom + "note: x\n", "a.yaml:2:1: " + mark},
+		{"in a plain value", "note: " + bom + "Plan\n", "a.yaml:1:7: " + mark},
+		{"in a block", "note: |\n  a" + bom + "b\n", "a.yaml:2:4: " + mark},
+		{"in a block of lines", "note: |\n  aaa\n  bb" + bom + "b\n  cc\n", "a.yaml:3:5: " + mark},
+		{"on a line alone", "a: 1\nb: 2\n" + bom + "\nd: 4\n", "a.yaml:3:1: " + mark},
+		{"before an indent", "note:\n" + bom + "  a: b\n", "a.yaml:2:1: " + mark},
+		{"in a value over lines, spaces at a line's end", "note: hello \n  world" + bom + "\n", "a.yaml:2:8: " + mark},
+		{"in a block of a bad head", "note: |x\n  y" + bom + "z\n", "a.yaml:2:4: " + mark},
+		{"with CRLF", "a: 1\r\nnote: a" + bom + "b\r\n", "a.yaml:2:8: " + mark},
+		{"in a tag", "note: !!str " + bom + "x\n", "a.yaml:1:13: " + mark},
+		{"in an anchor", "note: &" + bom + "a 1\n", "a.yaml:1:8: " + mark},
+		{"in a flow sequence", "note: [a, " + bom + "b]\n", "a.yaml:1:11: " + mark},
+		{"in a flow mapping", "note: {" + bom + "k: v}\n", "a.yaml:1:8: " + mark},
+		{"after a quoted value", "note: \"x\"" + bom + "\n", "a.yaml:1:10: " + mark},
+		{"in double quotes", "note: \"" + bom + "Plan\"\n", "a.yaml:1:8: " + mark},
+		{"in single quotes", "note: 'x" + bom + "y'\n", "a.yaml:1:9: " + mark},
+		{"in a comment", "a: 1\n# a note " + bom + "\n", "a.yaml:2:10: " + mark},
+		{"FF FE", "\xff\xfetitle: t\n", "a.yaml:1:1: " + utf8},
+		{"in a value", "note: a\xc3b\n", "a.yaml:1:8: " + utf8},
+		{"once in a file", "a: \xc3\nb: \xc3\n", "a.yaml:1:4: " + utf8},
+		{"after a U+FFFD written", "note: \xef\xbf\xbd\xc3x\n", "a.yaml:1:8: " + utf8},
+		{"in a comment, as Shift_JIS", "# \x83\x52\n", "a.yaml:1:3: " + utf8},
+		{"UTF-32BE", "\x00\x00\xfe\xff", "a.yaml:1:3: " + utf8},
+		{"no UTF-8 and a mark", "a: \xc3\nb: " + bom + "x\n", "a.yaml:1:4: " + utf8 + "\na.yaml:2:4: " + mark},
+		{"an escape of a mark", "note: \"\\" + "ufeffPlan\"\n", ""},
+		{"spaces at a line's end, no mark", "a: x \n  y\nb: 1\n", ""},
+		{"the first mark", bom + "a: 1\n", ""},
+	} {
+		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
+		if got := told(err); got != tt.want {
+			t.Errorf("%s: Parse(%q) told\n%s\nwant\n%s", tt.name, tt.src, got, tt.want)
+		}
+	}
+}
+
 // Find follows keys and indexes to a value and its key, the - of an entry of a block sequence, and stops at the
 // last node it reaches.
 func TestFind(t *testing.T) {

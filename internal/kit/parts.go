@@ -11,6 +11,7 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
+	"github.com/sukekyo26/floe/internal/bom"
 	"github.com/sukekyo26/floe/internal/rules"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -368,12 +369,13 @@ func (k *Kit) baseDir(name string) (string, bool) {
 }
 
 // readPages parses the HTML file of the directory dir of d with fns and the words w, and returns it with its
-// text; nil without one.
+// text, both without a byte order mark at its start, so that places told in the text agree; nil without one.
 func readPages(d Dir, dir, file string, fns template.FuncMap, w words) (pages, []byte, error) {
 	src, ok, err := readFile(d, dir, file)
 	if !ok || err != nil {
 		return nil, nil, err
 	}
+	src = bom.Trim(src)
 	ps, err := parsePages(path.Join(d.Name, dir, file), src, fns, w)
 	return ps, src, err
 }

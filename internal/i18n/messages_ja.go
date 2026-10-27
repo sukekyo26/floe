@@ -8,6 +8,8 @@ var messagesJA = map[string]string{
 	"library": "%s",
 
 	"yaml_documents":            "YAML のファイルには文書を 1 つだけ書きます。--- で区切らず、1 つの文書で書いてください",
+	"yaml_not_utf8":             "このバイトは UTF-8 ではありません。ファイルを UTF-8 で保存してください",
+	"text_bom":                  "ここにバイト順マーク（U+FEFF）があり、字として読まれます。消してください。字として要るなら、二重引用符の文字列の中に \\ufeff と書いてください",
 	"yaml_no_anchors":           "アンカー・エイリアス・マージキー（<<）・タグは使えません。値をそのまま書いてください",
 	"yaml_comment_cut":          "空白の後の # が YAML のコメントを始め、値が %s で切れたかもしれません。# が値の一部なら値を引用符で囲み、コメントなら次の行に書いてください",
 	"yaml_flow_key_alone":       "%q は { } の中の値の無いキーです。値を「:」の後ろに書くか、前の文が文の中の , で切れたのなら、その文を引用符で囲んでください",
@@ -23,6 +25,7 @@ var messagesJA = map[string]string{
 	"schema_no_url":             "%s: schema はほかのファイルや URL を参照できません。$ref が指すものは、その schema のファイルの中に書いてください",
 	"schema_key_twice":          "鍵 %q はこのオブジェクトにもうあります。最後の値だけが読まれてしまうので、1 つにしてください",
 	"schema_empty":              `schema が空です。{"type": "object"} のような JSON Schema のオブジェクトを書いてください`,
+	"schema_after_value":        "ここから 2 つ目の JSON の値が始まります。schema は 1 つの値なので、後ろを消してください",
 	"schema_no_part":            "%s は部品ではありません。部品は floe:///parts/<名前>.json の形で参照してください",
 	"schema_id_floe":            "この $id は floe: の URL、%s を名乗っています。floe: の URL は floe 自身のものです。https://example.com/item.json のような自分の $id にするか、$id を消してください",
 	"schema_id_relative":        "この $id、%s には scheme がありません。部品と共有の schema では、floe:///parts/ の下に重なってほかのものの URL を奪うことがあるので、scheme の無い $id は書けません。https://example.com/item.json のような自分の絶対の URL にするか、$id を消してください",

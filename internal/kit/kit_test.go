@@ -1,6 +1,7 @@
 package kit_test
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"maps"
@@ -520,6 +521,69 @@ func TestCompileParts(t *testing.T) {
 		})
 		if got := told(err); got != tt.want {
 			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+	}
+}
+
+// A byte order mark past a file's start is refused in every file of one's own that Read reads as YAML or JSON:
+// Read leaves the one at the start to the reader of its kind, which leaves it out once. A part's HTML is kept
+// without it, as its places are told in it, and the files a template shows, but the example it draws, which the
+// reading of a data file leaves it out of.
+func TestReadMarks(t *testing.T) {
+	t.Parallel()
+
+	const mark = "\xef\xbb\xbf"
+	bomAt := func(file string) string { return file + ":1:1: " + i18n.EnglishCatalog().Msg("text_bom") }
+	part := func(name, src string) kit.Sources {
+		fsys := fstest.MapFS{
+			"mine/schema.json": {Data: []byte(partSchema)},
+			"mine/part.html":   {Data: []byte(`<div data-floe-part="mine">{{.t}}</div>`)},
+		}
+		fsys[name] = &fstest.MapFile{Data: []byte(src)}
+		return kit.Sources{Parts: kit.Dir{FS: fsys, Name: "own/parts"}}
+	}
+	const tmplSchema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`
+	template := func(name, src string) kit.Sources {
+		fsys := fstest.MapFS{
+			"memo/page.html":   {Data: []byte(`<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body></body></html>`)},
+			"memo/schema.json": {Data: []byte(tmplSchema)},
+		}
+		fsys[name] = &fstest.MapFile{Data: []byte(src)}
+		return kit.Sources{Templates: kit.Dir{FS: fsys, Name: "own/templates"}}
+	}
+	for _, tt := range []struct {
+		name string
+		own  kit.Sources
+		want string
+	}{
+		{"a part's schema.json", part("mine/schema.json", mark+mark+partSchema), bomAt("own/parts/mine/schema.json")},
+		{"a part's part.yaml", part("mine/part.yaml", mark+mark+"looks: [panel]\n"), bomAt("own/parts/mine/part.yaml")},
+		{"a part's checks.yaml", part("mine/checks.yaml", mark+mark+"[]\n"), bomAt("own/parts/mine/checks.yaml")},
+		{"a part's words.yaml", part("mine/words.yaml", mark+mark+"en: {}\n"), bomAt("own/parts/mine/words.yaml")},
+		{"a shared schema", part("one.json", mark+mark+`{"type": "string"}`), bomAt("own/parts/one.json")},
+		{"a template's schema.json", template("memo/schema.json", mark+mark+tmplSchema), bomAt("own/templates/memo/schema.json")},
+		{"a template's computed.yaml", template("memo/computed.yaml", mark+mark+"{}\n"), bomAt("own/templates/memo/computed.yaml")},
+	} {
+		if _, err := kit.Read(floe(t), tt.own); told(err) != tt.want {
+			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, told(err), tt.want)
+		}
+	}
+	own := part("mine/part.html", mark+`<div data-floe-part="mine">{{.t}}</div>`)
+	own.Templates = template("memo/example.yaml", mark+"lang: en\n").Templates
+	k, err := kit.Read(floe(t), own)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	p, _ := k.Part("mine")
+	m, _ := k.Template("memo")
+	if bytes.HasPrefix(p.PageSource(), []byte(mark)) || !bytes.HasPrefix(m.Example(), []byte(mark)) {
+		t.Errorf("part.html %q, example.yaml %q: want the one without its mark, the other as written", p.PageSource(), m.Example())
+	}
+	for _, e := range k.Templates() {
+		for _, f := range e.Files {
+			if bytes.Contains(f.Text, []byte(mark)) {
+				t.Errorf("%s shows %s with a mark: %q", e.Name, f.Name, f.Text)
+			}
 		}
 	}
 }

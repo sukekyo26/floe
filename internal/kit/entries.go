@@ -5,18 +5,24 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/sukekyo26/floe/internal/bom"
 	"github.com/sukekyo26/floe/internal/schema"
 )
 
-// Source is a file as it was read: its name in its directory, and its text.
+// Source is a file as it was read: its name in its directory, and its text without a byte order mark at its start.
 type Source struct {
 	Name string
 	Text []byte
 }
 
-// sources returns files but those not read (a nil Text).
+// sources returns files but those not read (a nil Text), each without the byte order mark at its start, as it
+// shows.
 func sources(files ...Source) []Source {
-	return slices.DeleteFunc(files, func(s Source) bool { return s.Text == nil })
+	files = slices.DeleteFunc(files, func(s Source) bool { return s.Text == nil })
+	for i := range files {
+		files[i].Text = bom.Trim(files[i].Text)
+	}
+	return files
 }
 
 // copied returns a copy of files, their texts too: the Kit stays as read, Floe's shared by the whole process.

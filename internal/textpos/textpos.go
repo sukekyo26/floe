@@ -13,13 +13,28 @@ import (
 // line, and the column counts the runes before it in its line, a byte that is no UTF-8 as one.
 // LIMIT: a tab is one column, and U+2028, U+2029 and FF end no line.
 func Of(src []byte, at int) (line, column int) {
-	line, start := 1, 0
-	for i := range at {
-		if src[i] == '\n' || src[i] == '\r' && (i+1 >= len(src) || src[i+1] != '\n') {
-			line, start = line+1, i+1
+	p := Each(src, []int{at})[0]
+	return p.Line, p.Column
+}
+
+// Place is a line and a column, both from 1.
+type Place struct {
+	Line, Column int
+}
+
+// Each returns the place of each byte of ats, which go up, as Of tells it, reading src once.
+func Each(src []byte, ats []int) []Place {
+	places := make([]Place, 0, len(ats))
+	line, start, i := 1, 0, 0
+	for _, at := range ats {
+		for ; i < at; i++ {
+			if src[i] == '\n' || src[i] == '\r' && (i+1 >= len(src) || src[i+1] != '\n') {
+				line, start = line+1, i+1
+			}
 		}
+		places = append(places, Place{Line: line, Column: utf8.RuneCount(src[start:at]) + 1})
 	}
-	return line, utf8.RuneCount(src[start:at]) + 1
+	return places
 }
 
 // Ending returns the line and the column of the character that ends at the byte offset of src: the place

@@ -1,0 +1,7 @@
+template: report
+lang: en
+title: Not UTF-8
+sections:
+  - heading: h
+    parts:
+      - text: "a√b"

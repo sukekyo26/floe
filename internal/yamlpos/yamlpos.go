@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
@@ -17,6 +18,7 @@ import (
 	"github.com/goccy/go-yaml/token"
 
 	"github.com/sukekyo26/floe/internal/bom"
+	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -174,12 +176,20 @@ func Parse(file string, src []byte) (ast.Node, error) {
 }
 
 // document returns the body of the one document of src. A document of a directive (%YAML) alone is no
-// document: it heads the one after it.
+// document: it heads the one after it. src is read as UTF-8, and a byte order mark past its start is refused
+// with it, before it is parsed: goccy/go-yaml reads the one and the other as characters of a key or a value
+// (U+FFFD for a byte that is no UTF-8), and fails on them where it does not.
+// LIMIT: a control character (NUL) and UTF-16 without a mark are UTF-8 and left to goccy/go-yaml, which reads a
+// NUL in a value; refuse what YAML 1.2 does not print if one comes to matter.
+// LIMIT: a lone surrogate escaped in double quotes ("\udc00") goccy/go-yaml reads as U+FFFD, telling only a high
+// one with nothing after it; refuse them if goccy/go-yaml comes to tell them, or one comes to matter.
 func document(file string, src []byte) (ast.Node, error) {
 	// YAML 1.2 allows a byte order mark at the start, which goccy/go-yaml reads as part of the first key.
 	// src is left without it for both the parser and dropped, so that their places agree.
-	// LIMIT: other marks stay where they are read, UTF-16/32 is misread; rework here when they are to be read or refused.
 	src = bom.Trim(src)
+	if err := usererr.Collect(bom.Refuse(file, src).Err(), notUTF8(file, src)); err != nil {
+		return nil, err //nolint:wrapcheck // the mistakes of src
+	}
 	doc, err := parser.ParseBytes(src, 0)
 	if err != nil {
 		return nil, library(file, err)
@@ -223,6 +233,23 @@ func startOf(d *ast.DocumentNode, at Pos) Pos {
 		return Pos{Line: d.Start.Position.Line, Column: d.Start.Position.Column}
 	}
 	return at
+}
+
+// notUTF8 refuses src, file, at its first byte that is no UTF-8: once, as the one way to mend it is to save the
+// file as UTF-8 (a file of Shift_JIS has hundreds). A U+FFFD written in UTF-8 is a character.
+func notUTF8(file string, src []byte) error {
+	if utf8.Valid(src) {
+		return nil
+	}
+	for at := 0; at < len(src); {
+		r, size := utf8.DecodeRune(src[at:])
+		if r == utf8.RuneError && size == 1 {
+			line, column := textpos.Of(src, at)
+			return usererr.NewAt(file, line, column, "yaml_not_utf8")
+		}
+		at += size
+	}
+	return nil
 }
 
 // dropped finds text after the --- at start, which goccy/go-yaml reads as an empty document and
