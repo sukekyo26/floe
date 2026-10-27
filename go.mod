@@ -10,6 +10,7 @@ require (
 	github.com/tdewolff/parse/v2 v2.8.20
 	github.com/yuin/goldmark v1.8.6
 	golang.org/x/net v0.61.0
+	golang.org/x/sys v0.49.0
 	golang.org/x/text v0.43.0
 )
 
@@ -20,7 +21,6 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/telemetry v0.0.0-20261020154912-7bf0a11256d5 // indirect
 	golang.org/x/term v0.47.0 // indirect
 	golang.org/x/tools v0.52.0 // indirect
