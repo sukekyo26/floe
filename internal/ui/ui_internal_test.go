@@ -95,7 +95,7 @@ var notFetched = map[string]bool{
 
 // builtinSources reads ui.html, floe's own templates, parts and themes (what template authors start from), and
 // the diagram's script and SVG every page with a diagram holds, by their names. They are read from the source
-// tree, which holds what is embedded.
+// tree, not the embedded files: those of kit and diagram are not exported, and the tree holds all that is embedded.
 func builtinSources(t *testing.T) map[string]string {
 	t.Helper()
 
