@@ -119,7 +119,7 @@ func (d *Data) readShared(theme string) error {
 	if d.Root != nil {
 		top = yamlpos.Of(d.Root)
 		for _, v := range d.Root.Values {
-			pairs[yamlpos.KeyOf(v).GetToken().Value] = v
+			pairs[yamlpos.KeyName(v)] = v
 		}
 	}
 	to := map[string]*string{"lang": &d.Lang, "template": &d.Template, "theme": &d.Theme, "title": &d.Title}

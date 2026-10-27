@@ -43,6 +43,11 @@ func KeyOf(v *ast.MappingValueNode) ast.Node {
 	return v.Key
 }
 
+// KeyName returns the name of the key of v, as KeyOf reads it.
+func KeyName(v *ast.MappingValueNode) string {
+	return KeyOf(v).GetToken().Value
+}
+
 // Quote is how a scalar is quoted, as the parser read it.
 type Quote int
 
@@ -81,7 +86,7 @@ func Find(root ast.Node, at []string) (key, value ast.Node) {
 	for _, step := range at {
 		switch n := value.(type) {
 		case *ast.MappingNode:
-			i := slices.IndexFunc(n.Values, func(v *ast.MappingValueNode) bool { return KeyOf(v).GetToken().Value == step })
+			i := slices.IndexFunc(n.Values, func(v *ast.MappingValueNode) bool { return KeyName(v) == step })
 			if i < 0 {
 				return key, value
 			}

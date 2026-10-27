@@ -20,6 +20,7 @@ import (
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/kit"
+	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -160,16 +161,12 @@ func tokenized(page []byte, end string) bool {
 
 // withStyles puts a <style> of each of sheets at the end of the head of tree, which the parser always makes.
 func withStyles(tree *html.Node, sheets []string) {
-	for n := range tree.Descendants() {
-		if n.Type == html.ElementNode && n.DataAtom == atom.Head && n.Namespace == "" {
-			for _, sheet := range sheets {
-				style := node(html.ElementNode, atom.Style, "style")
-				style.AppendChild(node(html.TextNode, 0, sheet))
-				n.AppendChild(style)
-				n.AppendChild(node(html.TextNode, 0, "\n"))
-			}
-			return
-		}
+	head := page.First(tree, atom.Head)
+	for _, sheet := range sheets {
+		style := node(html.ElementNode, atom.Style, "style")
+		style.AppendChild(node(html.TextNode, 0, sheet))
+		head.AppendChild(style)
+		head.AppendChild(node(html.TextNode, 0, "\n"))
 	}
 }
 

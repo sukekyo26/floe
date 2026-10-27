@@ -20,9 +20,7 @@ func (a *app) diagramCmd() *cobra.Command {
 		Use:   "diagram",
 		Short: "Draw diagrams from specs of parts on a canvas",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
-		},
+		RunE:  showHelp,
 	}
 	cmd.AddCommand(a.diagramRenderCmd(), a.diagramInspectCmd(), a.diagramExampleCmd())
 	return cmd

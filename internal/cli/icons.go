@@ -13,9 +13,7 @@ func (a *app) iconsCmd() *cobra.Command {
 		Use:   "icons",
 		Short: "Keep icon sets for the icon parts of diagrams, and search them",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
-		},
+		RunE:  showHelp,
 	}
 	cmd.AddCommand(a.iconsFetchCmd(), a.iconsSearchCmd())
 	return cmd

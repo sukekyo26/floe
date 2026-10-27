@@ -80,7 +80,7 @@ func englishOfWords(t *testing.T, name, src string) string {
 	english := commentRe.FindAllString(src, -1)
 	for _, v := range top.Values {
 		words, ok := v.Value.(*ast.MappingNode)
-		if i18n.Tag(yamlpos.KeyOf(v).GetToken().Value) != i18n.English || !ok {
+		if i18n.Tag(yamlpos.KeyName(v)) != i18n.English || !ok {
 			continue
 		}
 		for _, w := range words.Values {

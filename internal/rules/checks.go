@@ -111,7 +111,7 @@ func readCheck(file string, n ast.Node) (check, usererr.List, error) {
 		case ok:
 			found = append(found, yamlpos.New(file, written, "rules_checks_missing", key))
 		case !slices.ContainsFunc(m.Values, func(kv *ast.MappingValueNode) bool {
-			return yamlpos.KeyOf(kv).GetToken().Value == key
+			return yamlpos.KeyName(kv) == key
 		}):
 			// One that is not text is told as such.
 			found = append(found, yamlpos.New(file, yamlpos.Of(m), "rules_checks_missing", key))

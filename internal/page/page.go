@@ -1,4 +1,4 @@
-// Package page takes the title of an HTML page.
+// Package page reads an HTML page as a parser does: its title, and its first element of a tag.
 package page
 
 import (
@@ -18,9 +18,9 @@ func Title(doc string) string {
 	if err != nil {
 		return ""
 	}
-	n := first(root, atom.Title)
+	n := First(root, atom.Title)
 	if n == nil {
-		n = first(root, atom.H1)
+		n = First(root, atom.H1)
 	}
 	if n == nil {
 		return ""
@@ -28,8 +28,8 @@ func Title(doc string) string {
 	return strings.Join(strings.FieldsFunc(text(n), isASCIISpace), " ")
 }
 
-// first returns the first element of n, in tree order, of the HTML namespace and the tag a, or nil.
-func first(n *html.Node, a atom.Atom) *html.Node {
+// First returns the first element of n, in tree order, of the HTML namespace and the tag a, or nil.
+func First(n *html.Node, a atom.Atom) *html.Node {
 	for d := range n.Descendants() {
 		if d.Type == html.ElementNode && d.Namespace == "" && d.DataAtom == a {
 			return d

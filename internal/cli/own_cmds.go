@@ -17,9 +17,7 @@ func (a *app) partCmd() *cobra.Command {
 		Use:   "part",
 		Short: "List the parts, show one, make one of your own, and check yours",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
-		},
+		RunE:  showHelp,
 	}
 	cmd.AddCommand(&cobra.Command{
 		Use:   "list",
@@ -80,9 +78,7 @@ func (a *app) templateCmd() *cobra.Command {
 		Use:   "template",
 		Short: "List the templates, show one, make one of your own, and check yours",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
-		},
+		RunE:  showHelp,
 	}
 	cmd.AddCommand(&cobra.Command{
 		Use:   "list",
