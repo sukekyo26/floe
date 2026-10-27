@@ -23,6 +23,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/textpos"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -133,7 +134,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	if err != nil {
-		return nil, usererr.CannotRead(file, err)
+		return nil, s.cannotRead(file, err, k)
 	}
 	var idx index
 	if err = json.Unmarshal(b, &idx); err != nil {
@@ -171,6 +172,37 @@ func libraryAt(file string, line, column int, key string, err error, args ...any
 	e.Args = append(e.Args, args...)
 	e.File, e.Line, e.Column = file, line, column
 	return e
+}
+
+// cannotRead is err, of reading the file or the directory of the set k at path, under the store: to fetch the set
+// again when that mends it, else as it is (CannotRead).
+func (s *Store) cannotRead(path string, err error, k *kit) error {
+	switch {
+	case !s.mendable(path, err):
+		return usererr.CannotRead(path, err)
+	case errors.Is(err, usererr.ErrNotFile):
+		return usererr.NewAt(path, 0, 0, "icons_not_file", k.name)
+	}
+	return usererr.InSystemWords("icons_broken", path, err, k.name)
+}
+
+// mendable reports whether a fetch of the set mends err, of reading path under the store, which writes the set's
+// directory whole: none there, what is no regular file (a FIFO, a directory), the set's directory a file, or what
+// leads out of it (os.Root refuses a path that the system finds outside). A store that is no directory, and what
+// the system does not let floe read, a fetch cannot mend: it fails there too.
+func (s *Store) mendable(path string, err error) bool {
+	switch {
+	case errors.Is(err, fs.ErrPermission):
+		return false
+	case errors.Is(err, fs.ErrNotExist), errors.Is(err, usererr.ErrNotFile), errors.Is(err, syscall.EISDIR):
+		return true
+	case errors.Is(err, syscall.ENOTDIR):
+		fi, statErr := os.Stat(s.root)
+		return statErr == nil && fi.IsDir()
+	}
+	// The system finds it where os.Root does not let it be read: outside the set's directory.
+	_, statErr := os.Stat(path)
+	return statErr == nil
 }
 
 func (s *Store) loadIndex(k *kit) (*index, error) {
@@ -331,7 +363,7 @@ func replace(tmp, dir string) error {
 	if err := rename(tmp, dir); err != nil {
 		if hadOld {
 			if back := os.Rename(old, dir); back != nil {
-				return usererr.CannotWriteWith("icons_previous_left", dir, err, old)
+				return usererr.InSystemWords("icons_previous_left", dir, err, old)
 			}
 		}
 		return usererr.CannotWrite(dir, err)
@@ -506,14 +538,24 @@ func (s *Store) Lookup(name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Only a name in the index is read: it is a file the fetch wrote, inside the set's directory.
+	// Only a name in the index is read, and only inside the set's directory: an index or a link edited to lead
+	// out of it is refused by the system. Opened for each icon and closed: a Store a server keeps would else hold
+	// the directory open, and read on in the one a fetch --force replaced.
+	// LIMIT: a link to a file of the set by its absolute path is refused too (os.Root takes it as leading out); a
+	// fetch writes none, so make links relative, or resolve them in Lookup, if a set made by hand comes to need it.
 	if _, ok := idx.Icons[rest]; !ok {
 		return nil, ErrNoIcon
 	}
-	file := filepath.Join(s.dir(k), rest+".svg")
-	b, _, err := files.Read(file)
+	dir := s.dir(k)
+	root, err := os.OpenRoot(dir)
 	if err != nil {
-		return nil, usererr.CannotRead(file, err)
+		return nil, s.cannotRead(dir, err, k)
+	}
+	defer root.Close() //nolint:errcheck // read only
+	b, _, err := files.ReadIn(root, rest+".svg")
+	if err != nil {
+		// At the name as the index holds it, not cleaned to where it leads.
+		return nil, s.cannotRead(dirs.Join(dir, rest+".svg"), err, k)
 	}
 	return b, nil
 }

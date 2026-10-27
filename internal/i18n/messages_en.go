@@ -208,6 +208,7 @@ var messagesEN = map[string]string{
 	"dir_relative":             "%s is %s, a relative path; set it to an absolute path",
 	"icons_no_dir":             "there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path",
 	"icons_not_fetched":        "%[1]s icons are not in %[2]s; run \"floe icons fetch %[3]s\" (downloads about %[4]s from %[5]s) and try again",
+	"icons_not_file":           "is neither a regular file nor a directory (a FIFO, a device or the like), which floe does not open; run \"floe icons fetch %s --force\" to fetch the icons again",
 	"icons_broken":             "cannot be read (%s); run \"floe icons fetch %s --force\" to fetch the icons again",
 	"icons_download":           "cannot be downloaded (%s); check the network, or download it in a browser and pass its path",
 	"icons_page_download":      "cannot be downloaded (%s); check the network, or download the package's zip from this page and pass its path",

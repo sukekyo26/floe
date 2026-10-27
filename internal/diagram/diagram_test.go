@@ -487,3 +487,31 @@ func TestInspect(t *testing.T) {
 		}
 	}
 }
+
+// counted counts the lookups of icons.
+type counted struct {
+	iconsOf
+	n *int
+}
+
+func (c counted) Lookup(name string) ([]byte, error) {
+	*c.n++
+	return c.iconsOf.Lookup(name)
+}
+
+// An icon placed again, at the same size, is looked up once.
+func TestIconLookedUpOnce(t *testing.T) {
+	t.Parallel()
+
+	n := 0
+	src := "width: 200\nheight: 120\ntitle: T\nparts:\n" +
+		"  - icon: { x: 10, y: 10, icon: aws/aws-lambda, label: A }\n" +
+		"  - icon: { x: 100, y: 10, icon: aws/aws-lambda, label: B }\n"
+	_, mistakes := draw(t, src, func(d *diagram.Drawer, v any) (string, error) {
+		svg, err := d.Draw(v, diagram.Options{Lang: "en", Icons: counted{lambda, &n}, Seq: 1})
+		return string(svg), err
+	})
+	if mistakes != "" || n != 1 {
+		t.Errorf("an icon placed twice: %d lookups, %s; want 1", n, mistakes)
+	}
+}

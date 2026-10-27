@@ -198,6 +198,7 @@ var messagesJA = map[string]string{
 	"dir_relative":             "%s が相対パス %s です。絶対パスにしてください",
 	"icons_no_dir":             "HOME が絶対パスでないので、アイコンのディレクトリがありません。FLOE_ICONS_DIR に絶対パスを設定してください",
 	"icons_not_fetched":        "%[1]s のアイコンが %[2]s にありません。floe icons fetch %[3]s を実行してから（%[5]s から約 %[4]s を取得します）、やり直してください",
+	"icons_not_file":           "ふつうのファイルでもディレクトリでもない（FIFO やデバイスなど）ので、floe は開きません。floe icons fetch %s --force でアイコンを取り直してください",
 	"icons_broken":             "読めません（%s）。floe icons fetch %s --force でアイコンを取り直してください",
 	"icons_download":           "取得できません（%s）。ネットワークを確かめるか、ブラウザで取得してそのパスを渡してください",
 	"icons_page_download":      "取得できません（%s）。ネットワークを確かめるか、このページからアイコン集の zip を取得して、そのパスを渡してください",

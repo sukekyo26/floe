@@ -547,6 +547,11 @@ type iconDef struct {
 // image places the icon of name. A name its set does not hold is a mistake of the spec; icons not fetched or
 // not read are mistakes of their own place, and a failure that is no mistake stops the drawing.
 func (l *layout) image(at, name string, x, y, size float64, who string) (elem, bool) {
+	// An icon placed again is looked up once.
+	key := name + " " + num(size)
+	if id, ok := l.iconIDs[key]; ok {
+		return elem{Kind: "use", Ref: id, X: x, Y: y}, true
+	}
 	b, err := l.opts.Icons.Lookup(name)
 	switch {
 	case errors.Is(err, icons.ErrNoSet):
@@ -561,15 +566,11 @@ func (l *layout) image(at, name string, x, y, size float64, who string) (elem, b
 		}
 		return elem{}, false //nolint:exhaustruct // none
 	}
-	key := name + " " + num(size)
-	id, ok := l.iconIDs[key]
-	if !ok {
-		id = l.id + "_icon-" + strconv.Itoa(len(l.iconDefs))
-		l.iconIDs[key] = id
-		// A data URI of the SVG floe fetched itself (icons.Lookup reads only the set's own files).
-		href := template.URL("data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(b)) //nolint:gosec // see above
-		l.iconDefs = append(l.iconDefs, iconDef{ID: id, Href: href, Size: size})
-	}
+	id := l.id + "_icon-" + strconv.Itoa(len(l.iconDefs))
+	l.iconIDs[key] = id
+	// A data URI of the SVG floe fetched itself (icons.Lookup reads only the set's own files).
+	href := template.URL("data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(b)) //nolint:gosec // see above
+	l.iconDefs = append(l.iconDefs, iconDef{ID: id, Href: href, Size: size})
 	return elem{Kind: "use", Ref: id, X: x, Y: y}, true
 }
 

@@ -2,6 +2,7 @@ package files
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -10,41 +11,61 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// A regular file made a FIFO between what Open looks at and what it opens is refused unread: the open does not
-// block, and what was opened is looked at again. Another regular file put in its place, as a save by rename
-// does, is read.
-func TestOpenSwapped(t *testing.T) { //nolint:paralleltest // replaces openFile
-	path := filepath.Join(t.TempDir(), "a.yaml")
-	defer func() { openFile = os.OpenFile }()
+// swapped is an Opener that runs swap on the file between looking at it and opening it.
+type swapped struct {
+	Opener
+	swap func(name string) error
+}
+
+func (s swapped) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
+	if err := s.swap(name); err != nil {
+		return nil, err
+	}
+	return s.Opener.OpenFile(name, flag, perm) //nolint:wrapcheck // the system's
+}
+
+// A regular file made a FIFO between what Open looks at and what it opens is refused unread, at a path and under
+// an os.Root alike: the open does not block, and what was opened is looked at again. Another regular file put in
+// its place, as a save by rename does, is read.
+func TestOpenSwapped(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
 	for _, tt := range []struct {
 		name string
-		swap func() error
+		swap func(path string) error
 		want error
 	}{
-		{"a FIFO", func() error { return syscall.Mkfifo(path, 0o600) }, usererr.ErrNotFile},
-		{"a regular file", func() error { return os.WriteFile(path, []byte("y"), 0o600) }, nil},
+		{"a FIFO", func(path string) error { return syscall.Mkfifo(path, 0o600) }, usererr.ErrNotFile},
+		{"a regular file", func(path string) error { return os.WriteFile(path, []byte("y"), 0o600) }, nil},
 	} {
-		if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		openFile = func(name string, flag int, perm os.FileMode) (*os.File, error) {
-			if err := os.Remove(name); err != nil {
+		for _, o := range []struct {
+			via  string
+			o    Opener
+			name string
+		}{{"a path", paths{}, filepath.Join(dir, "a.yaml")}, {"an os.Root", root, "a.yaml"}} {
+			path := filepath.Join(dir, "a.yaml")
+			if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			if err := tt.swap(); err != nil {
+			s := swapped{Opener: o.o, swap: func(string) error {
+				if err := os.Remove(path); err != nil {
+					return err //nolint:wrapcheck // the test's
+				}
+				return tt.swap(path)
+			}}
+			b, _, err := ReadIn(s, o.name)
+			if !errors.Is(err, tt.want) || tt.want == nil && (err != nil || string(b) != "y") {
+				t.Errorf("ReadIn via %s of a file made %s = %q, %v, want %v", o.via, tt.name, b, err, tt.want)
+			}
+			if err := os.Remove(path); err != nil {
 				t.Fatal(err)
 			}
-			return os.OpenFile(name, flag, perm) //nolint:gosec // G304: the test's own file
-		}
-		f, _, err := Open(path)
-		if f != nil {
-			_ = f.Close()
-		}
-		if !errors.Is(err, tt.want) || tt.want == nil && err != nil {
-			t.Errorf("Open of a file made %s = %v, want %v", tt.name, err, tt.want)
-		}
-		if err := os.Remove(path); err != nil {
-			t.Fatal(err)
 		}
 	}
 }
