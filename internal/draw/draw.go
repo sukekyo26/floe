@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"slices"
 	"strconv"
 	"strings"
@@ -26,17 +27,17 @@ import (
 )
 
 // Page draws d, checked, with t of k in the theme named so, as a page titled title, calc the values of t's
-// computed.yaml (nil for none), the images it names read under imagesDir ("" for none), its diagrams' icons
+// computed.yaml (nil for none), the images it names read from images (nil for none) and named in mistakes under
+// imagesDir ("" for the data file's directory), its diagrams' icons
 // looked up in icons (nil for none kept): each part and item of a format from the inner ones out, then
 // page.html. The mistakes of the items are told together, a part
 // holding one that failed left undrawn. It checks the page drawn, its items of format html first (items.check),
 // and returns it as the parser read it, with its styles in its head and its headings given ids, written anew.
 func Page(
-	k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[string]any, title, imagesDir string,
-	icons diagram.Icons,
+	k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[string]any, title string,
+	images fs.FS, imagesDir string, icons diagram.Icons,
 ) ([]byte, error) {
-	s := newItems(imagesDir, icons)
-	defer s.close()
+	s := newItems(images, imagesDir, icons)
 	holds := map[string][]string{}
 	var found usererr.List
 	var failed [][]string

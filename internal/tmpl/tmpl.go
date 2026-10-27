@@ -6,6 +6,7 @@ package tmpl
 import (
 	"cmp"
 	"fmt"
+	"io/fs"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/diagram"
@@ -21,7 +22,8 @@ import (
 type Options struct {
 	Theme     string        // drawn with instead of the data's theme:, "" for none
 	Untitled  string        // the title of a page whose data names none
-	ImagesDir string        // the directory the data's images are under, "" for none
+	Images    fs.FS         // the data's images, nil for none; its maker closes it
+	ImagesDir string        // the directory mistakes name the images under, "" for the data file's
 	Icons     diagram.Icons // the icons the diagrams show, nil for none kept
 }
 
@@ -55,7 +57,7 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, error) {
 		return nil, err
 	}
 	//nolint:wrapcheck // mistakes of the page, or floe's failure
-	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.ImagesDir, o.Icons)
+	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.Images, o.ImagesDir, o.Icons)
 }
 
 // pick returns the template of k that d names and the name of the theme it is drawn with: given, else d's as

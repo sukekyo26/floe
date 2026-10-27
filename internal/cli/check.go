@@ -62,7 +62,9 @@ func drawFile(k *kit.Kit, store diagram.Icons, p arg) ([]byte, error) {
 		return nil, err
 	}
 	untitled := cmp.Or(files.SlugFromFile(p.name), baseName(p.name))
-	o := tmpl.Options{Theme: "", Untitled: untitled, ImagesDir: dirs.Dir(p.abs), Icons: store}
+	images := files.NewRoot(dirs.Dir(p.abs))
+	defer images.Close() //nolint:errcheck // only read from
+	o := tmpl.Options{Theme: "", Untitled: untitled, Images: images, ImagesDir: "", Icons: store}
 	return tmpl.Draw(k, p.name, src, o) //nolint:wrapcheck // its mistakes, or what failed
 }
 
