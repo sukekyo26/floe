@@ -188,7 +188,9 @@ func TestOwnDirsOverlap(t *testing.T) {
 		{"not there, with //", map[string]string{parts: pp, themes: pp + "//none"}, nil, overlap(parts, pp, themes, pp+"//none")},
 		{"templates", map[string]string{parts: pp, templates: pp}, []string{"check", "d.yaml"}, overlap(parts, pp, templates, pp)},
 		{
-			"all three", map[string]string{parts: pp, themes: pp, templates: pp}, []string{"check", "d.yaml"},
+			"all three",
+			map[string]string{parts: pp, themes: pp, templates: pp},
+			[]string{"check", "d.yaml"},
 			overlap(parts, pp, themes, pp) + overlap(parts, pp, templates, pp) + overlap(themes, pp, templates, pp),
 		},
 		{"templates, not read", map[string]string{parts: ok, templates: ok}, nil, ""},
@@ -236,7 +238,8 @@ func TestNewOwnOverlap(t *testing.T) {
 		{in, []string{"template", "new", "tp2"}, 0, ""},
 		{
 			map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_THEMES_DIR": filepath.Join(dir, "themes")},
-			[]string{"part", "new", "../themes"}, 1,
+			[]string{"part", "new", "../themes"},
+			1,
 			filepath.Join(dir, "themes") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n",
 		},
 	} {

@@ -119,7 +119,9 @@ func (a *app) kit(templates bool) (*kit.Kit, error) {
 		}
 	}
 	overlaps, in := overlapping(spots, func(int, int) bool { return true })
-	found = append(found, overlaps...)
+	if failed := found.Add(overlaps.Err()); failed != nil {
+		return nil, failed
+	}
 	var src kit.Sources
 	for i, to := range []*kit.Dir{&src.Parts, &src.Themes, &src.Templates}[:len(kinds)] {
 		if in[i] {
@@ -149,17 +151,17 @@ type spot struct {
 // directory or one in the other, and, by kind, whether one of its spots is in such two. A spot that cannot be
 // resolved is in none.
 func overlapping(spots []spot, pair func(i, j int) bool) (usererr.List, []bool) {
-	real := make([]string, len(spots))
+	resolved := make([]string, len(spots))
 	ok := make([]bool, len(spots))
 	for i, s := range spots {
-		real[i], ok[i] = resolve(s.at)
+		resolved[i], ok[i] = resolve(s.at)
 	}
 	var found usererr.List
 	in := make([]bool, len(ownKinds))
 	for i, s := range spots {
 		for j := i + 1; j < len(spots); j++ {
 			t := spots[j]
-			if !ok[i] || !ok[j] || !pair(i, j) || !within(real[i], real[j]) && !within(real[j], real[i]) {
+			if !ok[i] || !ok[j] || !pair(i, j) || !within(resolved[i], resolved[j]) && !within(resolved[j], resolved[i]) {
 				continue
 			}
 			found = append(found, usererr.New("dir_overlap", s.p.key, s.p.dir, t.p.key, t.p.dir))
@@ -178,8 +180,8 @@ func overlapping(spots []spot, pair func(i, j int) bool) (usererr.List, []bool) 
 func resolve(dir string) (string, bool) {
 	rest := ""
 	for at := dir; ; {
-		if real, err := filepath.EvalSymlinks(at); err == nil {
-			return filepath.Join(real, rest), true
+		if to, err := filepath.EvalSymlinks(at); err == nil {
+			return filepath.Join(to, rest), true
 		}
 		// dirs.Dir, as written: filepath.Dir would fold sym/.. by its letters, and filepath.Split stays on a/.
 		up := dirs.Dir(at)
