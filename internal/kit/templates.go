@@ -321,8 +321,8 @@ func (a *assetsOf) walk(at string) error {
 func (a *assetsOf) check(p string) error {
 	if _, err := imageStat(a.files, p, a.dir, "assets/"); err != nil {
 		var e *usererr.Error
-		if errors.As(err, &e) && e.File == "" {
-			e.File = path.Join(a.dir, p)
+		if errors.As(err, &e) && e.File() == "" {
+			return e.PlacedAt(path.Join(a.dir, p), 0, 0)
 		}
 		return err
 	}

@@ -95,7 +95,7 @@ an icon part (aws/…) and its category, tab-separated.`,
 func (a *app) iconsDir() (dataPlace, error) {
 	p, err := a.dataDir("FLOE_ICONS_DIR", "XDG_DATA_HOME", ".local/share", "floe-icons")
 	if err == nil && p.dir == "" {
-		err = usererr.New("icons_no_dir")
+		err = usererr.NewWhole("icons_no_dir")
 	}
 	return p, err
 }

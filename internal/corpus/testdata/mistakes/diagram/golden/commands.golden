@@ -10,8 +10,8 @@ far.yaml:36:15: label "A" finds no room inside a and outside the other circles: 
 narrow.yaml:12:15: frame "API": "とても長い日本語の見出しです" (ja) needs w: 192 or more
 narrow.yaml:13:15: table "T": "識別子  とても長い型の名前" (ja) needs w: 183 or more
 place.yaml:12:15: box "A" overlaps box "B"
-place.yaml:15:11: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
 place.yaml:25:27: raw SVG holds <script>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
+floe: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
 raw.yaml:12:27: raw SVG holds <noscript>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 raw.yaml:13:27: raw SVG holds <base>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 room.yaml:14:15: label "only in a" is not all inside a and outside the other circles: move it, or leave out x and y for floe to place it
@@ -34,8 +34,8 @@ $ floe render --out-dir $TMP/pages/place.yaml place.yaml
 exit 1
 --- stderr
 place.yaml:12:15: box "A" overlaps box "B"
-place.yaml:15:11: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
 place.yaml:25:27: raw SVG holds <script>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
+floe: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
 $ floe render --out-dir $TMP/pages/raw.yaml raw.yaml
 exit 1
 --- stderr
@@ -61,8 +61,8 @@ far.yaml:36:15: label "A" finds no room inside a and outside the other circles: 
 narrow.yaml:12:15: frame "API": "とても長い日本語の見出しです" (ja) needs w: 192 or more
 narrow.yaml:13:15: table "T": "識別子  とても長い型の名前" (ja) needs w: 183 or more
 place.yaml:12:15: box "A" overlaps box "B"
-place.yaml:15:11: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
 place.yaml:25:27: raw SVG holds <script>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
+floe: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
 raw.yaml:12:27: raw SVG holds <noscript>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 raw.yaml:13:27: raw SVG holds <base>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 room.yaml:14:15: label "only in a" is not all inside a and outside the other circles: move it, or leave out x and y for floe to place it

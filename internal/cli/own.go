@@ -47,7 +47,7 @@ func (p dataPlace) setting() string {
 func (a *app) dataDir(key, xdg, home, sub string) (dataPlace, error) {
 	if setting := a.getenv(key); setting != "" {
 		if !filepath.IsAbs(setting) {
-			return dataPlace{dir: "", key: key, set: true, unusable: nil}, usererr.New("dir_relative", key, setting)
+			return dataPlace{dir: "", key: key, set: true, unusable: nil}, usererr.NewWhole("dir_relative", key, setting)
 		}
 		return dataPlace{dir: setting, key: key, set: true, unusable: nil}, nil
 	}

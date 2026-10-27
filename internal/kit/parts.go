@@ -257,7 +257,7 @@ var nameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
 // refused reports whether found refuses the entry name of d.
 func refused(found usererr.List, d Dir, name string) bool {
-	return slices.ContainsFunc(found, func(e *usererr.Error) bool { return e.File == path.Join(d.Name, name) })
+	return slices.ContainsFunc(found, func(e *usererr.Error) bool { return e.File() == path.Join(d.Name, name) })
 }
 
 // readShared reads into k the schema the parts of d share, name.json.

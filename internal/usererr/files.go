@@ -44,7 +44,7 @@ func SettingDir(key, dir string, err, otherwise error) error {
 	case !ok:
 		return fmt.Errorf("%s: %w", dir, err)
 	}
-	return New("dir_setting", words, key, dir)
+	return NewWhole("dir_setting", words, key, dir)
 }
 
 // InSystemWords is err, of reading or writing the file or the directory named so, at it, in the words of the

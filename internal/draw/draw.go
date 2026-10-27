@@ -190,12 +190,12 @@ func (s *items) pageMistakes(t *kit.Template, err error) error {
 	if failed != nil {
 		return failed
 	}
-	for _, e := range mistakes {
+	for i, e := range mistakes {
 		e.Args = s.plainArgs(e.Args)
-		if e.File != "" && e.File != t.File("page.html") {
+		if e.File() != "" && e.File() != t.File("page.html") {
 			continue
 		}
-		e.File, e.Line, e.Column = t.File("page.html"), line, column
+		mistakes[i] = e.PlacedAt(t.File("page.html"), line, column)
 	}
 	return mistakes.Err()
 }
@@ -220,9 +220,10 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 	case "image":
 		uri, err := s.image(d, text)
 		var e *usererr.Error
-		if errors.As(err, &e) && e.File == "" {
+		if errors.As(err, &e) && e.File() == "" {
 			// What names no file is the item's: one of the file is told at it, once.
-			return nil, yamlpos.New(d.File, d.PosOf(it.At), e.Key, e.Args...)
+			pos := d.PosOf(it.At)
+			return nil, e.PlacedAt(d.File, pos.Line, pos.Column)
 		}
 		return uri, err
 	}
@@ -248,16 +249,17 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 		if failed != nil {
 			return nil, failed
 		}
-		for _, e := range mistakes {
+		for i, e := range mistakes {
 			switch {
-			case e.File == p.File("part.html") && line > 0:
+			case e.File() == p.File("part.html") && line > 0:
 				// One part.html tells of itself (a word its words.yaml has not): at its line and column, told
 				// once whatever uses the part.
-				e.Line, e.Column = line, column
-			case e.File == "" && e.At == "":
-				// At the value drawn: a part of floe's is no file one can fix, and the value tells why.
+				mistakes[i] = e.PlacedAt(e.File(), line, column)
+			case e.File() == "" && e.At() == "":
+				// At the value drawn: a part of floe's is no file one can fix, and the value tells why. One of
+				// the whole output (the icons of a diagram) takes no place.
 				pos := d.PosOf(it.At)
-				e.File, e.Line, e.Column = d.File, pos.Line, pos.Column
+				mistakes[i] = e.PlacedAt(d.File, pos.Line, pos.Column)
 			}
 		}
 		// A function's mistakes at a JSON pointer are at one from the root of the part's value.

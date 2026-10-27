@@ -172,8 +172,7 @@ func broken(file string, b []byte, err error, k *kit) error {
 func libraryAt(file string, line, column int, key string, err error, args ...any) error {
 	e := usererr.LibraryWith(key, err)
 	e.Args = append(e.Args, args...)
-	e.File, e.Line, e.Column = file, line, column
-	return e
+	return e.PlacedAt(file, line, column)
 }
 
 // cannotRead is err, of reading the file or the directory of the set k at path, under the store: to fetch the set
@@ -223,7 +222,7 @@ func (s *Store) loadIndex(k *kit) (*index, error) {
 }
 
 func (s *Store) notFetched(k *kit) *usererr.Error {
-	return usererr.New("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
+	return usererr.NewWhole("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
 }
 
 // rootIsDir reports whether the store's root is a directory now.

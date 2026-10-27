@@ -102,8 +102,8 @@ func TestDiagramLanguage(t *testing.T) {
 	}
 }
 
-// A diagram's mistakes are at their place in the data file: those of its layout under the diagram's value, icons
-// not kept at the diagram that has one, each such diagram once.
+// A diagram's mistakes are at their place in the data file, those of its layout under the diagram's value; icons
+// not kept are of the whole output, told once at no place whatever diagrams need them.
 func TestDiagramMistakes(t *testing.T) {
 	t.Parallel()
 
@@ -111,11 +111,11 @@ func TestDiagramMistakes(t *testing.T) {
 	overlap := `{width: 300, height: 100, title: o, parts: [{box: {x: 20, y: 20, w: 80, h: 40, rows: [A]}}, ` +
 		`{box: {x: 40, y: 30, w: 80, h: 40, rows: [B]}}]}`
 	src := diagramPage("en", overlap, boxSpec, iconSpec, iconSpec)
-	// At the box key of the item /parts/0, and at the first key of each diagram with an icon.
+	// At the box key of the item /parts/0; the icons' once, at no place, where Sorted puts those of no place: after
+	// d.yaml's, as the first diagram's mistake is d.yaml's.
 	want := lines(
 		`d.yaml:7:63: box "A" overlaps box "B"`,
-		`d.yaml:9:19: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path`,
-		`d.yaml:10:19: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path`,
+		`floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path`,
 	)
 	if got := drawn(t, k, src, none); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
