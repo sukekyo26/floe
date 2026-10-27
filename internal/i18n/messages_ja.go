@@ -223,7 +223,7 @@ var messagesJA = map[string]string{
 	"diagram_name_unknown":     "edge: 「%s」という名前の部品も行もありません",
 	"diagram_end_kind":         "edge: 「%s」は %s で、線の端にできません。box・table かその名前の付いた行・icon・frame・bar・dot・点で終えてください",
 	"diagram_end_side":         "edge: %s に辺 %s はありません。辺は box・table・icon・frame・bar に、行には left か right を書き、dot と点には書かないでください",
-	"diagram_too_narrow":       "%s: 「%s」には w: %s 以上が要ります",
+	"diagram_too_narrow":       "%s: 「%s」%sには w: %s 以上が要ります",
 	"diagram_too_short":        "%s: 文字を収めるには高さが %dpx 以上要ります（今は %spx）",
 	"diagram_outside":          "%sが %s×%s のキャンバスからはみ出しています",
 	"diagram_overlap":          "%sが%sと重なっています",
