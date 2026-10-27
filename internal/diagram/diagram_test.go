@@ -234,6 +234,44 @@ func TestLayoutMistakes(t *testing.T) {
 			t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
 		}
 	}
+	// A label keeps out of every other circle, one over the middle of its box or along an edge too, and is placed
+	// where none is: in the middle of the circles' boxes of one room.
+	venn := "width: 300\nheight: 300\ntitle: T\nparts:\n  - circle: { name: a, cx: 150, cy: 150, r: 140 }\n"
+	region := `s.yaml:7:5: label "only in a" is not all inside a and outside the other circles: move it, or leave out x and y for floe to place it`
+	at := "  - label: { text: only in a, in: [a], x: 150, y: 150 }"
+	for _, c := range []struct{ parts, want string }{
+		{"  - circle: { name: b, cx: 150, cy: 150, r: 8 }\n" + at, region},
+		{"  - circle: { name: b, cx: 150, cy: 165, r: 8 }\n" + at, region},
+		{"  - circle: { name: b, cx: 105, cy: 150, r: 8 }\n" + at, region},
+		{"  - circle: { name: b, cx: 195, cy: 150, r: 8 }\n" + at, region},
+		{"  - circle: { name: c, cx: 230, cy: 150, r: 60 }\n  - label: { text: a and c, in: [a, c], x: 230, y: 150 }", ""},
+		{
+			"  - circle: { name: c, cx: 230, cy: 150, r: 60 }\n  - label: { text: a and c, in: [a, c], x: 200, y: 150 }",
+			`s.yaml:7:5: label "a and c" is not all inside a, c and outside the other circles: move it, or leave out x and y for floe to place it`,
+		},
+		{
+			"  - circle: { name: b, cx: 150, cy: 162, r: 5 }\n  - circle: { name: c, cx: 150, cy: 138, r: 5 }\n" + at,
+			strings.Replace(region, "7:5", "8:5", 1),
+		},
+		{
+			"  - circle: { name: b, cx: 150, cy: 150, r: 60 }\n  - label: { text: a fairly long label for the ring, in: [a] }",
+			`s.yaml:7:5: label "a fairly long label for the ring" finds no room inside a and outside the other circles: make that area larger, or the text shorter`,
+		},
+		{"  - circle: { name: b, cx: 150, cy: 200, r: 8 }\n" + at, ""},
+		{"  - circle: { name: b, cx: 150, cy: 168, r: 9 }\n" + at, ""},
+	} {
+		if _, got := draw(t, venn+c.parts+"\n", render("en")); got != c.want {
+			t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
+		}
+	}
+	for parts, want := range map[string]string{
+		"  - circle: { name: b, cx: 150, cy: 150, r: 6 }\n  - label: { text: a rather long label text here ok, in: [a] }": `label "a rather long label text here ok" 29.8,113 240.4x18 in a`,
+		"  - circle: { name: b, cx: 150, cy: 150, r: 8 }\n  - label: { text: only in a, in: [a] }":                        `label "only in a" 112.6,73 74.8x18 in a`,
+	} {
+		if got, mistakes := draw(t, venn+parts+"\n", inspect); mistakes != "" || !strings.Contains(got, want) {
+			t.Errorf("%s\n  placed %s %s\n  want %s", parts, got, mistakes, want)
+		}
+	}
 	// The icons' own mistakes (none fetched) keep their places, told once however many icons need them.
 	missing := usererr.New("icons_not_fetched", "AWS", "/x/aws", "aws", "14MB", "aws.amazon.com")
 	none := failing{missing}

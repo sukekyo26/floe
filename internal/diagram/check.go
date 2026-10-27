@@ -141,22 +141,20 @@ type region struct {
 	in, out []circle
 }
 
-// room is how far inside the region the point x, y is: the least of its distances to the edges it must keep
-// within, negative when it is outside.
-func (g region) room(x, y float64) float64 {
+// roomOf is how far inside the region r is: the least of R less the distance of each corner, for each circle of
+// in, and of the distance of r's nearest point, less R, for each of out; negative when it is outside.
+func (g region) roomOf(r rect) float64 {
 	least := math.Inf(1)
 	for _, c := range g.in {
-		least = min(least, c.R-math.Hypot(x-c.CX, y-c.CY))
+		for _, p := range [4][2]float64{{r.x, r.y}, {r.x + r.w, r.y}, {r.x, r.y + r.h}, {r.x + r.w, r.y + r.h}} {
+			least = min(least, c.R-math.Hypot(p[0]-c.CX, p[1]-c.CY))
+		}
 	}
 	for _, c := range g.out {
-		least = min(least, math.Hypot(x-c.CX, y-c.CY)-c.R)
+		nx, ny := min(max(c.CX, r.x), r.x+r.w), min(max(c.CY, r.y), r.y+r.h)
+		least = min(least, math.Hypot(nx-c.CX, ny-c.CY)-c.R)
 	}
 	return least
-}
-
-// roomOf is the least room of the corners of r.
-func (g region) roomOf(r rect) float64 {
-	return min(g.room(r.x, r.y), g.room(r.x+r.w, r.y), g.room(r.x, r.y+r.h), g.room(r.x+r.w, r.y+r.h))
 }
 
 // regionOf is the region of the circles named in, telling a name that is no circle; false when there is one.
@@ -182,7 +180,7 @@ func (l *layout) regionOf(at string, in []string) (region, bool) {
 }
 
 // addLabel places a label: where it says, or, with in alone, in its region of a Venn diagram, below the labels
-// placed there before it; one at a place that says in is checked to be in that region, all four corners.
+// placed there before it; one at a place that says in is checked to be in that region, all of it.
 func (l *layout) addLabel(lb *label, at string) {
 	anchor := cmpOr(lb.Anchor, "middle")
 	if lb.In == nil {
@@ -214,12 +212,13 @@ func (l *layout) addLabel(lb *label, at string) {
 }
 
 // place finds where a label placed by its region goes: the labels of one region are stacked, the first above,
-// and placed as one block where its corners keep the most room; the block is placed once, for its first label.
+// and placed as one block where it keeps the most room; the block is placed once, for its first label.
 // LIMIT: points 4 apart are tried, and at most 501 a side of where the circles all are within the canvas; try
 // them closer if a region narrow enough to slip between comes to matter.
-// LIMIT: the room of a point is told in the circles' numbers, so with a radius far over the canvas (1e299) every
-// point's rounds to one, and the first, a corner, is taken: the label is told to stick out of a canvas the region
-// holds whole. Tell the room of a point in the canvas's numbers if radii that large come to matter.
+// LIMIT: roomOf is told in the circles' numbers, so with a radius far over the canvas (1e299) every point's rounds
+// to one, and the one nearest the middle of the circles' boxes, which rounds to 0, a corner, is taken: the label is
+// told to stick out of a canvas the region holds whole. Tell roomOf in the canvas's numbers if radii that large
+// come to matter.
 func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 	key := regionKey(lb.In)
 	st = l.stacks[key]
@@ -239,14 +238,8 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 		st.tried = x0 >= x1 || y0 >= y1 ||
 			max(x0, 0) < min(x1, l.s.Width) && max(y0, 0) < min(y1, l.s.Height)
 		xs, ys := grid(x0, x1, l.s.Width), grid(y0, y1, l.s.Height)
-		best := 0.0
-		for _, px := range xs {
-			for _, py := range ys {
-				if room := g.roomOf(rect{px - w/2, py - h/2, w, h, "", ""}); room > best {
-					best, st.x, st.top = room, px, py-h/2
-				}
-			}
-		}
+		var best float64
+		best, st.x, st.top = g.most(xs, ys, w, h, (x0+x1)/2, (y0+y1)/2)
 		st.found = best > 0
 	}
 	n := st.next
@@ -280,6 +273,29 @@ func grid(lo, hi, size float64) []float64 {
 		out = append(out, p)
 	}
 	return out
+}
+
+// most is the room of the point of xs and ys where a block w by h, centred on it, keeps the most room, and where
+// the block goes then (its middle and top), 0 for none of room: of points of one room, the one nearest mx, my,
+// the middle of the circles' boxes, as room told by the point of a box nearest a circle is one while the box
+// covers its centre, and a label stays on the axis of a Venn diagram of one when the middle is a point of the grid.
+// LIMIT: the grid counts 4 apart from where the circles' boxes start, so a middle off it leaves the label off the
+// axis, above or below as the radius goes; try the middle itself first if diagrams come to need it.
+func (g region) most(xs, ys []float64, w, h, mx, my float64) (best, x, top float64) {
+	near := math.Inf(1)
+	for _, px := range xs {
+		for _, py := range ys {
+			switch room := g.roomOf(rect{px - w/2, py - h/2, w, h, "", ""}); {
+			case room > best:
+				best, near, x, top = room, math.Hypot(px-mx, py-my), px, py-h/2
+			case room == best:
+				if d := math.Hypot(px-mx, py-my); d < near {
+					near, x, top = d, px, py-h/2
+				}
+			}
+		}
+	}
+	return best, x, top
 }
 
 // stack is the labels of one region of a Venn diagram placed by it, and where their block went.
