@@ -32,6 +32,7 @@ type Kit struct {
 	looks     map[string]*Look
 	themes    map[string]*Theme
 	templates map[string]*Template
+	shared    map[string]*shared
 	resources map[string]schema.Resource // by URL, those of base too
 }
 
@@ -104,7 +105,7 @@ func (k *Kit) BaseCSS() []byte {
 func read(base *Kit, src Sources) (*Kit, error) {
 	k := &Kit{
 		base: base, baseCSS: nil, parts: map[string]*Part{}, looks: map[string]*Look{}, themes: map[string]*Theme{},
-		templates: map[string]*Template{}, resources: map[string]schema.Resource{},
+		templates: map[string]*Template{}, shared: map[string]*shared{}, resources: map[string]schema.Resource{},
 	}
 	if base != nil {
 		maps.Copy(k.resources, base.resources)
@@ -275,13 +276,14 @@ func partFuncsAll() template.FuncMap {
 	return fns
 }
 
-// readChecks reads the checks.yaml of the directory dir of d, nil without one.
-func readChecks(d Dir, dir string) (*rules.Checks, error) {
+// readChecks reads the checks.yaml of the directory dir of d, nil without one, and returns its text too.
+func readChecks(d Dir, dir string) (*rules.Checks, []byte, error) {
 	src, ok, err := readFile(d, dir, "checks.yaml")
 	if !ok || err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return rules.ReadChecks(path.Join(d.Name, dir, "checks.yaml"), src) //nolint:wrapcheck // its mistakes
+	c, err := rules.ReadChecks(path.Join(d.Name, dir, "checks.yaml"), src)
+	return c, src, err //nolint:wrapcheck // its mistakes
 }
 
 // readWordsIn reads the words.yaml of the directory dir of d, none without one.

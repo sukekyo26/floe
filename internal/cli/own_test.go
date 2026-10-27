@@ -86,8 +86,9 @@ func TestOwnDirs(t *testing.T) {
 	}
 }
 
-// A mistake of one's own stops floe check and render, though the page does not use it, told at the file it is
-// in: a part's $ref to no part at the part's schema.json, not at a template's.
+// A mistake of one's own stops floe check and render, though the page does not use it, and every command that
+// reads one's own, told at the file it is in: a part's $ref to no part at the part's schema.json, not at a
+// template's.
 func TestOwnStops(t *testing.T) {
 	t.Parallel()
 
@@ -102,7 +103,18 @@ func TestOwnStops(t *testing.T) {
 	})
 	env := map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
 	want := filepath.Join(dir, "parts/mine/schema.json") + ": floe:///parts/gone.json is not a part; refer to one as floe:///parts/<name>.json\n"
-	for _, args := range [][]string{{"check", "d.yaml"}, {"render", "d.yaml"}, {"part", "check"}, {"template", "check"}} {
+	for _, args := range [][]string{
+		{"check", "d.yaml"},
+		{"render", "d.yaml"},
+		{"part", "check"},
+		{"template", "check"},
+		{"part", "list"},
+		{"part", "show", "note"},
+		{"part", "new", "x"},
+		{"template", "list"},
+		{"template", "show", "report"},
+		{"template", "new", "x"},
+	} {
 		if code, stdout, stderr := runEnv(dir, env, args...); code != 1 || stdout != "" || stderr != want {
 			t.Errorf("floe %v = %d, %q, %q; want 1, %q", args, code, stdout, stderr, want)
 		}

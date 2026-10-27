@@ -3,6 +3,7 @@ package kit_test
 import (
 	"fmt"
 	"html/template"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -66,6 +67,21 @@ func TestFloe(t *testing.T) {
 	}
 	if len(k.BaseCSS()) == 0 {
 		t.Error("no base.css")
+	}
+}
+
+// The files floe part show and template show print are copies: Floe's kit, shared by the process, stays.
+func TestEntriesCopied(t *testing.T) {
+	t.Parallel()
+
+	k := floe(t)
+	for _, entries := range []func() []kit.Entry{k.Parts, k.Templates} {
+		first := entries()
+		i := slices.IndexFunc(first, func(e kit.Entry) bool { return len(e.Files) > 0 })
+		first[i].Files[0].Text[0] = 'X'
+		if again := entries()[i].Files[0].Text[0]; again != '{' {
+			t.Errorf("%s: writing the text returned changed the kit: %q", first[i].Name, again)
+		}
 	}
 }
 
@@ -275,7 +291,7 @@ func TestWordsAsWritten(t *testing.T) {
 
 // Parts, looks and shared schemas share their names: one's own of a name floe's take is refused, of any kind,
 // as floe's templates and parts would go on with floe's; so are two of one's own of a name, a name floe does
-// not take, and a name of a theme's file.
+// not take, and a name of a theme's file. A theme of floe's name is refused too; a template of one hides floe's.
 func TestNames(t *testing.T) {
 	t.Parallel()
 
@@ -290,23 +306,23 @@ func TestNames(t *testing.T) {
 		},
 		{
 			fstest.MapFS{"table.json": {Data: []byte("{}")}},
-			"own/parts/table.json: table is the name of floe's parts/table, which floe's templates and parts would go on drawing and checking with: give yours another name",
+			"own/parts/table.json: table is the name of floe's parts/table: give yours another name",
 		},
 		{
 			fstest.MapFS{"any/part.css": {Data: []byte("")}},
-			"own/parts/any: any is the name of floe's parts/any.json, which floe's templates and parts would go on drawing and checking with: give yours another name",
+			"own/parts/any: any is the name of floe's parts/any.json: give yours another name",
 		},
 		{
 			fstest.MapFS{"table/schema.json": {Data: []byte(`{"type": "object"}`)}, "table/part.html": {Data: []byte("x")}},
-			"own/parts/table: table is the name of floe's parts/table, which floe's templates and parts would go on drawing and checking with: give yours another name",
+			"own/parts/table: table is the name of floe's parts/table: give yours another name",
 		},
 		{
 			fstest.MapFS{"diagram/schema.json": {Data: []byte(`{"type": "object"}`)}, "diagram/part.html": {Data: []byte("x")}},
-			"own/parts/diagram: diagram is the name of floe's parts/diagram, which floe's templates and parts would go on drawing and checking with: give yours another name",
+			"own/parts/diagram: diagram is the name of floe's parts/diagram: give yours another name",
 		},
 		{
 			fstest.MapFS{"panel/part.css": {Data: []byte("")}},
-			"own/parts/panel: panel is the name of floe's parts/panel, which floe's templates and parts would go on drawing and checking with: give yours another name",
+			"own/parts/panel: panel is the name of floe's parts/panel: give yours another name",
 		},
 		{
 			fstest.MapFS{"base/part.css": {Data: []byte("")}, "palette/part.css": {Data: []byte("")}},
@@ -333,14 +349,52 @@ func TestNames(t *testing.T) {
 	}
 	_, err := kit.Read(k, kit.Sources{
 		Themes:    kit.Dir{FS: fstest.MapFS{"Dark/base.css": {Data: []byte("")}, "ink/base.css": {Data: []byte("")}}, Name: "own/themes"},
-		Templates: kit.Dir{FS: fstest.MapFS{"Report/page.html": {Data: []byte("")}}, Name: "own/templates"},
+		Templates: kit.Dir{FS: fstest.MapFS{"Report/page.html": {Data: []byte("")}, "report/page.html": {Data: []byte("x")}}, Name: "own/templates"},
 	})
 	want := lines(
 		"own/themes/Dark: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it",
+		"own/themes/ink: ink is the name of floe's themes/ink: give yours another name",
 		"own/templates/Report: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it",
 	)
 	if got := told(err); got != want {
 		t.Errorf("themes and templates told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// NameMistake refuses the name of a part to make as Load refuses the part's directory, over the kit of one's
+// own: beside a shared schema of one's own of its name too, which Load tells at the schema.
+func TestNameMistake(t *testing.T) {
+	t.Parallel()
+
+	shr := fstest.MapFS{"shr.json": {Data: []byte("{}")}}
+	k, err := kit.Load(floe(t), kit.Sources{Parts: kit.Dir{FS: shr, Name: "own/parts"}})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	for _, tt := range []struct{ name, want string }{
+		{"mine", ""},
+		{"a-b_c", ""},
+		{"Bad", "own/parts/Bad: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it"},
+		{"base", "own/parts/base: base names a file of every theme (base.css), which a theme's CSS for this part would be read as: give it another name"},
+		{"palette", "own/parts/palette: palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name"},
+		{"note", "own/parts/note: note is the name of floe's parts/note: give yours another name"},
+		{"any", "own/parts/any: any is the name of floe's parts/any.json: give yours another name"},
+		{"shr", "own/parts/shr: shr names both own/parts/shr and own/parts/shr.json: give one of them another name"},
+	} {
+		if got := told(k.NameMistake("own/parts", kit.KindPart, tt.name)); got != tt.want {
+			t.Errorf("NameMistake(%s) told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+		if tt.name == "shr" {
+			continue
+		}
+		fsys := maps.Clone(shr)
+		fsys[tt.name+"/part.css"] = &fstest.MapFile{Data: []byte("")}
+		if _, err := kit.Load(floe(t), kit.Sources{Parts: kit.Dir{FS: fsys, Name: "own/parts"}}); told(err) != tt.want {
+			t.Errorf("Load of %s told\n%s\nwant\n%s", tt.name, told(err), tt.want)
+		}
+	}
+	if got := told(k.NameMistake("own/templates", kit.KindTemplate, "report")); got != "" {
+		t.Errorf("NameMistake of a template of floe's name told %s; it hides floe's", got)
 	}
 }
 

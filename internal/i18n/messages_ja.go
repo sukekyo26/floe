@@ -25,7 +25,7 @@ var messagesJA = map[string]string{
 	"schema_no_part":            "%s は部品ではありません。部品は floe:///parts/<名前>.json の形で参照してください",
 	"schema_id_floe":            "この $id は floe: の URL、%s を名乗っています。floe: の URL は floe 自身のものです。https://example.com/item.json のような自分の $id にするか、$id を消してください",
 	"schema_id_relative":        "この $id、%s には scheme がありません。部品と共有の schema では、floe:///parts/ の下に重なってほかのものの URL を奪うことがあるので、scheme の無い $id は書けません。https://example.com/item.json のような自分の絶対の URL にするか、$id を消してください",
-	"schema_id_root":            "この $id、%s は、このファイルの URL そのままではありません。%s をそのまま書くか、$id を消してください",
+	"schema_id_root":            "schema の根には $id を書けません。根の URL は floe が付けます。$id を消してください",
 	"schema_ref_templates":      "%s は floe が持つファイルではありません。テンプレートは、部品を floe:///parts/<名前>.json で、自分の schema.json の中を #/… で指します",
 	"schema_part_unreached":     "部品 %s はここでは項目を描きません。floe は根から properties と items で届く所と、横に描くものの無い $ref の先を描きます。ここの項目は検査されても描かれません",
 	"schema_ref_unreached":      "%s は floe が描く部品か format の項目を持ちます。floe が辿る properties か items の下で参照してください",
@@ -65,7 +65,7 @@ var messagesJA = map[string]string{
 
 	// kit: 段 1 で読む部品・見た目・テーマ・テンプレート
 	"kit_name_twice":             "%s が %s と %s の両方の名前です。どちらかの名前を変えてください",
-	"kit_name_floe":              "%s は floe の %s の名前です。floe のテンプレートと部品は floe のものを使って描き、確かめ続けるので、別の名前にしてください",
+	"kit_name_floe":              "%s は floe の %s の名前です。別の名前にしてください",
 	"kit_dir_link":               "これはディレクトリへのリンクで、floe はここでは本物のディレクトリだけを読みます。ディレクトリにしてください（ファイルへのリンクは読みます）",
 	"kit_not_file":               "これはふつうのファイルでもディレクトリでもありません（FIFO・デバイスなど）。floe は読み終えられないことがあるので、ふつうのファイルを置いてください",
 	"kit_bad_name":               "floe はこの名前を扱いません。小文字・数字・-・_ で、小文字か数字で始まる名前に変えてください",
@@ -191,5 +191,12 @@ var messagesJA = map[string]string{
 	"diagram_unknown_example":  "例 %s はありません。%s を使ってください",
 	"diagram_source":           "この図の spec",
 	"cli_wants_spec":           "図の spec（.yaml）",
+	"cli_unknown_part":         `部品 "%s" はありません。%s から選んでください`,
+	"cli_new_exists":           "ここにはこの名前のものがもうあります。別の名前にするか、それを消してください",
+	"cli_new_no_dir":           "HOME が絶対パスでないので、既定のディレクトリがありません。%s に絶対パスを設定してください",
+	"cli_made":                 "%s を作りました",
+	"cli_where":                "場所: %s",
+	"cli_looks":                "見た目: %s",
+	"cli_themes":               "テーマ: %s",
 	"diagram_edge_nowhere":     "%sは始まりと終わりが同じ所です。片方の端に別の部品か点を書いてください",
 }

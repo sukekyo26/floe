@@ -8,8 +8,10 @@
 
 > **ステータス:** 作り直し中です。今使えるのは、データファイルを描く `floe check`・`floe render`
 > （floe の部品・テーマ・report と、`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR`・`FLOE_TEMPLATES_DIR`、
-> 無ければ `~/.config/floe/parts`・`themes`・`templates` の自分のもの）、自分のものを確かめる
-> `floe part check`・`floe template check`、版を出す `floe version` です。
+> 無ければ `~/.config/floe/parts`・`themes`・`templates` の自分のもの）、部品とテンプレートを
+> 一覧し、schema を書いたとおりに見せ、いちばん小さい自分のものを作り、自分のものを確かめる
+> `floe part list|show|new|check`・`floe template list|show|new|check`、版を出す `floe version`
+> です。自分の schema の根には `$id` を書けず、自分のテーマには floe のテーマの名前を付けられません。
 
 ## インストール
 

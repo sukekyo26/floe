@@ -42,7 +42,7 @@ type Resource struct {
 	made bool // by NewResource: a doc of nil is the JSON null, not a Resource left zero
 	Kind Kind
 	File string
-	URL  string // where it is held, the URL its root $id may name
+	URL  string // where it is held, the URL floe gives its root
 }
 
 // NewResource reads src (the schema of file, held at u) as read does, a Resource of k. Its "$schema" and
@@ -52,7 +52,7 @@ func NewResource(u, file string, src []byte, k Kind) (Resource, error) {
 	if err != nil {
 		return Resource{}, err
 	}
-	if dialects, ids := raw(u, file, doc, true); dialects != nil || ids != nil {
+	if dialects, ids := raw(file, doc, true); dialects != nil || ids != nil {
 		return Resource{}, append(dialects, ids...).Sorted().Err()
 	}
 	return Resource{doc: doc, made: true, Kind: k, File: file, URL: u}, nil
@@ -135,13 +135,13 @@ func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) 
 		if !res[ru].made {
 			return nil, fmt.Errorf("schema: %s was not made by NewResource", ru) //nolint:err113 // floe's own mistake
 		}
-		// Its root $id was checked against its URL, which must be where it is held.
+		// It has no root $id, so the library holds it at its URL, which must be where it is held.
 		if res[ru].URL != ru {
 			return nil, fmt.Errorf("schema: %s is held at %s", res[ru].URL, ru) //nolint:err113 // floe's own mistake
 		}
 	}
 	c := &Compiled{Root: nil, url: u, file: file, res: res}
-	dialects, ids := raw(u, file, doc, false)
+	dialects, ids := raw(file, doc, false)
 	if dialects != nil {
 		return nil, append(dialects, ids...).Sorted().Err()
 	}

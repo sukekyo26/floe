@@ -30,6 +30,7 @@ type Part struct {
 	pageSrc []byte
 	unread  []string         // the files of its directory it does not read, for the check of what it holds
 	schema  *schema.Compiled // its schema as a root
+	files   []Source         // schema.json and checks.yaml as read, for floe part show
 }
 
 // taken is a look a part or a look takes, and where its part.yaml names it.
@@ -154,40 +155,95 @@ func (k *Kit) compileParts(dirs, shared []string) error {
 		if failed := found.Add(err); failed != nil {
 			return failed
 		}
-		if part && err == nil {
+		switch {
+		case err != nil:
+		case part:
 			p.schema = c
+		default:
+			k.shared[name].about = c.Root.Description
 		}
 	}
 	return found.Sorted().Err()
 }
 
-// clashes refuses each of the parts and looks (dirs) and the shared schemas of d whose name floe does not take
-// (validName); a part's or a look's that is a theme's file (base, palette); one that another of d's has; and one
-// that the base's has: floe's templates and parts would go on reading the base's, compiled with it. Each is
-// told at it.
+// clashes refuses each of the parts and looks (dirs) and the shared schemas of d whose name refusedName
+// refuses. Each is told at it.
 func (k *Kit) clashes(d Dir, dirs, shared []string) usererr.List {
 	var found usererr.List
-	check := func(name, at string, others, styled bool) {
-		switch {
-		case !validName(name):
-			found = append(found, usererr.NewAt(at, 0, 0, "kit_bad_name"))
-		case styled && (name == "base" || name == "palette"):
-			found = append(found, usererr.NewAt(at, 0, 0, "kit_name_theme_file", name))
-		case others:
-			found = append(found, usererr.NewAt(at, 0, 0, "kit_name_twice", name, path.Join(d.Name, name), at))
-		default:
-			if other, ok := k.baseDir(name); ok {
-				found = append(found, usererr.NewAt(at, 0, 0, "kit_name_floe", name, other))
-			}
+	for _, name := range dirs {
+		if e := k.refusedName(d.Name, KindPart, name, false); e != nil {
+			found = append(found, e)
 		}
 	}
-	for _, name := range dirs {
-		check(name, path.Join(d.Name, name), false, true)
-	}
 	for _, name := range shared {
-		check(name, path.Join(d.Name, name+".json"), slices.Contains(dirs, name), false)
+		if e := k.refusedName(d.Name, KindShared, name, slices.Contains(dirs, name)); e != nil {
+			found = append(found, e)
+		}
 	}
 	return found
+}
+
+// Kind is a kind of the things of one's own, each a directory or a file in the directory of its kind.
+type Kind int
+
+// The kinds of one's own: a part or a look (a directory of the parts), a schema the parts share (<name>.json
+// beside them), a theme and a template.
+const (
+	KindPart Kind = iota
+	KindShared
+	KindTheme
+	KindTemplate
+)
+
+// NameMistake returns the mistake Load would tell of a part or a look (KindPart), or a template, of one's own
+// named name made in dir, the directory of its kind as it is named, over k: nil for none.
+func (k *Kit) NameMistake(dir string, kind Kind, name string) error {
+	// A part beside a shared schema of its name, which k holds only of its own.
+	r, have := k.resources[partURL(name)]
+	_, floes := k.baseDir(name)
+	twice := kind == KindPart && have && r.Kind == schema.Shared && !floes
+	if e := k.refusedName(dir, kind, name, twice); e != nil {
+		return e
+	}
+	return nil
+}
+
+// refusedName returns the mistake of the name of one's own of the kind in dir, nil for none: a name floe does
+// not take (validName); a part's or a look's that is a theme's file (base, palette); one a part or a look and
+// a shared schema of dir both have (twice); and a part's, a look's, a shared schema's or a theme's that the
+// base has: floe's templates and parts would go on reading the base's, compiled with it, and a theme of one's
+// own would hide floe's whole. It is told at the entry.
+func (k *Kit) refusedName(dir string, kind Kind, name string, twice bool) *usererr.Error {
+	at := path.Join(dir, name)
+	if kind == KindShared {
+		at += ".json"
+	}
+	switch {
+	case !validName(name):
+		return usererr.NewAt(at, 0, 0, "kit_bad_name")
+	case kind == KindPart && (name == "base" || name == "palette"):
+		return usererr.NewAt(at, 0, 0, "kit_name_theme_file", name)
+	case twice:
+		return usererr.NewAt(at, 0, 0, "kit_name_twice", name, path.Join(dir, name), path.Join(dir, name+".json"))
+	}
+	var other string
+	var ok bool
+	switch kind {
+	case KindPart, KindShared:
+		other, ok = k.baseDir(name)
+	case KindTheme:
+		if k.base != nil {
+			var t *Theme
+			if t, ok = k.base.Theme(name); ok {
+				other = t.dir
+			}
+		}
+	case KindTemplate:
+	}
+	if ok {
+		return usererr.NewAt(at, 0, 0, "kit_name_floe", name, other)
+	}
+	return nil
 }
 
 // validName reports whether name is one floe takes for a part, a look, a shared schema, a theme or a template:
@@ -214,6 +270,7 @@ func (k *Kit) readShared(d Dir, name string) error {
 		return err //nolint:wrapcheck // its mistakes, or floe's failure
 	}
 	k.resources[r.URL] = r
+	k.shared[name] = &shared{name: name, file: r.File, about: "", files: sources(Source{name + ".json", src})}
 	return nil
 }
 
@@ -247,7 +304,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
-	checks, err := readChecks(d, name)
+	checks, checksSrc, err := readChecks(d, name)
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
@@ -270,6 +327,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 	k.parts[name] = &Part{
 		name: name, dir: dir, looks: looks, css: css, hasCSS: hasCSS, checks: checks, words: w, pages: ps,
 		pageSrc: pageSrc, unread: unread, schema: nil,
+		files: sources(Source{"schema.json", schemaSrc}, Source{"checks.yaml", checksSrc}),
 	}
 	return nil
 }

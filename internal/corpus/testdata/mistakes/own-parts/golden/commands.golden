@@ -3,16 +3,16 @@ exit 1
 --- stderr
 $SAMPLE/own/parts/Note: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it
 $SAMPLE/own/parts/base: base names a file of every theme (base.css), which a theme's CSS for this part would be read as: give it another name
-$SAMPLE/own/parts/table: table is the name of floe's parts/table, which floe's templates and parts would go on drawing and checking with: give yours another name
+$SAMPLE/own/parts/table: table is the name of floe's parts/table: give yours another name
 $ floe check page.yaml
 exit 1
 --- stderr
 $SAMPLE/own/parts/Note: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it
 $SAMPLE/own/parts/base: base names a file of every theme (base.css), which a theme's CSS for this part would be read as: give it another name
-$SAMPLE/own/parts/table: table is the name of floe's parts/table, which floe's templates and parts would go on drawing and checking with: give yours another name
+$SAMPLE/own/parts/table: table is the name of floe's parts/table: give yours another name
 $ floe render --out-dir $TMP/pages/page.yaml page.yaml
 exit 1
 --- stderr
 $SAMPLE/own/parts/Note: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it
 $SAMPLE/own/parts/base: base names a file of every theme (base.css), which a theme's CSS for this part would be read as: give it another name
-$SAMPLE/own/parts/table: table is the name of floe's parts/table, which floe's templates and parts would go on drawing and checking with: give yours another name
+$SAMPLE/own/parts/table: table is the name of floe's parts/table: give yours another name

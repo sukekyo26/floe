@@ -127,9 +127,9 @@ func TestHelp(t *testing.T) {
 		"diagram\tDraw diagrams from specs of parts on a canvas\n" +
 		"help\tHelp about any command\n" +
 		"icons\tKeep icon sets for the icon parts of diagrams, and search them\n" +
-		"part\tCheck the parts, looks and themes of your own\n" +
+		"part\tList the parts, show one, make one of your own, and check yours\n" +
 		"render\tWrite the page of each data file to an HTML file beside it, or in --out-dir\n" +
-		"template\tCheck the templates of your own\n" +
+		"template\tList the templates, show one, make one of your own, and check yours\n" +
 		"version\tPrint the floe version\n:4\n"
 	if code, got, _ := run("", "__complete", "help", ""); code != 0 || !strings.HasPrefix(got, want) {
 		t.Errorf("floe __complete help \"\" = %d, %q, want %q", code, got, want)

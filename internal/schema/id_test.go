@@ -12,7 +12,7 @@ import (
 const (
 	idFloe     = "this $id names %s, a floe: URL, which is floe's own: give the schema an $id of your own, like https://example.com/item.json, or leave $id out"
 	idRelative = "this $id, %s, has no scheme, which a part or a schema the parts share may not have, as it may land under floe:///parts/ and take the place of another: write an absolute URL of your own, like https://example.com/item.json, or leave $id out"
-	idRoot     = "this $id, %s, is not this file's URL as it is: write %s as it is, or leave $id out"
+	idRoot     = "the root of a schema takes no $id: floe gives it its URL; leave $id out"
 )
 
 // A template's "$id" of the floe: scheme is refused where it is, however its URL is written, with the
@@ -44,9 +44,11 @@ func TestCompileIDs(t *testing.T) {
 			"with a $schema floe does not take", `{` + head + `, "properties": {"x": {"$schema": "http://json-schema.org/draft-07/schema#"}}, "$defs": {"fake": {"$id": "floe:///parts/note.json"}}}`,
 			lines(at("#/$defs/fake", "floe:///parts/note.json"), "schema.json: #/properties/x: $schema http://json-schema.org/draft-07/schema# names no draft floe takes; name https://json-schema.org/draft/2020-12/schema or https://json-schema.org/draft/2019-09/schema, or leave it out"),
 		},
-		{"the root, not its URL as it is", `{` + head + `, "$id": "floe://templates/t/schema.json#"}`, "schema.json: #: " + fmt.Sprintf(idRoot, "floe://templates/t/schema.json#", template)},
-		{"the root, its URL", `{` + head + `, "$id": "` + template + `"}`, ""},
-		{"an $id of one's own", `{` + head + `, "$id": "https://example.com/t.json", "properties": {"x": {"$ref": "item.json"}}, "$defs": {"i": {"$id": "item.json", "type": "string"}}}`, ""},
+		// floe gives the root its URL: an $id there is refused, whatever it is, with one mistake.
+		{"the root, not its URL as it is", `{` + head + `, "$id": "floe://templates/t/schema.json#"}`, "schema.json: #: " + idRoot},
+		{"the root, its URL", `{` + head + `, "$id": "` + template + `"}`, "schema.json: #: " + idRoot},
+		{"the root, an $id of one's own", `{` + head + `, "$id": "https://example.com/t.json", "properties": {"x": {"$ref": "item.json"}}, "$defs": {"i": {"$id": "item.json", "type": "string"}}}`, "schema.json: #: " + idRoot},
+		{"the root, empty", `{` + head + `, "$id": ""}`, "schema.json: #: " + idRoot},
 		{"a relative $id", `{` + head + `, "properties": {"x": {"$ref": "item.json"}}, "$defs": {"i": {"$id": "item.json", "type": "string"}}}`, ""},
 		// The host keeps a relative $ref under the templates, where floe holds no file.
 		{"a relative $ref", `{` + head + `, "properties": {"x": {"$ref": "/parts/note.json"}}}`, "schema.json: floe://templates/parts/note.json is no file floe holds: a template refers to a part as floe:///parts/<name>.json, and inside its own schema.json as #/…"},
@@ -67,8 +69,8 @@ func TestCompileIDs(t *testing.T) {
 	}
 }
 
-// A part's or a shared schema's "$id" is refused as it is read, a relative one too; the root may name the
-// file's URL as it is.
+// A part's or a shared schema's "$id" is refused as it is read, a relative one too, and one at the root
+// whatever it is.
 func TestNewResourceIDs(t *testing.T) {
 	t.Parallel()
 
@@ -81,15 +83,18 @@ func TestNewResourceIDs(t *testing.T) {
 		{`{"type": "object", "$defs": {"f": {"$id": "r.json"}}}`, schema.Part, file + ": #/$defs/f: " + fmt.Sprintf(idRelative, "r.json")},
 		{`{"properties": {"y": {"$ref": "note.json"}}, "$defs": {"n": {"$id": "note.json"}}}`, schema.Shared, file + ": #/$defs/n: " + fmt.Sprintf(idRelative, "note.json")},
 		{`{"$defs": {"f": {"$id": "floe:///parts/note.json"}}}`, schema.Shared, file + ": #/$defs/f: " + fmt.Sprintf(idFloe, "floe:///parts/note.json")},
-		{`{"$id": "floe:///parts/mine.json#"}`, schema.Part, file + ": #: " + fmt.Sprintf(idRoot, "floe:///parts/mine.json#", u)},
-		{`{"$id": "FLOE:///parts/mine.json"}`, schema.Part, file + ": #: " + fmt.Sprintf(idRoot, "FLOE:///parts/mine.json", u)},
-		{`{"$id": "mine.json"}`, schema.Part, file + ": #: " + fmt.Sprintf(idRoot, "mine.json", u)},
+		{`{"$id": "floe:///parts/mine.json#"}`, schema.Part, file + ": #: " + idRoot},
+		{`{"$id": "FLOE:///parts/mine.json"}`, schema.Part, file + ": #: " + idRoot},
+		{`{"$id": "mine.json"}`, schema.Part, file + ": #: " + idRoot},
+		{`{"$id": "floe:///parts/mine.json"}`, schema.Part, file + ": #: " + idRoot},
+		{`{"$id": "#"}`, schema.Shared, file + ": #: " + idRoot},
+		{`{"$id": 5}`, schema.Shared, file + ": #: " + idRoot},
 		{`{"$schema": "https://example.com/s"}`, schema.Shared, file + ": #: $schema https://example.com/s names no draft floe takes; name https://json-schema.org/draft/2020-12/schema or https://json-schema.org/draft/2019-09/schema, or leave it out"},
 		// Under an absolute $id too, as the rule reads the text alone.
 		{`{"$defs": {"o": {"$id": "https://example.com/x.json", "$defs": {"f": {"$id": "../floe.json"}}}}}`, schema.Part, file + ": #/$defs/o/$defs/f: " + fmt.Sprintf(idRelative, "../floe.json")},
-		{`{"$id": "floe:///parts/mine.json", "$defs": {"f": {"$id": "https://example.com/f.json"}}, "properties": {"x": {"$ref": "note.json"}}}`, schema.Part, ""},
-		// The library reads "" and "#" as no $id.
-		{`{"$id": "", "$defs": {"f": {"$id": "#"}, "g": {"$id": ""}}}`, schema.Shared, ""},
+		{`{"$defs": {"f": {"$id": "https://example.com/f.json"}}, "properties": {"x": {"$ref": "note.json"}}}`, schema.Part, ""},
+		// Below the root, the library reads "" and "#" as no $id.
+		{`{"$defs": {"f": {"$id": "#"}, "g": {"$id": ""}}}`, schema.Shared, ""},
 	} {
 		_, err := schema.NewResource(u, file, []byte(tt.src), tt.kind)
 		if got := told(err); got != tt.want {
@@ -121,7 +126,7 @@ func TestCheckPartRelativeRef(t *testing.T) {
 	}
 }
 
-// A Resource held at a URL other than its own is floe's failure: its root $id was checked against its own.
+// A Resource held at a URL other than its own is floe's failure: the library holds it at its own.
 func TestResourceURL(t *testing.T) {
 	t.Parallel()
 
