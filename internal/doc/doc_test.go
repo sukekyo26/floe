@@ -13,6 +13,28 @@ import (
 
 const noLang = "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)"
 
+// Every key of Shared written as text is read into its field: a key added to Shared without a field fails here.
+func TestReadShared(t *testing.T) {
+	t.Parallel()
+
+	src := ""
+	for _, key := range doc.Shared {
+		src += key + ": ja\n"
+	}
+	d, err := doc.Read("a.yaml", []byte(src), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Lang != "ja" || d.Template != "ja" || d.Theme != "ja" || d.Title != "ja" {
+		t.Errorf("Read = %+v", d)
+	}
+	for i, key := range doc.Shared {
+		if want := (yamlpos.Pos{Line: i + 1, Column: len(key) + 3}); d.Where[key] != want {
+			t.Errorf("Where[%s] = %v, want %v", key, d.Where[key], want)
+		}
+	}
+}
+
 // Read moves the shared keys out of the values, each where it is written: its value, its key when the value is
 // left out, the top of the file when the key is.
 func TestRead(t *testing.T) {

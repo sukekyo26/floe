@@ -24,20 +24,10 @@ func (c *Compiled) Validate(d *doc.Data) error {
 	for _, key := range doc.Shared {
 		delete(values, key)
 	}
-	err := c.Root.Validate(values)
-	if err == nil {
-		return nil
-	}
-	var ve *jsonschema.ValidationError
-	if !errors.As(err, &ve) {
-		return fmt.Errorf("schema: validate %s: %w", d.File, err)
-	}
-	var found usererr.List
-	leaves(ve, func(e *jsonschema.ValidationError) {
+	return c.leafMistakes(values, d.File, func(e *jsonschema.ValidationError) *usererr.Error {
 		at := placeOf(d, e)
-		found = append(found, usererr.LibraryAt(d.File, at.Line, at.Column, words(e)))
+		return usererr.LibraryAt(d.File, at.Line, at.Column, words(e))
 	})
-	return found.Sorted().Err()
 }
 
 // ValidateAt checks v against c: each leaf of the library's ValidationError in its words, at the JSON pointer of
@@ -46,23 +36,29 @@ func (c *Compiled) Validate(d *doc.Data) error {
 // can make the pointer of a propertyNames mistake wrong; no schema checked by it uses propertyNames. Place it
 // as placeOfName does if one comes to.
 func (c *Compiled) ValidateAt(v any) error {
+	return c.leafMistakes(v, "a value", func(e *jsonschema.ValidationError) *usererr.Error {
+		steps := make([]string, len(e.InstanceLocation))
+		for i, step := range e.InstanceLocation {
+			steps[i] = escape(step)
+		}
+		at := strings.Join(append([]string{"#"}, steps...), "/")
+		return usererr.LibraryIn("", at, words(e))
+	})
+}
+
+// leafMistakes checks v against c and makes each leaf of the library's ValidationError a usererr.Error with mistake,
+// Sorted, so that their order does not follow the library's map order. what names v in floe's failure.
+func (c *Compiled) leafMistakes(v any, what string, mistake func(*jsonschema.ValidationError) *usererr.Error) error {
 	err := c.Root.Validate(v)
 	if err == nil {
 		return nil
 	}
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
-		return fmt.Errorf("schema: validate a value: %w", err)
+		return fmt.Errorf("schema: validate %s: %w", what, err)
 	}
 	var found usererr.List
-	leaves(ve, func(e *jsonschema.ValidationError) {
-		steps := make([]string, len(e.InstanceLocation))
-		for i, step := range e.InstanceLocation {
-			steps[i] = escape(step)
-		}
-		at := strings.Join(append([]string{"#"}, steps...), "/")
-		found = append(found, usererr.LibraryIn("", at, words(e)))
-	})
+	leaves(ve, func(e *jsonschema.ValidationError) { found = append(found, mistake(e)) })
 	return found.Sorted().Err()
 }
 
@@ -96,7 +92,7 @@ func placeOfName(root *ast.MappingNode, depth int, name string) yamlpos.Pos {
 		switch n := n.(type) {
 		case *ast.MappingNode:
 			for _, v := range n.Values {
-				key := yamlpos.KeyOf(v).GetToken().Value
+				key := yamlpos.KeyName(v)
 				switch {
 				case top && slices.Contains(doc.Shared, key):
 				case depth == 0 && key == name:

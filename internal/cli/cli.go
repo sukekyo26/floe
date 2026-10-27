@@ -112,11 +112,6 @@ func newRoot(env Env, out io.Writer) *cobra.Command {
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
-		// Without a RunE cobra treats the root as non-runnable and answers an
-		// unknown subcommand with help and exit 0 instead of NoArgs' error.
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
-		},
 	}
 	root.SetVersionTemplate("floe {{.Version}}\n")
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {

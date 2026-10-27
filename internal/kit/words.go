@@ -66,7 +66,7 @@ func readLang(file, tag string, key, n ast.Node) (map[string]string, usererr.Lis
 	ws := map[string]string{}
 	var found usererr.List
 	for _, v := range m.Values {
-		name := yamlpos.KeyOf(v).GetToken().Value
+		name := yamlpos.KeyName(v)
 		text, ok, err := yamlpos.Text(v.Value)
 		switch {
 		case err != nil:

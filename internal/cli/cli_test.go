@@ -24,6 +24,10 @@ func TestRun(t *testing.T) {
 		{[]string{"--version"}, 0, v, ""},
 		{[]string{"version", "x"}, 2, "", "floe: unknown command \"x\" for \"floe version\": run floe --help\n"},
 		{[]string{"nope"}, 2, "", "floe: unknown command \"nope\" for \"floe\": run floe --help\n"},
+		{[]string{"part", "nope"}, 2, "", "floe: unknown command \"nope\" for \"floe part\": run floe --help\n"},
+		{[]string{"template", "nope"}, 2, "", "floe: unknown command \"nope\" for \"floe template\": run floe --help\n"},
+		{[]string{"icons", "nope"}, 2, "", "floe: unknown command \"nope\" for \"floe icons\": run floe --help\n"},
+		{[]string{"diagram", "nope"}, 2, "", "floe: unknown command \"nope\" for \"floe diagram\": run floe --help\n"},
 		{[]string{"--nope"}, 2, "", "floe: unknown flag: --nope: run floe --help\n"},
 		{[]string{"--\xff"}, 2, "", "floe: unknown flag: --\ufffd: run floe --help\n"},
 	} {
