@@ -1,0 +1,12 @@
+template: report
+lang: en
+title: Icons
+sections:
+  - heading: A
+    parts:
+      - diagram:
+          width: 200
+          height: 100
+          title: One
+          parts:
+            - icon: { icon: aws/res/aws-lambda, x: 10, y: 10 }
