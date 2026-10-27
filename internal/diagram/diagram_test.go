@@ -238,6 +238,7 @@ func TestLayoutMistakes(t *testing.T) {
 		// Every element raw SVG may not hold is told, at one place and so sorted by its words, but none inside one
 		// told.
 		{"  - raw: { svg: '<noscript/><base href=\"x\"/><style/>' }", "s.yaml:5:17: raw SVG holds <base>, " + rawWords + "\ns.yaml:5:17: raw SVG holds <noscript>, " + rawWords + "\ns.yaml:5:17: raw SVG holds <style>, " + rawWords},
+		{"  - raw: { svg: '<g><circle r=\"1\"/><g><style/></g><base/></g>' }", "s.yaml:5:17: raw SVG holds <base>, " + rawWords + "\ns.yaml:5:17: raw SVG holds <style>, " + rawWords},
 		{"  - raw: { svg: '<g><script>x</script></g><rect/></svg><p><b>x</b></p>' }", "s.yaml:5:17: raw SVG holds <p>, " + rawWords + "\ns.yaml:5:17: raw SVG holds <script>, " + rawWords},
 		// Attributes are kept as written, and a name in text, a comment or an attribute is no element.
 		{"  - raw: { svg: '<circle onload=\"f()\" r=\"3\"/>' }", ""},
