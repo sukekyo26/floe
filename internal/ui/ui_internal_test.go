@@ -1,10 +1,16 @@
 package ui
 
 import (
+	"io/fs"
+	"maps"
+	"os"
+	"path"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 )
@@ -29,24 +35,94 @@ func TestPageRendersInTheReadersLanguage(t *testing.T) {
 	}
 }
 
-// ui.html is read by users: its words are in the catalogs, and its comments are English.
-func TestSourceIsInEnglish(t *testing.T) {
+// TestSourcesAreInEnglish keeps the files users and template authors read in English: their wording
+// is in the catalogs, and their comments are English too. A part's words.yaml holds its words in every
+// language, as a catalog does: its comment lines and its en, which a page of a language it has no words
+// of is drawn in, are kept in English.
+func TestSourcesAreInEnglish(t *testing.T) {
 	t.Parallel()
 
-	if japaneseRe.MatchString(pageSource) {
-		t.Errorf("ui.html has Japanese: %q", japaneseRe.FindAllString(pageSource, 3))
+	for name, src := range builtinSources(t) {
+		if path.Base(name) == "words.yaml" {
+			src = englishOfWords(t, name, src)
+		}
+		if japaneseRe.MatchString(src) {
+			t.Errorf("%s has Japanese: %q", name, japaneseRe.FindAllString(src, 3))
+		}
 	}
 }
 
-// The management page loads nothing from elsewhere.
-func TestLoadsNothingFromElsewhere(t *testing.T) {
-	t.Parallel()
+// englishOfWords returns what of src, the words.yaml file name, must be English: its comments, at the
+// start of a line or after a space, and the words of en, however its tag is written.
+func englishOfWords(t *testing.T, name, src string) string {
+	t.Helper()
 
-	for _, url := range elsewhereRe.FindAllString(pageSource, -1) {
-		if url != "http://www.w3.org/2000/svg" {
-			t.Errorf("ui.html names %s", url)
+	var all map[string]map[string]string
+	if err := yaml.Unmarshal([]byte(src), &all); err != nil {
+		t.Fatalf("%s: %v", name, err)
+	}
+	english := commentRe.FindAllString(src, -1)
+	for tag, words := range all {
+		if strings.EqualFold(tag, "en") {
+			english = append(english, slices.Collect(maps.Values(words))...)
 		}
 	}
+	return strings.Join(english, "\n")
+}
+
+// commentRe finds a comment of YAML: # at the start of a line or after a space, to the end of the line.
+var commentRe = regexp.MustCompile(`(?m)(?:^|\s)#.*$`)
+
+// TestBuiltinsLoadNothingFromElsewhere keeps the management page and floe's own templates, parts and themes off
+// the network: a page that loads from elsewhere is its template author's choice, not floe's.
+func TestBuiltinsLoadNothingFromElsewhere(t *testing.T) {
+	t.Parallel()
+
+	for name, src := range builtinSources(t) {
+		for _, url := range elsewhereRe.FindAllString(src, -1) {
+			if !notFetched[url] {
+				t.Errorf("%s names %s", name, url)
+			}
+		}
+	}
+}
+
+// notFetched are the URLs the sources name only as identifiers.
+var notFetched = map[string]bool{
+	"http://www.w3.org/2000/svg":                   true,
+	"https://json-schema.org/draft/2020-12/schema": true,
+}
+
+// builtinSources reads ui.html, floe's own templates, parts and themes (what template authors start from), and
+// the diagram's script and SVG every page with a diagram holds, by their names. They are read from the source
+// tree, which holds what is embedded.
+func builtinSources(t *testing.T) map[string]string {
+	t.Helper()
+
+	sources := map[string]string{"ui.html": pageSource}
+	for _, dir := range []string{"kit/floe", "diagram/assets"} {
+		root := os.DirFS("../" + dir)
+		err := fs.WalkDir(root, ".", func(name string, e fs.DirEntry, err error) error {
+			if err != nil || e.IsDir() {
+				return err
+			}
+			b, err := fs.ReadFile(root, name)
+			sources[dir+"/"+name] = string(b)
+			return err
+		})
+		if err != nil {
+			t.Fatalf("read %s: %v", dir, err)
+		}
+	}
+	b, err := os.ReadFile("../diagram/diagram.svg.tmpl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sources["diagram/diagram.svg.tmpl"] = string(b)
+	if len(sources) < 200 {
+		t.Fatalf("read %d files", len(sources))
+	}
+	return sources
 }
 
 var (
