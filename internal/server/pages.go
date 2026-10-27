@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -102,7 +101,7 @@ func (s *Server) content(c *i18n.Catalog, slug string, m *store.Meta, rest strin
 		}
 		return served{body: io.NopCloser(bytes.NewReader(page)), typ: htmlType, drawn: true}, nil
 	}
-	f, err := os.Open(file) //nolint:gosec // G304: file passed store.File
+	f, _, err := files.Open(file)
 	if err != nil {
 		return none, errNoPage
 	}
@@ -130,7 +129,7 @@ func (s *Server) drawLink(slug string, m *store.Meta, file string) ([]byte, erro
 	if drawing.Err != nil {
 		return nil, drawing.Err
 	}
-	src, err := os.ReadFile(file) //nolint:gosec // G304: file passed store.File
+	src, _, err := files.Read(file)
 	if err != nil {
 		return nil, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
 	}

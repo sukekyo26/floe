@@ -153,7 +153,7 @@ func (s *Store) WriteMeta(slug string, m *Meta) error {
 		return fmt.Errorf("encode meta.json of %s: %w", slug, err)
 	}
 	file := filepath.Join(dir, "meta.json")
-	if err := files.WriteAtomic(file, b.Bytes(), 0o600); err != nil {
+	if err := files.WriteAtomic(file, b.Bytes(), 0o600, nil); err != nil {
 		return usererr.CannotWrite(file, err) //nolint:wrapcheck // the system's words, at the file
 	}
 	return nil
@@ -272,7 +272,7 @@ func (s *Store) linkTitle(file string, data bool) (string, bool) {
 	if ok && hit.key == key {
 		return hit.title, true
 	}
-	b, err := os.ReadFile(file) //nolint:gosec // G304: file passed link.Resolve
+	b, _, err := files.Read(file)
 	if err != nil {
 		return "", false
 	}

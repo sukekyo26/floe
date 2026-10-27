@@ -14,6 +14,7 @@ import (
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -236,6 +237,18 @@ func TestLinkedData(t *testing.T) {
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`) //nolint:exhaustruct // the rest not given
 	want(t, e.do(t, http.MethodGet, "/a/h/s.css", ""), http.StatusOK, "p{}")
 	want(t, e.do(t, http.MethodGet, "/a/h/nope.css", ""), http.StatusNotFound, "not found")
+	// What is not a regular file is not served, so that a FIFO does not block the server.
+	if err := unix.Mkfifo(filepath.Join(e.home, "proj", "f.css"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	want(t, e.do(t, http.MethodGet, "/a/h/f.css", ""), http.StatusNotFound, "not found")
+	if err := os.Remove(data); err != nil {
+		t.Fatal(err)
+	}
+	if err := unix.Mkfifo(data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	want(t, e.do(t, http.MethodGet, "/api/artifacts/d/download", ""), http.StatusNotFound, "not found")
 	plain := e.do(t, http.MethodGet, "/api/artifacts/h/download", "")
 	if plain.Body.String() != "<title>h</title><p>x</p>" {
 		t.Errorf("a linked HTML file downloaded as %q", plain.Body)

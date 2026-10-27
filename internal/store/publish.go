@@ -364,7 +364,7 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, erro
 	if !files.IsDataFile(path) && opts.theme() != "" {
 		return "", nil, usererr.New("store_theme_link")
 	}
-	b, err := os.ReadFile(path) //nolint:gosec // G304: publishing the user's file is the point
+	b, _, err := files.Read(path)
 	if err != nil {
 		return "", nil, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
 	}
