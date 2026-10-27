@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -123,13 +124,7 @@ func TestUIFraming(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 	framed := ""
 	for deadline := time.Now().Add(waitLimit); framed == "" && time.Now().Before(deadline); {
-		res, err := chromedp.Call(b.ctx, page.GetFrameTree, cdp.Empty{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if kids := res.FrameTree.ChildFrames; len(kids) == 1 && kids[0].Frame.URL != "about:blank" {
-			framed = kids[0].Frame.URL
-		}
+		framed = framedDocument(t, b)
 		time.Sleep(50 * time.Millisecond)
 	}
 	out = append(out, "framed:"+framed)
@@ -163,4 +158,39 @@ func TestUIScript(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		"input.value = 1000; input.dispatchEvent(new Event('input')); before + ' ' + input.closest('div').querySelector('output').textContent")
 
 	check(t, "script", []string{got, slider}, "before|moves </script> __proto__,words|7 hours 2 hours")
+}
+
+// framedDocument is the URL of the document in the one frame of the tab's page, "" while there is none but
+// about:blank. The page's frame tree holds it when the frame runs in the page's process; Chrome for Testing puts a
+// frame's error page in a process of its own, a target of its own, out of that tree.
+func framedDocument(t *testing.T, b *browser) string {
+	t.Helper()
+
+	res, err := chromedp.Call(b.ctx, page.GetFrameTree, cdp.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kids := res.FrameTree.ChildFrames; len(kids) == 1 && kids[0].Frame.URL != "about:blank" {
+		return kids[0].Frame.URL
+	}
+	targets, err := chromedp.Targets(b.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, info := range targets {
+		if info.Type != "iframe" {
+			continue
+		}
+		// Attached until the test ends: cancelling the context closes the target.
+		tctx, cancel := chromedp.NewContext(b.ctx, chromedp.WithTargetID(info.TargetID))
+		t.Cleanup(cancel)
+		wait, stop := context.WithTimeout(tctx, waitLimit)
+		href, err := chromedp.Run(wait, chromedp.Evaluate[string]("location.href"))
+		stop()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return href
+	}
+	return ""
 }
