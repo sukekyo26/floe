@@ -253,7 +253,7 @@ func cmpOr(s, def string) string {
 	return s
 }
 
-// widest is the language of t whose text is widest, and its width: a full-width character (above U+2E80) is
+// widest is the language of t whose text is widest, and its width: a full-width character (U+2E80 and above) is
 // size wide, any other 0.6 of it, or 0.62 in code. Widths are counted in fiftieths of size, so that text as wide
 // compares equal: English is kept against text only as wide, and of the others the first by tag.
 // LIMIT: an estimate of no font, as floe draws with the system's. Measure the text if one comes to miss.
@@ -265,7 +265,7 @@ func widest(t Text, size float64, code bool) (string, float64) {
 	units := func(s string) int {
 		n := 0
 		for _, c := range s {
-			if c > 0x2e80 {
+			if c >= 0x2e80 {
 				n += 50
 			} else {
 				n += narrow
@@ -298,6 +298,8 @@ func what(kind, name string, text Text) string {
 // fit refuses text that is wider than room, telling the width to write: the widest of its languages.
 func (l *layout) fit(at, who string, t Text, size float64, code bool, room, written float64) {
 	if lang, tw := widest(t, size, code); tw > room {
+		// LIMIT: the mark of the language is made here, so no catalog chooses its brackets. Make it the
+		// catalogs' when one needs brackets of its own.
 		in := ""
 		if lang != "en" {
 			in = " (" + lang + ")"

@@ -352,6 +352,8 @@ func TestTooNarrow(t *testing.T) {
 		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: " + codeEn + ", ja: " + codeJa + " }]] }", `s.yaml:5:5: table "T": "` + codeEn + `" needs w: 396 or more`},
 		// A separator has no text, in a table sized by its rows too.
 		{"  - table: { x: 20, y: 20, title: T, rows: [a, \"---\", b] }", ""},
+		// U+2E80, the first CJK radical, is full-width.
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: \"\u2e80\u2e80\" }] }", "s.yaml:5:5: box \"AB\": \"\u2e80\u2e80\" (ja) needs w: 58 or more"},
 		// Text exactly as wide as the room fits.
 		{"  - box: { x: 20, y: 20, w: 104, h: 60, rows: [A, ABCDEFGHIJ] }", ""},
 	} {
