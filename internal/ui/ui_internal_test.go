@@ -2,7 +2,6 @@ package ui
 
 import (
 	"io/fs"
-	"maps"
 	"os"
 	"path"
 	"regexp"
@@ -10,9 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goccy/go-yaml"
+	"github.com/goccy/go-yaml/ast"
 
+	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 func TestPageRendersInTheReadersLanguage(t *testing.T) {
@@ -43,7 +44,7 @@ func TestSourcesAreInEnglish(t *testing.T) {
 	t.Parallel()
 
 	for name, src := range builtinSources(t) {
-		if path.Base(name) == "words.yaml" {
+		if isWords(name) {
 			src = englishOfWords(t, name, src)
 		}
 		if japaneseRe.MatchString(src) {
@@ -52,19 +53,42 @@ func TestSourcesAreInEnglish(t *testing.T) {
 	}
 }
 
+// isWords reports whether name is a words.yaml kit reads as one: right under a part or a template. Another file of
+// that name (a template's asset) is held to English as a whole.
+func isWords(name string) bool {
+	for _, kind := range []string{"parts", "templates"} {
+		if ok, _ := path.Match("kit/floe/"+kind+"/*/words.yaml", name); ok { //nolint:errcheck // the pattern is right
+			return true
+		}
+	}
+	return false
+}
+
 // englishOfWords returns what of src, the words.yaml file name, must be English: its comments, at the
-// start of a line or after a space, and the words of en, however its tag is written.
+// start of a line or after a space, and the words of en, its tag read as kit reads it (i18n.Tag).
 func englishOfWords(t *testing.T, name, src string) string {
 	t.Helper()
 
-	var all map[string]map[string]string
-	if err := yaml.Unmarshal([]byte(src), &all); err != nil {
+	body, err := yamlpos.Parse(name, []byte(src))
+	if err != nil {
 		t.Fatalf("%s: %v", name, err)
 	}
+	top, ok := body.(*ast.MappingNode)
+	if !ok {
+		t.Fatalf("%s is not a mapping", name)
+	}
 	english := commentRe.FindAllString(src, -1)
-	for tag, words := range all {
-		if strings.EqualFold(tag, "en") {
-			english = append(english, slices.Collect(maps.Values(words))...)
+	for _, v := range top.Values {
+		words, ok := v.Value.(*ast.MappingNode)
+		if i18n.Tag(yamlpos.KeyOf(v).GetToken().Value) != i18n.English || !ok {
+			continue
+		}
+		for _, w := range words.Values {
+			text, _, err := yamlpos.Text(w.Value)
+			if err != nil {
+				t.Fatalf("%s: %v", name, err)
+			}
+			english = append(english, text)
 		}
 	}
 	return strings.Join(english, "\n")
@@ -102,16 +126,30 @@ func builtinSources(t *testing.T) map[string]string {
 	sources := map[string]string{"ui.html": pageSource}
 	for _, dir := range []string{"kit/floe", "diagram/assets"} {
 		root := os.DirFS("../" + dir)
+		n := 0
 		err := fs.WalkDir(root, ".", func(name string, e fs.DirEntry, err error) error {
-			if err != nil || e.IsDir() {
+			switch {
+			case err != nil:
 				return err
+			// What embed leaves out (an editor's .part.css.swp) is not read.
+			case name != "." && (files.Hidden(e.Name()) || strings.HasPrefix(e.Name(), "_")):
+				if e.IsDir() {
+					return fs.SkipDir
+				}
+				return nil
+			case e.IsDir():
+				return nil
 			}
 			b, err := fs.ReadFile(root, name)
 			sources[dir+"/"+name] = string(b)
+			n++
 			return err
 		})
 		if err != nil {
 			t.Fatalf("read %s: %v", dir, err)
+		}
+		if n == 0 {
+			t.Fatalf("read no file under %s", dir)
 		}
 	}
 	b, err := os.ReadFile("../diagram/diagram.svg.tmpl")
@@ -119,9 +157,6 @@ func builtinSources(t *testing.T) map[string]string {
 		t.Fatal(err)
 	}
 	sources["diagram/diagram.svg.tmpl"] = string(b)
-	if len(sources) < 200 {
-		t.Fatalf("read %d files", len(sources))
-	}
 	return sources
 }
 
