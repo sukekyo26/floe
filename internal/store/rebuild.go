@@ -3,7 +3,6 @@ package store
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -66,11 +65,13 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 	}
 	defer unlock()
 	// Published again, removed or renamed since it was read: what it is now is not what was drawn.
-	if now := s.ReadMeta(slug); now == nil || now.Source != m.Source {
+	now := s.ReadMeta(slug)
+	if now == nil || now.Source != m.Source {
 		return nil
 	}
 	if err == nil {
-		err = s.keep(slug, m, got)
+		// Of meta.json as it is now: an edit made while the page was drawn stays.
+		err = s.keepCopy(slug, now, got.src, got.page, got.images)
 	}
 	if err == nil {
 		return nil
@@ -98,6 +99,10 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	imagesDir := filepath.Join(dir, imagesName)
 	images := files.NewRoot(imagesDir)
 	defer images.Close() //nolint:errcheck // only read from
+	// LIMIT: a page of no title: is drawn under the slug of now, which a rename on the management page changes
+	// while the list keeps the title it had. Keep the title drawn under in meta.json if that comes to matter.
+	// LIMIT: kit_image_path names the directory of data, not images/, for a name floe no longer reads, which
+	// a publish checked by the same rule. Have draw name it by ImagesDir too if the rule comes to change.
 	o := tmpl.Options{Theme: m.Theme, Untitled: slug, Images: images, ImagesDir: imagesDir, Icons: dw.Icons}
 	page, err := tmpl.Draw(dw.Kit, data, src, o)
 	if err != nil {
@@ -119,41 +124,22 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 func everyImage(images fs.FS, dir string) (map[string][]byte, error) {
 	kept := map[string][]byte{}
 	err := fs.WalkDir(images, ".", func(name string, d fs.DirEntry, err error) error {
+		at := filepath.Join(dir, filepath.FromSlash(name))
 		switch {
 		case err != nil:
-			return err
+			return usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at what cannot be read
 		case !d.Type().IsRegular():
 			return nil
 		}
 		b, err := fs.ReadFile(images, name)
 		if err != nil {
-			return err //nolint:wrapcheck // told below
+			return usererr.CannotRead(at, err) //nolint:wrapcheck // as above
 		}
 		kept[name] = b
 		return nil
 	})
 	if err != nil {
-		return nil, usererr.CannotRead(dir, err) //nolint:wrapcheck // the system's words, at the images
+		return nil, err //nolint:wrapcheck // a usererr, at what cannot be read
 	}
 	return kept, nil
-}
-
-// keep writes got, slug's page drawn again, as a new copy, which meta.json m then names, and removes the one
-// before: under the lock, m as it is now.
-func (s *Store) keep(slug string, m *Meta, got *drawn) error {
-	dir, ok := s.dir(slug)
-	if !ok {
-		return fmt.Errorf("store: keep %q, which cannot be a slug", slug) //nolint:err113 // floe's own mistake
-	}
-	source, err := writeSource(dir, got.src, got.page, got.images)
-	if err != nil {
-		return err
-	}
-	m.Source = source
-	if err := s.WriteMeta(slug, m); err != nil {
-		_ = os.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // the error is the write's
-		return err
-	}
-	removeSources(dir, source)
-	return nil
 }

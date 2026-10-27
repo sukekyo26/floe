@@ -18,6 +18,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/sukekyo26/floe/internal/dirs"
+	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/link"
 	"github.com/sukekyo26/floe/internal/project"
@@ -201,8 +202,12 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	images := &recorder{fsys: sent, names: nil, seen: map[string]bool{}}
 	o := tmpl.Options{Theme: opts.theme(), Untitled: *opts.Slug, Images: images, ImagesDir: "", Icons: dw.Icons}
 	page, drawErr := tmpl.Draw(dw.Kit, up.File, up.Source, o)
+	var mistakes usererr.List
+	if failed := mistakes.Add(drawErr); failed != nil {
+		return nil, failed
+	}
 	if up.Images == nil && len(images.names) > 0 {
-		if _, refused := s.storedPage(nil, opts, up.Project); refused != nil {
+		if _, refused := s.storedPage(up.File, nil, opts, up.Project); refused != nil {
 			return nil, refused
 		}
 		return nil, &NeedImages{Names: images.names}
@@ -210,7 +215,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	if drawErr != nil {
 		return nil, drawErr //nolint:wrapcheck // mistakes at their places, for the caller to show
 	}
-	e, err := s.storedPage(up.Source, opts, up.Project)
+	e, err := s.storedPage(up.File, up.Source, opts, up.Project)
 	if err != nil {
 		return nil, err
 	}
@@ -221,14 +226,32 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 			e.Images[name] = b
 		}
 	}
+	if err := imagesApart(up.File, e.Images); err != nil {
+		return nil, err
+	}
 	return e, nil
 }
 
-// storedPage builds the entry of a data file as a stored page of content src (nil checks its owner only),
-// published from the project from. opts are those Accept returned without a mistake, whose Slug is set.
-func (s *Store) storedPage(src []byte, opts Options, from string) (*Entry, error) {
+// imagesApart refuses images of the data file file one of which is under another, as a.png and a.png/b.png:
+// images sent are read as they are named, which a disk, where the copy goes, cannot hold. Its mistakes are at
+// file, by the names.
+func imagesApart(file string, images map[string][]byte) error {
+	var found usererr.List
+	for name := range images {
+		for dir := path.Dir(name); dir != "."; dir = path.Dir(dir) {
+			if _, ok := images[dir]; ok {
+				found = append(found, usererr.NewAt(file, 0, 0, "store_image_under_image", name, dir))
+			}
+		}
+	}
+	return found.Sorted().Err()
+}
+
+// storedPage builds the entry of the data file file as a stored page of content src (nil checks its owner
+// only), published from the project from. opts are those Accept returned without a mistake, whose Slug is set.
+func (s *Store) storedPage(file string, src []byte, opts Options, from string) (*Entry, error) {
 	e := &Entry{
-		Slug: *opts.Slug, Meta: seedMeta("", src != nil, opts.theme()), Source: src, Page: nil, Images: nil,
+		Slug: *opts.Slug, Meta: seedMeta("", file, src, opts.theme()), Source: src, Page: nil, Images: nil,
 		Prev: nil, opts: opts, from: from, named: "",
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
@@ -254,8 +277,9 @@ func (s *Store) PrepareLink(
 	if err != nil {
 		return nil, err
 	}
-	data := files.IsDataFile(path)
-	if data {
+	var data []byte
+	if files.IsDataFile(path) {
+		data = src
 		images := files.NewRoot(filepath.Dir(path))
 		o := tmpl.Options{Theme: opts.theme(), Untitled: slug, Images: images, ImagesDir: "", Icons: dw.Icons}
 		_, err = tmpl.Draw(dw.Kit, path, src, o)
@@ -269,7 +293,7 @@ func (s *Store) PrepareLink(
 		named = linkName(file, cwd)
 	}
 	e := &Entry{
-		Slug: slug, Meta: seedMeta(path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
+		Slug: slug, Meta: seedMeta(path, path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
 		opts: opts, from: project.Name(ctx, filepath.Dir(path)), named: named,
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
@@ -278,13 +302,16 @@ func (s *Store) PrepareLink(
 	return e, nil
 }
 
-// seedMeta is the seed of the Meta settle builds: the link's path ("" for a stored page), and the theme of a
-// page drawn from a data file.
-func seedMeta(path string, data bool, theme string) Meta {
+// seedMeta is the seed of the Meta settle builds: the link's path ("" for a stored page), and of a page drawn
+// from the data file file of content data (nil for HTML), its title: and the theme it is drawn with.
+func seedMeta(path, file string, data []byte, theme string) Meta {
 	var m Meta
 	m.Path = path
-	if data {
+	if data != nil {
 		m.Theme = theme
+		if d, _ := doc.Read(file, data, theme); d != nil { //nolint:errcheck // drawn without a mistake already
+			m.DataTitle = d.Title
+		}
 	}
 	return m
 }
@@ -466,27 +493,38 @@ func (s *Store) Save(e *Entry) error {
 		return fmt.Errorf("store: save %q, which cannot be a slug", e.Slug) //nolint:err113 // floe's own mistake
 	}
 	made := os.Mkdir(dir, 0o700) == nil
-	if err = s.write(e, dir); err != nil {
-		// The directory this save made, left, would keep a rename off the slug from the management
-		// page, which does not list it. One that was there (its meta.json unreadable) stays.
-		if made {
-			_ = os.RemoveAll(dir) //nolint:errcheck // the error is the save's
-		}
-		return err
+	if e.Meta.IsLink() {
+		err = s.WriteMeta(e.Slug, &e.Meta)
+	} else {
+		err = s.keepCopy(e.Slug, &e.Meta, e.Source, e.Page, e.Images)
 	}
-	removeSources(dir, e.Meta.Source)
-	return nil
+	// The directory this save made, left, would keep a rename off the slug from the management page, which
+	// does not list it. One that was there (its meta.json unreadable) stays.
+	if err != nil && made {
+		_ = os.RemoveAll(dir) //nolint:errcheck // the error is the save's
+	}
+	return err
 }
 
-// write writes e to dir, the directory of its slug: the copy of a stored page, then meta.json.
-func (s *Store) write(e *Entry, dir string) error {
-	if !e.Meta.IsLink() {
-		var err error
-		if e.Meta.Source, err = writeSource(dir, e.Source, e.Page, e.Images); err != nil {
-			return err
-		}
+// keepCopy writes a new copy of the stored page slug, the data file src, the page drawn from it and its
+// images, then m naming it as its meta.json, then removes the copies before: what a save and a rebuild keep. A
+// copy that meta.json could not come to name goes. It is called under the lock.
+func (s *Store) keepCopy(slug string, m *Meta, src, page []byte, images map[string][]byte) error {
+	dir, ok := s.dir(slug)
+	if !ok {
+		return fmt.Errorf("store: keep a copy of %q, which cannot be a slug", slug) //nolint:err113 // floe's own mistake
 	}
-	return s.WriteMeta(e.Slug, &e.Meta)
+	source, err := writeSource(dir, src, page, images)
+	if err != nil {
+		return err
+	}
+	m.Source = source
+	if err := s.WriteMeta(slug, m); err != nil {
+		_ = os.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // the error is the write's
+		return err
+	}
+	removeSources(dir, source)
+	return nil
 }
 
 // lock waits to hold the store alone among saves, edits, removals and rebuilds, in this process or another,
@@ -502,8 +540,10 @@ func (s *Store) lock(create bool) (func(), error) {
 		if err := os.MkdirAll(s.root, 0o700); err != nil {
 			return nil, usererr.CannotWrite(s.root, err) //nolint:wrapcheck // the system's words, at the store
 		}
-	} else if _, err := os.Stat(s.root); err != nil {
-		return nil, err //nolint:wrapcheck // fs.ErrNotExist, for the caller to tell
+	} else if _, err := os.Stat(s.root); errors.Is(err, fs.ErrNotExist) {
+		return nil, err //nolint:wrapcheck // for the caller to tell as it may
+	} else if err != nil {
+		return nil, usererr.CannotRead(s.root, err) //nolint:wrapcheck // the system's words, at the store
 	}
 	file := filepath.Join(s.root, ".lock")
 	f, err := os.OpenFile(file, os.O_RDONLY|os.O_CREATE, 0o600) //nolint:gosec // G304: the store's own

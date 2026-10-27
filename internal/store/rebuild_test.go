@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/store"
@@ -67,7 +68,7 @@ func TestRebuildKept(t *testing.T) {
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 	publish(t, s, dw, "b.yaml", "lang: en\ntemplate: pic\nneed: 1\ni: []\n", nil, store.Options{})
-	needs := picKit(t, "v2", `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["need"]}`)
+	needs := picKit(t, "v2", strings.Replace(picSchema, `"type": "object",`, `"type": "object", "required": ["need"],`, 1))
 	pageA := read(t, filepath.Join(copyOf(t, s, root, "a"), "page.html"))
 	err := s.Rebuild(needs)
 	copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
@@ -166,3 +167,153 @@ func TestCannotWrite(t *testing.T) {
 }
 
 func lines(l ...string) string { return strings.Join(l, "\n") }
+
+// meanwhile are icons whose lookup, while a page is drawn again, does what the test gives once: as another
+// process would while a rebuild draws.
+type meanwhile struct {
+	svg  string
+	then func()
+}
+
+func (m *meanwhile) Lookup(string) ([]byte, error) {
+	if m.then != nil {
+		then := m.then
+		m.then = nil
+		then()
+	}
+	return []byte(`<svg xmlns="http://www.w3.org/2000/svg">` + m.svg + `</svg>`), nil
+}
+
+const iconPage = "lang: en\ntemplate: pic\ntitle: T\nd: {width: 300, height: 100, title: i, parts: [{icon: {icon: aws/res/aws-lambda, x: 10, y: 10}}]}\n"
+
+// What happens to a page while it is drawn again stays: an edit on the management page is kept, and a page
+// published again, removed or renamed is not written.
+func TestRebuildMeanwhile(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name  string
+		then  func(t *testing.T, s *store.Store, dw store.Drawing)
+		check func(t *testing.T, s *store.Store, root, before string)
+	}{
+		{"edited", func(t *testing.T, s *store.Store, _ store.Drawing) {
+			t.Helper()
+			if _, err := s.Edit("d", store.Edit{Title: ptr("Kept"), Favorite: ptr(true), Description: ptr("about")}); err != nil {
+				t.Fatal(err)
+			}
+		}, func(t *testing.T, s *store.Store, root, before string) {
+			t.Helper()
+			m := s.ReadMeta("d")
+			if m.Title != "Kept" || !m.Favorite || m.Description != "about" {
+				t.Errorf("the edit was lost: %+v", m)
+			}
+			if page := read(t, filepath.Join(copyOf(t, s, root, "d"), "page.html")); page == before {
+				t.Error("not drawn again")
+			}
+		}},
+		{"published again", func(t *testing.T, s *store.Store, dw store.Drawing) {
+			t.Helper()
+			publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: Again\n", nil, store.Options{})
+		}, func(t *testing.T, s *store.Store, root, _ string) {
+			t.Helper()
+			if page := read(t, filepath.Join(copyOf(t, s, root, "d"), "page.html")); !strings.Contains(page, "<title>Again</title>") {
+				t.Errorf("the page published again was written over:\n%s", page)
+			}
+		}},
+		{"removed", func(t *testing.T, s *store.Store, _ store.Drawing) {
+			t.Helper()
+			if err := s.Remove("d"); err != nil {
+				t.Fatal(err)
+			}
+		}, func(t *testing.T, _ *store.Store, root, _ string) {
+			t.Helper()
+			if _, err := os.Stat(filepath.Join(root, "d")); !os.IsNotExist(err) {
+				t.Errorf("the page removed is back: %v", err)
+			}
+		}},
+		{"renamed", func(t *testing.T, s *store.Store, _ store.Drawing) {
+			t.Helper()
+			if _, err := s.Edit("d", store.Edit{Slug: ptr("z")}); err != nil {
+				t.Fatal(err)
+			}
+		}, func(t *testing.T, s *store.Store, root, before string) {
+			t.Helper()
+			if _, err := os.Stat(filepath.Join(root, "d")); !os.IsNotExist(err) {
+				t.Errorf("the slug renamed is back: %v", err)
+			}
+			if page := read(t, filepath.Join(copyOf(t, s, root, "z"), "page.html")); page != before {
+				t.Error("the page renamed was written")
+			}
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			s, root := newStore(t)
+			icons := &meanwhile{svg: "<g>v1</g>", then: nil}
+			dw := picKit(t, "", "")
+			dw.Icons = icons
+			publish(t, s, dw, "d.yaml", iconPage, nil, store.Options{})
+			before := read(t, filepath.Join(copyOf(t, s, root, "d"), "page.html"))
+			icons.svg = "<g>v2</g>"
+			icons.then = func() { tt.then(t, s, dw) }
+			if err := s.Rebuild(dw); err != nil {
+				t.Fatal(told(err, root))
+			}
+			tt.check(t, s, root, before)
+		})
+	}
+}
+
+// Drawn again, a page keeps the images under the directories of images/, not a symlink or a FIFO, which no save
+// writes.
+func TestRebuildImagesKept(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ni: [a.png]\n", map[string][]byte{"a.png": png}, store.Options{})
+	images := filepath.Join(copyOf(t, s, root, "d"), "images")
+	if err := os.MkdirAll(filepath.Join(images, "sub"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(images, "sub", "c.png"), png, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("a.png", filepath.Join(images, "link.png")); err != nil {
+		t.Fatal(err)
+	}
+	if err := syscall.Mkfifo(filepath.Join(images, "fifo.png"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+		t.Fatal(told(err, root))
+	}
+	if got, want := files(t, copyOf(t, s, root, "d")), []string{"data.yaml", "images/a.png", "images/sub/c.png", "page.html"}; !slices.Equal(got, want) {
+		t.Errorf("files %v, want %v", got, want)
+	}
+}
+
+// An image of the copy that cannot be read is told at it, the page kept.
+func TestRebuildImageUnreadable(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root reads what it may not")
+	}
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	old := filepath.Join(copyOf(t, s, root, "d"), "images", "old.png")
+	if err := os.WriteFile(old, png, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	copyD := strings.Replace(copyOf(t, s, root, "d"), root, "S", 1)
+	want := lines(
+		copyD+"/images/old.png: permission denied",
+		copyD+`/data.yaml: page "d" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
+	)
+	if got := told(s.Rebuild(picKit(t, "v2", "")), root); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}

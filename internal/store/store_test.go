@@ -25,7 +25,8 @@ func told(err error, root string) string {
 }
 
 const picSchema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
-"properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}, "need": {}}}`
+"properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}, "need": {},
+"d": {"$ref": "floe:///parts/diagram.json"}}}`
 
 // picKit is floe's own with a template pic of its own, which shows the images of i, its page.html opened by head
 // and its schema.json schema (picSchema for "").
@@ -37,7 +38,7 @@ func picKit(t *testing.T, head, schema string) store.Drawing {
 		t.Fatal(err)
 	}
 	page := "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head>\n<body>" + head +
-		"{{range .Data.i}}<img src=\"{{.}}\">{{end}}</body></html>\n"
+		"{{range .Data.i}}<img src=\"{{.}}\">{{end}}{{with .Data.d}}{{.}}{{end}}</body></html>\n"
 	files := fstest.MapFS{
 		"pic/page.html":    {Data: []byte(page)},
 		"pic/schema.json":  {Data: []byte(cmpOr(schema, picSchema))},
@@ -360,5 +361,78 @@ func TestOwners(t *testing.T) {
 	_, err = s.PrepareLink(t.Context(), dw, html, store.Options{Slug: ptr("same")}, "", home)
 	if got := told(err, root); got != `floe: slug "same" is used by a stored page; choose another slug, or remove that page first (floe rm same)` {
 		t.Errorf("told %s", got)
+	}
+}
+
+// Images sent one under another, which a disk cannot hold, are refused before they are saved, at the data file.
+func TestImageUnderImage(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	src := "lang: en\ntemplate: pic\ni: [a.png, a.png/b.png]\n"
+	_, err := s.PrepareData(picKit(t, "", ""), store.Upload{File: "d.yaml", Source: []byte(src), Images: map[string][]byte{"a.png": png, "a.png/b.png": png}, Project: "p"}, store.Options{})
+	want := `d.yaml: the image "a.png/b.png" is under "a.png", which is an image too, and a stored page cannot keep both: rename one of them`
+	if got := told(err, root); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A failure of floe's in drawing is told before the images are asked for.
+func TestFailureBeforeNeedImages(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newStore(t)
+	dw := picKit(t, "", "")
+	dw.Icons = failing{}
+	src := "lang: en\ntemplate: pic\ni: [a.png]\nd: {width: 300, height: 100, title: i, parts: [{icon: {icon: aws/res/aws-lambda, x: 10, y: 10}}]}\n"
+	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p"}, store.Options{})
+	var found usererr.List
+	if _, ok := errors.AsType[*store.NeedImages](err); ok || found.Add(err) == nil {
+		t.Errorf("PrepareData = %v, want floe's failure", err)
+	}
+}
+
+type failing struct{}
+
+func (failing) Lookup(string) ([]byte, error) { return nil, errors.New("boom") } //nolint:err113 // the test's
+
+// A store that cannot be looked into is told at it.
+func TestStoreUnreadable(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root reads what it may not")
+	}
+	s, root := newStore(t)
+	parent := filepath.Dir(root)
+	if err := os.Chmod(parent, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o700) }) //nolint:errcheck // the test is told already
+	if got, want := told(s.Remove("a"), "\x00"), root+": permission denied"; got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A stored page is listed under its data's title:, kept as its own to give back when a title pinned is cleared;
+// one of none under its slug.
+func TestPublishTitle(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: Data\n", nil, store.Options{})
+	if m := s.ReadMeta("d"); m.Title != "Data" || m.DataTitle != "Data" {
+		t.Errorf("title %q, data's %q", m.Title, m.DataTitle)
+	}
+	if _, err := s.Edit("d", store.Edit{Title: ptr("X")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Edit("d", store.Edit{Title: ptr("")}); err != nil || s.ReadMeta("d").Title != "Data" {
+		t.Errorf("cleared: %q, %v", s.ReadMeta("d").Title, err)
+	}
+	publish(t, s, dw, "e.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	if m := s.ReadMeta("e"); m.Title != "e" || m.DataTitle != "" {
+		t.Errorf("title %q, data's %q", m.Title, m.DataTitle)
 	}
 }
