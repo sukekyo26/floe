@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -22,10 +23,10 @@ const (
 )
 
 // api sends a request to h as the CLI does: from the server's origin, JSON in and out.
-func api(t *testing.T, h http.Handler, method, path, body string) *httptest.ResponseRecorder {
+func api(ctx context.Context, t *testing.T, h http.Handler, method, path, body string) *httptest.ResponseRecorder {
 	t.Helper()
 
-	req := httptest.NewRequestWithContext(t.Context(), method, path, strings.NewReader(body))
+	req := httptest.NewRequestWithContext(ctx, method, path, strings.NewReader(body))
 	req.Host = "127.0.0.1:7325"
 	req.Header.Set("Origin", "http://127.0.0.1:7325")
 	req.Header.Set("Content-Type", "application/json")
@@ -35,15 +36,15 @@ func api(t *testing.T, h http.Handler, method, path, body string) *httptest.Resp
 	return w
 }
 
-// publish sends the data file source as the page slug, of the project p.
-func publish(t *testing.T, h http.Handler, slug, source string) *httptest.ResponseRecorder {
+// publish sends the data file mineData as the page m, of the project p.
+func publish(ctx context.Context, t *testing.T, h http.Handler) *httptest.ResponseRecorder {
 	t.Helper()
 
-	b, err := json.Marshal(Upload{File: "m.yaml", Source: []byte(source), Project: "p"}) //nolint:exhaustruct // none else
+	b, err := json.Marshal(Upload{File: "m.yaml", Source: []byte(mineData), Project: "p"}) //nolint:exhaustruct // none else
 	if err != nil {
 		t.Fatal(err)
 	}
-	return api(t, h, http.MethodPut, "/api/artifacts/"+slug, string(b))
+	return api(ctx, t, h, http.MethodPut, "/api/artifacts/m", string(b))
 }
 
 // told is the report of w, laid out.
@@ -72,18 +73,18 @@ func TestLatestPublish(t *testing.T) {
 
 	s, dir := watched(t, false)
 	h := s.Handler()
-	if w := publish(t, h, "m", mineData); w.Code != http.StatusCreated {
+	if w := publish(t.Context(), t, h); w.Code != http.StatusCreated {
 		t.Fatalf("publish = %d %s", w.Code, w.Body)
 	}
 	_, gen := s.now()
-	if w := publish(t, h, "m", mineData); w.Code != http.StatusOK {
+	if w := publish(t.Context(), t, h); w.Code != http.StatusOK {
 		t.Fatalf("publish again = %d %s", w.Code, w.Body)
 	}
 	if _, again := s.now(); again != gen {
 		t.Errorf("a publish with nothing changed read the drawing again: %d, then %d", gen, again)
 	}
 	mine(t, dir, "{{.Data.n}} saved just now")
-	if w := publish(t, h, "m", mineData); w.Code != http.StatusOK {
+	if w := publish(t.Context(), t, h); w.Code != http.StatusOK {
 		t.Fatalf("publish after the save = %d %s", w.Code, w.Body)
 	}
 	if _, after := s.now(); after != gen+1 {
@@ -104,11 +105,11 @@ func TestLatestRebuild(t *testing.T) {
 
 	s, dir := watched(t, false)
 	h := s.Handler()
-	if w := publish(t, h, "m", mineData); w.Code != http.StatusCreated {
+	if w := publish(t.Context(), t, h); w.Code != http.StatusCreated {
 		t.Fatalf("publish = %d %s", w.Code, w.Body)
 	}
 	mine(t, dir, "{{.Data.nope.x}}")
-	w := api(t, h, http.MethodPost, "/api/rebuild", "{}")
+	w := api(t.Context(), t, h, http.MethodPost, "/api/rebuild", "{}")
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("rebuild = %d %s, want 400", w.Code, w.Body)
 	}
@@ -134,7 +135,7 @@ func TestLatestLink(t *testing.T) {
 	}
 	write(t, data, mineData)
 	mine(t, dir, "{{.Data.nope.x}}")
-	w := api(t, s.Handler(), http.MethodPost, "/api/artifacts", `{"path": "`+data+`"}`)
+	w := api(t.Context(), t, s.Handler(), http.MethodPost, "/api/artifacts", `{"path": "`+data+`"}`)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("link = %d %s, want 400", w.Code, w.Body)
 	}

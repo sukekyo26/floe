@@ -66,7 +66,8 @@ type Server struct {
 func New(cfg Config) *Server {
 	s := &Server{
 		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, id: rand.Text()[:8],
-		looking: sync.Mutex{}, mu: sync.Mutex{}, drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "", fresh: false,
+		looking: sync.Mutex{}, mu: sync.Mutex{}, drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "",
+		fresh: false,
 	}
 	// Requests under another name are refused against DNS rebinding.
 	for _, h := range []string{"localhost", "127.0.0.1"} {

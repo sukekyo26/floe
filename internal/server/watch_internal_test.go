@@ -333,7 +333,7 @@ func TestWatchParallel(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A stored page of the template too, which a rebuild draws again (it leaves links alone).
-	if w := publish(t, h, "m", mineData); w.Code != http.StatusCreated {
+	if w := publish(t.Context(), t, h); w.Code != http.StatusCreated {
 		t.Fatalf("publish = %d %s", w.Code, w.Body)
 	}
 	var wg sync.WaitGroup
@@ -347,8 +347,8 @@ func TestWatchParallel(t *testing.T) {
 					h.ServeHTTP(httptest.NewRecorder(), req)
 				}
 				// A file read half written is the user's mistake (400), never floe's failure.
-				noFailure(t, api(t, h, http.MethodPost, "/api/rebuild", "{}"), http.StatusNoContent)
-				noFailure(t, publish(t, h, "m", mineData), http.StatusOK)
+				noFailure(t, api(ctx, t, h, http.MethodPost, "/api/rebuild", "{}"), http.StatusNoContent)
+				noFailure(t, publish(ctx, t, h), http.StatusOK)
 			}
 		})
 	}
