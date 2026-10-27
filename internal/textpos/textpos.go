@@ -32,7 +32,7 @@ func Ending(src []byte, offset int) (line, column int) {
 
 // OfTemplate returns where the head of msg, text/template's words of src read as name, says it failed, and msg
 // without the head: "template: name:line:column: " of an execution, at line and column as Of counts them, and
-// "template: name:line: " of a parse, at the line templateLine says and no column (0). The head's column is in
+// "template: name:line: " of a parse, at the line TemplateLine says and no column (0). The head's column is in
 // bytes from 0, a byte of src (its end is none). line is 0 when the head says no place in src; without such a
 // head (another name, no numbers, a line of 0, a column below 0), line is 0 and rest msg.
 // LIMIT: text/template gives where it failed in its words alone; take it from the error once it gives it apart.
@@ -48,7 +48,7 @@ func OfTemplate(src []byte, msg, name string) (line, column int, rest string) {
 	}
 	// A parse's words follow ": " at once; an execution's, its column.
 	if words, parse := strings.CutPrefix(after, " "); parse {
-		return templateLine(src, at), 0, words
+		return TemplateLine(src, at), 0, words
 	}
 	columnText, words, ok := strings.Cut(after, ": ")
 	bytesIn, err := strconv.Atoi(columnText)
@@ -61,14 +61,14 @@ func OfTemplate(src []byte, msg, name string) (line, column int, rest string) {
 	return line, column, words
 }
 
-// templateLine returns the line, as Of counts it, of the start of line of src, a line as text/template counts
+// TemplateLine returns the line, as Of counts it, of the start of line of src, a line as text/template counts
 // them (\n alone); 0 when src has no such line. The end of src is a place in it, after its last line break,
 // when src is not empty (text/template's unexpected EOF).
 // LIMIT: a CR alone ending a line inside line is not seen: the line its start is on is told, as text/template
 // gives no column to tell more.
-func templateLine(src []byte, line int) int {
+func TemplateLine(src []byte, line int) int {
 	start := lineStart(src, line)
-	if start < 0 || len(src) == 0 {
+	if line < 1 || start < 0 || len(src) == 0 {
 		return 0
 	}
 	at, _ := Of(src, start)

@@ -85,6 +85,23 @@ func TestCheckMistakes(t *testing.T) {
 			"escaping", with(map[string]string{"p/part.html": `<div data-floe-part="p"><a href="{{.t}}>x</a></div>`}), nil, nil,
 			"own/parts/p/part.html: ends in a non-text context: {stateURL delimDoubleQuote urlPartPreQuery jsCtxRegexp [] attrURL elementNone <nil>}",
 		},
+		// Without a node html/template names a line of the file, as text/template counts them, {{define}}d ones too.
+		{
+			"escaping a range's re-entry", with(map[string]string{"p/part.html": "<div data-floe-part=\"p\">\n{{range .}}<a href={{end}}</div>"}), nil, nil,
+			"own/parts/p/part.html:2: on range loop re-entry: \"<\" in unquoted attr: \"<a\"",
+		},
+		{
+			"escaping a range's break", with(map[string]string{"p/part.html": "<div data-floe-part=\"p\">\n{{range .}}<p {{.}}{{break}}{{end}}</div>"}), nil, nil,
+			"own/parts/p/part.html:2: at range loop break: at range loop break: at range loop break: at range loop break: \"<\" in attribute name: \"<p \"",
+		},
+		{
+			"escaping in a define", with(map[string]string{"p/part.html": "{{define \"d\"}}\n\n{{range .}}<a href={{end}}{{end}}<div data-floe-part=\"p\">{{template \"d\" .}}</div>"}), nil, nil,
+			"own/parts/p/part.html:3: on range loop re-entry: \"<\" in unquoted attr: \"<a\"",
+		},
+		{
+			"escaping after a CR alone", with(map[string]string{"p/part.html": "<div data-floe-part=\"p\">\r\r\n{{range .}}<a href={{end}}</div>"}), nil, nil,
+			"own/parts/p/part.html:3: on range loop re-entry: \"<\" in unquoted attr: \"<a\"", // text/template says 2: a CR alone ends a line too
+		},
 		{
 			"an unknown look", with(map[string]string{"p/part.yaml": "looks: [panel, nope]\n"}), nil, nil,
 			"own/parts/p/part.yaml:1:16: looks names \"nope\", which is no part or look: name one floe or your own parts hold",
