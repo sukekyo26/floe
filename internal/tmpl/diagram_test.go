@@ -111,7 +111,8 @@ func TestDiagramMistakes(t *testing.T) {
 	overlap := `{width: 300, height: 100, title: o, parts: [{box: {x: 20, y: 20, w: 80, h: 40, rows: [A]}}, ` +
 		`{box: {x: 40, y: 30, w: 80, h: 40, rows: [B]}}]}`
 	src := diagramPage("en", overlap, boxSpec, iconSpec, iconSpec)
-	// At the box key of the item /parts/0; the icons' once, after the mistakes of d.yaml, which come first.
+	// At the box key of the item /parts/0; the icons' once, at no place, where Sorted puts those of no place: after
+	// d.yaml's, as the first diagram's mistake is d.yaml's.
 	want := lines(
 		`d.yaml:7:63: box "A" overlaps box "B"`,
 		`floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path`,
