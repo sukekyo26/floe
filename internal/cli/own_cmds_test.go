@@ -98,13 +98,14 @@ func TestNewRefused(t *testing.T) {
 		{nil, []string{"part", "new", "x", "--from", "note"}, 2, "floe: unknown flag: --from: run floe --help\n"},
 		{nil, []string{"template", "new", "a", "b"}, 2, "floe: accepts 1 arg(s), received 2: run floe --help\n"},
 		{map[string]string{"FLOE_PARTS_DIR": "/nowhere"}, []string{"part", "new", "x"}, 1, "/nowhere: no such file or directory\n"},
-		{map[string]string{}, []string{"part", "new", "x"}, 1, "floe: there is no default directory, as HOME is not an absolute path; set FLOE_PARTS_DIR to an absolute path\n"},
-		{map[string]string{}, []string{"template", "new", "x"}, 1, "floe: there is no default directory, as HOME is not an absolute path; set FLOE_TEMPLATES_DIR to an absolute path\n"},
+		{map[string]string{}, []string{"part", "new", "x"}, 1, "floe: there is no default directory: HOME is not an absolute path, or the default one is under a file; set FLOE_PARTS_DIR to an absolute path\n"},
+		{map[string]string{}, []string{"template", "new", "x"}, 1, "floe: there is no default directory: HOME is not an absolute path, or the default one is under a file; set FLOE_TEMPLATES_DIR to an absolute path\n"},
 		{
 			map[string]string{"HOME": "/dev/null"},
 			[]string{"part", "new", "x"},
 			1,
-			"/dev/null/.config/floe/parts: cannot be written (not a directory): check that its directory exists and can be written to, and that its name is free and not too long\n",
+			// The default under a file is no place, which a writer is told so.
+			"floe: there is no default directory: HOME is not an absolute path, or the default one is under a file; set FLOE_PARTS_DIR to an absolute path\n",
 		},
 	} {
 		env := tt.env

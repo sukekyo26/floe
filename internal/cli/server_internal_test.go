@@ -31,7 +31,7 @@ func TestServerConfig(t *testing.T) {
 		env  map[string]string
 		want string
 	}{
-		{map[string]string{}, "floe: there is no directory for pages, as HOME is not an absolute path; set FLOE_DIR to an absolute path"},
+		{map[string]string{}, "floe: there is no directory for pages: HOME is not an absolute path, or the default one is under a file; set FLOE_DIR to an absolute path"},
 		{map[string]string{"HOME": "/h", "FLOE_PORT": "0x10"}, `floe: invalid FLOE_PORT "0x10": use a port number from 1 to 65535`},
 		{map[string]string{"HOME": "/h", "FLOE_PORT": "70000"}, `floe: invalid FLOE_PORT "70000": use a port number from 1 to 65535`},
 		{map[string]string{"HOME": "/h", "FLOE_PORT": "+80"}, `floe: invalid FLOE_PORT "+80": use a port number from 1 to 65535`},

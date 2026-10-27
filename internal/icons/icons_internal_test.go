@@ -26,7 +26,7 @@ func told(err error) string {
 // When the new icons cannot be moved into place, the previous ones are put back.
 func TestFetchRestoresPrevious(t *testing.T) { //nolint:paralleltest // replaces rename
 	root := t.TempDir()
-	set := New(root, false)
+	set := New(root)
 	dir := filepath.Join(root, "aws")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
@@ -82,7 +82,7 @@ func TestFetchLeavesPrevious(t *testing.T) { //nolint:paralleltest // replaces r
 	}
 	t.Cleanup(func() { rename = os.Rename })
 
-	_, err := New(root, false).Fetch(context.Background(), "aws", Source{Name: src, At: src}, true)
+	_, err := New(root).Fetch(context.Background(), "aws", Source{Name: src, At: src}, true)
 	want := dir + ": cannot be written (injected), and the previous icons are left in " + old +
 		": move them back here, or fetch the icons again"
 	if told(err) != want {

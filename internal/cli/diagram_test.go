@@ -34,7 +34,7 @@ func TestDiagram(t *testing.T) {
 	}
 	code, _, errs = runIn(dir, nil, "diagram", "render", "b.yaml", "c.yaml", "gone.yaml")
 	want := "b.yaml:5:5: additional properties 'boxx' not allowed\n" +
-		"floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n" +
+		"floe: there is no directory for icons: HOME is not an absolute path, or the default one is under a file; set FLOE_ICONS_DIR to an absolute path\n" +
 		"gone.yaml: no such file or directory\n"
 	if code != 1 || errs != want {
 		t.Errorf("render of mistakes = %d, %q, want %q", code, errs, want)

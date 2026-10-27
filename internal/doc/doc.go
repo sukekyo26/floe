@@ -21,7 +21,7 @@ type Data struct {
 	Values                       map[string]any   // as written, the shared keys too but those that name none
 	Root                         *ast.MappingNode // nil for an empty file
 	// where each shared key is written: its value, its key when the value is left out, the top of the file
-	// for one left out; none (the zero Pos) for a theme given
+	// for one left out; line 0 for a theme given
 	Where map[string]yamlpos.Pos
 }
 
@@ -152,7 +152,7 @@ func (d *Data) readShared(themeGiven bool) error {
 		}
 	}
 	if themeGiven {
-		d.Where["theme"] = yamlpos.Pos{} // no line of d names it
+		d.Where["theme"] = yamlpos.Pos{Line: 0, Column: 0} // no line of d names it
 	}
 	// Read once as every lookup of it and the page's <html lang> take it: BCP 47 in lower case, JA and ja_JP ja's.
 	d.Lang = string(i18n.Tag(d.Lang))

@@ -94,7 +94,7 @@ func TestFetchAndSearch(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	set := icons.New(root, false)
+	set := icons.New(root)
 	dir := filepath.Join(root, "aws")
 	// Before a fetch, a search and a lookup say how to fetch.
 	notFetched := "floe: AWS icons are not in " + dir + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
@@ -161,7 +161,7 @@ func TestLookup(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	set := icons.New(root, false)
+	set := icons.New(root)
 	fetch(t, set, local(writeZip(t, "Icon-package.zip", packageFiles)), false)
 	// A name its set does not hold, and one outside the set's directory, are not read.
 	for _, name := range []string{"aws/amazon-ec2", "aws/../../etc/passwd", "aws/"} {
@@ -211,7 +211,7 @@ func TestFetchFromURL(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	root := t.TempDir()
-	set := icons.New(root, false)
+	set := icons.New(root)
 	url := srv.URL + "/x/Icon-package_01022030.abc.zip"
 	if got := fetch(t, set, icons.Source{Name: url, At: url}, false); got.Count != 8 {
 		t.Errorf("Fetch from a URL = %+v", got)
@@ -250,7 +250,7 @@ func TestFetchCannotWrite(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(parent, 0o700) }) //nolint:errcheck // for TempDir to remove it
 	root := filepath.Join(parent, "x")
 	url := srv.URL + "/x/Icon-package_01022030.abc.zip"
-	_, err := icons.New(root, false).Fetch(context.Background(), "aws", icons.Source{Name: url, At: url}, false)
+	_, err := icons.New(root).Fetch(context.Background(), "aws", icons.Source{Name: url, At: url}, false)
 	if os.Geteuid() == 0 {
 		t.Skip("root writes to any directory")
 	}
@@ -303,7 +303,7 @@ func TestFetchRefusals(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	set := icons.New(root, false)
+	set := icons.New(root)
 	dir := filepath.Join(root, "aws")
 	notZip := filepath.Join(t.TempDir(), "page.html")
 	if err := os.WriteFile(notZip, []byte("<html>"), 0o600); err != nil {
@@ -411,7 +411,7 @@ func TestBrokenIndex(t *testing.T) {
 		if err := os.WriteFile(index, []byte(c.index), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := icons.New(filepath.Dir(dir), false).Search([]string{"x"}); told(err) != index+c.want {
+		if _, err := icons.New(filepath.Dir(dir)).Search([]string{"x"}); told(err) != index+c.want {
 			t.Errorf("index %s = %s, want %s", c.index, told(err), index+c.want)
 		}
 	}
@@ -420,35 +420,28 @@ func TestBrokenIndex(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := icons.New(file, false).Search([]string{"x"}); told(err) != file+"/aws/index.json: not a directory" {
+	if _, err := icons.New(file).Search([]string{"x"}); told(err) != file+"/aws/index.json: not a directory" {
 		t.Errorf("a root that is a file = %s", told(err))
 	}
-	// The default store under a file (HOME=/dev/null) is not there: the set is not fetched. One set there is told,
-	// and so is either when a fetch would write it, before the network (the context is done).
+	// A store under a file is told as it is (the default one is none, which cli tells), and a fetch into one
+	// stops before the network (the context is done); one failing at the network makes nothing.
 	under := filepath.Join(file, "x")
-	if _, err := icons.New(under, false).Search([]string{"x"}); !strings.HasPrefix(told(err), "floe: AWS icons are not in "+under+"/aws;") {
-		t.Errorf("the default root under a file = %s", told(err))
-	}
-	if _, err := icons.New(under, true).Search([]string{"x"}); told(err) != under+"/aws/index.json: not a directory" {
-		t.Errorf("a root set under a file = %s", told(err))
+	if _, err := icons.New(under).Search([]string{"x"}); told(err) != under+"/aws/index.json: not a directory" {
+		t.Errorf("a root under a file = %s", told(err))
 	}
 	done, cancel := context.WithCancel(context.Background())
 	cancel()
-	// A fetch that fails at the network makes nothing.
+	if _, err := icons.New(under).Fetch(done, "aws", icons.Source{Name: "", At: ""}, false); !strings.HasPrefix(told(err), under+": cannot be written (not a directory): check") {
+		t.Errorf("a fetch into a root under a file = %s", told(err))
+	}
 	typo := filepath.Join(t.TempDir(), "typo")
-	if _, err := icons.New(typo, true).Fetch(done, "aws", icons.Source{Name: "", At: ""}, false); err == nil {
+	if _, err := icons.New(typo).Fetch(done, "aws", icons.Source{Name: "", At: ""}, false); err == nil {
 		t.Error("a fetch with its context done went on")
 	}
 	if _, err := os.Stat(typo); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("a fetch failing at the network left %s: %v", typo, err)
 	}
-	for _, set := range []bool{false, true} {
-		_, err := icons.New(under, set).Fetch(done, "aws", icons.Source{Name: "", At: ""}, false)
-		if want := under + ": cannot be written (not a directory): check"; !strings.HasPrefix(told(err), want) {
-			t.Errorf("a fetch into a root under a file (set %v) = %s, want %s…", set, told(err), want)
-		}
-	}
-	_, err := icons.New(file, false).Fetch(context.Background(), "aws", local(writeZip(t, "Icon-package.zip", packageFiles)), true)
+	_, err := icons.New(file).Fetch(context.Background(), "aws", local(writeZip(t, "Icon-package.zip", packageFiles)), true)
 	if want := file + ": cannot be written (not a directory): check"; !strings.HasPrefix(told(err), want) {
 		t.Errorf("a fetch --force into a root that is a file = %s, want %s…", told(err), want)
 	}
@@ -458,7 +451,7 @@ func TestBrokenIndex(t *testing.T) {
 func TestNotFetchedOnce(t *testing.T) {
 	t.Parallel()
 
-	s := icons.New(t.TempDir(), false)
+	s := icons.New(t.TempDir())
 	errs := make([]error, 8)
 	var wg sync.WaitGroup
 	for i := range errs {

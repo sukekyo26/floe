@@ -91,15 +91,14 @@ func kitOf(set string) *kit {
 // Store is the icon sets kept under a root, a directory each.
 type Store struct {
 	root string
-	set  bool // root is a setting's, not the default place
 	// The indexes of the sets read so far, by set: a diagram looks up many icons.
 	mu      sync.Mutex
 	indexes map[string]*index
 }
 
-// New returns the store under root, an absolute path, set when a setting names it.
-func New(root string, set bool) *Store {
-	return &Store{root: root, set: set, mu: sync.Mutex{}, indexes: map[string]*index{}}
+// New returns the store under root, an absolute path.
+func New(root string) *Store {
+	return &Store{root: root, mu: sync.Mutex{}, indexes: map[string]*index{}}
 }
 
 func (s *Store) dir(k *kit) string {
@@ -126,9 +125,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 	}
 	file := filepath.Join(s.dir(k), "index.json")
 	b, _, err := files.Read(file)
-	// None at the set is a set not fetched, and so is the default store under a file (HOME=/dev/null); a store
-	// set under a file, or one that is a file, is told.
-	if errors.Is(err, fs.ErrNotExist) || !s.set && files.UnderFile(s.root, err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	if err != nil {

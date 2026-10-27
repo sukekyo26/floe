@@ -14,23 +14,28 @@ import (
 )
 
 // dataDir is a directory of floe's: the setting key, else sub under the XDG base directory xdg, else under
-// home under HOME; "" when none is an absolute path. set reports whether it is the setting's. Each is an
+// home under HOME; "" when none is an absolute path, or the default is under a file (HOME=/dev/null), as there is
+// then no place to read or write. set reports whether it is the setting's, which is told as it is when it cannot
+// be used. Each is an
 // absolute path, so that floe reads one place wherever it runs: a setting written relative (~/x in quotes too,
 // which no shell read) is refused, and a relative XDG base directory is none, as its spec says.
 func (a *app) dataDir(key, xdg, home, sub string) (dir string, set bool, err error) {
-	if dir := a.getenv(key); dir != "" {
-		if !filepath.IsAbs(dir) {
-			return "", true, usererr.New("dir_relative", key, dir)
+	if setting := a.getenv(key); setting != "" {
+		if !filepath.IsAbs(setting) {
+			return "", true, usererr.New("dir_relative", key, setting)
 		}
-		return dir, true, nil
+		return setting, true, nil
 	}
-	if base := a.getenv(xdg); filepath.IsAbs(base) {
-		return filepath.Join(base, sub), false, nil
+	switch base, h := a.getenv(xdg), a.getenv("HOME"); {
+	case filepath.IsAbs(base):
+		dir = filepath.Join(base, sub)
+	case filepath.IsAbs(h):
+		dir = filepath.Join(h, home, sub)
 	}
-	if h := a.getenv("HOME"); filepath.IsAbs(h) {
-		return filepath.Join(h, home, sub), false, nil
+	if files.UnderFile(dir) {
+		return "", false, nil
 	}
-	return "", false, nil
+	return dir, false, nil
 }
 
 // ownPlace is the directory of one's own of the kind (parts, themes, templates) as set: FLOE_<KIND>_DIR, the key
@@ -43,7 +48,7 @@ func (a *app) ownPlace(kind string) (dir, key string, set bool, err error) {
 
 // ownDir is the directory of one's own of the kind (ownPlace), to read with the system following its links, its
 // Name as it was set; a zero Dir for none. One set that cannot be read is refused in the system's words; a
-// default that is not there, or is under a file, is none; one that is there but no directory is refused.
+// default that is not there is none (one under a file dataDir gives none); one there but no directory is refused.
 func (a *app) ownDir(kind string) (kit.Dir, error) {
 	none := kit.Dir{FS: nil, Name: ""}
 	dir, _, set, err := a.ownPlace(kind)
@@ -51,8 +56,8 @@ func (a *app) ownDir(kind string) (kit.Dir, error) {
 		return none, err
 	}
 	if _, err := os.ReadDir(dir); err != nil {
-		// A default not there, or under a file (HOME=/dev/null), is none; one there that is no directory is told.
-		if !set && (errors.Is(err, fs.ErrNotExist) || files.UnderFile(dir, err)) {
+		// A default not there is none; one there that is no directory is told.
+		if !set && errors.Is(err, fs.ErrNotExist) {
 			return none, nil
 		}
 		return none, usererr.CannotRead(dir, err) //nolint:wrapcheck // the system's words, at the directory
