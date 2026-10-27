@@ -179,14 +179,13 @@ func libraryAt(file string, line, column int, key string, err error, args ...any
 // cannotRead is err, of reading the file or the directory of the set k at path, under the store: to fetch the set
 // again when that mends it, else as it is (CannotRead).
 func (s *Store) cannotRead(path string, err error, k *kit) error {
+	// A path that is no directory on the way is the store's (a file, or under one) or the set's.
+	storeIsDir := !errors.Is(err, syscall.ENOTDIR) || s.rootIsDir()
 	switch {
-	case errors.Is(err, syscall.ENOTDIR) && !s.rootIsDir():
-		// The store itself is no directory: a file, or under one, which no fetch mends.
-		if s.setting != "" {
-			return usererr.SettingDir(s.setting, s.root, err) //nolint:wrapcheck // the system's words, for the setting
+	case !mendable(path, err, storeIsDir):
+		if !storeIsDir {
+			return usererr.SettingDir(s.setting, s.root, err, usererr.CannotRead(path, err))
 		}
-		return usererr.CannotRead(path, err)
-	case !mendable(path, err):
 		return usererr.CannotRead(path, err)
 	case errors.Is(err, usererr.ErrNotFile):
 		return usererr.NewAt(path, 0, 0, "icons_not_file", k.name)
@@ -196,16 +195,16 @@ func (s *Store) cannotRead(path string, err error, k *kit) error {
 
 // mendable reports whether a fetch of the set mends err, of reading path under the store, which writes the set's
 // directory whole: none there, what is no regular file (a FIFO, a directory), the set's directory a file, or what
-// leads out of it (os.Root refuses a path that the system finds outside). What the system does not let floe read
-// a fetch cannot mend: it fails there too. A store that is no directory, which neither can, cannotRead tells first.
-func mendable(path string, err error) bool {
+// leads out of it (os.Root refuses a path that the system finds outside). A store that is no directory
+// (storeIsDir false), and what the system does not let floe read, a fetch cannot mend: it fails there too.
+func mendable(path string, err error, storeIsDir bool) bool {
 	switch {
 	case errors.Is(err, fs.ErrPermission):
 		return false
 	case errors.Is(err, fs.ErrNotExist), errors.Is(err, usererr.ErrNotFile), errors.Is(err, syscall.EISDIR):
 		return true
 	case errors.Is(err, syscall.ENOTDIR):
-		return true // the store a directory: cannotRead told the rest
+		return storeIsDir
 	}
 	// The system finds it where os.Root does not let it be read: outside the set's directory.
 	_, statErr := os.Stat(path)
@@ -250,10 +249,7 @@ func (s *Store) checkWritable() error {
 
 // cannotWrite is err, of writing in the root: told for the setting that names it, if one does.
 func (s *Store) cannotWrite(err error) error {
-	if s.setting != "" {
-		return usererr.SettingDir(s.setting, s.root, err) //nolint:wrapcheck // the system's words, for the setting
-	}
-	return usererr.CannotWrite(s.root, err) //nolint:wrapcheck // the system's words, at the root
+	return usererr.SettingDir(s.setting, s.root, err, usererr.CannotWrite(s.root, err))
 }
 
 // Source is a package to fetch: At, a URL or an absolute path, and Name, as it was written, which its mistakes

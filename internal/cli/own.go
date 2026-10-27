@@ -39,22 +39,6 @@ func (p dataPlace) setting() string {
 	return ""
 }
 
-// cannotRead is err, of reading the directory p: told for its setting when one names it.
-func (p dataPlace) cannotRead(err error) error {
-	if p.set {
-		return usererr.SettingDir(p.key, p.dir, err) //nolint:wrapcheck // the system's words, for the setting
-	}
-	return usererr.CannotRead(p.dir, err) //nolint:wrapcheck // the system's words, at the directory
-}
-
-// cannotWrite is err, of writing in the directory p: told for its setting when one names it.
-func (p dataPlace) cannotWrite(err error) error {
-	if p.set {
-		return usererr.SettingDir(p.key, p.dir, err) //nolint:wrapcheck // the system's words, for the setting
-	}
-	return usererr.CannotWrite(p.dir, err) //nolint:wrapcheck // the system's words, at the directory
-}
-
 // dataDir is a directory of floe's: the setting key, else sub under the XDG base directory xdg, else under
 // home under HOME; "" when none is an absolute path. Each is an absolute path, so that floe reads one place
 // wherever it runs: a setting written relative (~/x in quotes too, which no shell read) is refused, and a
@@ -100,7 +84,7 @@ func (a *app) ownDir(kind string) (kit.Dir, error) {
 		if !p.set && errors.Is(err, fs.ErrNotExist) {
 			return none, nil
 		}
-		return none, p.cannotRead(err)
+		return none, usererr.SettingDir(p.setting(), dir, err, usererr.CannotRead(dir, err))
 	}
 	return kit.Dir{FS: os.DirFS(dir), Name: dir}, nil
 }
@@ -169,12 +153,12 @@ func (a *app) newOwn(kind kit.Kind, name string) error {
 		return usererr.NewAt(at, 0, 0, "cli_new_exists")
 	}
 	if err = os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: parts and templates are not secret
-		return usererr.CannotWrite(dir, err)
+		return usererr.SettingDir(p.setting(), dir, err, usererr.CannotWrite(dir, err))
 	}
 	// Not MkdirTemp, which makes it 0700 whatever the umask.
 	tmp := filepath.Join(dir, ".new-"+rand.Text())
 	if err = os.Mkdir(tmp, 0o755); err != nil { //nolint:gosec // G301: parts and templates are not secret
-		return p.cannotWrite(err)
+		return usererr.SettingDir(p.setting(), dir, err, usererr.CannotWrite(dir, err))
 	}
 	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory, which Load skips
 	for file, text := range kit.Skeleton(kind, name) {

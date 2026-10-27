@@ -33,6 +33,16 @@ func TestCannotReadWrite(t *testing.T) {
 			"directory exists and can be written to, and that its name is free and not too long"},
 		{usererr.InSystemWords("icons_previous_left", "out", werr, "out.old"), "out: cannot be written (no such file or " +
 			"directory), and the previous icons are left in out.old: move them back here, or fetch the icons again"},
+		// A directory a setting names is told for it; the default as it is told without one.
+		{usererr.SettingDir("FLOE_DIR", "/s", werr, usererr.CannotWrite("/s", werr)), "floe: FLOE_DIR is /s, which " +
+			"cannot be used as a directory (no such file or directory); make it a directory floe can use, or set " +
+			"FLOE_DIR to another directory"},
+		{usererr.SettingDir("FLOE_DIR", "/s", usererr.ErrNotFile, nil), "floe: FLOE_DIR is /s, which cannot be used " +
+			"as a directory (neither a regular file nor a directory); make it a directory floe can use, or set " +
+			"FLOE_DIR to another directory"},
+		{usererr.SettingDir("", "out", werr, usererr.CannotWrite("out", werr)), "out: cannot be written (no such " +
+			"file or directory): check that its directory exists and can be written to, and that its name is free " +
+			"and not too long"},
 	} {
 		if got := usererr.Tell(english, c.err).Render("floe: "); got != c.want {
 			t.Errorf("told %q, want %q", got, c.want)
@@ -41,6 +51,7 @@ func TestCannotReadWrite(t *testing.T) {
 	for _, err := range []error{
 		usererr.CannotRead("a", errors.New("odd")), usererr.CannotWrite("a", errors.New("odd")),
 		usererr.InSystemWords("icons_previous_left", "a", errors.New("odd"), "b"),
+		usererr.SettingDir("FLOE_DIR", "a", errors.New("odd"), nil),
 	} {
 		if r := usererr.Tell(english, err); r.Failure != "a: odd" {
 			t.Errorf("%v is told %+v, want floe's failure", err, r)
