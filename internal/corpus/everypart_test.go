@@ -79,7 +79,7 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 			t.Errorf("every-part draws no %s", name)
 			continue
 		}
-		if p.takesTone(p.schema, true) {
+		if p.takesTone(p.schema, true, map[string]bool{}) {
 			for _, tone := range tones {
 				if !drawn[name].has(tone) {
 					t.Errorf("every-part draws %s in no tone %q", name, tone)
@@ -87,7 +87,7 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 			}
 		}
 		enums := map[string][]string{}
-		p.enumsOf(p.schema, "", enums, true)
+		p.enumsOf(p.schema, "", enums, true, map[string]bool{})
 		for _, path := range slices.Sorted(maps.Keys(enums)) {
 			// One may be written short, for the object it is a key of (matrix's cells: [yes], for { mark: yes }); but
 			// not for the part's own data, which a list of words would meet.
@@ -145,7 +145,8 @@ type held struct {
 }
 
 // sub returns the schemas s holds, the ones of $defs it refers to among them, and whether s is another part's.
-func (p *part) sub(s map[string]any) ([]held, bool) {
+// A schema of $defs is held once a walk, as seen keeps them: one that refers to itself (a tree) ends the walk.
+func (p *part) sub(s map[string]any, seen map[string]bool) ([]held, bool) {
 	var hs []held
 	add := func(key string, v any) {
 		if m, ok := v.(map[string]any); ok {
@@ -157,8 +158,11 @@ func (p *part) sub(s map[string]any) ([]held, bool) {
 		if !local {
 			return nil, true
 		}
-		defs, _ := p.schema["$defs"].(map[string]any) //nolint:errcheck // none is none
-		add("", defs[name])
+		if !seen[name] {
+			seen[name] = true
+			defs, _ := p.schema["$defs"].(map[string]any) //nolint:errcheck // none is none
+			add("", defs[name])
+		}
 	}
 	if props, ok := s["properties"].(map[string]any); ok {
 		for k, v := range props {
@@ -179,16 +183,16 @@ func (p *part) sub(s map[string]any) ([]held, bool) {
 }
 
 // takesTone reports whether s, a schema of p, takes a tone, root, but not through a part it holds.
-func (p *part) takesTone(s map[string]any, root bool) bool {
+func (p *part) takesTone(s map[string]any, root bool, seen map[string]bool) bool {
 	if s["$ref"] == toneRef {
 		return true
 	}
-	hs, other := p.sub(s)
+	hs, other := p.sub(s, seen)
 	if other && !root {
 		return false
 	}
 	for _, h := range hs {
-		if p.takesTone(h.schema, false) {
+		if p.takesTone(h.schema, false, seen) {
 			return true
 		}
 	}
@@ -197,7 +201,7 @@ func (p *part) takesTone(s map[string]any, root bool) bool {
 
 // enumsOf adds to enums the values of each enum under s, a schema of p at path, by its path as valuesIn writes
 // it; a part's own, but not those of the parts it holds, nor the tones, which a part draws in a class of each.
-func (p *part) enumsOf(s map[string]any, path string, enums map[string][]string, root bool) {
+func (p *part) enumsOf(s map[string]any, path string, enums map[string][]string, root bool, seen map[string]bool) {
 	if s["$ref"] == toneRef {
 		return
 	}
@@ -208,7 +212,7 @@ func (p *part) enumsOf(s map[string]any, path string, enums map[string][]string,
 			}
 		}
 	}
-	hs, other := p.sub(s)
+	hs, other := p.sub(s, seen)
 	if other && !root {
 		return
 	}
@@ -217,7 +221,7 @@ func (p *part) enumsOf(s map[string]any, path string, enums map[string][]string,
 		if h.key != "" {
 			at += "." + h.key
 		}
-		p.enumsOf(h.schema, at, enums, false)
+		p.enumsOf(h.schema, at, enums, false, seen)
 	}
 }
 
@@ -333,4 +337,22 @@ func nodeAttr(n *html.Node, key string) string {
 		}
 	}
 	return ""
+}
+
+// A schema whose $defs refer to themselves (a tree of nodes) is walked to its end, its enums and tones found.
+func TestPartWalkEndsOnSelfReference(t *testing.T) {
+	t.Parallel()
+
+	var schema map[string]any
+	if err := json.Unmarshal([]byte(`{"$ref": "#/$defs/node", "$defs": {"node": {"type": "object", "properties": {
+		"kind": {"enum": ["leaf", "branch"]}, "tone": {"$ref": "floe:///parts/tone.json"},
+		"kids": {"type": "array", "items": {"$ref": "#/$defs/node"}}}}}}`), &schema); err != nil {
+		t.Fatal(err)
+	}
+	p := &part{schema: schema, css: ""}
+	enums := map[string][]string{}
+	p.enumsOf(schema, "", enums, true, map[string]bool{})
+	if !p.takesTone(schema, true, map[string]bool{}) || !slices.Equal(enums[".kind"], []string{"leaf", "branch"}) {
+		t.Errorf("enums %v", enums)
+	}
 }

@@ -101,11 +101,13 @@ func leave(t *testing.T, s *site, publish func(name, slug, title, body string)) 
 		}
 		return nil
 	}
-	for deadline := time.Now().Add(waitLimit); tab(other.URL+"/blank") == nil; {
-		if time.Now().After(deadline) {
-			t.Fatal("timed out waiting for the target=_blank tab")
+	for _, url := range []string{other.URL + "/blank", other.URL + "/plain"} {
+		for deadline := time.Now().Add(waitLimit); tab(url) == nil; {
+			if time.Now().After(deadline) {
+				t.Fatalf("timed out waiting for the tab of %s", url)
+			}
+			time.Sleep(50 * time.Millisecond)
 		}
-		time.Sleep(50 * time.Millisecond)
 	}
 	// The inner link moves the page in the frame, and opens no tab.
 	inner := s.Base + "/a/leave/inner.html"
