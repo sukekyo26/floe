@@ -209,6 +209,8 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	if failed := mistakes.Add(drawErr); failed != nil {
 		return nil, failed
 	}
+	// LIMIT: a template changed between the two puts to read another image too is told that image is not there,
+	// for this put sends the images the first asked (a map, not nil): publish again. Ask again if that comes to matter.
 	if up.Images == nil && len(images.names) > 0 {
 		if _, refused := s.storedPage(up.File, nil, opts, up.Project); refused != nil {
 			return nil, refused

@@ -41,7 +41,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **保存先を書くのはサーバーだけ**：CLI は API で頼む。publish・link・rm・rebuild・管理ページの変更はどれも API
 - **ページの中身と版は 1 か所ずつ**：中身は `server` の `content`、版は `version`（印は `files.Mark` 1 つ）。版は中身の前に取る。live reload は描かない
 - **CSP とサンドボックスは返すときに付ける**：ページとその下のファイルはヘッダーで。ダウンロードは描いたページに CSP の meta を足す
-- **描くものはまとまり 1 つ**：サーバーは `Config.Drawing` で読んだ Kit とアイコン集を 1 つ持ち、自分の 3 つの根とアイコン集を 1 つのタイマーで毎秒見張り、変われば丸ごと読み直す。読めなければ `store.Drawing.Err` で描く出力を全部止める
+- **描くものはまとまり 1 つ**：サーバーは `Config.Drawing` で読んだ Kit とアイコン集を 1 つ持ち、自分の 3 つの根とアイコン集を 1 つのタイマーで毎秒見張り、変われば丸ごと読み直す。見張りが後で直せない描き（ストアに書くものと download）は、描く前に同じ見張りをその場で 1 回走らせる（`latest`）。読めなければ `store.Drawing.Err` で描く出力を全部止める
 - **API の誤りは `refuse` 1 つ**：usererr の Report を返し、409 は `store.Conflict` で見分ける。プロトコルの断り（forbidden host・origin・not found など）は英語の固定の文
 - **管理ページと枠は `ui.Page` 1 つ**：`/` と `/a/{slug}/` は、読み手の言語で描いた同じ管理ページ（無いページは 404 の枠）。ページそのものは `?raw` で、枠の iframe が読む。管理ページと枠には `uiCSP`（frame-ancestors）を付け、枠に入れられるのは自分と VS Code だけにする。枠の中のリンクは `leaveFrame` 1 つが扱う
 - **ブラウザのテストは `internal/browsertest` に置く**：Chrome は 1 つを起こし、全部のテストが順に使う。サーバーは `internal/servetest` で本当のポートに起こし、publish は CLI（`cli.Run`）で行う。管理ページの動きと見た目でブラウザで確かめない所は、そのパッケージの `LIMIT:` にある

@@ -91,17 +91,19 @@ func (s *Server) version(slug string, m *store.Meta, rest string) string {
 
 // content is what slug, whose meta.json is m, serves for rest ("" for the page itself): a stored page as it was
 // drawn, a linked file as it is, a linked data file drawn now. A linked data file with mistakes (or a drawing
-// that cannot be read) is its mistakes, its body the page of them in the language of c. drawn tells a page floe
-// drew, whose CSP cuts it off. errNoPage for none.
+// that cannot be read) is its mistakes, its body the page of them in the language of c, drawn with what drawing
+// returns. drawn tells a page floe drew, whose CSP cuts it off. errNoPage for none.
 // LIMIT: no Range support. Add it if videos need seeking.
-func (s *Server) content(c *i18n.Catalog, slug string, m *store.Meta, rest string) (served, error) {
+func (s *Server) content(
+	c *i18n.Catalog, slug string, m *store.Meta, rest string, drawing func() store.Drawing,
+) (served, error) {
 	none := served{body: nil, typ: "", drawn: false}
 	file, ok := s.cfg.Store.File(slug, m, rest)
 	if !ok {
 		return none, errNoPage
 	}
 	if m.IsLink() && rest == "" && files.IsDataFile(m.Path) {
-		page, err := s.drawLink(slug, m, file)
+		page, err := drawLink(slug, m, file, drawing())
 		if err != nil {
 			return served{body: io.NopCloser(bytes.NewReader(mistakesPage(c, slug, err))), typ: htmlType, drawn: true}, err
 		}
@@ -128,10 +130,9 @@ type served struct {
 	drawn bool
 }
 
-// drawLink draws the linked data file file of slug, whose meta.json is m, with the drawing of now: in its
-// theme, under slug for a page of no title, its images under its real directory.
-func (s *Server) drawLink(slug string, m *store.Meta, file string) ([]byte, error) {
-	drawing, _ := s.now()
+// drawLink draws the linked data file file of slug, whose meta.json is m, with drawing: in its theme, under slug
+// for a page of no title, its images under its real directory.
+func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing) ([]byte, error) {
 	if drawing.Err != nil {
 		return nil, drawing.Err
 	}
@@ -171,7 +172,8 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		version = s.version(slug, m, rest)
-		got, err = s.content(catalog(r), slug, m, rest)
+		// Of the last look, as the version is: one changed since reloads the tab.
+		got, err = s.content(catalog(r), slug, m, rest, func() store.Drawing { d, _ := s.now(); return d })
 	}
 	if errors.Is(err, errNoPage) {
 		notFound(w)
@@ -205,7 +207,8 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	got, err := s.content(catalog(r), slug, m, "")
+	// A file kept is not mended by the watch: of what the directories hold now.
+	got, err := s.content(catalog(r), slug, m, "", s.latest)
 	switch {
 	case errors.Is(err, errNoPage):
 		notFound(w)
