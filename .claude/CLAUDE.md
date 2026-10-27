@@ -12,7 +12,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **ライブラリが返す誤り**：YAML・JSON Schema・html/template・expr などが返す誤りを、ライブラリの言葉のまま出す。言い直さない。場所は、ライブラリが返す分だけ付ける（JSON ポインタを YAML の行と列に写すのはよい）
 - **信頼境界**：パス、CSP、サンドボックス、大きさなど、floe の外へ出る・外から入るものを守る。文脈によらない保守的な決まりで断る
 - **floe 自身の仕組みの確かめ**：floe が置いた印や、floe がスタイルを入れる所など、floe の仕組みが前提にするものを確かめる
-- **ライブラリの黙った読み違い**：ライブラリが誤りを出さずに、書いたのと違う値を読む所（YAML の 2 つ目の文書、`#` で値が切れる、`{a, b: 1}`、文字でない鍵、`.inf`・`.nan`、YAML 1.2 と読みが違う数（`017`・`1e3` など））を断る
+- **ライブラリの黙った読み違い**：ライブラリが誤りを出さずに、書いたのと違う値を読む所（YAML の 2 つ目の文書、`#` で値が切れる、`{a, b: 1}`、文字でない鍵、`.inf`・`.nan`、YAML 1.2 と読みが違う数（`017`・`1e3` など）、schema の JSON の 1 つの object の中の同じ鍵）を断る
 
 ## 作りの決まり
 
@@ -21,15 +21,15 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **外の振る舞いを真似ない**：HTML・CSS・URL・JSON Schema などは、本物のパーサやライブラリを使う。自分で読む作りにしない。仕様が規範として定める表をそのまま写すのは、真似でなく文脈の要らない決まりで、よい（今は yamlpos の数の読みが、YAML 1.2 の core schema の表の正規表現を写す）
 - **受け入れた退行**：上に当たらない漏れは、`LIMIT:` のコメントと PR の本文に書く。検査は足さない
 
-- **schema の形はコンパイルした木から**：floe が要る形（どの項目がどの部品・format か）は、コンパイルした `*jsonschema.Schema` から取る。schema の JSON を自前で辿らない（生の JSON を見るのは `$schema` の確かめと、`$id` の scheme（`floe:` を名乗らないか。部品と共有の schema では scheme の無い相対も）と、根に `$id` が無いかの確かめ（根の URL は floe が付ける）だけで、schema の鍵の意味は読まない。`$id` を土台の URL に重ねることはしない）。`$schema` は 2020-12・2019-09 だけを受ける。例外：上の「埋めて呼び直す」ときは、写しに名前を足すために、生の JSON の根と `$defs` の直下を読んで書いてよい（書くのは写しだけ。今は `holes.fill`）。floe が要る形は、この例外の後もコンパイルした木から取る
-- **木を歩くのは 2 つだけ**：schema の木を歩くのは、全部の欄を辿る `every` と、描く歩きの `followFrom`（`schema.Follow` の繰り返し）だけ。描く歩きも確かめる歩きも `schema.Follow` を使い、検査ごとに歩きを書き分けない。例外は 2 つだけ：`$schema` と `$id` を見る生の JSON の歩き（schema の意味を読まない）と、根の値にいつも当たる schema の required を見る `sharedKeys`
+- **schema の形はコンパイルした木から**：floe が要る形（どの項目がどの部品・format か）は、コンパイルした `*jsonschema.Schema` から取る。schema の JSON を自前で辿らない（生の JSON を見るのは `$schema` の確かめと、`$id` の scheme（`floe:` を名乗らないか。部品と共有の schema では scheme の無い相対も）と、根に `$id` が無いかの確かめ（根の URL は floe が付ける）と、同じ鍵の確かめ（`json.Decoder` の字句で、鍵の名前だけを比べる）だけで、schema の鍵の意味は読まない。`$id` を土台の URL に重ねることはしない）。`$schema` は 2020-12・2019-09 だけを受ける。例外：上の「埋めて呼び直す」ときは、写しに名前を足すために、生の JSON の根と `$defs` の直下を読んで書いてよい（書くのは写しだけ。今は `holes.fill`）。floe が要る形は、この例外の後もコンパイルした木から取る
+- **木を歩くのは 2 つだけ**：schema の木を歩くのは、全部の欄を辿る `every` と、描く歩きの `followFrom`（`schema.Follow` の繰り返し）だけ。描く歩きも確かめる歩きも `schema.Follow` を使い、検査ごとに歩きを書き分けない。例外は 2 つだけ：`$schema` と `$id` を見る生の JSON の歩き（schema の意味を読まない）と、根の値にいつも当たる schema の required を見る `sharedKeys`。`read` が同じ鍵を見る字句の歩き（`keyWalk`）は、値にする前の JSON の字句だけを読み、schema の木も生の JSON の値も歩かないので、この数に入らない
 - **値を歩くのは Walk だけ**：データの値を schema に沿って歩くのは `schema.(*Compiled).Walk` だけで、値ごとに `Follow` を 1 回呼び、部品の値はその部品の schema の根から歩き続ける。描く値も、確かめる項目（部品の check を走らせる所）も、Walk から取る
 - **描いたページは x/net/html で読んで書く**：描いたページの確かめ（`<style>`・`<base>`・部品の名前）は x/net/html の木で行い、スタイルを head に入れるのも、見出しに id を付けるのも、その木を直して `html.Render` で書く。develop とバイトで同じにはしない（ユーザーが決めた）。正規表現は、CSS の `</style` の書き換えだけに使う
 - **データの HTML 項目は描いたページの木で確かめる**：format html の項目は、描くとき、探りの空白と、偽れない印のコメントの対で挟む。描いたページの木（`html.Parse` 1 回）で、印が同じ親の兄弟か、探りが動いていないか、印がコメントのまま残っているかを見る。見た後に印と探りを外して書き出し、確かめた木と書き出す木を同じにする。項目の文だけを読む検査は作らない（svg・math の中で、ブラウザと読みが違う）。`<style>`・`<base>`・`<noscript>` と、charset と viewport のほかの `<meta>` は、項目でなく、描いたページ全体で断る（page.html・部品の part.html・項目のどれが書いても）。floe が描くのは静的なページで、表示に要らないものは断る
 - **ユーザーのパスはふつうのファイルだけ読む**：ユーザーが渡したパス（データファイル・spec・zip・ページ・publish のリンク）から読むのは、ふつうのファイルだけで、`files.Open`・`files.Read` を通す。開く前に種類を見て、FIFO・デバイス・socket は開かない（開くと止まる、開くこと自体に副作用がある）
 - **render が書くのはページだけ**：書くページのリンクはたどり、たどった先の名前が .html（`files.IsPage`）でなければ、何も書かずに断る。データファイルやリポジトリの外のファイルを書き換えない
 - **YAML は yamlpos だけが読む**：YAML のバイト列を goccy に渡すのは `yamlpos` だけ。`yamlpos` の外（テストを除く）から import できる goccy のパッケージは `ast` だけ（depguard の規則 `goccy-in-yamlpos`）。値にするのも `yamlpos.Decode`
-- **schema の JSON は schema だけが読む**：schema.json などの JSON のバイト列を読むのは `schema` の `read` だけ。`schema` の外からは、バイト列を `Compile`・`NewResource` に渡す。jsonschema を import できるのは `internal/schema` だけ（depguard の規則 `jsonschema-in-schema`）
+- **schema の JSON は schema だけが読む**：schema.json などの JSON のバイト列を読むのは `schema` の `read` だけ。`schema` の外からは、バイト列を `Compile`・`NewResource` に渡す。1 つの object の中の同じ鍵は、`read` が値にする所で断る（ライブラリは後の値で読むので、構文の誤りと同じく読む所で断る）。jsonschema を import できるのは `internal/schema` だけ（depguard の規則 `jsonschema-in-schema`）
 - **段 1 は読むと確かめるに分ける**：kit の `read` は値を作るのに要ることだけ（ファイルを読む、YAML・JSON・HTML を値にする、schema をコンパイルする）をし、値の後の決まり（CSS の形、部品の schema、エスケープ、見た目の名前など）は確かめる関数 `check` が持つ。kit の外で Kit を作れるのは、read と check を通す `Load` と、floe のものを読む `Floe()` だけで、確かめていない自分のもので描くことは、型で起きない。実行のときは floe のものを読むだけで確かめず、同じ確かめをテストで floe のものに走らせる。例外：後で一緒にコンパイルするものの読み方を変える入力は、値を作るのに要る確かめとして読む所で断る（確かめる関数に置くと、その前のコンパイルが別の誤りで失敗し、原因が言われない）。floe のものも、実行のときに同じ確かめを通る。今これに当たるのは、部品と共有の schema の `$schema` と `$id`（`schema.NewResource`）だけ
 - **読んだ Kit は変えない**：`Kit` は欄を外へ出さず、`[]byte` も写しを返す。自分のものを重ねるときは、土台を書き換えずに新しい `Kit` を作る（`Floe()` の値をプロセス全体で共有するため）。描くときは、`Template.Page`・`Part.Page` が返す写しを Execute する（Execute は html/template にエスケープの結果を書き込み、その後は写しを作れない）
 - **Markdown は kit だけが読む**：goldmark を import できるのは `internal/kit` だけ（depguard の規則 `goldmark-in-kit`）。生の HTML を出さない `markdown` を、どこも通る

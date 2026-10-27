@@ -398,6 +398,27 @@ func TestNameMistake(t *testing.T) {
 	}
 }
 
+// A key written twice in a part's schema.json or a schema the parts share is told at that file, as read.
+func TestKeysTwiceOwn(t *testing.T) {
+	t.Parallel()
+
+	fsys := fstest.MapFS{
+		"p/schema.json": {Data: []byte(`{"type": "object", "type": "object"}`)},
+		"p/part.html":   {Data: []byte(`<div data-floe-part="p"></div>`)},
+		"p/part.css":    {Data: []byte("")},
+		"shr.json":      {Data: []byte("{\n  \"enum\": [1],\n  \"enum\": [2]\n}")},
+	}
+	_, err := kit.Load(floe(t), kit.Sources{Parts: kit.Dir{FS: fsys, Name: "own/parts"}})
+	tail := " is in this object already: only the last would be read; keep one"
+	want := lines(
+		`own/parts/p/schema.json:1:20: the key "type"`+tail,
+		`own/parts/shr.json:3:3: the key "enum"`+tail,
+	)
+	if got := told(err); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
 // Read keeps the names of the files it does not read, for the check of what a directory holds.
 func TestUnread(t *testing.T) {
 	t.Parallel()
