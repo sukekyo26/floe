@@ -90,14 +90,15 @@ func kitOf(set string) *kit {
 // Store is the icon sets kept under a root, a directory each.
 type Store struct {
 	root string
+	set  bool // root is a setting's, not the default place
 	// The indexes of the sets read so far, by set: a diagram looks up many icons.
 	mu      sync.Mutex
 	indexes map[string]*index
 }
 
-// New returns the store under root, an absolute path.
-func New(root string) *Store {
-	return &Store{root: root, mu: sync.Mutex{}, indexes: map[string]*index{}}
+// New returns the store under root, an absolute path, set when a setting names it.
+func New(root string, set bool) *Store {
+	return &Store{root: root, set: set, mu: sync.Mutex{}, indexes: map[string]*index{}}
 }
 
 func (s *Store) dir(k *kit) string {
@@ -124,8 +125,9 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 	}
 	file := filepath.Join(s.dir(k), "index.json")
 	b, _, err := files.Read(file)
-	// A store not there, or under a file (HOME=/dev/null), holds no set; one that is a file is told.
-	if files.NotThere(s.root, err) {
+	// None at the set is a set not fetched, and so is the default store under a file (HOME=/dev/null); a store
+	// set under a file, or one that is a file, is told.
+	if errors.Is(err, fs.ErrNotExist) || !s.set && files.NotThere(s.root, err) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	if err != nil {
@@ -208,6 +210,10 @@ func (s *Store) Fetch(ctx context.Context, set string, from Source, force bool) 
 	}
 	k := kitOf(set)
 	got := Fetched{Title: k.title, Dir: s.dir(k), Version: "", Count: 0, Already: false}
+	// Before the network, so that a store that cannot be written is told for it.
+	if err := os.MkdirAll(s.root, 0o700); err != nil {
+		return got, usererr.CannotWrite(s.root, err)
+	}
 	if from.At == "" {
 		at, err := k.packageURL(ctx)
 		if err != nil {
@@ -227,9 +233,6 @@ func (s *Store) Fetch(ctx context.Context, set string, from Source, force bool) 
 	if k.tells(from.At, got.Version) {
 		got.Already = true
 		return got, nil
-	}
-	if err := os.MkdirAll(s.root, 0o700); err != nil {
-		return got, usererr.CannotWrite(s.root, err)
 	}
 	tmp, err := os.MkdirTemp(s.root, k.name+".tmp-")
 	if err != nil {

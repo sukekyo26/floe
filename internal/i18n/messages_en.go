@@ -18,7 +18,7 @@ var messagesEN = map[string]string{
 	"yaml_not_finite":           "%s is not a value a YAML file can hold; write a number in digits, or quote it as text",
 	"yaml_number_not_number":    "%[1]s reads as the number %[2]s here, but as text in YAML 1.2: write %[2]s for the number, or put %[1]s in quotes for text",
 	"yaml_number_not_text":      "%[1]s reads as text here, but as the number %[2]s in YAML 1.2: write %[3]s for the number, or put %[1]s in quotes for text",
-	"yaml_number_octal":         "%[1]s reads as the octal number %[2]s here, but as %[3]s in YAML 1.2: write %[3]s for %[3]s, or %[4]s for %[2]s",
+	"yaml_number_octal":         "%[1]s reads as the octal number %[2]s here, but as %[3]s in YAML 1.2: write %[3]s for the decimal number, or %[4]s for the octal one (%[2]s)",
 	"yaml_number_too_big":       "%s is a number in YAML 1.2, too large for floe to read: put it in quotes to keep it as text",
 	"yaml_number_outside_float": "%s is a number in YAML 1.2 that a float64 cannot hold: put it in quotes to keep it as text",
 

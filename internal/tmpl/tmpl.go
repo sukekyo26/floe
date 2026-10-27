@@ -60,19 +60,13 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, error) {
 	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.Images, o.ImagesDir, o.Icons)
 }
 
-// pick returns the template of k that d names and the name of the theme it is drawn with: given, else d's as
-// written, else, left out or not text (which doc.Read told), the default. It adds to found a template: left out
-// or naming none, and a theme that is none, an empty one written too: at d's theme:, or, given, at no place, as
-// no line of d names it. The template is nil when it is none.
+// pick returns the template of k that d names and the name of the theme it is drawn with, as doc.Read read
+// them: the theme given or written, else the default. It adds to found a template left out, empty or naming
+// none, but one doc.Read refused, which it told; and a theme that is none: at d's theme:, or, given, at no
+// place, as no line of d names it. The template is nil when it is none.
 func pick(k *kit.Kit, d *doc.Data, given string, found *usererr.List) (*kit.Template, string) {
 	_, _, themes, templates := k.Names()
-	theme := given
-	if written, ok := d.Values["theme"].(string); given == "" {
-		theme = kit.DefaultTheme
-		if ok {
-			theme = written
-		}
-	}
+	theme := cmp.Or(d.Theme, kit.DefaultTheme)
 	if _, ok := k.Theme(theme); !ok {
 		bad := usererr.New("tmpl_unknown_theme", theme, strings.Join(themes, ", "))
 		if given == "" {
@@ -80,18 +74,16 @@ func pick(k *kit.Kit, d *doc.Data, given string, found *usererr.List) (*kit.Temp
 		}
 		*found = append(*found, bad)
 	}
-	v, written := d.Values["template"]
-	name, text := v.(string)
 	switch {
-	case !written:
+	case d.Refused("template"):
+	case d.Template == "":
 		*found = append(*found, yamlpos.New(d.File, d.Where["template"], "tmpl_no_template", strings.Join(templates, ", ")))
-	case !text:
-		// Told by doc.Read.
 	default:
-		if t, ok := k.Template(name); ok {
+		if t, ok := k.Template(d.Template); ok {
 			return t, theme
 		}
-		*found = append(*found, yamlpos.New(d.File, d.Where["template"], "tmpl_unknown", name, strings.Join(templates, ", ")))
+		bad := yamlpos.New(d.File, d.Where["template"], "tmpl_unknown", d.Template, strings.Join(templates, ", "))
+		*found = append(*found, bad)
 	}
 	return nil, theme
 }

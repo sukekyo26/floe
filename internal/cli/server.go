@@ -82,7 +82,7 @@ func (a *app) serverConfig() (server.Config, error) {
 		}
 		*d.to = dir
 	}
-	icons, err := a.iconsDir()
+	icons, _, err := a.iconsDir()
 	if e, ok := errors.AsType[*usererr.Error](err); ok && e.Key == "icons_no_dir" {
 		err = nil
 	}

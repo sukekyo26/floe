@@ -46,11 +46,11 @@ $XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons.`,
 					from.At, fromErr = p.abs, p.err
 				}
 			}
-			dir, dirErr := a.iconsDir()
+			dir, set, dirErr := a.iconsDir()
 			if err := usererr.Collect(icons.CheckSet(args[0]), fromErr, dirErr); err != nil {
 				return err //nolint:wrapcheck // mistakes for the user as they are
 			}
-			got, err := icons.New(dir).Fetch(cmd.Context(), args[0], from, force)
+			got, err := icons.New(dir, set).Fetch(cmd.Context(), args[0], from, force)
 			if err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}
@@ -74,11 +74,11 @@ func (a *app) iconsSearchCmd() *cobra.Command {
 an icon part (aws/…) and its category, tab-separated.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			dir, err := a.iconsDir()
+			dir, set, err := a.iconsDir()
 			if err != nil {
 				return err
 			}
-			hits, err := icons.New(dir).Search(args)
+			hits, err := icons.New(dir, set).Search(args)
 			if err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}
@@ -91,24 +91,25 @@ an icon part (aws/…) and its category, tab-separated.`,
 }
 
 // iconsDir is the directory of the icon sets: FLOE_ICONS_DIR, else floe-icons under the XDG data directory,
-// else under ~/.local/share (dataDir). The icon sets need a place, and there is none without one.
-func (a *app) iconsDir() (string, error) {
-	dir, _, err := a.dataDir("FLOE_ICONS_DIR", "XDG_DATA_HOME", ".local/share", "floe-icons")
+// else under ~/.local/share (dataDir), and whether the setting names it. The icon sets need a place, and there is
+// none without one.
+func (a *app) iconsDir() (dir string, set bool, err error) {
+	dir, set, err = a.dataDir("FLOE_ICONS_DIR", "XDG_DATA_HOME", ".local/share", "floe-icons")
 	switch {
 	case err != nil:
-		return "", err
+		return "", set, err
 	case dir == "":
-		return "", usererr.New("icons_no_dir")
+		return "", set, usererr.New("icons_no_dir")
 	}
-	return dir, nil
+	return dir, set, nil
 }
 
 // iconStore returns the icons the diagrams of one command show: those of iconsDir, or, without a directory for
 // them, none, which a diagram with an icon is told. Made once for the command: a Store keeps the indexes it read.
 func (a *app) iconStore() diagram.Icons {
-	dir, err := a.iconsDir()
+	dir, set, err := a.iconsDir()
 	if err != nil {
 		return diagram.NoIcons{Err: err}
 	}
-	return icons.New(dir)
+	return icons.New(dir, set)
 }

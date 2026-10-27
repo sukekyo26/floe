@@ -22,8 +22,12 @@ type Data struct {
 	Root                         *ast.MappingNode // nil for an empty file
 	// where each shared key is written: its value, its key when the value is left out, the top of the file
 	// for one left out
-	Where map[string]yamlpos.Pos
+	Where   map[string]yamlpos.Pos
+	refused map[string]bool // the shared keys Read refused, nil for none
 }
+
+// Refused reports whether Read refused the shared key, and told its mistake.
+func (d *Data) Refused(key string) bool { return d.refused[key] }
 
 // PosOf returns where the value at the path at (keys and indexes) is written in d: the value, or its key when
 // it is left out; the top of the file without a node.
@@ -64,7 +68,7 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 	root, _ := body.(*ast.MappingNode) //nolint:errcheck // see above
 	d := &Data{
 		File: file, Lang: "", Template: "", Theme: "", Title: "", Values: values, Root: root,
-		Where: map[string]yamlpos.Pos{},
+		Where: map[string]yamlpos.Pos{}, refused: nil,
 	}
 	if theme != "" {
 		values["theme"] = theme
@@ -132,7 +136,8 @@ func (d *Data) readShared(theme string) error {
 		}
 		v, ok := d.Values[key]
 		if ok && v == nil {
-			// A null value (lang: or lang: ~) is none written, for every reader of d.Values.
+			// A null value (lang: or lang: ~) is none written, for every reader of d.Values: these are keys floe
+			// reads itself, while the other values are the schema's, which tells a null as it is.
 			delete(d.Values, key)
 			ok = false
 		}
@@ -144,6 +149,10 @@ func (d *Data) readShared(theme string) error {
 			found = append(found, yamlpos.New(d.File, d.Where[key], mistake))
 		case mistake != "":
 			found = append(found, yamlpos.New(d.File, d.Where[key], mistake, key))
+			if d.refused == nil {
+				d.refused = map[string]bool{}
+			}
+			d.refused[key] = true
 		case ok:
 			*to[key], _ = v.(string) //nolint:errcheck // sharedMistake refuses one that is not text
 		}

@@ -28,7 +28,7 @@ func notText(written, shown, number string) string {
 }
 
 func octal(written, read, want, octal string) string {
-	return fmt.Sprintf("%s reads as the octal number %s here, but as %s in YAML 1.2: write %s for %s, or %s for %s", written, read, want, want, want, octal, read)
+	return fmt.Sprintf("%s reads as the octal number %s here, but as %s in YAML 1.2: write %s for the decimal number, or %s for the octal one (%s)", written, read, want, want, octal, read)
 }
 
 func outsideFloat(written string) string {
