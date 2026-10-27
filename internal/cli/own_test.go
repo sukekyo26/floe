@@ -168,6 +168,10 @@ func TestOwnDirsOverlap(t *testing.T) {
 		return "floe: " + key + " is " + value + ", which cannot be used as a directory (no such file or directory); " +
 			"make it a directory floe can use, or set " + key + " to another directory\n"
 	}
+	notDir := func(key, value string) string {
+		return "floe: " + key + " is " + value + ", which cannot be used as a directory (not a directory); " +
+			"make it a directory floe can use, or set " + key + " to another directory\n"
+	}
 	parts, themes, templates := "FLOE_PARTS_DIR", "FLOE_THEMES_DIR", "FLOE_TEMPLATES_DIR"
 	for _, tt := range []struct {
 		name string
@@ -196,8 +200,12 @@ func TestOwnDirsOverlap(t *testing.T) {
 		{"templates, not read", map[string]string{parts: ok, templates: ok}, nil, ""},
 		{"a name alike", map[string]string{parts: dir + "/pp2", themes: dir + "/pp22"}, nil, ""},
 		{"not there, out", map[string]string{parts: pp, themes: dir + "/none"}, nil, unusable(themes, dir+"/none")},
+		{
+			"a file and under it", map[string]string{parts: dir + "/d.yaml", themes: dir + "/d.yaml/th"}, nil,
+			notDir(parts, dir+"/d.yaml") + notDir(themes, dir+"/d.yaml/th"),
+		},
 		{"not there, then ..", map[string]string{parts: pp, themes: pp + "/none/.."}, nil, unusable(themes, pp+"/none/..")},
-		// LIMIT of resolve: a link to nothing is not followed, and is refused once what it leads to is there.
+		// A link to nothing is not followed (resolve), and is refused once what it leads to is there.
 		{"a link to nothing", map[string]string{parts: pp, themes: dir + "/dangling"}, nil, unusable(themes, dir+"/dangling")},
 	} {
 		env := map[string]string{"HOME": home}
