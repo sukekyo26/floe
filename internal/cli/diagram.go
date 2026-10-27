@@ -20,7 +20,6 @@ func (a *app) diagramCmd() *cobra.Command {
 		Use:   "diagram",
 		Short: "Draw diagrams from specs of parts on a canvas",
 		Args:  cobra.NoArgs,
-		RunE:  showHelp,
 	}
 	cmd.AddCommand(a.diagramRenderCmd(), a.diagramInspectCmd(), a.diagramExampleCmd())
 	return cmd

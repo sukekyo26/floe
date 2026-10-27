@@ -103,12 +103,6 @@ var english = i18n.EnglishCatalog()
 // named is floe's name before each mistake the command line tells.
 const named = "floe: "
 
-// showHelp is the RunE of a command run without a subcommand: without a RunE cobra treats it as non-runnable
-// and answers an unknown subcommand with help and exit 0 instead of NoArgs' error.
-func showHelp(cmd *cobra.Command, _ []string) error {
-	return cmd.Help() //nolint:wrapcheck // a stdout write error needs no extra context
-}
-
 // newRoot returns the command tree, writing to out.
 func newRoot(env Env, out io.Writer) *cobra.Command {
 	root := &cobra.Command{
@@ -118,7 +112,6 @@ func newRoot(env Env, out io.Writer) *cobra.Command {
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
-		RunE:          showHelp,
 	}
 	root.SetVersionTemplate("floe {{.Version}}\n")
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {

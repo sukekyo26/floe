@@ -13,7 +13,6 @@ func (a *app) iconsCmd() *cobra.Command {
 		Use:   "icons",
 		Short: "Keep icon sets for the icon parts of diagrams, and search them",
 		Args:  cobra.NoArgs,
-		RunE:  showHelp,
 	}
 	cmd.AddCommand(a.iconsFetchCmd(), a.iconsSearchCmd())
 	return cmd
