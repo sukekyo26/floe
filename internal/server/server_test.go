@@ -11,10 +11,11 @@ import (
 	"sync"
 	"testing"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
-	"golang.org/x/sys/unix"
 )
 
 const (
