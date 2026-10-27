@@ -4,10 +4,10 @@ circle "render" 210,165 340x340
 label "floe publish" 118.2,21 103.6x18
 label "floe serve" 546,21 88x18
 label "floe diagram render" 520.9,481 158.2x18
-label "cli, i18n" 340.6,193 74.8x18 in publish, render, serve
-label "usererr, yamlpos" 315.4,211 125.2x18 in publish, render, serve
-label "diagram, icons" 322.6,229 110.8x18 in publish, render, serve
-label "go-yaml" 347.8,247 60.4x18 in publish, render, serve
+label "cli, i18n" 344.6,193 74.8x18 in publish, render, serve
+label "usererr, yamlpos" 319.4,211 125.2x18 in publish, render, serve
+label "diagram, icons" 326.6,229 110.8x18 in publish, render, serve
+label "go-yaml" 351.8,247 60.4x18 in publish, render, serve
 label "store, link" 333.4,116 89.2x18 in publish, serve
 label "tmpl, daemon" 329.8,134 96.4x18 in publish, serve
 label "project" 187.8,145 60.4x18 in publish

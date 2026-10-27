@@ -234,7 +234,7 @@ var messagesEN = map[string]string{
 	"diagram_name_unknown":     `edge: no part or row named "%s"`,
 	"diagram_end_kind":         `edge: "%s" is a %s, which no edge can end at: end it at a box, a table or its named row, an icon, a frame, a bar, a dot or a point`,
 	"diagram_end_side":         `edge: %s has no side %s: write the side of a box, a table, an icon, a frame or a bar, left or right of a row, and none for a dot or a point`,
-	"diagram_too_narrow":       `%s: "%s" needs w: %s or more`,
+	"diagram_too_narrow":       `%s: "%s"%s needs w: %s or more`,
 	"diagram_too_short":        "%s: its text needs a height of %dpx or more; the box has %spx",
 	"diagram_outside":          "%s sticks out of the %sx%s canvas",
 	"diagram_overlap":          "%s overlaps %s",
