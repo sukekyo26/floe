@@ -169,7 +169,7 @@ func (t target) refused() error {
 	switch {
 	case !files.IsPage(t.page.real):
 		return usererr.NewAt(t.page.to, 0, 0, "cli_render_link_not_page", t.page.real)
-	case t.info != nil && !t.info.Mode().IsRegular() && !t.info.IsDir():
+	case t.info != nil && files.IsNotFile(t.info):
 		return usererr.CannotRead(t.page.to, usererr.ErrNotFile)
 	}
 	return nil
@@ -224,6 +224,9 @@ func (a *app) writePages(pages []rendered, out arg) error {
 		}
 		// Not private: the page goes into a repository, for others to read. One there, read or not, keeps its
 		// permissions.
+		if info != nil && !info.Mode().IsRegular() {
+			info = nil // a directory there: nothing to keep, and the system refuses the write
+		}
 		if err := files.WriteAtomic(p.real, p.page, 0o644, info); err != nil {
 			if failed := found.Add(usererr.CannotWrite(p.to, err)); failed != nil {
 				return failed

@@ -123,7 +123,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return idx, nil
 	}
 	file := filepath.Join(s.dir(k), "index.json")
-	b, err := os.ReadFile(file) //nolint:gosec // G304: the set's own index
+	b, _, err := files.Read(file)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
@@ -487,7 +487,7 @@ func (s *Store) Lookup(name string) ([]byte, error) {
 		return nil, ErrNoIcon
 	}
 	file := filepath.Join(s.dir(k), rest+".svg")
-	b, err := os.ReadFile(file) //nolint:gosec // G304: a name in the set's index
+	b, _, err := files.Read(file)
 	if err != nil {
 		return nil, usererr.CannotRead(file, err)
 	}

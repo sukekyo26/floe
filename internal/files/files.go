@@ -33,20 +33,27 @@ func IsPage(file string) bool {
 	return strings.ToLower(filepath.Ext(file)) == ".html"
 }
 
+// IsNotFile reports whether info is of what is neither a regular file nor a directory (a FIFO, a device, a
+// socket): what floe does not open.
+func IsNotFile(info fs.FileInfo) bool {
+	return !info.Mode().IsRegular() && !info.IsDir()
+}
+
 // openFile opens a file Open has looked at; a test puts another file in its place first.
 var openFile = os.OpenFile
 
 // Open opens the file path, a link followed, when it is a regular file or a directory, and returns what the system
 // says of it; else an *fs.PathError of usererr.ErrNotFile, the file unopened: a FIFO would block the open, and a
 // device may do more on it. What it opens without blocking (O_NONBLOCK, which a regular file's reads do not
-// take) is looked at again, so that one put in its place since is refused unread. The system's errors are
+// take) is looked at again, so that one made such since is refused unread; another regular file put in its place
+// (a save by rename) is read. The system's errors are
 // *fs.PathError (fs.ErrNotExist for none); one of opening it comes with what the system said of it before.
 func Open(path string) (*os.File, fs.FileInfo, error) {
 	before, err := os.Stat(path)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // the system's *fs.PathError, for the caller to tell
 	}
-	if !before.Mode().IsRegular() && !before.IsDir() {
+	if IsNotFile(before) {
 		return nil, before, &fs.PathError{Op: "open", Path: path, Err: usererr.ErrNotFile}
 	}
 	f, err := openFile(path, os.O_RDONLY|syscall.O_NONBLOCK|syscall.O_NOCTTY, 0)
@@ -54,7 +61,7 @@ func Open(path string) (*os.File, fs.FileInfo, error) {
 		return nil, before, err //nolint:wrapcheck // as above
 	}
 	info, err := f.Stat()
-	if err == nil && (!os.SameFile(before, info) || info.Mode().Type() != before.Mode().Type()) {
+	if err == nil && IsNotFile(info) {
 		err = &fs.PathError{Op: "open", Path: path, Err: usererr.ErrNotFile}
 	}
 	if err != nil {
@@ -102,11 +109,10 @@ func WriteAtomic(path string, data []byte, perm os.FileMode, old fs.FileInfo) er
 	}
 	tmp := f.Name()
 	if old != nil {
-		err = f.Chmod(old.Mode().Perm())
+		// Kept where the file system takes it: one that takes no mode (vfat) is written all the same.
+		_ = f.Chmod(old.Mode().Perm()) //nolint:errcheck // see above
 	}
-	if err == nil {
-		_, err = f.Write(data)
-	}
+	_, err = f.Write(data)
 	if closeErr := f.Close(); err == nil {
 		err = closeErr
 	}

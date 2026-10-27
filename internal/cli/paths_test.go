@@ -15,7 +15,8 @@ func TestRenderLinksToNoPage(t *testing.T) {
 	t.Parallel()
 
 	dir := write(t, map[string]string{
-		"a.yaml": good, "b.yaml": good, "c.yaml": good, "d.yaml": good, "e.yaml": good, "x.txt": "secret",
+		"a.yaml": good, "b.yaml": good, "c.yaml": good, "d.yaml": good, "e.yaml": good, "x.yaml": good, "x.txt": "secret",
+		"in/o.yaml": good,
 	})
 	if err := os.Mkdir(filepath.Join(dir, "somedir"), 0o755); err != nil {
 		t.Fatal(err)
@@ -24,16 +25,24 @@ func TestRenderLinksToNoPage(t *testing.T) {
 		link(t, to, filepath.Join(dir, page))
 	}
 	link(t, "somedir", filepath.Join(dir, "s.html"))
+	// The page's link as the system resolves it: /private/var for /var on macOS.
+	resolved, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	link(t, "y.html", filepath.Join(dir, "x.html"))
+	link(t, "a.yaml", filepath.Join(dir, "y.html"))
 	refused := func(page, to string) string {
 		return page + ": this page is a link to " + to + ", which is no .html file: floe writes pages to .html files alone; point the link at one, or remove it\n"
 	}
 	for _, tt := range []struct {
 		file, want string
 	}{
-		{"a.yaml", refused("a.html", filepath.Join(dir, "a.yaml"))},
-		{"b.yaml", refused("b.html", filepath.Join(dir, "c.yaml"))},
-		{"d.yaml", refused("d.html", filepath.Join(dir, "x.txt"))},
+		{"a.yaml", refused("a.html", filepath.Join(resolved, "a.yaml"))},
+		{"b.yaml", refused("b.html", filepath.Join(resolved, "c.yaml"))},
+		{"d.yaml", refused("d.html", filepath.Join(resolved, "x.txt"))},
 		{"e.yaml", refused("e.html", "/dev/zero")},
+		{"x.yaml", refused("x.html", filepath.Join(resolved, "a.yaml"))},
 	} {
 		for _, args := range [][]string{{"render", tt.file}, {"render", "--check", tt.file}, {"render", tt.file, "c.yaml"}} {
 			if code, stdout, stderr := run(dir, args...); code != 1 || stdout != "" || stderr != tt.want {
@@ -44,8 +53,17 @@ func TestRenderLinksToNoPage(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "s.yaml"), []byte(good), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if code, _, stderr := run(dir, "render", "s.yaml"); code != 1 || stderr != refused("s.html", filepath.Join(dir, "somedir")) {
+	if code, _, stderr := run(dir, "render", "s.yaml"); code != 1 || stderr != refused("s.html", filepath.Join(resolved, "somedir")) {
 		t.Errorf("a link to a directory = %d, %q", code, stderr)
+	}
+	// A page in --out-dir that is a link is refused alike.
+	if err := os.Mkdir(filepath.Join(dir, "out"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link(t, filepath.Join("..", "c.yaml"), filepath.Join(dir, "out", "o.html"))
+	if code, _, stderr := run(dir, "render", "--out-dir", "out", "in/o.yaml"); code != 1 ||
+		stderr != refused(filepath.Join("out", "o.html"), filepath.Join(resolved, "c.yaml")) {
+		t.Errorf("a link in --out-dir = %d, %q", code, stderr)
 	}
 	for name, want := range map[string]string{"a.yaml": good, "c.yaml": good, "x.txt": "secret"} {
 		if got, err := os.ReadFile(filepath.Join(dir, name)); err != nil || string(got) != want {
