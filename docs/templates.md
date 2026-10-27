@@ -205,9 +205,9 @@ An image, of the data or of `assets/`, is a png, jpeg, gif, webp or svg file, by
 
 A data file is checked in this order, and each stage runs only on data that passed the one before. `floe check` runs them all.
 
-1. Its YAML
-2. Its template and theme, and the parts, looks, shared schemas and themes of your own
-3. The template's `schema.json`, its images and its diagrams
-4. The template's `checks.yaml`
-5. The template's `computed.yaml`
-6. The page drawn from `page.html`
+The parts, looks, shared schemas, themes and templates of your own are read first: a mistake of one stops every page ([parts.md](parts.md#where-parts-and-themes-are)).
+
+1. Its YAML, and the template and theme it names
+2. The template's `schema.json`
+3. The template's `checks.yaml`, the `checks.yaml` of each part for each item it draws, and the template's `computed.yaml`, together
+4. The page drawn: each part and item of a format (images, diagrams, HTML), then `page.html`, and the page drawn as a whole
