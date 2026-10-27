@@ -71,3 +71,9 @@ func createNew(prefix string, perm os.FileMode) (*os.File, error) {
 		}
 	}
 }
+
+// Hidden reports whether name, of a file in a directory of floe's or one's own, is one floe leaves alone: one
+// starting with a dot (.git, an editor's .part.html.swp, .DS_Store).
+func Hidden(name string) bool {
+	return strings.HasPrefix(name, ".")
+}

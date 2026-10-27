@@ -171,6 +171,27 @@ var messagesEN = map[string]string{
 	"store_image_under_image": `the image "%[1]s" is under "%[2]s", which is an image too, and a stored page cannot keep both: rename one of them`,
 	"store_rebuild_kept":      `page "%s" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
 
+	"daemon_outdated_alive": "the outdated server (pid %d) did not stop; run \"floe stop\" and publish again",
+	"daemon_port_taken":     "port %d is used by another program; set FLOE_PORT to a free port",
+	"daemon_port_in_use":    "port %d is in use; stop that program (floe stop, if it is floe's server) or set FLOE_PORT",
+	"daemon_cannot_listen":  "cannot listen on 127.0.0.1:%d (permission denied); set FLOE_PORT to another port",
+	"daemon_port_silent":    "port %d is in use, and nothing answers there: a server another publish started may still be starting, or another program holds it; publish again, or set FLOE_PORT to a free port",
+	"daemon_not_started":    "the server did not start; run \"floe serve\" to see the error",
+	"daemon_other_root":     "the server on port %d serves %s; run \"floe stop\" and publish again",
+	"daemon_other_dirs":     "the server on port %d draws pages with the templates of %s, the parts of %s, the themes of %s and the icons of %s, and this command means the templates of %s, the parts of %s, the themes of %s and the icons of %s (FLOE_TEMPLATES_DIR, FLOE_PARTS_DIR, FLOE_THEMES_DIR, FLOE_ICONS_DIR); move yours where the server reads them, or run \"floe stop\" and publish again",
+	"cli_invalid_port":      "invalid FLOE_PORT \"%s\": use a port number from 1 to 65535",
+	"cli_publish_large":     "the data file and its images are larger than the %s a publish takes: make them smaller, or show fewer images",
+	"cli_serving":           "serving %s at %s/",
+	"cli_not_running":       "server is not running",
+	"cli_stopped":           "stopped server (pid %d)",
+	"cli_updated":           "updated \"%s\" (last published %s)",
+	"cli_updated_titled":    "updated \"%s\" (last published %s, title \"%s\")",
+	"cli_title_changed":     "warning: the title changed; if this is a different page, publish it under another --slug",
+	"cli_wants_publish":     "an HTML or data file",
+	"server_mistakes_head":  "The data file has mistakes",
+	"server_mistakes_lead":  "Fix them and save the file: this tab shows the page again.",
+	"store_no_dir":          "there is no directory for pages, as HOME is not an absolute path; set FLOE_DIR to an absolute path",
+
 	"cannot_write": "cannot be written (%s): check that its directory exists and can be written to, and that its name is free and not too long",
 
 	// icons: the icon sets

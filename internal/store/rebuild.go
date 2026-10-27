@@ -23,6 +23,9 @@ import (
 // rule, the second page's store_rebuild_kept without it above. Hang each page's mistakes under its
 // store_rebuild_kept, with an indent, if that comes to confuse.
 func (s *Store) Rebuild(dw Drawing) error {
+	if dw.Err != nil {
+		return dw.Err
+	}
 	slugs, err := s.slugs()
 	if err != nil {
 		return err

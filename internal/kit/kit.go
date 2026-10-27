@@ -13,11 +13,11 @@ import (
 	"maps"
 	"path"
 	"slices"
-	"strings"
 	"sync"
 
 	"github.com/sukekyo26/floe/internal/bom"
 	"github.com/sukekyo26/floe/internal/css"
+	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/rules"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -198,7 +198,7 @@ func entries(d Dir, dir string, dirs bool) ([]string, error) {
 	var names []string
 	var found usererr.List
 	for _, e := range all {
-		if strings.HasPrefix(e.Name(), ".") {
+		if files.Hidden(e.Name()) {
 			continue
 		}
 		at := path.Join(d.Name, dir, e.Name())

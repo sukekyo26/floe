@@ -12,6 +12,8 @@ import (
 	"maps"
 	"slices"
 	"strings"
+
+	"golang.org/x/text/language"
 )
 
 // Lang is a language tag in lower case (en, ja, pt-br).
@@ -109,4 +111,29 @@ func (c *Catalog) lookup(key string) string {
 // Langs are the languages with a catalog, by tag.
 func Langs() []Lang {
 	return slices.Sorted(maps.Keys(catalogs))
+}
+
+// Lang is the language c renders in, as a page's lang names it.
+func (c *Catalog) Lang() Lang {
+	return c.chain[0]
+}
+
+// FromAcceptLanguage is the language of a catalog that best meets the Accept-Language header, as golang.org/x/text
+// reads and matches it; English when none does, or the header cannot be read.
+func FromAcceptLanguage(header string) Lang {
+	wanted, _, err := language.ParseAcceptLanguage(header)
+	if err != nil || len(wanted) == 0 {
+		return English
+	}
+	// English first: what the matcher falls back to.
+	langs := append([]Lang{English}, slices.DeleteFunc(Langs(), func(l Lang) bool { return l == English })...)
+	have := make([]language.Tag, len(langs))
+	for i, l := range langs {
+		have[i] = language.Make(string(l))
+	}
+	_, i, confidence := language.NewMatcher(have).Match(wanted...)
+	if confidence == language.No {
+		return English
+	}
+	return langs[i]
 }

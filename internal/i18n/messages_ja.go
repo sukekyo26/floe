@@ -163,6 +163,27 @@ var messagesJA = map[string]string{
 	"store_image_under_image": "画像「%[1]s」は、画像でもある「%[2]s」の下にあり、保存したページは両方を持てません。どちらかの名前を変えてください",
 	"store_rebuild_kept":      "ページ「%s」は前のままにしました。公開した元のデータファイルを直して公開し直すか、テンプレートを直してください",
 
+	"daemon_outdated_alive": "古いサーバー（pid %d）が止まりませんでした。floe stop を実行してから、もう一度 publish してください",
+	"daemon_port_taken":     "ポート %d は別のプログラムが使っています。FLOE_PORT に空いているポートを設定してください",
+	"daemon_port_in_use":    "ポート %d は使われています。そのプログラムを止める（floe のサーバーなら floe stop）か、FLOE_PORT を設定してください",
+	"daemon_cannot_listen":  "127.0.0.1:%d で待ち受けられません（権限がありません）。FLOE_PORT に別のポートを設定してください",
+	"daemon_port_silent":    "ポート %d は使われていますが、何も答えません。別の publish が起こしたサーバーがまだ起きている途中か、別のプログラムが持っています。もう一度 publish するか、FLOE_PORT に空いているポートを設定してください",
+	"daemon_not_started":    "サーバーが起きませんでした。floe serve を実行して誤りを確かめてください",
+	"daemon_other_root":     "ポート %d のサーバーは %s を返しています。floe stop を実行してから、もう一度 publish してください",
+	"daemon_other_dirs":     "ポート %d のサーバーはテンプレート %s、部品 %s、テーマ %s、アイコン %s で描いていますが、このコマンドはテンプレート %s、部品 %s、テーマ %s、アイコン %s を使います（FLOE_TEMPLATES_DIR・FLOE_PARTS_DIR・FLOE_THEMES_DIR・FLOE_ICONS_DIR）。自分のものをサーバーが読む所に移すか、floe stop を実行してから、もう一度 publish してください",
+	"cli_invalid_port":      "FLOE_PORT「%s」は使えません。1〜65535 のポート番号にしてください",
+	"cli_publish_large":     "データファイルと画像が、publish が受ける %s より大きいです。小さくするか、見せる画像を減らしてください",
+	"cli_serving":           "%s を %s/ で返しています",
+	"cli_not_running":       "サーバーは動いていません",
+	"cli_stopped":           "サーバーを止めました（pid %d）",
+	"cli_updated":           "「%s」を置き換えました（前の publish は %s）",
+	"cli_updated_titled":    "「%s」を置き換えました（前の publish は %s、題は「%s」）",
+	"cli_title_changed":     "注意：題が変わりました。別のページなら、別の --slug で publish してください",
+	"cli_wants_publish":     "HTML かデータファイル",
+	"server_mistakes_head":  "データファイルに誤りがあります",
+	"server_mistakes_lead":  "直してファイルを保存すると、このタブにページが戻ります。",
+	"store_no_dir":          "HOME が絶対パスでないので、ページの保存先がありません。FLOE_DIR に絶対パスを設定してください",
+
 	"cannot_write": "書けません（%s）。ディレクトリがあって書けるか、名前が空いていて長すぎないかを確かめてください",
 
 	// icons

@@ -75,10 +75,12 @@ func (m *Meta) IsLink() bool {
 	return m.Path != ""
 }
 
-// Drawing is what pages are drawn with: the templates, parts and themes, and the icons of the diagrams.
+// Drawing is what pages are drawn with: the templates, parts and themes, and the icons of the diagrams; or, with
+// Err, why they cannot be read (one's own part that is broken), which every drawing refuses with.
 type Drawing struct {
 	Kit   *kit.Kit
 	Icons diagram.Icons
+	Err   error
 }
 
 // Store reads and writes the store directory.
@@ -294,4 +296,9 @@ func (s *Store) linkTitle(file string, data bool) (string, bool) {
 // Now is the time recorded in createdAt and updatedAt.
 func Now() string {
 	return time.Now().UTC().Format(isoMillis)
+}
+
+// Root returns the store directory.
+func (s *Store) Root() string {
+	return s.root
 }

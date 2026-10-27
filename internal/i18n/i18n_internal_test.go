@@ -181,3 +181,17 @@ func TestCatalogsMatchEnglish(t *testing.T) {
 		t.Error("the Japanese catalog is not registered")
 	}
 }
+
+// The language of a reader is the one of a catalog its Accept-Language header asks for most, as x/text reads it.
+func TestFromAcceptLanguage(t *testing.T) {
+	t.Parallel()
+
+	for header, want := range map[string]Lang{
+		"": English, "ja": "ja", "ja-JP": "ja", "ja;q=0.1, en;q=0.9": English, "en;q=0.1, ja": "ja",
+		"fr, ja;q=0.5": "ja", "fr": English, "ja;q=0": English, "*": English, ";;;": English,
+	} {
+		if got := FromAcceptLanguage(header); got != want {
+			t.Errorf("FromAcceptLanguage(%q) = %q, want %q", header, got, want)
+		}
+	}
+}

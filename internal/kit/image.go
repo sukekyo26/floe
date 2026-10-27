@@ -27,41 +27,52 @@ var imageTypes = map[string]string{
 }
 
 // ReadImage reads the image name of fsys, the directory dir as its mistakes name it, that of the file of, as a
-// data URI. A name floe does not read (told relative to the directory of of), an extension of no image floe
-// takes, a file that is not a regular one, and one over maxImage are mistakes of the name, without a place; one
-// that cannot be read is told at its path under dir, in the system's words (usererr.CannotRead), which says what
-// is wrong of the file.
-// LIMIT: a file is taken by its name's type, what it holds unchecked: one that holds another shows broken.
-// LIMIT: a file made a FIFO between the Stat and the Open blocks the read; open it without blocking if it comes to.
+// data URI, as ImageFile reads it.
 func ReadImage(fsys fs.FS, name, dir, of string) (template.URL, error) {
-	typ, err := imageStat(fsys, name, dir, of)
+	b, typ, err := ImageFile(fsys, name, dir, of)
 	if err != nil {
 		return "", err
+	}
+	//nolint:gosec // G203: an image of a type floe takes, as a data URI
+	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b)), nil
+}
+
+// ImageFile reads the image name of fsys, the directory dir as its mistakes name it, that of the file of, and
+// returns it with the type of its data URI: what a page shows, and what the command line sends a server to draw
+// with. A name floe does not read (told relative to the directory of of), an extension of no image floe takes, a
+// file that is not a regular one, and one over maxImage are mistakes of the name, without a place; one that cannot
+// be read is told at its path under dir, in the system's words (usererr.CannotRead), which says what is wrong of
+// the file.
+// LIMIT: a file is taken by its name's type, what it holds unchecked: one that holds another shows broken.
+// LIMIT: a file made a FIFO between the Stat and the Open blocks the read; open it without blocking if it comes to.
+func ImageFile(fsys fs.FS, name, dir, of string) ([]byte, string, error) {
+	typ, err := imageStat(fsys, name, dir, of)
+	if err != nil {
+		return nil, "", err
 	}
 	at := dirs.Join(dir, name)
 	f, err := fsys.Open(name)
 	if err != nil {
-		return "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
+		return nil, "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
 	}
 	defer f.Close()
 	fi, err := f.Stat()
 	switch {
 	case err != nil:
-		return "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
+		return nil, "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
 	case !fi.Mode().IsRegular():
-		return "", usererr.New("kit_image_not_file", name)
+		return nil, "", usererr.New("kit_image_not_file", name)
 	case fi.Size() > maxImage:
-		return "", tooLarge(name, fi.Size())
+		return nil, "", tooLarge(name, fi.Size())
 	}
 	b, err := io.ReadAll(io.LimitReader(f, maxImage+1))
 	switch {
 	case err != nil:
-		return "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
+		return nil, "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
 	case len(b) > maxImage:
-		return "", tooLarge(name, int64(len(b)))
+		return nil, "", tooLarge(name, int64(len(b)))
 	}
-	//nolint:gosec // G203: an image of a type floe takes, as a data URI
-	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b)), nil
+	return b, typ, nil
 }
 
 // imageStat checks the image name of fsys, the directory dir, as ReadImage does without reading it: a name floe
