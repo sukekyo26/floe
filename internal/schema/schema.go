@@ -62,6 +62,8 @@ func NewResource(u, file string, src []byte, k Kind) (Resource, error) {
 // past the start (bom.Refuse): a key an object has already, which the library would read over the first; a lone
 // surrogate or a byte that is no UTF-8 in a string, which it reads as U+FFFD; a value after the value. Then the
 // checks of $schema and $id after read do not run, as what they would look at is not what was written.
+// LIMIT: a file that is no UTF-8 (UTF-16, Shift_JIS) is told in jsontext's words (invalid UTF-8, an invalid
+// character), which do not say to save it as UTF-8 as a YAML file's do; tell it so if one comes to be written.
 func read(file string, src []byte) (any, error) {
 	src = bom.Trim(src)
 	if err := usererr.Collect(bom.Refuse(file, src).Err(), misread(file, src)); err != nil {

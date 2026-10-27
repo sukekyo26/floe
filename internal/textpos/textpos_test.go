@@ -118,3 +118,18 @@ func TestOfTemplate(t *testing.T) {
 		}
 	}
 }
+
+// Each tells, in one reading, each place as Of tells it alone: over LF, CRLF and CR, and a wide character.
+func TestEach(t *testing.T) {
+	t.Parallel()
+
+	src := []byte("a\nb\r\nc\rd日e\n\nf")
+	ats := []int{0, 2, 3, 5, 7, 8, 11, 13, 14}
+	got := textpos.Each(src, ats)
+	for i, at := range ats {
+		line, column := textpos.Of(src, at)
+		if got[i] != (textpos.Place{Line: line, Column: column}) {
+			t.Errorf("Each at %d = %+v, Of = %d:%d", at, got[i], line, column)
+		}
+	}
+}

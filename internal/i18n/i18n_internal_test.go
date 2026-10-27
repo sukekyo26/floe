@@ -205,7 +205,7 @@ func TestMarkWords(t *testing.T) {
 	for lang, messages := range catalogs {
 		words := messages["text_bom"]
 		if !strings.Contains(words, `\ufeff`) || strings.ContainsRune(words, 0xFEFF) {
-			t.Errorf("%s: text_bom = %q, want the escape \ufeff and no mark", lang, words)
+			t.Errorf("%s: text_bom = %q, want the escape \\ufeff and no mark", lang, words)
 		}
 	}
 }

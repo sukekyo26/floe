@@ -22,19 +22,25 @@ func At(src []byte) bool {
 	return bytes.HasPrefix(src, utf8BOM)
 }
 
-// Refuse refuses each byte order mark in src, file as Trim left it, at its line and column: YAML and JSON read
-// one past the start as a character of a key or a value, a name that is not the one written.
-// LIMIT: a mark in quotes or a comment is refused too, which YAML 1.2 takes in quotes; one a text needs is
-// written as an escape in double quotes. Take them if a file comes to need marks written as they are.
+// Refuse refuses each byte order mark in src, file as Trim left it, at its line and column. YAML and JSON read
+// one past the start as a character of a key or a value, so that a name or a text is not the one it shows;
+// YAML 1.2 takes it in quotes and RFC 8259 in any string, and they are refused there too, as a mark no one sees
+// makes a key another name all the same (decided for floe's files, in YAML and in a schema's JSON alike).
+// LIMIT: a mark written in quotes, a JSON string or a comment is refused; one a text needs is written as an
+// escape in double quotes. Take them if a file comes to need marks written as they are.
 func Refuse(file string, src []byte) usererr.List {
-	var found usererr.List
+	var ats []int
 	for at := 0; ; at += len(utf8BOM) {
 		i := bytes.Index(src[at:], utf8BOM)
 		if i < 0 {
-			return found
+			break
 		}
 		at += i
-		line, column := textpos.Of(src, at)
-		found = append(found, usererr.NewAt(file, line, column, "text_bom"))
+		ats = append(ats, at)
 	}
+	found := make(usererr.List, 0, len(ats))
+	for _, p := range textpos.Each(src, ats) {
+		found = append(found, usererr.NewAt(file, p.Line, p.Column, "text_bom"))
+	}
+	return found
 }

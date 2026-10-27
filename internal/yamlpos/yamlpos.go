@@ -238,6 +238,9 @@ func startOf(d *ast.DocumentNode, at Pos) Pos {
 // notUTF8 refuses src, file, at its first byte that is no UTF-8: once, as the one way to mend it is to save the
 // file as UTF-8 (a file of Shift_JIS has hundreds). A U+FFFD written in UTF-8 is a character.
 func notUTF8(file string, src []byte) error {
+	if utf8.Valid(src) {
+		return nil
+	}
 	for at := 0; at < len(src); {
 		r, size := utf8.DecodeRune(src[at:])
 		if r == utf8.RuneError && size == 1 {
