@@ -243,6 +243,12 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - circle: { name: b, cx: 150, cy: 150, r: 8 }\n" + at, region},
 		{"  - circle: { name: b, cx: 150, cy: 165, r: 8 }\n" + at, region},
 		{"  - circle: { name: b, cx: 105, cy: 150, r: 8 }\n" + at, region},
+		{"  - circle: { name: b, cx: 195, cy: 150, r: 8 }\n" + at, region},
+		{"  - circle: { name: c, cx: 230, cy: 150, r: 60 }\n  - label: { text: a and c, in: [a, c], x: 230, y: 150 }", ""},
+		{
+			"  - circle: { name: c, cx: 230, cy: 150, r: 60 }\n  - label: { text: a and c, in: [a, c], x: 200, y: 150 }",
+			`s.yaml:7:5: label "a and c" is not all inside a, c and outside the other circles: move it, or leave out x and y for floe to place it`,
+		},
 		{
 			"  - circle: { name: b, cx: 150, cy: 162, r: 5 }\n  - circle: { name: c, cx: 150, cy: 138, r: 5 }\n" + at,
 			strings.Replace(region, "7:5", "8:5", 1),

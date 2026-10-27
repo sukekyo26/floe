@@ -238,19 +238,8 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 		st.tried = x0 >= x1 || y0 >= y1 ||
 			max(x0, 0) < min(x1, l.s.Width) && max(y0, 0) < min(y1, l.s.Height)
 		xs, ys := grid(x0, x1, l.s.Width), grid(y0, y1, l.s.Height)
-		// Of points of one room, the nearest the middle of the circles' boxes: room told by the point of a box
-		// nearest a circle is one while the box covers its centre, and a Venn diagram of one axis keeps its labels
-		// on it.
-		best, near := 0.0, math.Inf(1)
-		mx, my := (x0+x1)/2, (y0+y1)/2
-		for _, px := range xs {
-			for _, py := range ys {
-				room, d := g.roomOf(rect{px - w/2, py - h/2, w, h, "", ""}), math.Hypot(px-mx, py-my)
-				if room > best || room == best && room > 0 && d < near {
-					best, near, st.x, st.top = room, d, px, py-h/2
-				}
-			}
-		}
+		var best float64
+		best, st.x, st.top = g.most(xs, ys, w, h, (x0+x1)/2, (y0+y1)/2)
 		st.found = best > 0
 	}
 	n := st.next
@@ -284,6 +273,29 @@ func grid(lo, hi, size float64) []float64 {
 		out = append(out, p)
 	}
 	return out
+}
+
+// most is the room of the point of xs and ys where a block w by h, centred on it, keeps the most room, and where
+// the block goes then (its middle and top), 0 for none of room: of points of one room, the one nearest mx, my,
+// the middle of the circles' boxes, as room told by the point of a box nearest a circle is one while the box
+// covers its centre, and a label stays on the axis of a Venn diagram of one when the middle is a point of the grid.
+// LIMIT: the grid counts 4 apart from where the circles' boxes start, so a middle off it leaves the label off the
+// axis, above or below as the radius goes; try the middle itself first if diagrams come to need it.
+func (g region) most(xs, ys []float64, w, h, mx, my float64) (best, x, top float64) {
+	near := math.Inf(1)
+	for _, px := range xs {
+		for _, py := range ys {
+			switch room := g.roomOf(rect{px - w/2, py - h/2, w, h, "", ""}); {
+			case room > best:
+				best, near, x, top = room, math.Hypot(px-mx, py-my), px, py-h/2
+			case room == best:
+				if d := math.Hypot(px-mx, py-my); d < near {
+					near, x, top = d, px, py-h/2
+				}
+			}
+		}
+	}
+	return best, x, top
 }
 
 // stack is the labels of one region of a Venn diagram placed by it, and where their block went.
