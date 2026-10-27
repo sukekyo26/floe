@@ -30,8 +30,10 @@ func TestDiffOf(t *testing.T) {
 	}
 	for _, c := range []struct{ text, kinds string }{
 		// Joined without diff --git: the head's counts end each hunk.
-		{"--- a/x\n+++ b/x\n@@ -1 +1 @@\n-old x\n+new x\n--- a/y\n+++ b/y\n@@ -1 +1 @@\n-old y\n+new y\n",
-			"meta meta hunk del add meta meta hunk del add"},
+		{
+			"--- a/x\n+++ b/x\n@@ -1 +1 @@\n-old x\n+new x\n--- a/y\n+++ b/y\n@@ -1 +1 @@\n-old y\n+new y\n",
+			"meta meta hunk del add meta meta hunk del add",
+		},
 		{"@@ -1,0 +1,0 @@\n--- x\n", "hunk meta"},
 		{"@@ -1,1 +1,2 @@\n-a\n-b\n+c\n+d\n--- e\n", "hunk del del add add meta"},
 		{"@@ -1 +1 @@\n--- x\n+y\n", "hunk del add"},

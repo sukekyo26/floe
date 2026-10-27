@@ -81,13 +81,13 @@ type diffText struct {
 func diffOf(text string) diffText {
 	var d diffText
 	inHunk, counted := false, false
-	var old, added int
+	var left hunkLeft
 	for line := range strings.Lines(text) {
 		kind := ""
 		switch {
 		case strings.HasPrefix(line, "@@"):
 			kind, inHunk = "hunk", true
-			old, added, counted = hunkLengths(line)
+			left, counted = hunkLengths(line)
 		case strings.HasPrefix(line, `\`):
 			kind = "meta"
 		case !inHunk && (strings.HasPrefix(line, "--- ") || strings.HasPrefix(line, "+++ ")):
@@ -102,19 +102,8 @@ func diffOf(text string) diffText {
 		default:
 			kind, inHunk = "meta", false
 		}
-		if inHunk && counted {
-			switch kind {
-			case "add":
-				added--
-			case "del":
-				old--
-			case "":
-				old--
-				added--
-			}
-			if old <= 0 && added <= 0 {
-				inHunk = false
-			}
+		if inHunk && counted && left.take(kind) {
+			inHunk = false
 		}
 		d.Lines = append(d.Lines, diffLine{Kind: kind, Text: line})
 	}
@@ -124,12 +113,31 @@ func diffOf(text string) diffText {
 // hunkHead is the start of a hunk's head, @@ -a,b +c,d @@, b and d its lengths, 1 when left out.
 var hunkHead = regexp.MustCompile(`^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@`)
 
+// hunkLeft is what is left of a hunk's lengths, the lines it has on the old side and on the new.
+type hunkLeft struct {
+	old, added int
+}
+
+// take takes a line of kind from what is left, and reports whether both sides are used up.
+func (h *hunkLeft) take(kind string) bool {
+	switch kind {
+	case "add":
+		h.added--
+	case "del":
+		h.old--
+	case "":
+		h.old--
+		h.added--
+	}
+	return h.old <= 0 && h.added <= 0
+}
+
 // hunkLengths returns the lengths of the hunk whose head is line, and false for a head that does not give
 // them (@@ alone, a combined diff's @@@, a length too large for an int).
-func hunkLengths(line string) (old, added int, ok bool) {
+func hunkLengths(line string) (hunkLeft, bool) {
 	m := hunkHead.FindStringSubmatch(line)
 	if m == nil {
-		return 0, 0, false
+		return hunkLeft{old: 0, added: 0}, false
 	}
 	n := [2]int{1, 1}
 	for i, s := range m[1:] {
@@ -138,11 +146,11 @@ func hunkLengths(line string) (old, added int, ok bool) {
 		}
 		v, err := strconv.Atoi(s)
 		if err != nil {
-			return 0, 0, false
+			return hunkLeft{old: 0, added: 0}, false
 		}
 		n[i] = v
 	}
-	return n[0], n[1], true
+	return hunkLeft{old: n[0], added: n[1]}, true
 }
 
 // treeNode is a file or a folder of a tree, with what is in a folder in the order the paths name it.
