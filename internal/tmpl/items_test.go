@@ -348,6 +348,7 @@ func TestZgotmplZ(t *testing.T) {
 		{"", `<p data-{{.Data.s}}="x">x</p>`, "<b>", in(`<p data-zgotmplz="x">`)},
 		{"<meta name=viewport content={{.Data.s}}>", "", "", in(`<meta content="ZgotmplZ"/>`)},
 		{"", `<div class="callout" data-floe-x="note" style="color: {{.Data.s}}"><p>x</p></div>`, "a;b", in(`<div style="color: ZgotmplZ">`)},
+		{"", "<p style=\"margin: 0; padding: 0;\n color: {{.Data.s}}\">x</p>", "a;b", in(`<p style="margin: 0; padding: 0;  color: ZgotmplZ">`)},
 		{"", `<svg width="8" height="8"><circle r="4" style="fill: {{.Data.s}}"/></svg>`, "a;b", in(`<circle style="fill: ZgotmplZ">`)},
 		// One mistake for an element refused already.
 		{"<meta http-equiv=refresh content={{.Data.s}}>", "", "", `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="Zgot…, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},

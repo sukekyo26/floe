@@ -28,8 +28,8 @@ type named struct {
 // off, unchecked), in an HTML <select> an element of textInSelect or svg or math (heldAsText), a name of an
 // element's data-floe-part or data-floe-look that is no part or look of k, and a data-floe-part not of one
 // part's name as written (the scope of its style, [data-floe-part="name"], would not reach it) or of a look,
-// which has no box, and an attribute where html/template wrote ZgotmplZ (replaced), once for an element refused
-// for none of the others. It returns what the page names.
+// which has no box, and an attribute where html/template wrote ZgotmplZ (replaced), in an element that the
+// switch's checks (a <meta> not shown, an element in a <select>) have not refused. It returns what the page names.
 func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error) {
 	var found usererr.List
 	refuse := func(key string, args ...any) {
@@ -127,7 +127,8 @@ func replaced(n *html.Node) string {
 	var b strings.Builder
 	_ = html.Render(&b, bare) //nolint:errcheck // a strings.Builder fails no write
 	tag := b.String()
-	return tag[:strings.IndexByte(tag, '>')+1]
+	// On one line, whole: Render leaves a line break in a value as it is, and a value cut short may lose ZgotmplZ.
+	return strings.ReplaceAll(tag[:strings.IndexByte(tag, '>')+1], "\n", " ")
 }
 
 // shown reports whether n, a <meta>, is one the page drawn may have: its charset alone, or a viewport's name and

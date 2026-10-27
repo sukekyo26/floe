@@ -120,7 +120,7 @@ var messagesJA = map[string]string{
 	"draw_part_unknown": "このファイルを描いたページが、無い部品 %s を名乗っています。%s のどれかを書いてください",
 	"draw_part_several": `ページの data-floe-part="%s" は 1 つの部品の名前ではありません。data-floe-part="<名前>" と名前をそのまま書き、ほかの部品の見た目は data-floe-look="<名前> …" で借りてください`,
 	"draw_look_box":     `ページに data-floe-part="%[1]s" がありますが、%[1]s は見た目で箱がありません。data-floe-look="%[1]s" で借りてください`,
-	"draw_zgotmplz":     "このファイルから描いたページの %s に ZgotmplZ があります。html/template が、そこに置けない値の代わりに書いたものです。値か、テンプレートが値を置く所を変えてください",
+	"draw_zgotmplz":     "このファイルを描いたページの %s に ZgotmplZ があります。html/template が、そこに置けない値の代わりに書いたものです。値か、テンプレートが値を置く所を変えてください",
 	"draw_meta":         "このファイルを描いたページに %s があります。page.html、部品の part.html、format html の項目のどれかが書いています。floe が描くのは静的なページで、<meta> は charset と viewport のものだけを受けるので、書かないでください",
 	"draw_noscript":     "このファイルを描いたページに <noscript> があります。page.html、部品の part.html、format html の項目のどれかが書いています。floe はその中を確かめられず、スクリプトを切ると中が働くので、書かないでください",
 	"draw_not_text":     "format %s の項目は文字です。文字で書いてください。YAML が数・true・false・null と読むものは引用符で囲んでください",
