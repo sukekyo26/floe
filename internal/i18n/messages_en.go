@@ -120,6 +120,7 @@ var messagesEN = map[string]string{
 	"tmpl_unknown_theme": `there is no theme "%s"; use %s`,
 
 	// draw: the page drawn
+	"draw_select_text":  "the page drawn from this file has a <%s> inside a <select>, which may hold no element whose content is read as text, nor svg or math: move it out of the <select>",
 	"draw_style":        "the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css",
 	"draw_base":         "the page drawn from this file has a <base>, which page.html, a part's part.html or an item of format html writes and the page's CSP ignores (base-uri 'none'): write its links whole",
 	"draw_part_unknown": "the page drawn from this file names the part %s, which there is none of; use %s",
