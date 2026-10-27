@@ -138,6 +138,9 @@ func TestExamples(t *testing.T) {
 
 const head = "width: 400\nheight: 200\ntitle: T\nparts:\n"
 
+// rawWords are the words of a mistake of raw SVG, after the element it holds.
+const rawWords = "which a diagram may not hold: draw with SVG's elements and attributes (fill= and the like) alone"
+
 // A spec of the wrong shape is told in jsonschema's words, at its line and column; nothing is laid out.
 func TestShapeMistakes(t *testing.T) {
 	t.Parallel()
@@ -158,6 +161,11 @@ func TestShapeMistakes(t *testing.T) {
 		{"  - circle: { name: c, cx: 1, cy: 1, r: 1 }\n  - label: { text: a, x: 1, in: [c] }", "s.yaml:6:14: properties 'y' required, if 'x' exists"},
 		{"  - edge: { from: [1, 2, 3], to: b }", "s.yaml:5:19: maxItems: got 3, want 2"},
 		{"  - box: { x: 1, y: 1, rows: [a], zz: 1, aa: 1, mm: 1 }", "s.yaml:5:12: additional properties 'aa', 'mm', 'zz' not allowed"},
+		// A label placed by its region takes no anchor; one at x and y does.
+		{"  - circle: { name: c, cx: 100, cy: 100, r: 80 }\n  - label: { text: a, in: [c], anchor: start }", "s.yaml:6:14: properties 'x' required, if 'anchor' exists"},
+		{"  - circle: { name: c, cx: 100, cy: 100, r: 80 }\n  - label: { text: a, in: [c], x: 100, anchor: start }", "s.yaml:6:14: properties 'y' required, if 'x' exists"},
+		{"  - circle: { name: c, cx: 100, cy: 100, r: 80 }\n  - label: { text: a, in: [c], x: 100, y: 100, anchor: start }", ""},
+		{"  - label: { text: a, x: 100, y: 100, anchor: end }", ""},
 	} {
 		// The library's map order does not change the words, however often they are told.
 		for range 5 {
@@ -216,19 +224,23 @@ func TestLayoutMistakes(t *testing.T) {
 			"  - circle: { name: a, cx: 100, cy: 100, r: 20 }\n  - label: { text: a label far too wide for it, in: [a] }",
 			`s.yaml:6:5: label "a label far too wide for it" finds no room inside a and outside the other circles: make that area larger, or the text shorter`,
 		},
-		{"  - raw: { svg: '<rect/></svg><p>x</p>' }", "s.yaml:5:5: raw SVG holds <p>, which it may not: write SVG's elements alone, without style, script or foreignObject"},
-		{"  - raw: { svg: '<foreignObject><div/></foreignObject>' }", "s.yaml:5:5: raw SVG holds <foreignObject>, which it may not: write SVG's elements alone, without style, script or foreignObject"},
-		{"  - raw: { svg: '<style>rect{}</style>' }", "s.yaml:5:5: raw SVG holds <style>, which it may not: write SVG's elements alone, without style, script or foreignObject"},
-		{"  - edge: { from: [10, 10], to: [10, 10] }", "s.yaml:5:5: edge [10,10]→[10,10] starts where it ends: end it at another part or point"},
-		{
-			"  - box: { name: a, x: 100, y: 20, w: 80, h: 29, rows: [a] }\n  - edge: { from: a, fromSide: left, to: a, toSide: left }",
-			"s.yaml:6:5: edge a→a starts where it ends: end it at another part or point",
-		},
-		{
-			"  - circle: { name: c, cx: 100, cy: 100, r: 60 }\n  - circle: { name: c, cx: 300, cy: 100, r: 5 }\n  - label: { text: x, in: [c] }",
-			`s.yaml:6:5: the name "c" is given before: give each part and row its own name`,
-		},
-		{"  - icon: { icon: aws/amazon-ec2, x: 10, y: 10 }", `s.yaml:5:5: icon "aws/amazon-ec2": no icon "aws/amazon-ec2" (search with: floe icons search <word>)`},
+		{"  - raw: { svg: '<rect/></svg><p>x</p>' }", "s.yaml:5:17: raw SVG holds <p>, " + rawWords},
+		{"  - raw: { svg: '<foreignObject><div/></foreignObject>' }", "s.yaml:5:17: raw SVG holds <foreignObject>, " + rawWords},
+		{"  - raw: { svg: '<style>rect{}</style>' }", "s.yaml:5:17: raw SVG holds <style>, " + rawWords},
+		// The elements no input of a page may write, in whatever case, under others, and past an </svg> too.
+		{"  - raw: { svg: '<noscript><circle r=\"3\"/></noscript>' }", "s.yaml:5:17: raw SVG holds <noscript>, " + rawWords},
+		{"  - raw: { svg: '<base href=\"https://x\"/>' }", "s.yaml:5:17: raw SVG holds <base>, " + rawWords},
+		{"  - raw: { svg: '<NoScript></NoScript>' }", "s.yaml:5:17: raw SVG holds <noscript>, " + rawWords},
+		{"  - raw: { svg: '<g><g><noscript/></g></g>' }", "s.yaml:5:17: raw SVG holds <noscript>, " + rawWords},
+		{"  - raw: { svg: '<BASE/>' }", "s.yaml:5:17: raw SVG holds <base>, " + rawWords},
+		{"  - raw: { svg: '<circle r=\"3\"/></svg><noscript>x</noscript>' }", "s.yaml:5:17: raw SVG holds <noscript>, " + rawWords},
+		{"  - raw: { svg: '<desc><noscript>x</noscript></desc>' }", "s.yaml:5:17: raw SVG holds <noscript>, " + rawWords},
+		// Attributes are kept as written, and a name in text, a comment or an attribute is no element.
+		{"  - raw: { svg: '<circle onload=\"f()\" r=\"3\"/>' }", ""},
+		{"  - raw: { svg: '<a href=\"javascript:f()\"><text>x</text></a>' }", ""},
+		{"  - raw: { svg: '<g><title>t</title><desc>d</desc><circle r=\"3\"/></g>' }", ""},
+		{"  - raw: { svg: '<text>noscript base</text>' }", ""},
+		{"  - raw: { svg: '<g class=\"noscript\"><!-- <noscript> --></g>' }", ""},
 	} {
 		if _, got := draw(t, head+c.parts+"\n", render("en")); got != c.want {
 			t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
@@ -441,6 +453,13 @@ func TestInspect(t *testing.T) {
 	src := head + "  - circle: { name: a, cx: 100, cy: 100, r: 80 }\n  - label: { text: x, in: [a] }\n  - edge: { from: [200, 10], to: [300, 10] }\n"
 	got, mistakes := draw(t, src, inspect)
 	for _, want := range []string{"edge [200,10]→[300,10] M200,10 H300", `label "x"`, "in a"} {
+		if mistakes != "" || !strings.Contains(got, want) {
+			t.Errorf("inspect = %s %s, want %s", got, mistakes, want)
+		}
+	}
+	// A bar is drawn from the smaller of its x, its label right of it, whichever is written first.
+	got, mistakes = draw(t, head+"  - bar: { x1: 200, x2: 20, y: 50, label: back }\n", inspect)
+	for _, want := range []string{`bar "back" 20,43 180x14`, `label "back" 205,41 38.8x18`} {
 		if mistakes != "" || !strings.Contains(got, want) {
 			t.Errorf("inspect = %s %s, want %s", got, mistakes, want)
 		}

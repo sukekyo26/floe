@@ -7,6 +7,8 @@ import (
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
+
+	"github.com/sukekyo26/floe/internal/page"
 )
 
 // rawElement is an element raw SVG may not hold, by its name.
@@ -17,9 +19,10 @@ func (e rawElement) Error() string {
 }
 
 // checkRaw reads svg as HTML reads it inside an <svg>, and returns the tree it read, written again: every element
-// must be one of SVG's, and none a style, a script or a foreignObject, whose content a page reads as CSS, script
-// or HTML. HTML written in it, or past an </svg> in it, is read as HTML's elements, and refused so. What is not
-// closed is written closed.
+// must be one of SVG's, and none a script or a foreignObject, whose content a page reads as script or HTML, or
+// one page.Refused refuses, which no input may write. HTML's elements that leave SVG's content (as a <p> does) are
+// read as HTML's, and refused so. What is not closed is written closed. Attributes are kept as written: an onload
+// or a javascript: URL runs as a script part's script does, under the page's CSP in the sandbox it is shown in.
 func checkRaw(svg string) (template.HTML, error) {
 	// A parent alone, to read as an <svg>'s content.
 	context := &html.Node{ //nolint:exhaustruct_v5 // see above
@@ -38,18 +41,18 @@ func checkRaw(svg string) (template.HTML, error) {
 			return "", fmt.Errorf("diagram: write raw SVG: %w", err)
 		}
 	}
-	// Read and written by x/net/html, of SVG's elements alone and none whose content runs.
+	// Read and written by x/net/html, of SVG's elements alone, none a script or a foreignObject.
 	return template.HTML(b.String()), nil //nolint:gosec // see above
 }
 
 // refused is the name of the first element under n, n itself included, that raw SVG may not hold; "" for none.
 func refused(n *html.Node) string {
 	if n.Type == html.ElementNode {
-		if n.Namespace != "svg" {
+		if n.Namespace != "svg" || page.Refused(n) != "" {
 			return n.Data
 		}
 		switch strings.ToLower(n.Data) {
-		case "style", "script", "foreignobject":
+		case "script", "foreignobject":
 			return n.Data
 		}
 	}

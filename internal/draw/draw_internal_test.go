@@ -11,7 +11,9 @@ import (
 
 	"golang.org/x/net/html"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/kit"
+	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -107,6 +109,18 @@ func TestUnfinished(t *testing.T) {
 	} {
 		if got := unfinished(text); got != want {
 			t.Errorf("unfinished(%q) = %q, want %q", text, got, want)
+		}
+	}
+}
+
+// Each element page.Refused refuses has its words in refusal, which the English catalog holds.
+func TestRefusalWords(t *testing.T) {
+	t.Parallel()
+
+	words := i18n.EnglishCatalog().Formats("draw_")
+	for _, name := range page.Refusable {
+		if key, ok := refusal[name]; !ok || words[key] == "" {
+			t.Errorf("<%s>: refusal has %q, which the English catalog holds as %q", name, key, words[key])
 		}
 	}
 }

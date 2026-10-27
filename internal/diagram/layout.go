@@ -222,7 +222,9 @@ func (l *layout) addRaw(r *raw, at string) {
 	var bad rawElement
 	switch {
 	case errors.As(err, &bad):
-		l.problem(at, "diagram_raw_element", string(bad))
+		// LIMIT: told at the start of the value, as x/net/html keeps no place of an element; tell its line in a
+		// block if long raw SVG comes to need it.
+		l.problem(at+"/raw/svg", "diagram_raw_element", string(bad))
 	case err != nil:
 		l.failure = err
 	default:
@@ -477,7 +479,8 @@ func barRect(b *bar, at string) rect {
 	if name == "" {
 		name = num(b.X1) + "-" + num(b.X2)
 	}
-	return rect{b.X1, b.Y - 7, math.Max(b.X2-b.X1, 4), 14, what("bar", b.Name, Text{"en": name}), at}
+	w := math.Max(math.Abs(b.X2-b.X1), 4)
+	return rect{math.Min(b.X1, b.X2), b.Y - 7, w, 14, what("bar", b.Name, Text{"en": name}), at}
 }
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
@@ -603,7 +606,7 @@ func (l *layout) addBar(b *bar, at string) {
 	l.boxes = append(l.boxes, r)
 	l.boxEls = append(l.boxEls, elem{Kind: "rect", X: r.x, Y: r.y, W: r.w, H: r.h, RX: 3, Class: "bar" + tone(b.Tone)})
 	if b.Label != nil {
-		l.label(at, b.Label, b.X1+r.w+10, b.Y, "start", false, false)
+		l.label(at, b.Label, r.x+r.w+10, b.Y, "start", false, false)
 	}
 }
 
