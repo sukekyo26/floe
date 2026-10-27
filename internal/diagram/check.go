@@ -215,7 +215,7 @@ func (l *layout) addLabel(lb *label, at string) {
 
 // place finds where a label placed by its region goes: the labels of one region are stacked, the first above,
 // and placed as one block where its corners keep the most room; the block is placed once, for its first label.
-// LIMIT: points 4 apart are tried, and at most 500 a side of where the circles all are within the canvas; try
+// LIMIT: points 4 apart are tried, and at most 501 a side of where the circles all are within the canvas; try
 // them closer if a region narrow enough to slip between comes to matter.
 func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 	key := regionKey(lb.In)
@@ -227,18 +227,18 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 		}
 		h := labelH * float64(len(st.labels))
 		// The points of a grid over where the circles of in all are (their boxes' overlap, in no order of in),
-		// those within the canvas alone: outside it, a label sticks out anyway. Circles that do not meet hold
-		// no room, wherever they are.
+		// those within the canvas alone: a label sticks out when none of it has room in the canvas. Circles
+		// whose boxes do not overlap hold no room, wherever they are.
 		x0, y0, x1, y1 := math.Inf(-1), math.Inf(-1), math.Inf(1), math.Inf(1)
 		for _, c := range g.in {
 			x0, y0, x1, y1 = max(x0, c.CX-c.R), max(y0, c.CY-c.R), min(x1, c.CX+c.R), min(y1, c.CY+c.R)
 		}
-		st.tried = x0 > x1 || y0 > y1
+		st.tried = x0 >= x1 || y0 >= y1 ||
+			max(x0, 0) < min(x1, l.s.Width) && max(y0, 0) < min(y1, l.s.Height)
 		xs, ys := grid(x0, x1, l.s.Width), grid(y0, y1, l.s.Height)
 		best := 0.0
 		for _, px := range xs {
 			for _, py := range ys {
-				st.tried = true
 				if room := g.roomOf(rect{px - w/2, py - h/2, w, h, "", ""}); room > best {
 					best, st.x, st.top = room, px, py-h/2
 				}
@@ -252,16 +252,28 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 	return st.x, st.top + labelH*float64(n) + labelH/2, st
 }
 
-// grid is the points from lo to hi, 4 apart or more for at most 500 of them across what is within 0 and size,
-// counted from lo: the canvas cuts the grid, and does not move it.
+// grid is at most 501 points from lo to hi within 0 and size, step apart, step being 4 or more: counted from lo,
+// so that the canvas cuts the grid and does not move it, else from where the canvas cuts it. Each is made from
+// its index, not by adding step again and again, which a float stops moving.
+// LIMIT: where a float's spacing passes step (beyond 2^55 or so for a step of 4), points round to the same
+// values, and what is between them is not tried; where it passes 500 steps (5e19 and the like), the points are
+// all one. Keep the points relative to the region's origin if a diagram that large comes to matter.
 func grid(lo, hi, size float64) []float64 {
 	from, to := max(lo, 0), min(hi, size)
-	if from > to {
+	if !(from <= to) {
 		return nil
 	}
 	step := max(4, (to-from)/500)
+	start := lo + math.Ceil((from-lo)/step)*step
+	if !(start >= from && start < from+step && start <= to) {
+		start = from
+	}
 	var out []float64
-	for p := lo + math.Ceil((from-lo)/step)*step; p <= to; p += step {
+	for i := range 501 {
+		p := start + float64(i)*step
+		if !(p <= to) {
+			break
+		}
 		out = append(out, p)
 	}
 	return out
