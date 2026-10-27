@@ -70,7 +70,7 @@
     "marker": { "enum": ["none", "arrow", "triangle", "diamond", "odiamond", "one", "many", "zero-one", "zero-many"] },
     "frame": {
       "type": "object",
-      "description": "A box around other parts, its label inside the top left corner, or right of its icon",
+      "description": "A box around other parts, its label inside the top left corner, or right of its icon. Frames are not checked against one another, so they may cross, and its label is kept within its width alone",
       "required": ["x", "y", "w", "h"],
       "additionalProperties": false,
       "properties": {

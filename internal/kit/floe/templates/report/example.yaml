@@ -2,7 +2,8 @@
 # terminal, which draws the prompt; numbers, steps and what changes go in stats, steps and compare;
 # a table's cells are lines of Markdown, numbers in quotes, or pills; html goes in as it is; a script is a
 # function the page calls with an element to draw in and its data; a diagram is checked for overlaps
-# and overflowing text, and floe diagram example prints one of each kind.
+# and overflowing text (frames may cross, and a frame's label is kept within its width alone), and
+# floe diagram example prints one of each kind.
 template: report
 lang: en
 title: Moving the team wiki
