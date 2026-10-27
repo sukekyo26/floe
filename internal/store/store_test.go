@@ -168,6 +168,13 @@ func TestPublishCopy(t *testing.T) {
 	if got := files(t, copyOf(t, s, root, "d")); !slices.Equal(got, []string{"data.yaml", "page.html"}) {
 		t.Errorf("files %v, want no image", got)
 	}
+	// A copy without its page has none to serve.
+	if err := os.Remove(filepath.Join(copyOf(t, s, root, "d"), "page.html")); err != nil {
+		t.Fatal(err)
+	}
+	if file, ok := s.File("d", s.ReadMeta("d"), ""); ok {
+		t.Errorf("File = %s with page.html gone", file)
+	}
 	if fi, err := os.Stat(filepath.Join(copyOf(t, s, root, "d"), "images")); err != nil || !fi.IsDir() {
 		t.Errorf("images/ of a page of no image: %v", err)
 	}

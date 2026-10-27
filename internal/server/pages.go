@@ -152,10 +152,6 @@ func (s *Server) drawLink(slug string, m *store.Meta, file string) ([]byte, erro
 // page whose copy a publish removed after its meta.json was read is read once more.
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	slug, rest := r.PathValue("slug"), r.PathValue("rest")
-	if !store.ValidSlug(slug) {
-		notFound(w)
-		return
-	}
 	if rest == "" && !r.URL.Query().Has("raw") {
 		status := http.StatusNotFound
 		if m := s.cfg.Store.ReadMeta(slug); m != nil {

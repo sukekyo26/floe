@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"strconv"
@@ -249,7 +250,9 @@ func (*Server) redirect(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	w.Header().Set("Location", "/a/"+slug+"/")
+	// The query kept: /a/x?raw is the page, not its frame.
+	u := url.URL{Path: "/a/" + slug + "/", RawQuery: r.URL.RawQuery}
+	w.Header().Set("Location", u.String())
 	send(w, http.StatusMovedPermanently, "")
 }
 

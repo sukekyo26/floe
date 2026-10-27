@@ -228,8 +228,16 @@ func TestManagementPageAndFrame(t *testing.T) {
 
 	e := newEnv(t)
 	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
+	// A stored page whose page.html is gone is not there, as ?raw finds it.
+	e.publish(t, "gone", "lang: en\ntemplate: pic\n", nil)
+	if err := os.Remove(filepath.Join(e.root, "gone", store.New(e.root).ReadMeta("gone").Source, "page.html")); err != nil {
+		t.Fatal(err)
+	}
 	frame := "frame-ancestors 'self' vscode-webview: vscode-file:"
-	for target, status := range map[string]int{"/": http.StatusOK, "/a/d/": http.StatusOK, "/a/none/": http.StatusNotFound} {
+	for target, status := range map[string]int{
+		"/": http.StatusOK, "/a/d/": http.StatusOK, "/a/none/": http.StatusNotFound, "/a/Bad_Slug/": http.StatusNotFound,
+		"/a/gone/": http.StatusNotFound,
+	} {
 		w := e.do(t, http.MethodGet, target, "")
 		want(t, w, status, `<html lang="en">`)
 		if got := w.Header().Get("Content-Security-Policy"); got != frame {
@@ -239,10 +247,16 @@ func TestManagementPageAndFrame(t *testing.T) {
 	}
 	// Not the frame, whose messages say "not found" too.
 	for _, w := range []*httptest.ResponseRecorder{
-		e.do(t, http.MethodGet, "/a/Bad_Slug/", ""), e.do(t, http.MethodPost, "/", ""), e.do(t, http.MethodGet, "/a/none/?raw", ""),
+		e.do(t, http.MethodPost, "/", ""), e.do(t, http.MethodGet, "/a/none/?raw", ""), e.do(t, http.MethodGet, "/a/gone/?raw", ""),
 	} {
 		if w.Code != http.StatusNotFound || w.Body.String() != "not found" {
 			t.Errorf("answered %d %.40q, want 404 not found", w.Code, w.Body)
+		}
+	}
+	// The query is kept, so that /a/d?raw stays the page, not its frame.
+	for target, to := range map[string]string{"/a/d": "/a/d/", "/a/d?raw": "/a/d/?raw"} {
+		if w := e.do(t, http.MethodGet, target, ""); w.Code != http.StatusMovedPermanently || w.Header().Get("Location") != to {
+			t.Errorf("GET %s = %d to %q, want 301 to %q", target, w.Code, w.Header().Get("Location"), to)
 		}
 	}
 }

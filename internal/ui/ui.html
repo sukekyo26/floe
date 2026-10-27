@@ -740,7 +740,7 @@
   async function deleteOne(slug) {
     try {
       const res = await api(`/api/artifacts/${slug}`, { method: 'DELETE' });
-      return res.ok || res.status === 404 ? '' : `HTTP ${res.status}`;
+      return res.ok || res.status === 404 ? '' : t('ui_http_error', await res.text(), res.status);
     } catch (e) {
       return e.message;
     }
