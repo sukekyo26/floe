@@ -200,12 +200,13 @@ Check each diagram spec and print the diagrams, in order, as one HTML fragment o
 - A spec is checked against the diagram's schema, then laid out once for every language its text is written in, and checked: text that overflows, parts that overlap or stick out of the canvas, edges through boxes, crossings … ([pages.md](pages.md#diagrams) lists the checks).
 - Every mistake of every spec is printed as `file:line:column: message`, in the order the specs were given, and nothing is drawn until all are fixed (exit code 1).
 - The text is written in the language of `--lang` (`en` when left out). A language a text does not have falls back to English.
-- The fragment starts with the assets: the diagrams' style, which takes its colours from the palette's CSS variables (a page without them gets `default`'s colours), and the script that zooms them. Readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. A page needs the assets once; holding them more than once does no harm.
+- Each diagram is in the box of the part diagram, `<div data-floe-part="diagram">`, as in a page drawn from a data file.
+- The fragment starts with the assets: the diagrams' style, scoped to those boxes (`@scope`), which takes its colours from the palette's CSS variables where the box is (a page without them gets `default`'s colours), and the script that zooms them. Readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. A page needs the assets once; holding them more than once does no harm. Take the assets and the diagrams from the same floe: a style of one floe may not fit the diagrams of another.
 
 | Flag | Description |
 |---|---|
 | `--lang <tag>` | The language to write the diagrams' text in (`en`, `ja`). Defaults to `en`. |
-| `--no-assets` | Print the diagrams without the assets, for a page that already holds them. |
+| `--no-assets` | Print the diagrams, each in its box, without the assets, for a page that already holds them. |
 
 ## `floe diagram inspect <spec.yaml>...`
 

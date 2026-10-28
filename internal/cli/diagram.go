@@ -39,8 +39,9 @@ frame's label is held to the frame's width, not its height or the canvas). Every
 spec is printed as file:line:column: message, and nothing is drawn until all are fixed.
 An icon part takes the icons that floe icons fetch <set> keeps.
 
-The fragment starts with the diagrams' style and the script that zooms them (once per page is
-enough; more does no harm). --no-assets leaves them out.`,
+Each diagram is in the box of the part diagram, as in a page. The fragment starts with the
+diagrams' style, scoped to those boxes, and the script that zooms them (once per page is enough;
+more does no harm; take them from the same floe as the diagrams). --no-assets leaves them out.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			svgs, err := a.diagrams(args, lang, func(d *diagram.Drawer, v any, o diagram.Options) (string, error) {
