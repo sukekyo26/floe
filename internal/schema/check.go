@@ -152,29 +152,33 @@ func (c *Compiled) checkNode(n *jsonschema.Schema, r reached, part bool) usererr
 	} else if unreached := c.unreachedFormat(n, r); unreached != nil {
 		found = append(found, unreached)
 	}
-	if n.Ref == nil {
-		return found
-	}
-	into := c.intoMistake(n)
-	switch name, isRoot := c.partRoot(n.Ref); {
-	case isRoot:
-		// Where Follow stopped at the format refused, the $ref beside it is not reached for it alone.
-		if !r.atPart[n] && !(formatRefused && r.atFormat[n]) {
-			found = append(found, c.mistake(n, "schema_part_unreached", partName(name)))
-		}
-	case into != nil:
-		found = append(found, into)
-	default:
-		if part {
-			if shared := c.sharedFormat(n); shared != nil {
-				return append(found, shared)
-			}
-		}
-		if unreached := c.unreachedRef(n, r); unreached != nil {
-			found = append(found, unreached)
+	if n.Ref != nil {
+		if refused := c.refMistake(n, r, part, formatRefused); refused != nil {
+			found = append(found, refused)
 		}
 	}
 	return found
+}
+
+// refMistake returns checkNode's mistake of the $ref of n, nil for none; formatRefused if checkNode refused the
+// format of n in a part.
+func (c *Compiled) refMistake(n *jsonschema.Schema, r reached, part, formatRefused bool) *usererr.Error {
+	if name, isRoot := c.partRoot(n.Ref); isRoot {
+		// Where Follow stopped at the format refused, the $ref beside it is not reached for it alone.
+		if !r.atPart[n] && (!formatRefused || !r.atFormat[n]) {
+			return c.mistake(n, "schema_part_unreached", partName(name))
+		}
+		return nil
+	}
+	if into := c.intoMistake(n); into != nil {
+		return into
+	}
+	if part {
+		if shared := c.sharedFormat(n); shared != nil {
+			return shared
+		}
+	}
+	return c.unreachedRef(n, r)
 }
 
 // isPart reports whether the file compiled is a part's (CompilePart).
