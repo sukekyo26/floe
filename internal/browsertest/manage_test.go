@@ -504,6 +504,147 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	}, "|"))
 }
 
+// tagsList is the list the stub answers for tags: pages with tags, one whose tag has a comma in it, one with none, and
+// an archived one with a tag of its own.
+const tagsList = `[
+	{ slug: 'a', title: 'Alpha', description: '', tags: ['設計', 'plan'], createdAt: at(1), updatedAt: at(9) },
+	{ slug: 'b', title: 'Beta', description: '', tags: ['plan'], createdAt: at(1), updatedAt: at(8) },
+	{ slug: 'c', title: 'Gamma', description: '', tags: ['設計、実装'], createdAt: at(1), updatedAt: at(7) },
+	{ slug: 'd', title: 'Delta', description: '', createdAt: at(1), updatedAt: at(6) },
+	{ slug: 'z', title: 'Zeta', description: '', tags: ['old', 'plan'], createdAt: at(1), updatedAt: at(5), archived: true },
+]`
+
+// TestUITags picks a tag on the shelf, by a row's tag, in the URL and on a narrow screen, counts the tags of the list
+// looked at, keeps the tag picked at 0 and lets it go with the other filters, searches tags, gives them in the edit
+// dialog and to those selected, and puts their names in as text, against a stubbed list.
+func TestUITags(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	inEveryLanguage(t, uiTags)
+}
+
+func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
+	t.Helper()
+
+	b := newBrowser(t, servetest.Start(t, nil).Base, lang)
+	b.navigate("/")
+	b.eval(stub(tagsList))
+	const rows = "[...document.querySelectorAll('#list li:not(.group)')].map((li) => li.dataset.slug).join('') + ' ' + (new URLSearchParams(location.search).get('tag') ?? '-')"
+	const shelf = "[...document.querySelectorAll('#tags .chip')].map((c) => c.textContent + ':' + c.getAttribute('aria-pressed')).join(',') + ' ' + document.getElementById('shelf-tags').hidden"
+	pick := func(name string) {
+		b.eval("[...document.querySelectorAll('#tags .chip')].find((c) => c.dataset.tag === " + js(name) + ").click()")
+	}
+	search := func(q string) {
+		b.eval("(() => { const q = document.getElementById('q'); q.value = " + js(q) + "; q.dispatchEvent(new Event('input')); })()")
+	}
+	tagsOf := func(names, how string) {
+		b.eval(`(() => {
+			document.getElementById('bulk-tag').click();
+			document.getElementById('tag-name').value = ` + js(names) + `;
+			` + how + `
+		})()`)
+	}
+
+	out := make([]string, 0, 40)
+	// The shelf names the tags of the list looked at by name, with their counts; the names written are suggested from all.
+	out = append(out, b.eval(shelf), b.eval(rows), b.eval("[...document.getElementById('tag-names').options].map((o) => o.value).join(',')"),
+		b.eval("[...document.querySelectorAll('#list li[data-slug=a] .tagpill')].map((p) => p.textContent + ':' + p.getAttribute('aria-label')).join(',')"),
+		b.eval("document.querySelector('#list li[data-slug=d] .tags').hidden"))
+	// Picked, the rows are its pages, as when the URL has it; picked again it is let go.
+	pick("plan")
+	out = append(out, b.eval(rows), b.eval(shelf))
+	b.navigate("/?tag=plan")
+	b.eval(stub(tagsList))
+	out = append(out, b.eval(rows))
+	pick("plan")
+	out = append(out, b.eval(rows))
+	b.eval("document.querySelector('.views [data-view=archived]').click()")
+	out = append(out, b.eval(shelf))
+	b.eval("document.querySelector('.views [data-view=all]').click()")
+	// A row's tag picks it.
+	b.eval("document.querySelector('#list li[data-slug=c] .tagpill').click()")
+	out = append(out, b.eval(rows))
+	// Searching finds a page by its tags.
+	b.eval("document.getElementById('clear').click()")
+	search("設計")
+	out = append(out, b.eval(rows))
+	search("")
+	// A tag picked stays at 0, until the filters are cleared.
+	pick("plan")
+	b.eval(stub(strings.ReplaceAll(tagsList, "'plan'", "'other'")))
+	out = append(out, b.eval(shelf), b.eval("document.getElementById('nomatch').hidden"))
+	b.eval("document.getElementById('clear').click()")
+	out = append(out, b.eval(rows))
+	b.eval(stub(tagsList))
+
+	// The edit dialog sends the tags written, split at commas; as opened, none, so that a name with a comma stays whole.
+	b.eval("document.querySelector('#list li[data-slug=a] .edit').click()")
+	out = append(out, b.eval("document.getElementById('edit-tags').value"))
+	b.eval("document.getElementById('edit-tags').value = '計画、 設計,'; document.getElementById('edit').requestSubmit()")
+	b.until("the edit dialog to close", "!document.getElementById('edit-dialog').open")
+	out = append(out, b.eval("calls.splice(0).join(',')"))
+	b.eval("document.querySelector('#list li[data-slug=c] .edit').click()")
+	b.eval("document.getElementById('edit-name').value = 'G2'; document.getElementById('edit').requestSubmit()")
+	b.until("the edit dialog to close", "!document.getElementById('edit-dialog').open")
+	out = append(out, b.eval("calls.splice(0).join(',')"))
+
+	// Those selected are each sent their tags with the names added, or removed; one that would not change is not sent.
+	for _, slug := range []string{"a", "b", "d"} {
+		b.eval("document.querySelector('#list li[data-slug=" + slug + "] .sel').click()")
+	}
+	b.eval("document.getElementById('bulk-tag').click()")
+	out = append(out, b.eval("[document.getElementById('tag-title').textContent, document.getElementById('tag-add').textContent, document.getElementById('tag-remove').textContent].join(' / ')"))
+	b.eval("document.querySelector('#tag-dialog [data-close]').click()")
+	named := b.eval("new Intl.ListFormat(document.documentElement.lang).format(['plan', 'new'])")
+	tagsOf("plan, new", "document.getElementById('tag-form').requestSubmit();")
+	out = append(out, b.until("the tags to be added", "document.getElementById('bulk').hidden && calls.splice(0).sort().join(',')"),
+		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_add_bulk_done", named, 3))+")"))
+	b.eval("document.getElementById('bulk-page').click()")
+	tagsOf("設計", "document.getElementById('tag-remove').click();")
+	out = append(out, b.until("the tag to be removed", "document.getElementById('bulk').hidden && calls.splice(0).join(',')"),
+		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_remove_bulk_done", "設計", 1))+")"))
+	b.eval("document.querySelector('#list li[data-slug=d] .sel').click()")
+	tagsOf("plan", "document.getElementById('tag-remove').click();")
+	out = append(out, b.until("nothing to change", "document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_bulk_none"))+") && "+
+		"[calls.length, document.getElementById('bulk').hidden, document.querySelector('#list li[data-slug=d] .sel').checked].join(' ')"))
+
+	// A narrow screen's select has the tags, which pick and let go as the shelf's do.
+	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 390, Height: 844, DeviceScaleFactor: 1, Mobile: true}
+	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
+		t.Fatal(err)
+	}
+	choose := func(value string) {
+		b.eval("(() => { const s = document.getElementById('view-select'); s.value = " + js(value) + "; s.dispatchEvent(new Event('change')); })()")
+	}
+	out = append(out, b.eval("[...document.getElementById('view-select').options].filter((o) => o.value.startsWith('tag:')).map((o) => o.value).join(',')"))
+	choose("tag:plan")
+	out = append(out, b.eval(rows), b.eval("document.getElementById('view-select').options[0].textContent.includes('plan')"))
+	choose("tag:plan")
+	out = append(out, b.eval(rows))
+	if _, err := chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// A tag's name goes in as text, wherever it shows, and counts as any.
+	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['<b>x</b>', '__proto__'], createdAt: at(1), updatedAt: at(9) }]`))
+	out = append(out, b.eval("[...document.querySelectorAll('#tags .chip')].map((c) => c.textContent).sort().join(',')"),
+		b.eval("[...document.querySelectorAll('#list .tagpill')].map((p) => p.textContent).join(',')"),
+		b.eval("document.querySelectorAll('.shelf b, #list b, #tag-names b').length"))
+
+	check(t, "tags", out, strings.Join([]string{
+		"plan2:false,設計1:false,設計、実装1:false false", "abcd -", "old,plan,設計,設計、実装",
+		"設計:" + msg("ui_tag_filter_named", "設計") + ",plan:" + msg("ui_tag_filter_named", "plan"), "true",
+		"ab plan", "plan2:true,設計1:false,設計、実装1:false false", "ab plan", "abcd -",
+		"old1:false,plan1:false false", "c 設計、実装", "ac -",
+		"other2:false,plan0:true,設計1:false,設計、実装1:false false", "false", "abcd -",
+		"設計, plan", `PATCH /api/artifacts/a {"tags":["計画","設計"]}`, `PATCH /api/artifacts/c {"title":"G2"}`,
+		msg("ui_tag_bulk_title", 3) + " / " + msg("ui_tag_add_bulk", 3) + " / " + msg("ui_tag_remove_bulk", 3),
+		`PATCH /api/artifacts/a {"tags":["設計","plan","new"]},PATCH /api/artifacts/b {"tags":["plan","new"]},PATCH /api/artifacts/d {"tags":["plan","new"]}`, "true",
+		`PATCH /api/artifacts/a {"tags":["plan"]}`, "true",
+		"0 true false",
+		"tag:plan,tag:設計,tag:設計、実装", "ab plan", "true", "abcd -",
+		"<b>x</b>1,__proto__1", "<b>x</b>,__proto__", "0",
+	}, "|"))
+}
+
 // TestUIShelfStays keeps the shelf where it sits, whether the list is long enough to scroll or not, and there once
 // scrolled: sticky only holds it, never pushes it.
 func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
