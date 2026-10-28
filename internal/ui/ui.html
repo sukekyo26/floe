@@ -121,11 +121,11 @@
     .shelf { scrollbar-width: thin; }
     .shelf:not(:hover, :focus-within) { scrollbar-color: transparent transparent; }
   }
-  .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 0.7rem/1.2 var(--body); color: var(--faint); letter-spacing: 0.02em; }
+  .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 0.7rem/1.2 var(--mono); color: var(--faint); letter-spacing: 0.08em; text-transform: uppercase; }
   /* minmax(0, …): no wider than the shelf, so that a long name is cut off rather than widening it */
   .shelf .views, .shelf .chips { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .shelf .views button, .shelf .chip {
-    display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: 8px;
+    display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: 999px;
     background: none; color: var(--muted); font-size: 0.86rem; font-weight: 500; text-align: left; overflow-wrap: anywhere;
   }
   .shelf .views svg { width: 15px; height: 15px; flex: none; color: var(--faint); }
@@ -151,7 +151,7 @@
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; height: 36px; padding: 0 0.95rem;
-    font-size: 0.86rem; font-weight: 600; background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+    font-size: 0.86rem; font-weight: 600; background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
     box-shadow: var(--shadow-sm); transition: background-color 0.15s, border-color 0.15s, filter 0.15s;
   }
   .btn:hover { border-color: var(--faint); }
@@ -185,22 +185,21 @@
      digits' room, right-aligned, so that the counts line up */
   .chip .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .chip .n { flex: none; min-width: 3ch; text-align: right; }
-  .count { flex: none; font: 0.74rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+  .count { flex: none; font: 0.74rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; letter-spacing: 0.08em; text-transform: uppercase; }
   .chip.tag::before { content: "#"; flex: none; color: var(--faint); font-family: var(--mono); }
   /* Each group a card: its heading rounds the top, its last row the bottom. Not overflow: hidden on a box round them, which
      would cut off a row's menu at the bottom */
-  .panel > .state { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+  .panel > .state { background: var(--panel); border-radius: 20px; box-shadow: 0 1px 0 var(--line); }
   /* Rows share columns through subgrid, so times and actions line up from row to row, and from group to group */
   ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; }
   li {
     position: relative; grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; column-gap: 0.85rem;
-    min-height: 3.1rem; padding: 0.45rem 0.6rem 0.45rem 0.85rem; transition: background-color 0.15s;
-    background: var(--panel); border-inline: 1px solid var(--line);
+    min-height: 3.1rem; padding: 0.45rem 0.75rem 0.45rem 18px; transition: background-color 0.15s; background: var(--panel);
     animation: rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 16ms);
   }
   li + li { border-top: 1px solid var(--line); }
   li.group:not(:first-child) { margin-top: 1.1rem; }
-  li:is(:has(+ li.group), :last-child) { border-bottom: 1px solid var(--line); border-radius: 0 0 8px 8px; }
+  li:is(:has(+ li.group), :last-child) { border-radius: 0 0 20px 20px; box-shadow: 0 1px 0 var(--line); }
   /* A heading is not pressed, so it is not pointed out */
   li:not(.group):hover { background: var(--hover); }
   li::before {
@@ -211,13 +210,13 @@
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
   /* A group's heading: a block, so that its text does not widen the rows' first column */
   li.group {
-    display: block; min-height: 0; padding: 0.7rem 0.85rem 0.5rem; font: 700 0.78rem/1.2 var(--body); color: var(--fg); animation: none;
-    border-top: 1px solid var(--line); border-radius: 8px 8px 0 0;
+    display: block; min-height: 0; padding: 14px 18px 10px; font: 700 0.75rem/1.2 var(--mono); color: var(--fg); animation: none;
+    letter-spacing: 0.08em; text-transform: uppercase; border-radius: 20px 20px 0 0;
   }
   li.group::before { content: none; }
   /* Its dot, of the group's color (--c), its name on one line (whole as the title) and its count, never split */
   li.group > div { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
-  li.group > div::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  li.group > div::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
   li.group .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   li.group .n { flex: none; white-space: nowrap; font: 500 0.72rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
   /* The checkbox sits above the row link's hit area; the label widens what can be clicked */
@@ -246,7 +245,6 @@
   .sub .path { flex: 0 1 auto; font: 0.72rem var(--mono); color: var(--faint); }
   .missing { color: var(--danger); }
   li:has(.missing) a.title { color: var(--muted); text-decoration: line-through; }
-  .sub .made { flex: none; font: 0.72rem var(--mono); color: var(--faint); }
   /* Above the title link's hit area, as the row's controls are */
   .sub .tags { position: relative; z-index: 1; display: flex; flex: 0 1 auto; gap: 0.3rem; }
   .tagpill {
@@ -257,10 +255,10 @@
   /* A tags field's names, as the row's menu looks: a popover in the top layer, so that no dialog or box cuts it off */
   .suggest {
     position: fixed; inset: auto; margin: 0; display: grid; gap: 1px; max-height: 14rem; overflow-y: auto; padding: 0.3rem;
-    color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);
+    color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
   }
   .suggest:not(:popover-open) { display: none; }
-  .suggest [role="option"] { padding: 0.4rem 0.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 0.82rem/1.4 var(--body); border-radius: 7px; cursor: pointer; }
+  .suggest [role="option"] { padding: 0.4rem 0.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 0.82rem/1.4 var(--body); border-radius: 10px; cursor: pointer; }
   .suggest [role="option"]:hover, .suggest [aria-selected="true"] { background: var(--subtle); }
   .suggest [aria-selected="true"] { color: var(--fg); box-shadow: inset 2px 0 0 var(--ink); }
   /* The bulk dialog's tags, a chip each, wrapping: on all the selected (filled), on some (dashed) or on none, told by the chip's
@@ -303,12 +301,12 @@
   .menu {
     position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; display: grid; gap: 2px; min-width: 17.5rem;
     max-width: calc(100vw - 2rem); padding: 0.35rem;
-    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
   }
   /* Its items grow with their words, a long one wrapping, instead of the 30px of a row's buttons */
   .menu .icon-btn {
     justify-content: flex-start; width: 100%; height: auto; min-height: 36px; padding: 0.45rem 0.6rem; gap: 0.6rem;
-    font-size: 0.82rem; line-height: 1.35; text-align: start;
+    font-size: 0.82rem; line-height: 1.35; text-align: start; border-radius: 10px;
   }
   .menu .icon-btn svg { flex-shrink: 0; }
   /* With a mouse, a row's actions show while it is pointed at, reached by keyboard or selected; a pressed star always. Only opacity, so they stay for keys and screen readers */
@@ -318,7 +316,7 @@
   }
   .icon-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; height: 30px; min-width: 30px; padding-inline: 0.4rem;
-    color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 7px; text-decoration: none;
+    color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 999px; text-decoration: none;
     transition: background-color 0.15s, color 0.15s;
   }
   .icon-btn svg { width: 16px; height: 16px; }
@@ -334,8 +332,8 @@
 
   .pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; font-size: 0.8rem; color: var(--muted); }
   .sizes { display: inline-flex; align-items: center; gap: 0.55rem; }
-  .seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--subtle); border: 1px solid var(--line); border-radius: 9px; }
-  .seg button { padding: 0.18rem 0.6rem; font: 0.74rem/1.5 var(--mono); color: var(--muted); background: none; border: 0; border-radius: 6px; }
+  .seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--subtle); border: 1px solid var(--line); border-radius: 999px; }
+  .seg button { padding: 0.18rem 0.6rem; font: 0.74rem/1.5 var(--mono); color: var(--muted); background: none; border: 0; border-radius: 999px; }
   .seg button:hover { color: var(--fg); }
   .seg button[aria-pressed="true"] { color: var(--fg); background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
   .pages { display: inline-flex; align-items: center; gap: 0.45rem; font: 0.74rem/1 var(--mono); font-variant-numeric: tabular-nums; }
@@ -361,7 +359,7 @@
   .toasts { position: fixed; right: 16px; bottom: 1.25rem; z-index: 40; display: grid; gap: 0.5rem; justify-items: end; pointer-events: none; }
   .toast {
     display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.95rem; font-size: 0.84rem; font-weight: 550;
-    color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 11px; box-shadow: var(--shadow);
+    color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow);
     animation: toast 3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
   .toast svg { width: 16px; height: 16px; flex: none; color: var(--good); }
@@ -394,20 +392,20 @@
   .state { display: grid; justify-items: center; gap: 0.5rem; padding: 3.5rem 1.5rem; text-align: center; color: var(--muted); }
   .state svg {
     width: 52px; height: 52px; padding: 12px; margin-bottom: 0.25rem; color: var(--muted);
-    background: var(--sel); border-radius: 14px;
+    background: var(--sel); border-radius: 50%;
   }
   .state p { margin: 0; max-width: 34rem; }
   .state strong { color: var(--fg); font-size: 0.98rem; }
   .state a { color: var(--fg); }
   .state code { font-family: var(--mono); font-size: 0.8em; background: var(--subtle); padding: 0.1rem 0.35rem; border-radius: 4px; overflow-wrap: anywhere; }
   .link-btn { background: none; border: 0; padding: 0; color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
-  .error { margin: 0; padding: 0.65rem 0.9rem; border-radius: 10px; color: var(--danger); background: var(--danger-soft); font-size: 0.86rem; white-space: pre-wrap; }
+  .error { margin: 0; padding: 0.65rem 0.9rem; border-radius: 14px; color: var(--danger); background: var(--danger-soft); font-size: 0.86rem; white-space: pre-wrap; }
   /* Under the header bar, in the list and in the frame alike */
   #error { margin: 0.75rem 16px 0; }
 
   dialog {
     width: min(32rem, calc(100% - 32px)); padding: 0; color: var(--fg); background: var(--panel);
-    border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lg);
+    border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow-lg);
   }
   dialog[open] { animation: pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
   dialog::backdrop { background: var(--scrim); backdrop-filter: blur(3px); }
@@ -417,7 +415,7 @@
   .add { display: grid; gap: 1rem; padding: 1.4rem 1.5rem 1.25rem; }
   .add-head { display: flex; align-items: center; gap: 0.8rem; }
   .add-head svg {
-    width: 38px; height: 38px; padding: 9px; flex: none; color: var(--on-ink); border-radius: 10px; background: var(--ink);
+    width: 38px; height: 38px; padding: 9px; flex: none; color: var(--fg); border-radius: 50%; background: var(--sel);
   }
   .add h2 { margin: 0; font-size: 1.05rem; line-height: 1.3; letter-spacing: -0.01em; }
   .add .lead { margin: 0.1rem 0 0; color: var(--muted); font-size: 0.82rem; }
@@ -689,15 +687,12 @@
     <label class="pick"><input type="checkbox" class="sel"></label>
     <div class="body">
       <a class="title"></a>
-      <span class="sub"><span class="tags"></span><span class="desc"></span><span class="made"></span></span>
+      <span class="sub"><span class="tags"></span><span class="desc"></span></span>
     </div>
     <span class="meta"><span class="proj"></span><time></time></span>
     <div class="actions">
       <button type="button" class="icon-btn star">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
-      </button>
-      <button type="button" class="icon-btn archive">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg>
       </button>
       <details class="more">
         <summary class="icon-btn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></summary>
@@ -706,6 +701,7 @@
           <button type="button" class="icon-btn copy" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>{{.Msg "ui_copy_path"}}</button>
           <a class="icon-btn open" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>{{.Msg "ui_open_raw"}}</a>
           <a class="icon-btn download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>{{.Msg "ui_download"}}</a>
+          <button type="button" class="icon-btn archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span class="label"></span></button>
           <button type="button" class="icon-btn delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg><span class="label"></span></button>
         </div>
       </details>
@@ -1381,11 +1377,7 @@
       return b;
     }));
     tags.hidden = !a.tags?.length;
-    // The creation date, which a meta.json from before it was recorded does not have
-    const made = li.querySelector('.made');
-    made.textContent = a.createdAt ? t(a.path ? 'ui_registered_at' : 'ui_created_at', new Date(a.createdAt).toLocaleDateString(LANG, { dateStyle: 'medium' })) : '';
-    made.hidden = !a.createdAt;
-    li.querySelector('.sub').hidden = !a.description && !a.path && !a.createdAt && !a.tags?.length;
+    li.querySelector('.sub').hidden = !a.description && !a.path && !a.tags?.length;
     li.querySelector('.more summary').setAttribute('aria-label', t('ui_more_named', a.title));
     // Sorted by creation, the creation time is shown
     const when = sort === 'created' && a.createdAt ? a.createdAt : a.updatedAt;
@@ -1429,7 +1421,7 @@
       dl.hidden = true;
     }
     const arc = li.querySelector('.archive');
-    arc.title = t(a.archived ? 'ui_unarchive' : 'ui_archive');
+    arc.querySelector('.label').textContent = t(a.archived ? 'ui_unarchive' : 'ui_archive');
     arc.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
     arc.addEventListener('click', () => toggleArchived(a));
     const del = li.querySelector('.delete');
