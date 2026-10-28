@@ -44,9 +44,9 @@ func stub(list string) string {
 	return `(() => {
 	window.calls = [];
 	const at = (d) => ` + "`2026-01-0${d}T00:00:00.000Z`" + `;
-	const list = JSON.stringify(` + list + `);
+	window.list = JSON.stringify(` + list + `);
 	window.fetch = (url, init = {}) => {
-		if (!init.method) return Promise.resolve(new Response(list));
+		if (!init.method) return Promise.resolve(new Response(window.list));
 		if (window.failWrites) return Promise.reject(new TypeError('Failed to fetch'));
 		calls.push([init.method, url, init.body].filter(Boolean).join(' '));
 		if (init.method === 'POST') return Promise.resolve(new Response('{"slug":"n"}', { status: 201 }));
@@ -381,12 +381,20 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		window.renders = 0;
 		window.draw = render;
 		render = () => { renders++; draw(); };
+		// The server lists the link added.
+		const post = window.fetch;
+		window.fetch = (url, init = {}) => {
+			if (init.method === 'POST') list = JSON.stringify([...JSON.parse(list), { slug: 'n', title: 'New', description: '', path: '/tmp/x/n.html', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-09T00:00:00.000Z' }]);
+			return post(url, init);
+		};
 		document.getElementById('add-open').click();
 		document.getElementById('add-path').value = '/tmp/x/n.html';
 		document.getElementById('add').requestSubmit();
 	})()`)
-	out = append(out, b.until("the link to be added", "!document.getElementById('add-dialog').open && "+
-		"[location.search, document.getElementById('q').value === '', renders].join(' ')"))
+	// Waited for until drawn: the dialog closes before the list is fetched again.
+	b.until("the link to be added", "!document.getElementById('add-dialog').open && location.search.includes('tab=links')")
+	out = append(out, b.eval("[location.search, document.getElementById('q').value === '', renders, "+
+		"[...document.querySelectorAll('#list .title')].map((a) => a.textContent)].join(' ')"))
 	b.eval("render = draw")
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval("document.getElementById('add-open').hidden"))
@@ -473,7 +481,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"true true", "false",
 		msg("ui_count_all", 1) + " true",
 		"empty-favorites", "all-archived", "archived ?archived=1", "archived ?archived=1",
-		"true false", "?tab=links true 1", "true",
+		"true false", "?tab=links true 1 New", "true",
 		"50 1 / 2", "true",
 		"none block", msg("ui_view_all") + " (" + msg("ui_count_all", 3) + ")",
 		`,view:all,view:fav,view:archived,project:,project:a<b&"c,project:archived,project:p`, "true", "p (1)", `a<b&"c`,
