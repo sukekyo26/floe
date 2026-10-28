@@ -245,7 +245,6 @@
   .sub .path { flex: 0 1 auto; font: 0.72rem var(--mono); color: var(--faint); }
   .missing { color: var(--danger); }
   li:has(.missing) a.title { color: var(--muted); text-decoration: line-through; }
-  .sub .made { flex: none; font: 0.72rem var(--mono); color: var(--faint); }
   /* Above the title link's hit area, as the row's controls are */
   .sub .tags { position: relative; z-index: 1; display: flex; flex: 0 1 auto; gap: 0.3rem; }
   .tagpill {
@@ -286,13 +285,15 @@
     border: 1px dashed var(--line); border-radius: 999px; font-size: 0.82rem;
   }
   .tag-new:hover { border-color: var(--ink); }
-  /* The row's project, as a chip of its color, and its time: one column, so that rows line up whatever their project */
+  /* The row's project, as a chip of its color, its creation date and its update's time: one column, so that rows line up
+     whatever their project. The chip gives way first, cut off, where the column is too narrow */
   .meta { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; min-width: 0; }
+  .made { flex: none; font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; }
   .proj {
-    max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0.05rem 0.5rem; border-radius: 999px;
+    min-width: 0; max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0.05rem 0.5rem; border-radius: 999px;
     font-size: 0.7rem; font-weight: 600; color: color-mix(in srgb, var(--c) 55%, var(--fg)); background: color-mix(in srgb, var(--c) 14%, var(--panel));
   }
-  li time { font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+  li time { flex: none; font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
   .actions { position: relative; z-index: 1; display: flex; gap: 2px; }
   /* The row's other actions. The row whose menu is open comes forward: each row's rise animation stacks the rows below over it */
   li:has(.more[open]) { z-index: 3; }
@@ -455,7 +456,7 @@
     li { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 0.3rem; column-gap: 0.6rem; }
     .pick { grid-column: 1; grid-row: 1 / 3; }
     .body { grid-column: 2; grid-row: 1; }
-    .meta { grid-column: 2; grid-row: 2; justify-content: flex-start; }
+    .meta { grid-column: 2; grid-row: 2; justify-content: flex-start; flex-wrap: wrap; row-gap: 0.3rem; }
     .actions { grid-column: 3; grid-row: 1 / 3; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } }
@@ -688,9 +689,9 @@
     <label class="pick"><input type="checkbox" class="sel"></label>
     <div class="body">
       <a class="title"></a>
-      <span class="sub"><span class="tags"></span><span class="desc"></span><span class="made"></span></span>
+      <span class="sub"><span class="tags"></span><span class="desc"></span></span>
     </div>
-    <span class="meta"><span class="proj"></span><time></time></span>
+    <span class="meta"><span class="proj"></span><span class="made"></span><time></time></span>
     <div class="actions">
       <button type="button" class="icon-btn star">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
@@ -1382,13 +1383,12 @@
     const made = li.querySelector('.made');
     made.textContent = a.createdAt ? t(a.path ? 'ui_registered_at' : 'ui_created_at', new Date(a.createdAt).toLocaleDateString(LANG, { dateStyle: 'medium' })) : '';
     made.hidden = !a.createdAt;
-    li.querySelector('.sub').hidden = !a.description && !a.path && !a.createdAt && !a.tags?.length;
+    li.querySelector('.sub').hidden = !a.description && !a.path && !a.tags?.length;
     li.querySelector('.more summary').setAttribute('aria-label', t('ui_more_named', a.title));
-    // Sorted by creation, the creation time is shown
-    const when = sort === 'created' && a.createdAt ? a.createdAt : a.updatedAt;
+    // The update's, in every order: the creation has its date beside it
     const time = li.querySelector('time');
-    time.dateTime = when;
-    time.textContent = ago(when);
+    time.dateTime = a.updatedAt;
+    time.textContent = ago(a.updatedAt);
     time.title = [a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
       .filter(Boolean).join('\n');
     // A link shows the file where it was registered; if the file is gone, the row says it cannot be opened
