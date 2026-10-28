@@ -49,7 +49,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   hold.
 - Add nine themes a data file picks with `theme:` (`default`, `soft`,
   `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `swiss` and `washi`),
-  each a palette of CSS variables and the shape of the parts.
+  each a palette of CSS variables and the shape of the parts. Pages in
+  `default`, and in the themes that take its colours (`soft`, `editorial`), have
+  the warm grey ground and text of the management page, with lines of the same
+  warmth.
 - Add templates of your own in `FLOE_TEMPLATES_DIR`: `page.html`,
   `schema.json` and `example.yaml`, and `page.css`, `checks.yaml`,
   `computed.yaml`, `words.yaml` and `assets/` if they like; and
