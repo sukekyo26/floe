@@ -144,7 +144,7 @@
   .count { flex: none; font: 0.74rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
 
   /* var(--h) resolves where it is declared, so colors are built on the element that has --h */
-  li, .chip.project {
+  .chip.project {
     --glyph-bg: hsl(var(--h) 85% 95%); --glyph-fg: hsl(var(--h) 55% 40%);
   }
   /* Not overflow: hidden, which would cut off a row's menu at the bottom: the first and last rows round their own corners */
@@ -154,7 +154,7 @@
   /* Rows share columns through subgrid, so times and actions line up from row to row */
   ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; }
   li {
-    --h: 225; position: relative; grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; column-gap: 0.85rem;
+    position: relative; grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; column-gap: 0.85rem;
     min-height: 3.1rem; padding: 0.45rem 0.6rem 0.45rem 0.85rem; transition: background-color 0.15s;
     animation: rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 16ms);
   }
@@ -205,7 +205,7 @@
   li time { font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
   .actions { position: relative; z-index: 1; display: flex; gap: 2px; }
   /* The row's other actions. The row whose menu is open comes forward: each row's rise animation stacks the rows below over it */
-  li:has(.more[open]) { z-index: 31; }
+  li:has(.more[open]) { z-index: 3; }
   .more { position: relative; }
   .more > summary { list-style: none; }
   .more > summary::-webkit-details-marker { display: none; }
@@ -721,29 +721,27 @@
     setTimeout(() => t.remove(), 3000);
   }
 
-  // A changed filter starts from the first page
-  function refilter() {
+  // The one place the list's filters change: view (all, the favourites or the archived), tab and project, as change has
+  // them. A changed filter starts from the first page and leaves the selection
+  function filter(change) {
+    if ('view' in change) {
+      fav = change.view === 'fav';
+      archived = change.view === 'archived';
+    }
+    if ('tab' in change) tab = change.tab;
+    if ('project' in change) project = change.project;
     page = 1;
     selected.clear();
+  }
+
+  function refilter(change = {}) {
+    filter(change);
     render();
   }
 
-  function setProject(value) {
-    project = value;
-    refilter();
-  }
-
-  function setTab(value) {
-    tab = value;
-    refilter();
-  }
-
-  // What is looked at: all, the favourites or the archived
-  function setView(value) {
-    fav = value === 'fav';
-    archived = value === 'archived';
-    refilter();
-  }
+  const setProject = (value) => refilter({ project: value });
+  const setTab = (value) => refilter({ tab: value });
+  const setView = (value) => refilter({ view: value });
 
   function setSize(value) {
     size = value;
@@ -832,7 +830,7 @@
     for (const t of document.querySelectorAll('#list time')) t.textContent = ago(t.dateTime);
   }
 
-  // The project's hue, shared by the row's icon, its tag and the chip
+  // The project's hue, the dot of its chip
   const hue = (name) => [...name].reduce((h, c) => (h * 31 + c.codePointAt(0)) % 360, 7);
 
   function chip(label, value, n, extra = '') {
@@ -851,11 +849,6 @@
     return b;
   }
 
-  function escapeHTML(s) {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML.replaceAll('"', '&quot;');
-  }
 
   function renderChips(list) {
     const counts = new Map();
@@ -895,22 +888,29 @@
     $('add-narrow').hidden = archived;
     // A button's own words, without its count
     const label = (b) => [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim();
-    // Values carry what they choose, so that a project named like a view is not taken for one
-    const option = (value, b) => `<option value="${escapeHTML(value)}">${escapeHTML(`${label(b)} (${b.querySelector('.n').textContent})`)}</option>`;
-    const group = (label, options) => `<optgroup label="${escapeHTML(label)}">${options.join('')}</optgroup>`;
     const summary = [views.find((b) => b.dataset.view === view), !$('shelf-kind').hidden && tabs.find((b) => b.dataset.tab === tab),
       project && chips.find((c) => c.getAttribute('aria-pressed') === 'true')].filter(Boolean)
       .map(label).join(' · ');
-    let html = `<option value="" disabled hidden selected>${escapeHTML(`${summary} (${$('count').textContent})`)}</option>`
-      + group(t('ui_shelf'), views.map((b) => option(`view:${b.dataset.view}`, b)));
-    if (!$('shelf-kind').hidden) html += group(t('ui_kind'), tabs.map((b) => option(`tab:${b.dataset.tab}`, b)));
-    if (!$('shelf-projects').hidden) html += group(t('ui_project'), chips.map((c) => option(`project:${c.dataset.project}`, c)));
+    // Groups of [value, words]. Values carry what they choose, so that a project named like a view is not taken for one
+    const groups = [[t('ui_shelf'), views.map((b) => [`view:${b.dataset.view}`, b])]];
+    if (!$('shelf-kind').hidden) groups.push([t('ui_kind'), tabs.map((b) => [`tab:${b.dataset.tab}`, b])]);
+    if (!$('shelf-projects').hidden) groups.push([t('ui_project'), chips.map((c) => [`project:${c.dataset.project}`, c])]);
+    const words = (b) => `${label(b)} (${b.querySelector('.n').textContent})`;
+    const signature = JSON.stringify([summary, $('count').textContent, groups.map(([g, items]) => [g, items.map(([v, b]) => [v, words(b)])])]);
     // Rebuilt only when it changes, so that a select left open stays open
     // LIMIT: one open while the list changes closes. Keep it open if that comes to matter
-    if (html !== $('view-select').dataset.html) {
-      $('view-select').innerHTML = html;
-      $('view-select').dataset.html = html;
-    }
+    const select = $('view-select');
+    if (signature === select.dataset.signature) return;
+    select.dataset.signature = signature;
+    const first = new Option(`${summary} (${$('count').textContent})`, '', true, true);
+    first.disabled = true;
+    first.hidden = true;
+    select.replaceChildren(first, ...groups.map(([g, items]) => {
+      const group = document.createElement('optgroup');
+      group.label = g;
+      group.append(...items.map(([value, b]) => new Option(words(b), value)));
+      return group;
+    }));
   }
 
   // If everything fits in the smallest page size, changing the size changes nothing, so the whole pager is hidden
@@ -972,7 +972,6 @@
       const copy = li.querySelector('.copy');
       copy.hidden = false;
       copy.setAttribute('aria-label', t('ui_copy_path_named', a.title));
-
       copy.addEventListener('click', () => copyPath(a.path, copy));
     }
     const star = li.querySelector('.star');
@@ -986,12 +985,10 @@
     const open = li.querySelector('.open');
     open.href = `/a/${a.slug}/?raw`;
     open.setAttribute('aria-label', t('ui_open_raw_named', a.title));
-
     const dl = li.querySelector('.download');
     dl.href = `/api/artifacts/${a.slug}/download`;
     dl.download = `${a.slug}.html`;
     dl.setAttribute('aria-label', t('ui_download_named', a.title));
-
     if (a.missing) {
       link.removeAttribute('href');
       // Without href it cannot take focus and ↑↓ would stop before this row, so scripts can still move to it
@@ -1073,9 +1070,10 @@
       $('edit-error').hidden = false;
       return;
     }
-    $('edit-dialog').close();
     toast(t('ui_saved'));
+    // Drawn before the dialog closes, which gives focus to the row's menu button as drawn
     await load();
+    $('edit-dialog').close();
   }
 
   function render() {
@@ -1263,13 +1261,11 @@
       $('add').reset();
       $('add-dialog').close();
       toast(t('ui_link_added', slug));
-      // To the list the link went on
-      fav = false;
-      archived = false;
-      tab = 'links';
-      page = 1;
+      // To the list the link went on, unfiltered, drawn once with it
+      $('q').value = '';
+      filter({ view: 'all', tab: 'links', project: '' });
+      drawn = '';
       await load();
-      render();
     } catch (err) {
       error.textContent = t('ui_add_failed', err.message);
       error.hidden = false;
@@ -1312,6 +1308,8 @@
     $('view-select').addEventListener('change', () => {
       const [kind, value] = $('view-select').value.split(/:(.*)/s);
       ({ view: setView, tab: setTab, project: setProject })[kind](value);
+      // Back to the summary, so that choosing the same again is a change too
+      $('view-select').selectedIndex = 0;
     });
     // One menu open at a time; Escape or a click elsewhere closes it, focus going back to its button rather than to the page
     const closeMenus = (except) => {
@@ -1323,6 +1321,16 @@
       }
     };
     $('list').addEventListener('toggle', (e) => { if (e.target.open) closeMenus(e.target); }, true);
+    // An item done closes its menu; delete stays for its second click
+    $('list').addEventListener('click', (e) => {
+      const item = e.target.closest('.menu .icon-btn');
+      if (item && !item.classList.contains('delete')) item.closest('.more').open = false;
+    });
+    // The edit dialog closed, focus goes back to its row's menu button rather than to the closed menu's item
+    $('edit-dialog').addEventListener('close', () => {
+      const row = [...$('list').querySelectorAll(':scope > li:not(.group)')].find((li) => li.dataset.slug === editing?.slug);
+      row?.querySelector('summary').focus();
+    });
     document.addEventListener('click', (e) => closeMenus(e.target.closest('.more')));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(null); });
     $('sort').addEventListener('change', () => {

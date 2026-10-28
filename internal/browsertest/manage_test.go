@@ -304,9 +304,27 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"document.activeElement === document.querySelector('#list li[data-slug=b] summary')].join(' ')"))
 	key("ArrowDown")
 	out = append(out, b.eval("document.activeElement.textContent"))
-	b.eval("document.querySelector('#list li[data-slug=b] summary').click()")
+	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] .edit').focus()")
 	b.eval("document.getElementById('count').click()")
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=b] .more').open"))
+	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] .more').open, "+
+		"document.activeElement === document.querySelector('#list li[data-slug=b] summary')].join(' ')"))
+	// One menu open at a time.
+	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=a] summary').click()")
+	out = append(out, b.eval("[...document.querySelectorAll('#list .more')].map((d) => d.open).join(' ')"))
+	b.eval("document.querySelector('#list li[data-slug=a] summary').click()")
+	// An item closes its menu; the edit dialog, cancelled or saved, gives focus back to the row's menu button.
+	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] .edit').click()")
+	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] .more').open, document.getElementById('edit-dialog').open].join(' ')"))
+	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
+	out = append(out, b.eval("document.activeElement === document.querySelector('#list li[data-slug=b] summary')"))
+	b.eval(`(() => {
+		document.querySelector('#list li[data-slug=b] summary').click();
+		document.querySelector('#list li[data-slug=b] .edit').click();
+		document.getElementById('edit-desc').value = 'new';
+		document.getElementById('edit').requestSubmit();
+	})()`)
+	out = append(out, b.until("the edit dialog to close", "!document.getElementById('edit-dialog').open && "+
+		"String(document.activeElement === document.querySelector('#list li[data-slug=b] summary'))"))
 	// A row's menu is not cut off by the list's box: with one row, the menu reaches below it, its delete the topmost at its
 	// middle, which deletes on a second click.
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) }]`))
@@ -353,22 +371,38 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.navigate("/?fav=1&archived=1")
 	b.eval(stub(extrasList))
 	out = append(out, b.eval(views))
-	// A link is added from any list but the archived, the first one too, and then shown on the links' list.
+	// A link is added from any list but the archived, the first one too, and then shown on the links' list, unfiltered by a
+	// project or a search it may not match, drawn once.
 	b.eval("document.querySelector('.views [data-view=all]').click()")
-	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) }]`))
+	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`))
 	out = append(out, b.eval("[document.getElementById('shelf-kind').hidden, document.getElementById('add-open').hidden].join(' ')"))
+	b.eval("setProject('p'); (() => { const q = document.getElementById('q'); q.value = 'Al'; q.dispatchEvent(new Event('input')); })()")
 	b.eval(`(() => {
+		window.renders = 0;
+		window.draw = render;
+		render = () => { renders++; draw(); };
 		document.getElementById('add-open').click();
 		document.getElementById('add-path').value = '/tmp/x/n.html';
 		document.getElementById('add').requestSubmit();
 	})()`)
-	out = append(out, b.until("the link to be added", "!document.getElementById('add-dialog').open && new URLSearchParams(location.search).get('tab')"))
+	out = append(out, b.until("the link to be added", "!document.getElementById('add-dialog').open && "+
+		"[location.search, document.getElementById('q').value === '', renders].join(' ')"))
+	b.eval("render = draw")
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval("document.getElementById('add-open').hidden"))
 	b.eval("document.querySelector('.views [data-view=all]').click(); document.querySelector('.tabs [data-tab=pages]').click()")
 	// 50 rows a page unless the viewer chose otherwise.
 	b.eval(stub("Array.from({ length: 60 }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))"))
 	out = append(out, b.eval("document.querySelectorAll('#list li').length + ' ' + document.getElementById('pageno').textContent"))
+	// An open menu passes under the bars stuck at the top as the page scrolls, not over them.
+	b.eval("document.querySelector('#list li[data-slug=p5] summary').click()")
+	out = append(out, b.eval(`(() => {
+		const bar = document.querySelector('.toolbar').getBoundingClientRect();
+		scrollBy(0, document.querySelector('#list li[data-slug=p5] .menu').getBoundingClientRect().top - bar.top - 5);
+		const menu = document.querySelector('#list li[data-slug=p5] .menu').getBoundingClientRect();
+		return Boolean(document.elementFromPoint(menu.left + menu.width / 2, bar.top + 10)?.closest('.toolbar'));
+	})()`))
+	b.eval("document.querySelector('#list li[data-slug=p5] summary').click(); scrollTo(0, 0)")
 	// A narrow screen: one select stands for the shelf, its values telling a view from a project of that name; choosing
 	// is clicking the shelf, and an unchanged list does not rebuild it.
 	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 390, Height: 844, DeviceScaleFactor: 1, Mobile: true}
@@ -376,14 +410,24 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		t.Fatal(err)
 	}
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'archived', createdAt: at(1), updatedAt: at(8) },
-		{ slug: 'b', title: 'Beta', description: '', project: 'p', createdAt: at(1), updatedAt: at(7) }]`))
+		{ slug: 'b', title: 'Beta', description: '', project: 'p', createdAt: at(1), updatedAt: at(7) },
+		{ slug: 'c', title: 'Gamma', description: '', project: 'a<b&"c', createdAt: at(1), updatedAt: at(6) }]`))
 	out = append(out, b.eval("[getComputedStyle(document.querySelector('.shelf')).display, getComputedStyle(document.getElementById('view-select')).display].join(' ')"),
 		b.eval("document.getElementById('view-select').options[0].textContent"),
 		b.eval("[...document.getElementById('view-select').options].map((o) => o.value).join(',')"))
 	b.eval("window.first = document.getElementById('view-select').options[0]; render()")
 	out = append(out, b.eval("document.getElementById('view-select').options[0] === window.first"))
-	b.eval("(() => { const s = document.getElementById('view-select'); s.value = 'project:archived'; s.dispatchEvent(new Event('change')); })()")
+	choose := func(value string) {
+		b.eval("(() => { const s = document.getElementById('view-select'); s.value = " + js(value) + "; s.dispatchEvent(new Event('change')); })()")
+	}
+	out = append(out, b.eval("[...document.getElementById('view-select').options].at(-1).textContent"))
+	choose(`project:a<b&"c`)
+	out = append(out, b.eval("new URLSearchParams(location.search).get('project')"))
+	choose("project:archived")
 	out = append(out, b.eval(views))
+	// Choosing what is chosen goes back to the summary too.
+	choose("view:all")
+	out = append(out, b.eval("document.getElementById('view-select').selectedIndex"))
 	if _, err := chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}); err != nil {
 		t.Fatal(err)
 	}
@@ -423,16 +467,17 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"Beta", msg("ui_selected", 3),
 		"00010", "shown", "shown", "shown", "0",
 		msg("ui_more_named", "Beta"), msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_delete"),
-		"false true", "Alpha", "false",
+		"false true", "Alpha", "false true", "false false true", "false true", "true", "true",
 		"true", "DELETE /api/artifacts/a", "cd",
 		msg("ui_created_at", date), "true", msg("ui_registered_at", date),
 		"true true", "false",
 		msg("ui_count_all", 1) + " true",
 		"empty-favorites", "all-archived", "archived ?archived=1", "archived ?archived=1",
-		"true false", "links", "true",
-		"50 1 / 2",
-		"none block", msg("ui_view_all") + " (" + msg("ui_count_all", 2) + ")",
-		",view:all,view:fav,view:archived,project:,project:archived,project:p", "true", "all ?project=archived",
+		"true false", "?tab=links true 1", "true",
+		"50 1 / 2", "true",
+		"none block", msg("ui_view_all") + " (" + msg("ui_count_all", 3) + ")",
+		`,view:all,view:fav,view:archived,project:,project:a<b&"c,project:archived,project:p`, "true", "p (1)", `a<b&"c`,
+		"all ?project=archived", "0",
 		"Zeta / false / true / " + msg("ui_unarchive"), `PATCH /api/artifacts/z {"archived":false}`,
 		msg("ui_favorite_failed", "Failed to fetch"),
 		"Beta / true / false / " + msg("ui_archive"),
