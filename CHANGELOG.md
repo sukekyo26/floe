@@ -30,11 +30,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, and a management
   page in English or Japanese, by the browser's language, that lists, edits,
   opens and downloads pages: a shelf on the left picks all, the favourites
-  (which head the list of all), the archived, a tag, the kind and the project
-  (picked again, let go), folded into a select on a narrow screen; the list
-  groups its pages by project, each project in a color of its own, those with
-  the most pages first; and the bar over an open page stars
-  and archives it. Tags are given in a page's edit dialog, to those selected,
+  (which head the list of all), the archived, a tag and the project (picked
+  again, let go), a row of buttons on a narrow screen; the bar over the list
+  picks the kind and the order, and holds the actions on the pages selected
+  while there are any; the list groups its pages by project, each project in a
+  color of its own, those with the most pages first; and the bar over an open
+  page stars and archives it. Tags are given in a page's edit dialog, to those selected,
   or as `tags` in `PATCH /api/artifacts/{slug}`; they show under a page's
   title, are searched, and stay when the page is published again.
 - Add floe's template `report`: a header over sections, each a heading over
