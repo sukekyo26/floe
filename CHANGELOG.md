@@ -12,7 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   on the management page, one page or those selected, and `archived` in
   `PATCH /api/artifacts/{slug}` take a page off `floe list` and the management
   page's list without deleting it; it is still served at its URL. The
-  management page shows the archived with "Archived only", and
+  management page shows the archived under "Archive" on its shelf, and
   `floe list --archived` lists them too, with a fifth column. Publishing an
   archived page again gives it back to the lists.
 - Add `floe publish`, which draws the page of a data file (YAML) with the
@@ -29,7 +29,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   parts and themes of now, keeping the page it had where it no longer draws.
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, and a management
   page in English or Japanese, by the browser's language, that lists, edits,
-  opens and downloads pages.
+  opens and downloads pages: a shelf on the left picks all, the favourites
+  (which head the list of all), the archived, the kind and the project, folded
+  into a select on a narrow screen, and the bar over an open page stars and
+  archives it.
 - Add floe's template `report`: a header over sections, each a heading over
   parts; and thirty-two parts a template refers to as
   `floe:///parts/<name>.json` (`floe part list` lists them): thirty that a
