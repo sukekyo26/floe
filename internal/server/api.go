@@ -71,7 +71,7 @@ func refuse(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 type slugBody struct {
-	Slug string `json:"slug,omitempty"`
+	Slug string `json:"slug"`
 }
 
 // Link is a link to add, as the management page and floe publish --link send it: a field sent is given,
@@ -122,6 +122,8 @@ func decodeStrict[T any](w http.ResponseWriter, body []byte) *T {
 		return nil
 	}
 	var v T
+	// LIMIT: encoding/json (v1) reads a key of other case as the field's ("Archived") and the last of a key sent
+	// twice. Read with encoding/json/v2, which refuses both, when the API is to say so.
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&v); err != nil {
@@ -139,23 +141,23 @@ type Upload struct {
 	File        string            `json:"file"`
 	Source      []byte            `json:"source"`
 	Images      map[string][]byte `json:"images"`
-	Project     string            `json:"project,omitempty"`
-	Title       *string           `json:"title,omitempty"`
-	Description *string           `json:"description,omitempty"`
+	Project     string            `json:"project"`
+	Title       *string           `json:"title"`
+	Description *string           `json:"description"`
 	Theme       *string           `json:"theme"`
 	Force       bool              `json:"force"`
 }
 
 // Saved is a page a publish or an added link stored, and what it replaced (nil for a new slug).
 type Saved struct {
-	Slug  string     `json:"slug,omitempty"`
-	Title string     `json:"title,omitempty"`
+	Slug  string     `json:"slug"`
+	Title string     `json:"title"`
 	Prev  *SavedPrev `json:"prev"`
 }
 
 // SavedPrev is the page a publish replaced.
 type SavedPrev struct {
-	Title     string `json:"title,omitempty"`
+	Title     string `json:"title"`
 	UpdatedAt string `json:"updatedAt"`
 }
 
@@ -244,7 +246,8 @@ type Edit struct {
 	Archived    *bool   `json:"archived,omitempty"`
 }
 
-// edit changes what the management page sends (title, description, project, URL name, favourite, archived).
+// edit changes a page as Edit, from the management page or floe archive, sends: its title, description, project, URL
+// name, favourite or archived.
 func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if !store.ValidSlug(slug) {

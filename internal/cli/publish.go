@@ -236,7 +236,7 @@ func (a *app) archiveCmd() *cobra.Command {
 		Args:  usage(cobra.MinimumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			archived := !undo
-			body := server.Edit{Archived: &archived} //nolint:exhaustruct_v5 // archived alone
+			body := server.Edit{Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: &archived}
 			return a.eachPage(cmd, args, http.MethodPatch, body)
 		},
 	}

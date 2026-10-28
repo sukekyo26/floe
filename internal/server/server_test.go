@@ -297,8 +297,8 @@ func TestLinkedData(t *testing.T) {
 	}
 }
 
-// An edit archives a page as true or false, which the list then carries; favorite and archived as anything else
-// are refused as encoding/json words it, and a page that is not there is not found.
+// An edit archives a page as true or false, which the list then carries; favorite and archived null are not
+// changed, as anything else are refused as encoding/json words it, and a page that is not there is not found.
 func TestEditArchived(t *testing.T) {
 	t.Parallel()
 
@@ -350,6 +350,9 @@ func TestEditKeys(t *testing.T) {
 		{`{"favorite":true}`, func(f *fields) { f.favorite = true }},
 		{`{"archived":true}`, func(f *fields) { f.archived = true }},
 		{`{"archived":null}`, func(*fields) {}},
+		// Cleared, the title is the data file's again and the project is dropped.
+		{`{"title":""}`, func(f *fields) { f.title = "T" }},
+		{`{"project":""}`, func(f *fields) { f.project = "" }},
 	} {
 		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(c.body)), http.StatusOK, `{"slug":"d"}`)
 		c.change(&now)
