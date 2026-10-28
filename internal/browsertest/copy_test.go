@@ -216,13 +216,13 @@ func TestUICopyRaw(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// A press whose copy ends after a later press's shows nothing: the later one's 1.5 seconds hold.
 	b.navigate("/a/copy/?raw")
-	b.eval("{ let n = 0; navigator.clipboard.writeText = () => new Promise((done) => setTimeout(done, n++ === 0 ? 1000 : 0)); }")
+	b.eval("{ let n = 0; navigator.clipboard.writeText = () => new Promise((done) => setTimeout(done, n++ === 0 ? 2000 : 0)); }")
 	b.pressButton("code")
 	time.Sleep(100 * time.Millisecond)
 	b.pressButton("code")
-	time.Sleep(1900 * time.Millisecond)
+	time.Sleep(2400 * time.Millisecond)
 	if got := b.eval(status("code") + " + '|' + " + button("code") + ".getAttribute('aria-label')"); got != "|Copy" {
-		t.Errorf("2 s after a press whose copy took 1 s, and 1.9 s after a second, the status and label are %q, want |Copy", got)
+		t.Errorf("2.5 s after a press whose copy took 2 s, and 2.4 s after a second, the status and label are %q, want |Copy", got)
 	}
 }
 
