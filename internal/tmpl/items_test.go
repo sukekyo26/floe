@@ -177,6 +177,7 @@ func TestPartHTMLItems(t *testing.T) {
 		{"only the item, in formatting", "{{.h}}", "{{.in}}", "<b>{{.Data.p}}</b>", `p: {h: "<b>ok</b>"}`, "", "<b><b>ok</b></b>"},
 		{"the item last", "<p>a</p>{{.h}}", "{{.in}}", "<div>{{.Data.p}}<p>after</p></div>", `p: {h: "<b>ok</b>"}`, "", "<div><p>a</p><b>ok</b><p>after</p></div>"},
 		{"only the item, left open", "{{.h}}", "{{.in}}", "<div>{{.Data.p}}<p>after</p></div>", `p: {h: "<b>x"}`, changes("3:8", "<b>"), ""},
+		{"only the item, after formatting the page left open", "{{.h}}", "{{.in}}", "<p><b>x</p>{{.Data.p}}", `p: {h: "ok"}`, "", "</p><b>ok"},
 		{"in a part in a part", "{{.h}}", "{{.in}}", "<div>{{.Data.o}}<p>after</p></div>", `o: {in: {h: "<b>ok</b>"}}`, "", "<div><b>ok</b><p>after</p></div>"},
 		{"in a part in a part, left open", "{{.h}}", "{{.in}}", "<div>{{.Data.o}}<p>after</p></div>", `o: {in: {h: "<b>x"}}`, changes("3:13", "<b>"), ""},
 		{"white space alone", "{{.h}}", "{{.in}}", "<div>a{{.Data.p}}b</div>", `p: {h: "  "}`, "", "<div>a  b</div>"},
