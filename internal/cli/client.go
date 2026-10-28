@@ -129,18 +129,20 @@ var sentAt = map[string]string{
 	"project": "the project name (of the git remote, the repository's directory or the working directory)",
 }
 
-// errNotUTF8 is what encoding/json/v2 tells a string's bytes that are no UTF-8 by, which it does not export.
-var errNotUTF8 = func() error {
-	_, err := jsonv2.Marshal("\xff")
-	syntax, _ := errors.AsType[*jsontext.SyntacticError](err)
-	return syntax.Err
-}()
+// notUTF8 reports whether err is encoding/json/v2's for a string's bytes that are no UTF-8, as it tells them now.
+// LIMIT: matched with v2's own error, which it does not export; if v2 tells them otherwise, they are floe's failure.
+func notUTF8(err error) bool {
+	_, probe := jsonv2.Marshal("\xff")
+	want, known := errors.AsType[*jsontext.SyntacticError](probe)
+	got, syntax := errors.AsType[*jsontext.SyntacticError](err)
+	return known && syntax && errors.Is(got.Err, want.Err)
+}
 
 // encode is body as the server reads it, with encoding/json/v2: nil maps as null (a jsontext.Value as it is). A
 // text in it that is no UTF-8 is the user's mistake, named by where it was given (at), else by its field.
 func encode(body any, at map[string]string) ([]byte, error) {
 	b, err := jsonv2.Marshal(body, jsonv2.FormatNilMapAsNull(true))
-	if syntax, ok := errors.AsType[*jsontext.SyntacticError](err); ok && errors.Is(syntax.Err, errNotUTF8) {
+	if syntax, ok := errors.AsType[*jsontext.SyntacticError](err); ok && notUTF8(err) {
 		field := strings.TrimPrefix(string(syntax.JSONPointer), "/")
 		field, _, _ = strings.Cut(field, "/")
 		return nil, usererr.New("cli_not_utf8", cmp.Or(at[field], fmt.Sprintf("the request's %q", field)))

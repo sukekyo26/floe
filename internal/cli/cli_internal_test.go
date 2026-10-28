@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"io"
 	"reflect"
 	"strings"
@@ -45,6 +46,10 @@ func TestEncode(t *testing.T) {
 				t.Errorf("%s.%s: no place in sentAt", typ.Name(), name)
 			}
 		}
+	}
+	// v2 still tells bytes no UTF-8 as notUTF8 matches them.
+	if _, err := jsonv2.Marshal("a\xffb"); !notUTF8(err) {
+		t.Errorf("encoding/json/v2 tells bytes no UTF-8 by %v, which notUTF8 does not match", err)
 	}
 	// Another syntax encoding/json/v2 tells is floe's failure: the body floe made is wrong.
 	if _, err := encode(jsontext.Value(`{"a":1,"a":2}`), sentAt); err == nil || usererr.Tell(english, err).Failure == "" {
