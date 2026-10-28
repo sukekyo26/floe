@@ -455,8 +455,11 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("String(new URLSearchParams(location.search).get('project'))"))
 	b.unsize()
 	// The frame's bar: the title, archived or not, the star and the archive, which act as the list's do and tell their failure.
+	// The archive, as the star, is an icon alone: pressed while archived, its name in its label and title, no words in it.
 	frame := "[document.getElementById('frame-title').textContent, document.getElementById('frame-archived').hidden, " +
-		"document.getElementById('frame-star').getAttribute('aria-pressed'), document.getElementById('frame-archive-label').textContent].join(' / ')"
+		"document.getElementById('frame-star').getAttribute('aria-pressed'), document.getElementById('frame-archive').getAttribute('aria-pressed'), " +
+		"document.getElementById('frame-archive').getAttribute('aria-label'), document.getElementById('frame-archive').title, " +
+		"JSON.stringify(document.getElementById('frame-archive').textContent.trim())].join(' / ')"
 	b.navigate("/a/z/")
 	b.eval(stub(extrasList))
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
@@ -500,9 +503,9 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"50 1 / 2", "true",
 		"flex static true true", `all,fav,archived,a<b&"c,archived,p`, `a<b&"c`,
 		"all ?project=archived", "null",
-		"Zeta / false / true / " + msg("ui_unarchive"), `PATCH /api/artifacts/z {"archived":false}`,
+		"Zeta / false / true / true / " + msg("ui_unarchive") + " / " + msg("ui_unarchive") + ` / ""`, `PATCH /api/artifacts/z {"archived":false}`,
 		msg("ui_favorite_failed", "Failed to fetch"),
-		"Beta / true / false / " + msg("ui_archive"),
+		"Beta / true / false / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
 		"  1 / 1", "false   1 / 1", "/a/c/  2 / 2",
 	}, "|"))
 }
