@@ -135,10 +135,14 @@ func TestCheckPartImage(t *testing.T) {
 		{"additionalProperties", `"additionalProperties": ` + img, unreached("#/additionalProperties")},
 		{"patternProperties", `"patternProperties": {"^s": ` + img + `}`, unreached("#/patternProperties/^s")},
 		{"prefixItems", `"properties": {"s": {"type": "array", "prefixItems": [` + img + `]}}`, unreached("#/properties/s/prefixItems/0")},
-		{"$ref reached and not", `"properties": {"a": {"$ref": "#/$defs/i"}, "b": {"anyOf": [{"$ref": "#/$defs/i"}]}}, "$defs": {"i": ` + img + `}`,
-			"parts/p.json: #/properties/b/anyOf/0: #/$defs/i holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows"},
-		{"$ref to a part", `"properties": {"a": {"anyOf": [{"$ref": "#/$defs/n"}]}}, "$defs": {"n": {"$ref": "floe:///parts/note.json"}}`,
-			"parts/p.json: #/properties/a/anyOf/0: #/$defs/n holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows"},
+		{
+			"$ref reached and not", `"properties": {"a": {"$ref": "#/$defs/i"}, "b": {"anyOf": [{"$ref": "#/$defs/i"}]}}, "$defs": {"i": ` + img + `}`,
+			"parts/p.json: #/properties/b/anyOf/0: #/$defs/i holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows",
+		},
+		{
+			"$ref to a part", `"properties": {"a": {"anyOf": [{"$ref": "#/$defs/n"}]}}, "$defs": {"n": {"$ref": "floe:///parts/note.json"}}`,
+			"parts/p.json: #/properties/a/anyOf/0: #/$defs/n holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows",
+		},
 		{"markdown", `"properties": {"s": {"type": "string", "format": "markdown"}}`, "parts/p.json: #/properties/s: a part's schema takes no \"format\": \"markdown\": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
 		{"shared", `"properties": {"s": {"$ref": "floe:///parts/shot.json"}}`, "parts/p.json: #/properties/s: the part refers to floe:///parts/shot.json, a shared schema that holds items of the format image, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own"},
 	} {
