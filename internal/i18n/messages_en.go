@@ -411,7 +411,6 @@ var messagesEN = map[string]string{
 	"ui_view_all":        "All",
 	"ui_view_favorites":  "Favorites",
 	"ui_view_archived":   "Archive",
-	"ui_view_select":     "Which list",
 	"ui_group_favorites": "Favorites",
 	"ui_no_favorites":    "No favorites",
 	"ui_more_named":      "More for %s",
