@@ -123,12 +123,11 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	}
 	b.size(1440, 900, false)
 
-	// The frame steps through the groups as the list has them: the favourite, then alpha's.
+	// The frame picks from the groups as the list has them: the favourite, then alpha's, and the others.
 	b.eval("sessionStorage.setItem('artifacts.list', '')")
 	b.navigate("/a/a2/")
 	b.eval(stub(groupsList))
-	out = append(out, b.until("the neighbours", "document.getElementById('frame-pos').textContent && "+
-		"['frame-prev', 'frame-next'].map((id) => document.getElementById(id).getAttribute('href')).concat(document.getElementById('frame-pos').textContent).join(' ')"))
+	out = append(out, b.until("the pages to pick from", "!document.getElementById('frame-pick').hidden && "+picker))
 
 	// A heading as the list draws it: its color, then its name and count with nothing between.
 	h := func(color, name string, n int) string { return fmt.Sprintf("\n%s %s%d in all", color, name, n) }
@@ -153,7 +152,7 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		"var(--faint) 0",
 		"3 true", "true true true true true", "true true",
 		"16 16 16 true", "16 16 16 true",
-		" /a/a1/ 1 / 10",
+		"Favorites:A2* / alpha:A1,A3 / beta:B1 / gamma:G1 / a project of a long name:Fav / delta:D1 / eps:E1 / fav:F2 / None recorded:N1",
 	}, "|"))
 }
 
