@@ -79,8 +79,6 @@ const ringOf = `(() => {
 // shows the one ring of the page: 2px of --faint, 1px off a control with 1px of ground past it before any face it would
 // fade into (the pressed shelf button beside, the bulk bar's ink), 2px inside a row, and seen against the ground it is drawn
 // on.
-// LIMIT: the sort is a select until it becomes a menu, and Chrome rings a select pressed with the mouse; so it is reached
-// by keyboard here and not pressed.
 func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -94,6 +92,13 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"#list li:not(.group) .sel", "#list li:not(.group) .star",
 	}
 	out := make([]string, 0, 16)
+	// The sort pressed opens its orders, the focus in them, and pressed again closes them, the focus back on it: unringed.
+	// First, as a row selected below puts the bulk bar in its place.
+	r := b.rect("document.getElementById('sort')")
+	b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	b.until("the orders", "document.activeElement.id === 'sort-list'")
+	b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	out = append(out, "#sort: "+b.until("the sort to have the focus", "document.activeElement.id === 'sort' && getComputedStyle(document.activeElement).outlineStyle"))
 	for _, sel := range pressed {
 		r := b.rect("document.querySelector(" + js(sel) + ")")
 		b.click(r.X+r.Width/2, r.Y+r.Height/2)
@@ -105,6 +110,7 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 		out = append(out, sel+": "+strings.SplitN(focused, " ", 3)[1]+" "+strconv.FormatBool(focused == unfocused))
 	}
 	check(t, "pressed", out, strings.Join([]string{
+		"#sort: none",
 		".tabs button[data-tab=links]: none true", ".tabs button[data-tab=pages]: none true",
 		".views button[data-view=fav]: none true", ".views button[data-view=all]: none true",
 		"#list li:not(.group) .sel: none true", "#list li:not(.group) .star: none true",
