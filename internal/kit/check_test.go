@@ -78,8 +78,8 @@ func TestCheckMistakes(t *testing.T) {
 			"own/parts/p/part.css:2:1: floe puts this CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",
 		)},
 		{
-			"a part's schema with floe's format", with(map[string]string{"p/schema.json": `{"type": "object", "properties": {"h": {"type": "string", "format": "html"}}}`}), nil, nil,
-			`own/parts/p/schema.json: #/properties/h: a part's schema takes no "format": "html": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}`,
+			"a part's schema with floe's format where floe does not follow", with(map[string]string{"p/schema.json": `{"type": "object", "properties": {"h": {"anyOf": [{"type": "string", "format": "html"}]}}}`}), nil, nil,
+			"own/parts/p/schema.json: #/properties/h/anyOf/0: the format html marks an item to draw; declare it under properties or items, which floe follows",
 		},
 		{
 			"escaping", with(map[string]string{"p/part.html": `<div data-floe-part="p"><a href="{{.t}}>x</a></div>`}), nil, nil,

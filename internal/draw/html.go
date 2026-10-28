@@ -73,8 +73,30 @@ func (s *items) around(n int) (before, after string) {
 	return probe(n) + "<!--" + s.mark(n, "s") + "-->", "<!--" + s.mark(n, "e") + "-->" + probe(n)
 }
 
+// trim returns out, a part's output, without the white space at its start and end, as strings.TrimSpace takes it
+// off, but the probe of an item whose mark it then starts or ends with: what checks the page drawn reads the
+// probes around an item, which a part's output put in the page keeps as page.html's item does.
+func (s *items) trim(out string) string {
+	out = strings.TrimSpace(out)
+	if rest, ok := strings.CutPrefix(out, "<!--"); ok {
+		if text, _, ok := strings.Cut(rest, "-->"); ok {
+			if n, end, ok := s.exact(text); ok && !end {
+				out = probe(n) + out
+			}
+		}
+	}
+	if at := strings.LastIndex(out, "<!--"); at >= 0 {
+		if text, ok := strings.CutSuffix(out[at+len("<!--"):], "-->"); ok {
+			if n, end, ok := s.exact(text); ok && end {
+				out += probe(n)
+			}
+		}
+	}
+	return out
+}
+
 // plain returns text without the probes and the marks of the items, as they are drawn around them: the text of a
-// mistake page.html made with an item.
+// mistake page.html or a part's part.html made with an item.
 func (s *items) plain(text string) string {
 	if len(s.html) == 0 {
 		return text
@@ -175,8 +197,8 @@ func (s *items) inAttrs(n *html.Node, probed bool) []occurrence {
 
 // probed returns the items whose probe value, an attribute of n, holds, read once through it: html/template
 // strips an item's tags, its marks among them, from an attribute's value, and leaves the probes.
-// LIMIT: an attribute page.html writes that holds the white space of a probe (\t\n, spaces, \t) is told as an
-// item put there; one an item writes is not looked at, as it is between the item's marks.
+// LIMIT: an attribute page.html or a part's part.html writes that holds the white space of a probe (\t\n, spaces,
+// \t) is told as an item put there; one an item writes is not looked at, as it is between the item's marks.
 func (s *items) probed(n *html.Node, value string) []occurrence {
 	var found []occurrence
 	for {
@@ -235,10 +257,10 @@ func (s *items) next(text string) (n int, end bool, rest string, ok bool) {
 }
 
 // check refuses each item of format html of d that changes the page tree, drawn, around it, at the item, and an
-// item page.html puts where HTML does not work (a mark of it is not a comment of its own), at d's template:.
-// They are looked at in the order of the page; past the first that changed the page, which the others are read
-// in, none is. It refuses at the item a name of a part its elements give that the page would be refused for
-// (checkNames).
+// item page.html or a part's part.html puts where HTML does not work (a mark of it is not a comment of its own),
+// at d's template:. They are looked at in the order of the page; past the first that changed the page, which the
+// others are read in, none is. It refuses at the item a name of a part its elements give that the page would be
+// refused for (checkNames).
 // LIMIT: the marks and the probe show the tree and the formatting rebuilt in body text alone: the form an item
 // left open and the attributes it adds to body or html are not checked; check them in the browser (B12).
 // page.html puts an item where elements go; between html and head, the probe is dropped and a right item is
@@ -264,6 +286,9 @@ func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error 
 		refuse := func(key string, args ...any) { found = append(found, yamlpos.New(d.File, pos, key, args...)) }
 		if !o.exact {
 			// The end of an item started as a comment is read with its start, below.
+			// LIMIT: told at template:, whether page.html or a part's part.html put the item there: which of them did
+			// is not known without marks around a part's output too, which would refuse part.html left open as an
+			// item's is. Mark a part's output if one comes to need it told at part.html.
 			found = append(found, yamlpos.New(d.File, d.Where["template"], "draw_html_placed",
 				strings.Join(s.html[o.n], "."), o.holder))
 			break
