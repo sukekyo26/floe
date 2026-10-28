@@ -45,8 +45,8 @@ func TestDiagram(t *testing.T) {
 		t.Errorf("render of a spec of nothing = %d, %q, want %q", code, errs, want)
 	}
 	// A diagram shows no spec: source is no key of it, and nothing is drawn.
-	if code, page, errs := runIn(dir, env, "diagram", "render", "--no-assets", "s.yaml"); code != 1 || page != "" ||
-		!strings.Contains(errs, "additional properties 'source' not allowed") {
+	code, page, errs := runIn(dir, env, "diagram", "render", "--no-assets", "s.yaml")
+	if code != 1 || page != "" || !strings.Contains(errs, "additional properties 'source' not allowed") {
 		t.Errorf("render of source = %d, %q, %q", code, page, errs)
 	}
 	if _, found, _ := runIn(dir, env, "diagram", "inspect", "a.yaml"); found != "box \"k\" 10,10 64x29\n" {
