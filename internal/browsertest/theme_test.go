@@ -65,6 +65,16 @@ func TestUITheme(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		b.navigate(path)
 		out = append(out, b.eval(state))
 	}
+	// Another tab open on the list follows a switch made in this one, its button too.
+	other, cancel := chromedp.NewContext(b.ctx)
+	defer cancel()
+	b2 := &browser{t: t, ctx: other, base: b.base}
+	b2.navigate("/")
+	out = append(out, b2.eval(state))
+	b.eval(press)
+	out = append(out, b2.until("the other tab to turn light", "!document.documentElement.dataset.theme && "+state))
+	b.eval(press)
+	out = append(out, b2.until("the other tab to turn dark", "document.documentElement.dataset.theme && "+state))
 	// The page in the frame follows the OS, whichever the frame around it is.
 	frame := func() string {
 		t.Helper()
@@ -99,7 +109,10 @@ func TestUITheme(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		if low := b.eval(measureFields); low != "" {
 			t.Errorf("%s: fields that cannot be read:\n%s", theme, low)
 		}
-		out = append(out, b.eval("getComputedStyle(document.querySelector('#list .sel:checked')).backgroundImage.includes(getComputedStyle(document.documentElement).getPropertyValue('--on-ink').replace('#', '%23'))"))
+		// The data URIs hold the colors they copy: the tick --on-ink, the sort's arrow --faint.
+		out = append(out, b.eval("(() => { const root = getComputedStyle(document.documentElement); "+
+			"const holds = (selector, color) => getComputedStyle(document.querySelector(selector)).backgroundImage.includes(root.getPropertyValue(color).replace('#', '%23')); "+
+			"return [holds('#list .sel:checked', '--on-ink'), holds('#sort', '--faint')].join(' '); })()"))
 		b.eval("document.getElementById('bulk-tag').click()")
 		measure("the tags dialog")
 		// The tag on some, given to all and then to none, keeps its count: on the filled chip, then on the plain one.
@@ -129,8 +142,9 @@ func TestUITheme(t *testing.T) { //nolint:paralleltest // the browser tests shar
 	check(t, "theme", out, strings.Join([]string{
 		"- " + light + " false", "dark " + dark + " true dark",
 		"dark " + dark + " true", "dark " + dark + " true", "dark " + dark + " true",
+		"dark " + dark + " true", "- " + light + " false", "dark " + dark + " true",
 		"dark", "dark", "light", "light",
-		"true", "true",
+		"true true", "true true",
 		"- " + light + " false 0", "dark " + dark + " true 0",
 	}, "|"))
 }
