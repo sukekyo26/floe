@@ -70,6 +70,15 @@ func TestUIPagePicker(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'p9' ? { ...a, title: 'P9 anew' } : a)); load()")
 	b.until("the list to be drawn", "items.some((a) => a.title === 'P9 anew')")
 	out = append(out, strings.ReplaceAll(b.eval(state+" + ' ' + document.getElementById('page-pick-q').value"), before, "kept"))
+	// The pages are links: a click with a key held (or the middle button) is the browser's, to open one in a new tab; a
+	// listener after the page's tells whether the page stopped it, and stops it itself, so that no tab opens.
+	out = append(out, b.eval("[...document.querySelectorAll('#page-pick-list [role=option]')].map((o) => o.tagName + ' ' + o.getAttribute('href')).join(',')"))
+	b.eval("addEventListener('click', (e) => { window.stopped = e.defaultPrevented; e.preventDefault(); }, { once: true }); " +
+		"document.querySelectorAll('#page-pick-list [role=option]')[1].dispatchEvent(new MouseEvent('click', { ctrlKey: true, bubbles: true, cancelable: true }))")
+	out = append(out, b.eval("[String(window.stopped), String(window.left), "+open+"].join(' ')"))
+	// Pressed on a heading, the field keeps the focus, and so the keys.
+	press("#page-pick-list .gh")
+	out = append(out, b.eval("document.activeElement.id"))
 	// Escape closes it and gives the focus back to the title.
 	key(kb.Escape)
 	out = append(out, b.eval("["+open+", document.activeElement.id].join(' ')"))
@@ -112,6 +121,11 @@ func TestUIPagePicker(t *testing.T) { //nolint:paralleltest // the browser tests
 	// Off the box, which opens over the top left of the page
 	b.click(r.X+r.Width-40, r.Y+r.Height-40)
 	out = append(out, b.until("the pages to close", "!"+open+" && 'closed'"))
+	// The page gone while they are open, they close with the title that opened them.
+	b.eval("document.getElementById('frame-pick').click()")
+	b.until("the pages to open", open)
+	b.eval("window.list = JSON.stringify(JSON.parse(window.list).filter((a) => a.slug !== 'b')); load()")
+	out = append(out, b.until("the gone page's pages to close", "!"+open+" && document.getElementById('frame-pick').hidden && 'gone'"))
 
 	pages := "Alpha,Beta,P0,P1,P2,P3,P4,P5,P6,P7,P8,P9"
 	ring := "solid 2px rgb(107, 105, 100) 1px seen"
@@ -120,11 +134,12 @@ func TestUIPagePicker(t *testing.T) { //nolint:paralleltest // the browser tests
 		"[Alpha],Beta Alpha page-pick-q false", " - page-pick-q true", "[Alpha] Alpha page-pick-q false",
 		"Alpha,[Beta] Beta page-pick-q false", "[Alpha],Beta Alpha page-pick-q false",
 		"kept",
+		"A /a/a/,A /a/b/", "false undefined true", "page-pick-q",
 		"false frame-pick",
 		"false undefined ?raw frame-pick",
 		"false",
 		"undefined /a/a/",
 		"frame-pick: " + ring, "page-pick-q: " + ring,
-		"/a/b/", "closed",
+		"/a/b/", "closed", "gone",
 	}, "|"))
 }
