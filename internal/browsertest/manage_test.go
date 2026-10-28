@@ -99,7 +99,9 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out := make([]string, 0, 32)
 	out = append(out, b.eval(titles))
 	sortBy("created")
-	out = append(out, b.eval(titles)+" "+b.eval("new URLSearchParams(location.search).get('sort')"))
+	// Sorted by creation too, the time is the update's: the creation date has its own place beside it.
+	out = append(out, b.eval(titles)+" "+b.eval("new URLSearchParams(location.search).get('sort')")+" "+
+		b.eval("[...document.querySelectorAll('#list li:not(.group)')].every((li) => li.querySelector('time').dateTime === items.find((a) => a.slug === li.dataset.slug).updatedAt)"))
 	sortBy("title")
 	out = append(out, b.eval(titles))
 	// The shelf's favourites narrow to them (kept in the URL); a row's star sends the change.
@@ -158,18 +160,25 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
 
 	// The archived are off every count and list but their own, which the switch shows (kept in the URL); a row's
-	// button and the bulk bar send the change, to archive or to give back, and say which.
+	// menu and the bulk bar send the change, to archive or to give back, and say which; the menu closes.
 	archiveWords := "(() => { const a = document.querySelector('#list li:not(.group) .archive'); document.getElementById('bulk-page').click(); " +
-		"const words = [a.title, a.getAttribute('aria-label'), document.getElementById('bulk-archive').textContent]; " +
+		"const words = [a.textContent.trim(), a.getAttribute('aria-label'), document.getElementById('bulk-archive').textContent]; " +
 		"document.getElementById('bulk-clear').click(); return words.join(' / '); })()"
+	const archiveRow = "document.querySelector('#list li:not(.group) .more summary').click(); document.querySelector('#list li:not(.group) .archive').click()"
 	out = append(out, b.eval(counts), b.eval(archiveWords))
-	b.eval("document.querySelector('#list li:not(.group) .archive').click()")
-	out = append(out, b.until("the archive", "calls.splice(0).join(',')"),
+	b.eval(archiveRow)
+	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list .more[open]').length"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Gamma"))+")"))
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval(counts), b.eval(archiveWords))
-	b.eval("document.querySelector('#list li:not(.group) .archive').click()")
+	b.eval(archiveRow)
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
+	// An item of the menu done by keys, the menu closes, focus going back to its button: there still when the change fails.
+	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .more summary').click(); " +
+		"document.querySelector('#list li:not(.group) .archive').focus(); document.querySelector('#list li:not(.group) .archive').click()")
+	out = append(out, b.until("the give back to fail", "!document.getElementById('error').hidden && "+
+		"String(document.activeElement === document.querySelector('#list li:not(.group) .more summary'))"))
+	b.eval("window.failWrites = false")
 	b.eval("document.getElementById('bulk-page').click()")
 	out = append(out, b.eval("document.getElementById('bulk-archive').textContent"))
 	b.eval("document.getElementById('bulk-archive').click()")
@@ -212,18 +221,18 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// The time's tooltip lines start with the label of their format ("Created %s").
 	label := func(key string) string { return strings.Fields(msg(key, ""))[0] }
 	check(t, "extras", out, strings.Join([]string{
-		"Gamma,Beta,Alpha", "Gamma,Beta,Alpha created", "Gamma,Alpha,Beta", "Gamma 1",
+		"Gamma,Beta,Alpha", "Gamma,Beta,Alpha created true", "Gamma,Alpha,Beta", "Gamma 1",
 		`PATCH /api/artifacts/c {"favorite":false}`, label("ui_created_at") + " " + label("ui_updated_at"), "Alpha",
 		msg("ui_selected", 1), msg("ui_selected", 2), msg("ui_delete_bulk_confirm", 2),
 		"DELETE /api/artifacts/a,DELETE /api/artifacts/c", "true old", `PATCH /api/artifacts/a {"description":"new"}`, "true", "true",
 		"copy /tmp/x/l.html", "true", "Missing", `POST /api/artifacts {"path":"/tmp/x/n.html","description":"a link"}`,
 		"3 2 " + msg("ui_no_project") + "3 true 3 1 2 " + msg("ui_count_all", 3) + " Gamma,Alpha,Beta ",
 		msg("ui_archive") + " / " + msg("ui_archive_named", "Gamma") + " / " + msg("ui_archive"),
-		`PATCH /api/artifacts/c {"archived":true}`, "true",
+		`PATCH /api/artifacts/c {"archived":true}`, "0", "true",
 		// The archived, by project: p's Zeta, then Ypsilon of none; two projects, so the shelf shows them.
 		"2 1 p1 " + msg("ui_no_project") + "1 false 3 1 2 " + msg("ui_count_all", 2) + " Zeta,Ypsilon 1",
 		msg("ui_unarchive") + " / " + msg("ui_unarchive_named", "Zeta") + " / " + msg("ui_unarchive"),
-		`PATCH /api/artifacts/z {"archived":false}`, msg("ui_unarchive"),
+		`PATCH /api/artifacts/z {"archived":false}`, "true", msg("ui_unarchive"),
 		`PATCH /api/artifacts/y {"archived":false},PATCH /api/artifacts/z {"archived":false}`,
 		"empty-archived:" + msg("ui_links_none_archived") + " true", "false",
 		msg("ui_favorite_failed", "Failed to fetch"), "true",
@@ -288,16 +297,16 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.getElementById('bulk-count').textContent"))
 	b.eval("document.getElementById('bulk-clear').click(); document.activeElement.blur()")
 	// With a mouse, a row's actions show only where pointed at, reached by keyboard or selected; a pressed star always.
-	out = append(out, opacity("a", ".star")+opacity("a", ".archive")+opacity("a", ".more")+opacity("c", ".star")+opacity("c", ".archive"))
+	out = append(out, opacity("a", ".star")+opacity("a", ".more")+opacity("c", ".star")+opacity("c", ".more"))
 	r := b.rect("document.querySelector('#list li[data-slug=a] .body')")
 	b.point(r.X+r.Width/2, r.Y+r.Height/2)
-	out = append(out, b.until("the pointed row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=a] .archive')).opacity === '1' && 'shown'"))
+	out = append(out, b.until("the pointed row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=a] .more')).opacity === '1' && 'shown'"))
 	b.point(0, 0)
-	b.until("the actions to hide", "getComputedStyle(document.querySelector('#list li[data-slug=a] .archive')).opacity === '0'")
+	b.until("the actions to hide", "getComputedStyle(document.querySelector('#list li[data-slug=a] .more')).opacity === '0'")
 	b.eval("document.querySelector('#list li[data-slug=b] .title').focus()")
-	out = append(out, b.until("the reached row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=b] .archive')).opacity === '1' && 'shown'"))
+	out = append(out, b.until("the reached row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=b] .more')).opacity === '1' && 'shown'"))
 	b.eval("document.activeElement.blur(); document.querySelector('#list li[data-slug=a] .sel').click()")
-	out = append(out, b.until("the selected row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=a] .archive')).opacity === '1' && 'shown'"))
+	out = append(out, b.until("the selected row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=a] .more')).opacity === '1' && 'shown'"))
 	b.eval("document.getElementById('bulk-clear').click()")
 	out = append(out, b.eval("[...document.querySelectorAll('#list li:not(.group)')].filter((li) => "+
 		"['.star', '.archive', '.more summary'].some((s) => !li.querySelector(s).getAttribute('aria-label'))).length"))
@@ -349,12 +358,13 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval(stub(`[{ slug: 'c', title: 'Gamma', description: '', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'd', title: 'Delta', description: '', createdAt: at(1), updatedAt: at(8), favorite: true }]`))
 	out = append(out, b.eval(order))
-	// The creation date under the title, of a link when registered, and none without one.
+	// The creation date beside the time, left of it, of a link when registered, and none without one; nothing under the title for it.
 	date := b.eval("new Date('2026-01-01T00:00:00.000Z').toLocaleDateString(document.documentElement.lang, { dateStyle: 'medium' })")
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'o', title: 'Old', description: '', updatedAt: at(7) },
 		{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`))
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] .made').textContent"),
+	out = append(out, b.eval("(() => { const li = document.querySelector('#list li[data-slug=a]'), m = li.querySelector('.made'); "+
+		"return [m.textContent, m.parentElement.classList.contains('meta'), m.getBoundingClientRect().right <= li.querySelector('time').getBoundingClientRect().left, li.querySelector('.sub').hidden].join(' '); })()"),
 		b.eval("document.querySelector('#list li[data-slug=o] .made').hidden"))
 	b.eval("document.querySelector('.tabs [data-tab=links]').click()")
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=l] .made').textContent"))
@@ -478,11 +488,11 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"HcHba", "none:heading:2:" + msg("ui_group_favorites") + msg("ui_count_all", 1) + ",none:heading:2:" + msg("ui_no_project") + msg("ui_count_all", 2),
 		"Hc fav ?fav=1", "HzHy archived ?archived=1",
 		"Beta", msg("ui_selected", 3),
-		"00010", "shown", "shown", "shown", "0",
-		msg("ui_more_named", "Beta"), msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_delete"),
+		"0010", "shown", "shown", "shown", "0",
+		msg("ui_more_named", "Beta"), msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_archive") + " / " + msg("ui_delete"),
 		"false true", "Alpha", "false true", "false false true", "false true", "true", "true",
 		"true", "DELETE /api/artifacts/a", "Hcd",
-		msg("ui_created_at", date), "true", msg("ui_registered_at", date),
+		msg("ui_created_at", date) + " true true true", "true", msg("ui_registered_at", date),
 		"true true", "false", "floe:var(--pc0),p:var(--pc1)",
 		msg("ui_count_all", 1) + " true",
 		"empty-favorites", "all-archived", "archived ?archived=1", "archived ?archived=1",
