@@ -49,50 +49,56 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		}
 	}
 	const ground = "getComputedStyle(document.body).backgroundColor"
+	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
 
-	out := make([]string, 0, 8)
-	// Light under an OS that prefers dark, the list and the frame; the page in the frame reads the OS's preference.
+	out := make([]string, 0, 16)
 	for _, scheme := range []string{"dark", "light"} {
 		media(scheme)
-		b.navigate("/")
-		out = append(out, b.eval(ground))
-		b.navigate("/a/scheme/")
-		out = append(out, b.eval(ground), b.until("the page's scheme", listening))
-	}
-
-	// Every text and field: a list with all it can show, its menus open, two rows selected, the bulk delete armed and an
-	// error; the links; the edit dialog; the bulk tags dialog with a tag on all, some and none.
-	b.navigate("/")
-	b.eval(stub(colorsList))
-	b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click(); " +
-		"document.getElementById('bulk-delete').click(); showError('failed'); document.getElementById('q').value = ''")
-	measure := func(where string) {
-		t.Helper()
-
-		if low := b.eval(measureContrast); low != "" {
-			t.Errorf("%s: text that cannot be read:\n%s", where, low)
+		// Light whatever the OS prefers: the list, a page's frame and a missing page's; the page in the frame reads the
+		// OS's preference.
+		for _, path := range []string{"/", "/a/p/", "/a/none/", "/a/scheme/"} {
+			b.navigate(path)
+			out = append(out, b.eval(ground))
 		}
+		out = append(out, b.until("the page's scheme", listening))
+
+		// Every text and field: a list with all it can show, its menus open, two rows selected, the bulk delete armed and
+		// an error; the links; the edit dialog; the bulk tags dialog with a tag on all, some and none.
+		b.navigate("/")
+		b.eval(stub(colorsList))
+		b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click(); " +
+			"document.getElementById('bulk-delete').click(); showError('failed'); document.getElementById('q').value = ''")
+		measure := func(where string) {
+			t.Helper()
+
+			if low := b.eval(measureContrast); low != "" {
+				t.Errorf("OS %s, %s: text that cannot be read:\n%s", scheme, where, low)
+			}
+		}
+		measure("the list")
+		if low := b.eval(measureFields); low != "" {
+			t.Errorf("OS %s: fields that cannot be read:\n%s", scheme, low)
+		}
+		// The data URIs hold the colors they copy: the tick --on-ink, the sort's arrow --faint.
+		out = append(out, b.eval("(() => { const root = getComputedStyle(document.documentElement); "+
+			"const holds = (selector, color) => getComputedStyle(document.querySelector(selector)).backgroundImage.includes(root.getPropertyValue(color).replace('#', '%23')); "+
+			"return [holds('#list .sel:checked', '--on-ink'), holds('#sort', '--faint')].join(' '); })()"))
+		b.eval("document.getElementById('bulk-tag').click()")
+		measure("the tags dialog")
+		// The tag on some, given to all and then to none, keeps its count: on the filled chip, then on the plain one.
+		for _, mark := range []string{"all", "none"} {
+			b.eval("[...document.querySelectorAll('.tag-box')].find((l) => l.querySelector('.n')).querySelector('input').click()")
+			measure("the tags dialog, a tag on some given to " + mark)
+		}
+		b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.querySelector('#list li:not(.group) .edit').click()")
+		measure("the edit dialog")
+		b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.querySelector('.tabs [data-tab=links]').click()")
+		measure("the links")
 	}
-	measure("the list")
-	if low := b.eval(measureFields); low != "" {
-		t.Errorf("fields that cannot be read:\n%s", low)
-	}
-	// The data URIs hold the colors they copy: the tick --on-ink, the sort's arrow --faint.
-	out = append(out, b.eval("(() => { const root = getComputedStyle(document.documentElement); "+
-		"const holds = (selector, color) => getComputedStyle(document.querySelector(selector)).backgroundImage.includes(root.getPropertyValue(color).replace('#', '%23')); "+
-		"return [holds('#list .sel:checked', '--on-ink'), holds('#sort', '--faint')].join(' '); })()"))
-	b.eval("document.getElementById('bulk-tag').click()")
-	measure("the tags dialog")
-	// The tag on some, given to all and then to none, keeps its count: on the filled chip, then on the plain one.
-	for _, mark := range []string{"all", "none"} {
-		b.eval("[...document.querySelectorAll('.tag-box')].find((l) => l.querySelector('.n')).querySelector('input').click()")
-		measure("the tags dialog, a tag on some given to " + mark)
-	}
-	b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.querySelector('#list li:not(.group) .edit').click()")
-	measure("the edit dialog")
-	b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.querySelector('.tabs [data-tab=links]').click()")
-	measure("the links")
 
 	const light = "rgb(244, 243, 240)"
-	check(t, "colors", out, strings.Join([]string{light, light, "dark", light, light, "light", "true true"}, "|"))
+	check(t, "colors", out, strings.Join([]string{
+		light, light, light, light, "dark", "true true",
+		light, light, light, light, "light", "true true",
+	}, "|"))
 }
