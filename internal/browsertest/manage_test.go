@@ -310,7 +310,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// A row's menu is not cut off by the list's box: with one row, the menu reaches below it, its delete the topmost at its
 	// middle, which deletes on a second click.
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) }]`))
-	b.eval("document.querySelector('#list > li:last-child summary').click(); document.querySelector('#list > li:last-child .delete').scrollIntoView({ block: 'center' })")
+	// Not scrollIntoView, which would scroll a box that cuts it off to bring it in.
+	b.eval("document.querySelector('#list > li:last-child summary').click()")
 	d := b.rect("document.querySelector('#list > li:last-child .delete')")
 	out = append(out, b.eval("Boolean(document.elementFromPoint("+js(fmt.Sprint(d.X+d.Width/2))+", "+js(fmt.Sprint(d.Y+d.Height/2))+")?.closest('.delete'))"))
 	b.eval("calls.length = 0; document.querySelector('#list > li:last-child .delete').click(); document.querySelector('#list > li:last-child .delete').click()")
