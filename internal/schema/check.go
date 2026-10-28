@@ -120,24 +120,23 @@ func (c *Compiled) checkTemplate() error {
 // it; both are true, at other places. Tell it once if that comes to mislead.
 func (c *Compiled) checkOwn() usererr.List {
 	r := c.followFrom(c.Root)
-	part := c.isPart()
 	var found usererr.List
 	enter := func(base string) bool { return base == c.url || c.isShared(base) }
 	c.every(c.Root, enter, func(n *jsonschema.Schema) {
 		if base, _ := split(n.Location); base == c.url {
-			found = append(found, c.checkNode(n, r, part)...)
+			found = append(found, c.checkNode(n, r)...)
 		}
 	}, func(from, to *jsonschema.Schema) { found = append(found, c.strayMistake(from, to)) })
 	return found
 }
 
-// checkNode returns the mistakes of n, a schema of the file compiled, a part's if part, r what Follow reaches
-// from the root: a $dynamicRef; an item a part or a format draws that r does not reach; a $ref into a part. A
-// part takes, of Formats, image alone, a trust boundary, as the checks of the data's HTML reach the template's
-// items alone; and refers to no Shared schema holding one of Formats, image too, of which no walk from the
-// part's root is checked. Either is told in place of the checks of where it is that it overlaps, as a part
-// holds it nowhere.
-func (c *Compiled) checkNode(n *jsonschema.Schema, r reached, part bool) usererr.List {
+// checkNode returns the mistakes of n, a schema of the file compiled, r what Follow reaches from the root: a
+// $dynamicRef; an item a part or a format draws that r does not reach; a $ref into a part. A part takes, of
+// Formats, image alone, a trust boundary, as the checks of the data's HTML reach the template's items alone;
+// and refers to no Shared schema holding one of Formats, image too, of which no walk from the part's root is
+// checked. Either is told in place of the check of where n is, as a part holds it nowhere; r of a part goes
+// through such a format, so that what is past it is told only as it would be with the format taken out.
+func (c *Compiled) checkNode(n *jsonschema.Schema, r reached) usererr.List {
 	var found usererr.List
 	switch {
 	case n.DynamicRef != nil:
@@ -145,27 +144,23 @@ func (c *Compiled) checkNode(n *jsonschema.Schema, r reached, part bool) usererr
 	case n.RecursiveRef != nil:
 		found = append(found, c.mistake(n, "schema_dynamic_ref", "$recursiveRef"))
 	}
-	formatRefused := false
-	if f := floeFormat(n); part && f != "" && f != "image" {
+	if f := floeFormat(n); c.part && f != "" && f != "image" {
 		found = append(found, c.mistake(n, "schema_part_format", f))
-		formatRefused = true
 	} else if unreached := c.unreachedFormat(n, r); unreached != nil {
 		found = append(found, unreached)
 	}
 	if n.Ref != nil {
-		if refused := c.refMistake(n, r, part, formatRefused); refused != nil {
+		if refused := c.refMistake(n, r); refused != nil {
 			found = append(found, refused)
 		}
 	}
 	return found
 }
 
-// refMistake returns checkNode's mistake of the $ref of n, nil for none; formatRefused if checkNode refused the
-// format of n in a part.
-func (c *Compiled) refMistake(n *jsonschema.Schema, r reached, part, formatRefused bool) *usererr.Error {
+// refMistake returns checkNode's mistake of the $ref of n, nil for none.
+func (c *Compiled) refMistake(n *jsonschema.Schema, r reached) *usererr.Error {
 	if name, isRoot := c.partRoot(n.Ref); isRoot {
-		// Where Follow stopped at the format refused, the $ref beside it is not reached for it alone.
-		if !r.atPart[n] && (!formatRefused || !r.atFormat[n]) {
+		if !r.atPart[n] {
 			return c.mistake(n, "schema_part_unreached", partName(name))
 		}
 		return nil
@@ -173,18 +168,12 @@ func (c *Compiled) refMistake(n *jsonschema.Schema, r reached, part, formatRefus
 	if into := c.intoMistake(n); into != nil {
 		return into
 	}
-	if part {
+	if c.part {
 		if shared := c.sharedFormat(n); shared != nil {
 			return shared
 		}
 	}
 	return c.unreachedRef(n, r)
-}
-
-// isPart reports whether the file compiled is a part's (CompilePart).
-func (c *Compiled) isPart() bool {
-	r, ok := c.res[c.url]
-	return ok && r.Kind == Part
 }
 
 // sharedFormat returns the mistake of the $ref of n to a Shared schema that holds one of Formats, in a part;
@@ -327,6 +316,11 @@ func (c *Compiled) strayMistake(from, to *jsonschema.Schema) *usererr.Error {
 
 // isShared reports whether base is the URL of a Shared schema.
 func (c *Compiled) isShared(base string) bool {
+	return c.held(base, Shared)
+}
+
+// held reports whether base is the URL of a resource of kind k, not the file compiled.
+func (c *Compiled) held(base string, k Kind) bool {
 	r, ok := c.res[base]
-	return ok && base != c.url && r.Kind == Shared
+	return ok && base != c.url && r.Kind == k
 }
