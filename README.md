@@ -28,6 +28,7 @@ floe check plan.yaml        # check a data file: prints its mistakes, or nothing
 floe publish plan.yaml      # store its page, print the URL and open it
 floe publish --link out/index.html   # show an HTML file as it is
 floe list                   # pages, newest first
+floe archive old-plan       # take a page off the lists, keeping it
 floe stop                   # stop the background server
 ```
 

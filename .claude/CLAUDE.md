@@ -40,6 +40,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **slug と写しのパスは 1 か所で作る**：slug をパスにするのは `store` の `dir` だけ、meta.json の `source` を写しのパスにするのは `copyDir` だけで、そこで確かめる（`ValidSlug`、save が付ける名前か）。呼ぶ側で別に確かめない
 - **publish は読んだ画像だけを書く**：publish が保存する画像は、描くときに `kit.ReadImage` が読んだ名前のものだけ。送られても読まなかった名前は書かない（信頼境界）。rebuild は前の写しの `images/` を全部引き継ぐ
 - **保存先を書くのはサーバーだけ**：CLI は API で頼む。publish・link・rm・rebuild・管理ページの変更はどれも API
+- **アーカイブは meta.json の `archived` 1 つ**：一覧から外すのは meta.json の `archived` だけで持ち、ディレクトリ・`/a/<slug>/`・ダウンロード・rebuild は見ない。立てる・外すのは `Store.Edit`（`PATCH`）だけで、ほかに外れるのは publish し直したとき（`newMeta` が引き継がない）だけ。`GET /api/artifacts` は全部を返し、一覧から外すのは見せる側（`floe list` と管理ページの `inView`）でする
 - **ページの中身と版は 1 か所ずつ**：中身は `server` の `content`、版は `version`（印は `files.Mark` 1 つ）。版は中身の前に取る。live reload は描かない
 - **CSP とサンドボックスは返すときに付ける**：ページとその下のファイルはヘッダーで。ダウンロードは描いたページに CSP の meta を足す
 - **描くものはまとまり 1 つ**：サーバーは `Config.Drawing` で読んだ Kit とアイコン集を 1 つ持ち、自分の 3 つの根とアイコン集を 1 つのタイマーで毎秒見張り、変われば丸ごと読み直す。見張りが後で直せない描き（ストアに書くものと download）は、描く前に同じ見張りをその場で 1 回走らせる（`latest`）。読めなければ `store.Drawing.Err` で描く出力を全部止める

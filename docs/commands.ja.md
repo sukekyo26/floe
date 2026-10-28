@@ -20,6 +20,7 @@
 | `floe part check` | 自分の部品・見た目・共有の schema・テーマを確かめる |
 | `floe list` | ページを新しい順に並べる |
 | `floe rm <slug>...` | ページを消す |
+| `floe archive <slug>...` | ページを消さずに一覧から外す（`--undo` で戻す） |
 | `floe serve` | サーバーを前面で動かす |
 | `floe stop` | 裏で動くサーバーを止める |
 | `floe diagram render <spec.yaml>...` | 図の spec を確かめ、inline SVG で出す |
@@ -58,7 +59,7 @@
 
 - 同じプロジェクトからの同じ slug は、ページを上書きします。標準エラー出力がそう言います（`updated "plan" (last published …, title "…")`）。題が変わっていれば、別の `--slug` を勧める警告を出します。終了コードは 0 のままです。
 - ほかのプロジェクトから公開した slug は、`--force` が無ければ断ります。`--force` はページを一から作り直し、前のものは何も残しません。
-- もう一度の publish は、管理ページで決めたもの（題・プロジェクト・お気に入り）、説明、作った日時を保ちます。`--title` と `--description` はそれより強いです。
+- もう一度の publish は、管理ページで決めたもの（題・プロジェクト・お気に入り）、説明、作った日時を保ちます。`--title` と `--description` はそれより強いです。アーカイブしたページは一覧に戻ります。
 
 ### リンクしたファイル
 
@@ -172,15 +173,19 @@ floe と自分の部品・見た目・共有の schema を 1 行ずつ、タブ�
 
 ## `floe list`
 
-サーバーが並べるとおりに、ページを新しい順に出します（動いていなければ起こす）。各行はタブで区切った 4 列で、更新した日時（手元の時刻、`YYYY-MM-DD HH:MM`）、slug、題、リンクしたパス（保存したページなら空）です。
+サーバーが並べるとおりに、ページを新しい順に出します（動いていなければ起こす）。各行はタブで区切った 4 列で、更新した日時（手元の時刻、`YYYY-MM-DD HH:MM`）、slug、題、リンクしたパス（保存したページなら空）です。アーカイブしたページは出しません。`--archived` を付けるとそれも出し、どの行にも 5 列目（`archived` か空）を足します。
 
 ## `floe rm <slug>...`
 
 サーバーを通して、ページを順に消します（動いていなければ起こす）。最初の失敗（無いページなど）で止まります。リンクしたファイルそのものは残し、登録だけを消します。
 
+## `floe archive <slug>...`
+
+サーバーを通して、ページを順にアーカイブします（動いていなければ起こす）。最初の失敗（無いページなど）で止まります。アーカイブしたページは、`floe list` と管理ページの一覧に出ません（管理ページでは「アーカイブのみ」で見られます）。URL では今までどおり開け、ダウンロードでき、`floe rebuild` で描き直されます。アーカイブ済みのページをもう一度アーカイブしても、何も変わりません。`--undo` で一覧に戻します。publish し直しても戻ります。
+
 ## `floe serve`
 
-サーバーを `127.0.0.1` で、SIGTERM か SIGINT まで前面で動かします。`floe publish`・`floe rebuild`・`floe list`・`floe rm` は同じサーバーを裏で起こすので、これは主にサーバーの誤りを見るためのものです。裏のサーバーが起きなければ、`the server did not start; run "floe serve" to see the error` と言います。
+サーバーを `127.0.0.1` で、SIGTERM か SIGINT まで前面で動かします。`floe publish`・`floe rebuild`・`floe list`・`floe rm`・`floe archive` は同じサーバーを裏で起こすので、これは主にサーバーの誤りを見るためのものです。裏のサーバーが起きなければ、`the server did not start; run "floe serve" to see the error` と言います。
 
 ## `floe stop`
 
@@ -236,11 +241,11 @@ floe と自分の部品・見た目・共有の schema を 1 行ずつ、タブ�
 
 ## サーバー
 
-- `floe publish`・`floe rebuild`・`floe list`・`floe rm` は、サーバーが動いていなければ起こし、動いていればそれを使います。
+- `floe publish`・`floe rebuild`・`floe list`・`floe rm`・`floe archive` は、サーバーが動いていなければ起こし、動いていればそれを使います。
 - これらはサーバーに、ページを確かめ・保存し・描き・並べ・消すよう頼みます。保存先に書くのはサーバーだけです。publish はデータファイル（とサーバーが求める画像）を送り、サーバーが自分のテンプレート・部品・テーマ・アイコンで確かめて描きます。
 - floe を入れ直す（別の版、またはビルドし直したバイナリ）と、次のコマンドが動いているサーバーを入れ替えます。
 - サーバーは `floe stop`、ログアウト、再起動まで動き続けます。
-- サーバーは、起こしたコマンドの `FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR`・`FLOE_ICONS_DIR` で描きます。違うものを使う `floe publish` と `floe rebuild` は `floe stop` まで断るので、1 つのコマンドにでなく、どのコマンドも受け取るシェルの環境に設定してください。`floe list` と `floe rm` は描かないので、どれでも通ります。
+- サーバーは、起こしたコマンドの `FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR`・`FLOE_ICONS_DIR` で描きます。違うものを使う `floe publish` と `floe rebuild` は `floe stop` まで断るので、1 つのコマンドにでなく、どのコマンドも受け取るシェルの環境に設定してください。`floe list`・`floe rm`・`floe archive` は描かないので、どれでも通ります。
 - 1 つのサーバーは、そのポートで 1 つの保存先（`FLOE_DIR`）を配信します。動いている間、ほかの保存先へのコマンドは断ります。その保存先には別の `FLOE_PORT` を使ってください。
 - `127.0.0.1` だけで待ちます。ほかのホスト名（DNS リバインディング対策）と、ほかのサイトからの書き込みは断ります。
 - 保存したページは描いたとおりに返し、CSP とサンドボックスを付けます。ページはサンドボックスで動くので、スクリプトは管理ページの API に届きません。
@@ -269,7 +274,7 @@ floe: FLOE_PARTS_DIR is /tmp/t/missing, which cannot be used as a directory (no 
 ```
 
 - `FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` は、ページを描くか自分のものを読むコマンド（`floe check`・`floe render`・`template` と `part` のコマンド、描くサーバー）が使うので、設定したものが無ければそれらを止めます。既定の場所が無ければ、自分のものは無いとし、floe のものだけで描きます。既定の場所があってもディレクトリでなければ断ります。
-- `FLOE_DIR` はサーバー（`floe serve` と、それを起こす `floe publish`・`floe rebuild`・`floe list`・`floe rm`）が使い、無ければ作ります。`FLOE_ICONS_DIR` は icons のコマンド（無ければ作る）と、アイコンを置いた図（その図の所で）が使います。
+- `FLOE_DIR` はサーバー（`floe serve` と、それを起こす `floe publish`・`floe rebuild`・`floe list`・`floe rm`・`floe archive`）が使い、無ければ作ります。`FLOE_ICONS_DIR` は icons のコマンド（無ければ作る）と、アイコンを置いた図（その図の所で）が使います。
 - `HOME` が無い（または絶対パスでない）とき、ほかに既定の無いディレクトリは無いものとします。`floe check` は floe のテンプレート・部品・テーマだけで走り、そこに書くコマンド（`floe template new`、`FLOE_DIR` を使う `floe list` …）は変数を設定するよう求めます。
 - `FLOE_PARTS_DIR`・`FLOE_THEMES_DIR`・`FLOE_TEMPLATES_DIR` は重ねません。2 つが同じディレクトリか、一方がもう一方の中にあれば（symlink を通しても）、中を読む前に、2 つの変数の名前で断ります。設定したものは、まだ無くても比べます。コマンドは自分が読むものだけを比べ、既定の場所は有るときだけ比べます。`floe part new`・`floe template new` は、作るものがほかの種類の置き場所の中に入るか、それを含むなら、作らずに断ります。
 

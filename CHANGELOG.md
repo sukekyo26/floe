@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add archiving: `floe archive <slug>...` (`--undo` to give back), "Archive"
+  on the management page, one page or those selected, and `archived` in
+  `PATCH /api/artifacts/{slug}` take a page off `floe list` and the management
+  page's list without deleting it; it is still served at its URL. The
+  management page shows the archived with "Archived only", and
+  `floe list --archived` lists them too, with a fifth column. Publishing an
+  archived page again gives it back to the lists.
 - Add `floe publish`, which draws the page of a data file (YAML) with the
   template it names, stores the page as drawn and prints its URL on a local
   server at `http://127.0.0.1:7325`, started in the background when it is not
