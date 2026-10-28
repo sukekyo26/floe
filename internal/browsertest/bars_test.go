@@ -82,11 +82,11 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		unlink := b.eval(bulk)
 		out = append(out, fmt.Sprintf("%d %s %v / %s / %s / %s", width, fit, before == after, selected, armed, unlink))
 		// The words show on a bar wider than 46rem, measured.
-		words, clear, confirm, unlinkConfirm := "", "", msg("ui_delete_bulk_confirm", 2), msg("ui_unlink_bulk_confirm", 2)
+		words, clearing, confirm, unlinkConfirm := "", "", msg("ui_delete_bulk_confirm", 2), msg("ui_unlink_bulk_confirm", 2)
 		if b.eval("String(document.querySelector('.toolbar').clientWidth > 46 * 16)") == "true" {
-			words, clear = all, "/"+msg("ui_clear_selection")
+			words, clearing = all, "/"+msg("ui_clear_selection")
 		}
-		want = append(want, fmt.Sprintf("%d true true / 5 true %s true / 2 true %s%s true / 2 true %s%s true", width, words, confirm, clear, unlinkConfirm, clear))
+		want = append(want, fmt.Sprintf("%d true true / 5 true %s true / 2 true %s%s true / 2 true %s%s true", width, words, confirm, clearing, unlinkConfirm, clearing))
 	}
 	b.unsize()
 
