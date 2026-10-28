@@ -12,7 +12,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **ライブラリが返す誤り**：YAML・JSON Schema・html/template・expr などが返す誤りを、ライブラリの言葉のまま出す。言い直さない。場所は、ライブラリが返す分だけ付ける（JSON ポインタを YAML の行と列に写すのはよい）
 - **信頼境界**：パス、CSP、サンドボックス、大きさなど、floe の外へ出る・外から入るものを守る。文脈によらない保守的な決まりで断る
 - **floe 自身の仕組みの確かめ**：floe が置いた印や、floe がスタイルを入れる所など、floe の仕組みが前提にするものを確かめる
-- **ライブラリの黙った読み違い**：ライブラリが誤りを出さずに、書いたのと違う値を読む所（YAML の 2 つ目の文書、`#` で値が切れる、`{a, b: 1}`、文字でない鍵、`.inf`・`.nan`、YAML 1.2 と読みが違う数（`017`・`1e3` など）、schema の JSON の 1 つの object の中の同じ鍵、html/template が値を誤りなしに `ZgotmplZ` に置き換える所、ファイルの先頭のほかの BOM（YAML と schema の JSON。引用符の中も）、YAML の UTF-8 でないバイト列、schema の JSON の文字列の中の孤立したサロゲートと UTF-8 でない字（U+FFFD と読む））を断る
+- **ライブラリの黙った読み違い**：ライブラリが誤りを出さずに、書いたのと違う値を読む所（YAML の 2 つ目の文書、`#` で値が切れる、`{a, b: 1}`、文字でない鍵、`.inf`・`.nan`、YAML 1.2 と読みが違う数（`017`・`1e3` など）、schema の JSON の 1 つの object の中の同じ鍵、html/template が値を誤りなしに `ZgotmplZ` に置き換える所、ファイルの先頭のほかの BOM（YAML と schema の JSON。引用符の中も）、YAML の UTF-8 でないバイト列、schema の JSON の文字列の中の孤立したサロゲートと UTF-8 でない字（U+FFFD と読む）、API の書き込みの本文の、大文字小文字だけが違う鍵・同じ鍵の 2 つ目・文字列の中の孤立したサロゲートと UTF-8 でない字）を断る
 
 ## 作りの決まり
 
@@ -46,7 +46,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **CSP とサンドボックスは返すときに付ける**：ページとその下のファイルはヘッダーで。ダウンロードは描いたページに CSP の meta を足す
 - **描くものはまとまり 1 つ**：サーバーは `Config.Drawing` で読んだ Kit とアイコン集を 1 つ持ち、自分の 3 つの根とアイコン集を 1 つのタイマーで毎秒見張り、変われば丸ごと読み直す。見張りが後で直せない描き（ストアに書くものと download）は、描く前に同じ見張りをその場で 1 回走らせる（`latest`）。読めなければ `store.Drawing.Err` で描く出力を全部止める
 - **API の誤りは `refuse` 1 つ**：usererr の Report を返し、409 は `store.Conflict` で見分ける。プロトコルの断り（forbidden host・origin・not found など）は英語の固定の文
-- **書き込みの本文は `decodeStrict` 1 つで読む**：API の書き込み（POST・PUT・PATCH）の本文は、送る形の型（`Link`・`Upload`・`Edit`、rebuild は欄の無い型）に `decodeStrict` で読む。型に無い鍵は encoding/json の言葉のまま 400 で断り、object でない本文（null も）も断る。ただし、鍵の大文字小文字の違い（`Archived` を archived と読む）と同じ鍵の 2 つ目は、まだ encoding/json（v1）の読みのままで断らない（`decodeStrict` の `LIMIT:`）。値が null の欄は、送らないのと同じ（変えない）。受ける鍵は型の欄にだけ書き、本文を map で読んで鍵を拾わない
+- **書き込みの本文は `decodeStrict` 1 つで読む**：API の書き込み（POST・PUT・PATCH）の本文は、送る形の型（`Link`・`Upload`・`Edit`、rebuild は欄の無い型）に、`decodeStrict` が encoding/json/v2 だけで読む（構文の確かめも v2 に任せ、v1 で読み直さない）。構文の誤り、型に無い鍵（大文字小文字だけが違うものも）、同じ鍵の 2 つ目（入れ子の map の中も）、文字列の中の孤立したサロゲートと UTF-8 でない字、v2 が読まない形の値（改行の入った base64、数の配列の `[]byte`）は、encoding/json/v2 の言葉のまま 400 で断り、object でない本文（null も）も断る。CLI が送る前に v1 の Marshal で U+FFFD に置き換える字は、サーバーには届かない（cli の `LIMIT:`）。値が null の欄は、送らないのと同じ（変えない）。受ける鍵は型の欄にだけ書き、本文を map で読んで鍵を拾わない
 - **管理ページと枠は `ui.Page` 1 つ**：`/` と `/a/{slug}/` は、読み手の言語で描いた同じ管理ページ（無いページは 404 の枠）。ページそのものは `?raw` で、枠の iframe が読む。管理ページと枠には `uiCSP`（frame-ancestors）を付け、枠に入れられるのは自分と VS Code だけにする。枠の中のリンクは `leaveFrame` 1 つが扱う
 - **ブラウザのテストは `internal/browsertest` に置く**：Chrome は 1 つを起こし、全部のテストが順に使う。サーバーは `internal/servetest` で本当のポートに起こし、publish は CLI（`cli.Run`）で行う。管理ページの動きと見た目でブラウザで確かめない所は、そのパッケージの `LIMIT:` にある
 - **Chrome は版を決めて入れる**：テストは `FLOE_CHROME`、無ければ PATH で Chrome を探し、手元で見つからなければ飛ばす。CI では、版を決めた Chrome for Testing を `FLOE_CHROME` で渡し、無ければ落とす。版は go-ci.yml の `CHROME_VERSION` 1 か所で、上げるのは手で
