@@ -213,12 +213,13 @@ func notFound(w http.ResponseWriter) {
 }
 
 func serveUI(w http.ResponseWriter, r *http.Request) {
-	sendUI(w, r, http.StatusOK)
+	sendUI(w, r, http.StatusOK, "")
 }
 
-// sendUI answers with the management page in the reader's language.
-func sendUI(w http.ResponseWriter, r *http.Request, status int) {
-	page, err := ui.Page(catalog(r))
+// sendUI answers with the management page in the reader's language: the frame around the page framed, a slug, or
+// the list for "".
+func sendUI(w http.ResponseWriter, r *http.Request, status int, framed string) {
+	page, err := ui.Page(catalog(r), framed)
 	if err != nil {
 		refuse(w, r, err)
 		return
