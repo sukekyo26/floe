@@ -13,7 +13,7 @@
   :root {
     --bg: #f4f3f0; --panel: #fbfaf8; --subtle: #efeee9; --hover: #f6f5f1; --sel: #ecebe6;
     --fg: #22211f; --muted: #615f5a; --faint: #6b6964; --line: #e3e1dc;
-    --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00;
+    --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00; --archived: #2f7a78;
     --danger: #b8332b; --danger-soft: #f8e3e1; --on-danger: #fff;
     /* The projects' colors, by projectOrder */
     --pc0: #e5533d; --pc1: #2f6bff; --pc2: #16a37a; --pc3: #b04fd6; --pc4: #d99a00; --pc5: #0f9bb5;
@@ -335,8 +335,11 @@
   .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
   .delete:hover { color: var(--danger); }
   .star:hover { color: var(--star); }
+  /* An icon button that toggles (the star, the frame's archive), pressed: its icon filled in, in ink or its own color */
+  .icon-btn[aria-pressed="true"] { color: var(--fg); }
+  .icon-btn[aria-pressed="true"] svg { fill: currentColor; }
   .star[aria-pressed="true"] { color: var(--star); }
-  .star[aria-pressed="true"] svg { fill: currentColor; }
+  .archive[aria-pressed="true"] { color: var(--archived); }
   .copy .done, .copy.copied > svg { display: none; }
   .copy.copied .done { display: block; color: var(--good); }
   .delete.armed { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 50%, transparent); font-weight: 650; }
@@ -498,7 +501,7 @@
     <div class="bar-end">
       <span class="frame-actions" hidden>
         <button type="button" class="icon-btn star" id="frame-star"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg></button>
-        <button type="button" class="icon-btn" id="frame-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span id="frame-archive-label"></span></button>
+        <button type="button" class="icon-btn archive" id="frame-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg></button>
         <a class="icon-btn" id="frame-download" title="{{.Msg "ui_download"}}" aria-label="{{.Msg "ui_download"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
         </a>
@@ -896,6 +899,14 @@
   // (picked, its last entry gone)
   // LIMIT: from the seventh project on the colors repeat; let the viewer pick them if projects come to be that many
   const projectColor = (name, ranks) => (ranks.has(name) ? `var(--pc${ranks.get(name) % 6})` : 'var(--faint)');
+
+  // An icon button that toggles: its name stays what pressing does, and aria-pressed tells whether it is on (a
+  // screen reader says "Archive, pressed"), as a WAI-ARIA toggle button
+  function toggle(btn, pressed, title, label = title) {
+    btn.setAttribute('aria-pressed', String(Boolean(pressed)));
+    btn.title = title;
+    btn.setAttribute('aria-label', label);
+  }
 
   function toast(msg) {
     const t = document.createElement('div');
@@ -1417,9 +1428,7 @@
       copy.addEventListener('click', () => copyPath(a.path, copy));
     }
     const star = li.querySelector('.star');
-    star.setAttribute('aria-pressed', String(Boolean(a.favorite)));
-    star.title = t(a.favorite ? 'ui_unfavorite' : 'ui_favorite');
-    star.setAttribute('aria-label', t(a.favorite ? 'ui_unfavorite_named' : 'ui_favorite_named', a.title));
+    toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
     const edit = li.querySelector('.edit');
     edit.setAttribute('aria-label', t('ui_edit_named', a.title));
@@ -1635,11 +1644,9 @@
     $('frame-title').textContent = found ? a.title : '';
     $('frame-archived').hidden = !(found && a.archived);
     if (found) {
-      $('frame-star').setAttribute('aria-pressed', String(Boolean(a.favorite)));
-      $('frame-star').title = t(a.favorite ? 'ui_unfavorite' : 'ui_favorite');
-      $('frame-star').setAttribute('aria-label', $('frame-star').title);
+      toggle($('frame-star'), a.favorite, t('ui_favorite'));
       $('frame-star').onclick = () => toggleFavorite(a);
-      $('frame-archive-label').textContent = t(a.archived ? 'ui_unarchive' : 'ui_archive');
+      toggle($('frame-archive'), a.archived, t('ui_archive'));
       $('frame-archive').onclick = () => toggleArchived(a);
     }
     if (found) renderNeighbors(a);

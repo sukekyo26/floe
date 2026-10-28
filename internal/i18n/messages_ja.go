@@ -338,8 +338,6 @@ var messagesJA = map[string]string{
 	"ui_favorite":             "お気に入りに追加",
 	"ui_favorite_named":       "%s をお気に入りに追加",
 	"ui_favorited":            "「%s」をお気に入りに追加しました",
-	"ui_unfavorite":           "お気に入りから外す",
-	"ui_unfavorite_named":     "%s をお気に入りから外す",
 	"ui_unfavorited":          "「%s」をお気に入りから外しました",
 	"ui_favorite_failed":      "お気に入りを変更できませんでした（%s）。",
 	"ui_prev_named":           "前: %s",
