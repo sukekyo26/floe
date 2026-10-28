@@ -1,8 +1,8 @@
 package server
 
 import (
-	"bytes"
-	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"io"
 	"io/fs"
@@ -12,6 +12,8 @@ import (
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
+
+// LIMIT: json/v2 and jsontext are outside the Go 1 promise; if a release drops them, use go-json-experiment/json.
 
 const maxBody = 64 << 10
 
@@ -23,7 +25,7 @@ const MaxUpload = 32 << 20
 // jsonType is the media type of a write, and the one Accept names for a report as JSON.
 const jsonType = "application/json"
 
-// readBody reads a write from the management page or the CLI, of up to limit bytes, as JSON. Other
+// readBody reads a write from the management page or the CLI, of up to limit bytes, for decodeStrict to read. Other
 // sites and the sandboxed pages are refused by the exact Origin and by requiring JSON (which needs a
 // CORS preflight), its Content-Type read as mime reads it: one whose parameters cannot be read is refused too.
 // On refusal it has answered and returns false.
@@ -43,26 +45,11 @@ func (s *Server) readBody(w http.ResponseWriter, r *http.Request, limit int64) (
 		send(w, http.StatusRequestEntityTooLarge, "request body too large")
 		return nil, false
 	}
-	if err != nil || !json.Valid(body) {
-		send(w, http.StatusBadRequest, "cannot read the request: it is not JSON")
+	if err != nil {
+		send(w, http.StatusBadRequest, "cannot read the request")
 		return nil, false
 	}
 	return body, true
-}
-
-// readJSON reads a write of the management page as readBody does, as a JSON object; nil on refusal.
-func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]json.RawMessage {
-	body, ok := s.readBody(w, r, maxBody)
-	if !ok {
-		return nil
-	}
-	// Anything but an object (a number, a string, an array, null) is a mistake, not an empty change.
-	var input map[string]json.RawMessage
-	if json.Unmarshal(body, &input) != nil || input == nil {
-		send(w, http.StatusBadRequest, "cannot read the request: send a JSON object")
-		return nil
-	}
-	return input
 }
 
 // refuse answers err told in the reader's language (usererr.Report): 500 for floe's failure, 409 for a name in use
@@ -108,8 +95,8 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var in Link
-	if !decodeStrict(w, body, &in) {
+	in := decodeStrict[Link](w, body)
+	if in == nil {
 		return
 	}
 	opts := store.Options{Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force}
@@ -128,18 +115,23 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	sendSaved(w, entry)
 }
 
-// decodeStrict reads body, a JSON object, into v, refusing a field v does not have. On refusal it has
-// answered and returns false.
-func decodeStrict(w http.ResponseWriter, body []byte, v any) bool {
-	dec := json.NewDecoder(bytes.NewReader(body))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(v); err != nil {
-		// What encoding/json could not read: neither the management page nor the CLI sends such JSON.
-		// LIMIT: in encoding/json's English, as the protocol's refusals are. Word it if a reader comes to see it.
-		send(w, http.StatusBadRequest, protocolText("cannot read the request: "+err.Error()))
-		return false
+// decodeStrict reads body as a T as encoding/json/v2 does, the one reading of a write: refusing anything but an
+// object (null too), a mistake of its syntax, a key T does not have (of other case too) and a key sent twice; nil
+// when it has answered a refusal. A field null is one not sent.
+func decodeStrict[T any](w http.ResponseWriter, body []byte) *T {
+	if jsontext.Value(body).Kind() != '{' {
+		send(w, http.StatusBadRequest, "cannot read the request: send a JSON object")
+		return nil
 	}
-	return true
+	var v T
+	if err := jsonv2.Unmarshal(body, &v, jsonv2.RejectUnknownMembers(true)); err != nil {
+		// What encoding/json/v2 or jsontext could not read, its syntax too, in words that may quote the body: the CLI
+		// sends none, the management page only a string holding a lone surrogate (half of an emoji pasted).
+		// LIMIT: in v2's English, as the protocol's refusals are; word it if a reader comes to see it.
+		send(w, http.StatusBadRequest, protocolText("cannot read the request: "+err.Error()))
+		return nil
+	}
+	return &v
 }
 
 // Upload is a publish of a data file, as the CLI sends it: see store.Upload. Images left out or null asks which
@@ -192,8 +184,8 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var in Upload
-	if !decodeStrict(w, body, &in) {
+	in := decodeStrict[Upload](w, body)
+	if in == nil {
 		return
 	}
 	if in.File == "" || in.Source == nil {
@@ -229,7 +221,8 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 
 // rebuild draws every stored page again with the drawing of now (store.Rebuild): 204, or its mistakes.
 func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
-	if s.readJSON(w, r) == nil {
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok || decodeStrict[struct{}](w, body) == nil {
 		return
 	}
 	drawing := s.latest()
@@ -241,30 +234,19 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// fields sets each of fields that input sends to its value, empty or not, leaving the rest nil; false when
-// one sent is not a T. The store trims strings.
-func fields[T any](input map[string]json.RawMessage, fields map[string]**T) bool {
-	for key, field := range fields {
-		if raw, ok := input[key]; ok {
-			v, isT := decode[T](raw)
-			if !isT {
-				return false
-			}
-			*field = &v
-		}
-	}
-	return true
+// Edit is a change of a page, as the management page and floe archive send it: store.Edit with its keys, which
+// edit converts to it (a field the two do not share fails the build). A field left out or null is not changed.
+type Edit struct {
+	Title       *string `json:"title,omitempty"`
+	Description *string `json:"description,omitempty"`
+	Project     *string `json:"project,omitempty"`
+	Slug        *string `json:"slug,omitempty"`
+	Favorite    *bool   `json:"favorite,omitempty"`
+	Archived    *bool   `json:"archived,omitempty"`
 }
 
-// decode reports whether raw is a JSON value of type T (null is none).
-func decode[T any](raw json.RawMessage) (T, bool) {
-	var v any
-	_ = json.Unmarshal(raw, &v) //nolint:errcheck // readJSON has checked the body
-	t, ok := v.(T)
-	return t, ok
-}
-
-// edit changes what the management page sends (title, description, project, URL name, favourite, archived).
+// edit changes a page as Edit, from the management page or floe archive, sends: its title, description, project, URL
+// name, favourite or archived.
 func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if !store.ValidSlug(slug) {
@@ -272,26 +254,19 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Origin is checked before the page is looked for, so that another site cannot tell which pages there are.
-	input := s.readJSON(w, r)
-	if input == nil {
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok {
+		return
+	}
+	in := decodeStrict[Edit](w, body)
+	if in == nil {
 		return
 	}
 	if s.cfg.Store.ReadMeta(slug) == nil {
 		notFound(w)
 		return
 	}
-	var ed store.Edit
-	if !fields(input, map[string]**string{
-		"title": &ed.Title, "description": &ed.Description, "project": &ed.Project, "slug": &ed.Slug,
-	}) {
-		send(w, http.StatusBadRequest, "send the title, description, project and slug as strings")
-		return
-	}
-	if !fields(input, map[string]**bool{"favorite": &ed.Favorite, "archived": &ed.Archived}) {
-		send(w, http.StatusBadRequest, "send favorite and archived as true or false")
-		return
-	}
-	to, err := s.cfg.Store.Edit(slug, ed)
+	to, err := s.cfg.Store.Edit(slug, store.Edit(*in))
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
 		return
