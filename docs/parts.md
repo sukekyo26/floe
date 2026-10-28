@@ -37,7 +37,7 @@ quote/
 - A schema names it as floe's are named, `"$ref": "floe:///parts/quote.json"`; its own schema names floe's parts and the shared schemas so too.
 - Its element is its box, which names it: `data-floe-part="quote"`.
 - `part.html` sees the item as `.`, and the functions of a template's `page.html` but `asset` ([templates.md](templates.md#pagehtml)).
-- Its schema takes no `format` of floe's (`markdown`, `html`, `image`), nor a shared schema that holds one (`any.json`): its `part.html` draws its items, Markdown with `{{markdown .text}}`.
+- Of floe's `format`s its schema takes `image` alone, declared under `properties` or `items`, where floe follows, and comes to `part.html` as a data URI (`<img src="{{.file}}" alt="{{.alt}}">`). It takes no `markdown` or `html`, nor a shared schema that holds a format (`any.json`): its `part.html` draws its items, Markdown with `{{markdown .text}}`.
 - `floe part show <name>` prints what one takes, floe's too: copy from floe's parts what fits.
 
 ## Looks and shared schemas

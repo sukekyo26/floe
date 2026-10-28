@@ -26,9 +26,9 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：`floe list`・`floe rm`・`floe serve`・`floe stop` と、ブラウザの言語で英語か日本語に
   なる管理ページ（ページの一覧・編集・表示・ダウンロード）。
 - 追加：floe のテンプレート `report`（見出しの下に節を並べ、節ごとに見出しと部品を置く）と、
-  テンプレートが `floe:///parts/<name>.json` で指す 31 の部品（`floe part list` が並べる）。
-  そのうち 29 は report の節が Markdown の `text`・`html` と並べて取るもの（`code`・
-  `terminal`・`table` から `findings`・`decision`・`risks`・`timeline`・`tabs`・`diagram`・
+  テンプレートが `floe:///parts/<name>.json` で指す 32 の部品（`floe part list` が並べる）。
+  そのうち 30 は report の節が Markdown の `text`・`html` と並べて取るもの（`code`・
+  `terminal`・`table`・`image`（画面の写しなど、データファイルのディレクトリの画像）から `findings`・`decision`・`risks`・`timeline`・`tabs`・`diagram`・
   `script` まで）、`cell` と `stack` はほかの部品が中に持つもの。
 - 追加：データファイルが `theme:` で選ぶ 9 つのテーマ（`default`・`soft`・`editorial`・
   `ink`・`brutal`・`blueprint`・`notebook`・`swiss`・`washi`）。どれも CSS の変数のパレットと
@@ -38,7 +38,8 @@ floe の主要な変更を記録します。フォーマットは
   `assets/`）と、`floe template list`・`show`・`new`（埋めて使う最小のテンプレート）・`check`。
 - 追加：`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` の自分の部品・見た目・共有の schema・テーマ
   （floe のものと並べて置き、floe のものと同じ名前は付けない）と、`floe part list`・`show`・
-  `new`（埋めて使う最小の部品）・`check`。自分の部品・テーマ・テンプレートに誤りがあると、
+  `new`（埋めて使う最小の部品）・`check`。部品の schema は、画像を `"format": "image"` の
+  項目で取れる。自分の部品・テーマ・テンプレートに誤りがあると、
   直すまでどのページも描かない。部品・テーマ・テンプレートの置き場所が同じか、一方がもう一方の
   中にあれば、その設定を断る。
 - 追加：キャンバスに部品（frame・box・table・icon・名前でつなぐ edge・dot・bar・axis・
