@@ -80,11 +80,11 @@ type slugBody struct {
 // empty or not, and one left out or null is not.
 type Link struct {
 	Path        string  `json:"path"`
-	Slug        *string `json:"slug,omitempty"`
-	Title       *string `json:"title,omitempty"`
-	Description *string `json:"description,omitempty"`
-	Theme       *string `json:"theme,omitempty"`
-	Force       bool    `json:"force,omitempty"`
+	Slug        *string `json:"slug,omitzero"`
+	Title       *string `json:"title,omitzero"`
+	Description *string `json:"description,omitzero"`
+	Theme       *string `json:"theme,omitzero"`
+	Force       bool    `json:"force,omitzero"`
 }
 
 // addLink registers a linked file, from the management page or floe publish --link. The management
@@ -237,12 +237,12 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 // Edit is a change of a page, as the management page and floe archive send it: store.Edit with its keys, which
 // edit converts to it (a field the two do not share fails the build). A field left out or null is not changed.
 type Edit struct {
-	Title       *string   `json:"title,omitempty"`
-	Description *string   `json:"description,omitempty"`
-	Project     *string   `json:"project,omitempty"`
-	Slug        *string   `json:"slug,omitempty"`
-	Favorite    *bool     `json:"favorite,omitempty"`
-	Archived    *bool     `json:"archived,omitempty"`
+	Title       *string   `json:"title,omitzero"`
+	Description *string   `json:"description,omitzero"`
+	Project     *string   `json:"project,omitzero"`
+	Slug        *string   `json:"slug,omitzero"`
+	Favorite    *bool     `json:"favorite,omitzero"`
+	Archived    *bool     `json:"archived,omitzero"`
 	Tags        *[]string `json:"tags,omitzero"`
 }
 

@@ -5,6 +5,9 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -49,15 +52,12 @@ func (e *remoteError) Report() usererr.Report {
 func (c client) do(ctx context.Context, method, path string, body, out any) error {
 	var r io.Reader
 	if body != nil {
-		// LIMIT: v1 Marshal sends bytes no UTF-8 as U+FFFD; refuse them if a path or title not in UTF-8 comes to be sent.
-		b, err := json.Marshal(body)
+		b, err := encode(body, sentAt)
+		if _, mistake := errors.AsType[*usererr.Error](err); mistake {
+			return err
+		}
 		if err != nil {
 			return fmt.Errorf("%s %s: %w", method, path, err)
-		}
-		// Refused before sending, as the server would: it stops reading at its limit, which may break
-		// the sending off before its answer comes.
-		if len(b) > server.MaxUpload {
-			return usererr.New("cli_publish_large", strconv.Itoa(server.MaxUpload>>20)+" MiB")
 		}
 		r = bytes.NewReader(b)
 	}
@@ -120,4 +120,37 @@ func readImages(dir, file string, names []string) (map[string][]byte, error) {
 		return nil, err //nolint:wrapcheck // mistakes for the user as they are
 	}
 	return images, nil
+}
+
+// sentAt names where each field of a body was given: a text in it that is no UTF-8 is told there.
+var sentAt = map[string]string{
+	"path": "argument 1", "file": "argument 1", "slug": "--slug", "title": "--title", "description": "--description",
+	"theme":   "--theme",
+	"project": "the project name (of the git remote, the repository's directory or the working directory)",
+}
+
+// notUTF8 reports whether err is encoding/json/v2's for a string's bytes that are no UTF-8, as it tells them now.
+// LIMIT: matched with v2's own error, which it does not export; if v2 tells them otherwise, they are floe's failure.
+func notUTF8(err error) bool {
+	_, probe := jsonv2.Marshal("\xff")
+	want, known := errors.AsType[*jsontext.SyntacticError](probe)
+	got, syntax := errors.AsType[*jsontext.SyntacticError](err)
+	return known && syntax && errors.Is(got.Err, want.Err)
+}
+
+// encode is body as the server reads it, with encoding/json/v2: nil maps as null (a jsontext.Value as it is). A
+// text in it that is no UTF-8 is the user's mistake, named by where it was given (at), else by its field.
+func encode(body any, at map[string]string) ([]byte, error) {
+	b, err := jsonv2.Marshal(body, jsonv2.FormatNilMapAsNull(true))
+	if syntax, ok := errors.AsType[*jsontext.SyntacticError](err); ok && notUTF8(err) {
+		field := strings.TrimPrefix(string(syntax.JSONPointer), "/")
+		field, _, _ = strings.Cut(field, "/")
+		return nil, usererr.New("cli_not_utf8", cmp.Or(at[field], fmt.Sprintf("the request's %q", field)))
+	}
+	// Refused before sending, as the server would: it stops reading at its limit, which may break the sending off
+	// before its answer comes.
+	if len(b) > server.MaxUpload {
+		return nil, usererr.New("cli_publish_large", strconv.Itoa(server.MaxUpload>>20)+" MiB")
+	}
+	return b, err //nolint:wrapcheck // do says what it sent
 }

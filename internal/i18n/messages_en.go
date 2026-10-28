@@ -196,6 +196,7 @@ var messagesEN = map[string]string{
 	"cli_updated_titled":    "updated \"%s\" (last published %s, title \"%s\")",
 	"cli_title_changed":     "warning: the title changed; if this is a different page, publish it under another --slug",
 	"cli_wants_publish":     "an HTML or data file",
+	"cli_not_utf8":          "%s is not UTF-8; the server takes only UTF-8: rename it, or give it in UTF-8",
 	"server_mistakes_head":  "The data file has mistakes",
 	"server_mistakes_lead":  "Fix them and save the file: this tab shows the page again.",
 	"store_no_dir":          "there is no directory for pages, as HOME is not an absolute path; set FLOE_DIR to an absolute path",

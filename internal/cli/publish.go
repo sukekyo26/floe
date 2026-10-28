@@ -3,12 +3,15 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
 	"time"
+	"unicode/utf8"
 
 	"github.com/spf13/cobra"
 
@@ -71,25 +74,17 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	// Checked as the server checks, to be refused before it starts, and sent so, as the slug names the URL.
 	opts, err := store.Accept(file, link, opts)
 	p := a.arg(file, place{name: "argument 1", wants: "cli_wants_publish"})
-	var saved server.Saved
-	switch {
 	// An empty data file is Accept's to refuse; told again here, it would be told twice, in other words.
-	case !link && file == "":
-	case p.err != nil:
+	if p.err != nil && (link || file != "") {
 		err = usererr.Collect(err, p.err)
-	case link:
-		// The server reads a link, as it draws it.
-		if _, statErr := os.Stat(p.abs); statErr != nil {
-			err = usererr.Collect(err, usererr.CannotRead(file, statErr))
-		}
-		if err == nil {
-			saved, err = a.publishLink(ctx, p.abs, opts)
-		}
-	// Read as data only when it is a data file: Accept has told that it is not.
-	case files.IsDataFile(file):
-		src, readErr := p.read()
-		if err = usererr.Collect(err, readErr); err == nil {
-			saved, err = a.publishData(ctx, p, src, opts)
+	}
+	up, b, sentErr := a.sent(ctx, p, link, opts)
+	var saved server.Saved
+	if err = usererr.Collect(err, sentErr); err == nil {
+		if link {
+			saved, err = a.publishLink(ctx, b)
+		} else {
+			saved, err = a.publishData(ctx, p, up, b, *opts.Slug)
 		}
 	}
 	if err != nil {
@@ -111,35 +106,74 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	return nil
 }
 
-// publishLink links the file at the absolute path, with opts Accept returned.
-func (a *app) publishLink(ctx context.Context, path string, opts store.Options) (server.Saved, error) {
+// sent is what a publish of p sends, with opts Accept returned: the link, or the data file with what it reads (up),
+// encoded once, as it will be sent. Its mistakes are told together: a file that cannot be read, and a text no UTF-8,
+// where it was given, as encode tells it. A file is read (git asked for its project) only when p resolved to a data
+// file or a link whose own name is UTF-8.
+func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (server.Upload, jsontext.Value, error) {
+	// Accept refuses a slug that is not ASCII, so a slug no UTF-8 is not told again.
+	if opts.Slug != nil && !utf8.ValidString(*opts.Slug) {
+		opts.Slug = nil
+	}
+	readable := p.err == nil && utf8.ValidString(p.name) && (link || files.IsDataFile(p.name))
+	at := sentAt
+	var body any
+	var up server.Upload
+	var err error
+	if link {
+		// The path sent is under the working directory: a name of UTF-8 has it in the directory.
+		if readable {
+			at = maps.Clone(sentAt)
+			at["path"] = "the working directory"
+		}
+		body = server.Link{
+			Path: p.abs, Slug: opts.Slug, Title: opts.Title, Description: opts.Description, Theme: opts.Theme,
+			Force: opts.Force,
+		}
+		// The server reads a link, as it draws it.
+		if _, statErr := os.Stat(p.abs); readable && statErr != nil {
+			err = usererr.CannotRead(p.name, statErr)
+		}
+	} else {
+		up = server.Upload{
+			File: p.name, Source: nil, Images: nil, Project: "", Title: opts.Title, Description: opts.Description,
+			Theme: opts.Theme, Force: opts.Force,
+		}
+		if p.err == nil && files.IsDataFile(p.name) {
+			up.Project = project.Name(ctx, a.env.Dir)
+		}
+		if readable {
+			up.Source, err = p.read()
+		}
+		body = up
+	}
+	b, bad := encode(body, at)
+	return up, b, usererr.Collect(err, bad)
+}
+
+// publishLink sends the link b, which sent encoded.
+func (a *app) publishLink(ctx context.Context, b jsontext.Value) (server.Saved, error) {
 	var saved server.Saved
 	c, err := a.client(ctx, false)
 	if err != nil {
 		return saved, err
 	}
-	err = c.do(ctx, http.MethodPost, "/api/artifacts", server.Link{
-		Path: path, Slug: opts.Slug, Title: opts.Title, Description: opts.Description, Theme: opts.Theme,
-		Force: opts.Force,
-	}, &saved)
+	err = c.do(ctx, http.MethodPost, "/api/artifacts", b, &saved)
 	return saved, err
 }
 
-// publishData sends the data file p, of content src, under the slug of opts, which Accept returned, published
-// from the project of the working directory. The images the server asks for are read under the data file's
-// directory and sent with it again, once.
-func (a *app) publishData(ctx context.Context, p arg, src []byte, opts store.Options) (server.Saved, error) {
+// publishData sends the data file p, up as sent encoded it in b, under slug. The images the server asks for are
+// read under the data file's directory and sent with it again, once.
+func (a *app) publishData(
+	ctx context.Context, p arg, up server.Upload, b jsontext.Value, slug string,
+) (server.Saved, error) {
 	var saved server.Saved
 	c, err := a.client(ctx, false)
 	if err != nil {
 		return saved, err
 	}
-	up := server.Upload{
-		File: p.name, Source: src, Images: nil, Project: project.Name(ctx, a.env.Dir), Title: opts.Title,
-		Description: opts.Description, Theme: opts.Theme, Force: opts.Force,
-	}
-	path := "/api/artifacts/" + *opts.Slug
-	err = c.do(ctx, http.MethodPut, path, up, &saved)
+	path := "/api/artifacts/" + slug
+	err = c.do(ctx, http.MethodPut, path, b, &saved)
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusUnprocessableEntity {
 		var need server.ImagesNeeded
 		if err = json.Unmarshal(re.body, &need); err != nil {
