@@ -37,14 +37,16 @@ floe の主要な変更を記録します。フォーマットは
   `findings`・`decision`・`risks`・`timeline`・`tabs`・`diagram`・`script` まで）、`cell` と `stack` はほかの部品が中に持つもの。
 - 追加：データファイルが `theme:` で選ぶ 9 つのテーマ（`default`・`soft`・`editorial`・
   `ink`・`brutal`・`blueprint`・`notebook`・`swiss`・`washi`）。どれも CSS の変数のパレットと
-  部品の形を持つ。
+  部品の形を持つ。`default` と、その色を使うテーマ（`soft`・`editorial`）のページの地は、管理
+  ページと同じ暖かい灰色で、字の色も管理ページと同じ、線も同じ暖かさ。
 - 追加：`FLOE_TEMPLATES_DIR` の自分のテンプレート（`page.html`・`schema.json`・
   `example.yaml`、要るなら `page.css`・`checks.yaml`・`computed.yaml`・`words.yaml`・
   `assets/`）と、`floe template list`・`show`・`new`（埋めて使う最小のテンプレート）・`check`。
 - 追加：`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` の自分の部品・見た目・共有の schema・テーマ
   （floe のものと並べて置き、floe のものと同じ名前は付けない）と、`floe part list`・`show`・
   `new`（埋めて使う最小の部品）・`check`。部品の schema は、画像を `"format": "image"` の
-  項目で取れる。自分の部品・テーマ・テンプレートに誤りがあると、直すまでどのページも描かない。
+  項目で取れる。共有の schema は、どれかの schema が名指すかによらず、その根から確かめる。
+  自分の部品・共有の schema・テーマ・テンプレートに誤りがあると、直すまでどのページも描かない。
   部品・テーマ・テンプレートの置き場所が同じか、一方がもう一方の中にあれば、その設定を断る。
 - 追加：キャンバスに部品（frame・box・table・icon・名前でつなぐ edge・dot・bar・axis・
   circle・label・line）を置く spec から inline SVG で描く図。文は 1 つの言語でも、

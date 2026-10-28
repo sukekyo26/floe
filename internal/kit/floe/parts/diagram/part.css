@@ -2,12 +2,13 @@
    set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
 /* The colours and fonts of the page's palette, with floe's default ones for a fragment of floe diagram
    render pasted into a page without them */
+/* LIMIT: the fallbacks copy default's palette.css by hand, and nothing checks they match; change them with it */
 .dg-wrap, .dg-tools {
-  --dg-bg: var(--bg, #f3f5f4);
+  --dg-bg: var(--bg, #f4f3f0);
   --dg-surface: var(--surface, #fff);
-  --dg-fg: var(--fg, #18201e);
-  --dg-muted: var(--muted, #57635f);
-  --dg-line: var(--line, #d4dbd8);
+  --dg-fg: var(--fg, #22211f);
+  --dg-muted: var(--muted, #615f5a);
+  --dg-line: var(--line, #dad7d0);
   --dg-accent: var(--accent, #1d6670);
   --dg-accent-soft: var(--accent-soft, #dcebec);
   --dg-good: var(--good, #1d7542);
