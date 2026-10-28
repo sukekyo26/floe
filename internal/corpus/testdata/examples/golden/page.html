@@ -62,6 +62,7 @@ blockquote > * + * { margin-top: 0.6rem; }
    set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
 /* The colours and fonts of the page's palette, with floe's default ones for a fragment of floe diagram
    render pasted into a page without them */
+/* LIMIT: the fallbacks copy default's palette.css by hand, and nothing checks they match; change them with it */
 .dg-wrap, .dg-tools {
   --dg-bg: var(--bg, #f4f3f0);
   --dg-surface: var(--surface, #fff);
