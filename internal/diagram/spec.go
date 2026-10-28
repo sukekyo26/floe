@@ -57,14 +57,13 @@ func (t Text) in(lang i18n.Lang) string {
 	return t["en"]
 }
 
-// spec is a diagram's value: its canvas and parts, or the name of a built-in example; and whether to show it.
+// spec is a diagram's value: its canvas and parts, or the name of a built-in example.
 type spec struct {
 	Width   float64 `json:"width"`
 	Height  float64 `json:"height"`
 	Title   Text    `json:"title"`
 	Parts   []part  `json:"parts"`
 	Example string  `json:"example,omitempty"` // omitted, so that the ids of a spec without it stay
-	Source  bool    `json:"source,omitempty"`
 }
 
 // part is one of its kinds, the one that is not nil.

@@ -18,7 +18,7 @@ func TestDiagram(t *testing.T) {
 		"b.yaml": "width: 200\nheight: 100\ntitle: B\nparts:\n  - boxx: {}\n",
 		"c.yaml": "width: 200\nheight: 100\ntitle: C\nparts:\n  - icon: { icon: aws/aws-lambda, x: 10, y: 10 }\n",
 		"e.yaml": "# nothing yet\n",
-		"s.yaml": "\ufeff# shown\r\nsource: true\r\nexample: flow\r\n",
+		"s.yaml": "source: true\nexample: flow\n",
 	} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(src), 0o600); err != nil {
 			t.Fatal(err)
@@ -44,15 +44,10 @@ func TestDiagram(t *testing.T) {
 		"e.yaml:1:1: missing properties 'width', 'height', 'title', 'parts'\n"; code != 1 || errs != want {
 		t.Errorf("render of a spec of nothing = %d, %q, want %q", code, errs, want)
 	}
-	// An example shows its file; the spec's own text is without its BOM and CRs.
-	if _, page, _ := runIn(dir, env, "diagram", "render", "--no-assets", "s.yaml"); !strings.Contains(page, "<pre><code># Decision flow:") {
-		t.Errorf("render of an example with its source = %q", page)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "s.yaml"), []byte("\ufeff# shown\r\nsource: true\r\nwidth: 9\r\nheight: 9\r\ntitle: t\r\nparts: []\r\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, page, _ := runIn(dir, env, "diagram", "render", "--no-assets", "s.yaml"); !strings.Contains(page, "<pre><code># shown\nsource: true\nwidth: 9") {
-		t.Errorf("render with its source = %q", page)
+	// A diagram shows no spec: source is no key of it, and nothing is drawn.
+	code, page, errs := runIn(dir, env, "diagram", "render", "--no-assets", "s.yaml")
+	if code != 1 || page != "" || !strings.Contains(errs, "additional properties 'source' not allowed") {
+		t.Errorf("render of source = %d, %q, %q", code, page, errs)
 	}
 	if _, found, _ := runIn(dir, env, "diagram", "inspect", "a.yaml"); found != "box \"k\" 10,10 64x29\n" {
 		t.Errorf("inspect = %q", found)

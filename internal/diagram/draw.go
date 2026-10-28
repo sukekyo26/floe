@@ -16,7 +16,6 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 var (
@@ -36,13 +35,11 @@ var svgPage = template.Must(template.New("svg").Funcs(template.FuncMap{
 const maxScale = 16.0 / sizeMain
 
 // Options are what a diagram is drawn with: the language its text is written in, the icons its icon parts show,
-// Seq, its number among the diagrams drawn into one page, which its ids hold so that they differ, and Source, the
-// spec as written, shown under it when it says source: true.
+// and Seq, its number among the diagrams drawn into one page, which its ids hold so that they differ.
 type Options struct {
-	Lang   i18n.Lang
-	Icons  Icons
-	Seq    int
-	Source string
+	Lang  i18n.Lang
+	Icons Icons
+	Seq   int
 }
 
 // Icons finds an icon's SVG by name, as icons.Store.Lookup does.
@@ -93,7 +90,7 @@ func (d *Drawer) layout(v any, opts Options) (*layout, error) {
 	}
 	name := s.Example
 	if name != "" {
-		if s, err = d.example(s, &opts); err != nil {
+		if s, err = d.example(s); err != nil {
 			return nil, err
 		}
 	}
@@ -114,9 +111,9 @@ func (d *Drawer) layout(v any, opts Options) (*layout, error) {
 	return l, nil
 }
 
-// example returns the spec of the built-in example s names, shown as s says, and makes opts.Source the text of its
-// file; or the mistake, at #/example, that there is none. An example that its schema refuses is floe's failure.
-func (d *Drawer) example(s *spec, opts *Options) (*spec, error) {
+// example returns the spec of the built-in example s names, or the mistake, at #/example, that there is none. An
+// example that its schema refuses is floe's failure.
+func (d *Drawer) example(s *spec) (*spec, error) {
 	e, err := ExampleOf(s.Example)
 	var none *usererr.Error
 	if errors.As(err, &none) {
@@ -133,8 +130,6 @@ func (d *Drawer) example(s *spec, opts *Options) (*spec, error) {
 	if err != nil {
 		return nil, fmt.Errorf("diagram: the example %s: %s", e.Name, err.Error()) //nolint:err113,errorlint // see above
 	}
-	ex.Source = s.Source
-	opts.Source = yamlpos.File(e.Spec)
 	return ex, nil
 }
 
@@ -167,11 +162,6 @@ type elem struct {
 	Kids         []elem
 }
 
-// shown is the spec shown under a diagram, folded, and the words of its summary.
-type shown struct {
-	Label, Text string
-}
-
 type markerDef struct {
 	marker
 	ID string
@@ -198,13 +188,9 @@ func (l *layout) draw(lang i18n.Lang) (template.HTML, error) {
 	}
 	t.Funcs(template.FuncMap{"t": func(x Text) string { return x.in(lang) }})
 	var b strings.Builder
-	var source *shown
-	if l.s.Source {
-		source = &shown{Label: i18n.New(lang).Msg("diagram_source"), Text: l.opts.Source}
-	}
 	err = t.ExecuteTemplate(&b, "diagram", map[string]any{
 		"W": l.s.Width, "H": l.s.Height, "MaxH": math.Floor(l.s.Height*maxScale + 0.5), "Title": l.s.Title,
-		"Markers": defs, "Icons": l.iconDefs, "Elems": elems, "Source": source,
+		"Markers": defs, "Icons": l.iconDefs, "Elems": elems,
 	})
 	if err != nil {
 		return "", fmt.Errorf("diagram: draw: %w", err)

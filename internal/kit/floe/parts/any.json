@@ -35,7 +35,7 @@
     "tabs": { "$ref": "floe:///parts/tabs.json" },
     "html": { "type": "string", "format": "html", "description": "HTML that goes in as it is" },
     "script": { "$ref": "floe:///parts/script.json" },
-    "diagram": { "$ref": "floe:///parts/diagram.json", "description": "A diagram drawn as inline SVG, checked for overlaps and overflowing text (frames may cross, and a frame's label is held to the frame's width, not its height or the canvas): width, height, title and parts, or example: <kind>, a built-in one floe diagram example lists; source: true shows the spec under it" }
+    "diagram": { "$ref": "floe:///parts/diagram.json", "description": "A diagram drawn as inline SVG, checked for overlaps and overflowing text (frames may cross, and a frame's label is held to the frame's width, not its height or the canvas): width, height, title and parts, or example: <kind>, a built-in one floe diagram example lists" }
   },
   "minProperties": 1,
   "maxProperties": 1,

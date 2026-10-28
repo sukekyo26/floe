@@ -102,7 +102,7 @@ func (a *app) diagrams(paths []string, lang string, with func(*diagram.Drawer, a
 	var found usererr.List
 	var out []string
 	for i, p := range a.args(paths, "cli_wants_spec") {
-		got, err := diagramOf(d, p, diagram.Options{Lang: i18n.Tag(lang), Icons: store, Seq: i + 1, Source: ""}, with)
+		got, err := diagramOf(d, p, diagram.Options{Lang: i18n.Tag(lang), Icons: store, Seq: i + 1}, with)
 		if failed := found.Add(err); failed != nil {
 			return nil, failed
 		}
@@ -151,8 +151,6 @@ func diagramOf(
 			return "", err //nolint:wrapcheck // as above
 		}
 	}
-	// The spec as written, shown under it when it says source: true.
-	o.Source = yamlpos.File(src)
 	got, err := with(d, doc.Ints(v), o)
 	return got, yamlpos.Place(err, p.name, root, nil) //nolint:wrapcheck // mistakes placed
 }
