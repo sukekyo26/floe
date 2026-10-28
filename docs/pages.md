@@ -103,7 +103,7 @@ A `diagram` part is a spec written in place: a canvas and the parts placed on it
       - edge: { from: alb, to: api, label: HTTPS }
 ```
 
-- `example: <kind>` in place of the rest draws a built-in example (`floe diagram example` lists them), and `source: true` shows the spec as written, folded under the diagram.
+- `example: <kind>` in place of the rest draws a built-in example (`floe diagram example` lists them). The page shows the diagram, not its spec: to read or copy an example's spec, print it with `floe diagram example <kind>`.
 - Text (a `title`, a row, a label) is text, or its words in each language, English among them: `{ en: Store, ja: 保存先 }`. The page draws the words of its `lang:`, and the spec is laid out and checked once for every language it is written in.
 - Each part is one key naming its kind. `floe part show diagram` prints every key; `floe diagram example <kind>` prints a spec of each kind, its comments explaining its grid.
 

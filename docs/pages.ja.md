@@ -103,7 +103,7 @@ Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書�
       - edge: { from: alb, to: api, label: HTTPS }
 ```
 
-- ほかの鍵の代わりに `example: <種類>` を書くと、組み込みの見本を描きます（`floe diagram example` が並べる）。`source: true` は、書いた spec を図の下に畳んで見せます。
+- ほかの鍵の代わりに `example: <種類>` を書くと、組み込みの見本を描きます（`floe diagram example` が並べる）。ページは図だけを見せ、spec は見せません。見本の spec を読む・写すときは、`floe diagram example <種類>` で出します。
 - 文（`title`・行・ラベル）は、文か、言語ごとの言葉（英語を含む）です：`{ en: Store, ja: 保存先 }`。ページは `lang:` の言葉を描き、spec は書いた言語ごとに並べて確かめます。
 - 部品は、種類を名指す鍵 1 つで書きます。`floe part show diagram` がすべての鍵を出し、`floe diagram example <種類>` が種類ごとの spec を、格子を説明するコメント付きで出します。
 
