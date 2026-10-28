@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/i18n"
 )
 
 // groupsList is the list the stub answers for the groups: seven projects, more than the six colors, counted over every
@@ -153,4 +155,29 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		"16 16 16 true", "16 16 16 true",
 		" /a/a1/ 1 / 10",
 	}, "|"))
+}
+
+// TestUIRowColumns lines up a row's project chip, creation date and time from row to row, however long its time reads:
+// minutes and hours of one digit and of two, days, months and years ago, in every language.
+func TestUIRowColumns(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	inEveryLanguage(t, uiRowColumns)
+}
+
+func uiRowColumns(t *testing.T, lang i18n.Lang, _ func(string, ...any) string) {
+	t.Helper()
+
+	s := newSite(t)
+	b := newBrowser(t, s.Base, lang)
+	b.navigate("/")
+	b.size(1440, 900, false)
+	b.eval(stub(`[[2, 'p'], [12, 'p'], [180, 'a project of a long name'], [780, 'p'], [4320, 'p'], [480000, 'p'], [1100000, 'p']].map(([m, p], i) => ({
+		slug: 'r' + i, title: 'R' + i, description: '', project: p, createdAt: at(1), updatedAt: new Date(Date.now() - m * 60000).toISOString() }))`))
+	out := b.eval(`(() => {
+		const rows = [...document.querySelectorAll('#list li:not(.group)')], r = (li, s) => li.querySelector(s).getBoundingClientRect();
+		const same = (f) => rows.every((li) => Math.abs(f(li) - f(rows[0])) <= 0.5);
+		return [rows.length, new Set(rows.map((li) => li.querySelector('time').textContent.length)).size > 2,
+			same((li) => r(li, '.proj').right), same((li) => r(li, '.made').left), same((li) => r(li, '.made').right), same((li) => r(li, 'time').right)].join(' ');
+	})()`)
+	b.unsize()
+	check(t, "row columns", []string{out}, "7 true true true true true")
 }
