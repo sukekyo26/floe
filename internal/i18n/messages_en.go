@@ -270,6 +270,7 @@ var messagesEN = map[string]string{
 	// ui: the management page (ui.html), which renders them itself
 	"ui_back_to_list":         "Back to the list",
 	"ui_page_nav":             "Previous and next pages",
+	"ui_dark_mode":            "Dark screen",
 	"ui_download":             "Download",
 	"ui_download_named":       "Download %s",
 	"ui_open_raw":             "Open the page alone in a new tab",

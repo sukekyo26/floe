@@ -5,18 +5,46 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>floe</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='floe-sky' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23D9F3ED'/%3E%3Cstop offset='1' stop-color='%23C2E7DF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='15' fill='url(%23floe-sky)'/%3E%3Cpath d='M17 47.5H47' fill='none' stroke='%235BB3A4' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M24 52.5H40' fill='none' stroke='%238ACBBE' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M12 32 22 38 41 37 53 29.5 53 34.5 41 42 22 43 12 37Z' fill='%236FAECB'/%3E%3Cpath d='M12 32 24 21.5 33 28 22 38Z' fill='%23F6FCFE'/%3E%3Cpath d='M24 21.5 42 21 53 29.5 33 28Z' fill='%23D3EAF4'/%3E%3Cpath d='M33 28 53 29.5 41 37 22 38Z' fill='%23E8F5FA'/%3E%3C/svg%3E">
+<!-- The light or dark screen the viewer picked, set before the page is drawn so that a dark one never shows light first. Light
+     unless dark was picked: the OS's setting is not followed -->
+<script>
+  try {
+    if (localStorage.getItem('artifacts.theme') === 'dark') document.documentElement.dataset.theme = 'dark';
+  } catch {
+    // Storage is unavailable
+  }
+</script>
 <style>
   /* Both the management page (/) and the frame around a page (/a/<slug>/): under the shared header bar it shows either the list or an iframe */
+  /* Every color is one of these, light here and dark below: text on its grounds reaches WCAG AA in both (TestUITheme measures it).
+     The data URIs cannot read a variable, so the colors in them are written out */
   :root {
-    --bg: #f6f7f9; --panel: #fff; --subtle: #f0f2f5;
-    --hover: #f8f9fb; --fg: #0d1220; --muted: #5a6273;
-    --faint: #8b93a3; --line: #e5e8ee;
-    --accent: #5753e0; --accent-2: #a64df0; --accent-soft: #eeedff;
-    --on-accent: #fff; --good: #16a36a; --star: #e0a100;
-    --danger: #d23b3b; --danger-soft: #fdecec;
-    --scrim: rgb(13 18 32 / 0.4);
-    --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
-    --shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 10px 30px -14px rgb(16 24 40 / 0.16);
+    color-scheme: light;
+    --bg: #f4f3f0; --panel: #fbfaf8; --subtle: #efeee9; --hover: #f6f5f1; --sel: #ecebe6;
+    --fg: #22211f; --muted: #615f5a; --faint: #6b6964; --line: #e3e1dc;
+    --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00;
+    --danger: #b8332b; --danger-soft: #f8e3e1; --on-danger: #fff;
+    --scrim: rgb(34 33 31 / 0.4);
+    --shadow-sm: 0 1px 2px rgb(34 33 31 / 0.06);
+    --shadow: 0 1px 2px rgb(34 33 31 / 0.04), 0 10px 30px -14px rgb(34 33 31 / 0.16);
+    --shadow-lg: 0 30px 80px -20px rgb(34 33 31 / 0.45);
+    --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fbfaf8' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b6964' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0e0f13; --panel: #16181e; --subtle: #1b1d24; --hover: #1a1c22; --sel: #1d2029;
+    --fg: #e7e8ee; --muted: #a3a7b3; --faint: #858893; --line: #262932;
+    --ink: #e7e8ee; --on-ink: #16181e; --good: #3fd3a0; --star: #f2bd45;
+    --danger: #ff7b72; --danger-soft: #3a1d1f; --on-danger: #0e0f13;
+    --scrim: rgb(0 0 0 / 0.6);
+    --shadow-sm: 0 1px 0 rgb(0 0 0 / 0.4);
+    --shadow: 0 1px 0 rgb(0 0 0 / 0.4), 0 10px 30px -14px rgb(0 0 0 / 0.6);
+    --shadow-lg: 0 30px 80px -20px rgb(0 0 0 / 0.7);
+    --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2316181e' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23858893' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  }
+  :root {
     /* The report template's faces */
     --body: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
@@ -42,15 +70,7 @@
   html:not(.framed) { scrollbar-gutter: stable; }
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
-  /* A faint glow at the top only; not in the frame, where it would get in the page's way */
-  body::before {
-    content: ""; position: fixed; inset: 0 0 auto; height: 30rem; z-index: -1; pointer-events: none;
-    background:
-      radial-gradient(56rem 20rem at 30% -8rem, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%),
-      radial-gradient(40rem 18rem at 80% -8rem, color-mix(in srgb, var(--accent-2) 11%, transparent), transparent 70%);
-  }
-  .framed body::before { display: none; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   button { font: inherit; color: inherit; cursor: pointer; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
@@ -85,7 +105,8 @@
 
   /* The frame: the iframe fills the space under the header bar. A page without a background of its own shows on the browser's default white */
   .framed body { height: 100dvh; display: flex; flex-direction: column; }
-  .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; }
+  /* color-scheme normal: Chrome hands an iframe's color-scheme to the page in it as its prefers-color-scheme, which stays the OS's */
+  .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; color-scheme: normal; }
   .notfound { flex: 1; align-content: center; }
 
   /* The shelf on the left picks which list the right shows; on a narrow screen a select at the top stands in for it */
@@ -126,7 +147,7 @@
   .shelf .n { margin-left: auto; font: 0.72rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
   .shelf .views button:hover, .shelf .chip:hover, .shelf .tabs button:hover { background: var(--subtle); color: var(--fg); }
   .shelf [aria-pressed="true"] { color: var(--fg); font-weight: 650; background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
-  .shelf [aria-pressed="true"] svg, .shelf [aria-pressed="true"] .n { color: var(--accent); }
+  .shelf [aria-pressed="true"] svg, .shelf [aria-pressed="true"] .n { color: var(--fg); }
   .shelf .add-link { display: flex; align-items: center; gap: 0.45rem; margin-left: 0.65rem; padding: 0; font-size: 0.82rem; }
   .shelf .add-link svg { width: 14px; height: 14px; }
   #view-select, #add-narrow { display: none; }
@@ -141,7 +162,7 @@
     min-width: 1.5rem; padding: 0.1rem 0.4rem; border-radius: 999px; text-align: center;
     font: 500 0.68rem/1.3 var(--mono); color: var(--muted); background: var(--line); font-variant-numeric: tabular-nums;
   }
-  .tabs button[aria-pressed="true"] .n { color: var(--accent); background: var(--accent-soft); }
+  .tabs button[aria-pressed="true"] .n { color: var(--fg); background: var(--sel); }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; height: 36px; padding: 0 0.95rem;
@@ -150,9 +171,7 @@
   }
   .btn:hover { border-color: var(--faint); }
   .btn.primary {
-    color: #fff; border-color: transparent;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    box-shadow: 0 1px 2px rgb(0 0 0 / 0.15), 0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.2);
+    color: var(--on-ink); border-color: transparent; background: var(--ink); box-shadow: var(--shadow-sm);
   }
   .btn.primary:hover { filter: brightness(1.08); }
   .btn:disabled { opacity: 0.6; cursor: progress; }
@@ -167,7 +186,7 @@
   }
   .search input { padding-inline: 2.2rem 2.5rem; }
   input::placeholder { color: var(--faint); }
-  input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 15%, transparent); }
   .search input::-webkit-search-cancel-button { display: none; }
   .search kbd {
     position: absolute; right: 0.6rem; top: 50%; translate: 0 -50%; font: 0.7rem/1 var(--mono); color: var(--faint);
@@ -198,7 +217,7 @@
   li:hover { background: var(--hover); }
   li::before {
     content: ""; position: absolute; left: 0; top: 0.55rem; bottom: 0.55rem; width: 2px; border-radius: 0 2px 2px 0;
-    background: linear-gradient(var(--accent), var(--accent-2)); opacity: 0; transition: opacity 0.15s;
+    background: var(--ink); opacity: 0; transition: opacity 0.15s;
   }
   li:hover::before { opacity: 1; }
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
@@ -214,16 +233,12 @@
     width: 16px; height: 16px; margin: 0; cursor: pointer; appearance: none; background: var(--panel);
     border: 1.5px solid color-mix(in srgb, var(--faint) 80%, transparent); border-radius: 5px; transition: background-color 0.12s, border-color 0.12s;
   }
-  .pick:hover .sel { border-color: var(--accent); }
-  .sel:checked {
-    border-color: transparent;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 12px no-repeat,
-      linear-gradient(135deg, var(--accent), var(--accent-2));
-  }
-  li:has(.sel:checked) { background: color-mix(in srgb, var(--accent-soft) 70%, var(--panel)); }
+  .pick:hover .sel { border-color: var(--ink); }
+  .sel:checked { border-color: transparent; background: var(--tick) center / 12px no-repeat, var(--ink); }
+  li:has(.sel:checked) { background: var(--sel); }
   /* A row reached by keyboard is outlined as a whole, without an outline on the title itself */
   a.title:focus-visible { outline: none; }
-  li:has(a.title:focus-visible) { box-shadow: inset 0 0 0 2px var(--accent); }
+  li:has(a.title:focus-visible) { box-shadow: inset 0 0 0 2px var(--ink); }
   li:has(a.title:focus-visible)::before { opacity: 1; }
   /* Under the title: the description (and, for a link, its path after it), cut off where it does not fit */
   .body { display: grid; gap: 0.05rem; min-width: 0; }
@@ -231,7 +246,6 @@
   /* The whole row is the link's hit area; only the controls sit above it */
   a.title { justify-self: start; max-width: 100%; color: var(--fg); font-weight: 600; text-decoration: none; scroll-margin-block: 10rem 5rem; }
   a.title::after { content: ""; position: absolute; inset: 0; }
-  li:hover a.title { color: var(--accent); }
   .sub { display: flex; align-items: baseline; gap: 0.65rem; min-width: 0; }
   .desc { flex: 0 1 auto; color: var(--muted); font-size: 0.76rem; }
   .sub .path { flex: 0 1 auto; font: 0.72rem var(--mono); color: var(--faint); }
@@ -242,7 +256,7 @@
   .sub .tags { position: relative; z-index: 1; display: flex; flex: 0 1 auto; gap: 0.3rem; }
   .tagpill {
     flex: none; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0.05rem 0.45rem;
-    font-size: 0.7rem; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px;
+    font-size: 0.7rem; color: var(--fg); background: var(--sel); border: 0; border-radius: 999px;
   }
   .tagpill:hover { box-shadow: inset 0 0 0 1px currentColor; }
   /* A tags field's names, as the row's menu looks: a popover in the top layer, so that no dialog or box cuts it off */
@@ -253,7 +267,7 @@
   .suggest:not(:popover-open) { display: none; }
   .suggest [role="option"] { padding: 0.4rem 0.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 0.82rem/1.4 var(--body); border-radius: 7px; cursor: pointer; }
   .suggest [role="option"]:hover, .suggest [aria-selected="true"] { background: var(--subtle); }
-  .suggest [aria-selected="true"] { color: var(--accent); }
+  .suggest [aria-selected="true"] { color: var(--fg); box-shadow: inset 2px 0 0 var(--ink); }
   /* The bulk dialog's tags, a chip each, wrapping: on all the selected (filled), on some (dashed) or on none, told by the chip's
      mark (✓, −, +) and its look, not by its color alone. The checkbox is the chip's own, out of sight, so keys and screen readers
      use it as any. No transition: a chip seen between two marks reads as neither */
@@ -264,20 +278,20 @@
   }
   .tag-box:hover { border-color: var(--faint); }
   .tag-box input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
-  .tag-box:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tag-box:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
   .tag-box .mark { flex: none; width: 0.9rem; font: 600 0.8rem/1 var(--mono); text-align: center; }
   .tag-box .mark::before { content: "+"; }
-  .tag-box:has(input:checked) { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .tag-box:has(input:checked) { color: var(--on-ink); background: var(--ink); border-color: var(--ink); }
   .tag-box:has(input:checked) .mark::before { content: "✓"; }
-  .tag-box:has(input:indeterminate) { color: var(--accent); background: var(--accent-soft); border: 1px dashed var(--accent); }
+  .tag-box:has(input:indeterminate) { color: var(--fg); background: var(--sel); border: 1px dashed var(--ink); }
   .tag-box:has(input:indeterminate) .mark::before { content: "−"; }
   .tag-box .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tag-box .n { font: 0.68rem/1 var(--mono); opacity: 0.8; font-variant-numeric: tabular-nums; }
+  .tag-box .n { font: 0.68rem/1 var(--mono); font-variant-numeric: tabular-nums; }
   .tag-new {
-    display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.28rem 0.7rem; color: var(--accent); background: none;
+    display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.28rem 0.7rem; color: var(--fg); background: none;
     border: 1px dashed var(--line); border-radius: 999px; font-size: 0.82rem;
   }
-  .tag-new:hover { border-color: var(--accent); }
+  .tag-new:hover { border-color: var(--ink); }
   li time { font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
   .actions { position: relative; z-index: 1; display: flex; gap: 2px; }
   /* The row's other actions. The row whose menu is open comes forward: each row's rise animation stacks the rows below over it */
@@ -313,6 +327,8 @@
   .star:hover { color: var(--star); }
   .star[aria-pressed="true"] { color: var(--star); }
   .star[aria-pressed="true"] svg { fill: currentColor; }
+  .theme[aria-pressed="true"] { color: var(--fg); }
+  .theme[aria-pressed="true"] svg { fill: currentColor; }
   .copy .done, .copy.copied > svg { display: none; }
   .copy.copied .done { display: block; color: var(--good); }
   .delete.armed { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 50%, transparent); font-weight: 650; }
@@ -329,7 +345,7 @@
 
   .sort select {
     height: 30px; padding: 0 1.8rem 0 0.65rem; font: inherit; font-size: 0.8rem; color: var(--muted); cursor: pointer;
-    background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E") no-repeat right 0.5rem center / 14px;
+    background: var(--panel) var(--chevron) no-repeat right 0.5rem center / 14px;
     border: 1px solid var(--line); border-radius: 8px; appearance: none;
   }
   .sort select:hover { color: var(--fg); border-color: var(--faint); }
@@ -357,31 +373,31 @@
   .bulk {
     position: fixed; left: 50%; bottom: 1.25rem; z-index: 20; translate: -50% 0; display: flex; align-items: center; gap: 0.4rem;
     max-width: calc(100% - 32px); padding: 0.4rem 0.4rem 0.4rem 1rem; color: var(--bg); background: var(--fg);
-    border-radius: 14px; box-shadow: 0 18px 40px -12px rgb(0 0 0 / 0.45); animation: pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    border-radius: 14px; box-shadow: var(--shadow-lg); animation: pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   .bulk-count { margin-right: 0.5rem; font-size: 0.84rem; font-weight: 600; white-space: nowrap; }
   .bulk .btn { height: 32px; color: inherit; background: transparent; border-color: color-mix(in srgb, var(--bg) 25%, transparent); box-shadow: none; }
   .bulk .btn:hover { background: color-mix(in srgb, var(--bg) 12%, transparent); }
-  .bulk .btn.danger { color: #fff; background: var(--danger); border-color: transparent; }
+  .bulk .btn.danger { color: var(--on-danger); background: var(--danger); border-color: transparent; }
   .bulk .btn.danger.armed { outline: 2px solid color-mix(in srgb, var(--danger) 50%, transparent); outline-offset: 2px; }
 
   .state { display: grid; justify-items: center; gap: 0.5rem; padding: 3.5rem 1.5rem; text-align: center; color: var(--muted); }
   .state svg {
-    width: 52px; height: 52px; padding: 12px; margin-bottom: 0.25rem; color: var(--accent);
-    background: var(--accent-soft); border-radius: 14px;
+    width: 52px; height: 52px; padding: 12px; margin-bottom: 0.25rem; color: var(--muted);
+    background: var(--sel); border-radius: 14px;
   }
   .state p { margin: 0; max-width: 34rem; }
   .state strong { color: var(--fg); font-size: 0.98rem; }
-  .state a { color: var(--accent); }
+  .state a { color: var(--fg); }
   .state code { font-family: var(--mono); font-size: 0.8em; background: var(--subtle); padding: 0.1rem 0.35rem; border-radius: 4px; overflow-wrap: anywhere; }
-  .link-btn { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .link-btn { background: none; border: 0; padding: 0; color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
   .error { margin: 0; padding: 0.65rem 0.9rem; border-radius: 10px; color: var(--danger); background: var(--danger-soft); font-size: 0.86rem; white-space: pre-wrap; }
   /* Under the header bar, in the list and in the frame alike */
   #error { margin: 0.75rem 16px 0; }
 
   dialog {
     width: min(32rem, calc(100% - 32px)); padding: 0; color: var(--fg); background: var(--panel);
-    border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.45);
+    border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lg);
   }
   dialog[open] { animation: pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
   dialog::backdrop { background: var(--scrim); backdrop-filter: blur(3px); }
@@ -391,8 +407,7 @@
   .add { display: grid; gap: 1rem; padding: 1.4rem 1.5rem 1.25rem; }
   .add-head { display: flex; align-items: center; gap: 0.8rem; }
   .add-head svg {
-    width: 38px; height: 38px; padding: 9px; flex: none; color: #fff; border-radius: 10px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    width: 38px; height: 38px; padding: 9px; flex: none; color: var(--on-ink); border-radius: 10px; background: var(--ink);
   }
   .add h2 { margin: 0; font-size: 1.05rem; line-height: 1.3; letter-spacing: -0.01em; }
   .add .lead { margin: 0.1rem 0 0; color: var(--muted); font-size: 0.82rem; }
@@ -447,6 +462,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
         </a>
       </span>
+      <button type="button" class="icon-btn theme" id="theme" aria-pressed="false" title="{{.Msg "ui_dark_mode"}}" aria-label="{{.Msg "ui_dark_mode"}}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+      </button>
       <span class="server" id="server" role="status"></span>
     </div>
   </div>
@@ -690,6 +708,22 @@
   let items = [];
   // The slug of the page this frames, as the server drew it at /a/<slug>/; none for the list
   const framed = document.documentElement.dataset.slug;
+  // The light or dark screen, as the head's script set it: the button tells which, in the list and in the frame alike, and a
+  // press switches and keeps it; without storage it still applies to this view
+  const THEME_KEY = 'artifacts.theme';
+  const showTheme = () => $('theme').setAttribute('aria-pressed', String(document.documentElement.dataset.theme === 'dark'));
+  showTheme();
+  $('theme').addEventListener('click', () => {
+    const dark = document.documentElement.dataset.theme !== 'dark';
+    if (dark) document.documentElement.dataset.theme = 'dark';
+    else delete document.documentElement.dataset.theme;
+    showTheme();
+    try {
+      localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
+    } catch {
+      // Storage is unavailable
+    }
+  });
   // A link in the page to a frame URL moves the whole tab, on a message from the script added to the page. The sender is the sandboxed page,
   // so only messages from this iframe naming a frame URL of this origin are followed (never javascript: and the like).
   // A move to a part of the page (#…) is written into this URL too, while the iframe still shows this page, so that a copy of the URL
