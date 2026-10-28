@@ -2,6 +2,7 @@ package browsertest_test
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -536,4 +537,61 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 	got := strings.Join(out, "|")
 	want := strings.Join([]string{"true", "true", out[3], out[3], out[5], out[5], out[7], out[7]}, "|")
 	check(t, "shelf stays", []string{got}, want)
+}
+
+// TestUIScrollbar keeps the list where it is whether or not it scrolls, the scrollbar's room kept on the right alone,
+// and the frame, a page's or a missing one's, without that room, as the server draws it so from the start.
+func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
+	b.navigate("/")
+	sb := b.eval(`(() => {
+		const d = Object.assign(document.createElement('div'), { style: 'overflow: scroll; width: 100px; height: 100px; position: absolute' });
+		document.body.append(d);
+		const width = d.offsetWidth - d.clientWidth;
+		d.remove();
+		return width;
+	})()`)
+	width, err := strconv.Atoi(sb)
+	switch {
+	case err != nil:
+		t.Fatalf("the scrollbar's width %q", sb)
+	case width == 0 && runtime.GOOS == "darwin":
+		t.Skip("macOS draws its scrollbars over the page, taking no room")
+	case width == 0:
+		t.Fatal("Chrome draws no scrollbar: the flag hide-scrollbars of startChrome no longer works")
+	}
+	// The size holds for this test's tab alone.
+	size := func(width int64) {
+		t.Helper()
+		metrics := emulation.SetDeviceMetricsOverrideParams{Width: width, Height: 900, DeviceScaleFactor: 1, Mobile: false}
+		if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// What the body is narrower than the window: the room kept for the scrollbar. Not innerWidth - clientWidth, which
+	// counts the room only while the scrollbar is there.
+	const room = "innerWidth - document.body.getBoundingClientRect().width"
+	const where = "['.shelf', '.search'].map((s) => document.querySelector(s).getBoundingClientRect().left)" +
+		".concat(document.querySelector('.panel').getBoundingClientRect().right).join(' ')"
+	out := make([]string, 0, 8)
+	size(1800)
+	b.eval(manyPages(60))
+	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"))
+	long := b.eval(where)
+	b.eval(manyPages(1))
+	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval(where+" === "+js(long)), b.eval(room))
+	// The room is on the right alone.
+	size(1200)
+	b.eval(manyPages(1))
+	out = append(out, b.eval(where))
+	for _, path := range []string{"/a/p/", "/a/none/"} {
+		b.navigate(path)
+		out = append(out, b.eval(room))
+	}
+	// The frame makes its URLs of the slug escaped again: one read from /a/x%3Fy/ is x?y.
+	b.navigate("/a/x%3Fy/")
+	out = append(out, b.eval("document.getElementById('frame-download').getAttribute('href')"))
+	check(t, "scrollbar", out, strings.Join([]string{"true", "false", "true", sb, fmt.Sprintf("16 272 %d", 1200-16-width), "0", "0", "/api/artifacts/x%3Fy/download"}, "|"))
 }

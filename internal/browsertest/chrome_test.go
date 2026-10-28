@@ -120,6 +120,8 @@ func startChrome(path string) (context.Context, error) {
 			// A screen with a mouse, as the management page shows a row's actions only while it is pointed at there.
 			// Headless Chrome has no pointing device, and Emulation.setEmulatedMedia does not take hover.
 			chromedp.Flag("blink-settings", "primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4"),
+			// Scrollbars drawn, which headless hides, as the management page keeps their room.
+			chromedp.Flag("hide-scrollbars", false),
 			chromedp.UserDataDir(profile),
 		)
 		actx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), opts...)
