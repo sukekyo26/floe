@@ -127,12 +127,6 @@ func scoped(k *kit.Kit, name string, named []string, look bool, css []byte) []by
 	return []byte("@scope (" + strings.Join(roots, ", ") + ") to (:scope [data-floe-part] > *) {\n" + string(css) + "}\n")
 }
 
-// ScopedPart is the CSS of the part name, scoped to its boxes as a page holds it: for what is not a page that
-// holds the part's boxes, as floe diagram render prints.
-func ScopedPart(k *kit.Kit, name string) []byte {
-	return scoped(k, name, []string{name}, false, cssOf(k, name))
-}
-
 // looksOf returns the looks the part or look name takes, in order.
 func looksOf(k *kit.Kit, name string) []string {
 	if p, ok := k.Part(name); ok {

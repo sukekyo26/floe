@@ -39,17 +39,13 @@ frame's label is held to the frame's width, not its height or the canvas). Every
 spec is printed as file:line:column: message, and nothing is drawn until all are fixed.
 An icon part takes the icons that floe icons fetch <set> keeps.
 
-Each diagram is in the box of the part diagram, as in a page. The fragment starts with the
-diagrams' style, scoped to those boxes, and the script that zooms them (once per page is enough;
-more does no harm; take them from the same floe as the diagrams). --no-assets leaves them out.`,
+The fragment starts with the diagrams' style and the script that zooms them (once per page is
+enough; more does no harm). --no-assets leaves them out.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			svgs, err := a.diagrams(args, lang, func(d *diagram.Drawer, v any, o diagram.Options) (string, error) {
 				svg, err := d.Draw(v, o)
-				if err != nil {
-					return "", err //nolint:wrapcheck // mistakes at their pointers, which diagrams places
-				}
-				return draw.Box(string(svg)), nil
+				return string(svg), err
 			})
 			if err != nil {
 				return err
@@ -119,7 +115,7 @@ func (a *app) diagrams(paths []string, lang string, with func(*diagram.Drawer, a
 }
 
 // diagramAssets are what a page holds once for the diagrams of floe diagram render: the script that zooms them
-// and the CSS of floe's part diagram, scoped to the part's boxes, which hold the diagrams, as in a page.
+// and the CSS of floe's part diagram, unscoped, as a page without floe's parts takes it.
 func diagramAssets() (string, error) {
 	script, err := diagram.Script()
 	if err != nil {
@@ -129,7 +125,11 @@ func diagramAssets() (string, error) {
 	if err != nil {
 		return "", err //nolint:wrapcheck // as above
 	}
-	return script + "\n<style>\n" + string(draw.ScopedPart(k, "diagram")) + "</style>", nil
+	p, ok := k.Part("diagram")
+	if !ok {
+		return "", errors.New("diagram: floe has no part diagram") //nolint:err113 // floe's own mistake
+	}
+	return script + "\n<style>\n" + string(p.CSS()) + "</style>", nil
 }
 
 func diagramOf(

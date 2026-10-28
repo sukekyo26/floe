@@ -57,12 +57,6 @@ func (s *items) diagramOf(d *doc.Data, it schema.Item) func() (template.HTML, er
 			return "", fmt.Errorf("%w: diagram: %w", kit.ErrFunc, err)
 		}
 		//nolint:gosec // G203: drawn by diagram, its values escaped, and floe's script
-		return template.HTML(Box(script + string(svg))), nil
+		return template.HTML(`<div data-floe-part="diagram">` + script + string(svg) + `</div>`), nil
 	}
-}
-
-// Box puts a diagram drawn, inner, in the box of floe's part diagram, which its CSS is scoped to: in a page, and in
-// what floe diagram render prints.
-func Box(inner string) string {
-	return `<div data-floe-part="diagram">` + inner + `</div>`
 }

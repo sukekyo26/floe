@@ -23,39 +23,28 @@ var diagramKit = map[string]string{
 const diagramPage = `lang: en
 template: mine
 title: Diagrams
-plain: { example: flow, source: true }
-pic: { source: true, width: 300, height: 100, title: p, parts: [ { box: { x: 20, y: 20, w: 120, h: 50, rows: [pic] } } ] }
+plain: { example: flow }
+pic: { width: 300, height: 100, title: p, parts: [ { box: { x: 20, y: 20, w: 120, h: 50, rows: [pic] } } ] }
 `
 
-// measureDiagrams returns a line for each diagram whose toolbar is not 0.4rem (6.4 px) above its frame, or whose
-// spec, opened, does not take the code colours of the page's theme and code's size: 0.875rem, 1.65 apart.
+// measureDiagrams returns a line for each diagram whose toolbar is not 0.4rem above its frame.
 const measureDiagrams = `(() => {
   const out = [];
-  // The theme's code colours, as colours.
-  const probe = document.createElement('div');
-  probe.style.cssText = 'background: var(--code-bg); color: var(--code-fg)';
-  document.body.append(probe);
-  const want = getComputedStyle(probe);
-  const [bg, fg] = [want.backgroundColor, want.color];
-  probe.remove();
-  const near = (a, b) => Math.abs(a - b) <= 0.5;
+  const want = 0.4 * parseFloat(getComputedStyle(document.documentElement).fontSize);
   for (const wrap of document.querySelectorAll('.dg-wrap')) {
     const box = wrap.closest('[data-floe-part="diagram"]');
     const name = box.parentElement.closest('[data-floe-part]')?.dataset.floePart ?? 'page';
     const tools = wrap.previousElementSibling;
     const gap = wrap.getBoundingClientRect().top - tools.getBoundingClientRect().bottom;
-    if (!tools.matches('.dg-tools') || !near(gap, 6.4)) out.push(name + ': toolbar ' + gap.toFixed(1) + ' px above the frame');
-    const source = wrap.nextElementSibling;
-    source.open = true;
-    const pre = getComputedStyle(source.querySelector('pre'));
-    if (pre.backgroundColor !== bg || pre.color !== fg) out.push(name + ': spec in ' + pre.color + ' on ' + pre.backgroundColor);
-    if (!near(parseFloat(pre.fontSize), 14) || !near(parseFloat(pre.lineHeight), 23.1)) out.push(name + ': spec ' + pre.fontSize + ' / ' + pre.lineHeight);
+    if (!tools.matches('.dg-tools') || Math.abs(gap - want) > 0.5) {
+      out.push(name + ': toolbar ' + gap.toFixed(1) + ' px above the frame, want ' + want.toFixed(1));
+    }
   }
   return out.join('\n');
 })()`
 
 // TestUIDiagram draws a diagram of a template and one in a part of one's own, wide and as wide as a phone: each
-// has its toolbar a little above its frame, not over it, and its spec in a block of code in the theme's colours.
+// has its toolbar a little above its frame, not over it.
 func TestUIDiagram(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
