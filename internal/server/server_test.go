@@ -371,6 +371,8 @@ func TestEditKeys(t *testing.T) {
 		// Cleared, the title is the data file's again and the project is dropped.
 		{`{"title":""}`, func(f *fields) { f.title = "T" }},
 		{`{"project":""}`, func(f *fields) { f.project = "" }},
+		// Kept on, for the rename below to keep.
+		{`{"tags":["k"]}`, func(f *fields) { f.tags = "k" }},
 	} {
 		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(c.body)), http.StatusOK, `{"slug":"d"}`)
 		c.change(&now)

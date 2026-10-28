@@ -279,7 +279,7 @@ func TestPublishKeepsTitle(t *testing.T) {
 }
 
 // An edit keeps tags trimmed, without the empty and the second of a name, in the order sent; an edit without them
-// leaves them, publishing again keeps them, and none sent clears them off meta.json.
+// (archiving too) leaves them, publishing again and renaming keep them, and none sent clears them off meta.json.
 func TestEditTags(t *testing.T) {
 	t.Parallel()
 
@@ -287,7 +287,8 @@ func TestEditTags(t *testing.T) {
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 	want := []string{"設計", "計画"}
-	for _, ed := range []store.Edit{{Tags: ptr([]string{"設計", " 計画 ", "設計", ""})}, {Favorite: ptr(true)}} {
+	edits := []store.Edit{{Tags: ptr([]string{"設計", " 計画 ", "設計", ""})}, {Favorite: ptr(true)}, {Archived: ptr(true)}}
+	for _, ed := range edits {
 		if _, err := s.Edit("d", ed); err != nil {
 			t.Fatal(err)
 		}
@@ -299,10 +300,16 @@ func TestEditTags(t *testing.T) {
 	if m := s.ReadMeta("d"); !slices.Equal(m.Tags, want) {
 		t.Errorf("published again: tags %q", m.Tags)
 	}
-	if _, err := s.Edit("d", store.Edit{Tags: ptr([]string{" "})}); err != nil {
+	if _, err := s.Edit("d", store.Edit{Slug: ptr("e")}); err != nil {
 		t.Fatal(err)
 	}
-	if meta := read(t, filepath.Join(root, "d", "meta.json")); strings.Contains(meta, "tags") {
+	if m := s.ReadMeta("e"); m == nil || !slices.Equal(m.Tags, want) {
+		t.Errorf("renamed: %+v", m)
+	}
+	if _, err := s.Edit("e", store.Edit{Tags: ptr([]string{" "})}); err != nil {
+		t.Fatal(err)
+	}
+	if meta := read(t, filepath.Join(root, "e", "meta.json")); strings.Contains(meta, "tags") {
 		t.Errorf("cleared, meta.json still has tags: %s", meta)
 	}
 }

@@ -374,7 +374,7 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, erro
 	return path, b, nil
 }
 
-// newMeta keeps what was set on the management page (favourite, title, project), the description and
+// newMeta keeps what was set on the management page (favourite, title, project, tags), the description and
 // createdAt from base, but not archived: a page published again comes back to the list. --title and
 // --description win.
 func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta {

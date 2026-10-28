@@ -885,37 +885,46 @@
     $('tag-add').textContent = t('ui_tag_add_bulk', selected.size);
     $('tag-remove').textContent = t('ui_tag_remove_bulk', selected.size);
     $('tag-form').reset();
+    $('tag-name').setCustomValidity('');
     $('tag-dialog').showModal();
   }
 
   // Adds the names of the tag dialog to the selected, or removes them, sending each page whose tags change them so;
   // one that would not change is not sent and leaves the selection, as done.
-  // LIMIT: the tags sent are those the list last read with the names added or removed, so a change made elsewhere in
-  // between is lost. Only this page writes tags now; give the API adding and removing if another comes to
+  // LIMIT: the tags sent are those of the list read just before, with the names added or removed, so a change made elsewhere
+  // in between is lost. Only this page writes tags now; give the API adding and removing if another comes to
   async function tagSelected(add) {
-    if (!$('tag-form').reportValidity()) return;
     const names = [...new Set(splitTags($('tag-name').value))];
-    if (names.length === 0) return;
+    // Commas alone pass required, so the field is told it has no name
+    $('tag-name').setCustomValidity(names.length ? '' : t('ui_tag_name_empty'));
+    if (!$('tag-form').reportValidity()) return;
     $('tag-dialog').close();
+    // Read again first: a page removed since leaves the selection, rather than be sent and not found
+    await load();
     const next = new Map();
     for (const slug of selected) {
       const now = items.find((a) => a.slug === slug)?.tags ?? [];
       const tags = add ? [...now, ...names.filter((name) => !now.includes(name))] : now.filter((name) => !names.includes(name));
       if (tags.length !== now.length) next.set(slug, tags);
-      else selected.delete(slug);
+    }
+    // The rest leave the selection unsent, their boxes unticked here: a list that does not change is not drawn again
+    for (const slug of [...selected].filter((s) => !next.has(s))) {
+      selected.delete(slug);
+      const row = [...$('list').querySelectorAll(':scope > li:not(.group)')].find((li) => li.dataset.slug === slug);
+      if (row) row.querySelector('.sel').checked = false;
+    }
+    if (next.size === 0) {
+      toast(t('ui_tag_bulk_none'));
+      renderBulk();
+      return;
     }
     const named = new Intl.ListFormat(LANG).format(names);
-    if (next.size === 0) toast(t('ui_tag_bulk_none'));
-    else {
-      await actOnSelected(
-        (slug) => patchOne(slug, { tags: next.get(slug) }),
-        (n) => t(add ? 'ui_tag_add_bulk_done' : 'ui_tag_remove_bulk_done', named, n),
-        (n, why) => t(add ? 'ui_tag_add_bulk_failed' : 'ui_tag_remove_bulk_failed', named, n, why),
-        [...next.keys()],
-      );
-    }
-    // Those that left the selection unsent are drawn so, which a list that did not change would not be
-    render();
+    await actOnSelected(
+      (slug) => patchOne(slug, { tags: next.get(slug) }),
+      (n) => t(add ? 'ui_tag_add_bulk_done' : 'ui_tag_remove_bulk_done', named, n),
+      (n, why) => t(add ? 'ui_tag_add_bulk_failed' : 'ui_tag_remove_bulk_failed', named, n, why),
+      [...next.keys()],
+    );
   }
 
   // Relative times ("3 minutes ago") advance without redrawing the list
@@ -1073,7 +1082,8 @@
       b.textContent = name;
       b.title = name;
       b.setAttribute('aria-label', t('ui_tag_filter_named', name));
-      b.addEventListener('click', () => setTag(name));
+      // The tag picked already, the list stays as it is (its selection and page too)
+      b.addEventListener('click', () => { if (name !== tag) setTag(name); });
       return b;
     }));
     tags.hidden = !a.tags?.length;
@@ -1253,8 +1263,12 @@
     $('list').replaceChildren(...rows);
     renderPager(shown.length, pages, start);
     renderShelf(chips, tags);
-    // Every page's tag names, suggested where tags are written
-    $('tag-names').replaceChildren(...[...new Set(items.flatMap((a) => a.tags ?? []))].sort((x, y) => x.localeCompare(y, LANG)).map((name) => new Option(name)));
+    // Every page's tag names, suggested where tags are written; rebuilt only when they change, so that suggestions open stay open
+    const names = [...new Set(items.flatMap((a) => a.tags ?? []))].sort((x, y) => x.localeCompare(y, LANG));
+    if (JSON.stringify(names) !== $('tag-names').dataset.signature) {
+      $('tag-names').dataset.signature = JSON.stringify(names);
+      $('tag-names').replaceChildren(...names.map((name) => new Option(name)));
+    }
     renderBulk();
     syncUrl();
   }
@@ -1487,6 +1501,7 @@
       tagSelected(true);
     });
     $('tag-remove').addEventListener('click', () => tagSelected(false));
+    $('tag-name').addEventListener('input', () => $('tag-name').setCustomValidity(''));
     $('bulk-archive').addEventListener('click', archiveSelected);
     $('bulk-delete').addEventListener('click', removeSelected);
     $('bulk-delete').addEventListener('blur', disarmBulk);

@@ -559,9 +559,12 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval(shelf))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
-	// A row's tag picks it.
+	// A row's tag picks it; the tag picked already, the list stays, its selection too.
 	b.eval("document.querySelector('#list li[data-slug=c] .tagpill').click()")
 	out = append(out, b.eval(rows))
+	b.eval("document.querySelector('#list li[data-slug=c] .sel').click(); document.querySelector('#list li[data-slug=c] .tagpill').click()")
+	out = append(out, b.eval("document.getElementById('bulk-count').textContent"))
+	b.eval("document.getElementById('bulk-clear').click()")
 	// Searching finds a page by its tags.
 	b.eval("document.getElementById('clear').click()")
 	search("設計")
@@ -592,11 +595,27 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	}
 	b.eval("document.getElementById('bulk-tag').click()")
 	out = append(out, b.eval("[document.getElementById('tag-title').textContent, document.getElementById('tag-add').textContent, document.getElementById('tag-remove').textContent].join(' / ')"))
+	// Commas alone are no name, which the field says, the dialog staying open.
+	b.eval("document.getElementById('tag-name').value = ' , 、 '; document.getElementById('tag-form').requestSubmit()")
+	out = append(out, b.eval("[document.getElementById('tag-dialog').open, document.getElementById('tag-name').validationMessage].join(' ')"))
 	b.eval("document.querySelector('#tag-dialog [data-close]').click()")
+	// The list is drawn once, by its reading again before the names are sent (changed since, as by another tab).
+	b.eval("window.renders = 0; window.draw = render; render = () => { renders++; draw(); }; list = list.replace('Delta', 'Delta 1')")
 	named := b.eval("new Intl.ListFormat(document.documentElement.lang).format(['plan', 'new'])")
 	tagsOf("plan, new", "document.getElementById('tag-form').requestSubmit();")
 	out = append(out, b.until("the tags to be added", "document.getElementById('bulk').hidden && calls.splice(0).sort().join(',')"),
-		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_add_bulk_done", named, 3))+")"))
+		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_add_bulk_done", named, 3))+")"), b.eval("renders"))
+	b.eval("render = draw")
+	// A page removed since the list was read leaves the selection unsent.
+	b.eval("document.querySelector('#list li[data-slug=b] .sel').click(); list = JSON.stringify(JSON.parse(list).filter((a) => a.slug !== 'b'))")
+	tagsOf("x", "document.getElementById('tag-form').requestSubmit();")
+	out = append(out, b.until("the gone page to drop", "document.getElementById('bulk').hidden && "+
+		"[document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_bulk_none"))+"), calls.length].join(' ')"))
+	b.eval(stub(tagsList))
+	// The names suggested are not built again for a list whose names did not change.
+	b.eval("window.option = document.getElementById('tag-names').options[0]; list = list.replace('Delta', 'Delta 2'); load()")
+	out = append(out, b.until("the list to be drawn again", "document.querySelector('#list li[data-slug=d] .title').textContent.startsWith('Delta 2') && "+
+		"String(document.getElementById('tag-names').options[0] === window.option)"))
 	b.eval("document.getElementById('bulk-page').click()")
 	tagsOf("設計", "document.getElementById('tag-remove').click();")
 	out = append(out, b.until("the tag to be removed", "document.getElementById('bulk').hidden && calls.splice(0).join(',')"),
@@ -633,11 +652,13 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"plan2:false,設計1:false,設計、実装1:false false", "abcd -", "old,plan,設計,設計、実装",
 		"設計:" + msg("ui_tag_filter_named", "設計") + ",plan:" + msg("ui_tag_filter_named", "plan"), "true",
 		"ab plan", "plan2:true,設計1:false,設計、実装1:false false", "ab plan", "abcd -",
-		"old1:false,plan1:false false", "c 設計、実装", "ac -",
+		"old1:false,plan1:false false", "c 設計、実装", msg("ui_selected", 1), "ac -",
 		"other2:false,plan0:true,設計1:false,設計、実装1:false false", "false", "abcd -",
 		"設計, plan", `PATCH /api/artifacts/a {"tags":["計画","設計"]}`, `PATCH /api/artifacts/c {"title":"G2"}`,
 		msg("ui_tag_bulk_title", 3) + " / " + msg("ui_tag_add_bulk", 3) + " / " + msg("ui_tag_remove_bulk", 3),
-		`PATCH /api/artifacts/a {"tags":["設計","plan","new"]},PATCH /api/artifacts/b {"tags":["plan","new"]},PATCH /api/artifacts/d {"tags":["plan","new"]}`, "true",
+		"true " + msg("ui_tag_name_empty"),
+		`PATCH /api/artifacts/a {"tags":["設計","plan","new"]},PATCH /api/artifacts/b {"tags":["plan","new"]},PATCH /api/artifacts/d {"tags":["plan","new"]}`, "true", "1",
+		"true 0", "true",
 		`PATCH /api/artifacts/a {"tags":["plan"]}`, "true",
 		"0 true false",
 		"tag:plan,tag:設計,tag:設計、実装", "ab plan", "true", "abcd -",

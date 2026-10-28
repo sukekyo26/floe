@@ -391,6 +391,7 @@ var messagesJA = map[string]string{
 	"ui_tag_filter_named":       "「%s」のページだけを出す",
 	"ui_tag_bulk_title":         "選んだ %d 件のタグ",
 	"ui_tag_name":               "タグの名前",
+	"ui_tag_name_empty":         "タグの名前を書いてください",
 	"ui_tag_add_bulk":           "%d 件に足す",
 	"ui_tag_remove_bulk":        "%d 件から外す",
 	"ui_tag_add_bulk_done":      "%[2]d 件に「%[1]s」を足しました",

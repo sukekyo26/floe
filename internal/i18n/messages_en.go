@@ -402,6 +402,7 @@ var messagesEN = map[string]string{
 	"ui_tag_filter_named":       "Show the pages tagged %s",
 	"ui_tag_bulk_title":         "Tags of the %d selected",
 	"ui_tag_name":               "Tag names",
+	"ui_tag_name_empty":         "Write a tag name",
 	"ui_tag_add_bulk":           "Add to %d",
 	"ui_tag_remove_bulk":        "Remove from %d",
 	"ui_tag_add_bulk_done":      "Added “%[1]s” to %[2]d",
