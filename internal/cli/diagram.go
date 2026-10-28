@@ -45,7 +45,10 @@ enough; more does no harm). --no-assets leaves them out.`,
 		RunE: func(_ *cobra.Command, args []string) error {
 			svgs, err := a.diagrams(args, lang, func(d *diagram.Drawer, v any, o diagram.Options) (string, error) {
 				svg, err := d.Draw(v, o)
-				return string(svg), err
+				if err != nil {
+					return "", err //nolint:wrapcheck // mistakes at their pointers, which diagrams places
+				}
+				return draw.Box(string(svg)), nil
 			})
 			if err != nil {
 				return err
@@ -115,7 +118,7 @@ func (a *app) diagrams(paths []string, lang string, with func(*diagram.Drawer, a
 }
 
 // diagramAssets are what a page holds once for the diagrams of floe diagram render: the script that zooms them
-// and the CSS of floe's part diagram, unscoped, as a page without floe's parts takes it.
+// and the CSS of floe's part diagram, scoped to the part's boxes, which hold the diagrams, as in a page.
 func diagramAssets() (string, error) {
 	script, err := diagram.Script()
 	if err != nil {
@@ -125,11 +128,7 @@ func diagramAssets() (string, error) {
 	if err != nil {
 		return "", err //nolint:wrapcheck // as above
 	}
-	p, ok := k.Part("diagram")
-	if !ok {
-		return "", errors.New("diagram: floe has no part diagram") //nolint:err113 // floe's own mistake
-	}
-	return script + "\n<style>\n" + string(p.CSS()) + "</style>", nil
+	return script + "\n<style>\n" + string(draw.ScopedPart(k, "diagram")) + "</style>", nil
 }
 
 func diagramOf(
