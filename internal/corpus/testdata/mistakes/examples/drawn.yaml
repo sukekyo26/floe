@@ -5,4 +5,5 @@ sections:
   - heading: Examples
     parts:
       - diagram: { example: nope }
-      - diagram: { example: aws, source: true }
+      - diagram: { example: aws }
+      - diagram: { example: flow, source: true }

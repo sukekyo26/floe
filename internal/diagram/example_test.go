@@ -56,7 +56,10 @@ func TestExampleMistakes(t *testing.T) {
 		icons diagram.Icons
 		want  string
 	}{
-		{"source: true\nexample: nope\n", nil, "s.yaml:2:10: no example nope; use architecture, aws, class, er, flow, git, sequence, state, timeline, venn"},
+		{"# c\nexample: nope\n", nil, "s.yaml:2:10: no example nope; use architecture, aws, class, er, flow, git, sequence, state, timeline, venn"},
+		// A diagram shows no spec.
+		{"example: flow\nsource: true\n", nil, "additional properties 'source' not allowed"},
+		{"source: true\nwidth: 200\nheight: 80\ntitle: t\nparts: []\n", nil, "additional properties 'source' not allowed"},
 		{"example: aws\n", nil, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path"},
 		{"example: aws\n", broken, `/i/aws/index.json:1:1: holds no version of the icons; run "floe icons fetch aws --force" to fetch them again`},
 		{"example: aws\n", lambda, `s.yaml:1:1: icon "aws/amazon-bedrock": no icon "aws/amazon-bedrock" (search with: floe icons search <word>)`},
@@ -73,33 +76,5 @@ func TestExampleMistakes(t *testing.T) {
 	var found usererr.List
 	if err == nil || found.Add(err) == nil {
 		t.Errorf("Draw = %v, want floe's failure", err)
-	}
-}
-
-// source: true shows the spec as written under the diagram, escaped; an example's, its file with its comments.
-func TestSource(t *testing.T) {
-	t.Parallel()
-
-	spec := "source: true\nwidth: 200\nheight: 80\ntitle: </code></pre><script>x</script>\nparts: []\n"
-	got, mistakes := draw(t, spec, drawWith("ja", nil, "the text\n<b>"))
-	if mistakes != "" {
-		t.Fatal(mistakes)
-	}
-	want := `</div><details class="dg-source"><summary>この図の spec</summary><pre><code>the text
-&lt;b&gt;</code></pre></details>`
-	if !strings.HasSuffix(got, want) {
-		t.Errorf("drawn\n%s\nwant it to end\n%s", got, want)
-	}
-	if strings.Contains(got, "<script>") {
-		t.Error("the title is not escaped")
-	}
-	plain, _ := draw(t, "width: 200\nheight: 80\ntitle: t\nparts: []\n", drawWith("en", nil, "the text"))
-	if strings.Contains(plain, "dg-source") {
-		t.Error("a spec without source: true shows its source")
-	}
-	got, _ = draw(t, "example: flow\nsource: true\n", drawWith("en", nil, "example: flow"))
-	if !strings.Contains(got, "<summary>The spec of this diagram</summary><pre><code># Decision flow:") ||
-		!strings.Contains(got, "title: { en: What floe publish checks") {
-		t.Error("an example's source is not its file")
 	}
 }
