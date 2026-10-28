@@ -6,9 +6,9 @@ on:
   # after a squash merge; main stays PR-only because the develop -> main release
   # PR reruns the suite.
   push:
-    branches: [develop, refactor/simple-core]
+    branches: [develop]
   pull_request:
-    branches: [develop, main, refactor/simple-core]
+    branches: [develop, main]
   schedule:
     # Weekly so govulncheck catches newly published advisories with no commit
     # to trigger a run.
