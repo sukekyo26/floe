@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/i18n"
 )
 
 // groupsList is the list the stub answers for the groups: seven projects, more than the six colors, counted over every
@@ -38,6 +40,8 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	// The groups and their rows: a heading as its color and words, a row as its slug and color.
 	out = append(out, b.eval("[...document.getElementById('list').children].map((li) => li.classList.contains('group') ? "+
 		"'\\n' + li.style.getPropertyValue('--c') + ' ' + li.textContent : li.dataset.slug + ':' + li.style.getPropertyValue('--c')).join(' ')"))
+	// Every heading alike: no line over the card, the first's or the next's.
+	out = append(out, b.eval("[...document.querySelectorAll('#list li.group')].map((li) => getComputedStyle(li).borderTopWidth).join(' ')"))
 	// The shelf's projects: name, color, title and count.
 	out = append(out, b.eval("[...document.querySelectorAll('#chips .chip')].map((c) => [c.dataset.project, c.style.getPropertyValue('--c'), "+
 		"c.title, c.querySelector('.n').textContent].join(' ')).join(', ')"))
@@ -49,16 +53,19 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	out = append(out, b.eval("String(new URLSearchParams(location.search).get('project'))"))
 
 	// The columns line up across groups whatever a row's project: the time's right and the star's left are one, the chip
-	// left of the time; a row of none has no chip.
+	// and the creation date left of the time; a row of none has no chip.
 	const columns = "(() => { const r = (slug, s) => document.querySelector(`#list li[data-slug=${slug}] ${s}`).getBoundingClientRect(); " +
 		"return [r('a1', 'time').right === r('fv', 'time').right, r('a1', '.star').left === r('n1', '.star').left, " +
-		"r('fv', '.proj').right <= r('fv', 'time').left, document.querySelector('#list li[data-slug=n1] .proj').hidden].join(' '); })()"
+		"r('fv', '.proj').right <= r('fv', '.made').left && r('fv', '.made').right <= r('fv', 'time').left, document.querySelector('#list li[data-slug=n1] .proj').hidden].join(' '); })()"
 	out = append(out, b.eval(columns))
-	// Narrow, a row's project and time go under its title, its actions where they were.
+	// Narrow, a row's project, creation date and time go under its title, within the row (wrapping where they do not fit
+	// on one line), the date and the time whole, the project's chip not squeezed away, its actions where they were.
 	b.size(390, 844, true)
-	out = append(out, b.eval("(() => { const r = (s) => document.querySelector(`#list li[data-slug=fv] ${s}`).getBoundingClientRect(); "+
+	out = append(out, b.eval("(() => { const li = document.querySelector('#list li[data-slug=fv]'), r = (s) => li.querySelector(s).getBoundingClientRect(); "+
+		"const whole = (s) => li.querySelector(s).scrollWidth <= li.querySelector(s).clientWidth; "+
 		"return [r('.proj').top >= r('.title').bottom, r('time').top >= r('.title').bottom, r('.proj').left === r('.title').left, "+
-		"r('.actions').top < r('.proj').top].join(' '); })()"))
+		"r('.actions').top < r('.proj').top, r('.made').right <= r('.actions').left && r('time').right <= r('.actions').left && r('.proj').width >= 48, "+
+		"whole('.made') && whole('time')].join(' '); })()"))
 	b.size(1440, 900, false)
 	// A heading pointed at keeps its ground, as it is not pressed; a row pointed at takes the hover's.
 	ground := func(selector string) string {
@@ -135,11 +142,12 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			h("var(--pc5)", "eps", 1) + " e1:var(--pc5) " +
 			h("var(--pc0)", "fav", 1) + " f2:var(--pc0) " +
 			h("var(--faint)", "None recorded", 1) + " n1:var(--faint)",
+		strings.TrimSpace(strings.Repeat("0px ", 9)),
 		"alpha var(--pc0) alpha 3, beta var(--pc1) beta 1, gamma var(--pc2) gamma 1, a project of a long name var(--pc3) a project of a long name 1, " +
 			"delta var(--pc4) delta 1, eps var(--pc5) eps 1, fav var(--pc0) fav 1, / var(--faint) None recorded 1",
 		"beta b1", "null",
 		"true true true true",
-		"true true true true",
+		"true true true true true true",
 		"rgb(251, 250, 248) rgb(246, 245, 241)",
 		"true",
 		"var(--faint) 0",
@@ -147,4 +155,31 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		"16 16 16 true", "16 16 16 true",
 		" /a/a1/ 1 / 10",
 	}, "|"))
+}
+
+// TestUIRowColumns lines up a row's project chip, creation date and time from row to row, however long its time reads:
+// minutes and hours of one digit and of two, days, months and years ago, in every language; a row of no project leaves
+// the chip's place empty.
+func TestUIRowColumns(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	inEveryLanguage(t, uiRowColumns)
+}
+
+func uiRowColumns(t *testing.T, lang i18n.Lang, _ func(string, ...any) string) {
+	t.Helper()
+
+	s := newSite(t)
+	b := newBrowser(t, s.Base, lang)
+	b.navigate("/")
+	b.size(1440, 900, false)
+	b.eval(stub(`[[2, 'p'], [12, 'p'], [180, 'a project of a long name'], [780, 'p'], [4320, 'p'], [480000, 'p'], [1100000, 'p'], [5, undefined]].map(([m, p], i) => ({
+		slug: 'r' + i, title: 'R' + i, description: '', project: p, createdAt: at(1), updatedAt: new Date(Date.now() - m * 60000).toISOString() }))`))
+	out := b.eval(`(() => {
+		const rows = [...document.querySelectorAll('#list li:not(.group)')], r = (li, s) => li.querySelector(s).getBoundingClientRect();
+		const same = (f, of = rows) => of.every((li) => Math.abs(f(li) - f(of[0])) <= 0.5);
+		const chips = rows.filter((li) => !li.querySelector('.proj').hidden);
+		return [rows.length, new Set(rows.map((li) => li.querySelector('time').textContent.length)).size > 2,
+			chips.length === 7 && same((li) => r(li, '.proj').right, chips), same((li) => r(li, '.made').left), same((li) => r(li, '.made').right), same((li) => r(li, 'time').right)].join(' ');
+	})()`)
+	b.unsize()
+	check(t, "row columns", []string{out}, "8 true true true true true")
 }
