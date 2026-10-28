@@ -114,14 +114,26 @@ func TestCheckPart(t *testing.T) {
 	}
 }
 
-// CheckPart takes a part's image where a walk from its root reaches it, and refuses one elsewhere as a template's
-// schema is refused, and one in a Shared schema the part refers to.
-func TestCheckPartImage(t *testing.T) {
+// CheckPart runs on each schema of a part what checks a template's (checkNode), with a part's rules in place of
+// the checks of where a schema is that they overlap: it takes a part's image where a walk from its root reaches
+// it, and refuses one elsewhere, a $ref to a part's root a walk does not reach, a $dynamicRef, one of floe's
+// formats but image, and one in a Shared schema the part refers to.
+func TestCheckPartNode(t *testing.T) {
 	t.Parallel()
 
 	const img = `{"type": "string", "format": "image"}`
+	const note = `{"$ref": "floe:///parts/note.json"}`
 	unreached := func(at string) string {
 		return "parts/p.json: " + at + ": the format image marks an item to draw; declare it under properties or items, which floe follows"
+	}
+	noPart := func(at string) string {
+		return "parts/p.json: " + at + ": the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"
+	}
+	html := func(at string) string {
+		return "parts/p.json: " + at + `: a part's schema takes no "format": "html": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}`
+	}
+	shot := func(at string) string {
+		return "parts/p.json: " + at + ": the part refers to floe:///parts/shot.json, a shared schema that holds items of the format image, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own"
 	}
 	for _, tt := range []struct{ name, body, want string }{
 		{"properties", `"properties": {"s": ` + img + `}`, ""},
@@ -141,8 +153,30 @@ func TestCheckPartImage(t *testing.T) {
 		},
 		{
 			"$ref to a part", `"properties": {"a": {"anyOf": [{"$ref": "#/$defs/n"}]}}, "$defs": {"n": {"$ref": "floe:///parts/note.json"}}`,
-			"parts/p.json: #/properties/a/anyOf/0: #/$defs/n holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows",
+			noPart("#/$defs/n") + "\n" + "parts/p.json: #/properties/a/anyOf/0: #/$defs/n holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows",
 		},
+		{"part's root", `"properties": {"n": ` + note + `}`, ""},
+		{"part's root in anyOf", `"properties": {"n": {"anyOf": [` + note + `]}}`, noPart("#/properties/n/anyOf/0")},
+		{"part's root in additionalProperties", `"additionalProperties": ` + note, noPart("#/additionalProperties")},
+		{"$dynamicRef", `"properties": {"s": {"$dynamicRef": "#/$defs/s"}}, "$defs": {"s": {"type": "string"}}`, "parts/p.json: #/properties/s: floe does not follow $dynamicRef: write a $ref"},
+		// A part's rule is told in place of where to move what a part holds nowhere; the other checks run.
+		{"html in anyOf", `"properties": {"s": {"anyOf": [{"type": "string", "format": "html"}]}}`, html("#/properties/s/anyOf/0")},
+		{"shared in anyOf", `"properties": {"s": {"anyOf": [{"$ref": "floe:///parts/shot.json"}]}}`, shot("#/properties/s/anyOf/0")},
+		{"html beside a part's root", `"properties": {"s": {"type": "string", "format": "html", "$ref": "floe:///parts/note.json"}}`, html("#/properties/s")},
+		{
+			"html beside a part's root in anyOf", `"properties": {"s": {"anyOf": [{"type": "string", "format": "html", "$ref": "floe:///parts/note.json"}]}}`,
+			html("#/properties/s/anyOf/0") + "\n" + noPart("#/properties/s/anyOf/0"),
+		},
+		{
+			"html beside a $ref into a part", `"properties": {"s": {"type": "string", "format": "html", "$ref": "floe:///parts/note.json#/properties/text"}}`,
+			html("#/properties/s") + "\n" + "parts/p.json: #/properties/s: floe:///parts/note.json#/properties/text points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, floe:///parts/note.json",
+		},
+		{"html beside a shared one", `"properties": {"s": {"type": "string", "format": "html", "$ref": "floe:///parts/shot.json"}}`, html("#/properties/s") + "\n" + shot("#/properties/s")},
+		{
+			"html beside a $dynamicRef", `"properties": {"s": {"type": "string", "format": "html", "$dynamicRef": "#/$defs/s"}}, "$defs": {"s": {"type": "string"}}`,
+			"parts/p.json: #/properties/s: floe does not follow $dynamicRef: write a $ref\n" + html("#/properties/s"),
+		},
+		{"html above a part's root", `"properties": {"s": {"format": "html", "anyOf": [` + note + `]}}`, html("#/properties/s") + "\n" + noPart("#/properties/s/anyOf/0")},
 		{"markdown", `"properties": {"s": {"type": "string", "format": "markdown"}}`, "parts/p.json: #/properties/s: a part's schema takes no \"format\": \"markdown\": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
 		{"shared", `"properties": {"s": {"$ref": "floe:///parts/shot.json"}}`, "parts/p.json: #/properties/s: the part refers to floe:///parts/shot.json, a shared schema that holds items of the format image, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own"},
 	} {
@@ -166,8 +200,8 @@ func TestCheckPartImage(t *testing.T) {
 	}
 }
 
-// CheckPart tells the library's mistake of a part in the part's file, a metaschema it refers to at its $ref,
-// and a URL it does not hold as floe's failure.
+// CheckPart tells the library's mistake of a part in the part's file, a metaschema it or a Shared schema it
+// refers to refers to at that $ref, a $recursiveRef, and a URL it does not hold as floe's failure.
 func TestCheckPartMistakes(t *testing.T) {
 	t.Parallel()
 
@@ -177,6 +211,8 @@ func TestCheckPartMistakes(t *testing.T) {
 		"b":       `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"n": {"type": "string"}}, "$defs": {"h": {"type": "string", "format": "html"}}}`,
 		"missing": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"text": {"$ref": "#/$defs/missing"}}}`,
 		"meta":    `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"m": {"$ref": "https://json-schema.org/draft/2020-12/schema"}}}`,
+		"refers":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"s": {"$ref": "floe:///parts/meta-shared.json"}}}`,
+		"rec":     `{"$schema": "https://json-schema.org/draft/2019-09/schema", "properties": {"s": {"$recursiveRef": "#"}}}`,
 	} {
 		r, err := schema.NewResource("floe:///parts/"+name+".json", "parts/"+name+".json", []byte(src), schema.Part)
 		if err != nil {
@@ -184,10 +220,17 @@ func TestCheckPartMistakes(t *testing.T) {
 		}
 		res["floe:///parts/"+name+".json"] = r
 	}
+	shared, err := schema.NewResource("floe:///parts/meta-shared.json", "parts/meta-shared.json", []byte(`{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": {"m": {"$ref": "https://json-schema.org/draft/2020-12/schema"}}}`), schema.Shared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res["floe:///parts/meta-shared.json"] = shared
 	for name, want := range map[string]string{
 		"a":       "parts/a.json: #/properties/h: floe:///parts/b.json#/$defs/h points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, floe:///parts/b.json",
 		"missing": `parts/missing.json: json-pointer in "floe:///parts/missing.json#/$defs/missing" not found`,
 		"meta":    "parts/meta.json: #/properties/m: https://json-schema.org/draft/2020-12/schema: a schema refers to no other file or URL; write what a $ref refers to in its own file",
+		"refers":  "parts/meta-shared.json: #/properties/m: https://json-schema.org/draft/2020-12/schema: a schema refers to no other file or URL; write what a $ref refers to in its own file",
+		"rec":     "parts/rec.json: #/properties/s: floe does not follow $recursiveRef: write a $ref",
 	} {
 		if got := told(checkPart("floe:///parts/"+name+".json", res)); got != want {
 			t.Errorf("CheckPart(%s) told\n%s\nwant\n%s", name, got, want)
