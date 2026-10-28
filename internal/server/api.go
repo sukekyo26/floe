@@ -50,21 +50,6 @@ func (s *Server) readBody(w http.ResponseWriter, r *http.Request, limit int64) (
 	return body, true
 }
 
-// readJSON reads a write of the management page as readBody does, as a JSON object; nil on refusal.
-func (s *Server) readJSON(w http.ResponseWriter, r *http.Request) map[string]json.RawMessage {
-	body, ok := s.readBody(w, r, maxBody)
-	if !ok {
-		return nil
-	}
-	// Anything but an object (a number, a string, an array, null) is a mistake, not an empty change.
-	var input map[string]json.RawMessage
-	if json.Unmarshal(body, &input) != nil || input == nil {
-		send(w, http.StatusBadRequest, "cannot read the request: send a JSON object")
-		return nil
-	}
-	return input
-}
-
 // refuse answers err told in the reader's language (usererr.Report): 500 for floe's failure, 409 for a name in use
 // (store.Conflict, which comes alone), 400 for the user's other mistakes. A reader whose Accept is JSON exactly
 // (the CLI) gets the report itself, which it lays out as it does its own mistakes; another, the management page,
@@ -86,7 +71,7 @@ func refuse(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 type slugBody struct {
-	Slug string `json:"slug"`
+	Slug string `json:"slug,omitempty"`
 }
 
 // Link is a link to add, as the management page and floe publish --link send it: a field sent is given,
@@ -108,8 +93,8 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var in Link
-	if !decodeStrict(w, body, &in) {
+	in := decodeStrict[Link](w, body)
+	if in == nil {
 		return
 	}
 	opts := store.Options{Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force}
@@ -128,18 +113,24 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	sendSaved(w, entry)
 }
 
-// decodeStrict reads body, a JSON object, into v, refusing a field v does not have. On refusal it has
-// answered and returns false.
-func decodeStrict(w http.ResponseWriter, body []byte, v any) bool {
+// decodeStrict reads body, which readBody has read, as a T, refusing anything but an object (null too) and a field
+// T does not have; nil when it has answered a refusal. A field null is one not sent. One Decode reads it all, as
+// readBody's json.Valid refuses a second value.
+func decodeStrict[T any](w http.ResponseWriter, body []byte) *T {
+	if tok, _ := json.NewDecoder(bytes.NewReader(body)).Token(); tok != json.Delim('{') {
+		send(w, http.StatusBadRequest, "cannot read the request: send a JSON object")
+		return nil
+	}
+	var v T
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(v); err != nil {
+	if err := dec.Decode(&v); err != nil {
 		// What encoding/json could not read: neither the management page nor the CLI sends such JSON.
 		// LIMIT: in encoding/json's English, as the protocol's refusals are. Word it if a reader comes to see it.
 		send(w, http.StatusBadRequest, protocolText("cannot read the request: "+err.Error()))
-		return false
+		return nil
 	}
-	return true
+	return &v
 }
 
 // Upload is a publish of a data file, as the CLI sends it: see store.Upload. Images left out or null asks which
@@ -148,23 +139,23 @@ type Upload struct {
 	File        string            `json:"file"`
 	Source      []byte            `json:"source"`
 	Images      map[string][]byte `json:"images"`
-	Project     string            `json:"project"`
-	Title       *string           `json:"title"`
-	Description *string           `json:"description"`
+	Project     string            `json:"project,omitempty"`
+	Title       *string           `json:"title,omitempty"`
+	Description *string           `json:"description,omitempty"`
 	Theme       *string           `json:"theme"`
 	Force       bool              `json:"force"`
 }
 
 // Saved is a page a publish or an added link stored, and what it replaced (nil for a new slug).
 type Saved struct {
-	Slug  string     `json:"slug"`
-	Title string     `json:"title"`
+	Slug  string     `json:"slug,omitempty"`
+	Title string     `json:"title,omitempty"`
 	Prev  *SavedPrev `json:"prev"`
 }
 
 // SavedPrev is the page a publish replaced.
 type SavedPrev struct {
-	Title     string `json:"title"`
+	Title     string `json:"title,omitempty"`
 	UpdatedAt string `json:"updatedAt"`
 }
 
@@ -192,8 +183,8 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var in Upload
-	if !decodeStrict(w, body, &in) {
+	in := decodeStrict[Upload](w, body)
+	if in == nil {
 		return
 	}
 	if in.File == "" || in.Source == nil {
@@ -229,7 +220,8 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 
 // rebuild draws every stored page again with the drawing of now (store.Rebuild): 204, or its mistakes.
 func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
-	if s.readJSON(w, r) == nil {
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok || decodeStrict[struct{}](w, body) == nil {
 		return
 	}
 	drawing := s.latest()
@@ -241,27 +233,15 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// fields sets each of fields that input sends to its value, empty or not, leaving the rest nil; false when
-// one sent is not a T. The store trims strings.
-func fields[T any](input map[string]json.RawMessage, fields map[string]**T) bool {
-	for key, field := range fields {
-		if raw, ok := input[key]; ok {
-			v, isT := decode[T](raw)
-			if !isT {
-				return false
-			}
-			*field = &v
-		}
-	}
-	return true
-}
-
-// decode reports whether raw is a JSON value of type T (null is none).
-func decode[T any](raw json.RawMessage) (T, bool) {
-	var v any
-	_ = json.Unmarshal(raw, &v) //nolint:errcheck // readJSON has checked the body
-	t, ok := v.(T)
-	return t, ok
+// Edit is a change of a page, as the management page and floe archive send it: store.Edit with its keys, which
+// edit converts to it (a field the two do not share fails the build). A field left out or null is not changed.
+type Edit struct {
+	Title       *string `json:"title,omitempty"`
+	Description *string `json:"description,omitempty"`
+	Project     *string `json:"project,omitempty"`
+	Slug        *string `json:"slug,omitempty"`
+	Favorite    *bool   `json:"favorite,omitempty"`
+	Archived    *bool   `json:"archived,omitempty"`
 }
 
 // edit changes what the management page sends (title, description, project, URL name, favourite, archived).
@@ -272,26 +252,19 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Origin is checked before the page is looked for, so that another site cannot tell which pages there are.
-	input := s.readJSON(w, r)
-	if input == nil {
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok {
+		return
+	}
+	in := decodeStrict[Edit](w, body)
+	if in == nil {
 		return
 	}
 	if s.cfg.Store.ReadMeta(slug) == nil {
 		notFound(w)
 		return
 	}
-	var ed store.Edit
-	if !fields(input, map[string]**string{
-		"title": &ed.Title, "description": &ed.Description, "project": &ed.Project, "slug": &ed.Slug,
-	}) {
-		send(w, http.StatusBadRequest, "send the title, description, project and slug as strings")
-		return
-	}
-	if !fields(input, map[string]**bool{"favorite": &ed.Favorite, "archived": &ed.Archived}) {
-		send(w, http.StatusBadRequest, "send favorite and archived as true or false")
-		return
-	}
-	to, err := s.cfg.Store.Edit(slug, ed)
+	to, err := s.cfg.Store.Edit(slug, store.Edit(*in))
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
 		return

@@ -235,7 +235,8 @@ func (a *app) archiveCmd() *cobra.Command {
 		Short: "Archive pages in order, stopping at the first failure: off the lists, still served (--undo gives them back)",
 		Args:  usage(cobra.MinimumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.eachPage(cmd, args, http.MethodPatch, map[string]bool{"archived": !undo})
+			archived := !undo
+			return a.eachPage(cmd, args, http.MethodPatch, server.Edit{Archived: &archived})
 		},
 	}
 	cmd.Flags().BoolVar(&undo, "undo", false, "give the pages back to the list")

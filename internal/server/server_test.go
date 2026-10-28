@@ -298,7 +298,7 @@ func TestLinkedData(t *testing.T) {
 }
 
 // An edit archives a page as true or false, which the list then carries; favorite and archived as anything else
-// are refused in one sentence, and a page that is not there is not found.
+// are refused as encoding/json words it, and a page that is not there is not found.
 func TestEditArchived(t *testing.T) {
 	t.Parallel()
 
@@ -306,9 +306,9 @@ func TestEditArchived(t *testing.T) {
 	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"archived": true}), http.StatusOK, `{"slug":"d"}`)
 	want(t, e.do(t, http.MethodGet, "/api/artifacts", ""), http.StatusOK, `"archived":true`)
-	for _, body := range []map[string]any{{"archived": "yes"}, {"archived": nil}, {"archived": 1}, {"favorite": "yes"}} {
+	for _, body := range []map[string]any{{"archived": "yes"}, {"archived": 1}, {"favorite": "yes"}} {
 		w := e.write(t, http.MethodPatch, "/api/artifacts/d", body)
-		if w.Code != http.StatusBadRequest || w.Body.String() != "send favorite and archived as true or false" {
+		if w.Code != http.StatusBadRequest || !strings.HasPrefix(w.Body.String(), "cannot read the request: json: cannot unmarshal") {
 			t.Errorf("%v: answered %d %q", body, w.Code, w.Body.String())
 		}
 	}
@@ -317,6 +317,85 @@ func TestEditArchived(t *testing.T) {
 		t.Errorf("given back, still listed archived: %s", w.Body.String())
 	}
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/none", map[string]any{"archived": true}), http.StatusNotFound, "not found")
+}
+
+// An edit changes each field by its own key and no other; a field null is not changed. A key it does not know is
+// refused with nothing changed, even beside one it knows and before the page is looked for.
+func TestEditKeys(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil)
+	type fields struct {
+		title, description, project string
+		favorite, archived          bool
+	}
+	look := func(slug string) fields {
+		t.Helper()
+
+		m := store.New(e.root).ReadMeta(slug)
+		if m == nil {
+			t.Fatalf("no page %q", slug)
+		}
+		return fields{m.Title, m.Description, m.Project, m.Favorite, m.Archived}
+	}
+	now := look("d")
+	for _, c := range []struct {
+		body   string
+		change func(*fields)
+	}{
+		{`{"title":"N"}`, func(f *fields) { f.title = "N" }},
+		{`{"description":"D"}`, func(f *fields) { f.description = "D" }},
+		{`{"project":"q"}`, func(f *fields) { f.project = "q" }},
+		{`{"favorite":true}`, func(f *fields) { f.favorite = true }},
+		{`{"archived":true}`, func(f *fields) { f.archived = true }},
+		{`{"archived":null}`, func(*fields) {}},
+	} {
+		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(c.body)), http.StatusOK, `{"slug":"d"}`)
+		c.change(&now)
+		if got := look("d"); got != now {
+			t.Errorf("%s: %+v, want %+v", c.body, got, now)
+		}
+	}
+	for _, body := range []string{`{"archivd":true}`, `{"title":"T2","tags":["a"]}`} {
+		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(body)), http.StatusBadRequest,
+			"cannot read the request: json: unknown field")
+		if got := look("d"); got != now {
+			t.Errorf("%s changed the page: %+v, want %+v", body, got, now)
+		}
+	}
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/none", json.RawMessage(`{"x":1}`)), http.StatusBadRequest,
+		`cannot read the request: json: unknown field "x"`)
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(`{"slug":"e"}`)), http.StatusOK, `{"slug":"e"}`)
+	if got := look("e"); got != now {
+		t.Errorf("renamed: %+v, want %+v", got, now)
+	}
+	// floe archive sends archived alone.
+	yes := true
+	if b, err := json.Marshal(server.Edit{Archived: &yes}); err != nil || string(b) != `{"archived":true}` {
+		t.Errorf("floe archive sends %s, %v", b, err)
+	}
+}
+
+// Every write refuses a body that is not one object, null too, in one sentence.
+func TestNotObject(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
+	for _, to := range []struct{ method, path string }{
+		{http.MethodPost, "/api/artifacts"}, {http.MethodPut, "/api/artifacts/d"},
+		{http.MethodPatch, "/api/artifacts/d"}, {http.MethodPost, "/api/rebuild"},
+	} {
+		for _, body := range []string{"null", "1", `"s"`, "[1]"} {
+			w := e.write(t, to.method, to.path, json.RawMessage(body))
+			if w.Code != http.StatusBadRequest || w.Body.String() != "cannot read the request: send a JSON object" {
+				t.Errorf("%s %s %s: answered %d %q", to.method, to.path, body, w.Code, w.Body.String())
+			}
+		}
+	}
+	want(t, e.do(t, http.MethodPatch, "/api/artifacts/d", "{}{}", "Origin", origin, "Content-Type", "application/json"),
+		http.StatusBadRequest, "cannot read the request: it is not JSON")
 }
 
 // A page not there is 404 to remove; one that cannot be removed is told why.
