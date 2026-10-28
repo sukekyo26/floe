@@ -191,10 +191,10 @@
     animation: rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 16ms);
   }
   li + li { border-top: 1px solid var(--line); }
-  li.group { border-top: 1px solid var(--line); border-radius: 8px 8px 0 0; }
   li.group:not(:first-child) { margin-top: 1.1rem; }
   li:is(:has(+ li.group), :last-child) { border-bottom: 1px solid var(--line); border-radius: 0 0 8px 8px; }
-  li:hover { background: var(--hover); }
+  /* A heading is not pressed, so it is not pointed out */
+  li:not(.group):hover { background: var(--hover); }
   li::before {
     content: ""; position: absolute; left: 0; top: 0.55rem; bottom: 0.55rem; width: 2px; border-radius: 0 2px 2px 0;
     background: var(--ink); opacity: 0; transition: opacity 0.15s;
@@ -204,6 +204,7 @@
   /* A group's heading: a block, so that its text does not widen the rows' first column */
   li.group {
     display: block; min-height: 0; padding: 0.7rem 0.85rem 0.5rem; font: 700 0.78rem/1.2 var(--body); color: var(--fg); animation: none;
+    border-top: 1px solid var(--line); border-radius: 8px 8px 0 0;
   }
   li.group::before { content: none; }
   /* Its dot, of the group's color (--c), and its count */
@@ -819,7 +820,7 @@
   }
 
   // Picks and orders the entries by tab, project, tag, search and sort; shared by the list and by moving between pages in the frame
-  function arrange(state) {
+  function arrange(state, ranks = projectOrder()) {
     const q = state.q.trim().toLowerCase();
     const shown = items.filter((a) => inList(a, state)
       && (!state.project || (a.project ?? NONE) === state.project)
@@ -828,29 +829,29 @@
     const sorted = SORTS[state.sort] ? shown.sort(SORTS[state.sort]) : shown;
     // Group by group, each in the order picked (sort is stable): the favourites first, then the projects as projectOrder
     // has them, those without one last
-    const order = projectOrder();
-    const rank = (a) => {
+    const rank = new Map(sorted.map((a) => {
       const g = group(a, state);
-      return g === null ? -1 : g === NONE ? order.length : order.indexOf(g);
-    };
-    return sorted.sort((x, y) => rank(x) - rank(y));
+      return [a, g === null ? -1 : ranks.get(g) ?? ranks.size];
+    }));
+    return sorted.sort((x, y) => rank.get(x) - rank.get(y));
   }
 
   // The group an entry is listed under: the favourites (null) in all of the list, else its project. A project's name is a
   // string, NONE too, so none is taken for the favourites
   const group = (a, state) => (!state.fav && !state.archived && a.favorite ? null : a.project ?? NONE);
 
-  // The projects of every entry (both kinds, archived or not), most entries first, then by name: the order of the groups
-  // and of the projects' colors, which no filter changes
+  // The projects of every entry (both kinds, archived or not), most entries first, then by name, each to its place: the
+  // order of the groups and of the projects' colors, which no filter changes
   function projectOrder() {
     const counts = new Map();
     for (const a of items) if (a.project) counts.set(a.project, (counts.get(a.project) ?? 0) + 1);
-    return [...counts.keys()].sort((x, y) => counts.get(y) - counts.get(x) || x.localeCompare(y));
+    return new Map([...counts.keys()].sort((x, y) => counts.get(y) - counts.get(x) || x.localeCompare(y)).map((name, i) => [name, i]));
   }
 
-  // A project's color: one of six, by its place in projectOrder, the faint one for none.
+  // A project's color: one of six, by its place in projectOrder; the faint one for none, and for one no entry has any more
+  // (picked, its last entry gone)
   // LIMIT: from the seventh project on the colors repeat; let the viewer pick them if projects come to be that many
-  const projectColor = (name, order) => (name === NONE ? 'var(--faint)' : `var(--pc${order.indexOf(name) % 6})`);
+  const projectColor = (name, ranks) => (ranks.has(name) ? `var(--pc${ranks.get(name) % 6})` : 'var(--faint)');
 
   function toast(msg) {
     const t = document.createElement('div');
@@ -1226,20 +1227,20 @@
     return b;
   }
 
-  function renderChips(list) {
+  // The shelf's projects of list, in the order of ranks (projectOrder)
+  function renderChips(list, ranks) {
     const counts = new Map();
     for (const a of list) counts.set(a.project ?? NONE, (counts.get(a.project ?? NONE) ?? 0) + 1);
     // Kept as a choice even at 0, so that deleting the last entry does not jump the selection back to all
     if (project && !counts.has(project)) counts.set(project, 0);
-    const order = projectOrder();
-    const names = order.filter((name) => counts.has(name));
+    const names = [...ranks.keys()].filter((name) => counts.has(name));
     // A project dropped from every entry but still picked comes after those in the order
     if (project && project !== NONE && !names.includes(project)) names.push(project);
     // Its dot, its share of the list as a bar, and its count
     const projectChip = (label, value, n) => {
       const b = chip(label, n, { pressed: value === project, pick: () => toggleProject(value), extra: 'project' });
       b.dataset.project = value;
-      b.style.setProperty('--c', projectColor(value, order));
+      b.style.setProperty('--c', projectColor(value, ranks));
       const bar = document.createElement('span');
       bar.className = 'share';
       bar.style.setProperty('--share', `${list.length ? Math.round((n / list.length) * 100) : 0}%`);
@@ -1338,11 +1339,11 @@
     $('next').disabled = page >= pages;
   }
 
-  // A row of a, i-th on the page, its dot and project chip of its project's color in order (projectOrder)
-  function row(a, i, order) {
+  // A row of a, i-th on the page, its dot and project chip of its project's color by ranks (projectOrder)
+  function row(a, i, ranks) {
     const li = $('row').content.firstElementChild.cloneNode(true);
     li.style.setProperty('--i', i);
-    li.style.setProperty('--c', projectColor(a.project ?? NONE, order));
+    li.style.setProperty('--c', projectColor(a.project ?? NONE, ranks));
     li.dataset.slug = a.slug;
     const proj = li.querySelector('.proj');
     proj.textContent = a.project ?? '';
@@ -1508,10 +1509,12 @@
 
   function render() {
     const list = items.filter((a) => inList(a, { tab, archived, fav }));
-    const chips = renderChips(list);
+    const ranks = projectOrder();
+    const chips = renderChips(list, ranks);
     const tags = renderTags(list);
     const archivedHere = items.filter((a) => inView(a, { tab, archived: true })).length;
-    const shown = arrange(current());
+    const state = current();
+    const shown = arrange(state, ranks);
     $('sort').value = sort;
     // Entries deleted elsewhere leave the selection
     for (const slug of selected) if (!list.some((a) => a.slug === slug)) selected.delete(slug);
@@ -1533,18 +1536,17 @@
     const start = (page - 1) * size;
     // Each group is headed, a page that starts within one too: its dot, its name and how many it has in all. A heading is
     // no row (role none)
-    const state = current();
-    const order = projectOrder();
+    const groups = shown.map((a) => group(a, state));
     const sizes = new Map();
-    for (const a of shown) sizes.set(group(a, state), (sizes.get(group(a, state)) ?? 0) + 1);
+    for (const g of groups) sizes.set(g, (sizes.get(g) ?? 0) + 1);
     const rows = [];
-    shown.slice(start, start + size).forEach((a, i, slice) => {
-      const g = group(a, state);
-      if (i === 0 || group(slice[i - 1], state) !== g) {
+    shown.slice(start, start + size).forEach((a, i) => {
+      const g = groups[start + i];
+      if (i === 0 || groups[start + i - 1] !== g) {
         const li = document.createElement('li');
         li.className = 'group';
         li.setAttribute('role', 'none');
-        li.style.setProperty('--c', g === null ? 'var(--star)' : projectColor(g, order));
+        li.style.setProperty('--c', g === null ? 'var(--star)' : projectColor(g, ranks));
         const heading = document.createElement('div');
         heading.setAttribute('role', 'heading');
         heading.setAttribute('aria-level', '2');
@@ -1555,7 +1557,7 @@
         li.append(heading);
         rows.push(li);
       }
-      rows.push(row(a, i, order));
+      rows.push(row(a, i, ranks));
     });
     // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
@@ -1565,7 +1567,8 @@
     syncUrl();
   }
 
-  // Previous and next follow the list the page was opened from (kept for the tab); if the page is not in it, all entries of the same kind by update time
+  // Previous and next follow the list the page was opened from (kept for the tab), in its groups' order (arrange); if the page
+  // is not in it, all entries of the same kind and archived or not, unfiltered, in their groups by update time
   // The order the frame steps through: that of the list when the page was first found, so that starring or archiving it
   // from the bar does not move it. A page gone since drops out
   let frameOrder;
