@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{.Lang}}">
+<html lang="{{.Lang}}"{{with .Framed}} class="framed" data-slug="{{.}}"{{end}}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -23,6 +23,8 @@
     --bar: 3.5rem;
   }
   * { box-sizing: border-box; }
+  /* The list keeps the scrollbar's room when it does not scroll, so that it does not move when it starts to. Not the frame, whose iframe scrolls */
+  html:not(.framed) { scrollbar-gutter: stable; }
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
   /* A faint glow at the top only; not in the frame, where it would get in the page's way */
@@ -32,7 +34,7 @@
       radial-gradient(56rem 20rem at 30% -8rem, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%),
       radial-gradient(40rem 18rem at 80% -8rem, color-mix(in srgb, var(--accent-2) 11%, transparent), transparent 70%);
   }
-  body.framed::before { display: none; }
+  .framed body::before { display: none; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   button { font: inherit; color: inherit; cursor: pointer; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -66,7 +68,7 @@
   @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 45%, transparent); } 50% { box-shadow: 0 0 0 4px transparent; } }
 
   /* The frame: the iframe fills the space under the header bar. A page without a background of its own shows on the browser's default white */
-  body.framed { height: 100dvh; display: flex; flex-direction: column; }
+  .framed body { height: 100dvh; display: flex; flex-direction: column; }
   .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; }
   .notfound { flex: 1; align-content: center; }
 
@@ -578,8 +580,8 @@
     });
   }
   let items = [];
-  // At /a/<slug>/ this is the frame around a page (the server returns the same HTML)
-  const framed = location.pathname.match(/^\/a\/([^/]+)\/$/)?.[1];
+  // The slug of the page this frames, as the server drew it at /a/<slug>/; none for the list
+  const framed = document.documentElement.dataset.slug;
   // A link in the page to a frame URL moves the whole tab, on a message from the script added to the page. The sender is the sandboxed page,
   // so only messages from this iframe naming a frame URL of this origin are followed (never javascript: and the like).
   // A move to a part of the page (#…) is written into this URL too, while the iframe still shows this page, so that a copy of the URL
@@ -1274,7 +1276,6 @@
   }
 
   if (framed) {
-    document.body.classList.add('framed');
     $('frame-download').href = `/api/artifacts/${framed}/download`;
     $('frame-download').download = `${framed}.html`;
     // Only while the frame has focus (keys inside the iframe belong to the page)

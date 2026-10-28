@@ -239,7 +239,12 @@ func TestManagementPageAndFrame(t *testing.T) {
 		"/a/gone/": http.StatusNotFound,
 	} {
 		w := e.do(t, http.MethodGet, target, "")
-		want(t, w, status, `<html lang="en">`)
+		// The frame is drawn as one from the start, its slug for the script.
+		html := `<html lang="en">`
+		if slug := strings.Trim(strings.TrimPrefix(target, "/a/"), "/"); target != "/" {
+			html = `<html lang="en" class="framed" data-slug="` + slug + `">`
+		}
+		want(t, w, status, html)
 		if got := w.Header().Get("Content-Security-Policy"); got != frame {
 			t.Errorf("GET %s: CSP %q", target, got)
 		}

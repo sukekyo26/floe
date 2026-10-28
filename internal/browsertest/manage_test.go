@@ -2,6 +2,7 @@ package browsertest_test
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -491,4 +492,59 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"Beta / true / false / " + msg("ui_archive"),
 		"  1 / 1", "false   1 / 1", "/a/c/  2 / 2",
 	}, "|"))
+}
+
+// TestUIScrollbar keeps the list where it is whether or not it scrolls, the scrollbar's room kept on the right alone,
+// and the frame, a page's or a missing one's, without that room, as the server draws it so from the start.
+func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
+	b.navigate("/")
+	sb := b.eval(`(() => {
+		const d = Object.assign(document.createElement('div'), { style: 'overflow: scroll; width: 100px; height: 100px; position: absolute' });
+		document.body.append(d);
+		const width = d.offsetWidth - d.clientWidth;
+		d.remove();
+		return width;
+	})()`)
+	width, err := strconv.Atoi(sb)
+	if err != nil || width == 0 {
+		t.Fatalf("Chrome draws no scrollbar (%q): the flag hide-scrollbars of startChrome no longer works", sb)
+	}
+	size := func(width int64) {
+		t.Helper()
+		metrics := emulation.SetDeviceMetricsOverrideParams{Width: width, Height: 900, DeviceScaleFactor: 1, Mobile: false}
+		if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// What the body is narrower than the window: the room kept for the scrollbar. Not innerWidth - clientWidth, which
+	// counts the room only while the scrollbar is there.
+	const room = "innerWidth - document.body.getBoundingClientRect().width"
+	const where = "['.shelf', '.search'].map((s) => document.querySelector(s).getBoundingClientRect().left)" +
+		".concat(document.querySelector('.panel').getBoundingClientRect().right).join(' ')"
+	pages := func(n int) string {
+		return stub("Array.from({ length: " + fmt.Sprint(n) + " }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))")
+	}
+
+	out := make([]string, 0, 8)
+	size(1800)
+	b.eval(pages(60))
+	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"))
+	long := b.eval(where)
+	b.eval(pages(1))
+	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval(where+" === "+js(long)), b.eval(room))
+	// The room is on the right alone.
+	size(1200)
+	b.eval(pages(1))
+	out = append(out, b.eval(where))
+	for _, path := range []string{"/a/p/", "/a/none/"} {
+		b.navigate(path)
+		out = append(out, b.eval(room))
+	}
+	if _, err := chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}); err != nil {
+		t.Fatal(err)
+	}
+	check(t, "scrollbar", out, strings.Join([]string{"true", "false", "true", sb, fmt.Sprintf("16 272 %d", 1200-16-width), "0", "0"}, "|"))
 }

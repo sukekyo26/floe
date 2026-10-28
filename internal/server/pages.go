@@ -160,7 +160,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 				status = http.StatusOK
 			}
 		}
-		sendUI(w, r, status)
+		sendUI(w, r, status, slug)
 		return
 	}
 	var version string
