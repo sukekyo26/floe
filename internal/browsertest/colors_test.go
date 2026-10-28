@@ -5,13 +5,12 @@ import (
 	"testing"
 
 	"github.com/chromedp/cdproto/emulation"
-	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 )
 
-// themeList is the list the stub answers for the colors: a favourite, a description, tags, links (one whose file is
+// colorsList is the list the stub answers for the colors: a favourite, a description, tags, links (one whose file is
 // gone), a project of its own, and more than the smallest page size, so that the pager shows.
-const themeList = `[
+const colorsList = `[
 	{ slug: 'a', title: 'Alpha', description: 'about alpha', tags: ['plan', 'design'], project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
 	{ slug: 'b', title: 'Beta', description: '', tags: ['plan'], project: 'q', createdAt: at(1), updatedAt: at(8) },
 	{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) },
@@ -34,13 +33,11 @@ const measureFields = `(() => {
   return low.join('\n');
 })()`
 
-// TestUITheme opens the management page and the frame light whatever the OS prefers, switches them dark and keeps it,
-// draws them so in either without storage, leaves the page in the frame to the OS's preference, and measures that every
-// text and field reads in both, the selected box's tick drawn in the color it sits on.
-func TestUITheme(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+// TestUIColors draws the management page and the frame light whatever the OS prefers, leaves the page in the frame to
+// the OS's preference, and measures that every text and field reads, the colors copied into data URIs held.
+func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
-	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
 	s.floe(t, "publish", s.page(t, "scheme.yaml", "Scheme", "<script>setInterval(() => parent.postMessage(matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', '*'), 100)</script>"), "--slug", "scheme")
 	// The OS's preference, and no motion: a row rising in is faded while it does.
 	media := func(scheme string) {
@@ -51,63 +48,36 @@ func TestUITheme(t *testing.T) { //nolint:paralleltest // the browser tests shar
 			t.Fatal(err)
 		}
 	}
-	const state = "[document.documentElement.dataset.theme ?? '-', getComputedStyle(document.body).backgroundColor, " +
-		"document.getElementById('theme').getAttribute('aria-pressed')].join(' ')"
-	const press = "document.getElementById('theme').click()"
+	const ground = "getComputedStyle(document.body).backgroundColor"
+	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
 
-	out := make([]string, 0, 32)
-	media("dark")
-	b.navigate("/")
-	out = append(out, b.eval(state))
-	b.eval(press)
-	out = append(out, b.eval(state+" + ' ' + localStorage.getItem('artifacts.theme')"))
-	for _, path := range []string{"/", "/a/p/", "/a/none/"} {
-		b.navigate(path)
-		out = append(out, b.eval(state))
-	}
-	// Another tab open on the list follows a switch made in this one, its button too.
-	other, cancel := chromedp.NewContext(b.ctx)
-	defer cancel()
-	b2 := &browser{t: t, ctx: other, base: b.base}
-	b2.navigate("/")
-	out = append(out, b2.eval(state))
-	b.eval(press)
-	out = append(out, b2.until("the other tab to turn light", "!document.documentElement.dataset.theme && "+state))
-	b.eval(press)
-	out = append(out, b2.until("the other tab to turn dark", "document.documentElement.dataset.theme && "+state))
-	// The page in the frame follows the OS, whichever the frame around it is.
-	frame := func() string {
-		t.Helper()
+	out := make([]string, 0, 16)
+	for _, scheme := range []string{"dark", "light"} {
+		media(scheme)
+		// Light whatever the OS prefers: the list, a page's frame and a missing page's; the page in the frame reads the
+		// OS's preference.
+		for _, path := range []string{"/", "/a/p/", "/a/none/", "/a/scheme/"} {
+			b.navigate(path)
+			out = append(out, b.eval(ground))
+		}
+		out = append(out, b.until("the page's scheme", listening))
 
-		b.navigate("/a/scheme/")
-		return b.until("the page's scheme", listening)
-	}
-	out = append(out, frame())
-	b.eval("localStorage.setItem('artifacts.theme', 'light')")
-	out = append(out, frame())
-	media("light")
-	out = append(out, frame())
-	b.eval("localStorage.setItem('artifacts.theme', 'dark')")
-	out = append(out, frame())
-
-	// Every text, field and the tick, light and dark: a list with all it can show, its menus open, two rows selected, the
-	// bulk delete armed and an error; the links; the edit dialog; the bulk tags dialog with a tag on all, some and none.
-	for _, theme := range []string{"light", "dark"} {
-		b.eval("localStorage.setItem('artifacts.theme', '" + theme + "')")
+		// Every text and field: a list with all it can show, its menus open, two rows selected, the bulk delete armed and
+		// an error; the links; the edit dialog; the bulk tags dialog with a tag on all, some and none.
 		b.navigate("/")
-		b.eval(stub(themeList))
+		b.eval(stub(colorsList))
 		b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click(); " +
 			"document.getElementById('bulk-delete').click(); showError('failed'); document.getElementById('q').value = ''")
 		measure := func(where string) {
 			t.Helper()
 
 			if low := b.eval(measureContrast); low != "" {
-				t.Errorf("%s, %s: text that cannot be read:\n%s", theme, where, low)
+				t.Errorf("OS %s, %s: text that cannot be read:\n%s", scheme, where, low)
 			}
 		}
 		measure("the list")
 		if low := b.eval(measureFields); low != "" {
-			t.Errorf("%s: fields that cannot be read:\n%s", theme, low)
+			t.Errorf("OS %s: fields that cannot be read:\n%s", scheme, low)
 		}
 		// The data URIs hold the colors they copy: the tick --on-ink, the sort's arrow --faint.
 		out = append(out, b.eval("(() => { const root = getComputedStyle(document.documentElement); "+
@@ -126,25 +96,9 @@ func TestUITheme(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		measure("the links")
 	}
 
-	// Storage that throws, from before the page's first script: light, and a press switches it all the same, nothing thrown.
-	if _, err := chromedp.Call(b.ctx, page.AddScriptToEvaluateOnNewDocument, page.AddScriptToEvaluateOnNewDocumentParams{Source: `
-		window.thrown = [];
-		addEventListener('error', (e) => thrown.push(e.message));
-		Storage.prototype.getItem = Storage.prototype.setItem = () => { throw new DOMException('denied', 'SecurityError'); };`}); err != nil {
-		t.Fatal(err)
-	}
-	b.navigate("/")
-	out = append(out, b.eval(state+" + ' ' + thrown.length"))
-	b.eval(press)
-	out = append(out, b.eval(state+" + ' ' + thrown.length"))
-
-	const light, dark = "rgb(244, 243, 240)", "rgb(14, 15, 19)"
-	check(t, "theme", out, strings.Join([]string{
-		"- " + light + " false", "dark " + dark + " true dark",
-		"dark " + dark + " true", "dark " + dark + " true", "dark " + dark + " true",
-		"dark " + dark + " true", "- " + light + " false", "dark " + dark + " true",
-		"dark", "dark", "light", "light",
-		"true true", "true true",
-		"- " + light + " false 0", "dark " + dark + " true 0",
+	const light = "rgb(244, 243, 240)"
+	check(t, "colors", out, strings.Join([]string{
+		light, light, light, light, "dark", "true true",
+		light, light, light, light, "light", "true true",
 	}, "|"))
 }
