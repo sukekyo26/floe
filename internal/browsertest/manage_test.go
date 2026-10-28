@@ -663,6 +663,9 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.getElementById('tag-new').textContent"))
 	press(kb.Enter)
 	out = append(out, b.eval(boxes), b.eval("[document.getElementById('tag-dialog').open, calls.length, "+applies+"].join(' ')"))
+	// Cancelled after a change, the dialog opens again with nothing to apply.
+	b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.getElementById('bulk-tag').click()")
+	out = append(out, b.eval(applies))
 	b.eval("document.querySelector('#tag-dialog [data-close]').click()")
 	// A page removed since the list was read leaves the selection unsent.
 	selectOnly("b")
@@ -789,7 +792,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"all:true none:true some:false all:true", "plan:all:✓:2/3,設計:none:+:1/3,old:all:✓:,設計、実装:none:+:", "true",
 		`PATCH /api/artifacts/a {"tags":["plan","old"]},PATCH /api/artifacts/b {"tags":["plan","old"]},PATCH /api/artifacts/d {"tags":["old","plan"]}`, "true", "1",
 		`PATCH /api/artifacts/a {"tags":["設計","plan","old"]},PATCH /api/artifacts/c {"tags":["設計、実装","old"]}`,
-		"plan:all:✓: false", msg("ui_tag_create", "new"), "plan:all:✓:,new:all:✓:,old:none:+:,設計:none:+:,設計、実装:none:+:", "true 0 true",
+		"plan:all:✓: false", msg("ui_tag_create", "new"), "plan:all:✓:,new:all:✓:,old:none:+:,設計:none:+:,設計、実装:none:+:", "true 0 true", "false",
 		"true 0",
 		"old,設計,設計、実装", "plan, old, ", "設計,設計、実装",
 		"tag:plan,tag:設計,tag:設計、実装", "ab plan", "true", "abcd -",

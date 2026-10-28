@@ -225,7 +225,6 @@
   .suggest [role="option"] { padding: 0.4rem 0.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 0.82rem/1.4 var(--body); border-radius: 7px; cursor: pointer; }
   .suggest [role="option"]:hover, .suggest [aria-selected="true"] { background: var(--subtle); }
   .suggest [aria-selected="true"] { color: var(--accent); }
-  /* The bulk dialog's tags, a box each: on all the selected, on some (indeterminate) or on none */
   /* The bulk dialog's tags, a chip each, wrapping: on all the selected (filled), on some (dashed) or on none, told by the chip's
      mark (✓, −, +) and its look, not by its color alone. The checkbox is the chip's own, out of sight, so keys and screen readers
      use it as any. No transition: a chip seen between two marks reads as neither */
@@ -1037,18 +1036,22 @@
     });
   }
 
-  // The bulk dialog's tags: how many of the selected each is on as the dialog opened (on), and the mark each box has (want):
-  // all, some or none. A box of a tag on some goes some → all → none → some, so that it can leave the pages as they are; the
-  // others all ⇄ none
+  // The bulk dialog's tags: how many of the selected each is on as the dialog opened (on), the mark that makes each chip
+  // (start) and the mark it has (want): all, some or none. A chip of a tag on some goes some → all → none → some, so that it
+  // can leave the pages as they are; the others all ⇄ none
   let tagMarks;
+
+  // Apply is for a change: none while every chip has the mark it started with
+  const tagsUnchanged = () => [...tagMarks.want].every(([name, w]) => w === tagMarks.start.get(name));
 
   function openTags() {
     const pages = [...selected].map((slug) => items.find((a) => a.slug === slug)).filter(Boolean);
     const on = new Map(tagNames().map((name) => [name, pages.filter((a) => a.tags?.includes(name)).length]));
-    const mark = (n) => (n === pages.length ? 'all' : n ? 'some' : 'none');
-    tagMarks = { total: pages.length, on, want: new Map([...on].map(([name, n]) => [name, mark(n)])) };
+    const start = new Map([...on].map(([name, n]) => [name, n === pages.length ? 'all' : n ? 'some' : 'none']));
+    tagMarks = { total: pages.length, on, start, want: new Map(start) };
     $('tag-title').textContent = t('ui_tag_bulk_title', pages.length);
     $('tag-find').value = '';
+    $('tag-apply').disabled = true;
     drawTagBoxes();
     $('tag-dialog').showModal();
   }
@@ -1071,10 +1074,9 @@
       show();
       box.addEventListener('click', () => {
         const now = want.get(name);
-        const some = on.get(name) > 0 && on.get(name) < total;
-        want.set(name, now === 'all' ? 'none' : now === 'none' && some ? 'some' : 'all');
+        want.set(name, now === 'all' ? 'none' : now === 'none' && tagMarks.start.get(name) === 'some' ? 'some' : 'all');
         show();
-        $('tag-apply').disabled = [...want].every(([n, w]) => w === (on.get(n) === total ? 'all' : on.get(n) ? 'some' : 'none'));
+        $('tag-apply').disabled = tagsUnchanged();
       });
       const mark = document.createElement('span');
       mark.className = 'mark';
@@ -1103,10 +1105,11 @@
     const name = $('tag-find').value.trim();
     if (!name || tagMarks.want.has(name)) return;
     tagMarks.on.set(name, 0);
+    tagMarks.start.set(name, 'none');
     tagMarks.want.set(name, 'all');
     $('tag-find').value = '';
     drawTagBoxes();
-    $('tag-apply').disabled = false;
+    $('tag-apply').disabled = tagsUnchanged();
   }
 
   // Gives the selected the tags as the boxes have them, sending each page whose tags change them so; one that would not
