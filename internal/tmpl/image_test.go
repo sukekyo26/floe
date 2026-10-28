@@ -130,11 +130,11 @@ func TestOwnPartImages(t *testing.T) {
 	k := ownKit(t, map[string]string{
 		"shots/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"one": {"type": "string", "format": "image"}, "many": {"type": "array", "items": {"type": "string", "format": "image"}}}}`,
-		"shots/part.html":   `<div data-floe-part="shots">{{with .one}}<img src="{{.}}" alt="">{{end}}{{range .many}}<img src="{{.}}" alt="">{{end}}</div>`,
-		"shots/part.css":    "",
-		"shot/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string", "format": "image"}`,
-		"shot/part.html":    `<div data-floe-part="shot"><img src="{{.}}" alt="" data-n="{{len .}}"></div>`,
-		"shot/part.css":     "",
+		"shots/part.html":  `<div data-floe-part="shots">{{with .one}}<img src="{{.}}" alt="">{{end}}{{range .many}}<img src="{{.}}" alt="">{{end}}</div>`,
+		"shots/part.css":   "",
+		"shot/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string", "format": "image"}`,
+		"shot/part.html":   `<div data-floe-part="shot"><img src="{{.}}" alt="" data-n="{{len .}}"></div>`,
+		"shot/part.css":    "",
 	}, mine(
 		"<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head>\n<body>\n"+
 			"{{.Data.shots}}{{.Data.shot}}\n</body></html>\n",
