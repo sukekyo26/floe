@@ -42,7 +42,8 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	const bulk = `(() => {
 		const bar = document.getElementById('bulk'), r = bar.getBoundingClientRect();
 		const shown = [...bar.querySelectorAll('.btn')].filter((e) => e.offsetParent);
-		const inside = shown.every((e) => { const x = e.getBoundingClientRect(); return x.left >= r.left - 0.5 && x.right <= r.right + 0.5 && x.top >= r.top - 0.5 && x.bottom <= r.bottom + 0.5; });
+		const within = (x, y) => x.left >= y.left - 0.5 && x.right <= y.right + 0.5 && x.top >= y.top - 0.5 && x.bottom <= y.bottom + 0.5;
+		const inside = within(r, document.querySelector('.toolbar').getBoundingClientRect()) && shown.every((e) => within(e.getBoundingClientRect(), r));
 		const words = shown.map((e) => e.querySelector('.label')).filter((l) => l.getBoundingClientRect().width > 1).map((l) => l.textContent);
 		return [shown.length, inside, words.join('/'), shown.every((e) => e.querySelector('.label').textContent !== '')].join(' ');
 	})()`
