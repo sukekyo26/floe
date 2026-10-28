@@ -27,6 +27,17 @@
     --bulk-room: 6rem;
   }
   * { box-sizing: border-box; }
+  /* Every scrollbar of the page, its own and its boxes': a thin round thumb of the faint color on a clear track. Chrome, Edge and
+     Safari draw it from ::-webkit-scrollbar, which Chrome drops in a box given scrollbar-color or scrollbar-width, so those are
+     Firefox's alone */
+  :root { --thumb: color-mix(in srgb, var(--faint) 55%, transparent); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--thumb); background-clip: padding-box; border: 2px solid transparent; border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--faint); }
+  ::-webkit-scrollbar-corner { background: transparent; }
+  @supports not selector(::-webkit-scrollbar) {
+    :root { scrollbar-color: var(--thumb) transparent; }
+  }
   /* The list keeps the scrollbar's room when it does not scroll, so that it does not move when it starts to. Not the frame, whose iframe scrolls */
   html:not(.framed) { scrollbar-gutter: stable; }
   [hidden] { display: none !important; }
@@ -95,7 +106,15 @@
   .shelf {
     position: sticky; top: calc(var(--bar) + var(--shell-top)); display: grid; gap: 1.1rem;
     max-height: max(10rem, calc(100dvh - var(--bar) - var(--shell-top) - var(--shell-bottom))); overflow-y: auto;
-    margin-inline: -4px; padding: 0.9rem 4px 4px; scrollbar-width: thin;
+    margin-inline: -4px; padding: 0.9rem 4px 4px;
+  }
+  /* The shelf's thumb shows only while it is pointed at or reached by keys; its room stays, so that nothing in it moves */
+  /* LIMIT: the 0.01px works round Chrome drawing a thumb anew only when its box is laid out again; without it, the thumb stays hidden */
+  .shelf:not(:hover, :focus-within)::-webkit-scrollbar-thumb { background: transparent; }
+  .shelf:is(:hover, :focus-within) { padding-right: 4.01px; }
+  @supports not selector(::-webkit-scrollbar) {
+    .shelf { scrollbar-width: thin; }
+    .shelf:not(:hover, :focus-within) { scrollbar-color: transparent transparent; }
   }
   .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 0.7rem/1.2 var(--body); color: var(--faint); letter-spacing: 0.02em; }
   .shelf .views, .shelf .chips, .shelf .tabs { display: grid; gap: 2px; }

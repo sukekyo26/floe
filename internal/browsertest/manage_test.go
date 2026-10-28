@@ -876,6 +876,15 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	// The focus ring's room each side, and a long name folded, not scrolling sideways.
 	out = append(out, b.eval("(() => { "+near+" const a = document.querySelector('.views button').getBoundingClientRect(); "+
 		"return [a.left - r.left >= 4, r.left + shelf.clientWidth - a.right >= 4, shelf.scrollWidth === shelf.clientWidth].join(' '); })()"))
+	// Pointed at, the shelf is laid out again (its right room 4.01px) for Chrome to draw its thumb; nothing in it moves.
+	hover := "document.querySelector('.views button').getBoundingClientRect().right + ' ' + getComputedStyle(document.querySelector('.shelf')).paddingRight"
+	b.point(800, 300)
+	away := b.eval(hover)
+	sr := b.rect("document.querySelector('.shelf')")
+	b.point(sr.X+sr.Width/2, sr.Y+sr.Height/2)
+	on := b.until("the shelf to be pointed at", "document.querySelector('.shelf:hover') && ("+hover+")")
+	b.point(800, 300)
+	out = append(out, away+" / "+on+" / "+b.until("the shelf to be left", "!document.querySelector('.shelf:hover') && ("+hover+")"))
 	// With the bulk bar, the shelf ends above it; in a window too low for that, it keeps 10rem, reaching below.
 	b.eval("document.querySelector('#list li:not(.group) .sel').click()")
 	out = append(out, b.until("the bar to show", "(() => { const r = document.querySelector('.shelf').getBoundingClientRect(); "+
@@ -891,7 +900,7 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	wheel()
 	out = append(out, b.until("the page to scroll", "scrollY > 0 && 'scrolled'"))
 	check(t, "shelf scrolls", out, strings.Join([]string{
-		"true true true true", "true true", "page at 0", "true true", "true true true", "true", "true", "true true", "scrolled",
+		"true true true true", "true true", "page at 0", "true true", "true true true", "238 4px / 238 4.01px / 238 4px", "true", "true", "true true", "scrolled",
 	}, "|"))
 }
 
@@ -942,5 +951,6 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// The frame makes its URLs of the slug escaped again: one read from /a/x%3Fy/ is x?y.
 	b.navigate("/a/x%3Fy/")
 	out = append(out, b.eval("document.getElementById('frame-download').getAttribute('href')"))
-	check(t, "scrollbar", out, strings.Join([]string{"true", "false", "true", sb, fmt.Sprintf("16 272 %d", 1200-16-width), "0", "0", "/api/artifacts/x%3Fy/download"}, "|"))
+	// The scrollbar is the management page's own, 10px wide.
+	check(t, "scrollbar", out, strings.Join([]string{"true", "false", "true", "10", fmt.Sprintf("16 272 %d", 1200-16-width), "0", "0", "/api/artifacts/x%3Fy/download"}, "|"))
 }
