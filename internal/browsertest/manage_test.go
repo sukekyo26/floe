@@ -2,6 +2,7 @@ package browsertest_test
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -58,6 +59,11 @@ func stub(list string) string {
 	};
 	return load();
 })()`
+}
+
+// manyPages is a stub of n pages, newest first, alike but for their slug and title.
+func manyPages(n int) string {
+	return stub("Array.from({ length: " + strconv.Itoa(n) + " }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))")
 }
 
 // TestUIExtras sorts, filters favourites and the archived, counts each list, moves by keyboard, deletes and
@@ -400,7 +406,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.getElementById('add-open').hidden"))
 	b.eval("document.querySelector('.views [data-view=all]').click(); document.querySelector('.tabs [data-tab=pages]').click()")
 	// 50 rows a page unless the viewer chose otherwise.
-	b.eval(stub("Array.from({ length: 60 }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))"))
+	b.eval(manyPages(60))
 	out = append(out, b.eval("document.querySelectorAll('#list li').length + ' ' + document.getElementById('pageno').textContent"))
 	// An open menu passes under the bars stuck at the top as the page scrolls, not over them.
 	b.eval("document.querySelector('#list li[data-slug=p5] summary').click()")
@@ -499,28 +505,35 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 	s := newSite(t)
 	b := s.b
 	b.navigate("/")
-	// The test Chrome's own window is near the width that hides the shelf.
+	// The test Chrome's own window is near the width that hides the shelf. The size holds for this test's tab alone.
 	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 1440, Height: 900, DeviceScaleFactor: 1, Mobile: false}
 	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _, _ = chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}) }) //nolint:errcheck // a test that failed tells why
-	pages := func(n int) string {
-		return stub("Array.from({ length: " + fmt.Sprint(n) + " }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))")
+	// The shelf's top, then where it sits below what is over it: the shell's top, or the bar's bottom once scrolled,
+	// and the shell's padding.
+	place := func(over, edge string) string {
+		return b.eval("(() => { const pad = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop); " +
+			"return document.querySelector('.shelf').getBoundingClientRect().top + ' ' + " +
+			"(document.querySelector('" + over + "').getBoundingClientRect()." + edge + " + pad); })()")
 	}
-	// The shelf's top, and where it sits: the shell's top and its padding.
-	const place = "(() => { const shell = document.querySelector('.shell'); const shelf = document.querySelector('.shelf').getBoundingClientRect(); " +
-		"return [shelf.height > 0, shelf.top === shell.getBoundingClientRect().top + parseFloat(getComputedStyle(shell).paddingTop)].join(' '); })()"
 
-	out := make([]string, 0, 4)
-	b.eval(pages(60))
-	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval(place))
+	out := make([]string, 0, 6)
+	b.eval(manyPages(60))
+	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval("document.querySelector('.shelf').getBoundingClientRect().height > 0"))
+	long := place(".shell", "top")
 	b.eval("scrollTo(0, 300)")
-	out = append(out, b.until("the page to scroll", "scrollY === 300 && "+
-		"String(document.querySelector('.shelf').getBoundingClientRect().top === document.querySelector('.bar').getBoundingClientRect().bottom + "+
-		"parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--shell-top')) * parseFloat(getComputedStyle(document.documentElement).fontSize))"))
+	b.until("the page to scroll", "scrollY === 300")
+	scrolled := place(".bar", "bottom")
 	b.eval("scrollTo(0, 0)")
-	b.eval(pages(1))
-	out = append(out, b.eval(place))
-	check(t, "shelf stays", out, "true|true true|true|true true")
+	b.eval(manyPages(1))
+	short := place(".shell", "top")
+	// Each the shelf's top and where it sits, alike.
+	for _, p := range []string{long, scrolled, short} {
+		top, sits, _ := strings.Cut(p, " ")
+		out = append(out, top, sits)
+	}
+	got := strings.Join(out, "|")
+	want := strings.Join([]string{"true", "true", out[3], out[3], out[5], out[5], out[7], out[7]}, "|")
+	check(t, "shelf stays", []string{got}, want)
 }
