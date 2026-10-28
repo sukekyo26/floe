@@ -105,11 +105,55 @@ func TestCheckPart(t *testing.T) {
 
 	for _, tt := range []struct{ name, want string }{
 		{"note", ""},
-		{"html", "parts/html.json: #/properties/body: a part's schema takes no \"format\": \"html\": its part.html draws its items, which the checks of a format do not reach; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
-		{"stack", "parts/stack.json: #/$defs/item: the part refers to floe:///parts/any.json, a schema of floe's that holds items of the format markdown, which a part's part.html cannot draw: refer to it from the template's schema instead, and give the part items of its own"},
+		{"html", "parts/html.json: #/properties/body: a part's schema takes no \"format\": \"html\": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
+		{"stack", "parts/stack.json: #/$defs/item: the part refers to floe:///parts/any.json, a shared schema that holds items of the format markdown, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own"},
 	} {
 		if got := told(checkPart("floe:///parts/"+tt.name+".json", resources(t))); got != tt.want {
 			t.Errorf("CheckPart(%s) told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+	}
+}
+
+// CheckPart takes a part's image where a walk from its root reaches it, and refuses one elsewhere as a template's
+// schema is refused, and one in a Shared schema the part refers to.
+func TestCheckPartImage(t *testing.T) {
+	t.Parallel()
+
+	const img = `{"type": "string", "format": "image"}`
+	unreached := func(at string) string {
+		return "parts/p.json: " + at + ": the format image marks an item to draw; declare it under properties or items, which floe follows"
+	}
+	for _, tt := range []struct{ name, body, want string }{
+		{"properties", `"properties": {"s": ` + img + `}`, ""},
+		{"items", `"properties": {"s": {"type": "array", "items": ` + img + `}}`, ""},
+		{"root", `"type": "string", "format": "image"`, ""},
+		{"$defs", `"properties": {"s": {"$ref": "#/$defs/s"}}, "$defs": {"s": ` + img + `}`, ""},
+		{"anyOf", `"properties": {"s": {"anyOf": [` + img + `]}}`, unreached("#/properties/s/anyOf/0")},
+		{"oneOf", `"properties": {"s": {"oneOf": [` + img + `]}}`, unreached("#/properties/s/oneOf/0")},
+		{"not", `"properties": {"s": {"not": ` + img + `}}`, unreached("#/properties/s/not")},
+		{"then", `"properties": {"s": {"if": {"type": "string"}, "then": ` + img + `}}`, unreached("#/properties/s/then")},
+		{"additionalProperties", `"additionalProperties": ` + img, unreached("#/additionalProperties")},
+		{"patternProperties", `"patternProperties": {"^s": ` + img + `}`, unreached("#/patternProperties/^s")},
+		{"prefixItems", `"properties": {"s": {"type": "array", "prefixItems": [` + img + `]}}`, unreached("#/properties/s/prefixItems/0")},
+		{"markdown", `"properties": {"s": {"type": "string", "format": "markdown"}}`, "parts/p.json: #/properties/s: a part's schema takes no \"format\": \"markdown\": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
+		{"shared", `"properties": {"s": {"$ref": "floe:///parts/shot.json"}}`, "parts/p.json: #/properties/s: the part refers to floe:///parts/shot.json, a shared schema that holds items of the format image, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own"},
+	} {
+		res := resources(t)
+		for name, r := range map[string]struct {
+			src  string
+			kind schema.Kind
+		}{
+			"p":    {`{"$schema": "https://json-schema.org/draft/2020-12/schema", ` + tt.body + `}`, schema.Part},
+			"shot": {`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"s": ` + img + `}}`, schema.Shared},
+		} {
+			got, err := schema.NewResource("floe:///parts/"+name+".json", "parts/"+name+".json", []byte(r.src), r.kind)
+			if err != nil {
+				t.Fatal(err)
+			}
+			res["floe:///parts/"+name+".json"] = got
+		}
+		if got := told(checkPart("floe:///parts/p.json", res)); got != tt.want {
+			t.Errorf("%s: CheckPart told\n%s\nwant\n%s", tt.name, got, tt.want)
 		}
 	}
 }

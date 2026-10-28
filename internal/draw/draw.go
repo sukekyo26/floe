@@ -45,7 +45,9 @@ func Page(
 		if it.Part != "" {
 			holds[it.Part] = it.Holds
 		}
-		if slices.ContainsFunc(failed, func(at []string) bool { return under(at, it.At) }) {
+		// Walk calls fn with the items a part holds before the part, so that what failed in it is known here; at
+		// the part's own path is the format of a part's root (a part whose value is an image).
+		if slices.ContainsFunc(failed, func(at []string) bool { return atOrUnder(at, it.At) }) {
 			return nil, nil //nolint:nilnil // not drawn: the mistake of what it holds is told
 		}
 		drawn, err := drawItem(k, d, it, ready, s)
@@ -177,9 +179,9 @@ func node(typ html.NodeType, a atom.Atom, data string) *html.Node {
 	}
 }
 
-// under reports whether the path at is under the path of, longer.
-func under(at, of []string) bool {
-	return len(at) > len(of) && slices.Equal(at[:len(of)], of)
+// atOrUnder reports whether the path at is the path of, or under it.
+func atOrUnder(at, of []string) bool {
+	return len(at) >= len(of) && slices.Equal(at[:len(of)], of)
 }
 
 // pageMistakes returns the mistakes err of executing the page.html of t: one of a file of its own (an asset

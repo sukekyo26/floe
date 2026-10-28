@@ -157,7 +157,7 @@ func TestListShow(t *testing.T) {
 		{[]string{"part", "show", "rows"}, 0, func(out string) bool {
 			return out == "rows: Rows in a panel, a rule between each and the next; take it by looks or data-floe-look\nwhere: floe\nlooks: panel\n"
 		}, ""},
-		{[]string{"part", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown part "nope"; use any, bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, keys, links, matrix, mine, note, options, panel, progress, risks, rows, script, stack, stats, steps, table, tabs, terminal, timeline, tone, tree` + "\n"},
+		{[]string{"part", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown part "nope"; use any, bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, mine, note, options, panel, progress, risks, rows, script, stack, stats, steps, table, tabs, terminal, timeline, tone, tree` + "\n"},
 		{[]string{"template", "list"}, 0, func(out string) bool {
 			return strings.HasPrefix(out, "memo\t"+filepath.Join(templates, "memo")+"\ta b c\nreport\tfloe\tA page of sections")
 		}, ""},

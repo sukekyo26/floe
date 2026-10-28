@@ -4,10 +4,11 @@
   "description": "One key naming the kind of the part",
   "type": "object",
   "properties": {
-    "text": { "type": "string", "format": "markdown", "description": "Markdown; raw HTML in it is left out. Code goes in code and commands in terminal, short code in a sentence as `code`" },
+    "text": { "type": "string", "format": "markdown", "description": "Markdown; raw HTML in it is left out. Code goes in code and commands in terminal, short code in a sentence as `code`; an image goes in image, as one in Markdown is not shown" },
     "code": { "$ref": "floe:///parts/code.json", "description": "Write every block of code here" },
     "terminal": { "$ref": "floe:///parts/terminal.json", "description": "Write every command here, without its prompt" },
     "table": { "$ref": "floe:///parts/table.json" },
+    "image": { "$ref": "floe:///parts/image.json" },
     "cards": { "$ref": "floe:///parts/cards.json" },
     "note": { "$ref": "floe:///parts/note.json" },
     "stats": { "$ref": "floe:///parts/stats.json" },

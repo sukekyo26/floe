@@ -129,7 +129,8 @@ type walk struct {
 func (w *walk) step(st Step, v any, at []string) (any, error) {
 	switch {
 	case st.Part != "":
-		// A part's schema holds no format of floe's (CheckPart): what is in it is parts, or drawn as written.
+		// A part's schema holds no format of floe's but image (CheckPart): what is in it is parts, images, or
+		// drawn as written.
 		ready, err := w.step(w.c.Follow(st.PartRoot), v, at)
 		if err != nil {
 			return nil, err

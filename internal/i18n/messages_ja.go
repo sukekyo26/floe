@@ -39,8 +39,8 @@ var messagesJA = map[string]string{
 	"schema_root_drawn":         "schema の根の全体を %s が描くことになります。ページの項目は properties の下に書き、部品はそのどれかの下で指してください",
 	"schema_shared_declared":    "%s は floe が自分で読む鍵です。schema の properties から消し、決まりを足すなら checks.yaml の check で書いてください",
 	"schema_shared_key":         "schema が %s を求めています。%[1]s は floe がどのデータファイルからも自分で読み、schema の検査から外す（lang・template・theme・title）ので、ほかの項目を求めてください",
-	"schema_part_shared_format": "部品が %s を指しています。これは format %s の項目を持つ floe の schema で、部品の part.html は描けません。テンプレートの schema から指し、部品には自分の項目を持たせてください",
-	"schema_part_format":        "部品の schema には \"format\": \"%s\" を書けません。部品の項目は part.html が描き、format の検査は届きません。その項目はテンプレートの schema に書くか、Markdown なら \"type\": \"string\" だけにして {{markdown .<名前>}} で描いてください",
+	"schema_part_shared_format": "部品が %s を指しています。これは format %s の項目を持つ共有の schema で、部品は共有の schema の中の format を取りません。テンプレートの schema から指し、部品には自分の項目を持たせてください",
+	"schema_part_format":        "部品の schema には \"format\": \"%s\" を書けません。部品が取る floe の format は image だけです。その項目はテンプレートの schema に書くか、Markdown なら \"type\": \"string\" だけにして {{markdown .<名前>}} で描いてください",
 
 	"doc_no_lang":  "最上位に lang: ja のようにページの言語を指定してください（en・ja・pt-BR のような BCP 47 の言語タグ）",
 	"doc_not_text": "%s は文字列で指定してください",

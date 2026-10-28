@@ -13,7 +13,8 @@
       "terminal": { "$ref": "floe:///parts/terminal.json" },
       "diff": { "$ref": "floe:///parts/diff.json" },
       "note": { "$ref": "floe:///parts/note.json" },
-      "table": { "$ref": "floe:///parts/table.json" }
+      "table": { "$ref": "floe:///parts/table.json" },
+      "image": { "$ref": "floe:///parts/image.json" }
     },
     "minProperties": 1,
     "maxProperties": 1,

@@ -212,6 +212,36 @@ func TestNeedImages(t *testing.T) {
 	}
 }
 
+// The images of report's part image, in a section or in tabs, are asked for and kept as those of an item of
+// format image: only those read, and drawn again from the copy.
+func TestImagePartPublished(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	src := "lang: en\ntemplate: report\nsections:\n  - parts:\n      - image: { file: img/a.png, alt: a }\n" +
+		"      - tabs:\n          - { title: b, parts: [{ image: { file: img/b.png, alt: b } }] }\n          - { title: c, parts: [{ text: c }] }\n"
+	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p"}, store.Options{})
+	if need, ok := errors.AsType[*store.NeedImages](err); !ok || !slices.Equal(need.Names, []string{"img/a.png", "img/b.png"}) {
+		t.Fatalf("PrepareData = %v, want NeedImages of img/a.png and img/b.png", err)
+	}
+	publish(t, s, dw, "d.yaml", src, map[string][]byte{"img/a.png": png, "img/b.png": png, "img/c.png": png}, store.Options{})
+	want := []string{"data.yaml", "images/img/a.png", "images/img/b.png", "page.html"}
+	if got := files(t, copyOf(t, s, root, "d")); !slices.Equal(got, want) {
+		t.Errorf("files %v, want %v", got, want)
+	}
+	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+		t.Fatal(told(err, root))
+	}
+	dir := copyOf(t, s, root, "d")
+	if got := files(t, dir); !slices.Equal(got, want) {
+		t.Errorf("rebuilt: files %v, want %v", got, want)
+	}
+	if n := strings.Count(read(t, filepath.Join(dir, "page.html")), `<img src="data:image/png;base64,`); n != 2 {
+		t.Errorf("rebuilt: %d images in page.html, want 2", n)
+	}
+}
+
 // A title or a theme given empty is not given; a slug is checked as given.
 func TestAccept(t *testing.T) {
 	t.Parallel()

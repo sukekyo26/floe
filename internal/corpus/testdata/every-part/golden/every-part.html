@@ -254,6 +254,15 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
+@scope ([data-floe-part="image"]) to (:scope [data-floe-part] > *) {
+/* A thin frame keeps a screenshot's white apart from the page's */
+:scope { margin: 0; }
+:scope img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
 @scope ([data-floe-part="note"]) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
 :scope {
@@ -990,7 +999,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <details data-floe-part="details" open=""><summary>The whole log</summary><div data-floe-part="stack"><p>What the copy printed.</p>
 <figure class="sh" data-floe-part="terminal"><pre><span class="run">wiki export</span><span class="out">done</span></pre></figure><figure data-floe-part="diff"><figcaption><span class="added">+1</span><span class="removed">−1</span></figcaption><pre><code><span class="add">+a
 </span><span class="del">-b
-</span></code></pre></figure></div></details>
+</span></code></pre></figure><figure data-floe-part="image"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAAJElEQVR42mOwqTgxIIhh1OJRi0ctHrV41OJRi0ctHrV45FgMAGfIo72jTm6ZAAAAAElFTkSuQmCC" alt="The wiki after the move"/></figure></div></details>
 <form data-floe-part="tabs">
 <label><input type="radio" name="tab" checked=""/>bash</label><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code>export WIKI=new</code></pre></figure></div>
 <label><input type="radio" name="tab"/>PowerShell</label><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">powershell</span></figcaption><pre><code>$env:WIKI = &#39;new&#39;</code></pre></figure><div class="good" data-floe-part="note"><p>Run it in a new window.</p>
