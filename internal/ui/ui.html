@@ -849,7 +849,6 @@
     return b;
   }
 
-
   function renderChips(list) {
     const counts = new Map();
     for (const a of list) counts.set(a.project ?? NONE, (counts.get(a.project ?? NONE) ?? 0) + 1);
