@@ -56,6 +56,7 @@ func TestExampleMistakes(t *testing.T) {
 		icons diagram.Icons
 		want  string
 	}{
+		// The comment puts the mistake on the second line, so that its line and column are of the value.
 		{"# c\nexample: nope\n", nil, "s.yaml:2:10: no example nope; use architecture, aws, class, er, flow, git, sequence, state, timeline, venn"},
 		// A diagram shows no spec.
 		{"example: flow\nsource: true\n", nil, "additional properties 'source' not allowed"},

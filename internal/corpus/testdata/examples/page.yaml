@@ -1,7 +1,7 @@
 template: report
 lang: ja
 title: 図の例
-lead: floe diagram example の 10 種を、名前で描いて spec を見せる（floe-diagram-examples の参照の形）。
+lead: floe diagram example の 10 種を、名前で描く（floe-diagram-examples の参照の形）。
 sections:
   - heading: architecture
     parts:

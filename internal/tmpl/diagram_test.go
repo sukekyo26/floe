@@ -172,9 +172,14 @@ func TestOwnPartDiagrams(t *testing.T) {
 		t.Error("the page holds no CSS of the part diagram")
 	}
 
-	// A diagram shows no spec, in a part's value too: source is no key of it.
-	if got := drawn(t, k, "lang: en\ntemplate: mine\npic: {source: true, width: 9, height: 9, title: p, parts: []}\n", none); !strings.Contains(got, "additional properties 'source' not allowed") {
-		t.Errorf("told\n%s\nwant source refused", got)
+	// A diagram shows no spec, in a part's value too, a flow or a block within a part: source is no key of it.
+	for _, src := range []string{
+		"lang: en\ntemplate: mine\npic: {source: true, width: 9, height: 9, title: p, parts: []}\n",
+		"lang: en\ntemplate: mine\ntwo:\n  a:\n    source: true\n    width: 300\n    height: 100\n    title: t\n    parts: []\n  b: " + boxSpec + "\n",
+	} {
+		if got := drawn(t, k, src, none); !strings.Contains(got, "additional properties 'source' not allowed") {
+			t.Errorf("told\n%s\nwant source refused", got)
+		}
 	}
 
 	// The layout of a diagram the part holds, under its key; the value the part draws as one, under its own.

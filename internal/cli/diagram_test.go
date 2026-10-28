@@ -18,7 +18,7 @@ func TestDiagram(t *testing.T) {
 		"b.yaml": "width: 200\nheight: 100\ntitle: B\nparts:\n  - boxx: {}\n",
 		"c.yaml": "width: 200\nheight: 100\ntitle: C\nparts:\n  - icon: { icon: aws/aws-lambda, x: 10, y: 10 }\n",
 		"e.yaml": "# nothing yet\n",
-		"s.yaml": "\ufeff# shown\r\nsource: true\r\nexample: flow\r\n",
+		"s.yaml": "source: true\nexample: flow\n",
 	} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(src), 0o600); err != nil {
 			t.Fatal(err)

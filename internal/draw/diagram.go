@@ -27,8 +27,8 @@ var Diagrams = sync.OnceValues(func() (*diagram.Drawer, error) {
 	return diagram.New(c), nil
 })
 
-// diagramOf returns the function diagram of a part.html that draws the value of it, an item of d, as written, in
-// d's language: in the box of floe's part diagram, so that its CSS is the page's whoever draws it, after the
+// diagramOf returns the function diagram of a part.html that draws the value of it, an item of d, in d's
+// language: in the box of floe's part diagram, so that its CSS is the page's whoever draws it, after the
 // script that zooms it. Its mistakes are at JSON pointers from the root of the value, or of no place (icons); what
 // fails otherwise is floe's failure.
 func (s *items) diagramOf(d *doc.Data, it schema.Item) func() (template.HTML, error) {
