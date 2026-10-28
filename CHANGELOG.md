@@ -32,13 +32,18 @@ adheres to [Semantic Versioning](https://semver.org/).
   opens and downloads pages: a shelf on the left picks all, the favourites
   (which head the list of all), the archived, a tag and the project (picked
   again, let go), a row of buttons on a narrow screen; the bar over the list
-  picks the kind and the order, and holds the actions on the pages selected
+  picks the kind and the order (from a menu of the page's own, by mouse or
+  keys), and holds the actions on the pages selected
   while there are any; the list groups its pages by project in round cards,
   each project in a color of its own, those with the most pages first, a row's
   menu holding its edit, opening, download, archive and delete; and the bar over
-  an open page stars and archives it. Tags are given in a page's edit dialog, to those selected,
+  an open page stars and archives it with buttons of icons alone, filled in while
+  on, and its title opens the pages of the list it was opened from, to search and
+  pick from. Tags are given in a page's edit dialog, to those selected,
   or as `tags` in `PATCH /api/artifacts/{slug}`; they show under a page's
-  title, are searched, and stay when the page is published again.
+  title, are searched, and stay when the page is published again. What is
+  reached by keyboard shows one thin grey ring, and a button pressed with the
+  mouse shows none.
 - Add floe's template `report`: a header over sections, each a heading over
   parts; and thirty-two parts a template refers to as
   `floe:///parts/<name>.json` (`floe part list` lists them): thirty that a

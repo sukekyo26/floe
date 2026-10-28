@@ -9,11 +9,11 @@
   /* Both the management page (/) and the frame around a page (/a/<slug>/): under the shared header bar it shows either the list or an iframe */
   /* Every color is one of these: text on its grounds reaches WCAG AA (TestUIColors measures it). The data URIs cannot read a
      variable, so the colors in them are written out */
-  /* LIMIT: --tick and --chevron copy --on-ink and --faint by hand; TestUIColors checks each holds its color, so change them together */
+  /* LIMIT: --tick copies --on-ink by hand; TestUIColors checks it holds that color, so change them together */
   :root {
     --bg: #f4f3f0; --panel: #fbfaf8; --subtle: #efeee9; --hover: #f6f5f1; --sel: #ecebe6;
     --fg: #22211f; --muted: #615f5a; --faint: #6b6964; --line: #e3e1dc;
-    --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00;
+    --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00; --archived: #2f7a78;
     --danger: #b8332b; --danger-soft: #f8e3e1; --on-danger: #fff;
     /* The projects' colors, by projectOrder */
     --pc0: #e5533d; --pc1: #2f6bff; --pc2: #16a37a; --pc3: #b04fd6; --pc4: #d99a00; --pc5: #0f9bb5;
@@ -21,8 +21,12 @@
     --shadow-sm: 0 1px 2px rgb(34 33 31 / 0.06);
     --shadow: 0 1px 2px rgb(34 33 31 / 0.04), 0 10px 30px -14px rgb(34 33 31 / 0.16);
     --shadow-lg: 0 30px 80px -20px rgb(34 33 31 / 0.45);
+    /* The focus ring of all that is reached by keyboard: 1px off a control and 2px wide, so that ground shows on both its sides,
+       not a filled face (ink, danger) it would fade into */
+    /* LIMIT: that holds where a control has 4px of ground round it, as the shelf and the bulk bar give theirs; TestUIFocusRing
+       measures the controls it reaches, so give a new one that room and add it there */
+    --ring: 2px solid var(--faint);
     --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fbfaf8' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
-    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b6964' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
     /* The report template's faces */
     --body: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
@@ -48,7 +52,7 @@
   html:not(.framed) { scrollbar-gutter: stable; }
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  :focus-visible { outline: var(--ring); outline-offset: 1px; }
   button { font: inherit; color: inherit; cursor: pointer; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
@@ -63,14 +67,45 @@
   .brand svg { width: 26px; height: 26px; flex: none; filter: drop-shadow(0 2px 6px rgb(91 179 164 / 35%)); }
   .bar-end { margin-left: auto; display: flex; align-items: center; gap: 0.6rem; flex: none; }
   .frame-actions { display: flex; gap: 0.15rem; }
-  .frame-nav { display: flex; align-items: center; gap: 0.15rem; padding-left: 0.6rem; margin-left: 0.15rem; border-left: 1px solid var(--line); }
-  .frame-nav a[aria-disabled="true"] { opacity: 0.35; pointer-events: none; }
-  .frame-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; font-size: 0.9rem; }
+  /* The page's title in the frame's bar: a button that opens the pages to pick from, set off from the logo by a line */
+  .frame-title {
+    position: relative; display: inline-flex; align-items: center; gap: 0.35rem; min-width: 0; height: 32px; padding: 0 0.6rem;
+    margin-left: 0.6rem; color: var(--fg); font-weight: 650; font-size: 0.9rem; background: none; border: 0; border-radius: 999px;
+  }
+  .frame-title::before { content: ""; position: absolute; left: -0.6rem; top: 4px; bottom: 4px; border-left: 1px solid var(--line); }
+  .frame-title > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .frame-title > svg { flex: none; width: 16px; height: 16px; color: var(--faint); }
+  .frame-title:hover, .frame-title[aria-expanded="true"] { background: var(--subtle); }
+  /* A box opened over the page from a button (menu): the frame's pages to pick from. Its options are reached by keys from the
+     field or the list that has the focus (aria-activedescendant), the one reached on --sel, the current one in bold and ticked */
+  /* LIMIT: it is put under its button's left edge; a button near the window's right edge would push it out, so align it to the
+     button's right then */
+  .pop {
+    position: fixed; inset: auto; margin: 0; padding: 8px; width: min(26rem, calc(100vw - 32px)); max-height: min(70dvh, 32rem);
+    flex-direction: column; gap: 6px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+  }
+  .pop:popover-open { display: flex; }
+  /* Round, so that the focus ring, where the keys put the focus on it (the sort's), follows its corners as its options' */
+  .pop [role="listbox"] { min-height: 0; overflow-y: auto; border-radius: 12px; }
+  .pop .gh { display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 0.75rem 0.35rem; font: 600 0.7rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .pop .gh::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .pop [role="option"] { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 12px; cursor: pointer; font-size: 0.88rem; }
+  .pop [role="option"] > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pop [role="option"] > svg { flex: none; width: 16px; height: 16px; visibility: hidden; }
+  .pop [role="option"]:hover { background: var(--hover); }
+  .pop [role="option"].reached { background: var(--sel); }
+  /* The one now: the page open (aria-current), the order chosen (a select's aria-selected) */
+  .pop [aria-current], #sort-list [aria-selected="true"] { font-weight: 650; }
+  .pop [aria-current] > svg, #sort-list [aria-selected="true"] > svg { visibility: visible; }
+  .pop-q { position: relative; flex: none; }
+  .pop-q svg { position: absolute; left: 0.75rem; top: 50%; translate: 0 -50%; width: 15px; height: 15px; color: var(--faint); pointer-events: none; }
+  .pop-q .text { padding-inline: 2.2rem 0.75rem; border-radius: 999px; }
+  .pop .none { margin: 0; padding: 0.75rem; color: var(--muted); font-size: 0.86rem; }
   .badge {
     flex: none; padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 600; color: var(--muted);
     background: var(--subtle); border: 1px solid var(--line); border-radius: 999px;
   }
-  .frame-pos { min-width: 3.5rem; text-align: center; font: 0.72rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
   .server {
     display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.7rem; font: 600 0.74rem/1 var(--body); color: var(--muted);
     background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-variant-numeric: tabular-nums;
@@ -105,7 +140,8 @@
   .toolbar:has(> .bulk:not([hidden])) > :not(#bulk) { display: none; }
   .toolbar .count { margin-left: auto; }
   /* Stuck where it sits (lower, sticky would push it down), and no taller than the window, so that its bottom is reached by scrolling
-     it, not the page; at least 10rem, which a very low window lets reach below. The 4px round it are a focus ring's room */
+     it, not the page; at least 10rem, which a very low window lets reach below. The 4px round it are a focus ring's room (1px off,
+     2px wide) and 1px of ground */
   /* LIMIT: a project or tag picked below where the shelf shows is not scrolled to when the URL opens it; scroll to it once if that matters */
   /* LIMIT: the load error above the shell pushes the shelf's bottom out of the window while it shows; make it overlay if that matters */
   .shelf {
@@ -123,7 +159,8 @@
   }
   .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 0.7rem/1.2 var(--mono); color: var(--faint); letter-spacing: 0.08em; text-transform: uppercase; }
   /* minmax(0, …): no wider than the shelf, so that a long name is cut off rather than widening it */
-  .shelf .views, .shelf .chips { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  /* 4px apart, so that the ring of one does not reach the one filled beside it */
+  .shelf .views, .shelf .chips { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .shelf .views button, .shelf .chip {
     display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: 999px;
     background: none; color: var(--muted); font-size: 0.86rem; font-weight: 500; text-align: left; overflow-wrap: anywhere;
@@ -167,11 +204,9 @@
   .text, .search input {
     width: 100%; min-width: 0; height: 36px; padding: 0 0.75rem; font: inherit; font-weight: 400; color: var(--fg);
     background: var(--panel); border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow-sm);
-    transition: border-color 0.15s, box-shadow 0.15s;
   }
   .search input { padding-inline: 2.2rem 2.5rem; border-radius: 999px; }
   input::placeholder { color: var(--faint); }
-  input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 15%, transparent); }
   .search input::-webkit-search-cancel-button { display: none; }
   .search kbd {
     position: absolute; right: 0.6rem; top: 50%; translate: 0 -50%; font: 0.7rem/1 var(--mono); color: var(--faint);
@@ -230,7 +265,7 @@
   li:has(.sel:checked) { background: var(--sel); }
   /* A row reached by keyboard is outlined as a whole, without an outline on the title itself */
   a.title:focus-visible { outline: none; }
-  li:has(a.title:focus-visible) { box-shadow: inset 0 0 0 2px var(--ink); }
+  li:has(a.title:focus-visible) { outline: var(--ring); outline-offset: -2px; }
   li:has(a.title:focus-visible)::before { opacity: 1; }
   /* Under the title: the description (and, for a link, its path after it), cut off where it does not fit */
   .body { display: grid; gap: 0.05rem; min-width: 0; }
@@ -271,7 +306,7 @@
   }
   .tag-box:hover { border-color: var(--faint); }
   .tag-box input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
-  .tag-box:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .tag-box:has(input:focus-visible) { outline: var(--ring); outline-offset: 1px; }
   .tag-box .mark { flex: none; width: 0.9rem; font: 600 0.8rem/1 var(--mono); text-align: center; }
   .tag-box .mark::before { content: "+"; }
   .tag-box:has(input:checked) { color: var(--on-ink); background: var(--ink); border-color: var(--ink); }
@@ -330,8 +365,11 @@
   .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
   .delete:hover { color: var(--danger); }
   .star:hover { color: var(--star); }
+  /* An icon button that toggles (the star, the frame's archive), pressed: its icon filled in, in ink or its own color */
+  .icon-btn[aria-pressed="true"] { color: var(--fg); }
+  .icon-btn[aria-pressed="true"] svg { fill: currentColor; }
   .star[aria-pressed="true"] { color: var(--star); }
-  .star[aria-pressed="true"] svg { fill: currentColor; }
+  .archive[aria-pressed="true"] { color: var(--archived); }
   .copy .done, .copy.copied > svg { display: none; }
   .copy.copied .done { display: block; color: var(--good); }
   .delete.armed { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 50%, transparent); font-weight: 650; }
@@ -347,13 +385,15 @@
   .pages .range { color: var(--faint); margin-right: 0.35rem; }
 
   /* The sort gives way, its words cut off, where the bar is too narrow for all; enough of them left to tell */
-  .sort { flex: 0 1 auto; min-width: 4.5rem; }
-  .sort select {
-    max-width: 100%; text-overflow: ellipsis; height: 32px; padding: 0 1.9rem 0 0.85rem; font: inherit; font-size: 0.8rem; color: var(--muted); cursor: pointer;
-    background: var(--panel) var(--chevron) no-repeat right 0.6rem center / 14px;
-    border: 1px solid var(--line); border-radius: 999px; appearance: none;
+  .sort { flex: 0 1 auto; min-width: 4.5rem; display: flex; }
+  #sort {
+    display: inline-flex; align-items: center; gap: 0.4rem; max-width: 100%; height: 32px; padding: 0 0.6rem 0 0.85rem; font-size: 0.8rem;
+    color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
   }
-  .sort select:hover { color: var(--fg); border-color: var(--faint); }
+  #sort > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #sort > svg { flex: none; width: 14px; height: 14px; color: var(--faint); }
+  #sort:hover, #sort[aria-expanded="true"] { color: var(--fg); border-color: var(--faint); }
+  .pop.sort-menu { width: 13rem; }
 
   .keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1rem; margin: 0; font-size: 0.74rem; color: var(--faint); }
   .keys kbd {
@@ -371,17 +411,18 @@
   .toast svg { width: 16px; height: 16px; flex: none; color: var(--good); }
   @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
   /* The bulk bar, in the bar over the list while items are selected: a round band ringed in ink, its last button (clearing the
-     selection) at its end */
+     selection) at its end. 6px of it round its buttons hold their focus ring off the ink */
   .bulk {
-    flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.4rem; height: 2.75rem; padding: 0 0.3rem 0 1rem;
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.4rem; height: 2.75rem; padding: 0 6px 0 1rem;
     background: var(--panel); border-radius: 999px; box-shadow: inset 0 0 0 2px var(--ink);
   }
   /* The count gives way first, cut off, where the bar is too narrow for all */
   .bulk-count { min-width: 0; margin-right: 0.4rem; overflow: hidden; text-overflow: ellipsis; font-size: 0.84rem; font-weight: 650; white-space: nowrap; }
-  .bulk .btn { flex: none; height: 2.1rem; padding: 0 0.8rem; border-radius: 999px; box-shadow: none; white-space: nowrap; }
+  .bulk .btn { flex: none; height: 2rem; padding: 0 0.8rem; border-radius: 999px; box-shadow: none; white-space: nowrap; }
   .bulk .btn.clear { margin-left: auto; }
   .bulk .btn.danger { color: var(--on-danger); background: var(--danger); border-color: transparent; }
-  .bulk .btn.danger.armed { outline: 2px solid color-mix(in srgb, var(--danger) 50%, transparent); outline-offset: 2px; }
+  /* A delete pressed once, asking in its longer words, is darker: a ring would be a second one beside the focus ring */
+  .bulk .btn.danger.armed { background: color-mix(in srgb, var(--danger) 80%, var(--ink)); }
   /* A delete pressed once asks in its longer words, the other buttons but the clearing out of its way (they come back as it is
      let go; the clearing lets it go where a click does not move the focus, as on Safari) */
   .bulk:has(.armed) > .btn:not(.armed, .clear) { display: none; }
@@ -437,7 +478,6 @@
     /* The list's header bar takes the search on a second line; all that sits under the bar (--bar) moves down with it */
     html:not(.framed) { --bar: 6.25rem; }
     html:not(.framed) .bar-inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 3.5rem 2.75rem; row-gap: 0; align-items: center; }
-    html:not(.framed) .frame-title { display: none; }
     html:not(.framed) .bar-end { grid-row: 1; grid-column: 2; }
     .bar-inner > .search { grid-row: 2; grid-column: 1 / -1; align-self: start; margin: 0; }
     /* The shelf, one row of its buttons, scrolled sideways */
@@ -455,7 +495,8 @@
   /* On narrow screens, the project and the time move to a second line */
   @media (max-width: 40rem) {
     .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
-    .frame-title { display: none; }
+    /* The title gives way, its button left as the chevron */
+    .frame-title > span:first-child { display: none; }
     ul { display: block; }
     li { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 0.3rem; column-gap: 0.6rem; }
     .pick { grid-column: 1; grid-row: 1 / 3; }
@@ -476,12 +517,8 @@
       <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="floe-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D9F3ED"/><stop offset="1" stop-color="#C2E7DF"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#floe-sky)"/><path d="M17 47.5H47" fill="none" stroke="#5BB3A4" stroke-width="2" stroke-linecap="round"/><path d="M24 52.5H40" fill="none" stroke="#8ACBBE" stroke-width="2" stroke-linecap="round"/><path d="M12 32 22 38 41 37 53 29.5 53 34.5 41 42 22 43 12 37Z" fill="#6FAECB"/><path d="M12 32 24 21.5 33 28 22 38Z" fill="#F6FCFE"/><path d="M24 21.5 42 21 53 29.5 33 28Z" fill="#D3EAF4"/><path d="M33 28 53 29.5 41 37 22 38Z" fill="#E8F5FA"/></svg>
       floe
     </a>
-    <nav class="frame-nav" aria-label="{{.Msg "ui_page_nav"}}" hidden>
-      <a class="icon-btn" id="frame-prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
-      <span class="frame-pos" id="frame-pos"></span>
-      <a class="icon-btn" id="frame-next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
-    </nav>
-    <span class="frame-title" id="frame-title"></span>
+    <!-- Named by the title it shows and what it does; on a narrow screen the title gives way, the words stay for screen readers -->
+    <button type="button" class="frame-title" id="frame-pick" popovertarget="page-pick" aria-haspopup="listbox" aria-expanded="false" hidden><span id="frame-title"></span><span class="sr-only">{{.Msg "ui_pick_page"}}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
     <span class="badge" id="frame-archived" hidden>{{.Msg "ui_archived_badge"}}</span>
     <!-- The list's search, shown with the list -->
     <label class="search" id="search" hidden>
@@ -492,7 +529,7 @@
     <div class="bar-end">
       <span class="frame-actions" hidden>
         <button type="button" class="icon-btn star" id="frame-star"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg></button>
-        <button type="button" class="icon-btn" id="frame-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span id="frame-archive-label"></span></button>
+        <button type="button" class="icon-btn archive" id="frame-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg></button>
         <a class="icon-btn" id="frame-download" title="{{.Msg "ui_download"}}" aria-label="{{.Msg "ui_download"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
         </a>
@@ -504,6 +541,20 @@
     </div>
   </div>
 </header>
+<!-- The sort's orders to pick from, opened from the sort -->
+<div class="pop sort-menu" id="sort-menu" popover>
+  <div role="listbox" id="sort-list" tabindex="-1" aria-labelledby="sort-label">
+    <div role="option" id="sort-updated" data-sort="updated"><span>{{.Msg "ui_sort_updated"}}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+    <div role="option" id="sort-created" data-sort="created"><span>{{.Msg "ui_sort_created"}}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+    <div role="option" id="sort-title" data-sort="title"><span>{{.Msg "ui_sort_title"}}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+  </div>
+</div>
+<!-- The frame's pages to pick from, opened from the title -->
+<div class="pop" id="page-pick" popover>
+  <label class="pop-q"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="text" id="page-pick-q" role="combobox" aria-autocomplete="list" aria-controls="page-pick-list" aria-expanded="true" placeholder="{{.Msg "ui_pick_search"}}" aria-label="{{.Msg "ui_pick_search"}}" autocomplete="off"></label>
+  <div id="page-pick-list" role="listbox" aria-label="{{.Msg "ui_pick_page"}}"></div>
+  <p class="none" id="page-pick-none" hidden>{{.Msg "ui_nomatch"}}</p>
+</div>
 <p class="error" id="error" hidden></p>
 <main class="shell" id="manage" hidden>
   <h1 class="sr-only">floe</h1>
@@ -530,13 +581,10 @@
         <button type="button" data-tab="pages">{{.Msg "ui_tab_pages"}}<span class="n"></span></button>
         <button type="button" data-tab="links">{{.Msg "ui_tab_links"}}<span class="n"></span></button>
       </div>
-      <label class="sort"><span class="sr-only">{{.Msg "ui_sort"}}</span>
-        <select id="sort">
-          <option value="updated">{{.Msg "ui_sort_updated"}}</option>
-          <option value="created">{{.Msg "ui_sort_created"}}</option>
-          <option value="title">{{.Msg "ui_sort_title"}}</option>
-        </select>
-      </label>
+      <!-- The sort: a button named by what it is and the order now, which opens the orders to pick from -->
+      <span class="sort"><span class="sr-only" id="sort-label">{{.Msg "ui_sort"}}</span>
+        <button type="button" id="sort" popovertarget="sort-menu" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sort-label sort-name"><span id="sort-name"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+      </span>
       <span class="count" id="count"></span>
       <button type="button" class="btn" id="add-narrow" aria-label="{{.Msg "ui_add_link"}}" title="{{.Msg "ui_add_link"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
       <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
@@ -857,13 +905,17 @@
     }
   }
 
-  // Picks and orders the entries by tab, project, tag, search and sort; shared by the list and by moving between pages in the frame
+  // Whether an entry has the words searched (lowercased) in its title, description, slug, project, path or tags; any, for none.
+  // Shared by the list's search and the frame's pages to pick from
+  const matches = (a, q) => !q || [a.title, a.description, a.slug, a.project, a.path, ...(a.tags ?? [])].join(' ').toLowerCase().includes(q);
+
+  // Picks and orders the entries by tab, project, tag, search and sort; shared by the list and by the frame's pages to pick from
   function arrange(state, ranks = projectOrder()) {
     const q = state.q.trim().toLowerCase();
     const shown = items.filter((a) => inList(a, state)
       && (!state.project || (a.project ?? NONE) === state.project)
       && (!state.tag || (a.tags ?? []).includes(state.tag))
-      && (!q || [a.title, a.description, a.slug, a.project, a.path, ...(a.tags ?? [])].join(' ').toLowerCase().includes(q)));
+      && matches(a, q));
     const sorted = SORTS[state.sort] ? shown.sort(SORTS[state.sort]) : shown;
     // Group by group, each in the order picked (sort is stable): the favourites first, then the projects as projectOrder
     // has them, those without one last
@@ -890,6 +942,17 @@
   // (picked, its last entry gone)
   // LIMIT: from the seventh project on the colors repeat; let the viewer pick them if projects come to be that many
   const projectColor = (name, ranks) => (ranks.has(name) ? `var(--pc${ranks.get(name) % 6})` : 'var(--faint)');
+  // A group's name and color, as group() gives it: in the list's headings and the frame's pages to pick from
+  const groupName = (g) => (g === null ? t('ui_group_favorites') : g === NONE ? t('ui_no_project') : g);
+  const groupColor = (g, ranks) => (g === null ? 'var(--star)' : projectColor(g, ranks));
+
+  // An icon button that toggles: its name stays what pressing does, and aria-pressed tells whether it is on (a
+  // screen reader says "Archive, pressed"), as a WAI-ARIA toggle button
+  function toggle(btn, pressed, title, label = title) {
+    btn.setAttribute('aria-pressed', String(Boolean(pressed)));
+    btn.title = title;
+    btn.setAttribute('aria-label', label);
+  }
 
   function toast(msg) {
     const t = document.createElement('div');
@@ -1017,6 +1080,93 @@
   // Every page's tag names, by name
   const tagNames = () => [...new Set(items.flatMap((a) => a.tags ?? []))].sort((x, y) => x.localeCompare(y, LANG));
 
+  // The keys of a listbox whose options are reached from the element with the focus (target) by aria-activedescendant, the one
+  // reached shown (.reached): ↑↓ (round the ends; opening it, shut), Enter to choose, Escape to close (the listbox, not a dialog
+  // it is in) and Tab to close. From a field (a combobox's), the one reached is also the one aria-selected, and Home and End are
+  // left to move its caret; from the listbox itself (a select's), aria-selected is the caller's (the one chosen), and Home and End
+  // reach the first and the last. Shared by the tags' suggestions, the frame's pages to pick from and the sort
+  function listKeys(target, { options, choose, close, open = () => {}, shown = () => true }) {
+    const field = target.matches('input, textarea');
+    let active = -1;
+    const mark = (i) => {
+      const all = options();
+      active = i;
+      all.forEach((option, j) => {
+        option.classList.toggle('reached', j === i);
+        if (field) option.setAttribute('aria-selected', String(j === i));
+      });
+      if (i < 0) target.removeAttribute('aria-activedescendant');
+      else {
+        target.setAttribute('aria-activedescendant', all[i].id);
+        all[i].scrollIntoView({ block: 'nearest' });
+      }
+    };
+    target.addEventListener('keydown', (e) => {
+      const n = options().length;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!shown()) open();
+        else if (n) mark(e.key === 'ArrowDown' ? (active + 1) % n : (active <= 0 ? n : active) - 1);
+      } else if (!field && (e.key === 'Home' || e.key === 'End') && shown() && n) {
+        e.preventDefault();
+        mark(e.key === 'Home' ? 0 : n - 1);
+      } else if (e.key === 'Enter' && shown() && active >= 0) {
+        e.preventDefault();
+        choose(active);
+      } else if (e.key === 'Escape' && shown()) {
+        e.preventDefault();
+        close();
+      } else if (e.key === 'Tab') close();
+    });
+    return mark;
+  }
+
+  // A button that opens a box over the page (popover, auto, from popovertarget): the browser opens and closes it from the button,
+  // closes it on a press outside and Escape, and gives the focus back to the button. It also closes where it would be left
+  // behind: when the window loses the focus (a press in the frame's page, which this page is not told of), changes its width (not
+  // its height alone, which a phone's keyboard changes) or scrolls the button from where it was as it opened (not a scroll that
+  // leaves it in place, as the tail of one before it opened does under a bar stuck to the top). Pressed anywhere in it but a field (an option, a heading),
+  // the focus stays where it is, and so the keys. build fills it before it shows, focus moves in once it shows
+  function menu(trigger, box, { build, focus }) {
+    let width;
+    let at;
+    box.addEventListener('mousedown', (e) => {
+      if (!e.target.closest('input')) e.preventDefault();
+    });
+    box.addEventListener('beforetoggle', (e) => {
+      if (e.newState !== 'open') {
+        trigger.setAttribute('aria-expanded', 'false');
+        return;
+      }
+      build();
+      const r = trigger.getBoundingClientRect();
+      const narrow = matchMedia('(max-width: 40rem)').matches;
+      box.style.top = `${r.bottom + 6}px`;
+      box.style.left = `${narrow ? 16 : r.left}px`;
+      box.style.width = narrow ? 'calc(100vw - 32px)' : '';
+      width = innerWidth;
+      at = r;
+    });
+    // Open is told once it is (an opening stopped on the way leaves it shut); shut, at once as it is about to be, above
+    box.addEventListener('toggle', (e) => {
+      if (e.newState !== 'open') return;
+      trigger.setAttribute('aria-expanded', 'true');
+      focus();
+    });
+    const close = () => {
+      if (box.matches(':popover-open')) box.hidePopover();
+    };
+    addEventListener('blur', close);
+    addEventListener('resize', () => {
+      if (innerWidth !== width) close();
+    });
+    document.addEventListener('scroll', (e) => {
+      const r = trigger.getBoundingClientRect();
+      if (e.target === document && at && (r.top !== at.top || r.left !== at.left)) close();
+    });
+    return close;
+  }
+
   // Suggests tag names for a tags field, as a WAI-ARIA combobox: the names that hold what is written between the commas
   // around the caret, those that start with it first, but none the field has already. ↓ opens it, ↑↓ pick, Enter or a
   // click puts the name in, Escape closes it, as does leaving the field. Drawn only as the field changes, so that the list
@@ -1034,7 +1184,6 @@
     input.setAttribute('aria-controls', box.id);
     input.setAttribute('aria-expanded', 'false');
     let names = [];
-    let active = -1;
     // Where a name picked goes: from start to end, after lead
     let spot;
     // Where the name at the caret starts and ends, between the commas around it
@@ -1043,15 +1192,6 @@
       const start = Math.max(input.value.lastIndexOf(',', at - 1), input.value.lastIndexOf('、', at - 1)) + 1;
       const end = input.value.slice(at).search(/[,、]/);
       return { start, end: end === -1 ? input.value.length : at + end };
-    };
-    const mark = (i) => {
-      active = i;
-      [...box.children].forEach((option, j) => option.setAttribute('aria-selected', String(j === i)));
-      if (i < 0) input.removeAttribute('aria-activedescendant');
-      else {
-        input.setAttribute('aria-activedescendant', box.children[i].id);
-        box.children[i].scrollIntoView({ block: 'nearest' });
-      }
     };
     // Under the field, and again once its dialog has stopped moving: measured while it opens, the field is where it passes
     const place = async () => {
@@ -1111,26 +1251,14 @@
       input.setAttribute('aria-expanded', 'true');
       mark(-1);
     };
+    const mark = listKeys(input, {
+      options: () => [...box.children], choose: (i) => choose(names[i]), close, open, shown: () => box.matches(':popover-open'),
+    });
     input.addEventListener('input', open);
     // Pressed or reached, the names show at once; pressed, again once the caret is where it was pressed, which focus is before
     input.addEventListener('focus', open);
     input.addEventListener('click', open);
     input.addEventListener('blur', close);
-    input.addEventListener('keydown', (e) => {
-      const shown = box.matches(':popover-open');
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (!shown) open();
-        else mark(e.key === 'ArrowDown' ? (active + 1) % names.length : (active <= 0 ? names.length : active) - 1);
-      } else if (e.key === 'Enter' && shown && active >= 0) {
-        e.preventDefault();
-        choose(names[active]);
-      } else if (e.key === 'Escape' && shown) {
-        // The list closes, not the dialog
-        e.preventDefault();
-        close();
-      } else if (e.key === 'Tab') close();
-    });
   }
 
   // The bulk dialog's tags: how many of the selected each is on as the dialog opened (on), the mark that makes each chip
@@ -1411,9 +1539,7 @@
       copy.addEventListener('click', () => copyPath(a.path, copy));
     }
     const star = li.querySelector('.star');
-    star.setAttribute('aria-pressed', String(Boolean(a.favorite)));
-    star.title = t(a.favorite ? 'ui_unfavorite' : 'ui_favorite');
-    star.setAttribute('aria-label', t(a.favorite ? 'ui_unfavorite_named' : 'ui_favorite_named', a.title));
+    toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
     const edit = li.querySelector('.edit');
     edit.setAttribute('aria-label', t('ui_edit_named', a.title));
@@ -1523,7 +1649,8 @@
     const archivedHere = items.filter((a) => inView(a, { tab, archived: true })).length;
     const state = current();
     const shown = arrange(state, ranks);
-    $('sort').value = sort;
+    $('sort-name').textContent = t(`ui_sort_${sort}`);
+    for (const option of $('sort-list').children) option.setAttribute('aria-selected', String(option.dataset.sort === sort));
     // Entries deleted elsewhere leave the selection
     for (const slug of selected) if (!list.some((a) => a.slug === slug)) selected.delete(slug);
     $('count').textContent = shown.length === list.length ? t('ui_count_all', list.length) : t('ui_count_shown', shown.length, list.length);
@@ -1554,7 +1681,7 @@
         const li = document.createElement('li');
         li.className = 'group';
         li.setAttribute('role', 'none');
-        li.style.setProperty('--c', g === null ? 'var(--star)' : projectColor(g, ranks));
+        li.style.setProperty('--c', groupColor(g, ranks));
         const heading = document.createElement('div');
         heading.setAttribute('role', 'heading');
         heading.setAttribute('aria-level', '2');
@@ -1563,7 +1690,7 @@
         count.textContent = t('ui_count_all', sizes.get(g));
         const name = document.createElement('span');
         name.className = 'name';
-        name.textContent = g === null ? t('ui_group_favorites') : g === NONE ? t('ui_no_project') : g;
+        name.textContent = groupName(g);
         heading.title = name.textContent;
         heading.append(name, count);
         li.append(heading);
@@ -1579,39 +1706,126 @@
     syncUrl();
   }
 
-  // Previous and next follow the list the page was opened from (kept for the tab), in its groups' order (arrange); if the page
-  // is not in it, all entries of the same kind and archived or not, unfiltered, in their groups by update time
-  // The order the frame steps through: that of the list when the page was first found, so that starring or archiving it
-  // from the bar does not move it. A page gone since drops out
-  let frameOrder;
-
-  function renderNeighbors(a) {
-    let saved = '';
+  // The list the frame was opened from, kept for the tab: its URL's query, '' for all or without storage
+  function savedList() {
     try {
-      saved = sessionStorage.getItem(LIST_KEY) ?? '';
+      return sessionStorage.getItem(LIST_KEY) ?? '';
     } catch {
-      // Storage is unavailable
+      return '';
     }
+  }
+
+  // The pages the frame picks from (framePages): the list the page was opened from, in its groups' order (arrange); if the
+  // page is not in it, all entries of the same kind and archived or not, unfiltered, in their groups by update time. That
+  // list as it was when the page was first found, so that starring or archiving it from the bar does not move it, with the
+  // state it was arranged by (for its groups). A page gone since drops out
+  let frameOrder;
+  let frameState;
+
+  // Fixes the frame's order and state once, as the page a is first found
+  function fixFrameOrder(a) {
+    if (frameOrder) return;
     const openable = (state) => arrange(state).filter((x) => !x.missing);
-    if (!frameOrder) {
-      let first = openable(readState(saved));
-      if (!first.some((x) => x.slug === a.slug)) first = openable({ ...readState(''), tab: a.path ? 'links' : 'pages', archived: Boolean(a.archived) });
-      frameOrder = first.map((x) => x.slug);
+    frameState = readState(savedList());
+    let first = openable(frameState);
+    if (!first.some((x) => x.slug === a.slug)) {
+      frameState = { ...readState(''), tab: a.path ? 'links' : 'pages', archived: Boolean(a.archived) };
+      first = openable(frameState);
     }
-    const order = frameOrder.map((slug) => items.find((x) => x.slug === slug)).filter((x) => x && !x.missing);
-    const at = order.findIndex((x) => x.slug === a.slug);
-    for (const [id, x, named, none] of [
-      ['frame-prev', order[at - 1], 'ui_prev_named', 'ui_no_prev'], ['frame-next', order[at + 1], 'ui_next_named', 'ui_no_next'],
-    ]) {
-      const link = $(id);
-      if (x) link.href = `/a/${x.slug}/`;
-      else link.removeAttribute('href');
-      link.setAttribute('aria-disabled', String(!x));
-      link.title = x ? t(named, x.title) : t(none);
-      link.setAttribute('aria-label', link.title);
-    }
-    $('frame-pos').textContent = `${at + 1} / ${order.length}`;
-    document.querySelector('.brand').href = `/${saved}`;
+    frameOrder = first.map((x) => x.slug);
+  }
+
+  const framePages = () => frameOrder.map((slug) => items.find((x) => x.slug === slug)).filter((x) => x && !x.missing);
+
+  // The sort's orders to pick from, opened from the sort: the focus on the list, the order now reached and selected (render
+  // selects it); picked, the list is sorted by it, as the select it replaces did
+  function sortMenu() {
+    const box = $('sort-menu');
+    const list = $('sort-list');
+    const options = () => [...list.children];
+    const pick = (i) => {
+      box.hidePopover();
+      sort = options()[i].dataset.sort;
+      refilter();
+    };
+    const close = menu($('sort'), box, {
+      build: () => mark(options().findIndex((o) => o.dataset.sort === sort)),
+      focus: () => list.focus(),
+    });
+    const mark = listKeys(list, { options, choose: pick, close });
+    options().forEach((option, i) => option.addEventListener('click', () => pick(i)));
+  }
+
+  // The frame's pages to pick from, opened from its title: made as it opens (not as the list is fetched again, which would undo
+  // what is typed and reached), searched as the list is, in the list's groups
+  function pagePicker() {
+    const box = $('page-pick');
+    const q = $('page-pick-q');
+    const list = $('page-pick-list');
+    let pages = [];
+    let shown = [];
+    const options = () => [...list.querySelectorAll('[role="option"]')];
+    // The page open now is not opened again
+    const go = (x) => {
+      if (x.slug === framed) box.hidePopover();
+      else location.href = `/a/${x.slug}/`;
+    };
+    const fill = () => {
+      const ranks = projectOrder();
+      const typed = q.value.trim().toLowerCase();
+      shown = pages.filter((x) => matches(x, typed));
+      const groups = [];
+      for (const x of shown) {
+        const g = group(x, frameState);
+        if (groups.at(-1)?.g !== g) groups.push({ g, pages: [] });
+        groups.at(-1).pages.push(x);
+      }
+      let i = 0;
+      list.replaceChildren(...groups.map(({ g, pages: inGroup }, n) => {
+        const el = document.createElement('div');
+        el.setAttribute('role', 'group');
+        el.setAttribute('aria-labelledby', `page-pick-g${n}`);
+        el.style.setProperty('--c', groupColor(g, ranks));
+        const heading = document.createElement('div');
+        heading.className = 'gh';
+        heading.id = `page-pick-g${n}`;
+        heading.textContent = groupName(g);
+        el.append(heading, ...inGroup.map((x) => {
+          // A link, so that a middle or modified click opens it in a new tab as the browser does; a plain one goes here
+          const option = document.createElement('a');
+          option.id = `page-pick-${i++}`;
+          option.href = `/a/${x.slug}/`;
+          option.tabIndex = -1;
+          option.setAttribute('role', 'option');
+          if (x.slug === framed) option.setAttribute('aria-current', 'page');
+          option.innerHTML = '<span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+          option.firstChild.textContent = x.title;
+          option.addEventListener('click', (e) => {
+            if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            go(x);
+          });
+          return option;
+        }));
+        return el;
+      }));
+      $('page-pick-none').hidden = shown.length > 0;
+    };
+    const close = menu($('frame-pick'), box, {
+      build: () => {
+        pages = framePages();
+        q.value = '';
+        fill();
+        mark(shown.findIndex((x) => x.slug === framed));
+      },
+      focus: () => q.focus(),
+    });
+    const mark = listKeys(q, { options, choose: (i) => go(shown[i]), close });
+    // Typed, the first page found is the one Enter opens
+    q.addEventListener('input', () => {
+      fill();
+      mark(shown.length ? 0 : -1);
+    });
   }
 
   function renderFrame() {
@@ -1625,18 +1839,21 @@
       : t('ui_not_found_detail');
     $('frame').hidden = !found;
     $('frame').title = a?.title ?? framed;
-    document.querySelector('.frame-nav').hidden = !found;
+    $('frame-pick').hidden = !found;
+    // A page gone while its pages to pick from are open closes them, the button that opened them hidden
+    if (!found && $('page-pick').matches(':popover-open')) $('page-pick').hidePopover();
     $('frame-title').textContent = found ? a.title : '';
     $('frame-archived').hidden = !(found && a.archived);
     if (found) {
-      $('frame-star').setAttribute('aria-pressed', String(Boolean(a.favorite)));
-      $('frame-star').title = t(a.favorite ? 'ui_unfavorite' : 'ui_favorite');
-      $('frame-star').setAttribute('aria-label', $('frame-star').title);
+      toggle($('frame-star'), a.favorite, t('ui_favorite'));
       $('frame-star').onclick = () => toggleFavorite(a);
-      $('frame-archive-label').textContent = t(a.archived ? 'ui_unarchive' : 'ui_archive');
+      toggle($('frame-archive'), a.archived, t('ui_archive'));
       $('frame-archive').onclick = () => toggleArchived(a);
     }
-    if (found) renderNeighbors(a);
+    if (found) {
+      fixFrameOrder(a);
+      document.querySelector('.brand').href = `/${savedList()}`;
+    }
     // Load only once found (so a missing page's 404 never flashes). Once loaded, src stays, keeping navigation inside the iframe.
     // The fragment goes with it, so that /a/<slug>/#part opens at that part of the page
     if (found && !$('frame').hasAttribute('src')) $('frame').src = '?raw' + location.hash;
@@ -1733,13 +1950,7 @@
     // The slug as the server read it from the URL, unescaped: escaped again to make one
     $('frame-download').href = `/api/artifacts/${encodeURIComponent(framed)}/download`;
     $('frame-download').download = `${framed}.html`;
-    // Only while the frame has focus (keys inside the iframe belong to the page)
-    document.addEventListener('keydown', (e) => {
-      const link = { ArrowLeft: $('frame-prev'), ArrowRight: $('frame-next') }[e.key];
-      if (!link?.href || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-      e.preventDefault();
-      location.href = link.href;
-    });
+    pagePicker();
   } else {
     $('manage').hidden = false;
     $('search').hidden = false;
@@ -1784,10 +1995,7 @@
     });
     document.addEventListener('click', (e) => closeMenus(e.target.closest('.more')));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(null); });
-    $('sort').addEventListener('change', () => {
-      sort = $('sort').value;
-      refilter();
-    });
+    sortMenu();
     $('bulk-page').addEventListener('click', () => {
       for (const sel of $('list').querySelectorAll('.sel')) sel.checked = true;
       for (const li of $('list').querySelectorAll(':scope > li:not(.group)')) selected.add(li.dataset.slug);
@@ -1851,8 +2059,10 @@
     };
     document.addEventListener('keydown', (e) => {
       const action = KEYS[e.key];
+      // A button that opens a listbox (the sort) keeps ↑↓ from the rows; a listbox, all its keys
       if (!action || e.ctrlKey || e.metaKey || e.altKey
-        || e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog')) return;
+        || e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog, [role="listbox"]')
+        || (e.target.closest('[aria-haspopup]') && (e.key === 'ArrowDown' || e.key === 'ArrowUp'))) return;
       e.preventDefault();
       action();
     });

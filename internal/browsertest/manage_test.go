@@ -61,6 +61,16 @@ func stub(list string) string {
 })()`
 }
 
+// picker opens the frame's pages to pick from afresh (shut first, so that it is made from the list as it is now) and reads
+// them: each group's heading, then its pages' titles, the page open now marked *.
+const picker = `(() => {
+	const box = document.getElementById('page-pick');
+	if (box.matches(':popover-open')) box.hidePopover();
+	document.getElementById('frame-pick').click();
+	return [...document.querySelectorAll('#page-pick-list [role=group]')].map((g) => g.querySelector('.gh').textContent + ':' +
+		[...g.querySelectorAll('[role=option]')].map((o) => o.textContent + (o.hasAttribute('aria-current') ? '*' : '')).join(',')).join(' / ');
+})()`
+
 // manyPages is a stub of n pages, newest first, alike but for their slug and title.
 func manyPages(n int) string {
 	return stub("Array.from({ length: " + strconv.Itoa(n) + " }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))")
@@ -90,7 +100,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	const empties = "['empty', 'empty-links', 'all-archived', 'empty-favorites', 'empty-archived', 'nomatch']" +
 		".filter((id) => !document.getElementById(id).hidden).map((id) => id + ':' + document.getElementById(id).querySelector('strong').textContent).join(' ')"
 	sortBy := func(v string) {
-		b.eval("(() => { const s = document.getElementById('sort'); s.value = '" + v + "'; s.dispatchEvent(new Event('change')); })()")
+		b.eval("document.getElementById('sort').click(); document.querySelector('#sort-list [data-sort=" + v + "]').click()")
 	}
 	key := func(k string) {
 		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
@@ -205,12 +215,10 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval(stub("[]"))
 	out = append(out, b.eval(empties))
 
-	// A page opened from the list steps to its neighbours in that list's order, and the logo returns to
-	// that list. An archived page opened from elsewhere steps through the archived.
+	// A page opened from the list picks from that list, in its order, and the logo returns to that list. An archived page
+	// opened from elsewhere picks from the archived.
 	b.eval("sessionStorage.setItem('artifacts.list', '?sort=title')")
-	neighbours := "document.getElementById('frame-pos').textContent && " +
-		"['frame-prev', 'frame-next'].map((id) => document.getElementById(id).getAttribute('href'))" +
-		".concat(document.getElementById('frame-pos').textContent, document.querySelector('.brand').getAttribute('href')).join(' ')"
+	neighbours := "!document.getElementById('frame-pick').hidden && " + picker + " + ' ' + document.querySelector('.brand').getAttribute('href')"
 	b.navigate("/a/b/")
 	b.eval(stub(extrasList))
 	out = append(out, b.until("the neighbours", neighbours))
@@ -239,8 +247,8 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"all-archived:" + msg("ui_pages_all_archived", 1),
 		"Zeta 1",
 		"empty:" + msg("ui_empty_pages"),
-		"/a/a/  3 / 3 /?sort=title",
-		" /a/y/ 1 / 2 /?sort=title",
+		msg("ui_group_favorites") + ":Gamma / " + msg("ui_no_project") + ":Alpha,Beta* /?sort=title",
+		"p:Zeta* / " + msg("ui_no_project") + ":Ypsilon /?sort=title",
 	}, "|"))
 }
 
@@ -455,22 +463,40 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("String(new URLSearchParams(location.search).get('project'))"))
 	b.unsize()
 	// The frame's bar: the title, archived or not, the star and the archive, which act as the list's do and tell their failure.
+	// The archive, as the star, is an icon alone that toggles: pressed while on, its name (label and title) the same either
+	// way, no words in it.
 	frame := "[document.getElementById('frame-title').textContent, document.getElementById('frame-archived').hidden, " +
-		"document.getElementById('frame-star').getAttribute('aria-pressed'), document.getElementById('frame-archive-label').textContent].join(' / ')"
+		"document.getElementById('frame-star').getAttribute('aria-pressed'), document.getElementById('frame-star').getAttribute('aria-label'), " +
+		"document.getElementById('frame-star').title, document.getElementById('frame-archive').getAttribute('aria-pressed'), " +
+		"document.getElementById('frame-archive').getAttribute('aria-label'), document.getElementById('frame-archive').title, " +
+		"JSON.stringify(document.getElementById('frame-archive').textContent.trim())].join(' / ')"
 	b.navigate("/a/z/")
 	b.eval(stub(extrasList))
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
+	// Pressed, the archive is filled in its own color, seen on the bar's ground and on the hover's at 3:1 or more (WCAG's
+	// for a mark that is not text).
+	out = append(out, b.eval(`(() => {
+		const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
+		const hex = (v) => v.trim().slice(1).match(/../g).map((x) => parseInt(x, 16));
+		const lum = (c) => { const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+		const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+		const root = getComputedStyle(document.documentElement);
+		const fill = getComputedStyle(document.querySelector('#frame-archive svg')).fill;
+		return [fill, ...['--bg', '--subtle'].map((v) => ratio(rgb(fill), hex(root.getPropertyValue(v))) >= 3)].join(' ');
+	})()`))
 	b.eval("document.getElementById('frame-archive').click()")
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
+	// Given back, as the server now lists it: the archive lets go, its name the same.
+	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'z' ? { ...a, archived: false } : a)); load()")
+	out = append(out, b.until("the archive to let go", "document.getElementById('frame-archive').getAttribute('aria-pressed') === 'false' && "+frame))
 	b.eval("window.failWrites = true; document.getElementById('frame-star').click()")
 	out = append(out, b.until("the failure to show", "!document.getElementById('error').hidden && document.getElementById('error').offsetHeight > 0 && "+
 		"document.getElementById('error').textContent"))
 	b.navigate("/a/b/")
 	b.eval(stub(extrasList))
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
-	// The frame steps through the list it was opened from, which starring it from the bar does not change; a page gone drops out.
-	neighbours := "document.getElementById('frame-pos').textContent && ['frame-prev', 'frame-next']" +
-		".map((id) => document.getElementById(id).getAttribute('href')).concat(document.getElementById('frame-pos').textContent).join(' ')"
+	// The frame picks from the list it was opened from, which starring it from the bar does not change; a page gone drops out.
+	neighbours := "!document.getElementById('frame-pick').hidden && " + picker
 	b.eval("sessionStorage.setItem('artifacts.list', '?fav=1')")
 	b.navigate("/a/c/")
 	b.eval(stub(extrasList))
@@ -482,7 +508,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval(stub(extrasList))
 	b.until("the neighbours", neighbours)
 	b.eval(stub(strings.Replace(extrasList, "{ slug: 'a', title: 'Alpha', description: 'old', createdAt: at(1), updatedAt: at(8) },", "", 1)))
-	out = append(out, b.until("the gone page to drop out", "document.getElementById('frame-pos').textContent !== '2 / 3' && "+neighbours))
+	out = append(out, b.until("the gone page to drop out", "!("+picker+").includes('Alpha') && "+neighbours))
 
 	check(t, "shelf", out, strings.Join([]string{
 		"HcHba", "none:heading:2:" + msg("ui_group_favorites") + msg("ui_count_all", 1) + ",none:heading:2:" + msg("ui_no_project") + msg("ui_count_all", 2),
@@ -500,10 +526,12 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"50 1 / 2", "true",
 		"flex static true true", `all,fav,archived,a<b&"c,archived,p`, `a<b&"c`,
 		"all ?project=archived", "null",
-		"Zeta / false / true / " + msg("ui_unarchive"), `PATCH /api/artifacts/z {"archived":false}`,
+		"Zeta / false / true / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / true / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`, "rgb(47, 122, 120) true true", `PATCH /api/artifacts/z {"archived":false}`,
+		"Zeta / true / true / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
 		msg("ui_favorite_failed", "Failed to fetch"),
-		"Beta / true / false / " + msg("ui_archive"),
-		"  1 / 1", "false   1 / 1", "/a/c/  2 / 2",
+		"Beta / true / false / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
+		msg("ui_no_project") + ":Gamma*", "false " + msg("ui_no_project") + ":Gamma*",
+		msg("ui_group_favorites") + ":Gamma / " + msg("ui_no_project") + ":Beta*",
 	}, "|"))
 }
 
@@ -539,23 +567,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	search := func(q string) {
 		b.eval("(() => { const q = document.getElementById('q'); q.value = " + js(q) + "; q.dispatchEvent(new Event('input')); })()")
 	}
-	// A key as a keyboard presses it: its text on the key down, which a page's preventDefault then stops too
-	// (chromedp.KeyEvent sends the text as an event of its own, which nothing stops).
-	press := func(k string) {
-		t.Helper()
-
-		for _, e := range kb.Encode([]rune(k)[0]) {
-			if e.Type == kb.KeyChar {
-				continue
-			}
-			if e.Type == kb.KeyDown {
-				e.Text = map[string]string{kb.Enter: "\r", " ": " "}[k]
-			}
-			if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, *e); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
+	press := b.pressKey
 	// The tag dialog's chips: name, state, the mark shown and count
 	const boxes = "[...document.querySelectorAll('#tag-boxes .tag-box')].map((l) => { const c = l.querySelector('input'); " +
 		"return [l.querySelector('.name').textContent, c.indeterminate ? 'some' : c.checked ? 'all' : 'none', " +

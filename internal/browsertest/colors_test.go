@@ -18,14 +18,14 @@ const colorsList = `[
 	...Array.from({ length: 10 }, (_, i) => ({ slug: ` + "`p${i}`" + `, title: ` + "`P${i}`" + `, description: '', createdAt: at(2), updatedAt: at(2) })),
 ]`
 
-// measureFields measures what measureContrast leaves out: the value of a field, its placeholder and the words of a
-// select, each against the field's own ground. It returns one line for each below 4.5:1.
+// measureFields measures what measureContrast leaves out: the value of a field and its placeholder, each against the
+// field's own ground. It returns one line for each below 4.5:1.
 const measureFields = `(() => {
   const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
   const lum = (c) => { const [r, g, b] = rgb(c).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
   const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
   const low = [];
-  for (const [what, e, pseudo] of [['#q', '#q', ''], ['#q::placeholder', '#q', '::placeholder'], ['#sort', '#sort', '']]) {
+  for (const [what, e, pseudo] of [['#q', '#q', ''], ['#q::placeholder', '#q', '::placeholder']]) {
     const el = document.querySelector(e);
     const r = ratio(getComputedStyle(el, pseudo || null).color, getComputedStyle(el).backgroundColor);
     if (r < 4.5) low.push(what + ' ' + r.toFixed(2));
@@ -79,10 +79,10 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		if low := b.eval(measureFields); low != "" {
 			t.Errorf("OS %s: fields that cannot be read:\n%s", scheme, low)
 		}
-		// The data URIs hold the colors they copy: the tick --on-ink, the sort's arrow --faint.
+		// The data URI holds the color it copies: the tick --on-ink.
 		out = append(out, b.eval("(() => { const root = getComputedStyle(document.documentElement); "+
 			"const holds = (selector, color) => getComputedStyle(document.querySelector(selector)).backgroundImage.includes(root.getPropertyValue(color).replace('#', '%23')); "+
-			"return [holds('#list .sel:checked', '--on-ink'), holds('#sort', '--faint')].join(' '); })()"))
+			"return holds('#list .sel:checked', '--on-ink'); })()"))
 		b.eval("document.getElementById('bulk-tag').click()")
 		measure("the tags dialog")
 		// The tag on some, given to all and then to none, keeps its count: on the filled chip, then on the plain one.
@@ -94,11 +94,25 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		measure("the edit dialog")
 		b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.querySelector('.tabs [data-tab=links]').click()")
 		measure("the links")
+		// The sort's orders, open, one of them reached and the one now marked.
+		b.eval("document.getElementById('sort').click()")
+		b.until("the orders", "document.getElementById('sort-menu').matches(':popover-open')")
+		b.eval("document.getElementById('sort-list').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))")
+		measure("the sort's orders")
+		b.eval("document.getElementById('sort-menu').hidePopover()")
+		// The frame's pages to pick from, open, one of them reached and the one open now marked.
+		b.navigate("/a/a/")
+		b.eval(stub(colorsList))
+		b.until("the title", "!document.getElementById('frame-pick').hidden")
+		b.eval("document.getElementById('frame-pick').click()")
+		b.until("the pages to pick from", "document.getElementById('page-pick').matches(':popover-open')")
+		b.eval("document.getElementById('page-pick-q').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))")
+		measure("the frame's pages to pick from")
 	}
 
 	const light = "rgb(244, 243, 240)"
 	check(t, "colors", out, strings.Join([]string{
-		light, light, light, light, "dark", "true true",
-		light, light, light, light, "light", "true true",
+		light, light, light, light, "dark", "true",
+		light, light, light, light, "light", "true",
 	}, "|"))
 }
