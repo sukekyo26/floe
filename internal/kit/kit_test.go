@@ -538,8 +538,12 @@ func TestCheckShared(t *testing.T) {
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	if i := slices.IndexFunc(k.Parts(), func(e kit.Entry) bool { return e.Name == "sh" }); i < 0 || k.Parts()[i].About != "Mine" {
-		t.Fatalf("Parts() = %v, want sh about Mine", k.Parts())
+	about := "(none)"
+	if i := slices.IndexFunc(k.Parts(), func(e kit.Entry) bool { return e.Name == "sh" }); i >= 0 {
+		about = k.Parts()[i].About
+	}
+	if about != "Mine" {
+		t.Fatalf("the about of sh = %q, want Mine", about)
 	}
 	for _, tt := range []struct {
 		name  string
