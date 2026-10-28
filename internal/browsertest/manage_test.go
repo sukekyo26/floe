@@ -455,9 +455,11 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("String(new URLSearchParams(location.search).get('project'))"))
 	b.unsize()
 	// The frame's bar: the title, archived or not, the star and the archive, which act as the list's do and tell their failure.
-	// The archive, as the star, is an icon alone: pressed while archived, its name in its label and title, no words in it.
+	// The archive, as the star, is an icon alone that toggles: pressed while on, its name (label and title) the same either
+	// way, no words in it.
 	frame := "[document.getElementById('frame-title').textContent, document.getElementById('frame-archived').hidden, " +
-		"document.getElementById('frame-star').getAttribute('aria-pressed'), document.getElementById('frame-archive').getAttribute('aria-pressed'), " +
+		"document.getElementById('frame-star').getAttribute('aria-pressed'), document.getElementById('frame-star').getAttribute('aria-label'), " +
+		"document.getElementById('frame-star').title, document.getElementById('frame-archive').getAttribute('aria-pressed'), " +
 		"document.getElementById('frame-archive').getAttribute('aria-label'), document.getElementById('frame-archive').title, " +
 		"JSON.stringify(document.getElementById('frame-archive').textContent.trim())].join(' / ')"
 	b.navigate("/a/z/")
@@ -465,6 +467,9 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
 	b.eval("document.getElementById('frame-archive').click()")
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
+	// Given back, as the server now lists it: the archive lets go, its name the same.
+	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'z' ? { ...a, archived: false } : a)); load()")
+	out = append(out, b.until("the archive to let go", "document.getElementById('frame-archive').getAttribute('aria-pressed') === 'false' && "+frame))
 	b.eval("window.failWrites = true; document.getElementById('frame-star').click()")
 	out = append(out, b.until("the failure to show", "!document.getElementById('error').hidden && document.getElementById('error').offsetHeight > 0 && "+
 		"document.getElementById('error').textContent"))
@@ -503,9 +508,10 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"50 1 / 2", "true",
 		"flex static true true", `all,fav,archived,a<b&"c,archived,p`, `a<b&"c`,
 		"all ?project=archived", "null",
-		"Zeta / false / true / true / " + msg("ui_unarchive") + " / " + msg("ui_unarchive") + ` / ""`, `PATCH /api/artifacts/z {"archived":false}`,
+		"Zeta / false / true / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / true / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`, `PATCH /api/artifacts/z {"archived":false}`,
+		"Zeta / true / true / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
 		msg("ui_favorite_failed", "Failed to fetch"),
-		"Beta / true / false / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
+		"Beta / true / false / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
 		"  1 / 1", "false   1 / 1", "/a/c/  2 / 2",
 	}, "|"))
 }

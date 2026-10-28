@@ -335,10 +335,10 @@
   .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
   .delete:hover { color: var(--danger); }
   .star:hover { color: var(--star); }
+  /* An icon button that toggles (the star, the frame's archive), pressed: its icon filled in, in ink or its own color */
+  .icon-btn[aria-pressed="true"] { color: var(--fg); }
+  .icon-btn[aria-pressed="true"] svg { fill: currentColor; }
   .star[aria-pressed="true"] { color: var(--star); }
-  .star[aria-pressed="true"] svg { fill: currentColor; }
-  /* The frame's archive, pressed while the page is archived: on the grey of a pressed filter, not a color of its own */
-  #frame-archive[aria-pressed="true"] { color: var(--fg); background: var(--sel); }
   .copy .done, .copy.copied > svg { display: none; }
   .copy.copied .done { display: block; color: var(--good); }
   .delete.armed { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 50%, transparent); font-weight: 650; }
@@ -899,6 +899,14 @@
   // LIMIT: from the seventh project on the colors repeat; let the viewer pick them if projects come to be that many
   const projectColor = (name, ranks) => (ranks.has(name) ? `var(--pc${ranks.get(name) % 6})` : 'var(--faint)');
 
+  // An icon button that toggles: its name stays what pressing does, and aria-pressed tells whether it is on (a
+  // screen reader says "Archive, pressed"), as a WAI-ARIA toggle button
+  function toggle(btn, pressed, title, label = title) {
+    btn.setAttribute('aria-pressed', String(Boolean(pressed)));
+    btn.title = title;
+    btn.setAttribute('aria-label', label);
+  }
+
   function toast(msg) {
     const t = document.createElement('div');
     t.className = 'toast';
@@ -1419,9 +1427,7 @@
       copy.addEventListener('click', () => copyPath(a.path, copy));
     }
     const star = li.querySelector('.star');
-    star.setAttribute('aria-pressed', String(Boolean(a.favorite)));
-    star.title = t(a.favorite ? 'ui_unfavorite' : 'ui_favorite');
-    star.setAttribute('aria-label', t(a.favorite ? 'ui_unfavorite_named' : 'ui_favorite_named', a.title));
+    toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
     const edit = li.querySelector('.edit');
     edit.setAttribute('aria-label', t('ui_edit_named', a.title));
@@ -1637,13 +1643,9 @@
     $('frame-title').textContent = found ? a.title : '';
     $('frame-archived').hidden = !(found && a.archived);
     if (found) {
-      $('frame-star').setAttribute('aria-pressed', String(Boolean(a.favorite)));
-      $('frame-star').title = t(a.favorite ? 'ui_unfavorite' : 'ui_favorite');
-      $('frame-star').setAttribute('aria-label', $('frame-star').title);
+      toggle($('frame-star'), a.favorite, t('ui_favorite'));
       $('frame-star').onclick = () => toggleFavorite(a);
-      $('frame-archive').setAttribute('aria-pressed', String(Boolean(a.archived)));
-      $('frame-archive').title = t(a.archived ? 'ui_unarchive' : 'ui_archive');
-      $('frame-archive').setAttribute('aria-label', $('frame-archive').title);
+      toggle($('frame-archive'), a.archived, t('ui_archive'));
       $('frame-archive').onclick = () => toggleArchived(a);
     }
     if (found) renderNeighbors(a);

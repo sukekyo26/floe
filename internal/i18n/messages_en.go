@@ -349,8 +349,6 @@ var messagesEN = map[string]string{
 	"ui_favorite":             "Add to favorites",
 	"ui_favorite_named":       "Add %s to favorites",
 	"ui_favorited":            "Added “%s” to favorites",
-	"ui_unfavorite":           "Remove from favorites",
-	"ui_unfavorite_named":     "Remove %s from favorites",
 	"ui_unfavorited":          "Removed “%s” from favorites",
 	"ui_favorite_failed":      "Could not change the favorite (%s).",
 	"ui_prev_named":           "Previous: %s",
