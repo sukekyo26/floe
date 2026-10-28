@@ -400,7 +400,6 @@ var messagesJA = map[string]string{
 	"ui_view_all":        "すべて",
 	"ui_view_favorites":  "お気に入り",
 	"ui_view_archived":   "アーカイブ",
-	"ui_view_select":     "見る一覧",
 	"ui_group_favorites": "お気に入り",
 	"ui_no_favorites":    "お気に入りはありません",
 	"ui_more_named":      "%s のほかの操作",

@@ -27,10 +27,10 @@
     --body: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
     --bar: 3.5rem;
+    /* The bar over the list, stuck under the header bar */
+    --toolbar: 4rem;
     /* The room above the list: with --bar, where the shelf sits */
     --shell-top: 0.75rem;
-    /* The room the bulk bar takes at the bottom, one line of it */
-    --bulk-room: 6rem;
   }
   * { box-sizing: border-box; }
   /* Every scrollbar of the page, its own and its boxes': a thin round thumb of the faint color on a clear track. Chrome, Edge and
@@ -52,13 +52,13 @@
   button { font: inherit; color: inherit; cursor: pointer; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-  .bar {
-    /* Its line drawn as a shadow, which takes no room: a border's width is rounded to the screen's pixels, which would move what sits below at a zoom other than 100% */
-    position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 var(--line);
-    background: color-mix(in srgb, var(--panel) 72%, transparent); backdrop-filter: saturate(1.6) blur(14px);
-  }
-  /* Full width rather than the text's, so that the list and the frame put things in the same place */
+  /* The header bar, of the page's own ground: no line under it */
+  .bar { position: sticky; top: 0; z-index: 10; background: var(--bg); }
+  /* Full width rather than the text's, so that the list and the frame put things in the same place. The list's search sits
+     in its middle */
   .bar-inner { padding: 0 16px; height: var(--bar); display: flex; align-items: center; gap: 0.75rem; }
+  .bar-inner > .search { flex: 0 1 34rem; margin-inline: auto; }
+  .bar-inner:has(> .search:not([hidden])) .bar-end { margin-left: 0; }
   .brand { display: flex; align-items: center; gap: 0.6rem; flex: none; color: var(--fg); text-decoration: none; font: 800 1.2rem/1 var(--body); letter-spacing: -0.03em; }
   .brand svg { width: 26px; height: 26px; flex: none; filter: drop-shadow(0 2px 6px rgb(91 179 164 / 35%)); }
   .bar-end { margin-left: auto; display: flex; align-items: center; gap: 0.6rem; flex: none; }
@@ -87,7 +87,7 @@
   .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; }
   .notfound { flex: 1; align-content: center; }
 
-  /* The shelf on the left picks which list the right shows; on a narrow screen a select at the top stands in for it. The whole
+  /* The shelf on the left picks which list the right shows; on a narrow screen a row of its buttons over the list. The whole
      window's width, as the header bar's: the shelf under the logo, the list out to the bar's right end */
   .shell {
     padding: var(--shell-top) 16px 0; --shell-bottom: var(--shell-top);
@@ -95,10 +95,15 @@
   }
   /* The room under the list is the list's own, so that sticky does not push the shelf up at the page's end */
   .main { display: grid; gap: 0.9rem; min-width: 0; padding-bottom: 4rem; }
+  /* The bar over the list: the kinds, the sort and the count; while items are selected, the bulk bar in their place, of the
+     same height, so that the list does not move. Its width decides how the bulk bar's buttons show (container bar) */
   .toolbar {
-    position: sticky; top: var(--bar); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; padding-block: 0.75rem;
-    background: color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter: blur(12px);
+    position: sticky; top: var(--bar); z-index: 5; display: flex; align-items: center; gap: 0.6rem; height: var(--toolbar);
+    background: var(--bg); container: bar / inline-size;
   }
+  /* :not(#bulk), of an id's weight, over #add-narrow's own display */
+  .toolbar:has(> .bulk:not([hidden])) > :not(#bulk) { display: none; }
+  .toolbar .count { margin-left: auto; }
   /* Stuck where it sits (lower, sticky would push it down), and no taller than the window, so that its bottom is reached by scrolling
      it, not the page; at least 10rem, which a very low window lets reach below. The 4px round it are a focus ring's room */
   /* LIMIT: a project or tag picked below where the shelf shows is not scrolled to when the URL opens it; scroll to it once if that matters */
@@ -118,22 +123,22 @@
   }
   .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 0.7rem/1.2 var(--body); color: var(--faint); letter-spacing: 0.02em; }
   /* minmax(0, …): no wider than the shelf, so that a long name is cut off rather than widening it */
-  .shelf .views, .shelf .chips, .shelf .tabs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
-  .shelf .views button, .shelf .chip, .shelf .tabs button {
+  .shelf .views, .shelf .chips { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .shelf .views button, .shelf .chip {
     display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: 8px;
     background: none; color: var(--muted); font-size: 0.86rem; font-weight: 500; text-align: left; overflow-wrap: anywhere;
   }
   .shelf .views svg { width: 15px; height: 15px; flex: none; color: var(--faint); }
   .shelf .n { margin-left: auto; font: 0.72rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
-  .shelf .views button:hover, .shelf .chip:hover, .shelf .tabs button:hover { background: var(--subtle); color: var(--fg); }
+  .shelf .views button:hover, .shelf .chip:hover { background: var(--subtle); color: var(--fg); }
   .shelf button[aria-pressed="true"], .shelf button[aria-pressed="true"]:hover { color: var(--on-ink); font-weight: 650; background: var(--ink); }
   .shelf [aria-pressed="true"] svg, .shelf [aria-pressed="true"] .n { color: var(--on-ink); }
   .shelf .add-link { display: flex; align-items: center; gap: 0.45rem; margin-left: 0.65rem; padding: 0; font-size: 0.82rem; }
   .shelf .add-link svg { width: 14px; height: 14px; }
-  #view-select, #add-narrow { display: none; }
-  .tabs { display: inline-flex; gap: 2px; padding: 3px; background: var(--subtle); border: 1px solid var(--line); border-radius: 10px; }
+  #add-narrow { display: none; }
+  .tabs { display: inline-flex; flex: none; gap: 2px; padding: 3px; background: var(--subtle); border: 1px solid var(--line); border-radius: 999px; }
   .tabs button {
-    display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.32rem 0.8rem; border: 0; border-radius: 7px;
+    display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.32rem 0.8rem; border: 0; border-radius: 999px;
     background: none; color: var(--muted); font-size: 0.86rem; font-weight: 550; transition: background-color 0.15s, color 0.15s;
   }
   .tabs button:hover { color: var(--fg); }
@@ -164,7 +169,7 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow-sm);
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-  .search input { padding-inline: 2.2rem 2.5rem; }
+  .search input { padding-inline: 2.2rem 2.5rem; border-radius: 999px; }
   input::placeholder { color: var(--faint); }
   input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 15%, transparent); }
   .search input::-webkit-search-cancel-button { display: none; }
@@ -232,7 +237,7 @@
   .body { display: grid; gap: 0.05rem; min-width: 0; }
   .body > a.title, .sub > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* The whole row is the link's hit area; only the controls sit above it */
-  a.title { justify-self: start; max-width: 100%; color: var(--fg); font-weight: 600; text-decoration: none; scroll-margin-block: 10rem 5rem; }
+  a.title { justify-self: start; max-width: 100%; color: var(--fg); font-weight: 600; text-decoration: none; scroll-margin-block: calc(var(--bar) + var(--toolbar) + 0.75rem) 5rem; }
   a.title::after { content: ""; position: absolute; inset: 0; }
   /* The dot of the row's project (--c), before its title: ::after is the hit area */
   a.title::before { content: ""; display: inline-block; width: 7px; height: 7px; margin: 0 0.5rem 0.1em 0; border-radius: 50%; background: var(--c); vertical-align: middle; }
@@ -337,10 +342,12 @@
   .pages .icon-btn { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow-sm); }
   .pages .range { color: var(--faint); margin-right: 0.35rem; }
 
+  /* The sort gives way, its words cut off, where the bar is too narrow for all; enough of them left to tell */
+  .sort { flex: 0 1 auto; min-width: 4.5rem; }
   .sort select {
-    height: 30px; padding: 0 1.8rem 0 0.65rem; font: inherit; font-size: 0.8rem; color: var(--muted); cursor: pointer;
-    background: var(--panel) var(--chevron) no-repeat right 0.5rem center / 14px;
-    border: 1px solid var(--line); border-radius: 8px; appearance: none;
+    max-width: 100%; text-overflow: ellipsis; height: 32px; padding: 0 1.9rem 0 0.85rem; font: inherit; font-size: 0.8rem; color: var(--muted); cursor: pointer;
+    background: var(--panel) var(--chevron) no-repeat right 0.6rem center / 14px;
+    border: 1px solid var(--line); border-radius: 999px; appearance: none;
   }
   .sort select:hover { color: var(--fg); border-color: var(--faint); }
 
@@ -351,7 +358,6 @@
   }
   @media (hover: none) { .keys { display: none; } }
 
-  /* The action bar that floats at the bottom while items are selected */
   .toasts { position: fixed; right: 16px; bottom: 1.25rem; z-index: 40; display: grid; gap: 0.5rem; justify-items: end; pointer-events: none; }
   .toast {
     display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.95rem; font-size: 0.84rem; font-weight: 550;
@@ -360,20 +366,30 @@
   }
   .toast svg { width: 16px; height: 16px; flex: none; color: var(--good); }
   @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
-  /* While items are selected, leave room for the action bar so that it covers neither the last row nor the shelf's bottom */
-  /* LIMIT: the room is the bar's on one line; folded (a window under about 1300px wide) it covers the shelf's bottom: fix with S76 */
-  .shell:has(.bulk:not([hidden])) { --shell-bottom: var(--bulk-room); }
-  .shell:has(.bulk:not([hidden])) .main { padding-bottom: var(--bulk-room); }
+  /* The bulk bar, in the bar over the list while items are selected: a round band ringed in ink, its last button (clearing the
+     selection) at its end */
   .bulk {
-    position: fixed; left: 50%; bottom: 1.25rem; z-index: 20; translate: -50% 0; display: flex; align-items: center; gap: 0.4rem;
-    max-width: calc(100% - 32px); padding: 0.4rem 0.4rem 0.4rem 1rem; color: var(--bg); background: var(--fg);
-    border-radius: 14px; box-shadow: var(--shadow-lg); animation: pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.4rem; height: 2.75rem; padding: 0 0.3rem 0 1rem;
+    background: var(--panel); border-radius: 999px; box-shadow: inset 0 0 0 2px var(--ink);
   }
-  .bulk-count { margin-right: 0.5rem; font-size: 0.84rem; font-weight: 600; white-space: nowrap; }
-  .bulk .btn { height: 32px; color: inherit; background: transparent; border-color: color-mix(in srgb, var(--bg) 25%, transparent); box-shadow: none; }
-  .bulk .btn:hover { background: color-mix(in srgb, var(--bg) 12%, transparent); }
+  /* The count gives way first, cut off, where the bar is too narrow for all */
+  .bulk-count { min-width: 0; margin-right: 0.4rem; overflow: hidden; text-overflow: ellipsis; font-size: 0.84rem; font-weight: 650; white-space: nowrap; }
+  .bulk .btn { flex: none; height: 2.1rem; padding: 0 0.8rem; border-radius: 999px; box-shadow: none; white-space: nowrap; }
+  .bulk .btn.clear { margin-left: auto; }
   .bulk .btn.danger { color: var(--on-danger); background: var(--danger); border-color: transparent; }
   .bulk .btn.danger.armed { outline: 2px solid color-mix(in srgb, var(--danger) 50%, transparent); outline-offset: 2px; }
+  /* A delete pressed once asks in its longer words, the other buttons but the clearing out of its way (they come back as it is
+     let go; the clearing lets it go where a click does not move the focus, as on Safari) */
+  .bulk:has(.armed) > .btn:not(.armed, .clear) { display: none; }
+  /* A bar too narrow for the words shows the buttons' icons alone, the words left for screen readers */
+  /* A bar too narrow for the kinds' counts, the sort and the add button side by side drops the counts */
+  @container bar (max-width: 27rem) {
+    .tabs .n { display: none; }
+  }
+  @container bar (max-width: 46rem) {
+    .bulk .btn:not(.armed) .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .bulk .btn:not(.armed) { padding: 0 0.6rem; }
+  }
 
   .state { display: grid; justify-items: center; gap: 0.5rem; padding: 3.5rem 1.5rem; text-align: center; color: var(--muted); }
   .state svg {
@@ -412,9 +428,25 @@
 
   @media (max-width: 48rem) {
     .shell { grid-template-columns: minmax(0, 1fr); }
-    .shelf, .count { display: none; }
-    #view-select { display: block; flex: 1 0 100%; }
+    .count, .shelf h2, .shelf .add-link { display: none; }
     #add-narrow { display: inline-flex; }
+    /* The list's header bar takes the search on a second line; all that sits under the bar (--bar) moves down with it */
+    html:not(.framed) { --bar: 6.25rem; }
+    html:not(.framed) .bar-inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 3.5rem 2.75rem; row-gap: 0; align-items: center; }
+    html:not(.framed) .frame-title { display: none; }
+    html:not(.framed) .bar-end { grid-row: 1; grid-column: 2; }
+    .bar-inner > .search { grid-row: 2; grid-column: 1 / -1; align-self: start; margin: 0; }
+    /* The shelf, one row of its buttons, scrolled sideways */
+    .shelf, .shelf:is(:hover, :focus-within) {
+      position: static; display: flex; gap: 6px; max-height: none; overflow: auto hidden; padding: 4px; scrollbar-width: none;
+    }
+    .shelf::-webkit-scrollbar { display: none; }
+    .shelf .views, .shelf .chips, #shelf-tags, #shelf-projects { display: flex; flex: none; gap: 6px; }
+    .shelf .views button, .shelf .chip {
+      flex: none; width: auto; padding: 0.35rem 0.8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); white-space: nowrap;
+    }
+    .shelf button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); }
+    .shelf .chip .name { max-width: 12rem; }
   }
   /* On narrow screens, the project and the time move to a second line */
   @media (max-width: 40rem) {
@@ -426,7 +458,6 @@
     .body { grid-column: 2; grid-row: 1; }
     .meta { grid-column: 2; grid-row: 2; justify-content: flex-start; }
     .actions { grid-column: 3; grid-row: 1 / 3; }
-    .bulk { left: 16px; right: 16px; translate: none; flex-wrap: wrap; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } }
 </style>
@@ -445,6 +476,12 @@
     </nav>
     <span class="frame-title" id="frame-title"></span>
     <span class="badge" id="frame-archived" hidden>{{.Msg "ui_archived_badge"}}</span>
+    <!-- The list's search, shown with the list -->
+    <label class="search" id="search" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="q" placeholder="{{.Msg "ui_search_placeholder"}}" aria-label="{{.Msg "ui_search"}}" autocomplete="off">
+      <kbd aria-hidden="true">/</kbd>
+    </label>
     <div class="bar-end">
       <span class="frame-actions" hidden>
         <button type="button" class="icon-btn star" id="frame-star"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg></button>
@@ -474,13 +511,6 @@
       <h2>{{.Msg "ui_tags"}}</h2>
       <div class="chips" id="tags" role="group" aria-label="{{.Msg "ui_tags"}}"></div>
     </div>
-    <div id="shelf-kind">
-      <h2>{{.Msg "ui_kind"}}</h2>
-      <div class="tabs" role="group" aria-label="{{.Msg "ui_kind"}}">
-        <button type="button" data-tab="pages">{{.Msg "ui_tab_pages"}}<span class="n"></span></button>
-        <button type="button" data-tab="links">{{.Msg "ui_tab_links"}}<span class="n"></span></button>
-      </div>
-    </div>
     <div id="shelf-projects">
       <h2>{{.Msg "ui_project"}}</h2>
       <div class="chips" id="chips" role="group" aria-label="{{.Msg "ui_project"}}"></div>
@@ -489,13 +519,10 @@
   </nav>
   <div class="main">
   <div class="toolbar">
-      <select id="view-select" class="text" aria-label="{{.Msg "ui_view_select"}}"></select>
-      <label class="search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input type="search" id="q" placeholder="{{.Msg "ui_search_placeholder"}}" aria-label="{{.Msg "ui_search"}}" autocomplete="off">
-        <kbd aria-hidden="true">/</kbd>
-      </label>
-      <span class="count" id="count"></span>
+      <div class="tabs" id="kinds" role="group" aria-label="{{.Msg "ui_kind"}}">
+        <button type="button" data-tab="pages">{{.Msg "ui_tab_pages"}}<span class="n"></span></button>
+        <button type="button" data-tab="links">{{.Msg "ui_tab_links"}}<span class="n"></span></button>
+      </div>
       <label class="sort"><span class="sr-only">{{.Msg "ui_sort"}}</span>
         <select id="sort">
           <option value="updated">{{.Msg "ui_sort_updated"}}</option>
@@ -503,7 +530,17 @@
           <option value="title">{{.Msg "ui_sort_title"}}</option>
         </select>
       </label>
+      <span class="count" id="count"></span>
       <button type="button" class="btn" id="add-narrow" aria-label="{{.Msg "ui_add_link"}}" title="{{.Msg "ui_add_link"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
+      <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
+        <span class="bulk-count" id="bulk-count" aria-live="polite"></span>
+        <button type="button" class="btn" id="bulk-page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="m8 12 3 3 5-6"/></svg><span class="label">{{.Msg "ui_select_page"}}</span></button>
+        <button type="button" class="btn" id="bulk-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg><span class="label">{{.Msg "ui_tags"}}</span></button>
+        <button type="button" class="btn" id="bulk-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span class="label"></span></button>
+        <button type="button" class="btn danger" id="bulk-delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg><span class="label"></span></button>
+        <button type="button" class="btn clear" id="bulk-clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg><span class="label">{{.Msg "ui_clear_selection"}}</span></button>
+      </div>
   </div>
   <div class="panel">
     <ul id="list"></ul>
@@ -557,14 +594,6 @@
     <span><kbd>↑</kbd><kbd>↓</kbd>{{.Msg "ui_key_move"}}</span><span><kbd>Enter</kbd>{{.Msg "ui_key_open"}}</span><span><kbd>x</kbd>{{.Msg "ui_key_select"}}</span><span><kbd>f</kbd>{{.Msg "ui_key_favorite"}}</span>
     <span><kbd>←</kbd><kbd>→</kbd>{{.Msg "ui_key_page"}}</span><span><kbd>/</kbd>{{.Msg "ui_search"}}</span>
   </p>
-  </div>
-  <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
-    <span class="bulk-count" id="bulk-count" aria-live="polite"></span>
-    <button type="button" class="btn" id="bulk-page">{{.Msg "ui_select_page"}}</button>
-    <button type="button" class="btn" id="bulk-clear">{{.Msg "ui_clear_selection"}}</button>
-    <button type="button" class="btn" id="bulk-tag">{{.Msg "ui_tags"}}</button>
-    <button type="button" class="btn" id="bulk-archive"></button>
-    <button type="button" class="btn danger" id="bulk-delete"></button>
   </div>
 </main>
 <!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
@@ -924,8 +953,8 @@
 
   function disarmBulk() {
     $('bulk-delete').classList.remove('armed');
-    $('bulk-delete').textContent = t(`ui_${tabKind()}`);
-    $('bulk-archive').textContent = t(archived ? 'ui_unarchive' : 'ui_archive');
+    $('bulk-delete').querySelector('.label').textContent = t(`ui_${tabKind()}`);
+    $('bulk-archive').querySelector('.label').textContent = t(archived ? 'ui_unarchive' : 'ui_archive');
   }
 
   function renderBulk() {
@@ -1256,7 +1285,6 @@
     $('chips').replaceChildren(...chips);
     // Projects to choose between, or one chosen
     $('shelf-projects').hidden = chips.length < 2 && !project;
-    return chips;
   }
 
   // The shelf's tags by name, with how many of list have each; none shown when no page of it has one
@@ -1272,11 +1300,10 @@
     });
     $('tags').replaceChildren(...chips);
     $('shelf-tags').hidden = chips.length === 0;
-    return chips;
   }
 
-  // The shelf's views and kinds with their counts, and the narrow screen's select of the same
-  function renderShelf(chips, tags) {
+  // The shelf's views and the kinds over the list, with their counts
+  function renderShelf() {
     const view = archived ? 'archived' : fav ? 'fav' : 'all';
     const counts = {
       all: items.filter((a) => inList(a, { tab, archived: false, fav: false })).length,
@@ -1293,38 +1320,10 @@
       b.setAttribute('aria-pressed', String(b.dataset.tab === tab));
       b.querySelector('.n').textContent = items.filter((a) => inList(a, { tab: b.dataset.tab, archived, fav })).length;
     }
-    $('shelf-kind').hidden = tab === 'pages' && !items.some((a) => a.path);
+    $('kinds').hidden = tab === 'pages' && !items.some((a) => a.path);
     // A link added is not archived, so it is added from the lists it goes on
     $('add-open').hidden = archived;
     $('add-narrow').hidden = archived;
-    // A button's own words, without its count: a chip's name, or the text of the others
-    const label = (b) => b.querySelector('.name')?.textContent
-      ?? [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim();
-    const pressed = (list) => list.find((c) => c.getAttribute('aria-pressed') === 'true');
-    const summary = [views.find((b) => b.dataset.view === view), tag && pressed(tags), !$('shelf-kind').hidden && tabs.find((b) => b.dataset.tab === tab),
-      project && pressed(chips)].filter(Boolean)
-      .map(label).join(' · ');
-    // Groups of [value, words]. Values carry what they choose, so that a project named like a view is not taken for one
-    const groups = [[t('ui_shelf'), views.map((b) => [`view:${b.dataset.view}`, b])]];
-    if (!$('shelf-tags').hidden) groups.push([t('ui_tags'), tags.map((b) => [`tag:${b.dataset.tag}`, b])]);
-    if (!$('shelf-kind').hidden) groups.push([t('ui_kind'), tabs.map((b) => [`tab:${b.dataset.tab}`, b])]);
-    if (!$('shelf-projects').hidden) groups.push([t('ui_project'), chips.map((c) => [`project:${c.dataset.project}`, c])]);
-    const words = (b) => `${label(b)} (${b.querySelector('.n').textContent})`;
-    const signature = JSON.stringify([summary, $('count').textContent, groups.map(([g, items]) => [g, items.map(([v, b]) => [v, words(b)])])]);
-    // Rebuilt only when it changes, so that a select left open stays open
-    // LIMIT: one open while the list changes closes. Keep it open if that comes to matter
-    const select = $('view-select');
-    if (signature === select.dataset.signature) return;
-    select.dataset.signature = signature;
-    const first = new Option(`${summary} (${$('count').textContent})`, '', true, true);
-    first.disabled = true;
-    first.hidden = true;
-    select.replaceChildren(first, ...groups.map(([g, items]) => {
-      const group = document.createElement('optgroup');
-      group.label = g;
-      group.append(...items.map(([value, b]) => new Option(words(b), value)));
-      return group;
-    }));
   }
 
   // If everything fits in the smallest page size, changing the size changes nothing, so the whole pager is hidden
@@ -1515,8 +1514,8 @@
   function render() {
     const list = items.filter((a) => inList(a, { tab, archived, fav }));
     const ranks = projectOrder();
-    const chips = renderChips(list, ranks);
-    const tags = renderTags(list);
+    renderChips(list, ranks);
+    renderTags(list);
     const archivedHere = items.filter((a) => inView(a, { tab, archived: true })).length;
     const state = current();
     const shown = arrange(state, ranks);
@@ -1571,7 +1570,7 @@
     // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
     renderPager(shown.length, pages, start);
-    renderShelf(chips, tags);
+    renderShelf();
     renderBulk();
     syncUrl();
   }
@@ -1739,6 +1738,7 @@
     });
   } else {
     $('manage').hidden = false;
+    $('search').hidden = false;
     $('q').value = readState(location.search).q;
     $('add').addEventListener('submit', add);
     const openAdd = () => {
@@ -1757,12 +1757,6 @@
     }
     for (const b of document.querySelectorAll('.views button')) b.addEventListener('click', () => setView(b.dataset.view));
     $('show-archived').addEventListener('click', () => setView('archived'));
-    $('view-select').addEventListener('change', () => {
-      const [kind, value] = $('view-select').value.split(/:(.*)/s);
-      ({ view: setView, tab: setTab, project: toggleProject, tag: toggleTag })[kind](value);
-      // Back to the summary, so that choosing the same again is a change too
-      $('view-select').selectedIndex = 0;
-    });
     // One menu open at a time; Escape or a click elsewhere closes it, focus going back to its button rather than to the page
     const closeMenus = (except) => {
       for (const d of document.querySelectorAll('.more[open]')) {

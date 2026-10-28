@@ -361,7 +361,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
 	// The kinds show with a link, the projects with two or one chosen.
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`))
-	out = append(out, b.eval("[document.getElementById('shelf-kind').hidden, document.getElementById('shelf-projects').hidden].join(' ')"))
+	out = append(out, b.eval("[document.getElementById('kinds').hidden, document.getElementById('shelf-projects').hidden].join(' ')"))
 	b.eval("setProject('p')")
 	out = append(out, b.eval("document.getElementById('shelf-projects').hidden"))
 	b.eval("setProject('')")
@@ -389,7 +389,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// project or a search it may not match, drawn once.
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`))
-	out = append(out, b.eval("[document.getElementById('shelf-kind').hidden, document.getElementById('add-open').hidden].join(' ')"))
+	out = append(out, b.eval("[document.getElementById('kinds').hidden, document.getElementById('add-open').hidden].join(' ')"))
 	b.eval("setProject('p'); (() => { const q = document.getElementById('q'); q.value = 'Al'; q.dispatchEvent(new Event('input')); })()")
 	b.eval(`(() => {
 		window.renders = 0;
@@ -425,28 +425,24 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		return Boolean(document.elementFromPoint(menu.left + menu.width / 2, bar.top + 10)?.closest('.toolbar'));
 	})()`))
 	b.eval("document.querySelector('#list li[data-slug=p5] summary').click(); scrollTo(0, 0)")
-	// A narrow screen: one select stands for the shelf, its values telling a view from a project of that name; choosing
-	// is clicking the shelf, and an unchanged list does not rebuild it.
+	// A narrow screen: the shelf is one row of its buttons, scrolled sideways rather than wrapped, its h2 and add link out of
+	// sight; a view and a project of that name are told apart, pressed as the wide shelf's are.
 	b.size(390, 844, true)
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'archived', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'b', title: 'Beta', description: '', project: 'p', createdAt: at(1), updatedAt: at(7) },
 		{ slug: 'c', title: 'Gamma', description: '', project: 'a<b&"c', createdAt: at(1), updatedAt: at(6) }]`))
-	out = append(out, b.eval("[getComputedStyle(document.querySelector('.shelf')).display, getComputedStyle(document.getElementById('view-select')).display].join(' ')"),
-		b.eval("document.getElementById('view-select').options[0].textContent"),
-		b.eval("[...document.getElementById('view-select').options].map((o) => o.value).join(',')"))
-	b.eval("window.first = document.getElementById('view-select').options[0]; render()")
-	out = append(out, b.eval("document.getElementById('view-select').options[0] === window.first"))
-	choose := func(value string) {
-		b.eval("(() => { const s = document.getElementById('view-select'); s.value = " + js(value) + "; s.dispatchEvent(new Event('change')); })()")
+	out = append(out, b.eval("(() => { const s = document.querySelector('.shelf'); return [getComputedStyle(s).display, getComputedStyle(s).position, "+
+		"s.scrollWidth > s.clientWidth, document.documentElement.scrollWidth === document.documentElement.clientWidth].join(' '); })()"),
+		b.eval("[...document.querySelectorAll('.shelf button, .shelf h2')].filter((e) => e.offsetParent).map((e) => e.dataset.view ?? e.dataset.project ?? e.tagName).join(',')"))
+	press := func(value string) {
+		b.eval("[...document.querySelectorAll('#chips .chip')].find((c) => c.dataset.project === " + js(value) + ").click()")
 	}
-	out = append(out, b.eval("[...document.getElementById('view-select').options].at(-1).textContent"))
-	choose(`project:a<b&"c`)
+	press(`a<b&"c`)
 	out = append(out, b.eval("new URLSearchParams(location.search).get('project')"))
-	choose("project:archived")
+	press("archived")
 	out = append(out, b.eval(views))
-	// Choosing what is chosen goes back to the summary too.
-	choose("view:all")
-	out = append(out, b.eval("document.getElementById('view-select').selectedIndex"))
+	press("archived")
+	out = append(out, b.eval("String(new URLSearchParams(location.search).get('project'))"))
 	b.unsize()
 	// The frame's bar: the title, archived or not, the star and the archive, which act as the list's do and tell their failure.
 	frame := "[document.getElementById('frame-title').textContent, document.getElementById('frame-archived').hidden, " +
@@ -492,9 +488,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"empty-favorites", "all-archived", "archived ?archived=1", "archived ?archived=1",
 		"true false", "?tab=links true 1 New", "true",
 		"50 1 / 2", "true",
-		"none block", msg("ui_view_all") + " (" + msg("ui_count_all", 3) + ")",
-		`,view:all,view:fav,view:archived,project:a<b&"c,project:archived,project:p`, "true", "p (1)", `a<b&"c`,
-		"all ?project=archived", "0",
+		"flex static true true", `all,fav,archived,a<b&"c,archived,p`, `a<b&"c`,
+		"all ?project=archived", "null",
 		"Zeta / false / true / " + msg("ui_unarchive"), `PATCH /api/artifacts/z {"archived":false}`,
 		msg("ui_favorite_failed", "Failed to fetch"),
 		"Beta / true / false / " + msg("ui_archive"),
@@ -686,15 +681,13 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
 	pickPlan()
 
-	// A narrow screen's select has the tags, which pick and let go as the shelf's do.
+	// A narrow screen's row of the shelf has the tags, which pick and let go as the wide shelf's do.
 	b.size(390, 844, true)
-	choose := func(value string) {
-		b.eval("(() => { const s = document.getElementById('view-select'); s.value = " + js(value) + "; s.dispatchEvent(new Event('change')); })()")
-	}
-	out = append(out, b.eval("[...document.getElementById('view-select').options].filter((o) => o.value.startsWith('tag:')).map((o) => o.value).join(',')"))
-	choose("tag:plan")
-	out = append(out, b.eval(rows), b.eval("document.getElementById('view-select').options[0].textContent.includes('plan')"))
-	choose("tag:plan")
+	plan := "[...document.querySelectorAll('#tags .chip')].find((c) => c.dataset.tag === 'plan')"
+	out = append(out, b.eval("[...document.querySelectorAll('#tags .chip')].filter((c) => c.offsetParent).map((c) => c.dataset.tag).join(',')"))
+	b.eval(plan + ".click()")
+	out = append(out, b.eval(rows), b.eval(plan+".getAttribute('aria-pressed')"))
+	b.eval(plan + ".click()")
 	out = append(out, b.eval(rows))
 	b.unsize()
 
@@ -781,7 +774,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"plan:all:✓: false", msg("ui_tag_create", "new"), "plan:all:✓:,new:all:✓:,old:none:+:,設計:none:+:,設計、実装:none:+:", "true 0 true", "false",
 		"true 0",
 		"old,設計,設計、実装", "plan, old, ", "設計,設計、実装",
-		"tag:plan,tag:設計,tag:設計、実装", "ab plan", "true", "abcd -",
+		"plan,設計,設計、実装", "ab plan", "true", "abcd -",
 		"<b>x</b>1,__proto__1", "<b>x</b>,__proto__", "0", "__proto__:all:✓:,<b>x</b>:all:✓: 0",
 		"combobox list true listbox",
 		"<b>x</b>,plan,xa,計画,設計", "true true", "true", "under", "<b>x</b>",
@@ -831,7 +824,7 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 }
 
 // TestUIShelfScrolls holds the shelf to the window under it, scrolling in itself when taller, where it sits however far the
-// page scrolls, clear of the bulk bar, with room for its focus rings, its long names on one line, cut off; and a shelf that fits passes the
+// page scrolls, its height kept with the bulk bar, with room for its focus rings, its long names on one line, cut off; and a shelf that fits passes the
 // wheel to the page.
 func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -889,9 +882,11 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.point(800, 300)
 	out = append(out, away+" / "+on+" / "+b.until("the shelf to be left", "!document.querySelector('.shelf:hover') && ("+hover+")"))
 	// With the bulk bar, the shelf ends above it; in a window too low for that, it keeps 10rem, reaching below.
+	// With the bulk bar, in the bar over the list, the shelf keeps its height.
+	tall := b.eval("document.querySelector('.shelf').getBoundingClientRect().height")
 	b.eval("document.querySelector('#list li:not(.group) .sel').click()")
-	out = append(out, b.until("the bar to show", "(() => { const r = document.querySelector('.shelf').getBoundingClientRect(); "+
-		"const bar = document.getElementById('bulk').getBoundingClientRect(); return bar.height > 0 && `${r.bottom <= bar.top}`; })()"))
+	out = append(out, b.until("the bar to show", "(() => { const bar = document.getElementById('bulk').getBoundingClientRect(); "+
+		"return bar.height > 0 && `${document.getElementById('bulk').closest('.toolbar') !== null} ${document.querySelector('.shelf').getBoundingClientRect().height === "+tall+"}`; })()"))
 	b.size(1440, 240, false)
 	out = append(out, b.eval("Math.abs(document.querySelector('.shelf').getBoundingClientRect().height - 10 * parseFloat(getComputedStyle(document.documentElement).fontSize)) <= 0.5"))
 	b.size(1440, 600, false)
@@ -903,7 +898,7 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	wheel()
 	out = append(out, b.until("the page to scroll", "scrollY > 0 && 'scrolled'"))
 	check(t, "shelf scrolls", out, strings.Join([]string{
-		"true true true true", "true true", "page at 0", "true true", "true true true true", "238 4px / 238 4.01px / 238 4px", "true", "true", "true true", "scrolled",
+		"true true true true", "true true", "page at 0", "true true", "true true true true", "238 4px / 238 4.01px / 238 4px", "true true", "true", "true true", "scrolled",
 	}, "|"))
 }
 
@@ -934,7 +929,7 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// counts the room only while the scrollbar is there.
 	const room = "innerWidth - document.body.getBoundingClientRect().width"
 	// The shelf's first button, not its box, which reaches 4px out for its focus rings.
-	const where = "['.shelf .views button', '.search'].map((s) => document.querySelector(s).getBoundingClientRect().left)" +
+	const where = "['.shelf .views button', '.toolbar'].map((s) => document.querySelector(s).getBoundingClientRect().left)" +
 		".concat(document.querySelector('.panel').getBoundingClientRect().right).join(' ')"
 	out := make([]string, 0, 8)
 	b.size(1800, 900, false)
