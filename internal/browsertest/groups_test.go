@@ -38,6 +38,8 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	// The groups and their rows: a heading as its color and words, a row as its slug and color.
 	out = append(out, b.eval("[...document.getElementById('list').children].map((li) => li.classList.contains('group') ? "+
 		"'\\n' + li.style.getPropertyValue('--c') + ' ' + li.textContent : li.dataset.slug + ':' + li.style.getPropertyValue('--c')).join(' ')"))
+	// Every heading alike: no line over the card, the first's or the next's.
+	out = append(out, b.eval("[...document.querySelectorAll('#list li.group')].map((li) => getComputedStyle(li).borderTopWidth).join(' ')"))
 	// The shelf's projects: name, color, title and count.
 	out = append(out, b.eval("[...document.querySelectorAll('#chips .chip')].map((c) => [c.dataset.project, c.style.getPropertyValue('--c'), "+
 		"c.title, c.querySelector('.n').textContent].join(' ')).join(', ')"))
@@ -135,6 +137,7 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			h("var(--pc5)", "eps", 1) + " e1:var(--pc5) " +
 			h("var(--pc0)", "fav", 1) + " f2:var(--pc0) " +
 			h("var(--faint)", "None recorded", 1) + " n1:var(--faint)",
+		strings.TrimSpace(strings.Repeat("0px ", 9)),
 		"alpha var(--pc0) alpha 3, beta var(--pc1) beta 1, gamma var(--pc2) gamma 1, a project of a long name var(--pc3) a project of a long name 1, " +
 			"delta var(--pc4) delta 1, eps var(--pc5) eps 1, fav var(--pc0) fav 1, / var(--faint) None recorded 1",
 		"beta b1", "null",

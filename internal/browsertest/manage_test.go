@@ -171,6 +171,12 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval(archiveRow)
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
+	// An item of the menu done by keys, the menu closes, focus going back to its button: there still when the change fails.
+	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .more summary').click(); " +
+		"document.querySelector('#list li:not(.group) .archive').focus(); document.querySelector('#list li:not(.group) .archive').click()")
+	out = append(out, b.until("the give back to fail", "!document.getElementById('error').hidden && "+
+		"String(document.activeElement === document.querySelector('#list li:not(.group) .more summary'))"))
+	b.eval("window.failWrites = false")
 	b.eval("document.getElementById('bulk-page').click()")
 	out = append(out, b.eval("document.getElementById('bulk-archive').textContent"))
 	b.eval("document.getElementById('bulk-archive').click()")
@@ -224,7 +230,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		// The archived, by project: p's Zeta, then Ypsilon of none; two projects, so the shelf shows them.
 		"2 1 p1 " + msg("ui_no_project") + "1 false 3 1 2 " + msg("ui_count_all", 2) + " Zeta,Ypsilon 1",
 		msg("ui_unarchive") + " / " + msg("ui_unarchive_named", "Zeta") + " / " + msg("ui_unarchive"),
-		`PATCH /api/artifacts/z {"archived":false}`, msg("ui_unarchive"),
+		`PATCH /api/artifacts/z {"archived":false}`, "true", msg("ui_unarchive"),
 		`PATCH /api/artifacts/y {"archived":false},PATCH /api/artifacts/z {"archived":false}`,
 		"empty-archived:" + msg("ui_links_none_archived") + " true", "false",
 		msg("ui_favorite_failed", "Failed to fetch"), "true",
@@ -356,7 +362,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		{ slug: 'o', title: 'Old', description: '', updatedAt: at(7) },
 		{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`))
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] .sub').hidden + ' ' + document.querySelector('#list li[data-slug=a] time').title.split('\\n')[0]"),
-		b.eval("!document.querySelector('#list li[data-slug=o] time').title.includes('\\n')"))
+		b.eval("document.querySelector('#list li[data-slug=o] .sub').hidden && !document.querySelector('#list li[data-slug=o] time').title.includes('\\n')"))
 	b.eval("document.querySelector('.tabs [data-tab=links]').click()")
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=l] time').title.split('\\n')[0]"))
 	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
