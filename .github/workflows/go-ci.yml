@@ -4,11 +4,13 @@ on:
   # Topic branches are covered by pull_request, which also fires on every push
   # to an open PR (synchronize). develop pushes re-validate the integrated state
   # after a squash merge; main stays PR-only because the develop -> main release
-  # PR reruns the suite.
+  # PR reruns the suite. A feature split over several PRs has a parent branch cut
+  # from develop, with the prefix of a topic branch: the PRs into it run the
+  # suite too, before the parent's one PR into develop.
   push:
     branches: [develop]
   pull_request:
-    branches: [develop, main]
+    branches: [develop, main, "feature/**", "fix/**", "refactor/**", "chore/**", "docs/**", "test/**"]
   schedule:
     # Weekly so govulncheck catches newly published advisories with no commit
     # to trigger a run.
