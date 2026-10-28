@@ -85,6 +85,7 @@ type Compiled struct {
 	url  string // the URL it was compiled under, the start of its walks
 	file string
 	res  map[string]Resource
+	part bool // compiled by CompilePart
 }
 
 // english words the library's mistakes, in English in every language (the catalog's library key).
@@ -98,7 +99,7 @@ func Compile(url, file string, src []byte, res map[string]Resource) (*Compiled, 
 	if err != nil {
 		return nil, err
 	}
-	c, err := build(url, file, doc, res)
+	c, err := build(url, file, doc, res, false)
 	if err != nil {
 		return nil, err
 	}
@@ -111,13 +112,13 @@ func CompilePart(url string, res map[string]Resource) (*Compiled, error) {
 	if !ok {
 		return nil, fmt.Errorf("schema: no resource %s", url) //nolint:err113 // floe's own mistake
 	}
-	return build(url, r.File, r.doc, res)
+	return build(url, r.File, r.doc, res, true)
 }
 
-// build compiles doc under url, after checking the drafts it names (check 0), with res and floe's formats;
+// build compiles doc under url, after checking the drafts it names, with res and floe's formats;
 // a template's "$id"s are told with the mistakes of compiling it, as both are of what was written, and no
 // check that reads the tree compiled runs past them. A part's NewResource has refused already.
-func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) {
+func build(u, file string, doc any, res map[string]Resource, part bool) (*Compiled, error) {
 	for _, ru := range slices.Sorted(maps.Keys(res)) {
 		if !res[ru].made {
 			return nil, fmt.Errorf("schema: %s was not made by NewResource", ru) //nolint:err113 // floe's own mistake
@@ -127,7 +128,7 @@ func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) 
 			return nil, fmt.Errorf("schema: %s is held at %s", res[ru].URL, ru) //nolint:err113 // floe's own mistake
 		}
 	}
-	c := &Compiled{Root: nil, url: u, file: file, res: res}
+	c := &Compiled{Root: nil, url: u, file: file, res: res, part: part}
 	dialects, ids := raw(file, doc, false)
 	if dialects != nil {
 		return nil, append(dialects, ids...).Sorted().Err()
