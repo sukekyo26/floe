@@ -17,7 +17,8 @@ import (
 
 // check checks what k read itself, not its base: the rules over the values read made. A part holds
 // schema.json, part.html and part.css, and a look part.css alone; their CSS and a theme's are what floe can
-// put in a layer (css); a part's schema is what a part may hold (schema.CheckPart); page.html and part.html
+// put in a layer (css); a part's schema is what a part may hold, and a shared schema is checked from its root
+// (schema.CheckPart); page.html and part.html
 // escape (escapeMistake); the looks they take are parts or looks, and none takes its own; a template holds
 // page.html and schema.json. Every mistake is told together, Sorted.
 func check(k *Kit) error {
@@ -25,6 +26,11 @@ func check(k *Kit) error {
 	add := func(err error) error { return found.Add(err) }
 	for _, name := range slices.Sorted(maps.Keys(k.parts)) {
 		if err := add(checkPart(k.parts[name])); err != nil {
+			return err
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(k.shared)) {
+		if err := add(k.shared[name].schema.CheckPart()); err != nil {
 			return err
 		}
 	}

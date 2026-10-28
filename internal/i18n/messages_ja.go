@@ -32,7 +32,7 @@ var messagesJA = map[string]string{
 	"schema_id_root":            "schema の根には $id を書けません。根の URL は floe が付けます。$id を消してください",
 	"schema_ref_templates":      "%s は floe が持つファイルではありません。テンプレートは、部品を floe:///parts/<名前>.json で、自分の schema.json の中を #/… で指します",
 	"schema_part_unreached":     "部品 %s はここでは項目を描きません。floe は根から properties と items で届く所と、横に描くものの無い $ref の先を描きます。ここの項目は検査されても描かれません",
-	"schema_ref_unreached":      "%s は floe が描く部品か format の項目を持ちます。floe が辿る properties か items の下で参照してください",
+	"schema_ref_unreached":      "%s は floe が描く部品か format の項目を持ちます。floe が辿るのは、properties か items の下の、横に部品も floe の format も無い $ref だけです。そこで参照してください",
 	"schema_format_unreached":   "format %s は描く項目の印です。floe が辿る properties か items の下で宣言してください",
 	"schema_part_into":          "%s は floe の部品か部品が共有する schema の中を指していて、検査はされても書いたとおりには描かれません。全体の %s を指してください",
 	"schema_dynamic_ref":        "floe は %s をたどりません。$ref を書いてください",

@@ -85,7 +85,7 @@ type Compiled struct {
 	url  string // the URL it was compiled under, the start of its walks
 	file string
 	res  map[string]Resource
-	part bool // compiled by CompilePart
+	part bool // a Part compiled by CompilePart, whose rules a Shared schema does not take
 }
 
 // english words the library's mistakes, in English in every language (the catalog's library key).
@@ -106,13 +106,14 @@ func Compile(url, file string, src []byte, res map[string]Resource) (*Compiled, 
 	return c, c.checkTemplate()
 }
 
-// CompilePart compiles the part at url of res as a root, for a value to be checked against it alone.
+// CompilePart compiles the part or the Shared schema at url of res as a root, for a value to be checked against
+// it alone and for CheckPart.
 func CompilePart(url string, res map[string]Resource) (*Compiled, error) {
 	r, ok := res[url]
 	if !ok {
 		return nil, fmt.Errorf("schema: no resource %s", url) //nolint:err113 // floe's own mistake
 	}
-	return build(url, r.File, r.doc, res, true)
+	return build(url, r.File, r.doc, res, r.Kind == Part)
 }
 
 // build compiles doc under url, after checking the drafts it names, with res and floe's formats;

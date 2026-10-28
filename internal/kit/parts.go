@@ -144,7 +144,7 @@ func (k *Kit) readParts(d Dir) error {
 
 // compileParts compiles each part and shared schema of k read from the names dirs and shared, all read without
 // a mistake (a $ref to one not read would be told missing), at its own file: a template compiled with it would
-// tell a mistake of it at the template. A part keeps its schema compiled, for check.
+// tell a mistake of it at the template. Each keeps its schema compiled, for check.
 func (k *Kit) compileParts(dirs, shared []string) error {
 	var found usererr.List
 	for _, name := range slices.Concat(dirs, shared) {
@@ -161,7 +161,7 @@ func (k *Kit) compileParts(dirs, shared []string) error {
 		case part:
 			p.schema = c
 		default:
-			k.shared[name].about = c.Root.Description
+			k.shared[name].schema = c
 		}
 	}
 	return found.Sorted().Err()
@@ -271,7 +271,7 @@ func (k *Kit) readShared(d Dir, name string) error {
 		return err //nolint:wrapcheck // its mistakes, or floe's failure
 	}
 	k.resources[r.URL] = r
-	k.shared[name] = &shared{name: name, file: r.File, about: "", files: sources(Source{name + ".json", src})}
+	k.shared[name] = &shared{name: name, file: r.File, schema: nil, files: sources(Source{name + ".json", src})}
 	return nil
 }
 
