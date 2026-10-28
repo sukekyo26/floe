@@ -117,6 +117,9 @@ func startChrome(path string) (context.Context, error) {
 			// Names other than 127.0.0.1 fail at once: the tests do not reach the network, nor wait on it
 			// for anything a page loads from elsewhere.
 			chromedp.Flag("host-resolver-rules", "MAP * ~NOTFOUND, EXCLUDE 127.0.0.1"),
+			// A screen with a mouse, as the management page shows a row's actions only while it is pointed at there.
+			// Headless Chrome has no pointing device, and Emulation.setEmulatedMedia does not take hover.
+			chromedp.Flag("blink-settings", "primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4"),
 			chromedp.UserDataDir(profile),
 		)
 		actx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), opts...)
