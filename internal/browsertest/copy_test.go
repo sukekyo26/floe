@@ -3,7 +3,8 @@ package browsertest_test
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -103,6 +104,7 @@ func (b *browser) pressButton(part string) {
 	b.t.Helper()
 
 	b.until("the copy button of "+part, button(part))
+	b.eval(button(part) + ".scrollIntoView({ block: 'center' })")
 	r := b.rect(button(part))
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
 }
@@ -246,10 +248,15 @@ func TestUICopyFrame(t *testing.T) { //nolint:paralleltest // the browser tests 
 func TestUICopyFallback(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := copySite(t, "en")
 	b := s.b
-	top := `<iframe id="frame" src="` + s.Base + `/a/copy/?raw" style="position: fixed; left: 0; top: 0; width: 800px; height: 600px; border: 0"></iframe>`
+	// Another origin, framing the page as Simple Browser frames the management page (simpleBrowserView.ts).
+	vscode := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = fmt.Fprint(w, `<iframe id="frame" sandbox="allow-scripts allow-forms allow-same-origin allow-downloads" src="`+ //nolint:errcheck // the test checks the copy
+			s.Base+`/a/copy/?raw" style="position: fixed; left: 0; top: 0; width: 800px; height: 600px; border: 0"></iframe>`)
+	}))
+	defer vscode.Close()
 	var r report
 	got := s.clip(t, func() {
-		b.navigate("data:text/html," + url.PathEscape(top))
+		b.navigate(vscode.URL)
 		r = b.pressInFrame("document.getElementById('frame')")
 	})
 	if got != copied["code"] {
