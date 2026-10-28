@@ -48,7 +48,7 @@ func (st Step) Forbids(key string) bool {
 // LIMIT: what floe draws under allOf and the like, and under the array form of items and additionalItems
 // (2019-09), is refused as unreached, not drawn.
 func (c *Compiled) Follow(s *jsonschema.Schema) Step {
-	st, through := c.step(s, map[*jsonschema.Schema]bool{})
+	st, through := c.step(s, map[*jsonschema.Schema]bool{}, false)
 	if st.Part == "" && st.Format == "" {
 		for _, s := range through {
 			if closed, ok := s.AdditionalProperties.(bool); ok && !closed {
@@ -59,8 +59,12 @@ func (c *Compiled) Follow(s *jsonschema.Schema) Step {
 	return st
 }
 
-// step returns the step of s and the schemas it went through to it: s, and those its $refs name.
-func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) (Step, []*jsonschema.Schema) {
+// step returns the step of s and the schemas it went through to it: s, and those its $refs name. In a part's
+// schema, one of Formats a part may not hold does not stop it if inPart, so that a check of where the rest is
+// does not tell what CheckPart tells of the format.
+func (c *Compiled) step(
+	s *jsonschema.Schema, seen map[*jsonschema.Schema]bool, inPart bool,
+) (Step, []*jsonschema.Schema) {
 	through := make([]*jsonschema.Schema, 1, 2)
 	through[0] = s
 	own := Step{Part: "", Format: "", PartRoot: nil, Props: s.Properties, Items: itemsOf(s), closed: nil}
@@ -68,7 +72,7 @@ func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) 
 		return Step{Part: "", Format: "", PartRoot: nil, Props: nil, Items: nil, closed: nil}, through
 	}
 	seen[s] = true
-	if f := floeFormat(s); f != "" {
+	if f := floeFormat(s); f != "" && (!inPart || f == "image") {
 		return Step{Part: "", Format: f, PartRoot: nil, Props: nil, Items: nil, closed: nil}, through
 	}
 	if s.Ref == nil {
@@ -80,7 +84,7 @@ func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) 
 	if !c.followed(s, s.Ref) {
 		return own, through
 	}
-	st, more := c.step(s.Ref, seen)
+	st, more := c.step(s.Ref, seen, inPart)
 	through = append(through, more...)
 	if st.Part != "" || st.Format != "" {
 		return st, through
@@ -216,8 +220,7 @@ func floeFormat(s *jsonschema.Schema) string {
 // partRoot reports whether to, a schema a $ref names, is the root of a Part, and its URL.
 func (c *Compiled) partRoot(to *jsonschema.Schema) (string, bool) {
 	base, frag := split(to.Location)
-	r, ok := c.res[base]
-	return base, ok && base != c.url && r.Kind == Part && frag == ""
+	return base, c.held(base, Part) && frag == ""
 }
 
 // followed reports whether Follow goes from s through its $ref to to: one in the same file, or in a Shared
@@ -264,7 +267,7 @@ func (c *Compiled) followFrom(starts ...*jsonschema.Schema) reached {
 			continue
 		}
 		started[s] = true
-		st, through := c.step(s, map[*jsonschema.Schema]bool{})
+		st, through := c.step(s, map[*jsonschema.Schema]bool{}, c.part)
 		for _, t := range through {
 			r.passed[t] = true
 			switch {
