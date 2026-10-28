@@ -23,6 +23,8 @@
     --bar: 3.5rem;
     /* The room above the list: with --bar, where the shelf sits */
     --shell-top: 0.75rem;
+    /* The room the bulk bar takes at the bottom, one line of it */
+    --bulk-room: 6rem;
   }
   * { box-sizing: border-box; }
   /* The list keeps the scrollbar's room when it does not scroll, so that it does not move when it starts to. Not the frame, whose iframe scrolls */
@@ -77,21 +79,33 @@
 
   /* The shelf on the left picks which list the right shows; on a narrow screen a select at the top stands in for it */
   .shell {
-    max-width: calc(96rem + 32px); margin-inline: auto; padding: var(--shell-top) 16px 4rem;
+    max-width: calc(96rem + 32px); margin-inline: auto; padding: var(--shell-top) 16px 0; --shell-bottom: var(--shell-top);
     display: grid; grid-template-columns: 14.5rem minmax(0, 1fr); align-items: start; column-gap: 1.5rem;
   }
-  .main { display: grid; gap: 0.9rem; min-width: 0; }
+  /* The room under the list is the list's own, so that the shelf's box reaches the page's end: sticky does not push the shelf
+     up from the window's bottom when the page is scrolled to its end */
+  .main { display: grid; gap: 0.9rem; min-width: 0; padding-bottom: 4rem; }
   .toolbar {
     position: sticky; top: var(--bar); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; padding-block: 0.75rem;
     background: color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter: blur(12px);
   }
-  /* Stuck where it sits: lower, sticky would push it down while the page can scroll, and only then */
-  .shelf { position: sticky; top: calc(var(--bar) + var(--shell-top)); display: grid; gap: 1.1rem; padding-top: 0.9rem; }
+  /* Stuck where it sits: lower, sticky would push it down while the page can scroll, and only then. No taller than the window
+     under it, --shell-bottom above the window's bottom, so that what is low on it is reached by scrolling it, not the page. The
+     4px each side and below are a focus ring's, which the scrolling box would cut off.
+     LIMIT: a project or tag picked lower than the shelf shows, opened from the URL, is not scrolled to. If that comes to matter,
+     scroll to it once as the page opens.
+     LIMIT: the error above the shell (a list that cannot be read) moves the shelf down by its height, which then reaches below
+     the window. It shows only while the list fails to load */
+  .shelf {
+    position: sticky; top: calc(var(--bar) + var(--shell-top)); display: grid; gap: 1.1rem;
+    max-height: calc(100dvh - var(--bar) - var(--shell-top) - var(--shell-bottom)); overflow-y: auto;
+    margin-inline: -4px; padding: 0.9rem 4px 4px; scrollbar-width: thin;
+  }
   .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 0.7rem/1.2 var(--body); color: var(--faint); letter-spacing: 0.02em; }
   .shelf .views, .shelf .chips, .shelf .tabs { display: grid; gap: 2px; }
   .shelf .views button, .shelf .chip, .shelf .tabs button {
     display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: 8px;
-    background: none; color: var(--muted); font-size: 0.86rem; font-weight: 500; text-align: left;
+    background: none; color: var(--muted); font-size: 0.86rem; font-weight: 500; text-align: left; overflow-wrap: anywhere;
   }
   .shelf .views svg { width: 15px; height: 15px; flex: none; color: var(--faint); }
   .shelf .n { margin-left: auto; font: 0.72rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
@@ -321,8 +335,11 @@
   }
   .toast svg { width: 16px; height: 16px; flex: none; color: var(--good); }
   @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
-  /* While items are selected, leave room for the action bar so that it does not cover the last row */
-  .shell:has(.bulk:not([hidden])) { padding-bottom: 6rem; }
+  /* While items are selected, leave room for the action bar so that it covers neither the last row nor the shelf's bottom.
+     LIMIT: the room is the bar's on one line; folded, as it is on a window under about 1300px wide (S76), it covers the shelf's
+     bottom. Fix with S76 */
+  .shell:has(.bulk:not([hidden])) { --shell-bottom: var(--bulk-room); }
+  .shell:has(.bulk:not([hidden])) .main { padding-bottom: var(--bulk-room); }
   .bulk {
     position: fixed; left: 50%; bottom: 1.25rem; z-index: 20; translate: -50% 0; display: flex; align-items: center; gap: 0.4rem;
     max-width: calc(100% - 32px); padding: 0.4rem 0.4rem 0.4rem 1rem; color: var(--bg); background: var(--fg);

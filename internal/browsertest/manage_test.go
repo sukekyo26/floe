@@ -847,6 +847,77 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 	check(t, "shelf stays", []string{got}, want)
 }
 
+// TestUIShelfScrolls holds the shelf to the window under it, scrolling in itself when taller, where it sits however far the
+// page scrolls, clear of the bulk bar, with room for its focus rings, its long names folded; and a shelf that fits passes the
+// wheel to the page.
+func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.navigate("/")
+	size := func(height int64) {
+		t.Helper()
+
+		// The size holds for this test's tab alone.
+		metrics := emulation.SetDeviceMetricsOverrideParams{Width: 1440, Height: height, DeviceScaleFactor: 1, Mobile: false}
+		if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A real wheel over the shelf's middle.
+	wheel := func() {
+		t.Helper()
+
+		r := b.rect("document.querySelector('.shelf')")
+		// The protocol wants deltaX sent, which a 0 is left out as: a sliver of a pixel moves nothing sideways.
+		e := input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseWheel, X: r.X + r.Width/2, Y: r.Y + r.Height/2, DeltaX: 1e-6, DeltaY: 100}
+		if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Within half a pixel of each other, or how far apart.
+	const near = "const near = (x, y, d = 0.5) => Math.abs(x - y) <= d || `${x} != ${y}`; " +
+		"const shelf = document.querySelector('.shelf'); const r = shelf.getBoundingClientRect(); " +
+		"const shell = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop);"
+	size(600)
+	// Thirty projects and a tag of a long name with nowhere to break, on a list long enough to scroll.
+	b.eval(stub("Array.from({ length: 60 }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', project: `project${i % 30}`, " +
+		"tags: i ? [] : ['averylongtagnamewithoutanyspacesorhyphens'], createdAt: at(1), updatedAt: at(1) }))"))
+	out := make([]string, 0, 10)
+	// Where #226 put it, down to the window's bottom less the room above it, scrolling in itself.
+	edges := b.eval("(() => { " + near + " return [r.top, r.bottom].join(' '); })()")
+	out = append(out, b.eval("(() => { "+near+" return [near(r.top, document.querySelector('.shell').getBoundingClientRect().top + shell), "+
+		"near(r.bottom, innerHeight - shell), shelf.scrollHeight > shelf.clientHeight, document.documentElement.scrollHeight > innerHeight].join(' '); })()"))
+	// Scrolled to the page's end, the shelf is not pushed up.
+	b.eval("scrollTo(0, document.documentElement.scrollHeight)")
+	b.until("the page to scroll to its end", "Math.abs(scrollY + innerHeight - document.documentElement.scrollHeight) < 1")
+	out = append(out, b.eval("(() => { "+near+" const [top, bottom] = "+js(edges)+".split(' ').map(Number); return [near(r.top, top, 1), near(r.bottom, bottom, 1)].join(' '); })()"))
+	b.eval("scrollTo(0, 0)")
+	b.until("the page to scroll back", "scrollY === 0")
+	// The wheel scrolls the shelf, not the page; at its end, its last item shows in the window, its focus ring room below (less
+	// what the shelf's whole-pixel scroll leaves of a fraction).
+	wheel()
+	out = append(out, b.until("the shelf to scroll", "document.querySelector('.shelf').scrollTop > 0 && `page at ${scrollY}`"))
+	b.eval("document.querySelector('.shelf').scrollTop = 1e6")
+	out = append(out, b.eval("(() => { "+near+" const a = document.getElementById('add-open').getBoundingClientRect(); "+
+		"return [a.bottom <= innerHeight - shell, r.bottom - a.bottom >= 3.5].join(' '); })()"))
+	// The focus ring's room each side, and a long name folded, not scrolling sideways.
+	out = append(out, b.eval("(() => { "+near+" const a = document.querySelector('.views button').getBoundingClientRect(); "+
+		"return [a.left - r.left >= 4, r.left + shelf.clientWidth - a.right >= 4, shelf.scrollWidth === shelf.clientWidth].join(' '); })()"))
+	// With the bulk bar, the shelf ends above the room it takes.
+	b.eval("document.querySelector('#list li:not(.group) .sel').click()")
+	out = append(out, b.eval("(() => { "+near+" return near(r.bottom, innerHeight - parseFloat(getComputedStyle(document.querySelector('.main')).paddingBottom)); })()"))
+	b.eval("document.getElementById('bulk-clear').click()")
+	// A shelf that fits does not scroll, and passes the wheel to the page.
+	size(900)
+	b.eval(manyPages(60))
+	out = append(out, b.eval("(() => { "+near+" return [shelf.scrollHeight === shelf.clientHeight, document.documentElement.scrollHeight > innerHeight].join(' '); })()"))
+	wheel()
+	out = append(out, b.until("the page to scroll", "scrollY > 0 && 'scrolled'"))
+	check(t, "shelf scrolls", out, strings.Join([]string{
+		"true true true true", "true true", "page at 0", "true true", "true true true", "true", "true true", "scrolled",
+	}, "|"))
+}
+
 // TestUIScrollbar keeps the list where it is whether or not it scrolls, the scrollbar's room kept on the right alone,
 // and the frame, a page's or a missing one's, without that room, as the server draws it so from the start.
 func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -881,7 +952,8 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// What the body is narrower than the window: the room kept for the scrollbar. Not innerWidth - clientWidth, which
 	// counts the room only while the scrollbar is there.
 	const room = "innerWidth - document.body.getBoundingClientRect().width"
-	const where = "['.shelf', '.search'].map((s) => document.querySelector(s).getBoundingClientRect().left)" +
+	// The shelf's first button, not its box, which reaches 4px out for its focus rings.
+	const where = "['.shelf .views button', '.search'].map((s) => document.querySelector(s).getBoundingClientRect().left)" +
 		".concat(document.querySelector('.panel').getBoundingClientRect().right).join(' ')"
 	out := make([]string, 0, 8)
 	size(1800)
