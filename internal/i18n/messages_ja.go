@@ -259,7 +259,6 @@ var messagesJA = map[string]string{
 	// ui
 	"ui_back_to_list":         "一覧へ戻る",
 	"ui_page_nav":             "前後のページ",
-	"ui_dark_mode":            "暗い画面",
 	"ui_download":             "ダウンロード",
 	"ui_download_named":       "%s をダウンロード",
 	"ui_open_raw":             "ページだけを新しいタブで開く",

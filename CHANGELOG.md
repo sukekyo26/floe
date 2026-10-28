@@ -34,10 +34,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   folded into a select on a narrow screen, and the bar over an open page stars
   and archives it. Tags are given in a page's edit dialog, to those selected,
   or as `tags` in `PATCH /api/artifacts/{slug}`; they show under a page's
-  title, are searched, and stay when the page is published again. The
-  management page and the bar over an open page are light, whatever the OS
-  prefers, until a button in the bar switches them dark, which the browser
-  keeps; the page in the bar's frame is drawn as it always is.
+  title, are searched, and stay when the page is published again.
 - Add floe's template `report`: a header over sections, each a heading over
   parts; and thirty-two parts a template refers to as
   `floe:///parts/<name>.json` (`floe part list` lists them): thirty that a
