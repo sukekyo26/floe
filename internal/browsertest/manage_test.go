@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chromedp/cdproto/cdp"
-	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
@@ -338,10 +336,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) }]`))
 	// A window tall enough for the menu below the one row, whatever the test Chrome's own window is (CI's is shorter): the
 	// width of that window, as the rest of the test sees it.
-	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 780, Height: 800, DeviceScaleFactor: 1, Mobile: false}
-	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
-		t.Fatal(err)
-	}
+	b.size(780, 800, false)
 	// Not scrollIntoView, which would scroll a box that cuts it off to bring it in.
 	b.eval("document.querySelector('#list > li:last-child summary').click()")
 	d := b.rect("document.querySelector('#list > li:last-child .delete')")
@@ -431,10 +426,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#list li[data-slug=p5] summary').click(); scrollTo(0, 0)")
 	// A narrow screen: one select stands for the shelf, its values telling a view from a project of that name; choosing
 	// is clicking the shelf, and an unchanged list does not rebuild it.
-	metrics = emulation.SetDeviceMetricsOverrideParams{Width: 390, Height: 844, DeviceScaleFactor: 1, Mobile: true}
-	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
-		t.Fatal(err)
-	}
+	b.size(390, 844, true)
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'archived', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'b', title: 'Beta', description: '', project: 'p', createdAt: at(1), updatedAt: at(7) },
 		{ slug: 'c', title: 'Gamma', description: '', project: 'a<b&"c', createdAt: at(1), updatedAt: at(6) }]`))
@@ -454,9 +446,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// Choosing what is chosen goes back to the summary too.
 	choose("view:all")
 	out = append(out, b.eval("document.getElementById('view-select').selectedIndex"))
-	if _, err := chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}); err != nil {
-		t.Fatal(err)
-	}
+	b.unsize()
 	// The frame's bar: the title, archived or not, the star and the archive, which act as the list's do and tell their failure.
 	frame := "[document.getElementById('frame-title').textContent, document.getElementById('frame-archived').hidden, " +
 		"document.getElementById('frame-star').getAttribute('aria-pressed'), document.getElementById('frame-archive-label').textContent].join(' / ')"
@@ -696,10 +686,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	pickPlan()
 
 	// A narrow screen's select has the tags, which pick and let go as the shelf's do.
-	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 390, Height: 844, DeviceScaleFactor: 1, Mobile: true}
-	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
-		t.Fatal(err)
-	}
+	b.size(390, 844, true)
 	choose := func(value string) {
 		b.eval("(() => { const s = document.getElementById('view-select'); s.value = " + js(value) + "; s.dispatchEvent(new Event('change')); })()")
 	}
@@ -708,9 +695,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(rows), b.eval("document.getElementById('view-select').options[0].textContent.includes('plan')"))
 	choose("tag:plan")
 	out = append(out, b.eval(rows))
-	if _, err := chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}); err != nil {
-		t.Fatal(err)
-	}
+	b.unsize()
 
 	// A tag's name goes in as text, wherever it shows, and counts as any.
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['<b>x</b>', '__proto__'], createdAt: at(1), updatedAt: at(9) }]`))
@@ -815,10 +800,7 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 	b := s.b
 	b.navigate("/")
 	// The test Chrome's own window is near the width that hides the shelf. The size holds for this test's tab alone.
-	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 1440, Height: 900, DeviceScaleFactor: 1, Mobile: false}
-	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
-		t.Fatal(err)
-	}
+	b.size(1440, 900, false)
 	// The shelf's top, then where it sits below what is over it: the shell's top, or the bar's bottom once scrolled,
 	// and the shell's padding.
 	place := func(over, edge string) string {
@@ -847,6 +829,81 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 	check(t, "shelf stays", []string{got}, want)
 }
 
+// TestUIShelfScrolls holds the shelf to the window under it, scrolling in itself when taller, where it sits however far the
+// page scrolls, clear of the bulk bar, with room for its focus rings, its long names folded; and a shelf that fits passes the
+// wheel to the page.
+func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.navigate("/")
+	// A real wheel over the shelf's middle.
+	wheel := func() {
+		t.Helper()
+
+		r := b.rect("document.querySelector('.shelf')")
+		// The protocol wants deltaX sent, which a 0 is left out as: a sliver of a pixel moves nothing sideways.
+		e := input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseWheel, X: r.X + r.Width/2, Y: r.Y + r.Height/2, DeltaX: 1e-6, DeltaY: 100}
+		if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Within half a pixel of each other, or how far apart.
+	const near = "const near = (x, y, d = 0.5) => Math.abs(x - y) <= d || `${x} != ${y}`; " +
+		"const shelf = document.querySelector('.shelf'); const r = shelf.getBoundingClientRect(); " +
+		"const shell = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop);"
+	b.size(1440, 600, false)
+	// Thirty projects and a tag of a long name with nowhere to break, on a list long enough to scroll.
+	b.eval(stub("Array.from({ length: 60 }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', project: `project${i % 30}`, " +
+		"tags: i ? [] : ['averylongtagnamewithoutanyspacesorhyphens'], createdAt: at(1), updatedAt: at(1) }))"))
+	out := make([]string, 0, 10)
+	// Where #226 put it, down to the window's bottom less the room above it, scrolling in itself.
+	edges := b.eval("(() => { " + near + " return [r.top, r.bottom].join(' '); })()")
+	out = append(out, b.eval("(() => { "+near+" return [near(r.top, document.querySelector('.shell').getBoundingClientRect().top + shell), "+
+		"near(r.bottom, innerHeight - shell), shelf.scrollHeight > shelf.clientHeight, document.documentElement.scrollHeight > innerHeight].join(' '); })()"))
+	// Scrolled to the page's end, the shelf is not pushed up.
+	b.eval("scrollTo(0, document.documentElement.scrollHeight)")
+	b.until("the page to scroll to its end", "Math.abs(scrollY + innerHeight - document.documentElement.scrollHeight) < 1")
+	out = append(out, b.eval("(() => { "+near+" const [top, bottom] = "+js(edges)+".split(' ').map(Number); return [near(r.top, top, 1), near(r.bottom, bottom, 1)].join(' '); })()"))
+	b.eval("scrollTo(0, 0)")
+	b.until("the page to scroll back", "scrollY === 0")
+	// The wheel scrolls the shelf, not the page; at its end, its last item shows in the window, its focus ring room below (less
+	// what the shelf's whole-pixel scroll leaves of a fraction).
+	wheel()
+	out = append(out, b.until("the shelf to scroll", "document.querySelector('.shelf').scrollTop > 0 && `page at ${scrollY}`"))
+	b.eval("document.querySelector('.shelf').scrollTop = 1e6")
+	out = append(out, b.eval("(() => { "+near+" const a = document.getElementById('add-open').getBoundingClientRect(); "+
+		"return [a.bottom <= innerHeight - shell, r.bottom - a.bottom >= 3.5].join(' '); })()"))
+	// The focus ring's room each side, and a long name folded, not scrolling sideways.
+	out = append(out, b.eval("(() => { "+near+" const a = document.querySelector('.views button').getBoundingClientRect(); "+
+		"return [a.left - r.left >= 4, r.left + shelf.clientWidth - a.right >= 4, shelf.scrollWidth === shelf.clientWidth].join(' '); })()"))
+	// Pointed at, the shelf is laid out again (its right room 4.01px) for Chrome to draw its thumb; nothing in it moves.
+	hover := "document.querySelector('.views button').getBoundingClientRect().right + ' ' + getComputedStyle(document.querySelector('.shelf')).paddingRight"
+	b.point(800, 300)
+	away := b.eval(hover)
+	sr := b.rect("document.querySelector('.shelf')")
+	b.point(sr.X+sr.Width/2, sr.Y+sr.Height/2)
+	on := b.until("the shelf to be pointed at", "document.querySelector('.shelf:hover') && ("+hover+")")
+	b.point(800, 300)
+	out = append(out, away+" / "+on+" / "+b.until("the shelf to be left", "!document.querySelector('.shelf:hover') && ("+hover+")"))
+	// With the bulk bar, the shelf ends above it; in a window too low for that, it keeps 10rem, reaching below.
+	b.eval("document.querySelector('#list li:not(.group) .sel').click()")
+	out = append(out, b.until("the bar to show", "(() => { const r = document.querySelector('.shelf').getBoundingClientRect(); "+
+		"const bar = document.getElementById('bulk').getBoundingClientRect(); return bar.height > 0 && `${r.bottom <= bar.top}`; })()"))
+	b.size(1440, 240, false)
+	out = append(out, b.eval("Math.abs(document.querySelector('.shelf').getBoundingClientRect().height - 10 * parseFloat(getComputedStyle(document.documentElement).fontSize)) <= 0.5"))
+	b.size(1440, 600, false)
+	b.eval("document.getElementById('bulk-clear').click()")
+	// A shelf that fits does not scroll, and passes the wheel to the page.
+	b.size(1440, 900, false)
+	b.eval(manyPages(60))
+	out = append(out, b.eval("(() => { "+near+" return [shelf.scrollHeight === shelf.clientHeight, document.documentElement.scrollHeight > innerHeight].join(' '); })()"))
+	wheel()
+	out = append(out, b.until("the page to scroll", "scrollY > 0 && 'scrolled'"))
+	check(t, "shelf scrolls", out, strings.Join([]string{
+		"true true true true", "true true", "page at 0", "true true", "true true true", "238 4px / 238 4.01px / 238 4px", "true", "true", "true true", "scrolled",
+	}, "|"))
+}
+
 // TestUIScrollbar keeps the list where it is whether or not it scrolls, the scrollbar's room kept on the right alone,
 // and the frame, a page's or a missing one's, without that room, as the server draws it so from the start.
 func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -870,28 +927,21 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 	case width == 0:
 		t.Fatal("Chrome draws no scrollbar: the flag hide-scrollbars of startChrome no longer works")
 	}
-	// The size holds for this test's tab alone.
-	size := func(width int64) {
-		t.Helper()
-		metrics := emulation.SetDeviceMetricsOverrideParams{Width: width, Height: 900, DeviceScaleFactor: 1, Mobile: false}
-		if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
-			t.Fatal(err)
-		}
-	}
 	// What the body is narrower than the window: the room kept for the scrollbar. Not innerWidth - clientWidth, which
 	// counts the room only while the scrollbar is there.
 	const room = "innerWidth - document.body.getBoundingClientRect().width"
-	const where = "['.shelf', '.search'].map((s) => document.querySelector(s).getBoundingClientRect().left)" +
+	// The shelf's first button, not its box, which reaches 4px out for its focus rings.
+	const where = "['.shelf .views button', '.search'].map((s) => document.querySelector(s).getBoundingClientRect().left)" +
 		".concat(document.querySelector('.panel').getBoundingClientRect().right).join(' ')"
 	out := make([]string, 0, 8)
-	size(1800)
+	b.size(1800, 900, false)
 	b.eval(manyPages(60))
 	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"))
 	long := b.eval(where)
 	b.eval(manyPages(1))
 	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval(where+" === "+js(long)), b.eval(room))
 	// The room is on the right alone.
-	size(1200)
+	b.size(1200, 900, false)
 	b.eval(manyPages(1))
 	out = append(out, b.eval(where))
 	for _, path := range []string{"/a/p/", "/a/none/"} {
@@ -901,5 +951,6 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// The frame makes its URLs of the slug escaped again: one read from /a/x%3Fy/ is x?y.
 	b.navigate("/a/x%3Fy/")
 	out = append(out, b.eval("document.getElementById('frame-download').getAttribute('href')"))
-	check(t, "scrollbar", out, strings.Join([]string{"true", "false", "true", sb, fmt.Sprintf("16 272 %d", 1200-16-width), "0", "0", "/api/artifacts/x%3Fy/download"}, "|"))
+	// The scrollbar is the management page's own, 10px wide.
+	check(t, "scrollbar", out, strings.Join([]string{"true", "false", "true", "10", fmt.Sprintf("16 272 %d", 1200-16-width), "0", "0", "/api/artifacts/x%3Fy/download"}, "|"))
 }
