@@ -13,8 +13,7 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// LIMIT: encoding/json/v2 and jsontext are in Go 1.27 by default, under goexperiment.jsonv2, outside the Go 1
-// compatibility promise. If a release drops or changes them, import github.com/go-json-experiment/json here.
+// LIMIT: json/v2 and jsontext are outside the Go 1 promise; if a release drops them, use go-json-experiment/json.
 
 const maxBody = 64 << 10
 
@@ -126,8 +125,9 @@ func decodeStrict[T any](w http.ResponseWriter, body []byte) *T {
 	}
 	var v T
 	if err := jsonv2.Unmarshal(body, &v, jsonv2.RejectUnknownMembers(true)); err != nil {
-		// What encoding/json could not read: neither the management page nor the CLI sends such JSON.
-		// LIMIT: in encoding/json's English, as the protocol's refusals are. Word it if a reader comes to see it.
+		// What encoding/json/v2 or jsontext could not read, its syntax too, in words that may quote the body: the CLI
+		// sends none, the management page only a string holding a lone surrogate (half of an emoji pasted).
+		// LIMIT: in v2's English, as the protocol's refusals are; word it if a reader comes to see it.
 		send(w, http.StatusBadRequest, protocolText("cannot read the request: "+err.Error()))
 		return nil
 	}

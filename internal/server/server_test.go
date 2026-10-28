@@ -436,8 +436,18 @@ func TestStrictKeys(t *testing.T) {
 		{http.MethodPatch, "/api/artifacts/d", `{"title":"a","title":"b"}`, `duplicate object member name "title"`},
 		// rebuild has no field: the first x is unknown before the second is seen.
 		{http.MethodPost, "/api/rebuild", `{"x":1,"x":1}`, `unknown object member name "x"`},
+		{http.MethodPost, "/api/artifacts", `{"path":"/a\ud800"}`, "invalid surrogate pair"},
+		{http.MethodPut, "/api/artifacts/e", `{"file":"e\ud800.yaml","source":` + src + `}`, "invalid surrogate pair"},
 		{http.MethodPatch, "/api/artifacts/d", `{"title":"\ud800"}`, "invalid surrogate pair"},
+		{http.MethodPost, "/api/rebuild", `{"\ud800":1}`, "invalid surrogate pair"},
+		{http.MethodPost, "/api/artifacts", "{\"path\":\"/a\xff\"}", "invalid UTF-8"},
+		{http.MethodPut, "/api/artifacts/e", "{\"file\":\"e\xff.yaml\",\"source\":" + src + "}", "invalid UTF-8"},
+		{
+			http.MethodPut, "/api/artifacts/e", "{\"file\":\"e.yaml\",\"source\":" + src + ",\"images\":{\"a\xff.png\":\"YQ==\"}}",
+			"invalid UTF-8",
+		},
 		{http.MethodPatch, "/api/artifacts/d", "{\"title\":\"a\xffb\"}", "invalid UTF-8"},
+		{http.MethodPost, "/api/rebuild", "{\"a\xff\":1}", "invalid UTF-8"},
 		{http.MethodPut, "/api/artifacts/e", `{"file":"e.yaml","source":"bGFuZzogZW4KdGVtcGxhdGU6IHBpYwo=\n"}`, `within "/source"`},
 	} {
 		w := e.do(t, c.method, c.path, c.body, "Origin", origin, "Content-Type", "application/json")
