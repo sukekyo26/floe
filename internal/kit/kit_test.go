@@ -525,6 +525,44 @@ func TestCompileParts(t *testing.T) {
 	}
 }
 
+// A shared schema of one's own is checked from its root, whether a schema refers to it or not, and its mistakes
+// are told in its file: one it refers to is checked from its own root, not in the file referring to it. Read keeps
+// it compiled, as a part list shows its description.
+func TestCheckShared(t *testing.T) {
+	t.Parallel()
+
+	const head = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "description": "Mine", `
+	inAnyOf := head + `"properties": {"m": {"anyOf": [{"$ref": "floe:///parts/note.json"}]}}}`
+	// Read, which does not check, keeps the schema compiled: Load checks what it keeps.
+	k, err := kit.Read(floe(t), kit.Sources{Parts: kit.Dir{FS: fstest.MapFS{"sh.json": {Data: []byte(inAnyOf)}}, Name: "own/parts"}})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	about := "(none)"
+	if i := slices.IndexFunc(k.Parts(), func(e kit.Entry) bool { return e.Name == "sh" }); i >= 0 {
+		about = k.Parts()[i].About
+	}
+	if about != "Mine" {
+		t.Fatalf("the about of sh = %q, want Mine", about)
+	}
+	for _, tt := range []struct {
+		name  string
+		parts fstest.MapFS
+		want  string
+	}{
+		{"referred to by none", fstest.MapFS{"sh.json": {Data: []byte(inAnyOf)}}, "own/parts/sh.json: #/properties/m/anyOf/0: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"},
+		{"referred to by a shared schema", fstest.MapFS{
+			"sh.json":  {Data: []byte(head + `"properties": {"t": {"$ref": "floe:///parts/sh2.json"}}}`)},
+			"sh2.json": {Data: []byte(inAnyOf)},
+		}, "own/parts/sh2.json: #/properties/m/anyOf/0: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"},
+		{"right", fstest.MapFS{"sh.json": {Data: []byte(head + `"properties": {"m": {"$ref": "floe:///parts/note.json"}}}`)}}, ""},
+	} {
+		if _, err := kit.Load(floe(t), kit.Sources{Parts: kit.Dir{FS: tt.parts, Name: "own/parts"}}); told(err) != tt.want {
+			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, told(err), tt.want)
+		}
+	}
+}
+
 // A byte order mark past a file's start is refused in every file of one's own that Read reads as YAML or JSON:
 // Read leaves the one at the start to the reader of its kind, which leaves it out once. A part's HTML is kept
 // without it, as its places are told in it, and the files a template shows, but the example it draws, which the
