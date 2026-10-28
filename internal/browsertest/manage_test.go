@@ -401,6 +401,21 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.navigate("/a/b/")
 	b.eval(stub(extrasList))
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
+	// The frame steps through the list it was opened from, which starring it from the bar does not change; a page gone drops out.
+	neighbours := "document.getElementById('frame-pos').textContent && ['frame-prev', 'frame-next']" +
+		".map((id) => document.getElementById(id).getAttribute('href')).concat(document.getElementById('frame-pos').textContent).join(' ')"
+	b.eval("sessionStorage.setItem('artifacts.list', '?fav=1')")
+	b.navigate("/a/c/")
+	b.eval(stub(extrasList))
+	out = append(out, b.until("the favourites' neighbours", neighbours))
+	b.eval(stub(strings.Replace(extrasList, "updatedAt: at(7), favorite: true", "updatedAt: at(7)", 1)))
+	out = append(out, b.eval("document.getElementById('frame-star').getAttribute('aria-pressed') + ' ' + ("+neighbours+")"))
+	b.eval("sessionStorage.setItem('artifacts.list', '')")
+	b.navigate("/a/b/")
+	b.eval(stub(extrasList))
+	b.until("the neighbours", neighbours)
+	b.eval(stub(strings.Replace(extrasList, "{ slug: 'a', title: 'Alpha', description: 'old', createdAt: at(1), updatedAt: at(8) },", "", 1)))
+	out = append(out, b.until("the gone page to drop out", "document.getElementById('frame-pos').textContent !== '2 / 3' && "+neighbours))
 
 	check(t, "shelf", out, strings.Join([]string{
 		"HcHba", "none:heading:2:" + msg("ui_group_favorites") + ",none:heading:2:" + msg("ui_group_others"),
@@ -421,5 +436,6 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"Zeta / false / true / " + msg("ui_unarchive"), `PATCH /api/artifacts/z {"archived":false}`,
 		msg("ui_favorite_failed", "Failed to fetch"),
 		"Beta / true / false / " + msg("ui_archive"),
+		"  1 / 1", "false   1 / 1", "/a/c/  2 / 2",
 	}, "|"))
 }

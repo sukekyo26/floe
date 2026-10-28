@@ -1127,6 +1127,10 @@
   }
 
   // Previous and next follow the list the page was opened from (kept for the tab); if the page is not in it, all entries of the same kind by update time
+  // The order the frame steps through: that of the list when the page was first found, so that starring or archiving it
+  // from the bar does not move it. A page gone since drops out
+  let frameOrder;
+
   function renderNeighbors(a) {
     let saved = '';
     try {
@@ -1135,8 +1139,12 @@
       // Storage is unavailable
     }
     const openable = (state) => arrange(state).filter((x) => !x.missing);
-    let order = openable(readState(saved));
-    if (!order.some((x) => x.slug === a.slug)) order = openable({ ...readState(''), tab: a.path ? 'links' : 'pages', archived: Boolean(a.archived) });
+    if (!frameOrder) {
+      let first = openable(readState(saved));
+      if (!first.some((x) => x.slug === a.slug)) first = openable({ ...readState(''), tab: a.path ? 'links' : 'pages', archived: Boolean(a.archived) });
+      frameOrder = first.map((x) => x.slug);
+    }
+    const order = frameOrder.map((slug) => items.find((x) => x.slug === slug)).filter((x) => x && !x.missing);
     const at = order.findIndex((x) => x.slug === a.slug);
     for (const [id, x, named, none] of [
       ['frame-prev', order[at - 1], 'ui_prev_named', 'ui_no_prev'], ['frame-next', order[at + 1], 'ui_next_named', 'ui_no_next'],
