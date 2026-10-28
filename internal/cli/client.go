@@ -5,6 +5,9 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -49,10 +52,9 @@ func (e *remoteError) Report() usererr.Report {
 func (c client) do(ctx context.Context, method, path string, body, out any) error {
 	var r io.Reader
 	if body != nil {
-		// LIMIT: v1 Marshal sends bytes no UTF-8 as U+FFFD; refuse them if a path or title not in UTF-8 comes to be sent.
-		b, err := json.Marshal(body)
+		b, err := encode(body)
 		if err != nil {
-			return fmt.Errorf("%s %s: %w", method, path, err)
+			return err
 		}
 		// Refused before sending, as the server would: it stops reading at its limit, which may break
 		// the sending off before its answer comes.
@@ -120,4 +122,27 @@ func readImages(dir, file string, names []string) (map[string][]byte, error) {
 		return nil, err //nolint:wrapcheck // mistakes for the user as they are
 	}
 	return images, nil
+}
+
+// sentAt names where each field of a body was given: a text in it that is no UTF-8 is told there.
+var sentAt = map[string]string{
+	"path": "argument 1", "file": "argument 1", "slug": "--slug", "title": "--title", "description": "--description",
+	"theme":   "--theme",
+	"project": "the project name (of the git remote, the repository's directory or the working directory)",
+}
+
+// encode is body as the server reads it, with encoding/json/v2: nil maps as null. A text in it that is no UTF-8 is
+// the user's mistake, named by where it was given (sentAt), else by its field.
+func encode(body any) ([]byte, error) {
+	b, err := jsonv2.Marshal(body, jsonv2.FormatNilMapAsNull(true))
+	// Of a struct, encoding/json/v2 tells syntax of nothing but a string's bytes that are no UTF-8.
+	if syntax, ok := errors.AsType[*jsontext.SyntacticError](err); ok {
+		field := strings.TrimPrefix(string(syntax.JSONPointer), "/")
+		field, _, _ = strings.Cut(field, "/")
+		return nil, usererr.New("cli_not_utf8", cmp.Or(sentAt[field], fmt.Sprintf("the request's %q", field)))
+	}
+	if err != nil {
+		return nil, fmt.Errorf("encode the request: %w", err)
+	}
+	return b, nil
 }

@@ -187,6 +187,7 @@ var messagesJA = map[string]string{
 	"cli_updated_titled":    "「%s」を置き換えました（前の publish は %s、題は「%s」）",
 	"cli_title_changed":     "注意：題が変わりました。別のページなら、別の --slug で publish してください",
 	"cli_wants_publish":     "HTML かデータファイル",
+	"cli_not_utf8":          "%s が UTF-8 ではありません。サーバーは UTF-8 しか受けません。名前を変えるか、UTF-8 で渡してください",
 	"server_mistakes_head":  "データファイルに誤りがあります",
 	"server_mistakes_lead":  "直してファイルを保存すると、このタブにページが戻ります。",
 	"store_no_dir":          "HOME が絶対パスでないので、ページの保存先がありません。FLOE_DIR に絶対パスを設定してください",

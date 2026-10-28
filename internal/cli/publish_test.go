@@ -1,6 +1,12 @@
 package cli_test
 
 import (
+	"errors"
+	"io"
+	"io/fs"
+	"net"
+	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -125,4 +131,114 @@ func TestServerCommandsAlone(t *testing.T) {
 			t.Errorf("floe %v = %d, %q", args, code, errs)
 		}
 	}
+}
+
+// notUTF8 is the line floe tells for a text sent that is no UTF-8, given at.
+func notUTF8(at string) string {
+	return "floe: " + at + " is not UTF-8; the server takes only UTF-8: rename it, or give it in UTF-8\n"
+}
+
+// made writes a file or makes a directory whose name is no UTF-8, skipping the test where the system takes none
+// (APFS on macOS).
+func made(t *testing.T, err error) {
+	t.Helper()
+
+	if err != nil {
+		t.Skipf("the system takes no name that is no UTF-8: %v", err)
+	}
+}
+
+// A publish whose name, title, description, theme, link or project is no UTF-8 is refused, named where it was
+// given, before a file is read; nothing is stored. A description sent empty clears it.
+func TestPublishNotUTF8(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	src := "lang: en\ntemplate: pic\n"
+	made(t, os.WriteFile(filepath.Join(dir, "a\xffb.yaml"), []byte(src), 0o600))
+	made(t, os.WriteFile(filepath.Join(dir, "k\xff.html"), []byte("<title>K</title>"), 0o600))
+	made(t, os.Mkdir(filepath.Join(dir, "p\xffq"), 0o700))
+	made(t, os.WriteFile(filepath.Join(dir, "p\xffq", "q.yaml"), []byte(src), 0o600))
+	for _, c := range []struct {
+		in   string
+		args []string
+		at   string
+	}{
+		{dir, []string{"publish", "a\xffb.yaml", "--slug", "ab"}, "argument 1"},
+		{dir, []string{"publish", "d.yaml", "--title", "a\xffb"}, "--title"},
+		// The first that encoding/json/v2 meets.
+		{dir, []string{"publish", "d.yaml", "--description", "a\xffb", "--theme", "t\xff"}, "--description"},
+		{dir, []string{"publish", "--link", filepath.Join(dir, "k\xff.html")}, "argument 1"},
+		// Not read: no second mistake that it is not there.
+		{dir, []string{"publish", "gone\xff.yaml"}, "argument 1"},
+		{
+			filepath.Join(dir, "p\xffq"),
+			[]string{"publish", "q.yaml"},
+			"the project name (of the git remote, the repository's directory or the working directory)",
+		},
+	} {
+		if code, _, errs := runIn(c.in, env, c.args...); code != 1 || errs != notUTF8(c.at) {
+			t.Errorf("floe %q = %d, %q", c.args, code, errs)
+		}
+	}
+	if _, out, _ := runIn(dir, env, "list"); out != "" {
+		t.Errorf("stored:\n%s", out)
+	}
+	runIn(dir, env, "publish", "--link", "h.html", "--description", "d")
+	runIn(dir, env, "publish", "--link", "h.html", "--description", "")
+	if b := get(t, "http://127.0.0.1:"+env["FLOE_PORT"]+"/api/artifacts"); !strings.Contains(b, `"description":""`) {
+		t.Errorf("a description sent empty is kept: %s", b)
+	}
+}
+
+// A text that is no UTF-8 is refused before the server starts: none answers at the port, and its store is not
+// made.
+func TestPublishNotUTF8Alone(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	ln, err := new(net.ListenConfig).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, port, err := net.SplitHostPort(ln.Addr().String())
+	if err = errors.Join(err, ln.Close(), os.WriteFile(filepath.Join(tmp, "d.yaml"), []byte("lang: en\n"), 0o600)); err != nil {
+		t.Fatal(err)
+	}
+	env := map[string]string{"HOME": tmp, "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": port, "BROWSER": "true"}
+	if code, _, errs := runIn(tmp, env, "publish", "d.yaml", "--title", "a\xffb"); code != 1 || errs != notUTF8("--title") {
+		t.Errorf("floe publish = %d, %q", code, errs)
+	}
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://127.0.0.1:"+port+"/api/health", http.NoBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res, err := http.DefaultClient.Do(req); err == nil {
+		t.Errorf("a server answers: %s", res.Status)
+		if closeErr := res.Body.Close(); closeErr != nil {
+			t.Error(closeErr)
+		}
+	}
+	if _, err := os.Stat(env["FLOE_DIR"]); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("the store: %v", err)
+	}
+}
+
+// get is the body that a GET of u answers.
+func get(t *testing.T, u string) string {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, u, http.NoBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(res.Body)
+	if err = errors.Join(err, res.Body.Close()); err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
 }
