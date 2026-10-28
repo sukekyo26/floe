@@ -2,6 +2,8 @@ package browsertest_test
 
 import (
 	"fmt"
+	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -58,6 +60,11 @@ func stub(list string) string {
 	};
 	return load();
 })()`
+}
+
+// manyPages is a stub of n pages, newest first, alike but for their slug and title.
+func manyPages(n int) string {
+	return stub("Array.from({ length: " + strconv.Itoa(n) + " }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))")
 }
 
 // TestUIExtras sorts, filters favourites and the archived, counts each list, moves by keyboard, deletes and
@@ -400,7 +407,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.getElementById('add-open').hidden"))
 	b.eval("document.querySelector('.views [data-view=all]').click(); document.querySelector('.tabs [data-tab=pages]').click()")
 	// 50 rows a page unless the viewer chose otherwise.
-	b.eval(stub("Array.from({ length: 60 }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))"))
+	b.eval(manyPages(60))
 	out = append(out, b.eval("document.querySelectorAll('#list li').length + ' ' + document.getElementById('pageno').textContent"))
 	// An open menu passes under the bars stuck at the top as the page scrolls, not over them.
 	b.eval("document.querySelector('#list li[data-slug=p5] summary').click()")
@@ -491,4 +498,100 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"Beta / true / false / " + msg("ui_archive"),
 		"  1 / 1", "false   1 / 1", "/a/c/  2 / 2",
 	}, "|"))
+}
+
+// TestUIShelfStays keeps the shelf where it sits, whether the list is long enough to scroll or not, and there once
+// scrolled: sticky only holds it, never pushes it.
+func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.navigate("/")
+	// The test Chrome's own window is near the width that hides the shelf. The size holds for this test's tab alone.
+	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 1440, Height: 900, DeviceScaleFactor: 1, Mobile: false}
+	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
+		t.Fatal(err)
+	}
+	// The shelf's top, then where it sits below what is over it: the shell's top, or the bar's bottom once scrolled,
+	// and the shell's padding.
+	place := func(over, edge string) string {
+		return b.eval("(() => { const pad = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop); " +
+			"return document.querySelector('.shelf').getBoundingClientRect().top + ' ' + " +
+			"(document.querySelector('" + over + "').getBoundingClientRect()." + edge + " + pad); })()")
+	}
+
+	out := make([]string, 0, 6)
+	b.eval(manyPages(60))
+	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval("document.querySelector('.shelf').getBoundingClientRect().height > 0"))
+	long := place(".shell", "top")
+	b.eval("scrollTo(0, 300)")
+	b.until("the page to scroll", "scrollY === 300")
+	scrolled := place(".bar", "bottom")
+	b.eval("scrollTo(0, 0)")
+	b.eval(manyPages(1))
+	short := place(".shell", "top")
+	// Each the shelf's top and where it sits, alike.
+	for _, p := range []string{long, scrolled, short} {
+		top, sits, _ := strings.Cut(p, " ")
+		out = append(out, top, sits)
+	}
+	got := strings.Join(out, "|")
+	want := strings.Join([]string{"true", "true", out[3], out[3], out[5], out[5], out[7], out[7]}, "|")
+	check(t, "shelf stays", []string{got}, want)
+}
+
+// TestUIScrollbar keeps the list where it is whether or not it scrolls, the scrollbar's room kept on the right alone,
+// and the frame, a page's or a missing one's, without that room, as the server draws it so from the start.
+func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
+	b.navigate("/")
+	sb := b.eval(`(() => {
+		const d = Object.assign(document.createElement('div'), { style: 'overflow: scroll; width: 100px; height: 100px; position: absolute' });
+		document.body.append(d);
+		const width = d.offsetWidth - d.clientWidth;
+		d.remove();
+		return width;
+	})()`)
+	width, err := strconv.Atoi(sb)
+	switch {
+	case err != nil:
+		t.Fatalf("the scrollbar's width %q", sb)
+	case width == 0 && runtime.GOOS == "darwin":
+		t.Skip("macOS draws its scrollbars over the page, taking no room")
+	case width == 0:
+		t.Fatal("Chrome draws no scrollbar: the flag hide-scrollbars of startChrome no longer works")
+	}
+	// The size holds for this test's tab alone.
+	size := func(width int64) {
+		t.Helper()
+		metrics := emulation.SetDeviceMetricsOverrideParams{Width: width, Height: 900, DeviceScaleFactor: 1, Mobile: false}
+		if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// What the body is narrower than the window: the room kept for the scrollbar. Not innerWidth - clientWidth, which
+	// counts the room only while the scrollbar is there.
+	const room = "innerWidth - document.body.getBoundingClientRect().width"
+	const where = "['.shelf', '.search'].map((s) => document.querySelector(s).getBoundingClientRect().left)" +
+		".concat(document.querySelector('.panel').getBoundingClientRect().right).join(' ')"
+	out := make([]string, 0, 8)
+	size(1800)
+	b.eval(manyPages(60))
+	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"))
+	long := b.eval(where)
+	b.eval(manyPages(1))
+	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval(where+" === "+js(long)), b.eval(room))
+	// The room is on the right alone.
+	size(1200)
+	b.eval(manyPages(1))
+	out = append(out, b.eval(where))
+	for _, path := range []string{"/a/p/", "/a/none/"} {
+		b.navigate(path)
+		out = append(out, b.eval(room))
+	}
+	// The frame makes its URLs of the slug escaped again: one read from /a/x%3Fy/ is x?y.
+	b.navigate("/a/x%3Fy/")
+	out = append(out, b.eval("document.getElementById('frame-download').getAttribute('href')"))
+	check(t, "scrollbar", out, strings.Join([]string{"true", "false", "true", sb, fmt.Sprintf("16 272 %d", 1200-16-width), "0", "0", "/api/artifacts/x%3Fy/download"}, "|"))
 }

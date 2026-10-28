@@ -77,6 +77,10 @@ func TestUIWrap(t *testing.T) { //nolint:paralleltest // the browser tests share
 		t.Fatal(err)
 	}
 	b.navigate("/a/wrap/?raw")
+	// A phone's scrollbar is drawn over the page, so that the page is laid out 390 px wide, as measureWrap takes it.
+	if got := b.eval("innerWidth + ' ' + document.documentElement.clientWidth"); got != "390 390" {
+		t.Fatalf("at 390 px the page is laid out %s wide", got)
+	}
 	if got := b.eval(measureWrap); got != "" {
 		t.Errorf("at 390 px:\n  %s", strings.ReplaceAll(got, "\n", "\n  "))
 	}
