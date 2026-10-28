@@ -364,7 +364,7 @@ func TestEditKeys(t *testing.T) {
 		{`{"favorite":true}`, func(f *fields) { f.favorite = true }},
 		{`{"archived":true}`, func(f *fields) { f.archived = true }},
 		{`{"archived":null}`, func(*fields) {}},
-		{`{"tags":["a"," b ","a",""]}`, func(f *fields) { f.tags = "a\x00b" }},
+		{`{"tags":["b"," a ","b",""]}`, func(f *fields) { f.tags = "b\x00a" }},
 		{`{"tags":["a,b"]}`, func(f *fields) { f.tags = "a,b" }},
 		{`{"tags":null}`, func(*fields) {}},
 		{`{"tags":[]}`, func(f *fields) { f.tags = "" }},

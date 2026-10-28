@@ -286,8 +286,8 @@ func TestEditTags(t *testing.T) {
 	s, root := newStore(t)
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
-	want := []string{"計画", "設計"}
-	for _, ed := range []store.Edit{{Tags: ptr([]string{"計画", " 設計 ", "計画", ""})}, {Favorite: ptr(true)}} {
+	want := []string{"設計", "計画"}
+	for _, ed := range []store.Edit{{Tags: ptr([]string{"設計", " 計画 ", "設計", ""})}, {Favorite: ptr(true)}} {
 		if _, err := s.Edit("d", ed); err != nil {
 			t.Fatal(err)
 		}
