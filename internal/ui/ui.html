@@ -87,9 +87,10 @@
   .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; }
   .notfound { flex: 1; align-content: center; }
 
-  /* The shelf on the left picks which list the right shows; on a narrow screen a select at the top stands in for it */
+  /* The shelf on the left picks which list the right shows; on a narrow screen a select at the top stands in for it. The whole
+     window's width, as the header bar's: the shelf under the logo, the list out to the bar's right end */
   .shell {
-    max-width: calc(96rem + 32px); margin-inline: auto; padding: var(--shell-top) 16px 0; --shell-bottom: var(--shell-top);
+    padding: var(--shell-top) 16px 0; --shell-bottom: var(--shell-top);
     display: grid; grid-template-columns: 14.5rem minmax(0, 1fr); align-items: start; column-gap: 1.5rem;
   }
   /* The room under the list is the list's own, so that sticky does not push the shelf up at the page's end */
@@ -103,7 +104,7 @@
   /* LIMIT: a project or tag picked below where the shelf shows is not scrolled to when the URL opens it; scroll to it once if that matters */
   /* LIMIT: the load error above the shell pushes the shelf's bottom out of the window while it shows; make it overlay if that matters */
   .shelf {
-    position: sticky; top: calc(var(--bar) + var(--shell-top)); display: grid; gap: 1.1rem;
+    position: sticky; top: calc(var(--bar) + var(--shell-top)); display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem;
     max-height: max(10rem, calc(100dvh - var(--bar) - var(--shell-top) - var(--shell-bottom))); overflow-y: auto;
     margin-inline: -4px; padding: 0.9rem 4px 4px;
   }
@@ -116,7 +117,8 @@
     .shelf:not(:hover, :focus-within) { scrollbar-color: transparent transparent; }
   }
   .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 0.7rem/1.2 var(--body); color: var(--faint); letter-spacing: 0.02em; }
-  .shelf .views, .shelf .chips, .shelf .tabs { display: grid; gap: 2px; }
+  /* minmax(0, …): no wider than the shelf, so that a long name is cut off rather than widening it */
+  .shelf .views, .shelf .chips, .shelf .tabs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .shelf .views button, .shelf .chip, .shelf .tabs button {
     display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: 8px;
     background: none; color: var(--muted); font-size: 0.86rem; font-weight: 500; text-align: left; overflow-wrap: anywhere;
@@ -174,10 +176,10 @@
 
   /* A project's dot, of its color (--c) */
   .chip.project::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
-  /* Its share of the list */
-  .chip .share { flex: none; width: 2.75rem; height: 4px; margin-left: auto; border-radius: 2px; background: linear-gradient(var(--c), var(--c)) no-repeat 0 0 / var(--share) 100% var(--line); }
-  /* Three digits' room, right-aligned, so that every bar sits in one place whatever the count */
-  .chip .share + .n { flex: none; min-width: 3ch; margin-left: 0; text-align: right; }
+  /* A project's or tag's name on one line, cut off where it does not fit (the button's title has it whole); its count three
+     digits' room, right-aligned, so that the counts line up */
+  .chip .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip .n { flex: none; min-width: 3ch; text-align: right; }
   .count { flex: none; font: 0.74rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
   .chip.tag::before { content: "#"; flex: none; color: var(--faint); font-family: var(--mono); }
   /* Each group a card: its heading rounds the top, its last row the bottom. Not overflow: hidden on a box round them, which
@@ -208,10 +210,11 @@
     border-top: 1px solid var(--line); border-radius: 8px 8px 0 0;
   }
   li.group::before { content: none; }
-  /* Its dot, of the group's color (--c), and its count */
-  li.group > div { display: flex; align-items: center; gap: 0.5rem; }
+  /* Its dot, of the group's color (--c), its name on one line (whole as the title) and its count, never split */
+  li.group > div { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
   li.group > div::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
-  li.group .n { font: 500 0.72rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+  li.group .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  li.group .n { flex: none; white-space: nowrap; font: 500 0.72rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
   /* The checkbox sits above the row link's hit area; the label widens what can be clicked */
   .pick { position: relative; z-index: 1; display: grid; place-items: center; width: 22px; height: 30px; margin-right: -0.35rem; cursor: pointer; }
   .sel {
@@ -1213,13 +1216,17 @@
   }
 
   // A button of the shelf's projects or tags, with its count: pressed when it is the one picked, pick done on a press.
-  // The label goes in as text, being a name the API was sent
+  // The label goes in as text, being a name the API was sent, on one line, and whole as the title
   function chip(label, n, { pressed, pick, extra = '' }) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `chip ${extra}`;
+    b.title = label;
     b.setAttribute('aria-pressed', String(pressed));
-    b.append(label);
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = label;
+    b.append(name);
     const count = document.createElement('span');
     count.className = 'n';
     count.textContent = n;
@@ -1237,15 +1244,11 @@
     const names = [...ranks.keys()].filter((name) => counts.has(name));
     // A project dropped from every entry but still picked comes after those in the order
     if (project && project !== NONE && !names.includes(project)) names.push(project);
-    // Its dot, its share of the list as a bar, and its count
+    // Its dot and its count
     const projectChip = (label, value, n) => {
       const b = chip(label, n, { pressed: value === project, pick: () => toggleProject(value), extra: 'project' });
       b.dataset.project = value;
       b.style.setProperty('--c', projectColor(value, ranks));
-      const bar = document.createElement('span');
-      bar.className = 'share';
-      bar.style.setProperty('--share', `${list.length ? Math.round((n / list.length) * 100) : 0}%`);
-      b.querySelector('.n').before(bar);
       return b;
     };
     const chips = names.map((name) => projectChip(name, name, counts.get(name)));
@@ -1294,8 +1297,9 @@
     // A link added is not archived, so it is added from the lists it goes on
     $('add-open').hidden = archived;
     $('add-narrow').hidden = archived;
-    // A button's own words, without its count
-    const label = (b) => [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim();
+    // A button's own words, without its count: a chip's name, or the text of the others
+    const label = (b) => b.querySelector('.name')?.textContent
+      ?? [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim();
     const pressed = (list) => list.find((c) => c.getAttribute('aria-pressed') === 'true');
     const summary = [views.find((b) => b.dataset.view === view), tag && pressed(tags), !$('shelf-kind').hidden && tabs.find((b) => b.dataset.tab === tab),
       project && pressed(chips)].filter(Boolean)
@@ -1554,7 +1558,11 @@
         const count = document.createElement('span');
         count.className = 'n';
         count.textContent = t('ui_count_all', sizes.get(g));
-        heading.append(g === null ? t('ui_group_favorites') : g === NONE ? t('ui_no_project') : g, count);
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = g === null ? t('ui_group_favorites') : g === NONE ? t('ui_no_project') : g;
+        heading.title = name.textContent;
+        heading.append(name, count);
         li.append(heading);
         rows.push(li);
       }
