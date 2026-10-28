@@ -710,18 +710,7 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	if m == nil {
 		return "", ErrNotFound
 	}
-	if ed.Description != nil {
-		m.Description = strings.TrimSpace(*ed.Description)
-	}
-	if ed.Favorite != nil {
-		m.Favorite = *ed.Favorite
-	}
-	if ed.Archived != nil {
-		m.Archived = *ed.Archived
-	}
-	if ed.Tags != nil {
-		m.Tags = tagged(*ed.Tags)
-	}
+	setMarks(m, ed)
 	if ed.Project != nil {
 		// "/" is the management page's value for "no project".
 		if strings.TrimSpace(*ed.Project) == "/" {
@@ -748,6 +737,22 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 		}
 	}
 	return to, nil
+}
+
+// setMarks sets what ed changes of m that nothing refuses: its description, favourite, archived and tags.
+func setMarks(m *Meta, ed Edit) {
+	if ed.Description != nil {
+		m.Description = strings.TrimSpace(*ed.Description)
+	}
+	if ed.Favorite != nil {
+		m.Favorite = *ed.Favorite
+	}
+	if ed.Archived != nil {
+		m.Archived = *ed.Archived
+	}
+	if ed.Tags != nil {
+		m.Tags = tagged(*ed.Tags)
+	}
 }
 
 // tagged is tags as a page keeps them: each trimmed, without the empty and a name the second time, in the
