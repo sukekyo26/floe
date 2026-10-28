@@ -41,6 +41,7 @@ func stub(list string) string {
 	const list = JSON.stringify(` + list + `);
 	window.fetch = (url, init = {}) => {
 		if (!init.method) return Promise.resolve(new Response(list));
+		if (window.failWrites) return Promise.reject(new TypeError('Failed to fetch'));
 		calls.push([init.method, url, init.body].filter(Boolean).join(' '));
 		return Promise.resolve(new Response(null, { status: 204 }));
 	};
@@ -53,8 +54,8 @@ func stub(list string) string {
 }
 
 // TestUIExtras sorts, filters favourites and the archived, counts each list, moves by keyboard, deletes and
-// archives in bulk, edits in a modal, copies a path, tells an empty list, and steps through neighbours, against a
-// stubbed list.
+// archives in bulk, edits in a modal, copies a path, adds a link only to the list it goes on, clears an error once a
+// change succeeds, tells an empty list, and steps through neighbours, against a stubbed list.
 func TestUIExtras(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	inEveryLanguage(t, uiExtras)
 }
@@ -144,13 +145,16 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
 
 	// The archived are off every count and list but their own, which the switch shows (kept in the URL); a row's
-	// button and the bulk bar send the change, to archive or to give back.
-	out = append(out, b.eval(counts))
+	// button and the bulk bar send the change, to archive or to give back, and say which.
+	archiveWords := "(() => { const a = document.querySelector('#list li .archive'); document.getElementById('bulk-page').click(); " +
+		"const words = [a.title, a.getAttribute('aria-label'), document.getElementById('bulk-archive').textContent]; " +
+		"document.getElementById('bulk-clear').click(); return words.join(' / '); })()"
+	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval("document.querySelector('#list li .archive').click()")
 	out = append(out, b.until("the archive", "calls.splice(0).join(',')"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Alpha"))+")"))
 	b.eval("document.getElementById('archived').click()")
-	out = append(out, b.eval(counts))
+	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval("document.querySelector('#list li .archive').click()")
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
 	b.eval("document.getElementById('bulk-page').click()")
@@ -161,7 +165,16 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// Empty lists: no archived link; all pages archived, which leads to them; nothing at all.
 	b.eval("document.querySelector('.tabs [data-tab=links]').click()")
 	b.eval(stub(`[{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`))
-	out = append(out, b.eval(empties))
+	// A link is added from the list it goes on, not from the archived.
+	out = append(out, b.eval(empties)+" "+b.eval("document.getElementById('add-open').hidden"))
+	b.eval("document.getElementById('archived').click()")
+	out = append(out, b.eval("document.getElementById('add-open').hidden"))
+	// A change that succeeds clears the error of one that failed before, a favourite's as an archive's.
+	b.eval("window.failWrites = true; document.querySelector('#list li .star').click()")
+	out = append(out, b.until("the favourite to fail", "!document.getElementById('error').hidden && document.getElementById('error').textContent"))
+	b.eval("window.failWrites = false; document.querySelector('#list li .star').click()")
+	out = append(out, b.until("the error to clear", "document.getElementById('error').hidden"))
+	b.eval("document.getElementById('archived').click()")
 	b.eval("document.querySelector('.tabs [data-tab=pages]').click(); document.getElementById('archived').click()")
 	b.eval(stub(`[{ slug: 'z', title: 'Zeta', description: '', createdAt: at(2), updatedAt: at(6), archived: true }]`))
 	out = append(out, b.eval(empties))
@@ -193,11 +206,14 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"DELETE /api/artifacts/a,DELETE /api/artifacts/b", "true old", `PATCH /api/artifacts/a {"description":"new"}`, "true", "true",
 		"copy /tmp/x/l.html", "true", "Missing", `POST /api/artifacts {"path":"/tmp/x/n.html","description":"a link"}`,
 		"3 2 " + msg("ui_all_projects") + "3 " + msg("ui_no_project") + "3 1 2 " + msg("ui_count_all", 3) + " Alpha,Beta,Gamma ",
+		msg("ui_archive") + " / " + msg("ui_archive_named", "Alpha") + " / " + msg("ui_archive"),
 		`PATCH /api/artifacts/a {"archived":true}`, "true",
 		"2 1 " + msg("ui_all_projects") + "2 p1 " + msg("ui_no_project") + "1 1 2 " + msg("ui_count_all", 2) + " Ypsilon,Zeta 1",
+		msg("ui_unarchive") + " / " + msg("ui_unarchive_named", "Ypsilon") + " / " + msg("ui_unarchive"),
 		`PATCH /api/artifacts/y {"archived":false}`, msg("ui_unarchive"),
 		`PATCH /api/artifacts/y {"archived":false},PATCH /api/artifacts/z {"archived":false}`,
-		"empty-archived:" + msg("ui_links_none_archived"),
+		"empty-archived:" + msg("ui_links_none_archived") + " true", "false",
+		msg("ui_favorite_failed", "Failed to fetch"), "true",
 		"all-archived:" + msg("ui_pages_all_archived", 1),
 		"Zeta 1",
 		"empty:" + msg("ui_empty_pages"),

@@ -756,29 +756,21 @@
     disarmBulk();
   }
 
-  // Returns the reason of a failure. Already gone (404) counts as deleted
-  async function deleteOne(slug) {
+  // Sends a change of an entry and returns the reason of a failure; one that succeeds clears the error of one before.
+  // gone counts a 404 as done, for a delete
+  async function writeOne(slug, init, gone = false) {
     try {
-      const res = await api(`/api/artifacts/${slug}`, { method: 'DELETE' });
-      return res.ok || res.status === 404 ? '' : t('ui_http_error', await res.text(), res.status);
+      const res = await api(`/api/artifacts/${slug}`, init);
+      if (!res.ok && !(gone && res.status === 404)) return t('ui_http_error', await res.text(), res.status);
     } catch (e) {
       return e.message;
     }
+    showError('');
+    return '';
   }
 
-  // Returns the reason of a failure, as deleteOne does
-  async function patchOne(slug, body) {
-    try {
-      const res = await api(`/api/artifacts/${slug}`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      return res.ok ? '' : t('ui_http_error', await res.text(), res.status);
-    } catch (e) {
-      return e.message;
-    }
-  }
+  const deleteOne = (slug) => writeOne(slug, { method: 'DELETE' }, true);
+  const patchOne = (slug, body) => writeOne(slug, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
   // Acts on every selected entry and tells how many it did, done(n), and how many failed, failed(n, the first reason). Those that failed stay selected
   async function actOnSelected(act, done, failed) {
@@ -962,7 +954,6 @@
       showError(t(a.archived ? 'ui_unarchive_failed' : 'ui_archive_failed', a.title, reason));
       return;
     }
-    showError('');
     toast(t(a.archived ? 'ui_unarchive_done' : 'ui_archive_done', a.title));
     await load();
   }
@@ -1020,7 +1011,8 @@
       b.setAttribute('aria-pressed', String(b.dataset.tab === tab));
       b.querySelector('.n').textContent = items.filter((a) => inView(a, { tab: b.dataset.tab, archived })).length;
     }
-    $('add-open').hidden = tab !== 'links';
+    // A link added is not archived, so it is added from the list it goes on
+    $('add-open').hidden = tab !== 'links' || archived;
     const list = items.filter((a) => inView(a, { tab, archived }));
     renderChips(list);
     const archivedHere = items.filter((a) => inView(a, { tab, archived: true })).length;
@@ -1113,7 +1105,6 @@
       return;
     }
     selected.delete(a.slug);
-    showError('');
     toast(t(`ui_${kind(a)}_done`, a.title));
     // Refetch and record what was drawn. Removing the row locally would make the next refetch redraw the list and disarm another row
     await load();

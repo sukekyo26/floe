@@ -297,7 +297,6 @@ func TestLinkedData(t *testing.T) {
 	}
 }
 
-// A page not there is 404 to remove; one that cannot be removed is told why.
 // An edit archives a page as true or false, which the list then carries; favorite and archived as anything else
 // are refused in one sentence, and a page that is not there is not found.
 func TestEditArchived(t *testing.T) {
@@ -320,6 +319,7 @@ func TestEditArchived(t *testing.T) {
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/none", map[string]any{"archived": true}), http.StatusNotFound, "not found")
 }
 
+// A page not there is 404 to remove; one that cannot be removed is told why.
 func TestRemove(t *testing.T) {
 	t.Parallel()
 
