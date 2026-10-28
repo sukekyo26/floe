@@ -80,6 +80,11 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	out = append(out, b.eval("(() => { const c = document.querySelector('#chips .chip[data-project=gone]'); "+
 		"return [c.style.getPropertyValue('--c'), c.querySelector('.share').style.getPropertyValue('--share'), c.querySelector('.n').textContent].join(' '); })()"))
 	b.eval("setProject('')")
+	// The shelf's bars sit in one place whatever their counts, of one, two and three digits.
+	b.eval(stub("[['one', 1], ['two', 12], ['three', 123]].flatMap(([p, n]) => Array.from({ length: n }, (_, i) => " +
+		"({ slug: `${p}${i}`, title: `${p}${i}`, description: '', project: p, createdAt: at(1), updatedAt: at(1) })))"))
+	out = append(out, b.eval("(() => { const bars = [...document.querySelectorAll('#chips .share')].map((s) => s.getBoundingClientRect()); "+
+		"return [bars.length, bars.every((r) => Math.abs(r.left - bars[0].left) <= 0.5 && Math.abs(r.right - bars[0].right) <= 0.5)].join(' '); })()"))
 
 	// The frame steps through the groups as the list has them: the favourite, then alpha's.
 	b.eval("sessionStorage.setItem('artifacts.list', '')")
@@ -108,6 +113,7 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		"rgb(251, 250, 248) rgb(246, 245, 241)",
 		"true",
 		"var(--faint) 0% 0",
+		"3 true",
 		" /a/a1/ 1 / 10",
 	}, "|"))
 }
