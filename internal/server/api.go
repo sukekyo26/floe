@@ -122,8 +122,7 @@ func decodeStrict[T any](w http.ResponseWriter, body []byte) *T {
 		return nil
 	}
 	var v T
-	// LIMIT: encoding/json (v1) reads a key of other case as the field's ("Archived") and the last of a key sent
-	// twice. Read with encoding/json/v2, which refuses both, when the API is to say so.
+	// LIMIT: v1 reads "Archived" as archived and a key sent twice as its last; read with json/v2 to refuse them.
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&v); err != nil {
