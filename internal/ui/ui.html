@@ -185,7 +185,7 @@
      digits' room, right-aligned, so that the counts line up */
   .chip .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .chip .n { flex: none; min-width: 3ch; text-align: right; }
-  .count { flex: none; font: 0.74rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; letter-spacing: 0.08em; text-transform: uppercase; }
+  .count { flex: none; font: 0.74rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
   .chip.tag::before { content: "#"; flex: none; color: var(--faint); font-family: var(--mono); }
   /* Each group a card: its heading rounds the top, its last row the bottom. Not overflow: hidden on a box round them, which
      would cut off a row's menu at the bottom */
@@ -211,7 +211,7 @@
   /* A group's heading: a block, so that its text does not widen the rows' first column */
   li.group {
     display: block; min-height: 0; padding: 14px 18px 10px; font: 700 0.75rem/1.2 var(--mono); color: var(--fg); animation: none;
-    letter-spacing: 0.08em; text-transform: uppercase; border-radius: 20px 20px 0 0;
+    letter-spacing: 0.08em; text-transform: uppercase; border-top: 0; border-radius: 20px 20px 0 0;
   }
   li.group::before { content: none; }
   /* Its dot, of the group's color (--c), its name on one line (whole as the title) and its count, never split */
@@ -245,6 +245,7 @@
   .sub .path { flex: 0 1 auto; font: 0.72rem var(--mono); color: var(--faint); }
   .missing { color: var(--danger); }
   li:has(.missing) a.title { color: var(--muted); text-decoration: line-through; }
+  .sub .made { flex: none; font: 0.72rem var(--mono); color: var(--faint); }
   /* Above the title link's hit area, as the row's controls are */
   .sub .tags { position: relative; z-index: 1; display: flex; flex: 0 1 auto; gap: 0.3rem; }
   .tagpill {
@@ -687,7 +688,7 @@
     <label class="pick"><input type="checkbox" class="sel"></label>
     <div class="body">
       <a class="title"></a>
-      <span class="sub"><span class="tags"></span><span class="desc"></span></span>
+      <span class="sub"><span class="tags"></span><span class="desc"></span><span class="made"></span></span>
     </div>
     <span class="meta"><span class="proj"></span><time></time></span>
     <div class="actions">
@@ -1377,7 +1378,11 @@
       return b;
     }));
     tags.hidden = !a.tags?.length;
-    li.querySelector('.sub').hidden = !a.description && !a.path && !a.tags?.length;
+    // The creation date, which a meta.json from before it was recorded does not have
+    const made = li.querySelector('.made');
+    made.textContent = a.createdAt ? t(a.path ? 'ui_registered_at' : 'ui_created_at', new Date(a.createdAt).toLocaleDateString(LANG, { dateStyle: 'medium' })) : '';
+    made.hidden = !a.createdAt;
+    li.querySelector('.sub').hidden = !a.description && !a.path && !a.createdAt && !a.tags?.length;
     li.querySelector('.more summary').setAttribute('aria-label', t('ui_more_named', a.title));
     // Sorted by creation, the creation time is shown
     const when = sort === 'created' && a.createdAt ? a.createdAt : a.updatedAt;
@@ -1749,20 +1754,21 @@
     }
     for (const b of document.querySelectorAll('.views button')) b.addEventListener('click', () => setView(b.dataset.view));
     $('show-archived').addEventListener('click', () => setView('archived'));
-    // One menu open at a time; Escape or a click elsewhere closes it, focus going back to its button rather than to the page
+    // One menu open at a time; Escape, a click elsewhere or an item done closes it, focus going back to its button rather than
+    // to the page (an item that opens a dialog has moved it there)
+    const closeMenu = (d) => {
+      const focusInside = d.contains(document.activeElement) || document.activeElement === document.body;
+      d.open = false;
+      if (focusInside) d.querySelector('summary').focus();
+    };
     const closeMenus = (except) => {
-      for (const d of document.querySelectorAll('.more[open]')) {
-        if (d === except) continue;
-        const focusInside = d.contains(document.activeElement) || document.activeElement === document.body;
-        d.open = false;
-        if (focusInside) d.querySelector('summary').focus();
-      }
+      for (const d of document.querySelectorAll('.more[open]')) if (d !== except) closeMenu(d);
     };
     $('list').addEventListener('toggle', (e) => { if (e.target.open) closeMenus(e.target); }, true);
     // An item done closes its menu; delete stays for its second click
     $('list').addEventListener('click', (e) => {
       const item = e.target.closest('.menu .icon-btn');
-      if (item && !item.classList.contains('delete')) item.closest('.more').open = false;
+      if (item && !item.classList.contains('delete')) closeMenu(item.closest('.more'));
     });
     // The edit dialog closed, focus goes back to its row's menu button rather than to the closed menu's item
     $('edit-dialog').addEventListener('close', () => {
