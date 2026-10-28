@@ -99,14 +99,15 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("(() => { const bar = document.querySelector('.bar').getBoundingClientRect(), q = document.getElementById('search').getBoundingClientRect(), "+
 		"brand = document.querySelector('.brand').getBoundingClientRect(), tools = document.querySelector('.toolbar').getBoundingClientRect(); "+
 		"return [q.top >= brand.bottom, q.bottom <= bar.bottom, Math.abs(tools.top - bar.bottom) <= 0.5].join(' '); })()"))
-	// A row above the window reached by ↑ shows its title under the bar over the list.
+	// A row half under the bar over the list, reached by ↑, shows its title under the bar.
 	key := func(k string) {
 		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
 	}
 	for range 30 {
 		key("ArrowDown")
 	}
-	b.eval("scrollTo(0, document.documentElement.scrollHeight)")
+	b.eval("scrollBy(0, [...document.querySelectorAll('#list .title')].find((a) => a.textContent === 'P28').getBoundingClientRect().top - " +
+		"document.querySelector('.toolbar').getBoundingClientRect().bottom + 10)")
 	key("ArrowUp")
 	out = append(out, b.eval("[document.activeElement.textContent, document.activeElement.getBoundingClientRect().top >= "+
 		"document.querySelector('.toolbar').getBoundingClientRect().bottom].join(' ')"))
