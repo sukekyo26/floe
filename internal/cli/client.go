@@ -49,7 +49,7 @@ func (e *remoteError) Report() usererr.Report {
 func (c client) do(ctx context.Context, method, path string, body, out any) error {
 	var r io.Reader
 	if body != nil {
-		// LIMIT: v1 Marshal sends bytes no UTF-8 in any string (a path, a title) as U+FFFD; refuse them here if need be.
+		// LIMIT: v1 Marshal sends bytes no UTF-8 as U+FFFD; refuse them if a path or title not in UTF-8 comes to be sent.
 		b, err := json.Marshal(body)
 		if err != nil {
 			return fmt.Errorf("%s %s: %w", method, path, err)
