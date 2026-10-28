@@ -21,6 +21,8 @@
     --body: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
     --bar: 3.5rem;
+    /* The room above the list: with --bar, where the shelf sits */
+    --shell-top: 0.75rem;
   }
   * { box-sizing: border-box; }
   /* The list keeps the scrollbar's room when it does not scroll, so that it does not move when it starts to. Not the frame, whose iframe scrolls */
@@ -40,7 +42,8 @@
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
   .bar {
-    position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--line);
+    /* Its line drawn as a shadow, which takes no room: a border's width is rounded to the screen's pixels, which would move what sits below at a zoom other than 100% */
+    position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 var(--line);
     background: color-mix(in srgb, var(--panel) 72%, transparent); backdrop-filter: saturate(1.6) blur(14px);
   }
   /* Full width rather than the text's, so that the list and the frame put things in the same place */
@@ -74,7 +77,7 @@
 
   /* The shelf on the left picks which list the right shows; on a narrow screen a select at the top stands in for it */
   .shell {
-    max-width: calc(96rem + 32px); margin-inline: auto; padding: 0.75rem 16px 4rem;
+    max-width: calc(96rem + 32px); margin-inline: auto; padding: var(--shell-top) 16px 4rem;
     display: grid; grid-template-columns: 14.5rem minmax(0, 1fr); align-items: start; column-gap: 1.5rem;
   }
   .main { display: grid; gap: 0.9rem; min-width: 0; }
@@ -82,7 +85,8 @@
     position: sticky; top: var(--bar); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; padding-block: 0.75rem;
     background: color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter: blur(12px);
   }
-  .shelf { position: sticky; top: calc(var(--bar) + 0.9rem); display: grid; gap: 1.1rem; padding-top: 0.9rem; }
+  /* Stuck where it sits: lower, sticky would push it down while the page can scroll, and only then */
+  .shelf { position: sticky; top: calc(var(--bar) + var(--shell-top)); display: grid; gap: 1.1rem; padding-top: 0.9rem; }
   .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 0.7rem/1.2 var(--body); color: var(--faint); letter-spacing: 0.02em; }
   .shelf .views, .shelf .chips, .shelf .tabs { display: grid; gap: 2px; }
   .shelf .views button, .shelf .chip, .shelf .tabs button {
