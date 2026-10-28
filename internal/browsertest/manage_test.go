@@ -536,8 +536,9 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval(stub(tagsList))
 	const rows = "[...document.querySelectorAll('#list li:not(.group)')].map((li) => li.dataset.slug).join('') + ' ' + (new URLSearchParams(location.search).get('tag') ?? '-')"
 	const shelf = "[...document.querySelectorAll('#tags .chip')].map((c) => c.textContent + ':' + c.getAttribute('aria-pressed')).join(',') + ' ' + document.getElementById('shelf-tags').hidden"
-	pick := func(name string) {
-		b.eval("[...document.querySelectorAll('#tags .chip')].find((c) => c.dataset.tag === " + js(name) + ").click()")
+	// Presses the shelf's tag plan, which picks it or lets it go.
+	pickPlan := func() {
+		b.eval("[...document.querySelectorAll('#tags .chip')].find((c) => c.dataset.tag === 'plan').click()")
 	}
 	search := func(q string) {
 		b.eval("(() => { const q = document.getElementById('q'); q.value = " + js(q) + "; q.dispatchEvent(new Event('input')); })()")
@@ -579,12 +580,12 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		b.eval("[...document.querySelectorAll('#list li[data-slug=a] .tagpill')].map((p) => p.textContent + ':' + p.getAttribute('aria-label')).join(',')"),
 		b.eval("document.querySelector('#list li[data-slug=d] .tags').hidden"))
 	// Picked, the rows are its pages, as when the URL has it; picked again it is let go.
-	pick("plan")
+	pickPlan()
 	out = append(out, b.eval(rows), b.eval(shelf))
 	b.navigate("/?tag=plan")
 	b.eval(stub(tagsList))
 	out = append(out, b.eval(rows))
-	pick("plan")
+	pickPlan()
 	out = append(out, b.eval(rows))
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval(shelf))
@@ -601,7 +602,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(rows))
 	search("")
 	// A tag picked stays at 0, until the filters are cleared.
-	pick("plan")
+	pickPlan()
 	b.eval(stub(strings.ReplaceAll(tagsList, "'plan'", "'other'")))
 	out = append(out, b.eval(shelf), b.eval("document.getElementById('nomatch').hidden"))
 	b.eval("document.getElementById('clear').click()")
@@ -667,7 +668,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"[document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_bulk_none"))+"), calls.length].join(' ')"))
 	b.eval(stub(tagsList))
 	// Narrowed to a tag, the edit dialog's field holds it whole: pressed, the field offers the other names (reported by the user).
-	pick("plan")
+	pickPlan()
 	b.eval("document.querySelector('#list li[data-slug=b] .edit').click()")
 	// The test's window is low enough to hide the field under the dialog's fold.
 	b.until("the edit dialog to stop moving", "document.getElementById('edit-dialog').getAnimations().length === 0")
@@ -685,7 +686,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the names where pressed", "document.getElementById('edit-tags-names').matches(':popover-open') && "+
 		"[...document.querySelectorAll('#edit-tags-names [role=option]')].map((o) => o.textContent).join(',')"))
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
-	pick("plan")
+	pickPlan()
 
 	// A narrow screen's select has the tags, which pick and let go as the shelf's do.
 	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 390, Height: 844, DeviceScaleFactor: 1, Mobile: true}
