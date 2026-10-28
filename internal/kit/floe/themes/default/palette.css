@@ -6,7 +6,7 @@
   --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
   --display: var(--font);
   --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
-  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #63b5be; --code-add: #6fcf97; --code-del: #f2b8b5;
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #b5e05a; --code-add: #6fcf97; --code-del: #f2b8b5;
   /* The page's ground, a pattern too, and the rule between its sections */
   --page-bg: var(--bg); --rule: 1px solid var(--line);
   /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */

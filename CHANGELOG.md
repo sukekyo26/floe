@@ -61,7 +61,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   each a palette of CSS variables and the shape of the parts. Pages in
   `default`, and in the themes that take its colours (`soft`, `editorial`), have
   the warm grey ground and text of the management page, with lines of the same
-  warmth.
+  warmth, and a terminal's prompt, the language of code and a diff's hunk heads
+  in yellow-green.
 - Add templates of your own in `FLOE_TEMPLATES_DIR`: `page.html`,
   `schema.json` and `example.yaml`, and `page.css`, `checks.yaml`,
   `computed.yaml`, `words.yaml` and `assets/` if they like; and
