@@ -216,6 +216,15 @@
     font-size: 0.7rem; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px;
   }
   .tagpill:hover { box-shadow: inset 0 0 0 1px currentColor; }
+  /* A tags field's names, as the row's menu looks: a popover in the top layer, so that no dialog or box cuts it off */
+  .suggest {
+    position: fixed; inset: auto; margin: 0; display: grid; gap: 1px; max-height: 14rem; overflow-y: auto; padding: 0.3rem;
+    color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);
+  }
+  .suggest:not(:popover-open) { display: none; }
+  .suggest [role="option"] { padding: 0.4rem 0.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 0.82rem/1.4 var(--body); border-radius: 7px; cursor: pointer; }
+  .suggest [role="option"]:hover, .suggest [aria-selected="true"] { background: var(--subtle); }
+  .suggest [aria-selected="true"] { color: var(--accent); }
   li time { font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
   .actions { position: relative; z-index: 1; display: flex; gap: 2px; }
   /* The row's other actions. The row whose menu is open comes forward: each row's rise animation stacks the rows below over it */
@@ -555,7 +564,7 @@
       <input class="text" id="edit-desc" autocomplete="off">
     </label>
     <label class="field"><span>{{.Msg "ui_tags"}} <small>{{.Msg "ui_tags_hint"}}</small></span>
-      <input class="text" id="edit-tags" autocomplete="off" list="tag-names">
+      <input class="text" id="edit-tags" autocomplete="off">
     </label>
     <p class="error" id="edit-error" hidden></p>
     <div class="dialog-actions">
@@ -573,7 +582,7 @@
       </div>
     </div>
     <label class="field"><span>{{.Msg "ui_tag_name"}} <small>{{.Msg "ui_tags_hint"}}</small></span>
-      <input class="text" id="tag-name" required autocomplete="off" list="tag-names">
+      <input class="text" id="tag-name" required autocomplete="off">
     </label>
     <div class="dialog-actions">
       <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
@@ -582,7 +591,6 @@
     </div>
   </form>
 </dialog>
-<datalist id="tag-names"></datalist>
 <template id="row">
   <li>
     <label class="pick"><input type="checkbox" class="sel"></label>
@@ -882,9 +890,119 @@
   }
 
   // The names of a tags field: split at commas (Japanese ones too), trimmed, without the empty; the server drops a name the second time.
-  // LIMIT: the names the field suggests (tag-names) are matched against all of its text, so none come after the first comma. If that
-  // comes to matter, take one name at a time. A name with a comma in it, which the API can give, splits when the field is edited
+  // LIMIT: a name with a comma in it, which the API can give, splits when the field is edited
   const splitTags = (text) => text.split(/[,、]/).map((name) => name.trim()).filter(Boolean);
+
+  // Every page's tag names, by name
+  const tagNames = () => [...new Set(items.flatMap((a) => a.tags ?? []))].sort((x, y) => x.localeCompare(y, LANG));
+
+  // Suggests tag names for a tags field, as a WAI-ARIA combobox: the names that hold what is written between the commas
+  // around the caret, those that start with it first, but none the field has already. ↓ opens it, ↑↓ pick, Enter or a
+  // click puts the name in, Escape closes it, as does leaving the field. Drawn only as the field changes, so that the list
+  // read again neither closes it nor moves the name picked
+  function suggestTags(input) {
+    // Not ul and li, which the list's rows style
+    const box = document.createElement('div');
+    box.id = `${input.id}-names`;
+    box.className = 'suggest';
+    box.popover = 'manual';
+    box.setAttribute('role', 'listbox');
+    input.after(box);
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-controls', box.id);
+    input.setAttribute('aria-expanded', 'false');
+    let names = [];
+    let active = -1;
+    // Where the name at the caret starts and ends, between the commas around it
+    const word = () => {
+      const at = input.selectionStart ?? input.value.length;
+      const start = Math.max(input.value.lastIndexOf(',', at - 1), input.value.lastIndexOf('、', at - 1)) + 1;
+      const end = input.value.slice(at).search(/[,、]/);
+      return { start, end: end === -1 ? input.value.length : at + end };
+    };
+    const mark = (i) => {
+      active = i;
+      [...box.children].forEach((option, j) => option.setAttribute('aria-selected', String(j === i)));
+      if (i < 0) input.removeAttribute('aria-activedescendant');
+      else {
+        input.setAttribute('aria-activedescendant', box.children[i].id);
+        box.children[i].scrollIntoView({ block: 'nearest' });
+      }
+    };
+    // Under the field, and again once its dialog has stopped moving: measured while it opens, the field is where it passes
+    const place = async () => {
+      const at = () => {
+        const r = input.getBoundingClientRect();
+        box.style.left = `${r.left}px`;
+        box.style.top = `${r.bottom + 4}px`;
+        box.style.width = `${r.width}px`;
+      };
+      at();
+      await Promise.all((input.closest('dialog')?.getAnimations() ?? []).map((a) => a.finished));
+      at();
+    };
+    const close = () => {
+      if (box.matches(':popover-open')) box.hidePopover();
+      input.setAttribute('aria-expanded', 'false');
+      mark(-1);
+    };
+    const choose = (name) => {
+      const { start, end } = word();
+      const before = input.value.slice(0, start);
+      const after = input.value.slice(end);
+      // A name put in last is followed by a comma, for the next
+      const put = `${before}${before ? ' ' : ''}${name}`;
+      input.value = put + (after || ', ');
+      input.setSelectionRange(put.length + (after ? 0 : 2), put.length + (after ? 0 : 2));
+      // What the field was told, of a name missing, no longer holds
+      input.setCustomValidity('');
+      close();
+    };
+    const open = () => {
+      const { start, end } = word();
+      const typed = input.value.slice(start, end).trim().toLowerCase();
+      const have = splitTags(input.value.slice(0, start) + input.value.slice(end));
+      const starts = (name) => name.toLowerCase().startsWith(typed);
+      names = tagNames().filter((name) => !have.includes(name) && name.toLowerCase().includes(typed));
+      names = [...names.filter(starts), ...names.filter((name) => !starts(name))];
+      if (names.length === 0) {
+        close();
+        return;
+      }
+      box.replaceChildren(...names.map((name, i) => {
+        const option = document.createElement('div');
+        option.id = `${box.id}-${i}`;
+        option.setAttribute('role', 'option');
+        option.textContent = name;
+        // Pressed, the field keeps its focus
+        option.addEventListener('mousedown', (e) => e.preventDefault());
+        option.addEventListener('click', () => choose(name));
+        return option;
+      }));
+      if (!box.matches(':popover-open')) box.showPopover();
+      place();
+      input.setAttribute('aria-expanded', 'true');
+      mark(-1);
+    };
+    input.addEventListener('input', open);
+    input.addEventListener('blur', close);
+    input.addEventListener('keydown', (e) => {
+      const shown = box.matches(':popover-open');
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!shown) open();
+        else mark(e.key === 'ArrowDown' ? (active + 1) % names.length : (active <= 0 ? names.length : active) - 1);
+      } else if (e.key === 'Enter' && shown && active >= 0) {
+        e.preventDefault();
+        choose(names[active]);
+      } else if (e.key === 'Escape' && shown) {
+        // The list closes, not the dialog
+        e.preventDefault();
+        close();
+      } else if (e.key === 'Tab') close();
+    });
+  }
 
   function openTags() {
     $('tag-title').textContent = t('ui_tag_bulk_title', selected.size);
@@ -1269,12 +1387,6 @@
     $('list').replaceChildren(...rows);
     renderPager(shown.length, pages, start);
     renderShelf(chips, tags);
-    // Every page's tag names, suggested where tags are written; rebuilt only when they change, so that suggestions open stay open
-    const names = [...new Set(items.flatMap((a) => a.tags ?? []))].sort((x, y) => x.localeCompare(y, LANG));
-    if (JSON.stringify(names) !== $('tag-names').dataset.signature) {
-      $('tag-names').dataset.signature = JSON.stringify(names);
-      $('tag-names').replaceChildren(...names.map((name) => new Option(name)));
-    }
     renderBulk();
     syncUrl();
   }
@@ -1501,6 +1613,8 @@
       for (const sel of $('list').querySelectorAll('.sel')) sel.checked = false;
       renderBulk();
     });
+    suggestTags($('edit-tags'));
+    suggestTags($('tag-name'));
     $('bulk-tag').addEventListener('click', openTags);
     $('tag-form').addEventListener('submit', (e) => {
       e.preventDefault();

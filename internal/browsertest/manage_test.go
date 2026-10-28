@@ -11,6 +11,7 @@ import (
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/servetest"
@@ -550,8 +551,8 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	}
 
 	out := make([]string, 0, 40)
-	// The shelf names the tags of the list looked at by name, with their counts; the names written are suggested from all.
-	out = append(out, b.eval(shelf), b.eval(rows), b.eval("[...document.getElementById('tag-names').options].map((o) => o.value).join(',')"),
+	// The shelf names the tags of the list looked at by name, with their counts.
+	out = append(out, b.eval(shelf), b.eval(rows),
 		b.eval("[...document.querySelectorAll('#list li[data-slug=a] .tagpill')].map((p) => p.textContent + ':' + p.getAttribute('aria-label')).join(',')"),
 		b.eval("document.querySelector('#list li[data-slug=d] .tags').hidden"))
 	// Picked, the rows are its pages, as when the URL has it; picked again it is let go.
@@ -618,10 +619,6 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the gone page to drop", "document.getElementById('bulk').hidden && "+
 		"[document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_bulk_none"))+"), calls.length].join(' ')"))
 	b.eval(stub(tagsList))
-	// The names suggested are not built again for a list whose names did not change.
-	b.eval("window.option = document.getElementById('tag-names').options[0]; list = list.replace('Delta', 'Delta 2'); load()")
-	out = append(out, b.until("the list to be drawn again", "document.querySelector('#list li[data-slug=d] .title').textContent.startsWith('Delta 2') && "+
-		"String(document.getElementById('tag-names').options[0] === window.option)"))
 	b.eval("document.getElementById('bulk-page').click()")
 	tagsOf("設計", "document.getElementById('tag-remove').click();")
 	out = append(out, b.until("the tag to be removed", "document.getElementById('bulk').hidden && calls.splice(0).join(',')"),
@@ -652,10 +649,79 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['<b>x</b>', '__proto__'], createdAt: at(1), updatedAt: at(9) }]`))
 	out = append(out, b.eval("[...document.querySelectorAll('#tags .chip')].map((c) => c.textContent).sort().join(',')"),
 		b.eval("[...document.querySelectorAll('#list .tagpill')].map((p) => p.textContent).join(',')"),
-		b.eval("document.querySelectorAll('.shelf b, #list b, #tag-names b').length"))
+		b.eval("document.querySelectorAll('.shelf b, #list b').length"))
+
+	// The tags fields suggest the names of every page, as a combobox, with the keyboard alone or the mouse.
+	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['設計', 'plan'], createdAt: at(1), updatedAt: at(9) },
+		{ slug: 'b', title: 'Beta', description: '', tags: ['計画', '<b>x</b>'], createdAt: at(1), updatedAt: at(8), archived: true }]`))
+	// A key as a keyboard presses it: its text on the key down, which a page's preventDefault then stops too
+	// (chromedp.KeyEvent sends the text as an event of its own, which nothing stops).
+	press := func(k string) {
+		t.Helper()
+
+		for _, e := range kb.Encode([]rune(k)[0]) {
+			if e.Type == kb.KeyChar {
+				continue
+			}
+			if e.Type == kb.KeyDown {
+				e.Text = map[string]string{kb.Enter: "\r"}[k]
+			}
+			if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, *e); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	write := func(v string) {
+		b.eval("(() => { const f = document.getElementById('edit-tags'); f.value = " + js(v) + "; f.setSelectionRange(f.value.length, f.value.length); f.dispatchEvent(new Event('input')); })()")
+	}
+	const box = "document.getElementById('edit-tags-names')"
+	const names = "[...document.querySelectorAll('#edit-tags-names [role=option]')].map((o) => o.textContent).join(',')"
+	const shown = box + ".matches(':popover-open') + ' ' + document.getElementById('edit-tags').getAttribute('aria-expanded')"
+	b.eval("document.querySelector('#list li[data-slug=a] .edit').click(); document.getElementById('edit-tags').value = ''; document.getElementById('edit-tags').focus()")
+	out = append(out, b.eval("['edit-tags', 'tag-name'].map((id) => { const f = document.getElementById(id); "+
+		"return [f.getAttribute('role'), f.getAttribute('aria-autocomplete'), f.getAttribute('aria-controls') === document.getElementById(id + '-names').id, "+
+		"document.getElementById(id + '-names').getAttribute('role')].join(' '); }).join(' / ')"), b.eval(shown))
+	// ↓ opens all the names, the archived page's too, as text; ↓ picks the first; Escape closes the names, not the dialog.
+	press(kb.ArrowDown)
+	out = append(out, b.eval(names), b.eval(shown), b.eval(box+".querySelector('b') === null"),
+		// Under the field, once the dialog has done moving in.
+		b.until("the names under the field", "(() => { const f = document.getElementById('edit-tags').getBoundingClientRect(); const r = "+box+".getBoundingClientRect(); "+
+			"return Math.abs(r.top - f.bottom - 4) < 0.5 && Math.abs(r.left - f.left) < 0.5 && Math.abs(r.width - f.width) < 0.5 && 'under'; })()"))
+	press(kb.ArrowDown)
+	out = append(out, b.eval("document.getElementById('edit-tags').getAttribute('aria-activedescendant') === "+box+".querySelector('[aria-selected=true]').id && "+
+		box+".querySelector('[aria-selected=true]').textContent"))
+	press(kb.Escape)
+	out = append(out, b.eval(shown)+" "+b.eval("document.getElementById('edit-dialog').open"))
+	// The name between the commas around the caret: those holding it, starting with it first, but none the field has.
+	write("計")
+	out = append(out, b.eval(names))
+	write("計画, ")
+	out = append(out, b.eval(names))
+	// ↓↓↓ and Enter put the third in, a comma after it for the next, sending nothing.
+	press(kb.ArrowDown)
+	press(kb.ArrowDown)
+	press(kb.ArrowDown)
+	press(kb.Enter)
+	out = append(out, b.eval("document.getElementById('edit-tags').value"), b.eval(shown),
+		b.eval("[document.getElementById('edit-dialog').open, calls.length].join(' ')"))
+	// The list read again leaves the names open, the one picked as it is.
+	press(kb.ArrowDown)
+	press(kb.ArrowDown)
+	b.eval("list = list.replace('Alpha', 'Alpha 2'); load()")
+	b.until("the list to be read again", "document.querySelector('#list li[data-slug=a] .title').textContent === 'Alpha 2'")
+	out = append(out, b.eval(shown)+" "+b.eval(box+".querySelector('[aria-selected=true]')?.textContent"))
+	// A click puts a name in, the field keeping its focus.
+	r := b.rect(box + ".querySelector('[role=option]:last-child')")
+	b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	out = append(out, b.until("the name clicked", "document.getElementById('edit-tags').value.includes('plan') && document.getElementById('edit-tags').value"),
+		b.eval("document.activeElement.id"))
+	press(kb.ArrowDown)
+	press(kb.Escape)
+	press(kb.Escape)
+	out = append(out, b.eval("document.getElementById('edit-dialog').open"))
 
 	check(t, "tags", out, strings.Join([]string{
-		"plan2:false,設計1:false,設計、実装1:false false", "abcd -", "old,plan,設計,設計、実装",
+		"plan2:false,設計1:false,設計、実装1:false false", "abcd -",
 		"設計:" + msg("ui_tag_filter_named", "設計") + ",plan:" + msg("ui_tag_filter_named", "plan"), "true",
 		"ab plan", "plan2:true,設計1:false,設計、実装1:false false", "ab plan", "abcd -",
 		"old1:false,plan1:false false", "c 設計、実装", msg("ui_selected", 1), "ac -",
@@ -664,11 +730,19 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		msg("ui_tag_bulk_title", 3) + " / " + msg("ui_tag_add_bulk", 3) + " / " + msg("ui_tag_remove_bulk", 3),
 		"true " + msg("ui_tag_name_empty"),
 		`PATCH /api/artifacts/a {"tags":["設計","plan","new"]},PATCH /api/artifacts/b {"tags":["plan","new"]},PATCH /api/artifacts/d {"tags":["plan","new"]}`, "true", "1",
-		"true 0", "true",
+		"true 0",
 		`PATCH /api/artifacts/a {"tags":["plan"]}`, "true",
 		"0 true false",
 		"tag:plan,tag:設計,tag:設計、実装", "ab plan", "true", "abcd -",
 		"<b>x</b>1,__proto__1", "<b>x</b>,__proto__", "0",
+		"combobox list true listbox / combobox list true listbox", "false false",
+		"<b>x</b>,plan,計画,設計", "true true", "true", "under", "<b>x</b>",
+		"false false true",
+		"計画,設計", "<b>x</b>,plan,設計",
+		"計画, 設計, ", "false false", "true 0",
+		"true true <b>x</b>",
+		"計画, 設計, plan, ", "edit-tags",
+		"false",
 	}, "|"))
 }
 
