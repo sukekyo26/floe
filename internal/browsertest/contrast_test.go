@@ -102,6 +102,12 @@ func TestUIContrast(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	file := s.write(t, "every-part.yaml", string(src))
+	// The image its part image shows, beside it.
+	shot, err := os.ReadFile("../corpus/testdata/every-part/shots/moved.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.write(t, "shots/moved.png", string(shot))
 	for _, theme := range themes {
 		name := theme.Name()
 		slug := "parts-" + name
