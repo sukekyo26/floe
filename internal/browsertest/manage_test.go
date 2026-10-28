@@ -307,13 +307,19 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#list li[data-slug=b] summary').click()")
 	b.eval("document.getElementById('count').click()")
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=b] .more').open"))
-	// The last row's menu is not cut off by the list's box: its delete is the topmost at its middle, and deletes on a second click.
+	// A row's menu is not cut off by the list's box: with one row, the menu reaches below it, its delete the topmost at its
+	// middle, which deletes on a second click.
+	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) }]`))
 	b.eval("document.querySelector('#list > li:last-child summary').click(); document.querySelector('#list > li:last-child .delete').scrollIntoView({ block: 'center' })")
 	d := b.rect("document.querySelector('#list > li:last-child .delete')")
 	out = append(out, b.eval("Boolean(document.elementFromPoint("+js(fmt.Sprint(d.X+d.Width/2))+", "+js(fmt.Sprint(d.Y+d.Height/2))+")?.closest('.delete'))"))
 	b.eval("calls.length = 0; document.querySelector('#list > li:last-child .delete').click(); document.querySelector('#list > li:last-child .delete').click()")
 	out = append(out, b.until("the delete", "calls.join(',')"))
 	b.eval("scrollTo(0, 0)")
+	// Only favourites, or none: no headings.
+	b.eval(stub(`[{ slug: 'c', title: 'Gamma', description: '', createdAt: at(1), updatedAt: at(9), favorite: true },
+		{ slug: 'd', title: 'Delta', description: '', createdAt: at(1), updatedAt: at(8), favorite: true }]`))
+	out = append(out, b.eval(order))
 	// The creation date under the title, of a link when registered, and none without one.
 	date := b.eval("new Date('2026-01-01T00:00:00.000Z').toLocaleDateString(document.documentElement.lang, { dateStyle: 'medium' })")
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) },
@@ -327,7 +333,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// The kinds show with a link, the projects with two or one chosen.
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`))
 	out = append(out, b.eval("[document.getElementById('shelf-kind').hidden, document.getElementById('shelf-projects').hidden].join(' ')"))
-	b.eval("setProject('gone')")
+	b.eval("setProject('p')")
 	out = append(out, b.eval("document.getElementById('shelf-projects').hidden"))
 	b.eval("setProject('')")
 	// The favourites count their own: their count, their projects, and none shown when there are none.
@@ -402,7 +408,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"00010", "shown", "shown", "shown", "0",
 		msg("ui_more_named", "Beta"), msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_delete"),
 		"false true", "Alpha", "false",
-		"true", "DELETE /api/artifacts/a",
+		"true", "DELETE /api/artifacts/a", "cd",
 		msg("ui_created_at", date), "true", msg("ui_registered_at", date),
 		"true true", "false",
 		msg("ui_count_all", 1) + " true",
