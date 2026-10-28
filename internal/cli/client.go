@@ -52,14 +52,12 @@ func (e *remoteError) Report() usererr.Report {
 func (c client) do(ctx context.Context, method, path string, body, out any) error {
 	var r io.Reader
 	if body != nil {
-		b, err := encode(body)
-		if err != nil {
+		b, err := encode(body, sentAt)
+		if _, mistake := errors.AsType[*usererr.Error](err); mistake {
 			return err
 		}
-		// Refused before sending, as the server would: it stops reading at its limit, which may break
-		// the sending off before its answer comes.
-		if len(b) > server.MaxUpload {
-			return usererr.New("cli_publish_large", strconv.Itoa(server.MaxUpload>>20)+" MiB")
+		if err != nil {
+			return fmt.Errorf("%s %s: %w", method, path, err)
 		}
 		r = bytes.NewReader(b)
 	}
@@ -131,18 +129,26 @@ var sentAt = map[string]string{
 	"project": "the project name (of the git remote, the repository's directory or the working directory)",
 }
 
-// encode is body as the server reads it, with encoding/json/v2: nil maps as null. A text in it that is no UTF-8 is
-// the user's mistake, named by where it was given (sentAt), else by its field.
-func encode(body any) ([]byte, error) {
+// errNotUTF8 is what encoding/json/v2 tells a string's bytes that are no UTF-8 by, which it does not export.
+var errNotUTF8 = func() error {
+	_, err := jsonv2.Marshal("\xff")
+	syntax, _ := errors.AsType[*jsontext.SyntacticError](err)
+	return syntax.Err
+}()
+
+// encode is body as the server reads it, with encoding/json/v2: nil maps as null (a jsontext.Value as it is). A
+// text in it that is no UTF-8 is the user's mistake, named by where it was given (at), else by its field.
+func encode(body any, at map[string]string) ([]byte, error) {
 	b, err := jsonv2.Marshal(body, jsonv2.FormatNilMapAsNull(true))
-	// Of a struct, encoding/json/v2 tells syntax of nothing but a string's bytes that are no UTF-8.
-	if syntax, ok := errors.AsType[*jsontext.SyntacticError](err); ok {
+	if syntax, ok := errors.AsType[*jsontext.SyntacticError](err); ok && errors.Is(syntax.Err, errNotUTF8) {
 		field := strings.TrimPrefix(string(syntax.JSONPointer), "/")
 		field, _, _ = strings.Cut(field, "/")
-		return nil, usererr.New("cli_not_utf8", cmp.Or(sentAt[field], fmt.Sprintf("the request's %q", field)))
+		return nil, usererr.New("cli_not_utf8", cmp.Or(at[field], fmt.Sprintf("the request's %q", field)))
 	}
-	if err != nil {
-		return nil, fmt.Errorf("encode the request: %w", err)
+	// Refused before sending, as the server would: it stops reading at its limit, which may break the sending off
+	// before its answer comes.
+	if len(b) > server.MaxUpload {
+		return nil, usererr.New("cli_publish_large", strconv.Itoa(server.MaxUpload>>20)+" MiB")
 	}
-	return b, nil
+	return b, err //nolint:wrapcheck // do says what it sent
 }

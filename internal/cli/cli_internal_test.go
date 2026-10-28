@@ -30,7 +30,7 @@ func TestUsageIsAMistake(t *testing.T) {
 func TestEncode(t *testing.T) {
 	t.Parallel()
 
-	b, err := encode(server.Upload{File: "d.yaml", Source: []byte("x")}) //nolint:exhaustruct // the rest not given
+	b, err := encode(server.Upload{File: "d.yaml", Source: []byte("x")}, sentAt) //nolint:exhaustruct // the rest not given
 	if err != nil || !strings.Contains(string(b), `"images":null`) {
 		t.Errorf("encoded %s, %v", b, err)
 	}
@@ -52,7 +52,7 @@ func TestEncode(t *testing.T) {
 			X string `json:"x"`
 		}{bad}: `the request's "x"`,
 	} {
-		_, err := encode(body)
+		_, err := encode(body, sentAt)
 		if got := usererr.Tell(english, err).Render(""); got != at+" is not UTF-8; the server takes only UTF-8: rename it, or give it in UTF-8" {
 			t.Errorf("%+v told %q", body, got)
 		}
