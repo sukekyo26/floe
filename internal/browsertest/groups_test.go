@@ -60,12 +60,26 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		"return [r('.proj').top >= r('.title').bottom, r('time').top >= r('.title').bottom, r('.proj').left === r('.title').left, "+
 		"r('.actions').top < r('.proj').top].join(' '); })()"))
 	b.size(1440, 900, false)
+	// A heading pointed at keeps its ground, as it is not pressed; a row pointed at takes the hover's.
+	ground := func(selector string) string {
+		r := b.rect("document.querySelector('" + selector + "')")
+		b.point(r.X+r.Width/2, r.Y+r.Height/2)
+		return b.until("the pointer on "+selector, "document.querySelector('"+selector+":hover') && "+
+			"new Promise((done) => setTimeout(done, 300)).then(() => getComputedStyle(document.querySelector('"+selector+"')).backgroundColor)")
+	}
+	out = append(out, ground("#list li.group")+" "+ground("#list li[data-slug=a1]"))
+	b.point(0, 0)
 
 	// An empty list keeps the box the list had.
 	b.eval(stub(`[{ slug: 'x', title: 'X', description: '', createdAt: at(1), updatedAt: at(1) }]`))
 	b.eval("document.querySelector('.views [data-view=fav]').click()")
 	out = append(out, b.eval("getComputedStyle(document.getElementById('empty-favorites')).backgroundColor === getComputedStyle(document.documentElement).getPropertyValue('--panel').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`)"))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
+	// A project picked whose last entry is gone stays on the shelf, of the faint color, with no share.
+	b.eval("setProject('gone')")
+	out = append(out, b.eval("(() => { const c = document.querySelector('#chips .chip[data-project=gone]'); "+
+		"return [c.style.getPropertyValue('--c'), c.querySelector('.share').style.getPropertyValue('--share'), c.querySelector('.n').textContent].join(' '); })()"))
+	b.eval("setProject('')")
 
 	// The frame steps through the groups as the list has them: the favourite, then alpha's.
 	b.eval("sessionStorage.setItem('artifacts.list', '')")
@@ -91,7 +105,9 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		"beta b1", "null",
 		"true true true true",
 		"true true true true",
+		"rgb(251, 250, 248) rgb(246, 245, 241)",
 		"true",
+		"var(--faint) 0% 0",
 		" /a/a1/ 1 / 10",
 	}, "|"))
 }
