@@ -27,6 +27,8 @@
     --body: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
     --bar: 3.5rem;
+    /* The bar over the list, stuck under the header bar */
+    --toolbar: 4rem;
     /* The room above the list: with --bar, where the shelf sits */
     --shell-top: 0.75rem;
   }
@@ -85,7 +87,7 @@
   .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; }
   .notfound { flex: 1; align-content: center; }
 
-  /* The shelf on the left picks which list the right shows; on a narrow screen a select at the top stands in for it. The whole
+  /* The shelf on the left picks which list the right shows; on a narrow screen a row of its buttons over the list. The whole
      window's width, as the header bar's: the shelf under the logo, the list out to the bar's right end */
   .shell {
     padding: var(--shell-top) 16px 0; --shell-bottom: var(--shell-top);
@@ -96,7 +98,7 @@
   /* The bar over the list: the kinds, the sort and the count; while items are selected, the bulk bar in their place, of the
      same height, so that the list does not move. Its width decides how the bulk bar's buttons show (container bar) */
   .toolbar {
-    position: sticky; top: var(--bar); z-index: 5; display: flex; align-items: center; gap: 0.6rem; height: 4rem;
+    position: sticky; top: var(--bar); z-index: 5; display: flex; align-items: center; gap: 0.6rem; height: var(--toolbar);
     background: var(--bg); container: bar / inline-size;
   }
   /* :not(#bulk), of an id's weight, over #add-narrow's own display */
@@ -235,7 +237,7 @@
   .body { display: grid; gap: 0.05rem; min-width: 0; }
   .body > a.title, .sub > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* The whole row is the link's hit area; only the controls sit above it */
-  a.title { justify-self: start; max-width: 100%; color: var(--fg); font-weight: 600; text-decoration: none; scroll-margin-block: 10rem 5rem; }
+  a.title { justify-self: start; max-width: 100%; color: var(--fg); font-weight: 600; text-decoration: none; scroll-margin-block: calc(var(--bar) + var(--toolbar) + 0.75rem) 5rem; }
   a.title::after { content: ""; position: absolute; inset: 0; }
   /* The dot of the row's project (--c), before its title: ::after is the hit area */
   a.title::before { content: ""; display: inline-block; width: 7px; height: 7px; margin: 0 0.5rem 0.1em 0; border-radius: 50%; background: var(--c); vertical-align: middle; }
@@ -340,9 +342,10 @@
   .pages .icon-btn { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow-sm); }
   .pages .range { color: var(--faint); margin-right: 0.35rem; }
 
-  .sort { flex: none; }
+  /* The sort gives way, its words cut off, where the bar is too narrow for all */
+  .sort { flex: 0 1 auto; min-width: 0; }
   .sort select {
-    height: 32px; padding: 0 1.9rem 0 0.85rem; font: inherit; font-size: 0.8rem; color: var(--muted); cursor: pointer;
+    max-width: 100%; text-overflow: ellipsis; height: 32px; padding: 0 1.9rem 0 0.85rem; font: inherit; font-size: 0.8rem; color: var(--muted); cursor: pointer;
     background: var(--panel) var(--chevron) no-repeat right 0.6rem center / 14px;
     border: 1px solid var(--line); border-radius: 999px; appearance: none;
   }
@@ -355,7 +358,6 @@
   }
   @media (hover: none) { .keys { display: none; } }
 
-  /* The action bar that floats at the bottom while items are selected */
   .toasts { position: fixed; right: 16px; bottom: 1.25rem; z-index: 40; display: grid; gap: 0.5rem; justify-items: end; pointer-events: none; }
   .toast {
     display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.95rem; font-size: 0.84rem; font-weight: 550;
@@ -370,14 +372,20 @@
     flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.4rem; height: 2.75rem; padding: 0 0.3rem 0 1rem;
     background: var(--panel); border-radius: 999px; box-shadow: inset 0 0 0 2px var(--ink);
   }
-  .bulk-count { margin-right: 0.4rem; font-size: 0.84rem; font-weight: 650; white-space: nowrap; }
+  /* The count gives way first, cut off, where the bar is too narrow for all */
+  .bulk-count { min-width: 0; margin-right: 0.4rem; overflow: hidden; text-overflow: ellipsis; font-size: 0.84rem; font-weight: 650; white-space: nowrap; }
   .bulk .btn { flex: none; height: 2.1rem; padding: 0 0.8rem; border-radius: 999px; box-shadow: none; white-space: nowrap; }
   .bulk .btn.clear { margin-left: auto; }
   .bulk .btn.danger { color: var(--on-danger); background: var(--danger); border-color: transparent; }
   .bulk .btn.danger.armed { outline: 2px solid color-mix(in srgb, var(--danger) 50%, transparent); outline-offset: 2px; }
-  /* A delete pressed once asks in its longer words, the other buttons out of its way (they come back as it is let go) */
-  .bulk:has(.armed) > .btn:not(.armed) { display: none; }
+  /* A delete pressed once asks in its longer words, the other buttons but the clearing out of its way (they come back as it is
+     let go; the clearing lets it go where a click does not move the focus, as on Safari) */
+  .bulk:has(.armed) > .btn:not(.armed, .clear) { display: none; }
   /* A bar too narrow for the words shows the buttons' icons alone, the words left for screen readers */
+  /* A bar too narrow for the kinds' counts, the sort and the add button side by side drops the counts */
+  @container bar (max-width: 27rem) {
+    .tabs .n { display: none; }
+  }
   @container bar (max-width: 46rem) {
     .bulk .btn:not(.armed) .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .bulk .btn:not(.armed) { padding: 0 0.6rem; }
@@ -432,6 +440,7 @@
     .shelf, .shelf:is(:hover, :focus-within) {
       position: static; display: flex; gap: 6px; max-height: none; overflow: auto hidden; padding: 4px; scrollbar-width: none;
     }
+    .shelf::-webkit-scrollbar { display: none; }
     .shelf .views, .shelf .chips, #shelf-tags, #shelf-projects { display: flex; flex: none; gap: 6px; }
     .shelf .views button, .shelf .chip {
       flex: none; width: auto; padding: 0.35rem 0.8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); white-space: nowrap;
