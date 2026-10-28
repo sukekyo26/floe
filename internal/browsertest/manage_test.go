@@ -362,6 +362,10 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("setProject('p')")
 	out = append(out, b.eval("document.getElementById('shelf-projects').hidden"))
 	b.eval("setProject('')")
+	// A project's dot is of its name's hue, the values measured on develop before chip took tags too; all has none.
+	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
+		{ slug: 'b', title: 'Beta', description: '', project: 'floe', createdAt: at(1), updatedAt: at(7) }]`))
+	out = append(out, b.eval("[...document.querySelectorAll('#chips .chip')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--h')).join(',')"))
 	// The favourites count their own: their count, their projects, and none shown when there are none.
 	b.eval(stub(`[{ slug: 'c', title: 'Gamma', description: '', project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'b', title: 'Beta', description: '', project: 'q', createdAt: at(1), updatedAt: at(8) }]`))
@@ -485,7 +489,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"false true", "Alpha", "false true", "false false true", "false true", "true", "true",
 		"true", "DELETE /api/artifacts/a", "cd",
 		msg("ui_created_at", date), "true", msg("ui_registered_at", date),
-		"true true", "false",
+		"true true", "false", ":,floe:99,p:329",
 		msg("ui_count_all", 1) + " true",
 		"empty-favorites", "all-archived", "archived ?archived=1", "archived ?archived=1",
 		"true false", "?tab=links true 1 New", "true",
