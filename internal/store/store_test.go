@@ -248,6 +248,62 @@ func TestPublishKeepsTitle(t *testing.T) {
 	}
 }
 
+// An edit archives a page and gives it back, its updatedAt kept, and a rename keeps it archived; publishing again,
+// a stored page or a link, gives it back to the list but keeps it a favourite.
+func TestArchive(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	before := s.ReadMeta("d").UpdatedAt
+	for _, v := range []bool{true, true, false, true} {
+		if _, err := s.Edit("d", store.Edit{Archived: ptr(v)}); err != nil {
+			t.Fatal(err)
+		}
+		if m := s.ReadMeta("d"); m.Archived != v || m.UpdatedAt != before {
+			t.Errorf("archived %v: %+v", v, m)
+		}
+	}
+	if _, err := s.Edit("d", store.Edit{Slug: ptr("e"), Favorite: ptr(true)}); err != nil {
+		t.Fatal(err)
+	}
+	if m := s.ReadMeta("e"); m == nil || !m.Archived {
+		t.Errorf("renamed: %+v", m)
+	}
+	publish(t, s, dw, "e.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	if m := s.ReadMeta("e"); m.Archived || !m.Favorite {
+		t.Errorf("published again: %+v", m)
+	}
+
+	home := filepath.Dir(root)
+	dir := filepath.Join(home, "h")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "h.html"), []byte("<title>H</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := func() {
+		t.Helper()
+		e, err := s.PrepareLink(t.Context(), dw, filepath.Join(dir, "h.html"), store.Options{}, "", home)
+		if err == nil {
+			err = s.Save(e)
+		}
+		if err != nil {
+			t.Fatal(told(err, root))
+		}
+	}
+	link()
+	if _, err := s.Edit("h", store.Edit{Archived: ptr(true)}); err != nil {
+		t.Fatal(err)
+	}
+	link()
+	if m := s.ReadMeta("h"); m.Archived {
+		t.Errorf("linked again: %+v", m)
+	}
+}
+
 // A slug that cannot be one is no page, whatever reads or writes it: none leads out of the store.
 func TestSlugIsNoPath(t *testing.T) {
 	t.Parallel()

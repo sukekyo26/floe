@@ -374,7 +374,8 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, erro
 }
 
 // newMeta keeps what was set on the management page (favourite, title, project), the description and
-// createdAt from base; --title and --description win.
+// createdAt from base, but not archived: a page published again comes back to the list. --title and
+// --description win.
 func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta {
 	keepTitle := opts.Title == nil && base.TitleEdited
 	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
@@ -391,6 +392,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",
 		Favorite:      base.Favorite,
+		Archived:      false,
 		CreatedAt:     cmp.Or(base.CreatedAt, now),
 		UpdatedAt:     now,
 	}
@@ -680,6 +682,7 @@ type Edit struct {
 	Project     *string
 	Slug        *string
 	Favorite    *bool
+	Archived    *bool
 }
 
 // Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
@@ -708,6 +711,9 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	}
 	if ed.Favorite != nil {
 		m.Favorite = *ed.Favorite
+	}
+	if ed.Archived != nil {
+		m.Archived = *ed.Archived
 	}
 	if ed.Project != nil {
 		// "/" is the management page's value for "no project".

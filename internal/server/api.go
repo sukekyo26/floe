@@ -241,13 +241,13 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// stringFields sets each of fields that input sends to its value, empty or not, leaving the rest nil;
-// false when one sent is not a string. The store trims them.
-func stringFields(input map[string]json.RawMessage, fields map[string]**string) bool {
+// fields sets each of fields that input sends to its value, empty or not, leaving the rest nil; false when
+// one sent is not a T. The store trims strings.
+func fields[T any](input map[string]json.RawMessage, fields map[string]**T) bool {
 	for key, field := range fields {
 		if raw, ok := input[key]; ok {
-			v, isString := decode[string](raw)
-			if !isString {
+			v, isT := decode[T](raw)
+			if !isT {
 				return false
 			}
 			*field = &v
@@ -264,7 +264,7 @@ func decode[T any](raw json.RawMessage) (T, bool) {
 	return t, ok
 }
 
-// edit changes what the management page sends (title, description, project, URL name, favourite).
+// edit changes what the management page sends (title, description, project, URL name, favourite, archived).
 func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if !store.ValidSlug(slug) {
@@ -281,19 +281,15 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var ed store.Edit
-	if !stringFields(input, map[string]**string{
+	if !fields(input, map[string]**string{
 		"title": &ed.Title, "description": &ed.Description, "project": &ed.Project, "slug": &ed.Slug,
 	}) {
 		send(w, http.StatusBadRequest, "send the title, description, project and slug as strings")
 		return
 	}
-	if raw, ok := input["favorite"]; ok {
-		v, isBool := decode[bool](raw)
-		if !isBool {
-			send(w, http.StatusBadRequest, "send favorite as true or false")
-			return
-		}
-		ed.Favorite = &v
+	if !fields(input, map[string]**bool{"favorite": &ed.Favorite, "archived": &ed.Archived}) {
+		send(w, http.StatusBadRequest, "send favorite and archived as true or false")
+		return
 	}
 	to, err := s.cfg.Store.Edit(slug, ed)
 	if errors.Is(err, store.ErrNotFound) {

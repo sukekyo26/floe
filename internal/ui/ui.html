@@ -128,18 +128,20 @@
   .chip.project::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--glyph-fg); }
   .chip .n { font: 0.68rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
   .chip.none { border-style: dashed; }
-  /* Favourites are a separate condition combined with the project, so they are an on/off switch shaped unlike the chips, set apart by a line */
-  .fav-toggle {
+  /* Favourites and archived are separate conditions combined with the project, so they are on/off switches shaped unlike the chips, set apart by a line */
+  .toggle {
     display: inline-flex; align-items: center; gap: 0.4rem; flex: none; padding: 0.22rem 0.7rem 0.22rem 0.55rem; font-size: 0.8rem; color: var(--muted);
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px; transition: background-color 0.15s, border-color 0.15s, color 0.15s;
   }
-  .fav-toggle:hover { color: var(--fg); border-color: var(--faint); }
-  .fav-toggle svg { width: 14px; height: 14px; color: var(--faint); }
-  .fav-toggle .n { font: 0.68rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
-  .fav-toggle[aria-checked="true"] {
-    color: var(--fg); background: color-mix(in srgb, var(--star) 14%, var(--panel)); border-color: color-mix(in srgb, var(--star) 55%, transparent);
+  .toggle:hover { color: var(--fg); border-color: var(--faint); }
+  .toggle svg { width: 14px; height: 14px; color: var(--faint); }
+  .toggle .n { font: 0.68rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+  .toggle[aria-checked="true"] { color: var(--fg); background: var(--subtle); border-color: var(--faint); }
+  .toggle[aria-checked="true"] svg { color: var(--fg); }
+  #fav[aria-checked="true"] {
+    background: color-mix(in srgb, var(--star) 14%, var(--panel)); border-color: color-mix(in srgb, var(--star) 55%, transparent);
   }
-  .fav-toggle[aria-checked="true"] svg { color: var(--star); fill: currentColor; }
+  #fav[aria-checked="true"] svg { color: var(--star); fill: currentColor; }
   .filters .divider { flex: none; width: 1px; height: 1.25rem; background: var(--line); }
   .chip[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
   .chip[aria-pressed="true"] .n { color: inherit; opacity: 0.65; }
@@ -370,7 +372,8 @@
       </button>
     </div>
     <div class="filters">
-      <button type="button" class="fav-toggle" id="fav" role="switch" aria-checked="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>{{.Msg "ui_favorites_only"}}<span class="n"></span></button>
+      <button type="button" class="toggle" id="fav" role="switch" aria-checked="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>{{.Msg "ui_favorites_only"}}<span class="n"></span></button>
+      <button type="button" class="toggle" id="archived" role="switch" aria-checked="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg>{{.Msg "ui_archived_only"}}<span class="n"></span></button>
       <span class="divider" aria-hidden="true"></span>
       <div class="chips" id="chips" role="group" aria-label="{{.Msg "ui_project"}}"></div>
       <span class="count" id="count"></span>
@@ -397,6 +400,15 @@
       <strong>{{.Msg "ui_empty_links"}}</strong>
       <p>{{.Msg "ui_empty_links_hint"}}</p>
       <p><code>floe publish &lt;file.html&gt; --link</code></p>
+    </div>
+    <div class="state" id="all-archived" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg>
+      <strong></strong>
+      <p><button type="button" class="link-btn" id="show-archived">{{.Msg "ui_show_archived"}}</button></p>
+    </div>
+    <div class="state" id="empty-archived" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg>
+      <strong></strong>
     </div>
     <div class="state" id="nomatch" hidden>
       <strong>{{.Msg "ui_nomatch"}}</strong>
@@ -427,6 +439,7 @@
     <span class="bulk-count" id="bulk-count" aria-live="polite"></span>
     <button type="button" class="btn" id="bulk-page">{{.Msg "ui_select_page"}}</button>
     <button type="button" class="btn" id="bulk-clear">{{.Msg "ui_clear_selection"}}</button>
+    <button type="button" class="btn" id="bulk-archive"></button>
     <button type="button" class="btn danger" id="bulk-delete"></button>
   </div>
 </main>
@@ -525,6 +538,9 @@
       <a class="icon-btn download" title="{{.Msg "ui_download"}}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
       </a>
+      <button type="button" class="icon-btn archive">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg>
+      </button>
       <button type="button" class="icon-btn delete">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg>
         <span class="label"></span>
@@ -569,6 +585,8 @@
   });
   // Stored pages (pages) and links registered by absolute path (links) are on separate tabs
   const inTab = (a, t = tab) => Boolean(a.path) === (t === 'links');
+  // The entries of a list: of its tab, and archived or not as it is. Every count and list goes through this, so that the archived stay off the rest
+  const inView = (a, state) => inTab(a, state.tab) && Boolean(a.archived) === state.archived;
   // Pages from before the project was recorded. A project is a directory name without /, so this cannot clash
   const NONE = '/';
   const SIZES = [10, 20, 50, 100];
@@ -592,9 +610,10 @@
       sort: Object.hasOwn(SORTS, p.get('sort')) ? p.get('sort') : 'updated',
       page: Math.max(1, Number.parseInt(p.get('page'), 10) || 1),
       fav: p.get('fav') === '1',
+      archived: p.get('archived') === '1',
     };
   }
-  let { tab, project, sort, page, fav } = readState(location.search);
+  let { tab, project, sort, page, fav, archived } = readState(location.search);
   // The selected slugs. Changing a filter or the tab clears them (so that nothing unseen is deleted); a selection across pages stays
   const selected = new Set();
   // LIMIT: changes to the list and a recovered connection are picked up by refetching every 3 s. If hundreds of entries make that heavy, push only the changes over SSE
@@ -647,7 +666,7 @@
   function syncUrl() {
     const url = new URL(location.href);
     const state = {
-      tab: tab === 'links' ? tab : '', fav: fav ? '1' : '', project, q: $('q').value.trim(), sort: sort === 'updated' ? '' : sort,
+      tab: tab === 'links' ? tab : '', fav: fav ? '1' : '', archived: archived ? '1' : '', project, q: $('q').value.trim(), sort: sort === 'updated' ? '' : sort,
       page: page > 1 ? String(page) : '',
     };
     for (const [name, value] of Object.entries(state)) {
@@ -665,7 +684,7 @@
   // Picks and orders the entries by tab, project, search and sort; shared by the list and by moving between pages in the frame
   function arrange(state) {
     const q = state.q.trim().toLowerCase();
-    const shown = items.filter((a) => inTab(a, state.tab) && (!state.fav || a.favorite)
+    const shown = items.filter((a) => inView(a, state) && (!state.fav || a.favorite)
       && (!state.project || (a.project ?? NONE) === state.project)
       && (!q || [a.title, a.description, a.slug, a.project, a.path].join(' ').toLowerCase().includes(q)));
     return SORTS[state.sort] ? shown.sort(SORTS[state.sort]) : shown;
@@ -728,6 +747,7 @@
   function disarmBulk() {
     $('bulk-delete').classList.remove('armed');
     $('bulk-delete').textContent = t(`ui_${tabKind()}`);
+    $('bulk-archive').textContent = t(archived ? 'ui_unarchive' : 'ui_archive');
   }
 
   function renderBulk() {
@@ -746,17 +766,44 @@
     }
   }
 
-  async function removeSelected() {
-    const btn = $('bulk-delete');
-    if (arm(btn, t(`ui_${tabKind()}_bulk_confirm`, selected.size))) return;
+  // Returns the reason of a failure, as deleteOne does
+  async function patchOne(slug, body) {
+    try {
+      const res = await api(`/api/artifacts/${slug}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return res.ok ? '' : t('ui_http_error', await res.text(), res.status);
+    } catch (e) {
+      return e.message;
+    }
+  }
+
+  // Acts on every selected entry and tells how many it did, done(n), and how many failed, failed(n, the first reason). Those that failed stay selected
+  async function actOnSelected(act, done, failed) {
     const slugs = [...selected];
-    const reasons = await Promise.all(slugs.map(deleteOne));
+    const reasons = await Promise.all(slugs.map(act));
     slugs.forEach((slug, i) => { if (!reasons[i]) selected.delete(slug); });
-    const failed = reasons.filter(Boolean);
-    if (failed.length < slugs.length) toast(t(`ui_${tabKind()}_bulk_done`, slugs.length - failed.length));
-    showError(failed.length ? t(`ui_${tabKind()}_bulk_failed`, failed.length, failed[0]) : '');
+    const why = reasons.filter(Boolean);
+    if (why.length < slugs.length) toast(done(slugs.length - why.length));
+    showError(why.length ? failed(why.length, why[0]) : '');
     await load();
     renderBulk();
+  }
+
+  async function removeSelected() {
+    if (arm($('bulk-delete'), t(`ui_${tabKind()}_bulk_confirm`, selected.size))) return;
+    await actOnSelected(deleteOne, (n) => t(`ui_${tabKind()}_bulk_done`, n), (n, why) => t(`ui_${tabKind()}_bulk_failed`, n, why));
+  }
+
+  async function archiveSelected() {
+    const to = !archived;
+    await actOnSelected(
+      (slug) => patchOne(slug, { archived: to }),
+      (n) => t(to ? 'ui_archive_bulk_done' : 'ui_unarchive_bulk_done', n),
+      (n, why) => t(to ? 'ui_archive_bulk_failed' : 'ui_unarchive_bulk_failed', n, why),
+    );
   }
 
   // Relative times ("3 minutes ago") advance without redrawing the list
@@ -888,6 +935,10 @@
       open.hidden = true;
       dl.hidden = true;
     }
+    const arc = li.querySelector('.archive');
+    arc.title = t(a.archived ? 'ui_unarchive' : 'ui_archive');
+    arc.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
+    arc.addEventListener('click', () => toggleArchived(a));
     const del = li.querySelector('.delete');
     disarm(a, del);
     del.addEventListener('click', () => remove(a, del));
@@ -896,18 +947,23 @@
   }
 
   async function toggleFavorite(a) {
-    try {
-      const res = await api(`/api/artifacts/${a.slug}`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ favorite: !a.favorite }),
-      });
-      if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
-    } catch (e) {
-      showError(t('ui_favorite_failed', e.message));
+    const reason = await patchOne(a.slug, { favorite: !a.favorite });
+    if (reason) {
+      showError(t('ui_favorite_failed', reason));
       return;
     }
     toast(t(a.favorite ? 'ui_unfavorited' : 'ui_favorited', a.title));
+    await load();
+  }
+
+  async function toggleArchived(a) {
+    const reason = await patchOne(a.slug, { archived: !a.archived });
+    if (reason) {
+      showError(t(a.archived ? 'ui_unarchive_failed' : 'ui_archive_failed', a.title, reason));
+      return;
+    }
+    showError('');
+    toast(t(a.archived ? 'ui_unarchive_done' : 'ui_archive_done', a.title));
     await load();
   }
 
@@ -944,42 +1000,45 @@
     e.preventDefault();
     const btn = $('edit-submit');
     btn.disabled = true;
-    try {
-      const changes = Object.fromEntries(Object.entries(EDIT_FIELDS)
-        .filter(([key, id]) => $(id).value.trim() !== (editing[key] ?? ''))
-        .map(([key, id]) => [key, $(id).value]));
-      const res = await api(`/api/artifacts/${editing.slug}`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(changes),
-      });
-      if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
-      $('edit-dialog').close();
-      toast(t('ui_saved'));
-      await load();
-    } catch (err) {
-      $('edit-error').textContent = t('ui_save_failed', err.message);
+    const changes = Object.fromEntries(Object.entries(EDIT_FIELDS)
+      .filter(([key, id]) => $(id).value.trim() !== (editing[key] ?? ''))
+      .map(([key, id]) => [key, $(id).value]));
+    const reason = await patchOne(editing.slug, changes);
+    btn.disabled = false;
+    if (reason) {
+      $('edit-error').textContent = t('ui_save_failed', reason);
       $('edit-error').hidden = false;
-    } finally {
-      btn.disabled = false;
+      return;
     }
+    $('edit-dialog').close();
+    toast(t('ui_saved'));
+    await load();
   }
 
   function render() {
     for (const b of document.querySelectorAll('.tabs button')) {
       b.setAttribute('aria-pressed', String(b.dataset.tab === tab));
-      b.querySelector('.n').textContent = items.filter((a) => inTab(a, b.dataset.tab)).length;
+      b.querySelector('.n').textContent = items.filter((a) => inView(a, { tab: b.dataset.tab, archived })).length;
     }
     $('add-open').hidden = tab !== 'links';
-    const list = items.filter((a) => inTab(a));
+    const list = items.filter((a) => inView(a, { tab, archived }));
     renderChips(list);
-    const shown = arrange({ tab, fav, project, q: $('q').value, sort });
+    const archivedHere = items.filter((a) => inView(a, { tab, archived: true })).length;
+    $('archived').setAttribute('aria-checked', String(archived));
+    $('archived').querySelector('.n').textContent = archivedHere;
+    const shown = arrange({ tab, fav, archived, project, q: $('q').value, sort });
     $('sort').value = sort;
     // Entries deleted elsewhere leave the selection
     for (const slug of selected) if (!list.some((a) => a.slug === slug)) selected.delete(slug);
     $('count').textContent = shown.length === list.length ? t('ui_count_all', list.length) : t('ui_count_shown', shown.length, list.length);
-    $('empty').hidden = tab !== 'pages' || list.length > 0;
-    $('empty-links').hidden = tab !== 'links' || list.length > 0;
+    // Empty: of the kind at all (how to add one), with all of it archived (the way to them), or in the archive
+    const empty = list.length === 0;
+    $('empty').hidden = !(empty && !archived && !archivedHere && tab === 'pages');
+    $('empty-links').hidden = !(empty && !archived && !archivedHere && tab === 'links');
+    $('all-archived').hidden = !(empty && !archived && archivedHere);
+    $('all-archived').querySelector('strong').textContent = t(tab === 'links' ? 'ui_links_all_archived' : 'ui_pages_all_archived', archivedHere);
+    $('empty-archived').hidden = !(empty && archived);
+    $('empty-archived').querySelector('strong').textContent = t(tab === 'links' ? 'ui_links_none_archived' : 'ui_pages_none_archived');
     $('nomatch').hidden = list.length === 0 || shown.length > 0;
     // If deleting empties the last page, go back to the last one left
     const pages = Math.max(1, Math.ceil(shown.length / size));
@@ -1001,7 +1060,7 @@
     }
     const openable = (state) => arrange(state).filter((x) => !x.missing);
     let order = openable(readState(saved));
-    if (!order.some((x) => x.slug === a.slug)) order = openable({ ...readState(''), tab: a.path ? 'links' : 'pages' });
+    if (!order.some((x) => x.slug === a.slug)) order = openable({ ...readState(''), tab: a.path ? 'links' : 'pages', archived: Boolean(a.archived) });
     const at = order.findIndex((x) => x.slug === a.slug);
     for (const [id, x, named, none] of [
       ['frame-prev', order[at - 1], 'ui_prev_named', 'ui_no_prev'], ['frame-next', order[at + 1], 'ui_next_named', 'ui_no_next'],
@@ -1151,6 +1210,14 @@
       fav = !fav;
       refilter();
     });
+    $('archived').addEventListener('click', () => {
+      archived = !archived;
+      refilter();
+    });
+    $('show-archived').addEventListener('click', () => {
+      archived = true;
+      refilter();
+    });
     $('sort').addEventListener('change', () => {
       sort = $('sort').value;
       refilter();
@@ -1165,6 +1232,7 @@
       for (const sel of $('list').querySelectorAll('.sel')) sel.checked = false;
       renderBulk();
     });
+    $('bulk-archive').addEventListener('click', archiveSelected);
     $('bulk-delete').addEventListener('click', removeSelected);
     $('bulk-delete').addEventListener('blur', disarmBulk);
     setInterval(refreshTimes, 60000);

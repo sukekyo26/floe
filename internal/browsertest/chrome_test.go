@@ -2,7 +2,9 @@
 // keep a page in its sandbox, that a script part runs under it, that the frame moves a tab for its links and
 // reloads a republished page, and that every theme's text can be read and wraps at a phone's width.
 //
-// LIMIT: the management page's own behaviour (list, filters in the URL, delete and its error text, edit, favourite, selection, add, pages, the frame's prev/next and back) is not checked in a browser; port develop's TestUIManage and TestUIExtras in a PR that changes ui.html's script.
+// LIMIT: the management page against a real server (its list, delete and its error text, the connection's dot, add and its
+// refusals, pages) is not checked in a browser, only against a stubbed list (TestUIExtras); port develop's TestUIManage in a PR that
+// changes those.
 // LIMIT: a frame URL's #part (written by the frame, kept on reload and Back) is not checked in a browser; port develop's TestUIFrameHash in a PR that changes leaveFrame or the frame's hash handling.
 // LIMIT: the diagram's zoom, pan and keys are not checked in a browser; port develop's TestUIZoom in a PR that changes zoom.js.
 // LIMIT: the order of floe's CSS layers, @scope and a part's looks are not checked as computed styles; port develop's TestUILayers in a PR that changes how draw assembles the page's CSS.
@@ -140,8 +142,8 @@ func startChrome(path string) (context.Context, error) {
 }
 
 // newBrowser opens a tab of the shared Chrome in a browser context of its own (its own cookies and storage),
-// whose requests ask for English.
-func newBrowser(t *testing.T, base string) *browser {
+// whose requests ask for lang (Accept-Language) as a reader of that language would.
+func newBrowser(t *testing.T, base string, lang i18n.Lang) *browser {
 	t.Helper()
 
 	parent, err := startChrome(chrome(t))
@@ -153,7 +155,7 @@ func newBrowser(t *testing.T, base string) *browser {
 	if _, err := chromedp.Call(ctx, network.Enable, network.EnableParams{}); err != nil {
 		t.Fatalf("open a tab: %v", err)
 	}
-	headers := network.SetExtraHTTPHeadersParams{Headers: network.Headers{"Accept-Language": string(i18n.English)}}
+	headers := network.SetExtraHTTPHeadersParams{Headers: network.Headers{"Accept-Language": string(lang)}}
 	if _, err := chromedp.Call(ctx, network.SetExtraHTTPHeaders, headers); err != nil {
 		t.Fatalf("set Accept-Language: %v", err)
 	}
@@ -300,7 +302,7 @@ func newSite(t *testing.T) *site {
 	t.Helper()
 
 	s := servetest.Start(t, nil)
-	return &site{Site: s, b: newBrowser(t, s.Base)}
+	return &site{Site: s, b: newBrowser(t, s.Base, i18n.English)}
 }
 
 // write writes text to rel under home and returns its path.
