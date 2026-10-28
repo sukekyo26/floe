@@ -7,7 +7,8 @@
 // changes those.
 // LIMIT: a frame URL's #part (written by the frame, kept on reload and Back) is not checked in a browser; port develop's TestUIFrameHash in a PR that changes leaveFrame or the frame's hash handling.
 // LIMIT: the diagram's zoom, pan and keys are not checked in a browser; port develop's TestUIZoom in a PR that changes zoom.js.
-// LIMIT: the order of floe's CSS layers, @scope and a part's looks are not checked as computed styles; port develop's TestUILayers in a PR that changes how draw assembles the page's CSS.
+// LIMIT: the order of floe's CSS layers, @scope and a part's looks are not checked as computed styles, but for the gap between
+// the diagram's toolbar and frame (TestUIDiagram); port develop's TestUILayers in a PR that changes how draw assembles the page's CSS.
 package browsertest_test
 
 import (
