@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing/fstest"
@@ -393,6 +394,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		PublishedFrom: "",
 		Favorite:      base.Favorite,
 		Archived:      false,
+		Tags:          base.Tags,
 		CreatedAt:     cmp.Or(base.CreatedAt, now),
 		UpdatedAt:     now,
 	}
@@ -683,11 +685,13 @@ type Edit struct {
 	Slug        *string
 	Favorite    *bool
 	Archived    *bool
+	Tags        *[]string
 }
 
 // Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
 // the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
 // data file's title: when published (a stored page), else to the slug; clearing the project drops it.
+// Tags are kept as tagged makes them.
 // The page drawn stays as it is, its title and slug as when it was drawn.
 func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	from, ok := s.dir(slug)
@@ -715,6 +719,9 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	if ed.Archived != nil {
 		m.Archived = *ed.Archived
 	}
+	if ed.Tags != nil {
+		m.Tags = tagged(*ed.Tags)
+	}
 	if ed.Project != nil {
 		// "/" is the management page's value for "no project".
 		if strings.TrimSpace(*ed.Project) == "/" {
@@ -741,6 +748,19 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 		}
 	}
 	return to, nil
+}
+
+// tagged is tags as a page keeps them: each trimmed, without the empty and a name the second time, in the
+// order given; nil for none.
+func tagged(tags []string) []string {
+	var kept []string
+	for _, tag := range tags {
+		tag = strings.TrimSpace(tag)
+		if tag != "" && !slices.Contains(kept, tag) {
+			kept = append(kept, tag)
+		}
+	}
+	return kept
 }
 
 // setTitle sets the title of m, whose slug the edit renames to: an empty one gives back the page's

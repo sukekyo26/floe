@@ -237,16 +237,17 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 // Edit is a change of a page, as the management page and floe archive send it: store.Edit with its keys, which
 // edit converts to it (a field the two do not share fails the build). A field left out or null is not changed.
 type Edit struct {
-	Title       *string `json:"title,omitempty"`
-	Description *string `json:"description,omitempty"`
-	Project     *string `json:"project,omitempty"`
-	Slug        *string `json:"slug,omitempty"`
-	Favorite    *bool   `json:"favorite,omitempty"`
-	Archived    *bool   `json:"archived,omitempty"`
+	Title       *string   `json:"title,omitempty"`
+	Description *string   `json:"description,omitempty"`
+	Project     *string   `json:"project,omitempty"`
+	Slug        *string   `json:"slug,omitempty"`
+	Favorite    *bool     `json:"favorite,omitempty"`
+	Archived    *bool     `json:"archived,omitempty"`
+	Tags        *[]string `json:"tags,omitzero"`
 }
 
 // edit changes a page as Edit, from the management page or floe archive, sends: its title, description, project, URL
-// name, favourite or archived.
+// name, favourite, archived or tags.
 func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if !store.ValidSlug(slug) {
