@@ -341,6 +341,8 @@ func TestEditKeys(t *testing.T) {
 	type fields struct {
 		title, description, project string
 		favorite, archived          bool
+		// The tags joined by NUL, which no tag sent here holds: a comma would tell ["a,b"] from ["a","b"] no more.
+		tags string
 	}
 	look := func(slug string) fields {
 		t.Helper()
@@ -349,7 +351,7 @@ func TestEditKeys(t *testing.T) {
 		if m == nil {
 			t.Fatalf("no page %q", slug)
 		}
-		return fields{m.Title, m.Description, m.Project, m.Favorite, m.Archived}
+		return fields{m.Title, m.Description, m.Project, m.Favorite, m.Archived, strings.Join(m.Tags, "\x00")}
 	}
 	now := look("d")
 	for _, c := range []struct {
@@ -362,9 +364,15 @@ func TestEditKeys(t *testing.T) {
 		{`{"favorite":true}`, func(f *fields) { f.favorite = true }},
 		{`{"archived":true}`, func(f *fields) { f.archived = true }},
 		{`{"archived":null}`, func(*fields) {}},
+		{`{"tags":["b"," a ","b",""]}`, func(f *fields) { f.tags = "b\x00a" }},
+		{`{"tags":["a,b"]}`, func(f *fields) { f.tags = "a,b" }},
+		{`{"tags":null}`, func(*fields) {}},
+		{`{"tags":[]}`, func(f *fields) { f.tags = "" }},
 		// Cleared, the title is the data file's again and the project is dropped.
 		{`{"title":""}`, func(f *fields) { f.title = "T" }},
 		{`{"project":""}`, func(f *fields) { f.project = "" }},
+		// Kept on, for the rename below to keep.
+		{`{"tags":["k"]}`, func(f *fields) { f.tags = "k" }},
 	} {
 		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(c.body)), http.StatusOK, `{"slug":"d"}`)
 		c.change(&now)
@@ -372,12 +380,18 @@ func TestEditKeys(t *testing.T) {
 			t.Errorf("%s: %+v, want %+v", c.body, got, now)
 		}
 	}
-	for _, body := range []string{`{"archivd":true}`, `{"title":"T2","tags":["a"]}`} {
+	for _, body := range []string{`{"archivd":true}`, `{"title":"T2","color":"red"}`} {
 		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(body)), http.StatusBadRequest,
 			"unknown object member name")
 		if got := look("d"); got != now {
 			t.Errorf("%s changed the page: %+v, want %+v", body, got, now)
 		}
+	}
+	for body, told := range map[string]string{
+		`{"tags":"a"}`: `unmarshal JSON string into Go []string within "/tags"`,
+		`{"tags":[1]}`: `unmarshal JSON number into Go string within "/tags/0"`,
+	} {
+		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(body)), http.StatusBadRequest, told)
 	}
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/none", json.RawMessage(`{"x":1}`)), http.StatusBadRequest,
 		`unknown object member name "x"`)
@@ -389,6 +403,10 @@ func TestEditKeys(t *testing.T) {
 	yes := true
 	if b, err := json.Marshal(server.Edit{Archived: &yes}); err != nil || string(b) != `{"archived":true}` {
 		t.Errorf("floe archive sends %s, %v", b, err)
+	}
+	// Tags none is sent as such, which clears them.
+	if b, err := json.Marshal(server.Edit{Tags: &[]string{}}); err != nil || string(b) != `{"tags":[]}` {
+		t.Errorf("no tags sent as %s, %v", b, err)
 	}
 }
 

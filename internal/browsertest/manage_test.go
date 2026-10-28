@@ -11,6 +11,7 @@ import (
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/servetest"
@@ -368,6 +369,10 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("setProject('p')")
 	out = append(out, b.eval("document.getElementById('shelf-projects').hidden"))
 	b.eval("setProject('')")
+	// A project's dot is of its name's hue, the values measured on develop before chip took tags too; all has none.
+	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
+		{ slug: 'b', title: 'Beta', description: '', project: 'floe', createdAt: at(1), updatedAt: at(7) }]`))
+	out = append(out, b.eval("[...document.querySelectorAll('#chips .chip')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--h')).join(',')"))
 	// The favourites count their own: their count, their projects, and none shown when there are none.
 	b.eval(stub(`[{ slug: 'c', title: 'Gamma', description: '', project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'b', title: 'Beta', description: '', project: 'q', createdAt: at(1), updatedAt: at(8) }]`))
@@ -491,7 +496,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"false true", "Alpha", "false true", "false false true", "false true", "true", "true",
 		"true", "DELETE /api/artifacts/a", "cd",
 		msg("ui_created_at", date), "true", msg("ui_registered_at", date),
-		"true true", "false",
+		"true true", "false", ":,floe:99,p:329",
 		msg("ui_count_all", 1) + " true",
 		"empty-favorites", "all-archived", "archived ?archived=1", "archived ?archived=1",
 		"true false", "?tab=links true 1 New", "true",
@@ -503,6 +508,303 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		msg("ui_favorite_failed", "Failed to fetch"),
 		"Beta / true / false / " + msg("ui_archive"),
 		"  1 / 1", "false   1 / 1", "/a/c/  2 / 2",
+	}, "|"))
+}
+
+// tagsList is the list the stub answers for tags: pages with tags, one whose tag has a comma in it, one with none, and
+// an archived one with a tag of its own.
+const tagsList = `[
+	{ slug: 'a', title: 'Alpha', description: '', tags: ['設計', 'plan'], createdAt: at(1), updatedAt: at(9) },
+	{ slug: 'b', title: 'Beta', description: '', tags: ['plan'], createdAt: at(1), updatedAt: at(8) },
+	{ slug: 'c', title: 'Gamma', description: '', tags: ['設計、実装'], createdAt: at(1), updatedAt: at(7) },
+	{ slug: 'd', title: 'Delta', description: '', createdAt: at(1), updatedAt: at(6) },
+	{ slug: 'z', title: 'Zeta', description: '', tags: ['old', 'plan'], createdAt: at(1), updatedAt: at(5), archived: true },
+]`
+
+// TestUITags picks a tag on the shelf, by a row's tag, in the URL and on a narrow screen, counts the tags of the list
+// looked at, keeps the tag picked at 0 and lets it go with the other filters, searches tags, gives them in the edit
+// dialog and to those selected, and puts their names in as text, against a stubbed list.
+func TestUITags(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	inEveryLanguage(t, uiTags)
+}
+
+func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
+	t.Helper()
+
+	b := newBrowser(t, servetest.Start(t, nil).Base, lang)
+	b.navigate("/")
+	b.eval(stub(tagsList))
+	const rows = "[...document.querySelectorAll('#list li:not(.group)')].map((li) => li.dataset.slug).join('') + ' ' + (new URLSearchParams(location.search).get('tag') ?? '-')"
+	const shelf = "[...document.querySelectorAll('#tags .chip')].map((c) => c.textContent + ':' + c.getAttribute('aria-pressed')).join(',') + ' ' + document.getElementById('shelf-tags').hidden"
+	// Presses the shelf's tag plan, which picks it or lets it go.
+	pickPlan := func() {
+		b.eval("[...document.querySelectorAll('#tags .chip')].find((c) => c.dataset.tag === 'plan').click()")
+	}
+	search := func(q string) {
+		b.eval("(() => { const q = document.getElementById('q'); q.value = " + js(q) + "; q.dispatchEvent(new Event('input')); })()")
+	}
+	// A key as a keyboard presses it: its text on the key down, which a page's preventDefault then stops too
+	// (chromedp.KeyEvent sends the text as an event of its own, which nothing stops).
+	press := func(k string) {
+		t.Helper()
+
+		for _, e := range kb.Encode([]rune(k)[0]) {
+			if e.Type == kb.KeyChar {
+				continue
+			}
+			if e.Type == kb.KeyDown {
+				e.Text = map[string]string{kb.Enter: "\r", " ": " "}[k]
+			}
+			if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, *e); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	// The tag dialog's chips: name, state, the mark shown and count
+	const boxes = "[...document.querySelectorAll('#tag-boxes .tag-box')].map((l) => { const c = l.querySelector('input'); " +
+		"return [l.querySelector('.name').textContent, c.indeterminate ? 'some' : c.checked ? 'all' : 'none', " +
+		"getComputedStyle(l.querySelector('.mark'), '::before').content.replaceAll('\"', ''), l.querySelector('.n')?.textContent ?? ''].join(':'); }).join(',')"
+	const applies = "!document.getElementById('tag-apply').disabled"
+	selectOnly := func(slugs ...string) {
+		b.eval("document.getElementById('bulk-clear').click()")
+		for _, slug := range slugs {
+			b.eval("document.querySelector('#list li[data-slug=" + slug + "] .sel').click()")
+		}
+	}
+	box := func(name string) string {
+		return "[...document.querySelectorAll('#tag-boxes .tag-box')].find((l) => l.querySelector('.name').textContent === " + js(name) + ").querySelector('input')"
+	}
+
+	out := make([]string, 0, 40)
+	// The shelf names the tags of the list looked at by name, with their counts.
+	out = append(out, b.eval(shelf), b.eval(rows),
+		b.eval("[...document.querySelectorAll('#list li[data-slug=a] .tagpill')].map((p) => p.textContent + ':' + p.getAttribute('aria-label')).join(',')"),
+		b.eval("document.querySelector('#list li[data-slug=d] .tags').hidden"))
+	// Picked, the rows are its pages, as when the URL has it; picked again it is let go.
+	pickPlan()
+	out = append(out, b.eval(rows), b.eval(shelf))
+	b.navigate("/?tag=plan")
+	b.eval(stub(tagsList))
+	out = append(out, b.eval(rows))
+	pickPlan()
+	out = append(out, b.eval(rows))
+	b.eval("document.querySelector('.views [data-view=archived]').click()")
+	out = append(out, b.eval(shelf))
+	b.eval("document.querySelector('.views [data-view=all]').click()")
+	// A row's tag picks it; the tag picked already, the list stays, its selection too.
+	b.eval("document.querySelector('#list li[data-slug=c] .tagpill').click()")
+	out = append(out, b.eval(rows))
+	b.eval("document.querySelector('#list li[data-slug=c] .sel').click(); document.querySelector('#list li[data-slug=c] .tagpill').click()")
+	out = append(out, b.eval("document.getElementById('bulk-count').textContent"))
+	b.eval("document.getElementById('bulk-clear').click()")
+	// Searching finds a page by its tags.
+	b.eval("document.getElementById('clear').click()")
+	search("設計")
+	out = append(out, b.eval(rows))
+	search("")
+	// A tag picked stays at 0, until the filters are cleared.
+	pickPlan()
+	b.eval(stub(strings.ReplaceAll(tagsList, "'plan'", "'other'")))
+	out = append(out, b.eval(shelf), b.eval("document.getElementById('nomatch').hidden"))
+	b.eval("document.getElementById('clear').click()")
+	out = append(out, b.eval(rows))
+	b.eval(stub(tagsList))
+
+	// The edit dialog sends the tags written, split at commas; as opened, none, so that a name with a comma stays whole.
+	b.eval("document.querySelector('#list li[data-slug=a] .edit').click()")
+	out = append(out, b.eval("document.getElementById('edit-tags').value"))
+	b.eval("document.getElementById('edit-tags').value = '計画、 設計,'; document.getElementById('edit').requestSubmit()")
+	b.until("the edit dialog to close", "!document.getElementById('edit-dialog').open")
+	out = append(out, b.eval("calls.splice(0).join(',')"))
+	b.eval("document.querySelector('#list li[data-slug=c] .edit').click()")
+	b.eval("document.getElementById('edit-name').value = 'G2'; document.getElementById('edit').requestSubmit()")
+	b.until("the edit dialog to close", "!document.getElementById('edit-dialog').open")
+	out = append(out, b.eval("calls.splice(0).join(',')"))
+
+	// The tag dialog boxes every tag, those on the selected first: on all, on some (indeterminate, with how many), on none.
+	selectOnly("a", "b", "d")
+	b.eval("document.getElementById('bulk-tag').click()")
+	out = append(out, b.eval("document.getElementById('tag-title').textContent"), b.eval(boxes), b.eval(applies))
+	// With keys alone: Tab to a box, Space marks it. One on some goes some, all, none and back; the others all and none.
+	b.until("the find field to have focus", "document.activeElement.id === 'tag-find'")
+	press(kb.Tab)
+	// The chip reached shows the ring of its hidden box's focus.
+	out = append(out, b.eval("document.activeElement.closest('.tag-box').querySelector('.name').textContent + ' ' + "+
+		"getComputedStyle(document.activeElement.closest('.tag-box')).outlineStyle"))
+	marks := make([]string, 0, 4)
+	for range 4 {
+		press(" ")
+		marks = append(marks, b.eval(box("plan")+".indeterminate ? 'some' : "+box("plan")+".checked ? 'all' : 'none'")+":"+b.eval(applies))
+	}
+	out = append(out, strings.Join(marks, " "))
+	press(kb.Tab)
+	press(" ")
+	press(" ")
+	press(kb.Tab)
+	press(" ")
+	out = append(out, b.eval(boxes), b.eval(applies))
+	// Applied, each page whose tags change is sent them so, drawn once by the list read again before (changed since).
+	b.eval("window.renders = 0; window.draw = render; render = () => { renders++; draw(); }; list = list.replace('Delta', 'Delta 1')")
+	b.eval("document.getElementById('tag-apply').click()")
+	out = append(out, b.until("the tags to be applied", "document.getElementById('bulk').hidden && calls.splice(0).sort().join(',')"),
+		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_bulk_done", 3))+")"), b.eval("renders"))
+	b.eval("render = draw")
+	// A tag left on some is left as each page has it.
+	selectOnly("a", "c")
+	b.eval("document.getElementById('bulk-tag').click(); " + box("old") + ".click(); document.getElementById('tag-apply').click()")
+	out = append(out, b.until("the tag to be added", "document.getElementById('bulk').hidden && calls.splice(0).sort().join(',')"))
+	// The find field narrows the boxes; a name no tag has can be made one, marked all, by Enter, sending nothing.
+	selectOnly("b")
+	b.eval("document.getElementById('bulk-tag').click()")
+	b.until("the find field to have focus", "document.activeElement.id === 'tag-find'")
+	b.eval("(() => { const f = document.getElementById('tag-find'); f.value = 'la'; f.dispatchEvent(new Event('input')); })()")
+	out = append(out, b.eval(boxes)+" "+b.eval("document.getElementById('tag-new').hidden"))
+	b.eval("(() => { const f = document.getElementById('tag-find'); f.value = 'new'; f.dispatchEvent(new Event('input')); })()")
+	out = append(out, b.eval("document.getElementById('tag-new').textContent"))
+	press(kb.Enter)
+	out = append(out, b.eval(boxes), b.eval("[document.getElementById('tag-dialog').open, calls.length, "+applies+"].join(' ')"))
+	// Cancelled after a change, the dialog opens again with nothing to apply.
+	b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.getElementById('bulk-tag').click()")
+	out = append(out, b.eval(applies))
+	b.eval("document.querySelector('#tag-dialog [data-close]').click()")
+	// A page removed since the list was read leaves the selection unsent.
+	selectOnly("b")
+	b.eval("list = JSON.stringify(JSON.parse(list).filter((a) => a.slug !== 'b')); document.getElementById('bulk-tag').click(); " +
+		box("old") + ".click(); document.getElementById('tag-apply').click()")
+	out = append(out, b.until("the gone page to drop", "document.getElementById('bulk').hidden && "+
+		"[document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_bulk_none"))+"), calls.length].join(' ')"))
+	b.eval(stub(tagsList))
+	// Narrowed to a tag, the edit dialog's field holds it whole: pressed, the field offers the other names (reported by the user).
+	pickPlan()
+	b.eval("document.querySelector('#list li[data-slug=b] .edit').click()")
+	// The test's window is low enough to hide the field under the dialog's fold.
+	b.until("the edit dialog to stop moving", "document.getElementById('edit-dialog').getAnimations().length === 0")
+	b.eval("document.getElementById('edit-tags').scrollIntoView({ block: 'center' })")
+	r := b.rect("document.getElementById('edit-tags')")
+	b.click(r.X+r.Width-8, r.Y+r.Height/2)
+	out = append(out, b.until("the names on a press", "document.getElementById('edit-tags-names').matches(':popover-open') && "+
+		"[...document.querySelectorAll('#edit-tags-names [role=option]')].map((o) => o.textContent).join(',')"))
+	press(kb.ArrowDown)
+	press(kb.Enter)
+	out = append(out, b.eval("document.getElementById('edit-tags').value"))
+	// Pressed after a name begun, the names are of what is begun where the caret lands, after focus put it at the start.
+	b.eval("document.getElementById('edit-tags').blur(); document.getElementById('edit-tags').value = 'plan, 設'")
+	b.click(r.X+r.Width-8, r.Y+r.Height/2)
+	out = append(out, b.until("the names where pressed", "document.getElementById('edit-tags-names').matches(':popover-open') && "+
+		"[...document.querySelectorAll('#edit-tags-names [role=option]')].map((o) => o.textContent).join(',')"))
+	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
+	pickPlan()
+
+	// A narrow screen's select has the tags, which pick and let go as the shelf's do.
+	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 390, Height: 844, DeviceScaleFactor: 1, Mobile: true}
+	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
+		t.Fatal(err)
+	}
+	choose := func(value string) {
+		b.eval("(() => { const s = document.getElementById('view-select'); s.value = " + js(value) + "; s.dispatchEvent(new Event('change')); })()")
+	}
+	out = append(out, b.eval("[...document.getElementById('view-select').options].filter((o) => o.value.startsWith('tag:')).map((o) => o.value).join(',')"))
+	choose("tag:plan")
+	out = append(out, b.eval(rows), b.eval("document.getElementById('view-select').options[0].textContent.includes('plan')"))
+	choose("tag:plan")
+	out = append(out, b.eval(rows))
+	if _, err := chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// A tag's name goes in as text, wherever it shows, and counts as any.
+	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['<b>x</b>', '__proto__'], createdAt: at(1), updatedAt: at(9) }]`))
+	out = append(out, b.eval("[...document.querySelectorAll('#tags .chip')].map((c) => c.textContent).sort().join(',')"),
+		b.eval("[...document.querySelectorAll('#list .tagpill')].map((p) => p.textContent).join(',')"),
+		b.eval("document.querySelectorAll('.shelf b, #list b').length"))
+	selectOnly("a")
+	b.eval("document.getElementById('bulk-tag').click()")
+	out = append(out, b.eval(boxes)+" "+b.eval("document.querySelectorAll('#tag-boxes b').length"))
+	b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.getElementById('bulk-clear').click()")
+
+	// The tags fields suggest the names of every page, as a combobox, with the keyboard alone or the mouse.
+	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['設計', 'plan'], createdAt: at(1), updatedAt: at(9) },
+		{ slug: 'b', title: 'Beta', description: '', tags: ['計画', '<b>x</b>', 'xa'], createdAt: at(1), updatedAt: at(8), archived: true }]`))
+	write := func(v string) {
+		b.eval("(() => { const f = document.getElementById('edit-tags'); f.value = " + js(v) + "; f.setSelectionRange(f.value.length, f.value.length); f.dispatchEvent(new Event('input')); })()")
+	}
+	const namesBox = "document.getElementById('edit-tags-names')"
+	const names = "[...document.querySelectorAll('#edit-tags-names [role=option]')].map((o) => o.textContent).join(',')"
+	const shown = namesBox + ".matches(':popover-open') + ' ' + document.getElementById('edit-tags').getAttribute('aria-expanded')"
+	b.eval("document.querySelector('#list li[data-slug=a] .edit').click(); document.getElementById('edit-tags').value = ''; document.getElementById('edit-tags').focus()")
+	out = append(out, b.eval("(() => { const f = document.getElementById('edit-tags'); "+
+		"return [f.getAttribute('role'), f.getAttribute('aria-autocomplete'), f.getAttribute('aria-controls') === document.getElementById('edit-tags-names').id, "+
+		"document.getElementById('edit-tags-names').getAttribute('role')].join(' '); })()"))
+	// Reached, the empty field opens all the names, the archived page's too, as text; ↓ picks the first; Escape closes the names,
+	// not the dialog.
+	out = append(out, b.eval(names), b.eval(shown), b.eval(namesBox+".querySelector('b') === null"),
+		// Under the field, once the dialog has done moving in.
+		b.until("the names under the field", "(() => { const f = document.getElementById('edit-tags').getBoundingClientRect(); const r = "+namesBox+".getBoundingClientRect(); "+
+			"return Math.abs(r.top - f.bottom - 4) < 0.5 && Math.abs(r.left - f.left) < 0.5 && Math.abs(r.width - f.width) < 0.5 && 'under'; })()"))
+	press(kb.ArrowDown)
+	out = append(out, b.eval("document.getElementById('edit-tags').getAttribute('aria-activedescendant') === "+namesBox+".querySelector('[aria-selected=true]').id && "+
+		namesBox+".querySelector('[aria-selected=true]').textContent"))
+	press(kb.Escape)
+	out = append(out, b.eval(shown)+" "+b.eval("document.getElementById('edit-dialog').open"))
+	// The name between the commas around the caret: those holding it, starting with it first, but none the field has.
+	write("計")
+	out = append(out, b.eval(names))
+	write("x")
+	out = append(out, b.eval(names))
+	write("計画, ")
+	out = append(out, b.eval(names))
+	// ↓↓↓ and Enter put the third in, a comma after it for the next, sending nothing.
+	press(kb.ArrowDown)
+	press(kb.ArrowDown)
+	press(kb.ArrowDown)
+	press(kb.Enter)
+	out = append(out, b.eval("document.getElementById('edit-tags').value"), b.eval(shown),
+		b.eval("[document.getElementById('edit-dialog').open, calls.length].join(' ')"))
+	// The list read again leaves the names open, the one picked as it is.
+	press(kb.ArrowDown)
+	press(kb.ArrowDown)
+	b.eval("list = list.replace('Alpha', 'Alpha 2'); load()")
+	b.until("the list to be read again", "document.querySelector('#list li[data-slug=a] .title').textContent === 'Alpha 2'")
+	out = append(out, b.eval(shown)+" "+b.eval(namesBox+".querySelector('[aria-selected=true]')?.textContent"))
+	// A click puts a name in, the field keeping its focus.
+	o := b.rect(namesBox + ".querySelector('[role=option]:last-child')")
+	b.click(o.X+o.Width/2, o.Y+o.Height/2)
+	out = append(out, b.until("the name clicked", "document.getElementById('edit-tags').value.includes('設計') && document.getElementById('edit-tags').value"),
+		b.eval("document.activeElement.id"))
+	press(kb.ArrowDown)
+	press(kb.Escape)
+	press(kb.Escape)
+	out = append(out, b.eval("document.getElementById('edit-dialog').open"))
+	// Opened as its dialog opens, the names go under the field once the dialog stops moving.
+	b.eval("document.querySelector('#list li[data-slug=a] .edit').click(); document.getElementById('edit-tags').value = ''; document.getElementById('edit-tags').focus()")
+	out = append(out, b.until("the names under the moving field", "document.getElementById('edit-dialog').getAnimations().length === 0 && (() => { "+
+		"const f = document.getElementById('edit-tags').getBoundingClientRect(); const r = document.getElementById('edit-tags-names').getBoundingClientRect(); "+
+		"return Math.abs(r.top - f.bottom - 4) < 0.5 && Math.abs(r.left - f.left) < 0.5 && 'under'; })()"))
+
+	check(t, "tags", out, strings.Join([]string{
+		"plan2:false,設計1:false,設計、実装1:false false", "abcd -",
+		"設計:" + msg("ui_tag_filter_named", "設計") + ",plan:" + msg("ui_tag_filter_named", "plan"), "true",
+		"ab plan", "plan2:true,設計1:false,設計、実装1:false false", "ab plan", "abcd -",
+		"old1:false,plan1:false false", "c 設計、実装", msg("ui_selected", 1), "ac -",
+		"other2:false,plan0:true,設計1:false,設計、実装1:false false", "false", "abcd -",
+		"設計, plan", `PATCH /api/artifacts/a {"tags":["計画","設計"]}`, `PATCH /api/artifacts/c {"title":"G2"}`,
+		msg("ui_tag_bulk_title", 3), "plan:some:−:2/3,設計:some:−:1/3,old:none:+:,設計、実装:none:+:", "false", "plan solid",
+		"all:true none:true some:false all:true", "plan:all:✓:2/3,設計:none:+:1/3,old:all:✓:,設計、実装:none:+:", "true",
+		`PATCH /api/artifacts/a {"tags":["plan","old"]},PATCH /api/artifacts/b {"tags":["plan","old"]},PATCH /api/artifacts/d {"tags":["old","plan"]}`, "true", "1",
+		`PATCH /api/artifacts/a {"tags":["設計","plan","old"]},PATCH /api/artifacts/c {"tags":["設計、実装","old"]}`,
+		"plan:all:✓: false", msg("ui_tag_create", "new"), "plan:all:✓:,new:all:✓:,old:none:+:,設計:none:+:,設計、実装:none:+:", "true 0 true", "false",
+		"true 0",
+		"old,設計,設計、実装", "plan, old, ", "設計,設計、実装",
+		"tag:plan,tag:設計,tag:設計、実装", "ab plan", "true", "abcd -",
+		"<b>x</b>1,__proto__1", "<b>x</b>,__proto__", "0", "__proto__:all:✓:,<b>x</b>:all:✓: 0",
+		"combobox list true listbox",
+		"<b>x</b>,plan,xa,計画,設計", "true true", "true", "under", "<b>x</b>",
+		"false false true",
+		"計画,設計", "xa,<b>x</b>", "<b>x</b>,plan,xa,設計",
+		"計画, xa, ", "false false", "true 0",
+		"true true <b>x</b>",
+		"計画, xa, 設計, ", "edit-tags",
+		"false", "under",
 	}, "|"))
 }
 
