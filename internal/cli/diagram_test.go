@@ -32,6 +32,13 @@ func TestDiagram(t *testing.T) {
 	if _, page, _ := runIn(dir, env, "diagram", "render", "a.yaml"); !strings.HasPrefix(page, "<script>") || !strings.Contains(page, ">Yes</text>") {
 		t.Errorf("render = %q, want the assets first, and the English", page)
 	}
+	// As a page draws it: each diagram in the part's box, its style scoped to the box.
+	if !strings.HasPrefix(out, `<div data-floe-part="diagram"><div class="dg-wrap"`) {
+		t.Errorf("render --no-assets = %q, want the diagram in the box of the part diagram", out)
+	}
+	if _, page, _ := runIn(dir, env, "diagram", "render", "a.yaml"); !strings.Contains(page, "<style>\n@scope ([data-floe-part=\"diagram\"])") {
+		t.Errorf("render = %q, want the style scoped to the box of the part diagram", page)
+	}
 	code, _, errs = runIn(dir, nil, "diagram", "render", "b.yaml", "c.yaml", "gone.yaml")
 	want := "b.yaml:5:5: additional properties 'boxx' not allowed\n" +
 		"floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n" +
