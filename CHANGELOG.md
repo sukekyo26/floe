@@ -39,7 +39,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   an open page stars and archives it. Tags are given in a page's edit dialog, to those selected,
   or as `tags` in `PATCH /api/artifacts/{slug}`; they show under a page's
   title, are searched, and stay when the page is published again. What is
-  reached by keyboard shows one thin grey ring; pressed with the mouse, none.
+  reached by keyboard shows one thin grey ring, and a button pressed with the
+  mouse shows none.
 - Add floe's template `report`: a header over sections, each a heading over
   parts; and thirty-two parts a template refers to as
   `floe:///parts/<name>.json` (`floe part list` lists them): thirty that a
