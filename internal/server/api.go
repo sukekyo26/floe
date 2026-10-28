@@ -117,7 +117,7 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 // T does not have; nil when it has answered a refusal. A field null is one not sent. One Decode reads it all, as
 // readBody's json.Valid refuses a second value.
 func decodeStrict[T any](w http.ResponseWriter, body []byte) *T {
-	if tok, _ := json.NewDecoder(bytes.NewReader(body)).Token(); tok != json.Delim('{') {
+	if tok, err := json.NewDecoder(bytes.NewReader(body)).Token(); err != nil || tok != json.Delim('{') {
 		send(w, http.StatusBadRequest, "cannot read the request: send a JSON object")
 		return nil
 	}

@@ -384,8 +384,10 @@ func TestNotObject(t *testing.T) {
 	e := newEnv(t)
 	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
 	for _, to := range []struct{ method, path string }{
-		{http.MethodPost, "/api/artifacts"}, {http.MethodPut, "/api/artifacts/d"},
-		{http.MethodPatch, "/api/artifacts/d"}, {http.MethodPost, "/api/rebuild"},
+		{http.MethodPost, "/api/artifacts"},
+		{http.MethodPut, "/api/artifacts/d"},
+		{http.MethodPatch, "/api/artifacts/d"},
+		{http.MethodPost, "/api/rebuild"},
 	} {
 		for _, body := range []string{"null", "1", `"s"`, "[1]"} {
 			w := e.write(t, to.method, to.path, json.RawMessage(body))

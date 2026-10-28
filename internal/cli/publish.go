@@ -236,7 +236,8 @@ func (a *app) archiveCmd() *cobra.Command {
 		Args:  usage(cobra.MinimumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			archived := !undo
-			return a.eachPage(cmd, args, http.MethodPatch, server.Edit{Archived: &archived})
+			body := server.Edit{Archived: &archived} //nolint:exhaustruct_v5 // archived alone
+			return a.eachPage(cmd, args, http.MethodPatch, body)
 		},
 	}
 	cmd.Flags().BoolVar(&undo, "undo", false, "give the pages back to the list")
