@@ -145,10 +145,21 @@ func (c *Compiled) checkNode(n *jsonschema.Schema, r reached) usererr.List {
 		found = append(found, c.mistake(n, "schema_part_unreached", partName(part)))
 	case into != nil:
 		found = append(found, into)
-	case c.followed(n, n.Ref) && !r.passed[n] && c.followFrom(n.Ref).stops():
-		found = append(found, c.mistake(n, "schema_ref_unreached", c.written(n.Ref.Location)))
+	default:
+		if unreached := c.unreachedRef(n, r); unreached != nil {
+			found = append(found, unreached)
+		}
 	}
 	return found
+}
+
+// unreachedRef refuses n, a $ref Follow goes through, if r, what Follow reaches from the root, does not pass n
+// while what n refers to holds parts or formats: items floe would not draw; nil else.
+func (c *Compiled) unreachedRef(n *jsonschema.Schema, r reached) *usererr.Error {
+	if c.followed(n, n.Ref) && !r.passed[n] && c.followFrom(n.Ref).stops() {
+		return c.mistake(n, "schema_ref_unreached", c.written(n.Ref.Location))
+	}
+	return nil
 }
 
 // unreachedFormat refuses n if it is of one of Formats that r, what Follow reaches from the root, does not
@@ -214,9 +225,9 @@ func requiredOf(s *jsonschema.Schema) []string {
 }
 
 // CheckPart refuses, in the part compiled (CompilePart), where it is written: one of Formats but image, a
-// trust boundary, as the checks of the data's HTML reach the template's items alone; an image a walk from the
-// part's root does not reach, as checkTemplate does; and one of Formats, image too, in a Shared schema it
-// refers to, of which no walk from the part's root is checked.
+// trust boundary, as the checks of the data's HTML reach the template's items alone; an image, or a $ref to
+// parts or images, a walk from the part's root does not reach, as checkTemplate does; and one of Formats,
+// image too, in a Shared schema it refers to, of which no walk from the part's root is checked.
 func (c *Compiled) CheckPart() error {
 	r := c.followFrom(c.Root)
 	var found usererr.List
@@ -238,7 +249,11 @@ func (c *Compiled) CheckPart() error {
 		if base, _ := split(n.Ref.Location); c.isShared(base) {
 			if f := c.formatIn(n.Ref); f != "" {
 				found = append(found, c.mistake(n, "schema_part_shared_format", base, f))
+				return
 			}
+		}
+		if unreached := c.unreachedRef(n, r); unreached != nil {
+			found = append(found, unreached)
 		}
 	}, func(from, to *jsonschema.Schema) { found = append(found, c.strayMistake(from, to)) })
 	return found.Sorted().Err()

@@ -54,7 +54,7 @@ Each part is one key naming its kind. `floe part list` lists them with a line ea
 
 | Part | What it draws |
 |---|---|
-| `text` | Markdown, tables included; raw HTML in it is left out. A fenced block of code (```` ``` ````) is refused: write code in `code` and commands in `terminal`. An image file named in it is not shown: write it in `image`. |
+| `text` | Markdown, tables included; raw HTML in it is left out. A fenced block of code (```` ``` ````) is refused: write code in `code` and commands in `terminal`. An image file named in it is not shown, only a data URI of a png, gif, jpeg or webp: write images in `image`. |
 | `code` | Code as it is, under its `file` with its `lang`. |
 | `terminal` | Commands (`run`) and what they printed (`out`), at the prompt of its `shell` (`bash`, `sh`, `zsh`, `powershell`, `cmd`). floe draws the prompt, so a `run` that starts with one (`$ ls`) is refused. |
 | `table` | `columns` and `rows`; each cell is a line of Markdown, a number in quotes as it is drawn, or a pill `{ pill, tone }`. |
@@ -82,9 +82,9 @@ A data file is one YAML document of keys and values. One with `---` between docu
 
 ## Images
 
-In `report`, an image is a part `image` (`- image: { file: shots/list.png, alt: The list of pages }`), in a section, `details` or `tabs`; a template of one's own takes one as an item of `"format": "image"`. Its `file` is the path of an image, relative to the data file's directory and under it, without `..` or names starting with a dot. The image goes into the page as a data URI, so that the page holds all it shows: a png, jpeg, gif, webp or svg file, by its name, up to 1 MiB. `floe publish` sends the server the images the page shows.
+In `report`, an image is a part `image` (`- image: { file: shots/list.png, alt: The list of pages }`), in a section, `details` or `tabs`: its `file` is the path of the image, and its `alt` what it shows. A template of one's own takes an image as an item of `"format": "image"`, whose value is the path. The path is relative to the data file's directory and under it, without `..` or names starting with a dot. The image goes into the page as a data URI, so that the page holds all it shows: a png, jpeg, gif, webp or svg file, by its name, up to 1 MiB. `floe publish` sends the server the images the page shows.
 
-An image in Markdown (`![x](shots/list.png)`) is drawn as written, and the page's CSP does not show it; a data URI written in it shows for png, gif, jpeg and webp, not svg. Write images in `image`.
+An image file Markdown names (`![x](shots/list.png)`) is drawn as written, and the page's CSP does not show it; only a data URI of a png, gif, jpeg or webp written in it shows. Write images in `image`.
 
 ## Diagrams
 

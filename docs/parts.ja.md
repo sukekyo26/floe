@@ -37,7 +37,7 @@ quote/
 - schema は、floe の部品と同じく `"$ref": "floe:///parts/quote.json"` で名指します。部品の schema も、floe の部品と共有の schema をこう名指します。
 - 部品の要素は箱で、`data-floe-part="quote"` で自分を名乗ります。
 - `part.html` は項目を `.` で見て、テンプレートの `page.html` と同じ関数を使えます（`asset` は除く。[templates.ja.md](templates.ja.md#pagehtml)）。
-- 部品の schema が取る floe の `format` は `image` だけで、floe が辿る `properties` か `items` の下で宣言します。その項目は `part.html` に data URI で来ます（`<img src="{{.file}}" alt="{{.alt}}">`）。`markdown`・`html` も、format を持つ共有の schema（`any.json`）も取りません。項目は `part.html` が描きます。Markdown は `{{markdown .text}}` で描きます。
+- 部品の schema が取る floe の `format` は `image` だけで、floe が辿る `properties` か `items` の下か、根で宣言します。その項目は `part.html` に data URI で来ます（`<img src="{{.file}}" alt="{{.alt}}">`）。`markdown`・`html` も、format を持つ共有の schema（`any.json`）も取りません。項目は `part.html` が描きます。Markdown は `{{markdown .text}}` で描きます。
 - `floe part show <名前>` は、floe の部品も含めて取るものを出します。合うものを floe の部品から写してください。
 
 ## 見た目と共有の schema

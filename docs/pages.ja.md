@@ -54,7 +54,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 | 部品 | 描くもの |
 |---|---|
-| `text` | Markdown（表も）。中の生の HTML は除く。囲んだコードのブロック（```` ``` ````）は断る：コードは `code`、コマンドは `terminal` に書く。中で名指した画像のファイルは出ないので、`image` に書く。 |
+| `text` | Markdown（表も）。中の生の HTML は除く。囲んだコードのブロック（```` ``` ````）は断る：コードは `code`、コマンドは `terminal` に書く。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ）ので、画像は `image` に書く。 |
 | `code` | コードをそのまま、`file` と `lang` の下に。 |
 | `terminal` | コマンド（`run`）と出力（`out`）を、`shell`（`bash`・`sh`・`zsh`・`powershell`・`cmd`）のプロンプトで。プロンプトは floe が描くので、プロンプトで始まる `run`（`$ ls`）は断る。 |
 | `table` | `columns` と `rows`。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`。 |
@@ -82,9 +82,9 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 ## 画像
 
-`report` では、画像は部品 `image`（`- image: { file: shots/list.png, alt: ページの一覧 }`）で、section・`details`・`tabs` に置けます。自分のテンプレートでは `"format": "image"` の項目で取ります。`file` は画像のパスで、データファイルのディレクトリからの相対パス、その下だけ、`..` やドットで始まる名前を含まないものです。画像は data URI でページに入るので、ページは見せるものを全部持ちます。png・jpeg・gif・webp・svg のファイルを名前で見分け、1 MiB までです。`floe publish` は、ページが見せる画像をサーバーに送ります。
+`report` では、画像は部品 `image`（`- image: { file: shots/list.png, alt: ページの一覧 }`）で、section・`details`・`tabs` に置けます。`file` は画像のパス、`alt` は何を写すかです。自分のテンプレートでは `"format": "image"` の項目で取り、その値が画像のパスです。パスは、データファイルのディレクトリからの相対パス、その下だけ、`..` やドットで始まる名前を含まないものです。画像は data URI でページに入るので、ページは見せるものを全部持ちます。png・jpeg・gif・webp・svg のファイルを名前で見分け、1 MiB までです。`floe publish` は、ページが見せる画像をサーバーに送ります。
 
-Markdown の画像（`![x](shots/list.png)`）は書いたまま描かれ、ページの CSP で出ません。Markdown に直に書いた data URI は、png・gif・jpeg・webp なら出ますが、svg は出ません。画像は `image` に書いてください。
+Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書いたまま描かれ、ページの CSP で出ません。出るのは、Markdown に直に書いた png・gif・jpeg・webp の data URI だけです。画像は `image` に書いてください。
 
 ## 図
 

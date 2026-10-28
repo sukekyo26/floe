@@ -46,7 +46,7 @@ func Page(
 			holds[it.Part] = it.Holds
 		}
 		// Walk calls fn with the items a part holds before the part, so that what failed in it is known here; at
-		// the part's own path is the format of a part's root (a part whose value is an image).
+		// the part's own path are what its root is: a format (a part whose value is an image), or another part.
 		if slices.ContainsFunc(failed, func(at []string) bool { return atOrUnder(at, it.At) }) {
 			return nil, nil //nolint:nilnil // not drawn: the mistake of what it holds is told
 		}
