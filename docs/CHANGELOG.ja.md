@@ -36,7 +36,8 @@ floe の主要な変更を記録します。フォーマットは
   `findings`・`decision`・`risks`・`timeline`・`tabs`・`diagram`・`script` まで）、`cell` と `stack` はほかの部品が中に持つもの。
 - 追加：データファイルが `theme:` で選ぶ 9 つのテーマ（`default`・`soft`・`editorial`・
   `ink`・`brutal`・`blueprint`・`notebook`・`swiss`・`washi`）。どれも CSS の変数のパレットと
-  部品の形を持つ。
+  部品の形を持つ。どのテーマの下にも敷かれる `default` のパレットの地は、管理ページと同じ暖かい
+  灰色。
 - 追加：`FLOE_TEMPLATES_DIR` の自分のテンプレート（`page.html`・`schema.json`・
   `example.yaml`、要るなら `page.css`・`checks.yaml`・`computed.yaml`・`words.yaml`・
   `assets/`）と、`floe template list`・`show`・`new`（埋めて使う最小のテンプレート）・`check`。
