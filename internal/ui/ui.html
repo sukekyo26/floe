@@ -13,7 +13,7 @@
   :root {
     --bg: #f4f3f0; --panel: #fbfaf8; --subtle: #efeee9; --hover: #f6f5f1; --sel: #ecebe6;
     --fg: #22211f; --muted: #615f5a; --faint: #6b6964; --line: #e3e1dc;
-    --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00;
+    --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00; --archived: #2f7a78;
     --danger: #b8332b; --danger-soft: #f8e3e1; --on-danger: #fff;
     /* The projects' colors, by projectOrder */
     --pc0: #e5533d; --pc1: #2f6bff; --pc2: #16a37a; --pc3: #b04fd6; --pc4: #d99a00; --pc5: #0f9bb5;
@@ -339,6 +339,7 @@
   .icon-btn[aria-pressed="true"] { color: var(--fg); }
   .icon-btn[aria-pressed="true"] svg { fill: currentColor; }
   .star[aria-pressed="true"] { color: var(--star); }
+  .archive[aria-pressed="true"] { color: var(--archived); }
   .copy .done, .copy.copied > svg { display: none; }
   .copy.copied .done { display: block; color: var(--good); }
   .delete.armed { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 50%, transparent); font-weight: 650; }
@@ -500,7 +501,7 @@
     <div class="bar-end">
       <span class="frame-actions" hidden>
         <button type="button" class="icon-btn star" id="frame-star"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg></button>
-        <button type="button" class="icon-btn" id="frame-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg></button>
+        <button type="button" class="icon-btn archive" id="frame-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg></button>
         <a class="icon-btn" id="frame-download" title="{{.Msg "ui_download"}}" aria-label="{{.Msg "ui_download"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
         </a>

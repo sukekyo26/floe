@@ -465,6 +465,17 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.navigate("/a/z/")
 	b.eval(stub(extrasList))
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
+	// Pressed, the archive is filled in its own color, seen on the bar's ground and on the hover's at 3:1 or more (WCAG's
+	// for a mark that is not text).
+	out = append(out, b.eval(`(() => {
+		const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
+		const hex = (v) => v.trim().slice(1).match(/../g).map((x) => parseInt(x, 16));
+		const lum = (c) => { const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+		const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+		const root = getComputedStyle(document.documentElement);
+		const fill = getComputedStyle(document.querySelector('#frame-archive svg')).fill;
+		return [fill, ...['--bg', '--subtle'].map((v) => ratio(rgb(fill), hex(root.getPropertyValue(v))) >= 3)].join(' ');
+	})()`))
 	b.eval("document.getElementById('frame-archive').click()")
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
 	// Given back, as the server now lists it: the archive lets go, its name the same.
@@ -508,7 +519,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"50 1 / 2", "true",
 		"flex static true true", `all,fav,archived,a<b&"c,archived,p`, `a<b&"c`,
 		"all ?project=archived", "null",
-		"Zeta / false / true / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / true / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`, `PATCH /api/artifacts/z {"archived":false}`,
+		"Zeta / false / true / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / true / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`, "rgb(47, 122, 120) true true", `PATCH /api/artifacts/z {"archived":false}`,
 		"Zeta / true / true / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
 		msg("ui_favorite_failed", "Failed to fetch"),
 		"Beta / true / false / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
