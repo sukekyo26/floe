@@ -2,6 +2,7 @@ package browsertest_test
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -509,9 +510,16 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 		return width;
 	})()`)
 	width, err := strconv.Atoi(sb)
-	if err != nil || width == 0 {
-		t.Fatalf("Chrome draws no scrollbar (%q): the flag hide-scrollbars of startChrome no longer works", sb)
+	switch {
+	case err != nil:
+		t.Fatalf("the scrollbar's width %q", sb)
+	case width == 0 && runtime.GOOS == "darwin":
+		t.Skip("macOS draws its scrollbars over the page, taking no room")
+	case width == 0:
+		t.Fatal("Chrome draws no scrollbar: the flag hide-scrollbars of startChrome no longer works")
 	}
+	// The shared Chrome is given back its own size whatever happens here.
+	t.Cleanup(func() { _, _ = chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}) }) //nolint:errcheck // a test that failed tells why
 	size := func(width int64) {
 		t.Helper()
 		metrics := emulation.SetDeviceMetricsOverrideParams{Width: width, Height: 900, DeviceScaleFactor: 1, Mobile: false}
@@ -543,8 +551,8 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 		b.navigate(path)
 		out = append(out, b.eval(room))
 	}
-	if _, err := chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}); err != nil {
-		t.Fatal(err)
-	}
-	check(t, "scrollbar", out, strings.Join([]string{"true", "false", "true", sb, fmt.Sprintf("16 272 %d", 1200-16-width), "0", "0"}, "|"))
+	// The frame makes its URLs of the slug escaped again: one read from /a/x%3Fy/ is x?y.
+	b.navigate("/a/x%3Fy/")
+	out = append(out, b.eval("document.getElementById('frame-download').getAttribute('href')"))
+	check(t, "scrollbar", out, strings.Join([]string{"true", "false", "true", sb, fmt.Sprintf("16 272 %d", 1200-16-width), "0", "0", "/api/artifacts/x%3Fy/download"}, "|"))
 }

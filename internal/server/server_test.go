@@ -250,6 +250,8 @@ func TestManagementPageAndFrame(t *testing.T) {
 		}
 		want(t, e.do(t, http.MethodGet, target, "", "Accept-Language", "ja,en;q=0.5"), status, "一覧へ戻る")
 	}
+	// The slug as the server read it, unescaped, is escaped in the HTML.
+	want(t, e.do(t, http.MethodGet, "/a/x%22%3E%3C%3Fy/", ""), http.StatusNotFound, `data-slug="x&#34;&gt;&lt;?y"`)
 	// Not the frame, whose messages say "not found" too.
 	for _, w := range []*httptest.ResponseRecorder{
 		e.do(t, http.MethodPost, "/", ""), e.do(t, http.MethodGet, "/a/none/?raw", ""), e.do(t, http.MethodGet, "/a/gone/?raw", ""),

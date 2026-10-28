@@ -1276,7 +1276,8 @@
   }
 
   if (framed) {
-    $('frame-download').href = `/api/artifacts/${framed}/download`;
+    // The slug as the server read it from the URL, unescaped: escaped again to make one
+    $('frame-download').href = `/api/artifacts/${encodeURIComponent(framed)}/download`;
     $('frame-download').download = `${framed}.html`;
     // Only while the frame has focus (keys inside the iframe belong to the page)
     document.addEventListener('keydown', (e) => {
