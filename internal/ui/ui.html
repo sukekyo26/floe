@@ -225,6 +225,15 @@
   .suggest [role="option"] { padding: 0.4rem 0.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 0.82rem/1.4 var(--body); border-radius: 7px; cursor: pointer; }
   .suggest [role="option"]:hover, .suggest [aria-selected="true"] { background: var(--subtle); }
   .suggest [aria-selected="true"] { color: var(--accent); }
+  /* The bulk dialog's tags, a box each: on all the selected, on some (indeterminate) or on none */
+  .tag-boxes { display: grid; gap: 1px; max-height: 16rem; overflow-y: auto; margin: 0 -0.4rem; padding: 0.1rem 0.4rem; }
+  .tag-box { display: flex; align-items: center; gap: 0.6rem; padding: 0.42rem 0.5rem; border-radius: 8px; font-size: 0.86rem; cursor: pointer; }
+  .tag-box:hover { background: var(--subtle); }
+  .tag-box input { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+  .tag-box .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tag-box .n { margin-left: auto; font: 0.72rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+  .tag-new { justify-content: flex-start; width: 100%; padding: 0.42rem 0.5rem; color: var(--accent); background: none; border: 0; border-radius: 8px; font-size: 0.86rem; text-align: left; }
+  .tag-new:hover { background: var(--subtle); }
   li time { font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
   .actions { position: relative; z-index: 1; display: flex; gap: 2px; }
   /* The row's other actions. The row whose menu is open comes forward: each row's rise animation stacks the rows below over it */
@@ -581,13 +590,13 @@
         <h2 id="tag-title"></h2>
       </div>
     </div>
-    <label class="field"><span>{{.Msg "ui_tag_name"}} <small>{{.Msg "ui_tags_hint"}}</small></span>
-      <input class="text" id="tag-name" required autocomplete="off">
-    </label>
+    <input class="text" id="tag-find" type="search" autocomplete="off" placeholder="{{.Msg "ui_tag_find"}}" aria-label="{{.Msg "ui_tag_find"}}" aria-controls="tag-boxes">
+    <div class="tag-boxes" id="tag-boxes" role="group" aria-labelledby="tag-title">
+      <button type="button" class="tag-new" id="tag-new" hidden></button>
+    </div>
     <div class="dialog-actions">
       <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
-      <button type="button" class="btn" id="tag-remove"></button>
-      <button type="submit" class="btn primary" id="tag-add"></button>
+      <button type="submit" class="btn primary" id="tag-apply" disabled>{{.Msg "ui_tag_apply"}}</button>
     </div>
   </form>
 </dialog>
@@ -914,6 +923,8 @@
     input.setAttribute('aria-expanded', 'false');
     let names = [];
     let active = -1;
+    // Where a name picked goes: from start to end, after lead
+    let spot;
     // Where the name at the caret starts and ends, between the commas around it
     const word = () => {
       const at = input.selectionStart ?? input.value.length;
@@ -948,11 +959,10 @@
       mark(-1);
     };
     const choose = (name) => {
-      const { start, end } = word();
-      const before = input.value.slice(0, start);
-      const after = input.value.slice(end);
+      const before = input.value.slice(0, spot.start);
+      const after = input.value.slice(spot.end);
       // A name put in last is followed by a comma, for the next
-      const put = `${before}${before ? ' ' : ''}${name}`;
+      const put = `${before}${spot.lead}${name}`;
       input.value = put + (after || ', ');
       input.setSelectionRange(put.length + (after ? 0 : 2), put.length + (after ? 0 : 2));
       // What the field was told, of a name missing, no longer holds
@@ -961,8 +971,12 @@
     };
     const open = () => {
       const { start, end } = word();
-      const typed = input.value.slice(start, end).trim().toLowerCase();
-      const have = splitTags(input.value.slice(0, start) + input.value.slice(end));
+      const written = input.value.slice(start, end).trim();
+      // A whole name at the caret, as when the field is pressed on it, is one written: the names offered are the next
+      const whole = tagNames().includes(written);
+      spot = whole ? { start: end, end, lead: ', ' } : { start, end, lead: start ? ' ' : '' };
+      const typed = whole ? '' : written.toLowerCase();
+      const have = splitTags(whole ? input.value : input.value.slice(0, start) + input.value.slice(end));
       const starts = (name) => name.toLowerCase().startsWith(typed);
       names = tagNames().filter((name) => !have.includes(name) && name.toLowerCase().includes(typed));
       names = [...names.filter(starts), ...names.filter((name) => !starts(name))];
@@ -986,6 +1000,9 @@
       mark(-1);
     };
     input.addEventListener('input', open);
+    // Pressed or reached, the names show at once; pressed, again once the caret is where it was pressed, which focus is before
+    input.addEventListener('focus', open);
+    input.addEventListener('click', open);
     input.addEventListener('blur', close);
     input.addEventListener('keydown', (e) => {
       const shown = box.matches(':popover-open');
@@ -1004,32 +1021,90 @@
     });
   }
 
+  // The bulk dialog's tags: how many of the selected each is on as the dialog opened (on), and the mark each box has (want):
+  // all, some or none. A box of a tag on some goes some → all → none → some, so that it can leave the pages as they are; the
+  // others all ⇄ none
+  let tagMarks;
+
   function openTags() {
-    $('tag-title').textContent = t('ui_tag_bulk_title', selected.size);
-    $('tag-add').textContent = t('ui_tag_add_bulk', selected.size);
-    $('tag-remove').textContent = t('ui_tag_remove_bulk', selected.size);
-    $('tag-form').reset();
-    $('tag-name').setCustomValidity('');
+    const pages = [...selected].map((slug) => items.find((a) => a.slug === slug)).filter(Boolean);
+    const on = new Map(tagNames().map((name) => [name, pages.filter((a) => a.tags?.includes(name)).length]));
+    const mark = (n) => (n === pages.length ? 'all' : n ? 'some' : 'none');
+    tagMarks = { total: pages.length, on, want: new Map([...on].map(([name, n]) => [name, mark(n)])) };
+    $('tag-title').textContent = t('ui_tag_bulk_title', pages.length);
+    $('tag-find').value = '';
+    drawTagBoxes();
     $('tag-dialog').showModal();
   }
 
-  // Adds the names of the tag dialog to the selected, or removes them, sending each page whose tags change them so;
-  // one that would not change is not sent and leaves the selection, as done.
-  // LIMIT: the tags sent are those of the list read just before, with the names added or removed, so a change made elsewhere
-  // in between is lost. Only this page writes tags now; give the API adding and removing if another comes to
-  async function tagSelected(add) {
-    const names = [...new Set(splitTags($('tag-name').value))];
-    // Commas alone pass required, so the field is told it has no name
-    $('tag-name').setCustomValidity(names.length ? '' : t('ui_tag_name_empty'));
-    if (!$('tag-form').reportValidity()) return;
+  // The boxes, the tags on the selected first, then by name; those that hold what the find field has
+  function drawTagBoxes() {
+    const { on, want, total } = tagMarks;
+    const find = $('tag-find').value.trim();
+    const names = [...want.keys()].sort((x, y) => Number(!on.get(x)) - Number(!on.get(y)) || x.localeCompare(y, LANG))
+      .filter((name) => name.toLowerCase().includes(find.toLowerCase()));
+    const boxes = names.map((name) => {
+      const label = document.createElement('label');
+      label.className = 'tag-box';
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      const show = () => {
+        box.checked = want.get(name) === 'all';
+        box.indeterminate = want.get(name) === 'some';
+      };
+      show();
+      box.addEventListener('click', () => {
+        const now = want.get(name);
+        const some = on.get(name) > 0 && on.get(name) < total;
+        want.set(name, now === 'all' ? 'none' : now === 'none' && some ? 'some' : 'all');
+        show();
+        $('tag-apply').disabled = [...want].every(([n, w]) => w === (on.get(n) === total ? 'all' : on.get(n) ? 'some' : 'none'));
+      });
+      const words = document.createElement('span');
+      words.className = 'name';
+      words.textContent = name;
+      label.append(box, words);
+      // A tag on some tells how many
+      if (on.get(name) > 0 && on.get(name) < total) {
+        const n = document.createElement('span');
+        n.className = 'n';
+        n.textContent = `${on.get(name)}/${total}`;
+        label.append(n);
+      }
+      return label;
+    });
+    // A name no tag has yet can be made one, on all the selected
+    const fresh = find && !want.has(find);
+    $('tag-new').hidden = !fresh;
+    if (fresh) $('tag-new').textContent = t('ui_tag_create', find);
+    $('tag-boxes').replaceChildren(...boxes, $('tag-new'));
+  }
+
+  function createTag() {
+    const name = $('tag-find').value.trim();
+    if (!name || tagMarks.want.has(name)) return;
+    tagMarks.on.set(name, 0);
+    tagMarks.want.set(name, 'all');
+    $('tag-find').value = '';
+    drawTagBoxes();
+    $('tag-apply').disabled = false;
+  }
+
+  // Gives the selected the tags as the boxes have them, sending each page whose tags change them so; one that would not
+  // change is not sent and leaves the selection, as done. A tag left on some is left as each page has it.
+  // LIMIT: the tags sent are those of the list read just before, as the boxes change them, so a change made elsewhere in
+  // between is lost. Only this page writes tags now; give the API adding and removing if another comes to
+  async function applyTags() {
+    const { want } = tagMarks;
     $('tag-dialog').close();
     // Read again first: a page removed since leaves the selection, rather than be sent and not found
     await load();
     const next = new Map();
     for (const slug of selected) {
       const now = items.find((a) => a.slug === slug)?.tags ?? [];
-      const tags = add ? [...now, ...names.filter((name) => !now.includes(name))] : now.filter((name) => !names.includes(name));
-      if (tags.length !== now.length) next.set(slug, tags);
+      const tags = [...now.filter((name) => want.get(name) !== 'none'),
+        ...[...want].filter(([name, w]) => w === 'all' && !now.includes(name)).map(([name]) => name)];
+      if (tags.join('\n') !== now.join('\n')) next.set(slug, tags);
     }
     // The rest leave the selection unsent, their boxes unticked here: a list that does not change is not drawn again
     for (const slug of [...selected].filter((s) => !next.has(s))) {
@@ -1042,11 +1117,10 @@
       renderBulk();
       return;
     }
-    const named = new Intl.ListFormat(LANG).format(names);
     await actOnSelected(
       (slug) => patchOne(slug, { tags: next.get(slug) }),
-      (n) => t(add ? 'ui_tag_add_bulk_done' : 'ui_tag_remove_bulk_done', named, n),
-      (n, why) => t(add ? 'ui_tag_add_bulk_failed' : 'ui_tag_remove_bulk_failed', named, n, why),
+      (n) => t('ui_tag_bulk_done', n),
+      (n, why) => t('ui_tag_bulk_failed', n, why),
       [...next.keys()],
     );
   }
@@ -1614,14 +1688,19 @@
       renderBulk();
     });
     suggestTags($('edit-tags'));
-    suggestTags($('tag-name'));
     $('bulk-tag').addEventListener('click', openTags);
     $('tag-form').addEventListener('submit', (e) => {
       e.preventDefault();
-      tagSelected(true);
+      applyTags();
     });
-    $('tag-remove').addEventListener('click', () => tagSelected(false));
-    $('tag-name').addEventListener('input', () => $('tag-name').setCustomValidity(''));
+    $('tag-find').addEventListener('input', drawTagBoxes);
+    // Enter in the find field makes the name a tag, rather than apply
+    $('tag-find').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      createTag();
+    });
+    $('tag-new').addEventListener('click', createTag);
     $('bulk-archive').addEventListener('click', archiveSelected);
     $('bulk-delete').addEventListener('click', removeSelected);
     $('bulk-delete').addEventListener('blur', disarmBulk);
