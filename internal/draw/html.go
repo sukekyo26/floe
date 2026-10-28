@@ -73,6 +73,24 @@ func (s *items) around(n int) (before, after string) {
 	return probe(n) + "<!--" + s.mark(n, "s") + "-->", "<!--" + s.mark(n, "e") + "-->" + probe(n)
 }
 
+// trim returns out, a part's output, without the white space at its start and end, as strings.TrimSpace takes it
+// off, but the probe of an item whose mark it then starts or ends with: what checks the page drawn reads the
+// probes around an item, which a part's output put in the page keeps as page.html's item does.
+func (s *items) trim(out string) string {
+	out = strings.TrimSpace(out)
+	if rest, ok := strings.CutPrefix(out, "<!--"); ok {
+		if n, end, _, ok := s.next(rest); ok && !end {
+			out = probe(n) + out
+		}
+	}
+	if at := strings.LastIndex(out, "<!--"); at >= 0 {
+		if n, end, rest, ok := s.next(out[at+len("<!--"):]); ok && end && rest == "-->" {
+			out += probe(n)
+		}
+	}
+	return out
+}
+
 // plain returns text without the probes and the marks of the items, as they are drawn around them: the text of a
 // mistake page.html made with an item.
 func (s *items) plain(text string) string {
@@ -235,7 +253,7 @@ func (s *items) next(text string) (n int, end bool, rest string, ok bool) {
 }
 
 // check refuses each item of format html of d that changes the page tree, drawn, around it, at the item, and an
-// item page.html puts where HTML does not work (a mark of it is not a comment of its own), at d's template:.
+// item page.html or a part's part.html puts where HTML does not work (a mark of it is not a comment of its own), at d's template:.
 // They are looked at in the order of the page; past the first that changed the page, which the others are read
 // in, none is. It refuses at the item a name of a part its elements give that the page would be refused for
 // (checkNames).

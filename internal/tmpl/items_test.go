@@ -182,7 +182,7 @@ func TestPartHTMLItems(t *testing.T) {
 		{"white space alone", "{{.h}}", "{{.in}}", "<div>a{{.Data.p}}b</div>", `p: {h: "  "}`, "", "<div>a  b</div>"},
 		{"in an attribute by part.html", `<div data-floe-part="ph" title="{{.h}}">x</div>`, "{{.in}}", "{{.Data.p}}", `p: {h: "<b>x</b>"}`, placed("p.h", "<div>"), ""},
 		{"in an attribute by page.html", whole, "{{.in}}", `<p title="{{.Data.p}}">x</p>`, `p: {h: "<b>x</b>"}`, placed("p.h", "<p>"), ""},
-		{"in a function", `<div data-floe-part="ph">{{num .h}}</div>`, "{{.in}}", "{{.Data.p}}", `p: {h: "<b>x</b>"}`, "d.yaml:3:4: num takes a number, not <b>x</b> (template.HTML)", ""},
+		{"in a function", `<div data-floe-part="ph">{{num .h}}</div>`, "{{.in}}", "{{.Data.p}}", `p: {h: "<b>x</b>"}`, "d.yaml:3:5: num takes a number, not <b>x</b> (template.HTML)", ""},
 	} {
 		k := ownKit(t, parts(tt.ph, tt.po), mine(htmlPage(tt.body), schema, nil))
 		page, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\n"+tt.data+"\n"), none)

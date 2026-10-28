@@ -39,8 +39,6 @@ var messagesJA = map[string]string{
 	"schema_root_drawn":         "schema の根の全体を %s が描くことになります。ページの項目は properties の下に書き、部品はそのどれかの下で指してください",
 	"schema_shared_declared":    "%s は floe が自分で読む鍵です。schema の properties から消し、決まりを足すなら checks.yaml の check で書いてください",
 	"schema_shared_key":         "schema が %s を求めています。%[1]s は floe がどのデータファイルからも自分で読み、schema の検査から外す（lang・template・theme・title）ので、ほかの項目を求めてください",
-	"schema_part_shared_format": "部品が %s を指しています。これは format %s の項目を持つ共有の schema で、部品は共有の schema の中の format を取りません。テンプレートの schema から指し、部品には自分の項目を持たせてください",
-	"schema_part_format":        "部品の schema には \"format\": \"%s\" を書けません。部品が取る floe の format は image だけです。その項目はテンプレートの schema に書くか、Markdown なら \"type\": \"string\" だけにして {{markdown .<名前>}} で描いてください",
 
 	"doc_no_lang":  "最上位に lang: ja のようにページの言語を指定してください（en・ja・pt-BR のような BCP 47 の言語タグ）",
 	"doc_not_text": "%s は文字列で指定してください",
@@ -129,7 +127,7 @@ var messagesJA = map[string]string{
 	"draw_not_text":     "format %s の項目は文字です。文字で書いてください。YAML が数・true・false・null と読むものは引用符で囲んでください",
 	"draw_html_whole":   "HTML が %s で周りのページを変えています。開いた要素とコメントは項目の中で閉じ、開いていない要素は閉じないでください",
 	"draw_page_cut":     "描いたページが途中で切れました。HTML の読み手は <svg> か <math> の中の <template> から後ろを読みません。その <template> を外に出してください（page.html・部品の part.html・format html の項目のどれか）",
-	"draw_html_placed":  "page.html が format html の項目 %[1]s を %[2]s の文字か属性の中に置いていて、そこでは HTML が働きません。要素を置ける所に置くか、項目の format を変えてください",
+	"draw_html_placed":  "page.html か、その項目を持つ部品の part.html が、format html の項目 %[1]s を %[2]s の文字か属性の中に置いていて、そこでは HTML が働きません。その項目か、それを持つ部品を要素を置ける所に置くか、項目の format を変えてください",
 
 	// cli: コマンド行（言うのは英語だけ。ほかの言語も、どの目録とも同じく鍵を持つ）
 	"cli_usage":                "%s: floe --help を見てください",

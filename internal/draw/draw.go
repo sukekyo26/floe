@@ -252,6 +252,7 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 			return nil, failed
 		}
 		for i, e := range mistakes {
+			e.Args = s.plainArgs(e.Args)
 			switch {
 			case e.File() == p.File("part.html") && line > 0:
 				// One part.html tells of itself (a word its words.yaml has not): at its line and column, told
@@ -267,7 +268,7 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 		// A function's mistakes at a JSON pointer are at one from the root of the part's value.
 		return nil, yamlpos.Place(mistakes.Err(), d.File, d.Root, it.At) //nolint:wrapcheck // mistakes placed
 	}
-	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
+	return template.HTML(s.trim(b.String())), nil //nolint:gosec // G203: drawn by html/template
 }
 
 // executed returns the mistakes err of executing the template name, whose text is src (nil when where it is

@@ -43,8 +43,6 @@ var messagesEN = map[string]string{
 	"schema_root_drawn":         "the root of the schema is drawn whole by %s; declare the items of the page under properties, and name a part under one of them",
 	"schema_shared_declared":    "%s is read by floe itself: remove it from the schema's properties; to add a rule for it, write a check in checks.yaml",
 	"schema_shared_key":         "the schema requires %s, which floe reads from every data file itself (lang, template, theme, title) and leaves out of what the schema checks: require other items",
-	"schema_part_shared_format": "the part refers to %s, a shared schema that holds items of the format %s, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own",
-	"schema_part_format":        `a part's schema takes no "format": "%s": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}`,
 
 	// doc: the keys every data file shares
 	"doc_no_lang":  "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)",
@@ -135,7 +133,7 @@ var messagesEN = map[string]string{
 	"draw_not_text":     "an item of format %s takes text: write it as text, in quotes where YAML would read a number, true, false or null",
 	"draw_html_whole":   "HTML changes the page around it at %s: close in it each element and comment it opens, and close no element it did not open",
 	"draw_page_cut":     "the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html, a part.html or an item of format html)",
-	"draw_html_placed":  "page.html puts the item %[1]s of format html in a text or an attribute of %[2]s, where HTML does not work: put it where elements go, or give the item another format",
+	"draw_html_placed":  "page.html, or the part.html of a part holding it, puts the item %[1]s of format html in a text or an attribute of %[2]s, where HTML does not work: put it, or the part holding it, where elements go, or give the item another format",
 
 	// cli: the command line (English alone is told; the other languages hold the keys as every catalog does)
 	// LIMIT: the %s of cli_usage is cobra's English, as cobra words what it cannot read
