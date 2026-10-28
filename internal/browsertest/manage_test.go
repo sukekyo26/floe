@@ -356,15 +356,15 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval(stub(`[{ slug: 'c', title: 'Gamma', description: '', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'd', title: 'Delta', description: '', createdAt: at(1), updatedAt: at(8), favorite: true }]`))
 	out = append(out, b.eval(order))
-	// No line under the title for the creation date: the time's title has it, of a link when registered, and none without one.
-	date := b.eval("new Date('2026-01-01T00:00:00.000Z').toLocaleString(document.documentElement.lang, { dateStyle: 'medium', timeStyle: 'short' })")
+	// The creation date under the title, of a link when registered, and none without one.
+	date := b.eval("new Date('2026-01-01T00:00:00.000Z').toLocaleDateString(document.documentElement.lang, { dateStyle: 'medium' })")
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'o', title: 'Old', description: '', updatedAt: at(7) },
 		{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`))
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] .sub').hidden + ' ' + document.querySelector('#list li[data-slug=a] time').title.split('\\n')[0]"),
-		b.eval("document.querySelector('#list li[data-slug=o] .sub').hidden && !document.querySelector('#list li[data-slug=o] time').title.includes('\\n')"))
+	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] .made').textContent"),
+		b.eval("document.querySelector('#list li[data-slug=o] .made').hidden"))
 	b.eval("document.querySelector('.tabs [data-tab=links]').click()")
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=l] time').title.split('\\n')[0]"))
+	out = append(out, b.eval("document.querySelector('#list li[data-slug=l] .made').textContent"))
 	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
 	// The kinds show with a link, the projects with two or one chosen.
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`))
@@ -489,7 +489,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		msg("ui_more_named", "Beta"), msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_archive") + " / " + msg("ui_delete"),
 		"false true", "Alpha", "false true", "false false true", "false true", "true", "true",
 		"true", "DELETE /api/artifacts/a", "Hcd",
-		"true " + msg("ui_created_at", date), "true", msg("ui_registered_at", date),
+		msg("ui_created_at", date), "true", msg("ui_registered_at", date),
 		"true true", "false", "floe:var(--pc0),p:var(--pc1)",
 		msg("ui_count_all", 1) + " true",
 		"empty-favorites", "all-archived", "archived ?archived=1", "archived ?archived=1",
