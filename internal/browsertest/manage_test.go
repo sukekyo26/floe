@@ -492,3 +492,35 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"  1 / 1", "false   1 / 1", "/a/c/  2 / 2",
 	}, "|"))
 }
+
+// TestUIShelfStays keeps the shelf where it sits, whether the list is long enough to scroll or not, and there once
+// scrolled: sticky only holds it, never pushes it.
+func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.navigate("/")
+	// The test Chrome's own window is near the width that hides the shelf.
+	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 1440, Height: 900, DeviceScaleFactor: 1, Mobile: false}
+	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}) }) //nolint:errcheck // a test that failed tells why
+	pages := func(n int) string {
+		return stub("Array.from({ length: " + fmt.Sprint(n) + " }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))")
+	}
+	// The shelf's top, and where it sits: the shell's top and its padding.
+	const place = "(() => { const shell = document.querySelector('.shell'); const shelf = document.querySelector('.shelf').getBoundingClientRect(); " +
+		"return [shelf.height > 0, shelf.top === shell.getBoundingClientRect().top + parseFloat(getComputedStyle(shell).paddingTop)].join(' '); })()"
+
+	out := make([]string, 0, 4)
+	b.eval(pages(60))
+	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval(place))
+	b.eval("scrollTo(0, 300)")
+	out = append(out, b.until("the page to scroll", "scrollY === 300 && "+
+		"String(document.querySelector('.shelf').getBoundingClientRect().top === document.querySelector('.bar').getBoundingClientRect().bottom + "+
+		"parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--shell-top')) * parseFloat(getComputedStyle(document.documentElement).fontSize))"))
+	b.eval("scrollTo(0, 0)")
+	b.eval(pages(1))
+	out = append(out, b.eval(place))
+	check(t, "shelf stays", out, "true|true true|true|true true")
+}
