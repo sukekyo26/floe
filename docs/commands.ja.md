@@ -167,7 +167,7 @@ floe と自分の部品・見た目・共有の schema を 1 行ずつ、タブ�
 
 `FLOE_PARTS_DIR` の部品・見た目・共有の schema と `FLOE_THEMES_DIR` のテーマを floe のものの上で読み、すべての誤りを出します（終了コード 1）。共有の schema は、どれかの schema が名指すかによらず、その根から確かめます。正しければ何も出しません（終了コード 0）。
 
-自分の部品・テーマ・テンプレートの誤りは、ページが使うかどうかによらず、`floe check`・`floe render`・`floe publish` も止めます。`floe part check` と `floe template check` で見てください。部品とテーマの中身は [parts.ja.md](parts.ja.md) にあります。
+自分の部品・共有の schema・テーマ・テンプレートの誤りは、ページが使うかどうかによらず、`floe check`・`floe render`・`floe publish` も止めます。`floe part check` と `floe template check` で見てください。部品とテーマの中身は [parts.ja.md](parts.ja.md) にあります。
 
 ---
 

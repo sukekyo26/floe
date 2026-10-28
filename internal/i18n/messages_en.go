@@ -36,7 +36,7 @@ var messagesEN = map[string]string{
 	"schema_id_root":            "the root of a schema takes no $id: floe gives it its URL; leave $id out",
 	"schema_ref_templates":      "%s is no file floe holds: a template refers to a part as floe:///parts/<name>.json, and inside its own schema.json as #/…",
 	"schema_part_unreached":     "the part %s draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn",
-	"schema_ref_unreached":      "%s holds parts or items of floe's formats, which floe draws only through a $ref under properties or items, with no part or format of floe's beside it; refer to it there",
+	"schema_ref_unreached":      "%s holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref",
 	"schema_format_unreached":   "the format %s marks an item to draw; declare it under properties or items, which floe follows",
 	"schema_part_into":          "%s points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, %s",
 	"schema_dynamic_ref":        "floe does not follow %s: write a $ref",

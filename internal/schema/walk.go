@@ -72,7 +72,7 @@ func (c *Compiled) step(
 		return Step{Part: "", Format: "", PartRoot: nil, Props: nil, Items: nil, closed: nil}, through
 	}
 	seen[s] = true
-	if f := floeFormat(s); f != "" && (!inPart || f == "image") {
+	if f := stopFormat(s, inPart); f != "" {
 		return Step{Part: "", Format: f, PartRoot: nil, Props: nil, Items: nil, closed: nil}, through
 	}
 	if s.Ref == nil {
@@ -213,6 +213,15 @@ func itemsOf(s *jsonschema.Schema) *jsonschema.Schema {
 func floeFormat(s *jsonschema.Schema) string {
 	if s.Format != nil && slices.Contains(Formats, s.Format.Name) {
 		return s.Format.Name
+	}
+	return ""
+}
+
+// stopFormat returns the format of floe's s has that stops a step at s, "" for none: any of Formats, and in a
+// part's schema walked as a part (inPart) image alone.
+func stopFormat(s *jsonschema.Schema, inPart bool) string {
+	if f := floeFormat(s); f != "" && (!inPart || f == "image") {
+		return f
 	}
 	return ""
 }

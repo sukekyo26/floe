@@ -115,9 +115,10 @@ func (c *Compiled) checkTemplate() error {
 // the Shared schemas it refers to too, to a schema floe does not hold. A Shared schema is checked from its own
 // root (CheckPart), not from what refers to it, which refers to its root alone (intoMistake); a $ref to it a
 // walk does not follow is told where it is (unreachedRef).
-// LIMIT: a property declared beside a $ref to a Shared schema hides the Shared schema's of its name, whose
-// parts or formats are then not drawn there, unsaid; a value is refused by the two schemas together, or drawn
-// as written, which shows. Tell it at the property if one of one's own comes to need it.
+// LIMIT: a property or items declared beside a $ref to a Shared schema hides the Shared schema's property of
+// its name or its items, whose parts or formats are then not drawn there, unsaid; a value is refused by the two
+// schemas together, or drawn as written, which shows. Tell it at the property or items if one of one's own comes
+// to need it.
 // LIMIT: one cause may be told twice or more, at the $ref a walk does not reach and at the part or format past
 // it; both are true, at other places. Tell it once if that comes to mislead.
 func (c *Compiled) checkOwn() usererr.List {
@@ -193,16 +194,10 @@ func (c *Compiled) sharedFormat(n *jsonschema.Schema) *usererr.Error {
 // or a format of n stops it before the $ref, while what n refers to holds parts or formats: items floe would not
 // draw; nil else.
 func (c *Compiled) unreachedRef(n *jsonschema.Schema, r reached) *usererr.Error {
-	if c.followed(n, n.Ref) && (!r.passed[n] || c.stopsAt(n)) && c.followFrom(n.Ref).stops() {
+	if c.followed(n, n.Ref) && (!r.passed[n] || stopFormat(n, c.part) != "") && c.followFrom(n.Ref).stops() {
 		return c.mistake(n, "schema_ref_unreached", c.written(n.Ref.Location))
 	}
 	return nil
-}
-
-// stopsAt reports whether the step of n stops at a format of n itself, past none of its $refs.
-func (c *Compiled) stopsAt(n *jsonschema.Schema) bool {
-	st, through := c.step(n, map[*jsonschema.Schema]bool{}, c.part)
-	return st.Format != "" && len(through) == 1
 }
 
 // unreachedFormat refuses n if it is of one of Formats that r, what Follow reaches from the root, does not

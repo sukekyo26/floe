@@ -533,6 +533,14 @@ func TestCheckShared(t *testing.T) {
 
 	const head = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "description": "Mine", `
 	inAnyOf := head + `"properties": {"m": {"anyOf": [{"$ref": "floe:///parts/note.json"}]}}}`
+	// Read, which does not check, keeps the schema compiled: Load checks what it keeps.
+	k, err := kit.Read(floe(t), kit.Sources{Parts: kit.Dir{FS: fstest.MapFS{"sh.json": {Data: []byte(inAnyOf)}}, Name: "own/parts"}})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if i := slices.IndexFunc(k.Parts(), func(e kit.Entry) bool { return e.Name == "sh" }); i < 0 || k.Parts()[i].About != "Mine" {
+		t.Fatalf("Parts() = %v, want sh about Mine", k.Parts())
+	}
 	for _, tt := range []struct {
 		name  string
 		parts fstest.MapFS
@@ -548,14 +556,6 @@ func TestCheckShared(t *testing.T) {
 		if _, err := kit.Load(floe(t), kit.Sources{Parts: kit.Dir{FS: tt.parts, Name: "own/parts"}}); told(err) != tt.want {
 			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, told(err), tt.want)
 		}
-	}
-	k, err := kit.Read(floe(t), kit.Sources{Parts: kit.Dir{FS: fstest.MapFS{"sh.json": {Data: []byte(inAnyOf)}}, Name: "own/parts"}})
-	if err != nil {
-		t.Fatal(told(err))
-	}
-	i := slices.IndexFunc(k.Parts(), func(e kit.Entry) bool { return e.Name == "sh" })
-	if i < 0 || k.Parts()[i].About != "Mine" {
-		t.Errorf("Parts() = %v, want sh about Mine", k.Parts())
 	}
 }
 
