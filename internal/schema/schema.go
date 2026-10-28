@@ -114,7 +114,7 @@ func CompilePart(url string, res map[string]Resource) (*Compiled, error) {
 	return build(url, r.File, r.doc, res)
 }
 
-// build compiles doc under url, after checking the drafts it names (check 0), with res and floe's formats;
+// build compiles doc under url, after checking the drafts it names, with res and floe's formats;
 // a template's "$id"s are told with the mistakes of compiling it, as both are of what was written, and no
 // check that reads the tree compiled runs past them. A part's NewResource has refused already.
 func build(u, file string, doc any, res map[string]Resource) (*Compiled, error) {
